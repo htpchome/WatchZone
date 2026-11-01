@@ -7,6 +7,7 @@ import { LiveStartupTiming } from "../src/core/live-startup-timing";
 const hlsMock = vi.hoisted(() => ({
   attachMedia: vi.fn(),
   destroy: vi.fn(),
+  isSupported: vi.fn(),
   loadSource: vi.fn(),
   on: vi.fn(),
 }));
@@ -15,7 +16,7 @@ vi.mock("hls.js/dist/hls.light.mjs", () => ({
   default: class FakeHls {
     public static readonly Events = { ERROR: "error" };
     public static isSupported(): boolean {
-      return true;
+      return hlsMock.isSupported();
     }
 
     public readonly attachMedia = hlsMock.attachMedia;
@@ -30,6 +31,7 @@ describe("Home Assistant HLS connection", () => {
     for (const mock of Object.values(hlsMock)) {
       mock.mockReset();
     }
+    hlsMock.isSupported.mockReturnValue(true);
     vi.spyOn(HTMLMediaElement.prototype, "canPlayType").mockReturnValue(
       "maybe",
     );
@@ -47,6 +49,10 @@ describe("Home Assistant HLS connection", () => {
   });
 
   it("requests an authenticated HLS stream and resolves on decoded media", async () => {
+    hlsMock.isSupported.mockReturnValue(false);
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("#EXTM3U\n#EXT-X-VERSION:3\n"),
+    );
     const callWS = vi.fn(async () => ({ url: "/api/hls/front.m3u8" }));
     const api: HomeAssistantApi = {
       identity: {} as HomeAssistantApi["identity"],
@@ -82,9 +88,13 @@ describe("Home Assistant HLS connection", () => {
       format: "hls",
     });
     expect(connection.video).toBe(video);
+    expect(connection.transport).toBe("hls_native");
     expect(video?.src).toBe("https://ha.example/api/hls/front.m3u8");
     expect(timing.snapshot().phases).toMatchObject({
       first_frame_decoded: expect.any(Number),
+      hls_engine_loaded: expect.any(Number),
+      hls_manifest_loaded: expect.any(Number),
+      hls_native_path_selected: expect.any(Number),
       stream_url_received: expect.any(Number),
       stream_url_requested: expect.any(Number),
     });
@@ -128,9 +138,11 @@ describe("Home Assistant HLS connection", () => {
     expect(hlsMock.loadSource).toHaveBeenCalledWith(
       "https://ha.example/api/hls/media/stream.m3u8",
     );
+    expect(connection.transport).toBe("hls_mse");
     expect(timing.snapshot().phases).toMatchObject({
       hls_engine_loaded: expect.any(Number),
       hls_manifest_loaded: expect.any(Number),
+      hls_mse_path_selected: expect.any(Number),
     });
 
     connection.close();

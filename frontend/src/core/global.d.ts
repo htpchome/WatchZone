@@ -26,9 +26,12 @@ interface Window {
             | "video_track_received"
             | "stream_url_requested"
             | "stream_url_received"
+            | "hls_native_path_selected"
+            | "hls_mse_path_selected"
             | "hls_engine_loaded"
             | "hls_manifest_loaded"
-            | "first_frame_decoded",
+            | "first_frame_decoded"
+            | "presentation_selected",
             number
           >
         >

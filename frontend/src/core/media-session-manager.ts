@@ -7,17 +7,21 @@ import {
 export type MediaSessionState =
   "new" | "connecting" | "live" | "parked" | "failed" | "closing" | "closed";
 
+export type MediaTransport = "hls_mse" | "hls_native" | "webrtc";
+
 export interface MediaSessionSnapshot {
   readonly error?: string;
   readonly state: MediaSessionState;
   readonly stream?: MediaStream;
   readonly timing?: LiveStartupTiming;
+  readonly transport?: MediaTransport;
   readonly video?: HTMLVideoElement;
 }
 
 export interface MediaConnection {
   readonly stream?: MediaStream;
   readonly timing?: LiveStartupTiming;
+  readonly transport?: MediaTransport;
   readonly video?: HTMLVideoElement;
   close(): void;
 }
@@ -201,6 +205,7 @@ class ManagedMediaSession {
         state: this._leaseCount > 0 ? "live" : "parked",
         stream: connection.stream,
         timing: connection.timing,
+        transport: connection.transport,
         video: connection.video,
       });
     } catch (error) {

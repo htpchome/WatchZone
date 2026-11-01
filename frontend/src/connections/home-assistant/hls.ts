@@ -53,6 +53,7 @@ export async function createHomeAssistantHlsConnection(
   let closed = false;
   let connected = false;
   let hls: HlsType | undefined;
+  let transport: "hls_mse" | "hls_native" = "hls_native";
   let rejectPending: ((error: unknown) => void) | undefined;
 
   const close = (): void => {
@@ -115,7 +116,7 @@ export async function createHomeAssistantHlsConnection(
         connected = true;
         window.clearTimeout(timeout);
         void video.play().catch(() => undefined);
-        resolve({ video, timing, close });
+        resolve({ video, timing, transport, close });
       },
       { once: true },
     );
@@ -135,33 +136,30 @@ export async function createHomeAssistantHlsConnection(
       throw abortError();
     }
 
-    if (video.canPlayType(HLS_CONTENT_TYPE)) {
-      video.src = streamUrl;
-      void video.play().catch(() => undefined);
-    } else {
-      const manifestPromise = fetch(streamUrl, { signal }).then(
-        async (response) => {
-          if (!response.ok) {
-            throw new Error(`HLS manifest request failed (${response.status})`);
-          }
-          const manifest = await response.text();
-          timing.mark("hls_manifest_loaded");
-          return selectSingleVariant(manifest, streamUrl);
-        },
-      );
-      const hlsModulePromise = import("hls.js/dist/hls.light.mjs").then(
-        (module) => {
-          timing.mark("hls_engine_loaded");
-          return module;
-        },
-      );
-      const [{ default: Hls }, playlistUrl] = await Promise.all([
-        hlsModulePromise,
-        manifestPromise,
-      ]);
-      if (!Hls.isSupported()) {
-        throw new Error("This browser does not support HLS playback");
-      }
+    const manifestPromise = fetch(streamUrl, { signal }).then(
+      async (response) => {
+        if (!response.ok) {
+          throw new Error(`HLS manifest request failed (${response.status})`);
+        }
+        const manifest = await response.text();
+        timing.mark("hls_manifest_loaded");
+        return selectSingleVariant(manifest, streamUrl);
+      },
+    );
+    const hlsModulePromise = import("hls.js/dist/hls.light.mjs").then(
+      (module) => {
+        timing.mark("hls_engine_loaded");
+        return module;
+      },
+    );
+    const [{ default: Hls }, playlistUrl] = await Promise.all([
+      hlsModulePromise,
+      manifestPromise,
+    ]);
+
+    if (Hls.isSupported()) {
+      transport = "hls_mse";
+      timing.mark("hls_mse_path_selected");
       if (signal.aborted) {
         throw abortError();
       }
@@ -178,6 +176,12 @@ export async function createHomeAssistantHlsConnection(
       });
       player.loadSource(playlistUrl);
       player.attachMedia(video);
+    } else if (video.canPlayType(HLS_CONTENT_TYPE)) {
+      timing.mark("hls_native_path_selected");
+      video.src = playlistUrl;
+      void video.play().catch(() => undefined);
+    } else {
+      throw new Error("This browser does not support HLS playback");
     }
   } catch (error) {
     fail(error);

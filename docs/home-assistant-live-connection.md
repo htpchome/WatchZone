@@ -95,18 +95,24 @@ The HLS adapter:
 1. Requests an authenticated URL through Home Assistant's `camera/stream`
    WebSocket command with `format: "hls"`.
 2. Resolves the returned relative URL through Home Assistant's URL resolver.
-3. Uses native HLS when the media element advertises support, covering Safari,
-   iOS, iPadOS, Companion iOS, and Catalyst behavior without browser-name
-   branching.
-4. Otherwise lazy-loads the light HLS.js engine while fetching the master
-   manifest in parallel. When the master has exactly one variant, it passes
-   that variant directly to the engine to avoid a redundant manifest request.
+3. Fetches the master manifest while lazy-loading the light HLS.js engine.
+   When HLS.js reports supported MSE/MMS playback, that path is preferred;
+   native `video` HLS is the capability-detected fallback. This order avoids
+   treating `canPlayType()`'s non-empty but inconclusive `"maybe"` result as
+   proof that native playback is reliable.
+4. When the master has exactly one variant, passes that variant directly to
+   the selected player to avoid a redundant manifest request.
 5. Reports live only after `loadeddata`, not merely after obtaining a playlist
    URL or parsing a manifest.
 
 The HLS session owns its media element because its MediaSource playback state
 is element-bound. Closing destroys the playback engine, cancels in-flight
 requests, resets the element, and removes it from presentation.
+
+The live view displays a small source indicator for the currently presented
+transport: `WebRTC`, `HLS · HLS.js`, or `HLS · native`. Diagnostics also record
+the selected HLS path and the time at which a transport became the presentation
+winner.
 
 ## 7. Ownership and retention
 

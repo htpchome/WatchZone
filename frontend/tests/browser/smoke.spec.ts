@@ -330,6 +330,9 @@ test("retains one live connection while the card presentation is replaced", asyn
     element.dispatchEvent(new Event("loadeddata")),
   );
   await expect(video).toBeVisible();
+  await expect(
+    page.locator("watchzone-card-live .source-indicator"),
+  ).toHaveText("WebRTC");
   await expect
     .poll(() =>
       page.evaluate(() => {

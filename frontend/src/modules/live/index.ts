@@ -60,6 +60,14 @@ export class WatchZoneLive extends LitElement {
   }
 
   protected render() {
+    const sourceLabel =
+      this._selected === "webrtc"
+        ? "WebRTC"
+        : this._hlsSnapshot.transport === "hls_native"
+          ? "HLS · native"
+          : this._hlsSnapshot.transport === "hls_mse"
+            ? "HLS · HLS.js"
+            : "HLS";
     const error = !this._available
       ? "Camera entity is unavailable"
       : this._webRtcSnapshot.state === "failed" &&
@@ -78,6 +86,16 @@ export class WatchZoneLive extends LitElement {
           ?hidden=${this._selected !== "webrtc"}
           @loadeddata=${this._handleWebRtcLoadedData}
         ></video>
+        ${
+          this._selected
+            ? html`<div
+                class="source-indicator"
+                aria-label=${`Live source: ${sourceLabel}`}
+              >
+                ${sourceLabel}
+              </div>`
+            : nothing
+        }
         ${
           error
             ? html`<div class="status error" role="alert">
@@ -172,6 +190,7 @@ export class WatchZoneLive extends LitElement {
       this._hlsSnapshot = snapshot;
       if (snapshot.state === "live" && !this._selected) {
         this._selected = "hls";
+        snapshot.timing?.mark("presentation_selected");
       } else if (snapshot.state === "failed" && this._selected === "hls") {
         this._selected = undefined;
       }
@@ -223,6 +242,7 @@ export class WatchZoneLive extends LitElement {
     }
     this._webRtcDecoded = true;
     this._webRtcSnapshot.timing?.mark("first_frame_decoded");
+    this._webRtcSnapshot.timing?.mark("presentation_selected");
     this._selected = "webrtc";
     this._releaseHlsLease(true);
     this.requestUpdate();
@@ -266,6 +286,30 @@ export class WatchZoneLive extends LitElement {
     video {
       object-fit: var(--wzc-live-fit, contain);
       background: inherit;
+    }
+
+    .source-indicator {
+      position: absolute;
+      z-index: 1;
+      inset-block-start: 0.5rem;
+      inset-inline-end: 0.5rem;
+      padding: 0.25rem 0.5rem;
+      color: var(--wzc-live-indicator-color, var(--primary-text-color));
+      background: color-mix(
+        in srgb,
+        var(
+            --wzc-live-indicator-background,
+            var(--card-background-color, var(--primary-background-color))
+          )
+          86%,
+        transparent
+      );
+      border: 1px solid var(--divider-color);
+      border-radius: var(--ha-border-radius-pill, 999px);
+      font-size: 0.75rem;
+      font-weight: 600;
+      line-height: 1.25;
+      pointer-events: none;
     }
 
     .status {

@@ -205,7 +205,7 @@ export async function createHomeAssistantWebRtcConnection(
         timing.mark("video_track_received");
         connected = true;
         window.clearTimeout(timeout);
-        resolve({ stream, timing, close });
+        resolve({ stream, timing, transport: "webrtc", close });
       }
     };
 
