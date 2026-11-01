@@ -26,7 +26,7 @@ export const watchZoneCardEditorStyles = css`
     line-height: var(--wzc-line-height-condensed);
   }
 
-  .appearance-option {
+  .boolean-option {
     margin-block-start: 0.5rem;
   }
 `;

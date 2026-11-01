@@ -8,6 +8,7 @@ export type MediaSessionState =
   "new" | "connecting" | "live" | "parked" | "failed" | "closing" | "closed";
 
 export type MediaTransport = "hls_mse" | "hls_native" | "webrtc";
+export type CameraMutePreference = "muted" | "unmuted";
 
 export interface MediaSessionSnapshot {
   readonly error?: string;
@@ -305,7 +306,10 @@ class ManagedMediaSession {
 }
 
 export class MediaSessionManager {
-  private readonly _cameraMuted = new Map<string, boolean>();
+  private readonly _cameraMutePreferences = new Map<
+    string,
+    CameraMutePreference
+  >();
   private readonly _sessions = new Map<string, ManagedMediaSession>();
 
   public constructor(
@@ -339,12 +343,22 @@ export class MediaSessionManager {
     );
   }
 
-  public getCameraMuted(entityId: string): boolean {
-    return this._cameraMuted.get(entityId) ?? true;
+  public getCameraMutePreference(
+    entityId: string,
+  ): CameraMutePreference | undefined {
+    return this._cameraMutePreferences.get(entityId);
+  }
+
+  public getCameraMuted(
+    entityId: string,
+    configuredDefaultMuted = true,
+  ): boolean {
+    const preference = this.getCameraMutePreference(entityId);
+    return preference ? preference === "muted" : configuredDefaultMuted;
   }
 
   public setCameraMuted(entityId: string, muted: boolean): void {
-    this._cameraMuted.set(entityId, muted);
+    this._cameraMutePreferences.set(entityId, muted ? "muted" : "unmuted");
   }
 
   private _acquire(

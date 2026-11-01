@@ -2,6 +2,7 @@ import { html, LitElement, nothing } from "lit";
 
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import { CAMERA_LIVE_VIEW_TAG } from "../../core/constants";
+import { DeviceProfileController } from "../../core/device-profile";
 import {
   getMediaSessionManager,
   type MediaSessionLease,
@@ -37,9 +38,11 @@ interface FullscreenVideo extends HTMLVideoElement {
 
 export class WatchZoneCameraLiveView extends LitElement {
   private _api?: HomeAssistantApi;
+  private _autoplayBlocked = false;
   private _available = false;
   private _activeVideo?: HTMLVideoElement;
   private _controlError?: string;
+  private _desiredMuted = true;
   private _entityId?: string;
   private _fullscreenActive = false;
   private _hlsLease?: MediaSessionLease;
@@ -53,6 +56,8 @@ export class WatchZoneCameraLiveView extends LitElement {
   private _selected?: "hls" | "webrtc";
   private _sourceIntroductionTimer?: ReturnType<typeof setTimeout>;
   private _sourceIntroductionVisible = false;
+  private _startUnmutedPcTablet = false;
+  private _startUnmutedPhone = false;
   private _webRtcDecoded = false;
   private _webRtcLease?: MediaSessionLease;
   private _webRtcSnapshot: MediaSessionSnapshot = { state: "new" };
@@ -60,6 +65,7 @@ export class WatchZoneCameraLiveView extends LitElement {
   private readonly _controlsVisibility = new CameraControlsVisibilityController(
     this,
   );
+  private readonly _deviceProfile = new DeviceProfileController(this);
 
   public set api(value: HomeAssistantApi | undefined) {
     if (this._api?.identity === value?.identity) {
@@ -88,9 +94,21 @@ export class WatchZoneCameraLiveView extends LitElement {
     this._controlError = undefined;
     this._releaseLeases();
     this._entityId = value;
-    this._muted = value ? getMediaSessionManager().getCameraMuted(value) : true;
+    this._syncMutePreference();
     this._syncLeases();
     this.requestUpdate();
+  }
+
+  public set startUnmutedPcTablet(value: boolean) {
+    if (this._startUnmutedPcTablet === value) return;
+    this._startUnmutedPcTablet = value;
+    if (!this._activeVideo && !this._selected) this._syncMutePreference();
+  }
+
+  public set startUnmutedPhone(value: boolean) {
+    if (this._startUnmutedPhone === value) return;
+    this._startUnmutedPhone = value;
+    if (!this._activeVideo && !this._selected) this._syncMutePreference();
   }
 
   public set posterUrl(value: string | undefined) {
@@ -106,6 +124,8 @@ export class WatchZoneCameraLiveView extends LitElement {
     super.connectedCallback();
     document.addEventListener("fullscreenchange", this._syncControlState);
     document.addEventListener("webkitfullscreenchange", this._syncControlState);
+    document.addEventListener("visibilitychange", this._handleVisibilityChange);
+    this._syncMutePreference();
     this._syncLeases();
   }
 
@@ -114,6 +134,10 @@ export class WatchZoneCameraLiveView extends LitElement {
     document.removeEventListener(
       "webkitfullscreenchange",
       this._syncControlState,
+    );
+    document.removeEventListener(
+      "visibilitychange",
+      this._handleVisibilityChange,
     );
     this._setActiveVideo(undefined);
     this._clearSourceIntroduction();
@@ -253,7 +277,7 @@ export class WatchZoneCameraLiveView extends LitElement {
     if (video && video.srcObject !== (stream ?? null)) {
       this._webRtcDecoded = false;
       video.srcObject = stream ?? null;
-      video.muted = this._selected !== "webrtc" || this._muted;
+      video.muted = true;
       if (stream) {
         void video.play().catch(() => undefined);
       }
@@ -262,12 +286,11 @@ export class WatchZoneCameraLiveView extends LitElement {
     const hlsVideo = this._hlsSnapshot.video;
     if (hlsHost && hlsVideo && hlsVideo.parentElement !== hlsHost) {
       hlsVideo.setAttribute("aria-label", "Live camera");
+      hlsVideo.muted = true;
       hlsHost.append(hlsVideo);
       void hlsVideo.play().catch(() => undefined);
     }
-    if (hlsVideo) {
-      hlsVideo.muted = this._selected !== "hls" || this._muted;
-    }
+    this._applyMediaMuteState();
   }
 
   private _syncLeases(): void {
@@ -399,6 +422,7 @@ export class WatchZoneCameraLiveView extends LitElement {
     if (this._activeVideo === video) {
       return;
     }
+    if (this._activeVideo) this._activeVideo.muted = true;
     for (const eventName of [
       "enterpictureinpicture",
       "leavepictureinpicture",
@@ -412,6 +436,7 @@ export class WatchZoneCameraLiveView extends LitElement {
     this._activeVideo = video;
     suppressNativePictureInPicture(video);
     this._syncControlState();
+    this._syncEffectiveMute(Boolean(video));
   }
 
   private _setInitialTransport(transport: MediaTransport | undefined): void {
@@ -477,31 +502,80 @@ export class WatchZoneCameraLiveView extends LitElement {
     );
   }
 
+  private _syncMutePreference(): void {
+    this._autoplayBlocked = false;
+    this._controlError = undefined;
+    if (!this._entityId) {
+      this._desiredMuted = true;
+    } else {
+      const startUnmuted =
+        this._deviceProfile.profile.deviceClass === "phone"
+          ? this._startUnmutedPhone
+          : this._startUnmutedPcTablet;
+      this._desiredMuted = getMediaSessionManager().getCameraMuted(
+        this._entityId,
+        !startUnmuted,
+      );
+    }
+    this._syncEffectiveMute(false);
+  }
+
+  private readonly _handleVisibilityChange = (): void => {
+    this._syncEffectiveMute(document.visibilityState === "visible");
+  };
+
+  private _syncEffectiveMute(attemptPlayback: boolean): void {
+    const muted =
+      this._desiredMuted ||
+      this._autoplayBlocked ||
+      document.visibilityState !== "visible";
+    const changed = muted !== this._muted;
+    this._muted = muted;
+    this._applyMediaMuteState();
+    if (changed) this.requestUpdate();
+    if (!muted && attemptPlayback && this._activeVideo) {
+      const video = this._activeVideo;
+      void video.play().catch(() => {
+        if (
+          this._activeVideo !== video ||
+          this._desiredMuted ||
+          document.visibilityState !== "visible"
+        ) {
+          return;
+        }
+        this._autoplayBlocked = true;
+        this._controlError =
+          "The browser blocked unmuted playback. Tap mute again to retry.";
+        this._syncEffectiveMute(false);
+      });
+    }
+  }
+
+  private _applyMediaMuteState(): void {
+    const webRtcVideo =
+      this.shadowRoot?.querySelector<HTMLVideoElement>("video.webrtc");
+    if (webRtcVideo) {
+      webRtcVideo.muted = this._selected !== "webrtc" || this._muted;
+    }
+    if (this._hlsSnapshot.video) {
+      this._hlsSnapshot.video.muted = this._selected !== "hls" || this._muted;
+    }
+  }
+
   private readonly _handleCameraControl = (
     event: CustomEvent<CameraControlEventDetail>,
   ): void => {
     this._controlError = undefined;
     if (event.detail.action === "mute") {
-      this._muted = !this._muted;
+      this._desiredMuted = !this._muted;
+      this._autoplayBlocked = false;
       if (this._entityId) {
-        getMediaSessionManager().setCameraMuted(this._entityId, this._muted);
+        getMediaSessionManager().setCameraMuted(
+          this._entityId,
+          this._desiredMuted,
+        );
       }
-      if (this._activeVideo) {
-        const video = this._activeVideo;
-        video.muted = this._muted;
-        if (!this._muted) {
-          void video.play().catch(() => {
-            this._muted = true;
-            if (this._activeVideo === video) {
-              video.muted = true;
-            }
-            this._controlError =
-              "The browser blocked unmuted playback. Tap mute again to retry.";
-            this.requestUpdate();
-          });
-        }
-      }
-      this.requestUpdate();
+      this._syncEffectiveMute(!this._desiredMuted);
       return;
     }
     if (event.detail.action === "picture_in_picture") {

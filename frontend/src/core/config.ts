@@ -7,6 +7,8 @@ export interface WatchZoneCardConfig {
   readonly outer_padding?: boolean;
   readonly outer_shadows?: boolean;
   readonly rounded_outer_corners?: boolean;
+  readonly start_live_unmuted_pc_tablet?: boolean;
+  readonly start_live_unmuted_phone?: boolean;
   readonly type: typeof CARD_TYPE;
   readonly title: string;
   readonly [key: string]: unknown;
@@ -39,6 +41,8 @@ export function normalizeCardConfig(value: unknown): WatchZoneCardConfig {
     "outer_padding",
     "camera_rounded_corners",
     "camera_shadows",
+    "start_live_unmuted_pc_tablet",
+    "start_live_unmuted_phone",
   ] as const) {
     if (key in source && typeof source[key] !== "boolean") {
       throw new Error(`WatchZone ${key} must be a boolean.`);
@@ -67,6 +71,10 @@ export function normalizeCardConfig(value: unknown): WatchZoneCardConfig {
       : true;
   normalized.camera_shadows =
     typeof source.camera_shadows === "boolean" ? source.camera_shadows : true;
+  normalized.start_live_unmuted_pc_tablet =
+    source.start_live_unmuted_pc_tablet === true;
+  normalized.start_live_unmuted_phone =
+    source.start_live_unmuted_phone === true;
   return normalized as WatchZoneCardConfig;
 }
 

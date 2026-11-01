@@ -282,17 +282,24 @@ restored when the final forced reason clears and browser policy permits.
   conditions.
 - A reconnect applies mute before audible media can play.
 
-### 9.3 Scope and persistence
+### 9.3 Scope and lifetime
 
 User mute preference is keyed by stable WatchZone camera ID and scoped to:
 
-- Home Assistant origin.
-- Home Assistant user ID.
-- Browser profile.
+- The current Home Assistant browser document and JavaScript realm.
+- The authenticated user represented by that document.
 
-It is persisted as small, versioned device-local preference data. This is not
-layout storage and must not contain provider credentials, URLs, or media
-descriptors. An in-memory copy is authoritative during the document lifetime.
+It is held in memory by the document-scoped media-session manager. It survives
+card replacement, editor transitions, Home Assistant route changes, browser
+tab backgrounding, and window minimization while that document remains alive.
+A hard refresh, discarded tab, new browser tab, or new document clears the
+override and returns the camera to its configured startup default.
+
+The configured default may independently request unmuted startup for phone or
+tablet/desktop presentation classes. Both defaults are muted unless explicitly
+enabled. A configured default is not a user preference: the first explicit
+mute or unmute action overrides it for that camera for the rest of the
+document lifetime.
 
 If the user or camera cannot be identified safely, preference defaults to
 muted rather than borrowing another user's or camera's choice.
@@ -382,7 +389,8 @@ The media-session implementation is incomplete without automated tests for:
 - Resource-budget enforcement.
 - Close/reconnect races and stale async completion.
 - Adapter cleanup idempotency.
-- Per-user, per-camera mute preference persistence.
+- Per-camera mute preference retention within one document and reset in a new
+  document.
 - Explicit mute surviving automatic unmute conditions.
 - Forced mute removal restoring desired state.
 - Multiple simultaneous forced mute reasons.

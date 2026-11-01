@@ -24,6 +24,25 @@ describe("MediaSessionManager", () => {
     vi.useRealTimers();
   });
 
+  it("uses configured mute defaults until the user makes a document-lifetime choice", () => {
+    const manager = new MediaSessionManager();
+
+    expect(manager.getCameraMuted("camera.front", false)).toBe(false);
+    expect(manager.getCameraMuted("camera.front", true)).toBe(true);
+
+    manager.setCameraMuted("camera.front", true);
+    expect(manager.getCameraMutePreference("camera.front")).toBe("muted");
+    expect(manager.getCameraMuted("camera.front", false)).toBe(true);
+
+    manager.setCameraMuted("camera.front", false);
+    expect(manager.getCameraMutePreference("camera.front")).toBe("unmuted");
+    expect(manager.getCameraMuted("camera.front", true)).toBe(false);
+
+    expect(
+      new MediaSessionManager().getCameraMutePreference("camera.front"),
+    ).toBeUndefined();
+  });
+
   it("deduplicates concurrent leases and retains the connection", async () => {
     vi.useFakeTimers();
     const stream = createStream();

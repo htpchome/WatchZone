@@ -377,6 +377,79 @@ describe("watchzone-card-editor", () => {
     document.removeEventListener("context-request", contextHandler);
   });
 
+  it("round-trips per-device startup audio defaults without saving false", async () => {
+    const states: WatchZoneCardConfig[] = [];
+    const contextHandler = (event: Event) => {
+      const request = event as ContextRequest;
+      request.callback?.({ setState: (config) => states.push(config) });
+    };
+    document.addEventListener("context-request", contextHandler);
+    const dialog = document.createElement(
+      "hui-dialog-edit-card",
+    ) as TestEditCardDialog;
+    dialog._cardConfig = { type: CARD_TYPE, title: "Camera" };
+    dialog._updateDirtyState = vi.fn();
+    const root = dialog.attachShadow({ mode: "open" });
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as WatchZoneCardEditor;
+    editor.setConfig(dialog._cardConfig);
+    const save = document.createElement("button");
+    save.slot = "primaryAction";
+    root.append(editor, save);
+    document.body.append(dialog);
+    await editor.updateComplete;
+
+    for (const key of [
+      "start_live_unmuted_pc_tablet",
+      "start_live_unmuted_phone",
+    ] as const) {
+      const selector = editor.shadowRoot?.querySelector(
+        `[data-config-key="${key}"]`,
+      );
+      expect((selector as { value?: boolean }).value).toBe(false);
+      selector?.dispatchEvent(
+        new CustomEvent("value-changed", {
+          detail: { value: true },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+      expect(states.at(-1)?.[key]).toBe(true);
+    }
+
+    save.click();
+    expect(dialog._cardConfig).toMatchObject({
+      start_live_unmuted_pc_tablet: true,
+      start_live_unmuted_phone: true,
+    });
+
+    const reopened = document.createElement(
+      "watchzone-card-editor",
+    ) as WatchZoneCardEditor;
+    reopened.setConfig(dialog._cardConfig);
+    document.body.append(reopened);
+    await reopened.updateComplete;
+    for (const key of [
+      "start_live_unmuted_pc_tablet",
+      "start_live_unmuted_phone",
+    ] as const) {
+      const selector = reopened.shadowRoot?.querySelector(
+        `[data-config-key="${key}"]`,
+      );
+      expect((selector as { value?: boolean }).value).toBe(true);
+      selector?.dispatchEvent(
+        new CustomEvent("value-changed", {
+          detail: { value: false },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+      expect(states.at(-1)?.[key]).toBeUndefined();
+    }
+    document.removeEventListener("context-request", contextHandler);
+  });
+
   it("uses a one-time dirty-state writer without subscribing", async () => {
     let publishContext: ContextRequest["callback"];
     let subscribed = false;

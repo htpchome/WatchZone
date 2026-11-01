@@ -18,6 +18,8 @@ describe("WatchZone card configuration", () => {
       outer_padding: true,
       camera_rounded_corners: true,
       camera_shadows: true,
+      start_live_unmuted_pc_tablet: false,
+      start_live_unmuted_phone: false,
     });
 
     expect(
@@ -38,7 +40,31 @@ describe("WatchZone card configuration", () => {
       outer_padding: false,
       camera_rounded_corners: false,
       camera_shadows: false,
+      start_live_unmuted_pc_tablet: false,
+      start_live_unmuted_phone: false,
     });
+  });
+
+  it("defaults startup audio off and preserves enabled device classes", () => {
+    expect(
+      normalizeCardConfig({
+        type: CARD_TYPE,
+        title: "Camera",
+        start_live_unmuted_pc_tablet: true,
+        start_live_unmuted_phone: true,
+      }),
+    ).toMatchObject({
+      start_live_unmuted_pc_tablet: true,
+      start_live_unmuted_phone: true,
+    });
+
+    expect(() =>
+      normalizeCardConfig({
+        type: CARD_TYPE,
+        title: "Camera",
+        start_live_unmuted_phone: "yes",
+      }),
+    ).toThrow("start_live_unmuted_phone must be a boolean");
   });
 
   it("rejects non-boolean appearance values", () => {

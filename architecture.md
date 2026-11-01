@@ -626,8 +626,12 @@ Mandatory behavior:
 User audio intent is separate from temporary playback state:
 
 - A user's explicit muted or unmuted preference is stored per camera and
-  shared across WatchZone card instances for that Home Assistant user and
-  browser profile.
+  shared across WatchZone card instances for the lifetime of the current Home
+  Assistant browser document. It survives route changes, background tabs, and
+  window minimization but resets on a hard refresh or new browser document.
+- Per-camera startup defaults may differ between phone and tablet/desktop
+  presentation classes. They apply only when no document-lifetime user
+  preference exists.
 - Automatic policies may temporarily force a session silent, but they never
   overwrite the user's preference.
 - No automatic behavior may unmute a camera the user explicitly muted.

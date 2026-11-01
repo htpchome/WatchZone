@@ -8,12 +8,53 @@ import {
 import type { WatchZoneCameraLiveView } from "../src/modules/camera/live-view";
 import "../src/modules/camera/live-view";
 
-function createLiveView(api: HomeAssistantApi): WatchZoneCameraLiveView {
+function createLiveView(
+  api: HomeAssistantApi,
+  startUnmutedPcTablet = false,
+  startUnmutedPhone = false,
+): WatchZoneCameraLiveView {
   const view = document.createElement("watchzone-camera-live-view");
   view.api = api;
   view.available = true;
+  view.startUnmutedPcTablet = startUnmutedPcTablet;
+  view.startUnmutedPhone = startUnmutedPhone;
   view.entityId = "camera.front";
   return view;
+}
+
+function cameraControl(view: WatchZoneCameraLiveView): HTMLElement {
+  const controls = view.shadowRoot?.querySelector<HTMLElement>(
+    "watchzone-camera-controls",
+  );
+  if (!controls) throw new Error("Camera controls are not rendered");
+  return controls;
+}
+
+function toggleMute(view: WatchZoneCameraLiveView): void {
+  cameraControl(view).dispatchEvent(
+    new CustomEvent("camera-control", {
+      detail: { action: "mute" },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+}
+
+function installHlsSession(): {
+  readonly api: HomeAssistantApi;
+  readonly hlsVideo: HTMLVideoElement;
+} {
+  vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
+  const hlsVideo = document.createElement("video");
+  window.__watchZoneMediaSessionManager = new MediaSessionManager(
+    vi.fn<ConnectionFactory>(async () => ({ close: vi.fn() })),
+    vi.fn<ConnectionFactory>(async () => ({
+      video: hlsVideo,
+      transport: "hls_mse",
+      close: vi.fn(),
+    })),
+  );
+  return { api: createApi(), hlsVideo };
 }
 
 describe("camera presentation retention", () => {
@@ -73,4 +114,151 @@ describe("camera presentation retention", () => {
     expect(hlsFactory).toHaveBeenCalledOnce();
     expect(webRtcFactory).toHaveBeenCalledOnce();
   });
+
+  it("keeps an explicit mute over an unmuted startup default across navigation", async () => {
+    const { api, hlsVideo } = installHlsSession();
+    const initial = createLiveView(api, true);
+    document.body.append(initial);
+    await vi.waitFor(() =>
+      expect(initial.shadowRoot?.querySelector(".hls-host video")).toBe(
+        hlsVideo,
+      ),
+    );
+    expect(hlsVideo.muted).toBe(false);
+
+    toggleMute(initial);
+    expect(hlsVideo.muted).toBe(true);
+    expect(
+      window.__watchZoneMediaSessionManager?.getCameraMutePreference(
+        "camera.front",
+      ),
+    ).toBe("muted");
+
+    initial.remove();
+    const returned = createLiveView(api, true);
+    document.body.append(returned);
+    await vi.waitFor(() =>
+      expect(returned.shadowRoot?.querySelector(".hls-host video")).toBe(
+        hlsVideo,
+      ),
+    );
+    expect(hlsVideo.muted).toBe(true);
+  });
+
+  it("keeps an explicit unmute over a muted startup default across navigation", async () => {
+    const { api, hlsVideo } = installHlsSession();
+    const initial = createLiveView(api);
+    document.body.append(initial);
+    await vi.waitFor(() =>
+      expect(initial.shadowRoot?.querySelector(".hls-host video")).toBe(
+        hlsVideo,
+      ),
+    );
+    expect(hlsVideo.muted).toBe(true);
+
+    toggleMute(initial);
+    await vi.waitFor(() => expect(hlsVideo.muted).toBe(false));
+    expect(
+      window.__watchZoneMediaSessionManager?.getCameraMutePreference(
+        "camera.front",
+      ),
+    ).toBe("unmuted");
+
+    initial.remove();
+    const returned = createLiveView(api);
+    document.body.append(returned);
+    await vi.waitFor(() =>
+      expect(returned.shadowRoot?.querySelector(".hls-host video")).toBe(
+        hlsVideo,
+      ),
+    );
+    expect(hlsVideo.muted).toBe(false);
+  });
+
+  it("temporarily mutes a hidden document without changing user intent", async () => {
+    const visibility = vi
+      .spyOn(document, "visibilityState", "get")
+      .mockReturnValue("visible");
+    const { api, hlsVideo } = installHlsSession();
+    const view = createLiveView(api);
+    document.body.append(view);
+    await vi.waitFor(() =>
+      expect(view.shadowRoot?.querySelector(".hls-host video")).toBe(hlsVideo),
+    );
+    toggleMute(view);
+    await vi.waitFor(() => expect(hlsVideo.muted).toBe(false));
+
+    visibility.mockReturnValue("hidden");
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(hlsVideo.muted).toBe(true);
+    expect(
+      window.__watchZoneMediaSessionManager?.getCameraMutePreference(
+        "camera.front",
+      ),
+    ).toBe("unmuted");
+
+    visibility.mockReturnValue("visible");
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.waitFor(() => expect(hlsVideo.muted).toBe(false));
+  });
+
+  it("keeps an explicit unmute preference when autoplay is blocked", async () => {
+    const play = vi
+      .spyOn(HTMLMediaElement.prototype, "play")
+      .mockResolvedValueOnce()
+      .mockRejectedValue(
+        new DOMException("Playback blocked", "NotAllowedError"),
+      );
+    const hlsVideo = document.createElement("video");
+    window.__watchZoneMediaSessionManager = new MediaSessionManager(
+      vi.fn<ConnectionFactory>(async () => ({ close: vi.fn() })),
+      vi.fn<ConnectionFactory>(async () => ({
+        video: hlsVideo,
+        transport: "hls_mse",
+        close: vi.fn(),
+      })),
+    );
+    const view = createLiveView(createApi());
+    document.body.append(view);
+    await vi.waitFor(() =>
+      expect(view.shadowRoot?.querySelector(".hls-host video")).toBe(hlsVideo),
+    );
+
+    toggleMute(view);
+
+    await vi.waitFor(() => expect(hlsVideo.muted).toBe(true));
+    expect(play).toHaveBeenCalledTimes(2);
+    expect(
+      window.__watchZoneMediaSessionManager?.getCameraMutePreference(
+        "camera.front",
+      ),
+    ).toBe("unmuted");
+    await vi.waitFor(() =>
+      expect(cameraControl(view).shadowRoot?.textContent).toContain(
+        "The browser blocked unmuted playback.",
+      ),
+    );
+  });
+
+  it("uses the independent phone startup default", async () => {
+    vi.spyOn(window, "innerWidth", "get").mockReturnValue(390);
+    vi.spyOn(window, "innerHeight", "get").mockReturnValue(844);
+    const { api, hlsVideo } = installHlsSession();
+    const view = createLiveView(api, false, true);
+    document.body.append(view);
+
+    await vi.waitFor(() =>
+      expect(view.shadowRoot?.querySelector(".hls-host video")).toBe(hlsVideo),
+    );
+    expect(hlsVideo.muted).toBe(false);
+  });
 });
+
+function createApi(): HomeAssistantApi {
+  return {
+    identity: {} as HomeAssistantApi["identity"],
+    callWS: vi.fn(),
+    resolveUrl: (path) => path,
+    subscribeMessage: vi.fn(),
+  };
+}

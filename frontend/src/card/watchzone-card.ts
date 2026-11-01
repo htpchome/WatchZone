@@ -177,6 +177,12 @@ export class WatchZoneCard extends LitElement {
                   ? html`<watchzone-camera
                       .api=${this._haApi}
                       .available=${cameraAvailable}
+                      .startUnmutedPcTablet=${
+                        config.start_live_unmuted_pc_tablet === true
+                      }
+                      .startUnmutedPhone=${
+                        config.start_live_unmuted_phone === true
+                      }
                       .entityId=${cameraEntity}
                       .posterUrl=${posterUrl}
                       .roundedCorners=${config.camera_rounded_corners !== false}

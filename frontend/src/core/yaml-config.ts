@@ -21,6 +21,12 @@ export function toYamlCardConfig(
     delete yaml.camera_rounded_corners;
   }
   if (config.camera_shadows !== false) delete yaml.camera_shadows;
+  if (config.start_live_unmuted_pc_tablet !== true) {
+    delete yaml.start_live_unmuted_pc_tablet;
+  }
+  if (config.start_live_unmuted_phone !== true) {
+    delete yaml.start_live_unmuted_phone;
+  }
   for (const [key, value] of Object.entries(yaml)) {
     if (value === undefined) delete yaml[key];
   }

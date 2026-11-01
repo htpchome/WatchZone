@@ -16,6 +16,8 @@ export class WatchZoneCamera extends LitElement {
     posterUrl: { attribute: false },
     roundedCorners: { attribute: false, type: Boolean },
     shadowStyle: { attribute: false },
+    startUnmutedPcTablet: { attribute: false, type: Boolean },
+    startUnmutedPhone: { attribute: false, type: Boolean },
   };
 
   public api?: HomeAssistantApi;
@@ -24,6 +26,8 @@ export class WatchZoneCamera extends LitElement {
   public posterUrl?: string;
   public roundedCorners = true;
   public shadowStyle: CameraShadowStyle = "medium";
+  public startUnmutedPcTablet = false;
+  public startUnmutedPhone = false;
 
   protected render() {
     return html`
@@ -40,6 +44,8 @@ export class WatchZoneCamera extends LitElement {
         <watchzone-camera-live-view
           .api=${this.api}
           .available=${this.available}
+          .startUnmutedPcTablet=${this.startUnmutedPcTablet}
+          .startUnmutedPhone=${this.startUnmutedPhone}
           .entityId=${this.entityId}
           .posterUrl=${this.posterUrl}
         ></watchzone-camera-live-view>

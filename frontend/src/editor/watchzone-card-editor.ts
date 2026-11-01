@@ -49,12 +49,14 @@ const CAMERA_SELECTOR = {
 
 const BOOLEAN_SELECTOR = { boolean: {} } as const;
 
-type AppearanceFlag =
+type BooleanConfigFlag =
   | "camera_rounded_corners"
   | "camera_shadows"
   | "outer_padding"
   | "outer_shadows"
-  | "rounded_outer_corners";
+  | "rounded_outer_corners"
+  | "start_live_unmuted_pc_tablet"
+  | "start_live_unmuted_phone";
 
 export class WatchZoneCardEditor extends LitElement {
   private _baseline?: WatchZoneCardConfig;
@@ -142,57 +144,78 @@ export class WatchZoneCardEditor extends LitElement {
         .required=${false}
         @value-changed=${this._handleCameraChange}
       ></ha-selector>
+      <div class="section-title">Camera Audio</div>
+      <ha-selector
+        class="boolean-option"
+        data-config-key="start_live_unmuted_pc_tablet"
+        label="Start Live Unmuted on PC/Tablet"
+        .hass=${this._hass}
+        .selector=${BOOLEAN_SELECTOR}
+        .value=${this._config?.start_live_unmuted_pc_tablet === true}
+        .required=${false}
+        @value-changed=${this._handleBooleanChange}
+      ></ha-selector>
+      <ha-selector
+        class="boolean-option"
+        data-config-key="start_live_unmuted_phone"
+        label="Start Live Unmuted on Mobile Phone"
+        .hass=${this._hass}
+        .selector=${BOOLEAN_SELECTOR}
+        .value=${this._config?.start_live_unmuted_phone === true}
+        .required=${false}
+        @value-changed=${this._handleBooleanChange}
+      ></ha-selector>
       <div class="section-title">Appearance</div>
       <ha-selector
-        class="appearance-option"
+        class="boolean-option"
         data-config-key="rounded_outer_corners"
         label="Rounded Outer Corners"
         .hass=${this._hass}
         .selector=${BOOLEAN_SELECTOR}
         .value=${this._config?.rounded_outer_corners !== false}
         .required=${false}
-        @value-changed=${this._handleAppearanceChange}
+        @value-changed=${this._handleBooleanChange}
       ></ha-selector>
       <ha-selector
-        class="appearance-option"
+        class="boolean-option"
         data-config-key="outer_shadows"
         label="Outer Shadows"
         .hass=${this._hass}
         .selector=${BOOLEAN_SELECTOR}
         .value=${this._config?.outer_shadows !== false}
         .required=${false}
-        @value-changed=${this._handleAppearanceChange}
+        @value-changed=${this._handleBooleanChange}
       ></ha-selector>
       <ha-selector
-        class="appearance-option"
+        class="boolean-option"
         data-config-key="outer_padding"
         label="Outer Padding"
         .hass=${this._hass}
         .selector=${BOOLEAN_SELECTOR}
         .value=${this._config?.outer_padding !== false}
         .required=${false}
-        @value-changed=${this._handleAppearanceChange}
+        @value-changed=${this._handleBooleanChange}
       ></ha-selector>
       <div class="section-title">Camera Appearance</div>
       <ha-selector
-        class="appearance-option"
+        class="boolean-option"
         data-config-key="camera_rounded_corners"
         label="Camera Rounded Corners"
         .hass=${this._hass}
         .selector=${BOOLEAN_SELECTOR}
         .value=${this._config?.camera_rounded_corners !== false}
         .required=${false}
-        @value-changed=${this._handleAppearanceChange}
+        @value-changed=${this._handleBooleanChange}
       ></ha-selector>
       <ha-selector
-        class="appearance-option"
+        class="boolean-option"
         data-config-key="camera_shadows"
         label="Camera Shadows"
         .hass=${this._hass}
         .selector=${BOOLEAN_SELECTOR}
         .value=${this._config?.camera_shadows !== false}
         .required=${false}
-        @value-changed=${this._handleAppearanceChange}
+        @value-changed=${this._handleBooleanChange}
       ></ha-selector>
     `;
   }
@@ -245,14 +268,12 @@ export class WatchZoneCardEditor extends LitElement {
     this._applyDraft(normalizeCardConfig(next), true);
   };
 
-  private readonly _handleAppearanceChange = (
-    event: ValueChangedEvent,
-  ): void => {
+  private readonly _handleBooleanChange = (event: ValueChangedEvent): void => {
     if (!this._config) {
       return;
     }
     const key = (event.currentTarget as HTMLElement).dataset.configKey as
-      AppearanceFlag | undefined;
+      BooleanConfigFlag | undefined;
     if (!key) {
       return;
     }

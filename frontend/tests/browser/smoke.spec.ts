@@ -369,7 +369,7 @@ test("camera selection does not recursively republish dirty state", async ({
   });
 });
 
-test("round-trips appearance toggles through false before Save", async ({
+test("round-trips boolean toggles through defaults before Save", async ({
   page,
 }) => {
   await page.goto("/");
@@ -434,6 +434,45 @@ test("round-trips appearance toggles through false before Save", async ({
     document.body.append(dialog);
     await Promise.all([card.updateComplete, editor.updateComplete]);
 
+    const pcAudioSelector = editor.shadowRoot?.querySelector(
+      '[data-config-key="start_live_unmuted_pc_tablet"]',
+    );
+    pcAudioSelector?.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: true },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await editor.updateComplete;
+    const pcAudioEnabled =
+      latestDirtyState?.start_live_unmuted_pc_tablet === true;
+    pcAudioSelector?.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: false },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await editor.updateComplete;
+    const pcAudioDefaultOmitted = !(
+      "start_live_unmuted_pc_tablet" in (latestDirtyState ?? {})
+    );
+
+    const phoneAudioSelector = editor.shadowRoot?.querySelector(
+      '[data-config-key="start_live_unmuted_phone"]',
+    );
+    phoneAudioSelector?.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: true },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await editor.updateComplete;
+    const phoneAudioEnabled =
+      latestDirtyState?.start_live_unmuted_phone === true;
+
     const selector = editor.shadowRoot?.querySelector(
       '[data-config-key="rounded_outer_corners"]',
     );
@@ -481,7 +520,11 @@ test("round-trips appearance toggles through false before Save", async ({
     return {
       defaultOmitted,
       dirtyValue: latestDirtyState?.rounded_outer_corners,
+      pcAudioDefaultOmitted,
+      pcAudioEnabled,
+      phoneAudioEnabled,
       roundedAfterOn,
+      savedPhoneAudio: dialog._cardConfig?.start_live_unmuted_phone,
       savedValue: dialog._cardConfig?.rounded_outer_corners,
       selectorValue: (
         editor.shadowRoot?.querySelector(
@@ -496,7 +539,11 @@ test("round-trips appearance toggles through false before Save", async ({
   expect(result).toEqual({
     defaultOmitted: true,
     dirtyValue: false,
+    pcAudioDefaultOmitted: true,
+    pcAudioEnabled: true,
+    phoneAudioEnabled: true,
     roundedAfterOn: true,
+    savedPhoneAudio: true,
     savedValue: false,
     selectorValue: false,
     squareAfterOff: true,

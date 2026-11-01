@@ -28,6 +28,8 @@ describe("WatchZone YAML configuration manager", () => {
           outer_padding: false,
           camera_rounded_corners: false,
           camera_shadows: false,
+          start_live_unmuted_pc_tablet: true,
+          start_live_unmuted_phone: true,
           grid_options: { columns: 8 },
         }),
       ),
@@ -40,6 +42,8 @@ describe("WatchZone YAML configuration manager", () => {
       outer_padding: false,
       camera_rounded_corners: false,
       camera_shadows: false,
+      start_live_unmuted_pc_tablet: true,
+      start_live_unmuted_phone: true,
       grid_options: { columns: 8 },
     });
   });
