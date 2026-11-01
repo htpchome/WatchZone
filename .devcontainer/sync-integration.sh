@@ -24,13 +24,12 @@ else
   echo "No custom_components/$INTEGRATION_DOMAIN backend found; backend sync skipped"
 fi
 
-if [ -d "$WORKSPACE_DIR/frontend/dist" ]; then
-  INTEGRATION_DIST_DIR="$WORKSPACE_DIR/frontend/dist" \
+if [ -d "$WORKSPACE_DIR/dist/frontend" ]; then
+  INTEGRATION_DIST_DIR="$WORKSPACE_DIR/dist/frontend" \
+    INTEGRATION_HA_TARGET_DIR="/config/custom_components/$INTEGRATION_DOMAIN/frontend" \
     bash "$WORKSPACE_DIR/.devcontainer/sync-assets.sh"
-elif [ -d "$WORKSPACE_DIR/dist" ]; then
-  bash "$WORKSPACE_DIR/.devcontainer/sync-assets.sh"
 else
-  echo "No frontend dist directory found; frontend sync skipped"
+  echo "No frontend build found at dist/frontend; frontend sync skipped"
 fi
 
 echo "Restart Home Assistant after Python backend changes."

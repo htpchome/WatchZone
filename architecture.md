@@ -15,6 +15,11 @@ They are built, tested, packaged, versioned, and released together as one
 integration. They are not independent products and do not carry compatibility
 layers for mixing frontend and backend releases.
 
+A configured WatchZone config entry is required. The frontend is packaged,
+served, and registered by the Python integration and has no supported
+standalone mode. Installing through HACS is followed by adding WatchZone under
+Home Assistant's Devices & services settings.
+
 The architecture is designed to support user-created layouts composed from
 independent modules such as live video, event lists, camera selectors,
 companion cameras, and navigation controls. Layouts are created and persisted
@@ -33,8 +38,9 @@ In priority order, WatchZone must be:
    unrelated features to change or fail.
 2. **Fast:** Initial code, rendering work, network traffic, and retained memory
    must remain proportional to the modules the user actually displays.
-3. **Modular:** Layout, modules, providers, storage, and Home Assistant adapters
-   have explicit contracts and one-way dependencies.
+3. **Modular:** Layout, modules, providers, live connection adapters, storage,
+   and Home Assistant adapters have explicit contracts and one-way
+   dependencies.
 4. **Resilient:** A failed module, provider request, or optional feature must
    not take down the entire card.
 5. **Native to Home Assistant:** Use supported Home Assistant lifecycle,
@@ -55,6 +61,8 @@ WatchZone does not:
 - Require every frontend helper to be a custom element.
 - Support separately installed or independently versioned frontend and backend
   packages.
+- Support a frontend-only or partially configured degraded operating mode.
+- Treat a camera's provider and live connection method as the same concept.
 - Load every module or the visual editor during normal card startup.
 - Preserve dead APIs or internal compatibility layers without an explicit
   migration requirement.
@@ -73,6 +81,8 @@ Home Assistant / Lovelace
  Layout runtime + module loader
           |
           +------ dynamic import ------> Feature modules
+          |
+          +------ dynamic import ------> Live connection adapters
           |
           v
  Typed frontend API client
@@ -102,6 +112,13 @@ architecture decision recorded in this document or a future ADR.
 ```text
 .
 ├── architecture.md
+├── hacs.json                       # HACS release-install metadata
+├── docs/
+│   └── live-session-lifecycle.md  # Retention and audio-state contract
+├── dist/                          # Generated output; never source
+│   ├── frontend/                  # Vite entry and lazy chunks
+│   ├── package/                   # Assembled integration staging tree
+│   └── watchzone.zip              # HACS release asset
 ├── custom_components/
 │   └── watchzone/                 # Shipped Python integration
 │       ├── __init__.py            # Composition root and HA lifecycle
@@ -121,9 +138,9 @@ architecture decision recorded in this document or a future ADR.
 │   │   ├── core/                  # Stable runtime and module contracts
 │   │   ├── api/                   # Typed backend client and wire types
 │   │   ├── modules/               # Independently loaded UI features
+│   │   ├── connections/           # Lazy browser playback adapters
 │   │   └── editor/                # Lazily loaded layout editor
-│   ├── tests/
-│   └── dist/                      # Generated build output
+│   └── tests/
 ├── tests/                         # Python and cross-boundary tests
 └── scripts/                       # Build, packaging, and validation tools
 ```
@@ -156,17 +173,19 @@ These rules are mandatory:
    implementation.
 2. A frontend module may depend on public contracts in `core` and `api`.
 3. A frontend module must never import another frontend module.
-4. `core` must not import any feature module.
-5. Backend API adapters validate transport input, enforce permissions, invoke
+4. A frontend module may use the public connection resolver but must not import
+   a concrete live connection adapter.
+5. `core` must not import any feature module or concrete connection adapter.
+6. Backend API adapters validate transport input, enforce permissions, invoke
    feature services, and serialize results. They do not contain feature logic.
-6. Backend features may depend on provider protocols and storage contracts,
+7. Backend features may depend on provider protocols and storage contracts,
    not on concrete provider internals.
-7. Providers translate external systems into WatchZone-owned models. Frigate
+8. Providers translate external systems into WatchZone-owned models. Frigate
    response shapes must not leak across the application by default.
-8. Storage adapters persist and migrate data. They do not contain UI or
+9. Storage adapters persist and migrate data. They do not contain UI or
    provider behavior.
-9. Circular imports and circular runtime dependencies are prohibited.
-10. Shared code must have at least two real consumers, unless it defines an
+10. Circular imports and circular runtime dependencies are prohibited.
+11. Shared code must have at least two real consumers, unless it defines an
     external boundary or stable system contract.
 
 Import-boundary checks must be automated when the relevant directories exist.
@@ -177,14 +196,45 @@ Code review alone is not sufficient enforcement.
 The frontend and backend are released in lockstep:
 
 - One integration version identifies the entire release.
-- The frontend is built before packaging and copied beneath
-  `custom_components/watchzone/frontend/`.
+- All generated output is isolated beneath repository-root `dist/`. Vite emits
+  frontend assets to `dist/frontend/`; release staging assembles the complete
+  integration beneath `dist/package/` and produces `dist/watchzone.zip`.
+- Packaging copies the built frontend beneath `frontend/` in the assembled
+  integration.
 - Release validation fails if generated assets are missing or do not match the
   current source build.
 - Python registers and serves the packaged frontend assets.
+- Python registers the card resource only after WatchZone is configured and
+  removes its registrations cleanly when the integration is unloaded.
 - The release must not depend on a separately installed Lovelace resource.
 - Frontend/backend compatibility shims are not maintained between WatchZone
   releases.
+
+The source repository uses HACS's standard integration layout:
+`custom_components/watchzone/` contains the integration source and
+`manifest.json`; `hacs.json` remains at the repository root. WatchZone does not
+use HACS `content_in_root`.
+
+Tagged releases use HACS `zip_release` with the filename `watchzone.zip`.
+HACS extracts that archive directly into
+`<config>/custom_components/watchzone`, so the archive root must contain the
+integration files themselves:
+
+```text
+watchzone.zip
+├── __init__.py
+├── manifest.json
+├── const.py
+├── ...
+└── frontend/
+    ├── watchzone.js
+    └── ... lazy chunks and asset manifest
+```
+
+The archive must not contain a wrapping `dist/`, `package/`,
+`custom_components/`, or `watchzone/` directory. Repository-root `dist/` is a
+local/CI staging convention, not a HACS installation requirement, and is never
+committed.
 
 The internal frontend/backend API is still typed and tested because it is a
 high-impact boundary. This protects correctness within a release; it is not a
@@ -192,6 +242,27 @@ mechanism for supporting mismatched releases.
 
 Persisted user data is different: saved layouts survive upgrades and therefore
 must have explicit schema versions and migrations.
+
+### 7.1 Version and commit discipline
+
+`custom_components/watchzone/const.py` is the source of truth for the WatchZone
+version through its `VERSION` constant.
+
+- Every commit increments `VERSION`; documentation-only and internal commits
+  are not exempt.
+- The version is valid Semantic Versioning and is unique to that commit.
+- `manifest.json`, frontend package metadata, release artifacts, and other
+  version-bearing files must match `VERSION`. Automated validation must reject
+  drift.
+- Patch increments cover fixes, documentation, tests, and internal changes.
+  Minor increments cover backward-compatible user-visible capabilities. Major
+  increments cover breaking public or persisted-contract changes after 1.0.
+- During initial development, intentional breaking changes increment the
+  pre-1.0 minor version when appropriate.
+- Commit subjects include the version using the format
+  `type(scope): summary (vX.Y.Z)`.
+- Whenever work is handed off for a commit, the handoff includes a proposed
+  commit subject containing the exact version.
 
 ## 8. Frontend architecture
 
@@ -211,6 +282,7 @@ the card shell:
 It must not eagerly import:
 
 - Any feature module implementation.
+- Any concrete live connection adapter.
 - The layout editor.
 - Provider-specific UI.
 - Large media, timeline, charting, or date libraries.
@@ -238,6 +310,8 @@ The exact syntax may change with the build tool, but these properties may not:
 - Modules needed by a layout load concurrently, not sequentially.
 - The editor is a separate dynamic import and is never loaded for normal card
   viewing.
+- A live connection adapter is requested only when a visible live module uses
+  its connection type.
 - Failed imports render a local module error with a retry action.
 - Module loaders cache successful promises to prevent duplicate fetches.
 - Optional prefetching is allowed only after the visible layout is interactive
@@ -324,6 +398,103 @@ navigation target.
 - Session state is scoped to a card instance unless a requirement explicitly
   calls for wider scope.
 
+### 8.7 Live connection adapters
+
+A **provider** and a **live connection type** are different architectural
+concepts:
+
+- A provider supplies camera identity, metadata, events, recordings, controls,
+  authentication, and provider capabilities. Examples include Frigate and
+  MotionEye.
+- A live connection adapter turns a normalized source descriptor into browser
+  playback. Examples include a Home Assistant camera connection and a
+  Frigate/go2rtc connection.
+
+A camera belongs to one provider instance but may expose multiple live source
+candidates. For example, a Frigate camera may be viewable through Frigate's
+go2rtc endpoint or through a linked Home Assistant camera entity. Layouts and
+modules refer to the stable WatchZone camera ID, not directly to a transport
+URL.
+
+Conceptually, the backend returns data shaped like:
+
+```ts
+interface LiveSourceDescriptor {
+  readonly id: string;
+  readonly type: "home_assistant" | "frigate_go2rtc";
+  readonly capabilities: readonly LiveSourceCapability[];
+  readonly parameters: Readonly<Record<string, unknown>>;
+}
+```
+
+The concrete descriptor schema is a discriminated union, not an unrestricted
+parameter bag. Credentials and provider secrets never appear in it.
+
+Connection rules:
+
+- The backend discovers, authorizes, normalizes, and ranks available source
+  descriptors.
+- The frontend connection resolver selects a compatible source according to
+  saved preference, required capabilities, health, and deterministic fallback
+  order.
+- Each connection type has a stable folder boundary under
+  `frontend/src/connections/<type>/` and is loaded with a dynamic import.
+- The live module depends only on the public resolver and playback contract.
+- Connection adapters own browser media objects and playback-specific cleanup,
+  but not camera metadata, layout state, or provider APIs.
+- Failure of one source may fall back to the next eligible source without
+  changing camera identity.
+- Adding a connection type must not require modifying existing modules beyond
+  registration in the compile-time loader map.
+- Video bytes should flow directly to the browser when security and provider
+  behavior permit. Python brokers authorization and source resolution but does
+  not proxy high-bitrate media without a concrete need.
+
+### 8.8 Retained media sessions and audio intent
+
+Live connections are owned by a document-scoped media-session manager, not by
+a card, module, layout renderer, preview, or editor element. The manager is a
+single typed runtime service shared by every WatchZone card instance in the
+same Home Assistant browser document.
+
+Mandatory behavior:
+
+- Re-rendering, moving, or temporarily disconnecting a live module does not
+  recreate an unchanged live connection.
+- Layout and WatchZone view changes transfer presentation attachment while
+  retaining the underlying session.
+- Pre-editor and editor previews acquire leases on existing sessions rather
+  than creating duplicate connections for the same source.
+- Navigation elsewhere in Home Assistant retains eligible sessions while the
+  same browser document remains alive, subject to explicit connection and
+  resource budgets.
+- Returning to a dashboard reattaches retained sessions without renegotiation
+  when the connection remains healthy.
+- Full page reload, browser process termination, network loss, or operating
+  system suspension may require reconnection; these are not falsely presented
+  as retained sessions.
+- Every connection adapter implements the common session, attachment,
+  detach/park, health, and close contract required by the manager.
+- Retention is bounded. Eviction is deterministic, closes resources fully, and
+  prioritizes visible, audible, recently used, and explicitly pinned sessions.
+
+User audio intent is separate from temporary playback state:
+
+- A user's explicit muted or unmuted preference is stored per camera and
+  shared across WatchZone card instances for that Home Assistant user and
+  browser profile.
+- Automatic policies may temporarily force a session silent, but they never
+  overwrite the user's preference.
+- No automatic behavior may unmute a camera the user explicitly muted.
+- When a temporary forced mute ends, the manager restores the user's desired
+  state when browser autoplay rules permit.
+- Browser autoplay rejection is represented separately from user mute intent.
+- Audio-focus rules prevent accidental simultaneous playback without changing
+  saved preferences.
+
+The detailed normative lifecycle, lease, retention, eviction, and mute-state
+contract is defined in [docs/live-session-lifecycle.md](docs/live-session-lifecycle.md).
+
 ## 9. Python-owned layout system
 
 ### 9.1 Authority
@@ -409,7 +580,12 @@ but the stored model and boundaries must not prevent them.
 
 ### 10.1 Home Assistant lifecycle
 
-- Use config entries and UI configuration for provider/integration setup.
+- WatchZone has one primary config entry representing the application.
+- Provider connections are configured as typed config subentries beneath the
+  WatchZone entry. The user can add, reconfigure, and remove provider instances
+  through Home Assistant's UI.
+- Multiple provider types and multiple instances of the same provider are
+  supported.
 - Use a typed `ConfigEntry[WatchZoneRuntime]` and `entry.runtime_data` for
   per-entry runtime objects.
 - Domain-global registrations are created once and cleaned up correctly.
@@ -459,8 +635,50 @@ protocols.
 - Provider capabilities are explicit so unsupported operations fail cleanly.
 - Provider clients and sessions are reused and closed during unload.
 
-The first provider may be Frigate, but core module and layout contracts must
-not encode Frigate as the only possible source.
+The first provider may be Frigate, but core module, camera, layout, and live
+connection contracts must not encode Frigate as the only possible source.
+
+Provider instances are isolated. Failure, reauthentication, or reload of one
+provider must not interrupt healthy providers. A WatchZone installation may,
+for example, contain two Frigate instances and one MotionEye instance.
+
+### 10.5 Camera catalog and capabilities
+
+The backend exposes one normalized camera catalog across every configured
+provider. Each camera has:
+
+- A stable opaque WatchZone camera ID.
+- Provider instance ID and provider-native camera ID.
+- User-visible metadata.
+- Provider capabilities such as events, recordings, snapshots, PTZ, or audio.
+- Zero or more normalized live source descriptors.
+- Health and availability information that does not replace its stable ID.
+
+Names are not identifiers. Camera IDs remain stable across display-name
+changes and cannot collide between provider instances.
+
+Frontend modules consume WatchZone camera models and capability flags. A
+generic module must not branch on provider names. Provider-specific modules
+are allowed only for genuinely provider-specific behavior and must declare the
+required provider capability explicitly.
+
+The camera catalog supports mixed-provider layouts. A live module may show a
+MotionEye camera while an event-list module displays Frigate events, and a
+camera selector may list cameras from all configured providers.
+
+### 10.6 Aggregation rules
+
+- Cross-provider queries fan out only to providers that advertise the required
+  capability.
+- Results use WatchZone-owned models and deterministic ordering.
+- Pagination remains bounded; cross-provider cursors are opaque to the
+  frontend.
+- Provider-specific caches, rate limits, and retries remain owned by that
+  provider instance.
+- Shared aggregation does not create a second unbounded copy of every
+  provider dataset.
+- Partial failure is represented explicitly so available results can still be
+  used without pretending the failed provider succeeded.
 
 ## 11. Frontend/backend API
 
@@ -498,6 +716,8 @@ requires otherwise.
 - Layout create, update, and delete operations require administrator access by
   default.
 - Provider credentials and secrets never cross into frontend payloads.
+- Live source descriptors contain only the minimum authorized information
+  needed by the selected connection adapter.
 - Errors are translated at the appropriate user-facing boundary and do not
   expose stack traces or secret-bearing upstream responses.
 - Large collections use cursor pagination or bounded windows.
@@ -533,6 +753,7 @@ must be bounded and must stop when a component disconnects.
   increase requires measured justification in the change that increases it.
 - The editor and unused modules contribute zero transferred bytes during
   normal card viewing.
+- Unused live connection adapters contribute zero transferred bytes.
 - Source maps are not included in the default release artifact unless the
   release process explicitly calls for them.
 - CI records asset sizes and fails on budget regressions.
@@ -549,11 +770,14 @@ measurements; they must not drift silently.
   measurable interaction problem.
 - Resize and intersection observation is scoped and disconnected correctly.
 - Hidden or removed modules release streams, object URLs, subscriptions,
-  timers, workers, and observers.
+  timers, workers, and observers when their retained session lease and manager
+  retention policy no longer require them.
 - Media elements are preserved across ordinary state changes and recreated
   only when their media identity or playback contract changes.
 - High-frequency events are sampled, coalesced, or scheduled once per frame.
 - Layout measurement avoids forced read/write/read cycles.
+- Retained sessions have explicit count, bandwidth, decoder, and memory
+  budgets; retention must not become an unbounded background resource leak.
 
 ### 13.3 Network and backend efficiency
 
@@ -575,8 +799,9 @@ are mandatory from the first implementation.
 There are three different forms of configuration and they must remain
 separate:
 
-1. **Integration/provider configuration:** Home Assistant config entries and
-   flows; credentials and connection settings belong here.
+1. **Integration/provider configuration:** A primary Home Assistant config
+   entry and provider subentry flows; credentials and connection settings
+   belong here.
 2. **Saved layouts:** Versioned Home Assistant `Store` data owned by Python.
 3. **Card reference:** Minimal Lovelace config used to select a saved layout or
    card instance; no layout tree belongs here.
@@ -612,6 +837,11 @@ Required layers as their corresponding features appear:
   isolation.
 - Lazy-loading tests proving unused module and editor chunks are absent from
   initial loading.
+- Connection-adapter contract tests covering selection, fallback, cleanup, and
+  proof that unused adapters are absent from initial loading.
+- Media-session lifecycle tests covering lease transfer, card disconnection,
+  view/editor transitions, Home Assistant route changes, eviction, reconnect,
+  mute persistence, forced mute, audio focus, and autoplay rejection.
 - Backend tests using Home Assistant fixtures for setup, unload, permissions,
   storage, migrations, WebSocket commands, and subscriptions.
 - Contract fixtures exercised by both Python serialization tests and
@@ -660,6 +890,8 @@ An architecture decision is required before changing any of the following:
 - Module isolation rules.
 - Mandatory lazy-loading behavior.
 - Release-as-one-integration strategy.
+- Separation of providers from live connection adapters.
+- Document-scoped retained media-session ownership and user audio-intent rules.
 - Storage format ownership.
 - Authentication or authorization model.
 - Performance budgets.
@@ -671,16 +903,22 @@ migration impact, and decision. Convenience alone is not sufficient.
 
 The architecture is established now, but implementation remains incremental:
 
-1. Register an empty `watchzone-card` shell with minimal Lovelace lifecycle
+1. Create the minimal Python integration, config flow, typed runtime, clean
+   unload path, and packaged frontend asset registration.
+2. Register an empty `watchzone-card` shell with minimal Lovelace lifecycle
    handling and an empty theme-compatible container.
-2. Establish the production asset build, hashed chunk output, asset manifest,
-   Python static serving, and one-integration packaging path.
-3. Add the typed runtime and layout API with a minimal stored empty layout.
-4. Add the lazy module loader and prove with a trivial first module that it is
+3. Establish hashed chunk output, the asset manifest, Python static serving,
+   HACS packaging, and release validation as one integration artifact.
+4. Add the layout API and a minimal stored empty layout.
+5. Add the lazy module loader and prove with a trivial first module that it is
    excluded from the eager entry.
-5. Add the lazy editor only when layout creation work begins.
-6. Add providers and feature modules vertically, one user-visible capability
-   at a time.
+6. Add the first provider package, normalized camera catalog, and provider
+   subentry flow.
+7. Add the live module plus one lazy connection adapter, then add other
+   connection types independently.
+8. Add the lazy editor only when layout creation work begins.
+9. Add further providers and feature modules vertically, one user-visible
+   capability at a time.
 
 Each step must leave the repository releasable, tested, and free of parallel
 temporary architectures.
@@ -695,7 +933,9 @@ A change is complete only when:
 - Unrelated HA state does not trigger avoidable expensive work.
 - Inputs are validated at trust boundaries.
 - Errors are contained and actionable.
-- Resources are released on disconnect or unload.
+- Resources are released when lifecycle ownership and retained-session policy
+  end, or when the integration unloads.
+- Live sessions and mute state follow the retained-session lifecycle contract.
 - Tests cover the changed contract and important failure paths.
 - Generated output and documentation are updated when applicable.
 - Replaced code and dead paths are removed.

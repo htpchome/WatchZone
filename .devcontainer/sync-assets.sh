@@ -13,13 +13,7 @@ if [ ! -d "$DIST_DIR" ]; then
   exit 0
 fi
 
-if [ -f "$WORKSPACE_DIR/scripts/list-release-assets.mjs" ]; then
-  mapfile -t ASSET_FILES < <(
-    node "$WORKSPACE_DIR/scripts/list-release-assets.mjs" "$DIST_DIR"
-  )
-else
-  mapfile -t ASSET_FILES < <(find "$DIST_DIR" -maxdepth 1 -type f -print | sort)
-fi
+mapfile -t ASSET_FILES < <(find "$DIST_DIR" -type f -print | sort)
 
 if [ "${#ASSET_FILES[@]}" -eq 0 ]; then
   echo "No built assets found in $DIST_DIR."
@@ -27,7 +21,7 @@ if [ "${#ASSET_FILES[@]}" -eq 0 ]; then
 fi
 
 mkdir -p "$TARGET_DIR"
-cp "${ASSET_FILES[@]}" "$TARGET_DIR/"
+rsync -a --delete "$DIST_DIR/" "$TARGET_DIR/"
 
 echo "✓ ${#ASSET_FILES[@]} $PROJECT_DISPLAY_NAME asset(s) synced to $TARGET_DIR"
 echo "  Refresh Home Assistant to load the updated build"
