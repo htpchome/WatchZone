@@ -2,6 +2,8 @@ export interface HomeAssistantEntity {
   readonly entity_id: string;
   readonly state: string;
   readonly attributes: Readonly<Record<string, unknown>> & {
+    readonly access_token?: string;
+    readonly entity_picture?: string;
     readonly friendly_name?: string;
   };
 }
@@ -58,4 +60,28 @@ export function createHomeAssistantApi(hass: HomeAssistant): HomeAssistantApi {
     subscribeMessage: (callback, message) =>
       hass.connection.subscribeMessage(callback, message),
   };
+}
+
+export function cameraImageUrl(
+  hass: HomeAssistant | undefined,
+  entityId: string | undefined,
+): string | undefined {
+  if (!hass || !entityId) {
+    return undefined;
+  }
+  const entity = hass.states[entityId];
+  if (!entity) {
+    return undefined;
+  }
+  const entityPicture = entity.attributes.entity_picture;
+  if (typeof entityPicture === "string" && entityPicture.length > 0) {
+    return hass.hassUrl(entityPicture);
+  }
+  const accessToken = entity.attributes.access_token;
+  if (typeof accessToken !== "string" || accessToken.length === 0) {
+    return undefined;
+  }
+  return hass.hassUrl(
+    `/api/camera_proxy/${encodeURIComponent(entityId)}?token=${encodeURIComponent(accessToken)}`,
+  );
 }

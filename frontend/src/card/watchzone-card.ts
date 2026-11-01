@@ -15,6 +15,7 @@ import {
   EDITOR_TAG,
 } from "../core/constants";
 import {
+  cameraImageUrl,
   createHomeAssistantApi,
   isHomeAssistant,
   type HomeAssistant,
@@ -141,6 +142,7 @@ export class WatchZoneCard extends LitElement {
     const cameraAvailable = Boolean(
       cameraEntity && this._hass?.states[cameraEntity],
     );
+    const posterUrl = cameraImageUrl(this._hass, cameraEntity);
     return html`
       <ha-card>
         <div class="shell">
@@ -163,6 +165,7 @@ export class WatchZoneCard extends LitElement {
                       .api=${this._haApi}
                       .available=${cameraAvailable}
                       .entityId=${cameraEntity}
+                      .posterUrl=${posterUrl}
                     ></watchzone-camera>`
                   : html`<div class="live-placeholder" role="status">
                       Preparing live view…

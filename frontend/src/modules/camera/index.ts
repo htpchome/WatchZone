@@ -38,13 +38,18 @@ export class WatchZoneCamera extends LitElement {
   private _activeVideo?: HTMLVideoElement;
   private _controlError?: string;
   private _entityId?: string;
+  private _frameCaptureGeneration = 0;
+  private _frameCaptureTimer?: number;
   private _fullscreenActive = false;
   private _hlsLease?: MediaSessionLease;
   private _hlsSnapshot: MediaSessionSnapshot = { state: "new" };
   private _hlsUnsubscribe?: () => void;
   private _initialTransport?: MediaTransport;
+  private _lastFrameUrl?: string;
   private _muted = true;
   private _pictureInPictureActive = false;
+  private _posterFailed = false;
+  private _posterUrl?: string;
   private _selected?: "hls" | "webrtc";
   private _webRtcDecoded = false;
   private _webRtcLease?: MediaSessionLease;
@@ -76,10 +81,20 @@ export class WatchZoneCamera extends LitElement {
     }
     this._initialTransport = undefined;
     this._controlError = undefined;
+    this._replaceLastFrame();
     this._releaseLeases();
     this._entityId = value;
     this._muted = value ? getMediaSessionManager().getCameraMuted(value) : true;
     this._syncLeases();
+    this.requestUpdate();
+  }
+
+  public set posterUrl(value: string | undefined) {
+    if (this._posterUrl === value) {
+      return;
+    }
+    this._posterUrl = value;
+    this._posterFailed = false;
     this.requestUpdate();
   }
 
@@ -97,6 +112,7 @@ export class WatchZoneCamera extends LitElement {
       this._syncControlState,
     );
     this._setActiveVideo(undefined);
+    this._replaceLastFrame();
     this._releaseLeases();
     super.disconnectedCallback();
   }
@@ -118,6 +134,38 @@ export class WatchZoneCamera extends LitElement {
         : undefined;
     return html`
       <div class="viewport">
+        <div class="generic-fallback" aria-hidden="true">
+          <svg viewBox="0 0 64 64">
+            <path
+              d="M11 20.5h30a5 5 0 0 1 5 5v18a5 5 0 0 1-5 5H11a5 5 0 0 1-5-5v-18a5 5 0 0 1 5-5Z"
+            />
+            <path d="m46 29 10-6v23l-10-6" />
+            <circle cx="26" cy="34.5" r="8" />
+          </svg>
+        </div>
+        ${
+          this._posterUrl && !this._posterFailed
+            ? html`<img
+                class="fallback-image poster"
+                src=${this._posterUrl}
+                alt=""
+                aria-hidden="true"
+                decoding="async"
+                fetchpriority="high"
+                @error=${this._handlePosterError}
+              />`
+            : nothing
+        }
+        ${
+          this._lastFrameUrl
+            ? html`<img
+                class="fallback-image retained-frame"
+                src=${this._lastFrameUrl}
+                alt=""
+                aria-hidden="true"
+              />`
+            : nothing
+        }
         <div class="hls-host" ?hidden=${this._selected !== "hls"}></div>
         <video
           class="webrtc"
@@ -156,17 +204,21 @@ export class WatchZoneCamera extends LitElement {
         ${
           error
             ? html`<div class="status error" role="alert">
-                <span>${error}</span>
-                ${
-                  this._available
-                    ? html`<button type="button" @click=${this._retry}>
-                        Retry
-                      </button>`
-                    : nothing
-                }
+                <div class="status-content">
+                  <span>${error}</span>
+                  ${
+                    this._available
+                      ? html`<button type="button" @click=${this._retry}>
+                          Retry
+                        </button>`
+                      : nothing
+                  }
+                </div>
               </div>`
             : !this._selected
-              ? html`<div class="status" role="status">Connecting…</div>`
+              ? html`<div class="status" role="status">
+                  <div class="status-content">Connecting…</div>
+                </div>`
               : nothing
         }
       </div>
@@ -297,8 +349,15 @@ export class WatchZoneCamera extends LitElement {
   }
 
   private readonly _retry = (): void => {
+    this._posterFailed = false;
     this._webRtcLease?.retry();
     this._hlsLease?.retry();
+    this.requestUpdate();
+  };
+
+  private readonly _handlePosterError = (): void => {
+    this._posterFailed = true;
+    this.requestUpdate();
   };
 
   private readonly _handleWebRtcLoadedData = (event: Event): void => {
@@ -331,7 +390,90 @@ export class WatchZoneCamera extends LitElement {
     }
     this._activeVideo = video;
     suppressNativePictureInPicture(video);
+    this._startFrameCapture(video);
     this._syncControlState();
+  }
+
+  private _startFrameCapture(video: HTMLVideoElement | undefined): void {
+    this._frameCaptureGeneration += 1;
+    if (this._frameCaptureTimer !== undefined) {
+      window.clearInterval(this._frameCaptureTimer);
+      this._frameCaptureTimer = undefined;
+    }
+    if (!video) {
+      return;
+    }
+    const generation = this._frameCaptureGeneration;
+    window.requestAnimationFrame(() => this._captureFrame(video, generation));
+    this._frameCaptureTimer = window.setInterval(
+      () => this._captureFrame(video, generation),
+      15_000,
+    );
+  }
+
+  private _captureFrame(video: HTMLVideoElement, generation: number): void {
+    if (
+      generation !== this._frameCaptureGeneration ||
+      video !== this._activeVideo ||
+      video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA ||
+      video.videoWidth === 0 ||
+      video.videoHeight === 0
+    ) {
+      return;
+    }
+    const width = Math.min(video.videoWidth, 1280);
+    const height = Math.max(
+      1,
+      Math.round((width * video.videoHeight) / video.videoWidth),
+    );
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    try {
+      canvas.getContext("2d")?.drawImage(video, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            this._disableFrameCapture(video, generation);
+            return;
+          }
+          if (
+            generation !== this._frameCaptureGeneration ||
+            video !== this._activeVideo
+          ) {
+            return;
+          }
+          this._replaceLastFrame(URL.createObjectURL(blob));
+          this.requestUpdate();
+        },
+        "image/jpeg",
+        0.82,
+      );
+    } catch {
+      this._disableFrameCapture(video, generation);
+      return;
+    }
+  }
+
+  private _disableFrameCapture(
+    video: HTMLVideoElement,
+    generation: number,
+  ): void {
+    if (
+      generation === this._frameCaptureGeneration &&
+      video === this._activeVideo &&
+      this._frameCaptureTimer !== undefined
+    ) {
+      window.clearInterval(this._frameCaptureTimer);
+      this._frameCaptureTimer = undefined;
+    }
+  }
+
+  private _replaceLastFrame(url?: string): void {
+    if (this._lastFrameUrl) {
+      URL.revokeObjectURL(this._lastFrameUrl);
+    }
+    this._lastFrameUrl = url;
   }
 
   private readonly _syncControlState = (): void => {
@@ -485,6 +627,41 @@ export class WatchZoneCamera extends LitElement {
       border-radius: 0;
     }
 
+    .generic-fallback,
+    .fallback-image {
+      position: absolute;
+      inset: 0;
+      inline-size: 100%;
+      block-size: 100%;
+    }
+
+    .generic-fallback {
+      display: grid;
+      place-items: center;
+      color: var(--wzc-placeholder-color, var(--secondary-text-color));
+      background: var(
+        --wzc-placeholder-background,
+        var(--secondary-background-color)
+      );
+    }
+
+    .generic-fallback svg {
+      inline-size: clamp(3rem, 14cqi, 6rem);
+      block-size: auto;
+      fill: none;
+      stroke: currentColor;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 2.25;
+      opacity: 0.55;
+    }
+
+    .fallback-image {
+      display: block;
+      object-fit: var(--wzc-live-fit, contain);
+      background: var(--wzc-live-background, var(--secondary-background-color));
+    }
+
     .hls-host,
     video {
       position: absolute;
@@ -531,22 +708,43 @@ export class WatchZoneCamera extends LitElement {
 
     .status {
       position: absolute;
+      z-index: 3;
       inset: 0;
       display: grid;
       place-content: center;
       justify-items: center;
-      gap: 0.75rem;
       padding: 1rem;
       text-align: center;
+      pointer-events: none;
+    }
+
+    .status-content {
+      display: grid;
+      justify-items: center;
+      gap: 0.75rem;
+      max-inline-size: min(28rem, 90%);
+      padding: 0.5rem 0.75rem;
+      color: var(--wzc-text-color, var(--primary-text-color));
       background: color-mix(
         in srgb,
-        var(--wzc-live-background, var(--secondary-background-color)) 88%,
+        var(
+            --wzc-status-background,
+            var(--card-background-color, var(--primary-background-color))
+          )
+          82%,
         transparent
       );
+      border: 1px solid var(--wzc-status-border-color, var(--divider-color));
+      border-radius: var(--ha-border-radius-lg, 8px);
+      backdrop-filter: blur(2px);
     }
 
     .error {
       color: var(--ha-color-text-error, var(--error-color));
+    }
+
+    .error .status-content {
+      color: inherit;
     }
 
     button {
@@ -559,6 +757,7 @@ export class WatchZoneCamera extends LitElement {
       border-radius: var(--ha-border-radius-button, 999px);
       font: inherit;
       cursor: pointer;
+      pointer-events: auto;
     }
   `;
 }

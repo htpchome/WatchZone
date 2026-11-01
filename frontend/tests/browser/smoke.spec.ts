@@ -201,6 +201,12 @@ test("camera selection does not recursively republish dirty state", async ({
 test("retains one live connection while the card presentation is replaced", async ({
   page,
 }) => {
+  await page.route("**/api/camera_proxy/**", (route) =>
+    route.fulfill({
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="9"/>',
+      contentType: "image/svg+xml",
+    }),
+  );
   await page.goto("/");
   await waitForWatchZoneDefinition(page);
 
@@ -269,7 +275,10 @@ test("retains one live connection while the card presentation is replaced", asyn
         "camera.front": {
           entity_id: "camera.front",
           state: "streaming",
-          attributes: { friendly_name: "Front" },
+          attributes: {
+            access_token: "poster-token",
+            friendly_name: "Front",
+          },
         },
       },
       connection,
@@ -303,6 +312,15 @@ test("retains one live connection while the card presentation is replaced", asyn
       }),
     )
     .toBe(1);
+
+  const poster = page.locator("watchzone-camera img.poster");
+  await expect(poster).toHaveAttribute(
+    "src",
+    "/api/camera_proxy/camera.front?token=poster-token",
+  );
+  await expect(
+    page.locator("watchzone-camera .generic-fallback"),
+  ).toBeVisible();
 
   await page.evaluate(() => {
     const testWindow = window as unknown as Window & {

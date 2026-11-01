@@ -44,13 +44,13 @@ for required in \
   brand/icon.png \
   brand/icon@2x.png \
   frontend/watchzone.js; do
-  if ! unzip -Z1 "$ARCHIVE_PATH" | grep -Fxq "$required"; then
+  if ! unzip -Z1 "$ARCHIVE_PATH" | grep -Fx "$required" >/dev/null; then
     echo "Release archive is missing $required" >&2
     exit 1
   fi
 done
 
-if unzip -Z1 "$ARCHIVE_PATH" | grep -Eq '^(dist|package|custom_components|watchzone)/'; then
+if unzip -Z1 "$ARCHIVE_PATH" | grep -E '^(dist|package|custom_components|watchzone)/' >/dev/null; then
   echo "Release archive contains a forbidden wrapping directory" >&2
   exit 1
 fi
