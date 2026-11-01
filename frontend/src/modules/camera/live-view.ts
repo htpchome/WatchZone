@@ -650,6 +650,24 @@ export class WatchZoneCameraLiveView extends LitElement {
         "warning",
       );
       this._syncEffectiveMute(false);
+      // Autoplay denial applies to audible playback, not to the live stream.
+      // The selected host pipeline resumes the same retained element without
+      // reconnecting. A host pipeline may retry audible output only after its
+      // native element is playing; ordinary clients remain on muted recovery.
+      if (this._activeVideo === video && video.muted) {
+        const audible =
+          await this._connectionResolver.recoverAudibleAutoplay(video);
+        if (
+          audible &&
+          this._activeVideo === video &&
+          !this._desiredMuted &&
+          !documentIsHidden()
+        ) {
+          this._autoplayBlocked = false;
+          this._dismissToast();
+          this._syncEffectiveMute(false);
+        }
+      }
     }
   }
 

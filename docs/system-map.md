@@ -131,8 +131,9 @@ A focused system contract records:
   remain lazy and report timing to the shared startup diagnostics.
 - **Key invariant:** Catalyst never starts WebRTC or HLS.js, its adapter is not
   imported by ordinary HLS, and its temporary runtime mute must not set
-  `defaultMuted`. A later WebRTC takeover does not change the initial-source
-  indicator.
+  `defaultMuted`. Audible autoplay denial always resumes the retained element
+  muted; only the lazy Catalyst autoplay policy retries unmuting after playback
+  starts. A later WebRTC takeover does not change the initial-source indicator.
 - **Verification:** `frontend/tests/home-assistant-connection.test.ts`,
   `frontend/tests/home-assistant-hls-connection.test.ts`,
   `frontend/tests/home-assistant-live-resolver.test.ts`, and Catalyst/browser

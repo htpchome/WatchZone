@@ -172,6 +172,11 @@ without changing the desired audio state. The distinction between runtime
 background safety, transport handoff, and autoplay recovery alter runtime mute
 only. Only an explicit user mute action changes `defaultMuted`; automatic
 unmute must not leave Catalyst's retained player classified as default-muted.
+If the initial audible request is rejected, the presentation immediately plays
+the same retained element muted. Catalyst then performs one isolated
+second-stage unmute attempt after native playback is confirmed; failure of that
+attempt leaves video playing muted and preserves the user's desired unmuted
+state for a later gesture. Ordinary HLS never imports or executes this retry.
 
 The presentation retains explicit user preference across HLS/WebRTC handoff
 and presentation replacement. An autoplay rejection temporarily forces muted

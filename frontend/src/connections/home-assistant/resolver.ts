@@ -1,5 +1,9 @@
 import type { ClientEnvironment } from "../../core/client-environment";
 import type { HomeAssistantApi } from "../../core/home-assistant";
+import {
+  playMediaElement,
+  setMediaElementRuntimeMuted,
+} from "../../core/media-playback";
 import type {
   MediaConnectionOptions,
   MediaSessionLease,
@@ -31,5 +35,23 @@ export class HomeAssistantLiveConnectionResolver {
     return this._environment.host === "catalyst"
       ? this._sessions.acquireHomeAssistantCatalystHls(api, entityId, options)
       : this._sessions.acquireHomeAssistantHls(api, entityId, options);
+  }
+
+  public async recoverAudibleAutoplay(
+    video: HTMLVideoElement,
+  ): Promise<boolean> {
+    if (this._environment.host === "catalyst") {
+      const { recoverCatalystAudibleAutoplay } =
+        await import("../../platform/catalyst/autoplay");
+      return recoverCatalystAudibleAutoplay(video);
+    }
+
+    setMediaElementRuntimeMuted(video, true);
+    try {
+      await playMediaElement(video);
+    } catch {
+      // The connection/session layer owns transport failure reporting.
+    }
+    return false;
   }
 }

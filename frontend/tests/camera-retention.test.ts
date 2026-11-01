@@ -238,12 +238,17 @@ describe("camera presentation retention", () => {
   });
 
   it("keeps an explicit unmute preference when autoplay is blocked", async () => {
+    const playbackMuteStates: boolean[] = [];
     const play = vi
       .spyOn(HTMLMediaElement.prototype, "play")
-      .mockResolvedValueOnce()
-      .mockRejectedValue(
-        new DOMException("Playback blocked", "NotAllowedError"),
-      );
+      .mockImplementation(function (this: HTMLMediaElement) {
+        playbackMuteStates.push(this.muted);
+        return this.muted
+          ? Promise.resolve()
+          : Promise.reject(
+              new DOMException("Playback blocked", "NotAllowedError"),
+            );
+      });
     const hlsVideo = document.createElement("video");
     window.__watchZoneMediaSessionManager = new MediaSessionManager(
       vi.fn<ConnectionFactory>(async () => ({ close: vi.fn() })),
@@ -262,7 +267,8 @@ describe("camera presentation retention", () => {
     toggleMute(view);
 
     await vi.waitFor(() => expect(hlsVideo.muted).toBe(true));
-    expect(play).toHaveBeenCalledTimes(2);
+    await vi.waitFor(() => expect(play).toHaveBeenCalledTimes(3));
+    expect(playbackMuteStates).toEqual([true, false, true]);
     expect(
       window.__watchZoneMediaSessionManager?.getCameraMutePreference(
         "camera.front",
@@ -274,6 +280,41 @@ describe("camera presentation retention", () => {
           ?.textContent,
       ).toContain("The browser blocked unmuted playback."),
     );
+  });
+
+  it("falls back to playing muted when startup auto-unmute is blocked", async () => {
+    const playbackMuteStates: boolean[] = [];
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockImplementation(function (
+      this: HTMLMediaElement,
+    ) {
+      playbackMuteStates.push(this.muted);
+      return this.muted
+        ? Promise.resolve()
+        : Promise.reject(
+            new DOMException("Playback blocked", "NotAllowedError"),
+          );
+    });
+    const hlsVideo = document.createElement("video");
+    window.__watchZoneMediaSessionManager = new MediaSessionManager(
+      vi.fn<ConnectionFactory>(async () => ({ close: vi.fn() })),
+      vi.fn<ConnectionFactory>(async () => ({
+        video: hlsVideo,
+        transport: "hls_mse",
+        close: vi.fn(),
+      })),
+    );
+    const view = createLiveView(createApi(), true);
+    document.body.append(view);
+
+    await vi.waitFor(() => expect(hlsVideo.muted).toBe(true));
+    await vi.waitFor(() =>
+      expect(playbackMuteStates.slice(-2)).toEqual([false, true]),
+    );
+    expect(
+      window.__watchZoneMediaSessionManager.getCameraMutePreference(
+        "camera.front",
+      ),
+    ).toBeUndefined();
   });
 
   it("does not reinterpret a transient play interruption as autoplay denial", async () => {

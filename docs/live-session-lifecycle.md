@@ -301,6 +301,12 @@ restored when the final forced reason clears and browser policy permits.
   focus adds a forced reason; it does not overwrite preference.
 - Clearing one forced reason does not unmute while another remains.
 - Browser autoplay rejection does not change preference to `muted`.
+- An audible `NotAllowedError` immediately retries playback temporarily muted
+  on the same retained element; autoplay policy must never leave live video
+  paused merely because audio was denied.
+- A host-specific pipeline may retry the desired audible state after muted
+  playback is confirmed, but that policy remains isolated to that host and
+  falls back to continuing muted playback without reconnecting.
 - UI state distinguishes user-muted, automatically muted, and autoplay-blocked
   conditions.
 - A reconnect applies mute before audible media can play.
