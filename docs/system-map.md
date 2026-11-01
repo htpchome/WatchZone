@@ -1,0 +1,161 @@
+# Implemented System Map
+
+## 1. Purpose
+
+This is the durable entry point for understanding WatchZone between sessions.
+It maps each implemented system to its owner, normative documentation, runtime
+flow, and verification. Read the relevant row and linked contract before
+tracing source code.
+
+This map describes the current implementation only. `architecture.md` defines
+project-wide boundaries and `ROADMAP.md` describes future pressure; neither is
+a substitute for the implemented-system contracts below.
+
+## 2. Maintenance rule
+
+Creating or changing a system requires updating its focused contract and this
+map in the same change when ownership, lifecycle, state flow, invariants,
+fallbacks, diagnostics, or integration boundaries change. Superseded behavior
+is removed rather than retained as historical commentary.
+
+A focused system contract records:
+
+- Purpose and stable ownership boundary.
+- Entry points and important collaborators.
+- State and event flow.
+- Invariants and decisions that callers may rely on.
+- Failure, fallback, cleanup, and retention behavior.
+- Supported extension points and prohibited coupling.
+- Diagnostics and the tests that verify the contract.
+
+## 3. Current systems
+
+### 3.1 Client environment
+
+- **Owner:** `frontend/src/core/client-environment.ts`
+- **Contract:** `docs/platform-compatibility.md`, sections 2 and 5
+- **Consumers:** card prewarming, camera startup-audio policy, transport
+  eligibility, and camera-control device matrices
+- **Flow:** one document-scoped `ClientEnvironment` class normalizes browser
+  evidence into host, operating system, physical client class, input evidence,
+  and derived WebRTC eligibility. Responsive sizing remains CSS-owned.
+- **Key invariant:** no other frontend source parses UA, platform, or physical
+  device evidence. ESLint enforces this boundary.
+- **Verification:** `frontend/tests/client-environment.test.ts` and the Catalyst
+  case in `frontend/tests/browser/smoke.spec.ts`
+
+### 3.2 Card configuration, YAML compaction, and editor lifecycle
+
+- **Owners:** `frontend/src/core/config.ts`,
+  `frontend/src/core/yaml-config.ts`, `frontend/src/editor/dirty-state.ts`, and
+  `frontend/src/editor/watchzone-card-editor.ts`
+- **Contract:** `docs/config-editor-lifecycle.md`
+- **Flow:** saved configuration is normalized into a complete runtime model;
+  editor controls update a local draft and soft preview; Save commits the full
+  draft; YAML output removes values equal to defaults.
+- **Key invariant:** input does not emit repeated `config-changed` events or
+  reconstruct the preview tree. Boolean values must round-trip through their
+  defaults without losing dirty state.
+- **Verification:** `frontend/tests/config.test.ts`,
+  `frontend/tests/yaml-config.test.ts`,
+  `frontend/tests/watchzone-card-editor.test.ts`, and editor cases in
+  `frontend/tests/browser/smoke.spec.ts`
+
+### 3.3 Card shell, appearance, and Home Assistant theme bridge
+
+- **Owners:** `frontend/src/card/watchzone-card.ts`,
+  `frontend/src/card/watchzone-card.styles.ts`,
+  `frontend/src/styles/theme-tokens.ts`, and
+  `frontend/src/styles/home-assistant-card-bridge.ts`
+- **Contract:** `architecture.md`, sections 8.5 and 8.6;
+  `docs/config-editor-lifecycle.md`, section 5
+- **Flow:** normalized card configuration drives WatchZone semantic tokens and
+  the narrow bridge that synchronizes outer appearance with Home Assistant's
+  card host and shadow boundary.
+- **Key invariant:** feature CSS consumes `--wzc-*` semantics; only
+  `theme-tokens.ts` directly references Home Assistant theme variables.
+- **Verification:** `frontend/tests/watchzone-card.test.ts`, shell and token
+  cases in `frontend/tests/browser/smoke.spec.ts`, and
+  `scripts/validate-styles.mjs`
+
+### 3.4 Camera module and live presentation
+
+- **Owners:** `frontend/src/modules/camera/index.ts` and
+  `frontend/src/modules/camera/live-view.ts`; colocated camera controllers and
+  styles own controls, visibility, Picture-in-Picture, and presentation
+- **Contract:** `docs/live-session-lifecycle.md` and
+  `docs/platform-compatibility.md`
+- **Flow:** the lazy camera module receives normalized configuration and a Home
+  Assistant API adapter, acquires pooled media leases, presents the selected
+  media element, and emits user control intent. It does not own the underlying
+  connection lifetime.
+- **Key invariant:** camera presentation can be replaced without creating a
+  duplicate connection or overwriting explicit mute preference.
+- **Verification:** `frontend/tests/camera-fallback.test.ts`,
+  `frontend/tests/camera-retention.test.ts`,
+  `frontend/tests/controls-visibility-controller.test.ts`, and
+  `frontend/tests/picture-in-picture.test.ts`
+
+### 3.5 Media sessions, retention, and audio intent
+
+- **Owners:** `frontend/src/core/media-session-manager.ts` and
+  `frontend/src/core/media-playback.ts`
+- **Contract:** `docs/live-session-lifecycle.md`
+- **Flow:** the document-scoped manager pools sessions by resolved source and
+  grants leases to presentations. It retains bounded healthy sessions across
+  presentation and Home Assistant route changes and separately stores the
+  user's per-camera mute choice for the document lifetime.
+- **Key invariant:** Lit element disconnect is lease release, not automatic
+  session destruction; automatic playback state never replaces user intent.
+- **Verification:** `frontend/tests/media-session-manager.test.ts` and
+  `frontend/tests/camera-retention.test.ts`
+
+### 3.6 Home Assistant direct live connection
+
+- **Owners:** `frontend/src/connections/home-assistant/index.ts` and
+  `frontend/src/connections/home-assistant/hls.ts`
+- **Contract:** `docs/home-assistant-live-connection.md`
+- **Flow:** eligible clients hedge WebRTC and HLS startup and present the first
+  decoded candidate; Catalyst uses retained native HLS only. Concrete adapters
+  remain lazy and report timing to the shared startup diagnostics.
+- **Key invariant:** Catalyst never starts WebRTC or HLS.js. A later WebRTC
+  takeover does not change the initial-source indicator.
+- **Verification:** `frontend/tests/home-assistant-connection.test.ts`,
+  `frontend/tests/home-assistant-hls-connection.test.ts`, and Catalyst/browser
+  cases in `frontend/tests/browser/smoke.spec.ts`
+
+### 3.7 Frontend loading, version identity, and release packaging
+
+- **Owners:** `frontend/src/main.ts`, `frontend/vite.config.ts`,
+  `scripts/check-version.mjs`, `scripts/validate-build.mjs`, and
+  `scripts/package-release.sh`
+- **Contract:** `architecture.md`, sections 5 and 6; `AGENTS.md`, structure and
+  version rules
+- **Flow:** the eager entry registers the card and diagnostics banner; feature
+  chunks load lazily; Vite emits production assets beneath root `dist/`; release
+  packaging assembles the integration and HACS archive from generated output.
+- **Key invariant:** Python `VERSION` is canonical and every release-bearing
+  file agrees with it. Generated output is never a source dependency.
+- **Verification:** `corepack yarn check:version`, production build validation,
+  and `scripts/validate-build.mjs`
+
+### 3.8 Python integration bootstrap and frontend registration
+
+- **Owners:** `custom_components/watchzone/__init__.py`,
+  `custom_components/watchzone/runtime.py`, and
+  `custom_components/watchzone/config_flow.py`
+- **Contract:** `architecture.md`, sections 7 and 10
+- **Flow:** Home Assistant config flow creates the integration entry; setup
+  creates the typed runtime and registers the packaged frontend resource;
+  unload reverses owned registrations.
+- **Key invariant:** WatchZone ships and versions Python and frontend as one
+  integration artifact.
+- **Verification:** build/release validation currently covers packaging; focused
+  Python lifecycle tests must be added when backend behavior expands.
+
+## 4. Updating this map
+
+When a change crosses multiple rows, update every affected focused contract but
+keep one owner per responsibility. If two rows begin claiming the same state or
+decision, resolve the ownership conflict instead of documenting duplicate
+systems.

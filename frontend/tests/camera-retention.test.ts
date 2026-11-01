@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import {
@@ -58,11 +58,16 @@ function installHlsSession(): {
 }
 
 describe("camera presentation retention", () => {
+  beforeEach(() => {
+    vi.stubGlobal("RTCPeerConnection", class TestPeerConnection {});
+  });
+
   afterEach(() => {
     window.__watchZoneMediaSessionManager?.closeAll();
     delete window.__watchZoneMediaSessionManager;
     document.body.replaceChildren();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("reattaches the retained HLS element after an editor presentation exits", async () => {
@@ -267,11 +272,11 @@ describe("camera presentation retention", () => {
     );
   });
 
-  it("uses the independent phone startup default", async () => {
+  it("uses the desktop startup default even in a narrow card", async () => {
     vi.spyOn(window, "innerWidth", "get").mockReturnValue(390);
     vi.spyOn(window, "innerHeight", "get").mockReturnValue(844);
     const { api, hlsVideo } = installHlsSession();
-    const view = createLiveView(api, false, true);
+    const view = createLiveView(api, true, false);
     document.body.append(view);
 
     await vi.waitFor(() =>

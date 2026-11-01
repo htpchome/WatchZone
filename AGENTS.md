@@ -8,7 +8,8 @@ Before changing source code, read:
 
 1. `architecture.md`
 2. `ROADMAP.md` for known future capabilities and planning pressure
-3. Any contract in `docs/` that governs the affected feature
+3. `docs/system-map.md` to locate the owning source, contract, and tests
+4. Every contract identified there for the affected system
 
 For card configuration, editor previews, Home Assistant controls, theming, or
 responsive card layout, also read `docs/config-editor-lifecycle.md` in full.
@@ -46,6 +47,25 @@ For any frontend, media, interaction, layout, or styling change, also read
   actionable warnings or errors. Remove temporary tracing before handoff and
   route future diagnostics through the centralized logger when introduced.
 
+## System documentation
+
+- `docs/system-map.md` is the durable entry point for understanding implemented
+  systems across sessions. Keep its ownership, flow, contract, and test links
+  accurate.
+- A change that creates a system or changes its ownership, lifecycle, state
+  flow, invariants, fallback behavior, diagnostics, or integration boundary
+  must update its focused document and the system map in the same change.
+- Read the mapped system document before tracing implementation code. Verify it
+  against the current source while working; stale documentation is a defect and
+  must be corrected before handoff.
+- System documents explain why the system exists, who owns state, the runtime
+  flow, invariants, failure/cleanup behavior, extension points, diagnostics,
+  and verification. They do not duplicate line-by-line code, serve as progress
+  logs, or preserve superseded designs.
+- Prefer extending an existing focused document over creating another file.
+  Create a new system document only when a new stable ownership boundary is
+  actually implemented.
+
 ## Core boundaries
 
 - WatchZone is one mandatory Python integration with a packaged frontend.
@@ -61,6 +81,12 @@ For any frontend, media, interaction, layout, or styling change, also read
   Lit elements. Element disconnection releases a lease; it does not
   automatically close a retained connection.
 - Automatic audio policy never overwrites explicit user mute preference.
+- `ClientEnvironment` is the sole frontend owner of Home Assistant host,
+  operating-system, physical phone/tablet/desktop, and input-capability
+  classification. Migrate every consumer and delete the replaced classifier in
+  the same change; do not add aliases, parallel detectors, or feature-local UA
+  parsing. Responsive sizing belongs to CSS container/media queries and must
+  not create a second JavaScript device profile.
 - Card-editor typing updates Home Assistant `dirtyState` and a coalesced soft
   preview; it never emits `config-changed` on every keystroke.
 - The editor requests the dirty-state context once without subscription because

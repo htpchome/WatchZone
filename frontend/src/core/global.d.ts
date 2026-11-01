@@ -5,6 +5,24 @@ interface Window {
   watchZone?: Readonly<{
     activeCardVersion: string | null;
     build: string;
+    clientEnvironment: Readonly<{
+      catalyst: boolean;
+      companion: boolean;
+      deviceClass: "desktop" | "phone" | "tablet";
+      hasTouch: boolean;
+      host: "browser" | "catalyst" | "companion";
+      operatingSystem:
+        | "android"
+        | "chromeos"
+        | "ios"
+        | "ipados"
+        | "linux"
+        | "macos"
+        | "unknown"
+        | "windows";
+      primaryTouch: boolean;
+      webRtcSupported: boolean;
+    }>;
     getLiveStartupTimings(): Array<{
       readonly key: string;
       readonly phases: Readonly<

@@ -1,9 +1,9 @@
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 
 import {
-  DeviceProfileController,
-  type DeviceClass,
-} from "../../core/device-profile";
+  type ClientDeviceClass,
+  getClientEnvironment,
+} from "../../core/client-environment";
 import { renderIcon, type WatchZoneIcon } from "../../ui/icons";
 import { cameraControlsStyles } from "./controls-overlay.styles";
 
@@ -19,14 +19,14 @@ interface ControlDefinition {
   readonly placeholder?: boolean;
 }
 
-const ALL_DEVICE_CLASSES: readonly DeviceClass[] = [
+const ALL_DEVICE_CLASSES: readonly ClientDeviceClass[] = [
   "phone",
   "tablet",
   "desktop",
 ];
 
 export const CAMERA_CONTROL_DEVICE_MATRIX: Readonly<
-  Record<CameraControlAction, readonly DeviceClass[]>
+  Record<CameraControlAction, readonly ClientDeviceClass[]>
 > = {
   suspend: ALL_DEVICE_CLASSES,
   picture_in_picture: ALL_DEVICE_CLASSES,
@@ -76,14 +76,14 @@ export class WatchZoneCameraControls extends LitElement {
   public pictureInPictureSupported = false;
   public visible = false;
 
-  private readonly _deviceProfile = new DeviceProfileController(this);
+  private readonly _clientEnvironment = getClientEnvironment();
 
   protected render() {
     return html`
       <div class="control-group" role="toolbar" aria-label="Camera controls">
         ${CONTROLS.filter((control) =>
           CAMERA_CONTROL_DEVICE_MATRIX[control.action].includes(
-            this._deviceProfile.profile.deviceClass,
+            this._clientEnvironment.deviceClass,
           ),
         ).map((control) => this._renderControl(control))}
       </div>

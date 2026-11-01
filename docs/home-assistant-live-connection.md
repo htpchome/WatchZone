@@ -76,7 +76,7 @@ The Home Assistant Catalyst runtime is the explicit exception. It uses one
 retained native-HLS session and does not start WebRTC or HLS.js candidates.
 This preserves the native media element and its audio/window lifecycle instead
 of replacing it during a later WebRTC takeover. Catalyst identity comes only
-from the centralized client-runtime profile.
+from the centralized client-environment profile.
 
 ## 5. WebRTC connection sequence
 

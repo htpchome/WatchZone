@@ -296,7 +296,7 @@ A hard refresh, discarded tab, new browser tab, or new document clears the
 override and returns the camera to its configured startup default.
 
 The configured default may independently request unmuted startup for phone or
-tablet/desktop presentation classes. Both defaults are muted unless explicitly
+tablet/desktop client form factors. Both defaults are muted unless explicitly
 enabled. A configured default is not a user preference: the first explicit
 mute or unmute action overrides it for that camera for the rest of the
 document lifetime.

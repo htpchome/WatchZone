@@ -1,9 +1,8 @@
 import { html, LitElement, nothing } from "lit";
 
-import { getHomeAssistantClientRuntime } from "../../core/client-runtime";
+import { getClientEnvironment } from "../../core/client-environment";
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import { CAMERA_LIVE_VIEW_TAG } from "../../core/constants";
-import { DeviceProfileController } from "../../core/device-profile";
 import {
   playMediaElement,
   setMediaElementMuted,
@@ -70,8 +69,7 @@ export class WatchZoneCameraLiveView extends LitElement {
   private readonly _controlsVisibility = new CameraControlsVisibilityController(
     this,
   );
-  private readonly _clientRuntime = getHomeAssistantClientRuntime();
-  private readonly _deviceProfile = new DeviceProfileController(this);
+  private readonly _clientEnvironment = getClientEnvironment();
 
   public set api(value: HomeAssistantApi | undefined) {
     if (this._api?.identity === value?.identity) {
@@ -310,7 +308,10 @@ export class WatchZoneCameraLiveView extends LitElement {
       this._releaseLeases();
       return;
     }
-    if (this._clientRuntime.catalyst) {
+    if (
+      this._clientEnvironment.catalyst ||
+      !this._clientEnvironment.webRtcSupported
+    ) {
       this._releaseWebRtcLease();
       this._syncHlsLease();
       return;
@@ -346,7 +347,9 @@ export class WatchZoneCameraLiveView extends LitElement {
     ) {
       return;
     }
-    const playbackMode = this._clientRuntime.catalyst ? "native" : "automatic";
+    const playbackMode = this._clientEnvironment.catalyst
+      ? "native"
+      : "automatic";
     const key = `home_assistant_hls${playbackMode === "native" ? "_native" : ""}:${this._entityId}`;
     if (this._hlsLease?.key === key) {
       return;
@@ -539,10 +542,9 @@ export class WatchZoneCameraLiveView extends LitElement {
     if (!this._entityId) {
       this._desiredMuted = true;
     } else {
-      const startUnmuted =
-        this._deviceProfile.profile.deviceClass === "phone"
-          ? this._startUnmutedPhone
-          : this._startUnmutedPcTablet;
+      const startUnmuted = this._clientEnvironment.isPhone
+        ? this._startUnmutedPhone
+        : this._startUnmutedPcTablet;
       this._desiredMuted = getMediaSessionManager().getCameraMuted(
         this._entityId,
         !startUnmuted,

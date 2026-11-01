@@ -35,45 +35,43 @@ new browser API makes another platform easier or faster.
 - Avoid APIs that require cross-origin isolation or browser flags unless the
   feature has a supported alternative.
 
-### 2.1 Home Assistant client runtime
+### 2.1 Unified client environment
 
 Catalyst is a Home Assistant host with media and window lifecycle behavior that
 cannot be distinguished through an individual browser capability. The shared
-client-runtime boundary may identify that host from the platform and Home
+client-environment class may identify that host from the platform and Home
 Assistant application signature. No feature component or connection adapter
 may parse those strings independently. Catalyst-specific policy is selected
 from the resulting typed runtime profile.
 
-### 2.2 Responsive and input profile
+There is one client-environment system. Its normalized profile reports these
+independent axes:
 
-WatchZone device labels are presentation classes derived from the component's
-actual container; they are not claims about physical hardware. User-agent,
-platform-string, screen-resolution, and operating-system parsing are
-prohibited for layout or interaction decisions.
+- Home Assistant host: browser, Companion, or Catalyst.
+- Operating system: Android, ChromeOS, iOS, iPadOS, Linux, macOS, Windows, or
+  unknown.
+- Physical client class: phone, tablet, or desktop.
+- Input evidence: touch availability and primary coarse-pointer state.
 
-The shared responsive profile uses these container inline-size classes:
+Detection prefers User-Agent Client Hints where the browser provides them and
+combines them with platform, application signature, touch points, and standard
+pointer/hover media queries. Legacy UA evidence is isolated inside this one
+boundary. iPadOS desktop-UA masquerading is resolved before Catalyst so an
+iPad Companion client cannot be misclassified as the macOS application.
 
-| Presentation class | Detailed size class | Inline size   |
-| ------------------ | ------------------- | ------------- |
-| Phone              | Compact phone       | `< 360px`     |
-| Phone              | Phone               | `360–599px`   |
-| Tablet             | Compact tablet      | `600–767px`   |
-| Tablet             | Tablet              | `768–1023px`  |
-| Desktop            | Desktop             | `1024–1439px` |
-| Desktop            | Wide desktop        | `>= 1440px`   |
+Physical client class is used only by settings that explicitly target a phone,
+tablet, or PC, including startup audio and typed device matrices. A narrow
+desktop card remains a desktop client. Feature code must not duplicate
+environment parsing or invent another device profile.
 
-These categories may select behavior from a typed device matrix. Purely visual
-size changes remain CSS container-query responsibilities.
+### 2.2 Responsive presentation
 
-Input capability is an independent dimension. The profile records primary
-pointer accuracy, primary and available hover, touch availability, and a
-derived `touch`, `pointer`, `hybrid`, or `none` input mode using standardized
-pointer/hover media queries and `maxTouchPoints`. Orientation is derived from
-the observed container rather than the physical screen.
-
-The profile reacts to container resize and pointing-device changes. Features
-must query the capability they actually require; a phone label does not imply
-touch-only input, and a desktop label does not imply hover or a fine pointer.
+Container and viewport dimensions are not device detection. Responsive visual
+layout and control sizing use CSS container queries, logical dimensions, safe
+area insets, and input media queries. They do not create a second JavaScript
+phone/tablet/desktop classifier. Features must query the capability they
+actually require; a phone classification does not imply touch-only input, and
+a desktop classification does not imply hover or a fine pointer.
 
 ## 3. Media rules
 

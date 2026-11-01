@@ -526,10 +526,13 @@ pointer, and keyboard input. Chromium-only behavior, scattered user-agent
 branching, and desktop-only interaction assumptions are prohibited. Browser
 capabilities are feature-detected at their ownership boundary. Home Assistant
 host identity that has no browser capability signal, currently Catalyst alone,
-is detected only by the shared client-runtime boundary and may select a
-dedicated lifecycle adapter. An unavailable media capability
-produces an explicit fallback or actionable local error rather than breaking
-the card. The normative platform and validation matrix is defined in
+is detected only by the shared client-environment class and may select a
+dedicated lifecycle adapter. That class is the sole owner of host,
+operating-system, physical client-class, and input-capability classification;
+responsive sizing remains CSS-owned and does not create a parallel JavaScript
+device profile. An unavailable media capability produces an explicit fallback
+or actionable local error rather than breaking the card. The normative
+platform and validation matrix is defined in
 [docs/platform-compatibility.md](docs/platform-compatibility.md).
 
 ### 8.7 Interaction state
@@ -633,7 +636,7 @@ User audio intent is separate from temporary playback state:
   Assistant browser document. It survives route changes, background tabs, and
   window minimization but resets on a hard refresh or new browser document.
 - Per-camera startup defaults may differ between phone and tablet/desktop
-  presentation classes. They apply only when no document-lifetime user
+  client form factors. They apply only when no document-lifetime user
   preference exists.
 - Automatic policies may temporarily force a session silent, but they never
   overwrite the user's preference.
@@ -1131,7 +1134,10 @@ A change is complete only when:
 - Every card configuration field follows the editor lifecycle contract.
 - Visual changes use Home Assistant theme tokens and remain responsive.
 - Tests cover the changed contract and important failure paths.
-- Generated output and documentation are updated when applicable.
+- The affected focused system contract and `docs/system-map.md` remain accurate
+  for ownership, lifecycle, state flow, invariants, fallbacks, diagnostics, and
+  verification.
+- Generated output is updated when applicable.
 - Replaced code and dead paths are removed.
 - Bundle and runtime performance remain within budget.
 

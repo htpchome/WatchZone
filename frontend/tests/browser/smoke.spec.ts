@@ -105,6 +105,7 @@ test("routes the Catalyst host through one native HLS candidate", async ({
       hass: unknown;
       setConfig(config: unknown): void;
     };
+    card.style.inlineSize = "320px";
     card.setConfig({
       type: "custom:watchzone-card",
       title: "Catalyst",
@@ -144,6 +145,15 @@ test("routes the Catalyst host through one native HLS candidate", async ({
       }),
     )
     .toEqual({ hls: 1, webRtc: 0 });
+  expect(
+    await page.evaluate(() => window.watchZone?.clientEnvironment),
+  ).toMatchObject({
+    catalyst: true,
+    deviceClass: "desktop",
+    host: "catalyst",
+    operatingSystem: "macos",
+    webRtcSupported: false,
+  });
   const video = page.locator("watchzone-camera .hls-host video");
   await expect(video).toHaveCount(1);
   expect(
