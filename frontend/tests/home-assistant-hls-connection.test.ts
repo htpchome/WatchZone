@@ -243,10 +243,14 @@ describe("Home Assistant HLS connection", () => {
     expect(attachedState).toEqual({
       autoplay: true,
       defaultMuted: false,
-      muted: false,
+      muted: true,
     });
     expect(video.isConnected).toBe(true);
-    expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+    expect(video.defaultMuted).toBe(false);
+    expect(video.muted).toBe(false);
+    await vi.waitFor(() =>
+      expect(HTMLMediaElement.prototype.play).toHaveBeenCalledOnce(),
+    );
     await vi.waitFor(() => expect(video.src).not.toBe(""));
     expect(video.src).toBe("https://ha.example/api/hls/front.m3u8");
     expect(fetchManifest).not.toHaveBeenCalled();
@@ -255,7 +259,7 @@ describe("Home Assistant HLS connection", () => {
 
     expect(connection.transport).toBe("hls_native");
     expect(hlsMock.isSupported).not.toHaveBeenCalled();
-    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledOnce();
+    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(2);
     expect(video.muted).toBe(false);
     expect(timing.snapshot().phases).not.toHaveProperty("hls_engine_loaded");
     expect(timing.snapshot().phases).not.toHaveProperty("hls_manifest_loaded");

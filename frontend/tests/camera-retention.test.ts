@@ -272,6 +272,33 @@ describe("camera presentation retention", () => {
     );
   });
 
+  it("does not reinterpret a transient play interruption as autoplay denial", async () => {
+    vi.spyOn(HTMLMediaElement.prototype, "play")
+      .mockResolvedValueOnce()
+      .mockRejectedValue(
+        new DOMException("Playback was interrupted", "AbortError"),
+      );
+    const hlsVideo = document.createElement("video");
+    window.__watchZoneMediaSessionManager = new MediaSessionManager(
+      vi.fn<ConnectionFactory>(async () => ({ close: vi.fn() })),
+      vi.fn<ConnectionFactory>(async () => ({
+        video: hlsVideo,
+        transport: "hls_native",
+        close: vi.fn(),
+      })),
+    );
+    const view = createLiveView(createApi(), true);
+    document.body.append(view);
+
+    await vi.waitFor(() =>
+      expect(view.shadowRoot?.querySelector(".hls-host video")).toBe(hlsVideo),
+    );
+    await vi.waitFor(() => expect(hlsVideo.muted).toBe(false));
+    expect(cameraControl(view).shadowRoot?.textContent).not.toContain(
+      "The browser blocked unmuted playback.",
+    );
+  });
+
   it("uses the desktop startup default even in a narrow card", async () => {
     vi.spyOn(window, "innerWidth", "get").mockReturnValue(390);
     vi.spyOn(window, "innerHeight", "get").mockReturnValue(844);

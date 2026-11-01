@@ -40,6 +40,19 @@ interface FullscreenVideo extends HTMLVideoElement {
   webkitEnterFullscreen?(): void;
 }
 
+function documentIsHidden(): boolean {
+  return document.hidden === true || document.visibilityState === "hidden";
+}
+
+function isAutoplayDenied(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    error.name === "NotAllowedError"
+  );
+}
+
 export class WatchZoneCameraLiveView extends LitElement {
   private _api?: HomeAssistantApi;
   private _autoplayBlocked = false;
@@ -559,20 +572,19 @@ export class WatchZoneCameraLiveView extends LitElement {
 
   private _syncEffectiveMute(attemptPlayback: boolean): void {
     const muted =
-      this._desiredMuted ||
-      this._autoplayBlocked ||
-      document.visibilityState !== "visible";
+      this._desiredMuted || this._autoplayBlocked || documentIsHidden();
     const changed = muted !== this._muted;
     this._muted = muted;
     this._applyMediaMuteState();
     if (changed) this.requestUpdate();
     if (!muted && attemptPlayback && this._activeVideo) {
       const video = this._activeVideo;
-      void playMediaElement(video).catch(() => {
+      void playMediaElement(video).catch((error: unknown) => {
         if (
           this._activeVideo !== video ||
           this._desiredMuted ||
-          document.visibilityState !== "visible"
+          documentIsHidden() ||
+          !isAutoplayDenied(error)
         ) {
           return;
         }

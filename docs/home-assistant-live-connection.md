@@ -158,13 +158,14 @@ playback contract: waiting to unmute until after `loadeddata` loses the initial
 audible-playback opportunity in WebKit clients.
 
 Catalyst has a stricter native-media exception matching its proven Home
-Assistant host lifecycle. Its retained video is created with `autoplay`
-enabled and the intended `muted`, `defaultMuted`, and volume state already
-applied; the visible element is attached before the direct native HLS URL is
-assigned. WatchZone does not first establish muted playback, issue a source-less
-`play()`, fetch the manifest, or replace that element. `loadeddata` confirms the
-same element and requests playback again without changing the desired audio
-state.
+Assistant selected-media lifecycle. Its retained video is created with
+`autoplay` enabled, runtime `muted=true`, and `defaultMuted=false`. After the
+visible element is attached, selected-media ownership applies the intended
+mute state and requests playback on that same element while the Home Assistant
+stream request is in flight. The direct native HLS URL is then assigned without
+fetching the manifest or replacing the element. `loadeddata` reapplies playback
+without changing the desired audio state. The distinction between the initial
+runtime `muted` property and `defaultMuted` is intentional and tested.
 
 The presentation retains explicit user preference across HLS/WebRTC handoff
 and presentation replacement. An autoplay rejection temporarily forces muted
@@ -172,6 +173,14 @@ output without rewriting that preference. A later user gesture can retry the
 same retained element. Audio behavior continues to follow the forced-mute,
 audio-focus, lifetime, and autoplay rules in
 `docs/live-session-lifecycle.md`.
+
+Only a `NotAllowedError` from the selected element is an autoplay-policy
+denial. Native HLS can reject overlapping or source-interrupted `play()` calls
+with `AbortError`, `NotSupportedError`, or another transient media error while
+continuing through autoplay or the next readiness request. Those errors do not
+change effective mute state. Likewise, only the document's explicit hidden
+state forces background mute; a non-hidden transitional visibility value is
+not treated as backgrounding.
 
 ## 9. Required evolution rules
 

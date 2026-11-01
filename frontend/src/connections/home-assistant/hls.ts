@@ -60,11 +60,13 @@ export async function createHomeAssistantHlsConnection(
   video.setAttribute("webkit-playsinline", "");
   video.preload = "auto";
   if (catalystNativePlayback) {
-    // Catalyst's HA host grants its native media element the useful autoplay
-    // lifecycle only when it is born with autoplay and the intended output
-    // state. Do not establish muted playback before its native HLS source.
-    setMediaElementMuted(video, options.initialMuted);
+    // Match the working Catalyst selected-media lifecycle precisely: autoplay
+    // is enabled, the runtime output begins muted, but defaultMuted remains
+    // false. After the visible element is attached, selected-media ownership
+    // applies the intended state and requests playback on that same element.
+    video.muted = true;
     options.onVideo?.(video);
+    setMediaElementMuted(video, options.initialMuted);
   } else {
     setMediaElementMuted(video, true);
     options.onVideo?.(video);
@@ -74,7 +76,7 @@ export async function createHomeAssistantHlsConnection(
     // its first audible-playback decision at this boundary; replacing the
     // element or unmuting only after loadeddata loses that opportunity.
   }
-  if (!catalystNativePlayback && !options.initialMuted) {
+  if (!options.initialMuted) {
     void Promise.resolve()
       .then(() => (video.muted ? undefined : playMediaElement(video)))
       .catch(() => undefined);

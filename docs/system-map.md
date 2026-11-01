@@ -90,7 +90,9 @@ A focused system contract records:
   media element, and emits user control intent. It does not own the underlying
   connection lifetime.
 - **Key invariant:** camera presentation can be replaced without creating a
-  duplicate connection or overwriting explicit mute preference.
+  duplicate connection or overwriting explicit mute preference. Only an actual
+  `NotAllowedError` may classify audible playback as autoplay-blocked;
+  transient native-media play interruptions do not re-mute the camera.
 - **Verification:** `frontend/tests/camera-fallback.test.ts`,
   `frontend/tests/camera-retention.test.ts`,
   `frontend/tests/controls-visibility-controller.test.ts`, and
@@ -116,13 +118,14 @@ A focused system contract records:
   `frontend/src/connections/home-assistant/hls.ts`
 - **Contract:** `docs/home-assistant-live-connection.md`
 - **Flow:** eligible clients hedge WebRTC and HLS startup and present the first
-  decoded candidate; Catalyst uses one retained native-HLS element born with
-  autoplay and its intended audio state, then receives the direct Home
-  Assistant stream URL. Concrete adapters remain lazy and report timing to the
-  shared startup diagnostics.
-- **Key invariant:** Catalyst never starts WebRTC, HLS.js, or a preliminary
-  muted/source-less playback sequence. A later WebRTC takeover does not change
-  the initial-source indicator.
+  decoded candidate; Catalyst uses one retained native-HLS element with
+  autoplay, temporary runtime mute, and unmuted default state. After attachment,
+  selected-media ownership applies configured audio and requests playback, then
+  the element receives the direct Home Assistant stream URL. Concrete adapters
+  remain lazy and report timing to the shared startup diagnostics.
+- **Key invariant:** Catalyst never starts WebRTC or HLS.js, and its temporary
+  runtime mute must not set `defaultMuted`. A later WebRTC takeover does not
+  change the initial-source indicator.
 - **Verification:** `frontend/tests/home-assistant-connection.test.ts`,
   `frontend/tests/home-assistant-hls-connection.test.ts`, and Catalyst/browser
   cases in `frontend/tests/browser/smoke.spec.ts`
