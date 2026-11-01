@@ -223,13 +223,6 @@ export class WatchZoneCameraControls extends LitElement {
       outline-offset: 1px;
     }
 
-    .control-button[aria-pressed="true"] {
-      border-color: var(
-        --wzc-control-active-border-color,
-        var(--primary-color)
-      );
-    }
-
     .control-button:disabled {
       opacity: var(--wzc-control-disabled-opacity, 1);
       cursor: default;

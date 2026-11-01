@@ -409,8 +409,18 @@ test("retains one live connection while the card presentation is replaced", asyn
     'watchzone-camera watchzone-camera-controls [data-control="mute"]',
   );
   await expect(mute).toHaveAttribute("aria-pressed", "true");
+  const mutedBorder = await mute.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return `${style.borderColor}|${style.borderWidth}|${style.borderStyle}`;
+  });
   await mute.click();
   await expect(mute).toHaveAttribute("aria-pressed", "false");
+  expect(
+    await mute.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return `${style.borderColor}|${style.borderWidth}|${style.borderStyle}`;
+    }),
+  ).toBe(mutedBorder);
   expect(
     await video.evaluate((element) => (element as HTMLVideoElement).muted),
   ).toBe(false);
