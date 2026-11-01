@@ -30,11 +30,11 @@ interface PreviewDraftDetail {
   readonly config: WatchZoneCardConfig | null;
 }
 
-let liveModulePromise: Promise<unknown> | undefined;
+let cameraModulePromise: Promise<unknown> | undefined;
 
-function loadLiveModule(): Promise<unknown> {
-  return (liveModulePromise ??= import("../modules/live").catch((error) => {
-    liveModulePromise = undefined;
+function loadCameraModule(): Promise<unknown> {
+  return (cameraModulePromise ??= import("../modules/camera").catch((error) => {
+    cameraModulePromise = undefined;
     throw error;
   }));
 }
@@ -117,7 +117,7 @@ export class WatchZoneCard extends LitElement {
   }
 
   protected updated(): void {
-    if (this.renderRoot.querySelector("watchzone-card-live")) {
+    if (this.renderRoot.querySelector("watchzone-camera")) {
       this._releasePrewarmLease();
     }
   }
@@ -159,11 +159,11 @@ export class WatchZoneCard extends LitElement {
                     </button>
                   </div>`
                 : this._liveModuleReady
-                  ? html`<watchzone-card-live
+                  ? html`<watchzone-camera
                       .api=${this._haApi}
                       .available=${cameraAvailable}
                       .entityId=${cameraEntity}
-                    ></watchzone-card-live>`
+                    ></watchzone-camera>`
                   : html`<div class="live-placeholder" role="status">
                       Preparing live view…
                     </div>`
@@ -196,7 +196,7 @@ export class WatchZoneCard extends LitElement {
     if (!config.camera_entity || this._liveModuleReady) {
       return;
     }
-    void loadLiveModule()
+    void loadCameraModule()
       .then(() => {
         if (this.isConnected) {
           this._liveModuleError = undefined;
@@ -306,7 +306,7 @@ export class WatchZoneCard extends LitElement {
       text-align: center;
     }
 
-    watchzone-card-live,
+    watchzone-camera,
     .live-placeholder,
     .live-error,
     .empty {

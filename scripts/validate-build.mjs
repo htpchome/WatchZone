@@ -9,7 +9,7 @@ const manifest = JSON.parse(
 );
 const entry = manifest["src/main.ts"];
 const editor = manifest["src/editor/watchzone-card-editor.ts"];
-const live = manifest["src/modules/live/index.ts"];
+const camera = manifest["src/modules/camera/index.ts"];
 const connection = manifest["src/connections/home-assistant/index.ts"];
 const hlsConnection = manifest["src/connections/home-assistant/hls.ts"];
 
@@ -18,7 +18,7 @@ if (!entry?.isEntry || entry.file !== "watchzone.js") {
 }
 for (const [name, asset] of Object.entries({
   editor,
-  live,
+  camera,
   connection,
   hlsConnection,
 })) {
@@ -45,7 +45,7 @@ const collectEagerGraph = (source, graph = new Set()) => {
 const eagerGraph = collectEagerGraph(entry.src);
 for (const [name, asset] of Object.entries({
   editor,
-  live,
+  camera,
   connection,
   hlsConnection,
 })) {
@@ -68,5 +68,5 @@ if (eagerGzipBytes > 50 * 1024) {
 }
 
 console.log(
-  `Validated lazy editor, live module, and WebRTC/HLS adapters; eager graph is ${eagerGzipBytes} bytes gzip.`,
+  `Validated lazy editor, camera module, and WebRTC/HLS adapters; eager graph is ${eagerGzipBytes} bytes gzip.`,
 );

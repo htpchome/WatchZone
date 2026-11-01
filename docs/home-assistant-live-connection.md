@@ -109,10 +109,10 @@ The HLS session owns its media element because its MediaSource playback state
 is element-bound. Closing destroys the playback engine, cancels in-flight
 requests, resets the element, and removes it from presentation.
 
-The live view displays a small source indicator for the currently presented
-transport: `WebRTC`, `HLS · HLS.js`, or `HLS · native`. Diagnostics also record
-the selected HLS path and the time at which a transport became the presentation
-winner.
+The camera information layer displays the initial presentation winner as
+`WebRTC`, `HLS · HLS.js`, or `HLS · native`. That label remains stable if
+WebRTC later takes over from HLS. Diagnostics separately retain the selected
+HLS path and the time at which each transport became the presentation winner.
 
 ## 7. Ownership and retention
 
@@ -158,3 +158,21 @@ forced-muted presentation.
   current startup recorder is read with
   `window.watchZone.getLiveStartupTimings()` and records relative milestone
   times without writing per-phase console messages.
+
+## 10. Observed client baseline
+
+Physical-client testing of `0.0.4-dev.8` recorded the following initial HLS
+playback paths. These are observations, not browser-name selection rules; the
+adapter must continue to choose by runtime capability.
+
+| Client                   | Initial playback path |
+| ------------------------ | --------------------- |
+| Catalyst                 | Native HLS            |
+| Safari                   | HLS.js                |
+| Home Assistant Companion | HLS.js                |
+| Edge                     | HLS.js                |
+| Chrome                   | HLS.js                |
+
+Startup time was acceptable across the tested clients. Exact client, operating
+system, and device versions were not recorded, so future media changes still
+require the full physical-client validation matrix.

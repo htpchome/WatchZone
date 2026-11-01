@@ -1,20 +1,50 @@
 import { css, html, LitElement, nothing } from "lit";
 
 import type { HomeAssistantApi } from "../../core/home-assistant";
-import { LIVE_TAG } from "../../core/constants";
+import { CAMERA_TAG } from "../../core/constants";
 import {
   getMediaSessionManager,
   type MediaSessionLease,
   type MediaSessionSnapshot,
+  type MediaTransport,
 } from "../../core/media-session-manager";
+import type { CameraControlEventDetail } from "./controls-overlay";
+import "./controls-overlay";
+import {
+  isPictureInPictureActive,
+  pictureInPictureMethod,
+  suppressNativePictureInPicture,
+  togglePictureInPicture,
+} from "./picture-in-picture";
 
-export class WatchZoneLive extends LitElement {
+interface FullscreenDocument extends Document {
+  webkitExitFullscreen?(): Promise<void> | void;
+  webkitFullscreenElement?: Element | null;
+}
+
+interface FullscreenElement extends HTMLElement {
+  webkitRequestFullscreen?(): Promise<void> | void;
+}
+
+interface FullscreenVideo extends HTMLVideoElement {
+  readonly webkitDisplayingFullscreen?: boolean;
+  webkitEnterFullScreen?(): void;
+  webkitEnterFullscreen?(): void;
+}
+
+export class WatchZoneCamera extends LitElement {
   private _api?: HomeAssistantApi;
   private _available = false;
+  private _activeVideo?: HTMLVideoElement;
+  private _controlError?: string;
   private _entityId?: string;
+  private _fullscreenActive = false;
   private _hlsLease?: MediaSessionLease;
   private _hlsSnapshot: MediaSessionSnapshot = { state: "new" };
   private _hlsUnsubscribe?: () => void;
+  private _initialTransport?: MediaTransport;
+  private _muted = true;
+  private _pictureInPictureActive = false;
   private _selected?: "hls" | "webrtc";
   private _webRtcDecoded = false;
   private _webRtcLease?: MediaSessionLease;
@@ -25,6 +55,7 @@ export class WatchZoneLive extends LitElement {
     if (this._api?.identity === value?.identity) {
       return;
     }
+    this._initialTransport = undefined;
     this._releaseLeases();
     this._api = value;
     this._syncLeases();
@@ -43,29 +74,40 @@ export class WatchZoneLive extends LitElement {
     if (this._entityId === value) {
       return;
     }
+    this._initialTransport = undefined;
+    this._controlError = undefined;
     this._releaseLeases();
     this._entityId = value;
+    this._muted = value ? getMediaSessionManager().getCameraMuted(value) : true;
     this._syncLeases();
     this.requestUpdate();
   }
 
   public connectedCallback(): void {
     super.connectedCallback();
+    document.addEventListener("fullscreenchange", this._syncControlState);
+    document.addEventListener("webkitfullscreenchange", this._syncControlState);
     this._syncLeases();
   }
 
   public disconnectedCallback(): void {
+    document.removeEventListener("fullscreenchange", this._syncControlState);
+    document.removeEventListener(
+      "webkitfullscreenchange",
+      this._syncControlState,
+    );
+    this._setActiveVideo(undefined);
     this._releaseLeases();
     super.disconnectedCallback();
   }
 
   protected render() {
     const sourceLabel =
-      this._selected === "webrtc"
+      this._initialTransport === "webrtc"
         ? "WebRTC"
-        : this._hlsSnapshot.transport === "hls_native"
+        : this._initialTransport === "hls_native"
           ? "HLS · native"
-          : this._hlsSnapshot.transport === "hls_mse"
+          : this._initialTransport === "hls_mse"
             ? "HLS · HLS.js"
             : "HLS";
     const error = !this._available
@@ -87,13 +129,28 @@ export class WatchZoneLive extends LitElement {
           @loadeddata=${this._handleWebRtcLoadedData}
         ></video>
         ${
-          this._selected
+          this._initialTransport
             ? html`<div
                 class="source-indicator"
                 aria-label=${`Live source: ${sourceLabel}`}
               >
                 ${sourceLabel}
               </div>`
+            : nothing
+        }
+        ${
+          this._selected
+            ? html`<watchzone-camera-controls
+                .errorMessage=${this._controlError}
+                .fullscreenActive=${this._fullscreenActive}
+                .fullscreenSupported=${this._fullscreenSupported()}
+                .muted=${this._muted}
+                .pictureInPictureActive=${this._pictureInPictureActive}
+                .pictureInPictureSupported=${Boolean(
+                  pictureInPictureMethod(this._activeVideo),
+                )}
+                @camera-control=${this._handleCameraControl}
+              ></watchzone-camera-controls>`
             : nothing
         }
         ${
@@ -123,7 +180,7 @@ export class WatchZoneLive extends LitElement {
     if (video && video.srcObject !== (stream ?? null)) {
       this._webRtcDecoded = false;
       video.srcObject = stream ?? null;
-      video.muted = true;
+      video.muted = this._selected !== "webrtc" || this._muted;
       if (stream) {
         void video.play().catch(() => undefined);
       }
@@ -134,6 +191,9 @@ export class WatchZoneLive extends LitElement {
       hlsVideo.setAttribute("aria-label", "Live camera");
       hlsHost.append(hlsVideo);
       void hlsVideo.play().catch(() => undefined);
+    }
+    if (hlsVideo) {
+      hlsVideo.muted = this._selected !== "hls" || this._muted;
     }
   }
 
@@ -159,6 +219,7 @@ export class WatchZoneLive extends LitElement {
         this._webRtcSnapshot = snapshot;
         if (snapshot.state === "failed" && this._selected === "webrtc") {
           this._selected = undefined;
+          this._setActiveVideo(undefined);
           this._syncHlsLease();
         }
         this.requestUpdate();
@@ -190,9 +251,12 @@ export class WatchZoneLive extends LitElement {
       this._hlsSnapshot = snapshot;
       if (snapshot.state === "live" && !this._selected) {
         this._selected = "hls";
+        this._initialTransport ??= snapshot.transport;
+        this._setActiveVideo(snapshot.video);
         snapshot.timing?.mark("presentation_selected");
       } else if (snapshot.state === "failed" && this._selected === "hls") {
         this._selected = undefined;
+        this._setActiveVideo(undefined);
       }
       this.requestUpdate();
     });
@@ -200,6 +264,7 @@ export class WatchZoneLive extends LitElement {
 
   private _releaseLeases(): void {
     this._selected = undefined;
+    this._setActiveVideo(undefined);
     this._webRtcDecoded = false;
     this._releaseWebRtcLease();
     this._releaseHlsLease();
@@ -236,17 +301,161 @@ export class WatchZoneLive extends LitElement {
     this._hlsLease?.retry();
   };
 
-  private readonly _handleWebRtcLoadedData = (): void => {
+  private readonly _handleWebRtcLoadedData = (event: Event): void => {
     if (this._webRtcDecoded || !this._webRtcSnapshot.stream) {
       return;
     }
     this._webRtcDecoded = true;
     this._webRtcSnapshot.timing?.mark("first_frame_decoded");
     this._webRtcSnapshot.timing?.mark("presentation_selected");
+    this._initialTransport ??= "webrtc";
     this._selected = "webrtc";
+    this._setActiveVideo(event.currentTarget as HTMLVideoElement);
     this._releaseHlsLease(true);
     this.requestUpdate();
   };
+
+  private _setActiveVideo(video: HTMLVideoElement | undefined): void {
+    if (this._activeVideo === video) {
+      return;
+    }
+    for (const eventName of [
+      "enterpictureinpicture",
+      "leavepictureinpicture",
+      "webkitpresentationmodechanged",
+      "webkitbeginfullscreen",
+      "webkitendfullscreen",
+    ]) {
+      this._activeVideo?.removeEventListener(eventName, this._syncControlState);
+      video?.addEventListener(eventName, this._syncControlState);
+    }
+    this._activeVideo = video;
+    suppressNativePictureInPicture(video);
+    this._syncControlState();
+  }
+
+  private readonly _syncControlState = (): void => {
+    const documentObject = document as FullscreenDocument;
+    const pictureInPictureActive = isPictureInPictureActive(this._activeVideo);
+    const fullscreenActive = Boolean(
+      document.fullscreenElement ||
+      documentObject.webkitFullscreenElement ||
+      (this._activeVideo as FullscreenVideo | undefined)
+        ?.webkitDisplayingFullscreen,
+    );
+    if (
+      this._pictureInPictureActive === pictureInPictureActive &&
+      this._fullscreenActive === fullscreenActive
+    ) {
+      return;
+    }
+    this._pictureInPictureActive = pictureInPictureActive;
+    this._fullscreenActive = fullscreenActive;
+    this.requestUpdate();
+  };
+
+  private _fullscreenSupported(): boolean {
+    const target = this.renderRoot.querySelector(
+      ".viewport",
+    ) as FullscreenElement | null;
+    const video = this._activeVideo as FullscreenVideo | undefined;
+    return Boolean(
+      target?.requestFullscreen ||
+      target?.webkitRequestFullscreen ||
+      video?.webkitEnterFullscreen ||
+      video?.webkitEnterFullScreen,
+    );
+  }
+
+  private readonly _handleCameraControl = (
+    event: CustomEvent<CameraControlEventDetail>,
+  ): void => {
+    this._controlError = undefined;
+    if (event.detail.action === "mute") {
+      this._muted = !this._muted;
+      if (this._entityId) {
+        getMediaSessionManager().setCameraMuted(this._entityId, this._muted);
+      }
+      if (this._activeVideo) {
+        const video = this._activeVideo;
+        video.muted = this._muted;
+        if (!this._muted) {
+          void video.play().catch(() => {
+            this._muted = true;
+            if (this._activeVideo === video) {
+              video.muted = true;
+            }
+            this._controlError =
+              "The browser blocked unmuted playback. Tap mute again to retry.";
+            this.requestUpdate();
+          });
+        }
+      }
+      this.requestUpdate();
+      return;
+    }
+    if (event.detail.action === "picture_in_picture") {
+      void this._togglePictureInPicture();
+      return;
+    }
+    if (event.detail.action === "fullscreen") {
+      void this._toggleFullscreen();
+    }
+  };
+
+  private async _togglePictureInPicture(): Promise<void> {
+    if (!this._activeVideo) {
+      return;
+    }
+    try {
+      await togglePictureInPicture(this._activeVideo);
+      this._syncControlState();
+    } catch (error) {
+      this._controlError =
+        error instanceof Error
+          ? error.message
+          : "Unable to change Picture-in-Picture mode.";
+      this.requestUpdate();
+    }
+  }
+
+  private async _toggleFullscreen(): Promise<void> {
+    const documentObject = document as FullscreenDocument;
+    const target = this.renderRoot.querySelector(
+      ".viewport",
+    ) as FullscreenElement | null;
+    try {
+      if (
+        document.fullscreenElement ||
+        documentObject.webkitFullscreenElement
+      ) {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else {
+          await documentObject.webkitExitFullscreen?.();
+        }
+      } else if (target?.requestFullscreen) {
+        await target.requestFullscreen();
+      } else if (target?.webkitRequestFullscreen) {
+        await target.webkitRequestFullscreen();
+      } else {
+        const video = this._activeVideo as FullscreenVideo | undefined;
+        const enter =
+          video?.webkitEnterFullscreen ?? video?.webkitEnterFullScreen;
+        if (!video || !enter) {
+          throw new Error("Fullscreen is not supported on this device.");
+        }
+        enter.call(video);
+      }
+      this._syncControlState();
+    } catch (error) {
+      this._controlError =
+        error instanceof Error
+          ? error.message
+          : "Unable to change fullscreen mode.";
+      this.requestUpdate();
+    }
+  }
 
   static styles = css`
     :host {
@@ -266,6 +475,14 @@ export class WatchZoneLive extends LitElement {
       overflow: hidden;
       background: var(--wzc-live-background, var(--secondary-background-color));
       border-radius: var(--wzc-live-radius, var(--ha-border-radius-lg, 8px));
+    }
+
+    .viewport:fullscreen,
+    .viewport:-webkit-full-screen {
+      inline-size: 100vw;
+      block-size: 100vh;
+      aspect-ratio: auto;
+      border-radius: 0;
     }
 
     .hls-host,
@@ -346,12 +563,12 @@ export class WatchZoneLive extends LitElement {
   `;
 }
 
-if (!customElements.get(LIVE_TAG)) {
-  customElements.define(LIVE_TAG, WatchZoneLive);
+if (!customElements.get(CAMERA_TAG)) {
+  customElements.define(CAMERA_TAG, WatchZoneCamera);
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    "watchzone-card-live": WatchZoneLive;
+    "watchzone-camera": WatchZoneCamera;
   }
 }

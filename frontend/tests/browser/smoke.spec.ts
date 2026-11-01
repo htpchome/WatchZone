@@ -325,14 +325,46 @@ test("retains one live connection while the card presentation is replaced", asyn
     document.body.append(replacement);
   });
 
-  const video = page.locator("watchzone-card-live video.webrtc");
+  const video = page.locator("watchzone-camera video.webrtc");
   await video.evaluate((element) =>
     element.dispatchEvent(new Event("loadeddata")),
   );
   await expect(video).toBeVisible();
+  await expect(page.locator("watchzone-camera .source-indicator")).toHaveText(
+    "WebRTC",
+  );
+  const controls = page.locator(
+    "watchzone-camera watchzone-camera-controls .control-button",
+  );
+  await expect(controls).toHaveCount(5);
   await expect(
-    page.locator("watchzone-card-live .source-indicator"),
-  ).toHaveText("WebRTC");
+    page.locator(
+      'watchzone-camera watchzone-camera-controls [data-control="snapshot"]',
+    ),
+  ).toBeDisabled();
+  await expect(
+    page.locator(
+      'watchzone-camera watchzone-camera-controls [data-control="suspend"]',
+    ),
+  ).toBeDisabled();
+  const mute = page.locator(
+    'watchzone-camera watchzone-camera-controls [data-control="mute"]',
+  );
+  await expect(mute).toHaveAttribute("aria-pressed", "true");
+  await mute.click();
+  await expect(mute).toHaveAttribute("aria-pressed", "false");
+  expect(
+    await video.evaluate((element) => (element as HTMLVideoElement).muted),
+  ).toBe(false);
+
+  await page.locator("watchzone-card").evaluate((element) => {
+    element.style.inlineSize = "320px";
+  });
+  await expect
+    .poll(() =>
+      mute.evaluate((element) => element.getBoundingClientRect().width),
+    )
+    .toBeLessThan(36);
   await expect
     .poll(() =>
       page.evaluate(() => {

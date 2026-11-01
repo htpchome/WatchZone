@@ -156,7 +156,7 @@ Each frontend module and backend feature receives a stable folder boundary
 from its first implementation:
 
 ```text
-frontend/src/modules/live/index.ts
+frontend/src/modules/camera/index.ts
 custom_components/watchzone/features/layouts/__init__.py
 ```
 
@@ -305,7 +305,7 @@ Every user-placeable module is loaded through a native dynamic import:
 
 ```ts
 const moduleLoaders = {
-  live: () => import("../modules/live/index.js"),
+  camera: () => import("../modules/camera/index.js"),
   eventList: () => import("../modules/event-list/index.js"),
 } satisfies ModuleLoaderMap;
 ```
@@ -359,6 +359,14 @@ Module responsibilities:
 
 A module does not own placement, overall navigation, layout persistence, or
 another module's state.
+
+The camera module is a composition boundary, not a monolithic media player. It
+owns the active camera and presentation choice while composing an internal
+single-camera live presentation, a control overlay, and a non-control
+information overlay. Presentation types such as a future carousel reuse the
+same internal single-camera presentation contract. Overlay controls dispatch
+typed intent and do not own connection adapters or duplicate media-session
+policy.
 
 ### 8.4 Custom elements and Lit
 

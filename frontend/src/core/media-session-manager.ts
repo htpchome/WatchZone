@@ -301,6 +301,7 @@ class ManagedMediaSession {
 }
 
 export class MediaSessionManager {
+  private readonly _cameraMuted = new Map<string, boolean>();
   private readonly _sessions = new Map<string, ManagedMediaSession>();
 
   public constructor(
@@ -332,6 +333,14 @@ export class MediaSessionManager {
       this._hlsFactory,
       HLS_RETAIN_IDLE_MS,
     );
+  }
+
+  public getCameraMuted(entityId: string): boolean {
+    return this._cameraMuted.get(entityId) ?? true;
+  }
+
+  public setCameraMuted(entityId: string, muted: boolean): void {
+    this._cameraMuted.set(entityId, muted);
   }
 
   private _acquire(
