@@ -1,6 +1,13 @@
+import { readFileSync } from "node:fs";
+
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
+const packageJson = JSON.parse(
+  readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
+) as { version: string };
+const expectedBuild = process.env.GITHUB_SHA?.slice(0, 7) ?? "local";
+const expectedVersion = packageJson.version;
 const pageErrors = new WeakMap<Page, string[]>();
 
 async function waitForWatchZoneDefinition(page: Page): Promise<void> {
@@ -32,13 +39,13 @@ test("loads the responsive WatchZone card shell", async ({ page }) => {
       (message) =>
         message.includes("WatchZone") &&
         message.includes("CURRENT") &&
-        message.includes("v0.0.4-dev.5 (local)"),
+        message.includes(`v${expectedVersion} (${expectedBuild})`),
     ),
   ).toBe(true);
   expect(await page.evaluate(() => window.watchZone)).toMatchObject({
-    activeCardVersion: "0.0.4-dev.5",
-    build: "local",
-    version: "0.0.4-dev.5",
+    activeCardVersion: expectedVersion,
+    build: expectedBuild,
+    version: expectedVersion,
   });
   expect(
     await page.evaluate(() => typeof window.watchZone?.getLiveStartupTimings),
