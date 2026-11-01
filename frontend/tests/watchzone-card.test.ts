@@ -29,4 +29,27 @@ describe("watchzone-card", () => {
 
     expect(element.shadowRoot?.querySelector("ha-card")).toBe(rendered);
   });
+
+  it("limits outer appearance removals to the Home Assistant card shell", async () => {
+    const element = document.createElement("watchzone-card") as WatchZoneCard;
+    element.setConfig({
+      type: "custom:watchzone-card",
+      title: "Front Door",
+      remove_outer_rounded_edges: true,
+      remove_outer_shadow: true,
+    });
+    document.body.append(element);
+    await element.updateComplete;
+
+    const card = element.shadowRoot?.querySelector("ha-card");
+    expect(card?.classList.contains("remove-outer-rounded-edges")).toBe(true);
+    expect(card?.classList.contains("remove-outer-shadow")).toBe(true);
+
+    element.setConfig({
+      type: "custom:watchzone-card",
+      title: "Front Door",
+    });
+    await element.updateComplete;
+    expect(card?.className).toBe("");
+  });
 });

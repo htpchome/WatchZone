@@ -72,6 +72,57 @@ test("fits phone, tablet, and desktop viewports without horizontal overflow", as
   }
 });
 
+test("applies outer shell appearance toggles without changing card identity", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+
+  const result = await page
+    .locator("watchzone-card")
+    .evaluate(async (element) => {
+      const card = element as HTMLElement & {
+        setConfig(config: unknown): void;
+        updateComplete: Promise<boolean>;
+      };
+      const shellBefore = card.shadowRoot?.querySelector("ha-card");
+      card.setConfig({
+        type: "custom:watchzone-card",
+        title: "Appearance",
+        remove_outer_rounded_edges: true,
+        remove_outer_shadow: true,
+      });
+      await card.updateComplete;
+      const shellAfter = card.shadowRoot?.querySelector("ha-card");
+      const enabledStyle = shellAfter
+        ? getComputedStyle(shellAfter)
+        : undefined;
+      const enabled = {
+        borderRadius: enabledStyle?.borderRadius,
+        boxShadow: enabledStyle?.boxShadow,
+        classes: shellAfter?.className,
+        identityRetained: shellAfter === shellBefore,
+      };
+      card.setConfig({
+        type: "custom:watchzone-card",
+        title: "Appearance",
+      });
+      await card.updateComplete;
+      return {
+        disabledClasses: shellAfter?.className,
+        enabled,
+      };
+    });
+
+  expect(result.enabled).toEqual({
+    borderRadius: "0px",
+    boxShadow: "none",
+    classes: "remove-outer-rounded-edges remove-outer-shadow",
+    identityRetained: true,
+  });
+  expect(result.disabledClasses).toBe("");
+});
+
 test("camera selection does not recursively republish dirty state", async ({
   page,
 }) => {

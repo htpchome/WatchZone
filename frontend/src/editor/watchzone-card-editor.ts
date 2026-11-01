@@ -30,7 +30,7 @@ interface PreviewDraftDetail {
 }
 
 interface ValueChangedEvent extends Event {
-  readonly detail: { readonly value?: string };
+  readonly detail: { readonly value?: unknown };
 }
 
 interface SelectorElement extends HTMLElement {
@@ -40,6 +40,10 @@ interface SelectorElement extends HTMLElement {
 const CAMERA_SELECTOR = {
   entity: { filter: { domain: "camera" } },
 } as const;
+
+const BOOLEAN_SELECTOR = { boolean: {} } as const;
+
+type AppearanceFlag = "remove_outer_rounded_edges" | "remove_outer_shadow";
 
 export class WatchZoneCardEditor extends LitElement {
   private _baseline?: WatchZoneCardConfig;
@@ -56,11 +60,12 @@ export class WatchZoneCardEditor extends LitElement {
     }
     const firstAssignment = !this._hass;
     this._hass = value;
-    const selector = this.renderRoot?.querySelector(
-      "ha-selector",
-    ) as SelectorElement | null;
-    if (selector) {
-      selector.hass = value;
+    const selectors = this.renderRoot?.querySelectorAll("ha-selector") as
+      NodeListOf<SelectorElement> | undefined;
+    if (selectors?.length) {
+      for (const selector of selectors) {
+        selector.hass = value;
+      }
     } else if (firstAssignment) {
       this.requestUpdate();
     }
@@ -126,6 +131,27 @@ export class WatchZoneCardEditor extends LitElement {
         .required=${false}
         @value-changed=${this._handleCameraChange}
       ></ha-selector>
+      <div class="section-title">Appearance</div>
+      <ha-selector
+        class="appearance-option"
+        data-config-key="remove_outer_rounded_edges"
+        label="Remove Outer Rounded Edges"
+        .hass=${this._hass}
+        .selector=${BOOLEAN_SELECTOR}
+        .value=${this._config?.remove_outer_rounded_edges === true}
+        .required=${false}
+        @value-changed=${this._handleAppearanceChange}
+      ></ha-selector>
+      <ha-selector
+        class="appearance-option"
+        data-config-key="remove_outer_shadow"
+        label="Remove Outer Shadow"
+        .hass=${this._hass}
+        .selector=${BOOLEAN_SELECTOR}
+        .value=${this._config?.remove_outer_shadow === true}
+        .required=${false}
+        @value-changed=${this._handleAppearanceChange}
+      ></ha-selector>
     `;
   }
 
@@ -164,12 +190,35 @@ export class WatchZoneCardEditor extends LitElement {
     if (!this._config) {
       return;
     }
-    const value = event.detail.value?.trim();
+    const value =
+      typeof event.detail.value === "string"
+        ? event.detail.value.trim()
+        : undefined;
     const next = { ...this._config };
     if (value) {
       next.camera_entity = value;
     } else {
       delete next.camera_entity;
+    }
+    this._applyDraft(normalizeCardConfig(next), true);
+  };
+
+  private readonly _handleAppearanceChange = (
+    event: ValueChangedEvent,
+  ): void => {
+    if (!this._config) {
+      return;
+    }
+    const key = (event.currentTarget as HTMLElement).dataset.configKey as
+      AppearanceFlag | undefined;
+    if (!key) {
+      return;
+    }
+    const next: Record<string, unknown> = { ...this._config };
+    if (event.detail.value === true) {
+      next[key] = true;
+    } else {
+      delete next[key];
     }
     this._applyDraft(normalizeCardConfig(next), true);
   };
@@ -259,6 +308,18 @@ export class WatchZoneCardEditor extends LitElement {
     ha-selector {
       display: block;
       margin-block-start: 1rem;
+    }
+
+    .section-title {
+      margin-block-start: 1.5rem;
+      color: var(--ha-color-text-primary, var(--primary-text-color));
+      font-size: var(--ha-font-size-m, 1rem);
+      font-weight: var(--ha-font-weight-medium, 500);
+      line-height: var(--ha-line-height-condensed, 1.25);
+    }
+
+    .appearance-option {
+      margin-block-start: 0.5rem;
     }
   `;
 }

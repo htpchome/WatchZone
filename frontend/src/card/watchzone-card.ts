@@ -143,8 +143,14 @@ export class WatchZoneCard extends LitElement {
       cameraEntity && this._hass?.states[cameraEntity],
     );
     const posterUrl = cameraImageUrl(this._hass, cameraEntity);
+    const cardClasses = [
+      config.remove_outer_rounded_edges ? "remove-outer-rounded-edges" : "",
+      config.remove_outer_shadow ? "remove-outer-shadow" : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
     return html`
-      <ha-card>
+      <ha-card class=${cardClasses}>
         <div class="shell">
           ${
             config.title
@@ -281,6 +287,16 @@ export class WatchZoneCard extends LitElement {
       border-color: var(--wzc-card-border-color);
       border-width: var(--wzc-card-border-width);
       border-radius: var(--wzc-card-radius);
+    }
+
+    ha-card.remove-outer-rounded-edges {
+      --ha-card-border-radius: 0px;
+      --wzc-card-radius: 0px;
+    }
+
+    ha-card.remove-outer-shadow {
+      --ha-card-box-shadow: none;
+      box-shadow: none;
     }
 
     .shell {
