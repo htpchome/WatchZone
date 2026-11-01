@@ -1,0 +1,10 @@
+# Keep this aligned with the Home Assistant image in docker-compose.yml.
+homeassistant==2026.9.0
+
+pytest==9.0.3
+pytest-asyncio==1.4.0
+pytest-cov>=6,<8
+pytest-homeassistant-custom-component>=0.13,<1
+ruff>=0.11,<1
+mypy>=1.15,<2
+pre-commit>=4,<5

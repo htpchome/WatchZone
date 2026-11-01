@@ -1,0 +1,99 @@
+mqtt:
+  enabled: false
+
+go2rtc:
+  streams:
+    front_door:
+      - "ffmpeg:https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4#video=h264"
+    backyard:
+      - "ffmpeg:https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4#video=h264"
+    driveway:
+      - "ffmpeg:https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4#video=h264"
+  webrtc:
+    candidates:
+      - 0.0.0.0:8555
+    listen: :8555
+
+cameras:
+  front_door:
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/front_door
+          input_args: preset-rtsp-restream-low-latency
+          roles:
+            - detect
+            - record
+    detect:
+      enabled: false
+      width: 1280
+      height: 720
+      fps: 5
+    record:
+      enabled: false
+    objects:
+      track:
+        - person
+        - car
+        - dog
+        - cat
+
+  backyard:
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/backyard
+          input_args: preset-rtsp-restream-low-latency
+          roles:
+            - detect
+            - record
+    detect:
+      enabled: false
+      width: 1280
+      height: 720
+      fps: 5
+    record:
+      enabled: false
+    objects:
+      track:
+        - person
+        - dog
+
+  driveway:
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/driveway
+          input_args: preset-rtsp-restream-low-latency
+          roles:
+            - detect
+            - record
+    detect:
+      enabled: false
+      width: 1280
+      height: 720
+      fps: 5
+    record:
+      enabled: false
+    objects:
+      track:
+        - person
+        - car
+        - truck
+
+detectors:
+  cpu:
+    type: cpu
+    num_threads: 3
+
+model:
+  path: /cpu_model.tflite
+  width: 320
+  height: 320
+
+birdseye:
+  enabled: true
+  width: 1280
+  height: 720
+  quality: 8
+  mode: objects
+
+ui: {}
+version: 0.17-0
