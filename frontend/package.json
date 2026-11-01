@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build",
+    "build:release": "yarn build && bash ../scripts/package-release.sh",
     "check:version": "node ../scripts/check-version.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",

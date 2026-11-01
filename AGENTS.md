@@ -9,6 +9,9 @@ Before changing source code, read:
 1. `architecture.md`
 2. Any contract in `docs/` that governs the affected feature
 
+For card configuration, editor previews, Home Assistant controls, theming, or
+responsive card layout, also read `docs/config-editor-lifecycle.md` in full.
+
 For live video, connection management, editor transitions, navigation
 retention, or audio state, also read `docs/live-session-lifecycle.md` in full.
 
@@ -24,6 +27,17 @@ retention, or audio state, also read `docs/live-session-lifecycle.md` in full.
 - Do not create empty directories, placeholder files, speculative interfaces,
   generic utility dumping grounds, or compatibility layers without a concrete
   requirement.
+- Keep code tight and cohesive. Extract shared helpers before real boundary or
+  repeated behavior is copied, and use controllers/handlers only where they
+  own orchestration, events, or lifecycle.
+- Choose classes for identity, state, cleanup, or polymorphism; choose plain
+  functions for stateless transformations. Concrete near-term architecture may
+  guide the choice, but hypothetical extensibility does not justify ceremony.
+- Translate errors once at the useful boundary. Do not swallow, repeatedly log
+  and rethrow, or duplicate defensive wrappers across layers.
+- Keep the browser console quiet: one name/version startup banner plus
+  actionable warnings or errors. Remove temporary tracing before handoff and
+  route future diagnostics through the centralized logger when introduced.
 
 ## Core boundaries
 
@@ -40,6 +54,10 @@ retention, or audio state, also read `docs/live-session-lifecycle.md` in full.
   Lit elements. Element disconnection releases a lease; it does not
   automatically close a retained connection.
 - Automatic audio policy never overwrites explicit user mute preference.
+- Card-editor typing updates Home Assistant `dirtyState` and a coalesced soft
+  preview; it never emits `config-changed` on every keystroke.
+- Use current Home Assistant controls and semantic theme tokens. WatchZone
+  customization properties use the `--wzc-` prefix.
 
 ## Structure and generated output
 

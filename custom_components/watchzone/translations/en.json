@@ -1,0 +1,14 @@
+{
+  "title": "WatchZone",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up WatchZone",
+        "description": "Create the WatchZone application entry. Camera providers can be added later."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "WatchZone is already configured."
+    }
+  }
+}

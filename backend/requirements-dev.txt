@@ -1,5 +1,6 @@
 # Keep this aligned with the Home Assistant image in docker-compose.yml.
 homeassistant==2026.9.0
+home-assistant-frontend==20260826.4
 
 pytest==9.0.3
 pytest-asyncio==1.4.0

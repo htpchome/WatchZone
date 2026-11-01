@@ -114,6 +114,7 @@ architecture decision recorded in this document or a future ADR.
 ├── architecture.md
 ├── hacs.json                       # HACS release-install metadata
 ├── docs/
+│   ├── config-editor-lifecycle.md # Draft and preview contract
 │   └── live-session-lifecycle.md  # Retention and audio-state contract
 ├── dist/                          # Generated output; never source
 │   ├── frontend/                  # Vite entry and lazy chunks
@@ -386,7 +387,27 @@ Home Assistant may assign a new `hass` object for any state change. Therefore:
   unrestricted service locator.
 - Ordinary parent-child data uses explicit properties.
 
-### 8.6 Interaction state
+### 8.6 Card editor, themes, and responsive behavior
+
+Every card configuration field uses Home Assistant's dirty-state editor
+lifecycle. Typing updates a local normalized draft and a stable `dirtyState`
+context key; it does not repeatedly emit `config-changed` or reconstruct the
+preview card. Draft preview uses a coalesced WatchZone-owned path that
+preserves component identity. Save hands the final draft to Home Assistant;
+Cancel discards it. The normative behavior and required tests are defined in
+[docs/config-editor-lifecycle.md](docs/config-editor-lifecycle.md).
+
+WatchZone uses current Home Assistant controls and semantic theme tokens.
+Project customization variables use the `--wzc-` prefix and resolve to Home
+Assistant tokens by default. Hardcoded application palettes and independent
+light/dark assumptions are prohibited.
+
+Every visual boundary is responsive from its first implementation. Use
+logical sizing, container-aware rules, bounded fluid values, and explicit
+overflow behavior. The card shell is the future constraint boundary for panel
+and full-size layouts and must not assume a dashboard column count or viewport.
+
+### 8.7 Interaction state
 
 Cross-module interaction is mediated by a small typed session store owned by
 the card runtime. Examples include selected camera, selected event, or active
@@ -400,7 +421,7 @@ navigation target.
 - Session state is scoped to a card instance unless a requirement explicitly
   calls for wider scope.
 
-### 8.7 Live connection adapters
+### 8.8 Live connection adapters
 
 A **provider** and a **live connection type** are different architectural
 concepts:
@@ -452,7 +473,7 @@ Connection rules:
   behavior permit. Python brokers authorization and source resolution but does
   not proxy high-bitrate media without a concrete need.
 
-### 8.8 Retained media sessions and audio intent
+### 8.9 Retained media sessions and audio intent
 
 Live connections are owned by a document-scoped media-session manager, not by
 a card, module, layout renderer, preview, or editor element. The manager is a
@@ -504,9 +525,10 @@ contract is defined in [docs/live-session-lifecycle.md](docs/live-session-lifecy
 Python is the authoritative owner of layouts. The frontend editor is a client
 of the Python layout API; it does not persist layout definitions in Lovelace.
 
-The Lovelace card configuration contains only the minimum identity needed to
-locate a saved layout, such as a layout ID or card instance ID. It must not
-contain the module tree, placement rules, or module configuration.
+The Lovelace card configuration contains only presentation metadata and the
+minimum identity needed to locate a saved layout, such as a title, layout ID,
+or card instance ID. It must not contain the module tree, placement rules, or
+module configuration.
 
 ### 9.2 Stored layout model
 
@@ -744,6 +766,19 @@ placeholder. They must not be silently deleted during load or save.
 Retry actions must be safe and idempotent where possible. Automatic retries
 must be bounded and must stop when a component disconnects.
 
+Errors are translated once at the boundary that can add useful context. Do not
+scatter duplicate `try`/`catch` blocks, silently swallow failures, or log and
+rethrow the same error at every layer. Expected failures use typed categories
+and actionable user-safe messages; unexpected failures retain their cause for
+diagnostics without exposing secrets.
+
+The browser console shows one startup banner with application name and version.
+Routine state changes, renders, and successful requests are not logged. Runtime
+diagnostics eventually flow through one small logging service with levels,
+redaction, and duplicate/rate control. Production defaults to actionable
+warnings and errors; temporary direct `console` tracing must not remain in a
+completed change.
+
 ## 13. Performance contract
 
 ### 13.1 Bundle and loading budgets
@@ -877,6 +912,21 @@ fixtures.
 - No commented-out implementations, unused exports, or compatibility aliases
   remain after a completed change.
 - Generated frontend assets are never manually edited.
+- Keep implementations cohesive and compact. Line count is not a target, but
+  repeated ceremony, parallel code paths, and pass-through layers are defects.
+- Extract a helper when behavior has multiple real consumers, protects a
+  stable boundary, or is required by a concrete near-term capability already
+  in this contract. Do not wait for the same logic to be copied repeatedly.
+- Use a controller or handler when it owns orchestration, an event boundary, or
+  a lifecycle. Keep policy in its owning feature and prevent controllers from
+  becoming general-purpose god objects.
+- Prefer a class when identity, encapsulated mutable state, lifecycle cleanup,
+  or multiple implementations make it clearer or more efficient. Prefer plain
+  functions and immutable data for stateless transformations. A known next
+  expansion may influence the choice; hypothetical flexibility alone may not.
+- Centralize validation, error translation, and cleanup patterns at their
+  natural boundary instead of repeating defensive boilerplate at every call
+  site.
 
 ## 18. Change discipline
 
@@ -894,6 +944,8 @@ An architecture decision is required before changing any of the following:
 - Release-as-one-integration strategy.
 - Separation of providers from live connection adapters.
 - Document-scoped retained media-session ownership and user audio-intent rules.
+- Dirty-state card-editor lifecycle and identity-preserving preview updates.
+- Home Assistant semantic theming and responsive shell requirements.
 - Storage format ownership.
 - Authentication or authorization model.
 - Performance budgets.
@@ -938,6 +990,8 @@ A change is complete only when:
 - Resources are released when lifecycle ownership and retained-session policy
   end, or when the integration unloads.
 - Live sessions and mute state follow the retained-session lifecycle contract.
+- Every card configuration field follows the editor lifecycle contract.
+- Visual changes use Home Assistant theme tokens and remain responsive.
 - Tests cover the changed contract and important failure paths.
 - Generated output and documentation are updated when applicable.
 - Replaced code and dead paths are removed.
@@ -956,6 +1010,11 @@ including:
   the supported Core version.
 - Home Assistant integration quality rules:
   <https://developers.home-assistant.io/docs/core/integration-quality-scale/>
+- Home Assistant custom card and editor guidance:
+  <https://contributors.home-assistant.io/frontend/custom-ui/card/>
+  and <https://contributors.home-assistant.io/frontend/custom-ui/card-editor/>
+- Home Assistant frontend theming:
+  <https://contributors.home-assistant.io/frontend/architecture/theming/>
 
 When platform behavior changes, implementation and this contract must be
 updated together. Unsupported frontend internals are not made architectural

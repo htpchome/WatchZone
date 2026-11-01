@@ -1,0 +1,31 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.19
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+      - run: corepack enable
+      - run: corepack yarn install --immutable
+        working-directory: frontend
+      - run: corepack yarn check:version
+        working-directory: frontend
+      - run: corepack yarn build
+        working-directory: frontend
+      - run: bash scripts/package-release.sh
+      - name: Create GitHub release
+        run: gh release create "$GITHUB_REF_NAME" dist/watchzone.zip --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}

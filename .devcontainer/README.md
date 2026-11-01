@@ -109,10 +109,11 @@ bash .devcontainer/sync-integration.sh
 ```
 
 The Python package is copied to
-`/config/custom_components/<integration-domain>` and frontend assets are copied
-to `/config/www/<integration-domain>`. If the project provides
-`scripts/list-release-assets.mjs`, the sync script uses that inventory;
-otherwise it copies the top-level files in `dist/`.
+`/config/custom_components/<integration-domain>` and compiled frontend assets
+are copied beneath that integration's `frontend/` directory, matching the
+packaged HACS artifact. WatchZone serves and registers those assets from its
+Python integration; it does not require a separate `/config/www` Lovelace
+resource.
 
 For continuous synchronization:
 
