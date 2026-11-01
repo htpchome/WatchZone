@@ -11,6 +11,7 @@ export interface HomeAssistantPresentationState {
 }
 
 export interface HomeAssistantMediaPresentation {
+  readonly requestsPlaybackOnSelection: boolean;
   render(state: HomeAssistantPresentationState): TemplateResult;
 }
 

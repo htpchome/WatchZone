@@ -43,11 +43,12 @@ that timer, hiding cancels it, and host disconnection clears all pending work.
 Components use the controller for state timing; CSS owns opacity, movement,
 reduced-motion behavior, and visual transitions.
 
-Camera controls and the initial source label use the same controller class and
+Camera controls and the current source label use the same controller class and
 the same named camera-overlay delay. They are independent states with shared
-behavior: Connecting remains visible while unresolved, the first source appears
-briefly after selection, and later source visibility follows control
-interaction.
+behavior: Connecting remains visible while unresolved, each newly presented
+source appears briefly after selection or takeover, and later source visibility
+follows control interaction. A takeover updates the existing indicator directly
+without returning to Connecting.
 
 ## 4. Media-overlay layout and input invariants
 

@@ -119,8 +119,9 @@ designer UI so saved layouts are declarative and testable.
   A substream changes live presentation only; events, PTZ, recordings, and
   other camera capabilities continue to use the stable camera identity.
 - An independent source/status overlay with a persistent connecting indicator
-  and timed first-source label; later source-label visibility shares the camera
-  controls' interaction state and timer while diagnostics retain the complete
+  and timed current-source label; a takeover updates the same indicator without
+  a second connecting phase, later visibility shares the camera controls'
+  interaction state and timer, and diagnostics retain the complete
   takeover/fallback history.
 - Resource budgets for simultaneous connections, decoders, bandwidth, parked
   sessions, and idle eviction.

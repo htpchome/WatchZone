@@ -140,8 +140,11 @@ A focused system contract records:
   `defaultMuted`. Audible autoplay denial always resumes the retained element
   muted; only the lazy Catalyst autoplay policy retries unmuting after playback
   starts. Its native-video host receives Catalyst-only compositor edge
-  isolation; Browser and Companion do not. A later WebRTC takeover does not
-  change the initial-source indicator.
+  isolation; Browser and Companion do not. A later WebRTC takeover updates the
+  same source indicator directly without creating a second connecting phase.
+  Catalyst selected playback follows its isolated two-action sequence (before
+  source attachment and at loaded data); generic presentation selection does
+  not issue a duplicate playback request.
 - **Verification:** `frontend/tests/home-assistant-connection.test.ts`,
   `frontend/tests/home-assistant-hls-connection.test.ts`,
   `frontend/tests/home-assistant-live-resolver.test.ts`, and Catalyst/browser
@@ -215,16 +218,16 @@ A focused system contract records:
 Passing a synthetic test is not equivalent to physical-client validation.
 Every handoff must state the strongest evidence actually obtained.
 
-| Contract area | Automated evidence | Evidence still required |
-| --- | --- | --- |
-| Internal rename safety | Naming validator runs in every production build and CI | External domain/tag migration plan when the public rename is chosen |
-| Browser/Catalyst isolation | Source-boundary validator, resolver/presentation unit tests, and browser routing tests | Physical Catalyst validation for native media, lifecycle, and audio behavior |
-| HA HLS/WebRTC hedge | Adapter, HLS-first takeover, retention, and Chromium/Firefox/WebKit tests | Live Home Assistant validation against real camera signaling and codecs |
-| Mute intent and autoplay | Unit/browser tests cover defaults, user overrides, retention, takeover, and blocked playback | Physical Safari, Companion, and Catalyst autoplay-policy validation |
-| Editor dirty state | Unit/browser tests cover true/false round trips, preview identity, and Save | Live Home Assistant editor validation after HA frontend upgrades |
-| Responsive/theme behavior | Style validator, token checks, and three-engine viewport tests | Physical phone/tablet safe-area, text-zoom, and native-app validation |
-| Retention/cleanup | Lease, navigation, replacement, timer, and controller cleanup tests | Long-running live-system observation; no automated heap/leak endurance gate exists yet |
-| Home Assistant API currency | Focused adapter boundaries and CI against installed development dependencies | Manual review against current HA developer documentation when an HA-facing API changes |
+| Contract area               | Automated evidence                                                                           | Evidence still required                                                                |
+| --------------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Internal rename safety      | Naming validator runs in every production build and CI                                       | External domain/tag migration plan when the public rename is chosen                    |
+| Browser/Catalyst isolation  | Source-boundary validator, resolver/presentation unit tests, and browser routing tests       | Physical Catalyst validation for native media, lifecycle, and audio behavior           |
+| HA HLS/WebRTC hedge         | Adapter, HLS-first takeover, retention, and Chromium/Firefox/WebKit tests                    | Live Home Assistant validation against real camera signaling and codecs                |
+| Mute intent and autoplay    | Unit/browser tests cover defaults, user overrides, retention, takeover, and blocked playback | Physical Safari, Companion, and Catalyst autoplay-policy validation                    |
+| Editor dirty state          | Unit/browser tests cover true/false round trips, preview identity, and Save                  | Live Home Assistant editor validation after HA frontend upgrades                       |
+| Responsive/theme behavior   | Style validator, token checks, and three-engine viewport tests                               | Physical phone/tablet safe-area, text-zoom, and native-app validation                  |
+| Retention/cleanup           | Lease, navigation, replacement, timer, and controller cleanup tests                          | Long-running live-system observation; no automated heap/leak endurance gate exists yet |
+| Home Assistant API currency | Focused adapter boundaries and CI against installed development dependencies                 | Manual review against current HA developer documentation when an HA-facing API changes |
 
 Local Python validation requires the Home Assistant development dependencies.
 The repository CI installs them and runs Ruff, mypy, and pytest; a local

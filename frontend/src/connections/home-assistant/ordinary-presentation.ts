@@ -7,6 +7,8 @@ import type {
 
 /** Proven Browser/Companion HLS hedge with an autoplaying WebRTC candidate. */
 export class OrdinaryHomeAssistantMediaPresentation implements HomeAssistantMediaPresentation {
+  public readonly requestsPlaybackOnSelection = true;
+
   public render(state: HomeAssistantPresentationState): TemplateResult {
     return html`
       <div class="hls-host" ?hidden=${state.selected === "webrtc"}></div>

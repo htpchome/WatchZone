@@ -183,6 +183,8 @@ describe("camera presentation retention", () => {
     await vi.waitFor(() =>
       expect(view.shadowRoot?.querySelector(".hls-host video")).toBe(hlsVideo),
     );
+    const sourceIndicator = view.shadowRoot?.querySelector(".source-indicator");
+    expect(sourceIndicator?.textContent?.trim()).toBe("HLS · HLS.js");
     const webRtcVideo =
       view.shadowRoot?.querySelector<HTMLVideoElement>("video.webrtc");
     expect(webRtcVideo).toBeTruthy();
@@ -195,6 +197,13 @@ describe("camera presentation retention", () => {
     webRtcVideo?.dispatchEvent(new Event("loadeddata"));
 
     await vi.waitFor(() => expect(webRtcVideo?.hidden).toBe(false));
+    expect(
+      view.shadowRoot?.querySelector(".source-indicator")?.textContent?.trim(),
+    ).toBe("WebRTC");
+    expect(view.shadowRoot?.querySelector(".source-indicator")).toBe(
+      sourceIndicator,
+    );
+    expect(view.shadowRoot?.querySelector(".connection-spinner")).toBeNull();
     expect(view.shadowRoot?.querySelector(".hls-host video")).toBeNull();
     expect(webRtcVideo?.muted).toBe(false);
 

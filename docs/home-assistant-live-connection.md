@@ -63,8 +63,9 @@ startup:
 5. If only one path succeeds, it remains selected. An error is shown only when
    both paths fail.
 6. The upper-right connection indicator shows `Connecting…` while candidates
-   race, then replaces that content in place with the initial winning transport.
-   A later WebRTC takeover does not rewrite the initial connection label.
+   race, then replaces that content in place with the currently presented
+   transport. A later WebRTC takeover changes that same indicator directly
+   from HLS to WebRTC without showing a second connecting phase.
 
 This policy deliberately avoids a preliminary capability request because that
 extra serial round trip would delay both candidates. Unsupported paths fail
@@ -124,10 +125,11 @@ The HLS session owns its media element because its MediaSource playback state
 is element-bound. Closing destroys the playback engine, cancels in-flight
 requests, resets the element, and removes it from presentation.
 
-The camera information layer displays the initial presentation winner as
-`WebRTC`, `HLS · HLS.js`, or `HLS · native`. That label remains stable if
-WebRTC later takes over from HLS. Diagnostics separately retain the selected
-HLS path and the time at which each transport became the presentation winner.
+The camera information layer displays the currently presented transport as
+`WebRTC`, `HLS · HLS.js`, or `HLS · native`. A transport takeover updates
+the same indicator in place without returning to `Connecting…`. Diagnostics
+retain the selected HLS path and the time at which each transport became the
+presentation winner.
 
 ## 7. Ownership and retention
 
@@ -165,18 +167,20 @@ Assistant selected-media lifecycle. Its retained video is created with
 visible element is attached, selected-media ownership applies the intended
 mute state and requests playback on that same element while the Home Assistant
 stream request is in flight. The direct native HLS URL is then assigned without
-fetching the manifest or replacing the element, and playback is requested again
-on that sourced element. `loadeddata` makes the final selected-media request
-without changing the desired audio state. The distinction between runtime
+fetching the manifest, replacing the element, or issuing a third request at
+source attachment. `loadeddata` makes the second selected-media request without
+changing the desired audio state. The generic presentation layer does not add
+another playback request when the Catalyst session becomes selected. The
+distinction between runtime
 `muted` and `defaultMuted` is intentional and tested: automatic attachment,
 background safety, transport handoff, and autoplay recovery alter runtime mute
 only. Only an explicit user mute action changes `defaultMuted`; automatic
 unmute must not leave Catalyst's retained player classified as default-muted.
-If the initial audible request is rejected, the presentation immediately plays
-the same retained element muted. Catalyst then performs one isolated
-second-stage unmute attempt after native playback is confirmed; failure of that
-attempt leaves video playing muted and preserves the user's desired unmuted
-state for a later gesture. Ordinary HLS never imports or executes this retry.
+If the pre-source audible request is rejected, the Catalyst adapter immediately
+plays the same retained element muted, then reapplies the requested audible
+state for its one `loadeddata` action. A denial at that source-ready action
+leaves video playing muted and preserves the user's desired unmuted state for a
+later gesture. Ordinary HLS never imports or executes this sequence.
 
 The presentation retains explicit user preference across HLS/WebRTC handoff
 and presentation replacement. An autoplay rejection temporarily forces muted

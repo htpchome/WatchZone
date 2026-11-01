@@ -72,7 +72,7 @@ export class CameraLiveView extends LitElement {
   private _hlsLease?: MediaSessionLease;
   private _hlsSnapshot: MediaSessionSnapshot = { state: "new" };
   private _hlsUnsubscribe?: () => void;
-  private _initialTransport?: MediaTransport;
+  private _presentedTransport?: MediaTransport;
   private _muted = true;
   private _pictureInPictureActive = false;
   private _posterFailed = false;
@@ -113,7 +113,7 @@ export class CameraLiveView extends LitElement {
     if (this._api?.identity === value?.identity) {
       return;
     }
-    this._resetInitialTransport();
+    this._resetPresentedTransport();
     this._releaseLeases();
     this._api = value;
     this._syncLeases();
@@ -132,7 +132,7 @@ export class CameraLiveView extends LitElement {
     if (this._entityId === value) {
       return;
     }
-    this._resetInitialTransport();
+    this._resetPresentedTransport();
     this._dismissToast();
     this._releaseLeases();
     this._entityId = value;
@@ -197,11 +197,11 @@ export class CameraLiveView extends LitElement {
 
   protected render() {
     const sourceLabel =
-      this._initialTransport === "webrtc"
+      this._presentedTransport === "webrtc"
         ? "WebRTC"
-        : this._initialTransport === "hls_native"
+        : this._presentedTransport === "hls_native"
           ? "HLS · native"
-          : this._initialTransport === "hls_mse"
+          : this._presentedTransport === "hls_mse"
             ? "HLS · HLS.js"
             : "HLS";
     const error = !this._available
@@ -213,7 +213,7 @@ export class CameraLiveView extends LitElement {
     const connecting = this._available && !error && !this._selected;
     const showSource = Boolean(
       this._selected &&
-      this._initialTransport &&
+      this._presentedTransport &&
       (this._sourceIntroduction.visible || this._controlsVisibility.visible),
     );
     const showConnectionIndicator = connecting || showSource;
@@ -371,6 +371,7 @@ export class CameraLiveView extends LitElement {
         this._webRtcSnapshot = snapshot;
         if (snapshot.state === "failed" && this._selected === "webrtc") {
           this._selected = undefined;
+          this._resetPresentedTransport();
           this._setActiveVideo(undefined);
           this._syncHlsLease();
         }
@@ -411,11 +412,13 @@ export class CameraLiveView extends LitElement {
       }
       if (snapshot.state === "live" && !this._selected) {
         this._selected = "hls";
-        this._setInitialTransport(snapshot.transport);
+        this._captureAutoplayFallback(snapshot.video);
+        this._setPresentedTransport(snapshot.transport);
         this._setActiveVideo(snapshot.video);
         snapshot.timing?.mark("presentation_selected");
       } else if (snapshot.state === "failed" && this._selected === "hls") {
         this._selected = undefined;
+        this._resetPresentedTransport();
         this._setActiveVideo(undefined);
       }
       this.requestUpdate();
@@ -424,6 +427,7 @@ export class CameraLiveView extends LitElement {
 
   private _releaseLeases(): void {
     this._selected = undefined;
+    this._resetPresentedTransport();
     this._setActiveVideo(undefined);
     this._webRtcDecoded = false;
     this._releaseWebRtcLease();
@@ -485,7 +489,7 @@ export class CameraLiveView extends LitElement {
     this._webRtcDecoded = true;
     this._webRtcSnapshot.timing?.mark("first_frame_decoded");
     this._webRtcSnapshot.timing?.mark("presentation_selected");
-    this._setInitialTransport("webrtc");
+    this._setPresentedTransport("webrtc");
     this._selected = "webrtc";
     this._setActiveVideo(event.currentTarget as HTMLVideoElement);
     this._releaseHlsLease(true);
@@ -515,19 +519,21 @@ export class CameraLiveView extends LitElement {
     }
     suppressNativePictureInPicture(video);
     this._syncControlState();
-    this._syncEffectiveMute(Boolean(video));
+    this._syncEffectiveMute(
+      Boolean(video) && this._mediaPresentation.requestsPlaybackOnSelection,
+    );
   }
 
-  private _setInitialTransport(transport: MediaTransport | undefined): void {
-    if (!transport || this._initialTransport) {
+  private _setPresentedTransport(transport: MediaTransport | undefined): void {
+    if (!transport || this._presentedTransport === transport) {
       return;
     }
-    this._initialTransport = transport;
+    this._presentedTransport = transport;
     this._sourceIntroduction.revealFor();
   }
 
-  private _resetInitialTransport(): void {
-    this._initialTransport = undefined;
+  private _resetPresentedTransport(): void {
+    this._presentedTransport = undefined;
     this._clearSourceIntroduction();
   }
 
@@ -634,6 +640,18 @@ export class CameraLiveView extends LitElement {
 
   private _applyMuteToElement(video: HTMLVideoElement, muted: boolean): void {
     setMediaElementRuntimeMuted(video, muted);
+  }
+
+  private _captureAutoplayFallback(video: HTMLVideoElement | undefined): void {
+    if (!video || this._desiredMuted || documentIsHidden() || !video.muted) {
+      return;
+    }
+    this._autoplayBlocked = true;
+    this._showToast(
+      "The browser blocked unmuted playback. Tap the audio button to retry.",
+      "warning",
+    );
+    this._syncEffectiveMute(false);
   }
 
   private async _requestPlayback(video: HTMLVideoElement): Promise<void> {

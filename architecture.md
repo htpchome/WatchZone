@@ -420,8 +420,10 @@ policy; behavioral delays are named constants rather than literals embedded in
 views or styles. The source indicator remains an independent non-control
 overlay, but after its exceptions it consumes the same interaction visibility
 state and hide timer as the control overlay. Its exceptions are that Connecting
-remains visible continuously and the first resolved source receives one
+remains visible continuously and each newly presented source receives one
 automatic timed introduction before ordinary interaction-controlled behavior.
+A transport takeover updates that same indicator without a second Connecting
+phase.
 
 ### 8.4 Custom elements and Lit
 

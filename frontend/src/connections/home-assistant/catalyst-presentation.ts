@@ -7,6 +7,8 @@ import type {
 
 /** Catalyst owns one native-HLS surface and never creates a WebRTC element. */
 export class CatalystHomeAssistantMediaPresentation implements HomeAssistantMediaPresentation {
+  public readonly requestsPlaybackOnSelection = false;
+
   public render(state: HomeAssistantPresentationState): TemplateResult {
     return html`<div
       class="hls-host native-edge-isolation"

@@ -20,6 +20,33 @@ function abortError(): DOMException {
   return new DOMException("Connection cancelled", "AbortError");
 }
 
+function isAutoplayDenied(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    error.name === "NotAllowedError"
+  );
+}
+
+async function requestSelectedPlayback(
+  video: HTMLVideoElement,
+  muted: boolean,
+): Promise<void> {
+  setMediaElementRuntimeMuted(video, muted);
+  try {
+    await playMediaElement(video);
+  } catch (error) {
+    if (muted || !isAutoplayDenied(error)) return;
+    setMediaElementRuntimeMuted(video, true);
+    try {
+      await playMediaElement(video);
+    } catch {
+      // Connection readiness and transport failure remain independently owned.
+    }
+  }
+}
+
 /** Catalyst-only native HLS lifecycle. Ordinary HLS must not import this file. */
 export async function createHomeAssistantCatalystHlsConnection(
   api: HomeAssistantApi,
@@ -44,11 +71,6 @@ export async function createHomeAssistantCatalystHlsConnection(
   video.muted = true;
   options.onVideo?.(video);
   setMediaElementRuntimeMuted(video, options.initialMuted);
-  if (!options.initialMuted) {
-    void Promise.resolve()
-      .then(() => (video.muted ? undefined : playMediaElement(video)))
-      .catch(() => undefined);
-  }
 
   let closed = false;
   let connected = false;
@@ -90,12 +112,13 @@ export async function createHomeAssistantCatalystHlsConnection(
     };
     video.addEventListener(
       "loadeddata",
-      () => {
+      async () => {
         if (closed) return;
         timing.mark("first_frame_decoded");
         connected = true;
         window.clearTimeout(timeout);
-        void playMediaElement(video).catch(() => undefined);
+        await requestSelectedPlayback(video, options.initialMuted);
+        if (closed) return;
         resolve({ video, timing, transport: "hls_native", close });
       },
       { once: true },
@@ -105,11 +128,15 @@ export async function createHomeAssistantCatalystHlsConnection(
 
   try {
     timing.mark("stream_url_requested");
-    const stream = await api.callWS<StreamResponse>({
+    const streamRequest = api.callWS<StreamResponse>({
       type: "camera/stream",
       entity_id: entityId,
       format: "hls",
     });
+    if (!options.initialMuted) {
+      await requestSelectedPlayback(video, false);
+    }
+    const stream = await streamRequest;
     timing.mark("stream_url_received");
     if (signal.aborted) throw abortError();
     if (!video.canPlayType(HLS_CONTENT_TYPE)) {
@@ -118,7 +145,6 @@ export async function createHomeAssistantCatalystHlsConnection(
     timing.mark("hls_native_path_selected");
     video.src = api.resolveUrl(stream.url);
     setMediaElementRuntimeMuted(video, options.initialMuted);
-    void playMediaElement(video).catch(() => undefined);
   } catch (error) {
     fail(error);
   }
