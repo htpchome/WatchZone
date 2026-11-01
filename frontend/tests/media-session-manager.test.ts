@@ -232,6 +232,38 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
+  it("preserves Catalyst native playback policy across a retry", async () => {
+    let attempt = 0;
+    const hlsFactory = vi.fn<ConnectionFactory>(async () => {
+      attempt += 1;
+      if (attempt === 1) throw new Error("temporary HLS failure");
+      return {
+        video: document.createElement("video"),
+        transport: "hls_native",
+        close: vi.fn(),
+      };
+    });
+    const manager = new MediaSessionManager(vi.fn(), hlsFactory);
+    const lease = manager.acquireHomeAssistantHls(createApi(), "camera.front", {
+      hlsPlaybackMode: "native",
+      initialMuted: false,
+    });
+
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("failed"));
+    lease.retry();
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
+    expect(hlsFactory).toHaveBeenCalledTimes(2);
+    for (const call of hlsFactory.mock.calls) {
+      expect(call[5]).toMatchObject({
+        hlsPlaybackMode: "native",
+        initialMuted: false,
+      });
+    }
+
+    lease.release();
+    manager.closeAll();
+  });
+
   it("hands a shared HLS element back to remaining leases without reconnecting", async () => {
     const video = document.createElement("video");
     const hlsFactory = vi.fn<ConnectionFactory>(async () => ({

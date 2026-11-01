@@ -116,10 +116,13 @@ A focused system contract records:
   `frontend/src/connections/home-assistant/hls.ts`
 - **Contract:** `docs/home-assistant-live-connection.md`
 - **Flow:** eligible clients hedge WebRTC and HLS startup and present the first
-  decoded candidate; Catalyst uses retained native HLS only. Concrete adapters
-  remain lazy and report timing to the shared startup diagnostics.
-- **Key invariant:** Catalyst never starts WebRTC or HLS.js. A later WebRTC
-  takeover does not change the initial-source indicator.
+  decoded candidate; Catalyst uses one retained native-HLS element born with
+  autoplay and its intended audio state, then receives the direct Home
+  Assistant stream URL. Concrete adapters remain lazy and report timing to the
+  shared startup diagnostics.
+- **Key invariant:** Catalyst never starts WebRTC, HLS.js, or a preliminary
+  muted/source-less playback sequence. A later WebRTC takeover does not change
+  the initial-source indicator.
 - **Verification:** `frontend/tests/home-assistant-connection.test.ts`,
   `frontend/tests/home-assistant-hls-connection.test.ts`, and Catalyst/browser
   cases in `frontend/tests/browser/smoke.spec.ts`

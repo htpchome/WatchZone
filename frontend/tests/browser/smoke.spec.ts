@@ -158,10 +158,11 @@ test("routes the Catalyst host through one native HLS candidate", async ({
   await expect(video).toHaveCount(1);
   expect(
     await video.evaluate((element) => ({
+      autoplay: (element as HTMLVideoElement).autoplay,
       defaultMuted: (element as HTMLVideoElement).defaultMuted,
       muted: (element as HTMLVideoElement).muted,
     })),
-  ).toEqual({ defaultMuted: false, muted: false });
+  ).toEqual({ autoplay: true, defaultMuted: false, muted: false });
 });
 
 test("applies outer shell appearance toggles without changing card identity", async ({

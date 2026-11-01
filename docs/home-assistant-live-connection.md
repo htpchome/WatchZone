@@ -105,14 +105,17 @@ The HLS adapter:
 1. Requests an authenticated URL through Home Assistant's `camera/stream`
    WebSocket command with `format: "hls"`.
 2. Resolves the returned relative URL through Home Assistant's URL resolver.
-3. Fetches the master manifest and checks the retained media element's native
-   HLS capability. Native HLS is preferred when advertised so Safari and
-   WebKit-hosted Home Assistant clients keep their platform media lifecycle.
-   Other clients lazy-load the light HLS.js engine and use its MSE/MMS path.
-   Catalyst requires native HLS and never loads HLS.js.
-4. When the master has exactly one variant, passes that variant directly to
-   the selected player to avoid a redundant manifest request.
-5. Reports live only after `loadeddata`, not merely after obtaining a playlist
+3. For the ordinary capability-selected path, fetches the master manifest and
+   checks the retained media element's native HLS capability. Native HLS is
+   preferred when advertised so Safari and WebKit-hosted Home Assistant clients
+   keep their platform media lifecycle. Other clients lazy-load the light
+   HLS.js engine and use its MSE/MMS path.
+4. Catalyst bypasses manifest fetching and assigns Home Assistant's returned
+   stream URL directly to its required native HLS element. It never loads
+   HLS.js.
+5. When the ordinary-path master has exactly one variant, passes that variant
+   directly to the selected player to avoid a redundant manifest request.
+6. Reports live only after `loadeddata`, not merely after obtaining a playlist
    URL or parsing a manifest.
 
 The HLS session owns its media element because its MediaSource playback state
@@ -153,6 +156,15 @@ startup, and then receives the intended `muted` and `defaultMuted` values
 before its source and first `play()` request. This ordering is part of the
 playback contract: waiting to unmute until after `loadeddata` loses the initial
 audible-playback opportunity in WebKit clients.
+
+Catalyst has a stricter native-media exception matching its proven Home
+Assistant host lifecycle. Its retained video is created with `autoplay`
+enabled and the intended `muted`, `defaultMuted`, and volume state already
+applied; the visible element is attached before the direct native HLS URL is
+assigned. WatchZone does not first establish muted playback, issue a source-less
+`play()`, fetch the manifest, or replace that element. `loadeddata` confirms the
+same element and requests playback again without changing the desired audio
+state.
 
 The presentation retains explicit user preference across HLS/WebRTC handoff
 and presentation replacement. An autoplay rejection temporarily forces muted

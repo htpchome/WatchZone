@@ -52,20 +52,29 @@ export async function createHomeAssistantHlsConnection(
     throw abortError();
   }
 
+  const catalystNativePlayback = options.hlsPlaybackMode === "native";
   const video = document.createElement("video");
-  video.autoplay = false;
+  video.autoplay = catalystNativePlayback;
   video.playsInline = true;
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
   video.preload = "auto";
-  setMediaElementMuted(video, true);
-  options.onVideo?.(video);
-  setMediaElementMuted(video, options.initialMuted);
+  if (catalystNativePlayback) {
+    // Catalyst's HA host grants its native media element the useful autoplay
+    // lifecycle only when it is born with autoplay and the intended output
+    // state. Do not establish muted playback before its native HLS source.
+    setMediaElementMuted(video, options.initialMuted);
+    options.onVideo?.(video);
+  } else {
+    setMediaElementMuted(video, true);
+    options.onVideo?.(video);
+    setMediaElementMuted(video, options.initialMuted);
 
-  // Prime the actual selected element before its source exists. WebKit makes
-  // its first audible-playback decision at this boundary; replacing the
-  // element or unmuting only after loadeddata loses that opportunity.
-  if (!options.initialMuted) {
+    // Prime the actual selected element before its source exists. WebKit makes
+    // its first audible-playback decision at this boundary; replacing the
+    // element or unmuting only after loadeddata loses that opportunity.
+  }
+  if (!catalystNativePlayback && !options.initialMuted) {
     void Promise.resolve()
       .then(() => (video.muted ? undefined : playMediaElement(video)))
       .catch(() => undefined);
@@ -157,6 +166,15 @@ export async function createHomeAssistantHlsConnection(
       throw abortError();
     }
 
+    if (catalystNativePlayback) {
+      if (!video.canPlayType(HLS_CONTENT_TYPE)) {
+        throw new Error("This browser does not support native HLS playback");
+      }
+      timing.mark("hls_native_path_selected");
+      video.src = streamUrl;
+      return ready;
+    }
+
     const manifestPromise = fetch(streamUrl, { signal }).then(
       async (response) => {
         if (!response.ok) {
@@ -176,10 +194,7 @@ export async function createHomeAssistantHlsConnection(
       void playMediaElement(video).catch(() => undefined);
     };
 
-    if (
-      options.hlsPlaybackMode === "native" ||
-      Boolean(video.canPlayType(HLS_CONTENT_TYPE))
-    ) {
+    if (video.canPlayType(HLS_CONTENT_TYPE)) {
       startNativePlayback(await manifestPromise);
       return ready;
     }

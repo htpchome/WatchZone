@@ -112,7 +112,10 @@ class ManagedMediaSession {
   ): MediaSessionLease {
     const transportChanged = this._api.identity !== api.identity;
     this._api = api;
-    this._connectionOptions = { initialMuted: options.initialMuted };
+    this._connectionOptions = {
+      hlsPlaybackMode: options.hlsPlaybackMode,
+      initialMuted: options.initialMuted,
+    };
     this.lastUsed = performance.now();
     this._leaseCount += 1;
     if (this._idleTimer) {

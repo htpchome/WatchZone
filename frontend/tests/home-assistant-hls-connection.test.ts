@@ -205,9 +205,9 @@ describe("Home Assistant HLS connection", () => {
   });
 
   it("uses native HLS without loading HLS.js for Catalyst policy", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response("#EXTM3U\n#EXT-X-VERSION:3\n"),
-    );
+    const fetchManifest = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("#EXTM3U\n#EXT-X-VERSION:3\n"));
     const api: HomeAssistantApi = {
       identity: {} as HomeAssistantApi["identity"],
       callWS: vi.fn(async () => ({
@@ -219,32 +219,46 @@ describe("Home Assistant HLS connection", () => {
     const timing = new LiveStartupTiming(
       "home_assistant_hls_native:camera.front",
     );
+    let attachedState:
+      { autoplay: boolean; defaultMuted: boolean; muted: boolean } | undefined;
+    const onVideo = vi.fn((video: HTMLVideoElement) => {
+      attachedState = {
+        autoplay: video.autoplay,
+        defaultMuted: video.defaultMuted,
+        muted: video.muted,
+      };
+      document.body.append(video);
+    });
     const connecting = createHomeAssistantHlsConnection(
       api,
       "camera.front",
       new AbortController().signal,
       vi.fn(),
       timing,
-      { hlsPlaybackMode: "native", initialMuted: false },
+      { hlsPlaybackMode: "native", initialMuted: false, onVideo },
     );
 
-    await vi.waitFor(() =>
-      expect(HTMLMediaElement.prototype.play).toHaveBeenCalled(),
-    );
-    const video = vi
-      .mocked(HTMLMediaElement.prototype.play)
-      .mock.contexts.find(
-        (context): context is HTMLVideoElement =>
-          context instanceof HTMLVideoElement,
-      );
-    expect(video).toBeDefined();
-    await vi.waitFor(() => expect(video?.src).not.toBe(""));
-    video?.dispatchEvent(new Event("loadeddata"));
+    expect(onVideo).toHaveBeenCalledOnce();
+    const video = onVideo.mock.calls[0][0];
+    expect(attachedState).toEqual({
+      autoplay: true,
+      defaultMuted: false,
+      muted: false,
+    });
+    expect(video.isConnected).toBe(true);
+    expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(video.src).not.toBe(""));
+    expect(video.src).toBe("https://ha.example/api/hls/front.m3u8");
+    expect(fetchManifest).not.toHaveBeenCalled();
+    video.dispatchEvent(new Event("loadeddata"));
     const connection = await connecting;
 
     expect(connection.transport).toBe("hls_native");
     expect(hlsMock.isSupported).not.toHaveBeenCalled();
+    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledOnce();
+    expect(video.muted).toBe(false);
     expect(timing.snapshot().phases).not.toHaveProperty("hls_engine_loaded");
+    expect(timing.snapshot().phases).not.toHaveProperty("hls_manifest_loaded");
     connection.close();
   });
 });
