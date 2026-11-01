@@ -33,6 +33,7 @@ jobs:
       - run: corepack yarn build
         working-directory: frontend
       - run: node scripts/validate-build.mjs
+      - run: node scripts/validate-brand.mjs
       - run: bash scripts/package-release.sh
       - run: ruff check custom_components tests
       - run: mypy

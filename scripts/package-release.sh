@@ -20,6 +20,7 @@ fi
 
 node "$REPOSITORY_ROOT/scripts/check-version.mjs"
 node "$REPOSITORY_ROOT/scripts/validate-build.mjs"
+node "$REPOSITORY_ROOT/scripts/validate-brand.mjs"
 
 rm -rf "$PACKAGE_DIR"
 rm -f "$ARCHIVE_PATH"
@@ -37,7 +38,12 @@ rsync -a "$FRONTEND_DIR/" "$PACKAGE_DIR/frontend/"
   zip -q -r "$ARCHIVE_PATH" .
 )
 
-for required in __init__.py manifest.json frontend/watchzone.js; do
+for required in \
+  __init__.py \
+  manifest.json \
+  brand/icon.png \
+  brand/icon@2x.png \
+  frontend/watchzone.js; do
   if ! unzip -Z1 "$ARCHIVE_PATH" | grep -Fxq "$required"; then
     echo "Release archive is missing $required" >&2
     exit 1

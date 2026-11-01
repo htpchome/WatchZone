@@ -1,7 +1,7 @@
 # WatchZone
 
 WatchZone is a modular camera interface delivered as one Home Assistant custom
-integration. Version `0.0.1` currently provides the installable application
+integration. Version `0.0.2` currently provides the installable application
 shell: a responsive, theme-aware Lovelace card with a title editor. Camera
 providers and media features have not been added yet.
 
