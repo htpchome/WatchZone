@@ -25,6 +25,7 @@ import {
   getMediaSessionManager,
   type MediaSessionLease,
 } from "../core/media-session-manager";
+import { syncHomeAssistantCardHostAppearance } from "../styles/home-assistant-card-bridge";
 import { watchZoneThemeTokens } from "../styles/theme-tokens";
 import { watchZoneCardStyles } from "./watchzone-card.styles";
 
@@ -95,6 +96,7 @@ export class WatchZoneCard extends LitElement {
     }
     this._config = next;
     this._previewConfig = undefined;
+    this._syncOuterAppearance(next);
     this._syncPrewarmLease();
     this._ensureLiveModule();
     this.requestUpdate();
@@ -197,6 +199,7 @@ export class WatchZoneCard extends LitElement {
       return;
     }
     this._previewConfig = event.detail.config ?? undefined;
+    this._syncOuterAppearance(this._previewConfig ?? this._config);
     this._syncPrewarmLease();
     this._ensureLiveModule();
     this.requestUpdate();
@@ -245,6 +248,19 @@ export class WatchZoneCard extends LitElement {
   private _releasePrewarmLease(): void {
     this._prewarmLease?.release();
     this._prewarmLease = undefined;
+  }
+
+  private _syncOuterAppearance(config: WatchZoneCardConfig): void {
+    const square = config.remove_outer_rounded_edges === true;
+    const flat = config.remove_outer_shadow === true;
+    this.toggleAttribute("data-wzc-remove-outer-rounded-edges", square);
+    this.toggleAttribute("data-wzc-remove-outer-shadow", flat);
+
+    for (const property of ["--wzc-card-radius", "--wzc-live-radius"]) {
+      if (square) this.style.setProperty(property, "0px");
+      else this.style.removeProperty(property);
+    }
+    syncHomeAssistantCardHostAppearance(this, { flat, square });
   }
 
   private readonly _retryLiveModule = (): void => {

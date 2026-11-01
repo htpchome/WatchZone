@@ -26,7 +26,19 @@ export const cameraControlsStyles = css`
     flex-direction: column;
     gap: var(--wzc-control-gap);
     transform: translateY(-50%);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity 140ms ease,
+      visibility 0s linear 140ms;
+  }
+
+  :host([visible]) .control-group {
+    opacity: 1;
+    visibility: visible;
     pointer-events: auto;
+    transition-delay: 0s;
   }
 
   .control-button {
@@ -55,7 +67,10 @@ export const cameraControlsStyles = css`
 
   .control-button:hover:not(:disabled) {
     color: var(--wzc-control-hover-color, var(--wzc-color-text-reversed));
-    background: var(--wzc-control-hover-background, var(--wzc-color-primary));
+    background: var(
+      --wzc-control-hover-background,
+      var(--wzc-media-overlay-hover-background)
+    );
   }
 
   .control-button:focus-visible {
@@ -114,6 +129,7 @@ export const cameraControlsStyles = css`
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .control-group,
     .control-button {
       transition: none;
     }

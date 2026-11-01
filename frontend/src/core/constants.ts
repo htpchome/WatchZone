@@ -11,3 +11,5 @@ export const EDITOR_DIRTY_STATE_KEY = `${CARD_TAG}-editor`;
 export const EDITOR_PREVIEW_DRAFT_EVENT = `${CARD_TAG}-preview-draft`;
 export const EDITOR_TEXT_PREVIEW_DELAY_MS = 200;
 export const CAMERA_TAG = "watchzone-camera";
+export const CAMERA_LIVE_VIEW_TAG = `${CAMERA_TAG}-live-view`;
+export const CAMERA_CONTROLS_HIDE_DELAY_MS = 2500;

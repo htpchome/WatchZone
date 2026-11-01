@@ -100,9 +100,15 @@ export const watchZoneThemeTokens = css`
     --wzc-live-background: var(--wzc-color-surface-secondary);
 
     --wzc-media-overlay-color: var(--wzc-color-background);
+    --wzc-media-overlay-opacity: 96%;
     --wzc-media-overlay-background: color-mix(
       in srgb,
-      var(--wzc-color-text-1) 94%,
+      var(--wzc-color-text-1) var(--wzc-media-overlay-opacity),
+      transparent
+    );
+    --wzc-media-overlay-hover-background: color-mix(
+      in srgb,
+      var(--wzc-color-primary) var(--wzc-media-overlay-opacity),
       transparent
     );
     --wzc-media-overlay-border-color: var(--wzc-color-border);

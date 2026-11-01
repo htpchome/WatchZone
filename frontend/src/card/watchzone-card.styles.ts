@@ -27,10 +27,13 @@ export const watchZoneCardStyles = css`
 
   ha-card.remove-outer-rounded-edges {
     --wzc-card-radius: 0px;
+    --wzc-live-radius: 0px;
+    border-radius: 0 !important;
   }
 
   ha-card.remove-outer-shadow {
     --wzc-shadow-card: none;
+    box-shadow: none !important;
   }
 
   .shell {

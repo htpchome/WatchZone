@@ -30,7 +30,7 @@ describe("watchzone-card", () => {
     expect(element.shadowRoot?.querySelector("ha-card")).toBe(rendered);
   });
 
-  it("limits outer appearance removals to the Home Assistant card shell", async () => {
+  it("propagates outer appearance removals through HA and nested shadows", async () => {
     const element = document.createElement("watchzone-card") as WatchZoneCard;
     element.setConfig({
       type: "custom:watchzone-card",
@@ -44,6 +44,16 @@ describe("watchzone-card", () => {
     const card = element.shadowRoot?.querySelector("ha-card");
     expect(card?.classList.contains("remove-outer-rounded-edges")).toBe(true);
     expect(card?.classList.contains("remove-outer-shadow")).toBe(true);
+    expect(element.hasAttribute("data-wzc-remove-outer-rounded-edges")).toBe(
+      true,
+    );
+    expect(element.hasAttribute("data-wzc-remove-outer-shadow")).toBe(true);
+    expect(element.style.getPropertyValue("--ha-card-border-radius")).toBe(
+      "0px",
+    );
+    expect(element.style.getPropertyValue("--wzc-live-radius")).toBe("0px");
+    expect(element.style.getPropertyValue("--ha-card-box-shadow")).toBe("none");
+    expect(element.style.getPropertyPriority("box-shadow")).toBe("important");
 
     element.setConfig({
       type: "custom:watchzone-card",
@@ -51,5 +61,11 @@ describe("watchzone-card", () => {
     });
     await element.updateComplete;
     expect(card?.className).toBe("");
+    expect(element.hasAttribute("data-wzc-remove-outer-rounded-edges")).toBe(
+      false,
+    );
+    expect(element.hasAttribute("data-wzc-remove-outer-shadow")).toBe(false);
+    expect(element.style.getPropertyValue("--wzc-live-radius")).toBe("");
+    expect(element.style.getPropertyValue("box-shadow")).toBe("");
   });
 });

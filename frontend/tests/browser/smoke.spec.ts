@@ -97,11 +97,20 @@ test("applies outer shell appearance toggles without changing card identity", as
       const enabledStyle = shellAfter
         ? getComputedStyle(shellAfter)
         : undefined;
+      const hostStyle = getComputedStyle(card);
       const enabled = {
         borderRadius: enabledStyle?.borderRadius,
         boxShadow: enabledStyle?.boxShadow,
         classes: shellAfter?.className,
+        hostBorderRadius: hostStyle.borderRadius,
+        hostBoxShadow: hostStyle.boxShadow,
         identityRetained: shellAfter === shellBefore,
+        nativeRadiusToken: hostStyle
+          .getPropertyValue("--ha-card-border-radius")
+          .trim(),
+        nativeShadowToken: hostStyle
+          .getPropertyValue("--ha-card-box-shadow")
+          .trim(),
       };
       card.setConfig({
         type: "custom:watchzone-card",
@@ -118,7 +127,11 @@ test("applies outer shell appearance toggles without changing card identity", as
     borderRadius: "0px",
     boxShadow: "none",
     classes: "remove-outer-rounded-edges remove-outer-shadow",
+    hostBorderRadius: "0px",
+    hostBoxShadow: "none",
     identityRetained: true,
+    nativeRadiusToken: "0px",
+    nativeShadowToken: "none",
   });
   expect(result.disabledClasses).toBe("");
 });
@@ -144,6 +157,7 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
       "--wzc-color-border",
       "--wzc-radius-card",
       "--wzc-shadow-card",
+      "--wzc-media-overlay-opacity",
     ];
     const host = element as HTMLElement;
     host.style.setProperty("--wzc-color-text-1", "rgb(10, 20, 30)");
@@ -161,6 +175,9 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
         (token) => hostStyle.getPropertyValue(token).trim().length === 0,
       ),
       textColor: shellStyle?.color,
+      overlayOpacity: hostStyle
+        .getPropertyValue("--wzc-media-overlay-opacity")
+        .trim(),
     };
   });
 
@@ -168,6 +185,7 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
     background: "rgb(40, 50, 60)",
     borderRadius: "18px",
     missingTokens: [],
+    overlayOpacity: "96%",
     textColor: "rgb(10, 20, 30)",
   });
   expect(result.boxShadow).toContain("rgb(1, 2, 3)");
@@ -439,6 +457,8 @@ test("retains one live connection while the card presentation is replaced", asyn
       type: "custom:watchzone-card",
       title: "Front",
       camera_entity: "camera.front",
+      remove_outer_rounded_edges: true,
+      remove_outer_shadow: true,
     });
     replacement.hass = testWindow.__watchZoneTestHass;
     document.body.append(replacement);
@@ -464,6 +484,15 @@ test("retains one live connection while the card presentation is replaced", asyn
     "watchzone-camera watchzone-camera-controls .control-button",
   );
   await expect(controls).toHaveCount(5);
+  await expect(controls.first()).toBeHidden();
+  const viewport = page.locator("watchzone-camera-live-view .viewport");
+  await expect
+    .poll(() =>
+      viewport.evaluate((element) => getComputedStyle(element).borderRadius),
+    )
+    .toBe("0px");
+  await viewport.hover();
+  await expect(controls.first()).toBeVisible();
   const controlPresentation = await controls.evaluateAll((buttons) => {
     const group = buttons[0]?.parentElement;
     const rectangles = buttons.map((button) => button.getBoundingClientRect());
@@ -526,6 +555,21 @@ test("retains one live connection while the card presentation is replaced", asyn
     ),
   ).toBe(true);
   expect(indicatorPresentation.borderRadius).not.toBe("999px");
+  const mute = page.locator(
+    'watchzone-camera watchzone-camera-controls [data-control="mute"]',
+  );
+  await page.locator("watchzone-card").evaluate((element) => {
+    element.style.setProperty("--wzc-color-primary", "rgb(0, 120, 255)");
+  });
+  const restingBackground = await mute.evaluate(
+    (element) => getComputedStyle(element).backgroundColor,
+  );
+  await mute.hover();
+  const hoverBackground = await mute.evaluate(
+    (element) => getComputedStyle(element).backgroundColor,
+  );
+  expect(hoverBackground).not.toBe("rgba(0, 0, 0, 0)");
+  expect(hoverBackground).not.toBe(restingBackground);
   await expect(
     page.locator(
       'watchzone-camera watchzone-camera-controls [data-control="snapshot"]',
@@ -536,9 +580,6 @@ test("retains one live connection while the card presentation is replaced", asyn
       'watchzone-camera watchzone-camera-controls [data-control="suspend"]',
     ),
   ).toBeDisabled();
-  const mute = page.locator(
-    'watchzone-camera watchzone-camera-controls [data-control="mute"]',
-  );
   await expect(mute).toHaveAttribute("aria-pressed", "true");
   const mutedBorder = await mute.evaluate((element) => {
     const style = getComputedStyle(element);
@@ -574,6 +615,17 @@ test("retains one live connection while the card presentation is replaced", asyn
       }),
     )
     .toBe(1);
+
+  await page.mouse.move(0, 0);
+  await viewport.dispatchEvent("pointerdown", {
+    isPrimary: true,
+    pointerId: 1,
+    pointerType: "touch",
+  });
+  await expect(controls.first()).toBeVisible();
+  await expect(controls.first()).toBeHidden({
+    timeout: 4_000,
+  });
 
   expect(
     await page.evaluate(

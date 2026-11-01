@@ -396,6 +396,12 @@ same internal single-camera presentation contract. Overlay controls dispatch
 typed intent and do not own connection adapters or duplicate media-session
 policy.
 
+Transient control visibility belongs to a Lit reactive controller within the
+camera feature. Pointer hover, touch, and keyboard focus share that policy;
+behavioral delays are named constants rather than literals embedded in views
+or styles. The non-control connection/source indicator remains independent of
+control visibility.
+
 ### 8.4 Custom elements and Lit
 
 - The card shell and meaningful independently updating module boundaries use
@@ -452,14 +458,18 @@ Assistant tokens by default. Hardcoded application palettes and independent
 light/dark assumptions are prohibited.
 
 `frontend/src/styles/theme-tokens.ts` is the only frontend file allowed to
-reference Home Assistant theme variables directly. It maps them to WatchZone
+consume Home Assistant theme variables directly. It maps them to WatchZone
 semantic tokens for primary, primary-dark, accent, surfaces, four text roles
 (primary, secondary, tertiary/disabled, and reversed), error, warning, success,
 borders, fills, radius scale, shadow scale, typography, card surfaces, and
 media overlays. Component styles consume `--wzc-*` tokens only. A new visual
 semantic state defines or reuses a WatchZone token before feature CSS uses it.
-Automated validation rejects direct HA-token access outside this boundary and
-rejects Lit CSS embedded in behavior files.
+The write-only `frontend/src/styles/home-assistant-card-bridge.ts` is the sole
+exception: it may assign Home Assistant's card-radius and card-shadow host
+hooks so appearance options cross HA's shadow-DOM boundary, but it must not
+consume those tokens or expose them to features. Automated validation rejects
+direct HA-token access outside these boundaries and rejects Lit CSS embedded
+in behavior files.
 
 Icons are rendered from the typed registry in `frontend/src/ui/icons.ts`.
 Standard actions use the same filled Material Design/MDI geometry expected in

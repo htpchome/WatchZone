@@ -65,6 +65,7 @@ export class WatchZoneCameraControls extends LitElement {
     muted: { attribute: false, type: Boolean },
     pictureInPictureActive: { attribute: false, type: Boolean },
     pictureInPictureSupported: { attribute: false, type: Boolean },
+    visible: { reflect: true, type: Boolean },
   };
 
   public errorMessage?: string;
@@ -73,6 +74,7 @@ export class WatchZoneCameraControls extends LitElement {
   public muted = true;
   public pictureInPictureActive = false;
   public pictureInPictureSupported = false;
+  public visible = false;
 
   private readonly _deviceProfile = detectDeviceProfile();
 
