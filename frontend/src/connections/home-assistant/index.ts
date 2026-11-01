@@ -1,6 +1,9 @@
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import type { LiveStartupTiming } from "../../core/live-startup-timing";
-import type { MediaConnection } from "../../core/media-session-manager";
+import type {
+  MediaConnection,
+  MediaConnectionOptions,
+} from "../../core/media-session-manager";
 
 interface ClientConfiguration {
   readonly configuration: RTCConfiguration;
@@ -46,7 +49,9 @@ export async function createHomeAssistantWebRtcConnection(
   signal: AbortSignal,
   onFailure: (error: Error) => void,
   timing: LiveStartupTiming,
+  _options: MediaConnectionOptions = { initialMuted: true },
 ): Promise<MediaConnection> {
+  void _options;
   if (typeof RTCPeerConnection === "undefined") {
     throw new Error("This browser does not support WebRTC");
   }

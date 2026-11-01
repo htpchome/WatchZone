@@ -170,6 +170,40 @@ describe("MediaSessionManager", () => {
     expect(close).toHaveBeenCalledOnce();
   });
 
+  it("publishes the HLS media element while an unmuted connection is starting", async () => {
+    const video = document.createElement("video");
+    let resolveConnection:
+      | ((connection: { video: HTMLVideoElement; close(): void }) => void)
+      | undefined;
+    const connection = new Promise<{
+      video: HTMLVideoElement;
+      close(): void;
+    }>((resolve) => {
+      resolveConnection = resolve;
+    });
+    const hlsFactory = vi.fn<ConnectionFactory>(
+      async (_api, _entity, _signal, _failure, _timing, options) => {
+        options.onVideo?.(video);
+        return connection;
+      },
+    );
+    const manager = new MediaSessionManager(vi.fn(), hlsFactory);
+    const lease = manager.acquireHomeAssistantHls(createApi(), "camera.front", {
+      initialMuted: false,
+    });
+
+    expect(lease.getSnapshot()).toMatchObject({
+      state: "connecting",
+      video,
+    });
+    expect(hlsFactory.mock.calls[0][5].initialMuted).toBe(false);
+
+    resolveConnection?.({ video, close: vi.fn() });
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
+    lease.release();
+    manager.closeAll();
+  });
+
   it("hands a shared HLS element back to remaining leases without reconnecting", async () => {
     const video = document.createElement("video");
     const hlsFactory = vi.fn<ConnectionFactory>(async () => ({

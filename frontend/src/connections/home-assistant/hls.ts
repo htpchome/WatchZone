@@ -2,7 +2,14 @@ import type HlsType from "hls.js";
 
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import type { LiveStartupTiming } from "../../core/live-startup-timing";
-import type { MediaConnection } from "../../core/media-session-manager";
+import {
+  playMediaElement,
+  setMediaElementMuted,
+} from "../../core/media-playback";
+import type {
+  MediaConnection,
+  MediaConnectionOptions,
+} from "../../core/media-session-manager";
 
 interface StreamResponse {
   readonly url: string;
@@ -39,16 +46,29 @@ export async function createHomeAssistantHlsConnection(
   signal: AbortSignal,
   onFailure: (error: Error) => void,
   timing: LiveStartupTiming,
+  options: MediaConnectionOptions = { initialMuted: true },
 ): Promise<MediaConnection> {
   if (signal.aborted) {
     throw abortError();
   }
 
   const video = document.createElement("video");
-  video.autoplay = true;
-  video.muted = true;
+  video.autoplay = false;
   video.playsInline = true;
+  video.setAttribute("playsinline", "");
+  video.setAttribute("webkit-playsinline", "");
   video.preload = "auto";
+  setMediaElementMuted(video, options.initialMuted);
+  options.onVideo?.(video);
+
+  // Prime the actual selected element before its source exists. WebKit makes
+  // its first audible-playback decision at this boundary; replacing the
+  // element or unmuting only after loadeddata loses that opportunity.
+  if (!options.initialMuted) {
+    void Promise.resolve()
+      .then(() => (video.muted ? undefined : playMediaElement(video)))
+      .catch(() => undefined);
+  }
 
   let closed = false;
   let connected = false;
@@ -115,7 +135,7 @@ export async function createHomeAssistantHlsConnection(
         timing.mark("first_frame_decoded");
         connected = true;
         window.clearTimeout(timeout);
-        void video.play().catch(() => undefined);
+        void playMediaElement(video).catch(() => undefined);
         resolve({ video, timing, transport, close });
       },
       { once: true },
@@ -179,7 +199,7 @@ export async function createHomeAssistantHlsConnection(
     } else if (video.canPlayType(HLS_CONTENT_TYPE)) {
       timing.mark("hls_native_path_selected");
       video.src = playlistUrl;
-      void video.play().catch(() => undefined);
+      void playMediaElement(video).catch(() => undefined);
     } else {
       throw new Error("This browser does not support HLS playback");
     }

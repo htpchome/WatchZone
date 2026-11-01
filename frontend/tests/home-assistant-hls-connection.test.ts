@@ -148,4 +148,53 @@ describe("Home Assistant HLS connection", () => {
     connection.close();
     expect(hlsMock.destroy).toHaveBeenCalledOnce();
   });
+
+  it("primes an unmuted visible candidate before requesting its source", async () => {
+    hlsMock.isSupported.mockReturnValue(false);
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("#EXTM3U\n#EXT-X-VERSION:3\n"),
+    );
+    let resolveStream: ((value: { url: string }) => void) | undefined;
+    const streamResponse = new Promise<{ url: string }>((resolve) => {
+      resolveStream = resolve;
+    });
+    const callWS = vi.fn(() => streamResponse);
+    const api: HomeAssistantApi = {
+      identity: {} as HomeAssistantApi["identity"],
+      callWS: callWS as HomeAssistantApi["callWS"],
+      resolveUrl: (path) => `https://ha.example${path}`,
+      subscribeMessage: vi.fn(),
+    };
+    const onVideo = vi.fn((video: HTMLVideoElement) => {
+      document.body.append(video);
+    });
+    const timing = new LiveStartupTiming("home_assistant_hls:camera.front");
+    const connecting = createHomeAssistantHlsConnection(
+      api,
+      "camera.front",
+      new AbortController().signal,
+      vi.fn(),
+      timing,
+      { initialMuted: false, onVideo },
+    );
+
+    expect(onVideo).toHaveBeenCalledOnce();
+    const video = onVideo.mock.calls[0][0];
+    expect(video.isConnected).toBe(true);
+    expect(video.muted).toBe(false);
+    expect(video.defaultMuted).toBe(false);
+    expect(video.playsInline).toBe(true);
+    expect(video.hasAttribute("webkit-playsinline")).toBe(true);
+    await vi.waitFor(() =>
+      expect(HTMLMediaElement.prototype.play).toHaveBeenCalledOnce(),
+    );
+    expect(callWS).toHaveBeenCalledOnce();
+    expect(video.src).toBe("");
+
+    resolveStream?.({ url: "/api/hls/front.m3u8" });
+    await vi.waitFor(() => expect(video.src).not.toBe(""));
+    video.dispatchEvent(new Event("loadeddata"));
+    const connection = await connecting;
+    connection.close();
+  });
 });

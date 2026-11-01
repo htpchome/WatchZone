@@ -115,6 +115,33 @@ describe("camera presentation retention", () => {
     expect(webRtcFactory).toHaveBeenCalledOnce();
   });
 
+  it("attaches and primes an unmuted HLS candidate while it is connecting", async () => {
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
+    const hlsVideo = document.createElement("video");
+    const hlsFactory = vi.fn<ConnectionFactory>(
+      async (_api, _entity, _signal, _failure, _timing, options) => {
+        hlsVideo.muted = options.initialMuted;
+        hlsVideo.defaultMuted = options.initialMuted;
+        options.onVideo?.(hlsVideo);
+        return new Promise(() => undefined);
+      },
+    );
+    window.__watchZoneMediaSessionManager = new MediaSessionManager(
+      vi.fn<ConnectionFactory>(async () => new Promise(() => undefined)),
+      hlsFactory,
+    );
+    const view = createLiveView(createApi(), true);
+    document.body.append(view);
+
+    await vi.waitFor(() =>
+      expect(view.shadowRoot?.querySelector(".hls-host video")).toBe(hlsVideo),
+    );
+    expect(hlsFactory.mock.calls[0][5].initialMuted).toBe(false);
+    expect(hlsVideo.muted).toBe(false);
+    expect(hlsVideo.defaultMuted).toBe(false);
+    expect(hlsVideo.parentElement?.hidden).toBe(false);
+  });
+
   it("keeps an explicit mute over an unmuted startup default across navigation", async () => {
     const { api, hlsVideo } = installHlsSession();
     const initial = createLiveView(api, true);

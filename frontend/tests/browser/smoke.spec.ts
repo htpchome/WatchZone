@@ -651,6 +651,8 @@ test("retains one live connection while the card presentation is replaced", asyn
       type: "custom:watchzone-card",
       title: "Front",
       camera_entity: "camera.front",
+      start_live_unmuted_pc_tablet: true,
+      start_live_unmuted_phone: true,
     });
     first.hass = hass;
   });
@@ -693,6 +695,8 @@ test("retains one live connection while the card presentation is replaced", asyn
       camera_entity: "camera.front",
       rounded_outer_corners: false,
       outer_shadows: false,
+      start_live_unmuted_pc_tablet: true,
+      start_live_unmuted_phone: true,
     });
     replacement.style.setProperty(
       "--ha-box-shadow-m",
@@ -707,6 +711,14 @@ test("retains one live connection while the card presentation is replaced", asyn
   });
 
   const video = page.locator("watchzone-camera video.webrtc");
+  await expect
+    .poll(() =>
+      video.evaluate((element) => ({
+        defaultMuted: (element as HTMLVideoElement).defaultMuted,
+        muted: (element as HTMLVideoElement).muted,
+      })),
+    )
+    .toEqual({ defaultMuted: false, muted: false });
   const connectionIndicator = page.locator(
     "watchzone-camera .source-indicator",
   );
@@ -893,11 +905,16 @@ test("retains one live connection while the card presentation is replaced", asyn
       'watchzone-camera watchzone-camera-controls [data-control="suspend"]',
     ),
   ).toBeDisabled();
-  await expect(mute).toHaveAttribute("aria-pressed", "true");
+  await expect(mute).toHaveAttribute("aria-pressed", "false");
   const mutedBorder = await mute.evaluate((element) => {
     const style = getComputedStyle(element);
     return `${style.borderColor}|${style.borderWidth}|${style.borderStyle}`;
   });
+  await mute.click();
+  await expect(mute).toHaveAttribute("aria-pressed", "true");
+  expect(
+    await video.evaluate((element) => (element as HTMLVideoElement).muted),
+  ).toBe(true);
   await mute.click();
   await expect(mute).toHaveAttribute("aria-pressed", "false");
   expect(

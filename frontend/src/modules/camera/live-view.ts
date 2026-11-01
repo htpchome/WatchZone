@@ -4,6 +4,10 @@ import type { HomeAssistantApi } from "../../core/home-assistant";
 import { CAMERA_LIVE_VIEW_TAG } from "../../core/constants";
 import { DeviceProfileController } from "../../core/device-profile";
 import {
+  playMediaElement,
+  setMediaElementMuted,
+} from "../../core/media-playback";
+import {
   getMediaSessionManager,
   type MediaSessionLease,
   type MediaSessionSnapshot,
@@ -126,7 +130,9 @@ export class WatchZoneCameraLiveView extends LitElement {
     document.addEventListener("webkitfullscreenchange", this._syncControlState);
     document.addEventListener("visibilitychange", this._handleVisibilityChange);
     this._syncMutePreference();
-    this._syncLeases();
+    void this.updateComplete.then(() => {
+      if (this.isConnected) this._syncLeases();
+    });
   }
 
   public disconnectedCallback(): void {
@@ -200,12 +206,12 @@ export class WatchZoneCameraLiveView extends LitElement {
               />`
             : nothing
         }
-        <div class="hls-host" ?hidden=${this._selected !== "hls"}></div>
+        <div class="hls-host" ?hidden=${this._selected === "webrtc"}></div>
         <video
           class="webrtc"
           autoplay
           playsinline
-          muted
+          .muted=${this._muted}
           aria-label="Live camera"
           ?hidden=${this._selected !== "webrtc"}
           @loadeddata=${this._handleWebRtcLoadedData}
@@ -276,19 +282,19 @@ export class WatchZoneCameraLiveView extends LitElement {
     const stream = this._webRtcSnapshot.stream;
     if (video && video.srcObject !== (stream ?? null)) {
       this._webRtcDecoded = false;
+      setMediaElementMuted(video, this._muted);
       video.srcObject = stream ?? null;
-      video.muted = true;
       if (stream) {
-        void video.play().catch(() => undefined);
+        void playMediaElement(video).catch(() => undefined);
       }
     }
     const hlsHost = this.renderRoot.querySelector(".hls-host");
     const hlsVideo = this._hlsSnapshot.video;
     if (hlsHost && hlsVideo && hlsVideo.parentElement !== hlsHost) {
       hlsVideo.setAttribute("aria-label", "Live camera");
-      hlsVideo.muted = true;
+      setMediaElementMuted(hlsVideo, this._muted);
       hlsHost.append(hlsVideo);
-      void hlsVideo.play().catch(() => undefined);
+      void playMediaElement(hlsVideo).catch(() => undefined);
     }
     this._applyMediaMuteState();
   }
@@ -342,9 +348,16 @@ export class WatchZoneCameraLiveView extends LitElement {
     this._hlsLease = getMediaSessionManager().acquireHomeAssistantHls(
       this._api,
       this._entityId,
+      {
+        initialMuted: this._muted,
+        onVideo: this._attachConnectingHlsVideo,
+      },
     );
     this._hlsUnsubscribe = this._hlsLease.subscribe((snapshot) => {
       this._hlsSnapshot = snapshot;
+      if (snapshot.video && snapshot.state === "connecting") {
+        this._attachConnectingHlsVideo(snapshot.video);
+      }
       if (snapshot.state === "live" && !this._selected) {
         this._selected = "hls";
         this._setInitialTransport(snapshot.transport);
@@ -365,6 +378,16 @@ export class WatchZoneCameraLiveView extends LitElement {
     this._releaseWebRtcLease();
     this._releaseHlsLease();
   }
+
+  private readonly _attachConnectingHlsVideo = (
+    video: HTMLVideoElement,
+  ): void => {
+    const host = this.renderRoot.querySelector(".hls-host");
+    if (!host || !this.isConnected) return;
+    video.setAttribute("aria-label", "Live camera");
+    setMediaElementMuted(video, this._muted);
+    if (video.parentElement !== host) host.append(video);
+  };
 
   private _releaseWebRtcLease(): void {
     this._webRtcUnsubscribe?.();
@@ -422,7 +445,7 @@ export class WatchZoneCameraLiveView extends LitElement {
     if (this._activeVideo === video) {
       return;
     }
-    if (this._activeVideo) this._activeVideo.muted = true;
+    if (this._activeVideo) setMediaElementMuted(this._activeVideo, true);
     for (const eventName of [
       "enterpictureinpicture",
       "leavepictureinpicture",
@@ -535,7 +558,7 @@ export class WatchZoneCameraLiveView extends LitElement {
     if (changed) this.requestUpdate();
     if (!muted && attemptPlayback && this._activeVideo) {
       const video = this._activeVideo;
-      void video.play().catch(() => {
+      void playMediaElement(video).catch(() => {
         if (
           this._activeVideo !== video ||
           this._desiredMuted ||
@@ -555,10 +578,16 @@ export class WatchZoneCameraLiveView extends LitElement {
     const webRtcVideo =
       this.shadowRoot?.querySelector<HTMLVideoElement>("video.webrtc");
     if (webRtcVideo) {
-      webRtcVideo.muted = this._selected !== "webrtc" || this._muted;
+      setMediaElementMuted(
+        webRtcVideo,
+        this._selected && this._selected !== "webrtc" ? true : this._muted,
+      );
     }
     if (this._hlsSnapshot.video) {
-      this._hlsSnapshot.video.muted = this._selected !== "hls" || this._muted;
+      setMediaElementMuted(
+        this._hlsSnapshot.video,
+        this._selected === "webrtc" ? true : this._muted,
+      );
     }
   }
 

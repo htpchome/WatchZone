@@ -138,11 +138,19 @@ immediate and starts a fresh bounded retry sequence.
 
 ## 8. Current audio behavior
 
-The initial live view is muted to satisfy browser autoplay policy safely. The
-presentation exposes a mute control and retains that preference by camera in
-the document-scoped session manager, including across HLS/WebRTC handoff and
-presentation replacement. Future audio work must continue to follow the
-forced-mute, audio-focus, persistence, and autoplay rules in
+The configured phone or tablet/desktop startup policy determines the initial
+audio intent unless the document-scoped session manager already holds an
+explicit user preference for that camera. The actual selected media element is
+attached during connection startup and receives both `muted` and
+`defaultMuted` before its source and first `play()` request. This ordering is
+part of the playback contract: creating a muted player and unmuting only after
+`loadeddata` loses the initial audible-playback opportunity in WebKit clients.
+
+The presentation retains explicit user preference across HLS/WebRTC handoff
+and presentation replacement. An autoplay rejection temporarily forces muted
+output without rewriting that preference. A later user gesture can retry the
+same retained element. Audio behavior continues to follow the forced-mute,
+audio-focus, lifetime, and autoplay rules in
 `docs/live-session-lifecycle.md`.
 
 ## 9. Required evolution rules

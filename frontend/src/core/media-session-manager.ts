@@ -27,12 +27,18 @@ export interface MediaConnection {
   close(): void;
 }
 
+export interface MediaConnectionOptions {
+  readonly initialMuted: boolean;
+  readonly onVideo?: (video: HTMLVideoElement) => void;
+}
+
 export type ConnectionFactory = (
   api: HomeAssistantApi,
   entityId: string,
   signal: AbortSignal,
   onFailure: (error: Error) => void,
   timing: LiveStartupTiming,
+  options: MediaConnectionOptions,
 ) => Promise<MediaConnection>;
 
 export interface MediaSessionLease {
@@ -77,6 +83,7 @@ class ManagedMediaSession {
   private _generation = 0;
   private _idleTimer?: ReturnType<typeof setTimeout>;
   private _leaseCount = 0;
+  private _connectionOptions: MediaConnectionOptions = { initialMuted: true };
   private _reconnectAttempts = 0;
   private _reconnectTimer?: ReturnType<typeof setTimeout>;
   private _stabilityTimer?: ReturnType<typeof setTimeout>;
@@ -98,9 +105,13 @@ class ManagedMediaSession {
     this._api = api;
   }
 
-  public acquire(api: HomeAssistantApi): MediaSessionLease {
+  public acquire(
+    api: HomeAssistantApi,
+    options: MediaConnectionOptions = { initialMuted: true },
+  ): MediaSessionLease {
     const transportChanged = this._api.identity !== api.identity;
     this._api = api;
+    this._connectionOptions = { initialMuted: options.initialMuted };
     this.lastUsed = performance.now();
     this._leaseCount += 1;
     if (this._idleTimer) {
@@ -120,7 +131,7 @@ class ManagedMediaSession {
       this._setSnapshot({ ...this._snapshot, state: "live" });
     }
     if (this._snapshot.state === "new" || this._snapshot.state === "failed") {
-      void this._connect();
+      void this._connect(options);
     }
 
     let released = false;
@@ -175,14 +186,15 @@ class ManagedMediaSession {
     return this._leaseCount === 0;
   }
 
-  private async _connect(): Promise<void> {
+  private async _connect(
+    connectionOptions = this._connectionOptions,
+  ): Promise<void> {
     const generation = ++this._generation;
     this._connectAbort?.abort();
     const abort = new AbortController();
     this._connectAbort = abort;
     this._setSnapshot({ state: "connecting" });
     const timing = beginLiveStartupTiming(this.key);
-
     try {
       const connection = await this._factory(
         this._api,
@@ -190,6 +202,14 @@ class ManagedMediaSession {
         abort.signal,
         (error) => this._handleFailure(generation, error),
         timing,
+        {
+          ...connectionOptions,
+          onVideo: (video) => {
+            if (generation !== this._generation || abort.signal.aborted) return;
+            this._setSnapshot({ ...this._snapshot, video });
+            connectionOptions.onVideo?.(video);
+          },
+        },
       );
       if (generation !== this._generation || abort.signal.aborted) {
         connection.close();
@@ -333,6 +353,7 @@ export class MediaSessionManager {
   public acquireHomeAssistantHls(
     api: HomeAssistantApi,
     entityId: string,
+    options: MediaConnectionOptions = { initialMuted: true },
   ): MediaSessionLease {
     return this._acquire(
       `home_assistant_hls:${entityId}`,
@@ -340,6 +361,7 @@ export class MediaSessionManager {
       api,
       this._hlsFactory,
       HLS_RETAIN_IDLE_MS,
+      options,
     );
   }
 
@@ -367,6 +389,7 @@ export class MediaSessionManager {
     api: HomeAssistantApi,
     factory: ConnectionFactory,
     retainIdleMs: number,
+    options: MediaConnectionOptions = { initialMuted: true },
   ): MediaSessionLease {
     let session = this._sessions.get(key);
     if (!session) {
@@ -381,7 +404,7 @@ export class MediaSessionManager {
       );
       this._sessions.set(key, session);
     }
-    return session.acquire(api);
+    return session.acquire(api, options);
   }
 
   public closeAll(): void {
