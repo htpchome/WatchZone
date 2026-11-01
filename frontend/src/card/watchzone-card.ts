@@ -13,22 +13,58 @@ import {
   EDITOR_PREVIEW_DRAFT_EVENT,
   EDITOR_TAG,
 } from "../core/constants";
+import {
+  createHomeAssistantApi,
+  isHomeAssistant,
+  type HomeAssistant,
+  type HomeAssistantApi,
+} from "../core/home-assistant";
 
 interface PreviewDraftDetail {
   readonly baselineSignature: string;
   readonly config: WatchZoneCardConfig | null;
 }
 
+let liveModulePromise: Promise<unknown> | undefined;
+
+function loadLiveModule(): Promise<unknown> {
+  return (liveModulePromise ??= import("../modules/live").catch((error) => {
+    liveModulePromise = undefined;
+    throw error;
+  }));
+}
+
 export class WatchZoneCard extends LitElement {
   private _config: WatchZoneCardConfig = normalizeCardConfig({});
+  private _hass?: HomeAssistant;
+  private _haApi?: HomeAssistantApi;
+  private _liveModuleReady = false;
+  private _liveModuleError?: string;
   private _previewConfig?: WatchZoneCardConfig;
 
   /** Set by Home Assistant for the card shown inside its editor preview. */
   public preview = false;
 
-  public set hass(_value: unknown) {
-    // This shell consumes no HA state. Do not retain or react to the frequently
-    // replaced hass object until a concrete feature needs a narrow slice of it.
+  public set hass(value: unknown) {
+    if (!isHomeAssistant(value)) {
+      return;
+    }
+    const config = this._previewConfig ?? this._config;
+    const previousEntity = config.camera_entity
+      ? this._hass?.states[config.camera_entity]
+      : undefined;
+    const transportChanged = this._hass?.connection !== value.connection;
+    this._hass = value;
+    if (transportChanged || !this._haApi) {
+      this._haApi = createHomeAssistantApi(value);
+    }
+    const entityChanged = config.camera_entity
+      ? previousEntity !== value.states[config.camera_entity]
+      : false;
+    if (transportChanged || entityChanged) {
+      this.requestUpdate();
+    }
+    this._ensureLiveModule();
   }
 
   public static getStubConfig(): WatchZoneCardConfig {
@@ -47,6 +83,7 @@ export class WatchZoneCard extends LitElement {
     }
     this._config = next;
     this._previewConfig = undefined;
+    this._ensureLiveModule();
     this.requestUpdate();
   }
 
@@ -56,6 +93,7 @@ export class WatchZoneCard extends LitElement {
       EDITOR_PREVIEW_DRAFT_EVENT,
       this._handlePreviewDraft as EventListener,
     );
+    this._ensureLiveModule();
   }
 
   public disconnectedCallback(): void {
@@ -67,20 +105,24 @@ export class WatchZoneCard extends LitElement {
   }
 
   public getCardSize(): number {
-    return 3;
+    return 5;
   }
 
   public getGridOptions() {
     return {
       columns: 6,
-      rows: 3,
+      rows: 5,
       min_columns: 3,
-      min_rows: 2,
+      min_rows: 3,
     };
   }
 
   protected render() {
     const config = this._previewConfig ?? this._config;
+    const cameraEntity = config.camera_entity;
+    const cameraAvailable = Boolean(
+      cameraEntity && this._hass?.states[cameraEntity],
+    );
     return html`
       <ha-card>
         <div class="shell">
@@ -88,6 +130,28 @@ export class WatchZoneCard extends LitElement {
             config.title
               ? html`<h2 class="title">${config.title}</h2>`
               : nothing
+          }
+          ${
+            cameraEntity
+              ? this._liveModuleError
+                ? html`<div class="live-error" role="alert">
+                    <span>${this._liveModuleError}</span>
+                    <button type="button" @click=${this._retryLiveModule}>
+                      Retry
+                    </button>
+                  </div>`
+                : this._liveModuleReady
+                  ? html`<watchzone-card-live
+                      .api=${this._haApi}
+                      .available=${cameraAvailable}
+                      .entityId=${cameraEntity}
+                    ></watchzone-card-live>`
+                  : html`<div class="live-placeholder" role="status">
+                      Preparing live view…
+                    </div>`
+              : html`<div class="empty">
+                  Select a camera in the card editor.
+                </div>`
           }
         </div>
       </ha-card>
@@ -104,6 +168,34 @@ export class WatchZoneCard extends LitElement {
       return;
     }
     this._previewConfig = event.detail.config ?? undefined;
+    this._ensureLiveModule();
+    this.requestUpdate();
+  };
+
+  private _ensureLiveModule(): void {
+    const config = this._previewConfig ?? this._config;
+    if (!config.camera_entity || this._liveModuleReady) {
+      return;
+    }
+    void loadLiveModule()
+      .then(() => {
+        if (this.isConnected) {
+          this._liveModuleError = undefined;
+          this._liveModuleReady = true;
+          this.requestUpdate();
+        }
+      })
+      .catch(() => {
+        if (this.isConnected) {
+          this._liveModuleError = "Unable to load the live-view module";
+          this.requestUpdate();
+        }
+      });
+  }
+
+  private readonly _retryLiveModule = (): void => {
+    this._liveModuleError = undefined;
+    this._ensureLiveModule();
     this.requestUpdate();
   };
 
@@ -128,13 +220,14 @@ export class WatchZoneCard extends LitElement {
       );
       --wzc-card-border-width: var(--ha-card-border-width, 0);
       --wzc-card-padding: clamp(1rem, 3cqi, 2rem);
+      --wzc-live-background: var(--secondary-background-color);
     }
 
     ha-card {
       box-sizing: border-box;
       inline-size: 100%;
       block-size: 100%;
-      min-block-size: 12rem;
+      min-block-size: 16rem;
       overflow: clip;
       container-type: inline-size;
       color: var(--wzc-text-color);
@@ -147,7 +240,9 @@ export class WatchZoneCard extends LitElement {
     .shell {
       box-sizing: border-box;
       display: grid;
-      place-items: center;
+      grid-template-rows: auto minmax(0, 1fr);
+      align-items: center;
+      gap: clamp(0.75rem, 2cqi, 1.25rem);
       inline-size: 100%;
       block-size: 100%;
       min-block-size: inherit;
@@ -166,6 +261,41 @@ export class WatchZoneCard extends LitElement {
       font-weight: var(--ha-font-weight-medium, 500);
       line-height: var(--ha-line-height-condensed, 1.2);
       text-align: center;
+    }
+
+    watchzone-card-live,
+    .live-placeholder,
+    .live-error,
+    .empty {
+      inline-size: 100%;
+      min-inline-size: 0;
+    }
+
+    .live-placeholder,
+    .live-error,
+    .empty {
+      display: grid;
+      place-items: center;
+      min-block-size: 10rem;
+      color: var(--ha-color-text-secondary, var(--secondary-text-color));
+      text-align: center;
+    }
+
+    .live-error {
+      gap: 0.75rem;
+      color: var(--ha-color-text-error, var(--error-color));
+    }
+
+    button {
+      min-block-size: 2.5rem;
+      padding-inline: 1rem;
+      color: var(--ha-color-text-primary, var(--primary-text-color));
+      background: var(--ha-color-fill-primary-normal-resting, transparent);
+      border: 1px solid
+        var(--ha-color-border-neutral-normal, var(--divider-color));
+      border-radius: var(--ha-border-radius-button, 999px);
+      font: inherit;
+      cursor: pointer;
     }
   `;
 }

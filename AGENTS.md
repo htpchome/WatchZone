@@ -15,6 +15,9 @@ responsive card layout, also read `docs/config-editor-lifecycle.md` in full.
 For live video, connection management, editor transitions, navigation
 retention, or audio state, also read `docs/live-session-lifecycle.md` in full.
 
+For the Home Assistant direct live connection, also read
+`docs/home-assistant-live-connection.md` in full.
+
 ## Architecture stability
 
 - Treat `architecture.md` as a contract, not a progress log.
@@ -78,9 +81,11 @@ retention, or audio state, also read `docs/live-session-lifecycle.md` in full.
 ## Version and commit rule
 
 - `custom_components/watchzone/const.py` `VERSION` is canonical.
-- Keep the current version across commits until the user requests a bump or the
-  work intentionally establishes the next distributable build. A commit alone
-  is not a reason to increment `VERSION`.
+- Each commit pushed to `main` is published for HACS testing and therefore must
+  have a unique Semantic Version. During prerelease development, increment the
+  prerelease identifier (for example, `0.0.3-beta.1` to `0.0.3-beta.2`).
+- Local work that is not being handed off for a commit does not itself require
+  a version change.
 - Keep `frontend/package.json`, `manifest.json` once present, and all other
   version-bearing release metadata synchronized with `VERSION`.
 - Run `corepack yarn check:version` from `frontend/` before a commit.

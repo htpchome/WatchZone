@@ -9,6 +9,9 @@ const packageJson = JSON.parse(
 
 export default defineConfig({
   define: {
+    __WATCHZONE_BUILD__: JSON.stringify(
+      process.env.GITHUB_SHA?.slice(0, 7) ?? "local",
+    ),
     __WATCHZONE_VERSION__: JSON.stringify(packageJson.version),
   },
   build: {

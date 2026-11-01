@@ -1,4 +1,5 @@
 declare const __WATCHZONE_VERSION__: string;
+declare const __WATCHZONE_BUILD__: string;
 
 interface Window {
   customCards?: Array<{

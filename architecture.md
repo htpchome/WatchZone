@@ -249,10 +249,11 @@ must have explicit schema versions and migrations.
 `custom_components/watchzone/const.py` is the source of truth for the WatchZone
 version through its `VERSION` constant.
 
-- Every commit subject includes the current `VERSION`, but commits do not
-  automatically increment it.
-- `VERSION` remains unchanged until the user requests a bump or the work
-  intentionally establishes the next distributable build.
+- Every commit pushed to `main` is an independently installable HACS test build
+  and therefore has a unique `VERSION` and generated GitHub release. During
+  prerelease development, increment the prerelease identifier for each such
+  commit (for example, `0.0.3-beta.1` to `0.0.3-beta.2`).
+- Uncommitted iterations within one handoff keep the same version.
 - The version is valid Semantic Versioning.
 - `manifest.json`, frontend package metadata, release artifacts, and other
   version-bearing files must match `VERSION`. Automated validation must reject
@@ -526,9 +527,11 @@ Python is the authoritative owner of layouts. The frontend editor is a client
 of the Python layout API; it does not persist layout definitions in Lovelace.
 
 The Lovelace card configuration contains only presentation metadata and the
-minimum identity needed to locate a saved layout, such as a title, layout ID,
-or card instance ID. It must not contain the module tree, placement rules, or
-module configuration.
+minimum identity or initial selection needed to render the card, such as a
+title, saved layout ID, card instance ID, or initial camera entity. It must not
+contain the module tree, placement rules, or module configuration. The initial
+camera selection is a narrow card input that can seed a future Python-owned
+layout; it is not a parallel layout definition in Lovelace.
 
 ### 9.2 Stored layout model
 

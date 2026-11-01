@@ -2,7 +2,7 @@
 
 DOMAIN = "watchzone"
 NAME = "WatchZone"
-VERSION = "0.0.2"
+VERSION = "0.0.3-beta.1"
 
 CARD_FILENAME = "watchzone.js"
 FRONTEND_URL_BASE = f"/{DOMAIN}/frontend"

@@ -10,6 +10,7 @@ import {
   EDITOR_TAG,
   EDITOR_TEXT_PREVIEW_DELAY_MS,
 } from "../core/constants";
+import { isHomeAssistant, type HomeAssistant } from "../core/home-assistant";
 import {
   commitDraftForSave,
   type DirtyStateContext,
@@ -28,17 +29,41 @@ interface PreviewDraftDetail {
   readonly config: WatchZoneCardConfig | null;
 }
 
+interface ValueChangedEvent extends Event {
+  readonly detail: { readonly value?: string };
+}
+
+interface SelectorElement extends HTMLElement {
+  hass?: HomeAssistant;
+}
+
+const CAMERA_SELECTOR = {
+  entity: { filter: { domain: "camera" } },
+} as const;
+
 export class WatchZoneCardEditor extends LitElement {
   private _baseline?: WatchZoneCardConfig;
   private _baselineSignature = "";
   private _config?: WatchZoneCardConfig;
   private _dirtyContext?: DirtyStateContext<WatchZoneCardConfig>;
   private _dirtyUnsubscribe?: () => void;
+  private _hass?: HomeAssistant;
   private _previewTimer?: ReturnType<typeof setTimeout>;
 
-  public set hass(_value: unknown) {
-    // The title editor consumes no Home Assistant state. Intentionally do not
-    // retain or react to the frequently replaced hass object.
+  public set hass(value: unknown) {
+    if (!isHomeAssistant(value)) {
+      return;
+    }
+    const firstAssignment = !this._hass;
+    this._hass = value;
+    const selector = this.renderRoot?.querySelector(
+      "ha-selector",
+    ) as SelectorElement | null;
+    if (selector) {
+      selector.hass = value;
+    } else if (firstAssignment) {
+      this.requestUpdate();
+    }
   }
 
   public setConfig(value: unknown): void {
@@ -98,6 +123,14 @@ export class WatchZoneCardEditor extends LitElement {
         @input=${this._handleTitleInput}
         @change=${this._handleTitleChange}
       ></ha-input>
+      <ha-selector
+        label="Camera"
+        .hass=${this._hass}
+        .selector=${CAMERA_SELECTOR}
+        .value=${this._config?.camera_entity ?? ""}
+        .required=${false}
+        @value-changed=${this._handleCameraChange}
+      ></ha-selector>
     `;
   }
 
@@ -125,7 +158,30 @@ export class WatchZoneCardEditor extends LitElement {
     }
 
     const nextConfig = normalizeCardConfig({ ...this._config, title });
+    this._applyDraft(nextConfig, immediatePreview, !immediatePreview);
+  }
+
+  private readonly _handleCameraChange = (event: ValueChangedEvent): void => {
+    if (!this._config) {
+      return;
+    }
+    const value = event.detail.value?.trim();
+    const next = { ...this._config };
+    if (value) {
+      next.camera_entity = value;
+    } else {
+      delete next.camera_entity;
+    }
+    this._applyDraft(normalizeCardConfig(next), true, false);
+  };
+
+  private _applyDraft(
+    nextConfig: WatchZoneCardConfig,
+    immediatePreview: boolean,
+    coalescePreview: boolean,
+  ): void {
     const changed =
+      !this._config ||
       cardConfigSignature(nextConfig) !== cardConfigSignature(this._config);
     if (changed) {
       this._config = nextConfig;
@@ -149,7 +205,7 @@ export class WatchZoneCardEditor extends LitElement {
     if (immediatePreview) {
       this._previewTimer = undefined;
       this._publishPreview(nextConfig);
-    } else if (changed) {
+    } else if (changed && coalescePreview) {
       this._previewTimer = setTimeout(() => {
         this._previewTimer = undefined;
         this._publishPreview(nextConfig);
@@ -194,8 +250,14 @@ export class WatchZoneCardEditor extends LitElement {
       color: var(--ha-color-text-primary, var(--primary-text-color));
     }
 
-    ha-input {
+    ha-input,
+    ha-selector {
       inline-size: 100%;
+    }
+
+    ha-selector {
+      display: block;
+      margin-block-start: 1rem;
     }
   `;
 }

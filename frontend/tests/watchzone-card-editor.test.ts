@@ -104,6 +104,48 @@ describe("watchzone-card-editor", () => {
     });
   });
 
+  it("updates the camera draft without rebuilding the preview card", async () => {
+    const states: WatchZoneCardConfig[] = [];
+    const contextHandler = (event: Event) => {
+      const request = event as ContextRequest;
+      request.callback?.({
+        setState: (config) => states.push(config),
+      });
+    };
+    document.addEventListener("context-request", contextHandler);
+    const card = document.createElement("watchzone-card") as WatchZoneCard;
+    card.preview = true;
+    card.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as WatchZoneCardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(card, editor);
+    await Promise.all([card.updateComplete, editor.updateComplete]);
+    const cardSurface = card.shadowRoot?.querySelector("ha-card");
+    const selector = editor.shadowRoot?.querySelector("ha-selector");
+
+    selector?.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: "camera.front" },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(
+        card.shadowRoot?.querySelector("watchzone-card-live"),
+      ).not.toBeNull(),
+    );
+
+    expect(changed).not.toHaveBeenCalled();
+    expect(states.at(-1)).toMatchObject({ camera_entity: "camera.front" });
+    expect(card.shadowRoot?.querySelector("ha-card")).toBe(cardSurface);
+    document.removeEventListener("context-request", contextHandler);
+  });
+
   it("hands the complete draft to Home Assistant immediately before Save", async () => {
     const dialog = document.createElement(
       "hui-dialog-edit-card",

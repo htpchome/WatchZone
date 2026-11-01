@@ -1,6 +1,7 @@
 import { CARD_TYPE, DEFAULT_CARD_TITLE } from "./constants";
 
 export interface WatchZoneCardConfig {
+  readonly camera_entity?: string;
   readonly type: typeof CARD_TYPE;
   readonly title: string;
   readonly [key: string]: unknown;
@@ -16,8 +17,21 @@ export function normalizeCardConfig(value: unknown): WatchZoneCardConfig {
     throw new Error("WatchZone card title must be a non-empty string.");
   }
 
+  const cameraEntity =
+    "camera_entity" in value ? value.camera_entity : undefined;
+  if (
+    cameraEntity !== undefined &&
+    (typeof cameraEntity !== "string" ||
+      !cameraEntity.trim().startsWith("camera."))
+  ) {
+    throw new Error("WatchZone camera must be a camera entity ID.");
+  }
+
   return {
     ...value,
+    ...(typeof cameraEntity === "string" && cameraEntity.trim()
+      ? { camera_entity: cameraEntity.trim() }
+      : {}),
     type: CARD_TYPE,
     title: title.trim(),
   };

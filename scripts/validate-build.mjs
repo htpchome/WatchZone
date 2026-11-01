@@ -9,27 +9,53 @@ const manifest = JSON.parse(
 );
 const entry = manifest["src/main.ts"];
 const editor = manifest["src/editor/watchzone-card-editor.ts"];
+const live = manifest["src/modules/live/index.ts"];
+const connection = manifest["src/connections/home-assistant/index.ts"];
 
 if (!entry?.isEntry || entry.file !== "watchzone.js") {
   throw new Error("Vite manifest is missing the stable WatchZone entry");
 }
-if (!editor?.isDynamicEntry || !entry.dynamicImports?.includes(editor.src)) {
-  throw new Error("The card editor must remain a dynamic entry");
-}
-if (entry.imports?.includes(editor.src)) {
-  throw new Error("The card editor was included in the eager import graph");
+for (const [name, asset] of Object.entries({ editor, live, connection })) {
+  if (!asset?.isDynamicEntry) {
+    throw new Error(`The ${name} must remain a dynamic entry`);
+  }
 }
 
 for (const asset of Object.values(manifest)) {
   await stat(resolve(frontend, asset.file));
 }
 
-const entrySource = await readFile(resolve(frontend, entry.file));
-const entryGzipBytes = gzipSync(entrySource).byteLength;
-if (entryGzipBytes > 50 * 1024) {
-  throw new Error(`Eager entry exceeds 50 KiB gzip: ${entryGzipBytes} bytes`);
+const collectEagerGraph = (source, graph = new Set()) => {
+  if (graph.has(source)) {
+    return graph;
+  }
+  graph.add(source);
+  for (const imported of manifest[source]?.imports ?? []) {
+    collectEagerGraph(imported, graph);
+  }
+  return graph;
+};
+
+const eagerGraph = collectEagerGraph(entry.src);
+for (const [name, asset] of Object.entries({ editor, live, connection })) {
+  if (eagerGraph.has(asset.src)) {
+    throw new Error(`The ${name} was included in the eager import graph`);
+  }
+}
+
+const eagerGzipBytes = (
+  await Promise.all(
+    [...eagerGraph].map(
+      async (source) =>
+        gzipSync(await readFile(resolve(frontend, manifest[source].file)))
+          .byteLength,
+    ),
+  )
+).reduce((total, size) => total + size, 0);
+if (eagerGzipBytes > 50 * 1024) {
+  throw new Error(`Eager graph exceeds 50 KiB gzip: ${eagerGzipBytes} bytes`);
 }
 
 console.log(
-  `Validated lazy editor and eager entry (${entryGzipBytes} bytes gzip).`,
+  `Validated lazy editor, live module, and connection adapter; eager graph is ${eagerGzipBytes} bytes gzip.`,
 );

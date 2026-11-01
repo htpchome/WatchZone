@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
 
 permissions:
   contents: write
@@ -22,8 +22,21 @@ jobs:
         working-directory: frontend
       - run: corepack yarn build
         working-directory: frontend
+        env:
+          GITHUB_SHA: ${{ github.sha }}
       - run: bash scripts/package-release.sh
       - name: Create GitHub release
-        run: gh release create "$GITHUB_REF_NAME" dist/watchzone.zip --generate-notes
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./frontend/package.json').version")
+          TAG="v${VERSION}"
+          EXTRA_ARGS=()
+          if [[ "$VERSION" == *-* ]]; then
+            EXTRA_ARGS+=(--prerelease)
+          fi
+          gh release create "$TAG" dist/watchzone.zip \
+            --target "$GITHUB_SHA" \
+            --generate-notes \
+            "${EXTRA_ARGS[@]}"
         env:
           GH_TOKEN: ${{ github.token }}
