@@ -12,8 +12,6 @@ const editor = manifest["src/editor/card-editor.ts"];
 const camera = manifest["src/modules/camera/index.ts"];
 const connection = manifest["src/connections/home-assistant/index.ts"];
 const hlsConnection = manifest["src/connections/home-assistant/hls.ts"];
-const catalystHlsConnection =
-  manifest["src/connections/home-assistant/catalyst-hls.ts"];
 
 if (!entry?.isEntry || entry.file !== "watchzone.js") {
   throw new Error("Vite manifest is missing the stable WatchZone entry");
@@ -23,7 +21,6 @@ for (const [name, asset] of Object.entries({
   camera,
   connection,
   hlsConnection,
-  catalystHlsConnection,
 })) {
   if (!asset?.isDynamicEntry) {
     throw new Error(`The ${name} must remain a dynamic entry`);
@@ -51,21 +48,12 @@ for (const [name, asset] of Object.entries({
   camera,
   connection,
   hlsConnection,
-  catalystHlsConnection,
 })) {
   if (eagerGraph.has(asset.src)) {
     throw new Error(`The ${name} was included in the eager import graph`);
   }
 }
 
-const ordinaryHlsGraph = collectEagerGraph(hlsConnection.src);
-const catalystHlsGraph = collectEagerGraph(catalystHlsConnection.src);
-if (ordinaryHlsGraph.has(catalystHlsConnection.src)) {
-  throw new Error("Ordinary HLS must not import the Catalyst HLS adapter");
-}
-if (catalystHlsGraph.has(hlsConnection.src)) {
-  throw new Error("Catalyst HLS must not import the ordinary HLS adapter");
-}
 const eagerGzipBytes = (
   await Promise.all(
     [...eagerGraph].map(
@@ -80,5 +68,5 @@ if (eagerGzipBytes > 50 * 1024) {
 }
 
 console.log(
-  `Validated lazy editor, camera module, isolated WebRTC/HLS/Catalyst adapters; eager graph is ${eagerGzipBytes} bytes gzip.`,
+  `Validated lazy editor, camera module, and WebRTC/HLS adapters; eager graph is ${eagerGzipBytes} bytes gzip.`,
 );

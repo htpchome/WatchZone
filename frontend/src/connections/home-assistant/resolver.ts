@@ -22,9 +22,7 @@ export class HomeAssistantLiveConnectionResolver {
   }
 
   public hlsSessionKey(entityId: string): string {
-    return `home_assistant${
-      this._environment.host === "catalyst" ? "_catalyst" : ""
-    }_hls:${entityId}`;
+    return `home_assistant_hls:${entityId}`;
   }
 
   public acquireHls(
@@ -32,19 +30,12 @@ export class HomeAssistantLiveConnectionResolver {
     entityId: string,
     options: MediaConnectionOptions,
   ): MediaSessionLease {
-    return this._environment.host === "catalyst"
-      ? this._sessions.acquireHomeAssistantCatalystHls(api, entityId, options)
-      : this._sessions.acquireHomeAssistantHls(api, entityId, options);
+    return this._sessions.acquireHomeAssistantHls(api, entityId, options);
   }
 
   public async recoverAudibleAutoplay(
     video: HTMLVideoElement,
   ): Promise<boolean> {
-    if (this._environment.host === "catalyst") {
-      const { recoverCatalystAudibleAutoplay } = await import("./catalyst-hls");
-      return recoverCatalystAudibleAutoplay(video);
-    }
-
     setMediaElementRuntimeMuted(video, true);
     try {
       await playMediaElement(video);

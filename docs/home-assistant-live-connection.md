@@ -73,14 +73,6 @@ locally at their adapter boundary. The policy may become capability-informed
 later if Home Assistant can expose that information without adding startup
 latency.
 
-The Home Assistant Catalyst runtime is the explicit exception. The resolver
-selects a separate, dynamically imported Catalyst native-HLS adapter with its
-own session key; ordinary HLS does not import or execute that adapter. Catalyst
-uses one retained native-HLS session and does not start WebRTC or HLS.js
-candidates. This preserves the native media element and its audio/window
-lifecycle instead of replacing it during a later WebRTC takeover. Catalyst
-identity comes only from the centralized client-environment profile.
-
 ## 5. WebRTC connection sequence
 
 For a validated camera entity, the adapter:
@@ -113,12 +105,9 @@ The HLS adapter:
    preferred when advertised so Safari and WebKit-hosted Home Assistant clients
    keep their platform media lifecycle. Other clients lazy-load the light
    HLS.js engine and use its MSE/MMS path.
-4. The separate Catalyst adapter bypasses manifest fetching and assigns Home
-   Assistant's returned stream URL directly to its required native HLS element.
-   It never imports ordinary HLS or loads HLS.js.
-5. When the ordinary-path master has exactly one variant, passes that variant
+4. When the master has exactly one variant, passes that variant
    directly to the selected player to avoid a redundant manifest request.
-6. Reports live only after `loadeddata`, not merely after obtaining a playlist
+5. Reports live only after `loadeddata`, not merely after obtaining a playlist
    URL or parsing a manifest.
 
 The HLS session owns its media element because its MediaSource playback state
@@ -161,29 +150,6 @@ before its source and first `play()` request. This ordering is part of the
 playback contract: waiting to unmute until after `loadeddata` loses the initial
 audible-playback opportunity in WebKit clients.
 
-Catalyst has a stricter native-media exception matching its proven Home
-Assistant selected-media lifecycle. Its retained video is created with
-`autoplay` enabled, runtime `muted=true`, and `defaultMuted=false`. After the
-visible element is attached, selected-media ownership applies the intended
-mute state and requests playback on that same element while the Home Assistant
-stream request is in flight. The direct native HLS URL is then assigned without
-fetching the manifest, replacing the element, or issuing a third request at
-source attachment. `loadeddata` makes the second selected-media request without
-changing the desired audio state. The generic presentation layer does not add
-another playback request when the Catalyst session becomes selected. The
-selected-media requests are fire-and-forget and never block the connection from
-becoming live, even if Catalyst leaves a `play()` promise pending. The
-distinction between runtime
-`muted` and `defaultMuted` is intentional and tested: automatic attachment,
-background safety, transport handoff, and autoplay recovery alter runtime mute
-only. Only an explicit user mute action changes `defaultMuted`; automatic
-unmute must not leave Catalyst's retained player classified as default-muted.
-If the pre-source audible request is rejected, the Catalyst adapter immediately
-plays the same retained element muted, then reapplies the requested audible
-state for its one `loadeddata` action. A denial at that source-ready action
-leaves video playing muted and preserves the user's desired unmuted state for a
-later gesture. Ordinary HLS never imports or executes this sequence.
-
 The presentation retains explicit user preference across HLS/WebRTC handoff
 and presentation replacement. An autoplay rejection temporarily forces muted
 output without rewriting that preference. A later user gesture can retry the
@@ -220,12 +186,10 @@ not treated as backgrounding.
 ## 10. Observed client baseline
 
 Physical-client testing of `0.0.4-dev.8` recorded the following initial HLS
-playback paths. These remain capability-selected observations except for the
-centralized Catalyst host policy documented above.
+playback paths. These remain capability-selected observations.
 
 | Client                   | Initial playback path |
 | ------------------------ | --------------------- |
-| Catalyst                 | Native HLS (required) |
 | Safari                   | HLS.js                |
 | Home Assistant Companion | HLS.js                |
 | Edge                     | HLS.js                |

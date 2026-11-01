@@ -92,22 +92,6 @@ export const cameraLiveViewStyles = css`
     background: inherit;
   }
 
-  .hls-host.native-edge-isolation {
-    overflow: hidden;
-    border-radius: inherit;
-    isolation: isolate;
-  }
-
-  .hls-host.native-edge-isolation video {
-    inset: -1px;
-    inline-size: calc(100% + 2px);
-    block-size: calc(100% + 2px);
-    max-inline-size: none;
-    max-block-size: none;
-    border: 0;
-    outline: 0;
-  }
-
   .source-indicator {
     position: absolute;
     z-index: 3;

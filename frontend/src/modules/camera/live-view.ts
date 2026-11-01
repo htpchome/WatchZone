@@ -1,7 +1,7 @@
 import { html, LitElement, nothing } from "lit";
 
 import { HomeAssistantLiveConnectionResolver } from "../../connections/home-assistant/resolver";
-import { createHomeAssistantMediaPresentation } from "../../connections/home-assistant/presentation";
+import { renderHomeAssistantMediaPresentation } from "../../connections/home-assistant/presentation";
 import { getClientEnvironment } from "../../core/client-environment";
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import { CAMERA_LIVE_VIEW_TAG } from "../../core/constants";
@@ -105,9 +105,6 @@ export class CameraLiveView extends LitElement {
       this._clientEnvironment,
       getMediaSessionManager(),
     );
-  private readonly _mediaPresentation = createHomeAssistantMediaPresentation(
-    this._clientEnvironment.host,
-  );
 
   public set api(value: HomeAssistantApi | undefined) {
     if (this._api?.identity === value?.identity) {
@@ -254,7 +251,7 @@ export class CameraLiveView extends LitElement {
                 }`
             : nothing
         }
-        ${this._mediaPresentation.render({
+        ${renderHomeAssistantMediaPresentation({
           muted: this._muted,
           onWebRtcLoadedData: this._handleWebRtcLoadedData,
           selected: this._selected,
@@ -339,9 +336,7 @@ export class CameraLiveView extends LitElement {
       hlsVideo.setAttribute("aria-label", "Live camera");
       this._applyMuteToElement(hlsVideo, this._muted);
       hlsHost.append(hlsVideo);
-      if (!this._mediaPresentation.ownsAutomaticPlayback) {
-        void playMediaElement(hlsVideo).catch(() => undefined);
-      }
+      void playMediaElement(hlsVideo).catch(() => undefined);
     }
     this._applyMediaMuteState();
   }
@@ -521,9 +516,7 @@ export class CameraLiveView extends LitElement {
     }
     suppressNativePictureInPicture(video);
     this._syncControlState();
-    this._syncEffectiveMute(
-      Boolean(video) && !this._mediaPresentation.ownsAutomaticPlayback,
-    );
+    this._syncEffectiveMute(Boolean(video));
   }
 
   private _setPresentedTransport(transport: MediaTransport | undefined): void {

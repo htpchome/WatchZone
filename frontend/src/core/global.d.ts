@@ -6,11 +6,10 @@ interface Window {
     activeCardVersion: string | null;
     build: string;
     clientEnvironment: Readonly<{
-      catalyst: boolean;
       companion: boolean;
       deviceClass: "desktop" | "phone" | "tablet";
       hasTouch: boolean;
-      host: "browser" | "catalyst" | "companion";
+      host: "browser" | "companion";
       operatingSystem:
         | "android"
         | "chromeos"

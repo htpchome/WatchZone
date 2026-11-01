@@ -53,12 +53,6 @@ provider services, and connection adapters that users compose into layouts.
 8. Every visual feature consumes WatchZone theme tokens and supports container
    responsiveness, touch, pointer, keyboard, and the supported browser/app
    matrix.
-9. Catalyst is a distinct host-runtime pipeline across transport, media,
-   visibility/window lifecycle, retention/resume, fullscreen, PiP, gestures,
-   and future host-specific behavior. Feature modules consume narrow selected
-   adapters and never implement Catalyst as a conditional variation of Browser
-   or Companion behavior.
-
 ## Capability roadmap
 
 ### 1. Python-owned layout and theme designer
@@ -126,7 +120,7 @@ designer UI so saved layouts are declarative and testable.
 - Resource budgets for simultaneous connections, decoders, bandwidth, parked
   sessions, and idle eviction.
 - Platform-specific capability handling isolated inside adapters, including
-  Safari, Companion, Catalyst, backgrounding, and autoplay constraints.
+  Safari, Companion, backgrounding, and autoplay constraints.
 
 ### 4. Camera module and presentations
 
@@ -188,8 +182,8 @@ designer UI so saved layouts are declarative and testable.
   safe-area behavior supplied by the layout designer.
 - Snapshot capture of the displayed frame, with a privacy-safe fallback when
   canvas extraction is unavailable; optional capture of current zoom/pan.
-- Browser-native fullscreen and Picture-in-Picture with Firefox, WebKit,
-  Companion, and Catalyst behavior isolated behind capability helpers.
+- Browser-native fullscreen and Picture-in-Picture with Firefox, WebKit, and
+  Companion behavior isolated behind capability helpers.
 - Optional AirPlay or platform media actions only where supported and useful.
 - Typed control intents routed to the owning camera/session/provider service;
   controls do not contain provider or connection logic.
@@ -313,8 +307,8 @@ designer UI so saved layouts are declarative and testable.
 - Localization from the first broadly user-facing feature set.
 - Accessible names, focus order, keyboard operation, reduced motion, text
   scaling, and screen-reader status announcements.
-- Physical smoke matrix for Chrome, Edge, Firefox, Safari, iOS/iPadOS,
-  Companion Android/iOS, and Catalyst in addition to automated browser tests.
+- Physical smoke matrix for Chrome, Edge, Firefox, Safari, iOS/iPadOS, and
+  Companion Android/iOS in addition to automated browser tests.
 - Security review for provider credentials, signed media, downloads, layout
   validation, permissions, microphone use, and external URLs.
 

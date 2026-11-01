@@ -101,12 +101,6 @@ describe("camera presentation retention", () => {
       ),
     );
     expect(preEditor.shadowRoot?.querySelector(".generic-fallback")).toBeNull();
-    expect(
-      preEditor.shadowRoot
-        ?.querySelector(".hls-host")
-        ?.classList.contains("native-edge-isolation"),
-    ).toBe(false);
-
     const editorPreview = createLiveView(api);
     document.body.append(editorPreview);
     await vi.waitFor(() =>

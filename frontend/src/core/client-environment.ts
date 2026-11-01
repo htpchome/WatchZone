@@ -1,5 +1,5 @@
 export type ClientDeviceClass = "desktop" | "phone" | "tablet";
-export type ClientHost = "browser" | "catalyst" | "companion";
+export type ClientHost = "browser" | "companion";
 export type ClientOperatingSystem =
   | "android"
   | "chromeos"
@@ -50,7 +50,6 @@ function mediaMatches(windowObject: ClientWindow, query: string): boolean {
  * describe presentation space, not the device running the client.
  */
 export class ClientEnvironment {
-  public readonly catalyst: boolean;
   public readonly companion: boolean;
   public readonly deviceClass: ClientDeviceClass;
   public readonly hasTouch: boolean;
@@ -98,15 +97,8 @@ export class ClientEnvironment {
       /home assistant\//.test(userAgent) ||
       /homeassistant\/|mobile\/homeassistant/.test(userAgent);
 
-    // Catalyst is identified by the same HA-on-Mac signature used by the
-    // established FrigateView path, with iPadOS desktop-UA exclusion added.
-    this.catalyst = homeAssistantApp && appleDesktop;
     this.companion = homeAssistantApp;
-    this.host = this.catalyst
-      ? "catalyst"
-      : homeAssistantApp
-        ? "companion"
-        : "browser";
+    this.host = homeAssistantApp ? "companion" : "browser";
 
     this.operatingSystem = android
       ? "android"
@@ -152,9 +144,7 @@ export class ClientEnvironment {
   }
 
   public get webRtcSupported(): boolean {
-    // Catalyst exposes browser surfaces that do not represent a usable HA
-    // WebRTC transport. Never probe it by constructing a peer connection.
-    return !this.catalyst && typeof globalThis.RTCPeerConnection === "function";
+    return typeof globalThis.RTCPeerConnection === "function";
   }
 }
 

@@ -120,8 +120,8 @@ eligible Browser or Companion host keeps the proven autoplaying WebRTC hedge
 mounted while HLS is visible and switches presentation after WebRTC decodes. It
 does not create media elements for transports the selected host cannot use, and
 it removes poster/fallback layers after decoded live media is selected.
-Catalyst creates only its native-HLS element. Retention may keep a session
-resource alive, but never as a second visible presentation.
+Retention may keep a session resource alive, but never as a second visible
+presentation.
 
 An adapter declares one supported attachment strategy:
 

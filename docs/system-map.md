@@ -41,8 +41,7 @@ A focused system contract records:
   and derived WebRTC eligibility. Responsive sizing remains CSS-owned.
 - **Key invariant:** no other frontend source parses UA, platform, or physical
   device evidence. ESLint enforces this boundary.
-- **Verification:** `frontend/tests/client-environment.test.ts` and the Catalyst
-  case in `frontend/tests/browser/smoke.spec.ts`
+- **Verification:** `frontend/tests/client-environment.test.ts`
 
 ### 3.2 Card configuration, YAML compaction, and editor lifecycle
 
@@ -123,33 +122,19 @@ A focused system contract records:
 ### 3.6 Home Assistant direct live connection
 
 - **Owners:** `frontend/src/connections/home-assistant/resolver.ts`,
-  `frontend/src/connections/home-assistant/presentation.ts`, the separate
-  ordinary and Catalyst presentation policies,
+  `frontend/src/connections/home-assistant/presentation.ts`,
   `frontend/src/connections/home-assistant/index.ts`,
-  `frontend/src/connections/home-assistant/hls.ts`, and the isolated
-  `frontend/src/connections/home-assistant/catalyst-hls.ts`
+  and `frontend/src/connections/home-assistant/hls.ts`
 - **Contract:** `docs/home-assistant-live-connection.md`
 - **Flow:** eligible clients hedge WebRTC and HLS startup and present the first
-  decoded candidate; Catalyst uses one retained native-HLS element with
-  autoplay, temporary runtime mute, and unmuted default state. After attachment,
-  selected-media ownership applies configured audio and requests playback, then
-  the element receives the direct Home Assistant stream URL. Concrete adapters
-  remain lazy and report timing to the shared startup diagnostics.
-- **Key invariant:** Catalyst never starts WebRTC or HLS.js, its adapter is not
-  imported by ordinary HLS, and its temporary runtime mute must not set
-  `defaultMuted`. Audible autoplay denial always resumes the retained element
-  muted; the same Catalyst adapter owns later unmute recovery. Its native-video
-  host receives Catalyst-only compositor edge isolation; Browser and Companion
-  do not. A later WebRTC takeover updates the same source indicator directly
-  without creating a second connecting phase.
-  Catalyst selected playback follows its isolated two-action sequence (before
-  source attachment and at loaded data); generic presentation selection does
-  not issue a duplicate playback request, and playback promises never gate
-  connection readiness.
+  decoded candidate. Concrete adapters remain lazy and report timing to the
+  shared startup diagnostics.
+- **Key invariant:** a later WebRTC takeover updates the same source indicator
+  directly without creating a second connecting phase.
 - **Verification:** `frontend/tests/home-assistant-connection.test.ts`,
   `frontend/tests/home-assistant-hls-connection.test.ts`,
-  `frontend/tests/home-assistant-live-resolver.test.ts`, and Catalyst/browser
-  cases in `frontend/tests/browser/smoke.spec.ts`
+  `frontend/tests/home-assistant-live-resolver.test.ts`, and browser cases in
+  `frontend/tests/browser/smoke.spec.ts`
 
 ### 3.7 Frontend loading, version identity, and release packaging
 
@@ -222,9 +207,8 @@ Every handoff must state the strongest evidence actually obtained.
 | Contract area               | Automated evidence                                                                           | Evidence still required                                                                |
 | --------------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | Internal rename safety      | Naming validator runs in every production build and CI                                       | External domain/tag migration plan when the public rename is chosen                    |
-| Browser/Catalyst isolation  | Source-boundary validator, resolver/presentation unit tests, and browser routing tests       | Physical Catalyst validation for native media, lifecycle, and audio behavior           |
 | HA HLS/WebRTC hedge         | Adapter, HLS-first takeover, retention, and Chromium/Firefox/WebKit tests                    | Live Home Assistant validation against real camera signaling and codecs                |
-| Mute intent and autoplay    | Unit/browser tests cover defaults, user overrides, retention, takeover, and blocked playback | Physical Safari, Companion, and Catalyst autoplay-policy validation                    |
+| Mute intent and autoplay    | Unit/browser tests cover defaults, user overrides, retention, takeover, and blocked playback | Physical Safari and Companion autoplay-policy validation                               |
 | Editor dirty state          | Unit/browser tests cover true/false round trips, preview identity, and Save                  | Live Home Assistant editor validation after HA frontend upgrades                       |
 | Responsive/theme behavior   | Style validator, token checks, and three-engine viewport tests                               | Physical phone/tablet safe-area, text-zoom, and native-app validation                  |
 | Retention/cleanup           | Lease, navigation, replacement, timer, and controller cleanup tests                          | Long-running live-system observation; no automated heap/leak endurance gate exists yet |

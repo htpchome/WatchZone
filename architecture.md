@@ -536,25 +536,14 @@ overflow behavior. The card shell is the future constraint boundary for panel
 and full-size layouts and must not assume a dashboard column count or viewport.
 
 WatchZone supports current Chrome, Edge, Firefox, and Safari releases, plus
-Home Assistant Companion on Android and iOS and Home Assistant clients using
-Catalyst. Interfaces must work at phone, tablet, and desktop sizes with touch,
+Home Assistant Companion on Android and iOS. Interfaces must work at phone,
+tablet, and desktop sizes with touch,
 pointer, and keyboard input. Chromium-only behavior, scattered user-agent
 branching, and desktop-only interaction assumptions are prohibited. Browser
 capabilities are feature-detected at their ownership boundary. Home Assistant
-host identity that has no browser capability signal, currently Catalyst alone,
-is detected only by the shared client-environment class and must select a
-dedicated host-runtime pipeline. `ClientEnvironment` identifies the host but
-does not accumulate host behavior. The runtime composition boundary selects
-Catalyst-owned adapters for every concern whose behavior differs, including
-media transport, autoplay/audio, visibility and window lifecycle,
-retention/resume, fullscreen, Picture-in-Picture, and gestures. Feature modules
-consume typed concern contracts and do not branch on Catalyst themselves.
-
-The Catalyst pipeline is a composition of narrow adapters, not a second card
-implementation or a platform god object. A Catalyst change must not modify the
-adapter, lifecycle state, or lazy chunk used by browser or Companion runtimes.
-Only genuinely host-neutral types and primitives may be shared. This isolation
-requirement applies across the entire frontend, not only live video.
+host and device evidence is normalized only by the shared client-environment
+class. Feature modules consume typed capabilities rather than parsing platform
+identity themselves.
 
 The client-environment class remains the sole owner of host,
 operating-system, physical client-class, and input-capability classification;
@@ -621,9 +610,8 @@ Connection rules:
   `frontend/src/connections/<type>/` and is loaded with a dynamic import.
 - Platform-specialized playback policy is a distinct adapter selected by the
   resolver, not a runtime conditional inside a shared adapter. Its dynamic
-  entry, session key, lifecycle, and tests are isolated so changing Catalyst
-  behavior cannot change the code path or lazy chunk used by Safari, Chrome,
-  Edge, Firefox, Companion, or another ordinary client.
+  entry, session key, lifecycle, and tests are isolated so a specialized
+  behavior cannot change another client's code path or lazy chunk.
 - Platform adapters share only stable typed contracts and genuinely
   platform-neutral primitives. A platform workaround may not be moved into a
   shared helper merely to reduce file count.
@@ -1071,8 +1059,7 @@ Required layers as their corresponding features appear:
 - A small end-to-end smoke path for Home Assistant loading the packaged card.
 - Browser-visible behavior runs against Chromium, Firefox, and WebKit. This
   engine matrix supplements, but does not replace, milestone testing in Chrome,
-  Edge, Firefox, Safari, Home Assistant Companion on Android and iOS, and a
-  Catalyst-based Home Assistant client.
+  Edge, Firefox, Safari, and Home Assistant Companion on Android and iOS.
 - Responsive component coverage includes representative phone, tablet, and
   desktop containers and both touch/coarse-pointer and mouse/keyboard paths
   when the feature has interactive behavior.

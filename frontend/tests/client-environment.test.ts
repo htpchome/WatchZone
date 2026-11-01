@@ -20,31 +20,29 @@ function runtime(
 describe("ClientEnvironment", () => {
   it.each([
     {
-      name: "Home Assistant macOS Catalyst",
+      name: "Home Assistant macOS app",
       navigator: {
         platform: "MacIntel",
         userAgent:
           "Mozilla/5.0 (Macintosh) Mobile/15E148 Home Assistant/2026.11",
       },
       expected: {
-        catalyst: true,
         companion: true,
         deviceClass: "desktop",
-        host: "catalyst",
+        host: "companion",
         operatingSystem: "macos",
       },
     },
     {
-      name: "alternate Catalyst app signature",
+      name: "alternate macOS app signature",
       navigator: {
         platform: "macOS",
         userAgent: "Mobile/HomeAssistant",
       },
       expected: {
-        catalyst: true,
         companion: true,
         deviceClass: "desktop",
-        host: "catalyst",
+        host: "companion",
         operatingSystem: "macos",
       },
     },
@@ -58,7 +56,6 @@ describe("ClientEnvironment", () => {
       },
       matches: ["(pointer: coarse)", "(hover: none)"],
       expected: {
-        catalyst: false,
         companion: true,
         deviceClass: "tablet",
         host: "companion",
@@ -73,7 +70,6 @@ describe("ClientEnvironment", () => {
         userAgent: "iPhone Mobile/HomeAssistant",
       },
       expected: {
-        catalyst: false,
         companion: true,
         deviceClass: "phone",
         host: "companion",
@@ -88,7 +84,6 @@ describe("ClientEnvironment", () => {
         userAgent: "Android 16 Mobile Home Assistant/2026.11",
       },
       expected: {
-        catalyst: false,
         companion: true,
         deviceClass: "phone",
         host: "companion",
@@ -103,7 +98,6 @@ describe("ClientEnvironment", () => {
         userAgent: "Android 16 Home Assistant/2026.11",
       },
       expected: {
-        catalyst: false,
         companion: true,
         deviceClass: "tablet",
         host: "companion",
@@ -118,7 +112,6 @@ describe("ClientEnvironment", () => {
           "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Version/18 Safari/605.1.15",
       },
       expected: {
-        catalyst: false,
         companion: false,
         deviceClass: "desktop",
         host: "browser",
@@ -134,7 +127,6 @@ describe("ClientEnvironment", () => {
       },
       matches: ["(any-pointer: coarse)"],
       expected: {
-        catalyst: false,
         companion: false,
         deviceClass: "desktop",
         host: "browser",
@@ -148,7 +140,6 @@ describe("ClientEnvironment", () => {
         userAgent: "Mozilla/5.0 (X11; CrOS x86_64 16000.0.0)",
       },
       expected: {
-        catalyst: false,
         companion: false,
         deviceClass: "desktop",
         host: "browser",
@@ -200,15 +191,15 @@ describe("ClientEnvironment", () => {
     });
   });
 
-  it("always rejects WebRTC for Catalyst even when the API is exposed", () => {
-    vi.stubGlobal("RTCPeerConnection", class MisleadingPeerConnection {});
+  it("reports WebRTC only when the runtime exposes it", () => {
+    vi.stubGlobal("RTCPeerConnection", class TestPeerConnection {});
     try {
       expect(
         runtime({
           platform: "MacIntel",
           userAgent: "Macintosh Mobile/HomeAssistant",
         }).webRtcSupported,
-      ).toBe(false);
+      ).toBe(true);
     } finally {
       vi.unstubAllGlobals();
     }

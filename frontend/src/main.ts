@@ -13,7 +13,6 @@ window.watchZone = Object.freeze({
   activeCardVersion,
   build: APP_BUILD,
   clientEnvironment: Object.freeze({
-    catalyst: clientEnvironment.catalyst,
     companion: clientEnvironment.companion,
     deviceClass: clientEnvironment.deviceClass,
     hasTouch: clientEnvironment.hasTouch,
