@@ -53,6 +53,11 @@ provider services, and connection adapters that users compose into layouts.
 8. Every visual feature consumes WatchZone theme tokens and supports container
    responsiveness, touch, pointer, keyboard, and the supported browser/app
    matrix.
+9. Catalyst is a distinct host-runtime pipeline across transport, media,
+   visibility/window lifecycle, retention/resume, fullscreen, PiP, gestures,
+   and future host-specific behavior. Feature modules consume narrow selected
+   adapters and never implement Catalyst as a conditional variation of Browser
+   or Companion behavior.
 
 ## Capability roadmap
 

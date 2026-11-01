@@ -246,7 +246,6 @@ export class WatchZoneCard extends LitElement {
     const available = Boolean(entityId && this._hass?.states[entityId]);
     const clientEnvironment = getClientEnvironment();
     if (
-      clientEnvironment.catalyst ||
       !clientEnvironment.webRtcSupported ||
       !this.isConnected ||
       !this._haApi ||

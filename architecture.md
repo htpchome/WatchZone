@@ -526,8 +526,21 @@ pointer, and keyboard input. Chromium-only behavior, scattered user-agent
 branching, and desktop-only interaction assumptions are prohibited. Browser
 capabilities are feature-detected at their ownership boundary. Home Assistant
 host identity that has no browser capability signal, currently Catalyst alone,
-is detected only by the shared client-environment class and may select a
-dedicated lifecycle adapter. That class is the sole owner of host,
+is detected only by the shared client-environment class and must select a
+dedicated host-runtime pipeline. `ClientEnvironment` identifies the host but
+does not accumulate host behavior. The runtime composition boundary selects
+Catalyst-owned adapters for every concern whose behavior differs, including
+media transport, autoplay/audio, visibility and window lifecycle,
+retention/resume, fullscreen, Picture-in-Picture, and gestures. Feature modules
+consume typed concern contracts and do not branch on Catalyst themselves.
+
+The Catalyst pipeline is a composition of narrow adapters, not a second card
+implementation or a platform god object. A Catalyst change must not modify the
+adapter, lifecycle state, or lazy chunk used by browser or Companion runtimes.
+Only genuinely host-neutral types and primitives may be shared. This isolation
+requirement applies across the entire frontend, not only live video.
+
+The client-environment class remains the sole owner of host,
 operating-system, physical client-class, and input-capability classification;
 responsive sizing remains CSS-owned and does not create a parallel JavaScript
 device profile. An unavailable media capability produces an explicit fallback
@@ -590,6 +603,14 @@ Connection rules:
   order.
 - Each connection type has a stable folder boundary under
   `frontend/src/connections/<type>/` and is loaded with a dynamic import.
+- Platform-specialized playback policy is a distinct adapter selected by the
+  resolver, not a runtime conditional inside a shared adapter. Its dynamic
+  entry, session key, lifecycle, and tests are isolated so changing Catalyst
+  behavior cannot change the code path or lazy chunk used by Safari, Chrome,
+  Edge, Firefox, Companion, or another ordinary client.
+- Platform adapters share only stable typed contracts and genuinely
+  platform-neutral primitives. A platform workaround may not be moved into a
+  shared helper merely to reduce file count.
 - The live module depends only on the public resolver and playback contract.
 - Connection adapters own browser media objects and playback-specific cleanup,
   but not camera metadata, layout state, or provider APIs.

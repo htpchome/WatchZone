@@ -28,7 +28,6 @@ export interface MediaConnection {
 }
 
 export interface MediaConnectionOptions {
-  readonly hlsPlaybackMode?: "automatic" | "native";
   readonly initialMuted: boolean;
   readonly onVideo?: (video: HTMLVideoElement) => void;
 }
@@ -77,6 +76,17 @@ const defaultHlsConnectionFactory: ConnectionFactory = async (...args) => {
   return createHomeAssistantHlsConnection(...args);
 };
 
+const defaultCatalystHlsConnectionFactory: ConnectionFactory = async (
+  ...args
+) => {
+  const timing = args[4];
+  timing.mark("adapter_import_started");
+  const { createHomeAssistantCatalystHlsConnection } =
+    await import("../connections/home-assistant/catalyst-hls");
+  timing.mark("adapter_imported");
+  return createHomeAssistantCatalystHlsConnection(...args);
+};
+
 class ManagedMediaSession {
   private _api: HomeAssistantApi;
   private _connection?: MediaConnection;
@@ -113,7 +123,6 @@ class ManagedMediaSession {
     const transportChanged = this._api.identity !== api.identity;
     this._api = api;
     this._connectionOptions = {
-      hlsPlaybackMode: options.hlsPlaybackMode,
       initialMuted: options.initialMuted,
     };
     this.lastUsed = performance.now();
@@ -339,6 +348,7 @@ export class MediaSessionManager {
   public constructor(
     private readonly _factory: ConnectionFactory = defaultConnectionFactory,
     private readonly _hlsFactory: ConnectionFactory = defaultHlsConnectionFactory,
+    private readonly _catalystHlsFactory: ConnectionFactory = defaultCatalystHlsConnectionFactory,
   ) {}
 
   public acquireHomeAssistant(
@@ -359,12 +369,26 @@ export class MediaSessionManager {
     entityId: string,
     options: MediaConnectionOptions = { initialMuted: true },
   ): MediaSessionLease {
-    const playbackMode = options.hlsPlaybackMode ?? "automatic";
     return this._acquire(
-      `home_assistant_hls${playbackMode === "native" ? "_native" : ""}:${entityId}`,
+      `home_assistant_hls:${entityId}`,
       entityId,
       api,
       this._hlsFactory,
+      HLS_RETAIN_IDLE_MS,
+      options,
+    );
+  }
+
+  public acquireHomeAssistantCatalystHls(
+    api: HomeAssistantApi,
+    entityId: string,
+    options: MediaConnectionOptions = { initialMuted: true },
+  ): MediaSessionLease {
+    return this._acquire(
+      `home_assistant_catalyst_hls:${entityId}`,
+      entityId,
+      api,
+      this._catalystHlsFactory,
       HLS_RETAIN_IDLE_MS,
       options,
     );

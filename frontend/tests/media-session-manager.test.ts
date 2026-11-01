@@ -205,27 +205,37 @@ describe("MediaSessionManager", () => {
   });
 
   it("keeps Catalyst native HLS separate from the automatic HLS pool", async () => {
-    const hlsFactory = vi.fn<ConnectionFactory>(
-      async (_api, _entity, _signal, _failure, _timing, options) => ({
-        video: document.createElement("video"),
-        transport:
-          options.hlsPlaybackMode === "native" ? "hls_native" : "hls_mse",
-        close: vi.fn(),
-      }),
+    const hlsFactory = vi.fn<ConnectionFactory>(async () => ({
+      video: document.createElement("video"),
+      transport: "hls_mse",
+      close: vi.fn(),
+    }));
+    const catalystHlsFactory = vi.fn<ConnectionFactory>(async () => ({
+      video: document.createElement("video"),
+      transport: "hls_native",
+      close: vi.fn(),
+    }));
+    const manager = new MediaSessionManager(
+      vi.fn(),
+      hlsFactory,
+      catalystHlsFactory,
     );
-    const manager = new MediaSessionManager(vi.fn(), hlsFactory);
     const api = createApi();
     const automatic = manager.acquireHomeAssistantHls(api, "camera.front");
-    const native = manager.acquireHomeAssistantHls(api, "camera.front", {
-      hlsPlaybackMode: "native",
-      initialMuted: false,
-    });
+    const native = manager.acquireHomeAssistantCatalystHls(
+      api,
+      "camera.front",
+      {
+        initialMuted: false,
+      },
+    );
 
     await vi.waitFor(() => expect(automatic.getSnapshot().state).toBe("live"));
     await vi.waitFor(() => expect(native.getSnapshot().state).toBe("live"));
     expect(automatic.key).toBe("home_assistant_hls:camera.front");
-    expect(native.key).toBe("home_assistant_hls_native:camera.front");
-    expect(hlsFactory).toHaveBeenCalledTimes(2);
+    expect(native.key).toBe("home_assistant_catalyst_hls:camera.front");
+    expect(hlsFactory).toHaveBeenCalledOnce();
+    expect(catalystHlsFactory).toHaveBeenCalledOnce();
 
     automatic.release();
     native.release();
@@ -234,7 +244,7 @@ describe("MediaSessionManager", () => {
 
   it("preserves Catalyst native playback policy across a retry", async () => {
     let attempt = 0;
-    const hlsFactory = vi.fn<ConnectionFactory>(async () => {
+    const catalystHlsFactory = vi.fn<ConnectionFactory>(async () => {
       attempt += 1;
       if (attempt === 1) throw new Error("temporary HLS failure");
       return {
@@ -243,21 +253,23 @@ describe("MediaSessionManager", () => {
         close: vi.fn(),
       };
     });
-    const manager = new MediaSessionManager(vi.fn(), hlsFactory);
-    const lease = manager.acquireHomeAssistantHls(createApi(), "camera.front", {
-      hlsPlaybackMode: "native",
-      initialMuted: false,
-    });
+    const manager = new MediaSessionManager(
+      vi.fn(),
+      vi.fn(),
+      catalystHlsFactory,
+    );
+    const lease = manager.acquireHomeAssistantCatalystHls(
+      createApi(),
+      "camera.front",
+      { initialMuted: false },
+    );
 
     await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("failed"));
     lease.retry();
     await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
-    expect(hlsFactory).toHaveBeenCalledTimes(2);
-    for (const call of hlsFactory.mock.calls) {
-      expect(call[5]).toMatchObject({
-        hlsPlaybackMode: "native",
-        initialMuted: false,
-      });
+    expect(catalystHlsFactory).toHaveBeenCalledTimes(2);
+    for (const call of catalystHlsFactory.mock.calls) {
+      expect(call[5]).toMatchObject({ initialMuted: false });
     }
 
     lease.release();

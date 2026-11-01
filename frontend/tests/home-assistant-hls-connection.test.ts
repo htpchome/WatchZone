@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createHomeAssistantHlsConnection } from "../src/connections/home-assistant/hls";
+import { createHomeAssistantCatalystHlsConnection } from "../src/connections/home-assistant/catalyst-hls";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import { LiveStartupTiming } from "../src/core/live-startup-timing";
 
@@ -234,7 +235,7 @@ describe("Home Assistant HLS connection", () => {
       subscribeMessage: vi.fn(),
     };
     const timing = new LiveStartupTiming(
-      "home_assistant_hls_native:camera.front",
+      "home_assistant_catalyst_hls:camera.front",
     );
     let attachedState:
       { autoplay: boolean; defaultMuted: boolean; muted: boolean } | undefined;
@@ -246,13 +247,13 @@ describe("Home Assistant HLS connection", () => {
       };
       document.body.append(video);
     });
-    const connecting = createHomeAssistantHlsConnection(
+    const connecting = createHomeAssistantCatalystHlsConnection(
       api,
       "camera.front",
       new AbortController().signal,
       vi.fn(),
       timing,
-      { hlsPlaybackMode: "native", initialMuted: false, onVideo },
+      { initialMuted: false, onVideo },
     );
 
     expect(onVideo).toHaveBeenCalledOnce();
@@ -260,7 +261,7 @@ describe("Home Assistant HLS connection", () => {
     expect(attachedState).toEqual({
       autoplay: true,
       defaultMuted: false,
-      muted: false,
+      muted: true,
     });
     expect(video.isConnected).toBe(true);
     expect(video.defaultMuted).toBe(false);

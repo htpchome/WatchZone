@@ -118,20 +118,24 @@ A focused system contract records:
 
 ### 3.6 Home Assistant direct live connection
 
-- **Owners:** `frontend/src/connections/home-assistant/index.ts` and
-  `frontend/src/connections/home-assistant/hls.ts`
+- **Owners:** `frontend/src/connections/home-assistant/resolver.ts`,
+  `frontend/src/connections/home-assistant/index.ts`,
+  `frontend/src/connections/home-assistant/hls.ts`, and the isolated
+  `frontend/src/connections/home-assistant/catalyst-hls.ts`
 - **Contract:** `docs/home-assistant-live-connection.md`
 - **Flow:** eligible clients hedge WebRTC and HLS startup and present the first
   decoded candidate; Catalyst uses one retained native-HLS element with
-  autoplay and an unmuted default state. Its intended runtime audio is applied
-  before DOM attachment and source assignment. Concrete adapters remain lazy
-  and report timing to the shared startup diagnostics.
-- **Key invariant:** Catalyst never starts WebRTC or HLS.js, automatic runtime
-  mute must not set `defaultMuted`, and only an explicit hidden visibility state
-  invokes background mute. A later WebRTC takeover does not change the
-  initial-source indicator.
+  autoplay, temporary runtime mute, and unmuted default state. After attachment,
+  selected-media ownership applies configured audio and requests playback, then
+  the element receives the direct Home Assistant stream URL. Concrete adapters
+  remain lazy and report timing to the shared startup diagnostics.
+- **Key invariant:** Catalyst never starts WebRTC or HLS.js, its adapter is not
+  imported by ordinary HLS, and its temporary runtime mute must not set
+  `defaultMuted`. A later WebRTC takeover does not change the initial-source
+  indicator.
 - **Verification:** `frontend/tests/home-assistant-connection.test.ts`,
-  `frontend/tests/home-assistant-hls-connection.test.ts`, and Catalyst/browser
+  `frontend/tests/home-assistant-hls-connection.test.ts`,
+  `frontend/tests/home-assistant-live-resolver.test.ts`, and Catalyst/browser
   cases in `frontend/tests/browser/smoke.spec.ts`
 
 ### 3.7 Frontend loading, version identity, and release packaging

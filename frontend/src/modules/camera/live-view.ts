@@ -1,5 +1,6 @@
 import { html, LitElement, nothing } from "lit";
 
+import { HomeAssistantLiveConnectionResolver } from "../../connections/home-assistant/resolver";
 import { getClientEnvironment } from "../../core/client-environment";
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import { CAMERA_LIVE_VIEW_TAG } from "../../core/constants";
@@ -46,10 +47,7 @@ interface FullscreenVideo extends HTMLVideoElement {
 }
 
 function documentIsHidden(): boolean {
-  // Catalyst can expose a stale `document.hidden` value during an otherwise
-  // visible WKWebView lifecycle transition. The working HA-on-Catalyst path
-  // treats only the explicit visibility state as a background transition.
-  return document.visibilityState === "hidden";
+  return document.hidden === true || document.visibilityState === "hidden";
 }
 
 function isAutoplayDenied(error: unknown): boolean {
@@ -101,6 +99,11 @@ export class WatchZoneCameraLiveView extends LitElement {
     },
   );
   private readonly _clientEnvironment = getClientEnvironment();
+  private readonly _connectionResolver =
+    new HomeAssistantLiveConnectionResolver(
+      this._clientEnvironment,
+      getMediaSessionManager(),
+    );
 
   public set api(value: HomeAssistantApi | undefined) {
     if (this._api?.identity === value?.identity) {
@@ -346,10 +349,7 @@ export class WatchZoneCameraLiveView extends LitElement {
       this._releaseLeases();
       return;
     }
-    if (
-      this._clientEnvironment.catalyst ||
-      !this._clientEnvironment.webRtcSupported
-    ) {
+    if (!this._connectionResolver.webRtcEligible) {
       this._releaseWebRtcLease();
       this._syncHlsLease();
       return;
@@ -385,22 +385,19 @@ export class WatchZoneCameraLiveView extends LitElement {
     ) {
       return;
     }
-    const playbackMode = this._clientEnvironment.catalyst
-      ? "native"
-      : "automatic";
-    const key = `home_assistant_hls${playbackMode === "native" ? "_native" : ""}:${this._entityId}`;
+    const key = this._connectionResolver.hlsSessionKey(this._entityId);
     if (this._hlsLease?.key === key) {
       return;
     }
     this._releaseHlsLease();
-    this._hlsLease = getMediaSessionManager().acquireHomeAssistantHls(
+    const options = {
+      initialMuted: this._muted,
+      onVideo: this._attachConnectingHlsVideo,
+    };
+    this._hlsLease = this._connectionResolver.acquireHls(
       this._api,
       this._entityId,
-      {
-        hlsPlaybackMode: playbackMode,
-        initialMuted: this._muted,
-        onVideo: this._attachConnectingHlsVideo,
-      },
+      options,
     );
     this._hlsUnsubscribe = this._hlsLease.subscribe((snapshot) => {
       this._hlsSnapshot = snapshot;

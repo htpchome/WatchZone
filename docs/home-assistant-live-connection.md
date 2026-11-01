@@ -72,11 +72,13 @@ locally at their adapter boundary. The policy may become capability-informed
 later if Home Assistant can expose that information without adding startup
 latency.
 
-The Home Assistant Catalyst runtime is the explicit exception. It uses one
-retained native-HLS session and does not start WebRTC or HLS.js candidates.
-This preserves the native media element and its audio/window lifecycle instead
-of replacing it during a later WebRTC takeover. Catalyst identity comes only
-from the centralized client-environment profile.
+The Home Assistant Catalyst runtime is the explicit exception. The resolver
+selects a separate, dynamically imported Catalyst native-HLS adapter with its
+own session key; ordinary HLS does not import or execute that adapter. Catalyst
+uses one retained native-HLS session and does not start WebRTC or HLS.js
+candidates. This preserves the native media element and its audio/window
+lifecycle instead of replacing it during a later WebRTC takeover. Catalyst
+identity comes only from the centralized client-environment profile.
 
 ## 5. WebRTC connection sequence
 
@@ -110,9 +112,9 @@ The HLS adapter:
    preferred when advertised so Safari and WebKit-hosted Home Assistant clients
    keep their platform media lifecycle. Other clients lazy-load the light
    HLS.js engine and use its MSE/MMS path.
-4. Catalyst bypasses manifest fetching and assigns Home Assistant's returned
-   stream URL directly to its required native HLS element. It never loads
-   HLS.js.
+4. The separate Catalyst adapter bypasses manifest fetching and assigns Home
+   Assistant's returned stream URL directly to its required native HLS element.
+   It never imports ordinary HLS or loads HLS.js.
 5. When the ordinary-path master has exactly one variant, passes that variant
    directly to the selected player to avoid a redundant manifest request.
 6. Reports live only after `loadeddata`, not merely after obtaining a playlist
@@ -159,21 +161,17 @@ audible-playback opportunity in WebKit clients.
 
 Catalyst has a stricter native-media exception matching its proven Home
 Assistant selected-media lifecycle. Its retained video is created with
-`autoplay` enabled and `defaultMuted=false`. The selected camera's intended
-runtime mute state is applied before the element is attached; attaching a
-temporarily muted element and unmuting it afterward is not equivalent in
-WKWebView's autoplay classification. The direct native HLS URL is then assigned
-without fetching the manifest or replacing the element. `loadeddata` makes the
-final selected-media request without changing the desired audio state. The
-distinction between runtime
+`autoplay` enabled, runtime `muted=true`, and `defaultMuted=false`. After the
+visible element is attached, selected-media ownership applies the intended
+mute state and requests playback on that same element while the Home Assistant
+stream request is in flight. The direct native HLS URL is then assigned without
+fetching the manifest or replacing the element, and playback is requested again
+on that sourced element. `loadeddata` makes the final selected-media request
+without changing the desired audio state. The distinction between runtime
 `muted` and `defaultMuted` is intentional and tested: automatic attachment,
 background safety, transport handoff, and autoplay recovery alter runtime mute
 only. Only an explicit user mute action changes `defaultMuted`; automatic
 unmute must not leave Catalyst's retained player classified as default-muted.
-
-Catalyst background policy uses `document.visibilityState === "hidden"` as the
-authoritative signal. A stale `document.hidden` flag during a visible WKWebView
-transition must not force the selected player back to muted output.
 
 The presentation retains explicit user preference across HLS/WebRTC handoff
 and presentation replacement. An autoplay rejection temporarily forces muted

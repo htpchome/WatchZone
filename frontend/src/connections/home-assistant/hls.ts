@@ -5,7 +5,6 @@ import type { LiveStartupTiming } from "../../core/live-startup-timing";
 import {
   playMediaElement,
   setMediaElementMuted,
-  setMediaElementRuntimeMuted,
 } from "../../core/media-playback";
 import type {
   MediaConnection,
@@ -53,30 +52,19 @@ export async function createHomeAssistantHlsConnection(
     throw abortError();
   }
 
-  const catalystNativePlayback = options.hlsPlaybackMode === "native";
   const video = document.createElement("video");
-  video.autoplay = catalystNativePlayback;
+  video.autoplay = false;
   video.playsInline = true;
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
   video.preload = "auto";
-  if (catalystNativePlayback) {
-    // Catalyst's native player must carry the selected camera's intended
-    // runtime state before it enters the DOM. Attaching it muted and changing
-    // that state afterward causes WKWebView to classify the source as muted
-    // autoplay even when the final properties look correct. defaultMuted is
-    // deliberately left false; only an explicit user action changes it.
-    setMediaElementRuntimeMuted(video, options.initialMuted);
-    options.onVideo?.(video);
-  } else {
-    setMediaElementMuted(video, true);
-    options.onVideo?.(video);
-    setMediaElementMuted(video, options.initialMuted);
+  setMediaElementMuted(video, true);
+  options.onVideo?.(video);
+  setMediaElementMuted(video, options.initialMuted);
 
-    // Prime the actual selected element before its source exists. WebKit makes
-    // its first audible-playback decision at this boundary; replacing the
-    // element or unmuting only after loadeddata loses that opportunity.
-  }
+  // Prime the actual selected element before its source exists. WebKit makes
+  // its first audible-playback decision at this boundary; replacing the
+  // element or unmuting only after loadeddata loses that opportunity.
   if (!options.initialMuted) {
     void Promise.resolve()
       .then(() => (video.muted ? undefined : playMediaElement(video)))
@@ -167,20 +155,6 @@ export async function createHomeAssistantHlsConnection(
     const streamUrl = api.resolveUrl(stream.url);
     if (signal.aborted) {
       throw abortError();
-    }
-
-    if (catalystNativePlayback) {
-      if (!video.canPlayType(HLS_CONTENT_TYPE)) {
-        throw new Error("This browser does not support native HLS playback");
-      }
-      timing.mark("hls_native_path_selected");
-      video.src = streamUrl;
-      // Catalyst's retained native player gets another audible request after
-      // its real source exists. Preserve defaultMuted: automatic lifecycle
-      // state must not reclassify this selected element as default-muted.
-      setMediaElementRuntimeMuted(video, options.initialMuted);
-      void playMediaElement(video).catch(() => undefined);
-      return ready;
     }
 
     const manifestPromise = fetch(streamUrl, { signal }).then(

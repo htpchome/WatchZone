@@ -77,6 +77,20 @@ For any frontend, media, interaction, layout, or styling change, also read
 - Feature modules do not import one another.
 - Concrete live connection adapters are dynamically imported and are not
   statically imported by the live module or eager entry.
+- Platform-specific media policy must be isolated behind a resolver/adapter
+  boundary when its failure could affect other supported clients. Do not add a
+  Safari, Companion, Catalyst, Firefox, or engine-specific workaround to a
+  shared transport or presentation lifecycle merely because it is guarded by a
+  runtime conditional. Shared-path changes require cross-platform behavior;
+  physical-client-only behavior requires a dedicated adapter plus physical
+  validation and may not be declared proven by synthetic browser tests alone.
+- Catalyst is a distinct host-runtime pipeline across the whole frontend, not
+  a Companion/browser subtype and not only a live-connection exception.
+  `ClientEnvironment` owns detection only. Route Catalyst-specific transport,
+  autoplay/audio, visibility/window lifecycle, retention/resume, fullscreen,
+  PiP, gesture, and future host behavior through narrow Catalyst-owned adapters
+  selected at the runtime composition boundary. Feature code must not grow
+  direct Catalyst conditionals.
 - Live sessions are owned by the document-scoped media-session manager, not by
   Lit elements. Element disconnection releases a lease; it does not
   automatically close a retained connection.

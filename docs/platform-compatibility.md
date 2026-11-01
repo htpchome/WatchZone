@@ -23,6 +23,12 @@ new browser API makes another platform easier or faster.
 - Keep platform-specific behavior behind the smallest owning adapter or helper.
 - Do not scatter Safari, Firefox, mobile, Companion, or Catalyst conditionals
   across modules.
+- A runtime conditional inside a shared media adapter is not platform
+  isolation. When platform-specific playback policy can change startup,
+  attachment, autoplay, visibility, recovery, or cleanup, select a dedicated
+  adapter at the resolver boundary so ordinary clients neither execute nor
+  depend on that implementation. Synthetic browser tests verify contracts but
+  do not replace validation on the physical client that motivated the path.
 - Provide a deterministic fallback or actionable local error when a required
   capability is unavailable.
 - Do not assume hover, a fine pointer, a physical keyboard, a wide viewport, or
@@ -72,7 +78,38 @@ tablet, or PC, including startup audio and typed device matrices. A narrow
 desktop card remains a desktop client. Feature code must not duplicate
 environment parsing or invent another device profile.
 
-### 2.2 Responsive presentation
+### 2.2 Host-runtime pipelines
+
+Browser, Companion, and Catalyst are distinct Home Assistant host runtimes.
+`ClientEnvironment` detects and describes the host once; it does not implement
+host policy. A document-scoped runtime composition boundary selects the narrow
+adapters required by that host.
+
+Catalyst always uses its own host-runtime pipeline. This requirement is broader
+than live playback and covers every concern where Catalyst behavior differs:
+
+- Connection selection and native-media lifecycle.
+- Autoplay, audio intent, and audio recovery.
+- Visibility, window backgrounding, suspension, and foreground resume.
+- Retained-session parking, health validation, and reconnection decisions.
+- Fullscreen and Picture-in-Picture entry, exit, and presentation restoration.
+- Touch, pointer, gesture, resize, and window-specific interaction behavior.
+- Future Catalyst-specific navigation or Home Assistant host integration.
+
+The pipeline composes concern-specific adapters behind typed contracts; it is
+not a duplicated card implementation and must not become a god object. Feature
+components do not test `environment.catalyst` to implement behavior. They call
+the selected concern contract. A Catalyst adapter may share platform-neutral
+types and primitives, but it must not share mutable lifecycle policy or an
+implementation entry with Browser or Companion.
+
+A Catalyst-only change must leave Browser and Companion adapter code paths and
+lazy chunks unchanged. Build validation enforces import isolation where a
+separate entry exists, unit tests verify resolver selection, and physical
+Catalyst testing remains mandatory for behavior that synthetic engines cannot
+reproduce.
+
+### 2.3 Responsive presentation
 
 Container and viewport dimensions are not device detection. Responsive visual
 layout and control sizing use CSS container queries, logical dimensions, safe
