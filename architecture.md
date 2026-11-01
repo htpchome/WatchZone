@@ -489,7 +489,9 @@ Card-shell appearance and module appearance are independent. The card owns
 presentation owns `--wzc-live-radius` and `--wzc-live-shadow`. Card-level
 toggles must not rewrite module-level tokens. The shadow scale exposes
 `--wzc-shadow-small` and `--wzc-shadow-medium`, mapped centrally to Home
-Assistant's small and medium shadow tokens.
+Assistant's small and medium shadow tokens. The durable camera presentation
+input selects `medium`, `small`, or `none`; temporary boolean controls map into
+that typed choice rather than becoming the component contract.
 
 `frontend/src/core/yaml-config.ts` is the persistence boundary for Lovelace
 YAML. Runtime and editor state remain fully normalized, while dirty-state,

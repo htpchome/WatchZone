@@ -648,8 +648,12 @@ test("retains one live connection while the card presentation is replaced", asyn
       outer_shadows: false,
     });
     replacement.style.setProperty(
+      "--ha-box-shadow-m",
+      "rgb(4, 5, 6) 0px 4px 8px",
+    );
+    replacement.style.setProperty(
       "--ha-box-shadow-s",
-      "rgb(4, 5, 6) 0px 3px 7px",
+      "rgb(7, 8, 9) 0px 1px 2px",
     );
     replacement.hass = testWindow.__watchZoneTestHass;
     document.body.append(replacement);
@@ -698,6 +702,19 @@ test("retains one live connection while the card presentation is replaced", asyn
       cameraSurface.evaluate((element) => getComputedStyle(element).boxShadow),
     )
     .toContain("rgb(4, 5, 6)");
+  await page.locator("watchzone-camera").evaluate(async (element) => {
+    const camera = element as HTMLElement & {
+      shadowStyle: "medium" | "none" | "small";
+      updateComplete: Promise<boolean>;
+    };
+    camera.shadowStyle = "small";
+    await camera.updateComplete;
+  });
+  await expect
+    .poll(() =>
+      cameraSurface.evaluate((element) => getComputedStyle(element).boxShadow),
+    )
+    .toContain("rgb(7, 8, 9)");
   const cameraIdentityRetained = await page
     .locator("watchzone-card")
     .evaluate(async (element) => {

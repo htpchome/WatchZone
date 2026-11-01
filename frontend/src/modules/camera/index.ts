@@ -5,6 +5,8 @@ import type { HomeAssistantApi } from "../../core/home-assistant";
 import { cameraStyles } from "./camera.styles";
 import "./live-view";
 
+export type CameraShadowStyle = "medium" | "none" | "small";
+
 /** Stable composition boundary for current and future camera presentations. */
 export class WatchZoneCamera extends LitElement {
   public static properties = {
@@ -13,7 +15,7 @@ export class WatchZoneCamera extends LitElement {
     entityId: { attribute: false },
     posterUrl: { attribute: false },
     roundedCorners: { attribute: false, type: Boolean },
-    shadows: { attribute: false, type: Boolean },
+    shadowStyle: { attribute: false },
   };
 
   public api?: HomeAssistantApi;
@@ -21,7 +23,7 @@ export class WatchZoneCamera extends LitElement {
   public entityId?: string;
   public posterUrl?: string;
   public roundedCorners = true;
-  public shadows = true;
+  public shadowStyle: CameraShadowStyle = "medium";
 
   protected render() {
     return html`
@@ -29,7 +31,8 @@ export class WatchZoneCamera extends LitElement {
         class=${[
           "camera",
           this.roundedCorners ? "" : "square-camera-corners",
-          this.shadows ? "" : "no-camera-shadow",
+          this.shadowStyle === "small" ? "camera-shadow-small" : "",
+          this.shadowStyle === "none" ? "camera-shadow-none" : "",
         ]
           .filter(Boolean)
           .join(" ")}

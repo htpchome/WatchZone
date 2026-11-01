@@ -140,6 +140,9 @@ designer UI so saved layouts are declarative and testable.
   that do not change transport identity.
 - Independent card-shell, camera-component, overlay, and module appearance
   settings through semantic tokens.
+- Typed component elevation choices (`medium`, `small`, or `none`) backed by
+  the WatchZone shadow scale; temporary boolean toggles map into this choice
+  until the layout/theme designer exposes the complete control.
 
 ### 5. Camera suspend and resume
 

@@ -180,7 +180,9 @@ export class WatchZoneCard extends LitElement {
                       .entityId=${cameraEntity}
                       .posterUrl=${posterUrl}
                       .roundedCorners=${config.camera_rounded_corners !== false}
-                      .shadows=${config.camera_shadows !== false}
+                      .shadowStyle=${
+                        config.camera_shadows === false ? "none" : "medium"
+                      }
                     ></watchzone-camera>`
                   : html`<div class="live-placeholder" role="status">
                       Preparing live view…

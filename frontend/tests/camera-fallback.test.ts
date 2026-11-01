@@ -46,11 +46,17 @@ describe("camera component appearance", () => {
     );
 
     camera.roundedCorners = false;
-    camera.shadows = false;
+    camera.shadowStyle = "small";
     await camera.updateComplete;
 
     expect(camera.shadowRoot?.querySelector(".camera")?.className).toBe(
-      "camera square-camera-corners no-camera-shadow",
+      "camera square-camera-corners camera-shadow-small",
+    );
+
+    camera.shadowStyle = "none";
+    await camera.updateComplete;
+    expect(camera.shadowRoot?.querySelector(".camera")?.className).toBe(
+      "camera square-camera-corners camera-shadow-none",
     );
   });
 });

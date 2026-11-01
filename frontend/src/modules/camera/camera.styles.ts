@@ -24,7 +24,11 @@ export const cameraStyles = css`
     --wzc-live-radius: 0px;
   }
 
-  .camera.no-camera-shadow {
+  .camera.camera-shadow-small {
+    box-shadow: var(--wzc-shadow-small);
+  }
+
+  .camera.camera-shadow-none {
     box-shadow: none;
   }
 `;

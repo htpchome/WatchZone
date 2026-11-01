@@ -106,7 +106,7 @@ export const watchZoneThemeTokens = css`
     --wzc-card-outer-shadow: var(--wzc-shadow-medium);
     --wzc-live-background: var(--wzc-color-surface-secondary);
     --wzc-live-radius: var(--wzc-radius-large);
-    --wzc-live-shadow: var(--wzc-shadow-small);
+    --wzc-live-shadow: var(--wzc-shadow-medium);
 
     --wzc-media-overlay-color: var(--wzc-color-background);
     --wzc-media-overlay-opacity: 72%;
