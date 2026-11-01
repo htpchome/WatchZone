@@ -60,13 +60,14 @@ retention, or audio state, also read `docs/live-session-lifecycle.md` in full.
 ## Version and commit rule
 
 - `custom_components/watchzone/const.py` `VERSION` is canonical.
-- Every commit must increment `VERSION`, including documentation, tests, and
-  internal-only commits.
+- Keep the current version across commits until the user requests a bump or the
+  work intentionally establishes the next distributable build. A commit alone
+  is not a reason to increment `VERSION`.
 - Keep `frontend/package.json`, `manifest.json` once present, and all other
   version-bearing release metadata synchronized with `VERSION`.
 - Run `corepack yarn check:version` from `frontend/` before a commit.
-- Commit subjects include the exact version:
-  `type(scope): summary (vX.Y.Z)`.
+- Prefix commit subjects with the exact current version:
+  `vX.Y.Z - type(scope): summary`.
 - Whenever a turn includes a commit or hands work off to be committed, provide
   a proposed commit subject containing the exact version.
 

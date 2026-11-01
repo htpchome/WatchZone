@@ -248,9 +248,11 @@ must have explicit schema versions and migrations.
 `custom_components/watchzone/const.py` is the source of truth for the WatchZone
 version through its `VERSION` constant.
 
-- Every commit increments `VERSION`; documentation-only and internal commits
-  are not exempt.
-- The version is valid Semantic Versioning and is unique to that commit.
+- Every commit subject includes the current `VERSION`, but commits do not
+  automatically increment it.
+- `VERSION` remains unchanged until the user requests a bump or the work
+  intentionally establishes the next distributable build.
+- The version is valid Semantic Versioning.
 - `manifest.json`, frontend package metadata, release artifacts, and other
   version-bearing files must match `VERSION`. Automated validation must reject
   drift.
@@ -260,7 +262,7 @@ version through its `VERSION` constant.
 - During initial development, intentional breaking changes increment the
   pre-1.0 minor version when appropriate.
 - Commit subjects include the version using the format
-  `type(scope): summary (vX.Y.Z)`.
+  `vX.Y.Z - type(scope): summary`.
 - Whenever work is handed off for a commit, the handoff includes a proposed
   commit subject containing the exact version.
 
