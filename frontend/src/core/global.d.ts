@@ -24,6 +24,10 @@ interface Window {
             | "remote_description_set"
             | "first_remote_candidate"
             | "video_track_received"
+            | "stream_url_requested"
+            | "stream_url_received"
+            | "hls_engine_loaded"
+            | "hls_manifest_loaded"
             | "first_frame_decoded",
             number
           >

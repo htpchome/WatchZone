@@ -86,6 +86,7 @@ describe("Home Assistant WebRTC connection", () => {
     const api: HomeAssistantApi = {
       identity: {} as HomeAssistantApi["identity"],
       callWS: callWS as HomeAssistantApi["callWS"],
+      resolveUrl: (path) => path,
       subscribeMessage: vi.fn(async (callback) => {
         offerCallback = callback as (event: unknown) => void;
         return unsubscribe;
@@ -164,7 +165,7 @@ describe("Home Assistant WebRTC connection", () => {
     expect(peer.addIceCandidate).toHaveBeenCalledWith({
       candidate: "remote-candidate",
     });
-    expect(connection.stream.getTracks()).toHaveLength(1);
+    expect(connection.stream?.getTracks()).toHaveLength(1);
     expect(timing.snapshot().phases).toMatchObject({
       answer_received: expect.any(Number),
       client_config_received: expect.any(Number),

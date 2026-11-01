@@ -12,11 +12,13 @@ export interface MediaSessionSnapshot {
   readonly state: MediaSessionState;
   readonly stream?: MediaStream;
   readonly timing?: LiveStartupTiming;
+  readonly video?: HTMLVideoElement;
 }
 
 export interface MediaConnection {
-  readonly stream: MediaStream;
+  readonly stream?: MediaStream;
   readonly timing?: LiveStartupTiming;
+  readonly video?: HTMLVideoElement;
   close(): void;
 }
 
@@ -30,6 +32,7 @@ export type ConnectionFactory = (
 
 export interface MediaSessionLease {
   readonly key: string;
+  discard(): void;
   getSnapshot(): MediaSessionSnapshot;
   release(): void;
   retry(): void;
@@ -37,6 +40,7 @@ export interface MediaSessionLease {
 }
 
 const RETAIN_IDLE_MS = 5 * 60 * 1000;
+const HLS_RETAIN_IDLE_MS = 15 * 1000;
 const MAX_RETAINED_SESSIONS = 4;
 const MAX_RECONNECT_ATTEMPTS = 2;
 const RECONNECT_BASE_DELAY_MS = 500;
@@ -50,6 +54,15 @@ const defaultConnectionFactory: ConnectionFactory = async (...args) => {
     await import("../connections/home-assistant");
   timing.mark("adapter_imported");
   return createHomeAssistantWebRtcConnection(...args);
+};
+
+const defaultHlsConnectionFactory: ConnectionFactory = async (...args) => {
+  const timing = args[4];
+  timing.mark("adapter_import_started");
+  const { createHomeAssistantHlsConnection } =
+    await import("../connections/home-assistant/hls");
+  timing.mark("adapter_imported");
+  return createHomeAssistantHlsConnection(...args);
 };
 
 class ManagedMediaSession {
@@ -74,6 +87,7 @@ class ManagedMediaSession {
     public readonly entityId: string,
     api: HomeAssistantApi,
     private readonly _factory: ConnectionFactory,
+    private readonly _retainIdleMs: number,
     private readonly _onClosed: () => void,
   ) {
     this._api = api;
@@ -105,16 +119,18 @@ class ManagedMediaSession {
     }
 
     let released = false;
+    const release = (discard: boolean): void => {
+      if (released) {
+        return;
+      }
+      released = true;
+      this._release(discard);
+    };
     return {
       key: this.key,
+      discard: () => release(true),
       getSnapshot: () => this._snapshot,
-      release: () => {
-        if (released) {
-          return;
-        }
-        released = true;
-        this._release();
-      },
+      release: () => release(false),
       retry: () => {
         if (!released) {
           this._retry();
@@ -185,6 +201,7 @@ class ManagedMediaSession {
         state: this._leaseCount > 0 ? "live" : "parked",
         stream: connection.stream,
         timing: connection.timing,
+        video: connection.video,
       });
     } catch (error) {
       if (generation !== this._generation || abort.signal.aborted) {
@@ -242,16 +259,20 @@ class ManagedMediaSession {
     }, delay);
   }
 
-  private _release(): void {
+  private _release(discard: boolean): void {
     this._leaseCount = Math.max(0, this._leaseCount - 1);
     this.lastUsed = performance.now();
     if (this._leaseCount > 0) {
       return;
     }
+    if (discard) {
+      this.close();
+      return;
+    }
     if (this._snapshot.state === "live") {
       this._setSnapshot({ ...this._snapshot, state: "parked" });
     }
-    this._idleTimer = setTimeout(() => this.close(), RETAIN_IDLE_MS);
+    this._idleTimer = setTimeout(() => this.close(), this._retainIdleMs);
   }
 
   private _closeConnection(): void {
@@ -279,18 +300,52 @@ export class MediaSessionManager {
 
   public constructor(
     private readonly _factory: ConnectionFactory = defaultConnectionFactory,
+    private readonly _hlsFactory: ConnectionFactory = defaultHlsConnectionFactory,
   ) {}
 
   public acquireHomeAssistant(
     api: HomeAssistantApi,
     entityId: string,
   ): MediaSessionLease {
-    const key = `home_assistant:${entityId}`;
+    return this._acquire(
+      `home_assistant:${entityId}`,
+      entityId,
+      api,
+      this._factory,
+      RETAIN_IDLE_MS,
+    );
+  }
+
+  public acquireHomeAssistantHls(
+    api: HomeAssistantApi,
+    entityId: string,
+  ): MediaSessionLease {
+    return this._acquire(
+      `home_assistant_hls:${entityId}`,
+      entityId,
+      api,
+      this._hlsFactory,
+      HLS_RETAIN_IDLE_MS,
+    );
+  }
+
+  private _acquire(
+    key: string,
+    entityId: string,
+    api: HomeAssistantApi,
+    factory: ConnectionFactory,
+    retainIdleMs: number,
+  ): MediaSessionLease {
     let session = this._sessions.get(key);
     if (!session) {
       this._evictIfNeeded();
-      session = new ManagedMediaSession(key, entityId, api, this._factory, () =>
-        this._sessions.delete(key),
+      session = new ManagedMediaSession(
+        key,
+        entityId,
+        api,
+        factory,
+        retainIdleMs,
+        () => this._sessions.delete(key),
       );
       this._sessions.set(key, session);
     }

@@ -12,16 +12,22 @@ export class WatchZoneLive extends LitElement {
   private _api?: HomeAssistantApi;
   private _available = false;
   private _entityId?: string;
-  private _lease?: MediaSessionLease;
-  private _snapshot: MediaSessionSnapshot = { state: "new" };
-  private _unsubscribe?: () => void;
+  private _hlsLease?: MediaSessionLease;
+  private _hlsSnapshot: MediaSessionSnapshot = { state: "new" };
+  private _hlsUnsubscribe?: () => void;
+  private _selected?: "hls" | "webrtc";
+  private _webRtcDecoded = false;
+  private _webRtcLease?: MediaSessionLease;
+  private _webRtcSnapshot: MediaSessionSnapshot = { state: "new" };
+  private _webRtcUnsubscribe?: () => void;
 
   public set api(value: HomeAssistantApi | undefined) {
     if (this._api?.identity === value?.identity) {
       return;
     }
+    this._releaseLeases();
     this._api = value;
-    this._syncLease();
+    this._syncLeases();
   }
 
   public set available(value: boolean) {
@@ -29,7 +35,7 @@ export class WatchZoneLive extends LitElement {
       return;
     }
     this._available = value;
-    this._syncLease();
+    this._syncLeases();
     this.requestUpdate();
   }
 
@@ -37,34 +43,40 @@ export class WatchZoneLive extends LitElement {
     if (this._entityId === value) {
       return;
     }
+    this._releaseLeases();
     this._entityId = value;
-    this._syncLease();
+    this._syncLeases();
     this.requestUpdate();
   }
 
   public connectedCallback(): void {
     super.connectedCallback();
-    this._syncLease();
+    this._syncLeases();
   }
 
   public disconnectedCallback(): void {
-    this._releaseLease();
-    this._detachVideo();
+    this._releaseLeases();
     super.disconnectedCallback();
   }
 
   protected render() {
     const error = !this._available
       ? "Camera entity is unavailable"
-      : this._snapshot.error;
+      : this._webRtcSnapshot.state === "failed" &&
+          this._hlsSnapshot.state === "failed"
+        ? (this._webRtcSnapshot.error ?? this._hlsSnapshot.error)
+        : undefined;
     return html`
       <div class="viewport">
+        <div class="hls-host" ?hidden=${this._selected !== "hls"}></div>
         <video
+          class="webrtc"
           autoplay
           playsinline
           muted
           aria-label="Live camera"
-          @loadeddata=${this._handleLoadedData}
+          ?hidden=${this._selected !== "webrtc"}
+          @loadeddata=${this._handleWebRtcLoadedData}
         ></video>
         ${
           error
@@ -78,7 +90,7 @@ export class WatchZoneLive extends LitElement {
                     : nothing
                 }
               </div>`
-            : this._snapshot.state !== "live"
+            : !this._selected
               ? html`<div class="status" role="status">Connecting…</div>`
               : nothing
         }
@@ -87,61 +99,133 @@ export class WatchZoneLive extends LitElement {
   }
 
   protected updated(): void {
-    const video = this.renderRoot.querySelector("video");
-    const stream = this._snapshot.stream;
+    const video =
+      this.shadowRoot?.querySelector<HTMLVideoElement>("video.webrtc");
+    const stream = this._webRtcSnapshot.stream;
     if (video && video.srcObject !== (stream ?? null)) {
+      this._webRtcDecoded = false;
       video.srcObject = stream ?? null;
       video.muted = true;
       if (stream) {
         void video.play().catch(() => undefined);
       }
     }
+    const hlsHost = this.renderRoot.querySelector(".hls-host");
+    const hlsVideo = this._hlsSnapshot.video;
+    if (hlsHost && hlsVideo && hlsVideo.parentElement !== hlsHost) {
+      hlsVideo.setAttribute("aria-label", "Live camera");
+      hlsHost.append(hlsVideo);
+      void hlsVideo.play().catch(() => undefined);
+    }
   }
 
-  private _syncLease(): void {
+  private _syncLeases(): void {
     if (
       !this.isConnected ||
       !this._api ||
       !this._entityId ||
       !this._available
     ) {
-      this._releaseLease();
+      this._releaseLeases();
       return;
     }
-    const key = `home_assistant:${this._entityId}`;
-    if (this._lease?.key === key) {
+    const manager = getMediaSessionManager();
+    const webRtcKey = `home_assistant:${this._entityId}`;
+    if (this._webRtcLease?.key !== webRtcKey) {
+      this._releaseWebRtcLease();
+      this._webRtcLease = manager.acquireHomeAssistant(
+        this._api,
+        this._entityId,
+      );
+      this._webRtcUnsubscribe = this._webRtcLease.subscribe((snapshot) => {
+        this._webRtcSnapshot = snapshot;
+        if (snapshot.state === "failed" && this._selected === "webrtc") {
+          this._selected = undefined;
+          this._syncHlsLease();
+        }
+        this.requestUpdate();
+      });
+    }
+    this._syncHlsLease();
+  }
+
+  private _syncHlsLease(): void {
+    if (
+      this._selected === "webrtc" ||
+      !this._api ||
+      !this._entityId ||
+      !this._available ||
+      !this.isConnected
+    ) {
       return;
     }
-    this._releaseLease();
-    this._lease = getMediaSessionManager().acquireHomeAssistant(
+    const key = `home_assistant_hls:${this._entityId}`;
+    if (this._hlsLease?.key === key) {
+      return;
+    }
+    this._releaseHlsLease();
+    this._hlsLease = getMediaSessionManager().acquireHomeAssistantHls(
       this._api,
       this._entityId,
     );
-    this._unsubscribe = this._lease.subscribe((snapshot) => {
-      this._snapshot = snapshot;
+    this._hlsUnsubscribe = this._hlsLease.subscribe((snapshot) => {
+      this._hlsSnapshot = snapshot;
+      if (snapshot.state === "live" && !this._selected) {
+        this._selected = "hls";
+      } else if (snapshot.state === "failed" && this._selected === "hls") {
+        this._selected = undefined;
+      }
       this.requestUpdate();
     });
   }
 
-  private _releaseLease(): void {
-    this._unsubscribe?.();
-    this._unsubscribe = undefined;
-    this._lease?.release();
-    this._lease = undefined;
-    this._snapshot = { state: "new" };
+  private _releaseLeases(): void {
+    this._selected = undefined;
+    this._webRtcDecoded = false;
+    this._releaseWebRtcLease();
+    this._releaseHlsLease();
   }
 
-  private _detachVideo(): void {
-    const video = this.renderRoot.querySelector("video");
+  private _releaseWebRtcLease(): void {
+    this._webRtcUnsubscribe?.();
+    this._webRtcUnsubscribe = undefined;
+    this._webRtcLease?.release();
+    this._webRtcLease = undefined;
+    this._webRtcSnapshot = { state: "new" };
+    const video =
+      this.shadowRoot?.querySelector<HTMLVideoElement>("video.webrtc");
     if (video) {
       video.srcObject = null;
     }
   }
 
-  private readonly _retry = (): void => this._lease?.retry();
+  private _releaseHlsLease(discard = false): void {
+    this._hlsSnapshot.video?.remove();
+    this._hlsUnsubscribe?.();
+    this._hlsUnsubscribe = undefined;
+    if (discard) {
+      this._hlsLease?.discard();
+    } else {
+      this._hlsLease?.release();
+    }
+    this._hlsLease = undefined;
+    this._hlsSnapshot = { state: "new" };
+  }
 
-  private readonly _handleLoadedData = (): void => {
-    this._snapshot.timing?.mark("first_frame_decoded");
+  private readonly _retry = (): void => {
+    this._webRtcLease?.retry();
+    this._hlsLease?.retry();
+  };
+
+  private readonly _handleWebRtcLoadedData = (): void => {
+    if (this._webRtcDecoded || !this._webRtcSnapshot.stream) {
+      return;
+    }
+    this._webRtcDecoded = true;
+    this._webRtcSnapshot.timing?.mark("first_frame_decoded");
+    this._selected = "webrtc";
+    this._releaseHlsLease(true);
+    this.requestUpdate();
   };
 
   static styles = css`
@@ -164,10 +248,22 @@ export class WatchZoneLive extends LitElement {
       border-radius: var(--wzc-live-radius, var(--ha-border-radius-lg, 8px));
     }
 
+    .hls-host,
     video {
+      position: absolute;
+      inset: 0;
       display: block;
       inline-size: 100%;
       block-size: 100%;
+    }
+
+    .hls-host[hidden],
+    video[hidden] {
+      display: none;
+    }
+
+    .hls-host video,
+    video {
       object-fit: var(--wzc-live-fit, contain);
       background: inherit;
     }

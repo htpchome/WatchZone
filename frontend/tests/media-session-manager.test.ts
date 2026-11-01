@@ -10,6 +10,7 @@ function createApi(identity: object = {}): HomeAssistantApi {
   return {
     identity: identity as HomeAssistantApi["identity"],
     callWS: vi.fn(),
+    resolveUrl: (path) => path,
     subscribeMessage: vi.fn(),
   };
 }
@@ -123,5 +124,45 @@ describe("MediaSessionManager", () => {
 
     lease.release();
     manager.closeAll();
+  });
+
+  it("deduplicates and briefly retains Home Assistant HLS sessions", async () => {
+    vi.useFakeTimers();
+    const video = document.createElement("video");
+    const close = vi.fn();
+    const hlsFactory = vi.fn<ConnectionFactory>(async () => ({
+      video,
+      close,
+    }));
+    const manager = new MediaSessionManager(vi.fn(), hlsFactory);
+    const api = createApi();
+
+    const first = manager.acquireHomeAssistantHls(api, "camera.front");
+    const second = manager.acquireHomeAssistantHls(api, "camera.front");
+    await vi.waitFor(() => expect(first.getSnapshot().state).toBe("live"));
+
+    expect(hlsFactory).toHaveBeenCalledOnce();
+    expect(second.getSnapshot().video).toBe(video);
+    first.release();
+    second.release();
+    expect(second.getSnapshot().state).toBe("parked");
+
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("immediately discards an unshared losing HLS session", async () => {
+    const close = vi.fn();
+    const hlsFactory = vi.fn<ConnectionFactory>(async () => ({
+      video: document.createElement("video"),
+      close,
+    }));
+    const manager = new MediaSessionManager(vi.fn(), hlsFactory);
+    const lease = manager.acquireHomeAssistantHls(createApi(), "camera.front");
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
+
+    lease.discard();
+    expect(close).toHaveBeenCalledOnce();
+    expect(lease.getSnapshot().state).toBe("closed");
   });
 });

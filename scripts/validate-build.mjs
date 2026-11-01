@@ -11,11 +11,17 @@ const entry = manifest["src/main.ts"];
 const editor = manifest["src/editor/watchzone-card-editor.ts"];
 const live = manifest["src/modules/live/index.ts"];
 const connection = manifest["src/connections/home-assistant/index.ts"];
+const hlsConnection = manifest["src/connections/home-assistant/hls.ts"];
 
 if (!entry?.isEntry || entry.file !== "watchzone.js") {
   throw new Error("Vite manifest is missing the stable WatchZone entry");
 }
-for (const [name, asset] of Object.entries({ editor, live, connection })) {
+for (const [name, asset] of Object.entries({
+  editor,
+  live,
+  connection,
+  hlsConnection,
+})) {
   if (!asset?.isDynamicEntry) {
     throw new Error(`The ${name} must remain a dynamic entry`);
   }
@@ -37,7 +43,12 @@ const collectEagerGraph = (source, graph = new Set()) => {
 };
 
 const eagerGraph = collectEagerGraph(entry.src);
-for (const [name, asset] of Object.entries({ editor, live, connection })) {
+for (const [name, asset] of Object.entries({
+  editor,
+  live,
+  connection,
+  hlsConnection,
+})) {
   if (eagerGraph.has(asset.src)) {
     throw new Error(`The ${name} was included in the eager import graph`);
   }
@@ -57,5 +68,5 @@ if (eagerGzipBytes > 50 * 1024) {
 }
 
 console.log(
-  `Validated lazy editor, live module, and connection adapter; eager graph is ${eagerGzipBytes} bytes gzip.`,
+  `Validated lazy editor, live module, and WebRTC/HLS adapters; eager graph is ${eagerGzipBytes} bytes gzip.`,
 );

@@ -273,6 +273,7 @@ test("retains one live connection while the card presentation is replaced", asyn
         },
       },
       connection,
+      hassUrl: (path: string) => path,
       callWS: async (message: { type: string }) => {
         if (message.type === "camera/webrtc/get_client_config") {
           testWindow.__watchZoneTestConnectionCount += 1;
@@ -324,7 +325,11 @@ test("retains one live connection while the card presentation is replaced", asyn
     document.body.append(replacement);
   });
 
-  await expect(page.locator("watchzone-card-live video")).toBeVisible();
+  const video = page.locator("watchzone-card-live video.webrtc");
+  await video.evaluate((element) =>
+    element.dispatchEvent(new Event("loadeddata")),
+  );
+  await expect(video).toBeVisible();
   await expect
     .poll(() =>
       page.evaluate(() => {
