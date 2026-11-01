@@ -10,6 +10,10 @@ describe("WatchZone icon registry", () => {
 
     const svg = host.querySelector("svg");
     const paths = [...host.querySelectorAll("path")];
+    expect(svg?.namespaceURI).toBe("http://www.w3.org/2000/svg");
+    expect(paths.every((path) => path.namespaceURI === svg?.namespaceURI)).toBe(
+      true,
+    );
     expect(svg?.getAttribute("fill")).toBe("currentColor");
     expect(paths).toHaveLength(4);
     expect(paths[1].getAttribute("fill-rule")).toBe("evenodd");

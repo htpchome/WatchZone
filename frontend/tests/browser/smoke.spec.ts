@@ -365,6 +365,19 @@ test("retains one live connection while the card presentation is replaced", asyn
       gaps: rectangles.slice(1).map((rectangle, index) => {
         return rectangle.top - rectangles[index].bottom;
       }),
+      icons: buttons.map((button) => {
+        const svg = button.querySelector("svg");
+        const paths = [...button.querySelectorAll("path")];
+        const bounds = paths.map((path) => path.getBBox());
+        return {
+          hasGeometry: bounds.some(
+            (rectangle) => rectangle.width > 0 && rectangle.height > 0,
+          ),
+          namespacesValid:
+            svg?.namespaceURI === "http://www.w3.org/2000/svg" &&
+            paths.every((path) => path.namespaceURI === svg.namespaceURI),
+        };
+      }),
       groupBackground: group
         ? getComputedStyle(group).backgroundColor
         : undefined,
@@ -377,6 +390,11 @@ test("retains one live connection while the card presentation is replaced", asyn
     ),
   ).toBe(true);
   expect(controlPresentation.gaps.every((gap) => gap > 0)).toBe(true);
+  expect(
+    controlPresentation.icons.every(
+      (icon) => icon.hasGeometry && icon.namespacesValid,
+    ),
+  ).toBe(true);
   await expect(
     page.locator(
       'watchzone-camera watchzone-camera-controls [data-control="snapshot"]',

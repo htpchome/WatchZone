@@ -188,12 +188,15 @@ export class WatchZoneCameraControls extends LitElement {
       min-inline-size: 0;
       min-block-size: 0;
       padding: 0;
-      color: var(--wzc-control-color, var(--primary-text-color, CanvasText));
+      color: var(
+        --wzc-control-color,
+        var(--card-background-color, var(--primary-background-color, Canvas))
+      );
       background: var(
         --wzc-control-background,
         color-mix(
           in srgb,
-          var(--card-background-color, Canvas) 82%,
+          var(--primary-text-color, CanvasText) 82%,
           transparent
         )
       );
@@ -221,10 +224,9 @@ export class WatchZoneCameraControls extends LitElement {
     }
 
     .control-button[aria-pressed="true"] {
-      color: var(--wzc-control-active-color, var(--primary-color));
-      background: var(
-        --wzc-control-active-background,
-        var(--card-background-color, Canvas)
+      border-color: var(
+        --wzc-control-active-border-color,
+        var(--primary-color)
       );
     }
 

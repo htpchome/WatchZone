@@ -1,4 +1,4 @@
-import { html, type TemplateResult } from "lit";
+import { svg, type TemplateResult } from "lit";
 
 interface IconPath {
   readonly d: string;
@@ -71,7 +71,7 @@ export type WatchZoneIcon = keyof typeof ICONS;
 
 export function renderIcon(name: WatchZoneIcon): TemplateResult {
   const definition: IconDefinition = ICONS[name];
-  return html`<svg
+  return svg`<svg
     viewBox=${definition.viewBox ?? "0 0 24 24"}
     fill="currentColor"
     aria-hidden="true"
@@ -79,8 +79,8 @@ export function renderIcon(name: WatchZoneIcon): TemplateResult {
   >
     ${definition.paths.map((path) =>
       path.fillRule
-        ? html`<path d=${path.d} fill-rule=${path.fillRule}></path>`
-        : html`<path d=${path.d}></path>`,
+        ? svg`<path d=${path.d} fill-rule=${path.fillRule}></path>`
+        : svg`<path d=${path.d}></path>`,
     )}
   </svg>`;
 }
