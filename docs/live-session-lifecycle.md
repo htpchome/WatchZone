@@ -180,6 +180,13 @@ same key merely because the preview uses a different component tree.
 - Leaving the editor returns attachment to the rendered card before releasing
   the preview lease where possible.
 - Cancelling a draft removes only resources introduced solely by that draft.
+- For element-backed transports, releasing the editor lease republishes the
+  existing live session snapshot to remaining pre-editor/card leases. The
+  remaining presentation reclaims the same media element; this handoff must
+  not invoke the connection factory or renegotiate the source.
+- A retained session that reports failure while parked is not considered
+  reusable. Its next visible lease starts one bounded reconnect rather than
+  presenting the stale media object as live.
 
 ### 6.3 Home Assistant route navigation
 

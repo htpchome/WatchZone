@@ -268,6 +268,10 @@ class ManagedMediaSession {
     this._leaseCount = Math.max(0, this._leaseCount - 1);
     this.lastUsed = performance.now();
     if (this._leaseCount > 0) {
+      // Element-backed transports can have only one DOM attachment. Republish
+      // the retained snapshot so another active lease can reclaim it after a
+      // preview/editor owner releases without creating a new connection.
+      this._setSnapshot(this._snapshot);
       return;
     }
     if (discard) {

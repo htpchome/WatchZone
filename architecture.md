@@ -477,6 +477,19 @@ consume those tokens or expose them to features. Automated validation rejects
 direct HA-token access outside these boundaries and rejects Lit CSS embedded
 in behavior files.
 
+Card-shell appearance and module appearance are independent. The card owns
+`--wzc-card-radius` and `--wzc-card-outer-shadow`; the single-camera live
+presentation owns `--wzc-live-radius` and `--wzc-live-shadow`. Card-level
+toggles must not rewrite module-level tokens. The shadow scale exposes
+`--wzc-shadow-small` and `--wzc-shadow-medium`, mapped centrally to Home
+Assistant's small and medium shadow tokens.
+
+`frontend/src/core/yaml-config.ts` is the persistence boundary for Lovelace
+YAML. Runtime and editor state remain fully normalized, while dirty-state,
+Save, and compatibility-event outputs pass through this manager so known
+default values are never written to YAML. Non-default values and unknown Home
+Assistant-owned configuration are preserved.
+
 Icons are rendered from the typed registry in `frontend/src/ui/icons.ts`.
 Standard actions use the same filled Material Design/MDI geometry expected in
 Home Assistant. Feature code may not scatter ad hoc SVG markup or inject SVG

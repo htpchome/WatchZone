@@ -2,8 +2,8 @@ import { CARD_TYPE, DEFAULT_CARD_TITLE } from "./constants";
 
 export interface WatchZoneCardConfig {
   readonly camera_entity?: string;
-  readonly remove_outer_rounded_edges?: boolean;
-  readonly remove_outer_shadow?: boolean;
+  readonly outer_shadows?: boolean;
+  readonly rounded_outer_corners?: boolean;
   readonly type: typeof CARD_TYPE;
   readonly title: string;
   readonly [key: string]: unknown;
@@ -30,10 +30,7 @@ export function normalizeCardConfig(value: unknown): WatchZoneCardConfig {
     throw new Error("WatchZone camera must be a camera entity ID.");
   }
 
-  for (const key of [
-    "remove_outer_rounded_edges",
-    "remove_outer_shadow",
-  ] as const) {
+  for (const key of ["rounded_outer_corners", "outer_shadows"] as const) {
     if (key in source && typeof source[key] !== "boolean") {
       throw new Error(`WatchZone ${key} must be a boolean.`);
     }
@@ -47,16 +44,12 @@ export function normalizeCardConfig(value: unknown): WatchZoneCardConfig {
     type: CARD_TYPE,
     title: title.trim(),
   };
-  for (const key of [
-    "remove_outer_rounded_edges",
-    "remove_outer_shadow",
-  ] as const) {
-    if (typeof source[key] === "boolean") {
-      normalized[key] = source[key];
-    } else {
-      delete normalized[key];
-    }
-  }
+  normalized.rounded_outer_corners =
+    typeof source.rounded_outer_corners === "boolean"
+      ? source.rounded_outer_corners
+      : true;
+  normalized.outer_shadows =
+    typeof source.outer_shadows === "boolean" ? source.outer_shadows : true;
   return normalized as WatchZoneCardConfig;
 }
 

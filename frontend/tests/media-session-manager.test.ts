@@ -151,6 +151,58 @@ describe("MediaSessionManager", () => {
     expect(close).toHaveBeenCalledOnce();
   });
 
+  it("hands a shared HLS element back to remaining leases without reconnecting", async () => {
+    const video = document.createElement("video");
+    const hlsFactory = vi.fn<ConnectionFactory>(async () => ({
+      video,
+      close: vi.fn(),
+    }));
+    const manager = new MediaSessionManager(vi.fn(), hlsFactory);
+    const api = createApi();
+    const preEditor = manager.acquireHomeAssistantHls(api, "camera.front");
+    const editor = manager.acquireHomeAssistantHls(api, "camera.front");
+    await vi.waitFor(() => expect(preEditor.getSnapshot().state).toBe("live"));
+    const preEditorListener = vi.fn();
+    const editorListener = vi.fn();
+    preEditor.subscribe(preEditorListener);
+    const unsubscribeEditor = editor.subscribe(editorListener);
+    preEditorListener.mockClear();
+
+    unsubscribeEditor();
+    editor.release();
+
+    expect(preEditorListener).toHaveBeenCalledOnce();
+    expect(preEditorListener).toHaveBeenCalledWith(
+      expect.objectContaining({ state: "live", video }),
+    );
+    expect(hlsFactory).toHaveBeenCalledOnce();
+    preEditor.release();
+    manager.closeAll();
+  });
+
+  it("reconnects a retained session that failed while parked", async () => {
+    const failures: Array<(error: Error) => void> = [];
+    const factory = vi.fn<ConnectionFactory>(
+      async (_api, _entity, _signal, onFailure) => {
+        failures.push(onFailure);
+        return { stream: createStream(), close: vi.fn() };
+      },
+    );
+    const manager = new MediaSessionManager(factory);
+    const api = createApi();
+    const initial = manager.acquireHomeAssistant(api, "camera.front");
+    await vi.waitFor(() => expect(initial.getSnapshot().state).toBe("live"));
+    initial.release();
+    failures[0](new Error("parked connection expired"));
+    expect(initial.getSnapshot().state).toBe("failed");
+
+    const returned = manager.acquireHomeAssistant(api, "camera.front");
+    await vi.waitFor(() => expect(returned.getSnapshot().state).toBe("live"));
+    expect(factory).toHaveBeenCalledTimes(2);
+    returned.release();
+    manager.closeAll();
+  });
+
   it("immediately discards an unshared losing HLS session", async () => {
     const close = vi.fn();
     const hlsFactory = vi.fn<ConnectionFactory>(async () => ({

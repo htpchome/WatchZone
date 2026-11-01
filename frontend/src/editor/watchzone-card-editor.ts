@@ -11,6 +11,10 @@ import {
   EDITOR_TEXT_PREVIEW_DELAY_MS,
 } from "../core/constants";
 import { isHomeAssistant, type HomeAssistant } from "../core/home-assistant";
+import {
+  toYamlCardConfig,
+  type WatchZoneYamlConfig,
+} from "../core/yaml-config";
 import { watchZoneThemeTokens } from "../styles/theme-tokens";
 import {
   commitDraftForSave,
@@ -45,13 +49,13 @@ const CAMERA_SELECTOR = {
 
 const BOOLEAN_SELECTOR = { boolean: {} } as const;
 
-type AppearanceFlag = "remove_outer_rounded_edges" | "remove_outer_shadow";
+type AppearanceFlag = "outer_shadows" | "rounded_outer_corners";
 
 export class WatchZoneCardEditor extends LitElement {
   private _baseline?: WatchZoneCardConfig;
   private _baselineSignature = "";
   private _config?: WatchZoneCardConfig;
-  private _dirtyContext?: DirtyStateContext<WatchZoneCardConfig>;
+  private _dirtyContext?: DirtyStateContext<WatchZoneYamlConfig>;
   private _dirtySeeded = false;
   private _hass?: HomeAssistant;
   private _previewTimer?: ReturnType<typeof setTimeout>;
@@ -96,7 +100,7 @@ export class WatchZoneCardEditor extends LitElement {
 
   public connectedCallback(): void {
     super.connectedCallback();
-    requestDirtyStateContext<WatchZoneCardConfig>(this, (context) => {
+    requestDirtyStateContext<WatchZoneYamlConfig>(this, (context) => {
       this._dirtyContext = context;
       this._seedDirtyState();
     });
@@ -136,21 +140,21 @@ export class WatchZoneCardEditor extends LitElement {
       <div class="section-title">Appearance</div>
       <ha-selector
         class="appearance-option"
-        data-config-key="remove_outer_rounded_edges"
-        label="Remove Outer Rounded Edges"
+        data-config-key="rounded_outer_corners"
+        label="Rounded Outer Corners"
         .hass=${this._hass}
         .selector=${BOOLEAN_SELECTOR}
-        .value=${this._config?.remove_outer_rounded_edges === true}
+        .value=${this._config?.rounded_outer_corners !== false}
         .required=${false}
         @value-changed=${this._handleAppearanceChange}
       ></ha-selector>
       <ha-selector
         class="appearance-option"
-        data-config-key="remove_outer_shadow"
-        label="Remove Outer Shadow"
+        data-config-key="outer_shadows"
+        label="Outer Shadows"
         .hass=${this._hass}
         .selector=${BOOLEAN_SELECTOR}
-        .value=${this._config?.remove_outer_shadow === true}
+        .value=${this._config?.outer_shadows !== false}
         .required=${false}
         @value-changed=${this._handleAppearanceChange}
       ></ha-selector>
@@ -160,12 +164,12 @@ export class WatchZoneCardEditor extends LitElement {
   private _seedDirtyState(): void {
     if (this._dirtyContext && this._baseline && !this._dirtySeeded) {
       this._dirtySeeded = true;
-      seedDirtyState(this._dirtyContext, this._baseline);
+      seedDirtyState(this._dirtyContext, toYamlCardConfig(this._baseline));
       if (
         this._config &&
         cardConfigSignature(this._config) !== this._baselineSignature
       ) {
-        updateDirtyState(this._dirtyContext, this._config);
+        updateDirtyState(this._dirtyContext, toYamlCardConfig(this._config));
       }
     }
   }
@@ -238,7 +242,7 @@ export class WatchZoneCardEditor extends LitElement {
       this.requestUpdate();
 
       if (this._dirtyContext) {
-        updateDirtyState(this._dirtyContext, nextConfig);
+        updateDirtyState(this._dirtyContext, toYamlCardConfig(nextConfig));
       }
     }
 
@@ -286,7 +290,7 @@ export class WatchZoneCardEditor extends LitElement {
   private _dispatchConfigChange(config: WatchZoneCardConfig): void {
     this.dispatchEvent(
       new CustomEvent("config-changed", {
-        detail: { config },
+        detail: { config: toYamlCardConfig(config) },
         bubbles: true,
         composed: true,
       }),
@@ -297,7 +301,8 @@ export class WatchZoneCardEditor extends LitElement {
     if (!this._config || !isDialogSaveClick(this, event)) {
       return;
     }
-    if (!commitDraftForSave(this, this._config)) {
+    const yamlConfig = toYamlCardConfig(this._config);
+    if (!commitDraftForSave(this, yamlConfig)) {
       this._dispatchConfigChange(this._config);
     }
   };

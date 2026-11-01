@@ -22,17 +22,16 @@ export const watchZoneCardStyles = css`
     border-color: var(--wzc-card-border-color);
     border-width: var(--wzc-card-border-width);
     border-radius: var(--wzc-card-radius);
-    box-shadow: var(--wzc-shadow-card);
+    box-shadow: var(--wzc-card-outer-shadow);
   }
 
-  ha-card.remove-outer-rounded-edges {
+  ha-card.square-outer-corners {
     --wzc-card-radius: 0px;
-    --wzc-live-radius: 0px;
     border-radius: 0 !important;
   }
 
-  ha-card.remove-outer-shadow {
-    --wzc-shadow-card: none;
+  ha-card.no-outer-shadow {
+    --wzc-card-outer-shadow: none;
     box-shadow: none !important;
   }
 

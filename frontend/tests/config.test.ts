@@ -4,31 +4,31 @@ import { normalizeCardConfig } from "../src/core/config";
 import { CARD_TYPE } from "../src/core/constants";
 
 describe("WatchZone card configuration", () => {
-  it("preserves both boolean values for outer appearance options", () => {
+  it("defaults positive outer appearance options on and preserves both values", () => {
     expect(
       normalizeCardConfig({
         type: CARD_TYPE,
         title: "Camera",
-        remove_outer_rounded_edges: true,
-        remove_outer_shadow: true,
       }),
-    ).toMatchObject({
-      remove_outer_rounded_edges: true,
-      remove_outer_shadow: true,
+    ).toEqual({
+      type: CARD_TYPE,
+      title: "Camera",
+      rounded_outer_corners: true,
+      outer_shadows: true,
     });
 
     expect(
       normalizeCardConfig({
         type: CARD_TYPE,
         title: "Camera",
-        remove_outer_rounded_edges: false,
-        remove_outer_shadow: false,
+        rounded_outer_corners: false,
+        outer_shadows: false,
       }),
     ).toEqual({
       type: CARD_TYPE,
       title: "Camera",
-      remove_outer_rounded_edges: false,
-      remove_outer_shadow: false,
+      rounded_outer_corners: false,
+      outer_shadows: false,
     });
   });
 
@@ -37,8 +37,8 @@ describe("WatchZone card configuration", () => {
       normalizeCardConfig({
         type: CARD_TYPE,
         title: "Camera",
-        remove_outer_shadow: "yes",
+        outer_shadows: "yes",
       }),
-    ).toThrow("remove_outer_shadow must be a boolean");
+    ).toThrow("outer_shadows must be a boolean");
   });
 });

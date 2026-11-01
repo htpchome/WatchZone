@@ -93,54 +93,71 @@ test("applies outer shell appearance toggles without changing card identity", as
         updateComplete: Promise<boolean>;
       };
       const shellBefore = card.shadowRoot?.querySelector("ha-card");
+      card.style.setProperty("--ha-box-shadow-m", "rgb(1, 2, 3) 0px 4px 8px");
       card.setConfig({
         type: "custom:watchzone-card",
         title: "Appearance",
-        remove_outer_rounded_edges: true,
-        remove_outer_shadow: true,
+        rounded_outer_corners: false,
+        outer_shadows: false,
       });
       await card.updateComplete;
       const shellAfter = card.shadowRoot?.querySelector("ha-card");
-      const enabledStyle = shellAfter
+      const disabledStyle = shellAfter
         ? getComputedStyle(shellAfter)
         : undefined;
-      const hostStyle = getComputedStyle(card);
-      const enabled = {
-        borderRadius: enabledStyle?.borderRadius,
-        boxShadow: enabledStyle?.boxShadow,
+      const disabledHostStyle = getComputedStyle(card);
+      const disabled = {
+        borderRadius: disabledStyle?.borderRadius,
+        boxShadow: disabledStyle?.boxShadow,
         classes: shellAfter?.className,
-        hostBorderRadius: hostStyle.borderRadius,
-        hostBoxShadow: hostStyle.boxShadow,
+        hostBorderRadius: disabledHostStyle.borderRadius,
+        hostBoxShadow: disabledHostStyle.boxShadow,
         identityRetained: shellAfter === shellBefore,
-        nativeRadiusToken: hostStyle
-          .getPropertyValue("--ha-card-border-radius")
-          .trim(),
-        nativeShadowToken: hostStyle
-          .getPropertyValue("--ha-card-box-shadow")
-          .trim(),
       };
       card.setConfig({
         type: "custom:watchzone-card",
         title: "Appearance",
       });
       await card.updateComplete;
+      const enabledStyle = shellAfter
+        ? getComputedStyle(shellAfter)
+        : undefined;
+      const enabledHostStyle = getComputedStyle(card);
       return {
-        disabledClasses: shellAfter?.className,
-        enabled,
+        disabled,
+        enabled: {
+          borderRadius: enabledStyle?.borderRadius,
+          boxShadow: enabledStyle?.boxShadow,
+          classes: shellAfter?.className,
+          hostBorderRadius: enabledHostStyle.borderRadius,
+          hostBoxShadow: enabledHostStyle.boxShadow,
+          nativeRadiusToken: enabledHostStyle
+            .getPropertyValue("--ha-card-border-radius")
+            .trim(),
+          nativeShadowToken: enabledHostStyle
+            .getPropertyValue("--ha-card-box-shadow")
+            .trim(),
+        },
       };
     });
 
-  expect(result.enabled).toEqual({
+  expect(result.disabled).toEqual({
     borderRadius: "0px",
     boxShadow: "none",
-    classes: "remove-outer-rounded-edges remove-outer-shadow",
+    classes: "square-outer-corners no-outer-shadow",
     hostBorderRadius: "0px",
     hostBoxShadow: "none",
     identityRetained: true,
-    nativeRadiusToken: "0px",
-    nativeShadowToken: "none",
   });
-  expect(result.disabledClasses).toBe("");
+  expect(result.enabled).toMatchObject({
+    classes: "",
+    nativeRadiusToken: "",
+    nativeShadowToken: "rgb(1, 2, 3) 0px 4px 8px",
+  });
+  expect(result.enabled.borderRadius).not.toBe("0px");
+  expect(result.enabled.hostBorderRadius).not.toBe("0px");
+  expect(result.enabled.boxShadow).toContain("rgb(1, 2, 3)");
+  expect(result.enabled.hostBoxShadow).toContain("rgb(1, 2, 3)");
 });
 
 test("exposes and honors the WatchZone semantic theme-token contract", async ({
@@ -164,6 +181,11 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
       "--wzc-color-border",
       "--wzc-radius-card",
       "--wzc-shadow-card",
+      "--wzc-shadow-small",
+      "--wzc-shadow-medium",
+      "--wzc-card-outer-shadow",
+      "--wzc-live-radius",
+      "--wzc-live-shadow",
       "--wzc-media-overlay-opacity",
       "--wzc-media-overlay-hover-opacity",
     ];
@@ -171,7 +193,10 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
     host.style.setProperty("--wzc-color-text-1", "rgb(10, 20, 30)");
     host.style.setProperty("--wzc-card-background", "rgb(40, 50, 60)");
     host.style.setProperty("--wzc-card-radius", "18px");
-    host.style.setProperty("--wzc-shadow-card", "rgb(1, 2, 3) 0px 4px 8px");
+    host.style.setProperty(
+      "--wzc-card-outer-shadow",
+      "rgb(1, 2, 3) 0px 4px 8px",
+    );
     const hostStyle = getComputedStyle(host);
     const shell = host.shadowRoot?.querySelector("ha-card");
     const shellStyle = shell ? getComputedStyle(shell) : undefined;
@@ -395,8 +420,20 @@ test("round-trips appearance toggles through false before Save", async ({
     await Promise.all([card.updateComplete, editor.updateComplete]);
 
     const selector = editor.shadowRoot?.querySelector(
-      '[data-config-key="remove_outer_rounded_edges"]',
+      '[data-config-key="rounded_outer_corners"]',
     );
+    selector?.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: false },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await Promise.all([card.updateComplete, editor.updateComplete]);
+    const squareAfterOff = card.shadowRoot
+      ?.querySelector("ha-card")
+      ?.classList.contains("square-outer-corners");
+
     selector?.dispatchEvent(
       new CustomEvent("value-changed", {
         detail: { value: true },
@@ -405,9 +442,12 @@ test("round-trips appearance toggles through false before Save", async ({
       }),
     );
     await Promise.all([card.updateComplete, editor.updateComplete]);
-    const enabled = card.shadowRoot
+    const roundedAfterOn = !card.shadowRoot
       ?.querySelector("ha-card")
-      ?.classList.contains("remove-outer-rounded-edges");
+      ?.classList.contains("square-outer-corners");
+    const defaultOmitted = !(
+      "rounded_outer_corners" in (latestDirtyState ?? {})
+    );
 
     selector?.dispatchEvent(
       new CustomEvent("value-changed", {
@@ -417,31 +457,35 @@ test("round-trips appearance toggles through false before Save", async ({
       }),
     );
     await Promise.all([card.updateComplete, editor.updateComplete]);
-    const disabled = !card.shadowRoot
+    const squareBeforeSave = card.shadowRoot
       ?.querySelector("ha-card")
-      ?.classList.contains("remove-outer-rounded-edges");
+      ?.classList.contains("square-outer-corners");
     save.click();
 
     document.removeEventListener("context-request", handleContext);
     return {
-      disabled,
-      dirtyValue: latestDirtyState?.remove_outer_rounded_edges,
-      enabled,
-      savedValue: dialog._cardConfig?.remove_outer_rounded_edges,
+      defaultOmitted,
+      dirtyValue: latestDirtyState?.rounded_outer_corners,
+      roundedAfterOn,
+      savedValue: dialog._cardConfig?.rounded_outer_corners,
       selectorValue: (
         editor.shadowRoot?.querySelector(
-          '[data-config-key="remove_outer_rounded_edges"]',
+          '[data-config-key="rounded_outer_corners"]',
         ) as HTMLElement & { value?: boolean }
       ).value,
+      squareAfterOff,
+      squareBeforeSave,
     };
   });
 
   expect(result).toEqual({
-    disabled: true,
+    defaultOmitted: true,
     dirtyValue: false,
-    enabled: true,
+    roundedAfterOn: true,
     savedValue: false,
     selectorValue: false,
+    squareAfterOff: true,
+    squareBeforeSave: true,
   });
 });
 
@@ -585,8 +629,8 @@ test("retains one live connection while the card presentation is replaced", asyn
       type: "custom:watchzone-card",
       title: "Front",
       camera_entity: "camera.front",
-      remove_outer_rounded_edges: true,
-      remove_outer_shadow: true,
+      rounded_outer_corners: false,
+      outer_shadows: false,
     });
     replacement.hass = testWindow.__watchZoneTestHass;
     document.body.append(replacement);
@@ -618,7 +662,7 @@ test("retains one live connection while the card presentation is replaced", asyn
     .poll(() =>
       viewport.evaluate((element) => getComputedStyle(element).borderRadius),
     )
-    .toBe("0px");
+    .not.toBe("0px");
   await viewport.hover();
   await expect(controls.first()).toBeVisible();
   const controlPresentation = await controls.evaluateAll((buttons) => {

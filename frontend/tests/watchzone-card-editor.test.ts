@@ -205,12 +205,12 @@ describe("watchzone-card-editor", () => {
     document.body.append(card, dialog);
     await Promise.all([card.updateComplete, editor.updateComplete]);
 
-    for (const key of ["remove_outer_rounded_edges", "remove_outer_shadow"]) {
+    for (const key of ["rounded_outer_corners", "outer_shadows"]) {
       editor.shadowRoot
         ?.querySelector(`[data-config-key="${key}"]`)
         ?.dispatchEvent(
           new CustomEvent("value-changed", {
-            detail: { value: true },
+            detail: { value: false },
             bubbles: true,
             composed: true,
           }),
@@ -219,19 +219,17 @@ describe("watchzone-card-editor", () => {
     }
 
     expect(states.at(-1)).toMatchObject({
-      remove_outer_rounded_edges: true,
-      remove_outer_shadow: true,
+      rounded_outer_corners: false,
+      outer_shadows: false,
     });
     const previewShell = card.shadowRoot?.querySelector("ha-card");
-    expect(previewShell?.classList.contains("remove-outer-rounded-edges")).toBe(
-      true,
-    );
-    expect(previewShell?.classList.contains("remove-outer-shadow")).toBe(true);
+    expect(previewShell?.classList.contains("square-outer-corners")).toBe(true);
+    expect(previewShell?.classList.contains("no-outer-shadow")).toBe(true);
 
     save.click();
     expect(dialog._cardConfig).toMatchObject({
-      remove_outer_rounded_edges: true,
-      remove_outer_shadow: true,
+      rounded_outer_corners: false,
+      outer_shadows: false,
     });
     const reopened = document.createElement(
       "watchzone-card-editor",
@@ -239,14 +237,14 @@ describe("watchzone-card-editor", () => {
     reopened.setConfig(dialog._cardConfig);
     document.body.append(reopened);
     await reopened.updateComplete;
-    for (const key of ["remove_outer_rounded_edges", "remove_outer_shadow"]) {
+    for (const key of ["rounded_outer_corners", "outer_shadows"]) {
       expect(
         (
           reopened.shadowRoot?.querySelector(`[data-config-key="${key}"]`) as {
             value?: boolean;
           }
         ).value,
-      ).toBe(true);
+      ).toBe(false);
     }
 
     document.removeEventListener("context-request", contextHandler);
@@ -280,27 +278,10 @@ describe("watchzone-card-editor", () => {
     document.body.append(card, dialog);
     await Promise.all([card.updateComplete, editor.updateComplete]);
 
-    for (const key of [
-      "remove_outer_rounded_edges",
-      "remove_outer_shadow",
-    ] as const) {
+    for (const key of ["rounded_outer_corners", "outer_shadows"] as const) {
       const selector = editor.shadowRoot?.querySelector(
         `[data-config-key="${key}"]`,
       );
-      selector?.dispatchEvent(
-        new CustomEvent("value-changed", {
-          detail: { value: true },
-          bubbles: true,
-          composed: true,
-        }),
-      );
-      await card.updateComplete;
-      expect(card.shadowRoot?.querySelector("ha-card")?.className).toContain(
-        key === "remove_outer_rounded_edges"
-          ? "remove-outer-rounded-edges"
-          : "remove-outer-shadow",
-      );
-
       selector?.dispatchEvent(
         new CustomEvent("value-changed", {
           detail: { value: false },
@@ -309,20 +290,34 @@ describe("watchzone-card-editor", () => {
         }),
       );
       await card.updateComplete;
+      expect(card.shadowRoot?.querySelector("ha-card")?.className).toContain(
+        key === "rounded_outer_corners"
+          ? "square-outer-corners"
+          : "no-outer-shadow",
+      );
+
+      selector?.dispatchEvent(
+        new CustomEvent("value-changed", {
+          detail: { value: true },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+      await card.updateComplete;
       expect(
         card.shadowRoot?.querySelector("ha-card")?.className,
       ).not.toContain(
-        key === "remove_outer_rounded_edges"
-          ? "remove-outer-rounded-edges"
-          : "remove-outer-shadow",
+        key === "rounded_outer_corners"
+          ? "square-outer-corners"
+          : "no-outer-shadow",
       );
-      expect(states.at(-1)?.[key]).toBe(false);
+      expect(states.at(-1)?.[key]).toBeUndefined();
     }
 
     save.click();
-    expect(dialog._cardConfig).toMatchObject({
-      remove_outer_rounded_edges: false,
-      remove_outer_shadow: false,
+    expect(dialog._cardConfig).toEqual({
+      type: CARD_TYPE,
+      title: "Camera",
     });
     expect(dialog._updateDirtyState).toHaveBeenCalledWith(dialog._cardConfig);
 
@@ -332,14 +327,14 @@ describe("watchzone-card-editor", () => {
     reopened.setConfig(dialog._cardConfig);
     document.body.append(reopened);
     await reopened.updateComplete;
-    for (const key of ["remove_outer_rounded_edges", "remove_outer_shadow"]) {
+    for (const key of ["rounded_outer_corners", "outer_shadows"]) {
       expect(
         (
           reopened.shadowRoot?.querySelector(`[data-config-key="${key}"]`) as {
             value?: boolean;
           }
         ).value,
-      ).toBe(false);
+      ).toBe(true);
     }
 
     document.removeEventListener("context-request", contextHandler);

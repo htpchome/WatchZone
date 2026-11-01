@@ -92,6 +92,7 @@ export class WatchZoneCard extends LitElement {
   public setConfig(value: unknown): void {
     const next = normalizeCardConfig(value);
     if (cardConfigSignature(next) === cardConfigSignature(this._config)) {
+      this._syncOuterAppearance(next);
       return;
     }
     this._config = next;
@@ -104,6 +105,7 @@ export class WatchZoneCard extends LitElement {
 
   public connectedCallback(): void {
     super.connectedCallback();
+    this._syncOuterAppearance(this._previewConfig ?? this._config);
     window.addEventListener(
       EDITOR_PREVIEW_DRAFT_EVENT,
       this._handlePreviewDraft as EventListener,
@@ -148,8 +150,8 @@ export class WatchZoneCard extends LitElement {
     );
     const posterUrl = cameraImageUrl(this._hass, cameraEntity);
     const cardClasses = [
-      config.remove_outer_rounded_edges ? "remove-outer-rounded-edges" : "",
-      config.remove_outer_shadow ? "remove-outer-shadow" : "",
+      config.rounded_outer_corners === false ? "square-outer-corners" : "",
+      config.outer_shadows === false ? "no-outer-shadow" : "",
     ]
       .filter(Boolean)
       .join(" ");
@@ -251,16 +253,17 @@ export class WatchZoneCard extends LitElement {
   }
 
   private _syncOuterAppearance(config: WatchZoneCardConfig): void {
-    const square = config.remove_outer_rounded_edges === true;
-    const flat = config.remove_outer_shadow === true;
-    this.toggleAttribute("data-wzc-remove-outer-rounded-edges", square);
-    this.toggleAttribute("data-wzc-remove-outer-shadow", flat);
+    const roundedCorners = config.rounded_outer_corners !== false;
+    const outerShadows = config.outer_shadows !== false;
+    this.toggleAttribute("data-wzc-square-outer-corners", !roundedCorners);
+    this.toggleAttribute("data-wzc-no-outer-shadow", !outerShadows);
 
-    for (const property of ["--wzc-card-radius", "--wzc-live-radius"]) {
-      if (square) this.style.setProperty(property, "0px");
-      else this.style.removeProperty(property);
-    }
-    syncHomeAssistantCardHostAppearance(this, { flat, square });
+    if (roundedCorners) this.style.removeProperty("--wzc-card-radius");
+    else this.style.setProperty("--wzc-card-radius", "0px");
+    syncHomeAssistantCardHostAppearance(this, {
+      outerShadows,
+      roundedCorners,
+    });
   }
 
   private readonly _retryLiveModule = (): void => {

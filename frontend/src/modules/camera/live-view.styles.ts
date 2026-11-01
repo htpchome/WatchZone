@@ -17,7 +17,8 @@ export const cameraLiveViewStyles = css`
     aspect-ratio: 16 / 9;
     overflow: hidden;
     background: var(--wzc-live-background);
-    border-radius: var(--wzc-live-radius, var(--wzc-radius-large));
+    border-radius: var(--wzc-live-radius, var(--wzc-radius-large, 8px));
+    box-shadow: var(--wzc-live-shadow, none);
   }
 
   .viewport:fullscreen,

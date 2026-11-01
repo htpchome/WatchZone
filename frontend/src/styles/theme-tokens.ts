@@ -82,8 +82,14 @@ export const watchZoneThemeTokens = css`
       --ha-card-box-shadow,
       var(--ha-box-shadow-card, none)
     );
-    --wzc-shadow-small: var(--ha-box-shadow-s, var(--wzc-shadow-card));
-    --wzc-shadow-medium: var(--ha-box-shadow-m, var(--wzc-shadow-card));
+    --wzc-shadow-small: var(
+      --ha-box-shadow-s,
+      0 1px 2px color-mix(in srgb, var(--wzc-color-text-1) 18%, transparent)
+    );
+    --wzc-shadow-medium: var(
+      --ha-box-shadow-m,
+      0 2px 6px color-mix(in srgb, var(--wzc-color-text-1) 24%, transparent)
+    );
 
     --wzc-font-family: var(--ha-font-family-body, inherit);
     --wzc-font-size-small: var(--ha-font-size-s, 0.75rem);
@@ -97,7 +103,10 @@ export const watchZoneThemeTokens = css`
     --wzc-card-border-color: var(--wzc-color-border);
     --wzc-card-border-width: var(--ha-card-border-width, 0);
     --wzc-card-padding: clamp(1rem, 3cqi, 2rem);
+    --wzc-card-outer-shadow: var(--wzc-shadow-medium);
     --wzc-live-background: var(--wzc-color-surface-secondary);
+    --wzc-live-radius: var(--wzc-radius-large);
+    --wzc-live-shadow: none;
 
     --wzc-media-overlay-color: var(--wzc-color-background);
     --wzc-media-overlay-opacity: 72%;

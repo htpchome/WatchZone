@@ -6,27 +6,35 @@ const HA_CARD_RADIUS_PROPERTY = "--ha-card-border-radius";
 const HA_CARD_SHADOW_PROPERTY = "--ha-card-box-shadow";
 
 export interface HomeAssistantCardAppearance {
-  readonly flat: boolean;
-  readonly square: boolean;
+  readonly outerShadows: boolean;
+  readonly roundedCorners: boolean;
 }
 
 export function syncHomeAssistantCardHostAppearance(
   host: HTMLElement,
   appearance: HomeAssistantCardAppearance,
 ): void {
-  if (appearance.square) {
+  if (appearance.roundedCorners) {
+    host.style.removeProperty(HA_CARD_RADIUS_PROPERTY);
+    host.style.setProperty(
+      "border-radius",
+      "var(--wzc-card-radius)",
+      "important",
+    );
+  } else {
     host.style.setProperty(HA_CARD_RADIUS_PROPERTY, "0px");
     host.style.setProperty("border-radius", "0px", "important");
-  } else {
-    host.style.removeProperty(HA_CARD_RADIUS_PROPERTY);
-    host.style.removeProperty("border-radius");
   }
 
-  if (appearance.flat) {
+  if (appearance.outerShadows) {
+    host.style.setProperty(HA_CARD_SHADOW_PROPERTY, "var(--wzc-shadow-medium)");
+    host.style.setProperty(
+      "box-shadow",
+      "var(--wzc-shadow-medium)",
+      "important",
+    );
+  } else {
     host.style.setProperty(HA_CARD_SHADOW_PROPERTY, "none");
     host.style.setProperty("box-shadow", "none", "important");
-  } else {
-    host.style.removeProperty(HA_CARD_SHADOW_PROPERTY);
-    host.style.removeProperty("box-shadow");
   }
 }
