@@ -10,4 +10,12 @@ export const cameraStyles = css`
     min-inline-size: 0;
     min-block-size: 0;
   }
+
+  .camera.square-camera-corners {
+    --wzc-live-radius: 0px;
+  }
+
+  .camera.no-camera-shadow {
+    --wzc-live-shadow: none;
+  }
 `;

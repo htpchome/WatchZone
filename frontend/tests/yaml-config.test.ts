@@ -25,6 +25,9 @@ describe("WatchZone YAML configuration manager", () => {
           camera_entity: "camera.front",
           rounded_outer_corners: false,
           outer_shadows: false,
+          outer_padding: false,
+          camera_rounded_corners: false,
+          camera_shadows: false,
           grid_options: { columns: 8 },
         }),
       ),
@@ -34,6 +37,9 @@ describe("WatchZone YAML configuration manager", () => {
       camera_entity: "camera.front",
       rounded_outer_corners: false,
       outer_shadows: false,
+      outer_padding: false,
+      camera_rounded_corners: false,
+      camera_shadows: false,
       grid_options: { columns: 8 },
     });
   });

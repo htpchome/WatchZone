@@ -152,6 +152,7 @@ export class WatchZoneCard extends LitElement {
     const cardClasses = [
       config.rounded_outer_corners === false ? "square-outer-corners" : "",
       config.outer_shadows === false ? "no-outer-shadow" : "",
+      config.outer_padding === false ? "no-outer-padding" : "",
     ]
       .filter(Boolean)
       .join(" ");
@@ -178,6 +179,8 @@ export class WatchZoneCard extends LitElement {
                       .available=${cameraAvailable}
                       .entityId=${cameraEntity}
                       .posterUrl=${posterUrl}
+                      .roundedCorners=${config.camera_rounded_corners !== false}
+                      .shadows=${config.camera_shadows !== false}
                     ></watchzone-camera>`
                   : html`<div class="live-placeholder" role="status">
                       Preparing live view…

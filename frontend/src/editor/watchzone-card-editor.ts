@@ -49,7 +49,12 @@ const CAMERA_SELECTOR = {
 
 const BOOLEAN_SELECTOR = { boolean: {} } as const;
 
-type AppearanceFlag = "outer_shadows" | "rounded_outer_corners";
+type AppearanceFlag =
+  | "camera_rounded_corners"
+  | "camera_shadows"
+  | "outer_padding"
+  | "outer_shadows"
+  | "rounded_outer_corners";
 
 export class WatchZoneCardEditor extends LitElement {
   private _baseline?: WatchZoneCardConfig;
@@ -155,6 +160,37 @@ export class WatchZoneCardEditor extends LitElement {
         .hass=${this._hass}
         .selector=${BOOLEAN_SELECTOR}
         .value=${this._config?.outer_shadows !== false}
+        .required=${false}
+        @value-changed=${this._handleAppearanceChange}
+      ></ha-selector>
+      <ha-selector
+        class="appearance-option"
+        data-config-key="outer_padding"
+        label="Outer Padding"
+        .hass=${this._hass}
+        .selector=${BOOLEAN_SELECTOR}
+        .value=${this._config?.outer_padding !== false}
+        .required=${false}
+        @value-changed=${this._handleAppearanceChange}
+      ></ha-selector>
+      <div class="section-title">Camera Appearance</div>
+      <ha-selector
+        class="appearance-option"
+        data-config-key="camera_rounded_corners"
+        label="Camera Rounded Corners"
+        .hass=${this._hass}
+        .selector=${BOOLEAN_SELECTOR}
+        .value=${this._config?.camera_rounded_corners !== false}
+        .required=${false}
+        @value-changed=${this._handleAppearanceChange}
+      ></ha-selector>
+      <ha-selector
+        class="appearance-option"
+        data-config-key="camera_shadows"
+        label="Camera Shadows"
+        .hass=${this._hass}
+        .selector=${BOOLEAN_SELECTOR}
+        .value=${this._config?.camera_shadows !== false}
         .required=${false}
         @value-changed=${this._handleAppearanceChange}
       ></ha-selector>

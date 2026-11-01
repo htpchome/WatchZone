@@ -298,6 +298,9 @@ version through its `VERSION` constant.
   `vX.Y.Z - type(scope): summary`.
 - Whenever work is handed off for a commit, the handoff includes a proposed
   commit subject containing the exact version.
+- The release workflow retains the five newest GitHub prereleases and removes
+  older prerelease tags and releases after a successful publish. Stable
+  releases are never pruned. The retention count is a named workflow constant.
 
 ## 8. Frontend architecture
 
@@ -489,6 +492,13 @@ YAML. Runtime and editor state remain fully normalized, while dirty-state,
 Save, and compatibility-event outputs pass through this manager so known
 default values are never written to YAML. Non-default values and unknown Home
 Assistant-owned configuration are preserved.
+
+Lovelace appearance toggles introduced during early development are
+provisional authoring controls, not the long-term ownership boundary. Durable
+appearance semantics belong to typed component inputs and `--wzc-*` tokens.
+The future Python-owned layout designer may replace these temporary controls
+and supply the same component inputs; feature styling must not depend on the
+temporary editor surface or duplicate its configuration path.
 
 Icons are rendered from the typed registry in `frontend/src/ui/icons.ts`.
 Standard actions use the same filled Material Design/MDI geometry expected in

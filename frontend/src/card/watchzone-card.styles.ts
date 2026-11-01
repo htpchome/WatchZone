@@ -35,6 +35,10 @@ export const watchZoneCardStyles = css`
     box-shadow: none !important;
   }
 
+  ha-card.no-outer-padding .shell {
+    padding: 0;
+  }
+
   .shell {
     box-sizing: border-box;
     display: grid;

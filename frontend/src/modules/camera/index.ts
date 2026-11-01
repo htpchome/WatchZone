@@ -12,16 +12,28 @@ export class WatchZoneCamera extends LitElement {
     available: { attribute: false, type: Boolean },
     entityId: { attribute: false },
     posterUrl: { attribute: false },
+    roundedCorners: { attribute: false, type: Boolean },
+    shadows: { attribute: false, type: Boolean },
   };
 
   public api?: HomeAssistantApi;
   public available = false;
   public entityId?: string;
   public posterUrl?: string;
+  public roundedCorners = true;
+  public shadows = true;
 
   protected render() {
     return html`
-      <div class="camera">
+      <div
+        class=${[
+          "camera",
+          this.roundedCorners ? "" : "square-camera-corners",
+          this.shadows ? "" : "no-camera-shadow",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
         <watchzone-camera-live-view
           .api=${this.api}
           .available=${this.available}

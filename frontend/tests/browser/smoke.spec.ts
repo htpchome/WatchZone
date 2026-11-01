@@ -99,6 +99,7 @@ test("applies outer shell appearance toggles without changing card identity", as
         title: "Appearance",
         rounded_outer_corners: false,
         outer_shadows: false,
+        outer_padding: false,
       });
       await card.updateComplete;
       const shellAfter = card.shadowRoot?.querySelector("ha-card");
@@ -106,6 +107,10 @@ test("applies outer shell appearance toggles without changing card identity", as
         ? getComputedStyle(shellAfter)
         : undefined;
       const disabledHostStyle = getComputedStyle(card);
+      const disabledShellPadding = shellAfter?.querySelector(".shell")
+        ? getComputedStyle(shellAfter.querySelector(".shell") as Element)
+            .padding
+        : undefined;
       const disabled = {
         borderRadius: disabledStyle?.borderRadius,
         boxShadow: disabledStyle?.boxShadow,
@@ -113,6 +118,7 @@ test("applies outer shell appearance toggles without changing card identity", as
         hostBorderRadius: disabledHostStyle.borderRadius,
         hostBoxShadow: disabledHostStyle.boxShadow,
         identityRetained: shellAfter === shellBefore,
+        padding: disabledShellPadding,
       };
       card.setConfig({
         type: "custom:watchzone-card",
@@ -123,6 +129,10 @@ test("applies outer shell appearance toggles without changing card identity", as
         ? getComputedStyle(shellAfter)
         : undefined;
       const enabledHostStyle = getComputedStyle(card);
+      const enabledShellPadding = shellAfter?.querySelector(".shell")
+        ? getComputedStyle(shellAfter.querySelector(".shell") as Element)
+            .padding
+        : undefined;
       return {
         disabled,
         enabled: {
@@ -137,6 +147,7 @@ test("applies outer shell appearance toggles without changing card identity", as
           nativeShadowToken: enabledHostStyle
             .getPropertyValue("--ha-card-box-shadow")
             .trim(),
+          padding: enabledShellPadding,
         },
       };
     });
@@ -144,10 +155,11 @@ test("applies outer shell appearance toggles without changing card identity", as
   expect(result.disabled).toEqual({
     borderRadius: "0px",
     boxShadow: "none",
-    classes: "square-outer-corners no-outer-shadow",
+    classes: "square-outer-corners no-outer-shadow no-outer-padding",
     hostBorderRadius: "0px",
     hostBoxShadow: "none",
     identityRetained: true,
+    padding: "0px",
   });
   expect(result.enabled).toMatchObject({
     classes: "",
@@ -158,6 +170,7 @@ test("applies outer shell appearance toggles without changing card identity", as
   expect(result.enabled.hostBorderRadius).not.toBe("0px");
   expect(result.enabled.boxShadow).toContain("rgb(1, 2, 3)");
   expect(result.enabled.hostBoxShadow).toContain("rgb(1, 2, 3)");
+  expect(result.enabled.padding).not.toBe("0px");
 });
 
 test("exposes and honors the WatchZone semantic theme-token contract", async ({
@@ -663,6 +676,45 @@ test("retains one live connection while the card presentation is replaced", asyn
       viewport.evaluate((element) => getComputedStyle(element).borderRadius),
     )
     .not.toBe("0px");
+  await expect
+    .poll(() =>
+      viewport.evaluate((element) => getComputedStyle(element).boxShadow),
+    )
+    .not.toBe("none");
+  const cameraIdentityRetained = await page
+    .locator("watchzone-card")
+    .evaluate(async (element) => {
+      const card = element as HTMLElement & {
+        setConfig(config: unknown): void;
+        updateComplete: Promise<boolean>;
+      };
+      const cameraBefore = card.shadowRoot?.querySelector("watchzone-camera");
+      card.setConfig({
+        type: "custom:watchzone-card",
+        title: "Front",
+        camera_entity: "camera.front",
+        rounded_outer_corners: false,
+        outer_shadows: false,
+        camera_rounded_corners: false,
+        camera_shadows: false,
+      });
+      await card.updateComplete;
+      const cameraAfter = card.shadowRoot?.querySelector("watchzone-camera") as
+        (HTMLElement & { updateComplete: Promise<boolean> }) | null;
+      await cameraAfter?.updateComplete;
+      return cameraAfter === cameraBefore;
+    });
+  expect(cameraIdentityRetained).toBe(true);
+  await expect
+    .poll(() =>
+      viewport.evaluate((element) => getComputedStyle(element).borderRadius),
+    )
+    .toBe("0px");
+  await expect
+    .poll(() =>
+      viewport.evaluate((element) => getComputedStyle(element).boxShadow),
+    )
+    .toBe("none");
   await viewport.hover();
   await expect(controls.first()).toBeVisible();
   const controlPresentation = await controls.evaluateAll((buttons) => {
