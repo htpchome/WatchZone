@@ -32,13 +32,13 @@ test("loads the responsive WatchZone card shell", async ({ page }) => {
       (message) =>
         message.includes("WatchZone") &&
         message.includes("CURRENT") &&
-        message.includes("v0.0.4-dev.2 (local)"),
+        message.includes("v0.0.4-dev.3 (local)"),
     ),
   ).toBe(true);
   expect(await page.evaluate(() => window.watchZone)).toMatchObject({
-    activeCardVersion: "0.0.4-dev.2",
+    activeCardVersion: "0.0.4-dev.3",
     build: "local",
-    version: "0.0.4-dev.2",
+    version: "0.0.4-dev.3",
   });
 });
 
@@ -68,7 +68,7 @@ test("camera selection does not recursively republish dirty state", async ({
   await page.goto("/");
   await waitForWatchZoneDefinition(page);
 
-  const stateWrites = await page.evaluate(async () => {
+  const result = await page.evaluate(async () => {
     interface ContextRequest extends Event {
       callback?: (context: {
         setState(config: unknown, key: string): void;
@@ -84,6 +84,16 @@ test("camera selection does not recursively republish dirty state", async ({
 
     interface TestCardConstructor extends CustomElementConstructor {
       getConfigElement(): Promise<TestEditor>;
+    }
+
+    interface PreviewCard extends HTMLElement {
+      preview: boolean;
+      setConfig(config: unknown): void;
+    }
+
+    interface TestDialog extends HTMLElement {
+      _cardConfig?: Record<string, unknown>;
+      _updateDirtyState?(config: unknown): void;
     }
 
     let callback: ContextRequest["callback"];
@@ -108,12 +118,28 @@ test("camera selection does not recursively republish dirty state", async ({
     const cardConstructor = customElements.get(
       "watchzone-card",
     ) as TestCardConstructor;
+    const previewCard = document.querySelector("watchzone-card") as PreviewCard;
+    previewCard.preview = true;
+    previewCard.setConfig({
+      type: "custom:watchzone-card",
+      title: "Camera",
+    });
     const editor = await cardConstructor.getConfigElement();
     editor.setConfig({
       type: "custom:watchzone-card",
       title: "Camera",
     });
-    document.body.append(editor);
+    const dialog = document.createElement("hui-dialog-edit-card") as TestDialog;
+    dialog._cardConfig = {
+      type: "custom:watchzone-card",
+      title: "Camera",
+    };
+    dialog._updateDirtyState = () => undefined;
+    const root = dialog.attachShadow({ mode: "open" });
+    const save = document.createElement("button");
+    save.slot = "primaryAction";
+    root.append(editor, save);
+    document.body.append(dialog);
     await editor.updateComplete;
     editor.shadowRoot?.querySelector("ha-selector")?.dispatchEvent(
       new CustomEvent("value-changed", {
@@ -122,12 +148,44 @@ test("camera selection does not recursively republish dirty state", async ({
         composed: true,
       }),
     );
+    await new Promise(requestAnimationFrame);
+    const previewUpdated = !document
+      .querySelector("watchzone-card")
+      ?.shadowRoot?.textContent?.includes(
+        "Select a camera in the card editor.",
+      );
+    save.click();
+    const writesBeforeReopen = writes;
+
+    const reopened = await cardConstructor.getConfigElement();
+    reopened.setConfig(dialog._cardConfig);
+    document.body.append(reopened);
+    await reopened.updateComplete;
+    const reopenedCamera = (
+      reopened.shadowRoot?.querySelector("ha-selector") as HTMLElement & {
+        value?: string;
+      }
+    ).value;
 
     document.removeEventListener("context-request", handleContext);
-    return { subscribed, writes };
+    return {
+      previewUpdated,
+      reopenedCamera,
+      savedCamera: dialog._cardConfig?.camera_entity,
+      subscribed,
+      writes,
+      writesBeforeReopen,
+    };
   });
 
-  expect(stateWrites).toEqual({ subscribed: false, writes: 2 });
+  expect(result).toEqual({
+    previewUpdated: true,
+    reopenedCamera: "camera.front",
+    savedCamera: "camera.front",
+    subscribed: false,
+    writes: 3,
+    writesBeforeReopen: 2,
+  });
 });
 
 test("retains one live connection while the card presentation is replaced", async ({

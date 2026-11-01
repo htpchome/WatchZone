@@ -21,6 +21,11 @@ interface InputElement extends HTMLElement {
   value: string;
 }
 
+interface TestEditCardDialog extends HTMLElement {
+  _cardConfig?: WatchZoneCardConfig;
+  _updateDirtyState?: (config: WatchZoneCardConfig) => void;
+}
+
 function inputTitle(editor: WatchZoneCardEditor, title: string): InputElement {
   const input = editor.shadowRoot?.querySelector("ha-input") as InputElement;
   input.value = title;
@@ -105,7 +110,7 @@ describe("watchzone-card-editor", () => {
     });
   });
 
-  it("commits one complete camera draft through the public event", async () => {
+  it("previews, saves, and restores a selected camera", async () => {
     const states: WatchZoneCardConfig[] = [];
     const contextHandler = (event: Event) => {
       const request = event as ContextRequest;
@@ -117,13 +122,26 @@ describe("watchzone-card-editor", () => {
     const card = document.createElement("watchzone-card") as WatchZoneCard;
     card.preview = true;
     card.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const dialog = document.createElement(
+      "hui-dialog-edit-card",
+    ) as TestEditCardDialog;
+    dialog._cardConfig = { type: CARD_TYPE, title: "Camera" };
+    dialog._updateDirtyState = vi.fn();
+    const dialogRoot = dialog.attachShadow({ mode: "open" });
     const editor = document.createElement(
       "watchzone-card-editor",
     ) as WatchZoneCardEditor;
     editor.setConfig({ type: CARD_TYPE, title: "Camera" });
     const changed = vi.fn();
     editor.addEventListener("config-changed", changed);
-    document.body.append(card, editor);
+    const save = document.createElement("button");
+    save.slot = "primaryAction";
+    let configSeenBySave: WatchZoneCardConfig | undefined;
+    save.addEventListener("click", () => {
+      configSeenBySave = dialog._cardConfig;
+    });
+    dialogRoot.append(editor, save);
+    document.body.append(card, dialog);
     await Promise.all([card.updateComplete, editor.updateComplete]);
     const selector = editor.shadowRoot?.querySelector("ha-selector");
 
@@ -134,11 +152,30 @@ describe("watchzone-card-editor", () => {
         composed: true,
       }),
     );
-    expect(changed).toHaveBeenCalledOnce();
-    expect(changed.mock.calls[0][0].detail.config).toMatchObject({
+    await card.updateComplete;
+
+    expect(changed).not.toHaveBeenCalled();
+    expect(card.shadowRoot?.textContent).not.toContain(
+      "Select a camera in the card editor.",
+    );
+    expect(states.at(-1)).toMatchObject({ camera_entity: "camera.front" });
+
+    save.click();
+    expect(configSeenBySave).toMatchObject({
       camera_entity: "camera.front",
     });
-    expect(states.at(-1)).toMatchObject({ camera_entity: "camera.front" });
+    expect(dialog._updateDirtyState).toHaveBeenCalledWith(configSeenBySave);
+
+    const reopened = document.createElement(
+      "watchzone-card-editor",
+    ) as WatchZoneCardEditor;
+    reopened.setConfig(configSeenBySave);
+    document.body.append(reopened);
+    await reopened.updateComplete;
+    expect(
+      (reopened.shadowRoot?.querySelector("ha-selector") as { value?: string })
+        .value,
+    ).toBe("camera.front");
     document.removeEventListener("context-request", contextHandler);
   });
 
@@ -179,7 +216,22 @@ describe("watchzone-card-editor", () => {
     document.removeEventListener("context-request", contextHandler);
   });
 
-  it("commits the complete draft through the public config event", async () => {
+  it("commits the complete draft to Home Assistant immediately before Save", async () => {
+    const contextHandler = (event: Event) => {
+      const request = event as ContextRequest;
+      request.callback?.({ setState: vi.fn() });
+    };
+    document.addEventListener("context-request", contextHandler);
+    const dialog = document.createElement(
+      "hui-dialog-edit-card",
+    ) as TestEditCardDialog;
+    dialog._cardConfig = {
+      type: CARD_TYPE,
+      title: "Original",
+      grid_options: { columns: 8 },
+    };
+    dialog._updateDirtyState = vi.fn();
+    const root = dialog.attachShadow({ mode: "open" });
     const editor = document.createElement(
       "watchzone-card-editor",
     ) as WatchZoneCardEditor;
@@ -190,17 +242,23 @@ describe("watchzone-card-editor", () => {
     });
     const changed = vi.fn();
     editor.addEventListener("config-changed", changed);
-    document.body.append(editor);
+    const save = document.createElement("button");
+    save.slot = "primaryAction";
+    root.append(editor, save);
+    document.body.append(dialog);
     await editor.updateComplete;
 
     const input = inputTitle(editor, "Saved draft");
     input.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
+    save.click();
 
-    expect(changed).toHaveBeenCalledOnce();
-    expect(changed.mock.calls[0][0].detail.config).toEqual({
+    expect(changed).not.toHaveBeenCalled();
+    expect(dialog._cardConfig).toEqual({
       type: CARD_TYPE,
       title: "Saved draft",
       grid_options: { columns: 8 },
     });
+    expect(dialog._updateDirtyState).toHaveBeenCalledWith(dialog._cardConfig);
+    document.removeEventListener("context-request", contextHandler);
   });
 });

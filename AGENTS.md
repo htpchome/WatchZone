@@ -63,9 +63,10 @@ For any frontend, media, interaction, layout, or styling change, also read
 - Card-editor typing updates Home Assistant `dirtyState` and a coalesced soft
   preview; it never emits `config-changed` on every keystroke.
 - The editor requests the dirty-state context once without subscription because
-  it only writes state. Committed controls emit one public `config-changed`
-  event. Never mutate Home Assistant dialog fields, call protected methods, or
-  intercept its Save button.
+  it only writes state. Dirty state does not transport card configuration. The
+  isolated editor lifecycle adapter commits the complete draft immediately
+  before Home Assistant handles Save, with feature detection and a public
+  `config-changed` fallback. Do not access dialog internals elsewhere.
 - Use current Home Assistant controls and semantic theme tokens. WatchZone
   customization properties use the `--wzc-` prefix.
 

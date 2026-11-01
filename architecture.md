@@ -402,11 +402,13 @@ Cancel discards it. The normative behavior and required tests are defined in
 [docs/config-editor-lifecycle.md](docs/config-editor-lifecycle.md).
 
 WatchZone's editor is a write-only dirty-state consumer and therefore requests
-the context once without subscribing to provider publications. A semantic
-control commit emits exactly one standard `config-changed` event containing the
-complete draft. Home Assistant owns the committed dialog configuration and
-Save/Cancel lifecycle; WatchZone does not access private dialog state, protected
-methods, Save-button structure, or shadow-DOM implementation details.
+the context once without subscribing to provider publications. Dirty state only
+tracks unsaved work; it does not transport the draft into Home Assistant's card
+configuration. To preserve preview component identity, one isolated lifecycle
+adapter commits the complete draft immediately before Home Assistant handles
+Save. It feature-detects the narrow dialog boundary and falls back to the public
+`config-changed` event when that boundary is unavailable. No other code accesses
+dialog internals or Save-button structure.
 
 WatchZone uses current Home Assistant controls and semantic theme tokens.
 Project customization variables use the `--wzc-` prefix and resolve to Home

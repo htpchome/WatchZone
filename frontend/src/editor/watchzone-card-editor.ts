@@ -12,7 +12,9 @@ import {
 } from "../core/constants";
 import { isHomeAssistant, type HomeAssistant } from "../core/home-assistant";
 import {
+  commitDraftForSave,
   type DirtyStateContext,
+  isDialogSaveClick,
   requestDirtyStateContext,
   seedDirtyState,
   updateDirtyState,
@@ -91,9 +93,11 @@ export class WatchZoneCardEditor extends LitElement {
       this._dirtyContext = context;
       this._seedDirtyState();
     });
+    document.addEventListener("click", this._handleDocumentClick, true);
   }
 
   public disconnectedCallback(): void {
+    document.removeEventListener("click", this._handleDocumentClick, true);
     this._dirtyContext = undefined;
     this._dirtySeeded = false;
     if (this._previewTimer) {
@@ -187,6 +191,7 @@ export class WatchZoneCardEditor extends LitElement {
 
     if (
       commitConfig &&
+      !this._dirtyContext &&
       cardConfigSignature(nextConfig) !== this._baselineSignature
     ) {
       this._dispatchConfigChange(nextConfig);
@@ -195,11 +200,16 @@ export class WatchZoneCardEditor extends LitElement {
     if (this._previewTimer) {
       clearTimeout(this._previewTimer);
     }
-    if (!commitConfig && changed) {
-      this._previewTimer = setTimeout(() => {
+    if (changed) {
+      if (commitConfig) {
         this._previewTimer = undefined;
         this._publishPreview(nextConfig);
-      }, EDITOR_TEXT_PREVIEW_DELAY_MS);
+      } else {
+        this._previewTimer = setTimeout(() => {
+          this._previewTimer = undefined;
+          this._publishPreview(nextConfig);
+        }, EDITOR_TEXT_PREVIEW_DELAY_MS);
+      }
     }
   }
 
@@ -223,6 +233,15 @@ export class WatchZoneCardEditor extends LitElement {
       }),
     );
   }
+
+  private readonly _handleDocumentClick = (event: Event): void => {
+    if (!this._config || !isDialogSaveClick(this, event)) {
+      return;
+    }
+    if (!commitDraftForSave(this, this._config)) {
+      this._dispatchConfigChange(this._config);
+    }
+  };
 
   static styles = css`
     :host {

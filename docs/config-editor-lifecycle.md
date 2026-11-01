@@ -14,8 +14,8 @@ The editor keeps three concepts separate:
 - **Baseline:** the configuration Home Assistant supplied when the editor
   opened.
 - **Draft:** the normalized local configuration currently shown in controls.
-- **Committed dialog configuration:** the draft handed to Home Assistant with
-  the public `config-changed` event after a control commit.
+- **Committed dialog configuration:** the draft handed to Home Assistant
+  immediately before Save.
 - **Saved configuration:** Home Assistant's committed dialog configuration
   persisted only when the user chooses Save.
 
@@ -34,21 +34,26 @@ request. It must not subscribe to provider publications unless a future feature
 actually reads `isDirty` or `isEffectiveDirty`; write-only subscription creates
 unnecessary reentrancy and lifecycle work.
 
+Dirty state is only change tracking. It does not update the edit dialog's card
+configuration and cannot by itself make a draft persist.
+
 The editor must not emit `config-changed` for each `input` event. Home
 Assistant treats that event as card configuration and may reconstruct the
 preview, destroying component identity and eventually expensive live media
 state.
 
-On a semantic control commit—`change` for text or one selection event for a
-selector—the editor emits one standard composed `config-changed` event with the
-complete normalized draft. Home Assistant then owns the committed dialog
-configuration and its normal Save/Cancel behavior. WatchZone must not mutate
-private dialog fields, call protected dirty-state methods, intercept the Save
-button, or depend on the dialog's shadow-DOM structure.
+Semantic control changes update the dirty-state slice and WatchZone soft
+preview without emitting `config-changed`, preserving the preview card and its
+live media identity. Immediately before Home Assistant handles Save, the
+isolated lifecycle adapter commits the complete normalized draft to the active
+edit dialog. Home Assistant currently exposes no public final-draft hook for a
+custom editor that suppresses `config-changed`; therefore the adapter
+feature-detects the narrow `_cardConfig` and `_updateDirtyState` boundary. No
+other module may depend on those members or the dialog's action structure.
 
-For versions without the dirty-state context, committed controls still use the
-same public `config-changed` path. Typing may update WatchZone's soft preview,
-but it does not repeatedly emit `config-changed`.
+If the dirty-state context or Save boundary is unavailable, the compatibility
+path emits one public `config-changed` event with the complete draft. Typing may
+update WatchZone's soft preview, but it does not repeatedly emit that event.
 
 ## 4. Soft preview updates
 
@@ -56,8 +61,7 @@ Draft preview is a WatchZone-owned presentation path. It never mutates saved
 configuration.
 
 - Text input is coalesced with a short delay.
-- A control commit/change event hands the latest draft to Home Assistant once;
-  Home Assistant performs its normal committed preview update.
+- A control commit/change event publishes the latest soft preview immediately.
 - Only the editor preview matching the draft baseline accepts the update.
 - Existing preview custom-element identity is preserved.
 - Leaving the editor clears the preview draft, timers, and listeners.
@@ -88,7 +92,8 @@ Every new card configuration option includes, in the same change:
 2. A Home Assistant-compatible themed control.
 3. Draft and dirty-state wiring under the stable editor key.
 4. A soft-preview policy that preserves component identity.
-5. Public `config-changed`, Save, Cancel, and context-republication behavior.
+5. Draft commit, public fallback, Save, Cancel, and context-republication
+   behavior.
 6. Tests proving typing does not repeatedly emit `config-changed` or replace
    the preview element.
 7. Cleanup for listeners, timers, observers, and asynchronous work.
