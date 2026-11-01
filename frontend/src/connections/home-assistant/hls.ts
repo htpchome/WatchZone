@@ -5,6 +5,7 @@ import type { LiveStartupTiming } from "../../core/live-startup-timing";
 import {
   playMediaElement,
   setMediaElementMuted,
+  setMediaElementRuntimeMuted,
 } from "../../core/media-playback";
 import type {
   MediaConnection,
@@ -66,7 +67,7 @@ export async function createHomeAssistantHlsConnection(
     // applies the intended state and requests playback on that same element.
     video.muted = true;
     options.onVideo?.(video);
-    setMediaElementMuted(video, options.initialMuted);
+    setMediaElementRuntimeMuted(video, options.initialMuted);
   } else {
     setMediaElementMuted(video, true);
     options.onVideo?.(video);
@@ -174,6 +175,11 @@ export async function createHomeAssistantHlsConnection(
       }
       timing.mark("hls_native_path_selected");
       video.src = streamUrl;
+      // Catalyst's retained native player gets another audible request after
+      // its real source exists. Preserve defaultMuted: automatic lifecycle
+      // state must not reclassify this selected element as default-muted.
+      setMediaElementRuntimeMuted(video, options.initialMuted);
+      void playMediaElement(video).catch(() => undefined);
       return ready;
     }
 

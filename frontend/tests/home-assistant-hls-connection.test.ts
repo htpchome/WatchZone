@@ -205,6 +205,23 @@ describe("Home Assistant HLS connection", () => {
   });
 
   it("uses native HLS without loading HLS.js for Catalyst policy", async () => {
+    const playbackStates: Array<{
+      defaultMuted: boolean;
+      muted: boolean;
+      src: string;
+      volume: number;
+    }> = [];
+    vi.mocked(HTMLMediaElement.prototype.play).mockImplementation(function (
+      this: HTMLMediaElement,
+    ) {
+      playbackStates.push({
+        defaultMuted: this.defaultMuted,
+        muted: this.muted,
+        src: this.getAttribute("src") ?? "",
+        volume: this.volume,
+      });
+      return Promise.resolve();
+    });
     const fetchManifest = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(new Response("#EXTM3U\n#EXT-X-VERSION:3\n"));
@@ -248,10 +265,11 @@ describe("Home Assistant HLS connection", () => {
     expect(video.isConnected).toBe(true);
     expect(video.defaultMuted).toBe(false);
     expect(video.muted).toBe(false);
-    await vi.waitFor(() =>
-      expect(HTMLMediaElement.prototype.play).toHaveBeenCalledOnce(),
-    );
+    await vi.waitFor(() => expect(playbackStates[0]?.src).toBe(""));
     await vi.waitFor(() => expect(video.src).not.toBe(""));
+    await vi.waitFor(() =>
+      expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(2),
+    );
     expect(video.src).toBe("https://ha.example/api/hls/front.m3u8");
     expect(fetchManifest).not.toHaveBeenCalled();
     video.dispatchEvent(new Event("loadeddata"));
@@ -259,7 +277,22 @@ describe("Home Assistant HLS connection", () => {
 
     expect(connection.transport).toBe("hls_native");
     expect(hlsMock.isSupported).not.toHaveBeenCalled();
-    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(2);
+    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(3);
+    expect(playbackStates).toEqual([
+      { defaultMuted: false, muted: false, src: "", volume: 1 },
+      {
+        defaultMuted: false,
+        muted: false,
+        src: "https://ha.example/api/hls/front.m3u8",
+        volume: 1,
+      },
+      {
+        defaultMuted: false,
+        muted: false,
+        src: "https://ha.example/api/hls/front.m3u8",
+        volume: 1,
+      },
+    ]);
     expect(video.muted).toBe(false);
     expect(timing.snapshot().phases).not.toHaveProperty("hls_engine_loaded");
     expect(timing.snapshot().phases).not.toHaveProperty("hls_manifest_loaded");

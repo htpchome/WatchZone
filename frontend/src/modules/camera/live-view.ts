@@ -5,7 +5,8 @@ import type { HomeAssistantApi } from "../../core/home-assistant";
 import { CAMERA_LIVE_VIEW_TAG } from "../../core/constants";
 import {
   playMediaElement,
-  setMediaElementMuted,
+  setMediaElementDefaultMuted,
+  setMediaElementRuntimeMuted,
 } from "../../core/media-playback";
 import {
   getMediaSessionManager,
@@ -20,6 +21,7 @@ import type { CameraControlEventDetail } from "./controls-overlay";
 import "./controls-overlay";
 import { CAMERA_OVERLAY_HIDE_DELAY_MS } from "./constants";
 import { CameraControlsVisibilityController } from "./controls-visibility.controller";
+import { FullscreenLifecycleController } from "./fullscreen-lifecycle.controller";
 import { cameraLiveViewStyles } from "./live-view.styles";
 import {
   isPictureInPictureActive,
@@ -63,6 +65,7 @@ export class WatchZoneCameraLiveView extends LitElement {
   private _activeVideo?: HTMLVideoElement;
   private _desiredMuted = true;
   private _entityId?: string;
+  private _explicitMutePreference = false;
   private _fullscreenActive = false;
   private _hlsLease?: MediaSessionLease;
   private _hlsSnapshot: MediaSessionSnapshot = { state: "new" };
@@ -85,6 +88,14 @@ export class WatchZoneCameraLiveView extends LitElement {
   private readonly _sourceIntroduction = new TimedVisibilityController(
     this,
     CAMERA_OVERLAY_HIDE_DELAY_MS,
+  );
+  private readonly _fullscreenLifecycle = new FullscreenLifecycleController(
+    this,
+    {
+      getCurrentVideo: () => this._activeVideo,
+      onExit: () => this._syncControlState(),
+      resumePlayback: (video) => this._requestPlayback(video),
+    },
   );
   private readonly _clientEnvironment = getClientEnvironment();
 
@@ -143,8 +154,11 @@ export class WatchZoneCameraLiveView extends LitElement {
 
   public connectedCallback(): void {
     super.connectedCallback();
-    document.addEventListener("fullscreenchange", this._syncControlState);
-    document.addEventListener("webkitfullscreenchange", this._syncControlState);
+    document.addEventListener("fullscreenchange", this._handleFullscreenChange);
+    document.addEventListener(
+      "webkitfullscreenchange",
+      this._handleFullscreenChange,
+    );
     document.addEventListener("visibilitychange", this._handleVisibilityChange);
     this._syncMutePreference();
     void this.updateComplete.then(() => {
@@ -153,10 +167,13 @@ export class WatchZoneCameraLiveView extends LitElement {
   }
 
   public disconnectedCallback(): void {
-    document.removeEventListener("fullscreenchange", this._syncControlState);
+    document.removeEventListener(
+      "fullscreenchange",
+      this._handleFullscreenChange,
+    );
     document.removeEventListener(
       "webkitfullscreenchange",
-      this._syncControlState,
+      this._handleFullscreenChange,
     );
     document.removeEventListener(
       "visibilitychange",
@@ -227,7 +244,6 @@ export class WatchZoneCameraLiveView extends LitElement {
         <video
           class="webrtc"
           playsinline
-          muted
           aria-label="Live camera"
           ?hidden=${this._selected !== "webrtc"}
           @loadeddata=${this._handleWebRtcLoadedData}
@@ -300,7 +316,7 @@ export class WatchZoneCameraLiveView extends LitElement {
     const stream = this._webRtcSnapshot.stream;
     if (video && video.srcObject !== (stream ?? null)) {
       this._webRtcDecoded = false;
-      setMediaElementMuted(video, this._muted);
+      this._applyMuteToElement(video, this._muted);
       video.srcObject = stream ?? null;
       if (stream) {
         void playMediaElement(video).catch(() => undefined);
@@ -310,7 +326,7 @@ export class WatchZoneCameraLiveView extends LitElement {
     const hlsVideo = this._hlsSnapshot.video;
     if (hlsHost && hlsVideo && hlsVideo.parentElement !== hlsHost) {
       hlsVideo.setAttribute("aria-label", "Live camera");
-      setMediaElementMuted(hlsVideo, this._muted);
+      this._applyMuteToElement(hlsVideo, this._muted);
       hlsHost.append(hlsVideo);
       void playMediaElement(hlsVideo).catch(() => undefined);
     }
@@ -415,7 +431,7 @@ export class WatchZoneCameraLiveView extends LitElement {
     const host = this.renderRoot.querySelector(".hls-host");
     if (!host || !this.isConnected) return;
     video.setAttribute("aria-label", "Live camera");
-    setMediaElementMuted(video, this._muted);
+    this._applyMuteToElement(video, this._muted);
     if (video.parentElement !== host) host.append(video);
   };
 
@@ -475,7 +491,9 @@ export class WatchZoneCameraLiveView extends LitElement {
     if (this._activeVideo === video) {
       return;
     }
-    if (this._activeVideo) setMediaElementMuted(this._activeVideo, true);
+    if (this._activeVideo) {
+      setMediaElementRuntimeMuted(this._activeVideo, true);
+    }
     for (const eventName of [
       "enterpictureinpicture",
       "leavepictureinpicture",
@@ -487,6 +505,9 @@ export class WatchZoneCameraLiveView extends LitElement {
       video?.addEventListener(eventName, this._syncControlState);
     }
     this._activeVideo = video;
+    if (video && this._explicitMutePreference) {
+      setMediaElementDefaultMuted(video, this._desiredMuted);
+    }
     suppressNativePictureInPicture(video);
     this._syncControlState();
     this._syncEffectiveMute(Boolean(video));
@@ -529,6 +550,16 @@ export class WatchZoneCameraLiveView extends LitElement {
     this.requestUpdate();
   };
 
+  private readonly _handleFullscreenChange = (): void => {
+    const documentObject = document as FullscreenDocument;
+    this._fullscreenLifecycle.handleDocumentFullscreenChange(
+      document.fullscreenElement ??
+        documentObject.webkitFullscreenElement ??
+        null,
+    );
+    this._syncControlState();
+  };
+
   private _fullscreenSupported(): boolean {
     const target = this.renderRoot.querySelector(
       ".viewport",
@@ -545,13 +576,17 @@ export class WatchZoneCameraLiveView extends LitElement {
   private _syncMutePreference(): void {
     this._autoplayBlocked = false;
     this._dismissToast();
+    this._explicitMutePreference = false;
     if (!this._entityId) {
       this._desiredMuted = true;
     } else {
       const startUnmuted = this._clientEnvironment.isPhone
         ? this._startUnmutedPhone
         : this._startUnmutedPcTablet;
-      this._desiredMuted = getMediaSessionManager().getCameraMuted(
+      const manager = getMediaSessionManager();
+      this._explicitMutePreference =
+        manager.getCameraMutePreference(this._entityId) !== undefined;
+      this._desiredMuted = manager.getCameraMuted(
         this._entityId,
         !startUnmuted,
       );
@@ -571,23 +606,7 @@ export class WatchZoneCameraLiveView extends LitElement {
     this._applyMediaMuteState();
     if (changed) this.requestUpdate();
     if (!muted && attemptPlayback && this._activeVideo) {
-      const video = this._activeVideo;
-      void playMediaElement(video).catch((error: unknown) => {
-        if (
-          this._activeVideo !== video ||
-          this._desiredMuted ||
-          documentIsHidden() ||
-          !isAutoplayDenied(error)
-        ) {
-          return;
-        }
-        this._autoplayBlocked = true;
-        this._showToast(
-          "The browser blocked unmuted playback. Tap mute again to retry.",
-          "warning",
-        );
-        this._syncEffectiveMute(false);
-      });
+      void this._requestPlayback(this._activeVideo);
     }
   }
 
@@ -595,16 +614,42 @@ export class WatchZoneCameraLiveView extends LitElement {
     const webRtcVideo =
       this.shadowRoot?.querySelector<HTMLVideoElement>("video.webrtc");
     if (webRtcVideo) {
-      setMediaElementMuted(
+      this._applyMuteToElement(
         webRtcVideo,
         this._selected && this._selected !== "webrtc" ? true : this._muted,
       );
     }
     if (this._hlsSnapshot.video) {
-      setMediaElementMuted(
+      this._applyMuteToElement(
         this._hlsSnapshot.video,
         this._selected === "webrtc" ? true : this._muted,
       );
+    }
+  }
+
+  private _applyMuteToElement(video: HTMLVideoElement, muted: boolean): void {
+    setMediaElementRuntimeMuted(video, muted);
+  }
+
+  private async _requestPlayback(video: HTMLVideoElement): Promise<void> {
+    this._applyMuteToElement(video, this._muted);
+    try {
+      await playMediaElement(video);
+    } catch (error) {
+      if (
+        this._activeVideo !== video ||
+        this._desiredMuted ||
+        documentIsHidden() ||
+        !isAutoplayDenied(error)
+      ) {
+        return;
+      }
+      this._autoplayBlocked = true;
+      this._showToast(
+        "The browser blocked unmuted playback. Tap the audio button to retry.",
+        "warning",
+      );
+      this._syncEffectiveMute(false);
     }
   }
 
@@ -615,11 +660,15 @@ export class WatchZoneCameraLiveView extends LitElement {
     if (event.detail.action === "mute") {
       this._desiredMuted = !this._muted;
       this._autoplayBlocked = false;
+      this._explicitMutePreference = true;
       if (this._entityId) {
         getMediaSessionManager().setCameraMuted(
           this._entityId,
           this._desiredMuted,
         );
+      }
+      if (this._activeVideo) {
+        setMediaElementDefaultMuted(this._activeVideo, this._desiredMuted);
       }
       this._syncEffectiveMute(!this._desiredMuted);
       return;
@@ -666,8 +715,10 @@ export class WatchZoneCameraLiveView extends LitElement {
           await documentObject.webkitExitFullscreen?.();
         }
       } else if (target?.requestFullscreen) {
+        this._fullscreenLifecycle.beginDocumentFullscreen(this._activeVideo);
         await target.requestFullscreen();
       } else if (target?.webkitRequestFullscreen) {
+        this._fullscreenLifecycle.beginDocumentFullscreen(this._activeVideo);
         await target.webkitRequestFullscreen();
       } else {
         const video = this._activeVideo as FullscreenVideo | undefined;
@@ -676,10 +727,12 @@ export class WatchZoneCameraLiveView extends LitElement {
         if (!video || !enter) {
           throw new Error("Fullscreen is not supported on this device.");
         }
+        this._fullscreenLifecycle.beginNativeFullscreen(video);
         enter.call(video);
       }
       this._syncControlState();
     } catch (error) {
+      this._fullscreenLifecycle.cancel();
       this._showToast(
         error instanceof Error
           ? error.message

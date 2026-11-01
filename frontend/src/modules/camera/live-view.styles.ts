@@ -24,6 +24,11 @@ export const cameraLiveViewStyles = css`
 
   .viewport:fullscreen,
   .viewport:-webkit-full-screen {
+    --wzc-safe-area-inset-block-start: env(safe-area-inset-top, 0px);
+    --wzc-safe-area-inset-block-end: env(safe-area-inset-bottom, 0px);
+    --wzc-safe-area-inset-inline-start: env(safe-area-inset-left, 0px);
+    --wzc-safe-area-inset-inline-end: env(safe-area-inset-right, 0px);
+
     inline-size: 100vw;
     block-size: 100vh;
     aspect-ratio: auto;
@@ -88,12 +93,13 @@ export const cameraLiveViewStyles = css`
   .source-indicator {
     position: absolute;
     z-index: 3;
-    inset-block-start: max(
-      var(--wzc-media-overlay-safe-block),
-      env(safe-area-inset-top, 0px)
+    inset-block-start: calc(
+      var(--wzc-media-overlay-safe-block) +
+        var(--wzc-safe-area-inset-block-start)
     );
     inset-inline-end: calc(
-      var(--wzc-media-overlay-safe-inline) + env(safe-area-inset-right, 0px)
+      var(--wzc-media-overlay-safe-inline) +
+        var(--wzc-safe-area-inset-inline-end)
     );
     display: inline-flex;
     align-items: center;
@@ -130,8 +136,9 @@ export const cameraLiveViewStyles = css`
 
   .source-indicator.controls-visible {
     inset-inline-end: calc(
-      var(--wzc-media-overlay-safe-inline) + env(safe-area-inset-right, 0px) +
-        var(--wzc-media-control-size) + var(--wzc-media-overlay-lane-gap)
+      var(--wzc-media-overlay-safe-inline) +
+        var(--wzc-safe-area-inset-inline-end) + var(--wzc-media-control-size) +
+        var(--wzc-media-overlay-lane-gap)
     );
     max-inline-size: calc(
       100% - 2 *

@@ -12,7 +12,22 @@ export function setMediaElementMuted(
   media: HTMLMediaElement,
   muted: boolean,
 ): void {
+  setMediaElementDefaultMuted(media, muted);
+  setMediaElementRuntimeMuted(media, muted);
+}
+
+export function setMediaElementDefaultMuted(
+  media: HTMLMediaElement,
+  muted: boolean,
+): void {
   media.defaultMuted = muted;
+}
+
+/** Applies current output state without rewriting retained autoplay intent. */
+export function setMediaElementRuntimeMuted(
+  media: HTMLMediaElement,
+  muted: boolean,
+): void {
   media.muted = muted;
   if (!muted) media.volume = 1;
 }

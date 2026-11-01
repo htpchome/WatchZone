@@ -82,7 +82,8 @@ A focused system contract records:
 
 - **Owners:** `frontend/src/modules/camera/index.ts` and
   `frontend/src/modules/camera/live-view.ts`; colocated camera controllers and
-  styles own controls, visibility, Picture-in-Picture, and presentation
+  styles own controls, visibility, fullscreen/Picture-in-Picture lifecycle,
+  and presentation
 - **Contract:** `docs/live-session-lifecycle.md` and
   `docs/platform-compatibility.md`
 - **Flow:** the lazy camera module receives normalized configuration and a Home
@@ -96,6 +97,7 @@ A focused system contract records:
 - **Verification:** `frontend/tests/camera-fallback.test.ts`,
   `frontend/tests/camera-retention.test.ts`,
   `frontend/tests/controls-visibility-controller.test.ts`, and
+  `frontend/tests/fullscreen-lifecycle-controller.test.ts`, and
   `frontend/tests/picture-in-picture.test.ts`
 
 ### 3.5 Media sessions, retention, and audio intent

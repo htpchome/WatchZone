@@ -163,9 +163,13 @@ Assistant selected-media lifecycle. Its retained video is created with
 visible element is attached, selected-media ownership applies the intended
 mute state and requests playback on that same element while the Home Assistant
 stream request is in flight. The direct native HLS URL is then assigned without
-fetching the manifest or replacing the element. `loadeddata` reapplies playback
-without changing the desired audio state. The distinction between the initial
-runtime `muted` property and `defaultMuted` is intentional and tested.
+fetching the manifest or replacing the element, and playback is requested again
+on that sourced element. `loadeddata` makes the final selected-media request
+without changing the desired audio state. The distinction between runtime
+`muted` and `defaultMuted` is intentional and tested: automatic attachment,
+background safety, transport handoff, and autoplay recovery alter runtime mute
+only. Only an explicit user mute action changes `defaultMuted`; automatic
+unmute must not leave Catalyst's retained player classified as default-muted.
 
 The presentation retains explicit user preference across HLS/WebRTC handoff
 and presentation replacement. An autoplay rejection temporarily forces muted

@@ -36,6 +36,10 @@ new browser API makes another platform easier or faster.
 - Use container size rather than global viewport size for card layout decisions.
 - Respect safe-area insets, text scaling, reduced motion, orientation changes,
   and Home Assistant theme tokens where they affect the feature.
+- Apply viewport safe-area environment insets only when WatchZone owns the
+  fullscreen viewport. Embedded cards already live inside Home Assistant's
+  safe content area and must not add the global notch or home-indicator inset a
+  second time.
 - Avoid APIs that require cross-origin isolation or browser flags unless the
   feature has a supported alternative.
 
@@ -90,6 +94,10 @@ background-lifecycle capability checks.
   must not be confused with explicit user closure.
 - iOS, iPadOS, Companion, and Catalyst lifecycle events can require reconnection
   even when ordinary desktop navigation retains a session.
+- iPhone native video fullscreen can emit its final inline `pause` after the
+  fullscreen-exit event. The camera fullscreen lifecycle resumes the exact
+  retained element after inline restoration and watches the bounded exit
+  window for that final pause; it must not reconnect or alter mute preference.
 - Unsupported WebRTC, codec, HLS, or media-element behavior is isolated to the
   affected source and may invoke an explicit resolver fallback when one exists.
 

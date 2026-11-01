@@ -1016,15 +1016,33 @@ test("retains one live connection while the card presentation is replaced", asyn
   });
   await viewport.hover();
   await expect(connectionIndicator).toBeVisible();
-  const [indicatorBox, firstControlBox] = await Promise.all([
+  const [viewportBox, indicatorBox, firstControlBox] = await Promise.all([
+    viewport.boundingBox(),
     connectionIndicator.boundingBox(),
     controls.first().boundingBox(),
   ]);
+  expect(viewportBox).not.toBeNull();
   expect(indicatorBox).not.toBeNull();
   expect(firstControlBox).not.toBeNull();
+  expect(indicatorBox!.y - viewportBox!.y).toBeLessThanOrEqual(20);
   expect(indicatorBox!.x + indicatorBox!.width).toBeLessThanOrEqual(
     firstControlBox!.x,
   );
+  const toast = page.locator("watchzone-camera watchzone-toast");
+  await toast.evaluate((element) => {
+    (
+      element as HTMLElement & {
+        show(message: string, options: { category: "warning" }): void;
+      }
+    ).show("Responsive feedback", { category: "warning" });
+  });
+  const toastSurface = toast.locator(".toast");
+  await expect(toastSurface).toBeVisible();
+  const toastBox = await toastSurface.boundingBox();
+  expect(toastBox).not.toBeNull();
+  expect(
+    viewportBox!.y + viewportBox!.height - (toastBox!.y + toastBox!.height),
+  ).toBeLessThanOrEqual(20);
   await expect
     .poll(() =>
       mute.evaluate((element) => element.getBoundingClientRect().width),

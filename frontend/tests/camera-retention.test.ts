@@ -160,6 +160,7 @@ describe("camera presentation retention", () => {
 
     toggleMute(initial);
     expect(hlsVideo.muted).toBe(true);
+    expect(hlsVideo.defaultMuted).toBe(true);
     expect(
       window.__watchZoneMediaSessionManager?.getCameraMutePreference(
         "camera.front",
@@ -219,10 +220,12 @@ describe("camera presentation retention", () => {
     );
     toggleMute(view);
     await vi.waitFor(() => expect(hlsVideo.muted).toBe(false));
+    expect(hlsVideo.defaultMuted).toBe(false);
 
     visibility.mockReturnValue("hidden");
     document.dispatchEvent(new Event("visibilitychange"));
     expect(hlsVideo.muted).toBe(true);
+    expect(hlsVideo.defaultMuted).toBe(false);
     expect(
       window.__watchZoneMediaSessionManager?.getCameraMutePreference(
         "camera.front",

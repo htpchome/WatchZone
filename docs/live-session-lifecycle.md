@@ -325,6 +325,12 @@ Visibility changes affect presentation and forced mute, not user preference.
 - Returning to visibility removes only the forced reasons that no longer
   apply.
 
+Fullscreen and Picture-in-Picture are presentation transitions, not session
+releases. Exiting iPhone native fullscreen resumes the exact retained media
+element after WebKit restores inline presentation. A bounded exit watcher
+handles WebKit's possible final `pause` event without reconnecting, replacing
+the element, or changing desired/default mute state.
+
 ## 11. Failure and reconnect behavior
 
 - Reconnect attempts are bounded, cancellable, and use backoff with jitter.

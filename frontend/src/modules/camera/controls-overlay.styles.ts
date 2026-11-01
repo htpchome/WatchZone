@@ -15,7 +15,8 @@ export const cameraControlsStyles = css`
     position: absolute;
     inset-block-start: 50%;
     inset-inline-end: calc(
-      var(--wzc-media-overlay-safe-inline) + env(safe-area-inset-right, 0px)
+      var(--wzc-media-overlay-safe-inline) +
+        var(--wzc-safe-area-inset-inline-end)
     );
     display: flex;
     flex-direction: column;

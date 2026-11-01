@@ -127,6 +127,10 @@ export const watchZoneThemeTokens = css`
     --wzc-media-overlay-safe-inline: 0.75rem;
     --wzc-media-overlay-safe-block: 0.75rem;
     --wzc-media-overlay-lane-gap: 0.5rem;
+    --wzc-safe-area-inset-block-start: 0px;
+    --wzc-safe-area-inset-block-end: 0px;
+    --wzc-safe-area-inset-inline-start: 0px;
+    --wzc-safe-area-inset-inline-end: 0px;
     --wzc-media-control-size: 2.75rem;
     --wzc-media-control-icon-size: 1.65rem;
     --wzc-media-control-gap: 0.3rem;

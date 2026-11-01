@@ -56,6 +56,13 @@ gaps, and lane spacing. When the control rail is visible, the source label
 reserves the rail's inline lane instead of occupying the same top-end corner.
 Container queries update both consumers from the same responsive values.
 
+Browser `safe-area-inset-*` values describe the full viewport, not an embedded
+dashboard card. Embedded modules therefore keep the shared safe-area inset
+tokens at zero and use their ordinary overlay spacing. Only an owning
+fullscreen container maps the browser environment insets into those tokens;
+source labels, controls, and toasts consume the resolved tokens and never read
+the global environment insets independently.
+
 Hover styling is enabled only for a fine pointer that reports hover support.
 The controls also record the latest pointer modality so a touch or pen
 interaction cannot retain an emulated/sticky hover or focus appearance on
@@ -82,5 +89,6 @@ keyboard accessibility is never removed globally.
 - `frontend/tests/controls-visibility-controller.test.ts` verifies camera
   hover/touch visibility timing.
 - `frontend/tests/browser/smoke.spec.ts` verifies real-engine opacity, touch
-  resting state, source/control lane separation at 320 CSS pixels, responsive
-  sizing, and synchronized source/control visibility.
+  resting state, embedded overlay edge spacing, source/control lane separation
+  at 320 CSS pixels, responsive sizing, and synchronized source/control
+  visibility.

@@ -4,13 +4,17 @@ export const toastStyles = css`
   :host {
     position: absolute;
     z-index: 4;
-    inset-block-end: max(
-      var(--wzc-toast-safe-block, 0.75rem),
-      env(safe-area-inset-bottom, 0px)
+    inset-block-end: calc(
+      var(--wzc-toast-safe-block, 0.75rem) +
+        var(--wzc-safe-area-inset-block-end, 0px)
     );
-    inset-inline: max(
-      var(--wzc-toast-safe-inline, 0.75rem),
-      env(safe-area-inset-left, 0px)
+    inset-inline-start: calc(
+      var(--wzc-toast-safe-inline, 0.75rem) +
+        var(--wzc-safe-area-inset-inline-start, 0px)
+    );
+    inset-inline-end: calc(
+      var(--wzc-toast-safe-inline, 0.75rem) +
+        var(--wzc-safe-area-inset-inline-end, 0px)
     );
     display: flex;
     justify-content: center;
@@ -18,9 +22,9 @@ export const toastStyles = css`
   }
 
   :host([placement^="top-"]) {
-    inset-block-start: max(
-      var(--wzc-toast-safe-block, 0.75rem),
-      env(safe-area-inset-top, 0px)
+    inset-block-start: calc(
+      var(--wzc-toast-safe-block, 0.75rem) +
+        var(--wzc-safe-area-inset-block-start, 0px)
     );
     inset-block-end: auto;
   }
