@@ -2,58 +2,86 @@ import { describe, expect, it } from "vitest";
 
 import { detectDeviceProfile } from "../src/core/device-profile";
 
-const matchMedia =
-  (coarse: boolean, fine = !coarse) =>
-  (query: string) => ({
-    matches: query.includes("coarse") ? coarse : query.includes("fine") && fine,
-  });
+function matchMedia(matches: readonly string[]) {
+  return (query: string) => ({ matches: matches.includes(query) });
+}
 
 describe("device profile", () => {
-  it("recognizes iPadOS when Safari reports a Mac platform", () => {
+  it.each([
+    [320, "phone", "compact_phone"],
+    [480, "phone", "phone"],
+    [600, "tablet", "compact_tablet"],
+    [768, "tablet", "tablet"],
+    [1024, "desktop", "desktop"],
+    [1440, "desktop", "wide_desktop"],
+  ] as const)(
+    "classifies a %ipx container as %s/%s",
+    (inlineSize, deviceClass, deviceSizeClass) => {
+      expect(
+        detectDeviceProfile({
+          blockSize: 800,
+          inlineSize,
+          window: { matchMedia: matchMedia([]) },
+        }),
+      ).toMatchObject({ deviceClass, deviceSizeClass });
+    },
+  );
+
+  it("classifies touch, pointer, and hover capabilities independently", () => {
     expect(
       detectDeviceProfile({
-        navigator: {
-          maxTouchPoints: 5,
-          platform: "MacIntel",
-          userAgent: "Mozilla/5.0 Version/18 Safari/605.1.15",
+        blockSize: 700,
+        inlineSize: 1200,
+        navigator: { maxTouchPoints: 10 },
+        window: {
+          matchMedia: matchMedia([
+            "(pointer: coarse)",
+            "(any-pointer: coarse)",
+            "(any-pointer: fine)",
+            "(any-hover: hover)",
+          ]),
         },
-        window: { matchMedia: matchMedia(true) },
       }),
-    ).toMatchObject({ deviceClass: "tablet", inputMode: "touch", isIOS: true });
+    ).toMatchObject({
+      anyHover: true,
+      deviceClass: "desktop",
+      hasTouch: true,
+      inputMode: "hybrid",
+      primaryHover: false,
+      primaryPointer: "coarse",
+    });
   });
 
-  it("distinguishes Android phones and tablets", () => {
-    const phone = detectDeviceProfile({
-      navigator: {
-        maxTouchPoints: 5,
-        platform: "Android",
-        userAgent: "Mozilla/5.0 (Linux; Android 16) Mobile",
-      },
-      window: { matchMedia: matchMedia(true) },
-    });
-    const tablet = detectDeviceProfile({
-      navigator: {
-        maxTouchPoints: 5,
-        platform: "Android",
-        userAgent: "Mozilla/5.0 (Linux; Android 16)",
-      },
-      window: { matchMedia: matchMedia(true) },
-    });
-
-    expect(phone.deviceClass).toBe("phone");
-    expect(tablet.deviceClass).toBe("tablet");
-  });
-
-  it("keeps touch-capable desktop computers in the desktop class", () => {
+  it("derives orientation from the observed container", () => {
     expect(
       detectDeviceProfile({
-        navigator: {
-          maxTouchPoints: 10,
-          platform: "Win32",
-          userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        blockSize: 500,
+        inlineSize: 800,
+        window: { matchMedia: matchMedia([]) },
+      }).orientation,
+    ).toBe("landscape");
+    expect(
+      detectDeviceProfile({
+        blockSize: 800,
+        inlineSize: 500,
+        window: { matchMedia: matchMedia([]) },
+      }).orientation,
+    ).toBe("portrait");
+  });
+
+  it("does not infer layout behavior from platform identifiers", () => {
+    expect(
+      detectDeviceProfile({
+        blockSize: 900,
+        inlineSize: 1300,
+        navigator: { maxTouchPoints: 5 },
+        window: {
+          matchMedia: matchMedia([
+            "(pointer: coarse)",
+            "(any-pointer: coarse)",
+          ]),
         },
-        window: { matchMedia: matchMedia(true, true) },
       }),
-    ).toMatchObject({ deviceClass: "desktop", inputMode: "hybrid" });
+    ).toMatchObject({ deviceClass: "desktop", inputMode: "touch" });
   });
 });

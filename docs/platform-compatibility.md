@@ -33,6 +33,37 @@ new browser API makes another platform easier or faster.
 - Avoid APIs that require cross-origin isolation or browser flags unless the
   feature has a supported alternative.
 
+### 2.1 Responsive and input profile
+
+WatchZone device labels are presentation classes derived from the component's
+actual container; they are not claims about physical hardware. User-agent,
+platform-string, screen-resolution, and operating-system parsing are
+prohibited for layout or interaction decisions.
+
+The shared responsive profile uses these container inline-size classes:
+
+| Presentation class | Detailed size class | Inline size   |
+| ------------------ | ------------------- | ------------- |
+| Phone              | Compact phone       | `< 360px`     |
+| Phone              | Phone               | `360–599px`   |
+| Tablet             | Compact tablet      | `600–767px`   |
+| Tablet             | Tablet              | `768–1023px`  |
+| Desktop            | Desktop             | `1024–1439px` |
+| Desktop            | Wide desktop        | `>= 1440px`   |
+
+These categories may select behavior from a typed device matrix. Purely visual
+size changes remain CSS container-query responsibilities.
+
+Input capability is an independent dimension. The profile records primary
+pointer accuracy, primary and available hover, touch availability, and a
+derived `touch`, `pointer`, `hybrid`, or `none` input mode using standardized
+pointer/hover media queries and `maxTouchPoints`. Orientation is derived from
+the observed container rather than the physical screen.
+
+The profile reacts to container resize and pointing-device changes. Features
+must query the capability they actually require; a phone label does not imply
+touch-only input, and a desktop label does not imply hover or a fine pointer.
+
 ## 3. Media rules
 
 Media support is capability-dependent even within one browser family.

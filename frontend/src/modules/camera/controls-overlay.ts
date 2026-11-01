@@ -1,7 +1,7 @@
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 
 import {
-  detectDeviceProfile,
+  DeviceProfileController,
   type DeviceClass,
 } from "../../core/device-profile";
 import { renderIcon, type WatchZoneIcon } from "../../ui/icons";
@@ -76,14 +76,14 @@ export class WatchZoneCameraControls extends LitElement {
   public pictureInPictureSupported = false;
   public visible = false;
 
-  private readonly _deviceProfile = detectDeviceProfile();
+  private readonly _deviceProfile = new DeviceProfileController(this);
 
   protected render() {
     return html`
       <div class="control-group" role="toolbar" aria-label="Camera controls">
         ${CONTROLS.filter((control) =>
           CAMERA_CONTROL_DEVICE_MATRIX[control.action].includes(
-            this._deviceProfile.deviceClass,
+            this._deviceProfile.profile.deviceClass,
           ),
         ).map((control) => this._renderControl(control))}
       </div>
