@@ -4,6 +4,7 @@ import {
   detectDeviceProfile,
   type DeviceClass,
 } from "../../core/device-profile";
+import { renderIcon, type WatchZoneIcon } from "../../ui/icons";
 
 export type CameraControlAction =
   "fullscreen" | "mute" | "picture_in_picture" | "snapshot" | "suspend";
@@ -41,37 +42,18 @@ const CONTROLS: readonly ControlDefinition[] = [
   { action: "mute" },
 ];
 
-function icon(action: CameraControlAction, muted: boolean): TemplateResult {
-  if (action === "suspend") {
-    return html`<svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 3v8m-5.7-5a8 8 0 1 0 11.4 0"></path>
-    </svg>`;
-  }
-  if (action === "picture_in_picture") {
-    return html`<svg viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="3" y="4" width="18" height="14" rx="2"></rect>
-      <rect x="12" y="12" width="9" height="7" rx="1"></rect>
-      <path d="m6 8 5 4m0-4v4H7"></path>
-    </svg>`;
-  }
-  if (action === "snapshot") {
-    return html`<svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M4 8h4l1.5-2h5L16 8h4a2 2 0 0 1 2 2v9H2v-9a2 2 0 0 1 2-2Z"
-      ></path>
-      <circle cx="12" cy="13.5" r="3.5"></circle>
-      <path d="M5 3v4M3 5h4"></path>
-    </svg>`;
-  }
+function iconName(
+  action: CameraControlAction,
+  muted: boolean,
+  fullscreenActive: boolean,
+): WatchZoneIcon {
+  if (action === "suspend") return "power";
+  if (action === "picture_in_picture") return "pipPopOut";
+  if (action === "snapshot") return "takeSnapshot";
   if (action === "fullscreen") {
-    return html`<svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M8 3H3v5m13-5h5v5M8 21H3v-5m13 5h5v-5"></path>
-    </svg>`;
+    return fullscreenActive ? "fullscreenExit" : "fullscreen";
   }
-  return html`<svg viewBox="0 0 24 24" aria-hidden="true">
-    <path d="M5 9H2v6h3l5 4V5L5 9Zm9.5 1.5a4 4 0 0 1 0 3"></path>
-    ${muted ? html`<path d="m3 3 18 18"></path>` : nothing}
-  </svg>`;
+  return muted ? "volumeOff" : "volumeOn";
 }
 
 export class WatchZoneCameraControls extends LitElement {
@@ -154,7 +136,7 @@ export class WatchZoneCameraControls extends LitElement {
       ?disabled=${!supported}
       @click=${() => this._dispatch(control.action)}
     >
-      ${icon(control.action, this.muted)}
+      ${renderIcon(iconName(control.action, this.muted, this.fullscreenActive))}
     </button>`;
   }
 
@@ -180,7 +162,7 @@ export class WatchZoneCameraControls extends LitElement {
 
       --wzc-control-size: 2.75rem;
       --wzc-control-icon-size: 1.65rem;
-      --wzc-control-gap: 0.25rem;
+      --wzc-control-gap: 0.3rem;
       --wzc-control-safe-inline: 0.75rem;
     }
 
@@ -193,19 +175,6 @@ export class WatchZoneCameraControls extends LitElement {
       display: flex;
       flex-direction: column;
       gap: var(--wzc-control-gap);
-      padding: var(--wzc-control-gap);
-      background: color-mix(
-        in srgb,
-        var(
-            --wzc-control-group-background,
-            var(--card-background-color, var(--primary-background-color))
-          )
-          72%,
-        transparent
-      );
-      border: 1px solid var(--wzc-control-border-color, var(--divider-color));
-      border-radius: var(--wzc-control-group-radius, 0.5rem);
-      box-shadow: var(--ha-card-box-shadow, none);
       transform: translateY(-50%);
       pointer-events: auto;
     }
@@ -219,10 +188,22 @@ export class WatchZoneCameraControls extends LitElement {
       min-inline-size: 0;
       min-block-size: 0;
       padding: 0;
-      color: var(--wzc-control-color, var(--primary-text-color));
-      background: var(--wzc-control-background, transparent);
-      border: 0;
-      border-radius: var(--wzc-control-radius, 0.375rem);
+      color: var(--wzc-control-color, var(--primary-text-color, CanvasText));
+      background: var(
+        --wzc-control-background,
+        color-mix(
+          in srgb,
+          var(--card-background-color, Canvas) 82%,
+          transparent
+        )
+      );
+      border: 1px solid
+        var(
+          --wzc-control-border-color,
+          var(--divider-color, color-mix(in srgb, CanvasText 24%, transparent))
+        );
+      border-radius: var(--wzc-control-radius, 0.25rem);
+      box-shadow: var(--wzc-control-shadow, var(--ha-card-box-shadow, none));
       font: inherit;
       cursor: pointer;
       touch-action: manipulation;
@@ -230,10 +211,8 @@ export class WatchZoneCameraControls extends LitElement {
     }
 
     .control-button:hover:not(:disabled) {
-      background: var(
-        --wzc-control-hover-background,
-        var(--secondary-background-color)
-      );
+      background: var(--wzc-control-hover-background, var(--primary-color));
+      color: var(--wzc-control-hover-color, var(--text-primary-color, Canvas));
     }
 
     .control-button:focus-visible {
@@ -245,12 +224,12 @@ export class WatchZoneCameraControls extends LitElement {
       color: var(--wzc-control-active-color, var(--primary-color));
       background: var(
         --wzc-control-active-background,
-        var(--secondary-background-color)
+        var(--card-background-color, Canvas)
       );
     }
 
     .control-button:disabled {
-      opacity: var(--wzc-control-disabled-opacity, 0.45);
+      opacity: var(--wzc-control-disabled-opacity, 1);
       cursor: default;
     }
 
@@ -258,11 +237,7 @@ export class WatchZoneCameraControls extends LitElement {
       inline-size: var(--wzc-control-icon-size);
       block-size: var(--wzc-control-icon-size);
       overflow: visible;
-      fill: none;
-      stroke: currentColor;
-      stroke-width: 1.8;
-      stroke-linecap: round;
-      stroke-linejoin: round;
+      fill: currentColor;
     }
 
     .control-error {

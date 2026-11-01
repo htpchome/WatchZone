@@ -355,6 +355,28 @@ test("retains one live connection while the card presentation is replaced", asyn
     "watchzone-camera watchzone-camera-controls .control-button",
   );
   await expect(controls).toHaveCount(5);
+  const controlPresentation = await controls.evaluateAll((buttons) => {
+    const group = buttons[0]?.parentElement;
+    const rectangles = buttons.map((button) => button.getBoundingClientRect());
+    return {
+      backgrounds: buttons.map(
+        (button) => getComputedStyle(button).backgroundColor,
+      ),
+      gaps: rectangles.slice(1).map((rectangle, index) => {
+        return rectangle.top - rectangles[index].bottom;
+      }),
+      groupBackground: group
+        ? getComputedStyle(group).backgroundColor
+        : undefined,
+    };
+  });
+  expect(controlPresentation.groupBackground).toBe("rgba(0, 0, 0, 0)");
+  expect(
+    controlPresentation.backgrounds.every(
+      (background) => background !== controlPresentation.groupBackground,
+    ),
+  ).toBe(true);
+  expect(controlPresentation.gaps.every((gap) => gap > 0)).toBe(true);
   await expect(
     page.locator(
       'watchzone-camera watchzone-camera-controls [data-control="snapshot"]',

@@ -38,14 +38,11 @@ export class WatchZoneCamera extends LitElement {
   private _activeVideo?: HTMLVideoElement;
   private _controlError?: string;
   private _entityId?: string;
-  private _frameCaptureGeneration = 0;
-  private _frameCaptureTimer?: number;
   private _fullscreenActive = false;
   private _hlsLease?: MediaSessionLease;
   private _hlsSnapshot: MediaSessionSnapshot = { state: "new" };
   private _hlsUnsubscribe?: () => void;
   private _initialTransport?: MediaTransport;
-  private _lastFrameUrl?: string;
   private _muted = true;
   private _pictureInPictureActive = false;
   private _posterFailed = false;
@@ -81,7 +78,6 @@ export class WatchZoneCamera extends LitElement {
     }
     this._initialTransport = undefined;
     this._controlError = undefined;
-    this._replaceLastFrame();
     this._releaseLeases();
     this._entityId = value;
     this._muted = value ? getMediaSessionManager().getCameraMuted(value) : true;
@@ -112,7 +108,6 @@ export class WatchZoneCamera extends LitElement {
       this._syncControlState,
     );
     this._setActiveVideo(undefined);
-    this._replaceLastFrame();
     this._releaseLeases();
     super.disconnectedCallback();
   }
@@ -153,16 +148,6 @@ export class WatchZoneCamera extends LitElement {
                 decoding="async"
                 fetchpriority="high"
                 @error=${this._handlePosterError}
-              />`
-            : nothing
-        }
-        ${
-          this._lastFrameUrl
-            ? html`<img
-                class="fallback-image retained-frame"
-                src=${this._lastFrameUrl}
-                alt=""
-                aria-hidden="true"
               />`
             : nothing
         }
@@ -390,90 +375,7 @@ export class WatchZoneCamera extends LitElement {
     }
     this._activeVideo = video;
     suppressNativePictureInPicture(video);
-    this._startFrameCapture(video);
     this._syncControlState();
-  }
-
-  private _startFrameCapture(video: HTMLVideoElement | undefined): void {
-    this._frameCaptureGeneration += 1;
-    if (this._frameCaptureTimer !== undefined) {
-      window.clearInterval(this._frameCaptureTimer);
-      this._frameCaptureTimer = undefined;
-    }
-    if (!video) {
-      return;
-    }
-    const generation = this._frameCaptureGeneration;
-    window.requestAnimationFrame(() => this._captureFrame(video, generation));
-    this._frameCaptureTimer = window.setInterval(
-      () => this._captureFrame(video, generation),
-      15_000,
-    );
-  }
-
-  private _captureFrame(video: HTMLVideoElement, generation: number): void {
-    if (
-      generation !== this._frameCaptureGeneration ||
-      video !== this._activeVideo ||
-      video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA ||
-      video.videoWidth === 0 ||
-      video.videoHeight === 0
-    ) {
-      return;
-    }
-    const width = Math.min(video.videoWidth, 1280);
-    const height = Math.max(
-      1,
-      Math.round((width * video.videoHeight) / video.videoWidth),
-    );
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    try {
-      canvas.getContext("2d")?.drawImage(video, 0, 0, width, height);
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) {
-            this._disableFrameCapture(video, generation);
-            return;
-          }
-          if (
-            generation !== this._frameCaptureGeneration ||
-            video !== this._activeVideo
-          ) {
-            return;
-          }
-          this._replaceLastFrame(URL.createObjectURL(blob));
-          this.requestUpdate();
-        },
-        "image/jpeg",
-        0.82,
-      );
-    } catch {
-      this._disableFrameCapture(video, generation);
-      return;
-    }
-  }
-
-  private _disableFrameCapture(
-    video: HTMLVideoElement,
-    generation: number,
-  ): void {
-    if (
-      generation === this._frameCaptureGeneration &&
-      video === this._activeVideo &&
-      this._frameCaptureTimer !== undefined
-    ) {
-      window.clearInterval(this._frameCaptureTimer);
-      this._frameCaptureTimer = undefined;
-    }
-  }
-
-  private _replaceLastFrame(url?: string): void {
-    if (this._lastFrameUrl) {
-      URL.revokeObjectURL(this._lastFrameUrl);
-    }
-    this._lastFrameUrl = url;
   }
 
   private readonly _syncControlState = (): void => {

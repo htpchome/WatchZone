@@ -140,6 +140,7 @@ architecture decision recorded in this document or a future ADR.
 │   │   ├── api/                   # Typed backend client and wire types
 │   │   ├── modules/               # Independently loaded UI features
 │   │   ├── connections/           # Lazy browser playback adapters
+│   │   ├── ui/                    # Shared visual primitives and icon registry
 │   │   └── editor/                # Lazily loaded layout editor
 │   └── tests/
 ├── tests/                         # Python and cross-boundary tests
@@ -422,6 +423,14 @@ WatchZone uses current Home Assistant controls and semantic theme tokens.
 Project customization variables use the `--wzc-` prefix and resolve to Home
 Assistant tokens by default. Hardcoded application palettes and independent
 light/dark assumptions are prohibited.
+
+Icons are rendered from the typed registry in `frontend/src/ui/icons.ts`.
+Standard actions use the same filled Material Design/MDI geometry expected in
+Home Assistant. Feature code may not scatter ad hoc SVG markup or inject SVG
+HTML strings. A custom path is allowed only when the default set has no
+appropriate icon or the design contract explicitly requires it, such as the
+camera Picture-in-Picture pop-out icon. The registry renders owned SVG markup
+directly so card behavior does not depend on private Home Assistant elements.
 
 Every visual boundary is responsive from its first implementation. Use
 logical sizing, container-aware rules, bounded fluid values, and explicit

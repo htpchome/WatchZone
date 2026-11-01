@@ -182,14 +182,14 @@ require the full physical-client validation matrix.
 
 The single-camera presentation keeps visual fallback behavior separate from
 transport selection. From back to front it renders a theme-aware generic camera
-placeholder, the authenticated Home Assistant camera still, a periodically
-retained decoded frame when browser media security permits capture, and the
-active live video. Connection and error states are overlays, so a transport
-failure does not replace an available image with an empty surface.
+placeholder, the authenticated Home Assistant camera still, and the active live
+video. Connection and error states are overlays, so a transport failure does
+not replace an available image with an empty surface.
 
 The Home Assistant boundary resolves `entity_picture` first and otherwise uses
 the entity's short-lived `access_token` with the camera proxy endpoint. Tokens
 must never be logged or persisted. A failed or unavailable still image falls
-back locally without delaying HLS or WebRTC startup. Retained-frame capture is
-best effort: a tainted media canvas must fail silently and leave the HA still in
-place.
+back locally without delaying HLS or WebRTC startup. WatchZone must not perform
+automatic canvas extraction from live video: privacy protections can block it
+without a user gesture and produce browser warnings. Future retained-frame work
+must use a media-native lifecycle or an explicit user action.
