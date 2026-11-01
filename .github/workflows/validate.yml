@@ -22,6 +22,8 @@ jobs:
       - run: corepack enable
       - run: corepack yarn install --immutable
         working-directory: frontend
+      - run: corepack yarn playwright install --with-deps chromium firefox webkit
+        working-directory: frontend
       - run: corepack yarn check:version
         working-directory: frontend
       - run: corepack yarn format
@@ -31,6 +33,8 @@ jobs:
       - run: corepack yarn test
         working-directory: frontend
       - run: corepack yarn build
+        working-directory: frontend
+      - run: corepack yarn test:browser
         working-directory: frontend
       - run: node scripts/validate-build.mjs
       - run: node scripts/validate-brand.mjs

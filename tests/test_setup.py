@@ -4,6 +4,12 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
+from homeassistant.components.lovelace.const import LOVELACE_DATA
+from homeassistant.components.lovelace.dashboard import LovelaceStorage
+from homeassistant.components.lovelace.resources import (
+    ResourceStorageCollection,
+    ResourceYAMLCollection,
+)
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -42,17 +48,54 @@ async def test_setup_registers_packaged_frontend(
 
 
 async def test_entry_adds_and_removes_card_module(hass: HomeAssistant) -> None:
-    """Config-entry lifecycle controls the registered card module."""
+    """Config-entry lifecycle controls an awaited Lovelace module resource."""
     entry = MockConfigEntry(domain=DOMAIN, data={})
     entry.add_to_hass(hass)
+    resources = ResourceStorageCollection(hass, LovelaceStorage(hass, None))
+    hass.data[LOVELACE_DATA] = SimpleNamespace(resources=resources)
 
-    with (
-        patch("custom_components.watchzone.add_extra_js_url") as add_url,
-        patch("custom_components.watchzone.remove_extra_js_url") as remove_url,
-    ):
-        assert await async_setup_entry(hass, entry)
-        add_url.assert_called_once_with(hass, CARD_MODULE_URL)
-        assert entry.runtime_data.entry_id == entry.entry_id
+    assert await async_setup_entry(hass, entry)
+    assert entry.runtime_data.entry_id == entry.entry_id
+    assert resources.async_items() == [
+        {
+            "id": resources.async_items()[0]["id"],
+            "type": "module",
+            "url": CARD_MODULE_URL,
+        }
+    ]
 
-        assert await async_unload_entry(hass, entry)
-        remove_url.assert_called_once_with(hass, CARD_MODULE_URL)
+    assert await async_unload_entry(hass, entry)
+    assert resources.async_items() == []
+
+
+async def test_entry_updates_existing_card_resource(hass: HomeAssistant) -> None:
+    """A version change updates one existing resource instead of duplicating it."""
+    entry = MockConfigEntry(domain=DOMAIN, data={})
+    entry.add_to_hass(hass)
+    resources = ResourceStorageCollection(hass, LovelaceStorage(hass, None))
+    hass.data[LOVELACE_DATA] = SimpleNamespace(resources=resources)
+    existing = await resources.async_create_item(
+        {"res_type": "module", "url": "/watchzone/frontend/watchzone.js?v=old"}
+    )
+
+    assert await async_setup_entry(hass, entry)
+
+    assert resources.async_items() == [
+        {"id": existing["id"], "type": "module", "url": CARD_MODULE_URL}
+    ]
+
+
+async def test_entry_registers_runtime_resource_in_yaml_mode(
+    hass: HomeAssistant,
+) -> None:
+    """YAML resource mode receives an awaited runtime resource without extra JS."""
+    entry = MockConfigEntry(domain=DOMAIN, data={})
+    entry.add_to_hass(hass)
+    resources = ResourceYAMLCollection([])
+    hass.data[LOVELACE_DATA] = SimpleNamespace(resources=resources)
+
+    assert await async_setup_entry(hass, entry)
+    assert resources.async_items() == [{"type": "module", "url": CARD_MODULE_URL}]
+
+    assert await async_unload_entry(hass, entry)
+    assert resources.async_items() == []

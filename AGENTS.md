@@ -18,6 +18,9 @@ retention, or audio state, also read `docs/live-session-lifecycle.md` in full.
 For the Home Assistant direct live connection, also read
 `docs/home-assistant-live-connection.md` in full.
 
+For any frontend, media, interaction, layout, or styling change, also read
+`docs/platform-compatibility.md` in full.
+
 ## Architecture stability
 
 - Treat `architecture.md` as a contract, not a progress log.
@@ -83,7 +86,7 @@ For the Home Assistant direct live connection, also read
 - `custom_components/watchzone/const.py` `VERSION` is canonical.
 - Each commit pushed to `main` is published for HACS testing and therefore must
   have a unique Semantic Version. During prerelease development, increment the
-  prerelease identifier (for example, `0.0.3-beta.1` to `0.0.3-beta.2`).
+  prerelease identifier (for example, `0.0.3-dev.1` to `0.0.3-dev.2`).
 - Local work that is not being handed off for a commit does not itself require
   a version change.
 - Keep `frontend/package.json`, `manifest.json` once present, and all other
@@ -104,6 +107,9 @@ For frontend changes, run from `frontend/` as applicable:
 - `corepack yarn test`
 - `corepack yarn build`
 - `corepack yarn test:browser --project=chromium` for browser-visible behavior
+- Run the complete `corepack yarn test:browser` matrix before handing off a
+  browser-visible feature. Chromium, Firefox, and WebKit are mandatory; one
+  engine passing is not evidence that the feature is portable.
 
 For Python changes, run Ruff, type checking, and focused pytest coverage once
 their project configuration exists. On the Windows-mounted development

@@ -1,10 +1,38 @@
 import { expect, test } from "@playwright/test";
 
 test("loads the responsive WatchZone card shell", async ({ page }) => {
+  const consoleMessages: string[] = [];
+  page.on("console", (message) => consoleMessages.push(message.text()));
   await page.goto("/");
 
   await expect(page.locator("watchzone-card")).toContainText("WatchZone");
   await expect(page.locator("watchzone-card ha-card")).toBeVisible();
+  expect(
+    consoleMessages.some(
+      (message) =>
+        message.includes("WatchZone") &&
+        message.includes("v0.0.4-dev.1 (local)"),
+    ),
+  ).toBe(true);
+});
+
+test("fits phone, tablet, and desktop viewports without horizontal overflow", async ({
+  page,
+}) => {
+  for (const viewport of [
+    { width: 320, height: 568 },
+    { width: 768, height: 1024 },
+    { width: 1440, height: 900 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    await expect(page.locator("watchzone-card ha-card")).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+  }
 });
 
 test("retains one live connection while the card presentation is replaced", async ({

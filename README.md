@@ -1,7 +1,7 @@
 # WatchZone
 
 WatchZone is a modular camera interface delivered as one Home Assistant custom
-integration. Version `0.0.3-beta.1` provides a responsive, theme-aware Lovelace
+integration. Version `0.0.4-dev.1` provides a responsive, theme-aware Lovelace
 card with a title editor and an initial retained Home Assistant WebRTC camera
 view. Backend camera providers have not been added yet.
 
@@ -24,6 +24,23 @@ view. Backend camera providers have not been added yet.
 
 The Python integration registers the bundled card resource. No separate
 Lovelace resource is required.
+
+## Development update cycle
+
+Installing `0.0.4-dev.1` requires one Home Assistant restart because it changes
+the Python-side resource-registration mechanism. After that baseline is active:
+
+- A frontend-only update needs a full browser/app reload, not a Home Assistant
+  restart. The stable entry is served without cache headers and its lazy chunks
+  are content-hashed.
+- A Python integration change still requires a Home Assistant restart.
+- The F12 banner identifies the loaded frontend version and commit build. If it
+  shows an older version, that client is still running an older document or
+  bundle.
+
+HACS may still display a restart-required notice because WatchZone is packaged
+as an integration; that notice does not make a frontend-only asset replacement
+depend on restarting Core.
 
 Architecture and contributor invariants are documented in
 [`architecture.md`](architecture.md) and [`AGENTS.md`](AGENTS.md).

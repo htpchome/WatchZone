@@ -205,8 +205,11 @@ The frontend and backend are released in lockstep:
 - Release validation fails if generated assets are missing or do not match the
   current source build.
 - Python registers and serves the packaged frontend assets.
-- Python registers the card resource only after WatchZone is configured and
-  removes its registrations cleanly when the integration is unloaded.
+- Python registers the card as an awaited Lovelace module resource only after
+  WatchZone is configured and removes its registration cleanly when the
+  integration is unloaded. The card must not use `extra_module_url` or
+  `add_extra_js_url`; those paths are not ordered ahead of dashboard rendering
+  and can lose custom-element registrations during frontend initialization.
 - The release must not depend on a separately installed Lovelace resource.
 - Frontend/backend compatibility shims are not maintained between WatchZone
   releases.
@@ -252,7 +255,7 @@ version through its `VERSION` constant.
 - Every commit pushed to `main` is an independently installable HACS test build
   and therefore has a unique `VERSION` and generated GitHub release. During
   prerelease development, increment the prerelease identifier for each such
-  commit (for example, `0.0.3-beta.1` to `0.0.3-beta.2`).
+  commit (for example, `0.0.3-dev.1` to `0.0.3-dev.2`).
 - Uncommitted iterations within one handoff keep the same version.
 - The version is valid Semantic Versioning.
 - `manifest.json`, frontend package metadata, release artifacts, and other
@@ -407,6 +410,16 @@ Every visual boundary is responsive from its first implementation. Use
 logical sizing, container-aware rules, bounded fluid values, and explicit
 overflow behavior. The card shell is the future constraint boundary for panel
 and full-size layouts and must not assume a dashboard column count or viewport.
+
+WatchZone supports current Chrome, Edge, Firefox, and Safari releases, plus
+Home Assistant Companion on Android and iOS and Home Assistant clients using
+Catalyst. Interfaces must work at phone, tablet, and desktop sizes with touch,
+pointer, and keyboard input. Chromium-only behavior, user-agent branching, and
+desktop-only interaction assumptions are prohibited. Browser capabilities are
+feature-detected at their ownership boundary; an unavailable media capability
+produces an explicit fallback or actionable local error rather than breaking
+the card. The normative platform and validation matrix is defined in
+[docs/platform-compatibility.md](docs/platform-compatibility.md).
 
 ### 8.7 Interaction state
 
@@ -889,6 +902,13 @@ Required layers as their corresponding features appear:
 - Build tests verifying the asset manifest, dynamic-import paths, content
   hashes, and release package contents.
 - A small end-to-end smoke path for Home Assistant loading the packaged card.
+- Browser-visible behavior runs against Chromium, Firefox, and WebKit. This
+  engine matrix supplements, but does not replace, milestone testing in Chrome,
+  Edge, Firefox, Safari, Home Assistant Companion on Android and iOS, and a
+  Catalyst-based Home Assistant client.
+- Responsive component coverage includes representative phone, tablet, and
+  desktop containers and both touch/coarse-pointer and mouse/keyboard paths
+  when the feature has interactive behavior.
 - Performance checks for eager bundle size and any feature-specific critical
   budget.
 
