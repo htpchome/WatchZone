@@ -28,6 +28,7 @@ export interface MediaConnection {
 }
 
 export interface MediaConnectionOptions {
+  readonly hlsPlaybackMode?: "automatic" | "native";
   readonly initialMuted: boolean;
   readonly onVideo?: (video: HTMLVideoElement) => void;
 }
@@ -355,8 +356,9 @@ export class MediaSessionManager {
     entityId: string,
     options: MediaConnectionOptions = { initialMuted: true },
   ): MediaSessionLease {
+    const playbackMode = options.hlsPlaybackMode ?? "automatic";
     return this._acquire(
-      `home_assistant_hls:${entityId}`,
+      `home_assistant_hls${playbackMode === "native" ? "_native" : ""}:${entityId}`,
       entityId,
       api,
       this._hlsFactory,

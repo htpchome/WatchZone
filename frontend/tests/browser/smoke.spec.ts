@@ -81,6 +81,79 @@ test("fits phone, tablet, and desktop viewports without horizontal overflow", as
   }
 });
 
+test("routes the Catalyst host through one native HLS candidate", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperties(navigator, {
+      platform: { configurable: true, value: "MacIntel" },
+      userAgent: {
+        configurable: true,
+        value: "Mozilla/5.0 (Macintosh) Mobile/15E148 Home Assistant/2026.11",
+      },
+    });
+  });
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+
+  await page.evaluate(() => {
+    const testWindow = window as unknown as Window & {
+      __watchZoneCatalystCounts: { hls: number; webRtc: number };
+    };
+    testWindow.__watchZoneCatalystCounts = { hls: 0, webRtc: 0 };
+    const card = document.querySelector("watchzone-card") as HTMLElement & {
+      hass: unknown;
+      setConfig(config: unknown): void;
+    };
+    card.setConfig({
+      type: "custom:watchzone-card",
+      title: "Catalyst",
+      camera_entity: "camera.front",
+      start_live_unmuted_pc_tablet: true,
+    });
+    card.hass = {
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "streaming",
+          attributes: {},
+        },
+      },
+      connection: { subscribeMessage: async () => () => undefined },
+      hassUrl: (path: string) => path,
+      callWS: async (message: { type: string }) => {
+        if (message.type === "camera/stream") {
+          testWindow.__watchZoneCatalystCounts.hls += 1;
+          return new Promise(() => undefined);
+        }
+        if (message.type === "camera/webrtc/get_client_config") {
+          testWindow.__watchZoneCatalystCounts.webRtc += 1;
+        }
+        return undefined;
+      },
+    };
+  });
+
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const testWindow = window as unknown as Window & {
+          __watchZoneCatalystCounts: { hls: number; webRtc: number };
+        };
+        return testWindow.__watchZoneCatalystCounts;
+      }),
+    )
+    .toEqual({ hls: 1, webRtc: 0 });
+  const video = page.locator("watchzone-camera .hls-host video");
+  await expect(video).toHaveCount(1);
+  expect(
+    await video.evaluate((element) => ({
+      defaultMuted: (element as HTMLVideoElement).defaultMuted,
+      muted: (element as HTMLVideoElement).muted,
+    })),
+  ).toEqual({ defaultMuted: false, muted: false });
+});
+
 test("applies outer shell appearance toggles without changing card identity", async ({
   page,
 }) => {

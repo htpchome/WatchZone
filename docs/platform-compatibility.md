@@ -17,7 +17,9 @@ new browser API makes another platform easier or faster.
 ## 2. Implementation rules
 
 - Use standards-based browser APIs and Home Assistant public surfaces.
-- Detect capabilities, not browser names or user-agent strings.
+- Detect browser features through capabilities, not browser names or
+  user-agent strings. Home Assistant host identity with no equivalent feature
+  signal is the narrow exception described below.
 - Keep platform-specific behavior behind the smallest owning adapter or helper.
 - Do not scatter Safari, Firefox, mobile, Companion, or Catalyst conditionals
   across modules.
@@ -33,7 +35,16 @@ new browser API makes another platform easier or faster.
 - Avoid APIs that require cross-origin isolation or browser flags unless the
   feature has a supported alternative.
 
-### 2.1 Responsive and input profile
+### 2.1 Home Assistant client runtime
+
+Catalyst is a Home Assistant host with media and window lifecycle behavior that
+cannot be distinguished through an individual browser capability. The shared
+client-runtime boundary may identify that host from the platform and Home
+Assistant application signature. No feature component or connection adapter
+may parse those strings independently. Catalyst-specific policy is selected
+from the resulting typed runtime profile.
+
+### 2.2 Responsive and input profile
 
 WatchZone device labels are presentation classes derived from the component's
 actual container; they are not claims about physical hardware. User-agent,

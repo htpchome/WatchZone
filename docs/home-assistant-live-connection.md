@@ -50,7 +50,8 @@ Home Assistant instance, browser, network, and cold/warm cache conditions.
 
 ## 4. Connection selection
 
-For the initial Home Assistant direct source, WatchZone uses a hedged startup:
+For the initial Home Assistant direct source, WatchZone normally uses a hedged
+startup:
 
 1. WebRTC and HLS begin concurrently; neither waits for the other to fail.
 2. The first adapter to decode usable video becomes the initial presentation.
@@ -70,6 +71,12 @@ extra serial round trip would delay both candidates. Unsupported paths fail
 locally at their adapter boundary. The policy may become capability-informed
 later if Home Assistant can expose that information without adding startup
 latency.
+
+The Home Assistant Catalyst runtime is the explicit exception. It uses one
+retained native-HLS session and does not start WebRTC or HLS.js candidates.
+This preserves the native media element and its audio/window lifecycle instead
+of replacing it during a later WebRTC takeover. Catalyst identity comes only
+from the centralized client-runtime profile.
 
 ## 5. WebRTC connection sequence
 
@@ -98,11 +105,11 @@ The HLS adapter:
 1. Requests an authenticated URL through Home Assistant's `camera/stream`
    WebSocket command with `format: "hls"`.
 2. Resolves the returned relative URL through Home Assistant's URL resolver.
-3. Fetches the master manifest while lazy-loading the light HLS.js engine.
-   When HLS.js reports supported MSE/MMS playback, that path is preferred;
-   native `video` HLS is the capability-detected fallback. This order avoids
-   treating `canPlayType()`'s non-empty but inconclusive `"maybe"` result as
-   proof that native playback is reliable.
+3. Fetches the master manifest and checks the retained media element's native
+   HLS capability. Native HLS is preferred when advertised so Safari and
+   WebKit-hosted Home Assistant clients keep their platform media lifecycle.
+   Other clients lazy-load the light HLS.js engine and use its MSE/MMS path.
+   Catalyst requires native HLS and never loads HLS.js.
 4. When the master has exactly one variant, passes that variant directly to
    the selected player to avoid a redundant manifest request.
 5. Reports live only after `loadeddata`, not merely after obtaining a playlist
@@ -141,10 +148,11 @@ immediate and starts a fresh bounded retry sequence.
 The configured phone or tablet/desktop startup policy determines the initial
 audio intent unless the document-scoped session manager already holds an
 explicit user preference for that camera. The actual selected media element is
-attached during connection startup and receives both `muted` and
-`defaultMuted` before its source and first `play()` request. This ordering is
-part of the playback contract: creating a muted player and unmuting only after
-`loadeddata` loses the initial audible-playback opportunity in WebKit clients.
+created safely muted with autoplay disabled, attached during connection
+startup, and then receives the intended `muted` and `defaultMuted` values
+before its source and first `play()` request. This ordering is part of the
+playback contract: waiting to unmute until after `loadeddata` loses the initial
+audible-playback opportunity in WebKit clients.
 
 The presentation retains explicit user preference across HLS/WebRTC handoff
 and presentation replacement. An autoplay rejection temporarily forces muted
@@ -174,12 +182,12 @@ audio-focus, lifetime, and autoplay rules in
 ## 10. Observed client baseline
 
 Physical-client testing of `0.0.4-dev.8` recorded the following initial HLS
-playback paths. These are observations, not browser-name selection rules; the
-adapter must continue to choose by runtime capability.
+playback paths. These remain capability-selected observations except for the
+centralized Catalyst host policy documented above.
 
 | Client                   | Initial playback path |
 | ------------------------ | --------------------- |
-| Catalyst                 | Native HLS            |
+| Catalyst                 | Native HLS (required) |
 | Safari                   | HLS.js                |
 | Home Assistant Companion | HLS.js                |
 | Edge                     | HLS.js                |

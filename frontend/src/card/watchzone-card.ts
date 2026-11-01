@@ -14,6 +14,7 @@ import {
   EDITOR_PREVIEW_DRAFT_EVENT,
   EDITOR_TAG,
 } from "../core/constants";
+import { getHomeAssistantClientRuntime } from "../core/client-runtime";
 import {
   cameraImageUrl,
   createHomeAssistantApi,
@@ -243,7 +244,13 @@ export class WatchZoneCard extends LitElement {
     const config = this._previewConfig ?? this._config;
     const entityId = config.camera_entity;
     const available = Boolean(entityId && this._hass?.states[entityId]);
-    if (!this.isConnected || !this._haApi || !entityId || !available) {
+    if (
+      getHomeAssistantClientRuntime().catalyst ||
+      !this.isConnected ||
+      !this._haApi ||
+      !entityId ||
+      !available
+    ) {
       this._releasePrewarmLease();
       return;
     }

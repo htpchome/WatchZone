@@ -1,5 +1,6 @@
 import { html, LitElement, nothing } from "lit";
 
+import { getHomeAssistantClientRuntime } from "../../core/client-runtime";
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import { CAMERA_LIVE_VIEW_TAG } from "../../core/constants";
 import { DeviceProfileController } from "../../core/device-profile";
@@ -69,6 +70,7 @@ export class WatchZoneCameraLiveView extends LitElement {
   private readonly _controlsVisibility = new CameraControlsVisibilityController(
     this,
   );
+  private readonly _clientRuntime = getHomeAssistantClientRuntime();
   private readonly _deviceProfile = new DeviceProfileController(this);
 
   public set api(value: HomeAssistantApi | undefined) {
@@ -209,9 +211,8 @@ export class WatchZoneCameraLiveView extends LitElement {
         <div class="hls-host" ?hidden=${this._selected === "webrtc"}></div>
         <video
           class="webrtc"
-          autoplay
           playsinline
-          .muted=${this._muted}
+          muted
           aria-label="Live camera"
           ?hidden=${this._selected !== "webrtc"}
           @loadeddata=${this._handleWebRtcLoadedData}
@@ -309,6 +310,11 @@ export class WatchZoneCameraLiveView extends LitElement {
       this._releaseLeases();
       return;
     }
+    if (this._clientRuntime.catalyst) {
+      this._releaseWebRtcLease();
+      this._syncHlsLease();
+      return;
+    }
     const manager = getMediaSessionManager();
     const webRtcKey = `home_assistant:${this._entityId}`;
     if (this._webRtcLease?.key !== webRtcKey) {
@@ -340,7 +346,8 @@ export class WatchZoneCameraLiveView extends LitElement {
     ) {
       return;
     }
-    const key = `home_assistant_hls:${this._entityId}`;
+    const playbackMode = this._clientRuntime.catalyst ? "native" : "automatic";
+    const key = `home_assistant_hls${playbackMode === "native" ? "_native" : ""}:${this._entityId}`;
     if (this._hlsLease?.key === key) {
       return;
     }
@@ -349,6 +356,7 @@ export class WatchZoneCameraLiveView extends LitElement {
       this._api,
       this._entityId,
       {
+        hlsPlaybackMode: playbackMode,
         initialMuted: this._muted,
         onVideo: this._attachConnectingHlsVideo,
       },

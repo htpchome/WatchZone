@@ -58,8 +58,9 @@ export async function createHomeAssistantHlsConnection(
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
   video.preload = "auto";
-  setMediaElementMuted(video, options.initialMuted);
+  setMediaElementMuted(video, true);
   options.onVideo?.(video);
+  setMediaElementMuted(video, options.initialMuted);
 
   // Prime the actual selected element before its source exists. WebKit makes
   // its first audible-playback decision at this boundary; replacing the
@@ -166,14 +167,28 @@ export async function createHomeAssistantHlsConnection(
         return selectSingleVariant(manifest, streamUrl);
       },
     );
-    const hlsModulePromise = import("hls.js/dist/hls.light.mjs").then(
-      (module) => {
+    const startNativePlayback = (playlistUrl: string): void => {
+      if (!video.canPlayType(HLS_CONTENT_TYPE)) {
+        throw new Error("This browser does not support native HLS playback");
+      }
+      timing.mark("hls_native_path_selected");
+      video.src = playlistUrl;
+      void playMediaElement(video).catch(() => undefined);
+    };
+
+    if (
+      options.hlsPlaybackMode === "native" ||
+      Boolean(video.canPlayType(HLS_CONTENT_TYPE))
+    ) {
+      startNativePlayback(await manifestPromise);
+      return ready;
+    }
+
+    const [{ default: Hls }, playlistUrl] = await Promise.all([
+      import("hls.js/dist/hls.light.mjs").then((module) => {
         timing.mark("hls_engine_loaded");
         return module;
-      },
-    );
-    const [{ default: Hls }, playlistUrl] = await Promise.all([
-      hlsModulePromise,
+      }),
       manifestPromise,
     ]);
 
@@ -196,10 +211,6 @@ export async function createHomeAssistantHlsConnection(
       });
       player.loadSource(playlistUrl);
       player.attachMedia(video);
-    } else if (video.canPlayType(HLS_CONTENT_TYPE)) {
-      timing.mark("hls_native_path_selected");
-      video.src = playlistUrl;
-      void playMediaElement(video).catch(() => undefined);
     } else {
       throw new Error("This browser does not support HLS playback");
     }

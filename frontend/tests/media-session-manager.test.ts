@@ -204,6 +204,34 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
+  it("keeps Catalyst native HLS separate from the automatic HLS pool", async () => {
+    const hlsFactory = vi.fn<ConnectionFactory>(
+      async (_api, _entity, _signal, _failure, _timing, options) => ({
+        video: document.createElement("video"),
+        transport:
+          options.hlsPlaybackMode === "native" ? "hls_native" : "hls_mse",
+        close: vi.fn(),
+      }),
+    );
+    const manager = new MediaSessionManager(vi.fn(), hlsFactory);
+    const api = createApi();
+    const automatic = manager.acquireHomeAssistantHls(api, "camera.front");
+    const native = manager.acquireHomeAssistantHls(api, "camera.front", {
+      hlsPlaybackMode: "native",
+      initialMuted: false,
+    });
+
+    await vi.waitFor(() => expect(automatic.getSnapshot().state).toBe("live"));
+    await vi.waitFor(() => expect(native.getSnapshot().state).toBe("live"));
+    expect(automatic.key).toBe("home_assistant_hls:camera.front");
+    expect(native.key).toBe("home_assistant_hls_native:camera.front");
+    expect(hlsFactory).toHaveBeenCalledTimes(2);
+
+    automatic.release();
+    native.release();
+    manager.closeAll();
+  });
+
   it("hands a shared HLS element back to remaining leases without reconnecting", async () => {
     const video = document.createElement("video");
     const hlsFactory = vi.fn<ConnectionFactory>(async () => ({

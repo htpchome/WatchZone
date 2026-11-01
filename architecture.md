@@ -522,9 +522,12 @@ and full-size layouts and must not assume a dashboard column count or viewport.
 WatchZone supports current Chrome, Edge, Firefox, and Safari releases, plus
 Home Assistant Companion on Android and iOS and Home Assistant clients using
 Catalyst. Interfaces must work at phone, tablet, and desktop sizes with touch,
-pointer, and keyboard input. Chromium-only behavior, user-agent branching, and
-desktop-only interaction assumptions are prohibited. Browser capabilities are
-feature-detected at their ownership boundary; an unavailable media capability
+pointer, and keyboard input. Chromium-only behavior, scattered user-agent
+branching, and desktop-only interaction assumptions are prohibited. Browser
+capabilities are feature-detected at their ownership boundary. Home Assistant
+host identity that has no browser capability signal, currently Catalyst alone,
+is detected only by the shared client-runtime boundary and may select a
+dedicated lifecycle adapter. An unavailable media capability
 produces an explicit fallback or actionable local error rather than breaking
 the card. The normative platform and validation matrix is defined in
 [docs/platform-compatibility.md](docs/platform-compatibility.md).
