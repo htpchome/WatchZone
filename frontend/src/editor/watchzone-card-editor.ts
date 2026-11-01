@@ -12,9 +12,7 @@ import {
 } from "../core/constants";
 import { isHomeAssistant, type HomeAssistant } from "../core/home-assistant";
 import {
-  commitDraftForSave,
   type DirtyStateContext,
-  isDialogSaveClick,
   requestDirtyStateContext,
   seedDirtyState,
   updateDirtyState,
@@ -46,7 +44,7 @@ export class WatchZoneCardEditor extends LitElement {
   private _baselineSignature = "";
   private _config?: WatchZoneCardConfig;
   private _dirtyContext?: DirtyStateContext<WatchZoneCardConfig>;
-  private _dirtyUnsubscribe?: () => void;
+  private _dirtySeeded = false;
   private _hass?: HomeAssistant;
   private _previewTimer?: ReturnType<typeof setTimeout>;
 
@@ -89,22 +87,15 @@ export class WatchZoneCardEditor extends LitElement {
 
   public connectedCallback(): void {
     super.connectedCallback();
-    requestDirtyStateContext<WatchZoneCardConfig>(
-      this,
-      (context, unsubscribe) => {
-        this._dirtyContext = context;
-        this._dirtyUnsubscribe ??= unsubscribe;
-        this._seedDirtyState();
-      },
-    );
-    document.addEventListener("click", this._handleDocumentClick, true);
+    requestDirtyStateContext<WatchZoneCardConfig>(this, (context) => {
+      this._dirtyContext = context;
+      this._seedDirtyState();
+    });
   }
 
   public disconnectedCallback(): void {
-    document.removeEventListener("click", this._handleDocumentClick, true);
-    this._dirtyUnsubscribe?.();
-    this._dirtyUnsubscribe = undefined;
     this._dirtyContext = undefined;
+    this._dirtySeeded = false;
     if (this._previewTimer) {
       clearTimeout(this._previewTimer);
       this._previewTimer = undefined;
@@ -135,9 +126,13 @@ export class WatchZoneCardEditor extends LitElement {
   }
 
   private _seedDirtyState(): void {
-    if (this._dirtyContext && this._baseline) {
+    if (this._dirtyContext && this._baseline && !this._dirtySeeded) {
+      this._dirtySeeded = true;
       seedDirtyState(this._dirtyContext, this._baseline);
-      if (this._config) {
+      if (
+        this._config &&
+        cardConfigSignature(this._config) !== this._baselineSignature
+      ) {
         updateDirtyState(this._dirtyContext, this._config);
       }
     }
@@ -151,14 +146,14 @@ export class WatchZoneCardEditor extends LitElement {
     this._updateTitle((event.currentTarget as InputElement).value, true);
   }
 
-  private _updateTitle(rawTitle: string, immediatePreview: boolean): void {
+  private _updateTitle(rawTitle: string, commitConfig: boolean): void {
     const title = rawTitle.trim();
     if (!this._config || title.length === 0) {
       return;
     }
 
     const nextConfig = normalizeCardConfig({ ...this._config, title });
-    this._applyDraft(nextConfig, immediatePreview, !immediatePreview);
+    this._applyDraft(nextConfig, commitConfig);
   }
 
   private readonly _handleCameraChange = (event: ValueChangedEvent): void => {
@@ -172,13 +167,12 @@ export class WatchZoneCardEditor extends LitElement {
     } else {
       delete next.camera_entity;
     }
-    this._applyDraft(normalizeCardConfig(next), true, false);
+    this._applyDraft(normalizeCardConfig(next), true);
   };
 
   private _applyDraft(
     nextConfig: WatchZoneCardConfig,
-    immediatePreview: boolean,
-    coalescePreview: boolean,
+    commitConfig: boolean,
   ): void {
     const changed =
       !this._config ||
@@ -192,20 +186,16 @@ export class WatchZoneCardEditor extends LitElement {
     }
 
     if (
-      !this._dirtyContext &&
-      immediatePreview &&
+      commitConfig &&
       cardConfigSignature(nextConfig) !== this._baselineSignature
     ) {
-      this._dispatchCompatibilityConfigChange(nextConfig);
+      this._dispatchConfigChange(nextConfig);
     }
 
     if (this._previewTimer) {
       clearTimeout(this._previewTimer);
     }
-    if (immediatePreview) {
-      this._previewTimer = undefined;
-      this._publishPreview(nextConfig);
-    } else if (changed && coalescePreview) {
+    if (!commitConfig && changed) {
       this._previewTimer = setTimeout(() => {
         this._previewTimer = undefined;
         this._publishPreview(nextConfig);
@@ -224,9 +214,7 @@ export class WatchZoneCardEditor extends LitElement {
     );
   }
 
-  private _dispatchCompatibilityConfigChange(
-    config: WatchZoneCardConfig,
-  ): void {
+  private _dispatchConfigChange(config: WatchZoneCardConfig): void {
     this.dispatchEvent(
       new CustomEvent("config-changed", {
         detail: { config },
@@ -235,12 +223,6 @@ export class WatchZoneCardEditor extends LitElement {
       }),
     );
   }
-
-  private readonly _handleDocumentClick = (event: Event): void => {
-    if (this._config && isDialogSaveClick(this, event)) {
-      commitDraftForSave(this, this._config);
-    }
-  };
 
   static styles = css`
     :host {

@@ -7,6 +7,7 @@ import {
 } from "../core/config";
 import {
   APP_NAME,
+  APP_VERSION,
   CARD_TAG,
   CARD_TYPE,
   DEFAULT_CARD_TITLE,
@@ -35,6 +36,8 @@ function loadLiveModule(): Promise<unknown> {
 }
 
 export class WatchZoneCard extends LitElement {
+  public static readonly watchZoneVersion = APP_VERSION;
+
   private _config: WatchZoneCardConfig = normalizeCardConfig({});
   private _hass?: HomeAssistant;
   private _haApi?: HomeAssistantApi;

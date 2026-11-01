@@ -14,6 +14,7 @@ interface ContextRequest extends Event {
     setState(config: WatchZoneCardConfig, key: string): void;
   }) => void;
   context?: string;
+  subscribe?: boolean;
 }
 
 interface InputElement extends HTMLElement {
@@ -104,7 +105,7 @@ describe("watchzone-card-editor", () => {
     });
   });
 
-  it("updates the camera draft without rebuilding the preview card", async () => {
+  it("commits one complete camera draft through the public event", async () => {
     const states: WatchZoneCardConfig[] = [];
     const contextHandler = (event: Event) => {
       const request = event as ContextRequest;
@@ -124,7 +125,6 @@ describe("watchzone-card-editor", () => {
     editor.addEventListener("config-changed", changed);
     document.body.append(card, editor);
     await Promise.all([card.updateComplete, editor.updateComplete]);
-    const cardSurface = card.shadowRoot?.querySelector("ha-card");
     const selector = editor.shadowRoot?.querySelector("ha-selector");
 
     selector?.dispatchEvent(
@@ -134,25 +134,52 @@ describe("watchzone-card-editor", () => {
         composed: true,
       }),
     );
-    await vi.waitFor(() =>
-      expect(
-        card.shadowRoot?.querySelector("watchzone-card-live"),
-      ).not.toBeNull(),
-    );
-
-    expect(changed).not.toHaveBeenCalled();
+    expect(changed).toHaveBeenCalledOnce();
+    expect(changed.mock.calls[0][0].detail.config).toMatchObject({
+      camera_entity: "camera.front",
+    });
     expect(states.at(-1)).toMatchObject({ camera_entity: "camera.front" });
-    expect(card.shadowRoot?.querySelector("ha-card")).toBe(cardSurface);
     document.removeEventListener("context-request", contextHandler);
   });
 
-  it("hands the complete draft to Home Assistant immediately before Save", async () => {
-    const dialog = document.createElement(
-      "hui-dialog-edit-card",
-    ) as HTMLElement & {
-      _cardConfig?: WatchZoneCardConfig;
+  it("uses a one-time dirty-state writer without subscribing", async () => {
+    let publishContext: ContextRequest["callback"];
+    let subscribed = false;
+    let stateWrites = 0;
+    const setState = (): void => {
+      stateWrites += 1;
+      if (subscribed) {
+        publishContext?.({ setState });
+      }
     };
-    const root = dialog.attachShadow({ mode: "open" });
+    const contextHandler = (event: Event) => {
+      const request = event as ContextRequest;
+      subscribed = request.subscribe === true;
+      publishContext = request.callback;
+      request.callback?.({ setState });
+    };
+    document.addEventListener("context-request", contextHandler);
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as WatchZoneCardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    document.body.append(editor);
+    await editor.updateComplete;
+
+    editor.shadowRoot?.querySelector("ha-selector")?.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: "camera.front" },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+
+    expect(stateWrites).toBe(2);
+    expect(subscribed).toBe(false);
+    document.removeEventListener("context-request", contextHandler);
+  });
+
+  it("commits the complete draft through the public config event", async () => {
     const editor = document.createElement(
       "watchzone-card-editor",
     ) as WatchZoneCardEditor;
@@ -161,16 +188,16 @@ describe("watchzone-card-editor", () => {
       title: "Original",
       grid_options: { columns: 8 },
     });
-    const save = document.createElement("button");
-    save.slot = "primaryAction";
-    root.append(editor, save);
-    document.body.append(dialog);
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
     await editor.updateComplete;
 
-    inputTitle(editor, "Saved draft");
-    save.click();
+    const input = inputTitle(editor, "Saved draft");
+    input.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
 
-    expect(dialog._cardConfig).toEqual({
+    expect(changed).toHaveBeenCalledOnce();
+    expect(changed.mock.calls[0][0].detail.config).toEqual({
       type: CARD_TYPE,
       title: "Saved draft",
       grid_options: { columns: 8 },

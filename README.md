@@ -1,7 +1,7 @@
 # WatchZone
 
 WatchZone is a modular camera interface delivered as one Home Assistant custom
-integration. Version `0.0.4-dev.1` provides a responsive, theme-aware Lovelace
+integration. Version `0.0.4-dev.2` provides a responsive, theme-aware Lovelace
 card with a title editor and an initial retained Home Assistant WebRTC camera
 view. Backend camera providers have not been added yet.
 
@@ -37,6 +37,14 @@ the Python-side resource-registration mechanism. After that baseline is active:
 - The F12 banner identifies the loaded frontend version and commit build. If it
   shows an older version, that client is still running an older document or
   bundle.
+- The authoritative runtime value is available as `window.watchZone` in the
+  browser console. Its `version`, `build`, and `activeCardVersion` fields show
+  the loaded asset and the custom element actually rendering the card.
+- If one page prints two WatchZone banners or `activeCardVersion` differs from
+  `version`, an older bundle already registered the card in that browser
+  document. Clear the Home Assistant site's frontend data once (or use the
+  Companion app's frontend-cache reset), then reopen Home Assistant. Custom
+  elements cannot be replaced inside an already loaded document.
 
 HACS may still display a restart-required notice because WatchZone is packaged
 as an integration; that notice does not make a frontend-only asset replacement

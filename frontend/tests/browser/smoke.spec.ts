@@ -1,9 +1,29 @@
 import { expect, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
+
+const pageErrors = new WeakMap<Page, string[]>();
+
+async function waitForWatchZoneDefinition(page: Page): Promise<void> {
+  await page.waitForFunction(
+    () => customElements.get("watchzone-card") !== undefined,
+  );
+}
+
+test.beforeEach(async ({ page }) => {
+  const errors: string[] = [];
+  pageErrors.set(page, errors);
+  page.on("pageerror", (error) => errors.push(error.message));
+});
+
+test.afterEach(async ({ page }) => {
+  expect(pageErrors.get(page)).toEqual([]);
+});
 
 test("loads the responsive WatchZone card shell", async ({ page }) => {
   const consoleMessages: string[] = [];
   page.on("console", (message) => consoleMessages.push(message.text()));
   await page.goto("/");
+  await waitForWatchZoneDefinition(page);
 
   await expect(page.locator("watchzone-card")).toContainText("WatchZone");
   await expect(page.locator("watchzone-card ha-card")).toBeVisible();
@@ -11,9 +31,15 @@ test("loads the responsive WatchZone card shell", async ({ page }) => {
     consoleMessages.some(
       (message) =>
         message.includes("WatchZone") &&
-        message.includes("v0.0.4-dev.1 (local)"),
+        message.includes("CURRENT") &&
+        message.includes("v0.0.4-dev.2 (local)"),
     ),
   ).toBe(true);
+  expect(await page.evaluate(() => window.watchZone)).toMatchObject({
+    activeCardVersion: "0.0.4-dev.2",
+    build: "local",
+    version: "0.0.4-dev.2",
+  });
 });
 
 test("fits phone, tablet, and desktop viewports without horizontal overflow", async ({
@@ -26,6 +52,7 @@ test("fits phone, tablet, and desktop viewports without horizontal overflow", as
   ]) {
     await page.setViewportSize(viewport);
     await page.goto("/");
+    await waitForWatchZoneDefinition(page);
     await expect(page.locator("watchzone-card ha-card")).toBeVisible();
     expect(
       await page.evaluate(
@@ -35,10 +62,79 @@ test("fits phone, tablet, and desktop viewports without horizontal overflow", as
   }
 });
 
+test("camera selection does not recursively republish dirty state", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+
+  const stateWrites = await page.evaluate(async () => {
+    interface ContextRequest extends Event {
+      callback?: (context: {
+        setState(config: unknown, key: string): void;
+      }) => void;
+      context?: string;
+      subscribe?: boolean;
+    }
+
+    interface TestEditor extends HTMLElement {
+      setConfig(config: unknown): void;
+      updateComplete: Promise<boolean>;
+    }
+
+    interface TestCardConstructor extends CustomElementConstructor {
+      getConfigElement(): Promise<TestEditor>;
+    }
+
+    let callback: ContextRequest["callback"];
+    let subscribed = false;
+    let writes = 0;
+    const setState = (): void => {
+      writes += 1;
+      if (subscribed) {
+        callback?.({ setState });
+      }
+    };
+    const handleContext = (event: Event): void => {
+      const request = event as ContextRequest;
+      if (request.context === "dirtyState") {
+        subscribed = request.subscribe === true;
+        callback = request.callback;
+        callback?.({ setState });
+      }
+    };
+    document.addEventListener("context-request", handleContext);
+
+    const cardConstructor = customElements.get(
+      "watchzone-card",
+    ) as TestCardConstructor;
+    const editor = await cardConstructor.getConfigElement();
+    editor.setConfig({
+      type: "custom:watchzone-card",
+      title: "Camera",
+    });
+    document.body.append(editor);
+    await editor.updateComplete;
+    editor.shadowRoot?.querySelector("ha-selector")?.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: "camera.front" },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+
+    document.removeEventListener("context-request", handleContext);
+    return { subscribed, writes };
+  });
+
+  expect(stateWrites).toEqual({ subscribed: false, writes: 2 });
+});
+
 test("retains one live connection while the card presentation is replaced", async ({
   page,
 }) => {
   await page.goto("/");
+  await waitForWatchZoneDefinition(page);
 
   await page.evaluate(async () => {
     interface TestCard extends HTMLElement {

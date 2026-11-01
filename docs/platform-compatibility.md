@@ -58,6 +58,11 @@ Browser-visible changes run Playwright against:
 - WebKit, representing the closest automated Safari engine coverage available
   outside Apple hardware.
 
+The browser harness loads the same scoped custom-element registry polyfill used
+by Home Assistant before importing WatchZone. A test environment without that
+polyfill does not exercise Home Assistant's custom-element constructor rules
+and is insufficient for card lifecycle validation.
+
 Responsive tests use component/container sizes representative of at least:
 
 - Phone: 320 to 480 CSS pixels.

@@ -14,8 +14,10 @@ The editor keeps three concepts separate:
 - **Baseline:** the configuration Home Assistant supplied when the editor
   opened.
 - **Draft:** the normalized local configuration currently shown in controls.
-- **Saved configuration:** the draft handed to Home Assistant only when the
-  user chooses Save.
+- **Committed dialog configuration:** the draft handed to Home Assistant with
+  the public `config-changed` event after a control commit.
+- **Saved configuration:** Home Assistant's committed dialog configuration
+  persisted only when the user chooses Save.
 
 The first `setConfig` value establishes the baseline. Editing updates the draft
 without replacing that baseline. Cancel discards the draft. Save hands the
@@ -25,21 +27,28 @@ complete normalized draft to Home Assistant.
 
 The primary editor path requests Home Assistant's `dirtyState` context with a
 composed `context-request` event. The editor seeds its stable WatchZone key
-with the baseline and updates that same key with each normalized draft.
+with the baseline and updates that same key with each normalized draft. The
+first write for the key establishes the baseline. WatchZone only needs the
+context's stable writer closure, so it makes a one-time, non-subscribing context
+request. It must not subscribe to provider publications unless a future feature
+actually reads `isDirty` or `isEffectiveDirty`; write-only subscription creates
+unnecessary reentrancy and lifecycle work.
 
 The editor must not emit `config-changed` for each `input` event. Home
 Assistant treats that event as card configuration and may reconstruct the
 preview, destroying component identity and eventually expensive live media
 state.
 
-Immediately before Home Assistant handles Save, the adapter hands the final
-draft to the edit-card dialog. Any dependency on an internal Home Assistant
-dialog member is isolated in `editor/dirty-state.ts`, covered by tests, and
-reviewed whenever the minimum supported Home Assistant version changes.
+On a semantic control commit—`change` for text or one selection event for a
+selector—the editor emits one standard composed `config-changed` event with the
+complete normalized draft. Home Assistant then owns the committed dialog
+configuration and its normal Save/Cancel behavior. WatchZone must not mutate
+private dialog fields, call protected dirty-state methods, intercept the Save
+button, or depend on the dialog's shadow-DOM structure.
 
-For versions without the dirty-state context, a compatibility path may emit
-one `config-changed` event on a committed control change. It may not emit that
-event for every keystroke and remains isolated in the adapter boundary.
+For versions without the dirty-state context, committed controls still use the
+same public `config-changed` path. Typing may update WatchZone's soft preview,
+but it does not repeatedly emit `config-changed`.
 
 ## 4. Soft preview updates
 
@@ -47,7 +56,8 @@ Draft preview is a WatchZone-owned presentation path. It never mutates saved
 configuration.
 
 - Text input is coalesced with a short delay.
-- A control commit/change event flushes the latest draft immediately.
+- A control commit/change event hands the latest draft to Home Assistant once;
+  Home Assistant performs its normal committed preview update.
 - Only the editor preview matching the draft baseline accepts the update.
 - Existing preview custom-element identity is preserved.
 - Leaving the editor clears the preview draft, timers, and listeners.
@@ -78,15 +88,17 @@ Every new card configuration option includes, in the same change:
 2. A Home Assistant-compatible themed control.
 3. Draft and dirty-state wiring under the stable editor key.
 4. A soft-preview policy that preserves component identity.
-5. Save, cancel, and compatibility behavior where applicable.
+5. Public `config-changed`, Save, Cancel, and context-republication behavior.
 6. Tests proving typing does not repeatedly emit `config-changed` or replace
    the preview element.
 7. Cleanup for listeners, timers, observers, and asynchronous work.
 
 ## 7. Authoritative references
 
-- Home Assistant 2026.8 frontend component update and dirty-state guidance:
-  <https://developers.home-assistant.io/blog/2026/07/31/frontend-component-updates-2026.8/>
+- Home Assistant dirty-state provider and consumer contract:
+  <https://github.com/home-assistant/frontend/blob/dev/src/mixins/dirty-state-provider-mixin.ts>
+- Home Assistant Lovelace card-edit dialog lifecycle:
+  <https://github.com/home-assistant/frontend/blob/dev/src/panels/lovelace/editor/card-editor/hui-dialog-edit-card.ts>
 - Home Assistant custom card editor guidance:
   <https://contributors.home-assistant.io/frontend/custom-ui/card-editor/>
 - Home Assistant frontend components:

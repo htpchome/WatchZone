@@ -7,6 +7,9 @@
   </head>
   <body>
     <watchzone-card></watchzone-card>
-    <script type="module" src="/src/main.ts"></script>
+    <script type="module">
+      import "@webcomponents/scoped-custom-element-registry/scoped-custom-element-registry.min";
+      await import("/src/main.ts");
+    </script>
   </body>
 </html>
