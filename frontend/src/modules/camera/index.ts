@@ -127,6 +127,9 @@ export class WatchZoneCamera extends LitElement {
           this._hlsSnapshot.state === "failed"
         ? (this._webRtcSnapshot.error ?? this._hlsSnapshot.error)
         : undefined;
+    const showConnectionIndicator = Boolean(
+      this._initialTransport || (this._available && !error),
+    );
     return html`
       <div class="viewport">
         <div class="generic-fallback" aria-hidden="true">
@@ -162,12 +165,26 @@ export class WatchZoneCamera extends LitElement {
           @loadeddata=${this._handleWebRtcLoadedData}
         ></video>
         ${
-          this._initialTransport
+          showConnectionIndicator
             ? html`<div
                 class="source-indicator"
-                aria-label=${`Live source: ${sourceLabel}`}
+                role="status"
+                aria-live="polite"
+                aria-label=${
+                  this._initialTransport
+                    ? `Live source: ${sourceLabel}`
+                    : "Connecting to camera"
+                }
               >
-                ${sourceLabel}
+                ${
+                  this._initialTransport
+                    ? sourceLabel
+                    : html`<span
+                          class="connection-spinner"
+                          aria-hidden="true"
+                        ></span>
+                        <span>Connecting…</span>`
+                }
               </div>`
             : nothing
         }
@@ -200,11 +217,7 @@ export class WatchZoneCamera extends LitElement {
                   }
                 </div>
               </div>`
-            : !this._selected
-              ? html`<div class="status" role="status">
-                  <div class="status-content">Connecting…</div>
-                </div>`
-              : nothing
+            : nothing
         }
       </div>
     `;
@@ -508,6 +521,22 @@ export class WatchZoneCamera extends LitElement {
       min-inline-size: 0;
       min-block-size: 0;
       color: var(--wzc-text-color, var(--primary-text-color));
+
+      --wzc-overlay-color: var(
+        --card-background-color,
+        var(--primary-background-color, Canvas)
+      );
+      --wzc-overlay-background: color-mix(
+        in srgb,
+        var(--primary-text-color, CanvasText) 94%,
+        transparent
+      );
+      --wzc-overlay-border-color: var(
+        --divider-color,
+        color-mix(in srgb, CanvasText 24%, transparent)
+      );
+      --wzc-overlay-radius: 0.25rem;
+      --wzc-overlay-shadow: var(--ha-card-box-shadow, none);
     }
 
     .viewport {
@@ -587,25 +616,50 @@ export class WatchZoneCamera extends LitElement {
     .source-indicator {
       position: absolute;
       z-index: 1;
-      inset-block-start: 0.5rem;
-      inset-inline-end: 0.5rem;
+      inset-block-start: max(0.5rem, env(safe-area-inset-top, 0px));
+      inset-inline-end: calc(0.5rem + env(safe-area-inset-right, 0px));
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
       padding: 0.25rem 0.5rem;
-      color: var(--wzc-live-indicator-color, var(--primary-text-color));
-      background: color-mix(
-        in srgb,
-        var(
-            --wzc-live-indicator-background,
-            var(--card-background-color, var(--primary-background-color))
-          )
-          86%,
-        transparent
+      color: var(--wzc-live-indicator-color, var(--wzc-overlay-color));
+      background: var(
+        --wzc-live-indicator-background,
+        var(--wzc-overlay-background)
       );
-      border: 1px solid var(--divider-color);
-      border-radius: var(--ha-border-radius-pill, 999px);
+      border: 1px solid
+        var(--wzc-live-indicator-border-color, var(--wzc-overlay-border-color));
+      border-radius: var(
+        --wzc-live-indicator-radius,
+        var(--wzc-overlay-radius)
+      );
+      box-shadow: var(--wzc-live-indicator-shadow, var(--wzc-overlay-shadow));
       font-size: 0.75rem;
       font-weight: 600;
       line-height: 1.25;
       pointer-events: none;
+    }
+
+    .connection-spinner {
+      box-sizing: border-box;
+      inline-size: 0.7rem;
+      block-size: 0.7rem;
+      border: 2px solid color-mix(in srgb, currentColor 35%, transparent);
+      border-block-start-color: currentColor;
+      border-radius: 50%;
+      animation: wzc-connection-spin 0.8s linear infinite;
+    }
+
+    @keyframes wzc-connection-spin {
+      to {
+        transform: rotate(1turn);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .connection-spinner {
+        animation: none;
+      }
     }
 
     .status {

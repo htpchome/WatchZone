@@ -190,23 +190,41 @@ export class WatchZoneCameraControls extends LitElement {
       padding: 0;
       color: var(
         --wzc-control-color,
-        var(--card-background-color, var(--primary-background-color, Canvas))
+        var(
+          --wzc-overlay-color,
+          var(--card-background-color, var(--primary-background-color, Canvas))
+        )
       );
       background: var(
         --wzc-control-background,
-        color-mix(
-          in srgb,
-          var(--primary-text-color, CanvasText) 82%,
-          transparent
+        var(
+          --wzc-overlay-background,
+          color-mix(
+            in srgb,
+            var(--primary-text-color, CanvasText) 94%,
+            transparent
+          )
         )
       );
       border: 1px solid
         var(
           --wzc-control-border-color,
-          var(--divider-color, color-mix(in srgb, CanvasText 24%, transparent))
+          var(
+            --wzc-overlay-border-color,
+            var(
+              --divider-color,
+              color-mix(in srgb, CanvasText 24%, transparent)
+            )
+          )
         );
-      border-radius: var(--wzc-control-radius, 0.25rem);
-      box-shadow: var(--wzc-control-shadow, var(--ha-card-box-shadow, none));
+      border-radius: var(
+        --wzc-control-radius,
+        var(--wzc-overlay-radius, 0.25rem)
+      );
+      box-shadow: var(
+        --wzc-control-shadow,
+        var(--wzc-overlay-shadow, var(--ha-card-box-shadow, none))
+      );
       font: inherit;
       cursor: pointer;
       touch-action: manipulation;

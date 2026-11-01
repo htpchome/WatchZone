@@ -395,12 +395,20 @@ test("retains one live connection while the card presentation is replaced", asyn
   });
 
   const video = page.locator("watchzone-camera video.webrtc");
+  const connectionIndicator = page.locator(
+    "watchzone-camera .source-indicator",
+  );
+  await expect(connectionIndicator).toHaveText("Connecting…");
+  await expect(
+    connectionIndicator.locator(".connection-spinner"),
+  ).toBeVisible();
   await video.evaluate((element) =>
     element.dispatchEvent(new Event("loadeddata")),
   );
   await expect(video).toBeVisible();
-  await expect(page.locator("watchzone-camera .source-indicator")).toHaveText(
-    "WebRTC",
+  await expect(connectionIndicator).toHaveText("WebRTC");
+  await expect(connectionIndicator.locator(".connection-spinner")).toHaveCount(
+    0,
   );
   const controls = page.locator(
     "watchzone-camera watchzone-camera-controls .control-button",
@@ -413,6 +421,7 @@ test("retains one live connection while the card presentation is replaced", asyn
       backgrounds: buttons.map(
         (button) => getComputedStyle(button).backgroundColor,
       ),
+      borders: buttons.map((button) => getComputedStyle(button).borderColor),
       gaps: rectangles.slice(1).map((rectangle, index) => {
         return rectangle.top - rectangles[index].bottom;
       }),
@@ -446,6 +455,27 @@ test("retains one live connection while the card presentation is replaced", asyn
       (icon) => icon.hasGeometry && icon.namespacesValid,
     ),
   ).toBe(true);
+  const indicatorPresentation = await connectionIndicator.evaluate(
+    (element) => {
+      const style = getComputedStyle(element);
+      return {
+        background: style.backgroundColor,
+        border: style.borderColor,
+        borderRadius: style.borderRadius,
+      };
+    },
+  );
+  expect(
+    controlPresentation.backgrounds.every(
+      (background) => background === indicatorPresentation.background,
+    ),
+  ).toBe(true);
+  expect(
+    controlPresentation.borders.every(
+      (border) => border === indicatorPresentation.border,
+    ),
+  ).toBe(true);
+  expect(indicatorPresentation.borderRadius).not.toBe("999px");
   await expect(
     page.locator(
       'watchzone-camera watchzone-camera-controls [data-control="snapshot"]',

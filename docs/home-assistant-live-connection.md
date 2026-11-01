@@ -61,6 +61,9 @@ For the initial Home Assistant direct source, WatchZone uses a hedged startup:
    shared HLS session used by another consumer is not closed.
 5. If only one path succeeds, it remains selected. An error is shown only when
    both paths fail.
+6. The upper-right connection indicator shows `Connecting…` while candidates
+   race, then replaces that content in place with the initial winning transport.
+   A later WebRTC takeover does not rewrite the initial connection label.
 
 This policy deliberately avoids a preliminary capability request because that
 extra serial round trip would delay both candidates. Unsupported paths fail
