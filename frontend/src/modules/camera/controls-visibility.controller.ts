@@ -1,6 +1,6 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
-import { CAMERA_CONTROLS_HIDE_DELAY_MS } from "../../core/constants";
+import { CAMERA_OVERLAY_HIDE_DELAY_MS } from "./constants";
 
 /** Owns transient pointer visibility without coupling timers to rendering. */
 export class CameraControlsVisibilityController implements ReactiveController {
@@ -73,7 +73,7 @@ export class CameraControlsVisibilityController implements ReactiveController {
       if (this._hovered || this._focused || !this.visible) return;
       this.visible = false;
       this._host.requestUpdate();
-    }, CAMERA_CONTROLS_HIDE_DELAY_MS);
+    }, CAMERA_OVERLAY_HIDE_DELAY_MS);
   }
 
   private _clearHideTimer(): void {

@@ -112,6 +112,7 @@ architecture decision recorded in this document or a future ADR.
 ```text
 .
 ├── architecture.md
+├── ROADMAP.md                      # Living future-capability reference
 ├── hacs.json                       # HACS release-install metadata
 ├── docs/
 │   ├── config-editor-lifecycle.md # Draft and preview contract
@@ -399,11 +400,14 @@ same internal single-camera presentation contract. Overlay controls dispatch
 typed intent and do not own connection adapters or duplicate media-session
 policy.
 
-Transient control visibility belongs to a Lit reactive controller within the
-camera feature. Pointer hover, touch, and keyboard focus share that policy;
-behavioral delays are named constants rather than literals embedded in views
-or styles. The non-control connection/source indicator remains independent of
-control visibility.
+Transient interaction-overlay visibility belongs to a Lit reactive controller
+within the camera feature. Pointer hover, touch, and keyboard focus share that
+policy; behavioral delays are named constants rather than literals embedded in
+views or styles. The source indicator remains an independent non-control
+overlay, but after its exceptions it consumes the same interaction visibility
+state and hide timer as the control overlay. Its exceptions are that Connecting
+remains visible continuously and the first resolved source receives one
+automatic timed introduction before ordinary interaction-controlled behavior.
 
 ### 8.4 Custom elements and Lit
 

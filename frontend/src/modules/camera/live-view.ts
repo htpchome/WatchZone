@@ -10,6 +10,7 @@ import {
 } from "../../core/media-session-manager";
 import type { CameraControlEventDetail } from "./controls-overlay";
 import "./controls-overlay";
+import { CAMERA_OVERLAY_HIDE_DELAY_MS } from "./constants";
 import { CameraControlsVisibilityController } from "./controls-visibility.controller";
 import { cameraLiveViewStyles } from "./live-view.styles";
 import {
@@ -50,6 +51,8 @@ export class WatchZoneCameraLiveView extends LitElement {
   private _posterFailed = false;
   private _posterUrl?: string;
   private _selected?: "hls" | "webrtc";
+  private _sourceIntroductionTimer?: ReturnType<typeof setTimeout>;
+  private _sourceIntroductionVisible = false;
   private _webRtcDecoded = false;
   private _webRtcLease?: MediaSessionLease;
   private _webRtcSnapshot: MediaSessionSnapshot = { state: "new" };
@@ -62,7 +65,7 @@ export class WatchZoneCameraLiveView extends LitElement {
     if (this._api?.identity === value?.identity) {
       return;
     }
-    this._initialTransport = undefined;
+    this._resetInitialTransport();
     this._releaseLeases();
     this._api = value;
     this._syncLeases();
@@ -81,7 +84,7 @@ export class WatchZoneCameraLiveView extends LitElement {
     if (this._entityId === value) {
       return;
     }
-    this._initialTransport = undefined;
+    this._resetInitialTransport();
     this._controlError = undefined;
     this._releaseLeases();
     this._entityId = value;
@@ -113,6 +116,7 @@ export class WatchZoneCameraLiveView extends LitElement {
       this._syncControlState,
     );
     this._setActiveVideo(undefined);
+    this._clearSourceIntroduction();
     this._releaseLeases();
     super.disconnectedCallback();
   }
@@ -132,9 +136,13 @@ export class WatchZoneCameraLiveView extends LitElement {
           this._hlsSnapshot.state === "failed"
         ? (this._webRtcSnapshot.error ?? this._hlsSnapshot.error)
         : undefined;
-    const showConnectionIndicator = Boolean(
-      this._initialTransport || (this._available && !error),
+    const connecting = this._available && !error && !this._selected;
+    const showSource = Boolean(
+      this._selected &&
+      this._initialTransport &&
+      (this._sourceIntroductionVisible || this._controlsVisibility.visible),
     );
+    const showConnectionIndicator = connecting || showSource;
     return html`
       <div
         class="viewport"
@@ -185,13 +193,13 @@ export class WatchZoneCameraLiveView extends LitElement {
                 role="status"
                 aria-live="polite"
                 aria-label=${
-                  this._initialTransport
+                  showSource
                     ? `Live source: ${sourceLabel}`
                     : "Connecting to camera"
                 }
               >
                 ${
-                  this._initialTransport
+                  showSource
                     ? sourceLabel
                     : html`<span
                           class="connection-spinner"
@@ -316,7 +324,7 @@ export class WatchZoneCameraLiveView extends LitElement {
       this._hlsSnapshot = snapshot;
       if (snapshot.state === "live" && !this._selected) {
         this._selected = "hls";
-        this._initialTransport ??= snapshot.transport;
+        this._setInitialTransport(snapshot.transport);
         this._setActiveVideo(snapshot.video);
         snapshot.timing?.mark("presentation_selected");
       } else if (snapshot.state === "failed" && this._selected === "hls") {
@@ -380,7 +388,7 @@ export class WatchZoneCameraLiveView extends LitElement {
     this._webRtcDecoded = true;
     this._webRtcSnapshot.timing?.mark("first_frame_decoded");
     this._webRtcSnapshot.timing?.mark("presentation_selected");
-    this._initialTransport ??= "webrtc";
+    this._setInitialTransport("webrtc");
     this._selected = "webrtc";
     this._setActiveVideo(event.currentTarget as HTMLVideoElement);
     this._releaseHlsLease(true);
@@ -404,6 +412,36 @@ export class WatchZoneCameraLiveView extends LitElement {
     this._activeVideo = video;
     suppressNativePictureInPicture(video);
     this._syncControlState();
+  }
+
+  private _setInitialTransport(transport: MediaTransport | undefined): void {
+    if (!transport || this._initialTransport) {
+      return;
+    }
+    this._initialTransport = transport;
+    this._clearSourceIntroduction();
+    this._sourceIntroductionVisible = true;
+    this._sourceIntroductionTimer = setTimeout(() => {
+      this._sourceIntroductionTimer = undefined;
+      if (!this._sourceIntroductionVisible) {
+        return;
+      }
+      this._sourceIntroductionVisible = false;
+      this.requestUpdate();
+    }, CAMERA_OVERLAY_HIDE_DELAY_MS);
+  }
+
+  private _resetInitialTransport(): void {
+    this._initialTransport = undefined;
+    this._clearSourceIntroduction();
+  }
+
+  private _clearSourceIntroduction(): void {
+    if (this._sourceIntroductionTimer !== undefined) {
+      clearTimeout(this._sourceIntroductionTimer);
+      this._sourceIntroductionTimer = undefined;
+    }
+    this._sourceIntroductionVisible = false;
   }
 
   private readonly _syncControlState = (): void => {

@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
+import { CAMERA_OVERLAY_HIDE_DELAY_MS } from "../../src/modules/camera/constants";
+
 const packageJson = JSON.parse(
   readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
 ) as { version: string };
@@ -645,6 +647,10 @@ test("retains one live connection while the card presentation is replaced", asyn
       rounded_outer_corners: false,
       outer_shadows: false,
     });
+    replacement.style.setProperty(
+      "--ha-box-shadow-s",
+      "rgb(4, 5, 6) 0px 3px 7px",
+    );
     replacement.hass = testWindow.__watchZoneTestHass;
     document.body.append(replacement);
   });
@@ -657,6 +663,8 @@ test("retains one live connection while the card presentation is replaced", asyn
   await expect(
     connectionIndicator.locator(".connection-spinner"),
   ).toBeVisible();
+  await page.waitForTimeout(CAMERA_OVERLAY_HIDE_DELAY_MS + 250);
+  await expect(connectionIndicator).toHaveText("Connecting…");
   await video.evaluate((element) =>
     element.dispatchEvent(new Event("loadeddata")),
   );
@@ -665,12 +673,16 @@ test("retains one live connection while the card presentation is replaced", asyn
   await expect(connectionIndicator.locator(".connection-spinner")).toHaveCount(
     0,
   );
+  await expect(connectionIndicator).toBeHidden({
+    timeout: CAMERA_OVERLAY_HIDE_DELAY_MS + 1_000,
+  });
   const controls = page.locator(
     "watchzone-camera watchzone-camera-controls .control-button",
   );
   await expect(controls).toHaveCount(5);
   await expect(controls.first()).toBeHidden();
   const viewport = page.locator("watchzone-camera-live-view .viewport");
+  const cameraSurface = page.locator("watchzone-camera .camera");
   await expect
     .poll(() =>
       viewport.evaluate((element) => getComputedStyle(element).borderRadius),
@@ -680,7 +692,12 @@ test("retains one live connection while the card presentation is replaced", asyn
     .poll(() =>
       viewport.evaluate((element) => getComputedStyle(element).boxShadow),
     )
-    .not.toBe("none");
+    .toBe("none");
+  await expect
+    .poll(() =>
+      cameraSurface.evaluate((element) => getComputedStyle(element).boxShadow),
+    )
+    .toContain("rgb(4, 5, 6)");
   const cameraIdentityRetained = await page
     .locator("watchzone-card")
     .evaluate(async (element) => {
@@ -712,11 +729,12 @@ test("retains one live connection while the card presentation is replaced", asyn
     .toBe("0px");
   await expect
     .poll(() =>
-      viewport.evaluate((element) => getComputedStyle(element).boxShadow),
+      cameraSurface.evaluate((element) => getComputedStyle(element).boxShadow),
     )
     .toBe("none");
   await viewport.hover();
   await expect(controls.first()).toBeVisible();
+  await expect(connectionIndicator).toHaveText("WebRTC");
   const controlPresentation = await controls.evaluateAll((buttons) => {
     const group = buttons[0]?.parentElement;
     const rectangles = buttons.map((button) => button.getBoundingClientRect());
@@ -854,8 +872,12 @@ test("retains one live connection while the card presentation is replaced", asyn
     pointerType: "touch",
   });
   await expect(controls.first()).toBeVisible();
+  await expect(connectionIndicator).toHaveText("WebRTC");
   await expect(controls.first()).toBeHidden({
-    timeout: 4_000,
+    timeout: CAMERA_OVERLAY_HIDE_DELAY_MS + 1_000,
+  });
+  await expect(connectionIndicator).toBeHidden({
+    timeout: CAMERA_OVERLAY_HIDE_DELAY_MS + 1_000,
   });
 
   expect(

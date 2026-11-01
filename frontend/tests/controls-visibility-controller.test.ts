@@ -1,8 +1,8 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CAMERA_CONTROLS_HIDE_DELAY_MS } from "../src/core/constants";
 import { CameraControlsVisibilityController } from "../src/modules/camera/controls-visibility.controller";
+import { CAMERA_OVERLAY_HIDE_DELAY_MS } from "../src/modules/camera/constants";
 
 class TestHost implements ReactiveControllerHost {
   public readonly controllers: ReactiveController[] = [];
@@ -35,11 +35,11 @@ describe("camera control visibility controller", () => {
 
     controller.handlePointerEnter(pointerEvent("mouse"));
     expect(controller.visible).toBe(true);
-    vi.advanceTimersByTime(CAMERA_CONTROLS_HIDE_DELAY_MS * 2);
+    vi.advanceTimersByTime(CAMERA_OVERLAY_HIDE_DELAY_MS * 2);
     expect(controller.visible).toBe(true);
 
     controller.handlePointerLeave(pointerEvent("mouse"));
-    vi.advanceTimersByTime(CAMERA_CONTROLS_HIDE_DELAY_MS - 1);
+    vi.advanceTimersByTime(CAMERA_OVERLAY_HIDE_DELAY_MS - 1);
     expect(controller.visible).toBe(true);
     vi.advanceTimersByTime(1);
     expect(controller.visible).toBe(false);
@@ -52,16 +52,16 @@ describe("camera control visibility controller", () => {
     const controller = new CameraControlsVisibilityController(host);
 
     controller.handlePointerDown(pointerEvent("touch"));
-    vi.advanceTimersByTime(CAMERA_CONTROLS_HIDE_DELAY_MS - 1);
+    vi.advanceTimersByTime(CAMERA_OVERLAY_HIDE_DELAY_MS - 1);
     controller.handlePointerDown(pointerEvent("touch"));
-    vi.advanceTimersByTime(CAMERA_CONTROLS_HIDE_DELAY_MS - 1);
+    vi.advanceTimersByTime(CAMERA_OVERLAY_HIDE_DELAY_MS - 1);
     expect(controller.visible).toBe(true);
     vi.advanceTimersByTime(1);
     expect(controller.visible).toBe(false);
 
     controller.handlePointerDown(pointerEvent("touch"));
     controller.hostDisconnected();
-    vi.advanceTimersByTime(CAMERA_CONTROLS_HIDE_DELAY_MS);
+    vi.advanceTimersByTime(CAMERA_OVERLAY_HIDE_DELAY_MS);
     expect(controller.visible).toBe(false);
   });
 });

@@ -11,11 +11,20 @@ export const cameraStyles = css`
     min-block-size: 0;
   }
 
+  .camera {
+    border-radius: var(--wzc-live-radius);
+    box-shadow: var(--wzc-live-shadow);
+  }
+
+  watchzone-camera-live-view {
+    --wzc-live-shadow: none;
+  }
+
   .camera.square-camera-corners {
     --wzc-live-radius: 0px;
   }
 
   .camera.no-camera-shadow {
-    --wzc-live-shadow: none;
+    box-shadow: none;
   }
 `;

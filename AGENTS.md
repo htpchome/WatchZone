@@ -7,7 +7,8 @@ These instructions apply to the entire repository.
 Before changing source code, read:
 
 1. `architecture.md`
-2. Any contract in `docs/` that governs the affected feature
+2. `ROADMAP.md` for known future capabilities and planning pressure
+3. Any contract in `docs/` that governs the affected feature
 
 For card configuration, editor previews, Home Assistant controls, theming, or
 responsive card layout, also read `docs/config-editor-lifecycle.md` in full.
