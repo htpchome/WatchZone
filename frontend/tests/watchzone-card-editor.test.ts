@@ -252,6 +252,99 @@ describe("watchzone-card-editor", () => {
     document.removeEventListener("context-request", contextHandler);
   });
 
+  it("round-trips appearance toggles back to explicit false before Save", async () => {
+    const states: WatchZoneCardConfig[] = [];
+    const contextHandler = (event: Event) => {
+      const request = event as ContextRequest;
+      request.callback?.({ setState: (config) => states.push(config) });
+    };
+    document.addEventListener("context-request", contextHandler);
+
+    const baseline = { type: CARD_TYPE, title: "Camera" } as const;
+    const card = document.createElement("watchzone-card") as WatchZoneCard;
+    card.preview = true;
+    card.setConfig(baseline);
+    const dialog = document.createElement(
+      "hui-dialog-edit-card",
+    ) as TestEditCardDialog;
+    dialog._cardConfig = baseline;
+    dialog._updateDirtyState = vi.fn();
+    const dialogRoot = dialog.attachShadow({ mode: "open" });
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as WatchZoneCardEditor;
+    editor.setConfig(baseline);
+    const save = document.createElement("button");
+    save.slot = "primaryAction";
+    dialogRoot.append(editor, save);
+    document.body.append(card, dialog);
+    await Promise.all([card.updateComplete, editor.updateComplete]);
+
+    for (const key of [
+      "remove_outer_rounded_edges",
+      "remove_outer_shadow",
+    ] as const) {
+      const selector = editor.shadowRoot?.querySelector(
+        `[data-config-key="${key}"]`,
+      );
+      selector?.dispatchEvent(
+        new CustomEvent("value-changed", {
+          detail: { value: true },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+      await card.updateComplete;
+      expect(card.shadowRoot?.querySelector("ha-card")?.className).toContain(
+        key === "remove_outer_rounded_edges"
+          ? "remove-outer-rounded-edges"
+          : "remove-outer-shadow",
+      );
+
+      selector?.dispatchEvent(
+        new CustomEvent("value-changed", {
+          detail: { value: false },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+      await card.updateComplete;
+      expect(
+        card.shadowRoot?.querySelector("ha-card")?.className,
+      ).not.toContain(
+        key === "remove_outer_rounded_edges"
+          ? "remove-outer-rounded-edges"
+          : "remove-outer-shadow",
+      );
+      expect(states.at(-1)?.[key]).toBe(false);
+    }
+
+    save.click();
+    expect(dialog._cardConfig).toMatchObject({
+      remove_outer_rounded_edges: false,
+      remove_outer_shadow: false,
+    });
+    expect(dialog._updateDirtyState).toHaveBeenCalledWith(dialog._cardConfig);
+
+    const reopened = document.createElement(
+      "watchzone-card-editor",
+    ) as WatchZoneCardEditor;
+    reopened.setConfig(dialog._cardConfig);
+    document.body.append(reopened);
+    await reopened.updateComplete;
+    for (const key of ["remove_outer_rounded_edges", "remove_outer_shadow"]) {
+      expect(
+        (
+          reopened.shadowRoot?.querySelector(`[data-config-key="${key}"]`) as {
+            value?: boolean;
+          }
+        ).value,
+      ).toBe(false);
+    }
+
+    document.removeEventListener("context-request", contextHandler);
+  });
+
   it("uses a one-time dirty-state writer without subscribing", async () => {
     let publishContext: ContextRequest["callback"];
     let subscribed = false;

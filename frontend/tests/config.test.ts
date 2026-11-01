@@ -4,7 +4,7 @@ import { normalizeCardConfig } from "../src/core/config";
 import { CARD_TYPE } from "../src/core/constants";
 
 describe("WatchZone card configuration", () => {
-  it("stores enabled outer appearance removals and omits disabled defaults", () => {
+  it("preserves both boolean values for outer appearance options", () => {
     expect(
       normalizeCardConfig({
         type: CARD_TYPE,
@@ -24,7 +24,12 @@ describe("WatchZone card configuration", () => {
         remove_outer_rounded_edges: false,
         remove_outer_shadow: false,
       }),
-    ).toEqual({ type: CARD_TYPE, title: "Camera" });
+    ).toEqual({
+      type: CARD_TYPE,
+      title: "Camera",
+      remove_outer_rounded_edges: false,
+      remove_outer_shadow: false,
+    });
   });
 
   it("rejects non-boolean outer appearance values", () => {

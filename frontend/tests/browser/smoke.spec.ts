@@ -10,6 +10,13 @@ const expectedBuild = process.env.GITHUB_SHA?.slice(0, 7) ?? "local";
 const expectedVersion = packageJson.version;
 const pageErrors = new WeakMap<Page, string[]>();
 
+function cssAlpha(color: string): number {
+  const modern = color.match(/\/\s*([\d.]+)\s*\)$/);
+  if (modern) return Number(modern[1]);
+  const legacy = color.match(/^rgba\([^)]*,\s*([\d.]+)\s*\)$/);
+  return legacy ? Number(legacy[1]) : 1;
+}
+
 async function waitForWatchZoneDefinition(page: Page): Promise<void> {
   await page.waitForFunction(
     () => customElements.get("watchzone-card") !== undefined,
@@ -158,6 +165,7 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
       "--wzc-radius-card",
       "--wzc-shadow-card",
       "--wzc-media-overlay-opacity",
+      "--wzc-media-overlay-hover-opacity",
     ];
     const host = element as HTMLElement;
     host.style.setProperty("--wzc-color-text-1", "rgb(10, 20, 30)");
@@ -178,6 +186,9 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
       overlayOpacity: hostStyle
         .getPropertyValue("--wzc-media-overlay-opacity")
         .trim(),
+      overlayHoverOpacity: hostStyle
+        .getPropertyValue("--wzc-media-overlay-hover-opacity")
+        .trim(),
     };
   });
 
@@ -185,7 +196,8 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
     background: "rgb(40, 50, 60)",
     borderRadius: "18px",
     missingTokens: [],
-    overlayOpacity: "96%",
+    overlayHoverOpacity: "84%",
+    overlayOpacity: "72%",
     textColor: "rgb(10, 20, 30)",
   });
   expect(result.boxShadow).toContain("rgb(1, 2, 3)");
@@ -314,6 +326,122 @@ test("camera selection does not recursively republish dirty state", async ({
     subscribed: false,
     writes: 3,
     writesBeforeReopen: 2,
+  });
+});
+
+test("round-trips appearance toggles through false before Save", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+
+  const result = await page.evaluate(async () => {
+    interface ContextRequest extends Event {
+      callback?: (context: {
+        setState(config: Record<string, unknown>, key: string): void;
+      }) => void;
+      context?: string;
+    }
+    interface TestEditor extends HTMLElement {
+      setConfig(config: unknown): void;
+      updateComplete: Promise<boolean>;
+    }
+    interface TestCard extends HTMLElement {
+      preview: boolean;
+      setConfig(config: unknown): void;
+      updateComplete: Promise<boolean>;
+    }
+    interface TestCardConstructor extends CustomElementConstructor {
+      getConfigElement(): Promise<TestEditor>;
+    }
+    interface TestDialog extends HTMLElement {
+      _cardConfig?: Record<string, unknown>;
+      _updateDirtyState?(config: unknown): void;
+    }
+
+    let latestDirtyState: Record<string, unknown> | undefined;
+    const handleContext = (event: Event): void => {
+      const request = event as ContextRequest;
+      if (request.context === "dirtyState") {
+        request.callback?.({
+          setState: (config) => {
+            latestDirtyState = config;
+          },
+        });
+      }
+    };
+    document.addEventListener("context-request", handleContext);
+
+    const baseline = {
+      type: "custom:watchzone-card",
+      title: "Appearance",
+    };
+    const card = document.querySelector("watchzone-card") as TestCard;
+    card.preview = true;
+    card.setConfig(baseline);
+    const constructor = customElements.get(
+      "watchzone-card",
+    ) as TestCardConstructor;
+    const editor = await constructor.getConfigElement();
+    editor.setConfig(baseline);
+    const dialog = document.createElement("hui-dialog-edit-card") as TestDialog;
+    dialog._cardConfig = baseline;
+    dialog._updateDirtyState = () => undefined;
+    const root = dialog.attachShadow({ mode: "open" });
+    const save = document.createElement("button");
+    save.slot = "primaryAction";
+    root.append(editor, save);
+    document.body.append(dialog);
+    await Promise.all([card.updateComplete, editor.updateComplete]);
+
+    const selector = editor.shadowRoot?.querySelector(
+      '[data-config-key="remove_outer_rounded_edges"]',
+    );
+    selector?.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: true },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await Promise.all([card.updateComplete, editor.updateComplete]);
+    const enabled = card.shadowRoot
+      ?.querySelector("ha-card")
+      ?.classList.contains("remove-outer-rounded-edges");
+
+    selector?.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: false },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await Promise.all([card.updateComplete, editor.updateComplete]);
+    const disabled = !card.shadowRoot
+      ?.querySelector("ha-card")
+      ?.classList.contains("remove-outer-rounded-edges");
+    save.click();
+
+    document.removeEventListener("context-request", handleContext);
+    return {
+      disabled,
+      dirtyValue: latestDirtyState?.remove_outer_rounded_edges,
+      enabled,
+      savedValue: dialog._cardConfig?.remove_outer_rounded_edges,
+      selectorValue: (
+        editor.shadowRoot?.querySelector(
+          '[data-config-key="remove_outer_rounded_edges"]',
+        ) as HTMLElement & { value?: boolean }
+      ).value,
+    };
+  });
+
+  expect(result).toEqual({
+    disabled: true,
+    dirtyValue: false,
+    enabled: true,
+    savedValue: false,
+    selectorValue: false,
   });
 });
 
@@ -549,6 +677,12 @@ test("retains one live connection while the card presentation is replaced", asyn
       (background) => background === indicatorPresentation.background,
     ),
   ).toBe(true);
+  expect(cssAlpha(indicatorPresentation.background)).toBeCloseTo(0.72, 2);
+  expect(
+    controlPresentation.backgrounds.every(
+      (background) => Math.abs(cssAlpha(background) - 0.72) < 0.01,
+    ),
+  ).toBe(true);
   expect(
     controlPresentation.borders.every(
       (border) => border === indicatorPresentation.border,
@@ -570,6 +704,7 @@ test("retains one live connection while the card presentation is replaced", asyn
   );
   expect(hoverBackground).not.toBe("rgba(0, 0, 0, 0)");
   expect(hoverBackground).not.toBe(restingBackground);
+  expect(cssAlpha(hoverBackground)).toBeCloseTo(0.84, 2);
   await expect(
     page.locator(
       'watchzone-camera watchzone-camera-controls [data-control="snapshot"]',

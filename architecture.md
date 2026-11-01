@@ -452,6 +452,12 @@ Save. It feature-detects the narrow dialog boundary and falls back to the public
 `config-changed` event when that boundary is unavailable. No other code accesses
 dialog internals or Save-button structure.
 
+Every editor control must round-trip all meaningful values through local
+draft, dirty state, preview, Save, and reopen. In particular, boolean `false`
+is an explicit value and must not be collapsed into a missing property while a
+draft is normalized or published. Regression tests cover both directions and
+reverting a control before Save.
+
 WatchZone uses current Home Assistant controls and semantic theme tokens.
 Project customization variables use the `--wzc-` prefix and resolve to Home
 Assistant tokens by default. Hardcoded application palettes and independent

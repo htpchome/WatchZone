@@ -51,8 +51,8 @@ export function normalizeCardConfig(value: unknown): WatchZoneCardConfig {
     "remove_outer_rounded_edges",
     "remove_outer_shadow",
   ] as const) {
-    if (source[key] === true) {
-      normalized[key] = true;
+    if (typeof source[key] === "boolean") {
+      normalized[key] = source[key];
     } else {
       delete normalized[key];
     }

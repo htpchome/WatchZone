@@ -216,12 +216,13 @@ export class WatchZoneCardEditor extends LitElement {
     if (!key) {
       return;
     }
-    const next: Record<string, unknown> = { ...this._config };
-    if (event.detail.value === true) {
-      next[key] = true;
-    } else {
-      delete next[key];
+    if (typeof event.detail.value !== "boolean") {
+      return;
     }
+    const next: Record<string, unknown> = {
+      ...this._config,
+      [key]: event.detail.value,
+    };
     this._applyDraft(normalizeCardConfig(next), true);
   };
 
@@ -234,6 +235,7 @@ export class WatchZoneCardEditor extends LitElement {
       cardConfigSignature(nextConfig) !== cardConfigSignature(this._config);
     if (changed) {
       this._config = nextConfig;
+      this.requestUpdate();
 
       if (this._dirtyContext) {
         updateDirtyState(this._dirtyContext, nextConfig);
@@ -254,14 +256,20 @@ export class WatchZoneCardEditor extends LitElement {
     if (changed) {
       if (commitConfig) {
         this._previewTimer = undefined;
-        this._publishPreview(nextConfig);
+        this._publishDraftPreview(nextConfig);
       } else {
         this._previewTimer = setTimeout(() => {
           this._previewTimer = undefined;
-          this._publishPreview(nextConfig);
+          this._publishDraftPreview(nextConfig);
         }, EDITOR_TEXT_PREVIEW_DELAY_MS);
       }
     }
+  }
+
+  private _publishDraftPreview(config: WatchZoneCardConfig): void {
+    this._publishPreview(
+      cardConfigSignature(config) === this._baselineSignature ? null : config,
+    );
   }
 
   private _publishPreview(config: WatchZoneCardConfig | null): void {
