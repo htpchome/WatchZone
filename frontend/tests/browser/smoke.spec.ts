@@ -32,13 +32,13 @@ test("loads the responsive WatchZone card shell", async ({ page }) => {
       (message) =>
         message.includes("WatchZone") &&
         message.includes("CURRENT") &&
-        message.includes("v0.0.4-dev.3 (local)"),
+        message.includes("v0.0.4-dev.4 (local)"),
     ),
   ).toBe(true);
   expect(await page.evaluate(() => window.watchZone)).toMatchObject({
-    activeCardVersion: "0.0.4-dev.3",
+    activeCardVersion: "0.0.4-dev.4",
     build: "local",
-    version: "0.0.4-dev.3",
+    version: "0.0.4-dev.4",
   });
 });
 

@@ -20,6 +20,10 @@ import {
   type HomeAssistant,
   type HomeAssistantApi,
 } from "../core/home-assistant";
+import {
+  getMediaSessionManager,
+  type MediaSessionLease,
+} from "../core/media-session-manager";
 
 interface PreviewDraftDetail {
   readonly baselineSignature: string;
@@ -43,6 +47,7 @@ export class WatchZoneCard extends LitElement {
   private _haApi?: HomeAssistantApi;
   private _liveModuleReady = false;
   private _liveModuleError?: string;
+  private _prewarmLease?: MediaSessionLease;
   private _previewConfig?: WatchZoneCardConfig;
 
   /** Set by Home Assistant for the card shown inside its editor preview. */
@@ -67,6 +72,7 @@ export class WatchZoneCard extends LitElement {
     if (transportChanged || entityChanged) {
       this.requestUpdate();
     }
+    this._syncPrewarmLease();
     this._ensureLiveModule();
   }
 
@@ -86,6 +92,7 @@ export class WatchZoneCard extends LitElement {
     }
     this._config = next;
     this._previewConfig = undefined;
+    this._syncPrewarmLease();
     this._ensureLiveModule();
     this.requestUpdate();
   }
@@ -96,6 +103,7 @@ export class WatchZoneCard extends LitElement {
       EDITOR_PREVIEW_DRAFT_EVENT,
       this._handlePreviewDraft as EventListener,
     );
+    this._syncPrewarmLease();
     this._ensureLiveModule();
   }
 
@@ -104,7 +112,14 @@ export class WatchZoneCard extends LitElement {
       EDITOR_PREVIEW_DRAFT_EVENT,
       this._handlePreviewDraft as EventListener,
     );
+    this._releasePrewarmLease();
     super.disconnectedCallback();
+  }
+
+  protected updated(): void {
+    if (this.renderRoot.querySelector("watchzone-card-live")) {
+      this._releasePrewarmLease();
+    }
   }
 
   public getCardSize(): number {
@@ -171,6 +186,7 @@ export class WatchZoneCard extends LitElement {
       return;
     }
     this._previewConfig = event.detail.config ?? undefined;
+    this._syncPrewarmLease();
     this._ensureLiveModule();
     this.requestUpdate();
   };
@@ -194,6 +210,30 @@ export class WatchZoneCard extends LitElement {
           this.requestUpdate();
         }
       });
+  }
+
+  private _syncPrewarmLease(): void {
+    const config = this._previewConfig ?? this._config;
+    const entityId = config.camera_entity;
+    const available = Boolean(entityId && this._hass?.states[entityId]);
+    if (!this.isConnected || !this._haApi || !entityId || !available) {
+      this._releasePrewarmLease();
+      return;
+    }
+    const key = `home_assistant:${entityId}`;
+    if (this._prewarmLease?.key === key) {
+      return;
+    }
+    this._releasePrewarmLease();
+    this._prewarmLease = getMediaSessionManager().acquireHomeAssistant(
+      this._haApi,
+      entityId,
+    );
+  }
+
+  private _releasePrewarmLease(): void {
+    this._prewarmLease?.release();
+    this._prewarmLease = undefined;
   }
 
   private readonly _retryLiveModule = (): void => {

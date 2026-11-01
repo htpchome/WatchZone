@@ -38,7 +38,16 @@ class FakePeerConnection {
     type: "offer" as RTCSdpType,
     sdp: "watchzone-offer",
   }));
-  public readonly setLocalDescription = vi.fn(async () => undefined);
+  public readonly setLocalDescription = vi.fn(async () => {
+    this.onicecandidate?.({
+      candidate: {
+        candidate: "candidate:early 1 udp 1 192.0.2.1 1234 typ host",
+        toJSON: () => ({
+          candidate: "candidate:early 1 udp 1 192.0.2.1 1234 typ host",
+        }),
+      },
+    } as unknown as RTCPeerConnectionIceEvent);
+  });
   public readonly setRemoteDescription = vi.fn(async (description) => {
     this.remoteDescription = description as RTCSessionDescription;
   });
@@ -96,6 +105,14 @@ describe("Home Assistant WebRTC connection", () => {
       return;
     }
 
+    peer.onicecandidate?.({
+      candidate: {
+        candidate: "candidate:late 1 udp 1 192.0.2.2 1234 typ host",
+        toJSON: () => ({
+          candidate: "candidate:late 1 udp 1 192.0.2.2 1234 typ host",
+        }),
+      },
+    } as unknown as RTCPeerConnectionIceEvent);
     offerCallback({
       type: "candidate",
       candidate: { candidate: "remote-candidate" },
@@ -121,7 +138,24 @@ describe("Home Assistant WebRTC connection", () => {
       expect.objectContaining({
         type: "camera/webrtc/offer",
         entity_id: "camera.front",
-        offer: "watchzone-offer",
+        offer:
+          "watchzone-offer\r\na=candidate:early 1 udp 1 192.0.2.1 1234 typ host\r\n",
+      }),
+    );
+    expect(callWS).toHaveBeenCalledWith({
+      type: "camera/webrtc/candidate",
+      entity_id: "camera.front",
+      session_id: "session-1",
+      candidate: {
+        candidate: "candidate:late 1 udp 1 192.0.2.2 1234 typ host",
+      },
+    });
+    expect(callWS).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "camera/webrtc/candidate",
+        candidate: expect.objectContaining({
+          candidate: expect.stringContaining("candidate:early"),
+        }),
       }),
     );
     expect(peer.addIceCandidate).toHaveBeenCalledWith({

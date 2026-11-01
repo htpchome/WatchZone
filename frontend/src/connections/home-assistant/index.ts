@@ -24,6 +24,21 @@ function normalizeError(error: unknown): Error {
     : new Error("Home Assistant camera connection failed");
 }
 
+function appendIceCandidates(
+  offer: string,
+  candidates: readonly RTCIceCandidateInit[],
+): string {
+  const candidateLines = candidates
+    .map((candidate) => candidate.candidate?.trim())
+    .filter((candidate): candidate is string => Boolean(candidate))
+    .map((candidate) => `a=${candidate}\r\n`)
+    .join("");
+  if (!candidateLines) {
+    return offer;
+  }
+  return `${offer}${offer.endsWith("\r\n") ? "" : "\r\n"}${candidateLines}`;
+}
+
 export async function createHomeAssistantWebRtcConnection(
   api: HomeAssistantApi,
   entityId: string,
@@ -199,12 +214,16 @@ export async function createHomeAssistantWebRtcConnection(
           rejectStart(abortError());
           return;
         }
+        const offerWithCandidates = appendIceCandidates(
+          offer.sdp ?? "",
+          localCandidates.splice(0),
+        );
         const unsubscribePromise = api.subscribeMessage<OfferEvent>(
           (event) => void handleOfferEvent(event),
           {
             type: "camera/webrtc/offer",
             entity_id: entityId,
-            offer: offer.sdp ?? "",
+            offer: offerWithCandidates,
           },
         );
         unsubscribe = await unsubscribePromise;

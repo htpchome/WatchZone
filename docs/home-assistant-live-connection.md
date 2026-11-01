@@ -39,8 +39,10 @@ The initial design analysis compared these local source baselines:
 The relevant observation is architectural, not a benchmark claim. Advanced
 Camera Card prepares Home Assistant camera elements early and limits broad card
 updates. Home Assistant's generic camera stream can also perform capability,
-poster, HLS, and WebRTC work. WatchZone instead loads its small live module and
-adapter on demand, then begins one direct WebRTC negotiation immediately.
+poster, HLS, and WebRTC work. WatchZone keeps its live UI and concrete adapter
+lazy, but starts a pooled prewarm lease as soon as the configured entity and
+Home Assistant transport are available. Module loading and direct WebRTC
+negotiation therefore run in parallel.
 
 No startup-time claim is considered verified until measured on the same camera,
 Home Assistant instance, browser, network, and cold/warm cache conditions.
@@ -55,8 +57,11 @@ For a validated camera entity, the adapter:
    channel, if any.
 4. Creates and installs the local offer.
 5. Subscribes to Home Assistant's WebRTC offer exchange.
-6. Buffers ICE candidates until their session or remote description exists.
-7. Reports the connection live when the first video track arrives.
+6. Includes local ICE candidates gathered while installing the offer in the
+   initial signaling request, avoiding an extra session/candidate round trip.
+   Later candidates are trickled after the session ID arrives.
+7. Buffers remote ICE candidates until the remote description exists.
+8. Reports the connection live when the first video track arrives.
 
 Connection startup is cancellable and bounded by a timeout. Errors are
 translated once into an actionable session error. Closing is idempotent and
