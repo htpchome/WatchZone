@@ -123,6 +123,56 @@ test("applies outer shell appearance toggles without changing card identity", as
   expect(result.disabledClasses).toBe("");
 });
 
+test("exposes and honors the WatchZone semantic theme-token contract", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+
+  const result = await page.locator("watchzone-card").evaluate((element) => {
+    const requiredTokens = [
+      "--wzc-color-primary",
+      "--wzc-color-primary-dark",
+      "--wzc-color-accent",
+      "--wzc-color-text-1",
+      "--wzc-color-text-2",
+      "--wzc-color-text-3",
+      "--wzc-color-text-reversed",
+      "--wzc-color-error",
+      "--wzc-color-warning",
+      "--wzc-color-success",
+      "--wzc-color-border",
+      "--wzc-radius-card",
+      "--wzc-shadow-card",
+    ];
+    const host = element as HTMLElement;
+    host.style.setProperty("--wzc-color-text-1", "rgb(10, 20, 30)");
+    host.style.setProperty("--wzc-card-background", "rgb(40, 50, 60)");
+    host.style.setProperty("--wzc-card-radius", "18px");
+    host.style.setProperty("--wzc-shadow-card", "rgb(1, 2, 3) 0px 4px 8px");
+    const hostStyle = getComputedStyle(host);
+    const shell = host.shadowRoot?.querySelector("ha-card");
+    const shellStyle = shell ? getComputedStyle(shell) : undefined;
+    return {
+      background: shellStyle?.backgroundColor,
+      borderRadius: shellStyle?.borderRadius,
+      boxShadow: shellStyle?.boxShadow,
+      missingTokens: requiredTokens.filter(
+        (token) => hostStyle.getPropertyValue(token).trim().length === 0,
+      ),
+      textColor: shellStyle?.color,
+    };
+  });
+
+  expect(result).toMatchObject({
+    background: "rgb(40, 50, 60)",
+    borderRadius: "18px",
+    missingTokens: [],
+    textColor: "rgb(10, 20, 30)",
+  });
+  expect(result.boxShadow).toContain("rgb(1, 2, 3)");
+});
+
 test("camera selection does not recursively republish dirty state", async ({
   page,
 }) => {

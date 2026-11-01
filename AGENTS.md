@@ -69,6 +69,17 @@ For any frontend, media, interaction, layout, or styling change, also read
   `config-changed` fallback. Do not access dialog internals elsewhere.
 - Use current Home Assistant controls and semantic theme tokens. WatchZone
   customization properties use the `--wzc-` prefix.
+- Use feature-based vertical slices with state/configuration flowing down and
+  typed intents flowing up. Do not impose MVP or MVVM layers on simple Lit
+  components. Add a controller only for distinct orchestration,
+  subscriptions, or lifecycle; add model/type files only for separately owned
+  policy or contracts.
+- Every Lit element keeps CSS in a colocated `*.styles.ts` file. Component
+  behavior files must not contain `css` template literals.
+- `frontend/src/styles/theme-tokens.ts` is the only frontend source allowed to
+  reference Home Assistant theme variables directly. Feature and component
+  styles consume semantic `--wzc-*` tokens only. Define a WatchZone token
+  before introducing a new visual semantic state.
 
 ## Structure and generated output
 

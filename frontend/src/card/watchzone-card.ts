@@ -1,4 +1,4 @@
-import { css, html, LitElement, nothing } from "lit";
+import { html, LitElement, nothing } from "lit";
 
 import {
   cardConfigSignature,
@@ -25,6 +25,8 @@ import {
   getMediaSessionManager,
   type MediaSessionLease,
 } from "../core/media-session-manager";
+import { watchZoneThemeTokens } from "../styles/theme-tokens";
+import { watchZoneCardStyles } from "./watchzone-card.styles";
 
 interface PreviewDraftDetail {
   readonly baselineSignature: string;
@@ -251,115 +253,7 @@ export class WatchZoneCard extends LitElement {
     this.requestUpdate();
   };
 
-  static styles = css`
-    :host {
-      display: block;
-      box-sizing: border-box;
-      inline-size: 100%;
-      block-size: 100%;
-      min-inline-size: 0;
-      min-block-size: 0;
-
-      --wzc-card-background: var(
-        --ha-card-background,
-        var(--card-background-color)
-      );
-      --wzc-text-color: var(--ha-color-text-primary, var(--primary-text-color));
-      --wzc-card-radius: var(--ha-card-border-radius, 12px);
-      --wzc-card-border-color: var(
-        --ha-card-border-color,
-        var(--divider-color)
-      );
-      --wzc-card-border-width: var(--ha-card-border-width, 0);
-      --wzc-card-padding: clamp(1rem, 3cqi, 2rem);
-      --wzc-live-background: var(--secondary-background-color);
-    }
-
-    ha-card {
-      box-sizing: border-box;
-      inline-size: 100%;
-      block-size: 100%;
-      min-block-size: 16rem;
-      overflow: clip;
-      container-type: inline-size;
-      color: var(--wzc-text-color);
-      background: var(--wzc-card-background);
-      border-color: var(--wzc-card-border-color);
-      border-width: var(--wzc-card-border-width);
-      border-radius: var(--wzc-card-radius);
-    }
-
-    ha-card.remove-outer-rounded-edges {
-      --ha-card-border-radius: 0px;
-      --wzc-card-radius: 0px;
-    }
-
-    ha-card.remove-outer-shadow {
-      --ha-card-box-shadow: none;
-      box-shadow: none;
-    }
-
-    .shell {
-      box-sizing: border-box;
-      display: grid;
-      grid-template-rows: auto minmax(0, 1fr);
-      align-items: center;
-      gap: clamp(0.75rem, 2cqi, 1.25rem);
-      inline-size: 100%;
-      block-size: 100%;
-      min-block-size: inherit;
-      padding: var(--wzc-card-padding);
-      overflow: hidden;
-    }
-
-    .title {
-      min-inline-size: 0;
-      max-inline-size: 100%;
-      margin: 0;
-      overflow-wrap: anywhere;
-      color: inherit;
-      font-family: var(--ha-font-family-body, inherit);
-      font-size: clamp(1.25rem, 8cqi, 2rem);
-      font-weight: var(--ha-font-weight-medium, 500);
-      line-height: var(--ha-line-height-condensed, 1.2);
-      text-align: center;
-    }
-
-    watchzone-camera,
-    .live-placeholder,
-    .live-error,
-    .empty {
-      inline-size: 100%;
-      min-inline-size: 0;
-    }
-
-    .live-placeholder,
-    .live-error,
-    .empty {
-      display: grid;
-      place-items: center;
-      min-block-size: 10rem;
-      color: var(--ha-color-text-secondary, var(--secondary-text-color));
-      text-align: center;
-    }
-
-    .live-error {
-      gap: 0.75rem;
-      color: var(--ha-color-text-error, var(--error-color));
-    }
-
-    button {
-      min-block-size: 2.5rem;
-      padding-inline: 1rem;
-      color: var(--ha-color-text-primary, var(--primary-text-color));
-      background: var(--ha-color-fill-primary-normal-resting, transparent);
-      border: 1px solid
-        var(--ha-color-border-neutral-normal, var(--divider-color));
-      border-radius: var(--ha-border-radius-button, 999px);
-      font: inherit;
-      cursor: pointer;
-    }
-  `;
+  static styles = [watchZoneThemeTokens, watchZoneCardStyles];
 }
 
 if (!customElements.get(CARD_TAG)) {

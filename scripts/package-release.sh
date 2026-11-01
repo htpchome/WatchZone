@@ -19,6 +19,7 @@ if [ ! -f "$FRONTEND_DIR/.vite/manifest.json" ]; then
 fi
 
 node "$REPOSITORY_ROOT/scripts/check-version.mjs"
+node "$REPOSITORY_ROOT/scripts/validate-styles.mjs"
 node "$REPOSITORY_ROOT/scripts/validate-build.mjs"
 node "$REPOSITORY_ROOT/scripts/validate-brand.mjs"
 

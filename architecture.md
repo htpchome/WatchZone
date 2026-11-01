@@ -141,6 +141,7 @@ architecture decision recorded in this document or a future ADR.
 │   │   ├── modules/               # Independently loaded UI features
 │   │   ├── connections/           # Lazy browser playback adapters
 │   │   ├── ui/                    # Shared visual primitives and icon registry
+│   │   ├── styles/                # HA theme boundary and global design tokens
 │   │   └── editor/                # Lazily loaded layout editor
 │   └── tests/
 ├── tests/                         # Python and cross-boundary tests
@@ -166,6 +167,32 @@ are added inside that boundary only when the feature gains a separate
 lifecycle, independently testable policy, or reusable internal concept.
 External code imports only the feature's public entry point. Internal files
 remain private, so reorganizing a feature does not ripple through the system.
+
+### 5.2 Frontend feature architecture
+
+The frontend uses feature-based vertical slices with unidirectional data flow
+and selective controllers. It does not impose application-wide MVP or MVVM.
+Lit reactive properties already provide the simple view-model function; adding
+a presenter or view-model class without separate policy or lifecycle is
+prohibited ceremony.
+
+Within a feature:
+
+- `index.ts` is the public/lazy entry and composition boundary.
+- A Lit element file renders state, accepts properties, and emits typed user
+  intents. It does not own provider, transport, or persistence behavior.
+- Every Lit element's CSS lives in a colocated `*.styles.ts` file. Behavior
+  files must not contain `css` template literals.
+- A `*.controller.ts` file is added only when orchestration, subscriptions, or
+  lifecycle have become a distinct responsibility.
+- A `*.model.ts` or `*.types.ts` file is added only when substantial pure
+  policy or a separately owned contract exists.
+- State and configuration flow down. Typed intents and events flow up.
+- Files are not created merely to fill out the pattern.
+
+Stable cross-feature contracts and document-scoped services belong in `core/`.
+Feature behavior does not. Provider and connection adapters remain outside UI
+features behind their established boundaries.
 
 ## 6. Dependency and ownership rules
 
@@ -423,6 +450,16 @@ WatchZone uses current Home Assistant controls and semantic theme tokens.
 Project customization variables use the `--wzc-` prefix and resolve to Home
 Assistant tokens by default. Hardcoded application palettes and independent
 light/dark assumptions are prohibited.
+
+`frontend/src/styles/theme-tokens.ts` is the only frontend file allowed to
+reference Home Assistant theme variables directly. It maps them to WatchZone
+semantic tokens for primary, primary-dark, accent, surfaces, four text roles
+(primary, secondary, tertiary/disabled, and reversed), error, warning, success,
+borders, fills, radius scale, shadow scale, typography, card surfaces, and
+media overlays. Component styles consume `--wzc-*` tokens only. A new visual
+semantic state defines or reuses a WatchZone token before feature CSS uses it.
+Automated validation rejects direct HA-token access outside this boundary and
+rejects Lit CSS embedded in behavior files.
 
 Icons are rendered from the typed registry in `frontend/src/ui/icons.ts`.
 Standard actions use the same filled Material Design/MDI geometry expected in

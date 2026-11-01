@@ -1,4 +1,4 @@
-import { css, html, LitElement } from "lit";
+import { html, LitElement } from "lit";
 
 import {
   cardConfigSignature,
@@ -11,6 +11,7 @@ import {
   EDITOR_TEXT_PREVIEW_DELAY_MS,
 } from "../core/constants";
 import { isHomeAssistant, type HomeAssistant } from "../core/home-assistant";
+import { watchZoneThemeTokens } from "../styles/theme-tokens";
 import {
   commitDraftForSave,
   type DirtyStateContext,
@@ -19,6 +20,7 @@ import {
   seedDirtyState,
   updateDirtyState,
 } from "./dirty-state";
+import { watchZoneCardEditorStyles } from "./watchzone-card-editor.styles";
 
 interface InputElement extends HTMLElement {
   value: string;
@@ -292,36 +294,7 @@ export class WatchZoneCardEditor extends LitElement {
     }
   };
 
-  static styles = css`
-    :host {
-      display: block;
-      box-sizing: border-box;
-      inline-size: 100%;
-      color: var(--ha-color-text-primary, var(--primary-text-color));
-    }
-
-    ha-input,
-    ha-selector {
-      inline-size: 100%;
-    }
-
-    ha-selector {
-      display: block;
-      margin-block-start: 1rem;
-    }
-
-    .section-title {
-      margin-block-start: 1.5rem;
-      color: var(--ha-color-text-primary, var(--primary-text-color));
-      font-size: var(--ha-font-size-m, 1rem);
-      font-weight: var(--ha-font-weight-medium, 500);
-      line-height: var(--ha-line-height-condensed, 1.25);
-    }
-
-    .appearance-option {
-      margin-block-start: 0.5rem;
-    }
-  `;
+  static styles = [watchZoneThemeTokens, watchZoneCardEditorStyles];
 }
 
 if (!customElements.get(EDITOR_TAG)) {

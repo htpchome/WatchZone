@@ -1,7 +1,7 @@
 {
   "name": "watchzone-frontend",
   "private": true,
-  "version": "0.0.4-dev.16",
+  "version": "0.0.4-dev.17",
   "type": "module",
   "packageManager": "yarn@4.18.1",
   "engines": {
@@ -9,9 +9,10 @@
   },
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "tsc --noEmit && vite build",
+    "build": "yarn check:styles && tsc --noEmit && vite build",
     "build:release": "yarn build && bash ../scripts/package-release.sh",
     "check:version": "node ../scripts/check-version.mjs",
+    "check:styles": "node ../scripts/validate-styles.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --check .",
