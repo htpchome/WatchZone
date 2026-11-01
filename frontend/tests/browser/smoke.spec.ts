@@ -1014,6 +1014,17 @@ test("retains one live connection while the card presentation is replaced", asyn
   await page.locator("watchzone-card").evaluate((element) => {
     element.style.inlineSize = "320px";
   });
+  await viewport.hover();
+  await expect(connectionIndicator).toBeVisible();
+  const [indicatorBox, firstControlBox] = await Promise.all([
+    connectionIndicator.boundingBox(),
+    controls.first().boundingBox(),
+  ]);
+  expect(indicatorBox).not.toBeNull();
+  expect(firstControlBox).not.toBeNull();
+  expect(indicatorBox!.x + indicatorBox!.width).toBeLessThanOrEqual(
+    firstControlBox!.x,
+  );
   await expect
     .poll(() =>
       mute.evaluate((element) => element.getBoundingClientRect().width),
@@ -1038,6 +1049,9 @@ test("retains one live connection while the card presentation is replaced", asyn
   });
   await expect(controls.first()).toBeVisible();
   await expect(connectionIndicator).toHaveText("WebRTC");
+  expect(
+    await mute.evaluate((element) => getComputedStyle(element).backgroundColor),
+  ).toBe(restingBackground);
   await expect(controls.first()).toBeHidden({
     timeout: CAMERA_OVERLAY_HIDE_DELAY_MS + 1_000,
   });

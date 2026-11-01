@@ -159,6 +159,23 @@ A focused system contract records:
 - **Verification:** build/release validation currently covers packaging; focused
   Python lifecycle tests must be added when backend behavior expands.
 
+### 3.9 UI feedback, timed visibility, and overlay lanes
+
+- **Owners:** `frontend/src/ui/toast.ts`,
+  `frontend/src/ui/timed-visibility.controller.ts`, and each feature's
+  colocated overlay styles
+- **Contract:** `docs/ui-feedback-and-overlays.md` and
+  `docs/platform-compatibility.md`
+- **Flow:** features emit categorized messages through a reusable toast class;
+  the shared controller owns transient timing and cleanup; feature CSS places
+  feedback and controls into responsive logical lanes.
+- **Key invariant:** features do not create independent toast/fade timers, and
+  touch interaction never retains emulated hover or pointer-focus styling.
+- **Verification:** `frontend/tests/toast.test.ts`,
+  `frontend/tests/timed-visibility-controller.test.ts`,
+  `frontend/tests/controls-visibility-controller.test.ts`, and compact-overlay
+  coverage in `frontend/tests/browser/smoke.spec.ts`
+
 ## 4. Updating this map
 
 When a change crosses multiple rows, update every affected focused contract but

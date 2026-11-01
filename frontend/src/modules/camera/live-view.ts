@@ -13,6 +13,9 @@ import {
   type MediaSessionSnapshot,
   type MediaTransport,
 } from "../../core/media-session-manager";
+import { TimedVisibilityController } from "../../ui/timed-visibility.controller";
+import type { WatchZoneToast } from "../../ui/toast";
+import "../../ui/toast";
 import type { CameraControlEventDetail } from "./controls-overlay";
 import "./controls-overlay";
 import { CAMERA_OVERLAY_HIDE_DELAY_MS } from "./constants";
@@ -58,7 +61,6 @@ export class WatchZoneCameraLiveView extends LitElement {
   private _autoplayBlocked = false;
   private _available = false;
   private _activeVideo?: HTMLVideoElement;
-  private _controlError?: string;
   private _desiredMuted = true;
   private _entityId?: string;
   private _fullscreenActive = false;
@@ -71,8 +73,6 @@ export class WatchZoneCameraLiveView extends LitElement {
   private _posterFailed = false;
   private _posterUrl?: string;
   private _selected?: "hls" | "webrtc";
-  private _sourceIntroductionTimer?: ReturnType<typeof setTimeout>;
-  private _sourceIntroductionVisible = false;
   private _startUnmutedPcTablet = false;
   private _startUnmutedPhone = false;
   private _webRtcDecoded = false;
@@ -81,6 +81,10 @@ export class WatchZoneCameraLiveView extends LitElement {
   private _webRtcUnsubscribe?: () => void;
   private readonly _controlsVisibility = new CameraControlsVisibilityController(
     this,
+  );
+  private readonly _sourceIntroduction = new TimedVisibilityController(
+    this,
+    CAMERA_OVERLAY_HIDE_DELAY_MS,
   );
   private readonly _clientEnvironment = getClientEnvironment();
 
@@ -108,7 +112,7 @@ export class WatchZoneCameraLiveView extends LitElement {
       return;
     }
     this._resetInitialTransport();
-    this._controlError = undefined;
+    this._dismissToast();
     this._releaseLeases();
     this._entityId = value;
     this._syncMutePreference();
@@ -183,7 +187,7 @@ export class WatchZoneCameraLiveView extends LitElement {
     const showSource = Boolean(
       this._selected &&
       this._initialTransport &&
-      (this._sourceIntroductionVisible || this._controlsVisibility.visible),
+      (this._sourceIntroduction.visible || this._controlsVisibility.visible),
     );
     const showConnectionIndicator = connecting || showSource;
     return html`
@@ -231,7 +235,9 @@ export class WatchZoneCameraLiveView extends LitElement {
         ${
           showConnectionIndicator
             ? html`<div
-                class="source-indicator"
+                class="source-indicator ${
+                  this._controlsVisibility.visible ? "controls-visible" : ""
+                }"
                 role="status"
                 aria-live="polite"
                 aria-label=${
@@ -256,7 +262,6 @@ export class WatchZoneCameraLiveView extends LitElement {
           this._selected
             ? html`<watchzone-camera-controls
                 .visible=${this._controlsVisibility.visible}
-                .errorMessage=${this._controlError}
                 .fullscreenActive=${this._fullscreenActive}
                 .fullscreenSupported=${this._fullscreenSupported()}
                 .muted=${this._muted}
@@ -268,6 +273,7 @@ export class WatchZoneCameraLiveView extends LitElement {
               ></watchzone-camera-controls>`
             : nothing
         }
+        <watchzone-toast></watchzone-toast>
         ${
           error
             ? html`<div class="status error" role="alert">
@@ -491,16 +497,7 @@ export class WatchZoneCameraLiveView extends LitElement {
       return;
     }
     this._initialTransport = transport;
-    this._clearSourceIntroduction();
-    this._sourceIntroductionVisible = true;
-    this._sourceIntroductionTimer = setTimeout(() => {
-      this._sourceIntroductionTimer = undefined;
-      if (!this._sourceIntroductionVisible) {
-        return;
-      }
-      this._sourceIntroductionVisible = false;
-      this.requestUpdate();
-    }, CAMERA_OVERLAY_HIDE_DELAY_MS);
+    this._sourceIntroduction.revealFor();
   }
 
   private _resetInitialTransport(): void {
@@ -509,11 +506,7 @@ export class WatchZoneCameraLiveView extends LitElement {
   }
 
   private _clearSourceIntroduction(): void {
-    if (this._sourceIntroductionTimer !== undefined) {
-      clearTimeout(this._sourceIntroductionTimer);
-      this._sourceIntroductionTimer = undefined;
-    }
-    this._sourceIntroductionVisible = false;
+    this._sourceIntroduction.hide();
   }
 
   private readonly _syncControlState = (): void => {
@@ -551,7 +544,7 @@ export class WatchZoneCameraLiveView extends LitElement {
 
   private _syncMutePreference(): void {
     this._autoplayBlocked = false;
-    this._controlError = undefined;
+    this._dismissToast();
     if (!this._entityId) {
       this._desiredMuted = true;
     } else {
@@ -589,8 +582,10 @@ export class WatchZoneCameraLiveView extends LitElement {
           return;
         }
         this._autoplayBlocked = true;
-        this._controlError =
-          "The browser blocked unmuted playback. Tap mute again to retry.";
+        this._showToast(
+          "The browser blocked unmuted playback. Tap mute again to retry.",
+          "warning",
+        );
         this._syncEffectiveMute(false);
       });
     }
@@ -616,7 +611,7 @@ export class WatchZoneCameraLiveView extends LitElement {
   private readonly _handleCameraControl = (
     event: CustomEvent<CameraControlEventDetail>,
   ): void => {
-    this._controlError = undefined;
+    this._dismissToast();
     if (event.detail.action === "mute") {
       this._desiredMuted = !this._muted;
       this._autoplayBlocked = false;
@@ -646,11 +641,12 @@ export class WatchZoneCameraLiveView extends LitElement {
       await togglePictureInPicture(this._activeVideo);
       this._syncControlState();
     } catch (error) {
-      this._controlError =
+      this._showToast(
         error instanceof Error
           ? error.message
-          : "Unable to change Picture-in-Picture mode.";
-      this.requestUpdate();
+          : "Unable to change Picture-in-Picture mode.",
+        "error",
+      );
     }
   }
 
@@ -684,12 +680,31 @@ export class WatchZoneCameraLiveView extends LitElement {
       }
       this._syncControlState();
     } catch (error) {
-      this._controlError =
+      this._showToast(
         error instanceof Error
           ? error.message
-          : "Unable to change fullscreen mode.";
-      this.requestUpdate();
+          : "Unable to change fullscreen mode.",
+        "error",
+      );
     }
+  }
+
+  private _showToast(message: string, category: "error" | "warning"): void {
+    const show = (): void => {
+      this.shadowRoot
+        ?.querySelector<WatchZoneToast>("watchzone-toast")
+        ?.show(message, { category });
+    };
+    show();
+    if (!this.shadowRoot?.querySelector("watchzone-toast")) {
+      void this.updateComplete.then(show);
+    }
+  }
+
+  private _dismissToast(): void {
+    this.shadowRoot
+      ?.querySelector<WatchZoneToast>("watchzone-toast")
+      ?.dismiss();
   }
 
   static styles = cameraLiveViewStyles;

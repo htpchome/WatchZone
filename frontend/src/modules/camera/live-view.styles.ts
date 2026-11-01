@@ -19,6 +19,7 @@ export const cameraLiveViewStyles = css`
     background: var(--wzc-live-background);
     border-radius: var(--wzc-live-radius, var(--wzc-radius-large, 8px));
     box-shadow: var(--wzc-live-shadow, none);
+    container-type: size;
   }
 
   .viewport:fullscreen,
@@ -86,9 +87,14 @@ export const cameraLiveViewStyles = css`
 
   .source-indicator {
     position: absolute;
-    z-index: 1;
-    inset-block-start: max(0.5rem, env(safe-area-inset-top, 0px));
-    inset-inline-end: calc(0.5rem + env(safe-area-inset-right, 0px));
+    z-index: 3;
+    inset-block-start: max(
+      var(--wzc-media-overlay-safe-block),
+      env(safe-area-inset-top, 0px)
+    );
+    inset-inline-end: calc(
+      var(--wzc-media-overlay-safe-inline) + env(safe-area-inset-right, 0px)
+    );
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
@@ -115,6 +121,24 @@ export const cameraLiveViewStyles = css`
     font-weight: var(--wzc-font-weight-semibold);
     line-height: var(--wzc-line-height-condensed);
     pointer-events: none;
+    max-inline-size: calc(100% - 2 * var(--wzc-media-overlay-safe-inline));
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: inset-inline-end var(--wzc-transition-fast) ease;
+  }
+
+  .source-indicator.controls-visible {
+    inset-inline-end: calc(
+      var(--wzc-media-overlay-safe-inline) + env(safe-area-inset-right, 0px) +
+        var(--wzc-media-control-size) + var(--wzc-media-overlay-lane-gap)
+    );
+    max-inline-size: calc(
+      100% - 2 *
+        var(--wzc-media-overlay-safe-inline) - var(
+          --wzc-media-control-size
+        ) - var(--wzc-media-overlay-lane-gap)
+    );
   }
 
   .connection-spinner {
@@ -134,8 +158,36 @@ export const cameraLiveViewStyles = css`
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .connection-spinner {
+    .connection-spinner,
+    .source-indicator {
       animation: none;
+      transition: none;
+    }
+  }
+
+  @container (max-width: 480px) {
+    .source-indicator,
+    watchzone-camera-controls {
+      --wzc-media-control-size: 2.35rem;
+      --wzc-media-control-icon-size: 1.4rem;
+    }
+  }
+
+  @container (max-height: 360px) {
+    .source-indicator,
+    watchzone-camera-controls {
+      --wzc-media-control-size: 2.25rem;
+      --wzc-media-control-icon-size: 1.3rem;
+      --wzc-media-control-gap: 0.125rem;
+    }
+  }
+
+  @container (max-height: 240px) {
+    .source-indicator,
+    watchzone-camera-controls {
+      --wzc-media-control-size: 1.875rem;
+      --wzc-media-control-icon-size: 1.15rem;
+      --wzc-media-control-gap: 0.1rem;
     }
   }
 

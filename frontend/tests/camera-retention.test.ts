@@ -266,9 +266,10 @@ describe("camera presentation retention", () => {
       ),
     ).toBe("unmuted");
     await vi.waitFor(() =>
-      expect(cameraControl(view).shadowRoot?.textContent).toContain(
-        "The browser blocked unmuted playback.",
-      ),
+      expect(
+        view.shadowRoot?.querySelector("watchzone-toast")?.shadowRoot
+          ?.textContent,
+      ).toContain("The browser blocked unmuted playback."),
     );
   });
 

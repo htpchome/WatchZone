@@ -29,6 +29,10 @@ new browser API makes another platform easier or faster.
   that the Home Assistant client keeps an ordinary browser-tab lifecycle.
 - Interactive targets must work with touch, mouse, keyboard, and assistive
   technology. Do not make hover the only way to expose an action.
+- Gate hover-only presentation behind hover and fine-pointer capabilities. A
+  component that also accepts touch records the latest input modality so
+  WebKit emulated hover or pointer focus cannot remain highlighted after a
+  touch; keyboard input restores keyboard focus presentation.
 - Use container size rather than global viewport size for card layout decisions.
 - Respect safe-area insets, text scaling, reduced motion, orientation changes,
   and Home Assistant theme tokens where they affect the feature.

@@ -1,4 +1,4 @@
-import { html, LitElement, nothing, type TemplateResult } from "lit";
+import { html, LitElement, type TemplateResult } from "lit";
 
 import {
   type ClientDeviceClass,
@@ -59,7 +59,6 @@ function iconName(
 
 export class WatchZoneCameraControls extends LitElement {
   public static properties = {
-    errorMessage: { attribute: false },
     fullscreenActive: { attribute: false, type: Boolean },
     fullscreenSupported: { attribute: false, type: Boolean },
     muted: { attribute: false, type: Boolean },
@@ -68,7 +67,6 @@ export class WatchZoneCameraControls extends LitElement {
     visible: { reflect: true, type: Boolean },
   };
 
-  public errorMessage?: string;
   public fullscreenActive = false;
   public fullscreenSupported = false;
   public muted = true;
@@ -80,20 +78,20 @@ export class WatchZoneCameraControls extends LitElement {
 
   protected render() {
     return html`
-      <div class="control-group" role="toolbar" aria-label="Camera controls">
+      <div
+        class="control-group"
+        role="toolbar"
+        aria-label="Camera controls"
+        @keydown=${this._handleKeyboardInput}
+        @pointerdown=${this._handlePointerInput}
+        @pointerenter=${this._handlePointerInput}
+      >
         ${CONTROLS.filter((control) =>
           CAMERA_CONTROL_DEVICE_MATRIX[control.action].includes(
             this._clientEnvironment.deviceClass,
           ),
         ).map((control) => this._renderControl(control))}
       </div>
-      ${
-        this.errorMessage
-          ? html`<div class="control-error" role="alert">
-              ${this.errorMessage}
-            </div>`
-          : nothing
-      }
     `;
   }
 
@@ -152,6 +150,14 @@ export class WatchZoneCameraControls extends LitElement {
       }),
     );
   }
+
+  private readonly _handleKeyboardInput = (): void => {
+    this.removeAttribute("touch-input");
+  };
+
+  private readonly _handlePointerInput = (event: PointerEvent): void => {
+    this.toggleAttribute("touch-input", event.pointerType !== "mouse");
+  };
 
   static styles = cameraControlsStyles;
 }
