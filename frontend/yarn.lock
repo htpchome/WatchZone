@@ -1978,6 +1978,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"swiper@npm:14.4.0":
+  version: 14.4.0
+  resolution: "swiper@npm:14.4.0"
+  checksum: 10c0/c7554da132e00667e2bb35cc239ad93c8f7c272f0a19b659e2fd2b9a3fe61c17ff607edb67efef6bc92e31d48f59198be2b7999c2a7c8678c3c50d3838094bf3
+  languageName: node
+  linkType: hard
+
 "symbol-tree@npm:^3.2.4":
   version: 3.2.4
   resolution: "symbol-tree@npm:3.2.4"
@@ -2298,6 +2305,7 @@ __metadata:
     jsdom: "npm:^29.1.1"
     lit: "npm:^3.3.3"
     prettier: "npm:^3.9.10"
+    swiper: "npm:14.4.0"
     typescript: "npm:^6.0.3"
     typescript-eslint: "npm:^8.72.1"
     vite: "npm:^8.3.5"

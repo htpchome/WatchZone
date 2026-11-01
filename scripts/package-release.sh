@@ -20,6 +20,7 @@ fi
 
 node "$REPOSITORY_ROOT/scripts/check-version.mjs"
 node "$REPOSITORY_ROOT/scripts/validate-styles.mjs"
+node "$REPOSITORY_ROOT/scripts/validate-third-party-notices.mjs"
 node "$REPOSITORY_ROOT/scripts/validate-build.mjs"
 node "$REPOSITORY_ROOT/scripts/validate-brand.mjs"
 
@@ -33,6 +34,8 @@ rsync -a \
   --exclude '*.pyc' \
   "$SOURCE_DIR/" "$PACKAGE_DIR/"
 rsync -a "$FRONTEND_DIR/" "$PACKAGE_DIR/frontend/"
+cp "$REPOSITORY_ROOT/LICENSE" "$PACKAGE_DIR/LICENSE"
+cp "$REPOSITORY_ROOT/THIRD_PARTY_NOTICES.md" "$PACKAGE_DIR/THIRD_PARTY_NOTICES.md"
 
 (
   cd "$PACKAGE_DIR"
@@ -42,6 +45,8 @@ rsync -a "$FRONTEND_DIR/" "$PACKAGE_DIR/frontend/"
 for required in \
   __init__.py \
   manifest.json \
+  LICENSE \
+  THIRD_PARTY_NOTICES.md \
   brand/icon.png \
   brand/icon@2x.png \
   frontend/watchzone.js; do
