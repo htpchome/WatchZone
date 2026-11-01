@@ -6,9 +6,8 @@ import { getMediaSessionManager } from "./core/media-session-manager";
 getMediaSessionManager();
 
 const activeCard = customElements.get(CARD_TAG) as
-  | (CustomElementConstructor & { readonly watchZoneVersion?: string })
-  | undefined;
-const activeCardVersion = activeCard?.watchZoneVersion ?? null;
+  (CustomElementConstructor & { readonly appVersion?: string }) | undefined;
+const activeCardVersion = activeCard?.appVersion ?? null;
 const clientEnvironment = getClientEnvironment();
 window.watchZone = Object.freeze({
   activeCardVersion,
@@ -41,4 +40,4 @@ if (activeCardVersion !== APP_VERSION) {
   );
 }
 
-export { WatchZoneCard } from "./card/watchzone-card";
+export { DashboardCard } from "./card/card";

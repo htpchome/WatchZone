@@ -67,9 +67,9 @@ const ICONS = {
   },
 } as const satisfies Readonly<Record<string, IconDefinition>>;
 
-export type WatchZoneIcon = keyof typeof ICONS;
+export type IconName = keyof typeof ICONS;
 
-export function renderIcon(name: WatchZoneIcon): TemplateResult {
+export function renderIcon(name: IconName): TemplateResult {
   const definition: IconDefinition = ICONS[name];
   return svg`<svg
     viewBox=${definition.viewBox ?? "0 0 24 24"}

@@ -1,6 +1,7 @@
 import { html, LitElement, nothing } from "lit";
 
 import { HomeAssistantLiveConnectionResolver } from "../../connections/home-assistant/resolver";
+import { createHomeAssistantMediaPresentation } from "../../connections/home-assistant/presentation";
 import { getClientEnvironment } from "../../core/client-environment";
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import { CAMERA_LIVE_VIEW_TAG } from "../../core/constants";
@@ -16,7 +17,7 @@ import {
   type MediaTransport,
 } from "../../core/media-session-manager";
 import { TimedVisibilityController } from "../../ui/timed-visibility.controller";
-import type { WatchZoneToast } from "../../ui/toast";
+import type { ToastElement } from "../../ui/toast";
 import "../../ui/toast";
 import type { CameraControlEventDetail } from "./controls-overlay";
 import "./controls-overlay";
@@ -59,7 +60,7 @@ function isAutoplayDenied(error: unknown): boolean {
   );
 }
 
-export class WatchZoneCameraLiveView extends LitElement {
+export class CameraLiveView extends LitElement {
   private _api?: HomeAssistantApi;
   private _autoplayBlocked = false;
   private _available = false;
@@ -104,6 +105,9 @@ export class WatchZoneCameraLiveView extends LitElement {
       this._clientEnvironment,
       getMediaSessionManager(),
     );
+  private readonly _mediaPresentation = createHomeAssistantMediaPresentation(
+    this._clientEnvironment.host,
+  );
 
   public set api(value: HomeAssistantApi | undefined) {
     if (this._api?.identity === value?.identity) {
@@ -224,36 +228,37 @@ export class WatchZoneCameraLiveView extends LitElement {
         @focusin=${this._controlsVisibility.handleFocusIn}
         @focusout=${this._controlsVisibility.handleFocusOut}
       >
-        <div class="generic-fallback" aria-hidden="true">
-          <svg viewBox="0 0 64 64">
-            <path
-              d="M11 20.5h30a5 5 0 0 1 5 5v18a5 5 0 0 1-5 5H11a5 5 0 0 1-5-5v-18a5 5 0 0 1 5-5Z"
-            />
-            <path d="m46 29 10-6v23l-10-6" />
-            <circle cx="26" cy="34.5" r="8" />
-          </svg>
-        </div>
         ${
-          this._posterUrl && !this._posterFailed
-            ? html`<img
-                class="fallback-image poster"
-                src=${this._posterUrl}
-                alt=""
-                aria-hidden="true"
-                decoding="async"
-                fetchpriority="high"
-                @error=${this._handlePosterError}
-              />`
+          !this._selected
+            ? html`<div class="generic-fallback" aria-hidden="true">
+                  <svg viewBox="0 0 64 64">
+                    <path
+                      d="M11 20.5h30a5 5 0 0 1 5 5v18a5 5 0 0 1-5 5H11a5 5 0 0 1-5-5v-18a5 5 0 0 1 5-5Z"
+                    />
+                    <path d="m46 29 10-6v23l-10-6" />
+                    <circle cx="26" cy="34.5" r="8" />
+                  </svg>
+                </div>
+                ${
+                  this._posterUrl && !this._posterFailed
+                    ? html`<img
+                        class="fallback-image poster"
+                        src=${this._posterUrl}
+                        alt=""
+                        aria-hidden="true"
+                        decoding="async"
+                        fetchpriority="high"
+                        @error=${this._handlePosterError}
+                      />`
+                    : nothing
+                }`
             : nothing
         }
-        <div class="hls-host" ?hidden=${this._selected === "webrtc"}></div>
-        <video
-          class="webrtc"
-          playsinline
-          aria-label="Live camera"
-          ?hidden=${this._selected !== "webrtc"}
-          @loadeddata=${this._handleWebRtcLoadedData}
-        ></video>
+        ${this._mediaPresentation.render({
+          muted: this._muted,
+          onWebRtcLoadedData: this._handleWebRtcLoadedData,
+          selected: this._selected,
+        })}
         ${
           showConnectionIndicator
             ? html`<div
@@ -763,7 +768,7 @@ export class WatchZoneCameraLiveView extends LitElement {
   private _showToast(message: string, category: "error" | "warning"): void {
     const show = (): void => {
       this.shadowRoot
-        ?.querySelector<WatchZoneToast>("watchzone-toast")
+        ?.querySelector<ToastElement>("watchzone-toast")
         ?.show(message, { category });
     };
     show();
@@ -773,20 +778,18 @@ export class WatchZoneCameraLiveView extends LitElement {
   }
 
   private _dismissToast(): void {
-    this.shadowRoot
-      ?.querySelector<WatchZoneToast>("watchzone-toast")
-      ?.dismiss();
+    this.shadowRoot?.querySelector<ToastElement>("watchzone-toast")?.dismiss();
   }
 
   static styles = cameraLiveViewStyles;
 }
 
 if (!customElements.get(CAMERA_LIVE_VIEW_TAG)) {
-  customElements.define(CAMERA_LIVE_VIEW_TAG, WatchZoneCameraLiveView);
+  customElements.define(CAMERA_LIVE_VIEW_TAG, CameraLiveView);
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    "watchzone-camera-live-view": WatchZoneCameraLiveView;
+    "watchzone-camera-live-view": CameraLiveView;
   }
 }

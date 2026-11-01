@@ -48,6 +48,20 @@ In priority order, WatchZone must be:
 6. **Simple where possible:** Do not introduce an abstraction, file, or runtime
    layer without a concrete responsibility.
 
+### 2.1 Rename-safe identity
+
+The current product name is expected to change. Internal classes, interfaces,
+types, functions, variables, and compile-time symbols must therefore use
+brand-neutral responsibility names. They must not use `WatchZone` or
+`watchZone` prefixes.
+
+Brand-bearing values are allowed only at true external identity boundaries:
+the Home Assistant domain, persisted custom-element tags and card type, current
+resource/package filenames, HACS metadata, display strings derived from the
+central name constant, the CSS custom-property namespace, and explicitly
+documented compatibility globals. Renaming an external identity requires an
+intentional migration decision; it must not require renaming internal APIs.
+
 ## 3. Non-goals
 
 WatchZone does not:
@@ -371,7 +385,7 @@ demonstrated cross-module requirement.
 Conceptually:
 
 ```ts
-interface WatchZoneModuleDefinition<TConfig = unknown> {
+interface ModuleDefinition<TConfig = unknown> {
   readonly type: string;
   validateConfig(value: unknown): TConfig;
   define(): void;
@@ -777,7 +791,7 @@ but the stored model and boundaries must not prevent them.
   through Home Assistant's UI.
 - Multiple provider types and multiple instances of the same provider are
   supported.
-- Use a typed `ConfigEntry[WatchZoneRuntime]` and `entry.runtime_data` for
+- Use a typed `ConfigEntry[IntegrationRuntime]` and `entry.runtime_data` for
   per-entry runtime objects.
 - Domain-global registrations are created once and cleaned up correctly.
 - `async_setup_entry` constructs the runtime and delegates to feature setup.
@@ -789,7 +803,7 @@ but the stored model and boundaries must not prevent them.
 
 ### 10.2 Runtime composition
 
-`WatchZoneRuntime` is a typed composition container, not a god object. It may
+`IntegrationRuntime` is a typed composition container, not a god object. It may
 hold references to feature services and provider instances, but it must not
 reimplement their behavior or expose unrestricted mutable dictionaries.
 

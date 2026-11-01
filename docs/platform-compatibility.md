@@ -109,6 +109,17 @@ separate entry exists, unit tests verify resolver selection, and physical
 Catalyst testing remains mandatory for behavior that synthetic engines cannot
 reproduce.
 
+Catalyst native video also requires an isolated presentation edge. The
+host-selected presentation policy clips the native HLS surface and applies a
+one-CSS-pixel compositor overscan so WKWebView cannot expose the native video
+edge when pointer-driven overlay layers are promoted or demoted. This is a
+rasterization correction, not responsive layout spacing. Browser and Companion
+pipelines must not receive the isolation class or overscan. Catalyst renders
+exactly one media element. An eligible Browser or Companion pipeline may render
+its proven autoplaying WebRTC candidate during the HLS/WebRTC startup hedge,
+but only one transport may be visible. Every host removes its poster after live
+media is selected.
+
 ### 2.3 Responsive presentation
 
 Container and viewport dimensions are not device detection. Responsive visual

@@ -8,7 +8,7 @@ import "./live-view";
 export type CameraShadowStyle = "medium" | "none" | "small";
 
 /** Stable composition boundary for current and future camera presentations. */
-export class WatchZoneCamera extends LitElement {
+export class CameraModule extends LitElement {
   public static properties = {
     api: { attribute: false },
     available: { attribute: false, type: Boolean },
@@ -57,11 +57,11 @@ export class WatchZoneCamera extends LitElement {
 }
 
 if (!customElements.get(CAMERA_TAG)) {
-  customElements.define(CAMERA_TAG, WatchZoneCamera);
+  customElements.define(CAMERA_TAG, CameraModule);
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    "watchzone-camera": WatchZoneCamera;
+    "watchzone-camera": CameraModule;
   }
 }

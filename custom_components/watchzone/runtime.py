@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True, slots=True)
-class WatchZoneRuntime:
+class IntegrationRuntime:
     """Runtime state owned by one WatchZone config entry."""
 
     entry_id: str

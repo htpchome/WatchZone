@@ -167,25 +167,14 @@ export async function createHomeAssistantHlsConnection(
         return selectSingleVariant(manifest, streamUrl);
       },
     );
-    const startNativePlayback = (playlistUrl: string): void => {
-      if (!video.canPlayType(HLS_CONTENT_TYPE)) {
-        throw new Error("This browser does not support native HLS playback");
-      }
-      timing.mark("hls_native_path_selected");
-      video.src = playlistUrl;
-      void playMediaElement(video).catch(() => undefined);
-    };
-
-    if (video.canPlayType(HLS_CONTENT_TYPE)) {
-      startNativePlayback(await manifestPromise);
-      return ready;
-    }
-
-    const [{ default: Hls }, playlistUrl] = await Promise.all([
-      import("hls.js/dist/hls.light.mjs").then((module) => {
+    const hlsModulePromise = import("hls.js/dist/hls.light.mjs").then(
+      (module) => {
         timing.mark("hls_engine_loaded");
         return module;
-      }),
+      },
+    );
+    const [{ default: Hls }, playlistUrl] = await Promise.all([
+      hlsModulePromise,
       manifestPromise,
     ]);
 
@@ -208,6 +197,10 @@ export async function createHomeAssistantHlsConnection(
       });
       player.loadSource(playlistUrl);
       player.attachMedia(video);
+    } else if (video.canPlayType(HLS_CONTENT_TYPE)) {
+      timing.mark("hls_native_path_selected");
+      video.src = playlistUrl;
+      void playMediaElement(video).catch(() => undefined);
     } else {
       throw new Error("This browser does not support HLS playback");
     }

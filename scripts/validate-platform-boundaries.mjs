@@ -5,6 +5,8 @@ const root = resolve(import.meta.dirname, "..");
 const sourceRoot = resolve(root, "frontend/src");
 const allowedCatalystOwners = new Set([
   "connections/home-assistant/catalyst-hls.ts",
+  "connections/home-assistant/catalyst-presentation.ts",
+  "connections/home-assistant/presentation.ts",
   "connections/home-assistant/resolver.ts",
   "core/client-environment.ts",
   "core/global.d.ts",

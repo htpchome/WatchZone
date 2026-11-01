@@ -115,6 +115,14 @@ moves the session into retention policy evaluation.
 Presentation is separate from connection ownership. A session can be detached
 from one live module and attached to another without renegotiating its source.
 
+Each presentation surface exposes exactly one visible live media layer. An
+eligible Browser or Companion host keeps the proven autoplaying WebRTC hedge
+mounted while HLS is visible and switches presentation after WebRTC decodes. It
+does not create media elements for transports the selected host cannot use, and
+it removes poster/fallback layers after decoded live media is selected.
+Catalyst creates only its native-HLS element. Retention may keep a session
+resource alive, but never as a second visible presentation.
+
 An adapter declares one supported attachment strategy:
 
 - **Stream attachment:** A retained `MediaStream` is attached to a new media

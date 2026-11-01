@@ -19,7 +19,7 @@ function cssAlpha(color: string): number {
   return legacy ? Number(legacy[1]) : 1;
 }
 
-async function waitForWatchZoneDefinition(page: Page): Promise<void> {
+async function waitForCardDefinition(page: Page): Promise<void> {
   await page.waitForFunction(
     () => customElements.get("watchzone-card") !== undefined,
   );
@@ -39,7 +39,7 @@ test("loads the responsive WatchZone card shell", async ({ page }) => {
   const consoleMessages: string[] = [];
   page.on("console", (message) => consoleMessages.push(message.text()));
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
+  await waitForCardDefinition(page);
 
   await expect(page.locator("watchzone-card")).toContainText("WatchZone");
   await expect(page.locator("watchzone-card ha-card")).toBeVisible();
@@ -71,7 +71,7 @@ test("fits phone, tablet, and desktop viewports without horizontal overflow", as
   ]) {
     await page.setViewportSize(viewport);
     await page.goto("/");
-    await waitForWatchZoneDefinition(page);
+    await waitForCardDefinition(page);
     await expect(page.locator("watchzone-card ha-card")).toBeVisible();
     expect(
       await page.evaluate(
@@ -94,13 +94,13 @@ test("routes the Catalyst host through one native HLS candidate", async ({
     });
   });
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
+  await waitForCardDefinition(page);
 
   await page.evaluate(() => {
     const testWindow = window as unknown as Window & {
-      __watchZoneCatalystCounts: { hls: number; webRtc: number };
+      __catalystCounts: { hls: number; webRtc: number };
     };
-    testWindow.__watchZoneCatalystCounts = { hls: 0, webRtc: 0 };
+    testWindow.__catalystCounts = { hls: 0, webRtc: 0 };
     const card = document.querySelector("watchzone-card") as HTMLElement & {
       hass: unknown;
       setConfig(config: unknown): void;
@@ -124,11 +124,11 @@ test("routes the Catalyst host through one native HLS candidate", async ({
       hassUrl: (path: string) => path,
       callWS: async (message: { type: string }) => {
         if (message.type === "camera/stream") {
-          testWindow.__watchZoneCatalystCounts.hls += 1;
+          testWindow.__catalystCounts.hls += 1;
           return new Promise(() => undefined);
         }
         if (message.type === "camera/webrtc/get_client_config") {
-          testWindow.__watchZoneCatalystCounts.webRtc += 1;
+          testWindow.__catalystCounts.webRtc += 1;
         }
         return undefined;
       },
@@ -139,9 +139,9 @@ test("routes the Catalyst host through one native HLS candidate", async ({
     .poll(() =>
       page.evaluate(() => {
         const testWindow = window as unknown as Window & {
-          __watchZoneCatalystCounts: { hls: number; webRtc: number };
+          __catalystCounts: { hls: number; webRtc: number };
         };
-        return testWindow.__watchZoneCatalystCounts;
+        return testWindow.__catalystCounts;
       }),
     )
     .toEqual({ hls: 1, webRtc: 0 });
@@ -156,6 +156,10 @@ test("routes the Catalyst host through one native HLS candidate", async ({
   });
   const video = page.locator("watchzone-camera .hls-host video");
   await expect(video).toHaveCount(1);
+  await expect(page.locator("watchzone-camera video")).toHaveCount(1);
+  await expect(page.locator("watchzone-camera .hls-host")).toHaveClass(
+    /native-edge-isolation/,
+  );
   expect(
     await video.evaluate((element) => ({
       autoplay: (element as HTMLVideoElement).autoplay,
@@ -169,7 +173,7 @@ test("applies outer shell appearance toggles without changing card identity", as
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
+  await waitForCardDefinition(page);
 
   const result = await page
     .locator("watchzone-card")
@@ -263,7 +267,7 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
+  await waitForCardDefinition(page);
 
   const result = await page.locator("watchzone-card").evaluate((element) => {
     const requiredTokens = [
@@ -331,7 +335,7 @@ test("camera selection does not recursively republish dirty state", async ({
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
+  await waitForCardDefinition(page);
 
   const result = await page.evaluate(async () => {
     interface ContextRequest extends Event {
@@ -457,7 +461,7 @@ test("round-trips boolean toggles through defaults before Save", async ({
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
+  await waitForCardDefinition(page);
 
   const result = await page.evaluate(async () => {
     interface ContextRequest extends Event {
@@ -645,7 +649,7 @@ test("retains one live connection while the card presentation is replaced", asyn
     }),
   );
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
+  await waitForCardDefinition(page);
 
   await page.evaluate(async () => {
     interface TestCard extends HTMLElement {
@@ -654,12 +658,12 @@ test("retains one live connection while the card presentation is replaced", asyn
     }
 
     interface TestWindow extends Window {
-      __watchZoneTestConnectionCount: number;
-      __watchZoneTestHass: unknown;
+      __testConnectionCount: number;
+      __testHass: unknown;
     }
 
     const testWindow = window as unknown as TestWindow;
-    testWindow.__watchZoneTestConnectionCount = 0;
+    testWindow.__testConnectionCount = 0;
 
     class TestPeerConnection {
       public connectionState: RTCPeerConnectionState = "new";
@@ -722,13 +726,13 @@ test("retains one live connection while the card presentation is replaced", asyn
       hassUrl: (path: string) => path,
       callWS: async (message: { type: string }) => {
         if (message.type === "camera/webrtc/get_client_config") {
-          testWindow.__watchZoneTestConnectionCount += 1;
+          testWindow.__testConnectionCount += 1;
           return { configuration: { iceServers: [] } };
         }
         return undefined;
       },
     };
-    testWindow.__watchZoneTestHass = hass;
+    testWindow.__testHass = hass;
 
     const first = document.querySelector("watchzone-card") as TestCard;
     first.setConfig({
@@ -745,9 +749,9 @@ test("retains one live connection while the card presentation is replaced", asyn
     .poll(() =>
       page.evaluate(() => {
         const testWindow = window as unknown as Window & {
-          __watchZoneTestConnectionCount: number;
+          __testConnectionCount: number;
         };
-        return testWindow.__watchZoneTestConnectionCount;
+        return testWindow.__testConnectionCount;
       }),
     )
     .toBe(1);
@@ -763,7 +767,7 @@ test("retains one live connection while the card presentation is replaced", asyn
 
   await page.evaluate(() => {
     const testWindow = window as unknown as Window & {
-      __watchZoneTestHass: unknown;
+      __testHass: unknown;
     };
     const first = document.querySelector("watchzone-card");
     first?.remove();
@@ -790,7 +794,7 @@ test("retains one live connection while the card presentation is replaced", asyn
       "--ha-box-shadow-s",
       "rgb(7, 8, 9) 0px 1px 2px",
     );
-    replacement.hass = testWindow.__watchZoneTestHass;
+    replacement.hass = testWindow.__testHass;
     document.body.append(replacement);
   });
 
@@ -1052,9 +1056,9 @@ test("retains one live connection while the card presentation is replaced", asyn
     .poll(() =>
       page.evaluate(() => {
         const testWindow = window as unknown as Window & {
-          __watchZoneTestConnectionCount: number;
+          __testConnectionCount: number;
         };
-        return testWindow.__watchZoneTestConnectionCount;
+        return testWindow.__testConnectionCount;
       }),
     )
     .toBe(1);

@@ -6,7 +6,7 @@ import { css } from "lit";
  * Components consume semantic --wzc-* tokens exclusively. Keeping HA token
  * aliases here makes theme changes and future design-system migrations local.
  */
-export const watchZoneThemeTokens = css`
+export const themeTokens = css`
   :host {
     --wzc-color-primary: var(--primary-color, CanvasText);
     --wzc-color-primary-dark: var(

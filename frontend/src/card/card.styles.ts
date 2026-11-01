@@ -1,6 +1,6 @@
 import { css } from "lit";
 
-export const watchZoneCardStyles = css`
+export const cardStyles = css`
   :host {
     display: block;
     box-sizing: border-box;

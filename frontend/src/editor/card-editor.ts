@@ -3,7 +3,7 @@ import { html, LitElement } from "lit";
 import {
   cardConfigSignature,
   normalizeCardConfig,
-  type WatchZoneCardConfig,
+  type CardConfig,
 } from "../core/config";
 import {
   EDITOR_PREVIEW_DRAFT_EVENT,
@@ -11,11 +11,8 @@ import {
   EDITOR_TEXT_PREVIEW_DELAY_MS,
 } from "../core/constants";
 import { isHomeAssistant, type HomeAssistant } from "../core/home-assistant";
-import {
-  toYamlCardConfig,
-  type WatchZoneYamlConfig,
-} from "../core/yaml-config";
-import { watchZoneThemeTokens } from "../styles/theme-tokens";
+import { toYamlCardConfig, type YamlCardConfig } from "../core/yaml-config";
+import { themeTokens } from "../styles/theme-tokens";
 import {
   commitDraftForSave,
   type DirtyStateContext,
@@ -24,7 +21,7 @@ import {
   seedDirtyState,
   updateDirtyState,
 } from "./dirty-state";
-import { watchZoneCardEditorStyles } from "./watchzone-card-editor.styles";
+import { cardEditorStyles } from "./card-editor.styles";
 
 interface InputElement extends HTMLElement {
   value: string;
@@ -32,7 +29,7 @@ interface InputElement extends HTMLElement {
 
 interface PreviewDraftDetail {
   readonly baselineSignature: string;
-  readonly config: WatchZoneCardConfig | null;
+  readonly config: CardConfig | null;
 }
 
 interface ValueChangedEvent extends Event {
@@ -58,11 +55,11 @@ type BooleanConfigFlag =
   | "start_live_unmuted_pc_tablet"
   | "start_live_unmuted_phone";
 
-export class WatchZoneCardEditor extends LitElement {
-  private _baseline?: WatchZoneCardConfig;
+export class CardEditor extends LitElement {
+  private _baseline?: CardConfig;
   private _baselineSignature = "";
-  private _config?: WatchZoneCardConfig;
-  private _dirtyContext?: DirtyStateContext<WatchZoneYamlConfig>;
+  private _config?: CardConfig;
+  private _dirtyContext?: DirtyStateContext<YamlCardConfig>;
   private _dirtySeeded = false;
   private _hass?: HomeAssistant;
   private _previewTimer?: ReturnType<typeof setTimeout>;
@@ -107,7 +104,7 @@ export class WatchZoneCardEditor extends LitElement {
 
   public connectedCallback(): void {
     super.connectedCallback();
-    requestDirtyStateContext<WatchZoneYamlConfig>(this, (context) => {
+    requestDirtyStateContext<YamlCardConfig>(this, (context) => {
       this._dirtyContext = context;
       this._seedDirtyState();
     });
@@ -287,10 +284,7 @@ export class WatchZoneCardEditor extends LitElement {
     this._applyDraft(normalizeCardConfig(next), true);
   };
 
-  private _applyDraft(
-    nextConfig: WatchZoneCardConfig,
-    commitConfig: boolean,
-  ): void {
+  private _applyDraft(nextConfig: CardConfig, commitConfig: boolean): void {
     const changed =
       !this._config ||
       cardConfigSignature(nextConfig) !== cardConfigSignature(this._config);
@@ -327,13 +321,13 @@ export class WatchZoneCardEditor extends LitElement {
     }
   }
 
-  private _publishDraftPreview(config: WatchZoneCardConfig): void {
+  private _publishDraftPreview(config: CardConfig): void {
     this._publishPreview(
       cardConfigSignature(config) === this._baselineSignature ? null : config,
     );
   }
 
-  private _publishPreview(config: WatchZoneCardConfig | null): void {
+  private _publishPreview(config: CardConfig | null): void {
     window.dispatchEvent(
       new CustomEvent<PreviewDraftDetail>(EDITOR_PREVIEW_DRAFT_EVENT, {
         detail: {
@@ -344,7 +338,7 @@ export class WatchZoneCardEditor extends LitElement {
     );
   }
 
-  private _dispatchConfigChange(config: WatchZoneCardConfig): void {
+  private _dispatchConfigChange(config: CardConfig): void {
     this.dispatchEvent(
       new CustomEvent("config-changed", {
         detail: { config: toYamlCardConfig(config) },
@@ -364,15 +358,15 @@ export class WatchZoneCardEditor extends LitElement {
     }
   };
 
-  static styles = [watchZoneThemeTokens, watchZoneCardEditorStyles];
+  static styles = [themeTokens, cardEditorStyles];
 }
 
 if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, WatchZoneCardEditor);
+  customElements.define(EDITOR_TAG, CardEditor);
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    "watchzone-card-editor": WatchZoneCardEditor;
+    "watchzone-card-editor": CardEditor;
   }
 }

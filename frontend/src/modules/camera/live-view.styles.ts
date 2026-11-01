@@ -38,6 +38,7 @@ export const cameraLiveViewStyles = css`
   .generic-fallback,
   .fallback-image {
     position: absolute;
+    z-index: 0;
     inset: 0;
     inline-size: 100%;
     block-size: 100%;
@@ -73,6 +74,7 @@ export const cameraLiveViewStyles = css`
   .hls-host,
   video {
     position: absolute;
+    z-index: 1;
     inset: 0;
     display: block;
     inline-size: 100%;
@@ -88,6 +90,22 @@ export const cameraLiveViewStyles = css`
   video {
     object-fit: var(--wzc-live-fit, contain);
     background: inherit;
+  }
+
+  .hls-host.native-edge-isolation {
+    overflow: hidden;
+    border-radius: inherit;
+    isolation: isolate;
+  }
+
+  .hls-host.native-edge-isolation video {
+    inset: -1px;
+    inline-size: calc(100% + 2px);
+    block-size: calc(100% + 2px);
+    max-inline-size: none;
+    max-block-size: none;
+    border: 0;
+    outline: 0;
   }
 
   .source-indicator {

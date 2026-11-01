@@ -3,7 +3,7 @@ import { html, LitElement, nothing } from "lit";
 import {
   cardConfigSignature,
   normalizeCardConfig,
-  type WatchZoneCardConfig,
+  type CardConfig,
 } from "../core/config";
 import {
   APP_NAME,
@@ -27,12 +27,12 @@ import {
   type MediaSessionLease,
 } from "../core/media-session-manager";
 import { syncHomeAssistantCardHostAppearance } from "../styles/home-assistant-card-bridge";
-import { watchZoneThemeTokens } from "../styles/theme-tokens";
-import { watchZoneCardStyles } from "./watchzone-card.styles";
+import { themeTokens } from "../styles/theme-tokens";
+import { cardStyles } from "./card.styles";
 
 interface PreviewDraftDetail {
   readonly baselineSignature: string;
-  readonly config: WatchZoneCardConfig | null;
+  readonly config: CardConfig | null;
 }
 
 let cameraModulePromise: Promise<unknown> | undefined;
@@ -44,16 +44,16 @@ function loadCameraModule(): Promise<unknown> {
   }));
 }
 
-export class WatchZoneCard extends LitElement {
-  public static readonly watchZoneVersion = APP_VERSION;
+export class DashboardCard extends LitElement {
+  public static readonly appVersion = APP_VERSION;
 
-  private _config: WatchZoneCardConfig = normalizeCardConfig({});
+  private _config: CardConfig = normalizeCardConfig({});
   private _hass?: HomeAssistant;
   private _haApi?: HomeAssistantApi;
   private _liveModuleReady = false;
   private _liveModuleError?: string;
   private _prewarmLease?: MediaSessionLease;
-  private _previewConfig?: WatchZoneCardConfig;
+  private _previewConfig?: CardConfig;
 
   /** Set by Home Assistant for the card shown inside its editor preview. */
   public preview = false;
@@ -81,12 +81,12 @@ export class WatchZoneCard extends LitElement {
     this._ensureLiveModule();
   }
 
-  public static getStubConfig(): WatchZoneCardConfig {
+  public static getStubConfig(): CardConfig {
     return { type: CARD_TYPE, title: DEFAULT_CARD_TITLE };
   }
 
   public static async getConfigElement(): Promise<HTMLElement> {
-    await import("../editor/watchzone-card-editor");
+    await import("../editor/card-editor");
     return document.createElement(EDITOR_TAG);
   }
 
@@ -271,7 +271,7 @@ export class WatchZoneCard extends LitElement {
     this._prewarmLease = undefined;
   }
 
-  private _syncOuterAppearance(config: WatchZoneCardConfig): void {
+  private _syncOuterAppearance(config: CardConfig): void {
     const roundedCorners = config.rounded_outer_corners !== false;
     const outerShadows = config.outer_shadows !== false;
     this.toggleAttribute("data-wzc-square-outer-corners", !roundedCorners);
@@ -291,11 +291,11 @@ export class WatchZoneCard extends LitElement {
     this.requestUpdate();
   };
 
-  static styles = [watchZoneThemeTokens, watchZoneCardStyles];
+  static styles = [themeTokens, cardStyles];
 }
 
 if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, WatchZoneCard);
+  customElements.define(CARD_TAG, DashboardCard);
 }
 
 window.customCards ??= [];

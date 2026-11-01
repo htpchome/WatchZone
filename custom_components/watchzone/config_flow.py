@@ -8,7 +8,7 @@ from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from .const import DOMAIN, NAME
 
 
-class WatchZoneConfigFlow(ConfigFlow, domain=DOMAIN):
+class IntegrationConfigFlow(ConfigFlow, domain=DOMAIN):
     """Create the single WatchZone application entry."""
 
     VERSION = 1

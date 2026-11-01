@@ -8,7 +8,7 @@ const manifest = JSON.parse(
   await readFile(resolve(frontend, ".vite/manifest.json"), "utf8"),
 );
 const entry = manifest["src/main.ts"];
-const editor = manifest["src/editor/watchzone-card-editor.ts"];
+const editor = manifest["src/editor/card-editor.ts"];
 const camera = manifest["src/modules/camera/index.ts"];
 const connection = manifest["src/connections/home-assistant/index.ts"];
 const hlsConnection = manifest["src/connections/home-assistant/hls.ts"];

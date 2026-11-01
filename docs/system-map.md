@@ -48,7 +48,7 @@ A focused system contract records:
 
 - **Owners:** `frontend/src/core/config.ts`,
   `frontend/src/core/yaml-config.ts`, `frontend/src/editor/dirty-state.ts`, and
-  `frontend/src/editor/watchzone-card-editor.ts`
+  `frontend/src/editor/card-editor.ts`
 - **Contract:** `docs/config-editor-lifecycle.md`
 - **Flow:** saved configuration is normalized into a complete runtime model;
   editor controls update a local draft and soft preview; Save commits the full
@@ -58,13 +58,13 @@ A focused system contract records:
   defaults without losing dirty state.
 - **Verification:** `frontend/tests/config.test.ts`,
   `frontend/tests/yaml-config.test.ts`,
-  `frontend/tests/watchzone-card-editor.test.ts`, and editor cases in
+  `frontend/tests/card-editor.test.ts`, and editor cases in
   `frontend/tests/browser/smoke.spec.ts`
 
 ### 3.3 Card shell, appearance, and Home Assistant theme bridge
 
-- **Owners:** `frontend/src/card/watchzone-card.ts`,
-  `frontend/src/card/watchzone-card.styles.ts`,
+- **Owners:** `frontend/src/card/card.ts`,
+  `frontend/src/card/card.styles.ts`,
   `frontend/src/styles/theme-tokens.ts`, and
   `frontend/src/styles/home-assistant-card-bridge.ts`
 - **Contract:** `architecture.md`, sections 8.5 and 8.6;
@@ -74,7 +74,7 @@ A focused system contract records:
   card host and shadow boundary.
 - **Key invariant:** feature CSS consumes `--wzc-*` semantics; only
   `theme-tokens.ts` directly references Home Assistant theme variables.
-- **Verification:** `frontend/tests/watchzone-card.test.ts`, shell and token
+- **Verification:** `frontend/tests/card.test.ts`, shell and token
   cases in `frontend/tests/browser/smoke.spec.ts`, and
   `scripts/validate-styles.mjs`
 
@@ -113,12 +113,18 @@ A focused system contract records:
   session destruction; automatic playback state never replaces user intent.
   Every presentation/lifecycle design declares its lease transition, and a
   presentation-only change must not create or renegotiate a connection.
+  A surface renders one visible live media layer and removes decoded-media
+  fallback layers. Eligible ordinary hosts keep the proven autoplaying WebRTC
+  hedge mounted until it decodes; unsupported transport elements are not
+  created.
 - **Verification:** `frontend/tests/media-session-manager.test.ts` and
   `frontend/tests/camera-retention.test.ts`
 
 ### 3.6 Home Assistant direct live connection
 
 - **Owners:** `frontend/src/connections/home-assistant/resolver.ts`,
+  `frontend/src/connections/home-assistant/presentation.ts`, the separate
+  ordinary and Catalyst presentation policies,
   `frontend/src/connections/home-assistant/index.ts`,
   `frontend/src/connections/home-assistant/hls.ts`, and the isolated
   `frontend/src/connections/home-assistant/catalyst-hls.ts`
@@ -133,7 +139,9 @@ A focused system contract records:
   imported by ordinary HLS, and its temporary runtime mute must not set
   `defaultMuted`. Audible autoplay denial always resumes the retained element
   muted; only the lazy Catalyst autoplay policy retries unmuting after playback
-  starts. A later WebRTC takeover does not change the initial-source indicator.
+  starts. Its native-video host receives Catalyst-only compositor edge
+  isolation; Browser and Companion do not. A later WebRTC takeover does not
+  change the initial-source indicator.
 - **Verification:** `frontend/tests/home-assistant-connection.test.ts`,
   `frontend/tests/home-assistant-hls-connection.test.ts`,
   `frontend/tests/home-assistant-live-resolver.test.ts`, and Catalyst/browser
@@ -185,7 +193,45 @@ A focused system contract records:
   `frontend/tests/controls-visibility-controller.test.ts`, and compact-overlay
   coverage in `frontend/tests/browser/smoke.spec.ts`
 
-## 4. Updating this map
+### 3.10 Product identity and rename safety
+
+- **Owners:** `frontend/src/core/constants.ts`,
+  `custom_components/watchzone/const.py`, and external package metadata
+- **Contract:** `architecture.md`, section 2.1; `AGENTS.md`, architecture
+  stability rules
+- **Flow:** internal code uses responsibility-based names. Current product and
+  domain values enter the application only through explicit external identity
+  boundaries such as the HA domain, card tag, resource filename, display name,
+  package metadata, CSS token namespace, and compatibility diagnostics global.
+- **Key invariant:** changing the product display name does not require renaming
+  internal classes, types, functions, variables, or compile-time symbols.
+  Persisted external IDs require a deliberate migration decision rather than a
+  blind constant replacement.
+- **Verification:** `corepack yarn check:naming` and
+  `scripts/validate-internal-naming.mjs`
+
+## 4. Verification strength and open enforcement gaps
+
+Passing a synthetic test is not equivalent to physical-client validation.
+Every handoff must state the strongest evidence actually obtained.
+
+| Contract area | Automated evidence | Evidence still required |
+| --- | --- | --- |
+| Internal rename safety | Naming validator runs in every production build and CI | External domain/tag migration plan when the public rename is chosen |
+| Browser/Catalyst isolation | Source-boundary validator, resolver/presentation unit tests, and browser routing tests | Physical Catalyst validation for native media, lifecycle, and audio behavior |
+| HA HLS/WebRTC hedge | Adapter, HLS-first takeover, retention, and Chromium/Firefox/WebKit tests | Live Home Assistant validation against real camera signaling and codecs |
+| Mute intent and autoplay | Unit/browser tests cover defaults, user overrides, retention, takeover, and blocked playback | Physical Safari, Companion, and Catalyst autoplay-policy validation |
+| Editor dirty state | Unit/browser tests cover true/false round trips, preview identity, and Save | Live Home Assistant editor validation after HA frontend upgrades |
+| Responsive/theme behavior | Style validator, token checks, and three-engine viewport tests | Physical phone/tablet safe-area, text-zoom, and native-app validation |
+| Retention/cleanup | Lease, navigation, replacement, timer, and controller cleanup tests | Long-running live-system observation; no automated heap/leak endurance gate exists yet |
+| Home Assistant API currency | Focused adapter boundaries and CI against installed development dependencies | Manual review against current HA developer documentation when an HA-facing API changes |
+
+Local Python validation requires the Home Assistant development dependencies.
+The repository CI installs them and runs Ruff, mypy, and pytest; a local
+environment without those dependencies may report only that validation is
+unavailable, never a pass.
+
+## 5. Updating this map
 
 When a change crosses multiple rows, update every affected focused contract but
 keep one owner per responsibility. If two rows begin claiming the same state or

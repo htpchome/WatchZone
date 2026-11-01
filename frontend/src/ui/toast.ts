@@ -24,7 +24,7 @@ export interface ToastOptions {
 }
 
 /** Reusable categorized feedback with one lifecycle-safe visibility policy. */
-export class WatchZoneToast extends LitElement {
+export class ToastElement extends LitElement {
   public static properties = {
     placement: { reflect: true, type: String },
     presentation: { reflect: true, type: String },
@@ -77,11 +77,11 @@ export class WatchZoneToast extends LitElement {
 }
 
 if (!customElements.get("watchzone-toast")) {
-  customElements.define("watchzone-toast", WatchZoneToast);
+  customElements.define("watchzone-toast", ToastElement);
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    "watchzone-toast": WatchZoneToast;
+    "watchzone-toast": ToastElement;
   }
 }

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import "../src/main";
-import type { WatchZoneCard } from "../src/card/watchzone-card";
+import type { DashboardCard } from "../src/card/card";
 
 describe("watchzone-card", () => {
   afterEach(() => {
@@ -9,7 +9,7 @@ describe("watchzone-card", () => {
   });
 
   it("renders the configured title in a Home Assistant card", async () => {
-    const element = document.createElement("watchzone-card") as WatchZoneCard;
+    const element = document.createElement("watchzone-card") as DashboardCard;
     element.setConfig({ type: "custom:watchzone-card", title: "Front Door" });
     document.body.append(element);
     await element.updateComplete;
@@ -19,7 +19,7 @@ describe("watchzone-card", () => {
   });
 
   it("does not rerender for unrelated hass assignments", async () => {
-    const element = document.createElement("watchzone-card") as WatchZoneCard;
+    const element = document.createElement("watchzone-card") as DashboardCard;
     document.body.append(element);
     await element.updateComplete;
     const rendered = element.shadowRoot?.querySelector("ha-card");
@@ -31,7 +31,7 @@ describe("watchzone-card", () => {
   });
 
   it("propagates outer appearance settings through the HA card boundary", async () => {
-    const element = document.createElement("watchzone-card") as WatchZoneCard;
+    const element = document.createElement("watchzone-card") as DashboardCard;
     element.setConfig({
       type: "custom:watchzone-card",
       title: "Front Door",

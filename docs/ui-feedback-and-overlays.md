@@ -16,7 +16,7 @@ and overlapping media overlays.
 
 ## 2. Toast contract
 
-`WatchZoneToast` is context-neutral. A live video, event list, configuration
+`ToastElement` is context-neutral. A live video, event list, configuration
 surface, or future module may host it without importing camera behavior. Its
 typed API accepts:
 

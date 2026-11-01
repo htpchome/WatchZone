@@ -455,10 +455,10 @@ export class MediaSessionManager {
 
 declare global {
   interface Window {
-    __watchZoneMediaSessionManager?: MediaSessionManager;
+    __appMediaSessionManager?: MediaSessionManager;
   }
 }
 
 export function getMediaSessionManager(): MediaSessionManager {
-  return (window.__watchZoneMediaSessionManager ??= new MediaSessionManager());
+  return (window.__appMediaSessionManager ??= new MediaSessionManager());
 }

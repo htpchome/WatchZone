@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { WatchZoneToast } from "../src/ui/toast";
+import type { ToastElement } from "../src/ui/toast";
 import { DEFAULT_TOAST_DURATION_MS } from "../src/ui/toast";
 import "../src/ui/toast";
 
@@ -14,7 +14,7 @@ describe("WatchZone toast", () => {
     "renders and expires the %s category",
     async (category) => {
       vi.useFakeTimers();
-      const toast = document.createElement("watchzone-toast") as WatchZoneToast;
+      const toast = document.createElement("watchzone-toast") as ToastElement;
       document.body.append(toast);
 
       toast.show("Test message", { category });

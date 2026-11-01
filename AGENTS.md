@@ -46,6 +46,10 @@ For any frontend, media, interaction, layout, or styling change, also read
 - Keep the browser console quiet: one name/version startup banner plus
   actionable warnings or errors. Remove temporary tracing before handoff and
   route future diagnostics through the centralized logger when introduced.
+- Keep internal identifiers brand-neutral because the product name is expected
+  to change. Product/domain names belong only at centralized external identity
+  boundaries. Run `corepack yarn check:naming`; do not introduce
+  `WatchZone*`, `watchZone*`, or `__WATCHZONE_*` internal identifiers.
 
 ## System documentation
 

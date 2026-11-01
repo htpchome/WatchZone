@@ -1,6 +1,6 @@
 export const APP_NAME = "WatchZone";
-export const APP_VERSION = __WATCHZONE_VERSION__;
-export const APP_BUILD = __WATCHZONE_BUILD__;
+export const APP_VERSION = __APP_VERSION__;
+export const APP_BUILD = __APP_BUILD__;
 
 export const CARD_TAG = "watchzone-card";
 export const CARD_TYPE = `custom:${CARD_TAG}`;

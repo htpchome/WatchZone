@@ -34,15 +34,15 @@ for (const path of await collectTypeScript(sourceRoot)) {
     violations.push(`${relativePath}: embedded Lit CSS is prohibited`);
   }
   if (!isStyleBoundary) {
-    const nonWatchZoneVariables = [
+    const nonAppVariables = [
       ...source.matchAll(/var\(\s*(--[a-z0-9-]+)/gi),
     ]
       .map((match) => match[1])
       .filter((name) => !name.startsWith("--wzc-"));
-    if (source.includes("--ha-") || nonWatchZoneVariables.length > 0) {
+    if (source.includes("--ha-") || nonAppVariables.length > 0) {
       violations.push(
         `${relativePath}: component CSS may reference only --wzc-* variables; found ${[
-          ...new Set(nonWatchZoneVariables),
+          ...new Set(nonAppVariables),
         ].join(", ") || "a direct --ha-* token"}`,
       );
     }
