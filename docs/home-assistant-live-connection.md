@@ -100,4 +100,7 @@ forced-muted presentation.
 - Preserve the peer connection and media stream when presentation elements are
   recreated or moved.
 - Add measured timing diagnostics through the future centralized diagnostic
-  system, never through routine console noise and never with credentials.
+  system, never through routine console noise and never with credentials. The
+  current startup recorder is read with
+  `window.watchZone.getLiveStartupTimings()` and records relative milestone
+  times without writing per-phase console messages.

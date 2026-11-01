@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createHomeAssistantWebRtcConnection } from "../src/connections/home-assistant";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
+import { LiveStartupTiming } from "../src/core/live-startup-timing";
 
 class FakeTrack {
   public readonly id = "video-track";
@@ -91,12 +92,14 @@ describe("Home Assistant WebRTC connection", () => {
       }),
     };
     const onFailure = vi.fn();
+    const timing = new LiveStartupTiming("home_assistant:camera.front");
 
     const connecting = createHomeAssistantWebRtcConnection(
       api,
       "camera.front",
       new AbortController().signal,
       onFailure,
+      timing,
     );
     await vi.waitFor(() => expect(offerCallback).toBeTypeOf("function"));
     const peer = FakePeerConnection.instance;
@@ -162,6 +165,19 @@ describe("Home Assistant WebRTC connection", () => {
       candidate: "remote-candidate",
     });
     expect(connection.stream.getTracks()).toHaveLength(1);
+    expect(timing.snapshot().phases).toMatchObject({
+      answer_received: expect.any(Number),
+      client_config_received: expect.any(Number),
+      first_local_candidate: expect.any(Number),
+      first_remote_candidate: expect.any(Number),
+      local_description_set: expect.any(Number),
+      offer_created: expect.any(Number),
+      peer_created: expect.any(Number),
+      remote_description_set: expect.any(Number),
+      session_received: expect.any(Number),
+      signaling_started: expect.any(Number),
+      video_track_received: expect.any(Number),
+    });
     expect(onFailure).not.toHaveBeenCalled();
 
     offerCallback({ type: "error", message: "camera connection lost" });

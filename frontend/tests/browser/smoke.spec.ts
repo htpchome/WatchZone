@@ -32,14 +32,17 @@ test("loads the responsive WatchZone card shell", async ({ page }) => {
       (message) =>
         message.includes("WatchZone") &&
         message.includes("CURRENT") &&
-        message.includes("v0.0.4-dev.4 (local)"),
+        message.includes("v0.0.4-dev.5 (local)"),
     ),
   ).toBe(true);
   expect(await page.evaluate(() => window.watchZone)).toMatchObject({
-    activeCardVersion: "0.0.4-dev.4",
+    activeCardVersion: "0.0.4-dev.5",
     build: "local",
-    version: "0.0.4-dev.4",
+    version: "0.0.4-dev.5",
   });
+  expect(
+    await page.evaluate(() => typeof window.watchZone?.getLiveStartupTimings),
+  ).toBe("function");
 });
 
 test("fits phone, tablet, and desktop viewports without horizontal overflow", async ({
@@ -325,4 +328,14 @@ test("retains one live connection while the card presentation is replaced", asyn
       }),
     )
     .toBe(1);
+
+  expect(
+    await page.evaluate(
+      () => window.watchZone?.getLiveStartupTimings()[0]?.phases,
+    ),
+  ).toMatchObject({
+    adapter_imported: expect.any(Number),
+    client_config_received: expect.any(Number),
+    video_track_received: expect.any(Number),
+  });
 });

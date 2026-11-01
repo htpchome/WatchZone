@@ -1,4 +1,5 @@
 import type { HomeAssistantApi } from "../../core/home-assistant";
+import type { LiveStartupTiming } from "../../core/live-startup-timing";
 import type { MediaConnection } from "../../core/media-session-manager";
 
 interface ClientConfiguration {
@@ -44,6 +45,7 @@ export async function createHomeAssistantWebRtcConnection(
   entityId: string,
   signal: AbortSignal,
   onFailure: (error: Error) => void,
+  timing: LiveStartupTiming,
 ): Promise<MediaConnection> {
   if (typeof RTCPeerConnection === "undefined") {
     throw new Error("This browser does not support WebRTC");
@@ -52,15 +54,18 @@ export async function createHomeAssistantWebRtcConnection(
     throw abortError();
   }
 
+  timing.mark("client_config_requested");
   const client = await api.callWS<ClientConfiguration>({
     type: "camera/webrtc/get_client_config",
     entity_id: entityId,
   });
+  timing.mark("client_config_received");
   if (signal.aborted) {
     throw abortError();
   }
 
   const peer = new RTCPeerConnection(client.configuration);
+  timing.mark("peer_created");
   const stream = new MediaStream();
   let closed = false;
   let connected = false;
@@ -124,6 +129,7 @@ export async function createHomeAssistantWebRtcConnection(
 
   peer.onicecandidate = (event) => {
     if (event.candidate?.candidate) {
+      timing.mark("first_local_candidate");
       void sendCandidate(event.candidate.toJSON());
     }
   };
@@ -155,19 +161,23 @@ export async function createHomeAssistantWebRtcConnection(
       }
       try {
         if (event.type === "session") {
+          timing.mark("session_received");
           sessionId = event.session_id;
           await Promise.all(localCandidates.splice(0).map(sendCandidate));
         } else if (event.type === "answer") {
+          timing.mark("answer_received");
           await peer.setRemoteDescription({
             type: "answer",
             sdp: event.answer,
           });
+          timing.mark("remote_description_set");
           await Promise.all(
             remoteCandidates
               .splice(0)
               .map((candidate) => peer.addIceCandidate(candidate)),
           );
         } else if (event.type === "candidate") {
+          timing.mark("first_remote_candidate");
           if (peer.remoteDescription) {
             await peer.addIceCandidate(event.candidate);
           } else {
@@ -192,9 +202,10 @@ export async function createHomeAssistantWebRtcConnection(
         stream.addTrack(event.track);
       }
       if (!connected && event.track.kind === "video") {
+        timing.mark("video_track_received");
         connected = true;
         window.clearTimeout(timeout);
-        resolve({ stream, close });
+        resolve({ stream, timing, close });
       }
     };
 
@@ -209,7 +220,9 @@ export async function createHomeAssistantWebRtcConnection(
           offerToReceiveAudio: true,
           offerToReceiveVideo: true,
         });
+        timing.mark("offer_created");
         await peer.setLocalDescription(offer);
+        timing.mark("local_description_set");
         if (closed || signal.aborted) {
           rejectStart(abortError());
           return;
@@ -226,6 +239,7 @@ export async function createHomeAssistantWebRtcConnection(
             offer: offerWithCandidates,
           },
         );
+        timing.mark("signaling_started");
         unsubscribe = await unsubscribePromise;
         if (closed) {
           unsubscribe();

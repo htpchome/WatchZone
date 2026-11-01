@@ -1,4 +1,5 @@
 import { APP_BUILD, APP_NAME, APP_VERSION, CARD_TAG } from "./core/constants";
+import { getLiveStartupTimings } from "./core/live-startup-timing";
 import { getMediaSessionManager } from "./core/media-session-manager";
 
 getMediaSessionManager();
@@ -10,6 +11,7 @@ const activeCardVersion = activeCard?.watchZoneVersion ?? null;
 window.watchZone = Object.freeze({
   activeCardVersion,
   build: APP_BUILD,
+  getLiveStartupTimings,
   loadedAt: new Date().toISOString(),
   version: APP_VERSION,
 });

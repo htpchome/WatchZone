@@ -59,7 +59,13 @@ export class WatchZoneLive extends LitElement {
       : this._snapshot.error;
     return html`
       <div class="viewport">
-        <video autoplay playsinline muted aria-label="Live camera"></video>
+        <video
+          autoplay
+          playsinline
+          muted
+          aria-label="Live camera"
+          @loadeddata=${this._handleLoadedData}
+        ></video>
         ${
           error
             ? html`<div class="status error" role="alert">
@@ -133,6 +139,10 @@ export class WatchZoneLive extends LitElement {
   }
 
   private readonly _retry = (): void => this._lease?.retry();
+
+  private readonly _handleLoadedData = (): void => {
+    this._snapshot.timing?.mark("first_frame_decoded");
+  };
 
   static styles = css`
     :host {

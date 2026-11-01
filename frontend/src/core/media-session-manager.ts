@@ -1,4 +1,8 @@
 import type { HomeAssistantApi } from "./home-assistant";
+import {
+  beginLiveStartupTiming,
+  type LiveStartupTiming,
+} from "./live-startup-timing";
 
 export type MediaSessionState =
   "new" | "connecting" | "live" | "parked" | "failed" | "closing" | "closed";
@@ -7,10 +11,12 @@ export interface MediaSessionSnapshot {
   readonly error?: string;
   readonly state: MediaSessionState;
   readonly stream?: MediaStream;
+  readonly timing?: LiveStartupTiming;
 }
 
 export interface MediaConnection {
   readonly stream: MediaStream;
+  readonly timing?: LiveStartupTiming;
   close(): void;
 }
 
@@ -19,6 +25,7 @@ export type ConnectionFactory = (
   entityId: string,
   signal: AbortSignal,
   onFailure: (error: Error) => void,
+  timing: LiveStartupTiming,
 ) => Promise<MediaConnection>;
 
 export interface MediaSessionLease {
@@ -37,8 +44,11 @@ const RECONNECT_JITTER_MS = 250;
 const RECONNECT_STABLE_RESET_MS = 30_000;
 
 const defaultConnectionFactory: ConnectionFactory = async (...args) => {
+  const timing = args[4];
+  timing.mark("adapter_import_started");
   const { createHomeAssistantWebRtcConnection } =
     await import("../connections/home-assistant");
+  timing.mark("adapter_imported");
   return createHomeAssistantWebRtcConnection(...args);
 };
 
@@ -150,6 +160,7 @@ class ManagedMediaSession {
     const abort = new AbortController();
     this._connectAbort = abort;
     this._setSnapshot({ state: "connecting" });
+    const timing = beginLiveStartupTiming(this.key);
 
     try {
       const connection = await this._factory(
@@ -157,6 +168,7 @@ class ManagedMediaSession {
         this.entityId,
         abort.signal,
         (error) => this._handleFailure(generation, error),
+        timing,
       );
       if (generation !== this._generation || abort.signal.aborted) {
         connection.close();
@@ -172,6 +184,7 @@ class ManagedMediaSession {
       this._setSnapshot({
         state: this._leaseCount > 0 ? "live" : "parked",
         stream: connection.stream,
+        timing: connection.timing,
       });
     } catch (error) {
       if (generation !== this._generation || abort.signal.aborted) {
