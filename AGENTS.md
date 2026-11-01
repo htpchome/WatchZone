@@ -80,6 +80,14 @@ For any frontend, media, interaction, layout, or styling change, also read
 - Live sessions are owned by the document-scoped media-session manager, not by
   Lit elements. Element disconnection releases a lease; it does not
   automatically close a retained connection.
+- Connection retention is an application-wide design invariant, not a camera
+  feature or later optimization. Every design and implementation that can
+  affect media presentation or lifecycle must define whether it acquires,
+  reuses, attaches, transfers, parks, resumes, releases, invalidates, or evicts
+  a session lease. Presentation-only changes must preserve the canonical
+  session and must not reconnect. When the impact is nontrivial, verification
+  must prove both the intended lifecycle and the absence of duplicate
+  connection creation.
 - Automatic audio policy never overwrites explicit user mute preference.
 - `ClientEnvironment` is the sole frontend owner of Home Assistant host,
   operating-system, physical phone/tablet/desktop, and input-capability

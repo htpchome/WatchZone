@@ -610,6 +610,18 @@ same Home Assistant browser document.
 
 Mandatory behavior:
 
+- Connection retention is an application-wide design input for every feature
+  that can affect media visibility, placement, ownership, presentation, or
+  lifecycle. It is not deferred integration work and is not scoped only to the
+  live-view component.
+- Layouts, navigation, editors, previews, carousels, popups, fullscreen, PiP,
+  responsive reflow, visibility handling, suspension, retry, and teardown must
+  each define their acquire, reuse, attach, transfer, park, resume, release,
+  invalidation, and eviction effects where applicable.
+- A presentation-only transition preserves the canonical session and does not
+  invoke a connection factory, renegotiate a source, or create a parallel
+  session. Any unavoidable reconnection must follow an explicit health,
+  identity, capability, or resource-policy transition.
 - Re-rendering, moving, or temporarily disconnecting a live module does not
   recreate an unchanged live connection.
 - Layout and WatchZone view changes transfer presentation attachment while

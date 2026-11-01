@@ -46,7 +46,10 @@ interface FullscreenVideo extends HTMLVideoElement {
 }
 
 function documentIsHidden(): boolean {
-  return document.hidden === true || document.visibilityState === "hidden";
+  // Catalyst can expose a stale `document.hidden` value during an otherwise
+  // visible WKWebView lifecycle transition. The working HA-on-Catalyst path
+  // treats only the explicit visibility state as a background transition.
+  return document.visibilityState === "hidden";
 }
 
 function isAutoplayDenied(error: unknown): boolean {

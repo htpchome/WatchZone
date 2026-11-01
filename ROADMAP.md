@@ -351,6 +351,8 @@ For each roadmap capability, confirm these before writing its feature code:
 - What is lazy-loaded, and what must remain in the eager shell?
 - Which retained-session resources are acquired, transferred, parked, or
   closed?
+- If the change is presentation-only, what preserves the canonical session and
+  proves that no connection factory or renegotiation runs?
 - What permissions and backend validation are required?
 - What are the empty, loading, unavailable, suspended, denied, partial-failure,
   and retry states?

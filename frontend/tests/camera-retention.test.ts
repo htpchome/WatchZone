@@ -237,6 +237,22 @@ describe("camera presentation retention", () => {
     await vi.waitFor(() => expect(hlsVideo.muted).toBe(false));
   });
 
+  it("does not mute visible playback for a stale Catalyst hidden flag", async () => {
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    vi.spyOn(document, "hidden", "get").mockReturnValue(true);
+    const { api, hlsVideo } = installHlsSession();
+    const view = createLiveView(api, true);
+    document.body.append(view);
+
+    await vi.waitFor(() =>
+      expect(view.shadowRoot?.querySelector(".hls-host video")).toBe(hlsVideo),
+    );
+    expect(hlsVideo.muted).toBe(false);
+
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.waitFor(() => expect(hlsVideo.muted).toBe(false));
+  });
+
   it("keeps an explicit unmute preference when autoplay is blocked", async () => {
     const play = vi
       .spyOn(HTMLMediaElement.prototype, "play")

@@ -17,6 +17,29 @@ Its goals are to:
 - Bound background bandwidth, decoders, memory, and provider connections.
 - Preserve explicit user mute choices across all automatic behavior.
 
+### 1.1 Mandatory design gate
+
+Connection retention is a required input to every WatchZone design decision
+that can affect a media presentation, even when the feature is not itself a
+camera or connection feature. Before implementation, the owner must determine:
+
+- Whether the canonical `MediaSessionKey` can change.
+- Which leases are acquired, reused, transferred, parked, resumed, released,
+  invalidated, or evicted across every affected transition.
+- Whether presentation identity and attachment can move without reconnecting.
+- How asynchronous handoff avoids a gap, duplicate session, stale attachment,
+  late completion, or leaked resource.
+- How backgrounding, visibility, retry, suspension, and failure affect
+  transport, decoding, attachment, and temporary forced-mute state.
+- What cleanup is required and which bounded retention budget applies.
+- Which test proves that presentation-only changes do not increase connection
+  factory calls or renegotiate an unchanged source.
+
+This gate applies to layouts, navigation, editors, previews, carousels, nested
+cards, popups, fullscreen, PiP, responsive reflow, visibility changes, and all
+future presentation systems. A feature may state that it has no media-session
+impact only after checking these transitions; it may not omit the analysis.
+
 ## 2. Guarantees and limits
 
 WatchZone guarantees retention only while the same Home Assistant browser

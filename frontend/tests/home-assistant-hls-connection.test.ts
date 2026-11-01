@@ -260,7 +260,7 @@ describe("Home Assistant HLS connection", () => {
     expect(attachedState).toEqual({
       autoplay: true,
       defaultMuted: false,
-      muted: true,
+      muted: false,
     });
     expect(video.isConnected).toBe(true);
     expect(video.defaultMuted).toBe(false);

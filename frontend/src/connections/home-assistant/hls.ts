@@ -61,13 +61,13 @@ export async function createHomeAssistantHlsConnection(
   video.setAttribute("webkit-playsinline", "");
   video.preload = "auto";
   if (catalystNativePlayback) {
-    // Match the working Catalyst selected-media lifecycle precisely: autoplay
-    // is enabled, the runtime output begins muted, but defaultMuted remains
-    // false. After the visible element is attached, selected-media ownership
-    // applies the intended state and requests playback on that same element.
-    video.muted = true;
-    options.onVideo?.(video);
+    // Catalyst's native player must carry the selected camera's intended
+    // runtime state before it enters the DOM. Attaching it muted and changing
+    // that state afterward causes WKWebView to classify the source as muted
+    // autoplay even when the final properties look correct. defaultMuted is
+    // deliberately left false; only an explicit user action changes it.
     setMediaElementRuntimeMuted(video, options.initialMuted);
+    options.onVideo?.(video);
   } else {
     setMediaElementMuted(video, true);
     options.onVideo?.(video);
