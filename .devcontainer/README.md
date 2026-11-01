@@ -45,6 +45,12 @@ name.
 | go2rtc API | <http://localhost:1984> |
 | TypeScript dev server | <http://localhost:5173> |
 
+The Home Assistant Config Helper extension connects to the bundled Home
+Assistant instance at `http://localhost:8123`. The devcontainer also resolves
+the extension's suggested `http://homeassistant.local:8123` URL for existing
+VS Code authentication settings. Container startup waits for Home Assistant's
+HTTP endpoint before starting the VS Code extension host.
+
 Home Assistant and Frigate use repository-scoped Compose volumes, so they do
 not reuse FrigateViewCard's development state. The host ports are the same, so
 the startup handoff stops only the labeled FrigateViewCard development Compose
@@ -77,6 +83,14 @@ It also supports `pyproject.toml`, `package.json`, `custom_components/`, and
 The backend receives a repository-level `.venv`. Requirements files and an
 editable `pyproject.toml` package are installed automatically when present.
 The frontend supports npm, pnpm, or Yarn according to its committed lockfile.
+
+The container mounts `.venv` and `frontend/node_modules` from Linux-backed
+Docker volumes. This avoids slow small-file writes through Docker Desktop and
+prevents Linux native Node packages from being loaded by Windows tools. The
+volumes persist across ordinary rebuilds and are populated by `post-create.sh`.
+If dependencies need a completely clean reinstall, remove the corresponding
+`<repository>-python-venv` or `<repository>-frontend-node-modules` Docker
+volume and rebuild the container.
 
 The initial backend development requirements include the same Home Assistant
 version as the local service, pytest, coverage, Ruff, mypy, and pre-commit. The

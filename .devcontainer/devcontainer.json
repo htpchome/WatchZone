@@ -5,6 +5,10 @@
   "dockerComposeFile": "docker-compose.yml",
   "service": "devcontainer",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "mounts": [
+    "source=${localWorkspaceFolderBasename}-python-venv,target=${containerWorkspaceFolder}/.venv,type=volume",
+    "source=${localWorkspaceFolderBasename}-frontend-node-modules,target=${containerWorkspaceFolder}/frontend/node_modules,type=volume"
+  ],
 
   "features": {
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
@@ -28,6 +32,7 @@
         "charliermarsh.ruff",
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
+        "vitest.explorer",
         "ms-vscode.vscode-json",
         "redhat.vscode-yaml",
         "keesschollaart.vscode-home-assistant",

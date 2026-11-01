@@ -8,6 +8,11 @@ source "$WORKSPACE_DIR/.devcontainer/project-settings.sh"
 sudo mkdir -p /home/node/.codex
 sudo chown -R node:node /home/node/.codex
 
+# Keep platform-specific dependencies on Linux-backed volumes instead of the
+# host bind mount. Empty named volumes are root-owned when first mounted.
+sudo mkdir -p "$WORKSPACE_DIR/.venv" "$WORKSPACE_DIR/frontend/node_modules"
+sudo chown -R node:node "$WORKSPACE_DIR/.venv" "$WORKSPACE_DIR/frontend/node_modules"
+
 echo "═══════════════════════════════════════════════════════════"
 echo "  $PROJECT_DISPLAY_NAME DevContainer - Initial Setup"
 echo "═══════════════════════════════════════════════════════════"

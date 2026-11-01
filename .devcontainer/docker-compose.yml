@@ -11,20 +11,36 @@ services:
       - ../..:/workspaces:cached
       - ha-config:/config
       - codex-data:/home/node/.codex
+    environment:
+      # The VS Code Home Assistant extension runs in this container. Because
+      # it shares Home Assistant's network namespace, the service is local.
+      HASS_SERVER: http://localhost:8123
     command: sleep infinity
     network_mode: service:homeassistant
     depends_on:
-      - homeassistant
-      - frigate
+      homeassistant:
+        condition: service_healthy
+      frigate:
+        condition: service_started
 
   homeassistant:
     image: ghcr.io/home-assistant/home-assistant:2026.9.0
     privileged: true
+    extra_hosts:
+      # The devcontainer shares this service's network files, including
+      # /etc/hosts, so this also fixes previously saved extension URLs.
+      - "homeassistant.local:127.0.0.1"
     volumes:
       - ha-config:/config
       - /etc/localtime:/etc/localtime:ro
     ports:
       - "127.0.0.1:8123:8123"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8123/"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
     depends_on:
       - frigate
 
