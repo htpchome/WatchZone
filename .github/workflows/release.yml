@@ -15,8 +15,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.19
-          cache: yarn
-          cache-dependency-path: frontend/yarn.lock
       - run: corepack enable
       - run: corepack yarn install --immutable
         working-directory: frontend
