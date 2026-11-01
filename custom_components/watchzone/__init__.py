@@ -73,7 +73,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: IntegrationConfigEntry) 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: IntegrationConfigEntry) -> bool:
+async def async_unload_entry(
+    hass: HomeAssistant, entry: IntegrationConfigEntry
+) -> bool:
     """Unload WatchZone and remove its Lovelace module resource."""
     domain_data = hass.data.get(DOMAIN)
     if not domain_data:

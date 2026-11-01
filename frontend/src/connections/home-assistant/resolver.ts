@@ -41,8 +41,7 @@ export class HomeAssistantLiveConnectionResolver {
     video: HTMLVideoElement,
   ): Promise<boolean> {
     if (this._environment.host === "catalyst") {
-      const { recoverCatalystAudibleAutoplay } =
-        await import("../../platform/catalyst/autoplay");
+      const { recoverCatalystAudibleAutoplay } = await import("./catalyst-hls");
       return recoverCatalystAudibleAutoplay(video);
     }
 

@@ -138,13 +138,14 @@ A focused system contract records:
 - **Key invariant:** Catalyst never starts WebRTC or HLS.js, its adapter is not
   imported by ordinary HLS, and its temporary runtime mute must not set
   `defaultMuted`. Audible autoplay denial always resumes the retained element
-  muted; only the lazy Catalyst autoplay policy retries unmuting after playback
-  starts. Its native-video host receives Catalyst-only compositor edge
-  isolation; Browser and Companion do not. A later WebRTC takeover updates the
-  same source indicator directly without creating a second connecting phase.
+  muted; the same Catalyst adapter owns later unmute recovery. Its native-video
+  host receives Catalyst-only compositor edge isolation; Browser and Companion
+  do not. A later WebRTC takeover updates the same source indicator directly
+  without creating a second connecting phase.
   Catalyst selected playback follows its isolated two-action sequence (before
   source attachment and at loaded data); generic presentation selection does
-  not issue a duplicate playback request.
+  not issue a duplicate playback request, and playback promises never gate
+  connection readiness.
 - **Verification:** `frontend/tests/home-assistant-connection.test.ts`,
   `frontend/tests/home-assistant-hls-connection.test.ts`,
   `frontend/tests/home-assistant-live-resolver.test.ts`, and Catalyst/browser

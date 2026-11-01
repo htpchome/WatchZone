@@ -339,7 +339,9 @@ export class CameraLiveView extends LitElement {
       hlsVideo.setAttribute("aria-label", "Live camera");
       this._applyMuteToElement(hlsVideo, this._muted);
       hlsHost.append(hlsVideo);
-      void playMediaElement(hlsVideo).catch(() => undefined);
+      if (!this._mediaPresentation.ownsAutomaticPlayback) {
+        void playMediaElement(hlsVideo).catch(() => undefined);
+      }
     }
     this._applyMediaMuteState();
   }
@@ -520,7 +522,7 @@ export class CameraLiveView extends LitElement {
     suppressNativePictureInPicture(video);
     this._syncControlState();
     this._syncEffectiveMute(
-      Boolean(video) && this._mediaPresentation.requestsPlaybackOnSelection,
+      Boolean(video) && !this._mediaPresentation.ownsAutomaticPlayback,
     );
   }
 

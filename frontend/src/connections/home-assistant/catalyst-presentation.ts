@@ -7,7 +7,7 @@ import type {
 
 /** Catalyst owns one native-HLS surface and never creates a WebRTC element. */
 export class CatalystHomeAssistantMediaPresentation implements HomeAssistantMediaPresentation {
-  public readonly requestsPlaybackOnSelection = false;
+  public readonly ownsAutomaticPlayback = true;
 
   public render(state: HomeAssistantPresentationState): TemplateResult {
     return html`<div

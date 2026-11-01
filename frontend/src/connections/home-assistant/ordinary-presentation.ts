@@ -7,7 +7,7 @@ import type {
 
 /** Proven Browser/Companion HLS hedge with an autoplaying WebRTC candidate. */
 export class OrdinaryHomeAssistantMediaPresentation implements HomeAssistantMediaPresentation {
-  public readonly requestsPlaybackOnSelection = true;
+  public readonly ownsAutomaticPlayback = false;
 
   public render(state: HomeAssistantPresentationState): TemplateResult {
     return html`

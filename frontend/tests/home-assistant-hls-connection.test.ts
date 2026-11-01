@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createHomeAssistantHlsConnection } from "../src/connections/home-assistant/hls";
-import { createHomeAssistantCatalystHlsConnection } from "../src/connections/home-assistant/catalyst-hls";
+import {
+  createHomeAssistantCatalystHlsConnection,
+  recoverCatalystAudibleAutoplay,
+} from "../src/connections/home-assistant/catalyst-hls";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import { LiveStartupTiming } from "../src/core/live-startup-timing";
 
@@ -331,11 +334,90 @@ describe("Home Assistant HLS connection", () => {
 
     await vi.waitFor(() => expect(video?.src).not.toBe(""));
     expect(playbackStates).toEqual([false, true]);
-    expect(video?.muted).toBe(false);
+    expect(video?.muted).toBe(true);
     video?.dispatchEvent(new Event("loadeddata"));
     const connection = await connecting;
 
     expect(playbackStates).toEqual([false, true, false]);
+    expect(video?.muted).toBe(false);
+    connection.close();
+  });
+
+  it("does not block Catalyst connection readiness on a pending playback promise", async () => {
+    vi.mocked(HTMLMediaElement.prototype.play).mockImplementation(
+      () => new Promise(() => undefined),
+    );
+    const api: HomeAssistantApi = {
+      identity: {} as HomeAssistantApi["identity"],
+      callWS: vi.fn(async () => ({
+        url: "/api/hls/front.m3u8",
+      })) as HomeAssistantApi["callWS"],
+      resolveUrl: (path) => `https://ha.example${path}`,
+      subscribeMessage: vi.fn(),
+    };
+    let video: HTMLVideoElement | undefined;
+    const connecting = createHomeAssistantCatalystHlsConnection(
+      api,
+      "camera.front",
+      new AbortController().signal,
+      vi.fn(),
+      new LiveStartupTiming("home_assistant_catalyst_hls:camera.front"),
+      {
+        initialMuted: false,
+        onVideo: (candidate) => {
+          video = candidate;
+          document.body.append(candidate);
+        },
+      },
+    );
+
+    await vi.waitFor(() => expect(video?.src).not.toBe(""));
+    video?.dispatchEvent(new Event("loadeddata"));
+    const connection = await connecting;
+
+    expect(connection.video).toBe(video);
+    expect(connection.transport).toBe("hls_native");
+    connection.close();
+  });
+
+  it("uses the retained Catalyst controller for later audible recovery", async () => {
+    const playbackStates: boolean[] = [];
+    const play = vi.mocked(HTMLMediaElement.prototype.play);
+    play.mockImplementation(function (this: HTMLMediaElement) {
+      playbackStates.push(this.muted);
+      return Promise.resolve();
+    });
+    const api: HomeAssistantApi = {
+      identity: {} as HomeAssistantApi["identity"],
+      callWS: vi.fn(async () => ({
+        url: "/api/hls/front.m3u8",
+      })) as HomeAssistantApi["callWS"],
+      resolveUrl: (path) => `https://ha.example${path}`,
+      subscribeMessage: vi.fn(),
+    };
+    let video: HTMLVideoElement | undefined;
+    const connecting = createHomeAssistantCatalystHlsConnection(
+      api,
+      "camera.front",
+      new AbortController().signal,
+      vi.fn(),
+      new LiveStartupTiming("home_assistant_catalyst_hls:camera.front"),
+      {
+        initialMuted: true,
+        onVideo: (candidate) => {
+          video = candidate;
+          document.body.append(candidate);
+        },
+      },
+    );
+
+    await vi.waitFor(() => expect(video?.src).not.toBe(""));
+    video?.dispatchEvent(new Event("loadeddata"));
+    const connection = await connecting;
+    expect(video).toBeDefined();
+    await expect(recoverCatalystAudibleAutoplay(video!)).resolves.toBe(true);
+
+    expect(playbackStates).toEqual([true, false]);
     expect(video?.muted).toBe(false);
     connection.close();
   });

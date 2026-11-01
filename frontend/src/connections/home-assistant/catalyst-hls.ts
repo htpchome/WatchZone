@@ -1,9 +1,5 @@
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import type { LiveStartupTiming } from "../../core/live-startup-timing";
-import {
-  playMediaElement,
-  setMediaElementRuntimeMuted,
-} from "../../core/media-playback";
 import type {
   MediaConnection,
   MediaConnectionOptions,
@@ -29,22 +25,92 @@ function isAutoplayDenied(error: unknown): boolean {
   );
 }
 
-async function requestSelectedPlayback(
-  video: HTMLVideoElement,
-  muted: boolean,
-): Promise<void> {
-  setMediaElementRuntimeMuted(video, muted);
-  try {
-    await playMediaElement(video);
-  } catch (error) {
-    if (muted || !isAutoplayDenied(error)) return;
-    setMediaElementRuntimeMuted(video, true);
+class CatalystSelectedPlayback {
+  private readonly _onLoaded = (): void => this._apply();
+
+  public constructor(
+    private readonly _video: HTMLVideoElement,
+    private readonly _startsUnmuted: boolean,
+    private readonly _isCurrent: () => boolean,
+  ) {
+    catalystPlaybackByVideo.set(this._video, this);
+  }
+
+  public start(): void {
+    if (!this._startsUnmuted) return;
+    this._video.addEventListener("loadeddata", this._onLoaded, { once: true });
+    this._apply();
+  }
+
+  public dispose(): void {
+    this._video.removeEventListener("loadeddata", this._onLoaded);
+    catalystPlaybackByVideo.delete(this._video);
+  }
+
+  public async recoverAudibleAutoplay(): Promise<boolean> {
+    if (!this._isCurrent()) return false;
+    this._video.muted = true;
     try {
-      await playMediaElement(video);
+      await this._video.play();
     } catch {
-      // Connection readiness and transport failure remain independently owned.
+      return false;
+    }
+
+    if (!this._isCurrent()) return false;
+    this._video.muted = false;
+    this._video.volume = 1;
+    try {
+      await this._video.play();
+      return true;
+    } catch {
+      this._video.muted = true;
+      try {
+        await this._video.play();
+      } catch {
+        // Connection readiness and transport failure remain independent.
+      }
+      return false;
     }
   }
+
+  private _apply(): void {
+    if (!this._startsUnmuted || !this._isCurrent() || document.hidden) return;
+    this._video.muted = false;
+    this._video.volume = 1;
+    void this._requestPlayback();
+  }
+
+  private async _requestPlayback(): Promise<void> {
+    await Promise.resolve();
+    if (!this._isCurrent() || this._video.muted || document.hidden) return;
+    try {
+      await this._video.play();
+    } catch (error) {
+      if (!isAutoplayDenied(error) || !this._isCurrent() || this._video.muted) {
+        return;
+      }
+      this._video.muted = true;
+      try {
+        await this._video.play();
+      } catch {
+        // Native media readiness and transport failure remain independent.
+      }
+    }
+  }
+}
+
+const catalystPlaybackByVideo = new WeakMap<
+  HTMLVideoElement,
+  CatalystSelectedPlayback
+>();
+
+export function recoverCatalystAudibleAutoplay(
+  video: HTMLVideoElement,
+): Promise<boolean> {
+  return (
+    catalystPlaybackByVideo.get(video)?.recoverAudibleAutoplay() ??
+    Promise.resolve(false)
+  );
 }
 
 /** Catalyst-only native HLS lifecycle. Ordinary HLS must not import this file. */
@@ -65,20 +131,23 @@ export async function createHomeAssistantCatalystHlsConnection(
   video.setAttribute("webkit-playsinline", "");
   video.preload = "auto";
 
-  // Preserve the established Catalyst lifecycle while isolating it from every
-  // ordinary HLS client: attach temporarily runtime-muted, retain an unmuted
-  // default, then apply selected-camera intent on the same element.
   video.muted = true;
   options.onVideo?.(video);
-  setMediaElementRuntimeMuted(video, options.initialMuted);
 
   let closed = false;
   let connected = false;
   let rejectPending: ((error: unknown) => void) | undefined;
+  const selectedPlayback = new CatalystSelectedPlayback(
+    video,
+    !options.initialMuted,
+    () => !closed && !signal.aborted,
+  );
+  selectedPlayback.start();
 
   const close = (): void => {
     if (closed) return;
     closed = true;
+    selectedPlayback.dispose();
     signal.removeEventListener("abort", handleAbort);
     video.pause();
     video.removeAttribute("src");
@@ -112,13 +181,11 @@ export async function createHomeAssistantCatalystHlsConnection(
     };
     video.addEventListener(
       "loadeddata",
-      async () => {
+      () => {
         if (closed) return;
         timing.mark("first_frame_decoded");
         connected = true;
         window.clearTimeout(timeout);
-        await requestSelectedPlayback(video, options.initialMuted);
-        if (closed) return;
         resolve({ video, timing, transport: "hls_native", close });
       },
       { once: true },
@@ -128,15 +195,12 @@ export async function createHomeAssistantCatalystHlsConnection(
 
   try {
     timing.mark("stream_url_requested");
-    const streamRequest = api.callWS<StreamResponse>({
+    await Promise.resolve();
+    const stream = await api.callWS<StreamResponse>({
       type: "camera/stream",
       entity_id: entityId,
       format: "hls",
     });
-    if (!options.initialMuted) {
-      await requestSelectedPlayback(video, false);
-    }
-    const stream = await streamRequest;
     timing.mark("stream_url_received");
     if (signal.aborted) throw abortError();
     if (!video.canPlayType(HLS_CONTENT_TYPE)) {
@@ -144,7 +208,6 @@ export async function createHomeAssistantCatalystHlsConnection(
     }
     timing.mark("hls_native_path_selected");
     video.src = api.resolveUrl(stream.url);
-    setMediaElementRuntimeMuted(video, options.initialMuted);
   } catch (error) {
     fail(error);
   }

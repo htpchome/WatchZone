@@ -171,6 +171,8 @@ fetching the manifest, replacing the element, or issuing a third request at
 source attachment. `loadeddata` makes the second selected-media request without
 changing the desired audio state. The generic presentation layer does not add
 another playback request when the Catalyst session becomes selected. The
+selected-media requests are fire-and-forget and never block the connection from
+becoming live, even if Catalyst leaves a `play()` promise pending. The
 distinction between runtime
 `muted` and `defaultMuted` is intentional and tested: automatic attachment,
 background safety, transport handoff, and autoplay recovery alter runtime mute

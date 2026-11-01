@@ -8,7 +8,7 @@ describe("Home Assistant host presentation isolation", () => {
     async (host) => {
       const container = document.createElement("div");
       const presentation = createHomeAssistantMediaPresentation(host);
-      expect(presentation.requestsPlaybackOnSelection).toBe(true);
+      expect(presentation.ownsAutomaticPlayback).toBe(false);
       const { render } = await import("lit");
       render(
         presentation.render({
@@ -30,7 +30,7 @@ describe("Home Assistant host presentation isolation", () => {
   it("gives Catalyst one isolated native-HLS surface", async () => {
     const container = document.createElement("div");
     const presentation = createHomeAssistantMediaPresentation("catalyst");
-    expect(presentation.requestsPlaybackOnSelection).toBe(false);
+    expect(presentation.ownsAutomaticPlayback).toBe(true);
     const { render } = await import("lit");
     render(
       presentation.render({

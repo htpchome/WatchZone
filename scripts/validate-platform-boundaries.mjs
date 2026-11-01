@@ -26,16 +26,21 @@ async function sourceFiles(directory) {
 }
 
 const violations = [];
+const catalystPlaybackOwners = [];
 for (const path of await sourceFiles(sourceRoot)) {
   if (!path.endsWith(".ts")) continue;
   const source = relative(sourceRoot, path).replaceAll("\\", "/");
+  const contents = await readFile(path, "utf8");
+  if (/catalyst/i.test(contents) && /\.play\s*\(/.test(contents)) {
+    catalystPlaybackOwners.push(source);
+  }
   if (
     allowedCatalystOwners.has(source) ||
     source.startsWith("platform/catalyst/")
   ) {
     continue;
   }
-  if (/catalyst/i.test(await readFile(path, "utf8"))) violations.push(source);
+  if (/catalyst/i.test(contents)) violations.push(source);
 }
 
 if (violations.length > 0) {
@@ -44,4 +49,15 @@ if (violations.length > 0) {
   );
 }
 
-console.log("Validated Catalyst host-runtime source boundaries.");
+if (
+  catalystPlaybackOwners.length !== 1 ||
+  catalystPlaybackOwners[0] !== "connections/home-assistant/catalyst-hls.ts"
+) {
+  throw new Error(
+    `Catalyst playback must have exactly one implementation owner: ${catalystPlaybackOwners.join(", ")}`,
+  );
+}
+
+console.log(
+  "Validated Catalyst host-runtime boundaries and single playback owner.",
+);

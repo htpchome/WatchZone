@@ -14,7 +14,6 @@ const connection = manifest["src/connections/home-assistant/index.ts"];
 const hlsConnection = manifest["src/connections/home-assistant/hls.ts"];
 const catalystHlsConnection =
   manifest["src/connections/home-assistant/catalyst-hls.ts"];
-const catalystAutoplay = manifest["src/platform/catalyst/autoplay.ts"];
 
 if (!entry?.isEntry || entry.file !== "watchzone.js") {
   throw new Error("Vite manifest is missing the stable WatchZone entry");
@@ -25,7 +24,6 @@ for (const [name, asset] of Object.entries({
   connection,
   hlsConnection,
   catalystHlsConnection,
-  catalystAutoplay,
 })) {
   if (!asset?.isDynamicEntry) {
     throw new Error(`The ${name} must remain a dynamic entry`);
@@ -54,7 +52,6 @@ for (const [name, asset] of Object.entries({
   connection,
   hlsConnection,
   catalystHlsConnection,
-  catalystAutoplay,
 })) {
   if (eagerGraph.has(asset.src)) {
     throw new Error(`The ${name} was included in the eager import graph`);
@@ -69,10 +66,6 @@ if (ordinaryHlsGraph.has(catalystHlsConnection.src)) {
 if (catalystHlsGraph.has(hlsConnection.src)) {
   throw new Error("Catalyst HLS must not import the ordinary HLS adapter");
 }
-if (ordinaryHlsGraph.has(catalystAutoplay.src)) {
-  throw new Error("Ordinary HLS must not import Catalyst autoplay policy");
-}
-
 const eagerGzipBytes = (
   await Promise.all(
     [...eagerGraph].map(
