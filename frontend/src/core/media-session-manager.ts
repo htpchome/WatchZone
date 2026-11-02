@@ -34,6 +34,7 @@ export interface MediaConnection {
 
 export interface MediaConnectionOptions {
   readonly initialMuted: boolean;
+  readonly lowLatencyHls?: boolean;
   readonly onVideo?: (video: HTMLVideoElement) => void;
 }
 
@@ -110,7 +111,10 @@ class ManagedMediaSession {
   ): MediaSessionLease {
     const transportChanged = this._api.identity !== api.identity;
     this._api = api;
-    this._connectionOptions = { initialMuted: options.initialMuted };
+    this._connectionOptions = {
+      initialMuted: options.initialMuted,
+      lowLatencyHls: options.lowLatencyHls,
+    };
     this.lastUsed = performance.now();
     this._leaseCount += 1;
     if (this._reconnectTimer) {

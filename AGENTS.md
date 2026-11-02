@@ -19,6 +19,9 @@ retention, or audio state, also read `docs/live-session-lifecycle.md` in full.
 For the Home Assistant direct live connection, also read
 `docs/home-assistant-live-connection.md` in full.
 
+For diagnostics, timing instrumentation, or future logging work, also read
+`docs/diagnostics.md` in full.
+
 For any frontend, media, interaction, layout, or styling change, also read
 `docs/platform-compatibility.md` in full.
 

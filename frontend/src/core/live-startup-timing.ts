@@ -23,6 +23,7 @@ export type LiveStartupPhase =
   | "presentation_selected";
 
 export interface LiveStartupTimingSnapshot {
+  readonly hlsMode?: "low_latency" | "standard";
   readonly key: string;
   readonly phases: Readonly<Partial<Record<LiveStartupPhase, number>>>;
   readonly signalingFallbackReason?: string;
@@ -33,6 +34,7 @@ export interface LiveStartupTimingSnapshot {
 export class LiveStartupTiming {
   private readonly _origin = performance.now();
   private readonly _phases: Partial<Record<LiveStartupPhase, number>> = {};
+  private _hlsMode?: "low_latency" | "standard";
   private _signalingFallbackReason?: string;
   private _signalingPath?: string;
 
@@ -51,8 +53,13 @@ export class LiveStartupTiming {
     this._signalingFallbackReason ??= fallbackReason ?? undefined;
   }
 
+  public setHlsMode(mode: "low_latency" | "standard"): void {
+    this._hlsMode ??= mode;
+  }
+
   public snapshot(): LiveStartupTimingSnapshot {
     return {
+      hlsMode: this._hlsMode,
       key: this.key,
       phases: { ...this._phases },
       signalingFallbackReason: this._signalingFallbackReason,
@@ -62,10 +69,16 @@ export class LiveStartupTiming {
   }
 }
 
+const MAX_RECORDED_STARTUPS = 20;
 const latestTimings = new Map<string, LiveStartupTiming>();
 
 export function beginLiveStartupTiming(key: string): LiveStartupTiming {
   const timing = new LiveStartupTiming(key);
+  if (!latestTimings.has(key) && latestTimings.size >= MAX_RECORDED_STARTUPS) {
+    const oldestKey = latestTimings.keys().next().value;
+    if (oldestKey !== undefined) latestTimings.delete(oldestKey);
+  }
+  latestTimings.delete(key);
   latestTimings.set(key, timing);
   return timing;
 }

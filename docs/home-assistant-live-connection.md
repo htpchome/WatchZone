@@ -117,15 +117,30 @@ The HLS adapter:
 1. Requests an authenticated URL through Home Assistant's `camera/stream`
    WebSocket command with `format: "hls"`.
 2. Resolves the returned relative URL through Home Assistant's URL resolver.
-3. Fetches the master manifest while lazy-loading the light HLS.js engine.
-   When HLS.js reports supported MSE/MMS playback, that path is preferred;
-   native `video` HLS is the capability-detected fallback. This order avoids
-   treating `canPlayType()`'s non-empty but inconclusive `"maybe"` result as
-   proof that native playback is reliable.
-4. When the master has exactly one variant, passes that variant directly to
-   the selected player to avoid a redundant manifest request.
-5. Reports live only after `loadeddata`, not merely after obtaining a playlist
+3. When Home Assistant returns its compatibility-only master playlist, targets
+   the sibling media playlist directly. With Low-Latency HLS enabled, the
+   initial request includes standard `_HLS_msn` and `_HLS_part` delivery
+   directives so a cold stream can return its first partial segment instead of
+   waiting for the master endpoint's two-segment readiness gate.
+4. Verifies `EXT-X-PART-INF` and blocking-reload support in the returned
+   playlist before enabling HLS.js low-latency mode. A server that does not
+   advertise both cleanly continues through standard HLS.
+5. Lazy-loads the light HLS.js engine. When HLS.js reports supported MSE/MMS
+   playback, that path is preferred; native `video` HLS is the
+   capability-detected fallback. This order avoids treating `canPlayType()`'s
+   non-empty but inconclusive `"maybe"` result as proof that native playback is
+   reliable.
+6. When a non-Home-Assistant master has exactly one variant, passes that
+   variant directly to the selected player to avoid a redundant manifest
+   request.
+7. Reports live only after `loadeddata`, not merely after obtaining a playlist
    URL or parsing a manifest.
+
+The card-level `low_latency_hls` setting defaults to `true`; YAML stores only
+the non-default opt-out. HLS session identity includes the selected mode so a
+retained low-latency session cannot be reused for a card that disabled it.
+Native HLS engines ultimately control their own interpretation of an LL-HLS
+playlist; the setting deterministically controls WatchZone's HLS.js path.
 
 The HLS session owns its media element because its MediaSource playback state
 is element-bound. Closing destroys the playback engine, cancels in-flight
@@ -144,12 +159,13 @@ which each transport became the presentation winner.
 The adapter owns transport mechanics. The document-scoped media-session manager
 owns identity, deduplication, leases, retention, retry, and eviction policy.
 
-The session key is the transport type plus camera entity for this first path.
-WebRTC and HLS therefore have independent session identities and cleanup while
-still participating in one selection policy. Compatible card and
-editor-preview instances in the same document share sessions. Removing a live
-element releases its lease and detaches presentation; it does not close a
-healthy retained winner.
+The session key is the transport type plus camera entity for this first path;
+HLS also includes a non-default standard-mode discriminator. WebRTC and HLS
+therefore have independent session identities and cleanup while still
+participating in one selection policy, and incompatible HLS modes never share
+a session. Compatible card and editor-preview instances in the same document
+share sessions. Removing a live element releases its lease and detaches
+presentation; it does not close a healthy retained winner.
 
 The initial resource budget retains at most four sessions for the current
 browser document. Parked sessions do not expire on an arbitrary idle timer;
@@ -199,7 +215,9 @@ continues to follow the forced-mute, audio-focus, lifetime, and autoplay rules i
   system, never through routine console noise and never with credentials. The
   current startup recorder is read with
   `window.wzc.getLiveStartupTimings()` and records relative milestone
-  times without writing per-phase console messages.
+  times without writing per-phase console messages. The complete test
+  procedure, field reference, and overhead constraints live in
+  `docs/diagnostics.md`.
 
 ### 9.1 Frigate signaling acceleration
 

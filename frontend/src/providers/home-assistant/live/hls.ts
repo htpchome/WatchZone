@@ -17,9 +17,57 @@ interface StreamResponse {
 
 const CONNECT_TIMEOUT_MS = 15_000;
 const HLS_CONTENT_TYPE = "application/vnd.apple.mpegurl";
+const HA_MASTER_PLAYLIST_SUFFIX = "/master_playlist.m3u8";
+const HA_MEDIA_PLAYLIST_SUFFIX = "/playlist.m3u8";
+
+interface PlaylistRequest {
+  readonly requestUrl: string;
+  readonly standardUrl: string;
+}
 
 function abortError(): DOMException {
   return new DOMException("Connection cancelled", "AbortError");
+}
+
+function homeAssistantPlaylistRequest(
+  streamUrl: string,
+  lowLatency: boolean,
+): PlaylistRequest {
+  const url = new URL(streamUrl);
+  if (!url.pathname.endsWith(HA_MASTER_PLAYLIST_SUFFIX)) {
+    return { requestUrl: streamUrl, standardUrl: streamUrl };
+  }
+  url.pathname = `${url.pathname.slice(0, -HA_MASTER_PLAYLIST_SUFFIX.length)}${HA_MEDIA_PLAYLIST_SUFFIX}`;
+  const standardUrl = url.href;
+  return {
+    requestUrl: lowLatency
+      ? `${standardUrl}${url.search ? "&" : "?"}_HLS_msn=0&_HLS_part=0`
+      : standardUrl,
+    standardUrl,
+  };
+}
+
+function isLowLatencyManifest(manifest: string): boolean {
+  return (
+    manifest.includes("#EXT-X-PART-INF:") &&
+    manifest.includes("CAN-BLOCK-RELOAD=YES")
+  );
+}
+
+async function fetchPlaylist(
+  request: PlaylistRequest,
+  signal: AbortSignal,
+): Promise<{ readonly manifest: string; readonly url: string }> {
+  let url = request.requestUrl;
+  let response = await fetch(url, { signal });
+  if (!response.ok && request.requestUrl !== request.standardUrl) {
+    url = request.standardUrl;
+    response = await fetch(url, { signal });
+  }
+  if (!response.ok) {
+    throw new Error(`HLS manifest request failed (${response.status})`);
+  }
+  return { manifest: await response.text(), url };
 }
 
 function selectSingleVariant(manifest: string, manifestUrl: string): string {
@@ -159,14 +207,26 @@ export async function createHomeAssistantHlsConnection(
       const streamUrl = api.resolveUrl(stream.url);
       if (signal.aborted || closed) return;
 
-      const manifestPromise = fetch(streamUrl, { signal }).then(
-        async (response) => {
-          if (!response.ok) {
-            throw new Error(`HLS manifest request failed (${response.status})`);
-          }
-          const manifest = await response.text();
+      const lowLatencyRequested = options.lowLatencyHls !== false;
+      const playlistRequest = homeAssistantPlaylistRequest(
+        streamUrl,
+        lowLatencyRequested,
+      );
+
+      const manifestPromise = fetchPlaylist(playlistRequest, signal).then(
+        ({ manifest, url }) => {
           timing.mark("hls_manifest_loaded");
-          return selectSingleVariant(manifest, streamUrl);
+          const lowLatency =
+            lowLatencyRequested &&
+            url === playlistRequest.requestUrl &&
+            isLowLatencyManifest(manifest);
+          timing.setHlsMode(lowLatency ? "low_latency" : "standard");
+          return {
+            lowLatency,
+            playlistUrl: lowLatency
+              ? selectSingleVariant(manifest, url)
+              : selectSingleVariant(manifest, playlistRequest.standardUrl),
+          };
         },
       );
       const hlsModulePromise = import("hls.js/dist/hls.light.mjs").then(
@@ -175,7 +235,7 @@ export async function createHomeAssistantHlsConnection(
           return module;
         },
       );
-      const [{ default: Hls }, playlistUrl] = await Promise.all([
+      const [{ default: Hls }, manifest] = await Promise.all([
         hlsModulePromise,
         manifestPromise,
       ]);
@@ -186,7 +246,7 @@ export async function createHomeAssistantHlsConnection(
         timing.mark("hls_mse_path_selected");
         const player = new Hls({
           backBufferLength: 30,
-          lowLatencyMode: true,
+          lowLatencyMode: manifest.lowLatency,
           maxLiveSyncPlaybackRate: 2,
         });
         hls = player;
@@ -195,11 +255,11 @@ export async function createHomeAssistantHlsConnection(
             fail(data.error ?? new Error(`HLS ${data.type} error`));
           }
         });
-        player.loadSource(playlistUrl);
+        player.loadSource(manifest.playlistUrl);
         player.attachMedia(video);
       } else if (video.canPlayType(HLS_CONTENT_TYPE)) {
         timing.mark("hls_native_path_selected");
-        video.src = playlistUrl;
+        video.src = manifest.playlistUrl;
         void playMediaElement(video).catch(() => undefined);
       } else {
         throw new Error("This browser does not support HLS playback");

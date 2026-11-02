@@ -19,6 +19,7 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
     delete yaml.camera_rounded_corners;
   }
   if (config.camera_shadows !== false) delete yaml.camera_shadows;
+  if (config.low_latency_hls !== false) delete yaml.low_latency_hls;
   if (config.start_live_unmuted_pc_tablet !== true) {
     delete yaml.start_live_unmuted_pc_tablet;
   }

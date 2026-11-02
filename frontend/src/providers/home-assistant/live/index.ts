@@ -27,12 +27,13 @@ export class HomeAssistantLiveProvider {
   public acquireWebRtc(
     api: HomeAssistantApi,
     entityId: string,
+    key: string,
   ): MediaSessionLease {
     return getMediaSessionManager().acquire({
       api,
       entityId,
       factory: webRtcFactory,
-      key: `home_assistant:webrtc:${entityId}`,
+      key,
       retention: "preferred",
     });
   }
@@ -40,23 +41,16 @@ export class HomeAssistantLiveProvider {
   public acquireHls(
     api: HomeAssistantApi,
     entityId: string,
+    key: string,
     options: MediaConnectionOptions,
   ): MediaSessionLease {
     return getMediaSessionManager().acquire({
       api,
       entityId,
       factory: hlsFactory,
-      key: this.hlsKey(entityId),
+      key,
       options,
       retention: "fallback",
     });
-  }
-
-  public hlsKey(entityId: string): string {
-    return `home_assistant:hls:${entityId}`;
-  }
-
-  public webRtcKey(entityId: string): string {
-    return `home_assistant:webrtc:${entityId}`;
   }
 }

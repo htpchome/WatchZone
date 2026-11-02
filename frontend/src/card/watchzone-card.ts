@@ -190,6 +190,7 @@ export class DashboardCard extends LitElement {
                         config.start_live_unmuted_phone === true
                       }
                       .entityId=${cameraEntity}
+                      .lowLatencyHls=${config.low_latency_hls !== false}
                       .posterUrl=${posterUrl}
                       .roundedCorners=${config.camera_rounded_corners !== false}
                       .shadowStyle=${

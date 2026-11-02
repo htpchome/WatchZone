@@ -49,6 +49,7 @@ const BOOLEAN_SELECTOR = { boolean: {} } as const;
 type BooleanConfigFlag =
   | "camera_rounded_corners"
   | "camera_shadows"
+  | "low_latency_hls"
   | "outer_padding"
   | "outer_shadows"
   | "rounded_outer_corners"
@@ -140,6 +141,17 @@ export class CardEditor extends LitElement {
         .value=${this._config?.camera_entity ?? ""}
         .required=${false}
         @value-changed=${this._handleCameraChange}
+      ></ha-selector>
+      <div class="section-title">Live Connection</div>
+      <ha-selector
+        class="boolean-option"
+        data-config-key="low_latency_hls"
+        label="Low-Latency HLS"
+        .hass=${this._hass}
+        .selector=${BOOLEAN_SELECTOR}
+        .value=${this._config?.low_latency_hls !== false}
+        .required=${false}
+        @value-changed=${this._handleBooleanChange}
       ></ha-selector>
       <div class="section-title">Camera Audio</div>
       <ha-selector

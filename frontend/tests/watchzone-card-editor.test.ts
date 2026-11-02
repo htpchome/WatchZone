@@ -179,7 +179,7 @@ describe("watchzone-card-editor", () => {
     document.removeEventListener("context-request", contextHandler);
   });
 
-  it("previews, saves, and restores card and camera appearance toggles", async () => {
+  it("previews, saves, and restores default-on toggles", async () => {
     const states: CardConfig[] = [];
     const contextHandler = (event: Event) => {
       const request = event as ContextRequest;
@@ -211,6 +211,7 @@ describe("watchzone-card-editor", () => {
       "outer_padding",
       "camera_rounded_corners",
       "camera_shadows",
+      "low_latency_hls",
     ]) {
       editor.shadowRoot
         ?.querySelector(`[data-config-key="${key}"]`)
@@ -230,6 +231,7 @@ describe("watchzone-card-editor", () => {
       outer_padding: false,
       camera_rounded_corners: false,
       camera_shadows: false,
+      low_latency_hls: false,
     });
     const previewShell = card.shadowRoot?.querySelector("ha-card");
     expect(previewShell?.classList.contains("square-outer-corners")).toBe(true);
@@ -243,6 +245,7 @@ describe("watchzone-card-editor", () => {
       outer_padding: false,
       camera_rounded_corners: false,
       camera_shadows: false,
+      low_latency_hls: false,
     });
     const reopened = document.createElement(
       "watchzone-card-editor",
@@ -256,6 +259,7 @@ describe("watchzone-card-editor", () => {
       "outer_padding",
       "camera_rounded_corners",
       "camera_shadows",
+      "low_latency_hls",
     ]) {
       expect(
         (
@@ -269,7 +273,7 @@ describe("watchzone-card-editor", () => {
     document.removeEventListener("context-request", contextHandler);
   });
 
-  it("round-trips appearance toggles back to their defaults before Save", async () => {
+  it("round-trips default-on toggles back to their defaults before Save", async () => {
     const states: CardConfig[] = [];
     const contextHandler = (event: Event) => {
       const request = event as ContextRequest;
@@ -303,6 +307,7 @@ describe("watchzone-card-editor", () => {
       "outer_padding",
       "camera_rounded_corners",
       "camera_shadows",
+      "low_latency_hls",
     ] as const) {
       const selector = editor.shadowRoot?.querySelector(
         `[data-config-key="${key}"]`,
@@ -364,6 +369,7 @@ describe("watchzone-card-editor", () => {
       "outer_padding",
       "camera_rounded_corners",
       "camera_shadows",
+      "low_latency_hls",
     ]) {
       expect(
         (

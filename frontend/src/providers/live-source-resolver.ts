@@ -23,7 +23,11 @@ export class LiveSourceResolver {
     api: HomeAssistantApi,
     entityId: string,
   ): Promise<MediaSessionLease> {
-    return (await getHomeAssistantProvider()).acquireWebRtc(api, entityId);
+    return (await getHomeAssistantProvider()).acquireWebRtc(
+      api,
+      entityId,
+      this.homeAssistantWebRtcKey(entityId),
+    );
   }
 
   public async acquireHomeAssistantHls(
@@ -34,6 +38,7 @@ export class LiveSourceResolver {
     return (await getHomeAssistantProvider()).acquireHls(
       api,
       entityId,
+      this.homeAssistantHlsKey(entityId, options.lowLatencyHls !== false),
       options,
     );
   }
@@ -42,7 +47,9 @@ export class LiveSourceResolver {
     return `home_assistant:webrtc:${entityId}`;
   }
 
-  public homeAssistantHlsKey(entityId: string): string {
-    return `home_assistant:hls:${entityId}`;
+  public homeAssistantHlsKey(entityId: string, lowLatencyHls = true): string {
+    return lowLatencyHls
+      ? `home_assistant:hls:${entityId}`
+      : `home_assistant:hls:standard:${entityId}`;
   }
 }

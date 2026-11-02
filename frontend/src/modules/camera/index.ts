@@ -23,6 +23,7 @@ export class CameraModule extends LitElement {
     api: { attribute: false },
     available: { attribute: false, type: Boolean },
     entityId: { attribute: false },
+    lowLatencyHls: { attribute: false, type: Boolean },
     posterUrl: { attribute: false },
     roundedCorners: { attribute: false, type: Boolean },
     shadowStyle: { attribute: false },
@@ -57,6 +58,7 @@ export class CameraModule extends LitElement {
   public api?: HomeAssistantApi;
   public available = false;
   public entityId?: string;
+  public lowLatencyHls = true;
   public posterUrl?: string;
   public roundedCorners = true;
   public shadowStyle: CameraShadowStyle = "medium";
@@ -78,7 +80,12 @@ export class CameraModule extends LitElement {
       this.startUnmutedPhone,
       false,
     );
-    this._session.configure(this.api, this.entityId, this.available);
+    this._session.configure(
+      this.api,
+      this.entityId,
+      this.available,
+      this.lowLatencyHls,
+    );
   }
 
   protected render() {

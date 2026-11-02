@@ -6,6 +6,7 @@ interface Window {
     activeCardVersion: string | null;
     build: string;
     getLiveStartupTimings(): Array<{
+      readonly hlsMode?: "low_latency" | "standard";
       readonly key: string;
       readonly phases: Readonly<
         Partial<

@@ -18,6 +18,7 @@ describe("WatchZone card configuration", () => {
       outer_padding: true,
       camera_rounded_corners: true,
       camera_shadows: true,
+      low_latency_hls: true,
       start_live_unmuted_pc_tablet: false,
       start_live_unmuted_phone: false,
     });
@@ -40,6 +41,7 @@ describe("WatchZone card configuration", () => {
       outer_padding: false,
       camera_rounded_corners: false,
       camera_shadows: false,
+      low_latency_hls: true,
       start_live_unmuted_pc_tablet: false,
       start_live_unmuted_phone: false,
     });
@@ -65,6 +67,24 @@ describe("WatchZone card configuration", () => {
         start_live_unmuted_phone: "yes",
       }),
     ).toThrow("start_live_unmuted_phone must be a boolean");
+  });
+
+  it("defaults low-latency HLS on and preserves an explicit opt-out", () => {
+    expect(
+      normalizeCardConfig({
+        type: CARD_TYPE,
+        title: "Camera",
+        low_latency_hls: false,
+      }),
+    ).toMatchObject({ low_latency_hls: false });
+
+    expect(() =>
+      normalizeCardConfig({
+        type: CARD_TYPE,
+        title: "Camera",
+        low_latency_hls: "yes",
+      }),
+    ).toThrow("low_latency_hls must be a boolean");
   });
 
   it("rejects non-boolean appearance values", () => {

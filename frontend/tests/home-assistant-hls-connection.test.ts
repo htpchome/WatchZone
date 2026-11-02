@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createHomeAssistantHlsConnection } from "../src/providers/home-assistant/live/hls";
+import { LiveSourceResolver } from "../src/providers/live-source-resolver";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import { LiveStartupTiming } from "../src/core/live-startup-timing";
 
 const hlsMock = vi.hoisted(() => ({
   attachMedia: vi.fn(),
+  construct: vi.fn(),
   destroy: vi.fn(),
   isSupported: vi.fn(),
   loadSource: vi.fn(),
@@ -17,6 +19,10 @@ vi.mock("hls.js/dist/hls.light.mjs", () => ({
     public static readonly Events = { ERROR: "error" };
     public static isSupported(): boolean {
       return hlsMock.isSupported();
+    }
+
+    public constructor(config: unknown) {
+      hlsMock.construct(config);
     }
 
     public readonly attachMedia = hlsMock.attachMedia;
@@ -46,6 +52,16 @@ describe("Home Assistant HLS connection", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("uses distinct retained identities for low-latency and standard HLS", () => {
+    const resolver = new LiveSourceResolver();
+    expect(resolver.homeAssistantHlsKey("camera.front", true)).toBe(
+      "home_assistant:hls:camera.front",
+    );
+    expect(resolver.homeAssistantHlsKey("camera.front", false)).toBe(
+      "home_assistant:hls:standard:camera.front",
+    );
   });
 
   it("requests an authenticated HLS stream and resolves on decoded media", async () => {
@@ -147,6 +163,134 @@ describe("Home Assistant HLS connection", () => {
 
     connection.close();
     expect(hlsMock.destroy).toHaveBeenCalledOnce();
+  });
+
+  it("bootstraps Home Assistant LL-HLS without waiting for its master playlist", async () => {
+    vi.mocked(HTMLMediaElement.prototype.canPlayType).mockReturnValue("");
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        '#EXTM3U\n#EXT-X-PART-INF:PART-TARGET=1.000\n#EXT-X-SERVER-CONTROL:CAN-BLOCK-RELOAD=YES,PART-HOLD-BACK=2.000\n#EXT-X-PART:DURATION=1.000,URI="segment/0.0.m4s"\n',
+      ),
+    );
+    const callWS = vi.fn(async () => ({
+      url: "/api/hls/token/master_playlist.m3u8",
+    }));
+    const api: HomeAssistantApi = {
+      identity: {} as HomeAssistantApi["identity"],
+      callWS: callWS as HomeAssistantApi["callWS"],
+      resolveUrl: (path) => `https://ha.example${path}`,
+      subscribeMessage: vi.fn(),
+    };
+    const timing = new LiveStartupTiming("home_assistant_hls:camera.front");
+    const connecting = createHomeAssistantHlsConnection(
+      api,
+      "camera.front",
+      new AbortController().signal,
+      vi.fn(),
+      timing,
+      { initialMuted: true, lowLatencyHls: true },
+    );
+
+    await vi.waitFor(() => expect(hlsMock.attachMedia).toHaveBeenCalled());
+    const video = hlsMock.attachMedia.mock.calls[0][0] as HTMLVideoElement;
+    video.dispatchEvent(new Event("loadeddata"));
+    const connection = await connecting;
+
+    const lowLatencyUrl =
+      "https://ha.example/api/hls/token/playlist.m3u8?_HLS_msn=0&_HLS_part=0";
+    expect(fetch).toHaveBeenCalledWith(
+      lowLatencyUrl,
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    expect(hlsMock.loadSource).toHaveBeenCalledWith(lowLatencyUrl);
+    expect(hlsMock.construct).toHaveBeenCalledWith(
+      expect.objectContaining({ lowLatencyMode: true }),
+    );
+    expect(timing.snapshot().hlsMode).toBe("low_latency");
+    connection.close();
+  });
+
+  it("uses standard HLS when low-latency mode is disabled", async () => {
+    vi.mocked(HTMLMediaElement.prototype.canPlayType).mockReturnValue("");
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("#EXTM3U\n#EXT-X-TARGETDURATION:6\n"),
+    );
+    const api: HomeAssistantApi = {
+      identity: {} as HomeAssistantApi["identity"],
+      callWS: vi.fn(async () => ({
+        url: "/api/hls/token/master_playlist.m3u8",
+      })) as HomeAssistantApi["callWS"],
+      resolveUrl: (path) => `https://ha.example${path}`,
+      subscribeMessage: vi.fn(),
+    };
+    const timing = new LiveStartupTiming("home_assistant_hls:camera.front");
+    const connecting = createHomeAssistantHlsConnection(
+      api,
+      "camera.front",
+      new AbortController().signal,
+      vi.fn(),
+      timing,
+      { initialMuted: true, lowLatencyHls: false },
+    );
+
+    await vi.waitFor(() => expect(hlsMock.attachMedia).toHaveBeenCalled());
+    const video = hlsMock.attachMedia.mock.calls[0][0] as HTMLVideoElement;
+    video.dispatchEvent(new Event("loadeddata"));
+    const connection = await connecting;
+
+    const standardUrl = "https://ha.example/api/hls/token/playlist.m3u8";
+    expect(fetch).toHaveBeenCalledWith(
+      standardUrl,
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    expect(hlsMock.loadSource).toHaveBeenCalledWith(standardUrl);
+    expect(hlsMock.construct).toHaveBeenCalledWith(
+      expect.objectContaining({ lowLatencyMode: false }),
+    );
+    expect(timing.snapshot().hlsMode).toBe("standard");
+    connection.close();
+  });
+
+  it("falls back to standard HLS when the LL-HLS bootstrap is rejected", async () => {
+    vi.mocked(HTMLMediaElement.prototype.canPlayType).mockReturnValue("");
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(null, { status: 400 }))
+      .mockResolvedValueOnce(
+        new Response("#EXTM3U\n#EXT-X-TARGETDURATION:6\n"),
+      );
+    const api: HomeAssistantApi = {
+      identity: {} as HomeAssistantApi["identity"],
+      callWS: vi.fn(async () => ({
+        url: "/api/hls/token/master_playlist.m3u8",
+      })) as HomeAssistantApi["callWS"],
+      resolveUrl: (path) => `https://ha.example${path}`,
+      subscribeMessage: vi.fn(),
+    };
+    const timing = new LiveStartupTiming("home_assistant_hls:camera.front");
+    const connecting = createHomeAssistantHlsConnection(
+      api,
+      "camera.front",
+      new AbortController().signal,
+      vi.fn(),
+      timing,
+      { initialMuted: true, lowLatencyHls: true },
+    );
+
+    await vi.waitFor(() => expect(hlsMock.attachMedia).toHaveBeenCalled());
+    const video = hlsMock.attachMedia.mock.calls[0][0] as HTMLVideoElement;
+    video.dispatchEvent(new Event("loadeddata"));
+    const connection = await connecting;
+
+    expect(fetch).toHaveBeenNthCalledWith(
+      2,
+      "https://ha.example/api/hls/token/playlist.m3u8",
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    expect(hlsMock.loadSource).toHaveBeenCalledWith(
+      "https://ha.example/api/hls/token/playlist.m3u8",
+    );
+    expect(timing.snapshot().hlsMode).toBe("standard");
+    connection.close();
   });
 
   it("primes an unmuted visible candidate before requesting its source", async () => {

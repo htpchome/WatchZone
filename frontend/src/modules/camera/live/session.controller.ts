@@ -25,6 +25,7 @@ export class CameraLiveSessionController implements ReactiveController {
   private _hlsPendingKey?: string;
   private _hlsSnapshot: MediaSessionSnapshot = { state: "new" };
   private _hlsUnsubscribe?: () => void;
+  private _lowLatencyHls = true;
   private _retryWebRtcAfterHlsRecovery = false;
   private _revision = 0;
   private _selected?: PresentedSource;
@@ -84,12 +85,16 @@ export class CameraLiveSessionController implements ReactiveController {
     api: HomeAssistantApi | undefined,
     entityId: string | undefined,
     available: boolean,
+    lowLatencyHls = true,
   ): void {
     const changed =
-      this._api?.identity !== api?.identity || this._entityId !== entityId;
+      this._api?.identity !== api?.identity ||
+      this._entityId !== entityId ||
+      this._lowLatencyHls !== lowLatencyHls;
     this._api = api;
     this._entityId = entityId;
     this._available = available;
+    this._lowLatencyHls = lowLatencyHls;
     if (changed || !available) this._releaseAll();
     this._sync();
     this._host.requestUpdate();
@@ -183,17 +188,21 @@ export class CameraLiveSessionController implements ReactiveController {
       !this._connected
     )
       return;
-    const key = this._resolver.homeAssistantHlsKey(this._entityId);
+    const key = this._resolver.homeAssistantHlsKey(
+      this._entityId,
+      this._lowLatencyHls,
+    );
     if (this._hlsLease?.key === key || this._hlsPendingKey === key) return;
     this._releaseHls();
     this._hlsPendingKey = key;
-    void this._acquireHls(this._api, this._entityId, key);
+    void this._acquireHls(this._api, this._entityId, key, this._lowLatencyHls);
   }
 
   private async _acquireHls(
     api: HomeAssistantApi,
     entityId: string,
     expectedKey: string,
+    lowLatencyHls: boolean,
   ): Promise<void> {
     try {
       const lease = await this._resolver.acquireHomeAssistantHls(
@@ -201,12 +210,15 @@ export class CameraLiveSessionController implements ReactiveController {
         entityId,
         {
           initialMuted: this._callbacks.getInitialMuted(),
+          lowLatencyHls,
         },
       );
       if (
         !this._connected ||
         this._api?.identity !== api.identity ||
         this._entityId !== entityId ||
+        this._resolver.homeAssistantHlsKey(entityId, this._lowLatencyHls) !==
+          expectedKey ||
         this._selected === "webrtc"
       ) {
         lease.release();

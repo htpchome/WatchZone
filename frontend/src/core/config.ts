@@ -4,6 +4,7 @@ export interface CardConfig {
   readonly camera_entity?: string;
   readonly camera_rounded_corners?: boolean;
   readonly camera_shadows?: boolean;
+  readonly low_latency_hls?: boolean;
   readonly outer_padding?: boolean;
   readonly outer_shadows?: boolean;
   readonly rounded_outer_corners?: boolean;
@@ -41,6 +42,7 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     "outer_padding",
     "camera_rounded_corners",
     "camera_shadows",
+    "low_latency_hls",
     "start_live_unmuted_pc_tablet",
     "start_live_unmuted_phone",
   ] as const) {
@@ -71,6 +73,8 @@ export function normalizeCardConfig(value: unknown): CardConfig {
       : true;
   normalized.camera_shadows =
     typeof source.camera_shadows === "boolean" ? source.camera_shadows : true;
+  normalized.low_latency_hls =
+    typeof source.low_latency_hls === "boolean" ? source.low_latency_hls : true;
   normalized.start_live_unmuted_pc_tablet =
     source.start_live_unmuted_pc_tablet === true;
   normalized.start_live_unmuted_phone =
