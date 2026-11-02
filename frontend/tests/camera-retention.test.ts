@@ -171,7 +171,9 @@ describe("camera presentation retention", () => {
 
     await vi.waitFor(() =>
       expect(
-        view.shadowRoot?.querySelector(".source-indicator")?.textContent?.trim(),
+        view.shadowRoot
+          ?.querySelector(".source-indicator")
+          ?.textContent?.trim(),
       ).toBe("HLS · HLS.js"),
     );
 
@@ -186,7 +188,9 @@ describe("camera presentation retention", () => {
 
     await vi.waitFor(() =>
       expect(
-        view.shadowRoot?.querySelector(".source-indicator")?.textContent?.trim(),
+        view.shadowRoot
+          ?.querySelector(".source-indicator")
+          ?.textContent?.trim(),
       ).toBe("WebRTC"),
     );
   });
