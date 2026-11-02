@@ -72,6 +72,7 @@ export class CameraLivePresentation extends LitElement {
   private _fullscreenActive = false;
   private _pictureInPictureActive = false;
   private _posterFailed = false;
+  private _webRtcFrameRequest?: number;
   private readonly _visibility = new CameraControlsVisibilityController(this);
 
   public available = false;
@@ -104,6 +105,7 @@ export class CameraLivePresentation extends LitElement {
       "webkitfullscreenchange",
       this._syncControlState,
     );
+    this._cancelWebRtcFrameRequest();
     this._setActiveVideo(undefined);
     super.disconnectedCallback();
   }
@@ -207,12 +209,16 @@ export class CameraLivePresentation extends LitElement {
   protected updated(changed: Map<PropertyKey, unknown>): void {
     const webRtcVideo = this.webRtcVideo;
     if (webRtcVideo && webRtcVideo.srcObject !== (this.webRtcStream ?? null)) {
+      this._cancelWebRtcFrameRequest(webRtcVideo);
       setMediaElementMuted(
         webRtcVideo,
         this.selected === "webrtc" ? this.muted : true,
       );
       webRtcVideo.srcObject = this.webRtcStream ?? null;
-      if (this.webRtcStream) this._emitMediaAttached(webRtcVideo);
+      if (this.webRtcStream) {
+        this._observeWebRtcFrame(webRtcVideo, this.webRtcStream);
+        this._emitMediaAttached(webRtcVideo);
+      }
     }
     const hlsHost = this.renderRoot.querySelector(".hls-host");
     if (hlsHost && this.hlsVideo && this.hlsVideo.parentElement !== hlsHost) {
@@ -278,14 +284,38 @@ export class CameraLivePresentation extends LitElement {
   }
 
   private readonly _handleWebRtcDecoded = (event: Event): void => {
+    this._emitWebRtcDecoded(event.currentTarget as HTMLVideoElement);
+  };
+
+  private _emitWebRtcDecoded(video: HTMLVideoElement): void {
+    this._cancelWebRtcFrameRequest(video);
     this.dispatchEvent(
       new CustomEvent<HTMLVideoElement>("camera-webrtc-decoded", {
         bubbles: true,
         composed: true,
-        detail: event.currentTarget as HTMLVideoElement,
+        detail: video,
       }),
     );
-  };
+  }
+
+  private _observeWebRtcFrame(
+    video: HTMLVideoElement,
+    stream: MediaStream,
+  ): void {
+    if (typeof video.requestVideoFrameCallback !== "function") return;
+    this._webRtcFrameRequest = video.requestVideoFrameCallback(() => {
+      this._webRtcFrameRequest = undefined;
+      if (video.srcObject === stream && this.webRtcStream === stream) {
+        this._emitWebRtcDecoded(video);
+      }
+    });
+  }
+
+  private _cancelWebRtcFrameRequest(video = this.webRtcVideo): void {
+    if (this._webRtcFrameRequest === undefined || !video) return;
+    video.cancelVideoFrameCallback?.(this._webRtcFrameRequest);
+    this._webRtcFrameRequest = undefined;
+  }
 
   private readonly _handleCameraControl = (
     event: CustomEvent<CameraControlEventDetail>,

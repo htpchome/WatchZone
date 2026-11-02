@@ -29,6 +29,49 @@ function normalizeError(error: unknown): Error {
     : new Error("Home Assistant camera connection failed");
 }
 
+function requestClientConfiguration(
+  api: HomeAssistantApi,
+  entityId: string,
+  signal: AbortSignal,
+): Promise<ClientConfiguration> {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (callback: () => void): void => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      signal.removeEventListener("abort", handleAbort);
+      callback();
+    };
+    const handleAbort = (): void => finish(() => reject(abortError()));
+    const timeout = window.setTimeout(
+      () =>
+        finish(() =>
+          reject(
+            new Error(
+              "Timed out requesting Home Assistant WebRTC configuration",
+            ),
+          ),
+        ),
+      CONNECT_TIMEOUT_MS,
+    );
+    signal.addEventListener("abort", handleAbort, { once: true });
+    if (signal.aborted) {
+      handleAbort();
+      return;
+    }
+    void api
+      .callWS<ClientConfiguration>({
+        type: "camera/webrtc/get_client_config",
+        entity_id: entityId,
+      })
+      .then(
+        (configuration) => finish(() => resolve(configuration)),
+        (error: unknown) => finish(() => reject(normalizeError(error))),
+      );
+  });
+}
+
 function appendIceCandidates(
   offer: string,
   candidates: readonly RTCIceCandidateInit[],
@@ -61,10 +104,7 @@ export async function createHomeAssistantWebRtcConnection(
   }
 
   timing.mark("client_config_requested");
-  const client = await api.callWS<ClientConfiguration>({
-    type: "camera/webrtc/get_client_config",
-    entity_id: entityId,
-  });
+  const client = await requestClientConfiguration(api, entityId, signal);
   timing.mark("client_config_received");
   if (signal.aborted) {
     throw abortError();

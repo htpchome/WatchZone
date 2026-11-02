@@ -333,19 +333,27 @@ describe("camera presentation retention", () => {
     );
     expect(webRtcFactory).toHaveBeenCalledOnce();
 
+    const webRtcVideo =
+      presentation(view)?.shadowRoot?.querySelector<HTMLVideoElement>(
+        "video.webrtc",
+      );
+    expect(webRtcVideo).toBeDefined();
+    let decodedFrame: VideoFrameRequestCallback | undefined;
+    Object.defineProperty(webRtcVideo, "requestVideoFrameCallback", {
+      configurable: true,
+      value: vi.fn((callback: VideoFrameRequestCallback) => {
+        decodedFrame = callback;
+        return 1;
+      }),
+    });
+
     hlsFailures[0](new Error("HLS interrupted"));
     await vi.advanceTimersByTimeAsync(500);
     await vi.waitFor(() => expect(hlsFactory).toHaveBeenCalledTimes(2));
     await vi.waitFor(() => expect(webRtcFactory).toHaveBeenCalledTimes(2));
-    const webRtcVideo = await vi.waitFor(() => {
-      const video =
-        presentation(view)?.shadowRoot?.querySelector<HTMLVideoElement>(
-          "video.webrtc",
-        );
-      expect(video?.srcObject).toBe(stream);
-      return video;
-    });
-    webRtcVideo?.dispatchEvent(new Event("loadeddata"));
+    await vi.waitFor(() => expect(webRtcVideo?.srcObject).toBe(stream));
+    expect(decodedFrame).toBeDefined();
+    decodedFrame?.(0, {} as VideoFrameCallbackMetadata);
 
     await vi.waitFor(() =>
       expect(

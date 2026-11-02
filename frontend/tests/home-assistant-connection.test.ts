@@ -75,6 +75,31 @@ describe("Home Assistant WebRTC connection", () => {
     globalThis.RTCPeerConnection = originalPeerConnection;
   });
 
+  it("bounds a client-configuration request stalled by an HA reboot", async () => {
+    vi.useFakeTimers();
+    const callWS = vi.fn(() => new Promise(() => undefined));
+    const api: HomeAssistantApi = {
+      identity: {} as HomeAssistantApi["identity"],
+      callWS: callWS as HomeAssistantApi["callWS"],
+      resolveUrl: (path) => path,
+      subscribeMessage: vi.fn(),
+    };
+    const connecting = createHomeAssistantWebRtcConnection(
+      api,
+      "camera.front",
+      new AbortController().signal,
+      vi.fn(),
+      new LiveStartupTiming("home_assistant:camera.front"),
+    );
+    const rejection = expect(connecting).rejects.toThrow(
+      "Timed out requesting Home Assistant WebRTC configuration",
+    );
+
+    await vi.advanceTimersByTimeAsync(15_000);
+    await rejection;
+    expect(FakePeerConnection.instance).toBeUndefined();
+  });
+
   it("negotiates immediately and buffers candidates until they are usable", async () => {
     let offerCallback: ((event: unknown) => void) | undefined;
     const unsubscribe = vi.fn();

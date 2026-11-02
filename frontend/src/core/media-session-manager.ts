@@ -1,4 +1,8 @@
-import type { HomeAssistantApi } from "./home-assistant";
+import type {
+  HomeAssistantApi,
+  HomeAssistantConnection,
+  HomeAssistantConnectionEventListener,
+} from "./home-assistant";
 import { MEDIA_SESSION_RUNTIME_KEY } from "./constants";
 import {
   beginLiveStartupTiming,
@@ -85,6 +89,10 @@ class ManagedMediaSession {
 
   public lastUsed = performance.now();
 
+  public get connectionIdentity(): HomeAssistantConnection {
+    return this._api.identity;
+  }
+
   public constructor(
     public readonly key: string,
     public readonly entityId: string,
@@ -117,7 +125,16 @@ class ManagedMediaSession {
     } else if (this._snapshot.state === "parked") {
       this._setSnapshot({ ...this._snapshot, state: "live" });
     }
-    if (this._snapshot.state === "new" || this._snapshot.state === "failed") {
+    if (api.identity.connected === false) {
+      this._closeConnection();
+      this._setSnapshot({
+        state: "failed",
+        error: "Home Assistant is reconnecting",
+      });
+    } else if (
+      this._snapshot.state === "new" ||
+      this._snapshot.state === "failed"
+    ) {
       void this._connect(options);
     }
 
@@ -167,6 +184,33 @@ class ManagedMediaSession {
 
   public isRetained(): boolean {
     return this._leaseCount === 0;
+  }
+
+  public handleTransportDisconnected(): void {
+    if (this._snapshot.state === "closed") return;
+    this._reconnectAttempts = 0;
+    if (this._reconnectTimer) {
+      clearTimeout(this._reconnectTimer);
+      this._reconnectTimer = undefined;
+    }
+    this._closeConnection();
+    this._setSnapshot({
+      state: "failed",
+      error: "Home Assistant connection interrupted",
+    });
+  }
+
+  public handleTransportReady(): void {
+    if (
+      this._leaseCount === 0 ||
+      this._snapshot.state === "closed" ||
+      this._snapshot.state === "live" ||
+      this._snapshot.state === "parked"
+    )
+      return;
+    this._reconnectAttempts = 0;
+    this._closeConnection();
+    void this._connect();
   }
 
   private async _connect(
@@ -313,6 +357,13 @@ export class MediaSessionManager {
     CameraMutePreference
   >();
   private readonly _sessions = new Map<string, ManagedMediaSession>();
+  private readonly _connectionObservers = new Map<
+    HomeAssistantConnection,
+    {
+      readonly disconnected: HomeAssistantConnectionEventListener;
+      readonly ready: HomeAssistantConnectionEventListener;
+    }
+  >();
 
   public acquire(request: MediaSessionRequest): MediaSessionLease {
     return this._acquire(
@@ -351,6 +402,7 @@ export class MediaSessionManager {
     retention: MediaRetentionClass,
     options: MediaConnectionOptions = { initialMuted: true },
   ): MediaSessionLease {
+    this._observeConnection(api.identity);
     let session = this._sessions.get(key);
     if (!session) {
       this._evictIfNeeded();
@@ -360,17 +412,69 @@ export class MediaSessionManager {
         api,
         factory,
         retention,
-        () => this._sessions.delete(key),
+        () => {
+          this._sessions.delete(key);
+          this._pruneConnectionObservers();
+        },
       );
       this._sessions.set(key, session);
     }
-    return session.acquire(api, options);
+    const lease = session.acquire(api, options);
+    this._pruneConnectionObservers();
+    return lease;
   }
 
   public closeAll(): void {
     for (const session of [...this._sessions.values()]) {
       session.close();
     }
+    this._clearConnectionObservers();
+  }
+
+  private _observeConnection(connection: HomeAssistantConnection): void {
+    if (
+      this._connectionObservers.has(connection) ||
+      !connection.addEventListener ||
+      !connection.removeEventListener
+    )
+      return;
+    const disconnected: HomeAssistantConnectionEventListener = () => {
+      for (const session of this._sessions.values()) {
+        if (session.connectionIdentity === connection) {
+          session.handleTransportDisconnected();
+        }
+      }
+    };
+    const ready: HomeAssistantConnectionEventListener = () => {
+      for (const session of this._sessions.values()) {
+        if (session.connectionIdentity === connection) {
+          session.handleTransportReady();
+        }
+      }
+    };
+    connection.addEventListener("disconnected", disconnected);
+    connection.addEventListener("ready", ready);
+    this._connectionObservers.set(connection, { disconnected, ready });
+  }
+
+  private _pruneConnectionObservers(): void {
+    const activeConnections = new Set(
+      [...this._sessions.values()].map((session) => session.connectionIdentity),
+    );
+    for (const [connection, listeners] of this._connectionObservers) {
+      if (activeConnections.has(connection)) continue;
+      connection.removeEventListener?.("disconnected", listeners.disconnected);
+      connection.removeEventListener?.("ready", listeners.ready);
+      this._connectionObservers.delete(connection);
+    }
+  }
+
+  private _clearConnectionObservers(): void {
+    for (const [connection, listeners] of this._connectionObservers) {
+      connection.removeEventListener?.("disconnected", listeners.disconnected);
+      connection.removeEventListener?.("ready", listeners.ready);
+    }
+    this._connectionObservers.clear();
   }
 
   private _evictIfNeeded(): void {

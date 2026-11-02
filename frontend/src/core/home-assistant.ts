@@ -13,8 +13,22 @@ export type HomeAssistantMessage = Readonly<Record<string, unknown>> & {
 };
 
 export type HomeAssistantUnsubscribe = () => void;
+export type HomeAssistantConnectionEvent = "disconnected" | "ready";
+export type HomeAssistantConnectionEventListener = (
+  connection: HomeAssistantConnection,
+  data?: unknown,
+) => void;
 
 export interface HomeAssistantConnection {
+  readonly connected?: boolean;
+  addEventListener?(
+    event: HomeAssistantConnectionEvent,
+    listener: HomeAssistantConnectionEventListener,
+  ): void;
+  removeEventListener?(
+    event: HomeAssistantConnectionEvent,
+    listener: HomeAssistantConnectionEventListener,
+  ): void;
   subscribeMessage<T>(
     callback: (message: T) => void,
     message: HomeAssistantMessage,

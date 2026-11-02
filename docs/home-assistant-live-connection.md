@@ -63,7 +63,9 @@ For the initial Home Assistant direct source, WatchZone uses a hedged startup:
    triggers one new WebRTC attempt. It does not poll or disturb healthy HLS.
    The background WebRTC media element remains playback-eligible while visually
    suppressed; it must not use `display: none`, which can prevent WebKit from
-   decoding the frame required for takeover.
+   decoding the frame required for takeover. When supported, presentation uses
+   `requestVideoFrameCallback` to confirm a frame from a replacement stream;
+   media readiness events remain the standards-based fallback.
 4. After a successful WebRTC handoff, the losing HLS lease is discarded. A
    shared HLS session used by another consumer is not closed. The presentation
    commits WebRTC visibility before discarding HLS so the handoff cannot expose
@@ -152,6 +154,13 @@ capacity pressure evicts parked fallback sessions first and then the
 least-recently-used preferred session. An unshared HLS loser is discarded
 immediately after WebRTC handoff. Established connections receive at most two
 automatic reconnect attempts with exponential backoff and jitter.
+
+The session pool also observes Home Assistant's own WebSocket lifecycle. A
+`disconnected` event invalidates retained and active media transports once;
+the matching `ready` event starts each actively leased session once. Parked
+sessions remain inactive until reacquired. This prevents a Home Assistant
+restart from leaving an old media transport indefinitely marked `live` or
+`connecting` without introducing health polling.
 
 ## 8. Current audio behavior
 

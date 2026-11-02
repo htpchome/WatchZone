@@ -1,7 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { MEDIA_SESSION_RUNTIME_KEY } from "../src/core/constants";
-import type { HomeAssistantApi } from "../src/core/home-assistant";
+import type {
+  HomeAssistantApi,
+  HomeAssistantConnection,
+  HomeAssistantConnectionEvent,
+  HomeAssistantConnectionEventListener,
+} from "../src/core/home-assistant";
 import {
   type ConnectionFactory,
   getMediaSessionManager,
@@ -19,6 +24,43 @@ function createApi(identity: object = {}): HomeAssistantApi {
 
 function createStream(): MediaStream {
   return { getTracks: () => [] } as unknown as MediaStream;
+}
+
+function createLifecycleApi(initiallyConnected = true): {
+  readonly api: HomeAssistantApi;
+  disconnect(): void;
+  ready(): void;
+} {
+  const listeners = new Map<
+    HomeAssistantConnectionEvent,
+    Set<HomeAssistantConnectionEventListener>
+  >();
+  const connection: HomeAssistantConnection = {
+    connected: initiallyConnected,
+    addEventListener: (event, listener) => {
+      const eventListeners = listeners.get(event) ?? new Set();
+      eventListeners.add(listener);
+      listeners.set(event, eventListeners);
+    },
+    removeEventListener: (event, listener) => {
+      listeners.get(event)?.delete(listener);
+    },
+    subscribeMessage: vi.fn(),
+  };
+  const emit = (event: HomeAssistantConnectionEvent): void => {
+    Object.defineProperty(connection, "connected", {
+      configurable: true,
+      value: event === "ready",
+    });
+    for (const listener of listeners.get(event) ?? []) {
+      listener(connection);
+    }
+  };
+  return {
+    api: createApi(connection),
+    disconnect: () => emit("disconnected"),
+    ready: () => emit("ready"),
+  };
 }
 
 describe("MediaSessionManager", () => {
@@ -150,6 +192,76 @@ describe("MediaSessionManager", () => {
     expect(factory).toHaveBeenCalledTimes(2);
     first.release();
     second.release();
+    manager.closeAll();
+  });
+
+  it("restarts active media exactly once when Home Assistant reconnects", async () => {
+    const closes: Array<ReturnType<typeof vi.fn>> = [];
+    const factory = vi.fn<ConnectionFactory>(async () => {
+      const close = vi.fn();
+      closes.push(close);
+      return { stream: createStream(), close };
+    });
+    const manager = new MediaSessionManager(factory);
+    const lifecycle = createLifecycleApi();
+    const lease = manager.acquireHomeAssistant(lifecycle.api, "camera.front");
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
+
+    lifecycle.disconnect();
+    expect(lease.getSnapshot().state).toBe("failed");
+    expect(closes[0]).toHaveBeenCalledOnce();
+
+    lifecycle.ready();
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
+    expect(factory).toHaveBeenCalledTimes(2);
+
+    lifecycle.ready();
+    expect(factory).toHaveBeenCalledTimes(2);
+    lease.release();
+    manager.closeAll();
+  });
+
+  it("waits for Home Assistant ready when acquired during a reboot", async () => {
+    const factory = vi.fn<ConnectionFactory>(async () => ({
+      stream: createStream(),
+      close: vi.fn(),
+    }));
+    const manager = new MediaSessionManager(factory);
+    const lifecycle = createLifecycleApi(false);
+    const lease = manager.acquireHomeAssistant(lifecycle.api, "camera.front");
+
+    expect(lease.getSnapshot().state).toBe("failed");
+    expect(factory).not.toHaveBeenCalled();
+
+    lifecycle.ready();
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
+    expect(factory).toHaveBeenCalledOnce();
+    lease.release();
+    manager.closeAll();
+  });
+
+  it("does not reconnect a parked session until it is reacquired", async () => {
+    const factory = vi.fn<ConnectionFactory>(async () => ({
+      stream: createStream(),
+      close: vi.fn(),
+    }));
+    const manager = new MediaSessionManager(factory);
+    const lifecycle = createLifecycleApi();
+    const initial = manager.acquireHomeAssistant(lifecycle.api, "camera.front");
+    await vi.waitFor(() => expect(initial.getSnapshot().state).toBe("live"));
+    initial.release();
+
+    lifecycle.disconnect();
+    lifecycle.ready();
+    expect(factory).toHaveBeenCalledOnce();
+
+    const returned = manager.acquireHomeAssistant(
+      lifecycle.api,
+      "camera.front",
+    );
+    await vi.waitFor(() => expect(returned.getSnapshot().state).toBe("live"));
+    expect(factory).toHaveBeenCalledTimes(2);
+    returned.release();
     manager.closeAll();
   });
 
