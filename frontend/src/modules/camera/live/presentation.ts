@@ -12,6 +12,7 @@ import {
 } from "../../../core/media-playback";
 import type { MediaTransport } from "../../../core/media-session-manager";
 import type { ToastNotice, ToastSeverity } from "../../../ui/toast-manager";
+import { renderIcon } from "../../../ui/icons";
 import "../../../ui/toast-region";
 import type { CameraControlEventDetail } from "../controls-overlay";
 import "../controls-overlay";
@@ -24,6 +25,7 @@ import {
   togglePictureInPicture,
 } from "../picture-in-picture";
 import type { PresentedSource } from "./session.controller";
+import { captureVideoFrame, downloadSnapshot } from "./frame-capture";
 import { CameraZoomController } from "./zoom.controller";
 
 interface FullscreenDocument extends Document {
@@ -65,6 +67,9 @@ export class CameraLivePresentation extends LitElement {
     posterUrl: { attribute: false },
     selected: { attribute: false },
     sessionRevision: { attribute: false, type: Number },
+    suspendPending: { attribute: false, type: Boolean },
+    suspendSupported: { attribute: false, type: Boolean },
+    suspended: { attribute: false, type: Boolean },
     transport: { attribute: false },
     webRtcStream: { attribute: false },
     zoomKey: { attribute: false },
@@ -74,6 +79,7 @@ export class CameraLivePresentation extends LitElement {
   private _fullscreenActive = false;
   private _pictureInPictureActive = false;
   private _posterFailed = false;
+  private _snapshotPending = false;
   private _webRtcFrameRequest?: number;
   private readonly _visibility = new CameraControlsVisibilityController(this);
   private readonly _zoom = new CameraZoomController(this);
@@ -86,6 +92,9 @@ export class CameraLivePresentation extends LitElement {
   public posterUrl?: string;
   public selected?: PresentedSource;
   public sessionRevision = 0;
+  public suspendPending = false;
+  public suspendSupported = false;
+  public suspended = false;
   public transport?: MediaTransport;
   public webRtcStream?: MediaStream;
   public zoomKey?: string;
@@ -130,8 +139,11 @@ export class CameraLivePresentation extends LitElement {
           : this.transport === "hls_mse"
             ? "HLS · HLS.js"
             : "HLS";
-    const connecting = this.available && !this.failed && !this.selected;
-    const resolvedSource = Boolean(this.selected && this.transport);
+    const connecting =
+      !this.suspended && this.available && !this.failed && !this.selected;
+    const resolvedSource = Boolean(
+      !this.suspended && this.selected && this.transport,
+    );
     const sourceVisible = Boolean(
       connecting ||
       (resolvedSource &&
@@ -166,19 +178,28 @@ export class CameraLivePresentation extends LitElement {
           @pointercancel=${this._zoom.handlePointerCancel}
           @wheel=${this._zoom.handleWheel}
         >
-          ${!this.selected ? this._renderFallback() : nothing}
-          <div class="hls-host" ?hidden=${this.selected === "webrtc"}></div>
-          <video
-            class=${this.selected === "webrtc" ? "webrtc" : "webrtc candidate"}
-            autoplay
-            playsinline
-            .muted=${this.selected === "webrtc" ? this.muted : true}
-            aria-label="Live camera"
-            aria-hidden=${this.selected === "webrtc" ? "false" : "true"}
-            @canplay=${this._handleWebRtcDecoded}
-            @loadeddata=${this._handleWebRtcDecoded}
-            @playing=${this._handleWebRtcDecoded}
-          ></video>
+          ${
+            this.suspended
+              ? this._renderSuspended()
+              : html`${!this.selected ? this._renderFallback() : nothing}
+                  <div
+                    class="hls-host"
+                    ?hidden=${this.selected === "webrtc"}
+                  ></div>
+                  <video
+                    class=${
+                      this.selected === "webrtc" ? "webrtc" : "webrtc candidate"
+                    }
+                    autoplay
+                    playsinline
+                    .muted=${this.selected === "webrtc" ? this.muted : true}
+                    aria-label="Live camera"
+                    aria-hidden=${this.selected === "webrtc" ? "false" : "true"}
+                    @canplay=${this._handleWebRtcDecoded}
+                    @loadeddata=${this._handleWebRtcDecoded}
+                    @playing=${this._handleWebRtcDecoded}
+                  ></video>`
+          }
         </div>
         ${
           connecting || resolvedSource
@@ -210,7 +231,7 @@ export class CameraLivePresentation extends LitElement {
             : nothing
         }
         ${
-          this.selected
+          this.selected || this.suspended
             ? staticHtml`<${controlsTag}
                 .visible=${this._visibility.visible}
                 .fullscreenActive=${this._fullscreenActive}
@@ -220,6 +241,10 @@ export class CameraLivePresentation extends LitElement {
                 .pictureInPictureSupported=${Boolean(
                   pictureInPictureMethod(this._activeVideo),
                 )}
+                .snapshotPending=${this._snapshotPending}
+                .suspendPending=${this.suspendPending}
+                .suspendSupported=${this.suspendSupported}
+                .suspended=${this.suspended}
                 @camera-control=${this._handleCameraControl}
               ></${controlsTag}>`
             : nothing
@@ -299,6 +324,16 @@ export class CameraLivePresentation extends LitElement {
       }`;
   }
 
+  private _renderSuspended() {
+    return html`<div class="suspended-presentation" role="status">
+      <span class="suspended-icon" aria-hidden="true"
+        >${renderIcon("power")}</span
+      >
+      <strong>Camera suspended</strong>
+      <span>Resume this camera to restore live video.</span>
+    </div>`;
+  }
+
   private _emitMediaAttached(video: HTMLVideoElement): void {
     void playMediaElement(video).catch(() => undefined);
     this.dispatchEvent(
@@ -358,8 +393,39 @@ export class CameraLivePresentation extends LitElement {
       void this._togglePictureInPicture();
     } else if (event.detail.action === "fullscreen") {
       void this._toggleFullscreen();
+    } else if (event.detail.action === "snapshot") {
+      void this._takeSnapshot();
+    } else if (event.detail.action === "suspend") {
+      this.dispatchEvent(
+        new CustomEvent("camera-suspend-toggle", {
+          bubbles: true,
+          composed: true,
+        }),
+      );
     }
   };
+
+  private async _takeSnapshot(): Promise<void> {
+    if (!this._activeVideo || this._snapshotPending) return;
+    this._snapshotPending = true;
+    this.requestUpdate();
+    try {
+      downloadSnapshot(
+        await captureVideoFrame(this._activeVideo),
+        this.zoomKey,
+      );
+      this._requestToast("success", "Snapshot downloaded.", "camera-snapshot");
+    } catch (error) {
+      this._requestToast(
+        "error",
+        error instanceof Error ? error.message : "Unable to take snapshot.",
+        "camera-snapshot",
+      );
+    } finally {
+      this._snapshotPending = false;
+      this.requestUpdate();
+    }
+  }
 
   private _setActiveVideo(video: HTMLVideoElement | undefined): void {
     if (this._activeVideo === video) return;

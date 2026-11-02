@@ -642,7 +642,22 @@ test("retains one live connection while the card presentation is replaced", asyn
     window.RTCPeerConnection =
       TestPeerConnection as unknown as typeof RTCPeerConnection;
     const connection = {
-      subscribeMessage: async () => () => undefined,
+      subscribeMessage: async (
+        callback: (message: unknown) => void,
+        message: { entity_id?: string; type: string },
+      ) => {
+        if (message.type === "watchzone/camera/runtime/subscribe") {
+          callback({
+            available: true,
+            entity_id: message.entity_id,
+            provider: "frigate",
+            resume_at: null,
+            supported: true,
+            suspended: false,
+          });
+        }
+        return () => undefined;
+      },
     };
     const hass = {
       states: {
@@ -837,6 +852,34 @@ test("retains one live connection while the card presentation is replaced", asyn
   await expect(controls.first()).toBeHidden({
     timeout: CAMERA_OVERLAY_HIDE_DELAY_MS + 1_000,
   });
+  await video.evaluate((element) => {
+    Object.defineProperties(element, {
+      readyState: { configurable: true, value: 4 },
+      videoHeight: { configurable: true, value: 720 },
+      videoWidth: { configurable: true, value: 1280 },
+    });
+    HTMLCanvasElement.prototype.getContext = (() => ({
+      drawImage: () => undefined,
+    })) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.toBlob = ((callback: BlobCallback) =>
+      callback(
+        new Blob(["frame"], { type: "image/jpeg" }),
+      )) as typeof HTMLCanvasElement.prototype.toBlob;
+  });
+  await liveViewport.hover();
+  const downloadPromise = page.waitForEvent("download");
+  await page.locator('wzc-camera-controls [data-control="snapshot"]').click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(
+    /^camera\.front_\d{4}-\d{2}-\d{2}T.*Z\.jpg$/,
+  );
+  await page.locator('wzc-camera-controls [data-control="suspend"]').click();
+  const suspendDialog = page.locator("wzc-camera-suspend-dialog dialog");
+  await expect(suspendDialog).toBeVisible();
+  await suspendDialog.locator('input[role="switch"]').check();
+  await expect(suspendDialog.locator('input[type="number"]')).toHaveCount(2);
+  await suspendDialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(suspendDialog).toBeHidden();
   const overlayTransitions = await page.evaluate(() => {
     const camera = document.querySelector("wzc-camera");
     const presentation = camera?.shadowRoot?.querySelector("wzc-camera-live");
@@ -1026,10 +1069,10 @@ test("retains one live connection while the card presentation is replaced", asyn
   ).toBe("rgb(230, 230, 230)");
   await expect(
     page.locator('wzc-camera wzc-camera-controls [data-control="snapshot"]'),
-  ).toBeDisabled();
+  ).toBeEnabled();
   await expect(
     page.locator('wzc-camera wzc-camera-controls [data-control="suspend"]'),
-  ).toBeDisabled();
+  ).toBeEnabled();
   await expect(mute).toHaveAttribute("aria-pressed", "false");
   const mutedBorder = await mute.evaluate((element) => {
     const style = getComputedStyle(element);

@@ -24,8 +24,8 @@ from homeassistant.helpers import config_validation as cv
 from mashumaro import MissingField
 from webrtc_models import RTCIceCandidateInit
 
-from ..const import DATA_RUNTIME, DOMAIN, NAME
-from ..runtime import WatchZoneRuntime
+from ..const import DOMAIN
+from . import runtime_from_hass
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -36,14 +36,6 @@ def _parse_candidate(value: Any) -> RTCIceCandidateInit:
         return RTCIceCandidateInit.from_dict(value)
     except (MissingField, ValueError) as err:
         raise vol.Invalid(str(err)) from err
-
-
-def _runtime(hass: HomeAssistant) -> WatchZoneRuntime:
-    """Return the configured runtime or report a useful API failure."""
-    runtime = hass.data.get(DOMAIN, {}).get(DATA_RUNTIME)
-    if not isinstance(runtime, WatchZoneRuntime):
-        raise HomeAssistantError(f"{NAME} is not configured")
-    return runtime
 
 
 def _owner_id(connection: ActiveConnection) -> str:
@@ -78,7 +70,7 @@ async def ws_live_offer(
     entity_id = msg["entity_id"]
     try:
         _require_camera_read(connection, entity_id)
-        runtime = _runtime(hass)
+        runtime = runtime_from_hass(hass)
 
         @callback
         def send_event(event: dict[str, object]) -> None:
@@ -134,7 +126,7 @@ async def ws_live_candidate(
     """Forward a browser candidate to its provider signaling session."""
     try:
         _require_camera_read(connection, msg["entity_id"])
-        await _runtime(hass).live_signaling.async_add_candidate(
+        await runtime_from_hass(hass).live_signaling.async_add_candidate(
             _owner_id(connection),
             msg["entity_id"],
             msg["session_id"],

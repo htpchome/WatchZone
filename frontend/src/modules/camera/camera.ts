@@ -1,7 +1,11 @@
 import { LitElement } from "lit";
 import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
-import { CAMERA_LIVE_PRESENTATION_TAG, CAMERA_TAG } from "../../core/constants";
+import {
+  CAMERA_LIVE_PRESENTATION_TAG,
+  CAMERA_SUSPEND_DIALOG_TAG,
+  CAMERA_TAG,
+} from "../../core/constants";
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import { ToastManager } from "../../ui/toast-manager";
 import { cameraStyles } from "./camera.styles";
@@ -12,10 +16,14 @@ import type {
 } from "./live/presentation";
 import "./live/presentation";
 import { CameraLiveSessionController } from "./live/session.controller";
+import { CameraRuntimeController } from "./runtime.controller";
+import type { CameraSuspendConfirmDetail } from "./suspend-dialog";
+import "./suspend-dialog";
 
 export type CameraShadowStyle = "medium" | "none" | "small";
 
 const presentationTag = unsafeStatic(CAMERA_LIVE_PRESENTATION_TAG);
+const suspendDialogTag = unsafeStatic(CAMERA_SUSPEND_DIALOG_TAG);
 
 /** Camera module composition root. Provider, audio, and presentation stay separate. */
 export class CameraModule extends LitElement {
@@ -54,6 +62,8 @@ export class CameraModule extends LitElement {
       onActiveVideoChanged: (video) =>
         this._audio.handleActiveVideoChanged(video),
     });
+  private readonly _runtime = new CameraRuntimeController(this);
+  private _suspendDialogActive = false;
 
   public api?: HomeAssistantApi;
   public available = false;
@@ -74,6 +84,9 @@ export class CameraModule extends LitElement {
   }
 
   protected willUpdate(): void {
+    this._runtime.configure(this.api, this.entityId);
+    const runtime = this._runtime.snapshot;
+    const suspended = runtime?.suspended === true;
     this._audio.configure(
       this.entityId,
       this.startUnmutedPcTablet,
@@ -83,12 +96,14 @@ export class CameraModule extends LitElement {
     this._session.configure(
       this.api,
       this.entityId,
-      this.available,
+      this.available && runtime?.available !== false && !suspended,
       this.lowLatencyHls,
     );
   }
 
   protected render() {
+    const runtime = this._runtime.snapshot;
+    const suspended = runtime?.suspended === true;
     return staticHtml`
       <div
         class=${[
@@ -110,15 +125,26 @@ export class CameraModule extends LitElement {
           .posterUrl=${this.posterUrl}
           .selected=${this._session.selected}
           .sessionRevision=${this._session.revision}
+          .suspendPending=${this._runtime.pending}
+          .suspendSupported=${runtime?.supported === true}
+          .suspended=${suspended}
           .transport=${this._session.transport}
           .webRtcStream=${this._session.webRtcStream}
           .zoomKey=${this.entityId}
           @camera-media-attached=${this._handleMediaAttached}
           @camera-mute-toggle=${this._handleMuteToggle}
+          @camera-suspend-toggle=${this._handleSuspendToggle}
           @camera-toast-request=${this._handleToastRequest}
           @camera-webrtc-decoded=${this._handleWebRtcDecoded}
           @camera-webrtc-presented=${this._handleWebRtcPresented}
         ></${presentationTag}>
+        <${suspendDialogTag}
+          .active=${this._suspendDialogActive}
+          .currentSuspended=${suspended}
+          .pending=${this._runtime.pending}
+          @camera-suspend-cancel=${this._handleSuspendCancel}
+          @camera-suspend-confirm=${this._handleSuspendConfirm}
+        ></${suspendDialogTag}>
       </div>
     `;
   }
@@ -134,6 +160,51 @@ export class CameraModule extends LitElement {
   private readonly _handleMuteToggle = (): void => {
     this._audio.toggleUserMute();
   };
+
+  private readonly _handleSuspendToggle = (): void => {
+    if (this._runtime.snapshot?.supported !== true || this._runtime.pending)
+      return;
+    this._suspendDialogActive = true;
+    this.requestUpdate();
+  };
+
+  private readonly _handleSuspendCancel = (): void => {
+    if (this._runtime.pending) return;
+    this._suspendDialogActive = false;
+    this.requestUpdate();
+  };
+
+  private readonly _handleSuspendConfirm = (
+    event: CustomEvent<CameraSuspendConfirmDetail>,
+  ): void => {
+    void this._applySuspension(event.detail);
+  };
+
+  private async _applySuspension(
+    detail: CameraSuspendConfirmDetail,
+  ): Promise<void> {
+    try {
+      await this._runtime.setSuspended(
+        detail.suspended,
+        detail.resumeAfterSeconds,
+      );
+      this._suspendDialogActive = false;
+      this._toasts.success(
+        detail.suspended ? "Camera suspended." : "Camera resumed.",
+        { key: "camera-runtime" },
+      );
+    } catch (error) {
+      this._toasts.error(
+        error instanceof Error
+          ? error.message
+          : detail.suspended
+            ? "Unable to suspend camera."
+            : "Unable to resume camera.",
+        { key: "camera-runtime" },
+      );
+    }
+    this.requestUpdate();
+  }
 
   private readonly _handleToastRequest = (
     event: CustomEvent<CameraToastRequestDetail>,

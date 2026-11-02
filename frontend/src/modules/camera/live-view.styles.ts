@@ -54,7 +54,8 @@ export const cameraLiveViewStyles = css`
   }
 
   .generic-fallback,
-  .fallback-image {
+  .fallback-image,
+  .suspended-presentation {
     position: absolute;
     inset: 0;
     inline-size: 100%;
@@ -87,6 +88,40 @@ export const cameraLiveViewStyles = css`
     object-fit: var(--wzc-live-fit, contain);
     background: var(--wzc-live-background);
     -webkit-user-drag: none;
+  }
+
+  .suspended-presentation {
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1.5rem;
+    color: var(--wzc-media-overlay-color);
+    background: var(--wzc-camera-stage);
+    text-align: center;
+  }
+
+  .suspended-presentation > span:last-child {
+    color: color-mix(in srgb, var(--wzc-media-overlay-color) 72%, transparent);
+    font-size: var(--wzc-font-size-small);
+  }
+
+  .suspended-icon {
+    display: grid;
+    place-items: center;
+    inline-size: 3rem;
+    block-size: 3rem;
+    background: var(--wzc-media-overlay-background);
+    border: 1px solid var(--wzc-media-overlay-border-color);
+    border-radius: 50%;
+    font-size: 1.75rem;
+  }
+
+  .suspended-icon svg {
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
   }
 
   .hls-host,

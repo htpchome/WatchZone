@@ -18,6 +18,7 @@ export const DEFAULT_CAMERA_MODULE_NODE_ID = `${APP_ID}:default-camera-module`;
 export const CAMERA_TAG = `${APP_ID}-camera`;
 export const CAMERA_LIVE_PRESENTATION_TAG = `${CAMERA_TAG}-live`;
 export const CAMERA_CONTROLS_TAG = `${CAMERA_TAG}-controls`;
+export const CAMERA_SUSPEND_DIALOG_TAG = `${CAMERA_TAG}-suspend-dialog`;
 export const TOAST_REGION_TAG = `${APP_ID}-toast-region`;
 export const TOAST_VISIBLE_DURATION_MS = 3_500;
 export const TOAST_TRANSITION_DURATION_MS = 180;

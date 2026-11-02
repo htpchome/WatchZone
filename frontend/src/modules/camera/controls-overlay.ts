@@ -17,7 +17,6 @@ export interface CameraControlEventDetail {
 
 interface ControlDefinition {
   readonly action: CameraControlAction;
-  readonly placeholder?: boolean;
 }
 
 const ALL_DEVICE_CLASSES: readonly DeviceClass[] = [
@@ -37,9 +36,9 @@ export const CAMERA_CONTROL_DEVICE_MATRIX: Readonly<
 };
 
 const CONTROLS: readonly ControlDefinition[] = [
-  { action: "suspend", placeholder: true },
+  { action: "suspend" },
   { action: "picture_in_picture" },
-  { action: "snapshot", placeholder: true },
+  { action: "snapshot" },
   { action: "fullscreen" },
   { action: "mute" },
 ];
@@ -65,6 +64,10 @@ export class CameraControls extends LitElement {
     muted: { attribute: false, type: Boolean },
     pictureInPictureActive: { attribute: false, type: Boolean },
     pictureInPictureSupported: { attribute: false, type: Boolean },
+    snapshotPending: { attribute: false, type: Boolean },
+    suspendPending: { attribute: false, type: Boolean },
+    suspendSupported: { attribute: false, type: Boolean },
+    suspended: { attribute: false, type: Boolean },
     visible: { reflect: true, type: Boolean },
   };
 
@@ -73,6 +76,10 @@ export class CameraControls extends LitElement {
   public muted = true;
   public pictureInPictureActive = false;
   public pictureInPictureSupported = false;
+  public snapshotPending = false;
+  public suspendPending = false;
+  public suspendSupported = false;
+  public suspended = false;
   public visible = false;
 
   private readonly _deviceProfile = new DeviceProfileController(this);
@@ -80,10 +87,13 @@ export class CameraControls extends LitElement {
   protected render() {
     return html`
       <div class="control-group" role="toolbar" aria-label="Camera controls">
-        ${CONTROLS.filter((control) =>
-          CAMERA_CONTROL_DEVICE_MATRIX[control.action].includes(
-            this._deviceProfile.profile.deviceClass,
-          ),
+        ${CONTROLS.filter(
+          (control) =>
+            CAMERA_CONTROL_DEVICE_MATRIX[control.action].includes(
+              this._deviceProfile.profile.deviceClass,
+            ) &&
+            (control.action !== "suspend" || this.suspendSupported) &&
+            (!this.suspended || control.action === "suspend"),
         ).map((control) => this._renderControl(control))}
       </div>
     `;
@@ -93,17 +103,27 @@ export class CameraControls extends LitElement {
     const active =
       control.action === "mute"
         ? this.muted
-        : control.action === "fullscreen"
-          ? this.fullscreenActive
-          : control.action === "picture_in_picture"
-            ? this.pictureInPictureActive
-            : false;
+        : control.action === "suspend"
+          ? this.suspended
+          : control.action === "fullscreen"
+            ? this.fullscreenActive
+            : control.action === "picture_in_picture"
+              ? this.pictureInPictureActive
+              : false;
     const supported =
       control.action === "fullscreen"
         ? this.fullscreenSupported
         : control.action === "picture_in_picture"
           ? this.pictureInPictureSupported
-          : !control.placeholder;
+          : control.action === "suspend"
+            ? this.suspendSupported
+            : true;
+    const pending =
+      control.action === "snapshot"
+        ? this.snapshotPending
+        : control.action === "suspend"
+          ? this.suspendPending
+          : false;
     const label =
       control.action === "mute"
         ? this.muted
@@ -118,8 +138,16 @@ export class CameraControls extends LitElement {
               ? "Exit Picture-in-Picture"
               : "Enter Picture-in-Picture"
             : control.action === "snapshot"
-              ? "Take snapshot (coming soon)"
-              : "Suspend camera (coming soon)";
+              ? this.snapshotPending
+                ? "Saving snapshot"
+                : "Take snapshot"
+              : this.suspendPending
+                ? this.suspended
+                  ? "Resuming camera"
+                  : "Suspending camera"
+                : this.suspended
+                  ? "Resume camera"
+                  : "Suspend camera";
 
     return html`<button
       class="control-button"
@@ -128,7 +156,7 @@ export class CameraControls extends LitElement {
       title=${label}
       aria-label=${label}
       aria-pressed=${active ? "true" : "false"}
-      ?disabled=${!supported}
+      ?disabled=${!supported || pending}
       @pointerup=${this._releaseTouchFocus}
       @click=${() => this._dispatch(control.action)}
     >

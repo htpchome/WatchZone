@@ -27,6 +27,7 @@ from .const import (
     DOMAIN,
     FRONTEND_URL_BASE,
 )
+from .features.camera_runtime import CameraRuntimeService
 from .features.live import LiveSignalingService
 from .runtime import WatchZoneRuntime
 
@@ -65,16 +66,21 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     await hass.http.async_register_static_paths(static_paths)
     hass.data.setdefault(DOMAIN, {})
+    from .api.camera import async_register as async_register_camera_api
     from .api.live import async_register as async_register_live_api
 
+    async_register_camera_api(hass)
     async_register_live_api(hass)
     return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: WatchZoneConfigEntry) -> bool:
     """Set up the configured WatchZone application."""
+    camera_runtime = CameraRuntimeService(hass)
+    await camera_runtime.async_setup()
     runtime = WatchZoneRuntime(
         entry_id=entry.entry_id,
+        camera_runtime=camera_runtime,
         live_signaling=LiveSignalingService(hass),
     )
     entry.runtime_data = runtime
