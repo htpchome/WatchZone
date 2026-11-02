@@ -61,8 +61,13 @@ For the initial Home Assistant direct source, WatchZone uses a hedged startup:
    reconnect; a newly decoded WebRTC frame takes ownership again.
    If WebRTC was unavailable while HLS was selected, a completed HLS recovery
    triggers one new WebRTC attempt. It does not poll or disturb healthy HLS.
+   The background WebRTC media element remains playback-eligible while visually
+   suppressed; it must not use `display: none`, which can prevent WebKit from
+   decoding the frame required for takeover.
 4. After a successful WebRTC handoff, the losing HLS lease is discarded. A
-   shared HLS session used by another consumer is not closed.
+   shared HLS session used by another consumer is not closed. The presentation
+   commits WebRTC visibility before discarding HLS so the handoff cannot expose
+   an empty paint between sources.
 5. If only one path succeeds, it remains selected. An error is shown only when
    both paths fail.
 6. The upper-right connection indicator shows `Connecting…` while candidates

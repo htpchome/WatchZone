@@ -109,6 +109,7 @@ export class CameraModule extends LitElement {
           @camera-mute-toggle=${this._handleMuteToggle}
           @camera-toast-request=${this._handleToastRequest}
           @camera-webrtc-decoded=${this._handleWebRtcDecoded}
+          @camera-webrtc-presented=${this._handleWebRtcPresented}
         ></${presentationTag}>
       </div>
     `;
@@ -138,6 +139,10 @@ export class CameraModule extends LitElement {
     event: CustomEvent<HTMLVideoElement>,
   ): void => {
     this._session.handleWebRtcDecoded(event.detail);
+  };
+
+  private readonly _handleWebRtcPresented = (): void => {
+    this._session.handleWebRtcPresented();
   };
 
   static styles = cameraStyles;

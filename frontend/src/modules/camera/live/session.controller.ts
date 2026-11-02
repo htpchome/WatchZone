@@ -101,7 +101,12 @@ export class CameraLiveSessionController implements ReactiveController {
     this._webRtcSnapshot.timing?.mark("first_frame_decoded");
     this._webRtcSnapshot.timing?.mark("presentation_selected");
     this._select("webrtc", this._webRtcSnapshot.transport, video);
+  }
+
+  public handleWebRtcPresented(): void {
+    if (this._selected !== "webrtc") return;
     this._releaseHls(true);
+    this._host.requestUpdate();
   }
 
   private _sync(): void {

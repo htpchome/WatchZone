@@ -73,9 +73,13 @@ export const cameraLiveViewStyles = css`
     block-size: 100%;
   }
 
-  .hls-host[hidden],
-  video[hidden] {
+  .hls-host[hidden] {
     display: none;
+  }
+
+  video.webrtc.candidate {
+    opacity: 0;
+    pointer-events: none;
   }
 
   .hls-host video,

@@ -167,6 +167,7 @@ describe("camera presentation retention", () => {
   it("updates the source label when WebRTC takes over from HLS", async () => {
     vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
     const hlsVideo = document.createElement("video");
+    const closeHls = vi.fn();
     const stream = { getTracks: () => [] } as unknown as MediaStream;
     let resolveWebRtc:
       | ((connection: {
@@ -186,11 +187,11 @@ describe("camera presentation retention", () => {
         vi.fn<ConnectionFactory>(async () => ({
           video: hlsVideo,
           transport: "hls_mse",
-          close: vi.fn(),
+          close: closeHls,
         })),
       ),
     );
-    const view = createLiveView(createApi());
+    const view = createLiveView(createApi(), true);
     document.body.append(view);
 
     await vi.waitFor(() =>
@@ -210,7 +211,12 @@ describe("camera presentation retention", () => {
       expect(video?.srcObject).toBe(stream);
       return video;
     });
-    webRtcVideo?.dispatchEvent(new Event("loadeddata"));
+    expect(webRtcVideo?.hidden).toBe(false);
+    expect(webRtcVideo?.classList.contains("candidate")).toBe(true);
+    expect(webRtcVideo?.getAttribute("aria-hidden")).toBe("true");
+    expect(webRtcVideo?.muted).toBe(true);
+    webRtcVideo?.dispatchEvent(new Event("playing"));
+    expect(closeHls).not.toHaveBeenCalled();
 
     await vi.waitFor(() =>
       expect(
@@ -219,6 +225,10 @@ describe("camera presentation retention", () => {
           ?.textContent?.trim(),
       ).toBe("WebRTC"),
     );
+    expect(webRtcVideo?.classList.contains("candidate")).toBe(false);
+    expect(webRtcVideo?.getAttribute("aria-hidden")).toBe("false");
+    expect(webRtcVideo?.muted).toBe(false);
+    expect(closeHls).toHaveBeenCalledOnce();
   });
 
   it("lets recovered WebRTC take presentation ownership from HLS again", async () => {
@@ -259,7 +269,8 @@ describe("camera presentation retention", () => {
       expect(element?.srcObject).toBe(streams[0]);
       return element;
     });
-    video?.dispatchEvent(new Event("loadeddata"));
+    expect(video?.classList.contains("candidate")).toBe(true);
+    video?.dispatchEvent(new Event("canplay"));
     await vi.waitFor(() =>
       expect(
         presentation(view)
@@ -267,6 +278,7 @@ describe("camera presentation retention", () => {
           ?.textContent?.trim(),
       ).toBe("WebRTC"),
     );
+    expect(video?.classList.contains("candidate")).toBe(false);
 
     failures[0](new Error("transient WebRTC failure"));
     await vi.waitFor(() => expect(webRtcFactory).toHaveBeenCalledTimes(2), {

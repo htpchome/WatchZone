@@ -145,13 +145,15 @@ export class CameraLivePresentation extends LitElement {
         ${!this.selected ? this._renderFallback() : nothing}
         <div class="hls-host" ?hidden=${this.selected === "webrtc"}></div>
         <video
-          class="webrtc"
+          class=${this.selected === "webrtc" ? "webrtc" : "webrtc candidate"}
           autoplay
           playsinline
-          .muted=${this.muted}
+          .muted=${this.selected === "webrtc" ? this.muted : true}
           aria-label="Live camera"
-          ?hidden=${this.selected !== "webrtc"}
-          @loadeddata=${this._handleWebRtcLoadedData}
+          aria-hidden=${this.selected === "webrtc" ? "false" : "true"}
+          @canplay=${this._handleWebRtcDecoded}
+          @loadeddata=${this._handleWebRtcDecoded}
+          @playing=${this._handleWebRtcDecoded}
         ></video>
         ${
           connecting || resolvedSource
@@ -202,10 +204,13 @@ export class CameraLivePresentation extends LitElement {
     `;
   }
 
-  protected updated(): void {
+  protected updated(changed: Map<PropertyKey, unknown>): void {
     const webRtcVideo = this.webRtcVideo;
     if (webRtcVideo && webRtcVideo.srcObject !== (this.webRtcStream ?? null)) {
-      setMediaElementMuted(webRtcVideo, this.muted);
+      setMediaElementMuted(
+        webRtcVideo,
+        this.selected === "webrtc" ? this.muted : true,
+      );
       webRtcVideo.srcObject = this.webRtcStream ?? null;
       if (this.webRtcStream) this._emitMediaAttached(webRtcVideo);
     }
@@ -223,6 +228,14 @@ export class CameraLivePresentation extends LitElement {
           ? webRtcVideo
           : undefined,
     );
+    if (changed.has("selected") && this.selected === "webrtc") {
+      this.dispatchEvent(
+        new CustomEvent("camera-webrtc-presented", {
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    }
   }
 
   private _renderFallback() {
@@ -264,7 +277,7 @@ export class CameraLivePresentation extends LitElement {
     );
   }
 
-  private readonly _handleWebRtcLoadedData = (event: Event): void => {
+  private readonly _handleWebRtcDecoded = (event: Event): void => {
     this.dispatchEvent(
       new CustomEvent<HTMLVideoElement>("camera-webrtc-decoded", {
         bubbles: true,
