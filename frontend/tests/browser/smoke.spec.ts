@@ -21,7 +21,7 @@ function cssAlpha(color: string): number {
 
 async function waitForWatchZoneDefinition(page: Page): Promise<void> {
   await page.waitForFunction(
-    () => customElements.get("watchzone-card") !== undefined,
+    () => customElements.get("wzc-card") !== undefined,
   );
 }
 
@@ -41,8 +41,8 @@ test("loads the responsive WatchZone card shell", async ({ page }) => {
   await page.goto("/");
   await waitForWatchZoneDefinition(page);
 
-  await expect(page.locator("watchzone-card")).toContainText("WatchZone");
-  await expect(page.locator("watchzone-card ha-card")).toBeVisible();
+  await expect(page.locator("wzc-card")).toContainText("WatchZone");
+  await expect(page.locator("wzc-card ha-card")).toBeVisible();
   expect(
     consoleMessages.some(
       (message) =>
@@ -51,13 +51,13 @@ test("loads the responsive WatchZone card shell", async ({ page }) => {
         message.includes(`v${expectedVersion} (${expectedBuild})`),
     ),
   ).toBe(true);
-  expect(await page.evaluate(() => window.watchZone)).toMatchObject({
+  expect(await page.evaluate(() => window.wzc)).toMatchObject({
     activeCardVersion: expectedVersion,
     build: expectedBuild,
     version: expectedVersion,
   });
   expect(
-    await page.evaluate(() => typeof window.watchZone?.getLiveStartupTimings),
+    await page.evaluate(() => typeof window.wzc?.getLiveStartupTimings),
   ).toBe("function");
 });
 
@@ -72,7 +72,7 @@ test("fits phone, tablet, and desktop viewports without horizontal overflow", as
     await page.setViewportSize(viewport);
     await page.goto("/");
     await waitForWatchZoneDefinition(page);
-    await expect(page.locator("watchzone-card ha-card")).toBeVisible();
+    await expect(page.locator("wzc-card ha-card")).toBeVisible();
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -87,72 +87,64 @@ test("applies outer shell appearance toggles without changing card identity", as
   await page.goto("/");
   await waitForWatchZoneDefinition(page);
 
-  const result = await page
-    .locator("watchzone-card")
-    .evaluate(async (element) => {
-      const card = element as HTMLElement & {
-        setConfig(config: unknown): void;
-        updateComplete: Promise<boolean>;
-      };
-      const shellBefore = card.shadowRoot?.querySelector("ha-card");
-      card.style.setProperty("--ha-box-shadow-m", "rgb(1, 2, 3) 0px 4px 8px");
-      card.setConfig({
-        type: "custom:watchzone-card",
-        title: "Appearance",
-        rounded_outer_corners: false,
-        outer_shadows: false,
-        outer_padding: false,
-      });
-      await card.updateComplete;
-      const shellAfter = card.shadowRoot?.querySelector("ha-card");
-      const disabledStyle = shellAfter
-        ? getComputedStyle(shellAfter)
-        : undefined;
-      const disabledHostStyle = getComputedStyle(card);
-      const disabledShellPadding = shellAfter?.querySelector(".shell")
-        ? getComputedStyle(shellAfter.querySelector(".shell") as Element)
-            .padding
-        : undefined;
-      const disabled = {
-        borderRadius: disabledStyle?.borderRadius,
-        boxShadow: disabledStyle?.boxShadow,
-        classes: shellAfter?.className,
-        hostBorderRadius: disabledHostStyle.borderRadius,
-        hostBoxShadow: disabledHostStyle.boxShadow,
-        identityRetained: shellAfter === shellBefore,
-        padding: disabledShellPadding,
-      };
-      card.setConfig({
-        type: "custom:watchzone-card",
-        title: "Appearance",
-      });
-      await card.updateComplete;
-      const enabledStyle = shellAfter
-        ? getComputedStyle(shellAfter)
-        : undefined;
-      const enabledHostStyle = getComputedStyle(card);
-      const enabledShellPadding = shellAfter?.querySelector(".shell")
-        ? getComputedStyle(shellAfter.querySelector(".shell") as Element)
-            .padding
-        : undefined;
-      return {
-        disabled,
-        enabled: {
-          borderRadius: enabledStyle?.borderRadius,
-          boxShadow: enabledStyle?.boxShadow,
-          classes: shellAfter?.className,
-          hostBorderRadius: enabledHostStyle.borderRadius,
-          hostBoxShadow: enabledHostStyle.boxShadow,
-          nativeRadiusToken: enabledHostStyle
-            .getPropertyValue("--ha-card-border-radius")
-            .trim(),
-          nativeShadowToken: enabledHostStyle
-            .getPropertyValue("--ha-card-box-shadow")
-            .trim(),
-          padding: enabledShellPadding,
-        },
-      };
+  const result = await page.locator("wzc-card").evaluate(async (element) => {
+    const card = element as HTMLElement & {
+      setConfig(config: unknown): void;
+      updateComplete: Promise<boolean>;
+    };
+    const shellBefore = card.shadowRoot?.querySelector("ha-card");
+    card.style.setProperty("--ha-box-shadow-m", "rgb(1, 2, 3) 0px 4px 8px");
+    card.setConfig({
+      type: "custom:wzc-card",
+      title: "Appearance",
+      rounded_outer_corners: false,
+      outer_shadows: false,
+      outer_padding: false,
     });
+    await card.updateComplete;
+    const shellAfter = card.shadowRoot?.querySelector("ha-card");
+    const disabledStyle = shellAfter ? getComputedStyle(shellAfter) : undefined;
+    const disabledHostStyle = getComputedStyle(card);
+    const disabledShellPadding = shellAfter?.querySelector(".shell")
+      ? getComputedStyle(shellAfter.querySelector(".shell") as Element).padding
+      : undefined;
+    const disabled = {
+      borderRadius: disabledStyle?.borderRadius,
+      boxShadow: disabledStyle?.boxShadow,
+      classes: shellAfter?.className,
+      hostBorderRadius: disabledHostStyle.borderRadius,
+      hostBoxShadow: disabledHostStyle.boxShadow,
+      identityRetained: shellAfter === shellBefore,
+      padding: disabledShellPadding,
+    };
+    card.setConfig({
+      type: "custom:wzc-card",
+      title: "Appearance",
+    });
+    await card.updateComplete;
+    const enabledStyle = shellAfter ? getComputedStyle(shellAfter) : undefined;
+    const enabledHostStyle = getComputedStyle(card);
+    const enabledShellPadding = shellAfter?.querySelector(".shell")
+      ? getComputedStyle(shellAfter.querySelector(".shell") as Element).padding
+      : undefined;
+    return {
+      disabled,
+      enabled: {
+        borderRadius: enabledStyle?.borderRadius,
+        boxShadow: enabledStyle?.boxShadow,
+        classes: shellAfter?.className,
+        hostBorderRadius: enabledHostStyle.borderRadius,
+        hostBoxShadow: enabledHostStyle.boxShadow,
+        nativeRadiusToken: enabledHostStyle
+          .getPropertyValue("--ha-card-border-radius")
+          .trim(),
+        nativeShadowToken: enabledHostStyle
+          .getPropertyValue("--ha-card-box-shadow")
+          .trim(),
+        padding: enabledShellPadding,
+      },
+    };
+  });
 
   expect(result.disabled).toEqual({
     borderRadius: "0px",
@@ -181,7 +173,7 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
   await page.goto("/");
   await waitForWatchZoneDefinition(page);
 
-  const result = await page.locator("watchzone-card").evaluate((element) => {
+  const result = await page.locator("wzc-card").evaluate((element) => {
     const requiredTokens = [
       "--wzc-color-primary",
       "--wzc-color-primary-dark",
@@ -297,22 +289,22 @@ test("camera selection does not recursively republish dirty state", async ({
     document.addEventListener("context-request", handleContext);
 
     const cardConstructor = customElements.get(
-      "watchzone-card",
+      "wzc-card",
     ) as TestCardConstructor;
-    const previewCard = document.querySelector("watchzone-card") as PreviewCard;
+    const previewCard = document.querySelector("wzc-card") as PreviewCard;
     previewCard.preview = true;
     previewCard.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:wzc-card",
       title: "Camera",
     });
     const editor = await cardConstructor.getConfigElement();
     editor.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:wzc-card",
       title: "Camera",
     });
     const dialog = document.createElement("hui-dialog-edit-card") as TestDialog;
     dialog._cardConfig = {
-      type: "custom:watchzone-card",
+      type: "custom:wzc-card",
       title: "Camera",
     };
     dialog._updateDirtyState = () => undefined;
@@ -331,7 +323,7 @@ test("camera selection does not recursively republish dirty state", async ({
     );
     await new Promise(requestAnimationFrame);
     const previewUpdated = !document
-      .querySelector("watchzone-card")
+      .querySelector("wzc-card")
       ?.shadowRoot?.textContent?.includes(
         "Select a camera in the card editor.",
       );
@@ -413,15 +405,13 @@ test("round-trips boolean toggles through defaults before Save", async ({
     document.addEventListener("context-request", handleContext);
 
     const baseline = {
-      type: "custom:watchzone-card",
+      type: "custom:wzc-card",
       title: "Appearance",
     };
-    const card = document.querySelector("watchzone-card") as TestCard;
+    const card = document.querySelector("wzc-card") as TestCard;
     card.preview = true;
     card.setConfig(baseline);
-    const constructor = customElements.get(
-      "watchzone-card",
-    ) as TestCardConstructor;
+    const constructor = customElements.get("wzc-card") as TestCardConstructor;
     const editor = await constructor.getConfigElement();
     editor.setConfig(baseline);
     const dialog = document.createElement("hui-dialog-edit-card") as TestDialog;
@@ -570,12 +560,12 @@ test("retains one live connection while the card presentation is replaced", asyn
     }
 
     interface TestWindow extends Window {
-      __watchZoneTestConnectionCount: number;
-      __watchZoneTestHass: unknown;
+      __wzcTestConnectionCount: number;
+      __wzcTestHass: unknown;
     }
 
     const testWindow = window as unknown as TestWindow;
-    testWindow.__watchZoneTestConnectionCount = 0;
+    testWindow.__wzcTestConnectionCount = 0;
 
     class TestPeerConnection {
       public connectionState: RTCPeerConnectionState = "new";
@@ -638,17 +628,17 @@ test("retains one live connection while the card presentation is replaced", asyn
       hassUrl: (path: string) => path,
       callWS: async (message: { type: string }) => {
         if (message.type === "camera/webrtc/get_client_config") {
-          testWindow.__watchZoneTestConnectionCount += 1;
+          testWindow.__wzcTestConnectionCount += 1;
           return { configuration: { iceServers: [] } };
         }
         return undefined;
       },
     };
-    testWindow.__watchZoneTestHass = hass;
+    testWindow.__wzcTestHass = hass;
 
-    const first = document.querySelector("watchzone-card") as TestCard;
+    const first = document.querySelector("wzc-card") as TestCard;
     first.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:wzc-card",
       title: "Front",
       camera_entity: "camera.front",
       start_live_unmuted_pc_tablet: true,
@@ -661,36 +651,32 @@ test("retains one live connection while the card presentation is replaced", asyn
     .poll(() =>
       page.evaluate(() => {
         const testWindow = window as unknown as Window & {
-          __watchZoneTestConnectionCount: number;
+          __wzcTestConnectionCount: number;
         };
-        return testWindow.__watchZoneTestConnectionCount;
+        return testWindow.__wzcTestConnectionCount;
       }),
     )
     .toBe(1);
 
-  const poster = page.locator("watchzone-camera img.poster");
+  const poster = page.locator("wzc-camera img.poster");
   await expect(poster).toHaveAttribute(
     "src",
     "/api/camera_proxy/camera.front?token=poster-token",
   );
-  await expect(
-    page.locator("watchzone-camera .generic-fallback"),
-  ).toBeVisible();
+  await expect(page.locator("wzc-camera .generic-fallback")).toBeVisible();
 
   await page.evaluate(() => {
     const testWindow = window as unknown as Window & {
-      __watchZoneTestHass: unknown;
+      __wzcTestHass: unknown;
     };
-    const first = document.querySelector("watchzone-card");
+    const first = document.querySelector("wzc-card");
     first?.remove();
-    const replacement = document.createElement(
-      "watchzone-card",
-    ) as HTMLElement & {
+    const replacement = document.createElement("wzc-card") as HTMLElement & {
       hass: unknown;
       setConfig(config: unknown): void;
     };
     replacement.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:wzc-card",
       title: "Front",
       camera_entity: "camera.front",
       rounded_outer_corners: false,
@@ -706,11 +692,11 @@ test("retains one live connection while the card presentation is replaced", asyn
       "--ha-box-shadow-s",
       "rgb(7, 8, 9) 0px 1px 2px",
     );
-    replacement.hass = testWindow.__watchZoneTestHass;
+    replacement.hass = testWindow.__wzcTestHass;
     document.body.append(replacement);
   });
 
-  const video = page.locator("watchzone-camera video.webrtc");
+  const video = page.locator("wzc-camera video.webrtc");
   await expect
     .poll(() =>
       video.evaluate((element) => ({
@@ -719,9 +705,7 @@ test("retains one live connection while the card presentation is replaced", asyn
       })),
     )
     .toEqual({ defaultMuted: false, muted: false });
-  const connectionIndicator = page.locator(
-    "watchzone-camera .source-indicator",
-  );
+  const connectionIndicator = page.locator("wzc-camera .source-indicator");
   await expect(connectionIndicator).toHaveText("Connecting…");
   await expect(
     connectionIndicator.locator(".connection-spinner"),
@@ -740,12 +724,12 @@ test("retains one live connection while the card presentation is replaced", asyn
     timeout: CAMERA_OVERLAY_HIDE_DELAY_MS + 1_000,
   });
   const controls = page.locator(
-    "watchzone-camera watchzone-camera-controls .control-button",
+    "wzc-camera wzc-camera-controls .control-button",
   );
   await expect(controls).toHaveCount(5);
   await expect(controls.first()).toBeHidden();
-  const viewport = page.locator("watchzone-camera-live-view .viewport");
-  const cameraSurface = page.locator("watchzone-camera .camera");
+  const viewport = page.locator("wzc-camera-live .viewport");
+  const cameraSurface = page.locator("wzc-camera .camera");
   await expect
     .poll(() =>
       viewport.evaluate((element) => getComputedStyle(element).borderRadius),
@@ -761,7 +745,7 @@ test("retains one live connection while the card presentation is replaced", asyn
       cameraSurface.evaluate((element) => getComputedStyle(element).boxShadow),
     )
     .toContain("rgb(4, 5, 6)");
-  await page.locator("watchzone-camera").evaluate(async (element) => {
+  await page.locator("wzc-camera").evaluate(async (element) => {
     const camera = element as HTMLElement & {
       shadowStyle: "medium" | "none" | "small";
       updateComplete: Promise<boolean>;
@@ -775,15 +759,15 @@ test("retains one live connection while the card presentation is replaced", asyn
     )
     .toContain("rgb(7, 8, 9)");
   const cameraIdentityRetained = await page
-    .locator("watchzone-card")
+    .locator("wzc-card")
     .evaluate(async (element) => {
       const card = element as HTMLElement & {
         setConfig(config: unknown): void;
         updateComplete: Promise<boolean>;
       };
-      const cameraBefore = card.shadowRoot?.querySelector("watchzone-camera");
+      const cameraBefore = card.shadowRoot?.querySelector("wzc-camera");
       card.setConfig({
-        type: "custom:watchzone-card",
+        type: "custom:wzc-card",
         title: "Front",
         camera_entity: "camera.front",
         rounded_outer_corners: false,
@@ -792,7 +776,7 @@ test("retains one live connection while the card presentation is replaced", asyn
         camera_shadows: false,
       });
       await card.updateComplete;
-      const cameraAfter = card.shadowRoot?.querySelector("watchzone-camera") as
+      const cameraAfter = card.shadowRoot?.querySelector("wzc-camera") as
         (HTMLElement & { updateComplete: Promise<boolean> }) | null;
       await cameraAfter?.updateComplete;
       return cameraAfter === cameraBefore;
@@ -880,9 +864,9 @@ test("retains one live connection while the card presentation is replaced", asyn
   ).toBe(true);
   expect(indicatorPresentation.borderRadius).not.toBe("999px");
   const mute = page.locator(
-    'watchzone-camera watchzone-camera-controls [data-control="mute"]',
+    'wzc-camera wzc-camera-controls [data-control="mute"]',
   );
-  await page.locator("watchzone-card").evaluate((element) => {
+  await page.locator("wzc-card").evaluate((element) => {
     element.style.setProperty("--wzc-color-primary", "rgb(0, 120, 255)");
   });
   const restingBackground = await mute.evaluate(
@@ -896,26 +880,22 @@ test("retains one live connection while the card presentation is replaced", asyn
   expect(hoverBackground).not.toBe(restingBackground);
   expect(cssAlpha(hoverBackground)).toBeCloseTo(0.84, 2);
   await expect(
-    page.locator(
-      'watchzone-camera watchzone-camera-controls [data-control="snapshot"]',
-    ),
+    page.locator('wzc-camera wzc-camera-controls [data-control="snapshot"]'),
   ).toBeDisabled();
   await expect(
-    page.locator(
-      'watchzone-camera watchzone-camera-controls [data-control="suspend"]',
-    ),
+    page.locator('wzc-camera wzc-camera-controls [data-control="suspend"]'),
   ).toBeDisabled();
   await expect(mute).toHaveAttribute("aria-pressed", "false");
   const mutedBorder = await mute.evaluate((element) => {
     const style = getComputedStyle(element);
     return `${style.borderColor}|${style.borderWidth}|${style.borderStyle}`;
   });
-  await mute.click();
+  await mute.evaluate((element) => (element as HTMLButtonElement).click());
   await expect(mute).toHaveAttribute("aria-pressed", "true");
   expect(
     await video.evaluate((element) => (element as HTMLVideoElement).muted),
   ).toBe(true);
-  await mute.click();
+  await mute.evaluate((element) => (element as HTMLButtonElement).click());
   await expect(mute).toHaveAttribute("aria-pressed", "false");
   expect(
     await mute.evaluate((element) => {
@@ -927,7 +907,7 @@ test("retains one live connection while the card presentation is replaced", asyn
     await video.evaluate((element) => (element as HTMLVideoElement).muted),
   ).toBe(false);
 
-  await page.locator("watchzone-card").evaluate((element) => {
+  await page.locator("wzc-card").evaluate((element) => {
     element.style.inlineSize = "320px";
   });
   await expect
@@ -939,9 +919,9 @@ test("retains one live connection while the card presentation is replaced", asyn
     .poll(() =>
       page.evaluate(() => {
         const testWindow = window as unknown as Window & {
-          __watchZoneTestConnectionCount: number;
+          __wzcTestConnectionCount: number;
         };
-        return testWindow.__watchZoneTestConnectionCount;
+        return testWindow.__wzcTestConnectionCount;
       }),
     )
     .toBe(1);
@@ -962,9 +942,7 @@ test("retains one live connection while the card presentation is replaced", asyn
   });
 
   expect(
-    await page.evaluate(
-      () => window.watchZone?.getLiveStartupTimings()[0]?.phases,
-    ),
+    await page.evaluate(() => window.wzc?.getLiveStartupTimings()[0]?.phases),
   ).toMatchObject({
     adapter_imported: expect.any(Number),
     client_config_received: expect.any(Number),

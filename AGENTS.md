@@ -55,8 +55,15 @@ For any frontend, media, interaction, layout, or styling change, also read
   latency-sensitive interaction.
 - A provider and a live connection type are different concepts.
 - Feature modules do not import one another.
-- Concrete live connection adapters are dynamically imported and are not
-  statically imported by the live module or eager entry.
+- Concrete provider capability adapters are dynamically imported and are not
+  statically imported by a module or eager entry. Modules use the public
+  provider resolver and never import a concrete provider implementation.
+- Camera is the module and composition boundary. Live, PTZ, talk, and other
+  camera capabilities stay private to camera or beneath the owning provider;
+  they do not become peer application modules.
+- Internal classes, custom-element names, diagnostics keys, and events derive
+  from centralized identity constants. Product display text derives from
+  `APP_NAME`; do not scatter branded identifiers through implementation code.
 - Live sessions are owned by the document-scoped media-session manager, not by
   Lit elements. Element disconnection releases a lease; it does not
   automatically close a retained connection.

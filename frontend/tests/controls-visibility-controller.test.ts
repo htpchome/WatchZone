@@ -35,6 +35,7 @@ describe("camera control visibility controller", () => {
 
     controller.handlePointerEnter(pointerEvent("mouse"));
     expect(controller.visible).toBe(true);
+    expect(controller.sourceVisible).toBe(true);
     vi.advanceTimersByTime(CAMERA_OVERLAY_HIDE_DELAY_MS * 2);
     expect(controller.visible).toBe(true);
 
@@ -43,6 +44,7 @@ describe("camera control visibility controller", () => {
     expect(controller.visible).toBe(true);
     vi.advanceTimersByTime(1);
     expect(controller.visible).toBe(false);
+    expect(controller.sourceVisible).toBe(false);
     expect(host.requestUpdate).toHaveBeenCalledTimes(2);
   });
 
@@ -58,10 +60,26 @@ describe("camera control visibility controller", () => {
     expect(controller.visible).toBe(true);
     vi.advanceTimersByTime(1);
     expect(controller.visible).toBe(false);
+    expect(controller.sourceVisible).toBe(false);
 
     controller.handlePointerDown(pointerEvent("touch"));
     controller.hostDisconnected();
     vi.advanceTimersByTime(CAMERA_OVERLAY_HIDE_DELAY_MS);
+    expect(controller.visible).toBe(false);
+  });
+
+  it("introduces the source independently, then shares the hide deadline", () => {
+    vi.useFakeTimers();
+    const controller = new CameraControlsVisibilityController(new TestHost());
+
+    controller.revealSource();
+    expect(controller.sourceVisible).toBe(true);
+    expect(controller.visible).toBe(false);
+
+    vi.advanceTimersByTime(CAMERA_OVERLAY_HIDE_DELAY_MS - 1);
+    expect(controller.sourceVisible).toBe(true);
+    vi.advanceTimersByTime(1);
+    expect(controller.sourceVisible).toBe(false);
     expect(controller.visible).toBe(false);
   });
 });

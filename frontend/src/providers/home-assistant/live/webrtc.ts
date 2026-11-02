@@ -1,9 +1,9 @@
-import type { HomeAssistantApi } from "../../core/home-assistant";
-import type { LiveStartupTiming } from "../../core/live-startup-timing";
+import type { HomeAssistantApi } from "../../../core/home-assistant";
+import type { LiveStartupTiming } from "../../../core/live-startup-timing";
 import type {
   MediaConnection,
   MediaConnectionOptions,
-} from "../../core/media-session-manager";
+} from "../../../core/media-session-manager";
 
 interface ClientConfiguration {
   readonly configuration: RTCConfiguration;

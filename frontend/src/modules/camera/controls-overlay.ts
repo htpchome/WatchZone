@@ -4,7 +4,8 @@ import {
   DeviceProfileController,
   type DeviceClass,
 } from "../../core/device-profile";
-import { renderIcon, type WatchZoneIcon } from "../../ui/icons";
+import { CAMERA_CONTROLS_TAG } from "../../core/constants";
+import { renderIcon, type IconName } from "../../ui/icons";
 import { cameraControlsStyles } from "./controls-overlay.styles";
 
 export type CameraControlAction =
@@ -47,7 +48,7 @@ function iconName(
   action: CameraControlAction,
   muted: boolean,
   fullscreenActive: boolean,
-): WatchZoneIcon {
+): IconName {
   if (action === "suspend") return "power";
   if (action === "picture_in_picture") return "pipPopOut";
   if (action === "snapshot") return "takeSnapshot";
@@ -57,7 +58,7 @@ function iconName(
   return muted ? "volumeOff" : "volumeOn";
 }
 
-export class WatchZoneCameraControls extends LitElement {
+export class CameraControls extends LitElement {
   public static properties = {
     errorMessage: { attribute: false },
     fullscreenActive: { attribute: false, type: Boolean },
@@ -156,12 +157,12 @@ export class WatchZoneCameraControls extends LitElement {
   static styles = cameraControlsStyles;
 }
 
-if (!customElements.get("watchzone-camera-controls")) {
-  customElements.define("watchzone-camera-controls", WatchZoneCameraControls);
+if (!customElements.get(CAMERA_CONTROLS_TAG)) {
+  customElements.define(CAMERA_CONTROLS_TAG, CameraControls);
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    "watchzone-camera-controls": WatchZoneCameraControls;
+    [CAMERA_CONTROLS_TAG]: CameraControls;
   }
 }

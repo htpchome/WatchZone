@@ -90,7 +90,8 @@ moves the session into retention policy evaluation.
 ### 3.4 Presentation attachment
 
 Presentation is separate from connection ownership. A session can be detached
-from one live module and attached to another without renegotiating its source.
+from one camera live presentation and attached to another without
+renegotiating its source.
 
 An adapter declares one supported attachment strategy:
 

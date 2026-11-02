@@ -88,6 +88,7 @@ export const cameraControlsStyles = css`
     block-size: var(--wzc-control-icon-size);
     overflow: visible;
     fill: currentColor;
+    pointer-events: none;
   }
 
   .control-error {

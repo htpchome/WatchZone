@@ -1,6 +1,6 @@
 import { css } from "lit";
 
-export const watchZoneCardStyles = css`
+export const cardStyles = css`
   :host {
     display: block;
     box-sizing: border-box;
@@ -65,7 +65,7 @@ export const watchZoneCardStyles = css`
     text-align: center;
   }
 
-  watchzone-camera,
+  .camera-module,
   .live-placeholder,
   .live-error,
   .empty {

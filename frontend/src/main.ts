@@ -1,14 +1,20 @@
-import { APP_BUILD, APP_NAME, APP_VERSION, CARD_TAG } from "./core/constants";
+import {
+  APP_BUILD,
+  APP_NAME,
+  APP_VERSION,
+  CARD_TAG,
+  RUNTIME_DIAGNOSTICS_KEY,
+} from "./core/constants";
 import { getLiveStartupTimings } from "./core/live-startup-timing";
 import { getMediaSessionManager } from "./core/media-session-manager";
 
 getMediaSessionManager();
 
 const activeCard = customElements.get(CARD_TAG) as
-  | (CustomElementConstructor & { readonly watchZoneVersion?: string })
-  | undefined;
-const activeCardVersion = activeCard?.watchZoneVersion ?? null;
-window.watchZone = Object.freeze({
+  (CustomElementConstructor & { readonly appVersion?: string }) | undefined;
+const activeCardVersion = activeCard?.appVersion ?? null;
+const runtime = window as unknown as Record<string, unknown>;
+runtime[RUNTIME_DIAGNOSTICS_KEY] = Object.freeze({
   activeCardVersion,
   build: APP_BUILD,
   getLiveStartupTimings,
@@ -29,4 +35,4 @@ if (activeCardVersion !== APP_VERSION) {
   );
 }
 
-export { WatchZoneCard } from "./card/watchzone-card";
+export { DashboardCard } from "./card/watchzone-card";

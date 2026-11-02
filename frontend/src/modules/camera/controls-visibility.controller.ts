@@ -4,11 +4,13 @@ import { CAMERA_OVERLAY_HIDE_DELAY_MS } from "./constants";
 
 /** Owns transient pointer visibility without coupling timers to rendering. */
 export class CameraControlsVisibilityController implements ReactiveController {
+  public sourceVisible = false;
   public visible = false;
 
   private _focused = false;
   private _hideTimer?: ReturnType<typeof setTimeout>;
   private _hovered = false;
+  private _interactionRoot?: HTMLElement;
   private _pointerFocusPending = false;
 
   public constructor(private readonly _host: ReactiveControllerHost) {
@@ -19,11 +21,20 @@ export class CameraControlsVisibilityController implements ReactiveController {
     this._clearHideTimer();
     this._focused = false;
     this._hovered = false;
+    this.sourceVisible = false;
     this.visible = false;
+  }
+
+  public revealSource(): void {
+    this._clearHideTimer();
+    this.sourceVisible = true;
+    this._host.requestUpdate();
+    this._scheduleHide();
   }
 
   public readonly handlePointerEnter = (event: PointerEvent): void => {
     if (event.pointerType === "touch") return;
+    this._interactionRoot = event.currentTarget as HTMLElement;
     this._hovered = true;
     this._show();
   };
@@ -34,7 +45,15 @@ export class CameraControlsVisibilityController implements ReactiveController {
     this._scheduleHide();
   };
 
+  public readonly handlePointerMove = (event: PointerEvent): void => {
+    if (event.pointerType === "touch") return;
+    this._interactionRoot = event.currentTarget as HTMLElement;
+    this._hovered = true;
+    this._show();
+  };
+
   public readonly handlePointerDown = (event: PointerEvent): void => {
+    this._interactionRoot = event.currentTarget as HTMLElement;
     // Pointer-origin focus must not pin the overlay open after pointer exit.
     this._focused = false;
     this._pointerFocusPending = true;
@@ -60,8 +79,9 @@ export class CameraControlsVisibilityController implements ReactiveController {
 
   private _show(): void {
     this._clearHideTimer();
-    if (this.visible) return;
+    if (this.visible && this.sourceVisible) return;
     this.visible = true;
+    this.sourceVisible = true;
     this._host.requestUpdate();
   }
 
@@ -70,8 +90,15 @@ export class CameraControlsVisibilityController implements ReactiveController {
     if (this._hovered || this._focused) return;
     this._hideTimer = setTimeout(() => {
       this._hideTimer = undefined;
-      if (this._hovered || this._focused || !this.visible) return;
+      if (
+        this._hovered ||
+        this._focused ||
+        this._interactionRoot?.matches(":hover")
+      ) {
+        return;
+      }
       this.visible = false;
+      this.sourceVisible = false;
       this._host.requestUpdate();
     }, CAMERA_OVERLAY_HIDE_DELAY_MS);
   }

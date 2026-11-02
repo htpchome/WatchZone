@@ -62,8 +62,9 @@ For the initial Home Assistant direct source, WatchZone uses a hedged startup:
 5. If only one path succeeds, it remains selected. An error is shown only when
    both paths fail.
 6. The upper-right connection indicator shows `Connecting…` while candidates
-   race, then replaces that content in place with the initial winning transport.
-   A later WebRTC takeover does not rewrite the initial connection label.
+   race, then replaces that content in place with the active transport. A later
+   WebRTC takeover updates that same label to `WebRTC`; it does not display a
+   second connecting phase.
 
 This policy deliberately avoids a preliminary capability request because that
 extra serial round trip would delay both candidates. Unsupported paths fail
@@ -112,10 +113,10 @@ The HLS session owns its media element because its MediaSource playback state
 is element-bound. Closing destroys the playback engine, cancels in-flight
 requests, resets the element, and removes it from presentation.
 
-The camera information layer displays the initial presentation winner as
-`WebRTC`, `HLS · HLS.js`, or `HLS · native`. That label remains stable if
-WebRTC later takes over from HLS. Diagnostics separately retain the selected
-HLS path and the time at which each transport became the presentation winner.
+The camera information layer displays the active presentation source as
+`WebRTC`, `HLS · HLS.js`, or `HLS · native`. The label changes when an actual
+takeover occurs. Diagnostics retain the selected HLS path and the time at
+which each transport became the presentation winner.
 
 ## 7. Ownership and retention
 
@@ -168,7 +169,7 @@ audio-focus, lifetime, and autoplay rules in
 - Add measured timing diagnostics through the future centralized diagnostic
   system, never through routine console noise and never with credentials. The
   current startup recorder is read with
-  `window.watchZone.getLiveStartupTimings()` and records relative milestone
+  `window.wzc.getLiveStartupTimings()` and records relative milestone
   times without writing per-phase console messages.
 
 ## 10. Observed client baseline

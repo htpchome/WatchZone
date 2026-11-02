@@ -1,16 +1,16 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import "../src/main";
-import type { WatchZoneCard } from "../src/card/watchzone-card";
+import type { DashboardCard } from "../src/card/watchzone-card";
 
-describe("watchzone-card", () => {
+describe("wzc-card", () => {
   afterEach(() => {
     document.body.replaceChildren();
   });
 
   it("renders the configured title in a Home Assistant card", async () => {
-    const element = document.createElement("watchzone-card") as WatchZoneCard;
-    element.setConfig({ type: "custom:watchzone-card", title: "Front Door" });
+    const element = document.createElement("wzc-card") as DashboardCard;
+    element.setConfig({ type: "custom:wzc-card", title: "Front Door" });
     document.body.append(element);
     await element.updateComplete;
 
@@ -19,7 +19,7 @@ describe("watchzone-card", () => {
   });
 
   it("does not rerender for unrelated hass assignments", async () => {
-    const element = document.createElement("watchzone-card") as WatchZoneCard;
+    const element = document.createElement("wzc-card") as DashboardCard;
     document.body.append(element);
     await element.updateComplete;
     const rendered = element.shadowRoot?.querySelector("ha-card");
@@ -31,9 +31,9 @@ describe("watchzone-card", () => {
   });
 
   it("propagates outer appearance settings through the HA card boundary", async () => {
-    const element = document.createElement("watchzone-card") as WatchZoneCard;
+    const element = document.createElement("wzc-card") as DashboardCard;
     element.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:wzc-card",
       title: "Front Door",
       rounded_outer_corners: false,
       outer_shadows: false,
@@ -56,7 +56,7 @@ describe("watchzone-card", () => {
     expect(element.style.getPropertyPriority("box-shadow")).toBe("important");
 
     element.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:wzc-card",
       title: "Front Door",
     });
     await element.updateComplete;

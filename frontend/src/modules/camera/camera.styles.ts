@@ -3,7 +3,7 @@ import { css } from "lit";
 export const cameraStyles = css`
   :host,
   .camera,
-  watchzone-camera-live-view {
+  .live-presentation {
     display: block;
     box-sizing: border-box;
     inline-size: 100%;
@@ -16,7 +16,7 @@ export const cameraStyles = css`
     box-shadow: var(--wzc-live-shadow);
   }
 
-  watchzone-camera-live-view {
+  .live-presentation {
     --wzc-live-shadow: none;
   }
 

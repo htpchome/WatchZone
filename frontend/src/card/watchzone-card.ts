@@ -1,13 +1,15 @@
 import { html, LitElement, nothing } from "lit";
+import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import {
   cardConfigSignature,
   normalizeCardConfig,
-  type WatchZoneCardConfig,
+  type CardConfig,
 } from "../core/config";
 import {
   APP_NAME,
   APP_VERSION,
+  CAMERA_TAG,
   CARD_TAG,
   CARD_TYPE,
   DEFAULT_CARD_TITLE,
@@ -21,17 +23,15 @@ import {
   type HomeAssistant,
   type HomeAssistantApi,
 } from "../core/home-assistant";
-import {
-  getMediaSessionManager,
-  type MediaSessionLease,
-} from "../core/media-session-manager";
+import type { MediaSessionLease } from "../core/media-session-manager";
+import { LiveSourceResolver } from "../providers/live-source-resolver";
 import { syncHomeAssistantCardHostAppearance } from "../styles/home-assistant-card-bridge";
-import { watchZoneThemeTokens } from "../styles/theme-tokens";
-import { watchZoneCardStyles } from "./watchzone-card.styles";
+import { themeTokens } from "../styles/theme-tokens";
+import { cardStyles } from "./watchzone-card.styles";
 
 interface PreviewDraftDetail {
   readonly baselineSignature: string;
-  readonly config: WatchZoneCardConfig | null;
+  readonly config: CardConfig | null;
 }
 
 let cameraModulePromise: Promise<unknown> | undefined;
@@ -43,16 +43,21 @@ function loadCameraModule(): Promise<unknown> {
   }));
 }
 
-export class WatchZoneCard extends LitElement {
-  public static readonly watchZoneVersion = APP_VERSION;
+const cameraTag = unsafeStatic(CAMERA_TAG);
 
-  private _config: WatchZoneCardConfig = normalizeCardConfig({});
+export class DashboardCard extends LitElement {
+  public static readonly appVersion = APP_VERSION;
+
+  private _config: CardConfig = normalizeCardConfig({});
   private _hass?: HomeAssistant;
   private _haApi?: HomeAssistantApi;
   private _liveModuleReady = false;
   private _liveModuleError?: string;
   private _prewarmLease?: MediaSessionLease;
-  private _previewConfig?: WatchZoneCardConfig;
+  private _prewarmRequestKey?: string;
+  private _prewarmGeneration = 0;
+  private _previewConfig?: CardConfig;
+  private readonly _sourceResolver = new LiveSourceResolver();
 
   /** Set by Home Assistant for the card shown inside its editor preview. */
   public preview = false;
@@ -80,7 +85,7 @@ export class WatchZoneCard extends LitElement {
     this._ensureLiveModule();
   }
 
-  public static getStubConfig(): WatchZoneCardConfig {
+  public static getStubConfig(): CardConfig {
     return { type: CARD_TYPE, title: DEFAULT_CARD_TITLE };
   }
 
@@ -124,7 +129,7 @@ export class WatchZoneCard extends LitElement {
   }
 
   protected updated(): void {
-    if (this.renderRoot.querySelector("watchzone-camera")) {
+    if (this.renderRoot.querySelector(CAMERA_TAG)) {
       this._releasePrewarmLease();
     }
   }
@@ -174,7 +179,8 @@ export class WatchZoneCard extends LitElement {
                     </button>
                   </div>`
                 : this._liveModuleReady
-                  ? html`<watchzone-camera
+                  ? staticHtml`<${cameraTag}
+                      class="camera-module"
                       .api=${this._haApi}
                       .available=${cameraAvailable}
                       .startUnmutedPcTablet=${
@@ -189,7 +195,7 @@ export class WatchZoneCard extends LitElement {
                       .shadowStyle=${
                         config.camera_shadows === false ? "none" : "medium"
                       }
-                    ></watchzone-camera>`
+                    ></${cameraTag}>`
                   : html`<div class="live-placeholder" role="status">
                       Preparing live view…
                     </div>`
@@ -247,23 +253,44 @@ export class WatchZoneCard extends LitElement {
       this._releasePrewarmLease();
       return;
     }
-    const key = `home_assistant:${entityId}`;
-    if (this._prewarmLease?.key === key) {
+    const key = this._sourceResolver.homeAssistantWebRtcKey(entityId);
+    if (this._prewarmLease?.key === key || this._prewarmRequestKey === key) {
       return;
     }
     this._releasePrewarmLease();
-    this._prewarmLease = getMediaSessionManager().acquireHomeAssistant(
-      this._haApi,
-      entityId,
-    );
+    const generation = ++this._prewarmGeneration;
+    this._prewarmRequestKey = key;
+    const api = this._haApi;
+    void this._sourceResolver
+      .acquireHomeAssistantWebRtc(api, entityId)
+      .then((lease) => {
+        if (
+          generation !== this._prewarmGeneration ||
+          !this.isConnected ||
+          this._haApi?.identity !== api.identity ||
+          (this._previewConfig ?? this._config).camera_entity !== entityId
+        ) {
+          lease.release();
+          return;
+        }
+        this._prewarmLease = lease;
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (generation === this._prewarmGeneration) {
+          this._prewarmRequestKey = undefined;
+        }
+      });
   }
 
   private _releasePrewarmLease(): void {
+    this._prewarmGeneration += 1;
+    this._prewarmRequestKey = undefined;
     this._prewarmLease?.release();
     this._prewarmLease = undefined;
   }
 
-  private _syncOuterAppearance(config: WatchZoneCardConfig): void {
+  private _syncOuterAppearance(config: CardConfig): void {
     const roundedCorners = config.rounded_outer_corners !== false;
     const outerShadows = config.outer_shadows !== false;
     this.toggleAttribute("data-wzc-square-outer-corners", !roundedCorners);
@@ -283,11 +310,11 @@ export class WatchZoneCard extends LitElement {
     this.requestUpdate();
   };
 
-  static styles = [watchZoneThemeTokens, watchZoneCardStyles];
+  static styles = [themeTokens, cardStyles];
 }
 
 if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, WatchZoneCard);
+  customElements.define(CARD_TAG, DashboardCard);
 }
 
 window.customCards ??= [];

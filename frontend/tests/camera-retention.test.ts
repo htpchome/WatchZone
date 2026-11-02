@@ -3,17 +3,23 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import {
   type ConnectionFactory,
-  MediaSessionManager,
+  getMediaSessionManager,
 } from "../src/core/media-session-manager";
-import type { WatchZoneCameraLiveView } from "../src/modules/camera/live-view";
-import "../src/modules/camera/live-view";
+import type { CameraModule } from "../src/modules/camera";
+import type { CameraLivePresentation } from "../src/modules/camera/live/presentation";
+import "../src/modules/camera";
+import {
+  installTestMediaSessionManager,
+  removeTestMediaSessionManager,
+  TestMediaSessionManager as MediaSessionManager,
+} from "./test-media-session-manager";
 
 function createLiveView(
   api: HomeAssistantApi,
   startUnmutedPcTablet = false,
   startUnmutedPhone = false,
-): WatchZoneCameraLiveView {
-  const view = document.createElement("watchzone-camera-live-view");
+): CameraModule {
+  const view = document.createElement("wzc-camera");
   view.api = api;
   view.available = true;
   view.startUnmutedPcTablet = startUnmutedPcTablet;
@@ -22,15 +28,22 @@ function createLiveView(
   return view;
 }
 
-function cameraControl(view: WatchZoneCameraLiveView): HTMLElement {
-  const controls = view.shadowRoot?.querySelector<HTMLElement>(
-    "watchzone-camera-controls",
+function presentation(view: CameraModule): CameraLivePresentation | undefined {
+  return (
+    view.shadowRoot?.querySelector<CameraLivePresentation>("wzc-camera-live") ??
+    undefined
+  );
+}
+
+function cameraControl(view: CameraModule): HTMLElement {
+  const controls = presentation(view)?.shadowRoot?.querySelector<HTMLElement>(
+    "wzc-camera-controls",
   );
   if (!controls) throw new Error("Camera controls are not rendered");
   return controls;
 }
 
-function toggleMute(view: WatchZoneCameraLiveView): void {
+function toggleMute(view: CameraModule): void {
   cameraControl(view).dispatchEvent(
     new CustomEvent("camera-control", {
       detail: { action: "mute" },
@@ -46,21 +59,22 @@ function installHlsSession(): {
 } {
   vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
   const hlsVideo = document.createElement("video");
-  window.__watchZoneMediaSessionManager = new MediaSessionManager(
-    vi.fn<ConnectionFactory>(async () => ({ close: vi.fn() })),
-    vi.fn<ConnectionFactory>(async () => ({
-      video: hlsVideo,
-      transport: "hls_mse",
-      close: vi.fn(),
-    })),
+  installTestMediaSessionManager(
+    new MediaSessionManager(
+      vi.fn<ConnectionFactory>(async () => ({ close: vi.fn() })),
+      vi.fn<ConnectionFactory>(async () => ({
+        video: hlsVideo,
+        transport: "hls_mse",
+        close: vi.fn(),
+      })),
+    ),
   );
   return { api: createApi(), hlsVideo };
 }
 
 describe("camera presentation retention", () => {
   afterEach(() => {
-    window.__watchZoneMediaSessionManager?.closeAll();
-    delete window.__watchZoneMediaSessionManager;
+    removeTestMediaSessionManager();
     document.body.replaceChildren();
     vi.restoreAllMocks();
   });
@@ -76,9 +90,8 @@ describe("camera presentation retention", () => {
       transport: "hls_mse",
       close: vi.fn(),
     }));
-    window.__watchZoneMediaSessionManager = new MediaSessionManager(
-      webRtcFactory,
-      hlsFactory,
+    installTestMediaSessionManager(
+      new MediaSessionManager(webRtcFactory, hlsFactory),
     );
     const identity = {} as HomeAssistantApi["identity"];
     const api: HomeAssistantApi = {
@@ -91,25 +104,29 @@ describe("camera presentation retention", () => {
     const preEditor = createLiveView(api);
     document.body.append(preEditor);
     await vi.waitFor(() =>
-      expect(preEditor.shadowRoot?.querySelector(".hls-host video")).toBe(
-        hlsVideo,
-      ),
+      expect(
+        presentation(preEditor)?.shadowRoot?.querySelector(".hls-host video"),
+      ).toBe(hlsVideo),
     );
 
     const editorPreview = createLiveView(api);
     document.body.append(editorPreview);
     await vi.waitFor(() =>
-      expect(editorPreview.shadowRoot?.querySelector(".hls-host video")).toBe(
-        hlsVideo,
-      ),
+      expect(
+        presentation(editorPreview)?.shadowRoot?.querySelector(
+          ".hls-host video",
+        ),
+      ).toBe(hlsVideo),
     );
-    expect(preEditor.shadowRoot?.querySelector(".hls-host video")).toBeNull();
+    expect(
+      presentation(preEditor)?.shadowRoot?.querySelector(".hls-host video"),
+    ).toBeNull();
 
     editorPreview.remove();
     await vi.waitFor(() =>
-      expect(preEditor.shadowRoot?.querySelector(".hls-host video")).toBe(
-        hlsVideo,
-      ),
+      expect(
+        presentation(preEditor)?.shadowRoot?.querySelector(".hls-host video"),
+      ).toBe(hlsVideo),
     );
     expect(hlsFactory).toHaveBeenCalledOnce();
     expect(webRtcFactory).toHaveBeenCalledOnce();
@@ -126,15 +143,19 @@ describe("camera presentation retention", () => {
         return new Promise(() => undefined);
       },
     );
-    window.__watchZoneMediaSessionManager = new MediaSessionManager(
-      vi.fn<ConnectionFactory>(async () => new Promise(() => undefined)),
-      hlsFactory,
+    installTestMediaSessionManager(
+      new MediaSessionManager(
+        vi.fn<ConnectionFactory>(async () => new Promise(() => undefined)),
+        hlsFactory,
+      ),
     );
     const view = createLiveView(createApi(), true);
     document.body.append(view);
 
     await vi.waitFor(() =>
-      expect(view.shadowRoot?.querySelector(".hls-host video")).toBe(hlsVideo),
+      expect(
+        presentation(view)?.shadowRoot?.querySelector(".hls-host video"),
+      ).toBe(hlsVideo),
     );
     expect(hlsFactory.mock.calls[0][5].initialMuted).toBe(false);
     expect(hlsVideo.muted).toBe(false);
@@ -153,26 +174,28 @@ describe("camera presentation retention", () => {
           close(): void;
         }) => void)
       | undefined;
-    window.__watchZoneMediaSessionManager = new MediaSessionManager(
-      vi.fn<ConnectionFactory>(
-        () =>
-          new Promise((resolve) => {
-            resolveWebRtc = resolve;
-          }),
+    installTestMediaSessionManager(
+      new MediaSessionManager(
+        vi.fn<ConnectionFactory>(
+          () =>
+            new Promise((resolve) => {
+              resolveWebRtc = resolve;
+            }),
+        ),
+        vi.fn<ConnectionFactory>(async () => ({
+          video: hlsVideo,
+          transport: "hls_mse",
+          close: vi.fn(),
+        })),
       ),
-      vi.fn<ConnectionFactory>(async () => ({
-        video: hlsVideo,
-        transport: "hls_mse",
-        close: vi.fn(),
-      })),
     );
     const view = createLiveView(createApi());
     document.body.append(view);
 
     await vi.waitFor(() =>
       expect(
-        view.shadowRoot
-          ?.querySelector(".source-indicator")
+        presentation(view)
+          ?.shadowRoot?.querySelector(".source-indicator")
           ?.textContent?.trim(),
       ).toBe("HLS · HLS.js"),
     );
@@ -180,7 +203,9 @@ describe("camera presentation retention", () => {
     resolveWebRtc?.({ stream, transport: "webrtc", close: vi.fn() });
     const webRtcVideo = await vi.waitFor(() => {
       const video =
-        view.shadowRoot?.querySelector<HTMLVideoElement>("video.webrtc");
+        presentation(view)?.shadowRoot?.querySelector<HTMLVideoElement>(
+          "video.webrtc",
+        );
       expect(video?.srcObject).toBe(stream);
       return video;
     });
@@ -188,8 +213,8 @@ describe("camera presentation retention", () => {
 
     await vi.waitFor(() =>
       expect(
-        view.shadowRoot
-          ?.querySelector(".source-indicator")
+        presentation(view)
+          ?.shadowRoot?.querySelector(".source-indicator")
           ?.textContent?.trim(),
       ).toBe("WebRTC"),
     );
@@ -200,27 +225,25 @@ describe("camera presentation retention", () => {
     const initial = createLiveView(api, true);
     document.body.append(initial);
     await vi.waitFor(() =>
-      expect(initial.shadowRoot?.querySelector(".hls-host video")).toBe(
-        hlsVideo,
-      ),
+      expect(
+        presentation(initial)?.shadowRoot?.querySelector(".hls-host video"),
+      ).toBe(hlsVideo),
     );
     expect(hlsVideo.muted).toBe(false);
 
     toggleMute(initial);
     expect(hlsVideo.muted).toBe(true);
     expect(
-      window.__watchZoneMediaSessionManager?.getCameraMutePreference(
-        "camera.front",
-      ),
+      getMediaSessionManager().getCameraMutePreference("camera.front"),
     ).toBe("muted");
 
     initial.remove();
     const returned = createLiveView(api, true);
     document.body.append(returned);
     await vi.waitFor(() =>
-      expect(returned.shadowRoot?.querySelector(".hls-host video")).toBe(
-        hlsVideo,
-      ),
+      expect(
+        presentation(returned)?.shadowRoot?.querySelector(".hls-host video"),
+      ).toBe(hlsVideo),
     );
     expect(hlsVideo.muted).toBe(true);
   });
@@ -230,27 +253,25 @@ describe("camera presentation retention", () => {
     const initial = createLiveView(api);
     document.body.append(initial);
     await vi.waitFor(() =>
-      expect(initial.shadowRoot?.querySelector(".hls-host video")).toBe(
-        hlsVideo,
-      ),
+      expect(
+        presentation(initial)?.shadowRoot?.querySelector(".hls-host video"),
+      ).toBe(hlsVideo),
     );
     expect(hlsVideo.muted).toBe(true);
 
     toggleMute(initial);
     await vi.waitFor(() => expect(hlsVideo.muted).toBe(false));
     expect(
-      window.__watchZoneMediaSessionManager?.getCameraMutePreference(
-        "camera.front",
-      ),
+      getMediaSessionManager().getCameraMutePreference("camera.front"),
     ).toBe("unmuted");
 
     initial.remove();
     const returned = createLiveView(api);
     document.body.append(returned);
     await vi.waitFor(() =>
-      expect(returned.shadowRoot?.querySelector(".hls-host video")).toBe(
-        hlsVideo,
-      ),
+      expect(
+        presentation(returned)?.shadowRoot?.querySelector(".hls-host video"),
+      ).toBe(hlsVideo),
     );
     expect(hlsVideo.muted).toBe(false);
   });
@@ -263,7 +284,9 @@ describe("camera presentation retention", () => {
     const view = createLiveView(api);
     document.body.append(view);
     await vi.waitFor(() =>
-      expect(view.shadowRoot?.querySelector(".hls-host video")).toBe(hlsVideo),
+      expect(
+        presentation(view)?.shadowRoot?.querySelector(".hls-host video"),
+      ).toBe(hlsVideo),
     );
     toggleMute(view);
     await vi.waitFor(() => expect(hlsVideo.muted).toBe(false));
@@ -272,9 +295,7 @@ describe("camera presentation retention", () => {
     document.dispatchEvent(new Event("visibilitychange"));
     expect(hlsVideo.muted).toBe(true);
     expect(
-      window.__watchZoneMediaSessionManager?.getCameraMutePreference(
-        "camera.front",
-      ),
+      getMediaSessionManager().getCameraMutePreference("camera.front"),
     ).toBe("unmuted");
 
     visibility.mockReturnValue("visible");
@@ -290,18 +311,22 @@ describe("camera presentation retention", () => {
         new DOMException("Playback blocked", "NotAllowedError"),
       );
     const hlsVideo = document.createElement("video");
-    window.__watchZoneMediaSessionManager = new MediaSessionManager(
-      vi.fn<ConnectionFactory>(async () => ({ close: vi.fn() })),
-      vi.fn<ConnectionFactory>(async () => ({
-        video: hlsVideo,
-        transport: "hls_mse",
-        close: vi.fn(),
-      })),
+    installTestMediaSessionManager(
+      new MediaSessionManager(
+        vi.fn<ConnectionFactory>(async () => ({ close: vi.fn() })),
+        vi.fn<ConnectionFactory>(async () => ({
+          video: hlsVideo,
+          transport: "hls_mse",
+          close: vi.fn(),
+        })),
+      ),
     );
     const view = createLiveView(createApi());
     document.body.append(view);
     await vi.waitFor(() =>
-      expect(view.shadowRoot?.querySelector(".hls-host video")).toBe(hlsVideo),
+      expect(
+        presentation(view)?.shadowRoot?.querySelector(".hls-host video"),
+      ).toBe(hlsVideo),
     );
 
     toggleMute(view);
@@ -309,9 +334,7 @@ describe("camera presentation retention", () => {
     await vi.waitFor(() => expect(hlsVideo.muted).toBe(true));
     expect(play).toHaveBeenCalledTimes(2);
     expect(
-      window.__watchZoneMediaSessionManager?.getCameraMutePreference(
-        "camera.front",
-      ),
+      getMediaSessionManager().getCameraMutePreference("camera.front"),
     ).toBe("unmuted");
     await vi.waitFor(() =>
       expect(cameraControl(view).shadowRoot?.textContent).toContain(
@@ -328,7 +351,9 @@ describe("camera presentation retention", () => {
     document.body.append(view);
 
     await vi.waitFor(() =>
-      expect(view.shadowRoot?.querySelector(".hls-host video")).toBe(hlsVideo),
+      expect(
+        presentation(view)?.shadowRoot?.querySelector(".hls-host video"),
+      ).toBe(hlsVideo),
     );
     expect(hlsVideo.muted).toBe(false);
   });

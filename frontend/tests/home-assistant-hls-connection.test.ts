@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createHomeAssistantHlsConnection } from "../src/connections/home-assistant/hls";
+import { createHomeAssistantHlsConnection } from "../src/providers/home-assistant/live/hls";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import { LiveStartupTiming } from "../src/core/live-startup-timing";
 

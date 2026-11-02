@@ -82,7 +82,7 @@ Home Assistant / Lovelace
           |
           +------ dynamic import ------> Feature modules
           |
-          +------ dynamic import ------> Live connection adapters
+          +------ dynamic import ------> Provider capability adapters
           |
           v
  Typed frontend API client
@@ -140,7 +140,7 @@ architecture decision recorded in this document or a future ADR.
 │   │   ├── core/                  # Stable runtime and module contracts
 │   │   ├── api/                   # Typed backend client and wire types
 │   │   ├── modules/               # Independently loaded UI features
-│   │   ├── connections/           # Lazy browser playback adapters
+│   │   ├── providers/             # External-system capabilities and resolver
 │   │   ├── ui/                    # Shared visual primitives and icon registry
 │   │   ├── styles/                # HA theme boundary and global design tokens
 │   │   └── editor/                # Lazily loaded layout editor
@@ -192,8 +192,8 @@ Within a feature:
 - Files are not created merely to fill out the pattern.
 
 Stable cross-feature contracts and document-scoped services belong in `core/`.
-Feature behavior does not. Provider and connection adapters remain outside UI
-features behind their established boundaries.
+Feature behavior does not. Provider capabilities remain outside UI features
+behind their public resolver boundaries.
 
 ## 6. Dependency and ownership rules
 
@@ -203,9 +203,10 @@ These rules are mandatory:
    implementation.
 2. A frontend module may depend on public contracts in `core` and `api`.
 3. A frontend module must never import another frontend module.
-4. A frontend module may use the public connection resolver but must not import
-   a concrete live connection adapter.
-5. `core` must not import any feature module or concrete connection adapter.
+4. A frontend module may use a public provider resolver but must not import a
+   concrete provider or provider-capability implementation.
+5. `core` must not import any feature module, provider, or concrete playback
+   adapter.
 6. Backend API adapters validate transport input, enforce permissions, invoke
    feature services, and serialize results. They do not contain feature logic.
 7. Backend features may depend on provider protocols and storage contracts,
@@ -325,7 +326,7 @@ the card shell:
 It must not eagerly import:
 
 - Any feature module implementation.
-- Any concrete live connection adapter.
+- Any concrete provider-capability or playback adapter.
 - The layout editor.
 - Provider-specific UI.
 - Large media, timeline, charting, or date libraries.
@@ -353,8 +354,8 @@ The exact syntax may change with the build tool, but these properties may not:
 - Modules needed by a layout load concurrently, not sequentially.
 - The editor is a separate dynamic import and is never loaded for normal card
   viewing.
-- A live connection adapter is requested only when a visible live module uses
-  its connection type.
+- A provider live adapter is requested only when a visible camera presentation
+  uses its source type.
 - Failed imports render a local module error with a retry action.
 - Module loaders cache successful promises to prevent duplicate fetches.
 - Optional prefetching is allowed only after the visible layout is interactive
@@ -547,17 +548,17 @@ navigation target.
 - Session state is scoped to a card instance unless a requirement explicitly
   calls for wider scope.
 
-### 8.8 Live connection adapters
+### 8.8 Provider capabilities and live source resolution
 
-A **provider** and a **live connection type** are different architectural
-concepts:
+A **provider** and a **live transport** are different concepts, but both are
+owned beneath the provider boundary that can perform the capability:
 
 - A provider supplies camera identity, metadata, events, recordings, controls,
   authentication, and provider capabilities. Examples include Frigate and
   MotionEye.
-- A live connection adapter turns a normalized source descriptor into browser
-  playback. Examples include a Home Assistant camera connection and a
-  Frigate/go2rtc connection.
+- A provider capability performs one provider-specific operation such as live
+  playback, PTZ, two-way talk, events, or recordings. A live capability may
+  contain separate browser transport adapters such as WebRTC, MSE, or HLS.
 
 A camera belongs to one provider instance but may expose multiple live source
 candidates. For example, a Frigate camera may be viewable through Frigate's
@@ -579,22 +580,27 @@ interface LiveSourceDescriptor {
 The concrete descriptor schema is a discriminated union, not an unrestricted
 parameter bag. Credentials and provider secrets never appear in it.
 
-Connection rules:
+Provider and live-resolution rules:
 
 - The backend discovers, authorizes, normalizes, and ranks available source
   descriptors.
-- The frontend connection resolver selects a compatible source according to
+- The frontend live-source resolver selects a compatible source according to
   saved preference, required capabilities, health, and deterministic fallback
   order.
-- Each connection type has a stable folder boundary under
-  `frontend/src/connections/<type>/` and is loaded with a dynamic import.
-- The live module depends only on the public resolver and playback contract.
-- Connection adapters own browser media objects and playback-specific cleanup,
-  but not camera metadata, layout state, or provider APIs.
+- Each external system has one stable folder under
+  `frontend/src/providers/<provider>/`. Capabilities are nested beneath it,
+  for example `providers/home-assistant/live/`; future PTZ or talk support
+  belongs beside `live/` rather than in new top-level modules.
+- Camera is the user-placeable module. Its `live/` folder is a private camera
+  capability and presentation, not another application module.
+- Camera code depends only on the public provider resolver and stable playback
+  contract. It never imports `providers/<provider>/...` directly.
+- Provider live adapters own browser media objects and playback-specific
+  cleanup, but not camera presentation, layout state, or module UI.
 - Failure of one source may fall back to the next eligible source without
   changing camera identity.
-- Adding a connection type must not require modifying existing modules beyond
-  registration in the compile-time loader map.
+- Adding a provider or transport extends provider resolution without adding a
+  parallel camera module or changing existing provider implementations.
 - Video bytes should flow directly to the browser when security and provider
   behavior permit. Python brokers authorization and source resolution but does
   not proxy high-bitrate media without a concrete need.
@@ -1081,7 +1087,7 @@ An architecture decision is required before changing any of the following:
 - Module isolation rules.
 - Mandatory lazy-loading behavior.
 - Release-as-one-integration strategy.
-- Separation of providers from live connection adapters.
+- Separation of provider capabilities from browser transport mechanics.
 - Document-scoped retained media-session ownership and user audio-intent rules.
 - Dirty-state card-editor lifecycle and identity-preserving preview updates.
 - Home Assistant semantic theming and responsive shell requirements.
@@ -1098,8 +1104,9 @@ The architecture is established now, but implementation remains incremental:
 
 1. Create the minimal Python integration, config flow, typed runtime, clean
    unload path, and packaged frontend asset registration.
-2. Register an empty `watchzone-card` shell with minimal Lovelace lifecycle
-   handling and an empty theme-compatible container.
+2. Register the empty card shell from the centralized internal identity with
+   minimal Lovelace lifecycle handling and an empty theme-compatible
+   container.
 3. Establish hashed chunk output, the asset manifest, Python static serving,
    HACS packaging, and release validation as one integration artifact.
 4. Add the layout API and a minimal stored empty layout.
@@ -1107,8 +1114,9 @@ The architecture is established now, but implementation remains incremental:
    excluded from the eager entry.
 6. Add the first provider package, normalized camera catalog, and provider
    subentry flow.
-7. Add the live module plus one lazy connection adapter, then add other
-   connection types independently.
+7. Add the camera module's private live presentation plus one lazy provider
+   live adapter, then add other providers or transports behind the same
+   resolver contract.
 8. Add the lazy editor only when layout creation work begins.
 9. Add further providers and feature modules vertically, one user-visible
    capability at a time.
