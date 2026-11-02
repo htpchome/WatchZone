@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import timedelta
 from typing import Any
 
@@ -23,6 +24,7 @@ from ..features.camera_runtime import snapshot_dict
 from . import runtime_from_hass
 
 _MAX_RESUME_SECONDS = 31 * 24 * 60 * 60
+_LOGGER = logging.getLogger(__name__)
 
 
 def _require_entity_permission(
@@ -100,6 +102,7 @@ async def ws_camera_runtime_set(
         connection.send_error(msg["id"], "camera_runtime_failed", str(err))
         return
     except Exception:
+        _LOGGER.exception("Unable to change runtime state for %s", entity_id)
         connection.send_error(
             msg["id"], "camera_runtime_failed", "Unable to change camera state"
         )

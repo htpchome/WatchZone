@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from homeassistant.const import (
     ATTR_ENTITY_ID,
+    ATTR_SUPPORTED_FEATURES,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
+    STATE_IDLE,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
@@ -13,15 +15,8 @@ from homeassistant.core import Context, HomeAssistant
 
 from ..camera import CameraRuntimeState
 
-PROVIDER = "frigate"
 CAMERA_DOMAIN = "camera"
-
-
-def _camera_is_on(hass: HomeAssistant, entity_id: str) -> bool:
-    """Read the public camera property without eagerly loading camera media code."""
-    from homeassistant.components.camera.helper import get_camera_from_entity_id
-
-    return get_camera_from_entity_id(hass, entity_id).is_on
+PROVIDER = "frigate"
 
 
 async def async_get_state(hass: HomeAssistant, entity_id: str) -> CameraRuntimeState:
@@ -31,11 +26,30 @@ async def async_get_state(hass: HomeAssistant, entity_id: str) -> CameraRuntimeS
         STATE_UNAVAILABLE,
         STATE_UNKNOWN,
     }
+    attributes = state.attributes if state is not None else {}
+    frigate_owned = bool(
+        (attributes.get("client_id") or attributes.get("mqtt_client_id"))
+        and attributes.get("camera_name")
+    )
+    raw_supported_features = attributes.get(ATTR_SUPPORTED_FEATURES)
+    if isinstance(raw_supported_features, int | str):
+        try:
+            supported_features = int(raw_supported_features)
+        except ValueError:
+            supported_features = None
+    else:
+        supported_features = None
     return CameraRuntimeState(
         available=available,
         provider=PROVIDER,
-        supported=True,
-        suspended=available and not _camera_is_on(hass, entity_id),
+        supported=available and frigate_owned,
+        suspended=(
+            available
+            and frigate_owned
+            and state is not None
+            and state.state == STATE_IDLE
+            and supported_features == 0
+        ),
     )
 
 

@@ -691,6 +691,7 @@ test("retains one live connection while the card presentation is replaced", asyn
           return new Promise(() => undefined);
         }
         if (message.type === "watchzone/camera/runtime/set") {
+          await new Promise((resolve) => window.setTimeout(resolve, 75));
           runtimeSuspended = message.suspended === true;
           const snapshot = runtimeSnapshot(message.entity_id);
           for (const subscriber of runtimeSubscribers) subscriber(snapshot);

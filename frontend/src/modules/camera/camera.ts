@@ -178,6 +178,9 @@ export class CameraModule extends LitElement {
   private readonly _handleSuspendConfirm = (
     event: CustomEvent<CameraSuspendConfirmDetail>,
   ): void => {
+    if (this._runtime.pending) return;
+    this._suspendDialogActive = false;
+    this.requestUpdate();
     void this._applySuspension(event.detail);
   };
 
@@ -189,7 +192,6 @@ export class CameraModule extends LitElement {
         detail.suspended,
         detail.resumeAfterSeconds,
       );
-      this._suspendDialogActive = false;
       this._toasts.success(
         detail.suspended ? "Camera suspended." : "Camera resumed.",
         { key: "camera-runtime" },

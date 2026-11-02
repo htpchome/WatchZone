@@ -19,14 +19,19 @@ async def test_frigate_camera_runtime_uses_public_camera_contract() -> None:
     services = SimpleNamespace(async_call=AsyncMock())
     hass = SimpleNamespace(
         services=services,
-        states={"camera.porch": SimpleNamespace(state="idle")},
+        states={
+            "camera.porch": SimpleNamespace(
+                state="idle",
+                attributes={
+                    "camera_name": "porch",
+                    "client_id": "frigate",
+                    "supported_features": 0,
+                },
+            )
+        },
     )
 
-    with patch(
-        "custom_components.watchzone.providers.frigate.camera._camera_is_on",
-        return_value=False,
-    ):
-        state = await async_get_state(hass, "camera.porch")  # type: ignore[arg-type]
+    state = await async_get_state(hass, "camera.porch")  # type: ignore[arg-type]
 
     assert state == CameraRuntimeState(
         available=True,
@@ -34,6 +39,19 @@ async def test_frigate_camera_runtime_uses_public_camera_contract() -> None:
         supported=True,
         suspended=True,
     )
+    hass.states["camera.porch"] = SimpleNamespace(
+        state="recording",
+        attributes={
+            "camera_name": "porch",
+            "client_id": "frigate",
+            "supported_features": 2,
+        },
+    )
+    active_state = await async_get_state(  # type: ignore[arg-type]
+        hass, "camera.porch"
+    )
+    assert active_state.suspended is False
+    assert active_state.supported is True
     context = Context(user_id="user")
     await async_set_suspended(
         hass,  # type: ignore[arg-type]
@@ -50,20 +68,34 @@ async def test_frigate_camera_runtime_uses_public_camera_contract() -> None:
     )
 
 
-async def test_timed_suspension_is_persisted_and_reapplied(
+async def test_timed_suspension_preserves_provider_authority(
     hass: HomeAssistant,
 ) -> None:
-    """A provider restart cannot silently discard backend suspension intent."""
+    """A timer never overrides a provider-reported external resume."""
+    provider_suspended = False
+
+    async def get_state(
+        _hass: HomeAssistant, _entity_id: str
+    ) -> CameraRuntimeState:
+        return CameraRuntimeState(
+            available=True,
+            provider="frigate",
+            supported=True,
+            suspended=provider_suspended,
+        )
+
+    async def set_suspended(
+        _hass: HomeAssistant,
+        _entity_id: str,
+        suspended: bool,
+        _context: Context | None,
+    ) -> None:
+        nonlocal provider_suspended
+        provider_suspended = suspended
+
     provider = SimpleNamespace(
-        async_get_state=AsyncMock(
-            return_value=CameraRuntimeState(
-                available=True,
-                provider="frigate",
-                supported=True,
-                suspended=False,
-            )
-        ),
-        async_set_suspended=AsyncMock(),
+        async_get_state=get_state,
+        async_set_suspended=AsyncMock(side_effect=set_suspended),
     )
     service = CameraRuntimeService(hass)
     service._store.async_save = AsyncMock()  # type: ignore[method-assign]
@@ -75,22 +107,26 @@ async def test_timed_suspension_is_persisted_and_reapplied(
             timedelta(hours=1, minutes=15),
             Context(user_id="user"),
         )
+        provider_suspended = False
+        externally_resumed = await service.async_snapshot("camera.porch")
         await service._async_reconcile("camera.porch")  # noqa: SLF001
 
     assert snapshot.resume_at is not None
     assert snapshot.supported is True
     assert snapshot.suspended is True
-    assert provider.async_set_suspended.await_count == 2
+    assert externally_resumed.suspended is False
+    assert externally_resumed.resume_at is not None
+    assert provider.async_set_suspended.await_count == 1
     assert provider.async_set_suspended.await_args_list[0].args[2] is True
-    assert provider.async_set_suspended.await_args_list[1].args[2] is True
-    service._store.async_save.assert_awaited_once()  # type: ignore[attr-defined]
+    assert "camera.porch" not in service._schedules  # noqa: SLF001
+    assert service._store.async_save.await_count == 2  # type: ignore[attr-defined]
     await service.async_close()
 
 
 async def test_runtime_changes_publish_to_every_subscribed_client(
     hass: HomeAssistant,
 ) -> None:
-    """Commands broadcast intent immediately without waiting for entity events."""
+    """Provider-confirmed commands broadcast to every subscribed client."""
     provider_suspended = False
 
     async def get_state(
@@ -145,6 +181,40 @@ async def test_runtime_changes_publish_to_every_subscribed_client(
     ]
     unsubscribe_first()
     unsubscribe_second()
+    await service.async_close()
+
+
+async def test_external_provider_state_is_published_without_local_intent(
+    hass: HomeAssistant,
+) -> None:
+    """An external provider resume replaces the suspended presentation."""
+    provider_suspended = True
+
+    async def get_state(
+        _hass: HomeAssistant, _entity_id: str
+    ) -> CameraRuntimeState:
+        return CameraRuntimeState(
+            available=True,
+            provider="frigate",
+            supported=True,
+            suspended=provider_suspended,
+        )
+
+    provider = SimpleNamespace(async_get_state=get_state)
+    service = CameraRuntimeService(hass)
+    listener = Mock()
+
+    with patch.object(service, "_provider", return_value=provider):
+        unsubscribe = service.async_subscribe("camera.porch", listener)
+        await service._async_publish_snapshot("camera.porch")  # noqa: SLF001
+        provider_suspended = False
+        await service._async_publish_snapshot("camera.porch")  # noqa: SLF001
+
+    assert [call.args[0].suspended for call in listener.call_args_list] == [
+        True,
+        False,
+    ]
+    unsubscribe()
     await service.async_close()
 
 

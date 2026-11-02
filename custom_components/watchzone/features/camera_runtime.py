@@ -25,6 +25,7 @@ from ..providers.camera import CameraRuntimeState
 
 _STORAGE_KEY = f"{DOMAIN}.camera_suspensions"
 _STORAGE_VERSION = 1
+_STATE_CONFIRMATION_TIMEOUT = 12.0
 _RESUME_RETRY_DELAY = timedelta(minutes=1)
 _LOGGER = logging.getLogger(__name__)
 
@@ -58,19 +59,19 @@ class CameraRuntimeSnapshot:
 
 
 @dataclass(frozen=True, slots=True)
-class _SuspensionIntent:
+class _ResumeSchedule:
     resume_at: datetime | None
 
 
 class CameraRuntimeService:
-    """Own provider commands, desired suspension state, and resume timers."""
+    """Own provider commands and optional backend resume schedules."""
 
     def __init__(self, hass: HomeAssistant) -> None:
         self._hass = hass
         self._store = Store[dict[str, object]](
             hass, _STORAGE_VERSION, _STORAGE_KEY, atomic_writes=True
         )
-        self._intents: dict[str, _SuspensionIntent] = {}
+        self._schedules: dict[str, _ResumeSchedule] = {}
         self._timers: dict[str, Callable[[], None]] = {}
         self._state_unsubs: dict[str, Callable[[], None]] = {}
         self._subscriber_state_unsubs: dict[str, Callable[[], None]] = {}
@@ -81,11 +82,11 @@ class CameraRuntimeService:
         self._closed = False
 
     async def async_setup(self) -> None:
-        """Restore persisted suspension intent and reconcile provider truth."""
+        """Restore persisted resume schedules and reconcile provider truth."""
         stored = await self._store.async_load() or {}
-        raw_intents = stored.get("intents", {})
-        if isinstance(raw_intents, dict):
-            for entity_id, raw in raw_intents.items():
+        raw_schedules = stored.get("schedules", stored.get("intents", {}))
+        if isinstance(raw_schedules, dict):
+            for entity_id, raw in raw_schedules.items():
                 if not isinstance(entity_id, str) or not isinstance(raw, dict):
                     continue
                 raw_resume_at = raw.get("resume_at")
@@ -98,17 +99,19 @@ class CameraRuntimeService:
                     continue
                 if resume_at is not None:
                     resume_at = dt_util.as_utc(resume_at)
-                self._intents[entity_id] = _SuspensionIntent(resume_at)
+                if resume_at is None:
+                    continue
+                self._schedules[entity_id] = _ResumeSchedule(resume_at)
                 self._watch_entity(entity_id)
                 self._schedule(entity_id)
         results = await asyncio.gather(
-            *(self._async_reconcile(entity_id) for entity_id in self._intents),
+            *(self._async_reconcile(entity_id) for entity_id in self._schedules),
             return_exceptions=True,
         )
         for result in results:
             if isinstance(result, BaseException):
                 _LOGGER.warning(
-                    "Unable to restore a persisted camera suspension: %s", result
+                    "Unable to restore a camera resume schedule: %s", result
                 )
 
     async def async_snapshot(self, entity_id: str) -> CameraRuntimeSnapshot:
@@ -124,16 +127,18 @@ class CameraRuntimeService:
                 suspended=False,
             )
         state = await provider.async_get_state(self._hass, entity_id)
-        intent = self._intents.get(entity_id)
+        schedule = self._schedules.get(entity_id)
         return CameraRuntimeSnapshot(
             available=state.available,
             entity_id=entity_id,
             provider=state.provider,
             resume_at=(
-                intent.resume_at.isoformat() if intent and intent.resume_at else None
+                schedule.resume_at.isoformat()
+                if schedule and schedule.resume_at
+                else None
             ),
             supported=state.supported,
-            suspended=intent is not None or state.suspended,
+            suspended=state.suspended,
         )
 
     async def async_set_suspended(
@@ -143,7 +148,7 @@ class CameraRuntimeService:
         resume_after: timedelta | None,
         context: Context | None,
     ) -> CameraRuntimeSnapshot:
-        """Apply one idempotent suspension command and persist its intent."""
+        """Apply one command and return only provider-confirmed state."""
         provider = self._provider(entity_id)
         if provider is None:
             raise HomeAssistantError("Camera suspension is not supported")
@@ -151,31 +156,71 @@ class CameraRuntimeService:
         if not state.supported:
             raise HomeAssistantError("Camera suspension is not supported")
 
-        if suspended:
-            resume_at = (
-                dt_util.utcnow() + resume_after if resume_after is not None else None
+        if state.suspended != suspended:
+            await provider.async_set_suspended(
+                self._hass, entity_id, suspended, context
             )
-            self._intents[entity_id] = _SuspensionIntent(resume_at)
+            state = await self._async_wait_for_provider_state(
+                provider, entity_id, suspended
+            )
+
+        if suspended and resume_after is not None:
+            self._schedules[entity_id] = _ResumeSchedule(
+                dt_util.utcnow() + resume_after
+            )
             self._watch_entity(entity_id)
-
-        try:
-            if state.suspended != suspended:
-                await provider.async_set_suspended(
-                    self._hass, entity_id, suspended, context
-                )
-        except Exception:
-            if suspended:
-                self._remove_intent(entity_id)
-            raise
-
-        if not suspended:
-            self._remove_intent(entity_id)
+        else:
+            self._remove_schedule(entity_id)
 
         self._schedule(entity_id)
         await self._save()
-        snapshot = await self.async_snapshot(entity_id)
+        schedule = self._schedules.get(entity_id)
+        snapshot = CameraRuntimeSnapshot(
+            available=state.available,
+            entity_id=entity_id,
+            provider=state.provider,
+            resume_at=(
+                schedule.resume_at.isoformat()
+                if schedule and schedule.resume_at
+                else None
+            ),
+            supported=state.supported,
+            suspended=state.suspended,
+        )
         self._notify_subscribers(entity_id, snapshot)
         return snapshot
+
+    async def _async_wait_for_provider_state(
+        self,
+        provider: _ProviderModule,
+        entity_id: str,
+        suspended: bool,
+    ) -> CameraRuntimeState:
+        """Wait for the provider to report the requested state."""
+        changed = asyncio.Event()
+        unsubscribe = async_track_state_change_event(
+            self._hass, [entity_id], lambda _event: changed.set()
+        )
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + _STATE_CONFIRMATION_TIMEOUT
+        try:
+            while True:
+                state = await provider.async_get_state(self._hass, entity_id)
+                if state.suspended == suspended:
+                    return state
+                remaining = deadline - loop.time()
+                if remaining <= 0:
+                    break
+                try:
+                    await asyncio.wait_for(changed.wait(), timeout=remaining)
+                except TimeoutError:
+                    break
+                changed.clear()
+        finally:
+            unsubscribe()
+        raise HomeAssistantError(
+            "The camera provider did not confirm the requested state change"
+        )
 
     def async_subscribe(
         self, entity_id: str, listener: Callable[[CameraRuntimeSnapshot], None]
@@ -269,31 +314,39 @@ class CameraRuntimeService:
             self._reconcile_tasks.pop(entity_id, None)
 
     async def _async_reconcile(self, entity_id: str) -> None:
-        intent = self._intents.get(entity_id)
-        if intent is None or self._closed:
-            return
-        if intent.resume_at is not None and intent.resume_at <= dt_util.utcnow():
-            await self._async_resume(entity_id)
+        schedule = self._schedules.get(entity_id)
+        if schedule is None or self._closed:
             return
         provider = self._provider(entity_id)
         if provider is None:
             return
         state = await provider.async_get_state(self._hass, entity_id)
         if state.available and state.supported and not state.suspended:
-            await provider.async_set_suspended(self._hass, entity_id, True, None)
+            self._remove_schedule(entity_id)
+            await self._save()
+            await self._async_publish_snapshot(entity_id)
+            return
+        if (
+            state.available
+            and state.supported
+            and state.suspended
+            and schedule.resume_at is not None
+            and schedule.resume_at <= dt_util.utcnow()
+        ):
+            await self._async_resume(entity_id)
 
     @callback
     def _schedule(self, entity_id: str) -> None:
         self._timers.pop(entity_id, lambda: None)()
-        intent = self._intents.get(entity_id)
-        if intent is None or intent.resume_at is None:
+        schedule = self._schedules.get(entity_id)
+        if schedule is None or schedule.resume_at is None:
             return
 
         async def resume(_now: datetime) -> None:
             await self._async_resume(entity_id)
 
         self._timers[entity_id] = async_track_point_in_utc_time(
-            self._hass, resume, intent.resume_at
+            self._hass, resume, schedule.resume_at
         )
 
     async def _async_resume(self, entity_id: str) -> None:
@@ -302,13 +355,9 @@ class CameraRuntimeService:
             self._schedule_retry(entity_id)
             return
         try:
-            await provider.async_set_suspended(self._hass, entity_id, False, None)
+            await self.async_set_suspended(entity_id, False, None, None)
         except Exception:
             self._schedule_retry(entity_id)
-            return
-        self._remove_intent(entity_id)
-        await self._save()
-        await self._async_publish_snapshot(entity_id)
 
     @callback
     def _schedule_retry(self, entity_id: str) -> None:
@@ -322,21 +371,23 @@ class CameraRuntimeService:
         )
 
     @callback
-    def _remove_intent(self, entity_id: str) -> None:
-        self._intents.pop(entity_id, None)
+    def _remove_schedule(self, entity_id: str) -> None:
+        self._schedules.pop(entity_id, None)
         self._timers.pop(entity_id, lambda: None)()
         self._state_unsubs.pop(entity_id, lambda: None)()
 
     async def _save(self) -> None:
         await self._store.async_save(
             {
-                "intents": {
+                "schedules": {
                     entity_id: {
                         "resume_at": (
-                            intent.resume_at.isoformat() if intent.resume_at else None
+                            schedule.resume_at.isoformat()
+                            if schedule.resume_at
+                            else None
                         )
                     }
-                    for entity_id, intent in self._intents.items()
+                    for entity_id, schedule in self._schedules.items()
                 }
             }
         )
