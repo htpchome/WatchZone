@@ -493,6 +493,41 @@ describe("watchzone-card-editor", () => {
     document.removeEventListener("context-request", contextHandler);
   });
 
+  it("widens the HA section preview and restores the host property", async () => {
+    const dialog = document.createElement("hui-dialog-edit-card");
+    dialog.style.setProperty(
+      "--ha-view-sections-column-max-width",
+      "480px",
+      "important",
+    );
+    const root = dialog.attachShadow({ mode: "open" });
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as CardEditor;
+    root.append(editor);
+    document.body.append(dialog);
+    await editor.updateComplete;
+
+    expect(
+      dialog.style
+        .getPropertyValue("--ha-view-sections-column-max-width")
+        .trim(),
+    ).toBe("100%");
+    expect(
+      dialog.style.getPropertyPriority("--ha-view-sections-column-max-width"),
+    ).toBe("important");
+
+    editor.remove();
+    expect(
+      dialog.style
+        .getPropertyValue("--ha-view-sections-column-max-width")
+        .trim(),
+    ).toBe("480px");
+    expect(
+      dialog.style.getPropertyPriority("--ha-view-sections-column-max-width"),
+    ).toBe("important");
+  });
+
   it("commits the complete draft to Home Assistant immediately before Save", async () => {
     const contextHandler = (event: Event) => {
       const request = event as ContextRequest;

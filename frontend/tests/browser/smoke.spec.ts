@@ -980,6 +980,7 @@ test("retains one live connection while the card presentation is replaced", asyn
       (border) => border === indicatorPresentation.border,
     ),
   ).toBe(true);
+  expect(cssAlpha(indicatorPresentation.border)).toBeCloseTo(0.45, 2);
   expect(indicatorPresentation.borderRadius).not.toBe("999px");
   const mute = page.locator(
     'wzc-camera wzc-camera-controls [data-control="mute"]',

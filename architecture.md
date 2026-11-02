@@ -458,11 +458,14 @@ Cancel discards it. The normative behavior and required tests are defined in
 WatchZone's editor is a write-only dirty-state consumer and therefore requests
 the context once without subscribing to provider publications. Dirty state only
 tracks unsaved work; it does not transport the draft into Home Assistant's card
-configuration. To preserve preview component identity, one isolated lifecycle
-adapter commits the complete draft immediately before Home Assistant handles
-Save. It feature-detects the narrow dialog boundary and falls back to the public
-`config-changed` event when that boundary is unavailable. No other code accesses
-dialog internals or Save-button structure.
+configuration. To preserve preview component identity, one isolated Home
+Assistant editor bridge commits the complete draft immediately before Home
+Assistant handles Save. It feature-detects the narrow dialog boundary and falls
+back to the public `config-changed` event when that boundary is unavailable. No
+other code accesses dialog internals, Save-button structure, or editor-preview
+host styling. The same bridge may apply a reversible, feature-detected preview
+width compatibility property when Home Assistant's default cap prevents the
+large dialog from using its available preview pane.
 
 Every editor control must round-trip all meaningful values through local
 draft, dirty state, preview, Save, and reopen. In particular, boolean `false`

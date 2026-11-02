@@ -8,6 +8,13 @@ const homeAssistantCardBridge = resolve(
   sourceRoot,
   "styles/home-assistant-card-bridge.ts",
 );
+const homeAssistantEditorBridge = resolve(
+  sourceRoot,
+  "editor/home-assistant-editor-bridge.ts",
+);
+const allowedHomeAssistantTokens = new Map([
+  [homeAssistantEditorBridge, new Set(["--ha-view-sections-column-max-width"])],
+]);
 
 async function collectTypeScript(directory, files = []) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -39,11 +46,20 @@ for (const path of await collectTypeScript(sourceRoot)) {
     ]
       .map((match) => match[1])
       .filter((name) => !name.startsWith("--wzc-"));
-    if (source.includes("--ha-") || nonWatchZoneVariables.length > 0) {
+    const unexpectedHomeAssistantTokens = [
+      ...source.matchAll(/--ha-[a-z0-9-]+/gi),
+    ]
+      .map((match) => match[0])
+      .filter((name) => !allowedHomeAssistantTokens.get(path)?.has(name));
+    if (
+      unexpectedHomeAssistantTokens.length > 0 ||
+      nonWatchZoneVariables.length > 0
+    ) {
       violations.push(
         `${relativePath}: component CSS may reference only --wzc-* variables; found ${[
           ...new Set(nonWatchZoneVariables),
-        ].join(", ") || "a direct --ha-* token"}`,
+          ...new Set(unexpectedHomeAssistantTokens),
+        ].join(", ")}`,
       );
     }
   }
@@ -54,5 +70,5 @@ if (violations.length > 0) {
 }
 
 console.log(
-  "Validated colocated styles, WatchZone theme tokens, and the isolated Home Assistant card bridge.",
+  "Validated colocated styles, WatchZone theme tokens, and isolated Home Assistant bridges.",
 );

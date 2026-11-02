@@ -148,7 +148,11 @@ export const themeTokens = css`
       var(--wzc-color-primary) var(--wzc-media-overlay-hover-opacity),
       transparent
     );
-    --wzc-media-overlay-border-color: var(--wzc-color-border);
+    --wzc-media-overlay-border-color: color-mix(
+      in srgb,
+      var(--wzc-media-overlay-color) 45%,
+      transparent
+    );
     --wzc-media-overlay-radius: var(--wzc-radius-small);
     --wzc-media-overlay-shadow: var(--wzc-shadow-card);
     --wzc-media-overlay-transition-duration: 140ms;

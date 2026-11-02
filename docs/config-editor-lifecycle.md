@@ -45,11 +45,20 @@ state.
 Semantic control changes update the dirty-state slice and WatchZone soft
 preview without emitting `config-changed`, preserving the preview card and its
 live media identity. Immediately before Home Assistant handles Save, the
-isolated lifecycle adapter commits the complete normalized draft to the active
-edit dialog. Home Assistant currently exposes no public final-draft hook for a
-custom editor that suppresses `config-changed`; therefore the adapter
+isolated `HomeAssistantEditorBridge` commits the complete normalized draft to
+the active edit dialog. Home Assistant currently exposes no public final-draft
+hook for a custom editor that suppresses `config-changed`; therefore the bridge
 feature-detects the narrow `_cardConfig` and `_updateDirtyState` boundary. No
 other module may depend on those members or the dialog's action structure.
+
+Home Assistant also caps a sections-view editor preview to
+`--ha-view-sections-column-max-width`, including while the edit dialog is in
+large mode. The same bridge temporarily sets that inherited property to `100%`
+on the active WatchZone dialog so the preview can use the available preview
+pane. It records and restores the prior inline value and priority when the
+editor disconnects. Failure to find the expected dialog degrades to Home
+Assistant's default preview width; it must never affect card rendering or saved
+configuration.
 
 If the dirty-state context or Save boundary is unavailable, the compatibility
 path emits one public `config-changed` event with the complete draft. Typing may

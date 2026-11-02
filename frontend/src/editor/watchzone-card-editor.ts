@@ -14,13 +14,12 @@ import { isHomeAssistant, type HomeAssistant } from "../core/home-assistant";
 import { toYamlCardConfig, type YamlCardConfig } from "../core/yaml-config";
 import { themeTokens } from "../styles/theme-tokens";
 import {
-  commitDraftForSave,
   type DirtyStateContext,
-  isDialogSaveClick,
   requestDirtyStateContext,
   seedDirtyState,
   updateDirtyState,
 } from "./dirty-state";
+import { HomeAssistantEditorBridge } from "./home-assistant-editor-bridge";
 import { cardEditorStyles } from "./watchzone-card-editor.styles";
 
 interface InputElement extends HTMLElement {
@@ -57,6 +56,9 @@ type BooleanConfigFlag =
   | "start_live_unmuted_phone";
 
 export class CardEditor extends LitElement {
+  private readonly _haEditor = new HomeAssistantEditorBridge<YamlCardConfig>(
+    this,
+  );
   private _baseline?: CardConfig;
   private _baselineSignature = "";
   private _config?: CardConfig;
@@ -361,11 +363,11 @@ export class CardEditor extends LitElement {
   }
 
   private readonly _handleDocumentClick = (event: Event): void => {
-    if (!this._config || !isDialogSaveClick(this, event)) {
+    if (!this._config || !this._haEditor.isSaveClick(event)) {
       return;
     }
     const yamlConfig = toYamlCardConfig(this._config);
-    if (!commitDraftForSave(this, yamlConfig)) {
+    if (!this._haEditor.commitDraftForSave(yamlConfig)) {
       this._dispatchConfigChange(this._config);
     }
   };
