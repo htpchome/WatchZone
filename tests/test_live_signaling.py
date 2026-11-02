@@ -13,6 +13,7 @@ from custom_components.watchzone.features.live import (
 )
 from custom_components.watchzone.providers.frigate.live import (
     FrigateLiveSignalingSession,
+    _camera_name,
     _stream_name,
     async_prepare_session,
 )
@@ -98,8 +99,8 @@ async def test_provider_resolver_loads_the_entity_owner_dynamically() -> None:
     assert fallback_reason is None
 
 
-async def test_frigate_capability_prepares_authenticated_go2rtc_socket() -> None:
-    """Frigate signaling uses its existing entity and authenticated API client."""
+async def test_frigate_capability_uses_public_camera_identity_for_go2rtc() -> None:
+    """A custom RTSP source falls back to Frigate's public camera identity."""
     registry = SimpleNamespace(
         async_get=Mock(
             return_value=SimpleNamespace(
@@ -118,10 +119,11 @@ async def test_frigate_capability_prepares_authenticated_go2rtc_socket() -> None
         get_client_for_config_entry=Mock(return_value=client)
     )
     hass = SimpleNamespace(
-        config_entries=SimpleNamespace(async_get_entry=Mock(return_value=config_entry))
+        config_entries=SimpleNamespace(async_get_entry=Mock(return_value=config_entry)),
+        states={"camera.porch": SimpleNamespace(attributes={"camera_name": "porch"})},
     )
     camera = SimpleNamespace(
-        stream_source=AsyncMock(return_value="rtsp://frigate:8554/porch")
+        stream_source=AsyncMock(return_value="rtsp://custom-stream-host:8554/porch")
     )
 
     with (
@@ -161,3 +163,13 @@ def test_frigate_stream_name_requires_its_go2rtc_source() -> None:
     assert _stream_name("rtsp://another-server:8554/front_door", frigate_url) is None
     assert _stream_name("rtsp://frigate:554/front_door", frigate_url) is None
     assert _stream_name(None, frigate_url) is None
+
+
+def test_frigate_camera_name_uses_its_public_entity_attribute() -> None:
+    """Valid Frigate entities provide a canonical fallback stream identity."""
+    hass = SimpleNamespace(
+        states={"camera.porch": SimpleNamespace(attributes={"camera_name": " porch "})}
+    )
+
+    assert _camera_name(hass, "camera.porch") == "porch"  # type: ignore[arg-type]
+    assert _camera_name(hass, "camera.missing") is None  # type: ignore[arg-type]

@@ -220,6 +220,13 @@ WatchZone signaling endpoint delegates to Home Assistant's standard public
 camera WebRTC contract. Other camera integrations always use that standard
 path.
 
+The Frigate adapter prefers a verified go2rtc stream name from the camera's
+public RTSP stream source. When a valid Frigate configuration uses a custom
+RTSP host or template that cannot be verified as the integration's local
+go2rtc endpoint, it falls back to the Frigate entity's public `camera_name`
+attribute. This matches Frigate's own WebRTC camera identity without reading
+private entity fields.
+
 The concrete Frigate capability remains dynamically loaded beneath the
 provider boundary. Camera UI, live presentation, session retention, HLS
 hedging, and audio policy do not import or branch on Frigate.

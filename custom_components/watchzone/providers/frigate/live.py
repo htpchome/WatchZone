@@ -157,11 +157,14 @@ async def async_prepare_session(
     if not isinstance(base_url, str):
         raise ProviderPreparationError("frigate_url_missing")
     stream_source = await camera.stream_source()
-    if not stream_source:
-        raise ProviderPreparationError("frigate_stream_source_unavailable")
-    stream_name = _stream_name(stream_source, base_url)
+    stream_name = _stream_name(stream_source, base_url) or _camera_name(hass, entity_id)
     if stream_name is None:
-        raise ProviderPreparationError("frigate_stream_source_incompatible")
+        reason = (
+            "frigate_stream_source_incompatible"
+            if stream_source
+            else "frigate_stream_source_unavailable"
+        )
+        raise ProviderPreparationError(reason)
 
     client = _get_frigate_client(hass, config_entry)
     if client is None:
@@ -198,6 +201,18 @@ def _stream_name(stream_source: str | None, frigate_url: str) -> str | None:
         return None
     name = source.path.strip("/")
     return name or None
+
+
+def _camera_name(hass: HomeAssistant, entity_id: str) -> str | None:
+    """Return the canonical camera name published by the Frigate entity."""
+    state = hass.states.get(entity_id)
+    if state is None:
+        return None
+    camera_name = state.attributes.get("camera_name")
+    if not isinstance(camera_name, str):
+        return None
+    camera_name = camera_name.strip()
+    return camera_name or None
 
 
 def _get_frigate_client(
