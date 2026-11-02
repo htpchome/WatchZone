@@ -61,6 +61,24 @@ test("loads the responsive WatchZone card shell", async ({ page }) => {
   ).toBe("function");
 });
 
+test("does not load camera code for a camera-free layout", async ({ page }) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+
+  expect(
+    await page.evaluate(() => ({
+      cameraDefined: customElements.get("wzc-camera") !== undefined,
+      cameraResources: performance
+        .getEntriesByType("resource")
+        .map(({ name }) => name)
+        .filter((name) => name.includes("/modules/camera/")),
+    })),
+  ).toEqual({ cameraDefined: false, cameraResources: [] });
+  await expect(page.locator("watchzone-card")).toContainText(
+    "No modules are configured.",
+  );
+});
+
 test("fits phone, tablet, and desktop viewports without horizontal overflow", async ({
   page,
 }) => {

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import "../src/main";
 import { DashboardCard } from "../src/card/watchzone-card";
@@ -31,6 +31,44 @@ describe("watchzone-card", () => {
 
     expect(element.shadowRoot?.querySelector("ha-card")).not.toBeNull();
     expect(element.shadowRoot?.textContent).toContain("Front Door");
+  });
+
+  it("keeps camera code and presentation absent from an empty layout", async () => {
+    const element = document.createElement("watchzone-card") as DashboardCard;
+    element.setConfig({ type: "custom:watchzone-card", title: "Events" });
+    document.body.append(element);
+    await element.updateComplete;
+
+    expect(customElements.get("wzc-camera")).toBeUndefined();
+    expect(element.shadowRoot?.querySelector("wzc-camera")).toBeNull();
+    expect(element.shadowRoot?.textContent).toContain(
+      "No modules are configured.",
+    );
+  });
+
+  it("preserves a configured camera module by its stable layout node ID", async () => {
+    const element = document.createElement("watchzone-card") as DashboardCard;
+    element.setConfig({
+      type: "custom:watchzone-card",
+      title: "Front",
+      camera_entity: "camera.front",
+    });
+    document.body.append(element);
+    const camera = await vi.waitFor(() => {
+      const current = element.shadowRoot?.querySelector("wzc-camera");
+      expect(current).not.toBeNull();
+      return current;
+    });
+
+    element.setConfig({
+      type: "custom:watchzone-card",
+      title: "Updated",
+      camera_entity: "camera.front",
+      camera_shadows: false,
+    });
+    await element.updateComplete;
+
+    expect(element.shadowRoot?.querySelector("wzc-camera")).toBe(camera);
   });
 
   it("does not rerender for unrelated hass assignments", async () => {

@@ -1,167 +1,97 @@
-import { LitElement } from "lit";
-import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
+import { CAMERA_MODULE_TYPE, CAMERA_TAG } from "../../core/constants";
+import { cameraImageUrl } from "../../core/home-assistant";
+import type { ModuleDefinition, ModuleRuntimeContext } from "../../core/module";
+import { LiveSourceResolver } from "../../providers/live-source-resolver";
+import type { CameraModule, CameraShadowStyle } from "./camera";
 
-import { CAMERA_LIVE_PRESENTATION_TAG, CAMERA_TAG } from "../../core/constants";
-import type { HomeAssistantApi } from "../../core/home-assistant";
-import { ToastManager } from "../../ui/toast-manager";
-import { cameraStyles } from "./camera.styles";
-import { CameraAudioController } from "./live/audio.controller";
-import type {
-  CameraLivePresentation,
-  CameraToastRequestDetail,
-} from "./live/presentation";
-import "./live/presentation";
-import { CameraLiveSessionController } from "./live/session.controller";
-
-export type CameraShadowStyle = "medium" | "none" | "small";
-
-const presentationTag = unsafeStatic(CAMERA_LIVE_PRESENTATION_TAG);
-
-/** Camera module composition root. Provider, audio, and presentation stay separate. */
-export class CameraModule extends LitElement {
-  public static properties = {
-    api: { attribute: false },
-    available: { attribute: false, type: Boolean },
-    entityId: { attribute: false },
-    lowLatencyHls: { attribute: false, type: Boolean },
-    posterUrl: { attribute: false },
-    roundedCorners: { attribute: false, type: Boolean },
-    shadowStyle: { attribute: false },
-    startUnmutedPcTablet: { attribute: false, type: Boolean },
-    startUnmutedPhone: { attribute: false, type: Boolean },
-  };
-
-  private readonly _toasts = new ToastManager(this);
-  private readonly _audio: CameraAudioController = new CameraAudioController(
-    this,
-    {
-      dismissToast: (key) => this._toasts.dismiss(key),
-      getMediaState: (): {
-        hls?: HTMLVideoElement;
-        selected?: "hls" | "webrtc";
-        webRtc?: HTMLVideoElement;
-      } => ({
-        hls: this._session.hlsVideo,
-        selected: this._session.selected,
-        webRtc: this._presentation?.webRtcVideo,
-      }),
-      showWarning: (message, key) => this._toasts.warning(message, { key }),
-    },
-  );
-  private readonly _session: CameraLiveSessionController =
-    new CameraLiveSessionController(this, {
-      getInitialMuted: (): boolean => this._audio.muted,
-      onActiveVideoChanged: (video) =>
-        this._audio.handleActiveVideoChanged(video),
-    });
-
-  public api?: HomeAssistantApi;
-  public available = false;
-  public entityId?: string;
-  public lowLatencyHls = true;
-  public posterUrl?: string;
-  public roundedCorners = true;
-  public shadowStyle: CameraShadowStyle = "medium";
-  public startUnmutedPcTablet = false;
-  public startUnmutedPhone = false;
-
-  private get _presentation(): CameraLivePresentation | undefined {
-    return (
-      this.renderRoot.querySelector<CameraLivePresentation>(
-        CAMERA_LIVE_PRESENTATION_TAG,
-      ) ?? undefined
-    );
-  }
-
-  protected willUpdate(): void {
-    this._audio.configure(
-      this.entityId,
-      this.startUnmutedPcTablet,
-      this.startUnmutedPhone,
-      false,
-    );
-    this._session.configure(
-      this.api,
-      this.entityId,
-      this.available,
-      this.lowLatencyHls,
-    );
-  }
-
-  protected render() {
-    return staticHtml`
-      <div
-        class=${[
-          "camera",
-          this.roundedCorners ? "" : "square-camera-corners",
-          this.shadowStyle === "small" ? "camera-shadow-small" : "",
-          this.shadowStyle === "none" ? "camera-shadow-none" : "",
-        ]
-          .filter(Boolean)
-          .join(" ")}
-      >
-        <${presentationTag}
-          class="live-presentation"
-          .available=${this.available}
-          .failed=${this._session.failed}
-          .hlsVideo=${this._session.hlsVideo}
-          .muted=${this._audio.muted}
-          .notices=${this._toasts.notices}
-          .posterUrl=${this.posterUrl}
-          .selected=${this._session.selected}
-          .sessionRevision=${this._session.revision}
-          .transport=${this._session.transport}
-          .webRtcStream=${this._session.webRtcStream}
-          .zoomKey=${this.entityId}
-          @camera-media-attached=${this._handleMediaAttached}
-          @camera-mute-toggle=${this._handleMuteToggle}
-          @camera-toast-request=${this._handleToastRequest}
-          @camera-webrtc-decoded=${this._handleWebRtcDecoded}
-          @camera-webrtc-presented=${this._handleWebRtcPresented}
-        ></${presentationTag}>
-      </div>
-    `;
-  }
-
-  protected updated(): void {
-    this._audio.syncMediaState();
-  }
-
-  private readonly _handleMediaAttached = (): void => {
-    this._audio.syncMediaState();
-  };
-
-  private readonly _handleMuteToggle = (): void => {
-    this._audio.toggleUserMute();
-  };
-
-  private readonly _handleToastRequest = (
-    event: CustomEvent<CameraToastRequestDetail>,
-  ): void => {
-    this._toasts.show(event.detail.severity, event.detail.message, {
-      key: event.detail.key,
-    });
-  };
-
-  private readonly _handleWebRtcDecoded = (
-    event: CustomEvent<HTMLVideoElement>,
-  ): void => {
-    this._session.handleWebRtcDecoded(event.detail);
-  };
-
-  private readonly _handleWebRtcPresented = (): void => {
-    this._session.handleWebRtcPresented();
-  };
-
-  static styles = cameraStyles;
+export interface CameraModuleConfig {
+  readonly entityId: string;
+  readonly lowLatencyHls: boolean;
+  readonly roundedCorners: boolean;
+  readonly shadowStyle: CameraShadowStyle;
+  readonly startUnmutedPcTablet: boolean;
+  readonly startUnmutedPhone: boolean;
 }
 
-if (!customElements.get(CAMERA_TAG)) {
-  customElements.define(CAMERA_TAG, CameraModule);
+const resolver = new LiveSourceResolver();
+let definitionPromise: Promise<void> | undefined;
+
+export const moduleDefinition: ModuleDefinition<CameraModuleConfig> = {
+  type: CAMERA_MODULE_TYPE,
+  validateConfig: validateCameraConfig,
+  getEntityIds: ({ entityId }) => [entityId],
+  async prepare(config, context) {
+    if (!context.api || !context.hass?.states[config.entityId])
+      return undefined;
+    const lease = await resolver.acquireHomeAssistantWebRtc(
+      context.api,
+      config.entityId,
+    );
+    return { release: () => lease.release() };
+  },
+  define() {
+    return (definitionPromise ??= import("./camera").then(() => undefined));
+  },
+  createElement() {
+    return document.createElement(CAMERA_TAG);
+  },
+  updateElement(element, config, context) {
+    updateCameraElement(element as CameraModule, config, context);
+  },
+};
+
+function updateCameraElement(
+  camera: CameraModule,
+  config: CameraModuleConfig,
+  context: ModuleRuntimeContext,
+): void {
+  camera.api = context.api;
+  camera.available = Boolean(context.hass?.states[config.entityId]);
+  camera.entityId = config.entityId;
+  camera.lowLatencyHls = config.lowLatencyHls;
+  camera.posterUrl = cameraImageUrl(context.hass, config.entityId);
+  camera.roundedCorners = config.roundedCorners;
+  camera.shadowStyle = config.shadowStyle;
+  camera.startUnmutedPcTablet = config.startUnmutedPcTablet;
+  camera.startUnmutedPhone = config.startUnmutedPhone;
 }
 
-declare global {
-  interface HTMLElementTagNameMap {
-    [CAMERA_TAG]: CameraModule;
+function validateCameraConfig(value: unknown): CameraModuleConfig {
+  if (typeof value !== "object" || value === null) {
+    throw new Error("Camera module configuration must be an object.");
   }
+  const source = value as Record<string, unknown>;
+  if (
+    typeof source.entityId !== "string" ||
+    !source.entityId.startsWith("camera.")
+  ) {
+    throw new Error("Camera modules require a camera entity ID.");
+  }
+  for (const key of [
+    "lowLatencyHls",
+    "roundedCorners",
+    "startUnmutedPcTablet",
+    "startUnmutedPhone",
+  ] as const) {
+    if (typeof source[key] !== "boolean") {
+      throw new Error(`Camera module ${key} must be a boolean.`);
+    }
+  }
+  if (
+    source.shadowStyle !== "medium" &&
+    source.shadowStyle !== "small" &&
+    source.shadowStyle !== "none"
+  ) {
+    throw new Error("Camera module shadowStyle is invalid.");
+  }
+  return {
+    entityId: source.entityId,
+    lowLatencyHls: source.lowLatencyHls as boolean,
+    roundedCorners: source.roundedCorners as boolean,
+    shadowStyle: source.shadowStyle,
+    startUnmutedPcTablet: source.startUnmutedPcTablet as boolean,
+    startUnmutedPhone: source.startUnmutedPhone as boolean,
+  };
 }
+
+export type { CameraModule, CameraShadowStyle } from "./camera";

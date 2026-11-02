@@ -65,31 +65,58 @@ export const cardStyles = css`
     text-align: center;
   }
 
-  .camera-module,
-  .live-placeholder,
-  .live-error,
-  .empty {
+  .layout-root,
+  .layout-container,
+  .module-slot,
+  .module-placeholder,
+  .module-error,
+  .layout-empty,
+  .layout-error {
+    box-sizing: border-box;
     inline-size: 100%;
     min-inline-size: 0;
   }
 
-  .camera-module,
-  .live-placeholder {
+  .layout-root,
+  .layout-container,
+  .module-slot {
     block-size: 100%;
     min-block-size: 0;
   }
 
-  .live-placeholder {
-    aspect-ratio: var(--wzc-camera-stage-aspect-ratio);
-    background: var(--wzc-camera-stage);
+  .layout-container {
     display: grid;
-    place-items: center;
-    color: var(--wzc-color-text-2);
-    text-align: center;
+    align-items: stretch;
+    gap: var(--wzc-card-padding);
   }
 
-  .live-error,
-  .empty {
+  .layout-container.single-child {
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .module-slot {
+    display: block;
+  }
+
+  .module-slot.module-loading.reserve-aspect-ratio {
+    aspect-ratio: var(--wzc-camera-stage-aspect-ratio);
+    background: var(--wzc-camera-stage);
+  }
+
+  .module-slot > * {
+    inline-size: 100%;
+    min-inline-size: 0;
+  }
+
+  .module-slot.module-ready > * {
+    block-size: 100%;
+    min-block-size: 0;
+  }
+
+  .module-placeholder,
+  .module-error,
+  .layout-empty,
+  .layout-error {
     display: grid;
     place-items: center;
     min-block-size: 10rem;
@@ -97,7 +124,12 @@ export const cardStyles = css`
     text-align: center;
   }
 
-  .live-error {
+  .module-placeholder {
+    min-block-size: 100%;
+  }
+
+  .module-error,
+  .layout-error {
     gap: 0.75rem;
     color: var(--wzc-color-error);
   }

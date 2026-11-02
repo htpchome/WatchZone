@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import type { CameraModule } from "../src/modules/camera";
+import type { CameraModule } from "../src/modules/camera/camera";
 import type { CameraLivePresentation } from "../src/modules/camera/live/presentation";
-import "../src/modules/camera";
+import "../src/modules/camera/camera";
 import "../src/modules/camera/live/presentation";
 
 afterEach(() => {

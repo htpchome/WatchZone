@@ -5,9 +5,9 @@ import {
   type ConnectionFactory,
   getMediaSessionManager,
 } from "../src/core/media-session-manager";
-import type { CameraModule } from "../src/modules/camera";
+import type { CameraModule } from "../src/modules/camera/camera";
 import type { CameraLivePresentation } from "../src/modules/camera/live/presentation";
-import "../src/modules/camera";
+import "../src/modules/camera/camera";
 import {
   installTestMediaSessionManager,
   removeTestMediaSessionManager,
