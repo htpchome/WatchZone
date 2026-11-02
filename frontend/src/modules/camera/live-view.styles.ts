@@ -44,12 +44,12 @@ export const cameraLiveViewStyles = css`
   }
 
   .media-surface.zoomed {
-    cursor: grab;
+    cursor: move;
     touch-action: none;
   }
 
   .media-surface.interacting {
-    cursor: grabbing;
+    cursor: move;
     transition: none;
   }
 

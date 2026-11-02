@@ -12,7 +12,7 @@ export const cameraControlsStyles = css`
 
     --wzc-control-size: 2.75rem;
     --wzc-control-icon-size: 1.65rem;
-    --wzc-control-gap: 0.3rem;
+    --wzc-control-gap: 0.5rem;
     --wzc-control-safe-inline: 0.75rem;
   }
 
@@ -67,7 +67,7 @@ export const cameraControlsStyles = css`
 
   @media (hover: hover) and (pointer: fine) {
     .control-button:hover:not(:disabled) {
-      color: var(--wzc-control-hover-color, var(--wzc-color-text-reversed));
+      color: var(--wzc-control-hover-color, var(--wzc-media-overlay-color));
       background: var(
         --wzc-control-hover-background,
         var(--wzc-media-overlay-hover-background)
@@ -104,7 +104,7 @@ export const cameraControlsStyles = css`
     .control-group {
       --wzc-control-size: 2.25rem;
       --wzc-control-icon-size: 1.3rem;
-      --wzc-control-gap: 0.125rem;
+      --wzc-control-gap: 0.3rem;
     }
   }
 
@@ -112,7 +112,7 @@ export const cameraControlsStyles = css`
     .control-group {
       --wzc-control-size: 1.875rem;
       --wzc-control-icon-size: 1.15rem;
-      --wzc-control-gap: 0.1rem;
+      --wzc-control-gap: 0.2rem;
     }
   }
 

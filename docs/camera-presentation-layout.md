@@ -15,10 +15,13 @@ document remains authoritative for application-wide boundaries.
 
 ## Default sizing
 
-The card advertises six columns and automatic row sizing in Home Assistant's
-sections view. Its content therefore determines the default height. The camera
-stage reserves `--wzc-camera-stage-aspect-ratio`, which defaults to `16 / 9`.
-The title, gap, and outer padding are outside that ratio.
+The card advertises Home Assistant's `full` width and explicit automatic row
+sizing in sections view. Home Assistant does not expose an automatic-width
+grid value; `full` makes a new card consume its entire available section row,
+including a section that spans multiple columns. Content determines the
+default height. The camera stage reserves `--wzc-camera-stage-aspect-ratio`,
+which defaults to `16 / 9`. The title, gap, and outer padding are outside that
+ratio.
 
 The lazy-loading placeholder reserves the same stage ratio and background as
 the loaded camera module. Loading the camera code, fallback image, HLS, or

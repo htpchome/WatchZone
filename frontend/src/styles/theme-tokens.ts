@@ -135,12 +135,13 @@ export const themeTokens = css`
     --wzc-live-shadow: var(--wzc-shadow-medium);
     --wzc-zoom-transition-duration: 180ms;
 
-    --wzc-media-overlay-color: var(--wzc-color-background);
+    --wzc-media-overlay-color: var(--ha-color-neutral-95, #f2f2f2);
+    --wzc-media-overlay-surface: var(--ha-color-neutral-05, #111111);
     --wzc-media-overlay-opacity: 72%;
     --wzc-media-overlay-hover-opacity: 84%;
     --wzc-media-overlay-background: color-mix(
       in srgb,
-      var(--wzc-color-text-1) var(--wzc-media-overlay-opacity),
+      var(--wzc-media-overlay-surface) var(--wzc-media-overlay-opacity),
       transparent
     );
     --wzc-media-overlay-hover-background: color-mix(
@@ -148,11 +149,7 @@ export const themeTokens = css`
       var(--wzc-color-primary) var(--wzc-media-overlay-hover-opacity),
       transparent
     );
-    --wzc-media-overlay-border-color: color-mix(
-      in srgb,
-      var(--wzc-media-overlay-color) 45%,
-      transparent
-    );
+    --wzc-media-overlay-border-color: var(--ha-color-neutral-30, #4a4a4a);
     --wzc-media-overlay-radius: var(--wzc-radius-small);
     --wzc-media-overlay-shadow: var(--wzc-shadow-card);
     --wzc-media-overlay-transition-duration: 140ms;

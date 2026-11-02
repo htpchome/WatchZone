@@ -13,13 +13,13 @@ describe("watchzone-card", () => {
     expect(customElements.get("wzc-card")).toBeUndefined();
   });
 
-  it("defaults sections layout to automatic height with a usable resize floor", () => {
+  it("defaults new section cards to full width and automatic height", () => {
     const element = document.createElement("watchzone-card") as DashboardCard;
 
     expect(element.getGridOptions()).toEqual({
-      columns: 6,
+      columns: "full",
       min_columns: 3,
-      min_rows: 2,
+      rows: "auto",
     });
   });
 

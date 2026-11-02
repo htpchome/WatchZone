@@ -4,6 +4,7 @@ const EDIT_CARD_DIALOG_TAG = "HUI-DIALOG-EDIT-CARD";
 const SECTION_PREVIEW_MAX_WIDTH = "100%";
 const SECTION_PREVIEW_MAX_WIDTH_PROPERTY =
   "--ha-view-sections-column-max-width";
+const DIALOG_CLOSED_EVENT = "dialog-closed";
 
 interface HomeAssistantEditCardDialog<T> extends HTMLElement {
   _cardConfig?: T;
@@ -15,10 +16,59 @@ interface InlinePropertyState {
   readonly value: string;
 }
 
+interface PreviewWidthOverride {
+  readonly closeHandler: EventListener;
+  readonly previous: InlinePropertyState;
+}
+
+const previewWidthOverrides = new WeakMap<HTMLElement, PreviewWidthOverride>();
+
+function releasePreviewWidth(dialog: HTMLElement): void {
+  const override = previewWidthOverrides.get(dialog);
+  if (!override) return;
+  dialog.removeEventListener(DIALOG_CLOSED_EVENT, override.closeHandler);
+  const ownsPreviewWidth =
+    dialog.style.getPropertyValue(SECTION_PREVIEW_MAX_WIDTH_PROPERTY).trim() ===
+      SECTION_PREVIEW_MAX_WIDTH &&
+    dialog.style.getPropertyPriority(SECTION_PREVIEW_MAX_WIDTH_PROPERTY) ===
+      "important";
+  if (ownsPreviewWidth) {
+    if (override.previous.value) {
+      dialog.style.setProperty(
+        SECTION_PREVIEW_MAX_WIDTH_PROPERTY,
+        override.previous.value,
+        override.previous.priority,
+      );
+    } else {
+      dialog.style.removeProperty(SECTION_PREVIEW_MAX_WIDTH_PROPERTY);
+    }
+  }
+  previewWidthOverrides.delete(dialog);
+}
+
+function retainPreviewWidth(dialog: HTMLElement): void {
+  if (previewWidthOverrides.has(dialog)) return;
+  const closeHandler = (): void => releasePreviewWidth(dialog);
+  previewWidthOverrides.set(dialog, {
+    closeHandler,
+    previous: {
+      priority: dialog.style.getPropertyPriority(
+        SECTION_PREVIEW_MAX_WIDTH_PROPERTY,
+      ),
+      value: dialog.style.getPropertyValue(SECTION_PREVIEW_MAX_WIDTH_PROPERTY),
+    },
+  });
+  dialog.addEventListener(DIALOG_CLOSED_EVENT, closeHandler, { once: true });
+  dialog.style.setProperty(
+    SECTION_PREVIEW_MAX_WIDTH_PROPERTY,
+    SECTION_PREVIEW_MAX_WIDTH,
+    "important",
+  );
+}
+
 /** Isolates the narrow Home Assistant edit-dialog compatibility boundary. */
 export class HomeAssistantEditorBridge<T> implements ReactiveController {
   private _dialog?: HomeAssistantEditCardDialog<T>;
-  private _previousPreviewWidth?: InlinePropertyState;
 
   public constructor(
     private readonly _host: ReactiveControllerHost & HTMLElement,
@@ -29,44 +79,14 @@ export class HomeAssistantEditorBridge<T> implements ReactiveController {
   public hostConnected(): void {
     this._dialog = this._findDialog();
     if (!this._dialog) return;
-    this._previousPreviewWidth = {
-      priority: this._dialog.style.getPropertyPriority(
-        SECTION_PREVIEW_MAX_WIDTH_PROPERTY,
-      ),
-      value: this._dialog.style.getPropertyValue(
-        SECTION_PREVIEW_MAX_WIDTH_PROPERTY,
-      ),
-    };
-    this._dialog.style.setProperty(
-      SECTION_PREVIEW_MAX_WIDTH_PROPERTY,
-      SECTION_PREVIEW_MAX_WIDTH,
-      "important",
-    );
+    retainPreviewWidth(this._dialog);
   }
 
   public hostDisconnected(): void {
-    const ownsPreviewWidth = Boolean(
-      this._dialog &&
-      this._dialog.style
-        .getPropertyValue(SECTION_PREVIEW_MAX_WIDTH_PROPERTY)
-        .trim() === SECTION_PREVIEW_MAX_WIDTH &&
-      this._dialog.style.getPropertyPriority(
-        SECTION_PREVIEW_MAX_WIDTH_PROPERTY,
-      ) === "important",
-    );
-    if (this._dialog && this._previousPreviewWidth && ownsPreviewWidth) {
-      if (this._previousPreviewWidth.value) {
-        this._dialog.style.setProperty(
-          SECTION_PREVIEW_MAX_WIDTH_PROPERTY,
-          this._previousPreviewWidth.value,
-          this._previousPreviewWidth.priority,
-        );
-      } else {
-        this._dialog.style.removeProperty(SECTION_PREVIEW_MAX_WIDTH_PROPERTY);
-      }
+    if (this._dialog && !this._dialog.isConnected) {
+      releasePreviewWidth(this._dialog);
     }
     this._dialog = undefined;
-    this._previousPreviewWidth = undefined;
   }
 
   public commitDraftForSave(draft: T): boolean {

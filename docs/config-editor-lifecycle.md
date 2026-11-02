@@ -55,10 +55,14 @@ Home Assistant also caps a sections-view editor preview to
 `--ha-view-sections-column-max-width`, including while the edit dialog is in
 large mode. The same bridge temporarily sets that inherited property to `100%`
 on the active WatchZone dialog so the preview can use the available preview
-pane. It records and restores the prior inline value and priority when the
-editor disconnects. Failure to find the expected dialog degrades to Home
-Assistant's default preview width; it must never affect card rendering or saved
-configuration.
+pane. The override belongs to the edit dialog rather than the custom Config
+tab: Home Assistant may disconnect that editor when switching to Visibility or
+Layout while retaining the same preview. The bridge therefore keeps the width
+uniform across every tab and records and restores the prior inline value and
+priority when the dialog closes. Re-entering Config reuses the same dialog-
+scoped override instead of stacking another one. Failure to find the expected
+dialog degrades to Home Assistant's default preview width; it must never affect
+card rendering or saved configuration.
 
 If the dirty-state context or Save boundary is unavailable, the compatibility
 path emits one public `config-changed` event with the complete draft. Typing may

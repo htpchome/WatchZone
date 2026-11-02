@@ -204,6 +204,8 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
       "--wzc-live-shadow",
       "--wzc-media-overlay-opacity",
       "--wzc-media-overlay-hover-opacity",
+      "--wzc-media-overlay-surface",
+      "--wzc-media-overlay-border-color",
     ];
     const host = element as HTMLElement;
     host.style.setProperty("--wzc-color-text-1", "rgb(10, 20, 30)");
@@ -799,6 +801,7 @@ test("retains one live connection while the card presentation is replaced", asyn
   const mediaSurface = page.locator("wzc-camera-live .media-surface");
   await mediaSurface.dblclick({ position: { x: 120, y: 80 } });
   await expect(mediaSurface).toHaveAttribute("style", /scale\(2\)/);
+  await expect(mediaSurface).toHaveCSS("cursor", "move");
   await mediaSurface.dispatchEvent("wheel", {
     clientX: 120,
     clientY: 80,
@@ -980,13 +983,15 @@ test("retains one live connection while the card presentation is replaced", asyn
       (border) => border === indicatorPresentation.border,
     ),
   ).toBe(true);
-  expect(cssAlpha(indicatorPresentation.border)).toBeCloseTo(0.45, 2);
+  expect(cssAlpha(indicatorPresentation.border)).toBe(1);
+  expect(indicatorPresentation.border).toBe("rgb(74, 74, 74)");
   expect(indicatorPresentation.borderRadius).not.toBe("999px");
   const mute = page.locator(
     'wzc-camera wzc-camera-controls [data-control="mute"]',
   );
   await page.locator("watchzone-card").evaluate((element) => {
     element.style.setProperty("--wzc-color-primary", "rgb(0, 120, 255)");
+    element.style.setProperty("--wzc-color-text-reversed", "rgb(1, 2, 3)");
   });
   const restingBackground = await mute.evaluate(
     (element) => getComputedStyle(element).backgroundColor,
@@ -998,6 +1003,9 @@ test("retains one live connection while the card presentation is replaced", asyn
   expect(hoverBackground).not.toBe("rgba(0, 0, 0, 0)");
   expect(hoverBackground).not.toBe(restingBackground);
   expect(cssAlpha(hoverBackground)).toBeCloseTo(0.84, 2);
+  expect(
+    await mute.evaluate((element) => getComputedStyle(element).color),
+  ).toBe("rgb(242, 242, 242)");
   await expect(
     page.locator('wzc-camera wzc-camera-controls [data-control="snapshot"]'),
   ).toBeDisabled();
