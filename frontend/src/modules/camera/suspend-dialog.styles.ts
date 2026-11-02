@@ -34,6 +34,44 @@ export const cameraSuspendDialogStyles = css`
     margin: 0;
   }
 
+  header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 0.75rem;
+  }
+
+  .heading-copy {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .dialog-icon {
+    display: grid;
+    place-items: center;
+    box-sizing: border-box;
+    inline-size: 2.5rem;
+    block-size: 2.5rem;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+  }
+
+  .dialog-icon.suspend {
+    color: var(--wzc-color-error);
+    background: var(--wzc-color-fill-error-quiet);
+  }
+
+  .dialog-icon.resume {
+    color: var(--wzc-color-success);
+    background: var(--wzc-color-fill-success-quiet);
+  }
+
+  .dialog-icon svg {
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    fill: currentColor;
+  }
+
   h2 {
     font-size: 1.25rem;
     line-height: var(--wzc-line-height-condensed);
@@ -46,12 +84,9 @@ export const cameraSuspendDialogStyles = css`
 
   .warning {
     padding: 0.75rem;
-    color: var(--wzc-color-on-warning);
-    background: color-mix(
-      in srgb,
-      var(--wzc-color-fill-warning) 70%,
-      transparent
-    );
+    color: var(--wzc-color-warning-text);
+    background: var(--wzc-color-fill-warning-quiet);
+    border: 1px solid var(--wzc-color-border-warning);
     border-radius: var(--wzc-radius-medium);
   }
 
@@ -64,9 +99,47 @@ export const cameraSuspendDialogStyles = css`
   }
 
   .timer-toggle input {
+    position: relative;
+    box-sizing: border-box;
     inline-size: 2.75rem;
     block-size: 1.5rem;
-    accent-color: var(--wzc-color-primary);
+    margin: 0;
+    appearance: none;
+    background: var(--wzc-color-surface-secondary);
+    border: 1px solid var(--wzc-color-border-control);
+    border-radius: var(--wzc-radius-pill);
+    cursor: pointer;
+    transition:
+      background var(--wzc-media-overlay-transition-duration) ease,
+      border-color var(--wzc-media-overlay-transition-duration) ease;
+  }
+
+  .timer-toggle input::before {
+    position: absolute;
+    inset-block-start: 0.1875rem;
+    inset-inline-start: 0.1875rem;
+    inline-size: 1rem;
+    block-size: 1rem;
+    content: "";
+    background: var(--wzc-color-text-2);
+    border-radius: 50%;
+    transition: inset-inline-start var(--wzc-media-overlay-transition-duration)
+      ease;
+  }
+
+  .timer-toggle input:checked {
+    background: var(--wzc-color-primary);
+    border-color: var(--wzc-color-primary);
+  }
+
+  .timer-toggle input:checked::before {
+    inset-inline-start: calc(100% - 1.1875rem);
+    background: var(--wzc-color-text-reversed);
+  }
+
+  .timer-toggle input:focus-visible {
+    outline: 2px solid var(--wzc-color-primary);
+    outline-offset: 2px;
   }
 
   .duration {
@@ -107,7 +180,7 @@ export const cameraSuspendDialogStyles = css`
     color: var(--wzc-color-text-1);
     background: transparent;
     border: 1px solid var(--wzc-color-border-control);
-    border-radius: var(--wzc-radius-button);
+    border-radius: var(--wzc-radius-medium);
     font: inherit;
     cursor: pointer;
   }
@@ -122,6 +195,10 @@ export const cameraSuspendDialogStyles = css`
     color: var(--wzc-color-on-success);
     background: var(--wzc-color-fill-success);
     border-color: var(--wzc-color-success);
+  }
+
+  button[type="button"] {
+    background: var(--wzc-color-surface-secondary);
   }
 
   button:disabled,

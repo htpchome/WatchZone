@@ -1,6 +1,7 @@
 import { html, LitElement, nothing } from "lit";
 
 import { APP_NAME, CAMERA_SUSPEND_DIALOG_TAG } from "../../core/constants";
+import { renderIcon } from "../../ui/icons";
 import { cameraSuspendDialogStyles } from "./suspend-dialog.styles";
 
 export interface CameraSuspendConfirmDetail {
@@ -28,21 +29,32 @@ export class CameraSuspendDialog extends LitElement {
     const durationSeconds = this._durationSeconds();
     return html`<dialog @cancel=${this._cancel} @close=${this._closed}>
       <form @submit=${this._confirm}>
-        <h2>${suspending ? "Suspend camera?" : "Resume camera?"}</h2>
-        <p>
-          ${
-            suspending
-              ? "Suspending this camera in Frigate stops live video, recordings, and detections. Existing recordings, clips, and snapshots remain available."
-              : "Resuming this camera restores live video, recordings, and detections. Frigate may need a short time before live video becomes available."
-          }
-        </p>
+        <header>
+          <span
+            class=${suspending ? "dialog-icon suspend" : "dialog-icon resume"}
+            aria-hidden="true"
+            >${renderIcon("power")}</span
+          >
+          <div class="heading-copy">
+            <h2>${suspending ? "Suspend camera?" : "Resume camera?"}</h2>
+            <p>
+              ${
+                suspending
+                  ? "Suspending this camera in Frigate stops live video, recordings, and detections. Existing recordings, clips, and snapshots remain available."
+                  : "Resuming this camera restores live video, recordings, and detections. Frigate may need a short time before live video becomes available."
+              }
+            </p>
+          </div>
+        </header>
         ${
           suspending
             ? html`<p class="warning">
-                  Direct camera recording and direct go2rtc connections are not
-                  stopped. ${APP_NAME} will preserve this suspension across Home
-                  Assistant or Frigate restarts until you resume it or its timer
-                  expires.
+                  <strong>Warning:</strong> Suspending this camera disables live
+                  view, recording, and detections in Frigate, Home Assistant,
+                  and ${APP_NAME}. It does not stop recording to the camera's
+                  storage or direct live connections through go2rtc. ${APP_NAME}
+                  preserves the suspension across Home Assistant or Frigate
+                  restarts until you resume it or its timer expires.
                 </p>
                 <label class="timer-toggle">
                   <span>Automatically resume</span>

@@ -86,6 +86,7 @@ export class CameraLiveSessionController implements ReactiveController {
     entityId: string | undefined,
     available: boolean,
     lowLatencyHls = true,
+    retainWhenInactive = true,
   ): void {
     const changed =
       this._api?.identity !== api?.identity ||
@@ -95,7 +96,10 @@ export class CameraLiveSessionController implements ReactiveController {
     this._entityId = entityId;
     this._available = available;
     this._lowLatencyHls = lowLatencyHls;
-    if (changed || !available) this._releaseAll();
+    if (changed || !available) {
+      if (!available && !retainWhenInactive) this._discardAll();
+      else this._releaseAll();
+    }
     this._sync();
     this._host.requestUpdate();
   }
@@ -287,11 +291,20 @@ export class CameraLiveSessionController implements ReactiveController {
     this._releaseHls();
   }
 
-  private _releaseWebRtc(): void {
+  private _discardAll(): void {
+    this._clearSelection();
+    this._webRtcDecoded = false;
+    this._retryWebRtcAfterHlsRecovery = false;
+    this._releaseWebRtc(true);
+    this._releaseHls(true);
+  }
+
+  private _releaseWebRtc(discard = false): void {
     this._webRtcPendingKey = undefined;
     this._webRtcUnsubscribe?.();
     this._webRtcUnsubscribe = undefined;
-    this._webRtcLease?.release();
+    if (discard) this._webRtcLease?.discard();
+    else this._webRtcLease?.release();
     this._webRtcLease = undefined;
     this._webRtcSnapshot = { state: "new" };
   }

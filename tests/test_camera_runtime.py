@@ -79,10 +79,72 @@ async def test_timed_suspension_is_persisted_and_reapplied(
 
     assert snapshot.resume_at is not None
     assert snapshot.supported is True
+    assert snapshot.suspended is True
     assert provider.async_set_suspended.await_count == 2
     assert provider.async_set_suspended.await_args_list[0].args[2] is True
     assert provider.async_set_suspended.await_args_list[1].args[2] is True
     service._store.async_save.assert_awaited_once()  # type: ignore[attr-defined]
+    await service.async_close()
+
+
+async def test_runtime_changes_publish_to_every_subscribed_client(
+    hass: HomeAssistant,
+) -> None:
+    """Commands broadcast intent immediately without waiting for entity events."""
+    provider_suspended = False
+
+    async def get_state(
+        _hass: HomeAssistant, _entity_id: str
+    ) -> CameraRuntimeState:
+        return CameraRuntimeState(
+            available=True,
+            provider="frigate",
+            supported=True,
+            suspended=provider_suspended,
+        )
+
+    async def set_suspended(
+        _hass: HomeAssistant,
+        _entity_id: str,
+        suspended: bool,
+        _context: Context | None,
+    ) -> None:
+        nonlocal provider_suspended
+        provider_suspended = suspended
+
+    provider = SimpleNamespace(
+        async_get_state=get_state,
+        async_set_suspended=set_suspended,
+    )
+    service = CameraRuntimeService(hass)
+    service._store.async_save = AsyncMock()  # type: ignore[method-assign]
+    first_listener = Mock()
+    second_listener = Mock()
+
+    with patch.object(service, "_provider", return_value=provider):
+        unsubscribe_first = service.async_subscribe(
+            "camera.porch", first_listener
+        )
+        unsubscribe_second = service.async_subscribe(
+            "camera.porch", second_listener
+        )
+        await service.async_set_suspended(
+            "camera.porch", True, None, Context(user_id="user")
+        )
+        await service.async_set_suspended(
+            "camera.porch", False, None, Context(user_id="user")
+        )
+
+    assert [call.args[0].suspended for call in first_listener.call_args_list] == [
+        True,
+        False,
+    ]
+    assert [call.args[0].suspended for call in second_listener.call_args_list] == [
+        True,
+        False,
+    ]
+    unsubscribe_first()
+    unsubscribe_second()
     await service.async_close()
 
 

@@ -98,6 +98,7 @@ export class CameraModule extends LitElement {
       this.entityId,
       this.available && runtime?.available !== false && !suspended,
       this.lowLatencyHls,
+      !suspended,
     );
   }
 

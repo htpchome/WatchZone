@@ -99,7 +99,7 @@ export const cameraLiveViewStyles = css`
     gap: 0.5rem;
     padding: 1.5rem;
     color: var(--wzc-media-overlay-color);
-    background: var(--wzc-camera-stage);
+    background: var(--wzc-camera-suspended-background);
     text-align: center;
   }
 
@@ -113,8 +113,9 @@ export const cameraLiveViewStyles = css`
     place-items: center;
     inline-size: 3rem;
     block-size: 3rem;
-    background: var(--wzc-media-overlay-background);
-    border: 1px solid var(--wzc-media-overlay-border-color);
+    color: var(--wzc-camera-suspended-icon-color);
+    background: transparent;
+    border: 1px solid var(--wzc-camera-suspended-icon-border-color);
     border-radius: 50%;
     font-size: 1.75rem;
   }
@@ -122,6 +123,10 @@ export const cameraLiveViewStyles = css`
   .suspended-icon svg {
     inline-size: 1.75rem;
     block-size: 1.75rem;
+  }
+
+  .suspended-presentation strong {
+    font-weight: var(--wzc-font-weight-semibold);
   }
 
   .hls-host,

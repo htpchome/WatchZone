@@ -32,8 +32,12 @@ again. A timed resume remains scheduled from its persisted UTC deadline. If the
 provider is temporarily unavailable at the deadline, resume is retried at a
 bounded one-minute interval until it succeeds or the integration unloads.
 
-Suspending releases the frontend media lease. Resuming creates a fresh live
+Suspending discards the frontend media lease. Resuming creates a fresh live
 connection rather than attempting to reuse a stream that may be stale.
+
+Every runtime command and provider state change is broadcast to all subscribed
+cards. A suspend or resume initiated in one browser therefore updates the
+presentation and media lifecycle in every other open browser without a refresh.
 
 ## Authorization
 

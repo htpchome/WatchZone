@@ -128,6 +128,7 @@ export class CameraLivePresentation extends LitElement {
     if (changed.has("transport") && this.transport)
       this._visibility.revealSource();
     if (changed.has("zoomKey")) this._zoom.configure(this.zoomKey);
+    if (changed.has("suspended") && this.suspended) this._zoom.reset();
   }
 
   protected render() {
@@ -233,7 +234,7 @@ export class CameraLivePresentation extends LitElement {
         ${
           this.selected || this.suspended
             ? staticHtml`<${controlsTag}
-                .visible=${this._visibility.visible}
+                .visible=${this.suspended || this._visibility.visible}
                 .fullscreenActive=${this._fullscreenActive}
                 .fullscreenSupported=${this._fullscreenSupported()}
                 .muted=${this.muted}
@@ -327,7 +328,7 @@ export class CameraLivePresentation extends LitElement {
   private _renderSuspended() {
     return html`<div class="suspended-presentation" role="status">
       <span class="suspended-icon" aria-hidden="true"
-        >${renderIcon("power")}</span
+        >${renderIcon("videoOff")}</span
       >
       <strong>Camera suspended</strong>
       <span>Resume this camera to restore live video.</span>

@@ -641,22 +641,26 @@ test("retains one live connection while the card presentation is replaced", asyn
 
     window.RTCPeerConnection =
       TestPeerConnection as unknown as typeof RTCPeerConnection;
+    let runtimeSuspended = false;
+    const runtimeSubscribers = new Set<(message: unknown) => void>();
+    const runtimeSnapshot = (entityId: string | undefined) => ({
+      available: true,
+      entity_id: entityId,
+      provider: "frigate",
+      resume_at: null,
+      supported: true,
+      suspended: runtimeSuspended,
+    });
     const connection = {
       subscribeMessage: async (
         callback: (message: unknown) => void,
         message: { entity_id?: string; type: string },
       ) => {
         if (message.type === "watchzone/camera/runtime/subscribe") {
-          callback({
-            available: true,
-            entity_id: message.entity_id,
-            provider: "frigate",
-            resume_at: null,
-            supported: true,
-            suspended: false,
-          });
+          runtimeSubscribers.add(callback);
+          callback(runtimeSnapshot(message.entity_id));
         }
-        return () => undefined;
+        return () => runtimeSubscribers.delete(callback);
       },
     };
     const hass = {
@@ -672,7 +676,11 @@ test("retains one live connection while the card presentation is replaced", asyn
       },
       connection,
       hassUrl: (path: string) => path,
-      callWS: async (message: { type: string }) => {
+      callWS: async (message: {
+        entity_id?: string;
+        suspended?: boolean;
+        type: string;
+      }) => {
         if (message.type === "camera/webrtc/get_client_config") {
           testWindow.__wzcTestConnectionCount += 1;
           return { configuration: { iceServers: [] } };
@@ -681,6 +689,12 @@ test("retains one live connection while the card presentation is replaced", asyn
           // Keep the hedged HLS candidate in startup so WebRTC takeover must
           // cancel it without producing an unhandled browser rejection.
           return new Promise(() => undefined);
+        }
+        if (message.type === "watchzone/camera/runtime/set") {
+          runtimeSuspended = message.suspended === true;
+          const snapshot = runtimeSnapshot(message.entity_id);
+          for (const subscriber of runtimeSubscribers) subscriber(snapshot);
+          return snapshot;
         }
         return undefined;
       },
@@ -880,6 +894,46 @@ test("retains one live connection while the card presentation is replaced", asyn
   await expect(suspendDialog.locator('input[type="number"]')).toHaveCount(2);
   await suspendDialog.getByRole("button", { name: "Cancel" }).click();
   await expect(suspendDialog).toBeHidden();
+  await page.locator('wzc-camera-controls [data-control="suspend"]').click();
+  await expect(suspendDialog).toBeVisible();
+  await suspendDialog.getByRole("button", { name: "Suspend camera" }).click();
+  await expect(suspendDialog).toBeHidden();
+  const suspendedPresentation = page.locator(
+    "wzc-camera-live .suspended-presentation",
+  );
+  await expect(suspendedPresentation).toBeVisible();
+  await expect(suspendedPresentation).toContainText("Camera suspended");
+  await expect(suspendedPresentation).toContainText(
+    "Resume this camera to restore live video.",
+  );
+  await expect(page.locator("wzc-camera video")).toHaveCount(0);
+  const resumeControl = page.locator(
+    'wzc-camera-controls [data-control="suspend"]',
+  );
+  await expect(resumeControl).toBeVisible();
+  await expect(resumeControl).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("wzc-camera-controls .control-button")).toHaveCount(
+    1,
+  );
+  await resumeControl.click();
+  await expect(suspendDialog).toBeVisible();
+  await suspendDialog.getByRole("button", { name: "Resume camera" }).click();
+  await expect(suspendDialog).toBeHidden();
+  await expect(suspendedPresentation).toHaveCount(0);
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const testWindow = window as unknown as Window & {
+          __wzcTestConnectionCount: number;
+        };
+        return testWindow.__wzcTestConnectionCount;
+      }),
+    )
+    .toBe(2);
+  await page
+    .locator("wzc-camera video.webrtc")
+    .evaluate((element) => element.dispatchEvent(new Event("loadeddata")));
+  await expect(connectionIndicator).toHaveText("WebRTC");
   const overlayTransitions = await page.evaluate(() => {
     const camera = document.querySelector("wzc-camera");
     const presentation = camera?.shadowRoot?.querySelector("wzc-camera-live");
@@ -1112,7 +1166,7 @@ test("retains one live connection while the card presentation is replaced", asyn
         return testWindow.__wzcTestConnectionCount;
       }),
     )
-    .toBe(1);
+    .toBe(2);
 
   await page.mouse.move(0, 0);
   await viewport.dispatchEvent("pointerdown", {

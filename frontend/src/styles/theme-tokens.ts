@@ -67,6 +67,10 @@ export const themeTokens = css`
       --ha-color-fill-danger-loud-resting,
       var(--wzc-color-error)
     );
+    --wzc-color-fill-error-quiet: var(
+      --ha-color-fill-danger-quiet-resting,
+      color-mix(in srgb, var(--wzc-color-error) 12%, transparent)
+    );
     --wzc-color-fill-warning: var(
       --ha-color-fill-warning-loud-resting,
       var(--wzc-color-warning)
@@ -74,6 +78,18 @@ export const themeTokens = css`
     --wzc-color-fill-success: var(
       --ha-color-fill-success-loud-resting,
       var(--wzc-color-success)
+    );
+    --wzc-color-fill-success-quiet: var(
+      --ha-color-fill-success-quiet-resting,
+      color-mix(in srgb, var(--wzc-color-success) 12%, transparent)
+    );
+    --wzc-color-fill-warning-quiet: var(
+      --ha-color-fill-warning-quiet-resting,
+      color-mix(in srgb, var(--wzc-color-warning) 18%, transparent)
+    );
+    --wzc-color-warning-text: var(
+      --ha-color-on-warning-quiet,
+      var(--wzc-color-text-1)
     );
     --wzc-color-border: var(
       --ha-card-border-color,
@@ -86,6 +102,10 @@ export const themeTokens = css`
     --wzc-color-border-danger: var(
       --ha-color-border-danger-quiet,
       var(--wzc-color-error)
+    );
+    --wzc-color-border-warning: var(
+      --ha-color-border-warning-normal,
+      var(--wzc-color-warning)
     );
     --wzc-color-fill-primary: var(
       --ha-color-fill-primary-normal-resting,
@@ -130,6 +150,14 @@ export const themeTokens = css`
     --wzc-card-outer-shadow: var(--wzc-shadow-medium);
     --wzc-camera-stage: var(--ha-color-neutral-10, #202020);
     --wzc-camera-stage-aspect-ratio: 16 / 9;
+    --wzc-camera-suspended-background: var(--ha-color-neutral-05, #111111);
+    --wzc-camera-suspended-icon-color: var(--wzc-color-error);
+    --wzc-camera-suspended-icon-border-color: var(
+      --ha-color-neutral-30,
+      #4a4a4a
+    );
+    --wzc-camera-suspended-resume-color: var(--wzc-color-success);
+    --wzc-camera-suspended-resume-border-color: var(--wzc-color-success);
     --wzc-live-background: var(--wzc-color-surface-secondary);
     --wzc-live-radius: var(--wzc-radius-large);
     --wzc-live-shadow: var(--wzc-shadow-medium);

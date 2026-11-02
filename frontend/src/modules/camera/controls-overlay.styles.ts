@@ -85,6 +85,11 @@ export const cameraControlsStyles = css`
     cursor: default;
   }
 
+  .control-button[data-control="suspend"][aria-pressed="true"] {
+    color: var(--wzc-camera-suspended-resume-color);
+    border-color: var(--wzc-camera-suspended-resume-border-color);
+  }
+
   svg {
     inline-size: var(--wzc-control-icon-size);
     block-size: var(--wzc-control-icon-size);

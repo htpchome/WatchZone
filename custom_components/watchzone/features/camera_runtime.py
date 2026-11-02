@@ -73,6 +73,10 @@ class CameraRuntimeService:
         self._intents: dict[str, _SuspensionIntent] = {}
         self._timers: dict[str, Callable[[], None]] = {}
         self._state_unsubs: dict[str, Callable[[], None]] = {}
+        self._subscriber_state_unsubs: dict[str, Callable[[], None]] = {}
+        self._subscribers: dict[
+            str, set[Callable[[CameraRuntimeSnapshot], None]]
+        ] = {}
         self._reconcile_tasks: dict[str, asyncio.Task[None]] = {}
         self._closed = False
 
@@ -129,7 +133,7 @@ class CameraRuntimeService:
                 intent.resume_at.isoformat() if intent and intent.resume_at else None
             ),
             supported=state.supported,
-            suspended=state.suspended,
+            suspended=intent is not None or state.suspended,
         )
 
     async def async_set_suspended(
@@ -153,8 +157,6 @@ class CameraRuntimeService:
             )
             self._intents[entity_id] = _SuspensionIntent(resume_at)
             self._watch_entity(entity_id)
-        else:
-            self._remove_intent(entity_id)
 
         try:
             if state.suspended != suspended:
@@ -166,20 +168,40 @@ class CameraRuntimeService:
                 self._remove_intent(entity_id)
             raise
 
+        if not suspended:
+            self._remove_intent(entity_id)
+
         self._schedule(entity_id)
         await self._save()
-        return await self.async_snapshot(entity_id)
+        snapshot = await self.async_snapshot(entity_id)
+        self._notify_subscribers(entity_id, snapshot)
+        return snapshot
 
     def async_subscribe(
         self, entity_id: str, listener: Callable[[CameraRuntimeSnapshot], None]
     ) -> Callable[[], None]:
         """Notify one frontend subscriber when normalized state changes."""
-        unsub = async_track_state_change_event(
-            self._hass,
-            [entity_id],
-            lambda _event: self._start_snapshot_notification(entity_id, listener),
-        )
-        return unsub
+        listeners = self._subscribers.setdefault(entity_id, set())
+        listeners.add(listener)
+        if entity_id not in self._subscriber_state_unsubs:
+            self._subscriber_state_unsubs[entity_id] = async_track_state_change_event(
+                self._hass,
+                [entity_id],
+                lambda _event: self._start_snapshot_notification(entity_id),
+            )
+
+        @callback
+        def unsubscribe() -> None:
+            current = self._subscribers.get(entity_id)
+            if current is None:
+                return
+            current.discard(listener)
+            if current:
+                return
+            self._subscribers.pop(entity_id, None)
+            self._subscriber_state_unsubs.pop(entity_id, lambda: None)()
+
+        return unsubscribe
 
     async def async_close(self) -> None:
         """Cancel timers, listeners, and reconciliation tasks."""
@@ -190,6 +212,10 @@ class CameraRuntimeService:
         for unsub in self._state_unsubs.values():
             unsub()
         self._state_unsubs.clear()
+        for unsub in self._subscriber_state_unsubs.values():
+            unsub()
+        self._subscriber_state_unsubs.clear()
+        self._subscribers.clear()
         tasks = list(self._reconcile_tasks.values())
         self._reconcile_tasks.clear()
         for task in tasks:
@@ -282,6 +308,7 @@ class CameraRuntimeService:
             return
         self._remove_intent(entity_id)
         await self._save()
+        await self._async_publish_snapshot(entity_id)
 
     @callback
     def _schedule_retry(self, entity_id: str) -> None:
@@ -318,14 +345,28 @@ class CameraRuntimeService:
     def _start_snapshot_notification(
         self,
         entity_id: str,
-        listener: Callable[[CameraRuntimeSnapshot], None],
     ) -> None:
-        async def notify() -> None:
-            listener(await self.async_snapshot(entity_id))
-
         self._hass.async_create_task(
-            notify(), f"{NAME} publish camera runtime state for {entity_id}"
+            self._async_publish_snapshot(entity_id),
+            f"{NAME} publish camera runtime state for {entity_id}",
         )
+
+    async def _async_publish_snapshot(self, entity_id: str) -> None:
+        if entity_id not in self._subscribers:
+            return
+        self._notify_subscribers(entity_id, await self.async_snapshot(entity_id))
+
+    @callback
+    def _notify_subscribers(
+        self, entity_id: str, snapshot: CameraRuntimeSnapshot
+    ) -> None:
+        for listener in tuple(self._subscribers.get(entity_id, ())):
+            try:
+                listener(snapshot)
+            except Exception:
+                _LOGGER.exception(
+                    "Unable to publish camera runtime state for %s", entity_id
+                )
 
 
 def snapshot_dict(snapshot: CameraRuntimeSnapshot) -> dict[str, object]:
