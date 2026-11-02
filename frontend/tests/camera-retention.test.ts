@@ -142,6 +142,55 @@ describe("camera presentation retention", () => {
     expect(hlsVideo.parentElement?.hidden).toBe(false);
   });
 
+  it("updates the source label when WebRTC takes over from HLS", async () => {
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
+    const hlsVideo = document.createElement("video");
+    const stream = { getTracks: () => [] } as unknown as MediaStream;
+    let resolveWebRtc:
+      | ((connection: {
+          stream: MediaStream;
+          transport: "webrtc";
+          close(): void;
+        }) => void)
+      | undefined;
+    window.__watchZoneMediaSessionManager = new MediaSessionManager(
+      vi.fn<ConnectionFactory>(
+        () =>
+          new Promise((resolve) => {
+            resolveWebRtc = resolve;
+          }),
+      ),
+      vi.fn<ConnectionFactory>(async () => ({
+        video: hlsVideo,
+        transport: "hls_mse",
+        close: vi.fn(),
+      })),
+    );
+    const view = createLiveView(createApi());
+    document.body.append(view);
+
+    await vi.waitFor(() =>
+      expect(
+        view.shadowRoot?.querySelector(".source-indicator")?.textContent?.trim(),
+      ).toBe("HLS · HLS.js"),
+    );
+
+    resolveWebRtc?.({ stream, transport: "webrtc", close: vi.fn() });
+    const webRtcVideo = await vi.waitFor(() => {
+      const video =
+        view.shadowRoot?.querySelector<HTMLVideoElement>("video.webrtc");
+      expect(video?.srcObject).toBe(stream);
+      return video;
+    });
+    webRtcVideo?.dispatchEvent(new Event("loadeddata"));
+
+    await vi.waitFor(() =>
+      expect(
+        view.shadowRoot?.querySelector(".source-indicator")?.textContent?.trim(),
+      ).toBe("WebRTC"),
+    );
+  });
+
   it("keeps an explicit mute over an unmuted startup default across navigation", async () => {
     const { api, hlsVideo } = installHlsSession();
     const initial = createLiveView(api, true);

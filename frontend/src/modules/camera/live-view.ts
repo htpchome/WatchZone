@@ -52,7 +52,7 @@ export class WatchZoneCameraLiveView extends LitElement {
   private _hlsLease?: MediaSessionLease;
   private _hlsSnapshot: MediaSessionSnapshot = { state: "new" };
   private _hlsUnsubscribe?: () => void;
-  private _initialTransport?: MediaTransport;
+  private _presentedTransport?: MediaTransport;
   private _muted = true;
   private _pictureInPictureActive = false;
   private _posterFailed = false;
@@ -75,7 +75,7 @@ export class WatchZoneCameraLiveView extends LitElement {
     if (this._api?.identity === value?.identity) {
       return;
     }
-    this._resetInitialTransport();
+    this._resetPresentedTransport();
     this._releaseLeases();
     this._api = value;
     this._syncLeases();
@@ -94,7 +94,7 @@ export class WatchZoneCameraLiveView extends LitElement {
     if (this._entityId === value) {
       return;
     }
-    this._resetInitialTransport();
+    this._resetPresentedTransport();
     this._controlError = undefined;
     this._releaseLeases();
     this._entityId = value;
@@ -153,11 +153,11 @@ export class WatchZoneCameraLiveView extends LitElement {
 
   protected render() {
     const sourceLabel =
-      this._initialTransport === "webrtc"
+      this._presentedTransport === "webrtc"
         ? "WebRTC"
-        : this._initialTransport === "hls_native"
+        : this._presentedTransport === "hls_native"
           ? "HLS · native"
-          : this._initialTransport === "hls_mse"
+          : this._presentedTransport === "hls_mse"
             ? "HLS · HLS.js"
             : "HLS";
     const error = !this._available
@@ -169,7 +169,7 @@ export class WatchZoneCameraLiveView extends LitElement {
     const connecting = this._available && !error && !this._selected;
     const showSource = Boolean(
       this._selected &&
-      this._initialTransport &&
+      this._presentedTransport &&
       (this._sourceIntroductionVisible || this._controlsVisibility.visible),
     );
     const showConnectionIndicator = connecting || showSource;
@@ -360,11 +360,12 @@ export class WatchZoneCameraLiveView extends LitElement {
       }
       if (snapshot.state === "live" && !this._selected) {
         this._selected = "hls";
-        this._setInitialTransport(snapshot.transport);
+        this._setPresentedTransport(snapshot.transport);
         this._setActiveVideo(snapshot.video);
         snapshot.timing?.mark("presentation_selected");
       } else if (snapshot.state === "failed" && this._selected === "hls") {
         this._selected = undefined;
+        this._setPresentedTransport(undefined);
         this._setActiveVideo(undefined);
       }
       this.requestUpdate();
@@ -434,7 +435,7 @@ export class WatchZoneCameraLiveView extends LitElement {
     this._webRtcDecoded = true;
     this._webRtcSnapshot.timing?.mark("first_frame_decoded");
     this._webRtcSnapshot.timing?.mark("presentation_selected");
-    this._setInitialTransport("webrtc");
+    this._setPresentedTransport("webrtc");
     this._selected = "webrtc";
     this._setActiveVideo(event.currentTarget as HTMLVideoElement);
     this._releaseHlsLease(true);
@@ -462,12 +463,15 @@ export class WatchZoneCameraLiveView extends LitElement {
     this._syncEffectiveMute(Boolean(video));
   }
 
-  private _setInitialTransport(transport: MediaTransport | undefined): void {
-    if (!transport || this._initialTransport) {
+  private _setPresentedTransport(transport: MediaTransport | undefined): void {
+    if (transport === this._presentedTransport) {
       return;
     }
-    this._initialTransport = transport;
+    this._presentedTransport = transport;
     this._clearSourceIntroduction();
+    if (!transport) {
+      return;
+    }
     this._sourceIntroductionVisible = true;
     this._sourceIntroductionTimer = setTimeout(() => {
       this._sourceIntroductionTimer = undefined;
@@ -479,8 +483,8 @@ export class WatchZoneCameraLiveView extends LitElement {
     }, CAMERA_OVERLAY_HIDE_DELAY_MS);
   }
 
-  private _resetInitialTransport(): void {
-    this._initialTransport = undefined;
+  private _resetPresentedTransport(): void {
+    this._presentedTransport = undefined;
     this._clearSourceIntroduction();
   }
 
