@@ -383,6 +383,58 @@ describe("camera presentation retention", () => {
     ).toBeUndefined();
   });
 
+  it("recovers a blocked WebRTC candidate before source selection", async () => {
+    const playbackMuteStates: boolean[] = [];
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockImplementation(function (
+      this: HTMLMediaElement,
+    ) {
+      playbackMuteStates.push(this.muted);
+      return this.muted
+        ? Promise.resolve()
+        : Promise.reject(
+            new DOMException("Playback blocked", "NotAllowedError"),
+          );
+    });
+    const stream = { getTracks: () => [] } as unknown as MediaStream;
+    const webRtcFactory = vi.fn<ConnectionFactory>(async () => ({
+      stream,
+      transport: "webrtc",
+      close: vi.fn(),
+    }));
+    const hlsFactory = vi.fn<ConnectionFactory>(() => new Promise(() => {}));
+    window.__appMediaSessionManager = new MediaSessionManager(
+      webRtcFactory,
+      hlsFactory,
+    );
+    const view = createLiveView(createApi(), true);
+    document.body.append(view);
+
+    await vi.waitFor(() =>
+      expect(
+        liveRoot(view)?.querySelector<HTMLVideoElement>("video.webrtc")
+          ?.srcObject,
+      ).toBe(stream),
+    );
+    const webRtcVideo =
+      liveRoot(view)?.querySelector<HTMLVideoElement>("video.webrtc");
+    if (!webRtcVideo) throw new Error("WebRTC video is not rendered");
+    await vi.waitFor(() =>
+      expect(playbackMuteStates.slice(-2)).toEqual([false, true]),
+    );
+    expect(webRtcVideo.muted).toBe(true);
+    expect(webRtcFactory).toHaveBeenCalledOnce();
+    expect(hlsFactory).toHaveBeenCalledOnce();
+
+    webRtcVideo.dispatchEvent(new Event("loadeddata"));
+
+    await vi.waitFor(() => expect(webRtcVideo.hidden).toBe(false));
+    expect(webRtcFactory).toHaveBeenCalledOnce();
+    expect(hlsFactory).toHaveBeenCalledOnce();
+    expect(
+      window.__appMediaSessionManager.getCameraMutePreference("camera.front"),
+    ).toBeUndefined();
+  });
+
   it("does not reinterpret a transient play interruption as autoplay denial", async () => {
     vi.spyOn(HTMLMediaElement.prototype, "play")
       .mockResolvedValueOnce()

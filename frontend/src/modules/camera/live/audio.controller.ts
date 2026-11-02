@@ -113,9 +113,8 @@ export class CameraAudioController implements ReactiveController {
     try {
       await playMediaElement(video);
     } catch (error) {
-      const active = this._activeVideo;
       if (
-        active !== video ||
+        !this._owns(video) ||
         this._desiredMuted ||
         documentIsHidden() ||
         !isAutoplayDenied(error)
@@ -125,7 +124,7 @@ export class CameraAudioController implements ReactiveController {
       this._autoplayBlocked = true;
       this._callbacks.showAutoplayWarning();
       this._syncEffectiveMute(false);
-      if (this._activeVideo === video && video.muted) {
+      if (this._owns(video) && video.muted) {
         try {
           await playMediaElement(video);
         } catch {
@@ -155,6 +154,11 @@ export class CameraAudioController implements ReactiveController {
     const { hls, selected, webRtc } = this._callbacks.getMediaState();
     if (webRtc) this.applyTo(webRtc, selected === "hls" || this._muted);
     if (hls) this.applyTo(hls, selected === "webrtc" || this._muted);
+  }
+
+  private _owns(video: HTMLVideoElement): boolean {
+    const { hls, webRtc } = this._callbacks.getMediaState();
+    return this._activeVideo === video || hls === video || webRtc === video;
   }
 
   private _syncPreference(): void {
