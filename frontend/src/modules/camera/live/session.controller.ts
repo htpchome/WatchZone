@@ -146,6 +146,9 @@ export class CameraLiveSessionController implements ReactiveController {
       this._webRtcUnsubscribe = this._webRtcLease.subscribe((snapshot) => {
         this._webRtcSnapshot = snapshot;
         this._revision += 1;
+        if (snapshot.state === "connecting" || snapshot.state === "failed") {
+          this._webRtcDecoded = false;
+        }
         if (snapshot.state === "failed" && this._selected === "webrtc") {
           this._clearSelection();
           this._syncHls();

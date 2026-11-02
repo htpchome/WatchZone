@@ -641,6 +641,11 @@ test("retains one live connection while the card presentation is replaced", asyn
           testWindow.__wzcTestConnectionCount += 1;
           return { configuration: { iceServers: [] } };
         }
+        if (message.type === "camera/stream") {
+          // Keep the hedged HLS candidate in startup so WebRTC takeover must
+          // cancel it without producing an unhandled browser rejection.
+          return new Promise(() => undefined);
+        }
         return undefined;
       },
     };

@@ -123,7 +123,11 @@ export async function createHomeAssistantHlsConnection(
       }
       window.clearTimeout(timeout);
       close();
-      reject(error instanceof Error ? error : new Error("Unable to start HLS"));
+      reject(
+        error instanceof Error || error instanceof DOMException
+          ? error
+          : new Error("Unable to start HLS"),
+      );
     };
 
     video.addEventListener(
@@ -143,69 +147,71 @@ export async function createHomeAssistantHlsConnection(
     video.addEventListener("error", () => fail(video.error), { once: true });
   });
 
-  try {
-    timing.mark("stream_url_requested");
-    const stream = await api.callWS<StreamResponse>({
-      type: "camera/stream",
-      entity_id: entityId,
-      format: "hls",
-    });
-    timing.mark("stream_url_received");
-    const streamUrl = api.resolveUrl(stream.url);
-    if (signal.aborted) {
-      throw abortError();
-    }
+  const setup = (async (): Promise<void> => {
+    try {
+      timing.mark("stream_url_requested");
+      const stream = await api.callWS<StreamResponse>({
+        type: "camera/stream",
+        entity_id: entityId,
+        format: "hls",
+      });
+      timing.mark("stream_url_received");
+      const streamUrl = api.resolveUrl(stream.url);
+      if (signal.aborted || closed) return;
 
-    const manifestPromise = fetch(streamUrl, { signal }).then(
-      async (response) => {
-        if (!response.ok) {
-          throw new Error(`HLS manifest request failed (${response.status})`);
-        }
-        const manifest = await response.text();
-        timing.mark("hls_manifest_loaded");
-        return selectSingleVariant(manifest, streamUrl);
-      },
-    );
-    const hlsModulePromise = import("hls.js/dist/hls.light.mjs").then(
-      (module) => {
-        timing.mark("hls_engine_loaded");
-        return module;
-      },
-    );
-    const [{ default: Hls }, playlistUrl] = await Promise.all([
-      hlsModulePromise,
-      manifestPromise,
-    ]);
+      const manifestPromise = fetch(streamUrl, { signal }).then(
+        async (response) => {
+          if (!response.ok) {
+            throw new Error(`HLS manifest request failed (${response.status})`);
+          }
+          const manifest = await response.text();
+          timing.mark("hls_manifest_loaded");
+          return selectSingleVariant(manifest, streamUrl);
+        },
+      );
+      const hlsModulePromise = import("hls.js/dist/hls.light.mjs").then(
+        (module) => {
+          timing.mark("hls_engine_loaded");
+          return module;
+        },
+      );
+      const [{ default: Hls }, playlistUrl] = await Promise.all([
+        hlsModulePromise,
+        manifestPromise,
+      ]);
+      if (signal.aborted || closed) return;
 
-    if (Hls.isSupported()) {
-      transport = "hls_mse";
-      timing.mark("hls_mse_path_selected");
-      if (signal.aborted) {
-        throw abortError();
+      if (Hls.isSupported()) {
+        transport = "hls_mse";
+        timing.mark("hls_mse_path_selected");
+        const player = new Hls({
+          backBufferLength: 30,
+          lowLatencyMode: true,
+          maxLiveSyncPlaybackRate: 2,
+        });
+        hls = player;
+        player.on(Hls.Events.ERROR, (_event, data) => {
+          if (data.fatal) {
+            fail(data.error ?? new Error(`HLS ${data.type} error`));
+          }
+        });
+        player.loadSource(playlistUrl);
+        player.attachMedia(video);
+      } else if (video.canPlayType(HLS_CONTENT_TYPE)) {
+        timing.mark("hls_native_path_selected");
+        video.src = playlistUrl;
+        void playMediaElement(video).catch(() => undefined);
+      } else {
+        throw new Error("This browser does not support HLS playback");
       }
-      const player = new Hls({
-        backBufferLength: 30,
-        lowLatencyMode: true,
-        maxLiveSyncPlaybackRate: 2,
-      });
-      hls = player;
-      player.on(Hls.Events.ERROR, (_event, data) => {
-        if (data.fatal) {
-          fail(data.error ?? new Error(`HLS ${data.type} error`));
-        }
-      });
-      player.loadSource(playlistUrl);
-      player.attachMedia(video);
-    } else if (video.canPlayType(HLS_CONTENT_TYPE)) {
-      timing.mark("hls_native_path_selected");
-      video.src = playlistUrl;
-      void playMediaElement(video).catch(() => undefined);
-    } else {
-      throw new Error("This browser does not support HLS playback");
+    } catch (error) {
+      fail(error);
     }
-  } catch (error) {
-    fail(error);
-  }
+  })();
 
-  return ready;
+  // Observe readiness immediately while source setup is still pending. This
+  // prevents an intentional HLS-loser abort from becoming a transient
+  // unhandled rejection before the connection factory returns to its manager.
+  const [connection] = await Promise.all([ready, setup]);
+  return connection;
 }

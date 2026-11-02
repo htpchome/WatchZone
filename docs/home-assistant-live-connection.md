@@ -56,7 +56,9 @@ For the initial Home Assistant direct source, WatchZone uses a hedged startup:
 2. The first adapter to decode usable video becomes the initial presentation.
 3. WebRTC remains the preferred steady-state transport. If HLS paints first,
    WebRTC continues negotiating in the background and takes over only after it
-   has decoded usable video.
+   has decoded usable video. If an established WebRTC connection fails, HLS
+   may temporarily retake presentation while WebRTC performs its bounded
+   reconnect; a newly decoded WebRTC frame takes ownership again.
 4. After a successful WebRTC handoff, the losing HLS lease is discarded. A
    shared HLS session used by another consumer is not closed.
 5. If only one path succeeds, it remains selected. An error is shown only when
@@ -112,6 +114,9 @@ The HLS adapter:
 The HLS session owns its media element because its MediaSource playback state
 is element-bound. Closing destroys the playback engine, cancels in-flight
 requests, resets the element, and removes it from presentation.
+Cancellation of an in-progress losing HLS candidate is expected teardown. Its
+rejection remains observable by the session manager but must be observed from
+the moment startup begins so Firefox cannot report it as an unhandled promise.
 
 The camera information layer displays the active presentation source as
 `WebRTC`, `HLS · HLS.js`, or `HLS · native`. The label changes when an actual

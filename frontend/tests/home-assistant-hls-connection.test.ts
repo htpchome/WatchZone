@@ -197,4 +197,30 @@ describe("Home Assistant HLS connection", () => {
     const connection = await connecting;
     connection.close();
   });
+
+  it("reports an intentional startup cancellation without a stray rejection", async () => {
+    let resolveStream: ((value: { url: string }) => void) | undefined;
+    const streamResponse = new Promise<{ url: string }>((resolve) => {
+      resolveStream = resolve;
+    });
+    const api: HomeAssistantApi = {
+      identity: {} as HomeAssistantApi["identity"],
+      callWS: vi.fn(() => streamResponse) as HomeAssistantApi["callWS"],
+      resolveUrl: (path) => `https://ha.example${path}`,
+      subscribeMessage: vi.fn(),
+    };
+    const abort = new AbortController();
+    const connecting = createHomeAssistantHlsConnection(
+      api,
+      "camera.front",
+      abort.signal,
+      vi.fn(),
+      new LiveStartupTiming("home_assistant_hls:camera.front"),
+    );
+
+    abort.abort();
+    await expect(connecting).rejects.toMatchObject({ name: "AbortError" });
+    resolveStream?.({ url: "/api/hls/front.m3u8" });
+    await Promise.resolve();
+  });
 });

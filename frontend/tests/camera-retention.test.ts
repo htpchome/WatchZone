@@ -74,6 +74,7 @@ function installHlsSession(): {
 
 describe("camera presentation retention", () => {
   afterEach(() => {
+    vi.useRealTimers();
     removeTestMediaSessionManager();
     document.body.replaceChildren();
     vi.restoreAllMocks();
@@ -218,6 +219,70 @@ describe("camera presentation retention", () => {
           ?.textContent?.trim(),
       ).toBe("WebRTC"),
     );
+  });
+
+  it("lets recovered WebRTC take presentation ownership from HLS again", async () => {
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
+    const streams = [
+      { getTracks: () => [] } as unknown as MediaStream,
+      { getTracks: () => [] } as unknown as MediaStream,
+    ];
+    const failures: Array<(error: Error) => void> = [];
+    let webRtcAttempt = 0;
+    const webRtcFactory = vi.fn<ConnectionFactory>(
+      async (_api, _entity, _signal, onFailure) => {
+        failures.push(onFailure);
+        return {
+          stream: streams[webRtcAttempt++],
+          transport: "webrtc",
+          close: vi.fn(),
+        };
+      },
+    );
+    const hlsFactory = vi.fn<ConnectionFactory>(async () => ({
+      video: document.createElement("video"),
+      transport: "hls_mse",
+      close: vi.fn(),
+    }));
+    installTestMediaSessionManager(
+      new MediaSessionManager(webRtcFactory, hlsFactory),
+    );
+    const view = createLiveView(createApi());
+    document.body.append(view);
+
+    const video = await vi.waitFor(() => {
+      const element =
+        presentation(view)?.shadowRoot?.querySelector<HTMLVideoElement>(
+          "video.webrtc",
+        );
+      expect(element?.srcObject).toBe(streams[0]);
+      return element;
+    });
+    video?.dispatchEvent(new Event("loadeddata"));
+    await vi.waitFor(() =>
+      expect(
+        presentation(view)
+          ?.shadowRoot?.querySelector(".source-indicator")
+          ?.textContent?.trim(),
+      ).toBe("WebRTC"),
+    );
+
+    failures[0](new Error("transient WebRTC failure"));
+    await vi.waitFor(() => expect(webRtcFactory).toHaveBeenCalledTimes(2), {
+      timeout: 2_000,
+    });
+    await vi.waitFor(() => expect(video?.srcObject).toBe(streams[1]));
+    video?.dispatchEvent(new Event("loadeddata"));
+
+    await vi.waitFor(() =>
+      expect(
+        presentation(view)
+          ?.shadowRoot?.querySelector(".source-indicator")
+          ?.textContent?.trim(),
+      ).toBe("WebRTC"),
+    );
+    expect(hlsFactory).toHaveBeenCalledTimes(2);
   });
 
   it("keeps an explicit mute over an unmuted startup default across navigation", async () => {
