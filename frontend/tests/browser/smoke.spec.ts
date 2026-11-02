@@ -1005,7 +1005,7 @@ test("retains one live connection while the card presentation is replaced", asyn
   expect(cssAlpha(hoverBackground)).toBeCloseTo(0.84, 2);
   expect(
     await mute.evaluate((element) => getComputedStyle(element).color),
-  ).toBe("rgb(242, 242, 242)");
+  ).toBe("rgb(230, 230, 230)");
   await expect(
     page.locator('wzc-camera wzc-camera-controls [data-control="snapshot"]'),
   ).toBeDisabled();

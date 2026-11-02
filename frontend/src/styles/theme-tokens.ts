@@ -135,7 +135,7 @@ export const themeTokens = css`
     --wzc-live-shadow: var(--wzc-shadow-medium);
     --wzc-zoom-transition-duration: 180ms;
 
-    --wzc-media-overlay-color: var(--ha-color-neutral-95, #f2f2f2);
+    --wzc-media-overlay-color: var(--ha-color-neutral-90, #e6e6e6);
     --wzc-media-overlay-surface: var(--ha-color-neutral-05, #111111);
     --wzc-media-overlay-opacity: 72%;
     --wzc-media-overlay-hover-opacity: 84%;

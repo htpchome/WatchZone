@@ -12,6 +12,7 @@ htmlcov/
 coverage/
 playwright-report/
 test-results/
+.media/
 **/.yarn/install-state.gz
 
 .env
