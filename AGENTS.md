@@ -101,9 +101,12 @@ For any frontend, media, interaction, layout, or styling change, also read
 ## Version and commit rule
 
 - `custom_components/watchzone/const.py` `VERSION` is canonical.
-- Each commit pushed to `main` is published for HACS testing and therefore must
-  have a unique Semantic Version. During prerelease development, increment the
-  prerelease identifier (for example, `0.0.3-dev.1` to `0.0.3-dev.2`).
+- Each release-affecting commit pushed to `main` is published for HACS testing
+  and therefore must have a unique Semantic Version. During prerelease
+  development, increment the prerelease identifier (for example,
+  `0.0.3-dev.1` to `0.0.3-dev.2`).
+- A commit limited to documentation, tests, or workflow maintenance validates
+  without publishing a HACS release and keeps the current application version.
 - Local work that is not being handed off for a commit does not itself require
   a version change.
 - Keep `frontend/package.json`, `manifest.json` once present, and all other

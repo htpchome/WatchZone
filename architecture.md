@@ -281,10 +281,14 @@ must have explicit schema versions and migrations.
 `custom_components/watchzone/const.py` is the source of truth for the WatchZone
 version through its `VERSION` constant.
 
-- Every commit pushed to `main` is an independently installable HACS test build
-  and therefore has a unique `VERSION` and generated GitHub release. During
-  prerelease development, increment the prerelease identifier for each such
-  commit (for example, `0.0.3-dev.1` to `0.0.3-dev.2`).
+- Every release-affecting commit pushed to `main` is an independently
+  installable HACS test build and therefore has a unique `VERSION` and
+  generated GitHub release. During prerelease development, increment the
+  prerelease identifier for each such commit (for example, `0.0.3-dev.1` to
+  `0.0.3-dev.2`).
+- Commits limited to documentation, tests, or workflow maintenance run the
+  validation workflow without publishing another HACS release and keep the
+  current application version.
 - Uncommitted iterations within one handoff keep the same version.
 - The version is valid Semantic Versioning.
 - `manifest.json`, frontend package metadata, release artifacts, and other
