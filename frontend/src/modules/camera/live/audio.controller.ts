@@ -169,6 +169,11 @@ export class CameraAudioController implements ReactiveController {
           AUTOPLAY_WARNING_KEY,
         );
         this._syncEffectiveMute(false);
+        // Audible autoplay rejection must not leave video paused. Preserve the
+        // user's unmuted intent, apply the temporary forced mute above, then
+        // retry the same retained element under the browser's muted-autoplay
+        // policy.
+        void playMediaElement(video).catch(() => undefined);
       });
     }
   }

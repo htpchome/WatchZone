@@ -154,9 +154,10 @@ part of the playback contract: creating a muted player and unmuting only after
 
 The presentation retains explicit user preference across HLS/WebRTC handoff
 and presentation replacement. An autoplay rejection temporarily forces muted
-output without rewriting that preference. A later user gesture can retry the
-same retained element. Audio behavior continues to follow the forced-mute,
-audio-focus, lifetime, and autoplay rules in
+output without rewriting that preference. The same retained media element is
+immediately retried muted so rejected audible autoplay cannot leave video
+paused. A later user gesture can retry audible playback. Audio behavior
+continues to follow the forced-mute, audio-focus, lifetime, and autoplay rules in
 `docs/live-session-lifecycle.md`.
 
 ## 9. Required evolution rules

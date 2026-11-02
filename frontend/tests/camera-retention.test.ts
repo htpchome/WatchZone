@@ -398,7 +398,8 @@ describe("camera presentation retention", () => {
     toggleMute(view);
 
     await vi.waitFor(() => expect(hlsVideo.muted).toBe(true));
-    expect(play).toHaveBeenCalledTimes(2);
+    expect(play).toHaveBeenCalledTimes(3);
+    expect(hlsVideo.muted).toBe(true);
     expect(
       getMediaSessionManager().getCameraMutePreference("camera.front"),
     ).toBe("unmuted");
@@ -409,6 +410,40 @@ describe("camera presentation retention", () => {
           ?.shadowRoot?.querySelector('[data-severity="warning"]')?.textContent,
       ).toContain("The browser blocked unmuted playback."),
     );
+  });
+
+  it("retries HLS muted when unmuted startup autoplay is blocked", async () => {
+    const mutedAtPlay: boolean[] = [];
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockImplementation(function (
+      this: HTMLMediaElement,
+    ) {
+      mutedAtPlay.push(this.muted);
+      return this.muted
+        ? Promise.resolve()
+        : Promise.reject(
+            new DOMException("Playback blocked", "NotAllowedError"),
+          );
+    });
+    const hlsVideo = document.createElement("video");
+    installTestMediaSessionManager(
+      new MediaSessionManager(
+        vi.fn<ConnectionFactory>(async () => ({ close: vi.fn() })),
+        vi.fn<ConnectionFactory>(async () => ({
+          video: hlsVideo,
+          transport: "hls_mse",
+          close: vi.fn(),
+        })),
+      ),
+    );
+    const view = createLiveView(createApi(), true);
+    document.body.append(view);
+
+    await vi.waitFor(() => expect(hlsVideo.muted).toBe(true));
+    await vi.waitFor(() => expect(mutedAtPlay).toContain(true));
+    expect(mutedAtPlay).toContain(false);
+    expect(
+      getMediaSessionManager().getCameraMutePreference("camera.front"),
+    ).toBeUndefined();
   });
 
   it("temporarily mutes page and app suspension without changing intent", async () => {
