@@ -70,6 +70,7 @@ describe("Home Assistant WebRTC connection", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     globalThis.MediaStream = originalMediaStream;
     globalThis.RTCPeerConnection = originalPeerConnection;
   });
@@ -180,6 +181,26 @@ describe("Home Assistant WebRTC connection", () => {
       video_track_received: expect.any(Number),
     });
     expect(onFailure).not.toHaveBeenCalled();
+
+    vi.useFakeTimers();
+    peer.connectionState = "disconnected";
+    peer.onconnectionstatechange?.();
+    expect(onFailure).not.toHaveBeenCalled();
+    peer.connectionState = "connected";
+    peer.onconnectionstatechange?.();
+    await vi.runAllTimersAsync();
+    expect(onFailure).not.toHaveBeenCalled();
+
+    peer.connectionState = "disconnected";
+    peer.onconnectionstatechange?.();
+    await vi.runOnlyPendingTimersAsync();
+    expect(onFailure).toHaveBeenCalledWith(
+      new Error(
+        "Home Assistant camera WebRTC connection remained disconnected",
+      ),
+    );
+    onFailure.mockClear();
+    vi.useRealTimers();
 
     offerCallback({ type: "error", message: "camera connection lost" });
     await vi.waitFor(() =>

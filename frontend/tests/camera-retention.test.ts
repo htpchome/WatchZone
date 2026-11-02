@@ -285,6 +285,112 @@ describe("camera presentation retention", () => {
     expect(hlsFactory).toHaveBeenCalledTimes(2);
   });
 
+  it("retries previously unavailable WebRTC once after HLS recovers", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
+    const stream = { getTracks: () => [] } as unknown as MediaStream;
+    let webRtcAttempt = 0;
+    const webRtcFactory = vi.fn<ConnectionFactory>(async () => {
+      if (webRtcAttempt++ === 0) throw new Error("WebRTC unavailable");
+      return { stream, transport: "webrtc", close: vi.fn() };
+    });
+    const hlsFailures: Array<(error: Error) => void> = [];
+    const hlsFactory = vi.fn<ConnectionFactory>(
+      async (_api, _entity, _signal, onFailure) => {
+        hlsFailures.push(onFailure);
+        return {
+          video: document.createElement("video"),
+          transport: "hls_mse",
+          close: vi.fn(),
+        };
+      },
+    );
+    installTestMediaSessionManager(
+      new MediaSessionManager(webRtcFactory, hlsFactory),
+    );
+    const view = createLiveView(createApi());
+    document.body.append(view);
+
+    await vi.waitFor(() =>
+      expect(
+        presentation(view)
+          ?.shadowRoot?.querySelector(".source-indicator")
+          ?.textContent?.trim(),
+      ).toBe("HLS · HLS.js"),
+    );
+    expect(webRtcFactory).toHaveBeenCalledOnce();
+
+    hlsFailures[0](new Error("HLS interrupted"));
+    await vi.advanceTimersByTimeAsync(500);
+    await vi.waitFor(() => expect(hlsFactory).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(webRtcFactory).toHaveBeenCalledTimes(2));
+    const webRtcVideo = await vi.waitFor(() => {
+      const video =
+        presentation(view)?.shadowRoot?.querySelector<HTMLVideoElement>(
+          "video.webrtc",
+        );
+      expect(video?.srcObject).toBe(stream);
+      return video;
+    });
+    webRtcVideo?.dispatchEvent(new Event("loadeddata"));
+
+    await vi.waitFor(() =>
+      expect(
+        presentation(view)
+          ?.shadowRoot?.querySelector(".source-indicator")
+          ?.textContent?.trim(),
+      ).toBe("WebRTC"),
+    );
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(webRtcFactory).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps recovered HLS when the single WebRTC retry remains unavailable", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
+    const webRtcFactory = vi.fn<ConnectionFactory>(async () => {
+      throw new Error("WebRTC unavailable");
+    });
+    const hlsFailures: Array<(error: Error) => void> = [];
+    const hlsFactory = vi.fn<ConnectionFactory>(
+      async (_api, _entity, _signal, onFailure) => {
+        hlsFailures.push(onFailure);
+        return {
+          video: document.createElement("video"),
+          transport: "hls_mse",
+          close: vi.fn(),
+        };
+      },
+    );
+    installTestMediaSessionManager(
+      new MediaSessionManager(webRtcFactory, hlsFactory),
+    );
+    const view = createLiveView(createApi());
+    document.body.append(view);
+
+    await vi.waitFor(() =>
+      expect(
+        presentation(view)
+          ?.shadowRoot?.querySelector(".source-indicator")
+          ?.textContent?.trim(),
+      ).toBe("HLS · HLS.js"),
+    );
+    hlsFailures[0](new Error("HLS interrupted"));
+    await vi.advanceTimersByTimeAsync(500);
+    await vi.waitFor(() => expect(hlsFactory).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(webRtcFactory).toHaveBeenCalledTimes(2));
+
+    expect(
+      presentation(view)
+        ?.shadowRoot?.querySelector(".source-indicator")
+        ?.textContent?.trim(),
+    ).toBe("HLS · HLS.js");
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(webRtcFactory).toHaveBeenCalledTimes(2);
+  });
+
   it("keeps an explicit mute over an unmuted startup default across navigation", async () => {
     const { api, hlsVideo } = installHlsSession();
     const initial = createLiveView(api, true);

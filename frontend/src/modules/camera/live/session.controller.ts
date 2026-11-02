@@ -25,6 +25,7 @@ export class CameraLiveSessionController implements ReactiveController {
   private _hlsPendingKey?: string;
   private _hlsSnapshot: MediaSessionSnapshot = { state: "new" };
   private _hlsUnsubscribe?: () => void;
+  private _retryWebRtcAfterHlsRecovery = false;
   private _revision = 0;
   private _selected?: PresentedSource;
   private _transport?: MediaTransport;
@@ -214,10 +215,19 @@ export class CameraLiveSessionController implements ReactiveController {
       this._hlsUnsubscribe = this._hlsLease.subscribe((snapshot) => {
         this._hlsSnapshot = snapshot;
         this._revision += 1;
-        if (snapshot.state === "live" && !this._selected) {
-          snapshot.timing?.mark("presentation_selected");
-          this._select("hls", snapshot.transport, snapshot.video);
+        if (snapshot.state === "live") {
+          if (!this._selected) {
+            snapshot.timing?.mark("presentation_selected");
+            this._select("hls", snapshot.transport, snapshot.video);
+          }
+          if (this._retryWebRtcAfterHlsRecovery) {
+            this._retryWebRtcAfterHlsRecovery = false;
+            if (this._webRtcSnapshot.state === "failed") {
+              this._webRtcLease?.retry();
+            }
+          }
         } else if (snapshot.state === "failed" && this._selected === "hls") {
+          this._retryWebRtcAfterHlsRecovery = true;
           this._clearSelection();
         }
         this._host.requestUpdate();
@@ -255,6 +265,7 @@ export class CameraLiveSessionController implements ReactiveController {
   private _releaseAll(): void {
     this._clearSelection();
     this._webRtcDecoded = false;
+    this._retryWebRtcAfterHlsRecovery = false;
     this._releaseWebRtc();
     this._releaseHls();
   }

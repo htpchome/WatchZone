@@ -17,6 +17,7 @@ type OfferEvent =
   | { readonly type: "error"; readonly message: string };
 
 const CONNECT_TIMEOUT_MS = 15_000;
+const DISCONNECTED_GRACE_MS = 5_000;
 
 function abortError(): DOMException {
   return new DOMException("Connection cancelled", "AbortError");
@@ -77,6 +78,7 @@ export async function createHomeAssistantWebRtcConnection(
   let sessionId: string | undefined;
   let unsubscribe: (() => void) | undefined;
   let rejectPending: ((error: unknown) => void) | undefined;
+  let disconnectedTimer: ReturnType<typeof setTimeout> | undefined;
   const localCandidates: RTCIceCandidateInit[] = [];
   const remoteCandidates: RTCIceCandidateInit[] = [];
 
@@ -88,6 +90,10 @@ export async function createHomeAssistantWebRtcConnection(
     signal.removeEventListener("abort", handleAbort);
     unsubscribe?.();
     unsubscribe = undefined;
+    if (disconnectedTimer) {
+      clearTimeout(disconnectedTimer);
+      disconnectedTimer = undefined;
+    }
     peer.onconnectionstatechange = null;
     peer.onicecandidate = null;
     peer.ontrack = null;
@@ -140,7 +146,25 @@ export async function createHomeAssistantWebRtcConnection(
   };
   peer.onconnectionstatechange = () => {
     if (peer.connectionState === "failed") {
+      if (disconnectedTimer) {
+        clearTimeout(disconnectedTimer);
+        disconnectedTimer = undefined;
+      }
       fail(new Error("Home Assistant camera WebRTC connection failed"));
+    } else if (peer.connectionState === "disconnected") {
+      disconnectedTimer ??= setTimeout(() => {
+        disconnectedTimer = undefined;
+        if (peer.connectionState === "disconnected") {
+          fail(
+            new Error(
+              "Home Assistant camera WebRTC connection remained disconnected",
+            ),
+          );
+        }
+      }, DISCONNECTED_GRACE_MS);
+    } else if (disconnectedTimer) {
+      clearTimeout(disconnectedTimer);
+      disconnectedTimer = undefined;
     }
   };
 

@@ -59,6 +59,8 @@ For the initial Home Assistant direct source, WatchZone uses a hedged startup:
    has decoded usable video. If an established WebRTC connection fails, HLS
    may temporarily retake presentation while WebRTC performs its bounded
    reconnect; a newly decoded WebRTC frame takes ownership again.
+   If WebRTC was unavailable while HLS was selected, a completed HLS recovery
+   triggers one new WebRTC attempt. It does not poll or disturb healthy HLS.
 4. After a successful WebRTC handoff, the losing HLS lease is discarded. A
    shared HLS session used by another consumer is not closed.
 5. If only one path succeeds, it remains selected. An error is shown only when
@@ -93,6 +95,10 @@ For a validated camera entity, the adapter:
 Connection startup is cancellable and bounded by a timeout. Errors are
 translated once into an actionable session error. Closing is idempotent and
 unsubscribes signaling, closes the peer connection, and stops owned tracks.
+An established peer that reports `disconnected` receives a short grace period
+to recover in place. A sustained disconnect is then treated as failure so
+WebKit clients enter the same bounded fallback and reconnect policy as peers
+that report `failed` immediately.
 
 ## 6. HLS connection sequence
 
