@@ -1,16 +1,21 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import "../src/main";
-import type { DashboardCard } from "../src/card/watchzone-card";
+import { DashboardCard } from "../src/card/watchzone-card";
 
-describe("wzc-card", () => {
+describe("watchzone-card", () => {
   afterEach(() => {
     document.body.replaceChildren();
   });
 
+  it("keeps the stable Lovelace custom-element contract", () => {
+    expect(customElements.get("watchzone-card")).toBe(DashboardCard);
+    expect(customElements.get("wzc-card")).toBeUndefined();
+  });
+
   it("renders the configured title in a Home Assistant card", async () => {
-    const element = document.createElement("wzc-card") as DashboardCard;
-    element.setConfig({ type: "custom:wzc-card", title: "Front Door" });
+    const element = document.createElement("watchzone-card") as DashboardCard;
+    element.setConfig({ type: "custom:watchzone-card", title: "Front Door" });
     document.body.append(element);
     await element.updateComplete;
 
@@ -19,7 +24,7 @@ describe("wzc-card", () => {
   });
 
   it("does not rerender for unrelated hass assignments", async () => {
-    const element = document.createElement("wzc-card") as DashboardCard;
+    const element = document.createElement("watchzone-card") as DashboardCard;
     document.body.append(element);
     await element.updateComplete;
     const rendered = element.shadowRoot?.querySelector("ha-card");
@@ -31,9 +36,9 @@ describe("wzc-card", () => {
   });
 
   it("propagates outer appearance settings through the HA card boundary", async () => {
-    const element = document.createElement("wzc-card") as DashboardCard;
+    const element = document.createElement("watchzone-card") as DashboardCard;
     element.setConfig({
-      type: "custom:wzc-card",
+      type: "custom:watchzone-card",
       title: "Front Door",
       rounded_outer_corners: false,
       outer_shadows: false,
@@ -56,7 +61,7 @@ describe("wzc-card", () => {
     expect(element.style.getPropertyPriority("box-shadow")).toBe("important");
 
     element.setConfig({
-      type: "custom:wzc-card",
+      type: "custom:watchzone-card",
       title: "Front Door",
     });
     await element.updateComplete;

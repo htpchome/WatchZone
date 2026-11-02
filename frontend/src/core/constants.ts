@@ -1,9 +1,10 @@
 export const APP_NAME = "WatchZone";
 export const APP_ID = "wzc";
+export const INTEGRATION_ID = "watchzone";
 export const APP_VERSION = __APP_VERSION__;
 export const APP_BUILD = __APP_BUILD__;
 
-export const CARD_TAG = `${APP_ID}-card`;
+export const CARD_TAG = `${INTEGRATION_ID}-card`;
 export const CARD_TYPE = `custom:${CARD_TAG}`;
 export const EDITOR_TAG = `${CARD_TAG}-editor`;
 
