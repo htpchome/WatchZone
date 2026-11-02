@@ -131,6 +131,7 @@ export const themeTokens = css`
     --wzc-live-background: var(--wzc-color-surface-secondary);
     --wzc-live-radius: var(--wzc-radius-large);
     --wzc-live-shadow: var(--wzc-shadow-medium);
+    --wzc-zoom-transition-duration: 180ms;
 
     --wzc-media-overlay-color: var(--wzc-color-background);
     --wzc-media-overlay-opacity: 72%;

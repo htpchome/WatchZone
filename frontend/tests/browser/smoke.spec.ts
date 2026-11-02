@@ -747,8 +747,26 @@ test("retains one live connection while the card presentation is replaced", asyn
   const controls = page.locator(
     "wzc-camera wzc-camera-controls .control-button",
   );
+  const mediaSurface = page.locator("wzc-camera-live .media-surface");
+  await mediaSurface.click({ position: { x: 120, y: 80 } });
+  await expect(mediaSurface).toHaveAttribute("style", /scale\(2\)/);
+  await mediaSurface.dispatchEvent("wheel", {
+    clientX: 120,
+    clientY: 80,
+    deltaMode: 0,
+    deltaX: 0,
+    deltaY: -100,
+  });
+  await expect(mediaSurface).toHaveAttribute("style", /scale\(2\.25\)/);
+  const liveViewport = page.locator("wzc-camera-live .viewport");
+  await liveViewport.press("Escape");
+  await expect(mediaSurface).toHaveAttribute("style", /scale\(1\)/);
+  await liveViewport.evaluate((element) => (element as HTMLElement).blur());
+  await page.mouse.move(0, 0);
   await expect(controls).toHaveCount(5);
-  await expect(controls.first()).toBeHidden();
+  await expect(controls.first()).toBeHidden({
+    timeout: CAMERA_OVERLAY_HIDE_DELAY_MS + 1_000,
+  });
   const overlayTransitions = await page.evaluate(() => {
     const camera = document.querySelector("wzc-camera");
     const presentation = camera?.shadowRoot?.querySelector("wzc-camera-live");

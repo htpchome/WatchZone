@@ -29,6 +29,29 @@ export const cameraLiveViewStyles = css`
     border-radius: 0;
   }
 
+  .media-surface {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    overflow: hidden;
+    transform-origin: center;
+    touch-action: pan-x pan-y;
+    user-select: none;
+    will-change: transform;
+    transition: transform var(--wzc-zoom-transition-duration) ease;
+  }
+
+  .media-surface.zoomed {
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .media-surface.interacting {
+    cursor: grabbing;
+    transition: none;
+  }
+
   .generic-fallback,
   .fallback-image {
     position: absolute;
@@ -62,6 +85,7 @@ export const cameraLiveViewStyles = css`
     display: block;
     object-fit: var(--wzc-live-fit, contain);
     background: var(--wzc-live-background);
+    -webkit-user-drag: none;
   }
 
   .hls-host,
@@ -156,7 +180,8 @@ export const cameraLiveViewStyles = css`
 
   @media (prefers-reduced-motion: reduce) {
     .connection-spinner,
-    .source-indicator {
+    .source-indicator,
+    .media-surface {
       animation: none;
       transition: none;
     }

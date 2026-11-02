@@ -112,6 +112,7 @@ export class CameraModule extends LitElement {
           .sessionRevision=${this._session.revision}
           .transport=${this._session.transport}
           .webRtcStream=${this._session.webRtcStream}
+          .zoomKey=${this.entityId}
           @camera-media-attached=${this._handleMediaAttached}
           @camera-mute-toggle=${this._handleMuteToggle}
           @camera-toast-request=${this._handleToastRequest}

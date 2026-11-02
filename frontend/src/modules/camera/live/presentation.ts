@@ -24,6 +24,7 @@ import {
   togglePictureInPicture,
 } from "../picture-in-picture";
 import type { PresentedSource } from "./session.controller";
+import { CameraZoomController } from "./zoom.controller";
 
 interface FullscreenDocument extends Document {
   webkitExitFullscreen?(): Promise<void> | void;
@@ -66,6 +67,7 @@ export class CameraLivePresentation extends LitElement {
     sessionRevision: { attribute: false, type: Number },
     transport: { attribute: false },
     webRtcStream: { attribute: false },
+    zoomKey: { attribute: false },
   };
 
   private _activeVideo?: HTMLVideoElement;
@@ -74,6 +76,7 @@ export class CameraLivePresentation extends LitElement {
   private _posterFailed = false;
   private _webRtcFrameRequest?: number;
   private readonly _visibility = new CameraControlsVisibilityController(this);
+  private readonly _zoom = new CameraZoomController(this);
 
   public available = false;
   public failed = false;
@@ -85,6 +88,7 @@ export class CameraLivePresentation extends LitElement {
   public sessionRevision = 0;
   public transport?: MediaTransport;
   public webRtcStream?: MediaStream;
+  public zoomKey?: string;
 
   public get webRtcVideo(): HTMLVideoElement | undefined {
     return (
@@ -114,6 +118,7 @@ export class CameraLivePresentation extends LitElement {
     if (changed.has("posterUrl")) this._posterFailed = false;
     if (changed.has("transport") && this.transport)
       this._visibility.revealSource();
+    if (changed.has("zoomKey")) this._zoom.configure(this.zoomKey);
   }
 
   protected render() {
@@ -136,7 +141,9 @@ export class CameraLivePresentation extends LitElement {
       <div
         class="viewport"
         tabindex="0"
-        aria-label="Camera live view"
+        aria-label=${`Camera live view, zoom ${Math.round(this._zoom.scale * 100)} percent`}
+        aria-keyshortcuts="Enter Space + - 0 Escape ArrowLeft ArrowRight ArrowUp ArrowDown"
+        @keydown=${this._zoom.handleKeyDown}
         @pointerenter=${this._visibility.handlePointerEnter}
         @pointerleave=${this._visibility.handlePointerLeave}
         @pointermove=${this._visibility.handlePointerMove}
@@ -144,19 +151,35 @@ export class CameraLivePresentation extends LitElement {
         @focusin=${this._visibility.handleFocusIn}
         @focusout=${this._visibility.handleFocusOut}
       >
-        ${!this.selected ? this._renderFallback() : nothing}
-        <div class="hls-host" ?hidden=${this.selected === "webrtc"}></div>
-        <video
-          class=${this.selected === "webrtc" ? "webrtc" : "webrtc candidate"}
-          autoplay
-          playsinline
-          .muted=${this.selected === "webrtc" ? this.muted : true}
-          aria-label="Live camera"
-          aria-hidden=${this.selected === "webrtc" ? "false" : "true"}
-          @canplay=${this._handleWebRtcDecoded}
-          @loadeddata=${this._handleWebRtcDecoded}
-          @playing=${this._handleWebRtcDecoded}
-        ></video>
+        <div
+          class=${[
+            "media-surface",
+            this._zoom.zoomed ? "zoomed" : "",
+            this._zoom.interacting ? "interacting" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+          style=${`transform: ${this._zoom.transform}`}
+          @pointerdown=${this._zoom.handlePointerDown}
+          @pointermove=${this._zoom.handlePointerMove}
+          @pointerup=${this._zoom.handlePointerUp}
+          @pointercancel=${this._zoom.handlePointerCancel}
+          @wheel=${this._zoom.handleWheel}
+        >
+          ${!this.selected ? this._renderFallback() : nothing}
+          <div class="hls-host" ?hidden=${this.selected === "webrtc"}></div>
+          <video
+            class=${this.selected === "webrtc" ? "webrtc" : "webrtc candidate"}
+            autoplay
+            playsinline
+            .muted=${this.selected === "webrtc" ? this.muted : true}
+            aria-label="Live camera"
+            aria-hidden=${this.selected === "webrtc" ? "false" : "true"}
+            @canplay=${this._handleWebRtcDecoded}
+            @loadeddata=${this._handleWebRtcDecoded}
+            @playing=${this._handleWebRtcDecoded}
+          ></video>
+        </div>
         ${
           connecting || resolvedSource
             ? html`<div
@@ -207,6 +230,9 @@ export class CameraLivePresentation extends LitElement {
   }
 
   protected updated(changed: Map<PropertyKey, unknown>): void {
+    this._zoom.observe(
+      this.renderRoot.querySelector<HTMLElement>(".media-surface") ?? undefined,
+    );
     const webRtcVideo = this.webRtcVideo;
     if (webRtcVideo && webRtcVideo.srcObject !== (this.webRtcStream ?? null)) {
       this._cancelWebRtcFrameRequest(webRtcVideo);
@@ -262,6 +288,7 @@ export class CameraLivePresentation extends LitElement {
               alt=""
               aria-hidden="true"
               decoding="async"
+              draggable="false"
               fetchpriority="high"
               @error=${() => {
                 this._posterFailed = true;

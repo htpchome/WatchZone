@@ -25,6 +25,9 @@ For diagnostics, timing instrumentation, or future logging work, also read
 For any frontend, media, interaction, layout, or styling change, also read
 `docs/platform-compatibility.md` in full.
 
+For camera display zoom, pan, or gesture changes, also read
+`docs/camera-display-zoom.md` in full.
+
 ## Architecture stability
 
 - Treat `architecture.md` as a contract, not a progress log.
