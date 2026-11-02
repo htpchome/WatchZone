@@ -40,11 +40,11 @@ view.
 
 | Input                             | Behavior                                                                       |
 | --------------------------------- | ------------------------------------------------------------------------------ |
-| Mouse primary click               | Toggle `1x` and `2x` at the pointer position.                                  |
+| Mouse primary double-click        | Toggle `1x` and `2x` at the pointer position.                                  |
 | Discrete mouse wheel              | Zoom in fixed increments between `1x` and `3x`.                                |
 | Trackpad pinch or modified wheel  | Leave unconsumed so native browser and operating-system behavior is preserved. |
 | Unmodified smooth pixel scrolling | Leave unconsumed so compact dashboard and page navigation continue to scroll.  |
-| Single touch or pen tap           | Toggle `1x` and `2x` at the contact position.                                  |
+| Double touch or pen tap           | Toggle `1x` and `2x` at the contact position.                                  |
 | Two touch or pen contacts         | Pinch continuously between `1x` and `3x`.                                      |
 | Pointer drag while zoomed         | Pan within the visible media bounds.                                           |
 | Enter or Space                    | Toggle `1x` and `2x` from the center.                                          |
@@ -61,7 +61,8 @@ permanent device class from one gesture.
 
 At `1x`, native one-finger page panning remains available. While zoomed, the
 media surface owns drag gestures so panning cannot leak into dashboard
-navigation. A drag or pinch never also activates the tap-to-toggle action.
+navigation. A drag or pinch clears the pending double-activation sequence and
+never activates zoom toggling.
 
 ## Bounds and lifecycle
 

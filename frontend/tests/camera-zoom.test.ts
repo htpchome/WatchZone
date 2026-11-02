@@ -91,19 +91,60 @@ describe("camera media zoom", () => {
     vi.restoreAllMocks();
   });
 
-  it("toggles between 1x and 2x with click or tap", () => {
+  it("toggles between 1x and 2x with double-click or double-tap", () => {
     const surface = createSurface();
     const controller = new CameraZoomController(createHost());
     controller.observe(surface);
     connectPointerEvents(surface, controller);
 
     tap(surface);
+    expect(controller.scale).toBe(1);
+    tap(surface);
     expect(controller.scale).toBe(2);
     expect(controller.zoomed).toBe(true);
 
     tap(surface, "touch");
+    expect(controller.scale).toBe(2);
+    tap(surface, "touch");
     expect(controller.scale).toBe(1);
     expect(controller.transform).toBe("translate3d(0px, 0px, 0) scale(1)");
+  });
+
+  it("does not treat a completed pan as part of a double activation", () => {
+    const surface = createSurface();
+    const controller = new CameraZoomController(createHost());
+    controller.observe(surface);
+    connectPointerEvents(surface, controller);
+    tap(surface);
+    tap(surface);
+    expect(controller.scale).toBe(2);
+
+    surface.dispatchEvent(
+      pointerEvent("pointerdown", {
+        clientX: 200,
+        clientY: 112.5,
+        pointerId: 2,
+        pointerType: "touch",
+      }),
+    );
+    surface.dispatchEvent(
+      pointerEvent("pointermove", {
+        clientX: 240,
+        clientY: 112.5,
+        pointerId: 2,
+        pointerType: "touch",
+      }),
+    );
+    surface.dispatchEvent(
+      pointerEvent("pointerup", {
+        clientX: 240,
+        clientY: 112.5,
+        pointerId: 2,
+        pointerType: "touch",
+      }),
+    );
+    tap(surface, "touch");
+    expect(controller.scale).toBe(2);
   });
 
   it("zooms discrete wheels without consuming smooth scroll or native pinch", () => {
@@ -229,6 +270,7 @@ describe("camera media zoom", () => {
     controller.observe(surface);
     connectPointerEvents(surface, controller);
     controller.configure("camera.front");
+    tap(surface);
     tap(surface);
     expect(controller.scale).toBe(2);
 

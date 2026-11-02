@@ -12,11 +12,14 @@ export const cameraStyles = css`
   }
 
   .camera {
+    background: var(--wzc-camera-stage);
     border-radius: var(--wzc-live-radius);
     box-shadow: var(--wzc-live-shadow);
   }
 
   .live-presentation {
+    --wzc-live-background: var(--wzc-camera-stage);
+    --wzc-placeholder-background: var(--wzc-camera-stage);
     --wzc-live-shadow: none;
   }
 

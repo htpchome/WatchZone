@@ -199,6 +199,7 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
       "--wzc-shadow-small",
       "--wzc-shadow-medium",
       "--wzc-card-outer-shadow",
+      "--wzc-camera-stage",
       "--wzc-live-radius",
       "--wzc-live-shadow",
       "--wzc-media-overlay-opacity",
@@ -712,6 +713,7 @@ test("retains one live connection while the card presentation is replaced", asyn
       "--ha-box-shadow-s",
       "rgb(7, 8, 9) 0px 1px 2px",
     );
+    replacement.style.setProperty("--wzc-camera-stage", "rgb(12, 13, 14)");
     replacement.hass = testWindow.__wzcTestHass;
     document.body.append(replacement);
   });
@@ -748,7 +750,7 @@ test("retains one live connection while the card presentation is replaced", asyn
     "wzc-camera wzc-camera-controls .control-button",
   );
   const mediaSurface = page.locator("wzc-camera-live .media-surface");
-  await mediaSurface.click({ position: { x: 120, y: 80 } });
+  await mediaSurface.dblclick({ position: { x: 120, y: 80 } });
   await expect(mediaSurface).toHaveAttribute("style", /scale\(2\)/);
   await mediaSurface.dispatchEvent("wheel", {
     clientX: 120,
@@ -787,6 +789,18 @@ test("retains one live connection while the card presentation is replaced", asyn
   expect(overlayTransitions.source).toBe(overlayTransitions.controls);
   const viewport = page.locator("wzc-camera-live .viewport");
   const cameraSurface = page.locator("wzc-camera .camera");
+  await expect
+    .poll(() =>
+      cameraSurface.evaluate(
+        (element) => getComputedStyle(element).backgroundColor,
+      ),
+    )
+    .toBe("rgb(12, 13, 14)");
+  await expect
+    .poll(() =>
+      viewport.evaluate((element) => getComputedStyle(element).backgroundColor),
+    )
+    .toBe("rgb(12, 13, 14)");
   await expect
     .poll(() =>
       viewport.evaluate((element) => getComputedStyle(element).borderRadius),

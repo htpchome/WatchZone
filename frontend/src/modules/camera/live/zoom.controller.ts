@@ -1,6 +1,8 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
 const CLICK_MOVE_TOLERANCE_PX = 6;
+const DOUBLE_ACTIVATION_DELAY_MS = 350;
+const DOUBLE_ACTIVATION_DISTANCE_PX = 24;
 const DISCRETE_PIXEL_WHEEL_DELTA = 80;
 const KEYBOARD_PAN_FRACTION = 0.05;
 const MAX_ZOOM = 3;
@@ -32,6 +34,11 @@ interface PinchStart {
   readonly scale: number;
 }
 
+interface TapCandidate extends Point {
+  readonly pointerType: string;
+  readonly time: number;
+}
+
 /** Owns camera-media zoom, bounded pan, gestures, and lifecycle cleanup. */
 export class CameraZoomController implements ReactiveController {
   private _dragStart?: DragStart;
@@ -45,6 +52,7 @@ export class CameraZoomController implements ReactiveController {
   private _resizeObserver?: ResizeObserver;
   private _scale = MIN_ZOOM;
   private _surface?: HTMLElement;
+  private _tapCandidate?: TapCandidate;
 
   public constructor(private readonly _host: ReactiveControllerHost) {
     _host.addController(this);
@@ -92,6 +100,7 @@ export class CameraZoomController implements ReactiveController {
     this._releasePointers();
     this._dragStart = undefined;
     this._pinchStart = undefined;
+    this._tapCandidate = undefined;
   }
 
   public reset(): void {
@@ -103,6 +112,7 @@ export class CameraZoomController implements ReactiveController {
     this._releasePointers();
     this._dragStart = undefined;
     this._pinchStart = undefined;
+    this._tapCandidate = undefined;
     this._host.requestUpdate();
   }
 
@@ -119,6 +129,7 @@ export class CameraZoomController implements ReactiveController {
     this._gestureMoved = false;
 
     if (this._touchPointers().length >= 2) {
+      this._tapCandidate = undefined;
       this._startPinch();
       this._gestureMoved = true;
       this._interacting = true;
@@ -199,6 +210,7 @@ export class CameraZoomController implements ReactiveController {
         Math.abs(event.deltaX) < Math.abs(event.deltaY) / 2);
     if (!discreteWheel) return;
 
+    this._tapCandidate = undefined;
     const nextScale = this._clampScale(
       this._scale + (event.deltaY < 0 ? WHEEL_ZOOM_STEP : -WHEEL_ZOOM_STEP),
     );
@@ -213,14 +225,17 @@ export class CameraZoomController implements ReactiveController {
     const centerX = rect ? rect.left + rect.width / 2 : 0;
     const centerY = rect ? rect.top + rect.height / 2 : 0;
     if (event.key === "Enter" || event.key === " ") {
+      this._tapCandidate = undefined;
       event.preventDefault();
       this._toggleAt(centerX, centerY);
       return;
     }
     if (event.key === "+" || event.key === "=") {
+      this._tapCandidate = undefined;
       event.preventDefault();
       this._setScaleAt(this._scale + WHEEL_ZOOM_STEP, centerX, centerY);
     } else if (event.key === "-") {
+      this._tapCandidate = undefined;
       event.preventDefault();
       this._setScaleAt(this._scale - WHEEL_ZOOM_STEP, centerX, centerY);
     } else if (event.key === "0" || event.key === "Escape") {
@@ -261,8 +276,35 @@ export class CameraZoomController implements ReactiveController {
     if (this._touchPointers().length < 2) this._pinchStart = undefined;
     this._dragStart = undefined;
     this._interacting = false;
-    if (eligible) this._toggleAt(event.clientX, event.clientY);
-    else this._host.requestUpdate();
+    if (eligible) this._activateTap(event);
+    else {
+      this._tapCandidate = undefined;
+      this._host.requestUpdate();
+    }
+  }
+
+  private _activateTap(event: PointerEvent): void {
+    const now = performance.now();
+    const previous = this._tapCandidate;
+    const isDoubleActivation = Boolean(
+      previous &&
+      previous.pointerType === event.pointerType &&
+      now - previous.time <= DOUBLE_ACTIVATION_DELAY_MS &&
+      Math.hypot(event.clientX - previous.x, event.clientY - previous.y) <=
+        DOUBLE_ACTIVATION_DISTANCE_PX,
+    );
+    if (isDoubleActivation) {
+      this._tapCandidate = undefined;
+      this._toggleAt(event.clientX, event.clientY);
+      return;
+    }
+    this._tapCandidate = {
+      pointerType: event.pointerType,
+      time: now,
+      x: event.clientX,
+      y: event.clientY,
+    };
+    this._host.requestUpdate();
   }
 
   private _toggleAt(clientX: number, clientY: number): void {
