@@ -1,8 +1,5 @@
 import type { HomeAssistantApi } from "./home-assistant";
-import {
-  MEDIA_SESSION_RUNTIME_KEY,
-  MEDIA_SESSION_TEARDOWN_RUNTIME_KEY,
-} from "./constants";
+import { MEDIA_SESSION_RUNTIME_KEY } from "./constants";
 import {
   beginLiveStartupTiming,
   type LiveStartupTiming,
@@ -394,18 +391,6 @@ export class MediaSessionManager {
 
 export function getMediaSessionManager(): MediaSessionManager {
   const runtime = window as unknown as Record<string, unknown>;
-  const manager = (runtime[MEDIA_SESSION_RUNTIME_KEY] ??=
+  return (runtime[MEDIA_SESSION_RUNTIME_KEY] ??=
     new MediaSessionManager()) as MediaSessionManager;
-  if (!runtime[MEDIA_SESSION_TEARDOWN_RUNTIME_KEY]) {
-    const closeOnDocumentExit = (event: PageTransitionEvent): void => {
-      if (!event.persisted) {
-        (
-          runtime[MEDIA_SESSION_RUNTIME_KEY] as MediaSessionManager | undefined
-        )?.closeAll();
-      }
-    };
-    window.addEventListener("pagehide", closeOnDocumentExit);
-    runtime[MEDIA_SESSION_TEARDOWN_RUNTIME_KEY] = true;
-  }
-  return manager;
 }

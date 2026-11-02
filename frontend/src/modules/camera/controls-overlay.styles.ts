@@ -30,8 +30,8 @@ export const cameraControlsStyles = css`
     visibility: hidden;
     pointer-events: none;
     transition:
-      opacity 140ms ease,
-      visibility 0s linear 140ms;
+      opacity var(--wzc-media-overlay-transition-duration) ease,
+      visibility 0s linear var(--wzc-media-overlay-transition-duration);
   }
 
   :host([visible]) .control-group {
@@ -65,12 +65,14 @@ export const cameraControlsStyles = css`
     -webkit-tap-highlight-color: transparent;
   }
 
-  .control-button:hover:not(:disabled) {
-    color: var(--wzc-control-hover-color, var(--wzc-color-text-reversed));
-    background: var(
-      --wzc-control-hover-background,
-      var(--wzc-media-overlay-hover-background)
-    );
+  @media (hover: hover) and (pointer: fine) {
+    .control-button:hover:not(:disabled) {
+      color: var(--wzc-control-hover-color, var(--wzc-color-text-reversed));
+      background: var(
+        --wzc-control-hover-background,
+        var(--wzc-media-overlay-hover-background)
+      );
+    }
   }
 
   .control-button:focus-visible {

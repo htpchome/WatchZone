@@ -20,4 +20,3 @@ export const TOAST_VISIBLE_DURATION_MS = 3_500;
 export const TOAST_TRANSITION_DURATION_MS = 180;
 export const RUNTIME_DIAGNOSTICS_KEY = APP_ID;
 export const MEDIA_SESSION_RUNTIME_KEY = `${APP_ID}:media-session-manager`;
-export const MEDIA_SESSION_TEARDOWN_RUNTIME_KEY = `${MEDIA_SESSION_RUNTIME_KEY}:teardown`;

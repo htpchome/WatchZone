@@ -124,10 +124,11 @@ export class CameraLivePresentation extends LitElement {
             ? "HLS · HLS.js"
             : "HLS";
     const connecting = this.available && !this.failed && !this.selected;
-    const showSource = Boolean(
-      this.selected &&
-      this.transport &&
-      (this._visibility.sourceVisible || this._visibility.visible),
+    const resolvedSource = Boolean(this.selected && this.transport);
+    const sourceVisible = Boolean(
+      connecting ||
+      (resolvedSource &&
+        (this._visibility.sourceVisible || this._visibility.visible)),
     );
     return staticHtml`
       <div
@@ -153,19 +154,24 @@ export class CameraLivePresentation extends LitElement {
           @loadeddata=${this._handleWebRtcLoadedData}
         ></video>
         ${
-          connecting || showSource
+          connecting || resolvedSource
             ? html`<div
-                class="source-indicator"
+                class=${
+                  sourceVisible
+                    ? "source-indicator visible"
+                    : "source-indicator"
+                }
                 role="status"
                 aria-live="polite"
+                aria-hidden=${sourceVisible ? "false" : "true"}
                 aria-label=${
-                  showSource
+                  resolvedSource
                     ? `Live source: ${sourceLabel}`
                     : "Connecting to camera"
                 }
               >
                 ${
-                  showSource
+                  resolvedSource
                     ? sourceLabel
                     : html`<span
                           class="connection-spinner"

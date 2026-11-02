@@ -1,9 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  MEDIA_SESSION_RUNTIME_KEY,
-  MEDIA_SESSION_TEARDOWN_RUNTIME_KEY,
-} from "../src/core/constants";
+import { MEDIA_SESSION_RUNTIME_KEY } from "../src/core/constants";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import {
   type ConnectionFactory,
@@ -29,7 +26,6 @@ describe("MediaSessionManager", () => {
     vi.useRealTimers();
     const runtime = window as unknown as Record<string, unknown>;
     delete runtime[MEDIA_SESSION_RUNTIME_KEY];
-    delete runtime[MEDIA_SESSION_TEARDOWN_RUNTIME_KEY];
   });
 
   it("uses configured mute defaults until the user makes a document-lifetime choice", () => {
@@ -78,7 +74,7 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
-  it("retains bfcache navigation and closes on final document exit", async () => {
+  it("does not treat pagehide as final document teardown", async () => {
     const close = vi.fn();
     const factory = vi.fn<ConnectionFactory>(async () => ({
       stream: createStream(),
@@ -88,7 +84,8 @@ describe("MediaSessionManager", () => {
     const runtime = window as unknown as Record<string, unknown>;
     runtime[MEDIA_SESSION_RUNTIME_KEY] = manager;
     expect(getMediaSessionManager()).toBe(manager);
-    const lease = manager.acquireHomeAssistant(createApi(), "camera.front");
+    const api = createApi();
+    const lease = manager.acquireHomeAssistant(api, "camera.front");
     await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
     lease.release();
 
@@ -100,8 +97,15 @@ describe("MediaSessionManager", () => {
     const finalPageHide = new Event("pagehide");
     Object.defineProperty(finalPageHide, "persisted", { value: false });
     window.dispatchEvent(finalPageHide);
+    expect(close).not.toHaveBeenCalled();
+    expect(lease.getSnapshot().state).toBe("parked");
+
+    const returned = manager.acquireHomeAssistant(api, "camera.front");
+    expect(returned.getSnapshot().state).toBe("live");
+    expect(factory).toHaveBeenCalledOnce();
+    returned.release();
+    manager.closeAll();
     expect(close).toHaveBeenCalledOnce();
-    expect(lease.getSnapshot().state).toBe("closed");
   });
 
   it("keeps a parked connection for the document lifetime", async () => {

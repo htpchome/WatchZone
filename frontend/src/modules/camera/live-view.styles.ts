@@ -87,8 +87,8 @@ export const cameraLiveViewStyles = css`
   .source-indicator {
     position: absolute;
     z-index: 1;
-    inset-block-start: max(0.5rem, env(safe-area-inset-top, 0px));
-    inset-inline-end: calc(0.5rem + env(safe-area-inset-right, 0px));
+    inset-block-start: 0.5rem;
+    inset-inline-end: 0.5rem;
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
@@ -114,7 +114,24 @@ export const cameraLiveViewStyles = css`
     font-size: var(--wzc-font-size-small);
     font-weight: var(--wzc-font-weight-semibold);
     line-height: var(--wzc-line-height-condensed);
+    opacity: 0;
+    visibility: hidden;
     pointer-events: none;
+    transition:
+      opacity var(--wzc-media-overlay-transition-duration) ease,
+      visibility 0s linear var(--wzc-media-overlay-transition-duration);
+  }
+
+  .source-indicator.visible {
+    opacity: 1;
+    visibility: visible;
+    transition-delay: 0s;
+  }
+
+  .viewport:fullscreen .source-indicator,
+  .viewport:-webkit-full-screen .source-indicator {
+    inset-block-start: max(0.5rem, env(safe-area-inset-top, 0px));
+    inset-inline-end: calc(0.5rem + env(safe-area-inset-right, 0px));
   }
 
   .connection-spinner {
@@ -134,8 +151,10 @@ export const cameraLiveViewStyles = css`
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .connection-spinner {
+    .connection-spinner,
+    .source-indicator {
       animation: none;
+      transition: none;
     }
   }
 `;

@@ -75,6 +75,11 @@ background-lifecycle capability checks.
 - Autoplay rejection is recoverable state and never overwrites user mute intent.
 - Backgrounding, app suspension, route changes, and presentation replacement
   must not be confused with explicit user closure.
+- `pagehide` is not proof of final document destruction in WebKit or embedded
+  Home Assistant WebViews and must not close the document-scoped session pool.
+- Native iOS video fullscreen cannot contain WatchZone-authored overlays and
+  therefore displays the platform's native controls rather than WatchZone's
+  control and information overlays.
 - iOS, iPadOS, Companion, and Catalyst lifecycle events can require reconnection
   even when ordinary desktop navigation retains a session.
 - Unsupported WebRTC, codec, HLS, or media-element behavior is isolated to the

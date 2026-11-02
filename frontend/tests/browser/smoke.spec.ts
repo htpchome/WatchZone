@@ -684,6 +684,9 @@ test("retains one live connection while the card presentation is replaced", asyn
     const testWindow = window as unknown as Window & {
       __wzcTestHass: unknown;
     };
+    const routePageHide = new Event("pagehide");
+    Object.defineProperty(routePageHide, "persisted", { value: false });
+    window.dispatchEvent(routePageHide);
     const first = document.querySelector("watchzone-card");
     first?.remove();
     const replacement = document.createElement(
@@ -740,11 +743,30 @@ test("retains one live connection while the card presentation is replaced", asyn
   await expect(connectionIndicator).toBeHidden({
     timeout: CAMERA_OVERLAY_HIDE_DELAY_MS + 1_000,
   });
+  await expect(connectionIndicator).toHaveCount(1);
   const controls = page.locator(
     "wzc-camera wzc-camera-controls .control-button",
   );
   await expect(controls).toHaveCount(5);
   await expect(controls.first()).toBeHidden();
+  const overlayTransitions = await page.evaluate(() => {
+    const camera = document.querySelector("wzc-camera");
+    const presentation = camera?.shadowRoot?.querySelector("wzc-camera-live");
+    const source =
+      presentation?.shadowRoot?.querySelector<HTMLElement>(".source-indicator");
+    const controls = presentation?.shadowRoot?.querySelector(
+      "wzc-camera-controls",
+    );
+    const controlGroup =
+      controls?.shadowRoot?.querySelector<HTMLElement>(".control-group");
+    return {
+      controls: controlGroup
+        ? getComputedStyle(controlGroup).transitionDuration
+        : undefined,
+      source: source ? getComputedStyle(source).transitionDuration : undefined,
+    };
+  });
+  expect(overlayTransitions.source).toBe(overlayTransitions.controls);
   const viewport = page.locator("wzc-camera-live .viewport");
   const cameraSurface = page.locator("wzc-camera .camera");
   await expect
@@ -957,6 +979,31 @@ test("retains one live connection while the card presentation is replaced", asyn
   await expect(connectionIndicator).toBeHidden({
     timeout: CAMERA_OVERLAY_HIDE_DELAY_MS + 1_000,
   });
+
+  await viewport.dispatchEvent("pointerdown", {
+    isPrimary: true,
+    pointerId: 2,
+    pointerType: "touch",
+  });
+  await expect(mute).toBeVisible();
+  await mute.evaluate((element) => (element as HTMLButtonElement).focus());
+  expect(
+    await mute.evaluate(
+      (element) =>
+        (element.getRootNode() as ShadowRoot).activeElement === element,
+    ),
+  ).toBe(true);
+  await mute.dispatchEvent("pointerup", {
+    isPrimary: true,
+    pointerId: 3,
+    pointerType: "touch",
+  });
+  expect(
+    await mute.evaluate(
+      (element) =>
+        (element.getRootNode() as ShadowRoot).activeElement === element,
+    ),
+  ).toBe(false);
 
   expect(
     await page.evaluate(() => window.wzc?.getLiveStartupTimings()[0]?.phases),

@@ -129,11 +129,17 @@ export class CameraControls extends LitElement {
       aria-label=${label}
       aria-pressed=${active ? "true" : "false"}
       ?disabled=${!supported}
+      @pointerup=${this._releaseTouchFocus}
       @click=${() => this._dispatch(control.action)}
     >
       ${renderIcon(iconName(control.action, this.muted, this.fullscreenActive))}
     </button>`;
   }
+
+  private readonly _releaseTouchFocus = (event: PointerEvent): void => {
+    if (event.pointerType === "touch")
+      (event.currentTarget as HTMLButtonElement).blur();
+  };
 
   private _dispatch(action: CameraControlAction): void {
     this.dispatchEvent(

@@ -357,8 +357,11 @@ Visibility changes affect presentation and forced mute, not user preference.
 ## 12. Cleanup
 
 Cleanup occurs when the manager evicts a session, the integration becomes
-unavailable, the document unloads where callbacks are possible, or an explicit
-stop closes the session.
+unavailable, or an explicit stop closes the session. The manager does not use
+`pagehide` as a final-document signal because WebKit and embedded WebViews may
+emit it during Home Assistant navigation while the document remains reusable.
+Actual document destruction releases its browser-owned media resources with
+the JavaScript realm.
 
 Cleanup is idempotent and includes:
 
