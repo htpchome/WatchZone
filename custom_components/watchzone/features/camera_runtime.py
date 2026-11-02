@@ -78,6 +78,8 @@ class CameraRuntimeService:
         self._subscribers: dict[
             str, set[Callable[[CameraRuntimeSnapshot], None]]
         ] = {}
+        self._last_snapshots: dict[str, CameraRuntimeSnapshot] = {}
+        self._monitor_tasks: dict[str, asyncio.Task[None]] = {}
         self._reconcile_tasks: dict[str, asyncio.Task[None]] = {}
         self._closed = False
 
@@ -223,17 +225,23 @@ class CameraRuntimeService:
         )
 
     def async_subscribe(
-        self, entity_id: str, listener: Callable[[CameraRuntimeSnapshot], None]
+        self,
+        entity_id: str,
+        listener: Callable[[CameraRuntimeSnapshot], None],
+        initial: CameraRuntimeSnapshot | None = None,
     ) -> Callable[[], None]:
         """Notify one frontend subscriber when normalized state changes."""
         listeners = self._subscribers.setdefault(entity_id, set())
         listeners.add(listener)
+        if initial is not None:
+            self._last_snapshots[entity_id] = initial
         if entity_id not in self._subscriber_state_unsubs:
             self._subscriber_state_unsubs[entity_id] = async_track_state_change_event(
                 self._hass,
                 [entity_id],
                 lambda _event: self._start_snapshot_notification(entity_id),
             )
+        self._start_provider_monitor(entity_id)
 
         @callback
         def unsubscribe() -> None:
@@ -245,6 +253,10 @@ class CameraRuntimeService:
                 return
             self._subscribers.pop(entity_id, None)
             self._subscriber_state_unsubs.pop(entity_id, lambda: None)()
+            self._last_snapshots.pop(entity_id, None)
+            monitor = self._monitor_tasks.pop(entity_id, None)
+            if monitor is not None:
+                monitor.cancel()
 
         return unsubscribe
 
@@ -261,11 +273,16 @@ class CameraRuntimeService:
             unsub()
         self._subscriber_state_unsubs.clear()
         self._subscribers.clear()
+        self._last_snapshots.clear()
+        monitor_tasks = list(self._monitor_tasks.values())
+        self._monitor_tasks.clear()
+        for task in monitor_tasks:
+            task.cancel()
         tasks = list(self._reconcile_tasks.values())
         self._reconcile_tasks.clear()
         for task in tasks:
             task.cancel()
-        await asyncio.gather(*tasks, return_exceptions=True)
+        await asyncio.gather(*monitor_tasks, *tasks, return_exceptions=True)
 
     def _provider(self, entity_id: str) -> _ProviderModule | None:
         registry_entry = er.async_get(self._hass).async_get(entity_id)
@@ -281,6 +298,56 @@ class CameraRuntimeService:
             )
         except ModuleNotFoundError:
             return None
+
+    @callback
+    def _start_provider_monitor(self, entity_id: str) -> None:
+        if entity_id in self._monitor_tasks:
+            return
+        provider = self._provider(entity_id)
+        interval = getattr(provider, "RUNTIME_POLL_INTERVAL", None)
+        if (
+            provider is None
+            or isinstance(interval, bool)
+            or not isinstance(interval, int | float)
+            or interval <= 0
+        ):
+            return
+        task = self._hass.async_create_task(
+            self._async_monitor_provider(entity_id, float(interval)),
+            f"{NAME} monitor camera runtime state for {entity_id}",
+        )
+        self._monitor_tasks[entity_id] = task
+        task.add_done_callback(
+            lambda completed: self._discard_monitor_task(entity_id, completed)
+        )
+
+    async def _async_monitor_provider(self, entity_id: str, interval: float) -> None:
+        failure_reported = False
+        while not self._closed and entity_id in self._subscribers:
+            await asyncio.sleep(interval)
+            try:
+                snapshot = await self.async_snapshot(entity_id)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                if not failure_reported:
+                    _LOGGER.warning(
+                        "Unable to monitor camera runtime state for %s",
+                        entity_id,
+                        exc_info=True,
+                    )
+                    failure_reported = True
+                continue
+            failure_reported = False
+            if self._last_snapshots.get(entity_id) != snapshot:
+                self._notify_subscribers(entity_id, snapshot)
+
+    @callback
+    def _discard_monitor_task(
+        self, entity_id: str, completed: asyncio.Task[None]
+    ) -> None:
+        if self._monitor_tasks.get(entity_id) is completed:
+            self._monitor_tasks.pop(entity_id, None)
 
     @callback
     def _watch_entity(self, entity_id: str) -> None:
@@ -411,6 +478,7 @@ class CameraRuntimeService:
     def _notify_subscribers(
         self, entity_id: str, snapshot: CameraRuntimeSnapshot
     ) -> None:
+        self._last_snapshots[entity_id] = snapshot
         for listener in tuple(self._subscribers.get(entity_id, ())):
             try:
                 listener(snapshot)

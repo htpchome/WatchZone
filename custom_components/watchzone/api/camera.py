@@ -63,7 +63,9 @@ async def ws_camera_runtime_subscribe(
         connection.send_message(event_message(msg["id"], snapshot))
 
     connection.subscriptions[msg["id"]] = service.async_subscribe(
-        entity_id, lambda snapshot: send(snapshot_dict(snapshot))
+        entity_id,
+        lambda snapshot: send(snapshot_dict(snapshot)),
+        initial,
     )
     connection.send_result(msg["id"])
     send(snapshot_dict(initial))

@@ -1,12 +1,16 @@
 """Tests for provider-owned camera suspension and resume scheduling."""
 
+import asyncio
 from datetime import timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
 from homeassistant.core import Context, HomeAssistant
 
-from custom_components.watchzone.features.camera_runtime import CameraRuntimeService
+from custom_components.watchzone.features.camera_runtime import (
+    CameraRuntimeService,
+    CameraRuntimeSnapshot,
+)
 from custom_components.watchzone.providers.camera import CameraRuntimeState
 from custom_components.watchzone.providers.frigate.camera import (
     async_get_state,
@@ -200,20 +204,29 @@ async def test_external_provider_state_is_published_without_local_intent(
             suspended=provider_suspended,
         )
 
-    provider = SimpleNamespace(async_get_state=get_state)
+    provider = SimpleNamespace(
+        RUNTIME_POLL_INTERVAL=0.01,
+        async_get_state=get_state,
+    )
     service = CameraRuntimeService(hass)
-    listener = Mock()
+    observed: list[bool] = []
+    resumed = asyncio.Event()
+
+    def listener(snapshot: CameraRuntimeSnapshot) -> None:
+        suspended = snapshot.suspended
+        observed.append(suspended)
+        if not suspended:
+            resumed.set()
 
     with patch.object(service, "_provider", return_value=provider):
-        unsubscribe = service.async_subscribe("camera.porch", listener)
-        await service._async_publish_snapshot("camera.porch")  # noqa: SLF001
+        initial = await service.async_snapshot("camera.porch")
+        unsubscribe = service.async_subscribe(
+            "camera.porch", listener, initial
+        )
         provider_suspended = False
-        await service._async_publish_snapshot("camera.porch")  # noqa: SLF001
+        await asyncio.wait_for(resumed.wait(), timeout=1)
 
-    assert [call.args[0].suspended for call in listener.call_args_list] == [
-        True,
-        False,
-    ]
+    assert observed == [False]
     unsubscribe()
     await service.async_close()
 

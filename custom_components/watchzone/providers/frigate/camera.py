@@ -17,6 +17,7 @@ from ..camera import CameraRuntimeState
 
 CAMERA_DOMAIN = "camera"
 PROVIDER = "frigate"
+RUNTIME_POLL_INTERVAL = 1.0
 
 
 async def async_get_state(hass: HomeAssistant, entity_id: str) -> CameraRuntimeState:

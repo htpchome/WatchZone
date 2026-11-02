@@ -47,6 +47,13 @@ Every runtime command and provider state change is broadcast to all subscribed
 cards. A suspend or resume initiated in one browser therefore updates the
 presentation and media lifecycle in every other open browser without a refresh.
 
+Runtime updates are driven by Home Assistant state events. A provider may also
+declare a reconciliation interval when its external control surface does not
+reliably produce an event for every change. The backend runs at most one monitor
+per entity, regardless of the number of cards or browsers, and only while that
+entity has subscribers. The Frigate provider uses this fallback so changes made
+directly in Frigate are reflected without navigation or refresh.
+
 ## Authorization
 
 - Subscriptions require read access to the camera entity.
