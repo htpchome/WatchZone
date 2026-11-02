@@ -5,7 +5,11 @@ import type {
 } from "../core/home-assistant";
 
 export type LiveOfferEvent =
-  | { readonly type: "session"; readonly session_id: string }
+  | {
+      readonly type: "session";
+      readonly session_id: string;
+      readonly signaling_path: string;
+    }
   | { readonly type: "answer"; readonly answer: string }
   | { readonly type: "candidate"; readonly candidate: RTCIceCandidateInit }
   | { readonly type: "error"; readonly message: string };

@@ -47,6 +47,7 @@ async def test_standard_home_assistant_session_delegates_public_contract() -> No
         "session-1",
         events.append,
     )
+    assert session.signaling_path == "home_assistant:standard"
 
     await session.async_start("offer")
     callback = camera.async_handle_async_webrtc_offer.await_args.args[2]
@@ -142,6 +143,7 @@ async def test_frigate_capability_prepares_authenticated_go2rtc_socket() -> None
         )
 
     assert isinstance(session, FrigateLiveSignalingSession)
+    assert session.signaling_path == "frigate:trickle_ice"
     websession.ws_connect.assert_awaited_once_with(
         URL("http://frigate:5000/live/webrtc/api/ws?src=porch"),
         headers={"Authorization": "Bearer token"},

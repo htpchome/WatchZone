@@ -12,6 +12,10 @@ type SendLiveSignalingEvent = Callable[[LiveSignalingEvent], None]
 class LiveSignalingSession(Protocol):
     """One provider-backed WebRTC signaling session."""
 
+    @property
+    def signaling_path(self) -> str:
+        """Return a non-secret diagnostics identifier for this path."""
+
     async def async_start(self, offer: str) -> None:
         """Start negotiation for a browser offer."""
 

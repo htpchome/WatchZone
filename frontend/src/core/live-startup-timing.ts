@@ -25,12 +25,14 @@ export type LiveStartupPhase =
 export interface LiveStartupTimingSnapshot {
   readonly key: string;
   readonly phases: Readonly<Partial<Record<LiveStartupPhase, number>>>;
+  readonly signalingPath?: string;
   readonly startedAt: string;
 }
 
 export class LiveStartupTiming {
   private readonly _origin = performance.now();
   private readonly _phases: Partial<Record<LiveStartupPhase, number>> = {};
+  private _signalingPath?: string;
 
   public constructor(public readonly key: string) {}
 
@@ -39,10 +41,15 @@ export class LiveStartupTiming {
       Math.round((performance.now() - this._origin) * 10) / 10;
   }
 
+  public setSignalingPath(path: string): void {
+    this._signalingPath ??= path;
+  }
+
   public snapshot(): LiveStartupTimingSnapshot {
     return {
       key: this.key,
       phases: { ...this._phases },
+      signalingPath: this._signalingPath,
       startedAt: new Date(performance.timeOrigin + this._origin).toISOString(),
     };
   }

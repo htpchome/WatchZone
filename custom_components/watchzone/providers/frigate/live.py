@@ -39,6 +39,8 @@ class _FrigateClient(Protocol):
 class FrigateLiveSignalingSession:
     """Relay trickled WebRTC signaling through Frigate's go2rtc socket."""
 
+    signaling_path = "frigate:trickle_ice"
+
     def __init__(
         self,
         hass: HomeAssistant,

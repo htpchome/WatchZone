@@ -224,6 +224,12 @@ The concrete Frigate capability remains dynamically loaded beneath the
 provider boundary. Camera UI, live presentation, session retention, HLS
 hedging, and audio policy do not import or branch on Frigate.
 
+The startup diagnostics snapshot exposes the selected backend route as
+`signalingPath`. `frigate:trickle_ice` confirms that the optimized capability
+was selected; `home_assistant:standard` confirms that the generic HA camera
+contract was used. This metadata is diagnostic only and does not change the
+user-facing transport label.
+
 ## 10. Observed client baseline
 
 Physical-client testing of `0.0.4-dev.8` recorded the following initial HLS

@@ -84,7 +84,7 @@ async def ws_live_offer(
         def send_event(event: dict[str, object]) -> None:
             connection.send_message(event_message(msg["id"], event))
 
-        session_id = await runtime.live_signaling.async_create(
+        created = await runtime.live_signaling.async_create(
             _owner_id(connection), entity_id, send_event
         )
     except HomeAssistantError as err:
@@ -92,13 +92,19 @@ async def ws_live_offer(
         return
 
     connection.subscriptions[msg["id"]] = partial(
-        runtime.live_signaling.close, session_id
+        runtime.live_signaling.close, created.session_id
     )
     connection.send_message(result_message(msg["id"]))
-    send_event({"type": "session", "session_id": session_id})
+    send_event(
+        {
+            "type": "session",
+            "session_id": created.session_id,
+            "signaling_path": created.signaling_path,
+        }
+    )
 
     try:
-        await runtime.live_signaling.async_start(session_id, msg["offer"])
+        await runtime.live_signaling.async_start(created.session_id, msg["offer"])
     except Exception as err:
         _LOGGER.debug("Live WebRTC signaling failed: %s", err)
         send_event(
@@ -107,7 +113,7 @@ async def ws_live_offer(
                 "message": "Camera WebRTC signaling failed",
             }
         )
-        runtime.live_signaling.close(session_id)
+        runtime.live_signaling.close(created.session_id)
 
 
 @websocket_command(

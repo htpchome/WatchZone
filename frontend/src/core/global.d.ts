@@ -36,6 +36,7 @@ interface Window {
           >
         >
       >;
+      readonly signalingPath?: string;
       readonly startedAt: string;
     }>;
     loadedAt: string;

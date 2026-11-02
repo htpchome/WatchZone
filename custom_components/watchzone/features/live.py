@@ -34,6 +34,8 @@ class _ProviderSessionFactory(Protocol):
 class HomeAssistantLiveSignalingSession:
     """Delegate signaling to the selected Home Assistant camera implementation."""
 
+    signaling_path = "home_assistant:standard"
+
     def __init__(
         self,
         camera: Camera,
@@ -68,6 +70,14 @@ class _OwnedSession:
     session: LiveSignalingSession
 
 
+@dataclass(frozen=True, slots=True)
+class CreatedLiveSignalingSession:
+    """Public result of provider resolution for one signaling session."""
+
+    session_id: str
+    signaling_path: str
+
+
 class LiveSignalingService:
     """Own active signaling sessions and select provider capabilities."""
 
@@ -80,7 +90,7 @@ class LiveSignalingService:
         owner_id: str,
         entity_id: str,
         send_event: SendLiveSignalingEvent,
-    ) -> str:
+    ) -> CreatedLiveSignalingSession:
         """Create one signaling session without starting negotiation."""
         from homeassistant.components.camera.const import StreamType
         from homeassistant.components.camera.helper import get_camera_from_entity_id
@@ -96,7 +106,7 @@ class LiveSignalingService:
         if session is None:
             session = HomeAssistantLiveSignalingSession(camera, session_id, send_event)
         self._sessions[session_id] = _OwnedSession(owner_id, entity_id, session)
-        return session_id
+        return CreatedLiveSignalingSession(session_id, session.signaling_path)
 
     async def async_start(self, session_id: str, offer: str) -> None:
         """Start a created signaling session."""
