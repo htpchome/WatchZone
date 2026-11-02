@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createHomeAssistantHlsConnection } from "../src/connections/home-assistant/hls";
+import { createHaDirectHlsConnection } from "../src/providers/home-assistant/live/hls";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import { LiveStartupTiming } from "../src/core/live-startup-timing";
 
@@ -58,8 +58,8 @@ describe("Home Assistant HLS connection", () => {
       new Response("#EXTM3U\n#EXT-X-VERSION:3\n"),
     );
     const callWS = vi.fn(async () => ({ url: "/api/hls/front.m3u8" }));
-    const timing = new LiveStartupTiming("home_assistant_hls:camera.front");
-    const connecting = createHomeAssistantHlsConnection(
+    const timing = new LiveStartupTiming("ha_direct:hls:camera.front");
+    const connecting = createHaDirectHlsConnection(
       createApi(callWS as HomeAssistantApi["callWS"]),
       "camera.front",
       new AbortController().signal,
@@ -105,8 +105,8 @@ describe("Home Assistant HLS connection", () => {
       ),
     );
     const callWS = vi.fn(async () => ({ url: "/api/hls/master.m3u8" }));
-    const timing = new LiveStartupTiming("home_assistant_hls:camera.front");
-    const connecting = createHomeAssistantHlsConnection(
+    const timing = new LiveStartupTiming("ha_direct:hls:camera.front");
+    const connecting = createHaDirectHlsConnection(
       createApi(callWS as HomeAssistantApi["callWS"]),
       "camera.front",
       new AbortController().signal,
@@ -146,12 +146,12 @@ describe("Home Assistant HLS connection", () => {
       };
       document.body.append(video);
     });
-    const connecting = createHomeAssistantHlsConnection(
+    const connecting = createHaDirectHlsConnection(
       createApi(callWS as HomeAssistantApi["callWS"]),
       "camera.front",
       new AbortController().signal,
       vi.fn(),
-      new LiveStartupTiming("home_assistant_hls:camera.front"),
+      new LiveStartupTiming("ha_direct:hls:camera.front"),
       { initialMuted: false, onVideo },
     );
 

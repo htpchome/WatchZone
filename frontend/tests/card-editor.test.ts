@@ -3,7 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DashboardCard } from "../src/card/card";
 import type { CardConfig } from "../src/core/config";
 import {
+  CARD_TAG,
   CARD_TYPE,
+  EDITOR_TAG,
   EDITOR_DIRTY_STATE_KEY,
   EDITOR_TEXT_PREVIEW_DELAY_MS,
 } from "../src/core/constants";
@@ -33,7 +35,7 @@ function inputTitle(editor: CardEditor, title: string): InputElement {
   return input;
 }
 
-describe("watchzone-card-editor", () => {
+describe(EDITOR_TAG, () => {
   beforeEach(async () => {
     vi.useFakeTimers();
     await import("../src/main");
@@ -57,12 +59,10 @@ describe("watchzone-card-editor", () => {
     };
     document.addEventListener("context-request", contextHandler);
 
-    const card = document.createElement("watchzone-card") as DashboardCard;
+    const card = document.createElement(CARD_TAG) as DashboardCard;
     card.preview = true;
     card.setConfig({ type: CARD_TYPE, title: "Original" });
-    const editor = document.createElement(
-      "watchzone-card-editor",
-    ) as CardEditor;
+    const editor = document.createElement(EDITOR_TAG) as CardEditor;
     editor.setConfig({ type: CARD_TYPE, title: "Original" });
     const configChanged = vi.fn();
     editor.addEventListener("config-changed", configChanged);
@@ -90,9 +90,7 @@ describe("watchzone-card-editor", () => {
   });
 
   it("uses one committed compatibility event when dirtyState is unavailable", async () => {
-    const editor = document.createElement(
-      "watchzone-card-editor",
-    ) as CardEditor;
+    const editor = document.createElement(EDITOR_TAG) as CardEditor;
     editor.setConfig({ type: CARD_TYPE, title: "Original" });
     const changed = vi.fn();
     editor.addEventListener("config-changed", changed);
@@ -119,7 +117,7 @@ describe("watchzone-card-editor", () => {
       });
     };
     document.addEventListener("context-request", contextHandler);
-    const card = document.createElement("watchzone-card") as DashboardCard;
+    const card = document.createElement(CARD_TAG) as DashboardCard;
     card.preview = true;
     card.setConfig({ type: CARD_TYPE, title: "Camera" });
     const dialog = document.createElement(
@@ -128,9 +126,7 @@ describe("watchzone-card-editor", () => {
     dialog._cardConfig = { type: CARD_TYPE, title: "Camera" };
     dialog._updateDirtyState = vi.fn();
     const dialogRoot = dialog.attachShadow({ mode: "open" });
-    const editor = document.createElement(
-      "watchzone-card-editor",
-    ) as CardEditor;
+    const editor = document.createElement(EDITOR_TAG) as CardEditor;
     editor.setConfig({ type: CARD_TYPE, title: "Camera" });
     const changed = vi.fn();
     editor.addEventListener("config-changed", changed);
@@ -166,9 +162,7 @@ describe("watchzone-card-editor", () => {
     });
     expect(dialog._updateDirtyState).toHaveBeenCalledWith(configSeenBySave);
 
-    const reopened = document.createElement(
-      "watchzone-card-editor",
-    ) as CardEditor;
+    const reopened = document.createElement(EDITOR_TAG) as CardEditor;
     reopened.setConfig(configSeenBySave);
     document.body.append(reopened);
     await reopened.updateComplete;
@@ -186,7 +180,7 @@ describe("watchzone-card-editor", () => {
       request.callback?.({ setState: (config) => states.push(config) });
     };
     document.addEventListener("context-request", contextHandler);
-    const card = document.createElement("watchzone-card") as DashboardCard;
+    const card = document.createElement(CARD_TAG) as DashboardCard;
     card.preview = true;
     card.setConfig({ type: CARD_TYPE, title: "Camera" });
     const dialog = document.createElement(
@@ -195,9 +189,7 @@ describe("watchzone-card-editor", () => {
     dialog._cardConfig = { type: CARD_TYPE, title: "Camera" };
     dialog._updateDirtyState = vi.fn();
     const dialogRoot = dialog.attachShadow({ mode: "open" });
-    const editor = document.createElement(
-      "watchzone-card-editor",
-    ) as CardEditor;
+    const editor = document.createElement(EDITOR_TAG) as CardEditor;
     editor.setConfig({ type: CARD_TYPE, title: "Camera" });
     const save = document.createElement("button");
     save.slot = "primaryAction";
@@ -244,9 +236,7 @@ describe("watchzone-card-editor", () => {
       camera_rounded_corners: false,
       camera_shadows: false,
     });
-    const reopened = document.createElement(
-      "watchzone-card-editor",
-    ) as CardEditor;
+    const reopened = document.createElement(EDITOR_TAG) as CardEditor;
     reopened.setConfig(dialog._cardConfig);
     document.body.append(reopened);
     await reopened.updateComplete;
@@ -278,7 +268,7 @@ describe("watchzone-card-editor", () => {
     document.addEventListener("context-request", contextHandler);
 
     const baseline = { type: CARD_TYPE, title: "Camera" } as const;
-    const card = document.createElement("watchzone-card") as DashboardCard;
+    const card = document.createElement(CARD_TAG) as DashboardCard;
     card.preview = true;
     card.setConfig(baseline);
     const dialog = document.createElement(
@@ -287,9 +277,7 @@ describe("watchzone-card-editor", () => {
     dialog._cardConfig = baseline;
     dialog._updateDirtyState = vi.fn();
     const dialogRoot = dialog.attachShadow({ mode: "open" });
-    const editor = document.createElement(
-      "watchzone-card-editor",
-    ) as CardEditor;
+    const editor = document.createElement(EDITOR_TAG) as CardEditor;
     editor.setConfig(baseline);
     const save = document.createElement("button");
     save.slot = "primaryAction";
@@ -352,9 +340,7 @@ describe("watchzone-card-editor", () => {
     });
     expect(dialog._updateDirtyState).toHaveBeenCalledWith(dialog._cardConfig);
 
-    const reopened = document.createElement(
-      "watchzone-card-editor",
-    ) as CardEditor;
+    const reopened = document.createElement(EDITOR_TAG) as CardEditor;
     reopened.setConfig(dialog._cardConfig);
     document.body.append(reopened);
     await reopened.updateComplete;
@@ -390,9 +376,7 @@ describe("watchzone-card-editor", () => {
     dialog._cardConfig = { type: CARD_TYPE, title: "Camera" };
     dialog._updateDirtyState = vi.fn();
     const root = dialog.attachShadow({ mode: "open" });
-    const editor = document.createElement(
-      "watchzone-card-editor",
-    ) as CardEditor;
+    const editor = document.createElement(EDITOR_TAG) as CardEditor;
     editor.setConfig(dialog._cardConfig);
     const save = document.createElement("button");
     save.slot = "primaryAction";
@@ -424,9 +408,7 @@ describe("watchzone-card-editor", () => {
       start_live_unmuted_phone: true,
     });
 
-    const reopened = document.createElement(
-      "watchzone-card-editor",
-    ) as CardEditor;
+    const reopened = document.createElement(EDITOR_TAG) as CardEditor;
     reopened.setConfig(dialog._cardConfig);
     document.body.append(reopened);
     await reopened.updateComplete;
@@ -467,9 +449,7 @@ describe("watchzone-card-editor", () => {
       request.callback?.({ setState });
     };
     document.addEventListener("context-request", contextHandler);
-    const editor = document.createElement(
-      "watchzone-card-editor",
-    ) as CardEditor;
+    const editor = document.createElement(EDITOR_TAG) as CardEditor;
     editor.setConfig({ type: CARD_TYPE, title: "Camera" });
     document.body.append(editor);
     await editor.updateComplete;
@@ -503,9 +483,7 @@ describe("watchzone-card-editor", () => {
     };
     dialog._updateDirtyState = vi.fn();
     const root = dialog.attachShadow({ mode: "open" });
-    const editor = document.createElement(
-      "watchzone-card-editor",
-    ) as CardEditor;
+    const editor = document.createElement(EDITOR_TAG) as CardEditor;
     editor.setConfig({
       type: CARD_TYPE,
       title: "Original",

@@ -34,8 +34,8 @@ A focused system contract records:
 
 - **Owner:** `frontend/src/core/client-environment.ts`
 - **Contract:** `docs/platform-compatibility.md`, sections 2 and 5
-- **Consumers:** card prewarming, camera startup-audio policy, transport
-  eligibility, and camera-control device matrices
+- **Consumers:** camera startup-audio policy, playback eligibility, and
+  camera-control device matrices
 - **Flow:** one document-scoped `ClientEnvironment` class normalizes browser
   evidence into host, operating system, physical client class, input evidence,
   and derived WebRTC eligibility. Responsive sizing remains CSS-owned.
@@ -70,7 +70,8 @@ A focused system contract records:
   `docs/config-editor-lifecycle.md`, section 5
 - **Flow:** normalized card configuration drives WatchZone semantic tokens and
   the narrow bridge that synchronizes outer appearance with Home Assistant's
-  card host and shadow boundary.
+  card host and shadow boundary. It lazy-loads the camera module but never
+  acquires or prewarms media itself.
 - **Key invariant:** feature CSS consumes `--wzc-*` semantics; only
   `theme-tokens.ts` directly references Home Assistant theme variables.
 - **Verification:** `frontend/tests/card.test.ts`, shell and token
@@ -79,16 +80,20 @@ A focused system contract records:
 
 ### 3.4 Camera module and live presentation
 
-- **Owners:** `frontend/src/modules/camera/index.ts` and
-  `frontend/src/modules/camera/live-view.ts`; colocated camera controllers and
-  styles own controls, visibility, fullscreen/Picture-in-Picture lifecycle,
-  and presentation
+- **Owners:** `frontend/src/modules/camera/index.ts`,
+  `frontend/src/modules/camera/live/presentation.ts`,
+  `frontend/src/modules/camera/live/session.controller.ts`, and
+  `frontend/src/modules/camera/live/audio.controller.ts`; colocated camera
+  helpers and styles own controls, visibility, fullscreen/Picture-in-Picture
+  lifecycle, and presentation
 - **Contract:** `docs/live-session-lifecycle.md` and
   `docs/platform-compatibility.md`
 - **Flow:** the lazy camera module receives normalized configuration and a Home
-  Assistant API adapter, acquires pooled media leases, presents the selected
-  media element, and emits user control intent. It does not own the underlying
-  connection lifetime.
+  Assistant API adapter. Its session controller resolves playback and acquires
+  pooled leases; its audio controller owns desired/effective mute and autoplay
+  recovery; its Lit presentation renders the selected element and emits user
+  control intent. The camera module does not own the underlying connection
+  lifetime.
 - **Key invariant:** camera presentation can be replaced without creating a
   duplicate connection or overwriting explicit mute preference. Only an actual
   `NotAllowedError` may classify audible playback as autoplay-blocked;
@@ -102,12 +107,14 @@ A focused system contract records:
 ### 3.5 Media sessions, retention, and audio intent
 
 - **Owners:** `frontend/src/core/media-session-manager.ts` and
-  `frontend/src/core/media-playback.ts`
+  `frontend/src/core/media-playback.ts`; the camera audio controller applies
+  their policy to its current presentation
 - **Contract:** `docs/live-session-lifecycle.md`
 - **Flow:** the document-scoped manager pools sessions by resolved source and
-  grants leases to presentations. It retains bounded healthy sessions across
-  presentation and Home Assistant route changes and separately stores the
-  user's per-camera mute choice for the document lifetime.
+  grants leases from typed, adapter-supplied requests. It has no concrete
+  playback imports. It retains bounded healthy sessions across presentation
+  and Home Assistant route changes and separately stores the user's per-camera
+  mute choice for the document lifetime.
 - **Key invariant:** Lit element disconnect is lease release, not automatic
   session destruction; automatic playback state never replaces user intent.
   Every presentation/lifecycle design declares its lease transition, and a
@@ -121,14 +128,14 @@ A focused system contract records:
 
 ### 3.6 Home Assistant direct live connection
 
-- **Owners:** `frontend/src/connections/home-assistant/resolver.ts`,
-  `frontend/src/connections/home-assistant/presentation.ts`,
-  `frontend/src/connections/home-assistant/index.ts`,
-  and `frontend/src/connections/home-assistant/hls.ts`
+- **Owners:** `frontend/src/providers/live-source-resolver.ts`,
+  `frontend/src/providers/home-assistant/live/webrtc.ts`, and
+  `frontend/src/providers/home-assistant/live/hls.ts`
 - **Contract:** `docs/home-assistant-live-connection.md`
 - **Flow:** eligible clients hedge WebRTC and HLS startup and present the first
-  decoded candidate. Concrete adapters remain lazy and report timing to the
-  shared startup diagnostics.
+  decoded candidate. The resolver supplies concrete lazy factories to the
+  transport-neutral session manager. Concrete adapters remain lazy and report
+  timing to the shared startup diagnostics.
 - **Key invariant:** a later WebRTC takeover updates the same source indicator
   directly without creating a second connecting phase.
 - **Verification:** `frontend/tests/home-assistant-connection.test.ts`,

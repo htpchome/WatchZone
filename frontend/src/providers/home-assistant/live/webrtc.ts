@@ -1,9 +1,9 @@
-import type { HomeAssistantApi } from "../../core/home-assistant";
-import type { LiveStartupTiming } from "../../core/live-startup-timing";
+import type { HomeAssistantApi } from "../../../core/home-assistant";
+import type { LiveStartupTiming } from "../../../core/live-startup-timing";
 import type {
   MediaConnection,
   MediaConnectionOptions,
-} from "../../core/media-session-manager";
+} from "../../../core/media-session-manager";
 
 interface ClientConfiguration {
   readonly configuration: RTCConfiguration;
@@ -43,7 +43,7 @@ function appendIceCandidates(
   return `${offer}${offer.endsWith("\r\n") ? "" : "\r\n"}${candidateLines}`;
 }
 
-export async function createHomeAssistantWebRtcConnection(
+export async function createHaDirectWebRtcConnection(
   api: HomeAssistantApi,
   entityId: string,
   signal: AbortSignal,

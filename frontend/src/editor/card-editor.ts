@@ -367,6 +367,6 @@ if (!customElements.get(EDITOR_TAG)) {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "watchzone-card-editor": CardEditor;
+    [EDITOR_TAG]: CardEditor;
   }
 }

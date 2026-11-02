@@ -1,4 +1,10 @@
-import { APP_BUILD, APP_NAME, APP_VERSION, CARD_TAG } from "./core/constants";
+import {
+  APP_BUILD,
+  APP_ID,
+  APP_NAME,
+  APP_VERSION,
+  CARD_TAG,
+} from "./core/constants";
 import { getClientEnvironment } from "./core/client-environment";
 import { getLiveStartupTimings } from "./core/live-startup-timing";
 import { getMediaSessionManager } from "./core/media-session-manager";
@@ -9,7 +15,7 @@ const activeCard = customElements.get(CARD_TAG) as
   (CustomElementConstructor & { readonly appVersion?: string }) | undefined;
 const activeCardVersion = activeCard?.appVersion ?? null;
 const clientEnvironment = getClientEnvironment();
-window.watchZone = Object.freeze({
+(window as unknown as Record<string, unknown>)[APP_ID] = Object.freeze({
   activeCardVersion,
   build: APP_BUILD,
   clientEnvironment: Object.freeze({

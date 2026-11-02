@@ -1,8 +1,8 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CameraControlsVisibilityController } from "../src/modules/camera/controls-visibility.controller";
-import { CAMERA_OVERLAY_HIDE_DELAY_MS } from "../src/modules/camera/constants";
+import { CameraControlsVisibilityController } from "../src/modules/camera/live/controls-visibility.controller";
+import { CAMERA_OVERLAY_HIDE_DELAY_MS } from "../src/modules/camera/live/constants";
 
 class TestHost implements ReactiveControllerHost {
   public readonly controllers: ReactiveController[] = [];

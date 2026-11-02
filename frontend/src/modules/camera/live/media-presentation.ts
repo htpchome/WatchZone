@@ -1,13 +1,17 @@
 import { html, type TemplateResult } from "lit";
 
-export interface HomeAssistantPresentationState {
+export type PresentedSource = "hls" | "webrtc";
+export type PresentedTransport = "hls_mse" | "hls_native" | "webrtc";
+
+export interface MediaPresentationState {
   readonly muted: boolean;
   readonly onWebRtcLoadedData: (event: Event) => void;
-  readonly selected?: "hls" | "webrtc";
+  readonly selected?: PresentedSource;
 }
 
-export function renderHomeAssistantMediaPresentation(
-  state: HomeAssistantPresentationState,
+/** Stateless DOM presentation for the source selected by the session controller. */
+export function renderMediaPresentation(
+  state: MediaPresentationState,
 ): TemplateResult {
   return html`
     <div class="hls-host" ?hidden=${state.selected === "webrtc"}></div>

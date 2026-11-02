@@ -3,8 +3,9 @@ import { html, LitElement, type TemplateResult } from "lit";
 import {
   type ClientDeviceClass,
   getClientEnvironment,
-} from "../../core/client-environment";
-import { renderIcon, type IconName } from "../../ui/icons";
+} from "../../../core/client-environment";
+import { CAMERA_CONTROLS_TAG } from "../../../core/constants";
+import { renderIcon, type IconName } from "../../../ui/icons";
 import { cameraControlsStyles } from "./controls-overlay.styles";
 
 export type CameraControlAction =
@@ -162,12 +163,12 @@ export class CameraControls extends LitElement {
   static styles = cameraControlsStyles;
 }
 
-if (!customElements.get("watchzone-camera-controls")) {
-  customElements.define("watchzone-camera-controls", CameraControls);
+if (!customElements.get(CAMERA_CONTROLS_TAG)) {
+  customElements.define(CAMERA_CONTROLS_TAG, CameraControls);
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    "watchzone-camera-controls": CameraControls;
+    [CAMERA_CONTROLS_TAG]: CameraControls;
   }
 }

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { normalizeCardConfig } from "../src/core/config";
-import { CARD_TYPE } from "../src/core/constants";
+import { APP_NAME, CARD_TYPE } from "../src/core/constants";
 
-describe("WatchZone card configuration", () => {
+describe(`${APP_NAME} card configuration`, () => {
   it("defaults card and camera appearance options on and preserves false", () => {
     expect(
       normalizeCardConfig({

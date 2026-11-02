@@ -41,6 +41,17 @@ export type ConnectionFactory = (
   options: MediaConnectionOptions,
 ) => Promise<MediaConnection>;
 
+export type MediaRetentionClass = "fallback" | "preferred";
+
+export interface MediaSessionRequest {
+  readonly api: HomeAssistantApi;
+  readonly entityId: string;
+  readonly factory: ConnectionFactory;
+  readonly key: string;
+  readonly options?: MediaConnectionOptions;
+  readonly retention: MediaRetentionClass;
+}
+
 export interface MediaSessionLease {
   readonly key: string;
   discard(): void;
@@ -50,31 +61,15 @@ export interface MediaSessionLease {
   subscribe(listener: (snapshot: MediaSessionSnapshot) => void): () => void;
 }
 
-const RETAIN_IDLE_MS = 5 * 60 * 1000;
-const HLS_RETAIN_IDLE_MS = 15 * 1000;
+const RETAIN_IDLE_MS: Readonly<Record<MediaRetentionClass, number>> = {
+  fallback: 15 * 1000,
+  preferred: 5 * 60 * 1000,
+};
 const MAX_RETAINED_SESSIONS = 4;
 const MAX_RECONNECT_ATTEMPTS = 2;
 const RECONNECT_BASE_DELAY_MS = 500;
 const RECONNECT_JITTER_MS = 250;
 const RECONNECT_STABLE_RESET_MS = 30_000;
-
-const defaultConnectionFactory: ConnectionFactory = async (...args) => {
-  const timing = args[4];
-  timing.mark("adapter_import_started");
-  const { createHomeAssistantWebRtcConnection } =
-    await import("../connections/home-assistant");
-  timing.mark("adapter_imported");
-  return createHomeAssistantWebRtcConnection(...args);
-};
-
-const defaultHlsConnectionFactory: ConnectionFactory = async (...args) => {
-  const timing = args[4];
-  timing.mark("adapter_import_started");
-  const { createHomeAssistantHlsConnection } =
-    await import("../connections/home-assistant/hls");
-  timing.mark("adapter_imported");
-  return createHomeAssistantHlsConnection(...args);
-};
 
 class ManagedMediaSession {
   private _api: HomeAssistantApi;
@@ -334,36 +329,14 @@ export class MediaSessionManager {
   >();
   private readonly _sessions = new Map<string, ManagedMediaSession>();
 
-  public constructor(
-    private readonly _factory: ConnectionFactory = defaultConnectionFactory,
-    private readonly _hlsFactory: ConnectionFactory = defaultHlsConnectionFactory,
-  ) {}
-
-  public acquireHomeAssistant(
-    api: HomeAssistantApi,
-    entityId: string,
-  ): MediaSessionLease {
+  public acquire(request: MediaSessionRequest): MediaSessionLease {
     return this._acquire(
-      `home_assistant:${entityId}`,
-      entityId,
-      api,
-      this._factory,
-      RETAIN_IDLE_MS,
-    );
-  }
-
-  public acquireHomeAssistantHls(
-    api: HomeAssistantApi,
-    entityId: string,
-    options: MediaConnectionOptions = { initialMuted: true },
-  ): MediaSessionLease {
-    return this._acquire(
-      `home_assistant_hls:${entityId}`,
-      entityId,
-      api,
-      this._hlsFactory,
-      HLS_RETAIN_IDLE_MS,
-      options,
+      request.key,
+      request.entityId,
+      request.api,
+      request.factory,
+      RETAIN_IDLE_MS[request.retention],
+      request.options,
     );
   }
 

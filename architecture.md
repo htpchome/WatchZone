@@ -154,7 +154,7 @@ architecture decision recorded in this document or a future ADR.
 │   │   ├── core/                  # Stable runtime and module contracts
 │   │   ├── api/                   # Typed backend client and wire types
 │   │   ├── modules/               # Independently loaded UI features
-│   │   ├── connections/           # Lazy browser playback adapters
+│   │   ├── providers/             # External-system frontend adapters
 │   │   ├── ui/                    # Shared visual primitives and icon registry
 │   │   ├── styles/                # HA theme boundary and global design tokens
 │   │   └── editor/                # Lazily loaded layout editor
@@ -174,6 +174,8 @@ from its first implementation:
 
 ```text
 frontend/src/modules/camera/index.ts
+frontend/src/modules/camera/live/presentation.ts
+frontend/src/providers/home-assistant/live/webrtc.ts
 custom_components/watchzone/features/layouts/__init__.py
 ```
 
@@ -206,8 +208,8 @@ Within a feature:
 - Files are not created merely to fill out the pattern.
 
 Stable cross-feature contracts and document-scoped services belong in `core/`.
-Feature behavior does not. Provider and connection adapters remain outside UI
-features behind their established boundaries.
+Feature behavior does not. External-system implementations remain under
+`providers/` behind public provider resolvers and capability contracts.
 
 ## 6. Dependency and ownership rules
 
@@ -217,9 +219,9 @@ These rules are mandatory:
    implementation.
 2. A frontend module may depend on public contracts in `core` and `api`.
 3. A frontend module must never import another frontend module.
-4. A frontend module may use the public connection resolver but must not import
-   a concrete live connection adapter.
-5. `core` must not import any feature module or concrete connection adapter.
+4. A frontend module may use a public provider resolver or capability contract
+   but must not import a concrete provider implementation.
+5. `core` must not import any feature module or provider adapter.
 6. Backend API adapters validate transport input, enforce permissions, invoke
    feature services, and serialize results. They do not contain feature logic.
 7. Backend features may depend on provider protocols and storage contracts,
@@ -363,8 +365,8 @@ The exact syntax may change with the build tool, but these properties may not:
 - Modules needed by a layout load concurrently, not sequentially.
 - The editor is a separate dynamic import and is never loaded for normal card
   viewing.
-- A live connection adapter is requested only when a visible live module uses
-  its connection type.
+- A live playback adapter is requested only when a visible camera presentation
+  uses its connection type.
 - Failed imports render a local module error with a retry action.
 - Module loaders cache successful promises to prevent duplicate fetches.
 - Optional prefetching is allowed only after the visible layout is interactive
@@ -585,6 +587,20 @@ go2rtc endpoint or through a linked Home Assistant camera entity. Layouts and
 modules refer to the stable WatchZone camera ID, not directly to a transport
 URL.
 
+The camera is the frontend feature module. Its `live/`, future `ptz/`, and
+future `talk/` folders own camera presentation and capability orchestration.
+External-system implementations are grouped separately beneath
+`frontend/src/providers/<provider>/` by the capability they implement. Thus
+Home Assistant Direct playback belongs in `providers/home-assistant/live/`,
+while future Home Assistant PTZ and talkback adapters belong beside it under
+their own capability folders. Frigate/go2rtc belongs in
+`providers/frigate/live/`; it is not another camera module.
+
+Provider identity and live-source identity remain independent. A Frigate-owned
+camera may expose an HA Direct source. The camera module consumes only the
+public typed provider resolver or capability contract, never a concrete
+provider folder.
+
 Conceptually, the backend returns data shaped like:
 
 ```ts
@@ -606,8 +622,9 @@ Connection rules:
 - The frontend connection resolver selects a compatible source according to
   saved preference, required capabilities, health, and deterministic fallback
   order.
-- Each connection type has a stable folder boundary under
-  `frontend/src/connections/<type>/` and is loaded with a dynamic import.
+- Each provider implementation has a stable capability folder beneath
+  `frontend/src/providers/<provider>/` and heavy adapters are loaded with a
+  dynamic import.
 - Platform-specialized playback policy is a distinct adapter selected by the
   resolver, not a runtime conditional inside a shared adapter. Its dynamic
   entry, session key, lifecycle, and tests are isolated so a specialized
@@ -615,13 +632,15 @@ Connection rules:
 - Platform adapters share only stable typed contracts and genuinely
   platform-neutral primitives. A platform workaround may not be moved into a
   shared helper merely to reduce file count.
-- The live module depends only on the public resolver and playback contract.
+- The camera module depends only on the public provider resolver and capability
+  contracts.
 - Connection adapters own browser media objects and playback-specific cleanup,
-  but not camera metadata, layout state, or provider APIs.
+  but not camera metadata, layout state, PTZ, talkback, events, or other
+  provider capabilities unrelated to playback.
 - Failure of one source may fall back to the next eligible source without
   changing camera identity.
-- Adding a connection type must not require modifying existing modules beyond
-  registration in the compile-time loader map.
+- Adding a live-source implementation must not require modifying the camera
+  module; it is registered at the public provider resolver boundary.
 - Video bytes should flow directly to the browser when security and provider
   behavior permit. Python brokers authorization and source resolution but does
   not proxy high-bitrate media without a concrete need.
@@ -638,7 +657,7 @@ Mandatory behavior:
 - Connection retention is an application-wide design input for every feature
   that can affect media visibility, placement, ownership, presentation, or
   lifecycle. It is not deferred integration work and is not scoped only to the
-  live-view component.
+  camera presentation.
 - Layouts, navigation, editors, previews, carousels, popups, fullscreen, PiP,
   responsive reflow, visibility handling, suspension, retry, and teardown must
   each define their acquire, reuse, attach, transfer, park, resume, release,
@@ -647,8 +666,8 @@ Mandatory behavior:
   invoke a connection factory, renegotiate a source, or create a parallel
   session. Any unavoidable reconnection must follow an explicit health,
   identity, capability, or resource-policy transition.
-- Re-rendering, moving, or temporarily disconnecting a live module does not
-  recreate an unchanged live connection.
+- Re-rendering, moving, or temporarily disconnecting a camera presentation does
+  not recreate an unchanged live connection.
 - Layout and WatchZone view changes transfer presentation attachment while
   retaining the underlying session.
 - Pre-editor and editor previews acquire leases on existing sessions rather
@@ -857,7 +876,7 @@ generic module must not branch on provider names. Provider-specific modules
 are allowed only for genuinely provider-specific behavior and must declare the
 required provider capability explicitly.
 
-The camera catalog supports mixed-provider layouts. A live module may show a
+The camera catalog supports mixed-provider layouts. A camera module may show a
 MotionEye camera while an event-list module displays Frigate events, and a
 camera selector may list cameras from all configured providers.
 
@@ -1145,8 +1164,8 @@ The architecture is established now, but implementation remains incremental:
    excluded from the eager entry.
 6. Add the first provider package, normalized camera catalog, and provider
    subentry flow.
-7. Add the live module plus one lazy connection adapter, then add other
-   connection types independently.
+7. Add the camera module's live presentation plus one lazy playback adapter,
+   then add other connection types independently.
 8. Add the lazy editor only when layout creation work begins.
 9. Add further providers and feature modules vertically, one user-visible
    capability at a time.

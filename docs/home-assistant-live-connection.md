@@ -40,10 +40,10 @@ The initial design analysis compared these local source baselines:
 The relevant observation is architectural, not a benchmark claim. Advanced
 Camera Card prepares Home Assistant camera elements early and limits broad card
 updates. Home Assistant's generic camera stream can also perform capability,
-poster, HLS, and WebRTC work. WatchZone keeps its live UI and concrete adapter
-lazy, but starts a pooled prewarm lease as soon as the configured entity and
-Home Assistant transport are available. Module loading and the eligible live
-connection attempts therefore run in parallel.
+poster, HLS, and WebRTC work. WatchZone keeps the camera module and concrete
+playback adapters lazy. Once the configured camera module mounts, its session
+controller starts the eligible pooled WebRTC and HLS leases concurrently; the
+card shell never owns or prewarms media.
 
 No startup-time claim is considered verified until measured on the same camera,
 Home Assistant instance, browser, network, and cold/warm cache conditions.
@@ -124,13 +124,16 @@ presentation winner.
 
 The adapter owns transport mechanics. The document-scoped media-session manager
 owns identity, deduplication, leases, retention, retry, and eviction policy.
+The public live-source resolver owns the concrete provider-adapter factories
+and lazy imports; the manager accepts a typed session request and has no Home
+Assistant provider dependency.
 
 The session key is the transport type plus camera entity for this first path.
 WebRTC and HLS therefore have independent session identities and cleanup while
 still participating in one selection policy. Compatible card and
-editor-preview instances in the same document share sessions. Removing a live
-element releases its lease and detaches presentation; it does not close a
-healthy retained winner.
+editor-preview instances in the same document share sessions. Removing a
+camera presentation releases its lease and detaches presentation; it does not
+close a healthy retained winner.
 
 The initial resource budget retains at most four sessions. A winning WebRTC
 session may remain parked for five minutes. An HLS candidate has a shorter
@@ -180,7 +183,8 @@ not treated as backgrounding.
 - Add measured timing diagnostics through the future centralized diagnostic
   system, never through routine console noise and never with credentials. The
   current startup recorder is read with
-  `window.watchZone.getLiveStartupTimings()` and records relative milestone
+  the runtime diagnostics object published under the lowercased `APP_NAME` on
+  `window`, via `getLiveStartupTimings()`, and records relative milestone
   times without writing per-phase console messages.
 
 ## 10. Observed client baseline

@@ -1,5 +1,6 @@
 import { html, LitElement } from "lit";
 
+import { TOAST_TAG } from "../core/constants";
 import { TimedVisibilityController } from "./timed-visibility.controller";
 import { toastStyles } from "./toast.styles";
 
@@ -76,12 +77,12 @@ export class ToastElement extends LitElement {
   static styles = toastStyles;
 }
 
-if (!customElements.get("watchzone-toast")) {
-  customElements.define("watchzone-toast", ToastElement);
+if (!customElements.get(TOAST_TAG)) {
+  customElements.define(TOAST_TAG, ToastElement);
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    "watchzone-toast": ToastElement;
+    [TOAST_TAG]: ToastElement;
   }
 }

@@ -1,8 +1,8 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { FullscreenLifecycleController } from "../src/modules/camera/fullscreen-lifecycle.controller";
-import { NATIVE_FULLSCREEN_EXIT_RECOVERY_MS } from "../src/modules/camera/constants";
+import { FullscreenLifecycleController } from "../src/modules/camera/live/fullscreen-lifecycle.controller";
+import { NATIVE_FULLSCREEN_EXIT_RECOVERY_MS } from "../src/modules/camera/live/constants";
 
 class TestHost implements ReactiveControllerHost {
   public readonly controllers: ReactiveController[] = [];

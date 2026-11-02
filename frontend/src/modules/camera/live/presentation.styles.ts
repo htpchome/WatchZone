@@ -1,6 +1,6 @@
 import { css } from "lit";
 
-export const cameraLiveViewStyles = css`
+export const cameraLivePresentationStyles = css`
   :host {
     display: block;
     inline-size: 100%;
@@ -176,7 +176,7 @@ export const cameraLiveViewStyles = css`
 
   @container (max-width: 480px) {
     .source-indicator,
-    watchzone-camera-controls {
+    .camera-controls {
       --wzc-media-control-size: 2.35rem;
       --wzc-media-control-icon-size: 1.4rem;
     }
@@ -184,7 +184,7 @@ export const cameraLiveViewStyles = css`
 
   @container (max-height: 360px) {
     .source-indicator,
-    watchzone-camera-controls {
+    .camera-controls {
       --wzc-media-control-size: 2.25rem;
       --wzc-media-control-icon-size: 1.3rem;
       --wzc-media-control-gap: 0.125rem;
@@ -193,7 +193,7 @@ export const cameraLiveViewStyles = css`
 
   @container (max-height: 240px) {
     .source-indicator,
-    watchzone-camera-controls {
+    .camera-controls {
       --wzc-media-control-size: 1.875rem;
       --wzc-media-control-icon-size: 1.15rem;
       --wzc-media-control-gap: 0.1rem;

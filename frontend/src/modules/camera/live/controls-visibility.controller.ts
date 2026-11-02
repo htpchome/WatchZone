@@ -1,6 +1,6 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
-import { TimedVisibilityController } from "../../ui/timed-visibility.controller";
+import { TimedVisibilityController } from "../../../ui/timed-visibility.controller";
 import { CAMERA_OVERLAY_HIDE_DELAY_MS } from "./constants";
 
 /** Owns transient pointer visibility without coupling timers to rendering. */

@@ -65,16 +65,16 @@ export const cardStyles = css`
     text-align: center;
   }
 
-  watchzone-camera,
-  .live-placeholder,
-  .live-error,
+  .camera-module,
+  .camera-module-placeholder,
+  .camera-module-error,
   .empty {
     inline-size: 100%;
     min-inline-size: 0;
   }
 
-  .live-placeholder,
-  .live-error,
+  .camera-module-placeholder,
+  .camera-module-error,
   .empty {
     display: grid;
     place-items: center;
@@ -83,7 +83,7 @@ export const cardStyles = css`
     text-align: center;
   }
 
-  .live-error {
+  .camera-module-error {
     gap: 0.75rem;
     color: var(--wzc-color-error);
   }

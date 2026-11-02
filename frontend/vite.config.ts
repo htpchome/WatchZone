@@ -8,6 +8,12 @@ const packageJson = JSON.parse(
 ) as { version: string };
 
 export default defineConfig({
+  resolve: {
+    dedupe: ["@lit/reactive-element", "lit", "lit-element", "lit-html"],
+  },
+  optimizeDeps: {
+    include: ["lit", "lit/static-html.js"],
+  },
   define: {
     __APP_BUILD__: JSON.stringify(
       process.env.GITHUB_SHA?.slice(0, 7) ?? "local",

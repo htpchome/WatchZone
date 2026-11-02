@@ -38,7 +38,8 @@ the Python-side resource-registration mechanism. After that baseline is active:
 - The F12 banner identifies the loaded frontend version and commit build. If it
   shows an older version, that client is still running an older document or
   bundle.
-- The authoritative runtime value is available as `window.watchZone` in the
+- The authoritative runtime value is published on `window` under the
+  lowercased `APP_NAME` in the
   browser console. Its `version`, `build`, and `activeCardVersion` fields show
   the loaded asset and the custom element actually rendering the card.
 - If one page prints two WatchZone banners or `activeCardVersion` differs from

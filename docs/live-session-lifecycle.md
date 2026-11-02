@@ -80,6 +80,14 @@ reuse the compatible existing manager rather than create a second pool.
 
 The manager must not depend on a specific card, layout, editor, or module.
 
+The camera module is the current lease consumer and composition boundary. Its
+live session controller acquires leases through the public provider resolver,
+and its audio controller applies document-scoped intent and temporary browser
+policy to the active media element. The Lit presentation receives render state
+and emits typed media/control intents; it does not import the session manager,
+audio policy, or a concrete provider. The card shell only lazy-loads the camera
+module and never acquires a media lease.
+
 ### 3.2 Session
 
 A `MediaSession` owns one resolved live connection and its expensive resources,
@@ -113,7 +121,8 @@ moves the session into retention policy evaluation.
 ### 3.4 Presentation attachment
 
 Presentation is separate from connection ownership. A session can be detached
-from one live module and attached to another without renegotiating its source.
+from one camera presentation and attached to another without renegotiating its
+source.
 
 Each presentation surface exposes exactly one visible live media layer. An
 eligible Browser or Companion host keeps the proven autoplaying WebRTC hedge

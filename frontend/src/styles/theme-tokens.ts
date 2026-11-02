@@ -1,7 +1,7 @@
 import { css } from "lit";
 
 /**
- * The only Home Assistant theme boundary in WatchZone.
+ * The only Home Assistant theme boundary in the application.
  *
  * Components consume semantic --wzc-* tokens exclusively. Keeping HA token
  * aliases here makes theme changes and future design-system migrations local.

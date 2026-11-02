@@ -79,8 +79,9 @@ For any frontend, media, interaction, layout, or styling change, also read
   latency-sensitive interaction.
 - A provider and a live connection type are different concepts.
 - Feature modules do not import one another.
-- Concrete live connection adapters are dynamically imported and are not
-  statically imported by the live module or eager entry.
+- Concrete provider live adapters are dynamically imported and are not
+  statically imported by the camera module or eager entry. The camera module
+  consumes only the public live-source resolver.
 - Platform-specific media policy must be isolated behind a resolver/adapter
   boundary when its failure could affect other supported clients. Do not add a
   Safari, Companion, Firefox, or engine-specific workaround to a

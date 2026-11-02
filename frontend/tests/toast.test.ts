@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { ToastElement } from "../src/ui/toast";
+import { APP_NAME, TOAST_TAG } from "../src/core/constants";
 import { DEFAULT_TOAST_DURATION_MS } from "../src/ui/toast";
 import "../src/ui/toast";
 
@@ -9,12 +9,12 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
-describe("WatchZone toast", () => {
+describe(`${APP_NAME} toast`, () => {
   it.each(["neutral", "success", "warning", "error"] as const)(
     "renders and expires the %s category",
     async (category) => {
       vi.useFakeTimers();
-      const toast = document.createElement("watchzone-toast") as ToastElement;
+      const toast = document.createElement(TOAST_TAG);
       document.body.append(toast);
 
       toast.show("Test message", { category });
@@ -34,7 +34,7 @@ describe("WatchZone toast", () => {
 
   it("supports persistent inline and positioned overlay presentations", async () => {
     vi.useFakeTimers();
-    const toast = document.createElement("watchzone-toast");
+    const toast = document.createElement(TOAST_TAG);
     document.body.append(toast);
 
     toast.show("Inline", {
@@ -58,7 +58,7 @@ describe("WatchZone toast", () => {
   });
 
   it("does not restore stale visible state after disconnection", async () => {
-    const toast = document.createElement("watchzone-toast");
+    const toast = document.createElement(TOAST_TAG);
     document.body.append(toast);
     toast.show("Temporary", { persistent: true });
     await toast.updateComplete;

@@ -1,15 +1,15 @@
 import type HlsType from "hls.js";
 
-import type { HomeAssistantApi } from "../../core/home-assistant";
-import type { LiveStartupTiming } from "../../core/live-startup-timing";
+import type { HomeAssistantApi } from "../../../core/home-assistant";
+import type { LiveStartupTiming } from "../../../core/live-startup-timing";
 import {
   playMediaElement,
   setMediaElementMuted,
-} from "../../core/media-playback";
+} from "../../../core/media-playback";
 import type {
   MediaConnection,
   MediaConnectionOptions,
-} from "../../core/media-session-manager";
+} from "../../../core/media-session-manager";
 
 interface StreamResponse {
   readonly url: string;
@@ -40,7 +40,7 @@ function selectSingleVariant(manifest: string, manifestUrl: string): string {
   return variants.length === 1 ? variants[0] : manifestUrl;
 }
 
-export async function createHomeAssistantHlsConnection(
+export async function createHaDirectHlsConnection(
   api: HomeAssistantApi,
   entityId: string,
   signal: AbortSignal,
