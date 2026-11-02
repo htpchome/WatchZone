@@ -129,6 +129,7 @@ export const themeTokens = css`
     --wzc-card-padding: clamp(1rem, 3cqi, 2rem);
     --wzc-card-outer-shadow: var(--wzc-shadow-medium);
     --wzc-camera-stage: var(--ha-color-neutral-10, #202020);
+    --wzc-camera-stage-aspect-ratio: 16 / 9;
     --wzc-live-background: var(--wzc-color-surface-secondary);
     --wzc-live-radius: var(--wzc-radius-large);
     --wzc-live-shadow: var(--wzc-shadow-medium);

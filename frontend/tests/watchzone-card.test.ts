@@ -13,6 +13,16 @@ describe("watchzone-card", () => {
     expect(customElements.get("wzc-card")).toBeUndefined();
   });
 
+  it("defaults sections layout to automatic height with a usable resize floor", () => {
+    const element = document.createElement("watchzone-card") as DashboardCard;
+
+    expect(element.getGridOptions()).toEqual({
+      columns: 6,
+      min_columns: 3,
+      min_rows: 2,
+    });
+  });
+
   it("renders the configured title in a Home Assistant card", async () => {
     const element = document.createElement("watchzone-card") as DashboardCard;
     element.setConfig({ type: "custom:watchzone-card", title: "Front Door" });

@@ -141,9 +141,8 @@ export class DashboardCard extends LitElement {
   public getGridOptions() {
     return {
       columns: 6,
-      rows: 5,
       min_columns: 3,
-      min_rows: 3,
+      min_rows: 2,
     };
   }
 

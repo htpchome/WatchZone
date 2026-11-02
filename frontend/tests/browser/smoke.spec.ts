@@ -746,6 +746,53 @@ test("retains one live connection while the card presentation is replaced", asyn
     timeout: CAMERA_OVERLAY_HIDE_DELAY_MS + 1_000,
   });
   await expect(connectionIndicator).toHaveCount(1);
+  const layoutSizing = await page
+    .locator("watchzone-card")
+    .evaluate(async (element) => {
+      const card = element as HTMLElement;
+      const frame = async (): Promise<void> => {
+        await new Promise<void>((resolve) =>
+          requestAnimationFrame(() => resolve()),
+        );
+      };
+      const viewport = card.shadowRoot
+        ?.querySelector("wzc-camera")
+        ?.shadowRoot?.querySelector("wzc-camera-live")
+        ?.shadowRoot?.querySelector<HTMLElement>(".viewport");
+      const shell = card.shadowRoot?.querySelector<HTMLElement>("ha-card");
+      card.style.inlineSize = "640px";
+      card.style.blockSize = "auto";
+      await frame();
+      const natural = viewport?.getBoundingClientRect();
+
+      card.style.blockSize = "240px";
+      await frame();
+      const fixed = viewport?.getBoundingClientRect();
+      const fixedCard = shell?.getBoundingClientRect();
+      const result = {
+        fixedHeight: fixed?.height,
+        fixedWithinCard: Boolean(
+          fixed &&
+          fixedCard &&
+          fixed.top >= fixedCard.top &&
+          fixed.bottom <= fixedCard.bottom,
+        ),
+        naturalHeight: natural?.height,
+        naturalRatio:
+          natural && natural.height > 0
+            ? natural.width / natural.height
+            : undefined,
+      };
+      card.style.removeProperty("block-size");
+      card.style.removeProperty("inline-size");
+      await frame();
+      return result;
+    });
+  expect(layoutSizing.naturalRatio).toBeCloseTo(16 / 9, 2);
+  expect(layoutSizing.fixedWithinCard).toBe(true);
+  expect(layoutSizing.fixedHeight).toBeLessThan(
+    layoutSizing.naturalHeight ?? Number.POSITIVE_INFINITY,
+  );
   const controls = page.locator(
     "wzc-camera wzc-camera-controls .control-button",
   );

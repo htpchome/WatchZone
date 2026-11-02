@@ -28,6 +28,9 @@ For any frontend, media, interaction, layout, or styling change, also read
 For camera display zoom, pan, or gesture changes, also read
 `docs/camera-display-zoom.md` in full.
 
+For camera stage, card sizing, aspect-ratio, or media fitting changes, also read
+`docs/camera-presentation-layout.md` in full.
+
 ## Architecture stability
 
 - Treat `architecture.md` as a contract, not a progress log.

@@ -14,7 +14,7 @@ export const cardStyles = css`
     box-sizing: border-box;
     inline-size: 100%;
     block-size: 100%;
-    min-block-size: 16rem;
+    min-block-size: 0;
     overflow: clip;
     container-type: inline-size;
     color: var(--wzc-color-text-1);
@@ -47,7 +47,7 @@ export const cardStyles = css`
     gap: clamp(0.75rem, 2cqi, 1.25rem);
     inline-size: 100%;
     block-size: 100%;
-    min-block-size: inherit;
+    min-block-size: 0;
     padding: var(--wzc-card-padding);
     overflow: hidden;
   }
@@ -73,7 +73,21 @@ export const cardStyles = css`
     min-inline-size: 0;
   }
 
-  .live-placeholder,
+  .camera-module,
+  .live-placeholder {
+    block-size: 100%;
+    min-block-size: 0;
+  }
+
+  .live-placeholder {
+    aspect-ratio: var(--wzc-camera-stage-aspect-ratio);
+    background: var(--wzc-camera-stage);
+    display: grid;
+    place-items: center;
+    color: var(--wzc-color-text-2);
+    text-align: center;
+  }
+
   .live-error,
   .empty {
     display: grid;

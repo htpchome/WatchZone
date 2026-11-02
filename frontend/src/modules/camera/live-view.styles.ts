@@ -14,7 +14,8 @@ export const cameraLiveViewStyles = css`
     display: grid;
     place-items: center;
     inline-size: 100%;
-    aspect-ratio: 16 / 9;
+    block-size: 100%;
+    aspect-ratio: var(--wzc-camera-stage-aspect-ratio);
     overflow: hidden;
     background: var(--wzc-live-background);
     border-radius: var(--wzc-live-radius, var(--wzc-radius-large, 8px));
