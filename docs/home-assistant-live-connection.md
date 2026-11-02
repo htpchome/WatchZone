@@ -19,8 +19,9 @@ FrigateViewCard, or Home Assistant frontend player implementations. The adapter
 is an original implementation against:
 
 - Home Assistant's authenticated frontend WebSocket connection.
-- The `camera/webrtc/get_client_config`, `camera/webrtc/offer`, and
-  `camera/webrtc/candidate` message contracts.
+- Home Assistant's `camera/webrtc/get_client_config` contract and WatchZone's
+  provider-resolved `watchzone/live/webrtc/offer` and
+  `watchzone/live/webrtc/candidate` signaling contracts.
 - Standard browser `RTCPeerConnection`, `MediaStream`, and media-element APIs.
 
 External projects may be studied to understand observable architecture and
@@ -92,7 +93,9 @@ For a validated camera entity, the adapter:
 3. Adds receive-only audio and video transceivers and the requested data
    channel, if any.
 4. Creates and installs the local offer.
-5. Subscribes to Home Assistant's WebRTC offer exchange.
+5. Subscribes to WatchZone's backend signaling exchange. The backend resolves
+   an eligible provider capability and otherwise delegates to Home Assistant's
+   public camera WebRTC contract.
 6. Includes local ICE candidates gathered while installing the offer in the
    initial signaling request, avoiding an extra session/candidate round trip.
    Later candidates are trickled after the session ID arrives.
@@ -197,6 +200,29 @@ continues to follow the forced-mute, audio-focus, lifetime, and autoplay rules i
   current startup recorder is read with
   `window.wzc.getLiveStartupTimings()` and records relative milestone
   times without writing per-phase console messages.
+
+### 9.1 Frigate signaling acceleration
+
+Home Assistant Direct remains the user-selected connection type and continues
+to use the existing Home Assistant camera entity, client ICE configuration,
+permissions, retained-session identity, and browser media path. For camera
+entities owned by the Frigate integration, WatchZone may fulfill only the
+signaling portion through its Python backend and Frigate's authenticated
+go2rtc WebSocket API. That API returns the SDP answer immediately and trickles
+ICE candidates instead of waiting for go2rtc's synchronous HTTP answer.
+
+This acceleration is an internal Frigate provider capability, not a second
+camera, a separately selectable go2rtc connection type, or a duplicate entity.
+The backend resolves it from the selected HA entity and its public stream
+source, keeps provider authentication out of the browser, and sends no media
+bytes through Python. If the Frigate capability cannot be prepared, the same
+WatchZone signaling endpoint delegates to Home Assistant's standard public
+camera WebRTC contract. Other camera integrations always use that standard
+path.
+
+The concrete Frigate capability remains dynamically loaded beneath the
+provider boundary. Camera UI, live presentation, session retention, HLS
+hedging, and audio policy do not import or branch on Frigate.
 
 ## 10. Observed client baseline
 

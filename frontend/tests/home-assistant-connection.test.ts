@@ -166,14 +166,14 @@ describe("Home Assistant WebRTC connection", () => {
     expect(api.subscribeMessage).toHaveBeenCalledWith(
       expect.any(Function),
       expect.objectContaining({
-        type: "camera/webrtc/offer",
+        type: "watchzone/live/webrtc/offer",
         entity_id: "camera.front",
         offer:
           "watchzone-offer\r\na=candidate:early 1 udp 1 192.0.2.1 1234 typ host\r\n",
       }),
     );
     expect(callWS).toHaveBeenCalledWith({
-      type: "camera/webrtc/candidate",
+      type: "watchzone/live/webrtc/candidate",
       entity_id: "camera.front",
       session_id: "session-1",
       candidate: {
@@ -182,7 +182,7 @@ describe("Home Assistant WebRTC connection", () => {
     });
     expect(callWS).not.toHaveBeenCalledWith(
       expect.objectContaining({
-        type: "camera/webrtc/candidate",
+        type: "watchzone/live/webrtc/candidate",
         candidate: expect.objectContaining({
           candidate: expect.stringContaining("candidate:early"),
         }),

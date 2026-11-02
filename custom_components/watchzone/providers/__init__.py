@@ -1,0 +1,1 @@
+"""WatchZone provider capability contracts."""

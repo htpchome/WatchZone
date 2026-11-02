@@ -23,9 +23,11 @@ from homeassistant.helpers.typing import ConfigType
 from .const import (
     CARD_FILENAME,
     CARD_MODULE_URL,
+    DATA_RUNTIME,
     DOMAIN,
     FRONTEND_URL_BASE,
 )
+from .features.live import LiveSignalingService
 from .runtime import WatchZoneRuntime
 
 _LOGGER = logging.getLogger(__name__)
@@ -63,12 +65,20 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     await hass.http.async_register_static_paths(static_paths)
     hass.data.setdefault(DOMAIN, {})
+    from .api.live import async_register as async_register_live_api
+
+    async_register_live_api(hass)
     return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: WatchZoneConfigEntry) -> bool:
     """Set up the configured WatchZone application."""
-    entry.runtime_data = WatchZoneRuntime(entry_id=entry.entry_id)
+    runtime = WatchZoneRuntime(
+        entry_id=entry.entry_id,
+        live_signaling=LiveSignalingService(hass),
+    )
+    entry.runtime_data = runtime
+    hass.data.setdefault(DOMAIN, {})[DATA_RUNTIME] = runtime
     await _async_register_card_resource(hass)
     return True
 
@@ -78,6 +88,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: WatchZoneConfigEntry) -
     domain_data = hass.data.get(DOMAIN)
     if not domain_data:
         return True
+
+    await entry.runtime_data.async_close()
+    domain_data.pop(DATA_RUNTIME, None)
 
     resources = hass.data[LOVELACE_DATA].resources
     if resource_id := domain_data.pop(_DATA_RESOURCE_ID, None):

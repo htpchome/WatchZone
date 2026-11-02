@@ -1,3 +1,8 @@
+import {
+  sendLiveCandidate,
+  subscribeLiveOffer,
+  type LiveOfferEvent,
+} from "../../../api/live-signaling";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
 import type { LiveStartupTiming } from "../../../core/live-startup-timing";
 import type {
@@ -9,12 +14,6 @@ interface ClientConfiguration {
   readonly configuration: RTCConfiguration;
   readonly dataChannel?: string;
 }
-
-type OfferEvent =
-  | { readonly type: "session"; readonly session_id: string }
-  | { readonly type: "answer"; readonly answer: string }
-  | { readonly type: "candidate"; readonly candidate: RTCIceCandidateInit }
-  | { readonly type: "error"; readonly message: string };
 
 const CONNECT_TIMEOUT_MS = 15_000;
 const DISCONNECTED_GRACE_MS = 5_000;
@@ -167,12 +166,7 @@ export async function createHomeAssistantWebRtcConnection(
       return;
     }
     try {
-      await api.callWS({
-        type: "camera/webrtc/candidate",
-        entity_id: entityId,
-        session_id: sessionId,
-        candidate,
-      });
+      await sendLiveCandidate(api, entityId, sessionId, candidate);
     } catch (error) {
       fail(error);
     }
@@ -224,7 +218,7 @@ export async function createHomeAssistantWebRtcConnection(
     };
     rejectPending = rejectStart;
 
-    const handleOfferEvent = async (event: OfferEvent): Promise<void> => {
+    const handleOfferEvent = async (event: LiveOfferEvent): Promise<void> => {
       if (closed) {
         return;
       }
@@ -300,13 +294,11 @@ export async function createHomeAssistantWebRtcConnection(
           offer.sdp ?? "",
           localCandidates.splice(0),
         );
-        const unsubscribePromise = api.subscribeMessage<OfferEvent>(
+        const unsubscribePromise = subscribeLiveOffer(
+          api,
+          entityId,
+          offerWithCandidates,
           (event) => void handleOfferEvent(event),
-          {
-            type: "camera/webrtc/offer",
-            entity_id: entityId,
-            offer: offerWithCandidates,
-          },
         );
         timing.mark("signaling_started");
         unsubscribe = await unsubscribePromise;
