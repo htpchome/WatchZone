@@ -170,6 +170,10 @@ When a layout or view changes:
 6. Sessions with no remaining lease enter retention policy evaluation.
 
 The implementation must not close all sessions as an intermediate step.
+Future camera switching follows the same rule: selecting another camera
+releases the presentation lease but parks the prior camera by canonical
+session key. Switching back reacquires that session subject to the shared
+resource budget; it does not require a second retention mechanism.
 
 ### 6.2 Editor and preview
 
@@ -211,7 +215,9 @@ Retention must be bounded by a policy containing at least:
 - Maximum simultaneously connected sessions.
 - Maximum audible sessions.
 - Adapter-specific decoder or bandwidth limits where measurable.
-- Maximum idle retention duration unless explicitly pinned.
+- A centralized parked-session lifetime policy. Eligible sessions remain
+  parked for the current browser document; count and resource budgets, rather
+  than scattered feature timers, bound retention.
 
 Exact defaults are implementation decisions that require measurement on
 representative desktop and mobile Home Assistant clients. They are centralized
@@ -230,6 +236,13 @@ the manager protects sessions in this order:
 Eviction calls the adapter's complete close path, revokes object URLs, removes
 listeners, cancels retries, and clears session-owned media resources. A closed
 session object is never returned to a new lease.
+
+The initial policy has no idle-time expiry for an eligible parked session.
+This is intentional: Home Assistant route navigation, dashboard editing, and
+background-tab use can outlast an arbitrary timeout. Capacity pressure evicts
+parked fallback sessions first, then the least-recently-used preferred
+session. A discarded losing connection and a failed or unhealthy connection
+remain eligible for immediate cleanup regardless of age.
 
 ## 8. Connection adapter contract
 

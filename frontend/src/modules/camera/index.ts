@@ -3,9 +3,13 @@ import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import { CAMERA_LIVE_PRESENTATION_TAG, CAMERA_TAG } from "../../core/constants";
 import type { HomeAssistantApi } from "../../core/home-assistant";
+import { ToastManager } from "../../ui/toast-manager";
 import { cameraStyles } from "./camera.styles";
 import { CameraAudioController } from "./live/audio.controller";
-import type { CameraLivePresentation } from "./live/presentation";
+import type {
+  CameraLivePresentation,
+  CameraToastRequestDetail,
+} from "./live/presentation";
 import "./live/presentation";
 import { CameraLiveSessionController } from "./live/session.controller";
 
@@ -26,16 +30,11 @@ export class CameraModule extends LitElement {
     startUnmutedPhone: { attribute: false, type: Boolean },
   };
 
-  private _controlError?: string;
+  private readonly _toasts = new ToastManager(this);
   private readonly _audio: CameraAudioController = new CameraAudioController(
     this,
     {
-      clearError: () => {
-        if (this._controlError) {
-          this._controlError = undefined;
-          this.requestUpdate();
-        }
-      },
+      dismissToast: (key) => this._toasts.dismiss(key),
       getMediaState: (): {
         hls?: HTMLVideoElement;
         selected?: "hls" | "webrtc";
@@ -45,10 +44,7 @@ export class CameraModule extends LitElement {
         selected: this._session.selected,
         webRtc: this._presentation?.webRtcVideo,
       }),
-      showError: (message) => {
-        this._controlError = message;
-        this.requestUpdate();
-      },
+      showWarning: (message, key) => this._toasts.warning(message, { key }),
     },
   );
   private readonly _session: CameraLiveSessionController =
@@ -100,10 +96,10 @@ export class CameraModule extends LitElement {
         <${presentationTag}
           class="live-presentation"
           .available=${this.available}
-          .controlError=${this._controlError}
-          .error=${this._session.error}
+          .failed=${this._session.failed}
           .hlsVideo=${this._session.hlsVideo}
           .muted=${this._audio.muted}
+          .notices=${this._toasts.notices}
           .posterUrl=${this.posterUrl}
           .selected=${this._session.selected}
           .sessionRevision=${this._session.revision}
@@ -111,7 +107,7 @@ export class CameraModule extends LitElement {
           .webRtcStream=${this._session.webRtcStream}
           @camera-media-attached=${this._handleMediaAttached}
           @camera-mute-toggle=${this._handleMuteToggle}
-          @camera-retry=${this._handleRetry}
+          @camera-toast-request=${this._handleToastRequest}
           @camera-webrtc-decoded=${this._handleWebRtcDecoded}
         ></${presentationTag}>
       </div>
@@ -130,8 +126,12 @@ export class CameraModule extends LitElement {
     this._audio.toggleUserMute();
   };
 
-  private readonly _handleRetry = (): void => {
-    this._session.retry();
+  private readonly _handleToastRequest = (
+    event: CustomEvent<CameraToastRequestDetail>,
+  ): void => {
+    this._toasts.show(event.detail.severity, event.detail.message, {
+      key: event.detail.key,
+    });
   };
 
   private readonly _handleWebRtcDecoded = (

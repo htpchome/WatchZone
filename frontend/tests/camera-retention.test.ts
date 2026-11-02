@@ -266,6 +266,7 @@ describe("camera presentation retention", () => {
     ).toBe("unmuted");
 
     initial.remove();
+    await vi.waitFor(() => expect(hlsVideo.muted).toBe(true));
     const returned = createLiveView(api);
     document.body.append(returned);
     await vi.waitFor(() =>
@@ -337,10 +338,40 @@ describe("camera presentation retention", () => {
       getMediaSessionManager().getCameraMutePreference("camera.front"),
     ).toBe("unmuted");
     await vi.waitFor(() =>
-      expect(cameraControl(view).shadowRoot?.textContent).toContain(
-        "The browser blocked unmuted playback.",
-      ),
+      expect(
+        presentation(view)
+          ?.shadowRoot?.querySelector("wzc-toast-region")
+          ?.shadowRoot?.querySelector('[data-severity="warning"]')?.textContent,
+      ).toContain("The browser blocked unmuted playback."),
     );
+  });
+
+  it("temporarily mutes page and app suspension without changing intent", async () => {
+    const { api, hlsVideo } = installHlsSession();
+    const view = createLiveView(api);
+    document.body.append(view);
+    await vi.waitFor(() =>
+      expect(
+        presentation(view)?.shadowRoot?.querySelector(".hls-host video"),
+      ).toBe(hlsVideo),
+    );
+    toggleMute(view);
+    await vi.waitFor(() => expect(hlsVideo.muted).toBe(false));
+
+    const pageHide = new Event("pagehide");
+    Object.defineProperty(pageHide, "persisted", { value: true });
+    window.dispatchEvent(pageHide);
+    expect(hlsVideo.muted).toBe(true);
+    expect(
+      getMediaSessionManager().getCameraMutePreference("camera.front"),
+    ).toBe("unmuted");
+
+    window.dispatchEvent(new Event("pageshow"));
+    await vi.waitFor(() => expect(hlsVideo.muted).toBe(false));
+    document.dispatchEvent(new Event("freeze"));
+    expect(hlsVideo.muted).toBe(true);
+    document.dispatchEvent(new Event("resume"));
+    await vi.waitFor(() => expect(hlsVideo.muted).toBe(false));
   });
 
   it("uses the independent phone startup default", async () => {

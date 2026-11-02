@@ -4,12 +4,15 @@ import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 import {
   CAMERA_CONTROLS_TAG,
   CAMERA_LIVE_PRESENTATION_TAG,
+  TOAST_REGION_TAG,
 } from "../../../core/constants";
 import {
   playMediaElement,
   setMediaElementMuted,
 } from "../../../core/media-playback";
 import type { MediaTransport } from "../../../core/media-session-manager";
+import type { ToastNotice, ToastSeverity } from "../../../ui/toast-manager";
+import "../../../ui/toast-region";
 import type { CameraControlEventDetail } from "../controls-overlay";
 import "../controls-overlay";
 import { CameraControlsVisibilityController } from "../controls-visibility.controller";
@@ -41,16 +44,23 @@ export interface CameraMediaAttachedDetail {
   readonly video: HTMLVideoElement;
 }
 
+export interface CameraToastRequestDetail {
+  readonly key: string;
+  readonly message: string;
+  readonly severity: ToastSeverity;
+}
+
 const controlsTag = unsafeStatic(CAMERA_CONTROLS_TAG);
+const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
 
 /** Renders one camera's live presentation and owns browser presentation APIs. */
 export class CameraLivePresentation extends LitElement {
   public static properties = {
     available: { attribute: false, type: Boolean },
-    controlError: { attribute: false },
-    error: { attribute: false },
+    failed: { attribute: false, type: Boolean },
     hlsVideo: { attribute: false },
     muted: { attribute: false, type: Boolean },
+    notices: { attribute: false },
     posterUrl: { attribute: false },
     selected: { attribute: false },
     sessionRevision: { attribute: false, type: Number },
@@ -65,10 +75,10 @@ export class CameraLivePresentation extends LitElement {
   private readonly _visibility = new CameraControlsVisibilityController(this);
 
   public available = false;
-  public controlError?: string;
-  public error?: string;
+  public failed = false;
   public hlsVideo?: HTMLVideoElement;
   public muted = true;
+  public notices: readonly ToastNotice[] = [];
   public posterUrl?: string;
   public selected?: PresentedSource;
   public sessionRevision = 0;
@@ -113,7 +123,7 @@ export class CameraLivePresentation extends LitElement {
           : this.transport === "hls_mse"
             ? "HLS · HLS.js"
             : "HLS";
-    const connecting = this.available && !this.error && !this.selected;
+    const connecting = this.available && !this.failed && !this.selected;
     const showSource = Boolean(
       this.selected &&
       this.transport &&
@@ -170,7 +180,6 @@ export class CameraLivePresentation extends LitElement {
           this.selected
             ? staticHtml`<${controlsTag}
                 .visible=${this._visibility.visible}
-                .errorMessage=${this.controlError}
                 .fullscreenActive=${this._fullscreenActive}
                 .fullscreenSupported=${this._fullscreenSupported()}
                 .muted=${this.muted}
@@ -182,7 +191,7 @@ export class CameraLivePresentation extends LitElement {
               ></${controlsTag}>`
             : nothing
         }
-        ${this.error ? this._renderError(this.error) : nothing}
+        <${toastRegionTag} .notices=${this.notices}></${toastRegionTag}>
       </div>
     `;
   }
@@ -236,30 +245,6 @@ export class CameraLivePresentation extends LitElement {
             />`
           : nothing
       }`;
-  }
-
-  private _renderError(error: string) {
-    return html`<div class="status error" role="alert">
-      <div class="status-content">
-        <span>${error}</span>
-        ${
-          this.available
-            ? html`<button
-                type="button"
-                @click=${() =>
-                  this.dispatchEvent(
-                    new CustomEvent("camera-retry", {
-                      bubbles: true,
-                      composed: true,
-                    }),
-                  )}
-              >
-                Retry
-              </button>`
-            : nothing
-        }
-      </div>
-    </div>`;
   }
 
   private _emitMediaAttached(video: HTMLVideoElement): void {
@@ -353,12 +338,14 @@ export class CameraLivePresentation extends LitElement {
     if (!this._activeVideo) return;
     try {
       await togglePictureInPicture(this._activeVideo);
-      this.controlError = undefined;
     } catch (error) {
-      this.controlError =
+      this._requestToast(
+        "error",
         error instanceof Error
           ? error.message
-          : "Unable to change Picture-in-Picture mode.";
+          : "Unable to change Picture-in-Picture mode.",
+        "camera-picture-in-picture",
+      );
     }
     this._syncControlState();
   }
@@ -387,14 +374,30 @@ export class CameraLivePresentation extends LitElement {
           throw new Error("Fullscreen is not supported on this device.");
         enter.call(video);
       }
-      this.controlError = undefined;
     } catch (error) {
-      this.controlError =
+      this._requestToast(
+        "error",
         error instanceof Error
           ? error.message
-          : "Unable to change fullscreen mode.";
+          : "Unable to change fullscreen mode.",
+        "camera-fullscreen",
+      );
     }
     this._syncControlState();
+  }
+
+  private _requestToast(
+    severity: ToastSeverity,
+    message: string,
+    key: string,
+  ): void {
+    this.dispatchEvent(
+      new CustomEvent<CameraToastRequestDetail>("camera-toast-request", {
+        bubbles: true,
+        composed: true,
+        detail: { key, message, severity },
+      }),
+    );
   }
 
   static styles = cameraLiveViewStyles;

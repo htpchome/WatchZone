@@ -1,5 +1,8 @@
 import type { HomeAssistantApi } from "./home-assistant";
-import { MEDIA_SESSION_RUNTIME_KEY } from "./constants";
+import {
+  MEDIA_SESSION_RUNTIME_KEY,
+  MEDIA_SESSION_TEARDOWN_RUNTIME_KEY,
+} from "./constants";
 import {
   beginLiveStartupTiming,
   type LiveStartupTiming,
@@ -62,10 +65,6 @@ export interface MediaSessionRequest {
   readonly retention: MediaRetentionClass;
 }
 
-const RETAIN_IDLE_MS: Readonly<Record<MediaRetentionClass, number>> = {
-  fallback: 15 * 1000,
-  preferred: 5 * 60 * 1000,
-};
 const MAX_RETAINED_SESSIONS = 4;
 const MAX_RECONNECT_ATTEMPTS = 2;
 const RECONNECT_BASE_DELAY_MS = 500;
@@ -77,7 +76,6 @@ class ManagedMediaSession {
   private _connection?: MediaConnection;
   private _connectAbort?: AbortController;
   private _generation = 0;
-  private _idleTimer?: ReturnType<typeof setTimeout>;
   private _leaseCount = 0;
   private _connectionOptions: MediaConnectionOptions = { initialMuted: true };
   private _reconnectAttempts = 0;
@@ -95,7 +93,7 @@ class ManagedMediaSession {
     public readonly entityId: string,
     api: HomeAssistantApi,
     private readonly _factory: ConnectionFactory,
-    private readonly _retainIdleMs: number,
+    public readonly retention: MediaRetentionClass,
     private readonly _onClosed: () => void,
   ) {
     this._api = api;
@@ -110,10 +108,6 @@ class ManagedMediaSession {
     this._connectionOptions = { initialMuted: options.initialMuted };
     this.lastUsed = performance.now();
     this._leaseCount += 1;
-    if (this._idleTimer) {
-      clearTimeout(this._idleTimer);
-      this._idleTimer = undefined;
-    }
     if (this._reconnectTimer) {
       clearTimeout(this._reconnectTimer);
       this._reconnectTimer = undefined;
@@ -164,10 +158,6 @@ class ManagedMediaSession {
       return;
     }
     this._setSnapshot({ state: "closing" });
-    if (this._idleTimer) {
-      clearTimeout(this._idleTimer);
-      this._idleTimer = undefined;
-    }
     if (this._reconnectTimer) {
       clearTimeout(this._reconnectTimer);
       this._reconnectTimer = undefined;
@@ -298,7 +288,6 @@ class ManagedMediaSession {
     if (this._snapshot.state === "live") {
       this._setSnapshot({ ...this._snapshot, state: "parked" });
     }
-    this._idleTimer = setTimeout(() => this.close(), this._retainIdleMs);
   }
 
   private _closeConnection(): void {
@@ -334,7 +323,7 @@ export class MediaSessionManager {
       request.entityId,
       request.api,
       request.factory,
-      RETAIN_IDLE_MS[request.retention],
+      request.retention,
       request.options,
     );
   }
@@ -362,7 +351,7 @@ export class MediaSessionManager {
     entityId: string,
     api: HomeAssistantApi,
     factory: ConnectionFactory,
-    retainIdleMs: number,
+    retention: MediaRetentionClass,
     options: MediaConnectionOptions = { initialMuted: true },
   ): MediaSessionLease {
     let session = this._sessions.get(key);
@@ -373,7 +362,7 @@ export class MediaSessionManager {
         entityId,
         api,
         factory,
-        retainIdleMs,
+        retention,
         () => this._sessions.delete(key),
       );
       this._sessions.set(key, session);
@@ -393,13 +382,30 @@ export class MediaSessionManager {
     }
     const retained = [...this._sessions.values()]
       .filter((session) => session.isRetained())
-      .sort((left, right) => left.lastUsed - right.lastUsed);
+      .sort((left, right) => {
+        if (left.retention !== right.retention) {
+          return left.retention === "fallback" ? -1 : 1;
+        }
+        return left.lastUsed - right.lastUsed;
+      });
     retained[0]?.close();
   }
 }
 
 export function getMediaSessionManager(): MediaSessionManager {
   const runtime = window as unknown as Record<string, unknown>;
-  return (runtime[MEDIA_SESSION_RUNTIME_KEY] ??=
+  const manager = (runtime[MEDIA_SESSION_RUNTIME_KEY] ??=
     new MediaSessionManager()) as MediaSessionManager;
+  if (!runtime[MEDIA_SESSION_TEARDOWN_RUNTIME_KEY]) {
+    const closeOnDocumentExit = (event: PageTransitionEvent): void => {
+      if (!event.persisted) {
+        (
+          runtime[MEDIA_SESSION_RUNTIME_KEY] as MediaSessionManager | undefined
+        )?.closeAll();
+      }
+    };
+    window.addEventListener("pagehide", closeOnDocumentExit);
+    runtime[MEDIA_SESSION_TEARDOWN_RUNTIME_KEY] = true;
+  }
+  return manager;
 }

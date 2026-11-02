@@ -1,7 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import {
+  MEDIA_SESSION_RUNTIME_KEY,
+  MEDIA_SESSION_TEARDOWN_RUNTIME_KEY,
+} from "../src/core/constants";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
-import { type ConnectionFactory } from "../src/core/media-session-manager";
+import {
+  type ConnectionFactory,
+  getMediaSessionManager,
+} from "../src/core/media-session-manager";
 import { TestMediaSessionManager as MediaSessionManager } from "./test-media-session-manager";
 
 function createApi(identity: object = {}): HomeAssistantApi {
@@ -20,6 +27,9 @@ function createStream(): MediaStream {
 describe("MediaSessionManager", () => {
   afterEach(() => {
     vi.useRealTimers();
+    const runtime = window as unknown as Record<string, unknown>;
+    delete runtime[MEDIA_SESSION_RUNTIME_KEY];
+    delete runtime[MEDIA_SESSION_TEARDOWN_RUNTIME_KEY];
   });
 
   it("uses configured mute defaults until the user makes a document-lifetime choice", () => {
@@ -68,7 +78,33 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
-  it("closes a parked connection after the bounded retention period", async () => {
+  it("retains bfcache navigation and closes on final document exit", async () => {
+    const close = vi.fn();
+    const factory = vi.fn<ConnectionFactory>(async () => ({
+      stream: createStream(),
+      close,
+    }));
+    const manager = new MediaSessionManager(factory);
+    const runtime = window as unknown as Record<string, unknown>;
+    runtime[MEDIA_SESSION_RUNTIME_KEY] = manager;
+    expect(getMediaSessionManager()).toBe(manager);
+    const lease = manager.acquireHomeAssistant(createApi(), "camera.front");
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
+    lease.release();
+
+    const cachedPageHide = new Event("pagehide");
+    Object.defineProperty(cachedPageHide, "persisted", { value: true });
+    window.dispatchEvent(cachedPageHide);
+    expect(close).not.toHaveBeenCalled();
+
+    const finalPageHide = new Event("pagehide");
+    Object.defineProperty(finalPageHide, "persisted", { value: false });
+    window.dispatchEvent(finalPageHide);
+    expect(close).toHaveBeenCalledOnce();
+    expect(lease.getSnapshot().state).toBe("closed");
+  });
+
+  it("keeps a parked connection for the document lifetime", async () => {
     vi.useFakeTimers();
     const close = vi.fn();
     const factory = vi.fn<ConnectionFactory>(async () => ({
@@ -81,16 +117,15 @@ describe("MediaSessionManager", () => {
     await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
 
     lease.release();
-    await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
-    expect(close).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(24 * 60 * 60 * 1000);
+    expect(close).not.toHaveBeenCalled();
 
-    const replacement = manager.acquireHomeAssistant(api, "camera.front");
-    await vi.waitFor(() =>
-      expect(replacement.getSnapshot().state).toBe("live"),
-    );
-    expect(factory).toHaveBeenCalledTimes(2);
-    replacement.release();
+    const returned = manager.acquireHomeAssistant(api, "camera.front");
+    expect(returned.getSnapshot().state).toBe("live");
+    expect(factory).toHaveBeenCalledOnce();
+    returned.release();
     manager.closeAll();
+    expect(close).toHaveBeenCalledOnce();
   });
 
   it("reconnects when Home Assistant replaces its transport", async () => {
@@ -143,7 +178,7 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
-  it("deduplicates and briefly retains Home Assistant HLS sessions", async () => {
+  it("deduplicates and retains Home Assistant HLS sessions", async () => {
     vi.useFakeTimers();
     const video = document.createElement("video");
     const close = vi.fn();
@@ -164,8 +199,48 @@ describe("MediaSessionManager", () => {
     second.release();
     expect(second.getSnapshot().state).toBe("parked");
 
-    await vi.advanceTimersByTimeAsync(15_000);
+    await vi.advanceTimersByTimeAsync(24 * 60 * 60 * 1000);
+    expect(close).not.toHaveBeenCalled();
+    const returned = manager.acquireHomeAssistantHls(api, "camera.front");
+    expect(returned.getSnapshot().video).toBe(video);
+    expect(hlsFactory).toHaveBeenCalledOnce();
+    returned.release();
+    manager.closeAll();
     expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("evicts a parked fallback before a preferred session at capacity", async () => {
+    const fallbackClose = vi.fn();
+    const preferredCloses = [vi.fn(), vi.fn(), vi.fn(), vi.fn()];
+    let preferredIndex = 0;
+    const preferredFactory = vi.fn<ConnectionFactory>(async () => ({
+      stream: createStream(),
+      close: preferredCloses[preferredIndex++],
+    }));
+    const fallbackFactory = vi.fn<ConnectionFactory>(async () => ({
+      video: document.createElement("video"),
+      close: fallbackClose,
+    }));
+    const manager = new MediaSessionManager(preferredFactory, fallbackFactory);
+    const api = createApi();
+    const fallback = manager.acquireHomeAssistantHls(api, "camera.fallback");
+    await vi.waitFor(() => expect(fallback.getSnapshot().state).toBe("live"));
+    fallback.release();
+
+    for (const entity of ["camera.one", "camera.two", "camera.three"]) {
+      const lease = manager.acquireHomeAssistant(api, entity);
+      await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
+      lease.release();
+    }
+
+    const fifth = manager.acquireHomeAssistant(api, "camera.four");
+    await vi.waitFor(() => expect(fifth.getSnapshot().state).toBe("live"));
+    expect(fallbackClose).toHaveBeenCalledOnce();
+    for (const close of preferredCloses.slice(0, 3)) {
+      expect(close).not.toHaveBeenCalled();
+    }
+    fifth.release();
+    manager.closeAll();
   });
 
   it("publishes the HLS media element while an unmuted connection is starting", async () => {

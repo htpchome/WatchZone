@@ -15,10 +15,17 @@ interface AudioMediaState {
 }
 
 interface AudioCallbacks {
-  clearError(): void;
+  dismissToast(key: string): void;
   getMediaState(): AudioMediaState;
-  showError(message: string): void;
+  showWarning(message: string, key: string): void;
 }
+
+const AUTOPLAY_WARNING_KEY = "camera-audio-autoplay";
+type ForcedMuteReason =
+  | "document-frozen"
+  | "document-hidden"
+  | "page-hidden"
+  | "presentation-detached";
 
 /** Owns configured audio defaults, user intent, and temporary forced mute. */
 export class CameraAudioController implements ReactiveController {
@@ -26,6 +33,7 @@ export class CameraAudioController implements ReactiveController {
   private _autoplayBlocked = false;
   private _desiredMuted = true;
   private _entityId?: string;
+  private readonly _forcedMuteReasons = new Set<ForcedMuteReason>();
   private _muted = true;
   private _startUnmutedPcTablet = false;
   private _startUnmutedPhone = false;
@@ -45,6 +53,16 @@ export class CameraAudioController implements ReactiveController {
 
   public hostConnected(): void {
     document.addEventListener("visibilitychange", this._handleVisibilityChange);
+    document.addEventListener("freeze", this._handleFreeze);
+    document.addEventListener("resume", this._handleResume);
+    window.addEventListener("pagehide", this._handlePageHide);
+    window.addEventListener("pageshow", this._handlePageShow);
+    this._forcedMuteReasons.clear();
+    this._setForcedMute(
+      "document-hidden",
+      document.visibilityState !== "visible",
+      false,
+    );
     this._syncPreference();
   }
 
@@ -53,6 +71,10 @@ export class CameraAudioController implements ReactiveController {
       "visibilitychange",
       this._handleVisibilityChange,
     );
+    document.removeEventListener("freeze", this._handleFreeze);
+    document.removeEventListener("resume", this._handleResume);
+    window.removeEventListener("pagehide", this._handlePageHide);
+    window.removeEventListener("pageshow", this._handlePageShow);
     this.handleActiveVideoChanged(undefined);
   }
 
@@ -72,6 +94,9 @@ export class CameraAudioController implements ReactiveController {
   public handleActiveVideoChanged(video: HTMLVideoElement | undefined): void {
     if (this._activeVideo === video) return;
     if (this._activeVideo) setMediaElementMuted(this._activeVideo, true);
+    if (video) this._forcedMuteReasons.delete("presentation-detached");
+    else if (this._activeVideo)
+      this._forcedMuteReasons.add("presentation-detached");
     this._activeVideo = video;
     this._syncEffectiveMute(Boolean(video));
   }
@@ -90,7 +115,7 @@ export class CameraAudioController implements ReactiveController {
   }
 
   public toggleUserMute(): void {
-    this._callbacks.clearError();
+    this._callbacks.dismissToast(AUTOPLAY_WARNING_KEY);
     this._desiredMuted = !this._muted;
     this._autoplayBlocked = false;
     if (this._entityId) {
@@ -104,7 +129,7 @@ export class CameraAudioController implements ReactiveController {
 
   private _syncPreference(): void {
     this._autoplayBlocked = false;
-    this._callbacks.clearError();
+    this._callbacks.dismissToast(AUTOPLAY_WARNING_KEY);
     if (!this._entityId) {
       this._desiredMuted = true;
     } else {
@@ -124,7 +149,7 @@ export class CameraAudioController implements ReactiveController {
     const muted =
       this._desiredMuted ||
       this._autoplayBlocked ||
-      document.visibilityState !== "visible";
+      this._forcedMuteReasons.size > 0;
     const changed = muted !== this._muted;
     this._muted = muted;
     this.syncMediaState();
@@ -135,12 +160,13 @@ export class CameraAudioController implements ReactiveController {
         if (
           this._activeVideo !== video ||
           this._desiredMuted ||
-          document.visibilityState !== "visible"
+          this._forcedMuteReasons.size > 0
         )
           return;
         this._autoplayBlocked = true;
-        this._callbacks.showError(
+        this._callbacks.showWarning(
           "The browser blocked unmuted playback. Tap mute again to retry.",
+          AUTOPLAY_WARNING_KEY,
         );
         this._syncEffectiveMute(false);
       });
@@ -148,6 +174,36 @@ export class CameraAudioController implements ReactiveController {
   }
 
   private readonly _handleVisibilityChange = (): void => {
-    this._syncEffectiveMute(document.visibilityState === "visible");
+    this._setForcedMute(
+      "document-hidden",
+      document.visibilityState !== "visible",
+      document.visibilityState === "visible",
+    );
   };
+
+  private readonly _handleFreeze = (): void => {
+    this._setForcedMute("document-frozen", true, false);
+  };
+
+  private readonly _handleResume = (): void => {
+    this._setForcedMute("document-frozen", false, true);
+  };
+
+  private readonly _handlePageHide = (): void => {
+    this._setForcedMute("page-hidden", true, false);
+  };
+
+  private readonly _handlePageShow = (): void => {
+    this._setForcedMute("page-hidden", false, true);
+  };
+
+  private _setForcedMute(
+    reason: ForcedMuteReason,
+    active: boolean,
+    attemptPlayback: boolean,
+  ): void {
+    if (active) this._forcedMuteReasons.add(reason);
+    else this._forcedMuteReasons.delete(reason);
+    this._syncEffectiveMute(attemptPlayback);
+  }
 }

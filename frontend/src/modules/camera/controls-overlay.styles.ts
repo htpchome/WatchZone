@@ -91,21 +91,6 @@ export const cameraControlsStyles = css`
     pointer-events: none;
   }
 
-  .control-error {
-    position: absolute;
-    inset-block-end: max(0.75rem, env(safe-area-inset-bottom, 0px));
-    inset-inline: 0.75rem;
-    max-inline-size: max-content;
-    margin-inline: auto;
-    padding: 0.375rem 0.625rem;
-    color: var(--wzc-color-error);
-    background: var(--wzc-color-background);
-    border: 1px solid var(--wzc-color-border-danger);
-    border-radius: var(--wzc-radius-pill);
-    font-size: var(--wzc-font-size-small);
-    pointer-events: none;
-  }
-
   @container (max-width: 480px) {
     .control-group {
       --wzc-control-size: 2.35rem;

@@ -51,6 +51,30 @@ export const themeTokens = css`
     );
     --wzc-color-warning: var(--warning-color, var(--wzc-color-accent));
     --wzc-color-success: var(--success-color, var(--wzc-color-primary));
+    --wzc-color-on-error: var(
+      --ha-color-on-danger-loud,
+      var(--wzc-color-text-reversed)
+    );
+    --wzc-color-on-warning: var(
+      --ha-color-on-warning-loud,
+      var(--wzc-color-text-1)
+    );
+    --wzc-color-on-success: var(
+      --ha-color-on-success-loud,
+      var(--wzc-color-text-reversed)
+    );
+    --wzc-color-fill-error: var(
+      --ha-color-fill-danger-loud-resting,
+      var(--wzc-color-error)
+    );
+    --wzc-color-fill-warning: var(
+      --ha-color-fill-warning-loud-resting,
+      var(--wzc-color-warning)
+    );
+    --wzc-color-fill-success: var(
+      --ha-color-fill-success-loud-resting,
+      var(--wzc-color-success)
+    );
     --wzc-color-border: var(
       --ha-card-border-color,
       var(--divider-color, color-mix(in srgb, CanvasText 24%, transparent))
@@ -124,5 +148,27 @@ export const themeTokens = css`
     --wzc-media-overlay-border-color: var(--wzc-color-border);
     --wzc-media-overlay-radius: var(--wzc-radius-small);
     --wzc-media-overlay-shadow: var(--wzc-shadow-card);
+
+    --wzc-toast-opacity: 78%;
+    --wzc-toast-error-color: var(--wzc-color-on-error);
+    --wzc-toast-error-background: color-mix(
+      in srgb,
+      var(--wzc-color-fill-error) var(--wzc-toast-opacity),
+      transparent
+    );
+    --wzc-toast-warning-color: var(--wzc-color-on-warning);
+    --wzc-toast-warning-background: color-mix(
+      in srgb,
+      var(--wzc-color-fill-warning) var(--wzc-toast-opacity),
+      transparent
+    );
+    --wzc-toast-success-color: var(--wzc-color-on-success);
+    --wzc-toast-success-background: color-mix(
+      in srgb,
+      var(--wzc-color-fill-success) var(--wzc-toast-opacity),
+      transparent
+    );
+    --wzc-toast-radius: var(--wzc-radius-pill);
+    --wzc-toast-shadow: var(--wzc-shadow-small);
   }
 `;

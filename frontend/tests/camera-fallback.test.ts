@@ -31,6 +31,12 @@ describe("camera presentation fallback", () => {
     expect(
       camera.shadowRoot?.querySelector(".generic-fallback"),
     ).not.toBeNull();
+
+    camera.available = true;
+    camera.failed = true;
+    await camera.updateComplete;
+    expect(camera.shadowRoot?.querySelector(".source-indicator")).toBeNull();
+    expect(camera.shadowRoot?.querySelector(".status")).toBeNull();
   });
 });
 

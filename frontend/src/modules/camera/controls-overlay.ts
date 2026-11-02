@@ -1,4 +1,4 @@
-import { html, LitElement, nothing, type TemplateResult } from "lit";
+import { html, LitElement, type TemplateResult } from "lit";
 
 import {
   DeviceProfileController,
@@ -60,7 +60,6 @@ function iconName(
 
 export class CameraControls extends LitElement {
   public static properties = {
-    errorMessage: { attribute: false },
     fullscreenActive: { attribute: false, type: Boolean },
     fullscreenSupported: { attribute: false, type: Boolean },
     muted: { attribute: false, type: Boolean },
@@ -69,7 +68,6 @@ export class CameraControls extends LitElement {
     visible: { reflect: true, type: Boolean },
   };
 
-  public errorMessage?: string;
   public fullscreenActive = false;
   public fullscreenSupported = false;
   public muted = true;
@@ -88,13 +86,6 @@ export class CameraControls extends LitElement {
           ),
         ).map((control) => this._renderControl(control))}
       </div>
-      ${
-        this.errorMessage
-          ? html`<div class="control-error" role="alert">
-              ${this.errorMessage}
-            </div>`
-          : nothing
-      }
     `;
   }
 

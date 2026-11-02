@@ -42,16 +42,15 @@ export class CameraLiveSessionController implements ReactiveController {
     _host.addController(this);
   }
 
-  public get error(): string | undefined {
-    if (!this._available) return "Camera entity is unavailable";
-    return this._webRtcSnapshot.state === "failed" &&
-      this._hlsSnapshot.state === "failed"
-      ? (this._webRtcSnapshot.error ?? this._hlsSnapshot.error)
-      : undefined;
-  }
-
   public get hlsVideo(): HTMLVideoElement | undefined {
     return this._hlsSnapshot.video;
+  }
+
+  public get failed(): boolean {
+    return (
+      this._webRtcSnapshot.state === "failed" &&
+      this._hlsSnapshot.state === "failed"
+    );
   }
 
   public get revision(): number {
@@ -102,11 +101,6 @@ export class CameraLiveSessionController implements ReactiveController {
     this._webRtcSnapshot.timing?.mark("presentation_selected");
     this._select("webrtc", this._webRtcSnapshot.transport, video);
     this._releaseHls(true);
-  }
-
-  public retry(): void {
-    this._webRtcLease?.retry();
-    this._hlsLease?.retry();
   }
 
   private _sync(): void {

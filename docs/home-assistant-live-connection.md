@@ -130,12 +130,12 @@ editor-preview instances in the same document share sessions. Removing a live
 element releases its lease and detaches presentation; it does not close a
 healthy retained winner.
 
-The initial resource budget retains at most four sessions. A winning WebRTC
-session may remain parked for five minutes. An HLS candidate has a shorter
-15-second idle window, and an unshared HLS loser is discarded immediately
-after WebRTC handoff. Established connections receive at most two automatic
-reconnect attempts with exponential backoff and jitter. A manual retry is
-immediate and starts a fresh bounded retry sequence.
+The initial resource budget retains at most four sessions for the current
+browser document. Parked sessions do not expire on an arbitrary idle timer;
+capacity pressure evicts parked fallback sessions first and then the
+least-recently-used preferred session. An unshared HLS loser is discarded
+immediately after WebRTC handoff. Established connections receive at most two
+automatic reconnect attempts with exponential backoff and jitter.
 
 ## 8. Current audio behavior
 
