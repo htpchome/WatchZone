@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createHaDirectHlsConnection } from "../src/providers/home-assistant/live/hls";
+import { createHomeAssistantHlsConnection } from "../src/connections/home-assistant/hls";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import { LiveStartupTiming } from "../src/core/live-startup-timing";
 
@@ -18,6 +18,7 @@ vi.mock("hls.js/dist/hls.light.mjs", () => ({
     public static isSupported(): boolean {
       return hlsMock.isSupported();
     }
+
     public readonly attachMedia = hlsMock.attachMedia;
     public readonly destroy = hlsMock.destroy;
     public readonly loadSource = hlsMock.loadSource;
@@ -25,18 +26,11 @@ vi.mock("hls.js/dist/hls.light.mjs", () => ({
   },
 }));
 
-function createApi(callWS: HomeAssistantApi["callWS"]): HomeAssistantApi {
-  return {
-    identity: {} as HomeAssistantApi["identity"],
-    callWS,
-    resolveUrl: (path) => `https://ha.example${path}`,
-    subscribeMessage: vi.fn(),
-  };
-}
-
 describe("Home Assistant HLS connection", () => {
   beforeEach(() => {
-    for (const mock of Object.values(hlsMock)) mock.mockReset();
+    for (const mock of Object.values(hlsMock)) {
+      mock.mockReset();
+    }
     hlsMock.isSupported.mockReturnValue(true);
     vi.spyOn(HTMLMediaElement.prototype, "canPlayType").mockReturnValue(
       "maybe",
@@ -50,17 +44,25 @@ describe("Home Assistant HLS connection", () => {
     );
   });
 
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
-  it("requests an authenticated native HLS stream and resolves on decoded media", async () => {
+  it("requests an authenticated HLS stream and resolves on decoded media", async () => {
     hlsMock.isSupported.mockReturnValue(false);
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response("#EXTM3U\n#EXT-X-VERSION:3\n"),
     );
     const callWS = vi.fn(async () => ({ url: "/api/hls/front.m3u8" }));
-    const timing = new LiveStartupTiming("ha_direct:hls:camera.front");
-    const connecting = createHaDirectHlsConnection(
-      createApi(callWS as HomeAssistantApi["callWS"]),
+    const api: HomeAssistantApi = {
+      identity: {} as HomeAssistantApi["identity"],
+      callWS: callWS as HomeAssistantApi["callWS"],
+      resolveUrl: (path) => `https://ha.example${path}`,
+      subscribeMessage: vi.fn(),
+    };
+    const timing = new LiveStartupTiming("home_assistant_hls:camera.front");
+    const connecting = createHomeAssistantHlsConnection(
+      api,
       "camera.front",
       new AbortController().signal,
       vi.fn(),
@@ -76,6 +78,7 @@ describe("Home Assistant HLS connection", () => {
         (context): context is HTMLVideoElement =>
           context instanceof HTMLVideoElement,
       );
+    expect(video).toBeDefined();
     video?.dispatchEvent(new Event("loadeddata"));
     const connection = await connecting;
 
@@ -89,15 +92,18 @@ describe("Home Assistant HLS connection", () => {
     expect(video?.src).toBe("https://ha.example/api/hls/front.m3u8");
     expect(timing.snapshot().phases).toMatchObject({
       first_frame_decoded: expect.any(Number),
+      hls_engine_loaded: expect.any(Number),
       hls_manifest_loaded: expect.any(Number),
       hls_native_path_selected: expect.any(Number),
+      stream_url_received: expect.any(Number),
+      stream_url_requested: expect.any(Number),
     });
 
     connection.close();
     expect(HTMLMediaElement.prototype.pause).toHaveBeenCalled();
   });
 
-  it("loads one HLS variant through the lazy playback engine", async () => {
+  it("loads one HLS variant directly through the lazy playback engine", async () => {
     vi.mocked(HTMLMediaElement.prototype.canPlayType).mockReturnValue("");
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
@@ -105,9 +111,15 @@ describe("Home Assistant HLS connection", () => {
       ),
     );
     const callWS = vi.fn(async () => ({ url: "/api/hls/master.m3u8" }));
-    const timing = new LiveStartupTiming("ha_direct:hls:camera.front");
-    const connecting = createHaDirectHlsConnection(
-      createApi(callWS as HomeAssistantApi["callWS"]),
+    const api: HomeAssistantApi = {
+      identity: {} as HomeAssistantApi["identity"],
+      callWS: callWS as HomeAssistantApi["callWS"],
+      resolveUrl: (path) => `https://ha.example${path}`,
+      subscribeMessage: vi.fn(),
+    };
+    const timing = new LiveStartupTiming("home_assistant_hls:camera.front");
+    const connecting = createHomeAssistantHlsConnection(
+      api,
       "camera.front",
       new AbortController().signal,
       vi.fn(),
@@ -119,10 +131,20 @@ describe("Home Assistant HLS connection", () => {
     video.dispatchEvent(new Event("loadeddata"));
     const connection = await connecting;
 
+    expect(fetch).toHaveBeenCalledWith(
+      "https://ha.example/api/hls/master.m3u8",
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
     expect(hlsMock.loadSource).toHaveBeenCalledWith(
       "https://ha.example/api/hls/media/stream.m3u8",
     );
     expect(connection.transport).toBe("hls_mse");
+    expect(timing.snapshot().phases).toMatchObject({
+      hls_engine_loaded: expect.any(Number),
+      hls_manifest_loaded: expect.any(Number),
+      hls_mse_path_selected: expect.any(Number),
+    });
+
     connection.close();
     expect(hlsMock.destroy).toHaveBeenCalledOnce();
   });
@@ -137,27 +159,28 @@ describe("Home Assistant HLS connection", () => {
       resolveStream = resolve;
     });
     const callWS = vi.fn(() => streamResponse);
-    let attachedMuteState:
-      { defaultMuted: boolean; muted: boolean } | undefined;
+    const api: HomeAssistantApi = {
+      identity: {} as HomeAssistantApi["identity"],
+      callWS: callWS as HomeAssistantApi["callWS"],
+      resolveUrl: (path) => `https://ha.example${path}`,
+      subscribeMessage: vi.fn(),
+    };
     const onVideo = vi.fn((video: HTMLVideoElement) => {
-      attachedMuteState = {
-        defaultMuted: video.defaultMuted,
-        muted: video.muted,
-      };
       document.body.append(video);
     });
-    const connecting = createHaDirectHlsConnection(
-      createApi(callWS as HomeAssistantApi["callWS"]),
+    const timing = new LiveStartupTiming("home_assistant_hls:camera.front");
+    const connecting = createHomeAssistantHlsConnection(
+      api,
       "camera.front",
       new AbortController().signal,
       vi.fn(),
-      new LiveStartupTiming("ha_direct:hls:camera.front"),
+      timing,
       { initialMuted: false, onVideo },
     );
 
     expect(onVideo).toHaveBeenCalledOnce();
     const video = onVideo.mock.calls[0][0];
-    expect(attachedMuteState).toEqual({ defaultMuted: true, muted: true });
+    expect(video.isConnected).toBe(true);
     expect(video.muted).toBe(false);
     expect(video.defaultMuted).toBe(false);
     expect(video.playsInline).toBe(true);
@@ -165,6 +188,7 @@ describe("Home Assistant HLS connection", () => {
     await vi.waitFor(() =>
       expect(HTMLMediaElement.prototype.play).toHaveBeenCalledOnce(),
     );
+    expect(callWS).toHaveBeenCalledOnce();
     expect(video.src).toBe("");
 
     resolveStream?.({ url: "/api/hls/front.m3u8" });

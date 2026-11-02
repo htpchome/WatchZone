@@ -1,32 +1,16 @@
-import {
-  APP_BUILD,
-  APP_ID,
-  APP_NAME,
-  APP_VERSION,
-  CARD_TAG,
-} from "./core/constants";
-import { getClientEnvironment } from "./core/client-environment";
+import { APP_BUILD, APP_NAME, APP_VERSION, CARD_TAG } from "./core/constants";
 import { getLiveStartupTimings } from "./core/live-startup-timing";
 import { getMediaSessionManager } from "./core/media-session-manager";
 
 getMediaSessionManager();
 
 const activeCard = customElements.get(CARD_TAG) as
-  (CustomElementConstructor & { readonly appVersion?: string }) | undefined;
-const activeCardVersion = activeCard?.appVersion ?? null;
-const clientEnvironment = getClientEnvironment();
-(window as unknown as Record<string, unknown>)[APP_ID] = Object.freeze({
+  | (CustomElementConstructor & { readonly watchZoneVersion?: string })
+  | undefined;
+const activeCardVersion = activeCard?.watchZoneVersion ?? null;
+window.watchZone = Object.freeze({
   activeCardVersion,
   build: APP_BUILD,
-  clientEnvironment: Object.freeze({
-    companion: clientEnvironment.companion,
-    deviceClass: clientEnvironment.deviceClass,
-    hasTouch: clientEnvironment.hasTouch,
-    host: clientEnvironment.host,
-    operatingSystem: clientEnvironment.operatingSystem,
-    primaryTouch: clientEnvironment.primaryTouch,
-    webRtcSupported: clientEnvironment.webRtcSupported,
-  }),
   getLiveStartupTimings,
   loadedAt: new Date().toISOString(),
   version: APP_VERSION,
@@ -45,4 +29,4 @@ if (activeCardVersion !== APP_VERSION) {
   );
 }
 
-export { DashboardCard } from "./card/card";
+export { WatchZoneCard } from "./card/watchzone-card";

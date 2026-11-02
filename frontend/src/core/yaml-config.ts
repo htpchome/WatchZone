@@ -1,13 +1,15 @@
-import type { CardConfig } from "./config";
+import type { WatchZoneCardConfig } from "./config";
 import { CARD_TYPE, DEFAULT_CARD_TITLE } from "./constants";
 
-export interface YamlCardConfig {
+export interface WatchZoneYamlConfig {
   readonly type: typeof CARD_TYPE;
   readonly [key: string]: unknown;
 }
 
 /** Removes known defaults before configuration is handed back to HA/YAML. */
-export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
+export function toYamlCardConfig(
+  config: WatchZoneCardConfig,
+): WatchZoneYamlConfig {
   const yaml: Record<string, unknown> = { ...config, type: CARD_TYPE };
   if (config.title === DEFAULT_CARD_TITLE) delete yaml.title;
   if (config.rounded_outer_corners !== false) {
@@ -28,5 +30,5 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
   for (const [key, value] of Object.entries(yaml)) {
     if (value === undefined) delete yaml[key];
   }
-  return yaml as YamlCardConfig;
+  return yaml as WatchZoneYamlConfig;
 }

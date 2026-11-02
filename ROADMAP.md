@@ -53,6 +53,7 @@ provider services, and connection adapters that users compose into layouts.
 8. Every visual feature consumes WatchZone theme tokens and supports container
    responsiveness, touch, pointer, keyboard, and the supported browser/app
    matrix.
+
 ## Capability roadmap
 
 ### 1. Python-owned layout and theme designer
@@ -113,14 +114,13 @@ designer UI so saved layouts are declarative and testable.
   A substream changes live presentation only; events, PTZ, recordings, and
   other camera capabilities continue to use the stable camera identity.
 - An independent source/status overlay with a persistent connecting indicator
-  and timed current-source label; a takeover updates the same indicator without
-  a second connecting phase, later visibility shares the camera controls'
-  interaction state and timer, and diagnostics retain the complete
+  and timed first-source label; later source-label visibility shares the camera
+  controls' interaction state and timer while diagnostics retain the complete
   takeover/fallback history.
 - Resource budgets for simultaneous connections, decoders, bandwidth, parked
   sessions, and idle eviction.
 - Platform-specific capability handling isolated inside adapters, including
-  Safari, Companion, backgrounding, and autoplay constraints.
+  Safari, Companion, Catalyst, backgrounding, and autoplay constraints.
 
 ### 4. Camera module and presentations
 
@@ -182,8 +182,8 @@ designer UI so saved layouts are declarative and testable.
   safe-area behavior supplied by the layout designer.
 - Snapshot capture of the displayed frame, with a privacy-safe fallback when
   canvas extraction is unavailable; optional capture of current zoom/pan.
-- Browser-native fullscreen and Picture-in-Picture with Firefox, WebKit, and
-  Companion behavior isolated behind capability helpers.
+- Browser-native fullscreen and Picture-in-Picture with Firefox, WebKit,
+  Companion, and Catalyst behavior isolated behind capability helpers.
 - Optional AirPlay or platform media actions only where supported and useful.
 - Typed control intents routed to the owning camera/session/provider service;
   controls do not contain provider or connection logic.
@@ -307,8 +307,8 @@ designer UI so saved layouts are declarative and testable.
 - Localization from the first broadly user-facing feature set.
 - Accessible names, focus order, keyboard operation, reduced motion, text
   scaling, and screen-reader status announcements.
-- Physical smoke matrix for Chrome, Edge, Firefox, Safari, iOS/iPadOS, and
-  Companion Android/iOS in addition to automated browser tests.
+- Physical smoke matrix for Chrome, Edge, Firefox, Safari, iOS/iPadOS,
+  Companion Android/iOS, and Catalyst in addition to automated browser tests.
 - Security review for provider credentials, signed media, downloads, layout
   validation, permissions, microphone use, and external URLs.
 
@@ -351,8 +351,6 @@ For each roadmap capability, confirm these before writing its feature code:
 - What is lazy-loaded, and what must remain in the eager shell?
 - Which retained-session resources are acquired, transferred, parked, or
   closed?
-- If the change is presentation-only, what preserves the canonical session and
-  proves that no connection factory or renegotiation runs?
 - What permissions and backend validation are required?
 - What are the empty, loading, unavailable, suspended, denied, partial-failure,
   and retry states?

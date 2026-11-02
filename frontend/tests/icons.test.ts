@@ -1,10 +1,9 @@
 import { render } from "lit";
 import { describe, expect, it } from "vitest";
 
-import { APP_NAME } from "../src/core/constants";
 import { renderIcon } from "../src/ui/icons";
 
-describe(`${APP_NAME} icon registry`, () => {
+describe("WatchZone icon registry", () => {
   it("renders the required Picture-in-Picture pop-out geometry safely", () => {
     const host = document.createElement("div");
     render(renderIcon("pipPopOut"), host);

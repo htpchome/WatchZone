@@ -8,8 +8,7 @@ Before changing source code, read:
 
 1. `architecture.md`
 2. `ROADMAP.md` for known future capabilities and planning pressure
-3. `docs/system-map.md` to locate the owning source, contract, and tests
-4. Every contract identified there for the affected system
+3. Any contract in `docs/` that governs the affected feature
 
 For card configuration, editor previews, Home Assistant controls, theming, or
 responsive card layout, also read `docs/config-editor-lifecycle.md` in full.
@@ -46,29 +45,6 @@ For any frontend, media, interaction, layout, or styling change, also read
 - Keep the browser console quiet: one name/version startup banner plus
   actionable warnings or errors. Remove temporary tracing before handoff and
   route future diagnostics through the centralized logger when introduced.
-- Keep internal identifiers brand-neutral because the product name is expected
-  to change. Product/domain names belong only at centralized external identity
-  boundaries. Run `corepack yarn check:naming`; do not introduce
-  `WatchZone*`, `watchZone*`, or `__WATCHZONE_*` internal identifiers.
-
-## System documentation
-
-- `docs/system-map.md` is the durable entry point for understanding implemented
-  systems across sessions. Keep its ownership, flow, contract, and test links
-  accurate.
-- A change that creates a system or changes its ownership, lifecycle, state
-  flow, invariants, fallback behavior, diagnostics, or integration boundary
-  must update its focused document and the system map in the same change.
-- Read the mapped system document before tracing implementation code. Verify it
-  against the current source while working; stale documentation is a defect and
-  must be corrected before handoff.
-- System documents explain why the system exists, who owns state, the runtime
-  flow, invariants, failure/cleanup behavior, extension points, diagnostics,
-  and verification. They do not duplicate line-by-line code, serve as progress
-  logs, or preserve superseded designs.
-- Prefer extending an existing focused document over creating another file.
-  Create a new system document only when a new stable ownership boundary is
-  actually implemented.
 
 ## Core boundaries
 
@@ -79,34 +55,12 @@ For any frontend, media, interaction, layout, or styling change, also read
   latency-sensitive interaction.
 - A provider and a live connection type are different concepts.
 - Feature modules do not import one another.
-- Concrete provider live adapters are dynamically imported and are not
-  statically imported by the camera module or eager entry. The camera module
-  consumes only the public live-source resolver.
-- Platform-specific media policy must be isolated behind a resolver/adapter
-  boundary when its failure could affect other supported clients. Do not add a
-  Safari, Companion, Firefox, or engine-specific workaround to a
-  shared transport or presentation lifecycle merely because it is guarded by a
-  runtime conditional. Shared-path changes require cross-platform behavior;
-  physical-client-only behavior requires a dedicated adapter plus physical
-  validation and may not be declared proven by synthetic browser tests alone.
+- Concrete live connection adapters are dynamically imported and are not
+  statically imported by the live module or eager entry.
 - Live sessions are owned by the document-scoped media-session manager, not by
   Lit elements. Element disconnection releases a lease; it does not
   automatically close a retained connection.
-- Connection retention is an application-wide design invariant, not a camera
-  feature or later optimization. Every design and implementation that can
-  affect media presentation or lifecycle must define whether it acquires,
-  reuses, attaches, transfers, parks, resumes, releases, invalidates, or evicts
-  a session lease. Presentation-only changes must preserve the canonical
-  session and must not reconnect. When the impact is nontrivial, verification
-  must prove both the intended lifecycle and the absence of duplicate
-  connection creation.
 - Automatic audio policy never overwrites explicit user mute preference.
-- `ClientEnvironment` is the sole frontend owner of Home Assistant host,
-  operating-system, physical phone/tablet/desktop, and input-capability
-  classification. Migrate every consumer and delete the replaced classifier in
-  the same change; do not add aliases, parallel detectors, or feature-local UA
-  parsing. Responsive sizing belongs to CSS container/media queries and must
-  not create a second JavaScript device profile.
 - Card-editor typing updates Home Assistant `dirtyState` and a coalesced soft
   preview; it never emits `config-changed` on every keystroke.
 - The editor requests the dirty-state context once without subscription because

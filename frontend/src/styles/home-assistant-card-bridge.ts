@@ -1,6 +1,6 @@
 /**
  * The narrow write-only bridge to Home Assistant's card host styling hooks.
- * Feature components consume application tokens and do not name HA tokens.
+ * Feature components consume WatchZone tokens and do not name HA tokens.
  */
 const HA_CARD_RADIUS_PROPERTY = "--ha-card-border-radius";
 const HA_CARD_SHADOW_PROPERTY = "--ha-card-box-shadow";

@@ -1,15 +1,15 @@
 import type HlsType from "hls.js";
 
-import type { HomeAssistantApi } from "../../../core/home-assistant";
-import type { LiveStartupTiming } from "../../../core/live-startup-timing";
+import type { HomeAssistantApi } from "../../core/home-assistant";
+import type { LiveStartupTiming } from "../../core/live-startup-timing";
 import {
   playMediaElement,
   setMediaElementMuted,
-} from "../../../core/media-playback";
+} from "../../core/media-playback";
 import type {
   MediaConnection,
   MediaConnectionOptions,
-} from "../../../core/media-session-manager";
+} from "../../core/media-session-manager";
 
 interface StreamResponse {
   readonly url: string;
@@ -40,7 +40,7 @@ function selectSingleVariant(manifest: string, manifestUrl: string): string {
   return variants.length === 1 ? variants[0] : manifestUrl;
 }
 
-export async function createHaDirectHlsConnection(
+export async function createHomeAssistantHlsConnection(
   api: HomeAssistantApi,
   entityId: string,
   signal: AbortSignal,
@@ -58,9 +58,8 @@ export async function createHaDirectHlsConnection(
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
   video.preload = "auto";
-  setMediaElementMuted(video, true);
-  options.onVideo?.(video);
   setMediaElementMuted(video, options.initialMuted);
+  options.onVideo?.(video);
 
   // Prime the actual selected element before its source exists. WebKit makes
   // its first audible-playback decision at this boundary; replacing the

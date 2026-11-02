@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createHaDirectWebRtcConnection } from "../src/providers/home-assistant/live/webrtc";
+import { createHomeAssistantWebRtcConnection } from "../src/connections/home-assistant";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import { LiveStartupTiming } from "../src/core/live-startup-timing";
 
@@ -37,7 +37,7 @@ class FakePeerConnection {
   public readonly createDataChannel = vi.fn();
   public readonly createOffer = vi.fn(async () => ({
     type: "offer" as RTCSdpType,
-    sdp: "test-offer",
+    sdp: "watchzone-offer",
   }));
   public readonly setLocalDescription = vi.fn(async () => {
     this.onicecandidate?.({
@@ -93,9 +93,9 @@ describe("Home Assistant WebRTC connection", () => {
       }),
     };
     const onFailure = vi.fn();
-    const timing = new LiveStartupTiming("ha_direct:webrtc:camera.front");
+    const timing = new LiveStartupTiming("home_assistant:camera.front");
 
-    const connecting = createHaDirectWebRtcConnection(
+    const connecting = createHomeAssistantWebRtcConnection(
       api,
       "camera.front",
       new AbortController().signal,
@@ -122,7 +122,7 @@ describe("Home Assistant WebRTC connection", () => {
       candidate: { candidate: "remote-candidate" },
     });
     offerCallback({ type: "session", session_id: "session-1" });
-    offerCallback({ type: "answer", answer: "test-answer" });
+    offerCallback({ type: "answer", answer: "watchzone-answer" });
     await vi.waitFor(() =>
       expect(peer.setRemoteDescription).toHaveBeenCalled(),
     );
@@ -143,7 +143,7 @@ describe("Home Assistant WebRTC connection", () => {
         type: "camera/webrtc/offer",
         entity_id: "camera.front",
         offer:
-          "test-offer\r\na=candidate:early 1 udp 1 192.0.2.1 1234 typ host\r\n",
+          "watchzone-offer\r\na=candidate:early 1 udp 1 192.0.2.1 1234 typ host\r\n",
       }),
     );
     expect(callWS).toHaveBeenCalledWith({

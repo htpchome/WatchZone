@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   suppressNativePictureInPicture,
   togglePictureInPicture,
-} from "../src/modules/camera/live/picture-in-picture";
+} from "../src/modules/camera/picture-in-picture";
 
 describe("camera Picture-in-Picture", () => {
   const pictureInPictureElementDescriptor = Object.getOwnPropertyDescriptor(

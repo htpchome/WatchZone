@@ -1,11 +1,10 @@
-import { html, LitElement, type TemplateResult } from "lit";
+import { html, LitElement, nothing, type TemplateResult } from "lit";
 
 import {
-  type ClientDeviceClass,
-  getClientEnvironment,
-} from "../../../core/client-environment";
-import { CAMERA_CONTROLS_TAG } from "../../../core/constants";
-import { renderIcon, type IconName } from "../../../ui/icons";
+  DeviceProfileController,
+  type DeviceClass,
+} from "../../core/device-profile";
+import { renderIcon, type WatchZoneIcon } from "../../ui/icons";
 import { cameraControlsStyles } from "./controls-overlay.styles";
 
 export type CameraControlAction =
@@ -20,14 +19,14 @@ interface ControlDefinition {
   readonly placeholder?: boolean;
 }
 
-const ALL_DEVICE_CLASSES: readonly ClientDeviceClass[] = [
+const ALL_DEVICE_CLASSES: readonly DeviceClass[] = [
   "phone",
   "tablet",
   "desktop",
 ];
 
 export const CAMERA_CONTROL_DEVICE_MATRIX: Readonly<
-  Record<CameraControlAction, readonly ClientDeviceClass[]>
+  Record<CameraControlAction, readonly DeviceClass[]>
 > = {
   suspend: ALL_DEVICE_CLASSES,
   picture_in_picture: ALL_DEVICE_CLASSES,
@@ -48,7 +47,7 @@ function iconName(
   action: CameraControlAction,
   muted: boolean,
   fullscreenActive: boolean,
-): IconName {
+): WatchZoneIcon {
   if (action === "suspend") return "power";
   if (action === "picture_in_picture") return "pipPopOut";
   if (action === "snapshot") return "takeSnapshot";
@@ -58,8 +57,9 @@ function iconName(
   return muted ? "volumeOff" : "volumeOn";
 }
 
-export class CameraControls extends LitElement {
+export class WatchZoneCameraControls extends LitElement {
   public static properties = {
+    errorMessage: { attribute: false },
     fullscreenActive: { attribute: false, type: Boolean },
     fullscreenSupported: { attribute: false, type: Boolean },
     muted: { attribute: false, type: Boolean },
@@ -68,6 +68,7 @@ export class CameraControls extends LitElement {
     visible: { reflect: true, type: Boolean },
   };
 
+  public errorMessage?: string;
   public fullscreenActive = false;
   public fullscreenSupported = false;
   public muted = true;
@@ -75,24 +76,24 @@ export class CameraControls extends LitElement {
   public pictureInPictureSupported = false;
   public visible = false;
 
-  private readonly _clientEnvironment = getClientEnvironment();
+  private readonly _deviceProfile = new DeviceProfileController(this);
 
   protected render() {
     return html`
-      <div
-        class="control-group"
-        role="toolbar"
-        aria-label="Camera controls"
-        @keydown=${this._handleKeyboardInput}
-        @pointerdown=${this._handlePointerInput}
-        @pointerenter=${this._handlePointerInput}
-      >
+      <div class="control-group" role="toolbar" aria-label="Camera controls">
         ${CONTROLS.filter((control) =>
           CAMERA_CONTROL_DEVICE_MATRIX[control.action].includes(
-            this._clientEnvironment.deviceClass,
+            this._deviceProfile.profile.deviceClass,
           ),
         ).map((control) => this._renderControl(control))}
       </div>
+      ${
+        this.errorMessage
+          ? html`<div class="control-error" role="alert">
+              ${this.errorMessage}
+            </div>`
+          : nothing
+      }
     `;
   }
 
@@ -152,23 +153,15 @@ export class CameraControls extends LitElement {
     );
   }
 
-  private readonly _handleKeyboardInput = (): void => {
-    this.removeAttribute("touch-input");
-  };
-
-  private readonly _handlePointerInput = (event: PointerEvent): void => {
-    this.toggleAttribute("touch-input", event.pointerType !== "mouse");
-  };
-
   static styles = cameraControlsStyles;
 }
 
-if (!customElements.get(CAMERA_CONTROLS_TAG)) {
-  customElements.define(CAMERA_CONTROLS_TAG, CameraControls);
+if (!customElements.get("watchzone-camera-controls")) {
+  customElements.define("watchzone-camera-controls", WatchZoneCameraControls);
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    [CAMERA_CONTROLS_TAG]: CameraControls;
+    "watchzone-camera-controls": WatchZoneCameraControls;
   }
 }

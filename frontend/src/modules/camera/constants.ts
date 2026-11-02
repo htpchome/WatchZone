@@ -1,0 +1,1 @@
+export const CAMERA_OVERLAY_HIDE_DELAY_MS = 2500;

@@ -1,6 +1,6 @@
-import { APP_NAME, CARD_TYPE, DEFAULT_CARD_TITLE } from "./constants";
+import { CARD_TYPE, DEFAULT_CARD_TITLE } from "./constants";
 
-export interface CardConfig {
+export interface WatchZoneCardConfig {
   readonly camera_entity?: string;
   readonly camera_rounded_corners?: boolean;
   readonly camera_shadows?: boolean;
@@ -14,15 +14,15 @@ export interface CardConfig {
   readonly [key: string]: unknown;
 }
 
-export function normalizeCardConfig(value: unknown): CardConfig {
+export function normalizeCardConfig(value: unknown): WatchZoneCardConfig {
   if (typeof value !== "object" || value === null) {
-    throw new Error(`${APP_NAME} card configuration must be an object.`);
+    throw new Error("WatchZone card configuration must be an object.");
   }
   const source = value as Record<string, unknown>;
 
   const title = "title" in source ? source.title : DEFAULT_CARD_TITLE;
   if (typeof title !== "string" || title.trim().length === 0) {
-    throw new Error(`${APP_NAME} card title must be a non-empty string.`);
+    throw new Error("WatchZone card title must be a non-empty string.");
   }
 
   const cameraEntity =
@@ -32,7 +32,7 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     (typeof cameraEntity !== "string" ||
       !cameraEntity.trim().startsWith("camera."))
   ) {
-    throw new Error(`${APP_NAME} camera must be a camera entity ID.`);
+    throw new Error("WatchZone camera must be a camera entity ID.");
   }
 
   for (const key of [
@@ -45,7 +45,7 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     "start_live_unmuted_phone",
   ] as const) {
     if (key in source && typeof source[key] !== "boolean") {
-      throw new Error(`${APP_NAME} ${key} must be a boolean.`);
+      throw new Error(`WatchZone ${key} must be a boolean.`);
     }
   }
 
@@ -75,9 +75,9 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     source.start_live_unmuted_pc_tablet === true;
   normalized.start_live_unmuted_phone =
     source.start_live_unmuted_phone === true;
-  return normalized as CardConfig;
+  return normalized as WatchZoneCardConfig;
 }
 
-export function cardConfigSignature(config: CardConfig): string {
+export function cardConfigSignature(config: WatchZoneCardConfig): string {
   return JSON.stringify(config);
 }

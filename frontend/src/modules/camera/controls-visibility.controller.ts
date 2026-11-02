@@ -1,31 +1,25 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
-import { TimedVisibilityController } from "../../../ui/timed-visibility.controller";
 import { CAMERA_OVERLAY_HIDE_DELAY_MS } from "./constants";
 
 /** Owns transient pointer visibility without coupling timers to rendering. */
 export class CameraControlsVisibilityController implements ReactiveController {
+  public visible = false;
+
   private _focused = false;
+  private _hideTimer?: ReturnType<typeof setTimeout>;
   private _hovered = false;
   private _pointerFocusPending = false;
-  private readonly _visibility: TimedVisibilityController;
 
   public constructor(private readonly _host: ReactiveControllerHost) {
     _host.addController(this);
-    this._visibility = new TimedVisibilityController(
-      _host,
-      CAMERA_OVERLAY_HIDE_DELAY_MS,
-    );
-  }
-
-  public get visible(): boolean {
-    return this._visibility.visible;
   }
 
   public hostDisconnected(): void {
-    this._visibility.reset();
+    this._clearHideTimer();
     this._focused = false;
     this._hovered = false;
+    this.visible = false;
   }
 
   public readonly handlePointerEnter = (event: PointerEvent): void => {
@@ -65,12 +59,26 @@ export class CameraControlsVisibilityController implements ReactiveController {
   };
 
   private _show(): void {
-    this._visibility.reveal();
+    this._clearHideTimer();
+    if (this.visible) return;
+    this.visible = true;
+    this._host.requestUpdate();
   }
 
   private _scheduleHide(): void {
-    this._visibility.cancelScheduledHide();
+    this._clearHideTimer();
     if (this._hovered || this._focused) return;
-    this._visibility.scheduleHide();
+    this._hideTimer = setTimeout(() => {
+      this._hideTimer = undefined;
+      if (this._hovered || this._focused || !this.visible) return;
+      this.visible = false;
+      this._host.requestUpdate();
+    }, CAMERA_OVERLAY_HIDE_DELAY_MS);
+  }
+
+  private _clearHideTimer(): void {
+    if (this._hideTimer === undefined) return;
+    clearTimeout(this._hideTimer);
+    this._hideTimer = undefined;
   }
 }

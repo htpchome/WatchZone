@@ -3,15 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Frontend Development</title>
+    <title>WatchZone Frontend Development</title>
   </head>
   <body>
+    <watchzone-card></watchzone-card>
     <script type="module">
       import "@webcomponents/scoped-custom-element-registry/scoped-custom-element-registry.min";
-      const { APP_NAME, CARD_TAG } = await import("/src/core/constants.ts");
       await import("/src/main.ts");
-      document.title = `${APP_NAME} Frontend Development`;
-      document.body.append(document.createElement(CARD_TAG));
     </script>
   </body>
 </html>

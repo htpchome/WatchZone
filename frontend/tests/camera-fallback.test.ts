@@ -1,9 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import {
-  CAMERA_LIVE_PRESENTATION_TAG,
-  CAMERA_TAG,
-} from "../src/core/constants";
+import type { WatchZoneCamera } from "../src/modules/camera";
+import type { WatchZoneCameraLiveView } from "../src/modules/camera/live-view";
 import "../src/modules/camera";
 
 afterEach(() => {
@@ -12,7 +10,9 @@ afterEach(() => {
 
 describe("camera presentation fallback", () => {
   it("reveals the generic themed layer when the HA poster fails", async () => {
-    const camera = document.createElement(CAMERA_LIVE_PRESENTATION_TAG);
+    const camera = document.createElement(
+      "watchzone-camera-live-view",
+    ) as WatchZoneCameraLiveView;
     camera.posterUrl = "/api/camera_proxy/camera.front?token=test";
     document.body.append(camera);
     await camera.updateComplete;
@@ -35,7 +35,9 @@ describe("camera presentation fallback", () => {
 
 describe("camera component appearance", () => {
   it("applies independent corner and shadow inputs", async () => {
-    const camera = document.createElement(CAMERA_TAG);
+    const camera = document.createElement(
+      "watchzone-camera",
+    ) as WatchZoneCamera;
     document.body.append(camera);
     await camera.updateComplete;
 

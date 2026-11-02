@@ -1,100 +1,36 @@
-import { LitElement } from "lit";
-import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
+import { html, LitElement } from "lit";
 
-import { CAMERA_LIVE_PRESENTATION_TAG, CAMERA_TAG } from "../../core/constants";
+import { CAMERA_TAG } from "../../core/constants";
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import { cameraStyles } from "./camera.styles";
-import { CameraAudioController } from "./live/audio.controller";
-import type {
-  CameraLivePresentation,
-  CameraMediaAttachedDetail,
-} from "./live/presentation";
-import "./live/presentation";
-import { LiveSessionController } from "./live/session.controller";
+import "./live-view";
 
 export type CameraShadowStyle = "medium" | "none" | "small";
-const cameraPresentationTag = unsafeStatic(CAMERA_LIVE_PRESENTATION_TAG);
 
-/** Stable composition boundary for all camera capabilities and presentations. */
-export class CameraModule extends LitElement {
+/** Stable composition boundary for current and future camera presentations. */
+export class WatchZoneCamera extends LitElement {
   public static properties = {
+    api: { attribute: false },
+    available: { attribute: false, type: Boolean },
+    entityId: { attribute: false },
     posterUrl: { attribute: false },
     roundedCorners: { attribute: false, type: Boolean },
     shadowStyle: { attribute: false },
+    startUnmutedPcTablet: { attribute: false, type: Boolean },
+    startUnmutedPhone: { attribute: false, type: Boolean },
   };
 
-  private _api?: HomeAssistantApi;
-  private _autoplayWarning = false;
-  private _available = false;
-  private _entityId?: string;
-  private _startUnmutedPcTablet = false;
-  private _startUnmutedPhone = false;
-  private readonly _audio: CameraAudioController;
-  private readonly _sessions: LiveSessionController;
-
+  public api?: HomeAssistantApi;
+  public available = false;
+  public entityId?: string;
   public posterUrl?: string;
   public roundedCorners = true;
   public shadowStyle: CameraShadowStyle = "medium";
-
-  public constructor() {
-    super();
-    this._audio = new CameraAudioController(this, {
-      dismissMessage: () => {
-        this._autoplayWarning = false;
-        this.requestUpdate();
-      },
-      getMediaState: () => ({
-        hls: this._sessions.hlsVideo,
-        selected: this._sessions.selected,
-        webRtc: this._presentation()?.webRtcVideo,
-      }),
-      showAutoplayWarning: () => {
-        this._autoplayWarning = true;
-        this.requestUpdate();
-      },
-    });
-    this._sessions = new LiveSessionController(this, {
-      getInitialMuted: () => this._audio.muted,
-      onActiveVideoChanged: (video) =>
-        this._audio.handleActiveVideoChanged(video),
-      onHlsSelected: (video) => this._audio.captureAutoplayFallback(video),
-      onPresentedTransportChanged: () => this.requestUpdate(),
-    });
-  }
-
-  public set api(value: HomeAssistantApi | undefined) {
-    if (this._api?.identity === value?.identity) return;
-    this._api = value;
-    this._configureSession();
-  }
-
-  public set available(value: boolean) {
-    if (this._available === value) return;
-    this._available = value;
-    this._configureSession();
-  }
-
-  public set entityId(value: string | undefined) {
-    if (this._entityId === value) return;
-    this._entityId = value;
-    this._configureAudio(true);
-    this._configureSession();
-  }
-
-  public set startUnmutedPcTablet(value: boolean) {
-    if (this._startUnmutedPcTablet === value) return;
-    this._startUnmutedPcTablet = value;
-    this._configureAudio(!this._sessions.selected);
-  }
-
-  public set startUnmutedPhone(value: boolean) {
-    if (this._startUnmutedPhone === value) return;
-    this._startUnmutedPhone = value;
-    this._configureAudio(!this._sessions.selected);
-  }
+  public startUnmutedPcTablet = false;
+  public startUnmutedPhone = false;
 
   protected render() {
-    return staticHtml`
+    return html`
       <div
         class=${[
           "camera",
@@ -105,83 +41,27 @@ export class CameraModule extends LitElement {
           .filter(Boolean)
           .join(" ")}
       >
-        <${cameraPresentationTag}
-          class="camera-presentation"
-          .autoplayWarning=${this._autoplayWarning}
-          .available=${this._available}
-          .error=${this._sessions.error}
-          .hlsVideo=${this._sessions.hlsVideo}
-          .muted=${this._audio.muted}
+        <watchzone-camera-live-view
+          .api=${this.api}
+          .available=${this.available}
+          .startUnmutedPcTablet=${this.startUnmutedPcTablet}
+          .startUnmutedPhone=${this.startUnmutedPhone}
+          .entityId=${this.entityId}
           .posterUrl=${this.posterUrl}
-          .selected=${this._sessions.selected}
-          .sessionRevision=${this._sessions.revision}
-          .transport=${this._sessions.transport}
-          .webRtcStream=${this._sessions.webRtcStream}
-          @camera-media-attached=${this._handleMediaAttached}
-          @camera-mute-toggle=${this._handleMuteToggle}
-          @camera-retry=${this._handleRetry}
-          @camera-webrtc-decoded=${this._handleWebRtcDecoded}
-        ></${cameraPresentationTag}>
+        ></watchzone-camera-live-view>
       </div>
     `;
   }
-
-  private _configureAudio(resetPreference: boolean): void {
-    this._audio.configure(
-      this._entityId,
-      this._startUnmutedPcTablet,
-      this._startUnmutedPhone,
-      resetPreference,
-    );
-  }
-
-  private _configureSession(): void {
-    this._sessions.configure(this._api, this._entityId, this._available);
-  }
-
-  private _presentation(): CameraLivePresentation | null {
-    return (
-      this.shadowRoot?.querySelector<CameraLivePresentation>(
-        CAMERA_LIVE_PRESENTATION_TAG,
-      ) ?? null
-    );
-  }
-
-  private readonly _handleMediaAttached = (
-    event: CustomEvent<CameraMediaAttachedDetail>,
-  ): void => {
-    event.stopPropagation();
-    this._audio.applyTo(event.detail.video);
-    void this._audio.requestPlayback(event.detail.video);
-    this._audio.syncMediaState();
-  };
-
-  private readonly _handleMuteToggle = (event: Event): void => {
-    event.stopPropagation();
-    this._audio.toggleUserMute();
-  };
-
-  private readonly _handleRetry = (event: Event): void => {
-    event.stopPropagation();
-    this._sessions.retry();
-  };
-
-  private readonly _handleWebRtcDecoded = (
-    event: CustomEvent<HTMLVideoElement>,
-  ): void => {
-    event.stopPropagation();
-    this._sessions.handleWebRtcDecoded(event.detail);
-  };
 
   static styles = cameraStyles;
 }
 
 if (!customElements.get(CAMERA_TAG)) {
-  customElements.define(CAMERA_TAG, CameraModule);
+  customElements.define(CAMERA_TAG, WatchZoneCamera);
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    [CAMERA_TAG]: CameraModule;
+    "watchzone-camera": WatchZoneCamera;
   }
 }

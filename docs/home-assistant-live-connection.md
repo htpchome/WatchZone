@@ -40,18 +40,17 @@ The initial design analysis compared these local source baselines:
 The relevant observation is architectural, not a benchmark claim. Advanced
 Camera Card prepares Home Assistant camera elements early and limits broad card
 updates. Home Assistant's generic camera stream can also perform capability,
-poster, HLS, and WebRTC work. WatchZone keeps the camera module and concrete
-playback adapters lazy. Once the configured camera module mounts, its session
-controller starts the eligible pooled WebRTC and HLS leases concurrently; the
-card shell never owns or prewarms media.
+poster, HLS, and WebRTC work. WatchZone keeps its live UI and concrete adapter
+lazy, but starts a pooled prewarm lease as soon as the configured entity and
+Home Assistant transport are available. Module loading and the eligible live
+connection attempts therefore run in parallel.
 
 No startup-time claim is considered verified until measured on the same camera,
 Home Assistant instance, browser, network, and cold/warm cache conditions.
 
 ## 4. Connection selection
 
-For the initial Home Assistant direct source, WatchZone normally uses a hedged
-startup:
+For the initial Home Assistant direct source, WatchZone uses a hedged startup:
 
 1. WebRTC and HLS begin concurrently; neither waits for the other to fail.
 2. The first adapter to decode usable video becomes the initial presentation.
@@ -63,9 +62,8 @@ startup:
 5. If only one path succeeds, it remains selected. An error is shown only when
    both paths fail.
 6. The upper-right connection indicator shows `Connecting…` while candidates
-   race, then replaces that content in place with the currently presented
-   transport. A later WebRTC takeover changes that same indicator directly
-   from HLS to WebRTC without showing a second connecting phase.
+   race, then replaces that content in place with the initial winning transport.
+   A later WebRTC takeover does not rewrite the initial connection label.
 
 This policy deliberately avoids a preliminary capability request because that
 extra serial round trip would delay both candidates. Unsupported paths fail
@@ -100,13 +98,13 @@ The HLS adapter:
 1. Requests an authenticated URL through Home Assistant's `camera/stream`
    WebSocket command with `format: "hls"`.
 2. Resolves the returned relative URL through Home Assistant's URL resolver.
-3. For the ordinary capability-selected path, fetches the master manifest and
-   checks the retained media element's native HLS capability. Native HLS is
-   preferred when advertised so Safari and WebKit-hosted Home Assistant clients
-   keep their platform media lifecycle. Other clients lazy-load the light
-   HLS.js engine and use its MSE/MMS path.
-4. When the master has exactly one variant, passes that variant
-   directly to the selected player to avoid a redundant manifest request.
+3. Fetches the master manifest while lazy-loading the light HLS.js engine.
+   When HLS.js reports supported MSE/MMS playback, that path is preferred;
+   native `video` HLS is the capability-detected fallback. This order avoids
+   treating `canPlayType()`'s non-empty but inconclusive `"maybe"` result as
+   proof that native playback is reliable.
+4. When the master has exactly one variant, passes that variant directly to
+   the selected player to avoid a redundant manifest request.
 5. Reports live only after `loadeddata`, not merely after obtaining a playlist
    URL or parsing a manifest.
 
@@ -114,26 +112,22 @@ The HLS session owns its media element because its MediaSource playback state
 is element-bound. Closing destroys the playback engine, cancels in-flight
 requests, resets the element, and removes it from presentation.
 
-The camera information layer displays the currently presented transport as
-`WebRTC`, `HLS · HLS.js`, or `HLS · native`. A transport takeover updates
-the same indicator in place without returning to `Connecting…`. Diagnostics
-retain the selected HLS path and the time at which each transport became the
-presentation winner.
+The camera information layer displays the initial presentation winner as
+`WebRTC`, `HLS · HLS.js`, or `HLS · native`. That label remains stable if
+WebRTC later takes over from HLS. Diagnostics separately retain the selected
+HLS path and the time at which each transport became the presentation winner.
 
 ## 7. Ownership and retention
 
 The adapter owns transport mechanics. The document-scoped media-session manager
 owns identity, deduplication, leases, retention, retry, and eviction policy.
-The public live-source resolver owns the concrete provider-adapter factories
-and lazy imports; the manager accepts a typed session request and has no Home
-Assistant provider dependency.
 
 The session key is the transport type plus camera entity for this first path.
 WebRTC and HLS therefore have independent session identities and cleanup while
 still participating in one selection policy. Compatible card and
-editor-preview instances in the same document share sessions. Removing a
-camera presentation releases its lease and detaches presentation; it does not
-close a healthy retained winner.
+editor-preview instances in the same document share sessions. Removing a live
+element releases its lease and detaches presentation; it does not close a
+healthy retained winner.
 
 The initial resource budget retains at most four sessions. A winning WebRTC
 session may remain parked for five minutes. An HLS candidate has a shorter
@@ -147,11 +141,10 @@ immediate and starts a fresh bounded retry sequence.
 The configured phone or tablet/desktop startup policy determines the initial
 audio intent unless the document-scoped session manager already holds an
 explicit user preference for that camera. The actual selected media element is
-created safely muted with autoplay disabled, attached during connection
-startup, and then receives the intended `muted` and `defaultMuted` values
-before its source and first `play()` request. This ordering is part of the
-playback contract: waiting to unmute until after `loadeddata` loses the initial
-audible-playback opportunity in WebKit clients.
+attached during connection startup and receives both `muted` and
+`defaultMuted` before its source and first `play()` request. This ordering is
+part of the playback contract: creating a muted player and unmuting only after
+`loadeddata` loses the initial audible-playback opportunity in WebKit clients.
 
 The presentation retains explicit user preference across HLS/WebRTC handoff
 and presentation replacement. An autoplay rejection temporarily forces muted
@@ -159,14 +152,6 @@ output without rewriting that preference. A later user gesture can retry the
 same retained element. Audio behavior continues to follow the forced-mute,
 audio-focus, lifetime, and autoplay rules in
 `docs/live-session-lifecycle.md`.
-
-Only a `NotAllowedError` from the selected element is an autoplay-policy
-denial. Native HLS can reject overlapping or source-interrupted `play()` calls
-with `AbortError`, `NotSupportedError`, or another transient media error while
-continuing through autoplay or the next readiness request. Those errors do not
-change effective mute state. Likewise, only the document's explicit hidden
-state forces background mute; a non-hidden transitional visibility value is
-not treated as backgrounding.
 
 ## 9. Required evolution rules
 
@@ -183,17 +168,18 @@ not treated as backgrounding.
 - Add measured timing diagnostics through the future centralized diagnostic
   system, never through routine console noise and never with credentials. The
   current startup recorder is read with
-  the runtime diagnostics object published under the lowercased `APP_NAME` on
-  `window`, via `getLiveStartupTimings()`, and records relative milestone
+  `window.watchZone.getLiveStartupTimings()` and records relative milestone
   times without writing per-phase console messages.
 
 ## 10. Observed client baseline
 
 Physical-client testing of `0.0.4-dev.8` recorded the following initial HLS
-playback paths. These remain capability-selected observations.
+playback paths. These are observations, not browser-name selection rules; the
+adapter must continue to choose by runtime capability.
 
 | Client                   | Initial playback path |
 | ------------------------ | --------------------- |
+| Catalyst                 | Native HLS            |
 | Safari                   | HLS.js                |
 | Home Assistant Companion | HLS.js                |
 | Edge                     | HLS.js                |

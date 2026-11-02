@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { HomeAssistantApi } from "../src/core/home-assistant";
-import { type ConnectionFactory } from "../src/core/media-session-manager";
-import { TestMediaSessionManager as MediaSessionManager } from "./test-media-session-manager";
+import {
+  type ConnectionFactory,
+  MediaSessionManager,
+} from "../src/core/media-session-manager";
 
 function createApi(identity: object = {}): HomeAssistantApi {
   return {

@@ -8,10 +8,10 @@ const manifest = JSON.parse(
   await readFile(resolve(frontend, ".vite/manifest.json"), "utf8"),
 );
 const entry = manifest["src/main.ts"];
-const editor = manifest["src/editor/card-editor.ts"];
+const editor = manifest["src/editor/watchzone-card-editor.ts"];
 const camera = manifest["src/modules/camera/index.ts"];
-const connection = manifest["src/providers/home-assistant/live/webrtc.ts"];
-const hlsConnection = manifest["src/providers/home-assistant/live/hls.ts"];
+const connection = manifest["src/connections/home-assistant/index.ts"];
+const hlsConnection = manifest["src/connections/home-assistant/hls.ts"];
 
 if (!entry?.isEntry || entry.file !== "watchzone.js") {
   throw new Error("Vite manifest is missing the stable WatchZone entry");

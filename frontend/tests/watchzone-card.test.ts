@@ -1,17 +1,16 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import "../src/main";
-import type { DashboardCard } from "../src/card/card";
-import { CARD_TAG, CARD_TYPE } from "../src/core/constants";
+import type { WatchZoneCard } from "../src/card/watchzone-card";
 
-describe(CARD_TAG, () => {
+describe("watchzone-card", () => {
   afterEach(() => {
     document.body.replaceChildren();
   });
 
   it("renders the configured title in a Home Assistant card", async () => {
-    const element = document.createElement(CARD_TAG) as DashboardCard;
-    element.setConfig({ type: CARD_TYPE, title: "Front Door" });
+    const element = document.createElement("watchzone-card") as WatchZoneCard;
+    element.setConfig({ type: "custom:watchzone-card", title: "Front Door" });
     document.body.append(element);
     await element.updateComplete;
 
@@ -20,7 +19,7 @@ describe(CARD_TAG, () => {
   });
 
   it("does not rerender for unrelated hass assignments", async () => {
-    const element = document.createElement(CARD_TAG) as DashboardCard;
+    const element = document.createElement("watchzone-card") as WatchZoneCard;
     document.body.append(element);
     await element.updateComplete;
     const rendered = element.shadowRoot?.querySelector("ha-card");
@@ -32,9 +31,9 @@ describe(CARD_TAG, () => {
   });
 
   it("propagates outer appearance settings through the HA card boundary", async () => {
-    const element = document.createElement(CARD_TAG) as DashboardCard;
+    const element = document.createElement("watchzone-card") as WatchZoneCard;
     element.setConfig({
-      type: CARD_TYPE,
+      type: "custom:watchzone-card",
       title: "Front Door",
       rounded_outer_corners: false,
       outer_shadows: false,
@@ -57,7 +56,7 @@ describe(CARD_TAG, () => {
     expect(element.style.getPropertyPriority("box-shadow")).toBe("important");
 
     element.setConfig({
-      type: CARD_TYPE,
+      type: "custom:watchzone-card",
       title: "Front Door",
     });
     await element.updateComplete;

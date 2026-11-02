@@ -8,6 +8,7 @@ WatchZone is designed for the current stable versions of:
 - Firefox.
 - Safari on macOS, iOS, and iPadOS.
 - Home Assistant Companion on Android and iOS.
+- Home Assistant clients running through macOS Catalyst.
 
 The interface supports phone, tablet, laptop, desktop, dashboard panel, and
 full-size layouts. A platform is not removed from this matrix merely because a
@@ -16,66 +17,52 @@ new browser API makes another platform easier or faster.
 ## 2. Implementation rules
 
 - Use standards-based browser APIs and Home Assistant public surfaces.
-- Detect browser features through capabilities, not browser names or
-  user-agent strings.
+- Detect capabilities, not browser names or user-agent strings.
 - Keep platform-specific behavior behind the smallest owning adapter or helper.
-- Do not scatter Safari, Firefox, mobile, or Companion conditionals
+- Do not scatter Safari, Firefox, mobile, Companion, or Catalyst conditionals
   across modules.
-- A runtime conditional inside a shared media adapter is not platform
-  isolation. When platform-specific playback policy can change startup,
-  attachment, autoplay, visibility, recovery, or cleanup, select a dedicated
-  adapter at the resolver boundary so ordinary clients neither execute nor
-  depend on that implementation. Synthetic browser tests verify contracts but
-  do not replace validation on the physical client that motivated the path.
 - Provide a deterministic fallback or actionable local error when a required
   capability is unavailable.
 - Do not assume hover, a fine pointer, a physical keyboard, a wide viewport, or
   that the Home Assistant client keeps an ordinary browser-tab lifecycle.
 - Interactive targets must work with touch, mouse, keyboard, and assistive
   technology. Do not make hover the only way to expose an action.
-- Gate hover-only presentation behind hover and fine-pointer capabilities. A
-  component that also accepts touch records the latest input modality so
-  WebKit emulated hover or pointer focus cannot remain highlighted after a
-  touch; keyboard input restores keyboard focus presentation.
 - Use container size rather than global viewport size for card layout decisions.
 - Respect safe-area insets, text scaling, reduced motion, orientation changes,
   and Home Assistant theme tokens where they affect the feature.
-- Apply viewport safe-area environment insets only when WatchZone owns the
-  fullscreen viewport. Embedded cards already live inside Home Assistant's
-  safe content area and must not add the global notch or home-indicator inset a
-  second time.
 - Avoid APIs that require cross-origin isolation or browser flags unless the
   feature has a supported alternative.
 
-### 2.1 Unified client environment
+### 2.1 Responsive and input profile
 
-There is one client-environment system. Its normalized profile reports these
-independent axes:
+WatchZone device labels are presentation classes derived from the component's
+actual container; they are not claims about physical hardware. User-agent,
+platform-string, screen-resolution, and operating-system parsing are
+prohibited for layout or interaction decisions.
 
-- Home Assistant host: browser or Companion.
-- Operating system: Android, ChromeOS, iOS, iPadOS, Linux, macOS, Windows, or
-  unknown.
-- Physical client class: phone, tablet, or desktop.
-- Input evidence: touch availability and primary coarse-pointer state.
+The shared responsive profile uses these container inline-size classes:
 
-Detection prefers User-Agent Client Hints where the browser provides them and
-combines them with platform, application signature, touch points, and standard
-pointer/hover media queries. Legacy UA evidence is isolated inside this one
-boundary.
+| Presentation class | Detailed size class | Inline size   |
+| ------------------ | ------------------- | ------------- |
+| Phone              | Compact phone       | `< 360px`     |
+| Phone              | Phone               | `360–599px`   |
+| Tablet             | Compact tablet      | `600–767px`   |
+| Tablet             | Tablet              | `768–1023px`  |
+| Desktop            | Desktop             | `1024–1439px` |
+| Desktop            | Wide desktop        | `>= 1440px`   |
 
-Physical client class is used only by settings that explicitly target a phone,
-tablet, or PC, including startup audio and typed device matrices. A narrow
-desktop card remains a desktop client. Feature code must not duplicate
-environment parsing or invent another device profile.
+These categories may select behavior from a typed device matrix. Purely visual
+size changes remain CSS container-query responsibilities.
 
-### 2.2 Responsive presentation
+Input capability is an independent dimension. The profile records primary
+pointer accuracy, primary and available hover, touch availability, and a
+derived `touch`, `pointer`, `hybrid`, or `none` input mode using standardized
+pointer/hover media queries and `maxTouchPoints`. Orientation is derived from
+the observed container rather than the physical screen.
 
-Container and viewport dimensions are not device detection. Responsive visual
-layout and control sizing use CSS container queries, logical dimensions, safe
-area insets, and input media queries. They do not create a second JavaScript
-phone/tablet/desktop classifier. Features must query the capability they
-actually require; a phone classification does not imply touch-only input, and
-a desktop classification does not imply hover or a fine pointer.
+The profile reacts to container resize and pointing-device changes. Features
+must query the capability they actually require; a phone label does not imply
+touch-only input, and a desktop label does not imply hover or a fine pointer.
 
 ## 3. Media rules
 
@@ -88,12 +75,8 @@ background-lifecycle capability checks.
 - Autoplay rejection is recoverable state and never overwrites user mute intent.
 - Backgrounding, app suspension, route changes, and presentation replacement
   must not be confused with explicit user closure.
-- iOS, iPadOS, and Companion lifecycle events can require reconnection
+- iOS, iPadOS, Companion, and Catalyst lifecycle events can require reconnection
   even when ordinary desktop navigation retains a session.
-- iPhone native video fullscreen can emit its final inline `pause` after the
-  fullscreen-exit event. The camera fullscreen lifecycle resumes the exact
-  retained element after inline restoration and watches the bounded exit
-  window for that final pause; it must not reconnect or alter mute preference.
 - Unsupported WebRTC, codec, HLS, or media-element behavior is isolated to the
   affected source and may invoke an explicit resolver fallback when one exists.
 
@@ -123,7 +106,7 @@ controlled fakes or local streams and do not depend on internet services.
 ## 5. Physical-client validation
 
 Automated engine coverage does not prove compatibility with real Safari,
-hardware codecs, WebViews, or Companion lifecycle rules. Before a
+hardware codecs, WebViews, Companion lifecycle rules, or Catalyst. Before a
 feature that changes media, gestures, fullscreen behavior, background handling,
 or editor lifecycle is called release-ready, record focused smoke results for
 the affected entries in this matrix:
@@ -137,6 +120,7 @@ the affected entries in this matrix:
 | Safari iPhone/iPad | Touch, rotation, safe area, autoplay           |
 | Companion Android  | WebView media and app background/restore       |
 | Companion iOS      | WKWebView media and app background/restore     |
+| Catalyst client    | Media, visibility, navigation, window resizing |
 
 An untested entry is reported as unverified, not silently treated as passing.
 Known platform limitations are documented beside the owning feature and must

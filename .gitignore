@@ -13,8 +13,6 @@ coverage/
 playwright-report/
 test-results/
 **/.yarn/install-state.gz
-.media/
-
 
 .env
 .env.*

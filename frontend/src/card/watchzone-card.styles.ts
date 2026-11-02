@@ -1,6 +1,6 @@
 import { css } from "lit";
 
-export const cardStyles = css`
+export const watchZoneCardStyles = css`
   :host {
     display: block;
     box-sizing: border-box;
@@ -65,16 +65,16 @@ export const cardStyles = css`
     text-align: center;
   }
 
-  .camera-module,
-  .camera-module-placeholder,
-  .camera-module-error,
+  watchzone-camera,
+  .live-placeholder,
+  .live-error,
   .empty {
     inline-size: 100%;
     min-inline-size: 0;
   }
 
-  .camera-module-placeholder,
-  .camera-module-error,
+  .live-placeholder,
+  .live-error,
   .empty {
     display: grid;
     place-items: center;
@@ -83,7 +83,7 @@ export const cardStyles = css`
     text-align: center;
   }
 
-  .camera-module-error {
+  .live-error {
     gap: 0.75rem;
     color: var(--wzc-color-error);
   }

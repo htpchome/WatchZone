@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { normalizeCardConfig } from "../src/core/config";
-import { APP_NAME, CARD_TYPE, DEFAULT_CARD_TITLE } from "../src/core/constants";
+import { CARD_TYPE, DEFAULT_CARD_TITLE } from "../src/core/constants";
 import { toYamlCardConfig } from "../src/core/yaml-config";
 
-describe(`${APP_NAME} YAML configuration manager`, () => {
+describe("WatchZone YAML configuration manager", () => {
   it("omits known defaults", () => {
     expect(
       toYamlCardConfig(

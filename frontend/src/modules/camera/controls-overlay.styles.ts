@@ -9,18 +9,22 @@ export const cameraControlsStyles = css`
     overflow: hidden;
     pointer-events: none;
     container-type: size;
+
+    --wzc-control-size: 2.75rem;
+    --wzc-control-icon-size: 1.65rem;
+    --wzc-control-gap: 0.3rem;
+    --wzc-control-safe-inline: 0.75rem;
   }
 
   .control-group {
     position: absolute;
     inset-block-start: 50%;
     inset-inline-end: calc(
-      var(--wzc-media-overlay-safe-inline) +
-        var(--wzc-safe-area-inset-inline-end)
+      var(--wzc-control-safe-inline) + env(safe-area-inset-right, 0px)
     );
     display: flex;
     flex-direction: column;
-    gap: var(--wzc-media-control-gap);
+    gap: var(--wzc-control-gap);
     transform: translateY(-50%);
     opacity: 0;
     visibility: hidden;
@@ -41,8 +45,8 @@ export const cameraControlsStyles = css`
     display: grid;
     place-items: center;
     box-sizing: border-box;
-    inline-size: var(--wzc-media-control-size);
-    block-size: var(--wzc-media-control-size);
+    inline-size: var(--wzc-control-size);
+    block-size: var(--wzc-control-size);
     min-inline-size: 0;
     min-block-size: 0;
     padding: 0;
@@ -58,36 +62,20 @@ export const cameraControlsStyles = css`
     font: inherit;
     cursor: pointer;
     touch-action: manipulation;
-    appearance: none;
-    -webkit-appearance: none;
     -webkit-tap-highlight-color: transparent;
   }
 
-  @media (hover: hover) and (pointer: fine) {
-    .control-button:hover:not(:disabled) {
-      color: var(--wzc-control-hover-color, var(--wzc-color-text-reversed));
-      background: var(
-        --wzc-control-hover-background,
-        var(--wzc-media-overlay-hover-background)
-      );
-    }
+  .control-button:hover:not(:disabled) {
+    color: var(--wzc-control-hover-color, var(--wzc-color-text-reversed));
+    background: var(
+      --wzc-control-hover-background,
+      var(--wzc-media-overlay-hover-background)
+    );
   }
 
   .control-button:focus-visible {
     outline: 2px solid var(--wzc-color-primary);
     outline-offset: 1px;
-  }
-
-  :host([touch-input]) .control-button:hover:not(:disabled) {
-    color: var(--wzc-control-color, var(--wzc-media-overlay-color));
-    background: var(
-      --wzc-control-background,
-      var(--wzc-media-overlay-background)
-    );
-  }
-
-  :host([touch-input]) .control-button:focus {
-    outline: none;
   }
 
   .control-button:disabled {
@@ -96,10 +84,48 @@ export const cameraControlsStyles = css`
   }
 
   svg {
-    inline-size: var(--wzc-media-control-icon-size);
-    block-size: var(--wzc-media-control-icon-size);
+    inline-size: var(--wzc-control-icon-size);
+    block-size: var(--wzc-control-icon-size);
     overflow: visible;
     fill: currentColor;
+  }
+
+  .control-error {
+    position: absolute;
+    inset-block-end: max(0.75rem, env(safe-area-inset-bottom, 0px));
+    inset-inline: 0.75rem;
+    max-inline-size: max-content;
+    margin-inline: auto;
+    padding: 0.375rem 0.625rem;
+    color: var(--wzc-color-error);
+    background: var(--wzc-color-background);
+    border: 1px solid var(--wzc-color-border-danger);
+    border-radius: var(--wzc-radius-pill);
+    font-size: var(--wzc-font-size-small);
+    pointer-events: none;
+  }
+
+  @container (max-width: 480px) {
+    .control-group {
+      --wzc-control-size: 2.35rem;
+      --wzc-control-icon-size: 1.4rem;
+    }
+  }
+
+  @container (max-height: 360px) {
+    .control-group {
+      --wzc-control-size: 2.25rem;
+      --wzc-control-icon-size: 1.3rem;
+      --wzc-control-gap: 0.125rem;
+    }
+  }
+
+  @container (max-height: 240px) {
+    .control-group {
+      --wzc-control-size: 1.875rem;
+      --wzc-control-icon-size: 1.15rem;
+      --wzc-control-gap: 0.1rem;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {

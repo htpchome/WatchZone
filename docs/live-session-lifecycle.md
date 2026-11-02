@@ -17,29 +17,6 @@ Its goals are to:
 - Bound background bandwidth, decoders, memory, and provider connections.
 - Preserve explicit user mute choices across all automatic behavior.
 
-### 1.1 Mandatory design gate
-
-Connection retention is a required input to every WatchZone design decision
-that can affect a media presentation, even when the feature is not itself a
-camera or connection feature. Before implementation, the owner must determine:
-
-- Whether the canonical `MediaSessionKey` can change.
-- Which leases are acquired, reused, transferred, parked, resumed, released,
-  invalidated, or evicted across every affected transition.
-- Whether presentation identity and attachment can move without reconnecting.
-- How asynchronous handoff avoids a gap, duplicate session, stale attachment,
-  late completion, or leaked resource.
-- How backgrounding, visibility, retry, suspension, and failure affect
-  transport, decoding, attachment, and temporary forced-mute state.
-- What cleanup is required and which bounded retention budget applies.
-- Which test proves that presentation-only changes do not increase connection
-  factory calls or renegotiate an unchanged source.
-
-This gate applies to layouts, navigation, editors, previews, carousels, nested
-cards, popups, fullscreen, PiP, responsive reflow, visibility changes, and all
-future presentation systems. A feature may state that it has no media-session
-impact only after checking these transitions; it may not omit the analysis.
-
 ## 2. Guarantees and limits
 
 WatchZone guarantees retention only while the same Home Assistant browser
@@ -80,14 +57,6 @@ reuse the compatible existing manager rather than create a second pool.
 
 The manager must not depend on a specific card, layout, editor, or module.
 
-The camera module is the current lease consumer and composition boundary. Its
-live session controller acquires leases through the public provider resolver,
-and its audio controller applies document-scoped intent and temporary browser
-policy to the active media element. The Lit presentation receives render state
-and emits typed media/control intents; it does not import the session manager,
-audio policy, or a concrete provider. The card shell only lazy-loads the camera
-module and never acquires a media lease.
-
 ### 3.2 Session
 
 A `MediaSession` owns one resolved live connection and its expensive resources,
@@ -121,16 +90,7 @@ moves the session into retention policy evaluation.
 ### 3.4 Presentation attachment
 
 Presentation is separate from connection ownership. A session can be detached
-from one camera presentation and attached to another without renegotiating its
-source.
-
-Each presentation surface exposes exactly one visible live media layer. An
-eligible Browser or Companion host keeps the proven autoplaying WebRTC hedge
-mounted while HLS is visible and switches presentation after WebRTC decodes. It
-does not create media elements for transports the selected host cannot use, and
-it removes poster/fallback layers after decoded live media is selected.
-Retention may keep a session resource alive, but never as a second visible
-presentation.
+from one live module and attached to another without renegotiating its source.
 
 An adapter declares one supported attachment strategy:
 
@@ -318,12 +278,6 @@ restored when the final forced reason clears and browser policy permits.
   focus adds a forced reason; it does not overwrite preference.
 - Clearing one forced reason does not unmute while another remains.
 - Browser autoplay rejection does not change preference to `muted`.
-- An audible `NotAllowedError` immediately retries playback temporarily muted
-  on the same retained element; autoplay policy must never leave live video
-  paused merely because audio was denied.
-- A host-specific pipeline may retry the desired audible state after muted
-  playback is confirmed, but that policy remains isolated to that host and
-  falls back to continuing muted playback without reconnecting.
 - UI state distinguishes user-muted, automatically muted, and autoplay-blocked
   conditions.
 - A reconnect applies mute before audible media can play.
@@ -342,7 +296,7 @@ A hard refresh, discarded tab, new browser tab, or new document clears the
 override and returns the camera to its configured startup default.
 
 The configured default may independently request unmuted startup for phone or
-tablet/desktop client form factors. Both defaults are muted unless explicitly
+tablet/desktop presentation classes. Both defaults are muted unless explicitly
 enabled. A configured default is not a user preference: the first explicit
 mute or unmute action overrides it for that camera for the rest of the
 document lifetime.
@@ -370,12 +324,6 @@ Visibility changes affect presentation and forced mute, not user preference.
   state are inputs to centralized policy, not independent competing handlers.
 - Returning to visibility removes only the forced reasons that no longer
   apply.
-
-Fullscreen and Picture-in-Picture are presentation transitions, not session
-releases. Exiting iPhone native fullscreen resumes the exact retained media
-element after WebKit restores inline presentation. A bounded exit watcher
-handles WebKit's possible final `pause` event without reconnecting, replacing
-the element, or changing desired/default mute state.
 
 ## 11. Failure and reconnect behavior
 

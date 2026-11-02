@@ -3,17 +3,7 @@ import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
-import {
-  APP_ID,
-  APP_NAME,
-  CAMERA_CONTROLS_TAG,
-  CAMERA_LIVE_PRESENTATION_TAG,
-  CAMERA_TAG,
-  CARD_TAG,
-  CARD_TYPE,
-  TOAST_TAG,
-} from "../../src/core/constants";
-import { CAMERA_OVERLAY_HIDE_DELAY_MS } from "../../src/modules/camera/live/constants";
+import { CAMERA_OVERLAY_HIDE_DELAY_MS } from "../../src/modules/camera/constants";
 
 const packageJson = JSON.parse(
   readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
@@ -29,10 +19,9 @@ function cssAlpha(color: string): number {
   return legacy ? Number(legacy[1]) : 1;
 }
 
-async function waitForCardDefinition(page: Page): Promise<void> {
+async function waitForWatchZoneDefinition(page: Page): Promise<void> {
   await page.waitForFunction(
-    (cardTag) => customElements.get(cardTag) !== undefined,
-    CARD_TAG,
+    () => customElements.get("watchzone-card") !== undefined,
   );
 }
 
@@ -46,41 +35,29 @@ test.afterEach(async ({ page }) => {
   expect(pageErrors.get(page)).toEqual([]);
 });
 
-test(`loads the responsive ${APP_NAME} card shell`, async ({ page }) => {
+test("loads the responsive WatchZone card shell", async ({ page }) => {
   const consoleMessages: string[] = [];
   page.on("console", (message) => consoleMessages.push(message.text()));
   await page.goto("/");
-  await waitForCardDefinition(page);
+  await waitForWatchZoneDefinition(page);
 
-  await expect(page.locator(CARD_TAG)).toContainText(APP_NAME);
-  await expect(page.locator(`${CARD_TAG} ha-card`)).toBeVisible();
+  await expect(page.locator("watchzone-card")).toContainText("WatchZone");
+  await expect(page.locator("watchzone-card ha-card")).toBeVisible();
   expect(
     consoleMessages.some(
       (message) =>
-        message.includes(APP_NAME) &&
+        message.includes("WatchZone") &&
         message.includes("CURRENT") &&
         message.includes(`v${expectedVersion} (${expectedBuild})`),
     ),
   ).toBe(true);
-  expect(
-    await page.evaluate(
-      (appId) => (window as unknown as Record<string, unknown>)[appId],
-      APP_ID,
-    ),
-  ).toMatchObject({
+  expect(await page.evaluate(() => window.watchZone)).toMatchObject({
     activeCardVersion: expectedVersion,
     build: expectedBuild,
     version: expectedVersion,
   });
   expect(
-    await page.evaluate(
-      (appId) =>
-        typeof (
-          (window as unknown as Record<string, unknown>)[appId] as
-            { getLiveStartupTimings?: unknown } | undefined
-        )?.getLiveStartupTimings,
-      APP_ID,
-    ),
+    await page.evaluate(() => typeof window.watchZone?.getLiveStartupTimings),
   ).toBe("function");
 });
 
@@ -94,8 +71,8 @@ test("fits phone, tablet, and desktop viewports without horizontal overflow", as
   ]) {
     await page.setViewportSize(viewport);
     await page.goto("/");
-    await waitForCardDefinition(page);
-    await expect(page.locator(`${CARD_TAG} ha-card`)).toBeVisible();
+    await waitForWatchZoneDefinition(page);
+    await expect(page.locator("watchzone-card ha-card")).toBeVisible();
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -108,11 +85,11 @@ test("applies outer shell appearance toggles without changing card identity", as
   page,
 }) => {
   await page.goto("/");
-  await waitForCardDefinition(page);
+  await waitForWatchZoneDefinition(page);
 
   const result = await page
-    .locator(CARD_TAG)
-    .evaluate(async (element, cardType) => {
+    .locator("watchzone-card")
+    .evaluate(async (element) => {
       const card = element as HTMLElement & {
         setConfig(config: unknown): void;
         updateComplete: Promise<boolean>;
@@ -120,7 +97,7 @@ test("applies outer shell appearance toggles without changing card identity", as
       const shellBefore = card.shadowRoot?.querySelector("ha-card");
       card.style.setProperty("--ha-box-shadow-m", "rgb(1, 2, 3) 0px 4px 8px");
       card.setConfig({
-        type: cardType,
+        type: "custom:watchzone-card",
         title: "Appearance",
         rounded_outer_corners: false,
         outer_shadows: false,
@@ -146,7 +123,7 @@ test("applies outer shell appearance toggles without changing card identity", as
         padding: disabledShellPadding,
       };
       card.setConfig({
-        type: cardType,
+        type: "custom:watchzone-card",
         title: "Appearance",
       });
       await card.updateComplete;
@@ -175,7 +152,7 @@ test("applies outer shell appearance toggles without changing card identity", as
           padding: enabledShellPadding,
         },
       };
-    }, CARD_TYPE);
+    });
 
   expect(result.disabled).toEqual({
     borderRadius: "0px",
@@ -198,13 +175,13 @@ test("applies outer shell appearance toggles without changing card identity", as
   expect(result.enabled.padding).not.toBe("0px");
 });
 
-test(`exposes and honors the ${APP_NAME} semantic theme-token contract`, async ({
+test("exposes and honors the WatchZone semantic theme-token contract", async ({
   page,
 }) => {
   await page.goto("/");
-  await waitForCardDefinition(page);
+  await waitForWatchZoneDefinition(page);
 
-  const result = await page.locator(CARD_TAG).evaluate((element) => {
+  const result = await page.locator("watchzone-card").evaluate((element) => {
     const requiredTokens = [
       "--wzc-color-primary",
       "--wzc-color-primary-dark",
@@ -270,122 +247,117 @@ test("camera selection does not recursively republish dirty state", async ({
   page,
 }) => {
   await page.goto("/");
-  await waitForCardDefinition(page);
+  await waitForWatchZoneDefinition(page);
 
-  const result = await page.evaluate(
-    async ({ cardTag, cardType }) => {
-      interface ContextRequest extends Event {
-        callback?: (context: {
-          setState(config: unknown, key: string): void;
-        }) => void;
-        context?: string;
-        subscribe?: boolean;
+  const result = await page.evaluate(async () => {
+    interface ContextRequest extends Event {
+      callback?: (context: {
+        setState(config: unknown, key: string): void;
+      }) => void;
+      context?: string;
+      subscribe?: boolean;
+    }
+
+    interface TestEditor extends HTMLElement {
+      setConfig(config: unknown): void;
+      updateComplete: Promise<boolean>;
+    }
+
+    interface TestCardConstructor extends CustomElementConstructor {
+      getConfigElement(): Promise<TestEditor>;
+    }
+
+    interface PreviewCard extends HTMLElement {
+      preview: boolean;
+      setConfig(config: unknown): void;
+    }
+
+    interface TestDialog extends HTMLElement {
+      _cardConfig?: Record<string, unknown>;
+      _updateDirtyState?(config: unknown): void;
+    }
+
+    let callback: ContextRequest["callback"];
+    let subscribed = false;
+    let writes = 0;
+    const setState = (): void => {
+      writes += 1;
+      if (subscribed) {
+        callback?.({ setState });
       }
-
-      interface TestEditor extends HTMLElement {
-        setConfig(config: unknown): void;
-        updateComplete: Promise<boolean>;
+    };
+    const handleContext = (event: Event): void => {
+      const request = event as ContextRequest;
+      if (request.context === "dirtyState") {
+        subscribed = request.subscribe === true;
+        callback = request.callback;
+        callback?.({ setState });
       }
+    };
+    document.addEventListener("context-request", handleContext);
 
-      interface TestCardConstructor extends CustomElementConstructor {
-        getConfigElement(): Promise<TestEditor>;
-      }
-
-      interface PreviewCard extends HTMLElement {
-        preview: boolean;
-        setConfig(config: unknown): void;
-      }
-
-      interface TestDialog extends HTMLElement {
-        _cardConfig?: Record<string, unknown>;
-        _updateDirtyState?(config: unknown): void;
-      }
-
-      let callback: ContextRequest["callback"];
-      let subscribed = false;
-      let writes = 0;
-      const setState = (): void => {
-        writes += 1;
-        if (subscribed) {
-          callback?.({ setState });
-        }
-      };
-      const handleContext = (event: Event): void => {
-        const request = event as ContextRequest;
-        if (request.context === "dirtyState") {
-          subscribed = request.subscribe === true;
-          callback = request.callback;
-          callback?.({ setState });
-        }
-      };
-      document.addEventListener("context-request", handleContext);
-
-      const cardConstructor = customElements.get(
-        cardTag,
-      ) as TestCardConstructor;
-      const previewCard = document.querySelector(cardTag) as PreviewCard;
-      previewCard.preview = true;
-      previewCard.setConfig({
-        type: cardType,
-        title: "Camera",
-      });
-      const editor = await cardConstructor.getConfigElement();
-      editor.setConfig({
-        type: cardType,
-        title: "Camera",
-      });
-      const dialog = document.createElement(
-        "hui-dialog-edit-card",
-      ) as TestDialog;
-      dialog._cardConfig = {
-        type: cardType,
-        title: "Camera",
-      };
-      dialog._updateDirtyState = () => undefined;
-      const root = dialog.attachShadow({ mode: "open" });
-      const save = document.createElement("button");
-      save.slot = "primaryAction";
-      root.append(editor, save);
-      document.body.append(dialog);
-      await editor.updateComplete;
-      editor.shadowRoot?.querySelector("ha-selector")?.dispatchEvent(
-        new CustomEvent("value-changed", {
-          detail: { value: "camera.front" },
-          bubbles: true,
-          composed: true,
-        }),
+    const cardConstructor = customElements.get(
+      "watchzone-card",
+    ) as TestCardConstructor;
+    const previewCard = document.querySelector("watchzone-card") as PreviewCard;
+    previewCard.preview = true;
+    previewCard.setConfig({
+      type: "custom:watchzone-card",
+      title: "Camera",
+    });
+    const editor = await cardConstructor.getConfigElement();
+    editor.setConfig({
+      type: "custom:watchzone-card",
+      title: "Camera",
+    });
+    const dialog = document.createElement("hui-dialog-edit-card") as TestDialog;
+    dialog._cardConfig = {
+      type: "custom:watchzone-card",
+      title: "Camera",
+    };
+    dialog._updateDirtyState = () => undefined;
+    const root = dialog.attachShadow({ mode: "open" });
+    const save = document.createElement("button");
+    save.slot = "primaryAction";
+    root.append(editor, save);
+    document.body.append(dialog);
+    await editor.updateComplete;
+    editor.shadowRoot?.querySelector("ha-selector")?.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: "camera.front" },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await new Promise(requestAnimationFrame);
+    const previewUpdated = !document
+      .querySelector("watchzone-card")
+      ?.shadowRoot?.textContent?.includes(
+        "Select a camera in the card editor.",
       );
-      await new Promise(requestAnimationFrame);
-      const previewUpdated = !document
-        .querySelector(cardTag)
-        ?.shadowRoot?.textContent?.includes(
-          "Select a camera in the card editor.",
-        );
-      save.click();
-      const writesBeforeReopen = writes;
+    save.click();
+    const writesBeforeReopen = writes;
 
-      const reopened = await cardConstructor.getConfigElement();
-      reopened.setConfig(dialog._cardConfig);
-      document.body.append(reopened);
-      await reopened.updateComplete;
-      const reopenedCamera = (
-        reopened.shadowRoot?.querySelector("ha-selector") as HTMLElement & {
-          value?: string;
-        }
-      ).value;
+    const reopened = await cardConstructor.getConfigElement();
+    reopened.setConfig(dialog._cardConfig);
+    document.body.append(reopened);
+    await reopened.updateComplete;
+    const reopenedCamera = (
+      reopened.shadowRoot?.querySelector("ha-selector") as HTMLElement & {
+        value?: string;
+      }
+    ).value;
 
-      document.removeEventListener("context-request", handleContext);
-      return {
-        previewUpdated,
-        reopenedCamera,
-        savedCamera: dialog._cardConfig?.camera_entity,
-        subscribed,
-        writes,
-        writesBeforeReopen,
-      };
-    },
-    { cardTag: CARD_TAG, cardType: CARD_TYPE },
-  );
+    document.removeEventListener("context-request", handleContext);
+    return {
+      previewUpdated,
+      reopenedCamera,
+      savedCamera: dialog._cardConfig?.camera_entity,
+      subscribed,
+      writes,
+      writesBeforeReopen,
+    };
+  });
 
   expect(result).toEqual({
     previewUpdated: true,
@@ -401,171 +373,168 @@ test("round-trips boolean toggles through defaults before Save", async ({
   page,
 }) => {
   await page.goto("/");
-  await waitForCardDefinition(page);
+  await waitForWatchZoneDefinition(page);
 
-  const result = await page.evaluate(
-    async ({ cardTag, cardType }) => {
-      interface ContextRequest extends Event {
-        callback?: (context: {
-          setState(config: Record<string, unknown>, key: string): void;
-        }) => void;
-        context?: string;
+  const result = await page.evaluate(async () => {
+    interface ContextRequest extends Event {
+      callback?: (context: {
+        setState(config: Record<string, unknown>, key: string): void;
+      }) => void;
+      context?: string;
+    }
+    interface TestEditor extends HTMLElement {
+      setConfig(config: unknown): void;
+      updateComplete: Promise<boolean>;
+    }
+    interface TestCard extends HTMLElement {
+      preview: boolean;
+      setConfig(config: unknown): void;
+      updateComplete: Promise<boolean>;
+    }
+    interface TestCardConstructor extends CustomElementConstructor {
+      getConfigElement(): Promise<TestEditor>;
+    }
+    interface TestDialog extends HTMLElement {
+      _cardConfig?: Record<string, unknown>;
+      _updateDirtyState?(config: unknown): void;
+    }
+
+    let latestDirtyState: Record<string, unknown> | undefined;
+    const handleContext = (event: Event): void => {
+      const request = event as ContextRequest;
+      if (request.context === "dirtyState") {
+        request.callback?.({
+          setState: (config) => {
+            latestDirtyState = config;
+          },
+        });
       }
-      interface TestEditor extends HTMLElement {
-        setConfig(config: unknown): void;
-        updateComplete: Promise<boolean>;
-      }
-      interface TestCard extends HTMLElement {
-        preview: boolean;
-        setConfig(config: unknown): void;
-        updateComplete: Promise<boolean>;
-      }
-      interface TestCardConstructor extends CustomElementConstructor {
-        getConfigElement(): Promise<TestEditor>;
-      }
-      interface TestDialog extends HTMLElement {
-        _cardConfig?: Record<string, unknown>;
-        _updateDirtyState?(config: unknown): void;
-      }
+    };
+    document.addEventListener("context-request", handleContext);
 
-      let latestDirtyState: Record<string, unknown> | undefined;
-      const handleContext = (event: Event): void => {
-        const request = event as ContextRequest;
-        if (request.context === "dirtyState") {
-          request.callback?.({
-            setState: (config) => {
-              latestDirtyState = config;
-            },
-          });
-        }
-      };
-      document.addEventListener("context-request", handleContext);
+    const baseline = {
+      type: "custom:watchzone-card",
+      title: "Appearance",
+    };
+    const card = document.querySelector("watchzone-card") as TestCard;
+    card.preview = true;
+    card.setConfig(baseline);
+    const constructor = customElements.get(
+      "watchzone-card",
+    ) as TestCardConstructor;
+    const editor = await constructor.getConfigElement();
+    editor.setConfig(baseline);
+    const dialog = document.createElement("hui-dialog-edit-card") as TestDialog;
+    dialog._cardConfig = baseline;
+    dialog._updateDirtyState = () => undefined;
+    const root = dialog.attachShadow({ mode: "open" });
+    const save = document.createElement("button");
+    save.slot = "primaryAction";
+    root.append(editor, save);
+    document.body.append(dialog);
+    await Promise.all([card.updateComplete, editor.updateComplete]);
 
-      const baseline = {
-        type: cardType,
-        title: "Appearance",
-      };
-      const card = document.querySelector(cardTag) as TestCard;
-      card.preview = true;
-      card.setConfig(baseline);
-      const constructor = customElements.get(cardTag) as TestCardConstructor;
-      const editor = await constructor.getConfigElement();
-      editor.setConfig(baseline);
-      const dialog = document.createElement(
-        "hui-dialog-edit-card",
-      ) as TestDialog;
-      dialog._cardConfig = baseline;
-      dialog._updateDirtyState = () => undefined;
-      const root = dialog.attachShadow({ mode: "open" });
-      const save = document.createElement("button");
-      save.slot = "primaryAction";
-      root.append(editor, save);
-      document.body.append(dialog);
-      await Promise.all([card.updateComplete, editor.updateComplete]);
+    const pcAudioSelector = editor.shadowRoot?.querySelector(
+      '[data-config-key="start_live_unmuted_pc_tablet"]',
+    );
+    pcAudioSelector?.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: true },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await editor.updateComplete;
+    const pcAudioEnabled =
+      latestDirtyState?.start_live_unmuted_pc_tablet === true;
+    pcAudioSelector?.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: false },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await editor.updateComplete;
+    const pcAudioDefaultOmitted = !(
+      "start_live_unmuted_pc_tablet" in (latestDirtyState ?? {})
+    );
 
-      const pcAudioSelector = editor.shadowRoot?.querySelector(
-        '[data-config-key="start_live_unmuted_pc_tablet"]',
-      );
-      pcAudioSelector?.dispatchEvent(
-        new CustomEvent("value-changed", {
-          detail: { value: true },
-          bubbles: true,
-          composed: true,
-        }),
-      );
-      await editor.updateComplete;
-      const pcAudioEnabled =
-        latestDirtyState?.start_live_unmuted_pc_tablet === true;
-      pcAudioSelector?.dispatchEvent(
-        new CustomEvent("value-changed", {
-          detail: { value: false },
-          bubbles: true,
-          composed: true,
-        }),
-      );
-      await editor.updateComplete;
-      const pcAudioDefaultOmitted = !(
-        "start_live_unmuted_pc_tablet" in (latestDirtyState ?? {})
-      );
+    const phoneAudioSelector = editor.shadowRoot?.querySelector(
+      '[data-config-key="start_live_unmuted_phone"]',
+    );
+    phoneAudioSelector?.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: true },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await editor.updateComplete;
+    const phoneAudioEnabled =
+      latestDirtyState?.start_live_unmuted_phone === true;
 
-      const phoneAudioSelector = editor.shadowRoot?.querySelector(
-        '[data-config-key="start_live_unmuted_phone"]',
-      );
-      phoneAudioSelector?.dispatchEvent(
-        new CustomEvent("value-changed", {
-          detail: { value: true },
-          bubbles: true,
-          composed: true,
-        }),
-      );
-      await editor.updateComplete;
-      const phoneAudioEnabled =
-        latestDirtyState?.start_live_unmuted_phone === true;
+    const selector = editor.shadowRoot?.querySelector(
+      '[data-config-key="rounded_outer_corners"]',
+    );
+    selector?.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: false },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await Promise.all([card.updateComplete, editor.updateComplete]);
+    const squareAfterOff = card.shadowRoot
+      ?.querySelector("ha-card")
+      ?.classList.contains("square-outer-corners");
 
-      const selector = editor.shadowRoot?.querySelector(
-        '[data-config-key="rounded_outer_corners"]',
-      );
-      selector?.dispatchEvent(
-        new CustomEvent("value-changed", {
-          detail: { value: false },
-          bubbles: true,
-          composed: true,
-        }),
-      );
-      await Promise.all([card.updateComplete, editor.updateComplete]);
-      const squareAfterOff = card.shadowRoot
-        ?.querySelector("ha-card")
-        ?.classList.contains("square-outer-corners");
+    selector?.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: true },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await Promise.all([card.updateComplete, editor.updateComplete]);
+    const roundedAfterOn = !card.shadowRoot
+      ?.querySelector("ha-card")
+      ?.classList.contains("square-outer-corners");
+    const defaultOmitted = !(
+      "rounded_outer_corners" in (latestDirtyState ?? {})
+    );
 
-      selector?.dispatchEvent(
-        new CustomEvent("value-changed", {
-          detail: { value: true },
-          bubbles: true,
-          composed: true,
-        }),
-      );
-      await Promise.all([card.updateComplete, editor.updateComplete]);
-      const roundedAfterOn = !card.shadowRoot
-        ?.querySelector("ha-card")
-        ?.classList.contains("square-outer-corners");
-      const defaultOmitted = !(
-        "rounded_outer_corners" in (latestDirtyState ?? {})
-      );
+    selector?.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: false },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await Promise.all([card.updateComplete, editor.updateComplete]);
+    const squareBeforeSave = card.shadowRoot
+      ?.querySelector("ha-card")
+      ?.classList.contains("square-outer-corners");
+    save.click();
 
-      selector?.dispatchEvent(
-        new CustomEvent("value-changed", {
-          detail: { value: false },
-          bubbles: true,
-          composed: true,
-        }),
-      );
-      await Promise.all([card.updateComplete, editor.updateComplete]);
-      const squareBeforeSave = card.shadowRoot
-        ?.querySelector("ha-card")
-        ?.classList.contains("square-outer-corners");
-      save.click();
-
-      document.removeEventListener("context-request", handleContext);
-      return {
-        defaultOmitted,
-        dirtyValue: latestDirtyState?.rounded_outer_corners,
-        pcAudioDefaultOmitted,
-        pcAudioEnabled,
-        phoneAudioEnabled,
-        roundedAfterOn,
-        savedPhoneAudio: dialog._cardConfig?.start_live_unmuted_phone,
-        savedValue: dialog._cardConfig?.rounded_outer_corners,
-        selectorValue: (
-          editor.shadowRoot?.querySelector(
-            '[data-config-key="rounded_outer_corners"]',
-          ) as HTMLElement & { value?: boolean }
-        ).value,
-        squareAfterOff,
-        squareBeforeSave,
-      };
-    },
-    { cardTag: CARD_TAG, cardType: CARD_TYPE },
-  );
+    document.removeEventListener("context-request", handleContext);
+    return {
+      defaultOmitted,
+      dirtyValue: latestDirtyState?.rounded_outer_corners,
+      pcAudioDefaultOmitted,
+      pcAudioEnabled,
+      phoneAudioEnabled,
+      roundedAfterOn,
+      savedPhoneAudio: dialog._cardConfig?.start_live_unmuted_phone,
+      savedValue: dialog._cardConfig?.rounded_outer_corners,
+      selectorValue: (
+        editor.shadowRoot?.querySelector(
+          '[data-config-key="rounded_outer_corners"]',
+        ) as HTMLElement & { value?: boolean }
+      ).value,
+      squareAfterOff,
+      squareBeforeSave,
+    };
+  });
 
   expect(result).toEqual({
     defaultOmitted: true,
@@ -592,158 +561,156 @@ test("retains one live connection while the card presentation is replaced", asyn
     }),
   );
   await page.goto("/");
-  await waitForCardDefinition(page);
+  await waitForWatchZoneDefinition(page);
 
-  await page.evaluate(
-    async ({ cardTag, cardType }) => {
-      interface TestCard extends HTMLElement {
-        hass: unknown;
-        setConfig(config: unknown): void;
+  await page.evaluate(async () => {
+    interface TestCard extends HTMLElement {
+      hass: unknown;
+      setConfig(config: unknown): void;
+    }
+
+    interface TestWindow extends Window {
+      __watchZoneTestConnectionCount: number;
+      __watchZoneTestHass: unknown;
+    }
+
+    const testWindow = window as unknown as TestWindow;
+    testWindow.__watchZoneTestConnectionCount = 0;
+
+    class TestPeerConnection {
+      public connectionState: RTCPeerConnectionState = "new";
+      public onconnectionstatechange: (() => void) | null = null;
+      public onicecandidate:
+        ((event: RTCPeerConnectionIceEvent) => void) | null = null;
+      public ontrack: ((event: RTCTrackEvent) => void) | null = null;
+      public remoteDescription: RTCSessionDescription | null = null;
+
+      public addIceCandidate(): Promise<void> {
+        return Promise.resolve();
       }
 
-      interface TestWindow extends Window {
-        __testConnectionCount: number;
-        __testHass: unknown;
+      public addTransceiver(): void {}
+
+      public close(): void {}
+
+      public createDataChannel(): RTCDataChannel {
+        return {} as RTCDataChannel;
       }
 
-      const testWindow = window as unknown as TestWindow;
-      testWindow.__testConnectionCount = 0;
-
-      class TestPeerConnection {
-        public connectionState: RTCPeerConnectionState = "new";
-        public onconnectionstatechange: (() => void) | null = null;
-        public onicecandidate:
-          ((event: RTCPeerConnectionIceEvent) => void) | null = null;
-        public ontrack: ((event: RTCTrackEvent) => void) | null = null;
-        public remoteDescription: RTCSessionDescription | null = null;
-
-        public addIceCandidate(): Promise<void> {
-          return Promise.resolve();
-        }
-
-        public addTransceiver(): void {}
-
-        public close(): void {}
-
-        public createDataChannel(): RTCDataChannel {
-          return {} as RTCDataChannel;
-        }
-
-        public createOffer(): Promise<RTCSessionDescriptionInit> {
-          return Promise.resolve({ type: "offer", sdp: "test-offer" });
-        }
-
-        public setLocalDescription(): Promise<void> {
-          const canvas = document.createElement("canvas");
-          const track = canvas.captureStream(1).getVideoTracks()[0];
-          window.setTimeout(() => {
-            this.ontrack?.({ track } as RTCTrackEvent);
-          });
-          return Promise.resolve();
-        }
-
-        public setRemoteDescription(
-          description: RTCSessionDescriptionInit,
-        ): Promise<void> {
-          this.remoteDescription = description as RTCSessionDescription;
-          return Promise.resolve();
-        }
+      public createOffer(): Promise<RTCSessionDescriptionInit> {
+        return Promise.resolve({ type: "offer", sdp: "test-offer" });
       }
 
-      window.RTCPeerConnection =
-        TestPeerConnection as unknown as typeof RTCPeerConnection;
-      const connection = {
-        subscribeMessage: async () => () => undefined,
-      };
-      const hass = {
-        states: {
-          "camera.front": {
-            entity_id: "camera.front",
-            state: "streaming",
-            attributes: {
-              access_token: "poster-token",
-              friendly_name: "Front",
-            },
+      public setLocalDescription(): Promise<void> {
+        const canvas = document.createElement("canvas");
+        const track = canvas.captureStream(1).getVideoTracks()[0];
+        window.setTimeout(() => {
+          this.ontrack?.({ track } as RTCTrackEvent);
+        });
+        return Promise.resolve();
+      }
+
+      public setRemoteDescription(
+        description: RTCSessionDescriptionInit,
+      ): Promise<void> {
+        this.remoteDescription = description as RTCSessionDescription;
+        return Promise.resolve();
+      }
+    }
+
+    window.RTCPeerConnection =
+      TestPeerConnection as unknown as typeof RTCPeerConnection;
+    const connection = {
+      subscribeMessage: async () => () => undefined,
+    };
+    const hass = {
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "streaming",
+          attributes: {
+            access_token: "poster-token",
+            friendly_name: "Front",
           },
         },
-        connection,
-        hassUrl: (path: string) => path,
-        callWS: async (message: { type: string }) => {
-          if (message.type === "camera/webrtc/get_client_config") {
-            testWindow.__testConnectionCount += 1;
-            return { configuration: { iceServers: [] } };
-          }
-          return undefined;
-        },
-      };
-      testWindow.__testHass = hass;
+      },
+      connection,
+      hassUrl: (path: string) => path,
+      callWS: async (message: { type: string }) => {
+        if (message.type === "camera/webrtc/get_client_config") {
+          testWindow.__watchZoneTestConnectionCount += 1;
+          return { configuration: { iceServers: [] } };
+        }
+        return undefined;
+      },
+    };
+    testWindow.__watchZoneTestHass = hass;
 
-      const first = document.querySelector(cardTag) as TestCard;
-      first.setConfig({
-        type: cardType,
-        title: "Front",
-        camera_entity: "camera.front",
-        start_live_unmuted_pc_tablet: true,
-        start_live_unmuted_phone: true,
-      });
-      first.hass = hass;
-    },
-    { cardTag: CARD_TAG, cardType: CARD_TYPE },
-  );
+    const first = document.querySelector("watchzone-card") as TestCard;
+    first.setConfig({
+      type: "custom:watchzone-card",
+      title: "Front",
+      camera_entity: "camera.front",
+      start_live_unmuted_pc_tablet: true,
+      start_live_unmuted_phone: true,
+    });
+    first.hass = hass;
+  });
 
   await expect
     .poll(() =>
       page.evaluate(() => {
         const testWindow = window as unknown as Window & {
-          __testConnectionCount: number;
+          __watchZoneTestConnectionCount: number;
         };
-        return testWindow.__testConnectionCount;
+        return testWindow.__watchZoneTestConnectionCount;
       }),
     )
     .toBe(1);
 
-  const poster = page.locator(`${CAMERA_TAG} img.poster`);
+  const poster = page.locator("watchzone-camera img.poster");
   await expect(poster).toHaveAttribute(
     "src",
     "/api/camera_proxy/camera.front?token=poster-token",
   );
-  await expect(page.locator(`${CAMERA_TAG} .generic-fallback`)).toBeVisible();
+  await expect(
+    page.locator("watchzone-camera .generic-fallback"),
+  ).toBeVisible();
 
-  await page.evaluate(
-    ({ cardTag, cardType }) => {
-      const testWindow = window as unknown as Window & {
-        __testHass: unknown;
-      };
-      const first = document.querySelector(cardTag);
-      first?.remove();
-      const replacement = document.createElement(cardTag) as HTMLElement & {
-        hass: unknown;
-        setConfig(config: unknown): void;
-      };
-      replacement.setConfig({
-        type: cardType,
-        title: "Front",
-        camera_entity: "camera.front",
-        rounded_outer_corners: false,
-        outer_shadows: false,
-        start_live_unmuted_pc_tablet: true,
-        start_live_unmuted_phone: true,
-      });
-      replacement.style.setProperty(
-        "--ha-box-shadow-m",
-        "rgb(4, 5, 6) 0px 4px 8px",
-      );
-      replacement.style.setProperty(
-        "--ha-box-shadow-s",
-        "rgb(7, 8, 9) 0px 1px 2px",
-      );
-      replacement.hass = testWindow.__testHass;
-      document.body.append(replacement);
-    },
-    { cardTag: CARD_TAG, cardType: CARD_TYPE },
-  );
+  await page.evaluate(() => {
+    const testWindow = window as unknown as Window & {
+      __watchZoneTestHass: unknown;
+    };
+    const first = document.querySelector("watchzone-card");
+    first?.remove();
+    const replacement = document.createElement(
+      "watchzone-card",
+    ) as HTMLElement & {
+      hass: unknown;
+      setConfig(config: unknown): void;
+    };
+    replacement.setConfig({
+      type: "custom:watchzone-card",
+      title: "Front",
+      camera_entity: "camera.front",
+      rounded_outer_corners: false,
+      outer_shadows: false,
+      start_live_unmuted_pc_tablet: true,
+      start_live_unmuted_phone: true,
+    });
+    replacement.style.setProperty(
+      "--ha-box-shadow-m",
+      "rgb(4, 5, 6) 0px 4px 8px",
+    );
+    replacement.style.setProperty(
+      "--ha-box-shadow-s",
+      "rgb(7, 8, 9) 0px 1px 2px",
+    );
+    replacement.hass = testWindow.__watchZoneTestHass;
+    document.body.append(replacement);
+  });
 
-  const video = page.locator(`${CAMERA_TAG} video.webrtc`);
+  const video = page.locator("watchzone-camera video.webrtc");
   await expect
     .poll(() =>
       video.evaluate((element) => ({
@@ -752,7 +719,9 @@ test("retains one live connection while the card presentation is replaced", asyn
       })),
     )
     .toEqual({ defaultMuted: false, muted: false });
-  const connectionIndicator = page.locator(`${CAMERA_TAG} .source-indicator`);
+  const connectionIndicator = page.locator(
+    "watchzone-camera .source-indicator",
+  );
   await expect(connectionIndicator).toHaveText("Connecting…");
   await expect(
     connectionIndicator.locator(".connection-spinner"),
@@ -771,12 +740,12 @@ test("retains one live connection while the card presentation is replaced", asyn
     timeout: CAMERA_OVERLAY_HIDE_DELAY_MS + 1_000,
   });
   const controls = page.locator(
-    `${CAMERA_TAG} ${CAMERA_CONTROLS_TAG} .control-button`,
+    "watchzone-camera watchzone-camera-controls .control-button",
   );
   await expect(controls).toHaveCount(5);
   await expect(controls.first()).toBeHidden();
-  const viewport = page.locator(`${CAMERA_LIVE_PRESENTATION_TAG} .viewport`);
-  const cameraSurface = page.locator(`${CAMERA_TAG} .camera`);
+  const viewport = page.locator("watchzone-camera-live-view .viewport");
+  const cameraSurface = page.locator("watchzone-camera .camera");
   await expect
     .poll(() =>
       viewport.evaluate((element) => getComputedStyle(element).borderRadius),
@@ -792,7 +761,7 @@ test("retains one live connection while the card presentation is replaced", asyn
       cameraSurface.evaluate((element) => getComputedStyle(element).boxShadow),
     )
     .toContain("rgb(4, 5, 6)");
-  await page.locator(CAMERA_TAG).evaluate(async (element) => {
+  await page.locator("watchzone-camera").evaluate(async (element) => {
     const camera = element as HTMLElement & {
       shadowStyle: "medium" | "none" | "small";
       updateComplete: Promise<boolean>;
@@ -805,15 +774,16 @@ test("retains one live connection while the card presentation is replaced", asyn
       cameraSurface.evaluate((element) => getComputedStyle(element).boxShadow),
     )
     .toContain("rgb(7, 8, 9)");
-  const cameraIdentityRetained = await page.locator(CARD_TAG).evaluate(
-    async (element, { cameraTag, cardType }) => {
+  const cameraIdentityRetained = await page
+    .locator("watchzone-card")
+    .evaluate(async (element) => {
       const card = element as HTMLElement & {
         setConfig(config: unknown): void;
         updateComplete: Promise<boolean>;
       };
-      const cameraBefore = card.shadowRoot?.querySelector(cameraTag);
+      const cameraBefore = card.shadowRoot?.querySelector("watchzone-camera");
       card.setConfig({
-        type: cardType,
+        type: "custom:watchzone-card",
         title: "Front",
         camera_entity: "camera.front",
         rounded_outer_corners: false,
@@ -822,13 +792,11 @@ test("retains one live connection while the card presentation is replaced", asyn
         camera_shadows: false,
       });
       await card.updateComplete;
-      const cameraAfter = card.shadowRoot?.querySelector(cameraTag) as
+      const cameraAfter = card.shadowRoot?.querySelector("watchzone-camera") as
         (HTMLElement & { updateComplete: Promise<boolean> }) | null;
       await cameraAfter?.updateComplete;
       return cameraAfter === cameraBefore;
-    },
-    { cameraTag: CAMERA_TAG, cardType: CARD_TYPE },
-  );
+    });
   expect(cameraIdentityRetained).toBe(true);
   await expect
     .poll(() =>
@@ -912,9 +880,9 @@ test("retains one live connection while the card presentation is replaced", asyn
   ).toBe(true);
   expect(indicatorPresentation.borderRadius).not.toBe("999px");
   const mute = page.locator(
-    `${CAMERA_TAG} ${CAMERA_CONTROLS_TAG} [data-control="mute"]`,
+    'watchzone-camera watchzone-camera-controls [data-control="mute"]',
   );
-  await page.locator(CARD_TAG).evaluate((element) => {
+  await page.locator("watchzone-card").evaluate((element) => {
     element.style.setProperty("--wzc-color-primary", "rgb(0, 120, 255)");
   });
   const restingBackground = await mute.evaluate(
@@ -929,12 +897,12 @@ test("retains one live connection while the card presentation is replaced", asyn
   expect(cssAlpha(hoverBackground)).toBeCloseTo(0.84, 2);
   await expect(
     page.locator(
-      `${CAMERA_TAG} ${CAMERA_CONTROLS_TAG} [data-control="snapshot"]`,
+      'watchzone-camera watchzone-camera-controls [data-control="snapshot"]',
     ),
   ).toBeDisabled();
   await expect(
     page.locator(
-      `${CAMERA_TAG} ${CAMERA_CONTROLS_TAG} [data-control="suspend"]`,
+      'watchzone-camera watchzone-camera-controls [data-control="suspend"]',
     ),
   ).toBeDisabled();
   await expect(mute).toHaveAttribute("aria-pressed", "false");
@@ -959,38 +927,9 @@ test("retains one live connection while the card presentation is replaced", asyn
     await video.evaluate((element) => (element as HTMLVideoElement).muted),
   ).toBe(false);
 
-  await page.locator(CARD_TAG).evaluate((element) => {
+  await page.locator("watchzone-card").evaluate((element) => {
     element.style.inlineSize = "320px";
   });
-  await viewport.hover();
-  await expect(connectionIndicator).toBeVisible();
-  const [viewportBox, indicatorBox, firstControlBox] = await Promise.all([
-    viewport.boundingBox(),
-    connectionIndicator.boundingBox(),
-    controls.first().boundingBox(),
-  ]);
-  expect(viewportBox).not.toBeNull();
-  expect(indicatorBox).not.toBeNull();
-  expect(firstControlBox).not.toBeNull();
-  expect(indicatorBox!.y - viewportBox!.y).toBeLessThanOrEqual(20);
-  expect(indicatorBox!.x + indicatorBox!.width).toBeLessThanOrEqual(
-    firstControlBox!.x,
-  );
-  const toast = page.locator(`${CAMERA_TAG} ${TOAST_TAG}`);
-  await toast.evaluate((element) => {
-    (
-      element as HTMLElement & {
-        show(message: string, options: { category: "warning" }): void;
-      }
-    ).show("Responsive feedback", { category: "warning" });
-  });
-  const toastSurface = toast.locator(".toast");
-  await expect(toastSurface).toBeVisible();
-  const toastBox = await toastSurface.boundingBox();
-  expect(toastBox).not.toBeNull();
-  expect(
-    viewportBox!.y + viewportBox!.height - (toastBox!.y + toastBox!.height),
-  ).toBeLessThanOrEqual(20);
   await expect
     .poll(() =>
       mute.evaluate((element) => element.getBoundingClientRect().width),
@@ -1000,9 +939,9 @@ test("retains one live connection while the card presentation is replaced", asyn
     .poll(() =>
       page.evaluate(() => {
         const testWindow = window as unknown as Window & {
-          __testConnectionCount: number;
+          __watchZoneTestConnectionCount: number;
         };
-        return testWindow.__testConnectionCount;
+        return testWindow.__watchZoneTestConnectionCount;
       }),
     )
     .toBe(1);
@@ -1015,9 +954,6 @@ test("retains one live connection while the card presentation is replaced", asyn
   });
   await expect(controls.first()).toBeVisible();
   await expect(connectionIndicator).toHaveText("WebRTC");
-  expect(
-    await mute.evaluate((element) => getComputedStyle(element).backgroundColor),
-  ).toBe(restingBackground);
   await expect(controls.first()).toBeHidden({
     timeout: CAMERA_OVERLAY_HIDE_DELAY_MS + 1_000,
   });
@@ -1026,18 +962,9 @@ test("retains one live connection while the card presentation is replaced", asyn
   });
 
   expect(
-    await page.evaluate((appId) => {
-      const diagnostics = (window as unknown as Record<string, unknown>)[
-        appId
-      ] as
-        | {
-            getLiveStartupTimings(): Array<{
-              phases: Record<string, number>;
-            }>;
-          }
-        | undefined;
-      return diagnostics?.getLiveStartupTimings()[0]?.phases;
-    }, APP_ID),
+    await page.evaluate(
+      () => window.watchZone?.getLiveStartupTimings()[0]?.phases,
+    ),
   ).toMatchObject({
     adapter_imported: expect.any(Number),
     client_config_received: expect.any(Number),

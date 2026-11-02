@@ -1,12 +1,12 @@
 import { css } from "lit";
 
 /**
- * The only Home Assistant theme boundary in the application.
+ * The only Home Assistant theme boundary in WatchZone.
  *
  * Components consume semantic --wzc-* tokens exclusively. Keeping HA token
  * aliases here makes theme changes and future design-system migrations local.
  */
-export const themeTokens = css`
+export const watchZoneThemeTokens = css`
   :host {
     --wzc-color-primary: var(--primary-color, CanvasText);
     --wzc-color-primary-dark: var(
@@ -124,46 +124,5 @@ export const themeTokens = css`
     --wzc-media-overlay-border-color: var(--wzc-color-border);
     --wzc-media-overlay-radius: var(--wzc-radius-small);
     --wzc-media-overlay-shadow: var(--wzc-shadow-card);
-    --wzc-media-overlay-safe-inline: 0.75rem;
-    --wzc-media-overlay-safe-block: 0.75rem;
-    --wzc-media-overlay-lane-gap: 0.5rem;
-    --wzc-safe-area-inset-block-start: 0px;
-    --wzc-safe-area-inset-block-end: 0px;
-    --wzc-safe-area-inset-inline-start: 0px;
-    --wzc-safe-area-inset-inline-end: 0px;
-    --wzc-media-control-size: 2.75rem;
-    --wzc-media-control-icon-size: 1.65rem;
-    --wzc-media-control-gap: 0.3rem;
-
-    --wzc-toast-neutral-color: var(--wzc-media-overlay-color);
-    --wzc-toast-neutral-background: var(--wzc-media-overlay-background);
-    --wzc-toast-neutral-border-color: var(--wzc-media-overlay-border-color);
-    --wzc-toast-success-color: var(--wzc-color-text-reversed);
-    --wzc-toast-success-background: color-mix(
-      in srgb,
-      var(--wzc-color-success) 82%,
-      transparent
-    );
-    --wzc-toast-success-border-color: var(--wzc-color-success);
-    --wzc-toast-warning-color: var(--wzc-color-text-1);
-    --wzc-toast-warning-background: color-mix(
-      in srgb,
-      var(--wzc-color-warning) 82%,
-      transparent
-    );
-    --wzc-toast-warning-border-color: var(--wzc-color-warning);
-    --wzc-toast-error-color: var(--wzc-color-text-reversed);
-    --wzc-toast-error-background: color-mix(
-      in srgb,
-      var(--wzc-color-error) 82%,
-      transparent
-    );
-    --wzc-toast-error-border-color: var(--wzc-color-error);
-    --wzc-toast-radius: var(--wzc-radius-pill);
-    --wzc-toast-shadow: var(--wzc-shadow-small);
-    --wzc-toast-safe-inline: var(--wzc-media-overlay-safe-inline);
-    --wzc-toast-safe-block: var(--wzc-media-overlay-safe-block);
-
-    --wzc-transition-fast: 140ms;
   }
 `;

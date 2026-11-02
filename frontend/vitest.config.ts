@@ -8,8 +8,8 @@ const packageJson = JSON.parse(
 
 export default defineConfig({
   define: {
-    __APP_BUILD__: JSON.stringify("test"),
-    __APP_VERSION__: JSON.stringify(packageJson.version),
+    __WATCHZONE_BUILD__: JSON.stringify("test"),
+    __WATCHZONE_VERSION__: JSON.stringify(packageJson.version),
   },
   test: {
     environment: "jsdom",

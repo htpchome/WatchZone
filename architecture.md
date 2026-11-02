@@ -48,20 +48,6 @@ In priority order, WatchZone must be:
 6. **Simple where possible:** Do not introduce an abstraction, file, or runtime
    layer without a concrete responsibility.
 
-### 2.1 Rename-safe identity
-
-The current product name is expected to change. Internal classes, interfaces,
-types, functions, variables, and compile-time symbols must therefore use
-brand-neutral responsibility names. They must not use `WatchZone` or
-`watchZone` prefixes.
-
-Brand-bearing values are allowed only at true external identity boundaries:
-the Home Assistant domain, persisted custom-element tags and card type, current
-resource/package filenames, HACS metadata, display strings derived from the
-central name constant, the CSS custom-property namespace, and explicitly
-documented compatibility globals. Renaming an external identity requires an
-intentional migration decision; it must not require renaming internal APIs.
-
 ## 3. Non-goals
 
 WatchZone does not:
@@ -154,7 +140,7 @@ architecture decision recorded in this document or a future ADR.
 │   │   ├── core/                  # Stable runtime and module contracts
 │   │   ├── api/                   # Typed backend client and wire types
 │   │   ├── modules/               # Independently loaded UI features
-│   │   ├── providers/             # External-system frontend adapters
+│   │   ├── connections/           # Lazy browser playback adapters
 │   │   ├── ui/                    # Shared visual primitives and icon registry
 │   │   ├── styles/                # HA theme boundary and global design tokens
 │   │   └── editor/                # Lazily loaded layout editor
@@ -174,8 +160,6 @@ from its first implementation:
 
 ```text
 frontend/src/modules/camera/index.ts
-frontend/src/modules/camera/live/presentation.ts
-frontend/src/providers/home-assistant/live/webrtc.ts
 custom_components/watchzone/features/layouts/__init__.py
 ```
 
@@ -208,8 +192,8 @@ Within a feature:
 - Files are not created merely to fill out the pattern.
 
 Stable cross-feature contracts and document-scoped services belong in `core/`.
-Feature behavior does not. External-system implementations remain under
-`providers/` behind public provider resolvers and capability contracts.
+Feature behavior does not. Provider and connection adapters remain outside UI
+features behind their established boundaries.
 
 ## 6. Dependency and ownership rules
 
@@ -219,9 +203,9 @@ These rules are mandatory:
    implementation.
 2. A frontend module may depend on public contracts in `core` and `api`.
 3. A frontend module must never import another frontend module.
-4. A frontend module may use a public provider resolver or capability contract
-   but must not import a concrete provider implementation.
-5. `core` must not import any feature module or provider adapter.
+4. A frontend module may use the public connection resolver but must not import
+   a concrete live connection adapter.
+5. `core` must not import any feature module or concrete connection adapter.
 6. Backend API adapters validate transport input, enforce permissions, invoke
    feature services, and serialize results. They do not contain feature logic.
 7. Backend features may depend on provider protocols and storage contracts,
@@ -365,8 +349,8 @@ The exact syntax may change with the build tool, but these properties may not:
 - Modules needed by a layout load concurrently, not sequentially.
 - The editor is a separate dynamic import and is never loaded for normal card
   viewing.
-- A live playback adapter is requested only when a visible camera presentation
-  uses its connection type.
+- A live connection adapter is requested only when a visible live module uses
+  its connection type.
 - Failed imports render a local module error with a retry action.
 - Module loaders cache successful promises to prevent duplicate fetches.
 - Optional prefetching is allowed only after the visible layout is interactive
@@ -387,7 +371,7 @@ demonstrated cross-module requirement.
 Conceptually:
 
 ```ts
-interface ModuleDefinition<TConfig = unknown> {
+interface WatchZoneModuleDefinition<TConfig = unknown> {
   readonly type: string;
   validateConfig(value: unknown): TConfig;
   define(): void;
@@ -422,10 +406,8 @@ policy; behavioral delays are named constants rather than literals embedded in
 views or styles. The source indicator remains an independent non-control
 overlay, but after its exceptions it consumes the same interaction visibility
 state and hide timer as the control overlay. Its exceptions are that Connecting
-remains visible continuously and each newly presented source receives one
+remains visible continuously and the first resolved source receives one
 automatic timed introduction before ordinary interaction-controlled behavior.
-A transport takeover updates that same indicator without a second Connecting
-phase.
 
 ### 8.4 Custom elements and Lit
 
@@ -538,21 +520,13 @@ overflow behavior. The card shell is the future constraint boundary for panel
 and full-size layouts and must not assume a dashboard column count or viewport.
 
 WatchZone supports current Chrome, Edge, Firefox, and Safari releases, plus
-Home Assistant Companion on Android and iOS. Interfaces must work at phone,
-tablet, and desktop sizes with touch,
-pointer, and keyboard input. Chromium-only behavior, scattered user-agent
-branching, and desktop-only interaction assumptions are prohibited. Browser
-capabilities are feature-detected at their ownership boundary. Home Assistant
-host and device evidence is normalized only by the shared client-environment
-class. Feature modules consume typed capabilities rather than parsing platform
-identity themselves.
-
-The client-environment class remains the sole owner of host,
-operating-system, physical client-class, and input-capability classification;
-responsive sizing remains CSS-owned and does not create a parallel JavaScript
-device profile. An unavailable media capability produces an explicit fallback
-or actionable local error rather than breaking the card. The normative
-platform and validation matrix is defined in
+Home Assistant Companion on Android and iOS and Home Assistant clients using
+Catalyst. Interfaces must work at phone, tablet, and desktop sizes with touch,
+pointer, and keyboard input. Chromium-only behavior, user-agent branching, and
+desktop-only interaction assumptions are prohibited. Browser capabilities are
+feature-detected at their ownership boundary; an unavailable media capability
+produces an explicit fallback or actionable local error rather than breaking
+the card. The normative platform and validation matrix is defined in
 [docs/platform-compatibility.md](docs/platform-compatibility.md).
 
 ### 8.7 Interaction state
@@ -587,20 +561,6 @@ go2rtc endpoint or through a linked Home Assistant camera entity. Layouts and
 modules refer to the stable WatchZone camera ID, not directly to a transport
 URL.
 
-The camera is the frontend feature module. Its `live/`, future `ptz/`, and
-future `talk/` folders own camera presentation and capability orchestration.
-External-system implementations are grouped separately beneath
-`frontend/src/providers/<provider>/` by the capability they implement. Thus
-Home Assistant Direct playback belongs in `providers/home-assistant/live/`,
-while future Home Assistant PTZ and talkback adapters belong beside it under
-their own capability folders. Frigate/go2rtc belongs in
-`providers/frigate/live/`; it is not another camera module.
-
-Provider identity and live-source identity remain independent. A Frigate-owned
-camera may expose an HA Direct source. The camera module consumes only the
-public typed provider resolver or capability contract, never a concrete
-provider folder.
-
 Conceptually, the backend returns data shaped like:
 
 ```ts
@@ -622,25 +582,15 @@ Connection rules:
 - The frontend connection resolver selects a compatible source according to
   saved preference, required capabilities, health, and deterministic fallback
   order.
-- Each provider implementation has a stable capability folder beneath
-  `frontend/src/providers/<provider>/` and heavy adapters are loaded with a
-  dynamic import.
-- Platform-specialized playback policy is a distinct adapter selected by the
-  resolver, not a runtime conditional inside a shared adapter. Its dynamic
-  entry, session key, lifecycle, and tests are isolated so a specialized
-  behavior cannot change another client's code path or lazy chunk.
-- Platform adapters share only stable typed contracts and genuinely
-  platform-neutral primitives. A platform workaround may not be moved into a
-  shared helper merely to reduce file count.
-- The camera module depends only on the public provider resolver and capability
-  contracts.
+- Each connection type has a stable folder boundary under
+  `frontend/src/connections/<type>/` and is loaded with a dynamic import.
+- The live module depends only on the public resolver and playback contract.
 - Connection adapters own browser media objects and playback-specific cleanup,
-  but not camera metadata, layout state, PTZ, talkback, events, or other
-  provider capabilities unrelated to playback.
+  but not camera metadata, layout state, or provider APIs.
 - Failure of one source may fall back to the next eligible source without
   changing camera identity.
-- Adding a live-source implementation must not require modifying the camera
-  module; it is registered at the public provider resolver boundary.
+- Adding a connection type must not require modifying existing modules beyond
+  registration in the compile-time loader map.
 - Video bytes should flow directly to the browser when security and provider
   behavior permit. Python brokers authorization and source resolution but does
   not proxy high-bitrate media without a concrete need.
@@ -654,20 +604,8 @@ same Home Assistant browser document.
 
 Mandatory behavior:
 
-- Connection retention is an application-wide design input for every feature
-  that can affect media visibility, placement, ownership, presentation, or
-  lifecycle. It is not deferred integration work and is not scoped only to the
-  camera presentation.
-- Layouts, navigation, editors, previews, carousels, popups, fullscreen, PiP,
-  responsive reflow, visibility handling, suspension, retry, and teardown must
-  each define their acquire, reuse, attach, transfer, park, resume, release,
-  invalidation, and eviction effects where applicable.
-- A presentation-only transition preserves the canonical session and does not
-  invoke a connection factory, renegotiate a source, or create a parallel
-  session. Any unavoidable reconnection must follow an explicit health,
-  identity, capability, or resource-policy transition.
-- Re-rendering, moving, or temporarily disconnecting a camera presentation does
-  not recreate an unchanged live connection.
+- Re-rendering, moving, or temporarily disconnecting a live module does not
+  recreate an unchanged live connection.
 - Layout and WatchZone view changes transfer presentation attachment while
   retaining the underlying session.
 - Pre-editor and editor previews acquire leases on existing sessions rather
@@ -692,7 +630,7 @@ User audio intent is separate from temporary playback state:
   Assistant browser document. It survives route changes, background tabs, and
   window minimization but resets on a hard refresh or new browser document.
 - Per-camera startup defaults may differ between phone and tablet/desktop
-  client form factors. They apply only when no document-lifetime user
+  presentation classes. They apply only when no document-lifetime user
   preference exists.
 - Automatic policies may temporarily force a session silent, but they never
   overwrite the user's preference.
@@ -800,7 +738,7 @@ but the stored model and boundaries must not prevent them.
   through Home Assistant's UI.
 - Multiple provider types and multiple instances of the same provider are
   supported.
-- Use a typed `ConfigEntry[IntegrationRuntime]` and `entry.runtime_data` for
+- Use a typed `ConfigEntry[WatchZoneRuntime]` and `entry.runtime_data` for
   per-entry runtime objects.
 - Domain-global registrations are created once and cleaned up correctly.
 - `async_setup_entry` constructs the runtime and delegates to feature setup.
@@ -812,7 +750,7 @@ but the stored model and boundaries must not prevent them.
 
 ### 10.2 Runtime composition
 
-`IntegrationRuntime` is a typed composition container, not a god object. It may
+`WatchZoneRuntime` is a typed composition container, not a god object. It may
 hold references to feature services and provider instances, but it must not
 reimplement their behavior or expose unrestricted mutable dictionaries.
 
@@ -876,7 +814,7 @@ generic module must not branch on provider names. Provider-specific modules
 are allowed only for genuinely provider-specific behavior and must declare the
 required provider capability explicitly.
 
-The camera catalog supports mixed-provider layouts. A camera module may show a
+The camera catalog supports mixed-provider layouts. A live module may show a
 MotionEye camera while an event-list module displays Frigate events, and a
 camera selector may list cameras from all configured providers.
 
@@ -1078,7 +1016,8 @@ Required layers as their corresponding features appear:
 - A small end-to-end smoke path for Home Assistant loading the packaged card.
 - Browser-visible behavior runs against Chromium, Firefox, and WebKit. This
   engine matrix supplements, but does not replace, milestone testing in Chrome,
-  Edge, Firefox, Safari, and Home Assistant Companion on Android and iOS.
+  Edge, Firefox, Safari, Home Assistant Companion on Android and iOS, and a
+  Catalyst-based Home Assistant client.
 - Responsive component coverage includes representative phone, tablet, and
   desktop containers and both touch/coarse-pointer and mouse/keyboard paths
   when the feature has interactive behavior.
@@ -1164,8 +1103,8 @@ The architecture is established now, but implementation remains incremental:
    excluded from the eager entry.
 6. Add the first provider package, normalized camera catalog, and provider
    subentry flow.
-7. Add the camera module's live presentation plus one lazy playback adapter,
-   then add other connection types independently.
+7. Add the live module plus one lazy connection adapter, then add other
+   connection types independently.
 8. Add the lazy editor only when layout creation work begins.
 9. Add further providers and feature modules vertically, one user-visible
    capability at a time.
@@ -1189,10 +1128,7 @@ A change is complete only when:
 - Every card configuration field follows the editor lifecycle contract.
 - Visual changes use Home Assistant theme tokens and remain responsive.
 - Tests cover the changed contract and important failure paths.
-- The affected focused system contract and `docs/system-map.md` remain accurate
-  for ownership, lifecycle, state flow, invariants, fallbacks, diagnostics, and
-  verification.
-- Generated output is updated when applicable.
+- Generated output and documentation are updated when applicable.
 - Replaced code and dead paths are removed.
 - Bundle and runtime performance remain within budget.
 

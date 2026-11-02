@@ -1,6 +1,6 @@
 import { css } from "lit";
 
-export const cameraLivePresentationStyles = css`
+export const cameraLiveViewStyles = css`
   :host {
     display: block;
     inline-size: 100%;
@@ -19,16 +19,10 @@ export const cameraLivePresentationStyles = css`
     background: var(--wzc-live-background);
     border-radius: var(--wzc-live-radius, var(--wzc-radius-large, 8px));
     box-shadow: var(--wzc-live-shadow, none);
-    container-type: size;
   }
 
   .viewport:fullscreen,
   .viewport:-webkit-full-screen {
-    --wzc-safe-area-inset-block-start: env(safe-area-inset-top, 0px);
-    --wzc-safe-area-inset-block-end: env(safe-area-inset-bottom, 0px);
-    --wzc-safe-area-inset-inline-start: env(safe-area-inset-left, 0px);
-    --wzc-safe-area-inset-inline-end: env(safe-area-inset-right, 0px);
-
     inline-size: 100vw;
     block-size: 100vh;
     aspect-ratio: auto;
@@ -38,7 +32,6 @@ export const cameraLivePresentationStyles = css`
   .generic-fallback,
   .fallback-image {
     position: absolute;
-    z-index: 0;
     inset: 0;
     inline-size: 100%;
     block-size: 100%;
@@ -74,7 +67,6 @@ export const cameraLivePresentationStyles = css`
   .hls-host,
   video {
     position: absolute;
-    z-index: 1;
     inset: 0;
     display: block;
     inline-size: 100%;
@@ -94,15 +86,9 @@ export const cameraLivePresentationStyles = css`
 
   .source-indicator {
     position: absolute;
-    z-index: 3;
-    inset-block-start: calc(
-      var(--wzc-media-overlay-safe-block) +
-        var(--wzc-safe-area-inset-block-start)
-    );
-    inset-inline-end: calc(
-      var(--wzc-media-overlay-safe-inline) +
-        var(--wzc-safe-area-inset-inline-end)
-    );
+    z-index: 1;
+    inset-block-start: max(0.5rem, env(safe-area-inset-top, 0px));
+    inset-inline-end: calc(0.5rem + env(safe-area-inset-right, 0px));
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
@@ -129,25 +115,6 @@ export const cameraLivePresentationStyles = css`
     font-weight: var(--wzc-font-weight-semibold);
     line-height: var(--wzc-line-height-condensed);
     pointer-events: none;
-    max-inline-size: calc(100% - 2 * var(--wzc-media-overlay-safe-inline));
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    transition: inset-inline-end var(--wzc-transition-fast) ease;
-  }
-
-  .source-indicator.controls-visible {
-    inset-inline-end: calc(
-      var(--wzc-media-overlay-safe-inline) +
-        var(--wzc-safe-area-inset-inline-end) + var(--wzc-media-control-size) +
-        var(--wzc-media-overlay-lane-gap)
-    );
-    max-inline-size: calc(
-      100% - 2 *
-        var(--wzc-media-overlay-safe-inline) - var(
-          --wzc-media-control-size
-        ) - var(--wzc-media-overlay-lane-gap)
-    );
   }
 
   .connection-spinner {
@@ -167,36 +134,8 @@ export const cameraLivePresentationStyles = css`
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .connection-spinner,
-    .source-indicator {
+    .connection-spinner {
       animation: none;
-      transition: none;
-    }
-  }
-
-  @container (max-width: 480px) {
-    .source-indicator,
-    .camera-controls {
-      --wzc-media-control-size: 2.35rem;
-      --wzc-media-control-icon-size: 1.4rem;
-    }
-  }
-
-  @container (max-height: 360px) {
-    .source-indicator,
-    .camera-controls {
-      --wzc-media-control-size: 2.25rem;
-      --wzc-media-control-icon-size: 1.3rem;
-      --wzc-media-control-gap: 0.125rem;
-    }
-  }
-
-  @container (max-height: 240px) {
-    .source-indicator,
-    .camera-controls {
-      --wzc-media-control-size: 1.875rem;
-      --wzc-media-control-icon-size: 1.15rem;
-      --wzc-media-control-gap: 0.1rem;
     }
   }
 
