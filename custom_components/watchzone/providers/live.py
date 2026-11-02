@@ -9,6 +9,14 @@ type LiveSignalingEvent = dict[str, object]
 type SendLiveSignalingEvent = Callable[[LiveSignalingEvent], None]
 
 
+class ProviderPreparationError(Exception):
+    """Report a sanitized reason why a provider capability was unavailable."""
+
+    def __init__(self, code: str) -> None:
+        super().__init__(code)
+        self.code = code
+
+
 class LiveSignalingSession(Protocol):
     """One provider-backed WebRTC signaling session."""
 

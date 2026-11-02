@@ -225,7 +225,10 @@ export async function createHomeAssistantWebRtcConnection(
       try {
         if (event.type === "session") {
           timing.mark("session_received");
-          timing.setSignalingPath(event.signaling_path);
+          timing.setSignaling(
+            event.signaling_path,
+            event.signaling_fallback_reason,
+          );
           sessionId = event.session_id;
           await Promise.all(localCandidates.splice(0).map(sendCandidate));
         } else if (event.type === "answer") {

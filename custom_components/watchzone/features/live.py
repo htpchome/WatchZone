@@ -14,7 +14,11 @@ from homeassistant.util.ulid import ulid
 from webrtc_models import RTCIceCandidateInit
 
 from ..const import DOMAIN, NAME
-from ..providers.live import LiveSignalingSession, SendLiveSignalingEvent
+from ..providers.live import (
+    LiveSignalingSession,
+    ProviderPreparationError,
+    SendLiveSignalingEvent,
+)
 
 if TYPE_CHECKING:
     from homeassistant.components.camera import Camera
@@ -27,7 +31,7 @@ class _ProviderSessionFactory(Protocol):
         camera: Camera,
         entity_id: str,
         send_event: SendLiveSignalingEvent,
-    ) -> LiveSignalingSession | None:
+    ) -> LiveSignalingSession:
         """Prepare an optional concrete provider signaling capability."""
 
 
@@ -76,6 +80,7 @@ class CreatedLiveSignalingSession:
 
     session_id: str
     signaling_path: str
+    fallback_reason: str | None
 
 
 class LiveSignalingService:
@@ -100,13 +105,15 @@ class LiveSignalingService:
             raise HomeAssistantError("Camera does not support WebRTC")
 
         session_id = ulid()
-        session = await self._async_prepare_provider_session(
+        session, fallback_reason = await self._async_prepare_provider_session(
             camera, entity_id, send_event
         )
         if session is None:
             session = HomeAssistantLiveSignalingSession(camera, session_id, send_event)
         self._sessions[session_id] = _OwnedSession(owner_id, entity_id, session)
-        return CreatedLiveSignalingSession(session_id, session.signaling_path)
+        return CreatedLiveSignalingSession(
+            session_id, session.signaling_path, fallback_reason
+        )
 
     async def async_start(self, session_id: str, offer: str) -> None:
         """Start a created signaling session."""
@@ -147,16 +154,20 @@ class LiveSignalingService:
         camera: Camera,
         entity_id: str,
         send_event: SendLiveSignalingEvent,
-    ) -> LiveSignalingSession | None:
+    ) -> tuple[LiveSignalingSession | None, str | None]:
         """Load and prepare an eligible concrete provider only on demand."""
         registry_entry = er.async_get(self._hass).async_get(entity_id)
         if registry_entry is None:
-            return None
+            return None, "entity_registry_entry_missing"
         try:
             module = import_module(
                 f"custom_components.{DOMAIN}.providers.{registry_entry.platform}.live"
             )
             factory = cast(_ProviderSessionFactory, module.async_prepare_session)
-            return await factory(self._hass, camera, entity_id, send_event)
+            return await factory(self._hass, camera, entity_id, send_event), None
+        except ProviderPreparationError as err:
+            return None, err.code
+        except ModuleNotFoundError:
+            return None, "provider_adapter_unavailable"
         except Exception:
-            return None
+            return None, "provider_adapter_failed"

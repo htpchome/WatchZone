@@ -8,7 +8,7 @@ from contextlib import suppress
 from importlib import import_module
 from typing import TYPE_CHECKING, Protocol, cast
 
-from aiohttp import ClientWebSocketResponse, WSMsgType
+from aiohttp import ClientError, ClientResponseError, ClientWebSocketResponse, WSMsgType
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_URL
 from homeassistant.core import HomeAssistant
@@ -18,7 +18,11 @@ from webrtc_models import RTCIceCandidateInit
 from yarl import URL
 
 from ...const import NAME
-from ..live import LiveSignalingSession, SendLiveSignalingEvent
+from ..live import (
+    LiveSignalingSession,
+    ProviderPreparationError,
+    SendLiveSignalingEvent,
+)
 
 if TYPE_CHECKING:
     from homeassistant.components.camera import Camera
@@ -135,39 +139,49 @@ async def async_prepare_session(
     camera: Camera,
     entity_id: str,
     send_event: SendLiveSignalingEvent,
-) -> LiveSignalingSession | None:
-    """Prepare fast Frigate signaling, or decline without changing HA behavior."""
+) -> LiveSignalingSession:
+    """Prepare fast Frigate signaling or report a sanitized fallback reason."""
     registry_entry = er.async_get(hass).async_get(entity_id)
     if (
         registry_entry is None
         or registry_entry.platform != _FRIGATE_DOMAIN
         or registry_entry.config_entry_id is None
     ):
-        return None
+        raise ProviderPreparationError("frigate_entity_mismatch")
 
     config_entry = hass.config_entries.async_get_entry(registry_entry.config_entry_id)
     if config_entry is None or CONF_URL not in config_entry.data:
-        return None
+        raise ProviderPreparationError("frigate_config_entry_missing")
 
     base_url = config_entry.data[CONF_URL]
     if not isinstance(base_url, str):
-        return None
+        raise ProviderPreparationError("frigate_url_missing")
     stream_source = await camera.stream_source()
+    if not stream_source:
+        raise ProviderPreparationError("frigate_stream_source_unavailable")
     stream_name = _stream_name(stream_source, base_url)
     if stream_name is None:
-        return None
+        raise ProviderPreparationError("frigate_stream_source_incompatible")
 
     client = _get_frigate_client(hass, config_entry)
     if client is None:
-        return None
+        raise ProviderPreparationError("frigate_client_unavailable")
     url = (URL(base_url) / _GO2RTC_WEBSOCKET_PATH) % {"src": stream_name}
-    headers = await client.get_auth_headers()
+    try:
+        headers = await client.get_auth_headers()
+    except Exception as err:
+        raise ProviderPreparationError("frigate_auth_failed") from err
     websession = async_get_clientsession(hass)
-    websocket = await websession.ws_connect(
-        url,
-        headers=headers,
-        ssl=client.validate_ssl,
-    )
+    try:
+        websocket = await websession.ws_connect(
+            url,
+            headers=headers,
+            ssl=client.validate_ssl,
+        )
+    except ClientResponseError as err:
+        raise ProviderPreparationError("frigate_websocket_rejected") from err
+    except (ClientError, TimeoutError) as err:
+        raise ProviderPreparationError("frigate_websocket_unreachable") from err
     return FrigateLiveSignalingSession(hass, websocket, send_event)
 
 
@@ -195,6 +209,8 @@ def _get_frigate_client(
     except ModuleNotFoundError:
         return None
 
+    if not hasattr(module, "get_client_for_config_entry"):
+        return None
     get_client_for_config_entry = cast(
         Callable[[HomeAssistant, ConfigEntry], object | None],
         module.get_client_for_config_entry,

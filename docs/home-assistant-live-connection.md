@@ -230,6 +230,10 @@ was selected; `home_assistant:standard` confirms that the generic HA camera
 contract was used. This metadata is diagnostic only and does not change the
 user-facing transport label.
 
+When the standard path is a fallback, `signalingFallbackReason` contains a
+sanitized preparation-stage code. It never contains provider URLs,
+credentials, access tokens, exception text, or stream names.
+
 ## 10. Observed client baseline
 
 Physical-client testing of `0.0.4-dev.8` recorded the following initial HLS

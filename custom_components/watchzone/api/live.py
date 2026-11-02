@@ -100,6 +100,7 @@ async def ws_live_offer(
             "type": "session",
             "session_id": created.session_id,
             "signaling_path": created.signaling_path,
+            "signaling_fallback_reason": created.fallback_reason,
         }
     )
 

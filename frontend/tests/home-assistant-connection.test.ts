@@ -151,6 +151,7 @@ describe("Home Assistant WebRTC connection", () => {
       type: "session",
       session_id: "session-1",
       signaling_path: "frigate:trickle_ice",
+      signaling_fallback_reason: null,
     });
     offerCallback({ type: "answer", answer: "watchzone-answer" });
     await vi.waitFor(() =>
@@ -210,6 +211,7 @@ describe("Home Assistant WebRTC connection", () => {
       video_track_received: expect.any(Number),
     });
     expect(timing.snapshot().signalingPath).toBe("frigate:trickle_ice");
+    expect(timing.snapshot().signalingFallbackReason).toBeUndefined();
     expect(onFailure).not.toHaveBeenCalled();
 
     vi.useFakeTimers();

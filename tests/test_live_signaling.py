@@ -85,14 +85,17 @@ async def test_provider_resolver_loads_the_entity_owner_dynamically() -> None:
             return_value=module,
         ) as import_provider,
     ):
-        resolved = await service._async_prepare_provider_session(  # noqa: SLF001
-            Mock(), "camera.garden", Mock()
+        resolved, fallback_reason = (  # noqa: SLF001
+            await service._async_prepare_provider_session(
+                Mock(), "camera.garden", Mock()
+            )
         )
 
     import_provider.assert_called_once_with(
         "custom_components.watchzone.providers.motioneye.live"
     )
     assert resolved is provider_session
+    assert fallback_reason is None
 
 
 async def test_frigate_capability_prepares_authenticated_go2rtc_socket() -> None:

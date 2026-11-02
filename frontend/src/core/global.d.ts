@@ -36,6 +36,7 @@ interface Window {
           >
         >
       >;
+      readonly signalingFallbackReason?: string;
       readonly signalingPath?: string;
       readonly startedAt: string;
     }>;

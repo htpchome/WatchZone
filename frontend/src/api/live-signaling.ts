@@ -9,6 +9,7 @@ export type LiveOfferEvent =
       readonly type: "session";
       readonly session_id: string;
       readonly signaling_path: string;
+      readonly signaling_fallback_reason: string | null;
     }
   | { readonly type: "answer"; readonly answer: string }
   | { readonly type: "candidate"; readonly candidate: RTCIceCandidateInit }
