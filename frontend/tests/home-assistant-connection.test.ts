@@ -4,10 +4,19 @@ import { createHomeAssistantWebRtcConnection } from "../src/providers/home-assis
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import { LiveStartupTiming } from "../src/core/live-startup-timing";
 
-class FakeTrack {
-  public readonly id = "video-track";
+class FakeTrack extends EventTarget {
   public readonly kind = "video";
+  public readyState: MediaStreamTrackState = "live";
   public readonly stop = vi.fn();
+
+  public constructor(public readonly id = "video-track") {
+    super();
+  }
+
+  public end(): void {
+    this.readyState = "ended";
+    this.dispatchEvent(new Event("ended"));
+  }
 }
 
 class FakeMediaStream {
@@ -157,7 +166,8 @@ describe("Home Assistant WebRTC connection", () => {
     await vi.waitFor(() =>
       expect(peer.setRemoteDescription).toHaveBeenCalled(),
     );
-    peer.ontrack?.({ track: new FakeTrack() } as unknown as RTCTrackEvent);
+    const track = new FakeTrack();
+    peer.ontrack?.({ track } as unknown as RTCTrackEvent);
     const connection = await connecting;
 
     expect(peer.configuration).toEqual({ iceServers: [] });
@@ -227,9 +237,10 @@ describe("Home Assistant WebRTC connection", () => {
     peer.onconnectionstatechange?.();
     await vi.runOnlyPendingTimersAsync();
     expect(onFailure).toHaveBeenCalledWith(
-      new Error(
-        "Home Assistant camera WebRTC connection remained disconnected",
-      ),
+      expect.objectContaining({
+        code: "peer_failed",
+        message: "WebRTC connection remained disconnected",
+      }),
     );
     onFailure.mockClear();
     vi.useRealTimers();
@@ -237,12 +248,64 @@ describe("Home Assistant WebRTC connection", () => {
     offerCallback({ type: "error", message: "camera connection lost" });
     await vi.waitFor(() =>
       expect(onFailure).toHaveBeenCalledWith(
-        new Error("camera connection lost"),
+        expect.objectContaining({
+          code: "signaling_failed",
+          message: "camera connection lost",
+        }),
       ),
+    );
+
+    onFailure.mockClear();
+    const replacementTrack = new FakeTrack("replacement-video-track");
+    peer.ontrack?.({ track: replacementTrack } as unknown as RTCTrackEvent);
+    track.end();
+    expect(onFailure).not.toHaveBeenCalled();
+    replacementTrack.end();
+    expect(onFailure).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: "track_ended",
+        message: "WebRTC video track ended",
+      }),
     );
 
     connection.close();
     expect(unsubscribe).toHaveBeenCalledOnce();
+    expect(peer.close).toHaveBeenCalledOnce();
+  });
+
+  it("rejects a peer failure before the first track without waiting for timeout", async () => {
+    let offerCallback: ((event: unknown) => void) | undefined;
+    const callWS = vi.fn(async () => ({
+      configuration: { iceServers: [] },
+    }));
+    const api: HomeAssistantApi = {
+      identity: {} as HomeAssistantApi["identity"],
+      callWS: callWS as HomeAssistantApi["callWS"],
+      resolveUrl: (path) => path,
+      subscribeMessage: vi.fn(async (callback) => {
+        offerCallback = callback as (event: unknown) => void;
+        return vi.fn();
+      }),
+    };
+    const connecting = createHomeAssistantWebRtcConnection(
+      api,
+      "camera.front",
+      new AbortController().signal,
+      vi.fn(),
+      new LiveStartupTiming("home_assistant:camera.front"),
+    );
+    await vi.waitFor(() => expect(offerCallback).toBeTypeOf("function"));
+    const peer = FakePeerConnection.instance;
+    expect(peer).toBeDefined();
+    if (!peer) return;
+
+    peer.connectionState = "failed";
+    peer.onconnectionstatechange?.();
+
+    await expect(connecting).rejects.toMatchObject({
+      code: "peer_failed",
+      message: "WebRTC connection failed",
+    });
     expect(peer.close).toHaveBeenCalledOnce();
   });
 });

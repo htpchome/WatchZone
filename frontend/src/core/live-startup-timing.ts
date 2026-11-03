@@ -1,3 +1,5 @@
+import type { MediaConnectionErrorCode } from "./media-connection-error";
+
 export type LiveStartupPhase =
   | "adapter_import_started"
   | "adapter_imported"
@@ -23,9 +25,12 @@ export type LiveStartupPhase =
   | "presentation_selected";
 
 export interface LiveStartupTimingSnapshot {
+  readonly failureCode?: MediaConnectionErrorCode;
   readonly hlsMode?: "low_latency" | "standard";
   readonly key: string;
   readonly phases: Readonly<Partial<Record<LiveStartupPhase, number>>>;
+  readonly reconnectAttempt?: number;
+  readonly reconnectDelayMs?: number;
   readonly signalingFallbackReason?: string;
   readonly signalingPath?: string;
   readonly startedAt: string;
@@ -34,7 +39,10 @@ export interface LiveStartupTimingSnapshot {
 export class LiveStartupTiming {
   private readonly _origin = performance.now();
   private readonly _phases: Partial<Record<LiveStartupPhase, number>> = {};
+  private _failureCode?: MediaConnectionErrorCode;
   private _hlsMode?: "low_latency" | "standard";
+  private _reconnectAttempt?: number;
+  private _reconnectDelayMs?: number;
   private _signalingFallbackReason?: string;
   private _signalingPath?: string;
 
@@ -57,11 +65,23 @@ export class LiveStartupTiming {
     this._hlsMode ??= mode;
   }
 
+  public setFailure(code: MediaConnectionErrorCode): void {
+    this._failureCode = code;
+  }
+
+  public setReconnect(attempt: number, delayMs: number): void {
+    this._reconnectAttempt = attempt;
+    this._reconnectDelayMs = delayMs;
+  }
+
   public snapshot(): LiveStartupTimingSnapshot {
     return {
+      failureCode: this._failureCode,
       hlsMode: this._hlsMode,
       key: this.key,
       phases: { ...this._phases },
+      reconnectAttempt: this._reconnectAttempt,
+      reconnectDelayMs: this._reconnectDelayMs,
       signalingFallbackReason: this._signalingFallbackReason,
       signalingPath: this._signalingPath,
       startedAt: new Date(performance.timeOrigin + this._origin).toISOString(),

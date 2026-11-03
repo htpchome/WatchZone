@@ -86,7 +86,14 @@ latency.
 
 ## 5. WebRTC connection sequence
 
-For a validated camera entity, the adapter:
+For a validated camera entity, the Home Assistant adapter owns configuration
+and signaling, while the provider-neutral peer engine owns browser
+`RTCPeerConnection`, candidate buffering, track health, timeouts, and cleanup.
+The document-scoped session manager remains the sole owner of retry and
+retention policy. Neither the provider adapter nor the peer engine owns
+presentation selection.
+
+The connection sequence is:
 
 1. Waits for WatchZone's backend to confirm that Home Assistant has registered
    the restored camera object. Restored entity state alone is not readiness;
@@ -108,6 +115,10 @@ For a validated camera entity, the adapter:
 Connection startup is cancellable and bounded by a timeout. Errors are
 translated once into an actionable session error. Closing is idempotent and
 unsubscribes signaling, closes the peer connection, and stops owned tracks.
+Peer or signaling failure before the first video track rejects startup
+immediately rather than waiting for the outer timeout. An ended received video
+track invalidates an established connection through the same session failure
+path; an audio-track change or ordinary temporary mute does not.
 An established peer that reports `disconnected` receives a short grace period
 to recover in place. A sustained disconnect is then treated as failure so
 WebKit clients enter the same bounded fallback and reconnect policy as peers
@@ -233,6 +244,10 @@ continues to follow the forced-mute, audio-focus, lifetime, and autoplay rules i
 - Keep the concrete adapter dynamically imported and outside the eager graph.
 - Keep Home Assistant API typing in WatchZone's narrow boundary instead of
   passing the entire `hass` object into transport code.
+- Keep provider signaling adapters separate from the provider-neutral browser
+  peer engine. Provider code supplies configuration and exchanges signaling;
+  it does not duplicate peer lifecycle, candidate buffering, track health, or
+  cleanup.
 - Keep WebRTC, HLS, future MJPEG, and snapshot behavior in separate concrete
   adapters. Selection and hedged-start policy belong at the resolver/live
   orchestration boundary, never inside an adapter.

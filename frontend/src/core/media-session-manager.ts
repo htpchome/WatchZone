@@ -11,6 +11,10 @@ import {
   beginLiveStartupTiming,
   type LiveStartupTiming,
 } from "./live-startup-timing";
+import {
+  mediaConnectionErrorCode,
+  type MediaConnectionErrorCode,
+} from "./media-connection-error";
 import type { DeviceClass } from "./device-profile";
 import {
   type MediaRetentionCamera,
@@ -26,6 +30,7 @@ export type CameraMutePreference = "muted" | "unmuted";
 
 export interface MediaSessionSnapshot {
   readonly error?: string;
+  readonly errorCode?: MediaConnectionErrorCode;
   readonly state: MediaSessionState;
   readonly stream?: MediaStream;
   readonly timing?: LiveStartupTiming;
@@ -273,7 +278,7 @@ class ManagedMediaSession {
         this._api,
         this.entityId,
         abort.signal,
-        (error) => this._handleFailure(generation, error),
+        (error) => this._handleFailure(generation, error, timing),
         timing,
         {
           ...connectionOptions,
@@ -309,9 +314,13 @@ class ManagedMediaSession {
       if (generation !== this._generation || abort.signal.aborted) {
         return;
       }
+      const errorCode = mediaConnectionErrorCode(error);
+      timing.setFailure(errorCode);
       this._setSnapshot({
         state: "failed",
         error: error instanceof Error ? error.message : "Unable to connect",
+        errorCode,
+        timing,
       });
       if (this._reconnectCause) {
         this._scheduleReconnect();
@@ -322,12 +331,23 @@ class ManagedMediaSession {
     }
   }
 
-  private _handleFailure(generation: number, error: Error): void {
+  private _handleFailure(
+    generation: number,
+    error: Error,
+    timing: LiveStartupTiming,
+  ): void {
     if (generation !== this._generation || this._snapshot.state === "closed") {
       return;
     }
+    const errorCode = mediaConnectionErrorCode(error);
+    timing.setFailure(errorCode);
     this._closeConnection();
-    this._setSnapshot({ state: "failed", error: error.message });
+    this._setSnapshot({
+      state: "failed",
+      error: error.message,
+      errorCode,
+      timing,
+    });
     this._reconnectCause ??= "media";
     this._scheduleReconnect();
   }
@@ -365,6 +385,7 @@ class ManagedMediaSession {
     const delay =
       policy.baseDelayMs * 2 ** attempt +
       Math.floor(Math.random() * RECONNECT_JITTER_MS);
+    this._snapshot.timing?.setReconnect(attempt + 1, delay);
     this._reconnectTimer = setTimeout(() => {
       this._reconnectTimer = undefined;
       if (this._leaseCount > 0 && this._snapshot.state === "failed") {

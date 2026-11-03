@@ -14,6 +14,7 @@ import {
   type ConnectionFactory,
   getMediaSessionManager,
 } from "../src/core/media-session-manager";
+import { MediaConnectionError } from "../src/core/media-connection-error";
 import { TestMediaSessionManager as MediaSessionManager } from "./test-media-session-manager";
 
 function createApi(identity: object = {}): HomeAssistantApi {
@@ -525,6 +526,30 @@ describe("MediaSessionManager", () => {
       timeout: 1_000,
     });
     expect(factory).toHaveBeenCalledTimes(2);
+
+    lease.release();
+    manager.closeAll();
+  });
+
+  it("publishes typed failure diagnostics without changing retry policy", async () => {
+    const factory = vi.fn<ConnectionFactory>(async () => {
+      throw new MediaConnectionError(
+        "signaling_failed",
+        "provider signaling unavailable",
+      );
+    });
+    const manager = new MediaSessionManager(factory);
+    const lease = manager.acquireHomeAssistant(createApi(), "camera.front");
+
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("failed"));
+    expect(lease.getSnapshot()).toMatchObject({
+      error: "provider signaling unavailable",
+      errorCode: "signaling_failed",
+    });
+    expect(lease.getSnapshot().timing?.snapshot()).toMatchObject({
+      failureCode: "signaling_failed",
+    });
+    expect(factory).toHaveBeenCalledOnce();
 
     lease.release();
     manager.closeAll();

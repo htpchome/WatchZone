@@ -6,6 +6,15 @@ interface Window {
     activeCardVersion: string | null;
     build: string;
     getLiveStartupTimings(): Array<{
+      readonly failureCode?:
+        | "cancelled"
+        | "configuration_timeout"
+        | "connection_timeout"
+        | "peer_failed"
+        | "signaling_failed"
+        | "track_ended"
+        | "unsupported"
+        | "unknown";
       readonly hlsMode?: "low_latency" | "standard";
       readonly key: string;
       readonly phases: Readonly<
@@ -37,6 +46,8 @@ interface Window {
           >
         >
       >;
+      readonly reconnectAttempt?: number;
+      readonly reconnectDelayMs?: number;
       readonly signalingFallbackReason?: string;
       readonly signalingPath?: string;
       readonly startedAt: string;

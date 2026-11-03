@@ -38,15 +38,29 @@ For a compact transport summary, run:
 ```js
 window.wzc
   ?.getLiveStartupTimings()
-  .map(({ key, hlsMode, signalingPath, signalingFallbackReason, phases }) => ({
-    camera: key,
-    hlsMode,
-    signalingPath,
-    signalingFallbackReason,
-    answerMs: phases.answer_received,
-    firstFrameMs: phases.first_frame_decoded,
-    selectedMs: phases.presentation_selected,
-  }));
+  .map(
+    ({
+      key,
+      hlsMode,
+      signalingPath,
+      signalingFallbackReason,
+      failureCode,
+      reconnectAttempt,
+      reconnectDelayMs,
+      phases,
+    }) => ({
+      camera: key,
+      hlsMode,
+      signalingPath,
+      signalingFallbackReason,
+      failureCode,
+      reconnectAttempt,
+      reconnectDelayMs,
+      answerMs: phases.answer_received,
+      firstFrameMs: phases.first_frame_decoded,
+      selectedMs: phases.presentation_selected,
+    }),
+  );
 ```
 
 Interpretation:
@@ -63,6 +77,13 @@ Interpretation:
 - `answerMs` measures WebRTC answer arrival, not decoded video.
 - `firstFrameMs` measures the first decodable frame for that transport.
 - `selectedMs` measures when that transport first owned presentation.
+- `failureCode` is a credential-free category recorded at the owning media
+  boundary. Current values distinguish cancellation, unsupported clients,
+  configuration or connection timeout, signaling failure, peer failure, ended
+  tracks, and otherwise unclassified failures.
+- `reconnectAttempt` and `reconnectDelayMs` describe only the latest reconnect
+  scheduled for that bounded timing record. They are passive diagnostics and
+  do not select or modify retry policy.
 
 ## 4. Cold WebRTC startup test
 
@@ -112,6 +133,7 @@ Run the focused HLS and diagnostics tests from `frontend/`:
 
 ```sh
 corepack yarn vitest run \
+  tests/home-assistant-connection.test.ts \
   tests/home-assistant-hls-connection.test.ts \
   tests/live-startup-timing.test.ts
 ```
