@@ -39,6 +39,12 @@ function inputTitle(editor: CardEditor, title: string): InputElement {
 describe("watchzone-card-editor", () => {
   beforeEach(async () => {
     vi.useFakeTimers();
+    HTMLDialogElement.prototype.showModal ??= function (): void {
+      this.setAttribute("open", "");
+    };
+    HTMLDialogElement.prototype.close ??= function (): void {
+      this.removeAttribute("open");
+    };
     await import("../src/main");
     await import("../src/editor/watchzone-card-editor");
   });
@@ -65,7 +71,6 @@ describe("watchzone-card-editor", () => {
       "Camera Settings",
       "General Settings",
       "Layout Settings",
-      "Display Options",
     ]);
     expect(items.every((item) => !item.open)).toBe(true);
     const status = editor.shadowRoot?.querySelector(
@@ -164,7 +169,7 @@ describe("watchzone-card-editor", () => {
     const dialog = document.createElement(
       "hui-dialog-edit-card",
     ) as TestEditCardDialog;
-    dialog._cardConfig = { type: CARD_TYPE, title: "Camera" };
+    dialog._cardConfig = { type: CARD_TYPE, title: "Camera", cameras: [] };
     dialog._updateDirtyState = vi.fn();
     const dialogRoot = dialog.attachShadow({ mode: "open" });
     const editor = document.createElement(
@@ -182,7 +187,11 @@ describe("watchzone-card-editor", () => {
     dialogRoot.append(editor, save);
     document.body.append(card, dialog);
     await Promise.all([card.updateComplete, editor.updateComplete]);
-    const selector = editor.shadowRoot?.querySelector("ha-selector");
+    (editor.shadowRoot?.querySelector(".add-camera") as HTMLElement).click();
+    await editor.updateComplete;
+    const selector = editor.shadowRoot?.querySelector(
+      ".camera-editor-dialog ha-selector",
+    );
 
     selector?.dispatchEvent(
       new CustomEvent("value-changed", {
@@ -191,17 +200,24 @@ describe("watchzone-card-editor", () => {
         composed: true,
       }),
     );
+    editor.shadowRoot
+      ?.querySelector(".camera-editor-dialog form")
+      ?.dispatchEvent(
+        new SubmitEvent("submit", { bubbles: true, cancelable: true }),
+      );
     await card.updateComplete;
 
     expect(changed).not.toHaveBeenCalled();
     expect(card.shadowRoot?.textContent).not.toContain(
       "Select a camera in the card editor.",
     );
-    expect(states.at(-1)).toMatchObject({ camera_entity: "camera.front" });
+    expect(states.at(-1)).toMatchObject({
+      cameras: [{ entity_id: "camera.front" }],
+    });
 
     save.click();
     expect(configSeenBySave).toMatchObject({
-      camera_entity: "camera.front",
+      cameras: [{ entity_id: "camera.front" }],
     });
     expect(dialog._updateDirtyState).toHaveBeenCalledWith(configSeenBySave);
 
@@ -212,9 +228,8 @@ describe("watchzone-card-editor", () => {
     document.body.append(reopened);
     await reopened.updateComplete;
     expect(
-      (reopened.shadowRoot?.querySelector("ha-selector") as { value?: string })
-        .value,
-    ).toBe("camera.front");
+      reopened.shadowRoot?.querySelectorAll("wzc-sortable-tile"),
+    ).toHaveLength(1);
     document.removeEventListener("context-request", contextHandler);
   });
 
@@ -231,7 +246,7 @@ describe("watchzone-card-editor", () => {
     const dialog = document.createElement(
       "hui-dialog-edit-card",
     ) as TestEditCardDialog;
-    dialog._cardConfig = { type: CARD_TYPE, title: "Camera" };
+    dialog._cardConfig = { type: CARD_TYPE, title: "Camera", cameras: [] };
     dialog._updateDirtyState = vi.fn();
     const dialogRoot = dialog.attachShadow({ mode: "open" });
     const editor = document.createElement(
@@ -248,9 +263,6 @@ describe("watchzone-card-editor", () => {
       "rounded_outer_corners",
       "outer_shadows",
       "outer_padding",
-      "camera_rounded_corners",
-      "camera_shadows",
-      "low_latency_hls",
     ]) {
       editor.shadowRoot
         ?.querySelector(`[data-config-key="${key}"]`)
@@ -268,9 +280,6 @@ describe("watchzone-card-editor", () => {
       rounded_outer_corners: false,
       outer_shadows: false,
       outer_padding: false,
-      camera_rounded_corners: false,
-      camera_shadows: false,
-      low_latency_hls: false,
     });
     const previewShell = card.shadowRoot?.querySelector("ha-card");
     expect(previewShell?.classList.contains("square-outer-corners")).toBe(true);
@@ -282,9 +291,6 @@ describe("watchzone-card-editor", () => {
       rounded_outer_corners: false,
       outer_shadows: false,
       outer_padding: false,
-      camera_rounded_corners: false,
-      camera_shadows: false,
-      low_latency_hls: false,
     });
     const reopened = document.createElement(
       "watchzone-card-editor",
@@ -296,9 +302,6 @@ describe("watchzone-card-editor", () => {
       "rounded_outer_corners",
       "outer_shadows",
       "outer_padding",
-      "camera_rounded_corners",
-      "camera_shadows",
-      "low_latency_hls",
     ]) {
       expect(
         (
@@ -320,7 +323,7 @@ describe("watchzone-card-editor", () => {
     };
     document.addEventListener("context-request", contextHandler);
 
-    const baseline = { type: CARD_TYPE, title: "Camera" } as const;
+    const baseline = { type: CARD_TYPE, title: "Camera", cameras: [] } as const;
     const card = document.createElement("watchzone-card") as DashboardCard;
     card.preview = true;
     card.setConfig(baseline);
@@ -344,9 +347,6 @@ describe("watchzone-card-editor", () => {
       "rounded_outer_corners",
       "outer_shadows",
       "outer_padding",
-      "camera_rounded_corners",
-      "camera_shadows",
-      "low_latency_hls",
     ] as const) {
       const selector = editor.shadowRoot?.querySelector(
         `[data-config-key="${key}"]`,
@@ -406,9 +406,6 @@ describe("watchzone-card-editor", () => {
       "rounded_outer_corners",
       "outer_shadows",
       "outer_padding",
-      "camera_rounded_corners",
-      "camera_shadows",
-      "low_latency_hls",
     ]) {
       expect(
         (
@@ -422,7 +419,7 @@ describe("watchzone-card-editor", () => {
     document.removeEventListener("context-request", contextHandler);
   });
 
-  it("round-trips per-device startup audio defaults without saving false", async () => {
+  it("edits per-camera audio defaults inside the camera dialog", async () => {
     const states: CardConfig[] = [];
     const contextHandler = (event: Event) => {
       const request = event as ContextRequest;
@@ -432,7 +429,20 @@ describe("watchzone-card-editor", () => {
     const dialog = document.createElement(
       "hui-dialog-edit-card",
     ) as TestEditCardDialog;
-    dialog._cardConfig = { type: CARD_TYPE, title: "Camera" };
+    dialog._cardConfig = {
+      type: CARD_TYPE,
+      title: "Camera",
+      cameras: [
+        {
+          entity_id: "camera.front",
+          camera_rounded_corners: true,
+          camera_shadows: true,
+          low_latency_hls: true,
+          start_live_unmuted_pc_tablet: false,
+          start_live_unmuted_phone: false,
+        },
+      ],
+    };
     dialog._updateDirtyState = vi.fn();
     const root = dialog.attachShadow({ mode: "open" });
     const editor = document.createElement(
@@ -445,12 +455,19 @@ describe("watchzone-card-editor", () => {
     document.body.append(dialog);
     await editor.updateComplete;
 
+    (
+      editor.shadowRoot?.querySelector(
+        '[aria-label="Edit front"]',
+      ) as HTMLElement
+    ).click();
+    await editor.updateComplete;
+
     for (const key of [
       "start_live_unmuted_pc_tablet",
       "start_live_unmuted_phone",
     ] as const) {
       const selector = editor.shadowRoot?.querySelector(
-        `[data-config-key="${key}"]`,
+        `[data-camera-config-key="${key}"]`,
       );
       expect((selector as { value?: boolean }).value).toBe(false);
       selector?.dispatchEvent(
@@ -460,13 +477,31 @@ describe("watchzone-card-editor", () => {
           composed: true,
         }),
       );
-      expect(states.at(-1)?.[key]).toBe(true);
     }
+
+    editor.shadowRoot
+      ?.querySelector(".camera-editor-dialog form")
+      ?.dispatchEvent(
+        new SubmitEvent("submit", { bubbles: true, cancelable: true }),
+      );
+    expect(states.at(-1)).toMatchObject({
+      cameras: [
+        {
+          entity_id: "camera.front",
+          start_live_unmuted_pc_tablet: true,
+          start_live_unmuted_phone: true,
+        },
+      ],
+    });
 
     save.click();
     expect(dialog._cardConfig).toMatchObject({
-      start_live_unmuted_pc_tablet: true,
-      start_live_unmuted_phone: true,
+      cameras: [
+        {
+          start_live_unmuted_pc_tablet: true,
+          start_live_unmuted_phone: true,
+        },
+      ],
     });
 
     const reopened = document.createElement(
@@ -475,22 +510,20 @@ describe("watchzone-card-editor", () => {
     reopened.setConfig(dialog._cardConfig);
     document.body.append(reopened);
     await reopened.updateComplete;
+    (
+      reopened.shadowRoot?.querySelector(
+        '[aria-label="Edit front"]',
+      ) as HTMLElement
+    ).click();
+    await reopened.updateComplete;
     for (const key of [
       "start_live_unmuted_pc_tablet",
       "start_live_unmuted_phone",
     ] as const) {
       const selector = reopened.shadowRoot?.querySelector(
-        `[data-config-key="${key}"]`,
+        `[data-camera-config-key="${key}"]`,
       );
       expect((selector as { value?: boolean }).value).toBe(true);
-      selector?.dispatchEvent(
-        new CustomEvent("value-changed", {
-          detail: { value: false },
-          bubbles: true,
-          composed: true,
-        }),
-      );
-      expect(states.at(-1)?.[key]).toBeUndefined();
     }
     document.removeEventListener("context-request", contextHandler);
   });
@@ -519,13 +552,22 @@ describe("watchzone-card-editor", () => {
     document.body.append(editor);
     await editor.updateComplete;
 
-    editor.shadowRoot?.querySelector("ha-selector")?.dispatchEvent(
-      new CustomEvent("value-changed", {
-        detail: { value: "camera.front" },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+    (editor.shadowRoot?.querySelector(".add-camera") as HTMLElement).click();
+    await editor.updateComplete;
+    editor.shadowRoot
+      ?.querySelector(".camera-editor-dialog ha-selector")
+      ?.dispatchEvent(
+        new CustomEvent("value-changed", {
+          detail: { value: "camera.front" },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    editor.shadowRoot
+      ?.querySelector(".camera-editor-dialog form")
+      ?.dispatchEvent(
+        new SubmitEvent("submit", { bubbles: true, cancelable: true }),
+      );
 
     expect(stateWrites).toBe(2);
     expect(subscribed).toBe(false);
@@ -598,6 +640,7 @@ describe("watchzone-card-editor", () => {
     dialog._cardConfig = {
       type: CARD_TYPE,
       title: "Original",
+      cameras: [],
       grid_options: { columns: 8 },
     };
     dialog._updateDirtyState = vi.fn();
@@ -608,6 +651,7 @@ describe("watchzone-card-editor", () => {
     editor.setConfig({
       type: CARD_TYPE,
       title: "Original",
+      cameras: [],
       grid_options: { columns: 8 },
     });
     const changed = vi.fn();

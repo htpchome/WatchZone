@@ -150,9 +150,10 @@ rejection remains observable by the session manager but must be observed from
 the moment startup begins so Firefox cannot report it as an unhandled promise.
 
 The camera information layer displays the active presentation source as
-`WebRTC`, `HLS · HLS.js`, or `HLS · native`. The label changes when an actual
-takeover occurs. Diagnostics retain the selected HLS path and the time at
-which each transport became the presentation winner.
+`WebRTC`, `HLS · HLS.js`, `HLS · native`, `HLS-LL · HLS.js`, or
+`HLS-LL · native`. The label changes when an actual takeover occurs.
+Diagnostics retain the selected HLS path and the time at which each transport
+became the presentation winner.
 
 ## 7. Ownership and retention
 
@@ -167,17 +168,21 @@ a session. Compatible card and editor-preview instances in the same document
 share sessions. Removing a live element releases its lease and detaches
 presentation; it does not close a healthy retained winner.
 
-The initial resource budget retains at most four sessions for the current
-browser document. Parked sessions do not expire on an arbitrary idle timer;
-capacity pressure evicts parked fallback sessions first and then the
-least-recently-used preferred session. An unshared HLS loser is discarded
-immediately after WebRTC handoff. Established connections receive at most two
-automatic reconnect attempts with exponential backoff and jitter.
+The current resource budget retains at most two transport sessions for each of
+the twelve configured cameras. This permits ordered full-camera preload while
+WebRTC and HLS compete without making retention unbounded. Parked sessions do
+not expire on an arbitrary idle timer; capacity pressure evicts parked
+fallback sessions first and then the least-recently-used preferred session. An
+unshared HLS loser is discarded immediately after WebRTC handoff. Established
+connections receive at most two automatic reconnect attempts with exponential
+backoff and jitter.
 
 The session pool also observes Home Assistant's own WebSocket lifecycle. A
 `disconnected` event invalidates retained and active media transports once;
-the matching authenticated `ready` event starts each actively leased session
-once. A full Home Assistant restart can accept WebSocket commands briefly
+the matching authenticated `ready` event restores actively leased sessions
+sequentially in their original acquisition order. A retained session that was
+not interrupted remains healthy and is reused instead of restarted. A full
+Home Assistant restart can accept WebSocket commands briefly
 before WatchZone's backend/provider commands are registered, so failed startup
 attempts during that recovery window use a separate bounded five-attempt
 backoff policy. This does not increase the two-attempt policy for ordinary

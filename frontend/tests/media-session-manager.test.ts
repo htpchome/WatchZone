@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { MEDIA_SESSION_RUNTIME_KEY } from "../src/core/constants";
+import {
+  MAX_RETAINED_CAMERA_SESSIONS,
+  MEDIA_SESSION_RUNTIME_KEY,
+} from "../src/core/constants";
 import type {
   HomeAssistantApi,
   HomeAssistantConnection,
@@ -221,6 +224,88 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
+  it("restores interrupted sessions sequentially in acquisition order", async () => {
+    let firstRecoveryComplete: (() => void) | undefined;
+    let initialConnections = 0;
+    const recoveryOrder: string[] = [];
+    const factory = vi.fn<ConnectionFactory>(async (_api, entityId) => {
+      initialConnections += 1;
+      if (initialConnections <= 2) {
+        return { stream: createStream(), close: vi.fn() };
+      }
+      recoveryOrder.push(entityId);
+      if (entityId === "camera.zero") {
+        await new Promise<void>((resolve) => {
+          firstRecoveryComplete = resolve;
+        });
+      }
+      return { stream: createStream(), close: vi.fn() };
+    });
+    const manager = new MediaSessionManager(factory);
+    const lifecycle = createLifecycleApi();
+    const zero = manager.acquireHomeAssistant(lifecycle.api, "camera.zero");
+    const one = manager.acquireHomeAssistant(lifecycle.api, "camera.one");
+    await vi.waitFor(() => expect(one.getSnapshot().state).toBe("live"));
+
+    lifecycle.disconnect();
+    lifecycle.ready();
+    await vi.waitFor(() => expect(recoveryOrder).toEqual(["camera.zero"]));
+
+    firstRecoveryComplete?.();
+    await vi.waitFor(() =>
+      expect(recoveryOrder).toEqual(["camera.zero", "camera.one"]),
+    );
+    await vi.waitFor(() => expect(one.getSnapshot().state).toBe("live"));
+
+    zero.release();
+    one.release();
+    manager.closeAll();
+  });
+
+  it("serializes provider-failure retries in acquisition order", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const failures = new Map<string, (error: Error) => void>();
+    const recoveryOrder: string[] = [];
+    let calls = 0;
+    let finishFirstRecovery: (() => void) | undefined;
+    const factory = vi.fn<ConnectionFactory>(
+      async (_api, entityId, _signal, onFailure) => {
+        calls += 1;
+        if (calls <= 2) {
+          failures.set(entityId, onFailure);
+          return { stream: createStream(), close: vi.fn() };
+        }
+        recoveryOrder.push(entityId);
+        if (entityId === "camera.zero") {
+          await new Promise<void>((resolve) => {
+            finishFirstRecovery = resolve;
+          });
+        }
+        return { stream: createStream(), close: vi.fn() };
+      },
+    );
+    const manager = new MediaSessionManager(factory);
+    const api = createApi();
+    const zero = manager.acquireHomeAssistant(api, "camera.zero");
+    const one = manager.acquireHomeAssistant(api, "camera.one");
+    await vi.waitFor(() => expect(one.getSnapshot().state).toBe("live"));
+
+    failures.get("camera.one")?.(new Error("provider stopped"));
+    failures.get("camera.zero")?.(new Error("provider stopped"));
+    await vi.advanceTimersByTimeAsync(501);
+    expect(recoveryOrder).toEqual(["camera.zero"]);
+
+    finishFirstRecovery?.();
+    await vi.waitFor(() =>
+      expect(recoveryOrder).toEqual(["camera.zero", "camera.one"]),
+    );
+
+    zero.release();
+    one.release();
+    manager.closeAll();
+  });
+
   it("retries while the backend finishes starting after Home Assistant is ready", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
@@ -409,7 +494,10 @@ describe("MediaSessionManager", () => {
 
   it("evicts a parked fallback before a preferred session at capacity", async () => {
     const fallbackClose = vi.fn();
-    const preferredCloses = [vi.fn(), vi.fn(), vi.fn(), vi.fn()];
+    const preferredCloses = Array.from(
+      { length: MAX_RETAINED_CAMERA_SESSIONS },
+      () => vi.fn(),
+    );
     let preferredIndex = 0;
     const preferredFactory = vi.fn<ConnectionFactory>(async () => ({
       stream: createStream(),
@@ -425,19 +513,20 @@ describe("MediaSessionManager", () => {
     await vi.waitFor(() => expect(fallback.getSnapshot().state).toBe("live"));
     fallback.release();
 
-    for (const entity of ["camera.one", "camera.two", "camera.three"]) {
+    for (let index = 1; index < MAX_RETAINED_CAMERA_SESSIONS; index += 1) {
+      const entity = `camera.${index}`;
       const lease = manager.acquireHomeAssistant(api, entity);
       await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
       lease.release();
     }
 
-    const fifth = manager.acquireHomeAssistant(api, "camera.four");
-    await vi.waitFor(() => expect(fifth.getSnapshot().state).toBe("live"));
+    const next = manager.acquireHomeAssistant(api, "camera.next");
+    await vi.waitFor(() => expect(next.getSnapshot().state).toBe("live"));
     expect(fallbackClose).toHaveBeenCalledOnce();
-    for (const close of preferredCloses.slice(0, 3)) {
+    for (const close of preferredCloses.slice(0, -1)) {
       expect(close).not.toHaveBeenCalled();
     }
-    fifth.release();
+    next.release();
     manager.closeAll();
   });
 

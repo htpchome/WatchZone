@@ -2,15 +2,13 @@ import { CAMERA_MODULE_TYPE, CAMERA_TAG } from "../../core/constants";
 import { cameraImageUrl } from "../../core/home-assistant";
 import type { ModuleDefinition, ModuleRuntimeContext } from "../../core/module";
 import { LiveSourceResolver } from "../../providers/live-source-resolver";
-import type { CameraModule, CameraShadowStyle } from "./camera";
+import type { CameraItemConfig, CameraModule } from "./camera";
 
 export interface CameraModuleConfig {
-  readonly entityId: string;
-  readonly lowLatencyHls: boolean;
-  readonly roundedCorners: boolean;
-  readonly shadowStyle: CameraShadowStyle;
-  readonly startUnmutedPcTablet: boolean;
-  readonly startUnmutedPhone: boolean;
+  readonly cameras: readonly Omit<
+    CameraItemConfig,
+    "available" | "posterUrl"
+  >[];
 }
 
 const resolver = new LiveSourceResolver();
@@ -19,13 +17,14 @@ let definitionPromise: Promise<void> | undefined;
 export const moduleDefinition: ModuleDefinition<CameraModuleConfig> = {
   type: CAMERA_MODULE_TYPE,
   validateConfig: validateCameraConfig,
-  getEntityIds: ({ entityId }) => [entityId],
+  getEntityIds: ({ cameras }) => cameras.map(({ entityId }) => entityId),
   async prepare(config, context) {
-    if (!context.api || !context.hass?.states[config.entityId])
+    const first = config.cameras[0];
+    if (!first || !context.api || !context.hass?.states[first.entityId])
       return undefined;
     const lease = await resolver.acquireHomeAssistantWebRtc(
       context.api,
-      config.entityId,
+      first.entityId,
     );
     return { release: () => lease.release() };
   },
@@ -46,14 +45,11 @@ function updateCameraElement(
   context: ModuleRuntimeContext,
 ): void {
   camera.api = context.api;
-  camera.available = Boolean(context.hass?.states[config.entityId]);
-  camera.entityId = config.entityId;
-  camera.lowLatencyHls = config.lowLatencyHls;
-  camera.posterUrl = cameraImageUrl(context.hass, config.entityId);
-  camera.roundedCorners = config.roundedCorners;
-  camera.shadowStyle = config.shadowStyle;
-  camera.startUnmutedPcTablet = config.startUnmutedPcTablet;
-  camera.startUnmutedPhone = config.startUnmutedPhone;
+  camera.cameras = config.cameras.map((item) => ({
+    ...item,
+    available: Boolean(context.hass?.states[item.entityId]),
+    posterUrl: cameraImageUrl(context.hass, item.entityId),
+  }));
 }
 
 function validateCameraConfig(value: unknown): CameraModuleConfig {
@@ -61,12 +57,27 @@ function validateCameraConfig(value: unknown): CameraModuleConfig {
     throw new Error("Camera module configuration must be an object.");
   }
   const source = value as Record<string, unknown>;
+  if (!Array.isArray(source.cameras) || source.cameras.length === 0)
+    throw new Error("Camera modules require at least one camera.");
+  const cameras = source.cameras.map((camera, index) =>
+    validateCameraItem(camera, index),
+  );
+  return { cameras };
+}
+
+function validateCameraItem(
+  value: unknown,
+  index: number,
+): Omit<CameraItemConfig, "available" | "posterUrl"> {
+  if (typeof value !== "object" || value === null) {
+    throw new Error(`Camera module item ${index + 1} must be an object.`);
+  }
+  const source = value as Record<string, unknown>;
   if (
     typeof source.entityId !== "string" ||
     !source.entityId.startsWith("camera.")
-  ) {
-    throw new Error("Camera modules require a camera entity ID.");
-  }
+  )
+    throw new Error("Camera modules require camera entity IDs.");
   for (const key of [
     "lowLatencyHls",
     "roundedCorners",
@@ -91,7 +102,7 @@ function validateCameraConfig(value: unknown): CameraModuleConfig {
     shadowStyle: source.shadowStyle,
     startUnmutedPcTablet: source.startUnmutedPcTablet as boolean,
     startUnmutedPhone: source.startUnmutedPhone as boolean,
-  };
+  } as Omit<CameraItemConfig, "available" | "posterUrl">;
 }
 
 export type { CameraModule, CameraShadowStyle } from "./camera";

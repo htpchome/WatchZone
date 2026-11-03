@@ -3,6 +3,7 @@ import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import {
   CAMERA_CONTROLS_TAG,
+  CAMERA_GESTURE_LOCK_EVENT,
   CAMERA_LIVE_PRESENTATION_TAG,
   BADGE_TAG,
   TOAST_REGION_TAG,
@@ -63,6 +64,11 @@ export interface CameraToastRequestDetail {
   readonly severity: ToastSeverity;
 }
 
+export interface CameraGestureLockDetail {
+  readonly key?: string;
+  readonly locked: boolean;
+}
+
 const controlsTag = unsafeStatic(CAMERA_CONTROLS_TAG);
 const badgeTag = unsafeStatic(BADGE_TAG);
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
@@ -73,9 +79,11 @@ export class CameraLivePresentation extends LitElement {
     available: { attribute: false, type: Boolean },
     failed: { attribute: false, type: Boolean },
     hlsVideo: { attribute: false },
+    lowLatencyHls: { attribute: false, type: Boolean },
     muted: { attribute: false, type: Boolean },
     notices: { attribute: false },
     posterUrl: { attribute: false },
+    posterPriority: { attribute: false, type: Boolean },
     selected: { attribute: false },
     sessionRevision: { attribute: false, type: Number },
     suspendPending: { attribute: false, type: Boolean },
@@ -91,6 +99,7 @@ export class CameraLivePresentation extends LitElement {
   private _pictureInPictureActive = false;
   private _posterDimensions?: MediaDimensions;
   private _posterFailed = false;
+  private _reportedGestureLocked = false;
   private _snapshotPending = false;
   private _webRtcFrameRequest?: number;
   private readonly _visibility = new CameraControlsVisibilityController(this);
@@ -99,9 +108,11 @@ export class CameraLivePresentation extends LitElement {
   public available = false;
   public failed = false;
   public hlsVideo?: HTMLVideoElement;
+  public lowLatencyHls = true;
   public muted = true;
   public notices: readonly ToastNotice[] = [];
   public posterUrl?: string;
+  public posterPriority = false;
   public selected?: PresentedSource;
   public sessionRevision = 0;
   public suspendPending = false;
@@ -163,14 +174,15 @@ export class CameraLivePresentation extends LitElement {
   }
 
   protected render() {
+    const hlsLabel = this.lowLatencyHls ? "HLS-LL" : "HLS";
     const sourceLabel =
       this.transport === "webrtc"
         ? "WebRTC"
         : this.transport === "hls_native"
-          ? "HLS · native"
+          ? `${hlsLabel} · native`
           : this.transport === "hls_mse"
-            ? "HLS · HLS.js"
-            : "HLS";
+            ? `${hlsLabel} · HLS.js`
+            : hlsLabel;
     const connecting =
       !this.suspended && this.available && !this.failed && !this.selected;
     const resolvedSource = Boolean(
@@ -296,6 +308,17 @@ export class CameraLivePresentation extends LitElement {
     this._zoom.observe(
       this.renderRoot.querySelector<HTMLElement>(".media-surface") ?? undefined,
     );
+    const gestureLocked = this._zoom.pannable;
+    if (gestureLocked !== this._reportedGestureLocked) {
+      this._reportedGestureLocked = gestureLocked;
+      this.dispatchEvent(
+        new CustomEvent<CameraGestureLockDetail>(CAMERA_GESTURE_LOCK_EVENT, {
+          bubbles: true,
+          composed: true,
+          detail: { key: this.zoomKey, locked: gestureLocked },
+        }),
+      );
+    }
     const webRtcVideo = this.webRtcVideo;
     if (webRtcVideo && webRtcVideo.srcObject !== (this.webRtcStream ?? null)) {
       this._cancelWebRtcFrameRequest(webRtcVideo);
@@ -353,7 +376,8 @@ export class CameraLivePresentation extends LitElement {
               aria-hidden="true"
               decoding="async"
               draggable="false"
-              fetchpriority="high"
+              fetchpriority=${this.posterPriority ? "high" : "auto"}
+              loading=${this.posterPriority ? "eager" : "lazy"}
               @load=${this._handlePosterLoaded}
               @error=${() => {
                 this._posterDimensions = undefined;

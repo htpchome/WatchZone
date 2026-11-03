@@ -633,6 +633,12 @@ Mandatory behavior:
   resource budgets.
 - Returning to a dashboard reattaches retained sessions without renegotiation
   when the connection remains healthy.
+- The initial multi-camera policy connects configured cameras sequentially in
+  display order and keeps every resulting healthy connection retained, within
+  the centralized twelve-camera/two-transports-per-camera budget. Recovery
+  uses the same order and reuses a still-healthy retained session instead of
+  reconnecting it. A future per-camera preload option extends this policy; it
+  does not introduce a second connection lifecycle.
 - Full page reload, browser process termination, network loss, or operating
   system suspension may require reconnection; these are not falsely presented
   as retained sessions.

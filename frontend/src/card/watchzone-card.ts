@@ -57,7 +57,7 @@ export class DashboardCard extends LitElement {
   }
 
   public static getStubConfig(): CardConfig {
-    return { type: CARD_TYPE, title: DEFAULT_CARD_TITLE };
+    return normalizeCardConfig({ type: CARD_TYPE, title: DEFAULT_CARD_TITLE });
   }
 
   public static async getConfigElement(): Promise<HTMLElement> {

@@ -2,11 +2,10 @@ import { css } from "lit";
 
 export const cameraStyles = css`
   :host,
-  .camera,
   .camera-carousel,
-  .swiper-slide,
   .swiper-wrapper,
-  .live-presentation {
+  .swiper-slide,
+  .camera-view {
     box-sizing: border-box;
     inline-size: 100%;
     block-size: 100%;
@@ -15,31 +14,16 @@ export const cameraStyles = css`
   }
 
   :host,
-  .camera,
   .camera-carousel,
-  .swiper-slide,
-  .live-presentation {
+  .camera-view {
     display: block;
-  }
-
-  .camera {
-    position: relative;
-    aspect-ratio: var(
-      --wzc-camera-stage-runtime-aspect-ratio,
-      var(--wzc-camera-stage-aspect-ratio)
-    );
-    background: var(--wzc-camera-stage);
-    border-radius: var(--wzc-live-radius);
-    box-shadow: var(--wzc-live-shadow);
-  }
-
-  .camera.stage-resized {
-    block-size: auto;
   }
 
   .camera-carousel {
     position: relative;
     overflow: hidden;
+    background: var(--wzc-camera-stage);
+    border-radius: var(--wzc-live-radius);
   }
 
   .camera-carousel.camera-carousel-interactive {
@@ -50,12 +34,14 @@ export const cameraStyles = css`
     position: relative;
     display: flex;
     box-sizing: content-box;
+    block-size: 100%;
     transition-property: transform;
   }
 
   .swiper-slide {
     position: relative;
     flex-shrink: 0;
+    block-size: 100%;
     transition-property: transform;
   }
 
@@ -63,84 +49,59 @@ export const cameraStyles = css`
     inline-size: 100% !important;
   }
 
-  .live-presentation {
-    --wzc-live-background: var(--wzc-camera-stage);
-    --wzc-placeholder-background: var(--wzc-camera-stage);
-    --wzc-live-shadow: none;
-  }
-
-  .camera.square-camera-corners {
-    --wzc-live-radius: 0px;
-  }
-
-  .camera.camera-shadow-small {
-    box-shadow: var(--wzc-shadow-small);
-  }
-
-  .camera.camera-shadow-none {
-    box-shadow: none;
-  }
-
-  .stage-resize-handle {
+  .carousel-navigation {
     position: absolute;
-    z-index: 3;
-    inset-block-end: max(0.2rem, env(safe-area-inset-bottom, 0px));
-    inset-inline-start: 50%;
+    z-index: 4;
+    inset-block-start: 50%;
     display: grid;
     place-items: center;
     box-sizing: border-box;
-    inline-size: clamp(4rem, 18%, 7rem);
-    block-size: 2.25rem;
-    padding: 0;
+    inline-size: 2.5rem;
+    block-size: 2.5rem;
+    padding: 0.45rem;
     color: var(--wzc-media-overlay-color);
-    background: transparent;
-    border: 0;
-    border-radius: var(--wzc-radius-pill);
-    opacity: var(--wzc-stage-resize-handle-opacity);
-    transform: translateX(-50%);
-    cursor: ns-resize;
-    touch-action: none;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .stage-resize-handle::before {
-    position: absolute;
-    inline-size: 100%;
-    block-size: 1.05rem;
     background: var(--wzc-media-overlay-background);
     border: 1px solid var(--wzc-media-overlay-border-color);
     border-radius: var(--wzc-radius-pill);
     box-shadow: var(--wzc-media-overlay-shadow);
-    content: "";
+    transform: translateY(-50%);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  .stage-resize-handle svg {
-    position: relative;
-    inline-size: 1.15rem;
-    block-size: 1.15rem;
+  .carousel-navigation.previous {
+    inset-inline-start: max(0.5rem, env(safe-area-inset-left, 0px));
+  }
+
+  .carousel-navigation.next {
+    inset-inline-end: max(0.5rem, env(safe-area-inset-right, 0px));
+  }
+
+  .carousel-navigation svg {
+    display: block;
+    inline-size: 100%;
     pointer-events: none;
   }
 
-  .stage-resize-handle:focus-visible {
+  .carousel-navigation:disabled {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .carousel-navigation:focus-visible {
     outline: 2px solid var(--wzc-color-primary);
-    outline-offset: 1px;
-    opacity: var(--wzc-stage-resize-handle-active-opacity);
-  }
-
-  .stage-resize-handle[hidden],
-  .camera:fullscreen .stage-resize-handle,
-  .camera:-webkit-full-screen .stage-resize-handle {
-    display: none;
-  }
-
-  .camera.stage-resizing .stage-resize-handle {
-    opacity: var(--wzc-stage-resize-handle-active-opacity);
+    outline-offset: 2px;
   }
 
   @media (hover: hover) and (pointer: fine) {
-    .stage-resize-handle:hover {
-      opacity: var(--wzc-stage-resize-handle-active-opacity);
+    .carousel-navigation:hover:not(:disabled) {
+      background: var(--wzc-media-overlay-hover-background);
+    }
+  }
+
+  @media (hover: none) {
+    .carousel-navigation:hover:not(:disabled) {
+      background: var(--wzc-media-overlay-background);
     }
   }
 `;

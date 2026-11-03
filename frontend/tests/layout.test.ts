@@ -62,7 +62,7 @@ describe("layout composition", () => {
       id: DEFAULT_CAMERA_MODULE_NODE_ID,
       kind: "module",
       moduleType: "camera",
-      config: { entityId: "camera.front" },
+      config: { cameras: [{ entityId: "camera.front" }] },
     });
   });
 

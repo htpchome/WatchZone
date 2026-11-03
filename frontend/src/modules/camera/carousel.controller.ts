@@ -3,19 +3,33 @@ import type Swiper from "swiper";
 
 /** Owns the camera-local Swiper instance without owning slides or selection. */
 export class CameraCarouselController implements ReactiveController {
+  private _activeIndex = 0;
   private _container?: HTMLElement;
   private _generation = 0;
   private _slideCount = 0;
+  private _interactionLocked = false;
   private _swiper?: Swiper;
 
-  public constructor(private readonly _host: ReactiveControllerHost) {
+  public constructor(
+    private readonly _host: ReactiveControllerHost,
+    private readonly _onSelectionChanged?: (index: number) => void,
+  ) {
     _host.addController(this);
   }
 
-  public observe(container: HTMLElement | undefined, slideCount: number): void {
+  public observe(
+    container: HTMLElement | undefined,
+    slideCount: number,
+    activeIndex = 0,
+  ): void {
     const normalizedCount = Math.max(0, Math.trunc(slideCount));
+    this._activeIndex = Math.max(
+      0,
+      Math.min(normalizedCount - 1, Math.trunc(activeIndex)),
+    );
     if (this._container === container) {
       this._setSlideCount(normalizedCount);
+      this._swiper?.slideTo(this._activeIndex, 0, false);
       return;
     }
     this._replaceContainer(container, normalizedCount);
@@ -27,6 +41,25 @@ export class CameraCarouselController implements ReactiveController {
 
   public hostDisconnected(): void {
     this._replaceContainer(undefined, 0);
+  }
+
+  public next(): void {
+    if (this._swiper) this._swiper.slideNext();
+    else
+      this._onSelectionChanged?.(
+        Math.min(this._slideCount - 1, this._activeIndex + 1),
+      );
+  }
+
+  public previous(): void {
+    if (this._swiper) this._swiper.slidePrev();
+    else this._onSelectionChanged?.(Math.max(0, this._activeIndex - 1));
+  }
+
+  public setInteractionLocked(locked: boolean): void {
+    if (this._interactionLocked === locked) return;
+    this._interactionLocked = locked;
+    this._syncInteraction();
   }
 
   private _replaceContainer(
@@ -50,8 +83,15 @@ export class CameraCarouselController implements ReactiveController {
       if (generation !== this._generation || this._container !== container)
         return;
       this._swiper = new SwiperConstructor(container, {
-        allowTouchMove: this._slideCount > 1,
+        allowTouchMove: this._canMove(),
+        initialSlide: this._activeIndex,
         nested: true,
+        on: {
+          slideChange: (swiper) => {
+            this._activeIndex = swiper.activeIndex;
+            this._onSelectionChanged?.(swiper.activeIndex);
+          },
+        },
         resizeObserver: true,
         touchStartPreventDefault: false,
         watchOverflow: true,
@@ -64,11 +104,10 @@ export class CameraCarouselController implements ReactiveController {
   private _setSlideCount(slideCount: number): void {
     if (this._slideCount === slideCount) return;
     this._slideCount = slideCount;
-    const allowTouchMove = slideCount > 1;
     this._syncInteractionClass();
     if (!this._swiper || this._swiper.destroyed) return;
-    this._swiper.allowTouchMove = allowTouchMove;
-    this._swiper.params.allowTouchMove = allowTouchMove;
+    this._swiper.allowTouchMove = this._canMove();
+    this._swiper.params.allowTouchMove = this._canMove();
     this._swiper.update();
   }
 
@@ -77,6 +116,17 @@ export class CameraCarouselController implements ReactiveController {
       "camera-carousel-interactive",
       this._slideCount > 1,
     );
+  }
+
+  private _canMove(): boolean {
+    return this._slideCount > 1 && !this._interactionLocked;
+  }
+
+  private _syncInteraction(): void {
+    this._syncInteractionClass();
+    if (!this._swiper || this._swiper.destroyed) return;
+    this._swiper.allowTouchMove = this._canMove();
+    this._swiper.params.allowTouchMove = this._canMove();
   }
 
   private _destroy(): void {

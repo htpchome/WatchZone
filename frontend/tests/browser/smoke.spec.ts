@@ -347,13 +347,22 @@ test("camera selection does not recursively republish dirty state", async ({
     root.append(editor, save);
     document.body.append(dialog);
     await editor.updateComplete;
-    editor.shadowRoot?.querySelector("ha-selector")?.dispatchEvent(
-      new CustomEvent("value-changed", {
-        detail: { value: "camera.front" },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+    (editor.shadowRoot?.querySelector(".add-camera") as HTMLElement).click();
+    await editor.updateComplete;
+    editor.shadowRoot
+      ?.querySelector(".camera-editor-dialog ha-selector")
+      ?.dispatchEvent(
+        new CustomEvent("value-changed", {
+          detail: { value: "camera.front" },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    editor.shadowRoot
+      ?.querySelector(".camera-editor-dialog form")
+      ?.dispatchEvent(
+        new SubmitEvent("submit", { bubbles: true, cancelable: true }),
+      );
     await new Promise(requestAnimationFrame);
     const previewUpdated = !document
       .querySelector("watchzone-card")
@@ -367,17 +376,17 @@ test("camera selection does not recursively republish dirty state", async ({
     reopened.setConfig(dialog._cardConfig);
     document.body.append(reopened);
     await reopened.updateComplete;
-    const reopenedCamera = (
-      reopened.shadowRoot?.querySelector("ha-selector") as HTMLElement & {
-        value?: string;
-      }
-    ).value;
+    const reopenedCamera = reopened.shadowRoot
+      ?.querySelector("wzc-sortable-tile")
+      ?.getAttribute("item-key");
+    const savedCameras = dialog._cardConfig?.cameras as
+      Array<{ entity_id?: string }> | undefined;
 
     document.removeEventListener("context-request", handleContext);
     return {
       previewUpdated,
       reopenedCamera,
-      savedCamera: dialog._cardConfig?.camera_entity,
+      savedCamera: savedCameras?.[0]?.entity_id,
       subscribed,
       writes,
       writesBeforeReopen,
@@ -422,7 +431,7 @@ test("editor uses exclusive accordions and shared draft status", async ({
 
   const editor = page.locator("#accordion-editor");
   const items = editor.locator("wzc-accordion-item");
-  await expect(items).toHaveCount(4);
+  await expect(items).toHaveCount(3);
   await expect(items.locator("details[open]")).toHaveCount(0);
   await items.nth(0).locator("summary").click();
   await expect(items.nth(0).locator("details")).toHaveAttribute("open", "");
@@ -495,6 +504,7 @@ test("round-trips boolean toggles through defaults before Save", async ({
     const baseline = {
       type: "custom:watchzone-card",
       title: "Appearance",
+      cameras: [{ entity_id: "camera.front" }],
     };
     const card = document.querySelector("watchzone-card") as TestCard;
     card.preview = true;
@@ -514,9 +524,27 @@ test("round-trips boolean toggles through defaults before Save", async ({
     document.body.append(dialog);
     await Promise.all([card.updateComplete, editor.updateComplete]);
 
-    const pcAudioSelector = editor.shadowRoot?.querySelector(
-      '[data-config-key="start_live_unmuted_pc_tablet"]',
-    );
+    const openCameraEditor = async (): Promise<void> => {
+      (
+        editor.shadowRoot?.querySelector(
+          '[aria-label="Edit front"]',
+        ) as HTMLElement
+      ).click();
+      await editor.updateComplete;
+    };
+    const cameraSelector = (key: string): Element | null | undefined =>
+      editor.shadowRoot?.querySelector(`[data-camera-config-key="${key}"]`);
+    const submitCamera = async (): Promise<void> => {
+      editor.shadowRoot
+        ?.querySelector(".camera-editor-dialog form")
+        ?.dispatchEvent(
+          new SubmitEvent("submit", { bubbles: true, cancelable: true }),
+        );
+      await editor.updateComplete;
+    };
+
+    await openCameraEditor();
+    const pcAudioSelector = cameraSelector("start_live_unmuted_pc_tablet");
     pcAudioSelector?.dispatchEvent(
       new CustomEvent("value-changed", {
         detail: { value: true },
@@ -524,24 +552,21 @@ test("round-trips boolean toggles through defaults before Save", async ({
         composed: true,
       }),
     );
-    await editor.updateComplete;
+    await submitCamera();
+    const dirtyCameras = latestDirtyState?.cameras as
+      Array<Record<string, unknown>> | undefined;
     const pcAudioEnabled =
-      latestDirtyState?.start_live_unmuted_pc_tablet === true;
-    pcAudioSelector?.dispatchEvent(
+      dirtyCameras?.[0]?.start_live_unmuted_pc_tablet === true;
+
+    await openCameraEditor();
+    cameraSelector("start_live_unmuted_pc_tablet")?.dispatchEvent(
       new CustomEvent("value-changed", {
         detail: { value: false },
         bubbles: true,
         composed: true,
       }),
     );
-    await editor.updateComplete;
-    const pcAudioDefaultOmitted = !(
-      "start_live_unmuted_pc_tablet" in (latestDirtyState ?? {})
-    );
-
-    const phoneAudioSelector = editor.shadowRoot?.querySelector(
-      '[data-config-key="start_live_unmuted_phone"]',
-    );
+    const phoneAudioSelector = cameraSelector("start_live_unmuted_phone");
     phoneAudioSelector?.dispatchEvent(
       new CustomEvent("value-changed", {
         detail: { value: true },
@@ -549,9 +574,14 @@ test("round-trips boolean toggles through defaults before Save", async ({
         composed: true,
       }),
     );
-    await editor.updateComplete;
+    await submitCamera();
+    const updatedCameras = latestDirtyState?.cameras as
+      Array<Record<string, unknown>> | undefined;
+    const pcAudioDefaultOmitted = !(
+      "start_live_unmuted_pc_tablet" in (updatedCameras?.[0] ?? {})
+    );
     const phoneAudioEnabled =
-      latestDirtyState?.start_live_unmuted_phone === true;
+      updatedCameras?.[0]?.start_live_unmuted_phone === true;
 
     const selector = editor.shadowRoot?.querySelector(
       '[data-config-key="rounded_outer_corners"]',
@@ -604,7 +634,10 @@ test("round-trips boolean toggles through defaults before Save", async ({
       pcAudioEnabled,
       phoneAudioEnabled,
       roundedAfterOn,
-      savedPhoneAudio: dialog._cardConfig?.start_live_unmuted_phone,
+      savedPhoneAudio: (
+        dialog._cardConfig?.cameras as
+          Array<Record<string, unknown>> | undefined
+      )?.[0]?.start_live_unmuted_phone,
       savedValue: dialog._cardConfig?.rounded_outer_corners,
       selectorValue: (
         editor.shadowRoot?.querySelector(
@@ -790,7 +823,7 @@ test("retains one live connection while the card presentation is replaced", asyn
   ).toHaveCount(1);
   await expect(
     carousel.locator(
-      ":scope > .swiper-wrapper > .swiper-slide > wzc-camera-live",
+      ":scope > .swiper-wrapper > .swiper-slide > wzc-camera-view",
     ),
   ).toHaveCount(1);
   expect(
@@ -921,13 +954,16 @@ test("retains one live connection while the card presentation is replaced", asyn
           requestAnimationFrame(() => resolve()),
         );
       };
-      const viewport = card.shadowRoot
+      const cameraView = card.shadowRoot
         ?.querySelector("wzc-camera")
-        ?.shadowRoot?.querySelector("wzc-camera-live")
+        ?.shadowRoot?.querySelector("wzc-camera-view");
+      const viewport = cameraView?.shadowRoot
+        ?.querySelector("wzc-camera-live")
         ?.shadowRoot?.querySelector<HTMLElement>(".viewport");
-      const resizeHandle = card.shadowRoot
-        ?.querySelector("wzc-camera")
-        ?.shadowRoot?.querySelector<HTMLButtonElement>(".stage-resize-handle");
+      const resizeHandle =
+        cameraView?.shadowRoot?.querySelector<HTMLButtonElement>(
+          ".stage-resize-handle",
+        );
       const shell = card.shadowRoot?.querySelector<HTMLElement>("ha-card");
       card.style.inlineSize = "640px";
       card.style.blockSize = "auto";
@@ -1201,13 +1237,13 @@ test("retains one live connection while the card presentation is replaced", asyn
       cameraSurface.evaluate((element) => getComputedStyle(element).boxShadow),
     )
     .toContain("rgb(4, 5, 6)");
-  await page.locator("wzc-camera").evaluate(async (element) => {
-    const camera = element as HTMLElement & {
+  await page.locator("wzc-camera-view").evaluate(async (element) => {
+    const cameraView = element as HTMLElement & {
       shadowStyle: "medium" | "none" | "small";
       updateComplete: Promise<boolean>;
     };
-    camera.shadowStyle = "small";
-    await camera.updateComplete;
+    cameraView.shadowStyle = "small";
+    await cameraView.updateComplete;
   });
   await expect
     .poll(() =>

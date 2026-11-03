@@ -5,9 +5,9 @@ import {
   type ConnectionFactory,
   getMediaSessionManager,
 } from "../src/core/media-session-manager";
-import type { CameraModule } from "../src/modules/camera/camera";
+import type { CameraView } from "../src/modules/camera/camera-view";
 import type { CameraLivePresentation } from "../src/modules/camera/live/presentation";
-import "../src/modules/camera/camera";
+import "../src/modules/camera/camera-view";
 import {
   installTestMediaSessionManager,
   removeTestMediaSessionManager,
@@ -18,9 +18,11 @@ function createLiveView(
   api: HomeAssistantApi,
   startUnmutedPcTablet = false,
   startUnmutedPhone = false,
-): CameraModule {
-  const view = document.createElement("wzc-camera");
+): CameraView {
+  const view = document.createElement("wzc-camera-view");
   view.api = api;
+  view.active = true;
+  view.connect = true;
   view.available = true;
   view.startUnmutedPcTablet = startUnmutedPcTablet;
   view.startUnmutedPhone = startUnmutedPhone;
@@ -28,14 +30,14 @@ function createLiveView(
   return view;
 }
 
-function presentation(view: CameraModule): CameraLivePresentation | undefined {
+function presentation(view: CameraView): CameraLivePresentation | undefined {
   return (
     view.shadowRoot?.querySelector<CameraLivePresentation>("wzc-camera-live") ??
     undefined
   );
 }
 
-function cameraControl(view: CameraModule): HTMLElement {
+function cameraControl(view: CameraView): HTMLElement {
   const controls = presentation(view)?.shadowRoot?.querySelector<HTMLElement>(
     "wzc-camera-controls",
   );
@@ -43,7 +45,7 @@ function cameraControl(view: CameraModule): HTMLElement {
   return controls;
 }
 
-function toggleMute(view: CameraModule): void {
+function toggleMute(view: CameraView): void {
   cameraControl(view).dispatchEvent(
     new CustomEvent("camera-control", {
       detail: { action: "mute" },
@@ -199,7 +201,7 @@ describe("camera presentation retention", () => {
         presentation(view)
           ?.shadowRoot?.querySelector(".source-indicator")
           ?.textContent?.trim(),
-      ).toBe("HLS · HLS.js"),
+      ).toBe("HLS-LL · HLS.js"),
     );
 
     resolveWebRtc?.({ stream, transport: "webrtc", close: vi.fn() });
@@ -329,7 +331,7 @@ describe("camera presentation retention", () => {
         presentation(view)
           ?.shadowRoot?.querySelector(".source-indicator")
           ?.textContent?.trim(),
-      ).toBe("HLS · HLS.js"),
+      ).toBe("HLS-LL · HLS.js"),
     );
     expect(webRtcFactory).toHaveBeenCalledOnce();
 
@@ -395,18 +397,20 @@ describe("camera presentation retention", () => {
         presentation(view)
           ?.shadowRoot?.querySelector(".source-indicator")
           ?.textContent?.trim(),
-      ).toBe("HLS · HLS.js"),
+      ).toBe("HLS-LL · HLS.js"),
     );
     hlsFailures[0](new Error("HLS interrupted"));
     await vi.advanceTimersByTimeAsync(500);
     await vi.waitFor(() => expect(hlsFactory).toHaveBeenCalledTimes(2));
     await vi.waitFor(() => expect(webRtcFactory).toHaveBeenCalledTimes(2));
 
-    expect(
-      presentation(view)
-        ?.shadowRoot?.querySelector(".source-indicator")
-        ?.textContent?.trim(),
-    ).toBe("HLS · HLS.js");
+    await vi.waitFor(() =>
+      expect(
+        presentation(view)
+          ?.shadowRoot?.querySelector(".source-indicator")
+          ?.textContent?.trim(),
+      ).toBe("HLS-LL · HLS.js"),
+    );
     await vi.advanceTimersByTimeAsync(60_000);
     expect(webRtcFactory).toHaveBeenCalledTimes(2);
   });

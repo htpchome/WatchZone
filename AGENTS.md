@@ -43,6 +43,9 @@ For toast timing, presentation, or placement, also read
 For badge presentation or object-label color policy, also read
 `docs/badge-system.md` in full.
 
+For reusable draggable tiles or ordered editor lists, also read
+`docs/sortable-list.md` in full.
+
 ## Architecture stability
 
 - Treat `architecture.md` as a contract, not a progress log.

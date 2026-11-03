@@ -20,21 +20,34 @@ application-wide boundaries.
 ## Structure and identity
 
 The camera stage contains one `.camera-carousel.swiper`, one
-`.swiper-wrapper`, and stable `.swiper-slide` children. Each future slide is
-keyed by stable camera identity so ordinary selection and rendering do not
-replace a healthy live presentation or its retained media-session lease.
+`.swiper-wrapper`, and one stable `.swiper-slide` per configured camera. Each
+slide is keyed by camera entity identity so selection and reordering do not
+replace a healthy live presentation or its media-session leases. The camera
+module accepts at most the centralized `MAX_CAMERAS` limit of twelve entries.
 
-The current implementation has exactly one slide containing the existing live
-presentation. Touch movement remains disabled with one slide. Swiper is still
-initialized so its real lifecycle and responsive behavior are established
-before multi-camera work begins.
+The selected slide owns visible controls, resize interaction, and audible
+presentation. Non-selected slides remain mounted and connected but are forced
+muted. One slide disables movement; multiple slides enable swipe and the
+camera-local previous/next chevrons.
 
 ## Loading and lifecycle
 
 Swiper is dynamically imported only after the already-lazy camera module has
-rendered its structural slide. The live session may begin without waiting for
-Swiper download or evaluation, and camera-free layouts transfer no Swiper
-code.
+rendered its structural slides. The first live session may begin without
+waiting for Swiper download or evaluation, and camera-free layouts transfer no
+Swiper code.
+
+Configured cameras connect sequentially in display order. The queue enables
+camera zero, waits until it has selected a live source or reached a terminal
+unavailable/failed/suspended state, and then enables the next camera. All
+enabled cameras retain active session leases; carousel selection does not
+release them. A retained healthy session satisfies its queue position without
+renegotiation. A real Home Assistant transport interruption resets the ordered
+gate, while an ordinary render or selection change does not.
+
+The initial policy connects every configured camera. A future per-camera
+preload option may opt individual cameras out, but it must extend this single
+queue rather than introduce a parallel lifecycle.
 
 The controller initializes once per rendered container, updates only when the
 slide count changes, and destroys the instance on host disconnection. A stale
@@ -66,5 +79,6 @@ cannot complete.
 ## Verification
 
 Tests verify structural geometry before initialization, single-slide movement
-lock, instance cleanup/reinitialization, lazy loading for camera-free layouts,
-retained live-element identity, and Chromium, Firefox, and WebKit behavior.
+lock, ordered connection enablement, retained live-element identity,
+instance cleanup/reinitialization, lazy loading for camera-free layouts, and
+Chromium, Firefox, and WebKit behavior.

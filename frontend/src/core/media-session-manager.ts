@@ -3,7 +3,10 @@ import type {
   HomeAssistantConnection,
   HomeAssistantConnectionEventListener,
 } from "./home-assistant";
-import { MEDIA_SESSION_RUNTIME_KEY } from "./constants";
+import {
+  MAX_RETAINED_CAMERA_SESSIONS,
+  MEDIA_SESSION_RUNTIME_KEY,
+} from "./constants";
 import {
   beginLiveStartupTiming,
   type LiveStartupTiming,
@@ -67,7 +70,6 @@ export interface MediaSessionRequest {
   readonly retention: MediaRetentionClass;
 }
 
-const MAX_RETAINED_SESSIONS = 4;
 type ReconnectCause = "home_assistant" | "media";
 
 const RECONNECT_POLICIES: Readonly<
@@ -112,6 +114,7 @@ class ManagedMediaSession {
     private readonly _factory: ConnectionFactory,
     public readonly retention: MediaRetentionClass,
     private readonly _onClosed: () => void,
+    private readonly _enqueueReconnect: (session: ManagedMediaSession) => void,
   ) {
     this._api = api;
   }
@@ -203,6 +206,11 @@ class ManagedMediaSession {
     return this._leaseCount === 0;
   }
 
+  public async reconnectIfFailed(): Promise<void> {
+    if (this._leaseCount === 0 || this._snapshot.state !== "failed") return;
+    await this._connect();
+  }
+
   public handleTransportDisconnected(): void {
     if (this._snapshot.state === "closed") return;
     this._transportInterrupted = true;
@@ -219,7 +227,7 @@ class ManagedMediaSession {
     });
   }
 
-  public handleTransportReady(): void {
+  public async handleTransportReady(): Promise<void> {
     if (this._snapshot.state === "closed" || !this._transportInterrupted)
       return;
     this._transportInterrupted = false;
@@ -231,7 +239,7 @@ class ManagedMediaSession {
     }
     if (this._leaseCount === 0) return;
     this._closeConnection();
-    void this._connect();
+    await this._connect();
   }
 
   private async _connect(
@@ -337,7 +345,7 @@ class ManagedMediaSession {
     this._reconnectTimer = setTimeout(() => {
       this._reconnectTimer = undefined;
       if (this._leaseCount > 0 && this._snapshot.state === "failed") {
-        void this._connect();
+        this._enqueueReconnect(this);
       }
     }, delay);
   }
@@ -394,6 +402,10 @@ export class MediaSessionManager {
       readonly ready: HomeAssistantConnectionEventListener;
     }
   >();
+  private _recoveryGeneration = 0;
+  private readonly _reconnectQueue = new Set<ManagedMediaSession>();
+  private _reconnectBatchTimer?: ReturnType<typeof setTimeout>;
+  private _reconnectDrain?: Promise<void>;
 
   public acquire(request: MediaSessionRequest): MediaSessionLease {
     return this._acquire(
@@ -443,9 +455,12 @@ export class MediaSessionManager {
         factory,
         retention,
         () => {
+          const closedSession = this._sessions.get(key);
+          if (closedSession) this._reconnectQueue.delete(closedSession);
           this._sessions.delete(key);
           this._pruneConnectionObservers();
         },
+        (reconnectSession) => this._enqueueReconnect(reconnectSession),
       );
       this._sessions.set(key, session);
     }
@@ -455,10 +470,43 @@ export class MediaSessionManager {
   }
 
   public closeAll(): void {
+    this._reconnectQueue.clear();
+    if (this._reconnectBatchTimer) {
+      clearTimeout(this._reconnectBatchTimer);
+      this._reconnectBatchTimer = undefined;
+    }
     for (const session of [...this._sessions.values()]) {
       session.close();
     }
     this._clearConnectionObservers();
+  }
+
+  private _enqueueReconnect(session: ManagedMediaSession): void {
+    if (!this._sessions.has(session.key)) return;
+    this._reconnectQueue.add(session);
+    if (this._reconnectDrain || this._reconnectBatchTimer) return;
+    this._reconnectBatchTimer = setTimeout(() => {
+      this._reconnectBatchTimer = undefined;
+      this._reconnectDrain = this._drainReconnectQueue().finally(() => {
+        this._reconnectDrain = undefined;
+        const next = this._reconnectQueue.values().next().value;
+        if (next) this._enqueueReconnect(next);
+      });
+    }, 0);
+  }
+
+  private async _drainReconnectQueue(): Promise<void> {
+    while (this._reconnectQueue.size > 0) {
+      const session = [...this._sessions.values()].find((candidate) =>
+        this._reconnectQueue.has(candidate),
+      );
+      if (!session) {
+        this._reconnectQueue.clear();
+        return;
+      }
+      this._reconnectQueue.delete(session);
+      await session.reconnectIfFailed();
+    }
   }
 
   private _observeConnection(connection: HomeAssistantConnection): void {
@@ -469,6 +517,7 @@ export class MediaSessionManager {
     )
       return;
     const disconnected: HomeAssistantConnectionEventListener = () => {
+      this._recoveryGeneration += 1;
       for (const session of this._sessions.values()) {
         if (session.connectionIdentity === connection) {
           session.handleTransportDisconnected();
@@ -476,15 +525,24 @@ export class MediaSessionManager {
       }
     };
     const ready: HomeAssistantConnectionEventListener = () => {
-      for (const session of this._sessions.values()) {
-        if (session.connectionIdentity === connection) {
-          session.handleTransportReady();
-        }
-      }
+      void this._restoreConnectionSessions(connection);
     };
     connection.addEventListener("disconnected", disconnected);
     connection.addEventListener("ready", ready);
     this._connectionObservers.set(connection, { disconnected, ready });
+  }
+
+  private async _restoreConnectionSessions(
+    connection: HomeAssistantConnection,
+  ): Promise<void> {
+    const generation = ++this._recoveryGeneration;
+    const sessions = [...this._sessions.values()].filter(
+      (session) => session.connectionIdentity === connection,
+    );
+    for (const session of sessions) {
+      if (generation !== this._recoveryGeneration) return;
+      await session.handleTransportReady();
+    }
   }
 
   private _pruneConnectionObservers(): void {
@@ -508,7 +566,7 @@ export class MediaSessionManager {
   }
 
   private _evictIfNeeded(): void {
-    if (this._sessions.size < MAX_RETAINED_SESSIONS) {
+    if (this._sessions.size < MAX_RETAINED_CAMERA_SESSIONS) {
       return;
     }
     const retained = [...this._sessions.values()]

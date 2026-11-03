@@ -3,7 +3,9 @@ import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import {
   cardConfigSignature,
+  createDefaultCameraConfig,
   normalizeCardConfig,
+  type CameraConfig,
   type CardConfig,
 } from "../core/config";
 import {
@@ -12,13 +14,20 @@ import {
   EDITOR_PREVIEW_DRAFT_EVENT,
   EDITOR_TAG,
   EDITOR_TEXT_PREVIEW_DELAY_MS,
+  MAX_CAMERAS,
+  SORTABLE_LIST_TAG,
+  SORTABLE_REORDER_EVENT,
+  SORTABLE_TILE_TAG,
   TOAST_REGION_TAG,
 } from "../core/constants";
 import { isHomeAssistant, type HomeAssistant } from "../core/home-assistant";
 import { toYamlCardConfig, type YamlCardConfig } from "../core/yaml-config";
 import { themeTokens } from "../styles/theme-tokens";
 import { ToastManager } from "../ui/toast-manager";
+import { renderIcon } from "../ui/icons";
+import type { SortableReorderDetail } from "../ui/sortable-list";
 import "../ui/accordion";
+import "../ui/sortable-list";
 import "../ui/toast-region";
 import {
   type DirtyStateContext,
@@ -54,17 +63,14 @@ const BOOLEAN_SELECTOR = { boolean: {} } as const;
 const accordionTag = unsafeStatic(ACCORDION_TAG);
 const accordionItemTag = unsafeStatic(ACCORDION_ITEM_TAG);
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
+const sortableListTag = unsafeStatic(SORTABLE_LIST_TAG);
+const sortableTileTag = unsafeStatic(SORTABLE_TILE_TAG);
 const EDITOR_STATUS_KEY = "editor-draft-status";
 
 type BooleanConfigFlag =
-  | "camera_rounded_corners"
-  | "camera_shadows"
-  | "low_latency_hls"
-  | "outer_padding"
-  | "outer_shadows"
-  | "rounded_outer_corners"
-  | "start_live_unmuted_pc_tablet"
-  | "start_live_unmuted_phone";
+  "outer_padding" | "outer_shadows" | "rounded_outer_corners";
+
+type CameraBooleanConfigFlag = Exclude<keyof CameraConfig, "entity_id">;
 
 export class CardEditor extends LitElement {
   private readonly _haEditor = new HomeAssistantEditorBridge<YamlCardConfig>(
@@ -73,6 +79,8 @@ export class CardEditor extends LitElement {
   private _baseline?: CardConfig;
   private _baselineSignature = "";
   private _config?: CardConfig;
+  private _cameraDraft?: CameraConfig;
+  private _editingCameraIndex?: number;
   private _dirtyContext?: DirtyStateContext<YamlCardConfig>;
   private _dirtySeeded = false;
   private _hass?: HomeAssistant;
@@ -127,10 +135,18 @@ export class CardEditor extends LitElement {
       this._seedDirtyState();
     });
     document.addEventListener("click", this._handleDocumentClick, true);
+    this.addEventListener(
+      SORTABLE_REORDER_EVENT,
+      this._handleCameraReorder as EventListener,
+    );
   }
 
   public disconnectedCallback(): void {
     document.removeEventListener("click", this._handleDocumentClick, true);
+    this.removeEventListener(
+      SORTABLE_REORDER_EVENT,
+      this._handleCameraReorder as EventListener,
+    );
     this._dirtyContext = undefined;
     this._dirtySeeded = false;
     if (this._previewTimer) {
@@ -139,6 +155,15 @@ export class CardEditor extends LitElement {
     }
     this._publishPreview(null);
     super.disconnectedCallback();
+  }
+
+  protected updated(): void {
+    const dialog = this.renderRoot.querySelector<HTMLDialogElement>(
+      ".camera-editor-dialog",
+    );
+    if (!dialog) return;
+    if (this._cameraDraft && !dialog.open) dialog.showModal();
+    else if (!this._cameraDraft && dialog.open) dialog.close();
   }
 
   protected render() {
@@ -170,60 +195,59 @@ export class CardEditor extends LitElement {
         >
           ${this._renderLayoutSettings()}
         </${accordionItemTag}>
-        <${accordionItemTag}
-          heading="Display Options"
-          item-key="display"
-          .icon=${"tune"}
-        >
-          ${this._renderDisplaySettings()}
-        </${accordionItemTag}>
       </${accordionTag}>
+      ${this._renderCameraDialog()}
     `;
   }
 
   private _renderCameraSettings() {
-    return html`
-      <ha-selector
-        label="Camera"
-        .hass=${this._hass}
-        .selector=${CAMERA_SELECTOR}
-        .value=${this._config?.camera_entity ?? ""}
-        .required=${false}
-        @value-changed=${this._handleCameraChange}
-      ></ha-selector>
-      <div class="section-title">Live Connection</div>
-      <ha-selector
-        class="boolean-option"
-        data-config-key="low_latency_hls"
-        label="Low-Latency HLS"
-        .hass=${this._hass}
-        .selector=${BOOLEAN_SELECTOR}
-        .value=${this._config?.low_latency_hls !== false}
-        .required=${false}
-        @value-changed=${this._handleBooleanChange}
-      ></ha-selector>
-      <div class="section-title">Camera Audio</div>
-      <ha-selector
-        class="boolean-option"
-        data-config-key="start_live_unmuted_pc_tablet"
-        label="Start Live Unmuted on PC/Tablet"
-        .hass=${this._hass}
-        .selector=${BOOLEAN_SELECTOR}
-        .value=${this._config?.start_live_unmuted_pc_tablet === true}
-        .required=${false}
-        @value-changed=${this._handleBooleanChange}
-      ></ha-selector>
-      <ha-selector
-        class="boolean-option"
-        data-config-key="start_live_unmuted_phone"
-        label="Start Live Unmuted on Mobile Phone"
-        .hass=${this._hass}
-        .selector=${BOOLEAN_SELECTOR}
-        .value=${this._config?.start_live_unmuted_phone === true}
-        .required=${false}
-        @value-changed=${this._handleBooleanChange}
-      ></ha-selector>
-    `;
+    const cameras = this._config?.cameras ?? [];
+    return staticHtml`<div class="camera-list-heading">
+        <strong>Cameras</strong>
+        <span>${cameras.length} of ${MAX_CAMERAS} configured</span>
+      </div>
+      <${sortableListTag}
+        aria-label="Configured cameras"
+      >
+        ${cameras.map(
+          (camera, index) => staticHtml`<${sortableTileTag}
+            item-key=${camera.entity_id}
+          >
+            <div class="camera-tile-copy">
+              <span>${this._cameraName(camera.entity_id)}</span>
+              <small>${this._cameraSummary(camera)}</small>
+            </div>
+            <button
+              slot="actions"
+              class="tile-action"
+              type="button"
+              aria-label=${`Edit ${this._cameraName(camera.entity_id)}`}
+              data-camera-index=${String(index)}
+              @click=${this._editCamera}
+            >
+              ${renderIcon("edit")}
+            </button>
+            <button
+              slot="actions"
+              class="tile-action"
+              type="button"
+              aria-label=${`Delete ${this._cameraName(camera.entity_id)}`}
+              data-camera-index=${String(index)}
+              @click=${this._deleteCamera}
+            >
+              ${renderIcon("delete")}
+            </button>
+          </${sortableTileTag}>`,
+        )}
+      </${sortableListTag}>
+      <button
+        class="add-camera"
+        type="button"
+        ?disabled=${cameras.length >= MAX_CAMERAS}
+        @click=${this._addCamera}
+      >
+        Add camera
+      </button>`;
   }
 
   private _renderGeneralSettings() {
@@ -257,19 +281,101 @@ export class CardEditor extends LitElement {
     `;
   }
 
-  private _renderDisplaySettings() {
-    return html`
-      ${this._renderBooleanOption(
-        "camera_rounded_corners",
-        "Camera Rounded Corners",
-        this._config?.camera_rounded_corners !== false,
-      )}
-      ${this._renderBooleanOption(
-        "camera_shadows",
-        "Camera Shadows",
-        this._config?.camera_shadows !== false,
-      )}
-    `;
+  private _renderCameraDialog() {
+    const camera = this._cameraDraft;
+    const editing = this._editingCameraIndex !== undefined;
+    return html`<dialog
+      class="camera-editor-dialog"
+      @cancel=${this._cancelCameraEdit}
+    >
+      <form @submit=${this._saveCameraEdit}>
+        <header>
+          <h2>${editing ? "Edit Camera" : "Add Camera"}</h2>
+          <button
+            class="dialog-close"
+            type="button"
+            aria-label="Close camera editor"
+            @click=${this._cancelCameraEdit}
+          >
+            ×
+          </button>
+        </header>
+        <div class="camera-dialog-content">
+          <section>
+            <h3>Camera</h3>
+            <ha-selector
+              label="Camera"
+              .hass=${this._hass}
+              .selector=${CAMERA_SELECTOR}
+              .value=${camera?.entity_id ?? ""}
+              .required=${true}
+              @value-changed=${this._handleCameraEntityChange}
+            ></ha-selector>
+          </section>
+          <section>
+            <h3>Live Connection</h3>
+            ${this._renderCameraBoolean(
+              "low_latency_hls",
+              "Low-Latency HLS",
+              camera?.low_latency_hls ?? true,
+            )}
+          </section>
+          <section>
+            <h3>Camera Audio</h3>
+            ${this._renderCameraBoolean(
+              "start_live_unmuted_pc_tablet",
+              "Start Live Unmuted on PC/Tablet",
+              camera?.start_live_unmuted_pc_tablet ?? false,
+            )}
+            ${this._renderCameraBoolean(
+              "start_live_unmuted_phone",
+              "Start Live Unmuted on Mobile Phone",
+              camera?.start_live_unmuted_phone ?? false,
+            )}
+          </section>
+          <section>
+            <h3>Appearance</h3>
+            ${this._renderCameraBoolean(
+              "camera_rounded_corners",
+              "Camera Rounded Corners",
+              camera?.camera_rounded_corners ?? true,
+            )}
+            ${this._renderCameraBoolean(
+              "camera_shadows",
+              "Camera Shadows",
+              camera?.camera_shadows ?? true,
+            )}
+          </section>
+        </div>
+        <footer>
+          <button type="button" @click=${this._cancelCameraEdit}>Cancel</button>
+          <button
+            class="primary"
+            type="submit"
+            ?disabled=${!this._cameraDraftIsValid()}
+          >
+            ${editing ? "Update" : "Add"}
+          </button>
+        </footer>
+      </form>
+    </dialog>`;
+  }
+
+  private _renderCameraBoolean(
+    key: CameraBooleanConfigFlag,
+    label: string,
+    value: boolean,
+  ) {
+    return html`<ha-selector
+      class="boolean-option"
+      data-camera-config-key=${key}
+      label=${label}
+      .hass=${this._hass}
+      .selector=${BOOLEAN_SELECTOR}
+      .value=${value}
+      .required=${false}
+      @value-changed=${this._handleCameraBooleanChange}
+    ></ha-selector>`;
   }
 
   private _renderBooleanOption(
@@ -320,22 +426,134 @@ export class CardEditor extends LitElement {
     this._applyDraft(nextConfig, commitConfig);
   }
 
-  private readonly _handleCameraChange = (event: ValueChangedEvent): void => {
-    if (!this._config) {
-      return;
-    }
+  private readonly _handleCameraEntityChange = (
+    event: ValueChangedEvent,
+  ): void => {
+    if (!this._cameraDraft) return;
     const value =
-      typeof event.detail.value === "string"
-        ? event.detail.value.trim()
-        : undefined;
-    const next = { ...this._config };
-    if (value) {
-      next.camera_entity = value;
-    } else {
-      delete next.camera_entity;
-    }
-    this._applyDraft(normalizeCardConfig(next), true);
+      typeof event.detail.value === "string" ? event.detail.value.trim() : "";
+    this._cameraDraft = { ...this._cameraDraft, entity_id: value };
+    this.requestUpdate();
   };
+
+  private readonly _handleCameraBooleanChange = (
+    event: ValueChangedEvent,
+  ): void => {
+    if (!this._cameraDraft || typeof event.detail.value !== "boolean") return;
+    const key = (event.currentTarget as HTMLElement).dataset.cameraConfigKey as
+      CameraBooleanConfigFlag | undefined;
+    if (!key) return;
+    this._cameraDraft = {
+      ...this._cameraDraft,
+      [key]: event.detail.value,
+    };
+    this.requestUpdate();
+  };
+
+  private readonly _addCamera = (): void => {
+    if ((this._config?.cameras.length ?? 0) >= MAX_CAMERAS) return;
+    this._editingCameraIndex = undefined;
+    this._cameraDraft = createDefaultCameraConfig();
+    this.requestUpdate();
+  };
+
+  private readonly _editCamera = (event: Event): void => {
+    const index = Number(
+      (event.currentTarget as HTMLElement).dataset.cameraIndex,
+    );
+    const camera = this._config?.cameras[index];
+    if (!camera) return;
+    this._editingCameraIndex = index;
+    this._cameraDraft = { ...camera };
+    this.requestUpdate();
+  };
+
+  private readonly _deleteCamera = (event: Event): void => {
+    const index = Number(
+      (event.currentTarget as HTMLElement).dataset.cameraIndex,
+    );
+    if (!this._config?.cameras[index]) return;
+    const cameras = [...this._config.cameras];
+    cameras.splice(index, 1);
+    this._applyCameraList(cameras);
+  };
+
+  private readonly _cancelCameraEdit = (event: Event): void => {
+    event.preventDefault();
+    this._cameraDraft = undefined;
+    this._editingCameraIndex = undefined;
+    this.requestUpdate();
+  };
+
+  private readonly _saveCameraEdit = (event: SubmitEvent): void => {
+    event.preventDefault();
+    if (!this._config || !this._cameraDraftIsValid() || !this._cameraDraft)
+      return;
+    const cameras = [...this._config.cameras];
+    if (this._editingCameraIndex === undefined) cameras.push(this._cameraDraft);
+    else cameras[this._editingCameraIndex] = this._cameraDraft;
+    this._cameraDraft = undefined;
+    this._editingCameraIndex = undefined;
+    this._applyCameraList(cameras);
+  };
+
+  private readonly _handleCameraReorder = (
+    event: CustomEvent<SortableReorderDetail>,
+  ): void => {
+    if (!this._config || event.target === this) return;
+    event.stopPropagation();
+    const { fromIndex, toIndex } = event.detail;
+    if (
+      fromIndex === toIndex ||
+      fromIndex < 0 ||
+      toIndex < 0 ||
+      fromIndex >= this._config.cameras.length ||
+      toIndex >= this._config.cameras.length
+    )
+      return;
+    const cameras = [...this._config.cameras];
+    const [camera] = cameras.splice(fromIndex, 1);
+    if (!camera) return;
+    cameras.splice(toIndex, 0, camera);
+    this._applyCameraList(cameras);
+  };
+
+  private _applyCameraList(cameras: readonly CameraConfig[]): void {
+    if (!this._config) return;
+    this._applyDraft(normalizeCardConfig({ ...this._config, cameras }), true);
+  }
+
+  private _cameraDraftIsValid(): boolean {
+    const draft = this._cameraDraft;
+    if (!draft?.entity_id.startsWith("camera.")) return false;
+    return !(
+      this._config?.cameras.some(
+        (camera, index) =>
+          camera.entity_id === draft.entity_id &&
+          index !== this._editingCameraIndex,
+      ) ?? false
+    );
+  }
+
+  private _cameraName(entityId: string): string {
+    const friendlyName = this._hass?.states[entityId]?.attributes.friendly_name;
+    if (typeof friendlyName === "string" && friendlyName.trim())
+      return friendlyName;
+    return entityId.startsWith("camera.")
+      ? entityId.slice("camera.".length).replaceAll("_", " ")
+      : entityId;
+  }
+
+  private _cameraSummary(camera: CameraConfig): string {
+    const connection = camera.low_latency_hls
+      ? "Low-latency HLS"
+      : "Standard HLS";
+    const audio = [
+      camera.start_live_unmuted_pc_tablet ? "PC/Tablet" : undefined,
+      camera.start_live_unmuted_phone ? "Mobile Phone" : undefined,
+    ].filter(Boolean);
+    return `${connection} · ${audio.length ? `Unmuted: ${audio.join(", ")}` : "Muted"}`;
+  }
 
   private readonly _handleBooleanChange = (event: ValueChangedEvent): void => {
     if (!this._config) {

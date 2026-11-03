@@ -192,6 +192,16 @@ export const themeTokens = css`
     --wzc-accordion-border-color: var(--wzc-color-border-control);
     --wzc-accordion-radius: var(--wzc-radius-large);
 
+    --wzc-sortable-gap: 0.5rem;
+    --wzc-sortable-color: var(--wzc-color-text-1);
+    --wzc-sortable-background: var(--wzc-color-surface-secondary);
+    --wzc-sortable-border-color: var(--wzc-color-border-control);
+    --wzc-sortable-accent-color: var(--wzc-color-primary);
+    --wzc-sortable-handle-color: var(--wzc-color-text-2);
+    --wzc-sortable-handle-background: var(--wzc-color-background);
+    --wzc-sortable-radius: var(--wzc-radius-large);
+    --wzc-sortable-shadow: none;
+
     --wzc-badge-neutral-background: var(--ha-color-neutral-60, #777777);
     --wzc-badge-neutral-color: var(--ha-color-neutral-95, #f5f5f5);
     --wzc-badge-blue-background: var(--ha-color-blue-60, #3b82f6);

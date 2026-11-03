@@ -9,6 +9,13 @@ Assistant must not reconstruct the card on every input event.
 
 ## 2. Baseline, draft, and saved configuration
 
+Camera configuration is an ordered list capped by the centralized
+`MAX_CAMERAS` value. Adding, editing, deleting, or reordering a camera produces
+one complete normalized list update and one dirty-state write. Per-camera live,
+audio, and appearance options are edited inside that camera's dialog; they are
+not duplicated as card-global fields. YAML output omits per-camera default
+values while preserving list order and stable entity identity.
+
 The editor keeps three concepts separate:
 
 - **Baseline:** the configuration Home Assistant supplied when the editor

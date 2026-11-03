@@ -7,15 +7,17 @@ import {
 import type { LayoutDocument, LayoutModuleNode } from "../core/layout";
 
 export function createDefaultCardLayout(config: CardConfig): LayoutDocument {
-  const cameraNode: LayoutModuleNode | undefined = config.camera_entity
+  const cameraNode: LayoutModuleNode | undefined = config.cameras.length
     ? {
         config: {
-          entityId: config.camera_entity,
-          lowLatencyHls: config.low_latency_hls !== false,
-          roundedCorners: config.camera_rounded_corners !== false,
-          shadowStyle: config.camera_shadows === false ? "none" : "medium",
-          startUnmutedPcTablet: config.start_live_unmuted_pc_tablet === true,
-          startUnmutedPhone: config.start_live_unmuted_phone === true,
+          cameras: config.cameras.map((camera) => ({
+            entityId: camera.entity_id,
+            lowLatencyHls: camera.low_latency_hls,
+            roundedCorners: camera.camera_rounded_corners,
+            shadowStyle: camera.camera_shadows ? "medium" : "none",
+            startUnmutedPcTablet: camera.start_live_unmuted_pc_tablet,
+            startUnmutedPhone: camera.start_live_unmuted_phone,
+          })),
         },
         id: DEFAULT_CAMERA_MODULE_NODE_ID,
         kind: "module",

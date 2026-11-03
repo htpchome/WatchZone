@@ -170,10 +170,11 @@ When a layout or view changes:
 6. Sessions with no remaining lease enter retention policy evaluation.
 
 The implementation must not close all sessions as an intermediate step.
-Future camera switching follows the same rule: selecting another camera
-releases the presentation lease but parks the prior camera by canonical
-session key. Switching back reacquires that session subject to the shared
-resource budget; it does not require a second retention mechanism.
+The current camera carousel preloads every configured camera sequentially and
+keeps its leases active after startup. Selecting another camera changes
+presentation focus and audio safety only; it does not release the prior
+camera's session. A future per-camera preload option may allow selected cameras
+to park, but it must continue to use this manager and canonical session keys.
 
 ### 6.2 Editor and preview
 
@@ -222,6 +223,18 @@ Retention must be bounded by a policy containing at least:
 Exact defaults are implementation decisions that require measurement on
 representative desktop and mobile Home Assistant clients. They are centralized
 in one policy and are not scattered through modules.
+
+The current camera policy permits twelve configured cameras and reserves up to
+two transport sessions per camera while HLS competes with or falls back from
+WebRTC. An unneeded HLS loser is still discarded after a successful WebRTC
+handoff. This is a bounded preload policy, not permission for unbounded
+sessions.
+
+Automatic provider-failure retries are serialized by the document manager in
+original session-acquisition order. Backoff timers may become ready together,
+but their reconnect factories do not run concurrently. This preserves camera
+display order after a shared provider outage without adding per-view retry
+loops.
 
 Eviction priority is deterministic. Unless a future requirement overrides it,
 the manager protects sessions in this order:

@@ -1,8 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { CameraModule } from "../src/modules/camera/camera";
+import type { CameraView } from "../src/modules/camera/camera-view";
+import { CAMERA_CONNECTION_SETTLED_EVENT } from "../src/core/constants";
 import type { CameraLivePresentation } from "../src/modules/camera/live/presentation";
 import "../src/modules/camera/camera";
+import "../src/modules/camera/camera-view";
 import "../src/modules/camera/live/presentation";
 
 afterEach(() => {
@@ -38,18 +41,44 @@ describe("camera presentation fallback", () => {
     expect(camera.shadowRoot?.querySelector(".source-indicator")).toBeNull();
     expect(camera.shadowRoot?.querySelector(".status")).toBeNull();
   });
+
+  it("distinguishes standard and low-latency HLS while retaining the engine", async () => {
+    const presentation = document.createElement(
+      "wzc-camera-live",
+    ) as CameraLivePresentation;
+    presentation.available = true;
+    presentation.selected = "hls";
+    presentation.transport = "hls_mse";
+    presentation.lowLatencyHls = true;
+    document.body.append(presentation);
+    await presentation.updateComplete;
+    expect(
+      presentation.shadowRoot
+        ?.querySelector(".source-indicator")
+        ?.textContent?.trim(),
+    ).toBe("HLS-LL · HLS.js");
+
+    presentation.lowLatencyHls = false;
+    await presentation.updateComplete;
+    expect(
+      presentation.shadowRoot
+        ?.querySelector(".source-indicator")
+        ?.textContent?.trim(),
+    ).toBe("HLS · HLS.js");
+  });
 });
 
 describe("camera component appearance", () => {
   it("keeps the live presentation inside one non-interactive camera slide", async () => {
     const camera = document.createElement("wzc-camera") as CameraModule;
+    camera.cameras = [cameraItem("camera.front")];
     document.body.append(camera);
     await camera.updateComplete;
 
     const carousel = camera.shadowRoot?.querySelector(".camera-carousel");
     const wrapper = carousel?.querySelector(".swiper-wrapper");
     const slides = wrapper?.querySelectorAll(".swiper-slide");
-    const presentation = slides?.[0]?.querySelector("wzc-camera-live");
+    const presentation = slides?.[0]?.querySelector("wzc-camera-view");
 
     expect(carousel?.getAttribute("aria-roledescription")).toBe("carousel");
     expect(carousel?.classList.contains("camera-carousel-interactive")).toBe(
@@ -61,7 +90,7 @@ describe("camera component appearance", () => {
   });
 
   it("applies independent corner and shadow inputs", async () => {
-    const camera = document.createElement("wzc-camera") as CameraModule;
+    const camera = document.createElement("wzc-camera-view") as CameraView;
     document.body.append(camera);
     await camera.updateComplete;
 
@@ -83,4 +112,53 @@ describe("camera component appearance", () => {
       "camera square-camera-corners camera-shadow-none",
     );
   });
+
+  it("renders ordered slides and advances connection permission sequentially", async () => {
+    const camera = document.createElement("wzc-camera") as CameraModule;
+    camera.cameras = [
+      cameraItem("camera.zero"),
+      cameraItem("camera.one"),
+      cameraItem("camera.two"),
+    ];
+    document.body.append(camera);
+    await camera.updateComplete;
+    let views = [
+      ...(camera.shadowRoot?.querySelectorAll<CameraView>("wzc-camera-view") ??
+        []),
+    ];
+    expect(views).toHaveLength(3);
+    expect(views.map(({ connect }) => connect)).toEqual([true, false, false]);
+
+    views[0].dispatchEvent(
+      new CustomEvent(CAMERA_CONNECTION_SETTLED_EVENT, {
+        bubbles: true,
+        composed: true,
+        detail: { entityId: "camera.zero" },
+      }),
+    );
+    await camera.updateComplete;
+    views = [
+      ...(camera.shadowRoot?.querySelectorAll<CameraView>("wzc-camera-view") ??
+        []),
+    ];
+    expect(views.map(({ connect }) => connect)).toEqual([true, true, false]);
+
+    camera.shadowRoot
+      ?.querySelector<HTMLButtonElement>(".carousel-navigation.next")
+      ?.click();
+    await camera.updateComplete;
+    expect(views.map(({ active }) => active)).toEqual([false, true, false]);
+  });
 });
+
+function cameraItem(entityId: string) {
+  return {
+    available: true,
+    entityId,
+    lowLatencyHls: true,
+    roundedCorners: true,
+    shadowStyle: "medium" as const,
+    startUnmutedPcTablet: false,
+    startUnmutedPhone: false,
+  };
+}

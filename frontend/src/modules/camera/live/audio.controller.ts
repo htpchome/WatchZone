@@ -22,6 +22,7 @@ interface AudioCallbacks {
 
 const AUTOPLAY_WARNING_KEY = "camera-audio-autoplay";
 type ForcedMuteReason =
+  | "camera-inactive"
   | "document-frozen"
   | "document-hidden"
   | "page-hidden"
@@ -83,11 +84,13 @@ export class CameraAudioController implements ReactiveController {
     startUnmutedPcTablet: boolean,
     startUnmutedPhone: boolean,
     reset: boolean,
+    presentationActive = true,
   ): void {
     const sourceChanged = this._entityId !== entityId;
     this._entityId = entityId;
     this._startUnmutedPcTablet = startUnmutedPcTablet;
     this._startUnmutedPhone = startUnmutedPhone;
+    this._setForcedMute("camera-inactive", !presentationActive, false);
     if (sourceChanged || reset) this._syncPreference();
   }
 
