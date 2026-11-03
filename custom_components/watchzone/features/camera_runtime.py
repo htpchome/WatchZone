@@ -8,10 +8,11 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 
-from homeassistant.core import Context, HomeAssistant, callback
+from homeassistant.core import Context, Event, HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.event import (
+    EventStateChangedData,
     async_track_point_in_utc_time,
     async_track_state_change_event,
 )
@@ -188,8 +189,13 @@ class CameraRuntimeService:
     ) -> CameraRuntimeState:
         """Wait for the provider to report the requested state."""
         changed = asyncio.Event()
+
+        @callback
+        def state_changed(_event: Event[EventStateChangedData]) -> None:
+            changed.set()
+
         unsubscribe = async_track_state_change_event(
-            self._hass, [entity_id], lambda _event: changed.set()
+            self._hass, [entity_id], state_changed
         )
         loop = asyncio.get_running_loop()
         deadline = loop.time() + _STATE_CONFIRMATION_TIMEOUT
@@ -227,7 +233,7 @@ class CameraRuntimeService:
             self._subscriber_state_unsubs[entity_id] = async_track_state_change_event(
                 self._hass,
                 [entity_id],
-                lambda _event: self._start_snapshot_notification(entity_id),
+                self._handle_subscriber_state_change,
             )
         self._start_provider_monitor(entity_id)
 
@@ -280,6 +286,12 @@ class CameraRuntimeService:
             return self._providers.camera_runtime(registry_entry.platform)
         except Exception:
             return None
+
+    @callback
+    def _handle_subscriber_state_change(
+        self, event: Event[EventStateChangedData]
+    ) -> None:
+        self._start_snapshot_notification(event.data["entity_id"])
 
     @callback
     def _start_provider_monitor(self, entity_id: str) -> None:
@@ -343,8 +355,14 @@ class CameraRuntimeService:
         self._state_unsubs[entity_id] = async_track_state_change_event(
             self._hass,
             [entity_id],
-            lambda _event: self._start_reconcile(entity_id),
+            self._handle_scheduled_camera_state_change,
         )
+
+    @callback
+    def _handle_scheduled_camera_state_change(
+        self, event: Event[EventStateChangedData]
+    ) -> None:
+        self._start_reconcile(event.data["entity_id"])
 
     @callback
     def _start_reconcile(self, entity_id: str) -> None:

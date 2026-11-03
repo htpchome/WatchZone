@@ -91,6 +91,11 @@ per entity, regardless of the number of cards or browsers, and only while that
 entity has subscribers. The Frigate provider uses this fallback so changes made
 directly in Frigate are reflected without navigation or refresh.
 
+Every Home Assistant state listener in the runtime service is an explicit
+`@callback`. This is a thread-safety boundary: listeners mutate asyncio state or
+schedule coroutines and must therefore execute on Home Assistant's event loop,
+never through its executor.
+
 ## Authorization
 
 - Subscriptions require read access to the camera entity.

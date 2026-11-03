@@ -1,9 +1,12 @@
 """Tests for explicitly selected Home Assistant HLS pre-warming."""
 
-from types import SimpleNamespace
+import sys
+from types import ModuleType, SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
+import pytest
 from homeassistant.core import CoreState, HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 
 from custom_components.watchzone.const import MAX_HLS_PREWARM_CAMERAS
 from custom_components.watchzone.features.hls_prewarm import HlsPrewarmService
@@ -111,4 +114,32 @@ async def test_failed_start_restores_runtime_keepalive(hass: HomeAssistant) -> N
 
     assert service.diagnostics()[0].state == "failed"
     assert camera.stream.dynamic_stream_settings.preload_stream is False
+    await service.async_close()
+
+
+async def test_camera_registration_race_stays_pending_and_recovers(
+    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A selected entity may exist before its camera platform is registered."""
+    hass.state = CoreState.running
+    camera = _camera()
+    service = HlsPrewarmService(hass)
+    camera_helper = ModuleType("homeassistant.components.camera.helper")
+    camera_helper.get_camera_from_entity_id = Mock(  # type: ignore[attr-defined]
+        side_effect=[HomeAssistantError("Camera not found"), camera]
+    )
+
+    with patch.dict(
+        sys.modules,
+        {"homeassistant.components.camera.helper": camera_helper},
+    ):
+        await service.async_setup(["camera.starting"])
+        await hass.async_block_till_done()
+        assert service.diagnostics()[0].state == "pending"
+
+        service._schedule_reconcile()  # noqa: SLF001
+        await hass.async_block_till_done()
+
+    assert service.diagnostics()[0].state == "warm"
+    assert "Unable to pre-warm HLS" not in caplog.text
     await service.async_close()

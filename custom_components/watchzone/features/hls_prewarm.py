@@ -10,6 +10,7 @@ from typing import Protocol, cast
 
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 from homeassistant.core import CoreState, Event, HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.event import (
     EventStateChangedData,
     async_track_state_change_event,
@@ -19,6 +20,10 @@ from ..const import MAX_HLS_PREWARM_CAMERAS, NAME
 
 _HLS_PROVIDER = "hls"
 _LOGGER = logging.getLogger(__name__)
+
+
+class _CameraNotReady(Exception):
+    """The selected entity has not finished camera-platform registration."""
 
 
 class _DynamicStreamSettings(Protocol):
@@ -213,6 +218,9 @@ class HlsPrewarmService:
                     await self._async_warm(entity_id)
                 except asyncio.CancelledError:
                     raise
+                except _CameraNotReady:
+                    self._states[entity_id] = "pending"
+                    self._failure_reported.discard(entity_id)
                 except Exception:
                     self._states[entity_id] = "failed"
                     if entity_id not in self._failure_reported:
@@ -265,4 +273,7 @@ class HlsPrewarmService:
         """Resolve through HA lazily so integration import stays lightweight."""
         from homeassistant.components.camera.helper import get_camera_from_entity_id
 
-        return cast(_Camera, get_camera_from_entity_id(self._hass, entity_id))
+        try:
+            return cast(_Camera, get_camera_from_entity_id(self._hass, entity_id))
+        except HomeAssistantError as err:
+            raise _CameraNotReady from err

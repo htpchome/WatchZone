@@ -46,7 +46,10 @@ test("loads the responsive WatchZone card shell", async ({ page }) => {
   await page.goto("/");
   await waitForWatchZoneDefinition(page);
 
-  await expect(page.locator("watchzone-card")).toContainText("WatchZone");
+  await expect(page.locator("watchzone-card .shell")).toHaveAttribute(
+    "aria-label",
+    "WatchZone",
+  );
   await expect(page.locator("watchzone-card ha-card")).toBeVisible();
   expect(
     consoleMessages.some(
@@ -241,6 +244,105 @@ test("preserves expanded camera-stage geometry across carousel selection", async
   await expect(previousNavigation).toBeHidden({
     timeout: CAMERA_OVERLAY_HIDE_DELAY_MS + 1_000,
   });
+});
+
+test("aligns phone carousel controls and stage handle to the active stage", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  await page.locator("watchzone-card").evaluate((element) => {
+    (
+      element as HTMLElement & {
+        setConfig(config: unknown): void;
+      }
+    ).setConfig({
+      type: "custom:watchzone-card",
+      cameras: [{ entity_id: "camera.front" }, { entity_id: "camera.back" }],
+    });
+  });
+  await expect(page.locator("wzc-camera-view")).toHaveCount(2);
+
+  const geometry = await page
+    .locator("wzc-camera")
+    .evaluate(async (element) => {
+      const camera = element as HTMLElement & {
+        updateComplete: Promise<boolean>;
+      };
+      const view = camera.shadowRoot?.querySelector<
+        HTMLElement & { updateComplete: Promise<boolean> }
+      >("wzc-camera-view");
+      const presentation = view?.shadowRoot?.querySelector<
+        HTMLElement & {
+          requestUpdate(): void;
+          selected?: "hls" | "webrtc";
+          transport?: "hls_native" | "hls_mse" | "webrtc";
+          updateComplete: Promise<boolean>;
+        }
+      >("wzc-camera-live");
+      if (!view || !presentation)
+        throw new Error("Camera view was not rendered");
+      presentation.selected = "hls";
+      presentation.transport = "hls_native";
+      presentation.requestUpdate();
+      await presentation.updateComplete;
+      await camera.updateComplete;
+
+      const stage = view.shadowRoot?.querySelector<HTMLElement>(".camera");
+      const handle = view.shadowRoot?.querySelector<HTMLElement>(
+        ".stage-resize-handle",
+      );
+      const controls = presentation.shadowRoot?.querySelector<HTMLElement>(
+        "wzc-camera-controls",
+      );
+      const controlButton =
+        controls?.shadowRoot?.querySelector<HTMLElement>(".control-button");
+      const carousel =
+        camera.shadowRoot?.querySelector<HTMLElement>(".camera-carousel");
+      const previous = camera.shadowRoot?.querySelector<HTMLElement>(
+        ".carousel-navigation.previous",
+      );
+      const next = camera.shadowRoot?.querySelector<HTMLElement>(
+        ".carousel-navigation.next",
+      );
+      const rect = (target?: HTMLElement | null) =>
+        target?.getBoundingClientRect();
+      return {
+        carousel: rect(carousel),
+        control: rect(controlButton),
+        handle: rect(handle),
+        next: rect(next),
+        previous: rect(previous),
+        stage: rect(stage),
+      };
+    });
+
+  const stageCenterX =
+    (geometry.stage?.left ?? 0) + (geometry.stage?.width ?? 0) / 2;
+  const stageCenterY =
+    (geometry.stage?.top ?? 0) + (geometry.stage?.height ?? 0) / 2;
+  expect(
+    (geometry.handle?.left ?? 0) + (geometry.handle?.width ?? 0) / 2,
+  ).toBeCloseTo(stageCenterX, 1);
+  const handleBottomInset =
+    (geometry.stage?.bottom ?? 0) - (geometry.handle?.bottom ?? 0);
+  expect(handleBottomInset).toBeGreaterThanOrEqual(0);
+  expect(handleBottomInset).toBeLessThan(5);
+  expect(
+    (geometry.next?.top ?? 0) + (geometry.next?.height ?? 0) / 2,
+  ).toBeCloseTo(stageCenterY, 1);
+  expect(
+    (geometry.previous?.top ?? 0) + (geometry.previous?.height ?? 0) / 2,
+  ).toBeCloseTo(stageCenterY, 1);
+  expect(geometry.control?.left ?? 0).toBeGreaterThan(
+    geometry.next?.right ?? 0,
+  );
+  const previousInset =
+    (geometry.previous?.left ?? 0) - (geometry.carousel?.left ?? 0);
+  const nextInset =
+    (geometry.carousel?.right ?? 0) - (geometry.next?.right ?? 0);
+  expect(previousInset).toBeCloseTo(nextInset, 1);
 });
 
 test("fits phone, tablet, and desktop viewports without horizontal overflow", async ({

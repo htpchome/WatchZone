@@ -5,7 +5,7 @@ from datetime import timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
-from homeassistant.core import Context, HomeAssistant
+from homeassistant.core import Context, HomeAssistant, is_callback
 
 from custom_components.watchzone.extensions import (
     EXTENSION_API_VERSION,
@@ -190,6 +190,50 @@ async def test_runtime_changes_publish_to_every_subscribed_client(
     ]
     unsubscribe_first()
     unsubscribe_second()
+    await service.async_close()
+
+
+async def test_state_change_listeners_are_event_loop_callbacks(
+    hass: HomeAssistant,
+) -> None:
+    """HA must never dispatch runtime state listeners through its executor."""
+    registered: list[object] = []
+
+    def track_state_change(
+        _hass: HomeAssistant, _entities: list[str], listener: object
+    ) -> Mock:
+        registered.append(listener)
+        return Mock()
+
+    provider = SimpleNamespace(
+        async_get_state=AsyncMock(
+            return_value=CameraRuntimeState(
+                available=True,
+                provider="test",
+                supported=True,
+                suspended=False,
+            )
+        )
+    )
+    service = CameraRuntimeService(hass)
+
+    with (
+        patch(
+            "custom_components.watchzone.features.camera_runtime."
+            "async_track_state_change_event",
+            side_effect=track_state_change,
+        ),
+        patch.object(service, "_provider", return_value=None),
+    ):
+        await service._async_wait_for_provider_state(  # noqa: SLF001
+            provider, "camera.waiting", False
+        )
+        unsubscribe = service.async_subscribe("camera.subscriber", Mock())
+        service._watch_entity("camera.scheduled")  # noqa: SLF001
+
+    assert len(registered) == 3
+    assert all(is_callback(listener) for listener in registered)
+    unsubscribe()
     await service.async_close()
 
 

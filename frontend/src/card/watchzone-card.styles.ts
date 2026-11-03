@@ -42,27 +42,13 @@ export const cardStyles = css`
   .shell {
     box-sizing: border-box;
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
     align-items: center;
-    gap: clamp(0.75rem, 2cqi, 1.25rem);
     inline-size: 100%;
     block-size: 100%;
     min-block-size: 0;
     padding: var(--wzc-card-padding);
     overflow: hidden;
-  }
-
-  .title {
-    min-inline-size: 0;
-    max-inline-size: 100%;
-    margin: 0;
-    overflow-wrap: anywhere;
-    color: inherit;
-    font-family: var(--wzc-font-family);
-    font-size: clamp(1.25rem, 8cqi, 2rem);
-    font-weight: var(--wzc-font-weight-medium);
-    line-height: var(--wzc-line-height-condensed);
-    text-align: center;
   }
 
   .layout-root,

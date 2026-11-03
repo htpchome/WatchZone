@@ -8,9 +8,9 @@ application-wide ownership and persistence rules remain defined by
 
 ## Runtime flow
 
-The Lovelace card shell owns card-level title and appearance only. It converts
-the current narrow card input into a default layout document and passes that
-document to `LayoutRuntime`.
+The Lovelace card shell owns the accessible card name and card-level appearance
+only. Its single visual stage contains the layout document rendered by
+`LayoutRuntime`; the shell does not place a visual title above the modules.
 
 `LayoutRuntime`:
 

@@ -1,4 +1,4 @@
-import { html, LitElement, nothing } from "lit";
+import { html, LitElement } from "lit";
 
 import {
   cardConfigSignature,
@@ -120,12 +120,7 @@ export class DashboardCard extends LitElement {
       .join(" ");
     return html`
       <ha-card class=${cardClasses}>
-        <div class="shell">
-          ${
-            config.title
-              ? html`<h2 class="title">${config.title}</h2>`
-              : nothing
-          }
+        <div class="shell" role="region" aria-label=${config.title}>
           ${this._layoutRuntime.render()}
         </div>
       </ha-card>

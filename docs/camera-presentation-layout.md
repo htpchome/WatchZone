@@ -7,7 +7,8 @@ document remains authoritative for application-wide boundaries.
 ## Ownership
 
 - Home Assistant owns the card's allocated grid rectangle.
-- The card shell owns title, outer padding, and the remaining content track.
+- The card shell owns the accessible card name, outer padding, and the stage
+  containing the active layout's modules. It does not render a visual heading.
 - The camera module owns the camera stage and its appearance.
 - The live presentation fills the camera stage. It does not determine card or
   dashboard dimensions from media metadata.
@@ -20,8 +21,7 @@ sizing in sections view. Home Assistant does not expose an automatic-width
 grid value; `full` makes a new card consume its entire available section row,
 including a section that spans multiple columns. Content determines the
 default height. The camera stage reserves `--wzc-camera-stage-aspect-ratio`,
-which defaults to `16 / 9`. The title, gap, and outer padding are outside that
-ratio.
+which defaults to `16 / 9`. Outer padding is outside that ratio.
 
 The lazy-loading placeholder reserves the same stage ratio and background as
 the loaded camera module. Loading the camera code, fallback image, HLS, or

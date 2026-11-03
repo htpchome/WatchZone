@@ -123,12 +123,16 @@ describe("watchzone-card-editor", () => {
       config: { type: CARD_TYPE, title: "Draft title" },
       key: EDITOR_DIRTY_STATE_KEY,
     });
-    expect(card.shadowRoot?.textContent).toContain("Draft title");
+    expect(
+      card.shadowRoot?.querySelector(".shell")?.getAttribute("aria-label"),
+    ).toBe("Draft title");
     expect(card.shadowRoot?.querySelector("ha-card")).toBe(originalCard);
 
     editor.remove();
     await card.updateComplete;
-    expect(card.shadowRoot?.textContent).toContain("Original");
+    expect(
+      card.shadowRoot?.querySelector(".shell")?.getAttribute("aria-label"),
+    ).toBe("Original");
     expect(card.shadowRoot?.querySelector("ha-card")).toBe(originalCard);
     document.removeEventListener("context-request", contextHandler);
   });

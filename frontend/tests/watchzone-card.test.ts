@@ -23,14 +23,19 @@ describe("watchzone-card", () => {
     });
   });
 
-  it("renders the configured title in a Home Assistant card", async () => {
+  it("uses the configured title as an accessible name without a visual heading", async () => {
     const element = document.createElement("watchzone-card") as DashboardCard;
     element.setConfig({ type: "custom:watchzone-card", title: "Front Door" });
     document.body.append(element);
     await element.updateComplete;
 
     expect(element.shadowRoot?.querySelector("ha-card")).not.toBeNull();
-    expect(element.shadowRoot?.textContent).toContain("Front Door");
+    expect(element.shadowRoot?.querySelector(".title")).toBeNull();
+    expect(element.shadowRoot?.querySelector(".shell")).toMatchObject({
+      ariaLabel: "Front Door",
+      role: "region",
+    });
+    expect(element.shadowRoot?.textContent).not.toContain("Front Door");
   });
 
   it("keeps camera code and presentation absent from an empty layout", async () => {

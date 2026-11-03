@@ -37,6 +37,12 @@ camera or unloading WatchZone restores only a value WatchZone changed. An HLS
 output that is already idle is removed; an output with an active consumer is
 left intact and returns to Home Assistant's normal idle cleanup.
 
+During Home Assistant startup, an entity state can exist before its camera
+platform object is registered. That condition remains `pending`, produces no
+failure warning, and is retried when the selected camera's state changes. Once
+the platform is registered, genuine stream creation failures remain `failed`
+and are logged once until the camera later recovers.
+
 ## Resource implications
 
 Pre-warming trades server CPU, memory, decoder work, and camera/network traffic
