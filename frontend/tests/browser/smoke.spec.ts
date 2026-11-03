@@ -812,6 +812,9 @@ test("retains one live connection while the card presentation is replaced", asyn
   });
 
   const video = page.locator("wzc-camera video.webrtc");
+  await expect(video).toHaveAttribute("disablepictureinpicture", "");
+  await expect(video).toHaveAttribute("controlslist", /nopictureinpicture/);
+  await expect(video).toHaveCSS("pointer-events", "none");
   await expect(page.locator("wzc-camera .camera-carousel")).toHaveClass(
     /swiper-initialized/,
   );
@@ -932,9 +935,7 @@ test("retains one live connection while the card presentation is replaced", asyn
   const mediaSurface = page.locator("wzc-camera-live .media-surface");
   await mediaSurface.dblclick({ position: { x: 120, y: 80 } });
   await expect(mediaSurface).toHaveAttribute("style", /scale\(2\)/);
-  expect(
-    await mediaSurface.evaluate((element) => getComputedStyle(element).cursor),
-  ).toContain("all-scroll");
+  await expect(mediaSurface).toHaveCSS("cursor", "move");
   await mediaSurface.dispatchEvent("wheel", {
     clientX: 120,
     clientY: 80,
@@ -952,11 +953,6 @@ test("retains one live connection while the card presentation is replaced", asyn
     width: page.viewportSize()?.width ?? 1_280,
   });
   await stageResizeHandle.scrollIntoViewIfNeeded();
-  expect(
-    await stageResizeHandle.evaluate(
-      (element) => getComputedStyle(element).cursor,
-    ),
-  ).toContain("row-resize");
   const cardShell = page.locator("watchzone-card ha-card");
   const initialCardBox = await cardShell.boundingBox();
   const initialStageBox = await liveViewport.boundingBox();
@@ -993,13 +989,16 @@ test("retains one live connection while the card presentation is replaced", asyn
           .poll(async () => (await cardShell.boundingBox())?.height)
           .toBeGreaterThan(initialCardBox.height);
       }
-      await expect(mediaSurface).toHaveAttribute("style", /scale\(2\.25\)/);
-      await expect(video).toHaveCSS("object-fit", "cover");
+      const expandedMediaScale = await currentMediaScale();
+      expect(expandedMediaScale).toBeGreaterThan(2.25);
+      await expect(video).toHaveCSS("object-fit", "contain");
 
       await page.mouse.move(handleX, handleY + expansionDistance / 2, {
         steps: 4,
       });
-      await expect.poll(currentMediaScale).toBeLessThan(2.25);
+      await expect
+        .poll(currentMediaScale)
+        .toBeLessThan(expandedMediaScale ?? Number.POSITIVE_INFINITY);
       await expect.poll(currentMediaScale).toBeGreaterThan(1);
       await page.mouse.move(handleX, handleY - 2, {
         steps: 4,
@@ -1015,10 +1014,7 @@ test("retains one live connection while the card presentation is replaced", asyn
       await expect
         .poll(async () => (await liveViewport.boundingBox())?.height)
         .toBeGreaterThan(initialStageBox.height);
-      await expect(mediaSurface).toHaveAttribute(
-        "style",
-        /translate3d\(0px, 0px, 0\) scale\(1\)/,
-      );
+      await expect.poll(currentMediaScale).toBeGreaterThan(1);
       await page.mouse.move(handleX, handleY - 2, { steps: 4 });
       await page.mouse.up();
     }

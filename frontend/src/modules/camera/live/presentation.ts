@@ -126,6 +126,10 @@ export class CameraLivePresentation extends LitElement {
     this._zoom.endStageResizeReturn();
   }
 
+  public setBasePresentationScale(scale: number): void {
+    this._zoom.setBasePresentationScale(scale);
+  }
+
   public connectedCallback(): void {
     super.connectedCallback();
     document.addEventListener("fullscreenchange", this._syncControlState);
@@ -190,7 +194,7 @@ export class CameraLivePresentation extends LitElement {
         <div
           class=${[
             "media-surface",
-            this._zoom.zoomed ? "zoomed" : "",
+            this._zoom.pannable ? "pannable" : "",
             this._zoom.interacting ? "interacting" : "",
             this._zoom.stageResizeActive ? "stage-resize-active" : "",
           ]
@@ -216,6 +220,8 @@ export class CameraLivePresentation extends LitElement {
                       this.selected === "webrtc" ? "webrtc" : "webrtc candidate"
                     }
                     autoplay
+                    controlslist="nopictureinpicture"
+                    disablepictureinpicture
                     playsinline
                     .muted=${this.selected === "webrtc" ? this.muted : true}
                     aria-label="Live camera"
@@ -264,7 +270,7 @@ export class CameraLivePresentation extends LitElement {
                 .muted=${this.muted}
                 .pictureInPictureActive=${this._pictureInPictureActive}
                 .pictureInPictureSupported=${Boolean(
-                  pictureInPictureMethod(this._activeVideo),
+                  pictureInPictureMethod(this._selectedVideoForRender),
                 )}
                 .snapshotPending=${this._snapshotPending}
                 .suspendPending=${this.suspendPending}
@@ -299,6 +305,7 @@ export class CameraLivePresentation extends LitElement {
     const hlsHost = this.renderRoot.querySelector(".hls-host");
     if (hlsHost && this.hlsVideo && this.hlsVideo.parentElement !== hlsHost) {
       this.hlsVideo.setAttribute("aria-label", "Live camera");
+      suppressNativePictureInPicture(this.hlsVideo);
       setMediaElementMuted(this.hlsVideo, this.muted);
       hlsHost.append(this.hlsVideo);
       this._emitMediaAttached(this.hlsVideo);
@@ -482,6 +489,14 @@ export class CameraLivePresentation extends LitElement {
     this._syncStageMediaDimensions();
   }
 
+  private get _selectedVideoForRender(): HTMLVideoElement | undefined {
+    return this.selected === "hls"
+      ? this.hlsVideo
+      : this.selected === "webrtc"
+        ? this.webRtcVideo
+        : undefined;
+  }
+
   private readonly _handlePosterLoaded = (event: Event): void => {
     const image = event.currentTarget as HTMLImageElement;
     this._posterDimensions = {
@@ -497,6 +512,10 @@ export class CameraLivePresentation extends LitElement {
       video && video.videoWidth > 0 && video.videoHeight > 0
         ? { height: video.videoHeight, width: video.videoWidth }
         : this._posterDimensions;
+    this._zoom.setMediaDimensions(
+      dimensions?.width ?? 0,
+      dimensions?.height ?? 0,
+    );
     this.dispatchEvent(
       new CustomEvent<CameraMediaDimensionsDetail>("camera-media-dimensions", {
         bubbles: true,

@@ -12,6 +12,21 @@ camera module. Actions must not be implemented inside a live connection adapter.
   the camera module, which presents them through the shared toast system.
 - Snapshot capture does not start, stop, or replace a media session.
 
+## Picture-in-Picture
+
+- `picture-in-picture.ts` exclusively owns browser capability detection,
+  native-control suppression, and temporary suppression release for an
+  explicit custom PiP action.
+- Live presentation owns selection of the active rendered video and derives
+  PiP support directly from the video selected for that render. HLS attachment
+  and WebRTC takeover therefore expose the same custom PiP action without a
+  follow-up lifecycle render or PiP logic in either connection adapter.
+- Every video is suppressed before it is connected or painted. Video elements
+  are not pointer hit targets; the parent media surface owns zoom and pan while
+  the controls overlay owns action input. This prevents a transient browser
+  video affordance from receiving a click intended for a WatchZone control.
+- Carousel containers do not detect, enable, suppress, or invoke PiP.
+
 ## Suspend and resume
 
 Suspension is a provider capability, not a live transport capability:

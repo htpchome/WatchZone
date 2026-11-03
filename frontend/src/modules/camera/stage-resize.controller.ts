@@ -36,6 +36,7 @@ export class CameraStageResizeController implements ReactiveController {
   private _heightRatio = DEFAULT_HEIGHT_RATIO;
   private _key?: string;
   private _mediaHeightRatio?: number;
+  private _mediaPresentationScale = 1;
   private _moved = false;
   private _resized = false;
   private _returnAnchorHeightRatio = DEFAULT_HEIGHT_RATIO;
@@ -47,12 +48,17 @@ export class CameraStageResizeController implements ReactiveController {
     private readonly _onInteraction?: (
       interaction: CameraStageResizeInteraction,
     ) => void,
+    private readonly _onMediaPresentationScaleChange?: (scale: number) => void,
   ) {
     _host.addController(this);
   }
 
   public get heightPercentage(): number {
     return Math.round(this._heightRatio * 100);
+  }
+
+  public get mediaPresentationScale(): number {
+    return this._mediaPresentationScale;
   }
 
   public configure(key: string | undefined): void {
@@ -84,7 +90,7 @@ export class CameraStageResizeController implements ReactiveController {
         : undefined;
     if (ratio === this._mediaHeightRatio) return;
     this._mediaHeightRatio = ratio;
-    this._applyFit();
+    this._syncMediaPresentationScale();
   }
 
   public reset(): void {
@@ -232,19 +238,21 @@ export class CameraStageResizeController implements ReactiveController {
         "--wzc-camera-stage-runtime-aspect-ratio",
       );
     }
-    this._applyFit();
+    this._syncMediaPresentationScale();
     this._syncHandle();
   }
 
-  private _applyFit(): void {
-    if (!this._stage) return;
-    const crop = Boolean(
+  private _syncMediaPresentationScale(): void {
+    const nextScale =
       this._resized &&
       this._mediaHeightRatio !== undefined &&
-      this._heightRatio > this._mediaHeightRatio + FIT_RATIO_TOLERANCE,
-    );
-    if (crop) this._stage.style.setProperty("--wzc-live-fit", "cover");
-    else this._stage.style.removeProperty("--wzc-live-fit");
+      this._heightRatio > this._mediaHeightRatio + FIT_RATIO_TOLERANCE
+        ? this._heightRatio / this._mediaHeightRatio
+        : 1;
+    if (Math.abs(nextScale - this._mediaPresentationScale) <= Number.EPSILON)
+      return;
+    this._mediaPresentationScale = nextScale;
+    this._onMediaPresentationScaleChange?.(nextScale);
   }
 
   private _syncHandle(): void {
@@ -283,7 +291,6 @@ export class CameraStageResizeController implements ReactiveController {
     stage?.classList.remove("stage-resizing");
     stage?.classList.remove("stage-resized");
     stage?.style.removeProperty("--wzc-camera-stage-runtime-aspect-ratio");
-    stage?.style.removeProperty("--wzc-live-fit");
   }
 
   private _clampHeightRatio(ratio: number): number {

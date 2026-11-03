@@ -1,7 +1,5 @@
 import { css } from "lit";
 
-import { cameraPanCursor } from "./interaction-cursors.styles";
-
 export const cameraLiveViewStyles = css`
   :host {
     display: block;
@@ -44,14 +42,14 @@ export const cameraLiveViewStyles = css`
     transition: transform var(--wzc-zoom-transition-duration) ease;
   }
 
-  .media-surface.zoomed {
-    cursor: ${cameraPanCursor};
+  .media-surface.pannable {
+    cursor: move;
     touch-action: none;
   }
 
   .media-surface.interacting,
   .media-surface.stage-resize-active {
-    cursor: ${cameraPanCursor};
+    cursor: move;
     transition: none;
   }
 
@@ -153,6 +151,7 @@ export const cameraLiveViewStyles = css`
   video {
     object-fit: var(--wzc-live-fit, contain);
     background: inherit;
+    pointer-events: none;
   }
 
   .source-indicator {

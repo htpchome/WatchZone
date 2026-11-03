@@ -49,8 +49,11 @@ allowed to clip content or escape Home Assistant's allocated grid area.
   camera identity, and does not alter YAML or provider state.
 - Until the expanded stage reaches the active media's intrinsic ratio, media
   remains contained so sources such as `4:3` reveal their available height.
-  Expansion beyond the source ratio switches the base fit to centered cover,
-  intentionally cropping the source rather than adding new letterboxing.
+  Expansion beyond the source ratio increases a centered base presentation
+  scale to the equivalent of `cover`, intentionally cropping the source rather
+  than adding new letterboxing. Because the existing zoom controller owns that
+  transform and its bounds, the cropped axis is pannable immediately without
+  requiring user zoom first.
 - Home Assistant's explicit grid height remains authoritative. Runtime stage
   resizing may not escape or overflow an explicitly allocated card rectangle.
 
@@ -63,19 +66,18 @@ Home, and End provide keyboard access, and double-click/double-tap resets the
 stage. The resize handle owns only its own touch gesture and does not replace
 native page scrolling elsewhere.
 
-The handle uses the shared vertical-resize cursor asset with `row-resize` as
-its standards-based fallback. This preserves the intended pointer feedback in
-WebKit/WKWebView releases with broken resize-keyword rendering without adding
-a Catalyst-specific interaction path.
-
-Stage sizing is separate from display zoom. Resizing changes the viewport and
-base `contain`/`cover` fit. When an expanded stage is dragged upward, the stage
-controller reports normalized return progress to the camera parent. The parent
-coordinates that intent with the live presentation; `CameraZoomController`
-remains the sole transform owner and continuously returns zoom and pan toward
-`1x` centered media. Reversing or partially releasing the drag preserves the
-most-neutral transform already reached; pulling down again resizes the stage
-without resurrecting discarded zoom or pan. A drag that starts at the default
+Stage sizing is separate from user display zoom. Resizing changes the viewport
+and reports only the base presentation scale required to fill it. The
+`CameraZoomController` remains the sole transform and pan-bound owner and
+combines that base scale with the independent `1x` to `3x` user zoom. It derives
+bounds from the active media ratio, so letterbox space cannot be dragged into
+view. When an expanded stage is dragged upward, the stage controller reports
+normalized return progress to the camera parent. The parent coordinates that
+intent with the live presentation, which continuously returns user zoom and pan
+toward `1x` centered media while the base scale independently follows stage
+geometry. Reversing or partially releasing the drag preserves the most-neutral
+transform already reached; pulling down again resizes the stage without
+resurrecting discarded user zoom or pan. A drag that starts at the default
 height uses its greatest expansion as the return range. Controls, source state,
 and toasts remain outside both transformations.
 
@@ -90,13 +92,15 @@ and toasts remain outside both transformations.
   and occupies the final media box.
 - Size changes are not animated. User-driven Home Assistant resizing may
   reflow, but connection, poster, and transport changes may not.
-- Stage-return zoom coordination changes only the media's compositor transform
-  during the direct user gesture. It does not animate stage geometry, schedule
-  a post-release correction, or alter the reserved default ratio, preventing
-  avoidable layout shifts outside the user's resize action.
+- Stage-created crop, pan, and stage-return zoom coordination change only the
+  media's compositor transform during direct user interaction. They do not
+  animate stage geometry, schedule a post-release correction, or alter the
+  reserved default ratio, preventing avoidable layout shifts outside the
+  user's resize action.
 
 ## Verification
 
 Browser coverage must verify automatic `16:9` stage sizing, explicit-height
-containment without overflow, `4:3` media containment, placeholder geometry,
-and consistent behavior in Chromium, Firefox, and WebKit.
+containment without overflow, `4:3` media containment, immediate pan after a
+stage-created crop, placeholder geometry, and consistent behavior in Chromium,
+Firefox, and WebKit.

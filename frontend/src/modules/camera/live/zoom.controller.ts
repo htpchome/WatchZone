@@ -47,10 +47,12 @@ interface ZoomTransform {
 
 /** Owns camera-media zoom, bounded pan, gestures, and lifecycle cleanup. */
 export class CameraZoomController implements ReactiveController {
+  private _basePresentationScale = 1;
   private _dragStart?: DragStart;
   private _gestureMoved = false;
   private _interacting = false;
   private _key?: string;
+  private _mediaHeightRatio?: number;
   private _panX = 0;
   private _panY = 0;
   private _pinchStart?: PinchStart;
@@ -82,16 +84,44 @@ export class CameraZoomController implements ReactiveController {
 
   public get transform(): string {
     const { panX, panY, scale } = this._presentationTransform();
-    return `translate3d(${panX}px, ${panY}px, 0) scale(${scale})`;
+    return `translate3d(${panX}px, ${panY}px, 0) scale(${scale * this._basePresentationScale})`;
   }
 
   public get zoomed(): boolean {
     return this.scale > MIN_ZOOM;
   }
 
+  public get pannable(): boolean {
+    return this.scale * this._basePresentationScale > MIN_ZOOM;
+  }
+
+  public setBasePresentationScale(scale: number): void {
+    const nextScale = Number.isFinite(scale) ? Math.max(MIN_ZOOM, scale) : 1;
+    if (Math.abs(nextScale - this._basePresentationScale) <= Number.EPSILON)
+      return;
+    this._basePresentationScale = nextScale;
+    this._clampPan();
+    this._host.requestUpdate();
+  }
+
+  public setMediaDimensions(width: number, height: number): void {
+    const nextRatio =
+      Number.isFinite(width) &&
+      Number.isFinite(height) &&
+      width > 0 &&
+      height > 0
+        ? height / width
+        : undefined;
+    if (nextRatio === this._mediaHeightRatio) return;
+    this._mediaHeightRatio = nextRatio;
+    this._clampPan();
+    this._host.requestUpdate();
+  }
+
   public configure(key: string | undefined): void {
     if (this._key === key) return;
     this._key = key;
+    this._mediaHeightRatio = undefined;
     this.reset();
   }
 
@@ -201,8 +231,8 @@ export class CameraZoomController implements ReactiveController {
         x: event.clientX,
         y: event.clientY,
       };
-      this._interacting = this.zoomed;
-      if (this.zoomed) event.preventDefault();
+      this._interacting = this.pannable;
+      if (this.pannable) event.preventDefault();
     }
     this._host.requestUpdate();
   };
@@ -237,7 +267,7 @@ export class CameraZoomController implements ReactiveController {
     }
 
     const drag = this._dragStart;
-    if (!drag || drag.pointerId !== event.pointerId || !this.zoomed) return;
+    if (!drag || drag.pointerId !== event.pointerId || !this.pannable) return;
     const deltaX = event.clientX - drag.x;
     const deltaY = event.clientY - drag.y;
     if (
@@ -298,11 +328,11 @@ export class CameraZoomController implements ReactiveController {
       event.preventDefault();
       this._setScaleAt(this._scale - WHEEL_ZOOM_STEP, centerX, centerY);
     } else if (event.key === "0" || event.key === "Escape") {
-      if (!this.zoomed) return;
+      if (!this.pannable) return;
       event.preventDefault();
       this.reset();
       return;
-    } else if (this.zoomed && event.key.startsWith("Arrow")) {
+    } else if (this.pannable && event.key.startsWith("Arrow")) {
       const amount = Math.max(
         1,
         Math.min(rect?.width ?? 0, rect?.height ?? 0) * KEYBOARD_PAN_FRACTION,
@@ -435,7 +465,7 @@ export class CameraZoomController implements ReactiveController {
   }
 
   private _clampPan(): void {
-    if (!this.zoomed) {
+    if (!this.pannable) {
       this._panX = 0;
       this._panY = 0;
       return;
@@ -460,13 +490,29 @@ export class CameraZoomController implements ReactiveController {
     return { panX: pan.x, panY: pan.y, scale };
   }
 
-  private _clampTransformPan(panX: number, panY: number, scale: number): Point {
+  private _clampTransformPan(
+    panX: number,
+    panY: number,
+    userScale: number,
+  ): Point {
+    const scale = userScale * this._basePresentationScale;
     if (scale <= MIN_ZOOM) return { x: 0, y: 0 };
     const width = this._surfaceWidth;
     const height = this._surfaceHeight;
     if (!width || !height) return { x: panX, y: panY };
-    const maxX = (width * (scale - 1)) / 2;
-    const maxY = (height * (scale - 1)) / 2;
+    const stageHeightRatio = height / width;
+    const contentWidth =
+      this._mediaHeightRatio !== undefined &&
+      stageHeightRatio < this._mediaHeightRatio
+        ? height / this._mediaHeightRatio
+        : width;
+    const contentHeight =
+      this._mediaHeightRatio !== undefined &&
+      stageHeightRatio > this._mediaHeightRatio
+        ? width * this._mediaHeightRatio
+        : height;
+    const maxX = Math.max(0, (contentWidth * scale - width) / 2);
+    const maxY = Math.max(0, (contentHeight * scale - height) / 2);
     return {
       x: Math.min(maxX, Math.max(-maxX, panX)),
       y: Math.min(maxY, Math.max(-maxY, panY)),

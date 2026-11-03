@@ -15,12 +15,12 @@ function createHost(): ReactiveControllerHost {
   };
 }
 
-function createSurface(): HTMLElement {
+function createSurface(height = 225): HTMLElement {
   const surface = document.createElement("div");
   Object.defineProperty(surface, "getBoundingClientRect", {
     value: () => ({
-      bottom: 225,
-      height: 225,
+      bottom: height,
+      height,
       left: 0,
       right: 400,
       top: 0,
@@ -262,6 +262,42 @@ describe("camera media zoom", () => {
       }),
     );
     expect(controller.transform).toContain("translate3d(400px, 225px, 0)");
+  });
+
+  it("pans a stage-created crop before the user adds display zoom", () => {
+    const surface = createSurface(400);
+    const controller = new CameraZoomController(createHost());
+    controller.observe(surface);
+    controller.setMediaDimensions(400, 300);
+    controller.setBasePresentationScale(4 / 3);
+    connectPointerEvents(surface, controller);
+
+    expect(controller.scale).toBe(1);
+    expect(controller.zoomed).toBe(false);
+    expect(controller.pannable).toBe(true);
+    expect(controller.transform).toContain("scale(1.3333333333333333)");
+
+    surface.dispatchEvent(
+      pointerEvent("pointerdown", {
+        clientX: 200,
+        clientY: 200,
+        pointerId: 1,
+        pointerType: "mouse",
+      }),
+    );
+    surface.dispatchEvent(
+      pointerEvent("pointermove", {
+        clientX: 400,
+        clientY: 400,
+        pointerId: 1,
+        pointerType: "mouse",
+      }),
+    );
+    expect(controller.transform).toMatch(/translate3d\(66\.6\d*px, 0px, 0\)/);
+
+    controller.setBasePresentationScale(1);
+    expect(controller.pannable).toBe(false);
+    expect(controller.transform).toBe("translate3d(0px, 0px, 0) scale(1)");
   });
 
   it("resets zoom when camera identity changes", () => {

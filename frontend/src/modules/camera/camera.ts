@@ -74,6 +74,7 @@ export class CameraModule extends LitElement {
   private readonly _stageResize = new CameraStageResizeController(
     this,
     (interaction) => this._handleStageResizeInteraction(interaction),
+    (scale) => this._presentation?.setBasePresentationScale(scale),
   );
   private _suspendDialogActive = false;
 
@@ -211,6 +212,9 @@ export class CameraModule extends LitElement {
       this.renderRoot.querySelector<HTMLButtonElement>(
         ".stage-resize-handle",
       ) ?? undefined,
+    );
+    this._presentation?.setBasePresentationScale(
+      this._stageResize.mediaPresentationScale,
     );
     this._audio.syncMediaState();
   }

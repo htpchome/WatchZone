@@ -78,7 +78,12 @@ describe("camera stage resizing", () => {
 
   it("reveals a 4:3 source before switching to centered crop", () => {
     const { handle, stage } = createElements();
-    const controller = new CameraStageResizeController(createHost());
+    const presentationScales: number[] = [];
+    const controller = new CameraStageResizeController(
+      createHost(),
+      undefined,
+      (scale) => presentationScales.push(scale),
+    );
     controller.observe(stage, handle);
     controller.setMediaDimensions(400, 300);
     connectPointerEvents(handle, controller);
@@ -94,12 +99,13 @@ describe("camera stage resizing", () => {
         stage.style.getPropertyValue("--wzc-camera-stage-runtime-aspect-ratio"),
       ),
     ).toBeCloseTo(4 / 3);
-    expect(stage.style.getPropertyValue("--wzc-live-fit")).toBe("");
+    expect(controller.mediaPresentationScale).toBe(1);
 
     handle.dispatchEvent(
       pointerEvent("pointermove", { clientX: 200, clientY: 200 }),
     );
-    expect(stage.style.getPropertyValue("--wzc-live-fit")).toBe("cover");
+    expect(controller.mediaPresentationScale).toBeCloseTo(0.8125 / 0.75);
+    expect(presentationScales.at(-1)).toBeCloseTo(0.8125 / 0.75);
   });
 
   it("clamps stage height between 16:9 and 1:1", () => {

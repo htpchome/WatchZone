@@ -4,6 +4,8 @@ import {
   suppressNativePictureInPicture,
   togglePictureInPicture,
 } from "../src/modules/camera/picture-in-picture";
+import type { CameraLivePresentation } from "../src/modules/camera/live/presentation";
+import "../src/modules/camera/live/presentation";
 
 describe("camera Picture-in-Picture", () => {
   const pictureInPictureElementDescriptor = Object.getOwnPropertyDescriptor(
@@ -16,6 +18,7 @@ describe("camera Picture-in-Picture", () => {
   );
 
   afterEach(() => {
+    document.body.replaceChildren();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
     if (pictureInPictureElementDescriptor) {
@@ -75,6 +78,9 @@ describe("camera Picture-in-Picture", () => {
 
     suppressNativePictureInPicture(video);
     expect(video.disablePictureInPicture).toBe(true);
+    expect(video.getAttribute("controlslist")?.split(/\s+/)).toContain(
+      "nopictureinpicture",
+    );
     expect(await togglePictureInPicture(video)).toBe(true);
     expect(request).toHaveBeenCalledOnce();
     expect(video.disablePictureInPicture).toBe(false);
@@ -117,5 +123,63 @@ describe("camera Picture-in-Picture", () => {
     expect(await togglePictureInPicture(video)).toBe(false);
     expect(video.webkitPresentationMode).toBe("inline");
     expect(video.disablePictureInPicture).toBe(true);
+  });
+
+  it("enables the custom action when a retained HLS video becomes active", async () => {
+    Object.defineProperty(document, "pictureInPictureEnabled", {
+      configurable: true,
+      value: true,
+    });
+    Object.defineProperty(document, "pictureInPictureElement", {
+      configurable: true,
+      value: null,
+      writable: true,
+    });
+    const hlsVideo = document.createElement("video");
+    const request = vi.fn(async () => ({}) as PictureInPictureWindow);
+    Object.defineProperty(hlsVideo, "requestPictureInPicture", {
+      configurable: true,
+      value: request,
+    });
+    const presentation = document.createElement(
+      "wzc-camera-live",
+    ) as CameraLivePresentation;
+    presentation.available = true;
+    presentation.hlsVideo = hlsVideo;
+    presentation.selected = "hls";
+    presentation.transport = "hls_mse";
+    document.body.append(presentation);
+
+    const pictureInPictureButton = (): HTMLButtonElement | null =>
+      presentation.shadowRoot
+        ?.querySelector("wzc-camera-controls")
+        ?.shadowRoot?.querySelector<HTMLButtonElement>(
+          '[data-control="picture_in_picture"]',
+        ) ?? null;
+    await vi.waitFor(() =>
+      expect(pictureInPictureButton()?.disabled).toBe(false),
+    );
+    expect(hlsVideo.disablePictureInPicture).toBe(true);
+    expect(hlsVideo.getAttribute("controlslist")?.split(/\s+/)).toContain(
+      "nopictureinpicture",
+    );
+
+    pictureInPictureButton()?.click();
+    await vi.waitFor(() => expect(request).toHaveBeenCalledOnce());
+  });
+
+  it("suppresses native PiP before the rendered WebRTC video is painted", async () => {
+    const presentation = document.createElement(
+      "wzc-camera-live",
+    ) as CameraLivePresentation;
+    document.body.append(presentation);
+    await vi.waitFor(() =>
+      expect(
+        presentation.webRtcVideo?.getAttribute("controlslist")?.split(/\s+/),
+      ).toContain("nopictureinpicture"),
+    );
+    expect(
+      presentation.webRtcVideo?.getAttribute("disablepictureinpicture"),
+    ).toBe("");
   });
 });

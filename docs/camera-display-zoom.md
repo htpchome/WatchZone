@@ -55,11 +55,6 @@ space or create a second transform owner.
 
 ## Input policy
 
-Zoomed panning presents a four-direction cursor through the shared camera
-cursor style, with `all-scroll` as its standards-based fallback. The visual
-cursor is presentation feedback only and does not create a second gesture or
-platform-detection path.
-
 | Input                             | Behavior                                                                       |
 | --------------------------------- | ------------------------------------------------------------------------------ |
 | Mouse primary double-click        | Toggle `1x` and `2x` at the pointer position.                                  |

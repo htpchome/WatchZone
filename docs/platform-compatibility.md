@@ -32,12 +32,6 @@ new browser API makes another platform easier or faster.
   and Home Assistant theme tokens where they affect the feature.
 - Avoid APIs that require cross-origin isolation or browser flags unless the
   feature has a supported alternative.
-- Interactive cursor semantics use standard CSS keywords. Camera pan and stage
-  resize also provide small static SVG cursor assets before their keyword
-  fallback because affected WebKit/WKWebView releases can accept `move`,
-  `all-scroll`, or resize declarations without visibly changing the pointer.
-  This compatibility path is shared across engines and must not add browser or
-  Catalyst detection.
 
 ### 2.1 Responsive and input profile
 
@@ -136,3 +130,11 @@ the affected entries in this matrix:
 An untested entry is reported as unverified, not silently treated as passing.
 Known platform limitations are documented beside the owning feature and must
 not be hidden behind generic failure messages.
+
+Affected Mac Catalyst WebKit releases may keep displaying the ordinary pointer
+when camera pan uses `move` or the stage handle uses `ns-resize`. Custom URL
+cursors do not reliably change that behavior, and CSS exposes no capability
+test for whether an accepted cursor value was actually painted. WatchZone keeps
+the standard cursors used by other clients and does not add user-agent
+detection for this visual-only Catalyst limitation; the interactions remain
+fully functional.

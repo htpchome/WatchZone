@@ -1,7 +1,5 @@
 import { css } from "lit";
 
-import { cameraVerticalResizeCursor } from "./interaction-cursors.styles";
-
 export const cameraStyles = css`
   :host,
   .camera,
@@ -100,7 +98,7 @@ export const cameraStyles = css`
     border-radius: var(--wzc-radius-pill);
     opacity: var(--wzc-stage-resize-handle-opacity);
     transform: translateX(-50%);
-    cursor: ${cameraVerticalResizeCursor};
+    cursor: ns-resize;
     touch-action: none;
     user-select: none;
     -webkit-tap-highlight-color: transparent;

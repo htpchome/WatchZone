@@ -16,6 +16,14 @@ interface PictureInPictureRoot extends Node {
 
 export type PictureInPictureMethod = "standard" | "webkit";
 
+function suppressNativeControl(video: HTMLVideoElement): void {
+  const controls = new Set(
+    (video.getAttribute("controlslist") ?? "").split(/\s+/).filter(Boolean),
+  );
+  controls.add("nopictureinpicture");
+  video.setAttribute("controlslist", [...controls].join(" "));
+}
+
 function ownerDocument(video: HTMLVideoElement): PictureInPictureDocument {
   return video.ownerDocument as PictureInPictureDocument;
 }
@@ -68,6 +76,7 @@ export function suppressNativePictureInPicture(video?: HTMLVideoElement): void {
   }
   video.disablePictureInPicture = true;
   video.setAttribute("disablepictureinpicture", "");
+  suppressNativeControl(video);
 }
 
 function restoreAfterPictureInPicture(video: HTMLVideoElement): void {
