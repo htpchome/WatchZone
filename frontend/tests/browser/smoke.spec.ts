@@ -204,14 +204,13 @@ test("preserves expanded camera-stage geometry across carousel selection", async
     result.navigation.previousTop ?? 0,
     1,
   );
-  expect(result.navigation.previousLeft).toBeCloseTo(
-    result.navigation.carouselLeft ?? 0,
-    1,
-  );
-  expect(result.navigation.nextRight).toBeCloseTo(
-    result.navigation.carouselRight ?? 0,
-    1,
-  );
+  const previousInset =
+    (result.navigation.previousLeft ?? 0) -
+    (result.navigation.carouselLeft ?? 0);
+  const nextInset =
+    (result.navigation.carouselRight ?? 0) - (result.navigation.nextRight ?? 0);
+  expect(previousInset).toBeGreaterThan(0);
+  expect(previousInset).toBeCloseTo(nextInset, 1);
   expect(
     (result.navigation.previousTop ?? 0) +
       (result.navigation.previousHeight ?? 0) / 2,

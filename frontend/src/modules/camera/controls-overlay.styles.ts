@@ -10,10 +10,10 @@ export const cameraControlsStyles = css`
     pointer-events: none;
     container-type: size;
 
-    --wzc-control-size: 2.75rem;
+    --wzc-control-size: var(--wzc-camera-control-size);
     --wzc-control-icon-size: 1.65rem;
     --wzc-control-gap: 0.5rem;
-    --wzc-control-safe-inline: 0.75rem;
+    --wzc-control-safe-inline: var(--wzc-camera-control-safe-inline);
   }
 
   .control-group {

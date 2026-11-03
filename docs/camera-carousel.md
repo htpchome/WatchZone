@@ -77,9 +77,12 @@ cannot complete.
   initialization does not cause layout shift.
 - Swiper transforms only its wrapper. Live zoom transforms only the media
   surface inside a slide, and stage resizing continues to own stage geometry.
-- Previous and next navigation are vertically centered on the carousel, remain
-  at its outer inline edges, and scale within fixed minimum and maximum bounds
-  from the carousel's own block size rather than from the viewport.
+- Previous and next navigation are vertically centered on the carousel and use
+  one symmetric inline inset. The right navigation remains to the inline-start
+  side of the control stack with an explicit gap, while the left navigation
+  mirrors that spacing.
+  Both scale within fixed minimum and maximum bounds from the carousel's own
+  block size rather than from the viewport.
 
 ## Gesture policy
 
