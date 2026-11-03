@@ -1,5 +1,7 @@
 import { css } from "lit";
 
+import { cameraPanCursor } from "./interaction-cursors.styles";
+
 export const cameraLiveViewStyles = css`
   :host {
     display: block;
@@ -43,13 +45,13 @@ export const cameraLiveViewStyles = css`
   }
 
   .media-surface.zoomed {
-    cursor: move;
+    cursor: ${cameraPanCursor};
     touch-action: none;
   }
 
   .media-surface.interacting,
   .media-surface.stage-resize-active {
-    cursor: move;
+    cursor: ${cameraPanCursor};
     transition: none;
   }
 

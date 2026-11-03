@@ -32,6 +32,12 @@ new browser API makes another platform easier or faster.
   and Home Assistant theme tokens where they affect the feature.
 - Avoid APIs that require cross-origin isolation or browser flags unless the
   feature has a supported alternative.
+- Interactive cursor semantics use standard CSS keywords. Camera pan and stage
+  resize also provide small static SVG cursor assets before their keyword
+  fallback because affected WebKit/WKWebView releases can accept `move`,
+  `all-scroll`, or resize declarations without visibly changing the pointer.
+  This compatibility path is shared across engines and must not add browser or
+  Catalyst detection.
 
 ### 2.1 Responsive and input profile
 

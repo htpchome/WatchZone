@@ -41,6 +41,25 @@ describe("camera presentation fallback", () => {
 });
 
 describe("camera component appearance", () => {
+  it("keeps the live presentation inside one non-interactive camera slide", async () => {
+    const camera = document.createElement("wzc-camera") as CameraModule;
+    document.body.append(camera);
+    await camera.updateComplete;
+
+    const carousel = camera.shadowRoot?.querySelector(".camera-carousel");
+    const wrapper = carousel?.querySelector(".swiper-wrapper");
+    const slides = wrapper?.querySelectorAll(".swiper-slide");
+    const presentation = slides?.[0]?.querySelector("wzc-camera-live");
+
+    expect(carousel?.getAttribute("aria-roledescription")).toBe("carousel");
+    expect(carousel?.classList.contains("camera-carousel-interactive")).toBe(
+      false,
+    );
+    expect(slides).toHaveLength(1);
+    expect(slides?.[0]?.getAttribute("aria-roledescription")).toBe("slide");
+    expect(presentation).not.toBeNull();
+  });
+
   it("applies independent corner and shadow inputs", async () => {
     const camera = document.createElement("wzc-camera") as CameraModule;
     document.body.append(camera);

@@ -31,6 +31,9 @@ For camera display zoom, pan, or gesture changes, also read
 For camera stage, card sizing, aspect-ratio, or media fitting changes, also read
 `docs/camera-presentation-layout.md` in full.
 
+For camera carousel, slide navigation, or Swiper lifecycle changes, also read
+`docs/camera-carousel.md` in full.
+
 ## Architecture stability
 
 - Treat `architecture.md` as a contract, not a progress log.

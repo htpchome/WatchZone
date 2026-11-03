@@ -1,15 +1,27 @@
 import { css } from "lit";
 
+import { cameraVerticalResizeCursor } from "./interaction-cursors.styles";
+
 export const cameraStyles = css`
   :host,
   .camera,
+  .camera-carousel,
+  .swiper-slide,
+  .swiper-wrapper,
   .live-presentation {
-    display: block;
     box-sizing: border-box;
     inline-size: 100%;
     block-size: 100%;
     min-inline-size: 0;
     min-block-size: 0;
+  }
+
+  :host,
+  .camera,
+  .camera-carousel,
+  .swiper-slide,
+  .live-presentation {
+    display: block;
   }
 
   .camera {
@@ -25,6 +37,32 @@ export const cameraStyles = css`
 
   .camera.stage-resized {
     block-size: auto;
+  }
+
+  .camera-carousel {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .camera-carousel.camera-carousel-interactive {
+    touch-action: pan-y;
+  }
+
+  .swiper-wrapper {
+    position: relative;
+    display: flex;
+    box-sizing: content-box;
+    transition-property: transform;
+  }
+
+  .swiper-slide {
+    position: relative;
+    flex-shrink: 0;
+    transition-property: transform;
+  }
+
+  .camera-carousel:not(.camera-carousel-interactive) .swiper-slide {
+    inline-size: 100% !important;
   }
 
   .live-presentation {
@@ -62,7 +100,7 @@ export const cameraStyles = css`
     border-radius: var(--wzc-radius-pill);
     opacity: var(--wzc-stage-resize-handle-opacity);
     transform: translateX(-50%);
-    cursor: ns-resize;
+    cursor: ${cameraVerticalResizeCursor};
     touch-action: none;
     user-select: none;
     -webkit-tap-highlight-color: transparent;

@@ -9,6 +9,7 @@ import {
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import { ToastManager } from "../../ui/toast-manager";
 import { renderIcon } from "../../ui/icons";
+import { CameraCarouselController } from "./carousel.controller";
 import { cameraStyles } from "./camera.styles";
 import { CameraAudioController } from "./live/audio.controller";
 import type {
@@ -45,6 +46,7 @@ export class CameraModule extends LitElement {
     startUnmutedPhone: { attribute: false, type: Boolean },
   };
 
+  private readonly _carousel = new CameraCarouselController(this);
   private readonly _toasts = new ToastManager(this);
   private readonly _audio: CameraAudioController = new CameraAudioController(
     this,
@@ -127,30 +129,46 @@ export class CameraModule extends LitElement {
           .filter(Boolean)
           .join(" ")}
       >
-        <${presentationTag}
-          class="live-presentation"
-          .available=${this.available}
-          .failed=${this._session.failed}
-          .hlsVideo=${this._session.hlsVideo}
-          .muted=${this._audio.muted}
-          .notices=${this._toasts.notices}
-          .posterUrl=${this.posterUrl}
-          .selected=${this._session.selected}
-          .sessionRevision=${this._session.revision}
-          .suspendPending=${this._runtime.pending}
-          .suspendSupported=${runtime?.supported === true}
-          .suspended=${suspended}
-          .transport=${this._session.transport}
-          .webRtcStream=${this._session.webRtcStream}
-          .zoomKey=${this.entityId}
-          @camera-media-attached=${this._handleMediaAttached}
-          @camera-media-dimensions=${this._handleMediaDimensions}
-          @camera-mute-toggle=${this._handleMuteToggle}
-          @camera-suspend-toggle=${this._handleSuspendToggle}
-          @camera-toast-request=${this._handleToastRequest}
-          @camera-webrtc-decoded=${this._handleWebRtcDecoded}
-          @camera-webrtc-presented=${this._handleWebRtcPresented}
-        ></${presentationTag}>
+        <div
+          class="camera-carousel swiper"
+          role="region"
+          aria-label="Camera views"
+          aria-roledescription="carousel"
+        >
+          <div class="swiper-wrapper">
+            <div
+              class="swiper-slide"
+              role="group"
+              aria-label="Camera 1 of 1"
+              aria-roledescription="slide"
+            >
+              <${presentationTag}
+                class="live-presentation"
+                .available=${this.available}
+                .failed=${this._session.failed}
+                .hlsVideo=${this._session.hlsVideo}
+                .muted=${this._audio.muted}
+                .notices=${this._toasts.notices}
+                .posterUrl=${this.posterUrl}
+                .selected=${this._session.selected}
+                .sessionRevision=${this._session.revision}
+                .suspendPending=${this._runtime.pending}
+                .suspendSupported=${runtime?.supported === true}
+                .suspended=${suspended}
+                .transport=${this._session.transport}
+                .webRtcStream=${this._session.webRtcStream}
+                .zoomKey=${this.entityId}
+                @camera-media-attached=${this._handleMediaAttached}
+                @camera-media-dimensions=${this._handleMediaDimensions}
+                @camera-mute-toggle=${this._handleMuteToggle}
+                @camera-suspend-toggle=${this._handleSuspendToggle}
+                @camera-toast-request=${this._handleToastRequest}
+                @camera-webrtc-decoded=${this._handleWebRtcDecoded}
+                @camera-webrtc-presented=${this._handleWebRtcPresented}
+              ></${presentationTag}>
+            </div>
+          </div>
+        </div>
         <button
           class="stage-resize-handle"
           type="button"
@@ -183,6 +201,11 @@ export class CameraModule extends LitElement {
   }
 
   protected updated(): void {
+    this._carousel.observe(
+      this.renderRoot.querySelector<HTMLElement>(".camera-carousel") ??
+        undefined,
+      1,
+    );
     this._stageResize.observe(
       this.renderRoot.querySelector<HTMLElement>(".camera") ?? undefined,
       this.renderRoot.querySelector<HTMLButtonElement>(

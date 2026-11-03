@@ -63,6 +63,11 @@ Home, and End provide keyboard access, and double-click/double-tap resets the
 stage. The resize handle owns only its own touch gesture and does not replace
 native page scrolling elsewhere.
 
+The handle uses the shared vertical-resize cursor asset with `row-resize` as
+its standards-based fallback. This preserves the intended pointer feedback in
+WebKit/WKWebView releases with broken resize-keyword rendering without adding
+a Catalyst-specific interaction path.
+
 Stage sizing is separate from display zoom. Resizing changes the viewport and
 base `contain`/`cover` fit. When an expanded stage is dragged upward, the stage
 controller reports normalized return progress to the camera parent. The parent

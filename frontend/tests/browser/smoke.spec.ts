@@ -71,7 +71,11 @@ test("does not load camera code for a camera-free layout", async ({ page }) => {
       cameraResources: performance
         .getEntriesByType("resource")
         .map(({ name }) => name)
-        .filter((name) => name.includes("/modules/camera/")),
+        .filter(
+          (name) =>
+            name.includes("/modules/camera/") ||
+            name.toLocaleLowerCase().includes("swiper"),
+        ),
     })),
   ).toEqual({ cameraDefined: false, cameraResources: [] });
   await expect(page.locator("watchzone-card")).toContainText(
@@ -724,6 +728,45 @@ test("retains one live connection while the card presentation is replaced", asyn
     )
     .toBe(1);
 
+  const carousel = page.locator("wzc-camera .camera-carousel");
+  await expect(carousel).toHaveClass(/swiper-initialized/);
+  await expect(
+    carousel.locator(":scope > .swiper-wrapper > .swiper-slide"),
+  ).toHaveCount(1);
+  await expect(
+    carousel.locator(
+      ":scope > .swiper-wrapper > .swiper-slide > wzc-camera-live",
+    ),
+  ).toHaveCount(1);
+  expect(
+    await carousel.evaluate((element) => {
+      const swiper = (
+        element as HTMLElement & {
+          swiper?: {
+            allowTouchMove: boolean;
+            params: { nested?: boolean };
+          };
+        }
+      ).swiper;
+      return {
+        allowTouchMove: swiper?.allowTouchMove,
+        interactive: element.classList.contains("camera-carousel-interactive"),
+        nested: swiper?.params.nested,
+      };
+    }),
+  ).toEqual({ allowTouchMove: false, interactive: false, nested: true });
+  await carousel.evaluate((element) => {
+    (
+      window as typeof window & {
+        __wzcRemovedCarousel?: { destroyed: boolean };
+      }
+    ).__wzcRemovedCarousel = (
+      element as HTMLElement & {
+        swiper?: { destroyed: boolean };
+      }
+    ).swiper;
+  });
+
   const poster = page.locator("wzc-camera img.poster");
   await expect(poster).toHaveAttribute(
     "src",
@@ -769,6 +812,19 @@ test("retains one live connection while the card presentation is replaced", asyn
   });
 
   const video = page.locator("wzc-camera video.webrtc");
+  await expect(page.locator("wzc-camera .camera-carousel")).toHaveClass(
+    /swiper-initialized/,
+  );
+  expect(
+    await page.evaluate(
+      () =>
+        (
+          window as typeof window & {
+            __wzcRemovedCarousel?: { destroyed: boolean };
+          }
+        ).__wzcRemovedCarousel?.destroyed,
+    ),
+  ).toBe(true);
   await expect
     .poll(() =>
       video.evaluate((element) => ({
@@ -876,7 +932,9 @@ test("retains one live connection while the card presentation is replaced", asyn
   const mediaSurface = page.locator("wzc-camera-live .media-surface");
   await mediaSurface.dblclick({ position: { x: 120, y: 80 } });
   await expect(mediaSurface).toHaveAttribute("style", /scale\(2\)/);
-  await expect(mediaSurface).toHaveCSS("cursor", "move");
+  expect(
+    await mediaSurface.evaluate((element) => getComputedStyle(element).cursor),
+  ).toContain("all-scroll");
   await mediaSurface.dispatchEvent("wheel", {
     clientX: 120,
     clientY: 80,
@@ -894,6 +952,11 @@ test("retains one live connection while the card presentation is replaced", asyn
     width: page.viewportSize()?.width ?? 1_280,
   });
   await stageResizeHandle.scrollIntoViewIfNeeded();
+  expect(
+    await stageResizeHandle.evaluate(
+      (element) => getComputedStyle(element).cursor,
+    ),
+  ).toContain("row-resize");
   const cardShell = page.locator("watchzone-card ha-card");
   const initialCardBox = await cardShell.boundingBox();
   const initialStageBox = await liveViewport.boundingBox();
