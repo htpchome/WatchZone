@@ -16,6 +16,17 @@ interface PictureInPictureRoot extends Node {
 
 export type PictureInPictureMethod = "standard" | "webkit";
 
+interface NativeSuppressionRefresh {
+  readonly previousPriority: string;
+  readonly previousWidth: string;
+  readonly temporaryWidth: string;
+}
+
+const nativeSuppressionRefreshes = new WeakMap<
+  HTMLVideoElement,
+  NativeSuppressionRefresh
+>();
+
 function suppressNativeControl(video: HTMLVideoElement): void {
   const controls = new Set(
     (video.getAttribute("controlslist") ?? "").split(/\s+/).filter(Boolean),
@@ -79,31 +90,60 @@ export function suppressNativePictureInPicture(video?: HTMLVideoElement): void {
   suppressNativeControl(video);
 }
 
-function restoreAfterPictureInPicture(video: HTMLVideoElement): void {
+/**
+ * Reapplies native PiP suppression after a browser has created its media UI.
+ *
+ * Firefox currently does not observe dynamic `disablepictureinpicture`
+ * changes. A one-frame geometry refresh makes it reevaluate the native toggle.
+ */
+export function refreshNativePictureInPictureSuppression(
+  video?: HTMLVideoElement,
+): void {
+  if (!video || isPictureInPictureActive(video)) {
+    return;
+  }
   suppressNativePictureInPicture(video);
-  if (video.paused) {
-    void video.play().catch(() => undefined);
+  if (nativeSuppressionRefreshes.has(video)) {
+    return;
   }
 
   const width = video.getBoundingClientRect().width;
   if (width <= 1) {
     return;
   }
-  const previousWidth = video.style.getPropertyValue("width");
-  const previousPriority = video.style.getPropertyPriority("width");
-  const temporaryWidth = `${Math.round(width) - 1}px`;
-  video.style.setProperty("width", temporaryWidth, "important");
+  const refresh: NativeSuppressionRefresh = {
+    previousPriority: video.style.getPropertyPriority("width"),
+    previousWidth: video.style.getPropertyValue("width"),
+    temporaryWidth: `${Math.max(1, Math.round(width) - 1)}px`,
+  };
+  nativeSuppressionRefreshes.set(video, refresh);
+  video.style.setProperty("width", refresh.temporaryWidth, "important");
   video.getBoundingClientRect();
   requestAnimationFrame(() => {
-    if (video.style.getPropertyValue("width") !== temporaryWidth) {
+    if (nativeSuppressionRefreshes.get(video) !== refresh) {
       return;
     }
-    if (previousWidth) {
-      video.style.setProperty("width", previousWidth, previousPriority);
+    nativeSuppressionRefreshes.delete(video);
+    if (video.style.getPropertyValue("width") !== refresh.temporaryWidth) {
+      return;
+    }
+    if (refresh.previousWidth) {
+      video.style.setProperty(
+        "width",
+        refresh.previousWidth,
+        refresh.previousPriority,
+      );
     } else {
       video.style.removeProperty("width");
     }
   });
+}
+
+function restoreAfterPictureInPicture(video: HTMLVideoElement): void {
+  refreshNativePictureInPictureSuppression(video);
+  if (video.paused) {
+    void video.play().catch(() => undefined);
+  }
 }
 
 export async function togglePictureInPicture(

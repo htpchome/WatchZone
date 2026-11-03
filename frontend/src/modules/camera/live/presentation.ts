@@ -21,6 +21,7 @@ import { cameraLiveViewStyles } from "../live-view.styles";
 import {
   isPictureInPictureActive,
   pictureInPictureMethod,
+  refreshNativePictureInPictureSuppression,
   suppressNativePictureInPicture,
   togglePictureInPicture,
 } from "../picture-in-picture";
@@ -386,6 +387,7 @@ export class CameraLivePresentation extends LitElement {
 
   private _emitWebRtcDecoded(video: HTMLVideoElement): void {
     this._cancelWebRtcFrameRequest(video);
+    refreshNativePictureInPictureSuppression(video);
     this.dispatchEvent(
       new CustomEvent<HTMLVideoElement>("camera-webrtc-decoded", {
         bubbles: true,

@@ -25,6 +25,15 @@ camera module. Actions must not be implemented inside a live connection adapter.
   are not pointer hit targets; the parent media surface owns zoom and pan while
   the controls overlay owns action input. This prevents a transient browser
   video affordance from receiving a click intended for a WatchZone control.
+- WebRTC media readiness reapplies suppression through the PiP helper and
+  performs one coalesced geometry refresh. This accounts for Firefox creating
+  its native PiP toggle after the video is mounted without adding carousel or
+  connection-adapter knowledge of browser controls. HLS retains its existing
+  pre-attachment suppression path.
+- Firefox's browser-native PiP toggle can consume pointer input before page
+  content receives it. CSS stacking is therefore not a reliable fallback; if
+  Firefox is configured to ignore a site's PiP opt-out, page code cannot
+  guarantee that an overlapping author control receives the click.
 - Carousel containers do not detect, enable, suppress, or invoke PiP.
 
 ## Suspend and resume

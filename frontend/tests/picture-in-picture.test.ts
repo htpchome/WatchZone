@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  refreshNativePictureInPictureSuppression,
   suppressNativePictureInPicture,
   togglePictureInPicture,
 } from "../src/modules/camera/picture-in-picture";
@@ -181,5 +182,59 @@ describe("camera Picture-in-Picture", () => {
     expect(
       presentation.webRtcVideo?.getAttribute("disablepictureinpicture"),
     ).toBe("");
+  });
+
+  it("refreshes native PiP suppression once when WebRTC becomes ready", async () => {
+    const callbacks: FrameRequestCallback[] = [];
+    vi.stubGlobal(
+      "requestAnimationFrame",
+      vi.fn((callback: FrameRequestCallback) => {
+        callbacks.push(callback);
+        return callbacks.length;
+      }),
+    );
+    const video = document.createElement("video");
+    video.style.setProperty("width", "100%", "important");
+    vi.spyOn(video, "getBoundingClientRect").mockReturnValue({
+      width: 640,
+    } as DOMRect);
+
+    refreshNativePictureInPictureSuppression(video);
+    refreshNativePictureInPictureSuppression(video);
+
+    expect(video.disablePictureInPicture).toBe(true);
+    expect(video.style.getPropertyValue("width")).toBe("639px");
+    expect(callbacks).toHaveLength(1);
+    callbacks[0]?.(0);
+    expect(video.style.getPropertyValue("width")).toBe("100%");
+    expect(video.style.getPropertyPriority("width")).toBe("important");
+  });
+
+  it("refreshes suppression at rendered WebRTC readiness", async () => {
+    const callbacks: FrameRequestCallback[] = [];
+    vi.stubGlobal(
+      "requestAnimationFrame",
+      vi.fn((callback: FrameRequestCallback) => {
+        callbacks.push(callback);
+        return callbacks.length;
+      }),
+    );
+    const presentation = document.createElement(
+      "wzc-camera-live",
+    ) as CameraLivePresentation;
+    document.body.append(presentation);
+    await presentation.updateComplete;
+    const video = presentation.webRtcVideo;
+    expect(video).toBeDefined();
+    vi.spyOn(video!, "getBoundingClientRect").mockReturnValue({
+      width: 640,
+    } as DOMRect);
+
+    video?.dispatchEvent(new Event("loadeddata"));
+
+    expect(video?.style.getPropertyValue("width")).toBe("639px");
+    expect(callbacks).toHaveLength(1);
+    callbacks[0]?.(0);
+    expect(video?.style.getPropertyValue("width")).toBe("");
   });
 });
