@@ -143,9 +143,9 @@ async def test_frigate_capability_uses_public_camera_identity_for_go2rtc() -> No
             return_value=registry,
         ),
         patch(
-            "custom_components.watchzone.providers.frigate.live.import_module",
-            return_value=frigate_module,
-        ),
+            "custom_components.watchzone.providers.frigate.live.async_import_module",
+            new=AsyncMock(return_value=frigate_module),
+        ) as import_frigate,
         patch(
             "custom_components.watchzone.providers.frigate.live.async_get_clientsession",
             return_value=websession,
@@ -160,6 +160,7 @@ async def test_frigate_capability_uses_public_camera_identity_for_go2rtc() -> No
 
     assert isinstance(session, FrigateLiveSignalingSession)
     assert session.signaling_path == "frigate:trickle_ice"
+    import_frigate.assert_awaited_once_with(hass, "custom_components.frigate.views")
     websession.ws_connect.assert_awaited_once_with(
         URL("http://frigate:5000/live/webrtc/api/ws?src=porch"),
         headers={"Authorization": "Bearer token"},

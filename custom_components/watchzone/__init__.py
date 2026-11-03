@@ -27,9 +27,16 @@ from .const import (
     DOMAIN,
     FRONTEND_URL_BASE,
 )
-from .extensions import get_provider_registry
+from .extensions import (
+    EXTENSION_API_VERSION,
+    ProviderExtension,
+    ProviderRegistry,
+    get_provider_registry,
+)
 from .features.camera_runtime import CameraRuntimeService
 from .features.live import LiveSignalingService
+from .providers.frigate import camera as frigate_camera
+from .providers.frigate import live as frigate_live
 from .runtime import WatchZoneRuntime
 
 _LOGGER = logging.getLogger(__name__)
@@ -39,6 +46,7 @@ _CARD_PATH = _FRONTEND_DIRECTORY / CARD_FILENAME
 _ASSET_DIRECTORY = _FRONTEND_DIRECTORY / "assets"
 _DATA_RESOURCE_ID = "resource_id"
 _DATA_YAML_RESOURCE = "yaml_resource"
+_DATA_BUILTIN_PROVIDERS = "builtin_providers_registered"
 
 type WatchZoneConfigEntry = ConfigEntry[WatchZoneRuntime]
 
@@ -67,6 +75,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     await hass.http.async_register_static_paths(static_paths)
     hass.data.setdefault(DOMAIN, {})
+    _register_builtin_providers(hass)
     from .api.camera import async_register as async_register_camera_api
     from .api.live import async_register as async_register_live_api
 
@@ -77,7 +86,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: WatchZoneConfigEntry) -> bool:
     """Set up the configured WatchZone application."""
-    providers = get_provider_registry(hass)
+    providers = _register_builtin_providers(hass)
     camera_runtime = CameraRuntimeService(hass, providers)
     await camera_runtime.async_setup()
     runtime = WatchZoneRuntime(
@@ -89,6 +98,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: WatchZoneConfigEntry) ->
     hass.data.setdefault(DOMAIN, {})[DATA_RUNTIME] = runtime
     await _async_register_card_resource(hass)
     return True
+
+
+def _register_builtin_providers(hass: HomeAssistant) -> ProviderRegistry:
+    """Compose built-in capabilities once without importing on the event loop."""
+    domain_data = hass.data.setdefault(DOMAIN, {})
+    registry = get_provider_registry(hass)
+    if domain_data.get(_DATA_BUILTIN_PROVIDERS) is True:
+        return registry
+    registry.register(
+        ProviderExtension(
+            api_version=EXTENSION_API_VERSION,
+            provider_id="frigate",
+            entity_platforms=frozenset({"frigate"}),
+            camera_runtime=frigate_camera,
+            camera_runtime_poll_interval=1.0,
+            live_signaling=frigate_live,
+        )
+    )
+    domain_data[_DATA_BUILTIN_PROVIDERS] = True
+    return registry
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: WatchZoneConfigEntry) -> bool:

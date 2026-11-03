@@ -47,6 +47,12 @@ work only when configured or requested. A capability can be a module
 implementing the structural protocol or a stateful instance when identity and
 lifecycle justify a class.
 
+WatchZone's composition root imports its built-in capability modules as part of
+Home Assistant's integration-module load, then registers those already-loaded
+objects during setup. Optional integration modules discovered later must use
+Home Assistant's async import helper. Provider registration and request paths
+must never call Python's blocking `import_module()` on the event loop.
+
 ## Lifecycle example
 
 ```python

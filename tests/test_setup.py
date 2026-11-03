@@ -14,11 +14,24 @@ from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.watchzone import (
+    _register_builtin_providers,
     async_setup,
     async_setup_entry,
     async_unload_entry,
 )
 from custom_components.watchzone.const import CARD_MODULE_URL, DOMAIN
+from custom_components.watchzone.providers.frigate import camera as frigate_camera
+from custom_components.watchzone.providers.frigate import live as frigate_live
+
+
+def test_builtin_provider_composition_is_idempotent(hass: HomeAssistant) -> None:
+    """The composition root registers concrete built-ins exactly once."""
+    first = _register_builtin_providers(hass)
+    second = _register_builtin_providers(hass)
+
+    assert second is first
+    assert first.camera_runtime("frigate") is frigate_camera
+    assert first.live_signaling("frigate") is frigate_live
 
 
 async def test_setup_registers_packaged_frontend(

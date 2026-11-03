@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable
 from contextlib import suppress
-from importlib import import_module
 from typing import TYPE_CHECKING, Protocol, cast
 
 from aiohttp import ClientError, ClientResponseError, ClientWebSocketResponse, WSMsgType
@@ -14,6 +13,7 @@ from homeassistant.const import CONF_URL
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.importlib import async_import_module
 from webrtc_models import RTCIceCandidateInit
 from yarl import URL
 
@@ -166,7 +166,7 @@ async def async_prepare_session(
         )
         raise ProviderPreparationError(reason)
 
-    client = _get_frigate_client(hass, config_entry)
+    client = await _async_get_frigate_client(hass, config_entry)
     if client is None:
         raise ProviderPreparationError("frigate_client_unavailable")
     url = (URL(base_url) / _GO2RTC_WEBSOCKET_PATH) % {"src": stream_name}
@@ -215,12 +215,12 @@ def _camera_name(hass: HomeAssistant, entity_id: str) -> str | None:
     return camera_name or None
 
 
-def _get_frigate_client(
+async def _async_get_frigate_client(
     hass: HomeAssistant, config_entry: ConfigEntry
 ) -> _FrigateClient | None:
     """Feature-detect the Frigate integration's authenticated API client."""
     try:
-        module = import_module("custom_components.frigate.views")
+        module = await async_import_module(hass, "custom_components.frigate.views")
     except ModuleNotFoundError:
         return None
 

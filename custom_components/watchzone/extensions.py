@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from importlib import import_module
-from typing import cast
 
 from homeassistant.core import HomeAssistant, callback
 
@@ -122,13 +120,12 @@ class ProviderRegistry:
 
 
 def get_provider_registry(hass: HomeAssistant) -> ProviderRegistry:
-    """Return the domain registry, creating built-in registrations once."""
+    """Return the domain registry, creating the provider-neutral store once."""
     domain_data = hass.data.setdefault(DOMAIN, {})
     registry = domain_data.get(_DATA_PROVIDER_REGISTRY)
     if isinstance(registry, ProviderRegistry):
         return registry
     registry = ProviderRegistry()
-    _register_builtin_providers(registry)
     domain_data[_DATA_PROVIDER_REGISTRY] = registry
     return registry
 
@@ -138,23 +135,3 @@ def register_provider_extension(
 ) -> Callable[[], None]:
     """Public entry point for a companion integration to register a provider."""
     return get_provider_registry(hass).register(extension)
-
-
-def _register_builtin_providers(registry: ProviderRegistry) -> None:
-    """Import and register built-in capability objects during backend setup."""
-    registry.register(
-        ProviderExtension(
-            api_version=EXTENSION_API_VERSION,
-            provider_id="frigate",
-            entity_platforms=frozenset({"frigate"}),
-            camera_runtime=cast(
-                CameraRuntimeProvider,
-                import_module(f"custom_components.{DOMAIN}.providers.frigate.camera"),
-            ),
-            camera_runtime_poll_interval=1.0,
-            live_signaling=cast(
-                LiveSignalingProvider,
-                import_module(f"custom_components.{DOMAIN}.providers.frigate.live"),
-            ),
-        )
-    )
