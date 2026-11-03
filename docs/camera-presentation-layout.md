@@ -46,7 +46,10 @@ allowed to clip content or escape Home Assistant's allocated grid area.
 - Source metadata and first-frame events never resize the stage.
 - The runtime stage-height handle may expand the stage from its `16:9` default
   to a guarded maximum of `1:1`. It is transient presentation state, keyed by
-  camera identity, and does not alter YAML or provider state.
+  the camera-module instance, and does not alter YAML or provider state. Every
+  carousel slide receives the same height ratio, so changing cameras preserves
+  stage geometry while each camera retains its independent media dimensions,
+  zoom, and pan.
 - Until the expanded stage reaches the active media's intrinsic ratio, media
   remains contained so sources such as `4:3` reveal their available height.
   Expansion beyond the source ratio increases a centered base presentation
@@ -59,12 +62,15 @@ allowed to clip content or escape Home Assistant's allocated grid area.
 
 ## Interactive stage resizing
 
-The camera module's `CameraStageResizeController` exclusively owns the runtime height ratio,
-pointer capture, keyboard slider behavior, fit threshold, identity reset, and
-cleanup. Dragging down increases height; dragging up reduces it. Arrow keys,
-Home, and End provide keyboard access, and double-click/double-tap resets the
-stage. The resize handle owns only its own touch gesture and does not replace
-native page scrolling elsewhere.
+The camera module owns the canonical runtime height ratio. The active camera
+view's `CameraStageResizeController` owns pointer capture, keyboard slider
+behavior, fit threshold, and cleanup, then emits typed size intent to the
+camera parent. The parent applies that ratio to every stable carousel slide;
+the views do not create per-camera stage-height state. Dragging down increases
+height; dragging up reduces it. Arrow keys, Home, and End provide keyboard
+access, and double-click/double-tap resets the stage. The resize handle owns
+only its own touch gesture and does not replace native page scrolling
+elsewhere.
 
 Stage sizing is separate from user display zoom. Resizing changes the viewport
 and reports only the base presentation scale required to fill it. The

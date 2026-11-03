@@ -279,7 +279,7 @@ describe("camera stage resizing", () => {
     ).toBe("");
   });
 
-  it("resets transient size when camera identity changes", () => {
+  it("preserves shared stage size when camera identity changes", () => {
     const { handle, stage } = createElements();
     const controller = new CameraStageResizeController(createHost());
     controller.observe(stage, handle);
@@ -293,7 +293,29 @@ describe("camera stage resizing", () => {
     controller.configure("camera.front");
     expect(
       stage.style.getPropertyValue("--wzc-camera-stage-runtime-aspect-ratio"),
-    ).toBe("");
+    ).toBe("1");
+  });
+
+  it("applies module-owned stage size without emitting a new intent", () => {
+    const { handle, stage } = createElements();
+    const sizes: unknown[] = [];
+    const controller = new CameraStageResizeController(
+      createHost(),
+      undefined,
+      undefined,
+      (size) => sizes.push(size),
+    );
+    controller.observe(stage, handle);
+
+    controller.setSize({ heightRatio: 0.75, resized: true });
+
+    expect(controller.heightPercentage).toBe(75);
+    expect(
+      Number(
+        stage.style.getPropertyValue("--wzc-camera-stage-runtime-aspect-ratio"),
+      ),
+    ).toBeCloseTo(4 / 3);
+    expect(sizes).toEqual([]);
   });
 
   it("does not escape a stage height constrained by its parent layout", () => {

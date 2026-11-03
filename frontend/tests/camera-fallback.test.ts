@@ -149,6 +149,55 @@ describe("camera component appearance", () => {
     await camera.updateComplete;
     expect(views.map(({ active }) => active)).toEqual([false, true, false]);
   });
+
+  it("keeps one shared stage height while changing camera slides", async () => {
+    const camera = document.createElement("wzc-camera") as CameraModule;
+    camera.cameras = [cameraItem("camera.zero"), cameraItem("camera.one")];
+    document.body.append(camera);
+    await camera.updateComplete;
+    const views = [
+      ...(camera.shadowRoot?.querySelectorAll<CameraView>("wzc-camera-view") ??
+        []),
+    ];
+    const firstHandle = views[0].shadowRoot?.querySelector<HTMLButtonElement>(
+      ".stage-resize-handle",
+    );
+
+    firstHandle?.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        bubbles: true,
+        cancelable: true,
+        key: "End",
+      }),
+    );
+    await camera.updateComplete;
+    await Promise.all(views.map((view) => view.updateComplete));
+
+    expect(views.map(({ stageHeightRatio }) => stageHeightRatio)).toEqual([
+      1, 1,
+    ]);
+    expect(views.map(({ stageResized }) => stageResized)).toEqual([true, true]);
+    expect(
+      views.map((view) =>
+        view.shadowRoot
+          ?.querySelector(".camera")
+          ?.classList.contains("stage-resized"),
+      ),
+    ).toEqual([true, true]);
+
+    camera.shadowRoot
+      ?.querySelector<HTMLButtonElement>(".carousel-navigation.next")
+      ?.click();
+    await camera.updateComplete;
+    await Promise.all(views.map((view) => view.updateComplete));
+
+    expect(views.map(({ active }) => active)).toEqual([false, true]);
+    expect(
+      views[1].shadowRoot
+        ?.querySelector<HTMLElement>(".camera")
+        ?.style.getPropertyValue("--wzc-camera-stage-runtime-aspect-ratio"),
+    ).toBe("1");
+  });
 });
 
 function cameraItem(entityId: string) {

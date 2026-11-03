@@ -28,7 +28,9 @@ module accepts at most the centralized `MAX_CAMERAS` limit of twelve entries.
 The selected slide owns visible controls, resize interaction, and audible
 presentation. Non-selected slides remain mounted and connected but are forced
 muted. One slide disables movement; multiple slides enable swipe and the
-camera-local previous/next chevrons.
+camera-local previous/next chevrons. Those chevrons consume the selected live
+presentation's typed overlay-visibility signal, so controls, source badge, and
+navigation share one timer rather than maintaining parallel hide timers.
 
 ## Loading and lifecycle
 
@@ -58,6 +60,9 @@ cannot complete.
 ## Sizing and stability
 
 - The carousel and every slide fill the camera-owned stage.
+- Runtime stage height is one camera-module value shared by every slide.
+  Selection never changes stage geometry; each slide independently derives its
+  media crop scale from that shared height and its own intrinsic dimensions.
 - Swiper does not use `autoHeight`, determine card size, or derive dimensions
   from media metadata.
 - The existing reserved stage ratio is present before Swiper loads, so
@@ -80,5 +85,5 @@ cannot complete.
 
 Tests verify structural geometry before initialization, single-slide movement
 lock, ordered connection enablement, retained live-element identity,
-instance cleanup/reinitialization, lazy loading for camera-free layouts, and
-Chromium, Firefox, and WebKit behavior.
+shared stage height across selection, instance cleanup/reinitialization, lazy
+loading for camera-free layouts, and Chromium, Firefox, and WebKit behavior.

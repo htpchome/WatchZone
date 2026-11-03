@@ -5,6 +5,7 @@ import {
   CAMERA_CONTROLS_TAG,
   CAMERA_GESTURE_LOCK_EVENT,
   CAMERA_LIVE_PRESENTATION_TAG,
+  CAMERA_OVERLAY_VISIBILITY_EVENT,
   BADGE_TAG,
   TOAST_REGION_TAG,
 } from "../../../core/constants";
@@ -69,6 +70,11 @@ export interface CameraGestureLockDetail {
   readonly locked: boolean;
 }
 
+export interface CameraOverlayVisibilityDetail {
+  readonly key: string;
+  readonly visible: boolean;
+}
+
 const controlsTag = unsafeStatic(CAMERA_CONTROLS_TAG);
 const badgeTag = unsafeStatic(BADGE_TAG);
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
@@ -102,7 +108,10 @@ export class CameraLivePresentation extends LitElement {
   private _reportedGestureLocked = false;
   private _snapshotPending = false;
   private _webRtcFrameRequest?: number;
-  private readonly _visibility = new CameraControlsVisibilityController(this);
+  private readonly _visibility = new CameraControlsVisibilityController(
+    this,
+    (visible) => this._emitOverlayVisibility(visible),
+  );
   private readonly _zoom = new CameraZoomController(this);
 
   public available = false;
@@ -388,6 +397,20 @@ export class CameraLivePresentation extends LitElement {
             />`
           : nothing
       }`;
+  }
+
+  private _emitOverlayVisibility(visible: boolean): void {
+    if (!this.zoomKey) return;
+    this.dispatchEvent(
+      new CustomEvent<CameraOverlayVisibilityDetail>(
+        CAMERA_OVERLAY_VISIBILITY_EVENT,
+        {
+          bubbles: true,
+          composed: true,
+          detail: { key: this.zoomKey, visible },
+        },
+      ),
+    );
   }
 
   private _renderSuspended() {

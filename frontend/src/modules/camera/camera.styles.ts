@@ -52,35 +52,49 @@ export const cameraStyles = css`
   .carousel-navigation {
     position: absolute;
     z-index: 4;
-    inset-block-start: 50%;
+    inset-block-start: 36%;
     display: grid;
     place-items: center;
     box-sizing: border-box;
-    inline-size: 2.5rem;
-    block-size: 2.5rem;
-    padding: 0.45rem;
+    inline-size: 2.75rem;
+    block-size: 3.5rem;
+    padding: 0.35rem;
     color: var(--wzc-media-overlay-color);
-    background: var(--wzc-media-overlay-background);
-    border: 1px solid var(--wzc-media-overlay-border-color);
-    border-radius: var(--wzc-radius-pill);
-    box-shadow: var(--wzc-media-overlay-shadow);
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    opacity: 0;
+    visibility: hidden;
     transform: translateY(-50%);
     cursor: pointer;
+    pointer-events: none;
+    transition:
+      opacity var(--wzc-media-overlay-transition-duration) ease,
+      visibility 0s linear var(--wzc-media-overlay-transition-duration);
     -webkit-tap-highlight-color: transparent;
   }
 
   .carousel-navigation.previous {
-    inset-inline-start: max(0.5rem, env(safe-area-inset-left, 0px));
+    inset-inline-start: max(0.15rem, env(safe-area-inset-left, 0px));
   }
 
   .carousel-navigation.next {
-    inset-inline-end: max(0.5rem, env(safe-area-inset-right, 0px));
+    inset-inline-end: max(0.15rem, env(safe-area-inset-right, 0px));
   }
 
   .carousel-navigation svg {
     display: block;
-    inline-size: 100%;
+    inline-size: clamp(1.75rem, 4vw, 2.5rem);
+    block-size: clamp(1.75rem, 4vw, 2.5rem);
     pointer-events: none;
+  }
+
+  .carousel-navigation.visible {
+    opacity: var(--wzc-carousel-navigation-opacity);
+    visibility: visible;
+    pointer-events: auto;
+    transition-delay: 0s;
   }
 
   .carousel-navigation:disabled {
@@ -95,13 +109,7 @@ export const cameraStyles = css`
 
   @media (hover: hover) and (pointer: fine) {
     .carousel-navigation:hover:not(:disabled) {
-      background: var(--wzc-media-overlay-hover-background);
-    }
-  }
-
-  @media (hover: none) {
-    .carousel-navigation:hover:not(:disabled) {
-      background: var(--wzc-media-overlay-background);
+      opacity: var(--wzc-carousel-navigation-hover-opacity);
     }
   }
 `;

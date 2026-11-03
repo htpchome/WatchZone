@@ -83,6 +83,119 @@ test("does not load camera code for a camera-free layout", async ({ page }) => {
   );
 });
 
+test("preserves expanded camera-stage geometry across carousel selection", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  await page.locator("watchzone-card").evaluate((element) => {
+    (
+      element as HTMLElement & {
+        setConfig(config: unknown): void;
+      }
+    ).setConfig({
+      type: "custom:watchzone-card",
+      cameras: [{ entity_id: "camera.front" }, { entity_id: "camera.back" }],
+    });
+  });
+  await expect(page.locator("wzc-camera-view")).toHaveCount(2);
+  await expect(page.locator("wzc-camera .camera-carousel")).toHaveClass(
+    /swiper-initialized/,
+  );
+  const nextNavigation = page.locator("wzc-camera .carousel-navigation.next");
+  await expect(nextNavigation).toBeHidden();
+  await page.locator("wzc-camera-live .viewport").first().hover();
+  await expect(nextNavigation).toBeVisible();
+
+  const result = await page.locator("wzc-camera").evaluate(async (element) => {
+    const camera = element as HTMLElement & {
+      updateComplete: Promise<boolean>;
+    };
+    const views = [
+      ...(camera.shadowRoot?.querySelectorAll<
+        HTMLElement & {
+          active: boolean;
+          updateComplete: Promise<boolean>;
+        }
+      >("wzc-camera-view") ?? []),
+    ];
+    const stage = (view: HTMLElement): HTMLElement | undefined =>
+      view.shadowRoot?.querySelector<HTMLElement>(".camera") ?? undefined;
+    const firstHandle = views[0]?.shadowRoot?.querySelector<HTMLButtonElement>(
+      ".stage-resize-handle",
+    );
+    const next = camera.shadowRoot?.querySelector<HTMLButtonElement>(
+      ".carousel-navigation.next",
+    );
+    const previous = camera.shadowRoot?.querySelector<HTMLButtonElement>(
+      ".carousel-navigation.previous",
+    );
+    const before = stage(views[0])?.getBoundingClientRect();
+
+    firstHandle?.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        bubbles: true,
+        cancelable: true,
+        key: "End",
+      }),
+    );
+    await camera.updateComplete;
+    await Promise.all(views.map((view) => view.updateComplete));
+    const expandedFirst = stage(views[0])?.getBoundingClientRect();
+    const expandedSecond = stage(views[1])?.getBoundingClientRect();
+
+    next?.click();
+    await camera.updateComplete;
+    await Promise.all(views.map((view) => view.updateComplete));
+    const selectedSecond = stage(views[1])?.getBoundingClientRect();
+    const nextStyle = next ? getComputedStyle(next) : undefined;
+
+    return {
+      active: views.map((view) => view.active),
+      beforeHeight: before?.height,
+      expandedFirstHeight: expandedFirst?.height,
+      expandedSecondHeight: expandedSecond?.height,
+      navigation: {
+        background: nextStyle?.backgroundColor,
+        border: nextStyle?.borderTopWidth,
+        nextTop: next?.getBoundingClientRect().top,
+        previousTop: previous?.getBoundingClientRect().top,
+      },
+      selectedSecondHeight: selectedSecond?.height,
+    };
+  });
+
+  expect(result.expandedFirstHeight).toBeGreaterThan(result.beforeHeight ?? 0);
+  expect(result.expandedSecondHeight).toBeCloseTo(
+    result.expandedFirstHeight ?? 0,
+    1,
+  );
+  expect(result.selectedSecondHeight).toBeCloseTo(
+    result.expandedFirstHeight ?? 0,
+    1,
+  );
+  expect(result.active).toEqual([false, true]);
+  expect(result.navigation).toMatchObject({
+    background: "rgba(0, 0, 0, 0)",
+    border: "0px",
+  });
+  expect(result.navigation.nextTop).toBeCloseTo(
+    result.navigation.previousTop ?? 0,
+    1,
+  );
+
+  const previousNavigation = page.locator(
+    "wzc-camera .carousel-navigation.previous",
+  );
+  await expect(previousNavigation).toBeHidden();
+  await page.locator("wzc-camera-live .viewport").nth(1).hover();
+  await expect(previousNavigation).toBeVisible();
+  await page.mouse.move(0, 0);
+  await expect(previousNavigation).toBeHidden({
+    timeout: CAMERA_OVERLAY_HIDE_DELAY_MS + 1_000,
+  });
+});
+
 test("fits phone, tablet, and desktop viewports without horizontal overflow", async ({
   page,
 }) => {

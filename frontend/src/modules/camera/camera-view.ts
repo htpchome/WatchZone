@@ -4,6 +4,7 @@ import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 import {
   CAMERA_CONNECTION_SETTLED_EVENT,
   CAMERA_LIVE_PRESENTATION_TAG,
+  CAMERA_STAGE_SIZE_CHANGE_EVENT,
   CAMERA_SUSPEND_DIALOG_TAG,
   CAMERA_VIEW_TAG,
 } from "../../core/constants";
@@ -22,6 +23,8 @@ import { CameraLiveSessionController } from "./live/session.controller";
 import { CameraRuntimeController } from "./runtime.controller";
 import {
   CameraStageResizeController,
+  DEFAULT_CAMERA_STAGE_HEIGHT_RATIO,
+  type CameraStageSize,
   type CameraStageResizeInteraction,
 } from "./stage-resize.controller";
 import type { CameraSuspendConfirmDetail } from "./suspend-dialog";
@@ -44,6 +47,8 @@ export class CameraView extends LitElement {
     posterUrl: { attribute: false },
     roundedCorners: { attribute: false, type: Boolean },
     shadowStyle: { attribute: false },
+    stageHeightRatio: { attribute: false, type: Number },
+    stageResized: { attribute: false, type: Boolean },
     startUnmutedPcTablet: { attribute: false, type: Boolean },
     startUnmutedPhone: { attribute: false, type: Boolean },
   };
@@ -76,6 +81,7 @@ export class CameraView extends LitElement {
     this,
     (interaction) => this._handleStageResizeInteraction(interaction),
     (scale) => this._presentation?.setBasePresentationScale(scale),
+    (size) => this._handleStageSizeChange(size),
   );
   private _suspendDialogActive = false;
   private _settledEntityId?: string;
@@ -89,6 +95,8 @@ export class CameraView extends LitElement {
   public posterUrl?: string;
   public roundedCorners = true;
   public shadowStyle: CameraShadowStyle = "medium";
+  public stageHeightRatio = DEFAULT_CAMERA_STAGE_HEIGHT_RATIO;
+  public stageResized = false;
   public startUnmutedPcTablet = false;
   public startUnmutedPhone = false;
 
@@ -102,6 +110,10 @@ export class CameraView extends LitElement {
 
   protected willUpdate(): void {
     this._stageResize.configure(this.entityId);
+    this._stageResize.setSize({
+      heightRatio: this.stageHeightRatio,
+      resized: this.stageResized,
+    });
     this._runtime.configure(
       this.connect ? this.api : undefined,
       this.connect ? this.entityId : undefined,
@@ -258,6 +270,16 @@ export class CameraView extends LitElement {
     else if (interaction.phase === "update")
       presentation.updateStageResizeReturn(interaction.returnProgress);
     else presentation.endStageResizeReturn();
+  }
+
+  private _handleStageSizeChange(size: CameraStageSize): void {
+    this.dispatchEvent(
+      new CustomEvent(CAMERA_STAGE_SIZE_CHANGE_EVENT, {
+        bubbles: true,
+        composed: true,
+        detail: size,
+      }),
+    );
   }
 
   private readonly _handleMuteToggle = (): void => {

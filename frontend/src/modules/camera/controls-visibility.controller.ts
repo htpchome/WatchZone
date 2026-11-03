@@ -13,7 +13,10 @@ export class CameraControlsVisibilityController implements ReactiveController {
   private _interactionRoot?: HTMLElement;
   private _pointerFocusPending = false;
 
-  public constructor(private readonly _host: ReactiveControllerHost) {
+  public constructor(
+    private readonly _host: ReactiveControllerHost,
+    private readonly _onVisibilityChange?: (visible: boolean) => void,
+  ) {
     _host.addController(this);
   }
 
@@ -23,6 +26,7 @@ export class CameraControlsVisibilityController implements ReactiveController {
     this._hovered = false;
     this.sourceVisible = false;
     this.visible = false;
+    this._onVisibilityChange?.(false);
   }
 
   public revealSource(): void {
@@ -82,6 +86,7 @@ export class CameraControlsVisibilityController implements ReactiveController {
     if (this.visible && this.sourceVisible) return;
     this.visible = true;
     this.sourceVisible = true;
+    this._onVisibilityChange?.(true);
     this._host.requestUpdate();
   }
 
@@ -99,6 +104,7 @@ export class CameraControlsVisibilityController implements ReactiveController {
       }
       this.visible = false;
       this.sourceVisible = false;
+      this._onVisibilityChange?.(false);
       this._host.requestUpdate();
     }, CAMERA_OVERLAY_HIDE_DELAY_MS);
   }

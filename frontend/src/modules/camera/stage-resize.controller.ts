@@ -1,6 +1,6 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
-const DEFAULT_HEIGHT_RATIO = 9 / 16;
+export const DEFAULT_CAMERA_STAGE_HEIGHT_RATIO = 9 / 16;
 const DOUBLE_ACTIVATION_DELAY_MS = 350;
 const DOUBLE_ACTIVATION_DISTANCE_PX = 24;
 const DRAG_MOVE_TOLERANCE_PX = 3;
@@ -29,17 +29,22 @@ export type CameraStageResizeInteraction =
   | { readonly phase: "update"; readonly returnProgress: number }
   | { readonly phase: "end" };
 
+export interface CameraStageSize {
+  readonly heightRatio: number;
+  readonly resized: boolean;
+}
+
 /** Owns transient camera-stage height without owning media zoom or pan. */
 export class CameraStageResizeController implements ReactiveController {
   private _dragStart?: DragStart;
   private _handle?: HTMLButtonElement;
-  private _heightRatio = DEFAULT_HEIGHT_RATIO;
+  private _heightRatio = DEFAULT_CAMERA_STAGE_HEIGHT_RATIO;
   private _key?: string;
   private _mediaHeightRatio?: number;
   private _mediaPresentationScale = 1;
   private _moved = false;
   private _resized = false;
-  private _returnAnchorHeightRatio = DEFAULT_HEIGHT_RATIO;
+  private _returnAnchorHeightRatio = DEFAULT_CAMERA_STAGE_HEIGHT_RATIO;
   private _stage?: HTMLElement;
   private _tapCandidate?: TapCandidate;
 
@@ -49,6 +54,7 @@ export class CameraStageResizeController implements ReactiveController {
       interaction: CameraStageResizeInteraction,
     ) => void,
     private readonly _onMediaPresentationScaleChange?: (scale: number) => void,
+    private readonly _onSizeChange?: (size: CameraStageSize) => void,
   ) {
     _host.addController(this);
   }
@@ -61,11 +67,25 @@ export class CameraStageResizeController implements ReactiveController {
     return this._mediaPresentationScale;
   }
 
+  public get size(): CameraStageSize {
+    return { heightRatio: this._heightRatio, resized: this._resized };
+  }
+
   public configure(key: string | undefined): void {
     if (this._key === key) return;
     this._key = key;
     this._mediaHeightRatio = undefined;
-    this.reset();
+    this._syncMediaPresentationScale();
+  }
+
+  public setSize(size: CameraStageSize): void {
+    const heightRatio = this._clampHeightRatio(size.heightRatio);
+    const resized =
+      size.resized && heightRatio > DEFAULT_CAMERA_STAGE_HEIGHT_RATIO;
+    if (heightRatio === this._heightRatio && resized === this._resized) return;
+    this._heightRatio = heightRatio;
+    this._resized = resized;
+    this._applyPresentation();
   }
 
   public observe(
@@ -94,11 +114,12 @@ export class CameraStageResizeController implements ReactiveController {
   }
 
   public reset(): void {
-    this._heightRatio = DEFAULT_HEIGHT_RATIO;
+    this._heightRatio = DEFAULT_CAMERA_STAGE_HEIGHT_RATIO;
     this._resized = false;
     this._finishDrag();
     this._tapCandidate = undefined;
     this._applyPresentation();
+    this._notifySizeChange();
     this._host.requestUpdate();
   }
 
@@ -155,6 +176,7 @@ export class CameraStageResizeController implements ReactiveController {
     );
     this._resized = true;
     this._applyPresentation();
+    this._notifySizeChange();
     this._onInteraction?.({
       phase: "update",
       returnProgress: this._returnProgress(),
@@ -198,8 +220,9 @@ export class CameraStageResizeController implements ReactiveController {
     event.stopPropagation();
     event.preventDefault();
     this._heightRatio = this._clampHeightRatio(nextRatio);
-    this._resized = this._heightRatio !== DEFAULT_HEIGHT_RATIO;
+    this._resized = this._heightRatio !== DEFAULT_CAMERA_STAGE_HEIGHT_RATIO;
     this._applyPresentation();
+    this._notifySizeChange();
   };
 
   private _activateTap(event: PointerEvent): void {
@@ -274,7 +297,7 @@ export class CameraStageResizeController implements ReactiveController {
     }
     this._stage?.classList.remove("stage-resizing");
     this._dragStart = undefined;
-    this._returnAnchorHeightRatio = DEFAULT_HEIGHT_RATIO;
+    this._returnAnchorHeightRatio = DEFAULT_CAMERA_STAGE_HEIGHT_RATIO;
     this._moved = false;
     if (interactionActive) this._onInteraction?.({ phase: "end" });
   }
@@ -294,11 +317,15 @@ export class CameraStageResizeController implements ReactiveController {
   }
 
   private _clampHeightRatio(ratio: number): number {
-    return Math.min(MAX_HEIGHT_RATIO, Math.max(DEFAULT_HEIGHT_RATIO, ratio));
+    return Math.min(
+      MAX_HEIGHT_RATIO,
+      Math.max(DEFAULT_CAMERA_STAGE_HEIGHT_RATIO, ratio),
+    );
   }
 
   private _returnProgress(): number {
-    const returnRange = this._returnAnchorHeightRatio - DEFAULT_HEIGHT_RATIO;
+    const returnRange =
+      this._returnAnchorHeightRatio - DEFAULT_CAMERA_STAGE_HEIGHT_RATIO;
     if (returnRange <= 0) return 0;
     return Math.min(
       1,
@@ -309,10 +336,14 @@ export class CameraStageResizeController implements ReactiveController {
     );
   }
 
+  private _notifySizeChange(): void {
+    this._onSizeChange?.(this.size);
+  }
+
   private _isExternallyConstrained(rect: DOMRect): boolean {
     if (this._resized || rect.width <= 0) return false;
     return (
-      Math.abs(rect.height / rect.width - DEFAULT_HEIGHT_RATIO) >
+      Math.abs(rect.height / rect.width - DEFAULT_CAMERA_STAGE_HEIGHT_RATIO) >
       STAGE_CONSTRAINT_TOLERANCE
     );
   }

@@ -31,7 +31,10 @@ describe("camera control visibility controller", () => {
   it("stays visible while hovered and hides after the named delay", () => {
     vi.useFakeTimers();
     const host = new TestHost();
-    const controller = new CameraControlsVisibilityController(host);
+    const visibility: boolean[] = [];
+    const controller = new CameraControlsVisibilityController(host, (visible) =>
+      visibility.push(visible),
+    );
 
     controller.handlePointerEnter(pointerEvent("mouse"));
     expect(controller.visible).toBe(true);
@@ -46,6 +49,7 @@ describe("camera control visibility controller", () => {
     expect(controller.visible).toBe(false);
     expect(controller.sourceVisible).toBe(false);
     expect(host.requestUpdate).toHaveBeenCalledTimes(2);
+    expect(visibility).toEqual([true, false]);
   });
 
   it("reveals on touch, resets on another touch, and cleans up its timer", () => {

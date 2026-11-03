@@ -5,16 +5,23 @@ import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 import {
   CAMERA_CONNECTION_SETTLED_EVENT,
   CAMERA_GESTURE_LOCK_EVENT,
+  CAMERA_OVERLAY_VISIBILITY_EVENT,
+  CAMERA_STAGE_SIZE_CHANGE_EVENT,
   CAMERA_TAG,
   CAMERA_VIEW_TAG,
 } from "../../core/constants";
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import { renderIcon } from "../../ui/icons";
 import type { CameraGestureLockDetail } from "./live/presentation";
+import type { CameraOverlayVisibilityDetail } from "./live/presentation";
 import "./camera-view";
 import { cameraStyles } from "./camera.styles";
 import { CameraCarouselController } from "./carousel.controller";
 import { CameraConnectionQueueController } from "./connection-queue.controller";
+import {
+  DEFAULT_CAMERA_STAGE_HEIGHT_RATIO,
+  type CameraStageSize,
+} from "./stage-resize.controller";
 
 export type CameraShadowStyle = "medium" | "none" | "small";
 
@@ -39,6 +46,12 @@ export class CameraModule extends LitElement {
   };
 
   private _activeIndex = 0;
+  private _navigationVisible = false;
+  private readonly _overlayVisibilityByCamera = new Map<string, boolean>();
+  private _stageSize: CameraStageSize = {
+    heightRatio: DEFAULT_CAMERA_STAGE_HEIGHT_RATIO,
+    resized: false,
+  };
   private readonly _carousel = new CameraCarouselController(this, (index) =>
     this._select(index),
   );
@@ -57,6 +70,14 @@ export class CameraModule extends LitElement {
       CAMERA_CONNECTION_SETTLED_EVENT,
       this._handleConnectionSettled as EventListener,
     );
+    this.addEventListener(
+      CAMERA_STAGE_SIZE_CHANGE_EVENT,
+      this._handleStageSizeChange as EventListener,
+    );
+    this.addEventListener(
+      CAMERA_OVERLAY_VISIBILITY_EVENT,
+      this._handleOverlayVisibility as EventListener,
+    );
   }
 
   public disconnectedCallback(): void {
@@ -68,6 +89,14 @@ export class CameraModule extends LitElement {
       CAMERA_CONNECTION_SETTLED_EVENT,
       this._handleConnectionSettled as EventListener,
     );
+    this.removeEventListener(
+      CAMERA_STAGE_SIZE_CHANGE_EVENT,
+      this._handleStageSizeChange as EventListener,
+    );
+    this.removeEventListener(
+      CAMERA_OVERLAY_VISIBILITY_EVENT,
+      this._handleOverlayVisibility as EventListener,
+    );
     super.disconnectedCallback();
   }
 
@@ -76,6 +105,15 @@ export class CameraModule extends LitElement {
       0,
       Math.min(this.cameras.length - 1, this._activeIndex),
     );
+    const cameraIds = new Set(this.cameras.map(({ entityId }) => entityId));
+    for (const entityId of this._overlayVisibilityByCamera.keys()) {
+      if (!cameraIds.has(entityId))
+        this._overlayVisibilityByCamera.delete(entityId);
+    }
+    this._navigationVisible =
+      this._overlayVisibilityByCamera.get(
+        this.cameras[this._activeIndex]?.entityId ?? "",
+      ) ?? false;
     this._connections.configure(
       this.cameras.map(({ available, entityId }) => ({
         available,
@@ -113,6 +151,8 @@ export class CameraModule extends LitElement {
               .posterUrl=${camera.posterUrl}
               .roundedCorners=${camera.roundedCorners}
               .shadowStyle=${camera.shadowStyle}
+              .stageHeightRatio=${this._stageSize.heightRatio}
+              .stageResized=${this._stageSize.resized}
               .startUnmutedPcTablet=${camera.startUnmutedPcTablet}
               .startUnmutedPhone=${camera.startUnmutedPhone}
             ></${cameraViewTag}>
@@ -120,18 +160,30 @@ export class CameraModule extends LitElement {
         )}
       </div>
       <button
-        class="carousel-navigation previous"
+        class=${
+          this._navigationVisible
+            ? "carousel-navigation previous visible"
+            : "carousel-navigation previous"
+        }
         type="button"
         aria-label="Previous camera"
+        aria-hidden=${this._navigationVisible ? "false" : "true"}
+        tabindex=${this._navigationVisible ? "0" : "-1"}
         ?disabled=${this.cameras.length < 2 || this._activeIndex === 0}
         @click=${this._previous}
       >
         ${renderIcon("chevronLeft")}
       </button>
       <button
-        class="carousel-navigation next"
+        class=${
+          this._navigationVisible
+            ? "carousel-navigation next visible"
+            : "carousel-navigation next"
+        }
         type="button"
         aria-label="Next camera"
+        aria-hidden=${this._navigationVisible ? "false" : "true"}
+        tabindex=${this._navigationVisible ? "0" : "-1"}
         ?disabled=${
           this.cameras.length < 2 ||
           this._activeIndex === this.cameras.length - 1
@@ -156,6 +208,9 @@ export class CameraModule extends LitElement {
     const next = Math.max(0, Math.min(this.cameras.length - 1, index));
     if (next === this._activeIndex) return;
     this._activeIndex = next;
+    this._navigationVisible =
+      this._overlayVisibilityByCamera.get(this.cameras[next]?.entityId ?? "") ??
+      false;
     this._carousel.setInteractionLocked(false);
     this.requestUpdate();
   }
@@ -179,6 +234,24 @@ export class CameraModule extends LitElement {
     event: CustomEvent<{ readonly entityId: string }>,
   ): void => {
     this._connections.settle(event.detail.entityId);
+  };
+
+  private readonly _handleStageSizeChange = (
+    event: CustomEvent<CameraStageSize>,
+  ): void => {
+    event.stopPropagation();
+    this._stageSize = event.detail;
+    this.requestUpdate();
+  };
+
+  private readonly _handleOverlayVisibility = (
+    event: CustomEvent<CameraOverlayVisibilityDetail>,
+  ): void => {
+    event.stopPropagation();
+    this._overlayVisibilityByCamera.set(event.detail.key, event.detail.visible);
+    if (event.detail.key !== this.cameras[this._activeIndex]?.entityId) return;
+    this._navigationVisible = event.detail.visible;
+    this.requestUpdate();
   };
 
   static styles = cameraStyles;
