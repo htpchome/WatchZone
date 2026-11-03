@@ -809,6 +809,9 @@ test("retains one live connection while the card presentation is replaced", asyn
         ?.querySelector("wzc-camera")
         ?.shadowRoot?.querySelector("wzc-camera-live")
         ?.shadowRoot?.querySelector<HTMLElement>(".viewport");
+      const resizeHandle = card.shadowRoot
+        ?.querySelector("wzc-camera")
+        ?.shadowRoot?.querySelector<HTMLButtonElement>(".stage-resize-handle");
       const shell = card.shadowRoot?.querySelector<HTMLElement>("ha-card");
       card.style.inlineSize = "640px";
       card.style.blockSize = "auto";
@@ -819,6 +822,23 @@ test("retains one live connection while the card presentation is replaced", asyn
       await frame();
       const fixed = viewport?.getBoundingClientRect();
       const fixedCard = shell?.getBoundingClientRect();
+      resizeHandle?.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          bubbles: true,
+          cancelable: true,
+          key: "End",
+        }),
+      );
+      await frame();
+      const fixedResized = viewport?.getBoundingClientRect();
+      const fixedResizedCard = shell?.getBoundingClientRect();
+      resizeHandle?.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          bubbles: true,
+          cancelable: true,
+          key: "Home",
+        }),
+      );
       const result = {
         fixedHeight: fixed?.height,
         fixedWithinCard: Boolean(
@@ -826,6 +846,12 @@ test("retains one live connection while the card presentation is replaced", asyn
           fixedCard &&
           fixed.top >= fixedCard.top &&
           fixed.bottom <= fixedCard.bottom,
+        ),
+        fixedResizeWithinCard: Boolean(
+          fixedResized &&
+          fixedResizedCard &&
+          fixedResized.top >= fixedResizedCard.top &&
+          fixedResized.bottom <= fixedResizedCard.bottom,
         ),
         naturalHeight: natural?.height,
         naturalRatio:
@@ -840,6 +866,7 @@ test("retains one live connection while the card presentation is replaced", asyn
     });
   expect(layoutSizing.naturalRatio).toBeCloseTo(16 / 9, 2);
   expect(layoutSizing.fixedWithinCard).toBe(true);
+  expect(layoutSizing.fixedResizeWithinCard).toBe(true);
   expect(layoutSizing.fixedHeight).toBeLessThan(
     layoutSizing.naturalHeight ?? Number.POSITIVE_INFINITY,
   );
@@ -859,6 +886,35 @@ test("retains one live connection while the card presentation is replaced", asyn
   });
   await expect(mediaSurface).toHaveAttribute("style", /scale\(2\.25\)/);
   const liveViewport = page.locator("wzc-camera-live .viewport");
+  const stageResizeHandle = page.locator(
+    'wzc-camera [aria-label="Camera stage height"]',
+  );
+  await stageResizeHandle.scrollIntoViewIfNeeded();
+  const cardShell = page.locator("watchzone-card ha-card");
+  const initialCardBox = await cardShell.boundingBox();
+  const initialStageBox = await liveViewport.boundingBox();
+  expect(initialStageBox).not.toBeNull();
+  expect(initialCardBox).not.toBeNull();
+  if (initialStageBox) {
+    await stageResizeHandle.press("ArrowDown");
+    await stageResizeHandle.press("ArrowDown");
+    await stageResizeHandle.press("ArrowDown");
+    await expect
+      .poll(async () => (await liveViewport.boundingBox())?.height)
+      .toBeGreaterThan(initialStageBox.height);
+    if (initialCardBox) {
+      await expect
+        .poll(async () => (await cardShell.boundingBox())?.height)
+        .toBeGreaterThan(initialCardBox.height);
+    }
+    await expect(mediaSurface).toHaveAttribute("style", /scale\(2\.25\)/);
+    await expect(video).toHaveCSS("object-fit", "cover");
+
+    await stageResizeHandle.press("Home");
+    await expect
+      .poll(async () => (await liveViewport.boundingBox())?.height)
+      .toBeCloseTo(initialStageBox.height, 0);
+  }
   await liveViewport.press("Escape");
   await expect(mediaSurface).toHaveAttribute("style", /scale\(1\)/);
   await liveViewport.evaluate((element) => (element as HTMLElement).blur());

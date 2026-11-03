@@ -8,15 +8,18 @@ import {
 } from "../../core/constants";
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import { ToastManager } from "../../ui/toast-manager";
+import { renderIcon } from "../../ui/icons";
 import { cameraStyles } from "./camera.styles";
 import { CameraAudioController } from "./live/audio.controller";
 import type {
   CameraLivePresentation,
+  CameraMediaDimensionsDetail,
   CameraToastRequestDetail,
 } from "./live/presentation";
 import "./live/presentation";
 import { CameraLiveSessionController } from "./live/session.controller";
 import { CameraRuntimeController } from "./runtime.controller";
+import { CameraStageResizeController } from "./stage-resize.controller";
 import type { CameraSuspendConfirmDetail } from "./suspend-dialog";
 import "./suspend-dialog";
 
@@ -63,6 +66,7 @@ export class CameraModule extends LitElement {
         this._audio.handleActiveVideoChanged(video),
     });
   private readonly _runtime = new CameraRuntimeController(this);
+  private readonly _stageResize = new CameraStageResizeController(this);
   private _suspendDialogActive = false;
 
   public api?: HomeAssistantApi;
@@ -84,6 +88,7 @@ export class CameraModule extends LitElement {
   }
 
   protected willUpdate(): void {
+    this._stageResize.configure(this.entityId);
     this._runtime.configure(this.api, this.entityId);
     const runtime = this._runtime.snapshot;
     const suspended = runtime?.suspended === true;
@@ -133,12 +138,33 @@ export class CameraModule extends LitElement {
           .webRtcStream=${this._session.webRtcStream}
           .zoomKey=${this.entityId}
           @camera-media-attached=${this._handleMediaAttached}
+          @camera-media-dimensions=${this._handleMediaDimensions}
           @camera-mute-toggle=${this._handleMuteToggle}
           @camera-suspend-toggle=${this._handleSuspendToggle}
           @camera-toast-request=${this._handleToastRequest}
           @camera-webrtc-decoded=${this._handleWebRtcDecoded}
           @camera-webrtc-presented=${this._handleWebRtcPresented}
         ></${presentationTag}>
+        <button
+          class="stage-resize-handle"
+          type="button"
+          role="slider"
+          title="Resize camera stage; double-activate to reset"
+          aria-label="Camera stage height"
+          aria-orientation="vertical"
+          aria-valuemin="56"
+          aria-valuemax="100"
+          aria-valuenow=${String(this._stageResize.heightPercentage)}
+          aria-valuetext=${`${this._stageResize.heightPercentage}% of stage width`}
+          ?hidden=${suspended || !this.entityId}
+          @pointerdown=${this._stageResize.handlePointerDown}
+          @pointermove=${this._stageResize.handlePointerMove}
+          @pointerup=${this._stageResize.handlePointerUp}
+          @pointercancel=${this._stageResize.handlePointerCancel}
+          @keydown=${this._stageResize.handleKeyDown}
+        >
+          ${renderIcon("chevronDown")}
+        </button>
         <${suspendDialogTag}
           .active=${this._suspendDialogActive}
           .currentSuspended=${suspended}
@@ -151,11 +177,26 @@ export class CameraModule extends LitElement {
   }
 
   protected updated(): void {
+    this._stageResize.observe(
+      this.renderRoot.querySelector<HTMLElement>(".camera") ?? undefined,
+      this.renderRoot.querySelector<HTMLButtonElement>(
+        ".stage-resize-handle",
+      ) ?? undefined,
+    );
     this._audio.syncMediaState();
   }
 
   private readonly _handleMediaAttached = (): void => {
     this._audio.syncMediaState();
+  };
+
+  private readonly _handleMediaDimensions = (
+    event: CustomEvent<CameraMediaDimensionsDetail>,
+  ): void => {
+    this._stageResize.setMediaDimensions(
+      event.detail.width,
+      event.detail.height,
+    );
   };
 
   private readonly _handleMuteToggle = (): void => {

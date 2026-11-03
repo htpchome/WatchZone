@@ -44,13 +44,35 @@ allowed to clip content or escape Home Assistant's allocated grid area.
 - A `16:9` source fills the default stage.
 - A `4:3` source is pillarboxed inside the default stage.
 - Source metadata and first-frame events never resize the stage.
-- Future crop, cover, and object-position choices change media fitting, not the
-  parent card's sizing contract.
+- The runtime stage-height handle may expand the stage from its `16:9` default
+  to a guarded maximum of `1:1`. It is transient presentation state, keyed by
+  camera identity, and does not alter YAML or provider state.
+- Until the expanded stage reaches the active media's intrinsic ratio, media
+  remains contained so sources such as `4:3` reveal their available height.
+  Expansion beyond the source ratio switches the base fit to centered cover,
+  intentionally cropping the source rather than adding new letterboxing.
+- Home Assistant's explicit grid height remains authoritative. Runtime stage
+  resizing may not escape or overflow an explicitly allocated card rectangle.
+
+## Interactive stage resizing
+
+The camera module's `CameraStageResizeController` exclusively owns the runtime height ratio,
+pointer capture, keyboard slider behavior, fit threshold, identity reset, and
+cleanup. Dragging down increases height; dragging up reduces it. Arrow keys,
+Home, and End provide keyboard access, and double-click/double-tap resets the
+stage. The resize handle owns only its own touch gesture and does not replace
+native page scrolling elsewhere.
+
+Stage sizing is separate from display zoom. Resizing changes the viewport and
+base `contain`/`cover` fit. `CameraZoomController` then applies user zoom and
+pan to the resulting media surface, reclamping pan when its bounds change.
+Controls, source state, and toasts remain outside both transformations.
 
 ## Performance and stability
 
-- Layout uses CSS sizing and intrinsic aspect ratio; it does not use JavaScript
-  measurement or `ResizeObserver` to control card geometry.
+- Default layout uses CSS sizing and intrinsic aspect ratio. JavaScript changes
+  the CSS ratio only during an explicit user resize gesture; it does not derive
+  card geometry from connection or media lifecycle events.
 - Space is reserved before the lazy camera module or media loads, preventing
   source selection and fallback replacement from producing layout shifts.
 - The authenticated fallback image remains eligible to paint before live media

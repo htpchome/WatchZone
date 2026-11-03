@@ -36,6 +36,12 @@ moving between fallback and live media retains the current transform. Selecting
 a different camera resets to `1x` so one camera cannot inherit another camera's
 view.
 
+Camera-stage resizing is a separate presentation layer. It changes the stage
+ratio and the base contain/cover fit before this controller's transform is
+applied. It never writes zoom scale or pan state. The zoom controller observes
+the resulting surface bounds and reclamps pan, so resizing cannot expose blank
+space or create a second transform owner.
+
 ## Input policy
 
 | Input                             | Behavior                                                                       |

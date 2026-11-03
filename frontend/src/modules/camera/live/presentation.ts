@@ -43,9 +43,16 @@ interface FullscreenVideo extends HTMLVideoElement {
   webkitEnterFullscreen?(): void;
 }
 
+interface MediaDimensions {
+  readonly height: number;
+  readonly width: number;
+}
+
 export interface CameraMediaAttachedDetail {
   readonly video: HTMLVideoElement;
 }
+
+export type CameraMediaDimensionsDetail = MediaDimensions;
 
 export interface CameraToastRequestDetail {
   readonly key: string;
@@ -78,6 +85,7 @@ export class CameraLivePresentation extends LitElement {
   private _activeVideo?: HTMLVideoElement;
   private _fullscreenActive = false;
   private _pictureInPictureActive = false;
+  private _posterDimensions?: MediaDimensions;
   private _posterFailed = false;
   private _snapshotPending = false;
   private _webRtcFrameRequest?: number;
@@ -124,7 +132,10 @@ export class CameraLivePresentation extends LitElement {
   }
 
   protected willUpdate(changed: Map<PropertyKey, unknown>): void {
-    if (changed.has("posterUrl")) this._posterFailed = false;
+    if (changed.has("posterUrl")) {
+      this._posterDimensions = undefined;
+      this._posterFailed = false;
+    }
     if (changed.has("transport") && this.transport)
       this._visibility.revealSource();
     if (changed.has("zoomKey")) this._zoom.configure(this.zoomKey);
@@ -316,7 +327,10 @@ export class CameraLivePresentation extends LitElement {
               decoding="async"
               draggable="false"
               fetchpriority="high"
+              @load=${this._handlePosterLoaded}
               @error=${() => {
+                this._posterDimensions = undefined;
+                this._syncStageMediaDimensions();
                 this._posterFailed = true;
                 this.requestUpdate();
               }}
@@ -436,14 +450,51 @@ export class CameraLivePresentation extends LitElement {
       "webkitpresentationmodechanged",
       "webkitbeginfullscreen",
       "webkitendfullscreen",
+      "loadedmetadata",
+      "resize",
+      "emptied",
     ]) {
-      this._activeVideo?.removeEventListener(eventName, this._syncControlState);
-      video?.addEventListener(eventName, this._syncControlState);
+      const handler =
+        eventName === "loadedmetadata" ||
+        eventName === "resize" ||
+        eventName === "emptied"
+          ? this._syncStageMediaDimensions
+          : this._syncControlState;
+      this._activeVideo?.removeEventListener(eventName, handler);
+      video?.addEventListener(eventName, handler);
     }
     this._activeVideo = video;
     suppressNativePictureInPicture(video);
     this._syncControlState();
+    this._syncStageMediaDimensions();
   }
+
+  private readonly _handlePosterLoaded = (event: Event): void => {
+    const image = event.currentTarget as HTMLImageElement;
+    this._posterDimensions = {
+      height: image.naturalHeight,
+      width: image.naturalWidth,
+    };
+    this._syncStageMediaDimensions();
+  };
+
+  private readonly _syncStageMediaDimensions = (): void => {
+    const video = this._activeVideo;
+    const dimensions =
+      video && video.videoWidth > 0 && video.videoHeight > 0
+        ? { height: video.videoHeight, width: video.videoWidth }
+        : this._posterDimensions;
+    this.dispatchEvent(
+      new CustomEvent<CameraMediaDimensionsDetail>("camera-media-dimensions", {
+        bubbles: true,
+        composed: true,
+        detail: {
+          height: dimensions?.height ?? 0,
+          width: dimensions?.width ?? 0,
+        },
+      }),
+    );
+  };
 
   private readonly _syncControlState = (): void => {
     const documentObject = document as FullscreenDocument;
