@@ -633,12 +633,22 @@ Mandatory behavior:
   resource budgets.
 - Returning to a dashboard reattaches retained sessions without renegotiation
   when the connection remains healthy.
-- The initial multi-camera policy connects configured cameras sequentially in
-  display order and keeps every resulting healthy connection retained, within
-  the centralized twelve-camera/two-transports-per-camera budget. Recovery
-  uses the same order and reuses a still-healthy retained session instead of
-  reconnecting it. A future per-camera preload option extends this policy; it
-  does not introduce a second connection lifecycle.
+- Only the selected camera acquires frontend transport leases. Selecting a
+  camera starts it immediately or reuses its healthy retained session; it does
+  not wait behind background camera startup. Backend HLS pre-warming is a
+  separate server policy and does not create browser transports.
+- Retention policy groups transport sessions by provider-neutral logical
+  camera identity. On phone-class clients with a confirmed unmetered network,
+  at most three logical cameras remain connected in total, including active
+  cameras; inactive cameras expire after two minutes and are evicted least
+  recently used. On metered, data-saving, or unknown phone networks, only the
+  active camera remains connected while mounted; during route navigation, its
+  single most-recent session may remain parked for up to two minutes. Desktop
+  and tablet sessions keep document-lifetime retention within the global
+  session budget.
+- Active leases remain protected across background tabs. Home Assistant route
+  and dashboard navigation releases element leases into the centralized
+  retention policy; returning consumers reuse a healthy retained session.
 - Full page reload, browser process termination, network loss, or operating
   system suspension may require reconnection; these are not falsely presented
   as retained sessions.

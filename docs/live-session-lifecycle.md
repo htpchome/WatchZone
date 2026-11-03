@@ -170,11 +170,11 @@ When a layout or view changes:
 6. Sessions with no remaining lease enter retention policy evaluation.
 
 The implementation must not close all sessions as an intermediate step.
-The current camera carousel preloads every configured camera sequentially and
-keeps its leases active after startup. Selecting another camera changes
-presentation focus and audio safety only; it does not release the prior
-camera's session. A future per-camera preload option may allow selected cameras
-to park, but it must continue to use this manager and canonical session keys.
+The camera carousel acquires frontend transport leases only for its selected
+camera. Selecting another camera releases the prior view's leases into the
+document manager and immediately acquires the selected camera without a
+background queue. A healthy retained session is reused by canonical key, so
+selection does not renegotiate when policy kept that camera connected.
 
 ### 6.2 Editor and preview
 
@@ -216,19 +216,28 @@ Retention must be bounded by a policy containing at least:
 - Maximum simultaneously connected sessions.
 - Maximum audible sessions.
 - Adapter-specific decoder or bandwidth limits where measurable.
-- A centralized parked-session lifetime policy. Eligible sessions remain
-  parked for the current browser document; count and resource budgets, rather
-  than scattered feature timers, bound retention.
+- A centralized parked-session lifetime policy. Desktop and tablet sessions
+  remain eligible for document-lifetime retention. Phone retention is adaptive
+  to confirmed network conditions and uses one centralized expiry timer.
 
 Exact defaults are implementation decisions that require measurement on
 representative desktop and mobile Home Assistant clients. They are centralized
 in one policy and are not scattered through modules.
 
-The current camera policy permits twelve configured cameras and reserves up to
-two transport sessions per camera while HLS competes with or falls back from
-WebRTC. An unneeded HLS loser is still discarded after a successful WebRTC
-handoff. This is a bounded preload policy, not permission for unbounded
-sessions.
+The global pool permits twelve configured cameras and reserves up to two
+transport sessions per logical camera while HLS competes with or falls back
+from WebRTC. Only selected cameras acquire frontend leases. An unneeded HLS
+loser is still discarded after a successful WebRTC handoff.
+
+On a phone with a confirmed Wi-Fi or Ethernet network, no more than three
+logical cameras remain connected in total, including active cameras. Inactive
+phone cameras are retained by most-recent use for at most two minutes. On a
+cellular, data-saving, or network-unknown phone, camera switching keeps only
+the active frontend transport. If Home Assistant route navigation temporarily
+removes the camera module, the one most-recent camera may remain parked for up
+to two minutes so returning does not force renegotiation. Server-side HLS
+pre-warming remains available independently and does not consume a browser
+decoder or transport.
 
 Automatic provider-failure retries are serialized by the document manager in
 original session-acquisition order. Backoff timers may become ready together,
@@ -250,12 +259,12 @@ Eviction calls the adapter's complete close path, revokes object URLs, removes
 listeners, cancels retries, and clears session-owned media resources. A closed
 session object is never returned to a new lease.
 
-The initial policy has no idle-time expiry for an eligible parked session.
-This is intentional: Home Assistant route navigation, dashboard editing, and
-background-tab use can outlast an arbitrary timeout. Capacity pressure evicts
-parked fallback sessions first, then the least-recently-used preferred
-session. A discarded losing connection and a failed or unhealthy connection
-remain eligible for immediate cleanup regardless of age.
+Desktop and tablet parked sessions have no idle-time expiry. This preserves
+Home Assistant route navigation, dashboard editing, and background-tab reuse;
+capacity pressure still evicts parked fallback sessions first, then the
+least-recently-used preferred session. Phone expiry and network constraints are
+the explicit exception above. A discarded losing connection and a failed or
+unhealthy connection remain eligible for immediate cleanup regardless of age.
 
 ## 8. Connection adapter contract
 

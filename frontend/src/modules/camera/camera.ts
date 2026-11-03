@@ -3,21 +3,21 @@ import { repeat } from "lit/directives/repeat.js";
 import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import {
-  CAMERA_CONNECTION_SETTLED_EVENT,
   CAMERA_GESTURE_LOCK_EVENT,
   CAMERA_OVERLAY_VISIBILITY_EVENT,
   CAMERA_STAGE_SIZE_CHANGE_EVENT,
   CAMERA_TAG,
   CAMERA_VIEW_TAG,
 } from "../../core/constants";
+import { DeviceProfileController } from "../../core/device-profile";
 import type { HomeAssistantApi } from "../../core/home-assistant";
+import { getMediaSessionManager } from "../../core/media-session-manager";
 import { renderIcon } from "../../ui/icons";
 import type { CameraGestureLockDetail } from "./live/presentation";
 import type { CameraOverlayVisibilityDetail } from "./live/presentation";
 import "./camera-view";
 import { cameraStyles } from "./camera.styles";
 import { CameraCarouselController } from "./carousel.controller";
-import { CameraConnectionQueueController } from "./connection-queue.controller";
 import {
   DEFAULT_CAMERA_STAGE_HEIGHT_RATIO,
   type CameraStageSize,
@@ -55,7 +55,7 @@ export class CameraModule extends LitElement {
   private readonly _carousel = new CameraCarouselController(this, (index) =>
     this._select(index),
   );
-  private readonly _connections = new CameraConnectionQueueController(this);
+  private readonly _deviceProfile = new DeviceProfileController(this);
 
   public api?: HomeAssistantApi;
   public cameras: readonly CameraItemConfig[] = [];
@@ -65,10 +65,6 @@ export class CameraModule extends LitElement {
     this.addEventListener(
       CAMERA_GESTURE_LOCK_EVENT,
       this._handleGestureLock as EventListener,
-    );
-    this.addEventListener(
-      CAMERA_CONNECTION_SETTLED_EVENT,
-      this._handleConnectionSettled as EventListener,
     );
     this.addEventListener(
       CAMERA_STAGE_SIZE_CHANGE_EVENT,
@@ -86,10 +82,6 @@ export class CameraModule extends LitElement {
       this._handleGestureLock as EventListener,
     );
     this.removeEventListener(
-      CAMERA_CONNECTION_SETTLED_EVENT,
-      this._handleConnectionSettled as EventListener,
-    );
-    this.removeEventListener(
       CAMERA_STAGE_SIZE_CHANGE_EVENT,
       this._handleStageSizeChange as EventListener,
     );
@@ -97,6 +89,7 @@ export class CameraModule extends LitElement {
       CAMERA_OVERLAY_VISIBILITY_EVENT,
       this._handleOverlayVisibility as EventListener,
     );
+    getMediaSessionManager().clearCameraActivity(this);
     super.disconnectedCallback();
   }
 
@@ -114,13 +107,7 @@ export class CameraModule extends LitElement {
       this._overlayVisibilityByCamera.get(
         this.cameras[this._activeIndex]?.entityId ?? "",
       ) ?? false;
-    this._connections.configure(
-      this.cameras.map(({ available, entityId }) => ({
-        available,
-        key: entityId,
-      })),
-      this.api?.identity.connected !== false,
-    );
+    this._syncCameraActivity();
   }
 
   protected render() {
@@ -143,7 +130,7 @@ export class CameraModule extends LitElement {
             <${cameraViewTag}
               class="camera-view"
               .active=${index === this._activeIndex}
-              .connect=${this._connections.isEnabled(camera.entityId)}
+              .connect=${index === this._activeIndex}
               .api=${this.api}
               .available=${camera.available}
               .entityId=${camera.entityId}
@@ -207,9 +194,8 @@ export class CameraModule extends LitElement {
   private _select(index: number): void {
     const next = Math.max(0, Math.min(this.cameras.length - 1, index));
     if (next === this._activeIndex) return;
-    const selectedCamera = this.cameras[next];
-    if (selectedCamera) this._connections.prioritize(selectedCamera.entityId);
     this._activeIndex = next;
+    this._syncCameraActivity();
     this._navigationVisible =
       this._overlayVisibilityByCamera.get(this.cameras[next]?.entityId ?? "") ??
       false;
@@ -232,12 +218,6 @@ export class CameraModule extends LitElement {
     this._carousel.setInteractionLocked(event.detail.locked);
   };
 
-  private readonly _handleConnectionSettled = (
-    event: CustomEvent<{ readonly entityId: string }>,
-  ): void => {
-    this._connections.settle(event.detail.entityId);
-  };
-
   private readonly _handleStageSizeChange = (
     event: CustomEvent<CameraStageSize>,
   ): void => {
@@ -255,6 +235,14 @@ export class CameraModule extends LitElement {
     this._navigationVisible = event.detail.visible;
     this.requestUpdate();
   };
+
+  private _syncCameraActivity(): void {
+    getMediaSessionManager().setCameraActivity(
+      this,
+      this.cameras[this._activeIndex]?.entityId,
+      this._deviceProfile.profile.deviceClass,
+    );
+  }
 
   static styles = cameraStyles;
 }

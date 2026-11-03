@@ -6,6 +6,7 @@ import {
   MediaSessionManager,
   type MediaSessionRequest,
 } from "../src/core/media-session-manager";
+import type { MediaRetentionEnvironment } from "../src/core/media-retention-policy";
 
 const missingFactory: ConnectionFactory = async () => {
   throw new Error("No test connection factory was configured");
@@ -16,8 +17,9 @@ export class TestMediaSessionManager extends MediaSessionManager {
   public constructor(
     private readonly _webRtcFactory: ConnectionFactory = missingFactory,
     private readonly _hlsFactory: ConnectionFactory = missingFactory,
+    retentionEnvironment: MediaRetentionEnvironment = {},
   ) {
-    super();
+    super(retentionEnvironment);
   }
 
   public override acquire(request: MediaSessionRequest) {
@@ -33,6 +35,7 @@ export class TestMediaSessionManager extends MediaSessionManager {
   public acquireHomeAssistant(api: HomeAssistantApi, entityId: string) {
     return this.acquire({
       api,
+      cameraKey: entityId,
       entityId,
       factory: this._webRtcFactory,
       key: `home_assistant:webrtc:${entityId}`,
@@ -47,6 +50,7 @@ export class TestMediaSessionManager extends MediaSessionManager {
   ) {
     return this.acquire({
       api,
+      cameraKey: entityId,
       entityId,
       factory: this._hlsFactory,
       key: `home_assistant:hls:${entityId}`,

@@ -2,7 +2,6 @@ import { LitElement } from "lit";
 import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import {
-  CAMERA_CONNECTION_SETTLED_EVENT,
   CAMERA_LIVE_PRESENTATION_TAG,
   CAMERA_STAGE_SIZE_CHANGE_EVENT,
   CAMERA_SUSPEND_DIALOG_TAG,
@@ -84,7 +83,6 @@ export class CameraView extends LitElement {
     (size) => this._handleStageSizeChange(size),
   );
   private _suspendDialogActive = false;
-  private _settledEntityId?: string;
 
   public active = false;
   public connect = false;
@@ -221,31 +219,6 @@ export class CameraView extends LitElement {
       this._stageResize.mediaPresentationScale,
     );
     this._audio.syncMediaState();
-    this._notifyConnectionSettled();
-  }
-
-  private _notifyConnectionSettled(): void {
-    if (!this.connect || !this.entityId) {
-      this._settledEntityId = undefined;
-      return;
-    }
-    if (this._settledEntityId === this.entityId) return;
-    const runtime = this._runtime.snapshot;
-    if (
-      this.available &&
-      runtime?.suspended !== true &&
-      !this._session.selected &&
-      !this._session.failed
-    )
-      return;
-    this._settledEntityId = this.entityId;
-    this.dispatchEvent(
-      new CustomEvent(CAMERA_CONNECTION_SETTLED_EVENT, {
-        bubbles: true,
-        composed: true,
-        detail: { entityId: this.entityId },
-      }),
-    );
   }
 
   private readonly _handleMediaAttached = (): void => {

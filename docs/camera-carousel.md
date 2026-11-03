@@ -25,9 +25,10 @@ slide is keyed by camera entity identity so selection and reordering do not
 replace a healthy live presentation or its media-session leases. The camera
 module accepts at most the centralized `MAX_CAMERAS` limit of twelve entries.
 
-The selected slide owns visible controls, resize interaction, and audible
-presentation. Non-selected slides remain mounted and connected but are forced
-muted. One slide disables movement; multiple slides enable swipe and the
+The selected slide owns its frontend transport leases, visible controls,
+resize interaction, and audible presentation. Non-selected slides remain
+mounted but release transport leases into the document retention policy. One
+slide disables movement; multiple slides enable swipe and the
 camera-local previous/next chevrons. Those chevrons consume the selected live
 presentation's typed overlay-visibility signal, so controls, source badge, and
 navigation share one timer rather than maintaining parallel hide timers.
@@ -39,25 +40,17 @@ rendered its structural slides. The first live session may begin without
 waiting for Swiper download or evaluation, and camera-free layouts transfer no
 Swiper code.
 
-Configured cameras connect sequentially in display order. The queue enables
-camera zero, waits until it has selected a live source or reached a terminal
-unavailable/failed/suspended state, and then enables the next camera. All
-enabled cameras retain active session leases; carousel selection does not
-release them. A retained healthy session satisfies its queue position without
-renegotiation. A real Home Assistant transport interruption resets the ordered
-gate, while an ordinary render or selection change does not.
+The selected camera connects immediately. Selection does not wait for or
+create a background connection queue. When selection changes, the old slide
+releases its leases and the new slide acquires canonical session keys. The
+document-scoped retention policy may keep the released logical camera parked;
+reselecting it then reattaches without invoking a provider factory. If policy
+closed it, the normal provider connection path starts once.
 
-Selecting a camera that has not reached its ordered queue position promotes
-that camera into connection immediately. Promotion does not cancel the camera
-already loading, does not create a second queue entry or media-session key, and
-does not reorder the remaining background work. When the ordered worker
-advances, it skips every camera that was already promoted and continues in
-configured display order. Repeated navigation only reuses the stable slide and
-retained leases; it never reacquires a healthy HLS or WebRTC session.
-
-The initial policy connects every configured camera. A future per-camera
-preload option may opt individual cameras out, but it must extend this single
-queue rather than introduce a parallel lifecycle.
+The carousel does not decide mobile network budgets, expiry, retry, or
+provider behavior. It reports selection and device class to the shared session
+manager. Backend HLS pre-warming is independent of slide mounting and does not
+make a non-selected slide connected in the browser.
 
 The controller initializes once per rendered container, updates only when the
 slide count changes, and destroys the instance on host disconnection. A stale
@@ -98,6 +91,6 @@ cannot complete.
 ## Verification
 
 Tests verify structural geometry before initialization, single-slide movement
-lock, ordered connection enablement, retained live-element identity,
+lock, selected-only connection ownership, retained live-element identity,
 shared stage height across selection, instance cleanup/reinitialization, lazy
 loading for camera-free layouts, and Chromium, Firefox, and WebKit behavior.

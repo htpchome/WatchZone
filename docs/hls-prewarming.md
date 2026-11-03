@@ -8,9 +8,10 @@ backend work. It is not inferred from a currently mounted card, stored in card
 YAML, or enabled for every camera in Home Assistant.
 
 The allowlist is configured under **Settings > Devices & services > WatchZone
+
 > Configure**. A maximum of twelve cameras may be selected. This prevents
-special-purpose cameras, such as a printer camera, from consuming resources
-unless the user deliberately opts them in.
+> special-purpose cameras, such as a printer camera, from consuming resources
+> unless the user deliberately opts them in.
 
 For each selected entity, WatchZone:
 
@@ -23,6 +24,13 @@ For each selected entity, WatchZone:
 No duplicate Home Assistant camera entity is created. Browsers still request
 their own playlists and media bytes through Home Assistant; the prepared
 server-side playlist and stream worker are shared.
+
+Pre-warming is independent of frontend selection and retention. It does not
+open browser HLS/WebRTC transports, consume a browser decoder, or make every
+configured camera an active carousel connection. A selected camera still
+acquires its frontend transport immediately; an inactive phone camera may be
+closed by frontend network policy while its explicitly allowed server stream
+remains prepared.
 
 WatchZone remembers the runtime keepalive value it encountered. Deselecting a
 camera or unloading WatchZone restores only a value WatchZone changed. An HLS

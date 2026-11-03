@@ -11,6 +11,12 @@ import {
   beginLiveStartupTiming,
   type LiveStartupTiming,
 } from "./live-startup-timing";
+import type { DeviceClass } from "./device-profile";
+import {
+  type MediaRetentionCamera,
+  type MediaRetentionEnvironment,
+  MediaRetentionPolicy,
+} from "./media-retention-policy";
 
 export type MediaSessionState =
   "new" | "connecting" | "live" | "parked" | "failed" | "closing" | "closed";
@@ -63,6 +69,7 @@ export type MediaRetentionClass = "fallback" | "preferred";
 
 export interface MediaSessionRequest {
   readonly api: HomeAssistantApi;
+  readonly cameraKey: string;
   readonly entityId: string;
   readonly factory: ConnectionFactory;
   readonly key: string;
@@ -109,11 +116,13 @@ class ManagedMediaSession {
 
   public constructor(
     public readonly key: string,
+    public readonly cameraKey: string,
     public readonly entityId: string,
     api: HomeAssistantApi,
     private readonly _factory: ConnectionFactory,
     public readonly retention: MediaRetentionClass,
     private readonly _onClosed: () => void,
+    private readonly _onRetained: () => void,
     private readonly _enqueueReconnect: (session: ManagedMediaSession) => void,
   ) {
     this._api = api;
@@ -367,6 +376,7 @@ class ManagedMediaSession {
     if (this._snapshot.state === "live") {
       this._setSnapshot({ ...this._snapshot, state: "parked" });
     }
+    this._onRetained();
   }
 
   private _closeConnection(): void {
@@ -395,6 +405,11 @@ export class MediaSessionManager {
     CameraMutePreference
   >();
   private readonly _sessions = new Map<string, ManagedMediaSession>();
+  private readonly _cameraActivity = new Map<
+    object,
+    { readonly cameraKey: string; readonly deviceClass: DeviceClass }
+  >();
+  private readonly _cameraDeviceClasses = new Map<string, DeviceClass>();
   private readonly _connectionObservers = new Map<
     HomeAssistantConnection,
     {
@@ -406,10 +421,19 @@ export class MediaSessionManager {
   private readonly _reconnectQueue = new Set<ManagedMediaSession>();
   private _reconnectBatchTimer?: ReturnType<typeof setTimeout>;
   private _reconnectDrain?: Promise<void>;
+  private readonly _retentionPolicy: MediaRetentionPolicy;
+
+  public constructor(retentionEnvironment: MediaRetentionEnvironment = {}) {
+    this._retentionPolicy = new MediaRetentionPolicy(
+      () => this._applyRetentionPolicy(),
+      retentionEnvironment,
+    );
+  }
 
   public acquire(request: MediaSessionRequest): MediaSessionLease {
     return this._acquire(
       request.key,
+      request.cameraKey,
       request.entityId,
       request.api,
       request.factory,
@@ -436,8 +460,36 @@ export class MediaSessionManager {
     this._cameraMutePreferences.set(entityId, muted ? "muted" : "unmuted");
   }
 
+  public setCameraActivity(
+    owner: object,
+    cameraKey: string | undefined,
+    deviceClass: DeviceClass,
+  ): void {
+    const current = this._cameraActivity.get(owner);
+    if (
+      current?.cameraKey === cameraKey &&
+      current?.deviceClass === deviceClass
+    )
+      return;
+    if (cameraKey) {
+      this._cameraActivity.set(owner, { cameraKey, deviceClass });
+      this._cameraDeviceClasses.set(cameraKey, deviceClass);
+    } else {
+      this._cameraActivity.delete(owner);
+    }
+    this._applyRetentionPolicy();
+    this._pruneCameraDeviceClasses();
+  }
+
+  public clearCameraActivity(owner: object): void {
+    if (!this._cameraActivity.delete(owner)) return;
+    this._applyRetentionPolicy();
+    this._pruneCameraDeviceClasses();
+  }
+
   private _acquire(
     key: string,
+    cameraKey: string,
     entityId: string,
     api: HomeAssistantApi,
     factory: ConnectionFactory,
@@ -450,6 +502,7 @@ export class MediaSessionManager {
       this._evictIfNeeded();
       session = new ManagedMediaSession(
         key,
+        cameraKey,
         entityId,
         api,
         factory,
@@ -458,14 +511,17 @@ export class MediaSessionManager {
           const closedSession = this._sessions.get(key);
           if (closedSession) this._reconnectQueue.delete(closedSession);
           this._sessions.delete(key);
+          this._pruneCameraDeviceClasses();
           this._pruneConnectionObservers();
         },
+        () => this._applyRetentionPolicy(),
         (reconnectSession) => this._enqueueReconnect(reconnectSession),
       );
       this._sessions.set(key, session);
     }
     const lease = session.acquire(api, options);
     this._pruneConnectionObservers();
+    this._applyRetentionPolicy();
     return lease;
   }
 
@@ -478,7 +534,52 @@ export class MediaSessionManager {
     for (const session of [...this._sessions.values()]) {
       session.close();
     }
+    this._cameraActivity.clear();
+    this._cameraDeviceClasses.clear();
+    this._retentionPolicy.dispose();
     this._clearConnectionObservers();
+  }
+
+  private _applyRetentionPolicy(): void {
+    const activeCameraKeys = new Set(
+      [...this._cameraActivity.values()].map(({ cameraKey }) => cameraKey),
+    );
+    const cameras = new Map<string, MediaRetentionCamera>();
+    for (const session of this._sessions.values()) {
+      const current = cameras.get(session.cameraKey);
+      cameras.set(session.cameraKey, {
+        active:
+          current?.active === true ||
+          activeCameraKeys.has(session.cameraKey) ||
+          !session.isRetained(),
+        deviceClass:
+          this._cameraDeviceClasses.get(session.cameraKey) ?? "desktop",
+        key: session.cameraKey,
+        lastUsed: Math.max(current?.lastUsed ?? 0, session.lastUsed),
+      });
+    }
+    for (const cameraKey of this._retentionPolicy.evaluate([
+      ...cameras.values(),
+    ])) {
+      for (const session of [...this._sessions.values()]) {
+        if (session.cameraKey === cameraKey && session.isRetained()) {
+          session.close();
+        }
+      }
+    }
+  }
+
+  private _pruneCameraDeviceClasses(): void {
+    const referenced = new Set(
+      [...this._cameraActivity.values()].map(({ cameraKey }) => cameraKey),
+    );
+    for (const session of this._sessions.values()) {
+      referenced.add(session.cameraKey);
+    }
+    for (const cameraKey of this._cameraDeviceClasses.keys()) {
+      if (!referenced.has(cameraKey))
+        this._cameraDeviceClasses.delete(cameraKey);
+    }
   }
 
   private _enqueueReconnect(session: ManagedMediaSession): void {

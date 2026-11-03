@@ -168,14 +168,15 @@ a session. Compatible card and editor-preview instances in the same document
 share sessions. Removing a live element releases its lease and detaches
 presentation; it does not close a healthy retained winner.
 
-The current resource budget retains at most two transport sessions for each of
-the twelve configured cameras. This permits ordered full-camera preload while
-WebRTC and HLS compete without making retention unbounded. Parked sessions do
-not expire on an arbitrary idle timer; capacity pressure evicts parked
-fallback sessions first and then the least-recently-used preferred session. An
-unshared HLS loser is discarded immediately after WebRTC handoff. Established
-connections receive at most two automatic reconnect attempts with exponential
-backoff and jitter.
+The global resource budget retains at most two transport sessions for each of
+the twelve configured cameras while WebRTC and HLS compete. Only the selected
+camera acquires frontend leases. Provider-neutral retention groups those
+transport keys by logical camera: desktop/tablet sessions remain eligible for
+document-lifetime parking, while phone sessions use the bounded network-aware
+MRU and expiry policy in `docs/live-session-lifecycle.md`. An unshared HLS
+loser is discarded immediately after WebRTC handoff. Established connections
+receive at most two automatic reconnect attempts with exponential backoff and
+jitter.
 
 The session pool also observes Home Assistant's own WebSocket lifecycle. A
 `disconnected` event invalidates retained and active media transports once;

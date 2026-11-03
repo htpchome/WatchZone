@@ -31,6 +31,7 @@ export class HomeAssistantLiveProvider {
   ): MediaSessionLease {
     return getMediaSessionManager().acquire({
       api,
+      cameraKey: entityId,
       entityId,
       factory: webRtcFactory,
       key,
@@ -46,6 +47,7 @@ export class HomeAssistantLiveProvider {
   ): MediaSessionLease {
     return getMediaSessionManager().acquire({
       api,
+      cameraKey: entityId,
       entityId,
       factory: hlsFactory,
       key,
