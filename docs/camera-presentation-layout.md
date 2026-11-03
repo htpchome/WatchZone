@@ -50,6 +50,9 @@ allowed to clip content or escape Home Assistant's allocated grid area.
   carousel slide receives the same height ratio, so changing cameras preserves
   stage geometry while each camera retains its independent media dimensions,
   zoom, and pan.
+- The resize handle is positioned against the card-local camera stage. Mobile
+  viewport safe-area insets do not offset it because the stage is not a
+  viewport-edge surface; fullscreen controls own safe-area treatment instead.
 - Until the expanded stage reaches the active media's intrinsic ratio, media
   remains contained so sources such as `4:3` reveal their available height.
   Expansion beyond the source ratio increases a centered base presentation

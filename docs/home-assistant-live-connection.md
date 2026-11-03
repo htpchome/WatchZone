@@ -184,13 +184,17 @@ transport keys by logical camera: desktop/tablet sessions remain eligible for
 document-lifetime parking, while phone sessions use the bounded network-aware
 MRU and expiry policy in `docs/live-session-lifecycle.md`. An unshared HLS
 loser is discarded immediately after WebRTC handoff. Established connections
-receive at most two automatic reconnect attempts with exponential backoff and
-jitter.
+use the reconnect policy supplied by their provider adapter. HLS keeps the
+shared short, bounded recovery cadence. Home Assistant WebRTC probes use a
+longer 60-second exponential cadence with five bounded attempts because an
+upstream media consumer can remain visible briefly after frontend signaling
+has closed. HLS remains available throughout that cooldown.
 
 Replacement WebRTC signaling for one authenticated browser connection and
 camera is serialized behind complete cleanup of its predecessor. Bounded
-background WebRTC upgrade retries therefore cannot stack WatchZone signaling
-sessions while HLS remains selected.
+background WebRTC upgrade retries are additionally spaced so a provider has
+time to retire the prior media consumer before the next probe begins while HLS
+remains selected.
 
 The session pool also observes Home Assistant's own WebSocket lifecycle. A
 `disconnected` event invalidates retained and active media transports once;
@@ -200,8 +204,8 @@ not interrupted remains healthy and is reused instead of restarted. A full
 Home Assistant restart can accept WebSocket commands briefly
 before WatchZone's backend/provider commands are registered, so failed startup
 attempts during that recovery window use a separate bounded five-attempt
-backoff policy. This does not increase the two-attempt policy for ordinary
-media failures. Parked sessions remain inactive until reacquired. This prevents
+backoff policy. This is independent of each adapter's bounded ordinary-media
+policy. Parked sessions remain inactive until reacquired. This prevents
 a Home Assistant restart from leaving an old media transport indefinitely
 marked `live` or `connecting` without introducing health polling or duplicate
 connections.

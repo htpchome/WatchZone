@@ -67,12 +67,18 @@ export interface MediaSessionLease {
 
 export type MediaRetentionClass = "fallback" | "preferred";
 
+export interface MediaReconnectPolicy {
+  readonly baseDelayMs: number;
+  readonly maxAttempts: number;
+}
+
 export interface MediaSessionRequest {
   readonly api: HomeAssistantApi;
   readonly cameraKey: string;
   readonly entityId: string;
   readonly factory: ConnectionFactory;
   readonly key: string;
+  readonly mediaReconnectPolicy?: MediaReconnectPolicy;
   readonly options?: MediaConnectionOptions;
   readonly retryInitialFailure?: boolean;
   readonly retention: MediaRetentionClass;
@@ -80,14 +86,13 @@ export interface MediaSessionRequest {
 
 type ReconnectCause = "home_assistant" | "media";
 
-const RECONNECT_POLICIES: Readonly<
-  Record<
-    ReconnectCause,
-    { readonly baseDelayMs: number; readonly maxAttempts: number }
-  >
-> = {
-  media: { baseDelayMs: 500, maxAttempts: 2 },
-  home_assistant: { baseDelayMs: 500, maxAttempts: 5 },
+const DEFAULT_MEDIA_RECONNECT_POLICY: MediaReconnectPolicy = {
+  baseDelayMs: 500,
+  maxAttempts: 2,
+};
+const HOME_ASSISTANT_RECONNECT_POLICY: MediaReconnectPolicy = {
+  baseDelayMs: 500,
+  maxAttempts: 5,
 };
 const RECONNECT_JITTER_MS = 250;
 const RECONNECT_STABLE_RESET_MS = 30_000;
@@ -123,6 +128,7 @@ class ManagedMediaSession {
     private readonly _factory: ConnectionFactory,
     public readonly retention: MediaRetentionClass,
     private readonly _retryInitialFailure: boolean,
+    private readonly _mediaReconnectPolicy: MediaReconnectPolicy,
     private readonly _onClosed: () => void,
     private readonly _onRetained: () => void,
     private readonly _enqueueReconnect: (session: ManagedMediaSession) => void,
@@ -341,9 +347,12 @@ class ManagedMediaSession {
   }
 
   private _scheduleReconnect(): void {
-    const policy = this._reconnectCause
-      ? RECONNECT_POLICIES[this._reconnectCause]
-      : undefined;
+    const policy =
+      this._reconnectCause === "media"
+        ? this._mediaReconnectPolicy
+        : this._reconnectCause === "home_assistant"
+          ? HOME_ASSISTANT_RECONNECT_POLICY
+          : undefined;
     if (
       !policy ||
       this._leaseCount === 0 ||
@@ -444,6 +453,7 @@ export class MediaSessionManager {
       request.factory,
       request.retention,
       request.retryInitialFailure ?? false,
+      request.mediaReconnectPolicy ?? DEFAULT_MEDIA_RECONNECT_POLICY,
       request.options,
     );
   }
@@ -501,6 +511,7 @@ export class MediaSessionManager {
     factory: ConnectionFactory,
     retention: MediaRetentionClass,
     retryInitialFailure: boolean,
+    mediaReconnectPolicy: MediaReconnectPolicy,
     options: MediaConnectionOptions = { initialMuted: true },
   ): MediaSessionLease {
     this._observeConnection(api.identity);
@@ -515,6 +526,7 @@ export class MediaSessionManager {
         factory,
         retention,
         retryInitialFailure,
+        mediaReconnectPolicy,
         () => {
           const closedSession = this._sessions.get(key);
           if (closedSession) this._reconnectQueue.delete(closedSession);

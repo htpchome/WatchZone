@@ -53,7 +53,7 @@ export const cameraViewStyles = css`
   .stage-resize-handle {
     position: absolute;
     z-index: 3;
-    bottom: max(0.2rem, env(safe-area-inset-bottom, 0px));
+    bottom: 0.2rem;
     left: 50%;
     display: grid;
     place-items: center;

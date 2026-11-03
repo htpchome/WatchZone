@@ -4,8 +4,17 @@ import {
   getMediaSessionManager,
   type ConnectionFactory,
   type MediaConnectionOptions,
+  type MediaReconnectPolicy,
   type MediaSessionLease,
 } from "../../../core/media-session-manager";
+
+// A failed WebRTC probe can outlive frontend signaling while the upstream
+// provider retires its media consumer. Space later probes so they cannot pile
+// onto that retiring consumer while HLS remains available to the presentation.
+const WEBRTC_RECONNECT_POLICY: MediaReconnectPolicy = {
+  baseDelayMs: 60_000,
+  maxAttempts: 5,
+};
 
 const webRtcFactory: ConnectionFactory = async (...args) => {
   const [api, entityId] = args;
@@ -44,6 +53,7 @@ export class HomeAssistantLiveProvider {
       entityId,
       factory: webRtcFactory,
       key,
+      mediaReconnectPolicy: WEBRTC_RECONNECT_POLICY,
       retention: "preferred",
     });
   }

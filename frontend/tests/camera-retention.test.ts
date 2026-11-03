@@ -283,6 +283,7 @@ describe("camera presentation retention", () => {
   });
 
   it("lets recovered WebRTC take presentation ownership from HLS again", async () => {
+    vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
     vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
     const streams = [
@@ -332,9 +333,8 @@ describe("camera presentation retention", () => {
     expect(video?.classList.contains("candidate")).toBe(false);
 
     failures[0](new Error("transient WebRTC failure"));
-    await vi.waitFor(() => expect(webRtcFactory).toHaveBeenCalledTimes(2), {
-      timeout: 2_000,
-    });
+    await vi.advanceTimersByTimeAsync(60_000);
+    await vi.waitFor(() => expect(webRtcFactory).toHaveBeenCalledTimes(2));
     await vi.waitFor(() => expect(video?.srcObject).toBe(streams[1]));
     video?.dispatchEvent(new Event("loadeddata"));
 

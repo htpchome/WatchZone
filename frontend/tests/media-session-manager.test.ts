@@ -461,6 +461,48 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
+  it("honors a provider reconnect cadence without changing shared recovery", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const failures: Array<(error: Error) => void> = [];
+    const factory = vi.fn<ConnectionFactory>(
+      async (_api, _entity, _signal, onFailure) => {
+        failures.push(onFailure);
+        return { stream: createStream(), close: vi.fn() };
+      },
+    );
+    const manager = new MediaSessionManager(factory);
+    const lease = manager.acquire({
+      api: createApi(),
+      cameraKey: "camera.front",
+      entityId: "camera.front",
+      factory,
+      key: "test:spaced:camera.front",
+      mediaReconnectPolicy: { baseDelayMs: 30_000, maxAttempts: 2 },
+      retention: "preferred",
+    });
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
+
+    failures[0](new Error("connection unavailable"));
+    await vi.advanceTimersByTimeAsync(29_999);
+    expect(factory).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(1);
+    await vi.waitFor(() => expect(factory).toHaveBeenCalledTimes(2));
+
+    failures[1](new Error("connection still unavailable"));
+    await vi.advanceTimersByTimeAsync(59_999);
+    expect(factory).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(1);
+    await vi.waitFor(() => expect(factory).toHaveBeenCalledTimes(3));
+
+    failures[2](new Error("connection remains unavailable"));
+    await vi.advanceTimersByTimeAsync(180_000);
+    expect(factory).toHaveBeenCalledTimes(3);
+
+    lease.release();
+    manager.closeAll();
+  });
+
   it("bounds opt-in retries for an initial connection failure", async () => {
     vi.spyOn(Math, "random").mockReturnValue(0);
     const factory = vi
