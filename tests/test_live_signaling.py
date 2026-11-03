@@ -15,6 +15,7 @@ from custom_components.watchzone.extensions import (
 from custom_components.watchzone.features.live import (
     HomeAssistantLiveSignalingSession,
     LiveSignalingService,
+    _OwnedSession,
 )
 from custom_components.watchzone.providers.frigate.live import (
     FrigateLiveSignalingSession,
@@ -38,6 +39,35 @@ class _FakeMessage:
 
     def as_dict(self) -> dict[str, object]:
         return self._payload
+
+
+async def test_replacement_signaling_waits_for_prior_cleanup() -> None:
+    """A retry cannot overlap its predecessor's backend signaling session."""
+    close_started = asyncio.Event()
+    allow_close = asyncio.Event()
+
+    async def close_session() -> None:
+        close_started.set()
+        await allow_close.wait()
+
+    session = SimpleNamespace(async_close=close_session)
+    service = LiveSignalingService(  # type: ignore[arg-type]
+        _FakeHass(), ProviderRegistry()
+    )
+    service._sessions["session-1"] = _OwnedSession(  # noqa: SLF001
+        "owner", "camera.porch", session  # type: ignore[arg-type]
+    )
+
+    service.close("session-1")
+    await close_started.wait()
+    replacement = asyncio.create_task(
+        service._async_wait_for_closing("owner", "camera.porch")  # noqa: SLF001
+    )
+    await asyncio.sleep(0)
+    assert replacement.done() is False
+
+    allow_close.set()
+    await replacement
 
 
 async def test_standard_home_assistant_session_delegates_public_contract() -> None:

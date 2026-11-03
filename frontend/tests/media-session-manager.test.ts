@@ -424,7 +424,7 @@ describe("MediaSessionManager", () => {
       "camera.front",
     );
     await vi.waitFor(() => expect(returned.getSnapshot().state).toBe("failed"));
-    await vi.advanceTimersByTimeAsync(500);
+    await vi.advanceTimersByTimeAsync(501);
     await vi.waitFor(() => expect(returned.getSnapshot().state).toBe("live"));
     expect(factory).toHaveBeenCalledTimes(3);
 
@@ -456,6 +456,33 @@ describe("MediaSessionManager", () => {
     failures[2](new Error("connection still unavailable"));
     await vi.advanceTimersByTimeAsync(10_000);
     expect(factory).toHaveBeenCalledTimes(3);
+
+    lease.release();
+    manager.closeAll();
+  });
+
+  it("bounds opt-in retries for an initial connection failure", async () => {
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const factory = vi
+      .fn<ConnectionFactory>()
+      .mockRejectedValueOnce(new Error("cellular manifest request failed"))
+      .mockResolvedValueOnce({ stream: createStream(), close: vi.fn() });
+    const manager = new MediaSessionManager(factory, factory);
+    const lease = manager.acquire({
+      api: createApi(),
+      cameraKey: "camera.front",
+      entityId: "camera.front",
+      factory,
+      key: "test:hls:camera.front",
+      retention: "fallback",
+      retryInitialFailure: true,
+    });
+
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("failed"));
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"), {
+      timeout: 1_000,
+    });
+    expect(factory).toHaveBeenCalledTimes(2);
 
     lease.release();
     manager.closeAll();

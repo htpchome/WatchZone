@@ -1,11 +1,13 @@
 """Tests for provider-owned camera suspension and resume scheduling."""
 
 import asyncio
+import sys
 from datetime import timedelta
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
 from homeassistant.core import Context, HomeAssistant, is_callback
+from homeassistant.exceptions import HomeAssistantError
 
 from custom_components.watchzone.extensions import (
     EXTENSION_API_VERSION,
@@ -21,6 +23,39 @@ from custom_components.watchzone.providers.frigate.camera import (
     async_get_state,
     async_set_suspended,
 )
+
+
+async def test_camera_readiness_waits_for_home_assistant_registration(
+    hass: HomeAssistant,
+) -> None:
+    """Restored state must not start media before HA registers the camera."""
+    service = CameraRuntimeService(hass)
+    camera = Mock()
+    lookup = Mock(
+        side_effect=[
+            HomeAssistantError("Camera not found"),
+            HomeAssistantError("Camera not found"),
+            camera,
+        ]
+    )
+    camera_helper = ModuleType("homeassistant.components.camera.helper")
+    camera_helper.get_camera_from_entity_id = lookup  # type: ignore[attr-defined]
+
+    with (
+        patch.dict(
+            sys.modules,
+            {"homeassistant.components.camera.helper": camera_helper},
+        ),
+        patch(
+            "custom_components.watchzone.features.camera_runtime.asyncio.sleep",
+            AsyncMock(),
+        ),
+    ):
+        ready = await service.async_wait_ready("camera.porch")
+
+    assert ready is True
+    assert lookup.call_count == 3
+    await service.async_close()
 
 
 async def test_frigate_camera_runtime_uses_public_camera_contract() -> None:

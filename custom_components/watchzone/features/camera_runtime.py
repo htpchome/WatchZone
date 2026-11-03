@@ -25,6 +25,7 @@ from ..providers.camera import CameraRuntimeProvider, CameraRuntimeState
 
 _STORAGE_KEY = f"{DOMAIN}.camera_suspensions"
 _STORAGE_VERSION = 1
+_CAMERA_READY_RETRY_DELAYS = (0.0, 0.1, 0.2, 0.4, 0.8, 1.6, 3.2, 3.2)
 _STATE_CONFIRMATION_TIMEOUT = 12.0
 _RESUME_RETRY_DELAY = timedelta(minutes=1)
 _LOGGER = logging.getLogger(__name__)
@@ -71,6 +72,20 @@ class CameraRuntimeService:
         self._monitor_tasks: dict[str, asyncio.Task[None]] = {}
         self._reconcile_tasks: dict[str, asyncio.Task[None]] = {}
         self._closed = False
+
+    async def async_wait_ready(self, entity_id: str) -> bool:
+        """Wait until Home Assistant has registered the restored camera entity."""
+        from homeassistant.components.camera.helper import get_camera_from_entity_id
+
+        for delay in _CAMERA_READY_RETRY_DELAYS:
+            if delay:
+                await asyncio.sleep(delay)
+            try:
+                get_camera_from_entity_id(self._hass, entity_id)
+            except HomeAssistantError:
+                continue
+            return True
+        return False
 
     async def async_setup(self) -> None:
         """Restore persisted resume schedules and reconcile provider truth."""

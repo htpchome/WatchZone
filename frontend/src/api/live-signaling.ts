@@ -17,6 +17,34 @@ export type LiveOfferEvent =
 
 const OFFER_COMMAND = `${INTEGRATION_ID}/live/webrtc/offer`;
 const CANDIDATE_COMMAND = `${INTEGRATION_ID}/live/webrtc/candidate`;
+const CAMERA_READY_COMMAND = `${INTEGRATION_ID}/live/camera/ready`;
+const pendingCameraReadiness = new WeakMap<
+  HomeAssistantApi["identity"],
+  Map<string, Promise<boolean>>
+>();
+
+export function waitForHomeAssistantCameraReady(
+  api: HomeAssistantApi,
+  entityId: string,
+): Promise<boolean> {
+  let connectionRequests = pendingCameraReadiness.get(api.identity);
+  if (!connectionRequests) {
+    connectionRequests = new Map();
+    pendingCameraReadiness.set(api.identity, connectionRequests);
+  }
+  const existing = connectionRequests.get(entityId);
+  if (existing) return existing;
+
+  const request = api
+    .callWS<{ readonly ready: boolean }>({
+      type: CAMERA_READY_COMMAND,
+      entity_id: entityId,
+    })
+    .then(({ ready }) => ready)
+    .finally(() => connectionRequests?.delete(entityId));
+  connectionRequests.set(entityId, request);
+  return request;
+}
 
 export function subscribeLiveOffer(
   api: HomeAssistantApi,

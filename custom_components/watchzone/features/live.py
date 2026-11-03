@@ -83,6 +83,7 @@ class LiveSignalingService:
         self._hass = hass
         self._providers = providers or get_provider_registry(hass)
         self._sessions: dict[str, _OwnedSession] = {}
+        self._closing_sessions: dict[tuple[str, str], asyncio.Task[None]] = {}
 
     async def async_create(
         self,
@@ -94,6 +95,7 @@ class LiveSignalingService:
         from homeassistant.components.camera.const import StreamType
         from homeassistant.components.camera.helper import get_camera_from_entity_id
 
+        await self._async_wait_for_closing(owner_id, entity_id)
         camera = get_camera_from_entity_id(self._hass, entity_id)
         if StreamType.WEB_RTC not in camera.camera_capabilities.frontend_stream_types:
             raise HomeAssistantError("Camera does not support WebRTC")
@@ -129,19 +131,48 @@ class LiveSignalingService:
     def close(self, session_id: str) -> None:
         """Schedule complete cleanup for one signaling session."""
         if owned := self._sessions.pop(session_id, None):
-            self._hass.async_create_task(
-                owned.session.async_close(),
+            key = (owned.owner_id, owned.entity_id)
+            previous = self._closing_sessions.get(key)
+
+            async def close_in_order() -> None:
+                if previous is not None:
+                    await asyncio.gather(previous, return_exceptions=True)
+                await owned.session.async_close()
+
+            task = self._hass.async_create_task(
+                close_in_order(),
                 f"{NAME} WebRTC signaling cleanup",
             )
+            self._closing_sessions[key] = task
+
+            def forget_closing(completed: asyncio.Task[None]) -> None:
+                self._forget_closing(key, completed)
+
+            task.add_done_callback(forget_closing)
 
     async def async_close(self) -> None:
         """Close every session during integration unload."""
         sessions = [owned.session for owned in self._sessions.values()]
+        closing = list(self._closing_sessions.values())
         self._sessions.clear()
+        self._closing_sessions.clear()
         await asyncio.gather(
             *(session.async_close() for session in sessions),
+            *closing,
             return_exceptions=True,
         )
+
+    async def _async_wait_for_closing(self, owner_id: str, entity_id: str) -> None:
+        """Serialize replacement signaling behind complete prior cleanup."""
+        if closing := self._closing_sessions.get((owner_id, entity_id)):
+            await asyncio.gather(closing, return_exceptions=True)
+
+    def _forget_closing(
+        self, key: tuple[str, str], completed: asyncio.Task[None]
+    ) -> None:
+        """Remove only the cleanup generation that actually completed."""
+        if self._closing_sessions.get(key) is completed:
+            self._closing_sessions.pop(key, None)
 
     async def _async_prepare_provider_session(
         self,

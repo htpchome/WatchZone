@@ -53,8 +53,8 @@ export const cameraViewStyles = css`
   .stage-resize-handle {
     position: absolute;
     z-index: 3;
-    inset-block-end: max(0.2rem, env(safe-area-inset-bottom, 0px));
-    inset-inline-start: 50%;
+    bottom: max(0.2rem, env(safe-area-inset-bottom, 0px));
+    left: 50%;
     display: grid;
     place-items: center;
     box-sizing: border-box;

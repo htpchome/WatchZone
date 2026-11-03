@@ -1035,6 +1035,9 @@ test("retains one live connection while the card presentation is replaced", asyn
         suspended?: boolean;
         type: string;
       }) => {
+        if (message.type === "watchzone/live/camera/ready") {
+          return { ready: true };
+        }
         if (message.type === "camera/webrtc/get_client_config") {
           testWindow.__wzcTestConnectionCount += 1;
           return { configuration: { iceServers: [] } };

@@ -74,6 +74,7 @@ export interface MediaSessionRequest {
   readonly factory: ConnectionFactory;
   readonly key: string;
   readonly options?: MediaConnectionOptions;
+  readonly retryInitialFailure?: boolean;
   readonly retention: MediaRetentionClass;
 }
 
@@ -121,6 +122,7 @@ class ManagedMediaSession {
     api: HomeAssistantApi,
     private readonly _factory: ConnectionFactory,
     public readonly retention: MediaRetentionClass,
+    private readonly _retryInitialFailure: boolean,
     private readonly _onClosed: () => void,
     private readonly _onRetained: () => void,
     private readonly _enqueueReconnect: (session: ManagedMediaSession) => void,
@@ -307,6 +309,9 @@ class ManagedMediaSession {
       });
       if (this._reconnectCause) {
         this._scheduleReconnect();
+      } else if (this._retryInitialFailure) {
+        this._reconnectCause = "media";
+        this._scheduleReconnect();
       }
     }
   }
@@ -438,6 +443,7 @@ export class MediaSessionManager {
       request.api,
       request.factory,
       request.retention,
+      request.retryInitialFailure ?? false,
       request.options,
     );
   }
@@ -494,6 +500,7 @@ export class MediaSessionManager {
     api: HomeAssistantApi,
     factory: ConnectionFactory,
     retention: MediaRetentionClass,
+    retryInitialFailure: boolean,
     options: MediaConnectionOptions = { initialMuted: true },
   ): MediaSessionLease {
     this._observeConnection(api.identity);
@@ -507,6 +514,7 @@ export class MediaSessionManager {
         api,
         factory,
         retention,
+        retryInitialFailure,
         () => {
           const closedSession = this._sessions.get(key);
           if (closedSession) this._reconnectQueue.delete(closedSession);

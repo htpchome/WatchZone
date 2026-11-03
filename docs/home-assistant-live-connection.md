@@ -88,19 +88,22 @@ latency.
 
 For a validated camera entity, the adapter:
 
-1. Requests Home Assistant's WebRTC client configuration.
-2. Creates one peer connection and one owned media stream.
-3. Adds receive-only audio and video transceivers and the requested data
+1. Waits for WatchZone's backend to confirm that Home Assistant has registered
+   the restored camera object. Restored entity state alone is not readiness;
+   this prevents `Camera not found` requests during an HA restart.
+2. Requests Home Assistant's WebRTC client configuration.
+3. Creates one peer connection and one owned media stream.
+4. Adds receive-only audio and video transceivers and the requested data
    channel, if any.
-4. Creates and installs the local offer.
-5. Subscribes to WatchZone's backend signaling exchange. The backend resolves
+5. Creates and installs the local offer.
+6. Subscribes to WatchZone's backend signaling exchange. The backend resolves
    an eligible provider capability and otherwise delegates to Home Assistant's
    public camera WebRTC contract.
-6. Includes local ICE candidates gathered while installing the offer in the
+7. Includes local ICE candidates gathered while installing the offer in the
    initial signaling request, avoiding an extra session/candidate round trip.
    Later candidates are trickled after the session ID arrives.
-7. Buffers remote ICE candidates until the remote description exists.
-8. Reports the connection live when the first video track arrives.
+8. Buffers remote ICE candidates until the remote description exists.
+9. Reports the connection live when the first video track arrives.
 
 Connection startup is cancellable and bounded by a timeout. Errors are
 translated once into an actionable session error. Closing is idempotent and
@@ -114,27 +117,33 @@ that report `failed` immediately.
 
 The HLS adapter:
 
-1. Requests an authenticated URL through Home Assistant's `camera/stream`
+1. Waits on the same backend camera-readiness gate as WebRTC.
+2. Requests an authenticated URL through Home Assistant's `camera/stream`
    WebSocket command with `format: "hls"`.
-2. Resolves the returned relative URL through Home Assistant's URL resolver.
-3. When Home Assistant returns its compatibility-only master playlist, targets
+3. Resolves the returned relative URL through Home Assistant's URL resolver.
+4. When Home Assistant returns its compatibility-only master playlist, targets
    the sibling media playlist directly. With Low-Latency HLS enabled, the
    initial request includes standard `_HLS_msn` and `_HLS_part` delivery
    directives so a cold stream can return its first partial segment instead of
    waiting for the master endpoint's two-segment readiness gate.
-4. Verifies `EXT-X-PART-INF` and blocking-reload support in the returned
+5. Verifies `EXT-X-PART-INF` and blocking-reload support in the returned
    playlist before enabling HLS.js low-latency mode. A server that does not
    advertise both cleanly continues through standard HLS.
-5. Lazy-loads the light HLS.js engine. When HLS.js reports supported MSE/MMS
+6. Lazy-loads the light HLS.js engine. When HLS.js reports supported MSE/MMS
    playback, that path is preferred; native `video` HLS is the
    capability-detected fallback. This order avoids treating `canPlayType()`'s
    non-empty but inconclusive `"maybe"` result as proof that native playback is
    reliable.
-6. When a non-Home-Assistant master has exactly one variant, passes that
+7. When a non-Home-Assistant master has exactly one variant, passes that
    variant directly to the selected player to avoid a redundant manifest
    request.
-7. Reports live only after `loadeddata`, not merely after obtaining a playlist
+8. Reports live only after `loadeddata`, not merely after obtaining a playlist
    URL or parsing a manifest.
+
+An initial HLS failure receives the same bounded two-attempt media recovery as
+an established HLS interruption. This covers transient cellular manifest and
+decoder startup failures without adding an endless per-view retry loop or
+changing healthy Wi-Fi playback.
 
 The card-level `low_latency_hls` setting defaults to `true`; YAML stores only
 the non-default opt-out. HLS session identity includes the selected mode so a
@@ -177,6 +186,11 @@ MRU and expiry policy in `docs/live-session-lifecycle.md`. An unshared HLS
 loser is discarded immediately after WebRTC handoff. Established connections
 receive at most two automatic reconnect attempts with exponential backoff and
 jitter.
+
+Replacement WebRTC signaling for one authenticated browser connection and
+camera is serialized behind complete cleanup of its predecessor. Bounded
+background WebRTC upgrade retries therefore cannot stack WatchZone signaling
+sessions while HLS remains selected.
 
 The session pool also observes Home Assistant's own WebSocket lifecycle. A
 `disconnected` event invalidates retained and active media transports once;

@@ -55,6 +55,29 @@ def _require_camera_read(connection: ActiveConnection, entity_id: str) -> None:
 
 @websocket_command(
     {
+        vol.Required("type"): f"{DOMAIN}/live/camera/ready",
+        vol.Required("entity_id"): cv.entity_id,
+    }
+)
+@async_response
+async def ws_live_camera_ready(
+    hass: HomeAssistant,
+    connection: ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Wait for a restored entity to become a usable Home Assistant camera."""
+    entity_id = msg["entity_id"]
+    try:
+        _require_camera_read(connection, entity_id)
+        ready = await runtime_from_hass(hass).camera_runtime.async_wait_ready(entity_id)
+    except HomeAssistantError as err:
+        connection.send_error(msg["id"], "camera_ready_failed", str(err))
+        return
+    connection.send_result(msg["id"], {"ready": ready})
+
+
+@websocket_command(
+    {
         vol.Required("type"): f"{DOMAIN}/live/webrtc/offer",
         vol.Required("entity_id"): cv.entity_id,
         vol.Required("offer"): str,
@@ -141,5 +164,6 @@ async def ws_live_candidate(
 @callback
 def async_register(hass: HomeAssistant) -> None:
     """Register WatchZone live WebSocket commands."""
+    async_register_command(hass, ws_live_camera_ready)
     async_register_command(hass, ws_live_offer)
     async_register_command(hass, ws_live_candidate)

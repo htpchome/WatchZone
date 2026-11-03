@@ -2,6 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import "../src/main";
 import { DashboardCard } from "../src/card/watchzone-card";
+import type {
+  HomeAssistantConnectionEvent,
+  HomeAssistantConnectionEventListener,
+} from "../src/core/home-assistant";
 
 describe("watchzone-card", () => {
   afterEach(() => {
@@ -86,6 +90,65 @@ describe("watchzone-card", () => {
     await element.updateComplete;
 
     expect(element.shadowRoot?.querySelector("ha-card")).toBe(rendered);
+  });
+
+  it("removes stale camera proxy tokens across a Home Assistant restart", async () => {
+    const listeners = new Map<
+      HomeAssistantConnectionEvent,
+      Set<HomeAssistantConnectionEventListener>
+    >();
+    const connection = {
+      connected: true,
+      addEventListener: (
+        event: HomeAssistantConnectionEvent,
+        listener: HomeAssistantConnectionEventListener,
+      ) => {
+        const current = listeners.get(event) ?? new Set();
+        current.add(listener);
+        listeners.set(event, current);
+      },
+      removeEventListener: (
+        event: HomeAssistantConnectionEvent,
+        listener: HomeAssistantConnectionEventListener,
+      ) => listeners.get(event)?.delete(listener),
+      subscribeMessage: vi.fn(async () => () => undefined),
+    };
+    const element = document.createElement("watchzone-card") as DashboardCard;
+    element.setConfig({
+      type: "custom:watchzone-card",
+      camera_entity: "camera.front",
+    });
+    element.hass = {
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "recording",
+          attributes: {
+            entity_picture: "/api/camera_proxy/camera.front?token=old",
+          },
+        },
+      },
+      connection,
+      callWS: vi.fn(),
+      hassUrl: (path: string) => path,
+    };
+    document.body.append(element);
+
+    const camera = await vi.waitFor(() => {
+      const current = element.shadowRoot?.querySelector<
+        HTMLElement & { cameras: readonly { posterUrl?: string }[] }
+      >("wzc-camera");
+      expect(current?.cameras[0]?.posterUrl).toContain("token=old");
+      return current;
+    });
+    Object.defineProperty(connection, "connected", { value: false });
+    for (const listener of listeners.get("disconnected") ?? []) {
+      listener(connection);
+    }
+
+    await vi.waitFor(() =>
+      expect(camera?.cameras[0]?.posterUrl).toBeUndefined(),
+    );
   });
 
   it("propagates outer appearance settings through the HA card boundary", async () => {

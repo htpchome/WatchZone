@@ -19,6 +19,8 @@ import {
   isHomeAssistant,
   type HomeAssistant,
   type HomeAssistantApi,
+  type HomeAssistantConnection,
+  type HomeAssistantConnectionEventListener,
 } from "../core/home-assistant";
 import { syncHomeAssistantCardHostAppearance } from "../styles/home-assistant-card-bridge";
 import { themeTokens } from "../styles/theme-tokens";
@@ -38,6 +40,8 @@ export class DashboardCard extends LitElement {
   private _hass?: HomeAssistant;
   private _haApi?: HomeAssistantApi;
   private _previewConfig?: CardConfig;
+  private _observedConnection?: HomeAssistantConnection;
+  private _transportConnected = true;
   private readonly _layoutRuntime = new LayoutRuntime(this);
 
   /** Set by Home Assistant for the card shown inside its editor preview. */
@@ -52,7 +56,9 @@ export class DashboardCard extends LitElement {
     if (transportChanged || !this._haApi) {
       this._haApi = createHomeAssistantApi(value);
     }
-    this._layoutRuntime.setRuntime(value, this._haApi);
+    this._transportConnected = value.connection.connected !== false;
+    this._observeConnection(value.connection);
+    this._syncRuntime();
     if (transportChanged) this.requestUpdate();
   }
 
@@ -86,7 +92,8 @@ export class DashboardCard extends LitElement {
       this._handlePreviewDraft as EventListener,
     );
     this._syncLayout(this._previewConfig ?? this._config);
-    this._layoutRuntime.setRuntime(this._hass, this._haApi);
+    if (this._hass) this._observeConnection(this._hass.connection);
+    this._syncRuntime();
   }
 
   public disconnectedCallback(): void {
@@ -94,6 +101,7 @@ export class DashboardCard extends LitElement {
       EDITOR_PREVIEW_DRAFT_EVENT,
       this._handlePreviewDraft as EventListener,
     );
+    this._unobserveConnection();
     super.disconnectedCallback();
   }
 
@@ -145,7 +153,50 @@ export class DashboardCard extends LitElement {
 
   private _syncLayout(config: CardConfig): void {
     this._layoutRuntime.setLayout(createDefaultCardLayout(config));
-    this._layoutRuntime.setRuntime(this._hass, this._haApi);
+    this._syncRuntime();
+  }
+
+  private readonly _handleConnectionDisconnected: HomeAssistantConnectionEventListener =
+    () => {
+      this._transportConnected = false;
+      this._syncRuntime();
+    };
+
+  private readonly _handleConnectionReady: HomeAssistantConnectionEventListener =
+    () => {
+      // Wait for Home Assistant's next `hass` assignment so restored entity
+      // pictures cannot reuse access tokens from before the restart.
+      this._transportConnected = false;
+      this._syncRuntime();
+    };
+
+  private _observeConnection(connection: HomeAssistantConnection): void {
+    if (this._observedConnection === connection) return;
+    this._unobserveConnection();
+    connection.addEventListener?.(
+      "disconnected",
+      this._handleConnectionDisconnected,
+    );
+    connection.addEventListener?.("ready", this._handleConnectionReady);
+    this._observedConnection = connection;
+  }
+
+  private _unobserveConnection(): void {
+    const connection = this._observedConnection;
+    if (!connection) return;
+    connection.removeEventListener?.(
+      "disconnected",
+      this._handleConnectionDisconnected,
+    );
+    connection.removeEventListener?.("ready", this._handleConnectionReady);
+    this._observedConnection = undefined;
+  }
+
+  private _syncRuntime(): void {
+    this._layoutRuntime.setRuntime(
+      this._transportConnected ? this._hass : undefined,
+      this._haApi,
+    );
   }
 
   private _syncOuterAppearance(config: CardConfig): void {

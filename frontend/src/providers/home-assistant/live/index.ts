@@ -1,3 +1,4 @@
+import { waitForHomeAssistantCameraReady } from "../../../api/live-signaling";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
 import {
   getMediaSessionManager,
@@ -7,6 +8,10 @@ import {
 } from "../../../core/media-session-manager";
 
 const webRtcFactory: ConnectionFactory = async (...args) => {
+  const [api, entityId] = args;
+  if (!(await waitForHomeAssistantCameraReady(api, entityId))) {
+    throw new Error("Home Assistant camera is not ready");
+  }
   const timing = args[4];
   timing.mark("adapter_import_started");
   const { createHomeAssistantWebRtcConnection } = await import("./webrtc");
@@ -15,6 +20,10 @@ const webRtcFactory: ConnectionFactory = async (...args) => {
 };
 
 const hlsFactory: ConnectionFactory = async (...args) => {
+  const [api, entityId] = args;
+  if (!(await waitForHomeAssistantCameraReady(api, entityId))) {
+    throw new Error("Home Assistant camera is not ready");
+  }
   const timing = args[4];
   timing.mark("adapter_import_started");
   const { createHomeAssistantHlsConnection } = await import("./hls");
@@ -52,6 +61,7 @@ export class HomeAssistantLiveProvider {
       factory: hlsFactory,
       key,
       options,
+      retryInitialFailure: true,
       retention: "fallback",
     });
   }
