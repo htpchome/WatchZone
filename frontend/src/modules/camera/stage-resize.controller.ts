@@ -38,6 +38,7 @@ export class CameraStageResizeController implements ReactiveController {
   private _mediaHeightRatio?: number;
   private _moved = false;
   private _resized = false;
+  private _returnAnchorHeightRatio = DEFAULT_HEIGHT_RATIO;
   private _stage?: HTMLElement;
   private _tapCandidate?: TapCandidate;
 
@@ -119,6 +120,7 @@ export class CameraStageResizeController implements ReactiveController {
       x: event.clientX,
       y: event.clientY,
     };
+    this._returnAnchorHeightRatio = this._heightRatio;
     this._onInteraction?.({ phase: "start" });
     this._moved = false;
     handle.setPointerCapture?.(event.pointerId);
@@ -141,11 +143,15 @@ export class CameraStageResizeController implements ReactiveController {
     this._heightRatio = this._clampHeightRatio(
       drag.heightRatio + deltaY / drag.stageWidth,
     );
+    this._returnAnchorHeightRatio = Math.max(
+      this._returnAnchorHeightRatio,
+      this._heightRatio,
+    );
     this._resized = true;
     this._applyPresentation();
     this._onInteraction?.({
       phase: "update",
-      returnProgress: this._returnProgress(drag.heightRatio),
+      returnProgress: this._returnProgress(),
     });
     event.preventDefault();
   };
@@ -260,6 +266,7 @@ export class CameraStageResizeController implements ReactiveController {
     }
     this._stage?.classList.remove("stage-resizing");
     this._dragStart = undefined;
+    this._returnAnchorHeightRatio = DEFAULT_HEIGHT_RATIO;
     this._moved = false;
     if (interactionActive) this._onInteraction?.({ phase: "end" });
   }
@@ -283,12 +290,15 @@ export class CameraStageResizeController implements ReactiveController {
     return Math.min(MAX_HEIGHT_RATIO, Math.max(DEFAULT_HEIGHT_RATIO, ratio));
   }
 
-  private _returnProgress(startHeightRatio: number): number {
-    const returnRange = startHeightRatio - DEFAULT_HEIGHT_RATIO;
+  private _returnProgress(): number {
+    const returnRange = this._returnAnchorHeightRatio - DEFAULT_HEIGHT_RATIO;
     if (returnRange <= 0) return 0;
     return Math.min(
       1,
-      Math.max(0, (startHeightRatio - this._heightRatio) / returnRange),
+      Math.max(
+        0,
+        (this._returnAnchorHeightRatio - this._heightRatio) / returnRange,
+      ),
     );
   }
 

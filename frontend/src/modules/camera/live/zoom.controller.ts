@@ -156,7 +156,10 @@ export class CameraZoomController implements ReactiveController {
 
   public updateStageResizeReturn(progress: number): void {
     if (!this._stageResizeStart) this.beginStageResizeReturn();
-    this._stageResizeProgress = Math.min(1, Math.max(0, progress));
+    this._stageResizeProgress = Math.max(
+      this._stageResizeProgress,
+      Math.min(1, Math.max(0, progress)),
+    );
     this._host.requestUpdate();
   }
 

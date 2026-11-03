@@ -42,9 +42,12 @@ applied. While a user drags an expanded stage back toward its default height,
 the stage controller emits only normalized return progress. The camera parent
 passes that progress to the live presentation, and the zoom controller alone
 interpolates and owns the effective scale and pan. Reversing the drag reverses
-the interpolation; releasing partway commits the visible transform. Reaching
-the default stage commits `1x` centered media. The stage controller never
-writes a transform or imports the zoom controller.
+the stage-size change but does not restore zoom or pan that has already been
+returned toward neutral; releasing partway commits the visible transform.
+When a drag begins at the default height, its greatest expansion establishes
+the return range, so zooming before a down-and-up resize still reaches `1x`
+centered media. Reaching the default stage commits that neutral transform. The
+stage controller never writes a transform or imports the zoom controller.
 
 The zoom controller observes the resulting surface bounds and clamps the
 effective pan throughout the interaction, so resizing cannot expose blank

@@ -349,7 +349,7 @@ describe("camera media zoom", () => {
     expect(controller.stageResizeActive).toBe(true);
 
     controller.updateStageResizeReturn(0.25);
-    expect(controller.scale).toBe(1.75);
+    expect(controller.scale).toBe(1.5);
 
     controller.updateStageResizeReturn(1);
     expect(controller.transform).toBe("translate3d(0px, 0px, 0) scale(1)");

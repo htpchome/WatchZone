@@ -181,6 +181,36 @@ describe("camera stage resizing", () => {
     expect(interactions.at(-1)).toEqual({ phase: "end" });
   });
 
+  it("establishes a return range when a drag begins at default height", () => {
+    const { handle, stage } = createElements();
+    const interactions: Array<
+      | { readonly phase: "start" }
+      | { readonly phase: "update"; readonly returnProgress: number }
+      | { readonly phase: "end" }
+    > = [];
+    const controller = new CameraStageResizeController(createHost(), (event) =>
+      interactions.push(event),
+    );
+    controller.observe(stage, handle);
+    connectPointerEvents(handle, controller);
+
+    handle.dispatchEvent(
+      pointerEvent("pointerdown", { clientX: 200, clientY: 225 }),
+    );
+    handle.dispatchEvent(
+      pointerEvent("pointermove", { clientX: 200, clientY: 325 }),
+    );
+    handle.dispatchEvent(
+      pointerEvent("pointermove", { clientX: 200, clientY: 275 }),
+    );
+
+    const updates = interactions.flatMap((interaction) =>
+      interaction.phase === "update" ? [interaction.returnProgress] : [],
+    );
+    expect(updates[0]).toBe(0);
+    expect(updates[1]).toBeCloseTo(0.5);
+  });
+
   it("supports keyboard resizing and resets on Home", () => {
     const { handle, stage } = createElements();
     const controller = new CameraStageResizeController(createHost());

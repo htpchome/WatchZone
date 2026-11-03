@@ -69,8 +69,10 @@ controller reports normalized return progress to the camera parent. The parent
 coordinates that intent with the live presentation; `CameraZoomController`
 remains the sole transform owner and continuously returns zoom and pan toward
 `1x` centered media. Reversing or partially releasing the drag preserves the
-corresponding visible transform. Controls, source state, and toasts remain
-outside both transformations.
+most-neutral transform already reached; pulling down again resizes the stage
+without resurrecting discarded zoom or pan. A drag that starts at the default
+height uses its greatest expansion as the return range. Controls, source state,
+and toasts remain outside both transformations.
 
 ## Performance and stability
 
