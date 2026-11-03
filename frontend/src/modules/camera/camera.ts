@@ -19,7 +19,10 @@ import type {
 import "./live/presentation";
 import { CameraLiveSessionController } from "./live/session.controller";
 import { CameraRuntimeController } from "./runtime.controller";
-import { CameraStageResizeController } from "./stage-resize.controller";
+import {
+  CameraStageResizeController,
+  type CameraStageResizeInteraction,
+} from "./stage-resize.controller";
 import type { CameraSuspendConfirmDetail } from "./suspend-dialog";
 import "./suspend-dialog";
 
@@ -66,7 +69,10 @@ export class CameraModule extends LitElement {
         this._audio.handleActiveVideoChanged(video),
     });
   private readonly _runtime = new CameraRuntimeController(this);
-  private readonly _stageResize = new CameraStageResizeController(this);
+  private readonly _stageResize = new CameraStageResizeController(
+    this,
+    (interaction) => this._handleStageResizeInteraction(interaction),
+  );
   private _suspendDialogActive = false;
 
   public api?: HomeAssistantApi;
@@ -198,6 +204,17 @@ export class CameraModule extends LitElement {
       event.detail.height,
     );
   };
+
+  private _handleStageResizeInteraction(
+    interaction: CameraStageResizeInteraction,
+  ): void {
+    const presentation = this._presentation;
+    if (!presentation) return;
+    if (interaction.phase === "start") presentation.beginStageResizeReturn();
+    else if (interaction.phase === "update")
+      presentation.updateStageResizeReturn(interaction.returnProgress);
+    else presentation.endStageResizeReturn();
+  }
 
   private readonly _handleMuteToggle = (): void => {
     this._audio.toggleUserMute();

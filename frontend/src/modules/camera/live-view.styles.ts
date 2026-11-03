@@ -47,7 +47,8 @@ export const cameraLiveViewStyles = css`
     touch-action: none;
   }
 
-  .media-surface.interacting {
+  .media-surface.interacting,
+  .media-surface.stage-resize-active {
     cursor: move;
     transition: none;
   }

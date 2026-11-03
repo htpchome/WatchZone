@@ -38,8 +38,16 @@ view.
 
 Camera-stage resizing is a separate presentation layer. It changes the stage
 ratio and the base contain/cover fit before this controller's transform is
-applied. It never writes zoom scale or pan state. The zoom controller observes
-the resulting surface bounds and reclamps pan, so resizing cannot expose blank
+applied. While a user drags an expanded stage back toward its default height,
+the stage controller emits only normalized return progress. The camera parent
+passes that progress to the live presentation, and the zoom controller alone
+interpolates and owns the effective scale and pan. Reversing the drag reverses
+the interpolation; releasing partway commits the visible transform. Reaching
+the default stage commits `1x` centered media. The stage controller never
+writes a transform or imports the zoom controller.
+
+The zoom controller observes the resulting surface bounds and clamps the
+effective pan throughout the interaction, so resizing cannot expose blank
 space or create a second transform owner.
 
 ## Input policy
@@ -75,6 +83,9 @@ never activates zoom toggling.
 - Scale is clamped to `1x` through `3x`.
 - Pan is clamped after every scale, drag, and resize so blank space cannot be
   pulled into view.
+- Stage-return interpolation uses compositor-only media transforms and disables
+  the normal zoom transition while the handle is moving, so the transform
+  follows the pointer without delayed catch-up.
 - Pointer capture, active pointer records, and resize observation are released
   on reset or host disconnection.
 - Reduced-motion preferences disable the animated transform transition.

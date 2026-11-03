@@ -128,6 +128,59 @@ describe("camera stage resizing", () => {
     ).toBeCloseTo(16 / 9);
   });
 
+  it("reports continuous progress while returning toward default height", () => {
+    const { handle, stage } = createElements();
+    let stageHeight = 225;
+    Object.defineProperty(stage, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({
+        bottom: stageHeight,
+        height: stageHeight,
+        left: 0,
+        right: 400,
+        top: 0,
+        width: 400,
+        x: 0,
+        y: 0,
+        toJSON: () => undefined,
+      }),
+    });
+    const interactions: Array<
+      | { readonly phase: "start" }
+      | { readonly phase: "update"; readonly returnProgress: number }
+      | { readonly phase: "end" }
+    > = [];
+    const controller = new CameraStageResizeController(createHost(), (event) =>
+      interactions.push(event),
+    );
+    controller.observe(stage, handle);
+    controller.handleKeyDown(
+      new KeyboardEvent("keydown", { cancelable: true, key: "End" }),
+    );
+    stageHeight = 400;
+    connectPointerEvents(handle, controller);
+
+    handle.dispatchEvent(
+      pointerEvent("pointerdown", { clientX: 200, clientY: 400 }),
+    );
+    stageHeight = 312.5;
+    handle.dispatchEvent(
+      pointerEvent("pointermove", { clientX: 200, clientY: 312.5 }),
+    );
+    handle.dispatchEvent(
+      pointerEvent("pointerup", { clientX: 200, clientY: 312.5 }),
+    );
+
+    expect(interactions[0]).toEqual({ phase: "start" });
+    expect(interactions[1]?.phase).toBe("update");
+    expect(
+      interactions[1]?.phase === "update"
+        ? interactions[1].returnProgress
+        : undefined,
+    ).toBeCloseTo(0.5);
+    expect(interactions.at(-1)).toEqual({ phase: "end" });
+  });
+
   it("supports keyboard resizing and resets on Home", () => {
     const { handle, stage } = createElements();
     const controller = new CameraStageResizeController(createHost());

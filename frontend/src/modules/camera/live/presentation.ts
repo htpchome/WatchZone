@@ -114,6 +114,18 @@ export class CameraLivePresentation extends LitElement {
     );
   }
 
+  public beginStageResizeReturn(): void {
+    this._zoom.beginStageResizeReturn();
+  }
+
+  public updateStageResizeReturn(progress: number): void {
+    this._zoom.updateStageResizeReturn(progress);
+  }
+
+  public endStageResizeReturn(): void {
+    this._zoom.endStageResizeReturn();
+  }
+
   public connectedCallback(): void {
     super.connectedCallback();
     document.addEventListener("fullscreenchange", this._syncControlState);
@@ -180,6 +192,7 @@ export class CameraLivePresentation extends LitElement {
             "media-surface",
             this._zoom.zoomed ? "zoomed" : "",
             this._zoom.interacting ? "interacting" : "",
+            this._zoom.stageResizeActive ? "stage-resize-active" : "",
           ]
             .filter(Boolean)
             .join(" ")}

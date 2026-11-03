@@ -896,9 +896,7 @@ test("retains one live connection while the card presentation is replaced", asyn
   expect(initialStageBox).not.toBeNull();
   expect(initialCardBox).not.toBeNull();
   if (initialStageBox) {
-    await stageResizeHandle.press("ArrowDown");
-    await stageResizeHandle.press("ArrowDown");
-    await stageResizeHandle.press("ArrowDown");
+    await stageResizeHandle.press("End");
     await expect
       .poll(async () => (await liveViewport.boundingBox())?.height)
       .toBeGreaterThan(initialStageBox.height);
@@ -910,12 +908,42 @@ test("retains one live connection while the card presentation is replaced", asyn
     await expect(mediaSurface).toHaveAttribute("style", /scale\(2\.25\)/);
     await expect(video).toHaveCSS("object-fit", "cover");
 
-    await stageResizeHandle.press("Home");
+    const expandedStageBox = await liveViewport.boundingBox();
+    await stageResizeHandle.hover({ force: true });
+    const resizeHandleBox = await stageResizeHandle.boundingBox();
+    expect(expandedStageBox).not.toBeNull();
+    expect(resizeHandleBox).not.toBeNull();
+    if (expandedStageBox && resizeHandleBox) {
+      const handleX = resizeHandleBox.x + resizeHandleBox.width / 2;
+      const handleY = resizeHandleBox.y + resizeHandleBox.height / 2;
+      const returnDistance = expandedStageBox.height - initialStageBox.height;
+      const currentMediaScale = (): Promise<number | undefined> =>
+        mediaSurface.evaluate((element) => {
+          const match = element.getAttribute("style")?.match(/scale\(([^)]+)/);
+          return match ? Number(match[1]) : undefined;
+        });
+      await page.mouse.down();
+      await expect(page.locator("wzc-camera .camera")).toHaveClass(
+        /stage-resizing/,
+      );
+      await page.mouse.move(handleX, handleY - returnDistance / 2, {
+        steps: 4,
+      });
+      await expect.poll(currentMediaScale).toBeLessThan(2.25);
+      await expect.poll(currentMediaScale).toBeGreaterThan(1);
+      await page.mouse.move(handleX, handleY - returnDistance - 2, {
+        steps: 4,
+      });
+      await expect(mediaSurface).toHaveAttribute(
+        "style",
+        /translate3d\(0px, 0px, 0\) scale\(1\)/,
+      );
+      await page.mouse.up();
+    }
     await expect
       .poll(async () => (await liveViewport.boundingBox())?.height)
       .toBeCloseTo(initialStageBox.height, 0);
   }
-  await liveViewport.press("Escape");
   await expect(mediaSurface).toHaveAttribute("style", /scale\(1\)/);
   await liveViewport.evaluate((element) => (element as HTMLElement).blur());
   await page.mouse.move(0, 0);

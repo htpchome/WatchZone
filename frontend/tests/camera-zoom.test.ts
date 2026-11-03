@@ -308,6 +308,56 @@ describe("camera media zoom", () => {
     expect(controller.scale).toBe(1);
   });
 
+  it("returns zoom and pan continuously with stage-resize progress", () => {
+    const surface = createSurface();
+    const controller = new CameraZoomController(createHost());
+    controller.observe(surface);
+    connectPointerEvents(surface, controller);
+    tap(surface);
+    tap(surface);
+
+    surface.dispatchEvent(
+      pointerEvent("pointerdown", {
+        clientX: 200,
+        clientY: 112.5,
+        pointerId: 2,
+        pointerType: "mouse",
+      }),
+    );
+    surface.dispatchEvent(
+      pointerEvent("pointermove", {
+        clientX: 300,
+        clientY: 160,
+        pointerId: 2,
+        pointerType: "mouse",
+      }),
+    );
+    surface.dispatchEvent(
+      pointerEvent("pointerup", {
+        clientX: 300,
+        clientY: 160,
+        pointerId: 2,
+        pointerType: "mouse",
+      }),
+    );
+    expect(controller.transform).not.toContain("translate3d(0px, 0px, 0)");
+
+    controller.beginStageResizeReturn();
+    controller.updateStageResizeReturn(0.5);
+    expect(controller.scale).toBe(1.5);
+    expect(controller.transform).toContain("scale(1.5)");
+    expect(controller.stageResizeActive).toBe(true);
+
+    controller.updateStageResizeReturn(0.25);
+    expect(controller.scale).toBe(1.75);
+
+    controller.updateStageResizeReturn(1);
+    expect(controller.transform).toBe("translate3d(0px, 0px, 0) scale(1)");
+    controller.endStageResizeReturn();
+    expect(controller.scale).toBe(1);
+    expect(controller.stageResizeActive).toBe(false);
+  });
+
   it("transforms fallback and live media without transforming overlays", async () => {
     const presentation = document.createElement(
       CAMERA_LIVE_PRESENTATION_TAG,

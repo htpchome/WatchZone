@@ -39,6 +39,12 @@ interface TapCandidate extends Point {
   readonly time: number;
 }
 
+interface ZoomTransform {
+  readonly panX: number;
+  readonly panY: number;
+  readonly scale: number;
+}
+
 /** Owns camera-media zoom, bounded pan, gestures, and lifecycle cleanup. */
 export class CameraZoomController implements ReactiveController {
   private _dragStart?: DragStart;
@@ -51,7 +57,11 @@ export class CameraZoomController implements ReactiveController {
   private readonly _pointers = new Map<number, PointerPoint>();
   private _resizeObserver?: ResizeObserver;
   private _scale = MIN_ZOOM;
+  private _stageResizeProgress = 0;
+  private _stageResizeStart?: ZoomTransform;
   private _surface?: HTMLElement;
+  private _surfaceHeight = 0;
+  private _surfaceWidth = 0;
   private _tapCandidate?: TapCandidate;
 
   public constructor(private readonly _host: ReactiveControllerHost) {
@@ -62,16 +72,21 @@ export class CameraZoomController implements ReactiveController {
     return this._interacting;
   }
 
+  public get stageResizeActive(): boolean {
+    return this._stageResizeStart !== undefined;
+  }
+
   public get scale(): number {
-    return this._scale;
+    return this._presentationTransform().scale;
   }
 
   public get transform(): string {
-    return `translate3d(${this._panX}px, ${this._panY}px, 0) scale(${this._scale})`;
+    const { panX, panY, scale } = this._presentationTransform();
+    return `translate3d(${panX}px, ${panY}px, 0) scale(${scale})`;
   }
 
   public get zoomed(): boolean {
-    return this._scale > MIN_ZOOM;
+    return this.scale > MIN_ZOOM;
   }
 
   public configure(key: string | undefined): void {
@@ -85,9 +100,20 @@ export class CameraZoomController implements ReactiveController {
     this._resizeObserver?.disconnect();
     this._resizeObserver = undefined;
     this._surface = surface;
+    this._surfaceWidth = surface?.clientWidth || 0;
+    this._surfaceHeight = surface?.clientHeight || 0;
+    if (surface && (!this._surfaceWidth || !this._surfaceHeight)) {
+      const rect = surface.getBoundingClientRect();
+      this._surfaceWidth ||= rect.width;
+      this._surfaceHeight ||= rect.height;
+    }
     if (!surface || typeof ResizeObserver === "undefined") return;
-    this._resizeObserver = new ResizeObserver(() => {
-      this._clampPan();
+    this._resizeObserver = new ResizeObserver(([entry]) => {
+      if (entry) {
+        this._surfaceWidth = entry.contentRect.width;
+        this._surfaceHeight = entry.contentRect.height;
+      }
+      if (!this.stageResizeActive) this._clampPan();
       this._host.requestUpdate();
     });
     this._resizeObserver.observe(surface);
@@ -97,10 +123,14 @@ export class CameraZoomController implements ReactiveController {
     this._resizeObserver?.disconnect();
     this._resizeObserver = undefined;
     this._surface = undefined;
+    this._surfaceWidth = 0;
+    this._surfaceHeight = 0;
     this._releasePointers();
     this._dragStart = undefined;
     this._pinchStart = undefined;
     this._tapCandidate = undefined;
+    this._stageResizeStart = undefined;
+    this._stageResizeProgress = 0;
   }
 
   public reset(): void {
@@ -113,6 +143,32 @@ export class CameraZoomController implements ReactiveController {
     this._dragStart = undefined;
     this._pinchStart = undefined;
     this._tapCandidate = undefined;
+    this._stageResizeStart = undefined;
+    this._stageResizeProgress = 0;
+    this._host.requestUpdate();
+  }
+
+  public beginStageResizeReturn(): void {
+    this._stageResizeStart = this._presentationTransform();
+    this._stageResizeProgress = 0;
+    this._host.requestUpdate();
+  }
+
+  public updateStageResizeReturn(progress: number): void {
+    if (!this._stageResizeStart) this.beginStageResizeReturn();
+    this._stageResizeProgress = Math.min(1, Math.max(0, progress));
+    this._host.requestUpdate();
+  }
+
+  public endStageResizeReturn(): void {
+    if (!this._stageResizeStart) return;
+    const current = this._presentationTransform();
+    this._scale = current.scale;
+    this._panX = current.panX;
+    this._panY = current.panY;
+    this._stageResizeStart = undefined;
+    this._stageResizeProgress = 0;
+    this._clampPan();
     this._host.requestUpdate();
   }
 
@@ -381,12 +437,37 @@ export class CameraZoomController implements ReactiveController {
       this._panY = 0;
       return;
     }
-    const rect = this._surface?.getBoundingClientRect();
-    if (!rect) return;
-    const maxX = (rect.width * (this._scale - 1)) / 2;
-    const maxY = (rect.height * (this._scale - 1)) / 2;
-    this._panX = Math.min(maxX, Math.max(-maxX, this._panX));
-    this._panY = Math.min(maxY, Math.max(-maxY, this._panY));
+    const pan = this._clampTransformPan(this._panX, this._panY, this._scale);
+    this._panX = pan.x;
+    this._panY = pan.y;
+  }
+
+  private _presentationTransform(): ZoomTransform {
+    const start = this._stageResizeStart;
+    if (!start) {
+      return { panX: this._panX, panY: this._panY, scale: this._scale };
+    }
+    const progress = this._stageResizeProgress;
+    const scale = start.scale + (MIN_ZOOM - start.scale) * progress;
+    const pan = this._clampTransformPan(
+      start.panX * (1 - progress),
+      start.panY * (1 - progress),
+      scale,
+    );
+    return { panX: pan.x, panY: pan.y, scale };
+  }
+
+  private _clampTransformPan(panX: number, panY: number, scale: number): Point {
+    if (scale <= MIN_ZOOM) return { x: 0, y: 0 };
+    const width = this._surfaceWidth;
+    const height = this._surfaceHeight;
+    if (!width || !height) return { x: panX, y: panY };
+    const maxX = (width * (scale - 1)) / 2;
+    const maxY = (height * (scale - 1)) / 2;
+    return {
+      x: Math.min(maxX, Math.max(-maxX, panX)),
+      y: Math.min(maxY, Math.max(-maxY, panY)),
+    };
   }
 
   private _releasePointers(): void {

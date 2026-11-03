@@ -64,9 +64,13 @@ stage. The resize handle owns only its own touch gesture and does not replace
 native page scrolling elsewhere.
 
 Stage sizing is separate from display zoom. Resizing changes the viewport and
-base `contain`/`cover` fit. `CameraZoomController` then applies user zoom and
-pan to the resulting media surface, reclamping pan when its bounds change.
-Controls, source state, and toasts remain outside both transformations.
+base `contain`/`cover` fit. When an expanded stage is dragged upward, the stage
+controller reports normalized return progress to the camera parent. The parent
+coordinates that intent with the live presentation; `CameraZoomController`
+remains the sole transform owner and continuously returns zoom and pan toward
+`1x` centered media. Reversing or partially releasing the drag preserves the
+corresponding visible transform. Controls, source state, and toasts remain
+outside both transformations.
 
 ## Performance and stability
 
@@ -79,6 +83,10 @@ Controls, source state, and toasts remain outside both transformations.
   and occupies the final media box.
 - Size changes are not animated. User-driven Home Assistant resizing may
   reflow, but connection, poster, and transport changes may not.
+- Stage-return zoom coordination changes only the media's compositor transform
+  during the direct user gesture. It does not animate stage geometry, schedule
+  a post-release correction, or alter the reserved default ratio, preventing
+  avoidable layout shifts outside the user's resize action.
 
 ## Verification
 
