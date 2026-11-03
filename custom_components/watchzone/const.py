@@ -2,9 +2,12 @@
 
 DOMAIN = "watchzone"
 NAME = "WatchZone"
-VERSION = "0.0.4-dev.88"
+VERSION = "0.0.4-dev.89"
 
 DATA_RUNTIME = "runtime"
+
+CONF_HLS_PREWARM_CAMERAS = "hls_prewarm_cameras"
+MAX_HLS_PREWARM_CAMERAS = 12
 
 CARD_FILENAME = "watchzone.js"
 FRONTEND_URL_BASE = f"/{DOMAIN}/frontend"

@@ -101,6 +101,11 @@ network traces can contain access tokens, signed paths, internal hostnames, or
 credentials. Diagnostics added later must remain allowlisted and redacted at
 their owning boundary.
 
+Backend HLS pre-warming has a separate, repeatable A/B procedure in
+`docs/hls-prewarming.md`. The service retains only a bounded state category for
+each selected entity (`pending`, `warming`, `warm`, or `failed`); it adds no
+polling, timing loop, URL capture, or browser console output.
+
 ## 7. Automated validation
 
 Run the focused HLS and diagnostics tests from `frontend/`:

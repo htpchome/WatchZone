@@ -23,6 +23,7 @@ from homeassistant.helpers.typing import ConfigType
 from .const import (
     CARD_FILENAME,
     CARD_MODULE_URL,
+    CONF_HLS_PREWARM_CAMERAS,
     DATA_RUNTIME,
     DOMAIN,
     FRONTEND_URL_BASE,
@@ -34,6 +35,7 @@ from .extensions import (
     get_provider_registry,
 )
 from .features.camera_runtime import CameraRuntimeService
+from .features.hls_prewarm import HlsPrewarmService
 from .features.live import LiveSignalingService
 from .providers.frigate import camera as frigate_camera
 from .providers.frigate import live as frigate_live
@@ -89,15 +91,29 @@ async def async_setup_entry(hass: HomeAssistant, entry: WatchZoneConfigEntry) ->
     providers = _register_builtin_providers(hass)
     camera_runtime = CameraRuntimeService(hass, providers)
     await camera_runtime.async_setup()
+    hls_prewarm = HlsPrewarmService(hass)
+    await hls_prewarm.async_setup(entry.options.get(CONF_HLS_PREWARM_CAMERAS, []))
     runtime = WatchZoneRuntime(
         entry_id=entry.entry_id,
         camera_runtime=camera_runtime,
+        hls_prewarm=hls_prewarm,
         live_signaling=LiveSignalingService(hass, providers),
     )
     entry.runtime_data = runtime
     hass.data.setdefault(DOMAIN, {})[DATA_RUNTIME] = runtime
+    entry.async_on_unload(entry.add_update_listener(_async_options_updated))
     await _async_register_card_resource(hass)
     return True
+
+
+async def _async_options_updated(
+    hass: HomeAssistant, entry: WatchZoneConfigEntry
+) -> None:
+    """Reconcile server-side settings without reloading frontend resources."""
+    del hass
+    await entry.runtime_data.hls_prewarm.async_set_entities(
+        entry.options.get(CONF_HLS_PREWARM_CAMERAS, [])
+    )
 
 
 def _register_builtin_providers(hass: HomeAssistant) -> ProviderRegistry:

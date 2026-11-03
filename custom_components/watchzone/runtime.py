@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 
 from .features.camera_runtime import CameraRuntimeService
+from .features.hls_prewarm import HlsPrewarmService
 from .features.live import LiveSignalingService
 
 
@@ -12,9 +13,11 @@ class WatchZoneRuntime:
 
     entry_id: str
     camera_runtime: CameraRuntimeService
+    hls_prewarm: HlsPrewarmService
     live_signaling: LiveSignalingService
 
     async def async_close(self) -> None:
         """Release integration-owned runtime resources."""
         await self.camera_runtime.async_close()
+        await self.hls_prewarm.async_close()
         await self.live_signaling.async_close()
