@@ -7,6 +7,11 @@ from unittest.mock import AsyncMock, Mock, patch
 
 from homeassistant.core import Context, HomeAssistant
 
+from custom_components.watchzone.extensions import (
+    EXTENSION_API_VERSION,
+    ProviderExtension,
+    ProviderRegistry,
+)
 from custom_components.watchzone.features.camera_runtime import (
     CameraRuntimeService,
     CameraRuntimeSnapshot,
@@ -204,11 +209,18 @@ async def test_external_provider_state_is_published_without_local_intent(
             suspended=provider_suspended,
         )
 
-    provider = SimpleNamespace(
-        RUNTIME_POLL_INTERVAL=0.01,
-        async_get_state=get_state,
+    provider = SimpleNamespace(async_get_state=get_state)
+    providers = ProviderRegistry()
+    providers.register(
+        ProviderExtension(
+            api_version=EXTENSION_API_VERSION,
+            provider_id="test-provider",
+            entity_platforms=frozenset({"test-camera"}),
+            camera_runtime=provider,
+            camera_runtime_poll_interval=0.01,
+        )
     )
-    service = CameraRuntimeService(hass)
+    service = CameraRuntimeService(hass, providers)
     observed: list[bool] = []
     resumed = asyncio.Event()
 
@@ -218,7 +230,13 @@ async def test_external_provider_state_is_published_without_local_intent(
         if not suspended:
             resumed.set()
 
-    with patch.object(service, "_provider", return_value=provider):
+    registry = SimpleNamespace(
+        async_get=Mock(return_value=SimpleNamespace(platform="test-camera"))
+    )
+    with patch(
+        "custom_components.watchzone.features.camera_runtime.er.async_get",
+        return_value=registry,
+    ):
         initial = await service.async_snapshot("camera.porch")
         unsubscribe = service.async_subscribe(
             "camera.porch", listener, initial
@@ -239,20 +257,22 @@ async def test_camera_runtime_resolver_is_provider_extensible(
         async_get=Mock(return_value=SimpleNamespace(platform="motioneye"))
     )
     provider = SimpleNamespace()
-    service = CameraRuntimeService(hass)
+    providers = ProviderRegistry()
+    unregister = providers.register(
+        ProviderExtension(
+            api_version=EXTENSION_API_VERSION,
+            provider_id="motioneye-addon",
+            entity_platforms=frozenset({"motioneye"}),
+            camera_runtime=provider,
+        )
+    )
+    service = CameraRuntimeService(hass, providers)
 
-    with (
-        patch(
-            "custom_components.watchzone.features.camera_runtime.er.async_get",
-            return_value=registry,
-        ),
-        patch(
-            "custom_components.watchzone.features.camera_runtime.import_module",
-            return_value=provider,
-        ) as import_provider,
+    with patch(
+        "custom_components.watchzone.features.camera_runtime.er.async_get",
+        return_value=registry,
     ):
         assert service._provider("camera.garden") is provider  # noqa: SLF001
-
-    import_provider.assert_called_once_with(
-        "custom_components.watchzone.providers.motioneye.camera"
-    )
+        assert service._provider("camera.garden") is provider  # noqa: SLF001
+        unregister()
+        assert service._provider("camera.garden") is None  # noqa: SLF001

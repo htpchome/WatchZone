@@ -63,6 +63,9 @@ directly in Frigate are reflected without navigation or refresh.
 
 ## Future providers
 
-Add a provider implementation under `providers/<platform>/camera.py` that
-implements the normalized camera runtime protocol. Do not branch on provider
-names inside the camera module, live presentation, or shared session manager.
+Built-ins and independently installed companion integrations implement the
+normalized camera-runtime protocol and register it through
+`custom_components.watchzone.extensions`. The feature resolves the capability
+from the provider registry; it does not derive a Python module path from an
+entity platform. Do not branch on provider names inside the camera module,
+live presentation, or shared session manager.

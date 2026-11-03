@@ -98,7 +98,11 @@ Home Assistant / Lovelace
           |
           +----------------------------> Layout storage
           |
-          +----------------------------> Provider adapters (Frigate, etc.)
+          +----------------------------> Provider capability registry
+                                                   |
+                                                   +--> Built-in adapters
+                                                   |
+                                                   +--> Companion integrations
 ```
 
 Dependencies flow downward in this diagram. A lower layer must not import or
@@ -127,9 +131,10 @@ architecture decision recorded in this document or a future ADR.
 │       ├── manifest.json
 │       ├── const.py
 │       ├── runtime.py             # Typed per-entry runtime container
+│       ├── extensions.py          # Versioned backend extension boundary
 │       ├── api/                   # HA WebSocket/HTTP boundary adapters
 │       ├── features/              # Backend use cases grouped by feature
-│       ├── providers/             # Frigate and future external adapters
+│       ├── providers/             # Built-in provider contracts and adapters
 │       ├── storage/               # Versioned persisted-data adapters
 │       ├── translations/
 │       └── frontend/              # Generated release assets only
@@ -807,7 +812,53 @@ Provider instances are isolated. Failure, reauthentication, or reload of one
 provider must not interrupt healthy providers. A WatchZone installation may,
 for example, contain two Frigate instances and one MotionEye instance.
 
-### 10.5 Camera catalog and capabilities
+### 10.5 Backend extensions
+
+WatchZone supports independently installed backend extensions without making
+feature services depend on external packages or on WatchZone's private module
+layout. The initial extension point is provider capabilities; additional areas
+may add their own extension points when a real use case exists.
+
+- `custom_components.watchzone.extensions` is the narrow, versioned public
+  Python contract. An external integration imports only this surface, declares
+  WatchZone as a Home Assistant dependency, registers during setup, and
+  unregisters through its config-entry unload lifecycle.
+- Registration uses a stable provider ID, optional Home Assistant entity
+  platform aliases, an exact extension API version, and explicit capability
+  objects. Registration is eager during backend setup so incompatibilities fail
+  early. Network clients, sessions, and external work remain demand-driven and
+  lifecycle-owned by the capability that needs them.
+- Built-in and external providers use the same registry. Features resolve a
+  capability from the registry and never construct an import path, import a
+  concrete provider, or branch on a provider name.
+- A registration owns its identifiers. Duplicate provider IDs or entity
+  platforms and incompatible API versions fail explicitly; an add-on cannot
+  silently replace a built-in or another add-on.
+- Registration returns idempotent cleanup. Unloading an extension prevents new
+  capability resolution without invalidating resources already owned by an
+  active, separately managed session.
+- Extension failures remain isolated to that provider and capability. Core
+  fallback behavior must remain available where the feature contract defines
+  one.
+- Public extension models contain no provider credentials, clients, or mutable
+  WatchZone runtime objects. Provider authentication and secrets stay owned by
+  the registering integration.
+- New extension areas receive a typed, purpose-specific contract and lifecycle;
+  WatchZone does not expose a generic service locator, unrestricted runtime
+  dictionary, arbitrary import hook, or frontend-code injection mechanism.
+
+In Home Assistant terminology these are companion custom integrations, not
+Supervisor add-ons. Installation, trust, dependency declaration, and version
+compatibility remain explicit. The core integration does not download or
+execute third-party Python code itself.
+
+The current entity-platform aliases support capabilities attached to existing
+Home Assistant camera entities. Future provider-owned catalogs and config
+subentries resolve by stable provider and instance identity; they must not
+manufacture duplicate Home Assistant camera entities merely to participate in
+the extension registry.
+
+### 10.6 Camera catalog and capabilities
 
 The backend exposes one normalized camera catalog across every configured
 provider. Each camera has:
@@ -831,7 +882,7 @@ The camera catalog supports mixed-provider layouts. A live module may show a
 MotionEye camera while an event-list module displays Frigate events, and a
 camera selector may list cameras from all configured providers.
 
-### 10.6 Aggregation rules
+### 10.7 Aggregation rules
 
 - Cross-provider queries fan out only to providers that advertise the required
   capability.

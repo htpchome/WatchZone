@@ -7,8 +7,6 @@ import logging
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
-from importlib import import_module
-from typing import Protocol, cast
 
 from homeassistant.core import Context, HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
@@ -21,29 +19,14 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from ..const import DOMAIN, NAME
-from ..providers.camera import CameraRuntimeState
+from ..extensions import ProviderRegistry, get_provider_registry
+from ..providers.camera import CameraRuntimeProvider, CameraRuntimeState
 
 _STORAGE_KEY = f"{DOMAIN}.camera_suspensions"
 _STORAGE_VERSION = 1
 _STATE_CONFIRMATION_TIMEOUT = 12.0
 _RESUME_RETRY_DELAY = timedelta(minutes=1)
 _LOGGER = logging.getLogger(__name__)
-
-
-class _ProviderModule(Protocol):
-    async def async_get_state(
-        self, hass: HomeAssistant, entity_id: str
-    ) -> CameraRuntimeState:
-        """Return normalized provider truth."""
-
-    async def async_set_suspended(
-        self,
-        hass: HomeAssistant,
-        entity_id: str,
-        suspended: bool,
-        context: Context | None,
-    ) -> None:
-        """Set provider camera runtime state."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,8 +49,13 @@ class _ResumeSchedule:
 class CameraRuntimeService:
     """Own provider commands and optional backend resume schedules."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        providers: ProviderRegistry | None = None,
+    ) -> None:
         self._hass = hass
+        self._providers = providers or get_provider_registry(hass)
         self._store = Store[dict[str, object]](
             hass, _STORAGE_VERSION, _STORAGE_KEY, atomic_writes=True
         )
@@ -194,7 +182,7 @@ class CameraRuntimeService:
 
     async def _async_wait_for_provider_state(
         self,
-        provider: _ProviderModule,
+        provider: CameraRuntimeProvider,
         entity_id: str,
         suspended: bool,
     ) -> CameraRuntimeState:
@@ -284,19 +272,13 @@ class CameraRuntimeService:
             task.cancel()
         await asyncio.gather(*monitor_tasks, *tasks, return_exceptions=True)
 
-    def _provider(self, entity_id: str) -> _ProviderModule | None:
+    def _provider(self, entity_id: str) -> CameraRuntimeProvider | None:
         registry_entry = er.async_get(self._hass).async_get(entity_id)
         if registry_entry is None:
             return None
         try:
-            return cast(
-                _ProviderModule,
-                import_module(
-                    f"custom_components.{DOMAIN}.providers."
-                    f"{registry_entry.platform}.camera"
-                ),
-            )
-        except ModuleNotFoundError:
+            return self._providers.camera_runtime(registry_entry.platform)
+        except Exception:
             return None
 
     @callback
@@ -304,7 +286,12 @@ class CameraRuntimeService:
         if entity_id in self._monitor_tasks:
             return
         provider = self._provider(entity_id)
-        interval = getattr(provider, "RUNTIME_POLL_INTERVAL", None)
+        registry_entry = er.async_get(self._hass).async_get(entity_id)
+        interval = (
+            self._providers.camera_runtime_poll_interval(registry_entry.platform)
+            if registry_entry is not None
+            else None
+        )
         if (
             provider is None
             or isinstance(interval, bool)

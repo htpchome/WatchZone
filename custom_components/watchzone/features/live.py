@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from importlib import import_module
-from typing import TYPE_CHECKING, Protocol, cast
+from typing import TYPE_CHECKING
 
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
@@ -13,7 +12,8 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.util.ulid import ulid
 from webrtc_models import RTCIceCandidateInit
 
-from ..const import DOMAIN, NAME
+from ..const import NAME
+from ..extensions import ProviderRegistry, get_provider_registry
 from ..providers.live import (
     LiveSignalingSession,
     ProviderPreparationError,
@@ -22,17 +22,6 @@ from ..providers.live import (
 
 if TYPE_CHECKING:
     from homeassistant.components.camera import Camera
-
-
-class _ProviderSessionFactory(Protocol):
-    async def __call__(
-        self,
-        hass: HomeAssistant,
-        camera: Camera,
-        entity_id: str,
-        send_event: SendLiveSignalingEvent,
-    ) -> LiveSignalingSession:
-        """Prepare an optional concrete provider signaling capability."""
 
 
 class HomeAssistantLiveSignalingSession:
@@ -86,8 +75,13 @@ class CreatedLiveSignalingSession:
 class LiveSignalingService:
     """Own active signaling sessions and select provider capabilities."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        providers: ProviderRegistry | None = None,
+    ) -> None:
         self._hass = hass
+        self._providers = providers or get_provider_registry(hass)
         self._sessions: dict[str, _OwnedSession] = {}
 
     async def async_create(
@@ -160,14 +154,13 @@ class LiveSignalingService:
         if registry_entry is None:
             return None, "entity_registry_entry_missing"
         try:
-            module = import_module(
-                f"custom_components.{DOMAIN}.providers.{registry_entry.platform}.live"
-            )
-            factory = cast(_ProviderSessionFactory, module.async_prepare_session)
-            return await factory(self._hass, camera, entity_id, send_event), None
+            provider = self._providers.live_signaling(registry_entry.platform)
+            if provider is None:
+                return None, "provider_adapter_unavailable"
+            return await provider.async_prepare_session(
+                self._hass, camera, entity_id, send_event
+            ), None
         except ProviderPreparationError as err:
             return None, err.code
-        except ModuleNotFoundError:
-            return None, "provider_adapter_unavailable"
         except Exception:
             return None, "provider_adapter_failed"

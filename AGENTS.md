@@ -64,9 +64,15 @@ For camera stage, card sizing, aspect-ratio, or media fitting changes, also read
   latency-sensitive interaction.
 - A provider and a live connection type are different concepts.
 - Feature modules do not import one another.
-- Concrete provider capability adapters are dynamically imported and are not
-  statically imported by a module or eager entry. Modules use the public
-  provider resolver and never import a concrete provider implementation.
+- Built-in and external provider capabilities register eagerly through the
+  versioned backend extension registry during integration setup. Network
+  clients, sessions, and provider work remain demand-driven. Features use the
+  registry and never construct provider import paths, import a concrete provider
+  implementation, or branch on provider names.
+- External backend integrations may import only the public extension contract,
+  must unregister on unload, and must not receive unrestricted runtime state.
+  Add a typed registry for each future extension area; never add a generic
+  plugin bag, service locator, or arbitrary import hook.
 - Camera is the module and composition boundary. Live, PTZ, talk, and other
   camera capabilities stay private to camera or beneath the owning provider;
   they do not become peer application modules.

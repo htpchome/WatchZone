@@ -7,6 +7,11 @@ from unittest.mock import AsyncMock, Mock, patch
 from webrtc_models import RTCIceCandidateInit
 from yarl import URL
 
+from custom_components.watchzone.extensions import (
+    EXTENSION_API_VERSION,
+    ProviderExtension,
+    ProviderRegistry,
+)
 from custom_components.watchzone.features.live import (
     HomeAssistantLiveSignalingSession,
     LiveSignalingService,
@@ -66,7 +71,7 @@ async def test_standard_home_assistant_session_delegates_public_contract() -> No
 
 
 async def test_provider_resolver_loads_the_entity_owner_dynamically() -> None:
-    """A future provider is a sibling package, not a new app-wide branch."""
+    """A future provider registers capabilities without joining the core package."""
     registry = SimpleNamespace(
         async_get=Mock(return_value=SimpleNamespace(platform="motioneye"))
     )
@@ -74,17 +79,25 @@ async def test_provider_resolver_loads_the_entity_owner_dynamically() -> None:
     factory = AsyncMock(return_value=provider_session)
     module = SimpleNamespace(async_prepare_session=factory)
     hass = SimpleNamespace()
-    service = LiveSignalingService(hass)  # type: ignore[arg-type]
+    providers = ProviderRegistry()
+    providers.register(
+        ProviderExtension(
+            api_version=EXTENSION_API_VERSION,
+            provider_id="motioneye-addon",
+            entity_platforms=frozenset({"motioneye"}),
+            live_signaling=module,
+        )
+    )
+    service = LiveSignalingService(  # type: ignore[arg-type]
+        hass,
+        providers,
+    )
 
     with (
         patch(
             "custom_components.watchzone.features.live.er.async_get",
             return_value=registry,
         ),
-        patch(
-            "custom_components.watchzone.features.live.import_module",
-            return_value=module,
-        ) as import_provider,
     ):
         resolved, fallback_reason = (  # noqa: SLF001
             await service._async_prepare_provider_session(
@@ -92,9 +105,7 @@ async def test_provider_resolver_loads_the_entity_owner_dynamically() -> None:
             )
         )
 
-    import_provider.assert_called_once_with(
-        "custom_components.watchzone.providers.motioneye.live"
-    )
+    factory.assert_awaited_once()
     assert resolved is provider_session
     assert fallback_reason is None
 
