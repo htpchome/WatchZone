@@ -207,6 +207,8 @@ export class CameraModule extends LitElement {
   private _select(index: number): void {
     const next = Math.max(0, Math.min(this.cameras.length - 1, index));
     if (next === this._activeIndex) return;
+    const selectedCamera = this.cameras[next];
+    if (selectedCamera) this._connections.prioritize(selectedCamera.entityId);
     this._activeIndex = next;
     this._navigationVisible =
       this._overlayVisibilityByCamera.get(this.cameras[next]?.entityId ?? "") ??

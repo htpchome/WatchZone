@@ -52,4 +52,30 @@ describe("CameraConnectionQueueController", () => {
     expect(queue.isEnabled("camera.zero")).toBe(true);
     expect(queue.isEnabled("camera.one")).toBe(false);
   });
+
+  it("prioritizes a selected camera without cancelling or duplicating the ordered worker", () => {
+    const host = new TestHost();
+    const queue = new CameraConnectionQueueController(host);
+    queue.configure([
+      { available: true, key: "camera.zero" },
+      { available: true, key: "camera.one" },
+      { available: true, key: "camera.two" },
+      { available: true, key: "camera.three" },
+    ]);
+
+    queue.prioritize("camera.two");
+    queue.prioritize("camera.two");
+    expect(queue.isEnabled("camera.zero")).toBe(true);
+    expect(queue.isEnabled("camera.one")).toBe(false);
+    expect(queue.isEnabled("camera.two")).toBe(true);
+    expect(host.requestUpdate).toHaveBeenCalledTimes(2);
+
+    queue.settle("camera.two");
+    expect(queue.isEnabled("camera.one")).toBe(false);
+
+    queue.settle("camera.zero");
+    expect(queue.isEnabled("camera.one")).toBe(true);
+    queue.settle("camera.one");
+    expect(queue.isEnabled("camera.three")).toBe(true);
+  });
 });

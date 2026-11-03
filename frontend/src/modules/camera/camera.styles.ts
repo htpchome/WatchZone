@@ -52,13 +52,13 @@ export const cameraStyles = css`
   .carousel-navigation {
     position: absolute;
     z-index: 4;
-    inset-block-start: 36%;
+    inset-block-start: 50%;
     display: grid;
     place-items: center;
     box-sizing: border-box;
     inline-size: 2.75rem;
-    block-size: 3.5rem;
-    padding: 0.35rem;
+    block-size: var(--wzc-carousel-navigation-icon-size);
+    padding: 0;
     color: var(--wzc-media-overlay-color);
     background: transparent;
     border: 0;
@@ -76,17 +76,17 @@ export const cameraStyles = css`
   }
 
   .carousel-navigation.previous {
-    inset-inline-start: max(0.15rem, env(safe-area-inset-left, 0px));
+    inset-inline-start: max(0rem, env(safe-area-inset-left, 0px));
   }
 
   .carousel-navigation.next {
-    inset-inline-end: max(0.15rem, env(safe-area-inset-right, 0px));
+    inset-inline-end: max(0rem, env(safe-area-inset-right, 0px));
   }
 
   .carousel-navigation svg {
     display: block;
-    inline-size: clamp(1.75rem, 4vw, 2.5rem);
-    block-size: clamp(1.75rem, 4vw, 2.5rem);
+    inline-size: var(--wzc-carousel-navigation-icon-size);
+    block-size: var(--wzc-carousel-navigation-icon-size);
     pointer-events: none;
   }
 

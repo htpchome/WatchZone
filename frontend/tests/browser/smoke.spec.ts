@@ -3,7 +3,12 @@ import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
-import { CAMERA_OVERLAY_HIDE_DELAY_MS } from "../../src/modules/camera/constants";
+import {
+  CAMERA_CAROUSEL_NAVIGATION_HEIGHT_RATIO,
+  CAMERA_CAROUSEL_NAVIGATION_MAX_SIZE_PX,
+  CAMERA_CAROUSEL_NAVIGATION_MIN_SIZE_PX,
+  CAMERA_OVERLAY_HIDE_DELAY_MS,
+} from "../../src/modules/camera/constants";
 
 const packageJson = JSON.parse(
   readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
@@ -149,6 +154,14 @@ test("preserves expanded camera-stage geometry across carousel selection", async
     await Promise.all(views.map((view) => view.updateComplete));
     const selectedSecond = stage(views[1])?.getBoundingClientRect();
     const nextStyle = next ? getComputedStyle(next) : undefined;
+    const carousel =
+      camera.shadowRoot?.querySelector<HTMLElement>(".camera-carousel");
+    const carouselRect = carousel?.getBoundingClientRect();
+    const nextRect = next?.getBoundingClientRect();
+    const previousRect = previous?.getBoundingClientRect();
+    const previousIconRect = previous
+      ?.querySelector("svg")
+      ?.getBoundingClientRect();
 
     return {
       active: views.map((view) => view.active),
@@ -158,7 +171,15 @@ test("preserves expanded camera-stage geometry across carousel selection", async
       navigation: {
         background: nextStyle?.backgroundColor,
         border: nextStyle?.borderTopWidth,
+        carouselHeight: carouselRect?.height,
+        carouselLeft: carouselRect?.left,
+        carouselRight: carouselRect?.right,
+        carouselTop: carouselRect?.top,
+        iconHeight: previousIconRect?.height,
         nextTop: next?.getBoundingClientRect().top,
+        nextRight: nextRect?.right,
+        previousHeight: previousRect?.height,
+        previousLeft: previousRect?.left,
         previousTop: previous?.getBoundingClientRect().top,
       },
       selectedSecondHeight: selectedSecond?.height,
@@ -181,6 +202,33 @@ test("preserves expanded camera-stage geometry across carousel selection", async
   });
   expect(result.navigation.nextTop).toBeCloseTo(
     result.navigation.previousTop ?? 0,
+    1,
+  );
+  expect(result.navigation.previousLeft).toBeCloseTo(
+    result.navigation.carouselLeft ?? 0,
+    1,
+  );
+  expect(result.navigation.nextRight).toBeCloseTo(
+    result.navigation.carouselRight ?? 0,
+    1,
+  );
+  expect(
+    (result.navigation.previousTop ?? 0) +
+      (result.navigation.previousHeight ?? 0) / 2,
+  ).toBeCloseTo(
+    (result.navigation.carouselTop ?? 0) +
+      (result.navigation.carouselHeight ?? 0) / 2,
+    1,
+  );
+  expect(result.navigation.iconHeight).toBeCloseTo(
+    Math.min(
+      CAMERA_CAROUSEL_NAVIGATION_MAX_SIZE_PX,
+      Math.max(
+        CAMERA_CAROUSEL_NAVIGATION_MIN_SIZE_PX,
+        CAMERA_CAROUSEL_NAVIGATION_HEIGHT_RATIO *
+          (result.navigation.carouselHeight ?? 0),
+      ),
+    ),
     1,
   );
 

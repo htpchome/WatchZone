@@ -47,6 +47,14 @@ release them. A retained healthy session satisfies its queue position without
 renegotiation. A real Home Assistant transport interruption resets the ordered
 gate, while an ordinary render or selection change does not.
 
+Selecting a camera that has not reached its ordered queue position promotes
+that camera into connection immediately. Promotion does not cancel the camera
+already loading, does not create a second queue entry or media-session key, and
+does not reorder the remaining background work. When the ordered worker
+advances, it skips every camera that was already promoted and continues in
+configured display order. Repeated navigation only reuses the stable slide and
+retained leases; it never reacquires a healthy HLS or WebRTC session.
+
 The initial policy connects every configured camera. A future per-camera
 preload option may opt individual cameras out, but it must extend this single
 queue rather than introduce a parallel lifecycle.
@@ -69,6 +77,9 @@ cannot complete.
   initialization does not cause layout shift.
 - Swiper transforms only its wrapper. Live zoom transforms only the media
   surface inside a slide, and stage resizing continues to own stage geometry.
+- Previous and next navigation are vertically centered on the carousel, remain
+  at its outer inline edges, and scale within fixed minimum and maximum bounds
+  from the carousel's own block size rather than from the viewport.
 
 ## Gesture policy
 

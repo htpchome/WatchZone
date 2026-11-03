@@ -150,6 +150,49 @@ describe("camera component appearance", () => {
     expect(views.map(({ active }) => active)).toEqual([false, true, false]);
   });
 
+  it("starts a selected queued camera without cancelling the camera already loading", async () => {
+    const camera = document.createElement("wzc-camera") as CameraModule;
+    camera.cameras = [
+      cameraItem("camera.zero"),
+      cameraItem("camera.one"),
+      cameraItem("camera.two"),
+    ];
+    document.body.append(camera);
+    await camera.updateComplete;
+
+    camera.shadowRoot
+      ?.querySelector<HTMLButtonElement>(".carousel-navigation.next")
+      ?.click();
+    await camera.updateComplete;
+
+    const views = [
+      ...(camera.shadowRoot?.querySelectorAll<CameraView>("wzc-camera-view") ??
+        []),
+    ];
+    expect(views.map(({ active }) => active)).toEqual([false, true, false]);
+    expect(views.map(({ connect }) => connect)).toEqual([true, true, false]);
+
+    views[0].dispatchEvent(
+      new CustomEvent(CAMERA_CONNECTION_SETTLED_EVENT, {
+        bubbles: true,
+        composed: true,
+        detail: { entityId: "camera.zero" },
+      }),
+    );
+    await camera.updateComplete;
+    expect(views.map(({ connect }) => connect)).toEqual([true, true, false]);
+
+    views[1].dispatchEvent(
+      new CustomEvent(CAMERA_CONNECTION_SETTLED_EVENT, {
+        bubbles: true,
+        composed: true,
+        detail: { entityId: "camera.one" },
+      }),
+    );
+    await camera.updateComplete;
+    expect(views.map(({ connect }) => connect)).toEqual([true, true, true]);
+  });
+
   it("keeps one shared stage height while changing camera slides", async () => {
     const camera = document.createElement("wzc-camera") as CameraModule;
     camera.cameras = [cameraItem("camera.zero"), cameraItem("camera.one")];

@@ -5,8 +5,10 @@ import {
   type ConnectionFactory,
   getMediaSessionManager,
 } from "../src/core/media-session-manager";
+import type { CameraModule } from "../src/modules/camera/camera";
 import type { CameraView } from "../src/modules/camera/camera-view";
 import type { CameraLivePresentation } from "../src/modules/camera/live/presentation";
+import "../src/modules/camera/camera";
 import "../src/modules/camera/camera-view";
 import {
   installTestMediaSessionManager,
@@ -80,6 +82,53 @@ describe("camera presentation retention", () => {
     removeTestMediaSessionManager();
     document.body.replaceChildren();
     vi.restoreAllMocks();
+  });
+
+  it("does not duplicate pending media connections during rapid carousel navigation", async () => {
+    const webRtcFactory = vi.fn<ConnectionFactory>(
+      async () => new Promise(() => undefined),
+    );
+    const hlsFactory = vi.fn<ConnectionFactory>(
+      async () => new Promise(() => undefined),
+    );
+    installTestMediaSessionManager(
+      new MediaSessionManager(webRtcFactory, hlsFactory),
+    );
+    const camera = document.createElement("wzc-camera") as CameraModule;
+    camera.api = createApi();
+    camera.cameras = [cameraItem("camera.zero"), cameraItem("camera.one")];
+    document.body.append(camera);
+
+    await vi.waitFor(() => expect(webRtcFactory).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(hlsFactory).toHaveBeenCalledOnce());
+    camera.shadowRoot
+      ?.querySelector<HTMLButtonElement>(".carousel-navigation.next")
+      ?.click();
+    await camera.updateComplete;
+    await vi.waitFor(() => expect(webRtcFactory).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(hlsFactory).toHaveBeenCalledTimes(2));
+
+    for (let index = 0; index < 4; index += 1) {
+      camera.shadowRoot
+        ?.querySelector<HTMLButtonElement>(".carousel-navigation.previous")
+        ?.click();
+      await camera.updateComplete;
+      camera.shadowRoot
+        ?.querySelector<HTMLButtonElement>(".carousel-navigation.next")
+        ?.click();
+      await camera.updateComplete;
+    }
+
+    expect(webRtcFactory).toHaveBeenCalledTimes(2);
+    expect(hlsFactory).toHaveBeenCalledTimes(2);
+    expect(webRtcFactory.mock.calls.map((call) => call[1]).sort()).toEqual([
+      "camera.one",
+      "camera.zero",
+    ]);
+    expect(hlsFactory.mock.calls.map((call) => call[1]).sort()).toEqual([
+      "camera.one",
+      "camera.zero",
+    ]);
   });
 
   it("reattaches the retained HLS element after an editor presentation exits", async () => {
@@ -626,5 +675,17 @@ function createApi(): HomeAssistantApi {
     callWS: vi.fn(),
     resolveUrl: (path) => path,
     subscribeMessage: vi.fn(),
+  };
+}
+
+function cameraItem(entityId: string) {
+  return {
+    available: true,
+    entityId,
+    lowLatencyHls: true,
+    roundedCorners: true,
+    shadowStyle: "medium" as const,
+    startUnmutedPcTablet: false,
+    startUnmutedPhone: false,
   };
 }

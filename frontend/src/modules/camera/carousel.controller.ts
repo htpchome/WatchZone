@@ -1,6 +1,12 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 import type Swiper from "swiper";
 
+import {
+  CAMERA_CAROUSEL_NAVIGATION_HEIGHT_RATIO,
+  CAMERA_CAROUSEL_NAVIGATION_MAX_SIZE_PX,
+  CAMERA_CAROUSEL_NAVIGATION_MIN_SIZE_PX,
+} from "./constants";
+
 /** Owns the camera-local Swiper instance without owning slides or selection. */
 export class CameraCarouselController implements ReactiveController {
   private _activeIndex = 0;
@@ -8,6 +14,7 @@ export class CameraCarouselController implements ReactiveController {
   private _generation = 0;
   private _slideCount = 0;
   private _interactionLocked = false;
+  private _resizeObserver?: ResizeObserver;
   private _swiper?: Swiper;
 
   public constructor(
@@ -29,6 +36,7 @@ export class CameraCarouselController implements ReactiveController {
     );
     if (this._container === container) {
       this._setSlideCount(normalizedCount);
+      this._syncNavigationSize();
       this._swiper?.slideTo(this._activeIndex, 0, false);
       return;
     }
@@ -71,7 +79,10 @@ export class CameraCarouselController implements ReactiveController {
     this._container = container;
     this._slideCount = slideCount;
     this._syncInteractionClass();
-    if (container) void this._initialize(container, generation);
+    if (container) {
+      this._observeSize(container);
+      void this._initialize(container, generation);
+    }
   }
 
   private async _initialize(
@@ -129,7 +140,36 @@ export class CameraCarouselController implements ReactiveController {
     this._swiper.params.allowTouchMove = this._canMove();
   }
 
+  private _observeSize(container: HTMLElement): void {
+    this._syncNavigationSize();
+    if (typeof ResizeObserver === "undefined") return;
+    this._resizeObserver = new ResizeObserver(() => this._syncNavigationSize());
+    this._resizeObserver.observe(container);
+  }
+
+  private _syncNavigationSize(): void {
+    const container = this._container;
+    if (!container) return;
+    const size = Math.min(
+      CAMERA_CAROUSEL_NAVIGATION_MAX_SIZE_PX,
+      Math.max(
+        CAMERA_CAROUSEL_NAVIGATION_MIN_SIZE_PX,
+        container.getBoundingClientRect().height *
+          CAMERA_CAROUSEL_NAVIGATION_HEIGHT_RATIO,
+      ),
+    );
+    container.style.setProperty(
+      "--wzc-carousel-navigation-icon-size",
+      `${size}px`,
+    );
+  }
+
   private _destroy(): void {
+    this._resizeObserver?.disconnect();
+    this._resizeObserver = undefined;
+    this._container?.style.removeProperty(
+      "--wzc-carousel-navigation-icon-size",
+    );
     this._container?.classList.remove("camera-carousel-interactive");
     if (this._swiper && !this._swiper.destroyed) {
       this._swiper.destroy(true, true);

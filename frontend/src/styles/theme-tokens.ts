@@ -185,6 +185,7 @@ export const themeTokens = css`
     --wzc-media-overlay-transition-duration: 140ms;
     --wzc-carousel-navigation-opacity: 72%;
     --wzc-carousel-navigation-hover-opacity: 100%;
+    --wzc-carousel-navigation-icon-size: 2.5rem;
 
     --wzc-accordion-background: var(--wzc-color-background);
     --wzc-accordion-header-color: var(--wzc-color-text-1);
