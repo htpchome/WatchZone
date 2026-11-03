@@ -1,4 +1,5 @@
 import { html, LitElement } from "lit";
+import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import {
   cardConfigSignature,
@@ -6,13 +7,19 @@ import {
   type CardConfig,
 } from "../core/config";
 import {
+  ACCORDION_ITEM_TAG,
+  ACCORDION_TAG,
   EDITOR_PREVIEW_DRAFT_EVENT,
   EDITOR_TAG,
   EDITOR_TEXT_PREVIEW_DELAY_MS,
+  TOAST_REGION_TAG,
 } from "../core/constants";
 import { isHomeAssistant, type HomeAssistant } from "../core/home-assistant";
 import { toYamlCardConfig, type YamlCardConfig } from "../core/yaml-config";
 import { themeTokens } from "../styles/theme-tokens";
+import { ToastManager } from "../ui/toast-manager";
+import "../ui/accordion";
+import "../ui/toast-region";
 import {
   type DirtyStateContext,
   requestDirtyStateContext,
@@ -44,6 +51,10 @@ const CAMERA_SELECTOR = {
 } as const;
 
 const BOOLEAN_SELECTOR = { boolean: {} } as const;
+const accordionTag = unsafeStatic(ACCORDION_TAG);
+const accordionItemTag = unsafeStatic(ACCORDION_ITEM_TAG);
+const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
+const EDITOR_STATUS_KEY = "editor-draft-status";
 
 type BooleanConfigFlag =
   | "camera_rounded_corners"
@@ -66,6 +77,7 @@ export class CardEditor extends LitElement {
   private _dirtySeeded = false;
   private _hass?: HomeAssistant;
   private _previewTimer?: ReturnType<typeof setTimeout>;
+  private readonly _toasts = new ToastManager(this);
 
   public set hass(value: unknown) {
     if (!isHomeAssistant(value)) {
@@ -92,6 +104,7 @@ export class CardEditor extends LitElement {
       this._baseline = config;
       this._baselineSignature = signature;
       this._config = config;
+      this._syncDraftStatus();
       this._seedDirtyState();
       this.requestUpdate();
       return;
@@ -102,11 +115,13 @@ export class CardEditor extends LitElement {
     }
 
     this._config = config;
+    this._syncDraftStatus();
     this.requestUpdate();
   }
 
   public connectedCallback(): void {
     super.connectedCallback();
+    this._syncDraftStatus();
     requestDirtyStateContext<YamlCardConfig>(this, (context) => {
       this._dirtyContext = context;
       this._seedDirtyState();
@@ -127,15 +142,47 @@ export class CardEditor extends LitElement {
   }
 
   protected render() {
+    return staticHtml`
+      <${toastRegionTag}
+        class="editor-status"
+        mode="inline"
+        .notices=${this._toasts.notices}
+      ></${toastRegionTag}>
+      <${accordionTag}>
+        <${accordionItemTag}
+          heading="Camera Settings"
+          item-key="camera"
+          .icon=${"camera"}
+        >
+          ${this._renderCameraSettings()}
+        </${accordionItemTag}>
+        <${accordionItemTag}
+          heading="General Settings"
+          item-key="general"
+          .icon=${"settings"}
+        >
+          ${this._renderGeneralSettings()}
+        </${accordionItemTag}>
+        <${accordionItemTag}
+          heading="Layout Settings"
+          item-key="layout"
+          .icon=${"layout"}
+        >
+          ${this._renderLayoutSettings()}
+        </${accordionItemTag}>
+        <${accordionItemTag}
+          heading="Display Options"
+          item-key="display"
+          .icon=${"tune"}
+        >
+          ${this._renderDisplaySettings()}
+        </${accordionItemTag}>
+      </${accordionTag}>
+    `;
+  }
+
+  private _renderCameraSettings() {
     return html`
-      <ha-input
-        required
-        auto-validate
-        label="Title"
-        .value=${this._config?.title ?? ""}
-        @input=${this._handleTitleInput}
-        @change=${this._handleTitleChange}
-      ></ha-input>
       <ha-selector
         label="Camera"
         .hass=${this._hass}
@@ -176,59 +223,70 @@ export class CardEditor extends LitElement {
         .required=${false}
         @value-changed=${this._handleBooleanChange}
       ></ha-selector>
-      <div class="section-title">Appearance</div>
-      <ha-selector
-        class="boolean-option"
-        data-config-key="rounded_outer_corners"
-        label="Rounded Outer Corners"
-        .hass=${this._hass}
-        .selector=${BOOLEAN_SELECTOR}
-        .value=${this._config?.rounded_outer_corners !== false}
-        .required=${false}
-        @value-changed=${this._handleBooleanChange}
-      ></ha-selector>
-      <ha-selector
-        class="boolean-option"
-        data-config-key="outer_shadows"
-        label="Outer Shadows"
-        .hass=${this._hass}
-        .selector=${BOOLEAN_SELECTOR}
-        .value=${this._config?.outer_shadows !== false}
-        .required=${false}
-        @value-changed=${this._handleBooleanChange}
-      ></ha-selector>
-      <ha-selector
-        class="boolean-option"
-        data-config-key="outer_padding"
-        label="Outer Padding"
-        .hass=${this._hass}
-        .selector=${BOOLEAN_SELECTOR}
-        .value=${this._config?.outer_padding !== false}
-        .required=${false}
-        @value-changed=${this._handleBooleanChange}
-      ></ha-selector>
-      <div class="section-title">Camera Appearance</div>
-      <ha-selector
-        class="boolean-option"
-        data-config-key="camera_rounded_corners"
-        label="Camera Rounded Corners"
-        .hass=${this._hass}
-        .selector=${BOOLEAN_SELECTOR}
-        .value=${this._config?.camera_rounded_corners !== false}
-        .required=${false}
-        @value-changed=${this._handleBooleanChange}
-      ></ha-selector>
-      <ha-selector
-        class="boolean-option"
-        data-config-key="camera_shadows"
-        label="Camera Shadows"
-        .hass=${this._hass}
-        .selector=${BOOLEAN_SELECTOR}
-        .value=${this._config?.camera_shadows !== false}
-        .required=${false}
-        @value-changed=${this._handleBooleanChange}
-      ></ha-selector>
     `;
+  }
+
+  private _renderGeneralSettings() {
+    return html`<ha-input
+      required
+      auto-validate
+      label="Title"
+      .value=${this._config?.title ?? ""}
+      @input=${this._handleTitleInput}
+      @change=${this._handleTitleChange}
+    ></ha-input>`;
+  }
+
+  private _renderLayoutSettings() {
+    return html`
+      ${this._renderBooleanOption(
+        "rounded_outer_corners",
+        "Rounded Outer Corners",
+        this._config?.rounded_outer_corners !== false,
+      )}
+      ${this._renderBooleanOption(
+        "outer_shadows",
+        "Outer Shadows",
+        this._config?.outer_shadows !== false,
+      )}
+      ${this._renderBooleanOption(
+        "outer_padding",
+        "Outer Padding",
+        this._config?.outer_padding !== false,
+      )}
+    `;
+  }
+
+  private _renderDisplaySettings() {
+    return html`
+      ${this._renderBooleanOption(
+        "camera_rounded_corners",
+        "Camera Rounded Corners",
+        this._config?.camera_rounded_corners !== false,
+      )}
+      ${this._renderBooleanOption(
+        "camera_shadows",
+        "Camera Shadows",
+        this._config?.camera_shadows !== false,
+      )}
+    `;
+  }
+
+  private _renderBooleanOption(
+    key: BooleanConfigFlag,
+    label: string,
+    value: boolean,
+  ) {
+    return html`<ha-selector
+      class="boolean-option"
+      data-config-key=${key}
+      label=${label}
+      .hass=${this._hass}
+      .selector=${BOOLEAN_SELECTOR}
+      .value=${value}
+      .required=${false}
+      @value-changed=${this._handleBooleanChange}
+    ></ha-selector>`;
   }
 
   private _seedDirtyState(): void {
@@ -304,6 +362,7 @@ export class CardEditor extends LitElement {
       cardConfigSignature(nextConfig) !== cardConfigSignature(this._config);
     if (changed) {
       this._config = nextConfig;
+      this._syncDraftStatus();
       this.requestUpdate();
 
       if (this._dirtyContext) {
@@ -332,6 +391,28 @@ export class CardEditor extends LitElement {
           this._publishDraftPreview(nextConfig);
         }, EDITOR_TEXT_PREVIEW_DELAY_MS);
       }
+    }
+  }
+
+  private _syncDraftStatus(): void {
+    if (!this._baseline || !this._config) return;
+    const changed =
+      cardConfigSignature(this._config) !== this._baselineSignature;
+    if (changed) {
+      this._toasts.warning(
+        "Unsaved changes — use Home Assistant's Save button to apply them.",
+        {
+          icon: "packageOutline",
+          key: EDITOR_STATUS_KEY,
+          persistent: true,
+        },
+      );
+    } else {
+      this._toasts.success("No pending changes.", {
+        icon: "packageOutline",
+        key: EDITOR_STATUS_KEY,
+        persistent: true,
+      });
     }
   }
 

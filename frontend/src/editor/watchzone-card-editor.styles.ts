@@ -15,7 +15,10 @@ export const cardEditorStyles = css`
 
   ha-selector {
     display: block;
-    margin-block-start: 1rem;
+  }
+
+  .editor-status {
+    margin-block-end: 0.75rem;
   }
 
   .section-title {

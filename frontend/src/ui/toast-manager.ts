@@ -5,19 +5,23 @@ import {
   TOAST_TRANSITION_DURATION_MS,
   TOAST_VISIBLE_DURATION_MS,
 } from "../core/constants";
+import type { IconName } from "./icons";
 
 export type ToastSeverity = "error" | "success" | "warning";
 
 export interface ToastNotice {
   readonly dismissing: boolean;
   readonly id: string;
+  readonly icon?: IconName;
   readonly message: string;
   readonly severity: ToastSeverity;
 }
 
-interface ToastOptions {
+export interface ToastOptions {
   readonly durationMs?: number;
+  readonly icon?: IconName;
   readonly key?: string;
+  readonly persistent?: boolean;
 }
 
 interface ToastTimers {
@@ -61,6 +65,7 @@ export class ToastManager implements ReactiveController {
     const notice: ToastNotice = {
       dismissing: false,
       id,
+      icon: options.icon,
       message,
       severity,
     };
@@ -73,11 +78,13 @@ export class ToastManager implements ReactiveController {
           );
     this._host.requestUpdate();
 
-    const durationMs = options.durationMs ?? TOAST_VISIBLE_DURATION_MS;
-    const timers: ToastTimers = {
-      dismiss: setTimeout(() => this.dismiss(id), durationMs),
-    };
-    this._timers.set(id, timers);
+    if (!options.persistent) {
+      const durationMs = options.durationMs ?? TOAST_VISIBLE_DURATION_MS;
+      const timers: ToastTimers = {
+        dismiss: setTimeout(() => this.dismiss(id), durationMs),
+      };
+      this._timers.set(id, timers);
+    }
     return id;
   }
 

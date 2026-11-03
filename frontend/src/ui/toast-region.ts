@@ -2,6 +2,7 @@ import { html, LitElement } from "lit";
 
 import { TOAST_REGION_TAG } from "../core/constants";
 import type { ToastNotice } from "./toast-manager";
+import { renderIcon } from "./icons";
 import { toastRegionStyles } from "./toast-region.styles";
 
 export type ToastRegionMode = "inline" | "overlay";
@@ -26,7 +27,12 @@ export class ToastRegion extends LitElement {
           role=${notice.severity === "success" ? "status" : "alert"}
           aria-atomic="true"
         >
-          ${notice.message}
+          ${
+            notice.icon
+              ? html`<span class="toast-icon">${renderIcon(notice.icon)}</span>`
+              : null
+          }
+          <span>${notice.message}</span>
         </div>`,
     );
   }

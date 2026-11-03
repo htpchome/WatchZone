@@ -17,6 +17,12 @@ export const toastRegionStyles = css`
 
   :host([mode="inline"]) {
     position: static;
+    justify-items: stretch;
+  }
+
+  :host([mode="inline"]) .toast {
+    inline-size: 100%;
+    max-inline-size: none;
   }
 
   .toast {
@@ -32,11 +38,25 @@ export const toastRegionStyles = css`
     text-align: center;
     overflow-wrap: anywhere;
     opacity: 1;
-    backdrop-filter: blur(0.2rem);
+    box-shadow:
+      inset 0 1px 0 var(--wzc-toast-highlight-color),
+      var(--wzc-toast-shadow);
     transition:
       opacity ${TOAST_TRANSITION_DURATION_MS}ms ease,
       transform ${TOAST_TRANSITION_DURATION_MS}ms ease;
     animation: wzc-toast-enter ${TOAST_TRANSITION_DURATION_MS}ms ease-out;
+  }
+
+  .toast-icon {
+    display: inline-grid;
+    inline-size: 1rem;
+    margin-inline-end: 0.35rem;
+    vertical-align: -0.2rem;
+  }
+
+  .toast-icon svg {
+    display: block;
+    inline-size: 100%;
   }
 
   .toast[data-severity="success"] {

@@ -92,4 +92,25 @@ describe("toast system", () => {
     vi.runAllTimers();
     expect(manager.notices).toHaveLength(0);
   });
+
+  it("keeps keyed persistent status notices until they are replaced", () => {
+    vi.useFakeTimers();
+    const host = new TestHost();
+    const manager = new ToastManager(host);
+
+    manager.success("No pending changes.", {
+      key: "editor-status",
+      persistent: true,
+    });
+    vi.advanceTimersByTime(TOAST_VISIBLE_DURATION_MS * 2);
+    expect(manager.notices).toHaveLength(1);
+    expect(manager.notices[0]?.severity).toBe("success");
+
+    manager.warning("Unsaved changes.", {
+      key: "editor-status",
+      persistent: true,
+    });
+    expect(manager.notices).toHaveLength(1);
+    expect(manager.notices[0]?.severity).toBe("warning");
+  });
 });

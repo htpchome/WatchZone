@@ -5,7 +5,11 @@ import {
   subscribeCameraRuntime,
   type CameraRuntimeSnapshot,
 } from "../../api/camera-runtime";
-import type { HomeAssistantApi } from "../../core/home-assistant";
+import type {
+  HomeAssistantApi,
+  HomeAssistantConnection,
+  HomeAssistantConnectionEventListener,
+} from "../../core/home-assistant";
 
 export class CameraRuntimeController implements ReactiveController {
   private _api?: HomeAssistantApi;
@@ -15,6 +19,7 @@ export class CameraRuntimeController implements ReactiveController {
   private _pending = false;
   private _snapshot?: CameraRuntimeSnapshot;
   private _unsubscribe?: () => void;
+  private _observedConnection?: HomeAssistantConnection;
 
   public constructor(private readonly _host: ReactiveControllerHost) {
     _host.addController(this);
@@ -34,10 +39,12 @@ export class CameraRuntimeController implements ReactiveController {
   ): void {
     if (this._api?.identity === api?.identity && this._entityId === entityId)
       return;
+    this._unobserveConnection();
     this._api = api;
     this._entityId = entityId;
     this._snapshot = undefined;
     this._pending = false;
+    this._observeConnection();
     this._resubscribe();
   }
 
@@ -67,14 +74,62 @@ export class CameraRuntimeController implements ReactiveController {
 
   public hostConnected(): void {
     this._connected = true;
+    this._observeConnection();
     this._resubscribe();
   }
 
   public hostDisconnected(): void {
     this._connected = false;
+    this._unobserveConnection();
     this._generation += 1;
     this._unsubscribe?.();
     this._unsubscribe = undefined;
+  }
+
+  private readonly _handleConnectionDisconnected: HomeAssistantConnectionEventListener =
+    () => {
+      this._generation += 1;
+      this._unsubscribe = undefined;
+      if (this._pending) {
+        this._pending = false;
+        this._host.requestUpdate();
+      }
+    };
+
+  private readonly _handleConnectionReady: HomeAssistantConnectionEventListener =
+    () => {
+      this._resubscribe();
+    };
+
+  private _observeConnection(): void {
+    const connection = this._api?.identity;
+    if (
+      !this._connected ||
+      !connection ||
+      this._observedConnection === connection ||
+      !connection.addEventListener ||
+      !connection.removeEventListener
+    ) {
+      return;
+    }
+    this._unobserveConnection();
+    connection.addEventListener(
+      "disconnected",
+      this._handleConnectionDisconnected,
+    );
+    connection.addEventListener("ready", this._handleConnectionReady);
+    this._observedConnection = connection;
+  }
+
+  private _unobserveConnection(): void {
+    const connection = this._observedConnection;
+    if (!connection) return;
+    connection.removeEventListener?.(
+      "disconnected",
+      this._handleConnectionDisconnected,
+    );
+    connection.removeEventListener?.("ready", this._handleConnectionReady);
+    this._observedConnection = undefined;
   }
 
   private _resubscribe(): void {

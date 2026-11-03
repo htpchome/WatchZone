@@ -13,6 +13,9 @@ export type HomeAssistantMessage = Readonly<Record<string, unknown>> & {
 };
 
 export type HomeAssistantUnsubscribe = () => void;
+export interface HomeAssistantSubscriptionOptions {
+  readonly resubscribe?: boolean;
+}
 export type HomeAssistantConnectionEvent = "disconnected" | "ready";
 export type HomeAssistantConnectionEventListener = (
   connection: HomeAssistantConnection,
@@ -32,6 +35,7 @@ export interface HomeAssistantConnection {
   subscribeMessage<T>(
     callback: (message: T) => void,
     message: HomeAssistantMessage,
+    options?: HomeAssistantSubscriptionOptions,
   ): Promise<HomeAssistantUnsubscribe>;
 }
 
@@ -49,6 +53,7 @@ export interface HomeAssistantApi {
   subscribeMessage<T>(
     callback: (message: T) => void,
     message: HomeAssistantMessage,
+    options?: HomeAssistantSubscriptionOptions,
   ): Promise<HomeAssistantUnsubscribe>;
 }
 
@@ -71,8 +76,8 @@ export function createHomeAssistantApi(hass: HomeAssistant): HomeAssistantApi {
     identity: hass.connection,
     callWS: (message) => hass.callWS(message),
     resolveUrl: (path) => hass.hassUrl(path),
-    subscribeMessage: (callback, message) =>
-      hass.connection.subscribeMessage(callback, message),
+    subscribeMessage: (callback, message, options) =>
+      hass.connection.subscribeMessage(callback, message, options),
   };
 }
 

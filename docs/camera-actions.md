@@ -71,6 +71,15 @@ Every runtime command and provider state change is broadcast to all subscribed
 cards. A suspend or resume initiated in one browser therefore updates the
 presentation and media lifecycle in every other open browser without a refresh.
 
+The frontend runtime controller observes Home Assistant connection readiness.
+Its subscription disables the WebSocket library's automatic resubscribe so
+there is exactly one reconnect owner. The controller retains the last provider
+snapshot while Home Assistant is unavailable and creates one fresh runtime
+subscription when the connection becomes ready. This avoids both duplicate
+subscriptions and a one-shot automatic retry racing integration startup. Live
+media reconnection and runtime-capability resubscription remain separate; a
+media reconnect must not erase or infer suspend support.
+
 Runtime updates are driven by Home Assistant state events. A provider may also
 declare a reconciliation interval when its external control surface does not
 reliably produce an event for every change. The backend runs at most one monitor

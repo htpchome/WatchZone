@@ -3,10 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DashboardCard } from "../src/card/watchzone-card";
 import type { CardConfig } from "../src/core/config";
 import {
+  ACCORDION_ITEM_TAG,
   CARD_TYPE,
   EDITOR_DIRTY_STATE_KEY,
   EDITOR_TEXT_PREVIEW_DELAY_MS,
 } from "../src/core/constants";
+import type { AccordionItem } from "../src/ui/accordion";
+import type { ToastRegion } from "../src/ui/toast-region";
 import type { CardEditor } from "../src/editor/watchzone-card-editor";
 
 interface ContextRequest extends Event {
@@ -43,6 +46,42 @@ describe("watchzone-card-editor", () => {
   afterEach(() => {
     document.body.replaceChildren();
     vi.useRealTimers();
+  });
+
+  it("groups settings into closed accordions and reports draft status", async () => {
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Original" });
+    document.body.append(editor);
+    await editor.updateComplete;
+
+    const items = [
+      ...(editor.shadowRoot?.querySelectorAll<AccordionItem>(
+        ACCORDION_ITEM_TAG,
+      ) ?? []),
+    ];
+    expect(items.map((item) => item.heading)).toEqual([
+      "Camera Settings",
+      "General Settings",
+      "Layout Settings",
+      "Display Options",
+    ]);
+    expect(items.every((item) => !item.open)).toBe(true);
+    const status = editor.shadowRoot?.querySelector(
+      "wzc-toast-region",
+    ) as ToastRegion;
+    expect(status.notices[0]).toMatchObject({
+      message: "No pending changes.",
+      severity: "success",
+    });
+
+    inputTitle(editor, "Changed");
+    await editor.updateComplete;
+    expect(status.notices).toHaveLength(1);
+    expect(status.notices[0]).toMatchObject({
+      severity: "warning",
+    });
   });
 
   it("uses dirtyState and soft preview without config-changed while typing", async () => {

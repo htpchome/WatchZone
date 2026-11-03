@@ -184,7 +184,20 @@ export const themeTokens = css`
     --wzc-media-overlay-shadow: var(--wzc-shadow-card);
     --wzc-media-overlay-transition-duration: 140ms;
 
+    --wzc-accordion-background: var(--wzc-color-background);
+    --wzc-accordion-header-color: var(--wzc-color-text-1);
+    --wzc-accordion-header-open-color: var(--wzc-color-primary);
+    --wzc-accordion-header-open-background: var(--wzc-color-surface-secondary);
+    --wzc-accordion-header-hover-background: var(--wzc-color-fill-primary);
+    --wzc-accordion-border-color: var(--wzc-color-border-control);
+    --wzc-accordion-radius: var(--wzc-radius-large);
+
     --wzc-toast-opacity: 78%;
+    --wzc-toast-highlight-color: color-mix(
+      in srgb,
+      var(--wzc-color-background) 34%,
+      transparent
+    );
     --wzc-toast-error-color: var(--wzc-color-on-error);
     --wzc-toast-error-background: color-mix(
       in srgb,

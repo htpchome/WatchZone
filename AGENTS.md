@@ -34,6 +34,12 @@ For camera stage, card sizing, aspect-ratio, or media fitting changes, also read
 For camera carousel, slide navigation, or Swiper lifecycle changes, also read
 `docs/camera-carousel.md` in full.
 
+For accordion behavior or editor disclosure groups, also read
+`docs/accordion.md` in full.
+
+For toast timing, presentation, or placement, also read
+`docs/toast-system.md` in full.
+
 ## Architecture stability
 
 - Treat `architecture.md` as a contract, not a progress log.

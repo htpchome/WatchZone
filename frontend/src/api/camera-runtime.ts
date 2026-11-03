@@ -15,10 +15,14 @@ export function subscribeCameraRuntime(
   entityId: string,
   callback: (snapshot: CameraRuntimeSnapshot) => void,
 ): Promise<() => void> {
-  return api.subscribeMessage(callback, {
-    type: `${INTEGRATION_ID}/camera/runtime/subscribe`,
-    entity_id: entityId,
-  });
+  return api.subscribeMessage(
+    callback,
+    {
+      type: `${INTEGRATION_ID}/camera/runtime/subscribe`,
+      entity_id: entityId,
+    },
+    { resubscribe: false },
+  );
 }
 
 export function setCameraSuspended(

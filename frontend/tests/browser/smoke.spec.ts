@@ -394,6 +394,61 @@ test("camera selection does not recursively republish dirty state", async ({
   });
 });
 
+test("editor uses exclusive accordions and shared draft status", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  await page.evaluate(async () => {
+    const constructor = customElements.get(
+      "watchzone-card",
+    ) as typeof HTMLElement & {
+      getConfigElement(): Promise<
+        HTMLElement & {
+          setConfig(config: unknown): void;
+          updateComplete: Promise<boolean>;
+        }
+      >;
+    };
+    const editor = await constructor.getConfigElement();
+    editor.id = "accordion-editor";
+    editor.setConfig({
+      type: "custom:watchzone-card",
+      title: "Accordion",
+    });
+    document.body.append(editor);
+    await editor.updateComplete;
+  });
+
+  const editor = page.locator("#accordion-editor");
+  const items = editor.locator("wzc-accordion-item");
+  await expect(items).toHaveCount(4);
+  await expect(items.locator("details[open]")).toHaveCount(0);
+  await items.nth(0).locator("summary").click();
+  await expect(items.nth(0).locator("details")).toHaveAttribute("open", "");
+  await items.nth(1).locator("summary").click();
+  await expect(items.nth(0).locator("details")).not.toHaveAttribute("open", "");
+  await expect(items.nth(1).locator("details")).toHaveAttribute("open", "");
+
+  const status = editor.locator(
+    'wzc-toast-region .toast[data-severity="success"]',
+  );
+  await expect(status).toContainText("No pending changes.");
+  await expect(status).toHaveCSS("backdrop-filter", "none");
+  await editor.evaluate(async (element) => {
+    const input = element.shadowRoot?.querySelector("ha-input") as
+      (HTMLElement & { value: string }) | undefined;
+    if (!input) throw new Error("Editor title input was not rendered");
+    input.value = "Changed";
+    input.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+    await (element as HTMLElement & { updateComplete: Promise<boolean> })
+      .updateComplete;
+  });
+  await expect(
+    editor.locator('wzc-toast-region .toast[data-severity="warning"]'),
+  ).toContainText("Unsaved changes");
+});
+
 test("round-trips boolean toggles through defaults before Save", async ({
   page,
 }) => {
