@@ -40,6 +40,9 @@ For accordion behavior or editor disclosure groups, also read
 For toast timing, presentation, or placement, also read
 `docs/toast-system.md` in full.
 
+For badge presentation or object-label color policy, also read
+`docs/badge-system.md` in full.
+
 ## Architecture stability
 
 - Treat `architecture.md` as a contract, not a progress log.

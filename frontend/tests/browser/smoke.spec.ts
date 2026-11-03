@@ -892,6 +892,8 @@ test("retains one live connection while the card presentation is replaced", asyn
     )
     .toEqual({ defaultMuted: false, muted: false });
   const connectionIndicator = page.locator("wzc-camera .source-indicator");
+  await expect(connectionIndicator).toHaveJSProperty("localName", "wzc-badge");
+  await expect(connectionIndicator).toHaveAttribute("shape", "pill");
   await expect(connectionIndicator).toHaveText("Connecting…");
   await expect(
     connectionIndicator.locator(".connection-spinner"),
@@ -1292,7 +1294,9 @@ test("retains one live connection while the card presentation is replaced", asyn
   ).toBe(true);
   const indicatorPresentation = await connectionIndicator.evaluate(
     (element) => {
-      const style = getComputedStyle(element);
+      const badge = element.shadowRoot?.querySelector<HTMLElement>(".badge");
+      if (!badge) throw new Error("Source badge presentation is missing");
+      const style = getComputedStyle(badge);
       return {
         background: style.backgroundColor,
         border: style.borderColor,
@@ -1318,7 +1322,7 @@ test("retains one live connection while the card presentation is replaced", asyn
   ).toBe(true);
   expect(cssAlpha(indicatorPresentation.border)).toBe(1);
   expect(indicatorPresentation.border).toBe("rgb(74, 74, 74)");
-  expect(indicatorPresentation.borderRadius).not.toBe("999px");
+  expect(indicatorPresentation.borderRadius).toBe("999px");
   const mute = page.locator(
     'wzc-camera wzc-camera-controls [data-control="mute"]',
   );

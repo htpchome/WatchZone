@@ -160,30 +160,22 @@ export const cameraLiveViewStyles = css`
     inset-block-start: 0.5rem;
     inset-inline-end: 0.5rem;
     display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.25rem 0.5rem;
-    color: var(--wzc-live-indicator-color, var(--wzc-media-overlay-color));
-    background: var(
+    --wzc-badge-color: var(
+      --wzc-live-indicator-color,
+      var(--wzc-media-overlay-color)
+    );
+    --wzc-badge-background: var(
       --wzc-live-indicator-background,
       var(--wzc-media-overlay-background)
     );
-    border: 1px solid
-      var(
-        --wzc-live-indicator-border-color,
-        var(--wzc-media-overlay-border-color)
-      );
-    border-radius: var(
-      --wzc-live-indicator-radius,
-      var(--wzc-media-overlay-radius)
+    --wzc-badge-border-color: var(
+      --wzc-live-indicator-border-color,
+      var(--wzc-media-overlay-border-color)
     );
-    box-shadow: var(
+    --wzc-badge-shadow: var(
       --wzc-live-indicator-shadow,
       var(--wzc-media-overlay-shadow)
     );
-    font-size: var(--wzc-font-size-small);
-    font-weight: var(--wzc-font-weight-semibold);
-    line-height: var(--wzc-line-height-condensed);
     opacity: 0;
     visibility: hidden;
     pointer-events: none;

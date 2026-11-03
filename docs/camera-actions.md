@@ -75,8 +75,12 @@ The frontend runtime controller observes Home Assistant connection readiness.
 Its subscription disables the WebSocket library's automatic resubscribe so
 there is exactly one reconnect owner. The controller retains the last provider
 snapshot while Home Assistant is unavailable and creates one fresh runtime
-subscription when the connection becomes ready. This avoids both duplicate
-subscriptions and a one-shot automatic retry racing integration startup. Live
+subscription when the connection becomes ready. If Home Assistant reports the
+connection ready just before WatchZone's WebSocket commands finish registering,
+the controller preserves that snapshot and uses one bounded, cancellable retry
+schedule. Success, entity changes, disconnect, and element teardown cancel the
+schedule. This avoids both duplicate subscriptions and a one-shot retry racing
+integration startup. Live
 media reconnection and runtime-capability resubscription remain separate; a
 media reconnect must not erase or infer suspend support.
 

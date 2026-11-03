@@ -1,5 +1,5 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type {
   HomeAssistantApi,
@@ -10,6 +10,7 @@ import type {
 } from "../src/core/home-assistant";
 import type { CameraRuntimeSnapshot } from "../src/api/camera-runtime";
 import { CameraRuntimeController } from "../src/modules/camera/runtime.controller";
+import { CAMERA_RUNTIME_RESUBSCRIBE_DELAYS_MS } from "../src/modules/camera/constants";
 
 class TestHost implements ReactiveControllerHost {
   public readonly requestUpdate = vi.fn<() => void>();
@@ -28,6 +29,7 @@ class TestConnection implements HomeAssistantConnection {
   public connected = true;
   public subscriptions = 0;
   public resubscribeOptions: Array<boolean | undefined> = [];
+  public subscriptionFailures = 0;
   private readonly _listeners = new Map<
     HomeAssistantConnectionEvent,
     Set<HomeAssistantConnectionEventListener>
@@ -56,6 +58,10 @@ class TestConnection implements HomeAssistantConnection {
   ): Promise<() => void> {
     this.subscriptions += 1;
     this.resubscribeOptions.push(options?.resubscribe);
+    if (this.subscriptionFailures > 0) {
+      this.subscriptionFailures -= 1;
+      throw new Error("Command not registered yet");
+    }
     callback({
       available: true,
       entity_id: message.entity_id,
@@ -75,6 +81,10 @@ class TestConnection implements HomeAssistantConnection {
 }
 
 describe("CameraRuntimeController", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("preserves capability state and resubscribes after HA reconnects", async () => {
     const host = new TestHost();
     const connection = new TestConnection();
@@ -105,6 +115,38 @@ describe("CameraRuntimeController", () => {
     expect(connection.subscriptions).toBe(2);
     expect(connection.resubscribeOptions).toEqual([false, false]);
     expect(controller.snapshot?.supported).toBe(true);
+  });
+
+  it("preserves capability state and retries a registration race after HA restarts", async () => {
+    vi.useFakeTimers();
+    const host = new TestHost();
+    const connection = new TestConnection();
+    const api: HomeAssistantApi = {
+      identity: connection,
+      callWS: async <T>() => undefined as T,
+      resolveUrl: (path) => path,
+      subscribeMessage: (callback, message, options) =>
+        connection.subscribeMessage(callback, message, options),
+    };
+    const controller = new CameraRuntimeController(host);
+    controller.hostConnected();
+    controller.configure(api, "camera.front");
+    await Promise.resolve();
+
+    expect(controller.snapshot?.supported).toBe(true);
+    connection.emit("disconnected");
+    connection.subscriptionFailures = 1;
+    connection.emit("ready");
+    await Promise.resolve();
+
+    expect(connection.subscriptions).toBe(2);
+    expect(controller.snapshot?.supported).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(CAMERA_RUNTIME_RESUBSCRIBE_DELAYS_MS[0]);
+
+    expect(connection.subscriptions).toBe(3);
+    expect(controller.snapshot?.supported).toBe(true);
+    expect(connection.resubscribeOptions).toEqual([false, false, false]);
   });
 
   it("clears a pending command when the HA connection is interrupted", async () => {

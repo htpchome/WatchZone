@@ -22,6 +22,7 @@ export const CAMERA_SUSPEND_DIALOG_TAG = `${CAMERA_TAG}-suspend-dialog`;
 export const ACCORDION_TAG = `${APP_ID}-accordion`;
 export const ACCORDION_ITEM_TAG = `${ACCORDION_TAG}-item`;
 export const ACCORDION_TOGGLE_EVENT = `${APP_ID}-accordion-toggle`;
+export const BADGE_TAG = `${APP_ID}-badge`;
 export const TOAST_REGION_TAG = `${APP_ID}-toast-region`;
 export const TOAST_VISIBLE_DURATION_MS = 3_500;
 export const TOAST_TRANSITION_DURATION_MS = 180;

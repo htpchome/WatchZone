@@ -4,6 +4,7 @@ import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 import {
   CAMERA_CONTROLS_TAG,
   CAMERA_LIVE_PRESENTATION_TAG,
+  BADGE_TAG,
   TOAST_REGION_TAG,
 } from "../../../core/constants";
 import {
@@ -13,6 +14,7 @@ import {
 import type { MediaTransport } from "../../../core/media-session-manager";
 import type { ToastNotice, ToastSeverity } from "../../../ui/toast-manager";
 import { renderIcon } from "../../../ui/icons";
+import "../../../ui/badge";
 import "../../../ui/toast-region";
 import type { CameraControlEventDetail } from "../controls-overlay";
 import "../controls-overlay";
@@ -62,6 +64,7 @@ export interface CameraToastRequestDetail {
 }
 
 const controlsTag = unsafeStatic(CAMERA_CONTROLS_TAG);
+const badgeTag = unsafeStatic(BADGE_TAG);
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
 
 /** Renders one camera's live presentation and owns browser presentation APIs. */
@@ -235,13 +238,16 @@ export class CameraLivePresentation extends LitElement {
         </div>
         ${
           connecting || resolvedSource
-            ? html`<div
+            ? staticHtml`<${badgeTag}
                 class=${
                   sourceVisible
                     ? "source-indicator visible"
                     : "source-indicator"
                 }
                 role="status"
+                shape="pill"
+                size="small"
+                variant="neutral"
                 aria-live="polite"
                 aria-hidden=${sourceVisible ? "false" : "true"}
                 aria-label=${
@@ -259,7 +265,7 @@ export class CameraLivePresentation extends LitElement {
                         ></span>
                         <span>Connecting…</span>`
                 }
-              </div>`
+              </${badgeTag}>`
             : nothing
         }
         ${

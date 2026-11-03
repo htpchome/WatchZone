@@ -192,6 +192,33 @@ export const themeTokens = css`
     --wzc-accordion-border-color: var(--wzc-color-border-control);
     --wzc-accordion-radius: var(--wzc-radius-large);
 
+    --wzc-badge-neutral-background: var(--ha-color-neutral-60, #777777);
+    --wzc-badge-neutral-color: var(--ha-color-neutral-95, #f5f5f5);
+    --wzc-badge-blue-background: var(--ha-color-blue-60, #3b82f6);
+    --wzc-badge-blue-color: var(--ha-color-neutral-100, #ffffff);
+    --wzc-badge-green-background: var(--ha-color-green-60, #10b981);
+    --wzc-badge-green-color: var(--ha-color-neutral-100, #ffffff);
+    --wzc-badge-amber-background: var(--ha-color-amber-60, #f59e0b);
+    --wzc-badge-amber-color: var(--ha-color-neutral-05, #111111);
+    --wzc-badge-red-background: var(--ha-color-red-60, #ef4444);
+    --wzc-badge-red-color: var(--ha-color-neutral-100, #ffffff);
+    --wzc-badge-cyan-background: var(--ha-color-cyan-60, #22d3ee);
+    --wzc-badge-cyan-color: var(--ha-color-neutral-05, #111111);
+    --wzc-badge-emerald-background: var(--ha-color-green-50, #34d399);
+    --wzc-badge-emerald-color: var(--ha-color-neutral-05, #111111);
+    --wzc-badge-indigo-background: var(--ha-color-indigo-50, #818cf8);
+    --wzc-badge-indigo-color: var(--ha-color-neutral-05, #111111);
+    --wzc-badge-orange-background: var(--ha-color-orange-60, #f97316);
+    --wzc-badge-orange-color: var(--ha-color-neutral-100, #ffffff);
+    --wzc-badge-pink-background: var(--ha-color-pink-50, #f472b6);
+    --wzc-badge-pink-color: var(--ha-color-neutral-05, #111111);
+    --wzc-badge-purple-background: var(--ha-color-purple-60, #a855f7);
+    --wzc-badge-purple-color: var(--ha-color-neutral-100, #ffffff);
+    --wzc-badge-rose-background: var(--ha-color-red-40, #fb7185);
+    --wzc-badge-rose-color: var(--ha-color-neutral-05, #111111);
+    --wzc-badge-yellow-background: var(--ha-color-yellow-60, #eab308);
+    --wzc-badge-yellow-color: var(--ha-color-neutral-05, #111111);
+
     --wzc-toast-opacity: 78%;
     --wzc-toast-highlight-color: color-mix(
       in srgb,

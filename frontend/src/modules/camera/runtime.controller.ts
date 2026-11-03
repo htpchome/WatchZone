@@ -10,6 +10,7 @@ import type {
   HomeAssistantConnection,
   HomeAssistantConnectionEventListener,
 } from "../../core/home-assistant";
+import { CAMERA_RUNTIME_RESUBSCRIBE_DELAYS_MS } from "./constants";
 
 export class CameraRuntimeController implements ReactiveController {
   private _api?: HomeAssistantApi;
@@ -17,6 +18,8 @@ export class CameraRuntimeController implements ReactiveController {
   private _entityId?: string;
   private _generation = 0;
   private _pending = false;
+  private _retryAttempt = 0;
+  private _retryTimer?: ReturnType<typeof setTimeout>;
   private _snapshot?: CameraRuntimeSnapshot;
   private _unsubscribe?: () => void;
   private _observedConnection?: HomeAssistantConnection;
@@ -40,12 +43,13 @@ export class CameraRuntimeController implements ReactiveController {
     if (this._api?.identity === api?.identity && this._entityId === entityId)
       return;
     this._unobserveConnection();
+    this._clearRetry();
     this._api = api;
     this._entityId = entityId;
     this._snapshot = undefined;
     this._pending = false;
     this._observeConnection();
-    this._resubscribe();
+    this._resubscribe(true);
   }
 
   public async setSuspended(
@@ -75,12 +79,13 @@ export class CameraRuntimeController implements ReactiveController {
   public hostConnected(): void {
     this._connected = true;
     this._observeConnection();
-    this._resubscribe();
+    this._resubscribe(true);
   }
 
   public hostDisconnected(): void {
     this._connected = false;
     this._unobserveConnection();
+    this._clearRetry();
     this._generation += 1;
     this._unsubscribe?.();
     this._unsubscribe = undefined;
@@ -88,6 +93,7 @@ export class CameraRuntimeController implements ReactiveController {
 
   private readonly _handleConnectionDisconnected: HomeAssistantConnectionEventListener =
     () => {
+      this._clearRetry();
       this._generation += 1;
       this._unsubscribe = undefined;
       if (this._pending) {
@@ -98,7 +104,7 @@ export class CameraRuntimeController implements ReactiveController {
 
   private readonly _handleConnectionReady: HomeAssistantConnectionEventListener =
     () => {
-      this._resubscribe();
+      this._resubscribe(true);
     };
 
   private _observeConnection(): void {
@@ -132,22 +138,52 @@ export class CameraRuntimeController implements ReactiveController {
     this._observedConnection = undefined;
   }
 
-  private _resubscribe(): void {
+  private _clearRetry(resetAttempt = true): void {
+    if (this._retryTimer !== undefined) {
+      clearTimeout(this._retryTimer);
+      this._retryTimer = undefined;
+    }
+    if (resetAttempt) this._retryAttempt = 0;
+  }
+
+  private _scheduleRetry(): void {
+    if (
+      !this._connected ||
+      !this._api ||
+      !this._entityId ||
+      this._retryTimer !== undefined
+    ) {
+      return;
+    }
+    const delay = CAMERA_RUNTIME_RESUBSCRIBE_DELAYS_MS[this._retryAttempt];
+    if (delay === undefined) return;
+    this._retryAttempt += 1;
+    this._retryTimer = setTimeout(() => {
+      this._retryTimer = undefined;
+      this._resubscribe(false);
+    }, delay);
+  }
+
+  private _resubscribe(resetRetry = false): void {
+    if (resetRetry) this._clearRetry();
     const generation = ++this._generation;
     this._unsubscribe?.();
     this._unsubscribe = undefined;
     if (!this._connected || !this._api || !this._entityId) return;
     const entityId = this._entityId;
-    const subscription = subscribeCameraRuntime(
-      this._api,
-      entityId,
-      (snapshot) => {
+    let subscription: Promise<() => void>;
+    try {
+      subscription = subscribeCameraRuntime(this._api, entityId, (snapshot) => {
         if (generation !== this._generation || snapshot.entity_id !== entityId)
           return;
+        this._clearRetry();
         this._snapshot = snapshot;
         this._host.requestUpdate();
-      },
-    );
+      });
+    } catch {
+      if (generation === this._generation) this._scheduleRetry();
+      return;
+    }
     void Promise.resolve(subscription)
       .then((unsubscribe) => {
         if (typeof unsubscribe !== "function") return;
@@ -155,10 +191,7 @@ export class CameraRuntimeController implements ReactiveController {
         else this._unsubscribe = unsubscribe;
       })
       .catch(() => {
-        if (generation === this._generation) {
-          this._snapshot = undefined;
-          this._host.requestUpdate();
-        }
+        if (generation === this._generation) this._scheduleRetry();
       });
   }
 }
