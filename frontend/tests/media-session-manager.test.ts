@@ -221,6 +221,57 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
+  it("retries while the backend finishes starting after Home Assistant is ready", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const factory = vi
+      .fn<ConnectionFactory>()
+      .mockResolvedValueOnce({ stream: createStream(), close: vi.fn() })
+      .mockRejectedValueOnce(new Error("WatchZone backend is starting"))
+      .mockResolvedValueOnce({ stream: createStream(), close: vi.fn() });
+    const manager = new MediaSessionManager(factory);
+    const lifecycle = createLifecycleApi();
+    const lease = manager.acquireHomeAssistant(lifecycle.api, "camera.front");
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
+
+    lifecycle.disconnect();
+    lifecycle.ready();
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("failed"));
+
+    await vi.advanceTimersByTimeAsync(500);
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
+    expect(factory).toHaveBeenCalledTimes(3);
+
+    lease.release();
+    manager.closeAll();
+  });
+
+  it("bounds Home Assistant restart recovery when the backend stays unavailable", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const factory = vi
+      .fn<ConnectionFactory>()
+      .mockResolvedValueOnce({ stream: createStream(), close: vi.fn() })
+      .mockRejectedValue(new Error("WatchZone backend is unavailable"));
+    const manager = new MediaSessionManager(factory);
+    const lifecycle = createLifecycleApi();
+    const lease = manager.acquireHomeAssistant(lifecycle.api, "camera.front");
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
+
+    lifecycle.disconnect();
+    lifecycle.ready();
+    await vi.advanceTimersByTimeAsync(30_000);
+
+    expect(factory).toHaveBeenCalledTimes(7);
+    expect(lease.getSnapshot()).toMatchObject({
+      state: "failed",
+      error: "WatchZone backend is unavailable",
+    });
+
+    lease.release();
+    manager.closeAll();
+  });
+
   it("waits for Home Assistant ready when acquired during a reboot", async () => {
     const factory = vi.fn<ConnectionFactory>(async () => ({
       stream: createStream(),
@@ -261,6 +312,37 @@ describe("MediaSessionManager", () => {
     );
     await vi.waitFor(() => expect(returned.getSnapshot().state).toBe("live"));
     expect(factory).toHaveBeenCalledTimes(2);
+    returned.release();
+    manager.closeAll();
+  });
+
+  it("retains Home Assistant restart recovery for a parked session", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const factory = vi
+      .fn<ConnectionFactory>()
+      .mockResolvedValueOnce({ stream: createStream(), close: vi.fn() })
+      .mockRejectedValueOnce(new Error("WatchZone backend is starting"))
+      .mockResolvedValueOnce({ stream: createStream(), close: vi.fn() });
+    const manager = new MediaSessionManager(factory);
+    const lifecycle = createLifecycleApi();
+    const initial = manager.acquireHomeAssistant(lifecycle.api, "camera.front");
+    await vi.waitFor(() => expect(initial.getSnapshot().state).toBe("live"));
+    initial.release();
+
+    lifecycle.disconnect();
+    lifecycle.ready();
+    expect(factory).toHaveBeenCalledOnce();
+
+    const returned = manager.acquireHomeAssistant(
+      lifecycle.api,
+      "camera.front",
+    );
+    await vi.waitFor(() => expect(returned.getSnapshot().state).toBe("failed"));
+    await vi.advanceTimersByTimeAsync(500);
+    await vi.waitFor(() => expect(returned.getSnapshot().state).toBe("live"));
+    expect(factory).toHaveBeenCalledTimes(3);
+
     returned.release();
     manager.closeAll();
   });

@@ -68,8 +68,17 @@ export interface MediaSessionRequest {
 }
 
 const MAX_RETAINED_SESSIONS = 4;
-const MAX_RECONNECT_ATTEMPTS = 2;
-const RECONNECT_BASE_DELAY_MS = 500;
+type ReconnectCause = "home_assistant" | "media";
+
+const RECONNECT_POLICIES: Readonly<
+  Record<
+    ReconnectCause,
+    { readonly baseDelayMs: number; readonly maxAttempts: number }
+  >
+> = {
+  media: { baseDelayMs: 500, maxAttempts: 2 },
+  home_assistant: { baseDelayMs: 500, maxAttempts: 5 },
+};
 const RECONNECT_JITTER_MS = 250;
 const RECONNECT_STABLE_RESET_MS = 30_000;
 
@@ -80,9 +89,11 @@ class ManagedMediaSession {
   private _generation = 0;
   private _leaseCount = 0;
   private _connectionOptions: MediaConnectionOptions = { initialMuted: true };
+  private _reconnectCause?: ReconnectCause;
   private _reconnectAttempts = 0;
   private _reconnectTimer?: ReturnType<typeof setTimeout>;
   private _stabilityTimer?: ReturnType<typeof setTimeout>;
+  private _transportInterrupted = false;
   private readonly _listeners = new Set<
     (snapshot: MediaSessionSnapshot) => void
   >();
@@ -123,6 +134,7 @@ class ManagedMediaSession {
     }
 
     if (transportChanged) {
+      this._reconnectCause = undefined;
       this._reconnectAttempts = 0;
       this._closeConnection();
       this._setSnapshot({ state: "new" });
@@ -130,6 +142,7 @@ class ManagedMediaSession {
       this._setSnapshot({ ...this._snapshot, state: "live" });
     }
     if (api.identity.connected === false) {
+      this._transportInterrupted = true;
       this._closeConnection();
       this._setSnapshot({
         state: "failed",
@@ -192,6 +205,8 @@ class ManagedMediaSession {
 
   public handleTransportDisconnected(): void {
     if (this._snapshot.state === "closed") return;
+    this._transportInterrupted = true;
+    this._reconnectCause = undefined;
     this._reconnectAttempts = 0;
     if (this._reconnectTimer) {
       clearTimeout(this._reconnectTimer);
@@ -205,14 +220,16 @@ class ManagedMediaSession {
   }
 
   public handleTransportReady(): void {
-    if (
-      this._leaseCount === 0 ||
-      this._snapshot.state === "closed" ||
-      this._snapshot.state === "live" ||
-      this._snapshot.state === "parked"
-    )
+    if (this._snapshot.state === "closed" || !this._transportInterrupted)
       return;
+    this._transportInterrupted = false;
+    this._reconnectCause = "home_assistant";
     this._reconnectAttempts = 0;
+    if (this._reconnectTimer) {
+      clearTimeout(this._reconnectTimer);
+      this._reconnectTimer = undefined;
+    }
+    if (this._leaseCount === 0) return;
     this._closeConnection();
     void this._connect();
   }
@@ -250,8 +267,11 @@ class ManagedMediaSession {
       if (this._reconnectAttempts > 0) {
         this._stabilityTimer = setTimeout(() => {
           this._stabilityTimer = undefined;
+          this._reconnectCause = undefined;
           this._reconnectAttempts = 0;
         }, RECONNECT_STABLE_RESET_MS);
+      } else {
+        this._reconnectCause = undefined;
       }
       this._setSnapshot({
         state: this._leaseCount > 0 ? "live" : "parked",
@@ -268,7 +288,7 @@ class ManagedMediaSession {
         state: "failed",
         error: error instanceof Error ? error.message : "Unable to connect",
       });
-      if (this._reconnectAttempts > 0) {
+      if (this._reconnectCause) {
         this._scheduleReconnect();
       }
     }
@@ -280,6 +300,7 @@ class ManagedMediaSession {
     }
     this._closeConnection();
     this._setSnapshot({ state: "failed", error: error.message });
+    this._reconnectCause ??= "media";
     this._scheduleReconnect();
   }
 
@@ -291,22 +312,27 @@ class ManagedMediaSession {
       clearTimeout(this._reconnectTimer);
       this._reconnectTimer = undefined;
     }
+    this._reconnectCause = undefined;
     this._reconnectAttempts = 0;
     this._closeConnection();
     void this._connect();
   }
 
   private _scheduleReconnect(): void {
+    const policy = this._reconnectCause
+      ? RECONNECT_POLICIES[this._reconnectCause]
+      : undefined;
     if (
+      !policy ||
       this._leaseCount === 0 ||
-      this._reconnectAttempts >= MAX_RECONNECT_ATTEMPTS ||
+      this._reconnectAttempts >= policy.maxAttempts ||
       this._reconnectTimer
     ) {
       return;
     }
     const attempt = this._reconnectAttempts++;
     const delay =
-      RECONNECT_BASE_DELAY_MS * 2 ** attempt +
+      policy.baseDelayMs * 2 ** attempt +
       Math.floor(Math.random() * RECONNECT_JITTER_MS);
     this._reconnectTimer = setTimeout(() => {
       this._reconnectTimer = undefined;

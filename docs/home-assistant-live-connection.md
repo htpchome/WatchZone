@@ -176,10 +176,15 @@ automatic reconnect attempts with exponential backoff and jitter.
 
 The session pool also observes Home Assistant's own WebSocket lifecycle. A
 `disconnected` event invalidates retained and active media transports once;
-the matching `ready` event starts each actively leased session once. Parked
-sessions remain inactive until reacquired. This prevents a Home Assistant
-restart from leaving an old media transport indefinitely marked `live` or
-`connecting` without introducing health polling.
+the matching authenticated `ready` event starts each actively leased session
+once. A full Home Assistant restart can accept WebSocket commands briefly
+before WatchZone's backend/provider commands are registered, so failed startup
+attempts during that recovery window use a separate bounded five-attempt
+backoff policy. This does not increase the two-attempt policy for ordinary
+media failures. Parked sessions remain inactive until reacquired. This prevents
+a Home Assistant restart from leaving an old media transport indefinitely
+marked `live` or `connecting` without introducing health polling or duplicate
+connections.
 
 ## 8. Current audio behavior
 
