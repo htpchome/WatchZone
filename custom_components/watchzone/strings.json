@@ -14,7 +14,13 @@
   "options": {
     "step": {
       "init": {
-        "title": "Stream preparation",
+        "title": "WatchZone settings",
+        "menu_options": {
+          "cameras": "Cameras"
+        }
+      },
+      "cameras": {
+        "title": "Camera settings",
         "description": "Keep Home Assistant HLS ready only for the selected cameras. This uses server resources even when no card is visible.",
         "data": {
           "hls_prewarm_cameras": "Pre-warm HLS cameras"

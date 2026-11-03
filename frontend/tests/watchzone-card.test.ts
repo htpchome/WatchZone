@@ -63,11 +63,14 @@ describe("watchzone-card", () => {
       camera_entity: "camera.front",
     });
     document.body.append(element);
-    const camera = await vi.waitFor(() => {
-      const current = element.shadowRoot?.querySelector("wzc-camera");
-      expect(current).not.toBeNull();
-      return current;
-    });
+    const camera = await vi.waitFor(
+      () => {
+        const current = element.shadowRoot?.querySelector("wzc-camera");
+        expect(current).not.toBeNull();
+        return current;
+      },
+      { timeout: 5_000 },
+    );
 
     element.setConfig({
       type: "custom:watchzone-card",
@@ -148,6 +151,44 @@ describe("watchzone-card", () => {
 
     await vi.waitFor(() =>
       expect(camera?.cameras[0]?.posterUrl).toBeUndefined(),
+    );
+
+    Object.defineProperty(connection, "connected", { value: true });
+    for (const listener of listeners.get("ready") ?? []) listener(connection);
+    element.hass = {
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "recording",
+          attributes: {
+            entity_picture: "/api/camera_proxy/camera.front?token=old",
+          },
+        },
+      },
+      connection,
+      callWS: vi.fn(),
+      hassUrl: (path: string) => path,
+    };
+    await vi.waitFor(() =>
+      expect(camera?.cameras[0]?.posterUrl).toBeUndefined(),
+    );
+
+    element.hass = {
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "recording",
+          attributes: {
+            entity_picture: "/api/camera_proxy/camera.front?token=new",
+          },
+        },
+      },
+      connection,
+      callWS: vi.fn(),
+      hassUrl: (path: string) => path,
+    };
+    await vi.waitFor(() =>
+      expect(camera?.cameras[0]?.posterUrl).toContain("token=new"),
     );
   });
 

@@ -336,3 +336,12 @@ back locally without delaying HLS or WebRTC startup. WatchZone must not perform
 automatic canvas extraction from live video: privacy protections can block it
 without a user gesture and produce browser warnings. Future retained-frame work
 must use a media-native lifecycle or an explicit user action.
+
+When Home Assistant disconnects, the frontend retires the current image URL for
+each configured camera. A restored entity carrying that same URL remains usable
+for live signaling, but its stale image credentials are withheld from the
+presentation until Home Assistant publishes a changed URL. This prevents Safari,
+Companion, or another retained client from retrying an expired camera-proxy token
+and contributing false authentication failures to Home Assistant's IP-ban
+counter. The credential guard does not own or alter HLS, WebRTC, or session
+retention.

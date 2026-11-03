@@ -16,6 +16,7 @@ import {
 } from "../core/constants";
 import {
   createHomeAssistantApi,
+  HomeAssistantCameraImageCredentialGuard,
   isHomeAssistant,
   type HomeAssistant,
   type HomeAssistantApi,
@@ -42,6 +43,8 @@ export class DashboardCard extends LitElement {
   private _previewConfig?: CardConfig;
   private _observedConnection?: HomeAssistantConnection;
   private _transportConnected = true;
+  private readonly _cameraImageCredentials =
+    new HomeAssistantCameraImageCredentialGuard();
   private readonly _layoutRuntime = new LayoutRuntime(this);
 
   /** Set by Home Assistant for the card shown inside its editor preview. */
@@ -158,6 +161,7 @@ export class DashboardCard extends LitElement {
 
   private readonly _handleConnectionDisconnected: HomeAssistantConnectionEventListener =
     () => {
+      this._cameraImageCredentials.retire(this._hass, this._cameraEntityIds());
       this._transportConnected = false;
       this._syncRuntime();
     };
@@ -193,9 +197,19 @@ export class DashboardCard extends LitElement {
   }
 
   private _syncRuntime(): void {
-    this._layoutRuntime.setRuntime(
-      this._transportConnected ? this._hass : undefined,
-      this._haApi,
+    const hass =
+      this._transportConnected && this._hass
+        ? this._cameraImageCredentials.sanitize(
+            this._hass,
+            this._cameraEntityIds(),
+          )
+        : undefined;
+    this._layoutRuntime.setRuntime(hass, this._haApi);
+  }
+
+  private _cameraEntityIds(): readonly string[] {
+    return (this._previewConfig ?? this._config).cameras.map(
+      ({ entity_id }) => entity_id,
     );
   }
 

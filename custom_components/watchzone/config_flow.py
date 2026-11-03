@@ -51,6 +51,12 @@ class WatchZoneOptionsFlow(OptionsFlow):
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
+        """Show the integration settings categories."""
+        return self.async_show_menu(step_id="init", menu_options=["cameras"])
+
+    async def async_step_cameras(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Select only cameras that should keep a prepared HA HLS stream."""
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -58,7 +64,9 @@ class WatchZoneOptionsFlow(OptionsFlow):
             if len(selected) > MAX_HLS_PREWARM_CAMERAS:
                 errors[CONF_HLS_PREWARM_CAMERAS] = "too_many_prewarm_cameras"
             else:
-                return self.async_create_entry(title="", data=user_input)
+                return self.async_create_entry(
+                    title="", data={**self.config_entry.options, **user_input}
+                )
 
         schema = vol.Schema(
             {
@@ -70,4 +78,6 @@ class WatchZoneOptionsFlow(OptionsFlow):
                 )
             }
         )
-        return self.async_show_form(step_id="init", data_schema=schema, errors=errors)
+        return self.async_show_form(
+            step_id="cameras", data_schema=schema, errors=errors
+        )

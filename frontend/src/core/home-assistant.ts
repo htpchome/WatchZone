@@ -104,3 +104,54 @@ export function cameraImageUrl(
     `/api/camera_proxy/${encodeURIComponent(entityId)}?token=${encodeURIComponent(accessToken)}`,
   );
 }
+
+/** Prevents camera stills from retrying credentials retired by an HA reconnect. */
+export class HomeAssistantCameraImageCredentialGuard {
+  private readonly _retiredUrls = new Map<string, string>();
+
+  public retire(
+    hass: HomeAssistant | undefined,
+    entityIds: readonly string[],
+  ): void {
+    if (!hass) return;
+    for (const entityId of entityIds) {
+      const url = cameraImageUrl(hass, entityId);
+      if (url) this._retiredUrls.set(entityId, url);
+    }
+  }
+
+  public sanitize(
+    hass: HomeAssistant,
+    entityIds: readonly string[],
+  ): HomeAssistant {
+    const activeIds = new Set(entityIds);
+    let states: Record<string, HomeAssistantEntity> | undefined;
+
+    for (const entityId of this._retiredUrls.keys()) {
+      if (!activeIds.has(entityId)) this._retiredUrls.delete(entityId);
+    }
+    for (const entityId of activeIds) {
+      const retiredUrl = this._retiredUrls.get(entityId);
+      if (!retiredUrl) continue;
+      const currentUrl = cameraImageUrl(hass, entityId);
+      if (currentUrl && currentUrl !== retiredUrl) {
+        this._retiredUrls.delete(entityId);
+        continue;
+      }
+      const entity = hass.states[entityId];
+      if (!entity || currentUrl !== retiredUrl) continue;
+      states ??= { ...hass.states };
+      const attributes = { ...entity.attributes };
+      delete attributes.access_token;
+      delete attributes.entity_picture;
+      states[entityId] = { ...entity, attributes };
+    }
+
+    if (!states) return hass;
+    return Object.assign(
+      Object.create(Object.getPrototypeOf(hass)) as HomeAssistant,
+      hass,
+      { states },
+    );
+  }
+}

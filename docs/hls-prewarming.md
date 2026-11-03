@@ -7,11 +7,10 @@ explicitly selected set of camera entities. This is integration-level shared
 backend work. It is not inferred from a currently mounted card, stored in card
 YAML, or enabled for every camera in Home Assistant.
 
-The allowlist is configured under **Settings > Devices & services > WatchZone
-
-> Configure**. A maximum of twelve cameras may be selected. This prevents
-> special-purpose cameras, such as a printer camera, from consuming resources
-> unless the user deliberately opts them in.
+The allowlist is configured under **Settings > Devices & services > WatchZone >
+Configure > Cameras**. A maximum of twelve cameras may be selected. This
+prevents special-purpose cameras, such as a printer camera, from consuming
+resources unless the user deliberately opts them in.
 
 For each selected entity, WatchZone:
 

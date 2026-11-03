@@ -47,7 +47,14 @@ async def test_options_flow_saves_explicit_hls_prewarm_allowlist(
     entry.add_to_hass(hass)
 
     result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["type"] is FlowResultType.MENU
+    assert result["menu_options"] == ["cameras"]
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input={"next_step_id": "cameras"}
+    )
     assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "cameras"
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
@@ -66,6 +73,9 @@ async def test_options_flow_enforces_server_resource_budget(
     entry = MockConfigEntry(domain=DOMAIN, data={})
     entry.add_to_hass(hass)
     result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input={"next_step_id": "cameras"}
+    )
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],

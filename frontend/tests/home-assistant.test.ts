@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   cameraImageUrl,
+  HomeAssistantCameraImageCredentialGuard,
   type HomeAssistant,
   type HomeAssistantEntity,
 } from "../src/core/home-assistant";
@@ -51,5 +52,32 @@ describe("Home Assistant camera image URL", () => {
     });
 
     expect(cameraImageUrl(hass, "camera.front")).toBeUndefined();
+  });
+
+  it("quarantines a retired image credential until HA supplies a new one", () => {
+    const guard = new HomeAssistantCameraImageCredentialGuard();
+    const stale = hassWith({
+      entity_id: "camera.front",
+      state: "streaming",
+      attributes: {
+        entity_picture: "/api/camera_proxy/camera.front?token=old",
+      },
+    });
+    guard.retire(stale, ["camera.front"]);
+
+    const sanitized = guard.sanitize(stale, ["camera.front"]);
+    expect(cameraImageUrl(sanitized, "camera.front")).toBeUndefined();
+    expect(sanitized.states["camera.front"]?.state).toBe("streaming");
+
+    const fresh = hassWith({
+      entity_id: "camera.front",
+      state: "streaming",
+      attributes: {
+        entity_picture: "/api/camera_proxy/camera.front?token=new",
+      },
+    });
+    expect(
+      cameraImageUrl(guard.sanitize(fresh, ["camera.front"]), "camera.front"),
+    ).toContain("token=new");
   });
 });
