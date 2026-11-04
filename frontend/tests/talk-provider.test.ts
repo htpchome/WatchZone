@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 
 const mocks = vi.hoisted(() => ({
+  answerAcceptsOutgoingAudio: vi.fn(),
   createPeer: vi.fn(),
   getTalkCapability: vi.fn(),
   sendTalkCandidate: vi.fn(),
@@ -16,6 +17,7 @@ vi.mock("../src/api/talk-signaling", () => ({
 }));
 
 vi.mock("../src/core/webrtc-peer-connection", () => ({
+  answerAcceptsOutgoingAudio: mocks.answerAcceptsOutgoingAudio,
   createWebRtcTalkPeerConnection: mocks.createPeer,
 }));
 
@@ -36,11 +38,89 @@ describe("Home Assistant two-way-talk provider", () => {
     });
     mocks.subscribeTalkOffer.mockResolvedValue(() => undefined);
     mocks.sendTalkCandidate.mockResolvedValue(undefined);
+    mocks.answerAcceptsOutgoingAudio.mockReturnValue(true);
   });
 
   afterEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllGlobals();
     track.enabled = true;
+  });
+
+  it("trusts Home Assistant's native two-way-audio capability", async () => {
+    mocks.getTalkCapability.mockResolvedValue({
+      supported: true,
+      probeRequired: false,
+    });
+
+    await expect(
+      new HomeAssistantTalkProvider().supports(api(), "camera.front"),
+    ).resolves.toBe(true);
+
+    expect(mocks.subscribeTalkOffer).not.toHaveBeenCalled();
+  });
+
+  it("rejects cameras without native support or a WebRTC probe path", async () => {
+    mocks.getTalkCapability.mockResolvedValue({
+      supported: false,
+      probeRequired: false,
+    });
+
+    await expect(
+      new HomeAssistantTalkProvider().supports(api(), "camera.front"),
+    ).resolves.toBe(false);
+
+    expect(mocks.subscribeTalkOffer).not.toHaveBeenCalled();
+  });
+
+  it("probes legacy support through standard Home Assistant signaling", async () => {
+    const close = vi.fn();
+    const addTransceiver = vi.fn();
+    const createOffer = vi.fn().mockResolvedValue({ sdp: "offer" });
+    const setLocalDescription = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal(
+      "RTCPeerConnection",
+      class {
+        public addTransceiver = addTransceiver;
+        public close = close;
+        public createOffer = createOffer;
+        public setLocalDescription = setLocalDescription;
+      },
+    );
+    mocks.getTalkCapability.mockResolvedValue({
+      supported: false,
+      probeRequired: true,
+    });
+    mocks.subscribeTalkOffer.mockImplementation(
+      async (
+        _api: HomeAssistantApi,
+        _entityId: string,
+        _offer: string,
+        _forceStandard: boolean,
+        callback: (event: { type: "answer"; answer: string }) => void,
+      ) => {
+        callback({ type: "answer", answer: "answer" });
+        return () => undefined;
+      },
+    );
+
+    await expect(
+      new HomeAssistantTalkProvider().supports(api(), "camera.front"),
+    ).resolves.toBe(true);
+
+    expect(addTransceiver).toHaveBeenCalledWith("audio", {
+      direction: "sendonly",
+    });
+    expect(mocks.subscribeTalkOffer).toHaveBeenCalledWith(
+      expect.anything(),
+      "camera.front",
+      "offer",
+      true,
+      expect.any(Function),
+      true,
+    );
+    expect(mocks.answerAcceptsOutgoingAudio).toHaveBeenCalledWith("answer");
+    expect(close).toHaveBeenCalledOnce();
   });
 
   it("retries accelerated signaling once through standard Home Assistant", async () => {

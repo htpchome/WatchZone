@@ -70,6 +70,27 @@ function appendIceCandidates(
   return `${offer}${offer.endsWith("\r\n") ? "" : "\r\n"}${candidateLines}`;
 }
 
+/** Return whether a remote SDP answer accepts browser-to-camera audio. */
+export function answerAcceptsOutgoingAudio(answer: string): boolean {
+  const normalized = answer.replaceAll("\r", "");
+  const sections = normalized.split("\nm=");
+  const sessionDirection = sections[0]
+    ?.split("\n")
+    .find((line) => /^a=(sendrecv|sendonly|recvonly|inactive)$/.test(line))
+    ?.slice(2);
+  for (const section of sections.slice(1)) {
+    const lines = section.split("\n");
+    const media = lines[0]?.trim().split(/\s+/);
+    if (media?.[0] !== "audio" || media[1] === "0") continue;
+    const mediaDirection = lines
+      .find((line) => /^a=(sendrecv|sendonly|recvonly|inactive)$/.test(line))
+      ?.slice(2);
+    const direction = mediaDirection ?? sessionDirection ?? "sendrecv";
+    return direction === "recvonly" || direction === "sendrecv";
+  }
+  return false;
+}
+
 export async function createWebRtcPeerConnection(
   options: WebRtcPeerConnectionOptions,
 ): Promise<MediaConnection> {
@@ -438,6 +459,10 @@ export function createWebRtcTalkPeerConnection(
           options.onSignalingPath(event.path);
           await Promise.all(localCandidates.splice(0).map(sendCandidate));
         } else if (event.type === "answer") {
+          if (!answerAcceptsOutgoingAudio(event.answer)) {
+            fail(new Error("Camera did not accept outgoing audio"));
+            return;
+          }
           await peer.setRemoteDescription({
             type: "answer",
             sdp: event.answer,

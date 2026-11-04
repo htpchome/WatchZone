@@ -129,6 +129,7 @@ export class TalkSessionController implements ReactiveController {
         return;
       }
       this._connection = connection;
+      if (camera.muted) camera.setMuted(false);
       this._callbacks.onConnected(connection);
     } catch (error) {
       if (!abort.signal.aborted) this._callbacks.onFailed(error);

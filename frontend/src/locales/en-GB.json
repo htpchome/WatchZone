@@ -10,7 +10,7 @@
   "editor.two_way_talk_unavailable": "This camera does not expose a compatible WebRTC talk path.",
   "talk.controls": "Two-way talk controls",
   "talk.connect": "Start two-way talk",
-  "talk.connecting": "Connecting two-way talk",
+  "talk.cancel_connecting": "Cancel two-way talk connection",
   "talk.connected": "Two-way talk connected",
   "talk.failed": "Two-way talk failed to connect",
   "talk.disconnect": "Disconnect two-way talk",

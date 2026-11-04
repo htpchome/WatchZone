@@ -54,7 +54,7 @@
   "editor.two_way_talk_unavailable": "Aquesta càmera no ofereix una ruta WebRTC compatible.",
   "talk.controls": "Controls de comunicació bidireccional",
   "talk.connect": "Inicia la comunicació bidireccional",
-  "talk.connecting": "S’està connectant la comunicació bidireccional",
+  "talk.cancel_connecting": "Cancel·la la connexió de comunicació bidireccional",
   "talk.connected": "Comunicació bidireccional connectada",
   "talk.failed": "No s’ha pogut connectar la comunicació bidireccional",
   "talk.disconnect": "Desconnecta la comunicació bidireccional",

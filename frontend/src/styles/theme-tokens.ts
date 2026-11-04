@@ -191,6 +191,7 @@ export const themeTokens = css`
     --wzc-carousel-navigation-icon-size: 2.5rem;
     --wzc-carousel-navigation-control-gap: 0.75rem;
     --wzc-talk-connected-color: var(--ha-color-green-50, #34d399);
+    --wzc-talk-connecting-color: var(--ha-color-blue-50, #3b82f6);
     --wzc-talk-panel-background: color-mix(
       in srgb,
       var(--wzc-media-overlay-surface) 80%,

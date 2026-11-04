@@ -25,6 +25,7 @@ from mashumaro import MissingField
 from webrtc_models import RTCIceCandidateInit
 
 from ..const import DOMAIN
+from ..features.talk import camera_talk_capability
 from . import runtime_from_hass
 
 _LOGGER = logging.getLogger(__name__)
@@ -60,20 +61,20 @@ def _parse_candidate(value: Any) -> RTCIceCandidateInit:
 async def ws_talk_capability(
     hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
-    """Report whether the selected HA camera exposes WebRTC."""
-    from homeassistant.components.camera.const import StreamType
-    from homeassistant.components.camera.helper import get_camera_from_entity_id
-
+    """Report whether Home Assistant exposes a usable two-way-audio path."""
     try:
         _require_camera_read(connection, msg["entity_id"])
-        camera = get_camera_from_entity_id(hass, msg["entity_id"])
-        supported = (
-            StreamType.WEB_RTC in camera.camera_capabilities.frontend_stream_types
-        )
+        capability = camera_talk_capability(hass, msg["entity_id"])
     except HomeAssistantError as err:
         connection.send_error(msg["id"], "talk_capability_failed", str(err))
         return
-    connection.send_result(msg["id"], {"supported": supported})
+    connection.send_result(
+        msg["id"],
+        {
+            "supported": capability.supported,
+            "probe_required": capability.probe_required,
+        },
+    )
 
 
 @websocket_command(
@@ -82,6 +83,7 @@ async def ws_talk_capability(
         vol.Required("entity_id"): cv.entity_id,
         vol.Required("offer"): str,
         vol.Optional("force_standard", default=False): bool,
+        vol.Optional("capability_probe", default=False): bool,
     }
 )
 @async_response
@@ -92,6 +94,9 @@ async def ws_talk_offer(
     entity_id = msg["entity_id"]
     try:
         _require_camera_read(connection, entity_id)
+        capability = camera_talk_capability(hass, entity_id)
+        if not capability.supported and not capability.probe_required:
+            raise HomeAssistantError("Camera does not support two-way audio")
         runtime = runtime_from_hass(hass)
 
         @callback
@@ -102,8 +107,8 @@ async def ws_talk_offer(
             _owner_id(connection),
             entity_id,
             send_event,
-            force_standard=msg["force_standard"],
-            purpose="talk",
+            force_standard=msg["force_standard"] or msg["capability_probe"],
+            purpose="talk_probe" if msg["capability_probe"] else "talk",
         )
     except HomeAssistantError as err:
         connection.send_error(msg["id"], "talk_offer_failed", str(err))

@@ -54,7 +54,7 @@
   "editor.two_way_talk_unavailable": "Ta kamera nie udostępnia zgodnej ścieżki WebRTC.",
   "talk.controls": "Sterowanie rozmową dwukierunkową",
   "talk.connect": "Rozpocznij rozmowę dwukierunkową",
-  "talk.connecting": "Łączenie rozmowy dwukierunkowej",
+  "talk.cancel_connecting": "Anuluj łączenie rozmowy dwukierunkowej",
   "talk.connected": "Rozmowa dwukierunkowa połączona",
   "talk.failed": "Nie udało się połączyć rozmowy dwukierunkowej",
   "talk.disconnect": "Rozłącz rozmowę dwukierunkową",

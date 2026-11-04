@@ -54,7 +54,7 @@
   "editor.two_way_talk_unavailable": "Diese Kamera bietet keinen kompatiblen WebRTC-Sprechweg.",
   "talk.controls": "Gegensprechsteuerung",
   "talk.connect": "Gegensprechen starten",
-  "talk.connecting": "Gegensprechen wird verbunden",
+  "talk.cancel_connecting": "Verbindung zum Gegensprechen abbrechen",
   "talk.connected": "Gegensprechen verbunden",
   "talk.failed": "Gegensprechen konnte nicht verbunden werden",
   "talk.disconnect": "Gegensprechen trennen",

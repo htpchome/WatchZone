@@ -54,7 +54,7 @@
   "editor.two_way_talk_unavailable": "Questa videocamera non espone un percorso WebRTC compatibile.",
   "talk.controls": "Controlli audio bidirezionali",
   "talk.connect": "Avvia audio bidirezionale",
-  "talk.connecting": "Connessione audio bidirezionale",
+  "talk.cancel_connecting": "Annulla la connessione audio bidirezionale",
   "talk.connected": "Audio bidirezionale connesso",
   "talk.failed": "Connessione audio bidirezionale non riuscita",
   "talk.disconnect": "Disconnetti audio bidirezionale",

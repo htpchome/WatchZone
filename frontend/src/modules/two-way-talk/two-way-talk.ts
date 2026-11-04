@@ -117,15 +117,16 @@ export class TwoWayTalkModule extends LitElement {
                 class=${visible ? "inactive-control visible" : "inactive-control"}
               >
                 <button
-                  class="inactive"
+                  class=${connecting ? "inactive connecting" : "inactive"}
                   type="button"
+                  aria-busy=${connecting ? "true" : "false"}
                   aria-label=${
                     connecting
-                      ? this.localize("talk.connecting")
+                      ? this.localize("talk.cancel_connecting")
                       : this.localize("talk.connect")
                   }
-                  ?disabled=${connecting || !camera.available}
-                  @click=${this._start}
+                  ?disabled=${!camera.available}
+                  @click=${this._toggleConnection}
                 >
                   ${renderIcon("microphoneOff")}
                 </button>
@@ -172,7 +173,13 @@ export class TwoWayTalkModule extends LitElement {
     this._soundwave.dispose();
   }
 
-  private readonly _start = (): void => void this._session.start();
+  private readonly _toggleConnection = (): void => {
+    if (this._session.connecting) {
+      this._session.stop();
+      return;
+    }
+    void this._session.start();
+  };
   private readonly _stop = (): void => this._session.stop();
   private readonly _toggleMicrophone = (): void =>
     this._session.toggleMicrophoneMute();

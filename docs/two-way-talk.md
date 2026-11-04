@@ -17,14 +17,24 @@ boundaries. It supplements `architecture.md`, which remains authoritative.
 
 ## Capability and configuration
 
-Two-way talk is opt-in per camera. The editor asks the backend whether the
-camera exposes a WebRTC path before enabling the control. Capability discovery
-does not request microphone permission or start a media connection. YAML omits
+Two-way talk is opt-in per camera. For the Home Assistant connection provider,
+the editor first trusts Home Assistant's resolved `two_way_audio` capability.
+This requires both WebRTC and a camera integration that positively declares a
+usable audio backchannel; generic WebRTC playback alone is not sufficient.
+
+Older Home Assistant versions and integrations that have not adopted the
+standard capability use a bounded, microphone-free compatibility probe through
+Home Assistant's standard camera WebRTC signaling contract. The probe offers a
+send-only audio transceiver and accepts support only when the remote SDP answer
+accepts browser-to-camera audio. It closes immediately, never requests
+microphone permission, and never calls a provider API directly. The real talk
+connection validates the same SDP property before declaring success. YAML omits
 the option at its default `false` value.
 
-The initial Home Assistant provider supports camera entities whose public
-camera capabilities include WebRTC. Future providers implement the same public
-resolver contract rather than adding provider branches to the module.
+Future connection providers implement capability discovery and signaling in
+their own provider adapter. A future Frigate go2rtc connection may use the
+integration API directly; that behavior must not be added to the Home Assistant
+provider or the provider-neutral module.
 
 ## Signaling fallback
 
@@ -40,7 +50,11 @@ does not contain signaling-path conditions.
 - The inactive microphone control follows the camera overlay's shared
   visibility state and hide timer.
 - Starting talk requests microphone permission and connects with the outgoing
-  microphone live. Active talk controls remain visible.
+  microphone live. While startup is pending, the same microphone control shows
+  progress and cancels the attempt. Active talk controls remain visible.
+- A successful talk connection explicitly unmutes the active camera through
+  the existing camera audio intent. Cancellation and failure do not change its
+  mute state.
 - The center control disconnects talk. The small microphone control disables
   only the outgoing audio track and keeps the peer alive.
 - The speaker control dispatches the active camera's typed mute intent. It uses

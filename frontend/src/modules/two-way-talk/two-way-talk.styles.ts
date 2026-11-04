@@ -84,6 +84,24 @@ export const twoWayTalkStyles = css`
     border: 1px solid var(--wzc-media-overlay-border-color);
   }
 
+  button.inactive.connecting::after {
+    content: "";
+    position: absolute;
+    inset: -0.35rem;
+    border: 2px solid
+      color-mix(in srgb, var(--wzc-talk-connecting-color) 30%, transparent);
+    border-block-start-color: var(--wzc-talk-connecting-color);
+    border-radius: 50%;
+    animation: wzc-talk-connecting 700ms linear infinite;
+    pointer-events: none;
+  }
+
+  @keyframes wzc-talk-connecting {
+    to {
+      transform: rotate(1turn);
+    }
+  }
+
   button:focus-visible {
     outline: 2px solid var(--wzc-color-primary);
     outline-offset: 2px;
@@ -137,6 +155,10 @@ export const twoWayTalkStyles = css`
   @media (prefers-reduced-motion: reduce) {
     .inactive-control {
       transition: none;
+    }
+
+    button.inactive.connecting::after {
+      animation-duration: 1.4s;
     }
   }
 `;

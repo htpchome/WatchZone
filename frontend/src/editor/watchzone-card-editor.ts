@@ -1,4 +1,4 @@
-import { html, LitElement } from "lit";
+import { html, LitElement, nothing } from "lit";
 import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import {
@@ -25,9 +25,9 @@ import {
   isHomeAssistant,
   type HomeAssistant,
 } from "../core/home-assistant";
-import { getTalkCapability } from "../api/talk-signaling";
 import { LocalizationController } from "../core/localization";
 import { toYamlCardConfig, type YamlCardConfig } from "../core/yaml-config";
+import { TalkSourceResolver } from "../providers/talk-source-resolver";
 import { themeTokens } from "../styles/theme-tokens";
 import { ToastManager } from "../ui/toast-manager";
 import { renderIcon } from "../ui/icons";
@@ -98,6 +98,7 @@ export class CardEditor extends LitElement {
   private _hass?: HomeAssistant;
   private _previewTimer?: ReturnType<typeof setTimeout>;
   private readonly _toasts = new ToastManager(this);
+  private readonly _talkResolver = new TalkSourceResolver();
   private readonly _localization = new LocalizationController(this, () =>
     this._syncDraftStatus(),
   );
@@ -372,12 +373,15 @@ export class CardEditor extends LitElement {
           </section>
           <section>
             <h3>${this._t("editor.two_way_talk")}</h3>
-            ${this._renderCameraBoolean(
-              "two_way_talk_enabled",
-              this._t("editor.enable_two_way_talk"),
-              camera?.two_way_talk_enabled ?? false,
-              this._talkCapabilityPending || this._talkCapability !== true,
-            )}
+            ${
+              this._talkCapability === true
+                ? this._renderCameraBoolean(
+                    "two_way_talk_enabled",
+                    this._t("editor.enable_two_way_talk"),
+                    camera?.two_way_talk_enabled ?? false,
+                  )
+                : nothing
+            }
             <small class="capability-status">
               ${
                 this._talkCapabilityPending
@@ -620,7 +624,8 @@ export class CardEditor extends LitElement {
     }
     this._talkCapabilityPending = true;
     this.requestUpdate();
-    void getTalkCapability(createHomeAssistantApi(this._hass), entityId)
+    void this._talkResolver
+      .supports(createHomeAssistantApi(this._hass), entityId)
       .then((supported) => {
         if (generation !== this._talkCapabilityGeneration) return;
         this._talkCapability = supported;

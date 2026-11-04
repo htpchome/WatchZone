@@ -77,6 +77,69 @@ describe("two-way-talk session lifecycle", () => {
     expect(close).toHaveBeenCalledOnce();
     expect(controller.active).toBe(false);
   });
+
+  it("aborts startup without reporting a connection failure", async () => {
+    let startupSignal: AbortSignal | undefined;
+    resolver.supports.mockResolvedValue(true);
+    resolver.connect.mockImplementation(
+      (_api: HomeAssistantApi, _entityId: string, signal: AbortSignal) => {
+        startupSignal = signal;
+        return new Promise((_resolve, reject) => {
+          signal.addEventListener(
+            "abort",
+            () => reject(new DOMException("Aborted", "AbortError")),
+            { once: true },
+          );
+        });
+      },
+    );
+    const callbacks = {
+      onConnected: vi.fn(),
+      onFailed: vi.fn(),
+      onStopped: vi.fn(),
+    };
+    const controller = new TalkSessionController(new Host(), callbacks);
+    const cameraContext = new CameraSessionContext();
+    controller.configure(api(), cameraContext, ["camera.front"]);
+    cameraContext.publish({}, camera("camera.front"));
+    await vi.waitFor(() => expect(controller.supported).toBe(true));
+
+    const startup = controller.start();
+    await vi.waitFor(() => expect(controller.connecting).toBe(true));
+    controller.stop();
+    await startup;
+
+    expect(startupSignal?.aborted).toBe(true);
+    expect(controller.connecting).toBe(false);
+    expect(callbacks.onConnected).not.toHaveBeenCalled();
+    expect(callbacks.onFailed).not.toHaveBeenCalled();
+    expect(callbacks.onStopped).toHaveBeenCalledOnce();
+  });
+
+  it("unmutes the active camera only after talk connects", async () => {
+    resolver.supports.mockResolvedValue(true);
+    resolver.connect.mockResolvedValue({
+      close: vi.fn(),
+      localStream: {} as MediaStream,
+      setMicrophoneMuted: vi.fn(),
+    });
+    const activeCamera = camera("camera.front");
+    const controller = new TalkSessionController(new Host(), {
+      onConnected: vi.fn(),
+      onFailed: vi.fn(),
+      onStopped: vi.fn(),
+    });
+    const cameraContext = new CameraSessionContext();
+    controller.configure(api(), cameraContext, ["camera.front"]);
+    cameraContext.publish({}, activeCamera);
+    await vi.waitFor(() => expect(controller.supported).toBe(true));
+
+    expect(activeCamera.setMuted).not.toHaveBeenCalled();
+    await controller.start();
+
+    expect(activeCamera.setMuted).toHaveBeenCalledOnce();
+    expect(activeCamera.setMuted).toHaveBeenCalledWith(false);
+  });
 });
 
 class Host {
