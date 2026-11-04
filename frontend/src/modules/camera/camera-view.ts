@@ -257,6 +257,8 @@ export class CameraView extends LitElement {
       incomingStream: this._session.webRtcStream,
       muted: this._audio.muted,
       overlayVisible: this.overlayVisible,
+      holdOverlay: () => this._presentation?.holdOverlay() ?? (() => undefined),
+      revealOverlay: () => this._presentation?.revealOverlay(),
       setMuted: (muted) => this._audio.setUserMuted(muted),
     });
   }

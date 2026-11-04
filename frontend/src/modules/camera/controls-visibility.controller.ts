@@ -8,6 +8,7 @@ export class CameraControlsVisibilityController implements ReactiveController {
   public visible = false;
 
   private _focused = false;
+  private _holds = 0;
   private _hideTimer?: ReturnType<typeof setTimeout>;
   private _hovered = false;
   private _interactionRoot?: HTMLElement;
@@ -24,6 +25,7 @@ export class CameraControlsVisibilityController implements ReactiveController {
     this._clearHideTimer();
     this._focused = false;
     this._hovered = false;
+    this._holds = 0;
     this.sourceVisible = false;
     this.visible = false;
     this._onVisibilityChange?.(false);
@@ -34,6 +36,23 @@ export class CameraControlsVisibilityController implements ReactiveController {
     this.sourceVisible = true;
     this._host.requestUpdate();
     this._scheduleHide();
+  }
+
+  public reveal(): void {
+    this._show();
+    this._scheduleHide();
+  }
+
+  public hold(): () => void {
+    this._holds += 1;
+    this._show();
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      this._holds = Math.max(0, this._holds - 1);
+      this._scheduleHide();
+    };
   }
 
   public readonly handlePointerEnter = (event: PointerEvent): void => {
@@ -92,12 +111,13 @@ export class CameraControlsVisibilityController implements ReactiveController {
 
   private _scheduleHide(): void {
     this._clearHideTimer();
-    if (this._hovered || this._focused) return;
+    if (this._hovered || this._focused || this._holds > 0) return;
     this._hideTimer = setTimeout(() => {
       this._hideTimer = undefined;
       if (
         this._hovered ||
         this._focused ||
+        this._holds > 0 ||
         this._interactionRoot?.matches(":hover")
       ) {
         return;

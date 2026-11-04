@@ -22,6 +22,9 @@ For the Home Assistant direct live connection, also read
 For two-way talk signaling, controls, audio visualization, or microphone
 lifecycle, also read `docs/two-way-talk.md` in full.
 
+For PTZ capability discovery, controls, or motion lifecycle, also read
+`docs/ptz.md` in full.
+
 For diagnostics, timing instrumentation, or future logging work, also read
 `docs/diagnostics.md` in full.
 

@@ -9,6 +9,7 @@ const providersRoot = resolve(sourceRoot, "providers");
 const obsoleteConnectionsRoot = resolve(sourceRoot, "connections");
 const publicProviderResolvers = new Set([
   "live-source-resolver",
+  "ptz-source-resolver",
   "talk-source-resolver",
 ]);
 

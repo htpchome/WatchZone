@@ -59,5 +59,16 @@
   "talk.failed": "Nie udało się połączyć rozmowy dwukierunkowej",
   "talk.disconnect": "Rozłącz rozmowę dwukierunkową",
   "talk.mute_microphone": "Wycisz mikrofon",
-  "talk.unmute_microphone": "Włącz mikrofon"
+  "talk.unmute_microphone": "Włącz mikrofon",
+  "editor.ptz": "Sterowanie PTZ",
+  "editor.enable_ptz": "Włącz sterowanie PTZ",
+  "editor.checking_ptz": "Sprawdzanie obsługi PTZ…",
+  "editor.ptz_available": "Sterowanie PTZ jest dostępne dla tej kamery.",
+  "editor.ptz_unavailable": "Home Assistant nie udostępnia sterowania PTZ dla tej kamery.",
+  "ptz.controls": "Sterowanie obrotem i pochyleniem",
+  "ptz.up": "Przesuń kamerę w górę",
+  "ptz.down": "Przesuń kamerę w dół",
+  "ptz.left": "Przesuń kamerę w lewo",
+  "ptz.right": "Przesuń kamerę w prawo",
+  "ptz.failed": "Ruch kamery nie powiódł się"
 }

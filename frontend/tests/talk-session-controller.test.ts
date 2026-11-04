@@ -155,6 +155,8 @@ function camera(entityId: string) {
     entityId,
     muted: true,
     overlayVisible: true,
+    holdOverlay: vi.fn(() => vi.fn()),
+    revealOverlay: vi.fn(),
     setMuted: vi.fn(),
   };
 }

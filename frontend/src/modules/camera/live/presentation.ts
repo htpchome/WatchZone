@@ -160,6 +160,14 @@ export class CameraLivePresentation extends LitElement {
     this._zoom.setBasePresentationScale(scale);
   }
 
+  public revealOverlay(): void {
+    this._visibility.reveal();
+  }
+
+  public holdOverlay(): () => void {
+    return this._visibility.hold();
+  }
+
   public connectedCallback(): void {
     super.connectedCallback();
     document.addEventListener("fullscreenchange", this._syncControlState);

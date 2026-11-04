@@ -33,6 +33,7 @@ describe("WatchZone card configuration", () => {
         camera_rounded_corners: true,
         camera_shadows: true,
         low_latency_hls: false,
+        ptz_enabled: false,
         start_live_unmuted_pc_tablet: true,
         start_live_unmuted_phone: false,
         two_way_talk_enabled: false,
@@ -45,6 +46,14 @@ describe("WatchZone card configuration", () => {
       normalizeCardConfig({
         cameras: [{ entity_id: "camera.front", two_way_talk_enabled: true }],
       }).cameras[0]?.two_way_talk_enabled,
+    ).toBe(true);
+  });
+
+  it("normalizes the opt-in PTZ camera capability", () => {
+    expect(
+      normalizeCardConfig({
+        cameras: [{ entity_id: "camera.front", ptz_enabled: true }],
+      }).cameras[0]?.ptz_enabled,
     ).toBe(true);
   });
 

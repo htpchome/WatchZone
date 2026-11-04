@@ -15,5 +15,16 @@
   "talk.failed": "Two-way talk failed to connect",
   "talk.disconnect": "Disconnect two-way talk",
   "talk.mute_microphone": "Mute microphone",
-  "talk.unmute_microphone": "Unmute microphone"
+  "talk.unmute_microphone": "Unmute microphone",
+  "editor.ptz": "PTZ Controls",
+  "editor.enable_ptz": "Enable PTZ Controls",
+  "editor.checking_ptz": "Checking PTZ capability…",
+  "editor.ptz_available": "PTZ controls are available for this camera.",
+  "editor.ptz_unavailable": "Home Assistant does not expose PTZ controls for this camera.",
+  "ptz.controls": "Pan and tilt controls",
+  "ptz.up": "Move camera up",
+  "ptz.down": "Move camera down",
+  "ptz.left": "Move camera left",
+  "ptz.right": "Move camera right",
+  "ptz.failed": "Camera movement failed"
 }

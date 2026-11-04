@@ -41,8 +41,10 @@ from .extensions import (
 from .features.camera_runtime import CameraRuntimeService
 from .features.hls_prewarm import HlsPrewarmService
 from .features.live import LiveSignalingService
+from .features.ptz import PtzService
 from .providers.frigate import camera as frigate_camera
 from .providers.frigate import live as frigate_live
+from .providers.home_assistant.ptz import ptz as home_assistant_ptz
 from .runtime import WatchZoneRuntime
 
 _LOGGER = logging.getLogger(__name__)
@@ -84,11 +86,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     _register_builtin_providers(hass)
     from .api.camera import async_register as async_register_camera_api
     from .api.live import async_register as async_register_live_api
+    from .api.ptz import async_register as async_register_ptz_api
     from .api.talk import async_register as async_register_talk_api
 
     async_register_camera_api(hass)
     async_register_live_api(hass)
     async_register_talk_api(hass)
+    async_register_ptz_api(hass)
     return True
 
 
@@ -104,6 +108,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WatchZoneConfigEntry) ->
         camera_runtime=camera_runtime,
         hls_prewarm=hls_prewarm,
         live_signaling=LiveSignalingService(hass, providers),
+        ptz=PtzService(hass, providers),
     )
     entry.runtime_data = runtime
     hass.data.setdefault(DOMAIN, {})[DATA_RUNTIME] = runtime
@@ -166,6 +171,14 @@ def _register_builtin_providers(hass: HomeAssistant) -> ProviderRegistry:
     registry = get_provider_registry(hass)
     if domain_data.get(_DATA_BUILTIN_PROVIDERS) is True:
         return registry
+    registry.register(
+        ProviderExtension(
+            api_version=EXTENSION_API_VERSION,
+            provider_id="home_assistant",
+            entity_platforms=frozenset(),
+            ptz=home_assistant_ptz,
+        )
+    )
     registry.register(
         ProviderExtension(
             api_version=EXTENSION_API_VERSION,

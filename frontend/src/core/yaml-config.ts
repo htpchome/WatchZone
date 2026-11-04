@@ -29,6 +29,7 @@ function compactCameraConfig(camera: CameraConfig): Record<string, unknown> {
   if (!camera.camera_rounded_corners) compact.camera_rounded_corners = false;
   if (!camera.camera_shadows) compact.camera_shadows = false;
   if (!camera.low_latency_hls) compact.low_latency_hls = false;
+  if (camera.ptz_enabled) compact.ptz_enabled = true;
   if (camera.start_live_unmuted_pc_tablet)
     compact.start_live_unmuted_pc_tablet = true;
   if (camera.start_live_unmuted_phone) compact.start_live_unmuted_phone = true;

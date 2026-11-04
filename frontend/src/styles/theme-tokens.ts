@@ -200,6 +200,16 @@ export const themeTokens = css`
     --wzc-talk-panel-border-color: var(--ha-color-purple-50, #a78bfa);
     --wzc-talk-wave-incoming-color: var(--ha-color-blue-40, #60a5fa);
     --wzc-talk-wave-outgoing-color: var(--ha-color-purple-40, #c084fc);
+    --wzc-ptz-button-size: clamp(1.15rem, 4.5cqi, 1.7rem);
+    --wzc-ptz-icon-padding: 0.1rem;
+    --wzc-ptz-inline-gap: 1rem;
+    --wzc-ptz-panel-padding: 0.18rem;
+    --wzc-ptz-safe-block: 0.5rem;
+    --wzc-ptz-panel-background: color-mix(
+      in srgb,
+      var(--wzc-media-overlay-surface) var(--wzc-media-overlay-opacity),
+      transparent
+    );
 
     --wzc-accordion-background: var(--wzc-color-background);
     --wzc-accordion-header-color: var(--wzc-color-text-1);

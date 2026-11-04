@@ -8,6 +8,7 @@ import { normalizeCardConfig } from "../src/core/config";
 import {
   DEFAULT_CAMERA_MODULE_NODE_ID,
   DEFAULT_LAYOUT_ROOT_NODE_ID,
+  DEFAULT_PTZ_MODULE_NODE_ID,
   DEFAULT_TALK_MODULE_NODE_ID,
 } from "../src/core/constants";
 import { validateLayoutDocument } from "../src/core/layout";
@@ -87,6 +88,27 @@ describe("layout composition", () => {
       kind: "module",
       moduleType: "two_way_talk",
       config: { enabledCameraIds: ["camera.front"] },
+    });
+  });
+
+  it("composes an independent provider-resolved PTZ overlay", () => {
+    const layout = createDefaultCardLayout(
+      normalizeCardConfig({
+        cameras: [
+          { entity_id: "camera.front", ptz_enabled: true },
+          { entity_id: "camera.back" },
+        ],
+      }),
+    );
+
+    expect(layout.root.presentation).toBe("overlay");
+    expect(layout.root.children[1]).toMatchObject({
+      id: DEFAULT_PTZ_MODULE_NODE_ID,
+      kind: "module",
+      moduleType: "ptz",
+      config: {
+        cameras: [{ entityId: "camera.front", provider: "home_assistant" }],
+      },
     });
   });
 

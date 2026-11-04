@@ -15,6 +15,7 @@ from .providers.live import (
     ProviderPreparationError,
     SendLiveSignalingEvent,
 )
+from .providers.ptz import PtzProvider
 
 __all__ = [
     "EXTENSION_API_VERSION",
@@ -24,6 +25,7 @@ __all__ = [
     "LiveSignalingSession",
     "ProviderExtension",
     "ProviderPreparationError",
+    "PtzProvider",
     "SendLiveSignalingEvent",
     "register_provider_extension",
 ]
@@ -43,6 +45,7 @@ class ProviderExtension:
     camera_runtime_poll_interval: float | None = None
     live_signaling: LiveSignalingProvider | None = None
     talk_signaling: LiveSignalingProvider | None = None
+    ptz: PtzProvider | None = None
 
 
 class ProviderRegistry:
@@ -101,6 +104,11 @@ class ProviderRegistry:
         extension = self._platforms.get(platform)
         return extension.talk_signaling if extension else None
 
+    def ptz(self, provider_id: str) -> PtzProvider | None:
+        """Resolve PTZ by explicit connection-provider identity."""
+        extension = self._providers.get(provider_id)
+        return extension.ptz if extension else None
+
     @staticmethod
     def _validate(extension: ProviderExtension) -> None:
         if extension.api_version != EXTENSION_API_VERSION:
@@ -110,10 +118,14 @@ class ProviderRegistry:
             )
         if not extension.provider_id.strip():
             raise ValueError("Provider extension ID must not be empty")
-        if not extension.entity_platforms or any(
+        if any(
             not platform.strip() for platform in extension.entity_platforms
         ):
-            raise ValueError("Provider extension must declare entity platforms")
+            raise ValueError("Provider entity platforms must not be empty strings")
+        if not extension.entity_platforms and extension.ptz is None:
+            raise ValueError(
+                "Provider extension must declare entity platforms or PTZ"
+            )
         interval = extension.camera_runtime_poll_interval
         if interval is not None and (
             isinstance(interval, bool) or interval <= 0

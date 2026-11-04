@@ -59,5 +59,16 @@
   "talk.failed": "Gegensprechen konnte nicht verbunden werden",
   "talk.disconnect": "Gegensprechen trennen",
   "talk.mute_microphone": "Mikrofon stummschalten",
-  "talk.unmute_microphone": "Mikrofon einschalten"
+  "talk.unmute_microphone": "Mikrofon einschalten",
+  "editor.ptz": "PTZ-Steuerung",
+  "editor.enable_ptz": "PTZ-Steuerung aktivieren",
+  "editor.checking_ptz": "PTZ-Fähigkeit wird geprüft…",
+  "editor.ptz_available": "PTZ-Steuerung ist für diese Kamera verfügbar.",
+  "editor.ptz_unavailable": "Home Assistant stellt für diese Kamera keine PTZ-Steuerung bereit.",
+  "ptz.controls": "Schwenk- und Neigesteuerung",
+  "ptz.up": "Kamera nach oben bewegen",
+  "ptz.down": "Kamera nach unten bewegen",
+  "ptz.left": "Kamera nach links bewegen",
+  "ptz.right": "Kamera nach rechts bewegen",
+  "ptz.failed": "Kamerabewegung fehlgeschlagen"
 }

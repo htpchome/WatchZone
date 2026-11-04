@@ -28,6 +28,8 @@ import {
 import { LocalizationController } from "../core/localization";
 import { toYamlCardConfig, type YamlCardConfig } from "../core/yaml-config";
 import { TalkSourceResolver } from "../providers/talk-source-resolver";
+import { PtzSourceResolver } from "../providers/ptz-source-resolver";
+import type { PtzCapability } from "../api/ptz";
 import { themeTokens } from "../styles/theme-tokens";
 import { ToastManager } from "../ui/toast-manager";
 import { renderIcon } from "../ui/icons";
@@ -92,6 +94,9 @@ export class CardEditor extends LitElement {
   private _talkCapability?: boolean;
   private _talkCapabilityGeneration = 0;
   private _talkCapabilityPending = false;
+  private _ptzCapability?: PtzCapability;
+  private _ptzCapabilityGeneration = 0;
+  private _ptzCapabilityPending = false;
   private _editingCameraIndex?: number;
   private _dirtyContext?: DirtyStateContext<YamlCardConfig>;
   private _dirtySeeded = false;
@@ -99,6 +104,7 @@ export class CardEditor extends LitElement {
   private _previewTimer?: ReturnType<typeof setTimeout>;
   private readonly _toasts = new ToastManager(this);
   private readonly _talkResolver = new TalkSourceResolver();
+  private readonly _ptzResolver = new PtzSourceResolver();
   private readonly _localization = new LocalizationController(this, () =>
     this._syncDraftStatus(),
   );
@@ -393,6 +399,27 @@ export class CardEditor extends LitElement {
             </small>
           </section>
           <section>
+            <h3>${this._t("editor.ptz")}</h3>
+            ${
+              this._ptzCapability?.supported === true
+                ? this._renderCameraBoolean(
+                    "ptz_enabled",
+                    this._t("editor.enable_ptz"),
+                    camera?.ptz_enabled ?? false,
+                  )
+                : nothing
+            }
+            <small class="capability-status">
+              ${
+                this._ptzCapabilityPending
+                  ? this._t("editor.checking_ptz")
+                  : this._ptzCapability?.supported === true
+                    ? this._t("editor.ptz_available")
+                    : this._t("editor.ptz_unavailable")
+              }
+            </small>
+          </section>
+          <section>
             <h3>${this._t("editor.appearance")}</h3>
             ${this._renderCameraBoolean(
               "camera_rounded_corners",
@@ -497,6 +524,7 @@ export class CardEditor extends LitElement {
       typeof event.detail.value === "string" ? event.detail.value.trim() : "";
     this._cameraDraft = { ...this._cameraDraft, entity_id: value };
     this._checkTalkCapability(value);
+    this._checkPtzCapability(value);
     this.requestUpdate();
   };
 
@@ -520,6 +548,8 @@ export class CardEditor extends LitElement {
     this._cameraDraft = createDefaultCameraConfig();
     this._talkCapability = undefined;
     this._talkCapabilityPending = false;
+    this._ptzCapability = undefined;
+    this._ptzCapabilityPending = false;
     this.requestUpdate();
   };
 
@@ -532,6 +562,7 @@ export class CardEditor extends LitElement {
     this._editingCameraIndex = index;
     this._cameraDraft = { ...camera };
     this._checkTalkCapability(camera.entity_id);
+    this._checkPtzCapability(camera.entity_id);
     this.requestUpdate();
   };
 
@@ -551,6 +582,9 @@ export class CardEditor extends LitElement {
     this._talkCapabilityGeneration += 1;
     this._talkCapability = undefined;
     this._talkCapabilityPending = false;
+    this._ptzCapabilityGeneration += 1;
+    this._ptzCapability = undefined;
+    this._ptzCapabilityPending = false;
     this._editingCameraIndex = undefined;
     this.requestUpdate();
   };
@@ -641,6 +675,37 @@ export class CardEditor extends LitElement {
       });
   }
 
+  private _checkPtzCapability(entityId: string): void {
+    const generation = ++this._ptzCapabilityGeneration;
+    this._ptzCapability = undefined;
+    if (!this._hass || !entityId.startsWith("camera.")) {
+      this._ptzCapabilityPending = false;
+      this.requestUpdate();
+      return;
+    }
+    this._ptzCapabilityPending = true;
+    this.requestUpdate();
+    void this._ptzResolver
+      .capability(
+        createHomeAssistantApi(this._hass),
+        "home_assistant",
+        entityId,
+      )
+      .then((capability) => {
+        if (generation !== this._ptzCapabilityGeneration) return;
+        this._ptzCapability = capability;
+      })
+      .catch(() => {
+        if (generation !== this._ptzCapabilityGeneration) return;
+        this._ptzCapability = undefined;
+      })
+      .finally(() => {
+        if (generation !== this._ptzCapabilityGeneration) return;
+        this._ptzCapabilityPending = false;
+        this.requestUpdate();
+      });
+  }
+
   private _cameraSummary(camera: CameraConfig): string {
     const connection = camera.low_latency_hls
       ? this._t("editor.low_latency_hls")
@@ -656,11 +721,12 @@ export class CardEditor extends LitElement {
     const talk = camera.two_way_talk_enabled
       ? ` · ${this._t("editor.two_way_talk")}`
       : "";
+    const ptz = camera.ptz_enabled ? ` · ${this._t("editor.ptz")}` : "";
     return `${connection} · ${
       audio.length
         ? this._t("editor.unmuted", { devices: audio.join(", ") })
         : this._t("editor.muted")
-    }${talk}`;
+    }${talk}${ptz}`;
   }
 
   private readonly _handleBooleanChange = (event: ValueChangedEvent): void => {

@@ -59,5 +59,16 @@
   "talk.failed": "No s’ha pogut connectar la comunicació bidireccional",
   "talk.disconnect": "Desconnecta la comunicació bidireccional",
   "talk.mute_microphone": "Silencia el micròfon",
-  "talk.unmute_microphone": "Activa el micròfon"
+  "talk.unmute_microphone": "Activa el micròfon",
+  "editor.ptz": "Controls PTZ",
+  "editor.enable_ptz": "Activa els controls PTZ",
+  "editor.checking_ptz": "S’està comprovant la capacitat PTZ…",
+  "editor.ptz_available": "Els controls PTZ estan disponibles per a aquesta càmera.",
+  "editor.ptz_unavailable": "Home Assistant no ofereix controls PTZ per a aquesta càmera.",
+  "ptz.controls": "Controls de panoràmica i inclinació",
+  "ptz.up": "Mou la càmera amunt",
+  "ptz.down": "Mou la càmera avall",
+  "ptz.left": "Mou la càmera a l’esquerra",
+  "ptz.right": "Mou la càmera a la dreta",
+  "ptz.failed": "Ha fallat el moviment de la càmera"
 }

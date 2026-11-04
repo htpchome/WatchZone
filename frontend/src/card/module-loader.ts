@@ -1,4 +1,8 @@
-import { CAMERA_MODULE_TYPE, TALK_MODULE_TYPE } from "../core/constants";
+import {
+  CAMERA_MODULE_TYPE,
+  PTZ_MODULE_TYPE,
+  TALK_MODULE_TYPE,
+} from "../core/constants";
 import type {
   ModuleDefinition,
   ModuleLoaderMap,
@@ -12,6 +16,9 @@ const moduleLoaders = {
   },
   [TALK_MODULE_TYPE]: {
     load: () => import("../modules/two-way-talk"),
+  },
+  [PTZ_MODULE_TYPE]: {
+    load: () => import("../modules/ptz"),
   },
 } satisfies ModuleLoaderMap;
 

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from .features.camera_runtime import CameraRuntimeService
 from .features.hls_prewarm import HlsPrewarmService
 from .features.live import LiveSignalingService
+from .features.ptz import PtzService
 
 
 @dataclass(slots=True)
@@ -15,9 +16,11 @@ class WatchZoneRuntime:
     camera_runtime: CameraRuntimeService
     hls_prewarm: HlsPrewarmService
     live_signaling: LiveSignalingService
+    ptz: PtzService
 
     async def async_close(self) -> None:
         """Release integration-owned runtime resources."""
         await self.camera_runtime.async_close()
         await self.hls_prewarm.async_close()
         await self.live_signaling.async_close()
+        await self.ptz.async_close()

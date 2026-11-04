@@ -59,5 +59,16 @@
   "talk.failed": "Échec de la connexion audio bidirectionnelle",
   "talk.disconnect": "Déconnecter l’audio bidirectionnel",
   "talk.mute_microphone": "Couper le microphone",
-  "talk.unmute_microphone": "Activer le microphone"
+  "talk.unmute_microphone": "Activer le microphone",
+  "editor.ptz": "Commandes PTZ",
+  "editor.enable_ptz": "Activer les commandes PTZ",
+  "editor.checking_ptz": "Vérification de la compatibilité PTZ…",
+  "editor.ptz_available": "Les commandes PTZ sont disponibles pour cette caméra.",
+  "editor.ptz_unavailable": "Home Assistant n’expose pas de commandes PTZ pour cette caméra.",
+  "ptz.controls": "Commandes de panoramique et d’inclinaison",
+  "ptz.up": "Déplacer la caméra vers le haut",
+  "ptz.down": "Déplacer la caméra vers le bas",
+  "ptz.left": "Déplacer la caméra vers la gauche",
+  "ptz.right": "Déplacer la caméra vers la droite",
+  "ptz.failed": "Échec du déplacement de la caméra"
 }

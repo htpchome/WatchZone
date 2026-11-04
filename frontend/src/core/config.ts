@@ -10,6 +10,7 @@ export interface CameraConfig {
   readonly camera_shadows: boolean;
   readonly entity_id: string;
   readonly low_latency_hls: boolean;
+  readonly ptz_enabled: boolean;
   readonly start_live_unmuted_pc_tablet: boolean;
   readonly start_live_unmuted_phone: boolean;
   readonly two_way_talk_enabled: boolean;
@@ -86,6 +87,7 @@ export function createDefaultCameraConfig(entityId = ""): CameraConfig {
     camera_shadows: true,
     entity_id: entityId,
     low_latency_hls: true,
+    ptz_enabled: false,
     start_live_unmuted_pc_tablet: false,
     start_live_unmuted_phone: false,
     two_way_talk_enabled: false,
@@ -126,6 +128,7 @@ function legacyCamera(
       camera_shadows: source.camera_shadows,
       entity_id: source.camera_entity,
       low_latency_hls: source.low_latency_hls,
+      ptz_enabled: source.ptz_enabled,
       start_live_unmuted_pc_tablet: source.start_live_unmuted_pc_tablet,
       start_live_unmuted_phone: source.start_live_unmuted_phone,
       two_way_talk_enabled: source.two_way_talk_enabled,
@@ -151,6 +154,7 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
     "camera_rounded_corners",
     "camera_shadows",
     "low_latency_hls",
+    "ptz_enabled",
     "start_live_unmuted_pc_tablet",
     "start_live_unmuted_phone",
     "two_way_talk_enabled",
@@ -179,6 +183,7 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
       typeof source.low_latency_hls === "boolean"
         ? source.low_latency_hls
         : defaults.low_latency_hls,
+    ptz_enabled: source.ptz_enabled === true,
     start_live_unmuted_pc_tablet: source.start_live_unmuted_pc_tablet === true,
     start_live_unmuted_phone: source.start_live_unmuted_phone === true,
     two_way_talk_enabled: source.two_way_talk_enabled === true,

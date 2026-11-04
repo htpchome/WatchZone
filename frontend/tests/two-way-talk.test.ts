@@ -48,6 +48,8 @@ function cameraSession(overlayVisible: boolean) {
     entityId: "camera.front",
     muted: true,
     overlayVisible,
+    holdOverlay: vi.fn(() => vi.fn()),
+    revealOverlay: vi.fn(),
     setMuted: vi.fn(),
   };
 }

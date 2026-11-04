@@ -59,5 +59,16 @@
   "talk.failed": "Connessione audio bidirezionale non riuscita",
   "talk.disconnect": "Disconnetti audio bidirezionale",
   "talk.mute_microphone": "Disattiva microfono",
-  "talk.unmute_microphone": "Attiva microfono"
+  "talk.unmute_microphone": "Attiva microfono",
+  "editor.ptz": "Controlli PTZ",
+  "editor.enable_ptz": "Abilita controlli PTZ",
+  "editor.checking_ptz": "Verifica funzionalità PTZ…",
+  "editor.ptz_available": "I controlli PTZ sono disponibili per questa videocamera.",
+  "editor.ptz_unavailable": "Home Assistant non espone controlli PTZ per questa videocamera.",
+  "ptz.controls": "Controlli panoramica e inclinazione",
+  "ptz.up": "Sposta videocamera verso l’alto",
+  "ptz.down": "Sposta videocamera verso il basso",
+  "ptz.left": "Sposta videocamera a sinistra",
+  "ptz.right": "Sposta videocamera a destra",
+  "ptz.failed": "Movimento della videocamera non riuscito"
 }

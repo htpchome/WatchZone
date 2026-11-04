@@ -4,6 +4,8 @@ export interface ActiveCameraSession {
   readonly incomingStream?: MediaStream;
   readonly muted: boolean;
   readonly overlayVisible: boolean;
+  holdOverlay(): () => void;
+  revealOverlay(): void;
   setMuted(muted: boolean): void;
 }
 

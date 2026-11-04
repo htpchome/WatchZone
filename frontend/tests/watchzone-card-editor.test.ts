@@ -470,6 +470,7 @@ describe("watchzone-card-editor", () => {
           camera_rounded_corners: true,
           camera_shadows: true,
           low_latency_hls: true,
+          ptz_enabled: false,
           start_live_unmuted_pc_tablet: false,
           start_live_unmuted_phone: false,
           two_way_talk_enabled: false,
