@@ -1474,6 +1474,7 @@ test("retains one live connection while the card presentation is replaced", asyn
   });
   expect(overlayTransitions.source).toBe(overlayTransitions.controls);
   const viewport = page.locator("wzc-camera-live .viewport");
+  const cameraStage = page.locator("wzc-camera .camera-carousel");
   const cameraSurface = page.locator("wzc-camera .camera");
   await expect
     .poll(() =>
@@ -1499,20 +1500,20 @@ test("retains one live connection while the card presentation is replaced", asyn
     .toBe("none");
   await expect
     .poll(() =>
-      cameraSurface.evaluate((element) => getComputedStyle(element).boxShadow),
+      cameraStage.evaluate((element) => getComputedStyle(element).boxShadow),
     )
     .toContain("rgb(4, 5, 6)");
-  await page.locator("wzc-camera-view").evaluate(async (element) => {
-    const cameraView = element as HTMLElement & {
+  await page.locator("wzc-camera").evaluate(async (element) => {
+    const cameraModule = element as HTMLElement & {
       shadowStyle: "medium" | "none" | "small";
       updateComplete: Promise<boolean>;
     };
-    cameraView.shadowStyle = "small";
-    await cameraView.updateComplete;
+    cameraModule.shadowStyle = "small";
+    await cameraModule.updateComplete;
   });
   await expect
     .poll(() =>
-      cameraSurface.evaluate((element) => getComputedStyle(element).boxShadow),
+      cameraStage.evaluate((element) => getComputedStyle(element).boxShadow),
     )
     .toContain("rgb(7, 8, 9)");
   const cameraIdentityRetained = await page
@@ -1546,7 +1547,7 @@ test("retains one live connection while the card presentation is replaced", asyn
     .toBe("0px");
   await expect
     .poll(() =>
-      cameraSurface.evaluate((element) => getComputedStyle(element).boxShadow),
+      cameraStage.evaluate((element) => getComputedStyle(element).boxShadow),
     )
     .toBe("none");
   await viewport.hover();

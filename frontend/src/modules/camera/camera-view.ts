@@ -34,8 +34,6 @@ import {
 import type { CameraSuspendConfirmDetail } from "./suspend-dialog";
 import "./suspend-dialog";
 
-export type CameraShadowStyle = "medium" | "none" | "small";
-
 const presentationTag = unsafeStatic(CAMERA_LIVE_PRESENTATION_TAG);
 const suspendDialogTag = unsafeStatic(CAMERA_SUSPEND_DIALOG_TAG);
 
@@ -52,8 +50,6 @@ export class CameraView extends LitElement {
     localize: { attribute: false },
     overlayVisible: { attribute: false, type: Boolean },
     posterUrl: { attribute: false },
-    roundedCorners: { attribute: false, type: Boolean },
-    shadowStyle: { attribute: false },
     stageHeightRatio: { attribute: false, type: Number },
     stageResized: { attribute: false, type: Boolean },
     startUnmutedPcTablet: { attribute: false, type: Boolean },
@@ -103,8 +99,6 @@ export class CameraView extends LitElement {
   public localize: LocalizeFunction = englishLocalize;
   public overlayVisible = false;
   public posterUrl?: string;
-  public roundedCorners = true;
-  public shadowStyle: CameraShadowStyle = "medium";
   public stageHeightRatio = DEFAULT_CAMERA_STAGE_HEIGHT_RATIO;
   public stageResized = false;
   public startUnmutedPcTablet = false;
@@ -154,14 +148,7 @@ export class CameraView extends LitElement {
     const suspended = runtime?.suspended === true;
     return staticHtml`
       <div
-        class=${[
-          "camera",
-          this.roundedCorners ? "" : "square-camera-corners",
-          this.shadowStyle === "small" ? "camera-shadow-small" : "",
-          this.shadowStyle === "none" ? "camera-shadow-none" : "",
-        ]
-          .filter(Boolean)
-          .join(" ")}
+        class="camera"
       >
         <${presentationTag}
                 class="live-presentation"

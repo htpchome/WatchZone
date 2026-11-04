@@ -25,7 +25,7 @@ export const cameraViewStyles = css`
     );
     background: var(--wzc-camera-stage);
     border-radius: var(--wzc-live-radius);
-    box-shadow: var(--wzc-live-shadow);
+    box-shadow: none;
   }
 
   .camera.stage-resized {
@@ -36,18 +36,6 @@ export const cameraViewStyles = css`
     --wzc-live-background: var(--wzc-camera-stage);
     --wzc-placeholder-background: var(--wzc-camera-stage);
     --wzc-live-shadow: none;
-  }
-
-  .camera.square-camera-corners {
-    --wzc-live-radius: 0px;
-  }
-
-  .camera.camera-shadow-small {
-    box-shadow: var(--wzc-shadow-small);
-  }
-
-  .camera.camera-shadow-none {
-    box-shadow: none;
   }
 
   .stage-resize-handle {

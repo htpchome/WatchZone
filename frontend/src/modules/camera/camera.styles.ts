@@ -24,6 +24,19 @@ export const cameraStyles = css`
     overflow: hidden;
     background: var(--wzc-camera-stage);
     border-radius: var(--wzc-live-radius);
+    box-shadow: var(--wzc-live-shadow);
+  }
+
+  .camera-carousel.square-camera-corners {
+    --wzc-live-radius: 0px;
+  }
+
+  .camera-carousel.camera-shadow-small {
+    box-shadow: var(--wzc-shadow-small);
+  }
+
+  .camera-carousel.camera-shadow-none {
+    box-shadow: none;
   }
 
   .camera-carousel.camera-carousel-interactive {

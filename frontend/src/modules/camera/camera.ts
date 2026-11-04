@@ -126,7 +126,15 @@ export class CameraModule extends LitElement {
 
   protected render() {
     return staticHtml`<div
-      class="camera-carousel swiper"
+            class=${[
+              "camera-carousel",
+              "swiper",
+              this.roundedCorners ? "" : "square-camera-corners",
+              this.shadowStyle === "small" ? "camera-shadow-small" : "",
+              this.shadowStyle === "none" ? "camera-shadow-none" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
       role="region"
       aria-label=${this.localize("camera.views")}
       aria-roledescription="carousel"
@@ -158,8 +166,6 @@ export class CameraModule extends LitElement {
                 this._overlayVisibilityByCamera.get(camera.entityId) ?? false
               }
               .posterUrl=${camera.posterUrl}
-              .roundedCorners=${this.roundedCorners}
-              .shadowStyle=${this.shadowStyle}
               .stageHeightRatio=${this._stageSize.heightRatio}
               .stageResized=${this._stageSize.resized}
               .startUnmutedPcTablet=${camera.startUnmutedPcTablet}

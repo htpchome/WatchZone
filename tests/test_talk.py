@@ -18,7 +18,7 @@ def test_talk_capability_requires_home_assistant_two_way_audio() -> None:
 
 
 def test_talk_capability_uses_home_assistant_resolved_signal() -> None:
-    """The HA camera capability is the sole positive capability signal."""
+    """A native HA camera capability is accepted without compatibility probing."""
     capabilities = SimpleNamespace(
         frontend_stream_types={"web_rtc"}, two_way_audio=True
     )

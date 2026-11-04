@@ -9,9 +9,12 @@ document remains authoritative for application-wide boundaries.
 - Home Assistant owns the card's allocated grid rectangle.
 - The card shell owns the accessible card name, outer padding, and the stage
   containing the active layout's modules. It does not render a visual heading.
-- The camera module owns the camera stage and its appearance.
+- The camera module owns the camera stage, including its clipping radius and
+  stage shadow. Appearance is applied to that stable module boundary, not to an
+  individual carousel slide.
 - The live presentation fills the camera stage. It does not determine card or
-  dashboard dimensions from media metadata.
+  dashboard dimensions from media metadata, and it does not own the module
+  shadow. Its clipping radius inherits the module's stage radius.
 - Media elements own only how their intrinsic content fits inside the stage.
 
 ## Default sizing

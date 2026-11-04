@@ -18,18 +18,22 @@ boundaries. It supplements `architecture.md`, which remains authoritative.
 ## Capability and configuration
 
 Two-way talk is opt-in per camera. For the Home Assistant connection provider,
-the editor first trusts Home Assistant's resolved `two_way_audio` capability.
-This requires both WebRTC and a camera integration that positively declares a
-usable audio backchannel; generic WebRTC playback alone is not sufficient.
+the editor first uses Home Assistant's resolved `two_way_audio` capability when
+that field is available. Home Assistant 2026.9 does not expose that field on
+`CameraCapabilities`, so its absence must not be treated as a negative result.
+Both WebRTC and positive evidence of a usable audio backchannel are required;
+generic WebRTC playback alone is not sufficient.
 
-Older Home Assistant versions use an explicit compatibility capability only
-when the selected HA entity belongs to the installed Frigate integration. The
-adapter reads go2rtc's runtime producer metadata through that integration and
-requires a send-only or send-receive audio backchannel. A WebRTC SDP answer by
-itself is deliberately not accepted because go2rtc can accept an outgoing audio
-track even when the physical camera has no talkback path. Generic HA cameras
-remain unavailable until their integration publishes the native capability.
-YAML omits the option at its default `false` value.
+When the native field is unavailable, an explicit compatibility capability is
+used only when the selected HA entity belongs to the installed Frigate
+integration. The provider adapter reads go2rtc runtime metadata through the
+Frigate integration's current 0.18+ stream route, with its legacy route as a
+compatibility fallback. It requires a send-only/send-receive audio producer or
+an explicit talkback capability marker. A WebRTC SDP answer by itself is
+deliberately not accepted because go2rtc can accept an outgoing audio track
+even when the physical camera has no talkback path. Generic HA cameras remain
+unavailable until their integration publishes the native capability. YAML
+omits the option at its default `false` value.
 
 Future connection providers implement capability discovery and signaling in
 their own provider adapter. A future Frigate go2rtc connection may use the

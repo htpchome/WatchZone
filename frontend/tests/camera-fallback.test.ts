@@ -89,27 +89,28 @@ describe("camera component appearance", () => {
   });
 
   it("applies independent corner and shadow inputs", async () => {
-    const camera = document.createElement("wzc-camera-view") as CameraView;
+    const camera = document.createElement("wzc-camera") as CameraModule;
+    camera.cameras = [cameraItem("camera.front")];
     document.body.append(camera);
     await camera.updateComplete;
 
-    expect(camera.shadowRoot?.querySelector(".camera")?.className).toBe(
-      "camera",
-    );
+    expect(
+      camera.shadowRoot?.querySelector(".camera-carousel")?.className,
+    ).toBe("camera-carousel swiper");
 
     camera.roundedCorners = false;
     camera.shadowStyle = "small";
     await camera.updateComplete;
 
-    expect(camera.shadowRoot?.querySelector(".camera")?.className).toBe(
-      "camera square-camera-corners camera-shadow-small",
-    );
+    expect(
+      camera.shadowRoot?.querySelector(".camera-carousel")?.className,
+    ).toBe("camera-carousel swiper square-camera-corners camera-shadow-small");
 
     camera.shadowStyle = "none";
     await camera.updateComplete;
-    expect(camera.shadowRoot?.querySelector(".camera")?.className).toBe(
-      "camera square-camera-corners camera-shadow-none",
-    );
+    expect(
+      camera.shadowRoot?.querySelector(".camera-carousel")?.className,
+    ).toBe("camera-carousel swiper square-camera-corners camera-shadow-none");
   });
 
   it("connects only the selected camera while retaining ordered slides", async () => {

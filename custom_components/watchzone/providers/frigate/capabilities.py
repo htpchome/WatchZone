@@ -16,6 +16,22 @@ from ..ptz import PtzCapabilities
 from .live import async_get_frigate_client
 
 _CAPABILITY_TIMEOUT = ClientTimeout(total=5)
+_TALK_CAPABILITY_KEYS = frozenset(
+    {
+        "audio_out",
+        "audio_output",
+        "backchannel",
+        "mic",
+        "microphone",
+        "supports_two_way_audio",
+        "supports_two_way_talk",
+        "talk",
+        "talkback",
+        "two_way_audio",
+        "two_way_talk",
+    }
+)
+_TALK_CAPABILITY_COLLECTIONS = frozenset({"capabilities", "features"})
 
 
 class _CapabilityClient(Protocol):
@@ -86,46 +102,102 @@ async def async_two_way_audio_capability(
     client, camera_name, base_url = context
     try:
         headers = await client.get_auth_headers()
-        response = await async_get_clientsession(hass).get(
-            URL(base_url) / "api/go2rtc/streams",
-            params={
-                "src": camera_name,
-                "video": "all",
-                "audio": "all",
-                "microphone": "",
-            },
-            headers=headers,
-            ssl=client.validate_ssl,
-            timeout=_CAPABILITY_TIMEOUT,
-        )
-        async with response:
-            if response.status != 200:
-                return False
-            payload = await response.json(content_type=None)
+        session = async_get_clientsession(hass)
+        payload: object | None = None
+        for url, params in _stream_metadata_requests(base_url, camera_name):
+            response = await session.get(
+                url,
+                params=params,
+                headers=headers,
+                ssl=client.validate_ssl,
+                timeout=_CAPABILITY_TIMEOUT,
+            )
+            async with response:
+                if response.status != 200:
+                    continue
+                payload = await response.json(content_type=None)
+                break
     except Exception:
         return False
-    return _has_audio_backchannel(payload)
+    return payload is not None and _has_audio_backchannel(payload)
+
+
+def _stream_metadata_requests(
+    base_url: str, camera_name: str
+) -> tuple[tuple[URL, dict[str, str]], ...]:
+    """Return current and legacy Frigate go2rtc metadata routes."""
+    media = {"video": "all", "audio": "all", "microphone": ""}
+    return (
+        (
+            URL(base_url) / "api/go2rtc/streams" / camera_name,
+            media,
+        ),
+        (
+            URL(base_url) / "api/go2rtc/api/streams",
+            {"src": camera_name, **media},
+        ),
+    )
 
 
 def _has_audio_backchannel(payload: object) -> bool:
-    """Recognize an actual browser-to-camera audio producer."""
+    """Recognize an audio producer or an explicit provider capability marker."""
+    return _has_send_audio_producer(payload) or _has_explicit_talk_marker(payload)
+
+
+def _has_send_audio_producer(payload: object) -> bool:
+    """Find a browser-to-camera audio producer in nested stream metadata."""
+    if isinstance(payload, list):
+        return any(_has_send_audio_producer(value) for value in payload)
     if not isinstance(payload, dict):
         return False
     producers = payload.get("producers")
-    if not isinstance(producers, list):
+    if isinstance(producers, list):
+        for producer in producers:
+            if not isinstance(producer, dict):
+                continue
+            medias = producer.get("medias")
+            if not isinstance(medias, list):
+                continue
+            for media in medias:
+                token = str(media).strip().lower()
+                if "audio" in token and (
+                    "sendonly" in token or "sendrecv" in token
+                ):
+                    return True
+    return any(_has_send_audio_producer(value) for value in payload.values())
+
+
+def _has_explicit_talk_marker(payload: object) -> bool:
+    """Find only explicit capability fields, never generic camera labels."""
+    if isinstance(payload, list):
+        return any(_has_explicit_talk_marker(value) for value in payload)
+    if not isinstance(payload, dict):
         return False
-    for producer in producers:
-        if not isinstance(producer, dict):
-            continue
-        medias = producer.get("medias")
-        if not isinstance(medias, list):
-            continue
-        for media in medias:
-            token = str(media).strip().lower()
-            if "audio" in token and (
-                "sendonly" in token or "sendrecv" in token
-            ):
-                return True
+    for key, value in payload.items():
+        normalized_key = str(key).strip().lower().replace("-", "_")
+        if normalized_key in _TALK_CAPABILITY_KEYS and value is True:
+            return True
+        if normalized_key in _TALK_CAPABILITY_COLLECTIONS and _contains_talk_token(
+            value
+        ):
+            return True
+        if isinstance(value, (dict, list)) and _has_explicit_talk_marker(value):
+            return True
+    return False
+
+
+def _contains_talk_token(value: object) -> bool:
+    """Inspect one explicit feature/capability collection."""
+    if isinstance(value, str):
+        return value.strip().lower().replace("-", "_") in _TALK_CAPABILITY_KEYS
+    if isinstance(value, list):
+        return any(_contains_talk_token(item) for item in value)
+    if isinstance(value, dict):
+        return any(
+            _contains_talk_token(item)
+            for key, item in value.items()
+            if str(key).strip().lower() in {"name", "type", "value"}
+        )
     return False
 
 
