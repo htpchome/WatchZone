@@ -84,9 +84,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     _register_builtin_providers(hass)
     from .api.camera import async_register as async_register_camera_api
     from .api.live import async_register as async_register_live_api
+    from .api.talk import async_register as async_register_talk_api
 
     async_register_camera_api(hass)
     async_register_live_api(hass)
+    async_register_talk_api(hass)
     return True
 
 
@@ -172,6 +174,7 @@ def _register_builtin_providers(hass: HomeAssistant) -> ProviderRegistry:
             camera_runtime=frigate_camera,
             camera_runtime_poll_interval=1.0,
             live_signaling=frigate_live,
+            talk_signaling=frigate_live,
         )
     )
     domain_data[_DATA_BUILTIN_PROVIDERS] = True

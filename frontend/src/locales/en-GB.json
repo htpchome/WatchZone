@@ -2,5 +2,18 @@
   "editor.mobile_data_saving": "Mobile Data Saving",
   "editor.start_unmuted_pc_tablet": "Start Live Unmuted on PC/Tablet",
   "editor.start_unmuted_phone": "Start Live Unmuted on Mobile Phone",
-  "editor.unsaved_changes": "Unsaved changes — use Home Assistant's Save button to apply them."
+  "editor.unsaved_changes": "Unsaved changes — use Home Assistant's Save button to apply them.",
+  "editor.two_way_talk": "Two-Way Talk",
+  "editor.enable_two_way_talk": "Enable Two-Way Talk",
+  "editor.checking_two_way_talk": "Checking camera capability…",
+  "editor.two_way_talk_available": "Two-way talk is available for this camera.",
+  "editor.two_way_talk_unavailable": "This camera does not expose a compatible WebRTC talk path.",
+  "talk.controls": "Two-way talk controls",
+  "talk.connect": "Start two-way talk",
+  "talk.connecting": "Connecting two-way talk",
+  "talk.connected": "Two-way talk connected",
+  "talk.failed": "Two-way talk failed to connect",
+  "talk.disconnect": "Disconnect two-way talk",
+  "talk.mute_microphone": "Mute microphone",
+  "talk.unmute_microphone": "Unmute microphone"
 }

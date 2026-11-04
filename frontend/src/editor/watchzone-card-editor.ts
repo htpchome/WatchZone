@@ -20,7 +20,12 @@ import {
   SORTABLE_TILE_TAG,
   TOAST_REGION_TAG,
 } from "../core/constants";
-import { isHomeAssistant, type HomeAssistant } from "../core/home-assistant";
+import {
+  createHomeAssistantApi,
+  isHomeAssistant,
+  type HomeAssistant,
+} from "../core/home-assistant";
+import { getTalkCapability } from "../api/talk-signaling";
 import { LocalizationController } from "../core/localization";
 import { toYamlCardConfig, type YamlCardConfig } from "../core/yaml-config";
 import { themeTokens } from "../styles/theme-tokens";
@@ -84,6 +89,9 @@ export class CardEditor extends LitElement {
   private _baselineSignature = "";
   private _config?: CardConfig;
   private _cameraDraft?: CameraConfig;
+  private _talkCapability?: boolean;
+  private _talkCapabilityGeneration = 0;
+  private _talkCapabilityPending = false;
   private _editingCameraIndex?: number;
   private _dirtyContext?: DirtyStateContext<YamlCardConfig>;
   private _dirtySeeded = false;
@@ -363,6 +371,24 @@ export class CardEditor extends LitElement {
             )}
           </section>
           <section>
+            <h3>${this._t("editor.two_way_talk")}</h3>
+            ${this._renderCameraBoolean(
+              "two_way_talk_enabled",
+              this._t("editor.enable_two_way_talk"),
+              camera?.two_way_talk_enabled ?? false,
+              this._talkCapabilityPending || this._talkCapability !== true,
+            )}
+            <small class="capability-status">
+              ${
+                this._talkCapabilityPending
+                  ? this._t("editor.checking_two_way_talk")
+                  : this._talkCapability === true
+                    ? this._t("editor.two_way_talk_available")
+                    : this._t("editor.two_way_talk_unavailable")
+              }
+            </small>
+          </section>
+          <section>
             <h3>${this._t("editor.appearance")}</h3>
             ${this._renderCameraBoolean(
               "camera_rounded_corners",
@@ -396,6 +422,7 @@ export class CardEditor extends LitElement {
     key: CameraBooleanConfigFlag,
     label: string,
     value: boolean,
+    disabled = false,
   ) {
     return html`<ha-selector
       class="boolean-option"
@@ -405,6 +432,7 @@ export class CardEditor extends LitElement {
       .selector=${BOOLEAN_SELECTOR}
       .value=${value}
       .required=${false}
+      .disabled=${disabled}
       @value-changed=${this._handleCameraBooleanChange}
     ></ha-selector>`;
   }
@@ -464,6 +492,7 @@ export class CardEditor extends LitElement {
     const value =
       typeof event.detail.value === "string" ? event.detail.value.trim() : "";
     this._cameraDraft = { ...this._cameraDraft, entity_id: value };
+    this._checkTalkCapability(value);
     this.requestUpdate();
   };
 
@@ -485,6 +514,8 @@ export class CardEditor extends LitElement {
     if ((this._config?.cameras.length ?? 0) >= MAX_CAMERAS) return;
     this._editingCameraIndex = undefined;
     this._cameraDraft = createDefaultCameraConfig();
+    this._talkCapability = undefined;
+    this._talkCapabilityPending = false;
     this.requestUpdate();
   };
 
@@ -496,6 +527,7 @@ export class CardEditor extends LitElement {
     if (!camera) return;
     this._editingCameraIndex = index;
     this._cameraDraft = { ...camera };
+    this._checkTalkCapability(camera.entity_id);
     this.requestUpdate();
   };
 
@@ -512,6 +544,9 @@ export class CardEditor extends LitElement {
   private readonly _cancelCameraEdit = (event: Event): void => {
     event.preventDefault();
     this._cameraDraft = undefined;
+    this._talkCapabilityGeneration += 1;
+    this._talkCapability = undefined;
+    this._talkCapabilityPending = false;
     this._editingCameraIndex = undefined;
     this.requestUpdate();
   };
@@ -575,6 +610,32 @@ export class CardEditor extends LitElement {
       : entityId;
   }
 
+  private _checkTalkCapability(entityId: string): void {
+    const generation = ++this._talkCapabilityGeneration;
+    this._talkCapability = undefined;
+    if (!this._hass || !entityId.startsWith("camera.")) {
+      this._talkCapabilityPending = false;
+      this.requestUpdate();
+      return;
+    }
+    this._talkCapabilityPending = true;
+    this.requestUpdate();
+    void getTalkCapability(createHomeAssistantApi(this._hass), entityId)
+      .then((supported) => {
+        if (generation !== this._talkCapabilityGeneration) return;
+        this._talkCapability = supported;
+      })
+      .catch(() => {
+        if (generation !== this._talkCapabilityGeneration) return;
+        this._talkCapability = false;
+      })
+      .finally(() => {
+        if (generation !== this._talkCapabilityGeneration) return;
+        this._talkCapabilityPending = false;
+        this.requestUpdate();
+      });
+  }
+
   private _cameraSummary(camera: CameraConfig): string {
     const connection = camera.low_latency_hls
       ? this._t("editor.low_latency_hls")
@@ -587,11 +648,14 @@ export class CardEditor extends LitElement {
         ? this._t("editor.mobile_phone")
         : undefined,
     ].filter(Boolean);
+    const talk = camera.two_way_talk_enabled
+      ? ` · ${this._t("editor.two_way_talk")}`
+      : "";
     return `${connection} · ${
       audio.length
         ? this._t("editor.unmuted", { devices: audio.join(", ") })
         : this._t("editor.muted")
-    }`;
+    }${talk}`;
   }
 
   private readonly _handleBooleanChange = (event: ValueChangedEvent): void => {

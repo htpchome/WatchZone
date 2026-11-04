@@ -42,6 +42,7 @@ class ProviderExtension:
     camera_runtime: CameraRuntimeProvider | None = None
     camera_runtime_poll_interval: float | None = None
     live_signaling: LiveSignalingProvider | None = None
+    talk_signaling: LiveSignalingProvider | None = None
 
 
 class ProviderRegistry:
@@ -94,6 +95,11 @@ class ProviderRegistry:
         """Resolve one platform's optional live-signaling capability."""
         extension = self._platforms.get(platform)
         return extension.live_signaling if extension else None
+
+    def talk_signaling(self, platform: str) -> LiveSignalingProvider | None:
+        """Resolve one platform's optional talk-signaling capability."""
+        extension = self._platforms.get(platform)
+        return extension.talk_signaling if extension else None
 
     @staticmethod
     def _validate(extension: ProviderExtension) -> None:

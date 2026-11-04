@@ -1,8 +1,10 @@
 import type { HomeAssistant, HomeAssistantApi } from "./home-assistant";
 import type { LocalizeFunction } from "./localization";
+import type { CameraSessionContext } from "./camera-session-context";
 
 export interface ModuleRuntimeContext {
   readonly api?: HomeAssistantApi;
+  readonly cameraSession: CameraSessionContext;
   readonly hass?: HomeAssistant;
   readonly localize?: LocalizeFunction;
 }

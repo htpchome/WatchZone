@@ -8,6 +8,7 @@ import {
   CAMERA_VIEW_TAG,
 } from "../../core/constants";
 import type { HomeAssistantApi } from "../../core/home-assistant";
+import type { CameraSessionContext } from "../../core/camera-session-context";
 import {
   englishLocalize,
   type LocalizeFunction,
@@ -44,10 +45,12 @@ export class CameraView extends LitElement {
     active: { attribute: false, type: Boolean },
     connect: { attribute: false, type: Boolean },
     api: { attribute: false },
+    cameraSession: { attribute: false },
     available: { attribute: false, type: Boolean },
     entityId: { attribute: false },
     lowLatencyHls: { attribute: false, type: Boolean },
     localize: { attribute: false },
+    overlayVisible: { attribute: false, type: Boolean },
     posterUrl: { attribute: false },
     roundedCorners: { attribute: false, type: Boolean },
     shadowStyle: { attribute: false },
@@ -93,10 +96,12 @@ export class CameraView extends LitElement {
   public active = false;
   public connect = false;
   public api?: HomeAssistantApi;
+  public cameraSession?: CameraSessionContext;
   public available = false;
   public entityId?: string;
   public lowLatencyHls = true;
   public localize: LocalizeFunction = englishLocalize;
+  public overlayVisible = false;
   public posterUrl?: string;
   public roundedCorners = true;
   public shadowStyle: CameraShadowStyle = "medium";
@@ -230,6 +235,30 @@ export class CameraView extends LitElement {
       this._stageResize.mediaPresentationScale,
     );
     this._audio.syncMediaState();
+    this._publishCameraSession();
+  }
+
+  public disconnectedCallback(): void {
+    this.cameraSession?.clear(this);
+    super.disconnectedCallback();
+  }
+
+  private _publishCameraSession(): void {
+    if (!this.active || !this.entityId) {
+      this.cameraSession?.clear(this);
+      return;
+    }
+    this.cameraSession?.publish(this, {
+      available:
+        this.available &&
+        this._runtime.snapshot?.available !== false &&
+        this._runtime.snapshot?.suspended !== true,
+      entityId: this.entityId,
+      incomingStream: this._session.webRtcStream,
+      muted: this._audio.muted,
+      overlayVisible: this.overlayVisible,
+      setMuted: (muted) => this._audio.setUserMuted(muted),
+    });
   }
 
   private readonly _handleMediaAttached = (): void => {

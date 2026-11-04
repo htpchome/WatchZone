@@ -2,6 +2,7 @@ export interface LayoutContainerNode {
   readonly children: readonly LayoutNode[];
   readonly id: string;
   readonly kind: "container";
+  readonly presentation?: "flow" | "overlay";
 }
 
 export interface LayoutModuleNode {
@@ -48,6 +49,9 @@ function validateNode(value: unknown, ids: Set<string>): LayoutNode {
       children: source.children.map((child) => validateNode(child, ids)),
       id,
       kind: "container",
+      ...(source.presentation === "overlay"
+        ? { presentation: "overlay" as const }
+        : {}),
     };
   }
   if (source.kind === "module") {

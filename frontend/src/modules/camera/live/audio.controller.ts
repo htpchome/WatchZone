@@ -119,8 +119,12 @@ export class CameraAudioController implements ReactiveController {
   }
 
   public toggleUserMute(): void {
+    this.setUserMuted(!this._muted);
+  }
+
+  public setUserMuted(muted: boolean): void {
     this._callbacks.dismissToast(AUTOPLAY_WARNING_KEY);
-    this._desiredMuted = !this._muted;
+    this._desiredMuted = muted;
     this._autoplayBlocked = false;
     if (this._entityId) {
       getMediaSessionManager().setCameraMuted(

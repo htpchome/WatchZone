@@ -408,7 +408,9 @@ single-camera live presentation, a control overlay, and a non-control
 information overlay. Presentation types such as a future carousel reuse the
 same internal single-camera presentation contract. Overlay controls dispatch
 typed intent and do not own connection adapters or duplicate media-session
-policy.
+policy. A capability that must be independently placed or restyled by the
+Stage Designer, such as two-way talk, is a peer module. It consumes only the
+card-owned active-camera session context and cannot import camera internals.
 
 Transient interaction-overlay visibility belongs to a Lit reactive controller
 within the camera feature. Pointer hover, touch, and keyboard focus share that
@@ -555,6 +557,10 @@ navigation target.
 - A generic string-based global event bus is prohibited.
 - Session state is scoped to a card instance unless a requirement explicitly
   calls for wider scope.
+- The active-camera context exposes only the identity and interaction handles
+  independently placeable camera-control modules require. It may reference a
+  retained incoming stream and typed mute intent, but never provider clients,
+  credentials, layout state, or camera implementation objects.
 
 ### 8.8 Provider capabilities and live source resolution
 
@@ -597,12 +603,15 @@ Provider and live-resolution rules:
   order.
 - Each external system has one stable folder under
   `frontend/src/providers/<provider>/`. Capabilities are nested beneath it,
-  for example `providers/home-assistant/live/`; future PTZ or talk support
-  belongs beside `live/` rather than in new top-level modules.
+  for example `providers/home-assistant/live/`; PTZ and talk transports belong
+  beside `live/`. A user-placeable capability presentation may be a module,
+  but provider signaling and media mechanics never belong in that module.
 - Camera is the user-placeable module. Its `live/` folder is a private camera
-  capability and presentation, not another application module.
-- Camera code depends only on the public provider resolver and stable playback
-  contract. It never imports `providers/<provider>/...` directly.
+  capability and presentation, not another application module. Additional
+  independently placeable modules are allowed only for Stage Designer features
+  with their own presentation and lifecycle.
+- Feature modules depend only on public provider resolvers and stable capability
+  contracts. They never import `providers/<provider>/...` directly.
 - Provider live adapters own browser media objects and playback-specific
   cleanup, but not camera presentation, layout state, or module UI.
 - Failure of one source may fall back to the next eligible source without

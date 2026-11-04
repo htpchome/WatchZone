@@ -59,7 +59,7 @@ export const cameraViewStyles = css`
     place-items: center;
     box-sizing: border-box;
     inline-size: clamp(4rem, 18%, 7rem);
-    block-size: 2.25rem;
+    block-size: var(--wzc-stage-resize-handle-block-size);
     padding: 0;
     color: var(--wzc-media-overlay-color);
     background: transparent;

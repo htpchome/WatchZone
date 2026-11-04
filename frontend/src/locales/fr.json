@@ -46,5 +46,18 @@
   "camera.snapshot_downloaded": "Instantané téléchargé.",
   "camera.snapshot_failed": "Impossible de prendre l’instantané.",
   "camera.autoplay_blocked": "Le navigateur a bloqué la lecture avec le son. Touchez à nouveau le bouton de sourdine pour réessayer.",
-  "sortable.reorder": "Réorganiser l’élément"
+  "sortable.reorder": "Réorganiser l’élément",
+  "editor.two_way_talk": "Audio bidirectionnel",
+  "editor.enable_two_way_talk": "Activer l’audio bidirectionnel",
+  "editor.checking_two_way_talk": "Vérification de la caméra…",
+  "editor.two_way_talk_available": "L’audio bidirectionnel est disponible pour cette caméra.",
+  "editor.two_way_talk_unavailable": "Cette caméra n’expose pas de canal WebRTC compatible.",
+  "talk.controls": "Commandes audio bidirectionnelles",
+  "talk.connect": "Démarrer l’audio bidirectionnel",
+  "talk.connecting": "Connexion de l’audio bidirectionnel",
+  "talk.connected": "Audio bidirectionnel connecté",
+  "talk.failed": "Échec de la connexion audio bidirectionnelle",
+  "talk.disconnect": "Déconnecter l’audio bidirectionnel",
+  "talk.mute_microphone": "Couper le microphone",
+  "talk.unmute_microphone": "Activer le microphone"
 }

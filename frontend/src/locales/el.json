@@ -46,5 +46,18 @@
   "camera.snapshot_downloaded": "Έγινε λήψη του στιγμιότυπου.",
   "camera.snapshot_failed": "Δεν ήταν δυνατή η λήψη στιγμιότυπου.",
   "camera.autoplay_blocked": "Το πρόγραμμα περιήγησης απέκλεισε την αναπαραγωγή με ήχο. Πατήστε ξανά τη σίγαση για επανάληψη.",
-  "sortable.reorder": "Αναδιάταξη στοιχείου"
+  "sortable.reorder": "Αναδιάταξη στοιχείου",
+  "editor.two_way_talk": "Αμφίδρομη ομιλία",
+  "editor.enable_two_way_talk": "Ενεργοποίηση αμφίδρομης ομιλίας",
+  "editor.checking_two_way_talk": "Έλεγχος δυνατότητας κάμερας…",
+  "editor.two_way_talk_available": "Η αμφίδρομη ομιλία είναι διαθέσιμη για αυτήν την κάμερα.",
+  "editor.two_way_talk_unavailable": "Αυτή η κάμερα δεν παρέχει συμβατή διαδρομή WebRTC.",
+  "talk.controls": "Στοιχεία ελέγχου αμφίδρομης ομιλίας",
+  "talk.connect": "Έναρξη αμφίδρομης ομιλίας",
+  "talk.connecting": "Σύνδεση αμφίδρομης ομιλίας",
+  "talk.connected": "Η αμφίδρομη ομιλία συνδέθηκε",
+  "talk.failed": "Η σύνδεση αμφίδρομης ομιλίας απέτυχε",
+  "talk.disconnect": "Αποσύνδεση αμφίδρομης ομιλίας",
+  "talk.mute_microphone": "Σίγαση μικροφώνου",
+  "talk.unmute_microphone": "Κατάργηση σίγασης μικροφώνου"
 }

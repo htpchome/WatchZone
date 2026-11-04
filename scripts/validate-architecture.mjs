@@ -7,6 +7,10 @@ const coreRoot = resolve(sourceRoot, "core");
 const modulesRoot = resolve(sourceRoot, "modules");
 const providersRoot = resolve(sourceRoot, "providers");
 const obsoleteConnectionsRoot = resolve(sourceRoot, "connections");
+const publicProviderResolvers = new Set([
+  "live-source-resolver",
+  "talk-source-resolver",
+]);
 
 async function collectTypeScript(directory, files = []) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -54,7 +58,7 @@ for (const path of await collectTypeScript(sourceRoot)) {
     if (
       isModule &&
       resolved?.startsWith(`${providersRoot}${sep}`) &&
-      basename(resolved) !== "live-source-resolver"
+      !publicProviderResolvers.has(basename(resolved))
     ) {
       violations.push(
         `${displayPath}: modules must use a public provider resolver`,

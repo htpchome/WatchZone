@@ -46,5 +46,18 @@
   "camera.snapshot_downloaded": "Foto baixada.",
   "camera.snapshot_failed": "Não foi possível tirar a foto.",
   "camera.autoplay_blocked": "O navegador bloqueou a reprodução com áudio. Toque novamente em silenciar para tentar de novo.",
-  "sortable.reorder": "Reordenar item"
+  "sortable.reorder": "Reordenar item",
+  "editor.two_way_talk": "Áudio bidirecional",
+  "editor.enable_two_way_talk": "Ativar áudio bidirecional",
+  "editor.checking_two_way_talk": "Verificando a capacidade da câmera…",
+  "editor.two_way_talk_available": "O áudio bidirecional está disponível para esta câmera.",
+  "editor.two_way_talk_unavailable": "Esta câmera não oferece uma conexão WebRTC compatível.",
+  "talk.controls": "Controles de áudio bidirecional",
+  "talk.connect": "Iniciar áudio bidirecional",
+  "talk.connecting": "Conectando áudio bidirecional",
+  "talk.connected": "Áudio bidirecional conectado",
+  "talk.failed": "Falha ao conectar o áudio bidirecional",
+  "talk.disconnect": "Desconectar áudio bidirecional",
+  "talk.mute_microphone": "Silenciar microfone",
+  "talk.unmute_microphone": "Ativar microfone"
 }

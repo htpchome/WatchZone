@@ -46,5 +46,18 @@
   "camera.snapshot_downloaded": "Istantanea scaricata.",
   "camera.snapshot_failed": "Impossibile scattare l’istantanea.",
   "camera.autoplay_blocked": "Il browser ha bloccato la riproduzione con audio. Tocca di nuovo il pulsante audio per riprovare.",
-  "sortable.reorder": "Riordina elemento"
+  "sortable.reorder": "Riordina elemento",
+  "editor.two_way_talk": "Audio bidirezionale",
+  "editor.enable_two_way_talk": "Abilita audio bidirezionale",
+  "editor.checking_two_way_talk": "Verifica della videocamera…",
+  "editor.two_way_talk_available": "L’audio bidirezionale è disponibile per questa videocamera.",
+  "editor.two_way_talk_unavailable": "Questa videocamera non espone un percorso WebRTC compatibile.",
+  "talk.controls": "Controlli audio bidirezionali",
+  "talk.connect": "Avvia audio bidirezionale",
+  "talk.connecting": "Connessione audio bidirezionale",
+  "talk.connected": "Audio bidirezionale connesso",
+  "talk.failed": "Connessione audio bidirezionale non riuscita",
+  "talk.disconnect": "Disconnetti audio bidirezionale",
+  "talk.mute_microphone": "Disattiva microfono",
+  "talk.unmute_microphone": "Attiva microfono"
 }

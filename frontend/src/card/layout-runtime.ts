@@ -18,6 +18,7 @@ import type {
   LayoutModuleNode,
   LayoutNode,
 } from "../core/layout";
+import { CameraSessionContext } from "../core/camera-session-context";
 import { validateLayoutDocument } from "../core/layout";
 import { englishLocalize, type LocalizeFunction } from "../core/localization";
 import type {
@@ -43,7 +44,10 @@ interface ModuleRecord {
 /** Owns validated layout rendering, lazy module loading, and local failures. */
 export class LayoutRuntime implements ReactiveController {
   private _connected = false;
-  private _context: ModuleRuntimeContext = {};
+  private readonly _cameraSession = new CameraSessionContext();
+  private _context: ModuleRuntimeContext = {
+    cameraSession: this._cameraSession,
+  };
   private _layout?: LayoutDocument;
   private _layoutError?: string;
   private readonly _records = new Map<string, ModuleRecord>();
@@ -108,7 +112,12 @@ export class LayoutRuntime implements ReactiveController {
   ): void {
     const transportChanged = this._context.api?.identity !== api?.identity;
     const localeChanged = this._context.localize !== localize;
-    this._context = { api, hass, localize };
+    this._context = {
+      api,
+      cameraSession: this._cameraSession,
+      hass,
+      localize,
+    };
     for (const record of this._records.values()) {
       if (record.status === "ready") {
         this._updateRecord(record, transportChanged || localeChanged);
@@ -138,6 +147,7 @@ export class LayoutRuntime implements ReactiveController {
       class=${[
         "layout-container",
         root ? "layout-root" : "",
+        node.presentation === "overlay" ? "overlay" : "",
         node.children.length === 1 ? "single-child" : "",
       ]
         .filter(Boolean)

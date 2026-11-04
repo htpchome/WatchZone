@@ -35,8 +35,17 @@ describe("WatchZone card configuration", () => {
         low_latency_hls: false,
         start_live_unmuted_pc_tablet: true,
         start_live_unmuted_phone: false,
+        two_way_talk_enabled: false,
       },
     ]);
+  });
+
+  it("normalizes the opt-in two-way-talk camera capability", () => {
+    expect(
+      normalizeCardConfig({
+        cameras: [{ entity_id: "camera.front", two_way_talk_enabled: true }],
+      }).cameras[0]?.two_way_talk_enabled,
+    ).toBe(true);
   });
 
   it("migrates the legacy single-camera shape", () => {

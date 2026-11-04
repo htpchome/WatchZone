@@ -472,6 +472,7 @@ describe("watchzone-card-editor", () => {
           low_latency_hls: true,
           start_live_unmuted_pc_tablet: false,
           start_live_unmuted_phone: false,
+          two_way_talk_enabled: false,
         },
       ],
     };

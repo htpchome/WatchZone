@@ -46,5 +46,18 @@
   "camera.snapshot_downloaded": "Zdjęcie pobrane.",
   "camera.snapshot_failed": "Nie udało się zrobić zdjęcia.",
   "camera.autoplay_blocked": "Przeglądarka zablokowała odtwarzanie z dźwiękiem. Dotknij ponownie wyciszenia, aby spróbować ponownie.",
-  "sortable.reorder": "Zmień kolejność elementu"
+  "sortable.reorder": "Zmień kolejność elementu",
+  "editor.two_way_talk": "Rozmowa dwukierunkowa",
+  "editor.enable_two_way_talk": "Włącz rozmowę dwukierunkową",
+  "editor.checking_two_way_talk": "Sprawdzanie możliwości kamery…",
+  "editor.two_way_talk_available": "Rozmowa dwukierunkowa jest dostępna dla tej kamery.",
+  "editor.two_way_talk_unavailable": "Ta kamera nie udostępnia zgodnej ścieżki WebRTC.",
+  "talk.controls": "Sterowanie rozmową dwukierunkową",
+  "talk.connect": "Rozpocznij rozmowę dwukierunkową",
+  "talk.connecting": "Łączenie rozmowy dwukierunkowej",
+  "talk.connected": "Rozmowa dwukierunkowa połączona",
+  "talk.failed": "Nie udało się połączyć rozmowy dwukierunkowej",
+  "talk.disconnect": "Rozłącz rozmowę dwukierunkową",
+  "talk.mute_microphone": "Wycisz mikrofon",
+  "talk.unmute_microphone": "Włącz mikrofon"
 }

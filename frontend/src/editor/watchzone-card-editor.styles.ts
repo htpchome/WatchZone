@@ -42,7 +42,8 @@ export const cardEditorStyles = css`
   }
 
   .camera-list-heading span,
-  .camera-tile-copy small {
+  .camera-tile-copy small,
+  .capability-status {
     color: var(--wzc-color-text-2);
     font-size: var(--wzc-font-size-small);
   }

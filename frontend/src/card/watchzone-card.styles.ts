@@ -80,6 +80,14 @@ export const cardStyles = css`
     grid-template-rows: minmax(0, 1fr);
   }
 
+  .layout-container.overlay {
+    grid-template: "overlay" minmax(0, 1fr) / minmax(0, 1fr);
+  }
+
+  .layout-container.overlay > .module-slot {
+    grid-area: overlay;
+  }
+
   .module-slot {
     display: block;
   }

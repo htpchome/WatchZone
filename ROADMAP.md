@@ -209,7 +209,11 @@ designer UI so saved layouts are declarative and testable.
 - Explicit microphone permission and secure-context requirements.
 - Separate outgoing talk session from retained incoming live playback when the
   transport requires it.
-- Push-to-talk and/or latched talk modes decided from provider and UX testing.
+- Independently placeable talk module with provider-neutral transport, an
+  initial latched full-duplex overlay presentation, and future presentation
+  variants owned by the Stage Designer.
+- Accelerated provider signaling with one clean Home Assistant WebRTC fallback;
+  transport fallback is not implemented in the presentation module.
 - Talk start/stop, microphone mute, incoming-audio mute, audio focus, and live
   mute preference kept as distinct state.
 - Full cancellation and cleanup for permission denial, camera switch, layout

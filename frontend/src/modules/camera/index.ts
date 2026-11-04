@@ -48,6 +48,7 @@ function updateCameraElement(
   context: ModuleRuntimeContext,
 ): void {
   camera.api = context.api;
+  camera.cameraSession = context.cameraSession;
   camera.localize = context.localize ?? englishLocalize;
   camera.retentionPreference = config.retentionPreference;
   camera.cameras = config.cameras.map((item) => ({

@@ -55,7 +55,7 @@ async def test_replacement_signaling_waits_for_prior_cleanup() -> None:
         _FakeHass(), ProviderRegistry()
     )
     service._sessions["session-1"] = _OwnedSession(  # noqa: SLF001
-        "owner", "camera.porch", session  # type: ignore[arg-type]
+        "owner", "camera.porch", "live", session  # type: ignore[arg-type]
     )
 
     service.close("session-1")
@@ -137,6 +137,42 @@ async def test_provider_resolver_loads_the_entity_owner_dynamically() -> None:
 
     factory.assert_awaited_once()
     assert resolved is provider_session
+    assert fallback_reason is None
+
+
+async def test_talk_resolver_uses_the_registered_talk_capability() -> None:
+    """Talk resolution is separate from live and remains provider-neutral."""
+    registry = SimpleNamespace(
+        async_get=Mock(return_value=SimpleNamespace(platform="motioneye"))
+    )
+    live_factory = AsyncMock()
+    talk_session = Mock()
+    talk_factory = AsyncMock(return_value=talk_session)
+    providers = ProviderRegistry()
+    providers.register(
+        ProviderExtension(
+            api_version=EXTENSION_API_VERSION,
+            provider_id="motioneye-addon",
+            entity_platforms=frozenset({"motioneye"}),
+            live_signaling=SimpleNamespace(async_prepare_session=live_factory),
+            talk_signaling=SimpleNamespace(async_prepare_session=talk_factory),
+        )
+    )
+    service = LiveSignalingService(SimpleNamespace(), providers)  # type: ignore[arg-type]
+
+    with patch(
+        "custom_components.watchzone.features.live.er.async_get",
+        return_value=registry,
+    ):
+        resolved, fallback_reason = (  # noqa: SLF001
+            await service._async_prepare_provider_session(
+                Mock(), "camera.garden", Mock(), purpose="talk"
+            )
+        )
+
+    talk_factory.assert_awaited_once()
+    live_factory.assert_not_awaited()
+    assert resolved is talk_session
     assert fallback_reason is None
 
 

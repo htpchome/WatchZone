@@ -10,6 +10,7 @@ import {
   CAMERA_VIEW_TAG,
 } from "../../core/constants";
 import { DeviceProfileController } from "../../core/device-profile";
+import type { CameraSessionContext } from "../../core/camera-session-context";
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import {
   englishLocalize,
@@ -47,6 +48,7 @@ const cameraViewTag = unsafeStatic(CAMERA_VIEW_TAG);
 export class CameraModule extends LitElement {
   public static properties = {
     api: { attribute: false },
+    cameraSession: { attribute: false },
     cameras: { attribute: false },
     localize: { attribute: false },
     retentionPreference: { attribute: false },
@@ -65,6 +67,7 @@ export class CameraModule extends LitElement {
   private readonly _deviceProfile = new DeviceProfileController(this);
 
   public api?: HomeAssistantApi;
+  public cameraSession?: CameraSessionContext;
   public cameras: readonly CameraItemConfig[] = [];
   public localize: LocalizeFunction = englishLocalize;
   public retentionPreference: MediaRetentionPreference = "automatic";
@@ -144,10 +147,14 @@ export class CameraModule extends LitElement {
               .active=${index === this._activeIndex}
               .connect=${index === this._activeIndex}
               .api=${this.api}
+              .cameraSession=${this.cameraSession}
               .available=${camera.available}
               .entityId=${camera.entityId}
               .lowLatencyHls=${camera.lowLatencyHls}
               .localize=${this.localize}
+              .overlayVisible=${
+                this._overlayVisibilityByCamera.get(camera.entityId) ?? false
+              }
               .posterUrl=${camera.posterUrl}
               .roundedCorners=${camera.roundedCorners}
               .shadowStyle=${camera.shadowStyle}

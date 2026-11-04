@@ -60,6 +60,7 @@ class HomeAssistantLiveSignalingSession:
 class _OwnedSession:
     owner_id: str
     entity_id: str
+    purpose: str
     session: LiveSignalingSession
 
 
@@ -83,30 +84,38 @@ class LiveSignalingService:
         self._hass = hass
         self._providers = providers or get_provider_registry(hass)
         self._sessions: dict[str, _OwnedSession] = {}
-        self._closing_sessions: dict[tuple[str, str], asyncio.Task[None]] = {}
+        self._closing_sessions: dict[tuple[str, str, str], asyncio.Task[None]] = {}
 
     async def async_create(
         self,
         owner_id: str,
         entity_id: str,
         send_event: SendLiveSignalingEvent,
+        *,
+        force_standard: bool = False,
+        purpose: str = "live",
     ) -> CreatedLiveSignalingSession:
         """Create one signaling session without starting negotiation."""
         from homeassistant.components.camera.const import StreamType
         from homeassistant.components.camera.helper import get_camera_from_entity_id
 
-        await self._async_wait_for_closing(owner_id, entity_id)
+        await self._async_wait_for_closing(owner_id, entity_id, purpose)
         camera = get_camera_from_entity_id(self._hass, entity_id)
         if StreamType.WEB_RTC not in camera.camera_capabilities.frontend_stream_types:
             raise HomeAssistantError("Camera does not support WebRTC")
 
         session_id = ulid()
-        session, fallback_reason = await self._async_prepare_provider_session(
-            camera, entity_id, send_event
-        )
+        session: LiveSignalingSession | None = None
+        fallback_reason: str | None = "standard_requested"
+        if not force_standard:
+            session, fallback_reason = await self._async_prepare_provider_session(
+                camera, entity_id, send_event, purpose
+            )
         if session is None:
             session = HomeAssistantLiveSignalingSession(camera, session_id, send_event)
-        self._sessions[session_id] = _OwnedSession(owner_id, entity_id, session)
+        self._sessions[session_id] = _OwnedSession(
+            owner_id, entity_id, purpose, session
+        )
         return CreatedLiveSignalingSession(
             session_id, session.signaling_path, fallback_reason
         )
@@ -131,7 +140,7 @@ class LiveSignalingService:
     def close(self, session_id: str) -> None:
         """Schedule complete cleanup for one signaling session."""
         if owned := self._sessions.pop(session_id, None):
-            key = (owned.owner_id, owned.entity_id)
+            key = (owned.owner_id, owned.entity_id, owned.purpose)
             previous = self._closing_sessions.get(key)
 
             async def close_in_order() -> None:
@@ -162,13 +171,15 @@ class LiveSignalingService:
             return_exceptions=True,
         )
 
-    async def _async_wait_for_closing(self, owner_id: str, entity_id: str) -> None:
+    async def _async_wait_for_closing(
+        self, owner_id: str, entity_id: str, purpose: str = "live"
+    ) -> None:
         """Serialize replacement signaling behind complete prior cleanup."""
-        if closing := self._closing_sessions.get((owner_id, entity_id)):
+        if closing := self._closing_sessions.get((owner_id, entity_id, purpose)):
             await asyncio.gather(closing, return_exceptions=True)
 
     def _forget_closing(
-        self, key: tuple[str, str], completed: asyncio.Task[None]
+        self, key: tuple[str, str, str], completed: asyncio.Task[None]
     ) -> None:
         """Remove only the cleanup generation that actually completed."""
         if self._closing_sessions.get(key) is completed:
@@ -179,13 +190,18 @@ class LiveSignalingService:
         camera: Camera,
         entity_id: str,
         send_event: SendLiveSignalingEvent,
+        purpose: str = "live",
     ) -> tuple[LiveSignalingSession | None, str | None]:
         """Load and prepare an eligible concrete provider only on demand."""
         registry_entry = er.async_get(self._hass).async_get(entity_id)
         if registry_entry is None:
             return None, "entity_registry_entry_missing"
         try:
-            provider = self._providers.live_signaling(registry_entry.platform)
+            provider = (
+                self._providers.talk_signaling(registry_entry.platform)
+                if purpose == "talk"
+                else self._providers.live_signaling(registry_entry.platform)
+            )
             if provider is None:
                 return None, "provider_adapter_unavailable"
             return await provider.async_prepare_session(

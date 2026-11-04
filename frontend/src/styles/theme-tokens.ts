@@ -164,6 +164,7 @@ export const themeTokens = css`
     --wzc-zoom-transition-duration: 180ms;
     --wzc-stage-resize-handle-opacity: 60%;
     --wzc-stage-resize-handle-active-opacity: 100%;
+    --wzc-stage-resize-handle-block-size: 2.25rem;
 
     --wzc-media-overlay-color: var(--ha-color-neutral-90, #e6e6e6);
     --wzc-media-overlay-surface: var(--ha-color-neutral-05, #111111);
@@ -189,6 +190,15 @@ export const themeTokens = css`
     --wzc-carousel-navigation-hover-opacity: 100%;
     --wzc-carousel-navigation-icon-size: 2.5rem;
     --wzc-carousel-navigation-control-gap: 0.75rem;
+    --wzc-talk-connected-color: var(--ha-color-green-50, #34d399);
+    --wzc-talk-panel-background: color-mix(
+      in srgb,
+      var(--wzc-media-overlay-surface) 80%,
+      transparent
+    );
+    --wzc-talk-panel-border-color: var(--ha-color-purple-50, #a78bfa);
+    --wzc-talk-wave-incoming-color: var(--ha-color-blue-40, #60a5fa);
+    --wzc-talk-wave-outgoing-color: var(--ha-color-purple-40, #c084fc);
 
     --wzc-accordion-background: var(--wzc-color-background);
     --wzc-accordion-header-color: var(--wzc-color-text-1);

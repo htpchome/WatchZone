@@ -19,6 +19,9 @@ retention, or audio state, also read `docs/live-session-lifecycle.md` in full.
 For the Home Assistant direct live connection, also read
 `docs/home-assistant-live-connection.md` in full.
 
+For two-way talk signaling, controls, audio visualization, or microphone
+lifecycle, also read `docs/two-way-talk.md` in full.
+
 For diagnostics, timing instrumentation, or future logging work, also read
 `docs/diagnostics.md` in full.
 
@@ -91,9 +94,11 @@ For reusable draggable tiles or ordered editor lists, also read
   must unregister on unload, and must not receive unrestricted runtime state.
   Add a typed registry for each future extension area; never add a generic
   plugin bag, service locator, or arbitrary import hook.
-- Camera is the module and composition boundary. Live, PTZ, talk, and other
-  camera capabilities stay private to camera or beneath the owning provider;
-  they do not become peer application modules.
+- Camera owns camera selection and its private live presentation. A capability
+  becomes a peer application module only when it is independently placeable in
+  the Stage Designer. Such modules consume the card's narrow active-camera
+  session context and a public provider resolver; they never import or mutate
+  the camera module. Provider-specific transport stays beneath the provider.
 - Internal classes, custom-element names, diagnostics keys, and events derive
   from centralized identity constants. Product display text derives from
   `APP_NAME`; do not scatter branded identifiers through implementation code.

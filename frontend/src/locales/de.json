@@ -46,5 +46,18 @@
   "camera.snapshot_downloaded": "Schnappschuss heruntergeladen.",
   "camera.snapshot_failed": "Schnappschuss konnte nicht aufgenommen werden.",
   "camera.autoplay_blocked": "Der Browser hat die Wiedergabe mit Ton blockiert. Zum Wiederholen erneut auf Stummschalten tippen.",
-  "sortable.reorder": "Element neu anordnen"
+  "sortable.reorder": "Element neu anordnen",
+  "editor.two_way_talk": "Gegensprechen",
+  "editor.enable_two_way_talk": "Gegensprechen aktivieren",
+  "editor.checking_two_way_talk": "Kamerafunktion wird geprüft…",
+  "editor.two_way_talk_available": "Gegensprechen ist für diese Kamera verfügbar.",
+  "editor.two_way_talk_unavailable": "Diese Kamera bietet keinen kompatiblen WebRTC-Sprechweg.",
+  "talk.controls": "Gegensprechsteuerung",
+  "talk.connect": "Gegensprechen starten",
+  "talk.connecting": "Gegensprechen wird verbunden",
+  "talk.connected": "Gegensprechen verbunden",
+  "talk.failed": "Gegensprechen konnte nicht verbunden werden",
+  "talk.disconnect": "Gegensprechen trennen",
+  "talk.mute_microphone": "Mikrofon stummschalten",
+  "talk.unmute_microphone": "Mikrofon einschalten"
 }

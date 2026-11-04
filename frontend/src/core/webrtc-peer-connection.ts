@@ -38,6 +38,21 @@ export interface WebRtcPeerConnectionOptions {
   readonly timing: LiveStartupTiming;
 }
 
+export interface WebRtcTalkPeerConnection {
+  readonly signalingPath?: string;
+  close(): void;
+}
+
+export interface WebRtcTalkPeerConnectionOptions {
+  readonly configuration: RTCConfiguration;
+  readonly connectTimeoutMs: number;
+  readonly localStream: MediaStream;
+  readonly signal: AbortSignal;
+  readonly signaling: WebRtcSignalingAdapter;
+  onFailure(error: Error): void;
+  onSignalingPath(path: string): void;
+}
+
 function abortError(): DOMException {
   return new DOMException("Connection cancelled", "AbortError");
 }
@@ -315,4 +330,157 @@ export async function createWebRtcPeerConnection(
   });
 
   return ready;
+}
+
+/** Creates an isolated send-only microphone peer without owning local tracks. */
+export function createWebRtcTalkPeerConnection(
+  options: WebRtcTalkPeerConnectionOptions,
+): Promise<WebRtcTalkPeerConnection> {
+  if (typeof RTCPeerConnection === "undefined") {
+    return Promise.reject(
+      new MediaConnectionError(
+        "unsupported",
+        "This browser does not support WebRTC",
+      ),
+    );
+  }
+  if (options.signal.aborted) return Promise.reject(abortError());
+
+  const peer = new RTCPeerConnection(options.configuration);
+  const localCandidates: RTCIceCandidateInit[] = [];
+  const remoteCandidates: RTCIceCandidateInit[] = [];
+  let closed = false;
+  let sessionId: string | undefined;
+  let signalingPath: string | undefined;
+  let unsubscribe: (() => void) | undefined;
+  let rejectPending: ((error: unknown) => void) | undefined;
+
+  const close = (): void => {
+    if (closed) return;
+    closed = true;
+    options.signal.removeEventListener("abort", handleAbort);
+    unsubscribe?.();
+    unsubscribe = undefined;
+    peer.onconnectionstatechange = null;
+    peer.oniceconnectionstatechange = null;
+    peer.onicecandidate = null;
+    peer.close();
+  };
+  const handleAbort = (): void => rejectPending?.(abortError());
+  options.signal.addEventListener("abort", handleAbort, { once: true });
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const timeout = window.setTimeout(
+      () => fail(new Error("Timed out connecting two-way talk")),
+      options.connectTimeoutMs,
+    );
+    const finish = (callback: () => void, preserveConnection = false): void => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      if (!preserveConnection) close();
+      callback();
+    };
+    const fail = (error: unknown): void => {
+      const normalized = normalizeMediaConnectionError(
+        error,
+        "peer_failed",
+        "Two-way talk connection failed",
+      );
+      if (settled) {
+        close();
+        options.onFailure(normalized);
+        return;
+      }
+      finish(() => reject(normalized));
+    };
+    rejectPending = fail;
+    const maybeResolve = (): void => {
+      if (
+        peer.connectionState === "connected" ||
+        peer.iceConnectionState === "connected" ||
+        peer.iceConnectionState === "completed"
+      ) {
+        finish(() => resolve({ signalingPath, close }), true);
+      }
+    };
+
+    peer.onconnectionstatechange = () => {
+      if (peer.connectionState === "failed") fail(new Error("WebRTC failed"));
+      else maybeResolve();
+    };
+    peer.oniceconnectionstatechange = () => {
+      if (peer.iceConnectionState === "failed")
+        fail(new Error("WebRTC ICE failed"));
+      else maybeResolve();
+    };
+    const sendCandidate = async (
+      candidate: RTCIceCandidateInit,
+    ): Promise<void> => {
+      if (!sessionId) {
+        localCandidates.push(candidate);
+        return;
+      }
+      await options.signaling.sendCandidate(sessionId, candidate);
+    };
+    peer.onicecandidate = (event) => {
+      if (!event.candidate?.candidate) return;
+      void sendCandidate(event.candidate.toJSON()).catch(fail);
+    };
+
+    const handleEvent = async (event: WebRtcSignalingEvent): Promise<void> => {
+      if (closed) return;
+      try {
+        if (event.type === "session") {
+          sessionId = event.sessionId;
+          signalingPath = event.path;
+          options.onSignalingPath(event.path);
+          await Promise.all(localCandidates.splice(0).map(sendCandidate));
+        } else if (event.type === "answer") {
+          await peer.setRemoteDescription({
+            type: "answer",
+            sdp: event.answer,
+          });
+          await Promise.all(
+            remoteCandidates
+              .splice(0)
+              .map((candidate) => peer.addIceCandidate(candidate)),
+          );
+        } else if (event.type === "candidate") {
+          if (peer.remoteDescription)
+            await peer.addIceCandidate(event.candidate);
+          else remoteCandidates.push(event.candidate);
+        } else {
+          fail(new Error(event.message || "Talk signaling failed"));
+        }
+      } catch (error) {
+        fail(error);
+      }
+    };
+
+    void (async () => {
+      try {
+        for (const track of options.localStream.getAudioTracks()) {
+          peer.addTransceiver(track, {
+            direction: "sendonly",
+            streams: [options.localStream],
+          });
+        }
+        const offer = await peer.createOffer();
+        await peer.setLocalDescription(offer);
+        const offerWithCandidates = appendIceCandidates(
+          offer.sdp ?? "",
+          localCandidates.splice(0),
+        );
+        unsubscribe = await options.signaling.subscribe(
+          offerWithCandidates,
+          (event) => void handleEvent(event),
+        );
+        if (closed) unsubscribe();
+      } catch (error) {
+        fail(error);
+      }
+    })();
+  });
 }

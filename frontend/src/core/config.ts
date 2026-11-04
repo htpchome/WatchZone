@@ -12,6 +12,7 @@ export interface CameraConfig {
   readonly low_latency_hls: boolean;
   readonly start_live_unmuted_pc_tablet: boolean;
   readonly start_live_unmuted_phone: boolean;
+  readonly two_way_talk_enabled: boolean;
 }
 
 export interface CardConfig {
@@ -87,6 +88,7 @@ export function createDefaultCameraConfig(entityId = ""): CameraConfig {
     low_latency_hls: true,
     start_live_unmuted_pc_tablet: false,
     start_live_unmuted_phone: false,
+    two_way_talk_enabled: false,
   };
 }
 
@@ -126,6 +128,7 @@ function legacyCamera(
       low_latency_hls: source.low_latency_hls,
       start_live_unmuted_pc_tablet: source.start_live_unmuted_pc_tablet,
       start_live_unmuted_phone: source.start_live_unmuted_phone,
+      two_way_talk_enabled: source.two_way_talk_enabled,
     },
   ];
 }
@@ -150,6 +153,7 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
     "low_latency_hls",
     "start_live_unmuted_pc_tablet",
     "start_live_unmuted_phone",
+    "two_way_talk_enabled",
   ] as const) {
     if (
       key in source &&
@@ -177,6 +181,7 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
         : defaults.low_latency_hls,
     start_live_unmuted_pc_tablet: source.start_live_unmuted_pc_tablet === true,
     start_live_unmuted_phone: source.start_live_unmuted_phone === true,
+    two_way_talk_enabled: source.two_way_talk_enabled === true,
   };
 }
 

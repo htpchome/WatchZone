@@ -3,6 +3,8 @@ import {
   CAMERA_MODULE_TYPE,
   DEFAULT_CAMERA_MODULE_NODE_ID,
   DEFAULT_LAYOUT_ROOT_NODE_ID,
+  DEFAULT_TALK_MODULE_NODE_ID,
+  TALK_MODULE_TYPE,
 } from "../core/constants";
 import type { LayoutDocument, LayoutModuleNode } from "../core/layout";
 
@@ -27,11 +29,28 @@ export function createDefaultCardLayout(config: CardConfig): LayoutDocument {
         moduleType: CAMERA_MODULE_TYPE,
       }
     : undefined;
+  const talkNode: LayoutModuleNode | undefined = config.cameras.some(
+    ({ two_way_talk_enabled: enabled }) => enabled,
+  )
+    ? {
+        config: {
+          enabledCameraIds: config.cameras
+            .filter(({ two_way_talk_enabled: enabled }) => enabled)
+            .map(({ entity_id: entityId }) => entityId),
+        },
+        id: DEFAULT_TALK_MODULE_NODE_ID,
+        kind: "module",
+        moduleType: TALK_MODULE_TYPE,
+      }
+    : undefined;
   return {
     root: {
-      children: cameraNode ? [cameraNode] : [],
+      children: [cameraNode, talkNode].filter(
+        (node): node is LayoutModuleNode => node !== undefined,
+      ),
       id: DEFAULT_LAYOUT_ROOT_NODE_ID,
       kind: "container",
+      ...(talkNode ? { presentation: "overlay" as const } : {}),
     },
   };
 }

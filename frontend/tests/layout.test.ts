@@ -8,6 +8,7 @@ import { normalizeCardConfig } from "../src/core/config";
 import {
   DEFAULT_CAMERA_MODULE_NODE_ID,
   DEFAULT_LAYOUT_ROOT_NODE_ID,
+  DEFAULT_TALK_MODULE_NODE_ID,
 } from "../src/core/constants";
 import { validateLayoutDocument } from "../src/core/layout";
 import type { ModuleDefinition } from "../src/core/module";
@@ -66,6 +67,26 @@ describe("layout composition", () => {
         cameras: [{ entityId: "camera.front" }],
         retentionPreference: "automatic",
       },
+    });
+  });
+
+  it("composes an independent talk overlay only for opted-in cameras", () => {
+    const layout = createDefaultCardLayout(
+      normalizeCardConfig({
+        cameras: [
+          { entity_id: "camera.front", two_way_talk_enabled: true },
+          { entity_id: "camera.back" },
+        ],
+      }),
+    );
+
+    expect(layout.root.presentation).toBe("overlay");
+    expect(layout.root.children).toHaveLength(2);
+    expect(layout.root.children[1]).toMatchObject({
+      id: DEFAULT_TALK_MODULE_NODE_ID,
+      kind: "module",
+      moduleType: "two_way_talk",
+      config: { enabledCameraIds: ["camera.front"] },
     });
   });
 

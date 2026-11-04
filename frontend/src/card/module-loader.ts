@@ -1,4 +1,4 @@
-import { CAMERA_MODULE_TYPE } from "../core/constants";
+import { CAMERA_MODULE_TYPE, TALK_MODULE_TYPE } from "../core/constants";
 import type {
   ModuleDefinition,
   ModuleLoaderMap,
@@ -9,6 +9,9 @@ const moduleLoaders = {
   [CAMERA_MODULE_TYPE]: {
     load: () => import("../modules/camera"),
     reserveAspectRatio: true,
+  },
+  [TALK_MODULE_TYPE]: {
+    load: () => import("../modules/two-way-talk"),
   },
 } satisfies ModuleLoaderMap;
 

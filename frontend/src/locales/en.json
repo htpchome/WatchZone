@@ -87,5 +87,18 @@
   "camera.fullscreen_unsupported": "Fullscreen is not supported on this device.",
   "camera.fullscreen_failed": "Unable to change fullscreen mode.",
   "camera.autoplay_blocked": "The browser blocked unmuted playback. Tap mute again to retry.",
-  "sortable.reorder": "Reorder item"
+  "sortable.reorder": "Reorder item",
+  "editor.two_way_talk": "Two-Way Talk",
+  "editor.enable_two_way_talk": "Enable Two-Way Talk",
+  "editor.checking_two_way_talk": "Checking camera capability…",
+  "editor.two_way_talk_available": "Two-way talk is available for this camera.",
+  "editor.two_way_talk_unavailable": "This camera does not expose a compatible WebRTC talk path.",
+  "talk.controls": "Two-way talk controls",
+  "talk.connect": "Start two-way talk",
+  "talk.connecting": "Connecting two-way talk",
+  "talk.connected": "Two-way talk connected",
+  "talk.failed": "Two-way talk failed to connect",
+  "talk.disconnect": "Disconnect two-way talk",
+  "talk.mute_microphone": "Mute microphone",
+  "talk.unmute_microphone": "Unmute microphone"
 }

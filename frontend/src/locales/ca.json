@@ -46,5 +46,18 @@
   "camera.snapshot_downloaded": "Instantània baixada.",
   "camera.snapshot_failed": "No s’ha pogut fer la instantània.",
   "camera.autoplay_blocked": "El navegador ha bloquejat la reproducció amb so. Torna a tocar el silenci per reintentar-ho.",
-  "sortable.reorder": "Reordena l’element"
+  "sortable.reorder": "Reordena l’element",
+  "editor.two_way_talk": "Comunicació bidireccional",
+  "editor.enable_two_way_talk": "Activa la comunicació bidireccional",
+  "editor.checking_two_way_talk": "S’està comprovant la compatibilitat de la càmera…",
+  "editor.two_way_talk_available": "La comunicació bidireccional està disponible per a aquesta càmera.",
+  "editor.two_way_talk_unavailable": "Aquesta càmera no ofereix una ruta WebRTC compatible.",
+  "talk.controls": "Controls de comunicació bidireccional",
+  "talk.connect": "Inicia la comunicació bidireccional",
+  "talk.connecting": "S’està connectant la comunicació bidireccional",
+  "talk.connected": "Comunicació bidireccional connectada",
+  "talk.failed": "No s’ha pogut connectar la comunicació bidireccional",
+  "talk.disconnect": "Desconnecta la comunicació bidireccional",
+  "talk.mute_microphone": "Silencia el micròfon",
+  "talk.unmute_microphone": "Activa el micròfon"
 }
