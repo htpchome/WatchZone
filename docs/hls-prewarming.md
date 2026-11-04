@@ -7,10 +7,10 @@ explicitly selected set of camera entities. This is integration-level shared
 backend work. It is not inferred from a currently mounted card, stored in card
 YAML, or enabled for every camera in Home Assistant.
 
-The allowlist is configured under **Settings > Devices & services > WatchZone >
-Configure > Cameras**. A maximum of twelve cameras may be selected. This
-prevents special-purpose cameras, such as a printer camera, from consuming
-resources unless the user deliberately opts them in.
+The allowlist is configured from the **Preloaded Cameras** child tile under
+**Settings > Devices & services > WatchZone**. A maximum of twelve cameras may
+be selected. This prevents special-purpose cameras, such as a printer camera,
+from consuming resources unless the user deliberately opts them in.
 
 For each selected entity, WatchZone:
 
@@ -53,7 +53,7 @@ lifecycle.
 
 ## Prototype test procedure
 
-1. Select one camera under WatchZone's **Configure** flow.
+1. Select one camera from WatchZone's **Preloaded Cameras** tile.
 2. Allow enough time for that camera to produce HLS segments.
 3. Open a fresh browser document so no retained frontend session can satisfy
    the test.

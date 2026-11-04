@@ -1045,8 +1045,10 @@ There are three different forms of configuration and they must remain
 separate:
 
 1. **Integration/provider configuration:** A primary Home Assistant config
-   entry and provider subentry flows; credentials and connection settings
-   belong here.
+   entry plus typed subentries for integration-owned settings and provider
+   instances; credentials, connection settings, and bounded shared-backend
+   policies belong here. Each setting has one persisted owner and one runtime
+   read path; an options-flow copy must not coexist with a subentry.
 2. **Saved layouts:** Versioned Home Assistant `Store` data owned by Python.
 3. **Card reference:** Minimal Lovelace config used to select a saved layout or
    card instance; no layout tree belongs here.

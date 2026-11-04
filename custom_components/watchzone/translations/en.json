@@ -11,27 +11,32 @@
       "single_instance_allowed": "WatchZone is already configured."
     }
   },
-  "options": {
-    "step": {
-      "init": {
-        "title": "WatchZone settings",
-        "menu_options": {
-          "cameras": "Cameras"
+  "config_subentries": {
+    "camera_preload": {
+      "entry_type": "Preloaded cameras",
+      "initiate_flow": {
+        "user": "Add preloaded cameras",
+        "reconfigure": "Configure preloaded cameras"
+      },
+      "step": {
+        "camera_preload": {
+          "title": "Preloaded Cameras",
+          "description": "Keep Home Assistant HLS ready only for the selected cameras. This uses server resources even when no card is visible.",
+          "data": {
+            "hls_prewarm_cameras": "Pre-warm HLS cameras"
+          },
+          "data_description": {
+            "hls_prewarm_cameras": "Select up to 12 cameras. Their existing Home Assistant entities and stream workers are reused; no duplicate camera entities are created."
+          }
         }
       },
-      "cameras": {
-        "title": "Camera settings",
-        "description": "Keep Home Assistant HLS ready only for the selected cameras. This uses server resources even when no card is visible.",
-        "data": {
-          "hls_prewarm_cameras": "Pre-warm HLS cameras"
-        },
-        "data_description": {
-          "hls_prewarm_cameras": "Select up to 12 cameras. Their existing Home Assistant entities and stream workers are reused; no duplicate camera entities are created."
-        }
+      "error": {
+        "too_many_prewarm_cameras": "Select no more than 12 cameras."
+      },
+      "abort": {
+        "single_camera_preload_allowed": "Preloaded Cameras is already configured.",
+        "reconfigure_successful": "Preloaded cameras updated successfully."
       }
-    },
-    "error": {
-      "too_many_prewarm_cameras": "Select no more than 12 cameras."
     }
   }
 }

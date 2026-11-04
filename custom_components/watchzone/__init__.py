@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from types import MappingProxyType
 from urllib.parse import urlsplit
 
 from homeassistant.components.http.server import StaticPathConfig
@@ -15,18 +16,21 @@ from homeassistant.components.lovelace.resources import (
     ResourceStorageCollection,
     ResourceYAMLCollection,
 )
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import ConfigEntry, ConfigSubentry
 from homeassistant.const import CONF_ID, CONF_TYPE, CONF_URL
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 
 from .const import (
+    CAMERA_PRELOAD_TITLE,
     CARD_FILENAME,
     CARD_MODULE_URL,
     CONF_HLS_PREWARM_CAMERAS,
     DATA_RUNTIME,
     DOMAIN,
     FRONTEND_URL_BASE,
+    SUBENTRY_TYPE_CAMERA_PRELOAD,
+    SUBENTRY_UNIQUE_ID_CAMERA_PRELOAD,
 )
 from .extensions import (
     EXTENSION_API_VERSION,
@@ -92,7 +96,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WatchZoneConfigEntry) ->
     camera_runtime = CameraRuntimeService(hass, providers)
     await camera_runtime.async_setup()
     hls_prewarm = HlsPrewarmService(hass)
-    await hls_prewarm.async_setup(entry.options.get(CONF_HLS_PREWARM_CAMERAS, []))
+    await hls_prewarm.async_setup(_prewarm_camera_ids(entry))
     runtime = WatchZoneRuntime(
         entry_id=entry.entry_id,
         camera_runtime=camera_runtime,
@@ -101,19 +105,57 @@ async def async_setup_entry(hass: HomeAssistant, entry: WatchZoneConfigEntry) ->
     )
     entry.runtime_data = runtime
     hass.data.setdefault(DOMAIN, {})[DATA_RUNTIME] = runtime
-    entry.async_on_unload(entry.add_update_listener(_async_options_updated))
+    entry.async_on_unload(entry.add_update_listener(_async_entry_updated))
     await _async_register_card_resource(hass)
     return True
 
 
-async def _async_options_updated(
+async def _async_entry_updated(
     hass: HomeAssistant, entry: WatchZoneConfigEntry
 ) -> None:
-    """Reconcile server-side settings without reloading frontend resources."""
+    """Reconcile typed child settings without reloading frontend resources."""
     del hass
-    await entry.runtime_data.hls_prewarm.async_set_entities(
-        entry.options.get(CONF_HLS_PREWARM_CAMERAS, [])
-    )
+    await entry.runtime_data.hls_prewarm.async_set_entities(_prewarm_camera_ids(entry))
+
+
+def _prewarm_camera_ids(entry: ConfigEntry) -> list[str]:
+    """Return the singleton camera-preload allowlist."""
+    subentries = entry.get_subentries_of_type(SUBENTRY_TYPE_CAMERA_PRELOAD)
+    if not subentries:
+        return []
+    selected = subentries[0].data.get(CONF_HLS_PREWARM_CAMERAS, [])
+    return list(selected) if isinstance(selected, list) else []
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Move legacy prewarm options into the typed child configuration."""
+    if entry.version > 2:
+        return False
+
+    if entry.version == 1:
+        selected = entry.options.get(CONF_HLS_PREWARM_CAMERAS, [])
+        if not entry.get_subentries_of_type(SUBENTRY_TYPE_CAMERA_PRELOAD):
+            hass.config_entries.async_add_subentry(
+                entry,
+                ConfigSubentry(
+                    data=MappingProxyType(
+                        {
+                            CONF_HLS_PREWARM_CAMERAS: (
+                                list(selected) if isinstance(selected, list) else []
+                            )
+                        }
+                    ),
+                    subentry_type=SUBENTRY_TYPE_CAMERA_PRELOAD,
+                    title=CAMERA_PRELOAD_TITLE,
+                    unique_id=SUBENTRY_UNIQUE_ID_CAMERA_PRELOAD,
+                ),
+            )
+
+        options = dict(entry.options)
+        options.pop(CONF_HLS_PREWARM_CAMERAS, None)
+        hass.config_entries.async_update_entry(entry, options=options, version=2)
+
+    return True
 
 
 def _register_builtin_providers(hass: HomeAssistant) -> ProviderRegistry:
