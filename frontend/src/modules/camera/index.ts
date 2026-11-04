@@ -1,6 +1,7 @@
 import { CAMERA_MODULE_TYPE, CAMERA_TAG } from "../../core/constants";
 import { cameraImageUrl } from "../../core/home-assistant";
 import { englishLocalize } from "../../core/localization";
+import type { MediaRetentionPreference } from "../../core/media-retention-policy";
 import type { ModuleDefinition, ModuleRuntimeContext } from "../../core/module";
 import { LiveSourceResolver } from "../../providers/live-source-resolver";
 import type { CameraItemConfig, CameraModule } from "./camera";
@@ -10,6 +11,7 @@ export interface CameraModuleConfig {
     CameraItemConfig,
     "available" | "posterUrl"
   >[];
+  readonly retentionPreference: MediaRetentionPreference;
 }
 
 const resolver = new LiveSourceResolver();
@@ -47,6 +49,7 @@ function updateCameraElement(
 ): void {
   camera.api = context.api;
   camera.localize = context.localize ?? englishLocalize;
+  camera.retentionPreference = config.retentionPreference;
   camera.cameras = config.cameras.map((item) => ({
     ...item,
     available: Boolean(context.hass?.states[item.entityId]),
@@ -64,7 +67,16 @@ function validateCameraConfig(value: unknown): CameraModuleConfig {
   const cameras = source.cameras.map((camera, index) =>
     validateCameraItem(camera, index),
   );
-  return { cameras };
+  if (
+    source.retentionPreference !== "automatic" &&
+    source.retentionPreference !== "reduced_bandwidth"
+  ) {
+    throw new Error("Camera modules require a valid retention preference.");
+  }
+  return {
+    cameras,
+    retentionPreference: source.retentionPreference,
+  };
 }
 
 function validateCameraItem(

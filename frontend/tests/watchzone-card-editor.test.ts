@@ -158,6 +158,34 @@ describe("watchzone-card-editor", () => {
     });
   });
 
+  it("exposes and saves Mobile Data Saving", async () => {
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+    const selector = editor.shadowRoot?.querySelector(
+      '[data-config-key="mobile_data_saving"]',
+    ) as (HTMLElement & { value?: boolean }) | null;
+    expect(selector?.value).toBe(false);
+
+    selector?.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: true },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
+      type: CARD_TYPE,
+      title: "Camera",
+      mobile_data_saving: true,
+    });
+  });
+
   it("previews, saves, and restores a selected camera", async () => {
     const states: CardConfig[] = [];
     const contextHandler = (event: Event) => {

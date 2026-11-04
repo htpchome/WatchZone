@@ -11,6 +11,7 @@ describe("WatchZone card configuration", () => {
       rounded_outer_corners: true,
       outer_shadows: true,
       outer_padding: true,
+      mobile_data_saving: false,
       cameras: [],
     });
   });
@@ -55,6 +56,9 @@ describe("WatchZone card configuration", () => {
   });
 
   it("rejects invalid, duplicate, and excessive camera configuration", () => {
+    expect(() => normalizeCardConfig({ mobile_data_saving: "yes" })).toThrow(
+      "mobile_data_saving must be a boolean",
+    );
     expect(() => normalizeCardConfig({ outer_shadows: "yes" })).toThrow(
       "outer_shadows must be a boolean",
     );

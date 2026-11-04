@@ -15,6 +15,7 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
   }
   if (config.outer_shadows !== false) delete yaml.outer_shadows;
   if (config.outer_padding !== false) delete yaml.outer_padding;
+  if (!config.mobile_data_saving) delete yaml.mobile_data_saving;
   if (config.cameras.length === 0) delete yaml.cameras;
   else yaml.cameras = config.cameras.map(compactCameraConfig);
   for (const [key, value] of Object.entries(yaml)) {

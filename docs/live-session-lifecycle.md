@@ -216,9 +216,9 @@ Retention must be bounded by a policy containing at least:
 - Maximum simultaneously connected sessions.
 - Maximum audible sessions.
 - Adapter-specific decoder or bandwidth limits where measurable.
-- A centralized parked-session lifetime policy. Desktop and tablet sessions
-  remain eligible for document-lifetime retention. Phone retention is adaptive
-  to confirmed network conditions and uses one centralized expiry timer.
+- A centralized parked-session lifetime policy. The `standard` profile keeps
+  sessions eligible for document-lifetime retention. The
+  `reduced_bandwidth` profile uses one centralized expiry timer.
 
 Exact defaults are implementation decisions that require measurement on
 representative desktop and mobile Home Assistant clients. They are centralized
@@ -229,15 +229,24 @@ transport sessions per logical camera while HLS competes with or falls back
 from WebRTC. Only selected cameras acquire frontend leases. An unneeded HLS
 loser is still discarded after a successful WebRTC handoff.
 
-On a phone with a confirmed Wi-Fi or Ethernet network, no more than three
-logical cameras remain connected in total, including active cameras. Inactive
-phone cameras are retained by most-recent use for at most two minutes. On a
-cellular, data-saving, or network-unknown phone, camera switching keeps only
-the active frontend transport. If Home Assistant route navigation temporarily
-removes the camera module, the one most-recent camera may remain parked for up
-to two minutes so returning does not force renegotiation. Server-side HLS
-pre-warming remains available independently and does not consume a browser
-decoder or transport.
+The `standard` profile applies to desktop, tablet, and phone clients by
+default, including phones on Wi-Fi and phones whose browser does not expose
+network information. It preserves document-lifetime retention within the
+global pool. On a phone with confirmed cellular service or the browser's data
+saving signal, the manager automatically selects `reduced_bandwidth`. The
+card-level Mobile Data Saving option also forces `reduced_bandwidth` on phone
+clients regardless of network. That profile keeps at most three logical
+cameras connected in total, including active cameras, and retains inactive
+cameras by most-recent use for at most two minutes. Active cameras are never
+evicted merely because the network profile changes. Server-side HLS
+pre-warming remains independent and consumes neither a browser decoder nor a
+frontend transport.
+
+This budget is keyed by logical camera rather than provider. A layout may mix,
+for example, a Home Assistant camera with a Frigate go2rtc camera. Both use the
+same retention profile and deterministic budget, while their provider adapters
+remain separate and exclusively own their connection, health, park, resume,
+and close behavior.
 
 Automatic provider-failure retries are serialized by the document manager in
 original session-acquisition order. Backoff timers may become ready together,
@@ -259,11 +268,11 @@ Eviction calls the adapter's complete close path, revokes object URLs, removes
 listeners, cancels retries, and clears session-owned media resources. A closed
 session object is never returned to a new lease.
 
-Desktop and tablet parked sessions have no idle-time expiry. This preserves
-Home Assistant route navigation, dashboard editing, and background-tab reuse;
+Standard-profile parked sessions have no idle-time expiry. This preserves Home
+Assistant route navigation, dashboard editing, and background-tab reuse;
 capacity pressure still evicts parked fallback sessions first, then the
-least-recently-used preferred session. Phone expiry and network constraints are
-the explicit exception above. A discarded losing connection and a failed or
+least-recently-used preferred session. Reduced-bandwidth phone retention is the
+explicit exception above. A discarded losing connection and a failed or
 unhealthy connection remain eligible for immediate cleanup regardless of age.
 
 ## 8. Connection adapter contract

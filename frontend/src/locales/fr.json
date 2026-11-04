@@ -10,6 +10,7 @@
   "editor.camera_count": "{count} sur {maximum} configurées",
   "editor.add_camera": "Ajouter une caméra",
   "editor.title": "Titre",
+  "editor.mobile_data_saving": "Économie de données mobiles",
   "editor.rounded_outer_corners": "Coins extérieurs arrondis",
   "editor.outer_shadows": "Ombres extérieures",
   "editor.outer_padding": "Marge extérieure",

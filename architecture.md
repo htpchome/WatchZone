@@ -638,14 +638,19 @@ Mandatory behavior:
   not wait behind background camera startup. Backend HLS pre-warming is a
   separate server policy and does not create browser transports.
 - Retention policy groups transport sessions by provider-neutral logical
-  camera identity. On phone-class clients with a confirmed unmetered network,
-  at most three logical cameras remain connected in total, including active
-  cameras; inactive cameras expire after two minutes and are evicted least
-  recently used. On metered, data-saving, or unknown phone networks, only the
-  active camera remains connected while mounted; during route navigation, its
-  single most-recent session may remain parked for up to two minutes. Desktop
-  and tablet sessions keep document-lifetime retention within the global
-  session budget.
+  camera identity and selects one of two centralized profiles. `standard`
+  provides document-lifetime retention within the global session budget and
+  applies to desktop, tablet, and phone clients by default. On phone clients,
+  confirmed cellular service or the browser's data-saving signal selects
+  `reduced_bandwidth`: at most three logical cameras remain connected in
+  total, inactive cameras expire after two minutes, and eviction is least
+  recently used. Missing network information does not by itself reduce phone
+  retention. The card-level Mobile Data Saving option forces
+  `reduced_bandwidth` on phone clients. Future device classes map into these
+  profiles instead of creating provider- or transport-specific policies.
+  Cameras using different providers or connection types participate in the
+  same logical-camera budget while each provider independently owns its
+  session implementation.
 - Active leases remain protected across background tabs. Home Assistant route
   and dashboard navigation releases element leases into the centralized
   retention policy; returning consumers reuse a healthy retained session.

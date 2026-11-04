@@ -191,15 +191,16 @@ presentation; it does not close a healthy retained winner.
 The global resource budget retains at most two transport sessions for each of
 the twelve configured cameras while WebRTC and HLS compete. Only the selected
 camera acquires frontend leases. Provider-neutral retention groups those
-transport keys by logical camera: desktop/tablet sessions remain eligible for
-document-lifetime parking, while phone sessions use the bounded network-aware
-MRU and expiry policy in `docs/live-session-lifecycle.md`. An unshared HLS
-loser is discarded immediately after WebRTC handoff. Established connections
-use the reconnect policy supplied by their provider adapter. HLS keeps the
-shared short, bounded recovery cadence. Home Assistant WebRTC probes use a
-longer 60-second exponential cadence with five bounded attempts because an
-upstream media consumer can remain visible briefly after frontend signaling
-has closed. HLS remains available throughout that cooldown.
+transport keys by logical camera and applies the provider-neutral `standard`
+or `reduced_bandwidth` profile defined in
+`docs/live-session-lifecycle.md`. Mixed-provider cameras share that logical
+budget without sharing provider implementation. An unshared HLS loser is
+discarded immediately after WebRTC handoff. Established connections use the
+reconnect policy supplied by their provider adapter. HLS keeps the shared
+short, bounded recovery cadence. Home Assistant WebRTC probes use a longer
+60-second exponential cadence with five bounded attempts because an upstream
+media consumer can remain visible briefly after frontend signaling has closed.
+HLS remains available throughout that cooldown.
 
 Replacement WebRTC signaling for one authenticated browser connection and
 camera is serialized behind complete cleanup of its predecessor. Bounded

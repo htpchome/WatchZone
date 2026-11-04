@@ -19,6 +19,7 @@ import type { DeviceClass } from "./device-profile";
 import {
   type MediaRetentionCamera,
   type MediaRetentionEnvironment,
+  type MediaRetentionPreference,
   MediaRetentionPolicy,
 } from "./media-retention-policy";
 
@@ -101,6 +102,14 @@ const HOME_ASSISTANT_RECONNECT_POLICY: MediaReconnectPolicy = {
 };
 const RECONNECT_JITTER_MS = 250;
 const RECONNECT_STABLE_RESET_MS = 30_000;
+
+function setEquals<T>(left: ReadonlySet<T>, right: ReadonlySet<T>): boolean {
+  if (left.size !== right.size) return false;
+  for (const value of left) {
+    if (!right.has(value)) return false;
+  }
+  return true;
+}
 
 class ManagedMediaSession {
   private _api: HomeAssistantApi;
@@ -444,7 +453,21 @@ export class MediaSessionManager {
     object,
     { readonly cameraKey: string; readonly deviceClass: DeviceClass }
   >();
-  private readonly _cameraDeviceClasses = new Map<string, DeviceClass>();
+  private readonly _cameraRetentionContexts = new Map<
+    object,
+    {
+      readonly cameraKeys: ReadonlySet<string>;
+      readonly deviceClass: DeviceClass;
+      readonly preference: MediaRetentionPreference;
+    }
+  >();
+  private readonly _cameraRetentionMetadata = new Map<
+    string,
+    {
+      readonly deviceClass: DeviceClass;
+      readonly preference: MediaRetentionPreference;
+    }
+  >();
   private readonly _connectionObservers = new Map<
     HomeAssistantConnection,
     {
@@ -510,18 +533,48 @@ export class MediaSessionManager {
       return;
     if (cameraKey) {
       this._cameraActivity.set(owner, { cameraKey, deviceClass });
-      this._cameraDeviceClasses.set(cameraKey, deviceClass);
     } else {
       this._cameraActivity.delete(owner);
     }
     this._applyRetentionPolicy();
-    this._pruneCameraDeviceClasses();
+    this._pruneCameraRetentionMetadata();
+  }
+
+  public setCameraRetentionPreference(
+    owner: object,
+    cameraKeys: readonly string[],
+    deviceClass: DeviceClass,
+    preference: MediaRetentionPreference,
+  ): void {
+    const previous = this._cameraRetentionContexts.get(owner);
+    const nextKeys = new Set(cameraKeys);
+    if (
+      previous?.deviceClass === deviceClass &&
+      previous.preference === preference &&
+      setEquals(previous.cameraKeys, nextKeys)
+    ) {
+      return;
+    }
+    this._cameraRetentionContexts.set(owner, {
+      cameraKeys: nextKeys,
+      deviceClass,
+      preference,
+    });
+    const affected = new Set(previous?.cameraKeys ?? []);
+    for (const cameraKey of nextKeys) affected.add(cameraKey);
+    this._refreshCameraRetentionMetadata(affected);
+    this._applyRetentionPolicy();
+    this._pruneCameraRetentionMetadata();
   }
 
   public clearCameraActivity(owner: object): void {
-    if (!this._cameraActivity.delete(owner)) return;
+    const activityRemoved = this._cameraActivity.delete(owner);
+    const context = this._cameraRetentionContexts.get(owner);
+    const contextRemoved = this._cameraRetentionContexts.delete(owner);
+    if (!activityRemoved && !contextRemoved) return;
+    if (context) this._refreshCameraRetentionMetadata(context.cameraKeys);
     this._applyRetentionPolicy();
-    this._pruneCameraDeviceClasses();
+    this._pruneCameraRetentionMetadata();
   }
 
   private _acquire(
@@ -552,7 +605,7 @@ export class MediaSessionManager {
           const closedSession = this._sessions.get(key);
           if (closedSession) this._reconnectQueue.delete(closedSession);
           this._sessions.delete(key);
-          this._pruneCameraDeviceClasses();
+          this._pruneCameraRetentionMetadata();
           this._pruneConnectionObservers();
         },
         () => this._applyRetentionPolicy(),
@@ -576,7 +629,8 @@ export class MediaSessionManager {
       session.close();
     }
     this._cameraActivity.clear();
-    this._cameraDeviceClasses.clear();
+    this._cameraRetentionContexts.clear();
+    this._cameraRetentionMetadata.clear();
     this._retentionPolicy.dispose();
     this._clearConnectionObservers();
   }
@@ -594,9 +648,13 @@ export class MediaSessionManager {
           activeCameraKeys.has(session.cameraKey) ||
           !session.isRetained(),
         deviceClass:
-          this._cameraDeviceClasses.get(session.cameraKey) ?? "desktop",
+          this._cameraRetentionMetadata.get(session.cameraKey)?.deviceClass ??
+          "desktop",
         key: session.cameraKey,
         lastUsed: Math.max(current?.lastUsed ?? 0, session.lastUsed),
+        preference:
+          this._cameraRetentionMetadata.get(session.cameraKey)?.preference ??
+          "automatic",
       });
     }
     for (const cameraKey of this._retentionPolicy.evaluate([
@@ -610,16 +668,37 @@ export class MediaSessionManager {
     }
   }
 
-  private _pruneCameraDeviceClasses(): void {
+  private _refreshCameraRetentionMetadata(cameraKeys: Iterable<string>): void {
+    for (const cameraKey of cameraKeys) {
+      const contexts = [...this._cameraRetentionContexts.values()].filter(
+        ({ cameraKeys: configured }) => configured.has(cameraKey),
+      );
+      if (contexts.length === 0) continue;
+      const reduced = contexts.find(
+        ({ preference }) => preference === "reduced_bandwidth",
+      );
+      const selected = reduced ?? contexts.at(-1);
+      if (!selected) continue;
+      this._cameraRetentionMetadata.set(cameraKey, {
+        deviceClass: selected.deviceClass,
+        preference: selected.preference,
+      });
+    }
+  }
+
+  private _pruneCameraRetentionMetadata(): void {
     const referenced = new Set(
       [...this._cameraActivity.values()].map(({ cameraKey }) => cameraKey),
     );
+    for (const context of this._cameraRetentionContexts.values()) {
+      for (const cameraKey of context.cameraKeys) referenced.add(cameraKey);
+    }
     for (const session of this._sessions.values()) {
       referenced.add(session.cameraKey);
     }
-    for (const cameraKey of this._cameraDeviceClasses.keys()) {
+    for (const cameraKey of this._cameraRetentionMetadata.keys()) {
       if (!referenced.has(cameraKey))
-        this._cameraDeviceClasses.delete(cameraKey);
+        this._cameraRetentionMetadata.delete(cameraKey);
     }
   }
 

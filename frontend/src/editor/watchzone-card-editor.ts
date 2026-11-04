@@ -69,7 +69,10 @@ const sortableTileTag = unsafeStatic(SORTABLE_TILE_TAG);
 const EDITOR_STATUS_KEY = "editor-draft-status";
 
 type BooleanConfigFlag =
-  "outer_padding" | "outer_shadows" | "rounded_outer_corners";
+  | "mobile_data_saving"
+  | "outer_padding"
+  | "outer_shadows"
+  | "rounded_outer_corners";
 
 type CameraBooleanConfigFlag = Exclude<keyof CameraConfig, "entity_id">;
 
@@ -264,14 +267,21 @@ export class CardEditor extends LitElement {
   }
 
   private _renderGeneralSettings() {
-    return html`<ha-input
-      required
-      auto-validate
-      label=${this._t("editor.title")}
-      .value=${this._config?.title ?? ""}
-      @input=${this._handleTitleInput}
-      @change=${this._handleTitleChange}
-    ></ha-input>`;
+    return html`
+      <ha-input
+        required
+        auto-validate
+        label=${this._t("editor.title")}
+        .value=${this._config?.title ?? ""}
+        @input=${this._handleTitleInput}
+        @change=${this._handleTitleChange}
+      ></ha-input>
+      ${this._renderBooleanOption(
+        "mobile_data_saving",
+        this._t("editor.mobile_data_saving"),
+        this._config?.mobile_data_saving === true,
+      )}
+    `;
   }
 
   private _renderLayoutSettings() {

@@ -1,9 +1,11 @@
 import type { DeviceClass } from "./device-profile";
 import {
-  MAX_CONSTRAINED_MOBILE_CONNECTED_CAMERAS,
-  MAX_MOBILE_CONNECTED_CAMERAS,
-  MOBILE_CAMERA_WARM_RETENTION_MS,
+  MAX_REDUCED_BANDWIDTH_CONNECTED_CAMERAS,
+  REDUCED_BANDWIDTH_CAMERA_RETENTION_MS,
 } from "./constants";
+
+export type MediaRetentionPreference = "automatic" | "reduced_bandwidth";
+export type MediaRetentionProfile = "standard" | "reduced_bandwidth";
 
 interface NetworkInformationLike {
   readonly saveData?: boolean;
@@ -17,6 +19,7 @@ export interface MediaRetentionCamera {
   readonly deviceClass: DeviceClass;
   readonly key: string;
   readonly lastUsed: number;
+  readonly preference: MediaRetentionPreference;
 }
 
 export interface MediaRetentionEnvironment {
@@ -34,7 +37,7 @@ function browserNetwork(): NetworkInformationLike | undefined {
   ).connection;
 }
 
-/** Owns provider-neutral mobile MRU, expiry, and network retention decisions. */
+/** Owns provider-neutral retention-profile, MRU, expiry, and network decisions. */
 export class MediaRetentionPolicy {
   private readonly _clearTimer: (timer: unknown) => void;
   private readonly _network?: NetworkInformationLike;
@@ -68,22 +71,27 @@ export class MediaRetentionPolicy {
   ): ReadonlySet<string> {
     this._clearExpiry();
     const evict = new Set<string>();
-    const retainedPhones = cameras
-      .filter(({ active, deviceClass }) => !active && deviceClass === "phone")
+    const retainedReducedBandwidthPhones = cameras
+      .filter(
+        (camera) =>
+          !camera.active && this._profileFor(camera) === "reduced_bandwidth",
+      )
       .sort((left, right) => right.lastUsed - left.lastUsed);
-    if (retainedPhones.length === 0) return evict;
+    if (retainedReducedBandwidthPhones.length === 0) return evict;
 
-    const activePhoneCount = cameras.filter(
-      ({ active, deviceClass }) => active && deviceClass === "phone",
+    const activeReducedBandwidthPhoneCount = cameras.filter(
+      (camera) =>
+        camera.active && this._profileFor(camera) === "reduced_bandwidth",
     ).length;
-    const connectedLimit = this._hasConfirmedUnmeteredNetwork()
-      ? MAX_MOBILE_CONNECTED_CAMERAS
-      : MAX_CONSTRAINED_MOBILE_CONNECTED_CAMERAS;
-    const retainedLimit = Math.max(0, connectedLimit - activePhoneCount);
+    const retainedLimit = Math.max(
+      0,
+      MAX_REDUCED_BANDWIDTH_CONNECTED_CAMERAS -
+        activeReducedBandwidthPhoneCount,
+    );
     const now = this._now();
     let nextExpiry = Number.POSITIVE_INFINITY;
-    retainedPhones.forEach((camera, index) => {
-      const expiresAt = camera.lastUsed + MOBILE_CAMERA_WARM_RETENTION_MS;
+    retainedReducedBandwidthPhones.forEach((camera, index) => {
+      const expiresAt = camera.lastUsed + REDUCED_BANDWIDTH_CAMERA_RETENTION_MS;
       if (index >= retainedLimit || expiresAt <= now) {
         evict.add(camera.key);
       } else {
@@ -104,9 +112,18 @@ export class MediaRetentionPolicy {
     this._network?.removeEventListener?.("change", this._handleNetworkChange);
   }
 
-  private _hasConfirmedUnmeteredNetwork(): boolean {
-    if (this._network?.saveData === true) return false;
-    return this._network?.type === "wifi" || this._network?.type === "ethernet";
+  private _profileFor(camera: MediaRetentionCamera): MediaRetentionProfile {
+    if (camera.deviceClass !== "phone") return "standard";
+    if (camera.preference === "reduced_bandwidth") {
+      return "reduced_bandwidth";
+    }
+    if (
+      this._network?.saveData === true ||
+      this._network?.type === "cellular"
+    ) {
+      return "reduced_bandwidth";
+    }
+    return "standard";
   }
 
   private _clearExpiry(): void {

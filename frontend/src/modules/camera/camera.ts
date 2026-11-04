@@ -16,6 +16,7 @@ import {
   type LocalizeFunction,
 } from "../../core/localization";
 import { getMediaSessionManager } from "../../core/media-session-manager";
+import type { MediaRetentionPreference } from "../../core/media-retention-policy";
 import { renderIcon } from "../../ui/icons";
 import type { CameraGestureLockDetail } from "./live/presentation";
 import type { CameraOverlayVisibilityDetail } from "./live/presentation";
@@ -48,6 +49,7 @@ export class CameraModule extends LitElement {
     api: { attribute: false },
     cameras: { attribute: false },
     localize: { attribute: false },
+    retentionPreference: { attribute: false },
   };
 
   private _activeIndex = 0;
@@ -65,6 +67,7 @@ export class CameraModule extends LitElement {
   public api?: HomeAssistantApi;
   public cameras: readonly CameraItemConfig[] = [];
   public localize: LocalizeFunction = englishLocalize;
+  public retentionPreference: MediaRetentionPreference = "automatic";
 
   public connectedCallback(): void {
     super.connectedCallback();
@@ -247,10 +250,18 @@ export class CameraModule extends LitElement {
   };
 
   private _syncCameraActivity(): void {
-    getMediaSessionManager().setCameraActivity(
+    const manager = getMediaSessionManager();
+    const deviceClass = this._deviceProfile.profile.deviceClass;
+    manager.setCameraActivity(
       this,
       this.cameras[this._activeIndex]?.entityId,
-      this._deviceProfile.profile.deviceClass,
+      deviceClass,
+    );
+    manager.setCameraRetentionPreference(
+      this,
+      this.cameras.map(({ entityId }) => entityId),
+      deviceClass,
+      this.retentionPreference,
     );
   }
 

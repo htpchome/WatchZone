@@ -10,6 +10,7 @@
   "editor.camera_count": "Έχουν ρυθμιστεί {count} από {maximum}",
   "editor.add_camera": "Προσθήκη κάμερας",
   "editor.title": "Τίτλος",
+  "editor.mobile_data_saving": "Εξοικονόμηση δεδομένων κινητής",
   "editor.rounded_outer_corners": "Στρογγυλεμένες εξωτερικές γωνίες",
   "editor.outer_shadows": "Εξωτερικές σκιές",
   "editor.outer_padding": "Εξωτερικό περιθώριο",

@@ -17,6 +17,7 @@ function camera(
     deviceClass: "phone",
     key,
     lastUsed: 0,
+    preference: "automatic",
     ...options,
   };
 }
@@ -45,35 +46,39 @@ describe("MediaRetentionPolicy", () => {
     policy.dispose();
   });
 
-  it("keeps only the active camera while viewing on a constrained phone", () => {
+  it("uses the standard profile for a phone on Wi-Fi", () => {
     const policy = new MediaRetentionPolicy(vi.fn(), {
-      network: { type: "cellular" },
-    });
-
-    expect(
-      policy.evaluate([camera("active", { active: true }), camera("inactive")]),
-    ).toEqual(new Set(["inactive"]));
-    policy.dispose();
-  });
-
-  it("parks only the most recent camera during constrained-phone navigation", () => {
-    const policy = new MediaRetentionPolicy(vi.fn(), {
-      network: { type: "cellular" },
-      now: () => 100,
+      network: { type: "wifi" },
     });
 
     expect(
       policy.evaluate([
-        camera("recent", { lastUsed: 90 }),
-        camera("older", { lastUsed: 80 }),
+        camera("active", { active: true }),
+        camera("one"),
+        camera("two"),
+        camera("three"),
       ]),
-    ).toEqual(new Set(["older"]));
+    ).toEqual(new Set());
     policy.dispose();
   });
 
-  it("retains the two most recent inactive phone cameras beside one active camera", () => {
+  it("uses the standard profile when phone network information is unavailable", () => {
+    const policy = new MediaRetentionPolicy(vi.fn());
+
+    expect(
+      policy.evaluate([
+        camera("active", { active: true }),
+        camera("one"),
+        camera("two"),
+        camera("three"),
+      ]),
+    ).toEqual(new Set());
+    policy.dispose();
+  });
+
+  it("retains the two most recent inactive cameras beside one active cellular camera", () => {
     const policy = new MediaRetentionPolicy(vi.fn(), {
-      network: { type: "wifi" },
+      network: { type: "cellular" },
       now: () => 100,
     });
 
@@ -88,12 +93,42 @@ describe("MediaRetentionPolicy", () => {
     policy.dispose();
   });
 
-  it("expires an inactive phone camera after the shared warm interval", () => {
+  it("can force the reduced-bandwidth profile on a Wi-Fi phone", () => {
+    const policy = new MediaRetentionPolicy(vi.fn(), {
+      network: { type: "wifi" },
+      now: () => 100,
+    });
+
+    expect(
+      policy.evaluate([
+        camera("active", {
+          active: true,
+          lastUsed: 100,
+          preference: "reduced_bandwidth",
+        }),
+        camera("newest", {
+          lastUsed: 90,
+          preference: "reduced_bandwidth",
+        }),
+        camera("middle", {
+          lastUsed: 80,
+          preference: "reduced_bandwidth",
+        }),
+        camera("oldest", {
+          lastUsed: 70,
+          preference: "reduced_bandwidth",
+        }),
+      ]),
+    ).toEqual(new Set(["oldest"]));
+    policy.dispose();
+  });
+
+  it("expires an inactive reduced-bandwidth camera after the shared warm interval", () => {
     let now = 1_000;
     let expiry: (() => void) | undefined;
     const onPolicyChange = vi.fn();
     const policy = new MediaRetentionPolicy(onPolicyChange, {
-      network: { type: "wifi" },
+      network: { type: "cellular" },
       now: () => now,
       setTimer: (callback) => {
         expiry = callback;
@@ -116,7 +151,7 @@ describe("MediaRetentionPolicy", () => {
 });
 
 describe("MediaSessionManager adaptive retention", () => {
-  it("closes every retained transport for an inactive cellular phone camera", async () => {
+  it("closes every retained transport for the least-recent cellular phone camera", async () => {
     const preferredClose = vi.fn();
     const fallbackClose = vi.fn();
     const preferredFactory = vi.fn<ConnectionFactory>(async () => ({
@@ -131,12 +166,33 @@ describe("MediaSessionManager adaptive retention", () => {
       { network: { type: "cellular" } },
     );
     const owner = {};
+    manager.setCameraRetentionPreference(
+      owner,
+      ["camera.old", "camera.middle", "camera.recent", "camera.current"],
+      "phone",
+      "automatic",
+    );
     manager.setCameraActivity(owner, "camera.old", "phone");
     const preferred = manager.acquireHomeAssistant(api(), "camera.old");
     const fallback = manager.acquireHomeAssistantHls(api(), "camera.old");
     await vi.waitFor(() => expect(preferred.getSnapshot().state).toBe("live"));
     await vi.waitFor(() => expect(fallback.getSnapshot().state).toBe("live"));
 
+    preferred.release();
+    fallback.release();
+    for (const entityId of ["camera.middle", "camera.recent"]) {
+      manager.setCameraActivity(owner, entityId, "phone");
+      const nextPreferred = manager.acquireHomeAssistant(api(), entityId);
+      const nextFallback = manager.acquireHomeAssistantHls(api(), entityId);
+      await vi.waitFor(() =>
+        expect(nextPreferred.getSnapshot().state).toBe("live"),
+      );
+      await vi.waitFor(() =>
+        expect(nextFallback.getSnapshot().state).toBe("live"),
+      );
+      nextPreferred.release();
+      nextFallback.release();
+    }
     manager.setCameraActivity(owner, "camera.current", "phone");
     const currentPreferred = manager.acquireHomeAssistant(
       api(),
@@ -152,9 +208,6 @@ describe("MediaSessionManager adaptive retention", () => {
     await vi.waitFor(() =>
       expect(currentFallback.getSnapshot().state).toBe("live"),
     );
-    preferred.release();
-    fallback.release();
-
     expect(preferredClose).toHaveBeenCalledOnce();
     expect(fallbackClose).toHaveBeenCalledOnce();
     currentPreferred.release();

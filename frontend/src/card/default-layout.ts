@@ -18,6 +18,9 @@ export function createDefaultCardLayout(config: CardConfig): LayoutDocument {
             startUnmutedPcTablet: camera.start_live_unmuted_pc_tablet,
             startUnmutedPhone: camera.start_live_unmuted_phone,
           })),
+          retentionPreference: config.mobile_data_saving
+            ? "reduced_bandwidth"
+            : "automatic",
         },
         id: DEFAULT_CAMERA_MODULE_NODE_ID,
         kind: "module",

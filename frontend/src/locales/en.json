@@ -13,6 +13,7 @@
   "editor.delete_camera_named": "Delete {name}",
   "editor.add_camera": "Add camera",
   "editor.title": "Title",
+  "editor.mobile_data_saving": "Mobile Data Saving",
   "editor.rounded_outer_corners": "Rounded Outer Corners",
   "editor.outer_shadows": "Outer Shadows",
   "editor.outer_padding": "Outer Padding",
