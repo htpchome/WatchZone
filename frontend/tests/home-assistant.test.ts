@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   cameraImageUrl,
+  createHomeAssistantApi,
+  homeAssistantLocale,
   HomeAssistantCameraImageCredentialGuard,
   type HomeAssistant,
   type HomeAssistantEntity,
@@ -79,5 +81,28 @@ describe("Home Assistant camera image URL", () => {
     expect(
       cameraImageUrl(guard.sanitize(fresh, ["camera.front"]), "camera.front"),
     ).toContain("token=new");
+  });
+});
+
+describe("Home Assistant locale", () => {
+  it("uses the complete HA locale and prefers its selected language", () => {
+    const hass = hassWith({
+      entity_id: "camera.front",
+      state: "streaming",
+      attributes: {},
+    });
+    const localized: HomeAssistant = {
+      ...hass,
+      language: "en",
+      locale: {
+        language: "pt-BR",
+        number_format: "comma_decimal",
+        time_format: "24",
+        time_zone: "local",
+      },
+    };
+
+    expect(homeAssistantLocale(localized)).toEqual(localized.locale);
+    expect(createHomeAssistantApi(localized).locale).toEqual(localized.locale);
   });
 });

@@ -1,8 +1,10 @@
 import type { HomeAssistant, HomeAssistantApi } from "./home-assistant";
+import type { LocalizeFunction } from "./localization";
 
 export interface ModuleRuntimeContext {
   readonly api?: HomeAssistantApi;
   readonly hass?: HomeAssistant;
+  readonly localize?: LocalizeFunction;
 }
 
 export interface ModulePreparation {

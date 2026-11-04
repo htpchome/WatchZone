@@ -91,7 +91,6 @@ class CameraPreloadSubentryFlow(ConfigSubentryFlow):
                 return self.async_update_and_abort(
                     entry,
                     self._get_reconfigure_subentry(),
-                    title=CAMERA_PRELOAD_TITLE,
                     data={CONF_HLS_PREWARM_CAMERAS: selected},
                 )
 

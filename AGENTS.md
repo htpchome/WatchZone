@@ -37,6 +37,9 @@ For camera carousel, slide navigation, or Swiper lifecycle changes, also read
 For accordion behavior or editor disclosure groups, also read
 `docs/accordion.md` in full.
 
+For user-visible text or locale handling, also read `docs/localization.md` in
+full.
+
 For toast timing, presentation, or placement, also read
 `docs/toast-system.md` in full.
 

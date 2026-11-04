@@ -11,6 +11,10 @@ import {
 } from "../../core/constants";
 import { DeviceProfileController } from "../../core/device-profile";
 import type { HomeAssistantApi } from "../../core/home-assistant";
+import {
+  englishLocalize,
+  type LocalizeFunction,
+} from "../../core/localization";
 import { getMediaSessionManager } from "../../core/media-session-manager";
 import { renderIcon } from "../../ui/icons";
 import type { CameraGestureLockDetail } from "./live/presentation";
@@ -43,6 +47,7 @@ export class CameraModule extends LitElement {
   public static properties = {
     api: { attribute: false },
     cameras: { attribute: false },
+    localize: { attribute: false },
   };
 
   private _activeIndex = 0;
@@ -59,6 +64,7 @@ export class CameraModule extends LitElement {
 
   public api?: HomeAssistantApi;
   public cameras: readonly CameraItemConfig[] = [];
+  public localize: LocalizeFunction = englishLocalize;
 
   public connectedCallback(): void {
     super.connectedCallback();
@@ -114,7 +120,7 @@ export class CameraModule extends LitElement {
     return staticHtml`<div
       class="camera-carousel swiper"
       role="region"
-      aria-label="Camera views"
+      aria-label=${this.localize("camera.views")}
       aria-roledescription="carousel"
     >
       <div class="swiper-wrapper">
@@ -124,7 +130,10 @@ export class CameraModule extends LitElement {
           (camera, index) => staticHtml`<div
             class="swiper-slide"
             role="group"
-            aria-label=${`Camera ${index + 1} of ${this.cameras.length}`}
+            aria-label=${this.localize("camera.position", {
+              position: index + 1,
+              total: this.cameras.length,
+            })}
             aria-roledescription="slide"
           >
             <${cameraViewTag}
@@ -135,6 +144,7 @@ export class CameraModule extends LitElement {
               .available=${camera.available}
               .entityId=${camera.entityId}
               .lowLatencyHls=${camera.lowLatencyHls}
+              .localize=${this.localize}
               .posterUrl=${camera.posterUrl}
               .roundedCorners=${camera.roundedCorners}
               .shadowStyle=${camera.shadowStyle}
@@ -153,7 +163,7 @@ export class CameraModule extends LitElement {
             : "carousel-navigation previous"
         }
         type="button"
-        aria-label="Previous camera"
+        aria-label=${this.localize("camera.previous")}
         aria-hidden=${this._navigationVisible ? "false" : "true"}
         tabindex=${this._navigationVisible ? "0" : "-1"}
         ?disabled=${this.cameras.length < 2 || this._activeIndex === 0}
@@ -168,7 +178,7 @@ export class CameraModule extends LitElement {
             : "carousel-navigation next"
         }
         type="button"
-        aria-label="Next camera"
+        aria-label=${this.localize("camera.next")}
         aria-hidden=${this._navigationVisible ? "false" : "true"}
         tabindex=${this._navigationVisible ? "0" : "-1"}
         ?disabled=${

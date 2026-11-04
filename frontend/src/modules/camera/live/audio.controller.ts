@@ -16,6 +16,7 @@ interface AudioMediaState {
 
 interface AudioCallbacks {
   dismissToast(key: string): void;
+  getAutoplayWarning(): string;
   getMediaState(): AudioMediaState;
   showWarning(message: string, key: string): void;
 }
@@ -168,7 +169,7 @@ export class CameraAudioController implements ReactiveController {
           return;
         this._autoplayBlocked = true;
         this._callbacks.showWarning(
-          "The browser blocked unmuted playback. Tap mute again to retry.",
+          this._callbacks.getAutoplayWarning(),
           AUTOPLAY_WARNING_KEY,
         );
         this._syncEffectiveMute(false);

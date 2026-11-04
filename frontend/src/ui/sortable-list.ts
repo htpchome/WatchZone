@@ -7,6 +7,7 @@ import {
   SORTABLE_REORDER_EVENT,
   SORTABLE_TILE_TAG,
 } from "../core/constants";
+import { englishLocalize, type LocalizeFunction } from "../core/localization";
 import { renderIcon } from "./icons";
 import { sortableListStyles, sortableTileStyles } from "./sortable-list.styles";
 
@@ -33,11 +34,13 @@ export class SortableTile extends LitElement {
       type: Boolean,
     },
     itemKey: { attribute: "item-key" },
+    localize: { attribute: false },
   };
 
   public dragging = false;
   public dropTarget = false;
   public itemKey = "";
+  public localize: LocalizeFunction = englishLocalize;
   private _offset = 0;
   private _pointerId?: number;
   private _startY = 0;
@@ -62,7 +65,7 @@ export class SortableTile extends LitElement {
       <button
         class="handle"
         type="button"
-        aria-label="Reorder item"
+        aria-label=${this.localize("sortable.reorder")}
         aria-keyshortcuts="ArrowUp ArrowDown"
         aria-pressed=${this.dragging ? "true" : "false"}
         @pointerdown=${this._handlePointerDown}

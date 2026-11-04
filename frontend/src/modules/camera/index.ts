@@ -1,5 +1,6 @@
 import { CAMERA_MODULE_TYPE, CAMERA_TAG } from "../../core/constants";
 import { cameraImageUrl } from "../../core/home-assistant";
+import { englishLocalize } from "../../core/localization";
 import type { ModuleDefinition, ModuleRuntimeContext } from "../../core/module";
 import { LiveSourceResolver } from "../../providers/live-source-resolver";
 import type { CameraItemConfig, CameraModule } from "./camera";
@@ -45,6 +46,7 @@ function updateCameraElement(
   context: ModuleRuntimeContext,
 ): void {
   camera.api = context.api;
+  camera.localize = context.localize ?? englishLocalize;
   camera.cameras = config.cameras.map((item) => ({
     ...item,
     available: Boolean(context.hass?.states[item.entityId]),

@@ -21,6 +21,7 @@ import {
   TOAST_REGION_TAG,
 } from "../core/constants";
 import { isHomeAssistant, type HomeAssistant } from "../core/home-assistant";
+import { LocalizationController } from "../core/localization";
 import { toYamlCardConfig, type YamlCardConfig } from "../core/yaml-config";
 import { themeTokens } from "../styles/theme-tokens";
 import { ToastManager } from "../ui/toast-manager";
@@ -86,6 +87,9 @@ export class CardEditor extends LitElement {
   private _hass?: HomeAssistant;
   private _previewTimer?: ReturnType<typeof setTimeout>;
   private readonly _toasts = new ToastManager(this);
+  private readonly _localization = new LocalizationController(this, () =>
+    this._syncDraftStatus(),
+  );
 
   public set hass(value: unknown) {
     if (!isHomeAssistant(value)) {
@@ -93,6 +97,7 @@ export class CardEditor extends LitElement {
     }
     const firstAssignment = !this._hass;
     this._hass = value;
+    this._localization.setLanguage(value.locale?.language ?? value.language);
     const selectors = this.renderRoot?.querySelectorAll("ha-selector") as
       NodeListOf<SelectorElement> | undefined;
     if (selectors?.length) {
@@ -175,21 +180,21 @@ export class CardEditor extends LitElement {
       ></${toastRegionTag}>
       <${accordionTag}>
         <${accordionItemTag}
-          heading="Camera Settings"
+          heading=${this._t("editor.camera_settings")}
           item-key="camera"
           .icon=${"camera"}
         >
           ${this._renderCameraSettings()}
         </${accordionItemTag}>
         <${accordionItemTag}
-          heading="General Settings"
+          heading=${this._t("editor.general_settings")}
           item-key="general"
           .icon=${"settings"}
         >
           ${this._renderGeneralSettings()}
         </${accordionItemTag}>
         <${accordionItemTag}
-          heading="Layout Settings"
+          heading=${this._t("editor.layout_settings")}
           item-key="layout"
           .icon=${"layout"}
         >
@@ -203,15 +208,19 @@ export class CardEditor extends LitElement {
   private _renderCameraSettings() {
     const cameras = this._config?.cameras ?? [];
     return staticHtml`<div class="camera-list-heading">
-        <strong>Cameras</strong>
-        <span>${cameras.length} of ${MAX_CAMERAS} configured</span>
+        <strong>${this._t("editor.cameras")}</strong>
+        <span>${this._t("editor.camera_count", {
+          count: cameras.length,
+          maximum: MAX_CAMERAS,
+        })}</span>
       </div>
       <${sortableListTag}
-        aria-label="Configured cameras"
+        aria-label=${this._t("editor.configured_cameras")}
       >
         ${cameras.map(
           (camera, index) => staticHtml`<${sortableTileTag}
             item-key=${camera.entity_id}
+            .localize=${this._localization.localize}
           >
             <div class="camera-tile-copy">
               <span>${this._cameraName(camera.entity_id)}</span>
@@ -221,7 +230,9 @@ export class CardEditor extends LitElement {
               slot="actions"
               class="tile-action"
               type="button"
-              aria-label=${`Edit ${this._cameraName(camera.entity_id)}`}
+              aria-label=${this._t("editor.edit_camera_named", {
+                name: this._cameraName(camera.entity_id),
+              })}
               data-camera-index=${String(index)}
               @click=${this._editCamera}
             >
@@ -231,7 +242,9 @@ export class CardEditor extends LitElement {
               slot="actions"
               class="tile-action"
               type="button"
-              aria-label=${`Delete ${this._cameraName(camera.entity_id)}`}
+              aria-label=${this._t("editor.delete_camera_named", {
+                name: this._cameraName(camera.entity_id),
+              })}
               data-camera-index=${String(index)}
               @click=${this._deleteCamera}
             >
@@ -246,7 +259,7 @@ export class CardEditor extends LitElement {
         ?disabled=${cameras.length >= MAX_CAMERAS}
         @click=${this._addCamera}
       >
-        Add camera
+        ${this._t("editor.add_camera")}
       </button>`;
   }
 
@@ -254,7 +267,7 @@ export class CardEditor extends LitElement {
     return html`<ha-input
       required
       auto-validate
-      label="Title"
+      label=${this._t("editor.title")}
       .value=${this._config?.title ?? ""}
       @input=${this._handleTitleInput}
       @change=${this._handleTitleChange}
@@ -265,17 +278,17 @@ export class CardEditor extends LitElement {
     return html`
       ${this._renderBooleanOption(
         "rounded_outer_corners",
-        "Rounded Outer Corners",
+        this._t("editor.rounded_outer_corners"),
         this._config?.rounded_outer_corners !== false,
       )}
       ${this._renderBooleanOption(
         "outer_shadows",
-        "Outer Shadows",
+        this._t("editor.outer_shadows"),
         this._config?.outer_shadows !== false,
       )}
       ${this._renderBooleanOption(
         "outer_padding",
-        "Outer Padding",
+        this._t("editor.outer_padding"),
         this._config?.outer_padding !== false,
       )}
     `;
@@ -290,11 +303,17 @@ export class CardEditor extends LitElement {
     >
       <form @submit=${this._saveCameraEdit}>
         <header>
-          <h2>${editing ? "Edit Camera" : "Add Camera"}</h2>
+          <h2>
+            ${
+              editing
+                ? this._t("editor.edit_camera")
+                : this._t("editor.add_camera")
+            }
+          </h2>
           <button
             class="dialog-close"
             type="button"
-            aria-label="Close camera editor"
+            aria-label=${this._t("editor.close_camera_editor")}
             @click=${this._cancelCameraEdit}
           >
             ×
@@ -302,9 +321,9 @@ export class CardEditor extends LitElement {
         </header>
         <div class="camera-dialog-content">
           <section>
-            <h3>Camera</h3>
+            <h3>${this._t("editor.camera")}</h3>
             <ha-selector
-              label="Camera"
+              label=${this._t("editor.camera")}
               .hass=${this._hass}
               .selector=${CAMERA_SELECTOR}
               .value=${camera?.entity_id ?? ""}
@@ -313,48 +332,50 @@ export class CardEditor extends LitElement {
             ></ha-selector>
           </section>
           <section>
-            <h3>Live Connection</h3>
+            <h3>${this._t("editor.live_connection")}</h3>
             ${this._renderCameraBoolean(
               "low_latency_hls",
-              "Low-Latency HLS",
+              this._t("editor.low_latency_hls"),
               camera?.low_latency_hls ?? true,
             )}
           </section>
           <section>
-            <h3>Camera Audio</h3>
+            <h3>${this._t("editor.camera_audio")}</h3>
             ${this._renderCameraBoolean(
               "start_live_unmuted_pc_tablet",
-              "Start Live Unmuted on PC/Tablet",
+              this._t("editor.start_unmuted_pc_tablet"),
               camera?.start_live_unmuted_pc_tablet ?? false,
             )}
             ${this._renderCameraBoolean(
               "start_live_unmuted_phone",
-              "Start Live Unmuted on Mobile Phone",
+              this._t("editor.start_unmuted_phone"),
               camera?.start_live_unmuted_phone ?? false,
             )}
           </section>
           <section>
-            <h3>Appearance</h3>
+            <h3>${this._t("editor.appearance")}</h3>
             ${this._renderCameraBoolean(
               "camera_rounded_corners",
-              "Camera Rounded Corners",
+              this._t("editor.camera_rounded_corners"),
               camera?.camera_rounded_corners ?? true,
             )}
             ${this._renderCameraBoolean(
               "camera_shadows",
-              "Camera Shadows",
+              this._t("editor.camera_shadows"),
               camera?.camera_shadows ?? true,
             )}
           </section>
         </div>
         <footer>
-          <button type="button" @click=${this._cancelCameraEdit}>Cancel</button>
+          <button type="button" @click=${this._cancelCameraEdit}>
+            ${this._t("common.cancel")}
+          </button>
           <button
             class="primary"
             type="submit"
             ?disabled=${!this._cameraDraftIsValid()}
           >
-            ${editing ? "Update" : "Add"}
+            ${editing ? this._t("common.update") : this._t("common.add")}
           </button>
         </footer>
       </form>
@@ -546,13 +567,21 @@ export class CardEditor extends LitElement {
 
   private _cameraSummary(camera: CameraConfig): string {
     const connection = camera.low_latency_hls
-      ? "Low-latency HLS"
-      : "Standard HLS";
+      ? this._t("editor.low_latency_hls")
+      : this._t("editor.standard_hls");
     const audio = [
-      camera.start_live_unmuted_pc_tablet ? "PC/Tablet" : undefined,
-      camera.start_live_unmuted_phone ? "Mobile Phone" : undefined,
+      camera.start_live_unmuted_pc_tablet
+        ? this._t("editor.pc_tablet")
+        : undefined,
+      camera.start_live_unmuted_phone
+        ? this._t("editor.mobile_phone")
+        : undefined,
     ].filter(Boolean);
-    return `${connection} · ${audio.length ? `Unmuted: ${audio.join(", ")}` : "Muted"}`;
+    return `${connection} · ${
+      audio.length
+        ? this._t("editor.unmuted", { devices: audio.join(", ") })
+        : this._t("editor.muted")
+    }`;
   }
 
   private readonly _handleBooleanChange = (event: ValueChangedEvent): void => {
@@ -617,21 +646,24 @@ export class CardEditor extends LitElement {
     const changed =
       cardConfigSignature(this._config) !== this._baselineSignature;
     if (changed) {
-      this._toasts.warning(
-        "Unsaved changes — use Home Assistant's Save button to apply them.",
-        {
-          icon: "packageOutline",
-          key: EDITOR_STATUS_KEY,
-          persistent: true,
-        },
-      );
+      this._toasts.warning(this._t("editor.unsaved_changes"), {
+        icon: "packageOutline",
+        key: EDITOR_STATUS_KEY,
+        persistent: true,
+      });
     } else {
-      this._toasts.success("No pending changes.", {
+      this._toasts.success(this._t("editor.no_pending_changes"), {
         icon: "packageOutline",
         key: EDITOR_STATUS_KEY,
         persistent: true,
       });
     }
+  }
+
+  private _t(
+    ...parameters: Parameters<LocalizationController["localize"]>
+  ): string {
+    return this._localization.localize(...parameters);
   }
 
   private _publishDraftPreview(config: CardConfig): void {

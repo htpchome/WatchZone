@@ -14,6 +14,10 @@ import {
   setMediaElementMuted,
 } from "../../../core/media-playback";
 import type { MediaTransport } from "../../../core/media-session-manager";
+import {
+  englishLocalize,
+  type LocalizeFunction,
+} from "../../../core/localization";
 import type { ToastNotice, ToastSeverity } from "../../../ui/toast-manager";
 import { renderIcon } from "../../../ui/icons";
 import "../../../ui/badge";
@@ -86,6 +90,7 @@ export class CameraLivePresentation extends LitElement {
     failed: { attribute: false, type: Boolean },
     hlsVideo: { attribute: false },
     lowLatencyHls: { attribute: false, type: Boolean },
+    localize: { attribute: false },
     muted: { attribute: false, type: Boolean },
     notices: { attribute: false },
     posterUrl: { attribute: false },
@@ -118,6 +123,7 @@ export class CameraLivePresentation extends LitElement {
   public failed = false;
   public hlsVideo?: HTMLVideoElement;
   public lowLatencyHls = true;
+  public localize: LocalizeFunction = englishLocalize;
   public muted = true;
   public notices: readonly ToastNotice[] = [];
   public posterUrl?: string;
@@ -206,7 +212,9 @@ export class CameraLivePresentation extends LitElement {
       <div
         class="viewport"
         tabindex="0"
-        aria-label=${`Camera live view, zoom ${Math.round(this._zoom.scale * 100)} percent`}
+        aria-label=${this.localize("camera.live_view_zoom", {
+          percent: Math.round(this._zoom.scale * 100),
+        })}
         aria-keyshortcuts="Enter Space + - 0 Escape ArrowLeft ArrowRight ArrowUp ArrowDown"
         @keydown=${this._zoom.handleKeyDown}
         @pointerenter=${this._visibility.handlePointerEnter}
@@ -249,7 +257,7 @@ export class CameraLivePresentation extends LitElement {
                     disablepictureinpicture
                     playsinline
                     .muted=${this.selected === "webrtc" ? this.muted : true}
-                    aria-label="Live camera"
+                    aria-label=${this.localize("camera.live")}
                     aria-hidden=${this.selected === "webrtc" ? "false" : "true"}
                     @canplay=${this._handleWebRtcDecoded}
                     @loadeddata=${this._handleWebRtcDecoded}
@@ -273,8 +281,10 @@ export class CameraLivePresentation extends LitElement {
                 aria-hidden=${sourceVisible ? "false" : "true"}
                 aria-label=${
                   resolvedSource
-                    ? `Live source: ${sourceLabel}`
-                    : "Connecting to camera"
+                    ? this.localize("camera.live_source", {
+                        source: sourceLabel,
+                      })
+                    : this.localize("camera.connecting_label")
                 }
               >
                 ${
@@ -284,7 +294,7 @@ export class CameraLivePresentation extends LitElement {
                           class="connection-spinner"
                           aria-hidden="true"
                         ></span>
-                        <span>Connecting…</span>`
+                        <span>${this.localize("camera.connecting")}</span>`
                 }
               </${badgeTag}>`
             : nothing
@@ -296,6 +306,7 @@ export class CameraLivePresentation extends LitElement {
                 .fullscreenActive=${this._fullscreenActive}
                 .fullscreenSupported=${this._fullscreenSupported()}
                 .muted=${this.muted}
+                .localize=${this.localize}
                 .pictureInPictureActive=${this._pictureInPictureActive}
                 .pictureInPictureSupported=${Boolean(
                   pictureInPictureMethod(this._selectedVideoForRender),
@@ -343,7 +354,7 @@ export class CameraLivePresentation extends LitElement {
     }
     const hlsHost = this.renderRoot.querySelector(".hls-host");
     if (hlsHost && this.hlsVideo && this.hlsVideo.parentElement !== hlsHost) {
-      this.hlsVideo.setAttribute("aria-label", "Live camera");
+      this.hlsVideo.setAttribute("aria-label", this.localize("camera.live"));
       suppressNativePictureInPicture(this.hlsVideo);
       setMediaElementMuted(this.hlsVideo, this.muted);
       hlsHost.append(this.hlsVideo);
@@ -418,8 +429,8 @@ export class CameraLivePresentation extends LitElement {
       <span class="suspended-icon" aria-hidden="true"
         >${renderIcon("videoOff")}</span
       >
-      <strong>Camera suspended</strong>
-      <span>Resume this camera to restore live video.</span>
+      <strong>${this.localize("camera.suspended")}</strong>
+      <span>${this.localize("camera.suspended_description")}</span>
     </div>`;
   }
 
@@ -504,11 +515,17 @@ export class CameraLivePresentation extends LitElement {
         await captureVideoFrame(this._activeVideo),
         this.zoomKey,
       );
-      this._requestToast("success", "Snapshot downloaded.", "camera-snapshot");
+      this._requestToast(
+        "success",
+        this.localize("camera.snapshot_downloaded"),
+        "camera-snapshot",
+      );
     } catch (error) {
       this._requestToast(
         "error",
-        error instanceof Error ? error.message : "Unable to take snapshot.",
+        error instanceof Error
+          ? error.message
+          : this.localize("camera.snapshot_failed"),
         "camera-snapshot",
       );
     } finally {
@@ -624,7 +641,7 @@ export class CameraLivePresentation extends LitElement {
         "error",
         error instanceof Error
           ? error.message
-          : "Unable to change Picture-in-Picture mode.",
+          : this.localize("camera.pip_failed"),
         "camera-picture-in-picture",
       );
     }
@@ -652,7 +669,7 @@ export class CameraLivePresentation extends LitElement {
         const enter =
           video?.webkitEnterFullscreen ?? video?.webkitEnterFullScreen;
         if (!video || !enter)
-          throw new Error("Fullscreen is not supported on this device.");
+          throw new Error(this.localize("camera.fullscreen_unsupported"));
         enter.call(video);
       }
     } catch (error) {
@@ -660,7 +677,7 @@ export class CameraLivePresentation extends LitElement {
         "error",
         error instanceof Error
           ? error.message
-          : "Unable to change fullscreen mode.",
+          : this.localize("camera.fullscreen_failed"),
         "camera-fullscreen",
       );
     }

@@ -18,13 +18,14 @@ from custom_components.watchzone.const import (
 
 def _preload_subentry_data(
     cameras: list[str] | None = None,
+    title: str = CAMERA_PRELOAD_TITLE,
 ) -> list[dict[str, object]]:
     """Return config-entry test data for the singleton preload child."""
     return [
         {
             "subentry_type": SUBENTRY_TYPE_CAMERA_PRELOAD,
             "data": {CONF_HLS_PREWARM_CAMERAS: cameras or []},
-            "title": CAMERA_PRELOAD_TITLE,
+            "title": title,
             "unique_id": SUBENTRY_UNIQUE_ID_CAMERA_PRELOAD,
         }
     ]
@@ -66,7 +67,10 @@ async def test_subentry_flow_saves_explicit_hls_prewarm_allowlist(
 ) -> None:
     """Only integration-selected cameras become backend pre-warm candidates."""
     entry = MockConfigEntry(
-        domain=DOMAIN, data={}, version=2, subentries_data=_preload_subentry_data()
+        domain=DOMAIN,
+        data={},
+        version=2,
+        subentries_data=_preload_subentry_data(title="My warm cameras"),
     )
     entry.add_to_hass(hass)
     preload = entry.get_subentries_of_type(SUBENTRY_TYPE_CAMERA_PRELOAD)[0]
@@ -90,6 +94,7 @@ async def test_subentry_flow_saves_explicit_hls_prewarm_allowlist(
     assert entry.subentries[preload.subentry_id].data == {
         CONF_HLS_PREWARM_CAMERAS: ["camera.porch", "camera.garage"]
     }
+    assert entry.subentries[preload.subentry_id].title == "My warm cameras"
     assert entry.options == {}
 
 

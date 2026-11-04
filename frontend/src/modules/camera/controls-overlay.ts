@@ -5,6 +5,10 @@ import {
   type DeviceClass,
 } from "../../core/device-profile";
 import { CAMERA_CONTROLS_TAG } from "../../core/constants";
+import {
+  englishLocalize,
+  type LocalizeFunction,
+} from "../../core/localization";
 import { renderIcon, type IconName } from "../../ui/icons";
 import { cameraControlsStyles } from "./controls-overlay.styles";
 
@@ -62,6 +66,7 @@ export class CameraControls extends LitElement {
     fullscreenActive: { attribute: false, type: Boolean },
     fullscreenSupported: { attribute: false, type: Boolean },
     muted: { attribute: false, type: Boolean },
+    localize: { attribute: false },
     pictureInPictureActive: { attribute: false, type: Boolean },
     pictureInPictureSupported: { attribute: false, type: Boolean },
     snapshotPending: { attribute: false, type: Boolean },
@@ -74,6 +79,7 @@ export class CameraControls extends LitElement {
   public fullscreenActive = false;
   public fullscreenSupported = false;
   public muted = true;
+  public localize: LocalizeFunction = englishLocalize;
   public pictureInPictureActive = false;
   public pictureInPictureSupported = false;
   public snapshotPending = false;
@@ -86,7 +92,11 @@ export class CameraControls extends LitElement {
 
   protected render() {
     return html`
-      <div class="control-group" role="toolbar" aria-label="Camera controls">
+      <div
+        class="control-group"
+        role="toolbar"
+        aria-label=${this.localize("camera.controls")}
+      >
         ${CONTROLS.filter(
           (control) =>
             CAMERA_CONTROL_DEVICE_MATRIX[control.action].includes(
@@ -127,27 +137,27 @@ export class CameraControls extends LitElement {
     const label =
       control.action === "mute"
         ? this.muted
-          ? "Unmute camera"
-          : "Mute camera"
+          ? this.localize("camera.unmute")
+          : this.localize("camera.mute")
         : control.action === "fullscreen"
           ? this.fullscreenActive
-            ? "Exit fullscreen"
-            : "Enter fullscreen"
+            ? this.localize("camera.exit_fullscreen")
+            : this.localize("camera.enter_fullscreen")
           : control.action === "picture_in_picture"
             ? this.pictureInPictureActive
-              ? "Exit Picture-in-Picture"
-              : "Enter Picture-in-Picture"
+              ? this.localize("camera.exit_pip")
+              : this.localize("camera.enter_pip")
             : control.action === "snapshot"
               ? this.snapshotPending
-                ? "Saving snapshot"
-                : "Take snapshot"
+                ? this.localize("camera.saving_snapshot")
+                : this.localize("camera.take_snapshot")
               : this.suspendPending
                 ? this.suspended
-                  ? "Resuming camera"
-                  : "Suspending camera"
+                  ? this.localize("camera.resuming")
+                  : this.localize("camera.suspending")
                 : this.suspended
-                  ? "Resume camera"
-                  : "Suspend camera";
+                  ? this.localize("camera.resume")
+                  : this.localize("camera.suspend");
 
     return html`<button
       class="control-button"

@@ -23,6 +23,7 @@ import {
   type HomeAssistantConnection,
   type HomeAssistantConnectionEventListener,
 } from "../core/home-assistant";
+import { LocalizationController } from "../core/localization";
 import { syncHomeAssistantCardHostAppearance } from "../styles/home-assistant-card-bridge";
 import { themeTokens } from "../styles/theme-tokens";
 import { createDefaultCardLayout } from "./default-layout";
@@ -45,6 +46,9 @@ export class DashboardCard extends LitElement {
   private _transportConnected = true;
   private readonly _cameraImageCredentials =
     new HomeAssistantCameraImageCredentialGuard();
+  private readonly _localization = new LocalizationController(this, () =>
+    this._syncRuntime(),
+  );
   private readonly _layoutRuntime = new LayoutRuntime(this);
 
   /** Set by Home Assistant for the card shown inside its editor preview. */
@@ -56,6 +60,7 @@ export class DashboardCard extends LitElement {
     }
     const transportChanged = this._hass?.connection !== value.connection;
     this._hass = value;
+    this._localization.setLanguage(value.locale?.language ?? value.language);
     if (transportChanged || !this._haApi) {
       this._haApi = createHomeAssistantApi(value);
     }
@@ -204,7 +209,11 @@ export class DashboardCard extends LitElement {
             this._cameraEntityIds(),
           )
         : undefined;
-    this._layoutRuntime.setRuntime(hass, this._haApi);
+    this._layoutRuntime.setRuntime(
+      hass,
+      this._haApi,
+      this._localization.localize,
+    );
   }
 
   private _cameraEntityIds(): readonly string[] {

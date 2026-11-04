@@ -8,6 +8,10 @@ import {
   CAMERA_VIEW_TAG,
 } from "../../core/constants";
 import type { HomeAssistantApi } from "../../core/home-assistant";
+import {
+  englishLocalize,
+  type LocalizeFunction,
+} from "../../core/localization";
 import { ToastManager } from "../../ui/toast-manager";
 import { renderIcon } from "../../ui/icons";
 import { cameraViewStyles } from "./camera-view.styles";
@@ -43,6 +47,7 @@ export class CameraView extends LitElement {
     available: { attribute: false, type: Boolean },
     entityId: { attribute: false },
     lowLatencyHls: { attribute: false, type: Boolean },
+    localize: { attribute: false },
     posterUrl: { attribute: false },
     roundedCorners: { attribute: false, type: Boolean },
     shadowStyle: { attribute: false },
@@ -66,6 +71,7 @@ export class CameraView extends LitElement {
         selected: this._session.selected,
         webRtc: this._presentation?.webRtcVideo,
       }),
+      getAutoplayWarning: () => this.localize("camera.autoplay_blocked"),
       showWarning: (message, key) => this._toasts.warning(message, { key }),
     },
   );
@@ -90,6 +96,7 @@ export class CameraView extends LitElement {
   public available = false;
   public entityId?: string;
   public lowLatencyHls = true;
+  public localize: LocalizeFunction = englishLocalize;
   public posterUrl?: string;
   public roundedCorners = true;
   public shadowStyle: CameraShadowStyle = "medium";
@@ -157,6 +164,7 @@ export class CameraView extends LitElement {
                 .failed=${this._session.failed}
                 .hlsVideo=${this._session.hlsVideo}
                 .lowLatencyHls=${this.lowLatencyHls}
+                .localize=${this.localize}
                 .muted=${this._audio.muted}
                 .notices=${this._toasts.notices}
                 .posterUrl=${this.posterUrl}
@@ -181,13 +189,15 @@ export class CameraView extends LitElement {
           class="stage-resize-handle"
           type="button"
           role="slider"
-          title="Resize camera stage; double-activate to reset"
-          aria-label="Camera stage height"
+          title=${this.localize("camera.stage_resize_title")}
+          aria-label=${this.localize("camera.stage_height")}
           aria-orientation="vertical"
           aria-valuemin="56"
           aria-valuemax="100"
           aria-valuenow=${String(this._stageResize.heightPercentage)}
-          aria-valuetext=${`${this._stageResize.heightPercentage}% of stage width`}
+          aria-valuetext=${this.localize("camera.stage_height_value", {
+            percent: this._stageResize.heightPercentage,
+          })}
           ?hidden=${!this.active || suspended || !this.entityId}
           @pointerdown=${this._stageResize.handlePointerDown}
           @pointermove=${this._stageResize.handlePointerMove}
@@ -201,6 +211,7 @@ export class CameraView extends LitElement {
           .active=${this._suspendDialogActive}
           .currentSuspended=${suspended}
           .pending=${this._runtime.pending}
+          .localize=${this.localize}
           @camera-suspend-cancel=${this._handleSuspendCancel}
           @camera-suspend-confirm=${this._handleSuspendConfirm}
         ></${suspendDialogTag}>
@@ -290,7 +301,9 @@ export class CameraView extends LitElement {
         detail.resumeAfterSeconds,
       );
       this._toasts.success(
-        detail.suspended ? "Camera suspended." : "Camera resumed.",
+        detail.suspended
+          ? this.localize("camera.suspended_success")
+          : this.localize("camera.resumed_success"),
         { key: "camera-runtime" },
       );
     } catch (error) {
@@ -298,8 +311,8 @@ export class CameraView extends LitElement {
         error instanceof Error
           ? error.message
           : detail.suspended
-            ? "Unable to suspend camera."
-            : "Unable to resume camera.",
+            ? this.localize("camera.suspend_failed")
+            : this.localize("camera.resume_failed"),
         { key: "camera-runtime" },
       );
     }

@@ -19,6 +19,7 @@ import type {
   LayoutNode,
 } from "../core/layout";
 import { validateLayoutDocument } from "../core/layout";
+import { englishLocalize, type LocalizeFunction } from "../core/localization";
 import type {
   ModuleDefinition,
   ModulePreparation,
@@ -84,7 +85,10 @@ export class LayoutRuntime implements ReactiveController {
       layout = validateLayoutDocument(value);
     } catch (error) {
       this._layout = undefined;
-      this._layoutError = messageFrom(error, "Unable to load this layout.");
+      this._layoutError = messageFrom(
+        error,
+        this._localize("layout.unable_to_load"),
+      );
       this._removeMissingRecords(new Set());
       this._host.requestUpdate();
       return;
@@ -100,12 +104,14 @@ export class LayoutRuntime implements ReactiveController {
   public setRuntime(
     hass: HomeAssistant | undefined,
     api: HomeAssistantApi | undefined,
+    localize?: LocalizeFunction,
   ): void {
     const transportChanged = this._context.api?.identity !== api?.identity;
-    this._context = { api, hass };
+    const localeChanged = this._context.localize !== localize;
+    this._context = { api, hass, localize };
     for (const record of this._records.values()) {
       if (record.status === "ready") {
-        this._updateRecord(record, transportChanged);
+        this._updateRecord(record, transportChanged || localeChanged);
       }
     }
   }
@@ -117,7 +123,9 @@ export class LayoutRuntime implements ReactiveController {
       </div>`;
     }
     if (!this._layout || this._layout.root.children.length === 0) {
-      return html`<div class="layout-empty">No modules are configured.</div>`;
+      return html`<div class="layout-empty">
+        ${this._localize("layout.no_modules")}
+      </div>`;
     }
     return this._renderContainer(this._layout.root, true);
   }
@@ -163,11 +171,11 @@ export class LayoutRuntime implements ReactiveController {
             ? html`<div class="module-error" role="alert">
                 <span>${record.error}</span>
                 <button type="button" @click=${() => this._retry(record)}>
-                  Retry
+                  ${this._localize("common.retry")}
                 </button>
               </div>`
             : html`<div class="module-placeholder" role="status">
-                Preparing module…
+                ${this._localize("layout.preparing_module")}
               </div>`
       }
     </div>`;
@@ -184,7 +192,10 @@ export class LayoutRuntime implements ReactiveController {
           existing.status = "ready";
           this._updateRecord(existing, true);
         } catch (error) {
-          existing.error = messageFrom(error, "Invalid module configuration.");
+          existing.error = messageFrom(
+            error,
+            this._localize("layout.invalid_module"),
+          );
           existing.status = "error";
         }
       }
@@ -244,7 +255,10 @@ export class LayoutRuntime implements ReactiveController {
       .catch((error: unknown) => {
         if (!this._isCurrent(record, generation)) return;
         this._releasePreparation(record);
-        record.error = messageFrom(error, "Unable to load this module.");
+        record.error = messageFrom(
+          error,
+          this._localize("layout.unable_to_load_module"),
+        );
         record.status = "error";
         this._host.requestUpdate();
       });
@@ -295,6 +309,10 @@ export class LayoutRuntime implements ReactiveController {
       record.generation === generation &&
       this._records.get(record.node.id) === record
     );
+  }
+
+  private _localize(...parameters: Parameters<LocalizeFunction>): string {
+    return (this._context.localize ?? englishLocalize)(...parameters);
   }
 }
 

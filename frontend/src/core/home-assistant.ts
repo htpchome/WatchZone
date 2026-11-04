@@ -39,15 +39,27 @@ export interface HomeAssistantConnection {
   ): Promise<HomeAssistantUnsubscribe>;
 }
 
+export interface HomeAssistantLocale {
+  readonly language: string;
+  readonly date_format?: string;
+  readonly first_weekday?: string;
+  readonly number_format?: string;
+  readonly time_format?: string;
+  readonly time_zone?: string;
+}
+
 export interface HomeAssistant {
   readonly states: Readonly<Record<string, HomeAssistantEntity>>;
   readonly connection: HomeAssistantConnection;
+  readonly language?: string;
+  readonly locale?: HomeAssistantLocale;
   callWS<T>(message: HomeAssistantMessage): Promise<T>;
   hassUrl(path: string): string;
 }
 
 export interface HomeAssistantApi {
   readonly identity: HomeAssistantConnection;
+  readonly locale?: HomeAssistantLocale;
   callWS<T>(message: HomeAssistantMessage): Promise<T>;
   resolveUrl(path: string): string;
   subscribeMessage<T>(
@@ -74,10 +86,18 @@ export function isHomeAssistant(value: unknown): value is HomeAssistant {
 export function createHomeAssistantApi(hass: HomeAssistant): HomeAssistantApi {
   return {
     identity: hass.connection,
+    locale: homeAssistantLocale(hass),
     callWS: (message) => hass.callWS(message),
     resolveUrl: (path) => hass.hassUrl(path),
     subscribeMessage: (callback, message, options) =>
       hass.connection.subscribeMessage(callback, message, options),
+  };
+}
+
+export function homeAssistantLocale(hass: HomeAssistant): HomeAssistantLocale {
+  return {
+    ...hass.locale,
+    language: hass.locale?.language ?? hass.language ?? "en",
   };
 }
 

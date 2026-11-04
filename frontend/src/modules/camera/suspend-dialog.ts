@@ -1,6 +1,10 @@
 import { html, LitElement, nothing } from "lit";
 
 import { APP_NAME, CAMERA_SUSPEND_DIALOG_TAG } from "../../core/constants";
+import {
+  englishLocalize,
+  type LocalizeFunction,
+} from "../../core/localization";
 import { renderIcon } from "../../ui/icons";
 import { cameraSuspendDialogStyles } from "./suspend-dialog.styles";
 
@@ -13,11 +17,13 @@ export class CameraSuspendDialog extends LitElement {
   public static properties = {
     active: { attribute: false, type: Boolean },
     currentSuspended: { attribute: false, type: Boolean },
+    localize: { attribute: false },
     pending: { attribute: false, type: Boolean },
   };
 
   public active = false;
   public currentSuspended = false;
+  public localize: LocalizeFunction = englishLocalize;
   public pending = false;
 
   private _hours = 1;
@@ -36,12 +42,18 @@ export class CameraSuspendDialog extends LitElement {
             >${renderIcon("power")}</span
           >
           <div class="heading-copy">
-            <h2>${suspending ? "Suspend camera?" : "Resume camera?"}</h2>
+            <h2>
+              ${
+                suspending
+                  ? this.localize("camera.suspend_question")
+                  : this.localize("camera.resume_question")
+              }
+            </h2>
             <p>
               ${
                 suspending
-                  ? "Suspending this camera in Frigate stops live video, recordings, and detections. Existing recordings, clips, and snapshots remain available."
-                  : "Resuming this camera restores live video, recordings, and detections. Frigate may need a short time before live video becomes available."
+                  ? this.localize("camera.suspend_description")
+                  : this.localize("camera.resume_description")
               }
             </p>
           </div>
@@ -49,15 +61,10 @@ export class CameraSuspendDialog extends LitElement {
         ${
           suspending
             ? html`<p class="warning">
-                  <strong>Warning:</strong> Suspending this camera disables live
-                  view, recording, and detections in Frigate, Home Assistant,
-                  and ${APP_NAME}. It does not stop recording to the camera's
-                  storage or direct live connections through go2rtc. ${APP_NAME}
-                  preserves the suspension across Home Assistant or Frigate
-                  restarts until you resume it or its timer expires.
+                  ${this.localize("camera.suspend_warning", { app: APP_NAME })}
                 </p>
                 <label class="timer-toggle">
-                  <span>Automatically resume</span>
+                  <span>${this.localize("camera.automatically_resume")}</span>
                   <input
                     type="checkbox"
                     role="switch"
@@ -70,7 +77,7 @@ export class CameraSuspendDialog extends LitElement {
                   this._timerEnabled
                     ? html`<div class="duration">
                         <label>
-                          Hours
+                          ${this.localize("camera.hours")}
                           <input
                             type="number"
                             inputmode="numeric"
@@ -82,7 +89,7 @@ export class CameraSuspendDialog extends LitElement {
                           />
                         </label>
                         <label>
-                          Minutes
+                          ${this.localize("camera.minutes")}
                           <input
                             type="number"
                             inputmode="numeric"
@@ -104,7 +111,7 @@ export class CameraSuspendDialog extends LitElement {
             ?disabled=${this.pending}
             @click=${this._cancel}
           >
-            Cancel
+            ${this.localize("common.cancel")}
           </button>
           <button
             class=${suspending ? "primary" : "resume"}
@@ -117,11 +124,11 @@ export class CameraSuspendDialog extends LitElement {
             ${
               this.pending
                 ? suspending
-                  ? "Suspending…"
-                  : "Resuming…"
+                  ? this.localize("camera.suspending_progress")
+                  : this.localize("camera.resuming_progress")
                 : suspending
-                  ? "Suspend camera"
-                  : "Resume camera"
+                  ? this.localize("camera.suspend")
+                  : this.localize("camera.resume")
             }
           </button>
         </footer>
