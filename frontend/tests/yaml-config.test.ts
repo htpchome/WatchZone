@@ -22,11 +22,11 @@ describe("WatchZone YAML configuration manager", () => {
         normalizeCardConfig({
           type: CARD_TYPE,
           title: "Front",
+          camera_rounded_corners: false,
+          camera_shadows: false,
           cameras: [
             {
               entity_id: "camera.front",
-              camera_rounded_corners: false,
-              camera_shadows: false,
               low_latency_hls: false,
               ptz_enabled: true,
               start_live_unmuted_pc_tablet: true,
@@ -44,11 +44,11 @@ describe("WatchZone YAML configuration manager", () => {
     ).toEqual({
       type: CARD_TYPE,
       title: "Front",
+      camera_rounded_corners: false,
+      camera_shadows: false,
       cameras: [
         {
           entity_id: "camera.front",
-          camera_rounded_corners: false,
-          camera_shadows: false,
           low_latency_hls: false,
           ptz_enabled: true,
           start_live_unmuted_pc_tablet: true,

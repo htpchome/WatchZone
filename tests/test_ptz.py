@@ -5,7 +5,9 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import Any
 
+import pytest
 from homeassistant.core import Context
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -154,6 +156,45 @@ async def test_home_assistant_ptz_detects_and_uses_same_device_buttons(
     assert capabilities.tilt is True
     assert capabilities.zoom is False
     assert calls == [buttons["ptz_left"], buttons["ptz_stop"]]
+
+
+async def test_frigate_ptz_movement_requires_runtime_capability(
+    hass: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A registered Frigate service cannot make every Frigate camera PTZ-capable."""
+    config_entry = MockConfigEntry(domain="frigate", data={})
+    config_entry.add_to_hass(hass)
+    camera = er.async_get(hass).async_get_or_create(
+        "camera",
+        "frigate",
+        "front",
+        config_entry=config_entry,
+        suggested_object_id="front",
+    )
+    hass.states.async_set(camera.entity_id, "streaming", {"camera_name": "front"})
+    calls: list[Any] = []
+
+    async def async_move(call: Any) -> None:
+        calls.append(call)
+
+    async def async_no_capabilities(
+        hass_arg: Any, entity_id: str
+    ) -> PtzCapabilities:
+        del hass_arg, entity_id
+        return PtzCapabilities()
+
+    hass.services.async_register("frigate", "ptz", async_move)
+    monkeypatch.setattr(
+        "custom_components.watchzone.providers.home_assistant.ptz."
+        "async_ptz_capabilities",
+        async_no_capabilities,
+    )
+    provider = HomeAssistantPtzProvider()
+
+    with pytest.raises(HomeAssistantError, match="does not support"):
+        await provider.async_start(hass, camera.entity_id, "left", Context())
+
+    assert calls == []
 
 
 def registry(provider: FakePtzProvider) -> ProviderRegistry:

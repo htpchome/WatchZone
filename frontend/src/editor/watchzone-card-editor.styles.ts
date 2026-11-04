@@ -85,8 +85,7 @@ export const cardEditorStyles = css`
 
   .tile-action:focus-visible,
   .dialog-close:focus-visible,
-  .add-camera:focus-visible,
-  footer button:focus-visible {
+  .add-camera:focus-visible {
     outline: 2px solid var(--wzc-color-primary);
     outline-offset: 2px;
   }
@@ -182,28 +181,6 @@ export const cardEditorStyles = css`
     gap: 0.75rem;
     padding: 0.85rem 1rem;
     background: var(--wzc-color-background);
-  }
-
-  dialog footer button {
-    min-block-size: 2.5rem;
-    padding-inline: 1rem;
-    color: var(--wzc-color-text-1);
-    background: var(--wzc-color-surface-secondary);
-    border: 1px solid var(--wzc-color-border-control);
-    border-radius: var(--wzc-radius-medium);
-    font: inherit;
-    cursor: pointer;
-  }
-
-  dialog footer button.primary {
-    color: var(--wzc-color-text-reversed);
-    background: var(--wzc-color-primary);
-    border-color: var(--wzc-color-primary);
-  }
-
-  dialog footer button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
   }
 
   @media (hover: hover) and (pointer: fine) {

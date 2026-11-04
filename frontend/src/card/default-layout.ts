@@ -17,11 +17,11 @@ export function createDefaultCardLayout(config: CardConfig): LayoutDocument {
           cameras: config.cameras.map((camera) => ({
             entityId: camera.entity_id,
             lowLatencyHls: camera.low_latency_hls,
-            roundedCorners: camera.camera_rounded_corners,
-            shadowStyle: camera.camera_shadows ? "medium" : "none",
             startUnmutedPcTablet: camera.start_live_unmuted_pc_tablet,
             startUnmutedPhone: camera.start_live_unmuted_phone,
           })),
+          roundedCorners: config.camera_rounded_corners,
+          shadowStyle: config.camera_shadows ? "medium" : "none",
           retentionPreference: config.mobile_data_saving
             ? "reduced_bandwidth"
             : "automatic",

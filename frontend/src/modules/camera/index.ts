@@ -4,7 +4,11 @@ import { englishLocalize } from "../../core/localization";
 import type { MediaRetentionPreference } from "../../core/media-retention-policy";
 import type { ModuleDefinition, ModuleRuntimeContext } from "../../core/module";
 import { LiveSourceResolver } from "../../providers/live-source-resolver";
-import type { CameraItemConfig, CameraModule } from "./camera";
+import type {
+  CameraItemConfig,
+  CameraModule,
+  CameraShadowStyle,
+} from "./camera";
 
 export interface CameraModuleConfig {
   readonly cameras: readonly Omit<
@@ -12,6 +16,8 @@ export interface CameraModuleConfig {
     "available" | "posterUrl"
   >[];
   readonly retentionPreference: MediaRetentionPreference;
+  readonly roundedCorners: boolean;
+  readonly shadowStyle: CameraShadowStyle;
 }
 
 const resolver = new LiveSourceResolver();
@@ -51,6 +57,8 @@ function updateCameraElement(
   camera.cameraSession = context.cameraSession;
   camera.localize = context.localize ?? englishLocalize;
   camera.retentionPreference = config.retentionPreference;
+  camera.roundedCorners = config.roundedCorners;
+  camera.shadowStyle = config.shadowStyle;
   camera.cameras = config.cameras.map((item) => ({
     ...item,
     available: Boolean(context.hass?.states[item.entityId]),
@@ -74,9 +82,21 @@ function validateCameraConfig(value: unknown): CameraModuleConfig {
   ) {
     throw new Error("Camera modules require a valid retention preference.");
   }
+  if (typeof source.roundedCorners !== "boolean") {
+    throw new Error("Camera module roundedCorners must be a boolean.");
+  }
+  if (
+    source.shadowStyle !== "medium" &&
+    source.shadowStyle !== "small" &&
+    source.shadowStyle !== "none"
+  ) {
+    throw new Error("Camera module shadowStyle is invalid.");
+  }
   return {
     cameras,
     retentionPreference: source.retentionPreference,
+    roundedCorners: source.roundedCorners,
+    shadowStyle: source.shadowStyle,
   };
 }
 
@@ -95,7 +115,6 @@ function validateCameraItem(
     throw new Error("Camera modules require camera entity IDs.");
   for (const key of [
     "lowLatencyHls",
-    "roundedCorners",
     "startUnmutedPcTablet",
     "startUnmutedPhone",
   ] as const) {
@@ -103,18 +122,9 @@ function validateCameraItem(
       throw new Error(`Camera module ${key} must be a boolean.`);
     }
   }
-  if (
-    source.shadowStyle !== "medium" &&
-    source.shadowStyle !== "small" &&
-    source.shadowStyle !== "none"
-  ) {
-    throw new Error("Camera module shadowStyle is invalid.");
-  }
   return {
     entityId: source.entityId,
     lowLatencyHls: source.lowLatencyHls as boolean,
-    roundedCorners: source.roundedCorners as boolean,
-    shadowStyle: source.shadowStyle,
     startUnmutedPcTablet: source.startUnmutedPcTablet as boolean,
     startUnmutedPhone: source.startUnmutedPhone as boolean,
   } as Omit<CameraItemConfig, "available" | "posterUrl">;

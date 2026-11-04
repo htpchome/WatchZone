@@ -5,7 +5,6 @@ import {
 } from "../../../api/talk-signaling";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
 import {
-  answerAcceptsOutgoingAudio,
   createWebRtcTalkPeerConnection,
   type WebRtcSignalingEvent,
 } from "../../../core/webrtc-peer-connection";
@@ -16,11 +15,6 @@ interface ClientConfiguration {
 }
 
 const CONNECT_TIMEOUT_MS = 8_000;
-const CAPABILITY_PROBE_TIMEOUT_MS = 7_000;
-const capabilityCache = new WeakMap<
-  HomeAssistantApi["identity"],
-  Map<string, Promise<boolean>>
->();
 
 function mapEvent(
   event: import("../../../api/live-signaling").LiveOfferEvent,
@@ -41,20 +35,7 @@ export class HomeAssistantTalkProvider {
     api: HomeAssistantApi,
     entityId: string,
   ): Promise<boolean> {
-    const capability = await getTalkCapability(api, entityId);
-    if (capability.supported || !capability.probeRequired)
-      return capability.supported;
-
-    let cameraCapabilities = capabilityCache.get(api.identity);
-    if (!cameraCapabilities) {
-      cameraCapabilities = new Map();
-      capabilityCache.set(api.identity, cameraCapabilities);
-    }
-    const existing = cameraCapabilities.get(entityId);
-    if (existing) return existing;
-    const probe = this._probe(api, entityId).catch(() => false);
-    cameraCapabilities.set(entityId, probe);
-    return probe;
+    return getTalkCapability(api, entityId);
   }
 
   public async connect(
@@ -121,60 +102,6 @@ export class HomeAssistantTalkProvider {
       peer?.close();
       for (const track of localStream.getTracks()) track.stop();
       throw error;
-    }
-  }
-
-  private async _probe(
-    api: HomeAssistantApi,
-    entityId: string,
-  ): Promise<boolean> {
-    if (typeof RTCPeerConnection === "undefined") return false;
-    const client = await api.callWS<ClientConfiguration>({
-      type: "camera/webrtc/get_client_config",
-      entity_id: entityId,
-    });
-    const peer = new RTCPeerConnection(client.configuration);
-    let unsubscribe: (() => void) | undefined;
-    try {
-      peer.addTransceiver("audio", { direction: "sendonly" });
-      const offer = await peer.createOffer();
-      await peer.setLocalDescription(offer);
-      return await new Promise<boolean>((resolve) => {
-        let settled = false;
-        const pending: { timeout?: number } = {};
-        const finish = (supported: boolean): void => {
-          if (settled) return;
-          settled = true;
-          if (pending.timeout !== undefined)
-            window.clearTimeout(pending.timeout);
-          unsubscribe?.();
-          resolve(supported);
-        };
-        pending.timeout = window.setTimeout(
-          () => finish(false),
-          CAPABILITY_PROBE_TIMEOUT_MS,
-        );
-        void subscribeTalkOffer(
-          api,
-          entityId,
-          offer.sdp ?? "",
-          true,
-          (event) => {
-            if (event.type === "answer")
-              finish(answerAcceptsOutgoingAudio(event.answer));
-            else if (event.type === "error") finish(false);
-          },
-          true,
-        )
-          .then((cleanup) => {
-            unsubscribe = cleanup;
-            if (settled) cleanup();
-          })
-          .catch(() => finish(false));
-      });
-    } finally {
-      unsubscribe?.();
-      peer.close();
     }
   }
 }

@@ -1,18 +1,20 @@
-"""Tests for Home Assistant two-way-audio capability resolution."""
+"""Tests for native Home Assistant two-way-audio capability resolution."""
 
 from types import SimpleNamespace
 
-from custom_components.watchzone.features.talk import _resolve_talk_capability
+from custom_components.watchzone.providers.home_assistant.talk import (
+    _resolve_native_talk_capability,
+)
 
 
 def test_talk_capability_requires_home_assistant_two_way_audio() -> None:
     """Generic WebRTC support alone must not advertise a camera backchannel."""
     capabilities = SimpleNamespace(frontend_stream_types={"web_rtc"})
 
-    capability = _resolve_talk_capability(capabilities)
+    supported, has_webrtc = _resolve_native_talk_capability(capabilities)
 
-    assert capability.supported is False
-    assert capability.probe_required is True
+    assert supported is False
+    assert has_webrtc is True
 
 
 def test_talk_capability_uses_home_assistant_resolved_signal() -> None:
@@ -21,17 +23,17 @@ def test_talk_capability_uses_home_assistant_resolved_signal() -> None:
         frontend_stream_types={"web_rtc"}, two_way_audio=True
     )
 
-    capability = _resolve_talk_capability(capabilities)
+    supported, has_webrtc = _resolve_native_talk_capability(capabilities)
 
-    assert capability.supported is True
-    assert capability.probe_required is False
+    assert supported is True
+    assert has_webrtc is True
 
 
 def test_talk_capability_rejects_non_webrtc_camera() -> None:
     """A legacy fallback probe is offered only for HA WebRTC cameras."""
-    capability = _resolve_talk_capability(
+    supported, has_webrtc = _resolve_native_talk_capability(
         SimpleNamespace(frontend_stream_types={"hls"})
     )
 
-    assert capability.supported is False
-    assert capability.probe_required is False
+    assert supported is False
+    assert has_webrtc is False

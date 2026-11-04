@@ -15,6 +15,10 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
   }
   if (config.outer_shadows !== false) delete yaml.outer_shadows;
   if (config.outer_padding !== false) delete yaml.outer_padding;
+  if (config.camera_rounded_corners !== false) {
+    delete yaml.camera_rounded_corners;
+  }
+  if (config.camera_shadows !== false) delete yaml.camera_shadows;
   if (!config.mobile_data_saving) delete yaml.mobile_data_saving;
   if (config.cameras.length === 0) delete yaml.cameras;
   else yaml.cameras = config.cameras.map(compactCameraConfig);
@@ -26,8 +30,6 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
 
 function compactCameraConfig(camera: CameraConfig): Record<string, unknown> {
   const compact: Record<string, unknown> = { entity_id: camera.entity_id };
-  if (!camera.camera_rounded_corners) compact.camera_rounded_corners = false;
-  if (!camera.camera_shadows) compact.camera_shadows = false;
   if (!camera.low_latency_hls) compact.low_latency_hls = false;
   if (camera.ptz_enabled) compact.ptz_enabled = true;
   if (camera.start_live_unmuted_pc_tablet)

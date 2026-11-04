@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DashboardCard } from "../src/card/watchzone-card";
-import type { CardConfig } from "../src/core/config";
+import { normalizeCardConfig, type CardConfig } from "../src/core/config";
 import {
   ACCORDION_ITEM_TAG,
   CARD_TYPE,
@@ -24,6 +24,10 @@ interface InputElement extends HTMLElement {
   value: string;
 }
 
+interface TestBooleanSelector extends HTMLElement {
+  value: boolean;
+}
+
 interface TestEditCardDialog extends HTMLElement {
   _cardConfig?: CardConfig;
   _updateDirtyState?: (config: CardConfig) => void;
@@ -34,6 +38,25 @@ function inputTitle(editor: CardEditor, title: string): InputElement {
   input.value = title;
   input.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
   return input;
+}
+
+function setBooleanSelector(
+  editor: CardEditor,
+  selector: string,
+  checked: boolean,
+): TestBooleanSelector {
+  const control = editor.shadowRoot?.querySelector(
+    selector,
+  ) as TestBooleanSelector;
+  control.value = checked;
+  control.dispatchEvent(
+    new CustomEvent("value-changed", {
+      detail: { value: checked },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+  return control;
 }
 
 describe("watchzone-card-editor", () => {
@@ -169,16 +192,10 @@ describe("watchzone-card-editor", () => {
     await editor.updateComplete;
     const selector = editor.shadowRoot?.querySelector(
       '[data-config-key="mobile_data_saving"]',
-    ) as (HTMLElement & { value?: boolean }) | null;
+    ) as TestBooleanSelector | null;
     expect(selector?.value).toBe(false);
 
-    selector?.dispatchEvent(
-      new CustomEvent("value-changed", {
-        detail: { value: true },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+    setBooleanSelector(editor, '[data-config-key="mobile_data_saving"]', true);
     expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
       type: CARD_TYPE,
       title: "Camera",
@@ -201,7 +218,11 @@ describe("watchzone-card-editor", () => {
     const dialog = document.createElement(
       "hui-dialog-edit-card",
     ) as TestEditCardDialog;
-    dialog._cardConfig = { type: CARD_TYPE, title: "Camera", cameras: [] };
+    dialog._cardConfig = normalizeCardConfig({
+      type: CARD_TYPE,
+      title: "Camera",
+      cameras: [],
+    });
     dialog._updateDirtyState = vi.fn();
     const dialogRoot = dialog.attachShadow({ mode: "open" });
     const editor = document.createElement(
@@ -278,7 +299,11 @@ describe("watchzone-card-editor", () => {
     const dialog = document.createElement(
       "hui-dialog-edit-card",
     ) as TestEditCardDialog;
-    dialog._cardConfig = { type: CARD_TYPE, title: "Camera", cameras: [] };
+    dialog._cardConfig = normalizeCardConfig({
+      type: CARD_TYPE,
+      title: "Camera",
+      cameras: [],
+    });
     dialog._updateDirtyState = vi.fn();
     const dialogRoot = dialog.attachShadow({ mode: "open" });
     const editor = document.createElement(
@@ -295,16 +320,10 @@ describe("watchzone-card-editor", () => {
       "rounded_outer_corners",
       "outer_shadows",
       "outer_padding",
+      "camera_rounded_corners",
+      "camera_shadows",
     ]) {
-      editor.shadowRoot
-        ?.querySelector(`[data-config-key="${key}"]`)
-        ?.dispatchEvent(
-          new CustomEvent("value-changed", {
-            detail: { value: false },
-            bubbles: true,
-            composed: true,
-          }),
-        );
+      setBooleanSelector(editor, `[data-config-key="${key}"]`, false);
       await card.updateComplete;
     }
 
@@ -312,6 +331,8 @@ describe("watchzone-card-editor", () => {
       rounded_outer_corners: false,
       outer_shadows: false,
       outer_padding: false,
+      camera_rounded_corners: false,
+      camera_shadows: false,
     });
     const previewShell = card.shadowRoot?.querySelector("ha-card");
     expect(previewShell?.classList.contains("square-outer-corners")).toBe(true);
@@ -323,6 +344,8 @@ describe("watchzone-card-editor", () => {
       rounded_outer_corners: false,
       outer_shadows: false,
       outer_padding: false,
+      camera_rounded_corners: false,
+      camera_shadows: false,
     });
     const reopened = document.createElement(
       "watchzone-card-editor",
@@ -334,12 +357,14 @@ describe("watchzone-card-editor", () => {
       "rounded_outer_corners",
       "outer_shadows",
       "outer_padding",
+      "camera_rounded_corners",
+      "camera_shadows",
     ]) {
       expect(
         (
-          reopened.shadowRoot?.querySelector(`[data-config-key="${key}"]`) as {
-            value?: boolean;
-          }
+          reopened.shadowRoot?.querySelector(
+            `[data-config-key="${key}"]`,
+          ) as TestBooleanSelector
         ).value,
       ).toBe(false);
     }
@@ -355,7 +380,11 @@ describe("watchzone-card-editor", () => {
     };
     document.addEventListener("context-request", contextHandler);
 
-    const baseline = { type: CARD_TYPE, title: "Camera", cameras: [] } as const;
+    const baseline = normalizeCardConfig({
+      type: CARD_TYPE,
+      title: "Camera",
+      cameras: [],
+    });
     const card = document.createElement("watchzone-card") as DashboardCard;
     card.preview = true;
     card.setConfig(baseline);
@@ -379,17 +408,10 @@ describe("watchzone-card-editor", () => {
       "rounded_outer_corners",
       "outer_shadows",
       "outer_padding",
+      "camera_rounded_corners",
+      "camera_shadows",
     ] as const) {
-      const selector = editor.shadowRoot?.querySelector(
-        `[data-config-key="${key}"]`,
-      );
-      selector?.dispatchEvent(
-        new CustomEvent("value-changed", {
-          detail: { value: false },
-          bubbles: true,
-          composed: true,
-        }),
-      );
+      setBooleanSelector(editor, `[data-config-key="${key}"]`, false);
       await card.updateComplete;
       const outerClass =
         key === "rounded_outer_corners"
@@ -405,13 +427,7 @@ describe("watchzone-card-editor", () => {
         );
       }
 
-      selector?.dispatchEvent(
-        new CustomEvent("value-changed", {
-          detail: { value: true },
-          bubbles: true,
-          composed: true,
-        }),
-      );
+      setBooleanSelector(editor, `[data-config-key="${key}"]`, true);
       await card.updateComplete;
       if (outerClass) {
         expect(
@@ -438,12 +454,14 @@ describe("watchzone-card-editor", () => {
       "rounded_outer_corners",
       "outer_shadows",
       "outer_padding",
+      "camera_rounded_corners",
+      "camera_shadows",
     ]) {
       expect(
         (
-          reopened.shadowRoot?.querySelector(`[data-config-key="${key}"]`) as {
-            value?: boolean;
-          }
+          reopened.shadowRoot?.querySelector(
+            `[data-config-key="${key}"]`,
+          ) as TestBooleanSelector
         ).value,
       ).toBe(true);
     }
@@ -461,14 +479,12 @@ describe("watchzone-card-editor", () => {
     const dialog = document.createElement(
       "hui-dialog-edit-card",
     ) as TestEditCardDialog;
-    dialog._cardConfig = {
+    dialog._cardConfig = normalizeCardConfig({
       type: CARD_TYPE,
       title: "Camera",
       cameras: [
         {
           entity_id: "camera.front",
-          camera_rounded_corners: true,
-          camera_shadows: true,
           low_latency_hls: true,
           ptz_enabled: false,
           start_live_unmuted_pc_tablet: false,
@@ -476,7 +492,7 @@ describe("watchzone-card-editor", () => {
           two_way_talk_enabled: false,
         },
       ],
-    };
+    });
     dialog._updateDirtyState = vi.fn();
     const root = dialog.attachShadow({ mode: "open" });
     const editor = document.createElement(
@@ -502,15 +518,9 @@ describe("watchzone-card-editor", () => {
     ] as const) {
       const selector = editor.shadowRoot?.querySelector(
         `[data-camera-config-key="${key}"]`,
-      );
-      expect((selector as { value?: boolean }).value).toBe(false);
-      selector?.dispatchEvent(
-        new CustomEvent("value-changed", {
-          detail: { value: true },
-          bubbles: true,
-          composed: true,
-        }),
-      );
+      ) as TestBooleanSelector;
+      expect(selector.value).toBe(false);
+      setBooleanSelector(editor, `[data-camera-config-key="${key}"]`, true);
     }
 
     editor.shadowRoot
@@ -556,9 +566,73 @@ describe("watchzone-card-editor", () => {
     ] as const) {
       const selector = reopened.shadowRoot?.querySelector(
         `[data-camera-config-key="${key}"]`,
-      );
-      expect((selector as { value?: boolean }).value).toBe(true);
+      ) as TestBooleanSelector;
+      expect(selector.value).toBe(true);
     }
+    document.removeEventListener("context-request", contextHandler);
+  });
+
+  it("enables Update only for a valid changed camera draft", async () => {
+    const states: CardConfig[] = [];
+    const contextHandler = (event: Event) => {
+      const request = event as ContextRequest;
+      request.callback?.({ setState: (config) => states.push(config) });
+    };
+    document.addEventListener("context-request", contextHandler);
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as CardEditor;
+    editor.setConfig({
+      type: CARD_TYPE,
+      cameras: [{ entity_id: "camera.front" }],
+    });
+    document.body.append(editor);
+    await editor.updateComplete;
+
+    (
+      editor.shadowRoot?.querySelector(
+        '[aria-label="Edit front"]',
+      ) as HTMLElement
+    ).click();
+    await editor.updateComplete;
+    const update = editor.shadowRoot?.querySelector(
+      'ha-button[variant="brand"]',
+    ) as HTMLElement & { disabled: boolean };
+    expect(update.disabled).toBe(true);
+
+    setBooleanSelector(
+      editor,
+      '[data-camera-config-key="low_latency_hls"]',
+      false,
+    );
+    await editor.updateComplete;
+    expect(update.disabled).toBe(false);
+
+    setBooleanSelector(
+      editor,
+      '[data-camera-config-key="low_latency_hls"]',
+      true,
+    );
+    await editor.updateComplete;
+    expect(update.disabled).toBe(true);
+
+    setBooleanSelector(
+      editor,
+      '[data-camera-config-key="low_latency_hls"]',
+      false,
+    );
+    await editor.updateComplete;
+    update.click();
+    await editor.updateComplete;
+    expect(states.at(-1)).toMatchObject({
+      cameras: [{ entity_id: "camera.front", low_latency_hls: false }],
+    });
+    expect(
+      editor.shadowRoot
+        ?.querySelector(".camera-editor-dialog")
+        ?.hasAttribute("open"),
+    ).toBe(false);
+
     document.removeEventListener("context-request", contextHandler);
   });
 
@@ -671,12 +745,12 @@ describe("watchzone-card-editor", () => {
     const dialog = document.createElement(
       "hui-dialog-edit-card",
     ) as TestEditCardDialog;
-    dialog._cardConfig = {
+    dialog._cardConfig = normalizeCardConfig({
       type: CARD_TYPE,
       title: "Original",
       cameras: [],
       grid_options: { columns: 8 },
-    };
+    });
     dialog._updateDirtyState = vi.fn();
     const root = dialog.attachShadow({ mode: "open" });
     const editor = document.createElement(

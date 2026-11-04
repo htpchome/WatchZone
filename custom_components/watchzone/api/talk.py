@@ -25,7 +25,7 @@ from mashumaro import MissingField
 from webrtc_models import RTCIceCandidateInit
 
 from ..const import DOMAIN
-from ..features.talk import camera_talk_capability
+from ..providers.home_assistant.talk import async_talk_capability
 from . import runtime_from_hass
 
 _LOGGER = logging.getLogger(__name__)
@@ -64,15 +64,14 @@ async def ws_talk_capability(
     """Report whether Home Assistant exposes a usable two-way-audio path."""
     try:
         _require_camera_read(connection, msg["entity_id"])
-        capability = camera_talk_capability(hass, msg["entity_id"])
+        supported = await async_talk_capability(hass, msg["entity_id"])
     except HomeAssistantError as err:
         connection.send_error(msg["id"], "talk_capability_failed", str(err))
         return
     connection.send_result(
         msg["id"],
         {
-            "supported": capability.supported,
-            "probe_required": capability.probe_required,
+            "supported": supported,
         },
     )
 
@@ -94,8 +93,7 @@ async def ws_talk_offer(
     entity_id = msg["entity_id"]
     try:
         _require_camera_read(connection, entity_id)
-        capability = camera_talk_capability(hass, entity_id)
-        if not capability.supported and not capability.probe_required:
+        if not await async_talk_capability(hass, entity_id):
             raise HomeAssistantError("Camera does not support two-way audio")
         runtime = runtime_from_hass(hass)
 

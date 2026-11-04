@@ -11,10 +11,17 @@ Assistant must not reconstruct the card on every input event.
 
 Camera configuration is an ordered list capped by the centralized
 `MAX_CAMERAS` value. Adding, editing, deleting, or reordering a camera produces
-one complete normalized list update and one dirty-state write. Per-camera live,
-audio, and appearance options are edited inside that camera's dialog; they are
-not duplicated as card-global fields. YAML output omits per-camera default
-values while preserving list order and stable entity identity.
+one complete normalized list update and one dirty-state write. Per-camera live
+and audio options are edited inside that camera's dialog. Camera-module
+appearance is edited once under Layout Settings and applies uniformly to the
+module rather than individual cameras. YAML output omits default values while
+preserving list order and stable entity identity.
+
+The camera dialog is a nested draft transaction. Update remains disabled until
+the normalized camera draft is valid and differs from the camera being edited;
+Cancel discards the nested draft. Dialog actions use Home Assistant button
+components so themes, disabled presentation, focus, and interaction conventions
+remain owned by Home Assistant.
 
 The editor keeps three concepts separate:
 

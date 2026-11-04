@@ -66,8 +66,8 @@ interface SelectorElement extends HTMLElement {
 const CAMERA_SELECTOR = {
   entity: { filter: { domain: "camera" } },
 } as const;
-
 const BOOLEAN_SELECTOR = { boolean: {} } as const;
+
 const accordionTag = unsafeStatic(ACCORDION_TAG);
 const accordionItemTag = unsafeStatic(ACCORDION_ITEM_TAG);
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
@@ -76,6 +76,8 @@ const sortableTileTag = unsafeStatic(SORTABLE_TILE_TAG);
 const EDITOR_STATUS_KEY = "editor-draft-status";
 
 type BooleanConfigFlag =
+  | "camera_rounded_corners"
+  | "camera_shadows"
   | "mobile_data_saving"
   | "outer_padding"
   | "outer_shadows"
@@ -90,6 +92,7 @@ export class CardEditor extends LitElement {
   private _baseline?: CardConfig;
   private _baselineSignature = "";
   private _config?: CardConfig;
+  private _cameraBaseline?: CameraConfig;
   private _cameraDraft?: CameraConfig;
   private _talkCapability?: boolean;
   private _talkCapabilityGeneration = 0;
@@ -316,6 +319,16 @@ export class CardEditor extends LitElement {
         this._t("editor.outer_padding"),
         this._config?.outer_padding !== false,
       )}
+      ${this._renderBooleanOption(
+        "camera_rounded_corners",
+        this._t("editor.camera_rounded_corners"),
+        this._config?.camera_rounded_corners !== false,
+      )}
+      ${this._renderBooleanOption(
+        "camera_shadows",
+        this._t("editor.camera_shadows"),
+        this._config?.camera_shadows !== false,
+      )}
     `;
   }
 
@@ -419,31 +432,27 @@ export class CardEditor extends LitElement {
               }
             </small>
           </section>
-          <section>
-            <h3>${this._t("editor.appearance")}</h3>
-            ${this._renderCameraBoolean(
-              "camera_rounded_corners",
-              this._t("editor.camera_rounded_corners"),
-              camera?.camera_rounded_corners ?? true,
-            )}
-            ${this._renderCameraBoolean(
-              "camera_shadows",
-              this._t("editor.camera_shadows"),
-              camera?.camera_shadows ?? true,
-            )}
-          </section>
         </div>
         <footer>
-          <button type="button" @click=${this._cancelCameraEdit}>
+          <ha-button
+            appearance="plain"
+            variant="neutral"
+            size="m"
+            type="button"
+            @click=${this._cancelCameraEdit}
+          >
             ${this._t("common.cancel")}
-          </button>
-          <button
-            class="primary"
-            type="submit"
-            ?disabled=${!this._cameraDraftIsValid()}
+          </ha-button>
+          <ha-button
+            appearance="accent"
+            variant="brand"
+            size="m"
+            type="button"
+            .disabled=${!this._cameraDraftCanCommit()}
+            @click=${this._saveCameraEdit}
           >
             ${editing ? this._t("common.update") : this._t("common.add")}
-          </button>
+          </ha-button>
         </footer>
       </form>
     </dialog>`;
@@ -545,6 +554,7 @@ export class CardEditor extends LitElement {
   private readonly _addCamera = (): void => {
     if ((this._config?.cameras.length ?? 0) >= MAX_CAMERAS) return;
     this._editingCameraIndex = undefined;
+    this._cameraBaseline = undefined;
     this._cameraDraft = createDefaultCameraConfig();
     this._talkCapability = undefined;
     this._talkCapabilityPending = false;
@@ -560,6 +570,7 @@ export class CardEditor extends LitElement {
     const camera = this._config?.cameras[index];
     if (!camera) return;
     this._editingCameraIndex = index;
+    this._cameraBaseline = camera;
     this._cameraDraft = { ...camera };
     this._checkTalkCapability(camera.entity_id);
     this._checkPtzCapability(camera.entity_id);
@@ -578,6 +589,7 @@ export class CardEditor extends LitElement {
 
   private readonly _cancelCameraEdit = (event: Event): void => {
     event.preventDefault();
+    this._cameraBaseline = undefined;
     this._cameraDraft = undefined;
     this._talkCapabilityGeneration += 1;
     this._talkCapability = undefined;
@@ -589,13 +601,14 @@ export class CardEditor extends LitElement {
     this.requestUpdate();
   };
 
-  private readonly _saveCameraEdit = (event: SubmitEvent): void => {
+  private readonly _saveCameraEdit = (event: Event): void => {
     event.preventDefault();
-    if (!this._config || !this._cameraDraftIsValid() || !this._cameraDraft)
+    if (!this._config || !this._cameraDraftCanCommit() || !this._cameraDraft)
       return;
     const cameras = [...this._config.cameras];
     if (this._editingCameraIndex === undefined) cameras.push(this._cameraDraft);
     else cameras[this._editingCameraIndex] = this._cameraDraft;
+    this._cameraBaseline = undefined;
     this._cameraDraft = undefined;
     this._editingCameraIndex = undefined;
     this._applyCameraList(cameras);
@@ -637,6 +650,12 @@ export class CardEditor extends LitElement {
           index !== this._editingCameraIndex,
       ) ?? false
     );
+  }
+
+  private _cameraDraftCanCommit(): boolean {
+    if (!this._cameraDraftIsValid() || !this._cameraDraft) return false;
+    if (!this._cameraBaseline) return true;
+    return !cameraConfigEquals(this._cameraDraft, this._cameraBaseline);
   }
 
   private _cameraName(entityId: string): string {
@@ -849,6 +868,17 @@ export class CardEditor extends LitElement {
   };
 
   static styles = [themeTokens, cardEditorStyles];
+}
+
+function cameraConfigEquals(left: CameraConfig, right: CameraConfig): boolean {
+  return (
+    left.entity_id === right.entity_id &&
+    left.low_latency_hls === right.low_latency_hls &&
+    left.ptz_enabled === right.ptz_enabled &&
+    left.start_live_unmuted_pc_tablet === right.start_live_unmuted_pc_tablet &&
+    left.start_live_unmuted_phone === right.start_live_unmuted_phone &&
+    left.two_way_talk_enabled === right.two_way_talk_enabled
+  );
 }
 
 if (!customElements.get(EDITOR_TAG)) {

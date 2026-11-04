@@ -29,12 +29,12 @@ Supported Home Assistant surfaces are discovered in this order:
 1. enabled same-device PTZ button entities;
 2. the Home Assistant ONVIF PTZ service and the camera entry's loaded ONVIF
    profile capability;
-3. for an HA Frigate camera, the installed integration's cached HA
-   configuration plus its registered `frigate.ptz` HA service.
+3. for an HA Frigate camera, the installed integration's runtime PTZ feature
+   report plus its registered `frigate.ptz` HA service.
 
 The third surface is an optional compatibility path inside the Home Assistant
-provider. It is not a direct Frigate connection and performs no Frigate API
-request. A future Frigate go2rtc connection must register its own PTZ provider
+provider. It does not change the configured connection type or movement path.
+A future Frigate go2rtc connection must register its own PTZ provider
 adapter and must not add Frigate transport conditions to the module or the Home
 Assistant adapter.
 

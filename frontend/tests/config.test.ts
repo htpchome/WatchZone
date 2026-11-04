@@ -8,6 +8,8 @@ describe("WatchZone card configuration", () => {
     expect(normalizeCardConfig({ type: CARD_TYPE, title: "Camera" })).toEqual({
       type: CARD_TYPE,
       title: "Camera",
+      camera_rounded_corners: true,
+      camera_shadows: true,
       rounded_outer_corners: true,
       outer_shadows: true,
       outer_padding: true,
@@ -30,8 +32,6 @@ describe("WatchZone card configuration", () => {
     ).toEqual([
       {
         entity_id: "camera.front",
-        camera_rounded_corners: true,
-        camera_shadows: true,
         low_latency_hls: false,
         ptz_enabled: false,
         start_live_unmuted_pc_tablet: true,
@@ -71,6 +71,23 @@ describe("WatchZone card configuration", () => {
         start_live_unmuted_phone: true,
       },
     ]);
+  });
+
+  it("migrates short-lived per-camera appearance to the camera module", () => {
+    const config = normalizeCardConfig({
+      cameras: [
+        {
+          entity_id: "camera.front",
+          camera_rounded_corners: false,
+          camera_shadows: false,
+        },
+      ],
+    });
+
+    expect(config.camera_rounded_corners).toBe(false);
+    expect(config.camera_shadows).toBe(false);
+    expect(config.cameras[0]).not.toHaveProperty("camera_rounded_corners");
+    expect(config.cameras[0]).not.toHaveProperty("camera_shadows");
   });
 
   it("rejects invalid, duplicate, and excessive camera configuration", () => {

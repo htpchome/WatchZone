@@ -166,7 +166,7 @@ async def async_prepare_session(
         )
         raise ProviderPreparationError(reason)
 
-    client = await _async_get_frigate_client(hass, config_entry)
+    client = await async_get_frigate_client(hass, config_entry)
     if client is None:
         raise ProviderPreparationError("frigate_client_unavailable")
     url = (URL(base_url) / _GO2RTC_WEBSOCKET_PATH) % {"src": stream_name}
@@ -215,7 +215,7 @@ def _camera_name(hass: HomeAssistant, entity_id: str) -> str | None:
     return camera_name or None
 
 
-async def _async_get_frigate_client(
+async def async_get_frigate_client(
     hass: HomeAssistant, config_entry: ConfigEntry
 ) -> _FrigateClient | None:
     """Feature-detect the Frigate integration's authenticated API client."""

@@ -66,9 +66,34 @@ describe("layout composition", () => {
       moduleType: "camera",
       config: {
         cameras: [{ entityId: "camera.front" }],
+        roundedCorners: true,
+        shadowStyle: "medium",
         retentionPreference: "automatic",
       },
     });
+  });
+
+  it("maps camera appearance once at the camera module boundary", () => {
+    const layout = createDefaultCardLayout(
+      normalizeCardConfig({
+        camera_entity: "camera.front",
+        camera_rounded_corners: false,
+        camera_shadows: false,
+      }),
+    );
+    const cameraNode = layout.root.children[0];
+    if (cameraNode?.kind !== "module") {
+      throw new Error("Expected a camera module node.");
+    }
+
+    expect(cameraNode.config).toMatchObject({
+      cameras: [{ entityId: "camera.front" }],
+      roundedCorners: false,
+      shadowStyle: "none",
+    });
+    expect(
+      (cameraNode.config as { cameras: readonly unknown[] }).cameras[0],
+    ).not.toHaveProperty("roundedCorners");
   });
 
   it("composes an independent talk overlay only for opted-in cameras", () => {

@@ -6,8 +6,6 @@ import {
 } from "./constants";
 
 export interface CameraConfig {
-  readonly camera_rounded_corners: boolean;
-  readonly camera_shadows: boolean;
   readonly entity_id: string;
   readonly low_latency_hls: boolean;
   readonly ptz_enabled: boolean;
@@ -17,6 +15,8 @@ export interface CameraConfig {
 }
 
 export interface CardConfig {
+  readonly camera_rounded_corners: boolean;
+  readonly camera_shadows: boolean;
   readonly cameras: readonly CameraConfig[];
   readonly mobile_data_saving?: boolean;
   readonly outer_padding?: boolean;
@@ -39,6 +39,8 @@ export function normalizeCardConfig(value: unknown): CardConfig {
   }
 
   for (const key of [
+    "camera_rounded_corners",
+    "camera_shadows",
     "rounded_outer_corners",
     "outer_shadows",
     "outer_padding",
@@ -58,14 +60,17 @@ export function normalizeCardConfig(value: unknown): CardConfig {
   };
   for (const legacyKey of [
     "camera_entity",
-    "camera_rounded_corners",
-    "camera_shadows",
     "low_latency_hls",
     "start_live_unmuted_pc_tablet",
     "start_live_unmuted_phone",
   ]) {
     delete normalized[legacyKey];
   }
+  normalized.camera_rounded_corners = moduleAppearanceValue(
+    source,
+    "camera_rounded_corners",
+  );
+  normalized.camera_shadows = moduleAppearanceValue(source, "camera_shadows");
   normalized.rounded_outer_corners =
     typeof source.rounded_outer_corners === "boolean"
       ? source.rounded_outer_corners
@@ -83,8 +88,6 @@ export function normalizeCardConfig(value: unknown): CardConfig {
 
 export function createDefaultCameraConfig(entityId = ""): CameraConfig {
   return {
-    camera_rounded_corners: true,
-    camera_shadows: true,
     entity_id: entityId,
     low_latency_hls: true,
     ptz_enabled: false,
@@ -124,8 +127,6 @@ function legacyCamera(
   }
   return [
     {
-      camera_rounded_corners: source.camera_rounded_corners,
-      camera_shadows: source.camera_shadows,
       entity_id: source.camera_entity,
       low_latency_hls: source.low_latency_hls,
       ptz_enabled: source.ptz_enabled,
@@ -151,8 +152,6 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
   }
   const defaults = createDefaultCameraConfig(source.entity_id.trim());
   for (const key of [
-    "camera_rounded_corners",
-    "camera_shadows",
     "low_latency_hls",
     "ptz_enabled",
     "start_live_unmuted_pc_tablet",
@@ -170,14 +169,6 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
     }
   }
   return {
-    camera_rounded_corners:
-      typeof source.camera_rounded_corners === "boolean"
-        ? source.camera_rounded_corners
-        : defaults.camera_rounded_corners,
-    camera_shadows:
-      typeof source.camera_shadows === "boolean"
-        ? source.camera_shadows
-        : defaults.camera_shadows,
     entity_id: defaults.entity_id,
     low_latency_hls:
       typeof source.low_latency_hls === "boolean"
@@ -188,6 +179,24 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
     start_live_unmuted_phone: source.start_live_unmuted_phone === true,
     two_way_talk_enabled: source.two_way_talk_enabled === true,
   };
+}
+
+type CameraAppearanceKey = "camera_rounded_corners" | "camera_shadows";
+
+/** One-way migration from the short-lived per-camera appearance shape. */
+function moduleAppearanceValue(
+  source: Readonly<Record<string, unknown>>,
+  key: CameraAppearanceKey,
+): boolean {
+  if (typeof source[key] === "boolean") return source[key];
+  const firstCamera = Array.isArray(source.cameras) ? source.cameras[0] : null;
+  if (typeof firstCamera !== "object" || firstCamera === null) return true;
+  const legacyValue = (firstCamera as Record<string, unknown>)[key];
+  if (legacyValue === undefined) return true;
+  if (typeof legacyValue !== "boolean") {
+    throw new Error(`${APP_NAME} ${key} must be a boolean.`);
+  }
+  return legacyValue;
 }
 
 export function cardConfigSignature(config: CardConfig): string {

@@ -12,21 +12,14 @@ const CANDIDATE_COMMAND = `${INTEGRATION_ID}/talk/webrtc/candidate`;
 export async function getTalkCapability(
   api: HomeAssistantApi,
   entityId: string,
-): Promise<{
-  readonly supported: boolean;
-  readonly probeRequired: boolean;
-}> {
+): Promise<boolean> {
   const result = await api.callWS<{
     readonly supported: boolean;
-    readonly probe_required: boolean;
   }>({
     type: CAPABILITY_COMMAND,
     entity_id: entityId,
   });
-  return {
-    supported: result.supported,
-    probeRequired: result.probe_required,
-  };
+  return result.supported;
 }
 
 export function subscribeTalkOffer(

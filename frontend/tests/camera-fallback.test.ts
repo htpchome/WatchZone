@@ -221,8 +221,6 @@ function cameraItem(entityId: string) {
     available: true,
     entityId,
     lowLatencyHls: true,
-    roundedCorners: true,
-    shadowStyle: "medium" as const,
     startUnmutedPcTablet: false,
     startUnmutedPhone: false,
   };

@@ -9,6 +9,7 @@ from homeassistant.core import Context, HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 
+from ..frigate.capabilities import async_ptz_capabilities
 from ..ptz import PtzCapabilities, PtzDirection
 
 _DIRECTION_KEYS: dict[PtzDirection, str] = {
@@ -40,7 +41,10 @@ class HomeAssistantPtzProvider:
         self, hass: HomeAssistant, entity_id: str
     ) -> PtzCapabilities:
         """Return capability data exposed by the current HA installation."""
-        return self._surface(hass, entity_id).capabilities
+        surface = self._surface(hass, entity_id)
+        if surface.kind != "frigate_service":
+            return surface.capabilities
+        return await async_ptz_capabilities(hass, entity_id) or PtzCapabilities()
 
     async def async_start(
         self,
@@ -51,7 +55,12 @@ class HomeAssistantPtzProvider:
     ) -> None:
         """Start continuous movement or perform one HA-native step."""
         surface = self._surface(hass, entity_id)
-        self._require_direction(surface.capabilities, direction)
+        capabilities = surface.capabilities
+        if surface.kind == "frigate_service":
+            capabilities = (
+                await async_ptz_capabilities(hass, entity_id) or PtzCapabilities()
+            )
+        self._require_direction(capabilities, direction)
         if surface.kind == "buttons":
             control = (surface.controls or {}).get(_DIRECTION_KEYS[direction])
             if not control:
@@ -214,19 +223,9 @@ class HomeAssistantPtzProvider:
             return _Surface("frigate_service", PtzCapabilities())
         state = hass.states.get(entity_id)
         camera_name = state.attributes.get("camera_name") if state else None
-        runtime = hass.data.get("frigate", {}).get(camera.config_entry_id, {})
-        config = runtime.get("config", {}) if isinstance(runtime, dict) else {}
-        cameras = config.get("cameras", {}) if isinstance(config, dict) else {}
-        camera_config = (
-            cameras.get(camera_name, {}) if isinstance(cameras, dict) else {}
-        )
-        onvif = camera_config.get("onvif") if isinstance(camera_config, dict) else None
-        if not isinstance(onvif, dict) or not onvif:
+        if not isinstance(camera_name, str) or not camera_name.strip():
             return _Surface("frigate_service", PtzCapabilities())
-        return _Surface(
-            "frigate_service",
-            PtzCapabilities(pan=True, tilt=True),
-        )
+        return _Surface("frigate_service", PtzCapabilities())
 
     @staticmethod
     def _require_direction(

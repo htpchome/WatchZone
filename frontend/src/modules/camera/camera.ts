@@ -36,8 +36,6 @@ export interface CameraItemConfig {
   readonly entityId: string;
   readonly lowLatencyHls: boolean;
   readonly posterUrl?: string;
-  readonly roundedCorners: boolean;
-  readonly shadowStyle: CameraShadowStyle;
   readonly startUnmutedPcTablet: boolean;
   readonly startUnmutedPhone: boolean;
 }
@@ -52,6 +50,8 @@ export class CameraModule extends LitElement {
     cameras: { attribute: false },
     localize: { attribute: false },
     retentionPreference: { attribute: false },
+    roundedCorners: { attribute: false, type: Boolean },
+    shadowStyle: { attribute: false },
   };
 
   private _activeIndex = 0;
@@ -71,6 +71,8 @@ export class CameraModule extends LitElement {
   public cameras: readonly CameraItemConfig[] = [];
   public localize: LocalizeFunction = englishLocalize;
   public retentionPreference: MediaRetentionPreference = "automatic";
+  public roundedCorners = true;
+  public shadowStyle: CameraShadowStyle = "medium";
 
   public connectedCallback(): void {
     super.connectedCallback();
@@ -156,8 +158,8 @@ export class CameraModule extends LitElement {
                 this._overlayVisibilityByCamera.get(camera.entityId) ?? false
               }
               .posterUrl=${camera.posterUrl}
-              .roundedCorners=${camera.roundedCorners}
-              .shadowStyle=${camera.shadowStyle}
+              .roundedCorners=${this.roundedCorners}
+              .shadowStyle=${this.shadowStyle}
               .stageHeightRatio=${this._stageSize.heightRatio}
               .stageResized=${this._stageSize.resized}
               .startUnmutedPcTablet=${camera.startUnmutedPcTablet}

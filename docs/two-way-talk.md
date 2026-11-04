@@ -22,14 +22,14 @@ the editor first trusts Home Assistant's resolved `two_way_audio` capability.
 This requires both WebRTC and a camera integration that positively declares a
 usable audio backchannel; generic WebRTC playback alone is not sufficient.
 
-Older Home Assistant versions and integrations that have not adopted the
-standard capability use a bounded, microphone-free compatibility probe through
-Home Assistant's standard camera WebRTC signaling contract. The probe offers a
-send-only audio transceiver and accepts support only when the remote SDP answer
-accepts browser-to-camera audio. It closes immediately, never requests
-microphone permission, and never calls a provider API directly. The real talk
-connection validates the same SDP property before declaring success. YAML omits
-the option at its default `false` value.
+Older Home Assistant versions use an explicit compatibility capability only
+when the selected HA entity belongs to the installed Frigate integration. The
+adapter reads go2rtc's runtime producer metadata through that integration and
+requires a send-only or send-receive audio backchannel. A WebRTC SDP answer by
+itself is deliberately not accepted because go2rtc can accept an outgoing audio
+track even when the physical camera has no talkback path. Generic HA cameras
+remain unavailable until their integration publishes the native capability.
+YAML omits the option at its default `false` value.
 
 Future connection providers implement capability discovery and signaling in
 their own provider adapter. A future Frigate go2rtc connection may use the
