@@ -43,6 +43,7 @@ export const SORTABLE_TILE_TAG = `${APP_ID}-sortable-tile`;
 export const SORTABLE_DRAG_EVENT = `${APP_ID}-sortable-drag`;
 export const SORTABLE_KEYBOARD_MOVE_EVENT = `${APP_ID}-sortable-keyboard-move`;
 export const SORTABLE_REORDER_EVENT = `${APP_ID}-sortable-reorder`;
+export const SORTABLE_SETTLE_DURATION_MS = 180;
 export const TOAST_REGION_TAG = `${APP_ID}-toast-region`;
 export const TOAST_VISIBLE_DURATION_MS = 3_500;
 export const TOAST_TRANSITION_DURATION_MS = 180;

@@ -5,6 +5,7 @@ import {
   SORTABLE_KEYBOARD_MOVE_EVENT,
   SORTABLE_LIST_TAG,
   SORTABLE_REORDER_EVENT,
+  SORTABLE_SETTLE_DURATION_MS,
   SORTABLE_TILE_TAG,
 } from "../core/constants";
 import { englishLocalize, type LocalizeFunction } from "../core/localization";
@@ -28,6 +29,7 @@ export interface SortableReorderDetail {
 export class SortableTile extends LitElement {
   public static properties = {
     dragging: { reflect: true, type: Boolean },
+    settling: { reflect: true, type: Boolean },
     dropTarget: {
       attribute: "drop-target",
       reflect: true,
@@ -38,12 +40,14 @@ export class SortableTile extends LitElement {
   };
 
   public dragging = false;
+  public settling = false;
   public dropTarget = false;
   public itemKey = "";
   public localize: LocalizeFunction = englishLocalize;
   private _offset = 0;
   private _pointerId?: number;
   private _pointerStartY = 0;
+  private _settleAnimation?: Animation;
 
   public connectedCallback(): void {
     super.connectedCallback();
@@ -51,11 +55,67 @@ export class SortableTile extends LitElement {
   }
 
   public resetDrag(): void {
+    this._settleAnimation?.cancel();
+    this._settleAnimation = undefined;
     this.dragging = false;
+    this.settling = false;
     this._pointerId = undefined;
     this._pointerStartY = 0;
     this._offset = 0;
     this.requestUpdate();
+  }
+
+  public releasePointer(): void {
+    this._pointerId = undefined;
+    this._pointerStartY = 0;
+  }
+
+  public prepareSettle(lifted: boolean): void {
+    this.releasePointer();
+    this.dragging = false;
+    this.settling = lifted;
+    this._offset = 0;
+    this.requestUpdate();
+  }
+
+  public async settleFrom(
+    previousRect: DOMRect,
+    lifted: boolean,
+  ): Promise<void> {
+    await this.updateComplete;
+    const tile = this.renderRoot.querySelector<HTMLElement>(".tile");
+    if (!tile) {
+      this.settling = false;
+      return;
+    }
+    const deltaY = previousRect.top - tile.getBoundingClientRect().top;
+    if (
+      Math.abs(deltaY) < 0.5 ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      this.settling = false;
+      return;
+    }
+    this.settling = lifted;
+    const animation = tile.animate(
+      [
+        { transform: `translateY(${deltaY}px)` },
+        { transform: "translateY(0)" },
+      ],
+      {
+        duration: SORTABLE_SETTLE_DURATION_MS,
+        easing: "ease-out",
+      },
+    );
+    this._settleAnimation = animation;
+    try {
+      await animation.finished;
+    } catch {
+      // A new interaction legitimately supersedes an in-flight settle.
+    }
+    if (this._settleAnimation !== animation) return;
+    this._settleAnimation = undefined;
+    this.settling = false;
   }
 
   public setDisplacement(offset: number): void {
@@ -103,6 +163,9 @@ export class SortableTile extends LitElement {
     if (event.button !== 0 || this._pointerId !== undefined) return;
     event.preventDefault();
     event.stopPropagation();
+    this._settleAnimation?.cancel();
+    this._settleAnimation = undefined;
+    this.settling = false;
     this._pointerId = event.pointerId;
     this._pointerStartY = event.clientY;
     this.dragging = true;
@@ -123,7 +186,6 @@ export class SortableTile extends LitElement {
     if (event.pointerId !== this._pointerId) return;
     event.preventDefault();
     this._dispatchDrag("end", event.clientY);
-    this.resetDrag();
   };
 
   private readonly _handleLostPointerCapture = (event: PointerEvent): void => {
@@ -163,6 +225,7 @@ export class SortableList extends LitElement {
   private _toIndex = -1;
   private _itemRects: DOMRect[] = [];
   private _displacement = 0;
+  private _settleFrame?: number;
 
   public connectedCallback(): void {
     super.connectedCallback();
@@ -186,6 +249,7 @@ export class SortableList extends LitElement {
       SORTABLE_KEYBOARD_MOVE_EVENT,
       this._handleKeyboardReorder as EventListener,
     );
+    this._cancelSettleFrame();
     this._resetDrag();
     super.disconnectedCallback();
   }
@@ -206,6 +270,7 @@ export class SortableList extends LitElement {
   ): void => {
     event.stopPropagation();
     if (event.detail.phase === "start") {
+      this._cancelSettleFrame();
       this._dragged = event.detail.item;
       const items = this._items;
       this._fromIndex = items.indexOf(event.detail.item);
@@ -242,16 +307,26 @@ export class SortableList extends LitElement {
       return;
     }
     const detail = this._reorderDetail(this._fromIndex, this._toIndex);
-    this._resetDrag();
-    if (detail && detail.fromIndex !== detail.toIndex) {
-      this.dispatchEvent(
-        new CustomEvent<SortableReorderDetail>(SORTABLE_REORDER_EVENT, {
-          bubbles: true,
-          composed: true,
-          detail,
-        }),
-      );
+    if (!detail || detail.fromIndex === detail.toIndex) {
+      this._resetDrag();
+      return;
     }
+    const draggedKey = detail.itemKey;
+    const previousRects = new Map(
+      this._items.map((item) => [item.itemKey, item.getBoundingClientRect()]),
+    );
+    this._dragged?.releasePointer();
+    this.dispatchEvent(
+      new CustomEvent<SortableReorderDetail>(SORTABLE_REORDER_EVENT, {
+        bubbles: true,
+        composed: true,
+        detail,
+      }),
+    );
+    this._settleFrame = requestAnimationFrame(() => {
+      this._settleFrame = undefined;
+      void this._settleReorder(previousRects, draggedKey);
+    });
   };
 
   private readonly _handleKeyboardReorder = (
@@ -311,6 +386,40 @@ export class SortableList extends LitElement {
       item.dropTarget = false;
       item.setDisplacement(0);
     }
+    this._dragged = undefined;
+    this._fromIndex = -1;
+    this._toIndex = -1;
+    this._itemRects = [];
+    this._displacement = 0;
+  }
+
+  private async _settleReorder(
+    previousRects: ReadonlyMap<string, DOMRect>,
+    draggedKey: string,
+  ): Promise<void> {
+    const items = this._items;
+    for (const item of items) {
+      item.dropTarget = false;
+      item.prepareSettle(item.itemKey === draggedKey);
+    }
+    await Promise.all(items.map((item) => item.updateComplete));
+    this._clearDragGeometry();
+    await Promise.all(
+      items.map(async (item) => {
+        const previousRect = previousRects.get(item.itemKey);
+        if (!previousRect) return;
+        await item.settleFrom(previousRect, item.itemKey === draggedKey);
+      }),
+    );
+  }
+
+  private _cancelSettleFrame(): void {
+    if (this._settleFrame === undefined) return;
+    cancelAnimationFrame(this._settleFrame);
+    this._settleFrame = undefined;
+  }
+
+  private _clearDragGeometry(): void {
     this._dragged = undefined;
     this._fromIndex = -1;
     this._toIndex = -1;

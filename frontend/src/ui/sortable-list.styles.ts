@@ -46,6 +46,11 @@ export const sortableTileStyles = css`
     transition: none;
   }
 
+  :host([settling]) .tile {
+    opacity: 0.9;
+    box-shadow: var(--wzc-shadow-medium);
+  }
+
   :host([drop-target]) .tile {
     border-color: var(--wzc-sortable-accent-color);
   }

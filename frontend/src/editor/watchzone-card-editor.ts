@@ -1,4 +1,5 @@
 import { html, LitElement, nothing } from "lit";
+import { repeat } from "lit/directives/repeat.js";
 import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import {
@@ -239,7 +240,9 @@ export class CardEditor extends LitElement {
         data-sortable-scope="cameras"
         aria-label=${this._t("editor.configured_cameras")}
       >
-        ${cameras.map(
+        ${repeat(
+          cameras,
+          (camera) => camera.entity_id,
           (camera, index) => staticHtml`<${sortableTileTag}
             item-key=${camera.entity_id}
             .localize=${this._localization.localize}

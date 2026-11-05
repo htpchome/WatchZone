@@ -25,6 +25,10 @@ state.
   registries.
 - Pointer cancellation and lost capture reset the complete transient drag
   state without emitting a reorder.
+- Pointer release hands the current visual geometry through the owner's keyed
+  Lit reconciliation, then settles once into the new slot. The lifted shadow
+  remains until that settle completes, so a tile never snaps back to its old
+  slot before moving to the new one.
 - Arrow Up and Arrow Down on the focused handle provide keyboard reordering.
 - The emitted detail contains stable item identity plus absolute source and
   destination indices.

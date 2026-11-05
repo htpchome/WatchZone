@@ -850,12 +850,25 @@ test("editor camera drag handles reorder the configured cameras", async ({
   await editor.locator("wzc-accordion-item").first().locator("summary").click();
   const tiles = editor.locator("wzc-sortable-tile");
   const firstHandle = tiles.nth(0).locator(".handle");
+  const firstTile = tiles.nth(0);
   const secondTile = tiles.nth(1);
   const start = await firstHandle.boundingBox();
   const target = await secondTile.boundingBox();
   expect(start).not.toBeNull();
   expect(target).not.toBeNull();
   if (!start || !target) return;
+
+  await firstTile.evaluate((element) => {
+    const observer = new MutationObserver(() => {
+      if (!element.hasAttribute("settling")) return;
+      element.dataset.sawSettle = "true";
+      observer.disconnect();
+    });
+    observer.observe(element, {
+      attributeFilter: ["settling"],
+      attributes: true,
+    });
+  });
 
   await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
   await page.mouse.down();
@@ -868,6 +881,7 @@ test("editor camera drag handles reorder the configured cameras", async ({
 
   await expect(tiles.nth(0)).toHaveAttribute("item-key", "camera.second");
   await expect(tiles.nth(1)).toHaveAttribute("item-key", "camera.first");
+  await expect(tiles.nth(1)).toHaveAttribute("data-saw-settle", "true");
 });
 
 test("round-trips boolean toggles through defaults before Save", async ({
