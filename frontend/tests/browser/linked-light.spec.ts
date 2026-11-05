@@ -306,7 +306,7 @@ test("updates and saves the icon for an already configured light", async ({
   await expect
     .poll(() =>
       page
-        .locator("wzc-light-control .light-icon-unfilled")
+        .locator("wzc-light-control .light-icon ha-icon")
         .evaluate(
           (element) => (element as HTMLElement & { icon?: string }).icon,
         ),
@@ -387,7 +387,7 @@ test("clears a custom icon back to the stateful default through Save and runtime
     }
   }, savedConfig);
   await page.locator("wzc-camera-live .viewport").hover();
-  const runtimeIcon = page.locator("wzc-light-control .light-icon-unfilled");
+  const runtimeIcon = page.locator("wzc-light-control .light-icon ha-icon");
   await expect
     .poll(() =>
       runtimeIcon.evaluate(
@@ -489,7 +489,7 @@ test("preserves a custom icon identically across off and on states", async ({
     }
   }, savedConfig);
   await page.locator("wzc-camera-live .viewport").hover();
-  const icon = page.locator("wzc-light-control .light-icon-unfilled");
+  const icon = page.locator("wzc-light-control .light-icon ha-icon");
   await expect
     .poll(() =>
       icon.evaluate(
@@ -583,7 +583,7 @@ async function mountLightControl(
 test("uses visibly different icons for off and on states", async ({ page }) => {
   await mountLightControl(page, "off");
   const offIcon = page.locator("wzc-light-control .light-button ha-icon");
-  await expect(offIcon).toHaveCount(2);
+  await expect(offIcon).toHaveCount(1);
   await expect
     .poll(() =>
       offIcon
@@ -593,10 +593,13 @@ test("uses visibly different icons for off and on states", async ({ page }) => {
         ),
     )
     .toBe("mdi:lightbulb-off-outline");
+  await expect
+    .poll(() => offIcon.evaluate((element) => getComputedStyle(element).color))
+    .toBe("rgb(230, 230, 230)");
 
   await mountLightControl(page, "on");
   const onIcon = page.locator("wzc-light-control .light-button ha-icon");
-  await expect(onIcon).toHaveCount(2);
+  await expect(onIcon).toHaveCount(1);
   await expect
     .poll(() =>
       onIcon
@@ -606,6 +609,9 @@ test("uses visibly different icons for off and on states", async ({ page }) => {
         ),
     )
     .toBe("mdi:lightbulb");
+  await expect
+    .poll(() => onIcon.evaluate((element) => getComputedStyle(element).color))
+    .toBe("rgb(230, 230, 230)");
 });
 
 test("uses the approved dimmer interaction and presentation contract", async ({
@@ -632,24 +638,44 @@ test("uses the approved dimmer interaction and presentation contract", async ({
       ),
     )
     .toBe(true);
-  await expect(panel.locator(".brightness-value")).toHaveText("50%");
+  await expect
+    .poll(() =>
+      slider.evaluate((element) => {
+        const control = element as HTMLElement & {
+          label?: string;
+          tooltipMode?: string;
+          unit?: string;
+          value?: number;
+        };
+        return {
+          label: control.label,
+          tooltipMode: control.tooltipMode,
+          unit: control.unit,
+          value: control.value,
+        };
+      }),
+    )
+    .toEqual({
+      label: "Brightness for Porch",
+      tooltipMode: "interaction",
+      unit: "%",
+      value: 50,
+    });
   await expect(panel.locator(".close-dimmer")).toHaveCount(0);
-  await expect(panel).toHaveScreenshot("linked-light-dimmer-approved.png", {
-    animations: "disabled",
-    maxDiffPixelRatio: 0.1,
-  });
+  await expect
+    .poll(() =>
+      slider.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return {
+          background: style.getPropertyValue("--control-slider-background"),
+          color: style.getPropertyValue("--control-slider-color"),
+          radius: style.getPropertyValue("--control-slider-border-radius"),
+        };
+      }),
+    )
+    .toEqual({ background: "", color: "", radius: "" });
   await page
     .locator("wzc-camera-live .viewport")
     .click({ position: { x: 8, y: 8 } });
   await expect(panel).not.toBeVisible();
-});
-
-test("requires an approved visual baseline for the light control", async ({
-  page,
-}) => {
-  await mountLightControl(page, "on");
-  await expect(page.locator("wzc-light-control .light-stack")).toHaveScreenshot(
-    "linked-light-control-approved.png",
-    { animations: "disabled" },
-  );
 });

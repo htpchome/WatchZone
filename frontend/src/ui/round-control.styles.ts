@@ -12,11 +12,11 @@ export const roundControlStyles = css`
     padding: 0.55rem;
     overflow: hidden;
     isolation: isolate;
-    color: var(--wzc-color-primary);
-    background-color: var(--wzc-media-overlay-background);
-    border: 1px solid var(--wzc-media-overlay-border-color);
+    color: var(--wzc-round-control-color);
+    background-color: var(--wzc-round-control-background);
+    border: 1px solid var(--wzc-round-control-border-color);
     border-radius: 50%;
-    box-shadow: var(--wzc-media-overlay-shadow);
+    box-shadow: var(--wzc-round-control-shadow);
     cursor: pointer;
     touch-action: manipulation;
     user-select: none;
@@ -28,7 +28,7 @@ export const roundControlStyles = css`
     position: absolute;
     z-index: 1;
     inset: 0;
-    background: var(--wzc-media-overlay-hover-background);
+    background: var(--wzc-round-control-hover-background);
     border-radius: 50%;
     content: "";
     pointer-events: none;

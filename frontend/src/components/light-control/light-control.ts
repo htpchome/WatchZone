@@ -175,8 +175,7 @@ export class LightControlComponent extends LitElement {
       @pointerenter=${this._revealOverlay}
     >
       <span class="light-icon" aria-hidden="true">
-        <ha-icon class="light-icon-unfilled" .icon=${iconName}></ha-icon>
-        <ha-icon class="light-icon-filled" .icon=${iconName}></ha-icon>
+        <ha-icon .icon=${iconName}></ha-icon>
       </span>
     </button>`;
   }
@@ -193,9 +192,6 @@ export class LightControlComponent extends LitElement {
       aria-label=${this.localize("light.dimmer", { name })}
     >
       <span class="dimmer-name">${name}</span>
-      <span class="brightness-value" aria-live="polite">
-        ${this._panelBrightness}%
-      </span>
       <ha-control-slider
         vertical
         .min=${1}
@@ -204,9 +200,9 @@ export class LightControlComponent extends LitElement {
         .value=${this._panelBrightness}
         .showHandle=${true}
         .unit=${"%"}
-        .tooltipMode=${"never"}
+        .label=${this.localize("light.brightness", { name })}
+        .tooltipMode=${"interaction"}
         title=${this.localize("light.brightness", { name })}
-        aria-label=${this.localize("light.brightness", { name })}
         @slider-moved=${this._handleBrightnessInput}
         @value-changed=${this._handleBrightnessChange}
       ></ha-control-slider>

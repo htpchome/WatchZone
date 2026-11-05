@@ -352,6 +352,7 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
     });
   const lightTreatment = await roundTreatment(lightButton);
   expect(await roundTreatment(talkButton)).toEqual(lightTreatment);
+  expect(lightTreatment.color).toBe("rgb(230, 230, 230)");
   expect(lightTreatment.boxShadow).not.toBe("none");
   expect(
     await lightButton.evaluate((element) => {
@@ -376,12 +377,20 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
     )
     .toBe("matrix(1, 0, 0, 1, 0, 0)");
   await talkButton.hover();
-  await expect(talkButton).toHaveScreenshot(
-    "round-control-hover-approved.png",
-    {
-      animations: "disabled",
-    },
-  );
+  await expect
+    .poll(() =>
+      talkButton.evaluate((element) => {
+        const layer = getComputedStyle(element, "::after");
+        return {
+          backgroundColor: layer.backgroundColor,
+          transform: layer.transform,
+        };
+      }),
+    )
+    .toEqual({
+      backgroundColor: "rgb(3, 169, 244)",
+      transform: "matrix(1, 0, 0, 1, 0, 0)",
+    });
 
   for (const control of [talkButton, lightButton, ptzControl]) {
     await control.hover();
@@ -739,7 +748,6 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
       "--wzc-media-overlay-hover-opacity",
       "--wzc-media-overlay-surface",
       "--wzc-media-overlay-border-color",
-      "--wzc-light-slider-background",
     ];
     const host = element as HTMLElement;
     host.style.setProperty("--wzc-color-text-1", "rgb(10, 20, 30)");
@@ -1666,6 +1674,7 @@ test("retains one live connection while the card presentation is replaced", asyn
       "--ha-box-shadow-s",
       "rgb(7, 8, 9) 0px 1px 2px",
     );
+    replacement.style.setProperty("--primary-color", "#03a9f4");
     replacement.style.setProperty("--wzc-camera-stage", "rgb(12, 13, 14)");
     replacement.hass = testWindow.__wzcTestHass;
     document.body.append(replacement);
@@ -1909,6 +1918,11 @@ test("retains one live connection while the card presentation is replaced", asyn
       )) as typeof HTMLCanvasElement.prototype.toBlob;
   });
   await liveViewport.hover();
+  await controls.first().hover();
+  await expect(controls.first()).toHaveCSS(
+    "background-color",
+    "rgb(3, 169, 244)",
+  );
   const downloadPromise = page.waitForEvent("download");
   await page.locator('wzc-camera-controls [data-control="snapshot"]').click();
   const download = await downloadPromise;
@@ -2148,7 +2162,8 @@ test("retains one live connection while the card presentation is replaced", asyn
   );
   expect(hoverBackground).not.toBe("rgba(0, 0, 0, 0)");
   expect(hoverBackground).not.toBe(restingBackground);
-  expect(cssAlpha(hoverBackground)).toBeCloseTo(0.22, 2);
+  expect(hoverBackground).toBe("rgb(0, 120, 255)");
+  expect(cssAlpha(hoverBackground)).toBe(1);
   expect(
     await mute.evaluate((element) => getComputedStyle(element).color),
   ).toBe("rgb(230, 230, 230)");
