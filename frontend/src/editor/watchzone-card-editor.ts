@@ -386,15 +386,13 @@ export class CardEditor extends LitElement {
                 : this._t("editor.add_camera")
             }
           </h2>
-          <button
+          <ha-icon-button
             class="dialog-close"
-            type="button"
-            title=${this._t("editor.close_camera_editor")}
-            aria-label=${this._t("editor.close_camera_editor")}
+            .label=${this._t("editor.close_camera_editor")}
             @click=${this._cancelCameraEdit}
           >
-            ×
-          </button>
+            ${renderIcon("close")}
+          </ha-icon-button>
         </header>
         <div class="camera-dialog-content">
           ${
@@ -538,8 +536,9 @@ export class CardEditor extends LitElement {
         </div>
         <footer>
           <ha-button
-            appearance="plain"
-            variant="neutral"
+            class="camera-dialog-cancel"
+            appearance="filled"
+            variant="brand"
             size="m"
             type="button"
             @click=${this._cancelCameraEdit}
@@ -547,6 +546,7 @@ export class CardEditor extends LitElement {
             ${this._t("common.cancel")}
           </ha-button>
           <ha-button
+            class="camera-dialog-primary"
             appearance="accent"
             variant="brand"
             size="m"
@@ -580,8 +580,9 @@ export class CardEditor extends LitElement {
         </div>
         <footer>
           <ha-button
-            appearance="plain"
-            variant="neutral"
+            class="remove-camera-cancel"
+            appearance="filled"
+            variant="brand"
             size="m"
             type="button"
             @click=${this._cancelRemoveCamera}
@@ -589,6 +590,7 @@ export class CardEditor extends LitElement {
             ${this._t("common.cancel")}
           </ha-button>
           <ha-button
+            class="remove-camera-confirm"
             appearance="accent"
             variant="danger"
             size="m"
@@ -619,7 +621,7 @@ export class CardEditor extends LitElement {
             .hass=${this._hass}
             .selector=${ICON_SELECTOR}
             .value=${camera.light_icons[entityId]}
-            .required=${true}
+            .required=${camera.light_icons[entityId] === DEFAULT_LIGHT_ICON}
             @value-changed=${this._handleConfiguredLightIconChange}
           ></ha-selector>
           <button

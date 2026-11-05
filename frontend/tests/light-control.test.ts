@@ -147,6 +147,40 @@ describe("linked-light component", () => {
     await vi.advanceTimersByTimeAsync(LIGHT_LONG_PRESS_MS);
     expect(callService).not.toHaveBeenCalled();
   });
+
+  it("holds the shared overlay for pointer and keyboard interaction", async () => {
+    const release = vi.fn();
+    const holdOverlay = vi.fn(() => release);
+    const context = new CameraSessionContext();
+    const element = document.createElement(LIGHT_TAG) as LightControlComponent;
+    element.cameraSession = context;
+    element.cameras = cameraLights({ "camera.front": ["light.porch"] });
+    element.hass = createHass(vi.fn(async () => undefined));
+    document.body.append(element);
+    context.publish(
+      {},
+      {
+        ...activeCamera("camera.front"),
+        holdOverlay,
+      },
+    );
+    await element.updateComplete;
+
+    const group = element.shadowRoot?.querySelector(".light-buttons");
+    group?.dispatchEvent(new Event("pointerenter"));
+    expect(holdOverlay).toHaveBeenCalledOnce();
+    group?.dispatchEvent(new FocusEvent("focusin"));
+    expect(holdOverlay).toHaveBeenCalledOnce();
+    group?.dispatchEvent(new Event("pointerleave"));
+    expect(release).not.toHaveBeenCalled();
+    group?.dispatchEvent(new FocusEvent("focusout"));
+    expect(release).toHaveBeenCalledOnce();
+
+    group?.dispatchEvent(new Event("pointerenter"));
+    expect(holdOverlay).toHaveBeenCalledTimes(2);
+    group?.dispatchEvent(new Event("pointerleave"));
+    expect(release).toHaveBeenCalledTimes(2);
+  });
 });
 
 function cameraLights(

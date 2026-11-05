@@ -145,9 +145,7 @@ test("adds, limits, saves, reopens, and removes lights through visible controls"
   await addLight(page, "Driveway");
   await expect(editor.locator(".linked-light-row")).toHaveCount(2);
   await expect(editor.locator(".add-light")).toHaveCount(0);
-  await editor
-    .locator('.camera-editor-dialog ha-button[variant="brand"][size="m"]')
-    .click();
+  await editor.locator(".camera-dialog-primary").click();
 
   await expect
     .poll(() =>
@@ -168,9 +166,7 @@ test("adds, limits, saves, reopens, and removes lights through visible controls"
   await openLights(page);
   await expect(editor.locator(".linked-light-row")).toHaveCount(2);
   await editor.locator(".remove-light").first().click();
-  await editor
-    .locator('.camera-editor-dialog ha-button[variant="brand"][size="m"]')
-    .click();
+  await editor.locator(".camera-dialog-primary").click();
   await expect
     .poll(() =>
       page.evaluate(
@@ -227,6 +223,212 @@ test("provides a defaulted icon picker for each pending light", async ({
     });
 });
 
+test("updates and saves the icon for an already configured light", async ({
+  page,
+}) => {
+  await mountEditor(page);
+  await openCameraEditor(page);
+  await openLights(page);
+  await addLight(page, "Porch");
+
+  const editor = page.locator("#linked-light-editor");
+  const row = editor.locator(".linked-light-row");
+  const iconSelector = row.locator(".linked-light-icon");
+  await iconSelector.getByRole("button", { name: "Stateful bulb" }).click();
+  await iconSelector.getByRole("option", { name: "Coach lamp" }).click();
+  await expect
+    .poll(() =>
+      row
+        .locator("ha-icon")
+        .evaluate(
+          (element) => (element as HTMLElement & { icon?: string }).icon,
+        ),
+    )
+    .toBe("mdi:coach-lamp");
+
+  await editor.locator(".camera-dialog-primary").click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (
+            window as unknown as {
+              linkedLightConfigs?: Array<{
+                cameras?: Array<{
+                  light_icons?: Record<string, string>;
+                }>;
+              }>;
+            }
+          ).linkedLightConfigs?.at(-1)?.cameras?.[0]?.light_icons?.[
+            "light.porch"
+          ],
+      ),
+    )
+    .toBe("mdi:coach-lamp");
+
+  const savedConfig = await page.evaluate(() =>
+    (
+      window as unknown as {
+        linkedLightConfigs?: unknown[];
+      }
+    ).linkedLightConfigs?.at(-1),
+  );
+  await editor.evaluate((element) => element.remove());
+  await page.locator("watchzone-card").evaluate((element, config) => {
+    const card = element as HTMLElement & {
+      hass: unknown;
+      setConfig(config: unknown): void;
+    };
+    card.setConfig(config);
+    card.hass = {
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "streaming",
+          attributes: { friendly_name: "Front Door" },
+        },
+        "light.porch": {
+          entity_id: "light.porch",
+          state: "off",
+          attributes: { friendly_name: "Porch" },
+        },
+      },
+      connection: { subscribeMessage: async () => () => undefined },
+      callService: async () => undefined,
+      callWS: async (message: { type: string }) =>
+        message.type === "watchzone/live/camera/ready"
+          ? { ready: false }
+          : undefined,
+      hassUrl: (path: string) => path,
+    };
+  }, savedConfig);
+  await page.locator("wzc-camera-live .viewport").hover();
+  await expect
+    .poll(() =>
+      page
+        .locator("wzc-light-control .light-icon-unfilled")
+        .evaluate(
+          (element) => (element as HTMLElement & { icon?: string }).icon,
+        ),
+    )
+    .toBe("mdi:coach-lamp");
+});
+
+test("clears a custom icon back to the stateful default through Save and runtime", async ({
+  page,
+}) => {
+  await mountEditor(page);
+  await openCameraEditor(page);
+  await openLights(page);
+  await addLight(page, "Porch");
+
+  const editor = page.locator("#linked-light-editor");
+  const row = editor.locator(".linked-light-row");
+  const iconSelector = row.locator(".linked-light-icon");
+  await iconSelector.getByRole("button", { name: "Stateful bulb" }).click();
+  await iconSelector.getByRole("option", { name: "Coach lamp" }).click();
+  const clearIcon = iconSelector.getByRole("button", { name: "Clear Icon" });
+  await expect(clearIcon).toBeVisible();
+  await clearIcon.click();
+  await expect
+    .poll(() =>
+      row
+        .locator("ha-icon")
+        .evaluate(
+          (element) => (element as HTMLElement & { icon?: string }).icon,
+        ),
+    )
+    .toBe("mdi:lightbulb-off-outline");
+
+  await editor.locator(".camera-dialog-primary").click();
+  const savedConfig = await page.evaluate(() =>
+    (
+      window as unknown as {
+        linkedLightConfigs?: Array<{
+          cameras?: Array<{ light_icons?: Record<string, string> }>;
+        }>;
+      }
+    ).linkedLightConfigs?.at(-1),
+  );
+  expect(savedConfig?.cameras?.[0]?.light_icons).toBeUndefined();
+
+  await editor.evaluate((element) => element.remove());
+  const card = page.locator("watchzone-card");
+  await card.evaluate((element, config) => {
+    const watchZone = element as HTMLElement & {
+      hass: unknown;
+      setConfig(config: unknown): void;
+    };
+    watchZone.setConfig(config);
+    watchZone.hass = lightHass("off");
+
+    function lightHass(state: "off" | "on") {
+      return {
+        states: {
+          "camera.front": {
+            entity_id: "camera.front",
+            state: "streaming",
+            attributes: { friendly_name: "Front Door" },
+          },
+          "light.porch": {
+            entity_id: "light.porch",
+            state,
+            attributes: { brightness: 128, friendly_name: "Porch" },
+          },
+        },
+        connection: { subscribeMessage: async () => () => undefined },
+        callService: async () => undefined,
+        callWS: async (message: { type: string }) =>
+          message.type === "watchzone/live/camera/ready"
+            ? { ready: false }
+            : undefined,
+        hassUrl: (path: string) => path,
+      };
+    }
+  }, savedConfig);
+  await page.locator("wzc-camera-live .viewport").hover();
+  const runtimeIcon = page.locator("wzc-light-control .light-icon-unfilled");
+  await expect
+    .poll(() =>
+      runtimeIcon.evaluate(
+        (element) => (element as HTMLElement & { icon?: string }).icon,
+      ),
+    )
+    .toBe("mdi:lightbulb-off-outline");
+
+  await card.evaluate((element) => {
+    const watchZone = element as HTMLElement & { hass: unknown };
+    watchZone.hass = {
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "streaming",
+          attributes: { friendly_name: "Front Door" },
+        },
+        "light.porch": {
+          entity_id: "light.porch",
+          state: "on",
+          attributes: { brightness: 128, friendly_name: "Porch" },
+        },
+      },
+      connection: { subscribeMessage: async () => () => undefined },
+      callService: async () => undefined,
+      callWS: async (message: { type: string }) =>
+        message.type === "watchzone/live/camera/ready"
+          ? { ready: false }
+          : undefined,
+      hassUrl: (path: string) => path,
+    };
+  });
+  await expect
+    .poll(() =>
+      runtimeIcon.evaluate(
+        (element) => (element as HTMLElement & { icon?: string }).icon,
+      ),
+    )
+    .toBe("mdi:lightbulb");
+});
+
 test("preserves a custom icon identically across off and on states", async ({
   page,
 }) => {
@@ -243,9 +445,7 @@ test("preserves a custom icon identically across off and on states", async ({
   await selectors.nth(1).getByRole("button", { name: "Stateful bulb" }).click();
   await selectors.nth(1).getByRole("option", { name: "Coach lamp" }).click();
   await editor.locator('.add-light-form ha-button[variant="brand"]').click();
-  await editor
-    .locator('.camera-editor-dialog ha-button[variant="brand"][size="m"]')
-    .click();
+  await editor.locator(".camera-dialog-primary").click();
 
   const savedConfig = await page.evaluate(() =>
     (
@@ -289,7 +489,7 @@ test("preserves a custom icon identically across off and on states", async ({
     }
   }, savedConfig);
   await page.locator("wzc-camera-live .viewport").hover();
-  const icon = page.locator("wzc-light-control .light-button ha-icon");
+  const icon = page.locator("wzc-light-control .light-icon-unfilled");
   await expect
     .poll(() =>
       icon.evaluate(
@@ -383,23 +583,27 @@ async function mountLightControl(
 test("uses visibly different icons for off and on states", async ({ page }) => {
   await mountLightControl(page, "off");
   const offIcon = page.locator("wzc-light-control .light-button ha-icon");
-  await expect(offIcon).toHaveCount(1);
+  await expect(offIcon).toHaveCount(2);
   await expect
     .poll(() =>
-      offIcon.evaluate(
-        (element) => (element as HTMLElement & { icon?: string }).icon,
-      ),
+      offIcon
+        .first()
+        .evaluate(
+          (element) => (element as HTMLElement & { icon?: string }).icon,
+        ),
     )
     .toBe("mdi:lightbulb-off-outline");
 
   await mountLightControl(page, "on");
   const onIcon = page.locator("wzc-light-control .light-button ha-icon");
-  await expect(onIcon).toHaveCount(1);
+  await expect(onIcon).toHaveCount(2);
   await expect
     .poll(() =>
-      onIcon.evaluate(
-        (element) => (element as HTMLElement & { icon?: string }).icon,
-      ),
+      onIcon
+        .first()
+        .evaluate(
+          (element) => (element as HTMLElement & { icon?: string }).icon,
+        ),
     )
     .toBe("mdi:lightbulb");
 });
@@ -419,7 +623,15 @@ test("uses the approved dimmer interaction and presentation contract", async ({
 
   const panel = page.locator("wzc-light-control .dimmer-panel");
   await expect(panel).toBeVisible();
-  await expect(panel.locator("ha-control-slider")).toHaveCount(1);
+  const slider = panel.locator("ha-control-slider");
+  await expect(slider).toHaveCount(1);
+  await expect
+    .poll(() =>
+      slider.evaluate((element) =>
+        Boolean((element as HTMLElement & { showHandle?: boolean }).showHandle),
+      ),
+    )
+    .toBe(true);
   await expect(panel.locator(".brightness-value")).toHaveText("50%");
   await expect(panel.locator(".close-dimmer")).toHaveCount(0);
   await expect(panel).toHaveScreenshot("linked-light-dimmer-approved.png", {

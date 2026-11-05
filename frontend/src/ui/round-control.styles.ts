@@ -12,7 +12,7 @@ export const roundControlStyles = css`
     padding: 0.55rem;
     overflow: hidden;
     isolation: isolate;
-    color: var(--wzc-media-overlay-color);
+    color: var(--wzc-color-primary);
     background-color: var(--wzc-media-overlay-background);
     border: 1px solid var(--wzc-media-overlay-border-color);
     border-radius: 50%;

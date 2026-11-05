@@ -170,7 +170,7 @@ export const themeTokens = css`
     --wzc-media-overlay-color: var(--ha-color-neutral-90, #e6e6e6);
     --wzc-media-overlay-surface: var(--ha-color-neutral-05, #111111);
     --wzc-media-overlay-opacity: 72%;
-    --wzc-media-overlay-hover-opacity: 84%;
+    --wzc-media-overlay-hover-opacity: 22%;
     --wzc-media-overlay-background: color-mix(
       in srgb,
       var(--wzc-media-overlay-surface) var(--wzc-media-overlay-opacity),
@@ -178,12 +178,12 @@ export const themeTokens = css`
     );
     --wzc-media-overlay-hover-background: color-mix(
       in srgb,
-      var(--wzc-color-primary) var(--wzc-media-overlay-hover-opacity),
+      var(--wzc-media-overlay-color) var(--wzc-media-overlay-hover-opacity),
       transparent
     );
     --wzc-media-overlay-border-color: var(--ha-color-neutral-30, #4a4a4a);
     --wzc-media-overlay-radius: var(--wzc-radius-small);
-    --wzc-media-overlay-shadow: var(--wzc-shadow-card);
+    --wzc-media-overlay-shadow: var(--wzc-shadow-small);
     --wzc-media-overlay-transition-duration: 140ms;
     --wzc-camera-control-size: 2.75rem;
     --wzc-camera-control-safe-inline: 0.75rem;
@@ -210,6 +210,11 @@ export const themeTokens = css`
     --wzc-light-panel-inline-size: clamp(6.5rem, 24cqi, 8rem);
     --wzc-light-power-active-color: var(--wzc-color-primary);
     --wzc-light-slider-color: var(--wzc-color-primary);
+    --wzc-light-slider-background: color-mix(
+      in srgb,
+      var(--wzc-media-overlay-color) 18%,
+      transparent
+    );
     --wzc-light-transition-duration: 160ms;
 
     --wzc-accordion-background: var(--wzc-color-background);

@@ -57,7 +57,33 @@ export const lightControlStyles = css`
     transition: block-size var(--wzc-light-transition-duration) ease;
   }
 
-  .light-button ha-icon,
+  .light-icon {
+    position: relative;
+    z-index: 2;
+    display: block;
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+    pointer-events: none;
+  }
+
+  .light-icon ha-icon {
+    position: absolute;
+    z-index: auto;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  .light-icon-unfilled {
+    color: var(--wzc-color-primary);
+    clip-path: inset(0 0 var(--wzc-light-level) 0);
+  }
+
+  .light-icon-filled {
+    color: var(--wzc-media-overlay-surface);
+    clip-path: inset(calc(100% - var(--wzc-light-level)) 0 0 0);
+  }
+
   .power-button svg {
     inline-size: 1.35rem;
     block-size: 1.35rem;
@@ -75,7 +101,11 @@ export const lightControlStyles = css`
     gap: 0.35rem;
     box-sizing: border-box;
     inline-size: var(--wzc-light-panel-inline-size);
-    block-size: 14.25rem;
+    block-size: clamp(
+      13rem,
+      calc(100cqb - var(--wzc-stage-resize-handle-block-size) - 1rem),
+      19rem
+    );
     padding: 0.7rem;
     color: var(--wzc-media-overlay-color);
     background: var(--wzc-light-panel-background);
@@ -105,11 +135,14 @@ export const lightControlStyles = css`
 
   ha-control-slider {
     grid-area: slider;
-    inline-size: 3.25rem;
+    inline-size: min(6rem, 100%);
     block-size: 100%;
     min-block-size: 7rem;
     --control-slider-color: var(--wzc-light-slider-color);
-    --control-slider-background: var(--wzc-media-overlay-border-color);
+    --control-slider-background: var(--wzc-light-slider-background);
+    --control-slider-background-opacity: 100%;
+    --control-slider-border-radius: var(--wzc-radius-pill);
+    --control-slider-thickness: min(6rem, 100%);
     cursor: pointer;
     touch-action: none;
   }

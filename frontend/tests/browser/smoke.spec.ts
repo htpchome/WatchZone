@@ -258,6 +258,7 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
       hass: unknown;
       setConfig(config: unknown): void;
     };
+    card.style.setProperty("--primary-color", "#03a9f4");
     const connection = {
       subscribeMessage: async () => () => undefined,
     };
@@ -374,6 +375,43 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
       ),
     )
     .toBe("matrix(1, 0, 0, 1, 0, 0)");
+  await talkButton.hover();
+  await expect(talkButton).toHaveScreenshot(
+    "round-control-hover-approved.png",
+    {
+      animations: "disabled",
+    },
+  );
+
+  for (const control of [talkButton, lightButton, ptzControl]) {
+    await control.hover();
+    await page.waitForTimeout(CAMERA_OVERLAY_HIDE_DELAY_MS + 100);
+    await expect(talkButton).toBeVisible();
+    await expect(lightButton).toBeVisible();
+    await expect(ptzControl).toBeVisible();
+  }
+
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: {
+        getUserMedia: () => new Promise<MediaStream>(() => undefined),
+      },
+    });
+  });
+  await talkButton.click();
+  const connectingIndicator = talk.locator(".connecting-indicator");
+  await expect(connectingIndicator).toBeVisible();
+  await talkButton.hover();
+  const connectingLayers = await talkButton.evaluate((element) => ({
+    hover: Number(getComputedStyle(element, "::after").zIndex),
+    spinner: Number(
+      getComputedStyle(
+        element.querySelector(".connecting-indicator") as Element,
+      ).zIndex,
+    ),
+  }));
+  expect(connectingLayers.spinner).toBeGreaterThan(connectingLayers.hover);
 
   const cameraBox = await camera.boundingBox();
   const talkHostBox = await talk.boundingBox();
@@ -701,6 +739,7 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
       "--wzc-media-overlay-hover-opacity",
       "--wzc-media-overlay-surface",
       "--wzc-media-overlay-border-color",
+      "--wzc-light-slider-background",
     ];
     const host = element as HTMLElement;
     host.style.setProperty("--wzc-color-text-1", "rgb(10, 20, 30)");
@@ -734,7 +773,7 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
     background: "rgb(40, 50, 60)",
     borderRadius: "18px",
     missingTokens: [],
-    overlayHoverOpacity: "84%",
+    overlayHoverOpacity: "22%",
     overlayOpacity: "72%",
     textColor: "rgb(10, 20, 30)",
   });
@@ -1039,7 +1078,7 @@ test("camera editor configures lights and confirms accessible removal", async ({
     input.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
   });
   await expect(editor.locator(".character-count")).toHaveText("24/24");
-  await editor.locator('ha-button[variant="brand"]').click();
+  await editor.locator(".camera-dialog-primary").click();
   await expect(editor.locator(".camera-tile-copy span")).toHaveText(
     "Front Door 1234567890123",
   );
@@ -1057,7 +1096,7 @@ test("camera editor configures lights and confirms accessible removal", async ({
   const removeDialog = editor.locator(".remove-camera-dialog");
   await expect(removeDialog).toBeVisible();
   await expect(removeDialog).toContainText("Remove camera?");
-  await removeDialog.locator('ha-button[variant="neutral"]').click();
+  await removeDialog.locator(".remove-camera-cancel").click();
   await expect(removeDialog).not.toBeVisible();
   await expect(editor.locator("wzc-sortable-tile")).toHaveCount(1);
   await removeAction.click();
@@ -2109,7 +2148,7 @@ test("retains one live connection while the card presentation is replaced", asyn
   );
   expect(hoverBackground).not.toBe("rgba(0, 0, 0, 0)");
   expect(hoverBackground).not.toBe(restingBackground);
-  expect(cssAlpha(hoverBackground)).toBeCloseTo(0.84, 2);
+  expect(cssAlpha(hoverBackground)).toBeCloseTo(0.22, 2);
   expect(
     await mute.evaluate((element) => getComputedStyle(element).color),
   ).toBe("rgb(230, 230, 230)");

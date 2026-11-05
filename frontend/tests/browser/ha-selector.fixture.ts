@@ -10,6 +10,7 @@ export async function installHaSelectorFixture(page: Page): Promise<void> {
         states?: Record<string, { attributes?: { friendly_name?: unknown } }>;
       };
       private _open = false;
+      private _required = false;
       private _selector?: {
         entity?: { filter?: { domain?: string | readonly string[] } };
         icon?: Record<string, never>;
@@ -43,6 +44,15 @@ export async function installHaSelectorFixture(page: Page): Promise<void> {
         return this._value;
       }
 
+      public set required(value: boolean) {
+        this._required = value;
+        this._render();
+      }
+
+      public get required(): boolean {
+        return this._required;
+      }
+
       public connectedCallback(): void {
         if (!this.shadowRoot) this.attachShadow({ mode: "open" });
         this._render();
@@ -66,6 +76,25 @@ export async function installHaSelectorFixture(page: Page): Promise<void> {
           this._render();
         });
         this.shadowRoot.append(trigger);
+
+        if (this._selector?.icon && this._value && !this._required) {
+          const clear = document.createElement("button");
+          clear.type = "button";
+          clear.setAttribute("aria-label", `Clear ${label}`);
+          clear.textContent = "×";
+          clear.addEventListener("click", () => {
+            this._value = "";
+            this.dispatchEvent(
+              new CustomEvent("value-changed", {
+                bubbles: true,
+                composed: true,
+                detail: { value: undefined },
+              }),
+            );
+            this._render();
+          });
+          this.shadowRoot.append(clear);
+        }
 
         if (!this._open) return;
         const list = document.createElement("div");
@@ -187,12 +216,12 @@ export async function installHaControlSliderFixture(page: Page): Promise<void> {
         if (!this.shadowRoot) return;
         this.shadowRoot.innerHTML = `<div class="track">
           <span class="fill" style="height:${this._value}%"></span>
-          <span class="handle" style="bottom:calc(${this._value}% - .55rem)"></span>
+          <span class="handle" style="bottom:calc(${this._value}% - .125rem)"></span>
         </div><style>
           :host{display:grid;place-items:center}
-          .track{position:relative;width:2.4rem;height:100%;min-height:7rem;overflow:hidden;border-radius:1.2rem;background:var(--control-slider-background)}
+          .track{position:relative;width:100%;height:100%;min-height:7rem;overflow:hidden;border-radius:999px;background:var(--control-slider-background)}
           .fill{position:absolute;inset-inline:0;bottom:0;background:var(--control-slider-color)}
-          .handle{position:absolute;left:50%;width:1.1rem;height:1.1rem;transform:translateX(-50%);border:2px solid white;border-radius:50%;background:var(--control-slider-color);box-shadow:0 1px 3px #0008}
+          .handle{position:absolute;left:25%;width:50%;height:.25rem;border-radius:999px;background:white}
         </style>`;
       }
     }

@@ -62,7 +62,6 @@ export const cardEditorStyles = css`
   }
 
   .tile-action,
-  .dialog-close,
   .remove-light {
     display: grid;
     place-items: center;
@@ -91,7 +90,6 @@ export const cardEditorStyles = css`
   }
 
   .tile-action:focus-visible,
-  .dialog-close:focus-visible,
   .remove-light:focus-visible,
   .add-camera:focus-visible {
     outline: 2px solid var(--wzc-color-primary);
@@ -166,8 +164,14 @@ export const cardEditorStyles = css`
 
   .dialog-close {
     grid-column: 2;
-    font-size: 1.75rem;
-    line-height: 1;
+    color: var(--wzc-color-text-2);
+  }
+
+  .dialog-close svg {
+    display: block;
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    pointer-events: none;
   }
 
   .camera-dialog-content {
@@ -303,7 +307,6 @@ export const cardEditorStyles = css`
 
   @media (hover: hover) and (pointer: fine) {
     .tile-action:hover,
-    .dialog-close:hover,
     .remove-light:hover,
     .add-camera:hover:not(:disabled) {
       background: var(--wzc-color-fill-primary);
@@ -312,7 +315,6 @@ export const cardEditorStyles = css`
 
   @media (hover: none) {
     .tile-action:hover,
-    .dialog-close:hover,
     .remove-light:hover,
     .add-camera:hover:not(:disabled) {
       background: transparent;

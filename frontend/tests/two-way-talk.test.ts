@@ -84,6 +84,46 @@ describe("two-way-talk component", () => {
       }
     }
   });
+
+  it("holds the shared overlay for pointer and keyboard interaction", async () => {
+    const release = vi.fn();
+    const holdOverlay = vi.fn(() => release);
+    const context = new CameraSessionContext();
+    const element = document.createElement(
+      "wzc-two-way-talk",
+    ) as TwoWayTalkComponent;
+    element.api = api(vi.fn().mockResolvedValue({ supported: true }));
+    element.cameraSession = context;
+    element.enabledCameraIds = ["camera.front"];
+    document.body.append(element);
+    context.publish(
+      {},
+      {
+        ...cameraSession(true),
+        holdOverlay,
+      },
+    );
+    await vi.waitFor(() =>
+      expect(
+        element.shadowRoot?.querySelector(".inactive-control"),
+      ).not.toBeNull(),
+    );
+
+    const control = element.shadowRoot?.querySelector(".inactive-control");
+    control?.dispatchEvent(new Event("pointerenter"));
+    expect(holdOverlay).toHaveBeenCalledOnce();
+    control?.dispatchEvent(new FocusEvent("focusin"));
+    expect(holdOverlay).toHaveBeenCalledOnce();
+    control?.dispatchEvent(new Event("pointerleave"));
+    expect(release).not.toHaveBeenCalled();
+    control?.dispatchEvent(new FocusEvent("focusout"));
+    expect(release).toHaveBeenCalledOnce();
+
+    control?.dispatchEvent(new Event("pointerenter"));
+    expect(holdOverlay).toHaveBeenCalledTimes(2);
+    control?.dispatchEvent(new Event("pointerleave"));
+    expect(release).toHaveBeenCalledTimes(2);
+  });
 });
 
 function cameraSession(overlayVisible: boolean) {

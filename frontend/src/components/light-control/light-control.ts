@@ -48,6 +48,9 @@ export class LightControlComponent extends LitElement {
   private _pendingLightIds = new Set<string>();
   private _pressLightId?: string;
   private _pressTimer?: ReturnType<typeof setTimeout>;
+  private _interactionFocused = false;
+  private _interactionHovered = false;
+  private _releaseInteractionOverlay?: () => void;
   private _releaseOverlay?: () => void;
   private _unsubscribeCamera?: () => void;
   private readonly _toasts = new ToastManager(this);
@@ -85,6 +88,7 @@ export class LightControlComponent extends LitElement {
     this._unsubscribeCamera = undefined;
     this._cameraContext = undefined;
     this._cancelPress();
+    this._releaseInteractionHold();
     this._closeDimmer();
     super.disconnectedCallback();
   }
@@ -119,6 +123,10 @@ export class LightControlComponent extends LitElement {
           class="light-buttons"
           role="group"
           aria-label=${this.localize("light.controls")}
+          @pointerenter=${this._handleInteractionPointerEnter}
+          @pointerleave=${this._handleInteractionPointerLeave}
+          @focusin=${this._handleInteractionFocusIn}
+          @focusout=${this._handleInteractionFocusOut}
         >
           ${lights.map(({ entityId, entity, icon }) =>
             this._renderLightButton(entityId, icon, entity),
@@ -136,6 +144,7 @@ export class LightControlComponent extends LitElement {
     const name = lightName(entityId, entity);
     const level = this._displayLevel(entityId, entity);
     const pending = this._pendingLightIds.has(entityId);
+    const iconName = lightIconForState(icon, entity?.state === "on");
     const title =
       entity?.state === "on"
         ? this.localize("light.turn_off", { name })
@@ -165,9 +174,10 @@ export class LightControlComponent extends LitElement {
       @focus=${this._revealOverlay}
       @pointerenter=${this._revealOverlay}
     >
-      <ha-icon
-        .icon=${lightIconForState(icon, entity?.state === "on")}
-      ></ha-icon>
+      <span class="light-icon" aria-hidden="true">
+        <ha-icon class="light-icon-unfilled" .icon=${iconName}></ha-icon>
+        <ha-icon class="light-icon-filled" .icon=${iconName}></ha-icon>
+      </span>
     </button>`;
   }
 
@@ -192,6 +202,7 @@ export class LightControlComponent extends LitElement {
         .max=${100}
         .step=${1}
         .value=${this._panelBrightness}
+        .showHandle=${true}
         .unit=${"%"}
         .tooltipMode=${"never"}
         title=${this.localize("light.brightness", { name })}
@@ -232,6 +243,7 @@ export class LightControlComponent extends LitElement {
     this._cameraContext = this.cameraSession;
     this._unsubscribeCamera = this.cameraSession?.subscribe((camera) => {
       if (camera?.entityId !== this._activeCamera?.entityId) {
+        this._releaseInteractionHold();
         this._closeDimmer();
       }
       this._activeCamera = camera;
@@ -403,6 +415,50 @@ export class LightControlComponent extends LitElement {
     event.preventDefault();
   private readonly _revealOverlay = (): void =>
     this._activeCamera?.revealOverlay();
+
+  private readonly _handleInteractionPointerEnter = (
+    event: PointerEvent,
+  ): void => {
+    if (event.pointerType === "touch") return;
+    this._interactionHovered = true;
+    this._syncInteractionHold();
+  };
+
+  private readonly _handleInteractionPointerLeave = (): void => {
+    this._interactionHovered = false;
+    this._syncInteractionHold();
+  };
+
+  private readonly _handleInteractionFocusIn = (): void => {
+    this._interactionFocused = true;
+    this._syncInteractionHold();
+  };
+
+  private readonly _releaseInteractionHold = (): void => {
+    this._releaseInteractionOverlay?.();
+    this._releaseInteractionOverlay = undefined;
+    this._interactionFocused = false;
+    this._interactionHovered = false;
+  };
+
+  private _syncInteractionHold(): void {
+    if (this._interactionFocused || this._interactionHovered) {
+      if (!this._releaseInteractionOverlay) {
+        this._releaseInteractionOverlay = this._activeCamera?.holdOverlay();
+      }
+      this._activeCamera?.revealOverlay();
+      return;
+    }
+    this._releaseInteractionOverlay?.();
+    this._releaseInteractionOverlay = undefined;
+  }
+
+  private readonly _handleInteractionFocusOut = (event: FocusEvent): void => {
+    const group = event.currentTarget as HTMLElement;
+    if (group.contains(event.relatedTarget as Node | null)) return;
+    this._interactionFocused = false;
+    this._syncInteractionHold();
+  };
 
   private readonly _handleOutsidePointerDown = (event: PointerEvent): void => {
     if (!this._openLightId) return;
