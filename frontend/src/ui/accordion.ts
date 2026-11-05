@@ -63,16 +63,20 @@ function scrollPort(element: Element): ScrollPort | undefined {
 
 export class AccordionItem extends LitElement {
   public static properties = {
+    density: { reflect: true, type: String },
     heading: { type: String },
     icon: { attribute: false },
     itemKey: { attribute: "item-key", type: String },
     open: { type: Boolean },
+    summaryText: { attribute: "summary-text", type: String },
   };
 
+  public density: "comfortable" | "compact" = "comfortable";
   public heading = "";
   public icon?: IconName;
   public itemKey = "";
   public open = false;
+  public summaryText = "";
 
   protected render() {
     return html`
@@ -84,6 +88,11 @@ export class AccordionItem extends LitElement {
               : html`<slot name="icon"></slot>`
           }
           <span class="heading">${this.heading}</span>
+          ${
+            this.summaryText
+              ? html`<span class="summary-text">${this.summaryText}</span>`
+              : ""
+          }
           <span class="chevron">${renderIcon("chevronDown")}</span>
         </summary>
         <div class="content"><slot></slot></div>

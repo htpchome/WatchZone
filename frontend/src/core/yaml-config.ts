@@ -35,6 +35,7 @@ function compactCameraConfig(camera: CameraConfig): Record<string, unknown> {
   if (camera.start_live_unmuted_pc_tablet)
     compact.start_live_unmuted_pc_tablet = true;
   if (camera.start_live_unmuted_phone) compact.start_live_unmuted_phone = true;
+  if (camera.title) compact.title = camera.title;
   if (camera.two_way_talk_enabled) compact.two_way_talk_enabled = true;
   return compact;
 }

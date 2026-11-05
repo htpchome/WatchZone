@@ -36,6 +36,7 @@ describe("WatchZone card configuration", () => {
         ptz_enabled: false,
         start_live_unmuted_pc_tablet: true,
         start_live_unmuted_phone: false,
+        title: "",
         two_way_talk_enabled: false,
       },
     ]);
@@ -55,6 +56,24 @@ describe("WatchZone card configuration", () => {
         cameras: [{ entity_id: "camera.front", ptz_enabled: true }],
       }).cameras[0]?.ptz_enabled,
     ).toBe(true);
+  });
+
+  it("sanitizes and bounds optional camera titles", () => {
+    expect(
+      normalizeCardConfig({
+        cameras: [
+          {
+            entity_id: "camera.front",
+            title: "  Café!  42 / Patio 12345678901234567890",
+          },
+        ],
+      }).cameras[0]?.title,
+    ).toBe("Café 42 Patio 1234567890");
+    expect(() =>
+      normalizeCardConfig({
+        cameras: [{ entity_id: "camera.front", title: 42 }],
+      }),
+    ).toThrow("camera 1 title must be a string");
   });
 
   it("migrates the legacy single-camera shape", () => {

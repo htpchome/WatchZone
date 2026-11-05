@@ -112,6 +112,77 @@ describe("watchzone-card-editor", () => {
     });
   });
 
+  it("uses a compact camera accordion and saves a sanitized camera title", async () => {
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as CardEditor;
+    editor.setConfig({
+      type: CARD_TYPE,
+      cameras: [{ entity_id: "camera.front" }],
+    });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+
+    (
+      editor.shadowRoot?.querySelector(
+        '[aria-label="Edit front"]',
+      ) as HTMLElement
+    ).click();
+    await editor.updateComplete;
+
+    const accordion = editor.shadowRoot?.querySelector(
+      ".camera-dialog-accordion",
+    );
+    const items = [
+      ...(accordion?.querySelectorAll<AccordionItem>(ACCORDION_ITEM_TAG) ?? []),
+    ];
+    await Promise.all(items.map((item) => item.updateComplete));
+    expect(items.map((item) => item.heading)).toEqual([
+      "Camera",
+      "Connection Source",
+      "Additional Camera",
+      "Lights",
+      "Options and Controls",
+    ]);
+    expect(
+      items.every((item) => item.getAttribute("density") === "compact"),
+    ).toBe(true);
+    expect(items[0]?.open).toBe(true);
+    expect(items[1]?.summaryText).toBe("Home Assistant");
+    expect(items[2]?.summaryText).toBe("Not configured");
+    expect(
+      editor.shadowRoot?.querySelectorAll("[data-camera-config-key]").length,
+    ).toBe(5);
+
+    const input = editor.shadowRoot?.querySelector(
+      ".camera-title-field ha-input",
+    ) as InputElement;
+    input.value = "  Front!  Door @12345678901234567890";
+    input.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+    await editor.updateComplete;
+
+    expect(input.value).toBe("Front Door 1234567890123");
+    expect(
+      editor.shadowRoot?.querySelector(".character-count")?.textContent?.trim(),
+    ).toBe("24/24");
+    (
+      editor.shadowRoot?.querySelector(
+        'ha-button[variant="brand"]',
+      ) as HTMLElement
+    ).click();
+    await editor.updateComplete;
+
+    expect(changed).toHaveBeenCalledOnce();
+    expect(changed.mock.calls[0][0].detail.config.cameras[0].title).toBe(
+      "Front Door 1234567890123",
+    );
+    expect(
+      editor.shadowRoot?.querySelector(".camera-tile-copy span")?.textContent,
+    ).toBe("Front Door 1234567890123");
+  });
+
   it("uses dirtyState and soft preview without config-changed while typing", async () => {
     const states: Array<{ config: CardConfig; key: string }> = [];
     const contextHandler = (event: Event) => {

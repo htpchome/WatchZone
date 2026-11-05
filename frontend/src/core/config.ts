@@ -2,6 +2,7 @@ import {
   APP_NAME,
   CARD_TYPE,
   DEFAULT_CARD_TITLE,
+  MAX_CAMERA_TITLE_LENGTH,
   MAX_CAMERAS,
 } from "./constants";
 
@@ -11,6 +12,7 @@ export interface CameraConfig {
   readonly ptz_enabled: boolean;
   readonly start_live_unmuted_pc_tablet: boolean;
   readonly start_live_unmuted_phone: boolean;
+  readonly title: string;
   readonly two_way_talk_enabled: boolean;
 }
 
@@ -93,8 +95,23 @@ export function createDefaultCameraConfig(entityId = ""): CameraConfig {
     ptz_enabled: false,
     start_live_unmuted_pc_tablet: false,
     start_live_unmuted_phone: false,
+    title: "",
     two_way_talk_enabled: false,
   };
+}
+
+/** Keeps camera labels safe for plain-text presentation while supporting locales. */
+export function sanitizeCameraTitleInput(value: string): string {
+  return value
+    .normalize("NFKC")
+    .replace(/[^\p{L}\p{N} ]/gu, "")
+    .replace(/ {2,}/g, " ")
+    .trimStart()
+    .slice(0, MAX_CAMERA_TITLE_LENGTH);
+}
+
+export function normalizeCameraTitle(value: string): string {
+  return sanitizeCameraTitleInput(value).trimEnd();
 }
 
 function normalizeCameras(
@@ -168,6 +185,13 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
       );
     }
   }
+  if (
+    "title" in source &&
+    source.title !== undefined &&
+    typeof source.title !== "string"
+  ) {
+    throw new Error(`${APP_NAME} camera ${index + 1} title must be a string.`);
+  }
   return {
     entity_id: defaults.entity_id,
     low_latency_hls:
@@ -177,6 +201,10 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
     ptz_enabled: source.ptz_enabled === true,
     start_live_unmuted_pc_tablet: source.start_live_unmuted_pc_tablet === true,
     start_live_unmuted_phone: source.start_live_unmuted_phone === true,
+    title:
+      typeof source.title === "string"
+        ? normalizeCameraTitle(source.title)
+        : defaults.title,
     two_way_talk_enabled: source.two_way_talk_enabled === true,
   };
 }

@@ -5,7 +5,9 @@ import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 import {
   cardConfigSignature,
   createDefaultCameraConfig,
+  normalizeCameraTitle,
   normalizeCardConfig,
+  sanitizeCameraTitleInput,
   type CameraConfig,
   type CardConfig,
 } from "../core/config";
@@ -15,6 +17,7 @@ import {
   EDITOR_PREVIEW_DRAFT_EVENT,
   EDITOR_TAG,
   EDITOR_TEXT_PREVIEW_DELAY_MS,
+  MAX_CAMERA_TITLE_LENGTH,
   MAX_CAMERAS,
   SORTABLE_LIST_TAG,
   SORTABLE_REORDER_EVENT,
@@ -84,7 +87,10 @@ type BooleanConfigFlag =
   | "outer_shadows"
   | "rounded_outer_corners";
 
-type CameraBooleanConfigFlag = Exclude<keyof CameraConfig, "entity_id">;
+type CameraBooleanConfigFlag = Exclude<
+  keyof CameraConfig,
+  "entity_id" | "title"
+>;
 
 export class CardEditor extends LitElement {
   private readonly _haEditor = new HomeAssistantEditorBridge<YamlCardConfig>(
@@ -95,6 +101,7 @@ export class CardEditor extends LitElement {
   private _config?: CardConfig;
   private _cameraBaseline?: CameraConfig;
   private _cameraDraft?: CameraConfig;
+  private _cameraTitleInput = "";
   private _talkCapability?: boolean;
   private _talkCapabilityGeneration = 0;
   private _talkCapabilityPending = false;
@@ -248,7 +255,7 @@ export class CardEditor extends LitElement {
             .localize=${this._localization.localize}
           >
             <div class="camera-tile-copy">
-              <span>${this._cameraName(camera.entity_id)}</span>
+              <span>${camera.title || this._cameraName(camera.entity_id)}</span>
               <small>${this._cameraSummary(camera)}</small>
             </div>
             <button
@@ -256,7 +263,7 @@ export class CardEditor extends LitElement {
               class="tile-action"
               type="button"
               aria-label=${this._t("editor.edit_camera_named", {
-                name: this._cameraName(camera.entity_id),
+                name: camera.title || this._cameraName(camera.entity_id),
               })}
               data-camera-index=${String(index)}
               @click=${this._editCamera}
@@ -268,7 +275,7 @@ export class CardEditor extends LitElement {
               class="tile-action"
               type="button"
               aria-label=${this._t("editor.delete_camera_named", {
-                name: this._cameraName(camera.entity_id),
+                name: camera.title || this._cameraName(camera.entity_id),
               })}
               data-camera-index=${String(index)}
               @click=${this._deleteCamera}
@@ -362,80 +369,138 @@ export class CardEditor extends LitElement {
           </button>
         </header>
         <div class="camera-dialog-content">
-          <section>
-            <h3>${this._t("editor.camera")}</h3>
-            <ha-selector
-              label=${this._t("editor.camera")}
-              .hass=${this._hass}
-              .selector=${CAMERA_SELECTOR}
-              .value=${camera?.entity_id ?? ""}
-              .required=${true}
-              @value-changed=${this._handleCameraEntityChange}
-            ></ha-selector>
-          </section>
-          <section>
-            <h3>${this._t("editor.live_connection")}</h3>
-            ${this._renderCameraBoolean(
-              "low_latency_hls",
-              this._t("editor.low_latency_hls"),
-              camera?.low_latency_hls ?? true,
-            )}
-          </section>
-          <section>
-            <h3>${this._t("editor.camera_audio")}</h3>
-            ${this._renderCameraBoolean(
-              "start_live_unmuted_pc_tablet",
-              this._t("editor.start_unmuted_pc_tablet"),
-              camera?.start_live_unmuted_pc_tablet ?? false,
-            )}
-            ${this._renderCameraBoolean(
-              "start_live_unmuted_phone",
-              this._t("editor.start_unmuted_phone"),
-              camera?.start_live_unmuted_phone ?? false,
-            )}
-          </section>
-          <section>
-            <h3>${this._t("editor.two_way_talk")}</h3>
-            ${
-              this._talkCapability === true
-                ? this._renderCameraBoolean(
-                    "two_way_talk_enabled",
-                    this._t("editor.enable_two_way_talk"),
-                    camera?.two_way_talk_enabled ?? false,
-                  )
-                : nothing
-            }
-            <small class="capability-status">
-              ${
-                this._talkCapabilityPending
-                  ? this._t("editor.checking_two_way_talk")
-                  : this._talkCapability === true
-                    ? this._t("editor.two_way_talk_available")
-                    : this._t("editor.two_way_talk_unavailable")
-              }
-            </small>
-          </section>
-          <section>
-            <h3>${this._t("editor.ptz")}</h3>
-            ${
-              this._ptzCapability?.supported === true
-                ? this._renderCameraBoolean(
-                    "ptz_enabled",
-                    this._t("editor.enable_ptz"),
-                    camera?.ptz_enabled ?? false,
-                  )
-                : nothing
-            }
-            <small class="capability-status">
-              ${
-                this._ptzCapabilityPending
-                  ? this._t("editor.checking_ptz")
-                  : this._ptzCapability?.supported === true
-                    ? this._t("editor.ptz_available")
-                    : this._t("editor.ptz_unavailable")
-              }
-            </small>
-          </section>
+          ${
+            camera
+              ? staticHtml`<${accordionTag}
+                  class="camera-dialog-accordion"
+                  initial-open="camera"
+                >
+                  <${accordionItemTag}
+                    density="compact"
+                    heading=${this._t("editor.camera")}
+                    item-key="camera"
+                  >
+                    <div class="camera-section-fields">
+                      <ha-selector
+                        label=${this._t("editor.camera")}
+                        .hass=${this._hass}
+                        .selector=${CAMERA_SELECTOR}
+                        .value=${camera.entity_id}
+                        .required=${true}
+                        @value-changed=${this._handleCameraEntityChange}
+                      ></ha-selector>
+                      <div class="camera-title-field">
+                        <ha-input
+                          label=${this._t("editor.camera_title")}
+                          maxlength=${String(MAX_CAMERA_TITLE_LENGTH)}
+                          .value=${this._cameraTitleInput}
+                          @input=${this._handleCameraTitleInput}
+                        ></ha-input>
+                        <span class="character-count" aria-live="polite">
+                          ${this._cameraTitleInput.length}/${MAX_CAMERA_TITLE_LENGTH}
+                        </span>
+                      </div>
+                    </div>
+                  </${accordionItemTag}>
+                  <${accordionItemTag}
+                    density="compact"
+                    heading=${this._t("editor.connection_source")}
+                    item-key="connection"
+                    summary-text=${this._t("editor.home_assistant")}
+                  >
+                    <div class="camera-section-fields">
+                      <ha-selector
+                        label=${this._t("editor.connection")}
+                        .hass=${this._hass}
+                        .selector=${this._connectionSourceSelector()}
+                        .value=${"home_assistant"}
+                        .required=${true}
+                        .disabled=${true}
+                      ></ha-selector>
+                      ${this._renderCameraBoolean(
+                        "low_latency_hls",
+                        this._t("editor.low_latency_hls"),
+                        camera.low_latency_hls,
+                      )}
+                    </div>
+                  </${accordionItemTag}>
+                  <${accordionItemTag}
+                    density="compact"
+                    heading=${this._t("editor.additional_camera")}
+                    item-key="additional-camera"
+                    summary-text=${this._t("editor.not_configured")}
+                  >
+                    <p class="empty-camera-section">
+                      ${this._t("editor.no_settings_available")}
+                    </p>
+                  </${accordionItemTag}>
+                  <${accordionItemTag}
+                    density="compact"
+                    heading=${this._t("editor.lights")}
+                    item-key="lights"
+                    summary-text=${this._t("editor.not_configured")}
+                  >
+                    <p class="empty-camera-section">
+                      ${this._t("editor.no_settings_available")}
+                    </p>
+                  </${accordionItemTag}>
+                  <${accordionItemTag}
+                    density="compact"
+                    heading=${this._t("editor.options_controls")}
+                    item-key="options"
+                  >
+                    <div class="camera-section-fields">
+                      ${this._renderCameraBoolean(
+                        "start_live_unmuted_pc_tablet",
+                        this._t("editor.start_unmuted_pc_tablet"),
+                        camera.start_live_unmuted_pc_tablet,
+                      )}
+                      ${this._renderCameraBoolean(
+                        "start_live_unmuted_phone",
+                        this._t("editor.start_unmuted_phone"),
+                        camera.start_live_unmuted_phone,
+                      )}
+                      <div class="capability-option">
+                        ${this._renderCameraBoolean(
+                          "two_way_talk_enabled",
+                          this._t("editor.two_way_talk"),
+                          camera.two_way_talk_enabled,
+                          this._talkCapabilityPending ||
+                            this._talkCapability !== true,
+                        )}
+                        <small class="capability-status">
+                          ${
+                            this._talkCapabilityPending
+                              ? this._t("editor.checking_two_way_talk")
+                              : this._talkCapability === true
+                                ? this._t("editor.two_way_talk_available")
+                                : this._t("editor.two_way_talk_unavailable")
+                          }
+                        </small>
+                      </div>
+                      <div class="capability-option">
+                        ${this._renderCameraBoolean(
+                          "ptz_enabled",
+                          this._t("editor.ptz"),
+                          camera.ptz_enabled,
+                          this._ptzCapabilityPending ||
+                            this._ptzCapability?.supported !== true,
+                        )}
+                        <small class="capability-status">
+                          ${
+                            this._ptzCapabilityPending
+                              ? this._t("editor.checking_ptz")
+                              : this._ptzCapability?.supported === true
+                                ? this._t("editor.ptz_available")
+                                : this._t("editor.ptz_unavailable")
+                          }
+                        </small>
+                      </div>
+                    </div>
+                  </${accordionItemTag}>
+                </${accordionTag}>`
+              : nothing
+          }
         </div>
         <footer>
           <ha-button
@@ -479,6 +544,20 @@ export class CardEditor extends LitElement {
       .disabled=${disabled}
       @value-changed=${this._handleCameraBooleanChange}
     ></ha-selector>`;
+  }
+
+  private _connectionSourceSelector() {
+    return {
+      select: {
+        mode: "dropdown",
+        options: [
+          {
+            label: this._t("editor.home_assistant"),
+            value: "home_assistant",
+          },
+        ],
+      },
+    } as const;
   }
 
   private _renderBooleanOption(
@@ -541,6 +620,19 @@ export class CardEditor extends LitElement {
     this.requestUpdate();
   };
 
+  private readonly _handleCameraTitleInput = (event: Event): void => {
+    if (!this._cameraDraft) return;
+    const input = event.currentTarget as InputElement;
+    const sanitized = sanitizeCameraTitleInput(input.value);
+    if (input.value !== sanitized) input.value = sanitized;
+    this._cameraTitleInput = sanitized;
+    this._cameraDraft = {
+      ...this._cameraDraft,
+      title: normalizeCameraTitle(sanitized),
+    };
+    this.requestUpdate();
+  };
+
   private readonly _handleCameraBooleanChange = (
     event: ValueChangedEvent,
   ): void => {
@@ -560,6 +652,7 @@ export class CardEditor extends LitElement {
     this._editingCameraIndex = undefined;
     this._cameraBaseline = undefined;
     this._cameraDraft = createDefaultCameraConfig();
+    this._cameraTitleInput = "";
     this._talkCapability = undefined;
     this._talkCapabilityPending = false;
     this._ptzCapability = undefined;
@@ -576,6 +669,7 @@ export class CardEditor extends LitElement {
     this._editingCameraIndex = index;
     this._cameraBaseline = camera;
     this._cameraDraft = { ...camera };
+    this._cameraTitleInput = camera.title;
     this._checkTalkCapability(camera.entity_id);
     this._checkPtzCapability(camera.entity_id);
     this.requestUpdate();
@@ -595,6 +689,7 @@ export class CardEditor extends LitElement {
     event.preventDefault();
     this._cameraBaseline = undefined;
     this._cameraDraft = undefined;
+    this._cameraTitleInput = "";
     this._talkCapabilityGeneration += 1;
     this._talkCapability = undefined;
     this._talkCapabilityPending = false;
@@ -614,6 +709,7 @@ export class CardEditor extends LitElement {
     else cameras[this._editingCameraIndex] = this._cameraDraft;
     this._cameraBaseline = undefined;
     this._cameraDraft = undefined;
+    this._cameraTitleInput = "";
     this._editingCameraIndex = undefined;
     this._applyCameraList(cameras);
   };
@@ -888,6 +984,7 @@ function cameraConfigEquals(left: CameraConfig, right: CameraConfig): boolean {
     left.ptz_enabled === right.ptz_enabled &&
     left.start_live_unmuted_pc_tablet === right.start_live_unmuted_pc_tablet &&
     left.start_live_unmuted_phone === right.start_live_unmuted_phone &&
+    left.title === right.title &&
     left.two_way_talk_enabled === right.two_way_talk_enabled
   );
 }

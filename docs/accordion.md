@@ -12,6 +12,9 @@ application module and owns no configuration or feature state.
 - Opening an item closes every other item in the same accordion.
 - Feature and editor code own headings, icons, and slotted content. The
   accordion owns only disclosure state, presentation, and reveal scrolling.
+- Items use the comfortable density by default. Nested editor dialogs may use
+  the compact density and an optional short summary value without creating a
+  second disclosure implementation.
 - When an opened item and the following header already fit in the nearest
   scroll container, no scrolling occurs. Otherwise the opened item is aligned
   to the scroll container's top. This shows its complete content and the next

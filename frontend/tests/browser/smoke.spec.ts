@@ -820,6 +820,65 @@ test("editor uses exclusive accordions and shared draft status", async ({
   ).toContainText("Unsaved changes");
 });
 
+test("camera editor uses compact sections and saves a sanitized title", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  await page.evaluate(async () => {
+    const constructor = customElements.get(
+      "watchzone-card",
+    ) as typeof HTMLElement & {
+      getConfigElement(): Promise<
+        HTMLElement & {
+          setConfig(config: unknown): void;
+          updateComplete: Promise<boolean>;
+        }
+      >;
+    };
+    const editor = await constructor.getConfigElement();
+    editor.id = "camera-config-editor";
+    editor.setConfig({
+      type: "custom:watchzone-card",
+      cameras: [{ entity_id: "camera.front" }],
+    });
+    document.body.append(editor);
+    await editor.updateComplete;
+  });
+
+  const editor = page.locator("#camera-config-editor");
+  await editor.locator("wzc-accordion-item").first().locator("summary").click();
+  await editor.locator('[aria-label="Edit front"]').click();
+
+  const items = editor.locator(".camera-dialog-accordion > wzc-accordion-item");
+  await expect(items).toHaveCount(5);
+  await expect(items.locator(".heading")).toHaveText([
+    "Camera",
+    "Connection Source",
+    "Additional Camera",
+    "Lights",
+    "Options and Controls",
+  ]);
+  await expect(items.nth(0).locator("details")).toHaveAttribute("open", "");
+  await expect(items.nth(1).locator(".summary-text")).toHaveText(
+    "Home Assistant",
+  );
+  const compactHeader = await items.nth(1).locator("summary").boundingBox();
+  expect(compactHeader?.height).toBeLessThanOrEqual(44);
+
+  const titleInput = editor.locator(".camera-title-field ha-input");
+  await titleInput.evaluate((element) => {
+    const input = element as HTMLElement & { value: string };
+    input.value = "  Front!  Door @12345678901234567890";
+    input.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+  });
+  await expect(editor.locator(".character-count")).toHaveText("24/24");
+  await editor.locator('ha-button[variant="brand"]').click();
+  await expect(editor.locator(".camera-tile-copy span")).toHaveText(
+    "Front Door 1234567890123",
+  );
+});
+
 test("editor camera drag handles reorder the configured cameras", async ({
   page,
 }) => {

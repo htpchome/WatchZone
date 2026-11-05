@@ -14,6 +14,7 @@ export const EDITOR_PREVIEW_DRAFT_EVENT = `${CARD_TAG}-preview-draft`;
 export const EDITOR_TEXT_PREVIEW_DELAY_MS = 200;
 export const CAMERA_MODULE_TYPE = "camera";
 export const MAX_CAMERAS = 12;
+export const MAX_CAMERA_TITLE_LENGTH = 24;
 export const MAX_RETAINED_CAMERA_SESSIONS = MAX_CAMERAS * 2;
 export const MAX_REDUCED_BANDWIDTH_CONNECTED_CAMERAS = 3;
 export const REDUCED_BANDWIDTH_CAMERA_RETENTION_MS = 2 * 60 * 1000;

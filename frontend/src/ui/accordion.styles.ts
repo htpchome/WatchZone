@@ -62,6 +62,17 @@ export const accordionItemStyles = css`
     flex: 1;
   }
 
+  .summary-text {
+    overflow: hidden;
+    min-inline-size: 0;
+    max-inline-size: 45%;
+    color: var(--wzc-color-text-2);
+    font-size: var(--wzc-font-size-small);
+    font-weight: var(--wzc-font-weight-regular);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .chevron {
     display: grid;
     inline-size: 1.25rem;
@@ -91,6 +102,21 @@ export const accordionItemStyles = css`
   .icon svg {
     display: block;
     inline-size: 100%;
+  }
+
+  :host([density="compact"]) details {
+    border-radius: var(--wzc-radius-medium);
+  }
+
+  :host([density="compact"]) summary {
+    min-block-size: 2.5rem;
+    gap: 0.5rem;
+    padding: 0.5rem 0.7rem;
+    font-size: var(--wzc-font-size-small);
+  }
+
+  :host([density="compact"]) .content {
+    padding: 0.7rem;
   }
 
   @media (hover: none) {

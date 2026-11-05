@@ -163,14 +163,39 @@ export const cardEditorStyles = css`
   }
 
   .camera-dialog-content {
+    padding: 0.75rem 1rem;
+  }
+
+  .camera-dialog-accordion {
+    gap: 0.35rem;
+  }
+
+  .camera-section-fields {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .camera-title-field {
     display: grid;
   }
 
-  .camera-dialog-content section {
+  .character-count {
+    justify-self: end;
+    margin-block-start: 0.15rem;
+    margin-inline-end: 0.25rem;
+    color: var(--wzc-color-text-2);
+    font-size: var(--wzc-font-size-small);
+  }
+
+  .capability-option {
     display: grid;
-    gap: 0.5rem;
-    padding: 0.85rem 1rem;
-    border-block-end: 1px solid var(--wzc-color-border);
+    gap: 0.15rem;
+  }
+
+  .empty-camera-section {
+    margin: 0;
+    color: var(--wzc-color-text-2);
+    font-size: var(--wzc-font-size-small);
   }
 
   dialog footer {
