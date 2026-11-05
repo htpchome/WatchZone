@@ -885,7 +885,10 @@ test("editor camera drag handles reorder the configured cameras", async ({
         const positions: number[] = [];
         const startedAt = performance.now();
         const sample = (): void => {
-          positions.push(element.getBoundingClientRect().top);
+          const tile = element.shadowRoot?.querySelector(".tile");
+          if (tile instanceof HTMLElement) {
+            positions.push(tile.getBoundingClientRect().top);
+          }
           if (performance.now() - startedAt < 300) {
             requestAnimationFrame(sample);
             return;
@@ -905,6 +908,13 @@ test("editor camera drag handles reorder the configured cameras", async ({
     target.y + target.height * 0.25,
     { steps: 12 },
   );
+  const preReleasePosition = await thirdTile.evaluate((element) => {
+    const tile = element.shadowRoot?.querySelector(".tile");
+    if (!(tile instanceof HTMLElement)) {
+      throw new Error("Sortable tile surface was not rendered");
+    }
+    return tile.getBoundingClientRect().top;
+  });
   await page.mouse.up();
 
   await expect(tiles.nth(0)).toHaveAttribute("item-key", "camera.third");
@@ -923,6 +933,7 @@ test("editor camera drag handles reorder the configured cameras", async ({
     JSON.parse(element.dataset.settlePositions ?? "[]"),
   );
   expect(positions.length).toBeGreaterThan(4);
+  expect(Math.abs((positions[0] ?? 0) - preReleasePosition)).toBeLessThan(3);
   const finalPosition = positions.at(-1) ?? 0;
   let previousDistance = Number.POSITIVE_INFINITY;
   for (const position of positions) {

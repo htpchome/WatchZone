@@ -77,6 +77,14 @@ export class SortableTile extends LitElement {
     this._pointerStartY = 0;
   }
 
+  public getVisualRect(): DOMRect {
+    return (
+      this.renderRoot
+        .querySelector<HTMLElement>(".tile")
+        ?.getBoundingClientRect() ?? this.getBoundingClientRect()
+    );
+  }
+
   public prepareSettle(lifted: boolean): void {
     this.releasePointer();
     this.dragging = false;
@@ -279,7 +287,7 @@ export class SortableList extends LitElement {
       this._dragged = event.detail.item;
       const items = this._items;
       this._fromIndex = items.indexOf(event.detail.item);
-      this._itemRects = items.map((item) => item.getBoundingClientRect());
+      this._itemRects = items.map((item) => item.getVisualRect());
       const draggedRect = this._itemRects[this._fromIndex];
       const nextRect = this._itemRects[this._fromIndex + 1];
       this._displacement = draggedRect
@@ -318,7 +326,7 @@ export class SortableList extends LitElement {
     }
     const draggedKey = detail.itemKey;
     const previousRects = new Map(
-      this._items.map((item) => [item.itemKey, item.getBoundingClientRect()]),
+      this._items.map((item) => [item.itemKey, item.getVisualRect()]),
     );
     this._dragged?.releasePointer();
     this.dispatchEvent(
