@@ -142,9 +142,10 @@ architecture decision recorded in this document or a future ADR.
 │   ├── src/
 │   │   ├── main.ts                # Minimal eager browser entry
 │   │   ├── card/                  # Lovelace shell and layout renderer
-│   │   ├── core/                  # Stable runtime and module contracts
+│   │   ├── core/                  # Stable runtime and placeable contracts
 │   │   ├── api/                   # Typed backend client and wire types
 │   │   ├── modules/               # Independently loaded UI features
+│   │   ├── components/            # Portable placeables for module slots
 │   │   ├── providers/             # External-system capabilities and resolver
 │   │   ├── ui/                    # Shared visual primitives and icon registry
 │   │   ├── styles/                # HA theme boundary and global design tokens
@@ -160,11 +161,12 @@ responsibility is implemented.
 
 ### 5.1 Feature package rule
 
-Each frontend module and backend feature receives a stable folder boundary
+Each frontend placeable and backend feature receives a stable folder boundary
 from its first implementation:
 
 ```text
 frontend/src/modules/camera/index.ts
+frontend/src/components/two-way-talk/index.ts
 custom_components/watchzone/features/layouts/__init__.py
 ```
 
@@ -343,20 +345,26 @@ The shell owns orchestration, not feature behavior.
 Lazy loading is a first-class architectural requirement, not a later
 optimization.
 
-Every user-placeable module is loaded through a native dynamic import:
+Every user-placeable module and component is loaded through a native dynamic
+import:
 
 ```ts
 const moduleLoaders = {
   camera: () => import("../modules/camera/index.js"),
   eventList: () => import("../modules/event-list/index.js"),
-} satisfies ModuleLoaderMap;
+} satisfies PlaceableLoaderMap;
+
+const componentLoaders = {
+  twoWayTalk: () => import("../components/two-way-talk/index.js"),
+  ptz: () => import("../components/ptz/index.js"),
+} satisfies PlaceableLoaderMap;
 ```
 
 The exact syntax may change with the build tool, but these properties may not:
 
-- The eager entry has no static import path to a module implementation.
-- A module chunk is requested only when the active layout contains that module.
-- Modules needed by a layout load concurrently, not sequentially.
+- The eager entry has no static import path to a placeable implementation.
+- A placeable chunk is requested only when the active layout contains it.
+- Placeables needed by a layout load concurrently, not sequentially.
 - The editor is a separate dynamic import and is never loaded for normal card
   viewing.
 - A provider live adapter is requested only when a visible camera presentation
@@ -371,17 +379,17 @@ must remain relative to the served entry or be resolved through the generated
 asset manifest. The stable entry must not be cached longer than the integration
 can safely update it; hashed chunks may use immutable caching.
 
-### 8.3 Frontend module contract
+### 8.3 Frontend placeable contract
 
-A module is a user-placeable unit with a stable type identifier. Its public
-entry exports a definition matching the core contract. The contract will begin
-with the minimum fields required by the first module and may grow only for a
-demonstrated cross-module requirement.
+A module or component is a user-placeable unit with a stable type identifier.
+Its public entry exports a definition matching the core placeable contract. The
+contract begins with the minimum fields required by the first placeables and may
+grow only for a demonstrated cross-placeable requirement.
 
 Conceptually:
 
 ```ts
-interface WatchZoneModuleDefinition<TConfig = unknown> {
+interface WatchZonePlaceableDefinition<TConfig = unknown> {
   readonly type: string;
   validateConfig(value: unknown): TConfig;
   define(): void;
@@ -389,18 +397,31 @@ interface WatchZoneModuleDefinition<TConfig = unknown> {
 }
 ```
 
-Module responsibilities:
+Placeable responsibilities:
 
 - Validate its own configuration after structural layout validation.
 - Own its rendering, loading, empty, error, and disconnected states.
 - Own and release its subscriptions, timers, observers, media objects, and
   abort controllers.
-- Expose behavior only through the core module contract.
+- Expose behavior only through the core placeable contract.
 - Preserve expensive DOM, especially media elements, across unrelated updates.
-- Fail locally without preventing sibling modules from rendering.
+- Fail locally without preventing sibling placeables from rendering.
 
-A module does not own placement, overall navigation, layout persistence, or
-another module's state.
+A placeable does not own placement, overall navigation, layout persistence, or
+another placeable's state.
+
+A **module** is a major Stage content system. It may publish semantic slots
+named `content`, `overlay`, `controls`, or `footer`. Camera and the future events
+surface are modules. A **component** is a portable capability presentation
+placed in a compatible module slot. PTZ and two-way talk are components. A
+**container** owns logical grid placement and no feature behavior. A
+**presentation** is private rendering inside its owner; camera live video is a
+camera presentation rather than another placeable.
+
+Modules and components never import one another or another placeable of their
+own kind. Composition belongs to the Stage renderer through stable core
+contracts and typed runtime context. Moving a component to another compatible
+slot must not require changing its provider transport.
 
 The camera module is a composition boundary, not a monolithic media player. It
 owns the active camera and presentation choice while composing an internal
@@ -409,8 +430,8 @@ information overlay. Presentation types such as a future carousel reuse the
 same internal single-camera presentation contract. Overlay controls dispatch
 typed intent and do not own connection adapters or duplicate media-session
 policy. A capability that must be independently placed or restyled by the
-Stage Designer, such as two-way talk, is a peer module. It consumes only the
-card-owned active-camera session context and cannot import camera internals.
+Stage Designer, such as two-way talk or PTZ, is a component. It consumes only
+the card-owned active-camera session context and cannot import camera internals.
 
 Transient interaction-overlay visibility belongs to a Lit reactive controller
 within the camera feature. Pointer hover, touch, and keyboard focus share that
@@ -558,7 +579,7 @@ navigation target.
 - Session state is scoped to a card instance unless a requirement explicitly
   calls for wider scope.
 - The active-camera context exposes only the identity and interaction handles
-  independently placeable camera-control modules require. It may reference a
+  independently placeable camera-control components require. It may reference a
   retained incoming stream and typed mute intent, but never provider clients,
   credentials, layout state, or camera implementation objects.
 
@@ -604,12 +625,12 @@ Provider and live-resolution rules:
 - Each external system has one stable folder under
   `frontend/src/providers/<provider>/`. Capabilities are nested beneath it,
   for example `providers/home-assistant/live/`; PTZ and talk transports belong
-  beside `live/`. A user-placeable capability presentation may be a module,
-  but provider signaling and media mechanics never belong in that module.
+  beside `live/`. A user-placeable capability presentation may be a component,
+  but provider signaling and media mechanics never belong in that component.
 - Camera is the user-placeable module. Its `live/` folder is a private camera
   capability and presentation, not another application module. Additional
-  independently placeable modules are allowed only for Stage Designer features
-  with their own presentation and lifecycle.
+  independently placeable capability presentations are components composed by
+  Stage slots, not camera internals or parallel application modules.
 - Feature modules depend only on public provider resolvers and stable capability
   contracts. They never import `providers/<provider>/...` directly.
 - Provider live adapters own browser media objects and playback-specific
@@ -717,13 +738,21 @@ a saved layout contains:
 - Monotonic revision.
 - Root layout node.
 - Stable node IDs.
-- Module type and validated module configuration for module nodes.
-- Container placement and responsive behavior for container nodes.
+- Module type, validated module configuration, and semantic component slots for
+  module nodes.
+- Component type and validated component configuration for component nodes.
+- Logical grid placement and responsive behavior for container nodes.
+- Required `default` and `phone` responsive variants whose corresponding nodes
+  reuse stable IDs.
 - Creation and modification metadata where useful.
 
-The root is a typed tree of container nodes and module nodes. Container nodes
-control placement; module nodes control behavior. Neither is allowed to absorb
-the other's responsibilities.
+The root is a typed grid container whose placements contain module nodes.
+Module nodes may publish typed component slots. Containers control placement,
+modules control major content behavior, and components control portable
+capability presentation. None may absorb another category's responsibility.
+
+The normative version-1 schema and runtime rules are defined in
+[docs/stage-layout-system.md](docs/stage-layout-system.md).
 
 Stored values are declarative data. Arbitrary executable content, unvalidated
 URLs containing credentials, raw HTML, and unrestricted CSS are prohibited.

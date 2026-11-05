@@ -70,6 +70,15 @@ if (eagerGzipBytes > 50 * 1024) {
   throw new Error(`Eager graph exceeds 50 KiB gzip: ${eagerGzipBytes} bytes`);
 }
 
+const editorGzipBytes = gzipSync(
+  await readFile(resolve(frontend, editor.file)),
+).byteLength;
+if (editorGzipBytes > 19 * 1024) {
+  throw new Error(
+    `Lazy editor entry exceeds 19 KiB gzip: ${editorGzipBytes} bytes`,
+  );
+}
+
 console.log(
-  `Validated lazy editor, camera module, provider, and WebRTC/HLS adapters; eager graph is ${eagerGzipBytes} bytes gzip.`,
+  `Validated lazy editor (${editorGzipBytes} bytes gzip), camera module, provider, and WebRTC/HLS adapters; eager graph is ${eagerGzipBytes} bytes gzip.`,
 );

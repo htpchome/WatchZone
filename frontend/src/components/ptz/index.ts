@@ -1,23 +1,23 @@
-import { PTZ_MODULE_TYPE, PTZ_TAG } from "../../core/constants";
+import { PTZ_COMPONENT_TYPE, PTZ_TAG } from "../../core/constants";
 import { englishLocalize } from "../../core/localization";
-import type { ModuleDefinition } from "../../core/module";
+import type { ComponentDefinition } from "../../core/placeable";
 import type { PtzProviderId } from "../../api/ptz";
-import type { PtzModule } from "./ptz";
+import type { PtzComponent } from "./ptz";
 import type { PtzCameraSource } from "./session.controller";
 
-export interface PtzModuleConfig {
+export interface PtzComponentConfig {
   readonly cameras: readonly PtzCameraSource[];
 }
 
 let definitionPromise: Promise<void> | undefined;
 
-export const moduleDefinition: ModuleDefinition<PtzModuleConfig> = {
-  type: PTZ_MODULE_TYPE,
+export const componentDefinition: ComponentDefinition<PtzComponentConfig> = {
+  type: PTZ_COMPONENT_TYPE,
   createElement: () => document.createElement(PTZ_TAG),
   define: () => (definitionPromise ??= import("./ptz").then(() => undefined)),
   getEntityIds: ({ cameras }) => cameras.map(({ entityId }) => entityId),
   updateElement(element, config, context) {
-    const ptz = element as PtzModule;
+    const ptz = element as PtzComponent;
     ptz.api = context.api;
     ptz.cameraSession = context.cameraSession;
     ptz.cameras = config.cameras;
@@ -49,4 +49,4 @@ export const moduleDefinition: ModuleDefinition<PtzModuleConfig> = {
   },
 };
 
-export type { PtzModule } from "./ptz";
+export type { PtzComponent } from "./ptz";

@@ -15,7 +15,7 @@ vi.mock("../src/providers/ptz-source-resolver", () => ({
   },
 }));
 
-import { PtzSessionController } from "../src/modules/ptz/session.controller";
+import { PtzSessionController } from "../src/components/ptz/session.controller";
 
 describe("PTZ session lifecycle", () => {
   afterEach(() => vi.clearAllMocks());

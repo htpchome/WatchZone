@@ -2,7 +2,10 @@ import { CAMERA_MODULE_TYPE, CAMERA_TAG } from "../../core/constants";
 import { cameraImageUrl } from "../../core/home-assistant";
 import { englishLocalize } from "../../core/localization";
 import type { MediaRetentionPreference } from "../../core/media-retention-policy";
-import type { ModuleDefinition, ModuleRuntimeContext } from "../../core/module";
+import type {
+  ModuleDefinition,
+  PlaceableRuntimeContext,
+} from "../../core/placeable";
 import { LiveSourceResolver } from "../../providers/live-source-resolver";
 import type {
   CameraItemConfig,
@@ -51,7 +54,7 @@ export const moduleDefinition: ModuleDefinition<CameraModuleConfig> = {
 function updateCameraElement(
   camera: CameraModule,
   config: CameraModuleConfig,
-  context: ModuleRuntimeContext,
+  context: PlaceableRuntimeContext,
 ): void {
   camera.api = context.api;
   camera.cameraSession = context.cameraSession;

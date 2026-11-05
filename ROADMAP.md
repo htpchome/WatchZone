@@ -209,7 +209,7 @@ designer UI so saved layouts are declarative and testable.
 - Explicit microphone permission and secure-context requirements.
 - Separate outgoing talk session from retained incoming live playback when the
   transport requires it.
-- Independently placeable talk module with provider-neutral transport, an
+- Independently placeable talk component with provider-neutral transport, an
   initial latched full-duplex overlay presentation, and future presentation
   variants owned by the Stage Designer.
 - Accelerated provider signaling with one clean Home Assistant WebRTC fallback;

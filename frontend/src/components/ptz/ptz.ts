@@ -34,7 +34,7 @@ const DIRECTIONS: readonly {
 ];
 
 /** Independently placeable PTZ presentation for the active camera. */
-export class PtzModule extends LitElement {
+export class PtzComponent extends LitElement {
   public static properties = {
     api: { attribute: false },
     cameraSession: { attribute: false },
@@ -172,10 +172,10 @@ export class PtzModule extends LitElement {
   static styles = ptzStyles;
 }
 
-if (!customElements.get(PTZ_TAG)) customElements.define(PTZ_TAG, PtzModule);
+if (!customElements.get(PTZ_TAG)) customElements.define(PTZ_TAG, PtzComponent);
 
 declare global {
   interface HTMLElementTagNameMap {
-    [PTZ_TAG]: PtzModule;
+    [PTZ_TAG]: PtzComponent;
   }
 }

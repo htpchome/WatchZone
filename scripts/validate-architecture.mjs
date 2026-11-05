@@ -5,6 +5,7 @@ const root = resolve(import.meta.dirname, "..");
 const sourceRoot = resolve(root, "frontend/src");
 const coreRoot = resolve(sourceRoot, "core");
 const modulesRoot = resolve(sourceRoot, "modules");
+const componentsRoot = resolve(sourceRoot, "components");
 const providersRoot = resolve(sourceRoot, "providers");
 const obsoleteConnectionsRoot = resolve(sourceRoot, "connections");
 const publicProviderResolvers = new Set([
@@ -30,8 +31,12 @@ for (const path of await collectTypeScript(sourceRoot)) {
   const displayPath = relative(root, path);
   const isCore = path.startsWith(`${coreRoot}${sep}`);
   const isModule = path.startsWith(`${modulesRoot}${sep}`);
+  const isComponent = path.startsWith(`${componentsRoot}${sep}`);
   const moduleName = isModule
     ? relative(modulesRoot, path).split(sep)[0]
+    : undefined;
+  const componentName = isComponent
+    ? relative(componentsRoot, path).split(sep)[0]
     : undefined;
 
   for (const match of source.matchAll(imports)) {
@@ -48,6 +53,9 @@ for (const path of await collectTypeScript(sourceRoot)) {
         `${displayPath}: core cannot import modules or providers`,
       );
     }
+    if (isCore && resolved && resolved.startsWith(componentsRoot)) {
+      violations.push(`${displayPath}: core cannot import components`);
+    }
     if (isModule && resolved?.startsWith(`${modulesRoot}${sep}`)) {
       const importedModule = relative(modulesRoot, resolved).split(sep)[0];
       if (importedModule !== moduleName) {
@@ -56,13 +64,31 @@ for (const path of await collectTypeScript(sourceRoot)) {
         );
       }
     }
+    if (isComponent && resolved?.startsWith(`${componentsRoot}${sep}`)) {
+      const importedComponent = relative(componentsRoot, resolved).split(
+        sep,
+      )[0];
+      if (importedComponent !== componentName) {
+        violations.push(
+          `${displayPath}: component ${componentName} cannot import component ${importedComponent}`,
+        );
+      }
+    }
     if (
-      isModule &&
+      (isModule && resolved?.startsWith(`${componentsRoot}${sep}`)) ||
+      (isComponent && resolved?.startsWith(`${modulesRoot}${sep}`))
+    ) {
+      violations.push(
+        `${displayPath}: modules and components communicate through core contracts`,
+      );
+    }
+    if (
+      (isModule || isComponent) &&
       resolved?.startsWith(`${providersRoot}${sep}`) &&
       !publicProviderResolvers.has(basename(resolved))
     ) {
       violations.push(
-        `${displayPath}: modules must use a public provider resolver`,
+        `${displayPath}: placeables must use a public provider resolver`,
       );
     }
   }

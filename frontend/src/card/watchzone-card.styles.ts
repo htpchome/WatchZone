@@ -43,7 +43,7 @@ export const cardStyles = css`
     box-sizing: border-box;
     display: grid;
     grid-template-rows: minmax(0, 1fr);
-    align-items: center;
+    align-items: stretch;
     inline-size: 100%;
     block-size: 100%;
     min-block-size: 0;
@@ -51,9 +51,12 @@ export const cardStyles = css`
     overflow: hidden;
   }
 
-  .layout-root,
-  .layout-container,
+  .stage-grid,
+  .stage-placement,
+  .module-composition,
   .module-slot,
+  .component-slot,
+  .component-node,
   .module-placeholder,
   .module-error,
   .layout-empty,
@@ -63,36 +66,46 @@ export const cardStyles = css`
     min-inline-size: 0;
   }
 
-  .layout-root,
-  .layout-container,
-  .module-slot {
-    block-size: 100%;
-    min-block-size: 0;
-  }
-
-  .layout-container {
+  .stage-grid {
     display: grid;
+    grid-template-columns: repeat(
+      var(--wzc-stage-grid-columns),
+      minmax(0, 1fr)
+    );
+    grid-template-rows: repeat(var(--wzc-stage-grid-rows), minmax(0, 1fr));
     align-items: stretch;
     gap: var(--wzc-card-padding);
   }
 
-  .layout-container.single-child {
-    grid-template-rows: minmax(0, 1fr);
+  .module-composition {
+    display: grid;
+    min-block-size: 0;
   }
 
-  .layout-container.overlay {
+  .module-composition.has-components {
     grid-template: "overlay" minmax(0, 1fr) / minmax(0, 1fr);
   }
 
-  .layout-container.overlay > .module-slot {
+  .module-composition.has-components > .module-slot,
+  .module-composition.has-components > .component-slot {
     grid-area: overlay;
+  }
+
+  .component-slot,
+  .component-node {
+    min-block-size: 0;
+    pointer-events: none;
+  }
+
+  .component-slot-overlay {
+    z-index: 3;
   }
 
   .module-slot {
     display: block;
   }
 
-  .module-slot.module-loading.reserve-aspect-ratio {
+  .module-slot.placeable-loading.reserve-aspect-ratio {
     aspect-ratio: var(--wzc-camera-stage-aspect-ratio);
     background: var(--wzc-camera-stage);
   }
@@ -102,7 +115,8 @@ export const cardStyles = css`
     min-inline-size: 0;
   }
 
-  .module-slot.module-ready > * {
+  .module-slot.placeable-ready > *,
+  .component-node.placeable-ready > * {
     block-size: 100%;
     min-block-size: 0;
   }

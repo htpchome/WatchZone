@@ -2,10 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CameraSessionContext } from "../src/core/camera-session-context";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
-import type { TwoWayTalkModule } from "../src/modules/two-way-talk/two-way-talk";
-import "../src/modules/two-way-talk/two-way-talk";
+import type { TwoWayTalkComponent } from "../src/components/two-way-talk/two-way-talk";
+import "../src/components/two-way-talk/two-way-talk";
 
-describe("two-way-talk module", () => {
+describe("two-way-talk component", () => {
   afterEach(() => {
     document.body.replaceChildren();
     vi.restoreAllMocks();
@@ -17,7 +17,7 @@ describe("two-way-talk module", () => {
     const owner = {};
     const element = document.createElement(
       "wzc-two-way-talk",
-    ) as TwoWayTalkModule;
+    ) as TwoWayTalkComponent;
     element.api = api(callWS);
     element.cameraSession = context;
     element.enabledCameraIds = ["camera.front"];

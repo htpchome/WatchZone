@@ -1,0 +1,116 @@
+"""Tests for the Python-owned stage design schema and store."""
+
+import asyncio
+from unittest.mock import AsyncMock
+
+import pytest
+from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
+
+from custom_components.watchzone.features.layouts import (
+    StageDesignStore,
+    validate_stage_design,
+)
+from custom_components.watchzone.features.layouts.store import StageRevisionConflict
+
+
+def _design(*, revision: int = 0) -> dict[str, object]:
+    camera = {
+        "config": {},
+        "id": "camera-module",
+        "kind": "module",
+        "moduleType": "camera",
+        "slots": {
+            "overlay": [
+                {
+                    "componentType": "ptz",
+                    "config": {},
+                    "id": "ptz-component",
+                    "kind": "component",
+                }
+            ]
+        },
+    }
+    return {
+        "id": "default",
+        "name": "Default",
+        "revision": revision,
+        "schemaVersion": 1,
+        "variants": {
+            name: {
+                "root": {
+                    "children": [
+                        {
+                            "grid": {
+                                "column": 1,
+                                "columnSpan": columns,
+                                "row": 1,
+                                "rowSpan": 1,
+                            },
+                            "node": camera,
+                        }
+                    ],
+                    "columns": columns,
+                    "id": "root",
+                    "kind": "container",
+                }
+            }
+            for name, columns in (("default", 12), ("phone", 4))
+        },
+    }
+
+
+def test_stage_schema_preserves_module_component_and_slot_boundaries() -> None:
+    """Camera owns placement while PTZ remains a portable overlay component."""
+    design = validate_stage_design(_design())
+
+    camera = design.variants["default"].root.children[0].node
+    assert camera.module_type == "camera"
+    assert camera.slots["overlay"][0].component_type == "ptz"
+    assert design.as_json() == _design()
+
+
+def test_stage_schema_rejects_duplicate_node_ids() -> None:
+    """Stable IDs are unique within each responsive variant."""
+    value = _design()
+    variants = value["variants"]
+    assert isinstance(variants, dict)
+    default = variants["default"]
+    assert isinstance(default, dict)
+    root = default["root"]
+    assert isinstance(root, dict)
+    children = root["children"]
+    assert isinstance(children, list)
+    children.append(children[0])
+
+    with pytest.raises(HomeAssistantError, match="Duplicate stage node ID"):
+        validate_stage_design(value)
+
+
+async def test_stage_store_uses_optimistic_revisions(hass: HomeAssistant) -> None:
+    """A stale editor cannot overwrite a successfully saved design."""
+    store = StageDesignStore(hass)
+    store._store.async_save = AsyncMock()  # type: ignore[method-assign]
+
+    saved = await store.async_save(_design(), expected_revision=0)
+
+    assert saved.revision == 1
+    assert store.get("default") is saved
+    with pytest.raises(StageRevisionConflict):
+        await store.async_save(_design(revision=1), expected_revision=0)
+
+
+async def test_stage_store_serializes_competing_writes(hass: HomeAssistant) -> None:
+    """Only one concurrent editor may commit the same expected revision."""
+    store = StageDesignStore(hass)
+    store._store.async_save = AsyncMock()  # type: ignore[method-assign]
+
+    results = await asyncio.gather(
+        store.async_save(_design(), expected_revision=0),
+        store.async_save(_design(), expected_revision=0),
+        return_exceptions=True,
+    )
+
+    assert sum(isinstance(result, StageRevisionConflict) for result in results) == 1
+    assert store.get("default") is not None
+    assert store.get("default").revision == 1

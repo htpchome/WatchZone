@@ -5,10 +5,10 @@ ownership. It supplements `architecture.md`, which remains authoritative.
 
 ## Ownership
 
-- PTZ is an independently placeable, lazily loaded frontend module. It is a
-  peer of the camera module because the Stage Designer will eventually place
-  and style PTZ independently.
-- The module consumes only `CameraSessionContext` and a provider-neutral
+- PTZ is an independently placeable, lazily loaded frontend component. The
+  Stage Designer places it into a compatible module slot and may style it
+  independently.
+- The component consumes only `CameraSessionContext` and a provider-neutral
   `PtzSourceResolver`. It does not import the camera module, inspect its shadow
   tree, or own live playback.
 - The backend `PtzService` resolves the configured connection provider through
@@ -35,7 +35,7 @@ Supported Home Assistant surfaces are discovered in this order:
 The third surface is an optional compatibility path inside the Home Assistant
 provider. It does not change the configured connection type or movement path.
 A future Frigate go2rtc connection must register its own PTZ provider
-adapter and must not add Frigate transport conditions to the module or the Home
+adapter and must not add Frigate transport conditions to the component or the Home
 Assistant adapter.
 
 Capabilities are conservative. A control is offered only when Home Assistant
@@ -60,7 +60,7 @@ defaults to `false` and is omitted from YAML at its default.
 
 One WebSocket subscription owns one movement. Closing the subscription is the
 stop intent. Motion is stopped on pointer release or cancellation, keyboard
-release, active-camera change, module removal, document visibility loss,
+release, active-camera change, component removal, document visibility loss,
 window blur, freeze, page hide, WebSocket disconnect, provider error, or
 integration unload.
 

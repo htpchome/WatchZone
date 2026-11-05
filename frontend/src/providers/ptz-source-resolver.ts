@@ -18,7 +18,7 @@ function homeAssistantProvider(): Promise<
   ));
 }
 
-/** Provider-neutral PTZ entry used by the editor and PTZ module. */
+/** Provider-neutral PTZ entry used by the editor and PTZ component. */
 export class PtzSourceResolver {
   public async capability(
     api: HomeAssistantApi,

@@ -30,6 +30,7 @@ export const sortableTileStyles = css`
     box-shadow: var(--wzc-sortable-shadow);
     transform: translateY(var(--wzc-sortable-drag-offset, 0px));
     transition:
+      transform var(--wzc-media-overlay-transition-duration) ease,
       border-color var(--wzc-media-overlay-transition-duration) ease,
       opacity var(--wzc-media-overlay-transition-duration) ease;
   }

@@ -1,4 +1,5 @@
 import { html, LitElement } from "lit";
+import { draggable } from "@atlaskit/pragmatic-drag-and-drop/adapter/element-adapter";
 
 import {
   SORTABLE_DRAG_EVENT,
@@ -42,18 +43,51 @@ export class SortableTile extends LitElement {
   public itemKey = "";
   public localize: LocalizeFunction = englishLocalize;
   private _offset = 0;
-  private _pointerId?: number;
-  private _startY = 0;
+  private _disposeDrag?: () => void;
 
   public connectedCallback(): void {
     super.connectedCallback();
     this.setAttribute("role", "listitem");
   }
 
+  public disconnectedCallback(): void {
+    this._disposeDrag?.();
+    this._disposeDrag = undefined;
+    super.disconnectedCallback();
+  }
+
+  protected firstUpdated(): void {
+    const tile = this.renderRoot.querySelector<HTMLElement>(".tile");
+    const handle = this.renderRoot.querySelector<HTMLElement>(".handle");
+    if (!tile || !handle) return;
+    this._disposeDrag = draggable({
+      element: tile,
+      dragHandle: handle,
+      getInitialData: () => ({ itemKey: this.itemKey }),
+      onDragStart: ({ location }) => {
+        this.dragging = true;
+        this._offset = 0;
+        this._dispatchDrag("start", location.initial.input.clientY);
+      },
+      onDrag: ({ location }) => {
+        this._dispatchDrag("move", location.current.input.clientY);
+      },
+      onDrop: ({ location }) => {
+        this._dispatchDrag("end", location.current.input.clientY);
+        this.resetDrag();
+      },
+    });
+  }
+
   public resetDrag(): void {
     this.dragging = false;
     this._offset = 0;
-    this._pointerId = undefined;
+    this.requestUpdate();
+  }
+
+  public setDisplacement(offset: number): void {
+    if (this.dragging || this._offset === offset) return;
+    this._offset = offset;
     this.requestUpdate();
   }
 
@@ -68,10 +102,6 @@ export class SortableTile extends LitElement {
         aria-label=${this.localize("sortable.reorder")}
         aria-keyshortcuts="ArrowUp ArrowDown"
         aria-pressed=${this.dragging ? "true" : "false"}
-        @pointerdown=${this._handlePointerDown}
-        @pointermove=${this._handlePointerMove}
-        @pointerup=${this._handlePointerUp}
-        @pointercancel=${this._handlePointerCancel}
         @keydown=${this._handleKeyDown}
       >
         ${renderIcon("dragHorizontal")}
@@ -90,40 +120,6 @@ export class SortableTile extends LitElement {
       }),
     );
   }
-
-  private readonly _handlePointerDown = (event: PointerEvent): void => {
-    if (event.pointerType === "mouse" && event.button !== 0) return;
-    this._pointerId = event.pointerId;
-    this._startY = event.clientY;
-    this._offset = 0;
-    this.dragging = true;
-    (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
-    this._dispatchDrag("start", event.clientY);
-    event.preventDefault();
-  };
-
-  private readonly _handlePointerMove = (event: PointerEvent): void => {
-    if (event.pointerId !== this._pointerId) return;
-    this._offset = event.clientY - this._startY;
-    this.requestUpdate();
-    this._dispatchDrag("move", event.clientY);
-    event.preventDefault();
-  };
-
-  private readonly _handlePointerUp = (event: PointerEvent): void => {
-    if (event.pointerId !== this._pointerId) return;
-    (event.currentTarget as HTMLElement).releasePointerCapture?.(
-      event.pointerId,
-    );
-    this._dispatchDrag("end", event.clientY);
-    this.resetDrag();
-  };
-
-  private readonly _handlePointerCancel = (event: PointerEvent): void => {
-    if (event.pointerId !== this._pointerId) return;
-    this._dispatchDrag("end", this._startY);
-    this.resetDrag();
-  };
 
   private readonly _handleKeyDown = (event: KeyboardEvent): void => {
     if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
@@ -148,6 +144,8 @@ export class SortableList extends LitElement {
   private _dragged?: SortableTile;
   private _fromIndex = -1;
   private _toIndex = -1;
+  private _itemRects: DOMRect[] = [];
+  private _displacement = 0;
 
   public connectedCallback(): void {
     super.connectedCallback();
@@ -192,7 +190,18 @@ export class SortableList extends LitElement {
     event.stopPropagation();
     if (event.detail.phase === "start") {
       this._dragged = event.detail.item;
-      this._fromIndex = this._items.indexOf(event.detail.item);
+      const items = this._items;
+      this._fromIndex = items.indexOf(event.detail.item);
+      this._itemRects = items.map((item) => item.getBoundingClientRect());
+      const draggedRect = this._itemRects[this._fromIndex];
+      const nextRect = this._itemRects[this._fromIndex + 1];
+      this._displacement = draggedRect
+        ? draggedRect.height +
+          Math.max(
+            0,
+            (nextRect?.top ?? draggedRect.bottom) - draggedRect.bottom,
+          )
+        : 0;
       this._setTarget(this._fromIndex);
       return;
     }
@@ -201,7 +210,8 @@ export class SortableList extends LitElement {
       const items = this._items;
       let target = items.length - 1;
       for (let index = 0; index < items.length; index += 1) {
-        const rect = items[index].getBoundingClientRect();
+        const rect = this._itemRects[index];
+        if (!rect) continue;
         if (event.detail.clientY < rect.top + rect.height / 2) {
           target = index;
           break;
@@ -260,15 +270,31 @@ export class SortableList extends LitElement {
     this._toIndex = index;
     for (const [itemIndex, item] of this._items.entries()) {
       item.dropTarget = itemIndex === index && item !== this._dragged;
+      const displaced =
+        this._fromIndex < index &&
+        itemIndex > this._fromIndex &&
+        itemIndex <= index
+          ? -this._displacement
+          : this._fromIndex > index &&
+              itemIndex >= index &&
+              itemIndex < this._fromIndex
+            ? this._displacement
+            : 0;
+      item.setDisplacement(displaced);
     }
   }
 
   private _resetDrag(): void {
     this._dragged?.resetDrag();
-    for (const item of this._items) item.dropTarget = false;
+    for (const item of this._items) {
+      item.dropTarget = false;
+      item.setDisplacement(0);
+    }
     this._dragged = undefined;
     this._fromIndex = -1;
     this._toIndex = -1;
+    this._itemRects = [];
+    this._displacement = 0;
   }
 
   static styles = sortableListStyles;

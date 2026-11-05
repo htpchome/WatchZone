@@ -19,7 +19,7 @@ async function provider(): Promise<InstanceType<HomeAssistantTalkProvider>> {
   ));
 }
 
-/** Provider-neutral entry used by the two-way-talk module. */
+/** Provider-neutral entry used by the two-way-talk component. */
 export class TalkSourceResolver {
   public async supports(
     api: HomeAssistantApi,

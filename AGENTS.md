@@ -55,6 +55,9 @@ For badge presentation or object-label color policy, also read
 For reusable draggable tiles or ordered editor lists, also read
 `docs/sortable-list.md` in full.
 
+For Stage Design schemas, placeable classification, slots, responsive variants,
+or future designer work, also read `docs/stage-layout-system.md` in full.
+
 ## Architecture stability
 
 - Treat `architecture.md` as a contract, not a progress log.
@@ -87,7 +90,7 @@ For reusable draggable tiles or ordered editor lists, also read
 - TypeScript owns rendering, browser media APIs, lazy UI modules, and
   latency-sensitive interaction.
 - A provider and a live connection type are different concepts.
-- Feature modules do not import one another.
+- Modules and components do not import one another or another placeable.
 - Built-in and external provider capabilities register eagerly through the
   versioned backend extension registry during integration setup. Network
   clients, sessions, and provider work remain demand-driven. Features use the
@@ -97,11 +100,11 @@ For reusable draggable tiles or ordered editor lists, also read
   must unregister on unload, and must not receive unrestricted runtime state.
   Add a typed registry for each future extension area; never add a generic
   plugin bag, service locator, or arbitrary import hook.
-- Camera owns camera selection and its private live presentation. A capability
-  becomes a peer application module only when it is independently placeable in
-  the Stage Designer. Such modules consume the card's narrow active-camera
-  session context and a public provider resolver; they never import or mutate
-  the camera module. Provider-specific transport stays beneath the provider.
+- Camera owns camera selection and its private live presentation. Major stage
+  content systems are modules; portable capability presentations placed into a
+  compatible module slot are components. Both consume narrow core context and a
+  public provider resolver; neither imports or mutates another placeable.
+  Provider-specific transport stays beneath the provider.
 - Internal classes, custom-element names, diagnostics keys, and events derive
   from centralized identity constants. Product display text derives from
   `APP_NAME`; do not scatter branded identifiers through implementation code.

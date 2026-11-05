@@ -26,7 +26,7 @@ import {
 import { LocalizationController } from "../core/localization";
 import { syncHomeAssistantCardHostAppearance } from "../styles/home-assistant-card-bridge";
 import { themeTokens } from "../styles/theme-tokens";
-import { createDefaultCardLayout } from "./default-layout";
+import { createDefaultStageDesign } from "./default-layout";
 import { LayoutRuntime } from "./layout-runtime";
 import { cardStyles } from "./watchzone-card.styles";
 
@@ -50,6 +50,21 @@ export class DashboardCard extends LitElement {
     this._syncRuntime(),
   );
   private readonly _layoutRuntime = new LayoutRuntime(this);
+  private _stageResizeFrame?: number;
+  private readonly _stageResizeObserver =
+    typeof ResizeObserver === "undefined"
+      ? undefined
+      : new ResizeObserver(([entry]) => {
+          if (!entry) return;
+          if (this._stageResizeFrame !== undefined) {
+            cancelAnimationFrame(this._stageResizeFrame);
+          }
+          const inlineSize = entry.contentRect.width;
+          this._stageResizeFrame = requestAnimationFrame(() => {
+            this._stageResizeFrame = undefined;
+            this._layoutRuntime.setInlineSize(inlineSize);
+          });
+        });
 
   /** Set by Home Assistant for the card shown inside its editor preview. */
   public preview = false;
@@ -102,9 +117,16 @@ export class DashboardCard extends LitElement {
     this._syncLayout(this._previewConfig ?? this._config);
     if (this._hass) this._observeConnection(this._hass.connection);
     this._syncRuntime();
+    this._stageResizeObserver?.observe(this);
+    this._layoutRuntime.setInlineSize(this.getBoundingClientRect().width);
   }
 
   public disconnectedCallback(): void {
+    this._stageResizeObserver?.disconnect();
+    if (this._stageResizeFrame !== undefined) {
+      cancelAnimationFrame(this._stageResizeFrame);
+      this._stageResizeFrame = undefined;
+    }
     window.removeEventListener(
       EDITOR_PREVIEW_DRAFT_EVENT,
       this._handlePreviewDraft as EventListener,
@@ -160,7 +182,7 @@ export class DashboardCard extends LitElement {
   };
 
   private _syncLayout(config: CardConfig): void {
-    this._layoutRuntime.setLayout(createDefaultCardLayout(config));
+    this._layoutRuntime.setLayout(createDefaultStageDesign(config));
     this._syncRuntime();
   }
 

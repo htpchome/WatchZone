@@ -7,54 +7,66 @@ import {
 } from "lit";
 import { repeat } from "lit/directives/repeat.js";
 
+import { CameraSessionContext } from "../core/camera-session-context";
 import type {
   HomeAssistant,
   HomeAssistantApi,
   HomeAssistantEntity,
 } from "../core/home-assistant";
-import type {
-  LayoutContainerNode,
-  LayoutDocument,
-  LayoutModuleNode,
-  LayoutNode,
+import {
+  selectStageVariant,
+  validateStageDesign,
+  type StageComponentNode,
+  type StageDesignDocument,
+  type StageModuleNode,
+  type StagePlacement,
+  type StageSlotName,
+  type StageVariantName,
 } from "../core/layout";
-import { CameraSessionContext } from "../core/camera-session-context";
-import { validateLayoutDocument } from "../core/layout";
 import { englishLocalize, type LocalizeFunction } from "../core/localization";
 import type {
-  ModuleDefinition,
-  ModulePreparation,
-  ModuleRuntimeContext,
-} from "../core/module";
-import { moduleLoader, type ModuleLoader } from "./module-loader";
+  PlaceableDefinition,
+  PlaceablePreparation,
+  PlaceableRuntimeContext,
+} from "../core/placeable";
+import {
+  componentLoader,
+  moduleLoader,
+  type PlaceableLoader,
+} from "./placeable-loader";
 
-interface ModuleRecord {
+type PlaceableNode = StageModuleNode | StageComponentNode;
+
+interface PlaceableRecord {
   config?: unknown;
-  definition?: ModuleDefinition<unknown>;
+  definition?: PlaceableDefinition<unknown>;
   element?: HTMLElement;
   entityRefs: ReadonlyMap<string, HomeAssistantEntity | undefined>;
   error?: string;
   generation: number;
-  node: LayoutModuleNode;
-  preparation?: ModulePreparation;
+  node: PlaceableNode;
+  preparation?: PlaceablePreparation;
   reserveAspectRatio: boolean;
   status: "error" | "loading" | "ready";
 }
 
-/** Owns validated layout rendering, lazy module loading, and local failures. */
+/** Owns validated stage rendering, lazy placeable loading, and local failures. */
 export class LayoutRuntime implements ReactiveController {
   private _connected = false;
   private readonly _cameraSession = new CameraSessionContext();
-  private _context: ModuleRuntimeContext = {
+  private _context: PlaceableRuntimeContext = {
     cameraSession: this._cameraSession,
   };
-  private _layout?: LayoutDocument;
-  private _layoutError?: string;
-  private readonly _records = new Map<string, ModuleRecord>();
+  private _design?: StageDesignDocument;
+  private _designError?: string;
+  private _inlineSize = Number.POSITIVE_INFINITY;
+  private readonly _records = new Map<string, PlaceableRecord>();
+  private _variantName: StageVariantName = "default";
 
   public constructor(
     private readonly _host: ReactiveControllerHost,
-    private readonly _loader: ModuleLoader = moduleLoader,
+    private readonly _moduleLoader: PlaceableLoader = moduleLoader,
+    private readonly _componentLoader: PlaceableLoader = componentLoader,
   ) {
     _host.addController(this);
   }
@@ -62,19 +74,15 @@ export class LayoutRuntime implements ReactiveController {
   public hostConnected(): void {
     this._connected = true;
     for (const record of this._records.values()) {
-      if (record.status === "loading" && !record.definition) {
-        this._load(record);
-      } else if (record.status === "ready") {
-        this._updateRecord(record, true);
-      }
+      if (record.status === "loading" && !record.definition) this._load(record);
+      else if (record.status === "ready") this._updateRecord(record, true);
     }
   }
 
   public hostDisconnected(): void {
     this._connected = false;
-    for (const record of this._records.values()) {
+    for (const record of this._records.values())
       this._releasePreparation(record);
-    }
   }
 
   public hostUpdated(): void {
@@ -83,26 +91,34 @@ export class LayoutRuntime implements ReactiveController {
     }
   }
 
+  public setInlineSize(inlineSize: number): void {
+    if (!Number.isFinite(inlineSize) || inlineSize <= 0) return;
+    this._inlineSize = inlineSize;
+    const next = inlineSize <= 599 ? "phone" : "default";
+    if (next === this._variantName) return;
+    this._variantName = next;
+    this._syncActiveVariant();
+  }
+
   public setLayout(value: unknown): void {
-    let layout: LayoutDocument;
     try {
-      layout = validateLayoutDocument(value);
+      this._design = validateStageDesign(value);
+      this._designError = undefined;
+      this._variantName =
+        selectStageVariant(this._design, this._inlineSize) ===
+        this._design.variants.phone
+          ? "phone"
+          : "default";
+      this._syncActiveVariant();
     } catch (error) {
-      this._layout = undefined;
-      this._layoutError = messageFrom(
+      this._design = undefined;
+      this._designError = messageFrom(
         error,
         this._localize("layout.unable_to_load"),
       );
       this._removeMissingRecords(new Set());
       this._host.requestUpdate();
-      return;
     }
-    this._layout = layout;
-    this._layoutError = undefined;
-    const nodes = collectModuleNodes(layout.root);
-    this._removeMissingRecords(new Set(nodes.map(({ id }) => id)));
-    for (const node of nodes) this._syncNode(node);
-    this._host.requestUpdate();
   }
 
   public setRuntime(
@@ -112,12 +128,7 @@ export class LayoutRuntime implements ReactiveController {
   ): void {
     const transportChanged = this._context.api?.identity !== api?.identity;
     const localeChanged = this._context.localize !== localize;
-    this._context = {
-      api,
-      cameraSession: this._cameraSession,
-      hass,
-      localize,
-    };
+    this._context = { api, cameraSession: this._cameraSession, hass, localize };
     for (const record of this._records.values()) {
       if (record.status === "ready") {
         this._updateRecord(record, transportChanged || localeChanged);
@@ -126,54 +137,109 @@ export class LayoutRuntime implements ReactiveController {
   }
 
   public render() {
-    if (this._layoutError) {
+    if (this._designError) {
       return html`<div class="layout-error" role="alert">
-        ${this._layoutError}
+        ${this._designError}
       </div>`;
     }
-    if (!this._layout || this._layout.root.children.length === 0) {
+    const variant = this._activeVariant();
+    if (!variant || variant.root.children.length === 0) {
       return html`<div class="layout-empty">
         ${this._localize("layout.no_modules")}
       </div>`;
     }
-    return this._renderContainer(this._layout.root, true);
-  }
-
-  private _renderContainer(
-    node: LayoutContainerNode,
-    root = false,
-  ): TemplateResult {
+    const rows = Math.max(
+      1,
+      ...variant.root.children.map(({ grid }) => grid.row + grid.rowSpan - 1),
+    );
     return html`<div
-      class=${[
-        "layout-container",
-        root ? "layout-root" : "",
-        node.presentation === "overlay" ? "overlay" : "",
-        node.children.length === 1 ? "single-child" : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-      data-layout-node=${node.id}
+      class="stage-grid"
+      data-layout-node=${variant.root.id}
+      data-stage-variant=${this._variantName}
+      style=${`--wzc-stage-grid-columns:${variant.root.columns};--wzc-stage-grid-rows:${rows}`}
     >
       ${repeat(
-        node.children,
-        (child) => child.id,
-        (child) => this._renderNode(child),
+        variant.root.children,
+        ({ node }) => node.id,
+        (placement) => this._renderPlacement(placement),
       )}
     </div>`;
   }
 
-  private _renderNode(node: LayoutNode): TemplateResult | typeof nothing {
-    if (node.kind === "container") return this._renderContainer(node);
+  private _activeVariant() {
+    return this._design?.variants[this._variantName];
+  }
+
+  private _syncActiveVariant(): void {
+    const variant = this._activeVariant();
+    if (!variant) return;
+    const nodes = collectPlaceables(variant.root.children);
+    this._removeMissingRecords(new Set(nodes.map(({ id }) => id)));
+    for (const node of nodes) this._syncNode(node);
+    this._host.requestUpdate();
+  }
+
+  private _renderPlacement(
+    placement: StagePlacement,
+  ): TemplateResult | typeof nothing {
+    const { column, columnSpan, row, rowSpan } = placement.grid;
+    const placementStyle = `grid-column:${column}/span ${columnSpan};grid-row:${row}/span ${rowSpan}`;
+    const hasComponents = Object.values(placement.node.slots ?? {}).some(
+      (components) => components && components.length > 0,
+    );
+    return hasComponents
+      ? this._renderModule(placement.node, placementStyle)
+      : this._renderRecord(placement.node, "stage-placement", placementStyle);
+  }
+
+  private _renderModule(
+    node: StageModuleNode,
+    placementStyle: string,
+  ): TemplateResult {
+    const slotEntries = Object.entries(node.slots ?? {}) as Array<
+      [StageSlotName, readonly StageComponentNode[]]
+    >;
+    return html`<div
+      class="stage-placement module-composition has-components"
+      style=${placementStyle}
+    >
+      ${this._renderRecord(node)}
+      ${slotEntries.map(
+        ([name, components]) =>
+          html`<div
+            class=${`component-slot component-slot-${name}`}
+            data-stage-slot=${name}
+          >
+            ${repeat(
+              components,
+              ({ id }) => id,
+              (component) => this._renderRecord(component),
+            )}
+          </div>`,
+      )}
+    </div>`;
+  }
+
+  private _renderRecord(
+    node: PlaceableNode,
+    extraClass = "",
+    style?: string,
+  ): TemplateResult | typeof nothing {
     const record = this._records.get(node.id);
     if (!record) return nothing;
     const classes = [
-      "module-slot",
-      `module-${record.status}`,
+      node.kind === "module" ? "module-slot" : "component-node",
+      extraClass,
+      `placeable-${record.status}`,
       record.reserveAspectRatio ? "reserve-aspect-ratio" : "",
     ]
       .filter(Boolean)
       .join(" ");
-    return html`<div class=${classes} data-layout-node=${node.id}>
+    return html`<div
+      class=${classes}
+      data-layout-node=${node.id}
+      style=${style ?? nothing}
+    >
       ${
         record.status === "ready"
           ? record.element
@@ -191,9 +257,9 @@ export class LayoutRuntime implements ReactiveController {
     </div>`;
   }
 
-  private _syncNode(node: LayoutModuleNode): void {
+  private _syncNode(node: PlaceableNode): void {
     const existing = this._records.get(node.id);
-    if (existing && existing.node.moduleType === node.moduleType) {
+    if (existing && placeableType(existing.node) === placeableType(node)) {
       existing.node = node;
       if (existing.definition && existing.element) {
         try {
@@ -212,12 +278,13 @@ export class LayoutRuntime implements ReactiveController {
       return;
     }
     if (existing) this._removeRecord(existing);
-    const record: ModuleRecord = {
+    const loader = this._loaderFor(node);
+    const record: PlaceableRecord = {
       entityRefs: new Map(),
       generation: 0,
       node,
       reserveAspectRatio:
-        this._loader.getRegistration(node.moduleType)?.reserveAspectRatio ===
+        loader.getRegistration(placeableType(node))?.reserveAspectRatio ===
         true,
       status: "loading",
     };
@@ -225,13 +292,14 @@ export class LayoutRuntime implements ReactiveController {
     if (this._connected) this._load(record);
   }
 
-  private _load(record: ModuleRecord, retry = false): void {
+  private _load(record: PlaceableRecord, retry = false): void {
     record.status = "loading";
     record.error = undefined;
     const generation = ++record.generation;
+    const loader = this._loaderFor(record.node);
     const request = retry
-      ? this._loader.retry(record.node.moduleType)
-      : this._loader.load(record.node.moduleType);
+      ? loader.retry(placeableType(record.node))
+      : loader.load(placeableType(record.node));
     void request
       .then(async (definition) => {
         if (!this._isCurrent(record, generation)) return;
@@ -249,9 +317,7 @@ export class LayoutRuntime implements ReactiveController {
                 record.element?.isConnected
               ) {
                 preparation?.release();
-              } else {
-                record.preparation = preparation;
-              }
+              } else record.preparation = preparation;
             })
             .catch(() => undefined);
         }
@@ -274,7 +340,7 @@ export class LayoutRuntime implements ReactiveController {
       });
   }
 
-  private _retry(record: ModuleRecord): void {
+  private _retry(record: PlaceableRecord): void {
     this._releasePreparation(record);
     record.definition = undefined;
     record.element = undefined;
@@ -283,7 +349,11 @@ export class LayoutRuntime implements ReactiveController {
     this._host.requestUpdate();
   }
 
-  private _updateRecord(record: ModuleRecord, force: boolean): void {
+  private _loaderFor(node: PlaceableNode): PlaceableLoader {
+    return node.kind === "module" ? this._moduleLoader : this._componentLoader;
+  }
+
+  private _updateRecord(record: PlaceableRecord, force: boolean): void {
     const { definition, element, config } = record;
     if (!definition || !element || config === undefined) return;
     const ids = definition.getEntityIds(config);
@@ -303,18 +373,18 @@ export class LayoutRuntime implements ReactiveController {
     }
   }
 
-  private _removeRecord(record: ModuleRecord): void {
+  private _removeRecord(record: PlaceableRecord): void {
     record.generation += 1;
     this._releasePreparation(record);
     record.element?.remove();
   }
 
-  private _releasePreparation(record: ModuleRecord): void {
+  private _releasePreparation(record: PlaceableRecord): void {
     record.preparation?.release();
     record.preparation = undefined;
   }
 
-  private _isCurrent(record: ModuleRecord, generation: number): boolean {
+  private _isCurrent(record: PlaceableRecord, generation: number): boolean {
     return (
       record.generation === generation &&
       this._records.get(record.node.id) === record
@@ -326,9 +396,19 @@ export class LayoutRuntime implements ReactiveController {
   }
 }
 
-function collectModuleNodes(node: LayoutNode): LayoutModuleNode[] {
-  if (node.kind === "module") return [node];
-  return node.children.flatMap((child) => collectModuleNodes(child));
+function collectPlaceables(
+  placements: readonly StagePlacement[],
+): PlaceableNode[] {
+  return placements.flatMap(({ node }) => [
+    node,
+    ...Object.values(node.slots ?? {}).flatMap(
+      (components) => components ?? [],
+    ),
+  ]);
+}
+
+function placeableType(node: PlaceableNode): string {
+  return node.kind === "module" ? node.moduleType : node.componentType;
 }
 
 function sameEntityRefs(

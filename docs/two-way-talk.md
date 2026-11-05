@@ -5,9 +5,9 @@ boundaries. It supplements `architecture.md`, which remains authoritative.
 
 ## Ownership
 
-- Two-way talk is an independently placeable, lazily loaded frontend module.
-  The Stage Designer may eventually choose its placement and presentation.
-- The module consumes the card-scoped `CameraSessionContext`. It does not import
+- Two-way talk is an independently placeable, lazily loaded frontend component.
+  The Stage Designer may choose a compatible module slot and presentation.
+- The component consumes the card-scoped `CameraSessionContext`. It does not import
   the camera module, reach into its shadow tree, or own live playback.
 - Provider-neutral talk resolution lives behind `TalkSourceResolver`.
   Provider signaling and microphone transport live under
@@ -38,7 +38,7 @@ omits the option at its default `false` value.
 Future connection providers implement capability discovery and signaling in
 their own provider adapter. A future Frigate go2rtc connection may use the
 integration API directly; that behavior must not be added to the Home Assistant
-provider or the provider-neutral module.
+provider or the provider-neutral component.
 
 ## Signaling fallback
 
@@ -46,7 +46,7 @@ For an eligible Frigate camera, the backend first resolves the registered
 accelerated trickle-ICE provider capability. If that browser peer fails after
 using `frigate:trickle_ice`, the provider performs exactly one clean retry via
 Home Assistant's standard camera WebRTC contract. The failed peer is fully
-closed before retry. The module receives only the final success or failure and
+closed before retry. The component receives only the final success or failure and
 does not contain signaling-path conditions.
 
 ## Interaction and audio state
@@ -70,14 +70,14 @@ does not contain signaling-path conditions.
 ## Mandatory teardown
 
 The talk peer and every acquired microphone track are closed on explicit stop,
-active-camera change, camera disablement, module/card removal, editor/layout
+active-camera change, camera disablement, component/card removal, editor/layout
 replacement, document visibility loss, freeze, page hide, failed negotiation,
 or late completion after cancellation. Talk is never retained while the app is
 backgrounded. Teardown is idempotent and late async results close themselves.
 
 ## Validation
 
-Tests must cover opt-in configuration compaction, module composition, provider
+Tests must cover opt-in configuration compaction, component composition, provider
 fallback, cancellation, camera-switch teardown, microphone mute, and media
 track cleanup. Browser validation must include permission denial, backgrounding,
 live playback continuity, and both accelerated and standard signaling paths.

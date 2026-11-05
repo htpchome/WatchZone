@@ -15,10 +15,10 @@ vi.mock("../src/providers/ptz-source-resolver", () => ({
   },
 }));
 
-import type { PtzModule } from "../src/modules/ptz/ptz";
-import "../src/modules/ptz/ptz";
+import type { PtzComponent } from "../src/components/ptz/ptz";
+import "../src/components/ptz/ptz";
 
-describe("PTZ module", () => {
+describe("PTZ component", () => {
   afterEach(() => {
     document.body.replaceChildren();
     vi.clearAllMocks();
@@ -36,7 +36,7 @@ describe("PTZ module", () => {
     });
     resolver.start.mockResolvedValue(stopMotion);
     const context = new CameraSessionContext();
-    const element = document.createElement("wzc-ptz") as PtzModule;
+    const element = document.createElement("wzc-ptz") as PtzComponent;
     element.api = api();
     element.cameraSession = context;
     element.cameras = [

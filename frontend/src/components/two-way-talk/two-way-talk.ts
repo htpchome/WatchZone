@@ -25,7 +25,7 @@ const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
 const TALK_TOAST_KEY = "two-way-talk-status";
 
 /** User-placeable two-way-talk presentation over the active camera. */
-export class TwoWayTalkModule extends LitElement {
+export class TwoWayTalkComponent extends LitElement {
   public static properties = {
     api: { attribute: false },
     cameraSession: { attribute: false },
@@ -192,11 +192,11 @@ export class TwoWayTalkModule extends LitElement {
 }
 
 if (!customElements.get(TALK_TAG)) {
-  customElements.define(TALK_TAG, TwoWayTalkModule);
+  customElements.define(TALK_TAG, TwoWayTalkComponent);
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    [TALK_TAG]: TwoWayTalkModule;
+    [TALK_TAG]: TwoWayTalkComponent;
   }
 }

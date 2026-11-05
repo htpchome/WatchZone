@@ -40,6 +40,7 @@ from .extensions import (
 )
 from .features.camera_runtime import CameraRuntimeService
 from .features.hls_prewarm import HlsPrewarmService
+from .features.layouts import StageDesignStore
 from .features.live import LiveSignalingService
 from .features.ptz import PtzService
 from .providers.frigate import camera as frigate_camera
@@ -103,11 +104,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: WatchZoneConfigEntry) ->
     await camera_runtime.async_setup()
     hls_prewarm = HlsPrewarmService(hass)
     await hls_prewarm.async_setup(_prewarm_camera_ids(entry))
+    stage_designs = StageDesignStore(hass)
+    await stage_designs.async_setup()
     runtime = WatchZoneRuntime(
         entry_id=entry.entry_id,
         camera_runtime=camera_runtime,
         hls_prewarm=hls_prewarm,
         live_signaling=LiveSignalingService(hass, providers),
+        stage_designs=stage_designs,
         ptz=PtzService(hass, providers),
     )
     entry.runtime_data = runtime

@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from .features.camera_runtime import CameraRuntimeService
 from .features.hls_prewarm import HlsPrewarmService
+from .features.layouts import StageDesignStore
 from .features.live import LiveSignalingService
 from .features.ptz import PtzService
 
@@ -16,6 +17,7 @@ class WatchZoneRuntime:
     camera_runtime: CameraRuntimeService
     hls_prewarm: HlsPrewarmService
     live_signaling: LiveSignalingService
+    stage_designs: StageDesignStore
     ptz: PtzService
 
     async def async_close(self) -> None:

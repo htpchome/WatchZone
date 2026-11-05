@@ -15,7 +15,7 @@ vi.mock("../src/providers/talk-source-resolver", () => ({
   },
 }));
 
-import { TalkSessionController } from "../src/modules/two-way-talk/session.controller";
+import { TalkSessionController } from "../src/components/two-way-talk/session.controller";
 
 describe("two-way-talk session lifecycle", () => {
   afterEach(() => vi.clearAllMocks());
