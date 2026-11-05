@@ -28,6 +28,7 @@ export class TalkSessionController implements ReactiveController {
   private _enabledCameraIds = new Set<string>();
   private _microphoneMuted = false;
   private _supported = false;
+  private _talkAudioCamera?: ActiveCameraSession;
   private _unsubscribeCamera?: () => void;
   private readonly _resolver = new TalkSourceResolver();
 
@@ -129,7 +130,8 @@ export class TalkSessionController implements ReactiveController {
         return;
       }
       this._connection = connection;
-      if (camera.muted) camera.setMuted(false);
+      this._talkAudioCamera = camera;
+      camera.setTalkAudioActive(true);
       this._callbacks.onConnected(connection);
     } catch (error) {
       if (!abort.signal.aborted) this._callbacks.onFailed(error);
@@ -145,6 +147,7 @@ export class TalkSessionController implements ReactiveController {
     this._abort = undefined;
     this._connection?.close();
     this._connection = undefined;
+    this._releaseTalkAudio();
     this._microphoneMuted = false;
     if (hadSession) this._callbacks.onStopped();
     this._host.requestUpdate();
@@ -203,10 +206,16 @@ export class TalkSessionController implements ReactiveController {
     if (this._camera?.entityId !== entityId || !this._connection) return;
     this._connection.close();
     this._connection = undefined;
+    this._releaseTalkAudio();
     this._microphoneMuted = false;
     this._callbacks.onFailed(error);
     this._host.requestUpdate();
   }
 
   private readonly _handleBackground = (): void => this.stop();
+
+  private _releaseTalkAudio(): void {
+    this._talkAudioCamera?.setTalkAudioActive(false);
+    this._talkAudioCamera = undefined;
+  }
 }

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { HomeAssistantApi } from "../src/core/home-assistant";
+import { CameraSessionContext } from "../src/core/camera-session-context";
 import {
   type ConnectionFactory,
   getMediaSessionManager,
@@ -519,6 +520,84 @@ describe("camera presentation retention", () => {
       ).toBe(hlsVideo),
     );
     expect(hlsVideo.muted).toBe(false);
+  });
+
+  it("temporarily unmutes an explicit mute for talk without changing preference", async () => {
+    const { api, hlsVideo } = installHlsSession();
+    const context = new CameraSessionContext();
+    const view = createLiveView(api, true);
+    view.cameraSession = context;
+    document.body.append(view);
+    await vi.waitFor(() =>
+      expect(
+        presentation(view)?.shadowRoot?.querySelector(".hls-host video"),
+      ).toBe(hlsVideo),
+    );
+    expect(hlsVideo.muted).toBe(false);
+    toggleMute(view);
+    expect(hlsVideo.muted).toBe(true);
+    expect(
+      getMediaSessionManager().getCameraMutePreference("camera.front"),
+    ).toBe("muted");
+
+    context.session?.setTalkAudioActive(true);
+    await vi.waitFor(() => expect(hlsVideo.muted).toBe(false));
+    expect(
+      getMediaSessionManager().getCameraMutePreference("camera.front"),
+    ).toBe("muted");
+
+    context.session?.setTalkAudioActive(false);
+    expect(hlsVideo.muted).toBe(true);
+    expect(
+      getMediaSessionManager().getCameraMutePreference("camera.front"),
+    ).toBe("muted");
+  });
+
+  it("restores an explicit unmuted preference after talk ends", async () => {
+    const { api, hlsVideo } = installHlsSession();
+    const context = new CameraSessionContext();
+    const view = createLiveView(api);
+    view.cameraSession = context;
+    document.body.append(view);
+    await vi.waitFor(() =>
+      expect(
+        presentation(view)?.shadowRoot?.querySelector(".hls-host video"),
+      ).toBe(hlsVideo),
+    );
+    toggleMute(view);
+    await vi.waitFor(() => expect(hlsVideo.muted).toBe(false));
+
+    context.session?.setTalkAudioActive(true);
+    context.session?.setTalkAudioActive(false);
+
+    expect(hlsVideo.muted).toBe(false);
+    expect(
+      getMediaSessionManager().getCameraMutePreference("camera.front"),
+    ).toBe("unmuted");
+  });
+
+  it("keeps a user mute made during talk over an auto-unmuted default", async () => {
+    const { api, hlsVideo } = installHlsSession();
+    const context = new CameraSessionContext();
+    const view = createLiveView(api, true);
+    view.cameraSession = context;
+    document.body.append(view);
+    await vi.waitFor(() =>
+      expect(
+        presentation(view)?.shadowRoot?.querySelector(".hls-host video"),
+      ).toBe(hlsVideo),
+    );
+    expect(hlsVideo.muted).toBe(false);
+
+    context.session?.setTalkAudioActive(true);
+    context.session?.setMuted(true);
+    expect(hlsVideo.muted).toBe(true);
+
+    context.session?.setTalkAudioActive(false);
+    expect(hlsVideo.muted).toBe(true);
+    expect(
+      getMediaSessionManager().getCameraMutePreference("camera.front"),
+    ).toBe("muted");
   });
 
   it("temporarily mutes a hidden document without changing user intent", async () => {

@@ -7,6 +7,7 @@ export interface ActiveCameraSession {
   holdOverlay(): () => void;
   revealOverlay(): void;
   setMuted(muted: boolean): void;
+  setTalkAudioActive(active: boolean): void;
 }
 
 export type ActiveCameraSessionListener = (

@@ -56,9 +56,13 @@ does not contain signaling-path conditions.
 - Starting talk requests microphone permission and connects with the outgoing
   microphone live. While startup is pending, the same microphone control shows
   progress and cancels the attempt. Active talk controls remain visible.
-- A successful talk connection explicitly unmutes the active camera through
-  the existing camera audio intent. Cancellation and failure do not change its
-  mute state.
+- A successful talk connection activates a temporary audible-playback override
+  through the existing camera audio manager. It does not replace the user's
+  stored mute preference. Ending or failing talk removes only that override and
+  restores the current user preference. An explicit mute or unmute while talk
+  is active cancels the override and remains authoritative after talk ends.
+  Cancellation before connection does not change audio state. Configured
+  auto-unmute is an initial default only and never overwrites user intent.
 - The center control disconnects talk. The small microphone control disables
   only the outgoing audio track and keeps the peer alive.
 - The speaker control dispatches the active camera's typed mute intent. It uses

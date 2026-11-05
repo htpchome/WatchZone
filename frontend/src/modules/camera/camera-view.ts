@@ -247,6 +247,7 @@ export class CameraView extends LitElement {
       holdOverlay: () => this._presentation?.holdOverlay() ?? (() => undefined),
       revealOverlay: () => this._presentation?.revealOverlay(),
       setMuted: (muted) => this._audio.setUserMuted(muted),
+      setTalkAudioActive: (active) => this._audio.setTalkAudioActive(active),
     });
   }
 

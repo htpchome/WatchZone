@@ -116,7 +116,7 @@ describe("two-way-talk session lifecycle", () => {
     expect(callbacks.onStopped).toHaveBeenCalledOnce();
   });
 
-  it("unmutes the active camera only after talk connects", async () => {
+  it("activates temporary camera audio only while talk is connected", async () => {
     resolver.supports.mockResolvedValue(true);
     resolver.connect.mockResolvedValue({
       close: vi.fn(),
@@ -134,11 +134,14 @@ describe("two-way-talk session lifecycle", () => {
     cameraContext.publish({}, activeCamera);
     await vi.waitFor(() => expect(controller.supported).toBe(true));
 
-    expect(activeCamera.setMuted).not.toHaveBeenCalled();
+    expect(activeCamera.setTalkAudioActive).not.toHaveBeenCalled();
     await controller.start();
 
-    expect(activeCamera.setMuted).toHaveBeenCalledOnce();
-    expect(activeCamera.setMuted).toHaveBeenCalledWith(false);
+    expect(activeCamera.setTalkAudioActive).toHaveBeenCalledWith(true);
+
+    controller.stop();
+
+    expect(activeCamera.setTalkAudioActive).toHaveBeenLastCalledWith(false);
   });
 });
 
@@ -158,6 +161,7 @@ function camera(entityId: string) {
     holdOverlay: vi.fn(() => vi.fn()),
     revealOverlay: vi.fn(),
     setMuted: vi.fn(),
+    setTalkAudioActive: vi.fn(),
   };
 }
 

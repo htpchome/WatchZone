@@ -144,6 +144,7 @@ function camera(entityId: string, releaseOverlay = vi.fn()) {
     overlayVisible: true,
     revealOverlay: vi.fn(),
     setMuted: vi.fn(),
+    setTalkAudioActive: vi.fn(),
   };
 }
 

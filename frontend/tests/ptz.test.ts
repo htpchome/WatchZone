@@ -77,6 +77,7 @@ function cameraSession() {
     overlayVisible: true,
     revealOverlay: vi.fn(),
     setMuted: vi.fn(),
+    setTalkAudioActive: vi.fn(),
   };
 }
 

@@ -39,6 +39,8 @@ export class CameraAudioController implements ReactiveController {
   private _muted = true;
   private _startUnmutedPcTablet = false;
   private _startUnmutedPhone = false;
+  private _talkAudioActive = false;
+  private _talkUnmuteOverride = false;
   private readonly _deviceProfile: DeviceProfileController;
 
   public constructor(
@@ -77,6 +79,8 @@ export class CameraAudioController implements ReactiveController {
     document.removeEventListener("resume", this._handleResume);
     window.removeEventListener("pagehide", this._handlePageHide);
     window.removeEventListener("pageshow", this._handlePageShow);
+    this._talkAudioActive = false;
+    this._talkUnmuteOverride = false;
     this.handleActiveVideoChanged(undefined);
   }
 
@@ -88,6 +92,10 @@ export class CameraAudioController implements ReactiveController {
     presentationActive = true,
   ): void {
     const sourceChanged = this._entityId !== entityId;
+    if (sourceChanged) {
+      this._talkAudioActive = false;
+      this._talkUnmuteOverride = false;
+    }
     this._entityId = entityId;
     this._startUnmutedPcTablet = startUnmutedPcTablet;
     this._startUnmutedPhone = startUnmutedPhone;
@@ -124,6 +132,7 @@ export class CameraAudioController implements ReactiveController {
 
   public setUserMuted(muted: boolean): void {
     this._callbacks.dismissToast(AUTOPLAY_WARNING_KEY);
+    if (this._talkAudioActive) this._talkUnmuteOverride = false;
     this._desiredMuted = muted;
     this._autoplayBlocked = false;
     if (this._entityId) {
@@ -133,6 +142,17 @@ export class CameraAudioController implements ReactiveController {
       );
     }
     this._syncEffectiveMute(!this._desiredMuted);
+  }
+
+  public setTalkAudioActive(active: boolean): void {
+    if (this._talkAudioActive === active) return;
+    this._talkAudioActive = active;
+    this._talkUnmuteOverride = active;
+    if (active) {
+      this._callbacks.dismissToast(AUTOPLAY_WARNING_KEY);
+      this._autoplayBlocked = false;
+    }
+    this._syncEffectiveMute(active);
   }
 
   private _syncPreference(): void {
@@ -155,7 +175,7 @@ export class CameraAudioController implements ReactiveController {
 
   private _syncEffectiveMute(attemptPlayback: boolean): void {
     const muted =
-      this._desiredMuted ||
+      (this._talkUnmuteOverride ? false : this._desiredMuted) ||
       this._autoplayBlocked ||
       this._forcedMuteReasons.size > 0;
     const changed = muted !== this._muted;

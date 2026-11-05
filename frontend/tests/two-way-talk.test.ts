@@ -51,6 +51,7 @@ function cameraSession(overlayVisible: boolean) {
     holdOverlay: vi.fn(() => vi.fn()),
     revealOverlay: vi.fn(),
     setMuted: vi.fn(),
+    setTalkAudioActive: vi.fn(),
   };
 }
 
