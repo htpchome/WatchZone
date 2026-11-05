@@ -30,6 +30,11 @@ export class SortableTile extends LitElement {
   public static properties = {
     dragging: { reflect: true, type: Boolean },
     settling: { reflect: true, type: Boolean },
+    settleLifted: {
+      attribute: "settle-lifted",
+      reflect: true,
+      type: Boolean,
+    },
     dropTarget: {
       attribute: "drop-target",
       reflect: true,
@@ -41,6 +46,7 @@ export class SortableTile extends LitElement {
 
   public dragging = false;
   public settling = false;
+  public settleLifted = false;
   public dropTarget = false;
   public itemKey = "";
   public localize: LocalizeFunction = englishLocalize;
@@ -59,6 +65,7 @@ export class SortableTile extends LitElement {
     this._settleAnimation = undefined;
     this.dragging = false;
     this.settling = false;
+    this.settleLifted = false;
     this._pointerId = undefined;
     this._pointerStartY = 0;
     this._offset = 0;
@@ -73,30 +80,26 @@ export class SortableTile extends LitElement {
   public prepareSettle(lifted: boolean): void {
     this.releasePointer();
     this.dragging = false;
-    this.settling = lifted;
+    this.settling = true;
+    this.settleLifted = lifted;
     this._offset = 0;
     this.requestUpdate();
   }
 
-  public async settleFrom(
-    previousRect: DOMRect,
-    lifted: boolean,
-  ): Promise<void> {
+  public async settleFrom(previousRect: DOMRect): Promise<void> {
     await this.updateComplete;
     const tile = this.renderRoot.querySelector<HTMLElement>(".tile");
     if (!tile) {
       this.settling = false;
+      this.settleLifted = false;
       return;
     }
     const deltaY = previousRect.top - tile.getBoundingClientRect().top;
-    if (
-      Math.abs(deltaY) < 0.5 ||
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    ) {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       this.settling = false;
+      this.settleLifted = false;
       return;
     }
-    this.settling = lifted;
     const animation = tile.animate(
       [
         { transform: `translateY(${deltaY}px)` },
@@ -116,6 +119,7 @@ export class SortableTile extends LitElement {
     if (this._settleAnimation !== animation) return;
     this._settleAnimation = undefined;
     this.settling = false;
+    this.settleLifted = false;
   }
 
   public setDisplacement(offset: number): void {
@@ -166,6 +170,7 @@ export class SortableTile extends LitElement {
     this._settleAnimation?.cancel();
     this._settleAnimation = undefined;
     this.settling = false;
+    this.settleLifted = false;
     this._pointerId = event.pointerId;
     this._pointerStartY = event.clientY;
     this.dragging = true;
@@ -408,7 +413,7 @@ export class SortableList extends LitElement {
       items.map(async (item) => {
         const previousRect = previousRects.get(item.itemKey);
         if (!previousRect) return;
-        await item.settleFrom(previousRect, item.itemKey === draggedKey);
+        await item.settleFrom(previousRect);
       }),
     );
   }

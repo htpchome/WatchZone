@@ -47,6 +47,10 @@ export const sortableTileStyles = css`
   }
 
   :host([settling]) .tile {
+    transition: none;
+  }
+
+  :host([settle-lifted]) .tile {
     opacity: 0.9;
     box-shadow: var(--wzc-shadow-medium);
   }

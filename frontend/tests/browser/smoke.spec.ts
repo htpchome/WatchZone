@@ -840,7 +840,11 @@ test("editor camera drag handles reorder the configured cameras", async ({
     editor.id = "sortable-editor";
     editor.setConfig({
       type: "custom:watchzone-card",
-      cameras: [{ entity_id: "camera.first" }, { entity_id: "camera.second" }],
+      cameras: [
+        { entity_id: "camera.first" },
+        { entity_id: "camera.second" },
+        { entity_id: "camera.third" },
+      ],
     });
     document.body.append(editor);
     await editor.updateComplete;
@@ -849,39 +853,83 @@ test("editor camera drag handles reorder the configured cameras", async ({
   const editor = page.locator("#sortable-editor");
   await editor.locator("wzc-accordion-item").first().locator("summary").click();
   const tiles = editor.locator("wzc-sortable-tile");
-  const firstHandle = tiles.nth(0).locator(".handle");
+  const thirdTile = tiles.nth(2);
+  const thirdHandle = thirdTile.locator(".handle");
   const firstTile = tiles.nth(0);
-  const secondTile = tiles.nth(1);
-  const start = await firstHandle.boundingBox();
-  const target = await secondTile.boundingBox();
+  const start = await thirdHandle.boundingBox();
+  const target = await firstTile.boundingBox();
   expect(start).not.toBeNull();
   expect(target).not.toBeNull();
   if (!start || !target) return;
 
-  await firstTile.evaluate((element) => {
+  await thirdTile.evaluate((element) => {
     const observer = new MutationObserver(() => {
-      if (!element.hasAttribute("settling")) return;
+      if (!element.hasAttribute("settle-lifted")) return;
       element.dataset.sawSettle = "true";
+      const tile = element.shadowRoot?.querySelector(".tile");
+      if (tile instanceof HTMLElement) {
+        element.dataset.settleTransitionDuration =
+          getComputedStyle(tile).transitionDuration;
+      }
       observer.disconnect();
     });
     observer.observe(element, {
-      attributeFilter: ["settling"],
+      attributeFilter: ["settle-lifted"],
       attributes: true,
     });
+
+    const handle = element.shadowRoot?.querySelector(".handle");
+    handle?.addEventListener(
+      "pointerup",
+      () => {
+        const positions: number[] = [];
+        const startedAt = performance.now();
+        const sample = (): void => {
+          positions.push(element.getBoundingClientRect().top);
+          if (performance.now() - startedAt < 300) {
+            requestAnimationFrame(sample);
+            return;
+          }
+          element.dataset.settlePositions = JSON.stringify(positions);
+        };
+        requestAnimationFrame(sample);
+      },
+      { once: true },
+    );
   });
 
   await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
   await page.mouse.down();
   await page.mouse.move(
     target.x + target.width / 2,
-    target.y + target.height * 0.75,
-    { steps: 8 },
+    target.y + target.height * 0.25,
+    { steps: 12 },
   );
   await page.mouse.up();
 
-  await expect(tiles.nth(0)).toHaveAttribute("item-key", "camera.second");
+  await expect(tiles.nth(0)).toHaveAttribute("item-key", "camera.third");
   await expect(tiles.nth(1)).toHaveAttribute("item-key", "camera.first");
-  await expect(tiles.nth(1)).toHaveAttribute("data-saw-settle", "true");
+  await expect(tiles.nth(2)).toHaveAttribute("item-key", "camera.second");
+  const movedTile = editor.locator(
+    'wzc-sortable-tile[item-key="camera.third"]',
+  );
+  await expect(movedTile).toHaveAttribute("data-saw-settle", "true");
+  await expect(movedTile).toHaveAttribute(
+    "data-settle-transition-duration",
+    /^0s(?:, 0s)*$/,
+  );
+  await expect(movedTile).toHaveAttribute("data-settle-positions", /\[/);
+  const positions = await movedTile.evaluate((element) =>
+    JSON.parse(element.dataset.settlePositions ?? "[]"),
+  );
+  expect(positions.length).toBeGreaterThan(4);
+  const finalPosition = positions.at(-1) ?? 0;
+  let previousDistance = Number.POSITIVE_INFINITY;
+  for (const position of positions) {
+    const distance = Math.abs(position - finalPosition);
+    expect(distance).toBeLessThanOrEqual(previousDistance + 1.5);
+    previousDistance = distance;
+  }
 });
 
 test("round-trips boolean toggles through defaults before Save", async ({
