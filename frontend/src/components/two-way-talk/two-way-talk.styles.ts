@@ -53,35 +53,15 @@ export const twoWayTalkStyles = css`
     pointer-events: none;
   }
 
-  button {
-    display: grid;
-    position: relative;
+  .talk-controls button {
     z-index: 1;
-    place-items: center;
-    box-sizing: border-box;
-    inline-size: var(--wzc-camera-control-size);
-    block-size: var(--wzc-camera-control-size);
-    padding: 0.55rem;
-    color: inherit;
-    background: transparent;
-    border: 0;
-    border-radius: 50%;
-    cursor: pointer;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
   }
 
   button.center {
     transform: scale(1.18);
     color: var(--wzc-media-overlay-surface);
-    background: var(--wzc-talk-connected-color);
+    background-color: var(--wzc-talk-connected-color);
     box-shadow: 0 0 0 2px var(--wzc-talk-panel-border-color);
-  }
-
-  button.inactive {
-    color: var(--wzc-media-overlay-color);
-    background: var(--wzc-media-overlay-background);
-    border: 1px solid var(--wzc-media-overlay-border-color);
   }
 
   button.inactive.connecting::after {
@@ -102,18 +82,6 @@ export const twoWayTalkStyles = css`
     }
   }
 
-  button:focus-visible {
-    outline: 2px solid var(--wzc-color-primary);
-    outline-offset: 2px;
-  }
-
-  button svg {
-    display: block;
-    inline-size: 100%;
-    block-size: 100%;
-    pointer-events: none;
-  }
-
   .inactive-control {
     pointer-events: auto;
     opacity: 0;
@@ -127,29 +95,6 @@ export const twoWayTalkStyles = css`
   .talk-toast {
     inline-size: min(22rem, calc(100cqi - 2rem));
     pointer-events: none;
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    button:hover {
-      background: var(--wzc-media-overlay-hover-background);
-    }
-  }
-
-  @media (hover: none) {
-    button:hover,
-    button:active {
-      background: transparent;
-    }
-
-    button.center:hover,
-    button.center:active {
-      background: var(--wzc-talk-connected-color);
-    }
-
-    button.inactive:hover,
-    button.inactive:active {
-      background: var(--wzc-media-overlay-background);
-    }
   }
 
   @media (prefers-reduced-motion: reduce) {

@@ -9,6 +9,7 @@ import {
   CAMERA_CAROUSEL_NAVIGATION_MIN_SIZE_PX,
   CAMERA_OVERLAY_HIDE_DELAY_MS,
 } from "../../src/modules/camera/constants";
+import { installHaSelectorFixture } from "./ha-selector.fixture";
 
 const packageJson = JSON.parse(
   readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
@@ -338,6 +339,20 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
   await expect(lightButton).toBeVisible();
   await expect(lightButton).toHaveAttribute("title", "Turn off Porch");
   await expect(lightButton).toHaveAttribute("aria-label", "Turn off Porch");
+  const roundTreatment = async (locator: typeof lightButton) =>
+    locator.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        backgroundColor: style.backgroundColor,
+        backgroundImage: style.backgroundImage,
+        borderRadius: style.borderRadius,
+        boxShadow: style.boxShadow,
+      };
+    });
+  const lightTreatment = await roundTreatment(lightButton);
+  expect(await roundTreatment(talkButton)).toEqual(lightTreatment);
+  expect(lightTreatment.backgroundImage).toContain("radial-gradient");
+  expect(lightTreatment.boxShadow).not.toBe("none");
 
   const cameraBox = await camera.boundingBox();
   const talkHostBox = await talk.boundingBox();
@@ -392,12 +407,20 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
   await page.mouse.up();
   const dimmer = lights.locator(".dimmer-panel");
   await expect(dimmer).toBeVisible();
-  const slider = dimmer.locator('input[type="range"]');
+  const slider = dimmer.locator("ha-control-slider");
   await slider.evaluate((element) => {
-    const input = element as HTMLInputElement;
-    input.value = "70";
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    input.dispatchEvent(new Event("change", { bubbles: true }));
+    element.dispatchEvent(
+      new CustomEvent("slider-moved", {
+        bubbles: true,
+        detail: { value: 70 },
+      }),
+    );
+    element.dispatchEvent(
+      new CustomEvent("value-changed", {
+        bubbles: true,
+        detail: { value: 70 },
+      }),
+    );
   });
   await expect
     .poll(() =>
@@ -892,6 +915,7 @@ test("camera editor configures lights and confirms accessible removal", async ({
 }) => {
   await page.goto("/");
   await waitForWatchZoneDefinition(page);
+  await installHaSelectorFixture(page);
   await page.evaluate(async () => {
     const constructor = customElements.get(
       "watchzone-card",
@@ -905,6 +929,33 @@ test("camera editor configures lights and confirms accessible removal", async ({
     };
     const editor = await constructor.getConfigElement();
     editor.id = "camera-config-editor";
+    (
+      editor as typeof editor & {
+        hass: unknown;
+      }
+    ).hass = {
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "streaming",
+          attributes: { friendly_name: "Front" },
+        },
+        "light.driveway": {
+          entity_id: "light.driveway",
+          state: "off",
+          attributes: { friendly_name: "Driveway" },
+        },
+        "light.porch": {
+          entity_id: "light.porch",
+          state: "on",
+          attributes: { friendly_name: "Porch" },
+        },
+      },
+      connection: { subscribeMessage: async () => () => undefined },
+      callService: async () => undefined,
+      callWS: async () => ({ supported: false }),
+      hassUrl: (path: string) => path,
+    };
     editor.setConfig({
       type: "custom:watchzone-card",
       cameras: [{ entity_id: "camera.front" }],
@@ -915,7 +966,7 @@ test("camera editor configures lights and confirms accessible removal", async ({
 
   const editor = page.locator("#camera-config-editor");
   await editor.locator("wzc-accordion-item").first().locator("summary").click();
-  await editor.locator('[aria-label="Edit camera: front"]').click();
+  await editor.locator('[aria-label="Edit camera: Front"]').click();
 
   const items = editor.locator(".camera-dialog-accordion > wzc-accordion-item");
   await expect(items).toHaveCount(5);
@@ -935,15 +986,24 @@ test("camera editor configures lights and confirms accessible removal", async ({
 
   await items.nth(3).locator("summary").click();
   await editor.locator(".add-light").click();
-  await editor.locator(".add-light-form ha-selector").evaluate((element) => {
-    element.dispatchEvent(
-      new CustomEvent("value-changed", {
-        bubbles: true,
-        composed: true,
-        detail: { value: "light.porch" },
-      }),
-    );
-  });
+  const lightSelector = editor.locator(".add-light-form ha-selector");
+  await lightSelector.getByRole("button", { name: "Choose Light" }).click();
+  await expect(
+    lightSelector.getByRole("option", { name: "Front" }),
+  ).toHaveCount(0);
+  await lightSelector.getByRole("option", { name: "Porch" }).click();
+  await expect(
+    lightSelector.getByRole("button", { name: "Porch" }),
+  ).toBeVisible();
+  await expect
+    .poll(() =>
+      editor
+        .locator('.add-light-form ha-button[variant="brand"]')
+        .evaluate((element) =>
+          Boolean((element as HTMLElement & { disabled?: boolean }).disabled),
+        ),
+    )
+    .toBe(false);
   await editor.locator('.add-light-form ha-button[variant="brand"]').click();
   await expect(editor.locator(".linked-light-row")).toHaveCount(1);
   await expect(editor.locator(".remove-light")).toHaveAttribute(

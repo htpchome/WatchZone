@@ -37,6 +37,7 @@ describe("WatchZone card configuration", () => {
       {
         entity_id: "camera.front",
         light_entity_ids: [],
+        light_icons: {},
         low_latency_hls: false,
         ptz_enabled: false,
         start_live_unmuted_pc_tablet: true,
@@ -74,6 +75,17 @@ describe("WatchZone card configuration", () => {
         ],
       }).cameras[0]?.light_entity_ids,
     ).toEqual(["light.porch", "light.driveway"]);
+    expect(
+      normalizeCardConfig({
+        cameras: [
+          {
+            entity_id: "camera.front",
+            light_entity_ids: ["light.porch"],
+            light_icons: { "light.porch": "mdi:coach-lamp" },
+          },
+        ],
+      }).cameras[0]?.light_icons,
+    ).toEqual({ "light.porch": "mdi:coach-lamp" });
     expect(() =>
       normalizeCardConfig({
         cameras: [

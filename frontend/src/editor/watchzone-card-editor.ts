@@ -31,6 +31,7 @@ import {
   type HomeAssistant,
 } from "../core/home-assistant";
 import { LocalizationController } from "../core/localization";
+import { DEFAULT_LIGHT_ICON, normalizeLightIcon } from "../core/light-icons";
 import { toYamlCardConfig, type YamlCardConfig } from "../core/yaml-config";
 import { TalkSourceResolver } from "../providers/talk-source-resolver";
 import { PtzSourceResolver } from "../providers/ptz-source-resolver";
@@ -74,6 +75,7 @@ const CAMERA_SELECTOR = {
 const LIGHT_SELECTOR = {
   entity: { filter: { domain: "light" } },
 } as const;
+const ICON_SELECTOR = { icon: {} } as const;
 const BOOLEAN_SELECTOR = { boolean: {} } as const;
 
 const accordionTag = unsafeStatic(ACCORDION_TAG);
@@ -93,7 +95,7 @@ type BooleanConfigFlag =
 
 type CameraBooleanConfigFlag = Exclude<
   keyof CameraConfig,
-  "entity_id" | "light_entity_ids" | "title"
+  "entity_id" | "light_entity_ids" | "light_icons" | "title"
 >;
 
 export class CardEditor extends LitElement {
@@ -108,6 +110,7 @@ export class CardEditor extends LitElement {
   private _cameraTitleInput = "";
   private _addingLight = false;
   private _pendingLightEntityId = "";
+  private _pendingLightIcon = DEFAULT_LIGHT_ICON;
   private _pendingRemoveCameraIndex?: number;
   private _talkCapability?: boolean;
   private _talkCapabilityGeneration = 0;
@@ -418,6 +421,7 @@ export class CardEditor extends LitElement {
                         <ha-input
                           label=${this._t("editor.camera_title")}
                           maxlength=${String(MAX_CAMERA_TITLE_LENGTH)}
+                          .placeholder=${this._cameraName(camera.entity_id)}
                           .value=${this._cameraTitleInput}
                           @input=${this._handleCameraTitleInput}
                         ></ha-input>
@@ -603,11 +607,21 @@ export class CardEditor extends LitElement {
       ${camera.light_entity_ids.map((entityId, index) => {
         const name = this._entityName(entityId);
         return html`<div class="linked-light-row">
-          <span>${renderIcon("lightbulb")}</span>
+          <ha-icon .icon=${camera.light_icons[entityId]}></ha-icon>
           <span class="linked-light-copy">
             <strong>${name}</strong>
             <small>${entityId}</small>
           </span>
+          <ha-selector
+            class="linked-light-icon"
+            data-light-index=${String(index)}
+            label=${this._t("editor.icon")}
+            .hass=${this._hass}
+            .selector=${ICON_SELECTOR}
+            .value=${camera.light_icons[entityId]}
+            .required=${true}
+            @value-changed=${this._handleConfiguredLightIconChange}
+          ></ha-selector>
           <button
             class="remove-light"
             type="button"
@@ -630,6 +644,14 @@ export class CardEditor extends LitElement {
                 .value=${this._pendingLightEntityId}
                 .required=${true}
                 @value-changed=${this._handleLightEntityChange}
+              ></ha-selector>
+              <ha-selector
+                label=${this._t("editor.icon")}
+                .hass=${this._hass}
+                .selector=${ICON_SELECTOR}
+                .value=${this._pendingLightIcon}
+                .required=${true}
+                @value-changed=${this._handlePendingLightIconChange}
               ></ha-selector>
               <div class="add-light-actions">
                 <ha-button
@@ -798,15 +820,43 @@ export class CardEditor extends LitElement {
     this.requestUpdate();
   };
 
+  private readonly _handlePendingLightIconChange = (
+    event: ValueChangedEvent,
+  ): void => {
+    this._pendingLightIcon = normalizeLightIcon(event.detail.value);
+    this.requestUpdate();
+  };
+
+  private readonly _handleConfiguredLightIconChange = (
+    event: ValueChangedEvent,
+  ): void => {
+    if (!this._cameraDraft) return;
+    const index = Number(
+      (event.currentTarget as HTMLElement).dataset.lightIndex,
+    );
+    const entityId = this._cameraDraft.light_entity_ids[index];
+    if (!entityId) return;
+    this._cameraDraft = {
+      ...this._cameraDraft,
+      light_icons: {
+        ...this._cameraDraft.light_icons,
+        [entityId]: normalizeLightIcon(event.detail.value),
+      },
+    };
+    this.requestUpdate();
+  };
+
   private readonly _startAddingLight = (): void => {
     this._addingLight = true;
     this._pendingLightEntityId = "";
+    this._pendingLightIcon = DEFAULT_LIGHT_ICON;
     this.requestUpdate();
   };
 
   private readonly _cancelAddingLight = (): void => {
     this._addingLight = false;
     this._pendingLightEntityId = "";
+    this._pendingLightIcon = DEFAULT_LIGHT_ICON;
     this.requestUpdate();
   };
 
@@ -827,6 +877,10 @@ export class CardEditor extends LitElement {
         ...this._cameraDraft.light_entity_ids,
         this._pendingLightEntityId,
       ],
+      light_icons: {
+        ...this._cameraDraft.light_icons,
+        [this._pendingLightEntityId]: this._pendingLightIcon,
+      },
     };
     this._cancelAddingLight();
   };
@@ -836,10 +890,17 @@ export class CardEditor extends LitElement {
     const index = Number(
       (event.currentTarget as HTMLElement).dataset.lightIndex,
     );
-    if (!this._cameraDraft.light_entity_ids[index]) return;
+    const removedId = this._cameraDraft.light_entity_ids[index];
+    if (!removedId) return;
     const ids = [...this._cameraDraft.light_entity_ids];
     ids.splice(index, 1);
-    this._cameraDraft = { ...this._cameraDraft, light_entity_ids: ids };
+    const icons = { ...this._cameraDraft.light_icons };
+    delete icons[removedId];
+    this._cameraDraft = {
+      ...this._cameraDraft,
+      light_entity_ids: ids,
+      light_icons: icons,
+    };
     this.requestUpdate();
   };
 
@@ -865,7 +926,7 @@ export class CardEditor extends LitElement {
     if (!camera) return;
     this._editingCameraIndex = index;
     this._cameraBaseline = camera;
-    this._cameraDraft = { ...camera };
+    this._cameraDraft = { ...camera, light_icons: { ...camera.light_icons } };
     this._cameraTitleInput = camera.title;
     this._cancelAddingLight();
     this._checkTalkCapability(camera.entity_id);
@@ -1201,12 +1262,24 @@ function cameraConfigEquals(left: CameraConfig, right: CameraConfig): boolean {
   return (
     left.entity_id === right.entity_id &&
     arraysEqual(left.light_entity_ids, right.light_entity_ids) &&
+    recordsEqual(left.light_icons, right.light_icons) &&
     left.low_latency_hls === right.low_latency_hls &&
     left.ptz_enabled === right.ptz_enabled &&
     left.start_live_unmuted_pc_tablet === right.start_live_unmuted_pc_tablet &&
     left.start_live_unmuted_phone === right.start_live_unmuted_phone &&
     left.title === right.title &&
     left.two_way_talk_enabled === right.two_way_talk_enabled
+  );
+}
+
+function recordsEqual(
+  left: Readonly<Record<string, string>>,
+  right: Readonly<Record<string, string>>,
+): boolean {
+  const leftEntries = Object.entries(left);
+  return (
+    leftEntries.length === Object.keys(right).length &&
+    leftEntries.every(([key, value]) => right[key] === value)
   );
 }
 

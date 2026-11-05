@@ -14,6 +14,7 @@ import {
   type LocalizeFunction,
 } from "../../core/localization";
 import { renderIcon } from "../../ui/icons";
+import { roundControlStyles } from "../../ui/round-control.styles";
 import { ToastManager } from "../../ui/toast-manager";
 import "../../ui/toast-region";
 import type { TalkConnection } from "../../providers/talk-source-resolver";
@@ -79,6 +80,7 @@ export class TwoWayTalkComponent extends LitElement {
               >
                 <canvas aria-hidden="true"></canvas>
                 <button
+                  class="wzc-round-control"
                   type="button"
                   aria-label=${
                     this._session.microphoneMuted
@@ -94,7 +96,7 @@ export class TwoWayTalkComponent extends LitElement {
                   )}
                 </button>
                 <button
-                  class="center"
+                  class="wzc-round-control center"
                   type="button"
                   aria-label=${this.localize("talk.disconnect")}
                   @click=${this._stop}
@@ -102,6 +104,7 @@ export class TwoWayTalkComponent extends LitElement {
                   ${renderIcon("microphone")}
                 </button>
                 <button
+                  class="wzc-round-control"
                   type="button"
                   aria-label=${
                     camera.muted
@@ -117,7 +120,11 @@ export class TwoWayTalkComponent extends LitElement {
                 class=${visible ? "inactive-control visible" : "inactive-control"}
               >
                 <button
-                  class=${connecting ? "inactive connecting" : "inactive"}
+                  class=${
+                    connecting
+                      ? "wzc-round-control inactive connecting"
+                      : "wzc-round-control inactive"
+                  }
                   type="button"
                   aria-busy=${connecting ? "true" : "false"}
                   aria-label=${
@@ -188,7 +195,7 @@ export class TwoWayTalkComponent extends LitElement {
     if (camera) camera.setMuted(!camera.muted);
   };
 
-  static styles = twoWayTalkStyles;
+  static styles = [roundControlStyles, twoWayTalkStyles];
 }
 
 if (!customElements.get(TALK_TAG)) {

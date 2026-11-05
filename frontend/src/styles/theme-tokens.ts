@@ -193,11 +193,7 @@ export const themeTokens = css`
     --wzc-carousel-navigation-control-gap: 0.75rem;
     --wzc-talk-connected-color: var(--ha-color-green-50, #34d399);
     --wzc-talk-connecting-color: var(--ha-color-blue-50, #3b82f6);
-    --wzc-talk-panel-background: color-mix(
-      in srgb,
-      var(--wzc-media-overlay-surface) 80%,
-      transparent
-    );
+    --wzc-talk-panel-background: var(--wzc-media-overlay-background);
     --wzc-talk-panel-border-color: var(--ha-color-purple-50, #a78bfa);
     --wzc-talk-wave-incoming-color: var(--ha-color-blue-40, #60a5fa);
     --wzc-talk-wave-outgoing-color: var(--ha-color-purple-40, #c084fc);
@@ -206,21 +202,14 @@ export const themeTokens = css`
     --wzc-ptz-inline-gap: 1rem;
     --wzc-ptz-panel-padding: 0.18rem;
     --wzc-ptz-safe-block: 0.5rem;
-    --wzc-ptz-panel-background: color-mix(
-      in srgb,
-      var(--wzc-media-overlay-surface) var(--wzc-media-overlay-opacity),
-      transparent
-    );
+    --wzc-ptz-panel-background: var(--wzc-media-overlay-background);
     --wzc-light-control-gap: 0.5rem;
     --wzc-light-microphone-offset: 1.875rem;
-    --wzc-light-fill-color: var(--ha-color-amber-50, #fbbf24);
-    --wzc-light-panel-background: color-mix(
-      in srgb,
-      var(--wzc-media-overlay-surface) 90%,
-      transparent
-    );
+    --wzc-light-fill-color: var(--wzc-color-primary);
+    --wzc-light-panel-background: var(--wzc-media-overlay-background);
     --wzc-light-panel-inline-size: clamp(6.5rem, 24cqi, 8rem);
-    --wzc-light-power-active-color: var(--ha-color-amber-40, #fcd34d);
+    --wzc-light-power-active-color: var(--wzc-color-primary);
+    --wzc-light-slider-color: var(--wzc-color-primary);
     --wzc-light-transition-duration: 160ms;
 
     --wzc-accordion-background: var(--wzc-color-background);

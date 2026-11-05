@@ -214,7 +214,7 @@ export const cardEditorStyles = css`
 
   .linked-light-row {
     display: grid;
-    grid-template-columns: 1.5rem minmax(0, 1fr) auto;
+    grid-template-columns: 1.5rem minmax(0, 1fr) minmax(7rem, 0.8fr) auto;
     align-items: center;
     gap: 0.55rem;
     min-block-size: 2.75rem;
@@ -224,13 +224,13 @@ export const cardEditorStyles = css`
     border-radius: var(--wzc-radius-medium);
   }
 
-  .linked-light-row > span:first-child,
+  .linked-light-row > ha-icon,
   .add-light svg {
     display: grid;
     color: var(--wzc-color-primary);
   }
 
-  .linked-light-row svg,
+  .linked-light-row ha-icon,
   .add-light svg {
     inline-size: 1.25rem;
     block-size: 1.25rem;
@@ -257,6 +257,10 @@ export const cardEditorStyles = css`
   .remove-light {
     inline-size: 2rem;
     block-size: 2rem;
+  }
+
+  .linked-light-icon {
+    min-inline-size: 0;
   }
 
   .add-light {

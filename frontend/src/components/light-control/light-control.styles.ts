@@ -42,32 +42,13 @@ export const lightControlStyles = css`
     pointer-events: auto;
   }
 
-  button {
-    position: relative;
-    display: grid;
-    place-items: center;
-    box-sizing: border-box;
-    padding: 0;
-    color: var(--wzc-media-overlay-color);
-    background: var(--wzc-media-overlay-background);
-    border: 1px solid var(--wzc-media-overlay-border-color);
-    cursor: pointer;
-    touch-action: none;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-  }
-
   .light-button {
-    isolation: isolate;
-    inline-size: var(--wzc-camera-control-size);
-    block-size: var(--wzc-camera-control-size);
-    overflow: hidden;
-    border-radius: 50%;
+    touch-action: none;
   }
 
   .light-button::before {
     position: absolute;
-    z-index: -1;
+    z-index: 0;
     inset-inline: 0;
     inset-block-end: 0;
     block-size: var(--wzc-light-level);
@@ -76,32 +57,30 @@ export const lightControlStyles = css`
     transition: block-size var(--wzc-light-transition-duration) ease;
   }
 
-  .light-button svg,
-  .power-button svg,
-  .close-dimmer svg {
-    display: block;
-    inline-size: 1.35rem;
-    block-size: 1.35rem;
-    pointer-events: none;
+  .light-button.on {
+    color: var(--wzc-media-overlay-surface);
   }
 
-  .light-button:disabled,
-  .power-button:disabled {
-    cursor: not-allowed;
-    opacity: 0.55;
+  .light-button ha-icon,
+  .power-button svg {
+    inline-size: 1.35rem;
+    block-size: 1.35rem;
   }
 
   .dimmer-panel {
     display: grid;
     grid-template:
-      "name close" auto
-      "slider slider" auto
-      "power power" auto /
-      minmax(0, 1fr) auto;
+      "name" auto
+      "value" auto
+      "slider" minmax(7rem, 1fr)
+      "power" auto /
+      minmax(0, 1fr);
     justify-items: center;
+    gap: 0.35rem;
     box-sizing: border-box;
     inline-size: var(--wzc-light-panel-inline-size);
-    padding: 0.65rem;
+    min-block-size: 13rem;
+    padding: 0.7rem;
     color: var(--wzc-media-overlay-color);
     background: var(--wzc-light-panel-background);
     border: 1px solid var(--wzc-media-overlay-border-color);
@@ -112,7 +91,7 @@ export const lightControlStyles = css`
 
   .dimmer-name {
     grid-area: name;
-    justify-self: start;
+    justify-self: center;
     overflow: hidden;
     max-inline-size: 100%;
     font-size: var(--wzc-font-size-small);
@@ -121,41 +100,36 @@ export const lightControlStyles = css`
     white-space: nowrap;
   }
 
-  input[type="range"] {
+  .brightness-value {
+    grid-area: value;
+    color: var(--wzc-color-primary);
+    font-size: var(--wzc-font-size-small);
+    font-weight: var(--wzc-font-weight-semibold);
+  }
+
+  ha-control-slider {
     grid-area: slider;
-    inline-size: clamp(5rem, 20cqi, 8rem);
-    block-size: 2rem;
-    margin: 0.4rem;
-    accent-color: var(--wzc-light-fill-color);
+    inline-size: 3.25rem;
+    block-size: 100%;
+    min-block-size: 7rem;
+    --control-slider-color: var(--wzc-light-slider-color);
+    --control-slider-background: var(--wzc-media-overlay-border-color);
     cursor: pointer;
-    direction: rtl;
     touch-action: none;
-    writing-mode: vertical-lr;
   }
 
   .power-button {
     grid-area: power;
     inline-size: 2.5rem;
     block-size: 2.5rem;
-    margin-block-start: 0.35rem;
-    border-radius: 50%;
+    margin-block-start: 0.2rem;
   }
 
   .power-button.on {
     color: var(--wzc-light-power-active-color);
   }
 
-  .close-dimmer {
-    grid-area: close;
-    inline-size: 2rem;
-    block-size: 2rem;
-    background: transparent;
-    border: 0;
-    border-radius: 50%;
-  }
-
-  button:focus-visible,
-  input[type="range"]:focus-visible {
+  ha-control-slider:focus-visible {
     outline: 2px solid var(--wzc-color-primary);
     outline-offset: 2px;
   }
@@ -169,19 +143,6 @@ export const lightControlStyles = css`
     );
     margin-inline: auto;
     inline-size: min(22rem, calc(100% - 2rem));
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    button:hover:not(:disabled) {
-      background-color: var(--wzc-media-overlay-hover-background);
-    }
-  }
-
-  @media (hover: none) {
-    button:hover,
-    button:active {
-      background-color: var(--wzc-media-overlay-background);
-    }
   }
 
   @media (prefers-reduced-motion: reduce) {

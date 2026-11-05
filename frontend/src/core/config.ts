@@ -6,10 +6,12 @@ import {
   MAX_CAMERAS,
   MAX_LIGHTS_PER_CAMERA,
 } from "./constants";
+import { DEFAULT_LIGHT_ICON, normalizeLightIcon } from "./light-icons";
 
 export interface CameraConfig {
   readonly entity_id: string;
   readonly light_entity_ids: readonly string[];
+  readonly light_icons: Readonly<Record<string, string>>;
   readonly low_latency_hls: boolean;
   readonly ptz_enabled: boolean;
   readonly start_live_unmuted_pc_tablet: boolean;
@@ -94,6 +96,7 @@ export function createDefaultCameraConfig(entityId = ""): CameraConfig {
   return {
     entity_id: entityId,
     light_entity_ids: [],
+    light_icons: {},
     low_latency_hls: true,
     ptz_enabled: false,
     start_live_unmuted_pc_tablet: false,
@@ -172,6 +175,7 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
   }
   const defaults = createDefaultCameraConfig(source.entity_id.trim());
   const lightEntityIds = normalizeLightEntityIds(source, index);
+  const lightIcons = normalizeLightIcons(source, lightEntityIds, index);
   for (const key of [
     "low_latency_hls",
     "ptz_enabled",
@@ -199,6 +203,7 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
   return {
     entity_id: defaults.entity_id,
     light_entity_ids: lightEntityIds,
+    light_icons: lightIcons,
     low_latency_hls:
       typeof source.low_latency_hls === "boolean"
         ? source.low_latency_hls
@@ -212,6 +217,34 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
         : defaults.title,
     two_way_talk_enabled: source.two_way_talk_enabled === true,
   };
+}
+
+function normalizeLightIcons(
+  source: Readonly<Record<string, unknown>>,
+  entityIds: readonly string[],
+  cameraIndex: number,
+): Readonly<Record<string, string>> {
+  if (source.light_icons === undefined) {
+    return Object.fromEntries(
+      entityIds.map((entityId) => [entityId, DEFAULT_LIGHT_ICON]),
+    );
+  }
+  if (
+    typeof source.light_icons !== "object" ||
+    source.light_icons === null ||
+    Array.isArray(source.light_icons)
+  ) {
+    throw new Error(
+      `${APP_NAME} camera ${cameraIndex + 1} light icons must be an object.`,
+    );
+  }
+  const configured = source.light_icons as Readonly<Record<string, unknown>>;
+  return Object.fromEntries(
+    entityIds.map((entityId) => [
+      entityId,
+      normalizeLightIcon(configured[entityId]),
+    ]),
+  );
 }
 
 function normalizeLightEntityIds(

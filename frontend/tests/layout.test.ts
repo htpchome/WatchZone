@@ -166,11 +166,25 @@ describe("layout composition", () => {
         cameras: [
           {
             cameraEntityId: "camera.front",
-            lightEntityIds: ["light.porch", "light.driveway"],
+            lights: [
+              {
+                entityId: "light.porch",
+                icon: "mdi:lightbulb-off-outline",
+              },
+              {
+                entityId: "light.driveway",
+                icon: "mdi:lightbulb-off-outline",
+              },
+            ],
           },
           {
             cameraEntityId: "camera.back",
-            lightEntityIds: ["light.yard"],
+            lights: [
+              {
+                entityId: "light.yard",
+                icon: "mdi:lightbulb-off-outline",
+              },
+            ],
           },
         ],
       },

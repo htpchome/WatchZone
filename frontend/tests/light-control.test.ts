@@ -8,6 +8,7 @@ import type { LightControlComponent } from "../src/components/light-control/ligh
 import { CameraSessionContext } from "../src/core/camera-session-context";
 import { LIGHT_LONG_PRESS_MS, LIGHT_TAG } from "../src/core/constants";
 import type { HomeAssistant } from "../src/core/home-assistant";
+import { DEFAULT_LIGHT_ICON } from "../src/core/light-icons";
 import "../src/components/light-control/light-control";
 
 describe("linked-light component", () => {
@@ -26,7 +27,10 @@ describe("linked-light component", () => {
         cameras: [
           {
             cameraEntityId: "camera.front",
-            lightEntityIds: ["light.porch", "light.driveway"],
+            lights: [
+              { entityId: "light.porch", icon: DEFAULT_LIGHT_ICON },
+              { entityId: "light.driveway", icon: DEFAULT_LIGHT_ICON },
+            ],
           },
         ],
       }),
@@ -34,7 +38,10 @@ describe("linked-light component", () => {
       cameras: [
         {
           cameraEntityId: "camera.front",
-          lightEntityIds: ["light.porch", "light.driveway"],
+          lights: [
+            { entityId: "light.porch", icon: DEFAULT_LIGHT_ICON },
+            { entityId: "light.driveway", icon: DEFAULT_LIGHT_ICON },
+          ],
         },
       ],
     });
@@ -43,7 +50,9 @@ describe("linked-light component", () => {
         cameras: [
           {
             cameraEntityId: "camera.front",
-            lightEntityIds: ["light.one", "light.two", "light.three"],
+            lights: ["light.one", "light.two", "light.three"].map(
+              (entityId) => ({ entityId, icon: DEFAULT_LIGHT_ICON }),
+            ),
           },
         ],
       }),
@@ -84,12 +93,19 @@ describe("linked-light component", () => {
     expect(callService).not.toHaveBeenCalled();
     const panel = element.shadowRoot?.querySelector(".dimmer-panel");
     expect(panel?.getAttribute("role")).toBe("dialog");
-    const slider = panel?.querySelector(
-      'input[type="range"]',
-    ) as HTMLInputElement;
-    slider.value = "72";
-    slider.dispatchEvent(new Event("input", { bubbles: true }));
-    slider.dispatchEvent(new Event("change", { bubbles: true }));
+    const slider = panel?.querySelector("ha-control-slider") as HTMLElement;
+    slider.dispatchEvent(
+      new CustomEvent("slider-moved", {
+        bubbles: true,
+        detail: { value: 72 },
+      }),
+    );
+    slider.dispatchEvent(
+      new CustomEvent("value-changed", {
+        bubbles: true,
+        detail: { value: 72 },
+      }),
+    );
     expect(callService).toHaveBeenCalledWith(
       "light",
       "turn_on",
@@ -138,7 +154,10 @@ function cameraLights(
 ): LightControlComponentConfig["cameras"] {
   return Object.entries(cameras).map(([cameraEntityId, lightEntityIds]) => ({
     cameraEntityId,
-    lightEntityIds,
+    lights: lightEntityIds.map((entityId) => ({
+      entityId,
+      icon: DEFAULT_LIGHT_ICON,
+    })),
   }));
 }
 
