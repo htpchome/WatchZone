@@ -168,7 +168,9 @@ describe("watchzone-card-editor", () => {
       editor.shadowRoot?.querySelector(".character-count")?.textContent?.trim(),
     ).toBe("24/24");
     (
-      editor.shadowRoot?.querySelector(".camera-dialog-primary") as HTMLElement
+      editor.shadowRoot?.querySelector(
+        'ha-button[variant="brand"]',
+      ) as HTMLElement
     ).click();
     await editor.updateComplete;
 
@@ -210,7 +212,9 @@ describe("watchzone-card-editor", () => {
     expect(dialog.textContent).toContain(
       "Are you sure you want to remove “front” from this card?",
     );
-    (dialog.querySelector(".remove-camera-cancel") as HTMLElement).click();
+    (
+      dialog.querySelector('ha-button[variant="neutral"]') as HTMLElement
+    ).click();
     await editor.updateComplete;
     expect(dialog.open).toBe(false);
     expect(changed).not.toHaveBeenCalled();
@@ -225,48 +229,6 @@ describe("watchzone-card-editor", () => {
     expect(changed.mock.calls[0][0].detail.config.cameras).toEqual([
       { entity_id: "camera.back" },
     ]);
-  });
-
-  it("uses Home Assistant camera-dialog actions and an accessible icon close control", async () => {
-    const editor = document.createElement(
-      "watchzone-card-editor",
-    ) as CardEditor;
-    editor.setConfig({
-      type: CARD_TYPE,
-      cameras: [{ entity_id: "camera.front" }],
-    });
-    document.body.append(editor);
-    await editor.updateComplete;
-
-    (
-      editor.shadowRoot?.querySelector(
-        '[aria-label="Edit camera: front"]',
-      ) as HTMLElement
-    ).click();
-    await editor.updateComplete;
-
-    const dialog = editor.shadowRoot?.querySelector(
-      ".camera-editor-dialog",
-    ) as HTMLDialogElement;
-    const close = dialog.querySelector(".dialog-close") as HTMLElement & {
-      label?: string;
-    };
-    const cancel = dialog.querySelector(".camera-dialog-cancel");
-    const primary = dialog.querySelector(".camera-dialog-primary");
-
-    expect(close.tagName).toBe("HA-ICON-BUTTON");
-    expect(close.label).toBe("Close camera editor");
-    expect(close.querySelector("svg")).not.toBeNull();
-    expect(cancel?.getAttribute("appearance")).toBe("filled");
-    expect(cancel?.getAttribute("variant")).toBe("brand");
-    expect(cancel?.getAttribute("size")).toBe("m");
-    expect(primary?.getAttribute("appearance")).toBe("accent");
-    expect(primary?.getAttribute("variant")).toBe("brand");
-    expect(primary?.getAttribute("size")).toBe("m");
-
-    close.click();
-    await editor.updateComplete;
-    expect(dialog.open).toBe(false);
   });
 
   it("adds, cancels, limits, and removes linked Home Assistant lights", async () => {
@@ -369,7 +331,9 @@ describe("watchzone-card-editor", () => {
     )?.click();
     await editor.updateComplete;
     (
-      editor.shadowRoot?.querySelector(".camera-dialog-primary") as HTMLElement
+      editor.shadowRoot?.querySelector(
+        '.camera-editor-dialog ha-button[variant="brand"][size="m"]',
+      ) as HTMLElement
     ).click();
     await editor.updateComplete;
 
@@ -864,7 +828,7 @@ describe("watchzone-card-editor", () => {
     ).click();
     await editor.updateComplete;
     const update = editor.shadowRoot?.querySelector(
-      ".camera-dialog-primary",
+      'ha-button[variant="brand"]',
     ) as HTMLElement & { disabled: boolean };
     expect(update.disabled).toBe(true);
 

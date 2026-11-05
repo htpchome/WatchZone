@@ -1,6 +1,5 @@
 import type { CameraConfig, CardConfig } from "./config";
 import { CARD_TYPE, DEFAULT_CARD_TITLE } from "./constants";
-import { DEFAULT_LIGHT_ICON } from "./light-icons";
 
 export interface YamlCardConfig {
   readonly type: typeof CARD_TYPE;
@@ -33,12 +32,6 @@ function compactCameraConfig(camera: CameraConfig): Record<string, unknown> {
   const compact: Record<string, unknown> = { entity_id: camera.entity_id };
   if (camera.light_entity_ids.length)
     compact.light_entity_ids = camera.light_entity_ids;
-  const customIcons = Object.fromEntries(
-    Object.entries(camera.light_icons).filter(
-      ([, icon]) => icon !== DEFAULT_LIGHT_ICON,
-    ),
-  );
-  if (Object.keys(customIcons).length) compact.light_icons = customIcons;
   if (!camera.low_latency_hls) compact.low_latency_hls = false;
   if (camera.ptz_enabled) compact.ptz_enabled = true;
   if (camera.start_live_unmuted_pc_tablet)

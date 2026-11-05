@@ -70,7 +70,7 @@ export const cameraControlsStyles = css`
       color: var(--wzc-control-hover-color, var(--wzc-media-overlay-color));
       background: var(
         --wzc-control-hover-background,
-        var(--wzc-camera-control-hover-background)
+        var(--wzc-media-overlay-hover-background)
       );
     }
   }

@@ -3,9 +3,7 @@
 ## Ownership
 
 - Each camera configuration may reference at most two existing Home Assistant
-  light entity IDs and an icon for each light. WatchZone does not create or
-  duplicate light entities. The default bulb icon has distinct on/off states;
-  a custom icon without a state pair is identical in both states.
+  light entity IDs. WatchZone does not create or duplicate light entities.
 - The light control is an independently placeable, lazily loaded Stage
   component. The built-in Stage places it in the camera module's overlay slot;
   the component does not import the camera module or another component.
@@ -17,14 +15,10 @@
 - A short pointer, touch, Enter, or Space activation toggles the light.
 - Holding a light control opens its brightness panel. Arrow Up provides an
   immediate keyboard path to the same panel.
-- The brightness panel contains Home Assistant's vertical slider, a visible
-  percentage, and an explicit on/off control. It closes when the user clicks
-  outside it or presses Escape. While open it holds the camera overlay visible.
+- The brightness panel contains a native range control, an explicit on/off
+  control, and a close control. While open it holds the camera overlay visible.
 - The circular light button fills from bottom to top using the reported or
-  pending brightness percentage and the primary theme color. An off light has
-  no fill.
-- Round overlay controls share one visual treatment, and overlay control/panel
-  transparency derives from the single media-overlay opacity token.
+  pending brightness percentage. An off light has no fill.
 - Every icon-only action has a localized accessible name and matching title.
 
 ## Home Assistant boundary

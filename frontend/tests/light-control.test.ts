@@ -8,7 +8,6 @@ import type { LightControlComponent } from "../src/components/light-control/ligh
 import { CameraSessionContext } from "../src/core/camera-session-context";
 import { LIGHT_LONG_PRESS_MS, LIGHT_TAG } from "../src/core/constants";
 import type { HomeAssistant } from "../src/core/home-assistant";
-import { DEFAULT_LIGHT_ICON } from "../src/core/light-icons";
 import "../src/components/light-control/light-control";
 
 describe("linked-light component", () => {
@@ -27,10 +26,7 @@ describe("linked-light component", () => {
         cameras: [
           {
             cameraEntityId: "camera.front",
-            lights: [
-              { entityId: "light.porch", icon: DEFAULT_LIGHT_ICON },
-              { entityId: "light.driveway", icon: DEFAULT_LIGHT_ICON },
-            ],
+            lightEntityIds: ["light.porch", "light.driveway"],
           },
         ],
       }),
@@ -38,10 +34,7 @@ describe("linked-light component", () => {
       cameras: [
         {
           cameraEntityId: "camera.front",
-          lights: [
-            { entityId: "light.porch", icon: DEFAULT_LIGHT_ICON },
-            { entityId: "light.driveway", icon: DEFAULT_LIGHT_ICON },
-          ],
+          lightEntityIds: ["light.porch", "light.driveway"],
         },
       ],
     });
@@ -50,9 +43,7 @@ describe("linked-light component", () => {
         cameras: [
           {
             cameraEntityId: "camera.front",
-            lights: ["light.one", "light.two", "light.three"].map(
-              (entityId) => ({ entityId, icon: DEFAULT_LIGHT_ICON }),
-            ),
+            lightEntityIds: ["light.one", "light.two", "light.three"],
           },
         ],
       }),
@@ -93,19 +84,12 @@ describe("linked-light component", () => {
     expect(callService).not.toHaveBeenCalled();
     const panel = element.shadowRoot?.querySelector(".dimmer-panel");
     expect(panel?.getAttribute("role")).toBe("dialog");
-    const slider = panel?.querySelector("ha-control-slider") as HTMLElement;
-    slider.dispatchEvent(
-      new CustomEvent("slider-moved", {
-        bubbles: true,
-        detail: { value: 72 },
-      }),
-    );
-    slider.dispatchEvent(
-      new CustomEvent("value-changed", {
-        bubbles: true,
-        detail: { value: 72 },
-      }),
-    );
+    const slider = panel?.querySelector(
+      'input[type="range"]',
+    ) as HTMLInputElement;
+    slider.value = "72";
+    slider.dispatchEvent(new Event("input", { bubbles: true }));
+    slider.dispatchEvent(new Event("change", { bubbles: true }));
     expect(callService).toHaveBeenCalledWith(
       "light",
       "turn_on",
@@ -147,40 +131,6 @@ describe("linked-light component", () => {
     await vi.advanceTimersByTimeAsync(LIGHT_LONG_PRESS_MS);
     expect(callService).not.toHaveBeenCalled();
   });
-
-  it("holds the shared overlay for pointer and keyboard interaction", async () => {
-    const release = vi.fn();
-    const holdOverlay = vi.fn(() => release);
-    const context = new CameraSessionContext();
-    const element = document.createElement(LIGHT_TAG) as LightControlComponent;
-    element.cameraSession = context;
-    element.cameras = cameraLights({ "camera.front": ["light.porch"] });
-    element.hass = createHass(vi.fn(async () => undefined));
-    document.body.append(element);
-    context.publish(
-      {},
-      {
-        ...activeCamera("camera.front"),
-        holdOverlay,
-      },
-    );
-    await element.updateComplete;
-
-    const group = element.shadowRoot?.querySelector(".light-buttons");
-    group?.dispatchEvent(new Event("pointerenter"));
-    expect(holdOverlay).toHaveBeenCalledOnce();
-    group?.dispatchEvent(new FocusEvent("focusin"));
-    expect(holdOverlay).toHaveBeenCalledOnce();
-    group?.dispatchEvent(new Event("pointerleave"));
-    expect(release).not.toHaveBeenCalled();
-    group?.dispatchEvent(new FocusEvent("focusout"));
-    expect(release).toHaveBeenCalledOnce();
-
-    group?.dispatchEvent(new Event("pointerenter"));
-    expect(holdOverlay).toHaveBeenCalledTimes(2);
-    group?.dispatchEvent(new Event("pointerleave"));
-    expect(release).toHaveBeenCalledTimes(2);
-  });
 });
 
 function cameraLights(
@@ -188,10 +138,7 @@ function cameraLights(
 ): LightControlComponentConfig["cameras"] {
   return Object.entries(cameras).map(([cameraEntityId, lightEntityIds]) => ({
     cameraEntityId,
-    lights: lightEntityIds.map((entityId) => ({
-      entityId,
-      icon: DEFAULT_LIGHT_ICON,
-    })),
+    lightEntityIds,
   }));
 }
 

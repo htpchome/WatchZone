@@ -9,7 +9,6 @@ import {
   CAMERA_CAROUSEL_NAVIGATION_MIN_SIZE_PX,
   CAMERA_OVERLAY_HIDE_DELAY_MS,
 } from "../../src/modules/camera/constants";
-import { installHaSelectorFixture } from "./ha-selector.fixture";
 
 const packageJson = JSON.parse(
   readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
@@ -258,7 +257,6 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
       hass: unknown;
       setConfig(config: unknown): void;
     };
-    card.style.setProperty("--primary-color", "#03a9f4");
     const connection = {
       subscribeMessage: async () => () => undefined,
     };
@@ -340,87 +338,6 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
   await expect(lightButton).toBeVisible();
   await expect(lightButton).toHaveAttribute("title", "Turn off Porch");
   await expect(lightButton).toHaveAttribute("aria-label", "Turn off Porch");
-  const roundTreatment = async (locator: typeof lightButton) =>
-    locator.evaluate((element) => {
-      const style = getComputedStyle(element);
-      return {
-        backgroundColor: style.backgroundColor,
-        borderRadius: style.borderRadius,
-        boxShadow: style.boxShadow,
-        color: style.color,
-      };
-    });
-  const lightTreatment = await roundTreatment(lightButton);
-  expect(await roundTreatment(talkButton)).toEqual(lightTreatment);
-  expect(lightTreatment.color).toBe("rgb(230, 230, 230)");
-  expect(lightTreatment.boxShadow).not.toBe("none");
-  expect(
-    await lightButton.evaluate((element) => {
-      const layer = getComputedStyle(element, "::after");
-      return {
-        borderRadius: layer.borderRadius,
-        content: layer.content,
-        transform: layer.transform,
-      };
-    }),
-  ).toEqual({
-    borderRadius: "50%",
-    content: '""',
-    transform: "matrix(0, 0, 0, 0, 0, 0)",
-  });
-  await lightButton.hover();
-  await expect
-    .poll(() =>
-      lightButton.evaluate(
-        (element) => getComputedStyle(element, "::after").transform,
-      ),
-    )
-    .toBe("matrix(1, 0, 0, 1, 0, 0)");
-  await talkButton.hover();
-  await expect
-    .poll(() =>
-      talkButton.evaluate((element) => {
-        const layer = getComputedStyle(element, "::after");
-        return {
-          backgroundColor: layer.backgroundColor,
-          transform: layer.transform,
-        };
-      }),
-    )
-    .toEqual({
-      backgroundColor: "rgb(3, 169, 244)",
-      transform: "matrix(1, 0, 0, 1, 0, 0)",
-    });
-
-  for (const control of [talkButton, lightButton, ptzControl]) {
-    await control.hover();
-    await page.waitForTimeout(CAMERA_OVERLAY_HIDE_DELAY_MS + 100);
-    await expect(talkButton).toBeVisible();
-    await expect(lightButton).toBeVisible();
-    await expect(ptzControl).toBeVisible();
-  }
-
-  await page.evaluate(() => {
-    Object.defineProperty(navigator, "mediaDevices", {
-      configurable: true,
-      value: {
-        getUserMedia: () => new Promise<MediaStream>(() => undefined),
-      },
-    });
-  });
-  await talkButton.click();
-  const connectingIndicator = talk.locator(".connecting-indicator");
-  await expect(connectingIndicator).toBeVisible();
-  await talkButton.hover();
-  const connectingLayers = await talkButton.evaluate((element) => ({
-    hover: Number(getComputedStyle(element, "::after").zIndex),
-    spinner: Number(
-      getComputedStyle(
-        element.querySelector(".connecting-indicator") as Element,
-      ).zIndex,
-    ),
-  }));
-  expect(connectingLayers.spinner).toBeGreaterThan(connectingLayers.hover);
 
   const cameraBox = await camera.boundingBox();
   const talkHostBox = await talk.boundingBox();
@@ -475,20 +392,12 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
   await page.mouse.up();
   const dimmer = lights.locator(".dimmer-panel");
   await expect(dimmer).toBeVisible();
-  const slider = dimmer.locator("ha-control-slider");
+  const slider = dimmer.locator('input[type="range"]');
   await slider.evaluate((element) => {
-    element.dispatchEvent(
-      new CustomEvent("slider-moved", {
-        bubbles: true,
-        detail: { value: 70 },
-      }),
-    );
-    element.dispatchEvent(
-      new CustomEvent("value-changed", {
-        bubbles: true,
-        detail: { value: 70 },
-      }),
-    );
+    const input = element as HTMLInputElement;
+    input.value = "70";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
   });
   await expect
     .poll(() =>
@@ -781,7 +690,7 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
     background: "rgb(40, 50, 60)",
     borderRadius: "18px",
     missingTokens: [],
-    overlayHoverOpacity: "22%",
+    overlayHoverOpacity: "84%",
     overlayOpacity: "72%",
     textColor: "rgb(10, 20, 30)",
   });
@@ -983,7 +892,6 @@ test("camera editor configures lights and confirms accessible removal", async ({
 }) => {
   await page.goto("/");
   await waitForWatchZoneDefinition(page);
-  await installHaSelectorFixture(page);
   await page.evaluate(async () => {
     const constructor = customElements.get(
       "watchzone-card",
@@ -997,33 +905,6 @@ test("camera editor configures lights and confirms accessible removal", async ({
     };
     const editor = await constructor.getConfigElement();
     editor.id = "camera-config-editor";
-    (
-      editor as typeof editor & {
-        hass: unknown;
-      }
-    ).hass = {
-      states: {
-        "camera.front": {
-          entity_id: "camera.front",
-          state: "streaming",
-          attributes: { friendly_name: "Front" },
-        },
-        "light.driveway": {
-          entity_id: "light.driveway",
-          state: "off",
-          attributes: { friendly_name: "Driveway" },
-        },
-        "light.porch": {
-          entity_id: "light.porch",
-          state: "on",
-          attributes: { friendly_name: "Porch" },
-        },
-      },
-      connection: { subscribeMessage: async () => () => undefined },
-      callService: async () => undefined,
-      callWS: async () => ({ supported: false }),
-      hassUrl: (path: string) => path,
-    };
     editor.setConfig({
       type: "custom:watchzone-card",
       cameras: [{ entity_id: "camera.front" }],
@@ -1034,7 +915,7 @@ test("camera editor configures lights and confirms accessible removal", async ({
 
   const editor = page.locator("#camera-config-editor");
   await editor.locator("wzc-accordion-item").first().locator("summary").click();
-  await editor.locator('[aria-label="Edit camera: Front"]').click();
+  await editor.locator('[aria-label="Edit camera: front"]').click();
 
   const items = editor.locator(".camera-dialog-accordion > wzc-accordion-item");
   await expect(items).toHaveCount(5);
@@ -1054,24 +935,15 @@ test("camera editor configures lights and confirms accessible removal", async ({
 
   await items.nth(3).locator("summary").click();
   await editor.locator(".add-light").click();
-  const lightSelector = editor.locator(".add-light-form ha-selector");
-  await lightSelector.getByRole("button", { name: "Choose Light" }).click();
-  await expect(
-    lightSelector.getByRole("option", { name: "Front" }),
-  ).toHaveCount(0);
-  await lightSelector.getByRole("option", { name: "Porch" }).click();
-  await expect(
-    lightSelector.getByRole("button", { name: "Porch" }),
-  ).toBeVisible();
-  await expect
-    .poll(() =>
-      editor
-        .locator('.add-light-form ha-button[variant="brand"]')
-        .evaluate((element) =>
-          Boolean((element as HTMLElement & { disabled?: boolean }).disabled),
-        ),
-    )
-    .toBe(false);
+  await editor.locator(".add-light-form ha-selector").evaluate((element) => {
+    element.dispatchEvent(
+      new CustomEvent("value-changed", {
+        bubbles: true,
+        composed: true,
+        detail: { value: "light.porch" },
+      }),
+    );
+  });
   await editor.locator('.add-light-form ha-button[variant="brand"]').click();
   await expect(editor.locator(".linked-light-row")).toHaveCount(1);
   await expect(editor.locator(".remove-light")).toHaveAttribute(
@@ -1086,7 +958,7 @@ test("camera editor configures lights and confirms accessible removal", async ({
     input.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
   });
   await expect(editor.locator(".character-count")).toHaveText("24/24");
-  await editor.locator(".camera-dialog-primary").click();
+  await editor.locator('ha-button[variant="brand"]').click();
   await expect(editor.locator(".camera-tile-copy span")).toHaveText(
     "Front Door 1234567890123",
   );
@@ -1104,7 +976,7 @@ test("camera editor configures lights and confirms accessible removal", async ({
   const removeDialog = editor.locator(".remove-camera-dialog");
   await expect(removeDialog).toBeVisible();
   await expect(removeDialog).toContainText("Remove camera?");
-  await removeDialog.locator(".remove-camera-cancel").click();
+  await removeDialog.locator('ha-button[variant="neutral"]').click();
   await expect(removeDialog).not.toBeVisible();
   await expect(editor.locator("wzc-sortable-tile")).toHaveCount(1);
   await removeAction.click();
@@ -1674,7 +1546,6 @@ test("retains one live connection while the card presentation is replaced", asyn
       "--ha-box-shadow-s",
       "rgb(7, 8, 9) 0px 1px 2px",
     );
-    replacement.style.setProperty("--primary-color", "#03a9f4");
     replacement.style.setProperty("--wzc-camera-stage", "rgb(12, 13, 14)");
     replacement.hass = testWindow.__wzcTestHass;
     document.body.append(replacement);
@@ -1918,11 +1789,6 @@ test("retains one live connection while the card presentation is replaced", asyn
       )) as typeof HTMLCanvasElement.prototype.toBlob;
   });
   await liveViewport.hover();
-  await controls.first().hover();
-  await expect(controls.first()).toHaveCSS(
-    "background-color",
-    "rgb(3, 169, 244)",
-  );
   const downloadPromise = page.waitForEvent("download");
   await page.locator('wzc-camera-controls [data-control="snapshot"]').click();
   const download = await downloadPromise;
@@ -2162,8 +2028,7 @@ test("retains one live connection while the card presentation is replaced", asyn
   );
   expect(hoverBackground).not.toBe("rgba(0, 0, 0, 0)");
   expect(hoverBackground).not.toBe(restingBackground);
-  expect(hoverBackground).toBe("rgb(0, 120, 255)");
-  expect(cssAlpha(hoverBackground)).toBe(1);
+  expect(cssAlpha(hoverBackground)).toBeCloseTo(0.84, 2);
   expect(
     await mute.evaluate((element) => getComputedStyle(element).color),
   ).toBe("rgb(230, 230, 230)");

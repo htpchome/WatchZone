@@ -28,7 +28,6 @@ describe("WatchZone YAML configuration manager", () => {
             {
               entity_id: "camera.front",
               light_entity_ids: ["light.porch", "light.driveway"],
-              light_icons: { "light.porch": "mdi:coach-lamp" },
               low_latency_hls: false,
               ptz_enabled: true,
               start_live_unmuted_pc_tablet: true,
@@ -53,7 +52,6 @@ describe("WatchZone YAML configuration manager", () => {
         {
           entity_id: "camera.front",
           light_entity_ids: ["light.porch", "light.driveway"],
-          light_icons: { "light.porch": "mdi:coach-lamp" },
           low_latency_hls: false,
           ptz_enabled: true,
           start_live_unmuted_pc_tablet: true,

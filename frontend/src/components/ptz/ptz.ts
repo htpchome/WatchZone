@@ -43,10 +43,6 @@ export class PtzComponent extends LitElement {
   };
 
   private _activeDirection?: PtzDirection;
-  private _interactionFocused = false;
-  private _interactionHovered = false;
-  private _interactionCameraId?: string;
-  private _releaseInteractionOverlay?: () => void;
   private readonly _toasts = new ToastManager(this);
   private readonly _session = new PtzSessionController(this, {
     onFailure: () => this._showFailure(),
@@ -61,17 +57,6 @@ export class PtzComponent extends LitElement {
   protected willUpdate(): void {
     if (this.cameraSession)
       this._session.configure(this.api, this.cameraSession, this.cameras);
-    if (
-      this._interactionCameraId &&
-      this._interactionCameraId !== this._session.camera?.entityId
-    ) {
-      this._releaseInteractionHold();
-    }
-  }
-
-  public disconnectedCallback(): void {
-    this._releaseInteractionHold();
-    super.disconnectedCallback();
   }
 
   protected render() {
@@ -90,10 +75,8 @@ export class PtzComponent extends LitElement {
         class=${visible ? "ptz-control visible" : "ptz-control"}
         role="group"
         aria-label=${this.localize("ptz.controls")}
-        @pointerenter=${this._handleInteractionPointerEnter}
-        @pointerleave=${this._handleInteractionPointerLeave}
-        @focusin=${this._handleInteractionFocusIn}
-        @focusout=${this._handleInteractionFocusOut}
+        @pointerenter=${this._revealOverlay}
+        @focusin=${this._revealOverlay}
       >
         ${DIRECTIONS.map(({ direction, icon }) => {
           const supported =
@@ -181,56 +164,8 @@ export class PtzComponent extends LitElement {
     this.requestUpdate();
   }
 
-  private readonly _handleInteractionPointerEnter = (
-    event: PointerEvent,
-  ): void => {
-    if (event.pointerType === "touch") return;
-    this._interactionHovered = true;
-    this._syncInteractionHold();
-  };
-
-  private readonly _handleInteractionPointerLeave = (): void => {
-    this._interactionHovered = false;
-    this._syncInteractionHold();
-  };
-
-  private readonly _handleInteractionFocusIn = (): void => {
-    this._interactionFocused = true;
-    this._syncInteractionHold();
-  };
-
-  private _syncInteractionHold(): void {
-    if (!this._interactionFocused && !this._interactionHovered) {
-      this._releaseInteractionOverlay?.();
-      this._releaseInteractionOverlay = undefined;
-      this._interactionCameraId = undefined;
-      return;
-    }
-    if (this._releaseInteractionOverlay) {
-      this._session.camera?.revealOverlay();
-      return;
-    }
-    const camera = this._session.camera;
-    if (!camera) return;
-    this._interactionCameraId = camera.entityId;
-    this._releaseInteractionOverlay = camera.holdOverlay();
-    camera.revealOverlay();
-  }
-
-  private readonly _releaseInteractionHold = (): void => {
-    this._releaseInteractionOverlay?.();
-    this._releaseInteractionOverlay = undefined;
-    this._interactionCameraId = undefined;
-    this._interactionFocused = false;
-    this._interactionHovered = false;
-  };
-
-  private readonly _handleInteractionFocusOut = (event: FocusEvent): void => {
-    const group = event.currentTarget as HTMLElement;
-    if (group.contains(event.relatedTarget as Node | null)) return;
-    this._interactionFocused = false;
-    this._syncInteractionHold();
-  };
+  private readonly _revealOverlay = (): void =>
+    this._session.camera?.revealOverlay();
   private readonly _preventDefault = (event: Event): void =>
     event.preventDefault();
 

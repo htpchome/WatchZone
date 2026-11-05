@@ -66,46 +66,6 @@ describe("PTZ component", () => {
     );
     expect(stopMotion).toHaveBeenCalledOnce();
   });
-
-  it("holds the shared overlay for pointer and keyboard interaction", async () => {
-    const release = vi.fn();
-    const holdOverlay = vi.fn(() => release);
-    resolver.capability.mockResolvedValue({
-      focus: false,
-      pan: true,
-      presets: [],
-      supported: true,
-      tilt: true,
-      zoom: false,
-    });
-    const context = new CameraSessionContext();
-    const element = document.createElement("wzc-ptz") as PtzComponent;
-    element.api = api();
-    element.cameraSession = context;
-    element.cameras = [
-      { entityId: "camera.front", provider: "home_assistant" },
-    ];
-    document.body.append(element);
-    context.publish({}, { ...cameraSession(), holdOverlay });
-    await vi.waitFor(() =>
-      expect(element.shadowRoot?.querySelector(".ptz-control")).not.toBeNull(),
-    );
-
-    const control = element.shadowRoot?.querySelector(".ptz-control");
-    control?.dispatchEvent(new Event("pointerenter"));
-    expect(holdOverlay).toHaveBeenCalledOnce();
-    control?.dispatchEvent(new FocusEvent("focusin"));
-    expect(holdOverlay).toHaveBeenCalledOnce();
-    control?.dispatchEvent(new Event("pointerleave"));
-    expect(release).not.toHaveBeenCalled();
-    control?.dispatchEvent(new FocusEvent("focusout"));
-    expect(release).toHaveBeenCalledOnce();
-
-    control?.dispatchEvent(new Event("pointerenter"));
-    expect(holdOverlay).toHaveBeenCalledTimes(2);
-    control?.dispatchEvent(new Event("pointerleave"));
-    expect(release).toHaveBeenCalledTimes(2);
-  });
 });
 
 function cameraSession() {

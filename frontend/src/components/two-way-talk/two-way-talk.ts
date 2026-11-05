@@ -14,7 +14,6 @@ import {
   type LocalizeFunction,
 } from "../../core/localization";
 import { renderIcon } from "../../ui/icons";
-import { roundControlStyles } from "../../ui/round-control.styles";
 import { ToastManager } from "../../ui/toast-manager";
 import "../../ui/toast-region";
 import type { TalkConnection } from "../../providers/talk-source-resolver";
@@ -36,10 +35,6 @@ export class TwoWayTalkComponent extends LitElement {
 
   private readonly _toasts = new ToastManager(this);
   private readonly _soundwave = new TalkSoundwaveController();
-  private _interactionFocused = false;
-  private _interactionHovered = false;
-  private _interactionCameraId?: string;
-  private _releaseInteractionOverlay?: () => void;
   private _talkStream?: MediaStream;
   private readonly _session = new TalkSessionController(this, {
     onConnected: (connection) => this._handleConnected(connection),
@@ -59,12 +54,6 @@ export class TwoWayTalkComponent extends LitElement {
         this.cameraSession,
         this.enabledCameraIds,
       );
-    }
-    if (
-      this._interactionCameraId &&
-      this._interactionCameraId !== this._session.camera?.entityId
-    ) {
-      this._releaseInteractionHold();
     }
   }
 
@@ -87,14 +76,9 @@ export class TwoWayTalkComponent extends LitElement {
                 class="talk-controls"
                 role="group"
                 aria-label=${this.localize("talk.controls")}
-                @pointerenter=${this._handleInteractionPointerEnter}
-                @pointerleave=${this._handleInteractionPointerLeave}
-                @focusin=${this._handleInteractionFocusIn}
-                @focusout=${this._handleInteractionFocusOut}
               >
                 <canvas aria-hidden="true"></canvas>
                 <button
-                  class="wzc-round-control"
                   type="button"
                   aria-label=${
                     this._session.microphoneMuted
@@ -110,7 +94,7 @@ export class TwoWayTalkComponent extends LitElement {
                   )}
                 </button>
                 <button
-                  class="wzc-round-control center"
+                  class="center"
                   type="button"
                   aria-label=${this.localize("talk.disconnect")}
                   @click=${this._stop}
@@ -118,7 +102,6 @@ export class TwoWayTalkComponent extends LitElement {
                   ${renderIcon("microphone")}
                 </button>
                 <button
-                  class="wzc-round-control"
                   type="button"
                   aria-label=${
                     camera.muted
@@ -132,17 +115,9 @@ export class TwoWayTalkComponent extends LitElement {
               </div>`
             : html`<div
                 class=${visible ? "inactive-control visible" : "inactive-control"}
-                @pointerenter=${this._handleInteractionPointerEnter}
-                @pointerleave=${this._handleInteractionPointerLeave}
-                @focusin=${this._handleInteractionFocusIn}
-                @focusout=${this._handleInteractionFocusOut}
               >
                 <button
-                  class=${
-                    connecting
-                      ? "wzc-round-control inactive connecting"
-                      : "wzc-round-control inactive"
-                  }
+                  class=${connecting ? "inactive connecting" : "inactive"}
                   type="button"
                   aria-busy=${connecting ? "true" : "false"}
                   aria-label=${
@@ -153,14 +128,6 @@ export class TwoWayTalkComponent extends LitElement {
                   ?disabled=${!camera.available}
                   @click=${this._toggleConnection}
                 >
-                  ${
-                    connecting
-                      ? html`<span
-                          class="connecting-indicator"
-                          aria-hidden="true"
-                        ></span>`
-                      : nothing
-                  }
                   ${renderIcon("microphoneOff")}
                 </button>
               </div>`
@@ -179,7 +146,6 @@ export class TwoWayTalkComponent extends LitElement {
   }
 
   public disconnectedCallback(): void {
-    this._releaseInteractionHold();
     this._soundwave.dispose();
     super.disconnectedCallback();
   }
@@ -222,58 +188,7 @@ export class TwoWayTalkComponent extends LitElement {
     if (camera) camera.setMuted(!camera.muted);
   };
 
-  private readonly _handleInteractionPointerEnter = (
-    event: PointerEvent,
-  ): void => {
-    if (event.pointerType === "touch") return;
-    this._interactionHovered = true;
-    this._syncInteractionHold();
-  };
-
-  private readonly _handleInteractionPointerLeave = (): void => {
-    this._interactionHovered = false;
-    this._syncInteractionHold();
-  };
-
-  private readonly _handleInteractionFocusIn = (): void => {
-    this._interactionFocused = true;
-    this._syncInteractionHold();
-  };
-
-  private _syncInteractionHold(): void {
-    if (!this._interactionFocused && !this._interactionHovered) {
-      this._releaseInteractionOverlay?.();
-      this._releaseInteractionOverlay = undefined;
-      this._interactionCameraId = undefined;
-      return;
-    }
-    if (this._releaseInteractionOverlay) {
-      this._session.camera?.revealOverlay();
-      return;
-    }
-    const camera = this._session.camera;
-    if (!camera) return;
-    this._interactionCameraId = camera.entityId;
-    this._releaseInteractionOverlay = camera.holdOverlay();
-    camera.revealOverlay();
-  }
-
-  private readonly _releaseInteractionHold = (): void => {
-    this._releaseInteractionOverlay?.();
-    this._releaseInteractionOverlay = undefined;
-    this._interactionCameraId = undefined;
-    this._interactionFocused = false;
-    this._interactionHovered = false;
-  };
-
-  private readonly _handleInteractionFocusOut = (event: FocusEvent): void => {
-    const group = event.currentTarget as HTMLElement;
-    if (group.contains(event.relatedTarget as Node | null)) return;
-    this._interactionFocused = false;
-    this._syncInteractionHold();
-  };
-
-  static styles = [roundControlStyles, twoWayTalkStyles];
+  static styles = twoWayTalkStyles;
 }
 
 if (!customElements.get(TALK_TAG)) {

@@ -53,21 +53,41 @@ export const twoWayTalkStyles = css`
     pointer-events: none;
   }
 
-  .talk-controls button {
+  button {
+    display: grid;
+    position: relative;
     z-index: 1;
+    place-items: center;
+    box-sizing: border-box;
+    inline-size: var(--wzc-camera-control-size);
+    block-size: var(--wzc-camera-control-size);
+    padding: 0.55rem;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
 
   button.center {
     transform: scale(1.18);
     color: var(--wzc-media-overlay-surface);
-    background-color: var(--wzc-talk-connected-color);
+    background: var(--wzc-talk-connected-color);
     box-shadow: 0 0 0 2px var(--wzc-talk-panel-border-color);
   }
 
-  .connecting-indicator {
+  button.inactive {
+    color: var(--wzc-media-overlay-color);
+    background: var(--wzc-media-overlay-background);
+    border: 1px solid var(--wzc-media-overlay-border-color);
+  }
+
+  button.inactive.connecting::after {
+    content: "";
     position: absolute;
-    z-index: 3;
-    inset: 0.15rem;
+    inset: -0.35rem;
     border: 2px solid
       color-mix(in srgb, var(--wzc-talk-connecting-color) 30%, transparent);
     border-block-start-color: var(--wzc-talk-connecting-color);
@@ -80,6 +100,18 @@ export const twoWayTalkStyles = css`
     to {
       transform: rotate(1turn);
     }
+  }
+
+  button:focus-visible {
+    outline: 2px solid var(--wzc-color-primary);
+    outline-offset: 2px;
+  }
+
+  button svg {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    pointer-events: none;
   }
 
   .inactive-control {
@@ -97,12 +129,35 @@ export const twoWayTalkStyles = css`
     pointer-events: none;
   }
 
+  @media (hover: hover) and (pointer: fine) {
+    button:hover {
+      background: var(--wzc-media-overlay-hover-background);
+    }
+  }
+
+  @media (hover: none) {
+    button:hover,
+    button:active {
+      background: transparent;
+    }
+
+    button.center:hover,
+    button.center:active {
+      background: var(--wzc-talk-connected-color);
+    }
+
+    button.inactive:hover,
+    button.inactive:active {
+      background: var(--wzc-media-overlay-background);
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .inactive-control {
       transition: none;
     }
 
-    .connecting-indicator {
+    button.inactive.connecting::after {
       animation-duration: 1.4s;
     }
   }
