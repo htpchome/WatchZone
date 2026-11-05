@@ -40,6 +40,36 @@ describe("two-way-talk component", () => {
       element.shadowRoot?.querySelector(".inactive-control"),
     ).not.toBeNull();
   });
+
+  it("holds the shared overlay while the inactive microphone is hovered", async () => {
+    const callWS = vi.fn().mockResolvedValue({ supported: true });
+    const context = new CameraSessionContext();
+    const release = vi.fn();
+    const session = cameraSession(true);
+    session.holdOverlay.mockReturnValue(release);
+    const element = document.createElement(
+      "wzc-two-way-talk",
+    ) as TwoWayTalkComponent;
+    element.api = api(callWS);
+    element.cameraSession = context;
+    element.enabledCameraIds = ["camera.front"];
+    document.body.append(element);
+    context.publish({}, session);
+
+    await vi.waitFor(() =>
+      expect(
+        element.shadowRoot?.querySelector(".inactive-control.visible"),
+      ).not.toBeNull(),
+    );
+    const control = element.shadowRoot?.querySelector(
+      ".inactive-control",
+    ) as HTMLElement;
+    control.dispatchEvent(new Event("pointerenter"));
+    expect(session.holdOverlay).toHaveBeenCalledOnce();
+    expect(session.revealOverlay).toHaveBeenCalledOnce();
+    control.dispatchEvent(new Event("pointerleave"));
+    expect(release).toHaveBeenCalledOnce();
+  });
 });
 
 function cameraSession(overlayVisible: boolean) {

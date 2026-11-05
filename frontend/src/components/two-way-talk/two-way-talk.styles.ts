@@ -131,7 +131,7 @@ export const twoWayTalkStyles = css`
 
   @media (hover: hover) and (pointer: fine) {
     button:hover {
-      background: var(--wzc-media-overlay-hover-background);
+      background: var(--wzc-neutral-control-hover-background);
     }
   }
 

@@ -22,7 +22,10 @@ The camera dialog is a nested draft transaction. Update remains disabled until
 the normalized camera draft is valid and differs from the camera being edited;
 Cancel discards the nested draft. Dialog actions use Home Assistant button
 components so themes, disabled presentation, focus, and interaction conventions
-remain owned by Home Assistant.
+remain owned by Home Assistant. The dialog close action likewise uses Home
+Assistant's icon-button control. Linked-light icons use Home Assistant's icon
+selector and participate in the same nested camera draft; they do not write
+configuration until the camera draft is committed.
 
 The editor keeps three concepts separate:
 

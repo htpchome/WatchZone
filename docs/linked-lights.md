@@ -3,7 +3,9 @@
 ## Ownership
 
 - Each camera configuration may reference at most two existing Home Assistant
-  light entity IDs. WatchZone does not create or duplicate light entities.
+  light entities. Each reference may also store an optional Material Design
+  icon selected with Home Assistant's icon selector. WatchZone does not create
+  or duplicate light entities.
 - The light control is an independently placeable, lazily loaded Stage
   component. The built-in Stage places it in the camera module's overlay slot;
   the component does not import the camera module or another component.
@@ -15,10 +17,16 @@
 - A short pointer, touch, Enter, or Space activation toggles the light.
 - Holding a light control opens its brightness panel. Arrow Up provides an
   immediate keyboard path to the same panel.
-- The brightness panel contains a native range control, an explicit on/off
-  control, and a close control. While open it holds the camera overlay visible.
+- The brightness panel uses Home Assistant's vertical `ha-control-slider` with
+  a persistent handle, bottom-up primary-color fill, an interaction-only
+  percentage tooltip, and an explicit on/off control. Pointer or touch input
+  outside the panel closes it; there is no redundant close button. While open
+  it holds the camera overlay visible.
 - The circular light button fills from bottom to top using the reported or
   pending brightness percentage. An off light has no fill.
+- Hovering a light control acquires the same shared overlay hold used by the
+  camera controls. Leaving releases the hold and restarts the common hide
+  timer; the light control does not own a second timer.
 - Every icon-only action has a localized accessible name and matching title.
 
 ## Home Assistant boundary
@@ -35,7 +43,11 @@ failures remain local to the component and produce a bounded error toast.
   camera's configured lights without changing either entity's state.
 - Removing the component, card, or Stage clears press timers, releases overlay
   holds, and unsubscribes from active-camera state.
-- Configuration rejects non-light IDs, duplicates, and more than two lights.
+- The canonical YAML shape is an ordered `lights` array containing
+  `{ entity_id, icon? }` objects. The former `light_entity_ids` array is read
+  only as a one-way compatibility migration and is never written back.
+- Configuration rejects non-light IDs, invalid icons, duplicates, and more
+  than two lights.
 - Browser tests cover touch/pointer-equivalent long press, keyboard access,
   service payloads, active-camera changes, and cleanup in Chromium, Firefox,
   and WebKit.

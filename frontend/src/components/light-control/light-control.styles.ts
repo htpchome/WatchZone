@@ -77,8 +77,8 @@ export const lightControlStyles = css`
   }
 
   .light-button svg,
-  .power-button svg,
-  .close-dimmer svg {
+  .light-button ha-icon,
+  .power-button svg {
     display: block;
     inline-size: 1.35rem;
     block-size: 1.35rem;
@@ -94,10 +94,10 @@ export const lightControlStyles = css`
   .dimmer-panel {
     display: grid;
     grid-template:
-      "name close" auto
-      "slider slider" auto
-      "power power" auto /
-      minmax(0, 1fr) auto;
+      "name" auto
+      "slider" minmax(7rem, 1fr)
+      "power" auto /
+      1fr;
     justify-items: center;
     box-sizing: border-box;
     inline-size: var(--wzc-light-panel-inline-size);
@@ -112,7 +112,7 @@ export const lightControlStyles = css`
 
   .dimmer-name {
     grid-area: name;
-    justify-self: start;
+    justify-self: center;
     overflow: hidden;
     max-inline-size: 100%;
     font-size: var(--wzc-font-size-small);
@@ -121,16 +121,17 @@ export const lightControlStyles = css`
     white-space: nowrap;
   }
 
-  input[type="range"] {
+  ha-control-slider {
     grid-area: slider;
-    inline-size: clamp(5rem, 20cqi, 8rem);
-    block-size: 2rem;
-    margin: 0.4rem;
-    accent-color: var(--wzc-light-fill-color);
-    cursor: pointer;
-    direction: rtl;
-    touch-action: none;
-    writing-mode: vertical-lr;
+    inline-size: var(--wzc-light-slider-thickness);
+    block-size: var(--wzc-light-slider-block-size);
+    margin-block: 0.65rem;
+    --control-slider-background: var(--wzc-light-slider-background);
+    --control-slider-background-opacity: 1;
+    --control-slider-border-radius: var(--wzc-radius-large);
+    --control-slider-color: var(--wzc-light-fill-color);
+    --control-slider-thickness: var(--wzc-light-slider-thickness);
+    --control-slider-tooltip-font-size: var(--wzc-font-size-small);
   }
 
   .power-button {
@@ -145,17 +146,8 @@ export const lightControlStyles = css`
     color: var(--wzc-light-power-active-color);
   }
 
-  .close-dimmer {
-    grid-area: close;
-    inline-size: 2rem;
-    block-size: 2rem;
-    background: transparent;
-    border: 0;
-    border-radius: 50%;
-  }
-
   button:focus-visible,
-  input[type="range"]:focus-visible {
+  ha-control-slider:focus-visible {
     outline: 2px solid var(--wzc-color-primary);
     outline-offset: 2px;
   }
@@ -173,7 +165,7 @@ export const lightControlStyles = css`
 
   @media (hover: hover) and (pointer: fine) {
     button:hover:not(:disabled) {
-      background-color: var(--wzc-media-overlay-hover-background);
+      background-color: var(--wzc-neutral-control-hover-background);
     }
   }
 

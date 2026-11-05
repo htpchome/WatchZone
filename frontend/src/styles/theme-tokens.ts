@@ -181,6 +181,11 @@ export const themeTokens = css`
       var(--wzc-color-primary) var(--wzc-media-overlay-hover-opacity),
       transparent
     );
+    --wzc-neutral-control-hover-background: color-mix(
+      in srgb,
+      var(--ha-color-neutral-50, #737373) 84%,
+      transparent
+    );
     --wzc-media-overlay-border-color: var(--ha-color-neutral-30, #4a4a4a);
     --wzc-media-overlay-radius: var(--wzc-radius-small);
     --wzc-media-overlay-shadow: var(--wzc-shadow-card);
@@ -213,14 +218,17 @@ export const themeTokens = css`
     );
     --wzc-light-control-gap: 0.5rem;
     --wzc-light-microphone-offset: 1.875rem;
-    --wzc-light-fill-color: var(--ha-color-amber-50, #fbbf24);
+    --wzc-light-fill-color: var(--wzc-color-primary);
     --wzc-light-panel-background: color-mix(
       in srgb,
       var(--wzc-media-overlay-surface) 90%,
       transparent
     );
     --wzc-light-panel-inline-size: clamp(6.5rem, 24cqi, 8rem);
-    --wzc-light-power-active-color: var(--ha-color-amber-40, #fcd34d);
+    --wzc-light-power-active-color: var(--wzc-color-primary);
+    --wzc-light-slider-background: var(--ha-color-neutral-90, #e6e6e6);
+    --wzc-light-slider-block-size: clamp(7rem, 28cqi, 10rem);
+    --wzc-light-slider-thickness: clamp(2.75rem, 11cqi, 3.5rem);
     --wzc-light-transition-duration: 160ms;
 
     --wzc-accordion-background: var(--wzc-color-background);

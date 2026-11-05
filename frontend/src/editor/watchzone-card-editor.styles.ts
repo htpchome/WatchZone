@@ -62,7 +62,6 @@ export const cardEditorStyles = css`
   }
 
   .tile-action,
-  .dialog-close,
   .remove-light {
     display: grid;
     place-items: center;
@@ -91,7 +90,6 @@ export const cardEditorStyles = css`
   }
 
   .tile-action:focus-visible,
-  .dialog-close:focus-visible,
   .remove-light:focus-visible,
   .add-camera:focus-visible {
     outline: 2px solid var(--wzc-color-primary);
@@ -166,8 +164,7 @@ export const cardEditorStyles = css`
 
   .dialog-close {
     grid-column: 2;
-    font-size: 1.75rem;
-    line-height: 1;
+    color: var(--wzc-color-text-2);
   }
 
   .camera-dialog-content {
@@ -188,11 +185,9 @@ export const cardEditorStyles = css`
   }
 
   .character-count {
-    justify-self: end;
-    margin-block-start: 0.15rem;
-    margin-inline-end: 0.25rem;
     color: var(--wzc-color-text-2);
     font-size: var(--wzc-font-size-small);
+    white-space: nowrap;
   }
 
   .capability-option {
@@ -207,6 +202,7 @@ export const cardEditorStyles = css`
   }
 
   .linked-light-settings,
+  .linked-light-entry,
   .add-light-form {
     display: grid;
     gap: 0.65rem;
@@ -225,12 +221,14 @@ export const cardEditorStyles = css`
   }
 
   .linked-light-row > span:first-child,
+  .linked-light-row > ha-icon,
   .add-light svg {
     display: grid;
     color: var(--wzc-color-primary);
   }
 
   .linked-light-row svg,
+  .linked-light-row ha-icon,
   .add-light svg {
     inline-size: 1.25rem;
     block-size: 1.25rem;
@@ -257,6 +255,10 @@ export const cardEditorStyles = css`
   .remove-light {
     inline-size: 2rem;
     block-size: 2rem;
+  }
+
+  .light-icon-selector {
+    padding-inline: 0.45rem;
   }
 
   .add-light {
@@ -299,7 +301,6 @@ export const cardEditorStyles = css`
 
   @media (hover: hover) and (pointer: fine) {
     .tile-action:hover,
-    .dialog-close:hover,
     .remove-light:hover,
     .add-camera:hover:not(:disabled) {
       background: var(--wzc-color-fill-primary);
@@ -308,7 +309,6 @@ export const cardEditorStyles = css`
 
   @media (hover: none) {
     .tile-action:hover,
-    .dialog-close:hover,
     .remove-light:hover,
     .add-camera:hover:not(:disabled) {
       background: transparent;

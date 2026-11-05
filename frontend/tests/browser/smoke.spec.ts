@@ -265,7 +265,7 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
       cameras: [
         {
           entity_id: "camera.front",
-          light_entity_ids: ["light.porch"],
+          lights: [{ entity_id: "light.porch" }],
           ptz_enabled: true,
           two_way_talk_enabled: true,
         },
@@ -392,12 +392,17 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
   await page.mouse.up();
   const dimmer = lights.locator(".dimmer-panel");
   await expect(dimmer).toBeVisible();
-  const slider = dimmer.locator('input[type="range"]');
+  const slider = dimmer.locator("ha-control-slider");
+  await expect(slider).toHaveAttribute("vertical", "");
+  await expect(slider).toHaveAttribute("show-handle", "");
+  await expect(slider).toHaveAttribute("tooltip-mode", "interaction");
   await slider.evaluate((element) => {
-    const input = element as HTMLInputElement;
-    input.value = "70";
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    input.dispatchEvent(new Event("change", { bubbles: true }));
+    element.dispatchEvent(
+      new CustomEvent("value-changed", {
+        bubbles: true,
+        detail: { value: 70 },
+      }),
+    );
   });
   await expect
     .poll(() =>
@@ -952,13 +957,20 @@ test("camera editor configures lights and confirms accessible removal", async ({
   );
 
   const titleInput = editor.locator(".camera-title-field ha-input");
+  await expect(titleInput).toHaveAttribute("label", "Camera Name");
+  await expect(titleInput).toHaveAttribute(
+    "placeholder",
+    "Display name (optional)",
+  );
   await titleInput.evaluate((element) => {
     const input = element as HTMLElement & { value: string };
     input.value = "  Front!  Door @12345678901234567890";
     input.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
   });
   await expect(editor.locator(".character-count")).toHaveText("24/24");
-  await editor.locator('ha-button[variant="brand"]').click();
+  await editor
+    .locator('ha-button[appearance="accent"][variant="brand"]')
+    .click();
   await expect(editor.locator(".camera-tile-copy span")).toHaveText(
     "Front Door 1234567890123",
   );

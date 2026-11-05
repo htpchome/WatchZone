@@ -35,6 +35,8 @@ export class TwoWayTalkComponent extends LitElement {
 
   private readonly _toasts = new ToastManager(this);
   private readonly _soundwave = new TalkSoundwaveController();
+  private _hoverCameraEntityId?: string;
+  private _releaseHoverOverlay?: () => void;
   private _talkStream?: MediaStream;
   private readonly _session = new TalkSessionController(this, {
     onConnected: (connection) => this._handleConnected(connection),
@@ -54,6 +56,12 @@ export class TwoWayTalkComponent extends LitElement {
         this.cameraSession,
         this.enabledCameraIds,
       );
+    }
+    if (
+      this._hoverCameraEntityId &&
+      this._hoverCameraEntityId !== this._session.camera?.entityId
+    ) {
+      this._releaseHoverHold();
     }
   }
 
@@ -115,6 +123,8 @@ export class TwoWayTalkComponent extends LitElement {
               </div>`
             : html`<div
                 class=${visible ? "inactive-control visible" : "inactive-control"}
+                @pointerenter=${this._acquireHoverHold}
+                @pointerleave=${this._releaseHoverHold}
               >
                 <button
                   class=${connecting ? "inactive connecting" : "inactive"}
@@ -146,6 +156,7 @@ export class TwoWayTalkComponent extends LitElement {
   }
 
   public disconnectedCallback(): void {
+    this._releaseHoverHold();
     this._soundwave.dispose();
     super.disconnectedCallback();
   }
@@ -186,6 +197,19 @@ export class TwoWayTalkComponent extends LitElement {
   private readonly _toggleSpeaker = (): void => {
     const camera = this._session.camera;
     if (camera) camera.setMuted(!camera.muted);
+  };
+  private readonly _acquireHoverHold = (): void => {
+    const camera = this._session.camera;
+    if (!this._releaseHoverOverlay) {
+      this._releaseHoverOverlay = camera?.holdOverlay();
+      this._hoverCameraEntityId = camera?.entityId;
+    }
+    camera?.revealOverlay();
+  };
+  private readonly _releaseHoverHold = (): void => {
+    this._releaseHoverOverlay?.();
+    this._releaseHoverOverlay = undefined;
+    this._hoverCameraEntityId = undefined;
   };
 
   static styles = twoWayTalkStyles;

@@ -24,13 +24,15 @@
   "editor.edit_camera": "Edit Camera",
   "editor.close_camera_editor": "Close camera editor",
   "editor.camera": "Camera",
-  "editor.camera_title": "Camera Title",
+  "editor.camera_title": "Camera Name",
+  "editor.camera_title_placeholder": "Display name (optional)",
   "editor.connection_source": "Connection Source",
   "editor.connection": "Connection",
   "editor.home_assistant": "Home Assistant",
   "editor.additional_camera": "Additional Camera",
   "editor.lights": "Lights",
   "editor.light": "Light",
+  "editor.icon": "Icon",
   "editor.light_count": "{count} of {maximum} configured",
   "editor.add_light": "Add light",
   "editor.remove_light": "Remove light",
@@ -135,6 +137,5 @@
   "light.brightness": "Brightness for {name}",
   "light.turn_on": "Turn on {name}",
   "light.turn_off": "Turn off {name}",
-  "light.close_dimmer": "Close brightness controls",
   "light.failed": "Unable to control the light."
 }

@@ -46,6 +46,7 @@ export class LightControlComponent extends LitElement {
   private _pendingLightIds = new Set<string>();
   private _pressLightId?: string;
   private _pressTimer?: ReturnType<typeof setTimeout>;
+  private _releaseHoverOverlay?: () => void;
   private _releaseOverlay?: () => void;
   private _unsubscribeCamera?: () => void;
   private readonly _toasts = new ToastManager(this);
@@ -67,6 +68,7 @@ export class LightControlComponent extends LitElement {
     this._unsubscribeCamera = undefined;
     this._cameraContext = undefined;
     this._cancelPress();
+    this._releaseHoverHold();
     this._closeDimmer();
     super.disconnectedCallback();
   }
@@ -75,9 +77,10 @@ export class LightControlComponent extends LitElement {
     const camera = this._activeCamera;
     const config = this._activeConfig();
     if (!camera || !config || !this.hass) return nothing;
-    const lights = config.lightEntityIds.map((entityId) => ({
+    const lights = config.lights.map(({ entityId, icon }) => ({
       entity: this.hass?.states[entityId],
       entityId,
+      icon,
     }));
     const visible = camera.overlayVisible || this._openLightId !== undefined;
     const openLight = lights.find(
@@ -100,9 +103,11 @@ export class LightControlComponent extends LitElement {
           class="light-buttons"
           role="group"
           aria-label=${this.localize("light.controls")}
+          @pointerenter=${this._acquireHoverHold}
+          @pointerleave=${this._releaseHoverHold}
         >
-          ${lights.map(({ entityId, entity }) =>
-            this._renderLightButton(entityId, entity),
+          ${lights.map(({ entityId, entity, icon }) =>
+            this._renderLightButton(entityId, entity, icon),
           )}
         </div>
       </div>
@@ -112,6 +117,7 @@ export class LightControlComponent extends LitElement {
   private _renderLightButton(
     entityId: string,
     entity: HomeAssistantEntity | undefined,
+    icon: string | undefined,
   ) {
     const name = lightName(entityId, entity);
     const level = this._displayLevel(entityId, entity);
@@ -139,9 +145,8 @@ export class LightControlComponent extends LitElement {
       @keydown=${this._handleKeyDown}
       @keyup=${this._handleKeyUp}
       @focus=${this._revealOverlay}
-      @pointerenter=${this._revealOverlay}
     >
-      ${renderIcon("lightbulb")}
+      ${icon ? html`<ha-icon .icon=${icon}></ha-icon>` : renderIcon("lightbulb")}
     </button>`;
   }
 
@@ -157,16 +162,21 @@ export class LightControlComponent extends LitElement {
       aria-label=${this.localize("light.dimmer", { name })}
     >
       <span class="dimmer-name">${name}</span>
-      <input
-        type="range"
+      <ha-control-slider
+        vertical
+        show-handle
+        tooltip-mode="interaction"
+        unit="%"
         min="1"
         max="100"
-        .value=${String(this._panelBrightness)}
-        title=${this.localize("light.brightness", { name })}
-        aria-label=${this.localize("light.brightness", { name })}
-        @input=${this._handleBrightnessInput}
-        @change=${this._handleBrightnessChange}
-      />
+        step="1"
+        .value=${this._panelBrightness}
+        .label=${this.localize("light.brightness", { name })}
+        .locale=${this.hass?.locale}
+        .disabled=${this._pendingLightIds.has(entityId)}
+        @slider-moved=${this._handleBrightnessMoved}
+        @value-changed=${this._handleBrightnessChange}
+      ></ha-control-slider>
       <button
         class=${on ? "power-button on" : "power-button"}
         type="button"
@@ -187,15 +197,6 @@ export class LightControlComponent extends LitElement {
       >
         ${renderIcon("power")}
       </button>
-      <button
-        class="close-dimmer"
-        type="button"
-        title=${this.localize("light.close_dimmer")}
-        aria-label=${this.localize("light.close_dimmer")}
-        @click=${this._closeDimmer}
-      >
-        ${renderIcon("close")}
-      </button>
     </div>`;
   }
 
@@ -205,6 +206,7 @@ export class LightControlComponent extends LitElement {
     this._cameraContext = this.cameraSession;
     this._unsubscribeCamera = this.cameraSession?.subscribe((camera) => {
       if (camera?.entityId !== this._activeCamera?.entityId) {
+        this._releaseHoverHold();
         this._closeDimmer();
       }
       this._activeCamera = camera;
@@ -297,32 +299,50 @@ export class LightControlComponent extends LitElement {
   private _openDimmer(entityId: string): void {
     const entity = this.hass?.states[entityId];
     this._openLightId = entityId;
-    this._panelBrightness = Math.max(1, brightnessPercentage(entity) || 100);
+    this._panelBrightness = Math.max(
+      1,
+      retainedBrightnessPercentage(entity) ?? 100,
+    );
     this._releaseOverlay?.();
     this._releaseOverlay = this._activeCamera?.holdOverlay();
     this._activeCamera?.revealOverlay();
+    document.addEventListener(
+      "pointerdown",
+      this._handleOutsidePointerDown,
+      true,
+    );
     this.requestUpdate();
   }
 
   private readonly _closeDimmer = (): void => {
     this._openLightId = undefined;
+    document.removeEventListener(
+      "pointerdown",
+      this._handleOutsidePointerDown,
+      true,
+    );
     this._releaseOverlay?.();
     this._releaseOverlay = undefined;
     this.requestUpdate();
   };
 
-  private readonly _handleBrightnessInput = (event: Event): void => {
-    this._panelBrightness = Number(
-      (event.currentTarget as HTMLInputElement).value,
-    );
+  private readonly _handleBrightnessMoved = (
+    event: CustomEvent<{ value?: number }>,
+  ): void => {
+    if (typeof event.detail.value !== "number") return;
+    this._panelBrightness = event.detail.value;
     if (this._openLightId) {
       this._optimisticLevels.set(this._openLightId, this._panelBrightness);
     }
     this.requestUpdate();
   };
 
-  private readonly _handleBrightnessChange = (): void => {
+  private readonly _handleBrightnessChange = (
+    event: CustomEvent<{ value: number }>,
+  ): void => {
     if (!this._openLightId) return;
+    this._panelBrightness = event.detail.value;
+    this._optimisticLevels.set(this._openLightId, this._panelBrightness);
     void this._callLight(this._openLightId, "turn_on", {
       brightness_pct: this._panelBrightness,
     });
@@ -338,7 +358,10 @@ export class LightControlComponent extends LitElement {
     const service = entity?.state === "on" ? "turn_off" : "turn_on";
     if (service === "turn_off") this._optimisticLevels.set(entityId, 0);
     else
-      this._optimisticLevels.set(entityId, brightnessPercentage(entity) || 100);
+      this._optimisticLevels.set(
+        entityId,
+        retainedBrightnessPercentage(entity) ?? 100,
+      );
     this.requestUpdate();
     await this._callLight(entityId, service);
   }
@@ -372,6 +395,21 @@ export class LightControlComponent extends LitElement {
     event.preventDefault();
   private readonly _revealOverlay = (): void =>
     this._activeCamera?.revealOverlay();
+  private readonly _acquireHoverHold = (): void => {
+    if (!this._releaseHoverOverlay) {
+      this._releaseHoverOverlay = this._activeCamera?.holdOverlay();
+    }
+    this._activeCamera?.revealOverlay();
+  };
+  private readonly _releaseHoverHold = (): void => {
+    this._releaseHoverOverlay?.();
+    this._releaseHoverOverlay = undefined;
+  };
+  private readonly _handleOutsidePointerDown = (event: PointerEvent): void => {
+    const panel = this.renderRoot.querySelector(".dimmer-panel");
+    if (panel && event.composedPath().includes(panel)) return;
+    this._closeDimmer();
+  };
 
   static styles = lightControlStyles;
 }
@@ -386,10 +424,16 @@ function lightName(
 
 function brightnessPercentage(entity: HomeAssistantEntity | undefined): number {
   if (entity?.state !== "on") return 0;
-  const brightness = entity.attributes.brightness;
+  return retainedBrightnessPercentage(entity) ?? 100;
+}
+
+function retainedBrightnessPercentage(
+  entity: HomeAssistantEntity | undefined,
+): number | undefined {
+  const brightness = entity?.attributes.brightness;
   return typeof brightness === "number"
     ? Math.round((Math.max(0, Math.min(255, brightness)) / 255) * 100)
-    : 100;
+    : undefined;
 }
 
 if (!customElements.get(LIGHT_TAG)) {

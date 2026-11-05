@@ -26,7 +26,10 @@ describe("linked-light component", () => {
         cameras: [
           {
             cameraEntityId: "camera.front",
-            lightEntityIds: ["light.porch", "light.driveway"],
+            lights: [
+              { entityId: "light.porch", icon: "mdi:coach-lamp" },
+              { entityId: "light.driveway" },
+            ],
           },
         ],
       }),
@@ -34,7 +37,10 @@ describe("linked-light component", () => {
       cameras: [
         {
           cameraEntityId: "camera.front",
-          lightEntityIds: ["light.porch", "light.driveway"],
+          lights: [
+            { entityId: "light.porch", icon: "mdi:coach-lamp" },
+            { entityId: "light.driveway" },
+          ],
         },
       ],
     });
@@ -43,7 +49,11 @@ describe("linked-light component", () => {
         cameras: [
           {
             cameraEntityId: "camera.front",
-            lightEntityIds: ["light.one", "light.two", "light.three"],
+            lights: [
+              { entityId: "light.one" },
+              { entityId: "light.two" },
+              { entityId: "light.three" },
+            ],
           },
         ],
       }),
@@ -84,19 +94,68 @@ describe("linked-light component", () => {
     expect(callService).not.toHaveBeenCalled();
     const panel = element.shadowRoot?.querySelector(".dimmer-panel");
     expect(panel?.getAttribute("role")).toBe("dialog");
-    const slider = panel?.querySelector(
-      'input[type="range"]',
-    ) as HTMLInputElement;
-    slider.value = "72";
-    slider.dispatchEvent(new Event("input", { bubbles: true }));
-    slider.dispatchEvent(new Event("change", { bubbles: true }));
+    const slider = panel?.querySelector("ha-control-slider") as HTMLElement;
+    expect(slider.hasAttribute("vertical")).toBe(true);
+    expect(slider.hasAttribute("show-handle")).toBe(true);
+    expect(slider.getAttribute("tooltip-mode")).toBe("interaction");
+    slider.dispatchEvent(
+      new CustomEvent("value-changed", {
+        bubbles: true,
+        detail: { value: 72 },
+      }),
+    );
     expect(callService).toHaveBeenCalledWith(
       "light",
       "turn_on",
       { brightness_pct: 72 },
       { entity_id: "light.porch" },
     );
+    document.body.dispatchEvent(
+      new Event("pointerdown", { bubbles: true, composed: true }),
+    );
+    await element.updateComplete;
+    expect(element.shadowRoot?.querySelector(".dimmer-panel")).toBeNull();
     pressKey(button, " ", "keyup");
+  });
+
+  it("holds the shared overlay while its controls are hovered", async () => {
+    const release = vi.fn();
+    const holdOverlay = vi.fn(() => release);
+    const revealOverlay = vi.fn();
+    const context = new CameraSessionContext();
+    const element = document.createElement(LIGHT_TAG) as LightControlComponent;
+    element.cameraSession = context;
+    element.cameras = [
+      {
+        cameraEntityId: "camera.front",
+        lights: [{ entityId: "light.porch", icon: "mdi:coach-lamp" }],
+      },
+    ];
+    element.hass = createHass(vi.fn(async () => undefined));
+    document.body.append(element);
+    context.publish(
+      {},
+      Object.assign(activeCamera("camera.front"), {
+        holdOverlay,
+        revealOverlay,
+      }),
+    );
+    await element.updateComplete;
+
+    const controls = element.shadowRoot?.querySelector(
+      ".light-buttons",
+    ) as HTMLElement;
+    controls.dispatchEvent(new Event("pointerenter"));
+    expect(holdOverlay).toHaveBeenCalledOnce();
+    expect(revealOverlay).toHaveBeenCalledOnce();
+    controls.dispatchEvent(new Event("pointerleave"));
+    expect(release).toHaveBeenCalledOnce();
+    expect(
+      (
+        element.shadowRoot?.querySelector("ha-icon") as
+          (HTMLElement & { icon?: string }) | null
+      )?.icon,
+    ).toBe("mdi:coach-lamp");
   });
 
   it("switches linked controls with the active camera and cleans up presses", async () => {
@@ -138,7 +197,7 @@ function cameraLights(
 ): LightControlComponentConfig["cameras"] {
   return Object.entries(cameras).map(([cameraEntityId, lightEntityIds]) => ({
     cameraEntityId,
-    lightEntityIds,
+    lights: lightEntityIds.map((entityId) => ({ entityId })),
   }));
 }
 

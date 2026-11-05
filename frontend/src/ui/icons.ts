@@ -31,7 +31,7 @@ const ICONS = {
   chevronUp: {
     paths: [
       {
-        d: "m7.41 15.41 1.42 1.42L12 13.66l3.17 3.17 1.42-1.42L12 10l-4.59 5.41Z",
+        d: "M7.41 15.41 12 10.83l4.59 4.58L18 14l-6-6-6 6 1.41 1.41Z",
       },
     ],
   },
@@ -179,6 +179,14 @@ const ICONS = {
 } as const satisfies Readonly<Record<string, IconDefinition>>;
 
 export type IconName = keyof typeof ICONS;
+
+export function iconPath(name: IconName): string | undefined {
+  const definition: IconDefinition = ICONS[name];
+  const path = definition.paths[0];
+  return definition.paths.length === 1 && path && !path.fillRule
+    ? path.d
+    : undefined;
+}
 
 export function renderIcon(name: IconName): TemplateResult {
   const definition: IconDefinition = ICONS[name];

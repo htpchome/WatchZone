@@ -37,7 +37,7 @@ import { PtzSourceResolver } from "../providers/ptz-source-resolver";
 import type { PtzCapability } from "../api/ptz";
 import { themeTokens } from "../styles/theme-tokens";
 import { ToastManager } from "../ui/toast-manager";
-import { renderIcon } from "../ui/icons";
+import { iconPath, renderIcon } from "../ui/icons";
 import type { SortableReorderDetail } from "../ui/sortable-list";
 import "../ui/accordion";
 import "../ui/sortable-list";
@@ -74,6 +74,7 @@ const CAMERA_SELECTOR = {
 const LIGHT_SELECTOR = {
   entity: { filter: { domain: "light" } },
 } as const;
+const ICON_SELECTOR = { icon: {} } as const;
 const BOOLEAN_SELECTOR = { boolean: {} } as const;
 
 const accordionTag = unsafeStatic(ACCORDION_TAG);
@@ -93,7 +94,7 @@ type BooleanConfigFlag =
 
 type CameraBooleanConfigFlag = Exclude<
   keyof CameraConfig,
-  "entity_id" | "light_entity_ids" | "title"
+  "entity_id" | "lights" | "title"
 >;
 
 export class CardEditor extends LitElement {
@@ -383,15 +384,12 @@ export class CardEditor extends LitElement {
                 : this._t("editor.add_camera")
             }
           </h2>
-          <button
+          <ha-icon-button
             class="dialog-close"
-            type="button"
-            title=${this._t("editor.close_camera_editor")}
-            aria-label=${this._t("editor.close_camera_editor")}
+            .label=${this._t("editor.close_camera_editor")}
+            .path=${iconPath("close")}
             @click=${this._cancelCameraEdit}
-          >
-            ×
-          </button>
+          ></ha-icon-button>
         </header>
         <div class="camera-dialog-content">
           ${
@@ -417,13 +415,19 @@ export class CardEditor extends LitElement {
                       <div class="camera-title-field">
                         <ha-input
                           label=${this._t("editor.camera_title")}
+                          placeholder=${this._t("editor.camera_title_placeholder")}
                           maxlength=${String(MAX_CAMERA_TITLE_LENGTH)}
                           .value=${this._cameraTitleInput}
                           @input=${this._handleCameraTitleInput}
-                        ></ha-input>
-                        <span class="character-count" aria-live="polite">
-                          ${this._cameraTitleInput.length}/${MAX_CAMERA_TITLE_LENGTH}
-                        </span>
+                        >
+                          <span
+                            class="character-count"
+                            slot="end"
+                            aria-live="polite"
+                          >
+                            ${this._cameraTitleInput.length}/${MAX_CAMERA_TITLE_LENGTH}
+                          </span>
+                        </ha-input>
                       </div>
                     </div>
                   </${accordionItemTag}>
@@ -464,9 +468,9 @@ export class CardEditor extends LitElement {
                     heading=${this._t("editor.lights")}
                     item-key="lights"
                     summary-text=${
-                      camera.light_entity_ids.length
+                      camera.lights.length
                         ? this._t("editor.light_count", {
-                            count: camera.light_entity_ids.length,
+                            count: camera.lights.length,
                             maximum: MAX_LIGHTS_PER_CAMERA,
                           })
                         : this._t("editor.not_configured")
@@ -535,7 +539,7 @@ export class CardEditor extends LitElement {
         <footer>
           <ha-button
             appearance="plain"
-            variant="neutral"
+            variant="brand"
             size="m"
             type="button"
             @click=${this._cancelCameraEdit}
@@ -600,24 +604,37 @@ export class CardEditor extends LitElement {
 
   private _renderLightSettings(camera: CameraConfig) {
     return html`<div class="linked-light-settings">
-      ${camera.light_entity_ids.map((entityId, index) => {
+      ${camera.lights.map((light, index) => {
+        const entityId = light.entity_id;
         const name = this._entityName(entityId);
-        return html`<div class="linked-light-row">
-          <span>${renderIcon("lightbulb")}</span>
-          <span class="linked-light-copy">
-            <strong>${name}</strong>
-            <small>${entityId}</small>
-          </span>
-          <button
-            class="remove-light"
-            type="button"
+        return html`<div class="linked-light-entry">
+          <div class="linked-light-row">
+            <ha-icon .icon=${light.icon ?? "mdi:lightbulb"}></ha-icon>
+            <span class="linked-light-copy">
+              <strong>${name}</strong>
+              <small>${entityId}</small>
+            </span>
+            <button
+              class="remove-light"
+              type="button"
+              data-light-index=${String(index)}
+              title=${this._t("editor.remove_light")}
+              aria-label=${this._t("editor.remove_light_named", { name })}
+              @click=${this._removeLight}
+            >
+              ${renderIcon("close")}
+            </button>
+          </div>
+          <ha-selector
+            class="light-icon-selector"
             data-light-index=${String(index)}
-            title=${this._t("editor.remove_light")}
-            aria-label=${this._t("editor.remove_light_named", { name })}
-            @click=${this._removeLight}
-          >
-            ${renderIcon("close")}
-          </button>
+            label=${this._t("editor.icon")}
+            .hass=${this._hass}
+            .selector=${ICON_SELECTOR}
+            .value=${light.icon ?? "mdi:lightbulb"}
+            .required=${false}
+            @value-changed=${this._handleLightIconChange}
+          ></ha-selector>
         </div>`;
       })}
       ${
@@ -653,7 +670,7 @@ export class CardEditor extends LitElement {
                 </ha-button>
               </div>
             </div>`
-          : camera.light_entity_ids.length < MAX_LIGHTS_PER_CAMERA
+          : camera.lights.length < MAX_LIGHTS_PER_CAMERA
             ? html`<ha-button
                 class="add-light"
                 appearance="plain"
@@ -814,8 +831,10 @@ export class CardEditor extends LitElement {
     return Boolean(
       this._cameraDraft &&
       this._pendingLightEntityId.startsWith("light.") &&
-      this._cameraDraft.light_entity_ids.length < MAX_LIGHTS_PER_CAMERA &&
-      !this._cameraDraft.light_entity_ids.includes(this._pendingLightEntityId),
+      this._cameraDraft.lights.length < MAX_LIGHTS_PER_CAMERA &&
+      !this._cameraDraft.lights.some(
+        ({ entity_id: entityId }) => entityId === this._pendingLightEntityId,
+      ),
     );
   }
 
@@ -823,9 +842,9 @@ export class CardEditor extends LitElement {
     if (!this._cameraDraft || !this._pendingLightCanCommit()) return;
     this._cameraDraft = {
       ...this._cameraDraft,
-      light_entity_ids: [
-        ...this._cameraDraft.light_entity_ids,
-        this._pendingLightEntityId,
+      lights: [
+        ...this._cameraDraft.lights,
+        { entity_id: this._pendingLightEntityId },
       ],
     };
     this._cancelAddingLight();
@@ -836,10 +855,30 @@ export class CardEditor extends LitElement {
     const index = Number(
       (event.currentTarget as HTMLElement).dataset.lightIndex,
     );
-    if (!this._cameraDraft.light_entity_ids[index]) return;
-    const ids = [...this._cameraDraft.light_entity_ids];
-    ids.splice(index, 1);
-    this._cameraDraft = { ...this._cameraDraft, light_entity_ids: ids };
+    if (!this._cameraDraft.lights[index]) return;
+    const lights = [...this._cameraDraft.lights];
+    lights.splice(index, 1);
+    this._cameraDraft = { ...this._cameraDraft, lights };
+    this.requestUpdate();
+  };
+
+  private readonly _handleLightIconChange = (
+    event: ValueChangedEvent,
+  ): void => {
+    if (!this._cameraDraft) return;
+    const index = Number(
+      (event.currentTarget as HTMLElement).dataset.lightIndex,
+    );
+    const current = this._cameraDraft.lights[index];
+    if (!current) return;
+    const value =
+      typeof event.detail.value === "string" ? event.detail.value.trim() : "";
+    const lights = [...this._cameraDraft.lights];
+    lights[index] = {
+      entity_id: current.entity_id,
+      ...(value && value !== "mdi:lightbulb" ? { icon: value } : {}),
+    };
+    this._cameraDraft = { ...this._cameraDraft, lights };
     this.requestUpdate();
   };
 
@@ -1200,7 +1239,7 @@ export class CardEditor extends LitElement {
 function cameraConfigEquals(left: CameraConfig, right: CameraConfig): boolean {
   return (
     left.entity_id === right.entity_id &&
-    arraysEqual(left.light_entity_ids, right.light_entity_ids) &&
+    linkedLightsEqual(left.lights, right.lights) &&
     left.low_latency_hls === right.low_latency_hls &&
     left.ptz_enabled === right.ptz_enabled &&
     left.start_live_unmuted_pc_tablet === right.start_live_unmuted_pc_tablet &&
@@ -1210,13 +1249,17 @@ function cameraConfigEquals(left: CameraConfig, right: CameraConfig): boolean {
   );
 }
 
-function arraysEqual(
-  left: readonly string[],
-  right: readonly string[],
+function linkedLightsEqual(
+  left: CameraConfig["lights"],
+  right: CameraConfig["lights"],
 ): boolean {
   return (
     left.length === right.length &&
-    left.every((value, index) => value === right[index])
+    left.every(
+      (value, index) =>
+        value.entity_id === right[index]?.entity_id &&
+        value.icon === right[index]?.icon,
+    )
   );
 }
 

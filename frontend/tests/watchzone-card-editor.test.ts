@@ -10,6 +10,7 @@ import {
 } from "../src/core/constants";
 import type { AccordionItem } from "../src/ui/accordion";
 import type { ToastRegion } from "../src/ui/toast-region";
+import { iconPath } from "../src/ui/icons";
 import type { CardEditor } from "../src/editor/watchzone-card-editor";
 
 interface ContextRequest extends Event {
@@ -155,10 +156,19 @@ describe("watchzone-card-editor", () => {
     expect(
       editor.shadowRoot?.querySelectorAll("[data-camera-config-key]").length,
     ).toBe(5);
+    expect(
+      (
+        editor.shadowRoot?.querySelector("ha-icon-button.dialog-close") as
+          (HTMLElement & { path?: string }) | null
+      )?.path,
+    ).toBe(iconPath("close"));
 
     const input = editor.shadowRoot?.querySelector(
       ".camera-title-field ha-input",
     ) as InputElement;
+    expect(input.getAttribute("label")).toBe("Camera Name");
+    expect(input.getAttribute("placeholder")).toBe("Display name (optional)");
+    expect(input.querySelector('.character-count[slot="end"]')).not.toBeNull();
     input.value = "  Front!  Door @12345678901234567890";
     input.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
     await editor.updateComplete;
@@ -169,7 +179,7 @@ describe("watchzone-card-editor", () => {
     ).toBe("24/24");
     (
       editor.shadowRoot?.querySelector(
-        'ha-button[variant="brand"]',
+        'ha-button[appearance="accent"][variant="brand"]',
       ) as HTMLElement
     ).click();
     await editor.updateComplete;
@@ -325,6 +335,17 @@ describe("watchzone-card-editor", () => {
     ).toHaveLength(2);
     expect(editor.shadowRoot?.querySelector(".add-light")).toBeNull();
 
+    editor.shadowRoot
+      ?.querySelectorAll(".light-icon-selector")[1]
+      ?.dispatchEvent(
+        new CustomEvent("value-changed", {
+          bubbles: true,
+          composed: true,
+          detail: { value: "mdi:coach-lamp" },
+        }),
+      );
+    await editor.updateComplete;
+
     (
       editor.shadowRoot?.querySelectorAll<HTMLElement>(".remove-light")[0] as
         HTMLElement | undefined
@@ -332,7 +353,7 @@ describe("watchzone-card-editor", () => {
     await editor.updateComplete;
     (
       editor.shadowRoot?.querySelector(
-        '.camera-editor-dialog ha-button[variant="brand"][size="m"]',
+        '.camera-editor-dialog ha-button[appearance="accent"][variant="brand"][size="m"]',
       ) as HTMLElement
     ).click();
     await editor.updateComplete;
@@ -340,7 +361,7 @@ describe("watchzone-card-editor", () => {
     expect(changed).toHaveBeenCalledOnce();
     expect(changed.mock.calls[0][0].detail.config.cameras[0]).toEqual({
       entity_id: "camera.front",
-      light_entity_ids: ["light.driveway"],
+      lights: [{ entity_id: "light.driveway", icon: "mdi:coach-lamp" }],
     });
   });
 
@@ -828,7 +849,7 @@ describe("watchzone-card-editor", () => {
     ).click();
     await editor.updateComplete;
     const update = editor.shadowRoot?.querySelector(
-      'ha-button[variant="brand"]',
+      'ha-button[appearance="accent"][variant="brand"]',
     ) as HTMLElement & { disabled: boolean };
     expect(update.disabled).toBe(true);
 

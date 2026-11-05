@@ -150,9 +150,15 @@ describe("layout composition", () => {
         cameras: [
           {
             entity_id: "camera.front",
-            light_entity_ids: ["light.porch", "light.driveway"],
+            lights: [
+              { entity_id: "light.porch", icon: "mdi:coach-lamp" },
+              { entity_id: "light.driveway" },
+            ],
           },
-          { entity_id: "camera.back", light_entity_ids: ["light.yard"] },
+          {
+            entity_id: "camera.back",
+            lights: [{ entity_id: "light.yard" }],
+          },
         ],
       }),
     );
@@ -166,11 +172,14 @@ describe("layout composition", () => {
         cameras: [
           {
             cameraEntityId: "camera.front",
-            lightEntityIds: ["light.porch", "light.driveway"],
+            lights: [
+              { entityId: "light.porch", icon: "mdi:coach-lamp" },
+              { entityId: "light.driveway" },
+            ],
           },
           {
             cameraEntityId: "camera.back",
-            lightEntityIds: ["light.yard"],
+            lights: [{ entityId: "light.yard" }],
           },
         ],
       },

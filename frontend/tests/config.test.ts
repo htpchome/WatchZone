@@ -36,7 +36,7 @@ describe("WatchZone card configuration", () => {
     ).toEqual([
       {
         entity_id: "camera.front",
-        light_entity_ids: [],
+        lights: [],
         low_latency_hls: false,
         ptz_enabled: false,
         start_live_unmuted_pc_tablet: true,
@@ -63,7 +63,7 @@ describe("WatchZone card configuration", () => {
     ).toBe(true);
   });
 
-  it("normalizes up to two unique linked lights per camera", () => {
+  it("normalizes linked-light metadata and migrates the legacy entity list", () => {
     expect(
       normalizeCardConfig({
         cameras: [
@@ -72,16 +72,26 @@ describe("WatchZone card configuration", () => {
             light_entity_ids: ["light.porch", "light.driveway"],
           },
         ],
-      }).cameras[0]?.light_entity_ids,
-    ).toEqual(["light.porch", "light.driveway"]);
+      }).cameras[0]?.lights,
+    ).toEqual([{ entity_id: "light.porch" }, { entity_id: "light.driveway" }]);
+    expect(
+      normalizeCardConfig({
+        cameras: [
+          {
+            entity_id: "camera.front",
+            lights: [{ entity_id: "light.porch", icon: "mdi:coach-lamp" }],
+          },
+        ],
+      }).cameras[0]?.lights,
+    ).toEqual([{ entity_id: "light.porch", icon: "mdi:coach-lamp" }]);
     expect(() =>
       normalizeCardConfig({
         cameras: [
           {
             entity_id: "camera.front",
-            light_entity_ids: Array.from(
+            lights: Array.from(
               { length: MAX_LIGHTS_PER_CAMERA + 1 },
-              (_, index) => `light.${index}`,
+              (_, index) => ({ entity_id: `light.${index}` }),
             ),
           },
         ],
@@ -92,7 +102,10 @@ describe("WatchZone card configuration", () => {
         cameras: [
           {
             entity_id: "camera.front",
-            light_entity_ids: ["light.porch", "light.porch"],
+            lights: [
+              { entity_id: "light.porch" },
+              { entity_id: "light.porch" },
+            ],
           },
         ],
       }),
@@ -102,7 +115,7 @@ describe("WatchZone card configuration", () => {
         cameras: [
           {
             entity_id: "camera.front",
-            light_entity_ids: ["switch.porch"],
+            lights: [{ entity_id: "switch.porch" }],
           },
         ],
       }),
