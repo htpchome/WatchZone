@@ -32,6 +32,12 @@
                     "config": {},
                     "id": "default-ptz-component",
                     "kind": "component"
+                  },
+                  {
+                    "componentType": "light_control",
+                    "config": {},
+                    "id": "default-light-component",
+                    "kind": "component"
                   }
                 ]
               }
@@ -70,6 +76,12 @@
                     "componentType": "ptz",
                     "config": {},
                     "id": "default-ptz-component",
+                    "kind": "component"
+                  },
+                  {
+                    "componentType": "light_control",
+                    "config": {},
+                    "id": "default-light-component",
                     "kind": "component"
                   }
                 ]

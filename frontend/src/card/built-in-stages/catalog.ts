@@ -2,6 +2,7 @@ import type { CardConfig } from "../../core/config";
 import {
   APP_ID,
   CAMERA_MODULE_TYPE,
+  LIGHT_COMPONENT_TYPE,
   PTZ_COMPONENT_TYPE,
   TALK_COMPONENT_TYPE,
 } from "../../core/constants";
@@ -141,6 +142,17 @@ function hydrateCameraComponent(
         entityId,
         provider: "home_assistant" as const,
       }));
+    return cameras.length ? { ...node, config: { cameras } } : undefined;
+  }
+  if (node.componentType === LIGHT_COMPONENT_TYPE) {
+    const cameras = config.cameras
+      .filter(({ light_entity_ids: ids }) => ids.length > 0)
+      .map(
+        ({ entity_id: cameraEntityId, light_entity_ids: lightEntityIds }) => ({
+          cameraEntityId,
+          lightEntityIds,
+        }),
+      );
     return cameras.length ? { ...node, config: { cameras } } : undefined;
   }
   return node;

@@ -62,7 +62,8 @@ root grid
 └── camera module
     └── overlay slot
         ├── two-way-talk component (when enabled)
-        └── PTZ component (when enabled)
+        ├── PTZ component (when enabled)
+        └── linked-light component (when configured)
 ```
 
 ## Runtime rules

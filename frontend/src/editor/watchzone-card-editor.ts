@@ -19,6 +19,7 @@ import {
   EDITOR_TEXT_PREVIEW_DELAY_MS,
   MAX_CAMERA_TITLE_LENGTH,
   MAX_CAMERAS,
+  MAX_LIGHTS_PER_CAMERA,
   SORTABLE_LIST_TAG,
   SORTABLE_REORDER_EVENT,
   SORTABLE_TILE_TAG,
@@ -70,6 +71,9 @@ interface SelectorElement extends HTMLElement {
 const CAMERA_SELECTOR = {
   entity: { filter: { domain: "camera" } },
 } as const;
+const LIGHT_SELECTOR = {
+  entity: { filter: { domain: "light" } },
+} as const;
 const BOOLEAN_SELECTOR = { boolean: {} } as const;
 
 const accordionTag = unsafeStatic(ACCORDION_TAG);
@@ -89,7 +93,7 @@ type BooleanConfigFlag =
 
 type CameraBooleanConfigFlag = Exclude<
   keyof CameraConfig,
-  "entity_id" | "title"
+  "entity_id" | "light_entity_ids" | "title"
 >;
 
 export class CardEditor extends LitElement {
@@ -102,6 +106,9 @@ export class CardEditor extends LitElement {
   private _cameraBaseline?: CameraConfig;
   private _cameraDraft?: CameraConfig;
   private _cameraTitleInput = "";
+  private _addingLight = false;
+  private _pendingLightEntityId = "";
+  private _pendingRemoveCameraIndex?: number;
   private _talkCapability?: boolean;
   private _talkCapabilityGeneration = 0;
   private _talkCapabilityPending = false;
@@ -192,12 +199,26 @@ export class CardEditor extends LitElement {
   }
 
   protected updated(): void {
-    const dialog = this.renderRoot.querySelector<HTMLDialogElement>(
+    const cameraDialog = this.renderRoot.querySelector<HTMLDialogElement>(
       ".camera-editor-dialog",
     );
-    if (!dialog) return;
-    if (this._cameraDraft && !dialog.open) dialog.showModal();
-    else if (!this._cameraDraft && dialog.open) dialog.close();
+    if (cameraDialog) {
+      if (this._cameraDraft && !cameraDialog.open) cameraDialog.showModal();
+      else if (!this._cameraDraft && cameraDialog.open) cameraDialog.close();
+    }
+    const removeDialog = this.renderRoot.querySelector<HTMLDialogElement>(
+      ".remove-camera-dialog",
+    );
+    if (removeDialog) {
+      if (this._pendingRemoveCameraIndex !== undefined && !removeDialog.open) {
+        removeDialog.showModal();
+      } else if (
+        this._pendingRemoveCameraIndex === undefined &&
+        removeDialog.open
+      ) {
+        removeDialog.close();
+      }
+    }
   }
 
   protected render() {
@@ -231,6 +252,7 @@ export class CardEditor extends LitElement {
         </${accordionItemTag}>
       </${accordionTag}>
       ${this._renderCameraDialog()}
+      ${this._renderRemoveCameraDialog()}
     `;
   }
 
@@ -262,6 +284,7 @@ export class CardEditor extends LitElement {
               slot="actions"
               class="tile-action"
               type="button"
+              title=${this._t("editor.edit_camera")}
               aria-label=${this._t("editor.edit_camera_named", {
                 name: camera.title || this._cameraName(camera.entity_id),
               })}
@@ -274,13 +297,14 @@ export class CardEditor extends LitElement {
               slot="actions"
               class="tile-action"
               type="button"
-              aria-label=${this._t("editor.delete_camera_named", {
+              title=${this._t("editor.remove_camera")}
+              aria-label=${this._t("editor.remove_camera_named", {
                 name: camera.title || this._cameraName(camera.entity_id),
               })}
               data-camera-index=${String(index)}
-              @click=${this._deleteCamera}
+              @click=${this._requestRemoveCamera}
             >
-              ${renderIcon("delete")}
+              ${renderIcon("remove")}
             </button>
           </${sortableTileTag}>`,
         )}
@@ -362,6 +386,7 @@ export class CardEditor extends LitElement {
           <button
             class="dialog-close"
             type="button"
+            title=${this._t("editor.close_camera_editor")}
             aria-label=${this._t("editor.close_camera_editor")}
             @click=${this._cancelCameraEdit}
           >
@@ -438,11 +463,16 @@ export class CardEditor extends LitElement {
                     density="compact"
                     heading=${this._t("editor.lights")}
                     item-key="lights"
-                    summary-text=${this._t("editor.not_configured")}
+                    summary-text=${
+                      camera.light_entity_ids.length
+                        ? this._t("editor.light_count", {
+                            count: camera.light_entity_ids.length,
+                            maximum: MAX_LIGHTS_PER_CAMERA,
+                          })
+                        : this._t("editor.not_configured")
+                    }
                   >
-                    <p class="empty-camera-section">
-                      ${this._t("editor.no_settings_available")}
-                    </p>
+                    ${this._renderLightSettings(camera)}
                   </${accordionItemTag}>
                   <${accordionItemTag}
                     density="compact"
@@ -525,6 +555,119 @@ export class CardEditor extends LitElement {
         </footer>
       </form>
     </dialog>`;
+  }
+
+  private _renderRemoveCameraDialog() {
+    const camera =
+      this._pendingRemoveCameraIndex === undefined
+        ? undefined
+        : this._config?.cameras[this._pendingRemoveCameraIndex];
+    const name = camera
+      ? camera.title || this._cameraName(camera.entity_id)
+      : "";
+    return html`<dialog
+      class="remove-camera-dialog"
+      @cancel=${this._cancelRemoveCamera}
+    >
+      <form @submit=${this._confirmRemoveCamera}>
+        <header><h2>${this._t("editor.remove_camera_question")}</h2></header>
+        <div class="remove-camera-content">
+          ${this._t("editor.remove_camera_description", { name })}
+        </div>
+        <footer>
+          <ha-button
+            appearance="plain"
+            variant="neutral"
+            size="m"
+            type="button"
+            @click=${this._cancelRemoveCamera}
+          >
+            ${this._t("common.cancel")}
+          </ha-button>
+          <ha-button
+            appearance="accent"
+            variant="danger"
+            size="m"
+            type="button"
+            @click=${this._confirmRemoveCamera}
+          >
+            ${this._t("common.remove")}
+          </ha-button>
+        </footer>
+      </form>
+    </dialog>`;
+  }
+
+  private _renderLightSettings(camera: CameraConfig) {
+    return html`<div class="linked-light-settings">
+      ${camera.light_entity_ids.map((entityId, index) => {
+        const name = this._entityName(entityId);
+        return html`<div class="linked-light-row">
+          <span>${renderIcon("lightbulb")}</span>
+          <span class="linked-light-copy">
+            <strong>${name}</strong>
+            <small>${entityId}</small>
+          </span>
+          <button
+            class="remove-light"
+            type="button"
+            data-light-index=${String(index)}
+            title=${this._t("editor.remove_light")}
+            aria-label=${this._t("editor.remove_light_named", { name })}
+            @click=${this._removeLight}
+          >
+            ${renderIcon("close")}
+          </button>
+        </div>`;
+      })}
+      ${
+        this._addingLight
+          ? html`<div class="add-light-form">
+              <ha-selector
+                label=${this._t("editor.light")}
+                .hass=${this._hass}
+                .selector=${LIGHT_SELECTOR}
+                .value=${this._pendingLightEntityId}
+                .required=${true}
+                @value-changed=${this._handleLightEntityChange}
+              ></ha-selector>
+              <div class="add-light-actions">
+                <ha-button
+                  appearance="plain"
+                  variant="neutral"
+                  size="s"
+                  type="button"
+                  @click=${this._cancelAddingLight}
+                >
+                  ${this._t("common.cancel")}
+                </ha-button>
+                <ha-button
+                  appearance="accent"
+                  variant="brand"
+                  size="s"
+                  type="button"
+                  .disabled=${!this._pendingLightCanCommit()}
+                  @click=${this._addLightToDraft}
+                >
+                  ${this._t("common.add")}
+                </ha-button>
+              </div>
+            </div>`
+          : camera.light_entity_ids.length < MAX_LIGHTS_PER_CAMERA
+            ? html`<ha-button
+                class="add-light"
+                appearance="plain"
+                variant="neutral"
+                size="s"
+                type="button"
+                title=${this._t("editor.add_light")}
+                @click=${this._startAddingLight}
+              >
+                ${renderIcon("lightbulb")} ${this._t("editor.add_light")}
+              </ha-button>`
+            : nothing
+      }
+    </div>`;
   }
 
   private _renderCameraBoolean(
@@ -647,12 +790,66 @@ export class CardEditor extends LitElement {
     this.requestUpdate();
   };
 
+  private readonly _handleLightEntityChange = (
+    event: ValueChangedEvent,
+  ): void => {
+    this._pendingLightEntityId =
+      typeof event.detail.value === "string" ? event.detail.value.trim() : "";
+    this.requestUpdate();
+  };
+
+  private readonly _startAddingLight = (): void => {
+    this._addingLight = true;
+    this._pendingLightEntityId = "";
+    this.requestUpdate();
+  };
+
+  private readonly _cancelAddingLight = (): void => {
+    this._addingLight = false;
+    this._pendingLightEntityId = "";
+    this.requestUpdate();
+  };
+
+  private _pendingLightCanCommit(): boolean {
+    return Boolean(
+      this._cameraDraft &&
+      this._pendingLightEntityId.startsWith("light.") &&
+      this._cameraDraft.light_entity_ids.length < MAX_LIGHTS_PER_CAMERA &&
+      !this._cameraDraft.light_entity_ids.includes(this._pendingLightEntityId),
+    );
+  }
+
+  private readonly _addLightToDraft = (): void => {
+    if (!this._cameraDraft || !this._pendingLightCanCommit()) return;
+    this._cameraDraft = {
+      ...this._cameraDraft,
+      light_entity_ids: [
+        ...this._cameraDraft.light_entity_ids,
+        this._pendingLightEntityId,
+      ],
+    };
+    this._cancelAddingLight();
+  };
+
+  private readonly _removeLight = (event: Event): void => {
+    if (!this._cameraDraft) return;
+    const index = Number(
+      (event.currentTarget as HTMLElement).dataset.lightIndex,
+    );
+    if (!this._cameraDraft.light_entity_ids[index]) return;
+    const ids = [...this._cameraDraft.light_entity_ids];
+    ids.splice(index, 1);
+    this._cameraDraft = { ...this._cameraDraft, light_entity_ids: ids };
+    this.requestUpdate();
+  };
+
   private readonly _addCamera = (): void => {
     if ((this._config?.cameras.length ?? 0) >= MAX_CAMERAS) return;
     this._editingCameraIndex = undefined;
     this._cameraBaseline = undefined;
     this._cameraDraft = createDefaultCameraConfig();
     this._cameraTitleInput = "";
+    this._cancelAddingLight();
     this._talkCapability = undefined;
     this._talkCapabilityPending = false;
     this._ptzCapability = undefined;
@@ -670,18 +867,34 @@ export class CardEditor extends LitElement {
     this._cameraBaseline = camera;
     this._cameraDraft = { ...camera };
     this._cameraTitleInput = camera.title;
+    this._cancelAddingLight();
     this._checkTalkCapability(camera.entity_id);
     this._checkPtzCapability(camera.entity_id);
     this.requestUpdate();
   };
 
-  private readonly _deleteCamera = (event: Event): void => {
+  private readonly _requestRemoveCamera = (event: Event): void => {
     const index = Number(
       (event.currentTarget as HTMLElement).dataset.cameraIndex,
     );
     if (!this._config?.cameras[index]) return;
+    this._pendingRemoveCameraIndex = index;
+    this.requestUpdate();
+  };
+
+  private readonly _cancelRemoveCamera = (event?: Event): void => {
+    event?.preventDefault();
+    this._pendingRemoveCameraIndex = undefined;
+    this.requestUpdate();
+  };
+
+  private readonly _confirmRemoveCamera = (event: Event): void => {
+    event.preventDefault();
+    const index = this._pendingRemoveCameraIndex;
+    if (index === undefined || !this._config?.cameras[index]) return;
     const cameras = [...this._config.cameras];
     cameras.splice(index, 1);
+    this._pendingRemoveCameraIndex = undefined;
     this._applyCameraList(cameras);
   };
 
@@ -690,6 +903,7 @@ export class CardEditor extends LitElement {
     this._cameraBaseline = undefined;
     this._cameraDraft = undefined;
     this._cameraTitleInput = "";
+    this._cancelAddingLight();
     this._talkCapabilityGeneration += 1;
     this._talkCapability = undefined;
     this._talkCapabilityPending = false;
@@ -710,6 +924,7 @@ export class CardEditor extends LitElement {
     this._cameraBaseline = undefined;
     this._cameraDraft = undefined;
     this._cameraTitleInput = "";
+    this._cancelAddingLight();
     this._editingCameraIndex = undefined;
     this._applyCameraList(cameras);
   };
@@ -766,12 +981,17 @@ export class CardEditor extends LitElement {
   }
 
   private _cameraName(entityId: string): string {
+    return this._entityName(entityId).replace(/^camera\./, "");
+  }
+
+  private _entityName(entityId: string): string {
     const friendlyName = this._hass?.states[entityId]?.attributes.friendly_name;
     if (typeof friendlyName === "string" && friendlyName.trim())
       return friendlyName;
-    return entityId.startsWith("camera.")
-      ? entityId.slice("camera.".length).replaceAll("_", " ")
-      : entityId;
+    const separator = entityId.indexOf(".");
+    return (
+      separator >= 0 ? entityId.slice(separator + 1) : entityId
+    ).replaceAll("_", " ");
   }
 
   private _checkTalkCapability(entityId: string): void {
@@ -980,12 +1200,23 @@ export class CardEditor extends LitElement {
 function cameraConfigEquals(left: CameraConfig, right: CameraConfig): boolean {
   return (
     left.entity_id === right.entity_id &&
+    arraysEqual(left.light_entity_ids, right.light_entity_ids) &&
     left.low_latency_hls === right.low_latency_hls &&
     left.ptz_enabled === right.ptz_enabled &&
     left.start_live_unmuted_pc_tablet === right.start_live_unmuted_pc_tablet &&
     left.start_live_unmuted_phone === right.start_live_unmuted_phone &&
     left.title === right.title &&
     left.two_way_talk_enabled === right.two_way_talk_enabled
+  );
+}
+
+function arraysEqual(
+  left: readonly string[],
+  right: readonly string[],
+): boolean {
+  return (
+    left.length === right.length &&
+    left.every((value, index) => value === right[index])
   );
 }
 

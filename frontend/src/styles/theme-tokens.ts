@@ -141,6 +141,7 @@ export const themeTokens = css`
     --wzc-font-weight-medium: var(--ha-font-weight-medium, 500);
     --wzc-font-weight-semibold: var(--ha-font-weight-semibold, 600);
     --wzc-line-height-condensed: var(--ha-line-height-condensed, 1.25);
+    --wzc-line-height-normal: var(--ha-line-height-normal, 1.5);
 
     --wzc-card-background: var(--wzc-color-background);
     --wzc-card-radius: var(--wzc-radius-card);
@@ -210,6 +211,17 @@ export const themeTokens = css`
       var(--wzc-media-overlay-surface) var(--wzc-media-overlay-opacity),
       transparent
     );
+    --wzc-light-control-gap: 0.5rem;
+    --wzc-light-microphone-offset: 1.875rem;
+    --wzc-light-fill-color: var(--ha-color-amber-50, #fbbf24);
+    --wzc-light-panel-background: color-mix(
+      in srgb,
+      var(--wzc-media-overlay-surface) 90%,
+      transparent
+    );
+    --wzc-light-panel-inline-size: clamp(6.5rem, 24cqi, 8rem);
+    --wzc-light-power-active-color: var(--ha-color-amber-40, #fcd34d);
+    --wzc-light-transition-duration: 160ms;
 
     --wzc-accordion-background: var(--wzc-color-background);
     --wzc-accordion-header-color: var(--wzc-color-text-1);

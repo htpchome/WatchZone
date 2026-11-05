@@ -27,6 +27,9 @@ new browser API makes another platform easier or faster.
   that the Home Assistant client keeps an ordinary browser-tab lifecycle.
 - Interactive targets must work with touch, mouse, keyboard, and assistive
   technology. Do not make hover the only way to expose an action.
+- Every icon-only interactive control has a localized accessible name and a
+  matching hover title. Visible button text remains its own accessible name;
+  decorative icons are hidden from assistive technology.
 - Use container size rather than global viewport size for card layout decisions.
 - Respect safe-area insets, text scaling, reduced motion, orientation changes,
   and Home Assistant theme tokens where they affect the feature.

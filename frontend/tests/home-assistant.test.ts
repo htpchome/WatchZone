@@ -13,6 +13,7 @@ function hassWith(entity: HomeAssistantEntity): HomeAssistant {
   return {
     states: { [entity.entity_id]: entity },
     connection: { subscribeMessage: async () => () => undefined },
+    callService: async <T>() => undefined as T,
     callWS: async () => undefined as never,
     hassUrl: (path) => `https://ha.example${path}`,
   };

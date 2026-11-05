@@ -127,7 +127,7 @@ describe("watchzone-card-editor", () => {
 
     (
       editor.shadowRoot?.querySelector(
-        '[aria-label="Edit front"]',
+        '[aria-label="Edit camera: front"]',
       ) as HTMLElement
     ).click();
     await editor.updateComplete;
@@ -181,6 +181,167 @@ describe("watchzone-card-editor", () => {
     expect(
       editor.shadowRoot?.querySelector(".camera-tile-copy span")?.textContent,
     ).toBe("Front Door 1234567890123");
+  });
+
+  it("confirms camera removal and exposes accessible edit and remove names", async () => {
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as CardEditor;
+    editor.setConfig({
+      type: CARD_TYPE,
+      cameras: [{ entity_id: "camera.front" }, { entity_id: "camera.back" }],
+    });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+
+    const edit = editor.shadowRoot?.querySelector('[title="Edit Camera"]');
+    const remove = editor.shadowRoot?.querySelector(
+      '[title="Remove camera"]',
+    ) as HTMLElement;
+    expect(edit?.getAttribute("aria-label")).toBe("Edit camera: front");
+    expect(remove.getAttribute("aria-label")).toBe("Remove camera: front");
+
+    remove.click();
+    await editor.updateComplete;
+    const dialog = editor.shadowRoot?.querySelector(
+      ".remove-camera-dialog",
+    ) as HTMLDialogElement;
+    expect(dialog.open).toBe(true);
+    expect(dialog.textContent).toContain(
+      "Are you sure you want to remove “front” from this card?",
+    );
+    (
+      dialog.querySelector('ha-button[variant="neutral"]') as HTMLElement
+    ).click();
+    await editor.updateComplete;
+    expect(dialog.open).toBe(false);
+    expect(changed).not.toHaveBeenCalled();
+
+    remove.click();
+    await editor.updateComplete;
+    (
+      dialog.querySelector('ha-button[variant="danger"]') as HTMLElement
+    ).click();
+    await editor.updateComplete;
+    expect(changed).toHaveBeenCalledOnce();
+    expect(changed.mock.calls[0][0].detail.config.cameras).toEqual([
+      { entity_id: "camera.back" },
+    ]);
+  });
+
+  it("adds, cancels, limits, and removes linked Home Assistant lights", async () => {
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as CardEditor;
+    editor.hass = {
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "streaming",
+          attributes: { friendly_name: "Front" },
+        },
+        "light.porch": {
+          entity_id: "light.porch",
+          state: "off",
+          attributes: { friendly_name: "Porch" },
+        },
+        "light.driveway": {
+          entity_id: "light.driveway",
+          state: "on",
+          attributes: { friendly_name: "Driveway" },
+        },
+      },
+      connection: { subscribeMessage: async () => () => undefined },
+      callService: async () => undefined,
+      callWS: async () => undefined,
+      hassUrl: (path: string) => path,
+    };
+    editor.setConfig({
+      type: CARD_TYPE,
+      cameras: [{ entity_id: "camera.front" }],
+    });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+    (
+      editor.shadowRoot?.querySelector(
+        '[aria-label="Edit camera: Front"]',
+      ) as HTMLElement
+    ).click();
+    await editor.updateComplete;
+
+    const selectLight = async (entityId: string): Promise<void> => {
+      (editor.shadowRoot?.querySelector(".add-light") as HTMLElement).click();
+      await editor.updateComplete;
+      editor.shadowRoot
+        ?.querySelector(".add-light-form ha-selector")
+        ?.dispatchEvent(
+          new CustomEvent("value-changed", {
+            bubbles: true,
+            composed: true,
+            detail: { value: entityId },
+          }),
+        );
+      await editor.updateComplete;
+    };
+
+    await selectLight("light.porch");
+    (
+      editor.shadowRoot?.querySelector(
+        '.add-light-form ha-button[variant="brand"]',
+      ) as HTMLElement
+    ).click();
+    await editor.updateComplete;
+    expect(
+      editor.shadowRoot?.querySelectorAll(".linked-light-row"),
+    ).toHaveLength(1);
+    expect(
+      editor.shadowRoot?.querySelector(".remove-light")?.getAttribute("title"),
+    ).toBe("Remove light");
+
+    await selectLight("light.driveway");
+    (
+      editor.shadowRoot?.querySelector(
+        '.add-light-form ha-button[variant="neutral"]',
+      ) as HTMLElement
+    ).click();
+    await editor.updateComplete;
+    expect(
+      editor.shadowRoot?.querySelectorAll(".linked-light-row"),
+    ).toHaveLength(1);
+
+    await selectLight("light.driveway");
+    (
+      editor.shadowRoot?.querySelector(
+        '.add-light-form ha-button[variant="brand"]',
+      ) as HTMLElement
+    ).click();
+    await editor.updateComplete;
+    expect(
+      editor.shadowRoot?.querySelectorAll(".linked-light-row"),
+    ).toHaveLength(2);
+    expect(editor.shadowRoot?.querySelector(".add-light")).toBeNull();
+
+    (
+      editor.shadowRoot?.querySelectorAll<HTMLElement>(".remove-light")[0] as
+        HTMLElement | undefined
+    )?.click();
+    await editor.updateComplete;
+    (
+      editor.shadowRoot?.querySelector(
+        '.camera-editor-dialog ha-button[variant="brand"][size="m"]',
+      ) as HTMLElement
+    ).click();
+    await editor.updateComplete;
+
+    expect(changed).toHaveBeenCalledOnce();
+    expect(changed.mock.calls[0][0].detail.config.cameras[0]).toEqual({
+      entity_id: "camera.front",
+      light_entity_ids: ["light.driveway"],
+    });
   });
 
   it("uses dirtyState and soft preview without config-changed while typing", async () => {
@@ -578,7 +739,7 @@ describe("watchzone-card-editor", () => {
 
     (
       editor.shadowRoot?.querySelector(
-        '[aria-label="Edit front"]',
+        '[aria-label="Edit camera: front"]',
       ) as HTMLElement
     ).click();
     await editor.updateComplete;
@@ -627,7 +788,7 @@ describe("watchzone-card-editor", () => {
     await reopened.updateComplete;
     (
       reopened.shadowRoot?.querySelector(
-        '[aria-label="Edit front"]',
+        '[aria-label="Edit camera: front"]',
       ) as HTMLElement
     ).click();
     await reopened.updateComplete;
@@ -662,7 +823,7 @@ describe("watchzone-card-editor", () => {
 
     (
       editor.shadowRoot?.querySelector(
-        '[aria-label="Edit front"]',
+        '[aria-label="Edit camera: front"]',
       ) as HTMLElement
     ).click();
     await editor.updateComplete;

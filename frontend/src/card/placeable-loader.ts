@@ -1,5 +1,6 @@
 import {
   CAMERA_MODULE_TYPE,
+  LIGHT_COMPONENT_TYPE,
   PTZ_COMPONENT_TYPE,
   TALK_COMPONENT_TYPE,
 } from "../core/constants";
@@ -29,6 +30,12 @@ const componentLoaders = {
   [PTZ_COMPONENT_TYPE]: {
     load: () =>
       import("../components/ptz").then(
+        ({ componentDefinition }) => componentDefinition,
+      ),
+  },
+  [LIGHT_COMPONENT_TYPE]: {
+    load: () =>
+      import("../components/light-control").then(
         ({ componentDefinition }) => componentDefinition,
       ),
   },

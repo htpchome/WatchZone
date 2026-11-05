@@ -15,6 +15,7 @@ const packageJson = JSON.parse(
 ) as { version: string };
 const expectedBuild = process.env.GITHUB_SHA?.slice(0, 7) ?? "local";
 const expectedVersion = packageJson.version;
+const LIGHT_LONG_PRESS_WAIT_MS = 500;
 const pageErrors = new WeakMap<Page, string[]>();
 
 function cssAlpha(color: string): number {
@@ -246,7 +247,7 @@ test("preserves expanded camera-stage geometry across carousel selection", async
   });
 });
 
-test("fills the camera overlay slot with talk and PTZ controls", async ({
+test("fills the camera overlay slot with talk, PTZ, and light controls", async ({
   page,
 }) => {
   await page.goto("/");
@@ -264,6 +265,7 @@ test("fills the camera overlay slot with talk and PTZ controls", async ({
       cameras: [
         {
           entity_id: "camera.front",
+          light_entity_ids: ["light.porch"],
           ptz_enabled: true,
           two_way_talk_enabled: true,
         },
@@ -276,9 +278,31 @@ test("fills the camera overlay slot with talk and PTZ controls", async ({
           state: "streaming",
           attributes: { friendly_name: "Front" },
         },
+        "light.porch": {
+          entity_id: "light.porch",
+          state: "on",
+          attributes: { brightness: 128, friendly_name: "Porch" },
+        },
       },
       connection,
       hassUrl: (path: string) => path,
+      callService: async (
+        domain: string,
+        service: string,
+        data: Record<string, unknown> | undefined,
+        target: Record<string, unknown> | undefined,
+      ) => {
+        (
+          window as unknown as {
+            lightCalls?: unknown[];
+          }
+        ).lightCalls ??= [];
+        (
+          window as unknown as {
+            lightCalls: unknown[];
+          }
+        ).lightCalls.push({ data, domain, service, target });
+      },
       callWS: async (message: { type: string }) => {
         if (message.type === "watchzone/live/camera/ready") {
           return { ready: false };
@@ -305,27 +329,38 @@ test("fills the camera overlay slot with talk and PTZ controls", async ({
   await camera.locator("wzc-camera-live .viewport").hover();
   const talk = page.locator("wzc-two-way-talk");
   const ptz = page.locator("wzc-ptz");
+  const lights = page.locator("wzc-light-control");
   const talkButton = talk.locator("button.inactive");
   const ptzControl = ptz.locator(".ptz-control.visible");
+  const lightButton = lights.locator(".light-button");
   await expect(talkButton).toBeVisible();
   await expect(ptzControl).toBeVisible();
+  await expect(lightButton).toBeVisible();
+  await expect(lightButton).toHaveAttribute("title", "Turn off Porch");
+  await expect(lightButton).toHaveAttribute("aria-label", "Turn off Porch");
 
   const cameraBox = await camera.boundingBox();
   const talkHostBox = await talk.boundingBox();
   const ptzHostBox = await ptz.boundingBox();
+  const lightHostBox = await lights.boundingBox();
   const talkButtonBox = await talkButton.boundingBox();
   const ptzControlBox = await ptzControl.boundingBox();
+  const lightButtonBox = await lightButton.boundingBox();
   expect(cameraBox).not.toBeNull();
   expect(talkHostBox).not.toBeNull();
   expect(ptzHostBox).not.toBeNull();
+  expect(lightHostBox).not.toBeNull();
   expect(talkButtonBox).not.toBeNull();
   expect(ptzControlBox).not.toBeNull();
+  expect(lightButtonBox).not.toBeNull();
   if (
     !cameraBox ||
     !talkHostBox ||
     !ptzHostBox ||
+    !lightHostBox ||
     !talkButtonBox ||
-    !ptzControlBox
+    !ptzControlBox ||
+    !lightButtonBox
   ) {
     return;
   }
@@ -334,6 +369,8 @@ test("fills the camera overlay slot with talk and PTZ controls", async ({
   expect(ptzHostBox.height).toBeCloseTo(cameraBox.height, 0);
   expect(talkHostBox.y).toBeCloseTo(cameraBox.y, 0);
   expect(ptzHostBox.y).toBeCloseTo(cameraBox.y, 0);
+  expect(lightHostBox.height).toBeCloseTo(cameraBox.height, 0);
+  expect(lightHostBox.y).toBeCloseTo(cameraBox.y, 0);
   expect(talkButtonBox.y).toBeGreaterThan(cameraBox.y + cameraBox.height / 2);
   expect(talkButtonBox.x + talkButtonBox.width / 2).toBeCloseTo(
     cameraBox.x + cameraBox.width / 2,
@@ -344,6 +381,36 @@ test("fills the camera overlay slot with talk and PTZ controls", async ({
   expect(ptzControlBox.y + ptzControlBox.height).toBeLessThanOrEqual(
     cameraBox.y + cameraBox.height,
   );
+  expect(lightButtonBox.x + lightButtonBox.width).toBeLessThan(talkButtonBox.x);
+
+  await page.mouse.move(
+    lightButtonBox.x + lightButtonBox.width / 2,
+    lightButtonBox.y + lightButtonBox.height / 2,
+  );
+  await page.mouse.down();
+  await page.waitForTimeout(LIGHT_LONG_PRESS_WAIT_MS);
+  await page.mouse.up();
+  const dimmer = lights.locator(".dimmer-panel");
+  await expect(dimmer).toBeVisible();
+  const slider = dimmer.locator('input[type="range"]');
+  await slider.evaluate((element) => {
+    const input = element as HTMLInputElement;
+    input.value = "70";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (
+            window as unknown as {
+              lightCalls?: Array<{ data?: { brightness_pct?: number } }>;
+            }
+          ).lightCalls?.at(-1)?.data?.brightness_pct,
+      ),
+    )
+    .toBe(70);
 });
 
 test("aligns phone carousel controls and stage handle to the active stage", async ({
@@ -820,7 +887,7 @@ test("editor uses exclusive accordions and shared draft status", async ({
   ).toContainText("Unsaved changes");
 });
 
-test("camera editor uses compact sections and saves a sanitized title", async ({
+test("camera editor configures lights and confirms accessible removal", async ({
   page,
 }) => {
   await page.goto("/");
@@ -848,7 +915,7 @@ test("camera editor uses compact sections and saves a sanitized title", async ({
 
   const editor = page.locator("#camera-config-editor");
   await editor.locator("wzc-accordion-item").first().locator("summary").click();
-  await editor.locator('[aria-label="Edit front"]').click();
+  await editor.locator('[aria-label="Edit camera: front"]').click();
 
   const items = editor.locator(".camera-dialog-accordion > wzc-accordion-item");
   await expect(items).toHaveCount(5);
@@ -866,6 +933,24 @@ test("camera editor uses compact sections and saves a sanitized title", async ({
   const compactHeader = await items.nth(1).locator("summary").boundingBox();
   expect(compactHeader?.height).toBeLessThanOrEqual(44);
 
+  await items.nth(3).locator("summary").click();
+  await editor.locator(".add-light").click();
+  await editor.locator(".add-light-form ha-selector").evaluate((element) => {
+    element.dispatchEvent(
+      new CustomEvent("value-changed", {
+        bubbles: true,
+        composed: true,
+        detail: { value: "light.porch" },
+      }),
+    );
+  });
+  await editor.locator('.add-light-form ha-button[variant="brand"]').click();
+  await expect(editor.locator(".linked-light-row")).toHaveCount(1);
+  await expect(editor.locator(".remove-light")).toHaveAttribute(
+    "title",
+    "Remove light",
+  );
+
   const titleInput = editor.locator(".camera-title-field ha-input");
   await titleInput.evaluate((element) => {
     const input = element as HTMLElement & { value: string };
@@ -877,6 +962,26 @@ test("camera editor uses compact sections and saves a sanitized title", async ({
   await expect(editor.locator(".camera-tile-copy span")).toHaveText(
     "Front Door 1234567890123",
   );
+  const editAction = editor.locator('[title="Edit Camera"]');
+  const removeAction = editor.locator('[title="Remove camera"]');
+  await expect(editAction).toHaveAttribute(
+    "aria-label",
+    "Edit camera: Front Door 1234567890123",
+  );
+  await expect(removeAction).toHaveAttribute(
+    "aria-label",
+    "Remove camera: Front Door 1234567890123",
+  );
+  await removeAction.click();
+  const removeDialog = editor.locator(".remove-camera-dialog");
+  await expect(removeDialog).toBeVisible();
+  await expect(removeDialog).toContainText("Remove camera?");
+  await removeDialog.locator('ha-button[variant="neutral"]').click();
+  await expect(removeDialog).not.toBeVisible();
+  await expect(editor.locator("wzc-sortable-tile")).toHaveCount(1);
+  await removeAction.click();
+  await removeDialog.locator('ha-button[variant="danger"]').click();
+  await expect(editor.locator("wzc-sortable-tile")).toHaveCount(0);
 });
 
 test("editor camera drag handles reorder the configured cameras", async ({
@@ -1071,7 +1176,7 @@ test("round-trips boolean toggles through defaults before Save", async ({
     const openCameraEditor = async (): Promise<void> => {
       (
         editor.shadowRoot?.querySelector(
-          '[aria-label="Edit front"]',
+          '[aria-label="Edit camera: front"]',
         ) as HTMLElement
       ).click();
       await editor.updateComplete;

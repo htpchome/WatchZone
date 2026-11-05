@@ -10,9 +10,10 @@ Assistant must not reconstruct the card on every input event.
 ## 2. Baseline, draft, and saved configuration
 
 Camera configuration is an ordered list capped by the centralized
-`MAX_CAMERAS` value. Adding, editing, deleting, or reordering a camera produces
-one complete normalized list update and one dirty-state write. Per-camera live
-and audio options are edited inside that camera's dialog. Camera-module
+`MAX_CAMERAS` value. Adding, editing, removing, or reordering a camera produces
+one complete normalized list update and one dirty-state write. Removal requires
+confirmation before the draft changes. Per-camera live, audio, and linked-light
+options are edited inside that camera's dialog. Camera-module
 appearance is edited once under Layout Settings and applies uniformly to the
 module rather than individual cameras. YAML output omits default values while
 preserving list order and stable entity identity.

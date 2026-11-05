@@ -8,6 +8,7 @@ import { normalizeCardConfig } from "../src/core/config";
 import {
   DEFAULT_CAMERA_MODULE_NODE_ID,
   DEFAULT_LAYOUT_ROOT_NODE_ID,
+  DEFAULT_LIGHT_COMPONENT_NODE_ID,
   DEFAULT_PTZ_COMPONENT_NODE_ID,
   DEFAULT_TALK_COMPONENT_NODE_ID,
 } from "../src/core/constants";
@@ -139,6 +140,39 @@ describe("layout composition", () => {
       componentType: "ptz",
       config: {
         cameras: [{ entityId: "camera.front", provider: "home_assistant" }],
+      },
+    });
+  });
+
+  it("composes linked lights as an independent active-camera overlay", () => {
+    const layout = builtInStage(
+      normalizeCardConfig({
+        cameras: [
+          {
+            entity_id: "camera.front",
+            light_entity_ids: ["light.porch", "light.driveway"],
+          },
+          { entity_id: "camera.back", light_entity_ids: ["light.yard"] },
+        ],
+      }),
+    );
+
+    const camera = defaultVariant(layout).root.children[0]?.node;
+    expect(camera?.slots?.overlay?.[0]).toMatchObject({
+      id: DEFAULT_LIGHT_COMPONENT_NODE_ID,
+      kind: "component",
+      componentType: "light_control",
+      config: {
+        cameras: [
+          {
+            cameraEntityId: "camera.front",
+            lightEntityIds: ["light.porch", "light.driveway"],
+          },
+          {
+            cameraEntityId: "camera.back",
+            lightEntityIds: ["light.yard"],
+          },
+        ],
       },
     });
   });

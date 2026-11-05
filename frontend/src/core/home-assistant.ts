@@ -53,6 +53,12 @@ export interface HomeAssistant {
   readonly connection: HomeAssistantConnection;
   readonly language?: string;
   readonly locale?: HomeAssistantLocale;
+  callService<T = unknown>(
+    domain: string,
+    service: string,
+    serviceData?: Readonly<Record<string, unknown>>,
+    target?: Readonly<Record<string, unknown>>,
+  ): Promise<T>;
   callWS<T>(message: HomeAssistantMessage): Promise<T>;
   hassUrl(path: string): string;
 }

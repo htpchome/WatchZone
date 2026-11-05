@@ -62,7 +62,8 @@ export const cardEditorStyles = css`
   }
 
   .tile-action,
-  .dialog-close {
+  .dialog-close,
+  .remove-light {
     display: grid;
     place-items: center;
     box-sizing: border-box;
@@ -83,8 +84,15 @@ export const cardEditorStyles = css`
     pointer-events: none;
   }
 
+  .remove-light svg {
+    display: block;
+    inline-size: 100%;
+    pointer-events: none;
+  }
+
   .tile-action:focus-visible,
   .dialog-close:focus-visible,
+  .remove-light:focus-visible,
   .add-camera:focus-visible {
     outline: 2px solid var(--wzc-color-primary);
     outline-offset: 2px;
@@ -198,6 +206,87 @@ export const cardEditorStyles = css`
     font-size: var(--wzc-font-size-small);
   }
 
+  .linked-light-settings,
+  .add-light-form {
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .linked-light-row {
+    display: grid;
+    grid-template-columns: 1.5rem minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.55rem;
+    min-block-size: 2.75rem;
+    padding: 0.35rem 0.45rem;
+    background: var(--wzc-color-surface-secondary);
+    border: 1px solid var(--wzc-color-border-control);
+    border-radius: var(--wzc-radius-medium);
+  }
+
+  .linked-light-row > span:first-child,
+  .add-light svg {
+    display: grid;
+    color: var(--wzc-color-primary);
+  }
+
+  .linked-light-row svg,
+  .add-light svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
+
+  .linked-light-copy {
+    display: grid;
+    min-inline-size: 0;
+    gap: 0.1rem;
+  }
+
+  .linked-light-copy strong,
+  .linked-light-copy small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .linked-light-copy small {
+    color: var(--wzc-color-text-2);
+    font-size: var(--wzc-font-size-small);
+  }
+
+  .remove-light {
+    inline-size: 2rem;
+    block-size: 2rem;
+  }
+
+  .add-light {
+    justify-self: start;
+  }
+
+  .add-light-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  .remove-camera-dialog {
+    inline-size: min(27rem, calc(100vw - 2rem));
+  }
+
+  .remove-camera-dialog header {
+    display: block;
+  }
+
+  .remove-camera-dialog h2 {
+    text-align: start;
+  }
+
+  .remove-camera-content {
+    padding: 1rem;
+    color: var(--wzc-color-text-2);
+    line-height: var(--wzc-line-height-normal);
+  }
+
   dialog footer {
     position: sticky;
     inset-block-end: 0;
@@ -211,6 +300,7 @@ export const cardEditorStyles = css`
   @media (hover: hover) and (pointer: fine) {
     .tile-action:hover,
     .dialog-close:hover,
+    .remove-light:hover,
     .add-camera:hover:not(:disabled) {
       background: var(--wzc-color-fill-primary);
     }
@@ -219,6 +309,7 @@ export const cardEditorStyles = css`
   @media (hover: none) {
     .tile-action:hover,
     .dialog-close:hover,
+    .remove-light:hover,
     .add-camera:hover:not(:disabled) {
       background: transparent;
     }

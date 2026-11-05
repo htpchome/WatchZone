@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { normalizeCardConfig } from "../src/core/config";
-import { CARD_TYPE, MAX_CAMERAS } from "../src/core/constants";
+import {
+  CARD_TYPE,
+  MAX_CAMERAS,
+  MAX_LIGHTS_PER_CAMERA,
+} from "../src/core/constants";
 
 describe("WatchZone card configuration", () => {
   it("defaults card appearance and starts with no cameras", () => {
@@ -32,6 +36,7 @@ describe("WatchZone card configuration", () => {
     ).toEqual([
       {
         entity_id: "camera.front",
+        light_entity_ids: [],
         low_latency_hls: false,
         ptz_enabled: false,
         start_live_unmuted_pc_tablet: true,
@@ -56,6 +61,52 @@ describe("WatchZone card configuration", () => {
         cameras: [{ entity_id: "camera.front", ptz_enabled: true }],
       }).cameras[0]?.ptz_enabled,
     ).toBe(true);
+  });
+
+  it("normalizes up to two unique linked lights per camera", () => {
+    expect(
+      normalizeCardConfig({
+        cameras: [
+          {
+            entity_id: "camera.front",
+            light_entity_ids: ["light.porch", "light.driveway"],
+          },
+        ],
+      }).cameras[0]?.light_entity_ids,
+    ).toEqual(["light.porch", "light.driveway"]);
+    expect(() =>
+      normalizeCardConfig({
+        cameras: [
+          {
+            entity_id: "camera.front",
+            light_entity_ids: Array.from(
+              { length: MAX_LIGHTS_PER_CAMERA + 1 },
+              (_, index) => `light.${index}`,
+            ),
+          },
+        ],
+      }),
+    ).toThrow("supports at most 2 lights");
+    expect(() =>
+      normalizeCardConfig({
+        cameras: [
+          {
+            entity_id: "camera.front",
+            light_entity_ids: ["light.porch", "light.porch"],
+          },
+        ],
+      }),
+    ).toThrow("light entities must be unique");
+    expect(() =>
+      normalizeCardConfig({
+        cameras: [
+          {
+            entity_id: "camera.front",
+            light_entity_ids: ["switch.porch"],
+          },
+        ],
+      }),
+    ).toThrow("must use light entities");
   });
 
   it("sanitizes and bounds optional camera titles", () => {

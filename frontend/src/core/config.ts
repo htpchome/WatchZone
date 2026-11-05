@@ -4,10 +4,12 @@ import {
   DEFAULT_CARD_TITLE,
   MAX_CAMERA_TITLE_LENGTH,
   MAX_CAMERAS,
+  MAX_LIGHTS_PER_CAMERA,
 } from "./constants";
 
 export interface CameraConfig {
   readonly entity_id: string;
+  readonly light_entity_ids: readonly string[];
   readonly low_latency_hls: boolean;
   readonly ptz_enabled: boolean;
   readonly start_live_unmuted_pc_tablet: boolean;
@@ -91,6 +93,7 @@ export function normalizeCardConfig(value: unknown): CardConfig {
 export function createDefaultCameraConfig(entityId = ""): CameraConfig {
   return {
     entity_id: entityId,
+    light_entity_ids: [],
     low_latency_hls: true,
     ptz_enabled: false,
     start_live_unmuted_pc_tablet: false,
@@ -168,6 +171,7 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
     );
   }
   const defaults = createDefaultCameraConfig(source.entity_id.trim());
+  const lightEntityIds = normalizeLightEntityIds(source, index);
   for (const key of [
     "low_latency_hls",
     "ptz_enabled",
@@ -194,6 +198,7 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
   }
   return {
     entity_id: defaults.entity_id,
+    light_entity_ids: lightEntityIds,
     low_latency_hls:
       typeof source.low_latency_hls === "boolean"
         ? source.low_latency_hls
@@ -207,6 +212,37 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
         : defaults.title,
     two_way_talk_enabled: source.two_way_talk_enabled === true,
   };
+}
+
+function normalizeLightEntityIds(
+  source: Readonly<Record<string, unknown>>,
+  cameraIndex: number,
+): readonly string[] {
+  if (source.light_entity_ids === undefined) return [];
+  if (!Array.isArray(source.light_entity_ids)) {
+    throw new Error(
+      `${APP_NAME} camera ${cameraIndex + 1} lights must be an array.`,
+    );
+  }
+  if (source.light_entity_ids.length > MAX_LIGHTS_PER_CAMERA) {
+    throw new Error(
+      `${APP_NAME} camera ${cameraIndex + 1} supports at most ${MAX_LIGHTS_PER_CAMERA} lights.`,
+    );
+  }
+  const ids = source.light_entity_ids.map((value) => {
+    if (typeof value !== "string" || !value.trim().startsWith("light.")) {
+      throw new Error(
+        `${APP_NAME} camera ${cameraIndex + 1} must use light entities.`,
+      );
+    }
+    return value.trim();
+  });
+  if (new Set(ids).size !== ids.length) {
+    throw new Error(
+      `${APP_NAME} camera ${cameraIndex + 1} light entities must be unique.`,
+    );
+  }
+  return ids;
 }
 
 type CameraAppearanceKey = "camera_rounded_corners" | "camera_shadows";
