@@ -4,9 +4,9 @@ import { basename, resolve } from "node:path";
 const root = resolve(import.meta.dirname, "..");
 const sourceRoot = resolve(root, "frontend/src");
 const themeBoundary = resolve(sourceRoot, "styles/theme-tokens.ts");
-const homeAssistantCardBridge = resolve(
+const homeAssistantCardHostAppearance = resolve(
   sourceRoot,
-  "styles/home-assistant-card-bridge.ts",
+  "styles/card-host-appearance.controller.ts",
 );
 const homeAssistantEditorBridge = resolve(
   sourceRoot,
@@ -35,7 +35,7 @@ for (const path of await collectTypeScript(sourceRoot)) {
   const relativePath = path.slice(root.length + 1);
   const isStyleFile = basename(path).endsWith(".styles.ts");
   const isStyleBoundary =
-    path === themeBoundary || path === homeAssistantCardBridge;
+    path === themeBoundary || path === homeAssistantCardHostAppearance;
 
   if (!isStyleFile && path !== themeBoundary && /\bcss\s*`/.test(source)) {
     violations.push(`${relativePath}: embedded Lit CSS is prohibited`);

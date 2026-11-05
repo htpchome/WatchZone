@@ -332,6 +332,8 @@ test("fills the camera overlay slot with talk and PTZ controls", async ({
 
   expect(talkHostBox.height).toBeCloseTo(cameraBox.height, 0);
   expect(ptzHostBox.height).toBeCloseTo(cameraBox.height, 0);
+  expect(talkHostBox.y).toBeCloseTo(cameraBox.y, 0);
+  expect(ptzHostBox.y).toBeCloseTo(cameraBox.y, 0);
   expect(talkButtonBox.y).toBeGreaterThan(cameraBox.y + cameraBox.height / 2);
   expect(talkButtonBox.x + talkButtonBox.width / 2).toBeCloseTo(
     cameraBox.x + cameraBox.width / 2,
@@ -339,6 +341,9 @@ test("fills the camera overlay slot with talk and PTZ controls", async ({
   );
   expect(ptzControlBox.x).toBeGreaterThan(cameraBox.x + cameraBox.width / 2);
   expect(ptzControlBox.y).toBeGreaterThan(cameraBox.y + cameraBox.height / 2);
+  expect(ptzControlBox.y + ptzControlBox.height).toBeLessThanOrEqual(
+    cameraBox.y + cameraBox.height,
+  );
 });
 
 test("aligns phone carousel controls and stage handle to the active stage", async ({

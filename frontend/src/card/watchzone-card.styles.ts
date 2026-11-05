@@ -99,7 +99,13 @@ export const cardStyles = css`
   }
 
   .component-slot-overlay {
+    display: grid;
+    grid-template: "overlay" minmax(0, 1fr) / minmax(0, 1fr);
     z-index: 3;
+  }
+
+  .component-slot-overlay > .component-node {
+    grid-area: overlay;
   }
 
   .module-slot {

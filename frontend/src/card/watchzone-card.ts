@@ -24,7 +24,7 @@ import {
   type HomeAssistantConnectionEventListener,
 } from "../core/home-assistant";
 import { LocalizationController } from "../core/localization";
-import { syncHomeAssistantCardHostAppearance } from "../styles/home-assistant-card-bridge";
+import { CardHostAppearanceController } from "../styles/card-host-appearance.controller";
 import { themeTokens } from "../styles/theme-tokens";
 import { createDefaultStageDesign } from "./default-layout";
 import { LayoutRuntime } from "./layout-runtime";
@@ -50,6 +50,7 @@ export class DashboardCard extends LitElement {
     this._syncRuntime(),
   );
   private readonly _layoutRuntime = new LayoutRuntime(this);
+  private readonly _cardHostAppearance = new CardHostAppearanceController(this);
   private _stageResizeFrame?: number;
   private readonly _stageResizeObserver =
     typeof ResizeObserver === "undefined"
@@ -97,19 +98,19 @@ export class DashboardCard extends LitElement {
   public setConfig(value: unknown): void {
     const next = normalizeCardConfig(value);
     if (cardConfigSignature(next) === cardConfigSignature(this._config)) {
-      this._syncOuterAppearance(next);
+      this._cardHostAppearance.configure(next);
       return;
     }
     this._config = next;
     this._previewConfig = undefined;
-    this._syncOuterAppearance(next);
+    this._cardHostAppearance.configure(next);
     this._syncLayout(next);
     this.requestUpdate();
   }
 
   public connectedCallback(): void {
     super.connectedCallback();
-    this._syncOuterAppearance(this._previewConfig ?? this._config);
+    this._cardHostAppearance.configure(this._previewConfig ?? this._config);
     window.addEventListener(
       EDITOR_PREVIEW_DRAFT_EVENT,
       this._handlePreviewDraft as EventListener,
@@ -176,7 +177,7 @@ export class DashboardCard extends LitElement {
     }
     this._previewConfig = event.detail.config ?? undefined;
     const config = this._previewConfig ?? this._config;
-    this._syncOuterAppearance(config);
+    this._cardHostAppearance.configure(config);
     this._syncLayout(config);
     this.requestUpdate();
   };
@@ -242,20 +243,6 @@ export class DashboardCard extends LitElement {
     return (this._previewConfig ?? this._config).cameras.map(
       ({ entity_id }) => entity_id,
     );
-  }
-
-  private _syncOuterAppearance(config: CardConfig): void {
-    const roundedCorners = config.rounded_outer_corners !== false;
-    const outerShadows = config.outer_shadows !== false;
-    this.toggleAttribute("data-wzc-square-outer-corners", !roundedCorners);
-    this.toggleAttribute("data-wzc-no-outer-shadow", !outerShadows);
-
-    if (roundedCorners) this.style.removeProperty("--wzc-card-radius");
-    else this.style.setProperty("--wzc-card-radius", "0px");
-    syncHomeAssistantCardHostAppearance(this, {
-      outerShadows,
-      roundedCorners,
-    });
   }
 
   static styles = [themeTokens, cardStyles];

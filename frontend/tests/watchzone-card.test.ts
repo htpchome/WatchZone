@@ -232,5 +232,13 @@ describe("watchzone-card", () => {
     expect(element.style.getPropertyValue("box-shadow")).toBe(
       "var(--wzc-shadow-medium)",
     );
+
+    element.remove();
+    expect(element.hasAttribute("data-wzc-square-outer-corners")).toBe(false);
+    expect(element.hasAttribute("data-wzc-no-outer-shadow")).toBe(false);
+    expect(element.style.getPropertyValue("--ha-card-border-radius")).toBe("");
+    expect(element.style.getPropertyValue("--ha-card-box-shadow")).toBe("");
+    expect(element.style.getPropertyValue("border-radius")).toBe("");
+    expect(element.style.getPropertyValue("box-shadow")).toBe("");
   });
 });
