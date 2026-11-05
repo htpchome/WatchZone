@@ -135,6 +135,14 @@ export class TwoWayTalkComponent extends LitElement {
                   ?disabled=${!camera.available}
                   @click=${this._toggleConnection}
                 >
+                  ${
+                    connecting
+                      ? html`<span
+                          class="connecting-indicator"
+                          aria-hidden="true"
+                        ></span>`
+                      : nothing
+                  }
                   ${renderIcon("microphoneOff")}
                 </button>
               </div>`

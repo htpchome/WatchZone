@@ -12,15 +12,8 @@ export const roundControlStyles = css`
     padding: 0.55rem;
     overflow: hidden;
     isolation: isolate;
-    color: var(--wzc-color-primary);
+    color: var(--wzc-media-overlay-color);
     background-color: var(--wzc-media-overlay-background);
-    background-image: radial-gradient(
-      circle,
-      var(--wzc-media-overlay-hover-background) 0 100%
-    );
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: 0 0;
     border: 1px solid var(--wzc-media-overlay-border-color);
     border-radius: 50%;
     box-shadow: var(--wzc-media-overlay-shadow);
@@ -28,9 +21,20 @@ export const roundControlStyles = css`
     touch-action: manipulation;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
-    transition:
-      background-size var(--wzc-media-overlay-transition-duration) ease-out,
-      box-shadow var(--wzc-media-overlay-transition-duration) ease;
+    transition: box-shadow var(--wzc-media-overlay-transition-duration) ease;
+  }
+
+  .wzc-round-control::after {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    background: var(--wzc-media-overlay-hover-background);
+    border-radius: 50%;
+    content: "";
+    pointer-events: none;
+    transform: scale(0);
+    transform-origin: center;
+    transition: transform var(--wzc-media-overlay-transition-duration) ease-out;
   }
 
   .wzc-round-control:focus-visible {
@@ -47,20 +51,21 @@ export const roundControlStyles = css`
   .wzc-round-control ha-icon {
     display: block;
     position: relative;
-    z-index: 1;
+    z-index: 2;
     inline-size: 100%;
     block-size: 100%;
     pointer-events: none;
   }
 
   @media (hover: hover) and (pointer: fine) {
-    .wzc-round-control:hover:not(:disabled) {
-      background-size: 200% 200%;
+    .wzc-round-control:hover:not(:disabled)::after {
+      transform: scale(1);
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .wzc-round-control {
+    .wzc-round-control,
+    .wzc-round-control::after {
       transition: none;
     }
   }

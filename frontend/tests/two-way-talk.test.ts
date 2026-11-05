@@ -40,6 +40,50 @@ describe("two-way-talk component", () => {
       element.shadowRoot?.querySelector(".inactive-control"),
     ).not.toBeNull();
   });
+
+  it("keeps a visible spinner while the talk connection is pending", async () => {
+    const originalMediaDevices = Object.getOwnPropertyDescriptor(
+      navigator,
+      "mediaDevices",
+    );
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: {
+        getUserMedia: vi.fn(() => new Promise<MediaStream>(() => undefined)),
+      },
+    });
+    try {
+      const context = new CameraSessionContext();
+      const element = document.createElement(
+        "wzc-two-way-talk",
+      ) as TwoWayTalkComponent;
+      element.api = api(vi.fn().mockResolvedValue({ supported: true }));
+      element.cameraSession = context;
+      element.enabledCameraIds = ["camera.front"];
+      document.body.append(element);
+      context.publish({}, cameraSession(true));
+
+      await vi.waitFor(() =>
+        expect(
+          element.shadowRoot?.querySelector("button.inactive"),
+        ).not.toBeNull(),
+      );
+      element.shadowRoot
+        ?.querySelector<HTMLButtonElement>("button.inactive")
+        ?.click();
+      await element.updateComplete;
+
+      expect(
+        element.shadowRoot?.querySelector(".connecting-indicator"),
+      ).not.toBeNull();
+    } finally {
+      if (originalMediaDevices) {
+        Object.defineProperty(navigator, "mediaDevices", originalMediaDevices);
+      } else {
+        Reflect.deleteProperty(navigator, "mediaDevices");
+      }
+    }
+  });
 });
 
 function cameraSession(overlayVisible: boolean) {

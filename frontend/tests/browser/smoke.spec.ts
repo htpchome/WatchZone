@@ -344,15 +344,36 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
       const style = getComputedStyle(element);
       return {
         backgroundColor: style.backgroundColor,
-        backgroundImage: style.backgroundImage,
         borderRadius: style.borderRadius,
         boxShadow: style.boxShadow,
+        color: style.color,
       };
     });
   const lightTreatment = await roundTreatment(lightButton);
   expect(await roundTreatment(talkButton)).toEqual(lightTreatment);
-  expect(lightTreatment.backgroundImage).toContain("radial-gradient");
   expect(lightTreatment.boxShadow).not.toBe("none");
+  expect(
+    await lightButton.evaluate((element) => {
+      const layer = getComputedStyle(element, "::after");
+      return {
+        borderRadius: layer.borderRadius,
+        content: layer.content,
+        transform: layer.transform,
+      };
+    }),
+  ).toEqual({
+    borderRadius: "50%",
+    content: '""',
+    transform: "matrix(0, 0, 0, 0, 0, 0)",
+  });
+  await lightButton.hover();
+  await expect
+    .poll(() =>
+      lightButton.evaluate(
+        (element) => getComputedStyle(element, "::after").transform,
+      ),
+    )
+    .toBe("matrix(1, 0, 0, 1, 0, 0)");
 
   const cameraBox = await camera.boundingBox();
   const talkHostBox = await talk.boundingBox();

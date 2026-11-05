@@ -1,5 +1,5 @@
 export const DEFAULT_LIGHT_ICON = "mdi:lightbulb-off-outline";
-export const DEFAULT_LIGHT_ICON_ON = "mdi:lightbulb-on-outline";
+export const DEFAULT_LIGHT_ICON_ON = "mdi:lightbulb";
 
 const STATEFUL_LIGHT_ICONS = new Set([
   DEFAULT_LIGHT_ICON,

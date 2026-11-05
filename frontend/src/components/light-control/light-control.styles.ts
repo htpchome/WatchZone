@@ -57,10 +57,6 @@ export const lightControlStyles = css`
     transition: block-size var(--wzc-light-transition-duration) ease;
   }
 
-  .light-button.on {
-    color: var(--wzc-media-overlay-surface);
-  }
-
   .light-button ha-icon,
   .power-button svg {
     inline-size: 1.35rem;
@@ -79,7 +75,7 @@ export const lightControlStyles = css`
     gap: 0.35rem;
     box-sizing: border-box;
     inline-size: var(--wzc-light-panel-inline-size);
-    min-block-size: 13rem;
+    block-size: 14.25rem;
     padding: 0.7rem;
     color: var(--wzc-media-overlay-color);
     background: var(--wzc-light-panel-background);
@@ -126,7 +122,7 @@ export const lightControlStyles = css`
   }
 
   .power-button.on {
-    color: var(--wzc-light-power-active-color);
+    color: var(--wzc-media-overlay-color);
   }
 
   ha-control-slider:focus-visible {

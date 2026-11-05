@@ -64,10 +64,10 @@ export const twoWayTalkStyles = css`
     box-shadow: 0 0 0 2px var(--wzc-talk-panel-border-color);
   }
 
-  button.inactive.connecting::after {
-    content: "";
+  .connecting-indicator {
     position: absolute;
-    inset: -0.35rem;
+    z-index: 3;
+    inset: 0.15rem;
     border: 2px solid
       color-mix(in srgb, var(--wzc-talk-connecting-color) 30%, transparent);
     border-block-start-color: var(--wzc-talk-connecting-color);
@@ -102,7 +102,7 @@ export const twoWayTalkStyles = css`
       transition: none;
     }
 
-    button.inactive.connecting::after {
+    .connecting-indicator {
       animation-duration: 1.4s;
     }
   }

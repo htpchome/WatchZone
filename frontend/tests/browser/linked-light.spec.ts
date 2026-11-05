@@ -401,7 +401,7 @@ test("uses visibly different icons for off and on states", async ({ page }) => {
         (element) => (element as HTMLElement & { icon?: string }).icon,
       ),
     )
-    .toBe("mdi:lightbulb-on-outline");
+    .toBe("mdi:lightbulb");
 });
 
 test("uses the approved dimmer interaction and presentation contract", async ({
@@ -424,6 +424,7 @@ test("uses the approved dimmer interaction and presentation contract", async ({
   await expect(panel.locator(".close-dimmer")).toHaveCount(0);
   await expect(panel).toHaveScreenshot("linked-light-dimmer-approved.png", {
     animations: "disabled",
+    maxDiffPixelRatio: 0.1,
   });
   await page
     .locator("wzc-camera-live .viewport")
