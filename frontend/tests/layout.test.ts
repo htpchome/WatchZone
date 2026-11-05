@@ -150,18 +150,9 @@ describe("layout composition", () => {
         cameras: [
           {
             entity_id: "camera.front",
-            lights: [
-              {
-                entity_id: "light.porch",
-                icon: "mdi:lightbulb-off-outline",
-              },
-              { entity_id: "light.driveway", icon: "mdi:coach-lamp" },
-            ],
+            light_entity_ids: ["light.porch", "light.driveway"],
           },
-          {
-            entity_id: "camera.back",
-            lights: [{ entity_id: "light.yard" }],
-          },
+          { entity_id: "camera.back", light_entity_ids: ["light.yard"] },
         ],
       }),
     );
@@ -175,22 +166,11 @@ describe("layout composition", () => {
         cameras: [
           {
             cameraEntityId: "camera.front",
-            lights: [
-              {
-                entityId: "light.porch",
-                icon: "mdi:lightbulb-off-outline",
-              },
-              { entityId: "light.driveway", icon: "mdi:coach-lamp" },
-            ],
+            lightEntityIds: ["light.porch", "light.driveway"],
           },
           {
             cameraEntityId: "camera.back",
-            lights: [
-              {
-                entityId: "light.yard",
-                icon: "mdi:lightbulb-off-outline",
-              },
-            ],
+            lightEntityIds: ["light.yard"],
           },
         ],
       },

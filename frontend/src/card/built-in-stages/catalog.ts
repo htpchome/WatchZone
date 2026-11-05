@@ -146,14 +146,13 @@ function hydrateCameraComponent(
   }
   if (node.componentType === LIGHT_COMPONENT_TYPE) {
     const cameras = config.cameras
-      .filter(({ lights }) => lights.length > 0)
-      .map(({ entity_id: cameraEntityId, lights }) => ({
-        cameraEntityId,
-        lights: lights.map(({ entity_id: entityId, icon }) => ({
-          entityId,
-          icon,
-        })),
-      }));
+      .filter(({ light_entity_ids: ids }) => ids.length > 0)
+      .map(
+        ({ entity_id: cameraEntityId, light_entity_ids: lightEntityIds }) => ({
+          cameraEntityId,
+          lightEntityIds,
+        }),
+      );
     return cameras.length ? { ...node, config: { cameras } } : undefined;
   }
   return node;

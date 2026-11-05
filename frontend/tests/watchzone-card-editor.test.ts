@@ -21,7 +21,6 @@ interface ContextRequest extends Event {
 }
 
 interface InputElement extends HTMLElement {
-  placeholder: string;
   value: string;
 }
 
@@ -160,7 +159,6 @@ describe("watchzone-card-editor", () => {
     const input = editor.shadowRoot?.querySelector(
       ".camera-title-field ha-input",
     ) as InputElement;
-    expect(input.placeholder).toBe("front");
     input.value = "  Front!  Door @12345678901234567890";
     input.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
     await editor.updateComplete;
@@ -327,17 +325,6 @@ describe("watchzone-card-editor", () => {
     ).toHaveLength(2);
     expect(editor.shadowRoot?.querySelector(".add-light")).toBeNull();
 
-    editor.shadowRoot
-      ?.querySelectorAll<HTMLElement>(".linked-light-icon")[1]
-      ?.dispatchEvent(
-        new CustomEvent("value-changed", {
-          bubbles: true,
-          composed: true,
-          detail: { value: "mdi:coach-lamp" },
-        }),
-      );
-    await editor.updateComplete;
-
     (
       editor.shadowRoot?.querySelectorAll<HTMLElement>(".remove-light")[0] as
         HTMLElement | undefined
@@ -353,12 +340,7 @@ describe("watchzone-card-editor", () => {
     expect(changed).toHaveBeenCalledOnce();
     expect(changed.mock.calls[0][0].detail.config.cameras[0]).toEqual({
       entity_id: "camera.front",
-      lights: [
-        {
-          entity_id: "light.driveway",
-          icon: "mdi:coach-lamp",
-        },
-      ],
+      light_entity_ids: ["light.driveway"],
     });
   });
 

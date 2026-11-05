@@ -26,13 +26,7 @@ describe("linked-light component", () => {
         cameras: [
           {
             cameraEntityId: "camera.front",
-            lights: [
-              {
-                entityId: "light.porch",
-                icon: "mdi:lightbulb-off-outline",
-              },
-              { entityId: "light.driveway", icon: "mdi:coach-lamp" },
-            ],
+            lightEntityIds: ["light.porch", "light.driveway"],
           },
         ],
       }),
@@ -40,13 +34,7 @@ describe("linked-light component", () => {
       cameras: [
         {
           cameraEntityId: "camera.front",
-          lights: [
-            {
-              entityId: "light.porch",
-              icon: "mdi:lightbulb-off-outline",
-            },
-            { entityId: "light.driveway", icon: "mdi:coach-lamp" },
-          ],
+          lightEntityIds: ["light.porch", "light.driveway"],
         },
       ],
     });
@@ -55,10 +43,7 @@ describe("linked-light component", () => {
         cameras: [
           {
             cameraEntityId: "camera.front",
-            lights: ["one", "two", "three"].map((id) => ({
-              entityId: `light.${id}`,
-              icon: "mdi:lightbulb-off-outline",
-            })),
+            lightEntityIds: ["light.one", "light.two", "light.three"],
           },
         ],
       }),
@@ -85,9 +70,6 @@ describe("linked-light component", () => {
     expect(button.title).toBe("Turn off Porch");
     expect(button.ariaLabel).toBe("Turn off Porch");
     expect(button.style.getPropertyValue("--wzc-light-level")).toBe("50%");
-    expect(
-      (button.querySelector("ha-icon") as HTMLElement & { icon: string }).icon,
-    ).toBe("mdi:lightbulb-on-outline");
 
     pressKey(button, " ", "keydown");
     pressKey(button, " ", "keyup");
@@ -102,20 +84,12 @@ describe("linked-light component", () => {
     expect(callService).not.toHaveBeenCalled();
     const panel = element.shadowRoot?.querySelector(".dimmer-panel");
     expect(panel?.getAttribute("role")).toBe("dialog");
-    expect(panel?.querySelector(".brightness-value")?.textContent).toBe("50%");
-    const slider = panel?.querySelector("ha-control-slider") as HTMLElement;
-    slider.dispatchEvent(
-      new CustomEvent("slider-moved", {
-        bubbles: true,
-        detail: { value: 72 },
-      }),
-    );
-    slider.dispatchEvent(
-      new CustomEvent("value-changed", {
-        bubbles: true,
-        detail: { value: 72 },
-      }),
-    );
+    const slider = panel?.querySelector(
+      'input[type="range"]',
+    ) as HTMLInputElement;
+    slider.value = "72";
+    slider.dispatchEvent(new Event("input", { bubbles: true }));
+    slider.dispatchEvent(new Event("change", { bubbles: true }));
     expect(callService).toHaveBeenCalledWith(
       "light",
       "turn_on",
@@ -123,11 +97,6 @@ describe("linked-light component", () => {
       { entity_id: "light.porch" },
     );
     pressKey(button, " ", "keyup");
-    document.body.dispatchEvent(
-      new PointerEvent("pointerdown", { bubbles: true }),
-    );
-    await element.updateComplete;
-    expect(element.shadowRoot?.querySelector(".dimmer-panel")).toBeNull();
   });
 
   it("switches linked controls with the active camera and cleans up presses", async () => {
@@ -167,12 +136,9 @@ describe("linked-light component", () => {
 function cameraLights(
   cameras: Readonly<Record<string, readonly string[]>>,
 ): LightControlComponentConfig["cameras"] {
-  return Object.entries(cameras).map(([cameraEntityId, entityIds]) => ({
+  return Object.entries(cameras).map(([cameraEntityId, lightEntityIds]) => ({
     cameraEntityId,
-    lights: entityIds.map((entityId) => ({
-      entityId,
-      icon: "mdi:lightbulb-off-outline",
-    })),
+    lightEntityIds,
   }));
 }
 

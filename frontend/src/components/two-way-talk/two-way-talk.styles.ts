@@ -69,31 +69,19 @@ export const twoWayTalkStyles = css`
     cursor: pointer;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
-    background-image: radial-gradient(
-      circle,
-      var(--wzc-round-control-hover-color) 0 50%,
-      transparent 51%
-    );
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: 0 0;
-    box-shadow: var(--wzc-round-control-shadow);
-    transition: background-size var(--wzc-round-control-hover-duration) ease-out;
   }
 
   button.center {
     transform: scale(1.18);
     color: var(--wzc-media-overlay-surface);
-    background-color: var(--wzc-talk-connected-color);
-    box-shadow:
-      0 0 0 2px var(--wzc-talk-panel-border-color),
-      var(--wzc-round-control-shadow);
+    background: var(--wzc-talk-connected-color);
+    box-shadow: 0 0 0 2px var(--wzc-talk-panel-border-color);
   }
 
   button.inactive {
-    color: var(--wzc-round-control-color);
-    background-color: var(--wzc-round-control-background);
-    border: 1px solid var(--wzc-round-control-border-color);
+    color: var(--wzc-media-overlay-color);
+    background: var(--wzc-media-overlay-background);
+    border: 1px solid var(--wzc-media-overlay-border-color);
   }
 
   button.inactive.connecting::after {
@@ -143,33 +131,29 @@ export const twoWayTalkStyles = css`
 
   @media (hover: hover) and (pointer: fine) {
     button:hover {
-      background-size: 200% 200%;
+      background: var(--wzc-media-overlay-hover-background);
     }
   }
 
   @media (hover: none) {
     button:hover,
     button:active {
-      background-size: 0 0;
+      background: transparent;
     }
 
     button.center:hover,
     button.center:active {
-      background-color: var(--wzc-talk-connected-color);
+      background: var(--wzc-talk-connected-color);
     }
 
     button.inactive:hover,
     button.inactive:active {
-      background-color: var(--wzc-round-control-background);
+      background: var(--wzc-media-overlay-background);
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .inactive-control {
-      transition: none;
-    }
-
-    button {
       transition: none;
     }
 

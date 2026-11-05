@@ -265,12 +265,7 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
       cameras: [
         {
           entity_id: "camera.front",
-          lights: [
-            {
-              entity_id: "light.porch",
-              icon: "mdi:lightbulb-off-outline",
-            },
-          ],
+          light_entity_ids: ["light.porch"],
           ptz_enabled: true,
           two_way_talk_enabled: true,
         },
@@ -343,15 +338,6 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
   await expect(lightButton).toBeVisible();
   await expect(lightButton).toHaveAttribute("title", "Turn off Porch");
   await expect(lightButton).toHaveAttribute("aria-label", "Turn off Porch");
-  await expect
-    .poll(() =>
-      lightButton
-        .locator("ha-icon")
-        .evaluate(
-          (element) => (element as HTMLElement & { icon?: string }).icon,
-        ),
-    )
-    .toBe("mdi:lightbulb-on-outline");
 
   const cameraBox = await camera.boundingBox();
   const talkHostBox = await talk.boundingBox();
@@ -406,21 +392,12 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
   await page.mouse.up();
   const dimmer = lights.locator(".dimmer-panel");
   await expect(dimmer).toBeVisible();
-  await expect(dimmer.locator(".brightness-value")).toHaveText("50%");
-  const slider = dimmer.locator("ha-control-slider");
+  const slider = dimmer.locator('input[type="range"]');
   await slider.evaluate((element) => {
-    element.dispatchEvent(
-      new CustomEvent("slider-moved", {
-        bubbles: true,
-        detail: { value: 70 },
-      }),
-    );
-    element.dispatchEvent(
-      new CustomEvent("value-changed", {
-        bubbles: true,
-        detail: { value: 70 },
-      }),
-    );
+    const input = element as HTMLInputElement;
+    input.value = "70";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
   });
   await expect
     .poll(() =>
@@ -434,18 +411,6 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
       ),
     )
     .toBe(70);
-  await expect(dimmer.locator(".brightness-value")).toHaveText("70%");
-  await page.mouse.click(cameraBox.x + 20, cameraBox.y + 20);
-  await expect(dimmer).not.toBeVisible();
-
-  await lightButton.hover();
-  await page.waitForTimeout(220);
-  await expect(lightButton).toHaveCSS("background-size", "200% 200%");
-  await expect(lightButton).not.toHaveCSS("box-shadow", "none");
-  await talkButton.hover();
-  await page.waitForTimeout(220);
-  await expect(talkButton).toHaveCSS("background-size", "200% 200%");
-  await expect(talkButton).not.toHaveCSS("box-shadow", "none");
 });
 
 test("aligns phone carousel controls and stage handle to the active stage", async ({
@@ -970,17 +935,7 @@ test("camera editor configures lights and confirms accessible removal", async ({
 
   await items.nth(3).locator("summary").click();
   await editor.locator(".add-light").click();
-  const addLightSelectors = editor.locator(".add-light-form ha-selector");
-  await expect
-    .poll(() =>
-      addLightSelectors
-        .nth(1)
-        .evaluate(
-          (element) => (element as HTMLElement & { value?: string }).value,
-        ),
-    )
-    .toBe("mdi:lightbulb-off-outline");
-  await addLightSelectors.first().evaluate((element) => {
+  await editor.locator(".add-light-form ha-selector").evaluate((element) => {
     element.dispatchEvent(
       new CustomEvent("value-changed", {
         bubbles: true,
@@ -997,14 +952,6 @@ test("camera editor configures lights and confirms accessible removal", async ({
   );
 
   const titleInput = editor.locator(".camera-title-field ha-input");
-  await expect
-    .poll(() =>
-      titleInput.evaluate(
-        (element) =>
-          (element as HTMLElement & { placeholder?: string }).placeholder,
-      ),
-    )
-    .toBe("front");
   await titleInput.evaluate((element) => {
     const input = element as HTMLElement & { value: string };
     input.value = "  Front!  Door @12345678901234567890";

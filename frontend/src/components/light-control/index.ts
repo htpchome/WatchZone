@@ -4,18 +4,12 @@ import {
   MAX_LIGHTS_PER_CAMERA,
 } from "../../core/constants";
 import { englishLocalize } from "../../core/localization";
-import { normalizeLightIcon } from "../../core/light-icons";
 import type { ComponentDefinition } from "../../core/placeable";
 import type { LightControlComponent } from "./light-control";
 
 export interface CameraLightConfig {
   readonly cameraEntityId: string;
-  readonly lights: readonly LightConfig[];
-}
-
-export interface LightConfig {
-  readonly entityId: string;
-  readonly icon: string;
+  readonly lightEntityIds: readonly string[];
 }
 
 export interface LightControlComponentConfig {
@@ -31,7 +25,7 @@ export const componentDefinition: ComponentDefinition<LightControlComponentConfi
     define: () =>
       (definitionPromise ??= import("./light-control").then(() => undefined)),
     getEntityIds: ({ cameras }) =>
-      cameras.flatMap(({ lights }) => lights.map(({ entityId }) => entityId)),
+      cameras.flatMap(({ lightEntityIds }) => lightEntityIds),
     updateElement(element, config, context) {
       const control = element as LightControlComponent;
       control.cameraSession = context.cameraSession;
@@ -65,36 +59,19 @@ function validateCameraLights(value: unknown): CameraLightConfig {
     throw new Error("Light control requires a camera entity ID.");
   }
   if (
-    !Array.isArray(source.lights) ||
-    source.lights.length === 0 ||
-    source.lights.length > MAX_LIGHTS_PER_CAMERA
+    !Array.isArray(source.lightEntityIds) ||
+    source.lightEntityIds.length === 0 ||
+    source.lightEntityIds.length > MAX_LIGHTS_PER_CAMERA ||
+    source.lightEntityIds.some(
+      (id) => typeof id !== "string" || !id.startsWith("light."),
+    ) ||
+    new Set(source.lightEntityIds).size !== source.lightEntityIds.length
   ) {
-    throw new Error("Light control requires one or two unique light entities.");
-  }
-  const lights = source.lights.map((value) => validateLight(value));
-  if (new Set(lights.map(({ entityId }) => entityId)).size !== lights.length) {
     throw new Error("Light control requires one or two unique light entities.");
   }
   return {
     cameraEntityId: source.cameraEntityId,
-    lights,
-  };
-}
-
-function validateLight(value: unknown): LightConfig {
-  if (typeof value !== "object" || value === null) {
-    throw new Error("Light control requires valid light configuration.");
-  }
-  const source = value as Record<string, unknown>;
-  if (
-    typeof source.entityId !== "string" ||
-    !source.entityId.startsWith("light.")
-  ) {
-    throw new Error("Light control requires valid light configuration.");
-  }
-  return {
-    entityId: source.entityId,
-    icon: normalizeLightIcon(source.icon),
+    lightEntityIds: source.lightEntityIds as string[],
   };
 }
 
