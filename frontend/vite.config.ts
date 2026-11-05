@@ -7,12 +7,15 @@ const packageJson = JSON.parse(
   readFileSync(new URL("./package.json", import.meta.url), "utf8"),
 ) as { version: string };
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   define: {
     __APP_BUILD__: JSON.stringify(
       process.env.GITHUB_SHA?.slice(0, 7) ?? "local",
     ),
     __APP_VERSION__: JSON.stringify(packageJson.version),
+    "process.env.NODE_ENV": JSON.stringify(
+      mode === "production" ? "production" : "development",
+    ),
   },
   build: {
     emptyOutDir: true,
@@ -30,4 +33,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

@@ -31,6 +31,14 @@ for (const [name, asset] of Object.entries({
 
 for (const asset of Object.values(manifest)) {
   await stat(resolve(frontend, asset.file));
+  if (asset.file.endsWith(".js")) {
+    const source = await readFile(resolve(frontend, asset.file), "utf8");
+    if (/\bprocess(?:\.|\[)/u.test(source)) {
+      throw new Error(
+        `Browser bundle contains an unresolved Node process global: ${asset.file}`,
+      );
+    }
+  }
 }
 
 const collectEagerGraph = (source, graph = new Set()) => {

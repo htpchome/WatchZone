@@ -93,6 +93,7 @@ export const cardStyles = css`
 
   .component-slot,
   .component-node {
+    block-size: 100%;
     min-block-size: 0;
     pointer-events: none;
   }

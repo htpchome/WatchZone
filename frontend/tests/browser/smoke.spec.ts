@@ -246,6 +246,101 @@ test("preserves expanded camera-stage geometry across carousel selection", async
   });
 });
 
+test("fills the camera overlay slot with talk and PTZ controls", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  await page.locator("watchzone-card").evaluate((element) => {
+    const card = element as HTMLElement & {
+      hass: unknown;
+      setConfig(config: unknown): void;
+    };
+    const connection = {
+      subscribeMessage: async () => () => undefined,
+    };
+    card.setConfig({
+      type: "custom:watchzone-card",
+      cameras: [
+        {
+          entity_id: "camera.front",
+          ptz_enabled: true,
+          two_way_talk_enabled: true,
+        },
+      ],
+    });
+    card.hass = {
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "streaming",
+          attributes: { friendly_name: "Front" },
+        },
+      },
+      connection,
+      hassUrl: (path: string) => path,
+      callWS: async (message: { type: string }) => {
+        if (message.type === "watchzone/live/camera/ready") {
+          return { ready: false };
+        }
+        if (message.type === "watchzone/talk/capability") {
+          return { supported: true };
+        }
+        if (message.type === "watchzone/ptz/capability") {
+          return {
+            supported: true,
+            pan: true,
+            tilt: true,
+            zoom: false,
+            focus: false,
+            presets: [],
+          };
+        }
+        return undefined;
+      },
+    };
+  });
+
+  const camera = page.locator("wzc-camera");
+  await camera.locator("wzc-camera-live .viewport").hover();
+  const talk = page.locator("wzc-two-way-talk");
+  const ptz = page.locator("wzc-ptz");
+  const talkButton = talk.locator("button.inactive");
+  const ptzControl = ptz.locator(".ptz-control.visible");
+  await expect(talkButton).toBeVisible();
+  await expect(ptzControl).toBeVisible();
+
+  const cameraBox = await camera.boundingBox();
+  const talkHostBox = await talk.boundingBox();
+  const ptzHostBox = await ptz.boundingBox();
+  const talkButtonBox = await talkButton.boundingBox();
+  const ptzControlBox = await ptzControl.boundingBox();
+  expect(cameraBox).not.toBeNull();
+  expect(talkHostBox).not.toBeNull();
+  expect(ptzHostBox).not.toBeNull();
+  expect(talkButtonBox).not.toBeNull();
+  expect(ptzControlBox).not.toBeNull();
+  if (
+    !cameraBox ||
+    !talkHostBox ||
+    !ptzHostBox ||
+    !talkButtonBox ||
+    !ptzControlBox
+  ) {
+    return;
+  }
+
+  expect(talkHostBox.height).toBeCloseTo(cameraBox.height, 0);
+  expect(ptzHostBox.height).toBeCloseTo(cameraBox.height, 0);
+  expect(talkButtonBox.y).toBeGreaterThan(cameraBox.y + cameraBox.height / 2);
+  expect(talkButtonBox.x + talkButtonBox.width / 2).toBeCloseTo(
+    cameraBox.x + cameraBox.width / 2,
+    0,
+  );
+  expect(ptzControlBox.x).toBeGreaterThan(cameraBox.x + cameraBox.width / 2);
+  expect(ptzControlBox.y).toBeGreaterThan(cameraBox.y + cameraBox.height / 2);
+});
+
 test("aligns phone carousel controls and stage handle to the active stage", async ({
   page,
 }) => {
