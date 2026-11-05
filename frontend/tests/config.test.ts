@@ -6,8 +6,20 @@ import {
   MAX_CAMERAS,
   MAX_LIGHTS_PER_CAMERA,
 } from "../src/core/constants";
+import { DEFAULT_LIGHT_ICON, lightIconForState } from "../src/core/light-icons";
 
 describe("WatchZone card configuration", () => {
+  it("resolves default stateful light icons and preserves custom icons", () => {
+    expect(lightIconForState(DEFAULT_LIGHT_ICON, false)).toBe(
+      "mdi:lightbulb-off-outline",
+    );
+    expect(lightIconForState(DEFAULT_LIGHT_ICON, true)).toBe(
+      "mdi:lightbulb-on-outline",
+    );
+    expect(lightIconForState("mdi:coach-lamp", false)).toBe("mdi:coach-lamp");
+    expect(lightIconForState("mdi:coach-lamp", true)).toBe("mdi:coach-lamp");
+  });
+
   it("defaults card appearance and starts with no cameras", () => {
     expect(normalizeCardConfig({ type: CARD_TYPE, title: "Camera" })).toEqual({
       type: CARD_TYPE,
@@ -36,7 +48,7 @@ describe("WatchZone card configuration", () => {
     ).toEqual([
       {
         entity_id: "camera.front",
-        light_entity_ids: [],
+        lights: [],
         low_latency_hls: false,
         ptz_enabled: false,
         start_live_unmuted_pc_tablet: true,
@@ -69,19 +81,25 @@ describe("WatchZone card configuration", () => {
         cameras: [
           {
             entity_id: "camera.front",
-            light_entity_ids: ["light.porch", "light.driveway"],
+            lights: [
+              { entity_id: "light.porch" },
+              { entity_id: "light.driveway", icon: "mdi:coach-lamp" },
+            ],
           },
         ],
-      }).cameras[0]?.light_entity_ids,
-    ).toEqual(["light.porch", "light.driveway"]);
+      }).cameras[0]?.lights,
+    ).toEqual([
+      { entity_id: "light.porch", icon: "mdi:lightbulb-off-outline" },
+      { entity_id: "light.driveway", icon: "mdi:coach-lamp" },
+    ]);
     expect(() =>
       normalizeCardConfig({
         cameras: [
           {
             entity_id: "camera.front",
-            light_entity_ids: Array.from(
+            lights: Array.from(
               { length: MAX_LIGHTS_PER_CAMERA + 1 },
-              (_, index) => `light.${index}`,
+              (_, index) => ({ entity_id: `light.${index}` }),
             ),
           },
         ],
@@ -92,7 +110,10 @@ describe("WatchZone card configuration", () => {
         cameras: [
           {
             entity_id: "camera.front",
-            light_entity_ids: ["light.porch", "light.porch"],
+            lights: [
+              { entity_id: "light.porch" },
+              { entity_id: "light.porch" },
+            ],
           },
         ],
       }),
@@ -102,7 +123,7 @@ describe("WatchZone card configuration", () => {
         cameras: [
           {
             entity_id: "camera.front",
-            light_entity_ids: ["switch.porch"],
+            lights: [{ entity_id: "switch.porch" }],
           },
         ],
       }),

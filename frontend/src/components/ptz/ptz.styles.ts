@@ -38,6 +38,7 @@ export const ptzStyles = css`
     background: var(--wzc-ptz-panel-background);
     border: 1px solid var(--wzc-media-overlay-border-color);
     border-radius: 50%;
+    box-shadow: var(--wzc-round-control-shadow);
     opacity: 0;
     pointer-events: none;
     transition: opacity var(--wzc-media-overlay-transition-duration) ease;
@@ -63,6 +64,15 @@ export const ptzStyles = css`
     touch-action: none;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
+    background-image: radial-gradient(
+      circle,
+      var(--wzc-round-control-hover-color) 0 50%,
+      transparent 51%
+    );
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 0 0;
+    transition: background-size var(--wzc-round-control-hover-duration) ease-out;
   }
 
   button.up {
@@ -106,19 +116,23 @@ export const ptzStyles = css`
 
   @media (hover: hover) and (pointer: fine) {
     button:hover {
-      background: var(--wzc-media-overlay-hover-background);
+      background-size: 200% 200%;
     }
   }
 
   @media (hover: none) {
     button:hover,
     button:active {
-      background: transparent;
+      background-size: 0 0;
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .ptz-control {
+      transition: none;
+    }
+
+    button {
       transition: none;
     }
   }

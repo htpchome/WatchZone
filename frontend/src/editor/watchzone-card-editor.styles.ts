@@ -171,6 +171,7 @@ export const cardEditorStyles = css`
   }
 
   .camera-dialog-content {
+    container-type: inline-size;
     padding: 0.75rem 1rem;
   }
 
@@ -212,9 +213,13 @@ export const cardEditorStyles = css`
     gap: 0.65rem;
   }
 
+  .add-light-form {
+    grid-template-columns: minmax(0, 1fr) minmax(8rem, 0.75fr);
+  }
+
   .linked-light-row {
     display: grid;
-    grid-template-columns: 1.5rem minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) minmax(8rem, 0.75fr) auto;
     align-items: center;
     gap: 0.55rem;
     min-block-size: 2.75rem;
@@ -224,13 +229,11 @@ export const cardEditorStyles = css`
     border-radius: var(--wzc-radius-medium);
   }
 
-  .linked-light-row > span:first-child,
   .add-light svg {
     display: grid;
     color: var(--wzc-color-primary);
   }
 
-  .linked-light-row svg,
   .add-light svg {
     inline-size: 1.25rem;
     block-size: 1.25rem;
@@ -264,9 +267,21 @@ export const cardEditorStyles = css`
   }
 
   .add-light-actions {
+    grid-column: 1 / -1;
     display: flex;
     justify-content: flex-end;
     gap: 0.5rem;
+  }
+
+  @container (max-width: 27rem) {
+    .linked-light-row,
+    .add-light-form {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .linked-light-icon {
+      grid-column: 1 / -1;
+    }
   }
 
   .remove-camera-dialog {

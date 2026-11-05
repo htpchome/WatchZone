@@ -30,8 +30,7 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
 
 function compactCameraConfig(camera: CameraConfig): Record<string, unknown> {
   const compact: Record<string, unknown> = { entity_id: camera.entity_id };
-  if (camera.light_entity_ids.length)
-    compact.light_entity_ids = camera.light_entity_ids;
+  if (camera.lights.length) compact.lights = camera.lights;
   if (!camera.low_latency_hls) compact.low_latency_hls = false;
   if (camera.ptz_enabled) compact.ptz_enabled = true;
   if (camera.start_live_unmuted_pc_tablet)

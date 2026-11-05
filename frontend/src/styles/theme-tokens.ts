@@ -213,15 +213,34 @@ export const themeTokens = css`
     );
     --wzc-light-control-gap: 0.5rem;
     --wzc-light-microphone-offset: 1.875rem;
-    --wzc-light-fill-color: var(--ha-color-amber-50, #fbbf24);
+    --wzc-light-fill-color: color-mix(
+      in srgb,
+      var(--wzc-color-primary) 22%,
+      transparent
+    );
+    --wzc-light-active-color: var(--wzc-color-primary);
+    --wzc-light-inactive-color: var(--wzc-color-text-2);
     --wzc-light-panel-background: color-mix(
       in srgb,
       var(--wzc-media-overlay-surface) 90%,
       transparent
     );
     --wzc-light-panel-inline-size: clamp(6.5rem, 24cqi, 8rem);
-    --wzc-light-power-active-color: var(--ha-color-amber-40, #fcd34d);
+    --wzc-light-power-active-color: var(--wzc-color-primary);
+    --wzc-light-slider-background: var(--wzc-color-surface-secondary);
+    --wzc-light-slider-color: var(--wzc-color-primary);
     --wzc-light-transition-duration: 160ms;
+    --wzc-round-control-hover-color: color-mix(
+      in srgb,
+      var(--wzc-color-primary) 18%,
+      white
+    );
+    --wzc-round-control-background: var(--wzc-color-background);
+    --wzc-round-control-border-color: var(--wzc-color-border-control);
+    --wzc-round-control-color: var(--wzc-color-text-2);
+    --wzc-round-control-shadow: 0 2px 6px
+      color-mix(in srgb, black 28%, transparent);
+    --wzc-round-control-hover-duration: 180ms;
 
     --wzc-accordion-background: var(--wzc-color-background);
     --wzc-accordion-header-color: var(--wzc-color-text-1);

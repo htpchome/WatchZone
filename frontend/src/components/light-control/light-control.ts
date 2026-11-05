@@ -19,10 +19,11 @@ import {
   englishLocalize,
   type LocalizeFunction,
 } from "../../core/localization";
+import { lightIconForState } from "../../core/light-icons";
 import { renderIcon } from "../../ui/icons";
 import { ToastManager } from "../../ui/toast-manager";
 import "../../ui/toast-region";
-import type { CameraLightConfig } from "./index";
+import type { CameraLightConfig, LightConfig } from "./index";
 import { lightControlStyles } from "./light-control.styles";
 
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
@@ -63,6 +64,11 @@ export class LightControlComponent extends LitElement {
   }
 
   public disconnectedCallback(): void {
+    document.removeEventListener(
+      "pointerdown",
+      this._handleDocumentPointerDown,
+    );
+    document.removeEventListener("keydown", this._handleDocumentKeyDown);
     this._unsubscribeCamera?.();
     this._unsubscribeCamera = undefined;
     this._cameraContext = undefined;
@@ -71,13 +77,19 @@ export class LightControlComponent extends LitElement {
     super.disconnectedCallback();
   }
 
+  public connectedCallback(): void {
+    super.connectedCallback();
+    document.addEventListener("pointerdown", this._handleDocumentPointerDown);
+    document.addEventListener("keydown", this._handleDocumentKeyDown);
+  }
+
   protected render() {
     const camera = this._activeCamera;
     const config = this._activeConfig();
     if (!camera || !config || !this.hass) return nothing;
-    const lights = config.lightEntityIds.map((entityId) => ({
-      entity: this.hass?.states[entityId],
-      entityId,
+    const lights = config.lights.map((light) => ({
+      ...light,
+      entity: this.hass?.states[light.entityId],
     }));
     const visible = camera.overlayVisible || this._openLightId !== undefined;
     const openLight = lights.find(
@@ -101,18 +113,17 @@ export class LightControlComponent extends LitElement {
           role="group"
           aria-label=${this.localize("light.controls")}
         >
-          ${lights.map(({ entityId, entity }) =>
-            this._renderLightButton(entityId, entity),
-          )}
+          ${lights.map((light) => this._renderLightButton(light, light.entity))}
         </div>
       </div>
     </div>`;
   }
 
   private _renderLightButton(
-    entityId: string,
+    light: LightConfig,
     entity: HomeAssistantEntity | undefined,
   ) {
+    const { entityId, icon } = light;
     const name = lightName(entityId, entity);
     const level = this._displayLevel(entityId, entity);
     const pending = this._pendingLightIds.has(entityId);
@@ -120,6 +131,7 @@ export class LightControlComponent extends LitElement {
       entity?.state === "on"
         ? this.localize("light.turn_off", { name })
         : this.localize("light.turn_on", { name });
+    const stateIcon = lightIconForState(icon, entity?.state === "on");
     return html`<button
       class=${entity?.state === "on" ? "light-button on" : "light-button"}
       type="button"
@@ -141,7 +153,7 @@ export class LightControlComponent extends LitElement {
       @focus=${this._revealOverlay}
       @pointerenter=${this._revealOverlay}
     >
-      ${renderIcon("lightbulb")}
+      <ha-icon .icon=${stateIcon} aria-hidden="true"></ha-icon>
     </button>`;
   }
 
@@ -157,16 +169,22 @@ export class LightControlComponent extends LitElement {
       aria-label=${this.localize("light.dimmer", { name })}
     >
       <span class="dimmer-name">${name}</span>
-      <input
-        type="range"
+      <span class="brightness-value" aria-live="polite"
+        >${this._panelBrightness}%</span
+      >
+      <ha-control-slider
+        vertical
+        show-handle
         min="1"
         max="100"
-        .value=${String(this._panelBrightness)}
-        title=${this.localize("light.brightness", { name })}
-        aria-label=${this.localize("light.brightness", { name })}
-        @input=${this._handleBrightnessInput}
-        @change=${this._handleBrightnessChange}
-      />
+        step="1"
+        unit="%"
+        tooltip-mode="never"
+        .value=${this._panelBrightness}
+        .label=${this.localize("light.brightness", { name })}
+        @slider-moved=${this._handleBrightnessMoved}
+        @value-changed=${this._handleBrightnessChange}
+      ></ha-control-slider>
       <button
         class=${on ? "power-button on" : "power-button"}
         type="button"
@@ -186,15 +204,6 @@ export class LightControlComponent extends LitElement {
         @click=${this._toggleFromButton}
       >
         ${renderIcon("power")}
-      </button>
-      <button
-        class="close-dimmer"
-        type="button"
-        title=${this.localize("light.close_dimmer")}
-        aria-label=${this.localize("light.close_dimmer")}
-        @click=${this._closeDimmer}
-      >
-        ${renderIcon("close")}
       </button>
     </div>`;
   }
@@ -311,18 +320,26 @@ export class LightControlComponent extends LitElement {
     this.requestUpdate();
   };
 
-  private readonly _handleBrightnessInput = (event: Event): void => {
-    this._panelBrightness = Number(
-      (event.currentTarget as HTMLInputElement).value,
-    );
+  private readonly _handleBrightnessMoved = (
+    event: CustomEvent<{ value?: number }>,
+  ): void => {
+    if (typeof event.detail.value !== "number") return;
+    this._panelBrightness = Math.round(event.detail.value);
     if (this._openLightId) {
       this._optimisticLevels.set(this._openLightId, this._panelBrightness);
     }
     this.requestUpdate();
   };
 
-  private readonly _handleBrightnessChange = (): void => {
+  private readonly _handleBrightnessChange = (
+    event: CustomEvent<{ value?: number }>,
+  ): void => {
     if (!this._openLightId) return;
+    if (typeof event.detail.value === "number") {
+      this._panelBrightness = Math.round(event.detail.value);
+      this._optimisticLevels.set(this._openLightId, this._panelBrightness);
+      this.requestUpdate();
+    }
     void this._callLight(this._openLightId, "turn_on", {
       brightness_pct: this._panelBrightness,
     });
@@ -372,6 +389,17 @@ export class LightControlComponent extends LitElement {
     event.preventDefault();
   private readonly _revealOverlay = (): void =>
     this._activeCamera?.revealOverlay();
+
+  private readonly _handleDocumentPointerDown = (event: PointerEvent): void => {
+    if (!this._openLightId) return;
+    const panel = this.renderRoot.querySelector(".dimmer-panel");
+    if (panel && event.composedPath().includes(panel)) return;
+    this._closeDimmer();
+  };
+
+  private readonly _handleDocumentKeyDown = (event: KeyboardEvent): void => {
+    if (event.key === "Escape" && this._openLightId) this._closeDimmer();
+  };
 
   static styles = lightControlStyles;
 }
