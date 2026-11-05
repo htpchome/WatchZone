@@ -78,8 +78,9 @@ schema. The runtime renderer and ordinary cards must not import GridStack.
 
 ## Editor-only sorting
 
-Reusable ordered editor tiles use Pragmatic Drag and Drop only inside the lazy
-editor graph. The dependency must add zero bytes to the normal card entry and
-no more than 10 kB gzip to the editor graph. Keyboard reordering remains a
-first-class path and reduced motion removes reorder animation. The generated
-editor entry is mechanically capped at 19 KiB gzip by build validation.
+Reusable ordered editor tiles use a local Pointer Events/pointer-capture path
+inside the lazy editor graph. They do not rely on document-level drag matching,
+which cannot identify internal elements after Home Assistant's nested shadow
+roots retarget events. Keyboard reordering remains a first-class path and
+reduced motion removes reorder animation. The generated editor entry is
+mechanically capped at 12 KiB gzip by build validation.

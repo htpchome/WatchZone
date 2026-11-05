@@ -236,6 +236,7 @@ export class CardEditor extends LitElement {
         })}</span>
       </div>
       <${sortableListTag}
+        data-sortable-scope="cameras"
         aria-label=${this._t("editor.configured_cameras")}
       >
         ${cameras.map(
@@ -617,7 +618,14 @@ export class CardEditor extends LitElement {
   private readonly _handleCameraReorder = (
     event: CustomEvent<SortableReorderDetail>,
   ): void => {
-    if (!this._config || event.target === this) return;
+    const ownsEvent = event
+      .composedPath()
+      .some(
+        (target) =>
+          target instanceof HTMLElement &&
+          target.dataset.sortableScope === "cameras",
+      );
+    if (!this._config || !ownsEvent) return;
     event.stopPropagation();
     const { fromIndex, toIndex } = event.detail;
     if (

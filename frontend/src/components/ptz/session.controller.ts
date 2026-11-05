@@ -56,10 +56,11 @@ export class PtzSessionController implements ReactiveController {
     cameraContext: CameraSessionContext,
     sources: readonly PtzCameraSource[],
   ): void {
+    const apiChanged = this._api?.identity !== api?.identity;
     this._api = api;
     this._configuredSources = sources;
     if (this._cameraContext === cameraContext) {
-      this._syncCamera(cameraContext.session);
+      this._syncCamera(cameraContext.session, apiChanged);
       return;
     }
     this._contextUnsubscribe?.();
@@ -138,13 +139,18 @@ export class PtzSessionController implements ReactiveController {
     this.stop();
   }
 
-  private _syncCamera(camera: ActiveCameraSession | undefined): void {
+  private _syncCamera(
+    camera: ActiveCameraSession | undefined,
+    force = false,
+  ): void {
     const source = camera
       ? this._configuredSources.find(
           ({ entityId }) => entityId === camera.entityId,
         )
       : undefined;
-    if (camera === this._camera && source === this._source) return;
+    if (!force && camera === this._camera && sameSource(source, this._source)) {
+      return;
+    }
     this.stop();
     this._camera = camera;
     this._source = source;
@@ -176,4 +182,13 @@ export class PtzSessionController implements ReactiveController {
   };
 
   private readonly _stopForLifecycle = (): void => this.stop();
+}
+
+function sameSource(
+  left: PtzCameraSource | undefined,
+  right: PtzCameraSource | undefined,
+): boolean {
+  return (
+    left?.entityId === right?.entityId && left?.provider === right?.provider
+  );
 }

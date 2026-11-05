@@ -81,9 +81,9 @@ if (eagerGzipBytes > 50 * 1024) {
 const editorGzipBytes = gzipSync(
   await readFile(resolve(frontend, editor.file)),
 ).byteLength;
-if (editorGzipBytes > 19 * 1024) {
+if (editorGzipBytes > 12 * 1024) {
   throw new Error(
-    `Lazy editor entry exceeds 19 KiB gzip: ${editorGzipBytes} bytes`,
+    `Lazy editor entry exceeds 12 KiB gzip: ${editorGzipBytes} bytes`,
   );
 }
 

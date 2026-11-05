@@ -94,6 +94,23 @@ describe("PTZ session lifecycle", () => {
 
     expect(stopMotion).toHaveBeenCalledOnce();
   });
+
+  it("resolves capability when Home Assistant arrives after the camera", async () => {
+    resolver.capability.mockResolvedValue(capability());
+    const controller = new PtzSessionController(new Host(), {
+      onFailure: vi.fn(),
+      onStopped: vi.fn(),
+    });
+    const context = new CameraSessionContext();
+    controller.configure(undefined, context, [source("camera.front")]);
+    context.publish({}, camera("camera.front"));
+
+    expect(resolver.capability).not.toHaveBeenCalled();
+    controller.configure(api(), context, [source("camera.front")]);
+
+    await vi.waitFor(() => expect(controller.capability?.supported).toBe(true));
+    expect(resolver.capability).toHaveBeenCalledOnce();
+  });
 });
 
 class Host {

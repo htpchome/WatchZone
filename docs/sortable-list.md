@@ -6,8 +6,9 @@ state.
 
 ## Ownership
 
-- Pragmatic Drag and Drop owns cross-input drag lifecycle. The list owns local
-  vertical geometry, fluid sibling displacement, and one typed reorder intent.
+- The tile owns one Pointer Events/pointer-capture drag lifecycle that remains
+  local to its shadow root. The list owns local vertical geometry, fluid
+  sibling displacement, and one typed reorder intent.
 - A tile owns its registered drag handle, transient visual drag state, slotted
   content, slotted actions, and registration cleanup.
 - The consuming feature owns the ordered data, validation, dirty-state update,
@@ -17,9 +18,13 @@ state.
 
 ## Interaction
 
-- Drag uses Pragmatic's element adapter and is loaded only with the editor.
-- The original custom pointer-capture drag path has been removed; it must not
-  be layered beneath or beside Pragmatic.
+- Drag uses the browser Pointer Events and pointer-capture APIs so mouse, pen,
+  and touch follow one path without document-global listeners. This is
+  required because drag events are retargeted at Home Assistant's nested
+  shadow boundaries and cannot be matched reliably by document-level element
+  registries.
+- Pointer cancellation and lost capture reset the complete transient drag
+  state without emitting a reorder.
 - Arrow Up and Arrow Down on the focused handle provide keyboard reordering.
 - The emitted detail contains stable item identity plus absolute source and
   destination indices.
@@ -29,6 +34,6 @@ state.
 The component derives its element names and events from centralized identity
 constants and consumes only semantic `--wzc-*` styling tokens.
 
-Pragmatic core may add at most 10 kB gzip to the lazy editor graph and must add
-zero bytes to the normal card entry. Reordering honors reduced-motion and keeps
-the blue leading edge, left drag handle, and separately activated actions.
+The sorter has no runtime dependency and adds zero bytes to the normal card
+entry. Reordering honors reduced-motion and keeps the blue leading edge, left
+drag handle, and separately activated actions.

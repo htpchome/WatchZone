@@ -1,7 +1,7 @@
 {
   "name": "watchzone-frontend",
   "private": true,
-  "version": "0.0.4-dev.107",
+  "version": "0.0.4-dev.108",
   "type": "module",
   "packageManager": "yarn@4.18.1",
   "engines": {
@@ -22,7 +22,6 @@
     "test:browser": "playwright test"
   },
   "dependencies": {
-    "@atlaskit/pragmatic-drag-and-drop": "4.0.0",
     "hls.js": "1.7.4",
     "lit": "^3.3.3",
     "swiper": "14.4.0"

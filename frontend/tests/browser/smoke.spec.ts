@@ -815,6 +815,56 @@ test("editor uses exclusive accordions and shared draft status", async ({
   ).toContainText("Unsaved changes");
 });
 
+test("editor camera drag handles reorder the configured cameras", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  await page.evaluate(async () => {
+    const constructor = customElements.get(
+      "watchzone-card",
+    ) as typeof HTMLElement & {
+      getConfigElement(): Promise<
+        HTMLElement & {
+          setConfig(config: unknown): void;
+          updateComplete: Promise<boolean>;
+        }
+      >;
+    };
+    const editor = await constructor.getConfigElement();
+    editor.id = "sortable-editor";
+    editor.setConfig({
+      type: "custom:watchzone-card",
+      cameras: [{ entity_id: "camera.first" }, { entity_id: "camera.second" }],
+    });
+    document.body.append(editor);
+    await editor.updateComplete;
+  });
+
+  const editor = page.locator("#sortable-editor");
+  await editor.locator("wzc-accordion-item").first().locator("summary").click();
+  const tiles = editor.locator("wzc-sortable-tile");
+  const firstHandle = tiles.nth(0).locator(".handle");
+  const secondTile = tiles.nth(1);
+  const start = await firstHandle.boundingBox();
+  const target = await secondTile.boundingBox();
+  expect(start).not.toBeNull();
+  expect(target).not.toBeNull();
+  if (!start || !target) return;
+
+  await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(
+    target.x + target.width / 2,
+    target.y + target.height * 0.75,
+    { steps: 8 },
+  );
+  await page.mouse.up();
+
+  await expect(tiles.nth(0)).toHaveAttribute("item-key", "camera.second");
+  await expect(tiles.nth(1)).toHaveAttribute("item-key", "camera.first");
+});
+
 test("round-trips boolean toggles through defaults before Save", async ({
   page,
 }) => {

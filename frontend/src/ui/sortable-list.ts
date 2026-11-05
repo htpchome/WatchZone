@@ -1,5 +1,4 @@
 import { html, LitElement } from "lit";
-import { draggable } from "@atlaskit/pragmatic-drag-and-drop/adapter/element-adapter";
 
 import {
   SORTABLE_DRAG_EVENT,
@@ -12,7 +11,7 @@ import { englishLocalize, type LocalizeFunction } from "../core/localization";
 import { renderIcon } from "./icons";
 import { sortableListStyles, sortableTileStyles } from "./sortable-list.styles";
 
-type SortableDragPhase = "end" | "move" | "start";
+type SortableDragPhase = "cancel" | "end" | "move" | "start";
 
 interface SortableDragDetail {
   readonly clientY: number;
@@ -43,44 +42,18 @@ export class SortableTile extends LitElement {
   public itemKey = "";
   public localize: LocalizeFunction = englishLocalize;
   private _offset = 0;
-  private _disposeDrag?: () => void;
+  private _pointerId?: number;
+  private _pointerStartY = 0;
 
   public connectedCallback(): void {
     super.connectedCallback();
     this.setAttribute("role", "listitem");
   }
 
-  public disconnectedCallback(): void {
-    this._disposeDrag?.();
-    this._disposeDrag = undefined;
-    super.disconnectedCallback();
-  }
-
-  protected firstUpdated(): void {
-    const tile = this.renderRoot.querySelector<HTMLElement>(".tile");
-    const handle = this.renderRoot.querySelector<HTMLElement>(".handle");
-    if (!tile || !handle) return;
-    this._disposeDrag = draggable({
-      element: tile,
-      dragHandle: handle,
-      getInitialData: () => ({ itemKey: this.itemKey }),
-      onDragStart: ({ location }) => {
-        this.dragging = true;
-        this._offset = 0;
-        this._dispatchDrag("start", location.initial.input.clientY);
-      },
-      onDrag: ({ location }) => {
-        this._dispatchDrag("move", location.current.input.clientY);
-      },
-      onDrop: ({ location }) => {
-        this._dispatchDrag("end", location.current.input.clientY);
-        this.resetDrag();
-      },
-    });
-  }
-
   public resetDrag(): void {
     this.dragging = false;
+    this._pointerId = undefined;
+    this._pointerStartY = 0;
     this._offset = 0;
     this.requestUpdate();
   }
@@ -102,6 +75,11 @@ export class SortableTile extends LitElement {
         aria-label=${this.localize("sortable.reorder")}
         aria-keyshortcuts="ArrowUp ArrowDown"
         aria-pressed=${this.dragging ? "true" : "false"}
+        @pointerdown=${this._handlePointerDown}
+        @pointermove=${this._handlePointerMove}
+        @pointerup=${this._handlePointerUp}
+        @pointercancel=${this._handlePointerCancel}
+        @lostpointercapture=${this._handleLostPointerCapture}
         @keydown=${this._handleKeyDown}
       >
         ${renderIcon("dragHorizontal")}
@@ -120,6 +98,45 @@ export class SortableTile extends LitElement {
       }),
     );
   }
+
+  private readonly _handlePointerDown = (event: PointerEvent): void => {
+    if (event.button !== 0 || this._pointerId !== undefined) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this._pointerId = event.pointerId;
+    this._pointerStartY = event.clientY;
+    this.dragging = true;
+    this._offset = 0;
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    this._dispatchDrag("start", event.clientY);
+  };
+
+  private readonly _handlePointerMove = (event: PointerEvent): void => {
+    if (event.pointerId !== this._pointerId) return;
+    event.preventDefault();
+    this._offset = event.clientY - this._pointerStartY;
+    this.requestUpdate();
+    this._dispatchDrag("move", event.clientY);
+  };
+
+  private readonly _handlePointerUp = (event: PointerEvent): void => {
+    if (event.pointerId !== this._pointerId) return;
+    event.preventDefault();
+    this._dispatchDrag("end", event.clientY);
+    this.resetDrag();
+  };
+
+  private readonly _handleLostPointerCapture = (event: PointerEvent): void => {
+    if (event.pointerId !== this._pointerId) return;
+    this._dispatchDrag("cancel", event.clientY);
+    this.resetDrag();
+  };
+
+  private readonly _handlePointerCancel = (event: PointerEvent): void => {
+    if (event.pointerId !== this._pointerId) return;
+    this._dispatchDrag("cancel", event.clientY);
+    this.resetDrag();
+  };
 
   private readonly _handleKeyDown = (event: KeyboardEvent): void => {
     if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
@@ -206,6 +223,10 @@ export class SortableList extends LitElement {
       return;
     }
     if (event.detail.item !== this._dragged) return;
+    if (event.detail.phase === "cancel") {
+      this._resetDrag();
+      return;
+    }
     if (event.detail.phase === "move") {
       const items = this._items;
       let target = items.length - 1;
