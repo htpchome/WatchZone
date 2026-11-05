@@ -49,16 +49,20 @@ export interface StageDesignDocument {
   readonly name: string;
   readonly revision: number;
   readonly schemaVersion: typeof STAGE_SCHEMA_VERSION;
-  readonly variants: Readonly<Record<StageVariantName, StageVariant>>;
+  readonly variants: Readonly<Partial<Record<StageVariantName, StageVariant>>>;
 }
 
-export function selectStageVariant(
-  design: StageDesignDocument,
+export interface StageFlow {
+  readonly default: readonly string[];
+  readonly phone: readonly string[];
+}
+
+export type StageCatalog = ReadonlyMap<string, StageDesignDocument>;
+
+export function stageVariantNameForInlineSize(
   inlineSize: number,
-): StageVariant {
-  return inlineSize <= PHONE_STAGE_MAX_INLINE_SIZE
-    ? design.variants.phone
-    : design.variants.default;
+): StageVariantName {
+  return inlineSize <= PHONE_STAGE_MAX_INLINE_SIZE ? "phone" : "default";
 }
 
 export function validateStageDesign(value: unknown): StageDesignDocument {
@@ -67,16 +71,75 @@ export function validateStageDesign(value: unknown): StageDesignDocument {
     throw new Error("The stage design uses an unsupported schema version.");
   }
   const variants = objectValue(source.variants, "Stage design variants");
+  const validatedVariants: Partial<Record<StageVariantName, StageVariant>> = {};
+  for (const name of ["default", "phone"] as const) {
+    if (variants[name] !== undefined) {
+      validatedVariants[name] = validateVariant(variants[name], name);
+    }
+  }
+  if (!validatedVariants.default && !validatedVariants.phone) {
+    throw new Error("Stage designs must provide at least one variant.");
+  }
   return {
     id: nonEmptyString(source.id, "Stage design IDs"),
     name: nonEmptyString(source.name, "Stage design names"),
     revision: nonNegativeInteger(source.revision, "Stage design revisions"),
     schemaVersion: STAGE_SCHEMA_VERSION,
-    variants: {
-      default: validateVariant(variants.default, "default"),
-      phone: validateVariant(variants.phone, "phone"),
-    },
+    variants: validatedVariants,
   };
+}
+
+export function validateStageCatalog(values: readonly unknown[]): StageCatalog {
+  const catalog = new Map<string, StageDesignDocument>();
+  for (const value of values) {
+    const design = validateStageDesign(value);
+    if (catalog.has(design.id)) {
+      throw new Error(`Stage design ID "${design.id}" is duplicated.`);
+    }
+    catalog.set(design.id, design);
+  }
+  if (catalog.size === 0) {
+    throw new Error("Stage catalogs must contain at least one design.");
+  }
+  return catalog;
+}
+
+export function validateStageFlow(
+  value: unknown,
+  catalog: StageCatalog,
+): StageFlow {
+  const source = objectValue(value, "Stage flows");
+  return {
+    default: validateFlowEntries(source.default, "default", catalog),
+    phone: validateFlowEntries(source.phone, "phone", catalog),
+  };
+}
+
+function validateFlowEntries(
+  value: unknown,
+  variantName: StageVariantName,
+  catalog: StageCatalog,
+): readonly string[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error(`The ${variantName} stage flow must not be empty.`);
+  }
+  const ids = value.map((entry) => nonEmptyString(entry, "Stage flow IDs"));
+  const uniqueIds = new Set(ids);
+  if (uniqueIds.size !== ids.length) {
+    throw new Error(`The ${variantName} stage flow contains duplicate IDs.`);
+  }
+  for (const id of ids) {
+    const design = catalog.get(id);
+    if (!design) {
+      throw new Error(`Stage flow design "${id}" does not exist.`);
+    }
+    if (!design.variants[variantName]) {
+      throw new Error(
+        `Stage design "${id}" does not support the ${variantName} profile.`,
+      );
+    }
+  }
+  return ids;
 }
 
 function validateVariant(value: unknown, name: StageVariantName): StageVariant {

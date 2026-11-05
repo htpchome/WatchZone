@@ -9,6 +9,7 @@ from homeassistant.exceptions import HomeAssistantError
 
 STAGE_SCHEMA_VERSION = 1
 StageSlotName = Literal["content", "controls", "footer", "overlay"]
+StageVariantName = Literal["default", "phone"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,7 +75,7 @@ class StageDesign:
     id: str
     name: str
     revision: int
-    variants: dict[Literal["default", "phone"], StageVariant]
+    variants: dict[StageVariantName, StageVariant]
     schema_version: int = STAGE_SCHEMA_VERSION
 
     def with_revision(self, revision: int) -> StageDesign:
@@ -92,14 +93,17 @@ def validate_stage_design(value: object) -> StageDesign:
     if source.get("schemaVersion") != STAGE_SCHEMA_VERSION:
         raise HomeAssistantError("Unsupported stage schema version")
     variants = _mapping(source.get("variants"), "Stage variants")
+    validated_variants: dict[StageVariantName, StageVariant] = {}
+    for name in ("default", "phone"):
+        if name in variants:
+            validated_variants[name] = _variant(variants[name], name)
+    if not validated_variants:
+        raise HomeAssistantError("Stage designs must provide at least one variant")
     return StageDesign(
         id=_text(source.get("id"), "Stage design ID"),
         name=_text(source.get("name"), "Stage design name"),
         revision=_non_negative(source.get("revision"), "Stage revision"),
-        variants={
-            "default": _variant(variants.get("default"), "default"),
-            "phone": _variant(variants.get("phone"), "phone"),
-        },
+        variants=validated_variants,
     )
 
 

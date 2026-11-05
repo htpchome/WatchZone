@@ -1,0 +1,86 @@
+{
+  "id": "default-stage",
+  "name": "Default",
+  "revision": 0,
+  "schemaVersion": 1,
+  "variants": {
+    "default": {
+      "root": {
+        "children": [
+          {
+            "grid": {
+              "column": 1,
+              "columnSpan": 12,
+              "row": 1,
+              "rowSpan": 1
+            },
+            "node": {
+              "config": {},
+              "id": "default-camera-module",
+              "kind": "module",
+              "moduleType": "camera",
+              "slots": {
+                "overlay": [
+                  {
+                    "componentType": "two_way_talk",
+                    "config": {},
+                    "id": "default-talk-component",
+                    "kind": "component"
+                  },
+                  {
+                    "componentType": "ptz",
+                    "config": {},
+                    "id": "default-ptz-component",
+                    "kind": "component"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "columns": 12,
+        "id": "default-layout-root",
+        "kind": "container"
+      }
+    },
+    "phone": {
+      "root": {
+        "children": [
+          {
+            "grid": {
+              "column": 1,
+              "columnSpan": 4,
+              "row": 1,
+              "rowSpan": 1
+            },
+            "node": {
+              "config": {},
+              "id": "default-camera-module",
+              "kind": "module",
+              "moduleType": "camera",
+              "slots": {
+                "overlay": [
+                  {
+                    "componentType": "two_way_talk",
+                    "config": {},
+                    "id": "default-talk-component",
+                    "kind": "component"
+                  },
+                  {
+                    "componentType": "ptz",
+                    "config": {},
+                    "id": "default-ptz-component",
+                    "kind": "component"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "columns": 4,
+        "id": "default-layout-root",
+        "kind": "container"
+      }
+    }
+  }
+}

@@ -1,7 +1,7 @@
 import { render } from "lit";
 import { describe, expect, it, vi } from "vitest";
 
-import { createDefaultStageDesign } from "../src/card/default-layout";
+import { createBuiltInStageSet } from "../src/card/built-in-stages/catalog";
 import { LayoutRuntime } from "../src/card/layout-runtime";
 import { PlaceableLoader } from "../src/card/placeable-loader";
 import { normalizeCardConfig } from "../src/core/config";
@@ -11,7 +11,13 @@ import {
   DEFAULT_PTZ_COMPONENT_NODE_ID,
   DEFAULT_TALK_COMPONENT_NODE_ID,
 } from "../src/core/constants";
-import { validateStageDesign } from "../src/core/layout";
+import {
+  validateStageCatalog,
+  validateStageDesign,
+  validateStageFlow,
+  type StageDesignDocument,
+  type StageVariant,
+} from "../src/core/layout";
 import type { ModuleDefinition } from "../src/core/placeable";
 
 class RuntimeHost {
@@ -43,9 +49,9 @@ class RuntimeHost {
 
 describe("layout composition", () => {
   it("builds an empty layout without a privileged camera node", () => {
-    const layout = createDefaultStageDesign(normalizeCardConfig({}));
+    const layout = builtInStage(normalizeCardConfig({}));
 
-    expect(layout.variants.default).toEqual({
+    expect(defaultVariant(layout)).toEqual({
       root: {
         children: [],
         columns: 12,
@@ -56,11 +62,11 @@ describe("layout composition", () => {
   });
 
   it("seeds a stable camera module node from the initial card input", () => {
-    const layout = createDefaultStageDesign(
+    const layout = builtInStage(
       normalizeCardConfig({ camera_entity: "camera.front" }),
     );
 
-    const children = layout.variants.default.root.children;
+    const children = defaultVariant(layout).root.children;
     expect(children).toHaveLength(1);
     expect(children[0].node).toMatchObject({
       id: DEFAULT_CAMERA_MODULE_NODE_ID,
@@ -76,14 +82,14 @@ describe("layout composition", () => {
   });
 
   it("maps camera appearance once at the camera module boundary", () => {
-    const layout = createDefaultStageDesign(
+    const layout = builtInStage(
       normalizeCardConfig({
         camera_entity: "camera.front",
         camera_rounded_corners: false,
         camera_shadows: false,
       }),
     );
-    const cameraNode = layout.variants.default.root.children[0]?.node;
+    const cameraNode = defaultVariant(layout).root.children[0]?.node;
     if (!cameraNode) throw new Error("Expected a camera module node.");
 
     expect(cameraNode.config).toMatchObject({
@@ -97,7 +103,7 @@ describe("layout composition", () => {
   });
 
   it("composes an independent talk overlay only for opted-in cameras", () => {
-    const layout = createDefaultStageDesign(
+    const layout = builtInStage(
       normalizeCardConfig({
         cameras: [
           { entity_id: "camera.front", two_way_talk_enabled: true },
@@ -106,7 +112,7 @@ describe("layout composition", () => {
       }),
     );
 
-    const camera = layout.variants.default.root.children[0]?.node;
+    const camera = defaultVariant(layout).root.children[0]?.node;
     expect(camera?.slots?.overlay).toHaveLength(1);
     expect(camera?.slots?.overlay?.[0]).toMatchObject({
       id: DEFAULT_TALK_COMPONENT_NODE_ID,
@@ -117,7 +123,7 @@ describe("layout composition", () => {
   });
 
   it("composes an independent provider-resolved PTZ overlay", () => {
-    const layout = createDefaultStageDesign(
+    const layout = builtInStage(
       normalizeCardConfig({
         cameras: [
           { entity_id: "camera.front", ptz_enabled: true },
@@ -126,7 +132,7 @@ describe("layout composition", () => {
       }),
     );
 
-    const camera = layout.variants.default.root.children[0]?.node;
+    const camera = defaultVariant(layout).root.children[0]?.node;
     expect(camera?.slots?.overlay?.[0]).toMatchObject({
       id: DEFAULT_PTZ_COMPONENT_NODE_ID,
       kind: "component",
@@ -141,6 +147,88 @@ describe("layout composition", () => {
     expect(() => validateStageDesign(stageWithNodes("same", "same"))).toThrow(
       'Stage node ID "same" is duplicated.',
     );
+  });
+
+  it("allows stage designs to target one or both responsive profiles", () => {
+    const desktop = layoutWithModules("desktop-node");
+    const phone = {
+      ...layoutWithModules("phone-node"),
+      id: "phone-stage",
+      variants: { phone: variantWithNodes("phone-node") },
+    };
+    const desktopOnly = {
+      ...desktop,
+      variants: { default: desktop.variants.default },
+    };
+
+    expect(validateStageDesign(desktopOnly).variants.phone).toBeUndefined();
+    expect(validateStageDesign(phone).variants.default).toBeUndefined();
+    expect(() => validateStageDesign({ ...desktop, variants: {} })).toThrow(
+      "Stage designs must provide at least one variant.",
+    );
+  });
+
+  it("validates ordered desktop and phone flows against stage eligibility", () => {
+    const shared = layoutWithModules("shared-node");
+    const phone = {
+      ...layoutWithModules("phone-node"),
+      id: "phone-stage",
+      variants: { phone: variantWithNodes("phone-node") },
+    };
+    const catalog = validateStageCatalog([shared, phone]);
+
+    expect(
+      validateStageFlow(
+        {
+          default: [shared.id],
+          phone: [phone.id, shared.id],
+        },
+        catalog,
+      ),
+    ).toEqual({
+      default: [shared.id],
+      phone: [phone.id, shared.id],
+    });
+    expect(() =>
+      validateStageFlow({ default: [phone.id], phone: [shared.id] }, catalog),
+    ).toThrow(
+      `Stage design "${phone.id}" does not support the default profile.`,
+    );
+  });
+
+  it("lands on the first flow entry and selects another validated stage", () => {
+    const first = { ...layoutWithModules("first-node"), id: "first-stage" };
+    const second = { ...layoutWithModules("second-node"), id: "second-stage" };
+    const runtime = new LayoutRuntime(new RuntimeHost());
+    const container = document.createElement("div");
+
+    runtime.setStageSet([first, second], {
+      default: [first.id, second.id],
+      phone: [second.id, first.id],
+    });
+    render(runtime.render(), container);
+    expect(
+      container.querySelector(".stage-grid")?.getAttribute("data-stage-design"),
+    ).toBe(first.id);
+
+    expect(runtime.showStage(second.id)).toBe(true);
+    render(runtime.render(), container);
+    expect(
+      container.querySelector(".stage-grid")?.getAttribute("data-stage-design"),
+    ).toBe(second.id);
+
+    runtime.setInlineSize(500);
+    render(runtime.render(), container);
+    expect(
+      container.querySelector(".stage-grid")?.getAttribute("data-stage-design"),
+    ).toBe(second.id);
+    expect(runtime.showStage(first.id)).toBe(true);
+    runtime.setInlineSize(900);
+    render(runtime.render(), container);
+    expect(
+      container.querySelector(".stage-grid")?.getAttribute("data-stage-design"),
+    ).toBe(second.id);
+    expect(runtime.showStage("missing-stage")).toBe(false);
   });
 
   it("loads referenced module types once and preserves elements by node ID", async () => {
@@ -161,7 +249,7 @@ describe("layout composition", () => {
     const runtime = new LayoutRuntime(host, loader);
     const container = document.createElement("div");
     host.connect();
-    runtime.setLayout(layoutWithModules("first", "second"));
+    setRuntimeStage(runtime, layoutWithModules("first", "second"));
     await vi.waitFor(() => {
       render(runtime.render(), container);
       expect(container.querySelectorAll("article")).toHaveLength(2);
@@ -169,7 +257,7 @@ describe("layout composition", () => {
     host.updated();
     const before = [...container.querySelectorAll("article")];
 
-    runtime.setLayout(layoutWithModules("second", "first"));
+    setRuntimeStage(runtime, layoutWithModules("second", "first"));
     render(runtime.render(), container);
     const after = [...container.querySelectorAll("article")];
 
@@ -206,7 +294,7 @@ describe("layout composition", () => {
     const container = document.createElement("div");
     document.body.append(container);
     host.connect();
-    runtime.setLayout(layoutWithModules("only"));
+    setRuntimeStage(runtime, layoutWithModules("only"));
 
     await vi.waitFor(() => expect(prepare).toHaveBeenCalledOnce());
     expect(container.querySelector("article")).toBeNull();
@@ -222,7 +310,29 @@ describe("layout composition", () => {
   });
 });
 
-function layoutWithModules(...ids: string[]) {
+function builtInStage(config: ReturnType<typeof normalizeCardConfig>) {
+  const stage = createBuiltInStageSet(config).designs[0];
+  if (!stage) throw new Error("Expected the built-in stage.");
+  return stage;
+}
+
+function defaultVariant(design: StageDesignDocument): StageVariant {
+  const variant = design.variants.default;
+  if (!variant) throw new Error("Expected a default stage variant.");
+  return variant;
+}
+
+function setRuntimeStage(
+  runtime: LayoutRuntime,
+  design: StageDesignDocument,
+): void {
+  runtime.setStageSet([design], {
+    default: [design.id],
+    phone: [design.id],
+  });
+}
+
+function layoutWithModules(...ids: string[]): StageDesignDocument {
   return {
     id: "test-stage",
     name: "Test",
@@ -239,7 +349,7 @@ function stageWithNodes(...ids: string[]) {
   return layoutWithModules(...ids);
 }
 
-function variantWithNodes(...ids: string[]) {
+function variantWithNodes(...ids: string[]): StageVariant {
   return {
     root: {
       children: ids.map((id, index) => ({

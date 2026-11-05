@@ -15,8 +15,10 @@ provider services, and connection adapters that users compose into layouts.
 ## Product direction
 
 - One Home Assistant integration ships the Python backend and Lit frontend.
-- Python owns layout schemas, validation, persistence, revisions, permissions,
-  provider configuration, and provider-normalized data.
+- Python owns user-created layout validation, persistence, revisions,
+  permissions, provider configuration, and provider-normalized data. The
+  frontend may ship immutable built-in Stage Design templates; both sources
+  use the same versioned schema and renderer.
 - The browser owns the visual designer, responsive preview, interaction, and
   browser media APIs. The designer is therefore a frontend client of the
   Python-owned layout service rather than a second YAML configuration system.

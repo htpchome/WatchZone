@@ -14,10 +14,12 @@ import type {
   HomeAssistantEntity,
 } from "../core/home-assistant";
 import {
-  selectStageVariant,
-  validateStageDesign,
+  stageVariantNameForInlineSize,
+  validateStageCatalog,
+  validateStageFlow,
+  type StageCatalog,
   type StageComponentNode,
-  type StageDesignDocument,
+  type StageFlow,
   type StageModuleNode,
   type StagePlacement,
   type StageSlotName,
@@ -57,8 +59,11 @@ export class LayoutRuntime implements ReactiveController {
   private _context: PlaceableRuntimeContext = {
     cameraSession: this._cameraSession,
   };
-  private _design?: StageDesignDocument;
+  private readonly _activeStageIds: Partial<Record<StageVariantName, string>> =
+    {};
+  private _catalog?: StageCatalog;
   private _designError?: string;
+  private _flow?: StageFlow;
   private _inlineSize = Number.POSITIVE_INFINITY;
   private readonly _records = new Map<string, PlaceableRecord>();
   private _variantName: StageVariantName = "default";
@@ -94,24 +99,30 @@ export class LayoutRuntime implements ReactiveController {
   public setInlineSize(inlineSize: number): void {
     if (!Number.isFinite(inlineSize) || inlineSize <= 0) return;
     this._inlineSize = inlineSize;
-    const next = inlineSize <= 599 ? "phone" : "default";
+    const next = stageVariantNameForInlineSize(inlineSize);
     if (next === this._variantName) return;
     this._variantName = next;
     this._syncActiveVariant();
   }
 
-  public setLayout(value: unknown): void {
+  public setStageSet(designs: readonly unknown[], flow: unknown): void {
     try {
-      this._design = validateStageDesign(value);
+      const catalog = validateStageCatalog(designs);
+      const validatedFlow = validateStageFlow(flow, catalog);
+      this._catalog = catalog;
+      this._flow = validatedFlow;
       this._designError = undefined;
-      this._variantName =
-        selectStageVariant(this._design, this._inlineSize) ===
-        this._design.variants.phone
-          ? "phone"
-          : "default";
+      this._variantName = stageVariantNameForInlineSize(this._inlineSize);
+      for (const name of ["default", "phone"] as const) {
+        const current = this._activeStageIds[name];
+        if (!current || !validatedFlow[name].includes(current)) {
+          this._activeStageIds[name] = validatedFlow[name][0];
+        }
+      }
       this._syncActiveVariant();
     } catch (error) {
-      this._design = undefined;
+      this._catalog = undefined;
+      this._flow = undefined;
       this._designError = messageFrom(
         error,
         this._localize("layout.unable_to_load"),
@@ -119,6 +130,16 @@ export class LayoutRuntime implements ReactiveController {
       this._removeMissingRecords(new Set());
       this._host.requestUpdate();
     }
+  }
+
+  /** Selects a stage already present in the active responsive flow. */
+  public showStage(stageId: string): boolean {
+    const flow = this._flow?.[this._variantName];
+    if (!flow?.includes(stageId)) return false;
+    if (this._activeStageIds[this._variantName] === stageId) return true;
+    this._activeStageIds[this._variantName] = stageId;
+    this._syncActiveVariant();
+    return true;
   }
 
   public setRuntime(
@@ -155,6 +176,7 @@ export class LayoutRuntime implements ReactiveController {
     return html`<div
       class="stage-grid"
       data-layout-node=${variant.root.id}
+      data-stage-design=${this._activeStageId() ?? nothing}
       data-stage-variant=${this._variantName}
       style=${`--wzc-stage-grid-columns:${variant.root.columns};--wzc-stage-grid-rows:${rows}`}
     >
@@ -167,12 +189,25 @@ export class LayoutRuntime implements ReactiveController {
   }
 
   private _activeVariant() {
-    return this._design?.variants[this._variantName];
+    return this._activeDesign()?.variants[this._variantName];
+  }
+
+  private _activeDesign() {
+    const id = this._activeStageId();
+    return id ? this._catalog?.get(id) : undefined;
+  }
+
+  private _activeStageId(): string | undefined {
+    return this._activeStageIds[this._variantName];
   }
 
   private _syncActiveVariant(): void {
     const variant = this._activeVariant();
-    if (!variant) return;
+    if (!variant) {
+      this._removeMissingRecords(new Set());
+      this._host.requestUpdate();
+      return;
+    }
     const nodes = collectPlaceables(variant.root.children);
     this._removeMissingRecords(new Set(nodes.map(({ id }) => id)));
     for (const node of nodes) this._syncNode(node);

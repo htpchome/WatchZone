@@ -26,7 +26,7 @@ import {
 import { LocalizationController } from "../core/localization";
 import { CardHostAppearanceController } from "../styles/card-host-appearance.controller";
 import { themeTokens } from "../styles/theme-tokens";
-import { createDefaultStageDesign } from "./default-layout";
+import { createBuiltInStageSet } from "./built-in-stages/catalog";
 import { LayoutRuntime } from "./layout-runtime";
 import { cardStyles } from "./watchzone-card.styles";
 
@@ -183,7 +183,8 @@ export class DashboardCard extends LitElement {
   };
 
   private _syncLayout(config: CardConfig): void {
-    this._layoutRuntime.setLayout(createDefaultStageDesign(config));
+    const { designs, flow } = createBuiltInStageSet(config);
+    this._layoutRuntime.setStageSet(designs, flow);
     this._syncRuntime();
   }
 

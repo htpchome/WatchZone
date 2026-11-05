@@ -22,9 +22,11 @@ Home Assistant's Devices & services settings.
 
 The architecture is designed to support user-created layouts composed from
 independent modules such as live video, event lists, camera selectors,
-companion cameras, and navigation controls. Layouts are created and persisted
-through the Python integration. Lovelace YAML does not contain the layout
-definition.
+companion cameras, and navigation controls. User-created layouts are created
+and persisted through the Python integration. Immutable built-in Stage Design
+templates ship with the frontend; both sources validate into the same
+versioned schema and use the same renderer. Lovelace YAML references ordered
+Stage Design IDs but does not contain a layout definition.
 
 This contract is intentionally strict at system boundaries and intentionally
 light inside a feature. A feature starts small and gains files only when its

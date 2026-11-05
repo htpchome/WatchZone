@@ -85,8 +85,10 @@ or future designer work, also read `docs/stage-layout-system.md` in full.
 ## Core boundaries
 
 - WatchZone is one mandatory Python integration with a packaged frontend.
-- Python owns provider communication, normalized camera data, layouts,
-  persistence, permissions, and shared backend work.
+- Python owns provider communication, normalized camera data, user-created
+  Stage Designs, persistence, permissions, and shared backend work. The
+  frontend may ship immutable built-in Stage Design templates; both sources
+  must validate into the same versioned layout contract and use one renderer.
 - TypeScript owns rendering, browser media APIs, lazy UI modules, and
   latency-sensitive interaction.
 - A provider and a live connection type are different concepts.

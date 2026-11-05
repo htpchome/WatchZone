@@ -18,7 +18,6 @@ export const MAX_RETAINED_CAMERA_SESSIONS = MAX_CAMERAS * 2;
 export const MAX_REDUCED_BANDWIDTH_CONNECTED_CAMERAS = 3;
 export const REDUCED_BANDWIDTH_CAMERA_RETENTION_MS = 2 * 60 * 1000;
 export const DEFAULT_LAYOUT_ROOT_NODE_ID = `${APP_ID}:default-layout-root`;
-export const DEFAULT_STAGE_DESIGN_ID = `${APP_ID}:default-stage`;
 export const DEFAULT_CAMERA_MODULE_NODE_ID = `${APP_ID}:default-camera-module`;
 export const DEFAULT_TALK_COMPONENT_NODE_ID = `${APP_ID}:default-talk-component`;
 export const DEFAULT_PTZ_COMPONENT_NODE_ID = `${APP_ID}:default-ptz-component`;

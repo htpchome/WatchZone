@@ -87,6 +87,28 @@ def test_stage_schema_rejects_duplicate_node_ids() -> None:
         validate_stage_design(value)
 
 
+def test_stage_schema_allows_profile_specific_designs() -> None:
+    """A user design may target desktop/tablet or phone without duplication."""
+    value = _design()
+    variants = value["variants"]
+    assert isinstance(variants, dict)
+    variants.pop("phone")
+
+    design = validate_stage_design(value)
+
+    assert tuple(design.variants) == ("default",)
+    assert design.as_json() == value
+
+
+def test_stage_schema_requires_at_least_one_variant() -> None:
+    """A design with no eligible responsive profile cannot be saved."""
+    value = _design()
+    value["variants"] = {}
+
+    with pytest.raises(HomeAssistantError, match="at least one variant"):
+        validate_stage_design(value)
+
+
 async def test_stage_store_uses_optimistic_revisions(hass: HomeAssistant) -> None:
     """A stale editor cannot overwrite a successfully saved design."""
     store = StageDesignStore(hass)
