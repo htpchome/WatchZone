@@ -195,7 +195,7 @@ describe("linked-light component", () => {
     ) as HTMLElement;
     expect(button.getAttribute("aria-pressed")).toBe("false");
     expect(button.getAttribute("style")).toContain("--wzc-light-level:0%");
-    expect(button.querySelector(".light-button-icon")).not.toBeNull();
+    expect(button.querySelector("svg")).not.toBeNull();
   });
 
   it("switches linked controls with the active camera and cleans up presses", async () => {

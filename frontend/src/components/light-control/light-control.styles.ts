@@ -42,27 +42,10 @@ export const lightControlStyles = css`
     pointer-events: auto;
   }
 
-  button {
-    position: relative;
-    display: grid;
-    place-items: center;
-    box-sizing: border-box;
-    padding: 0;
-    color: var(--wzc-media-overlay-color);
-    background: var(--wzc-media-overlay-background);
-    border: 1px solid var(--wzc-media-overlay-border-color);
-    cursor: pointer;
-    touch-action: none;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-  }
-
   .light-button {
     isolation: isolate;
-    inline-size: var(--wzc-camera-control-size);
-    block-size: var(--wzc-camera-control-size);
     overflow: hidden;
-    border-radius: 50%;
+    --wzc-round-button-touch-action: none;
   }
 
   .light-button::before {
@@ -74,36 +57,6 @@ export const lightControlStyles = css`
     background: var(--wzc-light-fill-color);
     content: "";
     transition: block-size var(--wzc-light-transition-duration) ease;
-  }
-
-  .light-button-icon {
-    position: absolute;
-    z-index: 1;
-    inset-block-start: 50%;
-    left: 50%;
-    display: grid;
-    place-items: center;
-    inline-size: 1.35rem;
-    block-size: 1.35rem;
-    line-height: 0;
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-  }
-
-  .light-button-icon svg,
-  .light-button-icon ha-icon,
-  .power-button svg {
-    display: block;
-    inline-size: 1.35rem;
-    block-size: 1.35rem;
-    margin: 0;
-    pointer-events: none;
-  }
-
-  .light-button:disabled,
-  .power-button:disabled {
-    cursor: not-allowed;
-    opacity: 0.55;
   }
 
   .dimmer-panel {
@@ -151,17 +104,14 @@ export const lightControlStyles = css`
 
   .power-button {
     grid-area: power;
-    inline-size: 2.5rem;
-    block-size: 2.5rem;
     margin-block-start: 0.35rem;
-    border-radius: 50%;
+    --wzc-round-button-size: 2.5rem;
   }
 
   .power-button.on {
     color: var(--wzc-light-power-active-color);
   }
 
-  button:focus-visible,
   ha-control-slider:focus-visible {
     outline: 2px solid var(--wzc-color-primary);
     outline-offset: 2px;

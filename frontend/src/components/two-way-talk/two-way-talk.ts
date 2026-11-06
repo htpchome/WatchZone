@@ -13,6 +13,7 @@ import {
   englishLocalize,
   type LocalizeFunction,
 } from "../../core/localization";
+import { roundButtonStyles } from "../../styles/theme-tokens";
 import { renderIcon } from "../../ui/icons";
 import { ToastManager } from "../../ui/toast-manager";
 import "../../ui/toast-region";
@@ -87,6 +88,7 @@ export class TwoWayTalkComponent extends LitElement {
               >
                 <canvas aria-hidden="true"></canvas>
                 <button
+                  class="round-button talk-button"
                   type="button"
                   aria-label=${
                     this._session.microphoneMuted
@@ -102,7 +104,7 @@ export class TwoWayTalkComponent extends LitElement {
                   )}
                 </button>
                 <button
-                  class="center"
+                  class="round-button talk-button center"
                   type="button"
                   aria-label=${this.localize("talk.disconnect")}
                   @click=${this._stop}
@@ -110,6 +112,7 @@ export class TwoWayTalkComponent extends LitElement {
                   ${renderIcon("microphone")}
                 </button>
                 <button
+                  class="round-button talk-button"
                   type="button"
                   aria-label=${
                     camera.muted
@@ -127,7 +130,11 @@ export class TwoWayTalkComponent extends LitElement {
                 @pointerleave=${this._releaseHoverHold}
               >
                 <button
-                  class=${connecting ? "inactive connecting" : "inactive"}
+                  class=${
+                    connecting
+                      ? "round-button talk-button inactive connecting"
+                      : "round-button talk-button inactive"
+                  }
                   type="button"
                   aria-busy=${connecting ? "true" : "false"}
                   aria-label=${
@@ -212,7 +219,7 @@ export class TwoWayTalkComponent extends LitElement {
     this._hoverCameraEntityId = undefined;
   };
 
-  static styles = twoWayTalkStyles;
+  static styles = [roundButtonStyles, twoWayTalkStyles];
 }
 
 if (!customElements.get(TALK_TAG)) {

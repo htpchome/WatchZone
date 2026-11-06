@@ -31,6 +31,45 @@ async function waitForWatchZoneDefinition(page: Page): Promise<void> {
   );
 }
 
+async function installHaIconFixture(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    if (customElements.get("ha-icon")) return;
+    class TestHaIcon extends HTMLElement {
+      private _icon?: string;
+
+      public get icon(): string | undefined {
+        return this._icon;
+      }
+
+      public set icon(value: string | undefined) {
+        this._icon = value;
+        this._render();
+      }
+
+      public connectedCallback(): void {
+        this._render();
+      }
+
+      private _render(): void {
+        const root = this.shadowRoot ?? this.attachShadow({ mode: "open" });
+        root.innerHTML = `<style>
+          :host {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            inline-size: var(--mdc-icon-size, 24px);
+            block-size: var(--mdc-icon-size, 24px);
+          }
+          svg { display: block; inline-size: 100%; block-size: 100%; }
+        </style><svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7 2h10v20H7zM9 4v14h6V4zm2 15h2v1h-2z"></path>
+        </svg>`;
+      }
+    }
+    customElements.define("ha-icon", TestHaIcon);
+  });
+}
+
 test.beforeEach(async ({ page }) => {
   const errors: string[] = [];
   pageErrors.set(page, errors);
@@ -250,6 +289,7 @@ test("preserves expanded camera-stage geometry across carousel selection", async
 test("fills the camera overlay slot with talk, PTZ, and light controls", async ({
   page,
 }) => {
+  await installHaIconFixture(page);
   await page.goto("/");
   await waitForWatchZoneDefinition(page);
   await page.locator("watchzone-card").evaluate((element) => {
@@ -333,7 +373,8 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
   const talkButton = talk.locator("button.inactive");
   const ptzControl = ptz.locator(".ptz-control.visible");
   const lightButton = lights.locator(".light-button");
-  const lightIcon = lightButton.locator(".light-button-icon");
+  const talkIcon = talkButton.locator(":scope > svg");
+  const lightIcon = lightButton.locator(":scope > ha-icon svg");
   await expect(talkButton).toBeVisible();
   await expect(ptzControl).toBeVisible();
   await expect(lightButton).toBeVisible();
@@ -347,6 +388,7 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
     ptzHostBox,
     lightHostBox,
     talkButtonBox,
+    talkIconBox,
     ptzControlBox,
     lightButtonBox,
     lightIconBox,
@@ -356,6 +398,7 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
     ptz.boundingBox(),
     lights.boundingBox(),
     talkButton.boundingBox(),
+    talkIcon.boundingBox(),
     ptzControl.boundingBox(),
     lightButton.boundingBox(),
     lightIcon.boundingBox(),
@@ -365,6 +408,7 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
   expect(ptzHostBox).not.toBeNull();
   expect(lightHostBox).not.toBeNull();
   expect(talkButtonBox).not.toBeNull();
+  expect(talkIconBox).not.toBeNull();
   expect(ptzControlBox).not.toBeNull();
   expect(lightButtonBox).not.toBeNull();
   expect(lightIconBox).not.toBeNull();
@@ -374,6 +418,7 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
     !ptzHostBox ||
     !lightHostBox ||
     !talkButtonBox ||
+    !talkIconBox ||
     !ptzControlBox ||
     !lightButtonBox ||
     !lightIconBox
@@ -398,6 +443,10 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
     cameraBox.y + cameraBox.height,
   );
   expect(lightButtonBox.x + lightButtonBox.width).toBeLessThan(talkButtonBox.x);
+  expect(lightButtonBox.width).toBeCloseTo(talkButtonBox.width, 1);
+  expect(lightButtonBox.height).toBeCloseTo(talkButtonBox.height, 1);
+  expect(lightIconBox.width).toBeCloseTo(talkIconBox.width, 1);
+  expect(lightIconBox.height).toBeCloseTo(talkIconBox.height, 1);
   expect(lightIconBox.x + lightIconBox.width / 2).toBeCloseTo(
     lightButtonBox.x + lightButtonBox.width / 2,
     1,
@@ -406,10 +455,65 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
     lightButtonBox.y + lightButtonBox.height / 2,
     1,
   );
+  expect(talkIconBox.x + talkIconBox.width / 2).toBeCloseTo(
+    talkButtonBox.x + talkButtonBox.width / 2,
+    1,
+  );
+  expect(talkIconBox.y + talkIconBox.height / 2).toBeCloseTo(
+    talkButtonBox.y + talkButtonBox.height / 2,
+    1,
+  );
+
+  await Promise.all([
+    talk.evaluate((element) =>
+      element.style.setProperty("--wzc-round-button-size", "2rem"),
+    ),
+    lights.evaluate((element) =>
+      element.style.setProperty("--wzc-round-button-size", "2rem"),
+    ),
+  ]);
+  const [
+    resizedTalkButton,
+    resizedTalkIcon,
+    resizedLightButton,
+    resizedLightIcon,
+  ] = await Promise.all([
+    talkButton.boundingBox(),
+    talkIcon.boundingBox(),
+    lightButton.boundingBox(),
+    lightIcon.boundingBox(),
+  ]);
+  expect(resizedTalkButton?.width).toBeCloseTo(32, 1);
+  expect(resizedLightButton?.width).toBeCloseTo(32, 1);
+  expect(resizedTalkIcon?.width).toBeCloseTo(resizedLightIcon?.width ?? 0, 1);
+  expect(resizedTalkIcon?.height).toBeCloseTo(resizedLightIcon?.height ?? 0, 1);
+  expect(
+    (resizedTalkIcon?.x ?? 0) + (resizedTalkIcon?.width ?? 0) / 2,
+  ).toBeCloseTo(
+    (resizedTalkButton?.x ?? 0) + (resizedTalkButton?.width ?? 0) / 2,
+    1,
+  );
+  expect(
+    (resizedLightIcon?.x ?? 0) + (resizedLightIcon?.width ?? 0) / 2,
+  ).toBeCloseTo(
+    (resizedLightButton?.x ?? 0) + (resizedLightButton?.width ?? 0) / 2,
+    1,
+  );
+  await Promise.all([
+    talk.evaluate((element) =>
+      element.style.removeProperty("--wzc-round-button-size"),
+    ),
+    lights.evaluate((element) =>
+      element.style.removeProperty("--wzc-round-button-size"),
+    ),
+  ]);
+  const interactionLightButtonBox = await lightButton.boundingBox();
+  expect(interactionLightButtonBox).not.toBeNull();
+  if (!interactionLightButtonBox) return;
 
   await page.mouse.move(
-    lightButtonBox.x + lightButtonBox.width / 2,
-    lightButtonBox.y + lightButtonBox.height / 2,
+    interactionLightButtonBox.x + interactionLightButtonBox.width / 2,
+    interactionLightButtonBox.y + interactionLightButtonBox.height / 2,
   );
   await page.mouse.down();
   await page.waitForTimeout(LIGHT_LONG_PRESS_WAIT_MS);

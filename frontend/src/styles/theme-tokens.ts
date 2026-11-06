@@ -191,6 +191,14 @@ export const themeTokens = css`
     --wzc-media-overlay-shadow: var(--wzc-shadow-card);
     --wzc-media-overlay-transition-duration: 140ms;
     --wzc-camera-control-size: 2.75rem;
+    --wzc-round-button-size: var(--wzc-camera-control-size);
+    --wzc-round-button-icon-size: 60%;
+    --wzc-round-button-color: var(--wzc-media-overlay-color);
+    --wzc-round-button-background: var(--wzc-media-overlay-background);
+    --wzc-round-button-border-color: var(--wzc-media-overlay-border-color);
+    --wzc-round-button-hover-background: var(
+      --wzc-neutral-control-hover-background
+    );
     --wzc-camera-control-safe-inline: 0.75rem;
     --wzc-carousel-navigation-opacity: 72%;
     --wzc-carousel-navigation-hover-opacity: 100%;
@@ -302,5 +310,75 @@ export const themeTokens = css`
     );
     --wzc-toast-radius: var(--wzc-radius-pill);
     --wzc-toast-shadow: var(--wzc-shadow-small);
+  }
+`;
+
+/** Shared geometry and interaction contract for circular overlay controls. */
+export const roundButtonStyles = css`
+  .round-button {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    box-sizing: border-box;
+    inline-size: var(
+      --wzc-round-button-size,
+      var(--wzc-camera-control-size, 2.75rem)
+    );
+    block-size: var(
+      --wzc-round-button-size,
+      var(--wzc-camera-control-size, 2.75rem)
+    );
+    min-inline-size: 0;
+    min-block-size: 0;
+    padding: 0;
+    color: var(--wzc-round-button-color, currentcolor);
+    background: var(--wzc-round-button-background, transparent);
+    border: 1px solid var(--wzc-round-button-border-color, currentcolor);
+    border-radius: 50%;
+    font: inherit;
+    cursor: pointer;
+    touch-action: var(--wzc-round-button-touch-action, manipulation);
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .round-button > svg,
+  .round-button > ha-icon {
+    display: block;
+    inline-size: var(--wzc-round-button-icon-size, 60%);
+    block-size: var(--wzc-round-button-icon-size, 60%);
+    margin: 0;
+    pointer-events: none;
+  }
+
+  .round-button > ha-icon {
+    --mdc-icon-size: 100%;
+  }
+
+  .round-button:focus-visible {
+    outline: 2px solid var(--wzc-color-primary, currentcolor);
+    outline-offset: 2px;
+  }
+
+  .round-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .round-button:hover:not(:disabled) {
+      background: var(
+        --wzc-round-button-hover-background,
+        var(--wzc-round-button-background, transparent)
+      );
+    }
+  }
+
+  @media (hover: none) {
+    .round-button:hover,
+    .round-button:active {
+      background: var(--wzc-round-button-background, transparent);
+    }
   }
 `;

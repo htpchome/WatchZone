@@ -19,6 +19,7 @@ import {
   englishLocalize,
   type LocalizeFunction,
 } from "../../core/localization";
+import { roundButtonStyles } from "../../styles/theme-tokens";
 import { renderIcon } from "../../ui/icons";
 import { ToastManager } from "../../ui/toast-manager";
 import "../../ui/toast-region";
@@ -127,7 +128,11 @@ export class LightControlComponent extends LitElement {
         ? this.localize("light.turn_off", { name })
         : this.localize("light.turn_on", { name });
     return html`<button
-      class=${entity?.state === "on" ? "light-button on" : "light-button"}
+      class=${
+        entity?.state === "on"
+          ? "round-button light-button on"
+          : "round-button light-button"
+      }
       type="button"
       data-light-id=${entityId}
       style=${`--wzc-light-level:${level}%`}
@@ -146,13 +151,9 @@ export class LightControlComponent extends LitElement {
       @keyup=${this._handleKeyUp}
       @focus=${this._revealOverlay}
     >
-      <span class="light-button-icon">
-        ${
-          icon
-            ? html`<ha-icon .icon=${icon}></ha-icon>`
-            : renderIcon("lightbulb")
-        }
-      </span>
+      ${
+        icon ? html`<ha-icon .icon=${icon}></ha-icon>` : renderIcon("lightbulb")
+      }
     </button>`;
   }
 
@@ -184,7 +185,9 @@ export class LightControlComponent extends LitElement {
         @value-changed=${this._handleBrightnessChange}
       ></ha-control-slider>
       <button
-        class=${on ? "power-button on" : "power-button"}
+        class=${
+          on ? "round-button power-button on" : "round-button power-button"
+        }
         type="button"
         data-light-id=${entityId}
         title=${
@@ -417,7 +420,7 @@ export class LightControlComponent extends LitElement {
     this._closeDimmer();
   };
 
-  static styles = lightControlStyles;
+  static styles = [roundButtonStyles, lightControlStyles];
 }
 
 function lightName(
