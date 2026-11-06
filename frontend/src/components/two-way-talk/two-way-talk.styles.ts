@@ -59,10 +59,6 @@ export const twoWayTalkStyles = css`
     --wzc-round-button-border-color: transparent;
   }
 
-  .talk-button {
-    color: inherit;
-  }
-
   .talk-button.center {
     transform: scale(1.18);
     --wzc-round-button-color: var(--wzc-media-overlay-surface);

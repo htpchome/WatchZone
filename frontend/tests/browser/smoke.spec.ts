@@ -445,6 +445,11 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
   expect(lightButtonBox.x + lightButtonBox.width).toBeLessThan(talkButtonBox.x);
   expect(lightButtonBox.width).toBeCloseTo(talkButtonBox.width, 1);
   expect(lightButtonBox.height).toBeCloseTo(talkButtonBox.height, 1);
+  const [talkButtonColor, lightButtonColor] = await Promise.all([
+    talkButton.evaluate((element) => getComputedStyle(element).color),
+    lightButton.evaluate((element) => getComputedStyle(element).color),
+  ]);
+  expect(talkButtonColor).toBe(lightButtonColor);
   expect(lightIconBox.width).toBeCloseTo(talkIconBox.width, 1);
   expect(lightIconBox.height).toBeCloseTo(talkIconBox.height, 1);
   expect(lightIconBox.x + lightIconBox.width / 2).toBeCloseTo(
