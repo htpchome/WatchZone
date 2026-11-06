@@ -285,6 +285,67 @@ test("restores the camera switcher after an inner-dashboard detach", async ({
   );
 });
 
+test("camera switcher scrolls only its own viewport", async ({ page }) => {
+  await page.addInitScript(() => {
+    const testWindow = window as typeof window & {
+      __wzcScrollIntoViewCalls?: number;
+    };
+    testWindow.__wzcScrollIntoViewCalls = 0;
+    Element.prototype.scrollIntoView = function () {
+      testWindow.__wzcScrollIntoViewCalls =
+        (testWindow.__wzcScrollIntoViewCalls ?? 0) + 1;
+    };
+  });
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  await page.locator("watchzone-card").evaluate((element) => {
+    (
+      element as HTMLElement & {
+        setConfig(config: unknown): void;
+      }
+    ).setConfig({
+      type: "custom:watchzone-card",
+      cameras: Array.from({ length: 8 }, (_, index) => ({
+        entity_id: `camera.camera_${index}`,
+        title: `Camera ${index + 1}`,
+      })),
+    });
+  });
+
+  const switcher = page.locator("wzc-camera-switcher");
+  await expect(switcher.locator("button")).toHaveCount(8);
+  await switcher.evaluate((element) => {
+    element.style.inlineSize = "14rem";
+  });
+  const pagePosition = await page.evaluate(() => ({
+    x: window.scrollX,
+    y: window.scrollY,
+  }));
+  await switcher
+    .locator("button")
+    .last()
+    .evaluate((button) => (button as HTMLButtonElement).click());
+
+  await expect
+    .poll(() =>
+      switcher.locator(".scroller").evaluate((scroller) => scroller.scrollLeft),
+    )
+    .toBeGreaterThan(0);
+  expect(
+    await page.evaluate(
+      () =>
+        (
+          window as typeof window & {
+            __wzcScrollIntoViewCalls?: number;
+          }
+        ).__wzcScrollIntoViewCalls,
+    ),
+  ).toBe(0);
+  expect(
+    await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY })),
+  ).toEqual(pagePosition);
+});
+
 test("preserves expanded camera-stage geometry across carousel selection", async ({
   page,
 }) => {

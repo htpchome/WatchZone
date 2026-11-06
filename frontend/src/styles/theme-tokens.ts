@@ -117,8 +117,8 @@ export const themeTokens = css`
     );
 
     --wzc-radius-card: var(
-      --ha-card-border-radius,
-      var(--ha-border-radius-lg, 12px)
+      --wzc-theme-card-radius,
+      var(--ha-card-border-radius, var(--ha-border-radius-lg, 12px))
     );
     --wzc-radius-large: var(--ha-border-radius-lg, 8px);
     --wzc-radius-medium: var(--ha-border-radius-md, 6px);
