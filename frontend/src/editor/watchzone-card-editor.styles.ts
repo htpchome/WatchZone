@@ -43,7 +43,9 @@ export const cardEditorStyles = css`
 
   .camera-list-heading span,
   .camera-tile-copy small,
-  .capability-status {
+  .capability-status,
+  .character-count,
+  .empty-camera-section {
     color: var(--wzc-color-text-2);
     font-size: var(--wzc-font-size-small);
   }
@@ -77,12 +79,7 @@ export const cardEditorStyles = css`
     -webkit-tap-highlight-color: transparent;
   }
 
-  .tile-action svg {
-    display: block;
-    inline-size: 100%;
-    pointer-events: none;
-  }
-
+  .tile-action svg,
   .remove-light svg {
     display: block;
     inline-size: 100%;
@@ -186,8 +183,6 @@ export const cardEditorStyles = css`
   }
 
   .character-count {
-    color: var(--wzc-color-text-2);
-    font-size: var(--wzc-font-size-small);
     white-space: nowrap;
   }
 
@@ -198,12 +193,9 @@ export const cardEditorStyles = css`
 
   .empty-camera-section {
     margin: 0;
-    color: var(--wzc-color-text-2);
-    font-size: var(--wzc-font-size-small);
   }
 
-  .linked-light-settings,
-  .linked-light-entry {
+  .linked-light-settings {
     display: grid;
     gap: 0.65rem;
   }
@@ -220,14 +212,12 @@ export const cardEditorStyles = css`
     border-radius: var(--wzc-radius-medium);
   }
 
-  .linked-light-row > span:first-child,
   .linked-light-row > ha-icon,
   .add-light svg {
     display: grid;
     color: var(--wzc-color-primary);
   }
 
-  .linked-light-row svg,
   .linked-light-row ha-icon,
   .add-light svg {
     inline-size: 1.25rem;
@@ -287,7 +277,6 @@ export const cardEditorStyles = css`
     background: var(--wzc-color-fill-error-quiet);
     border: 1px solid var(--wzc-color-border-danger);
     border-radius: var(--wzc-radius-medium);
-    font-size: var(--wzc-font-size-small);
   }
 
   .add-light {

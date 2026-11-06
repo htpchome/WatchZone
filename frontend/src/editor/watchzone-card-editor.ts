@@ -40,7 +40,6 @@ import { ToastManager } from "../ui/toast-manager";
 import { iconPath, renderIcon } from "../ui/icons";
 import type { SortableReorderDetail } from "../ui/sortable-list";
 import "../ui/accordion";
-import "../ui/sortable-list";
 import "../ui/toast-region";
 import {
   type DirtyStateContext,
@@ -83,6 +82,8 @@ const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
 const sortableListTag = unsafeStatic(SORTABLE_LIST_TAG);
 const sortableTileTag = unsafeStatic(SORTABLE_TILE_TAG);
 const EDITOR_STATUS_KEY = "editor-draft-status";
+
+void import("../ui/sortable-list");
 
 type BooleanConfigFlag =
   | "camera_rounded_corners"
@@ -604,38 +605,36 @@ export class CardEditor extends LitElement {
   }
 
   private _renderLightSettings(camera: CameraConfig) {
+    const pendingDuplicate = this._pendingLightIsDuplicate();
     return html`<div class="linked-light-settings">
       ${camera.lights.map((light, index) => {
         const entityId = light.entity_id;
         const name = this._entityName(entityId);
-        return html`<div class="linked-light-entry">
-          <div class="linked-light-row">
-            <ha-icon .icon=${light.icon ?? "mdi:lightbulb"}></ha-icon>
-            <span class="linked-light-copy">
-              <strong>${name}</strong>
-              <small>${entityId}</small>
-            </span>
-            <ha-selector
-              class="light-icon-selector"
-              data-light-index=${String(index)}
-              label=${this._t("editor.icon")}
-              .hass=${this._hass}
-              .selector=${ICON_SELECTOR}
-              .value=${light.icon ?? "mdi:lightbulb"}
-              .required=${false}
-              @value-changed=${this._handleLightIconChange}
-            ></ha-selector>
-            <button
-              class="remove-light"
-              type="button"
-              data-light-index=${String(index)}
-              title=${this._t("editor.remove_light")}
-              aria-label=${this._t("editor.remove_light_named", { name })}
-              @click=${this._removeLight}
-            >
-              ${renderIcon("close")}
-            </button>
-          </div>
+        return html`<div class="linked-light-row">
+          <ha-icon .icon=${light.icon ?? "mdi:lightbulb"}></ha-icon>
+          <span class="linked-light-copy">
+            <strong>${name}</strong>
+            <small>${entityId}</small>
+          </span>
+          <ha-selector
+            class="light-icon-selector"
+            data-light-index=${String(index)}
+            label=${this._t("editor.icon")}
+            .hass=${this._hass}
+            .selector=${ICON_SELECTOR}
+            .value=${light.icon ?? "mdi:lightbulb"}
+            @value-changed=${this._handleLightIconChange}
+          ></ha-selector>
+          <button
+            class="remove-light"
+            type="button"
+            data-light-index=${String(index)}
+            title=${this._t("editor.remove_light")}
+            aria-label=${this._t("editor.remove_light_named", { name })}
+            @click=${this._removeLight}
+          >
+            ${renderIcon("close")}
+          </button>
         </div>`;
       })}
       ${
@@ -648,9 +647,7 @@ export class CardEditor extends LitElement {
                 <ha-selector
                   class="pending-light-selector"
                   label=${this._t("editor.light")}
-                  aria-invalid=${
-                    this._pendingLightIsDuplicate() ? "true" : "false"
-                  }
+                  aria-invalid=${pendingDuplicate ? "true" : "false"}
                   .hass=${this._hass}
                   .selector=${LIGHT_SELECTOR}
                   .value=${this._pendingLightEntityId}
@@ -663,15 +660,17 @@ export class CardEditor extends LitElement {
                   .hass=${this._hass}
                   .selector=${ICON_SELECTOR}
                   .value=${this._pendingLightIcon}
-                  .required=${false}
                   @value-changed=${this._handlePendingLightIconChange}
                 ></ha-selector>
               </div>
               ${
-                this._pendingLightIsDuplicate()
-                  ? html`<p class="add-light-feedback" role="alert">
+                pendingDuplicate
+                  ? html`<small
+                      class="capability-status add-light-feedback"
+                      role="alert"
+                    >
                       ${this._t("editor.light_already_linked")}
-                    </p>`
+                    </small>`
                   : nothing
               }
               <div class="add-light-actions">
@@ -726,7 +725,6 @@ export class CardEditor extends LitElement {
       .hass=${this._hass}
       .selector=${BOOLEAN_SELECTOR}
       .value=${value}
-      .required=${false}
       .disabled=${disabled}
       @value-changed=${this._handleCameraBooleanChange}
     ></ha-selector>`;
@@ -758,7 +756,6 @@ export class CardEditor extends LitElement {
       .hass=${this._hass}
       .selector=${BOOLEAN_SELECTOR}
       .value=${value}
-      .required=${false}
       @value-changed=${this._handleBooleanChange}
     ></ha-selector>`;
   }
@@ -798,8 +795,7 @@ export class CardEditor extends LitElement {
     event: ValueChangedEvent,
   ): void => {
     if (!this._cameraDraft) return;
-    const value =
-      typeof event.detail.value === "string" ? event.detail.value.trim() : "";
+    const value = eventString(event);
     this._cameraDraft = { ...this._cameraDraft, entity_id: value };
     this._checkTalkCapability(value);
     this._checkPtzCapability(value);
@@ -836,8 +832,7 @@ export class CardEditor extends LitElement {
   private readonly _handleLightEntityChange = (
     event: ValueChangedEvent,
   ): void => {
-    this._pendingLightEntityId =
-      typeof event.detail.value === "string" ? event.detail.value.trim() : "";
+    this._pendingLightEntityId = eventString(event);
     this.requestUpdate();
   };
 
@@ -869,9 +864,7 @@ export class CardEditor extends LitElement {
       this._cameraDraft &&
       this._pendingLightEntityId.startsWith("light.") &&
       this._cameraDraft.lights.length < MAX_LIGHTS_PER_CAMERA &&
-      !this._cameraDraft.lights.some(
-        ({ entity_id: entityId }) => entityId === this._pendingLightEntityId,
-      ),
+      !this._pendingLightIsDuplicate(),
     );
   }
 
@@ -914,8 +907,7 @@ export class CardEditor extends LitElement {
     );
     const current = this._cameraDraft.lights[index];
     if (!current) return;
-    const value =
-      typeof event.detail.value === "string" ? event.detail.value.trim() : "";
+    const value = eventString(event);
     const lights = [...this._cameraDraft.lights];
     lights[index] = {
       entity_id: current.entity_id,
@@ -928,8 +920,7 @@ export class CardEditor extends LitElement {
   private readonly _handlePendingLightIconChange = (
     event: ValueChangedEvent,
   ): void => {
-    this._pendingLightIcon =
-      typeof event.detail.value === "string" ? event.detail.value.trim() : "";
+    this._pendingLightIcon = eventString(event);
     this.requestUpdate();
   };
 
@@ -1096,16 +1087,10 @@ export class CardEditor extends LitElement {
     this.requestUpdate();
     void this._talkResolver
       .supports(createHomeAssistantApi(this._hass), entityId)
+      .catch(() => false)
       .then((supported) => {
         if (generation !== this._talkCapabilityGeneration) return;
         this._talkCapability = supported;
-      })
-      .catch(() => {
-        if (generation !== this._talkCapabilityGeneration) return;
-        this._talkCapability = false;
-      })
-      .finally(() => {
-        if (generation !== this._talkCapabilityGeneration) return;
         this._talkCapabilityPending = false;
         this.requestUpdate();
       });
@@ -1127,16 +1112,10 @@ export class CardEditor extends LitElement {
         "home_assistant",
         entityId,
       )
+      .catch(() => undefined)
       .then((capability) => {
         if (generation !== this._ptzCapabilityGeneration) return;
         this._ptzCapability = capability;
-      })
-      .catch(() => {
-        if (generation !== this._ptzCapabilityGeneration) return;
-        this._ptzCapability = undefined;
-      })
-      .finally(() => {
-        if (generation !== this._ptzCapabilityGeneration) return;
         this._ptzCapabilityPending = false;
         this.requestUpdate();
       });
@@ -1285,6 +1264,12 @@ export class CardEditor extends LitElement {
   };
 
   static styles = [themeTokens, cardEditorStyles];
+}
+
+function eventString(event: ValueChangedEvent): string {
+  return typeof event.detail.value === "string"
+    ? event.detail.value.trim()
+    : "";
 }
 
 function cameraConfigEquals(left: CameraConfig, right: CameraConfig): boolean {

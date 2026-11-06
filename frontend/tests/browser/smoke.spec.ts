@@ -339,13 +339,23 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
   await expect(lightButton).toHaveAttribute("title", "Turn off Porch");
   await expect(lightButton).toHaveAttribute("aria-label", "Turn off Porch");
 
-  const cameraBox = await camera.boundingBox();
-  const talkHostBox = await talk.boundingBox();
-  const ptzHostBox = await ptz.boundingBox();
-  const lightHostBox = await lights.boundingBox();
-  const talkButtonBox = await talkButton.boundingBox();
-  const ptzControlBox = await ptzControl.boundingBox();
-  const lightButtonBox = await lightButton.boundingBox();
+  const [
+    cameraBox,
+    talkHostBox,
+    ptzHostBox,
+    lightHostBox,
+    talkButtonBox,
+    ptzControlBox,
+    lightButtonBox,
+  ] = await Promise.all([
+    camera.boundingBox(),
+    talk.boundingBox(),
+    ptz.boundingBox(),
+    lights.boundingBox(),
+    talkButton.boundingBox(),
+    ptzControl.boundingBox(),
+    lightButton.boundingBox(),
+  ]);
   expect(cameraBox).not.toBeNull();
   expect(talkHostBox).not.toBeNull();
   expect(ptzHostBox).not.toBeNull();
