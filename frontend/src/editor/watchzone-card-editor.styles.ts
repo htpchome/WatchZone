@@ -267,7 +267,22 @@ export const cardEditorStyles = css`
   .add-light-fields {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
     gap: 0.65rem;
+  }
+
+  .add-light-field {
+    display: grid;
+    grid-template-rows: auto minmax(3.5rem, auto);
+    align-items: stretch;
+    gap: 0.3rem;
+    min-inline-size: 0;
+    font-size: var(--wzc-font-size-small);
+    font-weight: var(--wzc-font-weight-medium);
+  }
+
+  .add-light-field ha-selector {
+    align-self: stretch;
   }
 
   .add-light-feedback {

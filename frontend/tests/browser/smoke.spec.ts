@@ -265,7 +265,7 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
       cameras: [
         {
           entity_id: "camera.front",
-          lights: [{ entity_id: "light.porch" }],
+          lights: [{ entity_id: "light.porch", icon: "mdi:cellphone" }],
           ptz_enabled: true,
           two_way_talk_enabled: true,
         },
@@ -333,9 +333,11 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
   const talkButton = talk.locator("button.inactive");
   const ptzControl = ptz.locator(".ptz-control.visible");
   const lightButton = lights.locator(".light-button");
+  const lightIcon = lightButton.locator(".light-button-icon");
   await expect(talkButton).toBeVisible();
   await expect(ptzControl).toBeVisible();
   await expect(lightButton).toBeVisible();
+  await expect(lightIcon).toBeVisible();
   await expect(lightButton).toHaveAttribute("title", "Turn off Porch");
   await expect(lightButton).toHaveAttribute("aria-label", "Turn off Porch");
 
@@ -347,6 +349,7 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
     talkButtonBox,
     ptzControlBox,
     lightButtonBox,
+    lightIconBox,
   ] = await Promise.all([
     camera.boundingBox(),
     talk.boundingBox(),
@@ -355,6 +358,7 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
     talkButton.boundingBox(),
     ptzControl.boundingBox(),
     lightButton.boundingBox(),
+    lightIcon.boundingBox(),
   ]);
   expect(cameraBox).not.toBeNull();
   expect(talkHostBox).not.toBeNull();
@@ -363,6 +367,7 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
   expect(talkButtonBox).not.toBeNull();
   expect(ptzControlBox).not.toBeNull();
   expect(lightButtonBox).not.toBeNull();
+  expect(lightIconBox).not.toBeNull();
   if (
     !cameraBox ||
     !talkHostBox ||
@@ -370,7 +375,8 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
     !lightHostBox ||
     !talkButtonBox ||
     !ptzControlBox ||
-    !lightButtonBox
+    !lightButtonBox ||
+    !lightIconBox
   ) {
     return;
   }
@@ -392,6 +398,14 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
     cameraBox.y + cameraBox.height,
   );
   expect(lightButtonBox.x + lightButtonBox.width).toBeLessThan(talkButtonBox.x);
+  expect(lightIconBox.x + lightIconBox.width / 2).toBeCloseTo(
+    lightButtonBox.x + lightButtonBox.width / 2,
+    1,
+  );
+  expect(lightIconBox.y + lightIconBox.height / 2).toBeCloseTo(
+    lightButtonBox.y + lightButtonBox.height / 2,
+    1,
+  );
 
   await page.mouse.move(
     lightButtonBox.x + lightButtonBox.width / 2,
@@ -951,6 +965,16 @@ test("camera editor configures lights and confirms accessible removal", async ({
   await items.nth(3).locator("summary").click();
   await editor.locator(".add-light").click();
   await expect(editor.locator(".add-light-form")).toContainText("Linked Light");
+  const addLightFields = editor.locator(".add-light-field");
+  await expect(addLightFields).toHaveCount(2);
+  const [lightFieldBox, iconFieldBox] = await Promise.all([
+    addLightFields.nth(0).boundingBox(),
+    addLightFields.nth(1).boundingBox(),
+  ]);
+  expect(lightFieldBox).not.toBeNull();
+  expect(iconFieldBox).not.toBeNull();
+  expect(iconFieldBox?.y).toBeCloseTo(lightFieldBox?.y ?? 0, 1);
+  expect(iconFieldBox?.height).toBeCloseTo(lightFieldBox?.height ?? 0, 1);
   await editor.locator(".pending-light-selector").evaluate((element) => {
     element.dispatchEvent(
       new CustomEvent("value-changed", {

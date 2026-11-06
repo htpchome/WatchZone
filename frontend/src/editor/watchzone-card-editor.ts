@@ -644,24 +644,30 @@ export class CardEditor extends LitElement {
                 >${this._t("editor.linked_light")}</strong
               >
               <div class="add-light-fields">
-                <ha-selector
-                  class="pending-light-selector"
-                  label=${this._t("editor.light")}
-                  aria-invalid=${pendingDuplicate ? "true" : "false"}
-                  .hass=${this._hass}
-                  .selector=${LIGHT_SELECTOR}
-                  .value=${this._pendingLightEntityId}
-                  .required=${true}
-                  @value-changed=${this._handleLightEntityChange}
-                ></ha-selector>
-                <ha-selector
-                  class="pending-light-icon-selector"
-                  label=${this._t("editor.icon")}
-                  .hass=${this._hass}
-                  .selector=${ICON_SELECTOR}
-                  .value=${this._pendingLightIcon}
-                  @value-changed=${this._handlePendingLightIconChange}
-                ></ha-selector>
+                <div class="add-light-field">
+                  <span>${this._t("editor.light")}</span>
+                  <ha-selector
+                    class="pending-light-selector"
+                    aria-label=${this._t("editor.light")}
+                    aria-invalid=${pendingDuplicate ? "true" : "false"}
+                    .hass=${this._hass}
+                    .selector=${LIGHT_SELECTOR}
+                    .value=${this._pendingLightEntityId}
+                    .required=${true}
+                    @value-changed=${this._handleLightEntityChange}
+                  ></ha-selector>
+                </div>
+                <div class="add-light-field">
+                  <span>${this._t("editor.icon")}</span>
+                  <ha-selector
+                    class="pending-light-icon-selector"
+                    aria-label=${this._t("editor.icon")}
+                    .hass=${this._hass}
+                    .selector=${ICON_SELECTOR}
+                    .value=${this._pendingLightIcon}
+                    @value-changed=${this._handlePendingLightIconChange}
+                  ></ha-selector>
+                </div>
               </div>
               ${
                 pendingDuplicate

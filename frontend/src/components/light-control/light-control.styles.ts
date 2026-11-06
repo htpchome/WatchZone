@@ -77,13 +77,16 @@ export const lightControlStyles = css`
   }
 
   .light-button-icon {
-    position: relative;
+    position: absolute;
     z-index: 1;
+    inset-block-start: 50%;
+    left: 50%;
     display: grid;
     place-items: center;
     inline-size: 1.35rem;
     block-size: 1.35rem;
     line-height: 0;
+    transform: translate(-50%, -50%);
     pointer-events: none;
   }
 
