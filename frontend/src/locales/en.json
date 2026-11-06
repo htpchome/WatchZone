@@ -50,6 +50,7 @@
   "editor.appearance": "Appearance",
   "editor.camera_rounded_corners": "Camera Rounded Corners",
   "editor.camera_shadows": "Camera Shadows",
+  "editor.camera_bar_shadows": "Camera Bar Shadows",
   "editor.standard_hls": "Standard HLS",
   "editor.pc_tablet": "PC/Tablet",
   "editor.mobile_phone": "Mobile Phone",

@@ -212,6 +212,8 @@ export const themeTokens = css`
     --wzc-camera-switcher-background: var(--wzc-color-surface-secondary);
     --wzc-camera-switcher-active-color: var(--wzc-color-text-reversed);
     --wzc-camera-switcher-active-background: var(--wzc-color-primary);
+    --wzc-camera-switcher-shadow: var(--wzc-shadow-medium);
+    --wzc-camera-switcher-active-shadow: var(--wzc-shadow-small);
     --wzc-camera-switcher-gap: 0.25rem;
     --wzc-camera-switcher-padding: 0.25rem;
     --wzc-camera-switcher-item-size: 2.25rem;

@@ -24,6 +24,7 @@
   "editor.appearance": "Aspetto",
   "editor.camera_rounded_corners": "Angoli arrotondati della telecamera",
   "editor.camera_shadows": "Ombre della telecamera",
+  "editor.camera_bar_shadows": "Ombre della barra delle telecamere",
   "editor.standard_hls": "HLS standard",
   "editor.pc_tablet": "PC/tablet",
   "editor.mobile_phone": "Telefono cellulare",

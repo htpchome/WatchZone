@@ -104,11 +104,24 @@ function hydrateModule(
   if (node.moduleType === PANEL_MODULE_TYPE && config.cameras.length === 0) {
     return undefined;
   }
+  if (node.moduleType === PANEL_MODULE_TYPE) {
+    return {
+      ...node,
+      slots: Object.fromEntries(
+        Object.entries(node.slots ?? {}).map(([name, components]) => [
+          name,
+          components?.map((component) =>
+            hydrateRuntimeComponent(component, config),
+          ),
+        ]),
+      ),
+    };
+  }
   if (node.moduleType !== CAMERA_MODULE_TYPE) return node;
   if (config.cameras.length === 0) return undefined;
   const overlay = (node.slots?.overlay ?? []).flatMap((component) => {
     const hydrated = hydrateCameraComponent(component, config);
-    return hydrated ? [hydrated] : [];
+    return hydrated ? [hydrateRuntimeComponent(hydrated, config)] : [];
   });
   return {
     ...node,
@@ -127,6 +140,19 @@ function hydrateModule(
       shadowStyle: config.camera_shadows ? "medium" : "none",
     },
     ...(overlay.length ? { slots: { ...node.slots, overlay } } : { slots: {} }),
+  };
+}
+
+function hydrateRuntimeComponent(
+  node: StageComponentNode,
+  config: CardConfig,
+): StageComponentNode {
+  if (node.componentType !== CAMERA_SWITCHER_COMPONENT_TYPE) return node;
+  const componentConfig =
+    typeof node.config === "object" && node.config !== null ? node.config : {};
+  return {
+    ...node,
+    config: { ...componentConfig, shadows: config.camera_bar_shadows },
   };
 }
 

@@ -614,6 +614,7 @@ describe("watchzone-card-editor", () => {
       "outer_padding",
       "camera_rounded_corners",
       "camera_shadows",
+      "camera_bar_shadows",
     ]) {
       setBooleanSelector(editor, `[data-config-key="${key}"]`, false);
       await card.updateComplete;
@@ -625,6 +626,7 @@ describe("watchzone-card-editor", () => {
       outer_padding: false,
       camera_rounded_corners: false,
       camera_shadows: false,
+      camera_bar_shadows: false,
     });
     const previewShell = card.shadowRoot?.querySelector("ha-card");
     expect(previewShell?.classList.contains("square-outer-corners")).toBe(true);
@@ -638,6 +640,7 @@ describe("watchzone-card-editor", () => {
       outer_padding: false,
       camera_rounded_corners: false,
       camera_shadows: false,
+      camera_bar_shadows: false,
     });
     const reopened = document.createElement(
       "watchzone-card-editor",
@@ -651,6 +654,7 @@ describe("watchzone-card-editor", () => {
       "outer_padding",
       "camera_rounded_corners",
       "camera_shadows",
+      "camera_bar_shadows",
     ]) {
       expect(
         (
@@ -702,6 +706,7 @@ describe("watchzone-card-editor", () => {
       "outer_padding",
       "camera_rounded_corners",
       "camera_shadows",
+      "camera_bar_shadows",
     ] as const) {
       setBooleanSelector(editor, `[data-config-key="${key}"]`, false);
       await card.updateComplete;
@@ -748,6 +753,7 @@ describe("watchzone-card-editor", () => {
       "outer_padding",
       "camera_rounded_corners",
       "camera_shadows",
+      "camera_bar_shadows",
     ]) {
       expect(
         (

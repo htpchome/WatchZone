@@ -24,6 +24,7 @@
   "editor.appearance": "Wygląd",
   "editor.camera_rounded_corners": "Zaokrąglone narożniki kamery",
   "editor.camera_shadows": "Cienie kamery",
+  "editor.camera_bar_shadows": "Cienie paska kamer",
   "editor.standard_hls": "Standardowy HLS",
   "editor.pc_tablet": "Komputer/tablet",
   "editor.mobile_phone": "Telefon komórkowy",

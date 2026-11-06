@@ -22,6 +22,7 @@ describe("WatchZone YAML configuration manager", () => {
         normalizeCardConfig({
           type: CARD_TYPE,
           title: "Front",
+          camera_bar_shadows: false,
           camera_rounded_corners: false,
           camera_shadows: false,
           cameras: [
@@ -49,6 +50,7 @@ describe("WatchZone YAML configuration manager", () => {
     ).toEqual({
       type: CARD_TYPE,
       title: "Front",
+      camera_bar_shadows: false,
       camera_rounded_corners: false,
       camera_shadows: false,
       cameras: [

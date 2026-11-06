@@ -24,6 +24,11 @@ export const cameraSwitcherStyles = css`
     display: none;
   }
 
+  .scroller.shadows {
+    border-radius: var(--wzc-radius-pill);
+    box-shadow: var(--wzc-camera-switcher-shadow);
+  }
+
   .track {
     display: flex;
     position: relative;
@@ -51,6 +56,10 @@ export const cameraSwitcherStyles = css`
       inline-size var(--wzc-camera-switcher-transition-duration) ease,
       transform var(--wzc-camera-switcher-transition-duration) ease;
     pointer-events: none;
+  }
+
+  .scroller.shadows .active-indicator {
+    box-shadow: var(--wzc-camera-switcher-active-shadow);
   }
 
   button {

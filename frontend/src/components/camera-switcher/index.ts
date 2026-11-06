@@ -7,6 +7,7 @@ import type { ComponentDefinition } from "../../core/placeable";
 import type { CameraSwitcherComponent } from "./camera-switcher";
 
 export interface CameraSwitcherConfig {
+  readonly shadows: boolean;
   readonly targetModuleId: string;
 }
 
@@ -22,6 +23,7 @@ export const componentDefinition: ComponentDefinition<CameraSwitcherConfig> = {
     const switcher = element as CameraSwitcherComponent;
     switcher.cameraSelection = context.cameraSelection;
     switcher.localize = context.localize ?? englishLocalize;
+    switcher.shadows = config.shadows;
     switcher.targetModuleId = config.targetModuleId;
   },
   validateConfig(value) {
@@ -29,10 +31,14 @@ export const componentDefinition: ComponentDefinition<CameraSwitcherConfig> = {
       throw new Error("Camera switcher configuration must be an object.");
     }
     const targetModuleId = (value as Record<string, unknown>).targetModuleId;
+    const shadows = (value as Record<string, unknown>).shadows;
     if (typeof targetModuleId !== "string" || targetModuleId.length === 0) {
       throw new Error("Camera switchers require a target camera module.");
     }
-    return { targetModuleId };
+    if (shadows !== undefined && typeof shadows !== "boolean") {
+      throw new Error("Camera switcher shadows must be a boolean.");
+    }
+    return { shadows: shadows !== false, targetModuleId };
   },
 };
 

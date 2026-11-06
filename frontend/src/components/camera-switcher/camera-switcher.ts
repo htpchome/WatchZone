@@ -17,6 +17,7 @@ export class CameraSwitcherComponent extends LitElement {
   public static properties = {
     cameraSelection: { attribute: false },
     localize: { attribute: false },
+    shadows: { attribute: false, type: Boolean },
     targetModuleId: { attribute: false },
   };
 
@@ -28,6 +29,7 @@ export class CameraSwitcherComponent extends LitElement {
 
   public cameraSelection?: CameraSelectionContext;
   public localize: LocalizeFunction = englishLocalize;
+  public shadows = true;
   public targetModuleId = "";
 
   public connectedCallback(): void {
@@ -55,7 +57,7 @@ export class CameraSwitcherComponent extends LitElement {
   protected render() {
     if (this._state.items.length === 0) return nothing;
     return html`<nav
-      class="scroller"
+      class=${this.shadows ? "scroller shadows" : "scroller"}
       aria-label=${this.localize("camera.switcher")}
     >
       <div class="track" role="tablist">

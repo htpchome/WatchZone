@@ -24,6 +24,7 @@ export interface CameraConfig {
 }
 
 export interface CardConfig {
+  readonly camera_bar_shadows: boolean;
   readonly camera_rounded_corners: boolean;
   readonly camera_shadows: boolean;
   readonly cameras: readonly CameraConfig[];
@@ -48,6 +49,7 @@ export function normalizeCardConfig(value: unknown): CardConfig {
   }
 
   for (const key of [
+    "camera_bar_shadows",
     "camera_rounded_corners",
     "camera_shadows",
     "rounded_outer_corners",
@@ -80,6 +82,7 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     "camera_rounded_corners",
   );
   normalized.camera_shadows = moduleAppearanceValue(source, "camera_shadows");
+  normalized.camera_bar_shadows = source.camera_bar_shadows !== false;
   normalized.rounded_outer_corners =
     typeof source.rounded_outer_corners === "boolean"
       ? source.rounded_outer_corners

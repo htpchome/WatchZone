@@ -86,6 +86,7 @@ const EDITOR_STATUS_KEY = "editor-draft-status";
 void import("../ui/sortable-list");
 
 type BooleanConfigFlag =
+  | "camera_bar_shadows"
   | "camera_rounded_corners"
   | "camera_shadows"
   | "mobile_data_saving"
@@ -366,6 +367,11 @@ export class CardEditor extends LitElement {
         "camera_shadows",
         this._t("editor.camera_shadows"),
         this._config?.camera_shadows !== false,
+      )}
+      ${this._renderBooleanOption(
+        "camera_bar_shadows",
+        this._t("editor.camera_bar_shadows"),
+        this._config?.camera_bar_shadows !== false,
       )}
     `;
   }

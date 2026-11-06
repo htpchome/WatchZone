@@ -164,9 +164,25 @@ test("keeps the panel camera switcher and carousel selection bidirectional", asy
       "--ha-card-border-radius",
       "19px",
     );
+    (element as HTMLElement).style.setProperty(
+      "--ha-box-shadow-m",
+      "rgb(20, 21, 22) 0px 4px 8px",
+    );
+    (element as HTMLElement).style.setProperty(
+      "--ha-box-shadow-s",
+      "rgb(30, 31, 32) 0px 1px 2px",
+    );
   });
   await expect(buttons.nth(0)).toHaveCSS("color", "rgb(246, 247, 248)");
   await expect(switcher.locator(".track")).toHaveCSS("border-style", "none");
+  await expect(switcher.locator(".scroller")).toHaveCSS(
+    "box-shadow",
+    "rgb(20, 21, 22) 0px 4px 8px 0px",
+  );
+  await expect(switcher.locator(".active-indicator")).toHaveCSS(
+    "box-shadow",
+    "rgb(30, 31, 32) 0px 1px 2px 0px",
+  );
   await expect(page.locator("wzc-camera .camera-carousel")).toHaveCSS(
     "border-radius",
     "19px",
@@ -202,6 +218,27 @@ test("keeps the panel camera switcher and carousel selection bidirectional", asy
     (cameraBox?.y ?? 0) + (cameraBox?.height ?? 0),
   );
   expect(panelBox?.height).toBeCloseTo(selectorBox?.height ?? 0, 1);
+
+  await page.locator("watchzone-card").evaluate((element) => {
+    (
+      element as HTMLElement & {
+        setConfig(config: unknown): void;
+      }
+    ).setConfig({
+      type: "custom:watchzone-card",
+      camera_bar_shadows: false,
+      cameras: [
+        { entity_id: "camera.front", title: "Front Door" },
+        { entity_id: "camera.back", title: "Back Yard" },
+      ],
+    });
+  });
+  await expect(switcher.locator(".scroller")).not.toHaveClass(/shadows/);
+  await expect(switcher.locator(".scroller")).toHaveCSS("box-shadow", "none");
+  await expect(switcher.locator(".active-indicator")).toHaveCSS(
+    "box-shadow",
+    "none",
+  );
 });
 
 test("restores the camera switcher after an inner-dashboard detach", async ({

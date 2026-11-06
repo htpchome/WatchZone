@@ -91,12 +91,29 @@ describe("layout composition", () => {
         content: [
           {
             componentType: "camera_switcher",
-            config: { targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID },
+            config: {
+              shadows: true,
+              targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
+            },
             id: DEFAULT_CAMERA_SWITCHER_COMPONENT_NODE_ID,
             kind: "component",
           },
         ],
       },
+    });
+  });
+
+  it("maps camera bar shadows at the switcher component boundary", () => {
+    const layout = builtInStage(
+      normalizeCardConfig({
+        camera_entity: "camera.front",
+        camera_bar_shadows: false,
+      }),
+    );
+    const panel = defaultVariant(layout).root.children[1]?.node;
+    expect(panel?.slots?.content?.[0]?.config).toMatchObject({
+      shadows: false,
+      targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
     });
   });
 

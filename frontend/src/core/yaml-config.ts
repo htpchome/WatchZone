@@ -19,6 +19,7 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
     delete yaml.camera_rounded_corners;
   }
   if (config.camera_shadows !== false) delete yaml.camera_shadows;
+  if (config.camera_bar_shadows !== false) delete yaml.camera_bar_shadows;
   if (!config.mobile_data_saving) delete yaml.mobile_data_saving;
   if (config.cameras.length === 0) delete yaml.cameras;
   else yaml.cameras = config.cameras.map(compactCameraConfig);

@@ -24,6 +24,7 @@
   "editor.appearance": "Εμφάνιση",
   "editor.camera_rounded_corners": "Στρογγυλεμένες γωνίες κάμερας",
   "editor.camera_shadows": "Σκιές κάμερας",
+  "editor.camera_bar_shadows": "Σκιές γραμμής καμερών",
   "editor.standard_hls": "Τυπικό HLS",
   "editor.pc_tablet": "Υπολογιστής/tablet",
   "editor.mobile_phone": "Κινητό τηλέφωνο",

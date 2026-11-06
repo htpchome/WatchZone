@@ -12,6 +12,7 @@ describe("WatchZone card configuration", () => {
     expect(normalizeCardConfig({ type: CARD_TYPE, title: "Camera" })).toEqual({
       type: CARD_TYPE,
       title: "Camera",
+      camera_bar_shadows: true,
       camera_rounded_corners: true,
       camera_shadows: true,
       rounded_outer_corners: true,
@@ -179,6 +180,9 @@ describe("WatchZone card configuration", () => {
     );
     expect(() => normalizeCardConfig({ outer_shadows: "yes" })).toThrow(
       "outer_shadows must be a boolean",
+    );
+    expect(() => normalizeCardConfig({ camera_bar_shadows: "yes" })).toThrow(
+      "camera_bar_shadows must be a boolean",
     );
     expect(() =>
       normalizeCardConfig({
