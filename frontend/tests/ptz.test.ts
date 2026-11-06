@@ -72,6 +72,7 @@ function cameraSession() {
   return {
     available: true,
     entityId: "camera.front",
+    source: "home_assistant" as const,
     holdOverlay: vi.fn(() => vi.fn()),
     muted: true,
     overlayVisible: true,

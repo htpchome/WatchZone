@@ -299,6 +299,13 @@ describe("watchzone-card-editor", () => {
     };
 
     await selectLight("light.porch");
+    expect(
+      (
+        editor.shadowRoot?.querySelector(
+          ".pending-light-icon-selector",
+        ) as HTMLElement & { value?: string }
+      ).value,
+    ).toBe("mdi:lightbulb");
     editor.shadowRoot
       ?.querySelector(".pending-light-icon-selector")
       ?.dispatchEvent(

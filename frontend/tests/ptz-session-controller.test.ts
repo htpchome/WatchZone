@@ -111,6 +111,31 @@ describe("PTZ session lifecycle", () => {
     await vi.waitFor(() => expect(controller.capability?.supported).toBe(true));
     expect(resolver.capability).toHaveBeenCalledOnce();
   });
+
+  it("matches capability to the active camera's configured provider", async () => {
+    resolver.capability.mockResolvedValue(capability());
+    const controller = new PtzSessionController(new Host(), {
+      onFailure: vi.fn(),
+      onStopped: vi.fn(),
+    });
+    const context = new CameraSessionContext();
+    controller.configure(api(), context, [
+      source("camera.front", "home_assistant"),
+    ]);
+
+    context.publish({}, camera("camera.front", vi.fn(), "frigate_go2rtc"));
+    await Promise.resolve();
+    expect(resolver.capability).not.toHaveBeenCalled();
+
+    controller.configure(api(), context, [source("camera.front", "frigate")]);
+    await vi.waitFor(() =>
+      expect(resolver.capability).toHaveBeenCalledWith(
+        expect.anything(),
+        "frigate",
+        "camera.front",
+      ),
+    );
+  });
 });
 
 class Host {
@@ -131,14 +156,22 @@ function capability() {
   };
 }
 
-function source(entityId: string) {
-  return { entityId, provider: "home_assistant" as const };
+function source(
+  entityId: string,
+  provider: "home_assistant" | "frigate" = "home_assistant",
+) {
+  return { entityId, provider };
 }
 
-function camera(entityId: string, releaseOverlay = vi.fn()) {
+function camera(
+  entityId: string,
+  releaseOverlay = vi.fn(),
+  source: "home_assistant" | "frigate_go2rtc" = "home_assistant",
+) {
   return {
     available: true,
     entityId,
+    source,
     holdOverlay: vi.fn(() => releaseOverlay),
     muted: true,
     overlayVisible: true,

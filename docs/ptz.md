@@ -34,9 +34,9 @@ Supported Home Assistant surfaces are discovered in this order:
 
 The third surface is an optional compatibility path inside the Home Assistant
 provider. It does not change the configured connection type or movement path.
-A future Frigate go2rtc connection must register its own PTZ provider
-adapter and must not add Frigate transport conditions to the component or the Home
-Assistant adapter.
+The Frigate go2rtc connection registers its own PTZ provider adapter and does
+not add Frigate transport conditions to the component or the Home Assistant
+adapter.
 
 Capabilities are conservative. A control is offered only when Home Assistant
 positively exposes the corresponding operation. The editor displays the

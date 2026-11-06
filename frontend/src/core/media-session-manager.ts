@@ -26,7 +26,7 @@ import {
 export type MediaSessionState =
   "new" | "connecting" | "live" | "parked" | "failed" | "closing" | "closed";
 
-export type MediaTransport = "hls_mse" | "hls_native" | "webrtc";
+export type MediaTransport = "hls_mse" | "hls_native" | "mse" | "webrtc";
 export type CameraMutePreference = "muted" | "unmuted";
 
 export interface MediaSessionSnapshot {

@@ -26,6 +26,10 @@ import {
   TOAST_REGION_TAG,
 } from "../core/constants";
 import {
+  cameraProviderId,
+  type CameraConnectionSource,
+} from "../core/camera-connection-source";
+import {
   createHomeAssistantApi,
   isHomeAssistant,
   type HomeAssistant,
@@ -75,6 +79,7 @@ const LIGHT_SELECTOR = {
 } as const;
 const ICON_SELECTOR = { icon: {} } as const;
 const BOOLEAN_SELECTOR = { boolean: {} } as const;
+const DEFAULT_LIGHT_ICON = "mdi:lightbulb";
 
 const accordionTag = unsafeStatic(ACCORDION_TAG);
 const accordionItemTag = unsafeStatic(ACCORDION_ITEM_TAG);
@@ -96,7 +101,7 @@ type BooleanConfigFlag =
 
 type CameraBooleanConfigFlag = Exclude<
   keyof CameraConfig,
-  "entity_id" | "lights" | "title"
+  "connection_source" | "entity_id" | "lights" | "title"
 >;
 
 export class CardEditor extends LitElement {
@@ -450,15 +455,19 @@ export class CardEditor extends LitElement {
                         label=${this._t("editor.connection")}
                         .hass=${this._hass}
                         .selector=${this._connectionSourceSelector()}
-                        .value=${"home_assistant"}
+                        .value=${camera.connection_source}
                         .required=${true}
-                        .disabled=${true}
+                        @value-changed=${this._handleConnectionSourceChange}
                       ></ha-selector>
-                      ${this._renderCameraBoolean(
-                        "low_latency_hls",
-                        this._t("editor.low_latency_hls"),
-                        camera.low_latency_hls,
-                      )}
+                      ${
+                        camera.connection_source === "home_assistant"
+                          ? this._renderCameraBoolean(
+                              "low_latency_hls",
+                              this._t("editor.low_latency_hls"),
+                              camera.low_latency_hls,
+                            )
+                          : nothing
+                      }
                     </div>
                   </${accordionItemTag}>
                   <${accordionItemTag}
@@ -617,7 +626,7 @@ export class CardEditor extends LitElement {
         const entityId = light.entity_id;
         const name = this._entityName(entityId);
         return html`<div class="linked-light-row">
-          <ha-icon .icon=${light.icon ?? "mdi:lightbulb"}></ha-icon>
+          <ha-icon .icon=${light.icon ?? DEFAULT_LIGHT_ICON}></ha-icon>
           <span class="linked-light-copy">
             <strong>${name}</strong>
             <small>${entityId}</small>
@@ -628,7 +637,7 @@ export class CardEditor extends LitElement {
             label=${this._t("editor.icon")}
             .hass=${this._hass}
             .selector=${ICON_SELECTOR}
-            .value=${light.icon ?? "mdi:lightbulb"}
+            .value=${light.icon ?? DEFAULT_LIGHT_ICON}
             @value-changed=${this._handleLightIconChange}
           ></ha-selector>
           <button
@@ -751,6 +760,10 @@ export class CardEditor extends LitElement {
             label: this._t("editor.home_assistant"),
             value: "home_assistant",
           },
+          {
+            label: this._t("editor.frigate_go2rtc"),
+            value: "frigate_go2rtc",
+          },
         ],
       },
     } as const;
@@ -827,6 +840,23 @@ export class CardEditor extends LitElement {
     this.requestUpdate();
   };
 
+  private readonly _handleConnectionSourceChange = (
+    event: ValueChangedEvent,
+  ): void => {
+    if (!this._cameraDraft) return;
+    const value = eventString(event);
+    if (value !== "home_assistant" && value !== "frigate_go2rtc") return;
+    this._cameraDraft = {
+      ...this._cameraDraft,
+      connection_source: value,
+      ptz_enabled: false,
+      two_way_talk_enabled: false,
+    };
+    this._checkTalkCapability(this._cameraDraft.entity_id);
+    this._checkPtzCapability(this._cameraDraft.entity_id);
+    this.requestUpdate();
+  };
+
   private readonly _handleCameraBooleanChange = (
     event: ValueChangedEvent,
   ): void => {
@@ -851,7 +881,7 @@ export class CardEditor extends LitElement {
   private readonly _startAddingLight = (): void => {
     this._addingLight = true;
     this._pendingLightEntityId = "";
-    this._pendingLightIcon = "";
+    this._pendingLightIcon = DEFAULT_LIGHT_ICON;
     this.requestUpdate();
   };
 
@@ -889,7 +919,7 @@ export class CardEditor extends LitElement {
         {
           entity_id: this._pendingLightEntityId,
           ...(this._pendingLightIcon &&
-          this._pendingLightIcon !== "mdi:lightbulb"
+          this._pendingLightIcon !== DEFAULT_LIGHT_ICON
             ? { icon: this._pendingLightIcon }
             : {}),
         },
@@ -923,7 +953,7 @@ export class CardEditor extends LitElement {
     const lights = [...this._cameraDraft.lights];
     lights[index] = {
       entity_id: current.entity_id,
-      ...(value && value !== "mdi:lightbulb" ? { icon: value } : {}),
+      ...(value && value !== DEFAULT_LIGHT_ICON ? { icon: value } : {}),
     };
     this._cameraDraft = { ...this._cameraDraft, lights };
     this.requestUpdate();
@@ -1097,8 +1127,9 @@ export class CardEditor extends LitElement {
     }
     this._talkCapabilityPending = true;
     this.requestUpdate();
+    const source = this._cameraDraft?.connection_source ?? "home_assistant";
     void this._talkResolver
-      .supports(createHomeAssistantApi(this._hass), entityId)
+      .supports(createHomeAssistantApi(this._hass), source, entityId)
       .catch(() => false)
       .then((supported) => {
         if (generation !== this._talkCapabilityGeneration) return;
@@ -1118,10 +1149,12 @@ export class CardEditor extends LitElement {
     }
     this._ptzCapabilityPending = true;
     this.requestUpdate();
+    const source: CameraConnectionSource =
+      this._cameraDraft?.connection_source ?? "home_assistant";
     void this._ptzResolver
       .capability(
         createHomeAssistantApi(this._hass),
-        "home_assistant",
+        cameraProviderId(source),
         entityId,
       )
       .catch(() => undefined)
@@ -1134,9 +1167,12 @@ export class CardEditor extends LitElement {
   }
 
   private _cameraSummary(camera: CameraConfig): string {
-    const connection = camera.low_latency_hls
-      ? this._t("editor.low_latency_hls")
-      : this._t("editor.standard_hls");
+    const connection =
+      camera.connection_source === "frigate_go2rtc"
+        ? this._t("editor.frigate_go2rtc")
+        : camera.low_latency_hls
+          ? this._t("editor.low_latency_hls")
+          : this._t("editor.standard_hls");
     const audio = [
       camera.start_live_unmuted_pc_tablet
         ? this._t("editor.pc_tablet")

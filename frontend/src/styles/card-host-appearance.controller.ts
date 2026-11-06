@@ -5,6 +5,7 @@ import type { CardConfig } from "../core/config";
 const SQUARE_CORNERS_ATTRIBUTE = "data-wzc-square-outer-corners";
 const NO_SHADOW_ATTRIBUTE = "data-wzc-no-outer-shadow";
 const CARD_RADIUS_PROPERTY = "--wzc-card-radius";
+const THEME_CARD_RADIUS_PROPERTY = "--wzc-theme-card-radius";
 const HA_CARD_RADIUS_PROPERTY = "--ha-card-border-radius";
 const HA_CARD_SHADOW_PROPERTY = "--ha-card-box-shadow";
 
@@ -32,6 +33,7 @@ const MANAGED_ATTRIBUTES = [
 
 const MANAGED_STYLES = [
   CARD_RADIUS_PROPERTY,
+  THEME_CARD_RADIUS_PROPERTY,
   HA_CARD_RADIUS_PROPERTY,
   "border-radius",
   HA_CARD_SHADOW_PROPERTY,
@@ -79,12 +81,14 @@ export class CardHostAppearanceController implements ReactiveController {
     if (roundedCorners) {
       this._host.style.removeProperty(CARD_RADIUS_PROPERTY);
       this._host.style.removeProperty(HA_CARD_RADIUS_PROPERTY);
+      this._host.style.removeProperty(THEME_CARD_RADIUS_PROPERTY);
       this._host.style.setProperty(
         "border-radius",
         "var(--wzc-card-radius)",
         "important",
       );
     } else {
+      this._preserveThemeRadius();
       this._host.style.setProperty(CARD_RADIUS_PROPERTY, "0px");
       this._host.style.setProperty(HA_CARD_RADIUS_PROPERTY, "0px");
       this._host.style.setProperty("border-radius", "0px", "important");
@@ -103,6 +107,16 @@ export class CardHostAppearanceController implements ReactiveController {
     } else {
       this._host.style.setProperty(HA_CARD_SHADOW_PROPERTY, "none");
       this._host.style.setProperty("box-shadow", "none", "important");
+    }
+  }
+
+  private _preserveThemeRadius(): void {
+    if (this._host.style.getPropertyValue(THEME_CARD_RADIUS_PROPERTY)) return;
+    const radius = getComputedStyle(this._host)
+      .getPropertyValue("--wzc-radius-card")
+      .trim();
+    if (radius && radius !== "0px") {
+      this._host.style.setProperty(THEME_CARD_RADIUS_PROPERTY, radius);
     }
   }
 

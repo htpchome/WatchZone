@@ -6,6 +6,10 @@ import {
   MAX_CAMERAS,
   MAX_LIGHTS_PER_CAMERA,
 } from "./constants";
+import {
+  isCameraConnectionSource,
+  type CameraConnectionSource,
+} from "./camera-connection-source";
 
 export interface LinkedLightConfig {
   readonly entity_id: string;
@@ -13,6 +17,7 @@ export interface LinkedLightConfig {
 }
 
 export interface CameraConfig {
+  readonly connection_source: CameraConnectionSource;
   readonly entity_id: string;
   readonly lights: readonly LinkedLightConfig[];
   readonly low_latency_hls: boolean;
@@ -100,6 +105,7 @@ export function normalizeCardConfig(value: unknown): CardConfig {
 
 export function createDefaultCameraConfig(entityId = ""): CameraConfig {
   return {
+    connection_source: "home_assistant",
     entity_id: entityId,
     lights: [],
     low_latency_hls: true,
@@ -171,6 +177,15 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
   }
   const source = value as Record<string, unknown>;
   if (
+    "connection_source" in source &&
+    source.connection_source !== undefined &&
+    !isCameraConnectionSource(source.connection_source)
+  ) {
+    throw new Error(
+      `${APP_NAME} camera ${index + 1} connection_source is invalid.`,
+    );
+  }
+  if (
     typeof source.entity_id !== "string" ||
     !source.entity_id.trim().startsWith("camera.")
   ) {
@@ -205,6 +220,9 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
     throw new Error(`${APP_NAME} camera ${index + 1} title must be a string.`);
   }
   return {
+    connection_source: isCameraConnectionSource(source.connection_source)
+      ? source.connection_source
+      : defaults.connection_source,
     entity_id: defaults.entity_id,
     lights,
     low_latency_hls:

@@ -1,5 +1,6 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
+import type { PresentedLiveSource } from "../../../core/camera-connection-source";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
 import type {
   MediaSessionLease,
@@ -7,8 +8,6 @@ import type {
   MediaTransport,
 } from "../../../core/media-session-manager";
 import { LiveSourceResolver } from "../../../providers/live-source-resolver";
-
-export type PresentedSource = "hls" | "webrtc";
 
 interface SessionCallbacks {
   getInitialMuted(): boolean;
@@ -28,7 +27,7 @@ export class CameraLiveSessionController implements ReactiveController {
   private _lowLatencyHls = true;
   private _retryWebRtcAfterHlsRecovery = false;
   private _revision = 0;
-  private _selected?: PresentedSource;
+  private _selected?: PresentedLiveSource;
   private _transport?: MediaTransport;
   private _webRtcDecoded = false;
   private _webRtcLease?: MediaSessionLease;
@@ -59,7 +58,7 @@ export class CameraLiveSessionController implements ReactiveController {
     return this._revision;
   }
 
-  public get selected(): PresentedSource | undefined {
+  public get selected(): PresentedLiveSource | undefined {
     return this._selected;
   }
 
@@ -267,7 +266,7 @@ export class CameraLiveSessionController implements ReactiveController {
   }
 
   private _select(
-    source: PresentedSource,
+    source: PresentedLiveSource,
     transport: MediaTransport | undefined,
     video: HTMLVideoElement | undefined,
   ): void {

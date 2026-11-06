@@ -9,6 +9,7 @@ import {
   BADGE_TAG,
   TOAST_REGION_TAG,
 } from "../../../core/constants";
+import type { PresentedLiveSource } from "../../../core/camera-connection-source";
 import {
   playMediaElement,
   setMediaElementMuted,
@@ -33,7 +34,6 @@ import {
   suppressNativePictureInPicture,
   togglePictureInPicture,
 } from "../picture-in-picture";
-import type { PresentedSource } from "./session.controller";
 import { captureVideoFrame, downloadSnapshot } from "./frame-capture";
 import { CameraZoomController } from "./zoom.controller";
 
@@ -128,7 +128,7 @@ export class CameraLivePresentation extends LitElement {
   public notices: readonly ToastNotice[] = [];
   public posterUrl?: string;
   public posterPriority = false;
-  public selected?: PresentedSource;
+  public selected?: PresentedLiveSource;
   public sessionRevision = 0;
   public suspendPending = false;
   public suspendSupported = false;
@@ -201,11 +201,13 @@ export class CameraLivePresentation extends LitElement {
     const sourceLabel =
       this.transport === "webrtc"
         ? "WebRTC"
-        : this.transport === "hls_native"
-          ? `${hlsLabel} · native`
-          : this.transport === "hls_mse"
-            ? `${hlsLabel} · HLS.js`
-            : hlsLabel;
+        : this.transport === "mse"
+          ? "MSE"
+          : this.transport === "hls_native"
+            ? `${hlsLabel} · native`
+            : this.transport === "hls_mse"
+              ? `${hlsLabel} · HLS.js`
+              : hlsLabel;
     const connecting =
       !this.suspended && this.available && !this.failed && !this.selected;
     const resolvedSource = Boolean(
@@ -369,10 +371,10 @@ export class CameraLivePresentation extends LitElement {
       this._emitMediaAttached(this.hlsVideo);
     }
     this._setActiveVideo(
-      this.selected === "hls"
-        ? this.hlsVideo
-        : this.selected === "webrtc"
-          ? webRtcVideo
+      this.selected === "webrtc"
+        ? webRtcVideo
+        : this.selected
+          ? this.hlsVideo
           : undefined,
     );
     if (changed.has("selected") && this.selected === "webrtc") {
@@ -570,10 +572,10 @@ export class CameraLivePresentation extends LitElement {
   }
 
   private get _selectedVideoForRender(): HTMLVideoElement | undefined {
-    return this.selected === "hls"
-      ? this.hlsVideo
-      : this.selected === "webrtc"
-        ? this.webRtcVideo
+    return this.selected === "webrtc"
+      ? this.webRtcVideo
+      : this.selected
+        ? this.hlsVideo
         : undefined;
   }
 

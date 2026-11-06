@@ -11,6 +11,10 @@ import {
 } from "../../core/constants";
 import { DeviceProfileController } from "../../core/device-profile";
 import type { CameraSessionContext } from "../../core/camera-session-context";
+import {
+  cameraSourceKey,
+  type CameraConnectionSource,
+} from "../../core/camera-connection-source";
 import type { CameraSelectionContext } from "../../core/camera-selection-context";
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import {
@@ -35,6 +39,7 @@ export type CameraShadowStyle = "medium" | "none" | "small";
 export interface CameraItemConfig {
   readonly available: boolean;
   readonly entityId: string;
+  readonly source: CameraConnectionSource;
   readonly lowLatencyHls: boolean;
   readonly label: string;
   readonly posterUrl?: string;
@@ -170,6 +175,7 @@ export class CameraModule extends LitElement {
               .cameraSession=${this.cameraSession}
               .available=${camera.available}
               .entityId=${camera.entityId}
+              .source=${camera.source}
               .lowLatencyHls=${camera.lowLatencyHls}
               .localize=${this.localize}
               .overlayVisible=${
@@ -300,12 +306,19 @@ export class CameraModule extends LitElement {
     const deviceClass = this._deviceProfile.profile.deviceClass;
     manager.setCameraActivity(
       this,
-      this.cameras[this._activeIndex]?.entityId,
+      this.cameras[this._activeIndex]
+        ? cameraSourceKey(
+            this.cameras[this._activeIndex].source,
+            this.cameras[this._activeIndex].entityId,
+          )
+        : undefined,
       deviceClass,
     );
     manager.setCameraRetentionPreference(
       this,
-      this.cameras.map(({ entityId }) => entityId),
+      this.cameras.map(({ entityId, source }) =>
+        cameraSourceKey(source, entityId),
+      ),
       deviceClass,
       this.retentionPreference,
     );

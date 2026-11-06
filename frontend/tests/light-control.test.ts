@@ -282,6 +282,7 @@ function activeCamera(entityId: string) {
   return {
     available: true,
     entityId,
+    source: "home_assistant" as const,
     muted: true,
     overlayVisible: true,
     holdOverlay: () => () => undefined,

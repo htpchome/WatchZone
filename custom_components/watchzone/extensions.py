@@ -16,17 +16,21 @@ from .providers.live import (
     SendLiveSignalingEvent,
 )
 from .providers.ptz import PtzProvider
+from .providers.source import BrowserLiveSourceProvider
+from .providers.talk import TalkCapabilityProvider
 
 __all__ = [
     "EXTENSION_API_VERSION",
     "CameraRuntimeProvider",
     "CameraRuntimeState",
+    "BrowserLiveSourceProvider",
     "LiveSignalingProvider",
     "LiveSignalingSession",
     "ProviderExtension",
     "ProviderPreparationError",
     "PtzProvider",
     "SendLiveSignalingEvent",
+    "TalkCapabilityProvider",
     "register_provider_extension",
 ]
 
@@ -46,6 +50,8 @@ class ProviderExtension:
     live_signaling: LiveSignalingProvider | None = None
     talk_signaling: LiveSignalingProvider | None = None
     ptz: PtzProvider | None = None
+    browser_live_source: BrowserLiveSourceProvider | None = None
+    talk_capability: TalkCapabilityProvider | None = None
 
 
 class ProviderRegistry:
@@ -99,15 +105,41 @@ class ProviderRegistry:
         extension = self._platforms.get(platform)
         return extension.live_signaling if extension else None
 
+    def live_signaling_by_provider(
+        self, provider_id: str
+    ) -> LiveSignalingProvider | None:
+        """Resolve live signaling by explicit connection-provider identity."""
+        extension = self._providers.get(provider_id)
+        return extension.live_signaling if extension else None
+
     def talk_signaling(self, platform: str) -> LiveSignalingProvider | None:
         """Resolve one platform's optional talk-signaling capability."""
         extension = self._platforms.get(platform)
+        return extension.talk_signaling if extension else None
+
+    def talk_signaling_by_provider(
+        self, provider_id: str
+    ) -> LiveSignalingProvider | None:
+        """Resolve talk signaling by explicit connection-provider identity."""
+        extension = self._providers.get(provider_id)
         return extension.talk_signaling if extension else None
 
     def ptz(self, provider_id: str) -> PtzProvider | None:
         """Resolve PTZ by explicit connection-provider identity."""
         extension = self._providers.get(provider_id)
         return extension.ptz if extension else None
+
+    def browser_live_source(
+        self, provider_id: str
+    ) -> BrowserLiveSourceProvider | None:
+        """Resolve browser live-source capability by explicit provider ID."""
+        extension = self._providers.get(provider_id)
+        return extension.browser_live_source if extension else None
+
+    def talk_capability(self, provider_id: str) -> TalkCapabilityProvider | None:
+        """Resolve talk capability by explicit connection-provider identity."""
+        extension = self._providers.get(provider_id)
+        return extension.talk_capability if extension else None
 
     @staticmethod
     def _validate(extension: ProviderExtension) -> None:
@@ -122,9 +154,14 @@ class ProviderRegistry:
             not platform.strip() for platform in extension.entity_platforms
         ):
             raise ValueError("Provider entity platforms must not be empty strings")
-        if not extension.entity_platforms and extension.ptz is None:
+        if (
+            not extension.entity_platforms
+            and extension.ptz is None
+            and extension.browser_live_source is None
+            and extension.talk_capability is None
+        ):
             raise ValueError(
-                "Provider extension must declare entity platforms or PTZ"
+                "Provider extension must declare entity platforms or a capability"
             )
         interval = extension.camera_runtime_poll_interval
         if interval is not None and (

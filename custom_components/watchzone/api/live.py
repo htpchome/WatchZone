@@ -25,9 +25,44 @@ from mashumaro import MissingField
 from webrtc_models import RTCIceCandidateInit
 
 from ..const import DOMAIN
+from ..extensions import get_provider_registry
 from . import runtime_from_hass
 
 _LOGGER = logging.getLogger(__name__)
+
+
+@websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/live/source",
+        vol.Required("provider"): cv.string,
+        vol.Required("entity_id"): cv.entity_id,
+    }
+)
+@async_response
+async def ws_live_source(
+    hass: HomeAssistant,
+    connection: ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Resolve one explicit provider's browser media source."""
+    try:
+        _require_camera_read(connection, msg["entity_id"])
+        provider = get_provider_registry(hass).browser_live_source(msg["provider"])
+        if provider is None:
+            raise HomeAssistantError("Live source is unavailable for this provider")
+        source = await provider.async_resolve(hass, msg["entity_id"])
+    except HomeAssistantError as err:
+        connection.send_error(msg["id"], "live_source_failed", str(err))
+        return
+    connection.send_result(
+        msg["id"],
+        {
+            "provider": source.provider_id,
+            "provider_instance_id": source.provider_instance_id,
+            "stream_id": source.stream_id,
+            "websocket_path": source.websocket_path,
+        },
+    )
 
 
 def _parse_candidate(value: Any) -> RTCIceCandidateInit:
@@ -81,6 +116,7 @@ async def ws_live_camera_ready(
         vol.Required("type"): f"{DOMAIN}/live/webrtc/offer",
         vol.Required("entity_id"): cv.entity_id,
         vol.Required("offer"): str,
+        vol.Optional("provider"): cv.string,
     }
 )
 @async_response
@@ -100,7 +136,10 @@ async def ws_live_offer(
             connection.send_message(event_message(msg["id"], event))
 
         created = await runtime.live_signaling.async_create(
-            _owner_id(connection), entity_id, send_event
+            _owner_id(connection),
+            entity_id,
+            send_event,
+            provider_id=msg.get("provider"),
         )
     except HomeAssistantError as err:
         connection.send_error(msg["id"], "webrtc_offer_failed", str(err))
@@ -167,3 +206,4 @@ def async_register(hass: HomeAssistant) -> None:
     async_register_command(hass, ws_live_camera_ready)
     async_register_command(hass, ws_live_offer)
     async_register_command(hass, ws_live_candidate)
+    async_register_command(hass, ws_live_source)

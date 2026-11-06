@@ -12,12 +12,14 @@ const CANDIDATE_COMMAND = `${INTEGRATION_ID}/talk/webrtc/candidate`;
 export async function getTalkCapability(
   api: HomeAssistantApi,
   entityId: string,
+  provider = "home_assistant",
 ): Promise<boolean> {
   const result = await api.callWS<{
     readonly supported: boolean;
   }>({
     type: CAPABILITY_COMMAND,
     entity_id: entityId,
+    provider,
   });
   return result.supported;
 }
@@ -29,6 +31,7 @@ export function subscribeTalkOffer(
   forceStandard: boolean,
   callback: (event: LiveOfferEvent) => void,
   capabilityProbe = false,
+  provider = "home_assistant",
 ): Promise<HomeAssistantUnsubscribe> {
   return api.subscribeMessage(callback, {
     type: OFFER_COMMAND,
@@ -36,6 +39,7 @@ export function subscribeTalkOffer(
     force_standard: forceStandard,
     capability_probe: capabilityProbe,
     offer,
+    provider,
   });
 }
 

@@ -1,3 +1,4 @@
+import type { CameraConnectionSource } from "../core/camera-connection-source";
 import type { HomeAssistantApi } from "../core/home-assistant";
 
 export interface TalkConnection {
@@ -9,12 +10,17 @@ export interface TalkConnection {
 
 type HomeAssistantTalkProvider =
   typeof import("./home-assistant/talk").HomeAssistantTalkProvider;
+type FrigateTalkProvider = typeof import("./frigate/talk").FrigateTalkProvider;
 
-let providerPromise:
+let homeAssistantProviderPromise:
   Promise<InstanceType<HomeAssistantTalkProvider>> | undefined;
+let frigateProviderPromise:
+  Promise<InstanceType<FrigateTalkProvider>> | undefined;
 
-async function provider(): Promise<InstanceType<HomeAssistantTalkProvider>> {
-  return (providerPromise ??= import("./home-assistant/talk").then(
+async function homeAssistantProvider(): Promise<
+  InstanceType<HomeAssistantTalkProvider>
+> {
+  return (homeAssistantProviderPromise ??= import("./home-assistant/talk").then(
     ({ HomeAssistantTalkProvider }) => new HomeAssistantTalkProvider(),
   ));
 }
@@ -23,17 +29,35 @@ async function provider(): Promise<InstanceType<HomeAssistantTalkProvider>> {
 export class TalkSourceResolver {
   public async supports(
     api: HomeAssistantApi,
+    source: CameraConnectionSource,
     entityId: string,
   ): Promise<boolean> {
-    return (await provider()).supports(api, entityId);
+    return (await this._provider(source)).supports(api, entityId);
   }
 
   public async connect(
     api: HomeAssistantApi,
+    source: CameraConnectionSource,
     entityId: string,
     signal: AbortSignal,
     onFailure: (error: Error) => void,
   ): Promise<TalkConnection> {
-    return (await provider()).connect(api, entityId, signal, onFailure);
+    return (await this._provider(source)).connect(
+      api,
+      entityId,
+      signal,
+      onFailure,
+    );
+  }
+
+  private _provider(
+    source: CameraConnectionSource,
+  ): Promise<
+    InstanceType<HomeAssistantTalkProvider> | InstanceType<FrigateTalkProvider>
+  > {
+    if (source === "home_assistant") return homeAssistantProvider();
+    return (frigateProviderPromise ??= import("./frigate/talk").then(
+      ({ FrigateTalkProvider }) => new FrigateTalkProvider(),
+    ));
   }
 }

@@ -1,16 +1,16 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
+import type { PresentedLiveSource } from "../../../core/camera-connection-source";
 import { DeviceProfileController } from "../../../core/device-profile";
 import {
   playMediaElement,
   setMediaElementMuted,
 } from "../../../core/media-playback";
 import { getMediaSessionManager } from "../../../core/media-session-manager";
-import type { PresentedSource } from "./session.controller";
 
 interface AudioMediaState {
   readonly hls?: HTMLVideoElement;
-  readonly selected?: PresentedSource;
+  readonly selected?: PresentedLiveSource;
   readonly webRtc?: HTMLVideoElement;
 }
 
