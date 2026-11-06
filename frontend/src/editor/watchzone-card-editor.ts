@@ -1228,9 +1228,7 @@ export class CardEditor extends LitElement {
       });
   }
 
-  private _rememberCameraSourceControls(
-    source: CameraConnectionSource,
-  ): void {
+  private _rememberCameraSourceControls(source: CameraConnectionSource): void {
     if (!this._cameraDraft) return;
     this._cameraSourceControls.set(source, {
       ptzEnabled: this._cameraDraft.ptz_enabled,

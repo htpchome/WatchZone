@@ -188,7 +188,16 @@ export async function createHomeAssistantHlsConnection(
         connected = true;
         window.clearTimeout(timeout);
         void playMediaElement(video).catch(() => undefined);
-        resolve({ video, timing, transport, close });
+        resolve({
+          video,
+          timing,
+          transport,
+          close,
+          isHealthy: () =>
+            !closed &&
+            !video.error &&
+            video.readyState >= HTMLMediaElement.HAVE_METADATA,
+        });
       },
       { once: true },
     );

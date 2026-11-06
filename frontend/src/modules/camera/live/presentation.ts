@@ -88,7 +88,7 @@ export class CameraLivePresentation extends LitElement {
   public static properties = {
     available: { attribute: false, type: Boolean },
     failed: { attribute: false, type: Boolean },
-    hlsVideo: { attribute: false },
+    elementVideo: { attribute: false },
     lowLatencyHls: { attribute: false, type: Boolean },
     localize: { attribute: false },
     muted: { attribute: false, type: Boolean },
@@ -121,7 +121,7 @@ export class CameraLivePresentation extends LitElement {
 
   public available = false;
   public failed = false;
-  public hlsVideo?: HTMLVideoElement;
+  public elementVideo?: HTMLVideoElement;
   public lowLatencyHls = true;
   public localize: LocalizeFunction = englishLocalize;
   public muted = true;
@@ -363,18 +363,33 @@ export class CameraLivePresentation extends LitElement {
       }
     }
     const hlsHost = this.renderRoot.querySelector(".hls-host");
-    if (hlsHost && this.hlsVideo && this.hlsVideo.parentElement !== hlsHost) {
-      this.hlsVideo.setAttribute("aria-label", this.localize("camera.live"));
-      suppressNativePictureInPicture(this.hlsVideo);
-      setMediaElementMuted(this.hlsVideo, this.muted);
-      hlsHost.append(this.hlsVideo);
-      this._emitMediaAttached(this.hlsVideo);
+    const previousElement = changed.get("elementVideo");
+    if (
+      previousElement instanceof HTMLVideoElement &&
+      previousElement !== this.elementVideo &&
+      previousElement.parentElement === hlsHost
+    ) {
+      previousElement.remove();
+    }
+    if (
+      hlsHost &&
+      this.elementVideo &&
+      this.elementVideo.parentElement !== hlsHost
+    ) {
+      this.elementVideo.setAttribute(
+        "aria-label",
+        this.localize("camera.live"),
+      );
+      suppressNativePictureInPicture(this.elementVideo);
+      setMediaElementMuted(this.elementVideo, this.muted);
+      hlsHost.append(this.elementVideo);
+      this._emitMediaAttached(this.elementVideo);
     }
     this._setActiveVideo(
       this.selected === "webrtc"
         ? webRtcVideo
         : this.selected
-          ? this.hlsVideo
+          ? this.elementVideo
           : undefined,
     );
     if (changed.has("selected") && this.selected === "webrtc") {
@@ -575,7 +590,7 @@ export class CameraLivePresentation extends LitElement {
     return this.selected === "webrtc"
       ? this.webRtcVideo
       : this.selected
-        ? this.hlsVideo
+        ? this.elementVideo
         : undefined;
   }
 

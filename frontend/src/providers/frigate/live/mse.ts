@@ -7,6 +7,8 @@ import type {
 } from "../../../core/media-session-manager";
 
 const CONNECT_TIMEOUT_MS = 15_000;
+const MAX_PENDING_BYTES = 16 * 1024 * 1024;
+const RETAINED_BUFFER_SECONDS = 12;
 
 interface SignedPathResult {
   readonly path: string;
@@ -52,6 +54,7 @@ export async function createFrigateMseConnection(
   socket.binaryType = "arraybuffer";
   let sourceBuffer: SourceBuffer | undefined;
   const pending: ArrayBuffer[] = [];
+  let pendingBytes = 0;
   let closed = false;
   let settled = false;
   const handleAbort = (): void => fail(abortError());
@@ -61,6 +64,9 @@ export async function createFrigateMseConnection(
     closed = true;
     window.clearTimeout(timeout);
     signal.removeEventListener("abort", handleAbort);
+    sourceBuffer?.removeEventListener("updateend", appendNext);
+    pending.length = 0;
+    pendingBytes = 0;
     socket.close();
     video.pause();
     video.removeAttribute("src");
@@ -77,8 +83,50 @@ export async function createFrigateMseConnection(
     onFailure(error);
   };
   const appendNext = (): void => {
-    if (!sourceBuffer || sourceBuffer.updating || pending.length === 0) return;
-    sourceBuffer.appendBuffer(pending.shift()!);
+    if (
+      closed ||
+      mediaSource.readyState !== "open" ||
+      !sourceBuffer ||
+      sourceBuffer.updating ||
+      pending.length === 0
+    )
+      return;
+    const segment = pending.shift()!;
+    pendingBytes -= segment.byteLength;
+    try {
+      sourceBuffer.appendBuffer(segment);
+    } catch (error) {
+      pending.unshift(segment);
+      pendingBytes += segment.byteLength;
+      if (
+        error instanceof DOMException &&
+        error.name === "QuotaExceededError" &&
+        sourceBuffer.buffered.length > 0
+      ) {
+        const removeEnd = Math.min(
+          video.currentTime - RETAINED_BUFFER_SECONDS,
+          sourceBuffer.buffered.end(0),
+        );
+        if (removeEnd > sourceBuffer.buffered.start(0)) {
+          try {
+            sourceBuffer.remove(sourceBuffer.buffered.start(0), removeEnd);
+            return;
+          } catch (removeError) {
+            fail(
+              removeError instanceof Error
+                ? removeError
+                : new Error("Unable to recover the Frigate MSE buffer"),
+            );
+            return;
+          }
+        }
+      }
+      fail(
+        error instanceof Error
+          ? error
+          : new Error("Unable to append Frigate MSE media"),
+      );
+    }
   };
 
   let resolveConnection!: (connection: MediaConnection) => void;
@@ -145,6 +193,11 @@ export async function createFrigateMseConnection(
     }
     if (!(event.data instanceof ArrayBuffer)) return;
     pending.push(event.data);
+    pendingBytes += event.data.byteLength;
+    if (pendingBytes > MAX_PENDING_BYTES) {
+      fail(new Error("Frigate MSE media queue exceeded its safe limit"));
+      return;
+    }
     appendNext();
   });
   socket.addEventListener("error", () =>
@@ -164,6 +217,11 @@ export async function createFrigateMseConnection(
       void video.play().catch(() => undefined);
       resolveConnection({
         close: cleanup,
+        isHealthy: () =>
+          !closed &&
+          socket.readyState === WebSocket.OPEN &&
+          mediaSource.readyState === "open" &&
+          !video.error,
         timing,
         transport: "mse",
         video,

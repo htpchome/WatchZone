@@ -7,7 +7,6 @@ import type {
   MediaSessionSnapshot,
   MediaTransport,
 } from "../../../core/media-session-manager";
-import { getMediaSessionManager } from "../../../core/media-session-manager";
 import { FrigateLiveProvider } from ".";
 
 interface SessionCallbacks {
@@ -26,7 +25,6 @@ export class FrigateCameraLiveSessionController {
   private _mseSnapshot: MediaSessionSnapshot = { state: "new" };
   private _mseUnsubscribe?: () => void;
   private _revision = 0;
-  private _retainedWebRtcPreferred = false;
   private _selected?: PresentedLiveSource;
   private _transport?: MediaTransport;
   private _webRtcDecoded = false;
@@ -46,7 +44,7 @@ export class FrigateCameraLiveSessionController {
       this._webRtcSnapshot.state === "failed"
     );
   }
-  public get hlsVideo(): HTMLVideoElement | undefined {
+  public get elementVideo(): HTMLVideoElement | undefined {
     return this._mseSnapshot.video;
   }
   public get revision(): number {
@@ -75,8 +73,12 @@ export class FrigateCameraLiveSessionController {
     api: HomeAssistantApi | undefined,
     entityId: string | undefined,
     available: boolean,
-    retainWhenInactive = true,
+    options: {
+      readonly lowLatencyHls: boolean;
+      readonly retainWhenInactive: boolean;
+    },
   ): void {
+    const { retainWhenInactive } = options;
     const changed =
       this._api?.identity !== api?.identity || this._entityId !== entityId;
     this._api = api;
@@ -104,22 +106,26 @@ export class FrigateCameraLiveSessionController {
   private _sync(): void {
     if (!this._connected || !this._api || !this._entityId || !this._available)
       return;
-    this._retainedWebRtcPreferred =
-      this._selected === "webrtc" ||
-      getMediaSessionManager().hasReusableTransport(
-        `frigate_go2rtc:${this._entityId}`,
-        "webrtc",
-      );
-    if (
-      !this._retainedWebRtcPreferred &&
-      !this._mseLease &&
-      this._mseSnapshot.state === "new"
-    ) {
-      const generation = ++this._generation;
-      this._mseSnapshot = { state: "connecting" };
-      void this._acquireMse(this._api, this._entityId, generation);
-    }
     this._startWebRtc();
+    if (this._webRtcLease) this._syncMse();
+  }
+
+  private _syncMse(): void {
+    if (
+      !this._api ||
+      !this._entityId ||
+      !this._available ||
+      !this._connected ||
+      this._selected === "webrtc" ||
+      (this._webRtcSnapshot.state === "live" &&
+        Boolean(this._webRtcSnapshot.stream)) ||
+      this._mseLease ||
+      this._mseSnapshot.state !== "new"
+    )
+      return;
+    const generation = this._generation;
+    this._mseSnapshot = { state: "connecting" };
+    void this._acquireMse(this._api, this._entityId, generation);
   }
 
   private async _acquireMse(
@@ -184,13 +190,10 @@ export class FrigateCameraLiveSessionController {
         this._webRtcUnsubscribe = lease.subscribe((snapshot) => {
           this._webRtcSnapshot = snapshot;
           this._revision += 1;
-          if (snapshot.state === "failed") {
-            this._retainedWebRtcPreferred = false;
-          }
           if (snapshot.state === "failed" && this._selected === "webrtc") {
             this._clearSelection();
           }
-          if (snapshot.state === "failed") this._sync();
+          this._syncMse();
           this._host.requestUpdate();
         });
       })
@@ -201,6 +204,7 @@ export class FrigateCameraLiveSessionController {
           error:
             error instanceof Error ? error.message : "Unable to load WebRTC",
         };
+        this._syncMse();
         this._host.requestUpdate();
       });
   }
@@ -236,7 +240,6 @@ export class FrigateCameraLiveSessionController {
     this._generation += 1;
     this._clearSelection();
     this._webRtcDecoded = false;
-    this._retainedWebRtcPreferred = false;
     this._releaseMse();
     this._releaseWebRtc();
   }
@@ -244,7 +247,6 @@ export class FrigateCameraLiveSessionController {
     this._generation += 1;
     this._clearSelection();
     this._webRtcDecoded = false;
-    this._retainedWebRtcPreferred = false;
     this._releaseMse(true);
     this._releaseWebRtc(true);
   }

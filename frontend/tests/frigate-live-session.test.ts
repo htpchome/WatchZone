@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import type { MediaSessionSnapshot } from "../src/core/media-session-manager";
-import { getMediaSessionManager } from "../src/core/media-session-manager";
 
 const provider = vi.hoisted(() => ({
   acquireMse: vi.fn(),
@@ -39,8 +38,15 @@ describe("Frigate live session selection", () => {
       onActiveVideoChanged: activeVideoChanged,
     });
 
-    controller.configure(api(), "camera.front", true);
+    controller.configure(api(), "camera.front", true, {
+      lowLatencyHls: true,
+      retainWhenInactive: true,
+    });
     controller.connect();
+    await vi.waitFor(() => {
+      expect(provider.acquireWebRtc).toHaveBeenCalledOnce();
+    });
+    webRtc.publish({ state: "connecting" });
     await vi.waitFor(() => {
       expect(provider.acquireMse).toHaveBeenCalledOnce();
       expect(provider.acquireWebRtc).toHaveBeenCalledOnce();
@@ -70,10 +76,6 @@ describe("Frigate live session selection", () => {
   });
 
   it("reattaches retained WebRTC without painting a new MSE fallback", async () => {
-    vi.spyOn(
-      getMediaSessionManager(),
-      "hasReusableTransport",
-    ).mockReturnValue(true);
     const webRtc = lease();
     provider.acquireWebRtc.mockResolvedValue(webRtc.value);
     const activeVideoChanged = vi.fn();
@@ -82,7 +84,10 @@ describe("Frigate live session selection", () => {
       onActiveVideoChanged: activeVideoChanged,
     });
 
-    controller.configure(api(), "camera.front", true);
+    controller.configure(api(), "camera.front", true, {
+      lowLatencyHls: true,
+      retainWhenInactive: true,
+    });
     controller.connect();
     await vi.waitFor(() => {
       expect(provider.acquireWebRtc).toHaveBeenCalledOnce();

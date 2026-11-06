@@ -303,7 +303,19 @@ export async function createWebRtcPeerConnection(
         timing.mark("video_track_received");
         connected = true;
         window.clearTimeout(timeout);
-        resolve({ stream, timing, transport: "webrtc", close });
+        resolve({
+          stream,
+          timing,
+          transport: "webrtc",
+          close,
+          isHealthy: () =>
+            !closed &&
+            peer.connectionState !== "closed" &&
+            peer.connectionState !== "failed" &&
+            stream
+              .getVideoTracks()
+              .some((videoTrack) => videoTrack.readyState === "live"),
+        });
       }
     };
 

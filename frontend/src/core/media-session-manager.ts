@@ -45,6 +45,7 @@ export interface MediaConnection {
   readonly transport?: MediaTransport;
   readonly video?: HTMLVideoElement;
   close(): void;
+  isHealthy?(): boolean;
 }
 
 export interface MediaConnectionOptions {
@@ -179,7 +180,18 @@ class ManagedMediaSession {
       this._closeConnection();
       this._setSnapshot({ state: "new" });
     } else if (this._snapshot.state === "parked") {
-      this._setSnapshot({ ...this._snapshot, state: "live" });
+      if (this._connection && this._connection.isHealthy?.() !== false) {
+        this._setSnapshot({ ...this._snapshot, state: "live" });
+      } else {
+        this._closeConnection();
+        this._setSnapshot({ state: "new" });
+      }
+    } else if (
+      this._snapshot.state === "live" &&
+      this._connection?.isHealthy?.() === false
+    ) {
+      this._closeConnection();
+      this._setSnapshot({ state: "new" });
     }
     if (api.identity.connected === false) {
       this._transportInterrupted = true;
@@ -248,14 +260,6 @@ class ManagedMediaSession {
 
   public isRetained(): boolean {
     return this._leaseCount === 0;
-  }
-
-  public hasReusableTransport(transport: MediaTransport): boolean {
-    return (
-      (this._snapshot.state === "live" ||
-        this._snapshot.state === "parked") &&
-      this._snapshot.transport === transport
-    );
   }
 
   public async reconnectIfFailed(): Promise<void> {
@@ -558,18 +562,6 @@ export class MediaSessionManager {
 
   public setCameraMuted(entityId: string, muted: boolean): void {
     this._cameraMutePreferences.set(entityId, muted ? "muted" : "unmuted");
-  }
-
-  /** Reports actual retained connection health without owning presentation policy. */
-  public hasReusableTransport(
-    cameraKey: string,
-    transport: MediaTransport,
-  ): boolean {
-    return [...this._sessions.values()].some(
-      (session) =>
-        session.cameraKey === cameraKey &&
-        session.hasReusableTransport(transport),
-    );
   }
 
   public setCameraActivity(

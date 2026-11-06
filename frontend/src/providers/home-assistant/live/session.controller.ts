@@ -1,4 +1,4 @@
-import type { ReactiveController, ReactiveControllerHost } from "lit";
+import type { ReactiveControllerHost } from "lit";
 
 import type { PresentedLiveSource } from "../../../core/camera-connection-source";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
@@ -7,7 +7,6 @@ import type {
   MediaSessionSnapshot,
   MediaTransport,
 } from "../../../core/media-session-manager";
-import { getMediaSessionManager } from "../../../core/media-session-manager";
 import { LiveSourceResolver } from "../../../providers/live-source-resolver";
 
 interface SessionCallbacks {
@@ -16,7 +15,7 @@ interface SessionCallbacks {
 }
 
 /** Owns provider leases, retained-source selection, and takeover. */
-export class CameraLiveSessionController implements ReactiveController {
+export class HomeAssistantCameraLiveSessionController {
   private _api?: HomeAssistantApi;
   private _available = false;
   private _connected = false;
@@ -27,7 +26,6 @@ export class CameraLiveSessionController implements ReactiveController {
   private _hlsUnsubscribe?: () => void;
   private _lowLatencyHls = true;
   private _retryWebRtcAfterHlsRecovery = false;
-  private _retainedWebRtcPreferred = false;
   private _revision = 0;
   private _selected?: PresentedLiveSource;
   private _transport?: MediaTransport;
@@ -41,11 +39,9 @@ export class CameraLiveSessionController implements ReactiveController {
   public constructor(
     private readonly _host: ReactiveControllerHost,
     private readonly _callbacks: SessionCallbacks,
-  ) {
-    _host.addController(this);
-  }
+  ) {}
 
-  public get hlsVideo(): HTMLVideoElement | undefined {
+  public get elementVideo(): HTMLVideoElement | undefined {
     return this._hlsSnapshot.video;
   }
 
@@ -72,12 +68,12 @@ export class CameraLiveSessionController implements ReactiveController {
     return this._webRtcSnapshot.stream;
   }
 
-  public hostConnected(): void {
+  public connect(): void {
     this._connected = true;
     this._sync();
   }
 
-  public hostDisconnected(): void {
+  public disconnect(): void {
     this._connected = false;
     this._releaseAll();
   }
@@ -86,9 +82,12 @@ export class CameraLiveSessionController implements ReactiveController {
     api: HomeAssistantApi | undefined,
     entityId: string | undefined,
     available: boolean,
-    lowLatencyHls = true,
-    retainWhenInactive = true,
+    options: {
+      readonly lowLatencyHls: boolean;
+      readonly retainWhenInactive: boolean;
+    },
   ): void {
+    const { lowLatencyHls, retainWhenInactive } = options;
     const changed =
       this._api?.identity !== api?.identity ||
       this._entityId !== entityId ||
@@ -125,12 +124,6 @@ export class CameraLiveSessionController implements ReactiveController {
       return;
     }
     const webRtcKey = this._resolver.homeAssistantWebRtcKey(this._entityId);
-    this._retainedWebRtcPreferred =
-      this._selected === "webrtc" ||
-      getMediaSessionManager().hasReusableTransport(
-        this._entityId,
-        "webrtc",
-      );
     if (
       this._webRtcLease?.key !== webRtcKey &&
       this._webRtcPendingKey !== webRtcKey
@@ -139,7 +132,7 @@ export class CameraLiveSessionController implements ReactiveController {
       this._webRtcPendingKey = webRtcKey;
       void this._acquireWebRtc(this._api, this._entityId, webRtcKey);
     }
-    this._syncHls();
+    if (this._webRtcLease) this._syncHls();
   }
 
   private async _acquireWebRtc(
@@ -171,13 +164,10 @@ export class CameraLiveSessionController implements ReactiveController {
         if (snapshot.state === "connecting" || snapshot.state === "failed") {
           this._webRtcDecoded = false;
         }
-        if (snapshot.state === "failed") {
-          this._retainedWebRtcPreferred = false;
-        }
         if (snapshot.state === "failed" && this._selected === "webrtc") {
           this._clearSelection();
         }
-        if (snapshot.state === "failed") this._syncHls();
+        this._syncHls();
         this._host.requestUpdate();
       });
     } catch (error) {
@@ -185,6 +175,7 @@ export class CameraLiveSessionController implements ReactiveController {
         state: "failed",
         error: error instanceof Error ? error.message : "Unable to load WebRTC",
       };
+      this._syncHls();
       this._host.requestUpdate();
     } finally {
       if (this._webRtcPendingKey === expectedKey) {
@@ -196,7 +187,8 @@ export class CameraLiveSessionController implements ReactiveController {
   private _syncHls(): void {
     if (
       this._selected === "webrtc" ||
-      this._retainedWebRtcPreferred ||
+      (this._webRtcSnapshot.state === "live" &&
+        Boolean(this._webRtcSnapshot.stream)) ||
       !this._api ||
       !this._entityId ||
       !this._available ||
@@ -300,7 +292,6 @@ export class CameraLiveSessionController implements ReactiveController {
     this._clearSelection();
     this._webRtcDecoded = false;
     this._retryWebRtcAfterHlsRecovery = false;
-    this._retainedWebRtcPreferred = false;
     this._releaseWebRtc();
     this._releaseHls();
   }
@@ -309,7 +300,6 @@ export class CameraLiveSessionController implements ReactiveController {
     this._clearSelection();
     this._webRtcDecoded = false;
     this._retryWebRtcAfterHlsRecovery = false;
-    this._retainedWebRtcPreferred = false;
     this._releaseWebRtc(true);
     this._releaseHls(true);
   }
@@ -326,7 +316,6 @@ export class CameraLiveSessionController implements ReactiveController {
 
   private _releaseHls(discard = false): void {
     this._hlsPendingKey = undefined;
-    this._hlsSnapshot.video?.remove();
     this._hlsUnsubscribe?.();
     this._hlsUnsubscribe = undefined;
     if (discard) this._hlsLease?.discard();

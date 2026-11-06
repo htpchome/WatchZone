@@ -187,6 +187,19 @@ If the manager already holds a live or parked WebRTC transport for the selected
 camera, the new presentation reattaches that stream directly. It must not paint
 HLS or MSE first and simulate a fresh fallback-to-WebRTC takeover. The fallback
 starts normally when the retained WebRTC session is absent, failed, or evicted.
+The presentation does not infer this from a separate pool query or cached
+transport flag. It first acquires the canonical preferred lease; that lease's
+validated snapshot is the sole authority for retained-health, connecting, and
+failed state. A healthy retained preferred lease suppresses fallback, while a
+cold connecting or failed preferred lease permits the provider's fallback to
+start. This prevents stale pool metadata from hiding fallback indefinitely.
+
+One camera presentation owns exactly one provider-session resolver. Changing
+connection source replaces the active provider adapter behind that resolver;
+inactive provider adapters cannot publish media elements, clear audio targets,
+or influence selection. Provider adapters remain independently implemented and
+share only the document-scoped session manager and provider-neutral session
+contract.
 
 ### 6.2 Editor and preview
 
@@ -300,6 +313,12 @@ Every connection adapter must provide equivalent operations for:
 - Applying effective audio state.
 - Reconnecting under manager policy.
 - Closing idempotently and completely.
+
+Health reporting describes the live transport itself, not merely the
+manager's last state transition. Before promoting a parked session back to
+live, the manager validates adapter health. An unhealthy retained connection
+is closed and reconnected once through the normal bounded path rather than
+being presented as reusable.
 
 The manager owns policy. An adapter owns transport mechanics. Adapters must not
 invent independent retention, audio-preference, retry, or eviction policies.

@@ -346,7 +346,9 @@ describe("camera presentation retention", () => {
           ?.textContent?.trim(),
       ).toBe("WebRTC"),
     );
-    expect(hlsFactory).toHaveBeenCalledTimes(2);
+    // The cold preferred lease resolved before fallback was needed. Recovery
+    // starts one fallback while WebRTC reconnects, then returns to WebRTC.
+    expect(hlsFactory).toHaveBeenCalledOnce();
   });
 
   it("retries previously unavailable WebRTC once after HLS recovers", async () => {

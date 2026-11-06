@@ -9,7 +9,7 @@ import {
 import { getMediaSessionManager } from "../../../core/media-session-manager";
 
 interface AudioMediaState {
-  readonly hls?: HTMLVideoElement;
+  readonly element?: HTMLVideoElement;
   readonly selected?: PresentedLiveSource;
   readonly webRtc?: HTMLVideoElement;
 }
@@ -114,15 +114,15 @@ export class CameraAudioController implements ReactiveController {
   }
 
   public syncMediaState(): void {
-    const { hls, selected, webRtc } = this._callbacks.getMediaState();
+    const { element, selected, webRtc } = this._callbacks.getMediaState();
     if (webRtc) {
       setMediaElementMuted(
         webRtc,
         selected && selected !== "webrtc" ? true : this._muted,
       );
     }
-    if (hls) {
-      setMediaElementMuted(hls, selected === "webrtc" ? true : this._muted);
+    if (element) {
+      setMediaElementMuted(element, selected === "webrtc" ? true : this._muted);
     }
   }
 

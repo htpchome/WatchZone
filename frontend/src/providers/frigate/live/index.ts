@@ -57,7 +57,7 @@ export class FrigateLiveProvider {
       key: `frigate:${source.provider_instance_id}:${source.stream_id}:mse`,
       options,
       retryInitialFailure: true,
-      retention: "preferred",
+      retention: "fallback",
     });
   }
 
