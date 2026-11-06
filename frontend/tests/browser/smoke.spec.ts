@@ -155,6 +155,22 @@ test("keeps the panel camera switcher and carousel selection bidirectional", asy
   await expect(buttons).toHaveCount(2);
   await expect(buttons.nth(0)).toHaveText("Front Door");
   await expect(buttons.nth(0)).toHaveAttribute("aria-selected", "true");
+  await page.locator("watchzone-card").evaluate((element) => {
+    (element as HTMLElement).style.setProperty(
+      "--wzc-color-text-reversed",
+      "rgb(246, 247, 248)",
+    );
+    (element as HTMLElement).style.setProperty(
+      "--ha-card-border-radius",
+      "19px",
+    );
+  });
+  await expect(buttons.nth(0)).toHaveCSS("color", "rgb(246, 247, 248)");
+  await expect(switcher.locator(".track")).toHaveCSS("border-style", "none");
+  await expect(page.locator("wzc-camera .camera-carousel")).toHaveCSS(
+    "border-radius",
+    "19px",
+  );
 
   await buttons.nth(1).click();
   await expect(buttons.nth(1)).toHaveAttribute("aria-selected", "true");
@@ -186,6 +202,50 @@ test("keeps the panel camera switcher and carousel selection bidirectional", asy
     (cameraBox?.y ?? 0) + (cameraBox?.height ?? 0),
   );
   expect(panelBox?.height).toBeCloseTo(selectorBox?.height ?? 0, 1);
+});
+
+test("restores the camera switcher after an inner-dashboard detach", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  await page.locator("watchzone-card").evaluate((element) => {
+    (
+      element as HTMLElement & {
+        setConfig(config: unknown): void;
+      }
+    ).setConfig({
+      type: "custom:watchzone-card",
+      cameras: [
+        { entity_id: "camera.front", title: "Front Door" },
+        { entity_id: "camera.back", title: "Back Yard" },
+      ],
+    });
+  });
+
+  const card = page.locator("watchzone-card");
+  const switcher = card.locator("wzc-camera-switcher");
+  await expect(switcher.locator("button")).toHaveCount(2);
+
+  await card.evaluate((element) => {
+    const parent = element.parentNode;
+    if (!parent) throw new Error("WatchZone card has no parent");
+    const marker = document.createComment("inner-dashboard-navigation");
+    parent.insertBefore(marker, element);
+    element.remove();
+    parent.insertBefore(element, marker);
+    marker.remove();
+  });
+
+  await expect(switcher.locator("button")).toHaveCount(2);
+  await expect(switcher.locator('button[aria-selected="true"]')).toHaveText(
+    "Front Door",
+  );
+  await switcher.locator("button").nth(1).click();
+  await expect(switcher.locator("button").nth(1)).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
 });
 
 test("preserves expanded camera-stage geometry across carousel selection", async ({

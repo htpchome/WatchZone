@@ -42,7 +42,7 @@ export const themeTokens = css`
     );
     --wzc-color-text-reversed: var(
       --text-primary-color,
-      var(--primary-background-color, Canvas)
+      var(--ha-color-on-primary-loud, var(--white-color, #fff))
     );
     --wzc-color-on-primary: var(
       --ha-color-on-primary-normal,
@@ -164,7 +164,7 @@ export const themeTokens = css`
     --wzc-camera-suspended-resume-color: var(--wzc-color-success);
     --wzc-camera-suspended-resume-border-color: var(--wzc-color-success);
     --wzc-live-background: var(--wzc-color-surface-secondary);
-    --wzc-live-radius: var(--wzc-radius-large);
+    --wzc-live-radius: var(--wzc-radius-card);
     --wzc-live-shadow: var(--wzc-shadow-medium);
     --wzc-zoom-transition-duration: 180ms;
     --wzc-stage-resize-handle-opacity: 60%;
@@ -210,8 +210,7 @@ export const themeTokens = css`
     --wzc-carousel-navigation-control-gap: 0.75rem;
     --wzc-camera-switcher-color: var(--wzc-color-text-1);
     --wzc-camera-switcher-background: var(--wzc-color-surface-secondary);
-    --wzc-camera-switcher-border-color: var(--wzc-color-border-control);
-    --wzc-camera-switcher-active-color: var(--wzc-color-on-primary);
+    --wzc-camera-switcher-active-color: var(--wzc-color-text-reversed);
     --wzc-camera-switcher-active-background: var(--wzc-color-primary);
     --wzc-camera-switcher-gap: 0.25rem;
     --wzc-camera-switcher-padding: 0.25rem;

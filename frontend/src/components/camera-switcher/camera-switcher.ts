@@ -30,6 +30,11 @@ export class CameraSwitcherComponent extends LitElement {
   public localize: LocalizeFunction = englishLocalize;
   public targetModuleId = "";
 
+  public connectedCallback(): void {
+    super.connectedCallback();
+    this._subscribe();
+  }
+
   public disconnectedCallback(): void {
     this._unsubscribe?.();
     this._unsubscribe = undefined;

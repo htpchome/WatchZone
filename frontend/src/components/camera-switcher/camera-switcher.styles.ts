@@ -36,7 +36,6 @@ export const cameraSwitcherStyles = css`
     padding: var(--wzc-camera-switcher-padding);
     color: var(--wzc-camera-switcher-color);
     background: var(--wzc-camera-switcher-background);
-    border: 1px solid var(--wzc-camera-switcher-border-color);
     border-radius: var(--wzc-radius-pill);
   }
 

@@ -94,6 +94,7 @@ export class CameraModule extends LitElement {
       CAMERA_OVERLAY_VISIBILITY_EVENT,
       this._handleOverlayVisibility as EventListener,
     );
+    this._publishSelection();
     this.requestUpdate();
   }
 
