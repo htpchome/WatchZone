@@ -1,7 +1,6 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
 import type { PtzCapability, PtzDirection, PtzProviderId } from "../../api/ptz";
-import { cameraProviderId } from "../../core/camera-connection-source";
 import type {
   ActiveCameraSession,
   CameraSessionContext,
@@ -146,9 +145,7 @@ export class PtzSessionController implements ReactiveController {
   ): void {
     const source = camera
       ? this._configuredSources.find(
-          ({ entityId, provider }) =>
-            entityId === camera.entityId &&
-            provider === cameraProviderId(camera.source),
+          ({ entityId }) => entityId === camera.entityId,
         )
       : undefined;
     if (!force && camera === this._camera && sameSource(source, this._source)) {

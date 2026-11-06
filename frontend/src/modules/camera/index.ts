@@ -1,5 +1,4 @@
 import { CAMERA_MODULE_TYPE, CAMERA_TAG } from "../../core/constants";
-import { isCameraConnectionSource } from "../../core/camera-connection-source";
 import { cameraImageUrl } from "../../core/home-assistant";
 import { englishLocalize } from "../../core/localization";
 import type { MediaRetentionPreference } from "../../core/media-retention-policy";
@@ -37,7 +36,6 @@ export const moduleDefinition: ModuleDefinition<CameraModuleConfig> = {
     const first = config.cameras[0];
     if (!first || !context.api || !context.hass?.states[first.entityId])
       return undefined;
-    if (first.source !== "home_assistant") return undefined;
     const lease = await resolver.acquireHomeAssistantWebRtc(
       context.api,
       first.entityId,
@@ -139,9 +137,6 @@ function validateCameraItem(
   }
   return {
     entityId: source.entityId,
-    source: isCameraConnectionSource(source.source)
-      ? source.source
-      : "home_assistant",
     lowLatencyHls: source.lowLatencyHls as boolean,
     startUnmutedPcTablet: source.startUnmutedPcTablet as boolean,
     startUnmutedPhone: source.startUnmutedPhone as boolean,

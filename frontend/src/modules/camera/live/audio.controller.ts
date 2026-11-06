@@ -1,16 +1,16 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
-import type { PresentedLiveSource } from "../../../core/camera-connection-source";
 import { DeviceProfileController } from "../../../core/device-profile";
 import {
   playMediaElement,
   setMediaElementMuted,
 } from "../../../core/media-playback";
 import { getMediaSessionManager } from "../../../core/media-session-manager";
+import type { PresentedSource } from "./session.controller";
 
 interface AudioMediaState {
   readonly hls?: HTMLVideoElement;
-  readonly selected?: PresentedLiveSource;
+  readonly selected?: PresentedSource;
   readonly webRtc?: HTMLVideoElement;
 }
 
@@ -127,9 +127,7 @@ export class CameraAudioController implements ReactiveController {
   }
 
   public toggleUserMute(): void {
-    // Temporary forced-mute and talk state must not replace explicit user
-    // intent. Toggle the stored preference, not the effective presentation.
-    this.setUserMuted(!this._desiredMuted);
+    this.setUserMuted(!this._muted);
   }
 
   public setUserMuted(muted: boolean): void {

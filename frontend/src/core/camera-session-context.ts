@@ -1,9 +1,6 @@
-import type { CameraConnectionSource } from "./camera-connection-source";
-
 export interface ActiveCameraSession {
   readonly available: boolean;
   readonly entityId: string;
-  readonly source: CameraConnectionSource;
   readonly incomingStream?: MediaStream;
   readonly muted: boolean;
   readonly overlayVisible: boolean;

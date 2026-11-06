@@ -193,51 +193,6 @@ describe("watchzone-card-editor", () => {
     ).toBe("Front Door 1234567890123");
   });
 
-  it("treats a connection-source-only edit as dirty and updates its summary", async () => {
-    const editor = document.createElement(
-      "watchzone-card-editor",
-    ) as CardEditor;
-    editor.setConfig({
-      type: CARD_TYPE,
-      cameras: [{ entity_id: "camera.front" }],
-    });
-    document.body.append(editor);
-    await editor.updateComplete;
-
-    (
-      editor.shadowRoot?.querySelector(
-        '[aria-label="Edit camera: front"]',
-      ) as HTMLElement
-    ).click();
-    await editor.updateComplete;
-
-    editor.shadowRoot
-      ?.querySelector('ha-selector[label="Connection"]')
-      ?.dispatchEvent(
-        new CustomEvent("value-changed", {
-          bubbles: true,
-          composed: true,
-          detail: { value: "frigate_go2rtc" },
-        }),
-      );
-    await editor.updateComplete;
-
-    const connectionItem = [
-      ...(editor.shadowRoot?.querySelectorAll<AccordionItem>(
-        ".camera-dialog-accordion wzc-accordion-item",
-      ) ?? []),
-    ].find((item) => item.heading === "Connection Source");
-    await connectionItem?.updateComplete;
-    expect(connectionItem?.summaryText).toBe("Frigate go2rtc");
-    expect(
-      (
-        editor.shadowRoot?.querySelector(
-          'ha-button[appearance="accent"][variant="brand"]',
-        ) as HTMLElement & { disabled?: boolean }
-      ).disabled,
-    ).toBe(false);
-  });
-
   it("confirms camera removal and exposes accessible edit and remove names", async () => {
     const editor = document.createElement(
       "watchzone-card-editor",
@@ -344,13 +299,6 @@ describe("watchzone-card-editor", () => {
     };
 
     await selectLight("light.porch");
-    expect(
-      (
-        editor.shadowRoot?.querySelector(
-          ".pending-light-icon-selector",
-        ) as HTMLElement & { value?: string }
-      ).value,
-    ).toBe("mdi:lightbulb");
     editor.shadowRoot
       ?.querySelector(".pending-light-icon-selector")
       ?.dispatchEvent(

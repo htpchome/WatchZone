@@ -105,14 +105,6 @@ An adapter declares one supported attachment strategy:
 Adapters that cannot retain across attachment changes must declare that limit
 and may not silently claim full retention support.
 
-An element-backed session has exactly one active presentation owner. When a
-card and editor preview overlap, the newest lease receives the element and the
-previous lease receives the same live snapshot without the element so it can
-show its poster. Releasing the newest lease republishes ownership to the prior
-lease. Two presentations must never compete to reparent one media element.
-Stream-backed sessions remain independently attachable to multiple media
-elements.
-
 ## 4. Identity and pooling
 
 The manager pools by a canonical `MediaSessionKey`, not by camera display name,
@@ -183,27 +175,6 @@ camera. Selecting another camera releases the prior view's leases into the
 document manager and immediately acquires the selected camera without a
 background queue. A healthy retained session is reused by canonical key, so
 selection does not renegotiate when policy kept that camera connected.
-If the manager already holds a live or parked WebRTC transport for the selected
-camera, the new presentation reattaches that stream directly. It must not paint
-HLS or MSE first and simulate a fresh fallback-to-WebRTC takeover. The fallback
-starts normally when the retained WebRTC session is absent, failed, or evicted.
-The presentation does not infer this from a separate pool query or cached
-transport flag. It first acquires the canonical preferred lease. The manager
-marks whether that lease reused an existing connection, while the lease
-snapshot remains the sole authority for connecting, live, and failed state. A
-reused live preferred lease suppresses fallback. A cold, connecting, failed,
-or streamless preferred lease permits the provider's fallback to start. If a
-reused stream does not produce a presentation frame within the centralized
-grace period, fallback starts without discarding the retained preferred lease.
-This prevents both fallback flashes and stale retained media from hiding the
-fallback indefinitely.
-
-The camera presentation owns one Home Assistant session controller and one
-lazy non-Home-Assistant provider boundary. Exactly one is active for the
-configured source. Inactive controllers cannot publish media elements, clear
-audio targets, or influence selection. Provider controllers remain
-independently implemented and share only the document-scoped manager and
-provider-neutral lease contract.
 
 ### 6.2 Editor and preview
 
@@ -220,8 +191,8 @@ same key merely because the preview uses a different component tree.
   remaining presentation reclaims the same media element; this handoff must
   not invoke the connection factory or renegotiate the source.
 - A retained session that reports failure while parked is not considered
-  reusable. Its next visible lease enters the normal bounded reconnect path
-  rather than presenting the failed media object as live.
+  reusable. Its next visible lease starts one bounded reconnect rather than
+  presenting the stale media object as live.
 
 ### 6.3 Home Assistant route navigation
 
@@ -317,13 +288,6 @@ Every connection adapter must provide equivalent operations for:
 - Applying effective audio state.
 - Reconnecting under manager policy.
 - Closing idempotently and completely.
-
-Adapters report asynchronous transport failure through the session callback;
-the manager serializes and bounds reconnect work. A retained stream that is
-still reported live must also produce a frame for the new presentation within
-the shared grace period. Failure to present starts the provider-owned fallback
-without inventing a second retry loop or immediately destroying the preferred
-transport.
 
 The manager owns policy. An adapter owns transport mechanics. Adapters must not
 invent independent retention, audio-preference, retry, or eviction policies.

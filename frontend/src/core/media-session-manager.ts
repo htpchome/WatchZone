@@ -26,7 +26,7 @@ import {
 export type MediaSessionState =
   "new" | "connecting" | "live" | "parked" | "failed" | "closing" | "closed";
 
-export type MediaTransport = "hls_mse" | "hls_native" | "mse" | "webrtc";
+export type MediaTransport = "hls_mse" | "hls_native" | "webrtc";
 export type CameraMutePreference = "muted" | "unmuted";
 
 export interface MediaSessionSnapshot {
@@ -64,7 +64,6 @@ export type ConnectionFactory = (
 
 export interface MediaSessionLease {
   readonly key: string;
-  readonly reusedConnection: boolean;
   discard(): void;
   getSnapshot(): MediaSessionSnapshot;
   release(): void;
@@ -116,19 +115,16 @@ class ManagedMediaSession {
   private _api: HomeAssistantApi;
   private _connection?: MediaConnection;
   private _connectAbort?: AbortController;
-  private _elementOwner?: object;
   private _generation = 0;
   private _leaseCount = 0;
-  private readonly _leases: object[] = [];
   private _connectionOptions: MediaConnectionOptions = { initialMuted: true };
   private _reconnectCause?: ReconnectCause;
   private _reconnectAttempts = 0;
   private _reconnectTimer?: ReturnType<typeof setTimeout>;
   private _stabilityTimer?: ReturnType<typeof setTimeout>;
   private _transportInterrupted = false;
-  private readonly _listeners = new Map<
-    (snapshot: MediaSessionSnapshot) => void,
-    object
+  private readonly _listeners = new Set<
+    (snapshot: MediaSessionSnapshot) => void
   >();
   private _snapshot: MediaSessionSnapshot = { state: "new" };
 
@@ -158,13 +154,7 @@ class ManagedMediaSession {
     api: HomeAssistantApi,
     options: MediaConnectionOptions = { initialMuted: true },
   ): MediaSessionLease {
-    const leaseToken = {};
     const transportChanged = this._api.identity !== api.identity;
-    const reusedConnection = Boolean(
-      !transportChanged &&
-      this._connection &&
-      (this._snapshot.state === "live" || this._snapshot.state === "parked"),
-    );
     this._api = api;
     this._connectionOptions = {
       initialMuted: options.initialMuted,
@@ -172,8 +162,6 @@ class ManagedMediaSession {
     };
     this.lastUsed = performance.now();
     this._leaseCount += 1;
-    this._leases.push(leaseToken);
-    this._elementOwner = leaseToken;
     if (this._reconnectTimer) {
       clearTimeout(this._reconnectTimer);
       this._reconnectTimer = undefined;
@@ -200,9 +188,6 @@ class ManagedMediaSession {
     ) {
       void this._connect(options);
     }
-    if (this._leaseCount > 1 && this._snapshot.video) {
-      this._setSnapshot(this._snapshot);
-    }
 
     let released = false;
     const release = (discard: boolean): void => {
@@ -210,13 +195,12 @@ class ManagedMediaSession {
         return;
       }
       released = true;
-      this._release(leaseToken, discard);
+      this._release(discard);
     };
     return {
       key: this.key,
-      reusedConnection,
       discard: () => release(true),
-      getSnapshot: () => this._snapshotFor(leaseToken),
+      getSnapshot: () => this._snapshot,
       release: () => release(false),
       retry: () => {
         if (!released) {
@@ -227,8 +211,8 @@ class ManagedMediaSession {
         if (released) {
           return () => undefined;
         }
-        this._listeners.set(listener, leaseToken);
-        listener(this._snapshotFor(leaseToken));
+        this._listeners.add(listener);
+        listener(this._snapshot);
         return () => this._listeners.delete(listener);
       },
     };
@@ -246,8 +230,6 @@ class ManagedMediaSession {
     this._closeConnection();
     this._setSnapshot({ state: "closed" });
     this._listeners.clear();
-    this._leases.length = 0;
-    this._elementOwner = undefined;
     this._onClosed();
   }
 
@@ -421,15 +403,7 @@ class ManagedMediaSession {
     }, delay);
   }
 
-  private _release(leaseToken: object, discard: boolean): void {
-    for (const [listener, token] of this._listeners) {
-      if (token === leaseToken) this._listeners.delete(listener);
-    }
-    const leaseIndex = this._leases.indexOf(leaseToken);
-    if (leaseIndex >= 0) this._leases.splice(leaseIndex, 1);
-    if (this._elementOwner === leaseToken) {
-      this._elementOwner = this._leases.at(-1);
-    }
+  private _release(discard: boolean): void {
     this._leaseCount = Math.max(0, this._leaseCount - 1);
     this.lastUsed = performance.now();
     if (this._leaseCount > 0) {
@@ -463,26 +437,9 @@ class ManagedMediaSession {
 
   private _setSnapshot(snapshot: MediaSessionSnapshot): void {
     this._snapshot = snapshot;
-    for (const [listener, leaseToken] of this._listeners) {
-      listener(this._snapshotFor(leaseToken));
+    for (const listener of this._listeners) {
+      listener(snapshot);
     }
-  }
-
-  /**
-   * MediaStreams support concurrent renderers. Element-backed transports do
-   * not: one HTMLVideoElement has exactly one DOM parent. The newest active
-   * lease owns that element, and ownership returns to the prior lease without
-   * reconnecting when the newer presentation exits.
-   */
-  private _snapshotFor(leaseToken: object): MediaSessionSnapshot {
-    if (!this._snapshot.video || this._elementOwner === leaseToken) {
-      return this._snapshot;
-    }
-    const snapshot: { video?: HTMLVideoElement } & MediaSessionSnapshot = {
-      ...this._snapshot,
-    };
-    delete snapshot.video;
-    return snapshot;
   }
 }
 

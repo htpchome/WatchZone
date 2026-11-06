@@ -31,9 +31,6 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
 
 function compactCameraConfig(camera: CameraConfig): Record<string, unknown> {
   const compact: Record<string, unknown> = { entity_id: camera.entity_id };
-  if (camera.connection_source !== "home_assistant") {
-    compact.connection_source = camera.connection_source;
-  }
   if (camera.lights.length) {
     compact.lights = camera.lights.map((light) => ({
       entity_id: light.entity_id,

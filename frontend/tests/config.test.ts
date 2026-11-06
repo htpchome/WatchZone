@@ -36,7 +36,6 @@ describe("WatchZone card configuration", () => {
       }).cameras,
     ).toEqual([
       {
-        connection_source: "home_assistant",
         entity_id: "camera.front",
         lights: [],
         low_latency_hls: false,

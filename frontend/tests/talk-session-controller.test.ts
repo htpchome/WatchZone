@@ -37,9 +37,7 @@ describe("two-way-talk session lifecycle", () => {
     };
     const controller = new TalkSessionController(host, callbacks);
     const cameraContext = new CameraSessionContext();
-    controller.configure(api(), cameraContext, [
-      configuredCamera("camera.front"),
-    ]);
+    controller.configure(api(), cameraContext, ["camera.front"]);
     cameraContext.publish({}, camera("camera.front"));
     await vi.waitFor(() => expect(controller.supported).toBe(true));
 
@@ -70,9 +68,7 @@ describe("two-way-talk session lifecycle", () => {
     });
     const cameraContext = new CameraSessionContext();
     cameraContext.publish({}, camera("camera.front"));
-    controller.configure(api(), cameraContext, [
-      configuredCamera("camera.front"),
-    ]);
+    controller.configure(api(), cameraContext, ["camera.front"]);
     await vi.waitFor(() => expect(controller.supported).toBe(true));
     await controller.start();
 
@@ -86,12 +82,7 @@ describe("two-way-talk session lifecycle", () => {
     let startupSignal: AbortSignal | undefined;
     resolver.supports.mockResolvedValue(true);
     resolver.connect.mockImplementation(
-      (
-        _api: HomeAssistantApi,
-        _source: "home_assistant",
-        _entityId: string,
-        signal: AbortSignal,
-      ) => {
+      (_api: HomeAssistantApi, _entityId: string, signal: AbortSignal) => {
         startupSignal = signal;
         return new Promise((_resolve, reject) => {
           signal.addEventListener(
@@ -109,9 +100,7 @@ describe("two-way-talk session lifecycle", () => {
     };
     const controller = new TalkSessionController(new Host(), callbacks);
     const cameraContext = new CameraSessionContext();
-    controller.configure(api(), cameraContext, [
-      configuredCamera("camera.front"),
-    ]);
+    controller.configure(api(), cameraContext, ["camera.front"]);
     cameraContext.publish({}, camera("camera.front"));
     await vi.waitFor(() => expect(controller.supported).toBe(true));
 
@@ -141,9 +130,7 @@ describe("two-way-talk session lifecycle", () => {
       onStopped: vi.fn(),
     });
     const cameraContext = new CameraSessionContext();
-    controller.configure(api(), cameraContext, [
-      configuredCamera("camera.front"),
-    ]);
+    controller.configure(api(), cameraContext, ["camera.front"]);
     cameraContext.publish({}, activeCamera);
     await vi.waitFor(() => expect(controller.supported).toBe(true));
 
@@ -156,40 +143,6 @@ describe("two-way-talk session lifecycle", () => {
 
     expect(activeCamera.setTalkAudioActive).toHaveBeenLastCalledWith(false);
   });
-
-  it("routes capability and connection through the configured camera source", async () => {
-    resolver.supports.mockResolvedValue(true);
-    resolver.connect.mockResolvedValue({
-      close: vi.fn(),
-      localStream: {} as MediaStream,
-      setMicrophoneMuted: vi.fn(),
-    });
-    const controller = new TalkSessionController(new Host(), {
-      onConnected: vi.fn(),
-      onFailed: vi.fn(),
-      onStopped: vi.fn(),
-    });
-    const cameraContext = new CameraSessionContext();
-    controller.configure(api(), cameraContext, [
-      configuredCamera("camera.front", "frigate_go2rtc"),
-    ]);
-    cameraContext.publish({}, camera("camera.front", "frigate_go2rtc"));
-
-    await vi.waitFor(() => expect(controller.supported).toBe(true));
-    expect(resolver.supports).toHaveBeenCalledWith(
-      expect.anything(),
-      "frigate_go2rtc",
-      "camera.front",
-    );
-    await controller.start();
-    expect(resolver.connect).toHaveBeenCalledWith(
-      expect.anything(),
-      "frigate_go2rtc",
-      "camera.front",
-      expect.any(AbortSignal),
-      expect.any(Function),
-    );
-  });
 });
 
 class Host {
@@ -199,14 +152,10 @@ class Host {
   public requestUpdate = vi.fn();
 }
 
-function camera(
-  entityId: string,
-  source: "home_assistant" | "frigate_go2rtc" = "home_assistant",
-) {
+function camera(entityId: string) {
   return {
     available: true,
     entityId,
-    source,
     muted: true,
     overlayVisible: true,
     holdOverlay: vi.fn(() => vi.fn()),
@@ -214,13 +163,6 @@ function camera(
     setMuted: vi.fn(),
     setTalkAudioActive: vi.fn(),
   };
-}
-
-function configuredCamera(
-  entityId: string,
-  source: "home_assistant" | "frigate_go2rtc" = "home_assistant",
-) {
-  return { entityId, source };
 }
 
 function api(): HomeAssistantApi {

@@ -36,7 +36,7 @@ export const componentDefinition: ComponentDefinition<PtzComponentConfig> = {
       if (
         typeof source.entityId !== "string" ||
         !source.entityId.startsWith("camera.") ||
-        (source.provider !== "home_assistant" && source.provider !== "frigate")
+        source.provider !== "home_assistant"
       ) {
         throw new Error("PTZ requires a supported camera provider.");
       }

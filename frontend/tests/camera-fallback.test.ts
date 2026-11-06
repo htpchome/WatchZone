@@ -223,7 +223,6 @@ function cameraItem(entityId: string) {
     entityId,
     label: entityId,
     lowLatencyHls: true,
-    source: "home_assistant" as const,
     startUnmutedPcTablet: false,
     startUnmutedPhone: false,
   };

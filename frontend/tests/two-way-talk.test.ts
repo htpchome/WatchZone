@@ -20,7 +20,7 @@ describe("two-way-talk component", () => {
     ) as TwoWayTalkComponent;
     element.api = api(callWS);
     element.cameraSession = context;
-    element.cameras = [configuredCamera("camera.front")];
+    element.enabledCameraIds = ["camera.front"];
     document.body.append(element);
     context.publish(owner, cameraSession(true));
 
@@ -52,7 +52,7 @@ describe("two-way-talk component", () => {
     ) as TwoWayTalkComponent;
     element.api = api(callWS);
     element.cameraSession = context;
-    element.cameras = [configuredCamera("camera.front")];
+    element.enabledCameraIds = ["camera.front"];
     document.body.append(element);
     context.publish({}, session);
 
@@ -76,7 +76,6 @@ function cameraSession(overlayVisible: boolean) {
   return {
     available: true,
     entityId: "camera.front",
-    source: "home_assistant" as const,
     muted: true,
     overlayVisible,
     holdOverlay: vi.fn(() => vi.fn()),
@@ -84,10 +83,6 @@ function cameraSession(overlayVisible: boolean) {
     setMuted: vi.fn(),
     setTalkAudioActive: vi.fn(),
   };
-}
-
-function configuredCamera(entityId: string) {
-  return { entityId, source: "home_assistant" as const };
 }
 
 function api(callWS: HomeAssistantApi["callWS"]): HomeAssistantApi {

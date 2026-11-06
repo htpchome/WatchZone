@@ -154,9 +154,7 @@ describe("layout composition", () => {
       id: DEFAULT_TALK_COMPONENT_NODE_ID,
       kind: "component",
       componentType: "two_way_talk",
-      config: {
-        cameras: [{ entityId: "camera.front", source: "home_assistant" }],
-      },
+      config: { enabledCameraIds: ["camera.front"] },
     });
   });
 

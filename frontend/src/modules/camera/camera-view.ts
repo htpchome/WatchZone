@@ -8,8 +8,6 @@ import {
   CAMERA_VIEW_TAG,
 } from "../../core/constants";
 import type { HomeAssistantApi } from "../../core/home-assistant";
-import type { CameraConnectionSource } from "../../core/camera-connection-source";
-import type { PresentedLiveSource } from "../../core/camera-connection-source";
 import type { CameraSessionContext } from "../../core/camera-session-context";
 import {
   englishLocalize,
@@ -17,7 +15,6 @@ import {
 } from "../../core/localization";
 import { ToastManager } from "../../ui/toast-manager";
 import { renderIcon } from "../../ui/icons";
-import { ProviderLiveSessionResolver } from "../../providers/live-source-resolver";
 import { cameraViewStyles } from "./camera-view.styles";
 import { CameraAudioController } from "./live/audio.controller";
 import type {
@@ -57,7 +54,6 @@ export class CameraView extends LitElement {
     stageResized: { attribute: false, type: Boolean },
     startUnmutedPcTablet: { attribute: false, type: Boolean },
     startUnmutedPhone: { attribute: false, type: Boolean },
-    source: { attribute: false },
   };
 
   private readonly _toasts = new ToastManager(this);
@@ -67,11 +63,11 @@ export class CameraView extends LitElement {
       dismissToast: (key) => this._toasts.dismiss(key),
       getMediaState: (): {
         hls?: HTMLVideoElement;
-        selected?: PresentedLiveSource;
+        selected?: "hls" | "webrtc";
         webRtc?: HTMLVideoElement;
       } => ({
-        hls: this._activeSession.hlsVideo,
-        selected: this._activeSession.selected,
+        hls: this._session.hlsVideo,
+        selected: this._session.selected,
         webRtc: this._presentation?.webRtcVideo,
       }),
       getAutoplayWarning: () => this.localize("camera.autoplay_blocked"),
@@ -81,20 +77,9 @@ export class CameraView extends LitElement {
   private readonly _session: CameraLiveSessionController =
     new CameraLiveSessionController(this, {
       getInitialMuted: (): boolean => this._audio.muted,
-      onActiveVideoChanged: (video) => {
-        if (this.source === "home_assistant") {
-          this._audio.handleActiveVideoChanged(video);
-        }
-      },
+      onActiveVideoChanged: (video) =>
+        this._audio.handleActiveVideoChanged(video),
     });
-  private readonly _providerSession = new ProviderLiveSessionResolver(this, {
-    getInitialMuted: (): boolean => this._audio.muted,
-    onActiveVideoChanged: (video) => {
-      if (this.source === "frigate_go2rtc") {
-        this._audio.handleActiveVideoChanged(video);
-      }
-    },
-  });
   private readonly _runtime = new CameraRuntimeController(this);
   private readonly _stageResize = new CameraStageResizeController(
     this,
@@ -118,13 +103,6 @@ export class CameraView extends LitElement {
   public stageResized = false;
   public startUnmutedPcTablet = false;
   public startUnmutedPhone = false;
-  public source: CameraConnectionSource = "home_assistant";
-
-  private get _activeSession() {
-    return this.source === "frigate_go2rtc"
-      ? this._providerSession
-      : this._session;
-  }
 
   private get _presentation(): CameraLivePresentation | undefined {
     return (
@@ -153,23 +131,14 @@ export class CameraView extends LitElement {
       false,
       this.active,
     );
-    const sessionAvailable =
-      this.connect &&
-      this.available &&
-      runtime?.available !== false &&
-      !suspended;
     this._session.configure(
-      this.source === "home_assistant" ? this.api : undefined,
-      this.source === "home_assistant" ? this.entityId : undefined,
-      this.source === "home_assistant" && sessionAvailable,
-      this.lowLatencyHls,
-      !suspended,
-    );
-    this._providerSession.configure(
-      this.source,
       this.api,
       this.entityId,
-      sessionAvailable,
+      this.connect &&
+        this.available &&
+        runtime?.available !== false &&
+        !suspended,
+      this.lowLatencyHls,
       !suspended,
     );
   }
@@ -184,21 +153,21 @@ export class CameraView extends LitElement {
         <${presentationTag}
                 class="live-presentation"
                 .available=${this.connect && this.available}
-                .failed=${this._activeSession.failed}
-                .hlsVideo=${this._activeSession.hlsVideo}
+                .failed=${this._session.failed}
+                .hlsVideo=${this._session.hlsVideo}
                 .lowLatencyHls=${this.lowLatencyHls}
                 .localize=${this.localize}
                 .muted=${this._audio.muted}
                 .notices=${this._toasts.notices}
                 .posterUrl=${this.posterUrl}
                 .posterPriority=${this.active}
-                .selected=${this._activeSession.selected}
-                .sessionRevision=${this._activeSession.revision}
+                .selected=${this._session.selected}
+                .sessionRevision=${this._session.revision}
                 .suspendPending=${this._runtime.pending}
                 .suspendSupported=${runtime?.supported === true}
                 .suspended=${suspended}
-                .transport=${this._activeSession.transport}
-                .webRtcStream=${this._activeSession.webRtcStream}
+                .transport=${this._session.transport}
+                .webRtcStream=${this._session.webRtcStream}
                 .zoomKey=${this.entityId}
                 @camera-media-attached=${this._handleMediaAttached}
                 @camera-media-dimensions=${this._handleMediaDimensions}
@@ -272,9 +241,8 @@ export class CameraView extends LitElement {
         this._runtime.snapshot?.available !== false &&
         this._runtime.snapshot?.suspended !== true,
       entityId: this.entityId,
-      incomingStream: this._activeSession.webRtcStream,
+      incomingStream: this._session.webRtcStream,
       muted: this._audio.muted,
-      source: this.source,
       overlayVisible: this.overlayVisible,
       holdOverlay: () => this._presentation?.holdOverlay() ?? (() => undefined),
       revealOverlay: () => this._presentation?.revealOverlay(),
@@ -381,11 +349,11 @@ export class CameraView extends LitElement {
   private readonly _handleWebRtcDecoded = (
     event: CustomEvent<HTMLVideoElement>,
   ): void => {
-    this._activeSession.handleWebRtcDecoded(event.detail);
+    this._session.handleWebRtcDecoded(event.detail);
   };
 
   private readonly _handleWebRtcPresented = (): void => {
-    this._activeSession.handleWebRtcPresented();
+    this._session.handleWebRtcPresented();
   };
 
   static styles = cameraViewStyles;

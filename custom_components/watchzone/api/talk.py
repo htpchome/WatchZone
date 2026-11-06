@@ -25,7 +25,7 @@ from mashumaro import MissingField
 from webrtc_models import RTCIceCandidateInit
 
 from ..const import DOMAIN
-from ..extensions import get_provider_registry
+from ..providers.home_assistant.talk import async_talk_capability
 from . import runtime_from_hass
 
 _LOGGER = logging.getLogger(__name__)
@@ -55,7 +55,6 @@ def _parse_candidate(value: Any) -> RTCIceCandidateInit:
     {
         vol.Required("type"): f"{DOMAIN}/talk/capability",
         vol.Required("entity_id"): cv.entity_id,
-        vol.Optional("provider", default="home_assistant"): cv.string,
     }
 )
 @async_response
@@ -65,10 +64,7 @@ async def ws_talk_capability(
     """Report whether Home Assistant exposes a usable two-way-audio path."""
     try:
         _require_camera_read(connection, msg["entity_id"])
-        provider = get_provider_registry(hass).talk_capability(msg["provider"])
-        if provider is None:
-            raise HomeAssistantError("Talk is unavailable for this provider")
-        supported = await provider.async_capability(hass, msg["entity_id"])
+        supported = await async_talk_capability(hass, msg["entity_id"])
     except HomeAssistantError as err:
         connection.send_error(msg["id"], "talk_capability_failed", str(err))
         return
@@ -87,7 +83,6 @@ async def ws_talk_capability(
         vol.Required("offer"): str,
         vol.Optional("force_standard", default=False): bool,
         vol.Optional("capability_probe", default=False): bool,
-        vol.Optional("provider", default="home_assistant"): cv.string,
     }
 )
 @async_response
@@ -98,8 +93,7 @@ async def ws_talk_offer(
     entity_id = msg["entity_id"]
     try:
         _require_camera_read(connection, entity_id)
-        provider = get_provider_registry(hass).talk_capability(msg["provider"])
-        if provider is None or not await provider.async_capability(hass, entity_id):
+        if not await async_talk_capability(hass, entity_id):
             raise HomeAssistantError("Camera does not support two-way audio")
         runtime = runtime_from_hass(hass)
 
@@ -112,9 +106,6 @@ async def ws_talk_offer(
             entity_id,
             send_event,
             force_standard=msg["force_standard"] or msg["capability_probe"],
-            provider_id=(
-                msg["provider"] if msg["provider"] != "home_assistant" else None
-            ),
             purpose="talk_probe" if msg["capability_probe"] else "talk",
         )
     except HomeAssistantError as err:

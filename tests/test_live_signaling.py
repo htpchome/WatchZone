@@ -1,8 +1,7 @@
 """Tests for provider-resolved live WebRTC signaling."""
 
 import asyncio
-import sys
-from types import ModuleType, SimpleNamespace
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
 from webrtc_models import RTCIceCandidateInit
@@ -24,7 +23,6 @@ from custom_components.watchzone.providers.frigate.live import (
     _stream_name,
     async_prepare_session,
 )
-from custom_components.watchzone.providers.frigate.source import async_resolve
 
 
 class _FakeHass:
@@ -176,153 +174,6 @@ async def test_talk_resolver_uses_the_registered_talk_capability() -> None:
     live_factory.assert_not_awaited()
     assert resolved is talk_session
     assert fallback_reason is None
-
-
-async def test_explicit_provider_does_not_use_home_assistant_stream_gate() -> None:
-    """A selected provider owns signaling eligibility without HA fallback rules."""
-    provider_session = SimpleNamespace(signaling_path="frigate:trickle_ice")
-    factory = AsyncMock(return_value=provider_session)
-    providers = ProviderRegistry()
-    providers.register(
-        ProviderExtension(
-            api_version=EXTENSION_API_VERSION,
-            provider_id="frigate",
-            entity_platforms=frozenset({"frigate"}),
-            live_signaling=SimpleNamespace(async_prepare_session=factory),
-        )
-    )
-    camera = SimpleNamespace(
-        camera_capabilities=SimpleNamespace(frontend_stream_types=())
-    )
-    service = LiveSignalingService(_FakeHass(), providers)  # type: ignore[arg-type]
-
-    camera_helper = ModuleType("homeassistant.components.camera.helper")
-    camera_helper.get_camera_from_entity_id = Mock(  # type: ignore[attr-defined]
-        return_value=camera
-    )
-    camera_const = ModuleType("homeassistant.components.camera.const")
-    camera_const.StreamType = SimpleNamespace(WEB_RTC="web_rtc")  # type: ignore[attr-defined]
-    with patch.dict(
-        sys.modules,
-        {
-            "homeassistant.components.camera.const": camera_const,
-            "homeassistant.components.camera.helper": camera_helper,
-        },
-    ):
-        created = await service.async_create(
-            "owner",
-            "camera.porch",
-            Mock(),
-            provider_id="frigate",
-        )
-
-    assert factory.await_count == 1
-    assert factory.await_args.args[:3] == (
-        service._hass,  # noqa: SLF001
-        camera,
-        "camera.porch",
-    )
-    assert created.signaling_path == "frigate:trickle_ice"
-    assert created.fallback_reason is None
-
-
-async def test_frigate_browser_sources_keep_instance_routes_distinct() -> None:
-    """Two Frigate entries cannot collide when camera and MQTT names differ."""
-    registry = SimpleNamespace(
-        async_get=Mock(
-            side_effect=lambda entity_id: SimpleNamespace(
-                platform="frigate",
-                config_entry_id={
-                    "camera.home": "entry-home",
-                    "camera.workshop": "entry-workshop",
-                }[entity_id],
-            )
-        )
-    )
-    fake_hass = SimpleNamespace(
-        data={},
-        states={
-            "camera.home": SimpleNamespace(
-                attributes={"camera_name": "porch", "client_id": "home_nvr"}
-            ),
-            "camera.workshop": SimpleNamespace(
-                attributes={
-                    "camera_name": "porch",
-                    "client_id": "workshop_nvr",
-                }
-            ),
-        },
-    )
-
-    with patch(
-        "custom_components.watchzone.providers.frigate.source.er.async_get",
-        return_value=registry,
-    ):
-        home = await async_resolve(fake_hass, "camera.home")  # type: ignore[arg-type]
-        workshop = await async_resolve(  # type: ignore[arg-type]
-            fake_hass, "camera.workshop"
-        )
-
-    assert home.provider_instance_id == "entry-home"
-    assert workshop.provider_instance_id == "entry-workshop"
-    assert home.websocket_path == (
-        "/api/frigate/home_nvr/go2rtc/ws/api/ws?src=porch"
-    )
-    assert (
-        workshop.websocket_path
-        == "/api/frigate/workshop_nvr/go2rtc/ws/api/ws?src=porch"
-    )
-
-
-async def test_frigate_browser_source_uses_config_entry_route_identity() -> None:
-    """Display titles and MQTT topics cannot replace Frigate's route identity."""
-    registry = SimpleNamespace(
-        async_get=Mock(
-            return_value=SimpleNamespace(
-                platform="frigate", config_entry_id="entry-workshop"
-            )
-        )
-    )
-    config_entry = SimpleNamespace(
-        entry_id="entry-workshop",
-        title="Any user-facing server name",
-        data={"topic_prefix": "unrelated/topic"},
-    )
-    route_identity = Mock(return_value="workshop_client")
-    fake_hass = SimpleNamespace(
-        config_entries=SimpleNamespace(
-            async_get_entry=Mock(return_value=config_entry)
-        ),
-        states={
-            "camera.porch": SimpleNamespace(
-                attributes={"camera_name": "porch"}
-            )
-        },
-    )
-
-    with (
-        patch(
-            "custom_components.watchzone.providers.frigate.source.er.async_get",
-            return_value=registry,
-        ),
-        patch(
-            "custom_components.watchzone.providers.frigate.source.async_import_module",
-            new=AsyncMock(
-                return_value=SimpleNamespace(
-                    get_frigate_instance_id_for_config_entry=route_identity
-                )
-            ),
-        ),
-    ):
-        source = await async_resolve(  # type: ignore[arg-type]
-            fake_hass, "camera.porch"
-        )
-
-    route_identity.assert_called_once_with(fake_hass, config_entry)
-    assert source.provider_instance_id == "entry-workshop"
-    assert source.websocket_path == (
-        "/api/frigate/workshop_client/go2rtc/ws/api/ws?src=porch"
-    )
 
 
 async def test_frigate_capability_uses_public_camera_identity_for_go2rtc() -> None:

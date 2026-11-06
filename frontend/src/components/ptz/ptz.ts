@@ -43,7 +43,6 @@ export class PtzComponent extends LitElement {
   };
 
   private _activeDirection?: PtzDirection;
-  private _releaseHoverOverlay?: () => void;
   private readonly _toasts = new ToastManager(this);
   private readonly _session = new PtzSessionController(this, {
     onFailure: () => this._showFailure(),
@@ -58,11 +57,6 @@ export class PtzComponent extends LitElement {
   protected willUpdate(): void {
     if (this.cameraSession)
       this._session.configure(this.api, this.cameraSession, this.cameras);
-  }
-
-  public disconnectedCallback(): void {
-    this._releaseHoverHold();
-    super.disconnectedCallback();
   }
 
   protected render() {
@@ -81,8 +75,7 @@ export class PtzComponent extends LitElement {
         class=${visible ? "ptz-control visible" : "ptz-control"}
         role="group"
         aria-label=${this.localize("ptz.controls")}
-        @pointerenter=${this._acquireHoverHold}
-        @pointerleave=${this._releaseHoverHold}
+        @pointerenter=${this._revealOverlay}
         @focusin=${this._revealOverlay}
       >
         ${DIRECTIONS.map(({ direction, icon }) => {
@@ -173,16 +166,6 @@ export class PtzComponent extends LitElement {
 
   private readonly _revealOverlay = (): void =>
     this._session.camera?.revealOverlay();
-  private readonly _acquireHoverHold = (): void => {
-    if (!this._releaseHoverOverlay) {
-      this._releaseHoverOverlay = this._session.camera?.holdOverlay();
-    }
-    this._session.camera?.revealOverlay();
-  };
-  private readonly _releaseHoverHold = (): void => {
-    this._releaseHoverOverlay?.();
-    this._releaseHoverOverlay = undefined;
-  };
   private readonly _preventDefault = (event: Event): void =>
     event.preventDefault();
 

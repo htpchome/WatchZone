@@ -20,7 +20,6 @@ export const MAX_LIGHTS_PER_CAMERA = 2;
 export const MAX_RETAINED_CAMERA_SESSIONS = MAX_CAMERAS * 2;
 export const MAX_REDUCED_BANDWIDTH_CONNECTED_CAMERAS = 3;
 export const REDUCED_BANDWIDTH_CAMERA_RETENTION_MS = 2 * 60 * 1000;
-export const RETAINED_LIVE_PRESENTATION_GRACE_MS = 2_000;
 export const DEFAULT_LAYOUT_ROOT_NODE_ID = `${APP_ID}:default-layout-root`;
 export const DEFAULT_CAMERA_MODULE_NODE_ID = `${APP_ID}:default-camera-module`;
 export const DEFAULT_PANEL_MODULE_NODE_ID = `${APP_ID}:default-panel-module`;

@@ -127,7 +127,6 @@ function hydrateModule(
     ...node,
     config: {
       cameras: config.cameras.map((camera) => ({
-        source: camera.connection_source,
         entityId: camera.entity_id,
         lowLatencyHls: camera.low_latency_hls,
         startUnmutedPcTablet: camera.start_live_unmuted_pc_tablet,
@@ -173,23 +172,19 @@ function hydrateCameraComponent(
   config: CardConfig,
 ): StageComponentNode | undefined {
   if (node.componentType === TALK_COMPONENT_TYPE) {
-    const cameras = config.cameras
+    const enabledCameraIds = config.cameras
       .filter(({ two_way_talk_enabled: enabled }) => enabled)
-      .map(({ connection_source: source, entity_id: entityId }) => ({
-        entityId,
-        source,
-      }));
-    return cameras.length ? { ...node, config: { cameras } } : undefined;
+      .map(({ entity_id: entityId }) => entityId);
+    return enabledCameraIds.length
+      ? { ...node, config: { enabledCameraIds } }
+      : undefined;
   }
   if (node.componentType === PTZ_COMPONENT_TYPE) {
     const cameras = config.cameras
       .filter(({ ptz_enabled: enabled }) => enabled)
-      .map(({ connection_source, entity_id: entityId }) => ({
+      .map(({ entity_id: entityId }) => ({
         entityId,
-        provider:
-          connection_source === "frigate_go2rtc"
-            ? ("frigate" as const)
-            : ("home_assistant" as const),
+        provider: "home_assistant" as const,
       }));
     return cameras.length ? { ...node, config: { cameras } } : undefined;
   }

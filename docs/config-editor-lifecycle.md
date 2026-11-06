@@ -41,14 +41,6 @@ The first `setConfig` value establishes the baseline. Editing updates the draft
 without replacing that baseline. Cancel discards the draft. Save hands the
 complete normalized draft to Home Assistant.
 
-Nested camera drafts also retain source-specific control intent. Changing a
-camera between Home Assistant and Frigate go2rtc temporarily disables PTZ and
-two-way talk while the selected provider is checked, restores enabled controls
-only when that provider confirms support, and preserves the prior source's
-unsaved choices if the user switches back. `connection_source` participates in
-camera-draft equality; changing only that field must enable Update and update
-the accordion summary.
-
 ## 3. Home Assistant dirty-state integration
 
 The primary editor path requests Home Assistant's `dirtyState` context with a

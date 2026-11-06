@@ -35,10 +35,10 @@ even when the physical camera has no talkback path. Generic HA cameras remain
 unavailable until their integration publishes the native capability. YAML
 omits the option at its default `false` value.
 
-The Frigate go2rtc connection implements capability discovery and signaling in
-its own provider adapter. That behavior must not be added to the Home Assistant
-provider or the provider-neutral component. Other future connection providers
-follow the same boundary.
+Future connection providers implement capability discovery and signaling in
+their own provider adapter. A future Frigate go2rtc connection may use the
+integration API directly; that behavior must not be added to the Home Assistant
+provider or the provider-neutral component.
 
 ## Signaling fallback
 

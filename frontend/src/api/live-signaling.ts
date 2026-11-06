@@ -59,40 +59,6 @@ export function subscribeLiveOffer(
   });
 }
 
-export function subscribeProviderLiveOffer(
-  api: HomeAssistantApi,
-  provider: string,
-  entityId: string,
-  offer: string,
-  callback: (event: LiveOfferEvent) => void,
-): Promise<HomeAssistantUnsubscribe> {
-  return api.subscribeMessage(callback, {
-    type: OFFER_COMMAND,
-    provider,
-    entity_id: entityId,
-    offer,
-  });
-}
-
-export interface BrowserLiveSource {
-  readonly provider: string;
-  readonly provider_instance_id: string;
-  readonly stream_id: string;
-  readonly websocket_path: string;
-}
-
-export function getBrowserLiveSource(
-  api: HomeAssistantApi,
-  provider: string,
-  entityId: string,
-): Promise<BrowserLiveSource> {
-  return api.callWS({
-    type: `${INTEGRATION_ID}/live/source`,
-    provider,
-    entity_id: entityId,
-  });
-}
-
 export function sendLiveCandidate(
   api: HomeAssistantApi,
   entityId: string,

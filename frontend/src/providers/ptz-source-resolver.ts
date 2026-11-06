@@ -6,12 +6,9 @@ import type {
 
 type HomeAssistantPtzProvider =
   typeof import("./home-assistant/ptz").HomeAssistantPtzProvider;
-type FrigatePtzProvider = typeof import("./frigate/ptz").FrigatePtzProvider;
 
 let homeAssistantProviderPromise:
   Promise<InstanceType<HomeAssistantPtzProvider>> | undefined;
-let frigateProviderPromise:
-  Promise<InstanceType<FrigatePtzProvider>> | undefined;
 
 function homeAssistantProvider(): Promise<
   InstanceType<HomeAssistantPtzProvider>
@@ -42,12 +39,8 @@ export class PtzSourceResolver {
 
   private _provider(
     provider: PtzProviderId,
-  ): Promise<
-    InstanceType<HomeAssistantPtzProvider> | InstanceType<FrigatePtzProvider>
-  > {
+  ): Promise<InstanceType<HomeAssistantPtzProvider>> {
     if (provider === "home_assistant") return homeAssistantProvider();
-    return (frigateProviderPromise ??= import("./frigate/ptz").then(
-      ({ FrigatePtzProvider }) => new FrigatePtzProvider(),
-    ));
+    return Promise.reject(new Error("Unsupported PTZ provider."));
   }
 }

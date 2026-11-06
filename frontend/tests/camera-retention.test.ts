@@ -185,53 +185,6 @@ describe("camera presentation retention", () => {
     expect(webRtcFactory).toHaveBeenCalledOnce();
   });
 
-  it("presents retained WebRTC directly after a card replacement", async () => {
-    vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
-    const stream = { getTracks: () => [] } as unknown as MediaStream;
-    const webRtcFactory = vi.fn<ConnectionFactory>(async () => ({
-      stream,
-      transport: "webrtc",
-      close: vi.fn(),
-    }));
-    const hlsFactory = vi.fn<ConnectionFactory>(async () => ({
-      video: document.createElement("video"),
-      transport: "hls_mse",
-      close: vi.fn(),
-    }));
-    installTestMediaSessionManager(
-      new MediaSessionManager(webRtcFactory, hlsFactory),
-    );
-    const api = createApi();
-    const first = createLiveView(api);
-    document.body.append(first);
-    const firstWebRtc = await vi.waitFor(() => {
-      const video = presentation(first)?.webRtcVideo;
-      expect(video?.srcObject).toBe(stream);
-      return video;
-    });
-    firstWebRtc?.dispatchEvent(new Event("playing"));
-    await vi.waitFor(() =>
-      expect(presentation(first)?.selected).toBe("webrtc"),
-    );
-    expect(hlsFactory).toHaveBeenCalledOnce();
-
-    first.remove();
-    const returned = createLiveView(api);
-    document.body.append(returned);
-    const returnedWebRtc = await vi.waitFor(() => {
-      const video = presentation(returned)?.webRtcVideo;
-      expect(video?.srcObject).toBe(stream);
-      return video;
-    });
-    returnedWebRtc?.dispatchEvent(new Event("playing"));
-    await vi.waitFor(() =>
-      expect(presentation(returned)?.selected).toBe("webrtc"),
-    );
-
-    expect(webRtcFactory).toHaveBeenCalledOnce();
-    expect(hlsFactory).toHaveBeenCalledOnce();
-  });
-
   it("attaches and primes an unmuted HLS candidate while it is connecting", async () => {
     vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
     const hlsVideo = document.createElement("video");
@@ -810,7 +763,6 @@ function cameraItem(entityId: string) {
     entityId,
     label: entityId,
     lowLatencyHls: true,
-    source: "home_assistant" as const,
     startUnmutedPcTablet: false,
     startUnmutedPhone: false,
   };

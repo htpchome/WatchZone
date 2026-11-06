@@ -120,58 +120,6 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
-  it("transfers one element-backed presentation without reconnecting", async () => {
-    const video = document.createElement("video");
-    const close = vi.fn();
-    const factory = vi.fn<ConnectionFactory>(async () => ({
-      video,
-      transport: "hls_mse",
-      close,
-    }));
-    const manager = new MediaSessionManager(factory, factory);
-    const api = createApi();
-    const first = manager.acquireHomeAssistantHls(api, "camera.front");
-    await vi.waitFor(() => expect(first.getSnapshot().video).toBe(video));
-    const firstSnapshots: Array<HTMLVideoElement | undefined> = [];
-    first.subscribe((snapshot) => firstSnapshots.push(snapshot.video));
-
-    const second = manager.acquireHomeAssistantHls(api, "camera.front");
-    expect(first.getSnapshot().video).toBeUndefined();
-    expect(second.getSnapshot().video).toBe(video);
-    expect(firstSnapshots.at(-1)).toBeUndefined();
-    expect(factory).toHaveBeenCalledOnce();
-
-    second.release();
-    expect(first.getSnapshot().video).toBe(video);
-    expect(firstSnapshots.at(-1)).toBe(video);
-    expect(factory).toHaveBeenCalledOnce();
-    expect(close).not.toHaveBeenCalled();
-
-    first.release();
-    manager.closeAll();
-  });
-
-  it("shares MediaStreams across concurrent presentations", async () => {
-    const stream = createStream();
-    const factory = vi.fn<ConnectionFactory>(async () => ({
-      stream,
-      transport: "webrtc",
-      close: vi.fn(),
-    }));
-    const manager = new MediaSessionManager(factory);
-    const api = createApi();
-    const first = manager.acquireHomeAssistant(api, "camera.front");
-    const second = manager.acquireHomeAssistant(api, "camera.front");
-
-    await vi.waitFor(() => expect(first.getSnapshot().stream).toBe(stream));
-    expect(second.getSnapshot().stream).toBe(stream);
-    expect(factory).toHaveBeenCalledOnce();
-
-    first.release();
-    second.release();
-    manager.closeAll();
-  });
-
   it("does not treat pagehide as final document teardown", async () => {
     const close = vi.fn();
     const factory = vi.fn<ConnectionFactory>(async () => ({
