@@ -76,12 +76,24 @@ export const lightControlStyles = css`
     transition: block-size var(--wzc-light-transition-duration) ease;
   }
 
-  .light-button svg,
-  .light-button ha-icon,
+  .light-button-icon {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    inline-size: 1.35rem;
+    block-size: 1.35rem;
+    line-height: 0;
+    pointer-events: none;
+  }
+
+  .light-button-icon svg,
+  .light-button-icon ha-icon,
   .power-button svg {
     display: block;
     inline-size: 1.35rem;
     block-size: 1.35rem;
+    margin: 0;
     pointer-events: none;
   }
 

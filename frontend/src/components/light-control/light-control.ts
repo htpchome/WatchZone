@@ -146,7 +146,13 @@ export class LightControlComponent extends LitElement {
       @keyup=${this._handleKeyUp}
       @focus=${this._revealOverlay}
     >
-      ${icon ? html`<ha-icon .icon=${icon}></ha-icon>` : renderIcon("lightbulb")}
+      <span class="light-button-icon">
+        ${
+          icon
+            ? html`<ha-icon .icon=${icon}></ha-icon>`
+            : renderIcon("lightbulb")
+        }
+      </span>
     </button>`;
   }
 

@@ -169,6 +169,7 @@ export const cardEditorStyles = css`
 
   .camera-dialog-content {
     padding: 0.75rem 1rem;
+    container-type: inline-size;
   }
 
   .camera-dialog-accordion {
@@ -202,15 +203,14 @@ export const cardEditorStyles = css`
   }
 
   .linked-light-settings,
-  .linked-light-entry,
-  .add-light-form {
+  .linked-light-entry {
     display: grid;
     gap: 0.65rem;
   }
 
   .linked-light-row {
     display: grid;
-    grid-template-columns: 1.5rem minmax(0, 1fr) auto;
+    grid-template-columns: 1.5rem minmax(0, 1fr) minmax(8rem, 11rem) auto;
     align-items: center;
     gap: 0.55rem;
     min-block-size: 2.75rem;
@@ -258,7 +258,36 @@ export const cardEditorStyles = css`
   }
 
   .light-icon-selector {
-    padding-inline: 0.45rem;
+    min-inline-size: 0;
+  }
+
+  .add-light-form {
+    display: grid;
+    gap: 0.65rem;
+    padding: 0.75rem;
+    background: var(--wzc-color-surface-secondary);
+    border-inline-start: 3px solid var(--wzc-color-primary);
+    border-radius: var(--wzc-radius-large);
+  }
+
+  .add-light-heading {
+    font-size: var(--wzc-font-size-small);
+  }
+
+  .add-light-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  .add-light-feedback {
+    margin: 0;
+    padding: 0.4rem 0.55rem;
+    color: var(--wzc-color-error);
+    background: var(--wzc-color-fill-error-quiet);
+    border: 1px solid var(--wzc-color-border-danger);
+    border-radius: var(--wzc-radius-medium);
+    font-size: var(--wzc-font-size-small);
   }
 
   .add-light {
@@ -312,6 +341,20 @@ export const cardEditorStyles = css`
     .remove-light:hover,
     .add-camera:hover:not(:disabled) {
       background: transparent;
+    }
+  }
+
+  @container (max-width: 30rem) {
+    .linked-light-row {
+      grid-template-columns: 1.5rem minmax(0, 1fr) auto;
+    }
+
+    .linked-light-row .light-icon-selector {
+      grid-column: 1 / -1;
+    }
+
+    .add-light-fields {
+      grid-template-columns: 1fr;
     }
   }
 `;

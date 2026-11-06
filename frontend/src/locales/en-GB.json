@@ -18,6 +18,8 @@
   "talk.unmute_microphone": "Unmute microphone",
   "editor.ptz": "PTZ Controls",
   "editor.icon": "Icon",
+  "editor.linked_light": "Linked Light",
+  "editor.light_already_linked": "This light is already linked to this camera.",
   "editor.camera_title": "Camera Name",
   "editor.camera_title_placeholder": "Display name (optional)",
   "editor.enable_ptz": "Enable PTZ Controls",

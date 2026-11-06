@@ -6,6 +6,9 @@
   light entities. Each reference may also store an optional Material Design
   icon selected with Home Assistant's icon selector. WatchZone does not create
   or duplicate light entities.
+- The camera editor selects the entity and optional icon together before a
+  linked light is added. Selecting an entity already linked to that camera
+  produces immediate inline feedback and cannot create a duplicate.
 - The light control is an independently placeable, lazily loaded Stage
   component. The built-in Stage places it in the camera module's overlay slot;
   the component does not import the camera module or another component.
@@ -36,6 +39,9 @@ public `light.turn_on` and `light.turn_off` services with an entity target and
 uses `brightness_pct` for dimming. Optimistic fill is presentation state only
 and is replaced by the next Home Assistant entity update. Permission or service
 failures remain local to the component and produce a bounded error toast.
+After a Home Assistant restart, the control accepts the restored entity state
+as soon as Home Assistant republishes it; WatchZone does not poll or preserve a
+stale light state while the owning integration is still starting.
 
 ## Lifecycle and validation
 

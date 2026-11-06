@@ -940,7 +940,8 @@ test("camera editor configures lights and confirms accessible removal", async ({
 
   await items.nth(3).locator("summary").click();
   await editor.locator(".add-light").click();
-  await editor.locator(".add-light-form ha-selector").evaluate((element) => {
+  await expect(editor.locator(".add-light-form")).toContainText("Linked Light");
+  await editor.locator(".pending-light-selector").evaluate((element) => {
     element.dispatchEvent(
       new CustomEvent("value-changed", {
         bubbles: true,
@@ -949,12 +950,46 @@ test("camera editor configures lights and confirms accessible removal", async ({
       }),
     );
   });
+  await editor.locator(".pending-light-icon-selector").evaluate((element) => {
+    element.dispatchEvent(
+      new CustomEvent("value-changed", {
+        bubbles: true,
+        composed: true,
+        detail: { value: "mdi:coach-lamp" },
+      }),
+    );
+  });
   await editor.locator('.add-light-form ha-button[variant="brand"]').click();
   await expect(editor.locator(".linked-light-row")).toHaveCount(1);
+  await expect(
+    editor.locator(".linked-light-row .light-icon-selector"),
+  ).toHaveCount(1);
   await expect(editor.locator(".remove-light")).toHaveAttribute(
     "title",
     "Remove light",
   );
+
+  await editor.locator(".add-light").click();
+  await editor.locator(".pending-light-selector").evaluate((element) => {
+    element.dispatchEvent(
+      new CustomEvent("value-changed", {
+        bubbles: true,
+        composed: true,
+        detail: { value: "light.porch" },
+      }),
+    );
+  });
+  await expect(editor.locator(".add-light-feedback")).toContainText(
+    "already linked",
+  );
+  expect(
+    await editor
+      .locator('.add-light-form ha-button[variant="brand"]')
+      .evaluate(
+        (element) => (element as HTMLElement & { disabled?: boolean }).disabled,
+      ),
+  ).toBe(true);
+  await editor.locator('.add-light-form ha-button[variant="neutral"]').click();
 
   const titleInput = editor.locator(".camera-title-field ha-input");
   await expect(titleInput).toHaveAttribute("label", "Camera Name");

@@ -158,6 +158,46 @@ describe("linked-light component", () => {
     ).toBe("mdi:coach-lamp");
   });
 
+  it("uses the restored Home Assistant light state after a restart", async () => {
+    const context = new CameraSessionContext();
+    const element = document.createElement(LIGHT_TAG) as LightControlComponent;
+    element.cameraSession = context;
+    element.cameras = cameraLights({
+      "camera.front": ["light.porch"],
+    });
+    element.hass = createHass(vi.fn(async () => undefined));
+    document.body.append(element);
+    context.publish({}, activeCamera("camera.front"));
+    await element.updateComplete;
+
+    expect(
+      element.shadowRoot
+        ?.querySelector(".light-button")
+        ?.getAttribute("aria-pressed"),
+    ).toBe("true");
+
+    const restored = createHass(vi.fn(async () => undefined));
+    element.hass = {
+      ...restored,
+      states: {
+        ...restored.states,
+        "light.porch": {
+          entity_id: "light.porch",
+          state: "off",
+          attributes: { brightness: 128, friendly_name: "Porch" },
+        },
+      },
+    };
+    await element.updateComplete;
+
+    const button = element.shadowRoot?.querySelector(
+      ".light-button",
+    ) as HTMLElement;
+    expect(button.getAttribute("aria-pressed")).toBe("false");
+    expect(button.getAttribute("style")).toContain("--wzc-light-level:0%");
+    expect(button.querySelector(".light-button-icon")).not.toBeNull();
+  });
+
   it("switches linked controls with the active camera and cleans up presses", async () => {
     const callService = vi.fn(async () => undefined);
     const context = new CameraSessionContext();

@@ -287,7 +287,7 @@ describe("watchzone-card-editor", () => {
       (editor.shadowRoot?.querySelector(".add-light") as HTMLElement).click();
       await editor.updateComplete;
       editor.shadowRoot
-        ?.querySelector(".add-light-form ha-selector")
+        ?.querySelector(".pending-light-selector")
         ?.dispatchEvent(
           new CustomEvent("value-changed", {
             bubbles: true,
@@ -299,6 +299,16 @@ describe("watchzone-card-editor", () => {
     };
 
     await selectLight("light.porch");
+    editor.shadowRoot
+      ?.querySelector(".pending-light-icon-selector")
+      ?.dispatchEvent(
+        new CustomEvent("value-changed", {
+          bubbles: true,
+          composed: true,
+          detail: { value: "mdi:coach-lamp" },
+        }),
+      );
+    await editor.updateComplete;
     (
       editor.shadowRoot?.querySelector(
         '.add-light-form ha-button[variant="brand"]',
@@ -311,6 +321,35 @@ describe("watchzone-card-editor", () => {
     expect(
       editor.shadowRoot?.querySelector(".remove-light")?.getAttribute("title"),
     ).toBe("Remove light");
+    expect(
+      editor.shadowRoot
+        ?.querySelector(".linked-light-row")
+        ?.contains(editor.shadowRoot.querySelector(".light-icon-selector")!),
+    ).toBe(true);
+    expect(
+      (
+        editor.shadowRoot?.querySelector(".linked-light-row > ha-icon") as
+          (HTMLElement & { icon?: string }) | null
+      )?.icon,
+    ).toBe("mdi:coach-lamp");
+
+    await selectLight("light.porch");
+    expect(
+      editor.shadowRoot?.querySelector(".add-light-feedback")?.textContent,
+    ).toContain("already linked");
+    expect(
+      (
+        editor.shadowRoot?.querySelector(
+          '.add-light-form ha-button[variant="brand"]',
+        ) as HTMLElement & { disabled?: boolean }
+      ).disabled,
+    ).toBe(true);
+    (
+      editor.shadowRoot?.querySelector(
+        '.add-light-form ha-button[variant="neutral"]',
+      ) as HTMLElement
+    ).click();
+    await editor.updateComplete;
 
     await selectLight("light.driveway");
     (

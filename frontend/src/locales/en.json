@@ -33,6 +33,8 @@
   "editor.lights": "Lights",
   "editor.light": "Light",
   "editor.icon": "Icon",
+  "editor.linked_light": "Linked Light",
+  "editor.light_already_linked": "This light is already linked to this camera.",
   "editor.light_count": "{count} of {maximum} configured",
   "editor.add_light": "Add light",
   "editor.remove_light": "Remove light",

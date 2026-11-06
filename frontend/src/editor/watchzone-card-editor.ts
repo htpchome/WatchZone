@@ -109,6 +109,7 @@ export class CardEditor extends LitElement {
   private _cameraTitleInput = "";
   private _addingLight = false;
   private _pendingLightEntityId = "";
+  private _pendingLightIcon = "";
   private _pendingRemoveCameraIndex?: number;
   private _talkCapability?: boolean;
   private _talkCapabilityGeneration = 0;
@@ -614,6 +615,16 @@ export class CardEditor extends LitElement {
               <strong>${name}</strong>
               <small>${entityId}</small>
             </span>
+            <ha-selector
+              class="light-icon-selector"
+              data-light-index=${String(index)}
+              label=${this._t("editor.icon")}
+              .hass=${this._hass}
+              .selector=${ICON_SELECTOR}
+              .value=${light.icon ?? "mdi:lightbulb"}
+              .required=${false}
+              @value-changed=${this._handleLightIconChange}
+            ></ha-selector>
             <button
               class="remove-light"
               type="button"
@@ -625,29 +636,44 @@ export class CardEditor extends LitElement {
               ${renderIcon("close")}
             </button>
           </div>
-          <ha-selector
-            class="light-icon-selector"
-            data-light-index=${String(index)}
-            label=${this._t("editor.icon")}
-            .hass=${this._hass}
-            .selector=${ICON_SELECTOR}
-            .value=${light.icon ?? "mdi:lightbulb"}
-            .required=${false}
-            @value-changed=${this._handleLightIconChange}
-          ></ha-selector>
         </div>`;
       })}
       ${
         this._addingLight
           ? html`<div class="add-light-form">
-              <ha-selector
-                label=${this._t("editor.light")}
-                .hass=${this._hass}
-                .selector=${LIGHT_SELECTOR}
-                .value=${this._pendingLightEntityId}
-                .required=${true}
-                @value-changed=${this._handleLightEntityChange}
-              ></ha-selector>
+              <strong class="add-light-heading"
+                >${this._t("editor.linked_light")}</strong
+              >
+              <div class="add-light-fields">
+                <ha-selector
+                  class="pending-light-selector"
+                  label=${this._t("editor.light")}
+                  aria-invalid=${
+                    this._pendingLightIsDuplicate() ? "true" : "false"
+                  }
+                  .hass=${this._hass}
+                  .selector=${LIGHT_SELECTOR}
+                  .value=${this._pendingLightEntityId}
+                  .required=${true}
+                  @value-changed=${this._handleLightEntityChange}
+                ></ha-selector>
+                <ha-selector
+                  class="pending-light-icon-selector"
+                  label=${this._t("editor.icon")}
+                  .hass=${this._hass}
+                  .selector=${ICON_SELECTOR}
+                  .value=${this._pendingLightIcon}
+                  .required=${false}
+                  @value-changed=${this._handlePendingLightIconChange}
+                ></ha-selector>
+              </div>
+              ${
+                this._pendingLightIsDuplicate()
+                  ? html`<p class="add-light-feedback" role="alert">
+                      ${this._t("editor.light_already_linked")}
+                    </p>`
+                  : nothing
+              }
               <div class="add-light-actions">
                 <ha-button
                   appearance="plain"
@@ -818,14 +844,25 @@ export class CardEditor extends LitElement {
   private readonly _startAddingLight = (): void => {
     this._addingLight = true;
     this._pendingLightEntityId = "";
+    this._pendingLightIcon = "";
     this.requestUpdate();
   };
 
   private readonly _cancelAddingLight = (): void => {
     this._addingLight = false;
     this._pendingLightEntityId = "";
+    this._pendingLightIcon = "";
     this.requestUpdate();
   };
+
+  private _pendingLightIsDuplicate(): boolean {
+    return Boolean(
+      this._pendingLightEntityId &&
+      this._cameraDraft?.lights.some(
+        ({ entity_id: entityId }) => entityId === this._pendingLightEntityId,
+      ),
+    );
+  }
 
   private _pendingLightCanCommit(): boolean {
     return Boolean(
@@ -844,7 +881,13 @@ export class CardEditor extends LitElement {
       ...this._cameraDraft,
       lights: [
         ...this._cameraDraft.lights,
-        { entity_id: this._pendingLightEntityId },
+        {
+          entity_id: this._pendingLightEntityId,
+          ...(this._pendingLightIcon &&
+          this._pendingLightIcon !== "mdi:lightbulb"
+            ? { icon: this._pendingLightIcon }
+            : {}),
+        },
       ],
     };
     this._cancelAddingLight();
@@ -879,6 +922,14 @@ export class CardEditor extends LitElement {
       ...(value && value !== "mdi:lightbulb" ? { icon: value } : {}),
     };
     this._cameraDraft = { ...this._cameraDraft, lights };
+    this.requestUpdate();
+  };
+
+  private readonly _handlePendingLightIconChange = (
+    event: ValueChangedEvent,
+  ): void => {
+    this._pendingLightIcon =
+      typeof event.detail.value === "string" ? event.detail.value.trim() : "";
     this.requestUpdate();
   };
 
