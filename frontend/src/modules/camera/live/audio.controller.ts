@@ -9,7 +9,7 @@ import {
 import { getMediaSessionManager } from "../../../core/media-session-manager";
 
 interface AudioMediaState {
-  readonly element?: HTMLVideoElement;
+  readonly hls?: HTMLVideoElement;
   readonly selected?: PresentedLiveSource;
   readonly webRtc?: HTMLVideoElement;
 }
@@ -114,21 +114,21 @@ export class CameraAudioController implements ReactiveController {
   }
 
   public syncMediaState(): void {
-    const { element, selected, webRtc } = this._callbacks.getMediaState();
+    const { hls, selected, webRtc } = this._callbacks.getMediaState();
     if (webRtc) {
       setMediaElementMuted(
         webRtc,
         selected && selected !== "webrtc" ? true : this._muted,
       );
     }
-    if (element) {
-      setMediaElementMuted(element, selected === "webrtc" ? true : this._muted);
+    if (hls) {
+      setMediaElementMuted(hls, selected === "webrtc" ? true : this._muted);
     }
   }
 
   public toggleUserMute(): void {
-    // User intent is independent from temporary forced mute and talk state.
-    // Toggling the effective value can never unmute while either is active.
+    // Temporary forced-mute and talk state must not replace explicit user
+    // intent. Toggle the stored preference, not the effective presentation.
     this.setUserMuted(!this._desiredMuted);
   }
 

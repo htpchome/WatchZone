@@ -88,7 +88,7 @@ export class CameraLivePresentation extends LitElement {
   public static properties = {
     available: { attribute: false, type: Boolean },
     failed: { attribute: false, type: Boolean },
-    elementVideo: { attribute: false },
+    hlsVideo: { attribute: false },
     lowLatencyHls: { attribute: false, type: Boolean },
     localize: { attribute: false },
     muted: { attribute: false, type: Boolean },
@@ -121,7 +121,7 @@ export class CameraLivePresentation extends LitElement {
 
   public available = false;
   public failed = false;
-  public elementVideo?: HTMLVideoElement;
+  public hlsVideo?: HTMLVideoElement;
   public lowLatencyHls = true;
   public localize: LocalizeFunction = englishLocalize;
   public muted = true;
@@ -218,6 +218,9 @@ export class CameraLivePresentation extends LitElement {
       (resolvedSource &&
         (this._visibility.sourceVisible || this._visibility.visible)),
     );
+    const elementPresentationUnavailable = Boolean(
+      this.selected && this.selected !== "webrtc" && !this.hlsVideo,
+    );
     return staticHtml`
       <div
         class="viewport"
@@ -253,7 +256,11 @@ export class CameraLivePresentation extends LitElement {
           ${
             this.suspended
               ? this._renderSuspended()
-              : html`${!this.selected ? this._renderFallback() : nothing}
+              : html`${
+                    !this.selected || elementPresentationUnavailable
+                      ? this._renderFallback()
+                      : nothing
+                  }
                   <div
                     class="hls-host"
                     ?hidden=${this.selected === "webrtc"}
@@ -363,33 +370,18 @@ export class CameraLivePresentation extends LitElement {
       }
     }
     const hlsHost = this.renderRoot.querySelector(".hls-host");
-    const previousElement = changed.get("elementVideo");
-    if (
-      previousElement instanceof HTMLVideoElement &&
-      previousElement !== this.elementVideo &&
-      previousElement.parentElement === hlsHost
-    ) {
-      previousElement.remove();
-    }
-    if (
-      hlsHost &&
-      this.elementVideo &&
-      this.elementVideo.parentElement !== hlsHost
-    ) {
-      this.elementVideo.setAttribute(
-        "aria-label",
-        this.localize("camera.live"),
-      );
-      suppressNativePictureInPicture(this.elementVideo);
-      setMediaElementMuted(this.elementVideo, this.muted);
-      hlsHost.append(this.elementVideo);
-      this._emitMediaAttached(this.elementVideo);
+    if (hlsHost && this.hlsVideo && this.hlsVideo.parentElement !== hlsHost) {
+      this.hlsVideo.setAttribute("aria-label", this.localize("camera.live"));
+      suppressNativePictureInPicture(this.hlsVideo);
+      setMediaElementMuted(this.hlsVideo, this.muted);
+      hlsHost.append(this.hlsVideo);
+      this._emitMediaAttached(this.hlsVideo);
     }
     this._setActiveVideo(
       this.selected === "webrtc"
         ? webRtcVideo
         : this.selected
-          ? this.elementVideo
+          ? this.hlsVideo
           : undefined,
     );
     if (changed.has("selected") && this.selected === "webrtc") {
@@ -590,7 +582,7 @@ export class CameraLivePresentation extends LitElement {
     return this.selected === "webrtc"
       ? this.webRtcVideo
       : this.selected
-        ? this.elementVideo
+        ? this.hlsVideo
         : undefined;
   }
 

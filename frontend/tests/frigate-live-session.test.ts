@@ -23,9 +23,7 @@ describe("Frigate live session selection", () => {
     provider.acquireWebRtc.mockReset();
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+  afterEach(() => vi.useRealTimers());
 
   it("starts MSE and WebRTC together, then upgrades without a second session", async () => {
     const mse = lease();
@@ -38,15 +36,8 @@ describe("Frigate live session selection", () => {
       onActiveVideoChanged: activeVideoChanged,
     });
 
-    controller.configure(api(), "camera.front", true, {
-      lowLatencyHls: true,
-      retainWhenInactive: true,
-    });
+    controller.configure(api(), "camera.front", true);
     controller.connect();
-    await vi.waitFor(() => {
-      expect(provider.acquireWebRtc).toHaveBeenCalledOnce();
-    });
-    webRtc.publish({ state: "connecting" });
     await vi.waitFor(() => {
       expect(provider.acquireMse).toHaveBeenCalledOnce();
       expect(provider.acquireWebRtc).toHaveBeenCalledOnce();
@@ -75,31 +66,26 @@ describe("Frigate live session selection", () => {
     expect(provider.acquireWebRtc).toHaveBeenCalledOnce();
   });
 
-  it("reattaches retained WebRTC without painting a new MSE fallback", async () => {
-    const webRtc = lease();
+  it("presents retained WebRTC without restarting MSE", async () => {
+    vi.useFakeTimers();
+    const stream = {} as MediaStream;
+    const webRtc = lease({ state: "live", stream, transport: "webrtc" }, true);
     provider.acquireWebRtc.mockResolvedValue(webRtc.value);
-    const activeVideoChanged = vi.fn();
+    provider.acquireMse.mockResolvedValue(lease().value);
     const controller = new FrigateCameraLiveSessionController(new Host(), {
       getInitialMuted: () => true,
-      onActiveVideoChanged: activeVideoChanged,
+      onActiveVideoChanged: vi.fn(),
     });
 
-    controller.configure(api(), "camera.front", true, {
-      lowLatencyHls: true,
-      retainWhenInactive: true,
-    });
+    controller.configure(api(), "camera.front", true);
     controller.connect();
-    await vi.waitFor(() => {
-      expect(provider.acquireWebRtc).toHaveBeenCalledOnce();
-    });
-
+    await vi.waitFor(() => expect(controller.webRtcStream).toBe(stream));
     expect(provider.acquireMse).not.toHaveBeenCalled();
-    const stream = {} as MediaStream;
-    webRtc.publish({ state: "live", stream, transport: "webrtc" });
-    const video = document.createElement("video");
-    controller.handleWebRtcDecoded(video);
+
+    controller.handleWebRtcDecoded(document.createElement("video"));
+    await vi.advanceTimersByTimeAsync(10_000);
     expect(controller.selected).toBe("webrtc");
-    expect(activeVideoChanged).toHaveBeenLastCalledWith(video);
+    expect(provider.acquireMse).not.toHaveBeenCalled();
   });
 });
 
@@ -119,7 +105,10 @@ function api(): HomeAssistantApi {
   };
 }
 
-function lease() {
+function lease(
+  initial: MediaSessionSnapshot = { state: "connecting" },
+  reusedConnection = false,
+) {
   let publishSnapshot: ((snapshot: MediaSessionSnapshot) => void) | undefined;
   return {
     publish(snapshot: MediaSessionSnapshot): void {
@@ -128,8 +117,10 @@ function lease() {
     value: {
       discard: vi.fn(),
       release: vi.fn(),
+      reusedConnection,
       subscribe: vi.fn((callback: (snapshot: MediaSessionSnapshot) => void) => {
         publishSnapshot = callback;
+        callback(initial);
         return vi.fn();
       }),
     },

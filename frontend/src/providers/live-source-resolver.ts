@@ -68,7 +68,7 @@ interface ProviderSessionCallbacks {
 
 interface ProviderLiveSession {
   readonly failed: boolean;
-  readonly elementVideo?: HTMLVideoElement;
+  readonly hlsVideo?: HTMLVideoElement;
   readonly revision: number;
   readonly selected?: PresentedLiveSource;
   readonly transport?: MediaTransport;
@@ -78,10 +78,7 @@ interface ProviderLiveSession {
     api: HomeAssistantApi | undefined,
     entityId: string | undefined,
     available: boolean,
-    options: {
-      readonly lowLatencyHls: boolean;
-      readonly retainWhenInactive: boolean;
-    },
+    retainWhenInactive?: boolean,
   ): void;
   disconnect(): void;
   handleWebRtcDecoded(video: HTMLVideoElement): void;
@@ -96,9 +93,7 @@ export class ProviderLiveSessionResolver implements ReactiveController {
   private _connected = false;
   private _entityId?: string;
   private _generation = 0;
-  private _lowLatencyHls = true;
   private _retainWhenInactive = true;
-  private _source?: CameraConnectionSource;
 
   public constructor(
     private readonly _host: ReactiveControllerHost,
@@ -111,8 +106,8 @@ export class ProviderLiveSessionResolver implements ReactiveController {
     return this._adapter?.failed ?? false;
   }
 
-  public get elementVideo(): HTMLVideoElement | undefined {
-    return this._adapter?.elementVideo;
+  public get hlsVideo(): HTMLVideoElement | undefined {
+    return this._adapter?.hlsVideo;
   }
 
   public get revision(): number {
@@ -146,30 +141,16 @@ export class ProviderLiveSessionResolver implements ReactiveController {
     api: HomeAssistantApi | undefined,
     entityId: string | undefined,
     available: boolean,
-    lowLatencyHls = true,
     retainWhenInactive = true,
   ): void {
-    const sourceChanged = this._source !== source;
-    this._source = source;
-    this._api = api;
-    this._entityId = entityId;
-    this._available = available;
-    this._lowLatencyHls = lowLatencyHls;
+    const providerSelected = source === "frigate_go2rtc";
+    this._api = providerSelected ? api : undefined;
+    this._entityId = providerSelected ? entityId : undefined;
+    this._available = providerSelected && available;
     this._retainWhenInactive = retainWhenInactive;
-    if (sourceChanged && this._adapter) {
+    if (!providerSelected || !api || !entityId) {
       this._generation += 1;
-      this._adapter.configure(undefined, undefined, false, {
-        lowLatencyHls,
-        retainWhenInactive,
-      });
-      this._adapter.disconnect();
-      this._adapter = undefined;
-    }
-    if (!api || !entityId) {
-      this._adapter?.configure(undefined, undefined, false, {
-        lowLatencyHls,
-        retainWhenInactive,
-      });
+      this._adapter?.configure(undefined, undefined, false, retainWhenInactive);
       return;
     }
     if (this._adapter) {
@@ -177,25 +158,14 @@ export class ProviderLiveSessionResolver implements ReactiveController {
       return;
     }
     const generation = ++this._generation;
-    const adapterPromise =
-      source === "frigate_go2rtc"
-        ? import("./frigate/live/session.controller").then(
-            ({ FrigateCameraLiveSessionController }) =>
-              FrigateCameraLiveSessionController,
-          )
-        : import("./home-assistant/live/session.controller").then(
-            ({ HomeAssistantCameraLiveSessionController }) =>
-              HomeAssistantCameraLiveSessionController,
-          );
-    void adapterPromise
-      .then((SessionController) => {
+    void import("./frigate/live/session.controller")
+      .then(({ FrigateCameraLiveSessionController }) => {
         if (generation !== this._generation) return;
-        const adapter: ProviderLiveSession = new SessionController(
+        this._adapter = new FrigateCameraLiveSessionController(
           this._host,
           this._callbacks,
         );
-        this._adapter = adapter;
-        if (this._connected) adapter.connect();
+        if (this._connected) this._adapter.connect();
         this._syncAdapter();
         this._host.requestUpdate();
       })
@@ -213,9 +183,11 @@ export class ProviderLiveSessionResolver implements ReactiveController {
   }
 
   private _syncAdapter(): void {
-    this._adapter?.configure(this._api, this._entityId, this._available, {
-      lowLatencyHls: this._lowLatencyHls,
-      retainWhenInactive: this._retainWhenInactive,
-    });
+    this._adapter?.configure(
+      this._api,
+      this._entityId,
+      this._available,
+      this._retainWhenInactive,
+    );
   }
 }

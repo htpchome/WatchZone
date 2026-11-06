@@ -188,18 +188,22 @@ camera, the new presentation reattaches that stream directly. It must not paint
 HLS or MSE first and simulate a fresh fallback-to-WebRTC takeover. The fallback
 starts normally when the retained WebRTC session is absent, failed, or evicted.
 The presentation does not infer this from a separate pool query or cached
-transport flag. It first acquires the canonical preferred lease; that lease's
-validated snapshot is the sole authority for retained-health, connecting, and
-failed state. A healthy retained preferred lease suppresses fallback, while a
-cold connecting or failed preferred lease permits the provider's fallback to
-start. This prevents stale pool metadata from hiding fallback indefinitely.
+transport flag. It first acquires the canonical preferred lease. The manager
+marks whether that lease reused an existing connection, while the lease
+snapshot remains the sole authority for connecting, live, and failed state. A
+reused live preferred lease suppresses fallback. A cold, connecting, failed,
+or streamless preferred lease permits the provider's fallback to start. If a
+reused stream does not produce a presentation frame within the centralized
+grace period, fallback starts without discarding the retained preferred lease.
+This prevents both fallback flashes and stale retained media from hiding the
+fallback indefinitely.
 
-One camera presentation owns exactly one provider-session resolver. Changing
-connection source replaces the active provider adapter behind that resolver;
-inactive provider adapters cannot publish media elements, clear audio targets,
-or influence selection. Provider adapters remain independently implemented and
-share only the document-scoped session manager and provider-neutral session
-contract.
+The camera presentation owns one Home Assistant session controller and one
+lazy non-Home-Assistant provider boundary. Exactly one is active for the
+configured source. Inactive controllers cannot publish media elements, clear
+audio targets, or influence selection. Provider controllers remain
+independently implemented and share only the document-scoped manager and
+provider-neutral lease contract.
 
 ### 6.2 Editor and preview
 
@@ -216,8 +220,8 @@ same key merely because the preview uses a different component tree.
   remaining presentation reclaims the same media element; this handoff must
   not invoke the connection factory or renegotiate the source.
 - A retained session that reports failure while parked is not considered
-  reusable. Its next visible lease starts one bounded reconnect rather than
-  presenting the stale media object as live.
+  reusable. Its next visible lease enters the normal bounded reconnect path
+  rather than presenting the failed media object as live.
 
 ### 6.3 Home Assistant route navigation
 
@@ -314,11 +318,12 @@ Every connection adapter must provide equivalent operations for:
 - Reconnecting under manager policy.
 - Closing idempotently and completely.
 
-Health reporting describes the live transport itself, not merely the
-manager's last state transition. Before promoting a parked session back to
-live, the manager validates adapter health. An unhealthy retained connection
-is closed and reconnected once through the normal bounded path rather than
-being presented as reusable.
+Adapters report asynchronous transport failure through the session callback;
+the manager serializes and bounds reconnect work. A retained stream that is
+still reported live must also produce a frame for the new presentation within
+the shared grace period. Failure to present starts the provider-owned fallback
+without inventing a second retry loop or immediately destroying the preferred
+transport.
 
 The manager owns policy. An adapter owns transport mechanics. Adapters must not
 invent independent retention, audio-preference, retry, or eviction policies.

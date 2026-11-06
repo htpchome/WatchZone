@@ -1,6 +1,7 @@
 import type { ReactiveControllerHost } from "lit";
 
 import type { PresentedLiveSource } from "../../../core/camera-connection-source";
+import { RETAINED_LIVE_PRESENTATION_GRACE_MS } from "../../../core/constants";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
 import type {
   MediaSessionLease,
@@ -24,11 +25,13 @@ export class FrigateCameraLiveSessionController {
   private _mseLease?: MediaSessionLease;
   private _mseSnapshot: MediaSessionSnapshot = { state: "new" };
   private _mseUnsubscribe?: () => void;
+  private _preferredPresentationTimer?: ReturnType<typeof setTimeout>;
   private _revision = 0;
   private _selected?: PresentedLiveSource;
   private _transport?: MediaTransport;
   private _webRtcDecoded = false;
   private _webRtcLease?: MediaSessionLease;
+  private _webRtcReusedConnection = false;
   private _webRtcSnapshot: MediaSessionSnapshot = { state: "new" };
   private _webRtcUnsubscribe?: () => void;
   private readonly _provider = new FrigateLiveProvider();
@@ -44,7 +47,7 @@ export class FrigateCameraLiveSessionController {
       this._webRtcSnapshot.state === "failed"
     );
   }
-  public get elementVideo(): HTMLVideoElement | undefined {
+  public get hlsVideo(): HTMLVideoElement | undefined {
     return this._mseSnapshot.video;
   }
   public get revision(): number {
@@ -73,12 +76,8 @@ export class FrigateCameraLiveSessionController {
     api: HomeAssistantApi | undefined,
     entityId: string | undefined,
     available: boolean,
-    options: {
-      readonly lowLatencyHls: boolean;
-      readonly retainWhenInactive: boolean;
-    },
+    retainWhenInactive = true,
   ): void {
-    const { retainWhenInactive } = options;
     const changed =
       this._api?.identity !== api?.identity || this._entityId !== entityId;
     this._api = api;
@@ -93,6 +92,7 @@ export class FrigateCameraLiveSessionController {
 
   public handleWebRtcDecoded(video: HTMLVideoElement): void {
     if (this._webRtcDecoded || !this._webRtcSnapshot.stream) return;
+    this._clearPreferredPresentationTimer();
     this._webRtcDecoded = true;
     this._webRtcSnapshot.timing?.mark("first_frame_decoded");
     this._select("webrtc", this._webRtcSnapshot.transport, video);
@@ -107,25 +107,21 @@ export class FrigateCameraLiveSessionController {
     if (!this._connected || !this._api || !this._entityId || !this._available)
       return;
     this._startWebRtc();
-    if (this._webRtcLease) this._syncMse();
   }
 
-  private _syncMse(): void {
+  private _startMse(): void {
     if (
       !this._api ||
       !this._entityId ||
-      !this._available ||
       !this._connected ||
-      this._selected === "webrtc" ||
-      (this._webRtcSnapshot.state === "live" &&
-        Boolean(this._webRtcSnapshot.stream)) ||
+      !this._available ||
       this._mseLease ||
       this._mseSnapshot.state !== "new"
-    )
+    ) {
       return;
-    const generation = this._generation;
+    }
     this._mseSnapshot = { state: "connecting" };
-    void this._acquireMse(this._api, this._entityId, generation);
+    void this._acquireMse(this._api, this._entityId, this._generation);
   }
 
   private async _acquireMse(
@@ -149,8 +145,6 @@ export class FrigateCameraLiveSessionController {
           if (!this._selected) {
             snapshot.timing?.mark("presentation_selected");
             this._select("mse", snapshot.transport, snapshot.video);
-          } else if (this._selected === "mse") {
-            this._callbacks.onActiveVideoChanged(snapshot.video);
           }
         } else if (snapshot.state === "failed") {
           if (this._selected === "mse") this._clearSelection();
@@ -187,13 +181,14 @@ export class FrigateCameraLiveSessionController {
           return;
         }
         this._webRtcLease = lease;
+        this._webRtcReusedConnection = lease.reusedConnection;
         this._webRtcUnsubscribe = lease.subscribe((snapshot) => {
           this._webRtcSnapshot = snapshot;
           this._revision += 1;
           if (snapshot.state === "failed" && this._selected === "webrtc") {
             this._clearSelection();
           }
-          this._syncMse();
+          this._syncFallbackForWebRtcSnapshot(snapshot);
           this._host.requestUpdate();
         });
       })
@@ -204,9 +199,54 @@ export class FrigateCameraLiveSessionController {
           error:
             error instanceof Error ? error.message : "Unable to load WebRTC",
         };
-        this._syncMse();
+        this._startMse();
         this._host.requestUpdate();
       });
+  }
+
+  private _syncFallbackForWebRtcSnapshot(snapshot: MediaSessionSnapshot): void {
+    if (snapshot.state === "new") return;
+    if (snapshot.state === "connecting" || snapshot.state === "failed") {
+      this._clearPreferredPresentationTimer();
+      this._startMse();
+      return;
+    }
+    if (snapshot.state === "live" && !snapshot.stream) {
+      this._clearPreferredPresentationTimer();
+      this._startMse();
+      return;
+    }
+    if (snapshot.state === "live" && !this._webRtcReusedConnection) {
+      this._clearPreferredPresentationTimer();
+      this._startMse();
+      return;
+    }
+    if (
+      snapshot.state !== "live" ||
+      !snapshot.stream ||
+      this._webRtcDecoded ||
+      this._selected ||
+      this._preferredPresentationTimer
+    ) {
+      return;
+    }
+    this._preferredPresentationTimer = setTimeout(() => {
+      this._preferredPresentationTimer = undefined;
+      if (
+        this._connected &&
+        this._webRtcSnapshot.state === "live" &&
+        !this._webRtcDecoded &&
+        !this._selected
+      ) {
+        this._startMse();
+      }
+    }, RETAINED_LIVE_PRESENTATION_GRACE_MS);
+  }
+
+  private _clearPreferredPresentationTimer(): void {
+    if (!this._preferredPresentationTimer) return;
+    clearTimeout(this._preferredPresentationTimer);
+    this._preferredPresentationTimer = undefined;
   }
 
   private _valid(
@@ -237,6 +277,7 @@ export class FrigateCameraLiveSessionController {
     this._callbacks.onActiveVideoChanged(undefined);
   }
   private _releaseAll(): void {
+    this._clearPreferredPresentationTimer();
     this._generation += 1;
     this._clearSelection();
     this._webRtcDecoded = false;
@@ -244,6 +285,7 @@ export class FrigateCameraLiveSessionController {
     this._releaseWebRtc();
   }
   private _discardAll(): void {
+    this._clearPreferredPresentationTimer();
     this._generation += 1;
     this._clearSelection();
     this._webRtcDecoded = false;
@@ -264,6 +306,7 @@ export class FrigateCameraLiveSessionController {
     if (discard) this._webRtcLease?.discard();
     else this._webRtcLease?.release();
     this._webRtcLease = undefined;
+    this._webRtcReusedConnection = false;
     this._webRtcSnapshot = { state: "new" };
   }
 }

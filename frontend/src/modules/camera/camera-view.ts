@@ -1,4 +1,4 @@
-import { LitElement, type PropertyValues } from "lit";
+import { LitElement } from "lit";
 import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import {
@@ -26,6 +26,7 @@ import type {
   CameraToastRequestDetail,
 } from "./live/presentation";
 import "./live/presentation";
+import { CameraLiveSessionController } from "./live/session.controller";
 import { CameraRuntimeController } from "./runtime.controller";
 import {
   CameraStageResizeController,
@@ -65,11 +66,11 @@ export class CameraView extends LitElement {
     {
       dismissToast: (key) => this._toasts.dismiss(key),
       getMediaState: (): {
-        element?: HTMLVideoElement;
+        hls?: HTMLVideoElement;
         selected?: PresentedLiveSource;
         webRtc?: HTMLVideoElement;
       } => ({
-        element: this._activeSession.elementVideo,
+        hls: this._activeSession.hlsVideo,
         selected: this._activeSession.selected,
         webRtc: this._presentation?.webRtcVideo,
       }),
@@ -77,10 +78,22 @@ export class CameraView extends LitElement {
       showWarning: (message, key) => this._toasts.warning(message, { key }),
     },
   );
-  private readonly _session = new ProviderLiveSessionResolver(this, {
+  private readonly _session: CameraLiveSessionController =
+    new CameraLiveSessionController(this, {
+      getInitialMuted: (): boolean => this._audio.muted,
+      onActiveVideoChanged: (video) => {
+        if (this.source === "home_assistant") {
+          this._audio.handleActiveVideoChanged(video);
+        }
+      },
+    });
+  private readonly _providerSession = new ProviderLiveSessionResolver(this, {
     getInitialMuted: (): boolean => this._audio.muted,
-    onActiveVideoChanged: (video) =>
-      this._audio.handleActiveVideoChanged(video),
+    onActiveVideoChanged: (video) => {
+      if (this.source === "frigate_go2rtc") {
+        this._audio.handleActiveVideoChanged(video);
+      }
+    },
   });
   private readonly _runtime = new CameraRuntimeController(this);
   private readonly _stageResize = new CameraStageResizeController(
@@ -108,7 +121,9 @@ export class CameraView extends LitElement {
   public source: CameraConnectionSource = "home_assistant";
 
   private get _activeSession() {
-    return this._session;
+    return this.source === "frigate_go2rtc"
+      ? this._providerSession
+      : this._session;
   }
 
   private get _presentation(): CameraLivePresentation | undefined {
@@ -119,10 +134,7 @@ export class CameraView extends LitElement {
     );
   }
 
-  protected willUpdate(changedProperties: PropertyValues<this>): void {
-    if (changedProperties.has("source")) {
-      this._audio.handleActiveVideoChanged(undefined);
-    }
+  protected willUpdate(): void {
     this._stageResize.configure(this.entityId);
     this._stageResize.setSize({
       heightRatio: this.stageHeightRatio,
@@ -147,11 +159,17 @@ export class CameraView extends LitElement {
       runtime?.available !== false &&
       !suspended;
     this._session.configure(
+      this.source === "home_assistant" ? this.api : undefined,
+      this.source === "home_assistant" ? this.entityId : undefined,
+      this.source === "home_assistant" && sessionAvailable,
+      this.lowLatencyHls,
+      !suspended,
+    );
+    this._providerSession.configure(
       this.source,
       this.api,
       this.entityId,
       sessionAvailable,
-      this.lowLatencyHls,
       !suspended,
     );
   }
@@ -167,7 +185,7 @@ export class CameraView extends LitElement {
                 class="live-presentation"
                 .available=${this.connect && this.available}
                 .failed=${this._activeSession.failed}
-                .elementVideo=${this._activeSession.elementVideo}
+                .hlsVideo=${this._activeSession.hlsVideo}
                 .lowLatencyHls=${this.lowLatencyHls}
                 .localize=${this.localize}
                 .muted=${this._audio.muted}

@@ -1,6 +1,7 @@
-import type { ReactiveControllerHost } from "lit";
+import type { ReactiveController, ReactiveControllerHost } from "lit";
 
 import type { PresentedLiveSource } from "../../../core/camera-connection-source";
+import { RETAINED_LIVE_PRESENTATION_GRACE_MS } from "../../../core/constants";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
 import type {
   MediaSessionLease,
@@ -15,7 +16,7 @@ interface SessionCallbacks {
 }
 
 /** Owns provider leases, retained-source selection, and takeover. */
-export class HomeAssistantCameraLiveSessionController {
+export class CameraLiveSessionController implements ReactiveController {
   private _api?: HomeAssistantApi;
   private _available = false;
   private _connected = false;
@@ -25,6 +26,7 @@ export class HomeAssistantCameraLiveSessionController {
   private _hlsSnapshot: MediaSessionSnapshot = { state: "new" };
   private _hlsUnsubscribe?: () => void;
   private _lowLatencyHls = true;
+  private _preferredPresentationTimer?: ReturnType<typeof setTimeout>;
   private _retryWebRtcAfterHlsRecovery = false;
   private _revision = 0;
   private _selected?: PresentedLiveSource;
@@ -32,6 +34,7 @@ export class HomeAssistantCameraLiveSessionController {
   private _webRtcDecoded = false;
   private _webRtcLease?: MediaSessionLease;
   private _webRtcPendingKey?: string;
+  private _webRtcReusedConnection = false;
   private _webRtcSnapshot: MediaSessionSnapshot = { state: "new" };
   private _webRtcUnsubscribe?: () => void;
   private readonly _resolver = new LiveSourceResolver();
@@ -39,9 +42,11 @@ export class HomeAssistantCameraLiveSessionController {
   public constructor(
     private readonly _host: ReactiveControllerHost,
     private readonly _callbacks: SessionCallbacks,
-  ) {}
+  ) {
+    _host.addController(this);
+  }
 
-  public get elementVideo(): HTMLVideoElement | undefined {
+  public get hlsVideo(): HTMLVideoElement | undefined {
     return this._hlsSnapshot.video;
   }
 
@@ -68,12 +73,12 @@ export class HomeAssistantCameraLiveSessionController {
     return this._webRtcSnapshot.stream;
   }
 
-  public connect(): void {
+  public hostConnected(): void {
     this._connected = true;
     this._sync();
   }
 
-  public disconnect(): void {
+  public hostDisconnected(): void {
     this._connected = false;
     this._releaseAll();
   }
@@ -82,12 +87,9 @@ export class HomeAssistantCameraLiveSessionController {
     api: HomeAssistantApi | undefined,
     entityId: string | undefined,
     available: boolean,
-    options: {
-      readonly lowLatencyHls: boolean;
-      readonly retainWhenInactive: boolean;
-    },
+    lowLatencyHls = true,
+    retainWhenInactive = true,
   ): void {
-    const { lowLatencyHls, retainWhenInactive } = options;
     const changed =
       this._api?.identity !== api?.identity ||
       this._entityId !== entityId ||
@@ -106,6 +108,7 @@ export class HomeAssistantCameraLiveSessionController {
 
   public handleWebRtcDecoded(video: HTMLVideoElement): void {
     if (this._webRtcDecoded || !this._webRtcSnapshot.stream) return;
+    this._clearPreferredPresentationTimer();
     this._webRtcDecoded = true;
     this._webRtcSnapshot.timing?.mark("first_frame_decoded");
     this._webRtcSnapshot.timing?.mark("presentation_selected");
@@ -131,8 +134,9 @@ export class HomeAssistantCameraLiveSessionController {
       this._releaseWebRtc();
       this._webRtcPendingKey = webRtcKey;
       void this._acquireWebRtc(this._api, this._entityId, webRtcKey);
+      return;
     }
-    if (this._webRtcLease) this._syncHls();
+    this._syncFallbackForWebRtcSnapshot(this._webRtcSnapshot);
   }
 
   private async _acquireWebRtc(
@@ -158,6 +162,7 @@ export class HomeAssistantCameraLiveSessionController {
         return;
       }
       this._webRtcLease = lease;
+      this._webRtcReusedConnection = lease.reusedConnection;
       this._webRtcUnsubscribe = this._webRtcLease.subscribe((snapshot) => {
         this._webRtcSnapshot = snapshot;
         this._revision += 1;
@@ -167,7 +172,7 @@ export class HomeAssistantCameraLiveSessionController {
         if (snapshot.state === "failed" && this._selected === "webrtc") {
           this._clearSelection();
         }
-        this._syncHls();
+        this._syncFallbackForWebRtcSnapshot(snapshot);
         this._host.requestUpdate();
       });
     } catch (error) {
@@ -187,8 +192,6 @@ export class HomeAssistantCameraLiveSessionController {
   private _syncHls(): void {
     if (
       this._selected === "webrtc" ||
-      (this._webRtcSnapshot.state === "live" &&
-        Boolean(this._webRtcSnapshot.stream)) ||
       !this._api ||
       !this._entityId ||
       !this._available ||
@@ -203,6 +206,50 @@ export class HomeAssistantCameraLiveSessionController {
     this._releaseHls();
     this._hlsPendingKey = key;
     void this._acquireHls(this._api, this._entityId, key, this._lowLatencyHls);
+  }
+
+  private _syncFallbackForWebRtcSnapshot(snapshot: MediaSessionSnapshot): void {
+    if (snapshot.state === "connecting" || snapshot.state === "failed") {
+      this._clearPreferredPresentationTimer();
+      this._syncHls();
+      return;
+    }
+    if (snapshot.state === "live" && !snapshot.stream) {
+      this._clearPreferredPresentationTimer();
+      this._syncHls();
+      return;
+    }
+    if (snapshot.state === "live" && !this._webRtcReusedConnection) {
+      this._clearPreferredPresentationTimer();
+      this._syncHls();
+      return;
+    }
+    if (
+      snapshot.state !== "live" ||
+      !snapshot.stream ||
+      this._webRtcDecoded ||
+      this._selected ||
+      this._preferredPresentationTimer
+    ) {
+      return;
+    }
+    this._preferredPresentationTimer = setTimeout(() => {
+      this._preferredPresentationTimer = undefined;
+      if (
+        this._connected &&
+        this._webRtcSnapshot.state === "live" &&
+        !this._webRtcDecoded &&
+        !this._selected
+      ) {
+        this._syncHls();
+      }
+    }, RETAINED_LIVE_PRESENTATION_GRACE_MS);
+  }
+
+  private _clearPreferredPresentationTimer(): void {
+    if (!this._preferredPresentationTimer) return;
+    clearTimeout(this._preferredPresentationTimer);
+    this._preferredPresentationTimer = undefined;
   }
 
   private async _acquireHls(
@@ -243,8 +290,6 @@ export class HomeAssistantCameraLiveSessionController {
           if (!this._selected) {
             snapshot.timing?.mark("presentation_selected");
             this._select("hls", snapshot.transport, snapshot.video);
-          } else if (this._selected === "hls") {
-            this._callbacks.onActiveVideoChanged(snapshot.video);
           }
           if (this._retryWebRtcAfterHlsRecovery) {
             this._retryWebRtcAfterHlsRecovery = false;
@@ -289,6 +334,7 @@ export class HomeAssistantCameraLiveSessionController {
   }
 
   private _releaseAll(): void {
+    this._clearPreferredPresentationTimer();
     this._clearSelection();
     this._webRtcDecoded = false;
     this._retryWebRtcAfterHlsRecovery = false;
@@ -297,6 +343,7 @@ export class HomeAssistantCameraLiveSessionController {
   }
 
   private _discardAll(): void {
+    this._clearPreferredPresentationTimer();
     this._clearSelection();
     this._webRtcDecoded = false;
     this._retryWebRtcAfterHlsRecovery = false;
@@ -311,11 +358,13 @@ export class HomeAssistantCameraLiveSessionController {
     if (discard) this._webRtcLease?.discard();
     else this._webRtcLease?.release();
     this._webRtcLease = undefined;
+    this._webRtcReusedConnection = false;
     this._webRtcSnapshot = { state: "new" };
   }
 
   private _releaseHls(discard = false): void {
     this._hlsPendingKey = undefined;
+    this._hlsSnapshot.video?.remove();
     this._hlsUnsubscribe?.();
     this._hlsUnsubscribe = undefined;
     if (discard) this._hlsLease?.discard();

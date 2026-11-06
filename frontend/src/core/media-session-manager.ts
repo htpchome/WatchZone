@@ -45,7 +45,6 @@ export interface MediaConnection {
   readonly transport?: MediaTransport;
   readonly video?: HTMLVideoElement;
   close(): void;
-  isHealthy?(): boolean;
 }
 
 export interface MediaConnectionOptions {
@@ -65,6 +64,7 @@ export type ConnectionFactory = (
 
 export interface MediaSessionLease {
   readonly key: string;
+  readonly reusedConnection: boolean;
   discard(): void;
   getSnapshot(): MediaSessionSnapshot;
   release(): void;
@@ -116,16 +116,16 @@ class ManagedMediaSession {
   private _api: HomeAssistantApi;
   private _connection?: MediaConnection;
   private _connectAbort?: AbortController;
+  private _elementOwner?: object;
   private _generation = 0;
   private _leaseCount = 0;
+  private readonly _leases: object[] = [];
   private _connectionOptions: MediaConnectionOptions = { initialMuted: true };
   private _reconnectCause?: ReconnectCause;
   private _reconnectAttempts = 0;
   private _reconnectTimer?: ReturnType<typeof setTimeout>;
   private _stabilityTimer?: ReturnType<typeof setTimeout>;
   private _transportInterrupted = false;
-  private _elementOwner?: object;
-  private readonly _leases: object[] = [];
   private readonly _listeners = new Map<
     (snapshot: MediaSessionSnapshot) => void,
     object
@@ -158,7 +158,13 @@ class ManagedMediaSession {
     api: HomeAssistantApi,
     options: MediaConnectionOptions = { initialMuted: true },
   ): MediaSessionLease {
+    const leaseToken = {};
     const transportChanged = this._api.identity !== api.identity;
+    const reusedConnection = Boolean(
+      !transportChanged &&
+      this._connection &&
+      (this._snapshot.state === "live" || this._snapshot.state === "parked"),
+    );
     this._api = api;
     this._connectionOptions = {
       initialMuted: options.initialMuted,
@@ -166,7 +172,6 @@ class ManagedMediaSession {
     };
     this.lastUsed = performance.now();
     this._leaseCount += 1;
-    const leaseToken = {};
     this._leases.push(leaseToken);
     this._elementOwner = leaseToken;
     if (this._reconnectTimer) {
@@ -180,18 +185,7 @@ class ManagedMediaSession {
       this._closeConnection();
       this._setSnapshot({ state: "new" });
     } else if (this._snapshot.state === "parked") {
-      if (this._connection && this._connection.isHealthy?.() !== false) {
-        this._setSnapshot({ ...this._snapshot, state: "live" });
-      } else {
-        this._closeConnection();
-        this._setSnapshot({ state: "new" });
-      }
-    } else if (
-      this._snapshot.state === "live" &&
-      this._connection?.isHealthy?.() === false
-    ) {
-      this._closeConnection();
-      this._setSnapshot({ state: "new" });
+      this._setSnapshot({ ...this._snapshot, state: "live" });
     }
     if (api.identity.connected === false) {
       this._transportInterrupted = true;
@@ -205,10 +199,8 @@ class ManagedMediaSession {
       this._snapshot.state === "failed"
     ) {
       void this._connect(options);
-    } else if (this._snapshot.video) {
-      // A retained element-backed transport can have only one DOM parent.
-      // Republish ownership so an editor/card handoff cannot make two
-      // presentations repeatedly steal the same element from each other.
+    }
+    if (this._leaseCount > 1 && this._snapshot.video) {
       this._setSnapshot(this._snapshot);
     }
 
@@ -218,10 +210,11 @@ class ManagedMediaSession {
         return;
       }
       released = true;
-      this._release(discard, leaseToken);
+      this._release(leaseToken, discard);
     };
     return {
       key: this.key,
+      reusedConnection,
       discard: () => release(true),
       getSnapshot: () => this._snapshotFor(leaseToken),
       release: () => release(false),
@@ -428,16 +421,16 @@ class ManagedMediaSession {
     }, delay);
   }
 
-  private _release(discard: boolean, leaseToken: object): void {
-    this._leaseCount = Math.max(0, this._leaseCount - 1);
-    for (const [listener, owner] of this._listeners) {
-      if (owner === leaseToken) this._listeners.delete(listener);
+  private _release(leaseToken: object, discard: boolean): void {
+    for (const [listener, token] of this._listeners) {
+      if (token === leaseToken) this._listeners.delete(listener);
     }
     const leaseIndex = this._leases.indexOf(leaseToken);
     if (leaseIndex >= 0) this._leases.splice(leaseIndex, 1);
     if (this._elementOwner === leaseToken) {
       this._elementOwner = this._leases.at(-1);
     }
+    this._leaseCount = Math.max(0, this._leaseCount - 1);
     this.lastUsed = performance.now();
     if (this._leaseCount > 0) {
       // Element-backed transports can have only one DOM attachment. Republish
@@ -475,6 +468,12 @@ class ManagedMediaSession {
     }
   }
 
+  /**
+   * MediaStreams support concurrent renderers. Element-backed transports do
+   * not: one HTMLVideoElement has exactly one DOM parent. The newest active
+   * lease owns that element, and ownership returns to the prior lease without
+   * reconnecting when the newer presentation exits.
+   */
   private _snapshotFor(leaseToken: object): MediaSessionSnapshot {
     if (!this._snapshot.video || this._elementOwner === leaseToken) {
       return this._snapshot;

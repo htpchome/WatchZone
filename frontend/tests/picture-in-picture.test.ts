@@ -146,7 +146,7 @@ describe("camera Picture-in-Picture", () => {
       "wzc-camera-live",
     ) as CameraLivePresentation;
     presentation.available = true;
-    presentation.elementVideo = hlsVideo;
+    presentation.hlsVideo = hlsVideo;
     presentation.selected = "hls";
     presentation.transport = "hls_mse";
     document.body.append(presentation);

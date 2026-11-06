@@ -1,5 +1,8 @@
 import type { HomeAssistantApi } from "../../../core/home-assistant";
-import { getBrowserLiveSource } from "../../../api/live-signaling";
+import {
+  getBrowserLiveSource,
+  type BrowserLiveSource,
+} from "../../../api/live-signaling";
 import {
   getMediaSessionManager,
   type ConnectionFactory,
@@ -12,6 +15,32 @@ const WEBRTC_RECONNECT_POLICY: MediaReconnectPolicy = {
   baseDelayMs: 60_000,
   maxAttempts: 5,
 };
+
+const sourceRequests = new WeakMap<
+  HomeAssistantApi["identity"],
+  Map<string, Promise<BrowserLiveSource>>
+>();
+
+function resolveSource(
+  api: HomeAssistantApi,
+  entityId: string,
+): Promise<BrowserLiveSource> {
+  let requests = sourceRequests.get(api.identity);
+  if (!requests) {
+    requests = new Map();
+    sourceRequests.set(api.identity, requests);
+  }
+  const existing = requests.get(entityId);
+  if (existing) return existing;
+  const request = getBrowserLiveSource(api, "frigate", entityId).catch(
+    (error: unknown) => {
+      requests?.delete(entityId);
+      throw error;
+    },
+  );
+  requests.set(entityId, request);
+  return request;
+}
 
 const mseFactory: ConnectionFactory = async (...args) => {
   args[4].mark("adapter_import_started");
@@ -48,7 +77,7 @@ export class FrigateLiveProvider {
     entityId: string,
     options: MediaConnectionOptions,
   ): Promise<MediaSessionLease> {
-    const source = await getBrowserLiveSource(api, "frigate", entityId);
+    const source = await resolveSource(api, entityId);
     return getMediaSessionManager().acquire({
       api,
       cameraKey: `frigate_go2rtc:${entityId}`,
@@ -57,7 +86,7 @@ export class FrigateLiveProvider {
       key: `frigate:${source.provider_instance_id}:${source.stream_id}:mse`,
       options,
       retryInitialFailure: true,
-      retention: "fallback",
+      retention: "preferred",
     });
   }
 
@@ -72,7 +101,7 @@ export class FrigateLiveProvider {
     api: HomeAssistantApi,
     entityId: string,
   ): Promise<MediaSessionLease> {
-    const source = await getBrowserLiveSource(api, "frigate", entityId);
+    const source = await resolveSource(api, entityId);
     return getMediaSessionManager().acquire({
       api,
       cameraKey: `frigate_go2rtc:${entityId}`,

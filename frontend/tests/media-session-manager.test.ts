@@ -120,48 +120,55 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
-  it("reconnects an unhealthy parked transport instead of reusing it", async () => {
-    let healthy = true;
-    const factory = vi.fn<ConnectionFactory>(async () => ({
-      close: vi.fn(),
-      isHealthy: () => healthy,
-      stream: createStream(),
-      transport: "webrtc",
-    }));
-    const manager = new MediaSessionManager(factory);
-    const lease = manager.acquireHomeAssistant(createApi(), "camera.front");
-
-    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
-    lease.release();
-    expect(lease.getSnapshot().state).toBe("parked");
-    healthy = false;
-
-    const returned = manager.acquireHomeAssistant(createApi(), "camera.front");
-    await vi.waitFor(() => expect(returned.getSnapshot().state).toBe("live"));
-    expect(factory).toHaveBeenCalledTimes(2);
-  });
-
-  it("hands one retained media element between concurrent presentations", async () => {
+  it("transfers one element-backed presentation without reconnecting", async () => {
     const video = document.createElement("video");
+    const close = vi.fn();
     const factory = vi.fn<ConnectionFactory>(async () => ({
-      close: vi.fn(),
-      transport: "hls_mse",
       video,
+      transport: "hls_mse",
+      close,
     }));
     const manager = new MediaSessionManager(factory, factory);
     const api = createApi();
     const first = manager.acquireHomeAssistantHls(api, "camera.front");
-    await vi.waitFor(() => expect(first.getSnapshot().state).toBe("live"));
-    expect(first.getSnapshot().video).toBe(video);
+    await vi.waitFor(() => expect(first.getSnapshot().video).toBe(video));
+    const firstSnapshots: Array<HTMLVideoElement | undefined> = [];
+    first.subscribe((snapshot) => firstSnapshots.push(snapshot.video));
 
     const second = manager.acquireHomeAssistantHls(api, "camera.front");
     expect(first.getSnapshot().video).toBeUndefined();
     expect(second.getSnapshot().video).toBe(video);
+    expect(firstSnapshots.at(-1)).toBeUndefined();
+    expect(factory).toHaveBeenCalledOnce();
 
     second.release();
     expect(first.getSnapshot().video).toBe(video);
+    expect(firstSnapshots.at(-1)).toBe(video);
+    expect(factory).toHaveBeenCalledOnce();
+    expect(close).not.toHaveBeenCalled();
 
     first.release();
+    manager.closeAll();
+  });
+
+  it("shares MediaStreams across concurrent presentations", async () => {
+    const stream = createStream();
+    const factory = vi.fn<ConnectionFactory>(async () => ({
+      stream,
+      transport: "webrtc",
+      close: vi.fn(),
+    }));
+    const manager = new MediaSessionManager(factory);
+    const api = createApi();
+    const first = manager.acquireHomeAssistant(api, "camera.front");
+    const second = manager.acquireHomeAssistant(api, "camera.front");
+
+    await vi.waitFor(() => expect(first.getSnapshot().stream).toBe(stream));
+    expect(second.getSnapshot().stream).toBe(stream);
+    expect(factory).toHaveBeenCalledOnce();
+
+    first.release();
+    second.release();
     manager.closeAll();
   });
 
