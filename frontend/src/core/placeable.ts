@@ -1,12 +1,15 @@
 import type { CameraSessionContext } from "./camera-session-context";
+import type { CameraSelectionContext } from "./camera-selection-context";
 import type { HomeAssistant, HomeAssistantApi } from "./home-assistant";
 import type { LocalizeFunction } from "./localization";
 
 export interface PlaceableRuntimeContext {
   readonly api?: HomeAssistantApi;
+  readonly cameraSelection: CameraSelectionContext;
   readonly cameraSession: CameraSessionContext;
   readonly hass?: HomeAssistant;
   readonly localize?: LocalizeFunction;
+  readonly placeableId: string;
 }
 
 export interface PlaceablePreparation {

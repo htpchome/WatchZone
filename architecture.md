@@ -420,6 +420,14 @@ placed in a compatible module slot. PTZ and two-way talk are components. A
 **presentation** is private rendering inside its owner; camera live video is a
 camera presentation rather than another placeable.
 
+The generic **panel module** is the Stage placement surface for a standalone
+component. It owns only its grid-sized surface and `content` slot: it does not
+absorb the component's behavior or styling. This keeps components off the raw
+Stage while allowing the same component to move between a panel and another
+module's compatible slot. A camera switcher is therefore one portable
+component, whether presented beneath Camera in a panel or later inside a
+camera overlay.
+
 Modules and components never import one another or another placeable of their
 own kind. Composition belongs to the Stage renderer through stable core
 contracts and typed runtime context. Moving a component to another compatible
@@ -744,6 +752,7 @@ a saved layout contains:
   module nodes.
 - Component type and validated component configuration for component nodes.
 - Logical grid placement and responsive behavior for container nodes.
+- Explicit fractional or intrinsic-content sizing for each logical grid row.
 - Required `default` and `phone` responsive variants whose corresponding nodes
   reuse stable IDs.
 - Creation and modification metadata where useful.

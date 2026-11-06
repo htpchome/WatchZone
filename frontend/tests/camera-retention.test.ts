@@ -761,6 +761,7 @@ function cameraItem(entityId: string) {
   return {
     available: true,
     entityId,
+    label: entityId,
     lowLatencyHls: true,
     startUnmutedPcTablet: false,
     startUnmutedPhone: false,

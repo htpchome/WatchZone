@@ -3,6 +3,7 @@ export const PHONE_STAGE_MAX_INLINE_SIZE = 599;
 
 export type StageVariantName = "default" | "phone";
 export type StageSlotName = "content" | "controls" | "footer" | "overlay";
+export type StageGridRowSize = "content" | "fraction";
 
 export interface StageGridArea {
   readonly column: number;
@@ -21,6 +22,7 @@ export interface StageContainerNode {
   readonly columns: number;
   readonly id: string;
   readonly kind: "container";
+  readonly rows: readonly StageGridRowSize[];
 }
 
 export interface StageComponentNode {
@@ -158,19 +160,22 @@ function validateContainer(
     throw new Error(`Stage container "${id}" is invalid.`);
   }
   const columns = positiveInteger(source.columns, "Stage grid columns");
+  const rows = validateRows(source.rows);
   return {
     children: source.children.map((child) =>
-      validatePlacement(child, columns, ids),
+      validatePlacement(child, columns, rows.length, ids),
     ),
     columns,
     id,
     kind: "container",
+    rows,
   };
 }
 
 function validatePlacement(
   value: unknown,
   columns: number,
+  rows: number,
   ids: Set<string>,
 ): StagePlacement {
   const source = objectValue(value, "Stage placements");
@@ -180,15 +185,32 @@ function validatePlacement(
   if (column + columnSpan - 1 > columns) {
     throw new Error("A stage placement exceeds its container columns.");
   }
+  const row = positiveInteger(grid.row, "Stage grid rows");
+  const rowSpan = positiveInteger(grid.rowSpan, "Stage row spans");
+  if (row + rowSpan - 1 > rows) {
+    throw new Error("A stage placement exceeds its container rows.");
+  }
   return {
     grid: {
       column,
       columnSpan,
-      row: positiveInteger(grid.row, "Stage grid rows"),
-      rowSpan: positiveInteger(grid.rowSpan, "Stage row spans"),
+      row,
+      rowSpan,
     },
     node: validateModule(source.node, ids),
   };
+}
+
+function validateRows(value: unknown): readonly StageGridRowSize[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error("Stage grids require at least one row.");
+  }
+  return value.map((row) => {
+    if (row !== "content" && row !== "fraction") {
+      throw new Error("Stage grid rows require valid sizing.");
+    }
+    return row;
+  });
 }
 
 function validateModule(value: unknown, ids: Set<string>): StageModuleNode {

@@ -14,14 +14,16 @@ import type {
 } from "./camera";
 
 export interface CameraModuleConfig {
-  readonly cameras: readonly Omit<
-    CameraItemConfig,
-    "available" | "posterUrl"
-  >[];
+  readonly cameras: readonly CameraModuleItemConfig[];
   readonly retentionPreference: MediaRetentionPreference;
   readonly roundedCorners: boolean;
   readonly shadowStyle: CameraShadowStyle;
 }
+
+type CameraModuleItemConfig = Omit<
+  CameraItemConfig,
+  "available" | "label" | "posterUrl"
+> & { readonly title: string };
 
 const resolver = new LiveSourceResolver();
 let definitionPromise: Promise<void> | undefined;
@@ -57,14 +59,22 @@ function updateCameraElement(
   context: PlaceableRuntimeContext,
 ): void {
   camera.api = context.api;
+  camera.cameraSelection = context.cameraSelection;
   camera.cameraSession = context.cameraSession;
   camera.localize = context.localize ?? englishLocalize;
   camera.retentionPreference = config.retentionPreference;
   camera.roundedCorners = config.roundedCorners;
   camera.shadowStyle = config.shadowStyle;
+  camera.selectionId = context.placeableId;
   camera.cameras = config.cameras.map((item) => ({
     ...item,
     available: Boolean(context.hass?.states[item.entityId]),
+    label:
+      item.title ||
+      String(
+        context.hass?.states[item.entityId]?.attributes.friendly_name ??
+          item.entityId,
+      ),
     posterUrl: cameraImageUrl(context.hass, item.entityId),
   }));
 }
@@ -106,7 +116,7 @@ function validateCameraConfig(value: unknown): CameraModuleConfig {
 function validateCameraItem(
   value: unknown,
   index: number,
-): Omit<CameraItemConfig, "available" | "posterUrl"> {
+): CameraModuleItemConfig {
   if (typeof value !== "object" || value === null) {
     throw new Error(`Camera module item ${index + 1} must be an object.`);
   }
@@ -130,7 +140,8 @@ function validateCameraItem(
     lowLatencyHls: source.lowLatencyHls as boolean,
     startUnmutedPcTablet: source.startUnmutedPcTablet as boolean,
     startUnmutedPhone: source.startUnmutedPhone as boolean,
-  } as Omit<CameraItemConfig, "available" | "posterUrl">;
+    title: typeof source.title === "string" ? source.title.trim() : "",
+  } as CameraModuleItemConfig;
 }
 
 export type { CameraModule, CameraShadowStyle } from "./camera";

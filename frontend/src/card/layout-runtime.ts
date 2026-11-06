@@ -8,6 +8,7 @@ import {
 import { repeat } from "lit/directives/repeat.js";
 
 import { CameraSessionContext } from "../core/camera-session-context";
+import { CameraSelectionContext } from "../core/camera-selection-context";
 import type {
   HomeAssistant,
   HomeAssistantApi,
@@ -55,8 +56,10 @@ interface PlaceableRecord {
 /** Owns validated stage rendering, lazy placeable loading, and local failures. */
 export class LayoutRuntime implements ReactiveController {
   private _connected = false;
+  private readonly _cameraSelection = new CameraSelectionContext();
   private readonly _cameraSession = new CameraSessionContext();
-  private _context: PlaceableRuntimeContext = {
+  private _context: Omit<PlaceableRuntimeContext, "placeableId"> = {
+    cameraSelection: this._cameraSelection,
     cameraSession: this._cameraSession,
   };
   private readonly _activeStageIds: Partial<Record<StageVariantName, string>> =
@@ -149,7 +152,13 @@ export class LayoutRuntime implements ReactiveController {
   ): void {
     const transportChanged = this._context.api?.identity !== api?.identity;
     const localeChanged = this._context.localize !== localize;
-    this._context = { api, cameraSession: this._cameraSession, hass, localize };
+    this._context = {
+      api,
+      cameraSelection: this._cameraSelection,
+      cameraSession: this._cameraSession,
+      hass,
+      localize,
+    };
     for (const record of this._records.values()) {
       if (record.status === "ready") {
         this._updateRecord(record, transportChanged || localeChanged);
@@ -169,10 +178,9 @@ export class LayoutRuntime implements ReactiveController {
         ${this._localize("layout.no_modules")}
       </div>`;
     }
-    const rows = Math.max(
-      1,
-      ...variant.root.children.map(({ grid }) => grid.row + grid.rowSpan - 1),
-    );
+    const rows = variant.root.rows
+      .map((size) => (size === "content" ? "max-content" : "minmax(0,1fr)"))
+      .join(" ");
     return html`<div
       class="stage-grid"
       data-layout-node=${variant.root.id}
@@ -343,7 +351,7 @@ export class LayoutRuntime implements ReactiveController {
         record.config = config;
         if (this._connected && definition.prepare) {
           void definition
-            .prepare(config, this._context)
+            .prepare(config, this._runtimeContext(record))
             .then((preparation) => {
               if (
                 !this._isCurrent(record, generation) ||
@@ -397,7 +405,11 @@ export class LayoutRuntime implements ReactiveController {
     );
     if (!force && sameEntityRefs(record.entityRefs, nextRefs)) return;
     record.entityRefs = nextRefs;
-    definition.updateElement(element, config, this._context);
+    definition.updateElement(element, config, this._runtimeContext(record));
+  }
+
+  private _runtimeContext(record: PlaceableRecord): PlaceableRuntimeContext {
+    return { ...this._context, placeableId: record.node.id };
   }
 
   private _removeMissingRecords(ids: ReadonlySet<string>): void {

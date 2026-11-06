@@ -14,8 +14,9 @@ application-wide boundaries.
   responsive updates, interaction enablement, and destruction.
 - Live presentation remains unaware of Swiper. It owns its existing media,
   zoom, pan, controls, and browser-presentation behavior unchanged.
-- A future camera-switcher module emits typed selection intent through the
-  layout runtime. It does not import or control the camera's Swiper instance.
+- A camera-switcher component emits typed selection intent through the layout
+  runtime. It does not import or control the camera's Swiper instance and may
+  be placed in a generic panel or a compatible module slot.
 
 ## Structure and identity
 

@@ -131,6 +131,63 @@ test("does not load camera code for a camera-free layout", async ({ page }) => {
   );
 });
 
+test("keeps the panel camera switcher and carousel selection bidirectional", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  await page.locator("watchzone-card").evaluate((element) => {
+    (
+      element as HTMLElement & {
+        setConfig(config: unknown): void;
+      }
+    ).setConfig({
+      type: "custom:watchzone-card",
+      cameras: [
+        { entity_id: "camera.front", title: "Front Door" },
+        { entity_id: "camera.back", title: "Back Yard" },
+      ],
+    });
+  });
+
+  const switcher = page.locator("wzc-camera-switcher");
+  const buttons = switcher.locator("button");
+  await expect(buttons).toHaveCount(2);
+  await expect(buttons.nth(0)).toHaveText("Front Door");
+  await expect(buttons.nth(0)).toHaveAttribute("aria-selected", "true");
+
+  await buttons.nth(1).click();
+  await expect(buttons.nth(1)).toHaveAttribute("aria-selected", "true");
+  await expect(buttons.nth(0)).toHaveAttribute("aria-selected", "false");
+  await expect
+    .poll(() =>
+      page
+        .locator("wzc-camera-view")
+        .evaluateAll((views) =>
+          views.map(
+            (view) => (view as HTMLElement & { active: boolean }).active,
+          ),
+        ),
+    )
+    .toEqual([false, true]);
+
+  await page
+    .locator("wzc-camera .carousel-navigation.previous")
+    .click({ force: true });
+  await expect(buttons.nth(0)).toHaveAttribute("aria-selected", "true");
+
+  const cameraBox = await page.locator("wzc-camera").boundingBox();
+  const panelBox = await page.locator("wzc-panel").boundingBox();
+  const selectorBox = await switcher.boundingBox();
+  expect(cameraBox).not.toBeNull();
+  expect(panelBox).not.toBeNull();
+  expect(selectorBox).not.toBeNull();
+  expect(panelBox?.y).toBeGreaterThanOrEqual(
+    (cameraBox?.y ?? 0) + (cameraBox?.height ?? 0),
+  );
+  expect(panelBox?.height).toBeCloseTo(selectorBox?.height ?? 0, 1);
+});
+
 test("preserves expanded camera-stage geometry across carousel selection", async ({
   page,
 }) => {

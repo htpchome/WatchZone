@@ -11,6 +11,7 @@ import {
 } from "../../core/constants";
 import { DeviceProfileController } from "../../core/device-profile";
 import type { CameraSessionContext } from "../../core/camera-session-context";
+import type { CameraSelectionContext } from "../../core/camera-selection-context";
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import {
   englishLocalize,
@@ -35,6 +36,7 @@ export interface CameraItemConfig {
   readonly available: boolean;
   readonly entityId: string;
   readonly lowLatencyHls: boolean;
+  readonly label: string;
   readonly posterUrl?: string;
   readonly startUnmutedPcTablet: boolean;
   readonly startUnmutedPhone: boolean;
@@ -47,11 +49,13 @@ export class CameraModule extends LitElement {
   public static properties = {
     api: { attribute: false },
     cameraSession: { attribute: false },
+    cameraSelection: { attribute: false },
     cameras: { attribute: false },
     localize: { attribute: false },
     retentionPreference: { attribute: false },
     roundedCorners: { attribute: false, type: Boolean },
     shadowStyle: { attribute: false },
+    selectionId: { attribute: false },
   };
 
   private _activeIndex = 0;
@@ -68,11 +72,13 @@ export class CameraModule extends LitElement {
 
   public api?: HomeAssistantApi;
   public cameraSession?: CameraSessionContext;
+  public cameraSelection?: CameraSelectionContext;
   public cameras: readonly CameraItemConfig[] = [];
   public localize: LocalizeFunction = englishLocalize;
   public retentionPreference: MediaRetentionPreference = "automatic";
   public roundedCorners = true;
   public shadowStyle: CameraShadowStyle = "medium";
+  public selectionId = "";
 
   public connectedCallback(): void {
     super.connectedCallback();
@@ -88,6 +94,7 @@ export class CameraModule extends LitElement {
       CAMERA_OVERLAY_VISIBILITY_EVENT,
       this._handleOverlayVisibility as EventListener,
     );
+    this.requestUpdate();
   }
 
   public disconnectedCallback(): void {
@@ -104,6 +111,7 @@ export class CameraModule extends LitElement {
       this._handleOverlayVisibility as EventListener,
     );
     getMediaSessionManager().clearCameraActivity(this);
+    if (this.selectionId) this.cameraSelection?.clear(this.selectionId, this);
     super.disconnectedCallback();
   }
 
@@ -122,6 +130,7 @@ export class CameraModule extends LitElement {
         this.cameras[this._activeIndex]?.entityId ?? "",
       ) ?? false;
     this._syncCameraActivity();
+    this._publishSelection();
   }
 
   protected render() {
@@ -229,6 +238,27 @@ export class CameraModule extends LitElement {
       false;
     this._carousel.setInteractionLocked(false);
     this.requestUpdate();
+    this._publishSelection();
+  }
+
+  private _selectEntity = (entityId: string): void => {
+    const index = this.cameras.findIndex(
+      (camera) => camera.entityId === entityId,
+    );
+    if (index >= 0) this._select(index);
+  };
+
+  private _publishSelection(): void {
+    if (!this.cameraSelection || !this.selectionId) return;
+    this.cameraSelection.publish(
+      this.selectionId,
+      this,
+      {
+        activeEntityId: this.cameras[this._activeIndex]?.entityId,
+        items: this.cameras.map(({ entityId, label }) => ({ entityId, label })),
+      },
+      this._selectEntity,
+    );
   }
 
   private readonly _previous = (): void => {

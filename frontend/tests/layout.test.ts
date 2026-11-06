@@ -7,8 +7,10 @@ import { PlaceableLoader } from "../src/card/placeable-loader";
 import { normalizeCardConfig } from "../src/core/config";
 import {
   DEFAULT_CAMERA_MODULE_NODE_ID,
+  DEFAULT_CAMERA_SWITCHER_COMPONENT_NODE_ID,
   DEFAULT_LAYOUT_ROOT_NODE_ID,
   DEFAULT_LIGHT_COMPONENT_NODE_ID,
+  DEFAULT_PANEL_MODULE_NODE_ID,
   DEFAULT_PTZ_COMPONENT_NODE_ID,
   DEFAULT_TALK_COMPONENT_NODE_ID,
 } from "../src/core/constants";
@@ -58,6 +60,7 @@ describe("layout composition", () => {
         columns: 12,
         id: DEFAULT_LAYOUT_ROOT_NODE_ID,
         kind: "container",
+        rows: ["fraction", "content"],
       },
     });
   });
@@ -68,7 +71,7 @@ describe("layout composition", () => {
     );
 
     const children = defaultVariant(layout).root.children;
-    expect(children).toHaveLength(1);
+    expect(children).toHaveLength(2);
     expect(children[0].node).toMatchObject({
       id: DEFAULT_CAMERA_MODULE_NODE_ID,
       kind: "module",
@@ -78,6 +81,21 @@ describe("layout composition", () => {
         roundedCorners: true,
         shadowStyle: "medium",
         retentionPreference: "automatic",
+      },
+    });
+    expect(children[1].node).toMatchObject({
+      id: DEFAULT_PANEL_MODULE_NODE_ID,
+      kind: "module",
+      moduleType: "panel",
+      slots: {
+        content: [
+          {
+            componentType: "camera_switcher",
+            config: { targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID },
+            id: DEFAULT_CAMERA_SWITCHER_COMPONENT_NODE_ID,
+            kind: "component",
+          },
+        ],
       },
     });
   });
@@ -407,6 +425,7 @@ function variantWithNodes(...ids: string[]): StageVariant {
       columns: 12,
       id: "root",
       kind: "container",
+      rows: ids.map(() => "fraction" as const),
     },
   };
 }

@@ -44,6 +44,10 @@ export const themeTokens = css`
       --text-primary-color,
       var(--primary-background-color, Canvas)
     );
+    --wzc-color-on-primary: var(
+      --ha-color-on-primary-normal,
+      var(--text-primary-color, var(--wzc-color-text-reversed))
+    );
 
     --wzc-color-error: var(
       --ha-color-text-error,
@@ -204,6 +208,16 @@ export const themeTokens = css`
     --wzc-carousel-navigation-hover-opacity: 100%;
     --wzc-carousel-navigation-icon-size: 2.5rem;
     --wzc-carousel-navigation-control-gap: 0.75rem;
+    --wzc-camera-switcher-color: var(--wzc-color-text-1);
+    --wzc-camera-switcher-background: var(--wzc-color-surface-secondary);
+    --wzc-camera-switcher-border-color: var(--wzc-color-border-control);
+    --wzc-camera-switcher-active-color: var(--wzc-color-on-primary);
+    --wzc-camera-switcher-active-background: var(--wzc-color-primary);
+    --wzc-camera-switcher-gap: 0.25rem;
+    --wzc-camera-switcher-padding: 0.25rem;
+    --wzc-camera-switcher-item-size: 2.25rem;
+    --wzc-camera-switcher-item-padding: 1rem;
+    --wzc-camera-switcher-transition-duration: 180ms;
     --wzc-talk-connected-color: var(--ha-color-green-50, #34d399);
     --wzc-talk-connecting-color: var(--ha-color-blue-50, #3b82f6);
     --wzc-talk-panel-background: color-mix(

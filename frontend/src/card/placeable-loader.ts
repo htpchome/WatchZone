@@ -1,7 +1,9 @@
 import {
+  CAMERA_SWITCHER_COMPONENT_TYPE,
   CAMERA_MODULE_TYPE,
   LIGHT_COMPONENT_TYPE,
   PTZ_COMPONENT_TYPE,
+  PANEL_MODULE_TYPE,
   TALK_COMPONENT_TYPE,
 } from "../core/constants";
 import type {
@@ -18,9 +20,21 @@ const moduleLoaders = {
       ),
     reserveAspectRatio: true,
   },
+  [PANEL_MODULE_TYPE]: {
+    load: () =>
+      import("../modules/panel").then(
+        ({ moduleDefinition }) => moduleDefinition,
+      ),
+  },
 } satisfies PlaceableLoaderMap;
 
 const componentLoaders = {
+  [CAMERA_SWITCHER_COMPONENT_TYPE]: {
+    load: () =>
+      import("../components/camera-switcher").then(
+        ({ componentDefinition }) => componentDefinition,
+      ),
+  },
   [TALK_COMPONENT_TYPE]: {
     load: () =>
       import("../components/two-way-talk").then(

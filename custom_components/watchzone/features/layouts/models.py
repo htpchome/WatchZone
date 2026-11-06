@@ -10,6 +10,7 @@ from homeassistant.exceptions import HomeAssistantError
 STAGE_SCHEMA_VERSION = 1
 StageSlotName = Literal["content", "controls", "footer", "overlay"]
 StageVariantName = Literal["default", "phone"]
+StageGridRowSize = Literal["content", "fraction"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,6 +59,7 @@ class StageContainerNode:
     children: tuple[StagePlacement, ...]
     columns: int
     id: str
+    rows: tuple[StageGridRowSize, ...]
     kind: Literal["container"] = "container"
 
 
@@ -120,29 +122,47 @@ def _container(value: object, ids: set[str]) -> StageContainerNode:
     if source.get("kind") != "container" or not isinstance(children, list):
         raise HomeAssistantError(f"Invalid stage container {node_id}")
     columns = _positive(source.get("columns"), "Stage columns")
+    rows = _rows(source.get("rows"))
     return StageContainerNode(
-        children=tuple(_placement(item, columns, ids) for item in children),
+        children=tuple(
+            _placement(item, columns, len(rows), ids) for item in children
+        ),
         columns=columns,
         id=node_id,
+        rows=rows,
     )
 
 
-def _placement(value: object, columns: int, ids: set[str]) -> StagePlacement:
+def _placement(
+    value: object, columns: int, rows: int, ids: set[str]
+) -> StagePlacement:
     source = _mapping(value, "Stage placement")
     grid = _mapping(source.get("grid"), "Stage grid area")
     column = _positive(grid.get("column"), "Stage column")
     column_span = _positive(grid.get("columnSpan"), "Stage column span")
     if column + column_span - 1 > columns:
         raise HomeAssistantError("Stage placement exceeds its container")
+    row = _positive(grid.get("row"), "Stage row")
+    row_span = _positive(grid.get("rowSpan"), "Stage row span")
+    if row + row_span - 1 > rows:
+        raise HomeAssistantError("Stage placement exceeds its container rows")
     return StagePlacement(
         grid=StageGridArea(
             column=column,
             column_span=column_span,
-            row=_positive(grid.get("row"), "Stage row"),
-            row_span=_positive(grid.get("rowSpan"), "Stage row span"),
+            row=row,
+            row_span=row_span,
         ),
         node=_module(source.get("node"), ids),
     )
+
+
+def _rows(value: object) -> tuple[StageGridRowSize, ...]:
+    if not isinstance(value, list) or not value:
+        raise HomeAssistantError("Stage grids require at least one row")
+    if any(row not in ("content", "fraction") for row in value):
+        raise HomeAssistantError("Stage grid rows require valid sizing")
+    return tuple(cast(StageGridRowSize, row) for row in value)
 
 
 def _module(value: object, ids: set[str]) -> StageModuleNode:

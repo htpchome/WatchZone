@@ -63,6 +63,7 @@
   "layout.unable_to_load_module": "Unable to load this module.",
   "layout.preparing_module": "Preparing module…",
   "camera.views": "Camera views",
+  "camera.switcher": "Camera selector",
   "camera.position": "Camera {position} of {total}",
   "camera.previous": "Previous camera",
   "camera.next": "Next camera",

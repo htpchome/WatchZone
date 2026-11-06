@@ -53,6 +53,7 @@ def _design(*, revision: int = 0) -> dict[str, object]:
                     "columns": columns,
                     "id": "root",
                     "kind": "container",
+                    "rows": ["fraction"],
                 }
             }
             for name, columns in (("default", 12), ("phone", 4))

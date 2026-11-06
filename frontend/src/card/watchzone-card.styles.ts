@@ -72,7 +72,8 @@ export const cardStyles = css`
       var(--wzc-stage-grid-columns),
       minmax(0, 1fr)
     );
-    grid-template-rows: repeat(var(--wzc-stage-grid-rows), minmax(0, 1fr));
+    grid-template-rows: var(--wzc-stage-grid-rows);
+    align-content: start;
     align-items: stretch;
     gap: var(--wzc-card-padding);
   }
@@ -96,6 +97,12 @@ export const cardStyles = css`
     block-size: 100%;
     min-block-size: 0;
     pointer-events: none;
+  }
+
+  .component-slot-content,
+  .component-slot-content > .component-node,
+  .component-slot-content > .component-node.placeable-ready > * {
+    block-size: auto;
   }
 
   .component-slot-overlay {

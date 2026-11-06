@@ -1,9 +1,11 @@
 import type { CardConfig } from "../../core/config";
 import {
   APP_ID,
+  CAMERA_SWITCHER_COMPONENT_TYPE,
   CAMERA_MODULE_TYPE,
   LIGHT_COMPONENT_TYPE,
   PTZ_COMPONENT_TYPE,
+  PANEL_MODULE_TYPE,
   TALK_COMPONENT_TYPE,
 } from "../../core/constants";
 import {
@@ -66,6 +68,7 @@ function namespacePlacement(placement: StagePlacement): StagePlacement {
                 name,
                 nodes?.map((node) => ({
                   ...node,
+                  config: namespaceComponentConfig(node),
                   id: namespacedId(node.id),
                 })),
               ]),
@@ -98,6 +101,9 @@ function hydrateModule(
   node: StageModuleNode,
   config: CardConfig,
 ): StageModuleNode | undefined {
+  if (node.moduleType === PANEL_MODULE_TYPE && config.cameras.length === 0) {
+    return undefined;
+  }
   if (node.moduleType !== CAMERA_MODULE_TYPE) return node;
   if (config.cameras.length === 0) return undefined;
   const overlay = (node.slots?.overlay ?? []).flatMap((component) => {
@@ -112,6 +118,7 @@ function hydrateModule(
         lowLatencyHls: camera.low_latency_hls,
         startUnmutedPcTablet: camera.start_live_unmuted_pc_tablet,
         startUnmutedPhone: camera.start_live_unmuted_phone,
+        title: camera.title,
       })),
       retentionPreference: config.mobile_data_saving
         ? "reduced_bandwidth"
@@ -121,6 +128,17 @@ function hydrateModule(
     },
     ...(overlay.length ? { slots: { ...node.slots, overlay } } : { slots: {} }),
   };
+}
+
+function namespaceComponentConfig(node: StageComponentNode): unknown {
+  if (node.componentType !== CAMERA_SWITCHER_COMPONENT_TYPE) return node.config;
+  if (typeof node.config !== "object" || node.config === null)
+    return node.config;
+  const targetModuleId = (node.config as Record<string, unknown>)
+    .targetModuleId;
+  return typeof targetModuleId === "string"
+    ? { ...node.config, targetModuleId: namespacedId(targetModuleId) }
+    : node.config;
 }
 
 function hydrateCameraComponent(

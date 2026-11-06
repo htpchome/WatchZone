@@ -27,6 +27,9 @@ second layout model.
   `footer`.
 - A **presentation** is private rendering inside its owner. Camera live video is
   a camera presentation, not another module or component.
+- A generic **panel module** gives a standalone component a grid placement and
+  `content` slot. Panel owns no feature behavior or visual treatment. Components
+  never sit directly on the raw Stage.
 
 Modules and components are independently lazy loaded. Neither imports another
 placeable. Shared behavior uses core contracts and typed context. Provider
@@ -38,7 +41,10 @@ A Stage Design contains a stable ID, name, schema version, optimistic revision,
 and at least one responsive variant: `default` for tablet/desktop, `phone`, or
 both. Variant presence declares where the design is eligible. Each variant
 owns a root grid container. Grid coordinates are positive logical columns and
-rows, never CSS pixels.
+rows, never CSS pixels. Each grid row declares either `fraction` sizing for
+shared remaining space or `content` sizing for intrinsic controls such as a
+standalone camera switcher. This keeps fixed-height cards bounded without
+assigning feature-specific layout behavior to Panel.
 
 Container children are placements containing one module node and one grid area.
 A module node contains its validated configuration and optional named slots.
@@ -59,11 +65,14 @@ The first built-in composition is:
 
 ```text
 root grid
-└── camera module
-    └── overlay slot
-        ├── two-way-talk component (when enabled)
-        ├── PTZ component (when enabled)
-        └── linked-light component (when configured)
+├── camera module
+│   └── overlay slot
+│       ├── two-way-talk component (when enabled)
+│       ├── PTZ component (when enabled)
+│       └── linked-light component (when configured)
+└── panel module
+    └── content slot
+        └── camera-switcher component
 ```
 
 ## Runtime rules
