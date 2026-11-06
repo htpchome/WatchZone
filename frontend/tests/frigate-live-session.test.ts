@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import type { MediaSessionSnapshot } from "../src/core/media-session-manager";
+import { getMediaSessionManager } from "../src/core/media-session-manager";
 
 const provider = vi.hoisted(() => ({
   acquireMse: vi.fn(),
@@ -18,6 +19,15 @@ vi.mock("../src/providers/frigate/live", () => ({
 import { FrigateCameraLiveSessionController } from "../src/providers/frigate/live/session.controller";
 
 describe("Frigate live session selection", () => {
+  beforeEach(() => {
+    provider.acquireMse.mockReset();
+    provider.acquireWebRtc.mockReset();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("starts MSE and WebRTC together, then upgrades without a second session", async () => {
     const mse = lease();
     const webRtc = lease();
@@ -57,6 +67,34 @@ describe("Frigate live session selection", () => {
     expect(mse.value.discard).toHaveBeenCalledOnce();
     expect(provider.acquireMse).toHaveBeenCalledOnce();
     expect(provider.acquireWebRtc).toHaveBeenCalledOnce();
+  });
+
+  it("reattaches retained WebRTC without painting a new MSE fallback", async () => {
+    vi.spyOn(
+      getMediaSessionManager(),
+      "hasReusableTransport",
+    ).mockReturnValue(true);
+    const webRtc = lease();
+    provider.acquireWebRtc.mockResolvedValue(webRtc.value);
+    const activeVideoChanged = vi.fn();
+    const controller = new FrigateCameraLiveSessionController(new Host(), {
+      getInitialMuted: () => true,
+      onActiveVideoChanged: activeVideoChanged,
+    });
+
+    controller.configure(api(), "camera.front", true);
+    controller.connect();
+    await vi.waitFor(() => {
+      expect(provider.acquireWebRtc).toHaveBeenCalledOnce();
+    });
+
+    expect(provider.acquireMse).not.toHaveBeenCalled();
+    const stream = {} as MediaStream;
+    webRtc.publish({ state: "live", stream, transport: "webrtc" });
+    const video = document.createElement("video");
+    controller.handleWebRtcDecoded(video);
+    expect(controller.selected).toBe("webrtc");
+    expect(activeVideoChanged).toHaveBeenLastCalledWith(video);
   });
 });
 

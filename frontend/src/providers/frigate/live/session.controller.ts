@@ -7,6 +7,7 @@ import type {
   MediaSessionSnapshot,
   MediaTransport,
 } from "../../../core/media-session-manager";
+import { getMediaSessionManager } from "../../../core/media-session-manager";
 import { FrigateLiveProvider } from ".";
 
 interface SessionCallbacks {
@@ -25,6 +26,7 @@ export class FrigateCameraLiveSessionController {
   private _mseSnapshot: MediaSessionSnapshot = { state: "new" };
   private _mseUnsubscribe?: () => void;
   private _revision = 0;
+  private _retainedWebRtcPreferred = false;
   private _selected?: PresentedLiveSource;
   private _transport?: MediaTransport;
   private _webRtcDecoded = false;
@@ -102,7 +104,17 @@ export class FrigateCameraLiveSessionController {
   private _sync(): void {
     if (!this._connected || !this._api || !this._entityId || !this._available)
       return;
-    if (!this._mseLease && this._mseSnapshot.state === "new") {
+    this._retainedWebRtcPreferred =
+      this._selected === "webrtc" ||
+      getMediaSessionManager().hasReusableTransport(
+        `frigate_go2rtc:${this._entityId}`,
+        "webrtc",
+      );
+    if (
+      !this._retainedWebRtcPreferred &&
+      !this._mseLease &&
+      this._mseSnapshot.state === "new"
+    ) {
       const generation = ++this._generation;
       this._mseSnapshot = { state: "connecting" };
       void this._acquireMse(this._api, this._entityId, generation);
@@ -131,6 +143,8 @@ export class FrigateCameraLiveSessionController {
           if (!this._selected) {
             snapshot.timing?.mark("presentation_selected");
             this._select("mse", snapshot.transport, snapshot.video);
+          } else if (this._selected === "mse") {
+            this._callbacks.onActiveVideoChanged(snapshot.video);
           }
         } else if (snapshot.state === "failed") {
           if (this._selected === "mse") this._clearSelection();
@@ -170,10 +184,13 @@ export class FrigateCameraLiveSessionController {
         this._webRtcUnsubscribe = lease.subscribe((snapshot) => {
           this._webRtcSnapshot = snapshot;
           this._revision += 1;
+          if (snapshot.state === "failed") {
+            this._retainedWebRtcPreferred = false;
+          }
           if (snapshot.state === "failed" && this._selected === "webrtc") {
             this._clearSelection();
-            this._sync();
           }
+          if (snapshot.state === "failed") this._sync();
           this._host.requestUpdate();
         });
       })
@@ -219,6 +236,7 @@ export class FrigateCameraLiveSessionController {
     this._generation += 1;
     this._clearSelection();
     this._webRtcDecoded = false;
+    this._retainedWebRtcPreferred = false;
     this._releaseMse();
     this._releaseWebRtc();
   }
@@ -226,6 +244,7 @@ export class FrigateCameraLiveSessionController {
     this._generation += 1;
     this._clearSelection();
     this._webRtcDecoded = false;
+    this._retainedWebRtcPreferred = false;
     this._releaseMse(true);
     this._releaseWebRtc(true);
   }

@@ -105,6 +105,14 @@ An adapter declares one supported attachment strategy:
 Adapters that cannot retain across attachment changes must declare that limit
 and may not silently claim full retention support.
 
+An element-backed session has exactly one active presentation owner. When a
+card and editor preview overlap, the newest lease receives the element and the
+previous lease receives the same live snapshot without the element so it can
+show its poster. Releasing the newest lease republishes ownership to the prior
+lease. Two presentations must never compete to reparent one media element.
+Stream-backed sessions remain independently attachable to multiple media
+elements.
+
 ## 4. Identity and pooling
 
 The manager pools by a canonical `MediaSessionKey`, not by camera display name,
@@ -175,6 +183,10 @@ camera. Selecting another camera releases the prior view's leases into the
 document manager and immediately acquires the selected camera without a
 background queue. A healthy retained session is reused by canonical key, so
 selection does not renegotiate when policy kept that camera connected.
+If the manager already holds a live or parked WebRTC transport for the selected
+camera, the new presentation reattaches that stream directly. It must not paint
+HLS or MSE first and simulate a fresh fallback-to-WebRTC takeover. The fallback
+starts normally when the retained WebRTC session is absent, failed, or evicted.
 
 ### 6.2 Editor and preview
 

@@ -71,6 +71,11 @@ interface SelectorElement extends HTMLElement {
   hass?: HomeAssistant;
 }
 
+interface CameraSourceControlState {
+  readonly ptzEnabled: boolean;
+  readonly talkEnabled: boolean;
+}
+
 const CAMERA_SELECTOR = {
   entity: { filter: { domain: "camera" } },
 } as const;
@@ -113,6 +118,10 @@ export class CardEditor extends LitElement {
   private _config?: CardConfig;
   private _cameraBaseline?: CameraConfig;
   private _cameraDraft?: CameraConfig;
+  private readonly _cameraSourceControls = new Map<
+    CameraConnectionSource,
+    CameraSourceControlState
+  >();
   private _cameraTitleInput = "";
   private _addingLight = false;
   private _pendingLightEntityId = "";
@@ -448,7 +457,11 @@ export class CardEditor extends LitElement {
                     density="compact"
                     heading=${this._t("editor.connection_source")}
                     item-key="connection"
-                    summary-text=${this._t("editor.home_assistant")}
+                    summary-text=${
+                      camera.connection_source === "frigate_go2rtc"
+                        ? this._t("editor.frigate_go2rtc")
+                        : this._t("editor.home_assistant")
+                    }
                   >
                     <div class="camera-section-fields">
                       <ha-selector
@@ -679,7 +692,12 @@ export class CardEditor extends LitElement {
                     aria-label=${this._t("editor.icon")}
                     .hass=${this._hass}
                     .selector=${ICON_SELECTOR}
-                    .value=${this._pendingLightIcon}
+                    .value=${
+                      this._pendingLightEntityId
+                        ? this._pendingLightIcon || DEFAULT_LIGHT_ICON
+                        : ""
+                    }
+                    .required=${true}
                     @value-changed=${this._handlePendingLightIconChange}
                   ></ha-selector>
                 </div>
@@ -846,9 +864,18 @@ export class CardEditor extends LitElement {
     if (!this._cameraDraft) return;
     const value = eventString(event);
     if (value !== "home_assistant" && value !== "frigate_go2rtc") return;
+    if (value === this._cameraDraft.connection_source) return;
+    this._rememberCameraSourceControls(this._cameraDraft.connection_source);
+    const controls = this._cameraSourceControls.get(value) ?? {
+      ptzEnabled: this._cameraDraft.ptz_enabled,
+      talkEnabled: this._cameraDraft.two_way_talk_enabled,
+    };
+    this._cameraSourceControls.set(value, controls);
     this._cameraDraft = {
       ...this._cameraDraft,
       connection_source: value,
+      // Capability results below restore the source-specific intent only when
+      // the selected provider confirms support.
       ptz_enabled: false,
       two_way_talk_enabled: false,
     };
@@ -868,6 +895,9 @@ export class CardEditor extends LitElement {
       ...this._cameraDraft,
       [key]: event.detail.value,
     };
+    if (key === "ptz_enabled" || key === "two_way_talk_enabled") {
+      this._rememberCameraSourceControls(this._cameraDraft.connection_source);
+    }
     this.requestUpdate();
   };
 
@@ -875,13 +905,18 @@ export class CardEditor extends LitElement {
     event: ValueChangedEvent,
   ): void => {
     this._pendingLightEntityId = eventString(event);
+    if (this._pendingLightEntityId && !this._pendingLightIcon) {
+      this._pendingLightIcon = DEFAULT_LIGHT_ICON;
+    }
     this.requestUpdate();
   };
 
   private readonly _startAddingLight = (): void => {
     this._addingLight = true;
     this._pendingLightEntityId = "";
-    this._pendingLightIcon = DEFAULT_LIGHT_ICON;
+    // Transition the icon selector from empty to the default after an entity
+    // is chosen; HA's lazy selector otherwise does not paint an initial value.
+    this._pendingLightIcon = "";
     this.requestUpdate();
   };
 
@@ -971,6 +1006,8 @@ export class CardEditor extends LitElement {
     this._editingCameraIndex = undefined;
     this._cameraBaseline = undefined;
     this._cameraDraft = createDefaultCameraConfig();
+    this._cameraSourceControls.clear();
+    this._rememberCameraSourceControls(this._cameraDraft.connection_source);
     this._cameraTitleInput = "";
     this._cancelAddingLight();
     this._talkCapability = undefined;
@@ -989,6 +1026,8 @@ export class CardEditor extends LitElement {
     this._editingCameraIndex = index;
     this._cameraBaseline = camera;
     this._cameraDraft = { ...camera };
+    this._cameraSourceControls.clear();
+    this._rememberCameraSourceControls(camera.connection_source);
     this._cameraTitleInput = camera.title;
     this._cancelAddingLight();
     this._checkTalkCapability(camera.entity_id);
@@ -1025,6 +1064,7 @@ export class CardEditor extends LitElement {
     event.preventDefault();
     this._cameraBaseline = undefined;
     this._cameraDraft = undefined;
+    this._cameraSourceControls.clear();
     this._cameraTitleInput = "";
     this._cancelAddingLight();
     this._talkCapabilityGeneration += 1;
@@ -1046,6 +1086,7 @@ export class CardEditor extends LitElement {
     else cameras[this._editingCameraIndex] = this._cameraDraft;
     this._cameraBaseline = undefined;
     this._cameraDraft = undefined;
+    this._cameraSourceControls.clear();
     this._cameraTitleInput = "";
     this._cancelAddingLight();
     this._editingCameraIndex = undefined;
@@ -1135,6 +1176,16 @@ export class CardEditor extends LitElement {
         if (generation !== this._talkCapabilityGeneration) return;
         this._talkCapability = supported;
         this._talkCapabilityPending = false;
+        const source = this._cameraDraft?.connection_source;
+        const controls = source
+          ? this._cameraSourceControls.get(source)
+          : undefined;
+        if (supported && this._cameraDraft && controls?.talkEnabled) {
+          this._cameraDraft = {
+            ...this._cameraDraft,
+            two_way_talk_enabled: true,
+          };
+        }
         this.requestUpdate();
       });
   }
@@ -1162,8 +1213,29 @@ export class CardEditor extends LitElement {
         if (generation !== this._ptzCapabilityGeneration) return;
         this._ptzCapability = capability;
         this._ptzCapabilityPending = false;
+        const source = this._cameraDraft?.connection_source;
+        const controls = source
+          ? this._cameraSourceControls.get(source)
+          : undefined;
+        if (
+          capability?.supported === true &&
+          this._cameraDraft &&
+          controls?.ptzEnabled
+        ) {
+          this._cameraDraft = { ...this._cameraDraft, ptz_enabled: true };
+        }
         this.requestUpdate();
       });
+  }
+
+  private _rememberCameraSourceControls(
+    source: CameraConnectionSource,
+  ): void {
+    if (!this._cameraDraft) return;
+    this._cameraSourceControls.set(source, {
+      ptzEnabled: this._cameraDraft.ptz_enabled,
+      talkEnabled: this._cameraDraft.two_way_talk_enabled,
+    });
   }
 
   private _cameraSummary(camera: CameraConfig): string {
@@ -1322,6 +1394,7 @@ function eventString(event: ValueChangedEvent): string {
 
 function cameraConfigEquals(left: CameraConfig, right: CameraConfig): boolean {
   return (
+    left.connection_source === right.connection_source &&
     left.entity_id === right.entity_id &&
     linkedLightsEqual(left.lights, right.lights) &&
     left.low_latency_hls === right.low_latency_hls &&

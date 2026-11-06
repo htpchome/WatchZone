@@ -123,8 +123,11 @@ class ManagedMediaSession {
   private _reconnectTimer?: ReturnType<typeof setTimeout>;
   private _stabilityTimer?: ReturnType<typeof setTimeout>;
   private _transportInterrupted = false;
-  private readonly _listeners = new Set<
-    (snapshot: MediaSessionSnapshot) => void
+  private _elementOwner?: object;
+  private readonly _leases: object[] = [];
+  private readonly _listeners = new Map<
+    (snapshot: MediaSessionSnapshot) => void,
+    object
   >();
   private _snapshot: MediaSessionSnapshot = { state: "new" };
 
@@ -162,6 +165,9 @@ class ManagedMediaSession {
     };
     this.lastUsed = performance.now();
     this._leaseCount += 1;
+    const leaseToken = {};
+    this._leases.push(leaseToken);
+    this._elementOwner = leaseToken;
     if (this._reconnectTimer) {
       clearTimeout(this._reconnectTimer);
       this._reconnectTimer = undefined;
@@ -187,6 +193,11 @@ class ManagedMediaSession {
       this._snapshot.state === "failed"
     ) {
       void this._connect(options);
+    } else if (this._snapshot.video) {
+      // A retained element-backed transport can have only one DOM parent.
+      // Republish ownership so an editor/card handoff cannot make two
+      // presentations repeatedly steal the same element from each other.
+      this._setSnapshot(this._snapshot);
     }
 
     let released = false;
@@ -195,12 +206,12 @@ class ManagedMediaSession {
         return;
       }
       released = true;
-      this._release(discard);
+      this._release(discard, leaseToken);
     };
     return {
       key: this.key,
       discard: () => release(true),
-      getSnapshot: () => this._snapshot,
+      getSnapshot: () => this._snapshotFor(leaseToken),
       release: () => release(false),
       retry: () => {
         if (!released) {
@@ -211,8 +222,8 @@ class ManagedMediaSession {
         if (released) {
           return () => undefined;
         }
-        this._listeners.add(listener);
-        listener(this._snapshot);
+        this._listeners.set(listener, leaseToken);
+        listener(this._snapshotFor(leaseToken));
         return () => this._listeners.delete(listener);
       },
     };
@@ -230,11 +241,21 @@ class ManagedMediaSession {
     this._closeConnection();
     this._setSnapshot({ state: "closed" });
     this._listeners.clear();
+    this._leases.length = 0;
+    this._elementOwner = undefined;
     this._onClosed();
   }
 
   public isRetained(): boolean {
     return this._leaseCount === 0;
+  }
+
+  public hasReusableTransport(transport: MediaTransport): boolean {
+    return (
+      (this._snapshot.state === "live" ||
+        this._snapshot.state === "parked") &&
+      this._snapshot.transport === transport
+    );
   }
 
   public async reconnectIfFailed(): Promise<void> {
@@ -403,8 +424,16 @@ class ManagedMediaSession {
     }, delay);
   }
 
-  private _release(discard: boolean): void {
+  private _release(discard: boolean, leaseToken: object): void {
     this._leaseCount = Math.max(0, this._leaseCount - 1);
+    for (const [listener, owner] of this._listeners) {
+      if (owner === leaseToken) this._listeners.delete(listener);
+    }
+    const leaseIndex = this._leases.indexOf(leaseToken);
+    if (leaseIndex >= 0) this._leases.splice(leaseIndex, 1);
+    if (this._elementOwner === leaseToken) {
+      this._elementOwner = this._leases.at(-1);
+    }
     this.lastUsed = performance.now();
     if (this._leaseCount > 0) {
       // Element-backed transports can have only one DOM attachment. Republish
@@ -437,9 +466,20 @@ class ManagedMediaSession {
 
   private _setSnapshot(snapshot: MediaSessionSnapshot): void {
     this._snapshot = snapshot;
-    for (const listener of this._listeners) {
-      listener(snapshot);
+    for (const [listener, leaseToken] of this._listeners) {
+      listener(this._snapshotFor(leaseToken));
     }
+  }
+
+  private _snapshotFor(leaseToken: object): MediaSessionSnapshot {
+    if (!this._snapshot.video || this._elementOwner === leaseToken) {
+      return this._snapshot;
+    }
+    const snapshot: { video?: HTMLVideoElement } & MediaSessionSnapshot = {
+      ...this._snapshot,
+    };
+    delete snapshot.video;
+    return snapshot;
   }
 }
 
@@ -518,6 +558,18 @@ export class MediaSessionManager {
 
   public setCameraMuted(entityId: string, muted: boolean): void {
     this._cameraMutePreferences.set(entityId, muted ? "muted" : "unmuted");
+  }
+
+  /** Reports actual retained connection health without owning presentation policy. */
+  public hasReusableTransport(
+    cameraKey: string,
+    transport: MediaTransport,
+  ): boolean {
+    return [...this._sessions.values()].some(
+      (session) =>
+        session.cameraKey === cameraKey &&
+        session.hasReusableTransport(transport),
+    );
   }
 
   public setCameraActivity(

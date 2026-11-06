@@ -7,6 +7,7 @@ import type {
   MediaSessionSnapshot,
   MediaTransport,
 } from "../../../core/media-session-manager";
+import { getMediaSessionManager } from "../../../core/media-session-manager";
 import { LiveSourceResolver } from "../../../providers/live-source-resolver";
 
 interface SessionCallbacks {
@@ -26,6 +27,7 @@ export class CameraLiveSessionController implements ReactiveController {
   private _hlsUnsubscribe?: () => void;
   private _lowLatencyHls = true;
   private _retryWebRtcAfterHlsRecovery = false;
+  private _retainedWebRtcPreferred = false;
   private _revision = 0;
   private _selected?: PresentedLiveSource;
   private _transport?: MediaTransport;
@@ -123,6 +125,12 @@ export class CameraLiveSessionController implements ReactiveController {
       return;
     }
     const webRtcKey = this._resolver.homeAssistantWebRtcKey(this._entityId);
+    this._retainedWebRtcPreferred =
+      this._selected === "webrtc" ||
+      getMediaSessionManager().hasReusableTransport(
+        this._entityId,
+        "webrtc",
+      );
     if (
       this._webRtcLease?.key !== webRtcKey &&
       this._webRtcPendingKey !== webRtcKey
@@ -163,10 +171,13 @@ export class CameraLiveSessionController implements ReactiveController {
         if (snapshot.state === "connecting" || snapshot.state === "failed") {
           this._webRtcDecoded = false;
         }
+        if (snapshot.state === "failed") {
+          this._retainedWebRtcPreferred = false;
+        }
         if (snapshot.state === "failed" && this._selected === "webrtc") {
           this._clearSelection();
-          this._syncHls();
         }
+        if (snapshot.state === "failed") this._syncHls();
         this._host.requestUpdate();
       });
     } catch (error) {
@@ -185,6 +196,7 @@ export class CameraLiveSessionController implements ReactiveController {
   private _syncHls(): void {
     if (
       this._selected === "webrtc" ||
+      this._retainedWebRtcPreferred ||
       !this._api ||
       !this._entityId ||
       !this._available ||
@@ -239,6 +251,8 @@ export class CameraLiveSessionController implements ReactiveController {
           if (!this._selected) {
             snapshot.timing?.mark("presentation_selected");
             this._select("hls", snapshot.transport, snapshot.video);
+          } else if (this._selected === "hls") {
+            this._callbacks.onActiveVideoChanged(snapshot.video);
           }
           if (this._retryWebRtcAfterHlsRecovery) {
             this._retryWebRtcAfterHlsRecovery = false;
@@ -286,6 +300,7 @@ export class CameraLiveSessionController implements ReactiveController {
     this._clearSelection();
     this._webRtcDecoded = false;
     this._retryWebRtcAfterHlsRecovery = false;
+    this._retainedWebRtcPreferred = false;
     this._releaseWebRtc();
     this._releaseHls();
   }
@@ -294,6 +309,7 @@ export class CameraLiveSessionController implements ReactiveController {
     this._clearSelection();
     this._webRtcDecoded = false;
     this._retryWebRtcAfterHlsRecovery = false;
+    this._retainedWebRtcPreferred = false;
     this._releaseWebRtc(true);
     this._releaseHls(true);
   }

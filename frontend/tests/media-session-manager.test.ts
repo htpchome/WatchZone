@@ -107,9 +107,18 @@ describe("MediaSessionManager", () => {
 
     expect(factory).toHaveBeenCalledOnce();
     expect(second.getSnapshot().stream).toBe(stream);
+    expect(manager.hasReusableTransport("camera.front", "webrtc")).toBe(
+      false,
+    );
     first.release();
     second.release();
     expect(second.getSnapshot().state).toBe("parked");
+
+    // The test factory has no transport metadata, so an arbitrary retained
+    // stream must not be mistaken for a reusable WebRTC winner.
+    expect(manager.hasReusableTransport("camera.front", "webrtc")).toBe(
+      false,
+    );
 
     const returned = manager.acquireHomeAssistant(api, "camera.front");
     expect(returned.getSnapshot()).toMatchObject({ state: "live", stream });
@@ -117,6 +126,55 @@ describe("MediaSessionManager", () => {
     expect(close).not.toHaveBeenCalled();
 
     returned.release();
+    manager.closeAll();
+  });
+
+  it("reports only live or parked transports as reusable", async () => {
+    const factory = vi.fn<ConnectionFactory>(async () => ({
+      close: vi.fn(),
+      stream: createStream(),
+      transport: "webrtc",
+    }));
+    const manager = new MediaSessionManager(factory);
+    const lease = manager.acquireHomeAssistant(createApi(), "camera.front");
+
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
+    expect(manager.hasReusableTransport("camera.front", "webrtc")).toBe(true);
+    expect(manager.hasReusableTransport("camera.front", "hls_mse")).toBe(
+      false,
+    );
+
+    lease.release();
+    expect(lease.getSnapshot().state).toBe("parked");
+    expect(manager.hasReusableTransport("camera.front", "webrtc")).toBe(true);
+
+    manager.closeAll();
+    expect(manager.hasReusableTransport("camera.front", "webrtc")).toBe(
+      false,
+    );
+  });
+
+  it("hands one retained media element between concurrent presentations", async () => {
+    const video = document.createElement("video");
+    const factory = vi.fn<ConnectionFactory>(async () => ({
+      close: vi.fn(),
+      transport: "hls_mse",
+      video,
+    }));
+    const manager = new MediaSessionManager(factory, factory);
+    const api = createApi();
+    const first = manager.acquireHomeAssistantHls(api, "camera.front");
+    await vi.waitFor(() => expect(first.getSnapshot().state).toBe("live"));
+    expect(first.getSnapshot().video).toBe(video);
+
+    const second = manager.acquireHomeAssistantHls(api, "camera.front");
+    expect(first.getSnapshot().video).toBeUndefined();
+    expect(second.getSnapshot().video).toBe(video);
+
+    second.release();
+    expect(first.getSnapshot().video).toBe(video);
+
+    first.release();
     manager.closeAll();
   });
 

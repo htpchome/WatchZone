@@ -535,6 +535,10 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
   await expect(lightIcon).toBeVisible();
   await expect(lightButton).toHaveAttribute("title", "Turn off Porch");
   await expect(lightButton).toHaveAttribute("aria-label", "Turn off Porch");
+  // Hold the shared overlay while collecting geometry. WebKit is otherwise
+  // able to cross the intentional hide deadline between visibility checks and
+  // the final bounding-box read.
+  await ptzControl.hover();
 
   const [
     cameraBox,

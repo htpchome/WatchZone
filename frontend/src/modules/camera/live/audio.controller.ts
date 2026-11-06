@@ -127,7 +127,9 @@ export class CameraAudioController implements ReactiveController {
   }
 
   public toggleUserMute(): void {
-    this.setUserMuted(!this._muted);
+    // User intent is independent from temporary forced mute and talk state.
+    // Toggling the effective value can never unmute while either is active.
+    this.setUserMuted(!this._desiredMuted);
   }
 
   public setUserMuted(muted: boolean): void {
