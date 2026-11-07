@@ -301,6 +301,107 @@ describe("camera presentation retention", () => {
     expect(hlsFactory).toHaveBeenCalledOnce();
   });
 
+  it("reattaches retained Frigate MSE without presenting a connecting state", async () => {
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
+    const mseVideo = document.createElement("video");
+    const webRtcFactory = vi.fn<ConnectionFactory>(async () => ({
+      close: vi.fn(),
+    }));
+    const mseFactory = vi.fn<ConnectionFactory>(async () => ({
+      video: mseVideo,
+      transport: "mse",
+      close: vi.fn(),
+    }));
+    installTestMediaSessionManager(
+      new MediaSessionManager(webRtcFactory, mseFactory),
+    );
+    const api = createApi();
+    vi.mocked(api.callWS).mockResolvedValue({
+      id: "frigate_go2rtc:entry-home:front",
+      type: "frigate_go2rtc",
+      frigate_instance_id: "frigate",
+      stream_name: "front",
+    });
+    const first = createLiveView(api);
+    first.connection = "frigate_go2rtc";
+    document.body.append(first);
+    await vi.waitFor(() =>
+      expect(presentation(first)?.selected).toBe("fallback"),
+    );
+
+    first.remove();
+    const returned = createLiveView(api);
+    returned.connection = "frigate_go2rtc";
+    document.body.append(returned);
+    await returned.updateComplete;
+    const returnedPresentation = presentation(returned);
+    await returnedPresentation?.updateComplete;
+
+    expect(returnedPresentation?.selected).toBe("fallback");
+    expect(
+      returnedPresentation?.shadowRoot?.querySelector(".connection-spinner"),
+    ).toBeNull();
+    expect(returnedPresentation?.fallbackVideo).toBe(mseVideo);
+    expect(api.callWS).toHaveBeenCalledOnce();
+    expect(webRtcFactory).toHaveBeenCalledOnce();
+    expect(mseFactory).toHaveBeenCalledOnce();
+  });
+
+  it("reattaches retained Frigate WebRTC without presenting a connecting state", async () => {
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
+    const stream = { getTracks: () => [] } as unknown as MediaStream;
+    const webRtcVideo = document.createElement("video");
+    webRtcVideo.srcObject = stream;
+    const webRtcFactory = vi.fn<ConnectionFactory>(async () => ({
+      stream,
+      video: webRtcVideo,
+      transport: "webrtc",
+      close: vi.fn(),
+    }));
+    const mseFactory = vi.fn<ConnectionFactory>(async () => ({
+      video: document.createElement("video"),
+      transport: "mse",
+      close: vi.fn(),
+    }));
+    installTestMediaSessionManager(
+      new MediaSessionManager(webRtcFactory, mseFactory),
+    );
+    const api = createApi();
+    vi.mocked(api.callWS).mockResolvedValue({
+      id: "frigate_go2rtc:entry-home:backyard",
+      type: "frigate_go2rtc",
+      frigate_instance_id: "frigate",
+      stream_name: "backyard",
+    });
+    const first = createLiveView(api);
+    first.connection = "frigate_go2rtc";
+    document.body.append(first);
+    await vi.waitFor(() =>
+      expect(presentation(first)?.webRtcVideo).toBe(webRtcVideo),
+    );
+    webRtcVideo.dispatchEvent(new Event("loadeddata"));
+    await vi.waitFor(() =>
+      expect(presentation(first)?.selected).toBe("webrtc"),
+    );
+
+    first.remove();
+    const returned = createLiveView(api);
+    returned.connection = "frigate_go2rtc";
+    document.body.append(returned);
+    await returned.updateComplete;
+    const returnedPresentation = presentation(returned);
+    await returnedPresentation?.updateComplete;
+
+    expect(returnedPresentation?.selected).toBe("webrtc");
+    expect(
+      returnedPresentation?.shadowRoot?.querySelector(".connection-spinner"),
+    ).toBeNull();
+    expect(returnedPresentation?.webRtcVideo).toBe(webRtcVideo);
+    expect(api.callWS).toHaveBeenCalledOnce();
+    expect(webRtcFactory).toHaveBeenCalledOnce();
+    expect(mseFactory).toHaveBeenCalledOnce();
+  });
+
   it("reattaches the same verified WebRTC player without restarting HLS", async () => {
     vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
     const stream = { getTracks: () => [] } as unknown as MediaStream;

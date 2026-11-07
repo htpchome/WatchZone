@@ -16,6 +16,10 @@ type HomeAssistantProvider =
 let providerPromise: Promise<InstanceType<HomeAssistantProvider>> | undefined;
 type FrigateProvider = typeof import("./frigate/live").FrigateLiveProvider;
 let frigateProviderPromise: Promise<InstanceType<FrigateProvider>> | undefined;
+const frigateSources = new WeakMap<
+  HomeAssistantApi["identity"],
+  Map<string, FrigateGo2RtcLiveSourceDescriptor>
+>();
 
 async function getHomeAssistantProvider(): Promise<
   InstanceType<HomeAssistantProvider>
@@ -37,10 +41,22 @@ export class LiveSourceResolver {
     api: HomeAssistantApi,
     entityId: string,
   ): Promise<FrigateGo2RtcLiveSourceDescriptor> {
+    const cached = this.cachedFrigate(api, entityId);
+    if (cached) return cached;
     const descriptor = await resolveLiveSource(api, "frigate_go2rtc", entityId);
     if (descriptor.type !== "frigate_go2rtc")
       throw new Error("Frigate go2rtc source is unavailable");
+    const sources = frigateSources.get(api.identity) ?? new Map();
+    sources.set(entityId, descriptor);
+    frigateSources.set(api.identity, sources);
     return descriptor;
+  }
+
+  public cachedFrigate(
+    api: HomeAssistantApi,
+    entityId: string,
+  ): FrigateGo2RtcLiveSourceDescriptor | undefined {
+    return frigateSources.get(api.identity)?.get(entityId);
   }
 
   public connectionKey(
@@ -112,6 +128,18 @@ export class LiveSourceResolver {
     return getMediaSessionManager().acquireUsable(
       this.frigateWebRtcKey(source),
       api,
+    );
+  }
+
+  public acquireUsableFrigateMse(
+    api: HomeAssistantApi,
+    source: FrigateGo2RtcLiveSourceDescriptor,
+    options: MediaConnectionOptions,
+  ): MediaSessionLease | undefined {
+    return getMediaSessionManager().acquireUsable(
+      this.frigateMseKey(source),
+      api,
+      options,
     );
   }
 

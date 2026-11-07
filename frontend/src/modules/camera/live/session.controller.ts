@@ -112,7 +112,10 @@ export class CameraLiveSessionController implements ReactiveController {
     this._lowLatencyHls = lowLatencyHls;
     if (identityChanged) {
       this._sourceGeneration += 1;
-      this._frigateSource = undefined;
+      this._frigateSource =
+        connection === "frigate_go2rtc" && api && entityId
+          ? this._resolver.cachedFrigate(api, entityId)
+          : undefined;
       this._frigateSourcePending = false;
     }
     if (changed || !available) {
@@ -148,6 +151,12 @@ export class CameraLiveSessionController implements ReactiveController {
     if (!this._connected || !this._api || !this._entityId || !this._available) {
       this._releaseAll();
       return;
+    }
+    if (this._connection === "frigate_go2rtc" && !this._frigateSource) {
+      this._frigateSource = this._resolver.cachedFrigate(
+        this._api,
+        this._entityId,
+      );
     }
     if (this._connection === "frigate_go2rtc" && !this._frigateSource) {
       if (!this._frigateSourcePending) {
@@ -308,26 +317,32 @@ export class CameraLiveSessionController implements ReactiveController {
     if (this._fallbackLease?.key === key || this._fallbackPendingKey === key)
       return;
     this._releaseFallback();
+    const options = {
+      initialMuted: this._callbacks.getInitialMuted(),
+      lowLatencyHls: this._lowLatencyHls,
+    };
+    if (this._connection === "frigate_go2rtc") {
+      const usableLease = this._resolver.acquireUsableFrigateMse(
+        this._api,
+        this._frigateSource!,
+        options,
+      );
+      if (usableLease) {
+        this._adoptFallbackLease(usableLease);
+        return;
+      }
+    }
     this._fallbackPendingKey = key;
-    void this._acquireFallback(
-      this._api,
-      this._entityId,
-      key,
-      this._lowLatencyHls,
-    );
+    void this._acquireFallback(this._api, this._entityId, key, options);
   }
 
   private async _acquireFallback(
     api: HomeAssistantApi,
     entityId: string,
     expectedKey: string,
-    lowLatencyHls: boolean,
+    options: { initialMuted: boolean; lowLatencyHls: boolean },
   ): Promise<void> {
     try {
-      const options = {
-        initialMuted: this._callbacks.getInitialMuted(),
-        lowLatencyHls,
-      };
       const lease =
         this._connection === "frigate_go2rtc" && this._frigateSource
           ? await this._resolver.acquireFrigateMse(
@@ -361,30 +376,7 @@ export class CameraLiveSessionController implements ReactiveController {
         lease.release();
         return;
       }
-      this._fallbackLease = lease;
-      this._fallbackUnsubscribe = this._fallbackLease.subscribe((snapshot) => {
-        this._fallbackSnapshot = snapshot;
-        this._revision += 1;
-        if (snapshot.state === "live") {
-          if (!this._selected) {
-            snapshot.timing?.mark("presentation_selected");
-            this._select("fallback", snapshot.transport, snapshot.video);
-          }
-          if (this._retryWebRtcAfterFallbackRecovery) {
-            this._retryWebRtcAfterFallbackRecovery = false;
-            if (this._webRtcSnapshot.state === "failed") {
-              this._webRtcLease?.retry();
-            }
-          }
-        } else if (
-          snapshot.state === "failed" &&
-          this._selected === "fallback"
-        ) {
-          this._retryWebRtcAfterFallbackRecovery = true;
-          this._clearSelection();
-        }
-        this._host.requestUpdate();
-      });
+      this._adoptFallbackLease(lease);
     } catch (error) {
       this._fallbackSnapshot = {
         state: "failed",
@@ -397,6 +389,31 @@ export class CameraLiveSessionController implements ReactiveController {
         this._fallbackPendingKey = undefined;
       }
     }
+  }
+
+  private _adoptFallbackLease(lease: MediaSessionLease): void {
+    this._fallbackLease = lease;
+    this._fallbackUnsubscribe = lease.subscribe((snapshot) => {
+      this._fallbackSnapshot = snapshot;
+      this._revision += 1;
+      if (snapshot.state === "live") {
+        if (this._connection === "frigate_go2rtc") lease.markUsable();
+        if (!this._selected) {
+          snapshot.timing?.mark("presentation_selected");
+          this._select("fallback", snapshot.transport, snapshot.video);
+        }
+        if (this._retryWebRtcAfterFallbackRecovery) {
+          this._retryWebRtcAfterFallbackRecovery = false;
+          if (this._webRtcSnapshot.state === "failed") {
+            this._webRtcLease?.retry();
+          }
+        }
+      } else if (snapshot.state === "failed" && this._selected === "fallback") {
+        this._retryWebRtcAfterFallbackRecovery = true;
+        this._clearSelection();
+      }
+      this._host.requestUpdate();
+    });
   }
 
   private _select(

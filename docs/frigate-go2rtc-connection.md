@@ -59,6 +59,9 @@ and `ptz.md`, which remain authoritative.
   remain part of the concrete session key.
 - Camera selection, carousel movement, card navigation, dashboard navigation,
   editor transitions, and return navigation reuse healthy retained sessions.
+- The validated Frigate source descriptor is reused for the Home Assistant
+  document lifetime so card reconstruction can synchronously reclaim a healthy
+  retained MSE or WebRTC session without presenting a false connecting state.
 - Changing a camera's configured connection provider discards that camera's
   unused sessions from the former provider rather than accumulating both
   providers' preferred and fallback transports.
