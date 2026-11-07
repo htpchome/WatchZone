@@ -297,16 +297,10 @@ export class CameraModule extends LitElement {
 
   private _syncCameraActivity(): void {
     const manager = getMediaSessionManager();
-    const deviceClass = this._deviceProfile.profile.deviceClass;
-    manager.setCameraActivity(
-      this,
-      this.cameras[this._activeIndex]?.entityId,
-      deviceClass,
-    );
+    manager.setCameraActivity(this, this.cameras[this._activeIndex]?.entityId);
     manager.setCameraRetentionPreference(
       this,
       this.cameras.map(({ entityId }) => entityId),
-      deviceClass,
       this.retentionPreference,
     );
   }

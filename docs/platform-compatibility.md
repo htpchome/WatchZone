@@ -67,6 +67,24 @@ The profile reacts to container resize and pointing-device changes. Features
 must query the capability they actually require; a phone label does not imply
 touch-only input, and a desktop label does not imply hover or a fine pointer.
 
+### 2.2 Client identity profile
+
+Physical-client and Home Assistant application policy uses a separate,
+document-scoped client identity profile. It classifies phone, tablet, and
+desktop clients; distinguishes iOS and Android where the browser exposes that
+identity; and identifies Home Assistant Companion and Mac Catalyst clients.
+It uses User-Agent Client Hints first, then narrowly scoped user-agent and
+platform markers with touch capability for iPadOS and Android-tablet
+disambiguation. Client identity never derives from viewport, screen, card, or
+container width.
+
+The client identity profile may select policies that genuinely depend on the
+physical client or host application, including mobile connection retention and
+phone-specific startup audio. It does not select responsive layout, control
+geometry, or input behavior. Those remain owned by the container-responsive
+and input-capability profile above. User-agent and platform parsing remains
+prohibited for presentation decisions.
+
 ## 3. Media rules
 
 Media support is capability-dependent even within one browser family.

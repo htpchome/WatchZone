@@ -1,6 +1,6 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
-import { DeviceProfileController } from "../../../core/device-profile";
+import { detectClientProfile } from "../../../core/client-profile";
 import {
   playMediaElement,
   setMediaElementMuted,
@@ -41,14 +41,12 @@ export class CameraAudioController implements ReactiveController {
   private _startUnmutedPhone = false;
   private _talkAudioActive = false;
   private _talkUnmuteOverride = false;
-  private readonly _deviceProfile: DeviceProfileController;
 
   public constructor(
     private readonly _host: ReactiveControllerHost & HTMLElement,
     private readonly _callbacks: AudioCallbacks,
   ) {
     _host.addController(this);
-    this._deviceProfile = new DeviceProfileController(_host);
   }
 
   public get muted(): boolean {
@@ -161,10 +159,9 @@ export class CameraAudioController implements ReactiveController {
     if (!this._entityId) {
       this._desiredMuted = true;
     } else {
-      const startsUnmuted =
-        this._deviceProfile.profile.deviceClass === "phone"
-          ? this._startUnmutedPhone
-          : this._startUnmutedPcTablet;
+      const startsUnmuted = detectClientProfile().isPhone
+        ? this._startUnmutedPhone
+        : this._startUnmutedPcTablet;
       this._desiredMuted = getMediaSessionManager().getCameraMuted(
         this._entityId,
         !startsUnmuted,

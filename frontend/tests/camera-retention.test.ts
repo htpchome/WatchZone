@@ -732,11 +732,28 @@ describe("camera presentation retention", () => {
     await vi.waitFor(() => expect(hlsVideo.muted).toBe(false));
   });
 
-  it("uses the independent phone startup default", async () => {
+  it("uses the independent phone startup default on a detected iPhone", async () => {
+    vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue(
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148 Safari/604.1",
+    );
+    vi.spyOn(window.navigator, "platform", "get").mockReturnValue("iPhone");
+    const { api, hlsVideo } = installHlsSession();
+    const view = createLiveView(api, false, true);
+    document.body.append(view);
+
+    await vi.waitFor(() =>
+      expect(
+        presentation(view)?.shadowRoot?.querySelector(".hls-host video"),
+      ).toBe(hlsVideo),
+    );
+    expect(hlsVideo.muted).toBe(false);
+  });
+
+  it("uses the PC/tablet startup default on a narrow desktop", async () => {
     vi.spyOn(window, "innerWidth", "get").mockReturnValue(390);
     vi.spyOn(window, "innerHeight", "get").mockReturnValue(844);
     const { api, hlsVideo } = installHlsSession();
-    const view = createLiveView(api, false, true);
+    const view = createLiveView(api, true, false);
     document.body.append(view);
 
     await vi.waitFor(() =>

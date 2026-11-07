@@ -691,6 +691,10 @@ Mandatory behavior:
   Cameras using different providers or connection types participate in the
   same logical-camera budget while each provider independently owns its
   session implementation.
+- Physical client type and Home Assistant host-application identity come from
+  one document-scoped client profile. They never derive from a card or module
+  width. Container-responsive presentation classes remain separate and may not
+  select phone retention or phone-specific startup-audio policy.
 - Active leases remain protected across background tabs. Home Assistant route
   and dashboard navigation releases element leases into the centralized
   retention policy; returning consumers reuse a healthy retained session.

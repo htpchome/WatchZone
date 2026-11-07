@@ -14,7 +14,6 @@ function camera(
 ): MediaRetentionCamera {
   return {
     active: false,
-    deviceClass: "phone",
     key,
     lastUsed: 0,
     preference: "automatic",
@@ -33,21 +32,27 @@ function api(): HomeAssistantApi {
 
 describe("MediaRetentionPolicy", () => {
   it("keeps desktop and tablet sessions outside the phone budget", () => {
-    const policy = new MediaRetentionPolicy(vi.fn(), {
-      network: { type: "cellular" },
-    });
+    for (const clientDeviceClass of ["desktop", "tablet"] as const) {
+      const policy = new MediaRetentionPolicy(vi.fn(), {
+        clientDeviceClass,
+        network: { type: "cellular" },
+      });
 
-    expect(
-      policy.evaluate([
-        camera("desktop", { deviceClass: "desktop" }),
-        camera("tablet", { deviceClass: "tablet" }),
-      ]),
-    ).toEqual(new Set());
-    policy.dispose();
+      expect(
+        policy.evaluate([
+          camera("active", { active: true }),
+          camera("one"),
+          camera("two"),
+          camera("three"),
+        ]),
+      ).toEqual(new Set());
+      policy.dispose();
+    }
   });
 
   it("uses the standard profile for a phone on Wi-Fi", () => {
     const policy = new MediaRetentionPolicy(vi.fn(), {
+      clientDeviceClass: "phone",
       network: { type: "wifi" },
     });
 
@@ -63,7 +68,9 @@ describe("MediaRetentionPolicy", () => {
   });
 
   it("uses the standard profile when phone network information is unavailable", () => {
-    const policy = new MediaRetentionPolicy(vi.fn());
+    const policy = new MediaRetentionPolicy(vi.fn(), {
+      clientDeviceClass: "phone",
+    });
 
     expect(
       policy.evaluate([
@@ -78,6 +85,7 @@ describe("MediaRetentionPolicy", () => {
 
   it("retains the two most recent inactive cameras beside one active cellular camera", () => {
     const policy = new MediaRetentionPolicy(vi.fn(), {
+      clientDeviceClass: "phone",
       network: { type: "cellular" },
       now: () => 100,
     });
@@ -95,6 +103,7 @@ describe("MediaRetentionPolicy", () => {
 
   it("can force the reduced-bandwidth profile on a Wi-Fi phone", () => {
     const policy = new MediaRetentionPolicy(vi.fn(), {
+      clientDeviceClass: "phone",
       network: { type: "wifi" },
       now: () => 100,
     });
@@ -128,6 +137,7 @@ describe("MediaRetentionPolicy", () => {
     let expiry: (() => void) | undefined;
     const onPolicyChange = vi.fn();
     const policy = new MediaRetentionPolicy(onPolicyChange, {
+      clientDeviceClass: "phone",
       network: { type: "cellular" },
       now: () => now,
       setTimer: (callback) => {
@@ -151,6 +161,42 @@ describe("MediaRetentionPolicy", () => {
 });
 
 describe("MediaSessionManager adaptive retention", () => {
+  it("retains four cameras for a desktop client with Mobile Data Saving enabled", async () => {
+    const close = vi.fn();
+    const factory = vi.fn<ConnectionFactory>(async () => ({ close }));
+    const manager = new TestMediaSessionManager(vi.fn(), factory, {
+      clientDeviceClass: "desktop",
+      network: { type: "cellular" },
+    });
+    const owner = {};
+    const homeAssistant = api();
+    const cameraIds = [
+      "camera.one",
+      "camera.two",
+      "camera.three",
+      "camera.four",
+    ];
+    manager.setCameraRetentionPreference(owner, cameraIds, "reduced_bandwidth");
+
+    for (const entityId of cameraIds) {
+      manager.setCameraActivity(owner, entityId);
+      const lease = manager.acquireHomeAssistantHls(homeAssistant, entityId);
+      await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
+      lease.release();
+    }
+    manager.clearCameraActivity(owner);
+
+    const returned = manager.acquireHomeAssistantHls(
+      homeAssistant,
+      "camera.one",
+    );
+    expect(returned.getSnapshot().state).toBe("live");
+    expect(factory).toHaveBeenCalledTimes(4);
+    expect(close).not.toHaveBeenCalled();
+    returned.release();
+    manager.closeAll();
+  });
+
   it("closes every retained transport for the least-recent cellular phone camera", async () => {
     const preferredClose = vi.fn();
     const fallbackClose = vi.fn();
@@ -163,16 +209,18 @@ describe("MediaSessionManager adaptive retention", () => {
     const manager = new TestMediaSessionManager(
       preferredFactory,
       fallbackFactory,
-      { network: { type: "cellular" } },
+      {
+        clientDeviceClass: "phone",
+        network: { type: "cellular" },
+      },
     );
     const owner = {};
     manager.setCameraRetentionPreference(
       owner,
       ["camera.old", "camera.middle", "camera.recent", "camera.current"],
-      "phone",
       "automatic",
     );
-    manager.setCameraActivity(owner, "camera.old", "phone");
+    manager.setCameraActivity(owner, "camera.old");
     const preferred = manager.acquireHomeAssistant(api(), "camera.old");
     const fallback = manager.acquireHomeAssistantHls(api(), "camera.old");
     await vi.waitFor(() => expect(preferred.getSnapshot().state).toBe("live"));
@@ -181,7 +229,7 @@ describe("MediaSessionManager adaptive retention", () => {
     preferred.release();
     fallback.release();
     for (const entityId of ["camera.middle", "camera.recent"]) {
-      manager.setCameraActivity(owner, entityId, "phone");
+      manager.setCameraActivity(owner, entityId);
       const nextPreferred = manager.acquireHomeAssistant(api(), entityId);
       const nextFallback = manager.acquireHomeAssistantHls(api(), entityId);
       await vi.waitFor(() =>
@@ -193,7 +241,7 @@ describe("MediaSessionManager adaptive retention", () => {
       nextPreferred.release();
       nextFallback.release();
     }
-    manager.setCameraActivity(owner, "camera.current", "phone");
+    manager.setCameraActivity(owner, "camera.current");
     const currentPreferred = manager.acquireHomeAssistant(
       api(),
       "camera.current",
@@ -219,11 +267,12 @@ describe("MediaSessionManager adaptive retention", () => {
     const close = vi.fn();
     const factory = vi.fn<ConnectionFactory>(async () => ({ close }));
     const manager = new TestMediaSessionManager(factory, vi.fn(), {
+      clientDeviceClass: "phone",
       network: { type: "cellular" },
     });
     const owner = {};
     const homeAssistant = api();
-    manager.setCameraActivity(owner, "camera.current", "phone");
+    manager.setCameraActivity(owner, "camera.current");
     const first = manager.acquireHomeAssistant(homeAssistant, "camera.current");
     await vi.waitFor(() => expect(first.getSnapshot().state).toBe("live"));
 
@@ -231,7 +280,7 @@ describe("MediaSessionManager adaptive retention", () => {
     first.release();
     expect(close).not.toHaveBeenCalled();
 
-    manager.setCameraActivity(owner, "camera.current", "phone");
+    manager.setCameraActivity(owner, "camera.current");
     const returned = manager.acquireHomeAssistant(
       homeAssistant,
       "camera.current",
@@ -246,19 +295,20 @@ describe("MediaSessionManager adaptive retention", () => {
     const close = vi.fn();
     const factory = vi.fn<ConnectionFactory>(async () => ({ close }));
     const manager = new TestMediaSessionManager(factory, vi.fn(), {
+      clientDeviceClass: "phone",
       network: { type: "wifi" },
     });
     const owner = {};
     const homeAssistant = api();
-    manager.setCameraActivity(owner, "camera.old", "phone");
+    manager.setCameraActivity(owner, "camera.old");
     const first = manager.acquireHomeAssistant(homeAssistant, "camera.old");
     await vi.waitFor(() => expect(first.getSnapshot().state).toBe("live"));
 
-    manager.setCameraActivity(owner, "camera.current", "phone");
+    manager.setCameraActivity(owner, "camera.current");
     first.release();
     expect(close).not.toHaveBeenCalled();
 
-    manager.setCameraActivity(owner, "camera.old", "phone");
+    manager.setCameraActivity(owner, "camera.old");
     const returned = manager.acquireHomeAssistant(homeAssistant, "camera.old");
     expect(returned.getSnapshot().state).toBe("live");
     expect(factory).toHaveBeenCalledOnce();

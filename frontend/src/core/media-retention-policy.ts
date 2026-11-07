@@ -1,4 +1,4 @@
-import type { DeviceClass } from "./device-profile";
+import { CLIENT_PROFILE, type ClientDeviceClass } from "./client-profile";
 import {
   MAX_REDUCED_BANDWIDTH_CONNECTED_CAMERAS,
   REDUCED_BANDWIDTH_CAMERA_RETENTION_MS,
@@ -16,13 +16,13 @@ interface NetworkInformationLike {
 
 export interface MediaRetentionCamera {
   readonly active: boolean;
-  readonly deviceClass: DeviceClass;
   readonly key: string;
   readonly lastUsed: number;
   readonly preference: MediaRetentionPreference;
 }
 
 export interface MediaRetentionEnvironment {
+  readonly clientDeviceClass?: ClientDeviceClass;
   readonly network?: NetworkInformationLike;
   readonly now?: () => number;
   readonly setTimer?: (callback: () => void, delayMs: number) => unknown;
@@ -39,6 +39,7 @@ function browserNetwork(): NetworkInformationLike | undefined {
 
 /** Owns provider-neutral retention-profile, MRU, expiry, and network decisions. */
 export class MediaRetentionPolicy {
+  private readonly _clientDeviceClass: ClientDeviceClass;
   private readonly _clearTimer: (timer: unknown) => void;
   private readonly _network?: NetworkInformationLike;
   private readonly _now: () => number;
@@ -52,6 +53,8 @@ export class MediaRetentionPolicy {
     private readonly _onPolicyChange: () => void,
     environment: MediaRetentionEnvironment = {},
   ) {
+    this._clientDeviceClass =
+      environment.clientDeviceClass ?? CLIENT_PROFILE.deviceClass;
     this._network = environment.network ?? browserNetwork();
     this._now = environment.now ?? (() => performance.now());
     this._setTimer =
@@ -113,7 +116,7 @@ export class MediaRetentionPolicy {
   }
 
   private _profileFor(camera: MediaRetentionCamera): MediaRetentionProfile {
-    if (camera.deviceClass !== "phone") return "standard";
+    if (this._clientDeviceClass !== "phone") return "standard";
     if (camera.preference === "reduced_bandwidth") {
       return "reduced_bandwidth";
     }

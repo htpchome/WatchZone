@@ -15,7 +15,6 @@ import {
   mediaConnectionErrorCode,
   type MediaConnectionErrorCode,
 } from "./media-connection-error";
-import type { DeviceClass } from "./device-profile";
 import {
   type MediaRetentionCamera,
   type MediaRetentionEnvironment,
@@ -449,22 +448,17 @@ export class MediaSessionManager {
     CameraMutePreference
   >();
   private readonly _sessions = new Map<string, ManagedMediaSession>();
-  private readonly _cameraActivity = new Map<
-    object,
-    { readonly cameraKey: string; readonly deviceClass: DeviceClass }
-  >();
+  private readonly _cameraActivity = new Map<object, string>();
   private readonly _cameraRetentionContexts = new Map<
     object,
     {
       readonly cameraKeys: ReadonlySet<string>;
-      readonly deviceClass: DeviceClass;
       readonly preference: MediaRetentionPreference;
     }
   >();
   private readonly _cameraRetentionMetadata = new Map<
     string,
     {
-      readonly deviceClass: DeviceClass;
       readonly preference: MediaRetentionPreference;
     }
   >();
@@ -520,19 +514,11 @@ export class MediaSessionManager {
     this._cameraMutePreferences.set(entityId, muted ? "muted" : "unmuted");
   }
 
-  public setCameraActivity(
-    owner: object,
-    cameraKey: string | undefined,
-    deviceClass: DeviceClass,
-  ): void {
+  public setCameraActivity(owner: object, cameraKey: string | undefined): void {
     const current = this._cameraActivity.get(owner);
-    if (
-      current?.cameraKey === cameraKey &&
-      current?.deviceClass === deviceClass
-    )
-      return;
+    if (current === cameraKey) return;
     if (cameraKey) {
-      this._cameraActivity.set(owner, { cameraKey, deviceClass });
+      this._cameraActivity.set(owner, cameraKey);
     } else {
       this._cameraActivity.delete(owner);
     }
@@ -543,21 +529,18 @@ export class MediaSessionManager {
   public setCameraRetentionPreference(
     owner: object,
     cameraKeys: readonly string[],
-    deviceClass: DeviceClass,
     preference: MediaRetentionPreference,
   ): void {
     const previous = this._cameraRetentionContexts.get(owner);
     const nextKeys = new Set(cameraKeys);
     if (
-      previous?.deviceClass === deviceClass &&
-      previous.preference === preference &&
+      previous?.preference === preference &&
       setEquals(previous.cameraKeys, nextKeys)
     ) {
       return;
     }
     this._cameraRetentionContexts.set(owner, {
       cameraKeys: nextKeys,
-      deviceClass,
       preference,
     });
     const affected = new Set(previous?.cameraKeys ?? []);
@@ -636,9 +619,7 @@ export class MediaSessionManager {
   }
 
   private _applyRetentionPolicy(): void {
-    const activeCameraKeys = new Set(
-      [...this._cameraActivity.values()].map(({ cameraKey }) => cameraKey),
-    );
+    const activeCameraKeys = new Set(this._cameraActivity.values());
     const cameras = new Map<string, MediaRetentionCamera>();
     for (const session of this._sessions.values()) {
       const current = cameras.get(session.cameraKey);
@@ -647,9 +628,6 @@ export class MediaSessionManager {
           current?.active === true ||
           activeCameraKeys.has(session.cameraKey) ||
           !session.isRetained(),
-        deviceClass:
-          this._cameraRetentionMetadata.get(session.cameraKey)?.deviceClass ??
-          "desktop",
         key: session.cameraKey,
         lastUsed: Math.max(current?.lastUsed ?? 0, session.lastUsed),
         preference:
@@ -680,16 +658,13 @@ export class MediaSessionManager {
       const selected = reduced ?? contexts.at(-1);
       if (!selected) continue;
       this._cameraRetentionMetadata.set(cameraKey, {
-        deviceClass: selected.deviceClass,
         preference: selected.preference,
       });
     }
   }
 
   private _pruneCameraRetentionMetadata(): void {
-    const referenced = new Set(
-      [...this._cameraActivity.values()].map(({ cameraKey }) => cameraKey),
-    );
+    const referenced = new Set(this._cameraActivity.values());
     for (const context of this._cameraRetentionContexts.values()) {
       for (const cameraKey of context.cameraKeys) referenced.add(cameraKey);
     }
