@@ -241,6 +241,56 @@ test("keeps the panel camera switcher and carousel selection bidirectional", asy
   );
 });
 
+test("lets the camera switcher shadow paint into the card padding", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  const card = page.locator("watchzone-card");
+  await card.evaluate((element) => {
+    (
+      element as HTMLElement & {
+        setConfig(config: unknown): void;
+      }
+    ).setConfig({
+      type: "custom:watchzone-card",
+      cameras: [{ entity_id: "camera.front", title: "Front Door" }],
+    });
+  });
+  const scroller = card.locator("wzc-camera-switcher .scroller");
+  await expect(scroller).toBeVisible();
+
+  const cardResult = await card.evaluate((element) => {
+    const cardRoot = element.shadowRoot;
+    const cardShell = cardRoot?.querySelector("ha-card");
+    const shell = cardRoot?.querySelector<HTMLElement>(".shell");
+    if (!cardShell || !shell) {
+      throw new Error("Card presentation is incomplete");
+    }
+
+    const cardStyle = getComputedStyle(cardShell);
+    const shellStyle = getComputedStyle(shell);
+    return {
+      cardOverflow: cardStyle.overflow,
+      cardPaddingBottom: Number.parseFloat(cardStyle.paddingBottom),
+      shellOverflow: shellStyle.overflow,
+      cardBottom: cardShell.getBoundingClientRect().bottom,
+    };
+  });
+  const switcherResult = await scroller.evaluate((element) => ({
+    switcherShadow: getComputedStyle(element).boxShadow,
+    scrollerBottom: element.getBoundingClientRect().bottom,
+  }));
+
+  expect(cardResult.cardOverflow).toBe("clip");
+  expect(cardResult.shellOverflow).toBe("visible");
+  expect(switcherResult.switcherShadow).not.toBe("none");
+  expect(cardResult.cardPaddingBottom).toBeGreaterThan(0);
+  expect(
+    cardResult.cardBottom - switcherResult.scrollerBottom,
+  ).toBeGreaterThanOrEqual(cardResult.cardPaddingBottom - 1);
+});
+
 test("restores the camera switcher after an inner-dashboard detach", async ({
   page,
 }) => {

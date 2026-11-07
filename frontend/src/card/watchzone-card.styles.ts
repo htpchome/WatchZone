@@ -49,7 +49,6 @@ export const cardStyles = css`
     block-size: 100%;
     min-block-size: 0;
     padding: 0;
-    overflow: hidden;
   }
 
   .stage-grid,
