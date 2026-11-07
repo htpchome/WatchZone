@@ -750,7 +750,8 @@ a saved layout contains:
 - Stable node IDs.
 - Module type, validated module configuration, and semantic component slots for
   module nodes.
-- Component type and validated component configuration for component nodes.
+- Component type, validated component configuration, and optional logical
+  control-region placement for component nodes.
 - Logical grid placement and responsive behavior for container nodes.
 - Explicit fractional or intrinsic-content sizing for each logical grid row.
 - Required `default` and `phone` responsive variants whose corresponding nodes

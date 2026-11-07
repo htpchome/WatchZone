@@ -53,6 +53,11 @@ must be unique within a variant. Corresponding nodes use the same stable IDs in
 both variants so switching variants preserves loaded custom elements and live
 session leases.
 
+A component node may declare an optional logical `controlRegion` of `leading`,
+`center`, or `trailing`. The renderer applies it only inside a `controls` slot;
+an omitted value defaults to `center`. This is placement metadata owned by the
+slot and is never passed through component configuration.
+
 A Stage Flow is an ordered list of Stage Design IDs for one responsive profile.
 Cards have independent `default` and `phone` flows. The first entry is the
 landing stage and later entries are navigation targets. A design may appear in
@@ -77,10 +82,12 @@ root grid
 ```
 
 The controls slot owns placement, shared gaps, safe-area clearance, and
-responsive wrapping for its children. Components in that slot render at their
-intrinsic control size and must not position themselves relative to sibling
-components or the Stage center. Panels and transient notices may paint outside
-their dock item without changing the dock's measured control geometry.
+responsive wrapping for its three logical regions. Its center region remains
+geometrically centered while the leading and trailing regions flex equally and
+wrap their own controls away from center. Components in that slot render at
+their intrinsic control size and must not position themselves relative to
+sibling components or the Stage center. Panels and transient notices may paint
+outside their dock item without changing the dock's measured control geometry.
 
 ## Runtime rules
 

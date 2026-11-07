@@ -768,6 +768,9 @@ test("lays out talk and light controls in the responsive dock", async ({
 
   const camera = page.locator("wzc-camera");
   const controlsSlot = page.locator('[data-stage-slot="controls"]');
+  const leadingControls = controlsSlot.locator(
+    '[data-control-region="leading"]',
+  );
   await camera.locator("wzc-camera-live .viewport").hover();
   const talk = page.locator("wzc-two-way-talk");
   const ptz = page.locator("wzc-ptz");
@@ -844,6 +847,10 @@ test("lays out talk and light controls in the responsive dock", async ({
     controlsSlotBox.y + controlsSlotBox.height,
   );
   expect(talkButtonBox.y).toBeGreaterThan(cameraBox.y + cameraBox.height / 2);
+  expect(talkButtonBox.x + talkButtonBox.width / 2).toBeCloseTo(
+    cameraBox.x + cameraBox.width / 2,
+    0,
+  );
   expect(ptzControlBox.x).toBeGreaterThan(cameraBox.x + cameraBox.width / 2);
   expect(ptzControlBox.y).toBeGreaterThan(cameraBox.y + cameraBox.height / 2);
   expect(ptzControlBox.y + ptzControlBox.height).toBeLessThanOrEqual(
@@ -854,9 +861,14 @@ test("lays out talk and light controls in the responsive dock", async ({
   ).toBeGreaterThanOrEqual(8);
   const dockLayout = await controlsSlot.evaluate((element) => {
     const styles = getComputedStyle(element);
-    return { columnGap: styles.columnGap, flexWrap: styles.flexWrap };
+    return { columnGap: styles.columnGap, display: styles.display };
   });
-  expect(dockLayout).toEqual({ columnGap: "8px", flexWrap: "wrap" });
+  expect(dockLayout).toEqual({ columnGap: "8px", display: "grid" });
+  await expect
+    .poll(() =>
+      leadingControls.evaluate((element) => getComputedStyle(element).flexWrap),
+    )
+    .toBe("wrap");
 
   await talk.evaluate((element) => {
     element.style.inlineSize = "calc(var(--wzc-camera-control-size) * 3)";
@@ -872,6 +884,9 @@ test("lays out talk and light controls in the responsive dock", async ({
       ((reflowedLightHostBox?.x ?? 0) + (reflowedLightHostBox?.width ?? 0)),
   ).toBeGreaterThanOrEqual(8);
   expect(expandedTalkHostBox?.width).toBeCloseTo(talkButtonBox.width * 3, 0);
+  expect(
+    (expandedTalkHostBox?.x ?? 0) + (expandedTalkHostBox?.width ?? 0) / 2,
+  ).toBeCloseTo(cameraBox.x + cameraBox.width / 2, 0);
   await talk.evaluate((element) => {
     element.style.removeProperty("inline-size");
   });
@@ -1516,6 +1531,23 @@ test("camera editor configures lights and confirms accessible removal", async ({
     "value",
     "mdi:lightbulb",
   );
+  await expect(editor.locator(".pending-light-icon-selector")).toHaveJSProperty(
+    "required",
+    false,
+  );
+  await editor.locator(".pending-light-icon-selector").evaluate((element) => {
+    element.dispatchEvent(
+      new CustomEvent("value-changed", {
+        bubbles: true,
+        composed: true,
+        detail: { value: "" },
+      }),
+    );
+  });
+  await expect(editor.locator(".pending-light-icon-selector")).toHaveJSProperty(
+    "value",
+    "mdi:lightbulb",
+  );
   const addLightFields = editor.locator(".add-light-field");
   await expect(addLightFields).toHaveCount(2);
   const [lightFieldBox, iconFieldBox] = await Promise.all([
@@ -1549,43 +1581,44 @@ test("camera editor configures lights and confirms accessible removal", async ({
   await expect(
     editor.locator(".linked-light-row .light-icon-selector"),
   ).toHaveCount(1);
+  await expect(editor.locator(".light-icon-selector")).toHaveJSProperty(
+    "required",
+    false,
+  );
   await expect(editor.locator(".remove-light")).toHaveAttribute(
     "title",
     "Remove light",
   );
-  await expect(editor.locator(".reset-light-icon")).toHaveAttribute(
-    "title",
-    "Use default icon",
-  );
-  const [
-    linkedLightRowBox,
-    linkedLightControlBox,
-    linkedLightIconBox,
-    removeLightBox,
-  ] = await Promise.all([
-    editor.locator(".linked-light-row").boundingBox(),
-    editor.locator(".light-icon-control").boundingBox(),
-    editor.locator(".light-icon-selector").boundingBox(),
-    editor.locator(".remove-light").boundingBox(),
-  ]);
+  const [linkedLightRowBox, linkedLightIconBox, removeLightBox] =
+    await Promise.all([
+      editor.locator(".linked-light-row").boundingBox(),
+      editor.locator(".light-icon-selector").boundingBox(),
+      editor.locator(".remove-light").boundingBox(),
+    ]);
   expect(linkedLightRowBox).not.toBeNull();
-  expect(linkedLightControlBox).not.toBeNull();
   expect(linkedLightIconBox).not.toBeNull();
   expect(removeLightBox).not.toBeNull();
+  expect(linkedLightIconBox?.width).toBeGreaterThanOrEqual(200);
   expect(linkedLightIconBox?.width).toBeLessThan(
-    (linkedLightRowBox?.width ?? 0) * 0.5,
+    (linkedLightRowBox?.width ?? 0) * 0.6,
   );
   expect(
-    (linkedLightControlBox?.y ?? 0) + (linkedLightControlBox?.height ?? 0) / 2,
-  ).toBeCloseTo(
-    (removeLightBox?.y ?? 0) + (removeLightBox?.height ?? 0) / 2,
-    1,
-  );
+    (linkedLightIconBox?.y ?? 0) <
+      (removeLightBox?.y ?? 0) + (removeLightBox?.height ?? 0),
+  ).toBe(true);
   expect(
     (removeLightBox?.x ?? 0) -
       ((linkedLightIconBox?.x ?? 0) + (linkedLightIconBox?.width ?? 0)),
   ).toBeGreaterThanOrEqual(8);
-  await editor.locator(".reset-light-icon").click();
+  await editor.locator(".light-icon-selector").evaluate((element) => {
+    element.dispatchEvent(
+      new CustomEvent("value-changed", {
+        bubbles: true,
+        composed: true,
+        detail: { value: "" },
+      }),
+    );
+  });
   await expect(editor.locator(".light-icon-selector")).toHaveJSProperty(
     "value",
     "mdi:lightbulb",

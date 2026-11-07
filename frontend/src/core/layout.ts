@@ -3,6 +3,7 @@ export const PHONE_STAGE_MAX_INLINE_SIZE = 599;
 
 export type StageVariantName = "default" | "phone";
 export type StageSlotName = "content" | "controls" | "footer" | "overlay";
+export type StageControlRegion = "leading" | "center" | "trailing";
 export type StageGridRowSize = "content" | "fraction";
 
 export interface StageGridArea {
@@ -28,6 +29,7 @@ export interface StageContainerNode {
 export interface StageComponentNode {
   readonly componentType: string;
   readonly config: unknown;
+  readonly controlRegion?: StageControlRegion;
   readonly id: string;
   readonly kind: "component";
 }
@@ -257,9 +259,19 @@ function validateComponent(
   if (source.kind !== "component") {
     throw new Error(`Stage node "${id}" must be a component.`);
   }
+  const controlRegion = source.controlRegion;
+  if (
+    controlRegion !== undefined &&
+    controlRegion !== "leading" &&
+    controlRegion !== "center" &&
+    controlRegion !== "trailing"
+  ) {
+    throw new Error(`Stage component "${id}" has an invalid control region.`);
+  }
   return {
     componentType: nonEmptyString(source.componentType, "Component types"),
     config: source.config,
+    ...(controlRegion ? { controlRegion } : {}),
     id,
     kind: "component",
   };

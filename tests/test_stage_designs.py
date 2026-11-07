@@ -71,6 +71,68 @@ def test_stage_schema_preserves_module_component_and_slot_boundaries() -> None:
     assert design.as_json() == _design()
 
 
+def test_stage_schema_preserves_optional_control_regions() -> None:
+    """Control placement belongs to the slot renderer, not component config."""
+    value = _design()
+    variants = value["variants"]
+    assert isinstance(variants, dict)
+    default = variants["default"]
+    assert isinstance(default, dict)
+    root = default["root"]
+    assert isinstance(root, dict)
+    children = root["children"]
+    assert isinstance(children, list)
+    placement = children[0]
+    assert isinstance(placement, dict)
+    camera = placement["node"]
+    assert isinstance(camera, dict)
+    slots = camera["slots"]
+    assert isinstance(slots, dict)
+    overlay = slots["overlay"]
+    assert isinstance(overlay, list)
+    component = overlay[0]
+    assert isinstance(component, dict)
+    component["controlRegion"] = "trailing"
+
+    design = validate_stage_design(value)
+
+    assert (
+        design.variants["default"]
+        .root.children[0]
+        .node.slots["overlay"][0]
+        .control_region
+        == "trailing"
+    )
+    assert design.as_json() == value
+
+
+def test_stage_schema_rejects_invalid_control_regions() -> None:
+    """Unrecognized placement regions cannot enter the persisted layout."""
+    value = _design()
+    variants = value["variants"]
+    assert isinstance(variants, dict)
+    default = variants["default"]
+    assert isinstance(default, dict)
+    root = default["root"]
+    assert isinstance(root, dict)
+    children = root["children"]
+    assert isinstance(children, list)
+    placement = children[0]
+    assert isinstance(placement, dict)
+    camera = placement["node"]
+    assert isinstance(camera, dict)
+    slots = camera["slots"]
+    assert isinstance(slots, dict)
+    overlay = slots["overlay"]
+    assert isinstance(overlay, list)
+    component = overlay[0]
+    assert isinstance(component, dict)
+    component["controlRegion"] = "floating"
+
+    with pytest.raises(HomeAssistantError, match="Invalid control region"):
+        validate_stage_design(value)
+
+
 def test_stage_schema_rejects_duplicate_node_ids() -> None:
     """Stable IDs are unique within each responsive variant."""
     value = _design()

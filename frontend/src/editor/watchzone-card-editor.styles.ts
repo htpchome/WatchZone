@@ -64,7 +64,6 @@ export const cardEditorStyles = css`
   }
 
   .tile-action,
-  .reset-light-icon,
   .remove-light {
     display: grid;
     place-items: center;
@@ -81,7 +80,6 @@ export const cardEditorStyles = css`
   }
 
   .tile-action svg,
-  .reset-light-icon svg,
   .remove-light svg {
     display: block;
     inline-size: 100%;
@@ -89,7 +87,6 @@ export const cardEditorStyles = css`
   }
 
   .tile-action:focus-visible,
-  .reset-light-icon:focus-visible,
   .remove-light:focus-visible,
   .add-camera:focus-visible {
     outline: 2px solid var(--wzc-color-primary);
@@ -205,7 +202,7 @@ export const cardEditorStyles = css`
 
   .linked-light-row {
     display: grid;
-    grid-template-columns: 1.5rem minmax(0, 1fr) minmax(12.5rem, 14.5rem) auto;
+    grid-template-columns: 1.5rem minmax(0, 1fr) minmax(13.5rem, 15.5rem) auto;
     align-items: center;
     gap: 0.55rem;
     min-block-size: 2.75rem;
@@ -245,19 +242,10 @@ export const cardEditorStyles = css`
     font-size: var(--wzc-font-size-small);
   }
 
-  .light-icon-control {
-    display: grid;
-    grid-template-columns: minmax(10rem, 12rem) 2rem;
-    align-items: center;
-    gap: 0.5rem;
-    min-inline-size: 0;
-  }
-
   .light-icon-selector {
     min-inline-size: 0;
   }
 
-  .reset-light-icon,
   .remove-light {
     inline-size: 2rem;
     block-size: 2rem;
@@ -346,7 +334,6 @@ export const cardEditorStyles = css`
 
   @media (hover: hover) and (pointer: fine) {
     .tile-action:hover,
-    .reset-light-icon:hover,
     .remove-light:hover,
     .add-camera:hover:not(:disabled) {
       background: var(--wzc-color-fill-primary);
@@ -355,7 +342,6 @@ export const cardEditorStyles = css`
 
   @media (hover: none) {
     .tile-action:hover,
-    .reset-light-icon:hover,
     .remove-light:hover,
     .add-camera:hover:not(:disabled) {
       background: transparent;
@@ -365,12 +351,8 @@ export const cardEditorStyles = css`
   @container (max-width: 30rem) {
     .linked-light-row {
       grid-template-columns:
-        1.5rem minmax(0, 1fr) minmax(10.5rem, 12.5rem)
+        1.5rem minmax(0, 1fr) minmax(12.5rem, 14.5rem)
         auto;
-    }
-
-    .light-icon-control {
-      grid-template-columns: minmax(8rem, 10rem) 2rem;
     }
 
     .add-light-fields {

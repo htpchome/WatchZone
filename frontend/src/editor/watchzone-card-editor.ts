@@ -623,27 +623,16 @@ export class CardEditor extends LitElement {
             <strong>${name}</strong>
             <small>${entityId}</small>
           </span>
-          <span class="light-icon-control">
-            <ha-selector
-              class="light-icon-selector"
-              data-light-index=${String(index)}
-              label=${this._t("editor.icon")}
-              .hass=${this._hass}
-              .selector=${ICON_SELECTOR}
-              .value=${light.icon ?? DEFAULT_LIGHT_ICON}
-              @value-changed=${this._handleLightIconChange}
-            ></ha-selector>
-            <button
-              class="reset-light-icon"
-              type="button"
-              data-light-index=${String(index)}
-              title=${this._t("editor.reset_light_icon")}
-              aria-label=${this._t("editor.reset_light_icon")}
-              @click=${this._resetLightIcon}
-            >
-              ${renderIcon("close")}
-            </button>
-          </span>
+          <ha-selector
+            class="light-icon-selector"
+            data-light-index=${String(index)}
+            label=${this._t("editor.icon")}
+            .hass=${this._hass}
+            .selector=${ICON_SELECTOR}
+            .value=${light.icon ?? DEFAULT_LIGHT_ICON}
+            .required=${false}
+            @value-changed=${this._handleLightIconChange}
+          ></ha-selector>
           <button
             class="remove-light"
             type="button"
@@ -684,6 +673,7 @@ export class CardEditor extends LitElement {
                     .hass=${this._hass}
                     .selector=${ICON_SELECTOR}
                     .value=${this._pendingLightIcon}
+                    .required=${false}
                     @value-changed=${this._handlePendingLightIconChange}
                   ></ha-selector>
                 </div>
@@ -942,23 +932,10 @@ export class CardEditor extends LitElement {
     this.requestUpdate();
   };
 
-  private readonly _resetLightIcon = (event: Event): void => {
-    if (!this._cameraDraft) return;
-    const index = Number(
-      (event.currentTarget as HTMLElement).dataset.lightIndex,
-    );
-    const current = this._cameraDraft.lights[index];
-    if (!current) return;
-    const lights = [...this._cameraDraft.lights];
-    lights[index] = { entity_id: current.entity_id };
-    this._cameraDraft = { ...this._cameraDraft, lights };
-    this.requestUpdate();
-  };
-
   private readonly _handlePendingLightIconChange = (
     event: ValueChangedEvent,
   ): void => {
-    this._pendingLightIcon = eventString(event);
+    this._pendingLightIcon = eventString(event) || DEFAULT_LIGHT_ICON;
     this.requestUpdate();
   };
 

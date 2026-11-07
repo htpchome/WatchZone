@@ -24,12 +24,14 @@
                   {
                     "componentType": "light_control",
                     "config": {},
+                    "controlRegion": "leading",
                     "id": "default-light-component",
                     "kind": "component"
                   },
                   {
                     "componentType": "two_way_talk",
                     "config": {},
+                    "controlRegion": "center",
                     "id": "default-talk-component",
                     "kind": "component"
                   }
@@ -98,12 +100,14 @@
                   {
                     "componentType": "light_control",
                     "config": {},
+                    "controlRegion": "leading",
                     "id": "default-light-component",
                     "kind": "component"
                   },
                   {
                     "componentType": "two_way_talk",
                     "config": {},
+                    "controlRegion": "center",
                     "id": "default-talk-component",
                     "kind": "component"
                   }

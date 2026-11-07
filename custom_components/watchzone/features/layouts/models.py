@@ -9,6 +9,7 @@ from homeassistant.exceptions import HomeAssistantError
 
 STAGE_SCHEMA_VERSION = 1
 StageSlotName = Literal["content", "controls", "footer", "overlay"]
+StageControlRegion = Literal["leading", "center", "trailing"]
 StageVariantName = Literal["default", "phone"]
 StageGridRowSize = Literal["content", "fraction"]
 
@@ -30,6 +31,7 @@ class StageComponentNode:
     component_type: str
     config: object
     id: str
+    control_region: StageControlRegion | None = None
     kind: Literal["component"] = "component"
 
 
@@ -86,7 +88,9 @@ class StageDesign:
 
     def as_json(self) -> dict[str, object]:
         """Serialize using the frontend's camelCase wire schema."""
-        return cast(dict[str, object], _camelize(asdict(self)))
+        result = cast(dict[str, object], _camelize(asdict(self)))
+        _remove_unset_control_regions(result)
+        return result
 
 
 def validate_stage_design(value: object) -> StageDesign:
@@ -193,9 +197,15 @@ def _component(value: object, ids: set[str]) -> StageComponentNode:
     node_id = _unique_id(source.get("id"), ids)
     if source.get("kind") != "component":
         raise HomeAssistantError(f"Invalid stage component {node_id}")
+    raw_control_region = source.get("controlRegion")
+    if raw_control_region not in (None, "leading", "center", "trailing"):
+        raise HomeAssistantError(
+            f"Invalid control region for stage component {node_id}"
+        )
     return StageComponentNode(
         component_type=_text(source.get("componentType"), "Component type"),
         config=source.get("config"),
+        control_region=cast(StageControlRegion | None, raw_control_region),
         id=node_id,
     )
 
@@ -243,3 +253,15 @@ def _camelize(value: object) -> Any:
 def _camel_key(value: str) -> str:
     first, *rest = value.split("_")
     return first + "".join(part.title() for part in rest)
+
+
+def _remove_unset_control_regions(value: object) -> None:
+    """Keep the optional placement field absent in legacy wire documents."""
+    if isinstance(value, dict):
+        if value.get("controlRegion") is None:
+            value.pop("controlRegion", None)
+        for item in value.values():
+            _remove_unset_control_regions(item)
+    elif isinstance(value, list):
+        for item in value:
+            _remove_unset_control_regions(item)

@@ -302,6 +302,28 @@ describe("watchzone-card-editor", () => {
     expect(
       (
         editor.shadowRoot?.querySelector(".pending-light-icon-selector") as
+          (HTMLElement & { required?: boolean; value?: string }) | null
+      )?.value,
+    ).toBe("mdi:lightbulb");
+    expect(
+      (
+        editor.shadowRoot?.querySelector(".pending-light-icon-selector") as
+          (HTMLElement & { required?: boolean }) | null
+      )?.required,
+    ).toBe(false);
+    editor.shadowRoot
+      ?.querySelector(".pending-light-icon-selector")
+      ?.dispatchEvent(
+        new CustomEvent("value-changed", {
+          bubbles: true,
+          composed: true,
+          detail: { value: "" },
+        }),
+      );
+    await editor.updateComplete;
+    expect(
+      (
+        editor.shadowRoot?.querySelector(".pending-light-icon-selector") as
           (HTMLElement & { value?: string }) | null
       )?.value,
     ).toBe("mdi:lightbulb");
@@ -332,23 +354,28 @@ describe("watchzone-card-editor", () => {
     ).toBe(iconPath("remove"));
     expect(
       editor.shadowRoot
-        ?.querySelector(".reset-light-icon")
-        ?.getAttribute("title"),
-    ).toBe("Use default icon");
-    expect(
-      editor.shadowRoot
         ?.querySelector(".linked-light-row")
         ?.contains(editor.shadowRoot.querySelector(".light-icon-selector")!),
     ).toBe(true);
+    expect(
+      (
+        editor.shadowRoot?.querySelector(".light-icon-selector") as
+          (HTMLElement & { required?: boolean }) | null
+      )?.required,
+    ).toBe(false);
     expect(
       (
         editor.shadowRoot?.querySelector(".linked-light-row > ha-icon") as
           (HTMLElement & { icon?: string }) | null
       )?.icon,
     ).toBe("mdi:coach-lamp");
-    (
-      editor.shadowRoot?.querySelector(".reset-light-icon") as HTMLElement
-    ).click();
+    editor.shadowRoot?.querySelector(".light-icon-selector")?.dispatchEvent(
+      new CustomEvent("value-changed", {
+        bubbles: true,
+        composed: true,
+        detail: { value: "" },
+      }),
+    );
     await editor.updateComplete;
     expect(
       (

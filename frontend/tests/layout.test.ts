@@ -154,6 +154,7 @@ describe("layout composition", () => {
       id: DEFAULT_TALK_COMPONENT_NODE_ID,
       kind: "component",
       componentType: "two_way_talk",
+      controlRegion: "center",
       config: { enabledCameraIds: ["camera.front"] },
     });
   });
@@ -203,6 +204,7 @@ describe("layout composition", () => {
       id: DEFAULT_LIGHT_COMPONENT_NODE_ID,
       kind: "component",
       componentType: "light_control",
+      controlRegion: "leading",
       config: {
         cameras: [
           {

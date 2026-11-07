@@ -117,11 +117,9 @@ export const cardStyles = css`
 
   .component-slot-controls {
     z-index: 4;
-    display: flex;
-    flex-wrap: wrap;
-    align-content: flex-end;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1fr);
     align-items: flex-end;
-    justify-content: center;
     box-sizing: border-box;
     min-inline-size: 0;
     padding: 0 var(--wzc-camera-control-safe-inline)
@@ -129,11 +127,33 @@ export const cardStyles = css`
         var(--wzc-stage-resize-handle-block-size) +
           max(0.5rem, env(safe-area-inset-bottom))
       );
-    gap: var(--wzc-control-dock-gap);
+    column-gap: var(--wzc-control-dock-gap);
   }
 
-  .component-slot-controls > .component-node,
-  .component-slot-controls > .component-node.placeable-ready > * {
+  .control-region {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-end;
+    align-items: flex-end;
+    min-inline-size: 0;
+    gap: var(--wzc-control-dock-gap);
+    pointer-events: none;
+  }
+
+  .control-region-leading {
+    justify-content: flex-end;
+  }
+
+  .control-region-center {
+    justify-content: center;
+  }
+
+  .control-region-trailing {
+    justify-content: flex-start;
+  }
+
+  .control-region > .component-node,
+  .control-region > .component-node.placeable-ready > * {
     inline-size: auto;
     block-size: auto;
   }

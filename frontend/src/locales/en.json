@@ -39,7 +39,6 @@
   "editor.add_light": "Add light",
   "editor.remove_light": "Remove light",
   "editor.remove_light_named": "Remove light: {name}",
-  "editor.reset_light_icon": "Use default icon",
   "editor.not_configured": "Not configured",
   "editor.no_settings_available": "No settings are available yet.",
   "editor.options_controls": "Options and Controls",

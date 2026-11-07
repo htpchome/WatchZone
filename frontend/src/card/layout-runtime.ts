@@ -20,6 +20,7 @@ import {
   validateStageFlow,
   type StageCatalog,
   type StageComponentNode,
+  type StageControlRegion,
   type StageFlow,
   type StageModuleNode,
   type StagePlacement,
@@ -247,18 +248,49 @@ export class LayoutRuntime implements ReactiveController {
       style=${placementStyle}
     >
       ${this._renderRecord(node)}
-      ${slotEntries.map(
-        ([name, components]) =>
-          html`<div
-            class=${`component-slot component-slot-${name}`}
-            data-stage-slot=${name}
-          >
-            ${repeat(
+      ${slotEntries.map(([name, components]) =>
+        this._renderComponentSlot(name, components),
+      )}
+    </div>`;
+  }
+
+  private _renderComponentSlot(
+    name: StageSlotName,
+    components: readonly StageComponentNode[],
+  ): TemplateResult {
+    return html`<div
+      class=${`component-slot component-slot-${name}`}
+      data-stage-slot=${name}
+    >
+      ${
+        name === "controls"
+          ? (["leading", "center", "trailing"] as const).map((region) =>
+              this._renderControlRegion(region, components),
+            )
+          : repeat(
               components,
               ({ id }) => id,
               (component) => this._renderRecord(component),
-            )}
-          </div>`,
+            )
+      }
+    </div>`;
+  }
+
+  private _renderControlRegion(
+    region: StageControlRegion,
+    components: readonly StageComponentNode[],
+  ): TemplateResult {
+    const controls = components.filter(
+      ({ controlRegion }) => (controlRegion ?? "center") === region,
+    );
+    return html`<div
+      class=${`control-region control-region-${region}`}
+      data-control-region=${region}
+    >
+      ${repeat(
+        controls,
+        ({ id }) => id,
+        (component) => this._renderRecord(component),
       )}
     </div>`;
   }
