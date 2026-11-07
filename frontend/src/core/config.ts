@@ -4,6 +4,9 @@ import {
   DEFAULT_CARD_TITLE,
   MAX_CAMERA_TITLE_LENGTH,
   MAX_CAMERAS,
+  DEFAULT_EVENT_HISTORY_DAYS,
+  MAX_EVENT_HISTORY_DAYS,
+  MIN_EVENT_HISTORY_DAYS,
   MAX_LIGHTS_PER_CAMERA,
 } from "./constants";
 
@@ -33,6 +36,7 @@ export interface CardConfig {
   readonly camera_rounded_corners: boolean;
   readonly camera_shadows: boolean;
   readonly event_rounded_corners: boolean;
+  readonly event_history_days: number;
   readonly cameras: readonly CameraConfig[];
   readonly mobile_data_saving?: boolean;
   readonly outer_padding?: boolean;
@@ -70,6 +74,18 @@ export function normalizeCardConfig(value: unknown): CardConfig {
   }
 
   const cameras = normalizeCameras(source);
+  const eventHistoryDays = source.event_history_days;
+  if (
+    eventHistoryDays !== undefined &&
+    (typeof eventHistoryDays !== "number" ||
+      !Number.isInteger(eventHistoryDays) ||
+      eventHistoryDays < MIN_EVENT_HISTORY_DAYS ||
+      eventHistoryDays > MAX_EVENT_HISTORY_DAYS)
+  ) {
+    throw new Error(
+      `${APP_NAME} event_history_days must be an integer from ${MIN_EVENT_HISTORY_DAYS} to ${MAX_EVENT_HISTORY_DAYS}.`,
+    );
+  }
   const normalized: Record<string, unknown> = {
     ...source,
     cameras,
@@ -91,6 +107,10 @@ export function normalizeCardConfig(value: unknown): CardConfig {
   normalized.camera_shadows = moduleAppearanceValue(source, "camera_shadows");
   normalized.camera_bar_shadows = source.camera_bar_shadows !== false;
   normalized.event_rounded_corners = source.event_rounded_corners !== false;
+  normalized.event_history_days =
+    typeof eventHistoryDays === "number"
+      ? eventHistoryDays
+      : DEFAULT_EVENT_HISTORY_DAYS;
   normalized.rounded_outer_corners =
     typeof source.rounded_outer_corners === "boolean"
       ? source.rounded_outer_corners

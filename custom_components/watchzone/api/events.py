@@ -30,7 +30,7 @@ from . import runtime_from_hass
         vol.Optional("after"): vol.Coerce(float),
         vol.Optional("before"): vol.Coerce(float),
         vol.Optional("limit", default=50): vol.All(
-            vol.Coerce(int), vol.Range(min=1, max=100)
+            vol.Coerce(int), vol.Range(min=1, max=500)
         ),
         vol.Optional("bypass_cache", default=False): cv.boolean,
     }
@@ -49,7 +49,7 @@ async def ws_events_list(
         )
         return
     before = msg.get("before", time())
-    after = msg.get("after", before - 24 * 60 * 60)
+    after = msg.get("after", before - 5 * 24 * 60 * 60)
     try:
         items = await runtime_from_hass(hass).events.async_list(
             entity_id,

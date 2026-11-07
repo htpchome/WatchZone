@@ -547,6 +547,35 @@ describe("watchzone-card-editor", () => {
     });
   });
 
+  it("exposes and saves the event history day range", async () => {
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+
+    const selector = editor.shadowRoot?.querySelector<
+      HTMLElement & { value: number }
+    >('ha-selector[label="Event History Days"]');
+    expect(selector?.value).toBe(5);
+    selector?.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: 12 },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+
+    expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
+      type: CARD_TYPE,
+      title: "Camera",
+      event_history_days: 12,
+    });
+  });
+
   it("previews, saves, and restores a selected camera", async () => {
     const states: CardConfig[] = [];
     const contextHandler = (event: Event) => {

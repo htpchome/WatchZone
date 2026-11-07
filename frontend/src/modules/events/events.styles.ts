@@ -36,7 +36,7 @@ export const eventsStyles = css`
     grid-template-columns:
       var(--wzc-event-thumbnail-inline-size) minmax(0, 1fr)
       auto;
-    min-block-size: var(--wzc-event-tile-block-size);
+    block-size: var(--wzc-event-tile-block-size);
     overflow: hidden;
     padding: var(--wzc-event-tile-padding);
   }
@@ -47,8 +47,12 @@ export const eventsStyles = css`
   }
 
   .thumbnail-wrap {
-    align-self: stretch;
+    align-self: center;
+    aspect-ratio: 16 / 9;
+    background: var(--wzc-event-thumbnail-background);
+    inline-size: 100%;
     min-block-size: 0;
+    overflow: hidden;
     position: relative;
   }
 
@@ -57,7 +61,10 @@ export const eventsStyles = css`
     block-size: 100%;
     border-radius: var(--wzc-event-thumbnail-radius);
     inline-size: 100%;
-    object-fit: cover;
+  }
+
+  .thumbnail {
+    object-fit: contain;
   }
 
   .placeholder {
@@ -82,6 +89,7 @@ export const eventsStyles = css`
 
   .details {
     min-inline-size: 0;
+    overflow: hidden;
   }
 
   .badges {

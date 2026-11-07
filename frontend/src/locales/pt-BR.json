@@ -11,6 +11,7 @@
   "editor.add_camera": "Adicionar câmera",
   "editor.title": "Título",
   "editor.mobile_data_saving": "Economia de dados móveis",
+  "editor.event_history_days": "Dias do histórico de eventos",
   "editor.rounded_outer_corners": "Cantos externos arredondados",
   "editor.outer_shadows": "Sombras externas",
   "editor.outer_padding": "Espaçamento externo",

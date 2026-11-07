@@ -15,6 +15,7 @@ describe("WatchZone card configuration", () => {
       camera_bar_shadows: true,
       camera_rounded_corners: true,
       camera_shadows: true,
+      event_history_days: 5,
       event_rounded_corners: true,
       rounded_outer_corners: true,
       outer_shadows: true,
@@ -22,6 +23,17 @@ describe("WatchZone card configuration", () => {
       mobile_data_saving: false,
       cameras: [],
     });
+  });
+
+  it("accepts an event history range from 1 through 15 days", () => {
+    expect(
+      normalizeCardConfig({ event_history_days: 12 }).event_history_days,
+    ).toBe(12);
+    for (const event_history_days of [0, 16, 1.5, "5"]) {
+      expect(() => normalizeCardConfig({ event_history_days })).toThrow(
+        "event_history_days must be an integer from 1 to 15",
+      );
+    }
   });
 
   it("normalizes per-camera defaults and preserves explicit options", () => {

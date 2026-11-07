@@ -22,16 +22,16 @@ interface EventsResponse {
 export async function listEvents(
   api: HomeAssistantApi,
   entityId: string,
-  bypassCache = false,
+  options: { readonly bypassCache?: boolean; readonly historyDays: number },
 ): Promise<readonly EventItem[]> {
   const before = Date.now() / 1000;
   const response = await api.callWS<EventsResponse>({
     type: "watchzone/events/list",
     entity_id: entityId,
-    after: before - 24 * 60 * 60,
+    after: before - options.historyDays * 24 * 60 * 60,
     before,
-    limit: 50,
-    bypass_cache: bypassCache,
+    limit: 500,
+    bypass_cache: options.bypassCache ?? false,
   });
   return response.items;
 }

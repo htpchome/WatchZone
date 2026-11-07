@@ -17,12 +17,15 @@ import { resolveLiveSource } from "../api/live-source";
 import {
   ACCORDION_ITEM_TAG,
   ACCORDION_TAG,
+  DEFAULT_EVENT_HISTORY_DAYS,
   EDITOR_PREVIEW_DRAFT_EVENT,
   EDITOR_TAG,
   EDITOR_TEXT_PREVIEW_DELAY_MS,
+  MAX_EVENT_HISTORY_DAYS,
   MAX_CAMERA_TITLE_LENGTH,
   MAX_CAMERAS,
   MAX_LIGHTS_PER_CAMERA,
+  MIN_EVENT_HISTORY_DAYS,
   SORTABLE_LIST_TAG,
   SORTABLE_REORDER_EVENT,
   SORTABLE_TILE_TAG,
@@ -78,6 +81,14 @@ const LIGHT_SELECTOR = {
 } as const;
 const ICON_SELECTOR = { icon: {} } as const;
 const BOOLEAN_SELECTOR = { boolean: {} } as const;
+const EVENT_HISTORY_DAYS_SELECTOR = {
+  number: {
+    max: MAX_EVENT_HISTORY_DAYS,
+    min: MIN_EVENT_HISTORY_DAYS,
+    mode: "box",
+    step: 1,
+  },
+} as const;
 const DEFAULT_LIGHT_ICON = "mdi:lightbulb";
 
 const accordionTag = unsafeStatic(ACCORDION_TAG);
@@ -346,6 +357,13 @@ export class CardEditor extends LitElement {
         this._t("editor.mobile_data_saving"),
         this._config?.mobile_data_saving === true,
       )}
+      <ha-selector
+        label=${this._t("editor.event_history_days")}
+        .hass=${this._hass}
+        .selector=${EVENT_HISTORY_DAYS_SELECTOR}
+        .value=${this._config?.event_history_days ?? DEFAULT_EVENT_HISTORY_DAYS}
+        @value-changed=${this._handleEventHistoryDaysChange}
+      ></ha-selector>
     `;
   }
 
@@ -840,6 +858,24 @@ export class CardEditor extends LitElement {
   private _handleTitleChange(event: Event): void {
     this._updateTitle((event.currentTarget as InputElement).value, true);
   }
+
+  private readonly _handleEventHistoryDaysChange = (
+    event: ValueChangedEvent,
+  ): void => {
+    if (!this._config) return;
+    const value = Number(event.detail.value);
+    if (
+      !Number.isInteger(value) ||
+      value < MIN_EVENT_HISTORY_DAYS ||
+      value > MAX_EVENT_HISTORY_DAYS
+    ) {
+      return;
+    }
+    this._applyDraft(
+      normalizeCardConfig({ ...this._config, event_history_days: value }),
+      true,
+    );
+  };
 
   private _updateTitle(rawTitle: string, commitConfig: boolean): void {
     const title = rawTitle.trim();

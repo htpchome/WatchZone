@@ -11,6 +11,7 @@
   "editor.add_camera": "Afegeix una càmera",
   "editor.title": "Títol",
   "editor.mobile_data_saving": "Estalvi de dades mòbils",
+  "editor.event_history_days": "Dies d'historial d'esdeveniments",
   "editor.rounded_outer_corners": "Cantonades exteriors arrodonides",
   "editor.outer_shadows": "Ombres exteriors",
   "editor.outer_padding": "Espai exterior",

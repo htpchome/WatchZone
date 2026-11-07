@@ -133,6 +133,7 @@ function hydrateModule(
       ...node,
       config: {
         ...moduleConfig,
+        historyDays: config.event_history_days,
         roundedCorners: config.event_rounded_corners,
       },
     };

@@ -1,9 +1,15 @@
-import { EVENTS_MODULE_TYPE, EVENTS_TAG } from "../../core/constants";
+import {
+  EVENTS_MODULE_TYPE,
+  EVENTS_TAG,
+  MAX_EVENT_HISTORY_DAYS,
+  MIN_EVENT_HISTORY_DAYS,
+} from "../../core/constants";
 import { englishLocalize } from "../../core/localization";
 import type { ModuleDefinition } from "../../core/placeable";
 import type { EventsModule } from "./events";
 
 export interface EventsModuleConfig {
+  readonly historyDays: number;
   readonly roundedCorners: boolean;
   readonly targetModuleId: string;
 }
@@ -23,7 +29,18 @@ export const moduleDefinition: ModuleDefinition<EventsModuleConfig> = {
     if (typeof source.roundedCorners !== "boolean") {
       throw new Error("Events module roundedCorners must be a boolean.");
     }
+    if (
+      typeof source.historyDays !== "number" ||
+      !Number.isInteger(source.historyDays) ||
+      source.historyDays < MIN_EVENT_HISTORY_DAYS ||
+      source.historyDays > MAX_EVENT_HISTORY_DAYS
+    ) {
+      throw new Error(
+        `Events module historyDays must be an integer from ${MIN_EVENT_HISTORY_DAYS} to ${MAX_EVENT_HISTORY_DAYS}.`,
+      );
+    }
     return {
+      historyDays: source.historyDays,
       roundedCorners: source.roundedCorners,
       targetModuleId: source.targetModuleId,
     };
@@ -40,6 +57,7 @@ export const moduleDefinition: ModuleDefinition<EventsModuleConfig> = {
     events.api = context.api;
     events.cameraSelection = context.cameraSelection;
     events.localize = context.localize ?? englishLocalize;
+    events.historyDays = config.historyDays;
     events.roundedCorners = config.roundedCorners;
     events.targetModuleId = config.targetModuleId;
   },

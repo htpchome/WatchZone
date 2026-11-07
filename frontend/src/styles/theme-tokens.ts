@@ -220,7 +220,7 @@ export const themeTokens = css`
     --wzc-camera-switcher-item-size: 2.25rem;
     --wzc-event-list-gap: 0.5rem;
     --wzc-event-list-padding: 0.25rem;
-    --wzc-event-tile-block-size: 6rem;
+    --wzc-event-tile-block-size: 6.5rem;
     --wzc-event-tile-background: var(--wzc-color-surface-secondary);
     --wzc-event-tile-border-color: var(--wzc-color-border);
     --wzc-event-tile-border-width: var(--ha-card-border-width, 0);

@@ -25,6 +25,7 @@ describe("WatchZone YAML configuration manager", () => {
           camera_bar_shadows: false,
           camera_rounded_corners: false,
           camera_shadows: false,
+          event_history_days: 12,
           cameras: [
             {
               connection: "frigate_go2rtc",
@@ -55,6 +56,7 @@ describe("WatchZone YAML configuration manager", () => {
       camera_bar_shadows: false,
       camera_rounded_corners: false,
       camera_shadows: false,
+      event_history_days: 12,
       cameras: [
         {
           connection: "frigate_go2rtc",

@@ -11,6 +11,7 @@
   "editor.add_camera": "Aggiungi telecamera",
   "editor.title": "Titolo",
   "editor.mobile_data_saving": "Risparmio dati mobili",
+  "editor.event_history_days": "Giorni di cronologia eventi",
   "editor.rounded_outer_corners": "Angoli esterni arrotondati",
   "editor.outer_shadows": "Ombre esterne",
   "editor.outer_padding": "Spaziatura esterna",

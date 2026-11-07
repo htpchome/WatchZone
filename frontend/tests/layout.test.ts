@@ -107,9 +107,23 @@ describe("layout composition", () => {
       kind: "module",
       moduleType: "events",
       config: {
+        historyDays: 5,
         roundedCorners: true,
         targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
       },
+    });
+  });
+
+  it("maps the configured event history range at the events module boundary", () => {
+    const layout = builtInStage(
+      normalizeCardConfig({
+        camera_entity: "camera.front",
+        event_history_days: 12,
+      }),
+    );
+
+    expect(defaultVariant(layout).root.children[2]?.node.config).toMatchObject({
+      historyDays: 12,
     });
   });
 

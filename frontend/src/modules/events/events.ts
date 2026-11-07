@@ -7,7 +7,11 @@ import {
   formatHomeAssistantDate,
   formatHomeAssistantTime,
 } from "../../core/date-time";
-import { EVENTS_REFRESH_INTERVAL_MS, EVENTS_TAG } from "../../core/constants";
+import {
+  DEFAULT_EVENT_HISTORY_DAYS,
+  EVENTS_REFRESH_INTERVAL_MS,
+  EVENTS_TAG,
+} from "../../core/constants";
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import { homeAssistantNumberFormat } from "../../core/number-format";
 import {
@@ -25,6 +29,7 @@ export class EventsModule extends LitElement {
   public static properties = {
     api: { attribute: false },
     cameraSelection: { attribute: false },
+    historyDays: { attribute: false },
     localize: { attribute: false },
     roundedCorners: { attribute: false, type: Boolean },
     targetModuleId: { attribute: false },
@@ -34,6 +39,7 @@ export class EventsModule extends LitElement {
 
   public api?: HomeAssistantApi;
   public cameraSelection?: CameraSelectionContext;
+  public historyDays = DEFAULT_EVENT_HISTORY_DAYS;
   public localize: LocalizeFunction = englishLocalize;
   public roundedCorners = true;
   public targetModuleId = "";
@@ -65,6 +71,15 @@ export class EventsModule extends LitElement {
     if (changed.has("cameraSelection") || changed.has("targetModuleId")) {
       this._subscribe();
     }
+    if (
+      changed.has("historyDays") &&
+      !changed.has("cameraSelection") &&
+      !changed.has("targetModuleId") &&
+      this._activeEntityId
+    ) {
+      this._generation += 1;
+      void this._refresh(false);
+    }
   }
 
   protected render() {
@@ -95,6 +110,7 @@ export class EventsModule extends LitElement {
 
   private _renderEvent(event: EventItem) {
     const start = new Date(event.start_time * 1000);
+    const previewUrl = event.snapshot_url ?? event.thumbnail_url;
     const duration = Math.max(
       1,
       Math.round((event.end_time ?? Date.now() / 1000) - event.start_time),
@@ -102,12 +118,11 @@ export class EventsModule extends LitElement {
     return html`<article class="tile">
       <div class="thumbnail-wrap">
         ${
-          event.thumbnail_url &&
-          !this._failedMedia.has(`${event.id}:${event.revision}`)
+          previewUrl && !this._failedMedia.has(`${event.id}:${event.revision}`)
             ? html`<img
                 class="thumbnail"
                 loading="lazy"
-                src=${this.api?.resolveUrl(event.thumbnail_url) ?? event.thumbnail_url}
+                src=${this.api?.resolveUrl(previewUrl) ?? previewUrl}
                 alt=${this.localize("events.thumbnail", { label: event.label })}
                 @error=${() => this._mediaFailed(event)}
               />`
@@ -206,7 +221,10 @@ export class EventsModule extends LitElement {
     const generation = this._generation;
     this._loading = true;
     try {
-      const items = await listEvents(api, entityId, bypassCache);
+      const items = await listEvents(api, entityId, {
+        bypassCache,
+        historyDays: this.historyDays,
+      });
       if (generation !== this._generation || entityId !== this._activeEntityId)
         return;
       this._events = items;

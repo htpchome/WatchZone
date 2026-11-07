@@ -18,6 +18,7 @@
   "editor.add_camera": "Add camera",
   "editor.title": "Title",
   "editor.mobile_data_saving": "Mobile Data Saving",
+  "editor.event_history_days": "Event History Days",
   "editor.rounded_outer_corners": "Rounded Outer Corners",
   "editor.outer_shadows": "Outer Shadows",
   "editor.outer_padding": "Outer Padding",

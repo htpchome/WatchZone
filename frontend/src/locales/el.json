@@ -11,6 +11,7 @@
   "editor.add_camera": "Προσθήκη κάμερας",
   "editor.title": "Τίτλος",
   "editor.mobile_data_saving": "Εξοικονόμηση δεδομένων κινητής",
+  "editor.event_history_days": "Ημέρες ιστορικού συμβάντων",
   "editor.rounded_outer_corners": "Στρογγυλεμένες εξωτερικές γωνίες",
   "editor.outer_shadows": "Εξωτερικές σκιές",
   "editor.outer_padding": "Εξωτερικό περιθώριο",

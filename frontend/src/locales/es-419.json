@@ -1,5 +1,6 @@
 {
   "editor.mobile_data_saving": "Ahorro de datos móviles",
+  "editor.event_history_days": "Días del historial de eventos",
   "common.add": "Agregar",
   "common.cancel": "Cancelar",
   "common.retry": "Reintentar",

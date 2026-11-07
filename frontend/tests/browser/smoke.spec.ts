@@ -266,6 +266,7 @@ test("shows an independently scrolling event window for the active camera", asyn
       }));
     card.setConfig({
       type: "custom:watchzone-card",
+      event_history_days: 7,
       cameras: [
         { entity_id: "camera.front", title: "Front" },
         { entity_id: "camera.back", title: "Back" },
@@ -320,6 +321,26 @@ test("shows an independently scrolling event window for the active camera", asyn
     scrollHeight: node.scrollHeight,
   }));
   expect(scrolling.scrollHeight).toBeGreaterThan(scrolling.clientHeight);
+  const tileGeometry = await events.locator(".tile").evaluateAll((tiles) =>
+    tiles.map((tile) => {
+      const tileRect = tile.getBoundingClientRect();
+      const thumbnailRect = tile
+        .querySelector(".thumbnail-wrap")
+        ?.getBoundingClientRect();
+      return {
+        bottom: tileRect.bottom,
+        thumbnailRatio: thumbnailRect
+          ? thumbnailRect.width / thumbnailRect.height
+          : 0,
+      };
+    }),
+  );
+  const viewportBottom = await viewport.evaluate(
+    (node) => node.getBoundingClientRect().bottom,
+  );
+  expect(tileGeometry[2]?.bottom).toBeLessThanOrEqual(viewportBottom + 1);
+  expect(tileGeometry[3]?.bottom).toBeGreaterThan(viewportBottom);
+  expect(tileGeometry[0]?.thumbnailRatio).toBeCloseTo(16 / 9, 2);
 
   await page.locator("wzc-camera-switcher button").nth(1).click();
   await expect(events).toContainText("back");

@@ -43,6 +43,7 @@ describe("events module", () => {
     const module = document.createElement(EVENTS_TAG) as EventsModule;
     module.api = api;
     module.cameraSelection = selection;
+    module.historyDays = 7;
     module.targetModuleId = "camera-module";
     document.body.append(module);
     selection.publish(
@@ -62,9 +63,18 @@ describe("events module", () => {
       expect.objectContaining({
         type: "watchzone/events/list",
         entity_id: "camera.front",
+        limit: 500,
       }),
     );
+    const query = callWS.mock.calls[0]?.[0] as {
+      after: number;
+      before: number;
+    };
+    expect(query.before - query.after).toBe(7 * 24 * 60 * 60);
     expect(module.shadowRoot?.textContent).toContain("Resident");
+    expect(
+      module.shadowRoot?.querySelector<HTMLImageElement>(".thumbnail")?.src,
+    ).toBe("https://ha.local/snapshot.jpg");
     expect(
       module.shadowRoot
         ?.querySelector(".viewport")

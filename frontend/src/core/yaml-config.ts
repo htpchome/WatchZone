@@ -1,5 +1,9 @@
 import type { CameraConfig, CardConfig } from "./config";
-import { CARD_TYPE, DEFAULT_CARD_TITLE } from "./constants";
+import {
+  CARD_TYPE,
+  DEFAULT_CARD_TITLE,
+  DEFAULT_EVENT_HISTORY_DAYS,
+} from "./constants";
 
 export interface YamlCardConfig {
   readonly type: typeof CARD_TYPE;
@@ -22,6 +26,9 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
   if (config.camera_bar_shadows !== false) delete yaml.camera_bar_shadows;
   if (config.event_rounded_corners !== false) {
     delete yaml.event_rounded_corners;
+  }
+  if (config.event_history_days === DEFAULT_EVENT_HISTORY_DAYS) {
+    delete yaml.event_history_days;
   }
   if (!config.mobile_data_saving) delete yaml.mobile_data_saving;
   if (config.cameras.length === 0) delete yaml.cameras;
