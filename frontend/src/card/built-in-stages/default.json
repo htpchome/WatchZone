@@ -42,38 +42,12 @@
                 ]
               }
             }
-          },
-          {
-            "grid": {
-              "column": 1,
-              "columnSpan": 12,
-              "row": 2,
-              "rowSpan": 1
-            },
-            "node": {
-              "config": {},
-              "id": "default-panel-module",
-              "kind": "module",
-              "moduleType": "panel",
-              "slots": {
-                "content": [
-                  {
-                    "componentType": "camera_switcher",
-                    "config": {
-                      "targetModuleId": "default-camera-module"
-                    },
-                    "id": "default-camera-switcher-component",
-                    "kind": "component"
-                  }
-                ]
-              }
-            }
           }
         ],
         "columns": 12,
         "id": "default-layout-root",
         "kind": "container",
-        "rows": ["fraction", "content"]
+        "rows": ["fraction"]
       }
     },
     "phone": {
@@ -114,38 +88,12 @@
                 ]
               }
             }
-          },
-          {
-            "grid": {
-              "column": 1,
-              "columnSpan": 4,
-              "row": 2,
-              "rowSpan": 1
-            },
-            "node": {
-              "config": {},
-              "id": "default-panel-module",
-              "kind": "module",
-              "moduleType": "panel",
-              "slots": {
-                "content": [
-                  {
-                    "componentType": "camera_switcher",
-                    "config": {
-                      "targetModuleId": "default-camera-module"
-                    },
-                    "id": "default-camera-switcher-component",
-                    "kind": "component"
-                  }
-                ]
-              }
-            }
           }
         ],
         "columns": 4,
         "id": "default-layout-root",
         "kind": "container",
-        "rows": ["fraction", "content"]
+        "rows": ["fraction"]
       }
     }
   }
