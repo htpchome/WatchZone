@@ -109,6 +109,7 @@ describe("layout composition", () => {
       config: {
         displayEventTypeBadges: true,
         displayObjectBadges: true,
+        displayZone: true,
         historyDays: 5,
         roundedCorners: true,
         targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
@@ -122,12 +123,14 @@ describe("layout composition", () => {
         camera_entity: "camera.front",
         display_event_type_badges: false,
         display_object_badges: false,
+        display_zone: false,
       }),
     );
 
     expect(defaultVariant(layout).root.children[2]?.node.config).toMatchObject({
       displayEventTypeBadges: false,
       displayObjectBadges: false,
+      displayZone: false,
     });
   });
 

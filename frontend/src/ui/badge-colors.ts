@@ -69,6 +69,11 @@ export const OBJECT_BADGE_COLORS: Readonly<Record<string, BadgeColor>> = {
   resident: "emerald",
   person_verified: "indigo",
   special: "red",
+  northern_cardinal: "red",
+};
+
+const PINNED_BADGE_COLORS: Readonly<Record<string, BadgeColor>> = {
+  northern_cardinal: "red",
 };
 
 export function normalizeBadgeLabel(label: string): string {
@@ -99,9 +104,15 @@ export function distinctBadgeColorsForLabels(
     reservedColors.map((color) => COLOR_FAMILIES[color]),
   );
   return labels.map((label) => {
+    const normalized = normalizeBadgeLabel(label);
+    const pinned = PINNED_BADGE_COLORS[normalized];
+    if (pinned) {
+      usedColors.add(pinned);
+      usedFamilies.add(COLOR_FAMILIES[pinned]);
+      return pinned;
+    }
     const preferred = badgeColorForLabel(label);
-    const offset =
-      badgeHash(normalizeBadgeLabel(label)) % FALLBACK_PALETTE.length;
+    const offset = badgeHash(normalized) % FALLBACK_PALETTE.length;
     const rotated = [
       ...FALLBACK_PALETTE.slice(offset),
       ...FALLBACK_PALETTE.slice(0, offset),

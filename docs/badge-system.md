@@ -26,3 +26,7 @@ families already present. Semantic badges such as Clip reserve their family
 before object and identity labels are assigned. This prevents one tile from
 showing duplicate or visually clustered badge colors without moving collision
 logic into a feature renderer.
+
+An explicit product color pin overrides contextual collision resolution. These
+pins are intentionally rare and belong in the shared label policy; Northern
+Cardinal is pinned to red wherever its object badge is rendered.

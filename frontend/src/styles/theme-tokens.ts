@@ -220,7 +220,7 @@ export const themeTokens = css`
     --wzc-camera-switcher-item-size: 2.25rem;
     --wzc-event-list-gap: 0.5rem;
     --wzc-event-list-padding: 0.25rem;
-    --wzc-event-tile-block-size: 6rem;
+    --wzc-event-tile-block-size: 7.2rem;
     --wzc-event-tile-background: var(--wzc-color-surface-secondary);
     --wzc-event-tile-border-color: var(--wzc-color-border);
     --wzc-event-tile-border-width: var(--ha-card-border-width, 0);
@@ -228,13 +228,15 @@ export const themeTokens = css`
     --wzc-event-tile-shadow: var(--wzc-shadow-small);
     --wzc-event-tile-gap: 0.65rem;
     --wzc-event-content-padding: 0.25rem;
-    --wzc-event-thumbnail-inline-size: 10.6667rem;
+    --wzc-event-thumbnail-inline-size: 12.8rem;
     --wzc-event-thumbnail-radius: var(--wzc-radius-card);
     --wzc-event-thumbnail-placeholder-background: var(--wzc-camera-stage);
     --wzc-event-thumbnail-placeholder-color: var(--wzc-color-text-2);
     --wzc-event-thumbnail-placeholder-icon-size: 2.75rem;
     --wzc-event-badge-font-size: 0.6875rem;
     --wzc-event-badge-padding: 0.08em 0.45em;
+    --wzc-event-metadata-gap: 0.2rem;
+    --wzc-event-metadata-icon-size: 0.75rem;
     --wzc-event-secondary-color: var(--wzc-color-text-2);
     --wzc-event-duration-background: var(--wzc-media-overlay-background);
     --wzc-event-duration-color: var(--wzc-media-overlay-color);

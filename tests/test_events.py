@@ -27,6 +27,7 @@ def test_event_revision_changes_with_mutable_media_and_end_time() -> None:
             "end_time": 1700000024.2,
             "has_snapshot": True,
             "has_clip": True,
+            "zones": ["driveway", "front_yard", "driveway", ""],
         },
         "frigate_workshop",
     )
@@ -36,6 +37,7 @@ def test_event_revision_changes_with_mutable_media_and_end_time() -> None:
     assert pending.id == complete.id == "frigate_workshop:1700000000.1-abc"
     assert pending.revision != complete.revision
     assert complete.sub_label == "Resident"
+    assert complete.zones == ("driveway", "front_yard")
     assert complete.thumbnail_url is not None
     assert complete.thumbnail_url.startswith(
         "/api/frigate/frigate_workshop/notifications/1700000000.1-abc/"

@@ -37,6 +37,7 @@ export interface CardConfig {
   readonly camera_shadows: boolean;
   readonly display_event_type_badges: boolean;
   readonly display_object_badges: boolean;
+  readonly display_zone: boolean;
   readonly event_rounded_corners: boolean;
   readonly event_history_days: number;
   readonly cameras: readonly CameraConfig[];
@@ -66,6 +67,7 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     "camera_shadows",
     "display_event_type_badges",
     "display_object_badges",
+    "display_zone",
     "event_rounded_corners",
     "rounded_outer_corners",
     "outer_shadows",
@@ -113,6 +115,7 @@ export function normalizeCardConfig(value: unknown): CardConfig {
   normalized.display_event_type_badges =
     source.display_event_type_badges !== false;
   normalized.display_object_badges = source.display_object_badges !== false;
+  normalized.display_zone = source.display_zone !== false;
   normalized.event_rounded_corners = source.event_rounded_corners !== false;
   normalized.event_history_days =
     typeof eventHistoryDays === "number"

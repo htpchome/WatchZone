@@ -4,7 +4,7 @@ import { repeat } from "lit/directives/repeat.js";
 import { listEvents, type EventItem } from "../../api/events";
 import type { CameraSelectionContext } from "../../core/camera-selection-context";
 import {
-  formatHomeAssistantDate,
+  formatHomeAssistantEventDate,
   formatHomeAssistantTime,
 } from "../../core/date-time";
 import {
@@ -32,6 +32,7 @@ export class EventsModule extends LitElement {
     cameraSelection: { attribute: false },
     displayEventTypeBadges: { attribute: false },
     displayObjectBadges: { attribute: false },
+    displayZone: { attribute: false },
     historyDays: { attribute: false },
     localize: { attribute: false },
     roundedCorners: { attribute: false, type: Boolean },
@@ -44,6 +45,7 @@ export class EventsModule extends LitElement {
   public cameraSelection?: CameraSelectionContext;
   public displayEventTypeBadges = true;
   public displayObjectBadges = true;
+  public displayZone = true;
   public historyDays = DEFAULT_EVENT_HISTORY_DAYS;
   public localize: LocalizeFunction = englishLocalize;
   public roundedCorners = true;
@@ -182,9 +184,22 @@ export class EventsModule extends LitElement {
               </div>`
             : null
         }
-        <div class="metadata">${this._formatTime(start)}</div>
-        <div class="metadata">${this._formatDate(start)}</div>
-        <div class="metadata">${event.camera}</div>
+        <div class="metadata">
+          <span class="metadata-icon">${renderIcon("clock")}</span>
+          <span>${this._formatTime(start)}</span>
+        </div>
+        <div class="metadata">
+          <span class="metadata-icon">${renderIcon("calendar")}</span>
+          <span>${this._formatDate(start)}</span>
+        </div>
+        ${
+          this.displayZone && event.zones.length > 0
+            ? html`<div class="metadata">
+                <span class="metadata-icon">${renderIcon("mapMarker")}</span>
+                <span>${event.zones.join(", ")}</span>
+              </div>`
+            : null
+        }
       </div>
       <div class="actions">
         ${
@@ -295,7 +310,7 @@ export class EventsModule extends LitElement {
   }
 
   private _formatDate(date: Date): string {
-    return formatHomeAssistantDate(date, this.api?.locale);
+    return formatHomeAssistantEventDate(date, this.api?.locale);
   }
 
   private _stopRefresh(): void {

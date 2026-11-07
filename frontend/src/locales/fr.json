@@ -14,6 +14,7 @@
   "editor.mobile_data_saving": "Économie de données mobiles",
   "editor.display_object_badges": "Afficher les badges d'objets",
   "editor.display_event_type_badges": "Afficher les badges de clips/alertes/détections",
+  "editor.display_zone": "Afficher la zone",
   "editor.event_history_days": "Jours d'historique des événements",
   "editor.rounded_outer_corners": "Coins extérieurs arrondis",
   "editor.outer_shadows": "Ombres extérieures",

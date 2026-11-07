@@ -30,6 +30,7 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
   if (config.display_object_badges !== false) {
     delete yaml.display_object_badges;
   }
+  if (config.display_zone !== false) delete yaml.display_zone;
   if (config.event_rounded_corners !== false) {
     delete yaml.event_rounded_corners;
   }

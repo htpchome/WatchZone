@@ -15,6 +15,7 @@
   "editor.mobile_data_saving": "Ahorro de datos móviles",
   "editor.display_object_badges": "Mostrar insignias de objetos",
   "editor.display_event_type_badges": "Mostrar insignias de clips/alertas/detecciones",
+  "editor.display_zone": "Mostrar zona",
   "editor.event_history_days": "Días del historial de eventos",
   "editor.rounded_outer_corners": "Esquinas exteriores redondeadas",
   "editor.outer_shadows": "Sombras exteriores",

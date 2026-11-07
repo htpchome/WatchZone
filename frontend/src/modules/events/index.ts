@@ -11,6 +11,7 @@ import type { EventsModule } from "./events";
 export interface EventsModuleConfig {
   readonly displayEventTypeBadges: boolean;
   readonly displayObjectBadges: boolean;
+  readonly displayZone: boolean;
   readonly historyDays: number;
   readonly roundedCorners: boolean;
   readonly targetModuleId: string;
@@ -39,6 +40,9 @@ export const moduleDefinition: ModuleDefinition<EventsModuleConfig> = {
     if (typeof source.displayObjectBadges !== "boolean") {
       throw new Error("Events module displayObjectBadges must be a boolean.");
     }
+    if (typeof source.displayZone !== "boolean") {
+      throw new Error("Events module displayZone must be a boolean.");
+    }
     if (
       typeof source.historyDays !== "number" ||
       !Number.isInteger(source.historyDays) ||
@@ -52,6 +56,7 @@ export const moduleDefinition: ModuleDefinition<EventsModuleConfig> = {
     return {
       displayEventTypeBadges: source.displayEventTypeBadges,
       displayObjectBadges: source.displayObjectBadges,
+      displayZone: source.displayZone,
       historyDays: source.historyDays,
       roundedCorners: source.roundedCorners,
       targetModuleId: source.targetModuleId,
@@ -70,6 +75,7 @@ export const moduleDefinition: ModuleDefinition<EventsModuleConfig> = {
     events.cameraSelection = context.cameraSelection;
     events.displayEventTypeBadges = config.displayEventTypeBadges;
     events.displayObjectBadges = config.displayObjectBadges;
+    events.displayZone = config.displayZone;
     events.localize = context.localize ?? englishLocalize;
     events.historyDays = config.historyDays;
     events.roundedCorners = config.roundedCorners;

@@ -33,6 +33,7 @@ class EventItem:
     thumbnail_url: str | None
     snapshot_url: str | None
     clip_url: str | None
+    zones: tuple[str, ...]
     revision: str
 
 

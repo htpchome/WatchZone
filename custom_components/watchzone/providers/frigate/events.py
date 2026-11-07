@@ -67,6 +67,7 @@ def _normalize_event(raw: dict[str, Any], instance_id: str) -> EventItem | None:
     has_snapshot = raw.get("has_snapshot") is True
     has_clip = raw.get("has_clip") is True
     sub_label = _sub_label(raw.get("sub_label"))
+    zones = _string_list(raw.get("zones"))
     material = {
         "camera": camera,
         "end_time": end_time,
@@ -75,6 +76,7 @@ def _normalize_event(raw: dict[str, Any], instance_id: str) -> EventItem | None:
         "label": label,
         "start_time": start_time,
         "sub_label": sub_label,
+        "zones": zones,
     }
     revision = hashlib.sha256(
         json.dumps(material, sort_keys=True, separators=(",", ":")).encode()
@@ -96,6 +98,7 @@ def _normalize_event(raw: dict[str, Any], instance_id: str) -> EventItem | None:
         thumbnail_url=f"{base}/thumbnail.jpg{suffix}" if has_snapshot else None,
         snapshot_url=f"{base}/snapshot.jpg{suffix}" if has_snapshot else None,
         clip_url=f"{base}/clip.mp4{suffix}" if has_clip else None,
+        zones=zones,
         revision=revision,
     )
 
@@ -114,6 +117,12 @@ def _sub_label(value: object) -> str | None:
     if isinstance(value, list):
         return _text(value[0]) if value else None
     return _text(value)
+
+
+def _string_list(value: object) -> tuple[str, ...]:
+    if not isinstance(value, list):
+        return ()
+    return tuple(dict.fromkeys(text for item in value if (text := _text(item))))
 
 
 events: EventsProvider = FrigateEventsProvider()

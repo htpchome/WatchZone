@@ -19,6 +19,7 @@ const event = {
   start_time: 100,
   sub_label: "Resident",
   thumbnail_url: "/thumbnail.jpg",
+  zones: ["driveway"],
 };
 
 describe("events module", () => {
@@ -72,6 +73,10 @@ describe("events module", () => {
     };
     expect(query.before - query.after).toBe(7 * 24 * 60 * 60);
     expect(module.shadowRoot?.textContent).toContain("Resident");
+    expect(module.shadowRoot?.textContent).toContain("driveway");
+    expect(
+      module.shadowRoot?.querySelectorAll(".metadata-icon svg"),
+    ).toHaveLength(3);
     expect(
       [...(module.shadowRoot?.querySelectorAll("wzc-badge") ?? [])].map(
         (badge) => badge.textContent?.trim(),

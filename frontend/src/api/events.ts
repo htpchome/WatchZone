@@ -13,6 +13,7 @@ export interface EventItem {
   readonly start_time: number;
   readonly sub_label: string | null;
   readonly thumbnail_url: string | null;
+  readonly zones: readonly string[];
 }
 
 interface EventsResponse {

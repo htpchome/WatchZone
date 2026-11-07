@@ -112,12 +112,30 @@ export const eventsStyles = css`
   }
 
   .metadata {
+    align-items: center;
     color: var(--wzc-event-secondary-color);
+    display: flex;
     font-size: var(--wzc-font-size-small);
+    gap: var(--wzc-event-metadata-gap);
     line-height: var(--wzc-line-height-condensed);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .metadata-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+  }
+
+  .metadata-icon svg {
+    block-size: var(--wzc-event-metadata-icon-size);
+    inline-size: var(--wzc-event-metadata-icon-size);
+  }
+
+  .metadata > span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .actions {

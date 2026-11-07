@@ -14,6 +14,7 @@
   "editor.mobile_data_saving": "Estalvi de dades mòbils",
   "editor.display_object_badges": "Mostra les insígnies d'objectes",
   "editor.display_event_type_badges": "Mostra les insígnies de clips/alertes/deteccions",
+  "editor.display_zone": "Mostra la zona",
   "editor.event_history_days": "Dies d'historial d'esdeveniments",
   "editor.rounded_outer_corners": "Cantonades exteriors arrodonides",
   "editor.outer_shadows": "Ombres exteriors",

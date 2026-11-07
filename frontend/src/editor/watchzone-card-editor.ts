@@ -106,6 +106,7 @@ type BooleanConfigFlag =
   | "camera_shadows"
   | "display_event_type_badges"
   | "display_object_badges"
+  | "display_zone"
   | "event_rounded_corners"
   | "mobile_data_saving"
   | "outer_padding"
@@ -427,6 +428,11 @@ export class CardEditor extends LitElement {
         "display_event_type_badges",
         this._t("editor.display_event_type_badges"),
         this._config?.display_event_type_badges !== false,
+      )}
+      ${this._renderBooleanOption(
+        "display_zone",
+        this._t("editor.display_zone"),
+        this._config?.display_zone !== false,
       )}
     `;
   }

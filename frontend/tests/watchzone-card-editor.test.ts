@@ -564,8 +564,12 @@ describe("watchzone-card-editor", () => {
     const eventTypeSelector = editor.shadowRoot?.querySelector(
       '[data-config-key="display_event_type_badges"]',
     ) as TestBooleanSelector | null;
+    const zoneSelector = editor.shadowRoot?.querySelector(
+      '[data-config-key="display_zone"]',
+    ) as TestBooleanSelector | null;
     expect(objectSelector?.value).toBe(true);
     expect(eventTypeSelector?.value).toBe(true);
+    expect(zoneSelector?.value).toBe(true);
 
     setBooleanSelector(
       editor,
@@ -577,11 +581,13 @@ describe("watchzone-card-editor", () => {
       '[data-config-key="display_event_type_badges"]',
       false,
     );
+    setBooleanSelector(editor, '[data-config-key="display_zone"]', false);
     expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
       type: CARD_TYPE,
       title: "Camera",
       display_event_type_badges: false,
       display_object_badges: false,
+      display_zone: false,
     });
   });
 

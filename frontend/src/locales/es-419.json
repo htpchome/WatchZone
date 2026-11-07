@@ -3,6 +3,7 @@
   "editor.display_settings": "Configuración de visualización",
   "editor.display_object_badges": "Mostrar insignias de objetos",
   "editor.display_event_type_badges": "Mostrar insignias de clips/alertas/detecciones",
+  "editor.display_zone": "Mostrar zona",
   "editor.event_history_days": "Días del historial de eventos",
   "common.add": "Agregar",
   "common.cancel": "Cancelar",

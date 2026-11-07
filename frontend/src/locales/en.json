@@ -21,6 +21,7 @@
   "editor.mobile_data_saving": "Mobile Data Saving",
   "editor.display_object_badges": "Display Object Badges",
   "editor.display_event_type_badges": "Display Clip/Alert/Detection Badges",
+  "editor.display_zone": "Display Zone",
   "editor.event_history_days": "Event History Days",
   "editor.rounded_outer_corners": "Rounded Outer Corners",
   "editor.outer_shadows": "Outer Shadows",

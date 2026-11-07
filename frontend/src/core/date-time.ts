@@ -91,3 +91,17 @@ export function formatHomeAssistantDate(
   ).format(date);
   return `${weekday}, ${values[order].join(separator)}`;
 }
+
+/** Compact localized event date such as `Thu, Nov 5` or `Do., 5. Nov.`. */
+export function formatHomeAssistantEventDate(
+  date: Date,
+  locale: HomeAssistantLocale | undefined,
+): string {
+  const language =
+    locale?.date_format === "system" ? undefined : locale?.language;
+  return homeAssistantDateTimeFormat(
+    locale,
+    { day: "numeric", month: "short", weekday: "short" },
+    language,
+  ).format(date);
+}

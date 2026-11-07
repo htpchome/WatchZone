@@ -36,10 +36,17 @@ describe("badge system", () => {
     expect(OBJECT_BADGE_COLORS.person).toBe("blue");
     expect(badgeColorForLabel("Person-Verified")).toBe("indigo");
     expect(badgeColorForLabel("CAT")).toBe("pink");
+    expect(badgeColorForLabel("Northern Cardinal")).toBe("red");
     expect(normalizeBadgeLabel(" Front Door ")).toBe("front_door");
     expect(badgeColorForLabel("front door")).toBe(
       badgeColorForLabel("Front-Door"),
     );
+  });
+
+  it("keeps Northern Cardinal pinned red in contextual assignments", () => {
+    expect(
+      distinctBadgeColorsForLabels(["cat", "Northern Cardinal"], ["green"]),
+    ).toEqual(["pink", "red"]);
   });
 
   it("avoids duplicate and neighboring badge colors within one presentation", () => {
