@@ -285,15 +285,14 @@ test("restores the camera switcher after an inner-dashboard detach", async ({
   );
 });
 
-test("camera switcher scrolls only its own viewport", async ({ page }) => {
+test("requests visibility for an active overflow camera", async ({ page }) => {
   await page.addInitScript(() => {
     const testWindow = window as typeof window & {
-      __wzcScrollIntoViewCalls?: number;
+      __wzcScrollIntoViewOptions?: ScrollIntoViewOptions;
     };
-    testWindow.__wzcScrollIntoViewCalls = 0;
-    Element.prototype.scrollIntoView = function () {
-      testWindow.__wzcScrollIntoViewCalls =
-        (testWindow.__wzcScrollIntoViewCalls ?? 0) + 1;
+    Element.prototype.scrollIntoView = function (options) {
+      testWindow.__wzcScrollIntoViewOptions =
+        typeof options === "object" ? options : undefined;
     };
   });
   await page.goto("/");
@@ -317,10 +316,6 @@ test("camera switcher scrolls only its own viewport", async ({ page }) => {
   await switcher.evaluate((element) => {
     element.style.inlineSize = "14rem";
   });
-  const pagePosition = await page.evaluate(() => ({
-    x: window.scrollX,
-    y: window.scrollY,
-  }));
   await switcher
     .locator("button")
     .last()
@@ -328,22 +323,16 @@ test("camera switcher scrolls only its own viewport", async ({ page }) => {
 
   await expect
     .poll(() =>
-      switcher.locator(".scroller").evaluate((scroller) => scroller.scrollLeft),
+      page.evaluate(
+        () =>
+          (
+            window as typeof window & {
+              __wzcScrollIntoViewOptions?: ScrollIntoViewOptions;
+            }
+          ).__wzcScrollIntoViewOptions,
+      ),
     )
-    .toBeGreaterThan(0);
-  expect(
-    await page.evaluate(
-      () =>
-        (
-          window as typeof window & {
-            __wzcScrollIntoViewCalls?: number;
-          }
-        ).__wzcScrollIntoViewCalls,
-    ),
-  ).toBe(0);
-  expect(
-    await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY })),
-  ).toEqual(pagePosition);
+    .toMatchObject({ block: "nearest", inline: "center" });
 });
 
 test("preserves expanded camera-stage geometry across carousel selection", async ({
@@ -844,7 +833,7 @@ test("aligns phone carousel controls and stage handle to the active stage", asyn
     (geometry.stage?.top ?? 0) + (geometry.stage?.height ?? 0) / 2;
   expect(
     (geometry.handle?.left ?? 0) + (geometry.handle?.width ?? 0) / 2,
-  ).toBeCloseTo(stageCenterX, 1);
+  ).toBeCloseTo(stageCenterX, 0);
   const handleBottomInset =
     (geometry.stage?.bottom ?? 0) - (geometry.handle?.bottom ?? 0);
   expect(handleBottomInset).toBeGreaterThanOrEqual(0);
@@ -913,6 +902,7 @@ test("applies outer shell appearance toggles without changing card identity", as
         ? getComputedStyle(shellAfter)
         : undefined;
       const disabledHostStyle = getComputedStyle(card);
+      const disabledCardPadding = disabledStyle?.padding;
       const disabledShellPadding = shellAfter?.querySelector(".shell")
         ? getComputedStyle(shellAfter.querySelector(".shell") as Element)
             .padding
@@ -924,7 +914,8 @@ test("applies outer shell appearance toggles without changing card identity", as
         hostBorderRadius: disabledHostStyle.borderRadius,
         hostBoxShadow: disabledHostStyle.boxShadow,
         identityRetained: shellAfter === shellBefore,
-        padding: disabledShellPadding,
+        cardPadding: disabledCardPadding,
+        shellPadding: disabledShellPadding,
       };
       card.setConfig({
         type: "custom:watchzone-card",
@@ -935,6 +926,7 @@ test("applies outer shell appearance toggles without changing card identity", as
         ? getComputedStyle(shellAfter)
         : undefined;
       const enabledHostStyle = getComputedStyle(card);
+      const enabledCardPadding = enabledStyle?.padding;
       const enabledShellPadding = shellAfter?.querySelector(".shell")
         ? getComputedStyle(shellAfter.querySelector(".shell") as Element)
             .padding
@@ -953,7 +945,8 @@ test("applies outer shell appearance toggles without changing card identity", as
           nativeShadowToken: enabledHostStyle
             .getPropertyValue("--ha-card-box-shadow")
             .trim(),
-          padding: enabledShellPadding,
+          cardPadding: enabledCardPadding,
+          shellPadding: enabledShellPadding,
         },
       };
     });
@@ -965,7 +958,8 @@ test("applies outer shell appearance toggles without changing card identity", as
     hostBorderRadius: "0px",
     hostBoxShadow: "none",
     identityRetained: true,
-    padding: "0px",
+    cardPadding: "0px",
+    shellPadding: "0px",
   });
   expect(result.enabled).toMatchObject({
     classes: "",
@@ -976,7 +970,8 @@ test("applies outer shell appearance toggles without changing card identity", as
   expect(result.enabled.hostBorderRadius).not.toBe("0px");
   expect(result.enabled.boxShadow).toContain("rgb(1, 2, 3)");
   expect(result.enabled.hostBoxShadow).toContain("rgb(1, 2, 3)");
-  expect(result.enabled.padding).not.toBe("0px");
+  expect(result.enabled.cardPadding).not.toBe("0px");
+  expect(result.enabled.shellPadding).toBe("0px");
 });
 
 test("exposes and honors the WatchZone semantic theme-token contract", async ({

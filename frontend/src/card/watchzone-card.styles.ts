@@ -23,6 +23,7 @@ export const cardStyles = css`
     border-width: var(--wzc-card-border-width);
     border-radius: var(--wzc-card-radius);
     box-shadow: var(--wzc-card-outer-shadow);
+    padding: var(--wzc-card-padding);
   }
 
   ha-card.square-outer-corners {
@@ -35,7 +36,7 @@ export const cardStyles = css`
     box-shadow: none !important;
   }
 
-  ha-card.no-outer-padding .shell {
+  ha-card.no-outer-padding {
     padding: 0;
   }
 
@@ -47,7 +48,7 @@ export const cardStyles = css`
     inline-size: 100%;
     block-size: 100%;
     min-block-size: 0;
-    padding: var(--wzc-card-padding);
+    padding: 0;
     overflow: hidden;
   }
 
