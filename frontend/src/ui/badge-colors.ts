@@ -29,6 +29,22 @@ const FALLBACK_PALETTE: readonly BadgeColor[] = [
   "red",
 ];
 
+const COLOR_FAMILIES: Readonly<Record<BadgeColor, string>> = {
+  amber: "gold",
+  blue: "cool",
+  cyan: "cool",
+  emerald: "green",
+  green: "green",
+  indigo: "cool",
+  neutral: "neutral",
+  orange: "gold",
+  pink: "red",
+  purple: "purple",
+  red: "red",
+  rose: "red",
+  yellow: "gold",
+};
+
 /**
  * Presentation policy only: providers remain responsible for supplying labels.
  * Known Frigate labels retain familiar colors; unknown labels hash to a stable
@@ -67,9 +83,48 @@ export function badgeColorForLabel(label: string): BadgeColor {
   const known = OBJECT_BADGE_COLORS[normalized];
   if (known) return known;
   if (!normalized) return "neutral";
+  return (
+    FALLBACK_PALETTE[badgeHash(normalized) % FALLBACK_PALETTE.length] ??
+    "neutral"
+  );
+}
+
+/** Resolves one tile's labels without duplicate or neighboring color families. */
+export function distinctBadgeColorsForLabels(
+  labels: readonly string[],
+  reservedColors: readonly BadgeColor[] = [],
+): readonly BadgeColor[] {
+  const usedColors = new Set<BadgeColor>(reservedColors);
+  const usedFamilies = new Set(
+    reservedColors.map((color) => COLOR_FAMILIES[color]),
+  );
+  return labels.map((label) => {
+    const preferred = badgeColorForLabel(label);
+    const offset =
+      badgeHash(normalizeBadgeLabel(label)) % FALLBACK_PALETTE.length;
+    const rotated = [
+      ...FALLBACK_PALETTE.slice(offset),
+      ...FALLBACK_PALETTE.slice(0, offset),
+    ];
+    const candidates = [preferred, ...rotated];
+    const color =
+      candidates.find(
+        (candidate) =>
+          !usedColors.has(candidate) &&
+          !usedFamilies.has(COLOR_FAMILIES[candidate]),
+      ) ??
+      candidates.find((candidate) => !usedColors.has(candidate)) ??
+      preferred;
+    usedColors.add(color);
+    usedFamilies.add(COLOR_FAMILIES[color]);
+    return color;
+  });
+}
+
+function badgeHash(normalized: string): number {
   let hash = 0;
   for (const character of normalized) {
     hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
   }
-  return FALLBACK_PALETTE[hash % FALLBACK_PALETTE.length] ?? "neutral";
+  return hash;
 }

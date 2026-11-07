@@ -9,6 +9,8 @@ import type { ModuleDefinition } from "../../core/placeable";
 import type { EventsModule } from "./events";
 
 export interface EventsModuleConfig {
+  readonly displayEventTypeBadges: boolean;
+  readonly displayObjectBadges: boolean;
   readonly historyDays: number;
   readonly roundedCorners: boolean;
   readonly targetModuleId: string;
@@ -29,6 +31,14 @@ export const moduleDefinition: ModuleDefinition<EventsModuleConfig> = {
     if (typeof source.roundedCorners !== "boolean") {
       throw new Error("Events module roundedCorners must be a boolean.");
     }
+    if (typeof source.displayEventTypeBadges !== "boolean") {
+      throw new Error(
+        "Events module displayEventTypeBadges must be a boolean.",
+      );
+    }
+    if (typeof source.displayObjectBadges !== "boolean") {
+      throw new Error("Events module displayObjectBadges must be a boolean.");
+    }
     if (
       typeof source.historyDays !== "number" ||
       !Number.isInteger(source.historyDays) ||
@@ -40,6 +50,8 @@ export const moduleDefinition: ModuleDefinition<EventsModuleConfig> = {
       );
     }
     return {
+      displayEventTypeBadges: source.displayEventTypeBadges,
+      displayObjectBadges: source.displayObjectBadges,
       historyDays: source.historyDays,
       roundedCorners: source.roundedCorners,
       targetModuleId: source.targetModuleId,
@@ -56,6 +68,8 @@ export const moduleDefinition: ModuleDefinition<EventsModuleConfig> = {
     const events = element as EventsModule;
     events.api = context.api;
     events.cameraSelection = context.cameraSelection;
+    events.displayEventTypeBadges = config.displayEventTypeBadges;
+    events.displayObjectBadges = config.displayObjectBadges;
     events.localize = context.localize ?? englishLocalize;
     events.historyDays = config.historyDays;
     events.roundedCorners = config.roundedCorners;

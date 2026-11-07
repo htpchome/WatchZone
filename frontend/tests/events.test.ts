@@ -73,6 +73,11 @@ describe("events module", () => {
     expect(query.before - query.after).toBe(7 * 24 * 60 * 60);
     expect(module.shadowRoot?.textContent).toContain("Resident");
     expect(
+      [...(module.shadowRoot?.querySelectorAll("wzc-badge") ?? [])].map(
+        (badge) => badge.textContent?.trim(),
+      ),
+    ).toEqual(["Person", "Resident", "Clip"]);
+    expect(
       module.shadowRoot?.querySelector<HTMLImageElement>(".thumbnail")?.src,
     ).toBe("https://ha.local/thumbnail.jpg");
     expect(
@@ -139,5 +144,45 @@ describe("events module", () => {
         module.shadowRoot?.querySelector<HTMLImageElement>(".thumbnail")?.src,
       ).toBe("https://ha.local/snapshot.jpg");
     });
+    module.shadowRoot
+      ?.querySelector<HTMLImageElement>(".thumbnail")
+      ?.dispatchEvent(new Event("error"));
+    await vi.waitFor(() => {
+      expect(
+        module.shadowRoot?.querySelector(".placeholder svg"),
+      ).not.toBeNull();
+    });
+  });
+
+  it("independently hides object and event-type badges", async () => {
+    const api = {
+      callWS: vi.fn().mockResolvedValue({ items: [event] }),
+      identity: {},
+      locale: { language: "en", time_zone: "server" },
+      resolveUrl: (path: string) => `https://ha.local${path}`,
+      subscribeMessage: vi.fn(),
+    } as unknown as HomeAssistantApi;
+    const selection = new CameraSelectionContext();
+    const module = document.createElement(EVENTS_TAG) as EventsModule;
+    module.api = api;
+    module.cameraSelection = selection;
+    module.displayEventTypeBadges = false;
+    module.displayObjectBadges = false;
+    module.targetModuleId = "camera-module";
+    document.body.append(module);
+    selection.publish(
+      "camera-module",
+      {},
+      {
+        activeEntityId: "camera.front",
+        items: [{ entityId: "camera.front", label: "Front" }],
+      },
+      vi.fn(),
+    );
+
+    await vi.waitFor(() => {
+      expect(module.shadowRoot?.querySelectorAll(".tile")).toHaveLength(1);
+    });
+    expect(module.shadowRoot?.querySelectorAll("wzc-badge")).toHaveLength(0);
   });
 });

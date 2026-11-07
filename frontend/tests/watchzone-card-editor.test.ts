@@ -96,6 +96,7 @@ describe("watchzone-card-editor", () => {
       "Camera Settings",
       "General Settings",
       "Layout Settings",
+      "Display Settings",
     ]);
     expect(items.every((item) => !item.open)).toBe(true);
     const status = editor.shadowRoot?.querySelector(
@@ -544,6 +545,43 @@ describe("watchzone-card-editor", () => {
       type: CARD_TYPE,
       title: "Camera",
       mobile_data_saving: true,
+    });
+  });
+
+  it("groups event badge overrides under Display Settings", async () => {
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+
+    const objectSelector = editor.shadowRoot?.querySelector(
+      '[data-config-key="display_object_badges"]',
+    ) as TestBooleanSelector | null;
+    const eventTypeSelector = editor.shadowRoot?.querySelector(
+      '[data-config-key="display_event_type_badges"]',
+    ) as TestBooleanSelector | null;
+    expect(objectSelector?.value).toBe(true);
+    expect(eventTypeSelector?.value).toBe(true);
+
+    setBooleanSelector(
+      editor,
+      '[data-config-key="display_object_badges"]',
+      false,
+    );
+    setBooleanSelector(
+      editor,
+      '[data-config-key="display_event_type_badges"]',
+      false,
+    );
+    expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
+      type: CARD_TYPE,
+      title: "Camera",
+      display_event_type_badges: false,
+      display_object_badges: false,
     });
   });
 

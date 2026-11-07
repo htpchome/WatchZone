@@ -107,10 +107,27 @@ describe("layout composition", () => {
       kind: "module",
       moduleType: "events",
       config: {
+        displayEventTypeBadges: true,
+        displayObjectBadges: true,
         historyDays: 5,
         roundedCorners: true,
         targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
       },
+    });
+  });
+
+  it("maps event badge visibility at the events module boundary", () => {
+    const layout = builtInStage(
+      normalizeCardConfig({
+        camera_entity: "camera.front",
+        display_event_type_badges: false,
+        display_object_badges: false,
+      }),
+    );
+
+    expect(defaultVariant(layout).root.children[2]?.node.config).toMatchObject({
+      displayEventTypeBadges: false,
+      displayObjectBadges: false,
     });
   });
 

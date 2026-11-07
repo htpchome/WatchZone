@@ -24,6 +24,12 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
   }
   if (config.camera_shadows !== false) delete yaml.camera_shadows;
   if (config.camera_bar_shadows !== false) delete yaml.camera_bar_shadows;
+  if (config.display_event_type_badges !== false) {
+    delete yaml.display_event_type_badges;
+  }
+  if (config.display_object_badges !== false) {
+    delete yaml.display_object_badges;
+  }
   if (config.event_rounded_corners !== false) {
     delete yaml.event_rounded_corners;
   }

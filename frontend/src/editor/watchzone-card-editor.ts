@@ -104,6 +104,8 @@ type BooleanConfigFlag =
   | "camera_bar_shadows"
   | "camera_rounded_corners"
   | "camera_shadows"
+  | "display_event_type_badges"
+  | "display_object_badges"
   | "event_rounded_corners"
   | "mobile_data_saving"
   | "outer_padding"
@@ -273,6 +275,13 @@ export class CardEditor extends LitElement {
         >
           ${this._renderLayoutSettings()}
         </${accordionItemTag}>
+        <${accordionItemTag}
+          heading=${this._t("editor.display_settings")}
+          item-key="display"
+          .icon=${"tune"}
+        >
+          ${this._renderDisplaySettings()}
+        </${accordionItemTag}>
       </${accordionTag}>
       ${this._renderCameraDialog()}
       ${this._renderRemoveCameraDialog()}
@@ -403,6 +412,21 @@ export class CardEditor extends LitElement {
         "event_rounded_corners",
         this._t("editor.event_rounded_corners"),
         this._config?.event_rounded_corners !== false,
+      )}
+    `;
+  }
+
+  private _renderDisplaySettings() {
+    return html`
+      ${this._renderBooleanOption(
+        "display_object_badges",
+        this._t("editor.display_object_badges"),
+        this._config?.display_object_badges !== false,
+      )}
+      ${this._renderBooleanOption(
+        "display_event_type_badges",
+        this._t("editor.display_event_type_badges"),
+        this._config?.display_event_type_badges !== false,
       )}
     `;
   }

@@ -261,14 +261,14 @@ test("shows an independently scrolling event window for the active camera", asyn
         clip_url: null,
         end_time: 1_700_000_024 - index * 60,
         has_clip: false,
-        has_snapshot: true,
+        has_snapshot: index !== 3,
         id: `frigate:${camera}:${index}`,
         label: index === 0 ? "person" : "bird",
         revision: `revision-${index}`,
         snapshot_url: null,
         start_time: 1_700_000_000 - index * 60,
         sub_label: index === 0 ? "Resident" : null,
-        thumbnail_url: "/thumbnail.svg",
+        thumbnail_url: index === 3 ? null : "/thumbnail.svg",
       }));
     card.setConfig({
       type: "custom:watchzone-card",
@@ -320,8 +320,10 @@ test("shows an independently scrolling event window for the active camera", asyn
   const events = page.locator("wzc-events");
   const viewport = events.locator(".viewport");
   await expect(events.locator(".tile")).toHaveCount(4);
+  await expect(events.locator(".placeholder svg")).toHaveCount(1);
   await expect(events).toContainText("front");
   await expect(events).toContainText("5:13 PM");
+  await expect(events.locator("wzc-badge").first()).toHaveText("Person");
   const scrolling = await viewport.evaluate((node) => ({
     clientHeight: node.clientHeight,
     scrollHeight: node.scrollHeight,
@@ -377,6 +379,24 @@ test("shows an independently scrolling event window for the active camera", asyn
   await page.locator("wzc-camera-switcher button").nth(1).click();
   await expect(events).toContainText("back");
   await expect(events).not.toContainText("front");
+  await page.locator("watchzone-card").evaluate((element) => {
+    (
+      element as HTMLElement & {
+        setConfig(config: unknown): void;
+      }
+    ).setConfig({
+      type: "custom:watchzone-card",
+      display_event_type_badges: false,
+      display_object_badges: false,
+      event_history_days: 7,
+      cameras: [
+        { entity_id: "camera.front", title: "Front" },
+        { entity_id: "camera.back", title: "Back" },
+      ],
+    });
+  });
+  await expect(events.locator(".tile")).toHaveCount(4);
+  await expect(events.locator("wzc-badge")).toHaveCount(0);
 });
 
 test("lets the camera switcher shadow paint into the card padding", async ({
@@ -1596,7 +1616,7 @@ test("editor uses exclusive accordions and shared draft status", async ({
 
   const editor = page.locator("#accordion-editor");
   const items = editor.locator("wzc-accordion-item");
-  await expect(items).toHaveCount(3);
+  await expect(items).toHaveCount(4);
   await expect(items.locator("details[open]")).toHaveCount(0);
   await items.nth(0).locator("summary").click();
   await expect(items.nth(0).locator("details")).toHaveAttribute("open", "");

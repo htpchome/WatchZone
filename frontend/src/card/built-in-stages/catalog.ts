@@ -133,6 +133,8 @@ function hydrateModule(
       ...node,
       config: {
         ...moduleConfig,
+        displayEventTypeBadges: config.display_event_type_badges,
+        displayObjectBadges: config.display_object_badges,
         historyDays: config.event_history_days,
         roundedCorners: config.event_rounded_corners,
       },

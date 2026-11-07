@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { BADGE_TAG } from "../src/core/constants";
 import {
   badgeColorForLabel,
+  distinctBadgeColorsForLabels,
   normalizeBadgeLabel,
   OBJECT_BADGE_COLORS,
 } from "../src/ui/badge-colors";
@@ -39,5 +40,17 @@ describe("badge system", () => {
     expect(badgeColorForLabel("front door")).toBe(
       badgeColorForLabel("Front-Door"),
     );
+  });
+
+  it("avoids duplicate and neighboring badge colors within one presentation", () => {
+    const colors = distinctBadgeColorsForLabels(
+      ["person", "resident"],
+      ["green"],
+    );
+    expect(new Set([...colors, "green"]).size).toBe(3);
+    expect(colors[0]).toBe("blue");
+    expect(["blue", "cyan", "indigo"]).not.toContain(colors[1]);
+    expect(colors).not.toContain("emerald");
+    expect(colors).not.toContain("green");
   });
 });

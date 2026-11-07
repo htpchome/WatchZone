@@ -15,6 +15,8 @@ describe("WatchZone card configuration", () => {
       camera_bar_shadows: true,
       camera_rounded_corners: true,
       camera_shadows: true,
+      display_event_type_badges: true,
+      display_object_badges: true,
       event_history_days: 5,
       event_rounded_corners: true,
       rounded_outer_corners: true,

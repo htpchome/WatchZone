@@ -18,7 +18,8 @@ import {
   englishLocalize,
   type LocalizeFunction,
 } from "../../core/localization";
-import { badgeColorForLabel } from "../../ui/badge-colors";
+import { distinctBadgeColorsForLabels } from "../../ui/badge-colors";
+import { renderIcon } from "../../ui/icons";
 import { ToastManager } from "../../ui/toast-manager";
 import "../../ui/badge";
 import "../../ui/toast-region";
@@ -29,6 +30,8 @@ export class EventsModule extends LitElement {
   public static properties = {
     api: { attribute: false },
     cameraSelection: { attribute: false },
+    displayEventTypeBadges: { attribute: false },
+    displayObjectBadges: { attribute: false },
     historyDays: { attribute: false },
     localize: { attribute: false },
     roundedCorners: { attribute: false, type: Boolean },
@@ -39,6 +42,8 @@ export class EventsModule extends LitElement {
 
   public api?: HomeAssistantApi;
   public cameraSelection?: CameraSelectionContext;
+  public displayEventTypeBadges = true;
+  public displayObjectBadges = true;
   public historyDays = DEFAULT_EVENT_HISTORY_DAYS;
   public localize: LocalizeFunction = englishLocalize;
   public roundedCorners = true;
@@ -118,6 +123,14 @@ export class EventsModule extends LitElement {
       1,
       Math.round((event.end_time ?? Date.now() / 1000) - event.start_time),
     );
+    const showEventTypeBadge = this.displayEventTypeBadges && event.has_clip;
+    const objectLabels = this.displayObjectBadges
+      ? [event.label, ...(event.sub_label ? [event.sub_label] : [])]
+      : [];
+    const objectColors = distinctBadgeColorsForLabels(
+      objectLabels,
+      showEventTypeBadge ? ["green"] : [],
+    );
     return html`<article class="tile">
       <div class="thumbnail-wrap">
         ${
@@ -129,8 +142,8 @@ export class EventsModule extends LitElement {
                 alt=${this.localize("events.thumbnail", { label: event.label })}
                 @error=${() => this._mediaFailed(event, previewUrl)}
               />`
-            : html`<div class="placeholder">
-                <ha-icon icon="mdi:image-off"></ha-icon>
+            : html`<div class="placeholder" aria-hidden="true">
+                ${renderIcon("account")}
               </div>`
         }
         <span class="duration"
@@ -138,31 +151,37 @@ export class EventsModule extends LitElement {
         >
       </div>
       <div class="details">
-        <div class="badges">
-          <wzc-badge
-            color=${badgeColorForLabel(event.label)}
-            shape="pill"
-            size="small"
-            >${event.label}</wzc-badge
-          >
-          ${
-            event.sub_label
-              ? html`<wzc-badge
-                  color=${badgeColorForLabel(event.sub_label)}
-                  shape="pill"
-                  size="small"
-                  >${event.sub_label}</wzc-badge
-                >`
-              : null
-          }
-          ${
-            event.has_clip
-              ? html`<wzc-badge shape="pill" size="small" variant="success"
-                  >${this.localize("events.clip")}</wzc-badge
-                >`
-              : null
-          }
-        </div>
+        ${
+          objectLabels.length > 0 || showEventTypeBadge
+            ? html`<div class="badges">
+                ${objectLabels.map(
+                  (label, index) =>
+                    html`<wzc-badge
+                      color=${objectColors[index] ?? "neutral"}
+                      shape="pill"
+                      size="small"
+                      >${capitalizeBadgeText(
+                        label,
+                        this.api?.locale?.language,
+                      )}</wzc-badge
+                    >`,
+                )}
+                ${
+                  showEventTypeBadge
+                    ? html`<wzc-badge
+                        shape="pill"
+                        size="small"
+                        variant="success"
+                        >${capitalizeBadgeText(
+                          this.localize("events.clip"),
+                          this.api?.locale?.language,
+                        )}</wzc-badge
+                      >`
+                    : null
+                }
+              </div>`
+            : null
+        }
         <div class="metadata">${this._formatTime(start)}</div>
         <div class="metadata">${this._formatDate(start)}</div>
         <div class="metadata">${event.camera}</div>
@@ -290,6 +309,14 @@ export class EventsModule extends LitElement {
 
 function mediaKey(event: EventItem, url: string): string {
   return `${event.id}:${event.revision}:${url}`;
+}
+
+function capitalizeBadgeText(value: string, locale?: string): string {
+  const characters = Array.from(value.trim());
+  const first = characters.shift();
+  return first
+    ? `${first.toLocaleUpperCase(locale)}${characters.join("")}`
+    : "";
 }
 
 function formatDuration(

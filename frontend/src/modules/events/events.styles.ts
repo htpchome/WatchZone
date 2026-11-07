@@ -68,10 +68,16 @@ export const eventsStyles = css`
 
   .placeholder {
     align-items: center;
-    background: var(--wzc-event-thumbnail-background);
-    color: var(--wzc-event-secondary-color);
+    background: var(--wzc-event-thumbnail-placeholder-background);
+    color: var(--wzc-event-thumbnail-placeholder-color);
     display: flex;
     justify-content: center;
+  }
+
+  .placeholder svg {
+    block-size: auto;
+    inline-size: var(--wzc-event-thumbnail-placeholder-icon-size);
+    opacity: 0.55;
   }
 
   .duration {

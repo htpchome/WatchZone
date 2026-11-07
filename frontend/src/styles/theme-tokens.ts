@@ -230,7 +230,9 @@ export const themeTokens = css`
     --wzc-event-content-padding: 0.25rem;
     --wzc-event-thumbnail-inline-size: 10.6667rem;
     --wzc-event-thumbnail-radius: var(--wzc-radius-card);
-    --wzc-event-thumbnail-background: var(--wzc-color-surface);
+    --wzc-event-thumbnail-placeholder-background: var(--wzc-camera-stage);
+    --wzc-event-thumbnail-placeholder-color: var(--wzc-color-text-2);
+    --wzc-event-thumbnail-placeholder-icon-size: 2.75rem;
     --wzc-event-badge-font-size: 0.6875rem;
     --wzc-event-badge-padding: 0.08em 0.45em;
     --wzc-event-secondary-color: var(--wzc-color-text-2);

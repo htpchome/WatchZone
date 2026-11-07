@@ -25,6 +25,8 @@ describe("WatchZone YAML configuration manager", () => {
           camera_bar_shadows: false,
           camera_rounded_corners: false,
           camera_shadows: false,
+          display_event_type_badges: false,
+          display_object_badges: false,
           event_history_days: 12,
           cameras: [
             {
@@ -56,6 +58,8 @@ describe("WatchZone YAML configuration manager", () => {
       camera_bar_shadows: false,
       camera_rounded_corners: false,
       camera_shadows: false,
+      display_event_type_badges: false,
+      display_object_badges: false,
       event_history_days: 12,
       cameras: [
         {
