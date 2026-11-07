@@ -285,14 +285,17 @@ test("restores the camera switcher after an inner-dashboard detach", async ({
   );
 });
 
-test("requests visibility for an active overflow camera", async ({ page }) => {
+test("camera switcher scrolls only its own viewport across outer padding changes", async ({
+  page,
+}) => {
   await page.addInitScript(() => {
     const testWindow = window as typeof window & {
-      __wzcScrollIntoViewOptions?: ScrollIntoViewOptions;
+      __wzcScrollIntoViewCalls?: number;
     };
-    Element.prototype.scrollIntoView = function (options) {
-      testWindow.__wzcScrollIntoViewOptions =
-        typeof options === "object" ? options : undefined;
+    testWindow.__wzcScrollIntoViewCalls = 0;
+    Element.prototype.scrollIntoView = function () {
+      testWindow.__wzcScrollIntoViewCalls =
+        (testWindow.__wzcScrollIntoViewCalls ?? 0) + 1;
     };
   });
   await page.goto("/");
@@ -308,6 +311,7 @@ test("requests visibility for an active overflow camera", async ({ page }) => {
         entity_id: `camera.camera_${index}`,
         title: `Camera ${index + 1}`,
       })),
+      outer_padding: true,
     });
   });
 
@@ -316,6 +320,10 @@ test("requests visibility for an active overflow camera", async ({ page }) => {
   await switcher.evaluate((element) => {
     element.style.inlineSize = "14rem";
   });
+  const pagePosition = await page.evaluate(() => ({
+    x: window.scrollX,
+    y: window.scrollY,
+  }));
   await switcher
     .locator("button")
     .last()
@@ -323,16 +331,46 @@ test("requests visibility for an active overflow camera", async ({ page }) => {
 
   await expect
     .poll(() =>
-      page.evaluate(
-        () =>
-          (
-            window as typeof window & {
-              __wzcScrollIntoViewOptions?: ScrollIntoViewOptions;
-            }
-          ).__wzcScrollIntoViewOptions,
-      ),
+      switcher.locator(".scroller").evaluate((scroller) => scroller.scrollLeft),
     )
-    .toMatchObject({ block: "nearest", inline: "center" });
+    .toBeGreaterThan(0);
+
+  await page.locator("watchzone-card").evaluate(async (element) => {
+    const card = element as HTMLElement & {
+      setConfig(config: unknown): void;
+      updateComplete: Promise<boolean>;
+    };
+    const cameras = Array.from({ length: 8 }, (_, index) => ({
+      entity_id: `camera.camera_${index}`,
+      title: `Camera ${index + 1}`,
+    }));
+    card.setConfig({
+      type: "custom:watchzone-card",
+      cameras,
+      outer_padding: false,
+    });
+    await card.updateComplete;
+    card.setConfig({
+      type: "custom:watchzone-card",
+      cameras,
+      outer_padding: true,
+    });
+    await card.updateComplete;
+  });
+
+  expect(
+    await page.evaluate(
+      () =>
+        (
+          window as typeof window & {
+            __wzcScrollIntoViewCalls?: number;
+          }
+        ).__wzcScrollIntoViewCalls,
+    ),
+  ).toBe(0);
+  expect(
+    await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY })),
+  ).toEqual(pagePosition);
 });
 
 test("preserves expanded camera-stage geometry across carousel selection", async ({

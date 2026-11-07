@@ -132,16 +132,16 @@ export class CameraSwitcherComponent extends LitElement {
       );
       const indicator = track.querySelector<HTMLElement>(".active-indicator");
       if (indicator) indicator.style.inlineSize = `${active.offsetWidth}px`;
-      const activeRect = active.getBoundingClientRect();
-      const scrollerRect = scroller.getBoundingClientRect();
-      if (
-        activeRect.left < scrollerRect.left ||
-        activeRect.right > scrollerRect.right
-      ) {
-        active.scrollIntoView({
+      const activeStart = active.offsetLeft;
+      const activeEnd = activeStart + active.offsetWidth;
+      const viewportStart = scroller.scrollLeft;
+      const viewportEnd = viewportStart + scroller.clientWidth;
+      if (activeStart < viewportStart || activeEnd > viewportEnd) {
+        const centeredLeft =
+          activeStart - (scroller.clientWidth - active.offsetWidth) / 2;
+        scroller.scrollTo({
           behavior: reducedMotion() ? "auto" : "smooth",
-          block: "nearest",
-          inline: "center",
+          left: Math.max(0, centeredLeft),
         });
       }
     });
