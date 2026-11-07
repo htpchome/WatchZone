@@ -12,7 +12,10 @@ import {
 import { DeviceProfileController } from "../../core/device-profile";
 import type { CameraSessionContext } from "../../core/camera-session-context";
 import type { CameraSelectionContext } from "../../core/camera-selection-context";
-import type { LiveConnectionType } from "../../core/config";
+import type {
+  FrigateFallbackTransport,
+  LiveConnectionType,
+} from "../../core/config";
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import {
   englishLocalize,
@@ -37,6 +40,7 @@ export interface CameraItemConfig {
   readonly available: boolean;
   readonly connection: LiveConnectionType;
   readonly entityId: string;
+  readonly frigateFallback?: FrigateFallbackTransport;
   readonly lowLatencyHls: boolean;
   readonly label: string;
   readonly posterUrl?: string;
@@ -173,6 +177,7 @@ export class CameraModule extends LitElement {
               .available=${camera.available}
               .connection=${camera.connection}
               .entityId=${camera.entityId}
+              .frigateFallback=${camera.frigateFallback}
               .lowLatencyHls=${camera.lowLatencyHls}
               .localize=${this.localize}
               .overlayVisible=${

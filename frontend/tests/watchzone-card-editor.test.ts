@@ -1061,6 +1061,14 @@ describe("watchzone-card-editor", () => {
         '[data-camera-config-key="low_latency_hls"]',
       ),
     ).toBeNull();
+    const fallback = editor.shadowRoot?.querySelector(
+      '[data-camera-config-key="frigate_fallback"]',
+    ) as TestBooleanSelector;
+    expect(fallback.value).toBe("mse");
+    fallback.dispatchEvent(
+      new CustomEvent("value-changed", { detail: { value: "hls" } }),
+    );
+    await editor.updateComplete;
     expect(
       (
         editor.shadowRoot?.querySelector(
@@ -1089,6 +1097,20 @@ describe("watchzone-card-editor", () => {
         ) as TestBooleanSelector
       ).value,
     ).toBe(false);
+
+    connection.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: "frigate_go2rtc" },
+      }),
+    );
+    await editor.updateComplete;
+    expect(
+      (
+        editor.shadowRoot?.querySelector(
+          '[data-camera-config-key="frigate_fallback"]',
+        ) as TestBooleanSelector
+      ).value,
+    ).toBe("hls");
   });
 
   it("uses a one-time dirty-state writer without subscribing", async () => {

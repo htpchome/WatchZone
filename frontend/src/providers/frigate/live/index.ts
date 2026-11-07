@@ -27,6 +27,11 @@ function mseFactory(
   };
 }
 
+const hlsFactory: ConnectionFactory = async (...args) => {
+  const { createFrigateHlsConnection } = await import("./hls");
+  return createFrigateHlsConnection(...args);
+};
+
 /** Owns direct Frigate go2rtc source identity and transport adapters. */
 export class FrigateLiveProvider {
   public acquireWebRtc(
@@ -57,6 +62,24 @@ export class FrigateLiveProvider {
       cameraKey: entityId,
       entityId,
       factory: mseFactory(source),
+      key,
+      options,
+      retryInitialFailure: true,
+      retention: "fallback",
+    });
+  }
+
+  public acquireHls(
+    api: HomeAssistantApi,
+    entityId: string,
+    key: string,
+    options: MediaConnectionOptions,
+  ): MediaSessionLease {
+    return getMediaSessionManager().acquire({
+      api,
+      cameraKey: entityId,
+      entityId,
+      factory: hlsFactory,
       key,
       options,
       retryInitialFailure: true,

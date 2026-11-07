@@ -1,5 +1,11 @@
 # Frigate go2rtc Connection Contract
 
+Status: stable WebRTC/MSE connection baseline with an opt-in experimental HLS
+fallback. Continued edge-case testing may produce narrow fixes, but retention,
+navigation, mixed-card, two-way-talk, PTZ, and provider boundaries are accepted
+in their current form. Future transports extend this contract without reopening
+those boundaries.
+
 This document defines the selectable Frigate go2rtc connection provider. It
 supplements `architecture.md`, `live-session-lifecycle.md`, `two-way-talk.md`,
 and `ptz.md`, which remain authoritative.
@@ -30,16 +36,19 @@ and `ptz.md`, which remain authoritative.
 - The editor offers Frigate go2rtc only when the selected entity resolves to a
   usable Frigate integration instance and go2rtc stream.
 - Switching connection types never deletes the camera's Home Assistant HLS
-  preference, two-way-talk opt-in, or PTZ opt-in. Capability availability may
-  disable a control but does not rewrite user intent.
+  preference, Frigate fallback choice, two-way-talk opt-in, or PTZ opt-in.
+  Capability availability may disable a control but does not rewrite user
+  intent.
 - Active-camera context carries the selected camera's connection identity.
   Talk and PTZ therefore resolve independently as selection moves between
   providers in a mixed card.
 
 ## Live transports
 
-- Frigate go2rtc provides WebRTC as its preferred transport and MSE as its
-  fallback. It does not expose HLS in this version.
+- Frigate go2rtc provides WebRTC as its preferred transport and exactly one
+  configured fallback. MSE is the stable default; HLS is an explicit
+  experimental choice used for focused compatibility testing. MSE and HLS do
+  not race one another.
 - WebRTC signaling uses the explicit `frigate_go2rtc` backend capability. A
   failure does not silently fall through to Home Assistant Direct.
 - MSE uses the installed Frigate integration's instance-qualified authenticated
@@ -50,6 +59,15 @@ and `ptz.md`, which remain authoritative.
 - The MSE adapter bounds buffered history and corrects drift toward the live
   edge. It owns its MediaSource, SourceBuffer, WebSocket, object URL, video
   element, cancellation, and complete cleanup.
+- Frigate HLS first validates Home Assistant camera read permission and the
+  owning Frigate config entry and stream. The backend then asks Home
+  Assistant's shared stream worker to expose HLS from that Frigate camera's
+  go2rtc RTSP source. This supplies a complete authenticated playlist and
+  segment chain without exposing Frigate credentials, assuming direct access
+  to go2rtc port 1984, or creating an unrestricted proxy.
+- Frigate HLS reuses the transport-neutral HLS playback adapter, including
+  native-HLS selection, HLS.js selection, live-edge correction, cancellation,
+  and cleanup. Catalyst therefore remains on native HLS.
 
 ## Retention and navigation
 
@@ -81,6 +99,7 @@ and `ptz.md`, which remain authoritative.
 
 Tests must cover multiple Frigate instances with identical stream names,
 mixed-provider cards, configuration switching without lost intent, provider
-specific capability resolution, WebRTC-to-MSE fallback, retained navigation,
-MSE cleanup and live-edge correction, talk teardown, PTZ stop ownership, and
+specific capability resolution, WebRTC-to-MSE fallback, WebRTC-to-HLS
+fallback, the absence of an MSE/HLS race, retained navigation, MSE and HLS
+cleanup and live-edge correction, talk teardown, PTZ stop ownership, and
 unchanged Home Assistant Direct behavior.

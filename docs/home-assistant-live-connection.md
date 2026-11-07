@@ -1,8 +1,10 @@
 # Home Assistant Direct Live Connection
 
-Status: stable reference implementation. New connection providers extend the
-provider-neutral contracts and must not add provider-specific behavior to this
-adapter.
+Status: stable connection baseline. Continued edge-case testing may produce
+narrow fixes, but its transport selection, retention, navigation, audio, and
+provider boundaries are accepted in their current form. New connection
+providers extend the provider-neutral contracts and must not add
+provider-specific behavior to this adapter.
 
 ## 1. Scope
 

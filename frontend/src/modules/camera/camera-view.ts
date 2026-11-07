@@ -9,7 +9,10 @@ import {
 } from "../../core/constants";
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import type { CameraSessionContext } from "../../core/camera-session-context";
-import type { LiveConnectionType } from "../../core/config";
+import type {
+  FrigateFallbackTransport,
+  LiveConnectionType,
+} from "../../core/config";
 import {
   englishLocalize,
   type LocalizeFunction,
@@ -48,6 +51,7 @@ export class CameraView extends LitElement {
     available: { attribute: false, type: Boolean },
     connection: { attribute: false },
     entityId: { attribute: false },
+    frigateFallback: { attribute: false },
     lowLatencyHls: { attribute: false, type: Boolean },
     localize: { attribute: false },
     overlayVisible: { attribute: false, type: Boolean },
@@ -98,6 +102,7 @@ export class CameraView extends LitElement {
   public available = false;
   public connection: LiveConnectionType = "home_assistant";
   public entityId?: string;
+  public frigateFallback: FrigateFallbackTransport = "mse";
   public lowLatencyHls = true;
   public localize: LocalizeFunction = englishLocalize;
   public overlayVisible = false;
@@ -143,6 +148,7 @@ export class CameraView extends LitElement {
         !suspended,
       this.connection,
       this.lowLatencyHls,
+      this.frigateFallback,
       !suspended,
     );
   }
@@ -159,7 +165,12 @@ export class CameraView extends LitElement {
                 .available=${this.connect && this.available}
                 .failed=${this._session.failed}
                 .fallbackVideo=${this._session.fallbackVideo}
-                .lowLatencyHls=${this.lowLatencyHls}
+                .lowLatencyHls=${
+                  this.connection === "frigate_go2rtc" &&
+                  this.frigateFallback === "hls"
+                    ? true
+                    : this.lowLatencyHls
+                }
                 .localize=${this.localize}
                 .muted=${this._audio.muted}
                 .notices=${this._toasts.notices}

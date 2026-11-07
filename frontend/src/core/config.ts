@@ -13,10 +13,12 @@ export interface LinkedLightConfig {
 }
 
 export type LiveConnectionType = "home_assistant" | "frigate_go2rtc";
+export type FrigateFallbackTransport = "hls" | "mse";
 
 export interface CameraConfig {
   readonly connection: LiveConnectionType;
   readonly entity_id: string;
+  readonly frigate_fallback: FrigateFallbackTransport;
   readonly lights: readonly LinkedLightConfig[];
   readonly low_latency_hls: boolean;
   readonly ptz_enabled: boolean;
@@ -105,6 +107,7 @@ export function createDefaultCameraConfig(entityId = ""): CameraConfig {
   return {
     connection: "home_assistant",
     entity_id: entityId,
+    frigate_fallback: "mse",
     lights: [],
     low_latency_hls: true,
     ptz_enabled: false,
@@ -182,6 +185,16 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
       `${APP_NAME} camera ${index + 1} must use a camera entity.`,
     );
   }
+  if (
+    "frigate_fallback" in source &&
+    source.frigate_fallback !== undefined &&
+    source.frigate_fallback !== "mse" &&
+    source.frigate_fallback !== "hls"
+  ) {
+    throw new Error(
+      `${APP_NAME} camera ${index + 1} Frigate fallback must be mse or hls.`,
+    );
+  }
   const defaults = createDefaultCameraConfig(source.entity_id.trim());
   const lights = normalizeLights(source, index);
   if (
@@ -224,6 +237,8 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
         ? "frigate_go2rtc"
         : defaults.connection,
     entity_id: defaults.entity_id,
+    frigate_fallback:
+      source.frigate_fallback === "hls" ? "hls" : defaults.frigate_fallback,
     lights,
     low_latency_hls:
       typeof source.low_latency_hls === "boolean"

@@ -121,6 +121,10 @@ export class LiveSourceResolver {
     return `${source.id}:mse`;
   }
 
+  public frigateHlsKey(source: FrigateGo2RtcLiveSourceDescriptor): string {
+    return `${source.id}:hls`;
+  }
+
   public acquireUsableFrigateWebRtc(
     api: HomeAssistantApi,
     source: FrigateGo2RtcLiveSourceDescriptor,
@@ -138,6 +142,18 @@ export class LiveSourceResolver {
   ): MediaSessionLease | undefined {
     return getMediaSessionManager().acquireUsable(
       this.frigateMseKey(source),
+      api,
+      options,
+    );
+  }
+
+  public acquireUsableFrigateHls(
+    api: HomeAssistantApi,
+    source: FrigateGo2RtcLiveSourceDescriptor,
+    options: MediaConnectionOptions,
+  ): MediaSessionLease | undefined {
+    return getMediaSessionManager().acquireUsable(
+      this.frigateHlsKey(source),
       api,
       options,
     );
@@ -167,6 +183,20 @@ export class LiveSourceResolver {
       this.frigateMseKey(source),
       options,
       source,
+    );
+  }
+
+  public async acquireFrigateHls(
+    api: HomeAssistantApi,
+    entityId: string,
+    source: FrigateGo2RtcLiveSourceDescriptor,
+    options: MediaConnectionOptions,
+  ): Promise<MediaSessionLease> {
+    return (await getFrigateProvider()).acquireHls(
+      api,
+      entityId,
+      this.frigateHlsKey(source),
+      options,
     );
   }
 }

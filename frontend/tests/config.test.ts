@@ -38,6 +38,7 @@ describe("WatchZone card configuration", () => {
       {
         connection: "home_assistant",
         entity_id: "camera.front",
+        frigate_fallback: "mse",
         lights: [],
         low_latency_hls: false,
         ptz_enabled: false,
@@ -83,6 +84,23 @@ describe("WatchZone card configuration", () => {
     ]);
     expect(config.cameras[2]?.ptz_enabled).toBe(true);
     expect(config.cameras[3]?.two_way_talk_enabled).toBe(true);
+  });
+
+  it("defaults Frigate to MSE and accepts an explicit HLS fallback", () => {
+    const config = normalizeCardConfig({
+      cameras: [
+        { connection: "frigate_go2rtc", entity_id: "camera.front" },
+        {
+          connection: "frigate_go2rtc",
+          entity_id: "camera.back",
+          frigate_fallback: "hls",
+        },
+      ],
+    });
+
+    expect(
+      config.cameras.map(({ frigate_fallback }) => frigate_fallback),
+    ).toEqual(["mse", "hls"]);
   });
 
   it("normalizes the opt-in PTZ camera capability", () => {

@@ -136,6 +136,7 @@ function hydrateModule(
       cameras: config.cameras.map((camera) => ({
         connection: camera.connection,
         entityId: camera.entity_id,
+        frigateFallback: camera.frigate_fallback,
         lowLatencyHls: camera.low_latency_hls,
         startUnmutedPcTablet: camera.start_live_unmuted_pc_tablet,
         startUnmutedPhone: camera.start_live_unmuted_phone,

@@ -26,6 +26,10 @@ describe("live source identity", () => {
     expect(resolver.frigateMseKey(home)).not.toBe(
       resolver.frigateMseKey(workshop),
     );
+    expect(resolver.frigateHlsKey(home)).not.toBe(
+      resolver.frigateHlsKey(workshop),
+    );
+    expect(resolver.frigateHlsKey(home)).not.toBe(resolver.frigateMseKey(home));
     expect(resolver.homeAssistantWebRtcKey("camera.front")).not.toBe(
       resolver.frigateWebRtcKey(home),
     );

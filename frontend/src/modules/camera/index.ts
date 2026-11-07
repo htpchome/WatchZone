@@ -140,6 +140,13 @@ function validateCameraItem(
   ) {
     throw new Error("Camera modules require a valid connection type.");
   }
+  if (
+    source.frigateFallback !== undefined &&
+    source.frigateFallback !== "mse" &&
+    source.frigateFallback !== "hls"
+  ) {
+    throw new Error("Camera modules require a valid Frigate fallback.");
+  }
   for (const key of [
     "lowLatencyHls",
     "startUnmutedPcTablet",
@@ -155,6 +162,7 @@ function validateCameraItem(
         ? "frigate_go2rtc"
         : "home_assistant",
     entityId: source.entityId,
+    frigateFallback: source.frigateFallback === "hls" ? "hls" : "mse",
     lowLatencyHls: source.lowLatencyHls as boolean,
     startUnmutedPcTablet: source.startUnmutedPcTablet as boolean,
     startUnmutedPhone: source.startUnmutedPhone as boolean,

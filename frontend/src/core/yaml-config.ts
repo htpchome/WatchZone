@@ -34,6 +34,9 @@ function compactCameraConfig(camera: CameraConfig): Record<string, unknown> {
   if (camera.connection !== "home_assistant") {
     compact.connection = camera.connection;
   }
+  if (camera.frigate_fallback !== "mse") {
+    compact.frigate_fallback = camera.frigate_fallback;
+  }
   if (camera.lights.length) {
     compact.lights = camera.lights.map((light) => ({
       entity_id: light.entity_id,

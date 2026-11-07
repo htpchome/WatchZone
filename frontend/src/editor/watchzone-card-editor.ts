@@ -10,6 +10,7 @@ import {
   sanitizeCameraTitleInput,
   type CameraConfig,
   type CardConfig,
+  type FrigateFallbackTransport,
   type LiveConnectionType,
 } from "../core/config";
 import { resolveLiveSource } from "../api/live-source";
@@ -99,7 +100,7 @@ type BooleanConfigFlag =
 
 type CameraBooleanConfigFlag = Exclude<
   keyof CameraConfig,
-  "connection" | "entity_id" | "lights" | "title"
+  "connection" | "entity_id" | "frigate_fallback" | "lights" | "title"
 >;
 
 export class CardEditor extends LitElement {
@@ -467,7 +468,17 @@ export class CardEditor extends LitElement {
                               this._t("editor.low_latency_hls"),
                               camera.low_latency_hls,
                             )
-                          : nothing
+                          : html`<ha-selector
+                              data-camera-config-key="frigate_fallback"
+                              label=${this._t("editor.frigate_fallback")}
+                              .hass=${this._hass}
+                              .selector=${this._frigateFallbackSelector()}
+                              .value=${camera.frigate_fallback}
+                              .required=${true}
+                              @value-changed=${
+                                this._handleFrigateFallbackChange
+                              }
+                            ></ha-selector>`
                       }
                     </div>
                   </${accordionItemTag}>
@@ -775,6 +786,18 @@ export class CardEditor extends LitElement {
     } as const;
   }
 
+  private _frigateFallbackSelector() {
+    return {
+      select: {
+        mode: "dropdown",
+        options: [
+          { label: this._t("editor.mse"), value: "mse" },
+          { label: this._t("editor.hls_testing"), value: "hls" },
+        ],
+      },
+    } as const;
+  }
+
   private _renderBooleanOption(
     key: BooleanConfigFlag,
     label: string,
@@ -844,6 +867,16 @@ export class CardEditor extends LitElement {
     this._cameraDraft = { ...this._cameraDraft, connection };
     this._checkTalkCapability(this._cameraDraft.entity_id, connection);
     this._checkPtzCapability(this._cameraDraft.entity_id, connection);
+    this.requestUpdate();
+  };
+
+  private readonly _handleFrigateFallbackChange = (
+    event: ValueChangedEvent,
+  ): void => {
+    if (!this._cameraDraft) return;
+    const value = eventString(event) as FrigateFallbackTransport;
+    if (value !== "mse" && value !== "hls") return;
+    this._cameraDraft = { ...this._cameraDraft, frigate_fallback: value };
     this.requestUpdate();
   };
 
@@ -1208,7 +1241,11 @@ export class CardEditor extends LitElement {
   private _cameraSummary(camera: CameraConfig): string {
     const connection =
       camera.connection === "frigate_go2rtc"
-        ? this._t("editor.frigate_go2rtc")
+        ? `${this._t("editor.frigate_go2rtc")} · ${
+            camera.frigate_fallback === "hls"
+              ? this._t("editor.hls_testing")
+              : this._t("editor.mse")
+          }`
         : camera.low_latency_hls
           ? this._t("editor.low_latency_hls")
           : this._t("editor.standard_hls");
@@ -1363,6 +1400,7 @@ function cameraConfigEquals(left: CameraConfig, right: CameraConfig): boolean {
   return (
     left.entity_id === right.entity_id &&
     left.connection === right.connection &&
+    left.frigate_fallback === right.frigate_fallback &&
     linkedLightsEqual(left.lights, right.lights) &&
     left.low_latency_hls === right.low_latency_hls &&
     left.ptz_enabled === right.ptz_enabled &&

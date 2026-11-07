@@ -25,6 +25,7 @@ from mashumaro import MissingField
 from webrtc_models import RTCIceCandidateInit
 
 from ..const import DOMAIN
+from ..providers.frigate.hls import async_prepare_hls_endpoint
 from ..providers.frigate.source import async_resolve_source
 from ..providers.live import ProviderPreparationError
 from . import runtime_from_hass
@@ -89,6 +90,34 @@ async def ws_live_source(
         connection.send_error(msg["id"], "live_source_unavailable", str(err))
         return
     connection.send_result(msg["id"], descriptor)
+
+
+@websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/live/frigate/hls",
+        vol.Required("entity_id"): cv.entity_id,
+    }
+)
+@async_response
+async def ws_frigate_hls(
+    hass: HomeAssistant,
+    connection: ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Create an authenticated HA HLS endpoint for a validated Frigate source."""
+    entity_id = msg["entity_id"]
+    try:
+        _require_camera_read(connection, entity_id)
+        url = await async_prepare_hls_endpoint(hass, entity_id)
+    except (HomeAssistantError, ProviderPreparationError) as err:
+        connection.send_error(msg["id"], "frigate_hls_unavailable", str(err))
+        return
+    except TimeoutError:
+        connection.send_error(
+            msg["id"], "frigate_hls_unavailable", "Frigate HLS source timed out"
+        )
+        return
+    connection.send_result(msg["id"], {"url": url})
 
 
 @websocket_command(
@@ -213,6 +242,7 @@ async def ws_live_candidate(
 def async_register(hass: HomeAssistant) -> None:
     """Register WatchZone live WebSocket commands."""
     async_register_command(hass, ws_live_camera_ready)
+    async_register_command(hass, ws_frigate_hls)
     async_register_command(hass, ws_live_source)
     async_register_command(hass, ws_live_offer)
     async_register_command(hass, ws_live_candidate)

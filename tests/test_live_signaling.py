@@ -17,6 +17,9 @@ from custom_components.watchzone.features.live import (
     LiveSignalingService,
     _OwnedSession,
 )
+from custom_components.watchzone.providers.frigate.hls import (
+    async_prepare_hls_endpoint,
+)
 from custom_components.watchzone.providers.frigate.live import (
     FrigateLiveSignalingSession,
     async_prepare_session,
@@ -42,6 +45,34 @@ class _FakeMessage:
 
     def as_dict(self) -> dict[str, object]:
         return self._payload
+
+
+async def test_frigate_hls_uses_validated_camera_stream_worker() -> None:
+    """Frigate HLS is issued only after provider and HA permission validation."""
+    stream = SimpleNamespace(
+        add_provider=Mock(),
+        start=AsyncMock(),
+        endpoint_url=Mock(return_value="/api/hls/token/master_playlist.m3u8"),
+    )
+    camera = SimpleNamespace(async_create_stream=AsyncMock(return_value=stream))
+    hass = SimpleNamespace()
+
+    with (
+        patch(
+            "custom_components.watchzone.providers.frigate.hls.async_resolve_source",
+            new=AsyncMock(),
+        ) as resolve_source,
+        patch(
+            "custom_components.watchzone.providers.frigate.hls._camera",
+            return_value=camera,
+        ),
+    ):
+        endpoint = await async_prepare_hls_endpoint(hass, "camera.front")
+
+    resolve_source.assert_awaited_once_with(hass, "camera.front")
+    stream.add_provider.assert_called_once_with("hls")
+    stream.start.assert_awaited_once()
+    assert endpoint == "/api/hls/token/master_playlist.m3u8"
 
 
 async def test_replacement_signaling_waits_for_prior_cleanup() -> None:

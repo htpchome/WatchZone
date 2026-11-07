@@ -776,12 +776,12 @@ test("lays out talk and light controls in the responsive dock", async ({
   const ptz = page.locator("wzc-ptz");
   const lights = page.locator("wzc-light-control");
   const talkButton = talk.locator("button.inactive");
-  const ptzControl = ptz.locator(".ptz-control.visible");
+  const ptzControl = ptz.locator(".ptz-control");
   const lightButton = lights.locator(".light-button");
   const talkIcon = talkButton.locator(":scope > svg");
   const lightIcon = lightButton.locator(":scope > ha-icon svg");
   await expect(talkButton).toBeVisible();
-  await expect(ptzControl).toBeVisible();
+  await expect(ptzControl).toHaveClass(/\bvisible\b/);
   await expect(lightButton).toBeVisible();
   await expect(lightIcon).toBeVisible();
   await expect(lightButton).toHaveAttribute("title", "Turn off Porch");
