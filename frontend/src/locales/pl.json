@@ -71,5 +71,14 @@
   "ptz.down": "Przesuń kamerę w dół",
   "ptz.left": "Przesuń kamerę w lewo",
   "ptz.right": "Przesuń kamerę w prawo",
-  "ptz.failed": "Ruch kamery nie powiódł się"
+  "ptz.failed": "Ruch kamery nie powiódł się",
+  "editor.event_rounded_corners": "Zaokrąglone rogi zdarzeń",
+  "events.list": "Zdarzenia kamery",
+  "events.loading": "Ładowanie zdarzeń…",
+  "events.empty": "Brak ostatnich zdarzeń dla tej kamery.",
+  "events.load_failed": "Nie udało się załadować zdarzeń kamery.",
+  "events.thumbnail": "Miniatura zdarzenia {label}",
+  "events.clip": "Clip",
+  "events.download_clip": "Pobierz klip",
+  "events.view_snapshot": "Wyświetl migawkę"
 }

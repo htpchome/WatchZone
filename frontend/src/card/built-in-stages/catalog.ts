@@ -3,6 +3,7 @@ import {
   APP_ID,
   CAMERA_SWITCHER_COMPONENT_TYPE,
   CAMERA_MODULE_TYPE,
+  EVENTS_MODULE_TYPE,
   LIGHT_COMPONENT_TYPE,
   PTZ_COMPONENT_TYPE,
   PANEL_MODULE_TYPE,
@@ -60,6 +61,7 @@ function namespacePlacement(placement: StagePlacement): StagePlacement {
     ...placement,
     node: {
       ...placement.node,
+      config: namespaceModuleConfig(placement.node),
       id: namespacedId(placement.node.id),
       ...(placement.node.slots
         ? {
@@ -88,6 +90,10 @@ function hydrateTemplate(
     variants: mapVariants(template, (variant) => ({
       root: {
         ...variant.root,
+        rows:
+          config.cameras.length === 0
+            ? variant.root.rows.slice(0, 2)
+            : variant.root.rows,
         children: variant.root.children.flatMap((placement) => {
           const node = hydrateModule(placement.node, config);
           return node ? [{ ...placement, node }] : [];
@@ -115,6 +121,20 @@ function hydrateModule(
           ),
         ]),
       ),
+    };
+  }
+  if (node.moduleType === EVENTS_MODULE_TYPE) {
+    if (config.cameras.length === 0) return undefined;
+    const moduleConfig =
+      typeof node.config === "object" && node.config !== null
+        ? node.config
+        : {};
+    return {
+      ...node,
+      config: {
+        ...moduleConfig,
+        roundedCorners: config.event_rounded_corners,
+      },
     };
   }
   if (node.moduleType !== CAMERA_MODULE_TYPE) return node;
@@ -150,6 +170,17 @@ function hydrateModule(
     },
     slots,
   };
+}
+
+function namespaceModuleConfig(node: StageModuleNode): unknown {
+  if (node.moduleType !== EVENTS_MODULE_TYPE) return node.config;
+  if (typeof node.config !== "object" || node.config === null)
+    return node.config;
+  const targetModuleId = (node.config as Record<string, unknown>)
+    .targetModuleId;
+  return typeof targetModuleId === "string"
+    ? { ...node.config, targetModuleId: namespacedId(targetModuleId) }
+    : node.config;
 }
 
 function hydrateRuntimeComponent(

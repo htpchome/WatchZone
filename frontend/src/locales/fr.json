@@ -71,5 +71,14 @@
   "ptz.down": "Déplacer la caméra vers le bas",
   "ptz.left": "Déplacer la caméra vers la gauche",
   "ptz.right": "Déplacer la caméra vers la droite",
-  "ptz.failed": "Échec du déplacement de la caméra"
+  "ptz.failed": "Échec du déplacement de la caméra",
+  "editor.event_rounded_corners": "Coins arrondis des événements",
+  "events.list": "Événements de la caméra",
+  "events.loading": "Chargement des événements…",
+  "events.empty": "Aucun événement récent pour cette caméra.",
+  "events.load_failed": "Impossible de charger les événements de la caméra.",
+  "events.thumbnail": "Miniature de l'événement {label}",
+  "events.clip": "Clip",
+  "events.download_clip": "Télécharger le clip",
+  "events.view_snapshot": "Afficher l'instantané"
 }

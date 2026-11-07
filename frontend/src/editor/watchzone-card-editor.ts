@@ -93,6 +93,7 @@ type BooleanConfigFlag =
   | "camera_bar_shadows"
   | "camera_rounded_corners"
   | "camera_shadows"
+  | "event_rounded_corners"
   | "mobile_data_saving"
   | "outer_padding"
   | "outer_shadows"
@@ -379,6 +380,11 @@ export class CardEditor extends LitElement {
         "camera_bar_shadows",
         this._t("editor.camera_bar_shadows"),
         this._config?.camera_bar_shadows !== false,
+      )}
+      ${this._renderBooleanOption(
+        "event_rounded_corners",
+        this._t("editor.event_rounded_corners"),
+        this._config?.event_rounded_corners !== false,
       )}
     `;
   }

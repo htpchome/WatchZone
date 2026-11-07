@@ -8,6 +8,7 @@ import { normalizeCardConfig } from "../src/core/config";
 import {
   DEFAULT_CAMERA_MODULE_NODE_ID,
   DEFAULT_CAMERA_SWITCHER_COMPONENT_NODE_ID,
+  DEFAULT_EVENTS_MODULE_NODE_ID,
   DEFAULT_LAYOUT_ROOT_NODE_ID,
   DEFAULT_LIGHT_COMPONENT_NODE_ID,
   DEFAULT_PANEL_MODULE_NODE_ID,
@@ -71,7 +72,7 @@ describe("layout composition", () => {
     );
 
     const children = defaultVariant(layout).root.children;
-    expect(children).toHaveLength(2);
+    expect(children).toHaveLength(3);
     expect(children[0].node).toMatchObject({
       id: DEFAULT_CAMERA_MODULE_NODE_ID,
       kind: "module",
@@ -99,6 +100,15 @@ describe("layout composition", () => {
             kind: "component",
           },
         ],
+      },
+    });
+    expect(children[2].node).toMatchObject({
+      id: DEFAULT_EVENTS_MODULE_NODE_ID,
+      kind: "module",
+      moduleType: "events",
+      config: {
+        roundedCorners: true,
+        targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
       },
     });
   });

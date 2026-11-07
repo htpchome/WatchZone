@@ -71,5 +71,14 @@
   "ptz.down": "Mover câmera para baixo",
   "ptz.left": "Mover câmera para a esquerda",
   "ptz.right": "Mover câmera para a direita",
-  "ptz.failed": "Falha ao mover a câmera"
+  "ptz.failed": "Falha ao mover a câmera",
+  "editor.event_rounded_corners": "Cantos arredondados dos eventos",
+  "events.list": "Eventos da câmera",
+  "events.loading": "Carregando eventos…",
+  "events.empty": "Não há eventos recentes para esta câmera.",
+  "events.load_failed": "Não foi possível carregar os eventos da câmera.",
+  "events.thumbnail": "Miniatura do evento {label}",
+  "events.clip": "Clip",
+  "events.download_clip": "Baixar clipe",
+  "events.view_snapshot": "Ver captura"
 }

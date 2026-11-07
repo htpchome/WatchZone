@@ -32,5 +32,14 @@
   "ptz.down": "Move camera down",
   "ptz.left": "Move camera left",
   "ptz.right": "Move camera right",
-  "ptz.failed": "Camera movement failed"
+  "ptz.failed": "Camera movement failed",
+  "editor.event_rounded_corners": "Event Rounded Corners",
+  "events.list": "Camera events",
+  "events.loading": "Loading events…",
+  "events.empty": "No recent events for this camera.",
+  "events.load_failed": "Unable to load camera events.",
+  "events.thumbnail": "{label} event thumbnail",
+  "events.clip": "Clip",
+  "events.download_clip": "Download clip",
+  "events.view_snapshot": "View snapshot"
 }

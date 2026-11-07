@@ -71,5 +71,14 @@
   "ptz.down": "Mou la càmera avall",
   "ptz.left": "Mou la càmera a l’esquerra",
   "ptz.right": "Mou la càmera a la dreta",
-  "ptz.failed": "Ha fallat el moviment de la càmera"
+  "ptz.failed": "Ha fallat el moviment de la càmera",
+  "editor.event_rounded_corners": "Cantonades arrodonides dels esdeveniments",
+  "events.list": "Esdeveniments de la càmera",
+  "events.loading": "Carregant esdeveniments…",
+  "events.empty": "No hi ha esdeveniments recents per a aquesta càmera.",
+  "events.load_failed": "No s'han pogut carregar els esdeveniments de la càmera.",
+  "events.thumbnail": "Miniatura de l'esdeveniment {label}",
+  "events.clip": "Clip",
+  "events.download_clip": "Baixa el clip",
+  "events.view_snapshot": "Mostra la captura"
 }

@@ -9,6 +9,7 @@ from homeassistant.core import HomeAssistant, callback
 
 from .const import DOMAIN
 from .providers.camera import CameraRuntimeProvider, CameraRuntimeState
+from .providers.events import EventsProvider
 from .providers.live import (
     LiveSignalingProvider,
     LiveSignalingSession,
@@ -21,6 +22,7 @@ __all__ = [
     "EXTENSION_API_VERSION",
     "CameraRuntimeProvider",
     "CameraRuntimeState",
+    "EventsProvider",
     "LiveSignalingProvider",
     "LiveSignalingSession",
     "ProviderExtension",
@@ -46,6 +48,7 @@ class ProviderExtension:
     live_signaling: LiveSignalingProvider | None = None
     talk_signaling: LiveSignalingProvider | None = None
     ptz: PtzProvider | None = None
+    events: EventsProvider | None = None
 
 
 class ProviderRegistry:
@@ -122,6 +125,11 @@ class ProviderRegistry:
         """Resolve PTZ by explicit connection-provider identity."""
         extension = self._providers.get(provider_id)
         return extension.ptz if extension else None
+
+    def events(self, platform: str) -> EventsProvider | None:
+        """Resolve one platform's optional event capability."""
+        extension = self._platforms.get(platform)
+        return extension.events if extension else None
 
     @staticmethod
     def _validate(extension: ProviderExtension) -> None:

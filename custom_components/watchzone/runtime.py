@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 
 from .features.camera_runtime import CameraRuntimeService
+from .features.events import EventsService
 from .features.hls_prewarm import HlsPrewarmService
 from .features.layouts import StageDesignStore
 from .features.live import LiveSignalingService
@@ -19,6 +20,7 @@ class WatchZoneRuntime:
     live_signaling: LiveSignalingService
     stage_designs: StageDesignStore
     ptz: PtzService
+    events: EventsService
 
     async def async_close(self) -> None:
         """Release integration-owned runtime resources."""
@@ -26,3 +28,4 @@ class WatchZoneRuntime:
         await self.hls_prewarm.async_close()
         await self.live_signaling.async_close()
         await self.ptz.async_close()
+        await self.events.async_close()

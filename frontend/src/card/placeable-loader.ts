@@ -1,6 +1,7 @@
 import {
   CAMERA_SWITCHER_COMPONENT_TYPE,
   CAMERA_MODULE_TYPE,
+  EVENTS_MODULE_TYPE,
   LIGHT_COMPONENT_TYPE,
   PTZ_COMPONENT_TYPE,
   PANEL_MODULE_TYPE,
@@ -23,6 +24,12 @@ const moduleLoaders = {
   [PANEL_MODULE_TYPE]: {
     load: () =>
       import("../modules/panel").then(
+        ({ moduleDefinition }) => moduleDefinition,
+      ),
+  },
+  [EVENTS_MODULE_TYPE]: {
+    load: () =>
+      import("../modules/events").then(
         ({ moduleDefinition }) => moduleDefinition,
       ),
   },

@@ -54,6 +54,7 @@
   "editor.appearance": "Appearance",
   "editor.camera_rounded_corners": "Camera Rounded Corners",
   "editor.camera_shadows": "Camera Shadows",
+  "editor.event_rounded_corners": "Event Rounded Corners",
   "editor.camera_bar_shadows": "Camera Bar Shadows",
   "editor.standard_hls": "Standard HLS",
   "editor.pc_tablet": "PC/Tablet",
@@ -145,5 +146,13 @@
   "light.brightness": "Brightness for {name}",
   "light.turn_on": "Turn on {name}",
   "light.turn_off": "Turn off {name}",
-  "light.failed": "Unable to control the light."
+  "light.failed": "Unable to control the light.",
+  "events.list": "Camera events",
+  "events.loading": "Loading events…",
+  "events.empty": "No recent events for this camera.",
+  "events.load_failed": "Unable to load camera events.",
+  "events.thumbnail": "{label} event thumbnail",
+  "events.clip": "Clip",
+  "events.download_clip": "Download clip",
+  "events.view_snapshot": "View snapshot"
 }

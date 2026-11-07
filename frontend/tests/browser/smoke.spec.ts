@@ -238,6 +238,86 @@ test("keeps the panel camera switcher and carousel selection bidirectional", asy
   await expect(buttons.nth(0)).toHaveCSS("box-shadow", "none");
 });
 
+test("shows an independently scrolling event window for the active camera", async ({
+  page,
+}) => {
+  await installHaIconFixture(page);
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  await page.locator("watchzone-card").evaluate((element) => {
+    const card = element as HTMLElement & {
+      hass: unknown;
+      setConfig(config: unknown): void;
+    };
+    const events = (camera: string) =>
+      Array.from({ length: 4 }, (_, index) => ({
+        camera,
+        clip_url: null,
+        end_time: 1_700_000_024 - index * 60,
+        has_clip: false,
+        has_snapshot: false,
+        id: `frigate:${camera}:${index}`,
+        label: index === 0 ? "person" : "bird",
+        revision: `revision-${index}`,
+        snapshot_url: null,
+        start_time: 1_700_000_000 - index * 60,
+        sub_label: index === 0 ? "Resident" : null,
+        thumbnail_url: null,
+      }));
+    card.setConfig({
+      type: "custom:watchzone-card",
+      cameras: [
+        { entity_id: "camera.front", title: "Front" },
+        { entity_id: "camera.back", title: "Back" },
+      ],
+    });
+    card.hass = {
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "streaming",
+          attributes: { friendly_name: "Front" },
+        },
+        "camera.back": {
+          entity_id: "camera.back",
+          state: "streaming",
+          attributes: { friendly_name: "Back" },
+        },
+      },
+      connection: { subscribeMessage: async () => () => undefined },
+      hassUrl: (path: string) => path,
+      callService: async () => undefined,
+      callWS: async (message: { entity_id?: string; type: string }) => {
+        if (message.type === "watchzone/live/camera/ready") {
+          return { ready: false };
+        }
+        if (message.type === "watchzone/events/list") {
+          return {
+            items: events(
+              message.entity_id === "camera.back" ? "back" : "front",
+            ),
+          };
+        }
+        return undefined;
+      },
+    };
+  });
+
+  const events = page.locator("wzc-events");
+  const viewport = events.locator(".viewport");
+  await expect(events.locator(".tile")).toHaveCount(4);
+  await expect(events).toContainText("front");
+  const scrolling = await viewport.evaluate((node) => ({
+    clientHeight: node.clientHeight,
+    scrollHeight: node.scrollHeight,
+  }));
+  expect(scrolling.scrollHeight).toBeGreaterThan(scrolling.clientHeight);
+
+  await page.locator("wzc-camera-switcher button").nth(1).click();
+  await expect(events).toContainText("back");
+  await expect(events).not.toContainText("front");
+});
+
 test("lets the camera switcher shadow paint into the card padding", async ({
   page,
 }) => {

@@ -71,5 +71,14 @@
   "ptz.down": "Sposta videocamera verso il basso",
   "ptz.left": "Sposta videocamera a sinistra",
   "ptz.right": "Sposta videocamera a destra",
-  "ptz.failed": "Movimento della videocamera non riuscito"
+  "ptz.failed": "Movimento della videocamera non riuscito",
+  "editor.event_rounded_corners": "Angoli arrotondati degli eventi",
+  "events.list": "Eventi della videocamera",
+  "events.loading": "Caricamento eventi…",
+  "events.empty": "Nessun evento recente per questa videocamera.",
+  "events.load_failed": "Impossibile caricare gli eventi della videocamera.",
+  "events.thumbnail": "Miniatura dell'evento {label}",
+  "events.clip": "Clip",
+  "events.download_clip": "Scarica clip",
+  "events.view_snapshot": "Visualizza istantanea"
 }

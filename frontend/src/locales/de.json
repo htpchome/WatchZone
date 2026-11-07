@@ -71,5 +71,14 @@
   "ptz.down": "Kamera nach unten bewegen",
   "ptz.left": "Kamera nach links bewegen",
   "ptz.right": "Kamera nach rechts bewegen",
-  "ptz.failed": "Kamerabewegung fehlgeschlagen"
+  "ptz.failed": "Kamerabewegung fehlgeschlagen",
+  "editor.event_rounded_corners": "Abgerundete Ereignisecken",
+  "events.list": "Kameraereignisse",
+  "events.loading": "Ereignisse werden geladen…",
+  "events.empty": "Keine aktuellen Ereignisse für diese Kamera.",
+  "events.load_failed": "Kameraereignisse konnten nicht geladen werden.",
+  "events.thumbnail": "Vorschaubild des Ereignisses {label}",
+  "events.clip": "Clip",
+  "events.download_clip": "Clip herunterladen",
+  "events.view_snapshot": "Schnappschuss anzeigen"
 }

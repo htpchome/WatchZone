@@ -32,6 +32,7 @@ export interface CardConfig {
   readonly camera_bar_shadows: boolean;
   readonly camera_rounded_corners: boolean;
   readonly camera_shadows: boolean;
+  readonly event_rounded_corners: boolean;
   readonly cameras: readonly CameraConfig[];
   readonly mobile_data_saving?: boolean;
   readonly outer_padding?: boolean;
@@ -57,6 +58,7 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     "camera_bar_shadows",
     "camera_rounded_corners",
     "camera_shadows",
+    "event_rounded_corners",
     "rounded_outer_corners",
     "outer_shadows",
     "outer_padding",
@@ -88,6 +90,7 @@ export function normalizeCardConfig(value: unknown): CardConfig {
   );
   normalized.camera_shadows = moduleAppearanceValue(source, "camera_shadows");
   normalized.camera_bar_shadows = source.camera_bar_shadows !== false;
+  normalized.event_rounded_corners = source.event_rounded_corners !== false;
   normalized.rounded_outer_corners =
     typeof source.rounded_outer_corners === "boolean"
       ? source.rounded_outer_corners
