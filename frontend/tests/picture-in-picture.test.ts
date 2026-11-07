@@ -173,6 +173,7 @@ describe("camera Picture-in-Picture", () => {
     const presentation = document.createElement(
       "wzc-camera-live",
     ) as CameraLivePresentation;
+    presentation.webRtcMedia = document.createElement("video");
     document.body.append(presentation);
     await vi.waitFor(() =>
       expect(
@@ -222,6 +223,7 @@ describe("camera Picture-in-Picture", () => {
     const presentation = document.createElement(
       "wzc-camera-live",
     ) as CameraLivePresentation;
+    presentation.webRtcMedia = document.createElement("video");
     document.body.append(presentation);
     await presentation.updateComplete;
     const video = presentation.webRtcVideo;

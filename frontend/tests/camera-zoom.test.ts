@@ -406,7 +406,7 @@ describe("camera media zoom", () => {
     const surface = presentation.shadowRoot?.querySelector(".media-surface");
     expect(surface?.querySelector(".fallback-image")).not.toBeNull();
     expect(surface?.querySelector(".hls-host")).not.toBeNull();
-    expect(surface?.querySelector("video.webrtc")).not.toBeNull();
+    expect(surface?.querySelector(".webrtc-host")).not.toBeNull();
     expect(surface?.querySelector("wzc-toast-region")).toBeNull();
     expect(
       presentation.shadowRoot?.querySelector("wzc-toast-region"),

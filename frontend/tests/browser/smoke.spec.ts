@@ -2035,11 +2035,14 @@ test("retains one live connection while the card presentation is replaced", asyn
 
     interface TestWindow extends Window {
       __wzcTestConnectionCount: number;
+      __wzcTestHlsConnectionCount: number;
       __wzcTestHass: unknown;
+      __wzcTestRetainedVideo?: HTMLVideoElement;
     }
 
     const testWindow = window as unknown as TestWindow;
     testWindow.__wzcTestConnectionCount = 0;
+    testWindow.__wzcTestHlsConnectionCount = 0;
 
     class TestPeerConnection {
       public connectionState: RTCPeerConnectionState = "new";
@@ -2132,6 +2135,7 @@ test("retains one live connection while the card presentation is replaced", asyn
           return { configuration: { iceServers: [] } };
         }
         if (message.type === "camera/stream") {
+          testWindow.__wzcTestHlsConnectionCount += 1;
           // Keep the hedged HLS candidate in startup so WebRTC takeover must
           // cancel it without producing an unhandled browser rejection.
           return new Promise(() => undefined);
@@ -2209,6 +2213,32 @@ test("retains one live connection while the card presentation is replaced", asyn
     ).swiper;
   });
 
+  const poster = page.locator("wzc-camera img.poster");
+  await expect(poster).toHaveAttribute(
+    "src",
+    "/api/camera_proxy/camera.front?token=poster-token",
+  );
+  await expect(page.locator("wzc-camera .generic-fallback")).toBeVisible();
+
+  const initialVideo = page.locator("wzc-camera video.webrtc");
+  await initialVideo.evaluate((element) => {
+    Object.defineProperties(element, {
+      videoHeight: { configurable: true, value: 90 },
+      videoWidth: { configurable: true, value: 160 },
+    });
+    element.dispatchEvent(new Event("loadeddata"));
+  });
+  await expect(page.locator("wzc-camera .source-indicator")).toHaveText(
+    "WebRTC",
+  );
+  await initialVideo.evaluate((element) => {
+    (
+      window as typeof window & {
+        __wzcTestRetainedVideo?: HTMLVideoElement;
+      }
+    ).__wzcTestRetainedVideo = element as HTMLVideoElement;
+  });
+
   await page.evaluate(() => {
     const testWindow = window as unknown as Window & {
       __wzcTestHass: unknown;
@@ -2247,6 +2277,17 @@ test("retains one live connection while the card presentation is replaced", asyn
   });
 
   const video = page.locator("wzc-camera video.webrtc");
+  expect(
+    await video.evaluate(
+      (element) =>
+        element ===
+        (
+          window as typeof window & {
+            __wzcTestRetainedVideo?: HTMLVideoElement;
+          }
+        ).__wzcTestRetainedVideo,
+    ),
+  ).toBe(true);
   await expect(video).toHaveAttribute("disablepictureinpicture", "");
   await expect(video).toHaveAttribute("controlslist", /nopictureinpicture/);
   await expect(video).toHaveCSS("pointer-events", "none");
@@ -2286,21 +2327,12 @@ test("retains one live connection while the card presentation is replaced", asyn
           (
             window as typeof window & {
               __wzcTestConnectionCount: number;
+              __wzcTestHlsConnectionCount: number;
             }
-          ).__wzcTestConnectionCount,
+          ).__wzcTestHlsConnectionCount,
       ),
     )
     .toBe(1);
-  // The retained source must already be selected above. The fake stream has no
-  // intrinsic dimensions, so provide them before its synthetic media event for
-  // the zoom and stage-resize assertions below.
-  await video.evaluate((element) => {
-    Object.defineProperties(element, {
-      videoHeight: { configurable: true, value: 90 },
-      videoWidth: { configurable: true, value: 160 },
-    });
-    element.dispatchEvent(new Event("loadeddata"));
-  });
   await expect(connectionIndicator).toBeHidden({
     timeout: CAMERA_OVERLAY_HIDE_DELAY_MS + 1_000,
   });

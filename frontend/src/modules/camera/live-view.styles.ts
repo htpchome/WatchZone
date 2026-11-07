@@ -130,6 +130,7 @@ export const cameraLiveViewStyles = css`
   }
 
   .hls-host,
+  .webrtc-host,
   video {
     position: absolute;
     inset: 0;

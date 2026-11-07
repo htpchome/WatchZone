@@ -71,6 +71,10 @@ export class CameraLiveSessionController implements ReactiveController {
     return this._webRtcSnapshot.stream;
   }
 
+  public get webRtcVideo(): HTMLVideoElement | undefined {
+    return this._webRtcSnapshot.video;
+  }
+
   public hostConnected(): void {
     this._connected = true;
     this._sync();
@@ -105,8 +109,14 @@ export class CameraLiveSessionController implements ReactiveController {
   }
 
   public handleWebRtcDecoded(video: HTMLVideoElement): void {
-    if (this._webRtcDecoded || !this._webRtcSnapshot.stream) return;
+    if (
+      this._webRtcDecoded ||
+      !this._webRtcSnapshot.stream ||
+      this._webRtcSnapshot.video !== video
+    )
+      return;
     this._webRtcDecoded = true;
+    this._webRtcLease?.markUsable();
     this._webRtcSnapshot.timing?.mark("first_frame_decoded");
     this._webRtcSnapshot.timing?.mark("presentation_selected");
     this._select("webrtc", this._webRtcSnapshot.transport, video);
@@ -129,12 +139,12 @@ export class CameraLiveSessionController implements ReactiveController {
       this._webRtcPendingKey !== webRtcKey
     ) {
       this._releaseWebRtc();
-      const retainedLease = this._resolver.acquireRetainedHomeAssistantWebRtc(
+      const usableLease = this._resolver.acquireUsableHomeAssistantWebRtc(
         this._api,
         this._entityId,
       );
-      if (retainedLease) {
-        this._adoptWebRtcLease(retainedLease, true);
+      if (usableLease) {
+        this._adoptWebRtcLease(usableLease, true);
       } else {
         this._webRtcPendingKey = webRtcKey;
         void this._acquireWebRtc(this._api, this._entityId, webRtcKey);
@@ -181,7 +191,7 @@ export class CameraLiveSessionController implements ReactiveController {
 
   private _adoptWebRtcLease(
     lease: MediaSessionLease,
-    selectRetained: boolean,
+    selectUsable: boolean,
   ): void {
     this._webRtcLease = lease;
     this._webRtcUnsubscribe = lease.subscribe((snapshot) => {
@@ -197,12 +207,17 @@ export class CameraLiveSessionController implements ReactiveController {
       this._host.requestUpdate();
     });
     if (
-      selectRetained &&
+      selectUsable &&
       this._webRtcSnapshot.state === "live" &&
-      this._webRtcSnapshot.stream
+      this._webRtcSnapshot.usable === true &&
+      this._webRtcSnapshot.video
     ) {
       this._webRtcDecoded = true;
-      this._select("webrtc", this._webRtcSnapshot.transport, undefined);
+      this._select(
+        "webrtc",
+        this._webRtcSnapshot.transport,
+        this._webRtcSnapshot.video,
+      );
     }
   }
 

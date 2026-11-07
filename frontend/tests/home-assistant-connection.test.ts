@@ -207,6 +207,9 @@ describe("Home Assistant WebRTC connection", () => {
       candidate: "remote-candidate",
     });
     expect(connection.stream?.getTracks()).toHaveLength(1);
+    expect(connection.video?.srcObject).toBe(connection.stream);
+    expect(connection.video?.muted).toBe(true);
+    expect(connection.video?.defaultMuted).toBe(true);
     expect(timing.snapshot().phases).toMatchObject({
       answer_received: expect.any(Number),
       client_config_received: expect.any(Number),
@@ -269,6 +272,7 @@ describe("Home Assistant WebRTC connection", () => {
     );
 
     connection.close();
+    expect(connection.video?.srcObject).toBeNull();
     expect(unsubscribe).toHaveBeenCalledOnce();
     expect(peer.close).toHaveBeenCalledOnce();
   });

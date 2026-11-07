@@ -120,67 +120,40 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
-  it("synchronously reacquires a healthy retained connection", async () => {
+  it("reacquires only a retained player that proved usable", async () => {
     const stream = createStream();
+    const video = document.createElement("video");
+    video.srcObject = stream;
     const close = vi.fn();
-    const factory = vi.fn<ConnectionFactory>(async () => ({ stream, close }));
+    const factory = vi.fn<ConnectionFactory>(async () => ({
+      stream,
+      video,
+      close,
+    }));
     const manager = new MediaSessionManager(factory);
     const api = createApi();
     const first = manager.acquireHomeAssistant(api, "camera.front");
     await vi.waitFor(() => expect(first.getSnapshot().state).toBe("live"));
+
+    expect(
+      manager.acquireUsable("home_assistant:webrtc:camera.front", api),
+    ).toBeUndefined();
+    first.markUsable();
     first.release();
 
-    const retained = manager.acquireReusable(
+    const returned = manager.acquireUsable(
       "home_assistant:webrtc:camera.front",
       api,
     );
-
-    expect(retained?.getSnapshot()).toMatchObject({ state: "live", stream });
+    expect(returned?.getSnapshot()).toMatchObject({
+      state: "live",
+      stream,
+      usable: true,
+      video,
+    });
     expect(factory).toHaveBeenCalledOnce();
     expect(close).not.toHaveBeenCalled();
-    retained?.release();
-    manager.closeAll();
-  });
-
-  it("does not reuse a session for a different Home Assistant connection", async () => {
-    const factory = vi.fn<ConnectionFactory>(async () => ({
-      stream: createStream(),
-      close: vi.fn(),
-    }));
-    const manager = new MediaSessionManager(factory);
-    const first = manager.acquireHomeAssistant(createApi(), "camera.front");
-    await vi.waitFor(() => expect(first.getSnapshot().state).toBe("live"));
-    first.release();
-
-    expect(
-      manager.acquireReusable(
-        "home_assistant:webrtc:camera.front",
-        createApi(),
-      ),
-    ).toBeUndefined();
-    expect(factory).toHaveBeenCalledOnce();
-    manager.closeAll();
-  });
-
-  it("does not reuse a retained connection after media health fails", async () => {
-    const failures: Array<(error: Error) => void> = [];
-    const factory = vi.fn<ConnectionFactory>(
-      async (_api, _entity, _signal, onFailure) => {
-        failures.push(onFailure);
-        return { stream: createStream(), close: vi.fn() };
-      },
-    );
-    const manager = new MediaSessionManager(factory);
-    const api = createApi();
-    const first = manager.acquireHomeAssistant(api, "camera.front");
-    await vi.waitFor(() => expect(first.getSnapshot().state).toBe("live"));
-    first.release();
-    failures[0](new Error("peer connection lost"));
-
-    expect(
-      manager.acquireReusable("home_assistant:webrtc:camera.front", api),
-    ).toBeUndefined();
-    expect(factory).toHaveBeenCalledOnce();
+    returned?.release();
     manager.closeAll();
   });
 

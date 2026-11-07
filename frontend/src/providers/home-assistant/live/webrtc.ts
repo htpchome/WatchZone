@@ -5,6 +5,7 @@ import {
 } from "../../../api/live-signaling";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
 import type { LiveStartupTiming } from "../../../core/live-startup-timing";
+import { setMediaElementMuted } from "../../../core/media-playback";
 import {
   MediaConnectionError,
   normalizeMediaConnectionError,
@@ -101,16 +102,15 @@ export async function createHomeAssistantWebRtcConnection(
   signal: AbortSignal,
   onFailure: (error: Error) => void,
   timing: LiveStartupTiming,
-  _options: MediaConnectionOptions = { initialMuted: true },
+  options: MediaConnectionOptions = { initialMuted: true },
 ): Promise<MediaConnection> {
-  void _options;
   if (signal.aborted) throw abortError();
 
   timing.mark("client_config_requested");
   const client = await requestClientConfiguration(api, entityId, signal);
   timing.mark("client_config_received");
 
-  return createWebRtcPeerConnection({
+  const connection = await createWebRtcPeerConnection({
     configuration: client.configuration,
     connectTimeoutMs: CONNECT_TIMEOUT_MS,
     dataChannel: client.dataChannel,
@@ -128,4 +128,20 @@ export async function createHomeAssistantWebRtcConnection(
     },
     timing,
   });
+  const video = document.createElement("video");
+  video.autoplay = true;
+  video.playsInline = true;
+  setMediaElementMuted(video, options.initialMuted);
+  video.srcObject = connection.stream ?? null;
+
+  return {
+    ...connection,
+    video,
+    close: () => {
+      video.pause();
+      video.srcObject = null;
+      video.remove();
+      connection.close();
+    },
+  };
 }

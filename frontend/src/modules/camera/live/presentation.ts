@@ -101,11 +101,13 @@ export class CameraLivePresentation extends LitElement {
     suspendSupported: { attribute: false, type: Boolean },
     suspended: { attribute: false, type: Boolean },
     transport: { attribute: false },
+    webRtcMedia: { attribute: false },
     webRtcStream: { attribute: false },
     zoomKey: { attribute: false },
   };
 
   private _activeVideo?: HTMLVideoElement;
+  private _attachedWebRtcVideo?: HTMLVideoElement;
   private _fullscreenActive = false;
   private _pictureInPictureActive = false;
   private _posterDimensions?: MediaDimensions;
@@ -134,14 +136,12 @@ export class CameraLivePresentation extends LitElement {
   public suspendSupported = false;
   public suspended = false;
   public transport?: MediaTransport;
+  public webRtcMedia?: HTMLVideoElement;
   public webRtcStream?: MediaStream;
   public zoomKey?: string;
 
   public get webRtcVideo(): HTMLVideoElement | undefined {
-    return (
-      this.shadowRoot?.querySelector<HTMLVideoElement>("video.webrtc") ??
-      undefined
-    );
+    return this._attachedWebRtcVideo ?? this.webRtcMedia;
   }
 
   public beginStageResizeReturn(): void {
@@ -181,6 +181,7 @@ export class CameraLivePresentation extends LitElement {
       this._syncControlState,
     );
     this._cancelWebRtcFrameRequest();
+    this._detachWebRtcVideo();
     this._setActiveVideo(undefined);
     super.disconnectedCallback();
   }
@@ -256,21 +257,7 @@ export class CameraLivePresentation extends LitElement {
                     class="hls-host"
                     ?hidden=${this.selected === "webrtc"}
                   ></div>
-                  <video
-                    class=${
-                      this.selected === "webrtc" ? "webrtc" : "webrtc candidate"
-                    }
-                    autoplay
-                    controlslist="nopictureinpicture"
-                    disablepictureinpicture
-                    playsinline
-                    .muted=${this.selected === "webrtc" ? this.muted : true}
-                    aria-label=${this.localize("camera.live")}
-                    aria-hidden=${this.selected === "webrtc" ? "false" : "true"}
-                    @canplay=${this._handleWebRtcDecoded}
-                    @loadeddata=${this._handleWebRtcDecoded}
-                    @playing=${this._handleWebRtcDecoded}
-                  ></video>`
+                  <div class="webrtc-host"></div>`
           }
         </div>
         ${
@@ -347,19 +334,8 @@ export class CameraLivePresentation extends LitElement {
         }),
       );
     }
+    this._syncWebRtcVideo();
     const webRtcVideo = this.webRtcVideo;
-    if (webRtcVideo && webRtcVideo.srcObject !== (this.webRtcStream ?? null)) {
-      this._cancelWebRtcFrameRequest(webRtcVideo);
-      setMediaElementMuted(
-        webRtcVideo,
-        this.selected === "webrtc" ? this.muted : true,
-      );
-      webRtcVideo.srcObject = this.webRtcStream ?? null;
-      if (this.webRtcStream) {
-        this._observeWebRtcFrame(webRtcVideo, this.webRtcStream);
-        this._emitMediaAttached(webRtcVideo);
-      }
-    }
     const hlsHost = this.renderRoot.querySelector(".hls-host");
     if (hlsHost && this.hlsVideo && this.hlsVideo.parentElement !== hlsHost) {
       this.hlsVideo.setAttribute("aria-label", this.localize("camera.live"));
@@ -457,10 +433,52 @@ export class CameraLivePresentation extends LitElement {
     this._emitWebRtcDecoded(event.currentTarget as HTMLVideoElement);
   };
 
+  private _syncWebRtcVideo(): void {
+    const video = this.webRtcMedia;
+    if (this._attachedWebRtcVideo !== video) {
+      this._detachWebRtcVideo();
+      this._attachedWebRtcVideo = video;
+      for (const eventName of ["canplay", "loadeddata", "playing"]) {
+        video?.addEventListener(eventName, this._handleWebRtcDecoded);
+      }
+    }
+    if (!video) return;
+    video.className =
+      this.selected === "webrtc" ? "webrtc" : "webrtc candidate";
+    video.autoplay = true;
+    video.playsInline = true;
+    video.setAttribute("controlslist", "nopictureinpicture");
+    video.setAttribute("aria-label", this.localize("camera.live"));
+    video.setAttribute(
+      "aria-hidden",
+      this.selected === "webrtc" ? "false" : "true",
+    );
+    suppressNativePictureInPicture(video);
+    setMediaElementMuted(video, this.selected === "webrtc" ? this.muted : true);
+    const host = this.renderRoot.querySelector<HTMLElement>(".webrtc-host");
+    if (host && video.parentElement !== host) {
+      host.append(video);
+      if (this.webRtcStream) {
+        this._observeWebRtcFrame(video, this.webRtcStream);
+        this._emitMediaAttached(video);
+      }
+    }
+  }
+
+  private _detachWebRtcVideo(): void {
+    const video = this._attachedWebRtcVideo;
+    if (!video) return;
+    this._cancelWebRtcFrameRequest(video);
+    for (const eventName of ["canplay", "loadeddata", "playing"]) {
+      video.removeEventListener(eventName, this._handleWebRtcDecoded);
+    }
+    video.remove();
+    this._attachedWebRtcVideo = undefined;
+  }
+
   private _emitWebRtcDecoded(video: HTMLVideoElement): void {
     this._cancelWebRtcFrameRequest(video);
     refreshNativePictureInPictureSuppression(video);
-    if (this._activeVideo === video) this._syncStageMediaDimensions();
     this.dispatchEvent(
       new CustomEvent<HTMLVideoElement>("camera-webrtc-decoded", {
         bubbles: true,
@@ -477,7 +495,11 @@ export class CameraLivePresentation extends LitElement {
     if (typeof video.requestVideoFrameCallback !== "function") return;
     this._webRtcFrameRequest = video.requestVideoFrameCallback(() => {
       this._webRtcFrameRequest = undefined;
-      if (video.srcObject === stream && this.webRtcStream === stream) {
+      if (
+        video === this.webRtcMedia &&
+        video.srcObject === stream &&
+        this.webRtcStream === stream
+      ) {
         this._emitWebRtcDecoded(video);
       }
     });

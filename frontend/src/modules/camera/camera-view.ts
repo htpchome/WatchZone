@@ -167,6 +167,7 @@ export class CameraView extends LitElement {
                 .suspendSupported=${runtime?.supported === true}
                 .suspended=${suspended}
                 .transport=${this._session.transport}
+                .webRtcMedia=${this._session.webRtcVideo}
                 .webRtcStream=${this._session.webRtcStream}
                 .zoomKey=${this.entityId}
                 @camera-media-attached=${this._handleMediaAttached}

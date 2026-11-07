@@ -35,6 +35,7 @@ export interface MediaSessionSnapshot {
   readonly stream?: MediaStream;
   readonly timing?: LiveStartupTiming;
   readonly transport?: MediaTransport;
+  readonly usable?: boolean;
   readonly video?: HTMLVideoElement;
 }
 
@@ -65,6 +66,7 @@ export interface MediaSessionLease {
   readonly key: string;
   discard(): void;
   getSnapshot(): MediaSessionSnapshot;
+  markUsable(): void;
   release(): void;
   retry(): void;
   subscribe(listener: (snapshot: MediaSessionSnapshot) => void): () => void;
@@ -200,6 +202,9 @@ class ManagedMediaSession {
       key: this.key,
       discard: () => release(true),
       getSnapshot: () => this._snapshot,
+      markUsable: () => {
+        if (!released) this._markUsable();
+      },
       release: () => release(false),
       retry: () => {
         if (!released) {
@@ -236,11 +241,13 @@ class ManagedMediaSession {
     return this._leaseCount === 0;
   }
 
-  public isReusable(api: HomeAssistantApi): boolean {
+  public isUsable(api: HomeAssistantApi): boolean {
     return (
       this._api.identity === api.identity &&
       this._connection !== undefined &&
       !this._transportInterrupted &&
+      this._snapshot.usable === true &&
+      this._snapshot.video !== undefined &&
       (this._snapshot.state === "live" || this._snapshot.state === "parked")
     );
   }
@@ -431,6 +438,15 @@ class ManagedMediaSession {
     this._onRetained();
   }
 
+  private _markUsable(): void {
+    if (
+      this._snapshot.usable === true ||
+      (this._snapshot.state !== "live" && this._snapshot.state !== "parked")
+    )
+      return;
+    this._setSnapshot({ ...this._snapshot, usable: true });
+  }
+
   private _closeConnection(): void {
     this._generation += 1;
     if (this._stabilityTimer) {
@@ -505,13 +521,13 @@ export class MediaSessionManager {
     );
   }
 
-  public acquireReusable(
+  public acquireUsable(
     key: string,
     api: HomeAssistantApi,
     options: MediaConnectionOptions = { initialMuted: true },
   ): MediaSessionLease | undefined {
     const session = this._sessions.get(key);
-    if (!session?.isReusable(api)) return undefined;
+    if (!session?.isUsable(api)) return undefined;
     this._observeConnection(api.identity);
     const lease = session.acquire(api, options);
     this._pruneConnectionObservers();

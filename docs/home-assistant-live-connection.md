@@ -112,6 +112,13 @@ The connection sequence is:
 8. Buffers remote ICE candidates until the remote description exists.
 9. Reports the connection live when the first video track arrives.
 
+The WebRTC session owns both that retained `MediaStream` and one media element.
+Track arrival proves transport establishment but does not prove usable video.
+Only a decoded frame marks the session's player usable for direct presentation
+restoration. Navigation reparents that same verified player so its playback
+clock, mute state, and decoder are not replaced. A track-only session that has
+never decoded remains a candidate and may not displace a working HLS player.
+
 Connection startup is cancellable and bounded by a timeout. Errors are
 translated once into an actionable session error. Closing is idempotent and
 unsubscribes signaling, closes the peer connection, and stops owned tracks.
@@ -196,6 +203,13 @@ participating in one selection policy, and incompatible HLS modes never share
 a session. Compatible card and editor-preview instances in the same document
 share sessions. Removing a live element releases its lease and detaches
 presentation; it does not close a healthy retained winner.
+
+WebRTC uses element attachment after the adapter creates its session-owned
+player. The retained stream remains separately exposed for capabilities such
+as two-way talk. A directly restored WebRTC lease requires the same Home
+Assistant connection identity, a live or parked transport, and the exact
+session-owned player having previously decoded usable video. Failure,
+reconnection, or replacement transport creation clears that usability proof.
 
 The global resource budget retains at most two transport sessions for each of
 the twelve configured cameras while WebRTC and HLS compete. Only the selected

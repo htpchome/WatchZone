@@ -20,11 +20,11 @@ async function getHomeAssistantProvider(): Promise<
 
 /** Public provider boundary used by camera orchestration and eager prewarm. */
 export class LiveSourceResolver {
-  public acquireRetainedHomeAssistantWebRtc(
+  public acquireUsableHomeAssistantWebRtc(
     api: HomeAssistantApi,
     entityId: string,
   ): MediaSessionLease | undefined {
-    return getMediaSessionManager().acquireReusable(
+    return getMediaSessionManager().acquireUsable(
       this.homeAssistantWebRtcKey(entityId),
       api,
     );
