@@ -19,13 +19,15 @@ export const lightControlStyles = css`
 
   .light-stack {
     position: absolute;
-    inset-inline-end: calc(50% + var(--wzc-light-microphone-offset));
+    inset-inline-start: calc(
+      var(--wzc-camera-control-safe-inline) + env(safe-area-inset-left, 0px)
+    );
     inset-block-end: calc(
       var(--wzc-stage-resize-handle-block-size) +
         max(0.5rem, env(safe-area-inset-bottom))
     );
     display: grid;
-    justify-items: end;
+    justify-items: start;
     gap: var(--wzc-light-control-gap);
     opacity: 0;
     transition: opacity var(--wzc-media-overlay-transition-duration) ease;
@@ -38,6 +40,7 @@ export const lightControlStyles = css`
 
   .light-buttons {
     display: flex;
+    flex-direction: column;
     gap: var(--wzc-light-control-gap);
     pointer-events: auto;
   }

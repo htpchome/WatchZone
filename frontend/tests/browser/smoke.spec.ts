@@ -844,6 +844,14 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
     cameraBox.y + cameraBox.height,
   );
   expect(lightButtonBox.x + lightButtonBox.width).toBeLessThan(talkButtonBox.x);
+  const activeTalkLeft =
+    cameraBox.x + cameraBox.width / 2 - talkButtonBox.width * 1.5;
+  expect(
+    activeTalkLeft - (lightButtonBox.x + lightButtonBox.width),
+  ).toBeGreaterThanOrEqual(8);
+  expect(
+    talkButtonBox.x - (lightButtonBox.x + lightButtonBox.width),
+  ).toBeGreaterThanOrEqual(talkButtonBox.width);
   expect(lightButtonBox.width).toBeCloseTo(talkButtonBox.width, 1);
   expect(lightButtonBox.height).toBeCloseTo(talkButtonBox.height, 1);
   const [talkButtonColor, lightButtonColor] = await Promise.all([
@@ -1517,6 +1525,21 @@ test("camera editor configures lights and confirms accessible removal", async ({
   await expect(editor.locator(".remove-light")).toHaveAttribute(
     "title",
     "Remove light",
+  );
+  const [linkedLightRowBox, linkedLightIconBox, removeLightBox] =
+    await Promise.all([
+      editor.locator(".linked-light-row").boundingBox(),
+      editor.locator(".light-icon-selector").boundingBox(),
+      editor.locator(".remove-light").boundingBox(),
+    ]);
+  expect(linkedLightRowBox).not.toBeNull();
+  expect(linkedLightIconBox).not.toBeNull();
+  expect(removeLightBox).not.toBeNull();
+  expect(linkedLightIconBox?.width).toBeGreaterThan(
+    (linkedLightRowBox?.width ?? 0) * 0.8,
+  );
+  expect(linkedLightIconBox?.y).toBeGreaterThanOrEqual(
+    (removeLightBox?.y ?? 0) + (removeLightBox?.height ?? 0),
   );
 
   await editor.locator(".add-light").click();

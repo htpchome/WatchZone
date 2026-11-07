@@ -202,7 +202,7 @@ export const cardEditorStyles = css`
 
   .linked-light-row {
     display: grid;
-    grid-template-columns: 1.5rem minmax(0, 1fr) minmax(8rem, 11rem) auto;
+    grid-template-columns: 1.5rem minmax(0, 1fr) auto;
     align-items: center;
     gap: 0.55rem;
     min-block-size: 2.75rem;
@@ -218,6 +218,10 @@ export const cardEditorStyles = css`
     color: var(--wzc-color-primary);
   }
 
+  .linked-light-row > ha-icon {
+    grid-area: 1 / 1;
+  }
+
   .linked-light-row ha-icon,
   .add-light svg {
     inline-size: 1.25rem;
@@ -226,6 +230,7 @@ export const cardEditorStyles = css`
 
   .linked-light-copy {
     display: grid;
+    grid-area: 1 / 2;
     min-inline-size: 0;
     gap: 0.1rem;
   }
@@ -242,13 +247,13 @@ export const cardEditorStyles = css`
     font-size: var(--wzc-font-size-small);
   }
 
-  .remove-light {
-    inline-size: 2rem;
-    block-size: 2rem;
+  .light-icon-selector {
+    grid-area: 2 / 1 / 3 / -1;
+    min-inline-size: 0;
   }
 
-  .light-icon-selector {
-    min-inline-size: 0;
+  .linked-light-row .remove-light {
+    grid-area: 1 / 3;
   }
 
   .add-light-form {
@@ -349,14 +354,6 @@ export const cardEditorStyles = css`
   }
 
   @container (max-width: 30rem) {
-    .linked-light-row {
-      grid-template-columns: 1.5rem minmax(0, 1fr) auto;
-    }
-
-    .linked-light-row .light-icon-selector {
-      grid-column: 1 / -1;
-    }
-
     .add-light-fields {
       grid-template-columns: 1fr;
     }

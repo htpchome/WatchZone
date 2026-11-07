@@ -639,7 +639,7 @@ export class CardEditor extends LitElement {
             aria-label=${this._t("editor.remove_light_named", { name })}
             @click=${this._removeLight}
           >
-            ${renderIcon("close")}
+            ${renderIcon("remove")}
           </button>
         </div>`;
       })}

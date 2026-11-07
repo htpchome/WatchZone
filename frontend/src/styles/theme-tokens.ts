@@ -240,7 +240,6 @@ export const themeTokens = css`
       transparent
     );
     --wzc-light-control-gap: 0.5rem;
-    --wzc-light-microphone-offset: 1.875rem;
     --wzc-light-fill-color: var(--wzc-color-primary);
     --wzc-light-panel-background: color-mix(
       in srgb,
