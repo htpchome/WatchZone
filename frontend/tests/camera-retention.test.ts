@@ -132,6 +132,75 @@ describe("camera presentation retention", () => {
     ]);
   });
 
+  it("returns directly to retained WebRTC after in-card camera navigation", async () => {
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
+    const streams = new Map<string, MediaStream>([
+      ["camera.zero", { getTracks: () => [] } as unknown as MediaStream],
+      ["camera.one", { getTracks: () => [] } as unknown as MediaStream],
+    ]);
+    const webRtcFactory = vi.fn<ConnectionFactory>(async (_api, entityId) => ({
+      stream: streams.get(entityId),
+      transport: "webrtc",
+      close: vi.fn(),
+    }));
+    const hlsFactory = vi.fn<ConnectionFactory>(async () => ({
+      video: document.createElement("video"),
+      transport: "hls_mse",
+      close: vi.fn(),
+    }));
+    installTestMediaSessionManager(
+      new MediaSessionManager(webRtcFactory, hlsFactory),
+    );
+    const camera = document.createElement("wzc-camera") as CameraModule;
+    camera.api = createApi();
+    camera.cameras = [cameraItem("camera.zero"), cameraItem("camera.one")];
+    document.body.append(camera);
+
+    const views = await vi.waitFor(() => {
+      const elements = [
+        ...(camera.shadowRoot?.querySelectorAll<CameraView>(
+          "wzc-camera-view",
+        ) ?? []),
+      ];
+      expect(elements).toHaveLength(2);
+      return elements;
+    });
+    const firstVideo = await vi.waitFor(() => {
+      const video = presentation(views[0])?.webRtcVideo;
+      expect(video?.srcObject).toBe(streams.get("camera.zero"));
+      return video;
+    });
+    firstVideo?.dispatchEvent(new Event("loadeddata"));
+    await vi.waitFor(() =>
+      expect(presentation(views[0])?.selected).toBe("webrtc"),
+    );
+
+    camera.shadowRoot
+      ?.querySelector<HTMLButtonElement>(".carousel-navigation.next")
+      ?.click();
+    const secondVideo = await vi.waitFor(() => {
+      const video = presentation(views[1])?.webRtcVideo;
+      expect(video?.srcObject).toBe(streams.get("camera.one"));
+      return video;
+    });
+    secondVideo?.dispatchEvent(new Event("loadeddata"));
+    await vi.waitFor(() =>
+      expect(presentation(views[1])?.selected).toBe("webrtc"),
+    );
+
+    camera.shadowRoot
+      ?.querySelector<HTMLButtonElement>(".carousel-navigation.previous")
+      ?.click();
+    await vi.waitFor(() =>
+      expect(presentation(views[0])?.selected).toBe("webrtc"),
+    );
+    expect(presentation(views[0])?.webRtcVideo?.srcObject).toBe(
+      streams.get("camera.zero"),
+    );
+    expect(webRtcFactory).toHaveBeenCalledTimes(2);
+    expect(hlsFactory).toHaveBeenCalledTimes(2);
+  });
+
   it("reattaches the retained HLS element after an editor presentation exits", async () => {
     vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
     const hlsVideo = document.createElement("video");
@@ -281,6 +350,62 @@ describe("camera presentation retention", () => {
     expect(webRtcVideo?.getAttribute("aria-hidden")).toBe("false");
     expect(webRtcVideo?.muted).toBe(false);
     expect(closeHls).toHaveBeenCalledOnce();
+  });
+
+  it("reattaches retained WebRTC without restarting HLS or waiting for a new decode event", async () => {
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
+    const stream = { getTracks: () => [] } as unknown as MediaStream;
+    const closeWebRtc = vi.fn();
+    const closeHls = vi.fn();
+    const webRtcFactory = vi.fn<ConnectionFactory>(async () => ({
+      stream,
+      transport: "webrtc",
+      close: closeWebRtc,
+    }));
+    const hlsFactory = vi.fn<ConnectionFactory>(async () => ({
+      video: document.createElement("video"),
+      transport: "hls_mse",
+      close: closeHls,
+    }));
+    installTestMediaSessionManager(
+      new MediaSessionManager(webRtcFactory, hlsFactory),
+    );
+    const api = createApi();
+    const first = createLiveView(api);
+    document.body.append(first);
+
+    const firstWebRtcVideo = await vi.waitFor(() => {
+      const video = presentation(first)?.webRtcVideo;
+      expect(video?.srcObject).toBe(stream);
+      return video;
+    });
+    await vi.waitFor(() => expect(hlsFactory).toHaveBeenCalledOnce());
+    firstWebRtcVideo?.dispatchEvent(new Event("loadeddata"));
+    await vi.waitFor(() =>
+      expect(
+        presentation(first)
+          ?.shadowRoot?.querySelector(".source-indicator")
+          ?.textContent?.trim(),
+      ).toBe("WebRTC"),
+    );
+    await vi.waitFor(() => expect(closeHls).toHaveBeenCalledOnce());
+
+    first.remove();
+    expect(closeWebRtc).not.toHaveBeenCalled();
+
+    const returned = createLiveView(api);
+    document.body.append(returned);
+    await vi.waitFor(() =>
+      expect(
+        presentation(returned)
+          ?.shadowRoot?.querySelector(".source-indicator")
+          ?.textContent?.trim(),
+      ).toBe("WebRTC"),
+    );
+    expect(presentation(returned)?.webRtcVideo?.srcObject).toBe(stream);
+    expect(webRtcFactory).toHaveBeenCalledOnce();
+    expect(hlsFactory).toHaveBeenCalledOnce();
+    expect(closeWebRtc).not.toHaveBeenCalled();
   });
 
   it("lets recovered WebRTC take presentation ownership from HLS again", async () => {

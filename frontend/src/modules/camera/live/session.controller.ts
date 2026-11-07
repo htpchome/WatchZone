@@ -129,8 +129,16 @@ export class CameraLiveSessionController implements ReactiveController {
       this._webRtcPendingKey !== webRtcKey
     ) {
       this._releaseWebRtc();
-      this._webRtcPendingKey = webRtcKey;
-      void this._acquireWebRtc(this._api, this._entityId, webRtcKey);
+      const retainedLease = this._resolver.acquireRetainedHomeAssistantWebRtc(
+        this._api,
+        this._entityId,
+      );
+      if (retainedLease) {
+        this._adoptWebRtcLease(retainedLease, true);
+      } else {
+        this._webRtcPendingKey = webRtcKey;
+        void this._acquireWebRtc(this._api, this._entityId, webRtcKey);
+      }
     }
     this._syncHls();
   }
@@ -157,19 +165,7 @@ export class CameraLiveSessionController implements ReactiveController {
         lease.release();
         return;
       }
-      this._webRtcLease = lease;
-      this._webRtcUnsubscribe = this._webRtcLease.subscribe((snapshot) => {
-        this._webRtcSnapshot = snapshot;
-        this._revision += 1;
-        if (snapshot.state === "connecting" || snapshot.state === "failed") {
-          this._webRtcDecoded = false;
-        }
-        if (snapshot.state === "failed" && this._selected === "webrtc") {
-          this._clearSelection();
-          this._syncHls();
-        }
-        this._host.requestUpdate();
-      });
+      this._adoptWebRtcLease(lease, false);
     } catch (error) {
       this._webRtcSnapshot = {
         state: "failed",
@@ -180,6 +176,33 @@ export class CameraLiveSessionController implements ReactiveController {
       if (this._webRtcPendingKey === expectedKey) {
         this._webRtcPendingKey = undefined;
       }
+    }
+  }
+
+  private _adoptWebRtcLease(
+    lease: MediaSessionLease,
+    selectRetained: boolean,
+  ): void {
+    this._webRtcLease = lease;
+    this._webRtcUnsubscribe = lease.subscribe((snapshot) => {
+      this._webRtcSnapshot = snapshot;
+      this._revision += 1;
+      if (snapshot.state === "connecting" || snapshot.state === "failed") {
+        this._webRtcDecoded = false;
+      }
+      if (snapshot.state === "failed" && this._selected === "webrtc") {
+        this._clearSelection();
+        this._syncHls();
+      }
+      this._host.requestUpdate();
+    });
+    if (
+      selectRetained &&
+      this._webRtcSnapshot.state === "live" &&
+      this._webRtcSnapshot.stream
+    ) {
+      this._webRtcDecoded = true;
+      this._select("webrtc", this._webRtcSnapshot.transport, undefined);
     }
   }
 

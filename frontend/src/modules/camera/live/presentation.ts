@@ -460,6 +460,7 @@ export class CameraLivePresentation extends LitElement {
   private _emitWebRtcDecoded(video: HTMLVideoElement): void {
     this._cancelWebRtcFrameRequest(video);
     refreshNativePictureInPictureSuppression(video);
+    if (this._activeVideo === video) this._syncStageMediaDimensions();
     this.dispatchEvent(
       new CustomEvent<HTMLVideoElement>("camera-webrtc-decoded", {
         bubbles: true,

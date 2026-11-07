@@ -2209,13 +2209,6 @@ test("retains one live connection while the card presentation is replaced", asyn
     ).swiper;
   });
 
-  const poster = page.locator("wzc-camera img.poster");
-  await expect(poster).toHaveAttribute(
-    "src",
-    "/api/camera_proxy/camera.front?token=poster-token",
-  );
-  await expect(page.locator("wzc-camera .generic-fallback")).toBeVisible();
-
   await page.evaluate(() => {
     const testWindow = window as unknown as Window & {
       __wzcTestHass: unknown;
@@ -2281,20 +2274,33 @@ test("retains one live connection while the card presentation is replaced", asyn
   const connectionIndicator = page.locator("wzc-camera .source-indicator");
   await expect(connectionIndicator).toHaveJSProperty("localName", "wzc-badge");
   await expect(connectionIndicator).toHaveAttribute("shape", "pill");
-  await expect(connectionIndicator).toHaveText("Connecting…");
-  await expect(
-    connectionIndicator.locator(".connection-spinner"),
-  ).toBeVisible();
-  await page.waitForTimeout(CAMERA_OVERLAY_HIDE_DELAY_MS + 250);
-  await expect(connectionIndicator).toHaveText("Connecting…");
-  await video.evaluate((element) =>
-    element.dispatchEvent(new Event("loadeddata")),
-  );
   await expect(video).toBeVisible();
   await expect(connectionIndicator).toHaveText("WebRTC");
   await expect(connectionIndicator.locator(".connection-spinner")).toHaveCount(
     0,
   );
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (
+            window as typeof window & {
+              __wzcTestConnectionCount: number;
+            }
+          ).__wzcTestConnectionCount,
+      ),
+    )
+    .toBe(1);
+  // The retained source must already be selected above. The fake stream has no
+  // intrinsic dimensions, so provide them before its synthetic media event for
+  // the zoom and stage-resize assertions below.
+  await video.evaluate((element) => {
+    Object.defineProperties(element, {
+      videoHeight: { configurable: true, value: 90 },
+      videoWidth: { configurable: true, value: 160 },
+    });
+    element.dispatchEvent(new Event("loadeddata"));
+  });
   await expect(connectionIndicator).toBeHidden({
     timeout: CAMERA_OVERLAY_HIDE_DELAY_MS + 1_000,
   });
@@ -2822,7 +2828,12 @@ test("retains one live connection while the card presentation is replaced", asyn
   ).toBe(false);
 
   expect(
-    await page.evaluate(() => window.wzc?.getLiveStartupTimings()[0]?.phases),
+    await page.evaluate(
+      () =>
+        window.wzc
+          ?.getLiveStartupTimings()
+          .find(({ key }) => key.includes(":webrtc:"))?.phases,
+    ),
   ).toMatchObject({
     adapter_imported: expect.any(Number),
     client_config_received: expect.any(Number),

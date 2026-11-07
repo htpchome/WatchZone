@@ -1,7 +1,8 @@
 import type { HomeAssistantApi } from "../core/home-assistant";
-import type {
-  MediaConnectionOptions,
-  MediaSessionLease,
+import {
+  getMediaSessionManager,
+  type MediaConnectionOptions,
+  type MediaSessionLease,
 } from "../core/media-session-manager";
 
 type HomeAssistantProvider =
@@ -19,6 +20,16 @@ async function getHomeAssistantProvider(): Promise<
 
 /** Public provider boundary used by camera orchestration and eager prewarm. */
 export class LiveSourceResolver {
+  public acquireRetainedHomeAssistantWebRtc(
+    api: HomeAssistantApi,
+    entityId: string,
+  ): MediaSessionLease | undefined {
+    return getMediaSessionManager().acquireReusable(
+      this.homeAssistantWebRtcKey(entityId),
+      api,
+    );
+  }
+
   public async acquireHomeAssistantWebRtc(
     api: HomeAssistantApi,
     entityId: string,

@@ -236,6 +236,15 @@ class ManagedMediaSession {
     return this._leaseCount === 0;
   }
 
+  public isReusable(api: HomeAssistantApi): boolean {
+    return (
+      this._api.identity === api.identity &&
+      this._connection !== undefined &&
+      !this._transportInterrupted &&
+      (this._snapshot.state === "live" || this._snapshot.state === "parked")
+    );
+  }
+
   public async reconnectIfFailed(): Promise<void> {
     if (this._leaseCount === 0 || this._snapshot.state !== "failed") return;
     await this._connect();
@@ -494,6 +503,20 @@ export class MediaSessionManager {
       request.mediaReconnectPolicy ?? DEFAULT_MEDIA_RECONNECT_POLICY,
       request.options,
     );
+  }
+
+  public acquireReusable(
+    key: string,
+    api: HomeAssistantApi,
+    options: MediaConnectionOptions = { initialMuted: true },
+  ): MediaSessionLease | undefined {
+    const session = this._sessions.get(key);
+    if (!session?.isReusable(api)) return undefined;
+    this._observeConnection(api.identity);
+    const lease = session.acquire(api, options);
+    this._pruneConnectionObservers();
+    this._applyRetentionPolicy();
+    return lease;
   }
 
   public getCameraMutePreference(
