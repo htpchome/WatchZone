@@ -41,6 +41,7 @@ export const cardStyles = css`
   }
 
   .shell {
+    position: relative;
     box-sizing: border-box;
     display: grid;
     grid-template-rows: minmax(0, 1fr);
@@ -58,9 +59,7 @@ export const cardStyles = css`
   .component-slot,
   .component-node,
   .module-placeholder,
-  .module-error,
-  .layout-empty,
-  .layout-error {
+  .layout-empty {
     box-sizing: border-box;
     inline-size: 100%;
     min-inline-size: 0;
@@ -179,9 +178,7 @@ export const cardStyles = css`
   }
 
   .module-placeholder,
-  .module-error,
-  .layout-empty,
-  .layout-error {
+  .layout-empty {
     display: grid;
     place-items: center;
     min-block-size: 10rem;
@@ -193,20 +190,7 @@ export const cardStyles = css`
     min-block-size: 100%;
   }
 
-  .module-error,
-  .layout-error {
-    gap: 0.75rem;
-    color: var(--wzc-color-error);
-  }
-
-  button {
-    min-block-size: 2.5rem;
-    padding-inline: 1rem;
-    color: var(--wzc-color-text-1);
-    background: var(--wzc-color-fill-primary);
-    border: 1px solid var(--wzc-color-border-control);
-    border-radius: var(--wzc-radius-button);
-    font: inherit;
-    cursor: pointer;
+  .card-toast {
+    z-index: 8;
   }
 `;

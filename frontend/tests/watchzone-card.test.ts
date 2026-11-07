@@ -34,6 +34,9 @@ describe("watchzone-card", () => {
     await element.updateComplete;
 
     expect(element.shadowRoot?.querySelector("ha-card")).not.toBeNull();
+    expect(
+      element.shadowRoot?.querySelector("wzc-toast-region.card-toast"),
+    ).not.toBeNull();
     expect(element.shadowRoot?.querySelector(".title")).toBeNull();
     expect(element.shadowRoot?.querySelector(".shell")).toMatchObject({
       ariaLabel: "Front Door",

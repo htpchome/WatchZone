@@ -166,7 +166,11 @@ describe("layout composition", () => {
       normalizeCardConfig({
         cameras: [
           { entity_id: "camera.front", ptz_enabled: true },
-          { entity_id: "camera.back" },
+          {
+            connection: "frigate_go2rtc",
+            entity_id: "camera.back",
+            ptz_enabled: true,
+          },
         ],
       }),
     );
@@ -177,7 +181,10 @@ describe("layout composition", () => {
       kind: "component",
       componentType: "ptz",
       config: {
-        cameras: [{ entityId: "camera.front", provider: "home_assistant" }],
+        cameras: [
+          { entityId: "camera.front", provider: "home_assistant" },
+          { entityId: "camera.back", provider: "frigate_go2rtc" },
+        ],
       },
     });
   });
@@ -389,6 +396,39 @@ describe("layout composition", () => {
 
     expect(release).toHaveBeenCalledOnce();
     container.remove();
+  });
+
+  it("reports invalid placeables through the toast boundary without inline errors", async () => {
+    const showError = vi.fn();
+    const definition: ModuleDefinition<unknown> = {
+      type: "test",
+      createElement: () => document.createElement("article"),
+      define: async () => undefined,
+      getEntityIds: () => [],
+      updateElement: () => undefined,
+      validateConfig: () => {
+        throw new Error("Internal validation detail");
+      },
+    };
+    const loader = new PlaceableLoader({
+      test: { load: async () => definition },
+    });
+    const host = new RuntimeHost();
+    const runtime = new LayoutRuntime(host, loader, loader, showError);
+    const container = document.createElement("div");
+    host.connect();
+    setRuntimeStage(runtime, layoutWithModules("invalid"));
+
+    await vi.waitFor(() => expect(showError).toHaveBeenCalledOnce());
+    render(runtime.render(), container);
+
+    expect(showError).toHaveBeenCalledWith(
+      "Unable to load this module.",
+      "layout-placeable-invalid",
+    );
+    expect(container.querySelector("[role=alert]")).toBeNull();
+    expect(container.querySelector(".module-error")).toBeNull();
+    expect(container.textContent).not.toContain("Internal validation detail");
   });
 });
 

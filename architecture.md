@@ -371,7 +371,10 @@ The exact syntax may change with the build tool, but these properties may not:
   viewing.
 - A provider live adapter is requested only when a visible camera presentation
   uses its source type.
-- Failed imports render a local module error with a retry action.
+- Failed imports and invalid placeable configuration report through the shared
+  card toast overlay. They never render inline error text or retry controls over
+  Stage content. A later lifecycle or configuration sync may retry the failed
+  load through the placeable loader.
 - Module loaders cache successful promises to prevent duplicate fetches.
 - Optional prefetching is allowed only after the visible layout is interactive
   and only when measurement shows a benefit.

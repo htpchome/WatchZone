@@ -46,7 +46,6 @@ interface PlaceableRecord {
   definition?: PlaceableDefinition<unknown>;
   element?: HTMLElement;
   entityRefs: ReadonlyMap<string, HomeAssistantEntity | undefined>;
-  error?: string;
   generation: number;
   node: PlaceableNode;
   preparation?: PlaceablePreparation;
@@ -76,6 +75,7 @@ export class LayoutRuntime implements ReactiveController {
     private readonly _host: ReactiveControllerHost,
     private readonly _moduleLoader: PlaceableLoader = moduleLoader,
     private readonly _componentLoader: PlaceableLoader = componentLoader,
+    private readonly _showError?: (message: string, key: string) => void,
   ) {
     _host.addController(this);
   }
@@ -83,7 +83,7 @@ export class LayoutRuntime implements ReactiveController {
   public hostConnected(): void {
     this._connected = true;
     for (const record of this._records.values()) {
-      if (record.status === "loading" && !record.definition) this._load(record);
+      if (record.status !== "ready" && !record.definition) this._load(record);
       else if (record.status === "ready") this._updateRecord(record, true);
     }
   }
@@ -131,6 +131,10 @@ export class LayoutRuntime implements ReactiveController {
         error,
         this._localize("layout.unable_to_load"),
       );
+      this._showError?.(
+        this._localize("layout.unable_to_load"),
+        "layout-stage",
+      );
       this._removeMissingRecords(new Set());
       this._host.requestUpdate();
     }
@@ -169,9 +173,7 @@ export class LayoutRuntime implements ReactiveController {
 
   public render() {
     if (this._designError) {
-      return html`<div class="layout-error" role="alert">
-        ${this._designError}
-      </div>`;
+      return nothing;
     }
     const variant = this._activeVariant();
     if (!variant || variant.root.children.length === 0) {
@@ -318,16 +320,11 @@ export class LayoutRuntime implements ReactiveController {
       ${
         record.status === "ready"
           ? record.element
-          : record.status === "error"
-            ? html`<div class="module-error" role="alert">
-                <span>${record.error}</span>
-                <button type="button" @click=${() => this._retry(record)}>
-                  ${this._localize("common.retry")}
-                </button>
-              </div>`
-            : html`<div class="module-placeholder" role="status">
+          : record.status === "loading"
+            ? html`<div class="module-placeholder" role="status">
                 ${this._localize("layout.preparing_module")}
               </div>`
+            : nothing
       }
     </div>`;
   }
@@ -339,16 +336,17 @@ export class LayoutRuntime implements ReactiveController {
       if (existing.definition && existing.element) {
         try {
           existing.config = existing.definition.validateConfig(node.config);
-          existing.error = undefined;
           existing.status = "ready";
           this._updateRecord(existing, true);
-        } catch (error) {
-          existing.error = messageFrom(
-            error,
+        } catch {
+          this._showError?.(
             this._localize("layout.invalid_module"),
+            `layout-placeable-${node.id}`,
           );
           existing.status = "error";
         }
+      } else if (existing.status === "error") {
+        this._load(existing, true);
       }
       return;
     }
@@ -369,7 +367,6 @@ export class LayoutRuntime implements ReactiveController {
 
   private _load(record: PlaceableRecord, retry = false): void {
     record.status = "loading";
-    record.error = undefined;
     const generation = ++record.generation;
     const loader = this._loaderFor(record.node);
     const request = retry
@@ -403,25 +400,16 @@ export class LayoutRuntime implements ReactiveController {
         this._updateRecord(record, true);
         this._host.requestUpdate();
       })
-      .catch((error: unknown) => {
+      .catch(() => {
         if (!this._isCurrent(record, generation)) return;
         this._releasePreparation(record);
-        record.error = messageFrom(
-          error,
+        this._showError?.(
           this._localize("layout.unable_to_load_module"),
+          `layout-placeable-${record.node.id}`,
         );
         record.status = "error";
         this._host.requestUpdate();
       });
-  }
-
-  private _retry(record: PlaceableRecord): void {
-    this._releasePreparation(record);
-    record.definition = undefined;
-    record.element = undefined;
-    record.config = undefined;
-    this._load(record, true);
-    this._host.requestUpdate();
   }
 
   private _loaderFor(node: PlaceableNode): PlaceableLoader {

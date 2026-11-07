@@ -16,6 +16,7 @@ vi.mock("../src/providers/ptz-source-resolver", () => ({
 }));
 
 import type { PtzComponent } from "../src/components/ptz/ptz";
+import { componentDefinition } from "../src/components/ptz";
 import "../src/components/ptz/ptz";
 
 describe("PTZ component", () => {
@@ -65,6 +66,57 @@ describe("PTZ component", () => {
       "up",
     );
     expect(stopMotion).toHaveBeenCalledOnce();
+  });
+
+  it("accepts Frigate go2rtc as a runtime PTZ provider", () => {
+    expect(
+      componentDefinition.validateConfig({
+        cameras: [
+          {
+            entityId: "camera.front",
+            provider: "frigate_go2rtc",
+          },
+        ],
+      }),
+    ).toEqual({
+      cameras: [{ entityId: "camera.front", provider: "frigate_go2rtc" }],
+    });
+  });
+
+  it("resolves active-camera capability through the Frigate provider", async () => {
+    resolver.capability.mockResolvedValue({
+      focus: false,
+      pan: true,
+      presets: [],
+      supported: true,
+      tilt: true,
+      zoom: false,
+    });
+    const context = new CameraSessionContext();
+    const element = document.createElement("wzc-ptz") as PtzComponent;
+    const homeAssistantApi = api();
+    element.api = homeAssistantApi;
+    element.cameraSession = context;
+    element.cameras = [
+      { entityId: "camera.front", provider: "frigate_go2rtc" },
+    ];
+    document.body.append(element);
+    context.publish(
+      {},
+      {
+        ...cameraSession(),
+        connection: "frigate_go2rtc",
+      },
+    );
+
+    await vi.waitFor(() =>
+      expect(resolver.capability).toHaveBeenCalledWith(
+        homeAssistantApi,
+        "frigate_go2rtc",
+        "camera.front",
+      ),
+    );
+    expect(element.shadowRoot?.querySelectorAll("button")).toHaveLength(4);
   });
 });
 

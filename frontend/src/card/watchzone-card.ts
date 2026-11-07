@@ -1,4 +1,5 @@
-import { html, LitElement } from "lit";
+import { LitElement } from "lit";
+import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import {
   cardConfigSignature,
@@ -13,6 +14,7 @@ import {
   DEFAULT_CARD_TITLE,
   EDITOR_PREVIEW_DRAFT_EVENT,
   EDITOR_TAG,
+  TOAST_REGION_TAG,
 } from "../core/constants";
 import {
   createHomeAssistantApi,
@@ -26,9 +28,13 @@ import {
 import { LocalizationController } from "../core/localization";
 import { CardHostAppearanceController } from "../styles/card-host-appearance.controller";
 import { themeTokens } from "../styles/theme-tokens";
+import { ToastManager } from "../ui/toast-manager";
+import "../ui/toast-region";
 import { createBuiltInStageSet } from "./built-in-stages/catalog";
 import { LayoutRuntime } from "./layout-runtime";
 import { cardStyles } from "./watchzone-card.styles";
+
+const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
 
 interface PreviewDraftDetail {
   readonly baselineSignature: string;
@@ -49,7 +55,13 @@ export class DashboardCard extends LitElement {
   private readonly _localization = new LocalizationController(this, () =>
     this._syncRuntime(),
   );
-  private readonly _layoutRuntime = new LayoutRuntime(this);
+  private readonly _toasts = new ToastManager(this);
+  private readonly _layoutRuntime = new LayoutRuntime(
+    this,
+    undefined,
+    undefined,
+    (message, key) => this._toasts.error(message, { key }),
+  );
   private readonly _cardHostAppearance = new CardHostAppearanceController(this);
   private _stageResizeFrame?: number;
   private readonly _stageResizeObserver =
@@ -157,10 +169,15 @@ export class DashboardCard extends LitElement {
     ]
       .filter(Boolean)
       .join(" ");
-    return html`
+    return staticHtml`
       <ha-card class=${cardClasses}>
         <div class="shell" role="region" aria-label=${config.title}>
           ${this._layoutRuntime.render()}
+          <${toastRegionTag}
+            class="card-toast"
+            mode="overlay"
+            .notices=${this._toasts.notices}
+          ></${toastRegionTag}>
         </div>
       </ha-card>
     `;
