@@ -75,6 +75,7 @@ const LIGHT_SELECTOR = {
 } as const;
 const ICON_SELECTOR = { icon: {} } as const;
 const BOOLEAN_SELECTOR = { boolean: {} } as const;
+const DEFAULT_LIGHT_ICON = "mdi:lightbulb";
 
 const accordionTag = unsafeStatic(ACCORDION_TAG);
 const accordionItemTag = unsafeStatic(ACCORDION_ITEM_TAG);
@@ -111,7 +112,7 @@ export class CardEditor extends LitElement {
   private _cameraTitleInput = "";
   private _addingLight = false;
   private _pendingLightEntityId = "";
-  private _pendingLightIcon = "";
+  private _pendingLightIcon = DEFAULT_LIGHT_ICON;
   private _pendingRemoveCameraIndex?: number;
   private _talkCapability?: boolean;
   private _talkCapabilityGeneration = 0;
@@ -622,15 +623,27 @@ export class CardEditor extends LitElement {
             <strong>${name}</strong>
             <small>${entityId}</small>
           </span>
-          <ha-selector
-            class="light-icon-selector"
-            data-light-index=${String(index)}
-            label=${this._t("editor.icon")}
-            .hass=${this._hass}
-            .selector=${ICON_SELECTOR}
-            .value=${light.icon ?? "mdi:lightbulb"}
-            @value-changed=${this._handleLightIconChange}
-          ></ha-selector>
+          <span class="light-icon-control">
+            <ha-selector
+              class="light-icon-selector"
+              data-light-index=${String(index)}
+              label=${this._t("editor.icon")}
+              .hass=${this._hass}
+              .selector=${ICON_SELECTOR}
+              .value=${light.icon ?? DEFAULT_LIGHT_ICON}
+              @value-changed=${this._handleLightIconChange}
+            ></ha-selector>
+            <button
+              class="reset-light-icon"
+              type="button"
+              data-light-index=${String(index)}
+              title=${this._t("editor.reset_light_icon")}
+              aria-label=${this._t("editor.reset_light_icon")}
+              @click=${this._resetLightIcon}
+            >
+              ${renderIcon("close")}
+            </button>
+          </span>
           <button
             class="remove-light"
             type="button"
@@ -851,14 +864,14 @@ export class CardEditor extends LitElement {
   private readonly _startAddingLight = (): void => {
     this._addingLight = true;
     this._pendingLightEntityId = "";
-    this._pendingLightIcon = "";
+    this._pendingLightIcon = DEFAULT_LIGHT_ICON;
     this.requestUpdate();
   };
 
   private readonly _cancelAddingLight = (): void => {
     this._addingLight = false;
     this._pendingLightEntityId = "";
-    this._pendingLightIcon = "";
+    this._pendingLightIcon = DEFAULT_LIGHT_ICON;
     this.requestUpdate();
   };
 
@@ -889,7 +902,7 @@ export class CardEditor extends LitElement {
         {
           entity_id: this._pendingLightEntityId,
           ...(this._pendingLightIcon &&
-          this._pendingLightIcon !== "mdi:lightbulb"
+          this._pendingLightIcon !== DEFAULT_LIGHT_ICON
             ? { icon: this._pendingLightIcon }
             : {}),
         },
@@ -923,8 +936,21 @@ export class CardEditor extends LitElement {
     const lights = [...this._cameraDraft.lights];
     lights[index] = {
       entity_id: current.entity_id,
-      ...(value && value !== "mdi:lightbulb" ? { icon: value } : {}),
+      ...(value && value !== DEFAULT_LIGHT_ICON ? { icon: value } : {}),
     };
+    this._cameraDraft = { ...this._cameraDraft, lights };
+    this.requestUpdate();
+  };
+
+  private readonly _resetLightIcon = (event: Event): void => {
+    if (!this._cameraDraft) return;
+    const index = Number(
+      (event.currentTarget as HTMLElement).dataset.lightIndex,
+    );
+    const current = this._cameraDraft.lights[index];
+    if (!current) return;
+    const lights = [...this._cameraDraft.lights];
+    lights[index] = { entity_id: current.entity_id };
     this._cameraDraft = { ...this._cameraDraft, lights };
     this.requestUpdate();
   };

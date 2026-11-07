@@ -66,14 +66,21 @@ The first built-in composition is:
 ```text
 root grid
 ├── camera module
+│   ├── controls slot (responsive intrinsic-size dock)
+│   │   ├── linked-light component (when configured)
+│   │   └── two-way-talk component (when enabled)
 │   └── overlay slot
-│       ├── two-way-talk component (when enabled)
-│       ├── PTZ component (when enabled)
-│       └── linked-light component (when configured)
+│       └── PTZ component (when enabled)
 └── panel module
     └── content slot
         └── camera-switcher component
 ```
+
+The controls slot owns placement, shared gaps, safe-area clearance, and
+responsive wrapping for its children. Components in that slot render at their
+intrinsic control size and must not position themselves relative to sibling
+components or the Stage center. Panels and transient notices may paint outside
+their dock item without changing the dock's measured control geometry.
 
 ## Runtime rules
 

@@ -5,28 +5,19 @@ export const twoWayTalkStyles = css`
     display: block;
     position: relative;
     z-index: 4;
-    inline-size: 100%;
-    block-size: 100%;
-    min-block-size: 0;
+    inline-size: max-content;
     pointer-events: none;
   }
 
   .talk-layer {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: end center;
-    padding-block-end: calc(
-      var(--wzc-stage-resize-handle-block-size) +
-        max(0.5rem, env(safe-area-inset-bottom))
-    );
+    position: relative;
     pointer-events: none;
   }
 
   .talk-stack {
     display: grid;
+    position: relative;
     justify-items: center;
-    gap: 0.55rem;
     pointer-events: none;
   }
 
@@ -96,7 +87,11 @@ export const twoWayTalkStyles = css`
   }
 
   .talk-toast {
+    position: absolute;
+    inset-inline-start: 50%;
+    inset-block-end: calc(100% + var(--wzc-control-dock-gap));
     inline-size: min(22rem, calc(100cqi - 2rem));
+    transform: translateX(-50%);
     pointer-events: none;
   }
 

@@ -138,7 +138,7 @@ describe("layout composition", () => {
     ).not.toHaveProperty("roundedCorners");
   });
 
-  it("composes an independent talk overlay only for opted-in cameras", () => {
+  it("composes independent talk controls only for opted-in cameras", () => {
     const layout = builtInStage(
       normalizeCardConfig({
         cameras: [
@@ -149,8 +149,8 @@ describe("layout composition", () => {
     );
 
     const camera = defaultVariant(layout).root.children[0]?.node;
-    expect(camera?.slots?.overlay).toHaveLength(1);
-    expect(camera?.slots?.overlay?.[0]).toMatchObject({
+    expect(camera?.slots?.controls).toHaveLength(1);
+    expect(camera?.slots?.controls?.[0]).toMatchObject({
       id: DEFAULT_TALK_COMPONENT_NODE_ID,
       kind: "component",
       componentType: "two_way_talk",
@@ -179,7 +179,7 @@ describe("layout composition", () => {
     });
   });
 
-  it("composes linked lights as an independent active-camera overlay", () => {
+  it("composes linked lights in the responsive controls dock", () => {
     const layout = builtInStage(
       normalizeCardConfig({
         cameras: [
@@ -199,7 +199,7 @@ describe("layout composition", () => {
     );
 
     const camera = defaultVariant(layout).root.children[0]?.node;
-    expect(camera?.slots?.overlay?.[0]).toMatchObject({
+    expect(camera?.slots?.controls?.[0]).toMatchObject({
       id: DEFAULT_LIGHT_COMPONENT_NODE_ID,
       kind: "component",
       componentType: "light_control",

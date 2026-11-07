@@ -20,23 +20,25 @@
               "kind": "module",
               "moduleType": "camera",
               "slots": {
-                "overlay": [
+                "controls": [
+                  {
+                    "componentType": "light_control",
+                    "config": {},
+                    "id": "default-light-component",
+                    "kind": "component"
+                  },
                   {
                     "componentType": "two_way_talk",
                     "config": {},
                     "id": "default-talk-component",
                     "kind": "component"
-                  },
+                  }
+                ],
+                "overlay": [
                   {
                     "componentType": "ptz",
                     "config": {},
                     "id": "default-ptz-component",
-                    "kind": "component"
-                  },
-                  {
-                    "componentType": "light_control",
-                    "config": {},
-                    "id": "default-light-component",
                     "kind": "component"
                   }
                 ]
@@ -92,23 +94,25 @@
               "kind": "module",
               "moduleType": "camera",
               "slots": {
-                "overlay": [
+                "controls": [
+                  {
+                    "componentType": "light_control",
+                    "config": {},
+                    "id": "default-light-component",
+                    "kind": "component"
+                  },
                   {
                     "componentType": "two_way_talk",
                     "config": {},
                     "id": "default-talk-component",
                     "kind": "component"
-                  },
+                  }
+                ],
+                "overlay": [
                   {
                     "componentType": "ptz",
                     "config": {},
                     "id": "default-ptz-component",
-                    "kind": "component"
-                  },
-                  {
-                    "componentType": "light_control",
-                    "config": {},
-                    "id": "default-light-component",
                     "kind": "component"
                   }
                 ]

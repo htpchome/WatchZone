@@ -7,6 +7,9 @@ boundaries. It supplements `architecture.md`, which remains authoritative.
 
 - Two-way talk is an independently placeable, lazily loaded frontend component.
   The Stage Designer may choose a compatible module slot and presentation.
+- The built-in Stage presents it in the camera module's responsive controls
+  slot. The slot owns placement and collision-free spacing; the component
+  renders only its intrinsic one-button or active three-button control surface.
 - The component consumes the card-scoped `CameraSessionContext`. It does not import
   the camera module, reach into its shadow tree, or own live playback.
 - Provider-neutral talk resolution lives behind `TalkSourceResolver`.

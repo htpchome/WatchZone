@@ -10,8 +10,9 @@
   linked light is added. Selecting an entity already linked to that camera
   produces immediate inline feedback and cannot create a duplicate.
 - The light control is an independently placeable, lazily loaded Stage
-  component. The built-in Stage places it in the camera module's overlay slot;
-  the component does not import the camera module or another component.
+  component. The built-in Stage places it in the camera module's responsive
+  controls slot; the component does not import the camera module or another
+  component and does not calculate sibling-control placement.
 - The component follows active-camera identity through `CameraSessionContext`
   and receives Home Assistant state through the normal placeable runtime.
 

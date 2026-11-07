@@ -687,7 +687,7 @@ test("preserves expanded camera-stage geometry across carousel selection", async
   });
 });
 
-test("fills the camera overlay slot with talk, PTZ, and light controls", async ({
+test("lays out talk and light controls in the responsive dock", async ({
   page,
 }) => {
   await installHaIconFixture(page);
@@ -767,6 +767,7 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
   });
 
   const camera = page.locator("wzc-camera");
+  const controlsSlot = page.locator('[data-stage-slot="controls"]');
   await camera.locator("wzc-camera-live .viewport").hover();
   const talk = page.locator("wzc-two-way-talk");
   const ptz = page.locator("wzc-ptz");
@@ -785,6 +786,7 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
 
   const [
     cameraBox,
+    controlsSlotBox,
     talkHostBox,
     ptzHostBox,
     lightHostBox,
@@ -795,6 +797,7 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
     lightIconBox,
   ] = await Promise.all([
     camera.boundingBox(),
+    controlsSlot.boundingBox(),
     talk.boundingBox(),
     ptz.boundingBox(),
     lights.boundingBox(),
@@ -805,6 +808,7 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
     lightIcon.boundingBox(),
   ]);
   expect(cameraBox).not.toBeNull();
+  expect(controlsSlotBox).not.toBeNull();
   expect(talkHostBox).not.toBeNull();
   expect(ptzHostBox).not.toBeNull();
   expect(lightHostBox).not.toBeNull();
@@ -815,6 +819,7 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
   expect(lightIconBox).not.toBeNull();
   if (
     !cameraBox ||
+    !controlsSlotBox ||
     !talkHostBox ||
     !ptzHostBox ||
     !lightHostBox ||
@@ -827,31 +832,49 @@ test("fills the camera overlay slot with talk, PTZ, and light controls", async (
     return;
   }
 
-  expect(talkHostBox.height).toBeCloseTo(cameraBox.height, 0);
+  expect(talkHostBox.height).toBeCloseTo(talkButtonBox.height, 0);
   expect(ptzHostBox.height).toBeCloseTo(cameraBox.height, 0);
-  expect(talkHostBox.y).toBeCloseTo(cameraBox.y, 0);
   expect(ptzHostBox.y).toBeCloseTo(cameraBox.y, 0);
-  expect(lightHostBox.height).toBeCloseTo(cameraBox.height, 0);
-  expect(lightHostBox.y).toBeCloseTo(cameraBox.y, 0);
-  expect(talkButtonBox.y).toBeGreaterThan(cameraBox.y + cameraBox.height / 2);
-  expect(talkButtonBox.x + talkButtonBox.width / 2).toBeCloseTo(
-    cameraBox.x + cameraBox.width / 2,
+  expect(lightHostBox.height).toBeCloseTo(lightButtonBox.height, 0);
+  expect(talkHostBox.y + talkHostBox.height).toBeCloseTo(
+    lightHostBox.y + lightHostBox.height,
     0,
   );
+  expect(talkHostBox.y + talkHostBox.height).toBeLessThanOrEqual(
+    controlsSlotBox.y + controlsSlotBox.height,
+  );
+  expect(talkButtonBox.y).toBeGreaterThan(cameraBox.y + cameraBox.height / 2);
   expect(ptzControlBox.x).toBeGreaterThan(cameraBox.x + cameraBox.width / 2);
   expect(ptzControlBox.y).toBeGreaterThan(cameraBox.y + cameraBox.height / 2);
   expect(ptzControlBox.y + ptzControlBox.height).toBeLessThanOrEqual(
     cameraBox.y + cameraBox.height,
   );
-  expect(lightButtonBox.x + lightButtonBox.width).toBeLessThan(talkButtonBox.x);
-  const activeTalkLeft =
-    cameraBox.x + cameraBox.width / 2 - talkButtonBox.width * 1.5;
-  expect(
-    activeTalkLeft - (lightButtonBox.x + lightButtonBox.width),
-  ).toBeGreaterThanOrEqual(8);
   expect(
     talkButtonBox.x - (lightButtonBox.x + lightButtonBox.width),
-  ).toBeGreaterThanOrEqual(talkButtonBox.width);
+  ).toBeGreaterThanOrEqual(8);
+  const dockLayout = await controlsSlot.evaluate((element) => {
+    const styles = getComputedStyle(element);
+    return { columnGap: styles.columnGap, flexWrap: styles.flexWrap };
+  });
+  expect(dockLayout).toEqual({ columnGap: "8px", flexWrap: "wrap" });
+
+  await talk.evaluate((element) => {
+    element.style.inlineSize = "calc(var(--wzc-camera-control-size) * 3)";
+  });
+  const [expandedTalkHostBox, reflowedLightHostBox] = await Promise.all([
+    talk.boundingBox(),
+    lights.boundingBox(),
+  ]);
+  expect(expandedTalkHostBox).not.toBeNull();
+  expect(reflowedLightHostBox).not.toBeNull();
+  expect(
+    (expandedTalkHostBox?.x ?? 0) -
+      ((reflowedLightHostBox?.x ?? 0) + (reflowedLightHostBox?.width ?? 0)),
+  ).toBeGreaterThanOrEqual(8);
+  expect(expandedTalkHostBox?.width).toBeCloseTo(talkButtonBox.width * 3, 0);
+  await talk.evaluate((element) => {
+    element.style.removeProperty("inline-size");
+  });
   expect(lightButtonBox.width).toBeCloseTo(talkButtonBox.width, 1);
   expect(lightButtonBox.height).toBeCloseTo(talkButtonBox.height, 1);
   const [talkButtonColor, lightButtonColor] = await Promise.all([
@@ -1489,6 +1512,10 @@ test("camera editor configures lights and confirms accessible removal", async ({
   await items.nth(3).locator("summary").click();
   await editor.locator(".add-light").click();
   await expect(editor.locator(".add-light-form")).toContainText("Linked Light");
+  await expect(editor.locator(".pending-light-icon-selector")).toHaveJSProperty(
+    "value",
+    "mdi:lightbulb",
+  );
   const addLightFields = editor.locator(".add-light-field");
   await expect(addLightFields).toHaveCount(2);
   const [lightFieldBox, iconFieldBox] = await Promise.all([
@@ -1526,20 +1553,42 @@ test("camera editor configures lights and confirms accessible removal", async ({
     "title",
     "Remove light",
   );
-  const [linkedLightRowBox, linkedLightIconBox, removeLightBox] =
-    await Promise.all([
-      editor.locator(".linked-light-row").boundingBox(),
-      editor.locator(".light-icon-selector").boundingBox(),
-      editor.locator(".remove-light").boundingBox(),
-    ]);
+  await expect(editor.locator(".reset-light-icon")).toHaveAttribute(
+    "title",
+    "Use default icon",
+  );
+  const [
+    linkedLightRowBox,
+    linkedLightControlBox,
+    linkedLightIconBox,
+    removeLightBox,
+  ] = await Promise.all([
+    editor.locator(".linked-light-row").boundingBox(),
+    editor.locator(".light-icon-control").boundingBox(),
+    editor.locator(".light-icon-selector").boundingBox(),
+    editor.locator(".remove-light").boundingBox(),
+  ]);
   expect(linkedLightRowBox).not.toBeNull();
+  expect(linkedLightControlBox).not.toBeNull();
   expect(linkedLightIconBox).not.toBeNull();
   expect(removeLightBox).not.toBeNull();
-  expect(linkedLightIconBox?.width).toBeGreaterThan(
-    (linkedLightRowBox?.width ?? 0) * 0.8,
+  expect(linkedLightIconBox?.width).toBeLessThan(
+    (linkedLightRowBox?.width ?? 0) * 0.5,
   );
-  expect(linkedLightIconBox?.y).toBeGreaterThanOrEqual(
-    (removeLightBox?.y ?? 0) + (removeLightBox?.height ?? 0),
+  expect(
+    (linkedLightControlBox?.y ?? 0) + (linkedLightControlBox?.height ?? 0) / 2,
+  ).toBeCloseTo(
+    (removeLightBox?.y ?? 0) + (removeLightBox?.height ?? 0) / 2,
+    1,
+  );
+  expect(
+    (removeLightBox?.x ?? 0) -
+      ((linkedLightIconBox?.x ?? 0) + (linkedLightIconBox?.width ?? 0)),
+  ).toBeGreaterThanOrEqual(8);
+  await editor.locator(".reset-light-icon").click();
+  await expect(editor.locator(".light-icon-selector")).toHaveJSProperty(
+    "value",
+    "mdi:lightbulb",
   );
 
   await editor.locator(".add-light").click();

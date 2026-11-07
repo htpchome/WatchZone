@@ -204,6 +204,7 @@ export const themeTokens = css`
       --wzc-neutral-control-hover-background
     );
     --wzc-camera-control-safe-inline: 0.75rem;
+    --wzc-control-dock-gap: 0.5rem;
     --wzc-carousel-navigation-opacity: 72%;
     --wzc-carousel-navigation-hover-opacity: 100%;
     --wzc-carousel-navigation-icon-size: 2.5rem;

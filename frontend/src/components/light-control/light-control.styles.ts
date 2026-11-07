@@ -5,30 +5,17 @@ export const lightControlStyles = css`
     display: block;
     position: relative;
     z-index: 4;
-    inline-size: 100%;
-    block-size: 100%;
-    min-block-size: 0;
+    inline-size: max-content;
     pointer-events: none;
   }
 
   .light-layer {
-    position: absolute;
-    inset: 0;
+    position: relative;
     pointer-events: none;
   }
 
   .light-stack {
-    position: absolute;
-    inset-inline-start: calc(
-      var(--wzc-camera-control-safe-inline) + env(safe-area-inset-left, 0px)
-    );
-    inset-block-end: calc(
-      var(--wzc-stage-resize-handle-block-size) +
-        max(0.5rem, env(safe-area-inset-bottom))
-    );
-    display: grid;
-    justify-items: start;
-    gap: var(--wzc-light-control-gap);
+    position: relative;
     opacity: 0;
     transition: opacity var(--wzc-media-overlay-transition-duration) ease;
     pointer-events: none;
@@ -40,7 +27,6 @@ export const lightControlStyles = css`
 
   .light-buttons {
     display: flex;
-    flex-direction: column;
     gap: var(--wzc-light-control-gap);
     pointer-events: auto;
   }
@@ -64,6 +50,9 @@ export const lightControlStyles = css`
 
   .dimmer-panel {
     display: grid;
+    position: absolute;
+    inset-inline-end: 0;
+    inset-block-end: calc(100% + var(--wzc-light-control-gap));
     grid-template:
       "name" auto
       "slider" minmax(7rem, 1fr)
@@ -122,13 +111,10 @@ export const lightControlStyles = css`
 
   .light-toast {
     position: absolute;
-    inset-inline: 1rem;
-    inset-block-end: calc(
-      var(--wzc-stage-resize-handle-block-size) +
-        var(--wzc-camera-control-size) + 1rem
-    );
-    margin-inline: auto;
-    inline-size: min(22rem, calc(100% - 2rem));
+    inset-inline-start: 50%;
+    inset-block-end: calc(100% + var(--wzc-control-dock-gap));
+    inline-size: min(22rem, calc(100cqi - 2rem));
+    transform: translateX(-50%);
   }
 
   @media (hover: hover) and (pointer: fine) {

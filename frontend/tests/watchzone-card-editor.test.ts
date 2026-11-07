@@ -299,6 +299,12 @@ describe("watchzone-card-editor", () => {
     };
 
     await selectLight("light.porch");
+    expect(
+      (
+        editor.shadowRoot?.querySelector(".pending-light-icon-selector") as
+          (HTMLElement & { value?: string }) | null
+      )?.value,
+    ).toBe("mdi:lightbulb");
     editor.shadowRoot
       ?.querySelector(".pending-light-icon-selector")
       ?.dispatchEvent(
@@ -326,6 +332,11 @@ describe("watchzone-card-editor", () => {
     ).toBe(iconPath("remove"));
     expect(
       editor.shadowRoot
+        ?.querySelector(".reset-light-icon")
+        ?.getAttribute("title"),
+    ).toBe("Use default icon");
+    expect(
+      editor.shadowRoot
         ?.querySelector(".linked-light-row")
         ?.contains(editor.shadowRoot.querySelector(".light-icon-selector")!),
     ).toBe(true);
@@ -335,13 +346,9 @@ describe("watchzone-card-editor", () => {
           (HTMLElement & { icon?: string }) | null
       )?.icon,
     ).toBe("mdi:coach-lamp");
-    editor.shadowRoot?.querySelector(".light-icon-selector")?.dispatchEvent(
-      new CustomEvent("value-changed", {
-        bubbles: true,
-        composed: true,
-        detail: { value: "" },
-      }),
-    );
+    (
+      editor.shadowRoot?.querySelector(".reset-light-icon") as HTMLElement
+    ).click();
     await editor.updateComplete;
     expect(
       (

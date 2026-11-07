@@ -119,10 +119,17 @@ function hydrateModule(
   }
   if (node.moduleType !== CAMERA_MODULE_TYPE) return node;
   if (config.cameras.length === 0) return undefined;
-  const overlay = (node.slots?.overlay ?? []).flatMap((component) => {
-    const hydrated = hydrateCameraComponent(component, config);
-    return hydrated ? [hydrateRuntimeComponent(hydrated, config)] : [];
-  });
+  const slots = Object.fromEntries(
+    Object.entries(node.slots ?? {}).flatMap(([name, components]) => {
+      const hydrated = (components ?? []).flatMap((component) => {
+        const cameraComponent = hydrateCameraComponent(component, config);
+        return cameraComponent
+          ? [hydrateRuntimeComponent(cameraComponent, config)]
+          : [];
+      });
+      return hydrated.length ? [[name, hydrated]] : [];
+    }),
+  );
   return {
     ...node,
     config: {
@@ -139,7 +146,7 @@ function hydrateModule(
       roundedCorners: config.camera_rounded_corners,
       shadowStyle: config.camera_shadows ? "medium" : "none",
     },
-    ...(overlay.length ? { slots: { ...node.slots, overlay } } : { slots: {} }),
+    slots,
   };
 }
 

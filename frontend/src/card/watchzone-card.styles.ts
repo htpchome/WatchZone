@@ -115,6 +115,29 @@ export const cardStyles = css`
     grid-area: overlay;
   }
 
+  .component-slot-controls {
+    z-index: 4;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-end;
+    align-items: flex-end;
+    justify-content: center;
+    box-sizing: border-box;
+    min-inline-size: 0;
+    padding: 0 var(--wzc-camera-control-safe-inline)
+      calc(
+        var(--wzc-stage-resize-handle-block-size) +
+          max(0.5rem, env(safe-area-inset-bottom))
+      );
+    gap: var(--wzc-control-dock-gap);
+  }
+
+  .component-slot-controls > .component-node,
+  .component-slot-controls > .component-node.placeable-ready > * {
+    inline-size: auto;
+    block-size: auto;
+  }
+
   .module-slot {
     display: block;
   }
