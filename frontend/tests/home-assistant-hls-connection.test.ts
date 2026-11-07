@@ -32,6 +32,34 @@ vi.mock("hls.js/dist/hls.light.mjs", () => ({
   },
 }));
 
+function installVideoFrameCallbacks(): Map<number, VideoFrameRequestCallback> {
+  const callbacks = new Map<number, VideoFrameRequestCallback>();
+  let nextFrame = 1;
+  Object.defineProperty(
+    HTMLVideoElement.prototype,
+    "requestVideoFrameCallback",
+    {
+      configurable: true,
+      value: vi.fn((callback: VideoFrameRequestCallback) => {
+        const id = nextFrame++;
+        callbacks.set(id, callback);
+        return id;
+      }),
+    },
+  );
+  Object.defineProperty(
+    HTMLVideoElement.prototype,
+    "cancelVideoFrameCallback",
+    {
+      configurable: true,
+      value: vi.fn((id: number) => {
+        callbacks.delete(id);
+      }),
+    },
+  );
+  return callbacks;
+}
+
 describe("Home Assistant HLS connection", () => {
   beforeEach(() => {
     for (const mock of Object.values(hlsMock)) {
@@ -143,35 +171,48 @@ describe("Home Assistant HLS connection", () => {
     expect(HTMLMediaElement.prototype.pause).toHaveBeenCalled();
   });
 
-  it("waits for a presented native-HLS frame when the browser can report one", async () => {
+  it("does not block native HLS on WebKit's frame callback", async () => {
     hlsMock.isSupported.mockReturnValue(false);
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response("#EXTM3U\n#EXT-X-VERSION:3\n"),
     );
-    const frameCallbacks = new Map<number, VideoFrameRequestCallback>();
-    let nextFrame = 1;
-    Object.defineProperty(
-      HTMLVideoElement.prototype,
-      "requestVideoFrameCallback",
-      {
-        configurable: true,
-        value: vi.fn((callback: VideoFrameRequestCallback) => {
-          const id = nextFrame++;
-          frameCallbacks.set(id, callback);
-          return id;
-        }),
-      },
+    const frameCallbacks = installVideoFrameCallbacks();
+    const callWS = vi.fn(async () => ({ url: "/api/hls/front.m3u8" }));
+    const api: HomeAssistantApi = {
+      identity: {} as HomeAssistantApi["identity"],
+      callWS: callWS as HomeAssistantApi["callWS"],
+      resolveUrl: (path) => `https://ha.example${path}`,
+      subscribeMessage: vi.fn(),
+    };
+    const connecting = createHomeAssistantHlsConnection(
+      api,
+      "camera.front",
+      new AbortController().signal,
+      vi.fn(),
+      new LiveStartupTiming("home_assistant_hls:camera.front"),
     );
-    Object.defineProperty(
-      HTMLVideoElement.prototype,
-      "cancelVideoFrameCallback",
-      {
-        configurable: true,
-        value: vi.fn((id: number) => {
-          frameCallbacks.delete(id);
-        }),
-      },
+
+    await vi.waitFor(() =>
+      expect(HTMLMediaElement.prototype.play).toHaveBeenCalled(),
     );
+    const video = vi
+      .mocked(HTMLMediaElement.prototype.play)
+      .mock.contexts.find(
+        (context): context is HTMLVideoElement =>
+          context instanceof HTMLVideoElement,
+      );
+    video?.dispatchEvent(new Event("loadeddata"));
+    const connection = await connecting;
+    expect(frameCallbacks.size).toBe(0);
+    expect(connection.video).toBe(video);
+    connection.close();
+  });
+
+  it("still confirms an HLS.js frame when frame callbacks are available", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("#EXTM3U\n#EXT-X-VERSION:3\n"),
+    );
+    const frameCallbacks = installVideoFrameCallbacks();
     const callWS = vi.fn(async () => ({ url: "/api/hls/front.m3u8" }));
     const api: HomeAssistantApi = {
       identity: {} as HomeAssistantApi["identity"],
@@ -191,16 +232,9 @@ describe("Home Assistant HLS connection", () => {
       return connection;
     });
 
-    await vi.waitFor(() =>
-      expect(HTMLMediaElement.prototype.play).toHaveBeenCalled(),
-    );
-    const video = vi
-      .mocked(HTMLMediaElement.prototype.play)
-      .mock.contexts.find(
-        (context): context is HTMLVideoElement =>
-          context instanceof HTMLVideoElement,
-      );
-    video?.dispatchEvent(new Event("loadeddata"));
+    await vi.waitFor(() => expect(hlsMock.attachMedia).toHaveBeenCalled());
+    const video = hlsMock.attachMedia.mock.calls[0][0] as HTMLVideoElement;
+    video.dispatchEvent(new Event("loadeddata"));
     await Promise.resolve();
     expect(resolved).toBe(false);
     expect(frameCallbacks.size).toBe(1);
@@ -208,7 +242,7 @@ describe("Home Assistant HLS connection", () => {
     const [callback] = frameCallbacks.values();
     callback(performance.now(), {} as VideoFrameCallbackMetadata);
     const connection = await connecting;
-    expect(connection.video).toBe(video);
+    expect(connection.transport).toBe("hls_mse");
     connection.close();
   });
 

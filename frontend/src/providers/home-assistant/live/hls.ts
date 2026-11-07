@@ -203,7 +203,10 @@ export async function createHomeAssistantHlsConnection(
       "loadeddata",
       () => {
         if (closed || connected) return;
-        if (typeof video.requestVideoFrameCallback === "function") {
+        if (
+          transport !== "hls_native" &&
+          typeof video.requestVideoFrameCallback === "function"
+        ) {
           frameRequest ??= video.requestVideoFrameCallback(resolveReady);
         } else {
           resolveReady();

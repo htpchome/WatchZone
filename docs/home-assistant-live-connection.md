@@ -156,10 +156,12 @@ The HLS adapter:
    variant directly to the selected player to avoid a redundant manifest
    request.
 8. Keeps the connecting media element attached but visually transparent so its
-   black pre-frame surface cannot cover the camera still. Reports live only
-   after usable media output: a presented frame when the browser exposes video
-   frame callbacks, with `loadeddata` as the standards-compatible fallback.
-   It never reports live merely after obtaining a playlist URL or parsing a
+   black pre-frame surface cannot cover the camera still. HLS.js confirms a
+   presented frame when the browser exposes video frame callbacks, with
+   `loadeddata` as the standards-compatible fallback. Native HLS reports ready
+   on `loadeddata`; Catalyst WebKit exposes frame callbacks but may not invoke
+   them reliably for native HLS, so they must not gate its startup. Neither
+   path reports live merely after obtaining a playlist URL or parsing a
    manifest.
 
 The media playlist also supplies one browser-HLS live-edge policy for HLS.js.
