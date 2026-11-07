@@ -147,12 +147,11 @@ The HLS adapter:
 5. Verifies `EXT-X-PART-INF` and blocking-reload support in the returned
    playlist before enabling HLS.js low-latency mode. A server that does not
    advertise both cleanly continues through standard HLS.
-6. Checks the mandatory MSE/MMS and SourceBuffer surface before lazy-loading
-   the light HLS.js engine, so a native-only client does not download or parse
-   an engine it cannot use. When HLS.js reports supported MSE/MMS playback,
-   that path is preferred; native `video` HLS is the capability-detected
-   fallback. This order avoids treating `canPlayType()`'s non-empty but
-   inconclusive `"maybe"` result as proof that native playback is reliable.
+6. Lazy-loads the light HLS.js engine. When HLS.js reports supported MSE/MMS
+   playback, that path is preferred; native `video` HLS is the
+   capability-detected fallback. This order avoids treating `canPlayType()`'s
+   non-empty but inconclusive `"maybe"` result as proof that native playback is
+   reliable.
 7. When a non-Home-Assistant master has exactly one variant, passes that
    variant directly to the selected player to avoid a redundant manifest
    request.
@@ -163,14 +162,17 @@ The HLS adapter:
    It never reports live merely after obtaining a playlist URL or parsing a
    manifest.
 
-The media playlist also supplies one browser-HLS live-edge policy shared by the
-native and HLS.js paths. Its advertised hold-back and target durations define a
-target latency and a finite maximum latency. HLS.js receives those values
-through its latency controller; native HLS and standard HLS.js use the same
-event-driven policy to increase playback speed slightly when drift begins and
-seek to the safe target only after crossing the maximum. This policy owns no
-Home Assistant URL or session behavior, so another connection type may reuse it
-while obtaining its playlist through a different provider boundary.
+The media playlist also supplies one browser-HLS live-edge policy for HLS.js.
+Its advertised hold-back and target durations define a target latency and a
+finite maximum latency. Low-latency HLS.js receives those values through its
+latency controller; standard HLS.js uses the same event-driven policy to
+increase playback speed slightly when drift begins and seek to the safe target
+only after crossing the maximum. Native HLS remains owned by the browser's
+engine: forced playback-rate changes or seeks while a retained WebKit player is
+detached during navigation can leave it black without a fatal media error.
+This policy owns no Home Assistant URL or session behavior, so another
+connection type may reuse it while obtaining its playlist through a different
+provider boundary.
 
 An initial HLS failure receives the same bounded two-attempt media recovery as
 an established HLS interruption. This covers transient cellular manifest and

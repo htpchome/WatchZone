@@ -29,14 +29,6 @@ interface PlaylistRequest {
   readonly standardUrl: string;
 }
 
-interface HlsPlatformWindow extends Window {
-  readonly ManagedMediaSource?: typeof MediaSource;
-  readonly MediaSource?: typeof MediaSource;
-  readonly SourceBuffer?: typeof SourceBuffer;
-  readonly WebKitMediaSource?: typeof MediaSource;
-  readonly WebKitSourceBuffer?: typeof SourceBuffer;
-}
-
 function abortError(): DOMException {
   return new DOMException("Connection cancelled", "AbortError");
 }
@@ -63,25 +55,6 @@ function isLowLatencyManifest(manifest: string): boolean {
   return (
     manifest.includes("#EXT-X-PART-INF:") &&
     manifest.includes("CAN-BLOCK-RELOAD=YES")
-  );
-}
-
-/** Avoids loading HLS.js when its mandatory MSE surface is unavailable. */
-function canAttemptHlsJs(): boolean {
-  const platform = window as HlsPlatformWindow;
-  const mediaSource =
-    platform.ManagedMediaSource ??
-    platform.MediaSource ??
-    platform.WebKitMediaSource;
-  if (!mediaSource || typeof mediaSource.isTypeSupported !== "function") {
-    return false;
-  }
-  const sourceBuffer = platform.SourceBuffer ?? platform.WebKitSourceBuffer;
-  return Boolean(
-    !sourceBuffer ||
-    (sourceBuffer.prototype &&
-      typeof sourceBuffer.prototype.appendBuffer === "function" &&
-      typeof sourceBuffer.prototype.remove === "function"),
   );
 }
 
@@ -276,26 +249,26 @@ export async function createHomeAssistantHlsConnection(
           };
         },
       );
-      const hlsModulePromise = canAttemptHlsJs()
-        ? import("hls.js/dist/hls.light.mjs").then((module) => {
-            timing.mark("hls_engine_loaded");
-            return module;
-          })
-        : undefined;
-      const [hlsModule, manifest] = await Promise.all([
+      const hlsModulePromise = import("hls.js/dist/hls.light.mjs").then(
+        (module) => {
+          timing.mark("hls_engine_loaded");
+          return module;
+        },
+      );
+      const [{ default: Hls }, manifest] = await Promise.all([
         hlsModulePromise,
         manifestPromise,
       ]);
       if (signal.aborted || closed) return;
 
-      if (hlsModule?.default.isSupported()) {
+      if (Hls.isSupported()) {
         transport = "hls_mse";
         timing.mark("hls_mse_path_selected");
         const liveEdge = hlsLiveEdgePolicy(
           manifest.manifest,
           manifest.lowLatency,
         );
-        const player = new hlsModule.default({
+        const player = new Hls({
           backBufferLength: 30,
           ...liveEdge.hlsJsConfig,
           lowLatencyMode: manifest.lowLatency,
@@ -305,7 +278,7 @@ export async function createHomeAssistantHlsConnection(
         if (!manifest.lowLatency) {
           stopLiveEdgeMonitor = monitorHlsLiveEdge(video, liveEdge);
         }
-        player.on(hlsModule.default.Events.ERROR, (_event, data) => {
+        player.on(Hls.Events.ERROR, (_event, data) => {
           if (data.fatal) {
             fail(data.error ?? new Error(`HLS ${data.type} error`));
           }
@@ -314,10 +287,6 @@ export async function createHomeAssistantHlsConnection(
         player.attachMedia(video);
       } else if (video.canPlayType(HLS_CONTENT_TYPE)) {
         timing.mark("hls_native_path_selected");
-        stopLiveEdgeMonitor = monitorHlsLiveEdge(
-          video,
-          hlsLiveEdgePolicy(manifest.manifest, manifest.lowLatency),
-        );
         video.src = manifest.playlistUrl;
         void playMediaElement(video).catch(() => undefined);
       } else {

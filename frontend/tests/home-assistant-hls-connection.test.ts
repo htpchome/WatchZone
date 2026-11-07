@@ -48,17 +48,6 @@ describe("Home Assistant HLS connection", () => {
     vi.spyOn(HTMLMediaElement.prototype, "load").mockImplementation(
       () => undefined,
     );
-    class FakeMediaSource {
-      public static isTypeSupported(): boolean {
-        return true;
-      }
-    }
-    class FakeSourceBuffer {
-      public appendBuffer(): void {}
-      public remove(): void {}
-    }
-    vi.stubGlobal("MediaSource", FakeMediaSource);
-    vi.stubGlobal("SourceBuffer", FakeSourceBuffer);
   });
 
   afterEach(() => {
@@ -67,7 +56,6 @@ describe("Home Assistant HLS connection", () => {
       .requestVideoFrameCallback;
     delete (HTMLVideoElement.prototype as Partial<HTMLVideoElement>)
       .cancelVideoFrameCallback;
-    vi.unstubAllGlobals();
   });
 
   it("uses distinct retained identities for low-latency and standard HLS", () => {
@@ -82,8 +70,6 @@ describe("Home Assistant HLS connection", () => {
 
   it("requests an authenticated HLS stream and resolves on decoded media", async () => {
     hlsMock.isSupported.mockReturnValue(false);
-    vi.stubGlobal("MediaSource", undefined);
-    vi.stubGlobal("SourceBuffer", undefined);
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response("#EXTM3U\n#EXT-X-VERSION:3\n"),
     );
@@ -126,12 +112,32 @@ describe("Home Assistant HLS connection", () => {
     expect(video?.src).toBe("https://ha.example/api/hls/front.m3u8");
     expect(timing.snapshot().phases).toMatchObject({
       first_frame_decoded: expect.any(Number),
+      hls_engine_loaded: expect.any(Number),
       hls_manifest_loaded: expect.any(Number),
       hls_native_path_selected: expect.any(Number),
       stream_url_received: expect.any(Number),
       stream_url_requested: expect.any(Number),
     });
-    expect(timing.snapshot().phases.hls_engine_loaded).toBeUndefined();
+
+    Object.defineProperties(video as HTMLVideoElement, {
+      paused: { configurable: true, value: false },
+      readyState: {
+        configurable: true,
+        value: HTMLMediaElement.HAVE_FUTURE_DATA,
+      },
+      seekable: {
+        configurable: true,
+        value: {
+          end: () => 60,
+          length: 1,
+          start: () => 0,
+        },
+      },
+    });
+    (video as HTMLVideoElement).currentTime = 20;
+    video?.dispatchEvent(new Event("waiting"));
+    expect((video as HTMLVideoElement).currentTime).toBe(20);
+    expect((video as HTMLVideoElement).playbackRate).toBe(1);
 
     connection.close();
     expect(HTMLMediaElement.prototype.pause).toHaveBeenCalled();
