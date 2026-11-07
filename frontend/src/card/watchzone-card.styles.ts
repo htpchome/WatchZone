@@ -36,10 +36,6 @@ export const cardStyles = css`
     box-shadow: none !important;
   }
 
-  ha-card.no-outer-padding {
-    padding: 0;
-  }
-
   .shell {
     box-sizing: border-box;
     display: grid;

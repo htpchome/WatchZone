@@ -17,7 +17,6 @@ describe("WatchZone card configuration", () => {
       camera_shadows: true,
       rounded_outer_corners: true,
       outer_shadows: true,
-      outer_padding: true,
       mobile_data_saving: false,
       cameras: [],
     });
