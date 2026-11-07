@@ -153,6 +153,7 @@ export class DashboardCard extends LitElement {
     const cardClasses = [
       config.rounded_outer_corners === false ? "square-outer-corners" : "",
       config.outer_shadows === false ? "no-outer-shadow" : "",
+      config.outer_padding === false ? "no-outer-padding" : "",
     ]
       .filter(Boolean)
       .join(" ");

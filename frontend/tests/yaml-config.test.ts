@@ -42,6 +42,7 @@ describe("WatchZone YAML configuration manager", () => {
           ],
           rounded_outer_corners: false,
           outer_shadows: false,
+          outer_padding: false,
           mobile_data_saving: true,
           grid_options: { columns: 8 },
         }),
@@ -69,6 +70,7 @@ describe("WatchZone YAML configuration manager", () => {
       ],
       rounded_outer_corners: false,
       outer_shadows: false,
+      outer_padding: false,
       mobile_data_saving: true,
       grid_options: { columns: 8 },
     });

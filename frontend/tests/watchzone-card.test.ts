@@ -199,6 +199,7 @@ describe("watchzone-card", () => {
       title: "Front Door",
       rounded_outer_corners: false,
       outer_shadows: false,
+      outer_padding: false,
     });
     document.body.append(element);
     await element.updateComplete;
@@ -206,6 +207,7 @@ describe("watchzone-card", () => {
     const card = element.shadowRoot?.querySelector("ha-card");
     expect(card?.classList.contains("square-outer-corners")).toBe(true);
     expect(card?.classList.contains("no-outer-shadow")).toBe(true);
+    expect(card?.classList.contains("no-outer-padding")).toBe(true);
     expect(element.hasAttribute("data-wzc-square-outer-corners")).toBe(true);
     expect(element.hasAttribute("data-wzc-no-outer-shadow")).toBe(true);
     expect(element.style.getPropertyValue("--ha-card-border-radius")).toBe(

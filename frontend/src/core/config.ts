@@ -29,6 +29,7 @@ export interface CardConfig {
   readonly camera_shadows: boolean;
   readonly cameras: readonly CameraConfig[];
   readonly mobile_data_saving?: boolean;
+  readonly outer_padding?: boolean;
   readonly outer_shadows?: boolean;
   readonly rounded_outer_corners?: boolean;
   readonly type: typeof CARD_TYPE;
@@ -53,6 +54,7 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     "camera_shadows",
     "rounded_outer_corners",
     "outer_shadows",
+    "outer_padding",
     "mobile_data_saving",
   ] as const) {
     if (key in source && typeof source[key] !== "boolean") {
@@ -87,6 +89,8 @@ export function normalizeCardConfig(value: unknown): CardConfig {
       : true;
   normalized.outer_shadows =
     typeof source.outer_shadows === "boolean" ? source.outer_shadows : true;
+  normalized.outer_padding =
+    typeof source.outer_padding === "boolean" ? source.outer_padding : true;
   normalized.mobile_data_saving =
     typeof source.mobile_data_saving === "boolean"
       ? source.mobile_data_saving

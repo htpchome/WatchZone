@@ -90,6 +90,7 @@ type BooleanConfigFlag =
   | "camera_rounded_corners"
   | "camera_shadows"
   | "mobile_data_saving"
+  | "outer_padding"
   | "outer_shadows"
   | "rounded_outer_corners";
 
@@ -351,6 +352,11 @@ export class CardEditor extends LitElement {
         "outer_shadows",
         this._t("editor.outer_shadows"),
         this._config?.outer_shadows !== false,
+      )}
+      ${this._renderBooleanOption(
+        "outer_padding",
+        this._t("editor.outer_padding"),
+        this._config?.outer_padding !== false,
       )}
       ${this._renderBooleanOption(
         "camera_rounded_corners",

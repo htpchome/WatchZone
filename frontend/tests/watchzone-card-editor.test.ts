@@ -611,6 +611,7 @@ describe("watchzone-card-editor", () => {
     for (const key of [
       "rounded_outer_corners",
       "outer_shadows",
+      "outer_padding",
       "camera_rounded_corners",
       "camera_shadows",
       "camera_bar_shadows",
@@ -622,6 +623,7 @@ describe("watchzone-card-editor", () => {
     expect(states.at(-1)).toMatchObject({
       rounded_outer_corners: false,
       outer_shadows: false,
+      outer_padding: false,
       camera_rounded_corners: false,
       camera_shadows: false,
       camera_bar_shadows: false,
@@ -629,11 +631,13 @@ describe("watchzone-card-editor", () => {
     const previewShell = card.shadowRoot?.querySelector("ha-card");
     expect(previewShell?.classList.contains("square-outer-corners")).toBe(true);
     expect(previewShell?.classList.contains("no-outer-shadow")).toBe(true);
+    expect(previewShell?.classList.contains("no-outer-padding")).toBe(true);
 
     save.click();
     expect(dialog._cardConfig).toMatchObject({
       rounded_outer_corners: false,
       outer_shadows: false,
+      outer_padding: false,
       camera_rounded_corners: false,
       camera_shadows: false,
       camera_bar_shadows: false,
@@ -647,6 +651,7 @@ describe("watchzone-card-editor", () => {
     for (const key of [
       "rounded_outer_corners",
       "outer_shadows",
+      "outer_padding",
       "camera_rounded_corners",
       "camera_shadows",
       "camera_bar_shadows",
@@ -698,6 +703,7 @@ describe("watchzone-card-editor", () => {
     for (const key of [
       "rounded_outer_corners",
       "outer_shadows",
+      "outer_padding",
       "camera_rounded_corners",
       "camera_shadows",
       "camera_bar_shadows",
@@ -709,7 +715,9 @@ describe("watchzone-card-editor", () => {
           ? "square-outer-corners"
           : key === "outer_shadows"
             ? "no-outer-shadow"
-            : undefined;
+            : key === "outer_padding"
+              ? "no-outer-padding"
+              : undefined;
       if (outerClass) {
         expect(card.shadowRoot?.querySelector("ha-card")?.className).toContain(
           outerClass,
@@ -742,6 +750,7 @@ describe("watchzone-card-editor", () => {
     for (const key of [
       "rounded_outer_corners",
       "outer_shadows",
+      "outer_padding",
       "camera_rounded_corners",
       "camera_shadows",
       "camera_bar_shadows",

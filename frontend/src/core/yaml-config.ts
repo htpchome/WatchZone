@@ -14,6 +14,7 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
     delete yaml.rounded_outer_corners;
   }
   if (config.outer_shadows !== false) delete yaml.outer_shadows;
+  if (config.outer_padding !== false) delete yaml.outer_padding;
   if (config.camera_rounded_corners !== false) {
     delete yaml.camera_rounded_corners;
   }

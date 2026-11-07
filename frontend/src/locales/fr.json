@@ -13,6 +13,7 @@
   "editor.mobile_data_saving": "Économie de données mobiles",
   "editor.rounded_outer_corners": "Coins extérieurs arrondis",
   "editor.outer_shadows": "Ombres extérieures",
+  "editor.outer_padding": "Marge extérieure",
   "editor.edit_camera": "Modifier la caméra",
   "editor.camera": "Caméra",
   "editor.live_connection": "Connexion en direct",

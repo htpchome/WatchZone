@@ -894,6 +894,7 @@ test("applies outer shell appearance toggles without changing card identity", as
         title: "Appearance",
         rounded_outer_corners: false,
         outer_shadows: false,
+        outer_padding: false,
       });
       await card.updateComplete;
       const shellAfter = card.shadowRoot?.querySelector("ha-card");
@@ -950,13 +951,14 @@ test("applies outer shell appearance toggles without changing card identity", as
       };
     });
 
-  expect(result.disabled).toMatchObject({
+  expect(result.disabled).toEqual({
     borderRadius: "0px",
     boxShadow: "none",
-    classes: "square-outer-corners no-outer-shadow",
+    classes: "square-outer-corners no-outer-shadow no-outer-padding",
     hostBorderRadius: "0px",
     hostBoxShadow: "none",
     identityRetained: true,
+    cardPadding: "0px",
     shellPadding: "0px",
   });
   expect(result.enabled).toMatchObject({
@@ -968,7 +970,6 @@ test("applies outer shell appearance toggles without changing card identity", as
   expect(result.enabled.hostBorderRadius).not.toBe("0px");
   expect(result.enabled.boxShadow).toContain("rgb(1, 2, 3)");
   expect(result.enabled.hostBoxShadow).toContain("rgb(1, 2, 3)");
-  expect(result.disabled.cardPadding).not.toBe("0px");
   expect(result.enabled.cardPadding).not.toBe("0px");
   expect(result.enabled.shellPadding).toBe("0px");
 });
