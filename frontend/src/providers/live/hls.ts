@@ -171,9 +171,7 @@ export async function createHlsConnection(
   const ready = new Promise<MediaConnection>((resolve, reject) => {
     const timeout = window.setTimeout(() => {
       close();
-      reject(
-        new Error("Timed out connecting to the HLS stream"),
-      );
+      reject(new Error("Timed out connecting to the HLS stream"));
     }, CONNECT_TIMEOUT_MS);
 
     rejectPending = (error) => {
