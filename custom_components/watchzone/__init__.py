@@ -45,6 +45,7 @@ from .features.live import LiveSignalingService
 from .features.ptz import PtzService
 from .providers.frigate import camera as frigate_camera
 from .providers.frigate import live as frigate_live
+from .providers.frigate.ptz import ptz as frigate_ptz
 from .providers.home_assistant.ptz import ptz as home_assistant_ptz
 from .runtime import WatchZoneRuntime
 
@@ -186,12 +187,13 @@ def _register_builtin_providers(hass: HomeAssistant) -> ProviderRegistry:
     registry.register(
         ProviderExtension(
             api_version=EXTENSION_API_VERSION,
-            provider_id="frigate",
+            provider_id="frigate_go2rtc",
             entity_platforms=frozenset({"frigate"}),
             camera_runtime=frigate_camera,
             camera_runtime_poll_interval=1.0,
             live_signaling=frigate_live,
             talk_signaling=frigate_live,
+            ptz=frigate_ptz,
         )
     )
     domain_data[_DATA_BUILTIN_PROVIDERS] = True

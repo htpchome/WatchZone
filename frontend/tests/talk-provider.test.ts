@@ -70,6 +70,7 @@ describe("Home Assistant two-way-talk provider", () => {
     mocks.subscribeTalkOffer.mockImplementation(
       async (
         _api: HomeAssistantApi,
+        _provider: string,
         _entityId: string,
         _offer: string,
         forced: boolean,

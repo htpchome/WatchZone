@@ -12,6 +12,7 @@ import {
 import { DeviceProfileController } from "../../core/device-profile";
 import type { CameraSessionContext } from "../../core/camera-session-context";
 import type { CameraSelectionContext } from "../../core/camera-selection-context";
+import type { LiveConnectionType } from "../../core/config";
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import {
   englishLocalize,
@@ -34,6 +35,7 @@ export type CameraShadowStyle = "medium" | "none" | "small";
 
 export interface CameraItemConfig {
   readonly available: boolean;
+  readonly connection: LiveConnectionType;
   readonly entityId: string;
   readonly lowLatencyHls: boolean;
   readonly label: string;
@@ -169,6 +171,7 @@ export class CameraModule extends LitElement {
               .api=${this.api}
               .cameraSession=${this.cameraSession}
               .available=${camera.available}
+              .connection=${camera.connection}
               .entityId=${camera.entityId}
               .lowLatencyHls=${camera.lowLatencyHls}
               .localize=${this.localize}

@@ -5,7 +5,7 @@ import type {
 } from "../core/home-assistant";
 
 export type PtzDirection = "down" | "left" | "right" | "up";
-export type PtzProviderId = "home_assistant";
+export type PtzProviderId = "home_assistant" | "frigate_go2rtc";
 
 export interface PtzCapability {
   readonly supported: boolean;

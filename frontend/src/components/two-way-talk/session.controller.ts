@@ -4,6 +4,7 @@ import type {
   ActiveCameraSession,
   CameraSessionContext,
 } from "../../core/camera-session-context";
+import type { LiveConnectionType } from "../../core/config";
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import type { TalkConnection } from "../../providers/talk-source-resolver";
 import { TalkSourceResolver } from "../../providers/talk-source-resolver";
@@ -12,6 +13,11 @@ interface TalkSessionCallbacks {
   onConnected(connection: TalkConnection): void;
   onFailed(error: unknown): void;
   onStopped(): void;
+}
+
+interface TalkCameraSource {
+  readonly connection: LiveConnectionType;
+  readonly entityId: string;
 }
 
 /** Owns one ephemeral microphone session and all privacy-sensitive teardown. */
@@ -25,7 +31,7 @@ export class TalkSessionController implements ReactiveController {
   private _capabilityEnabled = false;
   private _capabilityGeneration = 0;
   private _connection?: TalkConnection;
-  private _enabledCameraIds = new Set<string>();
+  private _configuredSources: readonly TalkCameraSource[] = [];
   private _microphoneMuted = false;
   private _supported = false;
   private _talkAudioCamera?: ActiveCameraSession;
@@ -62,15 +68,18 @@ export class TalkSessionController implements ReactiveController {
   public configure(
     api: HomeAssistantApi | undefined,
     cameraContext: CameraSessionContext,
-    enabledCameraIds: readonly string[],
+    sources: readonly TalkCameraSource[],
   ): void {
-    const enabledSet = new Set(enabledCameraIds);
     const configurationChanged =
       this._api !== api ||
-      enabledSet.size !== this._enabledCameraIds.size ||
-      [...enabledSet].some((entityId) => !this._enabledCameraIds.has(entityId));
+      sources.length !== this._configuredSources.length ||
+      sources.some(
+        (source, index) =>
+          source.entityId !== this._configuredSources[index]?.entityId ||
+          source.connection !== this._configuredSources[index]?.connection,
+      );
     this._api = api;
-    this._enabledCameraIds = enabledSet;
+    this._configuredSources = sources;
     if (this._cameraContext !== cameraContext) {
       this._unsubscribeCamera?.();
       this._cameraContext = cameraContext;
@@ -117,6 +126,7 @@ export class TalkSessionController implements ReactiveController {
     try {
       const connection = await this._resolver.connect(
         api,
+        camera.connection,
         camera.entityId,
         abort.signal,
         (error) => this._handleConnectionFailure(camera.entityId, error),
@@ -165,7 +175,14 @@ export class TalkSessionController implements ReactiveController {
     if (changed) this.stop();
     this._camera = camera;
     const entityId = camera?.entityId;
-    const enabled = Boolean(entityId && this._enabledCameraIds.has(entityId));
+    const source = entityId
+      ? this._configuredSources.find(
+          (candidate) =>
+            candidate.entityId === entityId &&
+            candidate.connection === camera?.connection,
+        )
+      : undefined;
+    const enabled = Boolean(source);
     if (!enabled && (this.active || this.connecting)) this.stop();
     if (
       this._capabilityApi === this._api &&
@@ -185,7 +202,7 @@ export class TalkSessionController implements ReactiveController {
       return;
     }
     void this._resolver
-      .supports(this._api, entityId)
+      .supports(this._api, camera.connection, entityId)
       .then((supported) => {
         if (generation !== this._capabilityGeneration) return;
         this._supported = supported;

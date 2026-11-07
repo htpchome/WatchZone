@@ -37,7 +37,7 @@ describe("two-way-talk session lifecycle", () => {
     };
     const controller = new TalkSessionController(host, callbacks);
     const cameraContext = new CameraSessionContext();
-    controller.configure(api(), cameraContext, ["camera.front"]);
+    controller.configure(api(), cameraContext, [source("camera.front")]);
     cameraContext.publish({}, camera("camera.front"));
     await vi.waitFor(() => expect(controller.supported).toBe(true));
 
@@ -68,7 +68,7 @@ describe("two-way-talk session lifecycle", () => {
     });
     const cameraContext = new CameraSessionContext();
     cameraContext.publish({}, camera("camera.front"));
-    controller.configure(api(), cameraContext, ["camera.front"]);
+    controller.configure(api(), cameraContext, [source("camera.front")]);
     await vi.waitFor(() => expect(controller.supported).toBe(true));
     await controller.start();
 
@@ -82,7 +82,12 @@ describe("two-way-talk session lifecycle", () => {
     let startupSignal: AbortSignal | undefined;
     resolver.supports.mockResolvedValue(true);
     resolver.connect.mockImplementation(
-      (_api: HomeAssistantApi, _entityId: string, signal: AbortSignal) => {
+      (
+        _api: HomeAssistantApi,
+        _connection: string,
+        _entityId: string,
+        signal: AbortSignal,
+      ) => {
         startupSignal = signal;
         return new Promise((_resolve, reject) => {
           signal.addEventListener(
@@ -100,7 +105,7 @@ describe("two-way-talk session lifecycle", () => {
     };
     const controller = new TalkSessionController(new Host(), callbacks);
     const cameraContext = new CameraSessionContext();
-    controller.configure(api(), cameraContext, ["camera.front"]);
+    controller.configure(api(), cameraContext, [source("camera.front")]);
     cameraContext.publish({}, camera("camera.front"));
     await vi.waitFor(() => expect(controller.supported).toBe(true));
 
@@ -130,7 +135,7 @@ describe("two-way-talk session lifecycle", () => {
       onStopped: vi.fn(),
     });
     const cameraContext = new CameraSessionContext();
-    controller.configure(api(), cameraContext, ["camera.front"]);
+    controller.configure(api(), cameraContext, [source("camera.front")]);
     cameraContext.publish({}, activeCamera);
     await vi.waitFor(() => expect(controller.supported).toBe(true));
 
@@ -155,6 +160,7 @@ class Host {
 function camera(entityId: string) {
   return {
     available: true,
+    connection: "home_assistant" as const,
     entityId,
     muted: true,
     overlayVisible: true,
@@ -163,6 +169,10 @@ function camera(entityId: string) {
     setMuted: vi.fn(),
     setTalkAudioActive: vi.fn(),
   };
+}
+
+function source(entityId: string) {
+  return { connection: "home_assistant" as const, entityId };
 }
 
 function api(): HomeAssistantApi {

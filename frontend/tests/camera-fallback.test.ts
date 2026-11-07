@@ -47,17 +47,18 @@ describe("camera presentation fallback", () => {
     ) as CameraLivePresentation;
     camera.available = true;
     camera.posterUrl = "/api/camera_proxy/camera.front?token=test";
-    camera.hlsVideo = document.createElement("video");
+    camera.fallbackVideo = document.createElement("video");
     document.body.append(camera);
     await camera.updateComplete;
 
-    const host = camera.shadowRoot?.querySelector<HTMLElement>(".hls-host");
+    const host =
+      camera.shadowRoot?.querySelector<HTMLElement>(".fallback-host");
     expect(host?.classList.contains("candidate")).toBe(true);
     expect(host?.getAttribute("aria-hidden")).toBe("true");
-    expect(host?.contains(camera.hlsVideo)).toBe(true);
+    expect(host?.contains(camera.fallbackVideo)).toBe(true);
     expect(camera.shadowRoot?.querySelector("img.poster")).not.toBeNull();
 
-    camera.selected = "hls";
+    camera.selected = "fallback";
     camera.transport = "hls_native";
     await camera.updateComplete;
 
@@ -71,7 +72,7 @@ describe("camera presentation fallback", () => {
       "wzc-camera-live",
     ) as CameraLivePresentation;
     presentation.available = true;
-    presentation.selected = "hls";
+    presentation.selected = "fallback";
     presentation.transport = "hls_mse";
     presentation.lowLatencyHls = true;
     document.body.append(presentation);
@@ -245,6 +246,7 @@ describe("camera component appearance", () => {
 function cameraItem(entityId: string) {
   return {
     available: true,
+    connection: "home_assistant" as const,
     entityId,
     label: entityId,
     lowLatencyHls: true,

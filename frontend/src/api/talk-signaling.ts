@@ -4,6 +4,7 @@ import type {
   HomeAssistantUnsubscribe,
 } from "../core/home-assistant";
 import type { LiveOfferEvent } from "./live-signaling";
+import type { LiveConnectionType } from "../core/config";
 
 const CAPABILITY_COMMAND = `${INTEGRATION_ID}/talk/capability`;
 const OFFER_COMMAND = `${INTEGRATION_ID}/talk/webrtc/offer`;
@@ -11,6 +12,7 @@ const CANDIDATE_COMMAND = `${INTEGRATION_ID}/talk/webrtc/candidate`;
 
 export async function getTalkCapability(
   api: HomeAssistantApi,
+  provider: LiveConnectionType,
   entityId: string,
 ): Promise<boolean> {
   const result = await api.callWS<{
@@ -18,12 +20,14 @@ export async function getTalkCapability(
   }>({
     type: CAPABILITY_COMMAND,
     entity_id: entityId,
+    provider,
   });
   return result.supported;
 }
 
 export function subscribeTalkOffer(
   api: HomeAssistantApi,
+  provider: LiveConnectionType,
   entityId: string,
   offer: string,
   forceStandard: boolean,
@@ -33,6 +37,7 @@ export function subscribeTalkOffer(
   return api.subscribeMessage(callback, {
     type: OFFER_COMMAND,
     entity_id: entityId,
+    provider,
     force_standard: forceStandard,
     capability_probe: capabilityProbe,
     offer,

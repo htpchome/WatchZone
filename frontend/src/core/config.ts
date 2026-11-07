@@ -12,7 +12,10 @@ export interface LinkedLightConfig {
   readonly icon?: string;
 }
 
+export type LiveConnectionType = "home_assistant" | "frigate_go2rtc";
+
 export interface CameraConfig {
+  readonly connection: LiveConnectionType;
   readonly entity_id: string;
   readonly lights: readonly LinkedLightConfig[];
   readonly low_latency_hls: boolean;
@@ -100,6 +103,7 @@ export function normalizeCardConfig(value: unknown): CardConfig {
 
 export function createDefaultCameraConfig(entityId = ""): CameraConfig {
   return {
+    connection: "home_assistant",
     entity_id: entityId,
     lights: [],
     low_latency_hls: true,
@@ -180,6 +184,16 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
   }
   const defaults = createDefaultCameraConfig(source.entity_id.trim());
   const lights = normalizeLights(source, index);
+  if (
+    "connection" in source &&
+    source.connection !== undefined &&
+    source.connection !== "home_assistant" &&
+    source.connection !== "frigate_go2rtc"
+  ) {
+    throw new Error(
+      `${APP_NAME} camera ${index + 1} connection must be a supported connection type.`,
+    );
+  }
   for (const key of [
     "low_latency_hls",
     "ptz_enabled",
@@ -205,6 +219,10 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
     throw new Error(`${APP_NAME} camera ${index + 1} title must be a string.`);
   }
   return {
+    connection:
+      source.connection === "frigate_go2rtc"
+        ? "frigate_go2rtc"
+        : defaults.connection,
     entity_id: defaults.entity_id,
     lights,
     low_latency_hls:

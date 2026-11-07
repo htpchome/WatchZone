@@ -99,9 +99,23 @@ class ProviderRegistry:
         extension = self._platforms.get(platform)
         return extension.live_signaling if extension else None
 
+    def live_signaling_provider(
+        self, provider_id: str
+    ) -> LiveSignalingProvider | None:
+        """Resolve live signaling by explicit connection-provider identity."""
+        extension = self._providers.get(provider_id)
+        return extension.live_signaling if extension else None
+
     def talk_signaling(self, platform: str) -> LiveSignalingProvider | None:
         """Resolve one platform's optional talk-signaling capability."""
         extension = self._platforms.get(platform)
+        return extension.talk_signaling if extension else None
+
+    def talk_signaling_provider(
+        self, provider_id: str
+    ) -> LiveSignalingProvider | None:
+        """Resolve talk signaling by explicit connection-provider identity."""
+        extension = self._providers.get(provider_id)
         return extension.talk_signaling if extension else None
 
     def ptz(self, provider_id: str) -> PtzProvider | None:

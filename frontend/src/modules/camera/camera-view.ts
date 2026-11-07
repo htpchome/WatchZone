@@ -9,6 +9,7 @@ import {
 } from "../../core/constants";
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import type { CameraSessionContext } from "../../core/camera-session-context";
+import type { LiveConnectionType } from "../../core/config";
 import {
   englishLocalize,
   type LocalizeFunction,
@@ -45,6 +46,7 @@ export class CameraView extends LitElement {
     api: { attribute: false },
     cameraSession: { attribute: false },
     available: { attribute: false, type: Boolean },
+    connection: { attribute: false },
     entityId: { attribute: false },
     lowLatencyHls: { attribute: false, type: Boolean },
     localize: { attribute: false },
@@ -62,11 +64,11 @@ export class CameraView extends LitElement {
     {
       dismissToast: (key) => this._toasts.dismiss(key),
       getMediaState: (): {
-        hls?: HTMLVideoElement;
-        selected?: "hls" | "webrtc";
+        fallback?: HTMLVideoElement;
+        selected?: "fallback" | "webrtc";
         webRtc?: HTMLVideoElement;
       } => ({
-        hls: this._session.hlsVideo,
+        fallback: this._session.fallbackVideo,
         selected: this._session.selected,
         webRtc: this._presentation?.webRtcVideo,
       }),
@@ -94,6 +96,7 @@ export class CameraView extends LitElement {
   public api?: HomeAssistantApi;
   public cameraSession?: CameraSessionContext;
   public available = false;
+  public connection: LiveConnectionType = "home_assistant";
   public entityId?: string;
   public lowLatencyHls = true;
   public localize: LocalizeFunction = englishLocalize;
@@ -138,6 +141,7 @@ export class CameraView extends LitElement {
         this.available &&
         runtime?.available !== false &&
         !suspended,
+      this.connection,
       this.lowLatencyHls,
       !suspended,
     );
@@ -154,7 +158,7 @@ export class CameraView extends LitElement {
                 class="live-presentation"
                 .available=${this.connect && this.available}
                 .failed=${this._session.failed}
-                .hlsVideo=${this._session.hlsVideo}
+                .fallbackVideo=${this._session.fallbackVideo}
                 .lowLatencyHls=${this.lowLatencyHls}
                 .localize=${this.localize}
                 .muted=${this._audio.muted}
@@ -242,6 +246,7 @@ export class CameraView extends LitElement {
         this._runtime.snapshot?.available !== false &&
         this._runtime.snapshot?.suspended !== true,
       entityId: this.entityId,
+      connection: this.connection,
       incomingStream: this._session.webRtcStream,
       muted: this._audio.muted,
       overlayVisible: this.overlayVisible,

@@ -36,10 +36,17 @@ export const moduleDefinition: ModuleDefinition<CameraModuleConfig> = {
     const first = config.cameras[0];
     if (!first || !context.api || !context.hass?.states[first.entityId])
       return undefined;
-    const lease = await resolver.acquireHomeAssistantWebRtc(
-      context.api,
-      first.entityId,
-    );
+    const lease =
+      first.connection === "frigate_go2rtc"
+        ? await resolver.acquireFrigateWebRtc(
+            context.api,
+            first.entityId,
+            await resolver.resolveFrigate(context.api, first.entityId),
+          )
+        : await resolver.acquireHomeAssistantWebRtc(
+            context.api,
+            first.entityId,
+          );
     return { release: () => lease.release() };
   },
   define() {
@@ -126,6 +133,13 @@ function validateCameraItem(
     !source.entityId.startsWith("camera.")
   )
     throw new Error("Camera modules require camera entity IDs.");
+  if (
+    source.connection !== undefined &&
+    source.connection !== "home_assistant" &&
+    source.connection !== "frigate_go2rtc"
+  ) {
+    throw new Error("Camera modules require a valid connection type.");
+  }
   for (const key of [
     "lowLatencyHls",
     "startUnmutedPcTablet",
@@ -136,6 +150,10 @@ function validateCameraItem(
     }
   }
   return {
+    connection:
+      source.connection === "frigate_go2rtc"
+        ? "frigate_go2rtc"
+        : "home_assistant",
     entityId: source.entityId,
     lowLatencyHls: source.lowLatencyHls as boolean,
     startUnmutedPcTablet: source.startUnmutedPcTablet as boolean,

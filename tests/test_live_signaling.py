@@ -19,9 +19,12 @@ from custom_components.watchzone.features.live import (
 )
 from custom_components.watchzone.providers.frigate.live import (
     FrigateLiveSignalingSession,
+    async_prepare_session,
+)
+from custom_components.watchzone.providers.frigate.source import (
     _camera_name,
     _stream_name,
-    async_prepare_session,
+    async_resolve_source,
 )
 
 
@@ -176,6 +179,29 @@ async def test_talk_resolver_uses_the_registered_talk_capability() -> None:
     assert fallback_reason is None
 
 
+async def test_explicit_frigate_connection_uses_only_its_selected_provider() -> None:
+    """An explicit Frigate source never falls through to Home Assistant."""
+    session = SimpleNamespace()
+    factory = AsyncMock(return_value=session)
+    providers = ProviderRegistry()
+    providers.register(
+        ProviderExtension(
+            api_version=EXTENSION_API_VERSION,
+            provider_id="frigate_go2rtc",
+            entity_platforms=frozenset({"frigate"}),
+            live_signaling=SimpleNamespace(async_prepare_session=factory),
+        )
+    )
+    service = LiveSignalingService(SimpleNamespace(), providers)  # type: ignore[arg-type]
+
+    resolved = await service._async_prepare_explicit_provider_session(  # noqa: SLF001
+        "frigate_go2rtc", Mock(), "camera.workshop", Mock(), "live"
+    )
+
+    assert resolved is session
+    factory.assert_awaited_once()
+
+
 async def test_frigate_capability_uses_public_camera_identity_for_go2rtc() -> None:
     """A custom RTSP source falls back to Frigate's public camera identity."""
     registry = SimpleNamespace(
@@ -193,7 +219,8 @@ async def test_frigate_capability_uses_public_camera_identity_for_go2rtc() -> No
         get_auth_headers=AsyncMock(return_value={"Authorization": "Bearer token"}),
     )
     frigate_module = SimpleNamespace(
-        get_client_for_config_entry=Mock(return_value=client)
+        get_client_for_config_entry=Mock(return_value=client),
+        get_frigate_instance_id_for_config_entry=Mock(return_value="frigate"),
     )
     hass = SimpleNamespace(
         config_entries=SimpleNamespace(async_get_entry=Mock(return_value=config_entry)),
@@ -205,11 +232,11 @@ async def test_frigate_capability_uses_public_camera_identity_for_go2rtc() -> No
 
     with (
         patch(
-            "custom_components.watchzone.providers.frigate.live.er.async_get",
+            "custom_components.watchzone.providers.frigate.source.er.async_get",
             return_value=registry,
         ),
         patch(
-            "custom_components.watchzone.providers.frigate.live.async_import_module",
+            "custom_components.watchzone.providers.frigate.source.async_import_module",
             new=AsyncMock(return_value=frigate_module),
         ) as import_frigate,
         patch(
@@ -232,6 +259,84 @@ async def test_frigate_capability_uses_public_camera_identity_for_go2rtc() -> No
         headers={"Authorization": "Bearer token"},
         ssl=False,
     )
+
+
+async def test_frigate_sources_are_scoped_to_their_owning_instance() -> None:
+    """Identical stream names on separate Frigate entries never collide."""
+    entries = {
+        "entry-home": SimpleNamespace(
+            entry_id="entry-home", data={"url": "http://frigate-home:5000"}
+        ),
+        "entry-workshop": SimpleNamespace(
+            entry_id="entry-workshop",
+            data={"url": "http://frigate-workshop:5000"},
+        ),
+    }
+    registry = SimpleNamespace(
+        async_get=lambda entity_id: SimpleNamespace(
+            platform="frigate",
+            config_entry_id=(
+                "entry-home" if entity_id == "camera.home" else "entry-workshop"
+            ),
+        )
+    )
+    hass = SimpleNamespace(
+        config_entries=SimpleNamespace(
+            async_get_entry=lambda entry_id: entries.get(entry_id)
+        ),
+        states={
+            "camera.home": SimpleNamespace(
+                attributes={"camera_name": "front", "client_id": "frigate"}
+            ),
+            "camera.workshop": SimpleNamespace(
+                attributes={
+                    "camera_name": "front",
+                    "client_id": "myWorkshop",
+                }
+            ),
+        },
+    )
+    client = SimpleNamespace(validate_ssl=True, get_auth_headers=AsyncMock())
+    module = SimpleNamespace(
+        get_client_for_config_entry=Mock(return_value=client),
+        get_frigate_instance_id_for_config_entry=Mock(
+            side_effect=lambda _hass, entry: (
+                "frigate" if entry.entry_id == "entry-home" else "myWorkshop"
+            )
+        ),
+    )
+    cameras = {
+        entity_id: SimpleNamespace(
+            stream_source=AsyncMock(return_value=f"rtsp://{host}:8554/front")
+        )
+        for entity_id, host in (
+            ("camera.home", "frigate-home"),
+            ("camera.workshop", "frigate-workshop"),
+        )
+    }
+    with (
+        patch(
+            "custom_components.watchzone.providers.frigate.source.er.async_get",
+            return_value=registry,
+        ),
+        patch(
+            "custom_components.watchzone.providers.frigate.source.async_import_module",
+            new=AsyncMock(return_value=module),
+        ),
+    ):
+        home = await async_resolve_source(
+            hass, "camera.home", cameras["camera.home"]  # type: ignore[arg-type]
+        )
+        workshop = await async_resolve_source(
+            hass,
+            "camera.workshop",
+            cameras["camera.workshop"],  # type: ignore[arg-type]
+        )
+
+    assert home.frigate_instance_id == "frigate"
+    assert workshop.frigate_instance_id == "myWorkshop"
+    assert home.stream_name == workshop.stream_name == "front"
+    assert home.source_id != workshop.source_id
 
 
 def test_frigate_stream_name_requires_its_go2rtc_source() -> None:

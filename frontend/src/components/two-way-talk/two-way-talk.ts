@@ -8,6 +8,7 @@ import {
   TOAST_REGION_TAG,
 } from "../../core/constants";
 import type { CameraSessionContext } from "../../core/camera-session-context";
+import type { LiveConnectionType } from "../../core/config";
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import {
   englishLocalize,
@@ -30,7 +31,7 @@ export class TwoWayTalkComponent extends LitElement {
   public static properties = {
     api: { attribute: false },
     cameraSession: { attribute: false },
-    enabledCameraIds: { attribute: false },
+    cameras: { attribute: false },
     localize: { attribute: false },
   };
 
@@ -47,16 +48,15 @@ export class TwoWayTalkComponent extends LitElement {
 
   public api?: HomeAssistantApi;
   public cameraSession?: CameraSessionContext;
-  public enabledCameraIds: readonly string[] = [];
+  public cameras: readonly {
+    readonly connection: LiveConnectionType;
+    readonly entityId: string;
+  }[] = [];
   public localize: LocalizeFunction = englishLocalize;
 
   protected willUpdate(): void {
     if (this.cameraSession) {
-      this._session.configure(
-        this.api,
-        this.cameraSession,
-        this.enabledCameraIds,
-      );
+      this._session.configure(this.api, this.cameraSession, this.cameras);
     }
     if (
       this._hoverCameraEntityId &&

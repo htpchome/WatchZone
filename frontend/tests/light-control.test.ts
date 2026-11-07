@@ -281,6 +281,7 @@ function createHass(
 function activeCamera(entityId: string) {
   return {
     available: true,
+    connection: "home_assistant" as const,
     entityId,
     muted: true,
     overlayVisible: true,

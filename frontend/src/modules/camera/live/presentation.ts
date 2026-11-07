@@ -88,7 +88,7 @@ export class CameraLivePresentation extends LitElement {
   public static properties = {
     available: { attribute: false, type: Boolean },
     failed: { attribute: false, type: Boolean },
-    hlsVideo: { attribute: false },
+    fallbackVideo: { attribute: false },
     lowLatencyHls: { attribute: false, type: Boolean },
     localize: { attribute: false },
     muted: { attribute: false, type: Boolean },
@@ -123,7 +123,7 @@ export class CameraLivePresentation extends LitElement {
 
   public available = false;
   public failed = false;
-  public hlsVideo?: HTMLVideoElement;
+  public fallbackVideo?: HTMLVideoElement;
   public lowLatencyHls = true;
   public localize: LocalizeFunction = englishLocalize;
   public muted = true;
@@ -202,11 +202,13 @@ export class CameraLivePresentation extends LitElement {
     const sourceLabel =
       this.transport === "webrtc"
         ? "WebRTC"
-        : this.transport === "hls_native"
-          ? `${hlsLabel} · native`
-          : this.transport === "hls_mse"
-            ? `${hlsLabel} · HLS.js`
-            : hlsLabel;
+        : this.transport === "mse"
+          ? "MSE"
+          : this.transport === "hls_native"
+            ? `${hlsLabel} · native`
+            : this.transport === "hls_mse"
+              ? `${hlsLabel} · HLS.js`
+              : hlsLabel;
     const connecting =
       !this.suspended && this.available && !this.failed && !this.selected;
     const resolvedSource = Boolean(
@@ -255,12 +257,12 @@ export class CameraLivePresentation extends LitElement {
               : html`${!this.selected ? this._renderFallback() : nothing}
                   <div
                     class=${
-                      this.selected === "hls"
-                        ? "hls-host"
-                        : "hls-host candidate"
+                      this.selected === "fallback"
+                        ? "fallback-host"
+                        : "fallback-host candidate"
                     }
                     ?hidden=${this.selected === "webrtc"}
-                    aria-hidden=${this.selected === "hls" ? "false" : "true"}
+                    aria-hidden=${this.selected === "fallback" ? "false" : "true"}
                   ></div>
                   <div class="webrtc-host"></div>`
           }
@@ -341,17 +343,24 @@ export class CameraLivePresentation extends LitElement {
     }
     this._syncWebRtcVideo();
     const webRtcVideo = this.webRtcVideo;
-    const hlsHost = this.renderRoot.querySelector(".hls-host");
-    if (hlsHost && this.hlsVideo && this.hlsVideo.parentElement !== hlsHost) {
-      this.hlsVideo.setAttribute("aria-label", this.localize("camera.live"));
-      suppressNativePictureInPicture(this.hlsVideo);
-      setMediaElementMuted(this.hlsVideo, this.muted);
-      hlsHost.append(this.hlsVideo);
-      this._emitMediaAttached(this.hlsVideo);
+    const hlsHost = this.renderRoot.querySelector(".fallback-host");
+    if (
+      hlsHost &&
+      this.fallbackVideo &&
+      this.fallbackVideo.parentElement !== hlsHost
+    ) {
+      this.fallbackVideo.setAttribute(
+        "aria-label",
+        this.localize("camera.live"),
+      );
+      suppressNativePictureInPicture(this.fallbackVideo);
+      setMediaElementMuted(this.fallbackVideo, this.muted);
+      hlsHost.append(this.fallbackVideo);
+      this._emitMediaAttached(this.fallbackVideo);
     }
     this._setActiveVideo(
-      this.selected === "hls"
-        ? this.hlsVideo
+      this.selected === "fallback"
+        ? this.fallbackVideo
         : this.selected === "webrtc"
           ? webRtcVideo
           : undefined,
@@ -598,8 +607,8 @@ export class CameraLivePresentation extends LitElement {
   }
 
   private get _selectedVideoForRender(): HTMLVideoElement | undefined {
-    return this.selected === "hls"
-      ? this.hlsVideo
+    return this.selected === "fallback"
+      ? this.fallbackVideo
       : this.selected === "webrtc"
         ? this.webRtcVideo
         : undefined;

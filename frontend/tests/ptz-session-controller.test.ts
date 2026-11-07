@@ -138,6 +138,7 @@ function source(entityId: string) {
 function camera(entityId: string, releaseOverlay = vi.fn()) {
   return {
     available: true,
+    connection: "home_assistant" as const,
     entityId,
     holdOverlay: vi.fn(() => releaseOverlay),
     muted: true,

@@ -1,5 +1,9 @@
 # Home Assistant Direct Live Connection
 
+Status: stable reference implementation. New connection providers extend the
+provider-neutral contracts and must not add provider-specific behavior to this
+adapter.
+
 ## 1. Scope
 
 This contract governs WatchZone's browser-direct connection to a Home Assistant

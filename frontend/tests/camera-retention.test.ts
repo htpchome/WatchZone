@@ -176,22 +176,24 @@ describe("camera presentation retention", () => {
       return elements;
     });
     await vi.waitFor(() =>
-      expect(presentation(views[0])?.selected).toBe("hls"),
+      expect(presentation(views[0])?.selected).toBe("fallback"),
     );
     camera.shadowRoot
       ?.querySelector<HTMLButtonElement>(".carousel-navigation.next")
       ?.click();
     await vi.waitFor(() =>
-      expect(presentation(views[1])?.selected).toBe("hls"),
+      expect(presentation(views[1])?.selected).toBe("fallback"),
     );
     camera.shadowRoot
       ?.querySelector<HTMLButtonElement>(".carousel-navigation.previous")
       ?.click();
     await vi.waitFor(() =>
-      expect(presentation(views[0])?.selected).toBe("hls"),
+      expect(presentation(views[0])?.selected).toBe("fallback"),
     );
 
-    expect(presentation(views[0])?.hlsVideo).toBe(hlsVideos.get("camera.zero"));
+    expect(presentation(views[0])?.fallbackVideo).toBe(
+      hlsVideos.get("camera.zero"),
+    );
     expect(presentation(views[0])?.webRtcVideo).toBe(
       webRtcVideos.get("camera.zero"),
     );
@@ -225,7 +227,9 @@ describe("camera presentation retention", () => {
     document.body.append(preEditor);
     await vi.waitFor(() =>
       expect(
-        presentation(preEditor)?.shadowRoot?.querySelector(".hls-host video"),
+        presentation(preEditor)?.shadowRoot?.querySelector(
+          ".fallback-host video",
+        ),
       ).toBe(hlsVideo),
     );
 
@@ -234,18 +238,22 @@ describe("camera presentation retention", () => {
     await vi.waitFor(() =>
       expect(
         presentation(editorPreview)?.shadowRoot?.querySelector(
-          ".hls-host video",
+          ".fallback-host video",
         ),
       ).toBe(hlsVideo),
     );
     expect(
-      presentation(preEditor)?.shadowRoot?.querySelector(".hls-host video"),
+      presentation(preEditor)?.shadowRoot?.querySelector(
+        ".fallback-host video",
+      ),
     ).toBeNull();
 
     editorPreview.remove();
     await vi.waitFor(() =>
       expect(
-        presentation(preEditor)?.shadowRoot?.querySelector(".hls-host video"),
+        presentation(preEditor)?.shadowRoot?.querySelector(
+          ".fallback-host video",
+        ),
       ).toBe(hlsVideo),
     );
     expect(hlsFactory).toHaveBeenCalledOnce();
@@ -275,18 +283,20 @@ describe("camera presentation retention", () => {
     const api = createApi();
     const first = createLiveView(api);
     document.body.append(first);
-    await vi.waitFor(() => expect(presentation(first)?.selected).toBe("hls"));
+    await vi.waitFor(() =>
+      expect(presentation(first)?.selected).toBe("fallback"),
+    );
     expect(presentation(first)?.webRtcVideo).toBe(webRtcVideo);
 
     first.remove();
     const returned = createLiveView(api);
     document.body.append(returned);
     await vi.waitFor(() =>
-      expect(presentation(returned)?.selected).toBe("hls"),
+      expect(presentation(returned)?.selected).toBe("fallback"),
     );
 
     expect(presentation(returned)?.webRtcVideo).toBe(webRtcVideo);
-    expect(presentation(returned)?.hlsVideo).toBe(hlsVideo);
+    expect(presentation(returned)?.fallbackVideo).toBe(hlsVideo);
     expect(webRtcFactory).toHaveBeenCalledOnce();
     expect(hlsFactory).toHaveBeenCalledOnce();
   });
@@ -361,7 +371,7 @@ describe("camera presentation retention", () => {
 
     await vi.waitFor(() =>
       expect(
-        presentation(view)?.shadowRoot?.querySelector(".hls-host video"),
+        presentation(view)?.shadowRoot?.querySelector(".fallback-host video"),
       ).toBe(hlsVideo),
     );
     expect(hlsFactory.mock.calls[0][5].initialMuted).toBe(false);
@@ -616,7 +626,9 @@ describe("camera presentation retention", () => {
     document.body.append(initial);
     await vi.waitFor(() =>
       expect(
-        presentation(initial)?.shadowRoot?.querySelector(".hls-host video"),
+        presentation(initial)?.shadowRoot?.querySelector(
+          ".fallback-host video",
+        ),
       ).toBe(hlsVideo),
     );
     expect(hlsVideo.muted).toBe(false);
@@ -632,7 +644,9 @@ describe("camera presentation retention", () => {
     document.body.append(returned);
     await vi.waitFor(() =>
       expect(
-        presentation(returned)?.shadowRoot?.querySelector(".hls-host video"),
+        presentation(returned)?.shadowRoot?.querySelector(
+          ".fallback-host video",
+        ),
       ).toBe(hlsVideo),
     );
     expect(hlsVideo.muted).toBe(true);
@@ -644,7 +658,9 @@ describe("camera presentation retention", () => {
     document.body.append(initial);
     await vi.waitFor(() =>
       expect(
-        presentation(initial)?.shadowRoot?.querySelector(".hls-host video"),
+        presentation(initial)?.shadowRoot?.querySelector(
+          ".fallback-host video",
+        ),
       ).toBe(hlsVideo),
     );
     expect(hlsVideo.muted).toBe(true);
@@ -661,7 +677,9 @@ describe("camera presentation retention", () => {
     document.body.append(returned);
     await vi.waitFor(() =>
       expect(
-        presentation(returned)?.shadowRoot?.querySelector(".hls-host video"),
+        presentation(returned)?.shadowRoot?.querySelector(
+          ".fallback-host video",
+        ),
       ).toBe(hlsVideo),
     );
     expect(hlsVideo.muted).toBe(false);
@@ -675,7 +693,7 @@ describe("camera presentation retention", () => {
     document.body.append(view);
     await vi.waitFor(() =>
       expect(
-        presentation(view)?.shadowRoot?.querySelector(".hls-host video"),
+        presentation(view)?.shadowRoot?.querySelector(".fallback-host video"),
       ).toBe(hlsVideo),
     );
     expect(hlsVideo.muted).toBe(false);
@@ -706,7 +724,7 @@ describe("camera presentation retention", () => {
     document.body.append(view);
     await vi.waitFor(() =>
       expect(
-        presentation(view)?.shadowRoot?.querySelector(".hls-host video"),
+        presentation(view)?.shadowRoot?.querySelector(".fallback-host video"),
       ).toBe(hlsVideo),
     );
     toggleMute(view);
@@ -729,7 +747,7 @@ describe("camera presentation retention", () => {
     document.body.append(view);
     await vi.waitFor(() =>
       expect(
-        presentation(view)?.shadowRoot?.querySelector(".hls-host video"),
+        presentation(view)?.shadowRoot?.querySelector(".fallback-host video"),
       ).toBe(hlsVideo),
     );
     expect(hlsVideo.muted).toBe(false);
@@ -754,7 +772,7 @@ describe("camera presentation retention", () => {
     document.body.append(view);
     await vi.waitFor(() =>
       expect(
-        presentation(view)?.shadowRoot?.querySelector(".hls-host video"),
+        presentation(view)?.shadowRoot?.querySelector(".fallback-host video"),
       ).toBe(hlsVideo),
     );
     toggleMute(view);
@@ -794,7 +812,7 @@ describe("camera presentation retention", () => {
     document.body.append(view);
     await vi.waitFor(() =>
       expect(
-        presentation(view)?.shadowRoot?.querySelector(".hls-host video"),
+        presentation(view)?.shadowRoot?.querySelector(".fallback-host video"),
       ).toBe(hlsVideo),
     );
 
@@ -855,7 +873,7 @@ describe("camera presentation retention", () => {
     document.body.append(view);
     await vi.waitFor(() =>
       expect(
-        presentation(view)?.shadowRoot?.querySelector(".hls-host video"),
+        presentation(view)?.shadowRoot?.querySelector(".fallback-host video"),
       ).toBe(hlsVideo),
     );
     toggleMute(view);
@@ -888,7 +906,7 @@ describe("camera presentation retention", () => {
 
     await vi.waitFor(() =>
       expect(
-        presentation(view)?.shadowRoot?.querySelector(".hls-host video"),
+        presentation(view)?.shadowRoot?.querySelector(".fallback-host video"),
       ).toBe(hlsVideo),
     );
     expect(hlsVideo.muted).toBe(false);
@@ -903,7 +921,7 @@ describe("camera presentation retention", () => {
 
     await vi.waitFor(() =>
       expect(
-        presentation(view)?.shadowRoot?.querySelector(".hls-host video"),
+        presentation(view)?.shadowRoot?.querySelector(".fallback-host video"),
       ).toBe(hlsVideo),
     );
     expect(hlsVideo.muted).toBe(false);
@@ -922,6 +940,7 @@ function createApi(): HomeAssistantApi {
 function cameraItem(entityId: string) {
   return {
     available: true,
+    connection: "home_assistant" as const,
     entityId,
     label: entityId,
     lowLatencyHls: true,

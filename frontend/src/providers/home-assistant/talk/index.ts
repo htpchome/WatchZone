@@ -35,7 +35,7 @@ export class HomeAssistantTalkProvider {
     api: HomeAssistantApi,
     entityId: string,
   ): Promise<boolean> {
-    return getTalkCapability(api, entityId);
+    return getTalkCapability(api, "home_assistant", entityId);
   }
 
   public async connect(
@@ -72,8 +72,13 @@ export class HomeAssistantTalkProvider {
                 () => undefined,
               ),
             subscribe: (offer, callback) =>
-              subscribeTalkOffer(api, entityId, offer, forceStandard, (event) =>
-                callback(mapEvent(event)),
+              subscribeTalkOffer(
+                api,
+                "home_assistant",
+                entityId,
+                offer,
+                forceStandard,
+                (event) => callback(mapEvent(event)),
               ),
           },
         });

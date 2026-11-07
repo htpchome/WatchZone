@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DashboardCard } from "../src/card/watchzone-card";
 import { normalizeCardConfig, type CardConfig } from "../src/core/config";
+import type { HomeAssistantMessage } from "../src/core/home-assistant";
 import {
   ACCORDION_ITEM_TAG,
   CARD_TYPE,
@@ -983,6 +984,111 @@ describe("watchzone-card-editor", () => {
     ).toBe(false);
 
     document.removeEventListener("context-request", contextHandler);
+  });
+
+  it("retains HA and capability choices while switching connection types", async () => {
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as CardEditor;
+    editor.hass = {
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "streaming",
+          attributes: { friendly_name: "Front" },
+        },
+      },
+      connection: { subscribeMessage: async () => () => undefined },
+      callService: async () => undefined,
+      callWS: async <T>(message: HomeAssistantMessage): Promise<T> => {
+        if (message.type.endsWith("/live/source")) {
+          return {
+            id: "frigate_go2rtc:entry-front:front",
+            type: "frigate_go2rtc",
+            frigate_instance_id: "frigate",
+            stream_name: "front",
+          } as T;
+        }
+        if (message.type.endsWith("/talk/capability")) {
+          return { supported: true } as T;
+        }
+        return {
+          supported: true,
+          pan: true,
+          tilt: true,
+          zoom: false,
+          focus: false,
+          presets: [],
+        } as T;
+      },
+      hassUrl: (path: string) => path,
+    };
+    editor.setConfig({
+      type: CARD_TYPE,
+      cameras: [
+        {
+          entity_id: "camera.front",
+          low_latency_hls: false,
+          ptz_enabled: true,
+          two_way_talk_enabled: true,
+        },
+      ],
+    });
+    document.body.append(editor);
+    await editor.updateComplete;
+    (
+      editor.shadowRoot?.querySelector(
+        '[aria-label="Edit camera: Front"]',
+      ) as HTMLElement
+    ).click();
+    await vi.waitFor(() =>
+      expect(
+        editor.shadowRoot?.querySelector('ha-selector[label="Connection"]'),
+      ).not.toBeNull(),
+    );
+
+    const connection = editor.shadowRoot?.querySelector(
+      'ha-selector[label="Connection"]',
+    ) as TestBooleanSelector;
+    connection.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: "frigate_go2rtc" },
+      }),
+    );
+    await editor.updateComplete;
+    expect(
+      editor.shadowRoot?.querySelector(
+        '[data-camera-config-key="low_latency_hls"]',
+      ),
+    ).toBeNull();
+    expect(
+      (
+        editor.shadowRoot?.querySelector(
+          '[data-camera-config-key="two_way_talk_enabled"]',
+        ) as TestBooleanSelector
+      ).value,
+    ).toBe(true);
+    expect(
+      (
+        editor.shadowRoot?.querySelector(
+          '[data-camera-config-key="ptz_enabled"]',
+        ) as TestBooleanSelector
+      ).value,
+    ).toBe(true);
+
+    connection.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: "home_assistant" },
+      }),
+    );
+    await editor.updateComplete;
+    expect(
+      (
+        editor.shadowRoot?.querySelector(
+          '[data-camera-config-key="low_latency_hls"]',
+        ) as TestBooleanSelector
+      ).value,
+    ).toBe(false);
   });
 
   it("uses a one-time dirty-state writer without subscribing", async () => {

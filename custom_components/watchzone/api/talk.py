@@ -25,6 +25,7 @@ from mashumaro import MissingField
 from webrtc_models import RTCIceCandidateInit
 
 from ..const import DOMAIN
+from ..providers.frigate.capabilities import async_two_way_audio_capability
 from ..providers.home_assistant.talk import async_talk_capability
 from . import runtime_from_hass
 
@@ -55,6 +56,9 @@ def _parse_candidate(value: Any) -> RTCIceCandidateInit:
     {
         vol.Required("type"): f"{DOMAIN}/talk/capability",
         vol.Required("entity_id"): cv.entity_id,
+        vol.Optional("provider", default="home_assistant"): vol.In(
+            ("home_assistant", "frigate_go2rtc")
+        ),
     }
 )
 @async_response
@@ -64,7 +68,11 @@ async def ws_talk_capability(
     """Report whether Home Assistant exposes a usable two-way-audio path."""
     try:
         _require_camera_read(connection, msg["entity_id"])
-        supported = await async_talk_capability(hass, msg["entity_id"])
+        supported = (
+            await async_two_way_audio_capability(hass, msg["entity_id"])
+            if msg["provider"] == "frigate_go2rtc"
+            else await async_talk_capability(hass, msg["entity_id"])
+        )
     except HomeAssistantError as err:
         connection.send_error(msg["id"], "talk_capability_failed", str(err))
         return
@@ -81,6 +89,9 @@ async def ws_talk_capability(
         vol.Required("type"): f"{DOMAIN}/talk/webrtc/offer",
         vol.Required("entity_id"): cv.entity_id,
         vol.Required("offer"): str,
+        vol.Optional("provider", default="home_assistant"): vol.In(
+            ("home_assistant", "frigate_go2rtc")
+        ),
         vol.Optional("force_standard", default=False): bool,
         vol.Optional("capability_probe", default=False): bool,
     }
@@ -93,7 +104,12 @@ async def ws_talk_offer(
     entity_id = msg["entity_id"]
     try:
         _require_camera_read(connection, entity_id)
-        if not await async_talk_capability(hass, entity_id):
+        supported = (
+            await async_two_way_audio_capability(hass, entity_id)
+            if msg["provider"] == "frigate_go2rtc"
+            else await async_talk_capability(hass, entity_id)
+        )
+        if not supported:
             raise HomeAssistantError("Camera does not support two-way audio")
         runtime = runtime_from_hass(hass)
 
@@ -107,6 +123,11 @@ async def ws_talk_offer(
             send_event,
             force_standard=msg["force_standard"] or msg["capability_probe"],
             purpose="talk_probe" if msg["capability_probe"] else "talk",
+            provider_id=(
+                "frigate_go2rtc"
+                if msg["provider"] == "frigate_go2rtc"
+                else None
+            ),
         )
     except HomeAssistantError as err:
         connection.send_error(msg["id"], "talk_offer_failed", str(err))

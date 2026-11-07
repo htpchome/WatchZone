@@ -129,7 +129,7 @@ export const cameraLiveViewStyles = css`
     font-weight: var(--wzc-font-weight-semibold);
   }
 
-  .hls-host,
+  .fallback-host,
   .webrtc-host,
   video {
     position: absolute;
@@ -139,11 +139,11 @@ export const cameraLiveViewStyles = css`
     block-size: 100%;
   }
 
-  .hls-host[hidden] {
+  .fallback-host[hidden] {
     display: none;
   }
 
-  .hls-host.candidate {
+  .fallback-host.candidate {
     opacity: 0;
     pointer-events: none;
   }
@@ -153,7 +153,7 @@ export const cameraLiveViewStyles = css`
     pointer-events: none;
   }
 
-  .hls-host video,
+  .fallback-host video,
   video {
     object-fit: var(--wzc-live-fit, contain);
     background: inherit;

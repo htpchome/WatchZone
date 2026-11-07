@@ -27,6 +27,7 @@ describe("WatchZone YAML configuration manager", () => {
           camera_shadows: false,
           cameras: [
             {
+              connection: "frigate_go2rtc",
               entity_id: "camera.front",
               lights: [
                 { entity_id: "light.porch", icon: "mdi:coach-lamp" },
@@ -55,6 +56,7 @@ describe("WatchZone YAML configuration manager", () => {
       camera_shadows: false,
       cameras: [
         {
+          connection: "frigate_go2rtc",
           entity_id: "camera.front",
           lights: [
             { entity_id: "light.porch", icon: "mdi:coach-lamp" },

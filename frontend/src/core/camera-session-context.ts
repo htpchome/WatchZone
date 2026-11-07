@@ -1,5 +1,8 @@
+import type { LiveConnectionType } from "./config";
+
 export interface ActiveCameraSession {
   readonly available: boolean;
+  readonly connection: LiveConnectionType;
   readonly entityId: string;
   readonly incomingStream?: MediaStream;
   readonly muted: boolean;

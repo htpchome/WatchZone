@@ -155,7 +155,9 @@ describe("layout composition", () => {
       kind: "component",
       componentType: "two_way_talk",
       controlRegion: "center",
-      config: { enabledCameraIds: ["camera.front"] },
+      config: {
+        cameras: [{ connection: "home_assistant", entityId: "camera.front" }],
+      },
     });
   });
 

@@ -13,7 +13,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from yarl import URL
 
 from ..ptz import PtzCapabilities
-from .live import async_get_frigate_client
+from .source import FrigateClient, async_get_frigate_client
 
 _CAPABILITY_TIMEOUT = ClientTimeout(total=5)
 _TALK_CAPABILITY_KEYS = frozenset(
@@ -34,7 +34,7 @@ _TALK_CAPABILITY_KEYS = frozenset(
 _TALK_CAPABILITY_COLLECTIONS = frozenset({"capabilities", "features"})
 
 
-class _CapabilityClient(Protocol):
+class _CapabilityClient(FrigateClient, Protocol):
     """Narrow optional Frigate integration client surface."""
 
     validate_ssl: bool

@@ -10,7 +10,9 @@ import {
   sanitizeCameraTitleInput,
   type CameraConfig,
   type CardConfig,
+  type LiveConnectionType,
 } from "../core/config";
+import { resolveLiveSource } from "../api/live-source";
 import {
   ACCORDION_ITEM_TAG,
   ACCORDION_TAG,
@@ -97,7 +99,7 @@ type BooleanConfigFlag =
 
 type CameraBooleanConfigFlag = Exclude<
   keyof CameraConfig,
-  "entity_id" | "lights" | "title"
+  "connection" | "entity_id" | "lights" | "title"
 >;
 
 export class CardEditor extends LitElement {
@@ -120,6 +122,9 @@ export class CardEditor extends LitElement {
   private _ptzCapability?: PtzCapability;
   private _ptzCapabilityGeneration = 0;
   private _ptzCapabilityPending = false;
+  private _frigateConnectionAvailable = false;
+  private _frigateConnectionPending = false;
+  private _frigateConnectionGeneration = 0;
   private _editingCameraIndex?: number;
   private _dirtyContext?: DirtyStateContext<YamlCardConfig>;
   private _dirtySeeded = false;
@@ -444,22 +449,26 @@ export class CardEditor extends LitElement {
                     density="compact"
                     heading=${this._t("editor.connection_source")}
                     item-key="connection"
-                    summary-text=${this._t("editor.home_assistant")}
+                    summary-text=${this._connectionName(camera.connection)}
                   >
                     <div class="camera-section-fields">
                       <ha-selector
                         label=${this._t("editor.connection")}
                         .hass=${this._hass}
                         .selector=${this._connectionSourceSelector()}
-                        .value=${"home_assistant"}
+                        .value=${camera.connection}
                         .required=${true}
-                        .disabled=${true}
+                        @value-changed=${this._handleConnectionChange}
                       ></ha-selector>
-                      ${this._renderCameraBoolean(
-                        "low_latency_hls",
-                        this._t("editor.low_latency_hls"),
-                        camera.low_latency_hls,
-                      )}
+                      ${
+                        camera.connection === "home_assistant"
+                          ? this._renderCameraBoolean(
+                              "low_latency_hls",
+                              this._t("editor.low_latency_hls"),
+                              camera.low_latency_hls,
+                            )
+                          : nothing
+                      }
                     </div>
                   </${accordionItemTag}>
                   <${accordionItemTag}
@@ -754,6 +763,13 @@ export class CardEditor extends LitElement {
             label: this._t("editor.home_assistant"),
             value: "home_assistant",
           },
+          {
+            label: this._t("editor.frigate_go2rtc"),
+            value: "frigate_go2rtc",
+            disabled:
+              this._frigateConnectionPending ||
+              !this._frigateConnectionAvailable,
+          },
         ],
       },
     } as const;
@@ -812,8 +828,22 @@ export class CardEditor extends LitElement {
     if (!this._cameraDraft) return;
     const value = eventString(event);
     this._cameraDraft = { ...this._cameraDraft, entity_id: value };
-    this._checkTalkCapability(value);
-    this._checkPtzCapability(value);
+    this._checkConnectionCapability(value);
+    this._checkTalkCapability(value, this._cameraDraft.connection);
+    this._checkPtzCapability(value, this._cameraDraft.connection);
+    this.requestUpdate();
+  };
+
+  private readonly _handleConnectionChange = (
+    event: ValueChangedEvent,
+  ): void => {
+    if (!this._cameraDraft) return;
+    const connection = eventString(event) as LiveConnectionType;
+    if (connection !== "home_assistant" && connection !== "frigate_go2rtc")
+      return;
+    this._cameraDraft = { ...this._cameraDraft, connection };
+    this._checkTalkCapability(this._cameraDraft.entity_id, connection);
+    this._checkPtzCapability(this._cameraDraft.entity_id, connection);
     this.requestUpdate();
   };
 
@@ -950,6 +980,8 @@ export class CardEditor extends LitElement {
     this._talkCapabilityPending = false;
     this._ptzCapability = undefined;
     this._ptzCapabilityPending = false;
+    this._frigateConnectionAvailable = false;
+    this._frigateConnectionPending = false;
     this.requestUpdate();
   };
 
@@ -964,8 +996,9 @@ export class CardEditor extends LitElement {
     this._cameraDraft = { ...camera };
     this._cameraTitleInput = camera.title;
     this._cancelAddingLight();
-    this._checkTalkCapability(camera.entity_id);
-    this._checkPtzCapability(camera.entity_id);
+    this._checkConnectionCapability(camera.entity_id);
+    this._checkTalkCapability(camera.entity_id, camera.connection);
+    this._checkPtzCapability(camera.entity_id, camera.connection);
     this.requestUpdate();
   };
 
@@ -1006,6 +1039,9 @@ export class CardEditor extends LitElement {
     this._ptzCapabilityGeneration += 1;
     this._ptzCapability = undefined;
     this._ptzCapabilityPending = false;
+    this._frigateConnectionGeneration += 1;
+    this._frigateConnectionAvailable = false;
+    this._frigateConnectionPending = false;
     this._editingCameraIndex = undefined;
     this.requestUpdate();
   };
@@ -1090,7 +1126,10 @@ export class CardEditor extends LitElement {
     ).replaceAll("_", " ");
   }
 
-  private _checkTalkCapability(entityId: string): void {
+  private _checkTalkCapability(
+    entityId: string,
+    connection: LiveConnectionType,
+  ): void {
     const generation = ++this._talkCapabilityGeneration;
     this._talkCapability = undefined;
     if (!this._hass || !entityId.startsWith("camera.")) {
@@ -1101,7 +1140,7 @@ export class CardEditor extends LitElement {
     this._talkCapabilityPending = true;
     this.requestUpdate();
     void this._talkResolver
-      .supports(createHomeAssistantApi(this._hass), entityId)
+      .supports(createHomeAssistantApi(this._hass), connection, entityId)
       .catch(() => false)
       .then((supported) => {
         if (generation !== this._talkCapabilityGeneration) return;
@@ -1111,7 +1150,10 @@ export class CardEditor extends LitElement {
       });
   }
 
-  private _checkPtzCapability(entityId: string): void {
+  private _checkPtzCapability(
+    entityId: string,
+    connection: LiveConnectionType,
+  ): void {
     const generation = ++this._ptzCapabilityGeneration;
     this._ptzCapability = undefined;
     if (!this._hass || !entityId.startsWith("camera.")) {
@@ -1122,11 +1164,7 @@ export class CardEditor extends LitElement {
     this._ptzCapabilityPending = true;
     this.requestUpdate();
     void this._ptzResolver
-      .capability(
-        createHomeAssistantApi(this._hass),
-        "home_assistant",
-        entityId,
-      )
+      .capability(createHomeAssistantApi(this._hass), connection, entityId)
       .catch(() => undefined)
       .then((capability) => {
         if (generation !== this._ptzCapabilityGeneration) return;
@@ -1136,10 +1174,44 @@ export class CardEditor extends LitElement {
       });
   }
 
+  private _checkConnectionCapability(entityId: string): void {
+    const generation = ++this._frigateConnectionGeneration;
+    this._frigateConnectionAvailable = false;
+    if (!this._hass || !entityId.startsWith("camera.")) {
+      this._frigateConnectionPending = false;
+      this.requestUpdate();
+      return;
+    }
+    this._frigateConnectionPending = true;
+    this.requestUpdate();
+    void resolveLiveSource(
+      createHomeAssistantApi(this._hass),
+      "frigate_go2rtc",
+      entityId,
+    )
+      .then(() => true)
+      .catch(() => false)
+      .then((available) => {
+        if (generation !== this._frigateConnectionGeneration) return;
+        this._frigateConnectionAvailable = available;
+        this._frigateConnectionPending = false;
+        this.requestUpdate();
+      });
+  }
+
+  private _connectionName(connection: LiveConnectionType): string {
+    return connection === "frigate_go2rtc"
+      ? this._t("editor.frigate_go2rtc")
+      : this._t("editor.home_assistant");
+  }
+
   private _cameraSummary(camera: CameraConfig): string {
-    const connection = camera.low_latency_hls
-      ? this._t("editor.low_latency_hls")
-      : this._t("editor.standard_hls");
+    const connection =
+      camera.connection === "frigate_go2rtc"
+        ? this._t("editor.frigate_go2rtc")
+        : camera.low_latency_hls
+          ? this._t("editor.low_latency_hls")
+          : this._t("editor.standard_hls");
     const audio = [
       camera.start_live_unmuted_pc_tablet
         ? this._t("editor.pc_tablet")
@@ -1290,6 +1362,7 @@ function eventString(event: ValueChangedEvent): string {
 function cameraConfigEquals(left: CameraConfig, right: CameraConfig): boolean {
   return (
     left.entity_id === right.entity_id &&
+    left.connection === right.connection &&
     linkedLightsEqual(left.lights, right.lights) &&
     left.low_latency_hls === right.low_latency_hls &&
     left.ptz_enabled === right.ptz_enabled &&

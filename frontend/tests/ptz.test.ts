@@ -71,6 +71,7 @@ describe("PTZ component", () => {
 function cameraSession() {
   return {
     available: true,
+    connection: "home_assistant" as const,
     entityId: "camera.front",
     holdOverlay: vi.fn(() => vi.fn()),
     muted: true,

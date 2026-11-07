@@ -3,6 +3,7 @@ import type {
   HomeAssistantApi,
   HomeAssistantUnsubscribe,
 } from "../core/home-assistant";
+import type { LiveConnectionType } from "../core/config";
 
 export type LiveOfferEvent =
   | {
@@ -51,11 +52,13 @@ export function subscribeLiveOffer(
   entityId: string,
   offer: string,
   callback: (event: LiveOfferEvent) => void,
+  provider: LiveConnectionType = "home_assistant",
 ): Promise<HomeAssistantUnsubscribe> {
   return api.subscribeMessage(callback, {
     type: OFFER_COMMAND,
     entity_id: entityId,
     offer,
+    provider,
   });
 }
 

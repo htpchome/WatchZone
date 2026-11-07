@@ -36,6 +36,7 @@ describe("WatchZone card configuration", () => {
       }).cameras,
     ).toEqual([
       {
+        connection: "home_assistant",
         entity_id: "camera.front",
         lights: [],
         low_latency_hls: false,
@@ -54,6 +55,34 @@ describe("WatchZone card configuration", () => {
         cameras: [{ entity_id: "camera.front", two_way_talk_enabled: true }],
       }).cameras[0]?.two_way_talk_enabled,
     ).toBe(true);
+  });
+
+  it("keeps connection choice and controls independent in a mixed card", () => {
+    const config = normalizeCardConfig({
+      cameras: [
+        { entity_id: "camera.hall" },
+        { entity_id: "camera.doorbell" },
+        {
+          connection: "frigate_go2rtc",
+          entity_id: "camera.workshop",
+          ptz_enabled: true,
+        },
+        {
+          connection: "frigate_go2rtc",
+          entity_id: "camera.gate",
+          two_way_talk_enabled: true,
+        },
+      ],
+    });
+
+    expect(config.cameras.map(({ connection }) => connection)).toEqual([
+      "home_assistant",
+      "home_assistant",
+      "frigate_go2rtc",
+      "frigate_go2rtc",
+    ]);
+    expect(config.cameras[2]?.ptz_enabled).toBe(true);
+    expect(config.cameras[3]?.two_way_talk_enabled).toBe(true);
   });
 
   it("normalizes the opt-in PTZ camera capability", () => {

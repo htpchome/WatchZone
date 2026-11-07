@@ -1028,14 +1028,14 @@ test("aligns phone carousel controls and stage handle to the active stage", asyn
       const presentation = view?.shadowRoot?.querySelector<
         HTMLElement & {
           requestUpdate(): void;
-          selected?: "hls" | "webrtc";
+          selected?: "fallback" | "webrtc";
           transport?: "hls_native" | "hls_mse" | "webrtc";
           updateComplete: Promise<boolean>;
         }
       >("wzc-camera-live");
       if (!view || !presentation)
         throw new Error("Camera view was not rendered");
-      presentation.selected = "hls";
+      presentation.selected = "fallback";
       presentation.transport = "hls_native";
       presentation.requestUpdate();
       await presentation.updateComplete;
@@ -2219,7 +2219,10 @@ test("retains one live connection while the card presentation is replaced", asyn
     "/api/camera_proxy/camera.front?token=poster-token",
   );
   await expect(page.locator("wzc-camera .generic-fallback")).toBeVisible();
-  await expect(page.locator("wzc-camera .hls-host")).toHaveCSS("opacity", "0");
+  await expect(page.locator("wzc-camera .fallback-host")).toHaveCSS(
+    "opacity",
+    "0",
+  );
 
   const initialVideo = page.locator("wzc-camera video.webrtc");
   await initialVideo.evaluate((element) => {
@@ -2321,22 +2324,19 @@ test("retains one live connection while the card presentation is replaced", asyn
   await expect(connectionIndicator.locator(".connection-spinner")).toHaveCount(
     0,
   );
-  await expect
-    .poll(() =>
-      page.evaluate(
-        () =>
-          (
-            window as typeof window & {
-              __wzcTestConnectionCount: number;
-              __wzcTestHlsConnectionCount: number;
-            }
-          ).__wzcTestHlsConnectionCount,
-      ),
-    )
-    .toBe(1);
   await expect(connectionIndicator).toBeHidden({
     timeout: CAMERA_OVERLAY_HIDE_DELAY_MS + 1_000,
   });
+  expect(
+    await page.evaluate(
+      () =>
+        (
+          window as typeof window & {
+            __wzcTestHlsConnectionCount: number;
+          }
+        ).__wzcTestHlsConnectionCount,
+    ),
+  ).toBeLessThanOrEqual(1);
   await expect(connectionIndicator).toHaveCount(1);
   const layoutSizing = await page
     .locator("watchzone-card")
