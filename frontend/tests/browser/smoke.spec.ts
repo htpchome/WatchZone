@@ -179,7 +179,7 @@ test("keeps the panel camera switcher and carousel selection bidirectional", asy
     "box-shadow",
     "rgb(20, 21, 22) 0px 4px 8px 0px",
   );
-  await expect(switcher.locator(".active-indicator")).toHaveCSS(
+  await expect(buttons.nth(0)).toHaveCSS(
     "box-shadow",
     "rgb(30, 31, 32) 0px 1px 2px 0px",
   );
@@ -235,10 +235,7 @@ test("keeps the panel camera switcher and carousel selection bidirectional", asy
   });
   await expect(switcher.locator(".scroller")).not.toHaveClass(/shadows/);
   await expect(switcher.locator(".scroller")).toHaveCSS("box-shadow", "none");
-  await expect(switcher.locator(".active-indicator")).toHaveCSS(
-    "box-shadow",
-    "none",
-  );
+  await expect(buttons.nth(0)).toHaveCSS("box-shadow", "none");
 });
 
 test("lets the camera switcher shadow paint into the card padding", async ({
@@ -335,14 +332,154 @@ test("restores the camera switcher after an inner-dashboard detach", async ({
   );
 });
 
-test("requests visibility for an active overflow camera", async ({ page }) => {
+test("keeps the HA pre-editor wrapper stable without observing switcher geometry", async ({
+  page,
+}) => {
   await page.addInitScript(() => {
     const testWindow = window as typeof window & {
-      __wzcScrollIntoViewOptions?: ScrollIntoViewOptions;
+      __wzcSwitcherResizeObservations?: number;
     };
-    Element.prototype.scrollIntoView = function (options) {
-      testWindow.__wzcScrollIntoViewOptions =
-        typeof options === "object" ? options : undefined;
+    testWindow.__wzcSwitcherResizeObservations = 0;
+    const NativeResizeObserver = window.ResizeObserver;
+    window.ResizeObserver = class extends NativeResizeObserver {
+      public override observe(
+        target: Element,
+        options?: ResizeObserverOptions,
+      ): void {
+        const root = target.getRootNode();
+        if (
+          root instanceof ShadowRoot &&
+          root.host.localName === "wzc-camera-switcher"
+        ) {
+          testWindow.__wzcSwitcherResizeObservations =
+            (testWindow.__wzcSwitcherResizeObservations ?? 0) + 1;
+        }
+        super.observe(target, options);
+      }
+    };
+  });
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  const card = page.locator("watchzone-card");
+  await card.evaluate((element) => {
+    (
+      element as HTMLElement & {
+        setConfig(config: unknown): void;
+      }
+    ).setConfig({
+      type: "custom:watchzone-card",
+      cameras: [
+        { entity_id: "camera.front", title: "Front Door" },
+        { entity_id: "camera.back", title: "Back Yard" },
+      ],
+    });
+  });
+  await expect(card.locator("wzc-camera-switcher button")).toHaveCount(2);
+
+  const result = await card.evaluate(async (element) => {
+    const wrapper = document.createElement("div");
+    const root = wrapper.attachShadow({ mode: "open" });
+    const style = document.createElement("style");
+    style.textContent = `
+      :host { display: block; position: relative; }
+      .card-wrapper { position: relative; height: 100%; z-index: 0; }
+      .card-overlay {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 180ms ease-in-out;
+      }
+      .card-overlay.visible { opacity: 1; pointer-events: auto; }
+      .control-overlay {
+        position: absolute;
+        inset: 0;
+        opacity: 0.8;
+        background: white;
+      }
+    `;
+    const cardWrapper = document.createElement("div");
+    cardWrapper.className = "card-wrapper";
+    cardWrapper.inert = true;
+    const overlay = document.createElement("div");
+    overlay.className = "card-overlay";
+    const controlOverlay = document.createElement("div");
+    controlOverlay.className = "control-overlay";
+    overlay.append(controlOverlay);
+    const width = element.getBoundingClientRect().width;
+    wrapper.style.inlineSize = `${width}px`;
+    element.replaceWith(wrapper);
+    cardWrapper.append(element);
+    root.append(style, cardWrapper, overlay);
+
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+    let resizeNotifications = 0;
+    const observer = new ResizeObserver(() => {
+      resizeNotifications += 1;
+    });
+    observer.observe(element);
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+    resizeNotifications = 0;
+    const boxes: DOMRect[] = [];
+    const sample = async (): Promise<void> => {
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => resolve()),
+      );
+      boxes.push(element.getBoundingClientRect());
+    };
+    const pagePosition = { x: window.scrollX, y: window.scrollY };
+    overlay.classList.add("visible");
+    for (let index = 0; index < 15; index += 1) await sample();
+    overlay.classList.remove("visible");
+    for (let index = 0; index < 15; index += 1) await sample();
+    observer.disconnect();
+
+    return {
+      heightDelta:
+        Math.max(...boxes.map(({ height }) => height)) -
+        Math.min(...boxes.map(({ height }) => height)),
+      pageMoved:
+        window.scrollX !== pagePosition.x || window.scrollY !== pagePosition.y,
+      resizeNotifications,
+      widthDelta:
+        Math.max(...boxes.map(({ width: boxWidth }) => boxWidth)) -
+        Math.min(...boxes.map(({ width: boxWidth }) => boxWidth)),
+    };
+  });
+
+  expect(result).toEqual({
+    heightDelta: 0,
+    pageMoved: false,
+    resizeNotifications: 0,
+    widthDelta: 0,
+  });
+  expect(
+    await page.evaluate(
+      () =>
+        (
+          window as typeof window & {
+            __wzcSwitcherResizeObservations?: number;
+          }
+        ).__wzcSwitcherResizeObservations,
+    ),
+  ).toBe(0);
+});
+
+test("scrolls only the camera switcher's viewport for an overflow selection", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const testWindow = window as typeof window & {
+      __wzcScrollIntoViewCalls?: number;
+    };
+    testWindow.__wzcScrollIntoViewCalls = 0;
+    Element.prototype.scrollIntoView = function () {
+      testWindow.__wzcScrollIntoViewCalls =
+        (testWindow.__wzcScrollIntoViewCalls ?? 0) + 1;
     };
   });
   await page.goto("/");
@@ -366,6 +503,10 @@ test("requests visibility for an active overflow camera", async ({ page }) => {
   await switcher.evaluate((element) => {
     element.style.inlineSize = "14rem";
   });
+  const pagePosition = await page.evaluate(() => ({
+    x: window.scrollX,
+    y: window.scrollY,
+  }));
   await switcher
     .locator("button")
     .last()
@@ -373,16 +514,22 @@ test("requests visibility for an active overflow camera", async ({ page }) => {
 
   await expect
     .poll(() =>
-      page.evaluate(
-        () =>
-          (
-            window as typeof window & {
-              __wzcScrollIntoViewOptions?: ScrollIntoViewOptions;
-            }
-          ).__wzcScrollIntoViewOptions,
-      ),
+      switcher.locator(".scroller").evaluate((scroller) => scroller.scrollLeft),
     )
-    .toMatchObject({ block: "nearest", inline: "center" });
+    .toBeGreaterThan(0);
+  expect(
+    await page.evaluate(
+      () =>
+        (
+          window as typeof window & {
+            __wzcScrollIntoViewCalls?: number;
+          }
+        ).__wzcScrollIntoViewCalls,
+    ),
+  ).toBe(0);
+  expect(
+    await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY })),
+  ).toEqual(pagePosition);
 });
 
 test("preserves expanded camera-stage geometry across carousel selection", async ({

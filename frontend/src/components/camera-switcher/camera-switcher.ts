@@ -21,9 +21,7 @@ export class CameraSwitcherComponent extends LitElement {
     targetModuleId: { attribute: false },
   };
 
-  private _frame?: number;
-  private _observedScroller?: HTMLElement;
-  private _resizeObserver?: ResizeObserver;
+  private _revealActiveAfterUpdate = false;
   private _state: CameraSelectionState = { items: [] };
   private _unsubscribe?: () => void;
 
@@ -40,11 +38,6 @@ export class CameraSwitcherComponent extends LitElement {
   public disconnectedCallback(): void {
     this._unsubscribe?.();
     this._unsubscribe = undefined;
-    this._resizeObserver?.disconnect();
-    this._resizeObserver = undefined;
-    this._observedScroller = undefined;
-    if (this._frame !== undefined) cancelAnimationFrame(this._frame);
-    this._frame = undefined;
     super.disconnectedCallback();
   }
 
@@ -61,7 +54,6 @@ export class CameraSwitcherComponent extends LitElement {
       aria-label=${this.localize("camera.switcher")}
     >
       <div class="track" role="tablist">
-        <span class="active-indicator" aria-hidden="true"></span>
         ${repeat(
           this._state.items,
           ({ entityId }) => entityId,
@@ -83,16 +75,9 @@ export class CameraSwitcherComponent extends LitElement {
   }
 
   protected updated(): void {
-    if (!this._resizeObserver && typeof ResizeObserver !== "undefined") {
-      this._resizeObserver = new ResizeObserver(() => this._scheduleGeometry());
-    }
-    const scroller = this.renderRoot.querySelector<HTMLElement>(".scroller");
-    if (scroller !== this._observedScroller) {
-      this._resizeObserver?.disconnect();
-      this._observedScroller = scroller ?? undefined;
-      if (scroller) this._resizeObserver?.observe(scroller);
-    }
-    this._scheduleGeometry();
+    if (!this._revealActiveAfterUpdate) return;
+    this._revealActiveAfterUpdate = false;
+    this._revealActive();
   }
 
   private _subscribe(): void {
@@ -102,9 +87,12 @@ export class CameraSwitcherComponent extends LitElement {
       this._state = { items: [] };
       return;
     }
+    this._revealActiveAfterUpdate = true;
     this._unsubscribe = this.cameraSelection.subscribe(
       this.targetModuleId,
       (state) => {
+        this._revealActiveAfterUpdate ||=
+          state.activeEntityId !== this._state.activeEntityId;
         this._state = state;
         this.requestUpdate();
       },
@@ -116,34 +104,22 @@ export class CameraSwitcherComponent extends LitElement {
     if (entityId) this.cameraSelection?.select(this.targetModuleId, entityId);
   };
 
-  private _scheduleGeometry(): void {
-    if (this._frame !== undefined) cancelAnimationFrame(this._frame);
-    this._frame = requestAnimationFrame(() => {
-      this._frame = undefined;
-      const scroller = this.renderRoot.querySelector<HTMLElement>(".scroller");
-      const track = this.renderRoot.querySelector<HTMLElement>(".track");
-      const active = this.renderRoot.querySelector<HTMLElement>(
-        'button[aria-selected="true"]',
-      );
-      if (!scroller || !track || !active) return;
-      track.style.setProperty(
-        "--wzc-camera-switcher-active-offset",
-        `${active.offsetLeft}px`,
-      );
-      const indicator = track.querySelector<HTMLElement>(".active-indicator");
-      if (indicator) indicator.style.inlineSize = `${active.offsetWidth}px`;
-      const activeRect = active.getBoundingClientRect();
-      const scrollerRect = scroller.getBoundingClientRect();
-      if (
-        activeRect.left < scrollerRect.left ||
-        activeRect.right > scrollerRect.right
-      ) {
-        active.scrollIntoView({
-          behavior: reducedMotion() ? "auto" : "smooth",
-          block: "nearest",
-          inline: "center",
-        });
-      }
+  private _revealActive(): void {
+    const scroller = this.renderRoot.querySelector<HTMLElement>(".scroller");
+    const active = this.renderRoot.querySelector<HTMLElement>(
+      'button[aria-selected="true"]',
+    );
+    if (!scroller || !active) return;
+    const activeStart = active.offsetLeft;
+    const activeEnd = activeStart + active.offsetWidth;
+    const viewportStart = scroller.scrollLeft;
+    const viewportEnd = viewportStart + scroller.clientWidth;
+    if (activeStart >= viewportStart && activeEnd <= viewportEnd) return;
+    const centeredLeft =
+      activeStart - (scroller.clientWidth - active.offsetWidth) / 2;
+    scroller.scrollTo({
+      behavior: reducedMotion() ? "auto" : "smooth",
+      left: Math.max(0, centeredLeft),
     });
   }
 

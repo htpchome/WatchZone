@@ -7,7 +7,6 @@ export const cameraSwitcherStyles = css`
     inline-size: 100%;
     min-inline-size: 0;
     pointer-events: auto;
-    container-type: inline-size;
   }
 
   .scroller {
@@ -44,24 +43,6 @@ export const cameraSwitcherStyles = css`
     border-radius: var(--wzc-radius-pill);
   }
 
-  .active-indicator {
-    position: absolute;
-    inset-block: var(--wzc-camera-switcher-padding);
-    left: 0;
-    inline-size: 0;
-    background: var(--wzc-camera-switcher-active-background);
-    border-radius: var(--wzc-radius-pill);
-    transform: translateX(var(--wzc-camera-switcher-active-offset, 0));
-    transition:
-      inline-size var(--wzc-camera-switcher-transition-duration) ease,
-      transform var(--wzc-camera-switcher-transition-duration) ease;
-    pointer-events: none;
-  }
-
-  .scroller.shadows .active-indicator {
-    box-shadow: var(--wzc-camera-switcher-active-shadow);
-  }
-
   button {
     position: relative;
     z-index: 1;
@@ -76,11 +57,19 @@ export const cameraSwitcherStyles = css`
     font-weight: var(--wzc-font-weight-medium);
     white-space: nowrap;
     cursor: pointer;
+    transition:
+      color var(--wzc-camera-switcher-transition-duration) ease,
+      background-color var(--wzc-camera-switcher-transition-duration) ease;
     -webkit-tap-highlight-color: transparent;
   }
 
   button[aria-selected="true"] {
     color: var(--wzc-camera-switcher-active-color);
+    background: var(--wzc-camera-switcher-active-background);
+  }
+
+  .scroller.shadows button[aria-selected="true"] {
+    box-shadow: var(--wzc-camera-switcher-active-shadow);
   }
 
   button:focus-visible {
@@ -89,7 +78,7 @@ export const cameraSwitcherStyles = css`
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .active-indicator {
+    button {
       transition: none;
     }
   }
