@@ -41,6 +41,31 @@ describe("camera presentation fallback", () => {
     expect(camera.shadowRoot?.querySelector(".status")).toBeNull();
   });
 
+  it("keeps the fallback visible above a connecting HLS candidate", async () => {
+    const camera = document.createElement(
+      "wzc-camera-live",
+    ) as CameraLivePresentation;
+    camera.available = true;
+    camera.posterUrl = "/api/camera_proxy/camera.front?token=test";
+    camera.hlsVideo = document.createElement("video");
+    document.body.append(camera);
+    await camera.updateComplete;
+
+    const host = camera.shadowRoot?.querySelector<HTMLElement>(".hls-host");
+    expect(host?.classList.contains("candidate")).toBe(true);
+    expect(host?.getAttribute("aria-hidden")).toBe("true");
+    expect(host?.contains(camera.hlsVideo)).toBe(true);
+    expect(camera.shadowRoot?.querySelector("img.poster")).not.toBeNull();
+
+    camera.selected = "hls";
+    camera.transport = "hls_native";
+    await camera.updateComplete;
+
+    expect(host?.classList.contains("candidate")).toBe(false);
+    expect(host?.getAttribute("aria-hidden")).toBe("false");
+    expect(camera.shadowRoot?.querySelector("img.poster")).toBeNull();
+  });
+
   it("distinguishes standard and low-latency HLS while retaining the engine", async () => {
     const presentation = document.createElement(
       "wzc-camera-live",

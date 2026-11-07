@@ -155,8 +155,12 @@ The HLS adapter:
 7. When a non-Home-Assistant master has exactly one variant, passes that
    variant directly to the selected player to avoid a redundant manifest
    request.
-8. Reports live only after `loadeddata`, not merely after obtaining a playlist
-   URL or parsing a manifest.
+8. Keeps the connecting media element attached but visually transparent so its
+   black pre-frame surface cannot cover the camera still. Reports live only
+   after usable media output: a presented frame when the browser exposes video
+   frame callbacks, with `loadeddata` as the standards-compatible fallback.
+   It never reports live merely after obtaining a playlist URL or parsing a
+   manifest.
 
 The media playlist also supplies one browser-HLS live-edge policy shared by the
 native and HLS.js paths. Its advertised hold-back and target durations define a

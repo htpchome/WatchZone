@@ -254,8 +254,13 @@ export class CameraLivePresentation extends LitElement {
               ? this._renderSuspended()
               : html`${!this.selected ? this._renderFallback() : nothing}
                   <div
-                    class="hls-host"
+                    class=${
+                      this.selected === "hls"
+                        ? "hls-host"
+                        : "hls-host candidate"
+                    }
                     ?hidden=${this.selected === "webrtc"}
+                    aria-hidden=${this.selected === "hls" ? "false" : "true"}
                   ></div>
                   <div class="webrtc-host"></div>`
           }

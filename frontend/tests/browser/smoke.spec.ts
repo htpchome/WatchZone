@@ -2219,6 +2219,7 @@ test("retains one live connection while the card presentation is replaced", asyn
     "/api/camera_proxy/camera.front?token=poster-token",
   );
   await expect(page.locator("wzc-camera .generic-fallback")).toBeVisible();
+  await expect(page.locator("wzc-camera .hls-host")).toHaveCSS("opacity", "0");
 
   const initialVideo = page.locator("wzc-camera video.webrtc");
   await initialVideo.evaluate((element) => {

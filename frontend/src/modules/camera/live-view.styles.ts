@@ -143,6 +143,11 @@ export const cameraLiveViewStyles = css`
     display: none;
   }
 
+  .hls-host.candidate {
+    opacity: 0;
+    pointer-events: none;
+  }
+
   video.webrtc.candidate {
     opacity: 0;
     pointer-events: none;

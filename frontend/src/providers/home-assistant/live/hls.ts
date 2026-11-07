@@ -128,6 +128,7 @@ export async function createHomeAssistantHlsConnection(
   let stopLiveEdgeMonitor: (() => void) | undefined;
   let transport: "hls_mse" | "hls_native" = "hls_native";
   let rejectPending: ((error: unknown) => void) | undefined;
+  let frameRequest: number | undefined;
 
   const close = (): void => {
     if (closed) {
@@ -137,6 +138,10 @@ export async function createHomeAssistantHlsConnection(
     signal.removeEventListener("abort", handleAbort);
     stopLiveEdgeMonitor?.();
     stopLiveEdgeMonitor = undefined;
+    if (frameRequest !== undefined) {
+      video.cancelVideoFrameCallback?.(frameRequest);
+      frameRequest = undefined;
+    }
     hls?.destroy();
     hls = undefined;
     video.pause();
@@ -185,17 +190,24 @@ export async function createHomeAssistantHlsConnection(
       );
     };
 
+    const resolveReady = (): void => {
+      if (closed || connected) return;
+      frameRequest = undefined;
+      timing.mark("first_frame_decoded");
+      connected = true;
+      window.clearTimeout(timeout);
+      void playMediaElement(video).catch(() => undefined);
+      resolve({ video, timing, transport, close });
+    };
     video.addEventListener(
       "loadeddata",
       () => {
-        if (closed) {
-          return;
+        if (closed || connected) return;
+        if (typeof video.requestVideoFrameCallback === "function") {
+          frameRequest ??= video.requestVideoFrameCallback(resolveReady);
+        } else {
+          resolveReady();
         }
-        timing.mark("first_frame_decoded");
-        connected = true;
-        window.clearTimeout(timeout);
-        void playMediaElement(video).catch(() => undefined);
-        resolve({ video, timing, transport, close });
       },
       { once: true },
     );

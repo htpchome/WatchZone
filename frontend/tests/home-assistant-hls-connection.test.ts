@@ -52,6 +52,10 @@ describe("Home Assistant HLS connection", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    delete (HTMLVideoElement.prototype as Partial<HTMLVideoElement>)
+      .requestVideoFrameCallback;
+    delete (HTMLVideoElement.prototype as Partial<HTMLVideoElement>)
+      .cancelVideoFrameCallback;
   });
 
   it("uses distinct retained identities for low-latency and standard HLS", () => {
@@ -117,6 +121,75 @@ describe("Home Assistant HLS connection", () => {
 
     connection.close();
     expect(HTMLMediaElement.prototype.pause).toHaveBeenCalled();
+  });
+
+  it("waits for a presented native-HLS frame when the browser can report one", async () => {
+    hlsMock.isSupported.mockReturnValue(false);
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("#EXTM3U\n#EXT-X-VERSION:3\n"),
+    );
+    const frameCallbacks = new Map<number, VideoFrameRequestCallback>();
+    let nextFrame = 1;
+    Object.defineProperty(
+      HTMLVideoElement.prototype,
+      "requestVideoFrameCallback",
+      {
+        configurable: true,
+        value: vi.fn((callback: VideoFrameRequestCallback) => {
+          const id = nextFrame++;
+          frameCallbacks.set(id, callback);
+          return id;
+        }),
+      },
+    );
+    Object.defineProperty(
+      HTMLVideoElement.prototype,
+      "cancelVideoFrameCallback",
+      {
+        configurable: true,
+        value: vi.fn((id: number) => {
+          frameCallbacks.delete(id);
+        }),
+      },
+    );
+    const callWS = vi.fn(async () => ({ url: "/api/hls/front.m3u8" }));
+    const api: HomeAssistantApi = {
+      identity: {} as HomeAssistantApi["identity"],
+      callWS: callWS as HomeAssistantApi["callWS"],
+      resolveUrl: (path) => `https://ha.example${path}`,
+      subscribeMessage: vi.fn(),
+    };
+    let resolved = false;
+    const connecting = createHomeAssistantHlsConnection(
+      api,
+      "camera.front",
+      new AbortController().signal,
+      vi.fn(),
+      new LiveStartupTiming("home_assistant_hls:camera.front"),
+    ).then((connection) => {
+      resolved = true;
+      return connection;
+    });
+
+    await vi.waitFor(() =>
+      expect(HTMLMediaElement.prototype.play).toHaveBeenCalled(),
+    );
+    const video = vi
+      .mocked(HTMLMediaElement.prototype.play)
+      .mock.contexts.find(
+        (context): context is HTMLVideoElement =>
+          context instanceof HTMLVideoElement,
+      );
+    video?.dispatchEvent(new Event("loadeddata"));
+    await Promise.resolve();
+    expect(resolved).toBe(false);
+    expect(frameCallbacks.size).toBe(1);
+
+    const [callback] = frameCallbacks.values();
+    callback(performance.now(), {} as VideoFrameCallbackMetadata);
+    const connection = await connecting;
+    expect(connection.video).toBe(video);
+    connection.close();
   });
 
   it("loads one HLS variant directly through the lazy playback engine", async () => {
