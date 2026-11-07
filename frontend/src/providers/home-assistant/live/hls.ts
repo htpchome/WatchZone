@@ -10,6 +10,10 @@ import type {
   MediaConnection,
   MediaConnectionOptions,
 } from "../../../core/media-session-manager";
+import {
+  hlsLiveEdgePolicy,
+  monitorHlsLiveEdge,
+} from "../../live/hls-live-edge";
 
 interface StreamResponse {
   readonly url: string;
@@ -121,6 +125,7 @@ export async function createHomeAssistantHlsConnection(
   let closed = false;
   let connected = false;
   let hls: HlsType | undefined;
+  let stopLiveEdgeMonitor: (() => void) | undefined;
   let transport: "hls_mse" | "hls_native" = "hls_native";
   let rejectPending: ((error: unknown) => void) | undefined;
 
@@ -130,6 +135,8 @@ export async function createHomeAssistantHlsConnection(
     }
     closed = true;
     signal.removeEventListener("abort", handleAbort);
+    stopLiveEdgeMonitor?.();
+    stopLiveEdgeMonitor = undefined;
     hls?.destroy();
     hls = undefined;
     video.pause();
@@ -222,6 +229,7 @@ export async function createHomeAssistantHlsConnection(
             isLowLatencyManifest(manifest);
           timing.setHlsMode(lowLatency ? "low_latency" : "standard");
           return {
+            manifest,
             lowLatency,
             playlistUrl: lowLatency
               ? selectSingleVariant(manifest, url)
@@ -244,12 +252,20 @@ export async function createHomeAssistantHlsConnection(
       if (Hls.isSupported()) {
         transport = "hls_mse";
         timing.mark("hls_mse_path_selected");
+        const liveEdge = hlsLiveEdgePolicy(
+          manifest.manifest,
+          manifest.lowLatency,
+        );
         const player = new Hls({
           backBufferLength: 30,
+          ...liveEdge.hlsJsConfig,
           lowLatencyMode: manifest.lowLatency,
           maxLiveSyncPlaybackRate: 2,
         });
         hls = player;
+        if (!manifest.lowLatency) {
+          stopLiveEdgeMonitor = monitorHlsLiveEdge(video, liveEdge);
+        }
         player.on(Hls.Events.ERROR, (_event, data) => {
           if (data.fatal) {
             fail(data.error ?? new Error(`HLS ${data.type} error`));
@@ -259,6 +275,10 @@ export async function createHomeAssistantHlsConnection(
         player.attachMedia(video);
       } else if (video.canPlayType(HLS_CONTENT_TYPE)) {
         timing.mark("hls_native_path_selected");
+        stopLiveEdgeMonitor = monitorHlsLiveEdge(
+          video,
+          hlsLiveEdgePolicy(manifest.manifest, manifest.lowLatency),
+        );
         video.src = manifest.playlistUrl;
         void playMediaElement(video).catch(() => undefined);
       } else {

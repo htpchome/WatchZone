@@ -151,6 +151,15 @@ The HLS adapter:
 8. Reports live only after `loadeddata`, not merely after obtaining a playlist
    URL or parsing a manifest.
 
+The media playlist also supplies one browser-HLS live-edge policy shared by the
+native and HLS.js paths. Its advertised hold-back and target durations define a
+target latency and a finite maximum latency. HLS.js receives those values
+through its latency controller; native HLS and standard HLS.js use the same
+event-driven policy to increase playback speed slightly when drift begins and
+seek to the safe target only after crossing the maximum. This policy owns no
+Home Assistant URL or session behavior, so another connection type may reuse it
+while obtaining its playlist through a different provider boundary.
+
 An initial HLS failure receives the same bounded two-attempt media recovery as
 an established HLS interruption. This covers transient cellular manifest and
 decoder startup failures without adding an endless per-view retry loop or

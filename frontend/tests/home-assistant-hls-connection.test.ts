@@ -204,7 +204,11 @@ describe("Home Assistant HLS connection", () => {
     );
     expect(hlsMock.loadSource).toHaveBeenCalledWith(lowLatencyUrl);
     expect(hlsMock.construct).toHaveBeenCalledWith(
-      expect.objectContaining({ lowLatencyMode: true }),
+      expect.objectContaining({
+        liveMaxLatencyDuration: 8,
+        liveSyncDuration: 2,
+        lowLatencyMode: true,
+      }),
     );
     expect(timing.snapshot().hlsMode).toBe("low_latency");
     connection.close();
@@ -245,7 +249,11 @@ describe("Home Assistant HLS connection", () => {
     );
     expect(hlsMock.loadSource).toHaveBeenCalledWith(standardUrl);
     expect(hlsMock.construct).toHaveBeenCalledWith(
-      expect.objectContaining({ lowLatencyMode: false }),
+      expect.objectContaining({
+        liveMaxLatencyDuration: 30,
+        liveSyncDuration: 18,
+        lowLatencyMode: false,
+      }),
     );
     expect(timing.snapshot().hlsMode).toBe("standard");
     connection.close();
