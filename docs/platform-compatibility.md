@@ -105,6 +105,9 @@ background-lifecycle capability checks.
   even when ordinary desktop navigation retains a session.
 - Unsupported WebRTC, codec, HLS, or media-element behavior is isolated to the
   affected source and may invoke an explicit resolver fallback when one exists.
+- A positively identified Home Assistant Mac Catalyst host resolves Frigate
+  go2rtc playback to native HLS before transport acquisition. It does not start
+  WebRTC, MSE, or HLS.js as speculative alternatives.
 
 ## 4. Automated validation
 

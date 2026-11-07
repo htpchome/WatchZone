@@ -1,5 +1,8 @@
 import type { HomeAssistantApi } from "../core/home-assistant";
-import type { LiveConnectionType } from "../core/config";
+import type {
+  FrigateFallbackTransport,
+  LiveConnectionType,
+} from "../core/config";
 import {
   resolveLiveSource,
   type FrigateGo2RtcLiveSourceDescriptor,
@@ -9,6 +12,10 @@ import {
   type MediaConnectionOptions,
   type MediaSessionLease,
 } from "../core/media-session-manager";
+import {
+  resolveFrigateLiveTransportPolicy,
+  type FrigateLiveTransportPolicy,
+} from "./frigate/live/policy";
 
 type HomeAssistantProvider =
   typeof import("./home-assistant/live").HomeAssistantLiveProvider;
@@ -37,6 +44,12 @@ async function getFrigateProvider(): Promise<InstanceType<FrigateProvider>> {
 
 /** Public provider boundary used by camera orchestration and eager prewarm. */
 export class LiveSourceResolver {
+  public frigateTransportPolicy(
+    configuredFallback: FrigateFallbackTransport,
+  ): FrigateLiveTransportPolicy {
+    return resolveFrigateLiveTransportPolicy(configuredFallback);
+  }
+
   public async resolveFrigate(
     api: HomeAssistantApi,
     entityId: string,

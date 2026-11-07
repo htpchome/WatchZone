@@ -1,10 +1,10 @@
 # Frigate go2rtc Connection Contract
 
 Status: stable WebRTC/MSE connection baseline with an opt-in experimental HLS
-fallback. Continued edge-case testing may produce narrow fixes, but retention,
-navigation, mixed-card, two-way-talk, PTZ, and provider boundaries are accepted
-in their current form. Future transports extend this contract without reopening
-those boundaries.
+fallback and a native-HLS-only Catalyst policy. Continued edge-case testing may
+produce narrow fixes, but retention, navigation, mixed-card, two-way-talk, PTZ,
+and provider boundaries are accepted in their current form. Future transports
+extend this contract without reopening those boundaries.
 
 This document defines the selectable Frigate go2rtc connection provider. It
 supplements `architecture.md`, `live-session-lifecycle.md`, `two-way-talk.md`,
@@ -49,6 +49,11 @@ and `ptz.md`, which remain authoritative.
   configured fallback. MSE is the stable default; HLS is an explicit
   experimental choice used for focused compatibility testing. MSE and HLS do
   not race one another.
+- A positively identified Home Assistant Mac Catalyst client is the narrow
+  exception: its Frigate connection resolves to an HLS-only policy before
+  acquisition, so neither WebRTC nor MSE starts. This runtime constraint does
+  not rewrite the user's saved fallback choice. Other browser and Companion
+  identities retain the configured WebRTC-plus-fallback policy.
 - WebRTC signaling uses the explicit `frigate_go2rtc` backend capability. A
   failure does not silently fall through to Home Assistant Direct.
 - MSE uses the installed Frigate integration's instance-qualified authenticated
@@ -71,7 +76,7 @@ and `ptz.md`, which remain authoritative.
 
 ## Retention and navigation
 
-- Both Frigate transports use the document-scoped media-session manager and the
+- All Frigate transports use the document-scoped media-session manager and the
   same standard and reduced-bandwidth policies as Home Assistant Direct.
 - The retention budget remains keyed by logical camera. Provider and transport
   remain part of the concrete session key.

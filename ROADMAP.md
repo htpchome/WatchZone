@@ -105,7 +105,8 @@ designer UI so saved layouts are declarative and testable.
 - Stable current baselines are Home Assistant Direct with retained WebRTC/HLS
   and Frigate go2rtc with retained WebRTC/MSE. Frigate HLS is an opt-in
   experimental alternative to its default MSE fallback while compatibility is
-  validated. Continued edge-case testing may produce narrow fixes without
+  validated, and is the sole transport on the explicitly identified Catalyst
+  client. Continued edge-case testing may produce narrow fixes without
   reopening their accepted provider, retention, navigation, or audio
   boundaries.
 - Home Assistant Direct playback, including retained WebRTC and low-latency HLS

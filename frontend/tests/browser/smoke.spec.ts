@@ -787,6 +787,10 @@ test("lays out talk and light controls in the responsive dock", async ({
   await expect(lightButton).toHaveAttribute("title", "Turn off Porch");
   await expect(lightButton).toHaveAttribute("aria-label", "Turn off Porch");
 
+  // Keep the shared overlay timer active while WebKit gathers every box.
+  await camera.locator("wzc-camera-live .viewport").hover();
+  await expect(ptzControl).toHaveClass(/\bvisible\b/);
+
   const [
     cameraBox,
     controlsSlotBox,

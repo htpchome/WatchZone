@@ -165,12 +165,7 @@ export class CameraView extends LitElement {
                 .available=${this.connect && this.available}
                 .failed=${this._session.failed}
                 .fallbackVideo=${this._session.fallbackVideo}
-                .lowLatencyHls=${
-                  this.connection === "frigate_go2rtc" &&
-                  this.frigateFallback === "hls"
-                    ? true
-                    : this.lowLatencyHls
-                }
+                .lowLatencyHls=${this._session.effectiveLowLatencyHls}
                 .localize=${this.localize}
                 .muted=${this._audio.muted}
                 .notices=${this._toasts.notices}

@@ -1,6 +1,7 @@
 import { CAMERA_MODULE_TYPE, CAMERA_TAG } from "../../core/constants";
 import { cameraImageUrl } from "../../core/home-assistant";
 import { englishLocalize } from "../../core/localization";
+import type { MediaSessionLease } from "../../core/media-session-manager";
 import type { MediaRetentionPreference } from "../../core/media-retention-policy";
 import type {
   ModuleDefinition,
@@ -36,17 +37,34 @@ export const moduleDefinition: ModuleDefinition<CameraModuleConfig> = {
     const first = config.cameras[0];
     if (!first || !context.api || !context.hass?.states[first.entityId])
       return undefined;
-    const lease =
-      first.connection === "frigate_go2rtc"
-        ? await resolver.acquireFrigateWebRtc(
+    let lease: MediaSessionLease;
+    if (first.connection === "frigate_go2rtc") {
+      const source = await resolver.resolveFrigate(context.api, first.entityId);
+      const policy = resolver.frigateTransportPolicy(
+        first.frigateFallback ?? "mse",
+      );
+      lease = policy.hlsOnly
+        ? await resolver.acquireFrigateHls(
             context.api,
             first.entityId,
-            await resolver.resolveFrigate(context.api, first.entityId),
+            source,
+            {
+              initialMuted: true,
+              lowLatencyHls: true,
+              nativeHlsOnly: true,
+            },
           )
-        : await resolver.acquireHomeAssistantWebRtc(
+        : await resolver.acquireFrigateWebRtc(
             context.api,
             first.entityId,
+            source,
           );
+    } else {
+      lease = await resolver.acquireHomeAssistantWebRtc(
+        context.api,
+        first.entityId,
+      );
+    }
     return { release: () => lease.release() };
   },
   define() {

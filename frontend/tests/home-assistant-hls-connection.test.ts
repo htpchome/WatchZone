@@ -208,6 +208,47 @@ describe("Home Assistant HLS connection", () => {
     connection.close();
   });
 
+  it("bypasses HLS.js when native HLS is required", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("#EXTM3U\n#EXT-X-VERSION:3\n"),
+    );
+    const api: HomeAssistantApi = {
+      identity: {} as HomeAssistantApi["identity"],
+      callWS: vi.fn(async () => ({
+        url: "/api/hls/front.m3u8",
+      })) as HomeAssistantApi["callWS"],
+      resolveUrl: (path) => `https://ha.example${path}`,
+      subscribeMessage: vi.fn(),
+    };
+    const timing = new LiveStartupTiming("native_hls:camera.front");
+    const connecting = createHomeAssistantHlsConnection(
+      api,
+      "camera.front",
+      new AbortController().signal,
+      vi.fn(),
+      timing,
+      { initialMuted: true, nativeHlsOnly: true },
+    );
+
+    await vi.waitFor(() =>
+      expect(HTMLMediaElement.prototype.play).toHaveBeenCalled(),
+    );
+    const video = vi
+      .mocked(HTMLMediaElement.prototype.play)
+      .mock.contexts.find(
+        (context): context is HTMLVideoElement =>
+          context instanceof HTMLVideoElement,
+      );
+    video?.dispatchEvent(new Event("loadeddata"));
+    const connection = await connecting;
+
+    expect(connection.transport).toBe("hls_native");
+    expect(hlsMock.isSupported).not.toHaveBeenCalled();
+    expect(hlsMock.construct).not.toHaveBeenCalled();
+    expect(timing.snapshot().phases.hls_engine_loaded).toBeUndefined();
+    connection.close();
+  });
+
   it("still confirms an HLS.js frame when frame callbacks are available", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response("#EXTM3U\n#EXT-X-VERSION:3\n"),

@@ -50,6 +50,7 @@ export interface MediaConnection {
 export interface MediaConnectionOptions {
   readonly initialMuted: boolean;
   readonly lowLatencyHls?: boolean;
+  readonly nativeHlsOnly?: boolean;
   readonly onVideo?: (video: HTMLVideoElement) => void;
 }
 
@@ -160,6 +161,7 @@ class ManagedMediaSession {
     this._connectionOptions = {
       initialMuted: options.initialMuted,
       lowLatencyHls: options.lowLatencyHls,
+      nativeHlsOnly: options.nativeHlsOnly,
     };
     this.lastUsed = performance.now();
     this._leaseCount += 1;

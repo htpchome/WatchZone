@@ -245,6 +245,17 @@ export async function createHlsConnection(
           };
         },
       );
+      if (options.nativeHlsOnly) {
+        const manifest = await manifestPromise;
+        if (signal.aborted || closed) return;
+        if (!video.canPlayType(HLS_CONTENT_TYPE)) {
+          throw new Error("This browser does not support native HLS playback");
+        }
+        timing.mark("hls_native_path_selected");
+        video.src = manifest.playlistUrl;
+        void playMediaElement(video).catch(() => undefined);
+        return;
+      }
       const hlsModulePromise = import("hls.js/dist/hls.light.mjs").then(
         (module) => {
           timing.mark("hls_engine_loaded");

@@ -226,8 +226,9 @@ in one policy and are not scattered through modules.
 
 The global pool permits twelve configured cameras and reserves up to two
 transport sessions per logical camera while HLS competes with or falls back
-from WebRTC. Only selected cameras acquire frontend leases. An unneeded HLS
-loser is still discarded after a successful WebRTC handoff.
+from WebRTC. A client constrained to a single native-HLS path acquires only
+that transport. Only selected cameras acquire frontend leases. An unneeded
+HLS loser is still discarded after a successful WebRTC handoff.
 
 The `standard` profile applies to desktop, tablet, and phone clients by
 default, including phones on Wi-Fi and phones whose browser does not expose
