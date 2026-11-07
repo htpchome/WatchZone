@@ -279,6 +279,8 @@ test("shows an independently scrolling event window for the active camera", asyn
         { entity_id: "camera.back", title: "Back" },
       ],
     });
+    card.style.setProperty("--restore-card-border-radius", "21px");
+    card.style.setProperty("--ha-card-border-radius", "0px");
     card.hass = {
       config: { time_zone: "America/New_York" },
       locale: {
@@ -321,6 +323,18 @@ test("shows an independently scrolling event window for the active camera", asyn
   const events = page.locator("wzc-events");
   const viewport = events.locator(".viewport");
   await expect(events.locator(".tile")).toHaveCount(4);
+  await expect(page.locator("watchzone-card ha-card")).toHaveCSS(
+    "border-radius",
+    "21px",
+  );
+  await expect(page.locator("wzc-camera .camera-carousel")).toHaveCSS(
+    "border-radius",
+    "21px",
+  );
+  await expect(events.locator(".tile").first()).toHaveCSS(
+    "border-radius",
+    "21px",
+  );
   await expect(events.locator(".placeholder svg")).toHaveCount(1);
   await expect(events).toContainText("driveway");
   await expect(events).toContainText("5:13 PM");
@@ -391,6 +405,9 @@ test("shows an independently scrolling event window for the active camera", asyn
       display_object_badges: false,
       display_zone: false,
       event_history_days: 7,
+      rounded_outer_corners: false,
+      camera_rounded_corners: false,
+      event_rounded_corners: false,
       cameras: [
         { entity_id: "camera.front", title: "Front" },
         { entity_id: "camera.back", title: "Back" },
@@ -400,6 +417,18 @@ test("shows an independently scrolling event window for the active camera", asyn
   await expect(events.locator(".tile")).toHaveCount(4);
   await expect(events.locator("wzc-badge")).toHaveCount(0);
   await expect(events).not.toContainText("back_yard");
+  await expect(page.locator("watchzone-card ha-card")).toHaveCSS(
+    "border-radius",
+    "0px",
+  );
+  await expect(page.locator("wzc-camera .camera-carousel")).toHaveCSS(
+    "border-radius",
+    "0px",
+  );
+  await expect(events.locator(".tile").first()).toHaveCSS(
+    "border-radius",
+    "0px",
+  );
 });
 
 test("lets the camera switcher shadow paint into the card padding", async ({
