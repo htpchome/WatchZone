@@ -110,7 +110,10 @@ export class EventsModule extends LitElement {
 
   private _renderEvent(event: EventItem) {
     const start = new Date(event.start_time * 1000);
-    const previewUrl = event.snapshot_url ?? event.thumbnail_url;
+    const previewUrl = [event.thumbnail_url, event.snapshot_url].find(
+      (url): url is string =>
+        url !== null && !this._failedMedia.has(mediaKey(event, url)),
+    );
     const duration = Math.max(
       1,
       Math.round((event.end_time ?? Date.now() / 1000) - event.start_time),
@@ -118,13 +121,13 @@ export class EventsModule extends LitElement {
     return html`<article class="tile">
       <div class="thumbnail-wrap">
         ${
-          previewUrl && !this._failedMedia.has(`${event.id}:${event.revision}`)
+          previewUrl
             ? html`<img
                 class="thumbnail"
                 loading="lazy"
                 src=${this.api?.resolveUrl(previewUrl) ?? previewUrl}
                 alt=${this.localize("events.thumbnail", { label: event.label })}
-                @error=${() => this._mediaFailed(event)}
+                @error=${() => this._mediaFailed(event, previewUrl)}
               />`
             : html`<div class="placeholder">
                 <ha-icon icon="mdi:image-off"></ha-icon>
@@ -136,19 +139,25 @@ export class EventsModule extends LitElement {
       </div>
       <div class="details">
         <div class="badges">
-          <wzc-badge color=${badgeColorForLabel(event.label)}
+          <wzc-badge
+            color=${badgeColorForLabel(event.label)}
+            shape="pill"
+            size="small"
             >${event.label}</wzc-badge
           >
           ${
             event.sub_label
-              ? html`<wzc-badge color=${badgeColorForLabel(event.sub_label)}
+              ? html`<wzc-badge
+                  color=${badgeColorForLabel(event.sub_label)}
+                  shape="pill"
+                  size="small"
                   >${event.sub_label}</wzc-badge
                 >`
               : null
           }
           ${
             event.has_clip
-              ? html`<wzc-badge variant="success"
+              ? html`<wzc-badge shape="pill" size="small" variant="success"
                   >${this.localize("events.clip")}</wzc-badge
                 >`
               : null
@@ -229,7 +238,11 @@ export class EventsModule extends LitElement {
         return;
       this._events = items;
       const current = new Set(
-        items.map((item) => `${item.id}:${item.revision}`),
+        items.flatMap((item) =>
+          [item.thumbnail_url, item.snapshot_url]
+            .filter((url): url is string => url !== null)
+            .map((url) => mediaKey(item, url)),
+        ),
       );
       for (const key of this._failedMedia) {
         if (!current.has(key)) this._failedMedia.delete(key);
@@ -248,15 +261,14 @@ export class EventsModule extends LitElement {
     }
   }
 
-  private _mediaFailed(event: EventItem): void {
-    const key = `${event.id}:${event.revision}`;
-    if (this._retriedMedia.has(key)) {
-      this._failedMedia.add(key);
-      this.requestUpdate();
-      return;
+  private _mediaFailed(event: EventItem, url: string): void {
+    const key = mediaKey(event, url);
+    this._failedMedia.add(key);
+    this.requestUpdate();
+    if (!this._retriedMedia.has(key)) {
+      this._retriedMedia.add(key);
+      void this._refresh(true);
     }
-    this._retriedMedia.add(key);
-    void this._refresh(true);
   }
 
   private _formatTime(date: Date): string {
@@ -274,6 +286,10 @@ export class EventsModule extends LitElement {
   }
 
   static styles = eventsStyles;
+}
+
+function mediaKey(event: EventItem, url: string): string {
+  return `${event.id}:${event.revision}:${url}`;
 }
 
 function formatDuration(

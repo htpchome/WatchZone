@@ -242,6 +242,12 @@ test("shows an independently scrolling event window for the active camera", asyn
   page,
 }) => {
   await installHaIconFixture(page);
+  await page.route("**/thumbnail.svg", async (route) => {
+    await route.fulfill({
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="black"/></svg>',
+      contentType: "image/svg+xml",
+    });
+  });
   await page.goto("/");
   await waitForWatchZoneDefinition(page);
   await page.locator("watchzone-card").evaluate((element) => {
@@ -255,14 +261,14 @@ test("shows an independently scrolling event window for the active camera", asyn
         clip_url: null,
         end_time: 1_700_000_024 - index * 60,
         has_clip: false,
-        has_snapshot: false,
+        has_snapshot: true,
         id: `frigate:${camera}:${index}`,
         label: index === 0 ? "person" : "bird",
         revision: `revision-${index}`,
         snapshot_url: null,
         start_time: 1_700_000_000 - index * 60,
         sub_label: index === 0 ? "Resident" : null,
-        thumbnail_url: null,
+        thumbnail_url: "/thumbnail.svg",
       }));
     card.setConfig({
       type: "custom:watchzone-card",
@@ -329,9 +335,18 @@ test("shows an independently scrolling event window for the active camera", asyn
         ?.getBoundingClientRect();
       return {
         bottom: tileRect.bottom,
+        thumbnailBottomInset: thumbnailRect
+          ? tileRect.bottom - thumbnailRect.bottom
+          : Number.POSITIVE_INFINITY,
+        thumbnailLeadingInset: thumbnailRect
+          ? thumbnailRect.left - tileRect.left
+          : Number.POSITIVE_INFINITY,
         thumbnailRatio: thumbnailRect
           ? thumbnailRect.width / thumbnailRect.height
           : 0,
+        thumbnailTopInset: thumbnailRect
+          ? thumbnailRect.top - tileRect.top
+          : Number.POSITIVE_INFINITY,
       };
     }),
   );
@@ -341,6 +356,23 @@ test("shows an independently scrolling event window for the active camera", asyn
   expect(tileGeometry[2]?.bottom).toBeLessThanOrEqual(viewportBottom + 1);
   expect(tileGeometry[3]?.bottom).toBeGreaterThan(viewportBottom);
   expect(tileGeometry[0]?.thumbnailRatio).toBeCloseTo(16 / 9, 2);
+  expect(tileGeometry[0]?.thumbnailBottomInset).toBeLessThanOrEqual(1);
+  expect(tileGeometry[0]?.thumbnailLeadingInset).toBeLessThanOrEqual(1);
+  expect(tileGeometry[0]?.thumbnailTopInset).toBeLessThanOrEqual(1);
+  const thumbnailPresentation = await events
+    .locator(".thumbnail")
+    .first()
+    .evaluate((thumbnail) => {
+      const wrapper = thumbnail.parentElement;
+      return {
+        background: wrapper ? getComputedStyle(wrapper).backgroundColor : "",
+        objectFit: getComputedStyle(thumbnail).objectFit,
+      };
+    });
+  expect(thumbnailPresentation).toEqual({
+    background: "rgba(0, 0, 0, 0)",
+    objectFit: "cover",
+  });
 
   await page.locator("wzc-camera-switcher button").nth(1).click();
   await expect(events).toContainText("back");

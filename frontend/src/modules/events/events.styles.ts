@@ -38,7 +38,6 @@ export const eventsStyles = css`
       auto;
     block-size: var(--wzc-event-tile-block-size);
     overflow: hidden;
-    padding: var(--wzc-event-tile-padding);
   }
 
   .square .tile,
@@ -47,9 +46,8 @@ export const eventsStyles = css`
   }
 
   .thumbnail-wrap {
-    align-self: center;
     aspect-ratio: 16 / 9;
-    background: var(--wzc-event-thumbnail-background);
+    block-size: 100%;
     inline-size: 100%;
     min-block-size: 0;
     overflow: hidden;
@@ -64,7 +62,8 @@ export const eventsStyles = css`
   }
 
   .thumbnail {
-    object-fit: contain;
+    object-fit: cover;
+    object-position: center;
   }
 
   .placeholder {
@@ -90,6 +89,7 @@ export const eventsStyles = css`
   .details {
     min-inline-size: 0;
     overflow: hidden;
+    padding-block: var(--wzc-event-content-padding);
   }
 
   .badges {
@@ -98,6 +98,11 @@ export const eventsStyles = css`
     flex-wrap: wrap;
     gap: 0.25rem;
     margin-block-end: 0.2rem;
+  }
+
+  .badges wzc-badge {
+    --wzc-badge-font-size: var(--wzc-event-badge-font-size);
+    --wzc-badge-padding: var(--wzc-event-badge-padding);
   }
 
   .metadata {
@@ -112,6 +117,7 @@ export const eventsStyles = css`
   .actions {
     display: flex;
     gap: 0.2rem;
+    padding-inline-end: var(--wzc-event-content-padding);
   }
 
   .action {

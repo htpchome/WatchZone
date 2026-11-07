@@ -74,7 +74,13 @@ describe("events module", () => {
     expect(module.shadowRoot?.textContent).toContain("Resident");
     expect(
       module.shadowRoot?.querySelector<HTMLImageElement>(".thumbnail")?.src,
-    ).toBe("https://ha.local/snapshot.jpg");
+    ).toBe("https://ha.local/thumbnail.jpg");
+    expect(
+      module.shadowRoot?.querySelector("wzc-badge")?.getAttribute("shape"),
+    ).toBe("pill");
+    expect(
+      module.shadowRoot?.querySelector("wzc-badge")?.getAttribute("size"),
+    ).toBe("small");
     expect(
       module.shadowRoot
         ?.querySelector(".viewport")
@@ -93,6 +99,45 @@ describe("events module", () => {
     await vi.waitFor(() => {
       expect(module.shadowRoot?.querySelectorAll(".tile")).toHaveLength(0);
       expect(module.shadowRoot?.textContent).toContain("No recent events");
+    });
+  });
+
+  it("falls back from a failed focused thumbnail to the event snapshot", async () => {
+    const api = {
+      callWS: vi.fn().mockResolvedValue({ items: [event] }),
+      identity: {},
+      locale: { language: "en", time_zone: "server" },
+      resolveUrl: (path: string) => `https://ha.local${path}`,
+      subscribeMessage: vi.fn(),
+    } as unknown as HomeAssistantApi;
+    const selection = new CameraSelectionContext();
+    const module = document.createElement(EVENTS_TAG) as EventsModule;
+    module.api = api;
+    module.cameraSelection = selection;
+    module.targetModuleId = "camera-module";
+    document.body.append(module);
+    selection.publish(
+      "camera-module",
+      {},
+      {
+        activeEntityId: "camera.front",
+        items: [{ entityId: "camera.front", label: "Front" }],
+      },
+      vi.fn(),
+    );
+
+    await vi.waitFor(() => {
+      expect(
+        module.shadowRoot?.querySelector<HTMLImageElement>(".thumbnail")?.src,
+      ).toBe("https://ha.local/thumbnail.jpg");
+    });
+    module.shadowRoot
+      ?.querySelector<HTMLImageElement>(".thumbnail")
+      ?.dispatchEvent(new Event("error"));
+    await vi.waitFor(() => {
+      expect(
+        module.shadowRoot?.querySelector<HTMLImageElement>(".thumbnail")?.src,
+      ).toBe("https://ha.local/snapshot.jpg");
     });
   });
 });
