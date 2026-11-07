@@ -272,6 +272,13 @@ test("shows an independently scrolling event window for the active camera", asyn
       ],
     });
     card.hass = {
+      config: { time_zone: "America/New_York" },
+      locale: {
+        date_format: "MDY",
+        language: "en",
+        time_format: "12",
+        time_zone: "server",
+      },
       states: {
         "camera.front": {
           entity_id: "camera.front",
@@ -307,6 +314,7 @@ test("shows an independently scrolling event window for the active camera", asyn
   const viewport = events.locator(".viewport");
   await expect(events.locator(".tile")).toHaveCount(4);
   await expect(events).toContainText("front");
+  await expect(events).toContainText("5:13 PM");
   const scrolling = await viewport.evaluate((node) => ({
     clientHeight: node.clientHeight,
     scrollHeight: node.scrollHeight,

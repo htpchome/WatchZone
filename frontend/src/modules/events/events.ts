@@ -3,8 +3,13 @@ import { repeat } from "lit/directives/repeat.js";
 
 import { listEvents, type EventItem } from "../../api/events";
 import type { CameraSelectionContext } from "../../core/camera-selection-context";
+import {
+  formatHomeAssistantDate,
+  formatHomeAssistantTime,
+} from "../../core/date-time";
 import { EVENTS_REFRESH_INTERVAL_MS, EVENTS_TAG } from "../../core/constants";
 import type { HomeAssistantApi } from "../../core/home-assistant";
+import { homeAssistantNumberFormat } from "../../core/number-format";
 import {
   englishLocalize,
   type LocalizeFunction,
@@ -110,7 +115,9 @@ export class EventsModule extends LitElement {
                 <ha-icon icon="mdi:image-off"></ha-icon>
               </div>`
         }
-        <span class="duration">${formatDuration(duration)}</span>
+        <span class="duration"
+          >${formatDuration(duration, this.api?.locale)}</span
+        >
       </div>
       <div class="details">
         <div class="badges">
@@ -235,20 +242,11 @@ export class EventsModule extends LitElement {
   }
 
   private _formatTime(date: Date): string {
-    return new Intl.DateTimeFormat(this.api?.locale?.language, {
-      hour: "numeric",
-      minute: "2-digit",
-      timeZone: this.api?.locale?.time_zone,
-    }).format(date);
+    return formatHomeAssistantTime(date, this.api?.locale);
   }
 
   private _formatDate(date: Date): string {
-    return new Intl.DateTimeFormat(this.api?.locale?.language, {
-      day: "numeric",
-      month: "short",
-      weekday: "short",
-      timeZone: this.api?.locale?.time_zone,
-    }).format(date);
+    return formatHomeAssistantDate(date, this.api?.locale);
   }
 
   private _stopRefresh(): void {
@@ -260,11 +258,24 @@ export class EventsModule extends LitElement {
   static styles = eventsStyles;
 }
 
-function formatDuration(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`;
+function formatDuration(
+  seconds: number,
+  locale: HomeAssistantApi["locale"],
+): string {
+  if (seconds < 60) {
+    return `${homeAssistantNumberFormat(locale, {
+      maximumFractionDigits: 0,
+    }).format(seconds)}s`;
+  }
   const minutes = Math.floor(seconds / 60);
   const remainder = seconds % 60;
-  return `${minutes}:${String(remainder).padStart(2, "0")}`;
+  return `${homeAssistantNumberFormat(locale, {
+    maximumFractionDigits: 0,
+  }).format(minutes)}:${homeAssistantNumberFormat(locale, {
+    maximumFractionDigits: 0,
+    minimumIntegerDigits: 2,
+    useGrouping: false,
+  }).format(remainder)}`;
 }
 
 if (!customElements.get(EVENTS_TAG)) {

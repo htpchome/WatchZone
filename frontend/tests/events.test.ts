@@ -35,6 +35,7 @@ describe("events module", () => {
     const api = {
       callWS,
       identity: {},
+      locale: { language: "en", time_zone: "server" },
       resolveUrl: (path: string) => `https://ha.local${path}`,
       subscribeMessage: vi.fn(),
     } as unknown as HomeAssistantApi;

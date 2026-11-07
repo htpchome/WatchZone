@@ -49,6 +49,7 @@ export interface HomeAssistantLocale {
 }
 
 export interface HomeAssistant {
+  readonly config?: { readonly time_zone?: string };
   readonly states: Readonly<Record<string, HomeAssistantEntity>>;
   readonly connection: HomeAssistantConnection;
   readonly language?: string;
@@ -101,9 +102,14 @@ export function createHomeAssistantApi(hass: HomeAssistant): HomeAssistantApi {
 }
 
 export function homeAssistantLocale(hass: HomeAssistant): HomeAssistantLocale {
+  const selectedTimeZone = hass.locale?.time_zone;
   return {
     ...hass.locale,
     language: hass.locale?.language ?? hass.language ?? "en",
+    time_zone:
+      selectedTimeZone === "server" && hass.config?.time_zone
+        ? hass.config.time_zone
+        : selectedTimeZone,
   };
 }
 

@@ -96,6 +96,8 @@ describe("Home Assistant locale", () => {
       ...hass,
       language: "en",
       locale: {
+        date_format: "DMY",
+        first_weekday: "monday",
         language: "pt-BR",
         number_format: "comma_decimal",
         time_format: "24",
@@ -105,5 +107,20 @@ describe("Home Assistant locale", () => {
 
     expect(homeAssistantLocale(localized)).toEqual(localized.locale);
     expect(createHomeAssistantApi(localized).locale).toEqual(localized.locale);
+  });
+
+  it("resolves the HA server time-zone sentinel through server config", () => {
+    const hass = hassWith({
+      entity_id: "camera.front",
+      state: "streaming",
+      attributes: {},
+    });
+    const localized: HomeAssistant = {
+      ...hass,
+      config: { time_zone: "America/New_York" },
+      locale: { language: "en", time_zone: "server" },
+    };
+
+    expect(homeAssistantLocale(localized).time_zone).toBe("America/New_York");
   });
 });
