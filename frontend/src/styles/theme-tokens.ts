@@ -197,9 +197,7 @@ export const themeTokens = css`
     --wzc-media-overlay-radius: var(--wzc-radius-small);
     --wzc-media-overlay-shadow: var(--wzc-shadow-card);
     --wzc-media-overlay-transition-duration: 140ms;
-    --wzc-camera-control-size-default: 2.75rem;
-    --wzc-camera-control-size-compact: 1.875rem;
-    --wzc-camera-control-size: var(--wzc-camera-control-size-default);
+    --wzc-camera-control-size: 2.75rem;
     --wzc-round-button-size: var(--wzc-camera-control-size);
     --wzc-round-button-icon-size: 60%;
     --wzc-round-button-color: var(--wzc-media-overlay-color);
@@ -522,11 +520,5 @@ export const mediaOverlayControlButtonStyles = css`
   .media-overlay-control-button:disabled {
     cursor: default;
     opacity: var(--wzc-control-disabled-opacity, 1);
-  }
-
-  @container (max-width: 480px) {
-    .media-overlay-control-group {
-      --wzc-control-size: var(--wzc-camera-control-size-compact);
-    }
   }
 `;

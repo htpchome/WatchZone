@@ -50,10 +50,24 @@ export const mediaPlayerStyles = css`
 
   .controls {
     z-index: 2;
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+    transition:
+      opacity var(--wzc-media-overlay-transition-duration) ease,
+      visibility 0s linear var(--wzc-media-overlay-transition-duration);
+  }
+
+  .controls.visible {
+    opacity: 1;
+    pointer-events: auto;
+    visibility: visible;
+    transition-delay: 0s;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    video {
+    video,
+    .controls {
       transition: none;
     }
   }

@@ -640,6 +640,12 @@ test("shows an independently scrolling event window for the active camera", asyn
       viewportSize.height,
     );
   }
+  const recordedViewport = page.locator("wzc-media-player .viewport");
+  await recordedViewport.dispatchEvent("pointermove", {
+    isPrimary: true,
+    pointerId: 40,
+    pointerType: "mouse",
+  });
   await expect(
     page.getByRole("button", { name: "Mute recorded video" }),
   ).toBeVisible();
@@ -667,15 +673,57 @@ test("shows an independently scrolling event window for the active camera", asyn
         return { height: box.height, width: box.width };
       }),
     );
-  expect(recordedControlSizes).toEqual([
-    { height: 44, width: 44 },
-    { height: 44, width: 44 },
-    { height: 44, width: 44 },
-  ]);
+  const expectedControlSize = await recordedViewport.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    const rem = Number.parseFloat(
+      getComputedStyle(document.documentElement).fontSize,
+    );
+    let size = 2.75;
+    if (bounds.width <= 480) size = 2.35;
+    if (bounds.height <= 360) size = 2.25;
+    if (bounds.height <= 240) size = 1.875;
+    return size * rem;
+  });
+  for (const size of recordedControlSizes) {
+    expect(size.height).toBeCloseTo(expectedControlSize, 1);
+    expect(size.width).toBeCloseTo(expectedControlSize, 1);
+  }
   const recordedControlShape = await page
     .getByRole("button", { name: "Mute recorded video" })
     .evaluate((button) => getComputedStyle(button).borderRadius);
   expect(Number.parseFloat(recordedControlShape)).toBeLessThan(10);
+  await page.mouse.move(0, 0);
+  await recordedViewport.evaluate((element) => {
+    const surface = element as HTMLElement;
+    const setPointerCapture = surface.setPointerCapture;
+    surface.setPointerCapture = () => undefined;
+    try {
+      surface.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          bubbles: true,
+          isPrimary: true,
+          pointerId: 41,
+          pointerType: "touch",
+        }),
+      );
+      surface.dispatchEvent(
+        new PointerEvent("pointerup", {
+          bubbles: true,
+          isPrimary: true,
+          pointerId: 41,
+          pointerType: "touch",
+        }),
+      );
+    } finally {
+      surface.setPointerCapture = setPointerCapture;
+    }
+  });
+  await expect(
+    page.getByRole("button", { name: "Mute recorded video" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Mute recorded video" }),
+  ).toBeHidden({ timeout: CAMERA_OVERLAY_HIDE_DELAY_MS + 1_000 });
   const modalHeaderChildren = await page
     .locator("wzc-media-player-container .header")
     .evaluate((header) =>
@@ -1411,12 +1459,12 @@ test("lays out PTZ, talk, and light controls in the responsive dock", async ({
   expect(talkHostBox.height).toBeCloseTo(talkButtonBox.height, 0);
   expect(ptzHostBox.height).toBeCloseTo(ptzControlBox.height, 0);
   expect(lightHostBox.height).toBeCloseTo(lightButtonBox.height, 0);
-  expect(talkButtonBox.y + talkButtonBox.height / 2).toBeCloseTo(
-    lightButtonBox.y + lightButtonBox.height / 2,
+  expect(talkButtonBox.y + talkButtonBox.height).toBeCloseTo(
+    lightButtonBox.y + lightButtonBox.height,
     0,
   );
-  expect(talkButtonBox.y + talkButtonBox.height / 2).toBeCloseTo(
-    ptzControlBox.y + ptzControlBox.height / 2,
+  expect(talkButtonBox.y + talkButtonBox.height).toBeCloseTo(
+    ptzControlBox.y + ptzControlBox.height,
     0,
   );
   expect(talkHostBox.y + talkHostBox.height).toBeLessThanOrEqual(
@@ -1550,6 +1598,16 @@ test("lays out PTZ, talk, and light controls in the responsive dock", async ({
   await expect(talkButton).toBeVisible();
   await expect(lightButton).toBeVisible();
   await expect(ptzControl).toBeVisible();
+  await expect
+    .poll(async () => {
+      const boxes = await Promise.all([
+        talkButton.boundingBox(),
+        lightButton.boundingBox(),
+        ptzControl.boundingBox(),
+      ]);
+      return boxes.every((box) => box !== null);
+    })
+    .toBe(true);
   const [phoneTalkBox, phoneLightBox, phonePtzBox] = await Promise.all([
     talkButton.boundingBox(),
     lightButton.boundingBox(),
@@ -1559,12 +1617,9 @@ test("lays out PTZ, talk, and light controls in the responsive dock", async ({
   expect(phoneLightBox).not.toBeNull();
   expect(phonePtzBox).not.toBeNull();
   if (phoneTalkBox && phoneLightBox && phonePtzBox) {
-    const talkCenter = phoneTalkBox.y + phoneTalkBox.height / 2;
-    expect(talkCenter).toBeCloseTo(
-      phoneLightBox.y + phoneLightBox.height / 2,
-      0,
-    );
-    expect(talkCenter).toBeCloseTo(phonePtzBox.y + phonePtzBox.height / 2, 0);
+    const talkBottom = phoneTalkBox.y + phoneTalkBox.height;
+    expect(talkBottom).toBeCloseTo(phoneLightBox.y + phoneLightBox.height, 0);
+    expect(talkBottom).toBeCloseTo(phonePtzBox.y + phonePtzBox.height, 0);
     expect(phoneTalkBox.width).toBeCloseTo(phoneLightBox.width, 1);
   }
   const interactionLightButtonBox = await lightButton.boundingBox();

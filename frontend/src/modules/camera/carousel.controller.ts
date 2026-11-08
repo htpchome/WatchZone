@@ -5,6 +5,13 @@ import {
   CAMERA_CAROUSEL_NAVIGATION_HEIGHT_RATIO,
   CAMERA_CAROUSEL_NAVIGATION_MAX_SIZE_PX,
   CAMERA_CAROUSEL_NAVIGATION_MIN_SIZE_PX,
+  CAMERA_CONTROL_COMPACT_WIDTH_PX,
+  CAMERA_CONTROL_SHORT_HEIGHT_PX,
+  CAMERA_CONTROL_SIZE_COMPACT,
+  CAMERA_CONTROL_SIZE_DEFAULT,
+  CAMERA_CONTROL_SIZE_SHORT,
+  CAMERA_CONTROL_SIZE_VERY_SHORT,
+  CAMERA_CONTROL_VERY_SHORT_HEIGHT_PX,
 } from "./constants";
 
 /** Owns the camera-local Swiper instance without owning slides or selection. */
@@ -164,6 +171,17 @@ export class CameraCarouselController implements ReactiveController {
       "--wzc-carousel-navigation-icon-size",
       `${size}px`,
     );
+    let controlSize = CAMERA_CONTROL_SIZE_DEFAULT;
+    if (bounds.width <= CAMERA_CONTROL_COMPACT_WIDTH_PX) {
+      controlSize = CAMERA_CONTROL_SIZE_COMPACT;
+    }
+    if (bounds.height <= CAMERA_CONTROL_SHORT_HEIGHT_PX) {
+      controlSize = CAMERA_CONTROL_SIZE_SHORT;
+    }
+    if (bounds.height <= CAMERA_CONTROL_VERY_SHORT_HEIGHT_PX) {
+      controlSize = CAMERA_CONTROL_SIZE_VERY_SHORT;
+    }
+    container.style.setProperty("--wzc-camera-control-size", controlSize);
   }
 
   private _destroy(): void {
@@ -172,6 +190,7 @@ export class CameraCarouselController implements ReactiveController {
     this._container?.style.removeProperty(
       "--wzc-carousel-navigation-icon-size",
     );
+    this._container?.style.removeProperty("--wzc-camera-control-size");
     this._container?.classList.remove("camera-carousel-interactive");
     if (this._swiper && !this._swiper.destroyed) {
       this._swiper.destroy(true, true);
