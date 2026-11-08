@@ -253,6 +253,10 @@ export const themeTokens = css`
     --wzc-recorded-media-dialog-border: 1px solid var(--wzc-color-border);
     --wzc-recorded-media-dialog-radius: var(--wzc-radius-card);
     --wzc-recorded-media-dialog-shadow: var(--wzc-shadow-medium);
+    --wzc-recorded-media-dialog-padding: 0.75rem;
+    --wzc-recorded-media-dialog-min-inline-size: min(20rem, 90vw);
+    --wzc-recorded-media-dialog-min-block-size: min(14rem, 90dvh);
+    --wzc-recorded-media-resize-handle-size: 2.25rem;
     --wzc-recorded-media-header-background: var(--wzc-color-surface-secondary);
     --wzc-recorded-media-backdrop: color-mix(
       in srgb,

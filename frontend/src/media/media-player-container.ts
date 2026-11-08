@@ -32,6 +32,13 @@ export class MediaPlayerContainer extends LitElement {
     readonly pointerId: number;
   };
   private _muteLeaseActive = false;
+  private _resize?: {
+    readonly height: number;
+    readonly pointerId: number;
+    readonly startX: number;
+    readonly startY: number;
+    readonly width: number;
+  };
   private readonly _toasts = new ToastManager(this);
 
   public connectedCallback(): void {
@@ -92,6 +99,19 @@ export class MediaPlayerContainer extends LitElement {
           .notices=${this._toasts.notices}
         ></wzc-toast-region>
       </div>
+      <button
+        class="resize-handle"
+        type="button"
+        title=${this.localize("media_player.resize")}
+        aria-label=${this.localize("media_player.resize")}
+        @pointerdown=${this._startResize}
+        @pointermove=${this._moveResize}
+        @pointerup=${this._endResize}
+        @pointercancel=${this._endResize}
+        @keydown=${this._handleResizeKey}
+      >
+        <ha-icon icon="mdi:resize-bottom-right"></ha-icon>
+      </button>
     </dialog>`;
   }
 
@@ -113,6 +133,8 @@ export class MediaPlayerContainer extends LitElement {
     dialog.classList.remove("dragged");
     dialog.style.removeProperty("left");
     dialog.style.removeProperty("top");
+    dialog.style.removeProperty("width");
+    dialog.style.removeProperty("height");
     if (!dialog.open) dialog.showModal();
     this._acquireLiveMute();
     window.addEventListener("resize", this._clampDialog);
@@ -172,6 +194,58 @@ export class MediaPlayerContainer extends LitElement {
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
   };
 
+  private readonly _startResize = (event: PointerEvent): void => {
+    if (event.button !== 0) return;
+    event.stopPropagation();
+    const dialog = this._dialog();
+    if (!dialog) return;
+    const rect = dialog.getBoundingClientRect();
+    this._prepareManualBounds(rect);
+    this._resize = {
+      height: rect.height,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      width: rect.width,
+    };
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+  };
+
+  private readonly _moveResize = (event: PointerEvent): void => {
+    if (!this._resize || event.pointerId !== this._resize.pointerId) return;
+    this._resizeDialog(
+      this._resize.width + event.clientX - this._resize.startX,
+      this._resize.height + event.clientY - this._resize.startY,
+    );
+  };
+
+  private readonly _endResize = (event: PointerEvent): void => {
+    if (!this._resize || event.pointerId !== this._resize.pointerId) return;
+    this._resize = undefined;
+    const target = event.currentTarget as HTMLElement;
+    if (target.hasPointerCapture(event.pointerId)) {
+      target.releasePointerCapture(event.pointerId);
+    }
+  };
+
+  private readonly _handleResizeKey = (event: KeyboardEvent): void => {
+    const horizontal =
+      event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+    const vertical =
+      event.key === "ArrowDown" ? 1 : event.key === "ArrowUp" ? -1 : 0;
+    if (horizontal === 0 && vertical === 0) return;
+    event.preventDefault();
+    const dialog = this._dialog();
+    if (!dialog) return;
+    const rect = dialog.getBoundingClientRect();
+    this._prepareManualBounds(rect);
+    const step = event.shiftKey ? 32 : 16;
+    this._resizeDialog(
+      rect.width + horizontal * step,
+      rect.height + vertical * step,
+    );
+  };
+
   private readonly _moveDrag = (event: PointerEvent): void => {
     if (!this._drag || event.pointerId !== this._drag.pointerId) return;
     this._positionDialog(
@@ -193,15 +267,42 @@ export class MediaPlayerContainer extends LitElement {
     const dialog = this._dialog();
     if (!dialog?.classList.contains("dragged")) return;
     const rect = dialog.getBoundingClientRect();
+    this._resizeDialog(rect.width, rect.height);
     this._positionDialog(rect.left, rect.top);
   };
+
+  private _prepareManualBounds(rect: DOMRect): void {
+    const dialog = this._dialog();
+    if (!dialog) return;
+    dialog.classList.add("dragged");
+    dialog.style.left = `${rect.left}px`;
+    dialog.style.top = `${rect.top}px`;
+    dialog.style.width = `${rect.width}px`;
+    dialog.style.height = `${rect.height}px`;
+  }
+
+  private _resizeDialog(width: number, height: number): void {
+    const dialog = this._dialog();
+    if (!dialog) return;
+    const rect = dialog.getBoundingClientRect();
+    const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    const maxWidth = Math.max(1, viewportWidth - Math.max(0, rect.left));
+    const maxHeight = Math.max(1, viewportHeight - Math.max(0, rect.top));
+    const minWidth = Math.min(320, maxWidth);
+    const minHeight = Math.min(200, maxHeight);
+    dialog.style.width = `${Math.min(Math.max(minWidth, width), maxWidth)}px`;
+    dialog.style.height = `${Math.min(Math.max(minHeight, height), maxHeight)}px`;
+  }
 
   private _positionDialog(left: number, top: number): void {
     const dialog = this._dialog();
     if (!dialog) return;
     const rect = dialog.getBoundingClientRect();
-    const maxLeft = Math.max(0, window.innerWidth - rect.width);
-    const maxTop = Math.max(0, window.innerHeight - rect.height);
+    const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    const maxLeft = Math.max(0, viewportWidth - rect.width);
+    const maxTop = Math.max(0, viewportHeight - rect.height);
     dialog.style.left = `${Math.min(Math.max(0, left), maxLeft)}px`;
     dialog.style.top = `${Math.min(Math.max(0, top), maxTop)}px`;
   }

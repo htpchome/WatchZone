@@ -52,3 +52,5 @@ This document is normative for alert, event, and recording playback.
 - Only its header initiates pointer dragging. Controls in the header do not.
 - The modal is clamped to the viewport while dragging and after viewport
   resize. Its maximum dimensions preserve an on-screen close path.
+- The modal provides a pointer- and keyboard-operable resize handle. Resizing
+  is clamped to the visible viewport and preserves the header close path.

@@ -86,7 +86,10 @@ export class MediaPlayer extends LitElement {
     source: RecordedMediaSource,
     generation: number,
   ): Promise<void> {
-    const url = this.api?.resolveUrl(source.url) ?? source.url;
+    const url = await this._resolveSourceUrl(source.url);
+    if (generation !== this._generation) {
+      throw new DOMException("Playback superseded", "AbortError");
+    }
     if (source.transport === "file") {
       video.src = url;
       video.load();
@@ -140,6 +143,21 @@ export class MediaPlayer extends LitElement {
     this._generation += 1;
     const video = this.renderRoot.querySelector("video");
     if (video) this._clearSource(video);
+  }
+
+  private async _resolveSourceUrl(path: string): Promise<string> {
+    const api = this.api;
+    if (!api) return path;
+    try {
+      const signed = await api.callWS<{ readonly path?: string }>({
+        type: "auth/sign_path",
+        path,
+        expires: 3600,
+      });
+      return api.resolveUrl(signed.path ?? path);
+    } catch {
+      return api.resolveUrl(path);
+    }
   }
 
   private _clearSource(video: HTMLVideoElement): void {

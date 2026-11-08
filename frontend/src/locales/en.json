@@ -172,5 +172,6 @@
   "alerts.detection": "Detection",
   "media_player.open": "Play {title}",
   "media_player.close": "Close video player",
+  "media_player.resize": "Resize video player",
   "media_player.load_failed": "Unable to play this recording."
 }

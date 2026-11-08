@@ -508,6 +508,50 @@ test("shows an independently scrolling event window for the active camera", asyn
   await expect(recordedVideo).toHaveAttribute("autoplay", "");
   await expect(recordedVideo).toHaveAttribute("muted", "");
   await expect(recordedVideo).toHaveAttribute("playsinline", "");
+  await recordedVideo.evaluate((element) =>
+    element.dispatchEvent(
+      new CustomEvent("wzc-recorded-media-error", {
+        bubbles: true,
+        composed: true,
+      }),
+    ),
+  );
+  const mediaErrorToast = page.locator(
+    "wzc-media-player-container wzc-toast-region .toast",
+  );
+  await expect(mediaErrorToast).toContainText("Unable to play this recording.");
+  const mediaErrorBox = await mediaErrorToast.boundingBox();
+  expect(mediaErrorBox?.height).toBeLessThan(80);
+  expect(mediaErrorBox?.width).toBeLessThan(600);
+  const mediaBodyPadding = await page
+    .locator("wzc-media-player-container .body")
+    .evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).paddingTop),
+    );
+  expect(mediaBodyPadding).toBeGreaterThan(0);
+  const resizeHandle = page.locator(
+    "wzc-media-player-container .resize-handle",
+  );
+  await expect(resizeHandle).toHaveAttribute(
+    "aria-label",
+    "Resize video player",
+  );
+  const initialDialogBox = await mediaDialog.boundingBox();
+  const resizeBox = await resizeHandle.boundingBox();
+  expect(initialDialogBox).not.toBeNull();
+  expect(resizeBox).not.toBeNull();
+  if (initialDialogBox && resizeBox) {
+    await page.mouse.move(
+      resizeBox.x + resizeBox.width / 2,
+      resizeBox.y + resizeBox.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(resizeBox.x + 80, resizeBox.y + 60);
+    await page.mouse.up();
+    const resizedDialogBox = await mediaDialog.boundingBox();
+    expect(resizedDialogBox?.width).toBeGreaterThan(initialDialogBox.width);
+    expect(resizedDialogBox?.height).toBeGreaterThan(initialDialogBox.height);
+  }
   const header = page.locator("wzc-media-player-container .header");
   const headerBox = await header.boundingBox();
   expect(headerBox).not.toBeNull();

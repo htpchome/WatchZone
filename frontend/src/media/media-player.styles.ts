@@ -5,6 +5,7 @@ export const mediaPlayerStyles = css`
     background: var(--wzc-recorded-media-background);
     display: block;
     inline-size: 100%;
+    block-size: 100%;
     min-block-size: 0;
   }
 
@@ -12,8 +13,9 @@ export const mediaPlayerStyles = css`
     aspect-ratio: 16 / 9;
     background: var(--wzc-recorded-media-background);
     display: block;
+    block-size: 100%;
     inline-size: 100%;
-    max-block-size: var(--wzc-recorded-media-max-block-size);
+    max-block-size: 100%;
     object-fit: contain;
   }
 `;

@@ -111,7 +111,7 @@ def _normalize_event(raw: dict[str, Any], instance_id: str) -> EventItem | None:
             )
             if source is not None
         ),
-        preferred_transport="file",
+        preferred_transport="hls",
         zones=zones,
         revision=revision,
     )
