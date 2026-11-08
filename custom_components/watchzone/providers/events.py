@@ -7,6 +7,8 @@ from typing import Protocol
 
 from homeassistant.core import HomeAssistant
 
+from .media import PlaybackSource, PlaybackTransport
+
 
 @dataclass(frozen=True, slots=True)
 class EventQuery:
@@ -33,6 +35,8 @@ class EventItem:
     thumbnail_url: str | None
     snapshot_url: str | None
     clip_url: str | None
+    playback_sources: tuple[PlaybackSource, ...]
+    preferred_transport: PlaybackTransport
     zones: tuple[str, ...]
     revision: str
 

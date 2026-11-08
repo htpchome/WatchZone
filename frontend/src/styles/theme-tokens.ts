@@ -247,6 +247,21 @@ export const themeTokens = css`
     --wzc-event-action-color: var(--wzc-color-text-2);
     --wzc-event-action-size: 2.25rem;
     --wzc-alert-thumbnail-outline-width: 2px;
+    --wzc-recorded-media-background: var(--wzc-camera-stage);
+    --wzc-recorded-media-max-block-size: calc(90dvh - 3rem);
+    --wzc-recorded-media-dialog-background: var(--wzc-color-background);
+    --wzc-recorded-media-dialog-border: 1px solid var(--wzc-color-border);
+    --wzc-recorded-media-dialog-radius: var(--wzc-radius-card);
+    --wzc-recorded-media-dialog-shadow: var(--wzc-shadow-medium);
+    --wzc-recorded-media-header-background: var(--wzc-color-surface-secondary);
+    --wzc-recorded-media-backdrop: color-mix(
+      in srgb,
+      var(--wzc-camera-stage) 55%,
+      transparent
+    );
+    --wzc-recorded-media-control-hover-background: var(
+      --wzc-color-fill-primary
+    );
     --wzc-stage-stack-navigation-gap: 0.35rem;
     --wzc-stage-stack-navigation-padding: 0.25rem;
     --wzc-stage-stack-button-size: 2.75rem;

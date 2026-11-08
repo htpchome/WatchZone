@@ -169,5 +169,8 @@
   "alerts.load_failed": "Unable to load camera alerts.",
   "alerts.activity": "Camera activity",
   "alerts.alert": "Alert",
-  "alerts.detection": "Detection"
+  "alerts.detection": "Detection",
+  "media_player.open": "Play {title}",
+  "media_player.close": "Close video player",
+  "media_player.load_failed": "Unable to play this recording."
 }

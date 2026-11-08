@@ -52,3 +52,13 @@ def test_review_normalization_preserves_classification_and_media() -> None:
     )
     assert item.clip_url is not None
     assert "/recording/front/start/1700000000.1/end/1700000024.2" in item.clip_url
+    assert item.preferred_transport == "hls"
+    assert [source.transport for source in item.playback_sources] == [
+        "hls",
+        "hls",
+        "file",
+    ]
+    assert "/vod/front/start/1700000000.1/end/1700000024.2/index.m3u8" in (
+        item.playback_sources[0].url
+    )
+    assert item.playback_sources[-1].url == item.clip_url

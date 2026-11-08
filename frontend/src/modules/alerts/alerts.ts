@@ -62,6 +62,8 @@ export class AlertsModule extends LitElement {
       endTime: review.end_time,
       id: review.id,
       objectLabels: [...review.labels, ...review.sub_labels],
+      playbackSources: review.playback_sources,
+      preferredTransport: review.preferred_transport,
       revision: review.revision,
       snapshotUrl: review.snapshot_url,
       startTime: review.start_time,

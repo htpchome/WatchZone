@@ -248,6 +248,9 @@ test("shows an independently scrolling event window for the active camera", asyn
       contentType: "image/svg+xml",
     });
   });
+  await page.route("**/recording.mp4", async (route) => {
+    await route.fulfill({ body: "", contentType: "video/mp4" });
+  });
   await page.goto("/");
   await waitForWatchZoneDefinition(page);
   await page.locator("watchzone-card").evaluate((element) => {
@@ -258,12 +261,23 @@ test("shows an independently scrolling event window for the active camera", asyn
     const events = (camera: string) =>
       Array.from({ length: 6 }, (_, index) => ({
         camera,
-        clip_url: null,
+        clip_url: index === 0 ? "/recording.mp4" : null,
         end_time: 1_700_000_024 - index * 60,
-        has_clip: false,
+        has_clip: index === 0,
         has_snapshot: index !== 3,
         id: `frigate:${camera}:${index}`,
         label: index === 0 ? "person" : "bird",
+        playback_sources:
+          index === 0
+            ? [
+                {
+                  content_type: "video/mp4",
+                  transport: "file",
+                  url: "/recording.mp4",
+                },
+              ]
+            : [],
+        preferred_transport: "file",
         revision: `revision-${index}`,
         snapshot_url: null,
         start_time: 1_700_000_000 - index * 60,
@@ -329,6 +343,8 @@ test("shows an independently scrolling event window for the active camera", asyn
               end_time: event.end_time,
               id: `review:${camera}:${index}`,
               labels: [event.label],
+              playback_sources: [],
+              preferred_transport: "hls",
               revision: event.revision,
               snapshot_url: event.snapshot_url,
               start_time: event.start_time,
@@ -483,6 +499,30 @@ test("shows an independently scrolling event window for the active camera", asyn
     background: "rgba(0, 0, 0, 0)",
     objectFit: "cover",
   });
+
+  await events.locator(".tile-player").first().click();
+  const mediaDialog = page.locator("wzc-media-player-container dialog");
+  await expect(mediaDialog).toBeVisible();
+  const recordedVideo = page.locator("wzc-media-player video");
+  await expect(recordedVideo).toHaveAttribute("controls", "");
+  await expect(recordedVideo).toHaveAttribute("autoplay", "");
+  await expect(recordedVideo).toHaveAttribute("muted", "");
+  await expect(recordedVideo).toHaveAttribute("playsinline", "");
+  const header = page.locator("wzc-media-player-container .header");
+  const headerBox = await header.boundingBox();
+  expect(headerBox).not.toBeNull();
+  if (headerBox) {
+    await page.mouse.move(headerBox.x + 20, headerBox.y + 20);
+    await page.mouse.down();
+    await page.mouse.move(-500, -500);
+    await page.mouse.up();
+  }
+  const draggedBox = await mediaDialog.boundingBox();
+  expect(draggedBox?.x).toBeGreaterThanOrEqual(0);
+  expect(draggedBox?.y).toBeGreaterThanOrEqual(0);
+  await page.locator("wzc-media-player-container .close").click();
+  await expect(mediaDialog).toBeHidden();
+  await expect(recordedVideo).toHaveCount(0);
 
   await page.locator("wzc-camera-switcher button").nth(1).click();
   await expect(events).toContainText("back_yard");
@@ -1073,8 +1113,11 @@ test("lays out talk and light controls in the responsive dock", async ({
   await expect(lightButton).toHaveAttribute("title", "Turn off Porch");
   await expect(lightButton).toHaveAttribute("aria-label", "Turn off Porch");
 
-  // Keep the shared overlay timer active while WebKit gathers every box.
-  await camera.locator("wzc-camera-live .viewport").hover();
+  // Focus keeps the shared interaction overlay active while slower WebKit
+  // gathers every box; a hover-only timer can expire mid-measurement.
+  await talkButton.focus();
+  await expect(talkButton).toBeFocused();
+  await expect(ptzControl).toBeVisible();
   await expect(ptzControl).toHaveClass(/\bvisible\b/);
 
   const [

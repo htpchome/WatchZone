@@ -43,6 +43,15 @@ def test_event_revision_changes_with_mutable_media_and_end_time() -> None:
         "/api/frigate/frigate_workshop/notifications/1700000000.1-abc/"
     )
     assert f"v={complete.revision}" in complete.thumbnail_url
+    assert complete.preferred_transport == "file"
+    assert [source.transport for source in complete.playback_sources] == [
+        "file",
+        "hls",
+    ]
+    assert complete.playback_sources[0].url == complete.clip_url
+    assert complete.playback_sources[1].url.endswith(
+        f"master.m3u8?v={complete.revision}"
+    )
 
 
 def test_invalid_event_is_not_exposed() -> None:

@@ -93,6 +93,26 @@ describe("MediaSessionManager", () => {
     ).toBeUndefined();
   });
 
+  it("holds forced mute until every recorded-media owner releases it", () => {
+    const manager = new MediaSessionManager();
+    const states: boolean[] = [];
+    const unsubscribe = manager.subscribeForcedMute((active) =>
+      states.push(active),
+    );
+    const first = {};
+    const second = {};
+
+    manager.acquireForcedMute(first);
+    manager.acquireForcedMute(first);
+    manager.acquireForcedMute(second);
+    manager.releaseForcedMute(first);
+    manager.releaseForcedMute(first);
+    manager.releaseForcedMute(second);
+
+    expect(states).toEqual([false, true, false]);
+    unsubscribe();
+  });
+
   it("deduplicates concurrent leases and retains the connection", async () => {
     vi.useFakeTimers();
     const stream = createStream();

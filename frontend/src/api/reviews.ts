@@ -1,4 +1,8 @@
 import type { HomeAssistantApi } from "../core/home-assistant";
+import type {
+  RecordedMediaSource,
+  RecordedMediaTransport,
+} from "../core/recorded-media";
 
 export type ReviewClassification = "alert" | "detection";
 
@@ -8,6 +12,8 @@ export interface ReviewItem {
   readonly clip_url: string | null;
   readonly end_time: number | null;
   readonly id: string;
+  readonly playback_sources: readonly RecordedMediaSource[];
+  readonly preferred_transport: RecordedMediaTransport;
   readonly labels: readonly string[];
   readonly revision: string;
   readonly snapshot_url: string | null;

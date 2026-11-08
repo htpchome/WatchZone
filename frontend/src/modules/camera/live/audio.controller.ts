@@ -27,7 +27,8 @@ type ForcedMuteReason =
   | "document-frozen"
   | "document-hidden"
   | "page-hidden"
-  | "presentation-detached";
+  | "presentation-detached"
+  | "recorded-media";
 
 /** Owns configured audio defaults, user intent, and temporary forced mute. */
 export class CameraAudioController implements ReactiveController {
@@ -41,6 +42,7 @@ export class CameraAudioController implements ReactiveController {
   private _startUnmutedPhone = false;
   private _talkAudioActive = false;
   private _talkUnmuteOverride = false;
+  private _unsubscribeForcedMute?: () => void;
 
   public constructor(
     private readonly _host: ReactiveControllerHost & HTMLElement,
@@ -65,6 +67,11 @@ export class CameraAudioController implements ReactiveController {
       document.visibilityState !== "visible",
       false,
     );
+    this._unsubscribeForcedMute = getMediaSessionManager().subscribeForcedMute(
+      (active) => {
+        this._setForcedMute("recorded-media", active, !active);
+      },
+    );
     this._syncPreference();
   }
 
@@ -77,6 +84,8 @@ export class CameraAudioController implements ReactiveController {
     document.removeEventListener("resume", this._handleResume);
     window.removeEventListener("pagehide", this._handlePageHide);
     window.removeEventListener("pageshow", this._handlePageShow);
+    this._unsubscribeForcedMute?.();
+    this._unsubscribeForcedMute = undefined;
     this._talkAudioActive = false;
     this._talkUnmuteOverride = false;
     this.handleActiveVideoChanged(undefined);

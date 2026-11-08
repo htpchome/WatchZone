@@ -7,6 +7,11 @@ import {
   formatHomeAssistantTime,
 } from "../core/date-time";
 import type { HomeAssistantApi } from "../core/home-assistant";
+import {
+  openRecordedMedia,
+  type RecordedMediaSource,
+  type RecordedMediaTransport,
+} from "../core/recorded-media";
 import { homeAssistantNumberFormat } from "../core/number-format";
 import {
   englishLocalize,
@@ -32,6 +37,8 @@ export interface ActivityListItem {
   readonly endTime: number | null;
   readonly id: string;
   readonly objectLabels: readonly string[];
+  readonly playbackSources: readonly RecordedMediaSource[];
+  readonly preferredTransport: RecordedMediaTransport;
   readonly revision: string;
   readonly snapshotUrl: string | null;
   readonly startTime: number;
@@ -123,7 +130,29 @@ export class ActivityList extends LitElement {
       objectLabels,
       typeBadge ? [reservedColor(typeBadge.variant)] : [],
     );
+    const title = item.objectLabels[0] ?? this.localize("alerts.activity");
+    const posterUrl = previewUrl
+      ? (this.api?.resolveUrl(previewUrl) ?? previewUrl)
+      : undefined;
     return html`<article class="tile">
+      ${
+        item.playbackSources.length > 0
+          ? html`<button
+              class="tile-player"
+              type="button"
+              title=${this.localize("media_player.open", { title })}
+              aria-label=${this.localize("media_player.open", { title })}
+              @click=${() =>
+                openRecordedMedia(this, {
+                  id: item.id,
+                  posterUrl,
+                  preferredTransport: item.preferredTransport,
+                  sources: item.playbackSources,
+                  title,
+                })}
+            ></button>`
+          : null
+      }
       <div class=${`thumbnail-wrap ${item.classification ?? ""}`.trim()}>
         ${
           previewUrl

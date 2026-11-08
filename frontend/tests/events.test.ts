@@ -14,6 +14,10 @@ const event = {
   has_snapshot: true,
   id: "frigate:event-1",
   label: "person",
+  playback_sources: [
+    { content_type: "video/mp4", transport: "file", url: "/clip.mp4" },
+  ],
+  preferred_transport: "file",
   revision: "revision-1",
   snapshot_url: "/snapshot.jpg",
   start_time: 100,
@@ -91,6 +95,19 @@ describe("events module", () => {
     expect(
       activityRoot(module)?.querySelector("wzc-badge")?.getAttribute("size"),
     ).toBe("small");
+    const open = vi.fn();
+    module.addEventListener("wzc-recorded-media-open", open);
+    activityRoot(module)
+      ?.querySelector<HTMLButtonElement>(".tile-player")
+      ?.click();
+    expect(open).toHaveBeenCalledOnce();
+    expect(open.mock.calls[0]?.[0].detail).toEqual(
+      expect.objectContaining({
+        id: event.id,
+        preferredTransport: "file",
+        title: "person",
+      }),
+    );
     expect(
       activityRoot(module)
         ?.querySelector(".viewport")

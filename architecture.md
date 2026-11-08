@@ -149,6 +149,7 @@ architecture decision recorded in this document or a future ADR.
 │   │   ├── modules/               # Independently loaded UI features
 │   │   ├── components/            # Portable placeables for module slots
 │   │   ├── providers/             # External-system capabilities and resolver
+│   │   ├── media/                 # Lazy recorded-media players and containers
 │   │   ├── ui/                    # Shared visual primitives and icon registry
 │   │   ├── styles/                # HA theme boundary and global design tokens
 │   │   └── editor/                # Lazily loaded layout editor
@@ -731,6 +732,24 @@ User audio intent is separate from temporary playback state:
 
 The detailed normative lifecycle, lease, retention, eviction, and mute-state
 contract is defined in [docs/live-session-lifecycle.md](docs/live-session-lifecycle.md).
+
+### 8.10 Recorded-media playback
+
+Recorded alerts, events, and recording ranges use the lazy `media/` boundary.
+They are transient viewers, not Stage modules, Stage components, or retained
+live sessions. A media player owns transport selection, the browser media
+element, and transport cleanup. A media-player container owns only a concrete
+presentation such as the draggable modal, future bottom drawer, or live-area
+cover. Containers and players communicate through the provider-neutral
+recorded-media contract in `core/`.
+
+Providers return ordered, authenticated playback candidates and a preferred
+transport. Shared modules never construct provider URLs. Playback attempts are
+sequential rather than competing, and Catalyst is restricted to native HLS.
+Opening recorded media acquires a document-scoped temporary live-audio mute;
+closing it releases that mute without changing any camera's user preference.
+The detailed contract is defined in
+[docs/recorded-media-player.md](docs/recorded-media-player.md).
 
 ## 9. Python-owned layout system
 

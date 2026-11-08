@@ -64,6 +64,8 @@ export class EventsModule extends LitElement {
         event.label,
         ...(event.sub_label ? [event.sub_label] : []),
       ],
+      playbackSources: event.playback_sources,
+      preferredTransport: event.preferred_transport,
       revision: event.revision,
       snapshotUrl: event.snapshot_url,
       startTime: event.start_time,

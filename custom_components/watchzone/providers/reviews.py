@@ -7,6 +7,8 @@ from typing import Literal, Protocol
 
 from homeassistant.core import HomeAssistant
 
+from .media import PlaybackSource, PlaybackTransport
+
 ReviewClassification = Literal["alert", "detection"]
 
 
@@ -34,6 +36,8 @@ class ReviewItem:
     thumbnail_url: str | None
     snapshot_url: str | None
     clip_url: str | None
+    playback_sources: tuple[PlaybackSource, ...]
+    preferred_transport: PlaybackTransport
     zones: tuple[str, ...]
     revision: str
 

@@ -15,10 +15,13 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from yarl import URL
 
+from ..media import PlaybackSource
 from ..reviews import ReviewItem, ReviewQuery, ReviewsProvider
 from .source import FrigateSource, async_resolve_source
 
 _REQUEST_TIMEOUT = ClientTimeout(total=15)
+
+
 class FrigateReviewsProvider:
     """Fetch mutable Frigate reviews without the integration review cache."""
 
@@ -43,9 +46,7 @@ class FrigateReviewsProvider:
                 headers,
             )
         except (ClientError, TimeoutError, ValueError) as err:
-            raise HomeAssistantError(
-                "Unable to retrieve camera alerts"
-            ) from err
+            raise HomeAssistantError("Unable to retrieve camera alerts") from err
         if not isinstance(reviews_payload, list):
             raise HomeAssistantError("Frigate returned invalid alert data")
 
@@ -53,10 +54,7 @@ class FrigateReviewsProvider:
             item
             for raw in reviews_payload
             if isinstance(raw, dict)
-            and (
-                item := _normalize_review(raw, source, query.before)
-            )
-            is not None
+            and (item := _normalize_review(raw, source, query.before)) is not None
         ]
         return sorted(reviews, key=lambda item: item.start_time, reverse=True)[
             : query.limit
@@ -98,9 +96,7 @@ def _normalize_review(
     end_time = _timestamp(raw.get("end_time"))
     raw_data = raw.get("data")
     data: dict[str, Any] = raw_data if isinstance(raw_data, dict) else {}
-    labels = _unique_strings(
-        [*_list(data.get("objects")), *_list(data.get("audio"))]
-    )
+    labels = _unique_strings([*_list(data.get("objects")), *_list(data.get("audio"))])
     sub_labels = _string_list(data.get("sub_labels"))
     zones = _string_list(data.get("zones"))
     material = {
@@ -116,6 +112,8 @@ def _normalize_review(
     encoded_review = quote(review_id, safe="")
     encoded_camera = quote(camera, safe="")
     media_end = end_time or now
+    recording_url = _recording_url(source, camera, start_time, media_end)
+    vod_base = _vod_url(source, camera, start_time, media_end)
     return ReviewItem(
         id=f"{source.frigate_instance_id}:{review_id}",
         camera=camera,
@@ -129,7 +127,21 @@ def _normalize_review(
             f"{encoded_camera}/review_thumbnail.webp?v={revision}"
         ),
         snapshot_url=None,
-        clip_url=_recording_url(source, camera, start_time, media_end),
+        clip_url=recording_url,
+        playback_sources=(
+            PlaybackSource(
+                f"{vod_base}/index.m3u8",
+                "application/vnd.apple.mpegurl",
+                "hls",
+            ),
+            PlaybackSource(
+                f"{vod_base}/master.m3u8",
+                "application/vnd.apple.mpegurl",
+                "hls",
+            ),
+            PlaybackSource(recording_url, "video/mp4", "file"),
+        ),
+        preferred_transport="hls",
         zones=zones,
         revision=revision,
     )
@@ -140,6 +152,15 @@ def _recording_url(
 ) -> str:
     return (
         f"/api/frigate/{quote(source.frigate_instance_id, safe='')}/recording/"
+        f"{quote(camera, safe='')}/start/{start_time}/end/{end_time}"
+    )
+
+
+def _vod_url(
+    source: FrigateSource, camera: str, start_time: float, end_time: float
+) -> str:
+    return (
+        f"/api/frigate/{quote(source.frigate_instance_id, safe='')}/vod/"
         f"{quote(camera, safe='')}/start/{start_time}/end/{end_time}"
     )
 

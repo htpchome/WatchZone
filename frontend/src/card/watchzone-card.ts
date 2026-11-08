@@ -14,6 +14,8 @@ import {
   DEFAULT_CARD_TITLE,
   EDITOR_PREVIEW_DRAFT_EVENT,
   EDITOR_TAG,
+  MEDIA_PLAYER_CONTAINER_TAG,
+  RECORDED_MEDIA_OPEN_EVENT,
   TOAST_REGION_TAG,
 } from "../core/constants";
 import {
@@ -26,6 +28,7 @@ import {
   type HomeAssistantConnectionEventListener,
 } from "../core/home-assistant";
 import { LocalizationController } from "../core/localization";
+import type { RecordedMediaRequest } from "../core/recorded-media";
 import { CardHostAppearanceController } from "../styles/card-host-appearance.controller";
 import { roundButtonStyles, themeTokens } from "../styles/theme-tokens";
 import { ToastManager } from "../ui/toast-manager";
@@ -35,6 +38,7 @@ import { LayoutRuntime } from "./layout-runtime";
 import { cardStyles } from "./watchzone-card.styles";
 
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
+const mediaPlayerContainerTag = unsafeStatic(MEDIA_PLAYER_CONTAINER_TAG);
 
 interface PreviewDraftDetail {
   readonly baselineSignature: string;
@@ -50,6 +54,9 @@ export class DashboardCard extends LitElement {
   private _previewConfig?: CardConfig;
   private _observedConnection?: HomeAssistantConnection;
   private _transportConnected = true;
+  private _mediaContainerReady = false;
+  private _mediaContainerLoad?: Promise<void>;
+  private _mediaRequest?: RecordedMediaRequest;
   private readonly _cameraImageCredentials =
     new HomeAssistantCameraImageCredentialGuard();
   private readonly _localization = new LocalizationController(this, () =>
@@ -127,6 +134,10 @@ export class DashboardCard extends LitElement {
       EDITOR_PREVIEW_DRAFT_EVENT,
       this._handlePreviewDraft as EventListener,
     );
+    this.addEventListener(
+      RECORDED_MEDIA_OPEN_EVENT,
+      this._handleRecordedMediaOpen,
+    );
     this._syncLayout(this._previewConfig ?? this._config);
     if (this._hass) this._observeConnection(this._hass.connection);
     this._syncRuntime();
@@ -143,6 +154,10 @@ export class DashboardCard extends LitElement {
     window.removeEventListener(
       EDITOR_PREVIEW_DRAFT_EVENT,
       this._handlePreviewDraft as EventListener,
+    );
+    this.removeEventListener(
+      RECORDED_MEDIA_OPEN_EVENT,
+      this._handleRecordedMediaOpen,
     );
     this._unobserveConnection();
     super.disconnectedCallback();
@@ -173,6 +188,15 @@ export class DashboardCard extends LitElement {
       <ha-card class=${cardClasses}>
         <div class="shell" role="region" aria-label=${config.title}>
           ${this._layoutRuntime.render()}
+          ${
+            this._mediaContainerReady && this._mediaRequest
+              ? staticHtml`<${mediaPlayerContainerTag}
+                  .api=${this._haApi}
+                  .localize=${this._localization.localize}
+                  .request=${this._mediaRequest}
+                ></${mediaPlayerContainerTag}>`
+              : null
+          }
           <${toastRegionTag}
             class="card-toast"
             mode="overlay"
@@ -197,6 +221,30 @@ export class DashboardCard extends LitElement {
     this._cardHostAppearance.configure(config);
     this._syncLayout(config);
     this.requestUpdate();
+  };
+
+  private readonly _handleRecordedMediaOpen = (
+    event: CustomEvent<RecordedMediaRequest>,
+  ): void => {
+    event.stopPropagation();
+    this._mediaRequest = event.detail;
+    if (this._mediaContainerReady) {
+      this.requestUpdate();
+      return;
+    }
+    this._mediaContainerLoad ??= import("../media/index")
+      .then(() => {
+        if (!this.isConnected) return;
+        this._mediaContainerReady = true;
+        this.requestUpdate();
+      })
+      .catch(() => {
+        this._mediaContainerLoad = undefined;
+        this._toasts.error(
+          this._localization.localize("media_player.load_failed"),
+          { key: "recorded-media-module-load-failed" },
+        );
+      });
   };
 
   private _syncLayout(config: CardConfig): void {

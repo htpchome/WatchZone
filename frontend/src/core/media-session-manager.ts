@@ -475,6 +475,8 @@ export class MediaSessionManager {
     CameraMutePreference
   >();
   private readonly _sessions = new Map<string, ManagedMediaSession>();
+  private readonly _forcedMuteOwners = new Set<object>();
+  private readonly _forcedMuteListeners = new Set<(active: boolean) => void>();
   private readonly _cameraActivity = new Map<object, string>();
   private readonly _cameraRetentionContexts = new Map<
     object,
@@ -553,6 +555,23 @@ export class MediaSessionManager {
 
   public setCameraMuted(entityId: string, muted: boolean): void {
     this._cameraMutePreferences.set(entityId, muted ? "muted" : "unmuted");
+  }
+
+  public acquireForcedMute(owner: object): void {
+    const wasActive = this._forcedMuteOwners.size > 0;
+    this._forcedMuteOwners.add(owner);
+    if (!wasActive) this._publishForcedMute(true);
+  }
+
+  public releaseForcedMute(owner: object): void {
+    if (!this._forcedMuteOwners.delete(owner)) return;
+    if (this._forcedMuteOwners.size === 0) this._publishForcedMute(false);
+  }
+
+  public subscribeForcedMute(listener: (active: boolean) => void): () => void {
+    this._forcedMuteListeners.add(listener);
+    listener(this._forcedMuteOwners.size > 0);
+    return () => this._forcedMuteListeners.delete(listener);
   }
 
   public setCameraActivity(owner: object, cameraKey: string | undefined): void {
@@ -657,6 +676,10 @@ export class MediaSessionManager {
     this._cameraRetentionMetadata.clear();
     this._retentionPolicy.dispose();
     this._clearConnectionObservers();
+  }
+
+  private _publishForcedMute(active: boolean): void {
+    for (const listener of this._forcedMuteListeners) listener(active);
   }
 
   private _applyRetentionPolicy(): void {

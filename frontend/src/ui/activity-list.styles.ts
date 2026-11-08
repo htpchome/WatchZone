@@ -45,6 +45,24 @@ export const activityListStyles = css`
       auto;
     block-size: var(--wzc-event-tile-block-size);
     overflow: hidden;
+    position: relative;
+  }
+
+  .tile-player {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    inset: 0;
+    padding: 0;
+    position: absolute;
+    z-index: 1;
+  }
+
+  .tile-player:focus-visible {
+    border-radius: inherit;
+    outline: 2px solid var(--wzc-color-primary);
+    outline-offset: -2px;
   }
 
   .square .tile,
@@ -62,6 +80,7 @@ export const activityListStyles = css`
     min-block-size: 0;
     overflow: hidden;
     position: relative;
+    z-index: 0;
   }
 
   .thumbnail-wrap.alert {
@@ -127,6 +146,7 @@ export const activityListStyles = css`
     min-inline-size: 0;
     overflow: hidden;
     padding-block: var(--wzc-event-content-padding);
+    pointer-events: none;
   }
 
   .badges {
@@ -173,6 +193,8 @@ export const activityListStyles = css`
     display: flex;
     gap: 0.2rem;
     padding-inline-end: var(--wzc-event-content-padding);
+    position: relative;
+    z-index: 2;
   }
 
   .action {

@@ -891,6 +891,33 @@ describe("camera presentation retention", () => {
     await vi.waitFor(() => expect(hlsVideo.muted).toBe(false));
   });
 
+  it("temporarily mutes live video for recorded playback and restores intent", async () => {
+    const { api, hlsVideo } = installHlsSession();
+    const view = createLiveView(api);
+    document.body.append(view);
+    await vi.waitFor(() =>
+      expect(
+        presentation(view)?.shadowRoot?.querySelector(".fallback-host video"),
+      ).toBe(hlsVideo),
+    );
+    toggleMute(view);
+    await vi.waitFor(() => expect(hlsVideo.muted).toBe(false));
+    const manager = getMediaSessionManager();
+    const first = {};
+    const second = {};
+
+    manager.acquireForcedMute(first);
+    expect(hlsVideo.muted).toBe(true);
+    manager.acquireForcedMute(second);
+    manager.releaseForcedMute(first);
+    expect(hlsVideo.muted).toBe(true);
+    expect(manager.getCameraMutePreference("camera.front")).toBe("unmuted");
+
+    manager.releaseForcedMute(second);
+    await vi.waitFor(() => expect(hlsVideo.muted).toBe(false));
+    expect(manager.getCameraMutePreference("camera.front")).toBe("unmuted");
+  });
+
   it("keeps an explicit unmute preference when autoplay is blocked", async () => {
     const play = vi
       .spyOn(HTMLMediaElement.prototype, "play")

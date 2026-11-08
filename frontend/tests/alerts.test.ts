@@ -14,6 +14,10 @@ const reviews = [
     end_time: 124,
     id: "frigate:review-1",
     labels: ["person"],
+    playback_sources: [
+      { content_type: "video/mp4", transport: "file", url: "/alert.mp4" },
+    ],
+    preferred_transport: "hls",
     revision: "revision-1",
     snapshot_url: null,
     start_time: 100,
@@ -28,6 +32,14 @@ const reviews = [
     end_time: 90,
     id: "frigate:review-2",
     labels: ["cat"],
+    playback_sources: [
+      {
+        content_type: "application/vnd.apple.mpegurl",
+        transport: "hls",
+        url: "/detection.m3u8",
+      },
+    ],
+    preferred_transport: "hls",
     revision: "revision-2",
     snapshot_url: null,
     start_time: 80,

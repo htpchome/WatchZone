@@ -14,6 +14,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from yarl import URL
 
 from ..events import EventItem, EventQuery, EventsProvider
+from ..media import PlaybackSource
 from .source import async_resolve_source
 
 _REQUEST_TIMEOUT = ClientTimeout(total=15)
@@ -86,6 +87,8 @@ def _normalize_event(raw: dict[str, Any], instance_id: str) -> EventItem | None:
         f"{quote(event_id, safe='')}"
     )
     suffix = f"?v={revision}"
+    clip_url = f"{base}/clip.mp4{suffix}" if has_clip else None
+    hls_url = f"{base}/master.m3u8{suffix}" if has_clip else None
     return EventItem(
         id=f"{instance_id}:{event_id}",
         camera=camera,
@@ -97,7 +100,18 @@ def _normalize_event(raw: dict[str, Any], instance_id: str) -> EventItem | None:
         has_clip=has_clip,
         thumbnail_url=f"{base}/thumbnail.jpg{suffix}" if has_snapshot else None,
         snapshot_url=f"{base}/snapshot.jpg{suffix}" if has_snapshot else None,
-        clip_url=f"{base}/clip.mp4{suffix}" if has_clip else None,
+        clip_url=clip_url,
+        playback_sources=tuple(
+            source
+            for source in (
+                PlaybackSource(clip_url, "video/mp4", "file") if clip_url else None,
+                PlaybackSource(hls_url, "application/vnd.apple.mpegurl", "hls")
+                if hls_url
+                else None,
+            )
+            if source is not None
+        ),
+        preferred_transport="file",
         zones=zones,
         revision=revision,
     )
