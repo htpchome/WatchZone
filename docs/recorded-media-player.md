@@ -52,8 +52,9 @@ This document is normative for alert, event, and recording playback.
 
 ## Draggable modal
 
-- The modal uses the browser dialog/top-layer model and supports Escape and a
-  labeled close control.
+- The modal uses a non-modal browser dialog and supports Escape and a labeled
+  close control. It does not use the modal top layer because activity tiles
+  must remain actionable behind it.
 - Only its header initiates pointer dragging. Controls in the header do not.
 - The modal is clamped to the viewport while dragging and after viewport
   resize. Its maximum dimensions preserve an on-screen close path.
@@ -61,6 +62,12 @@ This document is normative for alert, event, and recording playback.
   stage is available. It provides a diagonal bottom-right, pointer- and
   keyboard-operable resize handle. Resizing is clamped to the visible viewport
   and preserves the header close path.
-- The non-blocking dialog retains a visual scrim. An activity-tile activation
-  may replace the current media without closing the viewer; any other click
-  outside the dialog closes it before the background action runs.
+- The non-blocking dialog has no visual scrim because activity tiles remain
+  directly actionable while it is open. An activity-tile activation may
+  replace the current media without closing the viewer; any other click outside
+  the dialog closes it before the background action runs.
+- The player viewport is always `16:9`. Only the diagonal bottom-right resize
+  handle changes its dimensions, and width and height remain locked to that
+  ratio. The header sits directly above the player; the container owns side and
+  bottom padding, while the player owns no modal spacing.
+- Recorded-media overlay buttons reuse the square live-media control primitive.

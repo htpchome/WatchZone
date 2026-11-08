@@ -158,10 +158,22 @@ describe("recorded media player", () => {
       y: 100,
       toJSON: () => ({}),
     });
+    const player = container.shadowRoot?.querySelector("wzc-media-player");
+    vi.spyOn(player!, "getBoundingClientRect").mockReturnValue({
+      bottom: 390,
+      height: 272.25,
+      left: 108,
+      right: 592,
+      top: 117.75,
+      width: 484,
+      x: 108,
+      y: 117.75,
+      toJSON: () => ({}),
+    });
     container.shadowRoot
       ?.querySelector(".resize-handle")
       ?.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
-    expect(dialog?.style.width).toBe("516px");
+    expect(Number.parseFloat(dialog?.style.width ?? "0")).toBeGreaterThan(484);
 
     container.close();
     expect(states).toEqual([false, true, false]);

@@ -25,7 +25,7 @@ import type {
   RecordedMediaRequest,
   RecordedMediaSource,
 } from "../core/recorded-media";
-import { roundButtonStyles } from "../styles/theme-tokens";
+import { mediaOverlayControlButtonStyles } from "../styles/theme-tokens";
 import { renderIcon } from "../ui/icons";
 import { MediaZoomController } from "../ui/media-zoom.controller";
 import { mediaPlayerStyles } from "./media-player.styles";
@@ -88,26 +88,21 @@ export class MediaPlayer extends LitElement {
       @wheel=${this._zoom.handleWheel}
       @keydown=${this._zoom.handleKeyDown}
     >
-      <div
-        class=${
-          this._zoom.interacting ? "media-surface interacting" : "media-surface"
-        }
+      <video
+        class=${this._zoom.interacting ? "interacting" : ""}
         style=${`transform: ${this._zoom.transform}`}
-      >
-        <video
-          controls
-          autoplay
-          muted
-          playsinline
-          preload="auto"
-          poster=${this.request?.posterUrl ?? ""}
-          @loadedmetadata=${this._handleLoadedMetadata}
-          @volumechange=${this._syncControlState}
-          @enterpictureinpicture=${this._syncControlState}
-          @leavepictureinpicture=${this._syncControlState}
-          @webkitpresentationmodechanged=${this._syncControlState}
-        ></video>
-      </div>
+        controls
+        autoplay
+        muted
+        playsinline
+        preload="auto"
+        poster=${this.request?.posterUrl ?? ""}
+        @loadedmetadata=${this._handleLoadedMetadata}
+        @volumechange=${this._syncControlState}
+        @enterpictureinpicture=${this._syncControlState}
+        @leavepictureinpicture=${this._syncControlState}
+        @webkitpresentationmodechanged=${this._syncControlState}
+      ></video>
       <div
         class="controls"
         role="group"
@@ -116,7 +111,7 @@ export class MediaPlayer extends LitElement {
         @keydown=${(event: Event) => event.stopPropagation()}
       >
         <button
-          class="round-button"
+          class="control-button"
           type="button"
           title=${this.localize(
             this._muted ? "media_player.unmute" : "media_player.mute",
@@ -131,7 +126,7 @@ export class MediaPlayer extends LitElement {
           ${renderIcon(this._muted ? "volumeOff" : "volumeOn")}
         </button>
         <button
-          class="round-button"
+          class="control-button"
           type="button"
           title=${this.localize(
             this._fullscreenActive
@@ -153,7 +148,7 @@ export class MediaPlayer extends LitElement {
           )}
         </button>
         <button
-          class="round-button"
+          class="control-button"
           type="button"
           title=${this.localize(
             this._pictureInPictureActive
@@ -407,7 +402,7 @@ export class MediaPlayer extends LitElement {
     );
   }
 
-  static styles = [roundButtonStyles, mediaPlayerStyles];
+  static styles = [mediaOverlayControlButtonStyles, mediaPlayerStyles];
 }
 
 function orderedSources(request: RecordedMediaRequest): RecordedMediaSource[] {

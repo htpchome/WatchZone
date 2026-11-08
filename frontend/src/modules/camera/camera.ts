@@ -107,9 +107,11 @@ export class CameraModule extends LitElement {
   /** Returns the visible live-stage bounds without exposing camera internals. */
   public getActiveStageRect(): DOMRectReadOnly | undefined {
     return this.renderRoot
-      .querySelectorAll<HTMLElement>(CAMERA_VIEW_TAG)
+      .querySelectorAll<HTMLElement & { getStageRect?(): DOMRectReadOnly }>(
+        CAMERA_VIEW_TAG,
+      )
       .item(this._activeIndex)
-      ?.getBoundingClientRect();
+      ?.getStageRect?.();
   }
 
   public disconnectedCallback(): void {

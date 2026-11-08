@@ -6,14 +6,16 @@ export const mediaPlayerContainerStyles = css`
   }
 
   dialog {
-    background: var(--wzc-recorded-media-dialog-background);
+    background: var(--wzc-recorded-media-header-background);
     border: var(--wzc-recorded-media-dialog-border);
     border-radius: var(--wzc-recorded-media-dialog-radius);
     box-shadow: var(--wzc-recorded-media-dialog-shadow);
     box-sizing: border-box;
     color: var(--wzc-color-text-1);
-    grid-template-rows: max-content minmax(0, 1fr);
+    grid-template-rows: max-content max-content;
     inline-size: min(52rem, calc(100vw - 1rem));
+    inset: 0;
+    margin: auto;
     max-block-size: calc(100dvh - 1rem);
     max-inline-size: calc(100vw - 1rem);
     min-block-size: var(--wzc-recorded-media-dialog-min-block-size);
@@ -28,15 +30,8 @@ export const mediaPlayerContainerStyles = css`
     display: grid;
   }
 
-  .scrim {
-    background: var(--wzc-recorded-media-backdrop);
-    inset: 0;
-    pointer-events: none;
-    position: fixed;
-    z-index: 1000;
-  }
-
   dialog.dragged {
+    inset: auto;
     margin: 0;
     position: fixed;
   }
@@ -93,18 +88,18 @@ export const mediaPlayerContainerStyles = css`
   }
 
   .body {
-    background: var(--wzc-recorded-media-background);
+    background: var(--wzc-recorded-media-header-background);
     box-sizing: border-box;
     display: grid;
-    min-block-size: 0;
     padding: 0 var(--wzc-recorded-media-dialog-padding)
       var(--wzc-recorded-media-dialog-bottom-padding);
     position: relative;
   }
 
   wzc-media-player {
-    block-size: 100%;
-    min-block-size: 0;
+    aspect-ratio: 16 / 9;
+    block-size: auto;
+    inline-size: 100%;
   }
 
   wzc-toast-region {
@@ -140,36 +135,8 @@ export const mediaPlayerContainerStyles = css`
     outline-offset: -2px;
   }
 
-  .diagonal-grip {
-    block-size: 1rem;
+  .resize-handle ha-icon {
+    --mdc-icon-size: 1.25rem;
     display: block;
-    inline-size: 1rem;
-    position: relative;
-  }
-
-  .diagonal-grip span {
-    background: currentcolor;
-    block-size: 1px;
-    position: absolute;
-    transform: rotate(-45deg);
-    transform-origin: right center;
-  }
-
-  .diagonal-grip span:nth-child(1) {
-    bottom: 0.05rem;
-    inline-size: 0.9rem;
-    right: 0;
-  }
-
-  .diagonal-grip span:nth-child(2) {
-    bottom: 0.35rem;
-    inline-size: 0.58rem;
-    right: 0;
-  }
-
-  .diagonal-grip span:nth-child(3) {
-    bottom: 0.65rem;
-    inline-size: 0.25rem;
-    right: 0;
   }
 `;

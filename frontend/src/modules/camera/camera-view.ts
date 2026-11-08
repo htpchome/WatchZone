@@ -368,6 +368,13 @@ export class CameraView extends LitElement {
     this._session.handleWebRtcPresented();
   };
 
+  /** Returns the rendered media stage rather than the carousel-slide host. */
+  public getStageRect(): DOMRectReadOnly | undefined {
+    return this.renderRoot
+      .querySelector<HTMLElement>(".camera")
+      ?.getBoundingClientRect();
+  }
+
   static styles = cameraViewStyles;
 }
 

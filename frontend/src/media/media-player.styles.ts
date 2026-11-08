@@ -3,17 +3,17 @@ import { css } from "lit";
 export const mediaPlayerStyles = css`
   :host {
     background: var(--wzc-recorded-media-background);
+    aspect-ratio: 16 / 9;
+    block-size: auto;
     display: block;
     inline-size: 100%;
-    block-size: 100%;
-    min-block-size: 0;
   }
 
   .viewport {
     background: var(--wzc-recorded-media-background);
-    block-size: 100%;
+    aspect-ratio: 16 / 9;
+    block-size: auto;
     inline-size: 100%;
-    min-block-size: 0;
     overflow: hidden;
     position: relative;
     touch-action: pan-x pan-y;
@@ -30,32 +30,26 @@ export const mediaPlayerStyles = css`
     outline-offset: -2px;
   }
 
-  .media-surface {
-    block-size: 100%;
-    inline-size: 100%;
-    transform-origin: center;
-    transition: transform var(--wzc-zoom-transition-duration) ease;
-    will-change: transform;
-  }
-
-  .media-surface.interacting {
-    cursor: move;
-    transition: none;
-  }
-
   video {
-    aspect-ratio: 16 / 9;
     background: var(--wzc-recorded-media-background);
     display: block;
     block-size: 100%;
     inline-size: 100%;
     max-block-size: 100%;
     object-fit: contain;
+    transform-origin: center;
+    transition: transform var(--wzc-zoom-transition-duration) ease;
+    will-change: transform;
+  }
+
+  video.interacting {
+    cursor: move;
+    transition: none;
   }
 
   .controls {
-    --wzc-round-button-size: var(--wzc-recorded-media-control-size);
-    --wzc-round-button-icon-size: 58%;
+    --wzc-control-size: var(--wzc-recorded-media-control-size);
+    --wzc-control-icon-size: 1.4rem;
     align-items: center;
     display: flex;
     flex-direction: column;
@@ -68,7 +62,7 @@ export const mediaPlayerStyles = css`
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .media-surface {
+    video {
       transition: none;
     }
   }

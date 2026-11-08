@@ -249,7 +249,6 @@ export const themeTokens = css`
     --wzc-alert-thumbnail-outline-width: 2px;
     --wzc-recorded-media-background: var(--wzc-camera-stage);
     --wzc-recorded-media-max-block-size: calc(90dvh - 3rem);
-    --wzc-recorded-media-dialog-background: var(--wzc-card-background);
     --wzc-recorded-media-dialog-border: 1px solid var(--wzc-color-border);
     --wzc-recorded-media-dialog-radius: var(--wzc-radius-card);
     --wzc-recorded-media-dialog-shadow: var(--wzc-shadow-medium);
@@ -260,11 +259,6 @@ export const themeTokens = css`
     --wzc-recorded-media-resize-handle-size: 1.5rem;
     --wzc-recorded-media-control-size: 2.5rem;
     --wzc-recorded-media-header-background: var(--wzc-color-surface-secondary);
-    --wzc-recorded-media-backdrop: color-mix(
-      in srgb,
-      var(--wzc-camera-stage) 55%,
-      transparent
-    );
     --wzc-recorded-media-control-hover-background: var(
       --wzc-color-fill-primary
     );
@@ -458,5 +452,61 @@ export const roundButtonStyles = css`
     .round-button:active {
       background: var(--wzc-round-button-background, transparent);
     }
+  }
+`;
+
+/** Shared geometry and states for square live-media overlay controls. */
+export const mediaOverlayControlButtonStyles = css`
+  .control-button {
+    appearance: none;
+    background: var(
+      --wzc-control-background,
+      var(--wzc-media-overlay-background)
+    );
+    border: 1px solid
+      var(--wzc-control-border-color, var(--wzc-media-overlay-border-color));
+    border-radius: var(--wzc-control-radius, var(--wzc-media-overlay-radius));
+    box-shadow: var(--wzc-control-shadow, var(--wzc-media-overlay-shadow));
+    box-sizing: border-box;
+    color: var(--wzc-control-color, var(--wzc-media-overlay-color));
+    cursor: pointer;
+    display: grid;
+    font: inherit;
+    inline-size: var(--wzc-control-size);
+    block-size: var(--wzc-control-size);
+    min-inline-size: 0;
+    min-block-size: 0;
+    padding: 0;
+    place-items: center;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .control-button svg {
+    block-size: var(--wzc-control-icon-size);
+    fill: currentcolor;
+    inline-size: var(--wzc-control-icon-size);
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .control-button:hover:not(:disabled) {
+      background: var(
+        --wzc-control-hover-background,
+        var(--wzc-media-overlay-hover-background)
+      );
+      color: var(--wzc-control-hover-color, var(--wzc-media-overlay-color));
+    }
+  }
+
+  .control-button:focus-visible {
+    outline: 2px solid var(--wzc-color-primary);
+    outline-offset: 1px;
+  }
+
+  .control-button:disabled {
+    cursor: default;
+    opacity: var(--wzc-control-disabled-opacity, 1);
   }
 `;

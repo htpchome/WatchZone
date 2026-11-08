@@ -542,30 +542,67 @@ test("shows an independently scrolling event window for the active camera", asyn
   const playerViewportBox = await page
     .locator("wzc-media-player .viewport")
     .boundingBox();
+  const recordedVideoBox = await recordedVideo.boundingBox();
   expect(liveStageBox).not.toBeNull();
   expect(playerViewportBox).not.toBeNull();
   if (liveStageBox && playerViewportBox) {
-    expect(
-      Math.abs(playerViewportBox.height - liveStageBox.height),
-    ).toBeLessThanOrEqual(2);
+    expect(playerViewportBox.width).toBeLessThanOrEqual(liveStageBox.width + 2);
+    expect(playerViewportBox.width / playerViewportBox.height).toBeCloseTo(
+      16 / 9,
+      2,
+    );
   }
-  const cardAndDialogBackgrounds = await page.evaluate(() => {
-    const card = document
+  if (recordedVideoBox && playerViewportBox) {
+    expect(recordedVideoBox.width).toBeCloseTo(playerViewportBox.width, 1);
+    expect(recordedVideoBox.height).toBeCloseTo(playerViewportBox.height, 1);
+  }
+  const modalBackgrounds = await page.evaluate(() => {
+    const container = document
       .querySelector("watchzone-card")
-      ?.shadowRoot?.querySelector("ha-card");
-    const dialog = document
-      .querySelector("watchzone-card")
-      ?.shadowRoot?.querySelector("wzc-media-player-container")
-      ?.shadowRoot?.querySelector("dialog");
+      ?.shadowRoot?.querySelector("wzc-media-player-container")?.shadowRoot;
+    const dialog = container?.querySelector("dialog");
+    const header = container?.querySelector(".header");
+    const body = container?.querySelector(".body");
     return {
-      card: card ? getComputedStyle(card).backgroundColor : "",
       dialog: dialog ? getComputedStyle(dialog).backgroundColor : "",
+      header: header ? getComputedStyle(header).backgroundColor : "",
+      body: body ? getComputedStyle(body).backgroundColor : "",
     };
   });
-  expect(cardAndDialogBackgrounds.dialog).toBe(cardAndDialogBackgrounds.card);
-  const initialSizeDialogBox = await mediaDialog.boundingBox();
-  if (liveStageBox && initialSizeDialogBox) {
-    expect(initialSizeDialogBox.width).toBeCloseTo(liveStageBox.width, 0);
+  expect(modalBackgrounds.dialog).toBe(modalBackgrounds.header);
+  expect(modalBackgrounds.body).toBe(modalBackgrounds.header);
+  const headerBeforeResizeBox = await page
+    .locator("wzc-media-player-container .header")
+    .boundingBox();
+  if (headerBeforeResizeBox && playerViewportBox) {
+    expect(playerViewportBox.y).toBeCloseTo(
+      headerBeforeResizeBox.y + headerBeforeResizeBox.height,
+      1,
+    );
+  }
+  await expect(page.locator("wzc-media-player .media-surface")).toHaveCount(0);
+  await expect(page.locator("wzc-media-player-container .scrim")).toHaveCount(
+    0,
+  );
+  const stablePlayerBox = await page
+    .locator("wzc-media-player .viewport")
+    .boundingBox();
+  expect(stablePlayerBox?.width).toBeCloseTo(playerViewportBox?.width ?? 0, 1);
+  expect(stablePlayerBox?.height).toBeCloseTo(
+    playerViewportBox?.height ?? 0,
+    1,
+  );
+  const viewportSize = page.viewportSize();
+  const fittedDialogBox = await mediaDialog.boundingBox();
+  if (viewportSize && fittedDialogBox) {
+    expect(fittedDialogBox.x).toBeGreaterThanOrEqual(0);
+    expect(fittedDialogBox.y).toBeGreaterThanOrEqual(0);
+    expect(fittedDialogBox.x + fittedDialogBox.width).toBeLessThanOrEqual(
+      viewportSize.width,
+    );
+    expect(fittedDialogBox.y + fittedDialogBox.height).toBeLessThanOrEqual(
+      viewportSize.height,
+    );
   }
   await expect(
     page.getByRole("button", { name: "Mute recorded video" }),
@@ -576,6 +613,10 @@ test("shows an independently scrolling event window for the active camera", asyn
   await expect(
     page.getByRole("button", { name: "Enter Picture-in-Picture" }),
   ).toBeVisible();
+  const recordedControlShape = await page
+    .getByRole("button", { name: "Mute recorded video" })
+    .evaluate((button) => getComputedStyle(button).borderRadius);
+  expect(Number.parseFloat(recordedControlShape)).toBeLessThan(10);
   const resizeHandle = page.locator(
     "wzc-media-player-container .resize-handle",
   );
@@ -583,8 +624,13 @@ test("shows an independently scrolling event window for the active camera", asyn
     "aria-label",
     "Resize video player",
   );
-  await expect(resizeHandle.locator(".diagonal-grip span")).toHaveCount(3);
+  await expect(
+    resizeHandle.locator('ha-icon[icon="mdi:resize-bottom-right"]'),
+  ).toHaveCount(1);
   const initialDialogBox = await mediaDialog.boundingBox();
+  const initialPlayerBox = await page
+    .locator("wzc-media-player .viewport")
+    .boundingBox();
   const resizeBox = await resizeHandle.boundingBox();
   expect(initialDialogBox).not.toBeNull();
   expect(resizeBox).not.toBeNull();
@@ -597,8 +643,18 @@ test("shows an independently scrolling event window for the active camera", asyn
     await page.mouse.move(resizeBox.x - 80, resizeBox.y - 40);
     await page.mouse.up();
     const resizedDialogBox = await mediaDialog.boundingBox();
+    const resizedPlayerBox = await page
+      .locator("wzc-media-player .viewport")
+      .boundingBox();
     expect(resizedDialogBox?.width).toBeLessThan(initialDialogBox.width);
     expect(resizedDialogBox?.height).toBeLessThan(initialDialogBox.height);
+    expect(resizedPlayerBox?.width).toBeLessThan(initialPlayerBox?.width ?? 0);
+    if (resizedPlayerBox) {
+      expect(resizedPlayerBox.width / resizedPlayerBox.height).toBeCloseTo(
+        16 / 9,
+        2,
+      );
+    }
   }
   const header = page.locator("wzc-media-player-container .header");
   const headerBox = await header.boundingBox();
