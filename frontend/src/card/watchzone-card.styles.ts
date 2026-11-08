@@ -159,6 +159,16 @@ export const cardStyles = css`
     grid-template: "overlay" minmax(0, 1fr) / minmax(0, 1fr);
   }
 
+  .module-composition-camera {
+    container-name: wzc-camera-module;
+    container-type: inline-size;
+  }
+
+  .module-composition-camera > .module-slot,
+  .module-composition-camera > .component-slot {
+    --wzc-camera-control-size: var(--wzc-camera-control-size-default);
+  }
+
   .module-composition.has-components > .module-slot,
   .module-composition.has-components > .component-slot {
     grid-area: overlay;
@@ -191,7 +201,8 @@ export const cardStyles = css`
     z-index: 4;
     display: grid;
     grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1fr);
-    align-items: flex-end;
+    align-content: flex-end;
+    align-items: center;
     box-sizing: border-box;
     min-inline-size: 0;
     padding: 0 var(--wzc-camera-control-safe-inline)
@@ -205,8 +216,8 @@ export const cardStyles = css`
   .control-region {
     display: flex;
     flex-wrap: wrap;
-    align-content: flex-end;
-    align-items: flex-end;
+    align-content: center;
+    align-items: center;
     min-inline-size: 0;
     gap: var(--wzc-control-dock-gap);
     pointer-events: none;
@@ -228,6 +239,13 @@ export const cardStyles = css`
   .control-region > .component-node.placeable-ready > * {
     inline-size: auto;
     block-size: auto;
+  }
+
+  @container wzc-camera-module (max-width: 480px) {
+    .module-composition-camera > .module-slot,
+    .module-composition-camera > .component-slot {
+      --wzc-camera-control-size: var(--wzc-camera-control-size-compact);
+    }
   }
 
   .module-slot {

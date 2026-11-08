@@ -104,30 +104,37 @@ export class MediaPlayer extends LitElement {
         @webkitpresentationmodechanged=${this._syncControlState}
       ></video>
       <div
-        class="controls"
+        class="controls media-overlay-control-group"
         role="group"
         aria-label=${this.localize("media_player.controls")}
         @pointerdown=${(event: Event) => event.stopPropagation()}
         @keydown=${(event: Event) => event.stopPropagation()}
       >
         <button
-          class="control-button"
+          class="control-button media-overlay-control-button"
           type="button"
+          data-control="picture_in_picture"
           title=${this.localize(
-            this._muted ? "media_player.unmute" : "media_player.mute",
+            this._pictureInPictureActive
+              ? "media_player.exit_pip"
+              : "media_player.enter_pip",
           )}
           aria-label=${this.localize(
-            this._muted ? "media_player.unmute" : "media_player.mute",
+            this._pictureInPictureActive
+              ? "media_player.exit_pip"
+              : "media_player.enter_pip",
           )}
-          aria-pressed=${this._muted ? "false" : "true"}
+          aria-pressed=${this._pictureInPictureActive ? "true" : "false"}
+          ?disabled=${!pictureInPictureSupported}
           @pointerup=${this._releaseTouchFocus}
-          @click=${this._toggleMute}
+          @click=${this._togglePictureInPicture}
         >
-          ${renderIcon(this._muted ? "volumeOff" : "volumeOn")}
+          ${renderIcon("pipPopOut")}
         </button>
         <button
-          class="control-button"
+          class="control-button media-overlay-control-button"
           type="button"
+          data-control="fullscreen"
           title=${this.localize(
             this._fullscreenActive
               ? "media_player.exit_fullscreen"
@@ -148,24 +155,20 @@ export class MediaPlayer extends LitElement {
           )}
         </button>
         <button
-          class="control-button"
+          class="control-button media-overlay-control-button"
           type="button"
+          data-control="mute"
           title=${this.localize(
-            this._pictureInPictureActive
-              ? "media_player.exit_pip"
-              : "media_player.enter_pip",
+            this._muted ? "media_player.unmute" : "media_player.mute",
           )}
           aria-label=${this.localize(
-            this._pictureInPictureActive
-              ? "media_player.exit_pip"
-              : "media_player.enter_pip",
+            this._muted ? "media_player.unmute" : "media_player.mute",
           )}
-          aria-pressed=${this._pictureInPictureActive ? "true" : "false"}
-          ?disabled=${!pictureInPictureSupported}
+          aria-pressed=${this._muted ? "false" : "true"}
           @pointerup=${this._releaseTouchFocus}
-          @click=${this._togglePictureInPicture}
+          @click=${this._toggleMute}
         >
-          ${renderIcon("pipPopOut")}
+          ${renderIcon(this._muted ? "volumeOff" : "volumeOn")}
         </button>
       </div>
     </div>`;

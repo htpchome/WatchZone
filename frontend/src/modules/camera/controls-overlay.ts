@@ -93,7 +93,7 @@ export class CameraControls extends LitElement {
   protected render() {
     return html`
       <div
-        class="control-group"
+        class="control-group media-overlay-control-group"
         role="toolbar"
         aria-label=${this.localize("camera.controls")}
       >
@@ -160,7 +160,7 @@ export class CameraControls extends LitElement {
                   : this.localize("camera.suspend");
 
     return html`<button
-      class="control-button"
+      class="control-button media-overlay-control-button"
       type="button"
       data-control=${control.action}
       title=${label}

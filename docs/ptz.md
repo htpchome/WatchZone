@@ -46,7 +46,7 @@ defaults to `false` and is omitted from YAML at its default.
 ## Interaction and overlay behavior
 
 - Pointer press or keyboard activation starts movement; release stops it.
-- The PTZ overlay consumes the camera controller's shared overlay state and
+- The PTZ presentation consumes the camera controller's shared overlay state and
   hide timer. It does not create a second visibility timer.
 - Active movement holds the shared overlay visible. Releasing movement releases
   that hold and returns visibility to the shared timer.

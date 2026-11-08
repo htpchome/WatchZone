@@ -11,6 +11,7 @@ import type {
   RecordedMediaInitialSize,
   RecordedMediaRequest,
 } from "../core/recorded-media";
+import { iconPath } from "../ui/icons";
 import { ToastManager } from "../ui/toast-manager";
 import "../ui/toast-region";
 import "./media-player";
@@ -78,17 +79,14 @@ export class MediaPlayerContainer extends LitElement {
         @pointerup=${this._endDrag}
         @pointercancel=${this._endDrag}
       >
-        <span class="title">${this.request?.title ?? ""}</span>
-        <button
+        <ha-icon-button
           class="close"
-          type="button"
-          title=${this.localize("media_player.close")}
-          aria-label=${this.localize("media_player.close")}
+          .label=${this.localize("media_player.close")}
+          .path=${iconPath("close")}
           @pointerdown=${(event: Event) => event.stopPropagation()}
           @click=${this.close}
-        >
-          <ha-icon icon="mdi:close"></ha-icon>
-        </button>
+        ></ha-icon-button>
+        <span class="title">${this.request?.title ?? ""}</span>
       </div>
       <div class="body">
         ${

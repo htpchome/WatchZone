@@ -78,9 +78,8 @@ root grid
 ├── camera module
 │   ├── controls slot (responsive intrinsic-size dock)
 │   │   ├── linked-light component (when configured)
-│   │   └── two-way-talk component (when enabled)
-│   └── overlay slot
-│       └── PTZ component (when enabled)
+│   │   ├── two-way-talk component (when enabled)
+│   │   └── PTZ component (when enabled)
 ├── panel module
     └── content slot
         └── camera-switcher component
@@ -89,13 +88,16 @@ root grid
     └── events module
 ```
 
-The controls slot owns placement, shared gaps, safe-area clearance, and
-responsive wrapping for its three logical regions. Its center region remains
-geometrically centered while the leading and trailing regions flex equally and
-wrap their own controls away from center. Components in that slot render at
-their intrinsic control size and must not position themselves relative to
-sibling components or the Stage center. Panels and transient notices may paint
-outside their dock item without changing the dock's measured control geometry.
+The controls slot owns placement, shared gaps, safe-area clearance, responsive
+sizing, and wrapping for its three logical regions. Light, talk, and PTZ use
+the leading, center, and trailing regions respectively. Its center region
+remains geometrically centered while the leading and trailing regions flex
+equally and wrap their own controls away from center. All three regions share
+one dock row and center controls of different intrinsic heights on the same
+horizontal axis. Components in that slot render at their intrinsic control
+size and must not position themselves relative to sibling components or the
+Stage center. Panels and transient notices may paint outside their dock item
+without changing the dock's measured control geometry.
 
 Module-stack navigation is rendered by the Stage runtime from module metadata,
 not by either child module. The first child is the initial selection. Switching

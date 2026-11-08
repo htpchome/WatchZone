@@ -231,7 +231,7 @@ describe("layout composition", () => {
     });
   });
 
-  it("composes an independent provider-resolved PTZ overlay", () => {
+  it("composes provider-resolved PTZ in the responsive controls dock", () => {
     const layout = builtInStage(
       normalizeCardConfig({
         cameras: [
@@ -246,10 +246,11 @@ describe("layout composition", () => {
     );
 
     const camera = moduleAt(layout, 0);
-    expect(camera?.slots?.overlay?.[0]).toMatchObject({
+    expect(camera?.slots?.controls?.[0]).toMatchObject({
       id: DEFAULT_PTZ_COMPONENT_NODE_ID,
       kind: "component",
       componentType: "ptz",
+      controlRegion: "trailing",
       config: {
         cameras: [
           { entityId: "camera.front", provider: "home_assistant" },

@@ -70,4 +70,7 @@ This document is normative for alert, event, and recording playback.
   handle changes its dimensions, and width and height remain locked to that
   ratio. The header sits directly above the player; the container owns side and
   bottom padding, while the player owns no modal spacing.
-- Recorded-media overlay buttons reuse the square live-media control primitive.
+- Recorded-media overlay buttons reuse the square live-media control primitive
+  without redefining its geometry or interaction styling. The recorded subset
+  preserves the live stack order: Picture-in-Picture, fullscreen, then mute
+  from top to bottom.

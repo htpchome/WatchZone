@@ -197,7 +197,9 @@ export const themeTokens = css`
     --wzc-media-overlay-radius: var(--wzc-radius-small);
     --wzc-media-overlay-shadow: var(--wzc-shadow-card);
     --wzc-media-overlay-transition-duration: 140ms;
-    --wzc-camera-control-size: 2.75rem;
+    --wzc-camera-control-size-default: 2.75rem;
+    --wzc-camera-control-size-compact: 1.875rem;
+    --wzc-camera-control-size: var(--wzc-camera-control-size-default);
     --wzc-round-button-size: var(--wzc-camera-control-size);
     --wzc-round-button-icon-size: 60%;
     --wzc-round-button-color: var(--wzc-media-overlay-color);
@@ -257,11 +259,7 @@ export const themeTokens = css`
     --wzc-recorded-media-dialog-min-inline-size: min(16rem, calc(100vw - 1rem));
     --wzc-recorded-media-dialog-min-block-size: min(10rem, calc(100dvh - 1rem));
     --wzc-recorded-media-resize-handle-size: 1.5rem;
-    --wzc-recorded-media-control-size: 2.5rem;
     --wzc-recorded-media-header-background: var(--wzc-color-surface-secondary);
-    --wzc-recorded-media-control-hover-background: var(
-      --wzc-color-fill-primary
-    );
     --wzc-stage-stack-navigation-gap: 0.35rem;
     --wzc-stage-stack-navigation-padding: 0.25rem;
     --wzc-stage-stack-button-size: 2.75rem;
@@ -455,9 +453,25 @@ export const roundButtonStyles = css`
   }
 `;
 
-/** Shared geometry and states for square live-media overlay controls. */
+/** Shared geometry, placement, and states for square media overlay controls. */
 export const mediaOverlayControlButtonStyles = css`
-  .control-button {
+  .media-overlay-control-group {
+    --wzc-control-size: var(--wzc-camera-control-size);
+    --wzc-control-icon-size: calc(var(--wzc-control-size) * 0.6);
+    --wzc-control-gap: var(--wzc-control-dock-gap);
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: var(--wzc-control-gap);
+    inset-block-start: 50%;
+    inset-inline-end: calc(
+      var(--wzc-camera-control-safe-inline) + env(safe-area-inset-right, 0px)
+    );
+    position: absolute;
+    transform: translateY(-50%);
+  }
+
+  .media-overlay-control-button {
     appearance: none;
     background: var(
       --wzc-control-background,
@@ -482,7 +496,7 @@ export const mediaOverlayControlButtonStyles = css`
     -webkit-tap-highlight-color: transparent;
   }
 
-  .control-button svg {
+  .media-overlay-control-button svg {
     block-size: var(--wzc-control-icon-size);
     fill: currentcolor;
     inline-size: var(--wzc-control-icon-size);
@@ -491,7 +505,7 @@ export const mediaOverlayControlButtonStyles = css`
   }
 
   @media (hover: hover) and (pointer: fine) {
-    .control-button:hover:not(:disabled) {
+    .media-overlay-control-button:hover:not(:disabled) {
       background: var(
         --wzc-control-hover-background,
         var(--wzc-media-overlay-hover-background)
@@ -500,13 +514,19 @@ export const mediaOverlayControlButtonStyles = css`
     }
   }
 
-  .control-button:focus-visible {
+  .media-overlay-control-button:focus-visible {
     outline: 2px solid var(--wzc-color-primary);
     outline-offset: 1px;
   }
 
-  .control-button:disabled {
+  .media-overlay-control-button:disabled {
     cursor: default;
     opacity: var(--wzc-control-disabled-opacity, 1);
+  }
+
+  @container (max-width: 480px) {
+    .media-overlay-control-group {
+      --wzc-control-size: var(--wzc-camera-control-size-compact);
+    }
   }
 `;

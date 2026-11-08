@@ -349,7 +349,7 @@ export class LayoutRuntime implements ReactiveController {
       [StageSlotName, readonly StageComponentNode[]]
     >;
     return html`<div
-      class="stage-placement module-composition has-components"
+      class=${`stage-placement module-composition module-composition-${node.moduleType} has-components`}
       style=${placementStyle}
     >
       ${this._renderRecord(node)}
