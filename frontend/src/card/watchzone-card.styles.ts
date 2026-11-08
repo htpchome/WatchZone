@@ -113,6 +113,15 @@ export const cardStyles = css`
     --wzc-round-button-hover-background: var(
       --wzc-stage-stack-button-active-background
     );
+    color: var(--wzc-camera-switcher-active-color);
+    opacity: 1;
+  }
+
+  .stage-stack-button.active > svg,
+  .stage-stack-button.active > svg path {
+    color: var(--wzc-camera-switcher-active-color);
+    fill: currentcolor;
+    opacity: 1;
   }
 
   .stage-stack-button:focus-visible {

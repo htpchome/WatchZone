@@ -253,7 +253,9 @@ export const themeTokens = css`
     --wzc-stage-stack-button-color: var(--wzc-color-text-2);
     --wzc-stage-stack-button-hover-color: var(--wzc-color-primary);
     --wzc-stage-stack-button-background: var(--wzc-color-surface-secondary);
-    --wzc-stage-stack-button-active-color: var(--wzc-color-on-primary);
+    --wzc-stage-stack-button-active-color: var(
+      --wzc-camera-switcher-active-color
+    );
     --wzc-stage-stack-button-active-background: var(--wzc-color-primary);
     --wzc-stage-stack-icon-size: 1.35rem;
     --wzc-camera-switcher-item-padding: 1rem;

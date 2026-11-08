@@ -281,7 +281,9 @@ test("shows an independently scrolling event window for the active camera", asyn
     });
     card.style.setProperty("--restore-card-border-radius", "21px");
     card.style.setProperty("--ha-card-border-radius", "0px");
+    card.style.setProperty("--ha-color-on-primary-normal", "#111111");
     card.style.setProperty("--primary-color", "#03a9f4");
+    card.style.setProperty("--text-primary-color", "#ffffff");
     card.style.blockSize = "900px";
     card.hass = {
       config: { time_zone: "America/New_York" },
@@ -347,12 +349,17 @@ test("shows an independently scrolling event window for the active camera", asyn
   const normalNavigation = await stackNavigation.evaluate((navigation) => {
     const buttons = [...navigation.querySelectorAll("button")];
     const active = getComputedStyle(buttons[0]!);
+    const activeIcon = getComputedStyle(buttons[0]!.querySelector("svg")!);
+    const activePath = getComputedStyle(buttons[0]!.querySelector("path")!);
     const inactive = getComputedStyle(buttons[1]!);
     const navigationRect = navigation.getBoundingClientRect();
     const firstRect = buttons[0]!.getBoundingClientRect();
     return {
       activeBackground: active.backgroundColor,
       activeColor: active.color,
+      activeIconColor: activeIcon.color,
+      activeIconOpacity: activeIcon.opacity,
+      activePathFill: activePath.fill,
       firstHeight: firstRect.height,
       leadingInset: firstRect.left - navigationRect.left,
       inactiveBackground: inactive.backgroundColor,
@@ -367,6 +374,10 @@ test("shows an independently scrolling event window for the active camera", asyn
     normalNavigation.inactiveBackground,
   );
   expect(normalNavigation.activeColor).not.toBe(normalNavigation.inactiveColor);
+  expect(normalNavigation.activeColor).toBe("rgb(255, 255, 255)");
+  expect(normalNavigation.activeIconColor).toBe("rgb(255, 255, 255)");
+  expect(normalNavigation.activeIconOpacity).toBe("1");
+  expect(normalNavigation.activePathFill).toBe("rgb(255, 255, 255)");
   await expect(page.locator("wzc-alerts .tile")).toHaveCount(6);
   await stackButtons.nth(1).hover();
   await expect(stackButtons.nth(1)).not.toHaveCSS(
