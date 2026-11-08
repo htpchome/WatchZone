@@ -1,6 +1,9 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
-import type { CameraSelectionContext } from "./camera-selection-context";
+import type {
+  CameraSelectionContext,
+  CameraSelectionState,
+} from "./camera-selection-context";
 import { EVENTS_REFRESH_INTERVAL_MS } from "./constants";
 import type { HomeAssistantApi } from "./home-assistant";
 
@@ -30,6 +33,7 @@ export class ActiveCameraActivityController<
   public loading = false;
 
   private _activeEntityId?: string;
+  private _activeCameraLabel?: string;
   private _connected = false;
   private _generation = 0;
   private _refreshTimer?: number;
@@ -74,6 +78,10 @@ export class ActiveCameraActivityController<
     void this._refresh(true);
   }
 
+  public get activeCameraLabel(): string | undefined {
+    return this._activeCameraLabel;
+  }
+
   private _syncContext(): void {
     if (!this._connected) return;
     const context = this._context();
@@ -86,6 +94,7 @@ export class ActiveCameraActivityController<
       this._subscribedSelection = context.cameraSelection;
       this._subscribedTarget = context.targetModuleId;
       this._activeEntityId = undefined;
+      this._activeCameraLabel = undefined;
       this.items = [];
       this._retriedMedia.clear();
       this._stopRefresh();
@@ -93,7 +102,7 @@ export class ActiveCameraActivityController<
       if (context.cameraSelection && context.targetModuleId) {
         this._unsubscribe = context.cameraSelection.subscribe(
           context.targetModuleId,
-          ({ activeEntityId }) => this._cameraChanged(activeEntityId),
+          (state) => this._cameraChanged(state),
         );
       }
     }
@@ -108,9 +117,24 @@ export class ActiveCameraActivityController<
     }
   }
 
-  private _cameraChanged(activeEntityId: string | undefined): void {
-    if (activeEntityId === this._activeEntityId) return;
+  private _cameraChanged(state: CameraSelectionState): void {
+    const activeEntityId = state.activeEntityId;
+    const activeCameraLabel = state.items.find(
+      ({ entityId }) => entityId === activeEntityId,
+    )?.label;
+    if (
+      activeEntityId === this._activeEntityId &&
+      activeCameraLabel === this._activeCameraLabel
+    ) {
+      return;
+    }
+    const cameraChanged = activeEntityId !== this._activeEntityId;
     this._activeEntityId = activeEntityId;
+    this._activeCameraLabel = activeCameraLabel;
+    if (!cameraChanged) {
+      this._host.requestUpdate();
+      return;
+    }
     this.items = [];
     this._retriedMedia.clear();
     this._stopRefresh();

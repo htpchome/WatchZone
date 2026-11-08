@@ -34,7 +34,7 @@ describe("recorded media player", () => {
       MEDIA_SESSION_RUNTIME_KEY
     ];
     vi.restoreAllMocks();
-    Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal");
+    Reflect.deleteProperty(HTMLDialogElement.prototype, "show");
     Reflect.deleteProperty(HTMLDialogElement.prototype, "close");
   });
 
@@ -123,7 +123,7 @@ describe("recorded media player", () => {
     const states: boolean[] = [];
     manager.subscribeForcedMute((active) => states.push(active));
     Object.defineProperties(HTMLDialogElement.prototype, {
-      showModal: {
+      show: {
         configurable: true,
         value: function (this: HTMLDialogElement) {
           this.setAttribute("open", "");

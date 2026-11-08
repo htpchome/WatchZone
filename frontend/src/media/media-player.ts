@@ -7,11 +7,27 @@ import {
   RECORDED_MEDIA_ERROR_EVENT,
 } from "../core/constants";
 import type { HomeAssistantApi } from "../core/home-assistant";
+import {
+  isMediaFullscreenActive,
+  mediaFullscreenSupported,
+  toggleMediaFullscreen,
+} from "../core/fullscreen";
+import { englishLocalize, type LocalizeFunction } from "../core/localization";
 import { playMediaElement, setMediaElementMuted } from "../core/media-playback";
+import {
+  isPictureInPictureActive,
+  pictureInPictureMethod,
+  refreshNativePictureInPictureSuppression,
+  suppressNativePictureInPicture,
+  togglePictureInPicture,
+} from "../core/picture-in-picture";
 import type {
   RecordedMediaRequest,
   RecordedMediaSource,
 } from "../core/recorded-media";
+import { roundButtonStyles } from "../styles/theme-tokens";
+import { renderIcon } from "../ui/icons";
+import { MediaZoomController } from "../ui/media-zoom.controller";
 import { mediaPlayerStyles } from "./media-player.styles";
 
 const HLS_CONTENT_TYPE = "application/vnd.apple.mpegurl";
@@ -21,39 +37,160 @@ const SOURCE_READY_TIMEOUT_MS = 12_000;
 export class MediaPlayer extends LitElement {
   public static properties = {
     api: { attribute: false },
+    localize: { attribute: false },
     request: { attribute: false },
   };
 
   public api?: HomeAssistantApi;
+  public localize: LocalizeFunction = englishLocalize;
   public request?: RecordedMediaRequest;
 
+  private _fullscreenActive = false;
   private _generation = 0;
   private _hls?: HlsType;
+  private _muted = true;
+  private _pictureInPictureActive = false;
+  private readonly _zoom = new MediaZoomController(this);
+
+  public connectedCallback(): void {
+    super.connectedCallback();
+    document.addEventListener("fullscreenchange", this._syncControlState);
+    document.addEventListener("webkitfullscreenchange", this._syncControlState);
+  }
 
   public disconnectedCallback(): void {
+    document.removeEventListener("fullscreenchange", this._syncControlState);
+    document.removeEventListener(
+      "webkitfullscreenchange",
+      this._syncControlState,
+    );
     this._stopPlayback();
     super.disconnectedCallback();
   }
 
   protected render() {
-    return html`<video
-      controls
-      autoplay
-      muted
-      playsinline
-      preload="auto"
-      poster=${this.request?.posterUrl ?? ""}
-    ></video>`;
+    const video = this._video();
+    const fullscreenSupported = mediaFullscreenSupported(
+      this._viewport(),
+      video,
+    );
+    const pictureInPictureSupported = Boolean(pictureInPictureMethod(video));
+    return html`<div
+      class="viewport"
+      tabindex="0"
+      aria-label=${this.localize("media_player.zoom_view", {
+        percent: Math.round(this._zoom.scale * 100),
+      })}
+      @pointerdown=${this._zoom.handlePointerDown}
+      @pointermove=${this._zoom.handlePointerMove}
+      @pointerup=${this._zoom.handlePointerUp}
+      @pointercancel=${this._zoom.handlePointerCancel}
+      @wheel=${this._zoom.handleWheel}
+      @keydown=${this._zoom.handleKeyDown}
+    >
+      <div
+        class=${
+          this._zoom.interacting ? "media-surface interacting" : "media-surface"
+        }
+        style=${`transform: ${this._zoom.transform}`}
+      >
+        <video
+          controls
+          autoplay
+          muted
+          playsinline
+          preload="auto"
+          poster=${this.request?.posterUrl ?? ""}
+          @loadedmetadata=${this._handleLoadedMetadata}
+          @volumechange=${this._syncControlState}
+          @enterpictureinpicture=${this._syncControlState}
+          @leavepictureinpicture=${this._syncControlState}
+          @webkitpresentationmodechanged=${this._syncControlState}
+        ></video>
+      </div>
+      <div
+        class="controls"
+        role="group"
+        aria-label=${this.localize("media_player.controls")}
+        @pointerdown=${(event: Event) => event.stopPropagation()}
+        @keydown=${(event: Event) => event.stopPropagation()}
+      >
+        <button
+          class="round-button"
+          type="button"
+          title=${this.localize(
+            this._muted ? "media_player.unmute" : "media_player.mute",
+          )}
+          aria-label=${this.localize(
+            this._muted ? "media_player.unmute" : "media_player.mute",
+          )}
+          aria-pressed=${this._muted ? "false" : "true"}
+          @pointerup=${this._releaseTouchFocus}
+          @click=${this._toggleMute}
+        >
+          ${renderIcon(this._muted ? "volumeOff" : "volumeOn")}
+        </button>
+        <button
+          class="round-button"
+          type="button"
+          title=${this.localize(
+            this._fullscreenActive
+              ? "media_player.exit_fullscreen"
+              : "media_player.enter_fullscreen",
+          )}
+          aria-label=${this.localize(
+            this._fullscreenActive
+              ? "media_player.exit_fullscreen"
+              : "media_player.enter_fullscreen",
+          )}
+          aria-pressed=${this._fullscreenActive ? "true" : "false"}
+          ?disabled=${!fullscreenSupported}
+          @pointerup=${this._releaseTouchFocus}
+          @click=${this._toggleFullscreen}
+        >
+          ${renderIcon(
+            this._fullscreenActive ? "fullscreenExit" : "fullscreen",
+          )}
+        </button>
+        <button
+          class="round-button"
+          type="button"
+          title=${this.localize(
+            this._pictureInPictureActive
+              ? "media_player.exit_pip"
+              : "media_player.enter_pip",
+          )}
+          aria-label=${this.localize(
+            this._pictureInPictureActive
+              ? "media_player.exit_pip"
+              : "media_player.enter_pip",
+          )}
+          aria-pressed=${this._pictureInPictureActive ? "true" : "false"}
+          ?disabled=${!pictureInPictureSupported}
+          @pointerup=${this._releaseTouchFocus}
+          @click=${this._togglePictureInPicture}
+        >
+          ${renderIcon("pipPopOut")}
+        </button>
+      </div>
+    </div>`;
   }
 
   protected firstUpdated(): void {
+    this._zoom.observe(this._viewport() ?? undefined);
     void this._loadRequest();
+  }
+
+  protected willUpdate(changed: Map<PropertyKey, unknown>): void {
+    if (changed.has("request")) this._zoom.configure(this.request?.id);
   }
 
   protected updated(changed: Map<PropertyKey, unknown>): void {
     if (changed.has("request") && changed.get("request") !== undefined) {
       void this._loadRequest();
     }
+    this._zoom.observe(this._viewport() ?? undefined);
+    refreshNativePictureInPictureSuppression(this._video());
   }
 
   private async _loadRequest(): Promise<void> {
@@ -63,6 +200,8 @@ export class MediaPlayer extends LitElement {
     const generation = ++this._generation;
     this._clearSource(video);
     setMediaElementMuted(video, true);
+    suppressNativePictureInPicture(video);
+    this._syncControlState();
 
     for (const source of orderedSources(request)) {
       if (generation !== this._generation) return;
@@ -70,6 +209,7 @@ export class MediaPlayer extends LitElement {
         await this._trySource(video, source, generation);
         if (generation !== this._generation) return;
         await playMediaElement(video);
+        refreshNativePictureInPictureSuppression(video);
         return;
       } catch {
         if (generation !== this._generation) return;
@@ -145,6 +285,86 @@ export class MediaPlayer extends LitElement {
     if (video) this._clearSource(video);
   }
 
+  private _video(): HTMLVideoElement | undefined {
+    return (
+      this.renderRoot.querySelector<HTMLVideoElement>("video") ?? undefined
+    );
+  }
+
+  private _viewport(): HTMLElement | undefined {
+    return this.renderRoot.querySelector<HTMLElement>(".viewport") ?? undefined;
+  }
+
+  private readonly _handleLoadedMetadata = (): void => {
+    const video = this._video();
+    this._zoom.setMediaDimensions(
+      video?.videoWidth ?? 0,
+      video?.videoHeight ?? 0,
+    );
+    refreshNativePictureInPictureSuppression(video);
+    this._syncControlState();
+  };
+
+  private readonly _syncControlState = (): void => {
+    const video = this._video();
+    const muted = video?.muted ?? true;
+    const fullscreenActive = isMediaFullscreenActive(video);
+    const pictureInPictureActive = isPictureInPictureActive(video);
+    if (
+      muted === this._muted &&
+      fullscreenActive === this._fullscreenActive &&
+      pictureInPictureActive === this._pictureInPictureActive
+    ) {
+      return;
+    }
+    this._muted = muted;
+    this._fullscreenActive = fullscreenActive;
+    this._pictureInPictureActive = pictureInPictureActive;
+    this.requestUpdate();
+  };
+
+  private readonly _toggleMute = (): void => {
+    const video = this._video();
+    if (!video) return;
+    setMediaElementMuted(video, !video.muted);
+    if (!video.muted) void playMediaElement(video);
+    this._syncControlState();
+  };
+
+  private readonly _toggleFullscreen = async (): Promise<void> => {
+    const video = this._video();
+    const viewport = this._viewport();
+    if (!mediaFullscreenSupported(viewport, video)) {
+      this._reportControlError(
+        this.localize("media_player.fullscreen_unsupported"),
+      );
+      return;
+    }
+    try {
+      await toggleMediaFullscreen(viewport, video);
+    } catch {
+      this._reportControlError(this.localize("media_player.fullscreen_failed"));
+    }
+    this._syncControlState();
+  };
+
+  private readonly _togglePictureInPicture = async (): Promise<void> => {
+    const video = this._video();
+    if (!video) return;
+    try {
+      await togglePictureInPicture(video);
+    } catch {
+      this._reportControlError(this.localize("media_player.pip_failed"));
+    }
+    this._syncControlState();
+  };
+
+  private readonly _releaseTouchFocus = (event: PointerEvent): void => {
+    if (event.pointerType === "touch") {
+      (event.currentTarget as HTMLButtonElement).blur();
+    }
+  };
+
   private async _resolveSourceUrl(path: string): Promise<string> {
     const api = this.api;
     if (!api) return path;
@@ -177,7 +397,17 @@ export class MediaPlayer extends LitElement {
     );
   }
 
-  static styles = mediaPlayerStyles;
+  private _reportControlError(message: string): void {
+    this.dispatchEvent(
+      new CustomEvent(RECORDED_MEDIA_ERROR_EVENT, {
+        bubbles: true,
+        composed: true,
+        detail: { message },
+      }),
+    );
+  }
+
+  static styles = [roundButtonStyles, mediaPlayerStyles];
 }
 
 function orderedSources(request: RecordedMediaRequest): RecordedMediaSource[] {

@@ -4,7 +4,7 @@ import {
   refreshNativePictureInPictureSuppression,
   suppressNativePictureInPicture,
   togglePictureInPicture,
-} from "../src/modules/camera/picture-in-picture";
+} from "../src/core/picture-in-picture";
 import type { CameraLivePresentation } from "../src/modules/camera/live/presentation";
 import "../src/modules/camera/live/presentation";
 

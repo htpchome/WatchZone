@@ -173,5 +173,16 @@
   "media_player.open": "Play {title}",
   "media_player.close": "Close video player",
   "media_player.resize": "Resize video player",
+  "media_player.controls": "Recorded video controls",
+  "media_player.mute": "Mute recorded video",
+  "media_player.unmute": "Unmute recorded video",
+  "media_player.enter_fullscreen": "Enter fullscreen",
+  "media_player.exit_fullscreen": "Exit fullscreen",
+  "media_player.enter_pip": "Enter Picture-in-Picture",
+  "media_player.exit_pip": "Exit Picture-in-Picture",
+  "media_player.fullscreen_unsupported": "Fullscreen is not supported on this device.",
+  "media_player.fullscreen_failed": "Unable to change fullscreen mode.",
+  "media_player.pip_failed": "Unable to change Picture-in-Picture mode.",
+  "media_player.zoom_view": "Recorded video, zoom {percent} percent",
   "media_player.load_failed": "Unable to play this recording."
 }

@@ -13,22 +13,27 @@ export const mediaPlayerContainerStyles = css`
     box-sizing: border-box;
     color: var(--wzc-color-text-1);
     grid-template-rows: max-content minmax(0, 1fr);
-    inline-size: min(52rem, 90vw);
-    max-block-size: 90dvh;
-    max-inline-size: 90vw;
+    inline-size: min(52rem, calc(100vw - 1rem));
+    max-block-size: calc(100dvh - 1rem);
+    max-inline-size: calc(100vw - 1rem);
     min-block-size: var(--wzc-recorded-media-dialog-min-block-size);
     min-inline-size: var(--wzc-recorded-media-dialog-min-inline-size);
     overflow: hidden;
     padding: 0;
-    position: relative;
+    position: fixed;
+    z-index: 1001;
   }
 
   dialog[open] {
     display: grid;
   }
 
-  dialog::backdrop {
+  .scrim {
     background: var(--wzc-recorded-media-backdrop);
+    inset: 0;
+    pointer-events: none;
+    position: fixed;
+    z-index: 1000;
   }
 
   dialog.dragged {
@@ -92,11 +97,8 @@ export const mediaPlayerContainerStyles = css`
     box-sizing: border-box;
     display: grid;
     min-block-size: 0;
-    padding: var(--wzc-recorded-media-dialog-padding);
-    padding-block-end: max(
-      var(--wzc-recorded-media-dialog-padding),
-      var(--wzc-recorded-media-resize-handle-size)
-    );
+    padding: 0 var(--wzc-recorded-media-dialog-padding)
+      var(--wzc-recorded-media-dialog-bottom-padding);
     position: relative;
   }
 
@@ -120,7 +122,7 @@ export const mediaPlayerContainerStyles = css`
     display: flex;
     height: var(--wzc-recorded-media-resize-handle-size);
     justify-content: flex-end;
-    padding: 0.2rem;
+    padding: 0;
     position: absolute;
     right: 0;
     touch-action: none;
@@ -138,7 +140,36 @@ export const mediaPlayerContainerStyles = css`
     outline-offset: -2px;
   }
 
-  .resize-handle ha-icon {
-    --mdc-icon-size: 1rem;
+  .diagonal-grip {
+    block-size: 1rem;
+    display: block;
+    inline-size: 1rem;
+    position: relative;
+  }
+
+  .diagonal-grip span {
+    background: currentcolor;
+    block-size: 1px;
+    position: absolute;
+    transform: rotate(-45deg);
+    transform-origin: right center;
+  }
+
+  .diagonal-grip span:nth-child(1) {
+    bottom: 0.05rem;
+    inline-size: 0.9rem;
+    right: 0;
+  }
+
+  .diagonal-grip span:nth-child(2) {
+    bottom: 0.35rem;
+    inline-size: 0.58rem;
+    right: 0;
+  }
+
+  .diagonal-grip span:nth-child(3) {
+    bottom: 0.65rem;
+    inline-size: 0.25rem;
+    right: 0;
   }
 `;

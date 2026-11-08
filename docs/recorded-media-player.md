@@ -36,6 +36,11 @@ This document is normative for alert, event, and recording playback.
   viewer. Download and snapshot actions keep their independent behavior.
 - The recorded video opens with native controls, autoplay requested,
   `playsinline`, and muted audio.
+- Recorded media uses the shared bounded display-zoom controller and shared
+  browser fullscreen and Picture-in-Picture capability boundaries. Mute,
+  fullscreen, and Picture-in-Picture remain fixed overlay controls outside the
+  transformed media surface. The PiP path retains the Firefox native-control
+  suppression refresh used by live video.
 - While a recorded-media container is open, live WatchZone video in the same
   document is temporarily forced muted through the media-session manager.
 - This forced state never changes a camera's explicit mute preference. When the
@@ -52,5 +57,10 @@ This document is normative for alert, event, and recording playback.
 - Only its header initiates pointer dragging. Controls in the header do not.
 - The modal is clamped to the viewport while dragging and after viewport
   resize. Its maximum dimensions preserve an on-screen close path.
-- The modal provides a pointer- and keyboard-operable resize handle. Resizing
-  is clamped to the visible viewport and preserves the header close path.
+- The modal initially matches the visible live camera stage dimensions when a
+  stage is available. It provides a diagonal bottom-right, pointer- and
+  keyboard-operable resize handle. Resizing is clamped to the visible viewport
+  and preserves the header close path.
+- The non-blocking dialog retains a visual scrim. An activity-tile activation
+  may replace the current media without closing the viewer; any other click
+  outside the dialog closes it before the background action runs.

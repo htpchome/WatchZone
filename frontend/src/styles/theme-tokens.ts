@@ -249,14 +249,16 @@ export const themeTokens = css`
     --wzc-alert-thumbnail-outline-width: 2px;
     --wzc-recorded-media-background: var(--wzc-camera-stage);
     --wzc-recorded-media-max-block-size: calc(90dvh - 3rem);
-    --wzc-recorded-media-dialog-background: var(--wzc-color-background);
+    --wzc-recorded-media-dialog-background: var(--wzc-card-background);
     --wzc-recorded-media-dialog-border: 1px solid var(--wzc-color-border);
     --wzc-recorded-media-dialog-radius: var(--wzc-radius-card);
     --wzc-recorded-media-dialog-shadow: var(--wzc-shadow-medium);
     --wzc-recorded-media-dialog-padding: 0.75rem;
-    --wzc-recorded-media-dialog-min-inline-size: min(20rem, 90vw);
-    --wzc-recorded-media-dialog-min-block-size: min(14rem, 90dvh);
-    --wzc-recorded-media-resize-handle-size: 2.25rem;
+    --wzc-recorded-media-dialog-bottom-padding: 1.25rem;
+    --wzc-recorded-media-dialog-min-inline-size: min(16rem, calc(100vw - 1rem));
+    --wzc-recorded-media-dialog-min-block-size: min(10rem, calc(100dvh - 1rem));
+    --wzc-recorded-media-resize-handle-size: 1.5rem;
+    --wzc-recorded-media-control-size: 2.5rem;
     --wzc-recorded-media-header-background: var(--wzc-color-surface-secondary);
     --wzc-recorded-media-backdrop: color-mix(
       in srgb,

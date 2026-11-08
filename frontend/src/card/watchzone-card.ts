@@ -14,6 +14,7 @@ import {
   DEFAULT_CARD_TITLE,
   EDITOR_PREVIEW_DRAFT_EVENT,
   EDITOR_TAG,
+  CAMERA_TAG,
   MEDIA_PLAYER_CONTAINER_TAG,
   RECORDED_MEDIA_OPEN_EVENT,
   TOAST_REGION_TAG,
@@ -28,7 +29,10 @@ import {
   type HomeAssistantConnectionEventListener,
 } from "../core/home-assistant";
 import { LocalizationController } from "../core/localization";
-import type { RecordedMediaRequest } from "../core/recorded-media";
+import type {
+  RecordedMediaInitialSize,
+  RecordedMediaRequest,
+} from "../core/recorded-media";
 import { CardHostAppearanceController } from "../styles/card-host-appearance.controller";
 import { roundButtonStyles, themeTokens } from "../styles/theme-tokens";
 import { ToastManager } from "../ui/toast-manager";
@@ -57,6 +61,7 @@ export class DashboardCard extends LitElement {
   private _mediaContainerReady = false;
   private _mediaContainerLoad?: Promise<void>;
   private _mediaRequest?: RecordedMediaRequest;
+  private _mediaInitialSize?: RecordedMediaInitialSize;
   private readonly _cameraImageCredentials =
     new HomeAssistantCameraImageCredentialGuard();
   private readonly _localization = new LocalizationController(this, () =>
@@ -193,6 +198,7 @@ export class DashboardCard extends LitElement {
               ? staticHtml`<${mediaPlayerContainerTag}
                   .api=${this._haApi}
                   .localize=${this._localization.localize}
+                  .initialSize=${this._mediaInitialSize}
                   .request=${this._mediaRequest}
                 ></${mediaPlayerContainerTag}>`
               : null
@@ -228,6 +234,7 @@ export class DashboardCard extends LitElement {
   ): void => {
     event.stopPropagation();
     this._mediaRequest = event.detail;
+    this._mediaInitialSize = this._activeCameraStageSize();
     if (this._mediaContainerReady) {
       this.requestUpdate();
       return;
@@ -246,6 +253,15 @@ export class DashboardCard extends LitElement {
         );
       });
   };
+
+  private _activeCameraStageSize(): RecordedMediaInitialSize | undefined {
+    const camera = this.renderRoot.querySelector<
+      HTMLElement & { getActiveStageRect?(): DOMRectReadOnly | undefined }
+    >(CAMERA_TAG);
+    const rect = camera?.getActiveStageRect?.();
+    if (!rect || rect.width <= 0 || rect.height <= 0) return undefined;
+    return { height: rect.height, width: rect.width };
+  }
 
   private _syncLayout(config: CardConfig): void {
     const { designs, flow } = createBuiltInStageSet(config);

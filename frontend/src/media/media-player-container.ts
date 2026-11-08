@@ -7,7 +7,10 @@ import {
 import type { HomeAssistantApi } from "../core/home-assistant";
 import { englishLocalize, type LocalizeFunction } from "../core/localization";
 import { getMediaSessionManager } from "../core/media-session-manager";
-import type { RecordedMediaRequest } from "../core/recorded-media";
+import type {
+  RecordedMediaInitialSize,
+  RecordedMediaRequest,
+} from "../core/recorded-media";
 import { ToastManager } from "../ui/toast-manager";
 import "../ui/toast-region";
 import "./media-player";
@@ -17,11 +20,13 @@ import { mediaPlayerContainerStyles } from "./media-player-container.styles";
 export class MediaPlayerContainer extends LitElement {
   public static properties = {
     api: { attribute: false },
+    initialSize: { attribute: false },
     localize: { attribute: false },
     request: { attribute: false },
   };
 
   public api?: HomeAssistantApi;
+  public initialSize?: RecordedMediaInitialSize;
   public localize: LocalizeFunction = englishLocalize;
   public request?: RecordedMediaRequest;
 
@@ -55,64 +60,71 @@ export class MediaPlayerContainer extends LitElement {
       this._handlePlaybackError,
     );
     window.removeEventListener("resize", this._clampDialog);
+    this._removeDocumentListeners();
     this._releaseLiveMute();
     super.disconnectedCallback();
   }
 
   protected render() {
-    return html`<dialog
-      aria-label=${this.request?.title ?? this.localize("alerts.activity")}
-      @cancel=${this._handleCancel}
-      @close=${this._handleClose}
-      @click=${this._handleBackdropClick}
-    >
-      <div
-        class="header"
-        @pointerdown=${this._startDrag}
-        @pointermove=${this._moveDrag}
-        @pointerup=${this._endDrag}
-        @pointercancel=${this._endDrag}
+    return html`${
+        this._active ? html`<div class="scrim" aria-hidden="true"></div>` : null
+      }
+      <dialog
+        aria-label=${this.request?.title ?? this.localize("alerts.activity")}
+        @cancel=${this._handleCancel}
+        @close=${this._handleClose}
+        @click=${this._handleBackdropClick}
       >
-        <span class="title">${this.request?.title ?? ""}</span>
-        <button
-          class="close"
-          type="button"
-          title=${this.localize("media_player.close")}
-          aria-label=${this.localize("media_player.close")}
-          @pointerdown=${(event: Event) => event.stopPropagation()}
-          @click=${this.close}
+        <div
+          class="header"
+          @pointerdown=${this._startDrag}
+          @pointermove=${this._moveDrag}
+          @pointerup=${this._endDrag}
+          @pointercancel=${this._endDrag}
         >
-          <ha-icon icon="mdi:close"></ha-icon>
+          <span class="title">${this.request?.title ?? ""}</span>
+          <button
+            class="close"
+            type="button"
+            title=${this.localize("media_player.close")}
+            aria-label=${this.localize("media_player.close")}
+            @pointerdown=${(event: Event) => event.stopPropagation()}
+            @click=${this.close}
+          >
+            <ha-icon icon="mdi:close"></ha-icon>
+          </button>
+        </div>
+        <div class="body">
+          ${
+            this._active
+              ? html`<wzc-media-player
+                  .api=${this.api}
+                  .localize=${this.localize}
+                  .request=${this.request}
+                ></wzc-media-player>`
+              : null
+          }
+          <wzc-toast-region
+            mode="overlay"
+            .notices=${this._toasts.notices}
+          ></wzc-toast-region>
+        </div>
+        <button
+          class="resize-handle"
+          type="button"
+          title=${this.localize("media_player.resize")}
+          aria-label=${this.localize("media_player.resize")}
+          @pointerdown=${this._startResize}
+          @pointermove=${this._moveResize}
+          @pointerup=${this._endResize}
+          @pointercancel=${this._endResize}
+          @keydown=${this._handleResizeKey}
+        >
+          <span class="diagonal-grip" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </span>
         </button>
-      </div>
-      <div class="body">
-        ${
-          this._active
-            ? html`<wzc-media-player
-                .api=${this.api}
-                .request=${this.request}
-              ></wzc-media-player>`
-            : null
-        }
-        <wzc-toast-region
-          mode="overlay"
-          .notices=${this._toasts.notices}
-        ></wzc-toast-region>
-      </div>
-      <button
-        class="resize-handle"
-        type="button"
-        title=${this.localize("media_player.resize")}
-        aria-label=${this.localize("media_player.resize")}
-        @pointerdown=${this._startResize}
-        @pointermove=${this._moveResize}
-        @pointerup=${this._endResize}
-        @pointercancel=${this._endResize}
-        @keydown=${this._handleResizeKey}
-      >
-        <ha-icon icon="mdi:resize-bottom-right"></ha-icon>
-      </button>
-    </dialog>`;
+      </dialog>`;
   }
 
   protected willUpdate(changed: Map<PropertyKey, unknown>): void {
@@ -124,20 +136,26 @@ export class MediaPlayerContainer extends LitElement {
   }
 
   public close = (): void => {
+    this._removeDocumentListeners();
     this._dialog()?.close();
   };
 
   private _open(): void {
     const dialog = this._dialog();
     if (!dialog) return;
-    dialog.classList.remove("dragged");
-    dialog.style.removeProperty("left");
-    dialog.style.removeProperty("top");
-    dialog.style.removeProperty("width");
-    dialog.style.removeProperty("height");
-    if (!dialog.open) dialog.showModal();
+    if (!dialog.open) {
+      dialog.classList.remove("dragged");
+      dialog.style.removeProperty("left");
+      dialog.style.removeProperty("top");
+      dialog.style.removeProperty("width");
+      dialog.style.removeProperty("height");
+      dialog.show();
+      this._applyInitialSize();
+    }
     this._acquireLiveMute();
     window.addEventListener("resize", this._clampDialog);
+    document.addEventListener("click", this._handleDocumentClick, true);
+    document.addEventListener("keydown", this._handleDocumentKeyDown);
   }
 
   private _dialog(): HTMLDialogElement | null {
@@ -162,20 +180,36 @@ export class MediaPlayerContainer extends LitElement {
 
   private readonly _handleClose = (): void => {
     window.removeEventListener("resize", this._clampDialog);
+    this._removeDocumentListeners();
     this._active = false;
     this.requestUpdate();
     this._releaseLiveMute();
   };
 
-  private readonly _handleBackdropClick = (event: MouseEvent): void => {
-    if (event.target === this._dialog()) this.close();
-  };
+  private readonly _handleBackdropClick = (): void => undefined;
 
   private readonly _handlePlaybackError = (event: Event): void => {
     event.stopPropagation();
-    this._toasts.error(this.localize("media_player.load_failed"), {
+    const message = (event as CustomEvent<{ readonly message?: string }>).detail
+      ?.message;
+    this._toasts.error(message ?? this.localize("media_player.load_failed"), {
       key: "recorded-media-load-failed",
     });
+  };
+
+  private readonly _handleDocumentClick = (event: MouseEvent): void => {
+    const dialog = this._dialog();
+    if (!dialog?.open) return;
+    const path = event.composedPath();
+    if (path.includes(dialog) || isRecordedMediaOpener(path)) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    this.close();
+  };
+
+  private readonly _handleDocumentKeyDown = (event: KeyboardEvent): void => {
+    if (event.key !== "Escape" || event.defaultPrevented) return;
+    this.close();
   };
 
   private readonly _startDrag = (event: PointerEvent): void => {
@@ -265,11 +299,45 @@ export class MediaPlayerContainer extends LitElement {
 
   private readonly _clampDialog = (): void => {
     const dialog = this._dialog();
-    if (!dialog?.classList.contains("dragged")) return;
+    if (!dialog?.open) return;
     const rect = dialog.getBoundingClientRect();
-    this._resizeDialog(rect.width, rect.height);
-    this._positionDialog(rect.left, rect.top);
+    if (dialog.classList.contains("dragged")) {
+      this._resizeDialog(rect.width, rect.height);
+      this._positionDialog(rect.left, rect.top);
+      return;
+    }
+    const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    dialog.style.width = `${Math.min(rect.width, viewportWidth - 16)}px`;
+    dialog.style.height = `${Math.min(rect.height, viewportHeight - 16)}px`;
   };
+
+  private _applyInitialSize(): void {
+    const dialog = this._dialog();
+    const size = this.initialSize;
+    if (!dialog || !size) return;
+    const headerHeight =
+      this.renderRoot
+        .querySelector<HTMLElement>(".header")
+        ?.getBoundingClientRect().height ?? 0;
+    const body = this.renderRoot.querySelector<HTMLElement>(".body");
+    const bodyStyle = body ? getComputedStyle(body) : undefined;
+    const verticalPadding =
+      Number.parseFloat(bodyStyle?.paddingTop ?? "0") +
+      Number.parseFloat(bodyStyle?.paddingBottom ?? "0");
+    const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    dialog.style.width = `${Math.min(size.width, viewportWidth - 16)}px`;
+    dialog.style.height = `${Math.min(
+      size.height + headerHeight + verticalPadding,
+      viewportHeight - 16,
+    )}px`;
+  }
+
+  private _removeDocumentListeners(): void {
+    document.removeEventListener("click", this._handleDocumentClick, true);
+    document.removeEventListener("keydown", this._handleDocumentKeyDown);
+  }
 
   private _prepareManualBounds(rect: DOMRect): void {
     const dialog = this._dialog();
@@ -289,8 +357,8 @@ export class MediaPlayerContainer extends LitElement {
     const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
     const maxWidth = Math.max(1, viewportWidth - Math.max(0, rect.left));
     const maxHeight = Math.max(1, viewportHeight - Math.max(0, rect.top));
-    const minWidth = Math.min(320, maxWidth);
-    const minHeight = Math.min(200, maxHeight);
+    const minWidth = Math.min(256, maxWidth);
+    const minHeight = Math.min(160, maxHeight);
     dialog.style.width = `${Math.min(Math.max(minWidth, width), maxWidth)}px`;
     dialog.style.height = `${Math.min(Math.max(minHeight, height), maxHeight)}px`;
   }
@@ -308,6 +376,14 @@ export class MediaPlayerContainer extends LitElement {
   }
 
   static styles = mediaPlayerContainerStyles;
+}
+
+function isRecordedMediaOpener(path: readonly EventTarget[]): boolean {
+  return path.some(
+    (target) =>
+      target instanceof HTMLElement &&
+      target.dataset.recordedMediaOpener === "true",
+  );
 }
 
 if (!customElements.get(MEDIA_PLAYER_CONTAINER_TAG)) {

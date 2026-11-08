@@ -105,7 +105,7 @@ describe("events module", () => {
       expect.objectContaining({
         id: event.id,
         preferredTransport: "file",
-        title: "person",
+        title: expect.stringMatching(/^Front - .+ - .+$/),
       }),
     );
     expect(

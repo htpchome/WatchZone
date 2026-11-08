@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { CAMERA_LIVE_PRESENTATION_TAG } from "../src/core/constants";
 import "../src/modules/camera/live/presentation";
 import type { CameraLivePresentation } from "../src/modules/camera/live/presentation";
-import { CameraZoomController } from "../src/modules/camera/live/zoom.controller";
+import { MediaZoomController } from "../src/ui/media-zoom.controller";
 
 function createHost(): ReactiveControllerHost {
   return {
@@ -55,7 +55,7 @@ function pointerEvent(
 
 function connectPointerEvents(
   surface: HTMLElement,
-  controller: CameraZoomController,
+  controller: MediaZoomController,
 ): void {
   surface.addEventListener("pointerdown", controller.handlePointerDown);
   surface.addEventListener("pointermove", controller.handlePointerMove);
@@ -93,7 +93,7 @@ describe("camera media zoom", () => {
 
   it("toggles between 1x and 2x with double-click or double-tap", () => {
     const surface = createSurface();
-    const controller = new CameraZoomController(createHost());
+    const controller = new MediaZoomController(createHost());
     controller.observe(surface);
     connectPointerEvents(surface, controller);
 
@@ -112,7 +112,7 @@ describe("camera media zoom", () => {
 
   it("does not treat a completed pan as part of a double activation", () => {
     const surface = createSurface();
-    const controller = new CameraZoomController(createHost());
+    const controller = new MediaZoomController(createHost());
     controller.observe(surface);
     connectPointerEvents(surface, controller);
     tap(surface);
@@ -149,7 +149,7 @@ describe("camera media zoom", () => {
 
   it("zooms discrete wheels without consuming smooth scroll or native pinch", () => {
     const surface = createSurface();
-    const controller = new CameraZoomController(createHost());
+    const controller = new MediaZoomController(createHost());
     controller.observe(surface);
     surface.addEventListener("wheel", controller.handleWheel);
 
@@ -198,7 +198,7 @@ describe("camera media zoom", () => {
 
   it("clamps pinch zoom to 3x and drag pan to the media bounds", () => {
     const surface = createSurface();
-    const controller = new CameraZoomController(createHost());
+    const controller = new MediaZoomController(createHost());
     controller.observe(surface);
     connectPointerEvents(surface, controller);
 
@@ -266,7 +266,7 @@ describe("camera media zoom", () => {
 
   it("pans a stage-created crop before the user adds display zoom", () => {
     const surface = createSurface(400);
-    const controller = new CameraZoomController(createHost());
+    const controller = new MediaZoomController(createHost());
     controller.observe(surface);
     controller.setMediaDimensions(400, 300);
     controller.setBasePresentationScale(4 / 3);
@@ -302,7 +302,7 @@ describe("camera media zoom", () => {
 
   it("resets zoom when camera identity changes", () => {
     const surface = createSurface();
-    const controller = new CameraZoomController(createHost());
+    const controller = new MediaZoomController(createHost());
     controller.observe(surface);
     connectPointerEvents(surface, controller);
     controller.configure("camera.front");
@@ -316,7 +316,7 @@ describe("camera media zoom", () => {
 
   it("supports keyboard zoom, bounded pan, and reset", () => {
     const surface = createSurface();
-    const controller = new CameraZoomController(createHost());
+    const controller = new MediaZoomController(createHost());
     controller.observe(surface);
 
     const zoom = new KeyboardEvent("keydown", {
@@ -346,7 +346,7 @@ describe("camera media zoom", () => {
 
   it("returns zoom and pan continuously with stage-resize progress", () => {
     const surface = createSurface();
-    const controller = new CameraZoomController(createHost());
+    const controller = new MediaZoomController(createHost());
     controller.observe(surface);
     connectPointerEvents(surface, controller);
     tap(surface);

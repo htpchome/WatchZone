@@ -268,7 +268,7 @@ test("shows an independently scrolling event window for the active camera", asyn
         id: `frigate:${camera}:${index}`,
         label: index === 0 ? "person" : "bird",
         playback_sources:
-          index === 0
+          index < 2
             ? [
                 {
                   content_type: "video/mp4",
@@ -343,7 +343,7 @@ test("shows an independently scrolling event window for the active camera", asyn
               end_time: event.end_time,
               id: `review:${camera}:${index}`,
               labels: [event.label],
-              playback_sources: [],
+              playback_sources: event.playback_sources,
               preferred_transport: "hls",
               revision: event.revision,
               snapshot_url: event.snapshot_url,
@@ -500,6 +500,10 @@ test("shows an independently scrolling event window for the active camera", asyn
     objectFit: "cover",
   });
 
+  const liveStageBox = await page
+    .locator("wzc-camera-view .camera")
+    .first()
+    .boundingBox();
   await events.locator(".tile-player").first().click();
   const mediaDialog = page.locator("wzc-media-player-container dialog");
   await expect(mediaDialog).toBeVisible();
@@ -525,10 +529,53 @@ test("shows an independently scrolling event window for the active camera", asyn
   expect(mediaErrorBox?.width).toBeLessThan(600);
   const mediaBodyPadding = await page
     .locator("wzc-media-player-container .body")
-    .evaluate((element) =>
-      Number.parseFloat(getComputedStyle(element).paddingTop),
-    );
-  expect(mediaBodyPadding).toBeGreaterThan(0);
+    .evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        bottom: Number.parseFloat(style.paddingBottom),
+        top: Number.parseFloat(style.paddingTop),
+      };
+    });
+  expect(mediaBodyPadding.top).toBe(0);
+  expect(mediaBodyPadding.bottom).toBeGreaterThan(0);
+  expect(mediaBodyPadding.bottom).toBeLessThan(24);
+  const playerViewportBox = await page
+    .locator("wzc-media-player .viewport")
+    .boundingBox();
+  expect(liveStageBox).not.toBeNull();
+  expect(playerViewportBox).not.toBeNull();
+  if (liveStageBox && playerViewportBox) {
+    expect(
+      Math.abs(playerViewportBox.height - liveStageBox.height),
+    ).toBeLessThanOrEqual(2);
+  }
+  const cardAndDialogBackgrounds = await page.evaluate(() => {
+    const card = document
+      .querySelector("watchzone-card")
+      ?.shadowRoot?.querySelector("ha-card");
+    const dialog = document
+      .querySelector("watchzone-card")
+      ?.shadowRoot?.querySelector("wzc-media-player-container")
+      ?.shadowRoot?.querySelector("dialog");
+    return {
+      card: card ? getComputedStyle(card).backgroundColor : "",
+      dialog: dialog ? getComputedStyle(dialog).backgroundColor : "",
+    };
+  });
+  expect(cardAndDialogBackgrounds.dialog).toBe(cardAndDialogBackgrounds.card);
+  const initialSizeDialogBox = await mediaDialog.boundingBox();
+  if (liveStageBox && initialSizeDialogBox) {
+    expect(initialSizeDialogBox.width).toBeCloseTo(liveStageBox.width, 0);
+  }
+  await expect(
+    page.getByRole("button", { name: "Mute recorded video" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Enter fullscreen" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Enter Picture-in-Picture" }),
+  ).toBeVisible();
   const resizeHandle = page.locator(
     "wzc-media-player-container .resize-handle",
   );
@@ -536,6 +583,7 @@ test("shows an independently scrolling event window for the active camera", asyn
     "aria-label",
     "Resize video player",
   );
+  await expect(resizeHandle.locator(".diagonal-grip span")).toHaveCount(3);
   const initialDialogBox = await mediaDialog.boundingBox();
   const resizeBox = await resizeHandle.boundingBox();
   expect(initialDialogBox).not.toBeNull();
@@ -546,11 +594,11 @@ test("shows an independently scrolling event window for the active camera", asyn
       resizeBox.y + resizeBox.height / 2,
     );
     await page.mouse.down();
-    await page.mouse.move(resizeBox.x + 80, resizeBox.y + 60);
+    await page.mouse.move(resizeBox.x - 80, resizeBox.y - 40);
     await page.mouse.up();
     const resizedDialogBox = await mediaDialog.boundingBox();
-    expect(resizedDialogBox?.width).toBeGreaterThan(initialDialogBox.width);
-    expect(resizedDialogBox?.height).toBeGreaterThan(initialDialogBox.height);
+    expect(resizedDialogBox?.width).toBeLessThan(initialDialogBox.width);
+    expect(resizedDialogBox?.height).toBeLessThan(initialDialogBox.height);
   }
   const header = page.locator("wzc-media-player-container .header");
   const headerBox = await header.boundingBox();
@@ -564,11 +612,32 @@ test("shows an independently scrolling event window for the active camera", asyn
   const draggedBox = await mediaDialog.boundingBox();
   expect(draggedBox?.x).toBeGreaterThanOrEqual(0);
   expect(draggedBox?.y).toBeGreaterThanOrEqual(0);
-  await page.locator("wzc-media-player-container .close").click();
+  const nextEventTile = events.locator(".tile-player").nth(1);
+  await nextEventTile.scrollIntoViewIfNeeded();
+  await nextEventTile.evaluate((button: HTMLButtonElement) => button.click());
+  await expect(page.locator("wzc-media-player-container .title")).toHaveText(
+    "Front - 5:12 PM - Tue, Nov 14",
+  );
+  await expect(mediaDialog).toBeVisible();
+  await page.evaluate(() =>
+    document.body.dispatchEvent(
+      new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+      }),
+    ),
+  );
   await expect(mediaDialog).toBeHidden();
   await expect(recordedVideo).toHaveCount(0);
+  await expect(page.locator("wzc-media-player-container .scrim")).toHaveCount(
+    0,
+  );
 
-  await page.locator("wzc-camera-switcher button").nth(1).click();
+  await page
+    .locator("wzc-camera-switcher button")
+    .nth(1)
+    .evaluate((button: HTMLButtonElement) => button.click());
   await expect(events).toContainText("back_yard");
   await expect(events).not.toContainText("driveway");
   await page.locator("watchzone-card").evaluate((element) => {

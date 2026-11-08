@@ -16,6 +16,11 @@ export interface RecordedMediaRequest {
   readonly title: string;
 }
 
+export interface RecordedMediaInitialSize {
+  readonly height: number;
+  readonly width: number;
+}
+
 export function openRecordedMedia(
   target: EventTarget,
   request: RecordedMediaRequest,

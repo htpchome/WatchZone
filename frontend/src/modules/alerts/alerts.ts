@@ -57,6 +57,7 @@ export class AlertsModule extends LitElement {
 
   protected render() {
     const items = this._activity.items.map((review): ActivityListItem => ({
+      cameraLabel: this._activity.activeCameraLabel ?? review.camera,
       classification: review.classification,
       clipUrl: review.clip_url,
       endTime: review.end_time,

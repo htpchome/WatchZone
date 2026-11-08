@@ -8,8 +8,9 @@ authoritative for application-wide boundaries.
 
 - Camera is the parent module. Display zoom is private camera presentation
   behavior under `frontend/src/modules/camera/live/`.
-- `CameraZoomController` exclusively owns zoom scale, bounded pan, pointer and
-  keyboard gesture state, resize handling, and cleanup.
+- The shared `MediaZoomController` exclusively owns zoom scale, bounded pan,
+  pointer and keyboard gesture state, resize handling, and cleanup for live and
+  recorded media presentations.
 - The live presentation supplies the media surface and renders controller
   state. It does not implement a second gesture path.
 - Provider adapters and retained media sessions do not know about display
@@ -98,7 +99,7 @@ never activates zoom toggling.
 
 The standards-based pointer, wheel, and keyboard path is the default on every
 platform. A verified Catalyst-specific gesture exception may be added only
-inside `CameraZoomController` (or a controller-owned input policy extracted
+inside `MediaZoomController` (or a controller-owned input policy extracted
 when actually needed). It must not create a Catalyst media pipeline, provider
 branch, or duplicate zoom state.
 

@@ -80,7 +80,7 @@ elsewhere.
 
 Stage sizing is separate from user display zoom. Resizing changes the viewport
 and reports only the base presentation scale required to fill it. The
-`CameraZoomController` remains the sole transform and pan-bound owner and
+`MediaZoomController` remains the sole transform and pan-bound owner and
 combines that base scale with the independent `1x` to `3x` user zoom. It derives
 bounds from the active media ratio, so letterbox space cannot be dragged into
 view. When an expanded stage is dragged upward, the stage controller reports

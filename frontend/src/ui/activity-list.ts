@@ -32,6 +32,7 @@ export interface ActivityTypeBadge {
 }
 
 export interface ActivityListItem {
+  readonly cameraLabel: string;
   readonly classification?: ActivityClassification;
   readonly clipUrl: string | null;
   readonly endTime: number | null;
@@ -130,7 +131,13 @@ export class ActivityList extends LitElement {
       objectLabels,
       typeBadge ? [reservedColor(typeBadge.variant)] : [],
     );
-    const title = item.objectLabels[0] ?? this.localize("alerts.activity");
+    const title = `${capitalizeBadgeText(
+      item.cameraLabel.replaceAll("_", " "),
+      this.api?.locale?.language,
+    )} - ${formatHomeAssistantTime(start, this.api?.locale)} - ${formatHomeAssistantEventDate(
+      start,
+      this.api?.locale,
+    )}`;
     const posterUrl = previewUrl
       ? (this.api?.resolveUrl(previewUrl) ?? previewUrl)
       : undefined;
@@ -139,6 +146,7 @@ export class ActivityList extends LitElement {
         item.playbackSources.length > 0
           ? html`<button
               class="tile-player"
+              data-recorded-media-opener="true"
               type="button"
               title=${this.localize("media_player.open", { title })}
               aria-label=${this.localize("media_player.open", { title })}

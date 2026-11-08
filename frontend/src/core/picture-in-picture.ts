@@ -1,3 +1,4 @@
+/** Shared browser Picture-in-Picture capability boundary. */
 type WebKitPresentationMode = "inline" | "picture-in-picture";
 
 interface PictureInPictureVideo extends HTMLVideoElement {

@@ -13,6 +13,11 @@ import {
   playMediaElement,
   setMediaElementMuted,
 } from "../../../core/media-playback";
+import {
+  isMediaFullscreenActive,
+  mediaFullscreenSupported,
+  toggleMediaFullscreen,
+} from "../../../core/fullscreen";
 import type { MediaTransport } from "../../../core/media-session-manager";
 import {
   englishLocalize,
@@ -32,25 +37,10 @@ import {
   refreshNativePictureInPictureSuppression,
   suppressNativePictureInPicture,
   togglePictureInPicture,
-} from "../picture-in-picture";
+} from "../../../core/picture-in-picture";
+import { MediaZoomController } from "../../../ui/media-zoom.controller";
 import type { PresentedSource } from "./session.controller";
 import { captureVideoFrame, downloadSnapshot } from "./frame-capture";
-import { CameraZoomController } from "./zoom.controller";
-
-interface FullscreenDocument extends Document {
-  webkitExitFullscreen?(): Promise<void> | void;
-  webkitFullscreenElement?: Element | null;
-}
-
-interface FullscreenElement extends HTMLElement {
-  webkitRequestFullscreen?(): Promise<void> | void;
-}
-
-interface FullscreenVideo extends HTMLVideoElement {
-  readonly webkitDisplayingFullscreen?: boolean;
-  webkitEnterFullScreen?(): void;
-  webkitEnterFullscreen?(): void;
-}
 
 interface MediaDimensions {
   readonly height: number;
@@ -119,7 +109,7 @@ export class CameraLivePresentation extends LitElement {
     this,
     (visible) => this._emitOverlayVisibility(visible),
   );
-  private readonly _zoom = new CameraZoomController(this);
+  private readonly _zoom = new MediaZoomController(this);
 
   public available = false;
   public failed = false;
@@ -646,14 +636,8 @@ export class CameraLivePresentation extends LitElement {
   };
 
   private readonly _syncControlState = (): void => {
-    const documentObject = document as FullscreenDocument;
     const pictureInPictureActive = isPictureInPictureActive(this._activeVideo);
-    const fullscreenActive = Boolean(
-      document.fullscreenElement ||
-      documentObject.webkitFullscreenElement ||
-      (this._activeVideo as FullscreenVideo | undefined)
-        ?.webkitDisplayingFullscreen,
-    );
+    const fullscreenActive = isMediaFullscreenActive(this._activeVideo);
     if (
       this._pictureInPictureActive === pictureInPictureActive &&
       this._fullscreenActive === fullscreenActive
@@ -665,15 +649,9 @@ export class CameraLivePresentation extends LitElement {
   };
 
   private _fullscreenSupported(): boolean {
-    const target = this.renderRoot.querySelector(
-      ".viewport",
-    ) as FullscreenElement | null;
-    const video = this._activeVideo as FullscreenVideo | undefined;
-    return Boolean(
-      target?.requestFullscreen ||
-      target?.webkitRequestFullscreen ||
-      video?.webkitEnterFullscreen ||
-      video?.webkitEnterFullScreen,
+    return mediaFullscreenSupported(
+      this.renderRoot.querySelector<HTMLElement>(".viewport"),
+      this._activeVideo,
     );
   }
 
@@ -694,29 +672,9 @@ export class CameraLivePresentation extends LitElement {
   }
 
   private async _toggleFullscreen(): Promise<void> {
-    const documentObject = document as FullscreenDocument;
-    const target = this.renderRoot.querySelector(
-      ".viewport",
-    ) as FullscreenElement | null;
+    const target = this.renderRoot.querySelector<HTMLElement>(".viewport");
     try {
-      if (
-        document.fullscreenElement ||
-        documentObject.webkitFullscreenElement
-      ) {
-        if (document.exitFullscreen) await document.exitFullscreen();
-        else await documentObject.webkitExitFullscreen?.();
-      } else if (target?.requestFullscreen) {
-        await target.requestFullscreen();
-      } else if (target?.webkitRequestFullscreen) {
-        await target.webkitRequestFullscreen();
-      } else {
-        const video = this._activeVideo as FullscreenVideo | undefined;
-        const enter =
-          video?.webkitEnterFullscreen ?? video?.webkitEnterFullScreen;
-        if (!video || !enter)
-          throw new Error(this.localize("camera.fullscreen_unsupported"));
-        enter.call(video);
-      }
+      await toggleMediaFullscreen(target, this._activeVideo);
     } catch (error) {
       this._requestToast(
         "error",

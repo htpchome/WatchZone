@@ -45,8 +45,8 @@ interface ZoomTransform {
   readonly scale: number;
 }
 
-/** Owns camera-media zoom, bounded pan, gestures, and lifecycle cleanup. */
-export class CameraZoomController implements ReactiveController {
+/** Owns media zoom, bounded pan, gestures, and lifecycle cleanup. */
+export class MediaZoomController implements ReactiveController {
   private _basePresentationScale = 1;
   private _dragStart?: DragStart;
   private _gestureMoved = false;
