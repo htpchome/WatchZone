@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CameraSelectionContext } from "../src/core/camera-selection-context";
-import { EVENTS_TAG } from "../src/core/constants";
+import { ACTIVITY_LIST_TAG, EVENTS_TAG } from "../src/core/constants";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import type { EventsModule } from "../src/modules/events/events";
 import "../src/modules/events/events";
@@ -58,7 +58,7 @@ describe("events module", () => {
     );
 
     await vi.waitFor(() => {
-      expect(module.shadowRoot?.querySelectorAll(".tile")).toHaveLength(1);
+      expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(1);
     });
     expect(callWS).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -72,27 +72,27 @@ describe("events module", () => {
       before: number;
     };
     expect(query.before - query.after).toBe(7 * 24 * 60 * 60);
-    expect(module.shadowRoot?.textContent).toContain("Resident");
-    expect(module.shadowRoot?.textContent).toContain("driveway");
+    expect(activityRoot(module)?.textContent).toContain("Resident");
+    expect(activityRoot(module)?.textContent).toContain("driveway");
     expect(
-      module.shadowRoot?.querySelectorAll(".metadata-icon svg"),
+      activityRoot(module)?.querySelectorAll(".metadata-icon svg"),
     ).toHaveLength(3);
     expect(
-      [...(module.shadowRoot?.querySelectorAll("wzc-badge") ?? [])].map(
+      [...(activityRoot(module)?.querySelectorAll("wzc-badge") ?? [])].map(
         (badge) => badge.textContent?.trim(),
       ),
     ).toEqual(["Person", "Resident", "Clip"]);
     expect(
-      module.shadowRoot?.querySelector<HTMLImageElement>(".thumbnail")?.src,
+      activityRoot(module)?.querySelector<HTMLImageElement>(".thumbnail")?.src,
     ).toBe("https://ha.local/thumbnail.jpg");
     expect(
-      module.shadowRoot?.querySelector("wzc-badge")?.getAttribute("shape"),
+      activityRoot(module)?.querySelector("wzc-badge")?.getAttribute("shape"),
     ).toBe("pill");
     expect(
-      module.shadowRoot?.querySelector("wzc-badge")?.getAttribute("size"),
+      activityRoot(module)?.querySelector("wzc-badge")?.getAttribute("size"),
     ).toBe("small");
     expect(
-      module.shadowRoot
+      activityRoot(module)
         ?.querySelector(".viewport")
         ?.classList.contains("square"),
     ).toBe(false);
@@ -107,8 +107,8 @@ describe("events module", () => {
       vi.fn(),
     );
     await vi.waitFor(() => {
-      expect(module.shadowRoot?.querySelectorAll(".tile")).toHaveLength(0);
-      expect(module.shadowRoot?.textContent).toContain("No recent events");
+      expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(0);
+      expect(activityRoot(module)?.textContent).toContain("No recent events");
     });
   });
 
@@ -138,23 +138,25 @@ describe("events module", () => {
 
     await vi.waitFor(() => {
       expect(
-        module.shadowRoot?.querySelector<HTMLImageElement>(".thumbnail")?.src,
+        activityRoot(module)?.querySelector<HTMLImageElement>(".thumbnail")
+          ?.src,
       ).toBe("https://ha.local/thumbnail.jpg");
     });
-    module.shadowRoot
+    activityRoot(module)
       ?.querySelector<HTMLImageElement>(".thumbnail")
       ?.dispatchEvent(new Event("error"));
     await vi.waitFor(() => {
       expect(
-        module.shadowRoot?.querySelector<HTMLImageElement>(".thumbnail")?.src,
+        activityRoot(module)?.querySelector<HTMLImageElement>(".thumbnail")
+          ?.src,
       ).toBe("https://ha.local/snapshot.jpg");
     });
-    module.shadowRoot
+    activityRoot(module)
       ?.querySelector<HTMLImageElement>(".thumbnail")
       ?.dispatchEvent(new Event("error"));
     await vi.waitFor(() => {
       expect(
-        module.shadowRoot?.querySelector(".placeholder svg"),
+        activityRoot(module)?.querySelector(".placeholder svg"),
       ).not.toBeNull();
     });
   });
@@ -186,8 +188,12 @@ describe("events module", () => {
     );
 
     await vi.waitFor(() => {
-      expect(module.shadowRoot?.querySelectorAll(".tile")).toHaveLength(1);
+      expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(1);
     });
-    expect(module.shadowRoot?.querySelectorAll("wzc-badge")).toHaveLength(0);
+    expect(activityRoot(module)?.querySelectorAll("wzc-badge")).toHaveLength(0);
   });
 });
+
+function activityRoot(module: EventsModule): ShadowRoot | null | undefined {
+  return module.shadowRoot?.querySelector(ACTIVITY_LIST_TAG)?.shadowRoot;
+}

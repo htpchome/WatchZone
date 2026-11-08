@@ -1,6 +1,7 @@
 import {
   CAMERA_SWITCHER_COMPONENT_TYPE,
   CAMERA_MODULE_TYPE,
+  ALERTS_MODULE_TYPE,
   EVENTS_MODULE_TYPE,
   LIGHT_COMPONENT_TYPE,
   PTZ_COMPONENT_TYPE,
@@ -14,6 +15,13 @@ import type {
 } from "../core/placeable";
 
 const moduleLoaders = {
+  [ALERTS_MODULE_TYPE]: {
+    load: () =>
+      import("../modules/alerts").then(
+        ({ moduleDefinition }) => moduleDefinition,
+      ),
+    navigation: { icon: "alerts", labelKey: "navigation.alerts" },
+  },
   [CAMERA_MODULE_TYPE]: {
     load: () =>
       import("../modules/camera").then(
@@ -32,6 +40,7 @@ const moduleLoaders = {
       import("../modules/events").then(
         ({ moduleDefinition }) => moduleDefinition,
       ),
+    navigation: { icon: "events", labelKey: "navigation.events" },
   },
 } satisfies PlaceableLoaderMap;
 

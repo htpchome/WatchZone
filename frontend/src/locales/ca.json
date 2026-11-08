@@ -85,5 +85,16 @@
   "events.thumbnail": "Miniatura de l'esdeveniment {label}",
   "events.clip": "Clip",
   "events.download_clip": "Baixa el clip",
-  "events.view_snapshot": "Mostra la captura"
+  "events.view_snapshot": "Mostra la captura",
+  "navigation.activity": "Mòduls d'activitat",
+  "navigation.alerts": "Alertes",
+  "navigation.events": "Esdeveniments",
+  "alerts.list": "Alertes de la càmera",
+  "alerts.loading": "S'estan carregant les alertes…",
+  "alerts.empty": "No hi ha activitat d'alerta recent per a aquesta càmera.",
+  "alerts.load_failed": "No s'han pogut carregar les alertes de la càmera.",
+  "alerts.activity": "Activitat de la càmera",
+  "alerts.alert": "Alerta",
+  "alerts.detection": "Detecció",
+  "alerts.motion": "Moviment"
 }

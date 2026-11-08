@@ -11,6 +11,13 @@ interface IconDefinition {
 }
 
 const ICONS = {
+  alerts: {
+    paths: [
+      {
+        d: "M12 2L4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3zm-1 14l-4-4 1.4-1.4L11 13.2l5.6-5.6L18 9l-7 7z",
+      },
+    ],
+  },
   account: {
     paths: [
       {
@@ -84,6 +91,13 @@ const ICONS = {
     paths: [
       {
         d: "M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75 1.84-1.83M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25Z",
+      },
+    ],
+  },
+  events: {
+    paths: [
+      {
+        d: "M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z",
       },
     ],
   },
@@ -207,6 +221,10 @@ const ICONS = {
 } as const satisfies Readonly<Record<string, IconDefinition>>;
 
 export type IconName = keyof typeof ICONS;
+
+export function isIconName(value: string): value is IconName {
+  return value in ICONS;
+}
 
 export function iconPath(name: IconName): string | undefined {
   const definition: IconDefinition = ICONS[name];

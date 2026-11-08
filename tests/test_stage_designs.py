@@ -150,6 +150,45 @@ def test_stage_schema_rejects_duplicate_node_ids() -> None:
         validate_stage_design(value)
 
 
+def test_stage_schema_preserves_an_ordered_module_stack() -> None:
+    """A stack owns navigation order without merging its child modules."""
+    value = _design()
+    variants = value["variants"]
+    assert isinstance(variants, dict)
+    for variant in variants.values():
+        assert isinstance(variant, dict)
+        root = variant["root"]
+        assert isinstance(root, dict)
+        children = root["children"]
+        assert isinstance(children, list)
+        placement = children[0]
+        assert isinstance(placement, dict)
+        camera = placement["node"]
+        placement["node"] = {
+            "children": [
+                camera,
+                {
+                    "config": {},
+                    "id": "events-module",
+                    "kind": "module",
+                    "moduleType": "events",
+                },
+            ],
+            "id": "activity-stack",
+            "kind": "stack",
+        }
+
+    design = validate_stage_design(value)
+
+    stack = design.variants["default"].root.children[0].node
+    assert stack.kind == "stack"
+    assert [module.module_type for module in stack.children] == [
+        "camera",
+        "events",
+    ]
+    assert design.as_json() == value
+
+
 def test_stage_schema_allows_profile_specific_designs() -> None:
     """A user design may target desktop/tablet or phone without duplication."""
     value = _design()

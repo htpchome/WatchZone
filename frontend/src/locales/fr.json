@@ -85,5 +85,16 @@
   "events.thumbnail": "Miniature de l'événement {label}",
   "events.clip": "Clip",
   "events.download_clip": "Télécharger le clip",
-  "events.view_snapshot": "Afficher l'instantané"
+  "events.view_snapshot": "Afficher l'instantané",
+  "navigation.activity": "Modules d'activité",
+  "navigation.alerts": "Alertes",
+  "navigation.events": "Événements",
+  "alerts.list": "Alertes de la caméra",
+  "alerts.loading": "Chargement des alertes…",
+  "alerts.empty": "Aucune activité d'alerte récente pour cette caméra.",
+  "alerts.load_failed": "Impossible de charger les alertes de la caméra.",
+  "alerts.activity": "Activité de la caméra",
+  "alerts.alert": "Alerte",
+  "alerts.detection": "Détection",
+  "alerts.motion": "Mouvement"
 }

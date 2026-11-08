@@ -25,6 +25,7 @@ import {
   type StageModuleNode,
   type StagePlacement,
   type StageSlotName,
+  type StageStackNode,
   type StageVariantName,
 } from "../core/layout";
 import { englishLocalize, type LocalizeFunction } from "../core/localization";
@@ -38,6 +39,7 @@ import {
   moduleLoader,
   type PlaceableLoader,
 } from "./placeable-loader";
+import { isIconName, renderIcon } from "../ui/icons";
 
 type PlaceableNode = StageModuleNode | StageComponentNode;
 
@@ -50,7 +52,8 @@ interface PlaceableRecord {
   node: PlaceableNode;
   preparation?: PlaceablePreparation;
   reserveAspectRatio: boolean;
-  status: "error" | "loading" | "ready";
+  status: "error" | "idle" | "loading" | "ready";
+  visible: boolean;
 }
 
 /** Owns validated stage rendering, lazy placeable loading, and local failures. */
@@ -69,6 +72,7 @@ export class LayoutRuntime implements ReactiveController {
   private _flow?: StageFlow;
   private _inlineSize = Number.POSITIVE_INFINITY;
   private readonly _records = new Map<string, PlaceableRecord>();
+  private readonly _activeStackModules = new Map<string, string>();
   private _variantName: StageVariantName = "default";
 
   public constructor(
@@ -83,7 +87,8 @@ export class LayoutRuntime implements ReactiveController {
   public hostConnected(): void {
     this._connected = true;
     for (const record of this._records.values()) {
-      if (record.status !== "ready" && !record.definition) this._load(record);
+      if (record.visible && record.status !== "ready" && !record.definition)
+        this._load(record);
       else if (record.status === "ready") this._updateRecord(record, true);
     }
   }
@@ -219,9 +224,12 @@ export class LayoutRuntime implements ReactiveController {
       this._host.requestUpdate();
       return;
     }
-    const nodes = collectPlaceables(variant.root.children);
-    this._removeMissingRecords(new Set(nodes.map(({ id }) => id)));
-    for (const node of nodes) this._syncNode(node);
+    const nodes = collectPlaceables(
+      variant.root.children,
+      this._activeStackModules,
+    );
+    this._removeMissingRecords(new Set(nodes.map(({ node }) => node.id)));
+    for (const { node, visible } of nodes) this._syncNode(node, visible);
     this._host.requestUpdate();
   }
 
@@ -230,12 +238,82 @@ export class LayoutRuntime implements ReactiveController {
   ): TemplateResult | typeof nothing {
     const { column, columnSpan, row, rowSpan } = placement.grid;
     const placementStyle = `grid-column:${column}/span ${columnSpan};grid-row:${row}/span ${rowSpan}`;
+    if (placement.node.kind === "stack") {
+      return this._renderStack(placement.node, placementStyle);
+    }
     const hasComponents = Object.values(placement.node.slots ?? {}).some(
       (components) => components && components.length > 0,
     );
     return hasComponents
       ? this._renderModule(placement.node, placementStyle)
       : this._renderRecord(placement.node, "stage-placement", placementStyle);
+  }
+
+  private _renderStack(
+    node: StageStackNode,
+    placementStyle: string,
+  ): TemplateResult {
+    const activeId =
+      this._activeStackModules.get(node.id) ?? node.children[0]?.id;
+    const active = node.children.find(({ id }) => id === activeId);
+    return html`<div
+      class="stage-placement stage-stack"
+      data-layout-node=${node.id}
+      style=${placementStyle}
+    >
+      <nav
+        class="stage-stack-navigation"
+        aria-label=${this._localize("navigation.activity")}
+      >
+        ${repeat(
+          node.children,
+          ({ id }) => id,
+          (child) => {
+            const navigation = this._moduleLoader.getRegistration(
+              child.moduleType,
+            )?.navigation;
+            const label = navigation
+              ? this._localize(navigation.labelKey)
+              : child.moduleType;
+            return html`<button
+              class=${child.id === activeId ? "active" : ""}
+              type="button"
+              aria-label=${label}
+              aria-pressed=${child.id === activeId ? "true" : "false"}
+              title=${label}
+              @click=${() => this._showStackModule(node, child.id)}
+            >
+              ${
+                navigation && isIconName(navigation.icon)
+                  ? renderIcon(navigation.icon)
+                  : label
+              }
+            </button>`;
+          },
+        )}
+      </nav>
+      <div class="stage-stack-content">
+        ${active ? this._renderStackModule(active) : nothing}
+      </div>
+    </div>`;
+  }
+
+  private _renderStackModule(
+    node: StageModuleNode,
+  ): TemplateResult | typeof nothing {
+    const hasComponents = Object.values(node.slots ?? {}).some(
+      (components) => components && components.length > 0,
+    );
+    return hasComponents
+      ? this._renderModule(node, "")
+      : this._renderRecord(node, "stage-stack-module");
+  }
+
+  private _showStackModule(node: StageStackNode, moduleId: string): void {
+    if (!node.children.some(({ id }) => id === moduleId)) return;
+    if (this._activeStackModules.get(node.id) === moduleId) return;
+    this._activeStackModules.set(node.id, moduleId);
+    this._syncActiveVariant();
   }
 
   private _renderModule(
@@ -329,10 +407,12 @@ export class LayoutRuntime implements ReactiveController {
     </div>`;
   }
 
-  private _syncNode(node: PlaceableNode): void {
+  private _syncNode(node: PlaceableNode, visible: boolean): void {
     const existing = this._records.get(node.id);
     if (existing && placeableType(existing.node) === placeableType(node)) {
       existing.node = node;
+      const becameVisible = visible && !existing.visible;
+      existing.visible = visible;
       if (existing.definition && existing.element) {
         try {
           existing.config = existing.definition.validateConfig(node.config);
@@ -345,7 +425,7 @@ export class LayoutRuntime implements ReactiveController {
           );
           existing.status = "error";
         }
-      } else if (existing.status === "error") {
+      } else if (visible && (existing.status === "error" || becameVisible)) {
         this._load(existing, true);
       }
       return;
@@ -359,10 +439,11 @@ export class LayoutRuntime implements ReactiveController {
       reserveAspectRatio:
         loader.getRegistration(placeableType(node))?.reserveAspectRatio ===
         true,
-      status: "loading",
+      status: visible ? "loading" : "idle",
+      visible,
     };
     this._records.set(node.id, record);
-    if (this._connected) this._load(record);
+    if (this._connected && visible) this._load(record);
   }
 
   private _load(record: PlaceableRecord, retry = false): void {
@@ -465,13 +546,34 @@ export class LayoutRuntime implements ReactiveController {
 
 function collectPlaceables(
   placements: readonly StagePlacement[],
-): PlaceableNode[] {
-  return placements.flatMap(({ node }) => [
-    node,
-    ...Object.values(node.slots ?? {}).flatMap(
-      (components) => components ?? [],
+  activeStackModules: Map<string, string>,
+): Array<{ readonly node: PlaceableNode; readonly visible: boolean }> {
+  return placements.flatMap(({ node }) => {
+    if (node.kind === "module") return modulePlaceables(node, true);
+    const current = activeStackModules.get(node.id);
+    const active = node.children.some(({ id }) => id === current)
+      ? current
+      : node.children[0]?.id;
+    if (active) activeStackModules.set(node.id, active);
+    return node.children.flatMap((child) =>
+      modulePlaceables(child, child.id === active),
+    );
+  });
+}
+
+function modulePlaceables(
+  node: StageModuleNode,
+  visible: boolean,
+): Array<{ readonly node: PlaceableNode; readonly visible: boolean }> {
+  return [
+    { node, visible },
+    ...Object.values(node.slots ?? {}).flatMap((components) =>
+      (components ?? []).map((component) => ({
+        node: component,
+        visible,
+      })),
     ),
-  ]);
+  ];
 }
 
 function placeableType(node: PlaceableNode): string {

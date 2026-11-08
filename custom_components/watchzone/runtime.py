@@ -8,6 +8,7 @@ from .features.hls_prewarm import HlsPrewarmService
 from .features.layouts import StageDesignStore
 from .features.live import LiveSignalingService
 from .features.ptz import PtzService
+from .features.reviews import ReviewsService
 
 
 @dataclass(slots=True)
@@ -21,6 +22,7 @@ class WatchZoneRuntime:
     stage_designs: StageDesignStore
     ptz: PtzService
     events: EventsService
+    reviews: ReviewsService
 
     async def async_close(self) -> None:
         """Release integration-owned runtime resources."""
@@ -29,3 +31,4 @@ class WatchZoneRuntime:
         await self.live_signaling.async_close()
         await self.ptz.async_close()
         await self.events.async_close()
+        await self.reviews.async_close()

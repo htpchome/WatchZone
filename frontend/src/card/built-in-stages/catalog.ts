@@ -1,6 +1,7 @@
 import type { CardConfig } from "../../core/config";
 import {
   APP_ID,
+  ALERTS_MODULE_TYPE,
   CAMERA_SWITCHER_COMPONENT_TYPE,
   CAMERA_MODULE_TYPE,
   EVENTS_MODULE_TYPE,
@@ -16,6 +17,7 @@ import {
   type StageFlow,
   type StageModuleNode,
   type StagePlacement,
+  type StageStackNode,
   type StageVariant,
   type StageVariantName,
 } from "../../core/layout";
@@ -59,25 +61,36 @@ function namespaceTemplate(template: StageDesignDocument): StageDesignDocument {
 function namespacePlacement(placement: StagePlacement): StagePlacement {
   return {
     ...placement,
-    node: {
-      ...placement.node,
-      config: namespaceModuleConfig(placement.node),
-      id: namespacedId(placement.node.id),
-      ...(placement.node.slots
+    node:
+      placement.node.kind === "stack"
         ? {
-            slots: Object.fromEntries(
-              Object.entries(placement.node.slots).map(([name, nodes]) => [
-                name,
-                nodes?.map((node) => ({
-                  ...node,
-                  config: namespaceComponentConfig(node),
-                  id: namespacedId(node.id),
-                })),
-              ]),
-            ),
+            ...placement.node,
+            children: placement.node.children.map(namespaceModule),
+            id: namespacedId(placement.node.id),
           }
-        : {}),
-    },
+        : namespaceModule(placement.node),
+  };
+}
+
+function namespaceModule(node: StageModuleNode): StageModuleNode {
+  return {
+    ...node,
+    config: namespaceModuleConfig(node),
+    id: namespacedId(node.id),
+    ...(node.slots
+      ? {
+          slots: Object.fromEntries(
+            Object.entries(node.slots).map(([name, nodes]) => [
+              name,
+              nodes?.map((component) => ({
+                ...component,
+                config: namespaceComponentConfig(component),
+                id: namespacedId(component.id),
+              })),
+            ]),
+          ),
+        }
+      : {}),
   };
 }
 
@@ -95,12 +108,24 @@ function hydrateTemplate(
             ? variant.root.rows.slice(0, 2)
             : variant.root.rows,
         children: variant.root.children.flatMap((placement) => {
-          const node = hydrateModule(placement.node, config);
+          const node = hydratePlacementNode(placement.node, config);
           return node ? [{ ...placement, node }] : [];
         }),
       },
     })),
   };
+}
+
+function hydratePlacementNode(
+  node: StageModuleNode | StageStackNode,
+  config: CardConfig,
+): StageModuleNode | StageStackNode | undefined {
+  if (node.kind === "module") return hydrateModule(node, config);
+  const children = node.children.flatMap((child) => {
+    const hydrated = hydrateModule(child, config);
+    return hydrated ? [hydrated] : [];
+  });
+  return children.length ? { ...node, children } : undefined;
 }
 
 function hydrateModule(
@@ -123,7 +148,10 @@ function hydrateModule(
       ),
     };
   }
-  if (node.moduleType === EVENTS_MODULE_TYPE) {
+  if (
+    node.moduleType === EVENTS_MODULE_TYPE ||
+    node.moduleType === ALERTS_MODULE_TYPE
+  ) {
     if (config.cameras.length === 0) return undefined;
     const moduleConfig =
       typeof node.config === "object" && node.config !== null
@@ -177,7 +205,11 @@ function hydrateModule(
 }
 
 function namespaceModuleConfig(node: StageModuleNode): unknown {
-  if (node.moduleType !== EVENTS_MODULE_TYPE) return node.config;
+  if (
+    node.moduleType !== EVENTS_MODULE_TYPE &&
+    node.moduleType !== ALERTS_MODULE_TYPE
+  )
+    return node.config;
   if (typeof node.config !== "object" || node.config === null)
     return node.config;
   const targetModuleId = (node.config as Record<string, unknown>)

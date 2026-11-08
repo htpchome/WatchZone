@@ -16,7 +16,7 @@ only. Its single visual stage contains the layout document rendered by
 
 - Validates a Stage Design catalog and separate ordered desktop/tablet and
   phone flows before selecting the active design.
-- Validates container and module-node structure before rendering.
+- Validates container, module-stack, and module-node structure before rendering.
 - Rejects duplicate node IDs.
 - Preserves module elements by stable node ID rather than list position.
 - Loads only module types referenced by the active layout.
@@ -29,6 +29,9 @@ only. Its single visual stage contains the layout document rendered by
 - Removes a module element when its node is removed; the element releases its
   media lease while the document-scoped session manager applies retention
   policy.
+- Keeps only the selected child of a module stack connected. Unvisited hidden
+  children remain unloaded; visited children retain their element identity for
+  later selection while disconnected lifecycle cleanup remains effective.
 
 The compile-time loader map contains lazy import functions and minimal loading
 surface metadata. It does not import module implementations into the eager
@@ -63,10 +66,12 @@ first compatible design is the landing stage. Runtime selection can move only
 to designs already validated for the active flow. A stage may support one or
 both responsive profiles; the runtime never fabricates a missing variant.
 
-The initial built-in template contains one stable camera module node and is the
-sole entry in both flows. Without camera input, its composition is empty and no
-camera module, provider adapter, poster, or media session is requested. Adding
-backend designs or navigation changes the catalog and flow, not the renderer.
+The initial built-in template contains one stable camera module node and one
+activity module stack whose Alerts child precedes Events. It is the sole entry
+in both flows. Without camera input, its composition is empty and no camera
+module, activity module, provider adapter, poster, or media session is
+requested. Adding backend designs or navigation changes the catalog and flow,
+not the renderer.
 
 ## Invariants
 

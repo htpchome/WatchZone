@@ -6,6 +6,8 @@ import { LayoutRuntime } from "../src/card/layout-runtime";
 import { PlaceableLoader } from "../src/card/placeable-loader";
 import { normalizeCardConfig } from "../src/core/config";
 import {
+  DEFAULT_ACTIVITY_STACK_NODE_ID,
+  DEFAULT_ALERTS_MODULE_NODE_ID,
   DEFAULT_CAMERA_MODULE_NODE_ID,
   DEFAULT_CAMERA_SWITCHER_COMPONENT_NODE_ID,
   DEFAULT_EVENTS_MODULE_NODE_ID,
@@ -20,6 +22,8 @@ import {
   validateStageDesign,
   validateStageFlow,
   type StageDesignDocument,
+  type StageModuleNode,
+  type StageStackNode,
   type StageVariant,
 } from "../src/core/layout";
 import type { ModuleDefinition } from "../src/core/placeable";
@@ -103,10 +107,23 @@ describe("layout composition", () => {
       },
     });
     expect(children[2].node).toMatchObject({
-      id: DEFAULT_EVENTS_MODULE_NODE_ID,
-      kind: "module",
-      moduleType: "events",
-      config: {
+      id: DEFAULT_ACTIVITY_STACK_NODE_ID,
+      kind: "stack",
+      children: [
+        {
+          id: DEFAULT_ALERTS_MODULE_NODE_ID,
+          kind: "module",
+          moduleType: "alerts",
+        },
+        {
+          id: DEFAULT_EVENTS_MODULE_NODE_ID,
+          kind: "module",
+          moduleType: "events",
+        },
+      ],
+    });
+    expect(activityModules(layout).map(({ config }) => config)).toEqual([
+      {
         displayEventTypeBadges: true,
         displayObjectBadges: true,
         displayZone: true,
@@ -114,7 +131,15 @@ describe("layout composition", () => {
         roundedCorners: true,
         targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
       },
-    });
+      {
+        displayEventTypeBadges: true,
+        displayObjectBadges: true,
+        displayZone: true,
+        historyDays: 5,
+        roundedCorners: true,
+        targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
+      },
+    ]);
   });
 
   it("maps event badge visibility at the events module boundary", () => {
@@ -127,11 +152,13 @@ describe("layout composition", () => {
       }),
     );
 
-    expect(defaultVariant(layout).root.children[2]?.node.config).toMatchObject({
-      displayEventTypeBadges: false,
-      displayObjectBadges: false,
-      displayZone: false,
-    });
+    for (const module of activityModules(layout)) {
+      expect(module.config).toMatchObject({
+        displayEventTypeBadges: false,
+        displayObjectBadges: false,
+        displayZone: false,
+      });
+    }
   });
 
   it("maps the configured event history range at the events module boundary", () => {
@@ -142,9 +169,9 @@ describe("layout composition", () => {
       }),
     );
 
-    expect(defaultVariant(layout).root.children[2]?.node.config).toMatchObject({
-      historyDays: 12,
-    });
+    for (const module of activityModules(layout)) {
+      expect(module.config).toMatchObject({ historyDays: 12 });
+    }
   });
 
   it("maps camera bar shadows at the switcher component boundary", () => {
@@ -154,7 +181,7 @@ describe("layout composition", () => {
         camera_bar_shadows: false,
       }),
     );
-    const panel = defaultVariant(layout).root.children[1]?.node;
+    const panel = moduleAt(layout, 1);
     expect(panel?.slots?.content?.[0]?.config).toMatchObject({
       shadows: false,
       targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
@@ -169,8 +196,7 @@ describe("layout composition", () => {
         camera_shadows: false,
       }),
     );
-    const cameraNode = defaultVariant(layout).root.children[0]?.node;
-    if (!cameraNode) throw new Error("Expected a camera module node.");
+    const cameraNode = moduleAt(layout, 0);
 
     expect(cameraNode.config).toMatchObject({
       cameras: [{ entityId: "camera.front" }],
@@ -192,7 +218,7 @@ describe("layout composition", () => {
       }),
     );
 
-    const camera = defaultVariant(layout).root.children[0]?.node;
+    const camera = moduleAt(layout, 0);
     expect(camera?.slots?.controls).toHaveLength(1);
     expect(camera?.slots?.controls?.[0]).toMatchObject({
       id: DEFAULT_TALK_COMPONENT_NODE_ID,
@@ -219,7 +245,7 @@ describe("layout composition", () => {
       }),
     );
 
-    const camera = defaultVariant(layout).root.children[0]?.node;
+    const camera = moduleAt(layout, 0);
     expect(camera?.slots?.overlay?.[0]).toMatchObject({
       id: DEFAULT_PTZ_COMPONENT_NODE_ID,
       kind: "component",
@@ -252,7 +278,7 @@ describe("layout composition", () => {
       }),
     );
 
-    const camera = defaultVariant(layout).root.children[0]?.node;
+    const camera = moduleAt(layout, 0);
     expect(camera?.slots?.controls?.[0]).toMatchObject({
       id: DEFAULT_LIGHT_COMPONENT_NODE_ID,
       kind: "component",
@@ -403,6 +429,63 @@ describe("layout composition", () => {
     ]);
   });
 
+  it("shows one stacked module at a time and preserves visited elements", async () => {
+    const createDefinition = (type: string): ModuleDefinition<unknown> => ({
+      type,
+      createElement: () => {
+        const element = document.createElement("article");
+        element.dataset.type = type;
+        return element;
+      },
+      define: async () => undefined,
+      getEntityIds: () => [],
+      updateElement: () => undefined,
+      validateConfig: (value) => value,
+    });
+    const alertsLoad = vi.fn(async () => createDefinition("alerts"));
+    const eventsLoad = vi.fn(async () => createDefinition("events"));
+    const loader = new PlaceableLoader({
+      alerts: {
+        load: alertsLoad,
+        navigation: { icon: "alerts", labelKey: "navigation.alerts" },
+      },
+      events: {
+        load: eventsLoad,
+        navigation: { icon: "events", labelKey: "navigation.events" },
+      },
+    });
+    const host = new RuntimeHost();
+    const runtime = new LayoutRuntime(host, loader);
+    const container = document.createElement("div");
+    host.connect();
+    setRuntimeStage(runtime, layoutWithStack());
+
+    await vi.waitFor(() => {
+      render(runtime.render(), container);
+      expect(container.querySelector("article")?.dataset.type).toBe("alerts");
+    });
+    const alerts = container.querySelector("article");
+    expect(alertsLoad).toHaveBeenCalledOnce();
+    expect(eventsLoad).not.toHaveBeenCalled();
+
+    container
+      .querySelectorAll<HTMLButtonElement>(".stage-stack-navigation button")[1]
+      ?.click();
+    await vi.waitFor(() => {
+      render(runtime.render(), container);
+      expect(container.querySelector("article")?.dataset.type).toBe("events");
+    });
+    expect(alerts?.isConnected).toBe(false);
+    expect(eventsLoad).toHaveBeenCalledOnce();
+
+    container
+      .querySelectorAll<HTMLButtonElement>(".stage-stack-navigation button")[0]
+      ?.click();
+    render(runtime.render(), container);
+    expect(container.querySelector("article")).toBe(alerts);
+    expect(alertsLoad).toHaveBeenCalledOnce();
+  });
+
   it("prepares a module while its visual definition loads and releases after mount", async () => {
     let finishDefinition: (() => void) | undefined;
     const definitionReady = new Promise<void>((resolve) => {
@@ -488,6 +571,24 @@ function defaultVariant(design: StageDesignDocument): StageVariant {
   return variant;
 }
 
+function moduleAt(design: StageDesignDocument, index: number): StageModuleNode {
+  const node = defaultVariant(design).root.children[index]?.node;
+  if (!node || node.kind !== "module") {
+    throw new Error(`Expected module at placement ${index}.`);
+  }
+  return node;
+}
+
+function activityModules(
+  design: StageDesignDocument,
+): readonly StageModuleNode[] {
+  const node = defaultVariant(design).root.children[2]?.node;
+  if (!node || node.kind !== "stack") {
+    throw new Error("Expected the built-in activity stack.");
+  }
+  return (node as StageStackNode).children;
+}
+
 function setRuntimeStage(
   runtime: LayoutRuntime,
   design: StageDesignDocument,
@@ -508,6 +609,47 @@ function layoutWithModules(...ids: string[]): StageDesignDocument {
       default: variantWithNodes(...ids),
       phone: variantWithNodes(...ids),
     },
+  };
+}
+
+function layoutWithStack(): StageDesignDocument {
+  const variant: StageVariant = {
+    root: {
+      children: [
+        {
+          grid: { column: 1, columnSpan: 12, row: 1, rowSpan: 1 },
+          node: {
+            children: [
+              {
+                config: {},
+                id: "alerts-node",
+                kind: "module",
+                moduleType: "alerts",
+              },
+              {
+                config: {},
+                id: "events-node",
+                kind: "module",
+                moduleType: "events",
+              },
+            ],
+            id: "activity-stack",
+            kind: "stack",
+          },
+        },
+      ],
+      columns: 12,
+      id: "root",
+      kind: "container",
+      rows: ["fraction"],
+    },
+  };
+  return {
+    id: "stack-stage",
+    name: "Stack",
+    revision: 0,
+    schemaVersion: 1,
+    variants: { default: variant, phone: variant },
   };
 }
 

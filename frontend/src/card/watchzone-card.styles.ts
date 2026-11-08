@@ -54,6 +54,8 @@ export const cardStyles = css`
 
   .stage-grid,
   .stage-placement,
+  .stage-stack,
+  .stage-stack-content,
   .module-composition,
   .module-slot,
   .component-slot,
@@ -75,6 +77,57 @@ export const cardStyles = css`
     align-content: start;
     align-items: stretch;
     gap: var(--wzc-card-padding);
+  }
+
+  .stage-stack {
+    display: grid;
+    grid-template-rows: max-content minmax(0, 1fr);
+    min-block-size: 0;
+  }
+
+  .stage-stack-navigation {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    gap: var(--wzc-stage-stack-navigation-gap);
+    padding-block: var(--wzc-stage-stack-navigation-padding);
+  }
+
+  .stage-stack-navigation button {
+    align-items: center;
+    background: var(--wzc-stage-stack-button-background);
+    border: var(--wzc-stage-stack-button-border-width) solid
+      var(--wzc-stage-stack-button-border-color);
+    border-radius: var(--wzc-radius-button);
+    color: var(--wzc-stage-stack-button-color);
+    cursor: pointer;
+    display: inline-flex;
+    justify-content: center;
+    min-block-size: var(--wzc-stage-stack-button-size);
+    min-inline-size: var(--wzc-stage-stack-button-size);
+    padding: var(--wzc-stage-stack-button-padding);
+  }
+
+  .stage-stack-navigation button.active {
+    background: var(--wzc-stage-stack-button-active-background);
+    color: var(--wzc-stage-stack-button-active-color);
+  }
+
+  .stage-stack-navigation button:focus-visible {
+    outline: 2px solid var(--wzc-color-primary);
+    outline-offset: 2px;
+  }
+
+  .stage-stack-navigation svg {
+    block-size: var(--wzc-stage-stack-icon-size);
+    inline-size: var(--wzc-stage-stack-icon-size);
+  }
+
+  .stage-stack-content,
+  .stage-stack-content > .module-slot,
+  .stage-stack-content > .module-slot.placeable-ready > * {
+    block-size: 100%;
+    min-block-size: 0;
   }
 
   .module-composition {

@@ -46,5 +46,16 @@
   "events.thumbnail": "{label} event thumbnail",
   "events.clip": "Clip",
   "events.download_clip": "Download clip",
-  "events.view_snapshot": "View snapshot"
+  "events.view_snapshot": "View snapshot",
+  "navigation.activity": "Activity modules",
+  "navigation.alerts": "Alerts",
+  "navigation.events": "Events",
+  "alerts.list": "Camera alerts",
+  "alerts.loading": "Loading alerts…",
+  "alerts.empty": "No recent alert activity for this camera.",
+  "alerts.load_failed": "Unable to load camera alerts.",
+  "alerts.activity": "Camera activity",
+  "alerts.alert": "Alert",
+  "alerts.detection": "Detection",
+  "alerts.motion": "Motion"
 }

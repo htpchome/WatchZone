@@ -15,7 +15,7 @@ export interface StageGridArea {
 
 export interface StagePlacement {
   readonly grid: StageGridArea;
-  readonly node: StageModuleNode;
+  readonly node: StageModuleNode | StageStackNode;
 }
 
 export interface StageContainerNode {
@@ -42,6 +42,12 @@ export interface StageModuleNode {
   readonly slots?: Readonly<
     Partial<Record<StageSlotName, readonly StageComponentNode[]>>
   >;
+}
+
+export interface StageStackNode {
+  readonly children: readonly StageModuleNode[];
+  readonly id: string;
+  readonly kind: "stack";
 }
 
 export interface StageVariant {
@@ -199,7 +205,27 @@ function validatePlacement(
       row,
       rowSpan,
     },
-    node: validateModule(source.node, ids),
+    node: validatePlacementNode(source.node, ids),
+  };
+}
+
+function validatePlacementNode(
+  value: unknown,
+  ids: Set<string>,
+): StageModuleNode | StageStackNode {
+  const source = objectValue(value, "Stage placement nodes");
+  if (source.kind === "module") return validateModule(source, ids);
+  if (source.kind !== "stack") {
+    throw new Error("Stage placements require a module or module stack.");
+  }
+  const id = uniqueId(source.id, ids);
+  if (!Array.isArray(source.children) || source.children.length === 0) {
+    throw new Error(`Stage stack "${id}" must contain at least one module.`);
+  }
+  return {
+    children: source.children.map((child) => validateModule(child, ids)),
+    id,
+    kind: "stack",
   };
 }
 

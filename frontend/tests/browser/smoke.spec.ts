@@ -256,7 +256,7 @@ test("shows an independently scrolling event window for the active camera", asyn
       setConfig(config: unknown): void;
     };
     const events = (camera: string) =>
-      Array.from({ length: 4 }, (_, index) => ({
+      Array.from({ length: 6 }, (_, index) => ({
         camera,
         clip_url: null,
         end_time: 1_700_000_024 - index * 60,
@@ -281,6 +281,7 @@ test("shows an independently scrolling event window for the active camera", asyn
     });
     card.style.setProperty("--restore-card-border-radius", "21px");
     card.style.setProperty("--ha-card-border-radius", "0px");
+    card.style.blockSize = "900px";
     card.hass = {
       config: { time_zone: "America/New_York" },
       locale: {
@@ -315,14 +316,53 @@ test("shows an independently scrolling event window for the active camera", asyn
             ),
           };
         }
+        if (message.type === "watchzone/reviews/list") {
+          const camera = message.entity_id === "camera.back" ? "back" : "front";
+          return {
+            items: events(camera).map((event, index) => ({
+              camera,
+              classification:
+                index === 0 ? "alert" : index === 3 ? "motion" : "detection",
+              clip_url: event.clip_url,
+              end_time: event.end_time,
+              id: `review:${camera}:${index}`,
+              labels: [event.label],
+              revision: event.revision,
+              snapshot_url: event.snapshot_url,
+              start_time: event.start_time,
+              sub_labels: event.sub_label ? [event.sub_label] : [],
+              thumbnail_url: event.thumbnail_url,
+              zones: event.zones,
+            })),
+          };
+        }
         return undefined;
       },
     };
   });
 
+  const stackNavigation = page.locator(".stage-stack-navigation");
+  await expect(stackNavigation.locator("button")).toHaveCount(2);
+  await expect(page.locator("wzc-alerts .tile")).toHaveCount(6);
+  await expect(page.locator("wzc-alerts .thumbnail-wrap.alert")).toHaveCSS(
+    "outline-style",
+    "solid",
+  );
+  await expect(
+    page.locator("wzc-alerts .thumbnail-wrap.detection").first(),
+  ).toHaveCSS("outline-style", "solid");
+  await expect(page.locator("wzc-alerts .thumbnail-wrap.motion")).toHaveCSS(
+    "outline-style",
+    "none",
+  );
+  await expect(stackNavigation.locator("button").first()).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await stackNavigation.locator("button").nth(1).click();
   const events = page.locator("wzc-events");
   const viewport = events.locator(".viewport");
-  await expect(events.locator(".tile")).toHaveCount(4);
+  await expect(events.locator(".tile")).toHaveCount(6);
   await expect(page.locator("watchzone-card ha-card")).toHaveCSS(
     "border-radius",
     "21px",
@@ -370,8 +410,8 @@ test("shows an independently scrolling event window for the active camera", asyn
   const viewportBottom = await viewport.evaluate(
     (node) => node.getBoundingClientRect().bottom,
   );
-  expect(tileGeometry[2]?.bottom).toBeLessThanOrEqual(viewportBottom + 1);
-  expect(tileGeometry[3]?.bottom).toBeGreaterThan(viewportBottom);
+  expect(tileGeometry[4]?.bottom).toBeLessThanOrEqual(viewportBottom + 1);
+  expect(tileGeometry[5]?.bottom).toBeGreaterThan(viewportBottom);
   expect(tileGeometry[0]?.thumbnailRatio).toBeCloseTo(16 / 9, 2);
   expect(tileGeometry[0]?.thumbnailBottomInset).toBeLessThanOrEqual(1);
   expect(tileGeometry[0]?.thumbnailLeadingInset).toBeLessThanOrEqual(1);
@@ -414,7 +454,7 @@ test("shows an independently scrolling event window for the active camera", asyn
       ],
     });
   });
-  await expect(events.locator(".tile")).toHaveCount(4);
+  await expect(events.locator(".tile")).toHaveCount(6);
   await expect(events.locator("wzc-badge")).toHaveCount(0);
   await expect(events).not.toContainText("back_yard");
   await expect(page.locator("watchzone-card ha-card")).toHaveCSS(

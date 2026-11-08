@@ -1,27 +1,17 @@
 import { html, LitElement } from "lit";
-import { repeat } from "lit/directives/repeat.js";
 
 import { listEvents, type EventItem } from "../../api/events";
+import { ActiveCameraActivityController } from "../../core/active-camera-activity.controller";
 import type { CameraSelectionContext } from "../../core/camera-selection-context";
-import {
-  formatHomeAssistantEventDate,
-  formatHomeAssistantTime,
-} from "../../core/date-time";
-import {
-  DEFAULT_EVENT_HISTORY_DAYS,
-  EVENTS_REFRESH_INTERVAL_MS,
-  EVENTS_TAG,
-} from "../../core/constants";
+import { DEFAULT_EVENT_HISTORY_DAYS, EVENTS_TAG } from "../../core/constants";
 import type { HomeAssistantApi } from "../../core/home-assistant";
-import { homeAssistantNumberFormat } from "../../core/number-format";
 import {
   englishLocalize,
   type LocalizeFunction,
 } from "../../core/localization";
-import { distinctBadgeColorsForLabels } from "../../ui/badge-colors";
-import { renderIcon } from "../../ui/icons";
+import type { ActivityListItem } from "../../ui/activity-list";
+import "../../ui/activity-list";
 import { ToastManager } from "../../ui/toast-manager";
-import "../../ui/badge";
 import "../../ui/toast-region";
 import { eventsStyles } from "./events.styles";
 
@@ -37,8 +27,6 @@ export class EventsModule extends LitElement {
     localize: { attribute: false },
     roundedCorners: { attribute: false, type: Boolean },
     targetModuleId: { attribute: false },
-    _events: { state: true },
-    _loading: { state: true },
   };
 
   public api?: HomeAssistantApi;
@@ -51,307 +39,58 @@ export class EventsModule extends LitElement {
   public roundedCorners = true;
   public targetModuleId = "";
 
-  private _activeEntityId?: string;
-  private _events: readonly EventItem[] = [];
-  private _generation = 0;
-  private _loading = false;
-  private _refreshTimer?: number;
-  private _unsubscribe?: () => void;
-  private readonly _failedMedia = new Set<string>();
-  private readonly _retriedMedia = new Set<string>();
   private readonly _toasts = new ToastManager(this);
-
-  public connectedCallback(): void {
-    super.connectedCallback();
-    this._subscribe();
-  }
-
-  public disconnectedCallback(): void {
-    this._unsubscribe?.();
-    this._unsubscribe = undefined;
-    this._stopRefresh();
-    this._generation += 1;
-    super.disconnectedCallback();
-  }
-
-  protected updated(changed: Map<PropertyKey, unknown>): void {
-    if (changed.has("cameraSelection") || changed.has("targetModuleId")) {
-      this._subscribe();
-    }
-    if (
-      changed.has("historyDays") &&
-      !changed.has("cameraSelection") &&
-      !changed.has("targetModuleId") &&
-      this._activeEntityId
-    ) {
-      this._generation += 1;
-      void this._refresh(false);
-    }
-  }
+  private readonly _activity = new ActiveCameraActivityController<EventItem>(
+    this,
+    () => ({
+      api: this.api,
+      cameraSelection: this.cameraSelection,
+      historyDays: this.historyDays,
+      targetModuleId: this.targetModuleId,
+    }),
+    listEvents,
+    () =>
+      this._toasts.error(this.localize("events.load_failed"), {
+        key: "events-load-failed",
+      }),
+  );
 
   protected render() {
+    const items = this._activity.items.map((event): ActivityListItem => ({
+      clipUrl: event.clip_url,
+      endTime: event.end_time,
+      id: event.id,
+      objectLabels: [
+        event.label,
+        ...(event.sub_label ? [event.sub_label] : []),
+      ],
+      revision: event.revision,
+      snapshotUrl: event.snapshot_url,
+      startTime: event.start_time,
+      thumbnailUrl: event.thumbnail_url,
+      typeBadge: event.has_clip
+        ? { label: this.localize("events.clip"), variant: "success" }
+        : undefined,
+      zones: event.zones,
+    }));
     return html`
-      <section
-        class=${this.roundedCorners ? "viewport" : "viewport square"}
-        aria-label=${this.localize("events.list")}
-      >
-        ${
-          this._loading && this._events.length === 0
-            ? html`<div class="loading">
-                ${this.localize("events.loading")}
-              </div>`
-            : this._events.length === 0
-              ? html`<div class="empty">${this.localize("events.empty")}</div>`
-              : html`<div class="list">
-                  ${repeat(
-                    this._events,
-                    (event) => event.id,
-                    (event) => this._renderEvent(event),
-                  )}
-                </div>`
-        }
-      </section>
+      <wzc-activity-list
+        .api=${this.api}
+        .displayObjectBadges=${this.displayObjectBadges}
+        .displayTypeBadges=${this.displayEventTypeBadges}
+        .displayZone=${this.displayZone}
+        .items=${items}
+        .loading=${this._activity.loading}
+        .localize=${this.localize}
+        .retryMedia=${(item: ActivityListItem, url: string) =>
+          this._activity.retryMedia(item, url)}
+        .roundedCorners=${this.roundedCorners}
+      ></wzc-activity-list>
       <wzc-toast-region .notices=${this._toasts.notices}></wzc-toast-region>
     `;
   }
 
-  private _renderEvent(event: EventItem) {
-    const start = new Date(event.start_time * 1000);
-    const previewUrl = [event.thumbnail_url, event.snapshot_url].find(
-      (url): url is string =>
-        url !== null && !this._failedMedia.has(mediaKey(event, url)),
-    );
-    const duration = Math.max(
-      1,
-      Math.round((event.end_time ?? Date.now() / 1000) - event.start_time),
-    );
-    const showEventTypeBadge = this.displayEventTypeBadges && event.has_clip;
-    const objectLabels = this.displayObjectBadges
-      ? [event.label, ...(event.sub_label ? [event.sub_label] : [])]
-      : [];
-    const objectColors = distinctBadgeColorsForLabels(
-      objectLabels,
-      showEventTypeBadge ? ["green"] : [],
-    );
-    return html`<article class="tile">
-      <div class="thumbnail-wrap">
-        ${
-          previewUrl
-            ? html`<img
-                class="thumbnail"
-                loading="lazy"
-                src=${this.api?.resolveUrl(previewUrl) ?? previewUrl}
-                alt=${this.localize("events.thumbnail", { label: event.label })}
-                @error=${() => this._mediaFailed(event, previewUrl)}
-              />`
-            : html`<div class="placeholder" aria-hidden="true">
-                ${renderIcon("account")}
-              </div>`
-        }
-        <span class="duration"
-          >${formatDuration(duration, this.api?.locale)}</span
-        >
-      </div>
-      <div class="details">
-        ${
-          objectLabels.length > 0 || showEventTypeBadge
-            ? html`<div class="badges">
-                ${objectLabels.map(
-                  (label, index) =>
-                    html`<wzc-badge
-                      color=${objectColors[index] ?? "neutral"}
-                      shape="pill"
-                      size="small"
-                      >${capitalizeBadgeText(
-                        label,
-                        this.api?.locale?.language,
-                      )}</wzc-badge
-                    >`,
-                )}
-                ${
-                  showEventTypeBadge
-                    ? html`<wzc-badge
-                        shape="pill"
-                        size="small"
-                        variant="success"
-                        >${capitalizeBadgeText(
-                          this.localize("events.clip"),
-                          this.api?.locale?.language,
-                        )}</wzc-badge
-                      >`
-                    : null
-                }
-              </div>`
-            : null
-        }
-        <div class="metadata">
-          <span class="metadata-icon">${renderIcon("clock")}</span>
-          <span>${this._formatTime(start)}</span>
-        </div>
-        <div class="metadata">
-          <span class="metadata-icon">${renderIcon("calendar")}</span>
-          <span>${this._formatDate(start)}</span>
-        </div>
-        ${
-          this.displayZone && event.zones.length > 0
-            ? html`<div class="metadata">
-                <span class="metadata-icon">${renderIcon("mapMarker")}</span>
-                <span>${event.zones.join(", ")}</span>
-              </div>`
-            : null
-        }
-      </div>
-      <div class="actions">
-        ${
-          event.clip_url
-            ? html`<a
-                class="action"
-                href=${this.api?.resolveUrl(event.clip_url) ?? event.clip_url}
-                download
-                title=${this.localize("events.download_clip")}
-                aria-label=${this.localize("events.download_clip")}
-                ><ha-icon icon="mdi:download"></ha-icon
-              ></a>`
-            : null
-        }
-        ${
-          event.snapshot_url
-            ? html`<a
-                class="action"
-                href=${this.api?.resolveUrl(event.snapshot_url) ?? event.snapshot_url}
-                target="_blank"
-                rel="noopener"
-                title=${this.localize("events.view_snapshot")}
-                aria-label=${this.localize("events.view_snapshot")}
-                ><ha-icon icon="mdi:camera"></ha-icon
-              ></a>`
-            : null
-        }
-      </div>
-    </article>`;
-  }
-
-  private _subscribe(): void {
-    this._unsubscribe?.();
-    this._unsubscribe = undefined;
-    if (!this.isConnected || !this.cameraSelection || !this.targetModuleId)
-      return;
-    this._unsubscribe = this.cameraSelection.subscribe(
-      this.targetModuleId,
-      ({ activeEntityId }) => {
-        if (activeEntityId === this._activeEntityId) return;
-        this._activeEntityId = activeEntityId;
-        this._events = [];
-        this._failedMedia.clear();
-        this._retriedMedia.clear();
-        this._stopRefresh();
-        this._generation += 1;
-        if (activeEntityId) {
-          void this._refresh(false);
-          this._refreshTimer = window.setInterval(
-            () => void this._refresh(false),
-            EVENTS_REFRESH_INTERVAL_MS,
-          );
-        }
-      },
-    );
-  }
-
-  private async _refresh(bypassCache: boolean): Promise<void> {
-    const api = this.api;
-    const entityId = this._activeEntityId;
-    if (!api || !entityId) return;
-    const generation = this._generation;
-    this._loading = true;
-    try {
-      const items = await listEvents(api, entityId, {
-        bypassCache,
-        historyDays: this.historyDays,
-      });
-      if (generation !== this._generation || entityId !== this._activeEntityId)
-        return;
-      this._events = items;
-      const current = new Set(
-        items.flatMap((item) =>
-          [item.thumbnail_url, item.snapshot_url]
-            .filter((url): url is string => url !== null)
-            .map((url) => mediaKey(item, url)),
-        ),
-      );
-      for (const key of this._failedMedia) {
-        if (!current.has(key)) this._failedMedia.delete(key);
-      }
-      for (const key of this._retriedMedia) {
-        if (!current.has(key)) this._retriedMedia.delete(key);
-      }
-    } catch {
-      if (generation === this._generation) {
-        this._toasts.error(this.localize("events.load_failed"), {
-          key: "events-load-failed",
-        });
-      }
-    } finally {
-      if (generation === this._generation) this._loading = false;
-    }
-  }
-
-  private _mediaFailed(event: EventItem, url: string): void {
-    const key = mediaKey(event, url);
-    this._failedMedia.add(key);
-    this.requestUpdate();
-    if (!this._retriedMedia.has(key)) {
-      this._retriedMedia.add(key);
-      void this._refresh(true);
-    }
-  }
-
-  private _formatTime(date: Date): string {
-    return formatHomeAssistantTime(date, this.api?.locale);
-  }
-
-  private _formatDate(date: Date): string {
-    return formatHomeAssistantEventDate(date, this.api?.locale);
-  }
-
-  private _stopRefresh(): void {
-    if (this._refreshTimer !== undefined)
-      window.clearInterval(this._refreshTimer);
-    this._refreshTimer = undefined;
-  }
-
   static styles = eventsStyles;
-}
-
-function mediaKey(event: EventItem, url: string): string {
-  return `${event.id}:${event.revision}:${url}`;
-}
-
-function capitalizeBadgeText(value: string, locale?: string): string {
-  const characters = Array.from(value.trim());
-  const first = characters.shift();
-  return first
-    ? `${first.toLocaleUpperCase(locale)}${characters.join("")}`
-    : "";
-}
-
-function formatDuration(
-  seconds: number,
-  locale: HomeAssistantApi["locale"],
-): string {
-  if (seconds < 60) {
-    return `${homeAssistantNumberFormat(locale, {
-      maximumFractionDigits: 0,
-    }).format(seconds)}s`;
-  }
-  const minutes = Math.floor(seconds / 60);
-  const remainder = seconds % 60;
-  return `${homeAssistantNumberFormat(locale, {
-    maximumFractionDigits: 0,
-  }).format(minutes)}:${homeAssistantNumberFormat(locale, {
-    maximumFractionDigits: 0,
-    minimumIntegerDigits: 2,
-    useGrouping: false,
-  }).format(remainder)}`;
 }
 
 if (!customElements.get(EVENTS_TAG)) {

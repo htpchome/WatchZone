@@ -44,10 +44,12 @@ from .features.hls_prewarm import HlsPrewarmService
 from .features.layouts import StageDesignStore
 from .features.live import LiveSignalingService
 from .features.ptz import PtzService
+from .features.reviews import ReviewsService
 from .providers.frigate import camera as frigate_camera
 from .providers.frigate import live as frigate_live
 from .providers.frigate.events import events as frigate_events
 from .providers.frigate.ptz import ptz as frigate_ptz
+from .providers.frigate.reviews import reviews as frigate_reviews
 from .providers.home_assistant.ptz import ptz as home_assistant_ptz
 from .runtime import WatchZoneRuntime
 
@@ -92,6 +94,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     from .api.events import async_register as async_register_events_api
     from .api.live import async_register as async_register_live_api
     from .api.ptz import async_register as async_register_ptz_api
+    from .api.reviews import async_register as async_register_reviews_api
     from .api.talk import async_register as async_register_talk_api
 
     async_register_camera_api(hass)
@@ -99,6 +102,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     async_register_live_api(hass)
     async_register_talk_api(hass)
     async_register_ptz_api(hass)
+    async_register_reviews_api(hass)
     return True
 
 
@@ -119,6 +123,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WatchZoneConfigEntry) ->
         stage_designs=stage_designs,
         ptz=PtzService(hass, providers),
         events=EventsService(hass, providers),
+        reviews=ReviewsService(hass, providers),
     )
     entry.runtime_data = runtime
     hass.data.setdefault(DOMAIN, {})[DATA_RUNTIME] = runtime
@@ -200,6 +205,7 @@ def _register_builtin_providers(hass: HomeAssistant) -> ProviderRegistry:
             talk_signaling=frigate_live,
             ptz=frigate_ptz,
             events=frigate_events,
+            reviews=frigate_reviews,
         )
     )
     domain_data[_DATA_BUILTIN_PROVIDERS] = True

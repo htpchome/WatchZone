@@ -85,5 +85,16 @@
   "events.thumbnail": "Miniatura dell'evento {label}",
   "events.clip": "Clip",
   "events.download_clip": "Scarica clip",
-  "events.view_snapshot": "Visualizza istantanea"
+  "events.view_snapshot": "Visualizza istantanea",
+  "navigation.activity": "Moduli attività",
+  "navigation.alerts": "Avvisi",
+  "navigation.events": "Eventi",
+  "alerts.list": "Avvisi della telecamera",
+  "alerts.loading": "Caricamento avvisi…",
+  "alerts.empty": "Nessuna attività di avviso recente per questa telecamera.",
+  "alerts.load_failed": "Impossibile caricare gli avvisi della telecamera.",
+  "alerts.activity": "Attività della telecamera",
+  "alerts.alert": "Avviso",
+  "alerts.detection": "Rilevamento",
+  "alerts.motion": "Movimento"
 }

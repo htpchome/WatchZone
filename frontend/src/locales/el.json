@@ -85,5 +85,16 @@
   "events.thumbnail": "Μικρογραφία συμβάντος {label}",
   "events.clip": "Clip",
   "events.download_clip": "Λήψη κλιπ",
-  "events.view_snapshot": "Προβολή στιγμιότυπου"
+  "events.view_snapshot": "Προβολή στιγμιότυπου",
+  "navigation.activity": "Μονάδες δραστηριότητας",
+  "navigation.alerts": "Ειδοποιήσεις",
+  "navigation.events": "Συμβάντα",
+  "alerts.list": "Ειδοποιήσεις κάμερας",
+  "alerts.loading": "Φόρτωση ειδοποιήσεων…",
+  "alerts.empty": "Δεν υπάρχει πρόσφατη δραστηριότητα ειδοποιήσεων για αυτήν την κάμερα.",
+  "alerts.load_failed": "Δεν ήταν δυνατή η φόρτωση των ειδοποιήσεων κάμερας.",
+  "alerts.activity": "Δραστηριότητα κάμερας",
+  "alerts.alert": "Ειδοποίηση",
+  "alerts.detection": "Ανίχνευση",
+  "alerts.motion": "Κίνηση"
 }

@@ -85,5 +85,16 @@
   "events.thumbnail": "Vorschaubild des Ereignisses {label}",
   "events.clip": "Clip",
   "events.download_clip": "Clip herunterladen",
-  "events.view_snapshot": "Schnappschuss anzeigen"
+  "events.view_snapshot": "Schnappschuss anzeigen",
+  "navigation.activity": "Aktivitätsmodule",
+  "navigation.alerts": "Alarme",
+  "navigation.events": "Ereignisse",
+  "alerts.list": "Kameraalarme",
+  "alerts.loading": "Alarme werden geladen…",
+  "alerts.empty": "Keine aktuellen Alarmaktivitäten für diese Kamera.",
+  "alerts.load_failed": "Kameraalarme konnten nicht geladen werden.",
+  "alerts.activity": "Kameraaktivität",
+  "alerts.alert": "Alarm",
+  "alerts.detection": "Erkennung",
+  "alerts.motion": "Bewegung"
 }

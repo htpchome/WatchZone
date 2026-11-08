@@ -47,11 +47,20 @@ class StageModuleNode:
 
 
 @dataclass(frozen=True, slots=True)
+class StageStackNode:
+    """Ordered modules sharing one placement and navigation surface."""
+
+    children: tuple[StageModuleNode, ...]
+    id: str
+    kind: Literal["stack"] = "stack"
+
+
+@dataclass(frozen=True, slots=True)
 class StagePlacement:
     """One module placement within a grid container."""
 
     grid: StageGridArea
-    node: StageModuleNode
+    node: StageModuleNode | StageStackNode
 
 
 @dataclass(frozen=True, slots=True)
@@ -157,7 +166,24 @@ def _placement(
             row=row,
             row_span=row_span,
         ),
-        node=_module(source.get("node"), ids),
+        node=_placement_node(source.get("node"), ids),
+    )
+
+
+def _placement_node(
+    value: object, ids: set[str]
+) -> StageModuleNode | StageStackNode:
+    source = _mapping(value, "Stage placement node")
+    if source.get("kind") == "module":
+        return _module(source, ids)
+    if source.get("kind") != "stack":
+        raise HomeAssistantError("Stage placements require a module or module stack")
+    node_id = _unique_id(source.get("id"), ids)
+    children = source.get("children")
+    if not isinstance(children, list) or not children:
+        raise HomeAssistantError(f"Stage stack {node_id} requires modules")
+    return StageStackNode(
+        children=tuple(_module(item, ids) for item in children), id=node_id
     )
 
 
@@ -260,6 +286,8 @@ def _remove_unset_control_regions(value: object) -> None:
     if isinstance(value, dict):
         if value.get("controlRegion") is None:
             value.pop("controlRegion", None)
+        if value.get("slots") == {}:
+            value.pop("slots", None)
         for item in value.values():
             _remove_unset_control_regions(item)
     elif isinstance(value, list):

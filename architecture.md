@@ -413,7 +413,9 @@ Placeable responsibilities:
 - Fail locally without preventing sibling placeables from rendering.
 
 A placeable does not own placement, overall navigation, layout persistence, or
-another placeable's state.
+another placeable's state. When several modules share one placement, the Stage
+renderer may compose them in a typed module stack that owns only the ordered
+selection controls and active-child lifecycle.
 
 A **module** is a major Stage content system. It may publish semantic slots
 named `content`, `overlay`, `controls`, or `footer`. Camera and the future events
@@ -757,6 +759,8 @@ a saved layout contains:
 - Stable node IDs.
 - Module type, validated module configuration, and semantic component slots for
   module nodes.
+- Ordered module-stack nodes that share one placement and expose one child at a
+  time without allowing child modules to import or control one another.
 - Component type, validated component configuration, and optional logical
   control-region placement for component nodes.
 - Logical grid placement and responsive behavior for container nodes.
@@ -765,10 +769,12 @@ a saved layout contains:
   reuse stable IDs.
 - Creation and modification metadata where useful.
 
-The root is a typed grid container whose placements contain module nodes.
-Module nodes may publish typed component slots. Containers control placement,
-modules control major content behavior, and components control portable
-capability presentation. None may absorb another category's responsibility.
+The root is a typed grid container whose placements contain module nodes or
+module-stack nodes. Module stacks own navigation between ordered child modules
+and no feature behavior. Module nodes may publish typed component slots.
+Containers control placement, modules control major content behavior, and
+components control portable capability presentation. None may absorb another
+category's responsibility.
 
 The normative version-1 schema and runtime rules are defined in
 [docs/stage-layout-system.md](docs/stage-layout-system.md).

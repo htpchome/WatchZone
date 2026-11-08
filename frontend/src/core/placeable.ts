@@ -2,6 +2,7 @@ import type { CameraSessionContext } from "./camera-session-context";
 import type { CameraSelectionContext } from "./camera-selection-context";
 import type { HomeAssistant, HomeAssistantApi } from "./home-assistant";
 import type { LocalizeFunction } from "./localization";
+import type { TranslationKey } from "./localization";
 
 export interface PlaceableRuntimeContext {
   readonly api?: HomeAssistantApi;
@@ -39,6 +40,10 @@ export type ComponentDefinition<TConfig = unknown> =
 
 export interface PlaceableLoaderRegistration {
   readonly load: () => Promise<PlaceableDefinition>;
+  readonly navigation?: {
+    readonly icon: string;
+    readonly labelKey: TranslationKey;
+  };
   readonly reserveAspectRatio?: boolean;
 }
 

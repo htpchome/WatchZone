@@ -246,6 +246,18 @@ export const themeTokens = css`
     --wzc-event-action-background: var(--wzc-color-surface);
     --wzc-event-action-color: var(--wzc-color-text-2);
     --wzc-event-action-size: 2.25rem;
+    --wzc-alert-thumbnail-outline-width: 2px;
+    --wzc-stage-stack-navigation-gap: 0.35rem;
+    --wzc-stage-stack-navigation-padding: 0.25rem;
+    --wzc-stage-stack-button-size: 2.5rem;
+    --wzc-stage-stack-button-padding: 0.45rem;
+    --wzc-stage-stack-button-border-width: 1px;
+    --wzc-stage-stack-button-border-color: var(--wzc-color-border-control);
+    --wzc-stage-stack-button-color: var(--wzc-color-text-2);
+    --wzc-stage-stack-button-background: var(--wzc-color-surface-secondary);
+    --wzc-stage-stack-button-active-color: var(--wzc-color-on-primary);
+    --wzc-stage-stack-button-active-background: var(--wzc-color-primary);
+    --wzc-stage-stack-icon-size: 1.35rem;
     --wzc-camera-switcher-item-padding: 1rem;
     --wzc-camera-switcher-transition-duration: 180ms;
     --wzc-talk-connected-color: var(--ha-color-green-50, #34d399);

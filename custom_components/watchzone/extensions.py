@@ -17,6 +17,7 @@ from .providers.live import (
     SendLiveSignalingEvent,
 )
 from .providers.ptz import PtzProvider
+from .providers.reviews import ReviewsProvider
 
 __all__ = [
     "EXTENSION_API_VERSION",
@@ -28,6 +29,7 @@ __all__ = [
     "ProviderExtension",
     "ProviderPreparationError",
     "PtzProvider",
+    "ReviewsProvider",
     "SendLiveSignalingEvent",
     "register_provider_extension",
 ]
@@ -49,6 +51,7 @@ class ProviderExtension:
     talk_signaling: LiveSignalingProvider | None = None
     ptz: PtzProvider | None = None
     events: EventsProvider | None = None
+    reviews: ReviewsProvider | None = None
 
 
 class ProviderRegistry:
@@ -130,6 +133,11 @@ class ProviderRegistry:
         """Resolve one platform's optional event capability."""
         extension = self._platforms.get(platform)
         return extension.events if extension else None
+
+    def reviews(self, platform: str) -> ReviewsProvider | None:
+        """Resolve one platform's optional review capability."""
+        extension = self._platforms.get(platform)
+        return extension.reviews if extension else None
 
     @staticmethod
     def _validate(extension: ProviderExtension) -> None:

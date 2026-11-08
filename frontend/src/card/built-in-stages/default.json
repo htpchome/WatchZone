@@ -81,13 +81,28 @@
               "rowSpan": 1
             },
             "node": {
-              "config": {
-                "roundedCorners": true,
-                "targetModuleId": "default-camera-module"
-              },
-              "id": "default-events-module",
-              "kind": "module",
-              "moduleType": "events"
+              "children": [
+                {
+                  "config": {
+                    "roundedCorners": true,
+                    "targetModuleId": "default-camera-module"
+                  },
+                  "id": "default-alerts-module",
+                  "kind": "module",
+                  "moduleType": "alerts"
+                },
+                {
+                  "config": {
+                    "roundedCorners": true,
+                    "targetModuleId": "default-camera-module"
+                  },
+                  "id": "default-events-module",
+                  "kind": "module",
+                  "moduleType": "events"
+                }
+              ],
+              "id": "default-activity-stack",
+              "kind": "stack"
             }
           }
         ],
@@ -174,13 +189,28 @@
               "rowSpan": 1
             },
             "node": {
-              "config": {
-                "roundedCorners": true,
-                "targetModuleId": "default-camera-module"
-              },
-              "id": "default-events-module",
-              "kind": "module",
-              "moduleType": "events"
+              "children": [
+                {
+                  "config": {
+                    "roundedCorners": true,
+                    "targetModuleId": "default-camera-module"
+                  },
+                  "id": "default-alerts-module",
+                  "kind": "module",
+                  "moduleType": "alerts"
+                },
+                {
+                  "config": {
+                    "roundedCorners": true,
+                    "targetModuleId": "default-camera-module"
+                  },
+                  "id": "default-events-module",
+                  "kind": "module",
+                  "moduleType": "events"
+                }
+              ],
+              "id": "default-activity-stack",
+              "kind": "stack"
             }
           }
         ],

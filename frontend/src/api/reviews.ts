@@ -1,0 +1,39 @@
+import type { HomeAssistantApi } from "../core/home-assistant";
+
+export type ReviewClassification = "alert" | "detection" | "motion";
+
+export interface ReviewItem {
+  readonly camera: string;
+  readonly classification: ReviewClassification;
+  readonly clip_url: string | null;
+  readonly end_time: number | null;
+  readonly id: string;
+  readonly labels: readonly string[];
+  readonly revision: string;
+  readonly snapshot_url: string | null;
+  readonly start_time: number;
+  readonly sub_labels: readonly string[];
+  readonly thumbnail_url: string | null;
+  readonly zones: readonly string[];
+}
+
+interface ReviewsResponse {
+  readonly items: readonly ReviewItem[];
+}
+
+export async function listReviews(
+  api: HomeAssistantApi,
+  entityId: string,
+  options: { readonly bypassCache?: boolean; readonly historyDays: number },
+): Promise<readonly ReviewItem[]> {
+  const before = Date.now() / 1000;
+  const response = await api.callWS<ReviewsResponse>({
+    type: "watchzone/reviews/list",
+    entity_id: entityId,
+    after: before - options.historyDays * 24 * 60 * 60,
+    before,
+    limit: 500,
+    bypass_cache: options.bypassCache ?? false,
+  });
+  return response.items;
+}

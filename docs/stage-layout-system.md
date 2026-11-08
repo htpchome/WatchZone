@@ -23,6 +23,9 @@ second layout model.
 - A **component** is a portable capability presentation placed in a compatible
   module slot. PTZ and two-way talk are components.
 - A **container** owns logical grid placement. It owns no feature behavior.
+- A **module stack** is a Stage-owned navigation container whose ordered child
+  modules share one placement and display one at a time. It owns no feature
+  data and its children remain independent placeables.
 - A **slot** is a named placement surface: `content`, `overlay`, `controls`, or
   `footer`.
 - A **presentation** is private rendering inside its owner. Camera live video is
@@ -46,8 +49,10 @@ shared remaining space or `content` sizing for intrinsic controls such as a
 standalone camera switcher. This keeps fixed-height cards bounded without
 assigning feature-specific layout behavior to Panel.
 
-Container children are placements containing one module node and one grid area.
-A module node contains its validated configuration and optional named slots.
+Container children are placements containing one module node or one module
+stack and one grid area. A module stack contains an ordered, non-empty list of
+module nodes. A module node contains its validated configuration and optional
+named slots.
 Slots contain component nodes with their own validated configuration. Node IDs
 must be unique within a variant. Corresponding nodes use the same stable IDs in
 both variants so switching variants preserves loaded custom elements and live
@@ -76,9 +81,12 @@ root grid
 │   │   └── two-way-talk component (when enabled)
 │   └── overlay slot
 │       └── PTZ component (when enabled)
-└── panel module
+├── panel module
     └── content slot
         └── camera-switcher component
+└── activity module stack
+    ├── alerts module (initially active)
+    └── events module
 ```
 
 The controls slot owns placement, shared gaps, safe-area clearance, and
@@ -88,6 +96,14 @@ wrap their own controls away from center. Components in that slot render at
 their intrinsic control size and must not position themselves relative to
 sibling components or the Stage center. Panels and transient notices may paint
 outside their dock item without changing the dock's measured control geometry.
+
+Module-stack navigation is rendered by the Stage runtime from module metadata,
+not by either child module. The first child is the initial selection. Switching
+disconnects the hidden child so it releases subscriptions and timers, while a
+previously loaded custom element is retained by stable node ID and reconnected
+if selected again. An unvisited hidden child is not imported until selected.
+Navigation controls are centered above the active child and expose localized
+labels, pressed state, and keyboard focus.
 
 ## Runtime rules
 
@@ -99,6 +115,8 @@ outside their dock item without changing the dock's measured control geometry.
 - Unknown or failed placeables fail locally and do not block siblings.
 - Responsive variant selection uses the card container's inline size.
 - Variant changes reuse records by stable node ID and compatible type.
+- Module-stack selection is local runtime interaction state and is not written
+  into the saved Stage Design.
 - The renderer never owns media sessions. Moving or replacing a presentation
   surface follows the lease and attachment rules in
   `docs/live-session-lifecycle.md`.

@@ -85,5 +85,16 @@
   "events.thumbnail": "Miniatura do evento {label}",
   "events.clip": "Clip",
   "events.download_clip": "Baixar clipe",
-  "events.view_snapshot": "Ver captura"
+  "events.view_snapshot": "Ver captura",
+  "navigation.activity": "Módulos de atividade",
+  "navigation.alerts": "Alertas",
+  "navigation.events": "Eventos",
+  "alerts.list": "Alertas da câmera",
+  "alerts.loading": "Carregando alertas…",
+  "alerts.empty": "Não há atividade de alertas recente para esta câmera.",
+  "alerts.load_failed": "Não foi possível carregar os alertas da câmera.",
+  "alerts.activity": "Atividade da câmera",
+  "alerts.alert": "Alerta",
+  "alerts.detection": "Detecção",
+  "alerts.motion": "Movimento"
 }
