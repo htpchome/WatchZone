@@ -462,9 +462,7 @@ export const mediaOverlayControlButtonStyles = css`
     flex-direction: column;
     gap: var(--wzc-control-gap);
     inset-block-start: 50%;
-    inset-inline-end: calc(
-      var(--wzc-camera-control-safe-inline) + env(safe-area-inset-right, 0px)
-    );
+    inset-inline-end: var(--wzc-camera-control-safe-inline);
     position: absolute;
     transform: translateY(-50%);
   }

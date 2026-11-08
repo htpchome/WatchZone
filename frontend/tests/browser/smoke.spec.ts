@@ -1459,12 +1459,12 @@ test("lays out PTZ, talk, and light controls in the responsive dock", async ({
   expect(talkHostBox.height).toBeCloseTo(talkButtonBox.height, 0);
   expect(ptzHostBox.height).toBeCloseTo(ptzControlBox.height, 0);
   expect(lightHostBox.height).toBeCloseTo(lightButtonBox.height, 0);
-  expect(talkButtonBox.y + talkButtonBox.height).toBeCloseTo(
-    lightButtonBox.y + lightButtonBox.height,
+  expect(talkButtonBox.y + talkButtonBox.height / 2).toBeCloseTo(
+    lightButtonBox.y + lightButtonBox.height / 2,
     0,
   );
-  expect(talkButtonBox.y + talkButtonBox.height).toBeCloseTo(
-    ptzControlBox.y + ptzControlBox.height,
+  expect(talkButtonBox.y + talkButtonBox.height / 2).toBeCloseTo(
+    ptzControlBox.y + ptzControlBox.height / 2,
     0,
   );
   expect(talkHostBox.y + talkHostBox.height).toBeLessThanOrEqual(
@@ -1617,9 +1617,12 @@ test("lays out PTZ, talk, and light controls in the responsive dock", async ({
   expect(phoneLightBox).not.toBeNull();
   expect(phonePtzBox).not.toBeNull();
   if (phoneTalkBox && phoneLightBox && phonePtzBox) {
-    const talkBottom = phoneTalkBox.y + phoneTalkBox.height;
-    expect(talkBottom).toBeCloseTo(phoneLightBox.y + phoneLightBox.height, 0);
-    expect(talkBottom).toBeCloseTo(phonePtzBox.y + phonePtzBox.height, 0);
+    const talkCenter = phoneTalkBox.y + phoneTalkBox.height / 2;
+    expect(talkCenter).toBeCloseTo(
+      phoneLightBox.y + phoneLightBox.height / 2,
+      0,
+    );
+    expect(talkCenter).toBeCloseTo(phonePtzBox.y + phonePtzBox.height / 2, 0);
     expect(phoneTalkBox.width).toBeCloseTo(phoneLightBox.width, 1);
   }
   const interactionLightButtonBox = await lightButton.boundingBox();

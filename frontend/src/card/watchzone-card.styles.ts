@@ -192,22 +192,19 @@ export const cardStyles = css`
     display: grid;
     grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1fr);
     align-content: flex-end;
-    align-items: end;
+    align-items: center;
     box-sizing: border-box;
     min-inline-size: 0;
     padding: 0 var(--wzc-camera-control-safe-inline)
-      calc(
-        var(--wzc-stage-resize-handle-block-size) +
-          max(0.5rem, env(safe-area-inset-bottom))
-      );
+      calc(var(--wzc-stage-resize-handle-block-size) + 0.5rem);
     column-gap: var(--wzc-control-dock-gap);
   }
 
   .control-region {
     display: flex;
     flex-wrap: wrap;
-    align-content: flex-end;
-    align-items: flex-end;
+    align-content: center;
+    align-items: center;
     min-inline-size: 0;
     gap: var(--wzc-control-dock-gap);
     pointer-events: none;
