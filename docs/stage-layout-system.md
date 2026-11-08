@@ -102,7 +102,7 @@ not by either child module. The first child is the initial selection. Switching
 disconnects the hidden child so it releases subscriptions and timers, while a
 previously loaded custom element is retained by stable node ID and reconnected
 if selected again. An unvisited hidden child is not imported until selected.
-Navigation controls are centered above the active child and expose localized
+Navigation controls are leading-aligned above the active child and expose localized
 labels, pressed state, and keyboard focus.
 
 ## Runtime rules

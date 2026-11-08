@@ -1,6 +1,6 @@
 import type { HomeAssistantApi } from "../core/home-assistant";
 
-export type ReviewClassification = "alert" | "detection" | "motion";
+export type ReviewClassification = "alert" | "detection";
 
 export interface ReviewItem {
   readonly camera: string;

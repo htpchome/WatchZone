@@ -65,15 +65,24 @@ export const activityListStyles = css`
   }
 
   .thumbnail-wrap.alert {
-    outline: var(--wzc-alert-thumbnail-outline-width) solid
-      var(--wzc-color-border-danger);
-    outline-offset: calc(-1 * var(--wzc-alert-thumbnail-outline-width));
+    --wzc-activity-thumbnail-outline-color: var(--wzc-color-error);
   }
 
   .thumbnail-wrap.detection {
-    outline: var(--wzc-alert-thumbnail-outline-width) solid
-      var(--wzc-color-border-warning);
-    outline-offset: calc(-1 * var(--wzc-alert-thumbnail-outline-width));
+    --wzc-activity-thumbnail-outline-color: var(--wzc-color-warning);
+  }
+
+  .thumbnail-wrap.alert::after,
+  .thumbnail-wrap.detection::after {
+    border: var(--wzc-alert-thumbnail-outline-width) solid
+      var(--wzc-activity-thumbnail-outline-color);
+    border-radius: inherit;
+    box-sizing: border-box;
+    content: "";
+    inset: 0;
+    pointer-events: none;
+    position: absolute;
+    z-index: 2;
   }
 
   .thumbnail,

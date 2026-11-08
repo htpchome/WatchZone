@@ -95,6 +95,5 @@
   "alerts.load_failed": "Não foi possível carregar os alertas da câmara.",
   "alerts.activity": "Atividade da câmara",
   "alerts.alert": "Alerta",
-  "alerts.detection": "Deteção",
-  "alerts.motion": "Movimento"
+  "alerts.detection": "Deteção"
 }

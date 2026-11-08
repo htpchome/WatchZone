@@ -88,39 +88,50 @@ export const cardStyles = css`
   .stage-stack-navigation {
     align-items: center;
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     gap: var(--wzc-stage-stack-navigation-gap);
     padding-block: var(--wzc-stage-stack-navigation-padding);
   }
 
-  .stage-stack-navigation button {
-    align-items: center;
-    background: var(--wzc-stage-stack-button-background);
-    border: var(--wzc-stage-stack-button-border-width) solid
-      var(--wzc-stage-stack-button-border-color);
-    border-radius: var(--wzc-radius-button);
-    color: var(--wzc-stage-stack-button-color);
-    cursor: pointer;
-    display: inline-flex;
-    justify-content: center;
-    min-block-size: var(--wzc-stage-stack-button-size);
-    min-inline-size: var(--wzc-stage-stack-button-size);
-    padding: var(--wzc-stage-stack-button-padding);
+  .stage-stack-button {
+    --wzc-round-button-size: var(--wzc-stage-stack-button-size);
+    --wzc-round-button-icon-size: var(--wzc-stage-stack-icon-size);
+    --wzc-round-button-color: var(--wzc-stage-stack-button-color);
+    --wzc-round-button-background: var(--wzc-stage-stack-button-background);
+    --wzc-round-button-border-color: transparent;
+    --wzc-round-button-hover-background: var(
+      --wzc-stage-stack-button-background
+    );
+    outline: none;
   }
 
-  .stage-stack-navigation button.active {
-    background: var(--wzc-stage-stack-button-active-background);
-    color: var(--wzc-stage-stack-button-active-color);
+  .stage-stack-button.active {
+    --wzc-round-button-background: var(
+      --wzc-stage-stack-button-active-background
+    );
+    --wzc-round-button-color: var(--wzc-stage-stack-button-active-color);
+    --wzc-round-button-hover-background: var(
+      --wzc-stage-stack-button-active-background
+    );
   }
 
-  .stage-stack-navigation button:focus-visible {
-    outline: 2px solid var(--wzc-color-primary);
-    outline-offset: 2px;
+  .stage-stack-button:focus-visible {
+    outline: none;
   }
 
-  .stage-stack-navigation svg {
-    block-size: var(--wzc-stage-stack-icon-size);
-    inline-size: var(--wzc-stage-stack-icon-size);
+  .stage-stack-button:focus-visible:not(.active) {
+    color: var(--wzc-stage-stack-button-hover-color);
+  }
+
+  .stage-stack-button:active:not(.active) {
+    --wzc-round-button-background: var(
+      --wzc-stage-stack-button-active-background
+    );
+    --wzc-round-button-color: var(--wzc-stage-stack-button-active-color);
+  }
+
+  .stage-stack-button.hovered:not(.active, :disabled) {
+    color: var(--wzc-stage-stack-button-hover-color);
   }
 
   .stage-stack-content,

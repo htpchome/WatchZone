@@ -79,13 +79,21 @@ export const badgeStyles = css`
     --wzc-badge-resolved-color: var(--wzc-badge-green-color);
   }
 
-  :host([variant="warning"]),
+  :host([variant="warning"]) {
+    --wzc-badge-resolved-background: var(--wzc-color-fill-warning);
+    --wzc-badge-resolved-color: var(--wzc-color-on-warning);
+  }
+
   :host([color="amber"]) {
     --wzc-badge-resolved-background: var(--wzc-badge-amber-background);
     --wzc-badge-resolved-color: var(--wzc-badge-amber-color);
   }
 
-  :host([variant="danger"]),
+  :host([variant="danger"]) {
+    --wzc-badge-resolved-background: var(--wzc-color-fill-error);
+    --wzc-badge-resolved-color: var(--wzc-color-on-error);
+  }
+
   :host([color="red"]) {
     --wzc-badge-resolved-background: var(--wzc-badge-red-background);
     --wzc-badge-resolved-color: var(--wzc-badge-red-color);

@@ -30,3 +30,5 @@ logic into a feature renderer.
 An explicit product color pin overrides contextual collision resolution. These
 pins are intentionally rare and belong in the shared label policy; Northern
 Cardinal is pinned to red wherever its object badge is rendered.
+The general collision fallback excludes the red family so ordinary object
+labels cannot be mistaken for semantic error or Alert badges.

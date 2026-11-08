@@ -35,20 +35,6 @@ const reviews = [
     thumbnail_url: "/detection.webp",
     zones: [],
   },
-  {
-    camera: "front",
-    classification: "motion",
-    clip_url: "/motion.mp4",
-    end_time: 70,
-    id: "frigate:motion:1",
-    labels: [],
-    revision: "revision-3",
-    snapshot_url: null,
-    start_time: 60,
-    sub_labels: [],
-    thumbnail_url: null,
-    zones: [],
-  },
 ] as const;
 
 describe("alerts module", () => {
@@ -57,7 +43,7 @@ describe("alerts module", () => {
     vi.restoreAllMocks();
   });
 
-  it("presents alert, detection, and motion review activity", async () => {
+  it("presents alert and detection review activity", async () => {
     const callWS = vi.fn().mockResolvedValue({ items: reviews });
     const api = {
       callWS,
@@ -84,7 +70,7 @@ describe("alerts module", () => {
     );
 
     await vi.waitFor(() => {
-      expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(3);
+      expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(2);
     });
     expect(callWS).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -97,21 +83,13 @@ describe("alerts module", () => {
       [...(activityRoot(module)?.querySelectorAll("wzc-badge") ?? [])].map(
         ({ textContent }) => textContent?.trim(),
       ),
-    ).toEqual(["Person", "Resident", "Alert", "Cat", "Detection", "Motion"]);
+    ).toEqual(["Person", "Resident", "Alert", "Cat", "Detection"]);
     expect(
       activityRoot(module)?.querySelectorAll(".thumbnail-wrap.alert"),
     ).toHaveLength(1);
     expect(
       activityRoot(module)?.querySelectorAll(".thumbnail-wrap.detection"),
     ).toHaveLength(1);
-    expect(
-      activityRoot(module)?.querySelectorAll(".thumbnail-wrap.motion"),
-    ).toHaveLength(1);
-    expect(
-      activityRoot(module)
-        ?.querySelector(".thumbnail-wrap.motion")
-        ?.querySelector(".placeholder"),
-    ).not.toBeNull();
   });
 });
 

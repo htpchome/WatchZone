@@ -70,16 +70,9 @@ export class AlertsModule extends LitElement {
         label: this.localize(
           review.classification === "alert"
             ? "alerts.alert"
-            : review.classification === "detection"
-              ? "alerts.detection"
-              : "alerts.motion",
+            : "alerts.detection",
         ),
-        variant:
-          review.classification === "alert"
-            ? "danger"
-            : review.classification === "detection"
-              ? "warning"
-              : "neutral",
+        variant: review.classification === "alert" ? "danger" : "warning",
       },
       zones: review.zones,
     }));

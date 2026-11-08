@@ -1,13 +1,10 @@
-"""Authenticated Frigate review and motion queries."""
+"""Authenticated Frigate review queries."""
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import json
-import math
 from collections.abc import Mapping
-from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 from urllib.parse import quote
@@ -22,16 +19,6 @@ from ..reviews import ReviewItem, ReviewQuery, ReviewsProvider
 from .source import FrigateSource, async_resolve_source
 
 _REQUEST_TIMEOUT = ClientTimeout(total=15)
-_MIN_MOTION_SCALE_SECONDS = 30
-_MAX_MOTION_POINTS = 1_000
-
-
-@dataclass(frozen=True, slots=True)
-class _MotionSample:
-    start_time: float
-    motion: float
-
-
 class FrigateReviewsProvider:
     """Fetch mutable Frigate reviews without the integration review cache."""
 
@@ -42,12 +29,8 @@ class FrigateReviewsProvider:
         headers = await source.client.get_auth_headers()
         if query.bypass_cache:
             headers = {**headers, "Cache-Control": "no-cache"}
-        scale = max(
-            _MIN_MOTION_SCALE_SECONDS,
-            math.ceil((query.before - query.after) / _MAX_MOTION_POINTS),
-        )
-        reviews_result, motion_result = await asyncio.gather(
-            _get_json(
+        try:
+            reviews_payload = await _get_json(
                 hass,
                 source,
                 "api/review",
@@ -58,38 +41,12 @@ class FrigateReviewsProvider:
                     "limit": query.limit,
                 },
                 headers,
-            ),
-            _get_json(
-                hass,
-                source,
-                "api/review/activity/motion",
-                {
-                    "after": query.after,
-                    "before": query.before,
-                    "cameras": source.camera_name,
-                    "scale": scale,
-                },
-                headers,
-            ),
-            return_exceptions=True,
-        )
-        if isinstance(reviews_result, asyncio.CancelledError):
-            raise reviews_result
-        if isinstance(reviews_result, (ClientError, TimeoutError, ValueError)):
+            )
+        except (ClientError, TimeoutError, ValueError) as err:
             raise HomeAssistantError(
                 "Unable to retrieve camera alerts"
-            ) from reviews_result
-        if isinstance(reviews_result, BaseException):
-            raise reviews_result
-        if isinstance(motion_result, asyncio.CancelledError):
-            raise motion_result
-        reviews_payload = reviews_result
-        motion_payload = (
-            [] if isinstance(motion_result, BaseException) else motion_result
-        )
-        if not isinstance(reviews_payload, list) or not isinstance(
-            motion_payload, list
-        ):
+            ) from err
+        if not isinstance(reviews_payload, list):
             raise HomeAssistantError("Frigate returned invalid alert data")
 
         reviews = [
@@ -101,17 +58,9 @@ class FrigateReviewsProvider:
             )
             is not None
         ]
-        samples = [
-            sample
-            for raw in motion_payload
-            if isinstance(raw, dict)
-            and (sample := _normalize_motion_sample(raw, source.camera_name))
-            is not None
+        return sorted(reviews, key=lambda item: item.start_time, reverse=True)[
+            : query.limit
         ]
-        motion = _motion_items(samples, reviews, source, scale)
-        return sorted(
-            [*reviews, *motion], key=lambda item: item.start_time, reverse=True
-        )[: query.limit]
 
 
 async def _get_json(
@@ -184,77 +133,6 @@ def _normalize_review(
         zones=zones,
         revision=revision,
     )
-
-
-def _normalize_motion_sample(
-    raw: dict[str, Any], camera_name: str
-) -> _MotionSample | None:
-    camera = _text(raw.get("camera"))
-    start_time = _timestamp(raw.get("start_time"))
-    motion = _number(raw.get("motion"))
-    if camera != camera_name or start_time is None or motion is None or motion <= 0:
-        return None
-    return _MotionSample(start_time, motion)
-
-
-def _motion_items(
-    samples: list[_MotionSample],
-    reviews: list[ReviewItem],
-    source: FrigateSource,
-    scale: int,
-) -> list[ReviewItem]:
-    review_windows = [
-        (item.start_time, item.end_time or item.start_time + scale)
-        for item in reviews
-    ]
-    standalone = sorted(
-        (
-            sample
-            for sample in samples
-            if not any(
-                start <= sample.start_time < end for start, end in review_windows
-            )
-        ),
-        key=lambda sample: sample.start_time,
-    )
-    groups: list[tuple[float, float]] = []
-    for sample in standalone:
-        sample_end = sample.start_time + scale
-        if groups and sample.start_time <= groups[-1][1] + scale * 0.5:
-            groups[-1] = (groups[-1][0], sample_end)
-        else:
-            groups.append((sample.start_time, sample_end))
-
-    items: list[ReviewItem] = []
-    for start_time, end_time in groups:
-        material = {
-            "classification": "motion",
-            "end_time": end_time,
-            "start_time": start_time,
-        }
-        revision = _revision(material)
-        items.append(
-            ReviewItem(
-                id=(
-                    f"{source.frigate_instance_id}:motion:"
-                    f"{start_time:.3f}:{end_time:.3f}"
-                ),
-                camera=source.camera_name,
-                classification="motion",
-                labels=(),
-                sub_labels=(),
-                start_time=start_time,
-                end_time=end_time,
-                thumbnail_url=None,
-                snapshot_url=None,
-                clip_url=_recording_url(
-                    source, source.camera_name, start_time, end_time
-                ),
-                zones=(),
-                revision=revision,
-            )
-        )
-    return items
 
 
 def _recording_url(

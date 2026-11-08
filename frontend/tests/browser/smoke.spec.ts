@@ -281,6 +281,7 @@ test("shows an independently scrolling event window for the active camera", asyn
     });
     card.style.setProperty("--restore-card-border-radius", "21px");
     card.style.setProperty("--ha-card-border-radius", "0px");
+    card.style.setProperty("--primary-color", "#03a9f4");
     card.style.blockSize = "900px";
     card.hass = {
       config: { time_zone: "America/New_York" },
@@ -321,8 +322,7 @@ test("shows an independently scrolling event window for the active camera", asyn
           return {
             items: events(camera).map((event, index) => ({
               camera,
-              classification:
-                index === 0 ? "alert" : index === 3 ? "motion" : "detection",
+              classification: index === 0 ? "alert" : "detection",
               clip_url: event.clip_url,
               end_time: event.end_time,
               id: `review:${camera}:${index}`,
@@ -343,23 +343,65 @@ test("shows an independently scrolling event window for the active camera", asyn
 
   const stackNavigation = page.locator(".stage-stack-navigation");
   await expect(stackNavigation.locator("button")).toHaveCount(2);
+  const stackButtons = stackNavigation.locator("button");
+  const normalNavigation = await stackNavigation.evaluate((navigation) => {
+    const buttons = [...navigation.querySelectorAll("button")];
+    const active = getComputedStyle(buttons[0]!);
+    const inactive = getComputedStyle(buttons[1]!);
+    const navigationRect = navigation.getBoundingClientRect();
+    const firstRect = buttons[0]!.getBoundingClientRect();
+    return {
+      activeBackground: active.backgroundColor,
+      activeColor: active.color,
+      firstHeight: firstRect.height,
+      leadingInset: firstRect.left - navigationRect.left,
+      inactiveBackground: inactive.backgroundColor,
+      inactiveColor: inactive.color,
+      outlineStyle: inactive.outlineStyle,
+    };
+  });
+  expect(normalNavigation.leadingInset).toBeLessThanOrEqual(1);
+  expect(normalNavigation.firstHeight).toBeGreaterThanOrEqual(44);
+  expect(normalNavigation.outlineStyle).toBe("none");
+  expect(normalNavigation.activeBackground).not.toBe(
+    normalNavigation.inactiveBackground,
+  );
+  expect(normalNavigation.activeColor).not.toBe(normalNavigation.inactiveColor);
   await expect(page.locator("wzc-alerts .tile")).toHaveCount(6);
-  await expect(page.locator("wzc-alerts .thumbnail-wrap.alert")).toHaveCSS(
-    "outline-style",
-    "solid",
+  await stackButtons.nth(1).hover();
+  await expect(stackButtons.nth(1)).not.toHaveCSS(
+    "color",
+    normalNavigation.inactiveColor,
   );
-  await expect(
-    page.locator("wzc-alerts .thumbnail-wrap.detection").first(),
-  ).toHaveCSS("outline-style", "solid");
-  await expect(page.locator("wzc-alerts .thumbnail-wrap.motion")).toHaveCSS(
-    "outline-style",
-    "none",
-  );
+  await page.mouse.move(0, 0);
+  const alertOutlines = await page
+    .locator("wzc-alerts .thumbnail-wrap")
+    .evaluateAll((thumbnails) =>
+      thumbnails.slice(0, 2).map((thumbnail) => {
+        const outline = getComputedStyle(thumbnail, "::after");
+        return {
+          color: outline.borderTopColor,
+          style: outline.borderTopStyle,
+          width: outline.borderTopWidth,
+        };
+      }),
+    );
+  expect(alertOutlines[0]).toMatchObject({ style: "solid", width: "2px" });
+  expect(alertOutlines[1]).toMatchObject({ style: "solid", width: "2px" });
+  expect(alertOutlines[0]?.color).not.toBe(alertOutlines[1]?.color);
   await expect(stackNavigation.locator("button").first()).toHaveAttribute(
     "aria-pressed",
     "true",
   );
-  await stackNavigation.locator("button").nth(1).click();
+  await stackButtons.nth(1).click();
+  await expect(stackButtons.nth(1)).toHaveCSS(
+    "background-color",
+    normalNavigation.activeBackground,
+  );
+  await expect(stackButtons.nth(1)).toHaveCSS(
+    "color",
+    normalNavigation.activeColor,
+  );
   const events = page.locator("wzc-events");
   const viewport = events.locator(".viewport");
   await expect(events.locator(".tile")).toHaveCount(6);

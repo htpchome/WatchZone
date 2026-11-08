@@ -276,11 +276,16 @@ export class LayoutRuntime implements ReactiveController {
               ? this._localize(navigation.labelKey)
               : child.moduleType;
             return html`<button
-              class=${child.id === activeId ? "active" : ""}
+              class=${`round-button stage-stack-button${
+                child.id === activeId ? " active" : ""
+              }`}
               type="button"
               aria-label=${label}
               aria-pressed=${child.id === activeId ? "true" : "false"}
               title=${label}
+              @pointerenter=${this._handleStackButtonPointerEnter}
+              @pointerleave=${this._handleStackButtonPointerLeave}
+              @pointerdown=${this._handleStackButtonPointerDown}
               @click=${() => this._showStackModule(node, child.id)}
             >
               ${
@@ -315,6 +320,26 @@ export class LayoutRuntime implements ReactiveController {
     this._activeStackModules.set(node.id, moduleId);
     this._syncActiveVariant();
   }
+
+  private readonly _handleStackButtonPointerEnter = (
+    event: PointerEvent,
+  ): void => {
+    if (event.pointerType !== "mouse") return;
+    (event.currentTarget as HTMLElement).classList.add("hovered");
+  };
+
+  private readonly _handleStackButtonPointerLeave = (
+    event: PointerEvent,
+  ): void => {
+    (event.currentTarget as HTMLElement).classList.remove("hovered");
+  };
+
+  private readonly _handleStackButtonPointerDown = (
+    event: PointerEvent,
+  ): void => {
+    if (event.pointerType === "mouse") return;
+    (event.currentTarget as HTMLElement).classList.remove("hovered");
+  };
 
   private _renderModule(
     node: StageModuleNode,

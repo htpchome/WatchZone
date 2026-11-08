@@ -95,6 +95,5 @@
   "alerts.load_failed": "Nie udało się wczytać alertów kamery.",
   "alerts.activity": "Aktywność kamery",
   "alerts.alert": "Alert",
-  "alerts.detection": "Wykrycie",
-  "alerts.motion": "Ruch"
+  "alerts.detection": "Wykrycie"
 }

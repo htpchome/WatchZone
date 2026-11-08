@@ -24,9 +24,7 @@ const FALLBACK_PALETTE: readonly BadgeColor[] = [
   "yellow",
   "orange",
   "indigo",
-  "rose",
   "emerald",
-  "red",
 ];
 
 const COLOR_FAMILIES: Readonly<Record<BadgeColor, string>> = {

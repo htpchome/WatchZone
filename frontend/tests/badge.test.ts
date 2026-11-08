@@ -49,6 +49,15 @@ describe("badge system", () => {
     ).toEqual(["pink", "red"]);
   });
 
+  it("keeps ordinary object labels out of the reserved alert color family", () => {
+    expect(distinctBadgeColorsForLabels(["bird"], ["amber"])).not.toContain(
+      "red",
+    );
+    expect(distinctBadgeColorsForLabels(["bird"], ["amber"])).not.toContain(
+      "rose",
+    );
+  });
+
   it("avoids duplicate and neighboring badge colors within one presentation", () => {
     const colors = distinctBadgeColorsForLabels(
       ["person", "resident"],

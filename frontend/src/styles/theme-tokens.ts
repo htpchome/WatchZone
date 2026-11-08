@@ -249,11 +249,9 @@ export const themeTokens = css`
     --wzc-alert-thumbnail-outline-width: 2px;
     --wzc-stage-stack-navigation-gap: 0.35rem;
     --wzc-stage-stack-navigation-padding: 0.25rem;
-    --wzc-stage-stack-button-size: 2.5rem;
-    --wzc-stage-stack-button-padding: 0.45rem;
-    --wzc-stage-stack-button-border-width: 1px;
-    --wzc-stage-stack-button-border-color: var(--wzc-color-border-control);
+    --wzc-stage-stack-button-size: 2.75rem;
     --wzc-stage-stack-button-color: var(--wzc-color-text-2);
+    --wzc-stage-stack-button-hover-color: var(--wzc-color-primary);
     --wzc-stage-stack-button-background: var(--wzc-color-surface-secondary);
     --wzc-stage-stack-button-active-color: var(--wzc-color-on-primary);
     --wzc-stage-stack-button-active-background: var(--wzc-color-primary);
@@ -389,8 +387,10 @@ export const roundButtonStyles = css`
     padding: 0;
     color: var(--wzc-round-button-color, currentcolor);
     background: var(--wzc-round-button-background, transparent);
-    border: 1px solid var(--wzc-round-button-border-color, currentcolor);
+    border: 0;
     border-radius: 50%;
+    box-shadow: inset 0 0 0 1px
+      var(--wzc-round-button-border-color, currentcolor);
     font: inherit;
     cursor: pointer;
     touch-action: var(--wzc-round-button-touch-action, manipulation);

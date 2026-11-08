@@ -95,6 +95,5 @@
   "alerts.load_failed": "Δεν ήταν δυνατή η φόρτωση των ειδοποιήσεων κάμερας.",
   "alerts.activity": "Δραστηριότητα κάμερας",
   "alerts.alert": "Ειδοποίηση",
-  "alerts.detection": "Ανίχνευση",
-  "alerts.motion": "Κίνηση"
+  "alerts.detection": "Ανίχνευση"
 }

@@ -7,7 +7,7 @@ from typing import Literal, Protocol
 
 from homeassistant.core import HomeAssistant
 
-ReviewClassification = Literal["alert", "detection", "motion"]
+ReviewClassification = Literal["alert", "detection"]
 
 
 @dataclass(frozen=True, slots=True)

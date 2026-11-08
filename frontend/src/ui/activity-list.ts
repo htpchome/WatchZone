@@ -19,7 +19,7 @@ import type { BadgeVariant } from "./badge";
 import "./badge";
 import { activityListStyles } from "./activity-list.styles";
 
-export type ActivityClassification = "alert" | "detection" | "motion";
+export type ActivityClassification = "alert" | "detection";
 
 export interface ActivityTypeBadge {
   readonly label: string;

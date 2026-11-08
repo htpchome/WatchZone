@@ -27,7 +27,7 @@ import {
 } from "../core/home-assistant";
 import { LocalizationController } from "../core/localization";
 import { CardHostAppearanceController } from "../styles/card-host-appearance.controller";
-import { themeTokens } from "../styles/theme-tokens";
+import { roundButtonStyles, themeTokens } from "../styles/theme-tokens";
 import { ToastManager } from "../ui/toast-manager";
 import "../ui/toast-region";
 import { createBuiltInStageSet } from "./built-in-stages/catalog";
@@ -263,7 +263,7 @@ export class DashboardCard extends LitElement {
     );
   }
 
-  static styles = [themeTokens, cardStyles];
+  static styles = [themeTokens, roundButtonStyles, cardStyles];
 }
 
 if (!customElements.get(CARD_TAG)) {

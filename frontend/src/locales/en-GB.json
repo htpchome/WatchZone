@@ -56,6 +56,5 @@
   "alerts.load_failed": "Unable to load camera alerts.",
   "alerts.activity": "Camera activity",
   "alerts.alert": "Alert",
-  "alerts.detection": "Detection",
-  "alerts.motion": "Motion"
+  "alerts.detection": "Detection"
 }

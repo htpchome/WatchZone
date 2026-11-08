@@ -95,6 +95,5 @@
   "alerts.load_failed": "Kameraalarme konnten nicht geladen werden.",
   "alerts.activity": "Kameraaktivität",
   "alerts.alert": "Alarm",
-  "alerts.detection": "Erkennung",
-  "alerts.motion": "Bewegung"
+  "alerts.detection": "Erkennung"
 }

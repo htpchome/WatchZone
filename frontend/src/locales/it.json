@@ -95,6 +95,5 @@
   "alerts.load_failed": "Impossibile caricare gli avvisi della telecamera.",
   "alerts.activity": "Attività della telecamera",
   "alerts.alert": "Avviso",
-  "alerts.detection": "Rilevamento",
-  "alerts.motion": "Movimento"
+  "alerts.detection": "Rilevamento"
 }
