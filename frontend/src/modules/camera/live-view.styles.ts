@@ -198,8 +198,8 @@ export const cameraLiveViewStyles = css`
 
   .viewport:fullscreen .source-indicator,
   .viewport:-webkit-full-screen .source-indicator {
-    inset-block-start: 0.5rem;
-    inset-inline-end: 0.5rem;
+    inset-block-start: max(0.5rem, env(safe-area-inset-top, 0px));
+    inset-inline-end: calc(0.5rem + env(safe-area-inset-right, 0px));
   }
 
   .connection-spinner {

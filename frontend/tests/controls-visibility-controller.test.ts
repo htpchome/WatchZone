@@ -19,11 +19,8 @@ class TestHost implements ReactiveControllerHost {
   }
 }
 
-function pointerEvent(
-  pointerType: string,
-  currentTarget?: HTMLElement,
-): PointerEvent {
-  return { currentTarget, pointerType } as unknown as PointerEvent;
+function pointerEvent(pointerType: string): PointerEvent {
+  return { pointerType } as PointerEvent;
 }
 
 describe("camera control visibility controller", () => {
@@ -73,20 +70,6 @@ describe("camera control visibility controller", () => {
     controller.hostDisconnected();
     vi.advanceTimersByTime(CAMERA_OVERLAY_HIDE_DELAY_MS);
     expect(controller.visible).toBe(false);
-  });
-
-  it("ignores sticky touch hover and pointer-origin focus", () => {
-    vi.useFakeTimers();
-    const controller = new CameraControlsVisibilityController(new TestHost());
-    const root = { matches: () => true } as unknown as HTMLElement;
-
-    controller.handlePointerDown(pointerEvent("touch", root));
-    controller.handleFocusIn();
-    controller.handlePointerEnd();
-    vi.advanceTimersByTime(CAMERA_OVERLAY_HIDE_DELAY_MS);
-
-    expect(controller.visible).toBe(false);
-    expect(controller.sourceVisible).toBe(false);
   });
 
   it("introduces the source independently, then shares the hide deadline", () => {

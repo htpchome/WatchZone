@@ -33,76 +33,40 @@ async function waitForWatchZoneDefinition(page: Page): Promise<void> {
 
 async function installHaIconFixture(page: Page): Promise<void> {
   await page.addInitScript(() => {
-    if (!customElements.get("ha-icon")) {
-      class TestHaIcon extends HTMLElement {
-        private _icon?: string;
+    if (customElements.get("ha-icon")) return;
+    class TestHaIcon extends HTMLElement {
+      private _icon?: string;
 
-        public get icon(): string | undefined {
-          return this._icon;
-        }
-
-        public set icon(value: string | undefined) {
-          this._icon = value;
-          this._render();
-        }
-
-        public connectedCallback(): void {
-          this._render();
-        }
-
-        private _render(): void {
-          const root = this.shadowRoot ?? this.attachShadow({ mode: "open" });
-          root.innerHTML = `<style>
-            :host {
-              display: inline-flex;
-              align-items: center;
-              justify-content: center;
-              inline-size: var(--mdc-icon-size, 24px);
-              block-size: var(--mdc-icon-size, 24px);
-            }
-            svg { display: block; inline-size: 100%; block-size: 100%; }
-          </style><svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M7 2h10v20H7zM9 4v14h6V4zm2 15h2v1h-2z"></path>
-          </svg>`;
-        }
+      public get icon(): string | undefined {
+        return this._icon;
       }
-      customElements.define("ha-icon", TestHaIcon);
-    }
 
-    if (!customElements.get("ha-icon-button")) {
-      class TestHaIconButton extends HTMLElement {
-        private _label = "";
-
-        public get label(): string {
-          return this._label;
-        }
-
-        public set label(value: string) {
-          this._label = value;
-          this.setAttribute("aria-label", value);
-        }
-
-        public connectedCallback(): void {
-          this.setAttribute("role", "button");
-          this.tabIndex = 0;
-          const root = this.shadowRoot ?? this.attachShadow({ mode: "open" });
-          root.innerHTML = `<style>
-            :host {
-              align-items: center;
-              border-radius: 50%;
-              display: inline-flex;
-              inline-size: 40px;
-              block-size: 40px;
-              justify-content: center;
-            }
-            svg { display: block; inline-size: 24px; block-size: 24px; }
-          </style><svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M18.3 5.71 12 12l6.3 6.29-1.41 1.42L10.59 13.41 4.29 19.71 2.88 18.29 9.17 12 2.88 5.71 4.29 4.29 10.59 10.59 16.89 4.29 18.3 5.71Z"></path>
-          </svg>`;
-        }
+      public set icon(value: string | undefined) {
+        this._icon = value;
+        this._render();
       }
-      customElements.define("ha-icon-button", TestHaIconButton);
+
+      public connectedCallback(): void {
+        this._render();
+      }
+
+      private _render(): void {
+        const root = this.shadowRoot ?? this.attachShadow({ mode: "open" });
+        root.innerHTML = `<style>
+          :host {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            inline-size: var(--mdc-icon-size, 24px);
+            block-size: var(--mdc-icon-size, 24px);
+          }
+          svg { display: block; inline-size: 100%; block-size: 100%; }
+        </style><svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7 2h10v20H7zM9 4v14h6V4zm2 15h2v1h-2z"></path>
+        </svg>`;
+      }
     }
+    customElements.define("ha-icon", TestHaIcon);
   });
 }
 
@@ -640,12 +604,6 @@ test("shows an independently scrolling event window for the active camera", asyn
       viewportSize.height,
     );
   }
-  const recordedViewport = page.locator("wzc-media-player .viewport");
-  await recordedViewport.dispatchEvent("pointermove", {
-    isPrimary: true,
-    pointerId: 40,
-    pointerType: "mouse",
-  });
   await expect(
     page.getByRole("button", { name: "Mute recorded video" }),
   ).toBeVisible();
@@ -655,84 +613,10 @@ test("shows an independently scrolling event window for the active camera", asyn
   await expect(
     page.getByRole("button", { name: "Enter Picture-in-Picture" }),
   ).toBeVisible();
-  const recordedControlOrder = await page
-    .locator("wzc-media-player .controls .control-button")
-    .evaluateAll((buttons) =>
-      buttons.map((button) => button.getAttribute("data-control")),
-    );
-  expect(recordedControlOrder).toEqual([
-    "picture_in_picture",
-    "fullscreen",
-    "mute",
-  ]);
-  const recordedControlSizes = await page
-    .locator("wzc-media-player .controls .control-button")
-    .evaluateAll((buttons) =>
-      buttons.map((button) => {
-        const box = button.getBoundingClientRect();
-        return { height: box.height, width: box.width };
-      }),
-    );
-  const expectedControlSize = await recordedViewport.evaluate((element) => {
-    const bounds = element.getBoundingClientRect();
-    const rem = Number.parseFloat(
-      getComputedStyle(document.documentElement).fontSize,
-    );
-    let size = 2.75;
-    if (bounds.width <= 480) size = 2.35;
-    if (bounds.height <= 360) size = 2.25;
-    if (bounds.height <= 240) size = 1.875;
-    return size * rem;
-  });
-  for (const size of recordedControlSizes) {
-    expect(size.height).toBeCloseTo(expectedControlSize, 1);
-    expect(size.width).toBeCloseTo(expectedControlSize, 1);
-  }
   const recordedControlShape = await page
     .getByRole("button", { name: "Mute recorded video" })
     .evaluate((button) => getComputedStyle(button).borderRadius);
   expect(Number.parseFloat(recordedControlShape)).toBeLessThan(10);
-  await page.mouse.move(0, 0);
-  await recordedViewport.evaluate((element) => {
-    const surface = element as HTMLElement;
-    const setPointerCapture = surface.setPointerCapture;
-    surface.setPointerCapture = () => undefined;
-    try {
-      surface.dispatchEvent(
-        new PointerEvent("pointerdown", {
-          bubbles: true,
-          isPrimary: true,
-          pointerId: 41,
-          pointerType: "touch",
-        }),
-      );
-      surface.dispatchEvent(
-        new PointerEvent("pointerup", {
-          bubbles: true,
-          isPrimary: true,
-          pointerId: 41,
-          pointerType: "touch",
-        }),
-      );
-    } finally {
-      surface.setPointerCapture = setPointerCapture;
-    }
-  });
-  await expect(
-    page.getByRole("button", { name: "Mute recorded video" }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Mute recorded video" }),
-  ).toBeHidden({ timeout: CAMERA_OVERLAY_HIDE_DELAY_MS + 1_000 });
-  const modalHeaderChildren = await page
-    .locator("wzc-media-player-container .header")
-    .evaluate((header) =>
-      Array.from(header.children, ({ tagName }) => tagName.toLowerCase()),
-    );
-  expect(modalHeaderChildren).toEqual(["ha-icon-button", "span"]);
-  await expect(
-    page.locator("wzc-media-player-container ha-icon-button.close"),
-  ).toHaveAttribute("aria-label", "Close video player");
   const resizeHandle = page.locator(
     "wzc-media-player-container .resize-handle",
   );
@@ -773,10 +657,10 @@ test("shows an independently scrolling event window for the active camera", asyn
     }
   }
   const header = page.locator("wzc-media-player-container .header");
-  const titleBox = await header.locator(".title").boundingBox();
-  expect(titleBox).not.toBeNull();
-  if (titleBox) {
-    await page.mouse.move(titleBox.x + titleBox.width / 2, titleBox.y + 20);
+  const headerBox = await header.boundingBox();
+  expect(headerBox).not.toBeNull();
+  if (headerBox) {
+    await page.mouse.move(headerBox.x + 20, headerBox.y + 20);
     await page.mouse.down();
     await page.mouse.move(-500, -500);
     await page.mouse.up();
@@ -1298,7 +1182,7 @@ test("preserves expanded camera-stage geometry across carousel selection", async
   });
 });
 
-test("lays out PTZ, talk, and light controls in the responsive dock", async ({
+test("lays out talk and light controls in the responsive dock", async ({
   page,
 }) => {
   await installHaIconFixture(page);
@@ -1382,9 +1266,6 @@ test("lays out PTZ, talk, and light controls in the responsive dock", async ({
   const leadingControls = controlsSlot.locator(
     '[data-control-region="leading"]',
   );
-  const trailingControls = controlsSlot.locator(
-    '[data-control-region="trailing"]',
-  );
   await camera.locator("wzc-camera-live .viewport").hover();
   const talk = page.locator("wzc-two-way-talk");
   const ptz = page.locator("wzc-ptz");
@@ -1457,14 +1338,11 @@ test("lays out PTZ, talk, and light controls in the responsive dock", async ({
   }
 
   expect(talkHostBox.height).toBeCloseTo(talkButtonBox.height, 0);
-  expect(ptzHostBox.height).toBeCloseTo(ptzControlBox.height, 0);
+  expect(ptzHostBox.height).toBeCloseTo(cameraBox.height, 0);
+  expect(ptzHostBox.y).toBeCloseTo(cameraBox.y, 0);
   expect(lightHostBox.height).toBeCloseTo(lightButtonBox.height, 0);
-  expect(talkButtonBox.y + talkButtonBox.height / 2).toBeCloseTo(
-    lightButtonBox.y + lightButtonBox.height / 2,
-    0,
-  );
-  expect(talkButtonBox.y + talkButtonBox.height / 2).toBeCloseTo(
-    ptzControlBox.y + ptzControlBox.height / 2,
+  expect(talkHostBox.y + talkHostBox.height).toBeCloseTo(
+    lightHostBox.y + lightHostBox.height,
     0,
   );
   expect(talkHostBox.y + talkHostBox.height).toBeLessThanOrEqual(
@@ -1476,7 +1354,10 @@ test("lays out PTZ, talk, and light controls in the responsive dock", async ({
     0,
   );
   expect(ptzControlBox.x).toBeGreaterThan(cameraBox.x + cameraBox.width / 2);
-  await expect(trailingControls.locator("wzc-ptz")).toHaveCount(1);
+  expect(ptzControlBox.y).toBeGreaterThan(cameraBox.y + cameraBox.height / 2);
+  expect(ptzControlBox.y + ptzControlBox.height).toBeLessThanOrEqual(
+    cameraBox.y + cameraBox.height,
+  );
   expect(
     talkButtonBox.x - (lightButtonBox.x + lightButtonBox.width),
   ).toBeGreaterThanOrEqual(8);
@@ -1580,51 +1461,6 @@ test("lays out PTZ, talk, and light controls in the responsive dock", async ({
       element.style.removeProperty("--wzc-round-button-size"),
     ),
   ]);
-  await talkButton.evaluate((button: HTMLButtonElement) => button.blur());
-  await page.locator("watchzone-card").evaluate((element) => {
-    element.style.inlineSize = "390px";
-  });
-  const liveViewport = camera.locator("wzc-camera-live .viewport");
-  await liveViewport.dispatchEvent("pointerdown", {
-    isPrimary: true,
-    pointerId: 31,
-    pointerType: "touch",
-  });
-  await liveViewport.dispatchEvent("pointerup", {
-    isPrimary: true,
-    pointerId: 31,
-    pointerType: "touch",
-  });
-  await expect(talkButton).toBeVisible();
-  await expect(lightButton).toBeVisible();
-  await expect(ptzControl).toBeVisible();
-  await expect
-    .poll(async () => {
-      const boxes = await Promise.all([
-        talkButton.boundingBox(),
-        lightButton.boundingBox(),
-        ptzControl.boundingBox(),
-      ]);
-      return boxes.every((box) => box !== null);
-    })
-    .toBe(true);
-  const [phoneTalkBox, phoneLightBox, phonePtzBox] = await Promise.all([
-    talkButton.boundingBox(),
-    lightButton.boundingBox(),
-    ptzControl.boundingBox(),
-  ]);
-  expect(phoneTalkBox).not.toBeNull();
-  expect(phoneLightBox).not.toBeNull();
-  expect(phonePtzBox).not.toBeNull();
-  if (phoneTalkBox && phoneLightBox && phonePtzBox) {
-    const talkCenter = phoneTalkBox.y + phoneTalkBox.height / 2;
-    expect(talkCenter).toBeCloseTo(
-      phoneLightBox.y + phoneLightBox.height / 2,
-      0,
-    );
-    expect(talkCenter).toBeCloseTo(phonePtzBox.y + phonePtzBox.height / 2, 0);
-    expect(phoneTalkBox.width).toBeCloseTo(phoneLightBox.width, 1);
-  }
   const interactionLightButtonBox = await lightButton.boundingBox();
   expect(interactionLightButtonBox).not.toBeNull();
   if (!interactionLightButtonBox) return;

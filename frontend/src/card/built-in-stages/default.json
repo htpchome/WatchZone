@@ -34,11 +34,12 @@
                     "controlRegion": "center",
                     "id": "default-talk-component",
                     "kind": "component"
-                  },
+                  }
+                ],
+                "overlay": [
                   {
                     "componentType": "ptz",
                     "config": {},
-                    "controlRegion": "trailing",
                     "id": "default-ptz-component",
                     "kind": "component"
                   }
@@ -141,11 +142,12 @@
                     "controlRegion": "center",
                     "id": "default-talk-component",
                     "kind": "component"
-                  },
+                  }
+                ],
+                "overlay": [
                   {
                     "componentType": "ptz",
                     "config": {},
-                    "controlRegion": "trailing",
                     "id": "default-ptz-component",
                     "kind": "component"
                   }

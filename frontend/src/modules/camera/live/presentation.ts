@@ -222,8 +222,6 @@ export class CameraLivePresentation extends LitElement {
         @pointerleave=${this._visibility.handlePointerLeave}
         @pointermove=${this._visibility.handlePointerMove}
         @pointerdown=${this._visibility.handlePointerDown}
-        @pointerup=${this._visibility.handlePointerEnd}
-        @pointercancel=${this._visibility.handlePointerEnd}
         @focusin=${this._visibility.handleFocusIn}
         @focusout=${this._visibility.handleFocusOut}
       >

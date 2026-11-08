@@ -5,19 +5,29 @@ export const ptzStyles = css`
     display: block;
     position: relative;
     z-index: 4;
-    inline-size: max-content;
-    block-size: max-content;
+    inline-size: 100%;
+    block-size: 100%;
+    min-block-size: 0;
     pointer-events: none;
   }
 
   .ptz-layer {
-    position: relative;
+    position: absolute;
+    inset: 0;
     pointer-events: none;
   }
 
   .ptz-control {
     display: grid;
-    position: relative;
+    position: absolute;
+    inset-inline-end: calc(
+      var(--wzc-camera-control-safe-inline) + var(--wzc-camera-control-size) +
+        var(--wzc-ptz-inline-gap)
+    );
+    inset-block-end: calc(
+      var(--wzc-stage-resize-handle-block-size) +
+        max(var(--wzc-ptz-safe-block), env(safe-area-inset-bottom))
+    );
     grid-template:
       repeat(3, var(--wzc-ptz-button-size)) /
       repeat(3, var(--wzc-ptz-button-size));
@@ -85,10 +95,13 @@ export const ptzStyles = css`
 
   .ptz-toast {
     position: absolute;
-    inset-inline-start: 50%;
-    inset-block-end: calc(100% + var(--wzc-control-dock-gap));
-    inline-size: min(22rem, calc(100cqi - 2rem));
-    transform: translateX(-50%);
+    inset-inline: 1rem;
+    inset-block-end: calc(
+      var(--wzc-stage-resize-handle-block-size) + var(--wzc-ptz-button-size) +
+        var(--wzc-ptz-button-size) + var(--wzc-ptz-button-size) + 2rem
+    );
+    margin-inline: auto;
+    inline-size: min(22rem, calc(100% - 2rem));
   }
 
   @media (hover: hover) and (pointer: fine) {

@@ -10,11 +10,9 @@ export class CameraControlsVisibilityController implements ReactiveController {
   private _focused = false;
   private _holds = 0;
   private _hideTimer?: ReturnType<typeof setTimeout>;
-  private _honorHoverPseudo = false;
   private _hovered = false;
   private _interactionRoot?: HTMLElement;
   private _pointerFocusPending = false;
-  private _pointerFocusResetTimer?: ReturnType<typeof setTimeout>;
 
   public constructor(
     private readonly _host: ReactiveControllerHost,
@@ -25,12 +23,9 @@ export class CameraControlsVisibilityController implements ReactiveController {
 
   public hostDisconnected(): void {
     this._clearHideTimer();
-    this._clearPointerFocusReset();
     this._focused = false;
-    this._honorHoverPseudo = false;
     this._hovered = false;
     this._holds = 0;
-    this._pointerFocusPending = false;
     this.sourceVisible = false;
     this.visible = false;
     this._onVisibilityChange?.(false);
@@ -63,7 +58,6 @@ export class CameraControlsVisibilityController implements ReactiveController {
   public readonly handlePointerEnter = (event: PointerEvent): void => {
     if (event.pointerType === "touch") return;
     this._interactionRoot = event.currentTarget as HTMLElement;
-    this._honorHoverPseudo = true;
     this._hovered = true;
     this._show();
   };
@@ -71,38 +65,26 @@ export class CameraControlsVisibilityController implements ReactiveController {
   public readonly handlePointerLeave = (event: PointerEvent): void => {
     if (event.pointerType === "touch") return;
     this._hovered = false;
-    this._honorHoverPseudo = false;
     this._scheduleHide();
   };
 
   public readonly handlePointerMove = (event: PointerEvent): void => {
     if (event.pointerType === "touch") return;
     this._interactionRoot = event.currentTarget as HTMLElement;
-    this._honorHoverPseudo = true;
     this._hovered = true;
     this._show();
   };
 
   public readonly handlePointerDown = (event: PointerEvent): void => {
     this._interactionRoot = event.currentTarget as HTMLElement;
-    if (event.pointerType === "touch") {
-      this._hovered = false;
-      this._honorHoverPseudo = false;
-    }
     // Pointer-origin focus must not pin the overlay open after pointer exit.
     this._focused = false;
     this._pointerFocusPending = true;
-    this._clearPointerFocusReset();
-    this._show();
-    if (event.pointerType === "touch") this._scheduleHide();
-  };
-
-  public readonly handlePointerEnd = (): void => {
-    this._clearPointerFocusReset();
-    this._pointerFocusResetTimer = setTimeout(() => {
-      this._pointerFocusResetTimer = undefined;
+    queueMicrotask(() => {
       this._pointerFocusPending = false;
     });
+    this._show();
+    if (event.pointerType === "touch") this._scheduleHide();
   };
 
   public readonly handleFocusIn = (): void => {
@@ -136,7 +118,7 @@ export class CameraControlsVisibilityController implements ReactiveController {
         this._hovered ||
         this._focused ||
         this._holds > 0 ||
-        (this._honorHoverPseudo && this._interactionRoot?.matches(":hover"))
+        this._interactionRoot?.matches(":hover")
       ) {
         return;
       }
@@ -151,11 +133,5 @@ export class CameraControlsVisibilityController implements ReactiveController {
     if (this._hideTimer === undefined) return;
     clearTimeout(this._hideTimer);
     this._hideTimer = undefined;
-  }
-
-  private _clearPointerFocusReset(): void {
-    if (this._pointerFocusResetTimer === undefined) return;
-    clearTimeout(this._pointerFocusResetTimer);
-    this._pointerFocusResetTimer = undefined;
   }
 }

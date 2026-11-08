@@ -257,7 +257,11 @@ export const themeTokens = css`
     --wzc-recorded-media-dialog-min-inline-size: min(16rem, calc(100vw - 1rem));
     --wzc-recorded-media-dialog-min-block-size: min(10rem, calc(100dvh - 1rem));
     --wzc-recorded-media-resize-handle-size: 1.5rem;
+    --wzc-recorded-media-control-size: 2.5rem;
     --wzc-recorded-media-header-background: var(--wzc-color-surface-secondary);
+    --wzc-recorded-media-control-hover-background: var(
+      --wzc-color-fill-primary
+    );
     --wzc-stage-stack-navigation-gap: 0.35rem;
     --wzc-stage-stack-navigation-padding: 0.25rem;
     --wzc-stage-stack-button-size: 2.75rem;
@@ -451,23 +455,9 @@ export const roundButtonStyles = css`
   }
 `;
 
-/** Shared geometry, placement, and states for square media overlay controls. */
+/** Shared geometry and states for square live-media overlay controls. */
 export const mediaOverlayControlButtonStyles = css`
-  .media-overlay-control-group {
-    --wzc-control-size: var(--wzc-camera-control-size);
-    --wzc-control-icon-size: calc(var(--wzc-control-size) * 0.6);
-    --wzc-control-gap: var(--wzc-control-dock-gap);
-    align-items: center;
-    display: flex;
-    flex-direction: column;
-    gap: var(--wzc-control-gap);
-    inset-block-start: 50%;
-    inset-inline-end: var(--wzc-camera-control-safe-inline);
-    position: absolute;
-    transform: translateY(-50%);
-  }
-
-  .media-overlay-control-button {
+  .control-button {
     appearance: none;
     background: var(
       --wzc-control-background,
@@ -492,7 +482,7 @@ export const mediaOverlayControlButtonStyles = css`
     -webkit-tap-highlight-color: transparent;
   }
 
-  .media-overlay-control-button svg {
+  .control-button svg {
     block-size: var(--wzc-control-icon-size);
     fill: currentcolor;
     inline-size: var(--wzc-control-icon-size);
@@ -501,7 +491,7 @@ export const mediaOverlayControlButtonStyles = css`
   }
 
   @media (hover: hover) and (pointer: fine) {
-    .media-overlay-control-button:hover:not(:disabled) {
+    .control-button:hover:not(:disabled) {
       background: var(
         --wzc-control-hover-background,
         var(--wzc-media-overlay-hover-background)
@@ -510,12 +500,12 @@ export const mediaOverlayControlButtonStyles = css`
     }
   }
 
-  .media-overlay-control-button:focus-visible {
+  .control-button:focus-visible {
     outline: 2px solid var(--wzc-color-primary);
     outline-offset: 1px;
   }
 
-  .media-overlay-control-button:disabled {
+  .control-button:disabled {
     cursor: default;
     opacity: var(--wzc-control-disabled-opacity, 1);
   }

@@ -91,14 +91,16 @@ export const cameraStyles = css`
   .carousel-navigation.previous {
     inset-inline-start: calc(
       var(--wzc-camera-control-safe-inline) + var(--wzc-camera-control-size) +
-        var(--wzc-carousel-navigation-control-gap)
+        var(--wzc-carousel-navigation-control-gap) +
+        env(safe-area-inset-left, 0px)
     );
   }
 
   .carousel-navigation.next {
     inset-inline-end: calc(
       var(--wzc-camera-control-safe-inline) + var(--wzc-camera-control-size) +
-        var(--wzc-carousel-navigation-control-gap)
+        var(--wzc-carousel-navigation-control-gap) +
+        env(safe-area-inset-right, 0px)
     );
   }
 

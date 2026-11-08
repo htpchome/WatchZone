@@ -6,8 +6,9 @@ export const toastRegionStyles = css`
   :host {
     position: absolute;
     z-index: 4;
-    inset-block-end: 0.75rem;
-    inset-inline: 0.75rem;
+    inset-block-end: max(0.75rem, env(safe-area-inset-bottom, 0px));
+    inset-inline: max(0.75rem, env(safe-area-inset-left, 0px))
+      max(0.75rem, env(safe-area-inset-right, 0px));
     display: grid;
     justify-items: center;
     gap: 0.5rem;

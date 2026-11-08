@@ -42,15 +42,14 @@ export const mediaPlayerContainerStyles = css`
     cursor: move;
     display: flex;
     gap: 0.75rem;
-    justify-content: flex-start;
+    justify-content: space-between;
     min-block-size: 3rem;
-    padding: 0.35rem 0.75rem 0.35rem 0.25rem;
+    padding: 0.35rem 0.5rem 0.35rem 1rem;
     touch-action: none;
     user-select: none;
   }
 
   .title {
-    flex: 1;
     font-size: var(--wzc-font-size-medium);
     font-weight: var(--wzc-font-weight-semibold);
     overflow: hidden;
@@ -59,8 +58,33 @@ export const mediaPlayerContainerStyles = css`
   }
 
   .close {
+    align-items: center;
+    appearance: none;
+    background: transparent;
+    border: 0;
+    border-radius: var(--wzc-radius-button);
+    color: var(--wzc-color-text-2);
     cursor: pointer;
-    flex: none;
+    display: inline-flex;
+    justify-content: center;
+    min-block-size: 2.5rem;
+    min-inline-size: 2.5rem;
+    padding: 0;
+  }
+
+  .close:hover,
+  .close:focus-visible {
+    background: var(--wzc-recorded-media-control-hover-background);
+    color: var(--wzc-color-primary);
+  }
+
+  .close:focus-visible {
+    outline: 2px solid var(--wzc-color-primary);
+    outline-offset: 1px;
+  }
+
+  .close ha-icon {
+    --mdc-icon-size: 1.5rem;
   }
 
   .body {

@@ -9,6 +9,7 @@ export const CAMERA_CONTROL_SIZE_DEFAULT = "2.75rem";
 export const CAMERA_CONTROL_SIZE_COMPACT = "2.35rem";
 export const CAMERA_CONTROL_SIZE_SHORT = "2.25rem";
 export const CAMERA_CONTROL_SIZE_VERY_SHORT = "1.875rem";
+
 /**
  * The HA websocket can become ready just before integration commands finish
  * registering after a restart. Keep retries bounded and owned by the camera

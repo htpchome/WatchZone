@@ -191,20 +191,22 @@ export const cardStyles = css`
     z-index: 4;
     display: grid;
     grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1fr);
-    align-content: flex-end;
-    align-items: center;
+    align-items: flex-end;
     box-sizing: border-box;
     min-inline-size: 0;
     padding: 0 var(--wzc-camera-control-safe-inline)
-      calc(var(--wzc-stage-resize-handle-block-size) + 0.5rem);
+      calc(
+        var(--wzc-stage-resize-handle-block-size) +
+          max(0.5rem, env(safe-area-inset-bottom))
+      );
     column-gap: var(--wzc-control-dock-gap);
   }
 
   .control-region {
     display: flex;
     flex-wrap: wrap;
-    align-content: center;
-    align-items: center;
+    align-content: flex-end;
+    align-items: flex-end;
     min-inline-size: 0;
     gap: var(--wzc-control-dock-gap);
     pointer-events: none;

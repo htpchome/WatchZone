@@ -7,7 +7,6 @@ export const mediaPlayerStyles = css`
     block-size: auto;
     display: block;
     inline-size: 100%;
-    container-type: size;
   }
 
   .viewport {
@@ -49,25 +48,21 @@ export const mediaPlayerStyles = css`
   }
 
   .controls {
+    --wzc-control-size: var(--wzc-recorded-media-control-size);
+    --wzc-control-icon-size: 1.4rem;
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: var(--wzc-control-dock-gap);
+    inset-block-start: 50%;
+    inset-inline-end: var(--wzc-camera-control-safe-inline);
+    position: absolute;
+    transform: translateY(-50%);
     z-index: 2;
-    opacity: 0;
-    pointer-events: none;
-    visibility: hidden;
-    transition:
-      opacity var(--wzc-media-overlay-transition-duration) ease,
-      visibility 0s linear var(--wzc-media-overlay-transition-duration);
-  }
-
-  .controls.visible {
-    opacity: 1;
-    pointer-events: auto;
-    visibility: visible;
-    transition-delay: 0s;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    video,
-    .controls {
+    video {
       transition: none;
     }
   }

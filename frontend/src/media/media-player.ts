@@ -32,7 +32,6 @@ import { mediaPlayerStyles } from "./media-player.styles";
 
 const HLS_CONTENT_TYPE = "application/vnd.apple.mpegurl";
 const SOURCE_READY_TIMEOUT_MS = 12_000;
-const CONTROLS_HIDE_DELAY_MS = 2500;
 
 /** Ephemeral recorded-media playback engine. */
 export class MediaPlayer extends LitElement {
@@ -47,17 +46,10 @@ export class MediaPlayer extends LitElement {
   public request?: RecordedMediaRequest;
 
   private _fullscreenActive = false;
-  private _controlsFocused = false;
-  private _controlsHovered = false;
-  private _controlsVisible = false;
-  private _controlsHideTimer?: ReturnType<typeof setTimeout>;
   private _generation = 0;
   private _hls?: HlsType;
   private _muted = true;
   private _pictureInPictureActive = false;
-  private _pointerFocusPending = false;
-  private _pointerFocusResetTimer?: ReturnType<typeof setTimeout>;
-  private _resizeObserver?: ResizeObserver;
   private readonly _zoom = new MediaZoomController(this);
 
   public connectedCallback(): void {
@@ -72,11 +64,6 @@ export class MediaPlayer extends LitElement {
       "webkitfullscreenchange",
       this._syncControlState,
     );
-    this._clearControlsHideTimer();
-    this._clearPointerFocusReset();
-    this._resizeObserver?.disconnect();
-    this._resizeObserver = undefined;
-    this.style.removeProperty("--wzc-camera-control-size");
     this._stopPlayback();
     super.disconnectedCallback();
   }
@@ -94,14 +81,10 @@ export class MediaPlayer extends LitElement {
       aria-label=${this.localize("media_player.zoom_view", {
         percent: Math.round(this._zoom.scale * 100),
       })}
-      @pointerenter=${this._handlePointerEnter}
-      @pointerleave=${this._handlePointerLeave}
-      @pointerdown=${this._handleViewportPointerDown}
-      @pointermove=${this._handleViewportPointerMove}
-      @pointerup=${this._handleViewportPointerUp}
-      @pointercancel=${this._handleViewportPointerCancel}
-      @focusin=${this._handleFocusIn}
-      @focusout=${this._handleFocusOut}
+      @pointerdown=${this._zoom.handlePointerDown}
+      @pointermove=${this._zoom.handlePointerMove}
+      @pointerup=${this._zoom.handlePointerUp}
+      @pointercancel=${this._zoom.handlePointerCancel}
       @wheel=${this._zoom.handleWheel}
       @keydown=${this._zoom.handleKeyDown}
     >
@@ -121,41 +104,30 @@ export class MediaPlayer extends LitElement {
         @webkitpresentationmodechanged=${this._syncControlState}
       ></video>
       <div
-        class=${`controls media-overlay-control-group${
-          this._controlsVisible ? " visible" : ""
-        }`}
+        class="controls"
         role="group"
         aria-label=${this.localize("media_player.controls")}
-        @pointerdown=${this._handleControlsPointerDown}
-        @pointerup=${this._handleControlsPointerEnd}
-        @pointercancel=${this._handleControlsPointerEnd}
+        @pointerdown=${(event: Event) => event.stopPropagation()}
         @keydown=${(event: Event) => event.stopPropagation()}
       >
         <button
-          class="control-button media-overlay-control-button"
+          class="control-button"
           type="button"
-          data-control="picture_in_picture"
           title=${this.localize(
-            this._pictureInPictureActive
-              ? "media_player.exit_pip"
-              : "media_player.enter_pip",
+            this._muted ? "media_player.unmute" : "media_player.mute",
           )}
           aria-label=${this.localize(
-            this._pictureInPictureActive
-              ? "media_player.exit_pip"
-              : "media_player.enter_pip",
+            this._muted ? "media_player.unmute" : "media_player.mute",
           )}
-          aria-pressed=${this._pictureInPictureActive ? "true" : "false"}
-          ?disabled=${!pictureInPictureSupported}
+          aria-pressed=${this._muted ? "false" : "true"}
           @pointerup=${this._releaseTouchFocus}
-          @click=${this._togglePictureInPicture}
+          @click=${this._toggleMute}
         >
-          ${renderIcon("pipPopOut")}
+          ${renderIcon(this._muted ? "volumeOff" : "volumeOn")}
         </button>
         <button
-          class="control-button media-overlay-control-button"
+          class="control-button"
           type="button"
-          data-control="fullscreen"
           title=${this.localize(
             this._fullscreenActive
               ? "media_player.exit_fullscreen"
@@ -176,20 +148,24 @@ export class MediaPlayer extends LitElement {
           )}
         </button>
         <button
-          class="control-button media-overlay-control-button"
+          class="control-button"
           type="button"
-          data-control="mute"
           title=${this.localize(
-            this._muted ? "media_player.unmute" : "media_player.mute",
+            this._pictureInPictureActive
+              ? "media_player.exit_pip"
+              : "media_player.enter_pip",
           )}
           aria-label=${this.localize(
-            this._muted ? "media_player.unmute" : "media_player.mute",
+            this._pictureInPictureActive
+              ? "media_player.exit_pip"
+              : "media_player.enter_pip",
           )}
-          aria-pressed=${this._muted ? "false" : "true"}
+          aria-pressed=${this._pictureInPictureActive ? "true" : "false"}
+          ?disabled=${!pictureInPictureSupported}
           @pointerup=${this._releaseTouchFocus}
-          @click=${this._toggleMute}
+          @click=${this._togglePictureInPicture}
         >
-          ${renderIcon(this._muted ? "volumeOff" : "volumeOn")}
+          ${renderIcon("pipPopOut")}
         </button>
       </div>
     </div>`;
@@ -197,7 +173,6 @@ export class MediaPlayer extends LitElement {
 
   protected firstUpdated(): void {
     this._zoom.observe(this._viewport() ?? undefined);
-    this._observeControlSize();
     void this._loadRequest();
   }
 
@@ -384,130 +359,6 @@ export class MediaPlayer extends LitElement {
       (event.currentTarget as HTMLButtonElement).blur();
     }
   };
-
-  private readonly _handlePointerEnter = (event: PointerEvent): void => {
-    if (event.pointerType === "touch") return;
-    this._controlsHovered = true;
-    this._showControls();
-  };
-
-  private readonly _handlePointerLeave = (event: PointerEvent): void => {
-    if (event.pointerType === "touch") return;
-    this._controlsHovered = false;
-    this._scheduleControlsHide();
-  };
-
-  private readonly _handleViewportPointerDown = (event: PointerEvent): void => {
-    this._handleControlsInteraction(event);
-    this._zoom.handlePointerDown(event);
-  };
-
-  private readonly _handleViewportPointerMove = (event: PointerEvent): void => {
-    if (event.pointerType !== "touch") {
-      this._controlsHovered = true;
-      this._showControls();
-    }
-    this._zoom.handlePointerMove(event);
-  };
-
-  private readonly _handleViewportPointerUp = (event: PointerEvent): void => {
-    this._endPointerInteraction();
-    this._zoom.handlePointerUp(event);
-  };
-
-  private readonly _handleViewportPointerCancel = (
-    event: PointerEvent,
-  ): void => {
-    this._endPointerInteraction();
-    this._zoom.handlePointerCancel(event);
-  };
-
-  private readonly _handleControlsPointerDown = (event: PointerEvent): void => {
-    event.stopPropagation();
-    this._handleControlsInteraction(event);
-  };
-
-  private readonly _handleControlsPointerEnd = (event: PointerEvent): void => {
-    event.stopPropagation();
-    this._endPointerInteraction();
-  };
-
-  private readonly _handleFocusIn = (): void => {
-    if (this._pointerFocusPending) return;
-    this._controlsFocused = true;
-    this._showControls();
-  };
-
-  private readonly _handleFocusOut = (event: FocusEvent): void => {
-    const root = event.currentTarget as Node | null;
-    if (root?.contains(event.relatedTarget as Node | null)) return;
-    this._controlsFocused = false;
-    this._scheduleControlsHide();
-  };
-
-  private _handleControlsInteraction(event: PointerEvent): void {
-    if (event.pointerType === "touch") this._controlsHovered = false;
-    this._controlsFocused = false;
-    this._pointerFocusPending = true;
-    this._clearPointerFocusReset();
-    this._showControls();
-    if (event.pointerType === "touch") this._scheduleControlsHide();
-  }
-
-  private _endPointerInteraction(): void {
-    this._clearPointerFocusReset();
-    this._pointerFocusResetTimer = setTimeout(() => {
-      this._pointerFocusResetTimer = undefined;
-      this._pointerFocusPending = false;
-    });
-  }
-
-  private _showControls(): void {
-    this._clearControlsHideTimer();
-    if (this._controlsVisible) return;
-    this._controlsVisible = true;
-    this.requestUpdate();
-  }
-
-  private _scheduleControlsHide(): void {
-    this._clearControlsHideTimer();
-    if (this._controlsHovered || this._controlsFocused) return;
-    this._controlsHideTimer = setTimeout(() => {
-      this._controlsHideTimer = undefined;
-      if (this._controlsHovered || this._controlsFocused) return;
-      this._controlsVisible = false;
-      this.requestUpdate();
-    }, CONTROLS_HIDE_DELAY_MS);
-  }
-
-  private _clearControlsHideTimer(): void {
-    if (this._controlsHideTimer === undefined) return;
-    clearTimeout(this._controlsHideTimer);
-    this._controlsHideTimer = undefined;
-  }
-
-  private _clearPointerFocusReset(): void {
-    if (this._pointerFocusResetTimer === undefined) return;
-    clearTimeout(this._pointerFocusResetTimer);
-    this._pointerFocusResetTimer = undefined;
-  }
-
-  private _observeControlSize(): void {
-    this._syncControlSize();
-    if (typeof ResizeObserver === "undefined") return;
-    this._resizeObserver = new ResizeObserver(() => this._syncControlSize());
-    this._resizeObserver.observe(this);
-  }
-
-  private _syncControlSize(): void {
-    const { height, width } = this.getBoundingClientRect();
-    if (height <= 0 || width <= 0) return;
-    let size = "2.75rem";
-    if (width <= 480) size = "2.35rem";
-    if (height <= 360) size = "2.25rem";
-    if (height <= 240) size = "1.875rem";
-    this.style.setProperty("--wzc-camera-control-size", size);
-  }
 
   private async _resolveSourceUrl(path: string): Promise<string> {
     const api = this.api;
