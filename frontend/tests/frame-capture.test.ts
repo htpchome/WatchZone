@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   captureVideoFrame,
   snapshotFilename,
-} from "../src/modules/camera/live/frame-capture";
+} from "../src/stage/modules/camera/live/frame-capture";
 
 describe("camera frame capture", () => {
   it("encodes the current video frame at its native dimensions", async () => {

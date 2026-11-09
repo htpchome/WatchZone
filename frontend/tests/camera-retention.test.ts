@@ -1,17 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { HomeAssistantApi } from "../src/core/home-assistant";
-import { CameraSessionContext } from "../src/core/camera-session-context";
+import { CameraSessionContext } from "../src/stage/camera-session-context";
 import {
   type ConnectionFactory,
   getMediaSessionManager,
   type MediaConnection,
 } from "../src/core/media-session-manager";
-import type { CameraModule } from "../src/modules/camera/camera";
-import type { CameraView } from "../src/modules/camera/camera-view";
-import type { CameraLivePresentation } from "../src/modules/camera/live/presentation";
-import "../src/modules/camera/camera";
-import "../src/modules/camera/camera-view";
+import type { CameraModule } from "../src/stage/modules/camera/camera";
+import type { CameraView } from "../src/stage/modules/camera/camera-view";
+import type { CameraLivePresentation } from "../src/stage/modules/camera/live/presentation";
+import "../src/stage/modules/camera/camera";
+import "../src/stage/modules/camera/camera-view";
 import {
   installTestMediaSessionManager,
   removeTestMediaSessionManager,

@@ -1,16 +1,23 @@
-# Recorded Media Player Contract
+# Recorded Video Viewer Contract
 
 This document is normative for alert, event, and recording playback.
 
 ## Ownership
 
-- `frontend/src/media/media-player.ts` owns one ephemeral recorded-media
-  element, transport selection, startup, failure fallback, and cleanup.
-- A media-player container owns presentation only. The first container is a
-  viewport-constrained draggable modal; future drawer and live-area-cover
-  containers reuse the same player contract.
-- Recorded-media players and containers are not Stage placeables and do not
+- `frontend/src/ui/recorded-video-viewer/recorded-video-player.ts` owns one
+  ephemeral recorded-media element, transport selection, startup, failure
+  fallback, and cleanup.
+- The recorded-video viewer owns viewer lifecycle, notices, and the temporary
+  live-audio mute lease. A concrete presentation owns geometry only. The first
+  presentation is a viewport-constrained draggable dialog.
+- Recorded-video viewers and presentations are not Stage placeables and do not
   enter the retained live-session pool.
+- Live and recorded video share media presentation primitives: overlay
+  geometry, control sizing, touch behavior, zoom, fullscreen, and
+  Picture-in-Picture boundaries. They do not share a playback/session engine;
+  live sessions are retained and recorded sources are finite and ephemeral.
+- A future drawer or live-area-cover viewer presentation composes those same
+  primitives and recorded player. It does not add a parallel control overlay.
 - Providers normalize media URLs into provider-neutral playback sources. UI
   modules and shared tiles do not construct provider-specific URLs.
 
@@ -41,13 +48,13 @@ This document is normative for alert, event, and recording playback.
   fullscreen, and Picture-in-Picture remain fixed overlay controls outside the
   transformed media surface. The PiP path retains the Firefox native-control
   suppression refresh used by live video.
-- While a recorded-media container is open, live WatchZone video in the same
+- While a recorded-video viewer is open, live WatchZone video in the same
   document is temporarily forced muted through the media-session manager.
 - This forced state never changes a camera's explicit mute preference. When the
   final recorded-media container closes, each live presentation recomputes its
   effective mute state from the preserved preference and browser autoplay
   policy.
-- Multiple containers use owner-based mute leases; closing one cannot restore
+- Multiple viewers use owner-based mute leases; closing one cannot restore
   live audio while another remains open.
 
 ## Draggable modal
@@ -70,4 +77,11 @@ This document is normative for alert, event, and recording playback.
   handle changes its dimensions, and width and height remain locked to that
   ratio. The header sits directly above the player; the container owns side and
   bottom padding, while the player owns no modal spacing.
-- Recorded-media overlay buttons reuse the square live-media control primitive.
+- Recorded and live video render one shared media-control overlay. The
+  recorded dialog supplies Picture-in-Picture, fullscreen, and mute in the
+  same vertical geometry and sizing as live video; from bottom to top their
+  order is mute, fullscreen, Picture-in-Picture.
+- Overlay controls use pointer events, minimum touch targets, touch-focus
+  release, and local surface-relative insets. Safe-area insets apply only when
+  a presentation actually reaches the physical viewport edge, such as native
+  fullscreen.

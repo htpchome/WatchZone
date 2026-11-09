@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CameraSessionContext } from "../src/core/camera-session-context";
+import { CameraSessionContext } from "../src/stage/camera-session-context";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 
 const resolver = vi.hoisted(() => ({
@@ -15,7 +15,7 @@ vi.mock("../src/providers/talk-source-resolver", () => ({
   },
 }));
 
-import { TalkSessionController } from "../src/components/two-way-talk/session.controller";
+import { TalkSessionController } from "../src/stage/components/two-way-talk/session.controller";
 
 describe("two-way-talk session lifecycle", () => {
   afterEach(() => vi.clearAllMocks());

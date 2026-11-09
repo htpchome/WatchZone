@@ -31,8 +31,16 @@ new browser API makes another platform easier or faster.
   matching hover title. Visible button text remains its own accessible name;
   decorative icons are hidden from assistive technology.
 - Use container size rather than global viewport size for card layout decisions.
-- Respect safe-area insets, text scaling, reduced motion, orientation changes,
-  and Home Assistant theme tokens where they affect the feature.
+- Respect safe-area insets only for surfaces that actually meet a physical
+  viewport edge, such as fullscreen. Card-contained Stage, carousel, control,
+  toast, and dialog surfaces use their own local geometry; applying viewport
+  safe-area values there would offset the same control differently by host
+  device. Respect text scaling, reduced motion, orientation changes, and Home
+  Assistant theme tokens where they affect the feature.
+- Shared overlay controls own minimum touch-target sizing, Pointer Events,
+  touch-focus release, keyboard focus, and tap-highlight suppression. Feature
+  controls compose that behavior rather than adding device-specific input
+  paths.
 - Avoid APIs that require cross-origin isolation or browser flags unless the
   feature has a supported alternative.
 

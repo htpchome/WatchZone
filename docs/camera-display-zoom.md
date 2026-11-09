@@ -7,7 +7,7 @@ authoritative for application-wide boundaries.
 ## Ownership
 
 - Camera is the parent module. Display zoom is private camera presentation
-  behavior under `frontend/src/modules/camera/live/`.
+  behavior under `frontend/src/stage/modules/camera/live/`.
 - The shared `MediaZoomController` exclusively owns zoom scale, bounded pan,
   pointer and keyboard gesture state, resize handling, and cleanup for live and
   recorded media presentations.

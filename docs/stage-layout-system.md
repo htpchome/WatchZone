@@ -63,6 +63,13 @@ A component node may declare an optional logical `controlRegion` of `leading`,
 an omitted value defaults to `center`. This is placement metadata owned by the
 slot and is never passed through component configuration.
 
+A component in an `overlay` slot may similarly declare `overlayRegion` using a
+three-by-three logical grid: `top-leading`, `top-center`, `top-trailing`,
+`center-leading`, `center`, `center-trailing`, `bottom-leading`,
+`bottom-center`, or `bottom-trailing`. The omitted default is `center`. An
+overlay component remains intrinsically sized; the slot renderer, not the
+component, owns its position.
+
 A Stage Flow is an ordered list of Stage Design IDs for one responsive profile.
 Cards have independent `default` and `phone` flows. The first entry is the
 landing stage and later entries are navigation targets. A design may appear in
@@ -89,13 +96,19 @@ root grid
     └── events module
 ```
 
-The controls slot owns placement, shared gaps, safe-area clearance, and
+The controls slot owns placement, shared gaps, local Stage-edge clearance, and
 responsive wrapping for its three logical regions. Its center region remains
 geometrically centered while the leading and trailing regions flex equally and
 wrap their own controls away from center. Components in that slot render at
 their intrinsic control size and must not position themselves relative to
 sibling components or the Stage center. Panels and transient notices may paint
 outside their dock item without changing the dock's measured control geometry.
+
+The overlay slot owns its three-by-three logical placement grid and local
+Stage-edge clearance. Neither Stage slot consumes device safe-area insets: a
+Stage is contained inside the Home Assistant card, not attached to a physical
+viewport edge. A true viewport-edge presentation such as fullscreen owns its
+own safe-area treatment.
 
 Module-stack navigation is rendered by the Stage runtime from module metadata,
 not by either child module. The first child is the initial selection. Switching

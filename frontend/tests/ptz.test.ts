@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CameraSessionContext } from "../src/core/camera-session-context";
+import { CameraSessionContext } from "../src/stage/camera-session-context";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 
 const resolver = vi.hoisted(() => ({
@@ -15,9 +15,9 @@ vi.mock("../src/providers/ptz-source-resolver", () => ({
   },
 }));
 
-import type { PtzComponent } from "../src/components/ptz/ptz";
-import { componentDefinition } from "../src/components/ptz";
-import "../src/components/ptz/ptz";
+import type { PtzComponent } from "../src/stage/components/ptz/ptz";
+import { componentDefinition } from "../src/stage/components/ptz";
+import "../src/stage/components/ptz/ptz";
 
 describe("PTZ component", () => {
   afterEach(() => {

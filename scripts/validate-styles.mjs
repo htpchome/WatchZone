@@ -12,6 +12,10 @@ const homeAssistantEditorBridge = resolve(
   sourceRoot,
   "editor/home-assistant-editor-bridge.ts",
 );
+const fullscreenCameraStyles = resolve(
+  sourceRoot,
+  "stage/modules/camera/live-view.styles.ts",
+);
 const allowedHomeAssistantTokens = new Map([
   [homeAssistantEditorBridge, new Set(["--ha-view-sections-column-max-width"])],
 ]);
@@ -63,6 +67,14 @@ for (const path of await collectTypeScript(sourceRoot)) {
       );
     }
   }
+  const safeAreaAllowed =
+    path === fullscreenCameraStyles ||
+    relativePath === "frontend/src/ui/media-controls-overlay.styles.ts";
+  if (source.includes("env(safe-area-inset-") && !safeAreaAllowed) {
+    violations.push(
+      `${relativePath}: safe-area insets are restricted to explicit viewport/fullscreen boundaries`,
+    );
+  }
 }
 
 if (violations.length > 0) {
@@ -70,5 +82,5 @@ if (violations.length > 0) {
 }
 
 console.log(
-  "Validated colocated styles, WatchZone theme tokens, and isolated Home Assistant bridges.",
+  "Validated colocated styles, semantic tokens, safe-area ownership, and isolated Home Assistant bridges.",
 );

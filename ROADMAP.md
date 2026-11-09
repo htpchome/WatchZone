@@ -187,8 +187,9 @@ designer UI so saved layouts are declarative and testable.
 
 - Mute, fullscreen, Picture-in-Picture, snapshot capture, suspend/resume, and
   source/status controls using the shared overlay control primitive.
-- Configurable control placement, order, visibility, device/layout matrix, and
-  safe-area behavior supplied by the layout designer.
+- Configurable control placement, order, visibility, and device/layout matrix
+  supplied by the layout designer. Safe-area policy remains owned by true
+  viewport-edge presentations such as fullscreen, not ordinary Stage layout.
 - Snapshot capture of the displayed frame, with a privacy-safe fallback when
   canvas extraction is unavailable; optional capture of current zoom/pan.
 - Browser-native fullscreen and Picture-in-Picture with Firefox, WebKit,

@@ -143,14 +143,15 @@ architecture decision recorded in this document or a future ADR.
 ├── frontend/
 │   ├── src/
 │   │   ├── main.ts                # Minimal eager browser entry
-│   │   ├── card/                  # Lovelace shell and layout renderer
-│   │   ├── core/                  # Stable runtime and placeable contracts
+│   │   ├── card/                  # Lovelace shell and card lifecycle
+│   │   ├── core/                  # Application-wide contracts and services
 │   │   ├── api/                   # Typed backend client and wire types
-│   │   ├── modules/               # Independently loaded UI features
-│   │   ├── components/            # Portable placeables for module slots
+│   │   ├── stage/                 # Stage runtime, contracts, and templates
+│   │   │   ├── modules/           # Independently loaded Stage features
+│   │   │   ├── components/        # Portable placeables for module slots
+│   │   │   └── built-in-stages/   # Immutable built-in Stage templates
 │   │   ├── providers/             # External-system capabilities and resolver
-│   │   ├── media/                 # Lazy recorded-media players and containers
-│   │   ├── ui/                    # Shared visual primitives and icon registry
+│   │   ├── ui/                    # Shared presentation and interaction primitives
 │   │   ├── styles/                # HA theme boundary and global design tokens
 │   │   └── editor/                # Lazily loaded layout editor
 │   └── tests/
@@ -168,8 +169,8 @@ Each frontend placeable and backend feature receives a stable folder boundary
 from its first implementation:
 
 ```text
-frontend/src/modules/camera/index.ts
-frontend/src/components/two-way-talk/index.ts
+frontend/src/stage/modules/camera/index.ts
+frontend/src/stage/components/two-way-talk/index.ts
 custom_components/watchzone/features/layouts/__init__.py
 ```
 
@@ -353,13 +354,13 @@ import:
 
 ```ts
 const moduleLoaders = {
-  camera: () => import("../modules/camera/index.js"),
-  eventList: () => import("../modules/event-list/index.js"),
+  camera: () => import("./modules/camera/index.js"),
+  eventList: () => import("./modules/event-list/index.js"),
 } satisfies PlaceableLoaderMap;
 
 const componentLoaders = {
-  twoWayTalk: () => import("../components/two-way-talk/index.js"),
-  ptz: () => import("../components/ptz/index.js"),
+  twoWayTalk: () => import("./components/two-way-talk/index.js"),
+  ptz: () => import("./components/ptz/index.js"),
 } satisfies PlaceableLoaderMap;
 ```
 
@@ -388,7 +389,7 @@ can safely update it; hashed chunks may use immutable caching.
 ### 8.3 Frontend placeable contract
 
 A module or component is a user-placeable unit with a stable type identifier.
-Its public entry exports a definition matching the core placeable contract. The
+Its public entry exports a definition matching the Stage placeable contract. The
 contract begins with the minimum fields required by the first placeables and may
 grow only for a demonstrated cross-placeable requirement.
 
@@ -409,7 +410,7 @@ Placeable responsibilities:
 - Own its rendering, loading, empty, error, and disconnected states.
 - Own and release its subscriptions, timers, observers, media objects, and
   abort controllers.
-- Expose behavior only through the core placeable contract.
+- Expose behavior only through the Stage placeable contract.
 - Preserve expensive DOM, especially media elements, across unrelated updates.
 - Fail locally without preventing sibling placeables from rendering.
 
@@ -435,7 +436,7 @@ component, whether presented beneath Camera in a panel or later inside a
 camera overlay.
 
 Modules and components never import one another or another placeable of their
-own kind. Composition belongs to the Stage renderer through stable core
+own kind. Composition belongs to the Stage renderer through stable Stage
 contracts and typed runtime context. Moving a component to another compatible
 slot must not require changing its provider transport.
 
@@ -735,13 +736,20 @@ contract is defined in [docs/live-session-lifecycle.md](docs/live-session-lifecy
 
 ### 8.10 Recorded-media playback
 
-Recorded alerts, events, and recording ranges use the lazy `media/` boundary.
-They are transient viewers, not Stage modules, Stage components, or retained
-live sessions. A media player owns transport selection, the browser media
-element, and transport cleanup. A media-player container owns only a concrete
-presentation such as the draggable modal, future bottom drawer, or live-area
-cover. Containers and players communicate through the provider-neutral
-recorded-media contract in `core/`.
+Recorded alerts, events, and recording ranges use the lazy
+`ui/recorded-video-viewer/` boundary. They are transient viewers, not Stage
+modules, Stage components, or retained live sessions. The recorded player owns
+transport selection, its finite browser media element, and transport cleanup.
+The viewer owns recorded-playback lifecycle and delegates concrete geometry to
+a presentation such as the draggable dialog.
+
+Live and recorded video reuse the same provider-neutral media presentation
+primitives for overlay geometry, control sizing, touch behavior, fullscreen,
+Picture-in-Picture, zoom, and pan. They do not share one playback/session
+engine: live playback remains a retained document-scoped session, while
+recorded playback is an ephemeral finite source. Future dialog, drawer, or
+live-area-cover presentations compose the same primitives without creating a
+second media-control system.
 
 Providers return ordered, authenticated playback candidates and a preferred
 transport. Shared modules never construct provider URLs. Playback attempts are

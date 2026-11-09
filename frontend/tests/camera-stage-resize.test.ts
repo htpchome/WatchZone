@@ -1,7 +1,7 @@
 import type { ReactiveControllerHost } from "lit";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CameraStageResizeController } from "../src/modules/camera/stage-resize.controller";
+import { CameraStageResizeController } from "../src/stage/modules/camera/stage-resize.controller";
 
 function createHost(): ReactiveControllerHost {
   return {

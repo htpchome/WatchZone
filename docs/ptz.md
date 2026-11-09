@@ -48,6 +48,9 @@ defaults to `false` and is omitted from YAML at its default.
 - Pointer press or keyboard activation starts movement; release stops it.
 - The PTZ overlay consumes the camera controller's shared overlay state and
   hide timer. It does not create a second visibility timer.
+- Stage overlay placement is supplied by the overlay slot's logical region.
+  PTZ renders at its intrinsic size and does not position itself against the
+  Stage or consume viewport safe-area insets.
 - Active movement holds the shared overlay visible. Releasing movement releases
   that hold and returns visibility to the shared timer.
 - Unsupported axes are not rendered. The initial UI exposes only pan and tilt;
@@ -55,6 +58,9 @@ defaults to `false` and is omitted from YAML at its default.
   normalized capability contract.
 - Touch controls have no sticky hover state and suppress platform tap
   highlighting.
+- The shared press-interaction controller owns pointer capture, cancellation,
+  keyboard press/release, blur/visibility cancellation, and touch-focus
+  release. PTZ supplies only movement start/stop intents.
 
 ## Motion safety
 

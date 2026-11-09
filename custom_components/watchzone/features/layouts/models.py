@@ -10,6 +10,17 @@ from homeassistant.exceptions import HomeAssistantError
 STAGE_SCHEMA_VERSION = 1
 StageSlotName = Literal["content", "controls", "footer", "overlay"]
 StageControlRegion = Literal["leading", "center", "trailing"]
+StageOverlayRegion = Literal[
+    "top-leading",
+    "top-center",
+    "top-trailing",
+    "center-leading",
+    "center",
+    "center-trailing",
+    "bottom-leading",
+    "bottom-center",
+    "bottom-trailing",
+]
 StageVariantName = Literal["default", "phone"]
 StageGridRowSize = Literal["content", "fraction"]
 
@@ -32,6 +43,7 @@ class StageComponentNode:
     config: object
     id: str
     control_region: StageControlRegion | None = None
+    overlay_region: StageOverlayRegion | None = None
     kind: Literal["component"] = "component"
 
 
@@ -98,7 +110,7 @@ class StageDesign:
     def as_json(self) -> dict[str, object]:
         """Serialize using the frontend's camelCase wire schema."""
         result = cast(dict[str, object], _camelize(asdict(self)))
-        _remove_unset_control_regions(result)
+        _remove_unset_placement_regions(result)
         return result
 
 
@@ -209,7 +221,7 @@ def _module(value: object, ids: set[str]) -> StageModuleNode:
             continue
         if not isinstance(raw_nodes, list):
             raise HomeAssistantError(f"Stage slot {name} must be a list")
-        slots[name] = tuple(_component(item, ids) for item in raw_nodes)
+        slots[name] = tuple(_component(item, ids, name) for item in raw_nodes)
     return StageModuleNode(
         config=source.get("config"),
         id=node_id,
@@ -218,7 +230,9 @@ def _module(value: object, ids: set[str]) -> StageModuleNode:
     )
 
 
-def _component(value: object, ids: set[str]) -> StageComponentNode:
+def _component(
+    value: object, ids: set[str], slot: StageSlotName
+) -> StageComponentNode:
     source = _mapping(value, "Stage component")
     node_id = _unique_id(source.get("id"), ids)
     if source.get("kind") != "component":
@@ -228,10 +242,35 @@ def _component(value: object, ids: set[str]) -> StageComponentNode:
         raise HomeAssistantError(
             f"Invalid control region for stage component {node_id}"
         )
+    if raw_control_region is not None and slot != "controls":
+        raise HomeAssistantError(
+            f"Control region outside controls slot for stage component {node_id}"
+        )
+    raw_overlay_region = source.get("overlayRegion")
+    if raw_overlay_region not in (
+        None,
+        "top-leading",
+        "top-center",
+        "top-trailing",
+        "center-leading",
+        "center",
+        "center-trailing",
+        "bottom-leading",
+        "bottom-center",
+        "bottom-trailing",
+    ):
+        raise HomeAssistantError(
+            f"Invalid overlay region for stage component {node_id}"
+        )
+    if raw_overlay_region is not None and slot != "overlay":
+        raise HomeAssistantError(
+            f"Overlay region outside overlay slot for stage component {node_id}"
+        )
     return StageComponentNode(
         component_type=_text(source.get("componentType"), "Component type"),
         config=source.get("config"),
         control_region=cast(StageControlRegion | None, raw_control_region),
+        overlay_region=cast(StageOverlayRegion | None, raw_overlay_region),
         id=node_id,
     )
 
@@ -281,15 +320,17 @@ def _camel_key(value: str) -> str:
     return first + "".join(part.title() for part in rest)
 
 
-def _remove_unset_control_regions(value: object) -> None:
-    """Keep the optional placement field absent in legacy wire documents."""
+def _remove_unset_placement_regions(value: object) -> None:
+    """Keep optional placement fields absent in compact wire documents."""
     if isinstance(value, dict):
         if value.get("controlRegion") is None:
             value.pop("controlRegion", None)
+        if value.get("overlayRegion") is None:
+            value.pop("overlayRegion", None)
         if value.get("slots") == {}:
             value.pop("slots", None)
         for item in value.values():
-            _remove_unset_control_regions(item)
+            _remove_unset_placement_regions(item)
     elif isinstance(value, list):
         for item in value:
-            _remove_unset_control_regions(item)
+            _remove_unset_placement_regions(item)

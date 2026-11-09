@@ -3,9 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MEDIA_SESSION_RUNTIME_KEY } from "../src/core/constants";
 import { MediaSessionManager } from "../src/core/media-session-manager";
 import type { RecordedMediaRequest } from "../src/core/recorded-media";
-import type { MediaPlayer } from "../src/media/media-player";
-import type { MediaPlayerContainer } from "../src/media/media-player-container";
-import "../src/media";
+import type { DraggableRecordedVideoDialog } from "../src/ui/recorded-video-viewer/draggable-dialog";
+import type { RecordedVideoPlayer } from "../src/ui/recorded-video-viewer/recorded-video-player";
+import type { RecordedVideoViewer } from "../src/ui/recorded-video-viewer/recorded-video-viewer";
+import "../src/ui/recorded-video-viewer";
 
 const request: RecordedMediaRequest = {
   id: "frigate:event-1",
@@ -39,7 +40,9 @@ describe("recorded media player", () => {
   });
 
   it("opens direct file playback muted with native controls and cleans up", async () => {
-    const player = document.createElement("wzc-media-player") as MediaPlayer;
+    const player = document.createElement(
+      "wzc-recorded-video-player",
+    ) as RecordedVideoPlayer;
     const callWS = vi.fn().mockResolvedValue({
       path: "/signed/clip.mp4?authSig=test",
     });
@@ -48,7 +51,7 @@ describe("recorded media player", () => {
       identity: { subscribeMessage: vi.fn() },
       resolveUrl: (path: string) => `https://ha.local${path}`,
       subscribeMessage: vi.fn(),
-    } as MediaPlayer["api"];
+    } as RecordedVideoPlayer["api"];
     player.request = request;
     document.body.append(player);
     await player.updateComplete;
@@ -79,13 +82,15 @@ describe("recorded media player", () => {
     const callWS = vi.fn().mockResolvedValue({
       path: "/signed/alert/index.m3u8?authSig=test",
     });
-    const player = document.createElement("wzc-media-player") as MediaPlayer;
+    const player = document.createElement(
+      "wzc-recorded-video-player",
+    ) as RecordedVideoPlayer;
     player.api = {
       callWS,
       identity: { subscribeMessage: vi.fn() },
       resolveUrl: (path: string) => `https://ha.local${path}`,
       subscribeMessage: vi.fn(),
-    } as MediaPlayer["api"];
+    } as RecordedVideoPlayer["api"];
     player.request = {
       ...request,
       id: "frigate:review-1",
@@ -138,11 +143,15 @@ describe("recorded media player", () => {
       },
     });
 
-    const container = document.createElement(
-      "wzc-media-player-container",
-    ) as MediaPlayerContainer;
-    container.request = request;
-    document.body.append(container);
+    const viewer = document.createElement(
+      "wzc-recorded-video-viewer",
+    ) as RecordedVideoViewer;
+    viewer.request = request;
+    document.body.append(viewer);
+    await viewer.updateComplete;
+    const container = viewer.shadowRoot?.querySelector(
+      "wzc-recorded-video-dialog",
+    ) as DraggableRecordedVideoDialog;
     await container.updateComplete;
     expect(container.shadowRoot?.querySelector("dialog")?.open).toBe(true);
     expect(states).toEqual([false, true]);
@@ -158,7 +167,9 @@ describe("recorded media player", () => {
       y: 100,
       toJSON: () => ({}),
     });
-    const player = container.shadowRoot?.querySelector("wzc-media-player");
+    const player = container.shadowRoot?.querySelector(
+      "wzc-recorded-video-player",
+    );
     vi.spyOn(player!, "getBoundingClientRect").mockReturnValue({
       bottom: 390,
       height: 272.25,
@@ -178,6 +189,8 @@ describe("recorded media player", () => {
     container.close();
     expect(states).toEqual([false, true, false]);
     await container.updateComplete;
-    expect(container.shadowRoot?.querySelector("wzc-media-player")).toBeNull();
+    expect(
+      container.shadowRoot?.querySelector("wzc-recorded-video-player"),
+    ).toBeNull();
   });
 });

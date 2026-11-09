@@ -4,10 +4,16 @@ import { basename, relative, resolve, sep } from "node:path";
 const root = resolve(import.meta.dirname, "..");
 const sourceRoot = resolve(root, "frontend/src");
 const coreRoot = resolve(sourceRoot, "core");
-const modulesRoot = resolve(sourceRoot, "modules");
-const componentsRoot = resolve(sourceRoot, "components");
+const stageRoot = resolve(sourceRoot, "stage");
+const modulesRoot = resolve(stageRoot, "modules");
+const componentsRoot = resolve(stageRoot, "components");
 const providersRoot = resolve(sourceRoot, "providers");
 const obsoleteConnectionsRoot = resolve(sourceRoot, "connections");
+const obsoleteOwnershipRoots = [
+  resolve(sourceRoot, "modules"),
+  resolve(sourceRoot, "components"),
+  resolve(sourceRoot, "media"),
+];
 const publicProviderResolvers = new Set([
   "live-source-resolver",
   "ptz-source-resolver",
@@ -47,14 +53,9 @@ for (const path of await collectTypeScript(sourceRoot)) {
     if (
       isCore &&
       resolved &&
-      (resolved.startsWith(modulesRoot) || resolved.startsWith(providersRoot))
+      (resolved.startsWith(stageRoot) || resolved.startsWith(providersRoot))
     ) {
-      violations.push(
-        `${displayPath}: core cannot import modules or providers`,
-      );
-    }
-    if (isCore && resolved && resolved.startsWith(componentsRoot)) {
-      violations.push(`${displayPath}: core cannot import components`);
+      violations.push(`${displayPath}: core cannot import stage or providers`);
     }
     if (isModule && resolved?.startsWith(`${modulesRoot}${sep}`)) {
       const importedModule = relative(modulesRoot, resolved).split(sep)[0];
@@ -102,6 +103,18 @@ try {
   }
 } catch (error) {
   if (error?.code !== "ENOENT") throw error;
+}
+
+for (const obsoleteRoot of obsoleteOwnershipRoots) {
+  try {
+    if ((await stat(obsoleteRoot)).isDirectory()) {
+      violations.push(
+        `${relative(root, obsoleteRoot)}: obsolete ownership root must not be retained`,
+      );
+    }
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
 }
 
 if (violations.length > 0) {

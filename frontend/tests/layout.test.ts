@@ -1,9 +1,9 @@
 import { render } from "lit";
 import { describe, expect, it, vi } from "vitest";
 
-import { createBuiltInStageSet } from "../src/card/built-in-stages/catalog";
-import { LayoutRuntime } from "../src/card/layout-runtime";
-import { PlaceableLoader } from "../src/card/placeable-loader";
+import { createBuiltInStageSet } from "../src/stage/built-in-stages/catalog";
+import { LayoutRuntime } from "../src/stage/layout-runtime";
+import { PlaceableLoader } from "../src/stage/placeable-loader";
 import { normalizeCardConfig } from "../src/core/config";
 import {
   DEFAULT_ACTIVITY_STACK_NODE_ID,
@@ -25,8 +25,8 @@ import {
   type StageModuleNode,
   type StageStackNode,
   type StageVariant,
-} from "../src/core/layout";
-import type { ModuleDefinition } from "../src/core/placeable";
+} from "../src/stage/layout";
+import type { ModuleDefinition } from "../src/stage/placeable";
 
 class RuntimeHost {
   public readonly controllers: Array<{
@@ -249,6 +249,7 @@ describe("layout composition", () => {
     expect(camera?.slots?.overlay?.[0]).toMatchObject({
       id: DEFAULT_PTZ_COMPONENT_NODE_ID,
       kind: "component",
+      overlayRegion: "bottom-trailing",
       componentType: "ptz",
       config: {
         cameras: [

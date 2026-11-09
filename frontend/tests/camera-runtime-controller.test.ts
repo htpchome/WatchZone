@@ -9,8 +9,8 @@ import type {
   HomeAssistantMessage,
 } from "../src/core/home-assistant";
 import type { CameraRuntimeSnapshot } from "../src/api/camera-runtime";
-import { CameraRuntimeController } from "../src/modules/camera/runtime.controller";
-import { CAMERA_RUNTIME_RESUBSCRIBE_DELAYS_MS } from "../src/modules/camera/constants";
+import { CameraRuntimeController } from "../src/stage/modules/camera/runtime.controller";
+import { CAMERA_RUNTIME_RESUBSCRIBE_DELAYS_MS } from "../src/stage/modules/camera/constants";
 
 class TestHost implements ReactiveControllerHost {
   public readonly requestUpdate = vi.fn<() => void>();

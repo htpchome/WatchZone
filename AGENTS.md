@@ -104,8 +104,9 @@ or future designer work, also read `docs/stage-layout-system.md` in full.
   plugin bag, service locator, or arbitrary import hook.
 - Camera owns camera selection and its private live presentation. Major stage
   content systems are modules; portable capability presentations placed into a
-  compatible module slot are components. Both consume narrow core context and a
-  public provider resolver; neither imports or mutates another placeable.
+  compatible module slot are components. Both consume narrow typed Stage
+  context and a public provider resolver; neither imports or mutates another
+  placeable.
   Provider-specific transport stays beneath the provider.
 - Internal classes, custom-element names, diagnostics keys, and events derive
   from centralized identity constants. Product display text derives from

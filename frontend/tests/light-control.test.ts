@@ -3,12 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   componentDefinition,
   type LightControlComponentConfig,
-} from "../src/components/light-control";
-import type { LightControlComponent } from "../src/components/light-control/light-control";
-import { CameraSessionContext } from "../src/core/camera-session-context";
+} from "../src/stage/components/light-control";
+import type { LightControlComponent } from "../src/stage/components/light-control/light-control";
+import { CameraSessionContext } from "../src/stage/camera-session-context";
 import { LIGHT_LONG_PRESS_MS, LIGHT_TAG } from "../src/core/constants";
 import type { HomeAssistant } from "../src/core/home-assistant";
-import "../src/components/light-control/light-control";
+import "../src/stage/components/light-control/light-control";
 
 describe("linked-light component", () => {
   beforeEach(() => {

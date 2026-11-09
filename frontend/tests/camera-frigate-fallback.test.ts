@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { FrigateGo2RtcLiveSourceDescriptor } from "../src/api/live-source";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import type { MediaSessionLease } from "../src/core/media-session-manager";
-import { CameraLiveSessionController } from "../src/modules/camera/live/session.controller";
+import { CameraLiveSessionController } from "../src/stage/modules/camera/live/session.controller";
 import { LiveSourceResolver } from "../src/providers/live-source-resolver";
 
 function lease(key: string): MediaSessionLease {

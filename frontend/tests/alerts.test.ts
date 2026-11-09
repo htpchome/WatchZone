@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CameraSelectionContext } from "../src/core/camera-selection-context";
+import { CameraSelectionContext } from "../src/stage/camera-selection-context";
 import { ACTIVITY_LIST_TAG, ALERTS_TAG } from "../src/core/constants";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
-import type { AlertsModule } from "../src/modules/alerts/alerts";
-import "../src/modules/alerts/alerts";
+import type { AlertsModule } from "../src/stage/modules/alerts/alerts";
+import "../src/stage/modules/alerts/alerts";
 
 const reviews = [
   {

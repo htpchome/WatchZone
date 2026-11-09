@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CameraSessionContext } from "../src/core/camera-session-context";
+import { CameraSessionContext } from "../src/stage/camera-session-context";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 
 const resolver = vi.hoisted(() => ({
@@ -15,7 +15,7 @@ vi.mock("../src/providers/ptz-source-resolver", () => ({
   },
 }));
 
-import { PtzSessionController } from "../src/components/ptz/session.controller";
+import { PtzSessionController } from "../src/stage/components/ptz/session.controller";
 
 describe("PTZ session lifecycle", () => {
   afterEach(() => vi.clearAllMocks());

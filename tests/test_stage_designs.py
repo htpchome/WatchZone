@@ -88,8 +88,8 @@ def test_stage_schema_preserves_optional_control_regions() -> None:
     assert isinstance(camera, dict)
     slots = camera["slots"]
     assert isinstance(slots, dict)
-    overlay = slots["overlay"]
-    assert isinstance(overlay, list)
+    overlay = slots.pop("overlay")
+    slots["controls"] = overlay
     component = overlay[0]
     assert isinstance(component, dict)
     component["controlRegion"] = "trailing"
@@ -99,7 +99,7 @@ def test_stage_schema_preserves_optional_control_regions() -> None:
     assert (
         design.variants["default"]
         .root.children[0]
-        .node.slots["overlay"][0]
+        .node.slots["controls"][0]
         .control_region
         == "trailing"
     )
@@ -130,6 +130,68 @@ def test_stage_schema_rejects_invalid_control_regions() -> None:
     component["controlRegion"] = "floating"
 
     with pytest.raises(HomeAssistantError, match="Invalid control region"):
+        validate_stage_design(value)
+
+
+def test_stage_schema_preserves_optional_overlay_regions() -> None:
+    """Overlay placement belongs to the slot renderer, not component config."""
+    value = _design()
+    variants = value["variants"]
+    assert isinstance(variants, dict)
+    default = variants["default"]
+    assert isinstance(default, dict)
+    root = default["root"]
+    assert isinstance(root, dict)
+    children = root["children"]
+    assert isinstance(children, list)
+    placement = children[0]
+    assert isinstance(placement, dict)
+    camera = placement["node"]
+    assert isinstance(camera, dict)
+    slots = camera["slots"]
+    assert isinstance(slots, dict)
+    overlay = slots["overlay"]
+    assert isinstance(overlay, list)
+    component = overlay[0]
+    assert isinstance(component, dict)
+    component["overlayRegion"] = "bottom-trailing"
+
+    design = validate_stage_design(value)
+
+    assert (
+        design.variants["default"]
+        .root.children[0]
+        .node.slots["overlay"][0]
+        .overlay_region
+        == "bottom-trailing"
+    )
+    assert design.as_json() == value
+
+
+def test_stage_schema_rejects_regions_outside_their_slot() -> None:
+    """A placement hint cannot bypass the semantic slot that owns it."""
+    value = _design()
+    variants = value["variants"]
+    assert isinstance(variants, dict)
+    default = variants["default"]
+    assert isinstance(default, dict)
+    root = default["root"]
+    assert isinstance(root, dict)
+    children = root["children"]
+    assert isinstance(children, list)
+    placement = children[0]
+    assert isinstance(placement, dict)
+    camera = placement["node"]
+    assert isinstance(camera, dict)
+    slots = camera["slots"]
+    assert isinstance(slots, dict)
+    overlay = slots["overlay"]
+    assert isinstance(overlay, list)
+    component = overlay[0]
+    assert isinstance(component, dict)
+    component["controlRegion"] = "trailing"
+
+    with pytest.raises(HomeAssistantError, match="outside controls slot"):
         validate_stage_design(value)
 
 

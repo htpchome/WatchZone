@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import type { CameraModule } from "../src/modules/camera/camera";
-import type { CameraView } from "../src/modules/camera/camera-view";
-import type { CameraLivePresentation } from "../src/modules/camera/live/presentation";
-import "../src/modules/camera/camera";
-import "../src/modules/camera/camera-view";
-import "../src/modules/camera/live/presentation";
+import type { CameraModule } from "../src/stage/modules/camera/camera";
+import type { CameraView } from "../src/stage/modules/camera/camera-view";
+import type { CameraLivePresentation } from "../src/stage/modules/camera/live/presentation";
+import "../src/stage/modules/camera/camera";
+import "../src/stage/modules/camera/camera-view";
+import "../src/stage/modules/camera/live/presentation";
 
 afterEach(() => {
   document.body.replaceChildren();

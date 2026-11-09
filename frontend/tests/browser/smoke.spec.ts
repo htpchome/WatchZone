@@ -3,12 +3,7 @@ import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
-import {
-  CAMERA_CAROUSEL_NAVIGATION_HEIGHT_RATIO,
-  CAMERA_CAROUSEL_NAVIGATION_MAX_SIZE_PX,
-  CAMERA_CAROUSEL_NAVIGATION_MIN_SIZE_PX,
-  CAMERA_OVERLAY_HIDE_DELAY_MS,
-} from "../../src/modules/camera/constants";
+import { CAMERA_OVERLAY_HIDE_DELAY_MS } from "../../src/stage/modules/camera/constants";
 
 const packageJson = JSON.parse(
   readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
@@ -505,9 +500,9 @@ test("shows an independently scrolling event window for the active camera", asyn
     .first()
     .boundingBox();
   await events.locator(".tile-player").first().click();
-  const mediaDialog = page.locator("wzc-media-player-container dialog");
+  const mediaDialog = page.locator("wzc-recorded-video-dialog dialog");
   await expect(mediaDialog).toBeVisible();
-  const recordedVideo = page.locator("wzc-media-player video");
+  const recordedVideo = page.locator("wzc-recorded-video-player video");
   await expect(recordedVideo).toHaveAttribute("controls", "");
   await expect(recordedVideo).toHaveAttribute("autoplay", "");
   await expect(recordedVideo).toHaveAttribute("muted", "");
@@ -521,14 +516,14 @@ test("shows an independently scrolling event window for the active camera", asyn
     ),
   );
   const mediaErrorToast = page.locator(
-    "wzc-media-player-container wzc-toast-region .toast",
+    "wzc-recorded-video-dialog wzc-toast-region .toast",
   );
   await expect(mediaErrorToast).toContainText("Unable to play this recording.");
   const mediaErrorBox = await mediaErrorToast.boundingBox();
   expect(mediaErrorBox?.height).toBeLessThan(80);
   expect(mediaErrorBox?.width).toBeLessThan(600);
   const mediaBodyPadding = await page
-    .locator("wzc-media-player-container .body")
+    .locator("wzc-recorded-video-dialog .body")
     .evaluate((element) => {
       const style = getComputedStyle(element);
       return {
@@ -540,7 +535,7 @@ test("shows an independently scrolling event window for the active camera", asyn
   expect(mediaBodyPadding.bottom).toBeGreaterThan(0);
   expect(mediaBodyPadding.bottom).toBeLessThan(24);
   const playerViewportBox = await page
-    .locator("wzc-media-player .viewport")
+    .locator("wzc-recorded-video-player .viewport")
     .boundingBox();
   const recordedVideoBox = await recordedVideo.boundingBox();
   expect(liveStageBox).not.toBeNull();
@@ -559,7 +554,7 @@ test("shows an independently scrolling event window for the active camera", asyn
   const modalBackgrounds = await page.evaluate(() => {
     const container = document
       .querySelector("watchzone-card")
-      ?.shadowRoot?.querySelector("wzc-media-player-container")?.shadowRoot;
+      ?.shadowRoot?.querySelector("wzc-recorded-video-dialog")?.shadowRoot;
     const dialog = container?.querySelector("dialog");
     const header = container?.querySelector(".header");
     const body = container?.querySelector(".body");
@@ -572,7 +567,7 @@ test("shows an independently scrolling event window for the active camera", asyn
   expect(modalBackgrounds.dialog).toBe(modalBackgrounds.header);
   expect(modalBackgrounds.body).toBe(modalBackgrounds.header);
   const headerBeforeResizeBox = await page
-    .locator("wzc-media-player-container .header")
+    .locator("wzc-recorded-video-dialog .header")
     .boundingBox();
   if (headerBeforeResizeBox && playerViewportBox) {
     expect(playerViewportBox.y).toBeCloseTo(
@@ -580,12 +575,12 @@ test("shows an independently scrolling event window for the active camera", asyn
       1,
     );
   }
-  await expect(page.locator("wzc-media-player .media-surface")).toHaveCount(0);
-  await expect(page.locator("wzc-media-player-container .scrim")).toHaveCount(
-    0,
-  );
+  await expect(
+    page.locator("wzc-recorded-video-player .media-surface"),
+  ).toHaveCount(0);
+  await expect(page.locator("wzc-recorded-video-dialog .scrim")).toHaveCount(0);
   const stablePlayerBox = await page
-    .locator("wzc-media-player .viewport")
+    .locator("wzc-recorded-video-player .viewport")
     .boundingBox();
   expect(stablePlayerBox?.width).toBeCloseTo(playerViewportBox?.width ?? 0, 1);
   expect(stablePlayerBox?.height).toBeCloseTo(
@@ -613,13 +608,25 @@ test("shows an independently scrolling event window for the active camera", asyn
   await expect(
     page.getByRole("button", { name: "Enter Picture-in-Picture" }),
   ).toBeVisible();
+  const recordedControls = page.locator(
+    "wzc-recorded-video-player wzc-media-controls .control-button",
+  );
+  await expect(recordedControls).toHaveCount(3);
+  expect(
+    await recordedControls.evaluateAll((buttons) =>
+      buttons.map((button) => button.getAttribute("data-control")),
+    ),
+  ).toEqual(["picture_in_picture", "fullscreen", "mute"]);
+  const recordedMuteBox = await page
+    .getByRole("button", { name: "Mute recorded video" })
+    .boundingBox();
+  expect(recordedMuteBox?.width).toBeGreaterThanOrEqual(44);
+  expect(recordedMuteBox?.height).toBeGreaterThanOrEqual(44);
   const recordedControlShape = await page
     .getByRole("button", { name: "Mute recorded video" })
     .evaluate((button) => getComputedStyle(button).borderRadius);
   expect(Number.parseFloat(recordedControlShape)).toBeLessThan(10);
-  const resizeHandle = page.locator(
-    "wzc-media-player-container .resize-handle",
-  );
+  const resizeHandle = page.locator("wzc-recorded-video-dialog .resize-handle");
   await expect(resizeHandle).toHaveAttribute(
     "aria-label",
     "Resize video player",
@@ -629,7 +636,7 @@ test("shows an independently scrolling event window for the active camera", asyn
   ).toHaveCount(1);
   const initialDialogBox = await mediaDialog.boundingBox();
   const initialPlayerBox = await page
-    .locator("wzc-media-player .viewport")
+    .locator("wzc-recorded-video-player .viewport")
     .boundingBox();
   const resizeBox = await resizeHandle.boundingBox();
   expect(initialDialogBox).not.toBeNull();
@@ -644,7 +651,7 @@ test("shows an independently scrolling event window for the active camera", asyn
     await page.mouse.up();
     const resizedDialogBox = await mediaDialog.boundingBox();
     const resizedPlayerBox = await page
-      .locator("wzc-media-player .viewport")
+      .locator("wzc-recorded-video-player .viewport")
       .boundingBox();
     expect(resizedDialogBox?.width).toBeLessThan(initialDialogBox.width);
     expect(resizedDialogBox?.height).toBeLessThan(initialDialogBox.height);
@@ -656,7 +663,7 @@ test("shows an independently scrolling event window for the active camera", asyn
       );
     }
   }
-  const header = page.locator("wzc-media-player-container .header");
+  const header = page.locator("wzc-recorded-video-dialog .header");
   const headerBox = await header.boundingBox();
   expect(headerBox).not.toBeNull();
   if (headerBox) {
@@ -671,7 +678,7 @@ test("shows an independently scrolling event window for the active camera", asyn
   const nextEventTile = events.locator(".tile-player").nth(1);
   await nextEventTile.scrollIntoViewIfNeeded();
   await nextEventTile.evaluate((button: HTMLButtonElement) => button.click());
-  await expect(page.locator("wzc-media-player-container .title")).toHaveText(
+  await expect(page.locator("wzc-recorded-video-dialog .title")).toHaveText(
     "Front - 5:12 PM - Tue, Nov 14",
   );
   await expect(mediaDialog).toBeVisible();
@@ -686,9 +693,7 @@ test("shows an independently scrolling event window for the active camera", asyn
   );
   await expect(mediaDialog).toBeHidden();
   await expect(recordedVideo).toHaveCount(0);
-  await expect(page.locator("wzc-media-player-container .scrim")).toHaveCount(
-    0,
-  );
+  await expect(page.locator("wzc-recorded-video-dialog .scrim")).toHaveCount(0);
 
   await page
     .locator("wzc-camera-switcher button")
@@ -1158,17 +1163,8 @@ test("preserves expanded camera-stage geometry across carousel selection", async
       (result.navigation.carouselHeight ?? 0) / 2,
     1,
   );
-  expect(result.navigation.iconHeight).toBeCloseTo(
-    Math.min(
-      CAMERA_CAROUSEL_NAVIGATION_MAX_SIZE_PX,
-      Math.max(
-        CAMERA_CAROUSEL_NAVIGATION_MIN_SIZE_PX,
-        CAMERA_CAROUSEL_NAVIGATION_HEIGHT_RATIO *
-          (result.navigation.carouselHeight ?? 0),
-      ),
-    ),
-    1,
-  );
+  expect(result.navigation.iconHeight).toBeGreaterThanOrEqual(44);
+  expect(result.navigation.iconHeight).toBeLessThanOrEqual(72);
 
   const previousNavigation = page.locator(
     "wzc-camera .carousel-navigation.previous",
@@ -1338,8 +1334,11 @@ test("lays out talk and light controls in the responsive dock", async ({
   }
 
   expect(talkHostBox.height).toBeCloseTo(talkButtonBox.height, 0);
-  expect(ptzHostBox.height).toBeCloseTo(cameraBox.height, 0);
-  expect(ptzHostBox.y).toBeCloseTo(cameraBox.y, 0);
+  expect(ptzHostBox.height).toBeCloseTo(ptzControlBox.height, 0);
+  expect(ptzHostBox.width).toBeCloseTo(ptzControlBox.width, 0);
+  await expect(ptz.locator("xpath=..")).toHaveClass(
+    /overlay-region-bottom-trailing/,
+  );
   expect(lightHostBox.height).toBeCloseTo(lightButtonBox.height, 0);
   expect(talkHostBox.y + talkHostBox.height).toBeCloseTo(
     lightHostBox.y + lightHostBox.height,
@@ -1437,8 +1436,8 @@ test("lays out talk and light controls in the responsive dock", async ({
     lightButton.boundingBox(),
     lightIcon.boundingBox(),
   ]);
-  expect(resizedTalkButton?.width).toBeCloseTo(32, 1);
-  expect(resizedLightButton?.width).toBeCloseTo(32, 1);
+  expect(resizedTalkButton?.width).toBeCloseTo(44, 1);
+  expect(resizedLightButton?.width).toBeCloseTo(44, 1);
   expect(resizedTalkIcon?.width).toBeCloseTo(resizedLightIcon?.width ?? 0, 1);
   expect(resizedTalkIcon?.height).toBeCloseTo(resizedLightIcon?.height ?? 0, 1);
   expect(
@@ -1550,8 +1549,9 @@ test("aligns phone carousel controls and stage handle to the active stage", asyn
       const controls = presentation.shadowRoot?.querySelector<HTMLElement>(
         "wzc-camera-controls",
       );
-      const controlButton =
-        controls?.shadowRoot?.querySelector<HTMLElement>(".control-button");
+      const controlButton = controls?.shadowRoot
+        ?.querySelector("wzc-media-controls")
+        ?.shadowRoot?.querySelector<HTMLElement>(".control-button");
       const carousel =
         camera.shadowRoot?.querySelector<HTMLElement>(".camera-carousel");
       const previous = camera.shadowRoot?.querySelector<HTMLElement>(
@@ -3310,7 +3310,7 @@ test("retains one live connection while the card presentation is replaced", asyn
     .poll(() =>
       mute.evaluate((element) => element.getBoundingClientRect().width),
     )
-    .toBeLessThan(36);
+    .toBe(44);
   await expect
     .poll(() =>
       page.evaluate(() => {

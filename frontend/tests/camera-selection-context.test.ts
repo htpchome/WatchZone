@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { CameraSelectionContext } from "../src/core/camera-selection-context";
+import { CameraSelectionContext } from "../src/stage/camera-selection-context";
 
 describe("camera selection context", () => {
   it("coordinates one camera module without leaking into another", () => {

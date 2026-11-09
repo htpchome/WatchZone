@@ -2,8 +2,8 @@ import type { ReactiveControllerHost } from "lit";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CAMERA_LIVE_PRESENTATION_TAG } from "../src/core/constants";
-import "../src/modules/camera/live/presentation";
-import type { CameraLivePresentation } from "../src/modules/camera/live/presentation";
+import "../src/stage/modules/camera/live/presentation";
+import type { CameraLivePresentation } from "../src/stage/modules/camera/live/presentation";
 import { MediaZoomController } from "../src/ui/media-zoom.controller";
 
 function createHost(): ReactiveControllerHost {

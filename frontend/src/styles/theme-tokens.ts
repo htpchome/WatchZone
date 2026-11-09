@@ -198,6 +198,8 @@ export const themeTokens = css`
     --wzc-media-overlay-shadow: var(--wzc-shadow-card);
     --wzc-media-overlay-transition-duration: 140ms;
     --wzc-camera-control-size: 2.75rem;
+    --wzc-camera-control-icon-size: 1.65rem;
+    --wzc-overlay-control-min-size: 2.75rem;
     --wzc-round-button-size: var(--wzc-camera-control-size);
     --wzc-round-button-icon-size: 60%;
     --wzc-round-button-color: var(--wzc-media-overlay-color);
@@ -206,11 +208,13 @@ export const themeTokens = css`
     --wzc-round-button-hover-background: var(
       --wzc-neutral-control-hover-background
     );
-    --wzc-camera-control-safe-inline: 0.75rem;
+    --wzc-camera-control-inline-inset: 0.75rem;
+    --wzc-camera-overlay-block-inset: 0.5rem;
+    --wzc-camera-overlay-inline-inset: 0.75rem;
     --wzc-control-dock-gap: 0.5rem;
     --wzc-carousel-navigation-opacity: 72%;
     --wzc-carousel-navigation-hover-opacity: 100%;
-    --wzc-carousel-navigation-icon-size: 2.5rem;
+    --wzc-carousel-navigation-icon-size: 2.75rem;
     --wzc-carousel-navigation-control-gap: 0.75rem;
     --wzc-camera-switcher-color: var(--wzc-color-text-1);
     --wzc-camera-switcher-background: var(--wzc-color-surface-secondary);
@@ -257,7 +261,6 @@ export const themeTokens = css`
     --wzc-recorded-media-dialog-min-inline-size: min(16rem, calc(100vw - 1rem));
     --wzc-recorded-media-dialog-min-block-size: min(10rem, calc(100dvh - 1rem));
     --wzc-recorded-media-resize-handle-size: 1.5rem;
-    --wzc-recorded-media-control-size: 2.5rem;
     --wzc-recorded-media-header-background: var(--wzc-color-surface-secondary);
     --wzc-recorded-media-control-hover-background: var(
       --wzc-color-fill-primary
@@ -285,11 +288,9 @@ export const themeTokens = css`
     --wzc-talk-panel-border-color: var(--ha-color-purple-50, #a78bfa);
     --wzc-talk-wave-incoming-color: var(--ha-color-blue-40, #60a5fa);
     --wzc-talk-wave-outgoing-color: var(--ha-color-purple-40, #c084fc);
-    --wzc-ptz-button-size: clamp(1.15rem, 4.5cqi, 1.7rem);
-    --wzc-ptz-icon-padding: 0.1rem;
-    --wzc-ptz-inline-gap: 1rem;
+    --wzc-ptz-button-size: 2.75rem;
+    --wzc-ptz-icon-padding: 0.65rem;
     --wzc-ptz-panel-padding: 0.18rem;
-    --wzc-ptz-safe-block: 0.5rem;
     --wzc-ptz-panel-background: color-mix(
       in srgb,
       var(--wzc-media-overlay-surface) var(--wzc-media-overlay-opacity),
@@ -380,133 +381,5 @@ export const themeTokens = css`
     );
     --wzc-toast-radius: var(--wzc-radius-pill);
     --wzc-toast-shadow: var(--wzc-shadow-small);
-  }
-`;
-
-/** Shared geometry and interaction contract for circular overlay controls. */
-export const roundButtonStyles = css`
-  .round-button {
-    position: relative;
-    z-index: 1;
-    display: grid;
-    place-items: center;
-    box-sizing: border-box;
-    inline-size: var(
-      --wzc-round-button-size,
-      var(--wzc-camera-control-size, 2.75rem)
-    );
-    block-size: var(
-      --wzc-round-button-size,
-      var(--wzc-camera-control-size, 2.75rem)
-    );
-    min-inline-size: 0;
-    min-block-size: 0;
-    padding: 0;
-    color: var(--wzc-round-button-color, currentcolor);
-    background: var(--wzc-round-button-background, transparent);
-    border: 0;
-    border-radius: 50%;
-    box-shadow: inset 0 0 0 1px
-      var(--wzc-round-button-border-color, currentcolor);
-    font: inherit;
-    cursor: pointer;
-    touch-action: var(--wzc-round-button-touch-action, manipulation);
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .round-button > svg,
-  .round-button > ha-icon {
-    display: block;
-    inline-size: var(--wzc-round-button-icon-size, 60%);
-    block-size: var(--wzc-round-button-icon-size, 60%);
-    margin: 0;
-    pointer-events: none;
-  }
-
-  .round-button > ha-icon {
-    --mdc-icon-size: 100%;
-  }
-
-  .round-button:focus-visible {
-    outline: 2px solid var(--wzc-color-primary, currentcolor);
-    outline-offset: 2px;
-  }
-
-  .round-button:disabled {
-    cursor: not-allowed;
-    opacity: 0.55;
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    .round-button:hover:not(:disabled) {
-      background: var(
-        --wzc-round-button-hover-background,
-        var(--wzc-round-button-background, transparent)
-      );
-    }
-  }
-
-  @media (hover: none) {
-    .round-button:hover,
-    .round-button:active {
-      background: var(--wzc-round-button-background, transparent);
-    }
-  }
-`;
-
-/** Shared geometry and states for square live-media overlay controls. */
-export const mediaOverlayControlButtonStyles = css`
-  .control-button {
-    appearance: none;
-    background: var(
-      --wzc-control-background,
-      var(--wzc-media-overlay-background)
-    );
-    border: 1px solid
-      var(--wzc-control-border-color, var(--wzc-media-overlay-border-color));
-    border-radius: var(--wzc-control-radius, var(--wzc-media-overlay-radius));
-    box-shadow: var(--wzc-control-shadow, var(--wzc-media-overlay-shadow));
-    box-sizing: border-box;
-    color: var(--wzc-control-color, var(--wzc-media-overlay-color));
-    cursor: pointer;
-    display: grid;
-    font: inherit;
-    inline-size: var(--wzc-control-size);
-    block-size: var(--wzc-control-size);
-    min-inline-size: 0;
-    min-block-size: 0;
-    padding: 0;
-    place-items: center;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .control-button svg {
-    block-size: var(--wzc-control-icon-size);
-    fill: currentcolor;
-    inline-size: var(--wzc-control-icon-size);
-    overflow: visible;
-    pointer-events: none;
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    .control-button:hover:not(:disabled) {
-      background: var(
-        --wzc-control-hover-background,
-        var(--wzc-media-overlay-hover-background)
-      );
-      color: var(--wzc-control-hover-color, var(--wzc-media-overlay-color));
-    }
-  }
-
-  .control-button:focus-visible {
-    outline: 2px solid var(--wzc-color-primary);
-    outline-offset: 1px;
-  }
-
-  .control-button:disabled {
-    cursor: default;
-    opacity: var(--wzc-control-disabled-opacity, 1);
   }
 `;

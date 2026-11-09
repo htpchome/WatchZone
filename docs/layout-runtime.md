@@ -11,6 +11,9 @@ application-wide ownership and persistence rules remain defined by
 The Lovelace card shell owns the accessible card name and card-level appearance
 only. Its single visual stage contains the layout document rendered by
 `LayoutRuntime`; the shell does not place a visual title above the modules.
+The runtime, Stage contracts, built-in templates, modules, and components live
+under `frontend/src/stage/`; the card imports that boundary instead of owning
+Stage implementation files.
 
 `LayoutRuntime`:
 
@@ -32,6 +35,8 @@ only. Its single visual stage contains the layout document rendered by
 - Keeps only the selected child of a module stack connected. Unvisited hidden
   children remain unloaded; visited children retain their element identity for
   later selection while disconnected lifecycle cleanup remains effective.
+- Places controls and overlays from logical slot-region metadata. Components
+  render at intrinsic size and do not calculate their own Stage coordinates.
 
 The compile-time loader map contains lazy import functions and minimal loading
 surface metadata. It does not import module implementations into the eager

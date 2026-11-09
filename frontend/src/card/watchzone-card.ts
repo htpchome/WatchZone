@@ -15,7 +15,7 @@ import {
   EDITOR_PREVIEW_DRAFT_EVENT,
   EDITOR_TAG,
   CAMERA_TAG,
-  MEDIA_PLAYER_CONTAINER_TAG,
+  RECORDED_VIDEO_VIEWER_TAG,
   RECORDED_MEDIA_OPEN_EVENT,
   TOAST_REGION_TAG,
 } from "../core/constants";
@@ -34,15 +34,17 @@ import type {
   RecordedMediaRequest,
 } from "../core/recorded-media";
 import { CardHostAppearanceController } from "../styles/card-host-appearance.controller";
-import { roundButtonStyles, themeTokens } from "../styles/theme-tokens";
+import { themeTokens } from "../styles/theme-tokens";
+import { stageRuntimeStyles } from "../stage/layout-runtime.styles";
+import { roundButtonStyles } from "../ui/overlay-control.styles";
 import { ToastManager } from "../ui/toast-manager";
 import "../ui/toast-region";
-import { createBuiltInStageSet } from "./built-in-stages/catalog";
-import { LayoutRuntime } from "./layout-runtime";
+import { createBuiltInStageSet } from "../stage/built-in-stages/catalog";
+import { LayoutRuntime } from "../stage/layout-runtime";
 import { cardStyles } from "./watchzone-card.styles";
 
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
-const mediaPlayerContainerTag = unsafeStatic(MEDIA_PLAYER_CONTAINER_TAG);
+const recordedVideoViewerTag = unsafeStatic(RECORDED_VIDEO_VIEWER_TAG);
 
 interface PreviewDraftDetail {
   readonly baselineSignature: string;
@@ -58,8 +60,8 @@ export class DashboardCard extends LitElement {
   private _previewConfig?: CardConfig;
   private _observedConnection?: HomeAssistantConnection;
   private _transportConnected = true;
-  private _mediaContainerReady = false;
-  private _mediaContainerLoad?: Promise<void>;
+  private _recordedVideoViewerReady = false;
+  private _recordedVideoViewerLoad?: Promise<void>;
   private _mediaRequest?: RecordedMediaRequest;
   private _mediaInitialSize?: RecordedMediaInitialSize;
   private readonly _cameraImageCredentials =
@@ -194,13 +196,13 @@ export class DashboardCard extends LitElement {
         <div class="shell" role="region" aria-label=${config.title}>
           ${this._layoutRuntime.render()}
           ${
-            this._mediaContainerReady && this._mediaRequest
-              ? staticHtml`<${mediaPlayerContainerTag}
+            this._recordedVideoViewerReady && this._mediaRequest
+              ? staticHtml`<${recordedVideoViewerTag}
                   .api=${this._haApi}
                   .localize=${this._localization.localize}
                   .initialSize=${this._mediaInitialSize}
                   .request=${this._mediaRequest}
-                ></${mediaPlayerContainerTag}>`
+                ></${recordedVideoViewerTag}>`
               : null
           }
           <${toastRegionTag}
@@ -235,23 +237,24 @@ export class DashboardCard extends LitElement {
     event.stopPropagation();
     this._mediaRequest = event.detail;
     this._mediaInitialSize = this._activeCameraStageSize();
-    if (this._mediaContainerReady) {
+    if (this._recordedVideoViewerReady) {
       this.requestUpdate();
       return;
     }
-    this._mediaContainerLoad ??= import("../media/index")
-      .then(() => {
-        if (!this.isConnected) return;
-        this._mediaContainerReady = true;
-        this.requestUpdate();
-      })
-      .catch(() => {
-        this._mediaContainerLoad = undefined;
-        this._toasts.error(
-          this._localization.localize("media_player.load_failed"),
-          { key: "recorded-media-module-load-failed" },
-        );
-      });
+    this._recordedVideoViewerLoad ??=
+      import("../ui/recorded-video-viewer/index")
+        .then(() => {
+          if (!this.isConnected) return;
+          this._recordedVideoViewerReady = true;
+          this.requestUpdate();
+        })
+        .catch(() => {
+          this._recordedVideoViewerLoad = undefined;
+          this._toasts.error(
+            this._localization.localize("media_player.load_failed"),
+            { key: "recorded-video-viewer-load-failed" },
+          );
+        });
   };
 
   private _activeCameraStageSize(): RecordedMediaInitialSize | undefined {
@@ -327,7 +330,12 @@ export class DashboardCard extends LitElement {
     );
   }
 
-  static styles = [themeTokens, roundButtonStyles, cardStyles];
+  static styles = [
+    themeTokens,
+    roundButtonStyles,
+    stageRuntimeStyles,
+    cardStyles,
+  ];
 }
 
 if (!customElements.get(CARD_TAG)) {

@@ -5,8 +5,8 @@ import {
   suppressNativePictureInPicture,
   togglePictureInPicture,
 } from "../src/core/picture-in-picture";
-import type { CameraLivePresentation } from "../src/modules/camera/live/presentation";
-import "../src/modules/camera/live/presentation";
+import type { CameraLivePresentation } from "../src/stage/modules/camera/live/presentation";
+import "../src/stage/modules/camera/live/presentation";
 
 describe("camera Picture-in-Picture", () => {
   const pictureInPictureElementDescriptor = Object.getOwnPropertyDescriptor(
@@ -154,6 +154,7 @@ describe("camera Picture-in-Picture", () => {
     const pictureInPictureButton = (): HTMLButtonElement | null =>
       presentation.shadowRoot
         ?.querySelector("wzc-camera-controls")
+        ?.shadowRoot?.querySelector("wzc-media-controls")
         ?.shadowRoot?.querySelector<HTMLButtonElement>(
           '[data-control="picture_in_picture"]',
         ) ?? null;

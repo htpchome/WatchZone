@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CameraSelectionContext } from "../src/core/camera-selection-context";
+import { CameraSelectionContext } from "../src/stage/camera-selection-context";
 import { ACTIVITY_LIST_TAG, EVENTS_TAG } from "../src/core/constants";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
-import type { EventsModule } from "../src/modules/events/events";
-import "../src/modules/events/events";
+import type { EventsModule } from "../src/stage/modules/events/events";
+import "../src/stage/modules/events/events";
 
 const event = {
   camera: "front",

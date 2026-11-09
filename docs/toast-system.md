@@ -13,7 +13,9 @@ All toast surfaces consume the same semantic `--wzc-toast-*` tokens. The
 glass-like appearance uses translucent severity fills, a border, shadow, and
 an inset highlight. It must not use `backdrop-filter`, blur, or a separate
 feature-specific toast style. Inline regions stretch to their container;
-overlay regions remain width-bounded and safe-area aware.
+overlay regions remain width-bounded and use local surface-relative insets.
+Card-contained toast regions do not consume viewport safe-area values. A future
+toast surface attached to a physical viewport edge owns that clearance itself.
 
 Runtime warnings and errors are presented only through a shared toast region.
 The card-level overlay owns layout, Stage, module, and component preparation

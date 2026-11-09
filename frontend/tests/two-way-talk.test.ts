@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CameraSessionContext } from "../src/core/camera-session-context";
+import { CameraSessionContext } from "../src/stage/camera-session-context";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
-import type { TwoWayTalkComponent } from "../src/components/two-way-talk/two-way-talk";
-import "../src/components/two-way-talk/two-way-talk";
+import type { TwoWayTalkComponent } from "../src/stage/components/two-way-talk/two-way-talk";
+import "../src/stage/components/two-way-talk/two-way-talk";
 
 describe("two-way-talk component", () => {
   afterEach(() => {
