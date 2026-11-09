@@ -36,7 +36,6 @@ export const ptzStyles = css`
 
   .ptz-control.visible {
     opacity: 1;
-    pointer-events: auto;
   }
 
   button {
@@ -50,6 +49,7 @@ export const ptzStyles = css`
     min-inline-size: 0;
     min-block-size: 0;
     color: inherit;
+    pointer-events: auto;
   }
 
   button.up {

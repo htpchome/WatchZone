@@ -10,8 +10,6 @@ export const activityListStyles = css`
 
   .viewport {
     box-sizing: border-box;
-    inline-size: 100%;
-    max-inline-size: 100%;
     block-size: 100%;
     max-block-size: calc(
       5 * var(--wzc-event-tile-block-size) + 4 * var(--wzc-event-list-gap) + 2 *
@@ -21,10 +19,8 @@ export const activityListStyles = css`
       3 * var(--wzc-event-tile-block-size) + 2 * var(--wzc-event-list-gap) + 2 *
         var(--wzc-event-list-padding)
     );
-    overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
-    scrollbar-gutter: stable;
     padding: var(--wzc-event-list-padding);
   }
 

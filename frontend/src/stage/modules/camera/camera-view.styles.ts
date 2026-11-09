@@ -44,7 +44,7 @@ export const cameraViewStyles = css`
 
   .stage-resize-handle {
     position: absolute;
-    z-index: 5;
+    z-index: 3;
     bottom: 0.2rem;
     left: 50%;
     display: grid;
