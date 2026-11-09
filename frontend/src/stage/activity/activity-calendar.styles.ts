@@ -1,5 +1,6 @@
 import { css } from "lit";
 
+/** Private styles for the Stage activity-calendar navigation adjunct. */
 export const activityCalendarStyles = css`
   :host {
     display: block;

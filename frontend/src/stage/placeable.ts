@@ -1,6 +1,6 @@
 import type { CameraSessionContext } from "./camera-session-context";
 import type { CameraSelectionContext } from "./camera-selection-context";
-import type { ActivityDateFilterContext } from "./activity-date-filter-context";
+import type { ActivityDateFilterContext } from "./activity";
 import type { HomeAssistant, HomeAssistantApi } from "../core/home-assistant";
 import type { LocalizeFunction } from "../core/localization";
 import type { TranslationKey } from "../core/localization";

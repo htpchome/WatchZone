@@ -1,9 +1,11 @@
 import { html, LitElement } from "lit";
 
 import { listReviews, type ReviewItem } from "../../../api/reviews";
-import { ActiveCameraActivityController } from "../../active-camera-activity.controller";
-import { ActivityDateFilterController } from "../../activity-date-filter.controller";
-import type { ActivityDateFilterContext } from "../../activity-date-filter-context";
+import {
+  ActiveCameraActivityController,
+  ActivityDateFilterController,
+  type ActivityDateFilterContext,
+} from "../../activity";
 import type { CameraSelectionContext } from "../../camera-selection-context";
 import {
   ALERTS_TAG,
@@ -65,6 +67,7 @@ export class AlertsModule extends LitElement {
       this._toasts.error(this.localize("alerts.load_failed"), {
         key: "alerts-load-failed",
       }),
+    "reviews",
   );
 
   protected render() {

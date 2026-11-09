@@ -9,9 +9,9 @@ import { repeat } from "lit/directives/repeat.js";
 
 import { CameraSessionContext } from "./camera-session-context";
 import { CameraSelectionContext } from "./camera-selection-context";
-import { ActivityDateFilterContext } from "./activity-date-filter-context";
+import { ActivityDateFilterContext } from "./activity";
 import { ALERTS_MODULE_TYPE, EVENTS_MODULE_TYPE } from "../core/constants";
-import "./activity-calendar";
+import "./activity";
 import type {
   HomeAssistant,
   HomeAssistantApi,

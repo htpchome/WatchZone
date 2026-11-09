@@ -3,7 +3,10 @@ import type {
   RecordedMediaSource,
   RecordedMediaTransport,
 } from "../core/recorded-media";
-import { listActivityWindow } from "./activity-window";
+import {
+  listActivityWindow,
+  type ActivityWindowOptions,
+} from "./activity-window";
 
 export type ReviewClassification = "alert" | "detection";
 
@@ -30,7 +33,7 @@ export interface ReviewItem {
 export async function listReviews(
   api: HomeAssistantApi,
   entityId: string,
-  options: { readonly bypassCache?: boolean; readonly historyDays: number },
+  options: ActivityWindowOptions<ReviewItem>,
 ): Promise<readonly ReviewItem[]> {
   return listActivityWindow<ReviewItem>(
     api,

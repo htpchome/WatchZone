@@ -2,9 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ACTIVITY_CALENDAR_TAG } from "../src/core/constants";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
-import type { ActivityCalendar } from "../src/stage/activity-calendar";
-import "../src/stage/activity-calendar";
-import { ActivityDateFilterContext } from "../src/stage/activity-date-filter-context";
+import {
+  ActivityDateFilterContext,
+  type ActivityCalendar,
+} from "../src/stage/activity";
 import { CameraSelectionContext } from "../src/stage/camera-selection-context";
 
 describe("activity calendar", () => {

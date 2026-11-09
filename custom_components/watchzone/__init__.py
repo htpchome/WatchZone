@@ -38,6 +38,7 @@ from .extensions import (
     ProviderRegistry,
     get_provider_registry,
 )
+from .features.activity_updates import ActivityUpdatesService
 from .features.camera_runtime import CameraRuntimeService
 from .features.events import EventsService
 from .features.hls_prewarm import HlsPrewarmService
@@ -47,6 +48,9 @@ from .features.ptz import PtzService
 from .features.reviews import ReviewsService
 from .providers.frigate import camera as frigate_camera
 from .providers.frigate import live as frigate_live
+from .providers.frigate.activity_updates import (
+    activity_updates as frigate_activity_updates,
+)
 from .providers.frigate.events import events as frigate_events
 from .providers.frigate.ptz import ptz as frigate_ptz
 from .providers.frigate.reviews import reviews as frigate_reviews
@@ -90,6 +94,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     await hass.http.async_register_static_paths(static_paths)
     hass.data.setdefault(DOMAIN, {})
     _register_builtin_providers(hass)
+    from .api.activity_updates import (
+        async_register as async_register_activity_updates_api,
+    )
     from .api.camera import async_register as async_register_camera_api
     from .api.events import async_register as async_register_events_api
     from .api.live import async_register as async_register_live_api
@@ -97,6 +104,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     from .api.reviews import async_register as async_register_reviews_api
     from .api.talk import async_register as async_register_talk_api
 
+    async_register_activity_updates_api(hass)
     async_register_camera_api(hass)
     async_register_events_api(hass)
     async_register_live_api(hass)
@@ -117,6 +125,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WatchZoneConfigEntry) ->
     await stage_designs.async_setup()
     runtime = WatchZoneRuntime(
         entry_id=entry.entry_id,
+        activity_updates=ActivityUpdatesService(hass, providers),
         camera_runtime=camera_runtime,
         hls_prewarm=hls_prewarm,
         live_signaling=LiveSignalingService(hass, providers),
@@ -199,6 +208,7 @@ def _register_builtin_providers(hass: HomeAssistant) -> ProviderRegistry:
             api_version=EXTENSION_API_VERSION,
             provider_id="frigate_go2rtc",
             entity_platforms=frozenset({"frigate"}),
+            activity_updates=frigate_activity_updates,
             camera_runtime=frigate_camera,
             camera_runtime_poll_interval=1.0,
             live_signaling=frigate_live,

@@ -1,3 +1,4 @@
+/** Shared date-filter state for one Stage activity module stack. */
 export interface ActivityDateFilterState {
   readonly selectedDate?: string;
 }

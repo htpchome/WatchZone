@@ -1,17 +1,20 @@
 import { html, LitElement, nothing } from "lit";
 
-import { listReviews, type ReviewItem } from "../api/reviews";
-import { ACTIVITY_CALENDAR_TAG } from "../core/constants";
-import { homeAssistantDateKey } from "../core/date-time";
+import { listReviews, type ReviewItem } from "../../api/reviews";
+import { ACTIVITY_CALENDAR_TAG } from "../../core/constants";
+import { homeAssistantDateKey } from "../../core/date-time";
 import type {
   HomeAssistantApi,
   HomeAssistantLocale,
-} from "../core/home-assistant";
-import { englishLocalize, type LocalizeFunction } from "../core/localization";
-import { renderIcon } from "../ui/icons";
+} from "../../core/home-assistant";
+import {
+  englishLocalize,
+  type LocalizeFunction,
+} from "../../core/localization";
+import { renderIcon } from "../../ui/icons";
 import { ActiveCameraActivityController } from "./active-camera-activity.controller";
 import type { ActivityDateFilterContext } from "./activity-date-filter-context";
-import type { CameraSelectionContext } from "./camera-selection-context";
+import type { CameraSelectionContext } from "../camera-selection-context";
 import { activityCalendarStyles } from "./activity-calendar.styles";
 
 interface CalendarMonth {
@@ -56,6 +59,7 @@ export class ActivityCalendar extends LitElement {
     }),
     listReviews,
     () => undefined,
+    "reviews",
   );
 
   public connectedCallback(): void {

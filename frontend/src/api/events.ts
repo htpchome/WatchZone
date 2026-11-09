@@ -3,7 +3,10 @@ import type {
   RecordedMediaSource,
   RecordedMediaTransport,
 } from "../core/recorded-media";
-import { listActivityWindow } from "./activity-window";
+import {
+  listActivityWindow,
+  type ActivityWindowOptions,
+} from "./activity-window";
 
 export interface EventItem {
   readonly camera: string;
@@ -26,7 +29,7 @@ export interface EventItem {
 export async function listEvents(
   api: HomeAssistantApi,
   entityId: string,
-  options: { readonly bypassCache?: boolean; readonly historyDays: number },
+  options: ActivityWindowOptions<EventItem>,
 ): Promise<readonly EventItem[]> {
   return listActivityWindow<EventItem>(
     api,

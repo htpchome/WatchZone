@@ -3,14 +3,24 @@ import type { ReactiveController, ReactiveControllerHost } from "lit";
 import type {
   CameraSelectionContext,
   CameraSelectionState,
-} from "./camera-selection-context";
+} from "../camera-selection-context";
 import {
+  ACTIVITY_RECONCILE_INTERVAL_MS,
   ACTIVITY_EMPTY_CONFIRM_DELAY_MS,
-  EVENTS_REFRESH_INTERVAL_MS,
-} from "../core/constants";
-import type { HomeAssistantApi } from "../core/home-assistant";
+} from "../../core/constants";
+import {
+  subscribeActivityUpdates,
+  type ActivityUpdateKind,
+} from "../../api/activity-updates";
+import type { HomeAssistantApi } from "../../core/home-assistant";
 
 export interface ActiveCameraActivityItem {
+  readonly id: string;
+  readonly revision: string;
+  readonly start_time: number;
+}
+
+interface RetriableActivityItem {
   readonly id: string;
   readonly revision: string;
 }
@@ -25,10 +35,15 @@ interface ActiveCameraActivityContext {
 type ActivityFetcher<T extends ActiveCameraActivityItem> = (
   api: HomeAssistantApi,
   entityId: string,
-  options: { readonly bypassCache: boolean; readonly historyDays: number },
+  options: {
+    readonly bypassCache: boolean;
+    readonly historyDays: number;
+    readonly loadFullHistory: boolean;
+    readonly onProgress: (items: readonly T[]) => void;
+  },
 ) => Promise<readonly T[]>;
 
-/** Owns the shared camera-scoped polling lifecycle for activity modules. */
+/** Owns camera-scoped activity loading, push invalidation, and reconciliation. */
 export class ActiveCameraActivityController<
   T extends ActiveCameraActivityItem,
 > implements ReactiveController {
@@ -42,6 +57,8 @@ export class ActiveCameraActivityController<
   private _emptyConfirmationPending = false;
   private _emptyConfirmTimer?: number;
   private _generation = 0;
+  private _historyLoadPending = false;
+  private _refreshAfterHistory = false;
   private _refreshTimer?: number;
   private readonly _retriedMedia = new Set<string>();
   private _subscribedSelection?: CameraSelectionContext;
@@ -49,12 +66,16 @@ export class ActiveCameraActivityController<
   private _unsubscribe?: () => void;
   private _lastApiIdentity?: HomeAssistantApi["identity"];
   private _lastHistoryDays?: number;
+  private _updateRefreshTimer?: number;
+  private _updatesGeneration = 0;
+  private _updatesUnsubscribe?: () => void;
 
   public constructor(
     private readonly _host: ReactiveControllerHost,
     private readonly _context: () => ActiveCameraActivityContext,
     private readonly _fetch: ActivityFetcher<T>,
     private readonly _onError: () => void,
+    private readonly _activityKind: ActivityUpdateKind,
   ) {
     _host.addController(this);
   }
@@ -70,6 +91,7 @@ export class ActiveCameraActivityController<
     this._unsubscribe = undefined;
     this._subscribedSelection = undefined;
     this._stopRefresh();
+    this._stopUpdates();
     this._stopEmptyConfirmation();
     this._generation += 1;
   }
@@ -78,11 +100,11 @@ export class ActiveCameraActivityController<
     this._syncContext();
   }
 
-  public retryMedia(item: ActiveCameraActivityItem, url: string): void {
+  public retryMedia(item: RetriableActivityItem, url: string): void {
     const key = `${item.id}:${item.revision}:${url}`;
     if (this._retriedMedia.has(key)) return;
     this._retriedMedia.add(key);
-    void this._refresh(true);
+    void this._refresh(true, true);
   }
 
   public get activeCameraLabel(): string | undefined {
@@ -104,6 +126,7 @@ export class ActiveCameraActivityController<
       this._activeCameraLabel = undefined;
       this._retriedMedia.clear();
       this._stopRefresh();
+      this._stopUpdates();
       this._stopEmptyConfirmation();
       this._generation += 1;
       if (context.cameraSelection && context.targetModuleId) {
@@ -113,14 +136,20 @@ export class ActiveCameraActivityController<
         );
       }
     }
+    const apiChanged = context.api?.identity !== this._lastApiIdentity;
     const queryChanged =
-      context.api?.identity !== this._lastApiIdentity ||
-      context.historyDays !== this._lastHistoryDays;
+      apiChanged || context.historyDays !== this._lastHistoryDays;
     this._lastApiIdentity = context.api?.identity;
     this._lastHistoryDays = context.historyDays;
     if (!selectionChanged && queryChanged && this._activeEntityId) {
       this._generation += 1;
-      void this._refresh(false);
+      if (apiChanged) {
+        this._stopUpdates();
+        if (context.api) {
+          this._subscribeUpdates(context.api, this._activeEntityId);
+        }
+      }
+      void this._refresh(false, true);
     }
   }
 
@@ -146,6 +175,7 @@ export class ActiveCameraActivityController<
     }
     this._retriedMedia.clear();
     this._stopRefresh();
+    this._stopUpdates();
     this._stopEmptyConfirmation();
     this._generation += 1;
     if (activeEntityId && this._itemsEntityId !== activeEntityId) {
@@ -154,34 +184,73 @@ export class ActiveCameraActivityController<
     }
     this._host.requestUpdate();
     if (!activeEntityId) return;
-    void this._refresh(false);
+    void this._refresh(false, true);
+    const api = this._context().api;
+    if (api) this._subscribeUpdates(api, activeEntityId);
     this._refreshTimer = window.setInterval(
-      () => void this._refresh(false),
-      EVENTS_REFRESH_INTERVAL_MS,
+      () => void this._refresh(false, false),
+      ACTIVITY_RECONCILE_INTERVAL_MS,
     );
   }
 
-  private async _refresh(bypassCache: boolean): Promise<void> {
+  private async _refresh(
+    bypassCache: boolean,
+    loadFullHistory: boolean,
+  ): Promise<void> {
     const context = this._context();
     const api = context.api;
     const entityId = this._activeEntityId;
     if (!api || !entityId) return;
+    if (!loadFullHistory && this._historyLoadPending) {
+      this._refreshAfterHistory = true;
+      return;
+    }
     const generation = this._generation;
+    if (loadFullHistory) this._historyLoadPending = true;
     this.loading = true;
     this._host.requestUpdate();
     try {
       const items = await this._fetch(api, entityId, {
         bypassCache,
         historyDays: context.historyDays,
+        loadFullHistory,
+        onProgress: (progressItems) => {
+          if (
+            generation !== this._generation ||
+            entityId !== this._activeEntityId
+          )
+            return;
+          if (
+            loadFullHistory &&
+            progressItems.length === 0 &&
+            this.items.length > 0
+          )
+            return;
+          this.items = loadFullHistory
+            ? progressItems
+            : mergeActivityItems(
+                this.items,
+                progressItems,
+                context.historyDays,
+              );
+          this._itemsEntityId = entityId;
+          this._host.requestUpdate();
+        },
       });
       if (generation !== this._generation || entityId !== this._activeEntityId)
         return;
+      if (!loadFullHistory) {
+        this._stopEmptyConfirmation();
+        this.items = mergeActivityItems(this.items, items, context.historyDays);
+        this._itemsEntityId = entityId;
+        return;
+      }
       if (items.length === 0 && this.items.length > 0) {
         if (!this._emptyConfirmationPending) {
           this._emptyConfirmationPending = true;
           this._emptyConfirmTimer = window.setTimeout(() => {
             this._emptyConfirmTimer = undefined;
-            void this._refresh(false);
+            void this._refresh(false, true);
           }, ACTIVITY_EMPTY_CONFIRM_DELAY_MS);
           return;
         }
@@ -193,8 +262,13 @@ export class ActiveCameraActivityController<
       if (generation === this._generation) this._onError();
     } finally {
       if (generation === this._generation) {
+        if (loadFullHistory) this._historyLoadPending = false;
         this.loading = false;
         this._host.requestUpdate();
+        if (loadFullHistory && this._refreshAfterHistory) {
+          this._refreshAfterHistory = false;
+          void this._refresh(true, false);
+        }
       }
     }
   }
@@ -205,6 +279,49 @@ export class ActiveCameraActivityController<
     this._refreshTimer = undefined;
   }
 
+  private _subscribeUpdates(api: HomeAssistantApi, entityId: string): void {
+    const generation = ++this._updatesGeneration;
+    void Promise.resolve(
+      subscribeActivityUpdates(api, entityId, this._activityKind, () => {
+        if (
+          generation !== this._updatesGeneration ||
+          entityId !== this._activeEntityId
+        )
+          return;
+        if (this._updateRefreshTimer !== undefined)
+          window.clearTimeout(this._updateRefreshTimer);
+        this._updateRefreshTimer = window.setTimeout(() => {
+          this._updateRefreshTimer = undefined;
+          void this._refresh(true, false);
+        }, 150);
+      }),
+    )
+      .then((unsubscribe) => {
+        if (
+          generation !== this._updatesGeneration ||
+          entityId !== this._activeEntityId
+        ) {
+          unsubscribe?.();
+          return;
+        }
+        this._updatesUnsubscribe = unsubscribe;
+      })
+      .catch(() => {
+        // The low-frequency reconciliation timer remains as the fallback.
+      });
+  }
+
+  private _stopUpdates(): void {
+    this._updatesGeneration += 1;
+    this._updatesUnsubscribe?.();
+    this._updatesUnsubscribe = undefined;
+    if (this._updateRefreshTimer !== undefined) {
+      window.clearTimeout(this._updateRefreshTimer);
+    }
+    this._updateRefreshTimer = undefined;
+    this._refreshAfterHistory = false;
+  }
+
   private _stopEmptyConfirmation(): void {
     if (this._emptyConfirmTimer !== undefined) {
       window.clearTimeout(this._emptyConfirmTimer);
@@ -212,4 +329,22 @@ export class ActiveCameraActivityController<
     this._emptyConfirmTimer = undefined;
     this._emptyConfirmationPending = false;
   }
+}
+
+function mergeActivityItems<T extends ActiveCameraActivityItem>(
+  current: readonly T[],
+  incoming: readonly T[],
+  historyDays: number,
+): readonly T[] {
+  const after = Date.now() / 1000 - historyDays * 24 * 60 * 60;
+  const merged = new Map(
+    current
+      .filter(({ start_time }) => start_time >= after)
+      .map((item) => [item.id, item]),
+  );
+  for (const item of incoming) merged.set(item.id, item);
+  return [...merged.values()].sort(
+    (left, right) =>
+      right.start_time - left.start_time || left.id.localeCompare(right.id),
+  );
 }

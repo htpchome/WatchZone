@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CameraSelectionContext } from "../src/stage/camera-selection-context";
-import { ActivityDateFilterContext } from "../src/stage/activity-date-filter-context";
+import { ActivityDateFilterContext } from "../src/stage/activity";
 import { ACTIVITY_LIST_TAG, ALERTS_TAG } from "../src/core/constants";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import type { AlertsModule } from "../src/stage/modules/alerts/alerts";
@@ -97,7 +97,7 @@ describe("alerts module", () => {
       expect.objectContaining({
         type: "watchzone/reviews/list",
         entity_id: "camera.front",
-        limit: 500,
+        limit: 10,
       }),
     );
     expect(

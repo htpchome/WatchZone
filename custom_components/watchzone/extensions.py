@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from homeassistant.core import HomeAssistant, callback
 
 from .const import DOMAIN
+from .providers.activity_updates import ActivityUpdatesProvider
 from .providers.camera import CameraRuntimeProvider, CameraRuntimeState
 from .providers.events import EventsProvider
 from .providers.live import (
@@ -21,6 +22,7 @@ from .providers.reviews import ReviewsProvider
 
 __all__ = [
     "EXTENSION_API_VERSION",
+    "ActivityUpdatesProvider",
     "CameraRuntimeProvider",
     "CameraRuntimeState",
     "EventsProvider",
@@ -47,6 +49,7 @@ class ProviderExtension:
     entity_platforms: frozenset[str]
     camera_runtime: CameraRuntimeProvider | None = None
     camera_runtime_poll_interval: float | None = None
+    activity_updates: ActivityUpdatesProvider | None = None
     live_signaling: LiveSignalingProvider | None = None
     talk_signaling: LiveSignalingProvider | None = None
     ptz: PtzProvider | None = None
@@ -92,6 +95,11 @@ class ProviderRegistry:
         """Resolve one platform's optional camera-runtime capability."""
         extension = self._platforms.get(platform)
         return extension.camera_runtime if extension else None
+
+    def activity_updates(self, platform: str) -> ActivityUpdatesProvider | None:
+        """Resolve one platform's optional real-time activity capability."""
+        extension = self._platforms.get(platform)
+        return extension.activity_updates if extension else None
 
     def camera_runtime_poll_interval(self, platform: str) -> float | None:
         """Return the declared monitor interval for camera-runtime truth."""

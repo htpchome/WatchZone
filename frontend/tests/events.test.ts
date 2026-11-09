@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CameraSelectionContext } from "../src/stage/camera-selection-context";
-import { ActivityDateFilterContext } from "../src/stage/activity-date-filter-context";
+import { ActivityDateFilterContext } from "../src/stage/activity";
 import { ACTIVITY_LIST_TAG, EVENTS_TAG } from "../src/core/constants";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import type { EventsModule } from "../src/stage/modules/events/events";
@@ -31,6 +31,66 @@ describe("events module", () => {
   afterEach(() => {
     document.body.replaceChildren();
     vi.restoreAllMocks();
+  });
+
+  it("refreshes the newest page from provider activity invalidations", async () => {
+    const newestEvent = {
+      ...event,
+      id: "frigate:event-2",
+      revision: "revision-2",
+      start_time: 200,
+    };
+    const callWS = vi
+      .fn()
+      .mockResolvedValueOnce({ items: [event] })
+      .mockResolvedValueOnce({ items: [newestEvent, event] });
+    let activityUpdate: (() => void) | undefined;
+    const unsubscribe = vi.fn();
+    const subscribeMessage = vi.fn(async (callback) => {
+      activityUpdate = callback as () => void;
+      return unsubscribe;
+    });
+    const api = {
+      callWS,
+      identity: {},
+      locale: { language: "en", time_zone: "server" },
+      resolveUrl: (path: string) => `https://ha.local${path}`,
+      subscribeMessage,
+    } as unknown as HomeAssistantApi;
+    const selection = new CameraSelectionContext();
+    const module = document.createElement(EVENTS_TAG) as EventsModule;
+    module.api = api;
+    module.cameraSelection = selection;
+    module.targetModuleId = "camera-module";
+    document.body.append(module);
+    selection.publish(
+      "camera-module",
+      {},
+      {
+        activeEntityId: "camera.front",
+        items: [{ entityId: "camera.front", label: "Front" }],
+      },
+      vi.fn(),
+    );
+
+    await vi.waitFor(() => expect(activityUpdate).toBeTypeOf("function"));
+    expect(subscribeMessage).toHaveBeenCalledWith(
+      expect.any(Function),
+      {
+        type: "watchzone/activity/subscribe",
+        entity_id: "camera.front",
+        kind: "events",
+      },
+      { resubscribe: true },
+    );
+    activityUpdate?.();
+    await vi.waitFor(() => {
+      expect(callWS).toHaveBeenCalledTimes(2);
+      expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(2);
+    });
+
+    module.remove();
+    expect(unsubscribe).toHaveBeenCalledOnce();
   });
 
   it("queries the active camera and replaces an authoritative event window", async () => {
@@ -71,7 +131,7 @@ describe("events module", () => {
       expect.objectContaining({
         type: "watchzone/events/list",
         entity_id: "camera.front",
-        limit: 500,
+        limit: 10,
       }),
     );
     const query = callWS.mock.calls[0]?.[0] as {

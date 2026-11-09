@@ -1,7 +1,7 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
-import { homeAssistantDateKey } from "../core/date-time";
-import type { HomeAssistantLocale } from "../core/home-assistant";
+import { homeAssistantDateKey } from "../../core/date-time";
+import type { HomeAssistantLocale } from "../../core/home-assistant";
 import type { ActivityDateFilterContext } from "./activity-date-filter-context";
 
 /** Makes the shared activity date selection reactive inside a placeable. */

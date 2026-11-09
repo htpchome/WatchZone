@@ -1,9 +1,11 @@
 import { html, LitElement } from "lit";
 
 import { listEvents, type EventItem } from "../../../api/events";
-import { ActiveCameraActivityController } from "../../active-camera-activity.controller";
-import { ActivityDateFilterController } from "../../activity-date-filter.controller";
-import type { ActivityDateFilterContext } from "../../activity-date-filter-context";
+import {
+  ActiveCameraActivityController,
+  ActivityDateFilterController,
+  type ActivityDateFilterContext,
+} from "../../activity";
 import type { CameraSelectionContext } from "../../camera-selection-context";
 import {
   DEFAULT_EVENT_HISTORY_DAYS,
@@ -65,6 +67,7 @@ export class EventsModule extends LitElement {
       this._toasts.error(this.localize("events.load_failed"), {
         key: "events-load-failed",
       }),
+    "events",
   );
 
   protected render() {

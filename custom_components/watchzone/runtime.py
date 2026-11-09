@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 
+from .features.activity_updates import ActivityUpdatesService
 from .features.camera_runtime import CameraRuntimeService
 from .features.events import EventsService
 from .features.hls_prewarm import HlsPrewarmService
@@ -16,6 +17,7 @@ class WatchZoneRuntime:
     """Runtime state owned by one WatchZone config entry."""
 
     entry_id: str
+    activity_updates: ActivityUpdatesService
     camera_runtime: CameraRuntimeService
     hls_prewarm: HlsPrewarmService
     live_signaling: LiveSignalingService
@@ -26,6 +28,7 @@ class WatchZoneRuntime:
 
     async def async_close(self) -> None:
         """Release integration-owned runtime resources."""
+        await self.activity_updates.async_close()
         await self.camera_runtime.async_close()
         await self.hls_prewarm.async_close()
         await self.live_signaling.async_close()
