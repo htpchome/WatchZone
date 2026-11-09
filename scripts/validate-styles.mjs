@@ -16,6 +16,10 @@ const fullscreenCameraStyles = resolve(
   sourceRoot,
   "stage/modules/camera/live-view.styles.ts",
 );
+const recordedVideoTransportStyles = resolve(
+  sourceRoot,
+  "ui/recorded-video-viewer/transport-controls.styles.ts",
+);
 const allowedHomeAssistantTokens = new Map([
   [homeAssistantEditorBridge, new Set(["--ha-view-sections-column-max-width"])],
 ]);
@@ -69,6 +73,7 @@ for (const path of await collectTypeScript(sourceRoot)) {
   }
   const safeAreaAllowed =
     path === fullscreenCameraStyles ||
+    path === recordedVideoTransportStyles ||
     relativePath === "frontend/src/ui/media-controls-overlay.styles.ts";
   if (source.includes("env(safe-area-inset-") && !safeAreaAllowed) {
     violations.push(

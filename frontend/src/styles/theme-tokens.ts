@@ -274,6 +274,24 @@ export const themeTokens = css`
     --wzc-recorded-media-control-hover-background: var(
       --wzc-color-fill-primary
     );
+    --wzc-recorded-transport-background: color-mix(
+      in srgb,
+      var(--wzc-media-overlay-surface) 82%,
+      transparent
+    );
+    --wzc-recorded-transport-color: var(--wzc-media-overlay-color);
+    --wzc-recorded-transport-accent: var(--wzc-color-primary);
+    --wzc-recorded-transport-track: color-mix(
+      in srgb,
+      var(--wzc-media-overlay-color) 45%,
+      transparent
+    );
+    --wzc-recorded-transport-block-inset: 0.35rem;
+    --wzc-recorded-transport-inline-inset: 0.5rem;
+    --wzc-recorded-transport-gap: 0.4rem;
+    --wzc-recorded-transport-padding: 0.25rem 0.35rem;
+    --wzc-recorded-transport-control-size: 2rem;
+    --wzc-recorded-transport-icon-size: 1.35rem;
     --wzc-stage-stack-navigation-gap: 0.35rem;
     --wzc-stage-stack-navigation-padding: 0.25rem;
     --wzc-stage-stack-button-size: 2.75rem;

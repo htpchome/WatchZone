@@ -6,6 +6,9 @@ import { detectClientProfile } from "../../core/client-profile";
 import {
   MEDIA_CONTROL_EVENT,
   MEDIA_CONTROLS_TAG,
+  RECORDED_VIDEO_TRANSPORT_EVENT,
+  RECORDED_VIDEO_TRANSPORT_HOLD_EVENT,
+  RECORDED_VIDEO_TRANSPORT_TAG,
   RECORDED_VIDEO_PLAYER_TAG,
   RECORDED_MEDIA_ERROR_EVENT,
 } from "../../core/constants";
@@ -41,12 +44,20 @@ import type {
 } from "../media-controls-overlay";
 import "../media-controls-overlay";
 import { recordedVideoPlayerStyles } from "./recorded-video-player.styles";
+import type {
+  RecordedVideoTransportEventDetail,
+  RecordedVideoTransportHoldDetail,
+} from "./transport-controls";
+import "./transport-controls";
 
 const HLS_CONTENT_TYPE = "application/vnd.apple.mpegurl";
 const SOURCE_READY_TIMEOUT_MS = 12_000;
 const mediaControlsTag = unsafeStatic(MEDIA_CONTROLS_TAG);
 const mediaControlEvent = unsafeStatic(MEDIA_CONTROL_EVENT);
-type RecordedVideoControlAction = "fullscreen" | "mute" | "picture_in_picture";
+const transportTag = unsafeStatic(RECORDED_VIDEO_TRANSPORT_TAG);
+const transportEvent = unsafeStatic(RECORDED_VIDEO_TRANSPORT_EVENT);
+const transportHoldEvent = unsafeStatic(RECORDED_VIDEO_TRANSPORT_HOLD_EVENT);
+type RecordedVideoControlAction = "fullscreen" | "picture_in_picture";
 
 /** Ephemeral recorded-media playback engine. */
 export class RecordedVideoPlayer extends LitElement {
@@ -63,8 +74,13 @@ export class RecordedVideoPlayer extends LitElement {
   private _fullscreenActive = false;
   private _generation = 0;
   private _hls?: HlsType;
+  private _currentTime = 0;
+  private _duration = 0;
   private _muted = true;
+  private _paused = true;
   private _pictureInPictureActive = false;
+  private _transportHoldRelease?: () => void;
+  private _volume = 1;
   private readonly _media = new MediaPresentationController(this);
 
   public connectedCallback(): void {
@@ -79,6 +95,7 @@ export class RecordedVideoPlayer extends LitElement {
       "webkitfullscreenchange",
       this._syncControlState,
     );
+    this._releaseTransportHold();
     this._stopPlayback();
     super.disconnectedCallback();
   }
@@ -114,14 +131,6 @@ export class RecordedVideoPlayer extends LitElement {
               : "media_player.enter_fullscreen",
           ),
         },
-        {
-          action: "mute",
-          active: this._muted,
-          icon: this._muted ? "volumeOff" : "volumeOn",
-          label: this.localize(
-            this._muted ? "media_player.unmute" : "media_player.mute",
-          ),
-        },
       ];
     return staticHtml`<div
       class="viewport"
@@ -143,13 +152,16 @@ export class RecordedVideoPlayer extends LitElement {
       <video
         class=${this._media.zoom.interacting ? "interacting" : ""}
         style=${`transform: ${this._media.zoom.transform}`}
-        controls
         autoplay
         muted
         playsinline
         preload="auto"
         poster=${this.request?.posterUrl ?? ""}
         @loadedmetadata=${this._handleLoadedMetadata}
+        @durationchange=${this._syncControlState}
+        @timeupdate=${this._syncControlState}
+        @play=${this._syncControlState}
+        @pause=${this._syncControlState}
         @volumechange=${this._syncControlState}
         @enterpictureinpicture=${this._syncControlState}
         @leavepictureinpicture=${this._syncControlState}
@@ -162,6 +174,18 @@ export class RecordedVideoPlayer extends LitElement {
         .viewportEdge=${this._fullscreenActive}
         @${mediaControlEvent}=${this._handleControl}
       ></${mediaControlsTag}>
+      <${transportTag}
+        .currentTime=${this._currentTime}
+        .duration=${this._duration}
+        .localize=${this.localize}
+        .muted=${this._muted}
+        .paused=${this._paused}
+        .visible=${this._media.overlay.visible}
+        .viewportEdge=${this._fullscreenActive}
+        .volume=${this._volume}
+        @${transportEvent}=${this._handleTransport}
+        @${transportHoldEvent}=${this._handleTransportHold}
+      ></${transportTag}>
     </div>`;
   }
 
@@ -198,6 +222,7 @@ export class RecordedVideoPlayer extends LitElement {
         await this._trySource(video, source, generation);
         if (generation !== this._generation) return;
         await playMediaElement(video);
+        this._syncControlState();
         refreshNativePictureInPictureSuppression(video);
         return;
       } catch {
@@ -297,16 +322,28 @@ export class RecordedVideoPlayer extends LitElement {
   private readonly _syncControlState = (): void => {
     const video = this._video();
     const muted = video?.muted ?? true;
+    const paused = video?.paused ?? true;
+    const currentTime = finiteMediaValue(video?.currentTime);
+    const duration = finiteMediaValue(video?.duration);
+    const volume = finiteVolume(video?.volume);
     const fullscreenActive = isMediaFullscreenActive(video);
     const pictureInPictureActive = isPictureInPictureActive(video);
     if (
       muted === this._muted &&
+      paused === this._paused &&
+      currentTime === this._currentTime &&
+      duration === this._duration &&
+      volume === this._volume &&
       fullscreenActive === this._fullscreenActive &&
       pictureInPictureActive === this._pictureInPictureActive
     ) {
       return;
     }
     this._muted = muted;
+    this._paused = paused;
+    this._currentTime = currentTime;
+    this._duration = duration;
+    this._volume = volume;
     this._fullscreenActive = fullscreenActive;
     this._pictureInPictureActive = pictureInPictureActive;
     this.requestUpdate();
@@ -319,6 +356,38 @@ export class RecordedVideoPlayer extends LitElement {
     if (!video.muted) void playMediaElement(video);
     this._syncControlState();
   };
+
+  private readonly _togglePlayback = async (): Promise<void> => {
+    const video = this._video();
+    if (!video) return;
+    if (video.paused) {
+      try {
+        await playMediaElement(video);
+      } catch {
+        this._reportError();
+      }
+    } else video.pause();
+    this._syncControlState();
+  };
+
+  private _seek(value: number): void {
+    const video = this._video();
+    if (!video || !Number.isFinite(value)) return;
+    video.currentTime = Math.max(
+      0,
+      Math.min(value, finiteMediaValue(video.duration)),
+    );
+    this._syncControlState();
+  }
+
+  private _setVolume(value: number): void {
+    const video = this._video();
+    if (!video || !Number.isFinite(value)) return;
+    const volume = finiteVolume(value);
+    setMediaElementMuted(video, volume === 0);
+    video.volume = volume;
+    this._syncControlState();
+  }
 
   private readonly _toggleFullscreen = async (): Promise<void> => {
     const video = this._video();
@@ -352,14 +421,37 @@ export class RecordedVideoPlayer extends LitElement {
     event: CustomEvent<MediaControlEventDetail<RecordedVideoControlAction>>,
   ): void => {
     event.stopPropagation();
-    if (event.detail.action === "mute") {
-      this._toggleMute();
-    } else if (event.detail.action === "fullscreen") {
+    if (event.detail.action === "fullscreen") {
       void this._toggleFullscreen();
     } else {
       void this._togglePictureInPicture();
     }
   };
+
+  private readonly _handleTransport = (
+    event: CustomEvent<RecordedVideoTransportEventDetail>,
+  ): void => {
+    event.stopPropagation();
+    const { action, value } = event.detail;
+    if (action === "toggle_play") void this._togglePlayback();
+    else if (action === "toggle_mute") this._toggleMute();
+    else if (action === "seek" && value !== undefined) this._seek(value);
+    else if (action === "volume" && value !== undefined) this._setVolume(value);
+  };
+
+  private readonly _handleTransportHold = (
+    event: CustomEvent<RecordedVideoTransportHoldDetail>,
+  ): void => {
+    event.stopPropagation();
+    if (event.detail.active) {
+      this._transportHoldRelease ??= this._media.overlay.hold();
+    } else this._releaseTransportHold();
+  };
+
+  private _releaseTransportHold(): void {
+    this._transportHoldRelease?.();
+    this._transportHoldRelease = undefined;
+  }
 
   private async _resolveSourceUrl(path: string): Promise<string> {
     const api = this.api;
@@ -404,6 +496,16 @@ export class RecordedVideoPlayer extends LitElement {
   }
 
   static styles = recordedVideoPlayerStyles;
+}
+
+function finiteMediaValue(value: number | undefined): number {
+  return value !== undefined && Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function finiteVolume(value: number | undefined): number {
+  return value !== undefined && Number.isFinite(value)
+    ? Math.max(0, Math.min(1, value))
+    : 1;
 }
 
 function orderedSources(request: RecordedMediaRequest): RecordedMediaSource[] {

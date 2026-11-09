@@ -702,7 +702,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   const mediaDialog = page.locator("wzc-recorded-video-dialog dialog");
   await expect(mediaDialog).toBeVisible();
   const recordedVideo = page.locator("wzc-recorded-video-player video");
-  await expect(recordedVideo).toHaveAttribute("controls", "");
+  await expect(recordedVideo).not.toHaveAttribute("controls", "");
   await expect(recordedVideo).toHaveAttribute("autoplay", "");
   await expect(recordedVideo).toHaveAttribute("muted", "");
   await expect(recordedVideo).toHaveAttribute("playsinline", "");
@@ -798,6 +798,11 @@ test("keeps activity content in an independently scrolling viewport", async ({
       viewportSize.height,
     );
   }
+  const transport = page.locator("wzc-recorded-video-transport");
+  await page.mouse.move(0, 0);
+  await expect(transport).toBeHidden({
+    timeout: MEDIA_OVERLAY_HIDE_DELAY_MS + 1_000,
+  });
   await page
     .locator("wzc-recorded-video-player .viewport")
     .hover({ force: true });
@@ -813,22 +818,33 @@ test("keeps activity content in an independently scrolling viewport", async ({
   const recordedControls = page.locator(
     "wzc-recorded-video-player wzc-media-controls .control-button",
   );
-  await expect(recordedControls).toHaveCount(3);
+  await expect(recordedControls).toHaveCount(2);
   expect(
     await recordedControls.evaluateAll((buttons) =>
       buttons.map((button) => button.getAttribute("data-control")),
     ),
-  ).toEqual(["picture_in_picture", "fullscreen", "mute"]);
+  ).toEqual(["picture_in_picture", "fullscreen"]);
+  await expect(transport).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Play recorded video" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("slider", { name: "Recorded video position" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("slider", { name: "Recorded video volume" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", {
+      name: "Additional recorded video control coming soon",
+    }),
+  ).toBeDisabled();
   const recordedMuteBox = await page
     .getByRole("button", { name: "Mute recorded video" })
     .boundingBox();
   expect(recordedMuteBox?.width).toBeGreaterThanOrEqual(30);
   expect(recordedMuteBox?.width).toBeLessThanOrEqual(44);
-  expect(recordedMuteBox?.height).toBe(recordedMuteBox?.width);
-  const recordedControlShape = await page
-    .getByRole("button", { name: "Mute recorded video" })
-    .evaluate((button) => getComputedStyle(button).borderRadius);
-  expect(Number.parseFloat(recordedControlShape)).toBeLessThan(10);
+  expect(recordedMuteBox?.height).toBeCloseTo(recordedMuteBox?.width ?? 0, 3);
   const dispatchRecordedDoubleClick = (): Promise<boolean> =>
     recordedVideo.evaluate((element) => {
       const event = new MouseEvent("dblclick", {

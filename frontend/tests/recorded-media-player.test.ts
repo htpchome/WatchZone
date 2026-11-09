@@ -5,6 +5,7 @@ import { MediaSessionManager } from "../src/core/media-session-manager";
 import type { RecordedMediaRequest } from "../src/core/recorded-media";
 import type { DraggableRecordedVideoDialog } from "../src/ui/recorded-video-viewer/draggable-dialog";
 import type { RecordedVideoPlayer } from "../src/ui/recorded-video-viewer/recorded-video-player";
+import type { RecordedVideoTransport } from "../src/ui/recorded-video-viewer/transport-controls";
 import type { RecordedVideoViewer } from "../src/ui/recorded-video-viewer/recorded-video-viewer";
 import "../src/ui/recorded-video-viewer";
 
@@ -39,7 +40,7 @@ describe("recorded media player", () => {
     Reflect.deleteProperty(HTMLDialogElement.prototype, "close");
   });
 
-  it("opens direct file playback muted with native controls and cleans up", async () => {
+  it("opens direct file playback muted with custom transport controls and cleans up", async () => {
     const player = document.createElement(
       "wzc-recorded-video-player",
     ) as RecordedVideoPlayer;
@@ -57,9 +58,16 @@ describe("recorded media player", () => {
     await player.updateComplete;
     const video = player.shadowRoot?.querySelector("video");
     expect(video).not.toBeNull();
-    expect(video?.controls).toBe(true);
+    expect(video?.controls).toBe(false);
     expect(video?.autoplay).toBe(true);
     expect(video?.muted).toBe(true);
+    const transport = player.shadowRoot?.querySelector(
+      "wzc-recorded-video-transport",
+    );
+    expect(transport).not.toBeNull();
+    expect(
+      transport?.shadowRoot?.querySelector('[data-control="future"]'),
+    ).toMatchObject({ disabled: true });
     await vi.waitFor(() =>
       expect(video?.src).toBe("https://ha.local/signed/clip.mp4?authSig=test"),
     );
@@ -119,6 +127,77 @@ describe("recorded media player", () => {
     );
     video?.dispatchEvent(new Event("loadeddata"));
     await vi.waitFor(() => expect(video?.play).toHaveBeenCalled());
+  });
+
+  it("drives playback, seeking, mute, and volume through the custom transport", async () => {
+    const player = document.createElement(
+      "wzc-recorded-video-player",
+    ) as RecordedVideoPlayer;
+    player.request = request;
+    document.body.append(player);
+    await player.updateComplete;
+    const video = player.shadowRoot?.querySelector("video");
+    expect(video).not.toBeNull();
+    if (!video) return;
+    Object.defineProperties(video, {
+      currentTime: { configurable: true, value: 30, writable: true },
+      duration: { configurable: true, value: 120 },
+      paused: { configurable: true, value: true, writable: true },
+      volume: { configurable: true, value: 1, writable: true },
+    });
+    video.dispatchEvent(new Event("durationchange"));
+    video.dispatchEvent(new Event("timeupdate"));
+    await player.updateComplete;
+    const transport = player.shadowRoot?.querySelector(
+      "wzc-recorded-video-transport",
+    ) as RecordedVideoTransport;
+    await transport.updateComplete;
+
+    const playButton = transport.shadowRoot?.querySelector<HTMLButtonElement>(
+      '[data-control="toggle_play"]',
+    );
+    playButton?.click();
+    await vi.waitFor(() => expect(video.play).toHaveBeenCalled());
+
+    Object.defineProperty(video, "paused", {
+      configurable: true,
+      value: false,
+      writable: true,
+    });
+    video.dispatchEvent(new Event("play"));
+    await player.updateComplete;
+    await transport.updateComplete;
+    transport.shadowRoot
+      ?.querySelector<HTMLButtonElement>('[data-control="toggle_play"]')
+      ?.click();
+    expect(video.pause).toHaveBeenCalled();
+
+    const timeline = transport.shadowRoot?.querySelector<HTMLInputElement>(
+      'input[aria-label="Recorded video position"]',
+    );
+    expect(timeline?.max).toBe("120");
+    expect(timeline?.value).toBe("30");
+    if (timeline) {
+      timeline.value = "75";
+      timeline.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    expect(video.currentTime).toBe(75);
+
+    const volume = transport.shadowRoot?.querySelector<HTMLInputElement>(
+      'input[aria-label="Recorded video volume"]',
+    );
+    if (volume) {
+      volume.value = "0.35";
+      volume.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    expect(video.volume).toBe(0.35);
+    expect(video.muted).toBe(false);
+    await player.updateComplete;
+    await transport.updateComplete;
+    transport.shadowRoot
+      ?.querySelector<HTMLButtonElement>('[data-control="toggle_mute"]')
+      ?.click();
+    expect(video.muted).toBe(true);
   });
 
   it("acquires and releases the global live-audio mute with the modal", async () => {
