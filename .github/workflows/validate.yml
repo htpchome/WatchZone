@@ -42,3 +42,68 @@ jobs:
       - run: ruff check custom_components tests
       - run: mypy
       - run: pytest
+
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    env:
+      PRERELEASES_TO_KEEP: "5"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.19
+      - run: corepack enable
+      - run: corepack yarn install --immutable
+        working-directory: frontend
+      - run: corepack yarn check:version
+        working-directory: frontend
+      - run: corepack yarn build
+        working-directory: frontend
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+      - run: bash scripts/package-release.sh
+      - name: Create GitHub release
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./frontend/package.json').version")
+          TAG="v${VERSION}"
+          EXTRA_ARGS=()
+          if [[ "$VERSION" == *-* ]]; then
+            EXTRA_ARGS+=(--prerelease)
+          fi
+          gh release create "$TAG" dist/watchzone.zip \
+            --target "$GITHUB_SHA" \
+            --generate-notes \
+            "${EXTRA_ARGS[@]}"
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Prune stale prereleases
+        shell: bash
+        run: |
+          CURRENT_TAG="v$(node -p "require('./frontend/package.json').version")"
+          PRERELEASE_LIST=$(
+            gh release list \
+              --limit 1000 \
+              --json tagName,isPrerelease,publishedAt \
+              --jq 'sort_by(.publishedAt) | reverse | map(select(.isPrerelease)) | .[].tagName'
+          )
+          PRERELEASE_TAGS=()
+          while IFS= read -r RELEASE_TAG; do
+            if [[ -n "$RELEASE_TAG" ]]; then
+              PRERELEASE_TAGS+=("$RELEASE_TAG")
+            fi
+          done <<< "$PRERELEASE_LIST"
+
+          for ((INDEX = PRERELEASES_TO_KEEP; INDEX < ${#PRERELEASE_TAGS[@]}; INDEX++)); do
+            STALE_TAG="${PRERELEASE_TAGS[$INDEX]}"
+            if [[ "$STALE_TAG" == "$CURRENT_TAG" ]]; then
+              continue
+            fi
+            gh release delete "$STALE_TAG" --cleanup-tag --yes
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}

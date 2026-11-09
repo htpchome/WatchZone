@@ -1,13 +1,7 @@
 name: Release
 
 on:
-  push:
-    branches: [main]
-    paths-ignore:
-      - "**/*.md"
-      - ".github/**"
-      - "frontend/tests/**"
-      - "tests/**"
+  workflow_dispatch:
 
 permissions:
   contents: write
