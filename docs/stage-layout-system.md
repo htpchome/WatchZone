@@ -46,7 +46,7 @@ both. Variant presence declares where the design is eligible. Each variant
 owns a root grid container. Grid coordinates are positive logical columns and
 rows, never CSS pixels. Each grid row declares either `fraction` sizing for
 shared remaining space or `content` sizing for intrinsic controls such as a
-standalone camera switcher. This keeps fixed-height cards bounded without
+standalone camera navigation bar. This keeps fixed-height cards bounded without
 assigning feature-specific layout behavior to Panel.
 
 Container children are placements containing one module node or one module
@@ -90,7 +90,7 @@ root grid
 │       └── PTZ component (when enabled)
 ├── panel module
     └── content slot
-        └── camera-switcher component
+        └── camera-navigation component
 └── activity module stack
     ├── alerts module (initially active)
     └── events module

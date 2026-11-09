@@ -47,6 +47,32 @@
               "rowSpan": 1
             },
             "node": {
+              "config": {},
+              "id": "default-panel-module",
+              "kind": "module",
+              "moduleType": "panel",
+              "slots": {
+                "content": [
+                  {
+                    "componentType": "camera_navigation",
+                    "config": {
+                      "targetModuleId": "default-camera-module"
+                    },
+                    "id": "default-camera-navigation-component",
+                    "kind": "component"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "grid": {
+              "column": 1,
+              "columnSpan": 12,
+              "row": 3,
+              "rowSpan": 1
+            },
+            "node": {
               "children": [
                 {
                   "config": {
@@ -75,7 +101,7 @@
         "columns": 12,
         "id": "default-layout-root",
         "kind": "container",
-        "rows": ["fraction", "content"]
+        "rows": ["fraction", "content", "content"]
       }
     },
     "phone": {
@@ -121,6 +147,32 @@
               "rowSpan": 1
             },
             "node": {
+              "config": {},
+              "id": "default-panel-module",
+              "kind": "module",
+              "moduleType": "panel",
+              "slots": {
+                "content": [
+                  {
+                    "componentType": "camera_navigation",
+                    "config": {
+                      "targetModuleId": "default-camera-module"
+                    },
+                    "id": "default-camera-navigation-component",
+                    "kind": "component"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "grid": {
+              "column": 1,
+              "columnSpan": 4,
+              "row": 3,
+              "rowSpan": 1
+            },
+            "node": {
               "children": [
                 {
                   "config": {
@@ -149,7 +201,7 @@
         "columns": 4,
         "id": "default-layout-root",
         "kind": "container",
-        "rows": ["fraction", "content"]
+        "rows": ["fraction", "content", "content"]
       }
     }
   }

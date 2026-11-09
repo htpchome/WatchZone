@@ -2,7 +2,7 @@ import type { CardConfig } from "../../core/config";
 import {
   APP_ID,
   ALERTS_MODULE_TYPE,
-  CAMERA_SWITCHER_COMPONENT_TYPE,
+  CAMERA_NAVIGATION_COMPONENT_TYPE,
   CAMERA_MODULE_TYPE,
   EVENTS_MODULE_TYPE,
   LIGHT_COMPONENT_TYPE,
@@ -223,7 +223,7 @@ function hydrateRuntimeComponent(
   node: StageComponentNode,
   config: CardConfig,
 ): StageComponentNode {
-  if (node.componentType !== CAMERA_SWITCHER_COMPONENT_TYPE) return node;
+  if (node.componentType !== CAMERA_NAVIGATION_COMPONENT_TYPE) return node;
   const componentConfig =
     typeof node.config === "object" && node.config !== null ? node.config : {};
   return {
@@ -233,7 +233,8 @@ function hydrateRuntimeComponent(
 }
 
 function namespaceComponentConfig(node: StageComponentNode): unknown {
-  if (node.componentType !== CAMERA_SWITCHER_COMPONENT_TYPE) return node.config;
+  if (node.componentType !== CAMERA_NAVIGATION_COMPONENT_TYPE)
+    return node.config;
   if (typeof node.config !== "object" || node.config === null)
     return node.config;
   const targetModuleId = (node.config as Record<string, unknown>)

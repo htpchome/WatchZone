@@ -9,12 +9,11 @@ import {
   DEFAULT_ACTIVITY_STACK_NODE_ID,
   DEFAULT_ALERTS_MODULE_NODE_ID,
   DEFAULT_CAMERA_MODULE_NODE_ID,
-  DEFAULT_CAMERA_SWITCHER_COMPONENT_NODE_ID,
+  DEFAULT_CAMERA_NAVIGATION_COMPONENT_NODE_ID,
   DEFAULT_EVENTS_MODULE_NODE_ID,
   DEFAULT_LAYOUT_ROOT_NODE_ID,
   DEFAULT_LIGHT_COMPONENT_NODE_ID,
   DEFAULT_PANEL_MODULE_NODE_ID,
-  DEFAULT_PTZ_COMPONENT_NODE_ID,
   DEFAULT_TALK_COMPONENT_NODE_ID,
 } from "../src/core/constants";
 import {
@@ -95,12 +94,12 @@ describe("layout composition", () => {
       slots: {
         content: [
           {
-            componentType: "camera_switcher",
+            componentType: "camera_navigation",
             config: {
               shadows: true,
               targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
             },
-            id: DEFAULT_CAMERA_SWITCHER_COMPONENT_NODE_ID,
+            id: DEFAULT_CAMERA_NAVIGATION_COMPONENT_NODE_ID,
             kind: "component",
           },
         ],
@@ -174,7 +173,7 @@ describe("layout composition", () => {
     }
   });
 
-  it("maps camera bar shadows at the switcher component boundary", () => {
+  it("maps camera bar shadows at the navigation component boundary", () => {
     const layout = builtInStage(
       normalizeCardConfig({
         camera_entity: "camera.front",
@@ -227,35 +226,6 @@ describe("layout composition", () => {
       controlRegion: "center",
       config: {
         cameras: [{ connection: "home_assistant", entityId: "camera.front" }],
-      },
-    });
-  });
-
-  it("composes an independent provider-resolved PTZ overlay", () => {
-    const layout = builtInStage(
-      normalizeCardConfig({
-        cameras: [
-          { entity_id: "camera.front", ptz_enabled: true },
-          {
-            connection: "frigate_go2rtc",
-            entity_id: "camera.back",
-            ptz_enabled: true,
-          },
-        ],
-      }),
-    );
-
-    const camera = moduleAt(layout, 0);
-    expect(camera?.slots?.overlay?.[0]).toMatchObject({
-      id: DEFAULT_PTZ_COMPONENT_NODE_ID,
-      kind: "component",
-      overlayRegion: "bottom-trailing",
-      componentType: "ptz",
-      config: {
-        cameras: [
-          { entityId: "camera.front", provider: "home_assistant" },
-          { entityId: "camera.back", provider: "frigate_go2rtc" },
-        ],
       },
     });
   });

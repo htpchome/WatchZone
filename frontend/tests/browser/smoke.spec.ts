@@ -126,7 +126,7 @@ test("does not load camera code for a camera-free layout", async ({ page }) => {
   );
 });
 
-test("keeps the panel camera switcher and carousel selection bidirectional", async ({
+test("keeps the panel camera navigation and carousel selection bidirectional", async ({
   page,
 }) => {
   await page.goto("/");
@@ -145,8 +145,8 @@ test("keeps the panel camera switcher and carousel selection bidirectional", asy
     });
   });
 
-  const switcher = page.locator("wzc-camera-switcher");
-  const buttons = switcher.locator("button");
+  const navigation = page.locator("wzc-camera-navigation");
+  const buttons = navigation.locator("button");
   await expect(buttons).toHaveCount(2);
   await expect(buttons.nth(0)).toHaveText("Front Door");
   await expect(buttons.nth(0)).toHaveAttribute("aria-selected", "true");
@@ -169,11 +169,14 @@ test("keeps the panel camera switcher and carousel selection bidirectional", asy
     );
   });
   await expect(buttons.nth(0)).toHaveCSS("color", "rgb(246, 247, 248)");
-  await expect(switcher.locator(".track")).toHaveCSS("border-style", "none");
-  await expect(switcher.locator(".scroller")).toHaveCSS(
+  await expect(navigation.locator(".items")).toHaveCSS("border-style", "none");
+  await expect(navigation.locator(".bar")).toHaveCSS(
     "box-shadow",
     "rgb(20, 21, 22) 0px 4px 8px 0px",
   );
+  await expect(navigation.locator(".bar")).toHaveCSS("border-radius", "999px");
+  await expect(buttons.nth(0)).toHaveCSS("border-radius", "999px");
+  await expect(buttons.nth(0)).toHaveCSS("transition-duration", "0s");
   await expect(buttons.nth(0)).toHaveCSS(
     "box-shadow",
     "rgb(30, 31, 32) 0px 1px 2px 0px",
@@ -205,7 +208,7 @@ test("keeps the panel camera switcher and carousel selection bidirectional", asy
 
   const cameraBox = await page.locator("wzc-camera").boundingBox();
   const panelBox = await page.locator("wzc-panel").boundingBox();
-  const selectorBox = await switcher.boundingBox();
+  const selectorBox = await navigation.boundingBox();
   expect(cameraBox).not.toBeNull();
   expect(panelBox).not.toBeNull();
   expect(selectorBox).not.toBeNull();
@@ -228,8 +231,8 @@ test("keeps the panel camera switcher and carousel selection bidirectional", asy
       ],
     });
   });
-  await expect(switcher.locator(".scroller")).not.toHaveClass(/shadows/);
-  await expect(switcher.locator(".scroller")).toHaveCSS("box-shadow", "none");
+  await expect(navigation.locator(".bar")).not.toHaveClass(/shadows/);
+  await expect(navigation.locator(".bar")).toHaveCSS("box-shadow", "none");
   await expect(buttons.nth(0)).toHaveCSS("box-shadow", "none");
 });
 
@@ -756,7 +759,7 @@ test("shows an independently scrolling event window for the active camera", asyn
   await expect(page.locator("wzc-recorded-video-dialog .scrim")).toHaveCount(0);
 
   await page
-    .locator("wzc-camera-switcher button")
+    .locator("wzc-camera-navigation button")
     .nth(1)
     .evaluate((button: HTMLButtonElement) => button.click());
   await expect(events).toContainText("back_yard");
@@ -798,7 +801,7 @@ test("shows an independently scrolling event window for the active camera", asyn
   );
 });
 
-test("lets the camera switcher shadow paint into the card padding", async ({
+test("lets the camera navigation shadow paint into the card padding", async ({
   page,
 }) => {
   await page.goto("/");
@@ -814,8 +817,8 @@ test("lets the camera switcher shadow paint into the card padding", async ({
       cameras: [{ entity_id: "camera.front", title: "Front Door" }],
     });
   });
-  const scroller = card.locator("wzc-camera-switcher .scroller");
-  await expect(scroller).toBeVisible();
+  const bar = card.locator("wzc-camera-navigation .bar");
+  await expect(bar).toBeVisible();
 
   const cardResult = await card.evaluate((element) => {
     const cardRoot = element.shadowRoot;
@@ -834,21 +837,21 @@ test("lets the camera switcher shadow paint into the card padding", async ({
       cardBottom: cardShell.getBoundingClientRect().bottom,
     };
   });
-  const switcherResult = await scroller.evaluate((element) => ({
-    switcherShadow: getComputedStyle(element).boxShadow,
-    scrollerBottom: element.getBoundingClientRect().bottom,
+  const navigationResult = await bar.evaluate((element) => ({
+    navigationShadow: getComputedStyle(element).boxShadow,
+    barBottom: element.getBoundingClientRect().bottom,
   }));
 
   expect(cardResult.cardOverflow).toBe("clip");
   expect(cardResult.shellOverflow).toBe("visible");
-  expect(switcherResult.switcherShadow).not.toBe("none");
+  expect(navigationResult.navigationShadow).not.toBe("none");
   expect(cardResult.cardPaddingBottom).toBeGreaterThan(0);
   expect(
-    cardResult.cardBottom - switcherResult.scrollerBottom,
+    cardResult.cardBottom - navigationResult.barBottom,
   ).toBeGreaterThanOrEqual(cardResult.cardPaddingBottom - 1);
 });
 
-test("restores the camera switcher after an inner-dashboard detach", async ({
+test("restores camera navigation after an inner-dashboard detach", async ({
   page,
 }) => {
   await page.goto("/");
@@ -868,8 +871,8 @@ test("restores the camera switcher after an inner-dashboard detach", async ({
   });
 
   const card = page.locator("watchzone-card");
-  const switcher = card.locator("wzc-camera-switcher");
-  await expect(switcher.locator("button")).toHaveCount(2);
+  const navigation = card.locator("wzc-camera-navigation");
+  await expect(navigation.locator("button")).toHaveCount(2);
 
   await card.evaluate((element) => {
     const parent = element.parentNode;
@@ -881,25 +884,25 @@ test("restores the camera switcher after an inner-dashboard detach", async ({
     marker.remove();
   });
 
-  await expect(switcher.locator("button")).toHaveCount(2);
-  await expect(switcher.locator('button[aria-selected="true"]')).toHaveText(
+  await expect(navigation.locator("button")).toHaveCount(2);
+  await expect(navigation.locator('button[aria-selected="true"]')).toHaveText(
     "Front Door",
   );
-  await switcher.locator("button").nth(1).click();
-  await expect(switcher.locator("button").nth(1)).toHaveAttribute(
+  await navigation.locator("button").nth(1).click();
+  await expect(navigation.locator("button").nth(1)).toHaveAttribute(
     "aria-selected",
     "true",
   );
 });
 
-test("keeps the HA pre-editor wrapper stable without observing switcher geometry", async ({
+test("keeps the HA pre-editor wrapper stable without observing navigation geometry", async ({
   page,
 }) => {
   await page.addInitScript(() => {
     const testWindow = window as typeof window & {
-      __wzcSwitcherResizeObservations?: number;
+      __wzcNavigationResizeObservations?: number;
     };
-    testWindow.__wzcSwitcherResizeObservations = 0;
+    testWindow.__wzcNavigationResizeObservations = 0;
     const NativeResizeObserver = window.ResizeObserver;
     window.ResizeObserver = class extends NativeResizeObserver {
       public override observe(
@@ -909,10 +912,10 @@ test("keeps the HA pre-editor wrapper stable without observing switcher geometry
         const root = target.getRootNode();
         if (
           root instanceof ShadowRoot &&
-          root.host.localName === "wzc-camera-switcher"
+          root.host.localName === "wzc-camera-navigation"
         ) {
-          testWindow.__wzcSwitcherResizeObservations =
-            (testWindow.__wzcSwitcherResizeObservations ?? 0) + 1;
+          testWindow.__wzcNavigationResizeObservations =
+            (testWindow.__wzcNavigationResizeObservations ?? 0) + 1;
         }
         super.observe(target, options);
       }
@@ -934,7 +937,7 @@ test("keeps the HA pre-editor wrapper stable without observing switcher geometry
       ],
     });
   });
-  await expect(card.locator("wzc-camera-switcher button")).toHaveCount(2);
+  await expect(card.locator("wzc-camera-navigation button")).toHaveCount(2);
 
   const result = await card.evaluate(async (element) => {
     const wrapper = document.createElement("div");
@@ -1022,14 +1025,14 @@ test("keeps the HA pre-editor wrapper stable without observing switcher geometry
       () =>
         (
           window as typeof window & {
-            __wzcSwitcherResizeObservations?: number;
+            __wzcNavigationResizeObservations?: number;
           }
-        ).__wzcSwitcherResizeObservations,
+        ).__wzcNavigationResizeObservations,
     ),
   ).toBe(0);
 });
 
-test("scrolls only the camera switcher's viewport for an overflow selection", async ({
+test("does not create a scroll container for overflow camera navigation", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -1058,25 +1061,24 @@ test("scrolls only the camera switcher's viewport for an overflow selection", as
     });
   });
 
-  const switcher = page.locator("wzc-camera-switcher");
-  await expect(switcher.locator("button")).toHaveCount(8);
-  await switcher.evaluate((element) => {
+  const navigation = page.locator("wzc-camera-navigation");
+  await expect(navigation.locator("button")).toHaveCount(8);
+  await navigation.evaluate((element) => {
     element.style.inlineSize = "14rem";
   });
   const pagePosition = await page.evaluate(() => ({
     x: window.scrollX,
     y: window.scrollY,
   }));
-  await switcher
+  await navigation
     .locator("button")
     .last()
     .evaluate((button) => (button as HTMLButtonElement).click());
 
   await expect
-    .poll(() =>
-      switcher.locator(".scroller").evaluate((scroller) => scroller.scrollLeft),
-    )
-    .toBeGreaterThan(0);
+    .poll(() => navigation.locator(".bar").evaluate((bar) => bar.scrollLeft))
+    .toBe(0);
+  await expect(navigation.locator(".bar")).toHaveCSS("overflow-x", "clip");
   expect(
     await page.evaluate(
       () =>
@@ -1258,7 +1260,6 @@ test("lays out talk and light controls in the responsive dock", async ({
         {
           entity_id: "camera.front",
           lights: [{ entity_id: "light.porch", icon: "mdi:cellphone" }],
-          ptz_enabled: true,
           two_way_talk_enabled: true,
         },
         { entity_id: "camera.doorbell" },
@@ -1320,16 +1321,6 @@ test("lays out talk and light controls in the responsive dock", async ({
         if (message.type === "watchzone/talk/capability") {
           return { supported: true };
         }
-        if (message.type === "watchzone/ptz/capability") {
-          return {
-            supported: true,
-            pan: true,
-            tilt: true,
-            zoom: false,
-            focus: false,
-            presets: [],
-          };
-        }
         return undefined;
       },
     };
@@ -1352,17 +1343,12 @@ test("lays out talk and light controls in the responsive dock", async ({
     .first();
   await selectedLiveViewport.hover();
   const talk = page.locator("wzc-two-way-talk");
-  const ptz = page.locator("wzc-ptz");
   const lights = page.locator("wzc-light-control");
   const talkButton = talk.locator("button.inactive");
-  const ptzControl = ptz.locator(".ptz-control");
   const lightButton = lights.locator(".light-button");
   const talkIcon = talkButton.locator(":scope > svg");
   const lightIcon = lightButton.locator(":scope > ha-icon svg");
   await expect(talkButton).toBeVisible();
-  await expect(ptzControl).toHaveClass(/\bvisible\b/);
-  await expect(ptzControl).toHaveCSS("pointer-events", "none");
-  await expect(ptz.locator("button.right")).toHaveCSS("pointer-events", "auto");
   await expect(lightButton).toBeVisible();
   await expect(lightIcon).toBeVisible();
   await expect(lightButton).toHaveAttribute("title", "Turn off Porch");
@@ -1372,95 +1358,55 @@ test("lays out talk and light controls in the responsive dock", async ({
   // gathers every box; a hover-only timer can expire mid-measurement.
   await talkButton.focus();
   await expect(talkButton).toBeFocused();
-  await expect(ptzControl).toBeVisible();
-  await expect(ptzControl).toHaveClass(/\bvisible\b/);
 
   const [
     cameraBox,
     controlsSlotBox,
     talkHostBox,
-    ptzHostBox,
     lightHostBox,
     talkButtonBox,
     talkIconBox,
-    ptzControlBox,
     lightButtonBox,
     lightIconBox,
   ] = await Promise.all([
     selectedCameraStage.boundingBox(),
     controlsSlot.boundingBox(),
     talk.boundingBox(),
-    ptz.boundingBox(),
     lights.boundingBox(),
     talkButton.boundingBox(),
     talkIcon.boundingBox(),
-    ptzControl.boundingBox(),
     lightButton.boundingBox(),
     lightIcon.boundingBox(),
   ]);
   expect(cameraBox).not.toBeNull();
   expect(controlsSlotBox).not.toBeNull();
   expect(talkHostBox).not.toBeNull();
-  expect(ptzHostBox).not.toBeNull();
   expect(lightHostBox).not.toBeNull();
   expect(talkButtonBox).not.toBeNull();
   expect(talkIconBox).not.toBeNull();
-  expect(ptzControlBox).not.toBeNull();
   expect(lightButtonBox).not.toBeNull();
   expect(lightIconBox).not.toBeNull();
   if (
     !cameraBox ||
     !controlsSlotBox ||
     !talkHostBox ||
-    !ptzHostBox ||
     !lightHostBox ||
     !talkButtonBox ||
     !talkIconBox ||
-    !ptzControlBox ||
     !lightButtonBox ||
     !lightIconBox
   ) {
     return;
   }
 
-  const overlaySlotBox = await page
-    .locator('[data-stage-slot="overlay"]')
-    .boundingBox();
-  expect(overlaySlotBox).not.toBeNull();
-  for (const slotBox of [controlsSlotBox, overlaySlotBox]) {
-    if (!slotBox) continue;
-    expect(slotBox.x).toBeCloseTo(cameraBox.x, 1);
-    expect(slotBox.y).toBeCloseTo(cameraBox.y, 1);
-    expect(slotBox.width).toBeCloseTo(cameraBox.width, 1);
-    expect(slotBox.height).toBeCloseTo(cameraBox.height, 1);
-  }
+  await expect(page.locator('[data-stage-slot="overlay"]')).toHaveCount(0);
+  expect(controlsSlotBox.x).toBeCloseTo(cameraBox.x, 1);
+  expect(controlsSlotBox.y).toBeCloseTo(cameraBox.y, 1);
+  expect(controlsSlotBox.width).toBeCloseTo(cameraBox.width, 1);
+  expect(controlsSlotBox.height).toBeCloseTo(cameraBox.height, 1);
 
   expect(talkHostBox.height).toBeCloseTo(talkButtonBox.height, 0);
-  expect(ptzHostBox.height).toBeCloseTo(ptzControlBox.height, 0);
-  expect(ptzHostBox.width).toBeCloseTo(ptzControlBox.width, 0);
-  expect(ptzHostBox.width).toBeLessThanOrEqual(90);
-  const [ptzButtonBox, ptzIconBox] = await Promise.all([
-    ptz.locator("button.right").boundingBox(),
-    ptz.locator("button.right > svg").boundingBox(),
-  ]);
-  expect(ptzButtonBox).not.toBeNull();
-  expect(ptzIconBox).not.toBeNull();
-  if (ptzButtonBox && ptzIconBox) {
-    expect(ptzIconBox.width).toBeLessThanOrEqual(ptzButtonBox.width * 0.32);
-    expect(ptzIconBox.height).toBeLessThanOrEqual(ptzButtonBox.height * 0.32);
-  }
   expect(cameraBox.width / cameraBox.height).toBeCloseTo(16 / 9, 1);
-  const overlayTrailingPadding = await page
-    .locator('[data-stage-slot="overlay"]')
-    .evaluate((element) =>
-      Number.parseFloat(getComputedStyle(element).paddingRight),
-    );
-  expect(ptzControlBox.x + ptzControlBox.width).toBeLessThanOrEqual(
-    cameraBox.x + cameraBox.width - overlayTrailingPadding + 1,
-  );
-  await expect(ptz.locator("xpath=..")).toHaveClass(
-    /overlay-region-bottom-trailing/,
-  );
   expect(lightHostBox.height).toBeCloseTo(lightButtonBox.height, 0);
   expect(talkHostBox.y + talkHostBox.height).toBeCloseTo(
     lightHostBox.y + lightHostBox.height,
@@ -1474,13 +1420,6 @@ test("lays out talk and light controls in the responsive dock", async ({
     cameraBox.x + cameraBox.width / 2,
     0,
   );
-  expect(ptzControlBox.x).toBeGreaterThan(cameraBox.x + cameraBox.width / 2);
-  expect(ptzControlBox.y).toBeGreaterThan(cameraBox.y + cameraBox.height / 2);
-  expect(ptzControlBox.y + ptzControlBox.height).toBeLessThanOrEqual(
-    cameraBox.y + cameraBox.height,
-  );
-  const desktopPtzBottomInset =
-    cameraBox.y + cameraBox.height - (ptzControlBox.y + ptzControlBox.height);
   const desktopTalkBottomInset =
     cameraBox.y + cameraBox.height - (talkButtonBox.y + talkButtonBox.height);
   const desktopLightBottomInset =
@@ -1637,36 +1576,24 @@ test("lays out talk and light controls in the responsive dock", async ({
   await page.setViewportSize({ width: 390, height: 844 });
   await expect
     .poll(async () => {
-      const [stageBox, controlBox, overlayBox] = await Promise.all([
+      const [stageBox, controlBox] = await Promise.all([
         selectedCameraStage.boundingBox(),
         controlsSlot.boundingBox(),
-        page.locator('[data-stage-slot="overlay"]').boundingBox(),
       ]);
-      if (!stageBox || !controlBox || !overlayBox) return false;
-      const boxesMatch = [controlBox, overlayBox].every(
-        (box) =>
-          Math.abs(box.x - stageBox.x) <= 1 &&
-          Math.abs(box.y - stageBox.y) <= 1 &&
-          Math.abs(box.width - stageBox.width) <= 1 &&
-          Math.abs(box.height - stageBox.height) <= 1,
-      );
+      if (!stageBox || !controlBox) return false;
+      const boxesMatch =
+        Math.abs(controlBox.x - stageBox.x) <= 1 &&
+        Math.abs(controlBox.y - stageBox.y) <= 1 &&
+        Math.abs(controlBox.width - stageBox.width) <= 1 &&
+        Math.abs(controlBox.height - stageBox.height) <= 1;
       return (
         boxesMatch &&
         Math.abs(stageBox.width / stageBox.height - 16 / 9) <= 0.05
       );
     })
     .toBe(true);
-  await expect
-    .poll(
-      async () => (await ptz.boundingBox())?.width ?? Number.POSITIVE_INFINITY,
-    )
-    .toBeLessThan(70);
   const mobileCameraBox = await selectedCameraStage.boundingBox();
-  const mobilePtzBox = await ptz.boundingBox();
-  const [mobileControlsSlotBox, mobileOverlaySlotBox] = await Promise.all([
-    controlsSlot.boundingBox(),
-    page.locator('[data-stage-slot="overlay"]').boundingBox(),
-  ]);
+  const mobileControlsSlotBox = await controlsSlot.boundingBox();
   const [mobileTalkBox, mobileLightBox] = await Promise.all([
     talkButton.boundingBox(),
     lightButton.boundingBox(),
@@ -1675,41 +1602,25 @@ test("lays out talk and light controls in the responsive dock", async ({
     .locator('.swiper-slide-active [aria-label="Camera stage height"]')
     .first();
   const mobileResizeHandleBox = await mobileResizeHandle.boundingBox();
-  const mobileOverlayTrailingPadding = await page
-    .locator('[data-stage-slot="overlay"]')
-    .evaluate((element) =>
-      Number.parseFloat(getComputedStyle(element).paddingRight),
-    );
   expect(mobileCameraBox).not.toBeNull();
-  expect(mobilePtzBox).not.toBeNull();
-  if (mobileCameraBox && mobilePtzBox) {
-    for (const slotBox of [mobileControlsSlotBox, mobileOverlaySlotBox]) {
-      expect(slotBox).not.toBeNull();
-      if (!slotBox) continue;
-      expect(slotBox.x).toBeCloseTo(mobileCameraBox.x, 1);
+  if (mobileCameraBox) {
+    expect(mobileControlsSlotBox).not.toBeNull();
+    if (mobileControlsSlotBox) {
+      expect(mobileControlsSlotBox.x).toBeCloseTo(mobileCameraBox.x, 1);
       expect(
-        slotBox.y,
-        JSON.stringify({ mobileCameraBox, slotBox }),
+        mobileControlsSlotBox.y,
+        JSON.stringify({ mobileCameraBox, mobileControlsSlotBox }),
       ).toBeCloseTo(mobileCameraBox.y, 1);
-      expect(slotBox.width).toBeCloseTo(mobileCameraBox.width, 1);
-      expect(slotBox.height).toBeCloseTo(mobileCameraBox.height, 1);
+      expect(mobileControlsSlotBox.width).toBeCloseTo(mobileCameraBox.width, 1);
+      expect(mobileControlsSlotBox.height).toBeCloseTo(
+        mobileCameraBox.height,
+        1,
+      );
     }
     expect(mobileCameraBox.width / mobileCameraBox.height).toBeCloseTo(
       16 / 9,
       1,
     );
-    expect(mobilePtzBox.x + mobilePtzBox.width).toBeLessThanOrEqual(
-      mobileCameraBox.x +
-        mobileCameraBox.width -
-        mobileOverlayTrailingPadding +
-        1,
-    );
-    const mobilePtzBottomInset =
-      mobileCameraBox.y +
-      mobileCameraBox.height -
-      (mobilePtzBox.y + mobilePtzBox.height);
-    expect(mobilePtzBottomInset).toBeLessThanOrEqual(8);
-    expect(mobilePtzBottomInset).toBeLessThan(desktopPtzBottomInset - 10);
     for (const [controlBox, desktopBottomInset] of [
       [mobileTalkBox, desktopTalkBottomInset],
       [mobileLightBox, desktopLightBottomInset],

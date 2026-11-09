@@ -220,15 +220,15 @@ export const themeTokens = css`
     --wzc-carousel-navigation-hover-opacity: 100%;
     --wzc-carousel-navigation-icon-size: 2.75rem;
     --wzc-carousel-navigation-control-gap: 0.75rem;
-    --wzc-camera-switcher-color: var(--wzc-color-text-1);
-    --wzc-camera-switcher-background: var(--wzc-color-surface-secondary);
-    --wzc-camera-switcher-active-color: var(--wzc-color-text-reversed);
-    --wzc-camera-switcher-active-background: var(--wzc-color-primary);
-    --wzc-camera-switcher-shadow: var(--wzc-shadow-medium);
-    --wzc-camera-switcher-active-shadow: var(--wzc-shadow-small);
-    --wzc-camera-switcher-gap: 0.25rem;
-    --wzc-camera-switcher-padding: 0.25rem;
-    --wzc-camera-switcher-item-size: 2.25rem;
+    --wzc-camera-navigation-color: var(--wzc-color-text-1);
+    --wzc-camera-navigation-background: var(--wzc-color-surface-secondary);
+    --wzc-camera-navigation-active-color: var(--wzc-color-text-reversed);
+    --wzc-camera-navigation-active-background: var(--wzc-color-primary);
+    --wzc-camera-navigation-shadow: var(--wzc-shadow-medium);
+    --wzc-camera-navigation-active-shadow: var(--wzc-shadow-small);
+    --wzc-camera-navigation-gap: 0.25rem;
+    --wzc-camera-navigation-padding: 0.25rem;
+    --wzc-camera-navigation-item-size: 2.25rem;
     --wzc-event-list-gap: 0.5rem;
     --wzc-event-list-padding: 0.25rem;
     --wzc-event-tile-block-size: 7.2rem;
@@ -275,13 +275,10 @@ export const themeTokens = css`
     --wzc-stage-stack-button-color: var(--wzc-color-text-2);
     --wzc-stage-stack-button-hover-color: var(--wzc-color-primary);
     --wzc-stage-stack-button-background: var(--wzc-color-surface-secondary);
-    --wzc-stage-stack-button-active-color: var(
-      --wzc-camera-switcher-active-color
-    );
+    --wzc-stage-stack-button-active-color: var(--wzc-color-text-reversed);
     --wzc-stage-stack-button-active-background: var(--wzc-color-primary);
     --wzc-stage-stack-icon-size: 1.35rem;
-    --wzc-camera-switcher-item-padding: 1rem;
-    --wzc-camera-switcher-transition-duration: 180ms;
+    --wzc-camera-navigation-item-padding: 1rem;
     --wzc-talk-connected-color: var(--ha-color-green-50, #34d399);
     --wzc-talk-connecting-color: var(--ha-color-blue-50, #3b82f6);
     --wzc-talk-panel-background: color-mix(

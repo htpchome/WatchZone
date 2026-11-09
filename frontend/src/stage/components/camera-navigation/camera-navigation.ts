@@ -5,15 +5,15 @@ import type {
   CameraSelectionContext,
   CameraSelectionState,
 } from "../../camera-selection-context";
-import { CAMERA_SWITCHER_TAG } from "../../../core/constants";
+import { CAMERA_NAVIGATION_TAG } from "../../../core/constants";
 import {
   englishLocalize,
   type LocalizeFunction,
 } from "../../../core/localization";
-import { cameraSwitcherStyles } from "./camera-switcher.styles";
+import { cameraNavigationStyles } from "./camera-navigation.styles";
 
-/** Portable camera selector presentation backed by shared layout selection. */
-export class CameraSwitcherComponent extends LitElement {
+/** Static camera navigation bar backed by shared layout selection. */
+export class CameraNavigationComponent extends LitElement {
   public static properties = {
     cameraSelection: { attribute: false },
     localize: { attribute: false },
@@ -21,7 +21,6 @@ export class CameraSwitcherComponent extends LitElement {
     targetModuleId: { attribute: false },
   };
 
-  private _revealActiveAfterUpdate = false;
   private _state: CameraSelectionState = { items: [] };
   private _unsubscribe?: () => void;
 
@@ -50,10 +49,10 @@ export class CameraSwitcherComponent extends LitElement {
   protected render() {
     if (this._state.items.length === 0) return nothing;
     return html`<nav
-      class=${this.shadows ? "scroller shadows" : "scroller"}
-      aria-label=${this.localize("camera.switcher")}
+      class=${this.shadows ? "bar shadows" : "bar"}
+      aria-label=${this.localize("camera.navigation")}
     >
-      <div class="track" role="tablist">
+      <div class="items" role="tablist">
         ${repeat(
           this._state.items,
           ({ entityId }) => entityId,
@@ -74,12 +73,6 @@ export class CameraSwitcherComponent extends LitElement {
     </nav>`;
   }
 
-  protected updated(): void {
-    if (!this._revealActiveAfterUpdate) return;
-    this._revealActiveAfterUpdate = false;
-    this._revealActive();
-  }
-
   private _subscribe(): void {
     this._unsubscribe?.();
     this._unsubscribe = undefined;
@@ -87,12 +80,9 @@ export class CameraSwitcherComponent extends LitElement {
       this._state = { items: [] };
       return;
     }
-    this._revealActiveAfterUpdate = true;
     this._unsubscribe = this.cameraSelection.subscribe(
       this.targetModuleId,
       (state) => {
-        this._revealActiveAfterUpdate ||=
-          state.activeEntityId !== this._state.activeEntityId;
         this._state = state;
         this.requestUpdate();
       },
@@ -104,40 +94,15 @@ export class CameraSwitcherComponent extends LitElement {
     if (entityId) this.cameraSelection?.select(this.targetModuleId, entityId);
   };
 
-  private _revealActive(): void {
-    const scroller = this.renderRoot.querySelector<HTMLElement>(".scroller");
-    const active = this.renderRoot.querySelector<HTMLElement>(
-      'button[aria-selected="true"]',
-    );
-    if (!scroller || !active) return;
-    const activeStart = active.offsetLeft;
-    const activeEnd = activeStart + active.offsetWidth;
-    const viewportStart = scroller.scrollLeft;
-    const viewportEnd = viewportStart + scroller.clientWidth;
-    if (activeStart >= viewportStart && activeEnd <= viewportEnd) return;
-    const centeredLeft =
-      activeStart - (scroller.clientWidth - active.offsetWidth) / 2;
-    scroller.scrollTo({
-      behavior: reducedMotion() ? "auto" : "smooth",
-      left: Math.max(0, centeredLeft),
-    });
-  }
-
-  static styles = cameraSwitcherStyles;
+  static styles = cameraNavigationStyles;
 }
 
-function reducedMotion(): boolean {
-  return (
-    globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false
-  );
-}
-
-if (!customElements.get(CAMERA_SWITCHER_TAG)) {
-  customElements.define(CAMERA_SWITCHER_TAG, CameraSwitcherComponent);
+if (!customElements.get(CAMERA_NAVIGATION_TAG)) {
+  customElements.define(CAMERA_NAVIGATION_TAG, CameraNavigationComponent);
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    [CAMERA_SWITCHER_TAG]: CameraSwitcherComponent;
+    [CAMERA_NAVIGATION_TAG]: CameraNavigationComponent;
   }
 }

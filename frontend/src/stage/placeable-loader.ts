@@ -1,5 +1,5 @@
 import {
-  CAMERA_SWITCHER_COMPONENT_TYPE,
+  CAMERA_NAVIGATION_COMPONENT_TYPE,
   CAMERA_MODULE_TYPE,
   ALERTS_MODULE_TYPE,
   EVENTS_MODULE_TYPE,
@@ -45,9 +45,9 @@ const moduleLoaders = {
 } satisfies PlaceableLoaderMap;
 
 const componentLoaders = {
-  [CAMERA_SWITCHER_COMPONENT_TYPE]: {
+  [CAMERA_NAVIGATION_COMPONENT_TYPE]: {
     load: () =>
-      import("./components/camera-switcher").then(
+      import("./components/camera-navigation").then(
         ({ componentDefinition }) => componentDefinition,
       ),
   },
