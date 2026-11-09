@@ -2,6 +2,8 @@ import { html, LitElement } from "lit";
 
 import { listEvents, type EventItem } from "../../../api/events";
 import { ActiveCameraActivityController } from "../../active-camera-activity.controller";
+import { ActivityDateFilterController } from "../../activity-date-filter.controller";
+import type { ActivityDateFilterContext } from "../../activity-date-filter-context";
 import type { CameraSelectionContext } from "../../camera-selection-context";
 import {
   DEFAULT_EVENT_HISTORY_DAYS,
@@ -22,6 +24,7 @@ import { eventsStyles } from "./events.styles";
 export class EventsModule extends LitElement {
   public static properties = {
     api: { attribute: false },
+    activityDateFilter: { attribute: false },
     cameraSelection: { attribute: false },
     displayEventTypeBadges: { attribute: false },
     displayObjectBadges: { attribute: false },
@@ -33,6 +36,7 @@ export class EventsModule extends LitElement {
   };
 
   public api?: HomeAssistantApi;
+  public activityDateFilter?: ActivityDateFilterContext;
   public cameraSelection?: CameraSelectionContext;
   public displayEventTypeBadges = true;
   public displayObjectBadges = true;
@@ -43,6 +47,11 @@ export class EventsModule extends LitElement {
   public targetModuleId = "";
 
   private readonly _toasts = new ToastManager(this);
+  private readonly _dateFilter = new ActivityDateFilterController(
+    this,
+    () => this.activityDateFilter,
+    () => this.api?.locale,
+  );
   private readonly _activity = new ActiveCameraActivityController<EventItem>(
     this,
     () => ({
@@ -59,26 +68,28 @@ export class EventsModule extends LitElement {
   );
 
   protected render() {
-    const items = this._activity.items.map((event): ActivityListItem => ({
-      cameraLabel: this._activity.activeCameraLabel ?? event.camera,
-      clipUrl: event.clip_url,
-      endTime: event.end_time,
-      id: event.id,
-      objectLabels: [
-        event.label,
-        ...(event.sub_label ? [event.sub_label] : []),
-      ],
-      playbackSources: event.playback_sources,
-      preferredTransport: event.preferred_transport,
-      revision: event.revision,
-      snapshotUrl: event.snapshot_url,
-      startTime: event.start_time,
-      thumbnailUrl: event.thumbnail_url,
-      typeBadge: event.has_clip
-        ? { label: this.localize("events.clip"), variant: "success" }
-        : undefined,
-      zones: event.zones,
-    }));
+    const items = this._activity.items
+      .filter((event) => this._dateFilter.includes(event.start_time))
+      .map((event): ActivityListItem => ({
+        cameraLabel: this._activity.activeCameraLabel ?? event.camera,
+        clipUrl: event.clip_url,
+        endTime: event.end_time,
+        id: event.id,
+        objectLabels: [
+          event.label,
+          ...(event.sub_label ? [event.sub_label] : []),
+        ],
+        playbackSources: event.playback_sources,
+        preferredTransport: event.preferred_transport,
+        revision: event.revision,
+        snapshotUrl: event.snapshot_url,
+        startTime: event.start_time,
+        thumbnailUrl: event.thumbnail_url,
+        typeBadge: event.has_clip
+          ? { label: this.localize("events.clip"), variant: "success" }
+          : undefined,
+        zones: event.zones,
+      }));
     return html`
       <wzc-activity-list
         .api=${this.api}

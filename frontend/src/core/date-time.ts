@@ -105,3 +105,18 @@ export function formatHomeAssistantEventDate(
     language,
   ).format(date);
 }
+
+/** Stable YYYY-MM-DD key for an instant in Home Assistant's selected zone. */
+export function homeAssistantDateKey(
+  timestampSeconds: number,
+  locale: HomeAssistantLocale | undefined,
+): string {
+  const parts = homeAssistantDateTimeFormat(
+    locale,
+    { day: "2-digit", month: "2-digit", year: "numeric" },
+    "en-CA",
+  ).formatToParts(new Date(timestampSeconds * 1000));
+  const value = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return `${value("year")}-${value("month")}-${value("day")}`;
+}

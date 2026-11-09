@@ -9,6 +9,9 @@ import { repeat } from "lit/directives/repeat.js";
 
 import { CameraSessionContext } from "./camera-session-context";
 import { CameraSelectionContext } from "./camera-selection-context";
+import { ActivityDateFilterContext } from "./activity-date-filter-context";
+import { ALERTS_MODULE_TYPE, EVENTS_MODULE_TYPE } from "../core/constants";
+import "./activity-calendar";
 import type {
   HomeAssistant,
   HomeAssistantApi,
@@ -58,10 +61,12 @@ interface PlaceableRecord {
 
 /** Owns validated stage rendering, lazy placeable loading, and local failures. */
 export class LayoutRuntime implements ReactiveController {
+  private readonly _activityDateFilter = new ActivityDateFilterContext();
   private _connected = false;
   private readonly _cameraSelection = new CameraSelectionContext();
   private readonly _cameraSession = new CameraSessionContext();
   private _context: Omit<PlaceableRuntimeContext, "placeableId"> = {
+    activityDateFilter: this._activityDateFilter,
     cameraSelection: this._cameraSelection,
     cameraSession: this._cameraSession,
   };
@@ -163,6 +168,7 @@ export class LayoutRuntime implements ReactiveController {
     const transportChanged = this._context.api?.identity !== api?.identity;
     const localeChanged = this._context.localize !== localize;
     this._context = {
+      activityDateFilter: this._activityDateFilter,
       api,
       cameraSelection: this._cameraSelection,
       cameraSession: this._cameraSession,
@@ -296,11 +302,34 @@ export class LayoutRuntime implements ReactiveController {
             </button>`;
           },
         )}
+        ${this._renderActivityCalendar(node)}
       </nav>
       <div class="stage-stack-content">
         ${active ? this._renderStackModule(active) : nothing}
       </div>
     </div>`;
+  }
+
+  private _renderActivityCalendar(
+    node: StageStackNode,
+  ): TemplateResult | typeof nothing {
+    const alerts = node.children.find(
+      ({ moduleType }) => moduleType === ALERTS_MODULE_TYPE,
+    );
+    const hasEvents = node.children.some(
+      ({ moduleType }) => moduleType === EVENTS_MODULE_TYPE,
+    );
+    if (!alerts || !hasEvents || !isActivityConfig(alerts.config)) {
+      return nothing;
+    }
+    return html`<wzc-activity-calendar
+      .api=${this._context.api}
+      .cameraSelection=${this._cameraSelection}
+      .dateFilter=${this._activityDateFilter}
+      .historyDays=${alerts.config.historyDays}
+      .localize=${this._context.localize ?? englishLocalize}
+      .targetModuleId=${alerts.config.targetModuleId}
+    ></wzc-activity-calendar>`;
   }
 
   private _renderStackModule(
@@ -654,4 +683,16 @@ function sameEntityRefs(
 
 function messageFrom(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback;
+}
+
+function isActivityConfig(
+  value: unknown,
+): value is { readonly historyDays: number; readonly targetModuleId: string } {
+  if (typeof value !== "object" || value === null) return false;
+  const config = value as Record<string, unknown>;
+  return (
+    typeof config.historyDays === "number" &&
+    typeof config.targetModuleId === "string" &&
+    config.targetModuleId.length > 0
+  );
 }

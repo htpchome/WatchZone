@@ -42,6 +42,7 @@ export const PANEL_TAG = `${APP_ID}-panel`;
 export const EVENTS_TAG = `${APP_ID}-events`;
 export const ALERTS_TAG = `${APP_ID}-alerts`;
 export const ACTIVITY_LIST_TAG = `${APP_ID}-activity-list`;
+export const ACTIVITY_CALENDAR_TAG = `${APP_ID}-activity-calendar`;
 export const RECORDED_VIDEO_PLAYER_TAG = `${APP_ID}-recorded-video-player`;
 export const RECORDED_VIDEO_TRANSPORT_TAG = `${APP_ID}-recorded-video-transport`;
 export const RECORDED_VIDEO_TRANSPORT_EVENT = `${APP_ID}-recorded-video-transport`;

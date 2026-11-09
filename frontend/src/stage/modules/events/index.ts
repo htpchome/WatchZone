@@ -71,6 +71,7 @@ export const moduleDefinition: ModuleDefinition<EventsModuleConfig> = {
   },
   updateElement(element, config, context) {
     const events = element as EventsModule;
+    events.activityDateFilter = context.activityDateFilter;
     events.api = context.api;
     events.cameraSelection = context.cameraSelection;
     events.displayEventTypeBadges = config.displayEventTypeBadges;

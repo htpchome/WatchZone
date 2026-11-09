@@ -71,6 +71,7 @@ export const moduleDefinition: ModuleDefinition<AlertsModuleConfig> = {
   },
   updateElement(element, config, context) {
     const alerts = element as AlertsModule;
+    alerts.activityDateFilter = context.activityDateFilter;
     alerts.api = context.api;
     alerts.cameraSelection = context.cameraSelection;
     alerts.displayEventTypeBadges = config.displayEventTypeBadges;

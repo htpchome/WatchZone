@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CameraSelectionContext } from "../src/stage/camera-selection-context";
+import { ActivityDateFilterContext } from "../src/stage/activity-date-filter-context";
 import { ACTIVITY_LIST_TAG, ALERTS_TAG } from "../src/core/constants";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import type { AlertsModule } from "../src/stage/modules/alerts/alerts";
@@ -71,8 +72,10 @@ describe("alerts module", () => {
       subscribeMessage: vi.fn(),
     } as unknown as HomeAssistantApi;
     const selection = new CameraSelectionContext();
+    const dateFilter = new ActivityDateFilterContext();
     const module = document.createElement(ALERTS_TAG) as AlertsModule;
     module.api = api;
+    module.activityDateFilter = dateFilter;
     module.cameraSelection = selection;
     module.historyDays = 5;
     module.targetModuleId = "camera-module";
@@ -125,6 +128,12 @@ describe("alerts module", () => {
     expect(activityRoot(module)?.querySelector(".duration")?.textContent).toBe(
       "34s",
     );
+    dateFilter.select("1970-01-02");
+    await module.updateComplete;
+    expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(0);
+    dateFilter.reset();
+    await module.updateComplete;
+    expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(2);
   });
 });
 

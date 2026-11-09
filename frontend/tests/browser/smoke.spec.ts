@@ -536,8 +536,8 @@ test("keeps activity content in an independently scrolling viewport", async ({
   });
 
   const stackNavigation = page.locator(".stage-stack-navigation");
-  await expect(stackNavigation.locator("button")).toHaveCount(2);
-  const stackButtons = stackNavigation.locator("button");
+  const stackButtons = stackNavigation.locator(".stage-stack-button");
+  await expect(stackButtons).toHaveCount(2);
   const normalNavigation = await stackNavigation.evaluate((navigation) => {
     const buttons = [...navigation.querySelectorAll("button")];
     const active = getComputedStyle(buttons[0]!);
@@ -1057,6 +1057,141 @@ test("keeps activity content in an independently scrolling viewport", async ({
     "border-radius",
     "0px",
   );
+});
+
+test("filters alerts and events through the shared activity calendar", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Date.now = () => Date.UTC(2026, 10, 9, 12);
+  });
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  await page.locator("watchzone-card").evaluate((element) => {
+    const today = Date.UTC(2026, 10, 9, 8) / 1000;
+    const yesterday = Date.UTC(2026, 10, 8, 8) / 1000;
+    const activity = [
+      { id: "today", label: "person", start: today },
+      { id: "yesterday", label: "bird", start: yesterday },
+    ];
+    const card = element as HTMLElement & {
+      hass: unknown;
+      setConfig(config: unknown): void;
+    };
+    card.setConfig({
+      type: "custom:watchzone-card",
+      event_history_days: 5,
+      cameras: [{ entity_id: "camera.front", title: "Front" }],
+    });
+    card.hass = {
+      config: { time_zone: "UTC" },
+      locale: {
+        first_weekday: "monday",
+        language: "en",
+        time_zone: "server",
+      },
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "streaming",
+          attributes: { friendly_name: "Front" },
+        },
+      },
+      connection: { subscribeMessage: async () => () => undefined },
+      hassUrl: (path: string) => path,
+      callService: async () => undefined,
+      callWS: async (message: { type: string }) => {
+        if (message.type === "watchzone/live/camera/ready") {
+          return { ready: false };
+        }
+        if (message.type === "watchzone/reviews/list") {
+          return {
+            items: activity.map((item) => ({
+              camera: "front",
+              classification: "detection",
+              clip_url: null,
+              end_time: item.start + 1,
+              id: `review:${item.id}`,
+              labels: [item.label],
+              media_end_time: item.start + 6,
+              media_start_time: item.start - 5,
+              playback_sources: [],
+              preferred_transport: "file",
+              related_event_ids: [`event:${item.id}`],
+              revision: item.id,
+              snapshot_url: null,
+              start_time: item.start,
+              sub_labels: [],
+              thumbnail_url: null,
+              zones: [],
+            })),
+          };
+        }
+        if (message.type === "watchzone/events/list") {
+          return {
+            items: activity.map((item) => ({
+              camera: "front",
+              clip_url: null,
+              end_time: item.start + 1,
+              has_clip: false,
+              has_snapshot: false,
+              id: `event:${item.id}`,
+              label: item.label,
+              playback_sources: [],
+              preferred_transport: "file",
+              revision: item.id,
+              snapshot_url: null,
+              start_time: item.start,
+              sub_label: null,
+              thumbnail_url: null,
+              zones: [],
+            })),
+          };
+        }
+        return undefined;
+      },
+    };
+  });
+
+  const navigation = page.locator(".stage-stack-navigation");
+  const calendar = navigation.locator("wzc-activity-calendar");
+  const trigger = calendar.locator(".calendar-trigger");
+  await expect(page.locator("wzc-alerts .tile")).toHaveCount(2);
+  await expect(trigger).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(trigger).toHaveCSS("border-top-width", "0px");
+  const alignment = await navigation.evaluate((node) => {
+    const navigationRect = node.getBoundingClientRect();
+    const calendarRect = node
+      .querySelector("wzc-activity-calendar")
+      ?.getBoundingClientRect();
+    const triggerRect = node
+      .querySelector("wzc-activity-calendar")
+      ?.shadowRoot?.querySelector("button")
+      ?.getBoundingClientRect();
+    return {
+      endGap: calendarRect ? navigationRect.right - calendarRect.right : -1,
+      triggerHeight: triggerRect?.height ?? 0,
+      triggerWidth: triggerRect?.width ?? 0,
+    };
+  });
+  expect(alignment.endGap).toBeLessThanOrEqual(1);
+  expect(alignment.triggerHeight).toBeGreaterThanOrEqual(44);
+  expect(alignment.triggerWidth).toBeGreaterThanOrEqual(44);
+
+  await trigger.click();
+  await expect(calendar.locator(".day.marked")).toHaveCount(2);
+  await calendar.locator(".day.marked").first().click();
+  await expect(page.locator("wzc-alerts .tile")).toHaveCount(1);
+  await expect(page.locator("wzc-alerts")).toContainText("Bird");
+
+  await navigation.locator(".stage-stack-button").nth(1).click();
+  await expect(page.locator("wzc-events .tile")).toHaveCount(1);
+  await expect(page.locator("wzc-events")).toContainText("Bird");
+
+  await trigger.click();
+  await expect(calendar.locator(".day.selected")).toHaveCount(1);
+  await calendar.locator(".reset").click();
+  await expect(page.locator("wzc-events .tile")).toHaveCount(2);
 });
 
 test("lets the camera navigation shadow paint into the card padding", async ({

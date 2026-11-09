@@ -2,6 +2,8 @@ import { html, LitElement } from "lit";
 
 import { listReviews, type ReviewItem } from "../../../api/reviews";
 import { ActiveCameraActivityController } from "../../active-camera-activity.controller";
+import { ActivityDateFilterController } from "../../activity-date-filter.controller";
+import type { ActivityDateFilterContext } from "../../activity-date-filter-context";
 import type { CameraSelectionContext } from "../../camera-selection-context";
 import {
   ALERTS_TAG,
@@ -22,6 +24,7 @@ import { alertsStyles } from "./alerts.styles";
 export class AlertsModule extends LitElement {
   public static properties = {
     api: { attribute: false },
+    activityDateFilter: { attribute: false },
     cameraSelection: { attribute: false },
     displayEventTypeBadges: { attribute: false },
     displayObjectBadges: { attribute: false },
@@ -33,6 +36,7 @@ export class AlertsModule extends LitElement {
   };
 
   public api?: HomeAssistantApi;
+  public activityDateFilter?: ActivityDateFilterContext;
   public cameraSelection?: CameraSelectionContext;
   public displayEventTypeBadges = true;
   public displayObjectBadges = true;
@@ -43,6 +47,11 @@ export class AlertsModule extends LitElement {
   public targetModuleId = "";
 
   private readonly _toasts = new ToastManager(this);
+  private readonly _dateFilter = new ActivityDateFilterController(
+    this,
+    () => this.activityDateFilter,
+    () => this.api?.locale,
+  );
   private readonly _activity = new ActiveCameraActivityController<ReviewItem>(
     this,
     () => ({
@@ -59,31 +68,33 @@ export class AlertsModule extends LitElement {
   );
 
   protected render() {
-    const items = this._activity.items.map((review): ActivityListItem => ({
-      cameraLabel: this._activity.activeCameraLabel ?? review.camera,
-      classification: review.classification,
-      clipUrl: review.clip_url,
-      endTime: review.end_time,
-      id: review.id,
-      mediaEndTime: review.media_end_time,
-      mediaStartTime: review.media_start_time,
-      objectLabels: [...review.labels, ...review.sub_labels],
-      playbackSources: review.playback_sources,
-      preferredTransport: review.preferred_transport,
-      revision: review.revision,
-      snapshotUrl: review.snapshot_url,
-      startTime: review.start_time,
-      thumbnailUrl: review.thumbnail_url,
-      typeBadge: {
-        label: this.localize(
-          review.classification === "alert"
-            ? "alerts.alert"
-            : "alerts.detection",
-        ),
-        variant: review.classification === "alert" ? "danger" : "warning",
-      },
-      zones: review.zones,
-    }));
+    const items = this._activity.items
+      .filter((review) => this._dateFilter.includes(review.start_time))
+      .map((review): ActivityListItem => ({
+        cameraLabel: this._activity.activeCameraLabel ?? review.camera,
+        classification: review.classification,
+        clipUrl: review.clip_url,
+        endTime: review.end_time,
+        id: review.id,
+        mediaEndTime: review.media_end_time,
+        mediaStartTime: review.media_start_time,
+        objectLabels: [...review.labels, ...review.sub_labels],
+        playbackSources: review.playback_sources,
+        preferredTransport: review.preferred_transport,
+        revision: review.revision,
+        snapshotUrl: review.snapshot_url,
+        startTime: review.start_time,
+        thumbnailUrl: review.thumbnail_url,
+        typeBadge: {
+          label: this.localize(
+            review.classification === "alert"
+              ? "alerts.alert"
+              : "alerts.detection",
+          ),
+          variant: review.classification === "alert" ? "danger" : "warning",
+        },
+        zones: review.zones,
+      }));
     return html`
       <wzc-activity-list
         .api=${this.api}

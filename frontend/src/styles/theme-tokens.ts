@@ -177,6 +177,10 @@ export const themeTokens = css`
     --wzc-stage-resize-handle-inline-size: clamp(6rem, 24%, 10rem);
     --wzc-stage-resize-handle-visual-inline-size: clamp(4rem, 18cqi, 7rem);
     --wzc-stage-resize-handle-visible-bottom-inset: 0.15rem;
+    --wzc-activity-calendar-background: var(--wzc-color-surface);
+    --wzc-activity-calendar-border-color: var(--wzc-color-border);
+    --wzc-activity-calendar-radius: var(--wzc-radius-card);
+    --wzc-activity-calendar-shadow: var(--wzc-shadow-medium);
 
     --wzc-media-overlay-color: var(--ha-color-neutral-90, #e6e6e6);
     --wzc-media-overlay-surface: var(--ha-color-neutral-05, #111111);
