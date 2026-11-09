@@ -293,7 +293,7 @@ export const themeTokens = css`
     --wzc-talk-wave-incoming-color: var(--ha-color-blue-40, #60a5fa);
     --wzc-talk-wave-outgoing-color: var(--ha-color-purple-40, #c084fc);
     --wzc-ptz-button-size: clamp(1.15rem, 4.5cqi, 1.7rem);
-    --wzc-ptz-icon-padding: 0.1rem;
+    --wzc-ptz-icon-size: 50%;
     --wzc-ptz-panel-padding: 0.18rem;
     --wzc-ptz-panel-background: color-mix(
       in srgb,

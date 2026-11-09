@@ -1,8 +1,10 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CameraControlsVisibilityController } from "../src/stage/modules/camera/controls-visibility.controller";
-import { CAMERA_OVERLAY_HIDE_DELAY_MS } from "../src/stage/modules/camera/constants";
+import {
+  MEDIA_OVERLAY_HIDE_DELAY_MS,
+  MediaOverlayVisibilityController,
+} from "../src/ui/media-overlay-visibility.controller";
 
 class TestHost implements ReactiveControllerHost {
   public readonly controllers: ReactiveController[] = [];
@@ -19,11 +21,14 @@ class TestHost implements ReactiveControllerHost {
   }
 }
 
-function pointerEvent(pointerType: string): PointerEvent {
-  return { pointerType } as PointerEvent;
+function pointerEvent(
+  pointerType: string,
+  currentTarget?: HTMLElement,
+): PointerEvent {
+  return { currentTarget, pointerType } as unknown as PointerEvent;
 }
 
-describe("camera control visibility controller", () => {
+describe("media overlay visibility controller", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
@@ -32,18 +37,18 @@ describe("camera control visibility controller", () => {
     vi.useFakeTimers();
     const host = new TestHost();
     const visibility: boolean[] = [];
-    const controller = new CameraControlsVisibilityController(host, (visible) =>
-      visibility.push(visible),
-    );
+    const controller = new MediaOverlayVisibilityController(host, {
+      onVisibilityChange: (visible) => visibility.push(visible),
+    });
 
     controller.handlePointerEnter(pointerEvent("mouse"));
     expect(controller.visible).toBe(true);
     expect(controller.sourceVisible).toBe(true);
-    vi.advanceTimersByTime(CAMERA_OVERLAY_HIDE_DELAY_MS * 2);
+    vi.advanceTimersByTime(MEDIA_OVERLAY_HIDE_DELAY_MS * 2);
     expect(controller.visible).toBe(true);
 
     controller.handlePointerLeave(pointerEvent("mouse"));
-    vi.advanceTimersByTime(CAMERA_OVERLAY_HIDE_DELAY_MS - 1);
+    vi.advanceTimersByTime(MEDIA_OVERLAY_HIDE_DELAY_MS - 1);
     expect(controller.visible).toBe(true);
     vi.advanceTimersByTime(1);
     expect(controller.visible).toBe(false);
@@ -52,35 +57,79 @@ describe("camera control visibility controller", () => {
     expect(visibility).toEqual([true, false]);
   });
 
-  it("reveals on touch, resets on another touch, and cleans up its timer", () => {
+  it("reveals on one touch and hides from the timer without an outside touch", () => {
     vi.useFakeTimers();
     const host = new TestHost();
-    const controller = new CameraControlsVisibilityController(host);
+    const controller = new MediaOverlayVisibilityController(host);
 
     controller.handlePointerDown(pointerEvent("touch"));
-    vi.advanceTimersByTime(CAMERA_OVERLAY_HIDE_DELAY_MS - 1);
-    controller.handlePointerDown(pointerEvent("touch"));
-    vi.advanceTimersByTime(CAMERA_OVERLAY_HIDE_DELAY_MS - 1);
+    vi.advanceTimersByTime(MEDIA_OVERLAY_HIDE_DELAY_MS - 1);
     expect(controller.visible).toBe(true);
     vi.advanceTimersByTime(1);
     expect(controller.visible).toBe(false);
     expect(controller.sourceVisible).toBe(false);
+  });
+
+  it("hides immediately when touched again while visible", () => {
+    vi.useFakeTimers();
+    const controller = new MediaOverlayVisibilityController(new TestHost());
+
+    controller.handlePointerDown(pointerEvent("touch"));
+    expect(controller.visible).toBe(true);
+    controller.handlePointerDown(pointerEvent("touch"));
+    expect(controller.visible).toBe(false);
+
+    vi.advanceTimersByTime(MEDIA_OVERLAY_HIDE_DELAY_MS);
+    expect(controller.visible).toBe(false);
+  });
+
+  it("does not let touch-origin focus or sticky hover pin the overlay", () => {
+    vi.useFakeTimers();
+    const root = {
+      blur: vi.fn(),
+      matches: vi.fn(() => true),
+    } as unknown as HTMLElement;
+    const controller = new MediaOverlayVisibilityController(new TestHost());
+
+    controller.handlePointerDown(pointerEvent("touch", root));
+    controller.handleFocusIn();
+    controller.handlePointerEnd(pointerEvent("touch", root));
+    vi.runOnlyPendingTimers();
+
+    expect(root.blur).toHaveBeenCalledOnce();
+    expect(controller.visible).toBe(false);
+  });
+
+  it("suppresses reveals while media is zoomed and restores touch toggling after reset", () => {
+    const controller = new MediaOverlayVisibilityController(new TestHost());
+
+    controller.setSuppressed(true);
+    controller.handlePointerDown(pointerEvent("touch"));
+    expect(controller.visible).toBe(false);
+    controller.setSuppressed(false);
+    controller.handlePointerDown(pointerEvent("touch"));
+    expect(controller.visible).toBe(true);
+  });
+
+  it("cleans up a pending timer on disconnect", () => {
+    vi.useFakeTimers();
+    const controller = new MediaOverlayVisibilityController(new TestHost());
 
     controller.handlePointerDown(pointerEvent("touch"));
     controller.hostDisconnected();
-    vi.advanceTimersByTime(CAMERA_OVERLAY_HIDE_DELAY_MS);
+    vi.advanceTimersByTime(MEDIA_OVERLAY_HIDE_DELAY_MS);
     expect(controller.visible).toBe(false);
   });
 
   it("introduces the source independently, then shares the hide deadline", () => {
     vi.useFakeTimers();
-    const controller = new CameraControlsVisibilityController(new TestHost());
+    const controller = new MediaOverlayVisibilityController(new TestHost());
 
     controller.revealSource();
     expect(controller.sourceVisible).toBe(true);
     expect(controller.visible).toBe(false);
 
-    vi.advanceTimersByTime(CAMERA_OVERLAY_HIDE_DELAY_MS - 1);
+    vi.advanceTimersByTime(MEDIA_OVERLAY_HIDE_DELAY_MS - 1);
     expect(controller.sourceVisible).toBe(true);
     vi.advanceTimersByTime(1);
     expect(controller.sourceVisible).toBe(false);

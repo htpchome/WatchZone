@@ -100,6 +100,7 @@ export const stageRuntimeStyles = css`
     position: relative;
     display: grid;
     min-block-size: 0;
+    container-type: inline-size;
   }
 
   .module-composition.has-components {
@@ -276,5 +277,15 @@ export const stageRuntimeStyles = css`
 
   .module-placeholder {
     min-block-size: 100%;
+  }
+
+  @container (max-width: 480px) {
+    .component-slot-overlay {
+      padding-block-end: 0.25rem;
+    }
+
+    .component-slot-controls {
+      padding-block-end: calc(var(--wzc-stage-resize-handle-block-size) / 2);
+    }
   }
 `;

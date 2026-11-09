@@ -48,6 +48,11 @@ This document is normative for alert, event, and recording playback.
   fullscreen, and Picture-in-Picture remain fixed overlay controls outside the
   transformed media surface. The PiP path retains the Firefox native-control
   suppression refresh used by live video.
+- Recorded media uses the same `MediaPresentationController` interaction
+  contract as live video. A touch shows controls and starts their timer, a
+  second touch hides them, and zoom or pan hides them. Double-click and
+  double-tap perform WatchZone display zoom; the captured double-click default
+  prevents the native video element from replacing that action with fullscreen.
 - While a recorded-video viewer is open, live WatchZone video in the same
   document is temporarily forced muted through the media-session manager.
 - This forced state never changes a camera's explicit mute preference. When the

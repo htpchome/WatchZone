@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
-import { CAMERA_OVERLAY_HIDE_DELAY_MS } from "../../src/stage/modules/camera/constants";
+import { MEDIA_OVERLAY_HIDE_DELAY_MS } from "../../src/ui/media-overlay-visibility.controller";
 
 const packageJson = JSON.parse(
   readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
@@ -599,6 +599,9 @@ test("shows an independently scrolling event window for the active camera", asyn
       viewportSize.height,
     );
   }
+  await page
+    .locator("wzc-recorded-video-player .viewport")
+    .hover({ force: true });
   await expect(
     page.getByRole("button", { name: "Mute recorded video" }),
   ).toBeVisible();
@@ -627,6 +630,27 @@ test("shows an independently scrolling event window for the active camera", asyn
     .getByRole("button", { name: "Mute recorded video" })
     .evaluate((button) => getComputedStyle(button).borderRadius);
   expect(Number.parseFloat(recordedControlShape)).toBeLessThan(10);
+  const dispatchRecordedDoubleClick = (): Promise<boolean> =>
+    recordedVideo.evaluate((element) => {
+      const event = new MouseEvent("dblclick", {
+        bubbles: true,
+        cancelable: true,
+        clientX: 120,
+        clientY: 80,
+        composed: true,
+      });
+      element.dispatchEvent(event);
+      return event.defaultPrevented;
+    });
+  expect(await dispatchRecordedDoubleClick()).toBe(true);
+  await expect(recordedVideo).toHaveAttribute("style", /scale\(2\)/);
+  await expect(
+    page.getByRole("button", { name: "Mute recorded video" }),
+  ).toBeHidden();
+  expect(await page.evaluate(() => document.fullscreenElement)).toBeNull();
+  expect(await dispatchRecordedDoubleClick()).toBe(true);
+  await expect(recordedVideo).toHaveAttribute("style", /scale\(1\)/);
+  expect(await page.evaluate(() => document.fullscreenElement)).toBeNull();
   const resizeHandle = page.locator("wzc-recorded-video-dialog .resize-handle");
   await expect(resizeHandle).toHaveAttribute(
     "aria-label",
@@ -655,8 +679,13 @@ test("shows an independently scrolling event window for the active camera", asyn
       .locator("wzc-recorded-video-player .viewport")
       .boundingBox();
     expect(resizedDialogBox?.width).toBeLessThan(initialDialogBox.width);
-    expect(resizedDialogBox?.height).toBeLessThan(initialDialogBox.height);
+    expect(resizedDialogBox?.height).toBeLessThanOrEqual(
+      initialDialogBox.height + 1,
+    );
     expect(resizedPlayerBox?.width).toBeLessThan(initialPlayerBox?.width ?? 0);
+    expect(resizedPlayerBox?.height).toBeLessThan(
+      initialPlayerBox?.height ?? 0,
+    );
     if (resizedPlayerBox) {
       expect(resizedPlayerBox.width / resizedPlayerBox.height).toBeCloseTo(
         16 / 9,
@@ -1175,7 +1204,7 @@ test("preserves expanded camera-stage geometry across carousel selection", async
   await expect(previousNavigation).toBeVisible();
   await page.mouse.move(0, 0);
   await expect(previousNavigation).toBeHidden({
-    timeout: CAMERA_OVERLAY_HIDE_DELAY_MS + 1_000,
+    timeout: MEDIA_OVERLAY_HIDE_DELAY_MS + 1_000,
   });
 });
 
@@ -1338,6 +1367,16 @@ test("lays out talk and light controls in the responsive dock", async ({
   expect(ptzHostBox.height).toBeCloseTo(ptzControlBox.height, 0);
   expect(ptzHostBox.width).toBeCloseTo(ptzControlBox.width, 0);
   expect(ptzHostBox.width).toBeLessThanOrEqual(90);
+  const [ptzButtonBox, ptzIconBox] = await Promise.all([
+    ptz.locator("button.right").boundingBox(),
+    ptz.locator("button.right > svg").boundingBox(),
+  ]);
+  expect(ptzButtonBox).not.toBeNull();
+  expect(ptzIconBox).not.toBeNull();
+  if (ptzButtonBox && ptzIconBox) {
+    expect(ptzIconBox.width).toBeLessThanOrEqual(ptzButtonBox.width * 0.55);
+    expect(ptzIconBox.height).toBeLessThanOrEqual(ptzButtonBox.height * 0.55);
+  }
   expect(cameraBox.width / cameraBox.height).toBeCloseTo(16 / 9, 1);
   const overlayTrailingPadding = await page
     .locator('[data-stage-slot="overlay"]')
@@ -1517,6 +1556,10 @@ test("lays out talk and light controls in the responsive dock", async ({
     .toBeLessThan(70);
   const mobileCameraBox = await camera.boundingBox();
   const mobilePtzBox = await ptz.boundingBox();
+  const [mobileTalkBox, mobileLightBox] = await Promise.all([
+    talkButton.boundingBox(),
+    lightButton.boundingBox(),
+  ]);
   const mobileOverlayTrailingPadding = await page
     .locator('[data-stage-slot="overlay"]')
     .evaluate((element) =>
@@ -1535,6 +1578,21 @@ test("lays out talk and light controls in the responsive dock", async ({
         mobileOverlayTrailingPadding +
         1,
     );
+    expect(
+      mobileCameraBox.y +
+        mobileCameraBox.height -
+        (mobilePtzBox.y + mobilePtzBox.height),
+    ).toBeLessThanOrEqual(8);
+    for (const controlBox of [mobileTalkBox, mobileLightBox]) {
+      expect(controlBox).not.toBeNull();
+      if (controlBox) {
+        expect(
+          mobileCameraBox.y +
+            mobileCameraBox.height -
+            (controlBox.y + controlBox.height),
+        ).toBeLessThanOrEqual(20);
+      }
+    }
   }
 });
 
@@ -2871,7 +2929,7 @@ test("retains one live connection while the card presentation is replaced", asyn
     0,
   );
   await expect(connectionIndicator).toBeHidden({
-    timeout: CAMERA_OVERLAY_HIDE_DELAY_MS + 1_000,
+    timeout: MEDIA_OVERLAY_HIDE_DELAY_MS + 1_000,
   });
   expect(
     await page.evaluate(
@@ -3059,7 +3117,7 @@ test("retains one live connection while the card presentation is replaced", asyn
   await page.mouse.move(0, 0);
   await expect(controls).toHaveCount(5);
   await expect(controls.first()).toBeHidden({
-    timeout: CAMERA_OVERLAY_HIDE_DELAY_MS + 1_000,
+    timeout: MEDIA_OVERLAY_HIDE_DELAY_MS + 1_000,
   });
   await video.evaluate((element) => {
     Object.defineProperties(element, {
@@ -3372,18 +3430,53 @@ test("retains one live connection while the card presentation is replaced", asyn
     pointerId: 1,
     pointerType: "touch",
   });
+  await viewport.dispatchEvent("pointerup", {
+    isPrimary: true,
+    pointerId: 1,
+    pointerType: "touch",
+  });
   await expect(controls.first()).toBeVisible();
   await expect(connectionIndicator).toHaveText("WebRTC");
+  await page.waitForTimeout(400);
+  await viewport.dispatchEvent("pointerdown", {
+    isPrimary: true,
+    pointerId: 2,
+    pointerType: "touch",
+  });
+  await viewport.dispatchEvent("pointerup", {
+    isPrimary: true,
+    pointerId: 2,
+    pointerType: "touch",
+  });
+  await expect(controls.first()).toBeHidden();
+
+  await page.waitForTimeout(400);
+  await viewport.dispatchEvent("pointerdown", {
+    isPrimary: true,
+    pointerId: 3,
+    pointerType: "touch",
+  });
+  await viewport.dispatchEvent("pointerup", {
+    isPrimary: true,
+    pointerId: 3,
+    pointerType: "touch",
+  });
+  await expect(controls.first()).toBeVisible();
   await expect(controls.first()).toBeHidden({
-    timeout: CAMERA_OVERLAY_HIDE_DELAY_MS + 1_000,
+    timeout: MEDIA_OVERLAY_HIDE_DELAY_MS + 1_000,
   });
   await expect(connectionIndicator).toBeHidden({
-    timeout: CAMERA_OVERLAY_HIDE_DELAY_MS + 1_000,
+    timeout: MEDIA_OVERLAY_HIDE_DELAY_MS + 1_000,
   });
 
   await viewport.dispatchEvent("pointerdown", {
     isPrimary: true,
-    pointerId: 2,
+    pointerId: 4,
+    pointerType: "touch",
+  });
+  await viewport.dispatchEvent("pointerup", {
+    isPrimary: true,
+    pointerId: 4,
     pointerType: "touch",
   });
   await expect(mute).toBeVisible();

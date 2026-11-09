@@ -82,6 +82,30 @@ media surface owns drag gestures so panning cannot leak into dashboard
 navigation. A drag or pinch clears the pending double-activation sequence and
 never activates zoom toggling.
 
+## Shared media-overlay interaction
+
+Live and recorded video use one `MediaPresentationController` to compose zoom
+with transient overlay visibility. The following behavior is normative for
+every presentation using that controller:
+
+1. A single touch on the media surface shows hidden controls and starts the
+   hide timer immediately.
+2. The timer hides the controls without requiring focus loss, pointer exit, or
+   another touch outside the presentation.
+3. A single touch while controls are visible hides them immediately.
+4. Double activation zooms the media and hides the controls. The presentation
+   captures the browser `dblclick` default so a recorded video's native controls
+   cannot substitute fullscreen for WatchZone display zoom.
+5. Drag or pinch interaction hides the controls. Controls remain suppressed
+   while display zoom is active and become eligible for the normal touch policy
+   after zoom returns to `1x`.
+
+Mouse hover and intentional keyboard focus may hold controls visible when media
+is not zoomed. Focus or sticky hover synthesized from a touch must not hold them
+visible. Overlay buttons stop pointer propagation and retain their own shared
+touch-focus-release behavior, so activating a control does not also toggle the
+overlay.
+
 ## Bounds and lifecycle
 
 - Scale is clamped to `1x` through `3x`.
@@ -105,8 +129,10 @@ branch, or duplicate zoom state.
 
 ## Verification
 
-Unit coverage must verify click/tap toggling, wheel and trackpad policy, pinch
-and pan bounds, camera-identity reset, keyboard access, and the media/overlay
-boundary. Browser-visible changes require the Chromium, Firefox, and WebKit
-Playwright matrix before handoff. Physical-device validation remains required
-for native touch and Catalyst behavior.
+Unit coverage must verify click/tap toggling, the five shared overlay rules,
+wheel and trackpad policy, pinch and pan bounds, media-identity reset, keyboard
+access, and the media/overlay boundary. Browser coverage must prove recorded
+double-click zoom does not enter fullscreen. Browser-visible changes require
+the Chromium, Firefox, and WebKit Playwright matrix before handoff.
+Physical-device validation remains required for native touch and Catalyst
+behavior.

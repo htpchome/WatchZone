@@ -1,9 +1,13 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
-import { CAMERA_OVERLAY_HIDE_DELAY_MS } from "./constants";
+export const MEDIA_OVERLAY_HIDE_DELAY_MS = 2500;
+
+export interface MediaOverlayVisibilityOptions {
+  readonly onVisibilityChange?: (visible: boolean) => void;
+}
 
 /** Owns transient pointer visibility without coupling timers to rendering. */
-export class CameraControlsVisibilityController implements ReactiveController {
+export class MediaOverlayVisibilityController implements ReactiveController {
   public sourceVisible = false;
   public visible = false;
 
@@ -13,10 +17,11 @@ export class CameraControlsVisibilityController implements ReactiveController {
   private _hovered = false;
   private _interactionRoot?: HTMLElement;
   private _pointerFocusPending = false;
+  private _suppressed = false;
 
   public constructor(
     private readonly _host: ReactiveControllerHost,
-    private readonly _onVisibilityChange?: (visible: boolean) => void,
+    private readonly _options: MediaOverlayVisibilityOptions = {},
   ) {
     _host.addController(this);
   }
@@ -26,9 +31,11 @@ export class CameraControlsVisibilityController implements ReactiveController {
     this._focused = false;
     this._hovered = false;
     this._holds = 0;
+    this._pointerFocusPending = false;
+    this._suppressed = false;
     this.sourceVisible = false;
     this.visible = false;
-    this._onVisibilityChange?.(false);
+    this._options.onVisibilityChange?.(false);
   }
 
   public revealSource(): void {
@@ -41,6 +48,20 @@ export class CameraControlsVisibilityController implements ReactiveController {
   public reveal(): void {
     this._show();
     this._scheduleHide();
+  }
+
+  public hide(): void {
+    this._clearHideTimer();
+    if (!this.visible && !this.sourceVisible) return;
+    this.visible = false;
+    this.sourceVisible = false;
+    this._options.onVisibilityChange?.(false);
+    this._host.requestUpdate();
+  }
+
+  public setSuppressed(suppressed: boolean): void {
+    this._suppressed = suppressed;
+    if (suppressed) this.hide();
   }
 
   public hold(): () => void {
@@ -80,11 +101,26 @@ export class CameraControlsVisibilityController implements ReactiveController {
     // Pointer-origin focus must not pin the overlay open after pointer exit.
     this._focused = false;
     this._pointerFocusPending = true;
+    if (event.pointerType === "touch") {
+      if (this.visible) this.hide();
+      else {
+        this._show();
+        this._scheduleHide();
+      }
+      return;
+    }
     queueMicrotask(() => {
       this._pointerFocusPending = false;
     });
     this._show();
-    if (event.pointerType === "touch") this._scheduleHide();
+  };
+
+  public readonly handlePointerEnd = (event: PointerEvent): void => {
+    if (event.pointerType !== "touch") return;
+    this._interactionRoot?.blur();
+    setTimeout(() => {
+      this._pointerFocusPending = false;
+    }, 0);
   };
 
   public readonly handleFocusIn = (): void => {
@@ -101,11 +137,12 @@ export class CameraControlsVisibilityController implements ReactiveController {
   };
 
   private _show(): void {
+    if (this._suppressed) return;
     this._clearHideTimer();
     if (this.visible && this.sourceVisible) return;
     this.visible = true;
     this.sourceVisible = true;
-    this._onVisibilityChange?.(true);
+    this._options.onVisibilityChange?.(true);
     this._host.requestUpdate();
   }
 
@@ -114,19 +151,14 @@ export class CameraControlsVisibilityController implements ReactiveController {
     if (this._hovered || this._focused || this._holds > 0) return;
     this._hideTimer = setTimeout(() => {
       this._hideTimer = undefined;
-      if (
-        this._hovered ||
-        this._focused ||
-        this._holds > 0 ||
-        this._interactionRoot?.matches(":hover")
-      ) {
+      if (this._hovered || this._focused || this._holds > 0) {
         return;
       }
       this.visible = false;
       this.sourceVisible = false;
-      this._onVisibilityChange?.(false);
+      this._options.onVisibilityChange?.(false);
       this._host.requestUpdate();
-    }, CAMERA_OVERLAY_HIDE_DELAY_MS);
+    }, MEDIA_OVERLAY_HIDE_DELAY_MS);
   }
 
   private _clearHideTimer(): void {

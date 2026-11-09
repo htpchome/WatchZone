@@ -34,7 +34,7 @@ import type {
   RecordedMediaRequest,
   RecordedMediaSource,
 } from "../../core/recorded-media";
-import { MediaZoomController } from "../media-zoom.controller";
+import { MediaPresentationController } from "../media-presentation.controller";
 import type {
   MediaControlDescriptor,
   MediaControlEventDetail,
@@ -65,7 +65,7 @@ export class RecordedVideoPlayer extends LitElement {
   private _hls?: HlsType;
   private _muted = true;
   private _pictureInPictureActive = false;
-  private readonly _zoom = new MediaZoomController(this);
+  private readonly _media = new MediaPresentationController(this);
 
   public connectedCallback(): void {
     super.connectedCallback();
@@ -127,18 +127,22 @@ export class RecordedVideoPlayer extends LitElement {
       class="viewport"
       tabindex="0"
       aria-label=${this.localize("media_player.zoom_view", {
-        percent: Math.round(this._zoom.scale * 100),
+        percent: Math.round(this._media.zoom.scale * 100),
       })}
-      @pointerdown=${this._zoom.handlePointerDown}
-      @pointermove=${this._zoom.handlePointerMove}
-      @pointerup=${this._zoom.handlePointerUp}
-      @pointercancel=${this._zoom.handlePointerCancel}
-      @wheel=${this._zoom.handleWheel}
-      @keydown=${this._zoom.handleKeyDown}
+      @pointerenter=${this._media.overlay.handlePointerEnter}
+      @pointerleave=${this._media.overlay.handlePointerLeave}
+      @pointerdown=${this._media.handlePointerDown}
+      @pointermove=${this._media.handlePointerMove}
+      @pointerup=${this._media.handlePointerUp}
+      @pointercancel=${this._media.handlePointerCancel}
+      @wheel=${this._media.handleWheel}
+      @keydown=${this._media.handleKeyDown}
+      @focusin=${this._media.overlay.handleFocusIn}
+      @focusout=${this._media.overlay.handleFocusOut}
     >
       <video
-        class=${this._zoom.interacting ? "interacting" : ""}
-        style=${`transform: ${this._zoom.transform}`}
+        class=${this._media.zoom.interacting ? "interacting" : ""}
+        style=${`transform: ${this._media.zoom.transform}`}
         controls
         autoplay
         muted
@@ -154,7 +158,7 @@ export class RecordedVideoPlayer extends LitElement {
       <${mediaControlsTag}
         .controls=${controls}
         .label=${this.localize("media_player.controls")}
-        .visible=${true}
+        .visible=${this._media.overlay.visible}
         .viewportEdge=${this._fullscreenActive}
         @${mediaControlEvent}=${this._handleControl}
       ></${mediaControlsTag}>
@@ -162,19 +166,19 @@ export class RecordedVideoPlayer extends LitElement {
   }
 
   protected firstUpdated(): void {
-    this._zoom.observe(this._viewport() ?? undefined);
+    this._media.observe(this._viewport() ?? undefined);
     void this._loadRequest();
   }
 
   protected willUpdate(changed: Map<PropertyKey, unknown>): void {
-    if (changed.has("request")) this._zoom.configure(this.request?.id);
+    if (changed.has("request")) this._media.configure(this.request?.id);
   }
 
   protected updated(changed: Map<PropertyKey, unknown>): void {
     if (changed.has("request") && changed.get("request") !== undefined) {
       void this._loadRequest();
     }
-    this._zoom.observe(this._viewport() ?? undefined);
+    this._media.observe(this._viewport() ?? undefined);
     refreshNativePictureInPictureSuppression(this._video());
   }
 
@@ -282,7 +286,7 @@ export class RecordedVideoPlayer extends LitElement {
 
   private readonly _handleLoadedMetadata = (): void => {
     const video = this._video();
-    this._zoom.setMediaDimensions(
+    this._media.zoom.setMediaDimensions(
       video?.videoWidth ?? 0,
       video?.videoHeight ?? 0,
     );

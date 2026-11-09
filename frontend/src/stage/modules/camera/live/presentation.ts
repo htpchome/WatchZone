@@ -29,7 +29,6 @@ import "../../../../ui/badge";
 import "../../../../ui/toast-region";
 import type { CameraControlEventDetail } from "../controls-overlay";
 import "../controls-overlay";
-import { CameraControlsVisibilityController } from "../controls-visibility.controller";
 import { cameraLiveViewStyles } from "../live-view.styles";
 import {
   isPictureInPictureActive,
@@ -38,7 +37,7 @@ import {
   suppressNativePictureInPicture,
   togglePictureInPicture,
 } from "../../../../core/picture-in-picture";
-import { MediaZoomController } from "../../../../ui/media-zoom.controller";
+import { MediaPresentationController } from "../../../../ui/media-presentation.controller";
 import type { PresentedSource } from "./session.controller";
 import { captureVideoFrame, downloadSnapshot } from "./frame-capture";
 
@@ -105,11 +104,9 @@ export class CameraLivePresentation extends LitElement {
   private _reportedGestureLocked = false;
   private _snapshotPending = false;
   private _webRtcFrameRequest?: number;
-  private readonly _visibility = new CameraControlsVisibilityController(
-    this,
-    (visible) => this._emitOverlayVisibility(visible),
-  );
-  private readonly _zoom = new MediaZoomController(this);
+  private readonly _media = new MediaPresentationController(this, {
+    onVisibilityChange: (visible) => this._emitOverlayVisibility(visible),
+  });
 
   public available = false;
   public failed = false;
@@ -135,27 +132,27 @@ export class CameraLivePresentation extends LitElement {
   }
 
   public beginStageResizeReturn(): void {
-    this._zoom.beginStageResizeReturn();
+    this._media.zoom.beginStageResizeReturn();
   }
 
   public updateStageResizeReturn(progress: number): void {
-    this._zoom.updateStageResizeReturn(progress);
+    this._media.zoom.updateStageResizeReturn(progress);
   }
 
   public endStageResizeReturn(): void {
-    this._zoom.endStageResizeReturn();
+    this._media.endStageResizeReturn();
   }
 
   public setBasePresentationScale(scale: number): void {
-    this._zoom.setBasePresentationScale(scale);
+    this._media.zoom.setBasePresentationScale(scale);
   }
 
   public revealOverlay(): void {
-    this._visibility.reveal();
+    this._media.overlay.reveal();
   }
 
   public holdOverlay(): () => void {
-    return this._visibility.hold();
+    return this._media.overlay.hold();
   }
 
   public connectedCallback(): void {
@@ -182,9 +179,9 @@ export class CameraLivePresentation extends LitElement {
       this._posterFailed = false;
     }
     if (changed.has("transport") && this.transport)
-      this._visibility.revealSource();
-    if (changed.has("zoomKey")) this._zoom.configure(this.zoomKey);
-    if (changed.has("suspended") && this.suspended) this._zoom.reset();
+      this._media.overlay.revealSource();
+    if (changed.has("zoomKey")) this._media.configure(this.zoomKey);
+    if (changed.has("suspended") && this.suspended) this._media.resetZoom();
   }
 
   protected render() {
@@ -207,39 +204,37 @@ export class CameraLivePresentation extends LitElement {
     const sourceVisible = Boolean(
       connecting ||
       (resolvedSource &&
-        (this._visibility.sourceVisible || this._visibility.visible)),
+        (this._media.overlay.sourceVisible || this._media.overlay.visible)),
     );
     return staticHtml`
       <div
         class="viewport"
         tabindex="0"
         aria-label=${this.localize("camera.live_view_zoom", {
-          percent: Math.round(this._zoom.scale * 100),
+          percent: Math.round(this._media.zoom.scale * 100),
         })}
         aria-keyshortcuts="Enter Space + - 0 Escape ArrowLeft ArrowRight ArrowUp ArrowDown"
-        @keydown=${this._zoom.handleKeyDown}
-        @pointerenter=${this._visibility.handlePointerEnter}
-        @pointerleave=${this._visibility.handlePointerLeave}
-        @pointermove=${this._visibility.handlePointerMove}
-        @pointerdown=${this._visibility.handlePointerDown}
-        @focusin=${this._visibility.handleFocusIn}
-        @focusout=${this._visibility.handleFocusOut}
+        @keydown=${this._media.handleKeyDown}
+        @pointerenter=${this._media.overlay.handlePointerEnter}
+        @pointerleave=${this._media.overlay.handlePointerLeave}
+        @pointermove=${this._media.handlePointerMove}
+        @pointerdown=${this._media.handlePointerDown}
+        @pointerup=${this._media.handlePointerUp}
+        @pointercancel=${this._media.handlePointerCancel}
+        @focusin=${this._media.overlay.handleFocusIn}
+        @focusout=${this._media.overlay.handleFocusOut}
+        @wheel=${this._media.handleWheel}
       >
         <div
           class=${[
             "media-surface",
-            this._zoom.pannable ? "pannable" : "",
-            this._zoom.interacting ? "interacting" : "",
-            this._zoom.stageResizeActive ? "stage-resize-active" : "",
+            this._media.zoom.pannable ? "pannable" : "",
+            this._media.zoom.interacting ? "interacting" : "",
+            this._media.zoom.stageResizeActive ? "stage-resize-active" : "",
           ]
             .filter(Boolean)
             .join(" ")}
-          style=${`transform: ${this._zoom.transform}`}
-          @pointerdown=${this._zoom.handlePointerDown}
-          @pointermove=${this._zoom.handlePointerMove}
-          @pointerup=${this._zoom.handlePointerUp}
-          @pointercancel=${this._zoom.handlePointerCancel}
-          @wheel=${this._zoom.handleWheel}
+          style=${`transform: ${this._media.zoom.transform}`}
         >
           ${
             this.suspended
@@ -295,7 +290,7 @@ export class CameraLivePresentation extends LitElement {
           this.selected || this.suspended
             ? staticHtml`<${controlsTag}
                 class="swiper-no-swiping"
-                .visible=${this.suspended || this._visibility.visible}
+                .visible=${this.suspended || this._media.overlay.visible}
                 .fullscreenActive=${this._fullscreenActive}
                 .fullscreenSupported=${this._fullscreenSupported()}
                 .muted=${this.muted}
@@ -318,10 +313,10 @@ export class CameraLivePresentation extends LitElement {
   }
 
   protected updated(changed: Map<PropertyKey, unknown>): void {
-    this._zoom.observe(
-      this.renderRoot.querySelector<HTMLElement>(".media-surface") ?? undefined,
+    this._media.observe(
+      this.renderRoot.querySelector<HTMLElement>(".viewport") ?? undefined,
     );
-    const gestureLocked = this._zoom.pannable;
+    const gestureLocked = this._media.zoom.pannable;
     if (gestureLocked !== this._reportedGestureLocked) {
       this._reportedGestureLocked = gestureLocked;
       this.dispatchEvent(
@@ -620,7 +615,7 @@ export class CameraLivePresentation extends LitElement {
       video && video.videoWidth > 0 && video.videoHeight > 0
         ? { height: video.videoHeight, width: video.videoWidth }
         : this._posterDimensions;
-    this._zoom.setMediaDimensions(
+    this._media.zoom.setMediaDimensions(
       dimensions?.width ?? 0,
       dimensions?.height ?? 0,
     );

@@ -43,9 +43,7 @@ export const ptzStyles = css`
     --wzc-round-button-size: var(--wzc-ptz-button-size);
     --wzc-round-button-background: transparent;
     --wzc-round-button-border-color: transparent;
-    --wzc-round-button-icon-size: calc(
-      100% - var(--wzc-ptz-icon-padding) - var(--wzc-ptz-icon-padding)
-    );
+    --wzc-round-button-icon-size: var(--wzc-ptz-icon-size);
     --wzc-round-button-touch-action: none;
     inline-size: var(--wzc-ptz-button-size);
     block-size: var(--wzc-ptz-button-size);

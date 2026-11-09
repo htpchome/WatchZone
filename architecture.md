@@ -450,14 +450,15 @@ policy. A capability that must be independently placed or restyled by the
 Stage Designer, such as two-way talk or PTZ, is a component. It consumes only
 the card-owned active-camera session context and cannot import camera internals.
 
-Transient interaction-overlay visibility belongs to a Lit reactive controller
-within the camera feature. Pointer hover, touch, and keyboard focus share that
-policy; behavioral delays are named constants rather than literals embedded in
-views or styles. The source indicator remains an independent non-control
-overlay, but after its exceptions it consumes the same interaction visibility
-state and hide timer as the control overlay. Its exceptions are that Connecting
-remains visible continuously and the first resolved source receives one
-automatic timed introduction before ordinary interaction-controlled behavior.
+Transient media-overlay visibility and display zoom belong to shared Lit
+reactive controllers used by live and recorded presentations. Pointer hover,
+touch, keyboard focus, double activation, zoom, and pan share that policy;
+behavioral delays are named constants rather than literals embedded in views or
+styles. The live source indicator remains an independent non-control overlay,
+but after its exceptions it consumes the same interaction visibility state and
+hide timer as the control overlay. Its exceptions are that Connecting remains
+visible continuously and the first resolved source receives one automatic timed
+introduction before ordinary interaction-controlled behavior.
 
 ### 8.4 Custom elements and Lit
 

@@ -4,7 +4,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { CAMERA_LIVE_PRESENTATION_TAG } from "../src/core/constants";
 import "../src/stage/modules/camera/live/presentation";
 import type { CameraLivePresentation } from "../src/stage/modules/camera/live/presentation";
+import { MediaPresentationController } from "../src/ui/media-presentation.controller";
 import { MediaZoomController } from "../src/ui/media-zoom.controller";
+import { MEDIA_OVERLAY_HIDE_DELAY_MS } from "../src/ui/media-overlay-visibility.controller";
 
 function createHost(): ReactiveControllerHost {
   return {
@@ -63,6 +65,16 @@ function connectPointerEvents(
   surface.addEventListener("pointercancel", controller.handlePointerCancel);
 }
 
+function connectMediaPointerEvents(
+  surface: HTMLElement,
+  controller: MediaPresentationController,
+): void {
+  surface.addEventListener("pointerdown", controller.handlePointerDown);
+  surface.addEventListener("pointermove", controller.handlePointerMove);
+  surface.addEventListener("pointerup", controller.handlePointerUp);
+  surface.addEventListener("pointercancel", controller.handlePointerCancel);
+}
+
 function tap(
   surface: HTMLElement,
   pointerType: "mouse" | "touch" = "mouse",
@@ -85,10 +97,23 @@ function tap(
   );
 }
 
+function doubleClick(surface: HTMLElement): void {
+  surface.dispatchEvent(
+    new MouseEvent("dblclick", {
+      bubbles: true,
+      button: 0,
+      cancelable: true,
+      clientX: 200,
+      clientY: 112.5,
+    }),
+  );
+}
+
 describe("camera media zoom", () => {
   afterEach(() => {
     document.body.replaceChildren();
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   it("toggles between 1x and 2x with double-click or double-tap", () => {
@@ -96,18 +121,65 @@ describe("camera media zoom", () => {
     const controller = new MediaZoomController(createHost());
     controller.observe(surface);
     connectPointerEvents(surface, controller);
+    surface.addEventListener("dblclick", controller.handleDoubleClick);
 
-    tap(surface);
-    expect(controller.scale).toBe(1);
-    tap(surface);
+    doubleClick(surface);
     expect(controller.scale).toBe(2);
     expect(controller.zoomed).toBe(true);
 
+    doubleClick(surface);
+    expect(controller.scale).toBe(1);
+
+    tap(surface, "touch");
+    expect(controller.scale).toBe(1);
     tap(surface, "touch");
     expect(controller.scale).toBe(2);
     tap(surface, "touch");
-    expect(controller.scale).toBe(1);
+    tap(surface, "touch");
     expect(controller.transform).toBe("translate3d(0px, 0px, 0) scale(1)");
+  });
+
+  it("applies one overlay contract to touch, zoom, pan, and native double-click", () => {
+    vi.useFakeTimers();
+    const surface = createSurface();
+    const controller = new MediaPresentationController(createHost());
+    controller.observe(surface);
+    connectMediaPointerEvents(surface, controller);
+
+    tap(surface, "touch");
+    expect(controller.overlay.visible).toBe(true);
+    vi.advanceTimersByTime(MEDIA_OVERLAY_HIDE_DELAY_MS);
+    expect(controller.overlay.visible).toBe(false);
+
+    tap(surface, "touch");
+    tap(surface, "touch");
+    expect(controller.zoom.scale).toBe(2);
+    expect(controller.overlay.visible).toBe(false);
+
+    surface.dispatchEvent(
+      pointerEvent("pointerdown", {
+        clientX: 200,
+        clientY: 112.5,
+        pointerId: 2,
+        pointerType: "touch",
+      }),
+    );
+    surface.dispatchEvent(
+      pointerEvent("pointermove", {
+        clientX: 240,
+        clientY: 112.5,
+        pointerId: 2,
+        pointerType: "touch",
+      }),
+    );
+    expect(controller.overlay.visible).toBe(false);
+
+    const doubleClick = new MouseEvent("dblclick", {
+      bubbles: true,
+      cancelable: true,
+    });
+    surface.dispatchEvent(doubleClick);
+    expect(doubleClick.defaultPrevented).toBe(true);
   });
 
   it("does not treat a completed pan as part of a double activation", () => {
@@ -115,8 +187,9 @@ describe("camera media zoom", () => {
     const controller = new MediaZoomController(createHost());
     controller.observe(surface);
     connectPointerEvents(surface, controller);
-    tap(surface);
-    tap(surface);
+    controller.handleDoubleClick(
+      new MouseEvent("dblclick", { clientX: 200, clientY: 112.5 }),
+    );
     expect(controller.scale).toBe(2);
 
     surface.dispatchEvent(
@@ -306,8 +379,9 @@ describe("camera media zoom", () => {
     controller.observe(surface);
     connectPointerEvents(surface, controller);
     controller.configure("camera.front");
-    tap(surface);
-    tap(surface);
+    controller.handleDoubleClick(
+      new MouseEvent("dblclick", { clientX: 200, clientY: 112.5 }),
+    );
     expect(controller.scale).toBe(2);
 
     controller.configure("camera.back");
@@ -349,8 +423,9 @@ describe("camera media zoom", () => {
     const controller = new MediaZoomController(createHost());
     controller.observe(surface);
     connectPointerEvents(surface, controller);
-    tap(surface);
-    tap(surface);
+    controller.handleDoubleClick(
+      new MouseEvent("dblclick", { clientX: 200, clientY: 112.5 }),
+    );
 
     surface.dispatchEvent(
       pointerEvent("pointerdown", {
