@@ -85,9 +85,8 @@ root grid
 ├── camera module
 │   ├── controls slot (responsive intrinsic-size dock)
 │   │   ├── linked-light component (when configured)
-│   │   └── two-way-talk component (when enabled)
-│   └── overlay slot
-│       └── PTZ component (when enabled)
+│   │   ├── two-way-talk component (when enabled)
+│   │   └── PTZ component (when enabled)
 ├── panel module
     └── content slot
         └── camera-navigation component
@@ -106,8 +105,8 @@ outside their dock item without changing the dock's measured control geometry.
 
 The overlay slot owns its three-by-three logical placement grid and local
 Stage-edge clearance. Its trailing clearance reserves the camera media-control
-rail, so a bottom-trailing component such as PTZ remains entirely before that
-rail without knowing camera-control geometry. Neither Stage slot consumes
+rail for future overlay components without exposing camera-control geometry.
+Neither Stage slot consumes
 device safe-area insets: a Stage is contained inside the Home Assistant card,
 not attached to a physical viewport edge. A true viewport-edge presentation
 such as fullscreen owns its own safe-area treatment.

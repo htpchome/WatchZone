@@ -48,7 +48,7 @@ defaults to `false` and is omitted from YAML at its default.
 - Pointer press or keyboard activation starts movement; release stops it.
 - The PTZ overlay consumes the camera controller's shared overlay state and
   hide timer. It does not create a second visibility timer.
-- Stage overlay placement is supplied by the overlay slot's logical region.
+- Stage placement is supplied by the controls slot's trailing logical region.
   PTZ renders at its intrinsic size and does not position itself against the
   Stage or consume viewport safe-area insets.
 - Active movement holds the shared overlay visible. Releasing movement releases

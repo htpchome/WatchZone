@@ -71,12 +71,12 @@ allowed to clip content or escape Home Assistant's allocated grid area.
 The camera module owns the canonical runtime height ratio. The active camera
 view's `CameraStageResizeController` owns pointer capture, keyboard slider
 behavior, fit threshold, and cleanup, then emits typed size intent to the
-camera parent. The parent applies that ratio to every stable carousel slide;
-the views do not create per-camera stage-height state. Dragging down increases
-height; dragging up reduces it. Arrow keys, Home, and End provide keyboard
-access, and double-click/double-tap resets the stage. The resize handle owns
-only its own touch gesture and does not replace native page scrolling
-elsewhere.
+camera parent. The parent applies that ratio to its viewport and every stable
+carousel slide; the views do not create per-camera stage-height state. Dragging
+down increases height; dragging up reduces it. Arrow keys, Home, and End
+provide keyboard access, and double-click/double-tap resets the stage. The
+resize handle owns only its own touch gesture and does not replace native page
+scrolling elsewhere.
 
 Stage sizing is separate from user display zoom. Resizing changes the viewport
 and reports only the base presentation scale required to fill it. The

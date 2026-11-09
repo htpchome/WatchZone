@@ -34,6 +34,13 @@
                     "controlRegion": "center",
                     "id": "default-talk-component",
                     "kind": "component"
+                  },
+                  {
+                    "componentType": "ptz",
+                    "config": {},
+                    "controlRegion": "trailing",
+                    "id": "default-ptz-component",
+                    "kind": "component"
                   }
                 ]
               }
@@ -133,6 +140,13 @@
                     "config": {},
                     "controlRegion": "center",
                     "id": "default-talk-component",
+                    "kind": "component"
+                  },
+                  {
+                    "componentType": "ptz",
+                    "config": {},
+                    "controlRegion": "trailing",
+                    "id": "default-ptz-component",
                     "kind": "component"
                   }
                 ]

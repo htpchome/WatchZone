@@ -303,6 +303,13 @@ export class CameraModule extends LitElement {
   ): void => {
     event.stopPropagation();
     this._stageSize = event.detail;
+    if (this._stageSize.resized) {
+      this.style.blockSize = "auto";
+      this.style.aspectRatio = String(1 / this._stageSize.heightRatio);
+    } else {
+      this.style.removeProperty("block-size");
+      this.style.removeProperty("aspect-ratio");
+    }
     this.requestUpdate();
   };
 

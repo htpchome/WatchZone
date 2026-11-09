@@ -14,6 +14,7 @@ import {
   DEFAULT_LAYOUT_ROOT_NODE_ID,
   DEFAULT_LIGHT_COMPONENT_NODE_ID,
   DEFAULT_PANEL_MODULE_NODE_ID,
+  DEFAULT_PTZ_COMPONENT_NODE_ID,
   DEFAULT_TALK_COMPONENT_NODE_ID,
 } from "../src/core/constants";
 import {
@@ -268,6 +269,36 @@ describe("layout composition", () => {
             cameraEntityId: "camera.back",
             lights: [{ entityId: "light.yard" }],
           },
+        ],
+      },
+    });
+  });
+
+  it("composes provider-resolved PTZ in the trailing controls region", () => {
+    const layout = builtInStage(
+      normalizeCardConfig({
+        cameras: [
+          { entity_id: "camera.front", ptz_enabled: true },
+          {
+            connection: "frigate_go2rtc",
+            entity_id: "camera.back",
+            ptz_enabled: true,
+          },
+        ],
+      }),
+    );
+
+    const camera = moduleAt(layout, 0);
+    expect(camera?.slots?.overlay).toBeUndefined();
+    expect(camera?.slots?.controls?.[0]).toMatchObject({
+      id: DEFAULT_PTZ_COMPONENT_NODE_ID,
+      kind: "component",
+      componentType: "ptz",
+      controlRegion: "trailing",
+      config: {
+        cameras: [
+          { entityId: "camera.front", provider: "home_assistant" },
+          { entityId: "camera.back", provider: "frigate_go2rtc" },
         ],
       },
     });

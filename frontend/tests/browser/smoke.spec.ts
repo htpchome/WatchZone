@@ -1240,7 +1240,7 @@ test("preserves expanded camera-stage geometry across carousel selection", async
   });
 });
 
-test("lays out talk and light controls in the responsive dock", async ({
+test("keeps PTZ, talk, and light controls attached to the resizing viewport", async ({
   page,
 }) => {
   await installHaIconFixture(page);
@@ -1260,6 +1260,7 @@ test("lays out talk and light controls in the responsive dock", async ({
         {
           entity_id: "camera.front",
           lights: [{ entity_id: "light.porch", icon: "mdi:cellphone" }],
+          ptz_enabled: true,
           two_way_talk_enabled: true,
         },
         { entity_id: "camera.doorbell" },
@@ -1321,6 +1322,16 @@ test("lays out talk and light controls in the responsive dock", async ({
         if (message.type === "watchzone/talk/capability") {
           return { supported: true };
         }
+        if (message.type === "watchzone/ptz/capability") {
+          return {
+            supported: true,
+            pan: true,
+            tilt: true,
+            zoom: false,
+            focus: false,
+            presets: [],
+          };
+        }
         return undefined;
       },
     };
@@ -1343,12 +1354,23 @@ test("lays out talk and light controls in the responsive dock", async ({
     .first();
   await selectedLiveViewport.hover();
   const talk = page.locator("wzc-two-way-talk");
+  const ptz = page.locator("wzc-ptz");
   const lights = page.locator("wzc-light-control");
   const talkButton = talk.locator("button.inactive");
+  const ptzControl = ptz.locator(".ptz-control");
   const lightButton = lights.locator(".light-button");
   const talkIcon = talkButton.locator(":scope > svg");
   const lightIcon = lightButton.locator(":scope > ha-icon svg");
   await expect(talkButton).toBeVisible();
+  await expect(ptzControl).toHaveClass(/\bvisible\b/);
+  await expect(ptz.locator("xpath=..")).toHaveAttribute(
+    "data-layout-node",
+    "wzc:default-ptz-component",
+  );
+  await expect(ptz.locator("xpath=../..")).toHaveAttribute(
+    "data-control-region",
+    "trailing",
+  );
   await expect(lightButton).toBeVisible();
   await expect(lightIcon).toBeVisible();
   await expect(lightButton).toHaveAttribute("title", "Turn off Porch");
@@ -1594,9 +1616,10 @@ test("lays out talk and light controls in the responsive dock", async ({
     .toBe(true);
   const mobileCameraBox = await selectedCameraStage.boundingBox();
   const mobileControlsSlotBox = await controlsSlot.boundingBox();
-  const [mobileTalkBox, mobileLightBox] = await Promise.all([
+  const [mobileTalkBox, mobileLightBox, mobilePtzBox] = await Promise.all([
     talkButton.boundingBox(),
     lightButton.boundingBox(),
+    ptz.boundingBox(),
   ]);
   const mobileResizeHandle = camera
     .locator('.swiper-slide-active [aria-label="Camera stage height"]')
@@ -1636,11 +1659,30 @@ test("lays out talk and light controls in the responsive dock", async ({
       }
     }
     expect(mobileResizeHandleBox).not.toBeNull();
-    if (mobileResizeHandleBox && mobileTalkBox) {
+    expect(mobilePtzBox).not.toBeNull();
+    if (
+      mobileResizeHandleBox &&
+      mobileTalkBox &&
+      mobileLightBox &&
+      mobilePtzBox
+    ) {
       expect(mobileTalkBox.y + mobileTalkBox.height).toBeLessThanOrEqual(
         mobileResizeHandleBox.y + 1,
       );
-      const initialMobileStageHeight = mobileCameraBox.height;
+      const cameraComposition = page.locator(".module-composition").first();
+      const [initialModuleBox, initialCompositionBox] = await Promise.all([
+        camera.boundingBox(),
+        cameraComposition.boundingBox(),
+      ]);
+      expect(initialModuleBox).not.toBeNull();
+      expect(initialCompositionBox).not.toBeNull();
+      if (!initialModuleBox || !initialCompositionBox) return;
+      expect(initialModuleBox.height).toBeCloseTo(mobileCameraBox.height, 1);
+      expect(initialCompositionBox.height).toBeCloseTo(
+        mobileCameraBox.height,
+        1,
+      );
+
       await page.mouse.move(
         mobileResizeHandleBox.x + mobileResizeHandleBox.width / 2,
         mobileResizeHandleBox.y + mobileResizeHandleBox.height / 2,
@@ -1651,9 +1693,38 @@ test("lays out talk and light controls in the responsive dock", async ({
         mobileResizeHandleBox.y + mobileResizeHandleBox.height / 2 + 30,
       );
       await page.mouse.up();
+
       await expect
-        .poll(async () => (await selectedCameraStage.boundingBox())?.height)
-        .toBeGreaterThan(initialMobileStageHeight);
+        .poll(async () => {
+          const [stage, module, composition, controls] = await Promise.all([
+            selectedCameraStage.boundingBox(),
+            camera.boundingBox(),
+            cameraComposition.boundingBox(),
+            controlsSlot.boundingBox(),
+          ]);
+          if (!stage || !module || !composition || !controls) return undefined;
+          return {
+            composition: composition.height,
+            controls: controls.height,
+            module: module.height,
+            stage: stage.height,
+          };
+        })
+        .toEqual({
+          composition: mobileCameraBox.height + 30,
+          controls: mobileCameraBox.height + 30,
+          module: mobileCameraBox.height + 30,
+          stage: mobileCameraBox.height + 30,
+        });
+
+      const [movedTalkBox, movedLightBox, movedPtzBox] = await Promise.all([
+        talkButton.boundingBox(),
+        lightButton.boundingBox(),
+        ptz.boundingBox(),
+      ]);
+      expect(movedTalkBox?.y).toBeGreaterThan(mobileTalkBox.y);
+      expect(movedLightBox?.y).toBeGreaterThan(mobileLightBox.y);
+      expect(movedPtzBox?.y).toBeGreaterThan(mobilePtzBox.y);
     }
   }
 });
