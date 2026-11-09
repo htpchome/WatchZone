@@ -230,6 +230,10 @@ export const themeTokens = css`
     --wzc-camera-navigation-gap: 0.25rem;
     --wzc-camera-navigation-padding: 0.25rem;
     --wzc-camera-navigation-item-size: 2.25rem;
+    --wzc-camera-navigation-block-size: calc(
+      var(--wzc-camera-navigation-item-size) + 2 *
+        var(--wzc-camera-navigation-padding)
+    );
     --wzc-event-list-gap: 0.5rem;
     --wzc-event-list-padding: 0.25rem;
     --wzc-event-tile-block-size: 7.2rem;
@@ -291,7 +295,10 @@ export const themeTokens = css`
     --wzc-talk-wave-incoming-color: var(--ha-color-blue-40, #60a5fa);
     --wzc-talk-wave-outgoing-color: var(--ha-color-purple-40, #c084fc);
     --wzc-ptz-cell-size: clamp(1.15rem, 4.5cqi, 1.7rem);
-    --wzc-ptz-button-size: calc(var(--wzc-overlay-control-min-size) * 0.5);
+    --wzc-ptz-button-size: calc(
+      var(--wzc-ptz-cell-size) + var(--wzc-ptz-panel-padding) +
+        var(--wzc-ptz-panel-padding) + 2px
+    );
     --wzc-ptz-icon-size: 42%;
     --wzc-ptz-panel-padding: 0.18rem;
     --wzc-ptz-panel-background: color-mix(

@@ -11,10 +11,6 @@ export const activityListStyles = css`
   .viewport {
     box-sizing: border-box;
     block-size: 100%;
-    max-block-size: calc(
-      5 * var(--wzc-event-tile-block-size) + 4 * var(--wzc-event-list-gap) + 2 *
-        var(--wzc-event-list-padding)
-    );
     min-block-size: calc(
       3 * var(--wzc-event-tile-block-size) + 2 * var(--wzc-event-list-gap) + 2 *
         var(--wzc-event-list-padding)
@@ -27,6 +23,14 @@ export const activityListStyles = css`
   .list {
     display: grid;
     gap: var(--wzc-event-list-gap);
+  }
+
+  .skeleton-row {
+    display: block;
+    block-size: var(--wzc-event-tile-block-size);
+    background: var(--wzc-event-tile-background);
+    border-radius: var(--wzc-event-tile-radius);
+    box-shadow: var(--wzc-event-tile-shadow);
   }
 
   .tile {
@@ -221,6 +225,16 @@ export const activityListStyles = css`
     display: flex;
     justify-content: center;
     text-align: center;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    inline-size: 1px;
+    block-size: 1px;
+    white-space: nowrap;
   }
 
   @media (max-width: 420px) {

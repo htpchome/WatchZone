@@ -126,6 +126,157 @@ test("does not load camera code for a camera-free layout", async ({ page }) => {
   );
 });
 
+test("starts the active camera poster before the full camera element loads", async ({
+  page,
+}) => {
+  let releaseCameraDefinition!: () => void;
+  const cameraDefinitionGate = new Promise<void>((resolve) => {
+    releaseCameraDefinition = resolve;
+  });
+  let posterRequested = false;
+  await page.route("**/src/stage/modules/camera/camera.ts*", async (route) => {
+    await cameraDefinitionGate;
+    await route.continue();
+  });
+  await page.route("**/poster.svg", async (route) => {
+    posterRequested = true;
+    await route.fulfill({
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900"><rect width="1600" height="900" fill="black"/></svg>',
+      contentType: "image/svg+xml",
+    });
+  });
+
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  await page.locator("watchzone-card").evaluate((element) => {
+    const card = element as HTMLElement & {
+      hass: unknown;
+      setConfig(config: unknown): void;
+    };
+    card.setConfig({
+      type: "custom:watchzone-card",
+      camera_entity: "camera.front",
+    });
+    card.hass = {
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "streaming",
+          attributes: { entity_picture: "/poster.svg" },
+        },
+      },
+      connection: { subscribeMessage: async () => () => undefined },
+      hassUrl: (path: string) => path,
+      callService: async () => undefined,
+      callWS: async (message: { type: string }) =>
+        message.type === "watchzone/reviews/list"
+          ? { items: [] }
+          : { ready: false },
+    };
+  });
+
+  await expect.poll(() => posterRequested).toBe(true);
+  expect(
+    await page.evaluate(() => customElements.get("wzc-camera")),
+  ).toBeUndefined();
+  releaseCameraDefinition();
+  await expect(page.locator("wzc-camera")).toBeVisible();
+});
+
+test("keeps picker and activity geometry stable across lazy loading", async ({
+  page,
+}) => {
+  let releasePlaceables!: () => void;
+  const placeableGate = new Promise<void>((resolve) => {
+    releasePlaceables = resolve;
+  });
+  for (const path of [
+    "**/src/stage/components/camera-navigation/camera-navigation.ts*",
+    "**/src/stage/modules/alerts/alerts.ts*",
+  ]) {
+    await page.route(path, async (route) => {
+      await placeableGate;
+      await route.continue();
+    });
+  }
+
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  const card = page.locator("watchzone-card");
+  await card.evaluate((element) => {
+    const host = element as HTMLElement & {
+      hass: unknown;
+      setConfig(config: unknown): void;
+    };
+    host.setConfig({
+      type: "custom:watchzone-card",
+      camera_entity: "camera.front",
+    });
+    host.hass = {
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "streaming",
+          attributes: { friendly_name: "Front" },
+        },
+      },
+      connection: { subscribeMessage: async () => () => undefined },
+      hassUrl: (path: string) => path,
+      callService: async () => undefined,
+      callWS: async (message: { type: string }) => {
+        if (message.type === "watchzone/reviews/list") {
+          return {
+            items: Array.from({ length: 3 }, (_, index) => ({
+              camera: "front",
+              classification: "detection",
+              clip_url: null,
+              end_time: 1_700_000_020 - index,
+              id: `review-${index}`,
+              labels: ["person"],
+              playback_sources: [],
+              preferred_transport: "file",
+              revision: `revision-${index}`,
+              snapshot_url: null,
+              start_time: 1_700_000_000 - index,
+              sub_labels: [],
+              thumbnail_url: null,
+              zones: [],
+            })),
+          };
+        }
+        return { ready: false };
+      },
+    };
+  });
+
+  const navigationSkeleton = card.locator(".camera-navigation-skeleton");
+  const activitySkeleton = card.locator(".activity-skeleton");
+  await expect(navigationSkeleton).toBeVisible();
+  await expect(activitySkeleton).toBeVisible();
+  const loading = await Promise.all([
+    card.locator("ha-card").boundingBox(),
+    navigationSkeleton.boundingBox(),
+    activitySkeleton.boundingBox(),
+  ]);
+
+  releasePlaceables();
+  const navigation = card.locator("wzc-camera-navigation");
+  const activity = card.locator("wzc-alerts .viewport");
+  await expect(navigation).toBeVisible();
+  await expect(card.locator("wzc-alerts .tile")).toHaveCount(3);
+  const loaded = await Promise.all([
+    card.locator("ha-card").boundingBox(),
+    navigation.boundingBox(),
+    activity.boundingBox(),
+  ]);
+
+  for (const index of [0, 1, 2]) {
+    expect(loading[index]).not.toBeNull();
+    expect(loaded[index]).not.toBeNull();
+    expect(loaded[index]?.height).toBeCloseTo(loading[index]?.height ?? 0, 0);
+  }
+});
+
 test("keeps the panel camera navigation and carousel selection bidirectional", async ({
   page,
 }) => {
@@ -236,7 +387,7 @@ test("keeps the panel camera navigation and carousel selection bidirectional", a
   await expect(buttons.nth(0)).toHaveCSS("box-shadow", "none");
 });
 
-test("shows an independently scrolling event window for the active camera", async ({
+test("grows activity content and scrolls only when height is constrained", async ({
   page,
 }) => {
   await installHaIconFixture(page);
@@ -296,7 +447,6 @@ test("shows an independently scrolling event window for the active camera", asyn
     card.style.setProperty("--ha-color-on-primary-normal", "#111111");
     card.style.setProperty("--primary-color", "#03a9f4");
     card.style.setProperty("--text-primary-color", "#ffffff");
-    card.style.blockSize = "900px";
     card.hass = {
       config: { time_zone: "America/New_York" },
       locale: {
@@ -446,11 +596,27 @@ test("shows an independently scrolling event window for the active camera", asyn
   await expect(events).toContainText("driveway");
   await expect(events).toContainText("5:13 PM");
   await expect(events.locator("wzc-badge").first()).toHaveText("Person");
-  const scrolling = await viewport.evaluate((node) => ({
+  const natural = await viewport.evaluate((node) => ({
     clientHeight: node.clientHeight,
     scrollHeight: node.scrollHeight,
   }));
-  expect(scrolling.scrollHeight).toBeGreaterThan(scrolling.clientHeight);
+  expect(natural.scrollHeight).toBeLessThanOrEqual(natural.clientHeight);
+  const constrained = await events
+    .locator("wzc-activity-list")
+    .evaluate((element) => {
+      const list = element as HTMLElement;
+      list.style.blockSize = "400px";
+      const viewportElement =
+        list.shadowRoot?.querySelector<HTMLElement>(".viewport");
+      const geometry = {
+        clientHeight: viewportElement?.clientHeight ?? 0,
+        scrollHeight: viewportElement?.scrollHeight ?? 0,
+      };
+      list.style.removeProperty("block-size");
+      return geometry;
+    });
+  expect(constrained.clientHeight).toBeCloseTo(400, 0);
+  expect(constrained.scrollHeight).toBeGreaterThan(constrained.clientHeight);
   const nonScrolling = await events
     .locator("wzc-activity-list")
     .evaluate(async (element) => {
@@ -481,6 +647,17 @@ test("shows an independently scrolling event window for the active camera", asyn
   expect(
     nonScrolling.offsetWidth - nonScrolling.clientWidth,
   ).toBeLessThanOrEqual(2);
+  const expandedViewportHeight = await events
+    .locator("wzc-activity-list")
+    .evaluate((element) => {
+      const list = element as HTMLElement;
+      list.style.blockSize = "900px";
+      const height =
+        list.shadowRoot?.querySelector<HTMLElement>(".viewport")?.clientHeight;
+      list.style.removeProperty("block-size");
+      return height;
+    });
+  expect(expandedViewportHeight).toBeGreaterThan(800);
   const tileGeometry = await events.locator(".tile").evaluateAll((tiles) =>
     tiles.map((tile) => {
       const tileRect = tile.getBoundingClientRect();
@@ -508,7 +685,7 @@ test("shows an independently scrolling event window for the active camera", asyn
     (node) => node.getBoundingClientRect().bottom,
   );
   expect(tileGeometry[4]?.bottom).toBeLessThanOrEqual(viewportBottom + 1);
-  expect(tileGeometry[5]?.bottom).toBeGreaterThan(viewportBottom);
+  expect(tileGeometry[5]?.bottom).toBeLessThanOrEqual(viewportBottom + 1);
   expect(tileGeometry[0]?.thumbnailRatio).toBeCloseTo(16 / 9, 2);
   expect(tileGeometry[0]?.thumbnailBottomInset).toBeLessThanOrEqual(1);
   expect(tileGeometry[0]?.thumbnailLeadingInset).toBeLessThanOrEqual(1);
@@ -1464,19 +1641,27 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   expect(
     cameraBox.x + cameraBox.width - (ptzHostBox.x + ptzHostBox.width),
   ).toBeCloseTo(desktopTrailingClearance, 0);
-  const ptzDirectionVisualSize = await ptzRightButton.evaluate((element) => {
-    const styles = getComputedStyle(element, "::before");
-    return {
-      height: Number.parseFloat(styles.height),
-      width: Number.parseFloat(styles.width),
-    };
-  });
-  expect(ptzDirectionVisualSize.width).toBeCloseTo(
-    ptzRightButtonBox.width * 0.5,
+  const ptzDirectionVisualGeometry = await ptzRightButton.evaluate(
+    (element) => {
+      const styles = getComputedStyle(element, "::before");
+      const control = element.closest(".ptz-control");
+      if (!control) throw new Error("PTZ control is unavailable");
+      const buttonRect = element.getBoundingClientRect();
+      const controlRect = control.getBoundingClientRect();
+      return {
+        height: Number.parseFloat(styles.height),
+        width: Number.parseFloat(styles.width),
+        expectedDiameter:
+          2 * (controlRect.right - (buttonRect.left + buttonRect.width / 2)),
+      };
+    },
+  );
+  expect(ptzDirectionVisualGeometry.width).toBeCloseTo(
+    ptzDirectionVisualGeometry.expectedDiameter,
     1,
   );
-  expect(ptzDirectionVisualSize.height).toBeCloseTo(
-    ptzRightButtonBox.height * 0.5,
+  expect(ptzDirectionVisualGeometry.height).toBeCloseTo(
+    ptzDirectionVisualGeometry.expectedDiameter,
     1,
   );
   expect(ptzRightIconBox.width).toBeCloseTo(ptzRightButtonBox.width * 0.42, 1);

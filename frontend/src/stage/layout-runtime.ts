@@ -50,8 +50,8 @@ interface PlaceableRecord {
   entityRefs: ReadonlyMap<string, HomeAssistantEntity | undefined>;
   generation: number;
   node: PlaceableNode;
+  placeholder?: "activity" | "camera" | "camera-navigation";
   preparation?: PlaceablePreparation;
-  reserveAspectRatio: boolean;
   status: "error" | "idle" | "loading" | "ready";
   visible: boolean;
 }
@@ -417,7 +417,7 @@ export class LayoutRuntime implements ReactiveController {
       node.kind === "module" ? "module-slot" : "component-node",
       extraClass,
       `placeable-${record.status}`,
-      record.reserveAspectRatio ? "reserve-aspect-ratio" : "",
+      record.placeholder ? `placeholder-${record.placeholder}` : "",
     ]
       .filter(Boolean)
       .join(" ");
@@ -430,9 +430,7 @@ export class LayoutRuntime implements ReactiveController {
         record.status === "ready"
           ? record.element
           : record.status === "loading"
-            ? html`<div class="module-placeholder" role="status">
-                ${this._localize("layout.preparing_module")}
-              </div>`
+            ? this._renderPlaceholder(record)
             : nothing
       }
     </div>`;
@@ -463,18 +461,50 @@ export class LayoutRuntime implements ReactiveController {
     }
     if (existing) this._removeRecord(existing);
     const loader = this._loaderFor(node);
+    const registration = loader.getRegistration(placeableType(node));
     const record: PlaceableRecord = {
       entityRefs: new Map(),
       generation: 0,
       node,
-      reserveAspectRatio:
-        loader.getRegistration(placeableType(node))?.reserveAspectRatio ===
-        true,
+      placeholder: registration?.placeholder,
       status: visible ? "loading" : "idle",
       visible,
     };
     this._records.set(node.id, record);
     if (this._connected && visible) this._load(record);
+  }
+
+  private _renderPlaceholder(record: PlaceableRecord): TemplateResult {
+    const status = html`<span class="visually-hidden">
+      ${this._localize("layout.preparing_module")}
+    </span>`;
+    if (record.placeholder === "activity") {
+      return html`<div
+        class="module-placeholder activity-skeleton"
+        role="status"
+      >
+        ${status}
+        ${Array.from(
+          { length: 3 },
+          () => html`<span class="activity-skeleton-row"></span>`,
+        )}
+      </div>`;
+    }
+    if (record.placeholder === "camera-navigation") {
+      return html`<div
+        class="module-placeholder camera-navigation-skeleton"
+        role="status"
+      >
+        ${status}
+        ${Array.from(
+          { length: 4 },
+          () => html`<span class="camera-navigation-skeleton-item"></span>`,
+        )}
+      </div>`;
+    }
+    return html`<div class="module-placeholder" role="status">
+      ${this._localize("layout.preparing_module")}
+    </div>`;
   }
 
   private _load(record: PlaceableRecord, retry = false): void {

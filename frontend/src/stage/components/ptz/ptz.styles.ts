@@ -5,8 +5,12 @@ export const ptzStyles = css`
     display: block;
     position: relative;
     z-index: 4;
-    inline-size: max-content;
-    block-size: max-content;
+    inline-size: calc(
+      3 * var(--wzc-ptz-cell-size) + 2 * var(--wzc-ptz-panel-padding) + 2px
+    );
+    block-size: calc(
+      3 * var(--wzc-ptz-cell-size) + 2 * var(--wzc-ptz-panel-padding) + 2px
+    );
     min-block-size: 0;
     pointer-events: none;
   }

@@ -44,7 +44,7 @@ export interface PlaceableLoaderRegistration {
     readonly icon: string;
     readonly labelKey: TranslationKey;
   };
-  readonly reserveAspectRatio?: boolean;
+  readonly placeholder?: "activity" | "camera" | "camera-navigation";
 }
 
 export type PlaceableLoaderMap = Readonly<

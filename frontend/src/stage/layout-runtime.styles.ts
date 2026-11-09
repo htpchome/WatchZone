@@ -256,7 +256,7 @@ export const stageRuntimeStyles = css`
     display: block;
   }
 
-  .module-slot.placeable-loading.reserve-aspect-ratio {
+  .module-slot.placeable-loading.placeholder-camera {
     aspect-ratio: var(--wzc-camera-stage-aspect-ratio);
     background: var(--wzc-camera-stage);
   }
@@ -283,6 +283,63 @@ export const stageRuntimeStyles = css`
 
   .module-placeholder {
     min-block-size: 100%;
+  }
+
+  .activity-skeleton {
+    align-content: start;
+    box-sizing: border-box;
+    block-size: 100%;
+    min-block-size: calc(
+      3 * var(--wzc-event-tile-block-size) + 2 * var(--wzc-event-list-gap) + 2 *
+        var(--wzc-event-list-padding)
+    );
+    gap: var(--wzc-event-list-gap);
+    overflow: hidden;
+    padding: var(--wzc-event-list-padding);
+  }
+
+  .activity-skeleton-row {
+    display: block;
+    block-size: var(--wzc-event-tile-block-size);
+    inline-size: 100%;
+    background: var(--wzc-event-tile-background);
+    border-radius: var(--wzc-event-tile-radius);
+    box-shadow: var(--wzc-event-tile-shadow);
+  }
+
+  .camera-navigation-skeleton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    block-size: var(--wzc-camera-navigation-block-size);
+    min-block-size: var(--wzc-camera-navigation-block-size);
+    gap: var(--wzc-camera-navigation-gap);
+    padding: var(--wzc-camera-navigation-padding);
+    background: var(--wzc-camera-navigation-background);
+    border-radius: var(--wzc-radius-pill);
+  }
+
+  .camera-navigation-skeleton-item {
+    display: block;
+    block-size: var(--wzc-camera-navigation-item-size);
+    inline-size: min(20%, 6rem);
+    background: color-mix(
+      in srgb,
+      var(--wzc-camera-navigation-color) 10%,
+      transparent
+    );
+    border-radius: var(--wzc-radius-pill);
+  }
+
+  .visually-hidden {
+    position: absolute;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    inline-size: 1px;
+    block-size: 1px;
+    white-space: nowrap;
   }
 
   @container (max-width: 480px) {

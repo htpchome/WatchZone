@@ -27,6 +27,7 @@ type CameraModuleItemConfig = Omit<
 > & { readonly title: string };
 
 const resolver = new LiveSourceResolver();
+const posterPreloads = new Map<string, HTMLImageElement>();
 let definitionPromise: Promise<void> | undefined;
 
 export const moduleDefinition: ModuleDefinition<CameraModuleConfig> = {
@@ -37,6 +38,8 @@ export const moduleDefinition: ModuleDefinition<CameraModuleConfig> = {
     const first = config.cameras[0];
     if (!first || !context.api || !context.hass?.states[first.entityId])
       return undefined;
+    const posterUrl = cameraImageUrl(context.hass, first.entityId);
+    if (posterUrl) preloadPoster(posterUrl);
     let lease: MediaSessionLease;
     if (first.connection === "frigate_go2rtc") {
       const source = await resolver.resolveFrigate(context.api, first.entityId);
@@ -77,6 +80,20 @@ export const moduleDefinition: ModuleDefinition<CameraModuleConfig> = {
     updateCameraElement(element as CameraModule, config, context);
   },
 };
+
+function preloadPoster(url: string): void {
+  if (posterPreloads.has(url)) return;
+  const image = new Image();
+  posterPreloads.set(url, image);
+  const release = () => {
+    if (posterPreloads.get(url) === image) posterPreloads.delete(url);
+  };
+  image.addEventListener("load", release, { once: true });
+  image.addEventListener("error", release, { once: true });
+  image.decoding = "async";
+  image.fetchPriority = "high";
+  image.src = url;
+}
 
 function updateCameraElement(
   camera: CameraModule,

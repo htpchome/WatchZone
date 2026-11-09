@@ -4,6 +4,7 @@ export const cameraNavigationStyles = css`
   :host {
     display: block;
     box-sizing: border-box;
+    block-size: var(--wzc-camera-navigation-block-size);
     inline-size: 100%;
     min-inline-size: 0;
     pointer-events: auto;
@@ -11,6 +12,7 @@ export const cameraNavigationStyles = css`
 
   .bar {
     box-sizing: border-box;
+    block-size: 100%;
     inline-size: 100%;
     overflow: clip;
     border-radius: var(--wzc-radius-pill);
@@ -27,6 +29,7 @@ export const cameraNavigationStyles = css`
     justify-content: center;
     gap: var(--wzc-camera-navigation-gap);
     inline-size: max-content;
+    block-size: 100%;
     min-inline-size: 100%;
     padding: var(--wzc-camera-navigation-padding);
     color: var(--wzc-camera-navigation-color);

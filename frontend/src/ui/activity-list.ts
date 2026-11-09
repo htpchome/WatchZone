@@ -98,10 +98,19 @@ export class ActivityList extends LitElement {
     return html`<section
       class=${this.roundedCorners ? "viewport" : "viewport square"}
       aria-label=${this.localize(this.listKey)}
+      aria-busy=${this.loading ? "true" : "false"}
     >
       ${
         this.loading && this.items.length === 0
-          ? html`<div class="loading">${this.localize(this.loadingKey)}</div>`
+          ? html`<div class="list" aria-hidden="true">
+                ${Array.from(
+                  { length: 3 },
+                  () => html`<span class="skeleton-row"></span>`,
+                )}
+              </div>
+              <span class="visually-hidden">
+                ${this.localize(this.loadingKey)}
+              </span>`
           : this.items.length === 0
             ? html`<div class="empty">${this.localize(this.emptyKey)}</div>`
             : html`<div class="list">

@@ -21,13 +21,14 @@ const moduleLoaders = {
         ({ moduleDefinition }) => moduleDefinition,
       ),
     navigation: { icon: "alerts", labelKey: "navigation.alerts" },
+    placeholder: "activity",
   },
   [CAMERA_MODULE_TYPE]: {
     load: () =>
       import("./modules/camera").then(
         ({ moduleDefinition }) => moduleDefinition,
       ),
-    reserveAspectRatio: true,
+    placeholder: "camera",
   },
   [PANEL_MODULE_TYPE]: {
     load: () =>
@@ -41,6 +42,7 @@ const moduleLoaders = {
         ({ moduleDefinition }) => moduleDefinition,
       ),
     navigation: { icon: "events", labelKey: "navigation.events" },
+    placeholder: "activity",
   },
 } satisfies PlaceableLoaderMap;
 
@@ -50,6 +52,7 @@ const componentLoaders = {
       import("./components/camera-navigation").then(
         ({ componentDefinition }) => componentDefinition,
       ),
+    placeholder: "camera-navigation",
   },
   [TALK_COMPONENT_TYPE]: {
     load: () =>
