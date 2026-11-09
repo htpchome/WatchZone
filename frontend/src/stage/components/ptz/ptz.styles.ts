@@ -43,6 +43,7 @@ export const ptzStyles = css`
     --wzc-round-button-size: var(--wzc-ptz-cell-size);
     --wzc-round-button-background: transparent;
     --wzc-round-button-border-color: transparent;
+    --wzc-round-button-hover-background: transparent;
     --wzc-round-button-icon-size: var(--wzc-ptz-icon-size);
     --wzc-round-button-touch-action: none;
     inline-size: var(--wzc-ptz-cell-size);
@@ -100,7 +101,7 @@ export const ptzStyles = css`
 
   @media (hover: hover) and (pointer: fine) {
     button:hover::before {
-      background: var(--wzc-media-overlay-hover-background);
+      background: var(--wzc-neutral-control-hover-background);
     }
   }
 

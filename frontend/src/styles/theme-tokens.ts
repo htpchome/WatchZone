@@ -155,6 +155,7 @@ export const themeTokens = css`
     --wzc-card-border-color: var(--wzc-color-border);
     --wzc-card-border-width: var(--ha-card-border-width, 0);
     --wzc-card-padding: clamp(1rem, 3cqi, 2rem);
+    --wzc-stage-module-gap: clamp(0.5rem, 1.5cqi, 1rem);
     --wzc-card-outer-shadow: var(--wzc-shadow-medium);
     --wzc-camera-stage: var(--ha-color-neutral-10, #202020);
     --wzc-camera-stage-aspect-ratio: 16 / 9;

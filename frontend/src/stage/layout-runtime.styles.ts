@@ -25,7 +25,7 @@ export const stageRuntimeStyles = css`
     grid-template-rows: var(--wzc-stage-grid-rows);
     align-content: start;
     align-items: stretch;
-    gap: var(--wzc-card-padding);
+    gap: var(--wzc-stage-module-gap);
   }
 
   .stage-stack {

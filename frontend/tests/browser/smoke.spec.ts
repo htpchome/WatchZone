@@ -1484,6 +1484,22 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
     ptzRightButtonBox.height * 0.42,
     1,
   );
+  await ptzRightButton.hover();
+  const ptzHoverLayers = await ptzRightButton.evaluate((element) => {
+    const neutralProbe = document.createElement("span");
+    neutralProbe.style.background =
+      "var(--wzc-neutral-control-hover-background)";
+    element.append(neutralProbe);
+    const result = {
+      button: getComputedStyle(element).backgroundColor,
+      expected: getComputedStyle(neutralProbe).backgroundColor,
+      visual: getComputedStyle(element, "::before").backgroundColor,
+    };
+    neutralProbe.remove();
+    return result;
+  });
+  expect(ptzHoverLayers.button).toBe("rgba(0, 0, 0, 0)");
+  expect(ptzHoverLayers.visual).toBe(ptzHoverLayers.expected);
   expect(talkHostBox.y + talkHostBox.height).toBeLessThanOrEqual(
     controlsSlotBox.y + controlsSlotBox.height,
   );
@@ -2022,8 +2038,20 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
 }) => {
   await page.goto("/");
   await waitForWatchZoneDefinition(page);
+  const card = page.locator("watchzone-card");
+  await card.evaluate((element) => {
+    (
+      element as HTMLElement & {
+        setConfig(config: unknown): void;
+      }
+    ).setConfig({
+      type: "custom:watchzone-card",
+      cameras: [{ entity_id: "camera.front" }],
+    });
+  });
+  await expect(card.locator(".stage-grid")).toBeVisible();
 
-  const result = await page.locator("watchzone-card").evaluate((element) => {
+  const result = await card.evaluate((element) => {
     const requiredTokens = [
       "--wzc-color-primary",
       "--wzc-color-primary-dark",
@@ -2041,6 +2069,7 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
       "--wzc-shadow-small",
       "--wzc-shadow-medium",
       "--wzc-card-outer-shadow",
+      "--wzc-stage-module-gap",
       "--wzc-camera-stage",
       "--wzc-live-radius",
       "--wzc-live-shadow",
@@ -2060,6 +2089,16 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
     const hostStyle = getComputedStyle(host);
     const shell = host.shadowRoot?.querySelector("ha-card");
     const shellStyle = shell ? getComputedStyle(shell) : undefined;
+    const stageGrid = host.shadowRoot?.querySelector(".stage-grid");
+    const stageGridStyle = stageGrid ? getComputedStyle(stageGrid) : undefined;
+    const defaultCardPadding = Number.parseFloat(shellStyle?.paddingTop ?? "0");
+    const defaultStageModuleGap = Number.parseFloat(
+      stageGridStyle?.rowGap ?? "0",
+    );
+    host.style.setProperty("--wzc-stage-module-gap", "7px");
+    const placementRects = Array.from(stageGrid?.children ?? []).map((child) =>
+      child.getBoundingClientRect(),
+    );
     return {
       background: shellStyle?.backgroundColor,
       borderRadius: shellStyle?.borderRadius,
@@ -2067,6 +2106,13 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
       missingTokens: requiredTokens.filter(
         (token) => hostStyle.getPropertyValue(token).trim().length === 0,
       ),
+      defaultCardPadding,
+      defaultStageModuleGap,
+      overriddenCardPadding: Number.parseFloat(shellStyle?.paddingTop ?? "0"),
+      overriddenStageModuleGap: stageGridStyle?.rowGap,
+      overriddenPlacementGaps: placementRects
+        .slice(1)
+        .map((rect, index) => rect.top - placementRects[index].bottom),
       textColor: shellStyle?.color,
       overlayOpacity: hostStyle
         .getPropertyValue("--wzc-media-overlay-opacity")
@@ -2080,11 +2126,20 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
   expect(result).toMatchObject({
     background: "rgb(40, 50, 60)",
     borderRadius: "18px",
+    overriddenStageModuleGap: "7px",
     missingTokens: [],
     overlayHoverOpacity: "84%",
     overlayOpacity: "72%",
+    overriddenPlacementGaps: [7, 7],
     textColor: "rgb(10, 20, 30)",
   });
+  expect(
+    Math.abs(result.defaultStageModuleGap - result.defaultCardPadding / 2),
+  ).toBeLessThanOrEqual(1);
+  expect(result.overriddenCardPadding).toBeCloseTo(
+    result.defaultCardPadding,
+    1,
+  );
   expect(result.boxShadow).toContain("rgb(1, 2, 3)");
 });
 

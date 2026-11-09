@@ -95,6 +95,10 @@ root grid
     └── events module
 ```
 
+Spacing between root Stage modules uses `--wzc-stage-module-gap`. It is
+independent from the outer card padding and defaults to half that padding's
+responsive scale.
+
 The controls slot owns placement, shared gaps, local Stage-edge clearance, and
 responsive wrapping for its three logical regions. Its center region remains
 geometrically centered while the leading and trailing regions flex equally.
