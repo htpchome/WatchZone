@@ -1988,6 +1988,22 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
       );
       expect(mobileResizeHandleBox.width).toBeGreaterThanOrEqual(96);
       expect(mobileResizeHandleBox.height).toBeGreaterThanOrEqual(44);
+      const mobileHandleGeometry = await mobileResizeHandle.evaluate(
+        (element) => {
+          const hitTarget = element.getBoundingClientRect();
+          const visual = getComputedStyle(element, "::before");
+          return {
+            borderWidth: visual.borderWidth,
+            hitTargetWidth: hitTarget.width,
+            visualWidth: Number.parseFloat(visual.width),
+          };
+        },
+      );
+      expect(mobileHandleGeometry.visualWidth).toBeLessThan(
+        mobileHandleGeometry.hitTargetWidth,
+      );
+      expect(mobileHandleGeometry.visualWidth).toBeGreaterThanOrEqual(64);
+      expect(mobileHandleGeometry.borderWidth).toBe("0px");
       expect(
         mobileCameraBox.y +
           mobileCameraBox.height -

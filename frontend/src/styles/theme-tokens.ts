@@ -175,6 +175,7 @@ export const themeTokens = css`
     --wzc-stage-resize-handle-active-opacity: 100%;
     --wzc-stage-resize-handle-block-size: 2.75rem;
     --wzc-stage-resize-handle-inline-size: clamp(6rem, 24%, 10rem);
+    --wzc-stage-resize-handle-visual-inline-size: clamp(4rem, 18cqi, 7rem);
     --wzc-stage-resize-handle-visible-bottom-inset: 0.15rem;
 
     --wzc-media-overlay-color: var(--ha-color-neutral-90, #e6e6e6);

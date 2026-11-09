@@ -66,13 +66,14 @@ export const cameraViewStyles = css`
   .stage-resize-handle::before {
     position: absolute;
     inset-block-end: var(--wzc-stage-resize-handle-visible-bottom-inset);
-    inset-inline-start: 0;
-    inline-size: 100%;
+    inset-inline-start: 50%;
+    inline-size: var(--wzc-stage-resize-handle-visual-inline-size);
     block-size: 1.05rem;
     background: var(--wzc-media-overlay-background);
-    border: 1px solid var(--wzc-media-overlay-border-color);
+    border: 0;
     border-radius: var(--wzc-radius-pill);
     box-shadow: var(--wzc-media-overlay-shadow);
+    transform: translateX(-50%);
     content: "";
   }
 
