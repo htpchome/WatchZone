@@ -47,45 +47,84 @@ describe("Frigate activity updates", () => {
         type: "new",
         after: {
           camera: "driveway",
+          data: {
+            detections: ["event-1"],
+            objects: ["person"],
+            sub_labels: ["Resident"],
+            zones: ["driveway"],
+          },
           id: "review-1",
           severity: "detection",
+          start_time: 100,
         },
       }),
     );
     callbacks[0]?.(
       JSON.stringify({
         type: "update",
-        after: { camera: "driveway", id: "review-1", severity: "alert" },
+        after: {
+          camera: "driveway",
+          data: { detections: ["event-1"], objects: ["person"] },
+          id: "review-1",
+          severity: "alert",
+          start_time: 100,
+        },
       }),
     );
     callbacks[0]?.(
       JSON.stringify({
         type: "end",
-        before: { camera: "driveway", id: "review-1", severity: "alert" },
+        before: {
+          camera: "driveway",
+          data: { detections: ["event-1"], objects: ["person"] },
+          end_time: 112,
+          id: "review-1",
+          severity: "alert",
+          start_time: 100,
+        },
       }),
     );
     expect(update).toHaveBeenCalledTimes(3);
-    expect(update).toHaveBeenNthCalledWith(1, {
-      cameraName: "driveway",
-      classification: "detection",
-      id: "review-1",
-      phase: "new",
-      topic: "reviews",
-    });
-    expect(update).toHaveBeenNthCalledWith(2, {
-      cameraName: "driveway",
-      classification: "alert",
-      id: "review-1",
-      phase: "update",
-      topic: "reviews",
-    });
-    expect(update).toHaveBeenNthCalledWith(3, {
-      cameraName: "driveway",
-      classification: "alert",
-      id: "review-1",
-      phase: "end",
-      topic: "reviews",
-    });
+    expect(update).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        cameraName: "driveway",
+        classification: "detection",
+        id: "review-1",
+        phase: "new",
+        review: expect.objectContaining({
+          classification: "detection",
+          id: "frigate-west:review-1",
+          labels: ["person"],
+          related_event_ids: ["frigate-west:event-1"],
+          start_time: 100,
+          sub_labels: ["Resident"],
+          zones: ["driveway"],
+        }),
+        topic: "reviews",
+      }),
+    );
+    expect(update).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        cameraName: "driveway",
+        classification: "alert",
+        id: "review-1",
+        phase: "update",
+        topic: "reviews",
+      }),
+    );
+    expect(update).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        cameraName: "driveway",
+        classification: "alert",
+        id: "review-1",
+        phase: "end",
+        review: expect.objectContaining({ end_time: 112, media_end_time: 112 }),
+        topic: "reviews",
+      }),
+    );
 
     unsubscribe();
     expect(unsubscribers[0]).toHaveBeenCalledOnce();

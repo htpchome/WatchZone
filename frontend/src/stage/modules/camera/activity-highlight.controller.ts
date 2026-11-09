@@ -10,9 +10,10 @@ import {
 export type LiveActivityClassification = "alert" | "detection";
 
 interface LiveActivityHighlightContext {
+  readonly activeEntityId?: string;
   readonly api?: HomeAssistantApi;
   readonly enabled: boolean;
-  readonly entityId?: string;
+  readonly entityIds: readonly string[];
 }
 
 /** Tracks active Frigate review notifications without waiting for REST convergence. */
@@ -21,15 +22,16 @@ export class LiveActivityHighlightController implements ReactiveController {
 
   private readonly _activeReviews = new Map<
     string,
-    LiveActivityClassification
+    Map<string, LiveActivityClassification>
   >();
+  private _activeEntityId?: string;
   private _connected = false;
+  private _entityIdsKey = "";
   private _generation = 0;
   private _identity?: HomeAssistantApi["identity"];
-  private _entityId?: string;
   private _enabled = false;
-  private _retryTimer?: number;
-  private _unsubscribe?: () => void;
+  private readonly _retryTimers = new Map<string, number>();
+  private readonly _unsubscribes = new Map<string, () => void>();
 
   public constructor(
     private readonly _host: ReactiveControllerHost,
@@ -54,51 +56,58 @@ export class LiveActivityHighlightController implements ReactiveController {
 
   private _sync(): void {
     if (!this._connected) return;
-    const { api, enabled, entityId } = this._context();
+    const { activeEntityId, api, enabled, entityIds } = this._context();
+    const normalizedEntityIds = [...new Set(entityIds.filter(Boolean))];
+    const entityIdsKey = normalizedEntityIds.join("\u0000");
     if (
       api?.identity === this._identity &&
-      entityId === this._entityId &&
+      entityIdsKey === this._entityIdsKey &&
       enabled === this._enabled
     ) {
+      if (activeEntityId !== this._activeEntityId) {
+        this._activeEntityId = activeEntityId;
+        this._publishClassification();
+      }
       return;
     }
     this._stop();
     this._identity = api?.identity;
-    this._entityId = entityId;
+    this._activeEntityId = activeEntityId;
+    this._entityIdsKey = entityIdsKey;
     this._enabled = enabled;
-    if (enabled && api && entityId) this._subscribe(api, entityId);
+    if (!enabled || !api) return;
+    const generation = ++this._generation;
+    for (const entityId of normalizedEntityIds) {
+      this._subscribe(api, entityId, generation);
+    }
   }
 
-  private _subscribe(api: HomeAssistantApi, entityId: string): void {
-    const generation = ++this._generation;
+  private _subscribe(
+    api: HomeAssistantApi,
+    entityId: string,
+    generation: number,
+  ): void {
     void subscribeActivityUpdates(api, entityId, "reviews", (notification) =>
       this._received(generation, entityId, notification),
     )
       .then((unsubscribe) => {
-        if (
-          generation !== this._generation ||
-          entityId !== this._entityId ||
-          !this._enabled
-        ) {
+        if (generation !== this._generation || !this._enabled) {
           unsubscribe();
           return;
         }
-        this._unsubscribe = unsubscribe;
+        this._unsubscribes.set(entityId, unsubscribe);
       })
       .catch(() => {
-        if (
-          generation !== this._generation ||
-          entityId !== this._entityId ||
-          !this._enabled
-        ) {
+        if (generation !== this._generation || !this._enabled) {
           return;
         }
-        this._retryTimer = window.setTimeout(() => {
-          this._retryTimer = undefined;
-          if (entityId === this._entityId && this._enabled) {
-            this._subscribe(api, entityId);
+        const retryTimer = window.setTimeout(() => {
+          this._retryTimers.delete(entityId);
+          if (generation === this._generation && this._enabled) {
+            this._subscribe(api, entityId, generation);
           }
         }, ACTIVITY_UPDATE_SUBSCRIBE_RETRY_MS);
+        this._retryTimers.set(entityId, retryTimer);
       });
   }
 
@@ -109,20 +118,32 @@ export class LiveActivityHighlightController implements ReactiveController {
   ): void {
     if (
       generation !== this._generation ||
-      entityId !== this._entityId ||
       notification.topic !== "reviews" ||
       !notification.id
     ) {
       return;
     }
-    if (notification.phase === "end") {
-      this._activeReviews.delete(notification.id);
-    } else if (notification.classification) {
-      this._activeReviews.set(notification.id, notification.classification);
+    let reviews = this._activeReviews.get(entityId);
+    if (!reviews) {
+      reviews = new Map();
+      this._activeReviews.set(entityId, reviews);
     }
-    const classification = this._activeReviewsHas("alert")
+    if (notification.phase === "end") {
+      reviews.delete(notification.id);
+    } else if (notification.classification) {
+      reviews.set(notification.id, notification.classification);
+    }
+    if (reviews.size === 0) this._activeReviews.delete(entityId);
+    if (entityId === this._activeEntityId) this._publishClassification();
+  }
+
+  private _publishClassification(): void {
+    const reviews = this._activeEntityId
+      ? this._activeReviews.get(this._activeEntityId)
+      : undefined;
+    const classification = this._activeReviewsHas(reviews, "alert")
       ? "alert"
-      : this._activeReviewsHas("detection")
+      : this._activeReviewsHas(reviews, "detection")
         ? "detection"
         : undefined;
     if (classification === this.classification) return;
@@ -130,16 +151,19 @@ export class LiveActivityHighlightController implements ReactiveController {
     this._host.requestUpdate();
   }
 
-  private _activeReviewsHas(classification: LiveActivityClassification) {
-    return [...this._activeReviews.values()].includes(classification);
+  private _activeReviewsHas(
+    reviews: ReadonlyMap<string, LiveActivityClassification> | undefined,
+    classification: LiveActivityClassification,
+  ) {
+    return reviews ? [...reviews.values()].includes(classification) : false;
   }
 
   private _stop(): void {
     this._generation += 1;
-    this._unsubscribe?.();
-    this._unsubscribe = undefined;
-    if (this._retryTimer !== undefined) window.clearTimeout(this._retryTimer);
-    this._retryTimer = undefined;
+    for (const unsubscribe of this._unsubscribes.values()) unsubscribe();
+    this._unsubscribes.clear();
+    for (const timer of this._retryTimers.values()) window.clearTimeout(timer);
+    this._retryTimers.clear();
     this._activeReviews.clear();
     if (this.classification !== undefined) {
       this.classification = undefined;

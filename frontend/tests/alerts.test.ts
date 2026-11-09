@@ -145,35 +145,8 @@ describe("alerts module", () => {
   });
 
   it("replaces one review tile through new, update, and end notifications", async () => {
-    const draft = {
-      ...reviews[1],
-      end_time: null,
-      id: "frigate-main:review-live",
-      labels: ["person"],
-      media_end_time: 105,
-      revision: "draft",
-      start_time: 100,
-    };
-    const promoted = {
-      ...draft,
-      classification: "alert",
-      labels: ["person", "package"],
-      media_end_time: 108,
-      revision: "promoted",
-    };
-    const ended = {
-      ...promoted,
-      end_time: 110,
-      media_end_time: 115,
-      revision: "ended",
-    };
-    const responses = [
-      { items: [] },
-      { items: [draft] },
-      { items: [promoted] },
-      { items: [ended] },
-    ];
-    const callWS = vi.fn().mockImplementation(async () => responses.shift());
+    const startTime = Date.now() / 1000;
+    const callWS = vi.fn().mockResolvedValue({ items: [] });
     let reviewUpdate: ((payload: unknown) => void) | undefined;
     const api = {
       callWS,
@@ -207,7 +180,13 @@ describe("alerts module", () => {
     reviewUpdate?.(
       JSON.stringify({
         type: "new",
-        after: { camera: "front", severity: "detection" },
+        after: {
+          camera: "front",
+          data: { objects: ["person"] },
+          id: "review-live",
+          severity: "detection",
+          start_time: startTime,
+        },
       }),
     );
     await vi.waitFor(() => {
@@ -220,7 +199,13 @@ describe("alerts module", () => {
     reviewUpdate?.(
       JSON.stringify({
         type: "update",
-        after: { camera: "front", severity: "alert" },
+        after: {
+          camera: "front",
+          data: { objects: ["person", "package"] },
+          id: "review-live",
+          severity: "alert",
+          start_time: startTime,
+        },
       }),
     );
     await vi.waitFor(() => {
@@ -237,13 +222,20 @@ describe("alerts module", () => {
     reviewUpdate?.(
       JSON.stringify({
         type: "end",
-        after: { camera: "front", severity: "alert" },
+        after: {
+          camera: "front",
+          data: { objects: ["person", "package"] },
+          end_time: startTime + 10,
+          id: "review-live",
+          severity: "alert",
+          start_time: startTime,
+        },
       }),
     );
     await vi.waitFor(() => {
       expect(
         activityRoot(module)?.querySelector(".duration")?.textContent,
-      ).toBe("40s");
+      ).toBe("10s");
     });
     module.remove();
   });

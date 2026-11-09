@@ -80,9 +80,10 @@ export class CameraModule extends LitElement {
   private readonly _activityHighlight = new LiveActivityHighlightController(
     this,
     () => ({
+      activeEntityId: this.cameras[this._activeIndex]?.entityId,
       api: this.api,
       enabled: this.highlightActivity,
-      entityId: this.cameras[this._activeIndex]?.entityId,
+      entityIds: this.cameras.map(({ entityId }) => entityId),
     }),
   );
   private readonly _deviceProfile = new DeviceProfileController(this);

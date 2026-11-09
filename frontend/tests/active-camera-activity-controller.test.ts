@@ -2,6 +2,7 @@ import type { ReactiveControllerHost } from "lit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { HomeAssistantApi } from "../src/core/home-assistant";
+import type { ActivityUpdateNotification } from "../src/providers/activity-update-resolver";
 import { ActiveCameraActivityController } from "../src/stage/activity/active-camera-activity.controller";
 import { CameraSelectionContext } from "../src/stage/camera-selection-context";
 
@@ -83,6 +84,81 @@ describe("active camera activity controller", () => {
     await vi.advanceTimersByTimeAsync(1_500);
     expect(fetch).toHaveBeenCalledTimes(baselineCalls + 12);
 
+    controller.hostDisconnected();
+  });
+
+  it("renders pushed draft state immediately and retains it across camera navigation", async () => {
+    let notify:
+      ((notification: ActivityUpdateNotification) => void) | undefined;
+    mocks.subscribe.mockImplementation(
+      async (
+        _api: HomeAssistantApi,
+        _entityId: string,
+        _kind: string,
+        callback: (notification: ActivityUpdateNotification) => void,
+      ) => {
+        notify = callback;
+        return () => undefined;
+      },
+    );
+    const selection = new CameraSelectionContext();
+    const draft = {
+      id: "frigate-main:review-1",
+      revision: "push:new",
+      start_time: Date.now() / 1000,
+    };
+    const controller = new ActiveCameraActivityController(
+      new TestHost(),
+      () => ({
+        api: {} as HomeAssistantApi,
+        cameraSelection: selection,
+        historyDays: 5,
+        targetModuleId: "camera-module",
+      }),
+      vi.fn().mockResolvedValue([]),
+      vi.fn(),
+      "reviews",
+      (notification) =>
+        notification.review
+          ? {
+              id: notification.review.id,
+              revision: notification.review.revision,
+              start_time: notification.review.start_time,
+            }
+          : undefined,
+    );
+    controller.hostConnected();
+    const selectionOwner = {};
+    const publish = (activeEntityId: string) =>
+      selection.publish(
+        "camera-module",
+        selectionOwner,
+        {
+          activeEntityId,
+          items: [
+            { entityId: "camera.front", label: "Front" },
+            { entityId: "camera.driveway", label: "Driveway" },
+          ],
+        },
+        vi.fn(),
+      );
+    publish("camera.front");
+    await vi.waitFor(() => expect(notify).toBeTypeOf("function"));
+
+    notify?.({
+      cameraName: "front",
+      id: "review-1",
+      phase: "new",
+      review: draft,
+      topic: "reviews",
+    } as ActivityUpdateNotification);
+    expect(controller.items).toEqual([draft]);
+
+    publish("camera.driveway");
+    expect(controller.items).toEqual([]);
+    await vi.waitFor(() => expect(notify).toBeTypeOf("function"));
+    publish("camera.front");
+    expect(controller.items).toEqual([draft]);
     controller.hostDisconnected();
   });
 

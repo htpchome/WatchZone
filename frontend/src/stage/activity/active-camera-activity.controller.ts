@@ -14,6 +14,7 @@ import type { HomeAssistantApi } from "../../core/home-assistant";
 import {
   subscribeActivityUpdates,
   type ActivityUpdateKind,
+  type ActivityUpdateNotification,
 } from "../../providers/activity-update-resolver";
 
 export interface ActiveCameraActivityItem {
@@ -45,6 +46,10 @@ type ActivityFetcher<T extends ActiveCameraActivityItem> = (
   },
 ) => Promise<readonly T[]>;
 
+type ActivityUpdateMapper<T extends ActiveCameraActivityItem> = (
+  notification: ActivityUpdateNotification,
+) => T | undefined;
+
 /** Owns camera-scoped activity loading, push invalidation, and reconciliation. */
 export class ActiveCameraActivityController<
   T extends ActiveCameraActivityItem,
@@ -60,6 +65,7 @@ export class ActiveCameraActivityController<
   private _emptyConfirmTimer?: number;
   private _generation = 0;
   private _historyLoadPending = false;
+  private readonly _itemsByEntityId = new Map<string, readonly T[]>();
   private _refreshAfterHistory = false;
   private _refreshTimer?: number;
   private readonly _retriedMedia = new Set<string>();
@@ -79,6 +85,7 @@ export class ActiveCameraActivityController<
     private readonly _fetch: ActivityFetcher<T>,
     private readonly _onError: () => void,
     private readonly _activityKind: ActivityUpdateKind,
+    private readonly _mapUpdate?: ActivityUpdateMapper<T>,
   ) {
     _host.addController(this);
   }
@@ -149,6 +156,7 @@ export class ActiveCameraActivityController<
       apiChanged || context.historyDays !== this._lastHistoryDays;
     this._lastApiIdentity = context.api?.identity;
     this._lastHistoryDays = context.historyDays;
+    if (apiChanged) this._itemsByEntityId.clear();
     if (!selectionChanged && queryChanged && this._activeEntityId) {
       this._generation += 1;
       if (apiChanged) {
@@ -187,7 +195,7 @@ export class ActiveCameraActivityController<
     this._stopEmptyConfirmation();
     this._generation += 1;
     if (activeEntityId && this._itemsEntityId !== activeEntityId) {
-      this.items = [];
+      this.items = this._itemsByEntityId.get(activeEntityId) ?? [];
       this._itemsEntityId = activeEntityId;
     }
     this._host.requestUpdate();
@@ -233,20 +241,10 @@ export class ActiveCameraActivityController<
             this.items.length > 0
           )
             return;
-          this.items = loadFullHistory
-            ? this._refreshAfterHistory
-              ? mergeActivityItems(
-                  this.items,
-                  progressItems,
-                  context.historyDays,
-                )
-              : progressItems
-            : mergeActivityItems(
-                this.items,
-                progressItems,
-                context.historyDays,
-              );
-          this._itemsEntityId = entityId;
+          this._setItems(
+            entityId,
+            mergeActivityItems(this.items, progressItems, context.historyDays),
+          );
           this._host.requestUpdate();
         },
       });
@@ -254,8 +252,10 @@ export class ActiveCameraActivityController<
         return;
       if (!loadFullHistory) {
         this._stopEmptyConfirmation();
-        this.items = mergeActivityItems(this.items, items, context.historyDays);
-        this._itemsEntityId = entityId;
+        this._setItems(
+          entityId,
+          mergeActivityItems(this.items, items, context.historyDays),
+        );
         return;
       }
       if (items.length === 0 && this.items.length > 0) {
@@ -265,14 +265,14 @@ export class ActiveCameraActivityController<
             this._emptyConfirmTimer = undefined;
             void this._refresh(false, true);
           }, ACTIVITY_EMPTY_CONFIRM_DELAY_MS);
-          return;
         }
+        return;
       }
       this._stopEmptyConfirmation();
-      this.items = this._refreshAfterHistory
-        ? mergeActivityItems(this.items, items, context.historyDays)
-        : items;
-      this._itemsEntityId = entityId;
+      this._setItems(
+        entityId,
+        mergeActivityItems(this.items, items, context.historyDays),
+      );
     } catch {
       if (generation === this._generation) this._onError();
     } finally {
@@ -297,22 +297,39 @@ export class ActiveCameraActivityController<
   private _subscribeUpdates(api: HomeAssistantApi, entityId: string): void {
     const generation = ++this._updatesGeneration;
     void Promise.resolve(
-      subscribeActivityUpdates(api, entityId, this._activityKind, () => {
-        if (
-          generation !== this._updatesGeneration ||
-          entityId !== this._activeEntityId
-        )
-          return;
-        void this._refresh(true, false);
-        if (this._updateReconcileTimers.size > 0) return;
-        for (const delay of ACTIVITY_UPDATE_RECONCILE_DELAYS_MS) {
-          const timer = window.setTimeout(() => {
-            this._updateReconcileTimers.delete(timer);
-            void this._refresh(true, false);
-          }, delay);
-          this._updateReconcileTimers.add(timer);
-        }
-      }),
+      subscribeActivityUpdates(
+        api,
+        entityId,
+        this._activityKind,
+        (notification) => {
+          if (
+            generation !== this._updatesGeneration ||
+            entityId !== this._activeEntityId
+          )
+            return;
+          const update = this._mapUpdate?.(notification);
+          if (update) {
+            this._setItems(
+              entityId,
+              mergeActivityItems(
+                this.items,
+                [update],
+                this._context().historyDays,
+              ),
+            );
+            this._host.requestUpdate();
+          }
+          void this._refresh(true, false);
+          if (this._updateReconcileTimers.size > 0) return;
+          for (const delay of ACTIVITY_UPDATE_RECONCILE_DELAYS_MS) {
+            const timer = window.setTimeout(() => {
+              this._updateReconcileTimers.delete(timer);
+              void this._refresh(true, false);
+            }, delay);
+            this._updateReconcileTimers.add(timer);
+          }
+        },
+      ),
     )
       .then((unsubscribe) => {
         if (
@@ -356,6 +373,12 @@ export class ActiveCameraActivityController<
       window.clearTimeout(timer);
     }
     this._updateReconcileTimers.clear();
+  }
+
+  private _setItems(entityId: string, items: readonly T[]): void {
+    this.items = items;
+    this._itemsEntityId = entityId;
+    this._itemsByEntityId.set(entityId, items);
   }
 
   private _stopEmptyConfirmation(): void {

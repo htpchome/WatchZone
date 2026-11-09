@@ -60,6 +60,7 @@ export class ActivityCalendar extends LitElement {
     listReviews,
     () => undefined,
     "reviews",
+    (notification) => notification.review,
   );
 
   public connectedCallback(): void {

@@ -1,4 +1,5 @@
 import { resolveActivityUpdateSource } from "../api/activity-updates";
+import type { ReviewItem } from "../api/reviews";
 import type {
   HomeAssistantApi,
   HomeAssistantUnsubscribe,
@@ -11,6 +12,7 @@ export interface ActivityUpdateNotification {
   readonly classification?: "alert" | "detection";
   readonly id?: string;
   readonly phase?: "end" | "new" | "update";
+  readonly review?: ReviewItem;
   readonly topic: ActivityUpdateKind;
 }
 

@@ -68,6 +68,7 @@ export class AlertsModule extends LitElement {
         key: "alerts-load-failed",
       }),
     "reviews",
+    (notification) => notification.review,
   );
 
   protected render() {

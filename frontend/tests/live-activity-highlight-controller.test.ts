@@ -46,9 +46,10 @@ describe("live activity highlight controller", () => {
     const host = new TestHost();
     const api = { identity: {} } as HomeAssistantApi;
     const context = {
+      activeEntityId: "camera.front",
       api,
       enabled: true,
-      entityId: "camera.front",
+      entityIds: ["camera.front"],
     };
     const controller = new LiveActivityHighlightController(host, () => context);
 
@@ -109,9 +110,10 @@ describe("live activity highlight controller", () => {
     const controller = new LiveActivityHighlightController(
       new TestHost(),
       () => ({
+        activeEntityId: "camera.front",
         api: { identity: {} } as HomeAssistantApi,
         enabled: true,
-        entityId: "camera.front",
+        entityIds: ["camera.front"],
       }),
     );
     controller.hostConnected();
@@ -147,5 +149,62 @@ describe("live activity highlight controller", () => {
       topic: "reviews",
     });
     expect(controller.classification).toBe("detection");
+  });
+
+  it("retains active review state while another camera is selected", async () => {
+    const callbacks = new Map<
+      string,
+      (notification: ActivityUpdateNotification) => void
+    >();
+    mocks.subscribe.mockImplementation(
+      async (
+        _api: HomeAssistantApi,
+        entityId: string,
+        _kind: string,
+        callback: (notification: ActivityUpdateNotification) => void,
+      ) => {
+        callbacks.set(entityId, callback);
+        return vi.fn();
+      },
+    );
+    const host = new TestHost();
+    const context = {
+      activeEntityId: "camera.front",
+      api: { identity: {} } as HomeAssistantApi,
+      enabled: true,
+      entityIds: ["camera.front", "camera.driveway"],
+    };
+    const controller = new LiveActivityHighlightController(host, () => context);
+    controller.hostConnected();
+    await vi.waitFor(() => expect(callbacks.size).toBe(2));
+
+    callbacks.get("camera.front")?.({
+      cameraName: "front",
+      classification: "alert",
+      id: "review-1",
+      phase: "new",
+      topic: "reviews",
+    });
+    expect(controller.classification).toBe("alert");
+
+    context.activeEntityId = "camera.driveway";
+    controller.hostUpdate();
+    expect(controller.classification).toBeUndefined();
+    context.activeEntityId = "camera.front";
+    controller.hostUpdate();
+    expect(controller.classification).toBe("alert");
+
+    context.activeEntityId = "camera.driveway";
+    controller.hostUpdate();
+    callbacks.get("camera.front")?.({
+      cameraName: "front",
+      classification: "alert",
+      id: "review-1",
+      phase: "end",
+      topic: "reviews",
+    });
+    context.activeEntityId = "camera.front";
+    controller.hostUpdate();
+    expect(controller.classification).toBeUndefined();
   });
 });

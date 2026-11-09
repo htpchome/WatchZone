@@ -439,7 +439,10 @@ test("highlights live video directly from draft review notifications", async ({
     };
     card.setConfig({
       type: "custom:watchzone-card",
-      cameras: [{ entity_id: "camera.front" }],
+      cameras: [
+        { entity_id: "camera.front" },
+        { entity_id: "camera.driveway" },
+      ],
     });
     card.hass = {
       states: {
@@ -448,16 +451,22 @@ test("highlights live video directly from draft review notifications", async ({
           state: "streaming",
           attributes: { friendly_name: "Front" },
         },
+        "camera.driveway": {
+          entity_id: "camera.driveway",
+          state: "streaming",
+          attributes: { friendly_name: "Driveway" },
+        },
       },
       connection,
       hassUrl: (path: string) => path,
       callService: async () => undefined,
-      callWS: async (message: { type: string }) => {
+      callWS: async (message: { entity_id?: string; type: string }) => {
         if (message.type === "watchzone/activity/source") {
           return {
             type: "frigate",
             instance_id: "frigate-main",
-            camera_name: "front",
+            camera_name:
+              message.entity_id === "camera.driveway" ? "driveway" : "front",
           };
         }
         if (message.type === "watchzone/live/camera/ready") {
@@ -502,6 +511,12 @@ test("highlights live video directly from draft review notifications", async ({
   });
   await expect(carousel).toHaveClass(/activity-detection/);
 
+  const cameraButtons = page.locator("wzc-camera-navigation button");
+  await cameraButtons.nth(1).click();
+  await expect(carousel).not.toHaveClass(/activity-(alert|detection)/);
+  await cameraButtons.nth(0).click();
+  await expect(carousel).toHaveClass(/activity-detection/);
+
   await page.evaluate(() => {
     for (const callback of (
       window as unknown as {
@@ -517,6 +532,8 @@ test("highlights live video directly from draft review notifications", async ({
   });
   await expect(carousel).toHaveClass(/activity-alert/);
 
+  await cameraButtons.nth(1).click();
+
   await page.evaluate(() => {
     for (const callback of (
       window as unknown as {
@@ -530,6 +547,7 @@ test("highlights live video directly from draft review notifications", async ({
         }),
       );
   });
+  await cameraButtons.nth(0).click();
   await expect(carousel).not.toHaveClass(/activity-(alert|detection)/);
 });
 
