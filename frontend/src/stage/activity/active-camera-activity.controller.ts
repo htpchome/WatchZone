@@ -5,8 +5,9 @@ import type {
   CameraSelectionState,
 } from "../camera-selection-context";
 import {
-  ACTIVITY_RECONCILE_INTERVAL_MS,
+  ACTIVITY_FALLBACK_RECONCILE_INTERVAL_MS,
   ACTIVITY_EMPTY_CONFIRM_DELAY_MS,
+  ACTIVITY_UPDATE_RECONCILE_DELAYS_MS,
   ACTIVITY_UPDATE_SUBSCRIBE_RETRY_MS,
 } from "../../core/constants";
 import type { HomeAssistantApi } from "../../core/home-assistant";
@@ -67,8 +68,7 @@ export class ActiveCameraActivityController<
   private _unsubscribe?: () => void;
   private _lastApiIdentity?: HomeAssistantApi["identity"];
   private _lastHistoryDays?: number;
-  private _updateRefreshTimer?: number;
-  private _updateReconcileTimer?: number;
+  private _updateReconcileTimers: number[] = [];
   private _updateSubscribeRetryTimer?: number;
   private _updatesGeneration = 0;
   private _updatesUnsubscribe?: () => void;
@@ -196,8 +196,8 @@ export class ActiveCameraActivityController<
     const api = this._context().api;
     if (api) this._subscribeUpdates(api, activeEntityId);
     this._refreshTimer = window.setInterval(
-      () => void this._refresh(false, false),
-      ACTIVITY_RECONCILE_INTERVAL_MS,
+      () => void this._refresh(true, false),
+      ACTIVITY_FALLBACK_RECONCILE_INTERVAL_MS,
     );
   }
 
@@ -303,18 +303,13 @@ export class ActiveCameraActivityController<
           entityId !== this._activeEntityId
         )
           return;
-        if (this._updateRefreshTimer !== undefined)
-          window.clearTimeout(this._updateRefreshTimer);
-        if (this._updateReconcileTimer !== undefined)
-          window.clearTimeout(this._updateReconcileTimer);
-        this._updateRefreshTimer = window.setTimeout(() => {
-          this._updateRefreshTimer = undefined;
-          void this._refresh(true, false);
-        }, 100);
-        this._updateReconcileTimer = window.setTimeout(() => {
-          this._updateReconcileTimer = undefined;
-          void this._refresh(true, false);
-        }, 1500);
+        this._clearUpdateReconcileTimers();
+        this._updateReconcileTimers = ACTIVITY_UPDATE_RECONCILE_DELAYS_MS.map(
+          (delay) =>
+            window.setTimeout(() => {
+              void this._refresh(true, false);
+            }, delay),
+        );
       }),
     )
       .then((unsubscribe) => {
@@ -346,19 +341,19 @@ export class ActiveCameraActivityController<
     this._updatesGeneration += 1;
     this._updatesUnsubscribe?.();
     this._updatesUnsubscribe = undefined;
-    if (this._updateRefreshTimer !== undefined) {
-      window.clearTimeout(this._updateRefreshTimer);
-    }
-    if (this._updateReconcileTimer !== undefined) {
-      window.clearTimeout(this._updateReconcileTimer);
-    }
+    this._clearUpdateReconcileTimers();
     if (this._updateSubscribeRetryTimer !== undefined) {
       window.clearTimeout(this._updateSubscribeRetryTimer);
     }
-    this._updateRefreshTimer = undefined;
-    this._updateReconcileTimer = undefined;
     this._updateSubscribeRetryTimer = undefined;
     this._refreshAfterHistory = false;
+  }
+
+  private _clearUpdateReconcileTimers(): void {
+    for (const timer of this._updateReconcileTimers) {
+      window.clearTimeout(timer);
+    }
+    this._updateReconcileTimers = [];
   }
 
   private _stopEmptyConfirmation(): void {

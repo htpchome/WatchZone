@@ -50,11 +50,24 @@ describe("Frigate activity updates", () => {
 
     callbacks[0]?.(
       JSON.stringify({
+        type: "new",
         after: { camera: "driveway", severity: "detection" },
       }),
     );
+    callbacks[0]?.(
+      JSON.stringify({
+        type: "update",
+        after: { camera: "driveway", severity: "alert" },
+      }),
+    );
+    callbacks[0]?.(
+      JSON.stringify({
+        type: "end",
+        before: { camera: "driveway", severity: "alert" },
+      }),
+    );
     callbacks[1]?.({ before: { camera: "driveway" } });
-    expect(update).toHaveBeenCalledTimes(2);
+    expect(update).toHaveBeenCalledTimes(4);
 
     unsubscribe();
     expect(unsubscribers[0]).toHaveBeenCalledOnce();

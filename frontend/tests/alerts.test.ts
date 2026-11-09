@@ -7,6 +7,14 @@ import type { HomeAssistantApi } from "../src/core/home-assistant";
 import type { AlertsModule } from "../src/stage/modules/alerts/alerts";
 import "../src/stage/modules/alerts/alerts";
 
+vi.mock("../src/api/activity-updates", () => ({
+  resolveActivityUpdateSource: vi.fn().mockResolvedValue({
+    type: "frigate",
+    instance_id: "frigate-main",
+    camera_name: "front",
+  }),
+}));
+
 const reviews = [
   {
     camera: "front",
@@ -134,6 +142,110 @@ describe("alerts module", () => {
     dateFilter.reset();
     await module.updateComplete;
     expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(2);
+  });
+
+  it("replaces one review tile through new, update, and end notifications", async () => {
+    const draft = {
+      ...reviews[1],
+      end_time: null,
+      id: "frigate-main:review-live",
+      labels: ["person"],
+      media_end_time: 105,
+      revision: "draft",
+      start_time: 100,
+    };
+    const promoted = {
+      ...draft,
+      classification: "alert",
+      labels: ["person", "package"],
+      media_end_time: 108,
+      revision: "promoted",
+    };
+    const ended = {
+      ...promoted,
+      end_time: 110,
+      media_end_time: 115,
+      revision: "ended",
+    };
+    const responses = [
+      { items: [] },
+      { items: [draft] },
+      { items: [promoted] },
+      { items: [ended] },
+    ];
+    const callWS = vi.fn().mockImplementation(async () => responses.shift());
+    let reviewUpdate: ((payload: unknown) => void) | undefined;
+    const api = {
+      callWS,
+      identity: {},
+      locale: { language: "en", time_zone: "server" },
+      resolveUrl: (path: string) => `https://ha.local${path}`,
+      subscribeMessage: vi.fn(async (callback, message: { type: string }) => {
+        if (message.type === "frigate/reviews/subscribe") {
+          reviewUpdate = callback as (payload: unknown) => void;
+        }
+        return () => undefined;
+      }),
+    } as unknown as HomeAssistantApi;
+    const selection = new CameraSelectionContext();
+    const module = document.createElement(ALERTS_TAG) as AlertsModule;
+    module.api = api;
+    module.cameraSelection = selection;
+    module.targetModuleId = "camera-module";
+    document.body.append(module);
+    selection.publish(
+      "camera-module",
+      {},
+      {
+        activeEntityId: "camera.front",
+        items: [{ entityId: "camera.front", label: "Front" }],
+      },
+      vi.fn(),
+    );
+
+    await vi.waitFor(() => expect(reviewUpdate).toBeTypeOf("function"));
+    reviewUpdate?.(
+      JSON.stringify({
+        type: "new",
+        after: { camera: "front", severity: "detection" },
+      }),
+    );
+    await vi.waitFor(() => {
+      expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(1);
+      expect(
+        activityRoot(module)?.querySelector(".thumbnail-wrap.detection"),
+      ).not.toBeNull();
+    });
+
+    reviewUpdate?.(
+      JSON.stringify({
+        type: "update",
+        after: { camera: "front", severity: "alert" },
+      }),
+    );
+    await vi.waitFor(() => {
+      expect(
+        [...(activityRoot(module)?.querySelectorAll("wzc-badge") ?? [])].map(
+          ({ textContent }) => textContent?.trim(),
+        ),
+      ).toContain("Package");
+      expect(
+        activityRoot(module)?.querySelector(".thumbnail-wrap.alert"),
+      ).not.toBeNull();
+    });
+
+    reviewUpdate?.(
+      JSON.stringify({
+        type: "end",
+        after: { camera: "front", severity: "alert" },
+      }),
+    );
+    await vi.waitFor(() => {
+      expect(
+        activityRoot(module)?.querySelector(".duration")?.textContent,
+      ).toBe("40s");
+    });
+    module.remove();
   });
 });
 
