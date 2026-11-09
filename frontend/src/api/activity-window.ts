@@ -30,8 +30,8 @@ export async function listActivityWindow<T extends ActivityWindowItem>(
   const windowAfter = windowBefore - options.historyDays * 24 * 60 * 60;
   const items = new Map<string, T>();
   let before = windowBefore;
-
   let pageSize = ACTIVITY_INITIAL_PAGE_SIZE;
+  let firstPage = true;
 
   while (before > windowAfter) {
     const response = await api.callWS<ActivityWindowResponse<T>>({
@@ -41,22 +41,44 @@ export async function listActivityWindow<T extends ActivityWindowItem>(
       before,
       limit: pageSize,
       bypass_cache: options.bypassCache ?? false,
+      ...(type === "watchzone/reviews/list"
+        ? {
+            summary_only: firstPage && options.loadFullHistory !== false,
+          }
+        : {}),
     });
     for (const item of response.items) items.set(item.id, item);
     const snapshot = sortedItems(items);
     options.onProgress?.(snapshot);
-    if (options.loadFullHistory === false || response.items.length < pageSize)
+    const summaryNeedsEnrichment =
+      type === "watchzone/reviews/list" &&
+      firstPage &&
+      response.items.length > 0;
+    if (
+      options.loadFullHistory === false ||
+      (!summaryNeedsEnrichment && response.items.length < pageSize)
+    )
       return snapshot;
+
+    if (firstPage) await allowFirstPagePaint();
 
     const oldestStart = Math.min(
       ...response.items.map(({ start_time }) => start_time),
     );
     if (!Number.isFinite(oldestStart) || oldestStart >= before) break;
-    before = oldestStart;
+    before =
+      type === "watchzone/reviews/list" && firstPage
+        ? windowBefore
+        : oldestStart;
     pageSize = ACTIVITY_BACKGROUND_PAGE_SIZE;
+    firstPage = false;
   }
 
   return sortedItems(items);
+}
+
+function allowFirstPagePaint(): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, 0));
 }
 
 function sortedItems<T extends ActivityWindowItem>(

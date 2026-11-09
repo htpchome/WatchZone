@@ -52,10 +52,10 @@ export class ActivityCalendar extends LitElement {
   private readonly _activity = new ActiveCameraActivityController<ReviewItem>(
     this,
     () => ({
-      api: this.api,
-      cameraSelection: this.cameraSelection,
+      api: this._open ? this.api : undefined,
+      cameraSelection: this._open ? this.cameraSelection : undefined,
       historyDays: this.historyDays,
-      targetModuleId: this.targetModuleId,
+      targetModuleId: this._open ? this.targetModuleId : "",
     }),
     listReviews,
     () => undefined,

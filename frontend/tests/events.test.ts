@@ -93,6 +93,74 @@ describe("events module", () => {
     expect(unsubscribe).toHaveBeenCalledOnce();
   });
 
+  it("applies provider updates while background history is still loading", async () => {
+    const now = Date.now() / 1000;
+    const initialEvents = Array.from({ length: 10 }, (_, index) => ({
+      ...event,
+      id: `frigate:event-${index}`,
+      revision: `revision-${index}`,
+      start_time: now - index,
+    }));
+    const newestEvent = {
+      ...event,
+      id: "frigate:event-new",
+      revision: "revision-new",
+      start_time: now + 1,
+    };
+    let finishBackground:
+      ((value: { items: readonly (typeof event)[] }) => void) | undefined;
+    const background = new Promise<{ items: readonly (typeof event)[] }>(
+      (resolve) => {
+        finishBackground = resolve;
+      },
+    );
+    const callWS = vi
+      .fn()
+      .mockResolvedValueOnce({ items: initialEvents })
+      .mockReturnValueOnce(background)
+      .mockResolvedValue({
+        items: [newestEvent, ...initialEvents.slice(0, 9)],
+      });
+    let activityUpdate: (() => void) | undefined;
+    const api = {
+      callWS,
+      identity: {},
+      locale: { language: "en", time_zone: "server" },
+      resolveUrl: (path: string) => `https://ha.local${path}`,
+      subscribeMessage: vi.fn(async (callback) => {
+        activityUpdate = callback as () => void;
+        return () => undefined;
+      }),
+    } as unknown as HomeAssistantApi;
+    const selection = new CameraSelectionContext();
+    const module = document.createElement(EVENTS_TAG) as EventsModule;
+    module.api = api;
+    module.cameraSelection = selection;
+    module.targetModuleId = "camera-module";
+    document.body.append(module);
+    selection.publish(
+      "camera-module",
+      {},
+      {
+        activeEntityId: "camera.front",
+        items: [{ entityId: "camera.front", label: "Front" }],
+      },
+      vi.fn(),
+    );
+
+    await vi.waitFor(() => {
+      expect(callWS).toHaveBeenCalledTimes(2);
+      expect(activityUpdate).toBeTypeOf("function");
+    });
+    activityUpdate?.();
+    await vi.waitFor(() => {
+      expect(callWS).toHaveBeenCalledTimes(3);
+      expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(11);
+    });
+
+    finishBackground?.({ items: [] });
+  });
+
   it("queries the active camera and replaces an authoritative event window", async () => {
     const callWS = vi
       .fn()

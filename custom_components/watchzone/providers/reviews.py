@@ -20,6 +20,7 @@ class ReviewQuery:
     before: float
     limit: int
     bypass_cache: bool = False
+    enrich: bool = True
 
 
 @dataclass(frozen=True, slots=True)

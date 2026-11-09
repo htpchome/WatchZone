@@ -67,6 +67,7 @@ export class ActiveCameraActivityController<
   private _lastApiIdentity?: HomeAssistantApi["identity"];
   private _lastHistoryDays?: number;
   private _updateRefreshTimer?: number;
+  private _updateReconcileTimer?: number;
   private _updatesGeneration = 0;
   private _updatesUnsubscribe?: () => void;
 
@@ -96,7 +97,7 @@ export class ActiveCameraActivityController<
     this._generation += 1;
   }
 
-  public hostUpdated(): void {
+  public hostUpdate(): void {
     this._syncContext();
   }
 
@@ -129,6 +130,11 @@ export class ActiveCameraActivityController<
       this._stopUpdates();
       this._stopEmptyConfirmation();
       this._generation += 1;
+      if (!context.cameraSelection || !context.targetModuleId) {
+        this.items = [];
+        this._itemsEntityId = undefined;
+        this._host.requestUpdate();
+      }
       if (context.cameraSelection && context.targetModuleId) {
         this._unsubscribe = context.cameraSelection.subscribe(
           context.targetModuleId,
@@ -203,7 +209,6 @@ export class ActiveCameraActivityController<
     if (!api || !entityId) return;
     if (!loadFullHistory && this._historyLoadPending) {
       this._refreshAfterHistory = true;
-      return;
     }
     const generation = this._generation;
     if (loadFullHistory) this._historyLoadPending = true;
@@ -227,7 +232,13 @@ export class ActiveCameraActivityController<
           )
             return;
           this.items = loadFullHistory
-            ? progressItems
+            ? this._refreshAfterHistory
+              ? mergeActivityItems(
+                  this.items,
+                  progressItems,
+                  context.historyDays,
+                )
+              : progressItems
             : mergeActivityItems(
                 this.items,
                 progressItems,
@@ -256,7 +267,9 @@ export class ActiveCameraActivityController<
         }
       }
       this._stopEmptyConfirmation();
-      this.items = items;
+      this.items = this._refreshAfterHistory
+        ? mergeActivityItems(this.items, items, context.historyDays)
+        : items;
       this._itemsEntityId = entityId;
     } catch {
       if (generation === this._generation) this._onError();
@@ -290,10 +303,16 @@ export class ActiveCameraActivityController<
           return;
         if (this._updateRefreshTimer !== undefined)
           window.clearTimeout(this._updateRefreshTimer);
+        if (this._updateReconcileTimer !== undefined)
+          window.clearTimeout(this._updateReconcileTimer);
         this._updateRefreshTimer = window.setTimeout(() => {
           this._updateRefreshTimer = undefined;
           void this._refresh(true, false);
-        }, 150);
+        }, 100);
+        this._updateReconcileTimer = window.setTimeout(() => {
+          this._updateReconcileTimer = undefined;
+          void this._refresh(true, false);
+        }, 1500);
       }),
     )
       .then((unsubscribe) => {
@@ -318,7 +337,11 @@ export class ActiveCameraActivityController<
     if (this._updateRefreshTimer !== undefined) {
       window.clearTimeout(this._updateRefreshTimer);
     }
+    if (this._updateReconcileTimer !== undefined) {
+      window.clearTimeout(this._updateReconcileTimer);
+    }
     this._updateRefreshTimer = undefined;
+    this._updateReconcileTimer = undefined;
     this._refreshAfterHistory = false;
   }
 

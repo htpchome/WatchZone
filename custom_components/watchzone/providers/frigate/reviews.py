@@ -46,7 +46,7 @@ class FrigateReviewsProvider:
         if query.bypass_cache:
             headers = {**headers, "Cache-Control": "no-cache"}
         try:
-            alerts_payload, detections_payload, config = await asyncio.gather(
+            alerts_payload, detections_payload = await asyncio.gather(
                 _get_json(
                     hass,
                     source,
@@ -73,7 +73,6 @@ class FrigateReviewsProvider:
                     },
                     headers,
                 ),
-                self._async_config(hass, source, headers, query.bypass_cache),
             )
         except (ClientError, TimeoutError, ValueError) as err:
             raise HomeAssistantError("Unable to retrieve camera alerts") from err
@@ -83,18 +82,25 @@ class FrigateReviewsProvider:
             raise HomeAssistantError("Frigate returned invalid alert data")
 
         raw_reviews = _merge_review_payloads(alerts_payload, detections_payload)
-        related_events = await _async_related_events(
-            hass,
-            source,
-            headers,
-            tuple(
-                dict.fromkeys(
-                    event_id
-                    for raw in raw_reviews
-                    for event_id in _review_event_ids(raw)
-                )
-            ),
-        )
+        if query.enrich:
+            config, related_events = await asyncio.gather(
+                self._async_config(hass, source, headers, query.bypass_cache),
+                _async_related_events(
+                    hass,
+                    source,
+                    headers,
+                    tuple(
+                        dict.fromkeys(
+                            event_id
+                            for raw in raw_reviews
+                            for event_id in _review_event_ids(raw)
+                        )
+                    ),
+                ),
+            )
+        else:
+            config = {}
+            related_events = {}
         reviews = [
             item
             for raw in raw_reviews

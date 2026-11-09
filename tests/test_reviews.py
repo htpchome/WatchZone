@@ -2,6 +2,7 @@
 
 from types import SimpleNamespace
 from typing import Any, cast
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -203,3 +204,78 @@ async def test_review_provider_filters_motion_before_frigate_limit(
         "detection",
     }
     assert all(request["limit"] == 500 for request in requests)
+
+
+async def test_review_summary_skips_related_event_and_config_enrichment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The first-paint query returns without waiting for enrichment requests."""
+
+    async def get_auth_headers() -> dict[str, str]:
+        return {}
+
+    source = cast(
+        FrigateSource,
+        SimpleNamespace(
+            base_url="http://frigate.local",
+            camera_name="front",
+            client=SimpleNamespace(
+                get_auth_headers=get_auth_headers,
+                validate_ssl=True,
+            ),
+            frigate_instance_id="frigate_workshop",
+        ),
+    )
+
+    async def resolve_source(hass: Any, entity_id: str) -> FrigateSource:
+        del hass, entity_id
+        return source
+
+    async def get_json(
+        hass: Any,
+        resolved_source: FrigateSource,
+        path: str,
+        params: dict[str, str | int | float],
+        headers: dict[str, str],
+    ) -> object:
+        del hass, resolved_source, headers
+        assert path == "api/review"
+        if params["severity"] == "detection":
+            return []
+        return [
+            {
+                "camera": "front",
+                "data": {"detections": ["event-person"], "objects": ["person"]},
+                "end_time": 101,
+                "id": "review-alert",
+                "severity": "alert",
+                "start_time": 100,
+            }
+        ]
+
+    config = AsyncMock()
+    related_events = AsyncMock()
+    monkeypatch.setattr(
+        "custom_components.watchzone.providers.frigate.reviews.async_resolve_source",
+        resolve_source,
+    )
+    monkeypatch.setattr(
+        "custom_components.watchzone.providers.frigate.reviews._get_json",
+        get_json,
+    )
+    monkeypatch.setattr(
+        "custom_components.watchzone.providers.frigate.reviews._async_related_events",
+        related_events,
+    )
+    provider = FrigateReviewsProvider()
+    monkeypatch.setattr(provider, "_async_config", config)
+
+    items = await provider.async_list_reviews(
+        cast(Any, SimpleNamespace()),
+        "camera.front",
+        ReviewQuery(after=0, before=200, limit=10, enrich=False),
+    )
+
+    assert [item.labels for item in items] == [("person",)]
+    config.assert_not_awaited()
+    related_events.assert_not_awaited()

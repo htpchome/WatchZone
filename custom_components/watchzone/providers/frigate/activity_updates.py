@@ -9,7 +9,7 @@ from typing import Any
 from aiohttp import ClientError, ClientTimeout
 from homeassistant.components.mqtt import async_subscribe
 from homeassistant.components.mqtt.models import ReceiveMessage
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from yarl import URL
@@ -57,11 +57,39 @@ class FrigateActivityUpdatesProvider:
             if _activity_payload_matches(message.payload, source.camera_name, kind):
                 listener()
 
-        return await async_subscribe(
-            hass,
-            f"{topic_prefix}/{'events' if kind == 'events' else 'reviews'}",
-            receive,
-        )
+        unsubscribes = [
+            await async_subscribe(
+                hass,
+                f"{topic_prefix}/{'events' if kind == 'events' else 'reviews'}",
+                receive,
+            )
+        ]
+        if kind == "reviews":
+
+            def receive_event(message: ReceiveMessage) -> None:
+                if _activity_payload_matches(
+                    message.payload, source.camera_name, "events"
+                ):
+                    listener()
+
+            try:
+                unsubscribes.append(
+                    await async_subscribe(
+                        hass,
+                        f"{topic_prefix}/events",
+                        receive_event,
+                    )
+                )
+            except Exception:
+                unsubscribes[0]()
+                raise
+
+        @callback
+        def unsubscribe() -> None:
+            for remove_subscription in unsubscribes:
+                remove_subscription()
+
+        return unsubscribe
 
 
 def _topic_prefix(config: object) -> str | None:

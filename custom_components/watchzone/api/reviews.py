@@ -33,6 +33,7 @@ from . import runtime_from_hass
             vol.Coerce(int), vol.Range(min=1, max=500)
         ),
         vol.Optional("bypass_cache", default=False): cv.boolean,
+        vol.Optional("summary_only", default=False): cv.boolean,
     }
 )
 @async_response
@@ -53,7 +54,13 @@ async def ws_reviews_list(
     try:
         items = await runtime_from_hass(hass).reviews.async_list(
             entity_id,
-            ReviewQuery(after, before, msg["limit"], msg["bypass_cache"]),
+            ReviewQuery(
+                after,
+                before,
+                msg["limit"],
+                msg["bypass_cache"],
+                not msg["summary_only"],
+            ),
         )
     except HomeAssistantError as err:
         connection.send_error(msg["id"], "reviews_list_failed", str(err))

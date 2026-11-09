@@ -54,12 +54,14 @@ describe("activity calendar", () => {
       vi.fn(),
     );
 
-    await vi.waitFor(() => expect(callWS).toHaveBeenCalledOnce());
+    expect(callWS).not.toHaveBeenCalled();
+    await calendar.updateComplete;
     calendar.shadowRoot
       ?.querySelector<HTMLButtonElement>(".calendar-trigger")
       ?.click();
     await calendar.updateComplete;
 
+    await vi.waitFor(() => expect(callWS).toHaveBeenCalled());
     await vi.waitFor(() =>
       expect(calendar.shadowRoot?.querySelectorAll(".day.marked")).toHaveLength(
         2,
