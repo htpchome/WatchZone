@@ -46,12 +46,14 @@ export const mediaControlsOverlayStyles = css`
 
   @container (max-width: 480px) {
     .control-group {
+      --wzc-control-size: 2.35rem;
       --wzc-control-icon-size: 1.4rem;
     }
   }
 
   @container (max-height: 360px) {
     .control-group {
+      --wzc-control-size: 2.25rem;
       --wzc-control-icon-size: 1.3rem;
       --wzc-control-gap: 0.3rem;
     }
@@ -59,6 +61,7 @@ export const mediaControlsOverlayStyles = css`
 
   @container (max-height: 240px) {
     .control-group {
+      --wzc-control-size: 1.875rem;
       --wzc-control-icon-size: 1.15rem;
       --wzc-control-gap: 0.2rem;
     }

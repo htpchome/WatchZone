@@ -49,6 +49,8 @@ export const ptzStyles = css`
     --wzc-round-button-touch-action: none;
     inline-size: var(--wzc-ptz-button-size);
     block-size: var(--wzc-ptz-button-size);
+    min-inline-size: 0;
+    min-block-size: 0;
     color: inherit;
   }
 

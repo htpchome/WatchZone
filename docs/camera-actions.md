@@ -22,9 +22,9 @@ camera module. Actions must not be implemented inside a live connection adapter.
   and WebRTC takeover therefore expose the same custom PiP action without a
   follow-up lifecycle render or PiP logic in either connection adapter.
 - Live and recorded presentations supply descriptors to the same shared media
-  control overlay. The overlay owns geometry, minimum touch targets, and input
-  behavior; each playback owner handles the typed action intent against its
-  own media/session lifecycle.
+  control overlay. The overlay owns geometry, stage-responsive visible sizing,
+  and input behavior; each playback owner handles the typed action intent
+  against its own media/session lifecycle.
 - Every video is suppressed before it is connected or painted. Video elements
   are not pointer hit targets; the parent media surface owns zoom and pan while
   the controls overlay owns action input. This prevents a transient browser

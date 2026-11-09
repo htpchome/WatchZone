@@ -81,7 +81,7 @@ This document is normative for alert, event, and recording playback.
   recorded dialog supplies Picture-in-Picture, fullscreen, and mute in the
   same vertical geometry and sizing as live video; from bottom to top their
   order is mute, fullscreen, Picture-in-Picture.
-- Overlay controls use pointer events, minimum touch targets, touch-focus
+- Overlay controls use pointer events, shared responsive sizing, touch-focus
   release, and local surface-relative insets. Safe-area insets apply only when
   a presentation actually reaches the physical viewport edge, such as native
   fullscreen.

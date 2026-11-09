@@ -8,8 +8,6 @@ const overlayControlBaseStyles = css`
     cursor: pointer;
     display: grid;
     font: inherit;
-    min-block-size: var(--wzc-overlay-control-min-size, 2.75rem);
-    min-inline-size: var(--wzc-overlay-control-min-size, 2.75rem);
     padding: 0;
     place-items: center;
     touch-action: var(--wzc-control-touch-action, manipulation);
@@ -45,6 +43,8 @@ export const roundButtonStyles = [
         --wzc-round-button-size,
         var(--wzc-camera-control-size, 2.75rem)
       );
+      min-inline-size: var(--wzc-overlay-control-min-size, 2.75rem);
+      min-block-size: var(--wzc-overlay-control-min-size, 2.75rem);
       color: var(--wzc-round-button-color, currentcolor);
       background: var(--wzc-round-button-background, transparent);
       border: 0;
@@ -104,6 +104,8 @@ export const mediaOverlayControlButtonStyles = [
       color: var(--wzc-control-color, var(--wzc-media-overlay-color));
       inline-size: var(--wzc-control-size, var(--wzc-camera-control-size));
       block-size: var(--wzc-control-size, var(--wzc-camera-control-size));
+      min-inline-size: 0;
+      min-block-size: 0;
     }
 
     .control-button svg {

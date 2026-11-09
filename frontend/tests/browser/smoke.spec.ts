@@ -620,8 +620,9 @@ test("shows an independently scrolling event window for the active camera", asyn
   const recordedMuteBox = await page
     .getByRole("button", { name: "Mute recorded video" })
     .boundingBox();
-  expect(recordedMuteBox?.width).toBeGreaterThanOrEqual(44);
-  expect(recordedMuteBox?.height).toBeGreaterThanOrEqual(44);
+  expect(recordedMuteBox?.width).toBeGreaterThanOrEqual(30);
+  expect(recordedMuteBox?.width).toBeLessThanOrEqual(44);
+  expect(recordedMuteBox?.height).toBe(recordedMuteBox?.width);
   const recordedControlShape = await page
     .getByRole("button", { name: "Mute recorded video" })
     .evaluate((button) => getComputedStyle(button).borderRadius);
@@ -1336,6 +1337,16 @@ test("lays out talk and light controls in the responsive dock", async ({
   expect(talkHostBox.height).toBeCloseTo(talkButtonBox.height, 0);
   expect(ptzHostBox.height).toBeCloseTo(ptzControlBox.height, 0);
   expect(ptzHostBox.width).toBeCloseTo(ptzControlBox.width, 0);
+  expect(ptzHostBox.width).toBeLessThanOrEqual(90);
+  expect(cameraBox.width / cameraBox.height).toBeCloseTo(16 / 9, 1);
+  const overlayTrailingPadding = await page
+    .locator('[data-stage-slot="overlay"]')
+    .evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).paddingRight),
+    );
+  expect(ptzControlBox.x + ptzControlBox.width).toBeLessThanOrEqual(
+    cameraBox.x + cameraBox.width - overlayTrailingPadding + 1,
+  );
   await expect(ptz.locator("xpath=..")).toHaveClass(
     /overlay-region-bottom-trailing/,
   );
@@ -1497,6 +1508,34 @@ test("lays out talk and light controls in the responsive dock", async ({
       ),
     )
     .toBe(70);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect
+    .poll(
+      async () => (await ptz.boundingBox())?.width ?? Number.POSITIVE_INFINITY,
+    )
+    .toBeLessThan(70);
+  const mobileCameraBox = await camera.boundingBox();
+  const mobilePtzBox = await ptz.boundingBox();
+  const mobileOverlayTrailingPadding = await page
+    .locator('[data-stage-slot="overlay"]')
+    .evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).paddingRight),
+    );
+  expect(mobileCameraBox).not.toBeNull();
+  expect(mobilePtzBox).not.toBeNull();
+  if (mobileCameraBox && mobilePtzBox) {
+    expect(mobileCameraBox.width / mobileCameraBox.height).toBeCloseTo(
+      16 / 9,
+      1,
+    );
+    expect(mobilePtzBox.x + mobilePtzBox.width).toBeLessThanOrEqual(
+      mobileCameraBox.x +
+        mobileCameraBox.width -
+        mobileOverlayTrailingPadding +
+        1,
+    );
+  }
 });
 
 test("aligns phone carousel controls and stage handle to the active stage", async ({
@@ -1592,6 +1631,11 @@ test("aligns phone carousel controls and stage handle to the active stage", asyn
   expect(geometry.control?.left ?? 0).toBeGreaterThan(
     geometry.next?.right ?? 0,
   );
+  expect(geometry.control?.width).toBeGreaterThanOrEqual(30);
+  expect(geometry.control?.width).toBeLessThan(36);
+  expect(
+    (geometry.stage?.width ?? 0) / (geometry.stage?.height ?? 1),
+  ).toBeCloseTo(16 / 9, 1);
   const previousInset =
     (geometry.previous?.left ?? 0) - (geometry.carousel?.left ?? 0);
   const nextInset =
@@ -3310,7 +3354,7 @@ test("retains one live connection while the card presentation is replaced", asyn
     .poll(() =>
       mute.evaluate((element) => element.getBoundingClientRect().width),
     )
-    .toBe(44);
+    .toBeLessThan(36);
   await expect
     .poll(() =>
       page.evaluate(() => {

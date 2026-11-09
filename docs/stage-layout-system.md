@@ -105,10 +105,12 @@ sibling components or the Stage center. Panels and transient notices may paint
 outside their dock item without changing the dock's measured control geometry.
 
 The overlay slot owns its three-by-three logical placement grid and local
-Stage-edge clearance. Neither Stage slot consumes device safe-area insets: a
-Stage is contained inside the Home Assistant card, not attached to a physical
-viewport edge. A true viewport-edge presentation such as fullscreen owns its
-own safe-area treatment.
+Stage-edge clearance. Its trailing clearance reserves the camera media-control
+rail, so a bottom-trailing component such as PTZ remains entirely before that
+rail without knowing camera-control geometry. Neither Stage slot consumes
+device safe-area insets: a Stage is contained inside the Home Assistant card,
+not attached to a physical viewport edge. A true viewport-edge presentation
+such as fullscreen owns its own safe-area treatment.
 
 Module-stack navigation is rendered by the Stage runtime from module metadata,
 not by either child module. The first child is the initial selection. Switching

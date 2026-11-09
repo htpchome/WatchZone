@@ -211,6 +211,10 @@ export const themeTokens = css`
     --wzc-camera-control-inline-inset: 0.75rem;
     --wzc-camera-overlay-block-inset: 0.5rem;
     --wzc-camera-overlay-inline-inset: 0.75rem;
+    --wzc-camera-overlay-trailing-clearance: calc(
+      var(--wzc-camera-control-inline-inset) + var(--wzc-camera-control-size) +
+        var(--wzc-control-dock-gap)
+    );
     --wzc-control-dock-gap: 0.5rem;
     --wzc-carousel-navigation-opacity: 72%;
     --wzc-carousel-navigation-hover-opacity: 100%;
@@ -288,8 +292,8 @@ export const themeTokens = css`
     --wzc-talk-panel-border-color: var(--ha-color-purple-50, #a78bfa);
     --wzc-talk-wave-incoming-color: var(--ha-color-blue-40, #60a5fa);
     --wzc-talk-wave-outgoing-color: var(--ha-color-purple-40, #c084fc);
-    --wzc-ptz-button-size: 2.75rem;
-    --wzc-ptz-icon-padding: 0.65rem;
+    --wzc-ptz-button-size: clamp(1.15rem, 4.5cqi, 1.7rem);
+    --wzc-ptz-icon-padding: 0.1rem;
     --wzc-ptz-panel-padding: 0.18rem;
     --wzc-ptz-panel-background: color-mix(
       in srgb,

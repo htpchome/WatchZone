@@ -97,6 +97,7 @@ export const stageRuntimeStyles = css`
   }
 
   .module-composition {
+    position: relative;
     display: grid;
     min-block-size: 0;
   }
@@ -106,8 +107,16 @@ export const stageRuntimeStyles = css`
   }
 
   .module-composition.has-components > .module-slot,
-  .module-composition.has-components > .component-slot {
+  .module-composition.has-components > .component-slot-content {
     grid-area: overlay;
+  }
+
+  .module-composition.has-components > .component-slot-overlay,
+  .module-composition.has-components > .component-slot-controls {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
   }
 
   .component-slot,
@@ -129,12 +138,13 @@ export const stageRuntimeStyles = css`
     grid-template-columns: repeat(3, minmax(0, 1fr));
     grid-template-rows: repeat(3, minmax(0, 1fr));
     box-sizing: border-box;
-    padding: var(--wzc-camera-overlay-block-inset)
-      var(--wzc-camera-overlay-inline-inset)
-      calc(
-        var(--wzc-stage-resize-handle-block-size) +
-          var(--wzc-camera-overlay-block-inset)
-      );
+    padding-block-start: var(--wzc-camera-overlay-block-inset);
+    padding-block-end: calc(
+      var(--wzc-stage-resize-handle-block-size) +
+        var(--wzc-camera-overlay-block-inset)
+    );
+    padding-inline-start: var(--wzc-camera-overlay-inline-inset);
+    padding-inline-end: var(--wzc-camera-overlay-trailing-clearance);
   }
 
   .component-slot-overlay > .component-node {

@@ -37,8 +37,9 @@ new browser API makes another platform easier or faster.
   safe-area values there would offset the same control differently by host
   device. Respect text scaling, reduced motion, orientation changes, and Home
   Assistant theme tokens where they affect the feature.
-- Shared overlay controls own minimum touch-target sizing, Pointer Events,
-  touch-focus release, keyboard focus, and tap-highlight suppression. Feature
+- Shared overlay controls own responsive target sizing, Pointer Events,
+  touch-focus release, keyboard focus, and tap-highlight suppression. Compact
+  stages may use smaller visible media controls than desktop stages. Feature
   controls compose that behavior rather than adding device-specific input
   paths.
 - Avoid APIs that require cross-origin isolation or browser flags unless the
