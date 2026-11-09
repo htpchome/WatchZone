@@ -554,6 +554,7 @@ test("highlights live video directly from draft review notifications", async ({
 test("keeps activity content in an independently scrolling viewport", async ({
   page,
 }) => {
+  let previewRequests = 0;
   await installHaIconFixture(page);
   await page.route("**/thumbnail.svg", async (route) => {
     await route.fulfill({
@@ -563,6 +564,13 @@ test("keeps activity content in an independently scrolling viewport", async ({
   });
   await page.route("**/recording.mp4", async (route) => {
     await route.fulfill({ body: "", contentType: "video/mp4" });
+  });
+  await page.route("**/review-preview.gif", async (route) => {
+    previewRequests += 1;
+    await route.fulfill({
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="blue"/></svg>',
+      contentType: "image/svg+xml",
+    });
   });
   await page.goto("/");
   await waitForWatchZoneDefinition(page);
@@ -659,6 +667,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
               media_start_time: event.start_time - 5,
               playback_sources: event.playback_sources,
               preferred_transport: "hls",
+              preview_url: "/review-preview.gif",
               revision: event.revision,
               related_event_ids: [event.id],
               snapshot_url: event.snapshot_url,
@@ -710,6 +719,29 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(normalNavigation.activeIconOpacity).toBe("1");
   expect(normalNavigation.activePathFill).toBe("rgb(255, 255, 255)");
   await expect(page.locator("wzc-alerts .tile")).toHaveCount(6);
+  expect(previewRequests).toBe(0);
+  await expect
+    .poll(() =>
+      page.locator("wzc-alerts wzc-activity-list").evaluate(
+        (element) =>
+          (
+            element as HTMLElement & {
+              items: Array<{ hoverPreviewUrl?: string }>;
+            }
+          ).items[0]?.hoverPreviewUrl,
+      ),
+    )
+    .toBe("/review-preview.gif");
+  await page
+    .locator("wzc-alerts .tile")
+    .first()
+    .hover({
+      position: { x: 10, y: 10 },
+    });
+  await expect(page.locator("wzc-alerts .hover-preview")).toHaveCount(1);
+  await expect.poll(() => previewRequests).toBe(1);
+  await page.mouse.move(0, 0);
+  await expect(page.locator("wzc-alerts .hover-preview")).toHaveCount(0);
   await stackButtons.nth(1).hover();
   await expect(stackButtons.nth(1)).not.toHaveCSS(
     "color",
@@ -2884,7 +2916,7 @@ test("editor uses exclusive accordions and shared draft status", async ({
 
   const editor = page.locator("#accordion-editor");
   const items = editor.locator("wzc-accordion-item");
-  await expect(items).toHaveCount(6);
+  await expect(items).toHaveCount(7);
   await expect(items.locator("details[open]")).toHaveCount(0);
   await items.nth(0).locator("summary").click();
   await expect(items.nth(0).locator("details")).toHaveAttribute("open", "");

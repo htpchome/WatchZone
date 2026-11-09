@@ -87,6 +87,10 @@ def test_review_normalization_preserves_classification_and_media() -> None:
         "/api/frigate/frigate_workshop/notifications/1700000000.1-abc/"
         "front/review_thumbnail.webp"
     )
+    assert item.preview_url == (
+        "/api/frigate/frigate_workshop/notifications/1700000000.1-abc/"
+        "review_preview.gif"
+    )
     assert item.clip_url is not None
     assert "/recording/front/start/1699999993.1/end/1700000029.2" in item.clip_url
     assert item.snapshot_url is not None

@@ -21,6 +21,7 @@ export interface ReviewItem {
   readonly labels: readonly string[];
   readonly media_end_time: number;
   readonly media_start_time: number;
+  readonly preview_url: string | null;
   readonly revision: string;
   readonly related_event_ids: readonly string[];
   readonly snapshot_url: string | null;

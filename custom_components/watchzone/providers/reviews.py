@@ -37,6 +37,7 @@ class ReviewItem:
     media_start_time: float
     media_end_time: float
     related_event_ids: tuple[str, ...]
+    preview_url: str | None
     thumbnail_url: str | None
     snapshot_url: str | None
     clip_url: str | None

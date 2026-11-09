@@ -8,6 +8,8 @@
   "editor.live_media_player": "Live Media Player",
   "editor.highlight_camera_on_activity": "Highlight Camera on Alert/Detection",
   "editor.recorded_media_player": "Recorded Media Player",
+  "editor.alerts_and_detections": "Alerts and Detections",
+  "editor.view_timelapse_on_thumbnail_hover": "View timelapse when thumbnail is hovered",
   "editor.general_settings": "General Settings",
   "editor.display_settings": "Display Settings",
   "editor.layout_settings": "Layout Settings",

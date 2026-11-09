@@ -156,6 +156,9 @@ function normalizeReview(
     media_start_time: activity.start_time,
     playback_sources: [],
     preferred_transport: "file" as const,
+    preview_url:
+      `/api/frigate/${instance}/notifications/${reviewId}/` +
+      "review_preview.gif",
     related_event_ids: eventIds.map((id) => `${source.instance_id}:${id}`),
     revision,
     snapshot_url: null,

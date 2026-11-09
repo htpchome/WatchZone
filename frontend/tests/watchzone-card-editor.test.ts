@@ -96,6 +96,7 @@ describe("watchzone-card-editor", () => {
       "Camera Settings",
       "Live Media Player",
       "Recorded Media Player",
+      "Alerts and Detections",
       "General Settings",
       "Layout Settings",
       "Display Settings",
@@ -107,6 +108,11 @@ describe("watchzone-card-editor", () => {
       ),
     ).not.toBeNull();
     expect(items[2]?.childElementCount).toBe(0);
+    expect(
+      items[3]?.querySelector(
+        '[data-config-key="view_timelapse_on_thumbnail_hover"]',
+      ),
+    ).not.toBeNull();
     expect(items.every((item) => !item.open)).toBe(true);
     const status = editor.shadowRoot?.querySelector(
       "wzc-toast-region",
@@ -581,6 +587,33 @@ describe("watchzone-card-editor", () => {
       type: CARD_TYPE,
       title: "Camera",
       highlight_camera_on_activity: false,
+    });
+  });
+
+  it("defaults thumbnail timelapse previews on and saves an opt-out", async () => {
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+
+    const selector = editor.shadowRoot?.querySelector(
+      '[data-config-key="view_timelapse_on_thumbnail_hover"]',
+    ) as TestBooleanSelector | null;
+    expect(selector?.value).toBe(true);
+
+    setBooleanSelector(
+      editor,
+      '[data-config-key="view_timelapse_on_thumbnail_hover"]',
+      false,
+    );
+    expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
+      type: CARD_TYPE,
+      title: "Camera",
+      view_timelapse_on_thumbnail_hover: false,
     });
   });
 

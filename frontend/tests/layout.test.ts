@@ -128,6 +128,7 @@ describe("layout composition", () => {
         displayObjectBadges: true,
         displayZone: true,
         historyDays: 5,
+        hoverPreviewEnabled: true,
         roundedCorners: true,
         targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
       },

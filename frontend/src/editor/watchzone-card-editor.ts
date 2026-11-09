@@ -109,6 +109,7 @@ type BooleanConfigFlag =
   | "display_zone"
   | "event_rounded_corners"
   | "highlight_camera_on_activity"
+  | "view_timelapse_on_thumbnail_hover"
   | "mobile_data_saving"
   | "outer_padding"
   | "outer_shadows"
@@ -276,6 +277,13 @@ export class CardEditor extends LitElement {
           .icon=${"events"}
         ></${accordionItemTag}>
         <${accordionItemTag}
+          heading=${this._t("editor.alerts_and_detections")}
+          item-key="alerts-and-detections"
+          .icon=${"alerts"}
+        >
+          ${this._renderAlertsDetectionsSettings()}
+        </${accordionItemTag}>
+        <${accordionItemTag}
           heading=${this._t("editor.general_settings")}
           item-key="general"
           .icon=${"settings"}
@@ -395,6 +403,14 @@ export class CardEditor extends LitElement {
       "highlight_camera_on_activity",
       this._t("editor.highlight_camera_on_activity"),
       this._config?.highlight_camera_on_activity !== false,
+    );
+  }
+
+  private _renderAlertsDetectionsSettings() {
+    return this._renderBooleanOption(
+      "view_timelapse_on_thumbnail_hover",
+      this._t("editor.view_timelapse_on_thumbnail_hover"),
+      this._config?.view_timelapse_on_thumbnail_hover !== false,
     );
   }
 

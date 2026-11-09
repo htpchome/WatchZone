@@ -165,6 +165,11 @@ function hydrateModule(
         displayObjectBadges: config.display_object_badges,
         displayZone: config.display_zone,
         historyDays: config.event_history_days,
+        ...(node.moduleType === ALERTS_MODULE_TYPE
+          ? {
+              hoverPreviewEnabled: config.view_timelapse_on_thumbnail_hover,
+            }
+          : {}),
         roundedCorners: config.event_rounded_corners,
       },
     };

@@ -123,6 +123,11 @@ export const activityListStyles = css`
     object-position: center;
   }
 
+  .hover-preview {
+    inset: 0;
+    position: absolute;
+  }
+
   .placeholder {
     align-items: center;
     background: var(--wzc-event-thumbnail-placeholder-background);

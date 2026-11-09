@@ -21,12 +21,26 @@ describe("WatchZone card configuration", () => {
       event_history_days: 5,
       event_rounded_corners: true,
       highlight_camera_on_activity: true,
+      view_timelapse_on_thumbnail_hover: true,
       rounded_outer_corners: true,
       outer_shadows: true,
       outer_padding: true,
       mobile_data_saving: false,
       cameras: [],
     });
+  });
+
+  it("defaults thumbnail timelapse previews on and accepts an explicit opt-out", () => {
+    expect(normalizeCardConfig({}).view_timelapse_on_thumbnail_hover).toBe(
+      true,
+    );
+    expect(
+      normalizeCardConfig({ view_timelapse_on_thumbnail_hover: false })
+        .view_timelapse_on_thumbnail_hover,
+    ).toBe(false);
+    expect(() =>
+      normalizeCardConfig({ view_timelapse_on_thumbnail_hover: "false" }),
+    ).toThrow("view_timelapse_on_thumbnail_hover must be a boolean");
   });
 
   it("defaults live activity highlighting on and accepts an explicit opt-out", () => {

@@ -267,6 +267,10 @@ def _normalize_review(
         related_event_ids=tuple(
             f"{source.frigate_instance_id}:{event_id}" for event_id in event_ids
         ),
+        preview_url=(
+            f"/api/frigate/{encoded_instance}/notifications/{encoded_review}/"
+            "review_preview.gif"
+        ),
         thumbnail_url=(
             f"/api/frigate/{encoded_instance}/notifications/{encoded_review}/"
             f"{encoded_camera}/review_thumbnail.webp?v={revision}"

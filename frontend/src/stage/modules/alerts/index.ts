@@ -13,6 +13,7 @@ export interface AlertsModuleConfig {
   readonly displayObjectBadges: boolean;
   readonly displayZone: boolean;
   readonly historyDays: number;
+  readonly hoverPreviewEnabled: boolean;
   readonly roundedCorners: boolean;
   readonly targetModuleId: string;
 }
@@ -53,11 +54,15 @@ export const moduleDefinition: ModuleDefinition<AlertsModuleConfig> = {
         `Alerts module historyDays must be an integer from ${MIN_EVENT_HISTORY_DAYS} to ${MAX_EVENT_HISTORY_DAYS}.`,
       );
     }
+    if (typeof source.hoverPreviewEnabled !== "boolean") {
+      throw new Error("Alerts module hoverPreviewEnabled must be a boolean.");
+    }
     return {
       displayEventTypeBadges: source.displayEventTypeBadges,
       displayObjectBadges: source.displayObjectBadges,
       displayZone: source.displayZone,
       historyDays: source.historyDays,
+      hoverPreviewEnabled: source.hoverPreviewEnabled,
       roundedCorners: source.roundedCorners,
       targetModuleId: source.targetModuleId,
     };
@@ -78,6 +83,7 @@ export const moduleDefinition: ModuleDefinition<AlertsModuleConfig> = {
     alerts.displayObjectBadges = config.displayObjectBadges;
     alerts.displayZone = config.displayZone;
     alerts.historyDays = config.historyDays;
+    alerts.hoverPreviewEnabled = config.hoverPreviewEnabled;
     alerts.localize = context.localize ?? englishLocalize;
     alerts.roundedCorners = config.roundedCorners;
     alerts.targetModuleId = config.targetModuleId;

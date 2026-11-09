@@ -40,6 +40,9 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
   if (config.highlight_camera_on_activity !== false) {
     delete yaml.highlight_camera_on_activity;
   }
+  if (config.view_timelapse_on_thumbnail_hover !== false) {
+    delete yaml.view_timelapse_on_thumbnail_hover;
+  }
   if (!config.mobile_data_saving) delete yaml.mobile_data_saving;
   if (config.cameras.length === 0) delete yaml.cameras;
   else yaml.cameras = config.cameras.map(compactCameraConfig);

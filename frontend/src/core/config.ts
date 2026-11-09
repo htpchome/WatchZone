@@ -41,6 +41,7 @@ export interface CardConfig {
   readonly event_rounded_corners: boolean;
   readonly event_history_days: number;
   readonly highlight_camera_on_activity: boolean;
+  readonly view_timelapse_on_thumbnail_hover: boolean;
   readonly cameras: readonly CameraConfig[];
   readonly mobile_data_saving?: boolean;
   readonly outer_padding?: boolean;
@@ -71,6 +72,7 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     "display_zone",
     "event_rounded_corners",
     "highlight_camera_on_activity",
+    "view_timelapse_on_thumbnail_hover",
     "rounded_outer_corners",
     "outer_shadows",
     "outer_padding",
@@ -125,6 +127,8 @@ export function normalizeCardConfig(value: unknown): CardConfig {
       : DEFAULT_EVENT_HISTORY_DAYS;
   normalized.highlight_camera_on_activity =
     source.highlight_camera_on_activity !== false;
+  normalized.view_timelapse_on_thumbnail_hover =
+    source.view_timelapse_on_thumbnail_hover !== false;
   normalized.rounded_outer_corners =
     typeof source.rounded_outer_corners === "boolean"
       ? source.rounded_outer_corners

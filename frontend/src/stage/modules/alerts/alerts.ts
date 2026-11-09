@@ -32,6 +32,7 @@ export class AlertsModule extends LitElement {
     displayObjectBadges: { attribute: false },
     displayZone: { attribute: false },
     historyDays: { attribute: false },
+    hoverPreviewEnabled: { attribute: false, type: Boolean },
     localize: { attribute: false },
     roundedCorners: { attribute: false, type: Boolean },
     targetModuleId: { attribute: false },
@@ -44,6 +45,7 @@ export class AlertsModule extends LitElement {
   public displayObjectBadges = true;
   public displayZone = true;
   public historyDays = DEFAULT_EVENT_HISTORY_DAYS;
+  public hoverPreviewEnabled = true;
   public localize: LocalizeFunction = englishLocalize;
   public roundedCorners = true;
   public targetModuleId = "";
@@ -79,6 +81,7 @@ export class AlertsModule extends LitElement {
         classification: review.classification,
         clipUrl: review.clip_url,
         endTime: review.end_time,
+        hoverPreviewUrl: this.hoverPreviewEnabled ? review.preview_url : null,
         id: review.id,
         mediaEndTime: review.media_end_time,
         mediaStartTime: review.media_start_time,

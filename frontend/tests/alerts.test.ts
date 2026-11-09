@@ -29,6 +29,7 @@ const reviews = [
       { content_type: "video/mp4", transport: "file", url: "/alert.mp4" },
     ],
     preferred_transport: "hls",
+    preview_url: "/review-1-preview.gif",
     revision: "revision-1",
     related_event_ids: ["frigate:event-1", "frigate:event-2"],
     snapshot_url: "/alert-snapshot.jpg",
@@ -54,6 +55,7 @@ const reviews = [
       },
     ],
     preferred_transport: "hls",
+    preview_url: "/review-2-preview.gif",
     revision: "revision-2",
     related_event_ids: ["frigate:event-3"],
     snapshot_url: null,
@@ -133,6 +135,15 @@ describe("alerts module", () => {
         'button[aria-label="View snapshot"]',
       ),
     ).toHaveLength(1);
+    const list = module.shadowRoot?.querySelector(ACTIVITY_LIST_TAG) as
+      | (HTMLElement & {
+          items: readonly { hoverPreviewUrl?: string | null }[];
+        })
+      | null;
+    expect(list?.items[0]?.hoverPreviewUrl).toBe("/review-1-preview.gif");
+    module.hoverPreviewEnabled = false;
+    await module.updateComplete;
+    expect(list?.items[0]?.hoverPreviewUrl).toBeNull();
     expect(activityRoot(module)?.querySelector(".duration")?.textContent).toBe(
       "34s",
     );

@@ -36,6 +36,7 @@ export interface ActivityListItem {
   readonly classification?: ActivityClassification;
   readonly clipUrl: string | null;
   readonly endTime: number | null;
+  readonly hoverPreviewUrl?: string | null;
   readonly id: string;
   readonly mediaEndTime?: number;
   readonly mediaStartTime?: number;
@@ -81,13 +82,14 @@ export class ActivityList extends LitElement {
   public roundedCorners = true;
 
   private readonly _failedMedia = new Set<string>();
+  private _hoveredPreviewId?: string;
 
   protected updated(changed: Map<PropertyKey, unknown>): void {
     if (!changed.has("items")) return;
     const current = new Set(
       this.items.flatMap((item) =>
-        [item.thumbnailUrl, item.snapshotUrl]
-          .filter((url): url is string => url !== null)
+        [item.thumbnailUrl, item.snapshotUrl, item.hoverPreviewUrl]
+          .filter((url): url is string => typeof url === "string")
           .map((url) => mediaKey(item, url)),
       ),
     );
@@ -133,6 +135,7 @@ export class ActivityList extends LitElement {
         url !== null && !this._failedMedia.has(mediaKey(item, url)),
     );
     const snapshotUrl = item.snapshotUrl;
+    const hoverPreviewUrl = item.hoverPreviewUrl;
     const durationStart = item.mediaStartTime ?? item.startTime;
     const durationEnd = item.mediaEndTime ?? item.endTime ?? Date.now() / 1000;
     const duration = Math.max(1, Math.round(durationEnd - durationStart));
@@ -152,7 +155,12 @@ export class ActivityList extends LitElement {
     const posterUrl = previewUrl
       ? (this.api?.resolveUrl(previewUrl) ?? previewUrl)
       : undefined;
-    return html`<article class="tile">
+    return html`<article
+      class="tile"
+      @pointermove=${(event: PointerEvent) =>
+        this._updateHoverPreview(event, item)}
+      @pointerleave=${() => this._clearHoverPreview(item.id)}
+    >
       ${
         item.playbackSources.length > 0
           ? html`<button
@@ -188,6 +196,19 @@ export class ActivityList extends LitElement {
             : html`<div class="placeholder" aria-hidden="true">
                 ${renderIcon("account")}
               </div>`
+        }
+        ${
+          hoverPreviewUrl &&
+          this._hoveredPreviewId === item.id &&
+          !this._failedMedia.has(mediaKey(item, hoverPreviewUrl))
+            ? html`<img
+                class="thumbnail hover-preview"
+                src=${this.api?.resolveUrl(hoverPreviewUrl) ?? hoverPreviewUrl}
+                alt=""
+                aria-hidden="true"
+                @error=${() => this._mediaFailed(item, hoverPreviewUrl)}
+              />`
+            : null
         }
         <span class="duration"
           >${formatDuration(duration, this.api?.locale)}</span
@@ -290,6 +311,33 @@ export class ActivityList extends LitElement {
   private _mediaFailed(item: ActivityListItem, url: string): void {
     this._failedMedia.add(mediaKey(item, url));
     this.retryMedia?.(item, url);
+    this.requestUpdate();
+  }
+
+  private _updateHoverPreview(
+    event: PointerEvent,
+    item: ActivityListItem,
+  ): void {
+    if (event.pointerType !== "mouse" || !item.hoverPreviewUrl) return;
+    const thumbnail = (event.currentTarget as HTMLElement).querySelector(
+      ".thumbnail-wrap",
+    );
+    if (!(thumbnail instanceof HTMLElement)) return;
+    const bounds = thumbnail.getBoundingClientRect();
+    const hovered =
+      event.clientX >= bounds.left &&
+      event.clientX <= bounds.right &&
+      event.clientY >= bounds.top &&
+      event.clientY <= bounds.bottom;
+    const nextId = hovered ? item.id : undefined;
+    if (nextId === this._hoveredPreviewId) return;
+    this._hoveredPreviewId = nextId;
+    this.requestUpdate();
+  }
+
+  private _clearHoverPreview(itemId: string): void {
+    if (this._hoveredPreviewId !== itemId) return;
+    this._hoveredPreviewId = undefined;
     this.requestUpdate();
   }
 
