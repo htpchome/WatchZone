@@ -11,6 +11,10 @@ export const activityListStyles = css`
   .viewport {
     box-sizing: border-box;
     block-size: 100%;
+    max-block-size: calc(
+      5 * var(--wzc-event-tile-block-size) + 4 * var(--wzc-event-list-gap) + 2 *
+        var(--wzc-event-list-padding)
+    );
     min-block-size: calc(
       3 * var(--wzc-event-tile-block-size) + 2 * var(--wzc-event-list-gap) + 2 *
         var(--wzc-event-list-padding)

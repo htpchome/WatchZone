@@ -226,7 +226,7 @@ test("keeps picker and activity geometry stable across lazy loading", async ({
       callWS: async (message: { type: string }) => {
         if (message.type === "watchzone/reviews/list") {
           return {
-            items: Array.from({ length: 3 }, (_, index) => ({
+            items: Array.from({ length: 5 }, (_, index) => ({
               camera: "front",
               classification: "detection",
               clip_url: null,
@@ -263,7 +263,7 @@ test("keeps picker and activity geometry stable across lazy loading", async ({
   const navigation = card.locator("wzc-camera-navigation");
   const activity = card.locator("wzc-alerts .viewport");
   await expect(navigation).toBeVisible();
-  await expect(card.locator("wzc-alerts .tile")).toHaveCount(3);
+  await expect(card.locator("wzc-alerts .tile")).toHaveCount(5);
   const loaded = await Promise.all([
     card.locator("ha-card").boundingBox(),
     navigation.boundingBox(),
@@ -387,7 +387,7 @@ test("keeps the panel camera navigation and carousel selection bidirectional", a
   await expect(buttons.nth(0)).toHaveCSS("box-shadow", "none");
 });
 
-test("grows activity content and scrolls only when height is constrained", async ({
+test("keeps activity content in an independently scrolling viewport", async ({
   page,
 }) => {
   await installHaIconFixture(page);
@@ -596,11 +596,11 @@ test("grows activity content and scrolls only when height is constrained", async
   await expect(events).toContainText("driveway");
   await expect(events).toContainText("5:13 PM");
   await expect(events.locator("wzc-badge").first()).toHaveText("Person");
-  const natural = await viewport.evaluate((node) => ({
+  const scrolling = await viewport.evaluate((node) => ({
     clientHeight: node.clientHeight,
     scrollHeight: node.scrollHeight,
   }));
-  expect(natural.scrollHeight).toBeLessThanOrEqual(natural.clientHeight);
+  expect(scrolling.scrollHeight).toBeGreaterThan(scrolling.clientHeight);
   const constrained = await events
     .locator("wzc-activity-list")
     .evaluate((element) => {
@@ -647,17 +647,6 @@ test("grows activity content and scrolls only when height is constrained", async
   expect(
     nonScrolling.offsetWidth - nonScrolling.clientWidth,
   ).toBeLessThanOrEqual(2);
-  const expandedViewportHeight = await events
-    .locator("wzc-activity-list")
-    .evaluate((element) => {
-      const list = element as HTMLElement;
-      list.style.blockSize = "900px";
-      const height =
-        list.shadowRoot?.querySelector<HTMLElement>(".viewport")?.clientHeight;
-      list.style.removeProperty("block-size");
-      return height;
-    });
-  expect(expandedViewportHeight).toBeGreaterThan(800);
   const tileGeometry = await events.locator(".tile").evaluateAll((tiles) =>
     tiles.map((tile) => {
       const tileRect = tile.getBoundingClientRect();
@@ -685,7 +674,7 @@ test("grows activity content and scrolls only when height is constrained", async
     (node) => node.getBoundingClientRect().bottom,
   );
   expect(tileGeometry[4]?.bottom).toBeLessThanOrEqual(viewportBottom + 1);
-  expect(tileGeometry[5]?.bottom).toBeLessThanOrEqual(viewportBottom + 1);
+  expect(tileGeometry[5]?.bottom).toBeGreaterThan(viewportBottom);
   expect(tileGeometry[0]?.thumbnailRatio).toBeCloseTo(16 / 9, 2);
   expect(tileGeometry[0]?.thumbnailBottomInset).toBeLessThanOrEqual(1);
   expect(tileGeometry[0]?.thumbnailLeadingInset).toBeLessThanOrEqual(1);

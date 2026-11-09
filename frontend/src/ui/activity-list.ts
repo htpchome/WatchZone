@@ -104,7 +104,7 @@ export class ActivityList extends LitElement {
         this.loading && this.items.length === 0
           ? html`<div class="list" aria-hidden="true">
                 ${Array.from(
-                  { length: 3 },
+                  { length: 5 },
                   () => html`<span class="skeleton-row"></span>`,
                 )}
               </div>
