@@ -68,7 +68,7 @@ export class ActiveCameraActivityController<
   private _unsubscribe?: () => void;
   private _lastApiIdentity?: HomeAssistantApi["identity"];
   private _lastHistoryDays?: number;
-  private _updateReconcileTimers: number[] = [];
+  private readonly _updateReconcileTimers = new Set<number>();
   private _updateSubscribeRetryTimer?: number;
   private _updatesGeneration = 0;
   private _updatesUnsubscribe?: () => void;
@@ -303,13 +303,15 @@ export class ActiveCameraActivityController<
           entityId !== this._activeEntityId
         )
           return;
-        this._clearUpdateReconcileTimers();
-        this._updateReconcileTimers = ACTIVITY_UPDATE_RECONCILE_DELAYS_MS.map(
-          (delay) =>
-            window.setTimeout(() => {
-              void this._refresh(true, false);
-            }, delay),
-        );
+        void this._refresh(true, false);
+        if (this._updateReconcileTimers.size > 0) return;
+        for (const delay of ACTIVITY_UPDATE_RECONCILE_DELAYS_MS) {
+          const timer = window.setTimeout(() => {
+            this._updateReconcileTimers.delete(timer);
+            void this._refresh(true, false);
+          }, delay);
+          this._updateReconcileTimers.add(timer);
+        }
       }),
     )
       .then((unsubscribe) => {
@@ -353,7 +355,7 @@ export class ActiveCameraActivityController<
     for (const timer of this._updateReconcileTimers) {
       window.clearTimeout(timer);
     }
-    this._updateReconcileTimers = [];
+    this._updateReconcileTimers.clear();
   }
 
   private _stopEmptyConfirmation(): void {

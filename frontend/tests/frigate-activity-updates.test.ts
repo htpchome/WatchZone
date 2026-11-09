@@ -6,7 +6,7 @@ import { subscribeFrigateActivityUpdates } from "../src/providers/frigate/activi
 describe("Frigate activity updates", () => {
   it("uses official per-instance proxies and filters review activity by camera", async () => {
     const callbacks: Array<(payload: unknown) => void> = [];
-    const unsubscribers = [vi.fn(), vi.fn()];
+    const unsubscribers = [vi.fn()];
     const subscribeMessage = vi.fn(async (callback) => {
       callbacks.push(callback as (payload: unknown) => void);
       return unsubscribers[callbacks.length - 1];
@@ -29,12 +29,6 @@ describe("Frigate activity updates", () => {
       1,
       expect.any(Function),
       { type: "frigate/reviews/subscribe", instance_id: "frigate-west" },
-      { resubscribe: true },
-    );
-    expect(subscribeMessage).toHaveBeenNthCalledWith(
-      2,
-      expect.any(Function),
-      { type: "frigate/events/subscribe", instance_id: "frigate-west" },
       { resubscribe: true },
     );
 
@@ -70,8 +64,7 @@ describe("Frigate activity updates", () => {
         before: { camera: "driveway", id: "review-1", severity: "alert" },
       }),
     );
-    callbacks[1]?.({ before: { camera: "driveway" } });
-    expect(update).toHaveBeenCalledTimes(4);
+    expect(update).toHaveBeenCalledTimes(3);
     expect(update).toHaveBeenNthCalledWith(1, {
       cameraName: "driveway",
       classification: "detection",
@@ -96,29 +89,24 @@ describe("Frigate activity updates", () => {
 
     unsubscribe();
     expect(unsubscribers[0]).toHaveBeenCalledOnce();
-    expect(unsubscribers[1]).toHaveBeenCalledOnce();
   });
 
-  it("releases an established subscription if a later subscription fails", async () => {
+  it("releases its review subscription", async () => {
     const unsubscribe = vi.fn();
-    const subscribeMessage = vi
-      .fn()
-      .mockResolvedValueOnce(unsubscribe)
-      .mockRejectedValueOnce(new Error("unavailable"));
+    const subscribeMessage = vi.fn().mockResolvedValueOnce(unsubscribe);
     const api = { subscribeMessage } as unknown as HomeAssistantApi;
 
-    await expect(
-      subscribeFrigateActivityUpdates(
-        api,
-        {
-          type: "frigate",
-          instance_id: "frigate-main",
-          camera_name: "front",
-        },
-        "reviews",
-        vi.fn(),
-      ),
-    ).rejects.toThrow("unavailable");
+    const release = await subscribeFrigateActivityUpdates(
+      api,
+      {
+        type: "frigate",
+        instance_id: "frigate-main",
+        camera_name: "front",
+      },
+      "reviews",
+      vi.fn(),
+    );
+    release();
     expect(unsubscribe).toHaveBeenCalledOnce();
   });
 });

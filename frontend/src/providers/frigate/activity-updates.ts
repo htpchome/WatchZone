@@ -30,7 +30,7 @@ export async function subscribeFrigateActivityUpdates(
   callback: (notification: ActivityUpdateNotification) => void,
 ): Promise<HomeAssistantUnsubscribe> {
   const topics: readonly FrigateActivityTopic[] =
-    kind === "reviews" ? ["reviews", "events"] : ["events"];
+    kind === "reviews" ? ["reviews"] : ["events"];
   const unsubscribers: HomeAssistantUnsubscribe[] = [];
   try {
     for (const topic of topics) {

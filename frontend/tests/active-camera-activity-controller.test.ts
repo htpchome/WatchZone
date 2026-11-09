@@ -1,12 +1,14 @@
 import type { ReactiveControllerHost } from "lit";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import { ActiveCameraActivityController } from "../src/stage/activity/active-camera-activity.controller";
 import { CameraSelectionContext } from "../src/stage/camera-selection-context";
 
+const mocks = vi.hoisted(() => ({ subscribe: vi.fn() }));
+
 vi.mock("../src/providers/activity-update-resolver", () => ({
-  subscribeActivityUpdates: vi.fn().mockResolvedValue(() => undefined),
+  subscribeActivityUpdates: mocks.subscribe,
 }));
 
 class TestHost implements ReactiveControllerHost {
@@ -19,9 +21,69 @@ class TestHost implements ReactiveControllerHost {
 }
 
 describe("active camera activity controller", () => {
+  beforeEach(() => {
+    mocks.subscribe.mockResolvedValue(() => undefined);
+  });
+
   afterEach(() => {
+    vi.clearAllMocks();
     vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  it("refreshes on the leading edge without notification timer starvation", async () => {
+    vi.useFakeTimers();
+    let notify: (() => void) | undefined;
+    mocks.subscribe.mockImplementation(
+      async (
+        _api: HomeAssistantApi,
+        _entityId: string,
+        _kind: string,
+        callback: () => void,
+      ) => {
+        notify = callback;
+        return () => undefined;
+      },
+    );
+    const fetch = vi.fn().mockResolvedValue([]);
+    const selection = new CameraSelectionContext();
+    const api = {} as HomeAssistantApi;
+    const controller = new ActiveCameraActivityController(
+      new TestHost(),
+      () => ({
+        api,
+        cameraSelection: selection,
+        historyDays: 5,
+        targetModuleId: "camera-module",
+      }),
+      fetch,
+      vi.fn(),
+      "reviews",
+    );
+    controller.hostConnected();
+    selection.publish(
+      "camera-module",
+      {},
+      {
+        activeEntityId: "camera.front",
+        items: [{ entityId: "camera.front", label: "Front" }],
+      },
+      vi.fn(),
+    );
+    await vi.waitFor(() => expect(notify).toBeTypeOf("function"));
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(controller.loading).toBe(false));
+
+    const baselineCalls = fetch.mock.calls.length;
+    notify?.();
+    expect(fetch).toHaveBeenCalledTimes(baselineCalls + 1);
+    for (let index = 0; index < 10; index += 1) notify?.();
+    expect(fetch).toHaveBeenCalledTimes(baselineCalls + 11);
+
+    await vi.advanceTimersByTimeAsync(1_500);
+    expect(fetch).toHaveBeenCalledTimes(baselineCalls + 12);
+
+    controller.hostDisconnected();
   });
 
   it("reconciles within five seconds when the push transport is silent", async () => {
