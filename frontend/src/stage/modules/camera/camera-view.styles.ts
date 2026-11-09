@@ -17,6 +17,10 @@ export const cameraViewStyles = css`
     display: block;
   }
 
+  :host {
+    container-type: inline-size;
+  }
+
   .camera {
     position: relative;
     aspect-ratio: var(
@@ -98,6 +102,12 @@ export const cameraViewStyles = css`
   @media (hover: hover) and (pointer: fine) {
     .stage-resize-handle:hover {
       opacity: var(--wzc-stage-resize-handle-active-opacity);
+    }
+  }
+
+  @container (max-width: 480px) {
+    .stage-resize-handle {
+      block-size: 1.5rem;
     }
   }
 `;

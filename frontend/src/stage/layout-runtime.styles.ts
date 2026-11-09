@@ -285,7 +285,7 @@ export const stageRuntimeStyles = css`
     }
 
     .component-slot-controls {
-      padding-block-end: calc(var(--wzc-stage-resize-handle-block-size) / 2);
+      padding-block-end: 1.75rem;
     }
   }
 `;

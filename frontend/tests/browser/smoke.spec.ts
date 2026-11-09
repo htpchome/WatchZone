@@ -1231,6 +1231,9 @@ test("lays out talk and light controls in the responsive dock", async ({
           ptz_enabled: true,
           two_way_talk_enabled: true,
         },
+        { entity_id: "camera.doorbell" },
+        { entity_id: "camera.birdfeeder" },
+        { entity_id: "camera.driveway" },
       ],
     });
     card.hass = {
@@ -1239,6 +1242,21 @@ test("lays out talk and light controls in the responsive dock", async ({
           entity_id: "camera.front",
           state: "streaming",
           attributes: { friendly_name: "Front" },
+        },
+        "camera.doorbell": {
+          entity_id: "camera.doorbell",
+          state: "streaming",
+          attributes: { friendly_name: "Doorbell" },
+        },
+        "camera.birdfeeder": {
+          entity_id: "camera.birdfeeder",
+          state: "streaming",
+          attributes: { friendly_name: "Birdfeeder" },
+        },
+        "camera.driveway": {
+          entity_id: "camera.driveway",
+          state: "streaming",
+          attributes: { friendly_name: "Driveway" },
         },
         "light.porch": {
           entity_id: "light.porch",
@@ -1288,11 +1306,21 @@ test("lays out talk and light controls in the responsive dock", async ({
   });
 
   const camera = page.locator("wzc-camera");
+  await expect(camera.locator(".swiper-slide")).toHaveCount(4);
+  await expect(camera.locator(".camera-carousel")).toHaveClass(
+    /swiper-initialized/,
+  );
   const controlsSlot = page.locator('[data-stage-slot="controls"]');
   const leadingControls = controlsSlot.locator(
     '[data-control-region="leading"]',
   );
-  await camera.locator("wzc-camera-live .viewport").hover();
+  const selectedLiveViewport = camera
+    .locator(".swiper-slide-active wzc-camera-live .viewport")
+    .first();
+  const selectedCameraStage = camera
+    .locator(".swiper-slide-active wzc-camera-view .camera")
+    .first();
+  await selectedLiveViewport.hover();
   const talk = page.locator("wzc-two-way-talk");
   const ptz = page.locator("wzc-ptz");
   const lights = page.locator("wzc-light-control");
@@ -1327,7 +1355,7 @@ test("lays out talk and light controls in the responsive dock", async ({
     lightButtonBox,
     lightIconBox,
   ] = await Promise.all([
-    camera.boundingBox(),
+    selectedCameraStage.boundingBox(),
     controlsSlot.boundingBox(),
     talk.boundingBox(),
     ptz.boundingBox(),
@@ -1363,6 +1391,18 @@ test("lays out talk and light controls in the responsive dock", async ({
     return;
   }
 
+  const overlaySlotBox = await page
+    .locator('[data-stage-slot="overlay"]')
+    .boundingBox();
+  expect(overlaySlotBox).not.toBeNull();
+  for (const slotBox of [controlsSlotBox, overlaySlotBox]) {
+    if (!slotBox) continue;
+    expect(slotBox.x).toBeCloseTo(cameraBox.x, 1);
+    expect(slotBox.y).toBeCloseTo(cameraBox.y, 1);
+    expect(slotBox.width).toBeCloseTo(cameraBox.width, 1);
+    expect(slotBox.height).toBeCloseTo(cameraBox.height, 1);
+  }
+
   expect(talkHostBox.height).toBeCloseTo(talkButtonBox.height, 0);
   expect(ptzHostBox.height).toBeCloseTo(ptzControlBox.height, 0);
   expect(ptzHostBox.width).toBeCloseTo(ptzControlBox.width, 0);
@@ -1374,8 +1414,8 @@ test("lays out talk and light controls in the responsive dock", async ({
   expect(ptzButtonBox).not.toBeNull();
   expect(ptzIconBox).not.toBeNull();
   if (ptzButtonBox && ptzIconBox) {
-    expect(ptzIconBox.width).toBeLessThanOrEqual(ptzButtonBox.width * 0.55);
-    expect(ptzIconBox.height).toBeLessThanOrEqual(ptzButtonBox.height * 0.55);
+    expect(ptzIconBox.width).toBeLessThanOrEqual(ptzButtonBox.width * 0.32);
+    expect(ptzIconBox.height).toBeLessThanOrEqual(ptzButtonBox.height * 0.32);
   }
   expect(cameraBox.width / cameraBox.height).toBeCloseTo(16 / 9, 1);
   const overlayTrailingPadding = await page
@@ -1407,6 +1447,12 @@ test("lays out talk and light controls in the responsive dock", async ({
   expect(ptzControlBox.y + ptzControlBox.height).toBeLessThanOrEqual(
     cameraBox.y + cameraBox.height,
   );
+  const desktopPtzBottomInset =
+    cameraBox.y + cameraBox.height - (ptzControlBox.y + ptzControlBox.height);
+  const desktopTalkBottomInset =
+    cameraBox.y + cameraBox.height - (talkButtonBox.y + talkButtonBox.height);
+  const desktopLightBottomInset =
+    cameraBox.y + cameraBox.height - (lightButtonBox.y + lightButtonBox.height);
   expect(
     talkButtonBox.x - (lightButtonBox.x + lightButtonBox.width),
   ).toBeGreaterThanOrEqual(8);
@@ -1548,18 +1594,55 @@ test("lays out talk and light controls in the responsive dock", async ({
     )
     .toBe(70);
 
+  await page.locator("body").dispatchEvent("pointerdown", {
+    button: 0,
+    isPrimary: true,
+    pointerId: 99,
+    pointerType: "mouse",
+  });
+  await expect(dimmer).toBeHidden();
+
   await page.setViewportSize({ width: 390, height: 844 });
+  await expect
+    .poll(async () => {
+      const [stageBox, controlBox, overlayBox] = await Promise.all([
+        selectedCameraStage.boundingBox(),
+        controlsSlot.boundingBox(),
+        page.locator('[data-stage-slot="overlay"]').boundingBox(),
+      ]);
+      if (!stageBox || !controlBox || !overlayBox) return false;
+      const boxesMatch = [controlBox, overlayBox].every(
+        (box) =>
+          Math.abs(box.x - stageBox.x) <= 1 &&
+          Math.abs(box.y - stageBox.y) <= 1 &&
+          Math.abs(box.width - stageBox.width) <= 1 &&
+          Math.abs(box.height - stageBox.height) <= 1,
+      );
+      return (
+        boxesMatch &&
+        Math.abs(stageBox.width / stageBox.height - 16 / 9) <= 0.05
+      );
+    })
+    .toBe(true);
   await expect
     .poll(
       async () => (await ptz.boundingBox())?.width ?? Number.POSITIVE_INFINITY,
     )
     .toBeLessThan(70);
-  const mobileCameraBox = await camera.boundingBox();
+  const mobileCameraBox = await selectedCameraStage.boundingBox();
   const mobilePtzBox = await ptz.boundingBox();
+  const [mobileControlsSlotBox, mobileOverlaySlotBox] = await Promise.all([
+    controlsSlot.boundingBox(),
+    page.locator('[data-stage-slot="overlay"]').boundingBox(),
+  ]);
   const [mobileTalkBox, mobileLightBox] = await Promise.all([
     talkButton.boundingBox(),
     lightButton.boundingBox(),
   ]);
+  const mobileResizeHandle = camera
+    .locator('.swiper-slide-active [aria-label="Camera stage height"]')
+    .first();
+  const mobileResizeHandleBox = await mobileResizeHandle.boundingBox();
   const mobileOverlayTrailingPadding = await page
     .locator('[data-stage-slot="overlay"]')
     .evaluate((element) =>
@@ -1568,6 +1651,17 @@ test("lays out talk and light controls in the responsive dock", async ({
   expect(mobileCameraBox).not.toBeNull();
   expect(mobilePtzBox).not.toBeNull();
   if (mobileCameraBox && mobilePtzBox) {
+    for (const slotBox of [mobileControlsSlotBox, mobileOverlaySlotBox]) {
+      expect(slotBox).not.toBeNull();
+      if (!slotBox) continue;
+      expect(slotBox.x).toBeCloseTo(mobileCameraBox.x, 1);
+      expect(
+        slotBox.y,
+        JSON.stringify({ mobileCameraBox, slotBox }),
+      ).toBeCloseTo(mobileCameraBox.y, 1);
+      expect(slotBox.width).toBeCloseTo(mobileCameraBox.width, 1);
+      expect(slotBox.height).toBeCloseTo(mobileCameraBox.height, 1);
+    }
     expect(mobileCameraBox.width / mobileCameraBox.height).toBeCloseTo(
       16 / 9,
       1,
@@ -1578,20 +1672,45 @@ test("lays out talk and light controls in the responsive dock", async ({
         mobileOverlayTrailingPadding +
         1,
     );
-    expect(
+    const mobilePtzBottomInset =
       mobileCameraBox.y +
-        mobileCameraBox.height -
-        (mobilePtzBox.y + mobilePtzBox.height),
-    ).toBeLessThanOrEqual(8);
-    for (const controlBox of [mobileTalkBox, mobileLightBox]) {
+      mobileCameraBox.height -
+      (mobilePtzBox.y + mobilePtzBox.height);
+    expect(mobilePtzBottomInset).toBeLessThanOrEqual(8);
+    expect(mobilePtzBottomInset).toBeLessThan(desktopPtzBottomInset - 10);
+    for (const [controlBox, desktopBottomInset] of [
+      [mobileTalkBox, desktopTalkBottomInset],
+      [mobileLightBox, desktopLightBottomInset],
+    ] as const) {
       expect(controlBox).not.toBeNull();
       if (controlBox) {
-        expect(
+        const mobileBottomInset =
           mobileCameraBox.y +
-            mobileCameraBox.height -
-            (controlBox.y + controlBox.height),
-        ).toBeLessThanOrEqual(20);
+          mobileCameraBox.height -
+          (controlBox.y + controlBox.height);
+        expect(mobileBottomInset).toBeLessThanOrEqual(30);
+        expect(mobileBottomInset).toBeLessThan(desktopBottomInset - 10);
       }
+    }
+    expect(mobileResizeHandleBox).not.toBeNull();
+    if (mobileResizeHandleBox && mobileTalkBox) {
+      expect(mobileTalkBox.y + mobileTalkBox.height).toBeLessThanOrEqual(
+        mobileResizeHandleBox.y + 1,
+      );
+      const initialMobileStageHeight = mobileCameraBox.height;
+      await page.mouse.move(
+        mobileResizeHandleBox.x + mobileResizeHandleBox.width / 2,
+        mobileResizeHandleBox.y + mobileResizeHandleBox.height / 2,
+      );
+      await page.mouse.down();
+      await page.mouse.move(
+        mobileResizeHandleBox.x + mobileResizeHandleBox.width / 2,
+        mobileResizeHandleBox.y + mobileResizeHandleBox.height / 2 + 30,
+      );
+      await page.mouse.up();
+      await expect
+        .poll(async () => (await selectedCameraStage.boundingBox())?.height)
+        .toBeGreaterThan(initialMobileStageHeight);
     }
   }
 });
