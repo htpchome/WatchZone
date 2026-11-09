@@ -445,9 +445,21 @@ test("shows an independently scrolling event window for the active camera", asyn
   await expect(events.locator("wzc-badge").first()).toHaveText("Person");
   const scrolling = await viewport.evaluate((node) => ({
     clientHeight: node.clientHeight,
+    clientWidth: node.clientWidth,
     scrollHeight: node.scrollHeight,
+    scrollWidth: node.scrollWidth,
   }));
   expect(scrolling.scrollHeight).toBeGreaterThan(scrolling.clientHeight);
+  expect(scrolling.scrollWidth).toBeLessThanOrEqual(scrolling.clientWidth);
+  const [cardRight, viewportRight, documentWidth] = await Promise.all([
+    page
+      .locator("watchzone-card ha-card")
+      .evaluate((node) => node.getBoundingClientRect().right),
+    viewport.evaluate((node) => node.getBoundingClientRect().right),
+    page.evaluate(() => document.documentElement.clientWidth),
+  ]);
+  expect(viewportRight).toBeLessThanOrEqual(cardRight + 1);
+  expect(cardRight).toBeLessThanOrEqual(documentWidth + 1);
   const tileGeometry = await events.locator(".tile").evaluateAll((tiles) =>
     tiles.map((tile) => {
       const tileRect = tile.getBoundingClientRect();
@@ -1698,11 +1710,43 @@ test("lays out talk and light controls in the responsive dock", async ({
         mobileResizeHandleBox.y + 1,
       );
       const initialMobileStageHeight = mobileCameraBox.height;
+      await selectedLiveViewport.hover();
+      await expect(ptzControl).toHaveClass(/\bvisible\b/);
+      await mobileResizeHandle.evaluate((element) => {
+        (
+          window as typeof window & {
+            __wzcStageResizePointerDown?: boolean;
+          }
+        ).__wzcStageResizePointerDown = false;
+        element.addEventListener(
+          "pointerdown",
+          () => {
+            (
+              window as typeof window & {
+                __wzcStageResizePointerDown?: boolean;
+              }
+            ).__wzcStageResizePointerDown = true;
+          },
+          { once: true },
+        );
+      });
       await page.mouse.move(
         mobileResizeHandleBox.x + mobileResizeHandleBox.width / 2,
         mobileResizeHandleBox.y + mobileResizeHandleBox.height / 2,
       );
       await page.mouse.down();
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () =>
+              (
+                window as typeof window & {
+                  __wzcStageResizePointerDown?: boolean;
+                }
+              ).__wzcStageResizePointerDown,
+          ),
+        )
+        .toBe(true);
       await page.mouse.move(
         mobileResizeHandleBox.x + mobileResizeHandleBox.width / 2,
         mobileResizeHandleBox.y + mobileResizeHandleBox.height / 2 + 30,
