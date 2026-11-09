@@ -28,6 +28,7 @@ type CameraModuleItemConfig = Omit<
 
 const resolver = new LiveSourceResolver();
 const posterPreloads = new Map<string, HTMLImageElement>();
+const friendlyNameCaches = new WeakMap<CameraModule, Map<string, string>>();
 let definitionPromise: Promise<void> | undefined;
 
 export const moduleDefinition: ModuleDefinition<CameraModuleConfig> = {
@@ -100,6 +101,13 @@ function updateCameraElement(
   config: CameraModuleConfig,
   context: PlaceableRuntimeContext,
 ): void {
+  const friendlyNames = cameraFriendlyNames(camera);
+  const activeEntityIds = new Set(
+    config.cameras.map(({ entityId }) => entityId),
+  );
+  for (const entityId of friendlyNames.keys()) {
+    if (!activeEntityIds.has(entityId)) friendlyNames.delete(entityId);
+  }
   camera.api = context.api;
   camera.cameraSelection = context.cameraSelection;
   camera.cameraSession = context.cameraSession;
@@ -108,17 +116,46 @@ function updateCameraElement(
   camera.roundedCorners = config.roundedCorners;
   camera.shadowStyle = config.shadowStyle;
   camera.selectionId = context.placeableId;
-  camera.cameras = config.cameras.map((item) => ({
-    ...item,
-    available: Boolean(context.hass?.states[item.entityId]),
-    label:
-      item.title ||
-      String(
-        context.hass?.states[item.entityId]?.attributes.friendly_name ??
-          item.entityId,
-      ),
-    posterUrl: cameraImageUrl(context.hass, item.entityId),
-  }));
+  camera.cameras = config.cameras.map((item) => {
+    const friendlyName = currentFriendlyName(
+      context.hass?.states[item.entityId]?.attributes.friendly_name,
+    );
+    if (friendlyName) friendlyNames.set(item.entityId, friendlyName);
+    return {
+      ...item,
+      available: Boolean(context.hass?.states[item.entityId]),
+      label:
+        item.title ||
+        friendlyName ||
+        friendlyNames.get(item.entityId) ||
+        humanizeCameraEntityId(item.entityId),
+      posterUrl: cameraImageUrl(context.hass, item.entityId),
+    };
+  });
+}
+
+function cameraFriendlyNames(camera: CameraModule): Map<string, string> {
+  const existing = friendlyNameCaches.get(camera);
+  if (existing) return existing;
+  const names = new Map<string, string>();
+  friendlyNameCaches.set(camera, names);
+  return names;
+}
+
+function currentFriendlyName(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function humanizeCameraEntityId(entityId: string): string {
+  const separator = entityId.indexOf(".");
+  const objectId = separator >= 0 ? entityId.slice(separator + 1) : entityId;
+  return objectId
+    .replace(/[_-]+/g, " ")
+    .replace(
+      /(^| )([a-z])/g,
+      (_match, prefix: string, letter: string) =>
+        `${prefix}${letter.toUpperCase()}`,
+    );
 }
 
 function validateCameraConfig(value: unknown): CameraModuleConfig {

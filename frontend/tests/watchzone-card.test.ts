@@ -131,6 +131,7 @@ describe("watchzone-card", () => {
           state: "recording",
           attributes: {
             entity_picture: "/api/camera_proxy/camera.front?token=old",
+            friendly_name: "Front Door",
           },
         },
       },
@@ -142,7 +143,9 @@ describe("watchzone-card", () => {
 
     const camera = await vi.waitFor(() => {
       const current = element.shadowRoot?.querySelector<
-        HTMLElement & { cameras: readonly { posterUrl?: string }[] }
+        HTMLElement & {
+          cameras: readonly { label: string; posterUrl?: string }[];
+        }
       >("wzc-camera");
       expect(current?.cameras[0]?.posterUrl).toContain("token=old");
       return current;
@@ -155,6 +158,7 @@ describe("watchzone-card", () => {
     await vi.waitFor(() =>
       expect(camera?.cameras[0]?.posterUrl).toBeUndefined(),
     );
+    expect(camera?.cameras[0]?.label).toBe("Front Door");
 
     Object.defineProperty(connection, "connected", { value: true });
     for (const listener of listeners.get("ready") ?? []) listener(connection);
@@ -165,6 +169,7 @@ describe("watchzone-card", () => {
           state: "recording",
           attributes: {
             entity_picture: "/api/camera_proxy/camera.front?token=old",
+            friendly_name: "Front Door",
           },
         },
       },
@@ -183,6 +188,7 @@ describe("watchzone-card", () => {
           state: "recording",
           attributes: {
             entity_picture: "/api/camera_proxy/camera.front?token=new",
+            friendly_name: "Front Door",
           },
         },
       },
@@ -193,6 +199,31 @@ describe("watchzone-card", () => {
     await vi.waitFor(() =>
       expect(camera?.cameras[0]?.posterUrl).toContain("token=new"),
     );
+  });
+
+  it("humanizes camera labels before Home Assistant entity state is available", async () => {
+    const element = document.createElement("watchzone-card") as DashboardCard;
+    element.setConfig({
+      type: "custom:watchzone-card",
+      cameras: [
+        { entity_id: "camera.hall" },
+        { entity_id: "camera.front_door" },
+      ],
+    });
+    document.body.append(element);
+
+    const camera = await vi.waitFor(() => {
+      const current = element.shadowRoot?.querySelector<
+        HTMLElement & { cameras: readonly { label: string }[] }
+      >("wzc-camera");
+      expect(current?.cameras).toHaveLength(2);
+      return current;
+    });
+
+    expect(camera?.cameras.map(({ label }) => label)).toEqual([
+      "Hall",
+      "Front Door",
+    ]);
   });
 
   it("propagates outer appearance settings through the HA card boundary", async () => {

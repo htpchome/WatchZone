@@ -387,6 +387,31 @@ test("keeps the panel camera navigation and carousel selection bidirectional", a
   await expect(buttons.nth(0)).toHaveCSS("box-shadow", "none");
 });
 
+test("uses readable camera navigation labels before HA state is available", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  await page.locator("watchzone-card").evaluate((element) => {
+    (
+      element as HTMLElement & {
+        setConfig(config: unknown): void;
+      }
+    ).setConfig({
+      type: "custom:watchzone-card",
+      cameras: [
+        { entity_id: "camera.hall" },
+        { entity_id: "camera.front_door" },
+      ],
+    });
+  });
+
+  const buttons = page.locator("wzc-camera-navigation button");
+  await expect(buttons).toHaveCount(2);
+  await expect(buttons.nth(0)).toHaveText("Hall");
+  await expect(buttons.nth(1)).toHaveText("Front Door");
+});
+
 test("keeps activity content in an independently scrolling viewport", async ({
   page,
 }) => {
