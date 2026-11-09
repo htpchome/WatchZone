@@ -56,6 +56,7 @@ export const RECORDED_MEDIA_OPEN_EVENT = `${APP_ID}-recorded-media-open`;
 export const RECORDED_MEDIA_ERROR_EVENT = `${APP_ID}-recorded-media-error`;
 export const ACTIVITY_RECONCILE_INTERVAL_MS = 5 * 60 * 1000;
 export const ACTIVITY_EMPTY_CONFIRM_DELAY_MS = 1_500;
+export const ACTIVITY_UPDATE_SUBSCRIBE_RETRY_MS = 5_000;
 export const DEFAULT_EVENT_HISTORY_DAYS = 5;
 export const MIN_EVENT_HISTORY_DAYS = 1;
 export const MAX_EVENT_HISTORY_DAYS = 15;

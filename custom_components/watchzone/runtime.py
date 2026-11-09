@@ -28,7 +28,6 @@ class WatchZoneRuntime:
 
     async def async_close(self) -> None:
         """Release integration-owned runtime resources."""
-        await self.activity_updates.async_close()
         await self.camera_runtime.async_close()
         await self.hls_prewarm.async_close()
         await self.live_signaling.async_close()

@@ -1,122 +1,27 @@
-"""Frigate MQTT activity update subscriptions."""
+"""Frigate activity update source resolution."""
 
 from __future__ import annotations
 
-import json
-from collections.abc import Callable, Mapping
-from typing import Any
+from homeassistant.core import HomeAssistant
 
-from aiohttp import ClientError, ClientTimeout
-from homeassistant.components.mqtt import async_subscribe
-from homeassistant.components.mqtt.models import ReceiveMessage
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from yarl import URL
-
-from ..activity_updates import (
-    ActivityUpdateKind,
-    ActivityUpdateListener,
-    ActivityUpdatesProvider,
-)
+from ..activity_updates import ActivityUpdateSource, ActivityUpdatesProvider
 from .source import async_resolve_source
-
-_REQUEST_TIMEOUT = ClientTimeout(total=15)
 
 
 class FrigateActivityUpdatesProvider:
-    """Translate Frigate MQTT messages into camera-scoped invalidations."""
+    """Resolve a camera to the owning Frigate WebSocket proxy identity."""
 
-    async def async_subscribe_activity_updates(
+    async def async_activity_update_source(
         self,
         hass: HomeAssistant,
         entity_id: str,
-        kind: ActivityUpdateKind,
-        listener: ActivityUpdateListener,
-    ) -> Callable[[], None]:
+    ) -> ActivityUpdateSource:
         source = await async_resolve_source(hass, entity_id)
-        headers = await source.client.get_auth_headers()
-        try:
-            async with async_get_clientsession(hass).get(
-                URL(source.base_url) / "api/config",
-                headers=headers,
-                ssl=source.client.validate_ssl,
-                timeout=_REQUEST_TIMEOUT,
-            ) as response:
-                response.raise_for_status()
-                config = await response.json()
-        except (ClientError, TimeoutError, ValueError) as err:
-            raise HomeAssistantError(
-                "Unable to subscribe to camera activity"
-            ) from err
-        topic_prefix = _topic_prefix(config)
-        if topic_prefix is None:
-            raise HomeAssistantError("Frigate MQTT topic is unavailable")
-
-        def receive(message: ReceiveMessage) -> None:
-            if _activity_payload_matches(message.payload, source.camera_name, kind):
-                listener()
-
-        unsubscribes = [
-            await async_subscribe(
-                hass,
-                f"{topic_prefix}/{'events' if kind == 'events' else 'reviews'}",
-                receive,
-            )
-        ]
-        if kind == "reviews":
-
-            def receive_event(message: ReceiveMessage) -> None:
-                if _activity_payload_matches(
-                    message.payload, source.camera_name, "events"
-                ):
-                    listener()
-
-            try:
-                unsubscribes.append(
-                    await async_subscribe(
-                        hass,
-                        f"{topic_prefix}/events",
-                        receive_event,
-                    )
-                )
-            except Exception:
-                unsubscribes[0]()
-                raise
-
-        @callback
-        def unsubscribe() -> None:
-            for remove_subscription in unsubscribes:
-                remove_subscription()
-
-        return unsubscribe
-
-
-def _topic_prefix(config: object) -> str | None:
-    if not isinstance(config, Mapping):
-        return None
-    mqtt = config.get("mqtt")
-    if not isinstance(mqtt, Mapping):
-        return None
-    prefix = mqtt.get("topic_prefix")
-    return prefix.strip() if isinstance(prefix, str) and prefix.strip() else None
-
-
-def _activity_payload_matches(
-    payload: str | bytes | bytearray,
-    camera_name: str,
-    kind: ActivityUpdateKind,
-) -> bool:
-    try:
-        raw: Any = json.loads(payload)
-    except (json.JSONDecodeError, TypeError, UnicodeDecodeError):
-        return False
-    if not isinstance(raw, Mapping):
-        return False
-    activity = raw.get("after") or raw.get("before")
-    if not isinstance(activity, Mapping) or activity.get("camera") != camera_name:
-        return False
-    return kind == "events" or activity.get("severity") in ("alert", "detection")
+        return ActivityUpdateSource(
+            type="frigate",
+            instance_id=source.frigate_instance_id,
+            camera_name=source.camera_name,
+        )
 
 
 activity_updates: ActivityUpdatesProvider = FrigateActivityUpdatesProvider()

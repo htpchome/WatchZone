@@ -7,6 +7,14 @@ import type { HomeAssistantApi } from "../src/core/home-assistant";
 import type { EventsModule } from "../src/stage/modules/events/events";
 import "../src/stage/modules/events/events";
 
+vi.mock("../src/api/activity-updates", () => ({
+  resolveActivityUpdateSource: vi.fn().mockResolvedValue({
+    type: "frigate",
+    instance_id: "frigate-main",
+    camera_name: "front",
+  }),
+}));
+
 const event = {
   camera: "front",
   clip_url: "/clip.mp4",
@@ -40,14 +48,23 @@ describe("events module", () => {
       revision: "revision-2",
       start_time: 200,
     };
-    const callWS = vi
-      .fn()
-      .mockResolvedValueOnce({ items: [event] })
-      .mockResolvedValueOnce({ items: [newestEvent, event] });
-    let activityUpdate: (() => void) | undefined;
+    const eventResponses = [
+      { items: [event] },
+      { items: [newestEvent, event] },
+    ];
+    const callWS = vi.fn(async (message: { type: string }) =>
+      message.type === "watchzone/activity/source"
+        ? {
+            type: "frigate",
+            instance_id: "frigate-main",
+            camera_name: "front",
+          }
+        : eventResponses.shift(),
+    );
+    let activityUpdate: ((payload: unknown) => void) | undefined;
     const unsubscribe = vi.fn();
     const subscribeMessage = vi.fn(async (callback) => {
-      activityUpdate = callback as () => void;
+      activityUpdate = callback as (payload: unknown) => void;
       return unsubscribe;
     });
     const api = {
@@ -77,15 +94,18 @@ describe("events module", () => {
     expect(subscribeMessage).toHaveBeenCalledWith(
       expect.any(Function),
       {
-        type: "watchzone/activity/subscribe",
-        entity_id: "camera.front",
-        kind: "events",
+        type: "frigate/events/subscribe",
+        instance_id: "frigate-main",
       },
       { resubscribe: true },
     );
-    activityUpdate?.();
+    activityUpdate?.(JSON.stringify({ after: { camera: "front" } }));
     await vi.waitFor(() => {
-      expect(callWS).toHaveBeenCalledTimes(2);
+      expect(
+        callWS.mock.calls.filter(([message]) =>
+          String((message as { type: string }).type).endsWith("/events/list"),
+        ),
+      ).toHaveLength(2);
       expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(2);
     });
 
@@ -114,21 +134,30 @@ describe("events module", () => {
         finishBackground = resolve;
       },
     );
-    const callWS = vi
-      .fn()
-      .mockResolvedValueOnce({ items: initialEvents })
-      .mockReturnValueOnce(background)
-      .mockResolvedValue({
+    const eventResponses = [
+      Promise.resolve({ items: initialEvents }),
+      background,
+      Promise.resolve({
         items: [newestEvent, ...initialEvents.slice(0, 9)],
-      });
-    let activityUpdate: (() => void) | undefined;
+      }),
+    ];
+    const callWS = vi.fn((message: { type: string }) =>
+      message.type === "watchzone/activity/source"
+        ? Promise.resolve({
+            type: "frigate",
+            instance_id: "frigate-main",
+            camera_name: "front",
+          })
+        : eventResponses.shift(),
+    );
+    let activityUpdate: ((payload: unknown) => void) | undefined;
     const api = {
       callWS,
       identity: {},
       locale: { language: "en", time_zone: "server" },
       resolveUrl: (path: string) => `https://ha.local${path}`,
       subscribeMessage: vi.fn(async (callback) => {
-        activityUpdate = callback as () => void;
+        activityUpdate = callback as (payload: unknown) => void;
         return () => undefined;
       }),
     } as unknown as HomeAssistantApi;
@@ -149,12 +178,20 @@ describe("events module", () => {
     );
 
     await vi.waitFor(() => {
-      expect(callWS).toHaveBeenCalledTimes(2);
+      expect(
+        callWS.mock.calls.filter(([message]) =>
+          String((message as { type: string }).type).endsWith("/events/list"),
+        ),
+      ).toHaveLength(2);
       expect(activityUpdate).toBeTypeOf("function");
     });
-    activityUpdate?.();
+    activityUpdate?.(JSON.stringify({ after: { camera: "front" } }));
     await vi.waitFor(() => {
-      expect(callWS).toHaveBeenCalledTimes(3);
+      expect(
+        callWS.mock.calls.filter(([message]) =>
+          String((message as { type: string }).type).endsWith("/events/list"),
+        ),
+      ).toHaveLength(3);
       expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(11);
     });
 

@@ -1,9 +1,9 @@
-"""Tests for provider-neutral real-time activity invalidations."""
+"""Tests for provider-resolved real-time activity sources."""
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from unittest.mock import Mock
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
@@ -13,44 +13,37 @@ from custom_components.watchzone.extensions import (
     ProviderExtension,
     ProviderRegistry,
 )
-from custom_components.watchzone.features.activity_updates import (
-    ActivityUpdatesService,
-)
-from custom_components.watchzone.providers.activity_updates import (
-    ActivityUpdateKind,
-    ActivityUpdateListener,
-)
+from custom_components.watchzone.features.activity_updates import ActivityUpdatesService
+from custom_components.watchzone.providers.activity_updates import ActivityUpdateSource
 from custom_components.watchzone.providers.frigate.activity_updates import (
-    _activity_payload_matches,
-    _topic_prefix,
+    FrigateActivityUpdatesProvider,
 )
 
 
 class FakeActivityUpdatesProvider:
-    """Record and publish one provider subscription."""
+    """Resolve one provider-owned activity source."""
 
     def __init__(self) -> None:
-        self.calls: list[tuple[str, ActivityUpdateKind]] = []
-        self.listener: ActivityUpdateListener | None = None
-        self.unsubscribe = Mock()
+        self.calls: list[str] = []
 
-    async def async_subscribe_activity_updates(
+    async def async_activity_update_source(
         self,
         hass: HomeAssistant,
         entity_id: str,
-        kind: ActivityUpdateKind,
-        listener: ActivityUpdateListener,
-    ) -> Callable[[], None]:
+    ) -> ActivityUpdateSource:
         del hass
-        self.calls.append((entity_id, kind))
-        self.listener = listener
-        return self.unsubscribe
+        self.calls.append(entity_id)
+        return ActivityUpdateSource(
+            type="frigate",
+            instance_id="frigate-main",
+            camera_name="front",
+        )
 
 
-async def test_service_coalesces_consumers_and_releases_last_listener(
+async def test_service_resolves_source_through_entity_platform(
     hass: HomeAssistant,
 ) -> None:
-    """Alerts and the calendar share one provider subscription per camera."""
+    """The frontend receives provider identity without provider lookup rules."""
     entity = er.async_get(hass).async_get_or_create(
         "camera",
         "frigate",
@@ -67,68 +60,40 @@ async def test_service_coalesces_consumers_and_releases_last_listener(
             activity_updates=provider,
         )
     )
-    service = ActivityUpdatesService(hass, providers)
-    first = Mock()
-    second = Mock()
 
-    unsubscribe_first = await service.async_subscribe(
-        entity.entity_id, "reviews", first
-    )
-    unsubscribe_second = await service.async_subscribe(
-        entity.entity_id, "reviews", second
+    source = await ActivityUpdatesService(hass, providers).async_source(
+        entity.entity_id
     )
 
-    assert provider.calls == [(entity.entity_id, "reviews")]
-    assert provider.listener is not None
-    provider.listener()
-    first.assert_called_once_with()
-    second.assert_called_once_with()
-
-    unsubscribe_first()
-    provider.unsubscribe.assert_not_called()
-    unsubscribe_second()
-    provider.unsubscribe.assert_called_once_with()
-    await service.async_close()
+    assert source == ActivityUpdateSource(
+        type="frigate",
+        instance_id="frigate-main",
+        camera_name="front",
+    )
+    assert provider.calls == [entity.entity_id]
 
 
-def test_frigate_event_payload_is_scoped_to_owning_camera() -> None:
-    """A shared instance topic only invalidates the matching camera."""
-    payload = '{"after":{"camera":"front"}}'
-
-    assert _activity_payload_matches(payload, "front", "events") is True
-    assert _activity_payload_matches(payload, "back", "events") is False
-
-
-def test_frigate_reviews_ignore_motion_and_accept_before_payload() -> None:
-    """Only alert/detection reviews drive the WatchZone activity surfaces."""
-    assert (
-        _activity_payload_matches(
-            '{"after":{"camera":"front","severity":"detection"}}',
-            "front",
-            "reviews",
+async def test_frigate_source_uses_owning_instance_and_camera(
+    hass: HomeAssistant,
+) -> None:
+    """Multiple Frigate instances retain their official proxy identity."""
+    resolved = SimpleNamespace(
+        frigate_instance_id="frigate-west",
+        camera_name="driveway",
+    )
+    resolver = AsyncMock(return_value=resolved)
+    with patch(
+        "custom_components.watchzone.providers.frigate.activity_updates.async_resolve_source",
+        resolver,
+    ):
+        source = await FrigateActivityUpdatesProvider().async_activity_update_source(
+            hass,
+            "camera.driveway",
         )
-        is True
-    )
-    assert (
-        _activity_payload_matches(
-            '{"before":{"camera":"front","severity":"alert"}}',
-            "front",
-            "reviews",
-        )
-        is True
-    )
-    assert (
-        _activity_payload_matches(
-            '{"after":{"camera":"front","severity":"motion"}}',
-            "front",
-            "reviews",
-        )
-        is False
-    )
-    assert _activity_payload_matches("invalid", "front", "reviews") is False
 
-
-def test_frigate_topic_prefix_comes_from_instance_config() -> None:
-    """Each resolved Frigate instance controls its own MQTT topic prefix."""
-    assert _topic_prefix({"mqtt": {"topic_prefix": "site-west"}}) == "site-west"
-    assert _topic_prefix({"mqtt": {}}) is None
+    assert source == ActivityUpdateSource(
+        type="frigate",
+        instance_id="frigate-west",
+        camera_name="driveway",
+    )
+    resolver.assert_awaited_once_with(hass, "camera.driveway")

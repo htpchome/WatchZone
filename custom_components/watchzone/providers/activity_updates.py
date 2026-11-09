@@ -1,24 +1,28 @@
-"""Provider-neutral activity update subscription contract."""
+"""Provider-neutral activity update source contract."""
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Literal, Protocol
 
 from homeassistant.core import HomeAssistant
 
-ActivityUpdateKind = Literal["events", "reviews"]
-ActivityUpdateListener = Callable[[], None]
+
+@dataclass(frozen=True, slots=True)
+class ActivityUpdateSource:
+    """Frontend subscription identity for one provider-owned camera."""
+
+    type: Literal["frigate"]
+    instance_id: str
+    camera_name: str
 
 
 class ActivityUpdatesProvider(Protocol):
-    """Optional provider capability for real-time activity invalidation."""
+    """Optional provider capability for resolving real-time activity."""
 
-    async def async_subscribe_activity_updates(
+    async def async_activity_update_source(
         self,
         hass: HomeAssistant,
         entity_id: str,
-        kind: ActivityUpdateKind,
-        listener: ActivityUpdateListener,
-    ) -> Callable[[], None]:
-        """Notify the listener when authoritative activity may have changed."""
+    ) -> ActivityUpdateSource:
+        """Resolve one camera to its provider-owned update source."""

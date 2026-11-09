@@ -7,12 +7,13 @@ import type {
 import {
   ACTIVITY_RECONCILE_INTERVAL_MS,
   ACTIVITY_EMPTY_CONFIRM_DELAY_MS,
+  ACTIVITY_UPDATE_SUBSCRIBE_RETRY_MS,
 } from "../../core/constants";
+import type { HomeAssistantApi } from "../../core/home-assistant";
 import {
   subscribeActivityUpdates,
   type ActivityUpdateKind,
-} from "../../api/activity-updates";
-import type { HomeAssistantApi } from "../../core/home-assistant";
+} from "../../providers/activity-update-resolver";
 
 export interface ActiveCameraActivityItem {
   readonly id: string;
@@ -68,6 +69,7 @@ export class ActiveCameraActivityController<
   private _lastHistoryDays?: number;
   private _updateRefreshTimer?: number;
   private _updateReconcileTimer?: number;
+  private _updateSubscribeRetryTimer?: number;
   private _updatesGeneration = 0;
   private _updatesUnsubscribe?: () => void;
 
@@ -326,7 +328,17 @@ export class ActiveCameraActivityController<
         this._updatesUnsubscribe = unsubscribe;
       })
       .catch(() => {
-        // The low-frequency reconciliation timer remains as the fallback.
+        if (
+          generation !== this._updatesGeneration ||
+          entityId !== this._activeEntityId
+        )
+          return;
+        this._updateSubscribeRetryTimer = window.setTimeout(() => {
+          this._updateSubscribeRetryTimer = undefined;
+          if (entityId === this._activeEntityId) {
+            this._subscribeUpdates(api, entityId);
+          }
+        }, ACTIVITY_UPDATE_SUBSCRIBE_RETRY_MS);
       });
   }
 
@@ -340,8 +352,12 @@ export class ActiveCameraActivityController<
     if (this._updateReconcileTimer !== undefined) {
       window.clearTimeout(this._updateReconcileTimer);
     }
+    if (this._updateSubscribeRetryTimer !== undefined) {
+      window.clearTimeout(this._updateSubscribeRetryTimer);
+    }
     this._updateRefreshTimer = undefined;
     this._updateReconcileTimer = undefined;
+    this._updateSubscribeRetryTimer = undefined;
     this._refreshAfterHistory = false;
   }
 
