@@ -266,10 +266,6 @@ export const stageRuntimeStyles = css`
     min-block-size: 0;
   }
 
-  .component-slot-overlay > .component-node.placeable-ready > * {
-    block-size: auto;
-  }
-
   .module-placeholder,
   .layout-empty {
     display: grid;
