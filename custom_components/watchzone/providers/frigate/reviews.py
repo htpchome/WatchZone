@@ -46,7 +46,7 @@ class FrigateReviewsProvider:
         if query.bypass_cache:
             headers = {**headers, "Cache-Control": "no-cache"}
         try:
-            reviews_payload, config = await asyncio.gather(
+            alerts_payload, detections_payload, config = await asyncio.gather(
                 _get_json(
                     hass,
                     source,
@@ -56,6 +56,20 @@ class FrigateReviewsProvider:
                         "before": query.before,
                         "cameras": source.camera_name,
                         "limit": query.limit,
+                        "severity": "alert",
+                    },
+                    headers,
+                ),
+                _get_json(
+                    hass,
+                    source,
+                    "api/review",
+                    {
+                        "after": query.after,
+                        "before": query.before,
+                        "cameras": source.camera_name,
+                        "limit": query.limit,
+                        "severity": "detection",
                     },
                     headers,
                 ),
@@ -63,10 +77,12 @@ class FrigateReviewsProvider:
             )
         except (ClientError, TimeoutError, ValueError) as err:
             raise HomeAssistantError("Unable to retrieve camera alerts") from err
-        if not isinstance(reviews_payload, list):
+        if not isinstance(alerts_payload, list) or not isinstance(
+            detections_payload, list
+        ):
             raise HomeAssistantError("Frigate returned invalid alert data")
 
-        raw_reviews = [raw for raw in reviews_payload if isinstance(raw, dict)]
+        raw_reviews = _merge_review_payloads(alerts_payload, detections_payload)
         related_events = await _async_related_events(
             hass,
             source,
@@ -144,6 +160,21 @@ async def _get_json(
     ) as response:
         response.raise_for_status()
         return await response.json()
+
+
+def _merge_review_payloads(*payloads: list[object]) -> list[dict[str, Any]]:
+    reviews: dict[str, dict[str, Any]] = {}
+    unidentified: list[dict[str, Any]] = []
+    for payload in payloads:
+        for raw in payload:
+            if not isinstance(raw, dict):
+                continue
+            review_id = _text(raw.get("id"))
+            if review_id is None:
+                unidentified.append(raw)
+                continue
+            reviews[review_id] = raw
+    return [*reviews.values(), *unidentified]
 
 
 def _normalize_review(

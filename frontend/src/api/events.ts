@@ -3,6 +3,7 @@ import type {
   RecordedMediaSource,
   RecordedMediaTransport,
 } from "../core/recorded-media";
+import { listActivityWindow } from "./activity-window";
 
 export interface EventItem {
   readonly camera: string;
@@ -22,23 +23,15 @@ export interface EventItem {
   readonly zones: readonly string[];
 }
 
-interface EventsResponse {
-  readonly items: readonly EventItem[];
-}
-
 export async function listEvents(
   api: HomeAssistantApi,
   entityId: string,
   options: { readonly bypassCache?: boolean; readonly historyDays: number },
 ): Promise<readonly EventItem[]> {
-  const before = Date.now() / 1000;
-  const response = await api.callWS<EventsResponse>({
-    type: "watchzone/events/list",
-    entity_id: entityId,
-    after: before - options.historyDays * 24 * 60 * 60,
-    before,
-    limit: 500,
-    bypass_cache: options.bypassCache ?? false,
-  });
-  return response.items;
+  return listActivityWindow<EventItem>(
+    api,
+    entityId,
+    "watchzone/events/list",
+    options,
+  );
 }

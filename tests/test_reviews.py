@@ -1,13 +1,17 @@
 """Tests for normalized Frigate review activity."""
 
 from types import SimpleNamespace
-from typing import cast
+from typing import Any, cast
+
+import pytest
 
 from custom_components.watchzone.providers.frigate.reviews import (
+    FrigateReviewsProvider,
     _capture_window,
     _normalize_review,
 )
 from custom_components.watchzone.providers.frigate.source import FrigateSource
+from custom_components.watchzone.providers.reviews import ReviewQuery
 
 
 def _source() -> FrigateSource:
@@ -117,3 +121,85 @@ def test_capture_window_uses_camera_override_then_global_defaults() -> None:
     assert _capture_window(config, "front", "alert") == (4, 12)
     assert _capture_window(config, "front", "detection") == (8, 10)
     assert _capture_window({}, "front", "alert") == (5, 5)
+
+
+async def test_review_provider_filters_motion_before_frigate_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Separate severity queries prevent motion reviews from consuming the page."""
+
+    async def get_auth_headers() -> dict[str, str]:
+        return {"Authorization": "Bearer token"}
+
+    source = cast(
+        FrigateSource,
+        SimpleNamespace(
+            base_url="http://frigate.local",
+            camera_name="front",
+            client=SimpleNamespace(
+                get_auth_headers=get_auth_headers,
+                validate_ssl=True,
+            ),
+            frigate_instance_id="frigate_workshop",
+        ),
+    )
+    requests: list[dict[str, str | int | float]] = []
+
+    async def resolve_source(hass: Any, entity_id: str) -> FrigateSource:
+        del hass, entity_id
+        return source
+
+    async def get_json(
+        hass: Any,
+        resolved_source: FrigateSource,
+        path: str,
+        params: dict[str, str | int | float],
+        headers: dict[str, str],
+    ) -> object:
+        del hass, resolved_source, headers
+        assert path == "api/review"
+        requests.append(params)
+        severity = cast(str, params["severity"])
+        return [
+            {
+                "camera": "front",
+                "data": {},
+                "end_time": 101 if severity == "alert" else 91,
+                "id": f"review-{severity}",
+                "severity": severity,
+                "start_time": 100 if severity == "alert" else 90,
+            }
+        ]
+
+    async def config(
+        hass: Any,
+        resolved_source: FrigateSource,
+        headers: dict[str, str],
+        bypass_cache: bool,
+    ) -> dict[str, object]:
+        del hass, resolved_source, headers, bypass_cache
+        return {}
+
+    monkeypatch.setattr(
+        "custom_components.watchzone.providers.frigate.reviews.async_resolve_source",
+        resolve_source,
+    )
+    monkeypatch.setattr(
+        "custom_components.watchzone.providers.frigate.reviews._get_json",
+        get_json,
+    )
+    provider = FrigateReviewsProvider()
+    monkeypatch.setattr(provider, "_async_config", config)
+
+    items = await provider.async_list_reviews(
+        cast(Any, SimpleNamespace()),
+        "camera.front",
+        ReviewQuery(after=0, before=200, limit=500),
+    )
+
+    assert [item.classification for item in items] == ["alert", "detection"]
+    assert {request["severity"] for request in requests} == {
+        "alert",
+        "detection",
+    }
+    assert all(request["limit"] == 500 for request in requests)
