@@ -22,6 +22,7 @@ describe("WatchZone YAML configuration manager", () => {
         normalizeCardConfig({
           type: CARD_TYPE,
           title: "Front",
+          camera_bar_rounded_corners: false,
           camera_bar_shadows: false,
           camera_rounded_corners: false,
           camera_shadows: false,
@@ -29,6 +30,7 @@ describe("WatchZone YAML configuration manager", () => {
           display_object_badges: false,
           display_zone: false,
           event_history_days: 12,
+          event_shadows: false,
           highlight_camera_on_activity: false,
           view_timelapse_on_thumbnail_hover: false,
           cameras: [
@@ -58,6 +60,7 @@ describe("WatchZone YAML configuration manager", () => {
     ).toEqual({
       type: CARD_TYPE,
       title: "Front",
+      camera_bar_rounded_corners: false,
       camera_bar_shadows: false,
       camera_rounded_corners: false,
       camera_shadows: false,
@@ -65,6 +68,7 @@ describe("WatchZone YAML configuration manager", () => {
       display_object_badges: false,
       display_zone: false,
       event_history_days: 12,
+      event_shadows: false,
       highlight_camera_on_activity: false,
       view_timelapse_on_thumbnail_hover: false,
       cameras: [

@@ -39,6 +39,7 @@ export const cameraViewStyles = css`
   .live-presentation {
     --wzc-live-background: var(--wzc-camera-stage);
     --wzc-placeholder-background: var(--wzc-camera-stage);
+    --wzc-placeholder-color: var(--wzc-media-placeholder-color);
     --wzc-live-shadow: none;
   }
 

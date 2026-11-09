@@ -14,6 +14,7 @@ export interface EventsModuleConfig {
   readonly displayZone: boolean;
   readonly historyDays: number;
   readonly roundedCorners: boolean;
+  readonly shadows: boolean;
   readonly targetModuleId: string;
 }
 
@@ -31,6 +32,9 @@ export const moduleDefinition: ModuleDefinition<EventsModuleConfig> = {
     }
     if (typeof source.roundedCorners !== "boolean") {
       throw new Error("Events module roundedCorners must be a boolean.");
+    }
+    if (typeof source.shadows !== "boolean") {
+      throw new Error("Events module shadows must be a boolean.");
     }
     if (typeof source.displayEventTypeBadges !== "boolean") {
       throw new Error(
@@ -59,6 +63,7 @@ export const moduleDefinition: ModuleDefinition<EventsModuleConfig> = {
       displayZone: source.displayZone,
       historyDays: source.historyDays,
       roundedCorners: source.roundedCorners,
+      shadows: source.shadows,
       targetModuleId: source.targetModuleId,
     };
   },
@@ -71,7 +76,7 @@ export const moduleDefinition: ModuleDefinition<EventsModuleConfig> = {
   },
   updateElement(element, config, context) {
     const events = element as EventsModule;
-    events.activityDateFilter = context.activityDateFilter;
+    events.activityFilter = context.activityFilter;
     events.api = context.api;
     events.cameraSelection = context.cameraSelection;
     events.displayEventTypeBadges = config.displayEventTypeBadges;
@@ -80,6 +85,7 @@ export const moduleDefinition: ModuleDefinition<EventsModuleConfig> = {
     events.localize = context.localize ?? englishLocalize;
     events.historyDays = config.historyDays;
     events.roundedCorners = config.roundedCorners;
+    events.shadows = config.shadows;
     events.targetModuleId = config.targetModuleId;
   },
 };

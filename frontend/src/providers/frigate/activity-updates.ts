@@ -12,6 +12,7 @@ interface FrigateActivityPayload {
     readonly camera?: string;
     readonly data?: FrigateReviewData;
     readonly end_time?: number | null;
+    readonly has_been_reviewed?: boolean;
     readonly id?: string;
     readonly severity?: string;
     readonly start_time?: number;
@@ -20,6 +21,7 @@ interface FrigateActivityPayload {
     readonly camera?: string;
     readonly data?: FrigateReviewData;
     readonly end_time?: number | null;
+    readonly has_been_reviewed?: boolean;
     readonly id?: string;
     readonly severity?: string;
     readonly start_time?: number;
@@ -160,6 +162,7 @@ function normalizeReview(
       `/api/frigate/${instance}/notifications/${reviewId}/` +
       "review_preview.gif",
     related_event_ids: eventIds.map((id) => `${source.instance_id}:${id}`),
+    reviewed: activity.has_been_reviewed === true,
     revision,
     snapshot_url: null,
     start_time: activity.start_time,

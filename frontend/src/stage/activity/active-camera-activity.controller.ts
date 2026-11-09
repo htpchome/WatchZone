@@ -121,6 +121,10 @@ export class ActiveCameraActivityController<
     return this._activeCameraLabel;
   }
 
+  public get activeEntityId(): string | undefined {
+    return this._activeEntityId;
+  }
+
   private _syncContext(): void {
     if (!this._connected) return;
     const context = this._context();

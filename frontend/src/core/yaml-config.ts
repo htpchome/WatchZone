@@ -23,6 +23,9 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
     delete yaml.camera_rounded_corners;
   }
   if (config.camera_shadows !== false) delete yaml.camera_shadows;
+  if (config.camera_bar_rounded_corners !== false) {
+    delete yaml.camera_bar_rounded_corners;
+  }
   if (config.camera_bar_shadows !== false) delete yaml.camera_bar_shadows;
   if (config.display_event_type_badges !== false) {
     delete yaml.display_event_type_badges;
@@ -34,6 +37,7 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
   if (config.event_rounded_corners !== false) {
     delete yaml.event_rounded_corners;
   }
+  if (config.event_shadows !== false) delete yaml.event_shadows;
   if (config.event_history_days === DEFAULT_EVENT_HISTORY_DAYS) {
     delete yaml.event_history_days;
   }

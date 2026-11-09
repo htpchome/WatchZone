@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CameraSelectionContext } from "../src/stage/camera-selection-context";
-import { ActivityDateFilterContext } from "../src/stage/activity";
+import { ActivityFilterContext } from "../src/stage/activity";
 import { ACTIVITY_LIST_TAG, ALERTS_TAG } from "../src/core/constants";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import type { AlertsModule } from "../src/stage/modules/alerts/alerts";
@@ -32,6 +32,7 @@ const reviews = [
     preview_url: "/review-1-preview.gif",
     revision: "revision-1",
     related_event_ids: ["frigate:event-1", "frigate:event-2"],
+    reviewed: true,
     snapshot_url: "/alert-snapshot.jpg",
     start_time: 100,
     sub_labels: ["Resident", "Northern Mockingbird", "American Goldfinch"],
@@ -58,6 +59,7 @@ const reviews = [
     preview_url: "/review-2-preview.gif",
     revision: "revision-2",
     related_event_ids: ["frigate:event-3"],
+    reviewed: false,
     snapshot_url: null,
     start_time: 80,
     sub_labels: [],
@@ -82,10 +84,10 @@ describe("alerts module", () => {
       subscribeMessage: vi.fn(),
     } as unknown as HomeAssistantApi;
     const selection = new CameraSelectionContext();
-    const dateFilter = new ActivityDateFilterContext();
+    const filterContext = new ActivityFilterContext();
     const module = document.createElement(ALERTS_TAG) as AlertsModule;
     module.api = api;
-    module.activityDateFilter = dateFilter;
+    module.activityFilter = filterContext;
     module.cameraSelection = selection;
     module.historyDays = 5;
     module.targetModuleId = "camera-module";
@@ -138,19 +140,46 @@ describe("alerts module", () => {
     const list = module.shadowRoot?.querySelector(ACTIVITY_LIST_TAG) as
       | (HTMLElement & {
           items: readonly { hoverPreviewUrl?: string | null }[];
+          updateComplete: Promise<boolean>;
         })
       | null;
     expect(list?.items[0]?.hoverPreviewUrl).toBe("/review-1-preview.gif");
     module.hoverPreviewEnabled = false;
     await module.updateComplete;
     expect(list?.items[0]?.hoverPreviewUrl).toBeNull();
+    module.shadows = false;
+    await module.updateComplete;
+    await list?.updateComplete;
+    expect(
+      activityRoot(module)
+        ?.querySelector(".viewport")
+        ?.classList.contains("no-shadows"),
+    ).toBe(true);
     expect(activityRoot(module)?.querySelector(".duration")?.textContent).toBe(
       "34s",
     );
-    dateFilter.select("1970-01-02");
+    filterContext.selectDate("camera.front", "1970-01-02");
     await module.updateComplete;
     expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(0);
-    dateFilter.reset();
+    filterContext.resetDate("camera.front");
+    await module.updateComplete;
+    expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(2);
+    filterContext.setClassification("camera.front", "alert");
+    await module.updateComplete;
+    expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(1);
+    filterContext.setClassification("camera.front", "all");
+    filterContext.toggleLabel("camera.front", "cat");
+    await module.updateComplete;
+    expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(1);
+    filterContext.clearLabels("camera.front");
+    filterContext.setReviewStatus("camera.front", "reviewed");
+    await module.updateComplete;
+    expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(1);
+    filterContext.setReviewStatus("camera.front", "all");
+    filterContext.toggleZone("camera.front", "driveway");
+    await module.updateComplete;
+    expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(1);
+    filterContext.resetFilters("camera.front");
     await module.updateComplete;
     expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(2);
   });

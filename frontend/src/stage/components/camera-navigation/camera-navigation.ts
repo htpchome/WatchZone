@@ -17,6 +17,7 @@ export class CameraNavigationComponent extends LitElement {
   public static properties = {
     cameraSelection: { attribute: false },
     localize: { attribute: false },
+    roundedCorners: { attribute: false, type: Boolean },
     shadows: { attribute: false, type: Boolean },
     targetModuleId: { attribute: false },
   };
@@ -26,6 +27,7 @@ export class CameraNavigationComponent extends LitElement {
 
   public cameraSelection?: CameraSelectionContext;
   public localize: LocalizeFunction = englishLocalize;
+  public roundedCorners = true;
   public shadows = true;
   public targetModuleId = "";
 
@@ -49,7 +51,13 @@ export class CameraNavigationComponent extends LitElement {
   protected render() {
     if (this._state.items.length === 0) return nothing;
     return html`<nav
-      class=${this.shadows ? "bar shadows" : "bar"}
+      class=${[
+        "bar",
+        this.roundedCorners ? "rounded" : "square",
+        this.shadows ? "shadows" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       aria-label=${this.localize("camera.navigation")}
     >
       <div class="items" role="tablist">

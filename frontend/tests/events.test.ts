@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CameraSelectionContext } from "../src/stage/camera-selection-context";
-import { ActivityDateFilterContext } from "../src/stage/activity";
+import { ActivityFilterContext } from "../src/stage/activity";
 import { ACTIVITY_LIST_TAG, EVENTS_TAG } from "../src/core/constants";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import type { EventsModule } from "../src/stage/modules/events/events";
@@ -211,10 +211,10 @@ describe("events module", () => {
       subscribeMessage: vi.fn(),
     } as unknown as HomeAssistantApi;
     const selection = new CameraSelectionContext();
-    const dateFilter = new ActivityDateFilterContext();
+    const filterContext = new ActivityFilterContext();
     const module = document.createElement(EVENTS_TAG) as EventsModule;
     module.api = api;
-    module.activityDateFilter = dateFilter;
+    module.activityFilter = filterContext;
     module.cameraSelection = selection;
     module.historyDays = 7;
     module.targetModuleId = "camera-module";
@@ -300,12 +300,30 @@ describe("events module", () => {
         ?.classList.contains("square"),
     ).toBe(false);
 
-    dateFilter.select("1970-01-02");
+    filterContext.selectDate("camera.front", "1970-01-02");
     await module.updateComplete;
     expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(0);
-    dateFilter.reset();
+    filterContext.resetDate("camera.front");
     await module.updateComplete;
     expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(1);
+    filterContext.publishReviews("camera.front", [
+      {
+        classification: "alert",
+        id: "review-1",
+        labels: ["person"],
+        relatedEventIds: [event.id],
+        reviewed: true,
+        zones: ["driveway"],
+      },
+    ]);
+    filterContext.setClassification("camera.front", "detection");
+    await module.updateComplete;
+    expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(0);
+    filterContext.setClassification("camera.front", "alert");
+    filterContext.setReviewStatus("camera.front", "reviewed");
+    await module.updateComplete;
+    expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(1);
+    filterContext.resetFilters("camera.front");
 
     selection.publish(
       "camera-module",

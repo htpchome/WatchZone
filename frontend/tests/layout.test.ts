@@ -97,6 +97,7 @@ describe("layout composition", () => {
           {
             componentType: "camera_navigation",
             config: {
+              roundedCorners: true,
               shadows: true,
               targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
             },
@@ -130,6 +131,7 @@ describe("layout composition", () => {
         historyDays: 5,
         hoverPreviewEnabled: true,
         roundedCorners: true,
+        shadows: true,
         targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
       },
       {
@@ -138,6 +140,7 @@ describe("layout composition", () => {
         displayZone: true,
         historyDays: 5,
         roundedCorners: true,
+        shadows: true,
         targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
       },
     ]);
@@ -175,18 +178,32 @@ describe("layout composition", () => {
     }
   });
 
-  it("maps camera bar shadows at the navigation component boundary", () => {
+  it("maps camera bar appearance at the navigation component boundary", () => {
     const layout = builtInStage(
       normalizeCardConfig({
         camera_entity: "camera.front",
+        camera_bar_rounded_corners: false,
         camera_bar_shadows: false,
       }),
     );
     const panel = moduleAt(layout, 1);
     expect(panel?.slots?.content?.[0]?.config).toMatchObject({
+      roundedCorners: false,
       shadows: false,
       targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
     });
+  });
+
+  it("maps event shadows at both activity module boundaries", () => {
+    const layout = builtInStage(
+      normalizeCardConfig({
+        camera_entity: "camera.front",
+        event_shadows: false,
+      }),
+    );
+    for (const module of activityModules(layout)) {
+      expect(module.config).toMatchObject({ shadows: false });
+    }
   });
 
   it("maps camera appearance once at the camera module boundary", () => {

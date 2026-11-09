@@ -160,7 +160,9 @@ export const themeTokens = css`
     --wzc-card-padding: clamp(1rem, 3cqi, 2rem);
     --wzc-stage-module-gap: clamp(0.5rem, 1.5cqi, 1rem);
     --wzc-card-outer-shadow: var(--wzc-shadow-medium);
-    --wzc-camera-stage: var(--ha-color-neutral-10, #202020);
+    --wzc-media-placeholder-background: #242424;
+    --wzc-media-placeholder-color: #626262;
+    --wzc-camera-stage: var(--wzc-media-placeholder-background);
     --wzc-camera-stage-aspect-ratio: 16 / 9;
     --wzc-camera-suspended-background: var(--ha-color-neutral-05, #111111);
     --wzc-camera-suspended-icon-color: var(--wzc-color-error);
@@ -180,10 +182,10 @@ export const themeTokens = css`
     --wzc-stage-resize-handle-inline-size: clamp(6rem, 24%, 10rem);
     --wzc-stage-resize-handle-visual-inline-size: clamp(4rem, 18cqi, 7rem);
     --wzc-stage-resize-handle-visible-bottom-inset: 0.15rem;
-    --wzc-activity-calendar-background: var(--wzc-color-surface);
-    --wzc-activity-calendar-border-color: var(--wzc-color-border);
-    --wzc-activity-calendar-radius: var(--wzc-radius-card);
-    --wzc-activity-calendar-shadow: var(--wzc-shadow-medium);
+    --wzc-activity-popover-background: var(--wzc-color-surface);
+    --wzc-activity-popover-border-color: var(--wzc-color-border);
+    --wzc-activity-popover-radius: var(--wzc-radius-card);
+    --wzc-activity-popover-shadow: var(--wzc-shadow-medium);
 
     --wzc-media-overlay-color: var(--ha-color-neutral-90, #e6e6e6);
     --wzc-media-overlay-surface: var(--ha-color-neutral-05, #111111);
@@ -257,8 +259,10 @@ export const themeTokens = css`
     --wzc-event-content-padding: 0.25rem;
     --wzc-event-thumbnail-inline-size: 12.8rem;
     --wzc-event-thumbnail-radius: var(--wzc-radius-card);
-    --wzc-event-thumbnail-placeholder-background: var(--wzc-camera-stage);
-    --wzc-event-thumbnail-placeholder-color: var(--wzc-color-text-2);
+    --wzc-event-thumbnail-placeholder-background: var(
+      --wzc-media-placeholder-background
+    );
+    --wzc-event-thumbnail-placeholder-color: var(--wzc-media-placeholder-color);
     --wzc-event-thumbnail-placeholder-icon-size: 2.75rem;
     --wzc-event-badge-font-size: 0.6875rem;
     --wzc-event-badge-padding: 0.08em 0.45em;

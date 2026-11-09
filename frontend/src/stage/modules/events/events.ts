@@ -1,10 +1,10 @@
-import { html, LitElement } from "lit";
+import { html, LitElement, type PropertyValues } from "lit";
 
 import { listEvents, type EventItem } from "../../../api/events";
 import {
   ActiveCameraActivityController,
-  ActivityDateFilterController,
-  type ActivityDateFilterContext,
+  ActivityFilterController,
+  type ActivityFilterContext,
 } from "../../activity";
 import type { CameraSelectionContext } from "../../camera-selection-context";
 import {
@@ -26,7 +26,7 @@ import { eventsStyles } from "./events.styles";
 export class EventsModule extends LitElement {
   public static properties = {
     api: { attribute: false },
-    activityDateFilter: { attribute: false },
+    activityFilter: { attribute: false },
     cameraSelection: { attribute: false },
     displayEventTypeBadges: { attribute: false },
     displayObjectBadges: { attribute: false },
@@ -34,11 +34,12 @@ export class EventsModule extends LitElement {
     historyDays: { attribute: false },
     localize: { attribute: false },
     roundedCorners: { attribute: false, type: Boolean },
+    shadows: { attribute: false, type: Boolean },
     targetModuleId: { attribute: false },
   };
 
   public api?: HomeAssistantApi;
-  public activityDateFilter?: ActivityDateFilterContext;
+  public activityFilter?: ActivityFilterContext;
   public cameraSelection?: CameraSelectionContext;
   public displayEventTypeBadges = true;
   public displayObjectBadges = true;
@@ -46,13 +47,17 @@ export class EventsModule extends LitElement {
   public historyDays = DEFAULT_EVENT_HISTORY_DAYS;
   public localize: LocalizeFunction = englishLocalize;
   public roundedCorners = true;
+  public shadows = true;
   public targetModuleId = "";
 
   private readonly _toasts = new ToastManager(this);
-  private readonly _dateFilter = new ActivityDateFilterController(
+  private readonly _filter = new ActivityFilterController(
     this,
-    () => this.activityDateFilter,
+    () => this.activityFilter,
+    () => this.cameraSelection,
+    () => this.targetModuleId,
     () => this.api?.locale,
+    "events",
   );
   private readonly _activity = new ActiveCameraActivityController<EventItem>(
     this,
@@ -70,9 +75,31 @@ export class EventsModule extends LitElement {
     "events",
   );
 
+  protected update(changed: PropertyValues<this>): void {
+    const entityId = this._activity.activeEntityId;
+    if (entityId && this.activityFilter) {
+      this.activityFilter.publishEvents(
+        entityId,
+        this._activity.items.map((event) => ({
+          id: event.id,
+          labels: [event.label, ...(event.sub_label ? [event.sub_label] : [])],
+          zones: event.zones,
+        })),
+      );
+    }
+    super.update(changed);
+  }
+
   protected render() {
     const items = this._activity.items
-      .filter((event) => this._dateFilter.includes(event.start_time))
+      .filter((event) =>
+        this._filter.includesEvent({
+          id: event.id,
+          labels: [event.label, ...(event.sub_label ? [event.sub_label] : [])],
+          startTime: event.start_time,
+          zones: event.zones,
+        }),
+      )
       .map((event): ActivityListItem => ({
         cameraLabel: this._activity.activeCameraLabel ?? event.camera,
         clipUrl: event.clip_url,
@@ -105,6 +132,7 @@ export class EventsModule extends LitElement {
         .retryMedia=${(item: ActivityListItem, url: string) =>
           this._activity.retryMedia(item, url)}
         .roundedCorners=${this.roundedCorners}
+        .shadows=${this.shadows}
       ></wzc-activity-list>
       <wzc-toast-region .notices=${this._toasts.notices}></wzc-toast-region>
     `;

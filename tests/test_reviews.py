@@ -33,6 +33,7 @@ def test_review_normalization_preserves_classification_and_media() -> None:
             "camera": "front",
             "start_time": 1_700_000_000.1,
             "end_time": 1_700_000_024.2,
+            "has_been_reviewed": True,
             "severity": "alert",
             "thumb_path": "/media/frigate/clips/review/thumb-front.webp",
             "data": {
@@ -69,6 +70,7 @@ def test_review_normalization_preserves_classification_and_media() -> None:
 
     assert item is not None
     assert item.classification == "alert"
+    assert item.reviewed is True
     assert item.labels == ("person", "car", "speech", "bird")
     assert item.sub_labels == (
         "Resident",

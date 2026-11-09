@@ -13,7 +13,7 @@ import {
 } from "../../core/localization";
 import { renderIcon } from "../../ui/icons";
 import { ActiveCameraActivityController } from "./active-camera-activity.controller";
-import type { ActivityDateFilterContext } from "./activity-date-filter-context";
+import type { ActivityFilterContext } from "./activity-filter-context";
 import type { CameraSelectionContext } from "../camera-selection-context";
 import { activityCalendarStyles } from "./activity-calendar.styles";
 
@@ -27,7 +27,7 @@ export class ActivityCalendar extends LitElement {
   public static properties = {
     api: { attribute: false },
     cameraSelection: { attribute: false },
-    dateFilter: { attribute: false },
+    filterContext: { attribute: false },
     historyDays: { attribute: false },
     localize: { attribute: false },
     targetModuleId: { attribute: false },
@@ -38,7 +38,7 @@ export class ActivityCalendar extends LitElement {
 
   public api?: HomeAssistantApi;
   public cameraSelection?: CameraSelectionContext;
-  public dateFilter?: ActivityDateFilterContext;
+  public filterContext?: ActivityFilterContext;
   public historyDays = 5;
   public localize: LocalizeFunction = englishLocalize;
   public targetModuleId = "";
@@ -46,7 +46,8 @@ export class ActivityCalendar extends LitElement {
   private _open = false;
   private _selectedDate?: string;
   private _visibleMonth = monthFromKey(this._todayKey());
-  private _subscribedFilter?: ActivityDateFilterContext;
+  private _subscribedEntityId?: string;
+  private _subscribedFilter?: ActivityFilterContext;
   private _unsubscribeFilter?: () => void;
 
   private readonly _activity = new ActiveCameraActivityController<ReviewItem>(
@@ -81,13 +82,27 @@ export class ActivityCalendar extends LitElement {
     super.disconnectedCallback();
   }
 
-  protected updated(): void {
-    if (this.dateFilter === this._subscribedFilter) return;
+  protected willUpdate(): void {
+    const entityId = this._activity.activeEntityId;
+    if (
+      this.filterContext === this._subscribedFilter &&
+      entityId === this._subscribedEntityId
+    ) {
+      return;
+    }
     this._unsubscribeFilter?.();
-    this._subscribedFilter = this.dateFilter;
-    this._unsubscribeFilter = this.dateFilter?.subscribe(({ selectedDate }) => {
-      this._selectedDate = selectedDate;
-    });
+    this._subscribedFilter = this.filterContext;
+    this._subscribedEntityId = entityId;
+    this._selectedDate = undefined;
+    if (this.filterContext && entityId) {
+      this._unsubscribeFilter = this.filterContext.subscribe(
+        entityId,
+        ({ selectedDate }) => {
+          if (selectedDate === this._selectedDate) return;
+          this._selectedDate = selectedDate;
+        },
+      );
+    }
   }
 
   protected render() {
@@ -193,12 +208,14 @@ export class ActivityCalendar extends LitElement {
   };
 
   private _select(key: string): void {
-    this.dateFilter?.select(key);
+    const entityId = this._activity.activeEntityId;
+    if (entityId) this.filterContext?.selectDate(entityId, key);
     this._open = false;
   }
 
   private readonly _reset = (): void => {
-    this.dateFilter?.reset();
+    const entityId = this._activity.activeEntityId;
+    if (entityId) this.filterContext?.resetDate(entityId);
     this._open = false;
   };
 

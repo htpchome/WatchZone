@@ -233,9 +233,14 @@ test("keeps picker and activity geometry stable across lazy loading", async ({
               end_time: 1_700_000_020 - index,
               id: `review-${index}`,
               labels: ["person"],
+              media_end_time: 1_700_000_025 - index,
+              media_start_time: 1_699_999_995 - index,
               playback_sources: [],
               preferred_transport: "file",
+              preview_url: null,
               revision: `revision-${index}`,
+              related_event_ids: [],
+              reviewed: false,
               snapshot_url: null,
               start_time: 1_700_000_000 - index,
               sub_labels: [],
@@ -325,7 +330,7 @@ test("keeps the panel camera navigation and carousel selection bidirectional", a
     "box-shadow",
     "rgb(20, 21, 22) 0px 4px 8px 0px",
   );
-  await expect(navigation.locator(".bar")).toHaveCSS("border-radius", "999px");
+  await expect(navigation.locator(".bar")).toHaveCSS("border-radius", "19px");
   await expect(buttons.nth(0)).toHaveCSS("border-radius", "999px");
   await expect(buttons.nth(0)).toHaveCSS("transition-duration", "0s");
   await expect(buttons.nth(0)).toHaveCSS(
@@ -375,6 +380,7 @@ test("keeps the panel camera navigation and carousel selection bidirectional", a
       }
     ).setConfig({
       type: "custom:watchzone-card",
+      camera_bar_rounded_corners: false,
       camera_bar_shadows: false,
       cameras: [
         { entity_id: "camera.front", title: "Front Door" },
@@ -382,8 +388,11 @@ test("keeps the panel camera navigation and carousel selection bidirectional", a
       ],
     });
   });
+  await expect(navigation.locator(".bar")).toHaveClass(/square/);
+  await expect(navigation.locator(".bar")).toHaveCSS("border-radius", "0px");
   await expect(navigation.locator(".bar")).not.toHaveClass(/shadows/);
   await expect(navigation.locator(".bar")).toHaveCSS("box-shadow", "none");
+  await expect(buttons.nth(0)).toHaveCSS("border-radius", "999px");
   await expect(buttons.nth(0)).toHaveCSS("box-shadow", "none");
 });
 
@@ -670,6 +679,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
               preview_url: "/review-preview.gif",
               revision: event.revision,
               related_event_ids: [event.id],
+              reviewed: false,
               snapshot_url: event.snapshot_url,
               start_time: event.start_time,
               sub_labels: event.sub_label ? [event.sub_label] : [],
@@ -889,7 +899,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
       };
     });
   expect(thumbnailPresentation).toEqual({
-    background: "rgba(0, 0, 0, 0)",
+    background: "rgb(36, 36, 36)",
     objectFit: "cover",
   });
 
@@ -1242,8 +1252,22 @@ test("filters alerts and events through the shared activity calendar", async ({
     const today = Date.UTC(2026, 10, 9, 8) / 1000;
     const yesterday = Date.UTC(2026, 10, 8, 8) / 1000;
     const activity = [
-      { id: "today", label: "person", start: today },
-      { id: "yesterday", label: "bird", start: yesterday },
+      {
+        classification: "alert",
+        id: "today",
+        label: "person",
+        reviewed: true,
+        start: today,
+        zones: ["driveway"],
+      },
+      {
+        classification: "detection",
+        id: "yesterday",
+        label: "bird",
+        reviewed: false,
+        start: yesterday,
+        zones: ["yard"],
+      },
     ];
     const card = element as HTMLElement & {
       hass: unknown;
@@ -1279,7 +1303,7 @@ test("filters alerts and events through the shared activity calendar", async ({
           return {
             items: activity.map((item) => ({
               camera: "front",
-              classification: "detection",
+              classification: item.classification,
               clip_url: null,
               end_time: item.start + 1,
               id: `review:${item.id}`,
@@ -1289,12 +1313,13 @@ test("filters alerts and events through the shared activity calendar", async ({
               playback_sources: [],
               preferred_transport: "file",
               related_event_ids: [`event:${item.id}`],
+              reviewed: item.reviewed,
               revision: item.id,
               snapshot_url: null,
               start_time: item.start,
               sub_labels: [],
               thumbnail_url: null,
-              zones: [],
+              zones: item.zones,
             })),
           };
         }
@@ -1315,7 +1340,7 @@ test("filters alerts and events through the shared activity calendar", async ({
               start_time: item.start,
               sub_label: null,
               thumbnail_url: null,
-              zones: [],
+              zones: item.zones,
             })),
           };
         }
@@ -1325,13 +1350,20 @@ test("filters alerts and events through the shared activity calendar", async ({
   });
 
   const navigation = page.locator(".stage-stack-navigation");
+  const filter = navigation.locator("wzc-activity-filter");
   const calendar = navigation.locator("wzc-activity-calendar");
   const trigger = calendar.locator(".calendar-trigger");
   await expect(page.locator("wzc-alerts .tile")).toHaveCount(2);
+  const loadingSurface = page.locator("wzc-alerts .thumbnail-wrap").first();
+  await expect(loadingSurface).toHaveCSS("background-color", "rgb(36, 36, 36)");
+  await expect(loadingSurface).toHaveCSS("color", "rgb(98, 98, 98)");
   await expect(trigger).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(trigger).toHaveCSS("border-top-width", "0px");
   const alignment = await navigation.evaluate((node) => {
     const navigationRect = node.getBoundingClientRect();
+    const filterRect = node
+      .querySelector("wzc-activity-filter")
+      ?.getBoundingClientRect();
     const calendarRect = node
       .querySelector("wzc-activity-calendar")
       ?.getBoundingClientRect();
@@ -1341,11 +1373,16 @@ test("filters alerts and events through the shared activity calendar", async ({
       ?.getBoundingClientRect();
     return {
       endGap: calendarRect ? navigationRect.right - calendarRect.right : -1,
+      filterBeforeCalendar:
+        filterRect && calendarRect
+          ? filterRect.right <= calendarRect.left
+          : false,
       triggerHeight: triggerRect?.height ?? 0,
       triggerWidth: triggerRect?.width ?? 0,
     };
   });
   expect(alignment.endGap).toBeLessThanOrEqual(1);
+  expect(alignment.filterBeforeCalendar).toBe(true);
   expect(alignment.triggerHeight).toBeGreaterThanOrEqual(44);
   expect(alignment.triggerWidth).toBeGreaterThanOrEqual(44);
 
@@ -1362,6 +1399,17 @@ test("filters alerts and events through the shared activity calendar", async ({
   await trigger.click();
   await expect(calendar.locator(".day.selected")).toHaveCount(1);
   await calendar.locator(".reset").click();
+  await expect(page.locator("wzc-events .tile")).toHaveCount(2);
+
+  await filter.locator(".filter-trigger").click();
+  await expect(filter.locator(".popover")).toBeVisible();
+  await filter.getByText("person", { exact: true }).click();
+  await expect(page.locator("wzc-events .tile")).toHaveCount(1);
+  await filter.locator('input[value="alert"]').click();
+  await filter.locator('input[value="reviewed"]').click();
+  await filter.getByText("driveway", { exact: true }).click();
+  await expect(page.locator("wzc-events .tile")).toHaveCount(1);
+  await filter.locator(".reset").click();
   await expect(page.locator("wzc-events .tile")).toHaveCount(2);
 });
 

@@ -171,6 +171,7 @@ function hydrateModule(
             }
           : {}),
         roundedCorners: config.event_rounded_corners,
+        shadows: config.event_shadows,
       },
     };
   }
@@ -234,7 +235,11 @@ function hydrateRuntimeComponent(
     typeof node.config === "object" && node.config !== null ? node.config : {};
   return {
     ...node,
-    config: { ...componentConfig, shadows: config.camera_bar_shadows },
+    config: {
+      ...componentConfig,
+      roundedCorners: config.camera_bar_rounded_corners,
+      shadows: config.camera_bar_shadows,
+    },
   };
 }
 

@@ -24,6 +24,7 @@ export interface ReviewItem {
   readonly preview_url: string | null;
   readonly revision: string;
   readonly related_event_ids: readonly string[];
+  readonly reviewed: boolean;
   readonly snapshot_url: string | null;
   readonly start_time: number;
   readonly sub_labels: readonly string[];

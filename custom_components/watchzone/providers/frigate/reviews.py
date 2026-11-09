@@ -202,6 +202,7 @@ def _normalize_review(
     ):
         return None
     end_time = _timestamp(raw.get("end_time"))
+    reviewed = raw.get("has_been_reviewed") is True
     raw_data = raw.get("data")
     data: dict[str, Any] = raw_data if isinstance(raw_data, dict) else {}
     event_ids = _review_event_ids(raw)
@@ -236,6 +237,7 @@ def _normalize_review(
         "media_end_time": media_end,
         "media_start_time": media_start,
         "related_event_ids": event_ids,
+        "reviewed": reviewed,
         "start_time": start_time,
         "sub_labels": sub_labels,
         "zones": zones,
@@ -267,6 +269,7 @@ def _normalize_review(
         related_event_ids=tuple(
             f"{source.frigate_instance_id}:{event_id}" for event_id in event_ids
         ),
+        reviewed=reviewed,
         preview_url=(
             f"/api/frigate/{encoded_instance}/notifications/{encoded_review}/"
             "review_preview.gif"

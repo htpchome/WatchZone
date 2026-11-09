@@ -1,7 +1,13 @@
 import "./activity-calendar";
+import "./activity-filter";
 
 export { ActiveCameraActivityController } from "./active-camera-activity.controller";
 export { ActivityCalendar } from "./activity-calendar";
-export { ActivityDateFilterContext } from "./activity-date-filter-context";
-export type { ActivityDateFilterState } from "./activity-date-filter-context";
-export { ActivityDateFilterController } from "./activity-date-filter.controller";
+export { ActivityFilter } from "./activity-filter";
+export { ActivityFilterContext } from "./activity-filter-context";
+export type {
+  ActivityEventFacet,
+  ActivityFilterState,
+  ActivityReviewFacet,
+} from "./activity-filter-context";
+export { ActivityFilterController } from "./activity-filter.controller";

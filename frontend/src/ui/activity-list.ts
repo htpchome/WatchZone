@@ -66,6 +66,7 @@ export class ActivityList extends LitElement {
     localize: { attribute: false },
     retryMedia: { attribute: false },
     roundedCorners: { attribute: false, type: Boolean },
+    shadows: { attribute: false, type: Boolean },
   };
 
   public api?: HomeAssistantApi;
@@ -80,6 +81,7 @@ export class ActivityList extends LitElement {
   public localize: LocalizeFunction = englishLocalize;
   public retryMedia?: (item: ActivityListItem, url: string) => void;
   public roundedCorners = true;
+  public shadows = true;
 
   private readonly _failedMedia = new Set<string>();
   private _hoveredPreviewId?: string;
@@ -100,7 +102,13 @@ export class ActivityList extends LitElement {
 
   protected render() {
     return html`<section
-      class=${this.roundedCorners ? "viewport" : "viewport square"}
+      class=${[
+        "viewport",
+        this.roundedCorners ? "" : "square",
+        this.shadows ? "" : "no-shadows",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       aria-label=${this.localize(this.listKey)}
       aria-busy=${this.loading ? "true" : "false"}
     >

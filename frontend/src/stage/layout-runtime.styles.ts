@@ -308,6 +308,10 @@ export const stageRuntimeStyles = css`
     box-shadow: var(--wzc-event-tile-shadow);
   }
 
+  .activity-skeleton.no-shadows .activity-skeleton-row {
+    box-shadow: none;
+  }
+
   .camera-navigation-skeleton {
     display: flex;
     align-items: center;
@@ -318,7 +322,18 @@ export const stageRuntimeStyles = css`
     gap: var(--wzc-camera-navigation-gap);
     padding: var(--wzc-camera-navigation-padding);
     background: var(--wzc-camera-navigation-background);
-    border-radius: var(--wzc-radius-pill);
+  }
+
+  .camera-navigation-skeleton.rounded {
+    border-radius: var(--wzc-radius-card);
+  }
+
+  .camera-navigation-skeleton.square {
+    border-radius: 0;
+  }
+
+  .camera-navigation-skeleton:not(.no-shadows) {
+    box-shadow: var(--wzc-shadow-medium);
   }
 
   .camera-navigation-skeleton-item {

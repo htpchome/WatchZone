@@ -101,6 +101,7 @@ const EDITOR_STATUS_KEY = "editor-draft-status";
 void import("../ui/sortable-list");
 
 type BooleanConfigFlag =
+  | "camera_bar_rounded_corners"
   | "camera_bar_shadows"
   | "camera_rounded_corners"
   | "camera_shadows"
@@ -108,6 +109,7 @@ type BooleanConfigFlag =
   | "display_object_badges"
   | "display_zone"
   | "event_rounded_corners"
+  | "event_shadows"
   | "highlight_camera_on_activity"
   | "view_timelapse_on_thumbnail_hover"
   | "mobile_data_saving"
@@ -442,6 +444,11 @@ export class CardEditor extends LitElement {
         this._config?.camera_shadows !== false,
       )}
       ${this._renderBooleanOption(
+        "camera_bar_rounded_corners",
+        this._t("editor.camera_bar_rounded_corners"),
+        this._config?.camera_bar_rounded_corners !== false,
+      )}
+      ${this._renderBooleanOption(
         "camera_bar_shadows",
         this._t("editor.camera_bar_shadows"),
         this._config?.camera_bar_shadows !== false,
@@ -450,6 +457,11 @@ export class CardEditor extends LitElement {
         "event_rounded_corners",
         this._t("editor.event_rounded_corners"),
         this._config?.event_rounded_corners !== false,
+      )}
+      ${this._renderBooleanOption(
+        "event_shadows",
+        this._t("editor.event_shadows"),
+        this._config?.event_shadows !== false,
       )}
     `;
   }

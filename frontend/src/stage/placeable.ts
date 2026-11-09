@@ -1,12 +1,12 @@
 import type { CameraSessionContext } from "./camera-session-context";
 import type { CameraSelectionContext } from "./camera-selection-context";
-import type { ActivityDateFilterContext } from "./activity";
+import type { ActivityFilterContext } from "./activity";
 import type { HomeAssistant, HomeAssistantApi } from "../core/home-assistant";
 import type { LocalizeFunction } from "../core/localization";
 import type { TranslationKey } from "../core/localization";
 
 export interface PlaceableRuntimeContext {
-  readonly activityDateFilter: ActivityDateFilterContext;
+  readonly activityFilter: ActivityFilterContext;
   readonly api?: HomeAssistantApi;
   readonly cameraSelection: CameraSelectionContext;
   readonly cameraSession: CameraSessionContext;

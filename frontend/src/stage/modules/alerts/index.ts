@@ -15,6 +15,7 @@ export interface AlertsModuleConfig {
   readonly historyDays: number;
   readonly hoverPreviewEnabled: boolean;
   readonly roundedCorners: boolean;
+  readonly shadows: boolean;
   readonly targetModuleId: string;
 }
 
@@ -32,6 +33,9 @@ export const moduleDefinition: ModuleDefinition<AlertsModuleConfig> = {
     }
     if (typeof source.roundedCorners !== "boolean") {
       throw new Error("Alerts module roundedCorners must be a boolean.");
+    }
+    if (typeof source.shadows !== "boolean") {
+      throw new Error("Alerts module shadows must be a boolean.");
     }
     if (typeof source.displayEventTypeBadges !== "boolean") {
       throw new Error(
@@ -64,6 +68,7 @@ export const moduleDefinition: ModuleDefinition<AlertsModuleConfig> = {
       historyDays: source.historyDays,
       hoverPreviewEnabled: source.hoverPreviewEnabled,
       roundedCorners: source.roundedCorners,
+      shadows: source.shadows,
       targetModuleId: source.targetModuleId,
     };
   },
@@ -76,7 +81,7 @@ export const moduleDefinition: ModuleDefinition<AlertsModuleConfig> = {
   },
   updateElement(element, config, context) {
     const alerts = element as AlertsModule;
-    alerts.activityDateFilter = context.activityDateFilter;
+    alerts.activityFilter = context.activityFilter;
     alerts.api = context.api;
     alerts.cameraSelection = context.cameraSelection;
     alerts.displayEventTypeBadges = config.displayEventTypeBadges;
@@ -86,6 +91,7 @@ export const moduleDefinition: ModuleDefinition<AlertsModuleConfig> = {
     alerts.hoverPreviewEnabled = config.hoverPreviewEnabled;
     alerts.localize = context.localize ?? englishLocalize;
     alerts.roundedCorners = config.roundedCorners;
+    alerts.shadows = config.shadows;
     alerts.targetModuleId = config.targetModuleId;
   },
 };

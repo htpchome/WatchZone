@@ -7,6 +7,7 @@ import type { ComponentDefinition } from "../../placeable";
 import type { CameraNavigationComponent } from "./camera-navigation";
 
 export interface CameraNavigationConfig {
+  readonly roundedCorners: boolean;
   readonly shadows: boolean;
   readonly targetModuleId: string;
 }
@@ -26,6 +27,7 @@ export const componentDefinition: ComponentDefinition<CameraNavigationConfig> =
       const navigation = element as CameraNavigationComponent;
       navigation.cameraSelection = context.cameraSelection;
       navigation.localize = context.localize ?? englishLocalize;
+      navigation.roundedCorners = config.roundedCorners;
       navigation.shadows = config.shadows;
       navigation.targetModuleId = config.targetModuleId;
     },
@@ -35,13 +37,21 @@ export const componentDefinition: ComponentDefinition<CameraNavigationConfig> =
       }
       const targetModuleId = (value as Record<string, unknown>).targetModuleId;
       const shadows = (value as Record<string, unknown>).shadows;
+      const roundedCorners = (value as Record<string, unknown>).roundedCorners;
       if (typeof targetModuleId !== "string" || targetModuleId.length === 0) {
         throw new Error("Camera navigation requires a target camera module.");
       }
       if (shadows !== undefined && typeof shadows !== "boolean") {
         throw new Error("Camera navigation shadows must be a boolean.");
       }
-      return { shadows: shadows !== false, targetModuleId };
+      if (roundedCorners !== undefined && typeof roundedCorners !== "boolean") {
+        throw new Error("Camera navigation roundedCorners must be a boolean.");
+      }
+      return {
+        roundedCorners: roundedCorners !== false,
+        shadows: shadows !== false,
+        targetModuleId,
+      };
     },
   };
 

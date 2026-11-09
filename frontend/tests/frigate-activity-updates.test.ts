@@ -97,6 +97,7 @@ describe("Frigate activity updates", () => {
           id: "frigate-west:review-1",
           labels: ["person"],
           related_event_ids: ["frigate-west:event-1"],
+          reviewed: false,
           start_time: 100,
           sub_labels: ["Resident"],
           zones: ["driveway"],

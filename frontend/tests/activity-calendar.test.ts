@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACTIVITY_CALENDAR_TAG } from "../src/core/constants";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import {
-  ActivityDateFilterContext,
+  ActivityFilterContext,
   type ActivityCalendar,
 } from "../src/stage/activity";
 import { CameraSelectionContext } from "../src/stage/camera-selection-context";
@@ -34,13 +34,13 @@ describe("activity calendar", () => {
       subscribeMessage: vi.fn(),
     } as unknown as HomeAssistantApi;
     const cameraSelection = new CameraSelectionContext();
-    const dateFilter = new ActivityDateFilterContext();
+    const filterContext = new ActivityFilterContext();
     const calendar = document.createElement(
       ACTIVITY_CALENDAR_TAG,
     ) as ActivityCalendar;
     calendar.api = api;
     calendar.cameraSelection = cameraSelection;
-    calendar.dateFilter = dateFilter;
+    calendar.filterContext = filterContext;
     calendar.historyDays = 5;
     calendar.targetModuleId = "camera-module";
     document.body.append(calendar);
@@ -75,14 +75,16 @@ describe("activity calendar", () => {
     calendar.shadowRoot
       ?.querySelector<HTMLButtonElement>('.day[aria-label^="November 8, 2026"]')
       ?.click();
-    expect(dateFilter.state.selectedDate).toBe("2026-11-08");
+    expect(filterContext.stateFor("camera.front").selectedDate).toBe(
+      "2026-11-08",
+    );
 
     calendar.shadowRoot
       ?.querySelector<HTMLButtonElement>(".calendar-trigger")
       ?.click();
     await calendar.updateComplete;
     calendar.shadowRoot?.querySelector<HTMLButtonElement>(".reset")?.click();
-    expect(dateFilter.state.selectedDate).toBeUndefined();
+    expect(filterContext.stateFor("camera.front").selectedDate).toBeUndefined();
   });
 });
 
@@ -99,6 +101,7 @@ function review(id: string, startTime: number) {
     playback_sources: [],
     preferred_transport: "file",
     related_event_ids: [],
+    reviewed: false,
     revision: id,
     snapshot_url: null,
     start_time: startTime,

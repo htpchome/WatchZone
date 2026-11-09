@@ -15,7 +15,16 @@ export const cameraNavigationStyles = css`
     block-size: 100%;
     inline-size: 100%;
     overflow: clip;
-    border-radius: var(--wzc-radius-pill);
+  }
+
+  .bar.rounded,
+  .bar.rounded .items {
+    border-radius: var(--wzc-radius-card);
+  }
+
+  .bar.square,
+  .bar.square .items {
+    border-radius: 0;
   }
 
   .bar.shadows {
@@ -34,7 +43,6 @@ export const cameraNavigationStyles = css`
     padding: var(--wzc-camera-navigation-padding);
     color: var(--wzc-camera-navigation-color);
     background: var(--wzc-camera-navigation-background);
-    border-radius: var(--wzc-radius-pill);
   }
 
   button {

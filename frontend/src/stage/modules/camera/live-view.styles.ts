@@ -84,6 +84,7 @@ export const cameraLiveViewStyles = css`
   }
 
   .fallback-image {
+    color: var(--wzc-placeholder-color, var(--wzc-media-placeholder-color));
     display: block;
     object-fit: var(--wzc-live-fit, contain);
     background: var(--wzc-live-background);

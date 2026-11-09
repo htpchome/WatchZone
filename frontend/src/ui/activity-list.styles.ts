@@ -55,6 +55,11 @@ export const activityListStyles = css`
     position: relative;
   }
 
+  .no-shadows .skeleton-row,
+  .no-shadows .tile {
+    box-shadow: none;
+  }
+
   .tile-player {
     appearance: none;
     background: transparent;
@@ -80,10 +85,12 @@ export const activityListStyles = css`
 
   .thumbnail-wrap {
     aspect-ratio: 16 / 9;
+    background: var(--wzc-event-thumbnail-placeholder-background);
     block-size: 100%;
     border-radius: var(--wzc-event-thumbnail-radius);
     box-sizing: border-box;
     inline-size: 100%;
+    color: var(--wzc-event-thumbnail-placeholder-color);
     min-block-size: 0;
     overflow: hidden;
     position: relative;
@@ -119,6 +126,8 @@ export const activityListStyles = css`
   }
 
   .thumbnail {
+    background: var(--wzc-event-thumbnail-placeholder-background);
+    color: var(--wzc-event-thumbnail-placeholder-color);
     object-fit: cover;
     object-position: center;
   }

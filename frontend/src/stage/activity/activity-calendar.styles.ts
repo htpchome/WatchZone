@@ -4,7 +4,6 @@ import { css } from "lit";
 export const activityCalendarStyles = css`
   :host {
     display: block;
-    margin-inline-start: auto;
     position: relative;
   }
 
@@ -49,10 +48,10 @@ export const activityCalendarStyles = css`
   }
 
   .popover {
-    background: var(--wzc-activity-calendar-background);
-    border: 1px solid var(--wzc-activity-calendar-border-color);
-    border-radius: var(--wzc-activity-calendar-radius);
-    box-shadow: var(--wzc-activity-calendar-shadow);
+    background: var(--wzc-activity-popover-background);
+    border: 1px solid var(--wzc-activity-popover-border-color);
+    border-radius: var(--wzc-activity-popover-radius);
+    box-shadow: var(--wzc-activity-popover-shadow);
     color: var(--wzc-color-text-1);
     inline-size: min(19rem, calc(100vw - 2rem));
     inset-block-start: calc(100% + 0.25rem);
@@ -162,7 +161,7 @@ export const activityCalendarStyles = css`
   }
 
   .footer {
-    border-block-start: 1px solid var(--wzc-activity-calendar-border-color);
+    border-block-start: 1px solid var(--wzc-activity-popover-border-color);
     display: flex;
     justify-content: flex-end;
     margin-block-start: 0.5rem;

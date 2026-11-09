@@ -12,6 +12,7 @@ describe("WatchZone card configuration", () => {
     expect(normalizeCardConfig({ type: CARD_TYPE, title: "Camera" })).toEqual({
       type: CARD_TYPE,
       title: "Camera",
+      camera_bar_rounded_corners: true,
       camera_bar_shadows: true,
       camera_rounded_corners: true,
       camera_shadows: true,
@@ -20,6 +21,7 @@ describe("WatchZone card configuration", () => {
       display_zone: true,
       event_history_days: 5,
       event_rounded_corners: true,
+      event_shadows: true,
       highlight_camera_on_activity: true,
       view_timelapse_on_thumbnail_hover: true,
       rounded_outer_corners: true,

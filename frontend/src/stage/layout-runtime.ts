@@ -9,7 +9,7 @@ import { repeat } from "lit/directives/repeat.js";
 
 import { CameraSessionContext } from "./camera-session-context";
 import { CameraSelectionContext } from "./camera-selection-context";
-import { ActivityDateFilterContext } from "./activity";
+import { ActivityFilterContext } from "./activity";
 import { ALERTS_MODULE_TYPE, EVENTS_MODULE_TYPE } from "../core/constants";
 import "./activity";
 import type {
@@ -61,12 +61,12 @@ interface PlaceableRecord {
 
 /** Owns validated stage rendering, lazy placeable loading, and local failures. */
 export class LayoutRuntime implements ReactiveController {
-  private readonly _activityDateFilter = new ActivityDateFilterContext();
+  private readonly _activityFilter = new ActivityFilterContext();
   private _connected = false;
   private readonly _cameraSelection = new CameraSelectionContext();
   private readonly _cameraSession = new CameraSessionContext();
   private _context: Omit<PlaceableRuntimeContext, "placeableId"> = {
-    activityDateFilter: this._activityDateFilter,
+    activityFilter: this._activityFilter,
     cameraSelection: this._cameraSelection,
     cameraSession: this._cameraSession,
   };
@@ -168,7 +168,7 @@ export class LayoutRuntime implements ReactiveController {
     const transportChanged = this._context.api?.identity !== api?.identity;
     const localeChanged = this._context.localize !== localize;
     this._context = {
-      activityDateFilter: this._activityDateFilter,
+      activityFilter: this._activityFilter,
       api,
       cameraSelection: this._cameraSelection,
       cameraSession: this._cameraSession,
@@ -302,7 +302,7 @@ export class LayoutRuntime implements ReactiveController {
             </button>`;
           },
         )}
-        ${this._renderActivityCalendar(node)}
+        ${this._renderActivityFilters(node)}
       </nav>
       <div class="stage-stack-content">
         ${active ? this._renderStackModule(active) : nothing}
@@ -310,7 +310,7 @@ export class LayoutRuntime implements ReactiveController {
     </div>`;
   }
 
-  private _renderActivityCalendar(
+  private _renderActivityFilters(
     node: StageStackNode,
   ): TemplateResult | typeof nothing {
     const alerts = node.children.find(
@@ -322,14 +322,22 @@ export class LayoutRuntime implements ReactiveController {
     if (!alerts || !hasEvents || !isActivityConfig(alerts.config)) {
       return nothing;
     }
-    return html`<wzc-activity-calendar
-      .api=${this._context.api}
-      .cameraSelection=${this._cameraSelection}
-      .dateFilter=${this._activityDateFilter}
-      .historyDays=${alerts.config.historyDays}
-      .localize=${this._context.localize ?? englishLocalize}
-      .targetModuleId=${alerts.config.targetModuleId}
-    ></wzc-activity-calendar>`;
+    return html`<wzc-activity-filter
+        .api=${this._context.api}
+        .cameraSelection=${this._cameraSelection}
+        .filterContext=${this._activityFilter}
+        .historyDays=${alerts.config.historyDays}
+        .localize=${this._context.localize ?? englishLocalize}
+        .targetModuleId=${alerts.config.targetModuleId}
+      ></wzc-activity-filter>
+      <wzc-activity-calendar
+        .api=${this._context.api}
+        .cameraSelection=${this._cameraSelection}
+        .filterContext=${this._activityFilter}
+        .historyDays=${alerts.config.historyDays}
+        .localize=${this._context.localize ?? englishLocalize}
+        .targetModuleId=${alerts.config.targetModuleId}
+      ></wzc-activity-calendar>`;
   }
 
   private _renderStackModule(
@@ -504,12 +512,22 @@ export class LayoutRuntime implements ReactiveController {
   }
 
   private _renderPlaceholder(record: PlaceableRecord): TemplateResult {
+    const config =
+      typeof record.node.config === "object" && record.node.config !== null
+        ? (record.node.config as Record<string, unknown>)
+        : {};
     const status = html`<span class="visually-hidden">
       ${this._localize("layout.preparing_module")}
     </span>`;
     if (record.placeholder === "activity") {
       return html`<div
-        class="module-placeholder activity-skeleton"
+        class=${[
+          "module-placeholder",
+          "activity-skeleton",
+          config.shadows === false ? "no-shadows" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
         role="status"
       >
         ${status}
@@ -521,7 +539,14 @@ export class LayoutRuntime implements ReactiveController {
     }
     if (record.placeholder === "camera-navigation") {
       return html`<div
-        class="module-placeholder camera-navigation-skeleton"
+        class=${[
+          "module-placeholder",
+          "camera-navigation-skeleton",
+          config.roundedCorners === false ? "square" : "rounded",
+          config.shadows === false ? "no-shadows" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
         role="status"
       >
         ${status}
