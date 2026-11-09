@@ -10,6 +10,7 @@ export interface RecordedMediaSource {
 
 export interface RecordedMediaRequest {
   readonly id: string;
+  readonly kind: "snapshot" | "video";
   readonly posterUrl?: string;
   readonly preferredTransport: RecordedMediaTransport;
   readonly sources: readonly RecordedMediaSource[];

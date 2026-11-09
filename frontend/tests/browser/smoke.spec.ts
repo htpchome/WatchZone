@@ -453,7 +453,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
             : [],
         preferred_transport: "file",
         revision: `revision-${index}`,
-        snapshot_url: null,
+        snapshot_url: index === 3 ? null : "/thumbnail.svg",
         start_time: 1_700_000_000 - index * 60,
         sub_label: index === 0 ? "Resident" : null,
         thumbnail_url: index === 3 ? null : "/thumbnail.svg",
@@ -516,9 +516,12 @@ test("keeps activity content in an independently scrolling viewport", async ({
               end_time: event.end_time,
               id: `review:${camera}:${index}`,
               labels: [event.label],
+              media_end_time: event.end_time + 5,
+              media_start_time: event.start_time - 5,
               playback_sources: event.playback_sources,
               preferred_transport: "hls",
               revision: event.revision,
+              related_event_ids: [event.id],
               snapshot_url: event.snapshot_url,
               start_time: event.start_time,
               sub_labels: event.sub_label ? [event.sub_label] : [],
@@ -1003,6 +1006,15 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect(mediaDialog).toBeHidden();
   await expect(recordedVideo).toHaveCount(0);
   await expect(page.locator("wzc-recorded-video-dialog .scrim")).toHaveCount(0);
+
+  await events.locator('button[aria-label="View snapshot"]').first().click();
+  await expect(mediaDialog).toBeVisible();
+  const snapshot = page.locator("wzc-recorded-video-dialog img.snapshot");
+  await expect(snapshot).toBeVisible();
+  await expect(snapshot).toHaveAttribute("src", "/thumbnail.svg");
+  await expect(page.locator("wzc-recorded-video-player")).toHaveCount(0);
+  await modalClose.click();
+  await expect(mediaDialog).toBeHidden();
 
   await page
     .locator("wzc-camera-navigation button")

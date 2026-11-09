@@ -99,6 +99,14 @@ export const draggableDialogStyles = css`
     inline-size: 100%;
   }
 
+  .snapshot {
+    aspect-ratio: 16 / 9;
+    block-size: auto;
+    display: block;
+    inline-size: 100%;
+    object-fit: contain;
+  }
+
   wzc-toast-region {
     z-index: 2;
   }

@@ -1,6 +1,6 @@
 # Recorded Video Viewer Contract
 
-This document is normative for alert, event, and recording playback.
+This document is normative for alert, event, snapshot, and recording viewing.
 
 ## Ownership
 
@@ -20,6 +20,9 @@ This document is normative for alert, event, and recording playback.
   primitives and recorded player. It does not add a parallel control overlay.
 - Providers normalize media URLs into provider-neutral playback sources. UI
   modules and shared tiles do not construct provider-specific URLs.
+- Snapshot actions reuse the same draggable viewer shell and render the
+  authenticated still image directly. They do not create a video player or
+  acquire a temporary live-audio mute lease.
 
 ## Playback selection
 
@@ -40,7 +43,8 @@ This document is normative for alert, event, and recording playback.
 ## Interaction and audio
 
 - Any non-action area of a playable activity tile opens the recorded-media
-  viewer. Download and snapshot actions keep their independent behavior.
+  viewer. Download remains independent; snapshot actions open the still image
+  in the same viewer shell.
 - The recorded video opens with native controls, autoplay requested,
   `playsinline`, and muted audio.
 - Recorded media uses the shared bounded display-zoom controller and shared

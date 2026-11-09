@@ -4,7 +4,10 @@ import type {
   CameraSelectionContext,
   CameraSelectionState,
 } from "./camera-selection-context";
-import { EVENTS_REFRESH_INTERVAL_MS } from "../core/constants";
+import {
+  ACTIVITY_EMPTY_CONFIRM_DELAY_MS,
+  EVENTS_REFRESH_INTERVAL_MS,
+} from "../core/constants";
 import type { HomeAssistantApi } from "../core/home-assistant";
 
 export interface ActiveCameraActivityItem {
@@ -34,7 +37,10 @@ export class ActiveCameraActivityController<
 
   private _activeEntityId?: string;
   private _activeCameraLabel?: string;
+  private _itemsEntityId?: string;
   private _connected = false;
+  private _emptyConfirmationPending = false;
+  private _emptyConfirmTimer?: number;
   private _generation = 0;
   private _refreshTimer?: number;
   private readonly _retriedMedia = new Set<string>();
@@ -64,6 +70,7 @@ export class ActiveCameraActivityController<
     this._unsubscribe = undefined;
     this._subscribedSelection = undefined;
     this._stopRefresh();
+    this._stopEmptyConfirmation();
     this._generation += 1;
   }
 
@@ -95,9 +102,9 @@ export class ActiveCameraActivityController<
       this._subscribedTarget = context.targetModuleId;
       this._activeEntityId = undefined;
       this._activeCameraLabel = undefined;
-      this.items = [];
       this._retriedMedia.clear();
       this._stopRefresh();
+      this._stopEmptyConfirmation();
       this._generation += 1;
       if (context.cameraSelection && context.targetModuleId) {
         this._unsubscribe = context.cameraSelection.subscribe(
@@ -130,15 +137,21 @@ export class ActiveCameraActivityController<
     }
     const cameraChanged = activeEntityId !== this._activeEntityId;
     this._activeEntityId = activeEntityId;
-    this._activeCameraLabel = activeCameraLabel;
+    if (activeCameraLabel !== undefined) {
+      this._activeCameraLabel = activeCameraLabel;
+    }
     if (!cameraChanged) {
       this._host.requestUpdate();
       return;
     }
-    this.items = [];
     this._retriedMedia.clear();
     this._stopRefresh();
+    this._stopEmptyConfirmation();
     this._generation += 1;
+    if (activeEntityId && this._itemsEntityId !== activeEntityId) {
+      this.items = [];
+      this._itemsEntityId = activeEntityId;
+    }
     this._host.requestUpdate();
     if (!activeEntityId) return;
     void this._refresh(false);
@@ -163,7 +176,19 @@ export class ActiveCameraActivityController<
       });
       if (generation !== this._generation || entityId !== this._activeEntityId)
         return;
+      if (items.length === 0 && this.items.length > 0) {
+        if (!this._emptyConfirmationPending) {
+          this._emptyConfirmationPending = true;
+          this._emptyConfirmTimer = window.setTimeout(() => {
+            this._emptyConfirmTimer = undefined;
+            void this._refresh(false);
+          }, ACTIVITY_EMPTY_CONFIRM_DELAY_MS);
+          return;
+        }
+      }
+      this._stopEmptyConfirmation();
       this.items = items;
+      this._itemsEntityId = entityId;
     } catch {
       if (generation === this._generation) this._onError();
     } finally {
@@ -178,5 +203,13 @@ export class ActiveCameraActivityController<
     if (this._refreshTimer !== undefined)
       window.clearInterval(this._refreshTimer);
     this._refreshTimer = undefined;
+  }
+
+  private _stopEmptyConfirmation(): void {
+    if (this._emptyConfirmTimer !== undefined) {
+      window.clearTimeout(this._emptyConfirmTimer);
+    }
+    this._emptyConfirmTimer = undefined;
+    this._emptyConfirmationPending = false;
   }
 }

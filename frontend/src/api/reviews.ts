@@ -15,7 +15,10 @@ export interface ReviewItem {
   readonly playback_sources: readonly RecordedMediaSource[];
   readonly preferred_transport: RecordedMediaTransport;
   readonly labels: readonly string[];
+  readonly media_end_time: number;
+  readonly media_start_time: number;
   readonly revision: string;
+  readonly related_event_ids: readonly string[];
   readonly snapshot_url: string | null;
   readonly start_time: number;
   readonly sub_labels: readonly string[];

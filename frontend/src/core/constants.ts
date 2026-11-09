@@ -54,6 +54,7 @@ export const MEDIA_CONTROL_EVENT = `${APP_ID}-media-control`;
 export const RECORDED_MEDIA_OPEN_EVENT = `${APP_ID}-recorded-media-open`;
 export const RECORDED_MEDIA_ERROR_EVENT = `${APP_ID}-recorded-media-error`;
 export const EVENTS_REFRESH_INTERVAL_MS = 15_000;
+export const ACTIVITY_EMPTY_CONFIRM_DELAY_MS = 1_500;
 export const DEFAULT_EVENT_HISTORY_DAYS = 5;
 export const MIN_EVENT_HISTORY_DAYS = 1;
 export const MAX_EVENT_HISTORY_DAYS = 15;

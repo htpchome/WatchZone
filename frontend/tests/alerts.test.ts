@@ -13,15 +13,18 @@ const reviews = [
     clip_url: "/alert.mp4",
     end_time: 124,
     id: "frigate:review-1",
-    labels: ["person"],
+    labels: ["person", "bird"],
+    media_end_time: 129,
+    media_start_time: 95,
     playback_sources: [
       { content_type: "video/mp4", transport: "file", url: "/alert.mp4" },
     ],
     preferred_transport: "hls",
     revision: "revision-1",
-    snapshot_url: null,
+    related_event_ids: ["frigate:event-1", "frigate:event-2"],
+    snapshot_url: "/alert-snapshot.jpg",
     start_time: 100,
-    sub_labels: ["Resident"],
+    sub_labels: ["Resident", "Northern Mockingbird", "American Goldfinch"],
     thumbnail_url: "/alert.webp",
     zones: ["driveway"],
   },
@@ -32,6 +35,8 @@ const reviews = [
     end_time: 90,
     id: "frigate:review-2",
     labels: ["cat"],
+    media_end_time: 95,
+    media_start_time: 75,
     playback_sources: [
       {
         content_type: "application/vnd.apple.mpegurl",
@@ -41,6 +46,7 @@ const reviews = [
     ],
     preferred_transport: "hls",
     revision: "revision-2",
+    related_event_ids: ["frigate:event-3"],
     snapshot_url: null,
     start_time: 80,
     sub_labels: [],
@@ -95,13 +101,30 @@ describe("alerts module", () => {
       [...(activityRoot(module)?.querySelectorAll("wzc-badge") ?? [])].map(
         ({ textContent }) => textContent?.trim(),
       ),
-    ).toEqual(["Person", "Resident", "Alert", "Cat", "Detection"]);
+    ).toEqual([
+      "Person",
+      "Bird",
+      "Resident",
+      "Northern Mockingbird",
+      "American Goldfinch",
+      "Alert",
+      "Cat",
+      "Detection",
+    ]);
     expect(
       activityRoot(module)?.querySelectorAll(".thumbnail-wrap.alert"),
     ).toHaveLength(1);
     expect(
       activityRoot(module)?.querySelectorAll(".thumbnail-wrap.detection"),
     ).toHaveLength(1);
+    expect(
+      activityRoot(module)?.querySelectorAll<HTMLButtonElement>(
+        'button[aria-label="View snapshot"]',
+      ),
+    ).toHaveLength(1);
+    expect(activityRoot(module)?.querySelector(".duration")?.textContent).toBe(
+      "34s",
+    );
   });
 });
 

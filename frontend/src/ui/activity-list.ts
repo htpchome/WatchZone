@@ -37,6 +37,8 @@ export interface ActivityListItem {
   readonly clipUrl: string | null;
   readonly endTime: number | null;
   readonly id: string;
+  readonly mediaEndTime?: number;
+  readonly mediaStartTime?: number;
   readonly objectLabels: readonly string[];
   readonly playbackSources: readonly RecordedMediaSource[];
   readonly preferredTransport: RecordedMediaTransport;
@@ -130,10 +132,10 @@ export class ActivityList extends LitElement {
       (url): url is string =>
         url !== null && !this._failedMedia.has(mediaKey(item, url)),
     );
-    const duration = Math.max(
-      1,
-      Math.round((item.endTime ?? Date.now() / 1000) - item.startTime),
-    );
+    const snapshotUrl = item.snapshotUrl;
+    const durationStart = item.mediaStartTime ?? item.startTime;
+    const durationEnd = item.mediaEndTime ?? item.endTime ?? Date.now() / 1000;
+    const duration = Math.max(1, Math.round(durationEnd - durationStart));
     const objectLabels = this.displayObjectBadges ? item.objectLabels : [];
     const typeBadge = this.displayTypeBadges ? item.typeBadge : undefined;
     const objectColors = distinctBadgeColorsForLabels(
@@ -162,6 +164,7 @@ export class ActivityList extends LitElement {
               @click=${() =>
                 openRecordedMedia(this, {
                   id: item.id,
+                  kind: "video",
                   posterUrl,
                   preferredTransport: item.preferredTransport,
                   sources: item.playbackSources,
@@ -253,16 +256,31 @@ export class ActivityList extends LitElement {
             : null
         }
         ${
-          item.snapshotUrl
-            ? html`<a
+          snapshotUrl
+            ? html`<button
                 class="action"
-                href=${this.api?.resolveUrl(item.snapshotUrl) ?? item.snapshotUrl}
-                target="_blank"
-                rel="noopener"
+                data-recorded-media-opener="true"
+                type="button"
                 title=${this.localize("events.view_snapshot")}
                 aria-label=${this.localize("events.view_snapshot")}
-                ><ha-icon icon="mdi:camera"></ha-icon
-              ></a>`
+                @click=${() =>
+                  openRecordedMedia(this, {
+                    id: `${item.id}:snapshot`,
+                    kind: "snapshot",
+                    posterUrl,
+                    preferredTransport: "file",
+                    sources: [
+                      {
+                        content_type: "image/jpeg",
+                        transport: "file",
+                        url: snapshotUrl,
+                      },
+                    ],
+                    title,
+                  })}
+              >
+                <ha-icon icon="mdi:camera"></ha-icon>
+              </button>`
             : null
         }
       </div>

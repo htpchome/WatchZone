@@ -2,6 +2,7 @@ import { html, LitElement } from "lit";
 import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import {
+  RECORDED_MEDIA_ERROR_EVENT,
   RECORDED_VIDEO_CLOSE_EVENT,
   RECORDED_VIDEO_DIALOG_TAG,
   RECORDED_VIDEO_PLAYER_TAG,
@@ -39,6 +40,7 @@ export class DraggableRecordedVideoDialog extends LitElement {
   public request?: RecordedMediaRequest;
 
   private _active = false;
+  private _pendingNativeCloses = 0;
   private _drag?: {
     readonly offsetX: number;
     readonly offsetY: number;
@@ -53,6 +55,7 @@ export class DraggableRecordedVideoDialog extends LitElement {
   public disconnectedCallback(): void {
     window.removeEventListener("resize", this._clampDialog);
     this._removeDocumentListeners();
+    this._clearPointerInteractions();
     super.disconnectedCallback();
   }
 
@@ -85,11 +88,19 @@ export class DraggableRecordedVideoDialog extends LitElement {
       <div class="body">
         ${
           this._active
-            ? staticHtml`<${playerTag}
-                .api=${this.api}
-                .localize=${this.localize}
-                .request=${this.request}
-              ></${playerTag}>`
+            ? this.request?.kind === "snapshot"
+              ? html`<img
+                  class="snapshot media-surface"
+                  src=${this._snapshotUrl()}
+                  alt=${this.request.title}
+                  @error=${this._handleSnapshotError}
+                />`
+              : staticHtml`<${playerTag}
+                  class="media-surface"
+                  .api=${this.api}
+                  .localize=${this.localize}
+                  .request=${this.request}
+                ></${playerTag}>`
             : null
         }
         <wzc-toast-region
@@ -123,7 +134,12 @@ export class DraggableRecordedVideoDialog extends LitElement {
 
   public close = (): void => {
     this._removeDocumentListeners();
-    this._dialog()?.close();
+    this._clearPointerInteractions();
+    const dialog = this._dialog();
+    if (!dialog?.open) return;
+    this._pendingNativeCloses += 1;
+    dialog.close();
+    this._finishClose();
   };
 
   private _open(): void {
@@ -149,6 +165,14 @@ export class DraggableRecordedVideoDialog extends LitElement {
   private readonly _handleCancel = (): void => undefined;
 
   private readonly _handleClose = (): void => {
+    if (this._pendingNativeCloses > 0) {
+      this._pendingNativeCloses -= 1;
+      return;
+    }
+    this._finishClose();
+  };
+
+  private _finishClose(): void {
     window.removeEventListener("resize", this._clampDialog);
     this._removeDocumentListeners();
     this._active = false;
@@ -159,7 +183,7 @@ export class DraggableRecordedVideoDialog extends LitElement {
         composed: true,
       }),
     );
-  };
+  }
 
   private readonly _handleBackdropClick = (): void => undefined;
 
@@ -201,9 +225,7 @@ export class DraggableRecordedVideoDialog extends LitElement {
     if (!dialog) return;
     const rect = dialog.getBoundingClientRect();
     this._prepareManualBounds(rect);
-    const player = this.renderRoot.querySelector<HTMLElement>(
-      RECORDED_VIDEO_PLAYER_TAG,
-    );
+    const player = this._mediaSurface();
     this._resize = {
       mediaWidth: player?.getBoundingClientRect().width ?? rect.width,
       pointerId: event.pointerId,
@@ -243,9 +265,7 @@ export class DraggableRecordedVideoDialog extends LitElement {
     const rect = dialog.getBoundingClientRect();
     this._prepareManualBounds(rect);
     const step = event.shiftKey ? 32 : 16;
-    const player = this.renderRoot.querySelector<HTMLElement>(
-      RECORDED_VIDEO_PLAYER_TAG,
-    );
+    const player = this._mediaSurface();
     const mediaWidth = player?.getBoundingClientRect().width ?? rect.width;
     this._setMediaWidth(
       mediaWidth + (horizontal !== 0 ? horizontal : vertical) * step,
@@ -274,16 +294,12 @@ export class DraggableRecordedVideoDialog extends LitElement {
     if (!dialog?.open) return;
     const rect = dialog.getBoundingClientRect();
     if (dialog.classList.contains("dragged")) {
-      const player = this.renderRoot.querySelector<HTMLElement>(
-        RECORDED_VIDEO_PLAYER_TAG,
-      );
+      const player = this._mediaSurface();
       this._setMediaWidth(player?.getBoundingClientRect().width ?? rect.width);
       this._positionDialog(rect.left, rect.top);
       return;
     }
-    const player = this.renderRoot.querySelector<HTMLElement>(
-      RECORDED_VIDEO_PLAYER_TAG,
-    );
+    const player = this._mediaSurface();
     this._setMediaWidth(player?.getBoundingClientRect().width ?? rect.width);
   };
 
@@ -294,9 +310,45 @@ export class DraggableRecordedVideoDialog extends LitElement {
     this._setMediaWidth(size.width);
   }
 
+  private _mediaSurface(): HTMLElement | null {
+    return this.renderRoot.querySelector<HTMLElement>(".media-surface");
+  }
+
+  private _snapshotUrl(): string {
+    const path = this.request?.sources[0]?.url ?? "";
+    return this.api?.resolveUrl(path) ?? path;
+  }
+
+  private readonly _handleSnapshotError = (): void => {
+    this.dispatchEvent(
+      new CustomEvent(RECORDED_MEDIA_ERROR_EVENT, {
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  };
+
   private _removeDocumentListeners(): void {
     document.removeEventListener("click", this._handleDocumentClick, true);
     document.removeEventListener("keydown", this._handleDocumentKeyDown);
+  }
+
+  private _clearPointerInteractions(): void {
+    if (this._drag) {
+      const header = this.renderRoot.querySelector<HTMLElement>(".header");
+      if (header?.hasPointerCapture(this._drag.pointerId)) {
+        header.releasePointerCapture(this._drag.pointerId);
+      }
+      this._drag = undefined;
+    }
+    if (this._resize) {
+      const handle =
+        this.renderRoot.querySelector<HTMLElement>(".resize-handle");
+      if (handle?.hasPointerCapture(this._resize.pointerId)) {
+        handle.releasePointerCapture(this._resize.pointerId);
+      }
+      this._resize = undefined;
+    }
   }
 
   private _prepareManualBounds(rect: DOMRect): void {

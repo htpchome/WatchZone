@@ -65,6 +65,8 @@ export class AlertsModule extends LitElement {
       clipUrl: review.clip_url,
       endTime: review.end_time,
       id: review.id,
+      mediaEndTime: review.media_end_time,
+      mediaStartTime: review.media_start_time,
       objectLabels: [...review.labels, ...review.sub_labels],
       playbackSources: review.playback_sources,
       preferredTransport: review.preferred_transport,

@@ -104,8 +104,26 @@ describe("events module", () => {
     expect(open.mock.calls[0]?.[0].detail).toEqual(
       expect.objectContaining({
         id: event.id,
+        kind: "video",
         preferredTransport: "file",
         title: expect.stringMatching(/^Front - .+ - .+$/),
+      }),
+    );
+    open.mockClear();
+    activityRoot(module)
+      ?.querySelector<HTMLButtonElement>('button[aria-label="View snapshot"]')
+      ?.click();
+    expect(open).toHaveBeenCalledOnce();
+    expect(open.mock.calls[0]?.[0].detail).toEqual(
+      expect.objectContaining({
+        id: `${event.id}:snapshot`,
+        kind: "snapshot",
+        sources: [
+          expect.objectContaining({
+            content_type: "image/jpeg",
+            url: event.snapshot_url,
+          }),
+        ],
       }),
     );
     expect(
@@ -176,6 +194,54 @@ describe("events module", () => {
         activityRoot(module)?.querySelector(".placeholder svg"),
       ).not.toBeNull();
     });
+  });
+
+  it("preserves loaded activity through a transient selection reconnect", async () => {
+    const callWS = vi
+      .fn()
+      .mockResolvedValueOnce({ items: [event] })
+      .mockResolvedValueOnce({ items: [] })
+      .mockResolvedValueOnce({ items: [event] });
+    const api = {
+      callWS,
+      identity: {},
+      locale: { language: "en", time_zone: "server" },
+      resolveUrl: (path: string) => `https://ha.local${path}`,
+      subscribeMessage: vi.fn(),
+    } as unknown as HomeAssistantApi;
+    const selection = new CameraSelectionContext();
+    const owner = {};
+    const module = document.createElement(EVENTS_TAG) as EventsModule;
+    module.api = api;
+    module.cameraSelection = selection;
+    module.targetModuleId = "camera-module";
+    document.body.append(module);
+    const publish = (): void =>
+      selection.publish(
+        "camera-module",
+        owner,
+        {
+          activeEntityId: "camera.front",
+          items: [{ entityId: "camera.front", label: "Front" }],
+        },
+        vi.fn(),
+      );
+    publish();
+
+    await vi.waitFor(() => {
+      expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(1);
+    });
+    selection.clear("camera-module", owner);
+    await module.updateComplete;
+    expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(1);
+
+    publish();
+    await vi.waitFor(() => expect(callWS).toHaveBeenCalledTimes(2));
+    expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(1);
+    await vi.waitFor(() => expect(callWS).toHaveBeenCalledTimes(3), {
+      timeout: 2_500,
+    });
+    expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(1);
   });
 
   it("independently hides object and event-type badges", async () => {

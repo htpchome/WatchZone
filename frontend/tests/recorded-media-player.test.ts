@@ -11,6 +11,7 @@ import "../src/ui/recorded-video-viewer";
 
 const request: RecordedMediaRequest = {
   id: "frigate:event-1",
+  kind: "video",
   posterUrl: "https://ha.local/poster.jpg",
   preferredTransport: "file",
   sources: [
@@ -271,5 +272,56 @@ describe("recorded media player", () => {
     expect(
       container.shadowRoot?.querySelector("wzc-recorded-video-player"),
     ).toBeNull();
+  });
+
+  it("opens snapshots in the shared dialog without muting live audio", async () => {
+    const manager = new MediaSessionManager();
+    (window as unknown as Record<string, unknown>)[MEDIA_SESSION_RUNTIME_KEY] =
+      manager;
+    const states: boolean[] = [];
+    manager.subscribeForcedMute((active) => states.push(active));
+    Object.defineProperty(HTMLDialogElement.prototype, "show", {
+      configurable: true,
+      value: function (this: HTMLDialogElement) {
+        this.setAttribute("open", "");
+      },
+    });
+    const viewer = document.createElement(
+      "wzc-recorded-video-viewer",
+    ) as RecordedVideoViewer;
+    viewer.api = {
+      callWS: vi.fn(),
+      identity: { subscribeMessage: vi.fn() },
+      resolveUrl: (path: string) => `https://ha.local${path}`,
+      subscribeMessage: vi.fn(),
+    } as RecordedVideoViewer["api"];
+    viewer.request = {
+      id: "frigate:event-1:snapshot",
+      kind: "snapshot",
+      preferredTransport: "file",
+      sources: [
+        {
+          content_type: "image/jpeg",
+          transport: "file",
+          url: "/snapshot.jpg",
+        },
+      ],
+      title: "Front snapshot",
+    };
+    document.body.append(viewer);
+    await viewer.updateComplete;
+    const container = viewer.shadowRoot?.querySelector(
+      "wzc-recorded-video-dialog",
+    ) as DraggableRecordedVideoDialog;
+    await container.updateComplete;
+
+    expect(container.shadowRoot?.querySelector("img.snapshot")).toMatchObject({
+      alt: "Front snapshot",
+      src: "https://ha.local/snapshot.jpg",
+    });
+    expect(
+      container.shadowRoot?.querySelector("wzc-recorded-video-player"),
+    ).toBeNull();
+    expect(states).toEqual([false]);
   });
 });

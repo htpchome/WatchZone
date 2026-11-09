@@ -64,7 +64,9 @@ export class RecordedVideoViewer extends LitElement {
   }
 
   protected updated(changed: Map<PropertyKey, unknown>): void {
-    if (changed.has("request") && this.request) this._acquireLiveMute();
+    if (!changed.has("request")) return;
+    if (this.request?.kind === "video") this._acquireLiveMute();
+    else this._releaseLiveMute();
   }
 
   private _acquireLiveMute(): void {
