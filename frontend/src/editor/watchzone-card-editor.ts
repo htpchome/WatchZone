@@ -108,6 +108,7 @@ type BooleanConfigFlag =
   | "display_object_badges"
   | "display_zone"
   | "event_rounded_corners"
+  | "highlight_camera_on_activity"
   | "mobile_data_saving"
   | "outer_padding"
   | "outer_shadows"
@@ -266,7 +267,9 @@ export class CardEditor extends LitElement {
           heading=${this._t("editor.live_media_player")}
           item-key="live-media-player"
           .icon=${"play"}
-        ></${accordionItemTag}>
+        >
+          ${this._renderLiveMediaPlayerSettings()}
+        </${accordionItemTag}>
         <${accordionItemTag}
           heading=${this._t("editor.recorded_media_player")}
           item-key="recorded-media-player"
@@ -385,6 +388,14 @@ export class CardEditor extends LitElement {
         @value-changed=${this._handleEventHistoryDaysChange}
       ></ha-selector>
     `;
+  }
+
+  private _renderLiveMediaPlayerSettings() {
+    return this._renderBooleanOption(
+      "highlight_camera_on_activity",
+      this._t("editor.highlight_camera_on_activity"),
+      this._config?.highlight_camera_on_activity !== false,
+    );
   }
 
   private _renderLayoutSettings() {

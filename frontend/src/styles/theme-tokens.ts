@@ -115,6 +115,9 @@ export const themeTokens = css`
       --ha-color-fill-primary-normal-resting,
       transparent
     );
+    --wzc-camera-activity-outline-width: 0.25rem;
+    --wzc-camera-alert-outline-color: var(--wzc-color-error);
+    --wzc-camera-detection-outline-color: var(--wzc-color-warning);
 
     --wzc-radius-card: var(
       --wzc-theme-card-radius,

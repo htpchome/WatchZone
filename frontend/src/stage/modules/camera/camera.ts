@@ -30,6 +30,7 @@ import type { CameraOverlayVisibilityDetail } from "./live/presentation";
 import "./camera-view";
 import { cameraStyles } from "./camera.styles";
 import { CameraCarouselController } from "./carousel.controller";
+import { LiveActivityHighlightController } from "./activity-highlight.controller";
 import {
   DEFAULT_CAMERA_STAGE_HEIGHT_RATIO,
   type CameraStageSize,
@@ -58,6 +59,7 @@ export class CameraModule extends LitElement {
     cameraSession: { attribute: false },
     cameraSelection: { attribute: false },
     cameras: { attribute: false },
+    highlightActivity: { attribute: false, type: Boolean },
     localize: { attribute: false },
     retentionPreference: { attribute: false },
     roundedCorners: { attribute: false, type: Boolean },
@@ -75,12 +77,21 @@ export class CameraModule extends LitElement {
   private readonly _carousel = new CameraCarouselController(this, (index) =>
     this._select(index),
   );
+  private readonly _activityHighlight = new LiveActivityHighlightController(
+    this,
+    () => ({
+      api: this.api,
+      enabled: this.highlightActivity,
+      entityId: this.cameras[this._activeIndex]?.entityId,
+    }),
+  );
   private readonly _deviceProfile = new DeviceProfileController(this);
 
   public api?: HomeAssistantApi;
   public cameraSession?: CameraSessionContext;
   public cameraSelection?: CameraSelectionContext;
   public cameras: readonly CameraItemConfig[] = [];
+  public highlightActivity = true;
   public localize: LocalizeFunction = englishLocalize;
   public retentionPreference: MediaRetentionPreference = "automatic";
   public roundedCorners = true;
@@ -159,6 +170,9 @@ export class CameraModule extends LitElement {
               this.roundedCorners ? "" : "square-camera-corners",
               this.shadowStyle === "small" ? "camera-shadow-small" : "",
               this.shadowStyle === "none" ? "camera-shadow-none" : "",
+              this._activityHighlight.classification
+                ? `activity-${this._activityHighlight.classification}`
+                : "",
             ]
               .filter(Boolean)
               .join(" ")}

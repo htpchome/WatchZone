@@ -6,12 +6,20 @@ import type {
 
 export type ActivityUpdateKind = "events" | "reviews";
 
+export interface ActivityUpdateNotification {
+  readonly cameraName: string;
+  readonly classification?: "alert" | "detection";
+  readonly id?: string;
+  readonly phase?: "end" | "new" | "update";
+  readonly topic: ActivityUpdateKind;
+}
+
 /** Subscribe through the camera provider's native Home Assistant transport. */
 export async function subscribeActivityUpdates(
   api: HomeAssistantApi,
   entityId: string,
   kind: ActivityUpdateKind,
-  callback: () => void,
+  callback: (notification: ActivityUpdateNotification) => void,
 ): Promise<HomeAssistantUnsubscribe> {
   const source = await resolveActivityUpdateSource(api, entityId);
   switch (source.type) {

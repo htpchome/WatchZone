@@ -16,6 +16,7 @@ import type {
 
 export interface CameraModuleConfig {
   readonly cameras: readonly CameraModuleItemConfig[];
+  readonly highlightActivity: boolean;
   readonly retentionPreference: MediaRetentionPreference;
   readonly roundedCorners: boolean;
   readonly shadowStyle: CameraShadowStyle;
@@ -112,6 +113,7 @@ function updateCameraElement(
   camera.cameraSelection = context.cameraSelection;
   camera.cameraSession = context.cameraSession;
   camera.localize = context.localize ?? englishLocalize;
+  camera.highlightActivity = config.highlightActivity;
   camera.retentionPreference = config.retentionPreference;
   camera.roundedCorners = config.roundedCorners;
   camera.shadowStyle = config.shadowStyle;
@@ -184,8 +186,12 @@ function validateCameraConfig(value: unknown): CameraModuleConfig {
   ) {
     throw new Error("Camera module shadowStyle is invalid.");
   }
+  if (typeof source.highlightActivity !== "boolean") {
+    throw new Error("Camera modules require a highlightActivity setting.");
+  }
   return {
     cameras,
+    highlightActivity: source.highlightActivity,
     retentionPreference: source.retentionPreference,
     roundedCorners: source.roundedCorners,
     shadowStyle: source.shadowStyle,

@@ -20,12 +20,24 @@ describe("WatchZone card configuration", () => {
       display_zone: true,
       event_history_days: 5,
       event_rounded_corners: true,
+      highlight_camera_on_activity: true,
       rounded_outer_corners: true,
       outer_shadows: true,
       outer_padding: true,
       mobile_data_saving: false,
       cameras: [],
     });
+  });
+
+  it("defaults live activity highlighting on and accepts an explicit opt-out", () => {
+    expect(normalizeCardConfig({}).highlight_camera_on_activity).toBe(true);
+    expect(
+      normalizeCardConfig({ highlight_camera_on_activity: false })
+        .highlight_camera_on_activity,
+    ).toBe(false);
+    expect(() =>
+      normalizeCardConfig({ highlight_camera_on_activity: "false" }),
+    ).toThrow("highlight_camera_on_activity must be a boolean");
   });
 
   it("accepts an event history range from 1 through 15 days", () => {

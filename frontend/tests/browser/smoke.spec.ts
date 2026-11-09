@@ -412,6 +412,127 @@ test("uses readable camera navigation labels before HA state is available", asyn
   await expect(buttons.nth(1)).toHaveText("Front Door");
 });
 
+test("highlights live video directly from draft review notifications", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  await page.locator("watchzone-card").evaluate((element) => {
+    const card = element as HTMLElement & {
+      hass: unknown;
+      setConfig(config: unknown): void;
+    };
+    const connection = {
+      subscribeMessage: async (
+        callback: (payload: unknown) => void,
+        message: { type: string },
+      ) => {
+        if (message.type === "frigate/reviews/subscribe") {
+          const target = window as unknown as {
+            reviewNotifications?: Array<(payload: unknown) => void>;
+          };
+          target.reviewNotifications ??= [];
+          target.reviewNotifications.push(callback);
+        }
+        return () => undefined;
+      },
+    };
+    card.setConfig({
+      type: "custom:watchzone-card",
+      cameras: [{ entity_id: "camera.front" }],
+    });
+    card.hass = {
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "streaming",
+          attributes: { friendly_name: "Front" },
+        },
+      },
+      connection,
+      hassUrl: (path: string) => path,
+      callService: async () => undefined,
+      callWS: async (message: { type: string }) => {
+        if (message.type === "watchzone/activity/source") {
+          return {
+            type: "frigate",
+            instance_id: "frigate-main",
+            camera_name: "front",
+          };
+        }
+        if (message.type === "watchzone/live/camera/ready") {
+          return { ready: false };
+        }
+        return undefined;
+      },
+    };
+  });
+
+  const carousel = page.locator("wzc-camera .camera-carousel");
+  await expect(carousel).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (
+            window as unknown as {
+              reviewNotifications?: Array<(payload: unknown) => void>;
+            }
+          ).reviewNotifications?.length ?? 0,
+      ),
+    )
+    .toBeGreaterThan(1);
+
+  await page.evaluate(() => {
+    for (const callback of (
+      window as unknown as {
+        reviewNotifications?: Array<(payload: unknown) => void>;
+      }
+    ).reviewNotifications ?? [])
+      callback(
+        JSON.stringify({
+          type: "new",
+          after: {
+            camera: "front",
+            id: "review-1",
+            severity: "detection",
+          },
+        }),
+      );
+  });
+  await expect(carousel).toHaveClass(/activity-detection/);
+
+  await page.evaluate(() => {
+    for (const callback of (
+      window as unknown as {
+        reviewNotifications?: Array<(payload: unknown) => void>;
+      }
+    ).reviewNotifications ?? [])
+      callback(
+        JSON.stringify({
+          type: "update",
+          after: { camera: "front", id: "review-1", severity: "alert" },
+        }),
+      );
+  });
+  await expect(carousel).toHaveClass(/activity-alert/);
+
+  await page.evaluate(() => {
+    for (const callback of (
+      window as unknown as {
+        reviewNotifications?: Array<(payload: unknown) => void>;
+      }
+    ).reviewNotifications ?? [])
+      callback(
+        JSON.stringify({
+          type: "end",
+          after: { camera: "front", id: "review-1", severity: "alert" },
+        }),
+      );
+  });
+  await expect(carousel).not.toHaveClass(/activity-(alert|detection)/);
+});
+
 test("keeps activity content in an independently scrolling viewport", async ({
   page,
 }) => {

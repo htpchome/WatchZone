@@ -4,14 +4,18 @@ import type {
   HomeAssistantUnsubscribe,
 } from "../../core/home-assistant";
 import type { ActivityUpdateKind } from "../activity-update-resolver";
+import type { ActivityUpdateNotification } from "../activity-update-resolver";
 
 interface FrigateActivityPayload {
+  readonly type?: string;
   readonly after?: {
     readonly camera?: string;
+    readonly id?: string;
     readonly severity?: string;
   };
   readonly before?: {
     readonly camera?: string;
+    readonly id?: string;
     readonly severity?: string;
   };
 }
@@ -23,7 +27,7 @@ export async function subscribeFrigateActivityUpdates(
   api: HomeAssistantApi,
   source: FrigateActivityUpdateSource,
   kind: ActivityUpdateKind,
-  callback: () => void,
+  callback: (notification: ActivityUpdateNotification) => void,
 ): Promise<HomeAssistantUnsubscribe> {
   const topics: readonly FrigateActivityTopic[] =
     kind === "reviews" ? ["reviews", "events"] : ["events"];
@@ -32,9 +36,13 @@ export async function subscribeFrigateActivityUpdates(
     for (const topic of topics) {
       const unsubscribe = await api.subscribeMessage<unknown>(
         (payload) => {
-          if (payloadMatches(payload, source.camera_name, topic, kind)) {
-            callback();
-          }
+          const notification = normalizePayload(
+            payload,
+            source.camera_name,
+            topic,
+            kind,
+          );
+          if (notification) callback(notification);
         },
         {
           type: `frigate/${topic}/subscribe`,
@@ -53,18 +61,36 @@ export async function subscribeFrigateActivityUpdates(
   };
 }
 
-function payloadMatches(
+function normalizePayload(
   value: unknown,
   cameraName: string,
   topic: FrigateActivityTopic,
   kind: ActivityUpdateKind,
-): boolean {
+): ActivityUpdateNotification | undefined {
   const payload = parsePayload(value);
-  if (!payload) return false;
+  if (!payload) return undefined;
   const activity = payload.after ?? payload.before;
-  if (activity?.camera !== cameraName) return false;
-  if (topic === "events" || kind === "events") return true;
-  return activity.severity === "alert" || activity.severity === "detection";
+  if (activity?.camera !== cameraName) return undefined;
+  const classification =
+    activity.severity === "alert" || activity.severity === "detection"
+      ? activity.severity
+      : undefined;
+  if (topic === "reviews" && kind === "reviews" && !classification) {
+    return undefined;
+  }
+  const phase =
+    payload.type === "new" ||
+    payload.type === "update" ||
+    payload.type === "end"
+      ? payload.type
+      : undefined;
+  return {
+    cameraName,
+    classification,
+    id: activity.id,
+    phase,
+    topic,
+  };
 }
 
 function parsePayload(value: unknown): FrigateActivityPayload | undefined {

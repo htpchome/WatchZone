@@ -45,6 +45,45 @@ class FrigateSource:
         return f"frigate_go2rtc:{self.config_entry.entry_id}:{self.stream_name}"
 
 
+@dataclass(frozen=True, slots=True)
+class FrigateActivityIdentity:
+    """Identity required by Frigate's activity WebSocket proxies."""
+
+    camera_name: str
+    frigate_instance_id: str
+
+
+async def async_resolve_activity_identity(
+    hass: HomeAssistant, entity_id: str
+) -> FrigateActivityIdentity:
+    """Resolve activity identity without acquiring or validating live media."""
+    registry_entry = er.async_get(hass).async_get(entity_id)
+    if registry_entry is None or registry_entry.platform != "frigate":
+        raise ProviderPreparationError("frigate_entity_mismatch")
+
+    camera_name = _camera_name(hass, entity_id)
+    if not camera_name:
+        raise ProviderPreparationError("frigate_camera_name_unavailable")
+
+    state = hass.states.get(entity_id)
+    value = state.attributes.get("client_id") if state else None
+    instance_id = value.strip() if isinstance(value, str) else None
+    if not instance_id and registry_entry.config_entry_id is not None:
+        config_entry = hass.config_entries.async_get_entry(
+            registry_entry.config_entry_id
+        )
+        if config_entry is not None:
+            module = await _async_views_module(hass)
+            instance_id = _instance_id(module, hass, config_entry)
+    if not instance_id:
+        raise ProviderPreparationError("frigate_instance_id_unavailable")
+
+    return FrigateActivityIdentity(
+        camera_name=camera_name,
+        frigate_instance_id=instance_id,
+    )
+
+
 async def async_resolve_source(
     hass: HomeAssistant, entity_id: str, camera: Camera | None = None
 ) -> FrigateSource:

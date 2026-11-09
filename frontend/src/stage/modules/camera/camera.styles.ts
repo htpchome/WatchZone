@@ -27,6 +27,25 @@ export const cameraStyles = css`
     box-shadow: var(--wzc-live-shadow);
   }
 
+  .camera-carousel::after {
+    position: absolute;
+    z-index: 5;
+    inset: 0;
+    box-sizing: border-box;
+    border: var(--wzc-camera-activity-outline-width) solid transparent;
+    border-radius: inherit;
+    content: "";
+    pointer-events: none;
+  }
+
+  .camera-carousel.activity-alert::after {
+    border-color: var(--wzc-camera-alert-outline-color);
+  }
+
+  .camera-carousel.activity-detection::after {
+    border-color: var(--wzc-camera-detection-outline-color);
+  }
+
   .camera-carousel.square-camera-corners {
     --wzc-live-radius: 0px;
   }

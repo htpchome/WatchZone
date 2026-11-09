@@ -6,6 +6,7 @@
   "common.update": "Update",
   "editor.camera_settings": "Camera Settings",
   "editor.live_media_player": "Live Media Player",
+  "editor.highlight_camera_on_activity": "Highlight Camera on Alert/Detection",
   "editor.recorded_media_player": "Recorded Media Player",
   "editor.general_settings": "General Settings",
   "editor.display_settings": "Display Settings",

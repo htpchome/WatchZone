@@ -15,6 +15,7 @@ const obsoleteOwnershipRoots = [
   resolve(sourceRoot, "media"),
 ];
 const publicProviderResolvers = new Set([
+  "activity-update-resolver",
   "live-source-resolver",
   "ptz-source-resolver",
   "talk-source-resolver",

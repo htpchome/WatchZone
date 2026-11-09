@@ -18,6 +18,10 @@ from custom_components.watchzone.providers.activity_updates import ActivityUpdat
 from custom_components.watchzone.providers.frigate.activity_updates import (
     FrigateActivityUpdatesProvider,
 )
+from custom_components.watchzone.providers.frigate.source import (
+    FrigateActivityIdentity,
+    async_resolve_activity_identity,
+)
 
 
 class FakeActivityUpdatesProvider:
@@ -83,7 +87,7 @@ async def test_frigate_source_uses_owning_instance_and_camera(
     )
     resolver = AsyncMock(return_value=resolved)
     with patch(
-        "custom_components.watchzone.providers.frigate.activity_updates.async_resolve_source",
+        "custom_components.watchzone.providers.frigate.activity_updates.async_resolve_activity_identity",
         resolver,
     ):
         source = await FrigateActivityUpdatesProvider().async_activity_update_source(
@@ -97,3 +101,27 @@ async def test_frigate_source_uses_owning_instance_and_camera(
         camera_name="driveway",
     )
     resolver.assert_awaited_once_with(hass, "camera.driveway")
+
+
+async def test_frigate_activity_identity_does_not_require_live_stream(
+    hass: HomeAssistant,
+) -> None:
+    """Activity subscriptions remain independent from live transport readiness."""
+    entity = er.async_get(hass).async_get_or_create(
+        "camera",
+        "frigate",
+        "front",
+        suggested_object_id="front",
+    )
+    hass.states.async_set(
+        entity.entity_id,
+        "streaming",
+        {"camera_name": "front", "client_id": "frigate-main"},
+    )
+
+    assert await async_resolve_activity_identity(
+        hass, entity.entity_id
+    ) == FrigateActivityIdentity(
+        camera_name="front",
+        frigate_instance_id="frigate-main",
+    )

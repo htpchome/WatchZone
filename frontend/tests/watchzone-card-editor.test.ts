@@ -100,7 +100,12 @@ describe("watchzone-card-editor", () => {
       "Layout Settings",
       "Display Settings",
     ]);
-    expect(items[1]?.childElementCount).toBe(0);
+    expect(items[1]?.childElementCount).toBe(1);
+    expect(
+      items[1]?.querySelector(
+        '[data-config-key="highlight_camera_on_activity"]',
+      ),
+    ).not.toBeNull();
     expect(items[2]?.childElementCount).toBe(0);
     expect(items.every((item) => !item.open)).toBe(true);
     const status = editor.shadowRoot?.querySelector(
@@ -549,6 +554,33 @@ describe("watchzone-card-editor", () => {
       type: CARD_TYPE,
       title: "Camera",
       mobile_data_saving: true,
+    });
+  });
+
+  it("defaults live activity highlighting on and saves an opt-out", async () => {
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+
+    const selector = editor.shadowRoot?.querySelector(
+      '[data-config-key="highlight_camera_on_activity"]',
+    ) as TestBooleanSelector | null;
+    expect(selector?.value).toBe(true);
+
+    setBooleanSelector(
+      editor,
+      '[data-config-key="highlight_camera_on_activity"]',
+      false,
+    );
+    expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
+      type: CARD_TYPE,
+      title: "Camera",
+      highlight_camera_on_activity: false,
     });
   });
 

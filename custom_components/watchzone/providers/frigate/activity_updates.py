@@ -5,7 +5,7 @@ from __future__ import annotations
 from homeassistant.core import HomeAssistant
 
 from ..activity_updates import ActivityUpdateSource, ActivityUpdatesProvider
-from .source import async_resolve_source
+from .source import async_resolve_activity_identity
 
 
 class FrigateActivityUpdatesProvider:
@@ -16,7 +16,7 @@ class FrigateActivityUpdatesProvider:
         hass: HomeAssistant,
         entity_id: str,
     ) -> ActivityUpdateSource:
-        source = await async_resolve_source(hass, entity_id)
+        source = await async_resolve_activity_identity(hass, entity_id)
         return ActivityUpdateSource(
             type="frigate",
             instance_id=source.frigate_instance_id,

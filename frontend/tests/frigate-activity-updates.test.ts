@@ -51,23 +51,48 @@ describe("Frigate activity updates", () => {
     callbacks[0]?.(
       JSON.stringify({
         type: "new",
-        after: { camera: "driveway", severity: "detection" },
+        after: {
+          camera: "driveway",
+          id: "review-1",
+          severity: "detection",
+        },
       }),
     );
     callbacks[0]?.(
       JSON.stringify({
         type: "update",
-        after: { camera: "driveway", severity: "alert" },
+        after: { camera: "driveway", id: "review-1", severity: "alert" },
       }),
     );
     callbacks[0]?.(
       JSON.stringify({
         type: "end",
-        before: { camera: "driveway", severity: "alert" },
+        before: { camera: "driveway", id: "review-1", severity: "alert" },
       }),
     );
     callbacks[1]?.({ before: { camera: "driveway" } });
     expect(update).toHaveBeenCalledTimes(4);
+    expect(update).toHaveBeenNthCalledWith(1, {
+      cameraName: "driveway",
+      classification: "detection",
+      id: "review-1",
+      phase: "new",
+      topic: "reviews",
+    });
+    expect(update).toHaveBeenNthCalledWith(2, {
+      cameraName: "driveway",
+      classification: "alert",
+      id: "review-1",
+      phase: "update",
+      topic: "reviews",
+    });
+    expect(update).toHaveBeenNthCalledWith(3, {
+      cameraName: "driveway",
+      classification: "alert",
+      id: "review-1",
+      phase: "end",
+      topic: "reviews",
+    });
 
     unsubscribe();
     expect(unsubscribers[0]).toHaveBeenCalledOnce();

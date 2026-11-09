@@ -194,6 +194,7 @@ function hydrateModule(
         startUnmutedPhone: camera.start_live_unmuted_phone,
         title: camera.title,
       })),
+      highlightActivity: config.highlight_camera_on_activity,
       retentionPreference: config.mobile_data_saving
         ? "reduced_bandwidth"
         : "automatic",

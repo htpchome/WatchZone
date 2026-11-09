@@ -40,6 +40,7 @@ export interface CardConfig {
   readonly display_zone: boolean;
   readonly event_rounded_corners: boolean;
   readonly event_history_days: number;
+  readonly highlight_camera_on_activity: boolean;
   readonly cameras: readonly CameraConfig[];
   readonly mobile_data_saving?: boolean;
   readonly outer_padding?: boolean;
@@ -69,6 +70,7 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     "display_object_badges",
     "display_zone",
     "event_rounded_corners",
+    "highlight_camera_on_activity",
     "rounded_outer_corners",
     "outer_shadows",
     "outer_padding",
@@ -121,6 +123,8 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     typeof eventHistoryDays === "number"
       ? eventHistoryDays
       : DEFAULT_EVENT_HISTORY_DAYS;
+  normalized.highlight_camera_on_activity =
+    source.highlight_camera_on_activity !== false;
   normalized.rounded_outer_corners =
     typeof source.rounded_outer_corners === "boolean"
       ? source.rounded_outer_corners

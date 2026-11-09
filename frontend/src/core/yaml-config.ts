@@ -37,6 +37,9 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
   if (config.event_history_days === DEFAULT_EVENT_HISTORY_DAYS) {
     delete yaml.event_history_days;
   }
+  if (config.highlight_camera_on_activity !== false) {
+    delete yaml.highlight_camera_on_activity;
+  }
   if (!config.mobile_data_saving) delete yaml.mobile_data_saving;
   if (config.cameras.length === 0) delete yaml.cameras;
   else yaml.cameras = config.cameras.map(compactCameraConfig);
