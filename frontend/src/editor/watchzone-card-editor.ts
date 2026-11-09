@@ -263,6 +263,16 @@ export class CardEditor extends LitElement {
           ${this._renderCameraSettings()}
         </${accordionItemTag}>
         <${accordionItemTag}
+          heading=${this._t("editor.live_media_player")}
+          item-key="live-media-player"
+          .icon=${"play"}
+        ></${accordionItemTag}>
+        <${accordionItemTag}
+          heading=${this._t("editor.recorded_media_player")}
+          item-key="recorded-media-player"
+          .icon=${"events"}
+        ></${accordionItemTag}>
+        <${accordionItemTag}
           heading=${this._t("editor.general_settings")}
           item-key="general"
           .icon=${"settings"}

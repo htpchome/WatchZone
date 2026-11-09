@@ -5,6 +5,8 @@
   "common.remove": "Remove",
   "common.update": "Update",
   "editor.camera_settings": "Camera Settings",
+  "editor.live_media_player": "Live Media Player",
+  "editor.recorded_media_player": "Recorded Media Player",
   "editor.general_settings": "General Settings",
   "editor.display_settings": "Display Settings",
   "editor.layout_settings": "Layout Settings",

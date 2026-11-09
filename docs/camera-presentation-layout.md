@@ -78,6 +78,10 @@ provide keyboard access, and double-click/double-tap resets the stage. The
 resize handle owns only its own touch gesture and does not replace native page
 scrolling elsewhere.
 
+- The resize handle keeps a larger transparent interaction target than its
+  visible pill. The handle and the bottom control dock use shared stage-local
+  geometry so presentation changes move light, talk, and PTZ controls together.
+
 Stage sizing is separate from user display zoom. Resizing changes the viewport
 and reports only the base presentation scale required to fill it. The
 `MediaZoomController` remains the sole transform and pan-bound owner and

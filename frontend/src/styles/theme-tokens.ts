@@ -173,7 +173,9 @@ export const themeTokens = css`
     --wzc-zoom-transition-duration: 180ms;
     --wzc-stage-resize-handle-opacity: 60%;
     --wzc-stage-resize-handle-active-opacity: 100%;
-    --wzc-stage-resize-handle-block-size: 2.25rem;
+    --wzc-stage-resize-handle-block-size: 2.75rem;
+    --wzc-stage-resize-handle-inline-size: clamp(6rem, 24%, 10rem);
+    --wzc-stage-resize-handle-visible-bottom-inset: 0.15rem;
 
     --wzc-media-overlay-color: var(--ha-color-neutral-90, #e6e6e6);
     --wzc-media-overlay-surface: var(--ha-color-neutral-05, #111111);
@@ -210,6 +212,7 @@ export const themeTokens = css`
       --wzc-neutral-control-hover-background
     );
     --wzc-camera-control-inline-inset: 0.75rem;
+    --wzc-camera-control-bottom-inset: 2.25rem;
     --wzc-camera-overlay-block-inset: 0.5rem;
     --wzc-camera-overlay-inline-inset: 0.75rem;
     --wzc-camera-overlay-trailing-clearance: calc(
@@ -272,12 +275,13 @@ export const themeTokens = css`
     --wzc-recorded-media-resize-handle-size: 1.5rem;
     --wzc-recorded-media-header-background: var(--wzc-color-surface-secondary);
     --wzc-recorded-media-close-size: 2.75rem;
-    --wzc-recorded-media-close-background: color-mix(
+    --wzc-recorded-media-close-background: transparent;
+    --wzc-recorded-media-close-hover-background: color-mix(
       in srgb,
       var(--wzc-color-text-1) 8%,
       transparent
     );
-    --wzc-recorded-media-close-hover-background: var(--wzc-color-fill-primary);
+    --wzc-recorded-media-close-color: var(--wzc-color-text-1);
     --wzc-recorded-media-control-hover-background: var(
       --wzc-color-fill-primary
     );

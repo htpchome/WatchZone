@@ -45,12 +45,10 @@ export const cameraViewStyles = css`
   .stage-resize-handle {
     position: absolute;
     z-index: 3;
-    bottom: 0.2rem;
+    bottom: 0;
     left: 50%;
-    display: grid;
-    place-items: center;
     box-sizing: border-box;
-    inline-size: clamp(4rem, 18%, 7rem);
+    inline-size: var(--wzc-stage-resize-handle-inline-size);
     block-size: var(--wzc-stage-resize-handle-block-size);
     padding: 0;
     color: var(--wzc-media-overlay-color);
@@ -67,6 +65,8 @@ export const cameraViewStyles = css`
 
   .stage-resize-handle::before {
     position: absolute;
+    inset-block-end: var(--wzc-stage-resize-handle-visible-bottom-inset);
+    inset-inline-start: 0;
     inline-size: 100%;
     block-size: 1.05rem;
     background: var(--wzc-media-overlay-background);
@@ -77,15 +77,18 @@ export const cameraViewStyles = css`
   }
 
   .stage-resize-handle svg {
-    position: relative;
+    position: absolute;
+    inset-block-end: calc(
+      var(--wzc-stage-resize-handle-visible-bottom-inset) - 0.05rem
+    );
+    inset-inline-start: calc(50% - 0.575rem);
     inline-size: 1.15rem;
     block-size: 1.15rem;
     pointer-events: none;
   }
 
   .stage-resize-handle:focus-visible {
-    outline: 2px solid var(--wzc-color-primary);
-    outline-offset: 1px;
+    outline: none;
     opacity: var(--wzc-stage-resize-handle-active-opacity);
   }
 
@@ -102,12 +105,6 @@ export const cameraViewStyles = css`
   @media (hover: hover) and (pointer: fine) {
     .stage-resize-handle:hover {
       opacity: var(--wzc-stage-resize-handle-active-opacity);
-    }
-  }
-
-  @container (max-width: 480px) {
-    .stage-resize-handle {
-      block-size: 1.5rem;
     }
   }
 `;

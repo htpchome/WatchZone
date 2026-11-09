@@ -25,6 +25,7 @@ application module and owns no configuration or feature state.
 - Styling consumes semantic `--wzc-accordion-*` tokens defined at the sole
   Home Assistant theme boundary.
 
-The current card editor uses four closed-by-default groups: Camera Settings,
-General Settings, Layout Settings, and Display Options. Opening and closing a
-group is presentation state only and never changes dirty state or card YAML.
+The current card editor uses six closed-by-default groups: Camera Settings,
+Live Media Player, Recorded Media Player, General Settings, Layout Settings,
+and Display Settings. Opening and closing a group is presentation state only and
+never changes dirty state or card YAML.

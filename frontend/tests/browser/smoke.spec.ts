@@ -709,6 +709,19 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(modalCloseBox?.width).toBeCloseTo(modalCloseBox?.height ?? 0, 3);
   expect(modalCloseBox?.width).toBeGreaterThanOrEqual(44);
   await expect(modalClose.locator('ha-icon[icon="mdi:close"]')).toHaveCount(1);
+  await expect(modalClose).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  const modalCloseColor = await modalClose.evaluate(
+    (element) => getComputedStyle(element).color,
+  );
+  await modalClose.hover();
+  await expect
+    .poll(() =>
+      modalClose.evaluate(
+        (element) => getComputedStyle(element).backgroundColor,
+      ),
+    )
+    .not.toBe("rgba(0, 0, 0, 0)");
+  await expect(modalClose).toHaveCSS("color", modalCloseColor);
   const recordedVideo = page.locator("wzc-recorded-video-player video");
   await expect(recordedVideo).not.toHaveAttribute("controls", "");
   await expect(recordedVideo).toHaveAttribute("autoplay", "");
@@ -1728,6 +1741,8 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
     cameraBox.y + cameraBox.height - (talkButtonBox.y + talkButtonBox.height);
   const desktopLightBottomInset =
     cameraBox.y + cameraBox.height - (lightButtonBox.y + lightButtonBox.height);
+  expect(desktopTalkBottomInset).toBeCloseTo(36, 0);
+  expect(desktopLightBottomInset).toBeCloseTo(36, 0);
   expect(
     talkButtonBox.x - (lightButtonBox.x + lightButtonBox.width),
   ).toBeGreaterThanOrEqual(8);
@@ -1957,9 +1972,29 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
           mobileCameraBox.width -
           (mobilePtzBox.x + mobilePtzBox.width),
       ).toBeCloseTo(desktopTrailingClearance, 0);
-      expect(mobileTalkBox.y + mobileTalkBox.height).toBeLessThanOrEqual(
-        mobileResizeHandleBox.y + 1,
+      const mobileHandleVisualTop = await mobileResizeHandle.evaluate(
+        (element) => {
+          const handle = element.getBoundingClientRect();
+          const visual = getComputedStyle(element, "::before");
+          return (
+            handle.bottom -
+            Number.parseFloat(visual.bottom) -
+            Number.parseFloat(visual.height)
+          );
+        },
       );
+      expect(mobileTalkBox.y + mobileTalkBox.height).toBeLessThanOrEqual(
+        mobileHandleVisualTop + 2,
+      );
+      expect(mobileResizeHandleBox.width).toBeGreaterThanOrEqual(96);
+      expect(mobileResizeHandleBox.height).toBeGreaterThanOrEqual(44);
+      expect(
+        mobileCameraBox.y +
+          mobileCameraBox.height -
+          (mobileResizeHandleBox.y + mobileResizeHandleBox.height),
+      ).toBeCloseTo(0, 1);
+      await mobileResizeHandle.focus();
+      await expect(mobileResizeHandle).toHaveCSS("outline-style", "none");
       const cameraComposition = page.locator(".module-composition").first();
       const [initialModuleBox, initialCompositionBox] = await Promise.all([
         camera.boundingBox(),
@@ -1976,12 +2011,12 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
 
       await page.mouse.move(
         mobileResizeHandleBox.x + mobileResizeHandleBox.width / 2,
-        mobileResizeHandleBox.y + mobileResizeHandleBox.height / 2,
+        mobileResizeHandleBox.y + mobileResizeHandleBox.height - 8,
       );
       await page.mouse.down();
       await page.mouse.move(
         mobileResizeHandleBox.x + mobileResizeHandleBox.width / 2,
-        mobileResizeHandleBox.y + mobileResizeHandleBox.height / 2 + 30,
+        mobileResizeHandleBox.y + mobileResizeHandleBox.height + 22,
       );
       await page.mouse.up();
 
@@ -2522,7 +2557,7 @@ test("editor uses exclusive accordions and shared draft status", async ({
 
   const editor = page.locator("#accordion-editor");
   const items = editor.locator("wzc-accordion-item");
-  await expect(items).toHaveCount(4);
+  await expect(items).toHaveCount(6);
   await expect(items.locator("details[open]")).toHaveCount(0);
   await items.nth(0).locator("summary").click();
   await expect(items.nth(0).locator("details")).toHaveAttribute("open", "");

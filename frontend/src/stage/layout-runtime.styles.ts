@@ -211,10 +211,7 @@ export const stageRuntimeStyles = css`
     box-sizing: border-box;
     min-inline-size: 0;
     padding: 0 var(--wzc-camera-control-inline-inset)
-      calc(
-        var(--wzc-stage-resize-handle-block-size) +
-          var(--wzc-camera-overlay-block-inset)
-      );
+      var(--wzc-camera-control-bottom-inset);
     column-gap: var(--wzc-control-dock-gap);
   }
 
@@ -352,7 +349,7 @@ export const stageRuntimeStyles = css`
     }
 
     .component-slot-controls {
-      padding-block-end: 1.75rem;
+      --wzc-camera-control-bottom-inset: 1.25rem;
     }
   }
 `;

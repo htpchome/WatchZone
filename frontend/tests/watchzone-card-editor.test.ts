@@ -94,10 +94,14 @@ describe("watchzone-card-editor", () => {
     ];
     expect(items.map((item) => item.heading)).toEqual([
       "Camera Settings",
+      "Live Media Player",
+      "Recorded Media Player",
       "General Settings",
       "Layout Settings",
       "Display Settings",
     ]);
+    expect(items[1]?.childElementCount).toBe(0);
+    expect(items[2]?.childElementCount).toBe(0);
     expect(items.every((item) => !item.open)).toBe(true);
     const status = editor.shadowRoot?.querySelector(
       "wzc-toast-region",
