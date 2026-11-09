@@ -70,7 +70,6 @@ export class DraggableRecordedVideoDialog extends LitElement {
         @pointerup=${this._endDrag}
         @pointercancel=${this._endDrag}
       >
-        <span class="title">${this.request?.title ?? ""}</span>
         <button
           class="close"
           type="button"
@@ -81,6 +80,7 @@ export class DraggableRecordedVideoDialog extends LitElement {
         >
           <ha-icon icon="mdi:close"></ha-icon>
         </button>
+        <span class="title">${this.request?.title ?? ""}</span>
       </div>
       <div class="body">
         ${

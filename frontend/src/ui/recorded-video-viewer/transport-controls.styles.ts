@@ -4,8 +4,8 @@ export const recordedVideoTransportStyles = css`
   :host {
     position: absolute;
     z-index: 3;
-    inset-block-end: var(--wzc-recorded-transport-block-inset);
-    inset-inline: var(--wzc-recorded-transport-inline-inset);
+    inset-block-end: 0;
+    inset-inline: 0;
     display: block;
     color: var(--wzc-recorded-transport-color);
     opacity: 0;
@@ -24,18 +24,9 @@ export const recordedVideoTransportStyles = css`
   }
 
   :host([viewport-edge]) {
-    inset-block-end: max(
-      var(--wzc-recorded-transport-block-inset),
-      env(safe-area-inset-bottom, 0px)
-    );
-    inset-inline-start: max(
-      var(--wzc-recorded-transport-inline-inset),
-      env(safe-area-inset-left, 0px)
-    );
-    inset-inline-end: max(
-      var(--wzc-recorded-transport-inline-inset),
-      env(safe-area-inset-right, 0px)
-    );
+    inset-block-end: env(safe-area-inset-bottom, 0px);
+    inset-inline-start: env(safe-area-inset-left, 0px);
+    inset-inline-end: env(safe-area-inset-right, 0px);
   }
 
   .transport {
@@ -51,7 +42,7 @@ export const recordedVideoTransportStyles = css`
     padding: var(--wzc-recorded-transport-padding);
     color: inherit;
     background: var(--wzc-recorded-transport-background);
-    border-radius: var(--wzc-radius-small);
+    border-radius: 0;
     box-shadow: var(--wzc-media-overlay-shadow);
   }
 
@@ -65,7 +56,7 @@ export const recordedVideoTransportStyles = css`
     min-inline-size: 0;
     min-block-size: 0;
     padding: 0;
-    color: inherit;
+    color: var(--wzc-recorded-transport-icon-color);
     background: transparent;
     border: 0;
     border-radius: var(--wzc-radius-small);
@@ -161,7 +152,7 @@ export const recordedVideoTransportStyles = css`
 
   @media (hover: hover) and (pointer: fine) {
     .transport-button:hover:not(:disabled) {
-      background: var(--wzc-recorded-media-control-hover-background);
+      color: var(--wzc-recorded-transport-icon-hover-color);
     }
   }
 

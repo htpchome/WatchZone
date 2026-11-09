@@ -42,16 +42,18 @@ export const draggableDialogStyles = css`
     cursor: move;
     display: flex;
     gap: 0.75rem;
-    justify-content: space-between;
+    justify-content: flex-start;
     min-block-size: 3rem;
-    padding: 0.35rem 0.5rem 0.35rem 1rem;
+    padding: 0.35rem 1rem 0.35rem 0.5rem;
     touch-action: none;
     user-select: none;
   }
 
   .title {
+    flex: 1;
     font-size: var(--wzc-font-size-medium);
     font-weight: var(--wzc-font-weight-semibold);
+    min-inline-size: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -60,21 +62,22 @@ export const draggableDialogStyles = css`
   .close {
     align-items: center;
     appearance: none;
-    background: transparent;
+    background: var(--wzc-recorded-media-close-background);
     border: 0;
-    border-radius: var(--wzc-radius-button);
+    border-radius: 50%;
     color: var(--wzc-color-text-2);
     cursor: pointer;
     display: inline-flex;
     justify-content: center;
-    min-block-size: 2.5rem;
-    min-inline-size: 2.5rem;
+    flex: none;
+    min-block-size: var(--wzc-recorded-media-close-size);
+    min-inline-size: var(--wzc-recorded-media-close-size);
     padding: 0;
   }
 
   .close:hover,
   .close:focus-visible {
-    background: var(--wzc-recorded-media-control-hover-background);
+    background: var(--wzc-recorded-media-close-hover-background);
     color: var(--wzc-color-primary);
   }
 

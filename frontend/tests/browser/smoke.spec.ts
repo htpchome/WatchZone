@@ -701,6 +701,14 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await events.locator(".tile-player").first().click();
   const mediaDialog = page.locator("wzc-recorded-video-dialog dialog");
   await expect(mediaDialog).toBeVisible();
+  const modalClose = page.getByRole("button", { name: "Close video player" });
+  const modalTitle = page.locator("wzc-recorded-video-dialog .title");
+  const modalCloseBox = await modalClose.boundingBox();
+  const modalTitleBox = await modalTitle.boundingBox();
+  expect(modalCloseBox?.x).toBeLessThan(modalTitleBox?.x ?? 0);
+  expect(modalCloseBox?.width).toBeCloseTo(modalCloseBox?.height ?? 0, 3);
+  expect(modalCloseBox?.width).toBeGreaterThanOrEqual(44);
+  await expect(modalClose.locator('ha-icon[icon="mdi:close"]')).toHaveCount(1);
   const recordedVideo = page.locator("wzc-recorded-video-player video");
   await expect(recordedVideo).not.toHaveAttribute("controls", "");
   await expect(recordedVideo).toHaveAttribute("autoplay", "");
@@ -839,12 +847,28 @@ test("keeps activity content in an independently scrolling viewport", async ({
       name: "Additional recorded video control coming soon",
     }),
   ).toBeDisabled();
-  const recordedMuteBox = await page
-    .getByRole("button", { name: "Mute recorded video" })
-    .boundingBox();
+  const recordedMute = page.getByRole("button", {
+    name: "Mute recorded video",
+  });
+  const recordedMuteBox = await recordedMute.boundingBox();
   expect(recordedMuteBox?.width).toBeGreaterThanOrEqual(30);
   expect(recordedMuteBox?.width).toBeLessThanOrEqual(44);
   expect(recordedMuteBox?.height).toBeCloseTo(recordedMuteBox?.width ?? 0, 3);
+  await expect(recordedMute).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(recordedMute).toHaveCSS("color", "rgb(229, 229, 229)");
+  await recordedMute.hover();
+  await expect(recordedMute).toHaveCSS("color", "rgb(255, 255, 255)");
+  await expect(recordedMute).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  const transportBox = await transport.boundingBox();
+  const currentPlayerBox = await page
+    .locator("wzc-recorded-video-player .viewport")
+    .boundingBox();
+  expect(transportBox?.x).toBeCloseTo(currentPlayerBox?.x ?? 0, 1);
+  expect(transportBox?.width).toBeCloseTo(currentPlayerBox?.width ?? 0, 1);
+  expect((transportBox?.y ?? 0) + (transportBox?.height ?? 0)).toBeCloseTo(
+    (currentPlayerBox?.y ?? 0) + (currentPlayerBox?.height ?? 0),
+    1,
+  );
   const dispatchRecordedDoubleClick = (): Promise<boolean> =>
     recordedVideo.evaluate((element) => {
       const event = new MouseEvent("dblclick", {
@@ -908,11 +932,13 @@ test("keeps activity content in an independently scrolling viewport", async ({
       );
     }
   }
-  const header = page.locator("wzc-recorded-video-dialog .header");
-  const headerBox = await header.boundingBox();
-  expect(headerBox).not.toBeNull();
-  if (headerBox) {
-    await page.mouse.move(headerBox.x + 20, headerBox.y + 20);
+  const dragTitleBox = await modalTitle.boundingBox();
+  expect(dragTitleBox).not.toBeNull();
+  if (dragTitleBox) {
+    await page.mouse.move(
+      dragTitleBox.x + dragTitleBox.width / 2,
+      dragTitleBox.y + dragTitleBox.height / 2,
+    );
     await page.mouse.down();
     await page.mouse.move(-500, -500);
     await page.mouse.up();

@@ -271,6 +271,13 @@ export const themeTokens = css`
     --wzc-recorded-media-dialog-min-block-size: min(10rem, calc(100dvh - 1rem));
     --wzc-recorded-media-resize-handle-size: 1.5rem;
     --wzc-recorded-media-header-background: var(--wzc-color-surface-secondary);
+    --wzc-recorded-media-close-size: 2.75rem;
+    --wzc-recorded-media-close-background: color-mix(
+      in srgb,
+      var(--wzc-color-text-1) 8%,
+      transparent
+    );
+    --wzc-recorded-media-close-hover-background: var(--wzc-color-fill-primary);
     --wzc-recorded-media-control-hover-background: var(
       --wzc-color-fill-primary
     );
@@ -286,8 +293,8 @@ export const themeTokens = css`
       var(--wzc-media-overlay-color) 45%,
       transparent
     );
-    --wzc-recorded-transport-block-inset: 0.35rem;
-    --wzc-recorded-transport-inline-inset: 0.5rem;
+    --wzc-recorded-transport-icon-color: #e5e5e5;
+    --wzc-recorded-transport-icon-hover-color: #ffffff;
     --wzc-recorded-transport-gap: 0.4rem;
     --wzc-recorded-transport-padding: 0.25rem 0.35rem;
     --wzc-recorded-transport-control-size: 2rem;
