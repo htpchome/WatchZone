@@ -1358,6 +1358,8 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   const lights = page.locator("wzc-light-control");
   const talkButton = talk.locator("button.inactive");
   const ptzControl = ptz.locator(".ptz-control");
+  const ptzRightButton = ptz.locator("button.right");
+  const ptzRightIcon = ptzRightButton.locator(":scope > svg");
   const lightButton = lights.locator(".light-button");
   const talkIcon = talkButton.locator(":scope > svg");
   const lightIcon = lightButton.locator(":scope > ha-icon svg");
@@ -1386,6 +1388,9 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
     controlsSlotBox,
     talkHostBox,
     lightHostBox,
+    ptzHostBox,
+    ptzRightButtonBox,
+    ptzRightIconBox,
     talkButtonBox,
     talkIconBox,
     lightButtonBox,
@@ -1395,6 +1400,9 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
     controlsSlot.boundingBox(),
     talk.boundingBox(),
     lights.boundingBox(),
+    ptz.boundingBox(),
+    ptzRightButton.boundingBox(),
+    ptzRightIcon.boundingBox(),
     talkButton.boundingBox(),
     talkIcon.boundingBox(),
     lightButton.boundingBox(),
@@ -1404,6 +1412,9 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   expect(controlsSlotBox).not.toBeNull();
   expect(talkHostBox).not.toBeNull();
   expect(lightHostBox).not.toBeNull();
+  expect(ptzHostBox).not.toBeNull();
+  expect(ptzRightButtonBox).not.toBeNull();
+  expect(ptzRightIconBox).not.toBeNull();
   expect(talkButtonBox).not.toBeNull();
   expect(talkIconBox).not.toBeNull();
   expect(lightButtonBox).not.toBeNull();
@@ -1413,6 +1424,9 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
     !controlsSlotBox ||
     !talkHostBox ||
     !lightHostBox ||
+    !ptzHostBox ||
+    !ptzRightButtonBox ||
+    !ptzRightIconBox ||
     !talkButtonBox ||
     !talkIconBox ||
     !lightButtonBox ||
@@ -1433,6 +1447,42 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   expect(talkHostBox.y + talkHostBox.height).toBeCloseTo(
     lightHostBox.y + lightHostBox.height,
     0,
+  );
+  expect(ptzHostBox.y + ptzHostBox.height).toBeCloseTo(
+    lightHostBox.y + lightHostBox.height,
+    0,
+  );
+  const desktopTrailingClearance = await controlsSlot.evaluate((element) => {
+    const probe = document.createElement("div");
+    probe.style.cssText =
+      "position:absolute;inline-size:var(--wzc-camera-overlay-trailing-clearance)";
+    element.append(probe);
+    const width = probe.getBoundingClientRect().width;
+    probe.remove();
+    return width;
+  });
+  expect(
+    cameraBox.x + cameraBox.width - (ptzHostBox.x + ptzHostBox.width),
+  ).toBeCloseTo(desktopTrailingClearance, 0);
+  const ptzDirectionVisualSize = await ptzRightButton.evaluate((element) => {
+    const styles = getComputedStyle(element, "::before");
+    return {
+      height: Number.parseFloat(styles.height),
+      width: Number.parseFloat(styles.width),
+    };
+  });
+  expect(ptzDirectionVisualSize.width).toBeCloseTo(
+    ptzRightButtonBox.width * 0.5,
+    1,
+  );
+  expect(ptzDirectionVisualSize.height).toBeCloseTo(
+    ptzRightButtonBox.height * 0.5,
+    1,
+  );
+  expect(ptzRightIconBox.width).toBeCloseTo(ptzRightButtonBox.width * 0.42, 1);
+  expect(ptzRightIconBox.height).toBeCloseTo(
+    ptzRightButtonBox.height * 0.42,
+    1,
   );
   expect(talkHostBox.y + talkHostBox.height).toBeLessThanOrEqual(
     controlsSlotBox.y + controlsSlotBox.height,
@@ -1666,6 +1716,15 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
       mobileLightBox &&
       mobilePtzBox
     ) {
+      expect(mobilePtzBox.y + mobilePtzBox.height).toBeCloseTo(
+        mobileLightBox.y + mobileLightBox.height,
+        0,
+      );
+      expect(
+        mobileCameraBox.x +
+          mobileCameraBox.width -
+          (mobilePtzBox.x + mobilePtzBox.width),
+      ).toBeCloseTo(desktopTrailingClearance, 0);
       expect(mobileTalkBox.y + mobileTalkBox.height).toBeLessThanOrEqual(
         mobileResizeHandleBox.y + 1,
       );
@@ -1725,6 +1784,10 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
       expect(movedTalkBox?.y).toBeGreaterThan(mobileTalkBox.y);
       expect(movedLightBox?.y).toBeGreaterThan(mobileLightBox.y);
       expect(movedPtzBox?.y).toBeGreaterThan(mobilePtzBox.y);
+      expect((movedPtzBox?.y ?? 0) + (movedPtzBox?.height ?? 0)).toBeCloseTo(
+        (movedLightBox?.y ?? 0) + (movedLightBox?.height ?? 0),
+        0,
+      );
     }
   }
 });

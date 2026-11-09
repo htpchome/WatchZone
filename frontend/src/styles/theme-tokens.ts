@@ -289,8 +289,9 @@ export const themeTokens = css`
     --wzc-talk-panel-border-color: var(--ha-color-purple-50, #a78bfa);
     --wzc-talk-wave-incoming-color: var(--ha-color-blue-40, #60a5fa);
     --wzc-talk-wave-outgoing-color: var(--ha-color-purple-40, #c084fc);
-    --wzc-ptz-button-size: clamp(1.15rem, 4.5cqi, 1.7rem);
-    --wzc-ptz-icon-size: 28%;
+    --wzc-ptz-cell-size: clamp(1.15rem, 4.5cqi, 1.7rem);
+    --wzc-ptz-button-size: calc(var(--wzc-overlay-control-min-size) * 0.5);
+    --wzc-ptz-icon-size: 42%;
     --wzc-ptz-panel-padding: 0.18rem;
     --wzc-ptz-panel-background: color-mix(
       in srgb,

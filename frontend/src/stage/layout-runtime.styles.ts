@@ -223,6 +223,7 @@ export const stageRuntimeStyles = css`
     flex-wrap: wrap;
     align-content: flex-end;
     align-items: flex-end;
+    box-sizing: border-box;
     min-inline-size: 0;
     gap: var(--wzc-control-dock-gap);
     pointer-events: none;
@@ -237,7 +238,12 @@ export const stageRuntimeStyles = css`
   }
 
   .control-region-trailing {
-    justify-content: flex-start;
+    justify-content: flex-end;
+    padding-inline-end: calc(
+      var(--wzc-camera-overlay-trailing-clearance) - var(
+          --wzc-camera-control-inline-inset
+        )
+    );
   }
 
   .control-region > .component-node,

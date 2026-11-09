@@ -20,8 +20,8 @@ export const ptzStyles = css`
     display: grid;
     position: relative;
     grid-template:
-      repeat(3, var(--wzc-ptz-button-size)) /
-      repeat(3, var(--wzc-ptz-button-size));
+      repeat(3, var(--wzc-ptz-cell-size)) /
+      repeat(3, var(--wzc-ptz-cell-size));
     place-items: center;
     box-sizing: border-box;
     padding: var(--wzc-ptz-panel-padding);
@@ -40,16 +40,26 @@ export const ptzStyles = css`
   }
 
   button {
-    --wzc-round-button-size: var(--wzc-ptz-button-size);
+    --wzc-round-button-size: var(--wzc-ptz-cell-size);
     --wzc-round-button-background: transparent;
     --wzc-round-button-border-color: transparent;
     --wzc-round-button-icon-size: var(--wzc-ptz-icon-size);
     --wzc-round-button-touch-action: none;
-    inline-size: var(--wzc-ptz-button-size);
-    block-size: var(--wzc-ptz-button-size);
+    inline-size: var(--wzc-ptz-cell-size);
+    block-size: var(--wzc-ptz-cell-size);
     min-inline-size: 0;
     min-block-size: 0;
     color: inherit;
+  }
+
+  button::before {
+    position: absolute;
+    z-index: 0;
+    inline-size: var(--wzc-ptz-button-size);
+    block-size: var(--wzc-ptz-button-size);
+    background: transparent;
+    border-radius: 50%;
+    content: "";
   }
 
   button.up {
@@ -70,6 +80,8 @@ export const ptzStyles = css`
 
   button svg {
     display: block;
+    position: relative;
+    z-index: 1;
     inline-size: 100%;
     block-size: 100%;
     pointer-events: none;
@@ -79,22 +91,22 @@ export const ptzStyles = css`
     position: absolute;
     inset-inline: 1rem;
     inset-block-end: calc(
-      var(--wzc-stage-resize-handle-block-size) + var(--wzc-ptz-button-size) +
-        var(--wzc-ptz-button-size) + var(--wzc-ptz-button-size) + 2rem
+      var(--wzc-stage-resize-handle-block-size) + var(--wzc-ptz-cell-size) +
+        var(--wzc-ptz-cell-size) + var(--wzc-ptz-cell-size) + 2rem
     );
     margin-inline: auto;
     inline-size: min(22rem, calc(100% - 2rem));
   }
 
   @media (hover: hover) and (pointer: fine) {
-    button:hover {
+    button:hover::before {
       background: var(--wzc-media-overlay-hover-background);
     }
   }
 
   @media (hover: none) {
-    button:hover,
-    button:active {
+    button:hover::before,
+    button:active::before {
       background: transparent;
     }
   }

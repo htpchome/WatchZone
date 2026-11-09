@@ -97,11 +97,12 @@ root grid
 
 The controls slot owns placement, shared gaps, local Stage-edge clearance, and
 responsive wrapping for its three logical regions. Its center region remains
-geometrically centered while the leading and trailing regions flex equally and
-wrap their own controls away from center. Components in that slot render at
-their intrinsic control size and must not position themselves relative to
-sibling components or the Stage center. Panels and transient notices may paint
-outside their dock item without changing the dock's measured control geometry.
+geometrically centered while the leading and trailing regions flex equally.
+The trailing region aligns to the Stage edge while reserving the camera media
+control rail. Components in that slot render at their intrinsic control size
+and must not position themselves relative to sibling components or the Stage
+center. Panels and transient notices may paint outside their dock item without
+changing the dock's measured control geometry.
 
 The overlay slot owns its three-by-three logical placement grid and local
 Stage-edge clearance. Its trailing clearance reserves the camera media-control
