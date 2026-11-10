@@ -226,18 +226,18 @@ export const activityListStyles = css`
     block-size: 1.15rem;
     place-items: center;
     color: var(--wzc-review-state-color);
-    background: var(--wzc-review-state-background);
+    background: transparent;
+    border: 2px solid currentcolor;
     border-radius: var(--wzc-radius-pill);
+    box-sizing: border-box;
   }
 
   .review-state.reviewed {
-    --wzc-review-state-color: var(--wzc-color-on-success);
-    --wzc-review-state-background: var(--wzc-color-fill-success);
+    --wzc-review-state-color: var(--wzc-color-success);
   }
 
   .review-state.unreviewed {
-    --wzc-review-state-color: var(--wzc-color-on-warning);
-    --wzc-review-state-background: var(--wzc-color-fill-warning);
+    --wzc-review-state-color: var(--wzc-color-warning);
   }
 
   .review-state ha-icon {

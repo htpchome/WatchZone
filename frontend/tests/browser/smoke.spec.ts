@@ -826,6 +826,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
     });
     card.style.setProperty("--restore-card-border-radius", "21px");
     card.style.setProperty("--ha-card-border-radius", "0px");
+    card.style.setProperty("--ha-card-backdrop-filter", "blur(7px)");
     card.style.setProperty("--ha-color-on-primary-normal", "#111111");
     card.style.setProperty("--primary-color", "#03a9f4");
     card.style.setProperty("--success-color", "#00a000");
@@ -935,9 +936,18 @@ test("keeps activity content in an independently scrolling viewport", async ({
   const reviewState = page.locator("wzc-reviews .review-state").first();
   await expect(reviewState).toHaveClass(/unreviewed/);
   await expect(reviewState).toHaveAttribute("aria-pressed", "false");
-  const unreviewedBackground = await reviewState
+  const unreviewedPresentation = await reviewState
     .locator(".review-state-indicator")
-    .evaluate((indicator) => getComputedStyle(indicator).backgroundColor);
+    .evaluate((indicator) => {
+      const style = getComputedStyle(indicator);
+      return {
+        background: style.backgroundColor,
+        borderColor: style.borderTopColor,
+        color: style.color,
+      };
+    });
+  expect(unreviewedPresentation.background).toBe("rgba(0, 0, 0, 0)");
+  expect(unreviewedPresentation.borderColor).toBe(unreviewedPresentation.color);
   expect(previewRequests).toBe(0);
   await expect
     .poll(() =>
@@ -968,9 +978,13 @@ test("keeps activity content in an independently scrolling viewport", async ({
     .poll(() =>
       reviewState
         .locator(".review-state-indicator")
-        .evaluate((indicator) => getComputedStyle(indicator).backgroundColor),
+        .evaluate((indicator) => getComputedStyle(indicator).color),
     )
-    .not.toBe(unreviewedBackground);
+    .not.toBe(unreviewedPresentation.color);
+  await expect(reviewState.locator(".review-state-indicator")).toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  );
   const alertList = page.locator("wzc-reviews wzc-activity-list");
   await alertList.evaluate(async (element) => {
     const list = element as HTMLElement & {
@@ -1114,6 +1128,21 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(underlayGeometry.firstTileTop).toBeGreaterThanOrEqual(
     underlayGeometry.stackNavigationBottom,
   );
+  const underlayCoverElement = page.locator(".activity-underlay-cover");
+  await expect(underlayCoverElement).toHaveAttribute("aria-hidden", "true");
+  const underlayCover = await underlayCoverElement.evaluate((cover) => ({
+    background: getComputedStyle(cover).backgroundColor,
+    backdropFilter: getComputedStyle(cover).backdropFilter,
+    pointerEvents: getComputedStyle(cover).pointerEvents,
+    tagName: cover.tagName,
+  }));
+  const cardBackground = await page
+    .locator("watchzone-card ha-card")
+    .evaluate((card) => getComputedStyle(card).backgroundColor);
+  expect(underlayCover.background).toBe(cardBackground);
+  expect(underlayCover.backdropFilter).toBe("blur(7px)");
+  expect(underlayCover.pointerEvents).toBe("none");
+  expect(underlayCover.tagName).toBe("DIV");
   await viewport.evaluate((node) => {
     node.scrollTop = 80;
     node.dispatchEvent(new Event("scroll"));

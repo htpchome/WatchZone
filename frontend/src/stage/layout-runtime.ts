@@ -288,6 +288,11 @@ export class LayoutRuntime implements ReactiveController {
       data-layout-node=${node.id}
       style=${placementStyle}
     >
+      ${
+        activityUnderlay
+          ? html`<div class="activity-underlay-cover" aria-hidden="true"></div>`
+          : nothing
+      }
       <nav
         class="stage-stack-navigation"
         aria-label=${this._localize("navigation.activity")}

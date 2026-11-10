@@ -35,18 +35,37 @@ export const stageRuntimeStyles = css`
   }
 
   .activity-underlay-stack {
+    position: relative;
+    --wzc-activity-camera-navigation-offset: calc(
+      2 * var(--wzc-stage-module-gap) + var(--wzc-camera-navigation-block-size)
+    );
     --wzc-activity-scroll-under-offset: calc(
-      2 * var(--wzc-stage-module-gap) +
-        var(--wzc-camera-navigation-block-size) +
+      var(--wzc-activity-camera-navigation-offset) +
         var(--wzc-stage-stack-button-size) + 2 *
         var(--wzc-stage-stack-navigation-padding)
     );
   }
 
+  .activity-underlay-cover {
+    position: absolute;
+    z-index: 2;
+    inset-block-start: calc(-1 * var(--wzc-activity-camera-navigation-offset));
+    inset-inline: 0;
+    block-size: var(--wzc-activity-scroll-under-offset);
+    box-sizing: border-box;
+    color: var(--wzc-color-text-1);
+    background: var(--wzc-card-background);
+    backdrop-filter: var(--wzc-card-backdrop-filter);
+    border: var(--wzc-card-border-width) solid var(--wzc-card-border-color);
+    border-radius: var(--wzc-card-radius);
+    box-shadow: var(--wzc-shadow-card);
+    pointer-events: none;
+  }
+
   .stage-camera-navigation,
   .activity-underlay-stack > .stage-stack-navigation {
     position: relative;
-    z-index: 2;
+    z-index: 3;
   }
 
   .activity-underlay-stack > .stage-stack-content {
