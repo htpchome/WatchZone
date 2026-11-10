@@ -18,10 +18,10 @@ Give the next agent this instruction:
 ## Repository state
 
 - Branch: `main`
-- Current working version: `0.0.4-dev.233`
-- Current commit: `4541454` —
-  `v0.0.4-dev.232 - fix(media): center recorded media dialog on card`
-- The worktree contains the completed, uncommitted recording scrubber change
+- Current working version: `0.0.4-dev.234`
+- Current commit: `d08218e` —
+  `v0.0.4-dev.233 - feat(recordings): add activity-aware hourly scrubber`
+- The worktree contains the completed, uncommitted control-restoration change
   described below.
 
 Always check `git status`, the canonical version in
@@ -48,7 +48,7 @@ The repository state takes precedence over this snapshot.
 
 ## Current completed change
 
-Working version `0.0.4-dev.233`:
+Working version `0.0.4-dev.234`:
 
 - Recording-hour playback has a dedicated scrubber below the video with a
   play/pause control, a full clock-hour scale, ten-minute labels, a current-time
@@ -60,6 +60,8 @@ Working version `0.0.4-dev.233`:
 - Hovering or focusing a marker presents its thumbnail and classification;
   activating it seeks to the marker start and plays. Reviews and Events retain
   their existing overlay transport and do not render the recording scrubber.
+- Recording playback retains the complete existing overlay transport; the
+  scrubber and its play/pause button are additive controls.
 - Dialog sizing accounts for the added recording controls after they render,
   while preserving the existing shared modal fit, drag, resize, and centered
   placement behavior.

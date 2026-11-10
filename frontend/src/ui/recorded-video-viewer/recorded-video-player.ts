@@ -188,7 +188,6 @@ export class RecordedVideoPlayer extends LitElement {
         .localize=${this.localize}
         .muted=${this._muted}
         .paused=${this._paused}
-        .scrubberMode=${Boolean(timeline)}
         .visible=${this._media.overlay.visible}
         .viewportEdge=${this._fullscreenActive}
         .volume=${this._volume}

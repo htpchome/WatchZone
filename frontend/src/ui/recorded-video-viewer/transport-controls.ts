@@ -33,7 +33,6 @@ export class RecordedVideoTransport extends LitElement {
     localize: { attribute: false },
     muted: { attribute: false, type: Boolean },
     paused: { attribute: false, type: Boolean },
-    scrubberMode: { attribute: false, type: Boolean },
     viewportEdge: {
       attribute: "viewport-edge",
       reflect: true,
@@ -48,7 +47,6 @@ export class RecordedVideoTransport extends LitElement {
   public localize: LocalizeFunction = englishLocalize;
   public muted = true;
   public paused = true;
-  public scrubberMode = false;
   public viewportEdge = false;
   public visible = false;
   public volume = 1;
@@ -60,7 +58,7 @@ export class RecordedVideoTransport extends LitElement {
     const timelineProgress = duration > 0 ? (currentTime / duration) * 100 : 0;
     const volumeProgress = Math.max(0, Math.min(1, this.volume)) * 100;
     return html`<div
-      class=${`transport ${this.scrubberMode ? "scrubber-mode" : ""}`}
+      class="transport"
       role="toolbar"
       aria-label=${this.localize("media_player.controls")}
       @click=${stopPropagation}
@@ -69,38 +67,34 @@ export class RecordedVideoTransport extends LitElement {
       @pointerup=${this._endPointerInteraction}
       @pointercancel=${this._endPointerInteraction}
     >
-      ${
-        this.scrubberMode
-          ? null
-          : html`<button
-                class="transport-button"
-                type="button"
-                data-control="toggle_play"
-                title=${this.localize(
-                  this.paused ? "media_player.play" : "media_player.pause",
-                )}
-                aria-label=${this.localize(
-                  this.paused ? "media_player.play" : "media_player.pause",
-                )}
-                @pointerup=${releaseTouchFocus}
-                @click=${() => this._dispatch("toggle_play")}
-              >
-                ${renderIcon(this.paused ? "play" : "pause")}
-              </button>
-              <input
-                class="timeline"
-                type="range"
-                min="0"
-                max=${String(duration)}
-                step="0.01"
-                .value=${String(currentTime)}
-                style=${rangeProgressStyle(timelineProgress)}
-                aria-label=${this.localize("media_player.seek")}
-                aria-valuetext=${timeLabel}
-                @input=${this._seek}
-              />
-              <output class="time" aria-hidden="true">${timeLabel}</output>`
-      }
+      <button
+        class="transport-button"
+        type="button"
+        data-control="toggle_play"
+        title=${this.localize(
+          this.paused ? "media_player.play" : "media_player.pause",
+        )}
+        aria-label=${this.localize(
+          this.paused ? "media_player.play" : "media_player.pause",
+        )}
+        @pointerup=${releaseTouchFocus}
+        @click=${() => this._dispatch("toggle_play")}
+      >
+        ${renderIcon(this.paused ? "play" : "pause")}
+      </button>
+      <input
+        class="timeline"
+        type="range"
+        min="0"
+        max=${String(duration)}
+        step="0.01"
+        .value=${String(currentTime)}
+        style=${rangeProgressStyle(timelineProgress)}
+        aria-label=${this.localize("media_player.seek")}
+        aria-valuetext=${timeLabel}
+        @input=${this._seek}
+      />
+      <output class="time" aria-hidden="true">${timeLabel}</output>
       <button
         class="transport-button"
         type="button"

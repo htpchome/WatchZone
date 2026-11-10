@@ -258,7 +258,7 @@ describe("recorded media player", () => {
       player.shadowRoot
         ?.querySelector("wzc-recorded-video-transport")
         ?.shadowRoot?.querySelector('[data-control="toggle_play"]'),
-    ).toBeNull();
+    ).not.toBeNull();
   });
 
   it("acquires and releases the global live-audio mute with the modal", async () => {
