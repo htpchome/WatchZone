@@ -1133,6 +1133,9 @@ test("keeps activity content in an independently scrolling viewport", async ({
   const underlayCover = await underlayCoverElement.evaluate((cover) => ({
     background: getComputedStyle(cover).backgroundColor,
     backdropFilter: getComputedStyle(cover).backdropFilter,
+    borderRadius: getComputedStyle(cover).borderRadius,
+    borderWidth: getComputedStyle(cover).borderTopWidth,
+    boxShadow: getComputedStyle(cover).boxShadow,
     pointerEvents: getComputedStyle(cover).pointerEvents,
     tagName: cover.tagName,
   }));
@@ -1141,6 +1144,9 @@ test("keeps activity content in an independently scrolling viewport", async ({
     .evaluate((card) => getComputedStyle(card).backgroundColor);
   expect(underlayCover.background).toBe(cardBackground);
   expect(underlayCover.backdropFilter).toBe("blur(7px)");
+  expect(underlayCover.borderRadius).toBe("0px");
+  expect(underlayCover.borderWidth).toBe("0px");
+  expect(underlayCover.boxShadow).toBe("none");
   expect(underlayCover.pointerEvents).toBe("none");
   expect(underlayCover.tagName).toBe("DIV");
   await viewport.evaluate((node) => {

@@ -30,5 +30,5 @@
 - In the built-in Stage, the active list paints beneath the camera-navigation
   and activity-navigation layers during scrolling. A noninteractive cover sits
   between the content and controls and consumes the same Home Assistant card
-  background, backdrop-filter, shadow, border, and radius theme semantics as
-  `ha-card`.
+  background and backdrop-filter semantics as `ha-card`. It is deliberately
+  square, borderless, and shadowless so it cannot appear as a nested card.

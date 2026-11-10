@@ -56,9 +56,9 @@ export const stageRuntimeStyles = css`
     color: var(--wzc-color-text-1);
     background: var(--wzc-card-background);
     backdrop-filter: var(--wzc-card-backdrop-filter);
-    border: var(--wzc-card-border-width) solid var(--wzc-card-border-color);
-    border-radius: var(--wzc-card-radius);
-    box-shadow: var(--wzc-shadow-card);
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
     pointer-events: none;
   }
 
