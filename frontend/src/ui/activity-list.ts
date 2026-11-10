@@ -43,6 +43,7 @@ export interface ActivityListItem {
   readonly endTime: number | null;
   readonly hoverPreviewUrl?: string | null;
   readonly id: string;
+  readonly inProgress?: boolean;
   readonly mediaEndTime?: number;
   readonly mediaStartTime?: number;
   readonly objectLabels: readonly string[];
@@ -54,6 +55,11 @@ export interface ActivityListItem {
   readonly thumbnailUrl: string | null;
   readonly typeBadge?: ActivityTypeBadge;
   readonly zones: readonly string[];
+}
+
+export interface ActivityPlaybackResolution {
+  readonly playbackSources: readonly RecordedMediaSource[];
+  readonly preferredTransport: RecordedMediaTransport;
 }
 
 const VIRTUALIZATION_THRESHOLD = 20;
@@ -73,6 +79,7 @@ export class ActivityList extends LitElement {
     loadingKey: { attribute: false },
     localize: { attribute: false },
     retryMedia: { attribute: false },
+    resolvePlayback: { attribute: false },
     roundedCorners: { attribute: false, type: Boolean },
     shadows: { attribute: false, type: Boolean },
   };
@@ -88,11 +95,15 @@ export class ActivityList extends LitElement {
   public loadingKey: TranslationKey = "events.loading";
   public localize: LocalizeFunction = englishLocalize;
   public retryMedia?: (item: ActivityListItem, url: string) => void;
+  public resolvePlayback?: (
+    item: ActivityListItem,
+  ) => Promise<ActivityPlaybackResolution | undefined>;
   public roundedCorners = true;
   public shadows = true;
 
   private readonly _failedMedia = new Set<string>();
   private _hoveredPreviewId?: string;
+  private readonly _resolvingPlayback = new Set<string>();
   private _rowGap = 0;
   private _rowHeight = 0;
   private _virtualFrame?: number;
@@ -200,6 +211,7 @@ export class ActivityList extends LitElement {
       typeBadge ? [reservedColor(typeBadge.variant)] : [],
     );
     const title = activityMediaTitle(item, this.api);
+    const playLabel = this.localize("media_player.open", { title });
     return html`<article
       class="tile"
       aria-posinset=${index + 1}
@@ -216,21 +228,14 @@ export class ActivityList extends LitElement {
       @pointerleave=${() => this._clearHoverPreview(item.id)}
     >
       ${
-        item.playbackSources.length > 0
+        item.playbackSources.length > 0 || this.resolvePlayback
           ? html`<button
               class="tile-player"
               data-recorded-media-opener="true"
               type="button"
-              title=${this.localize("media_player.open", { title })}
-              aria-label=${this.localize("media_player.open", { title })}
-              @click=${() => {
-                const request = activityRecordedMediaRequest(
-                  item,
-                  "video",
-                  this.api,
-                );
-                if (request) openRecordedMedia(this, request);
-              }}
+              title=${playLabel}
+              aria-label=${playLabel}
+              @click=${() => void this._playVideo(item)}
             ></button>`
           : null
       }
@@ -266,6 +271,13 @@ export class ActivityList extends LitElement {
         <span class="duration"
           >${formatDuration(duration, this.api?.locale)}</span
         >
+        ${
+          item.inProgress
+            ? html`<span class="in-progress"
+                >${this.localize("alerts.progress")}</span
+              >`
+            : null
+        }
       </div>
       <div class="details">
         ${
@@ -412,6 +424,30 @@ export class ActivityList extends LitElement {
     this._failedMedia.add(mediaKey(item, url));
     this.retryMedia?.(item, url);
     this.requestUpdate();
+  }
+
+  private async _playVideo(item: ActivityListItem): Promise<void> {
+    if (this._resolvingPlayback.has(item.id)) return;
+    let playable = item;
+    if (
+      this.resolvePlayback &&
+      (item.inProgress || item.playbackSources.length === 0)
+    ) {
+      this._resolvingPlayback.add(item.id);
+      try {
+        const resolution = await this.resolvePlayback(item);
+        if (!resolution) return;
+        playable = {
+          ...item,
+          playbackSources: resolution.playbackSources,
+          preferredTransport: resolution.preferredTransport,
+        };
+      } finally {
+        this._resolvingPlayback.delete(item.id);
+      }
+    }
+    const request = activityRecordedMediaRequest(playable, "video", this.api);
+    if (request) openRecordedMedia(this, request);
   }
 
   private _updateHoverPreview(

@@ -119,6 +119,10 @@ export class ActiveCameraActivityController<
     void this._refresh(true, true);
   }
 
+  public refresh(): Promise<void> {
+    return this._refresh(true, false);
+  }
+
   public get activeCameraLabel(): string | undefined {
     return this._activeCameraLabel;
   }

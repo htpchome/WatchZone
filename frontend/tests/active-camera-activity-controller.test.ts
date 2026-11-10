@@ -314,4 +314,47 @@ describe("active camera activity controller", () => {
     );
     controller.hostDisconnected();
   });
+
+  it("exposes an immediate authoritative refresh for draft media", async () => {
+    const now = Date.now() / 1000;
+    let mediaReady = false;
+    const fetch = vi.fn(async () => [
+      {
+        id: "front:draft",
+        revision: mediaReady ? "ready" : "draft",
+        start_time: now,
+      },
+    ]);
+    const selection = new CameraSelectionContext();
+    const controller = new ActiveCameraActivityController(
+      new TestHost(),
+      () => ({
+        api: {} as HomeAssistantApi,
+        cameraSelection: selection,
+        historyDays: 3,
+        targetModuleId: "camera-module",
+      }),
+      fetch,
+      vi.fn(),
+      "reviews",
+    );
+    controller.hostConnected();
+    selection.publish(
+      "camera-module",
+      {},
+      {
+        activeEntityId: "camera.front",
+        items: [{ entityId: "camera.front", label: "Front" }],
+      },
+      vi.fn(),
+    );
+    await vi.waitFor(() => expect(controller.items[0]?.revision).toBe("draft"));
+
+    mediaReady = true;
+    await controller.refresh();
+
+    expect(controller.items[0]?.revision).toBe("ready");
+    expect(fetch).toHaveBeenCalledTimes(2);
+    controller.hostDisconnected();
+  });
 });

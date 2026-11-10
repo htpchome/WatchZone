@@ -172,6 +172,28 @@ export const activityListStyles = css`
     line-height: 1;
     padding: 0.18rem 0.25rem;
     position: absolute;
+    z-index: 3;
+  }
+
+  .in-progress {
+    background: var(--wzc-color-fill-warning-quiet);
+    border: 1px solid var(--wzc-color-border-warning);
+    border-radius: var(--wzc-radius-small);
+    bottom: 0.2rem;
+    color: var(--wzc-color-warning-text);
+    font-size: var(--wzc-font-size-small);
+    font-weight: var(--wzc-font-weight-semibold);
+    inset-inline-start: 50%;
+    line-height: 1;
+    max-inline-size: calc(100% - 4rem);
+    overflow: hidden;
+    padding: 0.18rem 0.35rem;
+    pointer-events: none;
+    position: absolute;
+    text-overflow: ellipsis;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    z-index: 3;
   }
 
   .details {

@@ -953,6 +953,66 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect.poll(() => previewRequests).toBe(1);
   await page.mouse.move(0, 0);
   await expect(page.locator("wzc-alerts .hover-preview")).toHaveCount(0);
+  const alertList = page.locator("wzc-alerts wzc-activity-list");
+  await alertList.evaluate(async (element) => {
+    const list = element as HTMLElement & {
+      items: Array<{
+        inProgress?: boolean;
+        playbackSources: readonly unknown[];
+      }>;
+      resolvePlayback?: () => Promise<{
+        playbackSources: readonly unknown[];
+        preferredTransport: "file";
+      }>;
+      updateComplete: Promise<boolean>;
+    };
+    const originalItems = list.items;
+    const originalResolver = list.resolvePlayback;
+    Object.assign(list, {
+      items: [
+        {
+          ...originalItems[0],
+          inProgress: true,
+          playbackSources: [],
+        },
+      ],
+      resolvePlayback: async () => ({
+        playbackSources: [
+          {
+            content_type: "video/mp4",
+            transport: "file",
+            url: "/recording.mp4",
+          },
+        ],
+        preferredTransport: "file" as const,
+      }),
+    });
+    await list.updateComplete;
+    (
+      list as typeof list & {
+        restoreDraftFixture?: () => void;
+      }
+    ).restoreDraftFixture = () => {
+      list.items = originalItems;
+      list.resolvePlayback = originalResolver;
+    };
+  });
+  await expect(alertList.locator(".in-progress")).toHaveText("In progress");
+  await expect(alertList.locator(".tile-player")).toHaveCount(1);
+  await alertList.locator(".tile-player").click();
+  const draftDialog = page.locator("wzc-recorded-video-dialog dialog");
+  await expect(draftDialog).toBeVisible();
+  await page.getByRole("button", { name: "Close video player" }).click();
+  await alertList.evaluate(async (element) => {
+    const list = element as HTMLElement & {
+      restoreDraftFixture?: () => void;
+      updateComplete: Promise<boolean>;
+    };
+    list.restoreDraftFixture?.();
+    delete list.restoreDraftFixture;
+    await list.updateComplete;
+  });
+  await expect(alertList.locator(".in-progress")).toHaveCount(0);
   await stackButtons.nth(1).hover();
   await expect(stackButtons.nth(1)).not.toHaveCSS(
     "color",

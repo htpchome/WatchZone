@@ -195,6 +195,7 @@
   "alerts.activity": "Camera activity",
   "alerts.alert": "Alert",
   "alerts.detection": "Detection",
+  "alerts.progress": "In progress",
   "media_player.open": "Play {title}",
   "media_player.close": "Close video player",
   "media_player.resize": "Resize video player",

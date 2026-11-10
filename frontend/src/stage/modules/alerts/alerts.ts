@@ -16,11 +16,16 @@ import {
   englishLocalize,
   type LocalizeFunction,
 } from "../../../core/localization";
-import type { ActivityListItem } from "../../../ui/activity-list";
+import type {
+  ActivityListItem,
+  ActivityPlaybackResolution,
+} from "../../../ui/activity-list";
 import "../../../ui/activity-list";
 import { ToastManager } from "../../../ui/toast-manager";
 import "../../../ui/toast-region";
 import { alertsStyles } from "./alerts.styles";
+
+const MEDIA_RESOLVE_DELAYS_MS = [0, 750, 1_500] as const;
 
 /** Active-camera Frigate review activity presented as WatchZone Alerts. */
 export class AlertsModule extends LitElement {
@@ -119,32 +124,7 @@ export class AlertsModule extends LitElement {
           zones: review.zones,
         }),
       )
-      .map((review): ActivityListItem => ({
-        cameraLabel: this._activity.activeCameraLabel ?? review.camera,
-        classification: review.classification,
-        clipUrl: review.clip_url,
-        endTime: review.end_time,
-        hoverPreviewUrl: this.hoverPreviewEnabled ? review.preview_url : null,
-        id: review.id,
-        mediaEndTime: review.media_end_time,
-        mediaStartTime: review.media_start_time,
-        objectLabels: [...review.labels, ...review.sub_labels],
-        playbackSources: review.playback_sources,
-        preferredTransport: review.preferred_transport,
-        revision: review.revision,
-        snapshotUrl: review.snapshot_url,
-        startTime: review.start_time,
-        thumbnailUrl: review.thumbnail_url,
-        typeBadge: {
-          label: this.localize(
-            review.classification === "alert"
-              ? "alerts.alert"
-              : "alerts.detection",
-          ),
-          variant: review.classification === "alert" ? "danger" : "warning",
-        },
-        zones: review.zones,
-      }));
+      .map((review) => this._listItem(review));
     return html`
       <wzc-activity-list
         .api=${this.api}
@@ -159,6 +139,7 @@ export class AlertsModule extends LitElement {
         .localize=${this.localize}
         .retryMedia=${(item: ActivityListItem, url: string) =>
           this._activity.retryMedia(item, url)}
+        .resolvePlayback=${this._resolvePlayback}
         .roundedCorners=${this.roundedCorners}
         .shadows=${this.shadows}
       ></wzc-activity-list>
@@ -166,7 +147,64 @@ export class AlertsModule extends LitElement {
     `;
   }
 
+  private _listItem(review: ReviewItem): ActivityListItem {
+    return {
+      cameraLabel: this._activity.activeCameraLabel ?? review.camera,
+      classification: review.classification,
+      clipUrl: review.clip_url,
+      endTime: review.end_time,
+      hoverPreviewUrl: this.hoverPreviewEnabled ? review.preview_url : null,
+      id: review.id,
+      inProgress: review.end_time === null,
+      mediaEndTime: review.media_end_time,
+      mediaStartTime: review.media_start_time,
+      objectLabels: [...review.labels, ...review.sub_labels],
+      playbackSources: review.playback_sources,
+      preferredTransport: review.preferred_transport,
+      revision: review.revision,
+      snapshotUrl: review.snapshot_url,
+      startTime: review.start_time,
+      thumbnailUrl: review.thumbnail_url,
+      typeBadge: {
+        label: this.localize(
+          review.classification === "alert"
+            ? "alerts.alert"
+            : "alerts.detection",
+        ),
+        variant: review.classification === "alert" ? "danger" : "warning",
+      },
+      zones: review.zones,
+    };
+  }
+
+  private readonly _resolvePlayback = async (
+    item: ActivityListItem,
+  ): Promise<ActivityPlaybackResolution | undefined> => {
+    for (const delay of MEDIA_RESOLVE_DELAYS_MS) {
+      if (delay > 0) await wait(delay);
+      await this._activity.refresh();
+      const review = this._activity.items.find(
+        (candidate) =>
+          candidate.id === item.id && candidate.playback_sources.length > 0,
+      );
+      if (review) {
+        return {
+          playbackSources: review.playback_sources,
+          preferredTransport: review.preferred_transport,
+        };
+      }
+    }
+    this._toasts.warning(this.localize("media_player.load_failed"), {
+      key: "alert-recording-preparing",
+    });
+    return undefined;
+  };
+
   static styles = alertsStyles;
+}
+
+function wait(delayMs: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, delayMs));
 }
 
 if (!customElements.get(ALERTS_TAG)) {
