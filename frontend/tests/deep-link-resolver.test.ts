@@ -64,6 +64,8 @@ function event(overrides: Partial<EventItem> = {}): EventItem {
 function review(overrides: Partial<ReviewItem> = {}): ReviewItem {
   return {
     analysis_description: null,
+    analysis_concerns: [],
+    analysis_score: null,
     analysis_title: null,
     camera: "front",
     classification: "alert",

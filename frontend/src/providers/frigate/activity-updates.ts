@@ -33,6 +33,8 @@ interface FrigateReviewData {
   readonly detections?: readonly unknown[];
   readonly objects?: readonly unknown[];
   readonly metadata?: {
+    readonly confidence?: unknown;
+    readonly other_concerns?: readonly unknown[];
     readonly scene?: unknown;
     readonly title?: unknown;
   };
@@ -137,6 +139,10 @@ function normalizeReview(
   const eventIds = strings(activity.data?.detections ?? []);
   const analysisTitle = text(activity.data?.metadata?.title);
   const analysisDescription = text(activity.data?.metadata?.scene);
+  const analysisScore = confidence(activity.data?.metadata?.confidence);
+  const analysisConcerns = strings(
+    activity.data?.metadata?.other_concerns ?? [],
+  );
   const endTime =
     typeof activity.end_time === "number" ? activity.end_time : null;
   const mediaEndTime = endTime ?? Date.now() / 1000;
@@ -151,12 +157,16 @@ function normalizeReview(
     eventIds.join(","),
     analysisTitle ?? "",
     analysisDescription ?? "",
+    analysisScore ?? "",
+    analysisConcerns.join(","),
   ].join(":");
   const instance = encodeURIComponent(source.instance_id);
   const reviewId = encodeURIComponent(activity.id);
   const camera = encodeURIComponent(activity.camera);
   return {
     analysis_description: analysisDescription,
+    analysis_concerns: analysisConcerns,
+    analysis_score: analysisScore,
     analysis_title: analysisTitle,
     camera: activity.camera,
     classification,
@@ -186,6 +196,13 @@ function normalizeReview(
 
 function text(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function confidence(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    return null;
+  }
+  return Math.min(value > 1 ? value / 100 : value, 1);
 }
 
 function strings(values: readonly unknown[]): string[] {

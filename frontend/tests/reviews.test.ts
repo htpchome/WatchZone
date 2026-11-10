@@ -21,6 +21,8 @@ const reviews = [
   {
     analysis_description:
       "The resident enters the garage and approaches the red car.",
+    analysis_concerns: [],
+    analysis_score: 0.98,
     analysis_title: "Resident entering garage",
     camera: "front",
     classification: "alert",
@@ -46,6 +48,8 @@ const reviews = [
   },
   {
     analysis_description: null,
+    analysis_concerns: [],
+    analysis_score: null,
     analysis_title: null,
     camera: "front",
     classification: "detection",
@@ -248,6 +252,9 @@ describe("reviews module", () => {
     expect(dialog?.textContent).toContain(
       "The resident enters the garage and approaches the red car.",
     );
+    expect(dialog?.textContent).toContain("98%");
+    expect(dialog?.textContent).toContain("Concerns");
+    expect(dialog?.textContent).toContain("None");
   });
 
   it("toggles reviewed state through the normalized reviews API", async () => {
@@ -300,6 +307,81 @@ describe("reviews module", () => {
         activityRoot(module)?.querySelectorAll(".review-state.reviewed"),
       ).toHaveLength(2);
     });
+  });
+
+  it("loads an existing draft authoritatively when its camera becomes active", async () => {
+    const draft = {
+      ...reviews[0],
+      analysis_concerns: [],
+      analysis_description: null,
+      analysis_score: null,
+      analysis_title: null,
+      camera: "driveway",
+      clip_url: null,
+      end_time: null,
+      id: "frigate:review-draft",
+      playback_sources: [],
+      revision: "draft-revision",
+    };
+    const callWS = vi.fn(
+      async (message: {
+        bypass_cache?: boolean;
+        entity_id?: string;
+        type: string;
+      }) => ({
+        items:
+          message.type === "watchzone/reviews/list" &&
+          message.entity_id === "camera.driveway" &&
+          message.bypass_cache === true
+            ? [draft]
+            : [],
+      }),
+    );
+    const api = {
+      callWS,
+      identity: {},
+      locale: { language: "en", time_zone: "server" },
+      resolveUrl: (path: string) => `https://ha.local${path}`,
+      subscribeMessage: vi.fn(),
+    } as unknown as HomeAssistantApi;
+    const selection = new CameraSelectionContext();
+    const module = document.createElement(REVIEWS_TAG) as ReviewsModule;
+    module.api = api;
+    module.cameraSelection = selection;
+    module.targetModuleId = "camera-module";
+    document.body.append(module);
+    const owner = {};
+    const items = [
+      { entityId: "camera.front", label: "Front" },
+      { entityId: "camera.driveway", label: "Driveway" },
+    ];
+    selection.publish(
+      "camera-module",
+      owner,
+      { activeEntityId: "camera.front", items },
+      vi.fn(),
+    );
+    await vi.waitFor(() => expect(callWS).toHaveBeenCalled());
+
+    selection.publish(
+      "camera-module",
+      owner,
+      { activeEntityId: "camera.driveway", items },
+      vi.fn(),
+    );
+
+    await vi.waitFor(() => {
+      expect(
+        activityRoot(module)?.querySelector(".in-progress"),
+      ).not.toBeNull();
+    });
+    expect(callWS).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bypass_cache: true,
+        entity_id: "camera.driveway",
+        type: "watchzone/reviews/list",
+      }),
+    );
   });
 
   it("replaces one review tile through new, update, and end notifications", async () => {

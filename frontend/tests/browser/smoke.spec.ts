@@ -876,6 +876,8 @@ test("keeps activity content in an independently scrolling viewport", async ({
                 index === 0
                   ? "The resident enters the garage and approaches the red car."
                   : null,
+              analysis_concerns: [],
+              analysis_score: index === 0 ? 0.98 : null,
               analysis_title: index === 0 ? "Resident entering garage" : null,
               camera,
               classification: index === 0 ? "alert" : "detection",
@@ -957,6 +959,46 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect(analysisDialog).toContainText(
     "The resident enters the garage and approaches the red car.",
   );
+  await expect(analysisDialog).toContainText("98%");
+  await expect(analysisDialog).toContainText("Concerns");
+  await expect(analysisDialog).toContainText("None");
+  const dialogPosition = await analysisDialog.evaluate((dialogElement) => {
+    let current: Element | null = dialogElement;
+    let card: HTMLElement | null = null;
+    while (current) {
+      if (current instanceof HTMLElement && current.matches("watchzone-card")) {
+        card = current;
+        break;
+      }
+      const root = current.getRootNode();
+      current = root instanceof ShadowRoot ? root.host : current.parentElement;
+    }
+    if (!card)
+      throw new Error("Expected analysis dialog inside WatchZone card.");
+    const cardBounds = card.getBoundingClientRect();
+    const dialogBounds = dialogElement.getBoundingClientRect();
+    const viewportInset = 8;
+    const expectedLeft = Math.min(
+      Math.max(
+        cardBounds.left + (cardBounds.width - dialogBounds.width) / 2,
+        viewportInset,
+      ),
+      window.innerWidth - dialogBounds.width - viewportInset,
+    );
+    const expectedTop = Math.min(
+      Math.max(
+        cardBounds.top + (cardBounds.height - dialogBounds.height) / 2,
+        viewportInset,
+      ),
+      window.innerHeight - dialogBounds.height - viewportInset,
+    );
+    return {
+      left: Math.abs(dialogBounds.left - expectedLeft),
+      top: Math.abs(dialogBounds.top - expectedTop),
+    };
+  });
+  expect(dialogPosition.left).toBeLessThanOrEqual(1);
+  expect(dialogPosition.top).toBeLessThanOrEqual(1);
   await page
     .locator(
       'wzc-reviews wzc-review-analysis-dialog button[aria-label="Close AI analysis"]',

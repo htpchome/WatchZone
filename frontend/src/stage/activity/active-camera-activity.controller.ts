@@ -228,7 +228,10 @@ export class ActiveCameraActivityController<
     }
     this._host.requestUpdate();
     if (!activeEntityId) return;
-    void this._refresh(false, true);
+    // A review may have entered draft while this camera was inactive. The
+    // active-only update subscription cannot replay that earlier notification,
+    // so activation starts with one authoritative, cache-bypassed query.
+    void this._refresh(true, true);
     const api = this._context().api;
     if (api) this._subscribeUpdates(api, activeEntityId);
     this._refreshTimer = window.setInterval(

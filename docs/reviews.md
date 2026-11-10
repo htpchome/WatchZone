@@ -39,8 +39,9 @@
 
 ## Generated analysis
 
-- Providers may normalize an optional generated-analysis title and description
-  onto a Review. Provider response shapes do not cross the backend boundary.
+- Providers may normalize an optional generated-analysis title, description,
+  confidence score, and concerns onto a Review. Provider response shapes do not
+  cross the backend boundary.
 - Frigate supplies these values from review metadata. They participate in the
   review revision so analysis generated after initial detection replaces the
   existing Review presentation during realtime reconciliation.
@@ -49,3 +50,6 @@
   keyboard-accessible dialog containing the title and description. Reviews
   without complete analysis display no action. Events neither receive nor
   reserve presentation space for review analysis.
+- Selecting a camera begins with a cache-bypassed authoritative Reviews query.
+  This recovers a draft that began while another camera was active without
+  changing the realtime notification path or its fallback reconciliation.

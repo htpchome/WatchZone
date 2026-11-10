@@ -8,10 +8,14 @@ import {
   englishLocalize,
   type LocalizeFunction,
 } from "../../../core/localization";
+import type { HomeAssistantLocale } from "../../../core/home-assistant";
+import { homeAssistantNumberFormat } from "../../../core/number-format";
 import { reviewAnalysisDialogStyles } from "./review-analysis-dialog.styles";
 
 export interface ReviewAnalysis {
+  readonly concerns: readonly string[];
   readonly description: string;
+  readonly score?: number;
   readonly title: string;
 }
 
@@ -20,10 +24,12 @@ export class ReviewAnalysisDialog extends LitElement {
   public static properties = {
     analysis: { attribute: false },
     localize: { attribute: false },
+    locale: { attribute: false },
   };
 
   public analysis?: ReviewAnalysis;
   public localize: LocalizeFunction = englishLocalize;
+  public locale?: HomeAssistantLocale;
 
   protected render() {
     const analysis = this.analysis;
@@ -57,6 +63,29 @@ export class ReviewAnalysisDialog extends LitElement {
                   <h3>${this.localize("reviews.ai_description")}</h3>
                   <p>${analysis.description}</p>
                 </div>
+                ${
+                  analysis.score === undefined
+                    ? nothing
+                    : html`<div class="field">
+                        <h3>${this.localize("reviews.ai_score")}</h3>
+                        <p>
+                          ${homeAssistantNumberFormat(this.locale, {
+                            maximumFractionDigits: 0,
+                            style: "percent",
+                          }).format(analysis.score)}
+                        </p>
+                      </div>`
+                }
+                <div class="field">
+                  <h3>${this.localize("reviews.ai_concerns")}</h3>
+                  <p>
+                    ${
+                      analysis.concerns.length > 0
+                        ? analysis.concerns.join(", ")
+                        : this.localize("reviews.ai_no_concerns")
+                    }
+                  </p>
+                </div>
               </section>`
           : nothing
       }
@@ -67,8 +96,34 @@ export class ReviewAnalysisDialog extends LitElement {
     if (!changed.has("analysis")) return;
     const dialog = this.renderRoot.querySelector("dialog");
     if (!dialog) return;
-    if (this.analysis && !dialog.open) dialog.showModal();
-    else if (!this.analysis && dialog.open) dialog.close();
+    if (this.analysis && !dialog.open) {
+      dialog.showModal();
+      this._centerOnCard(dialog);
+    } else if (!this.analysis && dialog.open) dialog.close();
+  }
+
+  private _centerOnCard(dialog: HTMLDialogElement): void {
+    const card = composedAncestor(this, "watchzone-card");
+    if (!card) return;
+    const cardBounds = card.getBoundingClientRect();
+    const dialogBounds = dialog.getBoundingClientRect();
+    const inset = 8;
+    const left = Math.min(
+      Math.max(
+        inset,
+        cardBounds.left + (cardBounds.width - dialogBounds.width) / 2,
+      ),
+      window.innerWidth - dialogBounds.width - inset,
+    );
+    const top = Math.min(
+      Math.max(
+        inset,
+        cardBounds.top + (cardBounds.height - dialogBounds.height) / 2,
+      ),
+      window.innerHeight - dialogBounds.height - inset,
+    );
+    dialog.style.left = `${left}px`;
+    dialog.style.top = `${top}px`;
   }
 
   private readonly _backdropClick = (event: MouseEvent): void => {
@@ -86,6 +141,21 @@ export class ReviewAnalysisDialog extends LitElement {
   };
 
   static styles = reviewAnalysisDialogStyles;
+}
+
+function composedAncestor(
+  element: Element,
+  selector: string,
+): HTMLElement | null {
+  let current: Element | null = element;
+  while (current) {
+    if (current instanceof HTMLElement && current.matches(selector)) {
+      return current;
+    }
+    const root = current.getRootNode();
+    current = root instanceof ShadowRoot ? root.host : current.parentElement;
+  }
+  return null;
 }
 
 if (!customElements.get(REVIEW_ANALYSIS_DIALOG_TAG)) {

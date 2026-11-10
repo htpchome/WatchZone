@@ -161,6 +161,7 @@ export class ReviewsModule extends LitElement {
       <wzc-review-analysis-dialog
         .analysis=${this._analysis}
         .localize=${this.localize}
+        .locale=${this.api?.locale}
         @wzc-review-analysis-close=${this._closeAnalysis}
       ></wzc-review-analysis-dialog>
       <wzc-toast-region .notices=${this._toasts.notices}></wzc-toast-region>
@@ -172,6 +173,10 @@ export class ReviewsModule extends LitElement {
       ...(review.analysis_title && review.analysis_description
         ? {
             analysisDescription: review.analysis_description,
+            analysisConcerns: review.analysis_concerns,
+            ...(review.analysis_score !== null
+              ? { analysisScore: review.analysis_score }
+              : {}),
             analysisTitle: review.analysis_title,
           }
         : {}),
@@ -209,7 +214,9 @@ export class ReviewsModule extends LitElement {
   private readonly _openAnalysis = (item: ActivityListItem): void => {
     if (!item.analysisTitle || !item.analysisDescription) return;
     this._analysis = {
+      concerns: item.analysisConcerns ?? [],
       description: item.analysisDescription,
+      score: item.analysisScore,
       title: item.analysisTitle,
     };
     this.requestUpdate();

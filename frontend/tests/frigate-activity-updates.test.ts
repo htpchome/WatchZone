@@ -67,6 +67,8 @@ describe("Frigate activity updates", () => {
           data: {
             detections: ["event-1"],
             metadata: {
+              confidence: 0.98,
+              other_concerns: ["Gate left open"],
               scene: "A resident walks toward the car.",
               title: "Resident approaching car",
             },
@@ -121,6 +123,8 @@ describe("Frigate activity updates", () => {
         phase: "update",
         review: expect.objectContaining({
           analysis_description: "A resident walks toward the car.",
+          analysis_concerns: ["Gate left open"],
+          analysis_score: 0.98,
           analysis_title: "Resident approaching car",
         }),
         topic: "reviews",

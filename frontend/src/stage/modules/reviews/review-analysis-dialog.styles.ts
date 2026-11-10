@@ -14,9 +14,12 @@ export const reviewAnalysisDialogStyles = css`
     box-sizing: border-box;
     color: var(--wzc-color-text-1);
     inline-size: min(32rem, calc(100vw - 2rem));
+    inset: auto;
     max-block-size: calc(100dvh - 2rem);
+    margin: 0;
     overflow: auto;
     padding: 0;
+    position: fixed;
   }
 
   dialog::backdrop {

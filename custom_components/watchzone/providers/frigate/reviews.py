@@ -253,6 +253,8 @@ def _normalize_review(
     metadata = _mapping(data.get("metadata"))
     analysis_title = _text(metadata.get("title"))
     analysis_description = _text(metadata.get("scene"))
+    analysis_score = _confidence(metadata.get("confidence"))
+    analysis_concerns = _unique_strings(_list(metadata.get("other_concerns")))
     event_ids = _review_event_ids(raw)
     events = related_events or {}
     event_payloads = [events[event_id] for event_id in event_ids if event_id in events]
@@ -280,6 +282,8 @@ def _normalize_review(
     media_end = (end_time + post_capture) if end_time is not None else now
     material = {
         "analysis_description": analysis_description,
+        "analysis_concerns": analysis_concerns,
+        "analysis_score": analysis_score,
         "analysis_title": analysis_title,
         "classification": classification,
         "end_time": end_time,
@@ -322,6 +326,8 @@ def _normalize_review(
         reviewed=reviewed,
         analysis_title=analysis_title,
         analysis_description=analysis_description,
+        analysis_score=analysis_score,
+        analysis_concerns=analysis_concerns,
         preview_url=(
             f"/api/frigate/{encoded_instance}/notifications/{encoded_review}/"
             "review_preview.gif"
@@ -477,6 +483,15 @@ def _number(value: object) -> float | None:
     if isinstance(value, bool) or not isinstance(value, int | float):
         return None
     return float(value)
+
+
+def _confidence(value: object) -> float | None:
+    confidence = _number(value)
+    if confidence is None or confidence < 0:
+        return None
+    if confidence > 1:
+        confidence /= 100
+    return min(confidence, 1)
 
 
 def _text(value: object) -> str | None:

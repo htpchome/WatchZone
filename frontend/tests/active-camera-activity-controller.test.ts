@@ -209,6 +209,12 @@ describe("active camera activity controller", () => {
 
     publish("camera.driveway", true);
     await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    expect(fetch).toHaveBeenNthCalledWith(
+      2,
+      expect.anything(),
+      "camera.driveway",
+      expect.objectContaining({ bypassCache: true, loadFullHistory: true }),
+    );
     await vi.waitFor(() =>
       expect(controller.items[0]?.id).toBe("camera.driveway:review"),
     );

@@ -89,6 +89,15 @@ describe("live activity highlight controller", () => {
     });
     expect(controller.classification).toBeUndefined();
 
+    notify?.({
+      cameraName: "front",
+      classification: "alert",
+      id: "review-1",
+      phase: "update",
+      topic: "reviews",
+    });
+    expect(controller.classification).toBeUndefined();
+
     controller.hostDisconnected();
     expect(unsubscribe).toHaveBeenCalledOnce();
   });

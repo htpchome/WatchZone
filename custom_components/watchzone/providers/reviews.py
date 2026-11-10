@@ -40,6 +40,8 @@ class ReviewItem:
     reviewed: bool
     analysis_title: str | None
     analysis_description: str | None
+    analysis_score: float | None
+    analysis_concerns: tuple[str, ...]
     preview_url: str | None
     thumbnail_url: str | None
     snapshot_url: str | None

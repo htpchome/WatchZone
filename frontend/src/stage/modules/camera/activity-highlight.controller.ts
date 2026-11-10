@@ -24,6 +24,7 @@ export class LiveActivityHighlightController implements ReactiveController {
     string,
     Map<string, LiveActivityClassification>
   >();
+  private readonly _endedReviews = new Map<string, Set<string>>();
   private _activeEntityId?: string;
   private _connected = false;
   private _entityIdsKey = "";
@@ -101,6 +102,8 @@ export class LiveActivityHighlightController implements ReactiveController {
         if (generation !== this._generation || !this._enabled) {
           return;
         }
+        this._activeReviews.delete(entityId);
+        if (entityId === this._activeEntityId) this._publishClassification();
         const retryTimer = window.setTimeout(() => {
           this._retryTimers.delete(entityId);
           if (generation === this._generation && this._enabled) {
@@ -130,11 +133,26 @@ export class LiveActivityHighlightController implements ReactiveController {
     }
     if (notification.phase === "end") {
       reviews.delete(notification.id);
-    } else if (notification.classification) {
+      this._rememberEnded(entityId, notification.id);
+    } else if (
+      notification.classification &&
+      !this._endedReviews.get(entityId)?.has(notification.id)
+    ) {
       reviews.set(notification.id, notification.classification);
     }
     if (reviews.size === 0) this._activeReviews.delete(entityId);
     if (entityId === this._activeEntityId) this._publishClassification();
+  }
+
+  private _rememberEnded(entityId: string, reviewId: string): void {
+    const ended = this._endedReviews.get(entityId) ?? new Set<string>();
+    ended.add(reviewId);
+    while (ended.size > 100) {
+      const oldest = ended.values().next().value;
+      if (oldest === undefined) break;
+      ended.delete(oldest);
+    }
+    this._endedReviews.set(entityId, ended);
   }
 
   private _publishClassification(): void {
@@ -165,6 +183,7 @@ export class LiveActivityHighlightController implements ReactiveController {
     for (const timer of this._retryTimers.values()) window.clearTimeout(timer);
     this._retryTimers.clear();
     this._activeReviews.clear();
+    this._endedReviews.clear();
     if (this.classification !== undefined) {
       this.classification = undefined;
       this._host.requestUpdate();

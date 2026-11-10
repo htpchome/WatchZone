@@ -39,6 +39,8 @@ def test_review_normalization_preserves_classification_and_media() -> None:
             "data": {
                 "detections": ["event-bird", "event-goldfinch"],
                 "metadata": {
+                    "confidence": 0.98,
+                    "other_concerns": ["Gate left open", "Gate left open"],
                     "title": "Resident entering garage",
                     "scene": "A resident walks toward the parked car.",
                 },
@@ -79,6 +81,8 @@ def test_review_normalization_preserves_classification_and_media() -> None:
     assert item.analysis_description == (
         "A resident walks toward the parked car."
     )
+    assert item.analysis_score == 0.98
+    assert item.analysis_concerns == ("Gate left open",)
     assert item.labels == ("person", "car", "speech", "bird")
     assert item.sub_labels == (
         "Resident",
@@ -134,6 +138,8 @@ def test_review_normalization_omits_incomplete_analysis() -> None:
     assert item is not None
     assert item.analysis_title is None
     assert item.analysis_description is None
+    assert item.analysis_score is None
+    assert item.analysis_concerns == ()
 
 
 def test_capture_window_uses_camera_override_then_global_defaults() -> None:

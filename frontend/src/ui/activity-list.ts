@@ -42,6 +42,8 @@ export interface ActivityTypeBadge {
 
 export interface ActivityListItem {
   readonly analysisDescription?: string;
+  readonly analysisConcerns?: readonly string[];
+  readonly analysisScore?: number;
   readonly analysisTitle?: string;
   readonly cameraLabel: string;
   readonly classification?: ActivityClassification;
