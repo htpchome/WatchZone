@@ -15,6 +15,28 @@ export interface RecordedMediaRequest {
   readonly preferredTransport: RecordedMediaTransport;
   readonly sources: readonly RecordedMediaSource[];
   readonly title: string;
+  readonly timeline?: RecordingTimeline;
+}
+
+export interface RecordingTimelineSpan {
+  readonly endTime: number;
+  readonly mediaOffset: number;
+  readonly startTime: number;
+}
+
+export interface RecordingTimelineMarker {
+  readonly classification: "alert" | "detection";
+  readonly endTime: number;
+  readonly id: string;
+  readonly startTime: number;
+  readonly thumbnailUrl: string;
+}
+
+export interface RecordingTimeline {
+  readonly endTime: number;
+  readonly markers: readonly RecordingTimelineMarker[];
+  readonly spans: readonly RecordingTimelineSpan[];
+  readonly startTime: number;
 }
 
 export interface RecordedMediaInitialGeometry {

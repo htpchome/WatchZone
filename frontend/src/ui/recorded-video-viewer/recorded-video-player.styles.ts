@@ -9,6 +9,10 @@ export const recordedVideoPlayerStyles = css`
     inline-size: 100%;
   }
 
+  :host([recording-timeline]) {
+    aspect-ratio: auto;
+  }
+
   .viewport {
     background: var(--wzc-recorded-media-background);
     aspect-ratio: 16 / 9;

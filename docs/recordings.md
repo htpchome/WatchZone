@@ -67,3 +67,27 @@
 - Future gap navigation, segment selection, export jobs, and recording-range
   editing extend the normalized recording domain; they do not move provider
   logic into the module.
+
+## Hour scrubber
+
+- An hourly recording opens with a Recordings-only scrubber beneath the video.
+  Reviews and Events retain the ordinary recorded-media transport.
+- The normalized hour includes its local clock-hour bounds, ordered continuous
+  playable spans, cumulative media offsets, and overlapping alert/detection
+  markers. Provider segment and review response shapes do not cross this
+  boundary.
+- The scrubber always represents the complete clock hour. It labels both hour
+  boundaries and every ten-minute division using the Home Assistant locale and
+  clock preference. Missing recording spans remain visible as a fixed striped
+  gap rather than being collapsed out of the clock scale.
+- Player time is mapped through cumulative span offsets so the wall-clock seek
+  pointer skips unavailable gaps while the finite recording source remains a
+  concatenation of playable media. Seeking into a gap advances to the next
+  playable span; an activity marker seeks to its start and begins playback.
+- Alert and detection markers are keyboard-focusable and pointer-actionable.
+  Hover or focus shows the provider-normalized review thumbnail and localized
+  classification/time label. Marker metadata failure does not fail recording
+  discovery or playback.
+- Scrubber availability, marker, gap, and pointer colors are fixed WatchZone
+  product colors exposed through semantic `--wzc-recording-scrubber-*` tokens;
+  they do not derive from Home Assistant theme colors.

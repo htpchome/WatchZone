@@ -11,6 +11,8 @@ import {
   RECORDED_VIDEO_TRANSPORT_TAG,
   RECORDED_VIDEO_PLAYER_TAG,
   RECORDED_MEDIA_ERROR_EVENT,
+  RECORDING_SCRUBBER_EVENT,
+  RECORDING_SCRUBBER_TAG,
 } from "../../core/constants";
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import {
@@ -36,6 +38,7 @@ import {
 import type {
   RecordedMediaRequest,
   RecordedMediaSource,
+  RecordingTimeline,
 } from "../../core/recorded-media";
 import { MediaPresentationController } from "../media-presentation.controller";
 import type {
@@ -49,6 +52,8 @@ import type {
   RecordedVideoTransportHoldDetail,
 } from "./transport-controls";
 import "./transport-controls";
+import type { RecordingScrubberEventDetail } from "./recording-scrubber";
+import "./recording-scrubber";
 
 const HLS_CONTENT_TYPE = "application/vnd.apple.mpegurl";
 const SOURCE_READY_TIMEOUT_MS = 12_000;
@@ -57,6 +62,8 @@ const mediaControlEvent = unsafeStatic(MEDIA_CONTROL_EVENT);
 const transportTag = unsafeStatic(RECORDED_VIDEO_TRANSPORT_TAG);
 const transportEvent = unsafeStatic(RECORDED_VIDEO_TRANSPORT_EVENT);
 const transportHoldEvent = unsafeStatic(RECORDED_VIDEO_TRANSPORT_HOLD_EVENT);
+const recordingScrubberTag = unsafeStatic(RECORDING_SCRUBBER_TAG);
+const recordingScrubberEvent = unsafeStatic(RECORDING_SCRUBBER_EVENT);
 type RecordedVideoControlAction = "fullscreen" | "picture_in_picture";
 
 /** Ephemeral recorded-media playback engine. */
@@ -102,6 +109,7 @@ export class RecordedVideoPlayer extends LitElement {
 
   protected render() {
     const video = this._video();
+    const timeline = this.request?.timeline;
     const fullscreenSupported = mediaFullscreenSupported(
       this._viewport(),
       video,
@@ -180,13 +188,30 @@ export class RecordedVideoPlayer extends LitElement {
         .localize=${this.localize}
         .muted=${this._muted}
         .paused=${this._paused}
+        .scrubberMode=${Boolean(timeline)}
         .visible=${this._media.overlay.visible}
         .viewportEdge=${this._fullscreenActive}
         .volume=${this._volume}
         @${transportEvent}=${this._handleTransport}
         @${transportHoldEvent}=${this._handleTransportHold}
       ></${transportTag}>
-    </div>`;
+    </div>
+    ${
+      timeline
+        ? staticHtml`<${recordingScrubberTag}
+            .api=${this.api}
+            .currentTimestamp=${mediaTimeToRecordingTimestamp(
+              this._currentTime,
+              this._duration,
+              timeline,
+            )}
+            .localize=${this.localize}
+            .paused=${this._paused}
+            .timeline=${timeline}
+            @${recordingScrubberEvent}=${this._handleRecordingScrubber}
+          ></${recordingScrubberTag}>`
+        : null
+    }`;
   }
 
   protected firstUpdated(): void {
@@ -195,7 +220,13 @@ export class RecordedVideoPlayer extends LitElement {
   }
 
   protected willUpdate(changed: Map<PropertyKey, unknown>): void {
-    if (changed.has("request")) this._media.configure(this.request?.id);
+    if (changed.has("request")) {
+      this.toggleAttribute(
+        "recording-timeline",
+        Boolean(this.request?.timeline),
+      );
+      this._media.configure(this.request?.id);
+    }
   }
 
   protected updated(changed: Map<PropertyKey, unknown>): void {
@@ -448,6 +479,29 @@ export class RecordedVideoPlayer extends LitElement {
     } else this._releaseTransportHold();
   };
 
+  private readonly _handleRecordingScrubber = (
+    event: CustomEvent<RecordingScrubberEventDetail>,
+  ): void => {
+    event.stopPropagation();
+    if (event.detail.action === "toggle_play") {
+      void this._togglePlayback();
+      return;
+    }
+    const timeline = this.request?.timeline;
+    if (!timeline || event.detail.timestamp === undefined) return;
+    this._seek(
+      recordingTimestampToMediaTime(
+        event.detail.timestamp,
+        this._duration,
+        timeline,
+      ),
+    );
+    if (event.detail.action === "seek_and_play") {
+      const video = this._video();
+      if (video) void playMediaElement(video).catch(() => this._reportError());
+    }
+  };
+
   private _releaseTransportHold(): void {
     this._transportHoldRelease?.();
     this._transportHoldRelease = undefined;
@@ -506,6 +560,55 @@ function finiteVolume(value: number | undefined): number {
   return value !== undefined && Number.isFinite(value)
     ? Math.max(0, Math.min(1, value))
     : 1;
+}
+
+function recordingTimestampToMediaTime(
+  timestamp: number,
+  mediaDuration: number,
+  timeline: RecordingTimeline,
+): number {
+  const total = recordingTimelineMediaDuration(timeline);
+  if (total <= 0) return 0;
+  let offset = total;
+  for (const span of timeline.spans) {
+    if (timestamp <= span.startTime) {
+      offset = span.mediaOffset;
+      break;
+    }
+    if (timestamp < span.endTime) {
+      offset = span.mediaOffset + timestamp - span.startTime;
+      break;
+    }
+  }
+  return offset * (mediaDuration > 0 ? mediaDuration / total : 1);
+}
+
+function mediaTimeToRecordingTimestamp(
+  mediaTime: number,
+  mediaDuration: number,
+  timeline: RecordingTimeline,
+): number {
+  const total = recordingTimelineMediaDuration(timeline);
+  if (total <= 0 || timeline.spans.length === 0) return timeline.startTime;
+  const normalized = Math.max(
+    0,
+    Math.min(
+      total,
+      mediaTime * (mediaDuration > 0 ? total / mediaDuration : 1),
+    ),
+  );
+  for (const span of timeline.spans) {
+    const spanDuration = span.endTime - span.startTime;
+    if (normalized <= span.mediaOffset + spanDuration) {
+      return span.startTime + Math.max(0, normalized - span.mediaOffset);
+    }
+  }
+  return timeline.spans[timeline.spans.length - 1]?.endTime ?? timeline.endTime;
+}
+
+function recordingTimelineMediaDuration(timeline: RecordingTimeline): number {
+  const last = timeline.spans[timeline.spans.length - 1];
+  return last ? last.mediaOffset + last.endTime - last.startTime : 0;
 }
 
 function orderedSources(request: RecordedMediaRequest): RecordedMediaSource[] {

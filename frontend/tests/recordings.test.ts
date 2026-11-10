@@ -27,6 +27,7 @@ describe("recordings module", () => {
           duration: 1641,
           end_time: Date.UTC(2026, 10, 9, 22, 27, 21) / 1000,
           id: "frigate:front:hour",
+          markers: [],
           playback_sources: [
             {
               content_type: "application/vnd.apple.mpegurl",
@@ -36,7 +37,16 @@ describe("recordings module", () => {
           ],
           preferred_transport: "hls",
           revision: "revision",
+          spans: [
+            {
+              end_time: Date.UTC(2026, 10, 9, 22, 27, 21) / 1000,
+              media_offset: 0,
+              start_time: Date.UTC(2026, 10, 9, 22) / 1000,
+            },
+          ],
           start_time: Date.UTC(2026, 10, 9, 22) / 1000,
+          timeline_end_time: Date.UTC(2026, 10, 9, 23) / 1000,
+          timeline_start_time: Date.UTC(2026, 10, 9, 22) / 1000,
         },
       ],
     });
@@ -153,6 +163,10 @@ describe("recordings module", () => {
         id: "frigate:front:hour",
         kind: "video",
         preferredTransport: "hls",
+        timeline: expect.objectContaining({
+          endTime: Date.UTC(2026, 10, 9, 23) / 1000,
+          startTime: Date.UTC(2026, 10, 9, 22) / 1000,
+        }),
       }),
     );
   });

@@ -31,6 +31,14 @@ def test_recording_segments_are_grouped_into_hour_ranges() -> None:
             {"start_time": start + 3600, "end_time": start + 3660},
         ],
         query,
+        [
+            {
+                "id": "review-1",
+                "severity": "detection",
+                "start_time": start + 45,
+                "end_time": start + 75,
+            }
+        ],
     )
 
     assert len(hours) == 2
@@ -38,6 +46,22 @@ def test_recording_segments_are_grouped_into_hour_ranges() -> None:
     assert hours[1].start_time == start
     assert hours[1].end_time == start + 100
     assert hours[1].duration == 80
+    assert hours[1].timeline_start_time == start
+    assert hours[1].timeline_end_time == start + 3600
+    assert [
+        (span.start_time, span.end_time, span.media_offset)
+        for span in hours[1].spans
+    ] == [
+        (start, start + 20, 0),
+        (start + 40, start + 100, 20),
+    ]
+    assert len(hours[1].markers) == 1
+    assert hours[1].markers[0].classification == "detection"
+    assert hours[1].markers[0].start_time == start + 45
+    assert hours[1].markers[0].end_time == start + 75
+    assert "/notifications/review-1/front/review_thumbnail.webp" in (
+        hours[1].markers[0].thumbnail_url
+    )
     assert hours[1].preferred_transport == "hls"
     assert [source.transport for source in hours[1].playback_sources] == [
         "file",
@@ -64,3 +88,27 @@ def test_recording_days_include_the_provider_retention_window() -> None:
         {"2026-11-10": True, "2026-11-09": True, "2026-11-07": True},
         "UTC",
     ) == expected
+
+
+def test_recording_segments_are_clipped_across_clock_hour_boundaries() -> None:
+    """A provider segment crossing the hour remains playable in both rows."""
+    source = SimpleNamespace(
+        camera_name="front",
+        frigate_instance_id="frigate-main",
+    )
+    hour = datetime(2026, 11, 9, 22, tzinfo=UTC).timestamp()
+    hours = _recording_hours(
+        source,
+        [{"start_time": hour + 3590, "end_time": hour + 3610}],
+        RecordingQuery(selected_date="2026-11-09", timezone="UTC"),
+    )
+
+    assert len(hours) == 2
+    assert (hours[0].spans[0].start_time, hours[0].spans[0].end_time) == (
+        hour + 3600,
+        hour + 3610,
+    )
+    assert (hours[1].spans[0].start_time, hours[1].spans[0].end_time) == (
+        hour + 3590,
+        hour + 3600,
+    )

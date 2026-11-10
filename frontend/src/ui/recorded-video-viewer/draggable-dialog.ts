@@ -152,6 +152,14 @@ export class DraggableRecordedVideoDialog extends LitElement {
       dialog.style.removeProperty("width");
       dialog.show();
       this._applyInitialSize();
+      const media = this._mediaSurface();
+      if (this.request?.timeline && media instanceof LitElement) {
+        void media.updateComplete.then(() => {
+          if (dialog.open && media === this._mediaSurface()) {
+            this._applyInitialSize();
+          }
+        });
+      }
     }
     window.addEventListener("resize", this._clampDialog);
     document.addEventListener("click", this._handleDocumentClick, true);
@@ -380,12 +388,17 @@ export class DraggableRecordedVideoDialog extends LitElement {
       px(bodyStyle.paddingRight) +
       px(dialogStyle.borderLeftWidth) +
       px(dialogStyle.borderRightWidth);
+    const mediaRect = this._mediaSurface()?.getBoundingClientRect();
+    const mediaExtraHeight = mediaRect
+      ? Math.max(0, mediaRect.height - mediaRect.width * (9 / 16))
+      : 0;
     const verticalChrome =
       header.getBoundingClientRect().height +
       px(bodyStyle.paddingTop) +
       px(bodyStyle.paddingBottom) +
       px(dialogStyle.borderTopWidth) +
-      px(dialogStyle.borderBottomWidth);
+      px(dialogStyle.borderBottomWidth) +
+      mediaExtraHeight;
     const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
     const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
     const manuallyPositioned = dialog.classList.contains("dragged");

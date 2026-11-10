@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Literal, Protocol
 
 from homeassistant.core import HomeAssistant
 
@@ -19,6 +19,26 @@ class RecordingQuery:
 
 
 @dataclass(frozen=True, slots=True)
+class RecordingSpan:
+    """One continuous playable span within a clock-hour timeline."""
+
+    start_time: float
+    end_time: float
+    media_offset: float
+
+
+@dataclass(frozen=True, slots=True)
+class RecordingMarker:
+    """One alert or detection positioned on a recording timeline."""
+
+    id: str
+    classification: Literal["alert", "detection"]
+    start_time: float
+    end_time: float
+    thumbnail_url: str
+
+
+@dataclass(frozen=True, slots=True)
 class RecordingHour:
     """One provider-normalized hourly recording range."""
 
@@ -27,6 +47,10 @@ class RecordingHour:
     start_time: float
     end_time: float
     duration: float
+    timeline_start_time: float
+    timeline_end_time: float
+    spans: tuple[RecordingSpan, ...]
+    markers: tuple[RecordingMarker, ...]
     playback_sources: tuple[PlaybackSource, ...]
     preferred_transport: PlaybackTransport
     download_url: str

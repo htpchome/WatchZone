@@ -78,6 +78,11 @@ viewing. Recording discovery and grouping are governed by
   policy.
 - Multiple viewers use owner-based mute leases; closing one cannot restore
   live audio while another remains open.
+- Recording-hour requests may carry a normalized wall-clock timeline. Only
+  those requests render the persistent scrubber below the `16:9` video. Its
+  play/pause action replaces the overlay transport's duplicate play and seek
+  controls; mute and volume remain in the transient media overlay. Reviews and
+  Events do not receive the recording scrubber.
 
 ## Draggable modal
 

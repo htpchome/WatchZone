@@ -1935,6 +1935,18 @@ test("switches activity and recordings through the shared media calendar", async
                 duration: 1620,
                 end_time: start + 1620,
                 id: `front:${selectedDate}:${10 - index}`,
+                markers:
+                  index === 0
+                    ? [
+                        {
+                          classification: "detection",
+                          end_time: start + 540,
+                          id: "review:recording-marker",
+                          start_time: start + 420,
+                          thumbnail_url: "/thumbnail.svg",
+                        },
+                      ]
+                    : [],
                 playback_sources: [
                   {
                     content_type: "video/mp4",
@@ -1944,7 +1956,21 @@ test("switches activity and recordings through the shared media calendar", async
                 ],
                 preferred_transport: "file",
                 revision: selectedDate,
+                spans: [
+                  {
+                    end_time: start + 600,
+                    media_offset: 0,
+                    start_time: start,
+                  },
+                  {
+                    end_time: start + 1620,
+                    media_offset: 600,
+                    start_time: start + 720,
+                  },
+                ],
                 start_time: start,
+                timeline_end_time: start + 3600,
+                timeline_start_time: start,
               };
             }),
           };
@@ -2201,6 +2227,20 @@ test("switches activity and recordings through the shared media calendar", async
   );
   await recordings.locator(".tile-player").first().click();
   await expect(page.locator("wzc-recorded-video-dialog dialog")).toBeVisible();
+  const scrubber = page.locator("wzc-recording-scrubber");
+  await expect(scrubber).toBeVisible();
+  await expect(scrubber.locator(".label")).toHaveCount(7);
+  await expect(scrubber.locator(".marker.detection")).toHaveCount(1);
+  await expect(scrubber.locator('[data-control="toggle_play"]')).toBeVisible();
+  await expect(scrubber.locator(".track")).toHaveCSS(
+    "background-image",
+    /repeating-linear-gradient/,
+  );
+  await scrubber.locator(".marker.detection").hover();
+  await expect(scrubber.locator(".preview img")).toBeVisible();
+  await expect(scrubber.locator(".preview-label")).toContainText(
+    "Detection - 10:07",
+  );
 });
 
 test("lets the camera navigation shadow paint into the card padding", async ({

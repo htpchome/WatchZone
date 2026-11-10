@@ -18,11 +18,11 @@ Give the next agent this instruction:
 ## Repository state
 
 - Branch: `main`
-- Current working version: `0.0.4-dev.232`
-- Current commit: `d8b7c2d` —
-  `v0.0.4-dev.231 - fix(reviews): reconcile active drafts and AI details`
-- The worktree contains the completed, uncommitted recorded-media dialog
-  centering change described below.
+- Current working version: `0.0.4-dev.233`
+- Current commit: `4541454` —
+  `v0.0.4-dev.232 - fix(media): center recorded media dialog on card`
+- The worktree contains the completed, uncommitted recording scrubber change
+  described below.
 
 Always check `git status`, the canonical version in
 `custom_components/watchzone/const.py`, and the latest commit before starting.
@@ -48,21 +48,29 @@ The repository state takes precedence over this snapshot.
 
 ## Current completed change
 
-Working version `0.0.4-dev.232`:
+Working version `0.0.4-dev.233`:
 
-- The shared Reviews, Events, and Recordings media dialog keeps its initial
-  camera-stage size while opening centered on the WatchZone card.
-- Card-centered placement is clamped to the visible viewport and preserves the
-  existing drag, resize, replacement-media, and close behavior.
-- Unit and browser coverage verify the explicit initial geometry and actual
-  card-centered placement.
+- Recording-hour playback has a dedicated scrubber below the video with a
+  play/pause control, a full clock-hour scale, ten-minute labels, a current-time
+  pointer, fixed product colors, rounded presentation, and striped gaps.
+- Provider-neutral recording hours expose clock bounds, playable spans with
+  concatenated-media offsets, and alert/detection markers. Frigate normalizes
+  segments and review thumbnails into that contract; review lookup failure
+  does not make recordings unavailable.
+- Hovering or focusing a marker presents its thumbnail and classification;
+  activating it seeks to the marker start and plays. Reviews and Events retain
+  their existing overlay transport and do not render the recording scrubber.
+- Dialog sizing accounts for the added recording controls after they render,
+  while preserving the existing shared modal fit, drag, resize, and centered
+  placement behavior.
 
 Validation is green:
 
-- 321 frontend unit tests
+- 324 frontend unit tests
+- 77 backend tests
 - 81 browser tests across Chromium, Firefox, and WebKit
 - Formatting, lint, type checking, architecture/style validation, production
-  build, version consistency, and `git diff --check`
+  build, version consistency, release packaging, and `git diff --check`
 
 ## Previously completed behavior
 

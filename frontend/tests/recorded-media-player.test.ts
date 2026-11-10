@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { LitElement } from "lit";
 
 import { MEDIA_SESSION_RUNTIME_KEY } from "../src/core/constants";
 import { MediaSessionManager } from "../src/core/media-session-manager";
@@ -66,6 +67,9 @@ describe("recorded media player", () => {
       "wzc-recorded-video-transport",
     );
     expect(transport).not.toBeNull();
+    expect(
+      player.shadowRoot?.querySelector("wzc-recording-scrubber"),
+    ).toBeNull();
     expect(
       transport?.shadowRoot?.querySelector('[data-control="future"]'),
     ).toMatchObject({ disabled: true });
@@ -199,6 +203,62 @@ describe("recorded media player", () => {
       ?.querySelector<HTMLButtonElement>('[data-control="toggle_mute"]')
       ?.click();
     expect(video.muted).toBe(true);
+  });
+
+  it("maps recording activity markers across timeline gaps and starts playback", async () => {
+    const start = Date.UTC(2026, 10, 10, 14) / 1000;
+    const player = document.createElement(
+      "wzc-recorded-video-player",
+    ) as RecordedVideoPlayer;
+    player.request = {
+      ...request,
+      id: "frigate:front:recording-hour",
+      timeline: {
+        startTime: start,
+        endTime: start + 3600,
+        spans: [
+          { startTime: start, endTime: start + 600, mediaOffset: 0 },
+          {
+            startTime: start + 1200,
+            endTime: start + 3600,
+            mediaOffset: 600,
+          },
+        ],
+        markers: [
+          {
+            classification: "alert",
+            endTime: start + 1560,
+            id: "review-1",
+            startTime: start + 1500,
+            thumbnailUrl: "/review-1.webp",
+          },
+        ],
+      },
+    };
+    document.body.append(player);
+    await player.updateComplete;
+    const video = player.shadowRoot?.querySelector("video");
+    expect(video).not.toBeNull();
+    if (!video) return;
+    Object.defineProperties(video, {
+      currentTime: { configurable: true, value: 0, writable: true },
+      duration: { configurable: true, value: 1500 },
+      paused: { configurable: true, value: true, writable: true },
+    });
+    video.dispatchEvent(new Event("durationchange"));
+    await player.updateComplete;
+    const scrubber = player.shadowRoot?.querySelector("wzc-recording-scrubber");
+    await (scrubber as LitElement | null)?.updateComplete;
+
+    scrubber?.shadowRoot?.querySelector<HTMLButtonElement>(".marker")?.click();
+
+    expect(video.currentTime).toBe(450);
+    await vi.waitFor(() => expect(video.play).toHaveBeenCalled());
+    expect(
+      player.shadowRoot
+        ?.querySelector("wzc-recorded-video-transport")
+        ?.shadowRoot?.querySelector('[data-control="toggle_play"]'),
+    ).toBeNull();
   });
 
   it("acquires and releases the global live-audio mute with the modal", async () => {

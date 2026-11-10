@@ -46,6 +46,15 @@ export const recordedVideoTransportStyles = css`
     box-shadow: var(--wzc-media-overlay-shadow);
   }
 
+  .transport.scrubber-mode {
+    grid-template-columns:
+      var(--wzc-recorded-transport-control-size)
+      minmax(3.25rem, 6rem) var(--wzc-recorded-transport-control-size);
+    inline-size: max-content;
+    max-inline-size: 100%;
+    margin-inline-start: auto;
+  }
+
   .transport-button {
     appearance: none;
     display: grid;

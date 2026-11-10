@@ -235,6 +235,22 @@ export class RecordingsModule extends LitElement {
       preferredTransport: hour.preferred_transport,
       sources: hour.playback_sources,
       title,
+      timeline: {
+        endTime: hour.timeline_end_time,
+        markers: hour.markers.map((marker) => ({
+          classification: marker.classification,
+          endTime: marker.end_time,
+          id: marker.id,
+          startTime: marker.start_time,
+          thumbnailUrl: marker.thumbnail_url,
+        })),
+        spans: hour.spans.map((span) => ({
+          endTime: span.end_time,
+          mediaOffset: span.media_offset,
+          startTime: span.start_time,
+        })),
+        startTime: hour.timeline_start_time,
+      },
     });
   }
 
