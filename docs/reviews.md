@@ -29,3 +29,10 @@
 
 - Reviews shares the activity-list presentation primitive with Events while
   retaining its own loading, filtering, mutation, and playback orchestration.
+- Reviews and Events group tiles by the Home Assistant-localized civil date.
+  Each date heading remains at the top of the list viewport while its tiles
+  scroll beneath it; the next heading pushes it away at the group boundary.
+- Their shared camera-scoped filter retains distinct category headings and
+  presents each category's choices as wrapping pills. Native radio semantics
+  preserve single selection, while labels and zones remain multi-select
+  checkboxes available to keyboard and assistive-technology users.

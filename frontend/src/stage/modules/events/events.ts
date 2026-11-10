@@ -148,6 +148,7 @@ export class EventsModule extends LitElement {
         .retryMedia=${(item: ActivityListItem, url: string) =>
           this._activity.retryMedia(item, url)}
         .roundedCorners=${this.roundedCorners}
+        .selectedDate=${this._filter.selectedDate()}
         .shadows=${this.shadows}
       ></wzc-activity-list>
       <wzc-toast-region .notices=${this._toasts.notices}></wzc-toast-region>

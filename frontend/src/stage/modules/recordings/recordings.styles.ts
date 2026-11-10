@@ -14,11 +14,13 @@ export const recordingsStyles = css`
     box-sizing: border-box;
     block-size: 100%;
     max-block-size: calc(
-      5 * var(--wzc-recording-tile-block-size) + 4 *
+      var(--wzc-media-day-header-block-size) + 5 *
+        var(--wzc-recording-tile-block-size) + 5 *
         var(--wzc-recording-list-gap) + 2 * var(--wzc-recording-list-padding)
     );
     min-block-size: calc(
-      3 * var(--wzc-recording-tile-block-size) + 2 *
+      var(--wzc-media-day-header-block-size) + 3 *
+        var(--wzc-recording-tile-block-size) + 3 *
         var(--wzc-recording-list-gap) + 2 * var(--wzc-recording-list-padding)
     );
     overflow-y: auto;
@@ -29,6 +31,7 @@ export const recordingsStyles = css`
   .list {
     display: grid;
     gap: var(--wzc-recording-list-gap);
+    margin-block-start: var(--wzc-recording-list-gap);
   }
 
   .tile {

@@ -238,7 +238,7 @@ export class ActivityFilter extends LitElement {
       <div class="options">
         ${options.map(
           ([value, label]) =>
-            html`<label>
+            html`<label class="chip">
               <input
                 type="radio"
                 name=${name}
@@ -263,7 +263,7 @@ export class ActivityFilter extends LitElement {
     return html`<fieldset>
       <legend>${legend}</legend>
       <div class="options">
-        <label>
+        <label class="chip">
           <input
             type="checkbox"
             .checked=${selected.length === 0}
@@ -273,7 +273,7 @@ export class ActivityFilter extends LitElement {
         </label>
         ${options.map(
           (value) =>
-            html`<label>
+            html`<label class="chip">
               <input
                 type="checkbox"
                 .checked=${selected.includes(value)}

@@ -249,6 +249,9 @@ export const themeTokens = css`
     );
     --wzc-event-list-gap: 0.5rem;
     --wzc-event-list-padding: 0.25rem;
+    --wzc-media-day-header-block-size: 1.75rem;
+    --wzc-media-day-header-background: var(--wzc-card-background);
+    --wzc-media-day-header-color: var(--wzc-color-text-2);
     --wzc-event-tile-block-size: 7.2rem;
     --wzc-event-tile-background: var(--wzc-color-surface-secondary);
     --wzc-event-tile-border-color: var(--wzc-color-border);

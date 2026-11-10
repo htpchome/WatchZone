@@ -4,8 +4,10 @@ import { styleMap } from "lit/directives/style-map.js";
 
 import { ACTIVITY_LIST_TAG } from "../core/constants";
 import {
+  formatHomeAssistantDateKey,
   formatHomeAssistantEventDate,
   formatHomeAssistantTime,
+  homeAssistantDateKey,
 } from "../core/date-time";
 import type { HomeAssistantApi } from "../core/home-assistant";
 import {
@@ -28,6 +30,7 @@ import {
 } from "./activity-media";
 import type { BadgeVariant } from "./badge";
 import "./badge";
+import "./media-day-header";
 import { activityListStyles } from "./activity-list.styles";
 
 export type ActivityClassification = "alert" | "detection";
@@ -68,6 +71,13 @@ export interface ActivityPlaybackResolution {
 const VIRTUALIZATION_THRESHOLD = 20;
 const VIRTUALIZATION_OVERSCAN_ROWS = 3;
 
+interface ActivityDayGroup {
+  readonly dateKey: string;
+  readonly items: ActivityListItem[];
+  readonly label: string;
+  readonly startIndex: number;
+}
+
 /** Shared activity-tile presentation used by independent media modules. */
 export class ActivityList extends LitElement {
   public static properties = {
@@ -84,6 +94,7 @@ export class ActivityList extends LitElement {
     retryMedia: { attribute: false },
     resolvePlayback: { attribute: false },
     roundedCorners: { attribute: false, type: Boolean },
+    selectedDate: { attribute: false },
     shadows: { attribute: false, type: Boolean },
     toggleReviewed: { attribute: false },
   };
@@ -103,12 +114,14 @@ export class ActivityList extends LitElement {
     item: ActivityListItem,
   ) => Promise<ActivityPlaybackResolution | undefined>;
   public roundedCorners = true;
+  public selectedDate?: string;
   public shadows = true;
   public toggleReviewed?: (item: ActivityListItem) => void;
 
   private readonly _failedMedia = new Set<string>();
   private _hoveredPreviewId?: string;
   private readonly _resolvingPlayback = new Set<string>();
+  private _dayHeaderHeight = 0;
   private _rowGap = 0;
   private _rowHeight = 0;
   private _virtualFrame?: number;
@@ -117,6 +130,8 @@ export class ActivityList extends LitElement {
 
   protected updated(changed: Map<PropertyKey, unknown>): void {
     if (changed.has("items")) {
+      this._windowStart = 0;
+      this._windowEnd = VIRTUALIZATION_THRESHOLD;
       const current = new Set(
         this.items.flatMap((item) =>
           [item.thumbnailUrl, item.snapshotUrl, item.hoverPreviewUrl]
@@ -153,7 +168,10 @@ export class ActivityList extends LitElement {
     >
       ${
         this.loading && this.items.length === 0
-          ? html`<div class="list" aria-hidden="true">
+          ? html`<wzc-media-day-header
+                .label=${this._fallbackDayLabel()}
+              ></wzc-media-day-header>
+              <div class="list skeleton-list" aria-hidden="true">
                 ${Array.from(
                   { length: 5 },
                   () => html`<span class="skeleton-row"></span>`,
@@ -163,7 +181,10 @@ export class ActivityList extends LitElement {
                 ${this.localize(this.loadingKey)}
               </span>`
           : this.items.length === 0
-            ? html`<div class="empty">${this.localize(this.emptyKey)}</div>`
+            ? html`<wzc-media-day-header
+                  .label=${this._fallbackDayLabel()}
+                ></wzc-media-day-header>
+                <div class="empty">${this.localize(this.emptyKey)}</div>`
             : this._renderList()
       }
     </section>`;
@@ -171,32 +192,65 @@ export class ActivityList extends LitElement {
 
   private _renderList() {
     const virtualized =
-      this.items.length > VIRTUALIZATION_THRESHOLD && this._rowHeight > 0;
+      this.items.length > VIRTUALIZATION_THRESHOLD &&
+      this._rowHeight > 0 &&
+      this._dayHeaderHeight > 0;
     const start = virtualized ? this._windowStart : 0;
     const end = virtualized
       ? Math.min(this.items.length, this._windowEnd)
       : Math.min(this.items.length, VIRTUALIZATION_THRESHOLD);
-    const visibleItems = this.items
-      .slice(start, end)
-      .map((item, offset) => ({ index: start + offset, item }));
-    const totalHeight =
-      this.items.length * this._rowHeight +
-      Math.max(0, this.items.length - 1) * this._rowGap;
-    return html`<div
-      class=${virtualized ? "list virtualized" : "list"}
-      style=${styleMap(virtualized ? { blockSize: `${totalHeight}px` } : {})}
+    const groups = this._dayGroups();
+    const visibleGroups = virtualized
+      ? groups
+      : groups.filter(
+          (group) =>
+            group.startIndex < end &&
+            group.startIndex + group.items.length > start,
+        );
+    return html`<div class=${virtualized ? "list virtualized" : "list"}>
+      ${repeat(
+        visibleGroups,
+        ({ dateKey, startIndex }) => `${dateKey}:${startIndex}`,
+        (group) => this._renderDayGroup(group, start, end, virtualized),
+      )}
+    </div>`;
+  }
+
+  private _renderDayGroup(
+    group: ActivityDayGroup,
+    start: number,
+    end: number,
+    virtualized: boolean,
+  ) {
+    const visibleItems = group.items
+      .map((item, localIndex) => ({
+        index: group.startIndex + localIndex,
+        item,
+        localIndex,
+      }))
+      .filter(({ index }) => index >= start && index < end);
+    const groupHeight =
+      this._dayHeaderHeight +
+      group.items.length * (this._rowHeight + this._rowGap);
+    return html`<section
+      class=${virtualized ? "day-group virtualized" : "day-group"}
+      data-date=${group.dateKey}
+      style=${styleMap(virtualized ? { blockSize: `${groupHeight}px` } : {})}
     >
+      <wzc-media-day-header .label=${group.label}></wzc-media-day-header>
       ${repeat(
         visibleItems,
         ({ item }) => item.id,
-        ({ index, item }) => this._renderItem(item, index, virtualized),
+        ({ index, item, localIndex }) =>
+          this._renderItem(item, index, localIndex, virtualized),
       )}
-    </div>`;
+    </section>`;
   }
 
   private _renderItem(
     item: ActivityListItem,
     index: number,
+    localIndex: number,
     virtualized: boolean,
   ) {
     const start = new Date(item.startTime * 1000);
@@ -224,7 +278,7 @@ export class ActivityList extends LitElement {
       style=${styleMap(
         virtualized
           ? {
-              transform: `translateY(${index * (this._rowHeight + this._rowGap)}px)`,
+              transform: `translateY(${localIndex * (this._rowHeight + this._rowGap)}px)`,
             }
           : {},
       )}
@@ -420,37 +474,93 @@ export class ActivityList extends LitElement {
     const viewport = this.renderRoot.querySelector<HTMLElement>(".viewport");
     const list = this.renderRoot.querySelector<HTMLElement>(".list");
     const tile = list?.querySelector<HTMLElement>(".tile");
-    if (!viewport || !list || !tile) return;
+    const group = list?.querySelector<HTMLElement>(".day-group");
+    const dayHeader = group?.querySelector<HTMLElement>("wzc-media-day-header");
+    if (!viewport || !list || !group || !tile || !dayHeader) return;
     const nextRowHeight =
       Math.round(tile.getBoundingClientRect().height * 100) / 100;
-    const nextRowGap = list.classList.contains("virtualized")
+    const nextDayHeaderHeight =
+      Math.round(dayHeader.getBoundingClientRect().height * 100) / 100;
+    const nextRowGap = group.classList.contains("virtualized")
       ? this._rowGap
-      : Number.parseFloat(getComputedStyle(list).rowGap) || 0;
-    if (nextRowHeight <= 0) return;
+      : Number.parseFloat(getComputedStyle(group).rowGap) || 0;
+    if (nextRowHeight <= 0 || nextDayHeaderHeight <= 0) return;
     const stride = nextRowHeight + nextRowGap;
-    const visibleRows = Math.max(1, Math.ceil(viewport.clientHeight / stride));
-    const lastWindowStart = Math.max(0, this.items.length - visibleRows);
-    const nextStart = Math.max(
-      0,
-      Math.min(
-        lastWindowStart,
-        Math.floor(viewport.scrollTop / stride) - VIRTUALIZATION_OVERSCAN_ROWS,
-      ),
-    );
-    const nextEnd = Math.min(
-      this.items.length,
-      nextStart + visibleRows + VIRTUALIZATION_OVERSCAN_ROWS * 2,
-    );
+    const overscan = stride * VIRTUALIZATION_OVERSCAN_ROWS;
+    const visibleStart = Math.max(0, viewport.scrollTop - overscan);
+    const visibleEnd = viewport.scrollTop + viewport.clientHeight + overscan;
+    let nextStart = this.items.length;
+    let nextEnd = 0;
+    let groupOffset = 0;
+    for (const dayGroup of this._dayGroups()) {
+      for (
+        let localIndex = 0;
+        localIndex < dayGroup.items.length;
+        localIndex++
+      ) {
+        const index = dayGroup.startIndex + localIndex;
+        const itemStart =
+          groupOffset + nextDayHeaderHeight + nextRowGap + localIndex * stride;
+        const itemEnd = itemStart + nextRowHeight;
+        if (itemEnd >= visibleStart && itemStart <= visibleEnd) {
+          nextStart = Math.min(nextStart, index);
+          nextEnd = Math.max(nextEnd, index + 1);
+        }
+      }
+      groupOffset += nextDayHeaderHeight + dayGroup.items.length * stride;
+    }
+    if (nextStart === this.items.length) {
+      nextStart = Math.max(0, this.items.length - 1);
+      nextEnd = this.items.length;
+    }
     const changed =
       this._rowHeight !== nextRowHeight ||
+      this._dayHeaderHeight !== nextDayHeaderHeight ||
       this._rowGap !== nextRowGap ||
       this._windowStart !== nextStart ||
       this._windowEnd !== nextEnd;
     this._rowHeight = nextRowHeight;
+    this._dayHeaderHeight = nextDayHeaderHeight;
     this._rowGap = nextRowGap;
     this._windowStart = nextStart;
     this._windowEnd = nextEnd;
     if (changed) this.requestUpdate();
+  }
+
+  private _dayGroups(): readonly ActivityDayGroup[] {
+    const groups: ActivityDayGroup[] = [];
+    const moduleLabel = this._moduleLabel();
+    for (const [index, item] of this.items.entries()) {
+      const date = new Date(item.startTime * 1000);
+      const dateKey = homeAssistantDateKey(item.startTime, this.api?.locale);
+      const current = groups.at(-1);
+      if (current?.dateKey === dateKey) {
+        current.items.push(item);
+        continue;
+      }
+      groups.push({
+        dateKey,
+        items: [item],
+        label: `${formatHomeAssistantEventDate(date, this.api?.locale)} — ${moduleLabel}`,
+        startIndex: index,
+      });
+    }
+    return groups;
+  }
+
+  private _fallbackDayLabel(): string {
+    const dateKey =
+      this.selectedDate ??
+      homeAssistantDateKey(Date.now() / 1000, this.api?.locale);
+    return `${formatHomeAssistantDateKey(dateKey, this.api?.locale)} — ${this._moduleLabel()}`;
+  }
+
+  private _moduleLabel(): string {
+    return this.localize(
+      this.listKey === "reviews.list"
+        ? "navigation.reviews"
+        : "navigation.events",
+    );
   }
 
   private _mediaFailed(item: ActivityListItem, url: string): void {

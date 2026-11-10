@@ -50,8 +50,7 @@ export const activityFilterStyles = css`
   }
 
   .filter-trigger:focus-visible,
-  .reset:focus-visible,
-  input:focus-visible {
+  .reset:focus-visible {
     outline: 2px solid var(--wzc-color-primary);
     outline-offset: 2px;
   }
@@ -87,31 +86,63 @@ export const activityFilterStyles = css`
 
   legend {
     font-size: 0.82rem;
-    font-weight: 600;
+    font-weight: var(--wzc-font-weight-semibold);
     padding: 0;
   }
 
   .options {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.2rem 0.75rem;
+    gap: 0.2rem 0.3rem;
     padding-block-start: 0.35rem;
   }
 
-  label {
+  .chip {
     align-items: center;
     cursor: pointer;
     display: inline-flex;
-    font-size: 0.82rem;
-    gap: 0.3rem;
-    min-block-size: 2rem;
+    min-block-size: 2.25rem;
+    position: relative;
   }
 
-  input {
-    accent-color: var(--wzc-color-primary);
-    block-size: 1rem;
-    inline-size: 1rem;
-    margin: 0;
+  .chip input {
+    block-size: 1px;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    inline-size: 1px;
+    overflow: hidden;
+    position: absolute;
+    white-space: nowrap;
+  }
+
+  .chip span {
+    align-items: center;
+    background: var(--wzc-color-surface-secondary);
+    border: 1px solid var(--wzc-color-border-control);
+    border-radius: var(--wzc-radius-pill);
+    box-sizing: border-box;
+    color: var(--wzc-color-text-2);
+    display: inline-flex;
+    font-size: var(--wzc-font-size-small);
+    min-block-size: 1.75rem;
+    padding: 0.2rem 0.65rem;
+  }
+
+  .chip input:checked + span {
+    background: var(--wzc-color-primary);
+    border-color: var(--wzc-color-primary);
+    color: var(--wzc-color-text-reversed);
+  }
+
+  .chip input:focus-visible + span {
+    outline: 2px solid var(--wzc-color-primary);
+    outline-offset: 2px;
+  }
+
+  @media (hover: hover) {
+    .chip:hover span {
+      border-color: var(--wzc-color-primary);
+    }
   }
 
   .footer {

@@ -3,6 +3,7 @@ import { repeat } from "lit/directives/repeat.js";
 
 import type { RecordingHour } from "../../../api/recordings";
 import {
+  formatHomeAssistantDateKey,
   formatHomeAssistantEventDate,
   formatHomeAssistantTime,
   homeAssistantDateKey,
@@ -17,6 +18,7 @@ import { openRecordedMedia } from "../../../core/recorded-media";
 import { RECORDINGS_TAG } from "../../../core/constants";
 import { homeAssistantNumberFormat } from "../../../core/number-format";
 import { renderIcon } from "../../../ui/icons";
+import "../../../ui/media-day-header";
 import { ToastManager } from "../../../ui/toast-manager";
 import "../../../ui/toast-region";
 import type { CameraSelectionContext } from "../../camera-selection-context";
@@ -59,6 +61,9 @@ export class RecordingsModule extends LitElement {
     const hours = this._recordings.hours;
     return html`
       <div class="viewport">
+        <wzc-media-day-header
+          .label=${this._dayLabel(hours)}
+        ></wzc-media-day-header>
         ${
           this._recordings.loading && hours.length === 0
             ? html`<div
@@ -211,6 +216,24 @@ export class RecordingsModule extends LitElement {
     return `${camera} - ${this._range(hour)} - ${formatHomeAssistantEventDate(
       new Date(hour.start_time * 1000),
       this.api?.locale,
+    )}`;
+  }
+
+  private _dayLabel(hours: readonly RecordingHour[]): string {
+    const selectedDate = this._recordings.selectedDate();
+    let date: Date;
+    const locale = this.api?.locale;
+    if (hours[0]) {
+      date = new Date(hours[0].start_time * 1000);
+    } else if (selectedDate) {
+      return `${formatHomeAssistantDateKey(selectedDate, locale)} — ${this.localize(
+        "navigation.recordings",
+      )}`;
+    } else {
+      date = new Date();
+    }
+    return `${formatHomeAssistantEventDate(date, locale)} — ${this.localize(
+      "navigation.recordings",
     )}`;
   }
 

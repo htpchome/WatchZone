@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   formatHomeAssistantDate,
+  formatHomeAssistantDateKey,
   formatHomeAssistantEventDate,
   formatHomeAssistantTime,
   homeAssistantDateTimeFormat,
@@ -40,6 +41,21 @@ describe("Home Assistant date and time formatting", () => {
         time_zone: "UTC",
       }),
     ).toBe("Do., 5. Nov.");
+  });
+
+  it("formats civil date keys without time-zone date shifts", () => {
+    expect(
+      formatHomeAssistantDateKey("2026-11-09", {
+        language: "en-US",
+        time_zone: "Pacific/Kiritimati",
+      }),
+    ).toBe("Mon, Nov 9");
+    expect(
+      formatHomeAssistantDateKey("2026-11-09", {
+        language: "de-DE",
+        time_zone: "America/Adak",
+      }),
+    ).toBe("Mo., 9. Nov.");
   });
 
   it("honors explicit HA time and date formats", () => {

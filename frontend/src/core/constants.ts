@@ -45,6 +45,7 @@ export const EVENTS_TAG = `${APP_ID}-events`;
 export const REVIEWS_TAG = `${APP_ID}-reviews`;
 export const RECORDINGS_TAG = `${APP_ID}-recordings`;
 export const ACTIVITY_LIST_TAG = `${APP_ID}-activity-list`;
+export const MEDIA_DAY_HEADER_TAG = `${APP_ID}-media-day-header`;
 export const ACTIVITY_CALENDAR_TAG = `${APP_ID}-activity-calendar`;
 export const ACTIVITY_FILTER_TAG = `${APP_ID}-activity-filter`;
 export const RECORDED_VIDEO_PLAYER_TAG = `${APP_ID}-recorded-video-player`;

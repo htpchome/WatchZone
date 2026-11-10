@@ -561,6 +561,7 @@ export class LayoutRuntime implements ReactiveController {
         role="status"
       >
         ${status}
+        <span class="activity-skeleton-heading" aria-hidden="true"></span>
         ${Array.from(
           { length: 5 },
           () => html`<span class="activity-skeleton-row"></span>`,

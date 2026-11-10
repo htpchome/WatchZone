@@ -12,11 +12,13 @@ export const activityListStyles = css`
     box-sizing: border-box;
     block-size: 100%;
     max-block-size: calc(
-      5 * var(--wzc-event-tile-block-size) + 4 * var(--wzc-event-list-gap) + 2 *
+      var(--wzc-media-day-header-block-size) + 5 *
+        var(--wzc-event-tile-block-size) + 5 * var(--wzc-event-list-gap) + 2 *
         var(--wzc-event-list-padding)
     );
     min-block-size: calc(
-      3 * var(--wzc-event-tile-block-size) + 2 * var(--wzc-event-list-gap) + 2 *
+      var(--wzc-media-day-header-block-size) + 3 *
+        var(--wzc-event-tile-block-size) + 3 * var(--wzc-event-list-gap) + 2 *
         var(--wzc-event-list-padding)
     );
     overflow-y: auto;
@@ -25,8 +27,17 @@ export const activityListStyles = css`
   }
 
   .list {
+    display: block;
+  }
+
+  .skeleton-list,
+  .day-group {
     display: grid;
     gap: var(--wzc-event-list-gap);
+  }
+
+  .skeleton-list {
+    margin-block-start: var(--wzc-event-list-gap);
   }
 
   .list.virtualized {
@@ -34,8 +45,15 @@ export const activityListStyles = css`
     position: relative;
   }
 
-  .list.virtualized .tile {
-    inset-block-start: 0;
+  .day-group.virtualized {
+    display: block;
+    position: relative;
+  }
+
+  .day-group.virtualized .tile {
+    inset-block-start: calc(
+      var(--wzc-media-day-header-block-size) + var(--wzc-event-list-gap)
+    );
     inset-inline: 0;
     position: absolute;
   }

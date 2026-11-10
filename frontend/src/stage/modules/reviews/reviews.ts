@@ -150,6 +150,7 @@ export class ReviewsModule extends LitElement {
           this._activity.retryMedia(item, url)}
         .resolvePlayback=${this._resolvePlayback}
         .roundedCorners=${this.roundedCorners}
+        .selectedDate=${this._filter.selectedDate()}
         .shadows=${this.shadows}
         .toggleReviewed=${this._toggleReviewed}
       ></wzc-activity-list>

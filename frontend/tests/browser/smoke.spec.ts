@@ -790,32 +790,35 @@ test("keeps activity content in an independently scrolling viewport", async ({
       setConfig(config: unknown): void;
     };
     const events = (camera: string) =>
-      Array.from({ length: 6 }, (_, index) => ({
-        camera,
-        clip_url: index === 0 ? "/recording.mp4" : null,
-        end_time: 1_700_000_024 - index * 60,
-        has_clip: index === 0,
-        has_snapshot: index !== 3,
-        id: `frigate:${camera}:${index}`,
-        label: index === 0 ? "person" : "bird",
-        playback_sources:
-          index < 2
-            ? [
-                {
-                  content_type: "video/mp4",
-                  transport: "file",
-                  url: "/recording.mp4",
-                },
-              ]
-            : [],
-        preferred_transport: "file",
-        revision: `revision-${index}`,
-        snapshot_url: index === 3 ? null : "/thumbnail.svg",
-        start_time: 1_700_000_000 - index * 60,
-        sub_label: index === 0 ? "Resident" : null,
-        thumbnail_url: index === 3 ? null : "/thumbnail.svg",
-        zones: [camera === "back" ? "back_yard" : "driveway"],
-      }));
+      Array.from({ length: 6 }, (_, index) => {
+        const start = 1_700_000_000 - index * 60 - (index === 0 ? 0 : 86_400);
+        return {
+          camera,
+          clip_url: index === 0 ? "/recording.mp4" : null,
+          end_time: start + 24,
+          has_clip: index === 0,
+          has_snapshot: index !== 3,
+          id: `frigate:${camera}:${index}`,
+          label: index === 0 ? "person" : "bird",
+          playback_sources:
+            index < 2
+              ? [
+                  {
+                    content_type: "video/mp4",
+                    transport: "file",
+                    url: "/recording.mp4",
+                  },
+                ]
+              : [],
+          preferred_transport: "file",
+          revision: `revision-${index}`,
+          snapshot_url: index === 3 ? null : "/thumbnail.svg",
+          start_time: start,
+          sub_label: index === 0 ? "Resident" : null,
+          thumbnail_url: index === 3 ? null : "/thumbnail.svg",
+          zones: [camera === "back" ? "back_yard" : "driveway"],
+        };
+      });
     card.setConfig({
       type: "custom:watchzone-card",
       event_history_days: 7,
@@ -932,6 +935,11 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(normalNavigation.activeIconOpacity).toBe("1");
   expect(normalNavigation.activePathFill).toBe("rgb(255, 255, 255)");
   await expect(page.locator("wzc-reviews .tile")).toHaveCount(6);
+  const reviewHeaders = page.locator(
+    "wzc-reviews wzc-activity-list wzc-media-day-header",
+  );
+  await expect(reviewHeaders).toHaveCount(2);
+  await expect(reviewHeaders.first()).toContainText("Reviews");
   const reviewState = page.locator("wzc-reviews .review-state").first();
   await expect(reviewState).toHaveClass(/unreviewed/);
   await expect(reviewState).toHaveAttribute("aria-pressed", "false");
@@ -1161,7 +1169,10 @@ test("keeps activity content in an independently scrolling viewport", async ({
         ...originalItems[index % originalItems.length],
         id: `virtualized-${index}`,
         revision: `virtualized-${index}`,
-        startTime: Number(originalItems[0]?.startTime ?? 0) - index,
+        startTime:
+          Number(originalItems[0]?.startTime ?? 0) -
+          Math.floor(index / 20) * 86_400 -
+          index,
       }));
       await list.updateComplete;
       await new Promise<void>((resolve) =>
@@ -1174,6 +1185,28 @@ test("keeps activity content in an independently scrolling viewport", async ({
         throw new Error("Activity viewport was not rendered");
       const initialCount =
         list.shadowRoot?.querySelectorAll(".tile").length ?? 0;
+      const dayHeaderCount =
+        list.shadowRoot?.querySelectorAll("wzc-media-day-header").length ?? 0;
+      const headers = [
+        ...(list.shadowRoot?.querySelectorAll<HTMLElement>(
+          "wzc-media-day-header",
+        ) ?? []),
+      ];
+      const initialHeaderTop = headers[0]?.getBoundingClientRect().top ?? 0;
+      const secondHeaderOffset = headers[1]
+        ? headers[1].getBoundingClientRect().top -
+          viewportElement.getBoundingClientRect().top +
+          viewportElement.scrollTop
+        : 0;
+      viewportElement.scrollTop = secondHeaderOffset;
+      viewportElement.dispatchEvent(new Event("scroll"));
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => resolve()),
+      );
+      await list.updateComplete;
+      const stickyHeaderTop = headers[1]?.getBoundingClientRect().top ?? 0;
+      const previousHeaderBottom =
+        headers[0]?.getBoundingClientRect().bottom ?? 0;
       const scrollHeight = viewportElement.scrollHeight;
       viewportElement.scrollTop = scrollHeight;
       viewportElement.dispatchEvent(new Event("scroll"));
@@ -1189,12 +1222,24 @@ test("keeps activity content in an independently scrolling viewport", async ({
       await list.updateComplete;
       return {
         initialCount,
+        dayHeaderCount,
         lastPosition: Math.max(...positions),
+        previousHeaderBottom,
         scrollHeight,
+        initialHeaderTop,
+        stickyHeaderTop,
         visibleHeight: viewportElement.clientHeight,
       };
     });
   expect(virtualized.initialCount).toBeLessThan(20);
+  expect(virtualized.dayHeaderCount).toBe(5);
+  expect(virtualized.stickyHeaderTop).toBeCloseTo(
+    virtualized.initialHeaderTop,
+    0,
+  );
+  expect(virtualized.previousHeaderBottom).toBeLessThanOrEqual(
+    virtualized.stickyHeaderTop + 1,
+  );
   expect(virtualized.scrollHeight).toBeGreaterThan(virtualized.visibleHeight);
   expect(virtualized.lastPosition).toBe(100);
   const constrained = await events
@@ -1211,7 +1256,8 @@ test("keeps activity content in an independently scrolling viewport", async ({
       list.style.removeProperty("block-size");
       return geometry;
     });
-  expect(constrained.clientHeight).toBeCloseTo(400, 0);
+  expect(constrained.clientHeight).toBeGreaterThanOrEqual(400);
+  expect(constrained.clientHeight).toBeLessThan(420);
   expect(constrained.scrollHeight).toBeGreaterThan(constrained.clientHeight);
   const nonScrolling = await events
     .locator("wzc-activity-list")
@@ -1269,8 +1315,8 @@ test("keeps activity content in an independently scrolling viewport", async ({
   const viewportBottom = await viewport.evaluate(
     (node) => node.getBoundingClientRect().bottom,
   );
-  expect(tileGeometry[4]?.bottom).toBeLessThanOrEqual(viewportBottom + 1);
-  expect(tileGeometry[5]?.bottom).toBeGreaterThan(viewportBottom);
+  expect(tileGeometry[3]?.bottom).toBeLessThanOrEqual(viewportBottom + 1);
+  expect(tileGeometry[4]?.bottom).toBeGreaterThan(viewportBottom);
   expect(tileGeometry[0]?.thumbnailRatio).toBeCloseTo(16 / 9, 2);
   expect(tileGeometry[0]?.thumbnailBottomInset).toBeLessThanOrEqual(1);
   expect(tileGeometry[0]?.thumbnailLeadingInset).toBeLessThanOrEqual(1);
@@ -1559,7 +1605,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await nextEventTile.scrollIntoViewIfNeeded();
   await nextEventTile.evaluate((button: HTMLButtonElement) => button.click());
   await expect(page.locator("wzc-recorded-video-dialog .title")).toHaveText(
-    "Front - 5:12 PM - Tue, Nov 14",
+    "Front - 5:12 PM - Mon, Nov 13",
   );
   await expect(mediaDialog).toBeVisible();
   await page.evaluate(() =>
@@ -1774,6 +1820,10 @@ test("switches activity and recordings through the shared media calendar", async
   const calendar = navigation.locator("wzc-activity-calendar");
   const trigger = calendar.locator(".calendar-trigger");
   await expect(page.locator("wzc-reviews .tile")).toHaveCount(2);
+  const reviewDayHeaders = page.locator("wzc-reviews wzc-media-day-header");
+  await expect(reviewDayHeaders).toHaveCount(2);
+  await expect(reviewDayHeaders.first()).toContainText("Mon, Nov 9 — Reviews");
+  await expect(reviewDayHeaders.nth(1)).toContainText("Sun, Nov 8 — Reviews");
   const loadingSurface = page.locator("wzc-reviews .thumbnail-wrap").first();
   await expect(loadingSurface).toHaveCSS("background-color", "rgb(36, 36, 36)");
   await expect(loadingSurface).toHaveCSS("color", "rgb(98, 98, 98)");
@@ -1818,10 +1868,15 @@ test("switches activity and recordings through the shared media calendar", async
   await calendar.locator(".day.marked").first().click();
   await expect(page.locator("wzc-reviews .tile")).toHaveCount(1);
   await expect(page.locator("wzc-reviews")).toContainText("Bird");
+  await expect(reviewDayHeaders).toHaveCount(1);
+  await expect(reviewDayHeaders).toContainText("Sun, Nov 8 — Reviews");
 
   await navigation.locator(".stage-stack-button").nth(1).click();
   await expect(page.locator("wzc-events .tile")).toHaveCount(1);
   await expect(page.locator("wzc-events")).toContainText("Bird");
+  await expect(page.locator("wzc-events wzc-media-day-header")).toContainText(
+    "Sun, Nov 8 — Events",
+  );
 
   await trigger.click();
   await expect(calendar.locator(".day.selected")).toHaveCount(1);
@@ -1830,6 +1885,34 @@ test("switches activity and recordings through the shared media calendar", async
 
   await filter.locator(".filter-trigger").click();
   await expect(filter.locator(".popover")).toBeVisible();
+  await expect(filter.locator("fieldset")).toHaveCount(4);
+  const selectedFilterChip = filter
+    .locator(".chip input:checked + span")
+    .first();
+  const unselectedFilterChip = filter
+    .locator(".chip input:not(:checked) + span")
+    .first();
+  const filterChipPresentation = await Promise.all([
+    selectedFilterChip.evaluate((chip) => {
+      const style = getComputedStyle(chip);
+      return {
+        background: style.backgroundColor,
+        borderRadius: style.borderRadius,
+      };
+    }),
+    unselectedFilterChip.evaluate(
+      (chip) => getComputedStyle(chip).backgroundColor,
+    ),
+    filter
+      .locator(".chip")
+      .first()
+      .evaluate((chip) => chip.getBoundingClientRect().height),
+  ]);
+  expect(filterChipPresentation[0].background).not.toBe(
+    filterChipPresentation[1],
+  );
+  expect(filterChipPresentation[0].borderRadius).not.toBe("0px");
+  expect(filterChipPresentation[2]).toBeGreaterThanOrEqual(36);
   await expect
     .poll(() =>
       filter
@@ -1850,8 +1933,16 @@ test("switches activity and recordings through the shared media calendar", async
   ).toBeLessThanOrEqual(viewportSize?.height ?? 0);
   await filter.getByText("person", { exact: true }).click();
   await expect(page.locator("wzc-events .tile")).toHaveCount(1);
-  await filter.locator('input[value="alert"]').click();
-  await filter.locator('input[value="reviewed"]').click();
+  await filter.getByText("bird", { exact: true }).click();
+  await expect(
+    filter.locator("fieldset").nth(1).locator('input[type="checkbox"]:checked'),
+  ).toHaveCount(2);
+  await filter.getByText("Alerts", { exact: true }).click();
+  await filter.getByText("Detections", { exact: true }).click();
+  await expect(filter.locator('input[value="alert"]')).not.toBeChecked();
+  await expect(filter.locator('input[value="detection"]')).toBeChecked();
+  await filter.getByText("Alerts", { exact: true }).click();
+  await filter.getByText("Reviewed", { exact: true }).click();
   await filter.getByText("driveway", { exact: true }).click();
   await expect(page.locator("wzc-events .tile")).toHaveCount(1);
   await filter.locator(".reset").click();
@@ -1860,6 +1951,9 @@ test("switches activity and recordings through the shared media calendar", async
   await navigation.locator(".stage-stack-button").nth(2).click();
   const recordings = page.locator("wzc-recordings");
   await expect(recordings.locator(".tile")).toHaveCount(8);
+  await expect(recordings.locator("wzc-media-day-header")).toContainText(
+    "Mon, Nov 9 — Recordings",
+  );
   await expect(recordings.locator(".range").first()).toHaveText(
     "10:00 AM – 10:27 AM",
   );

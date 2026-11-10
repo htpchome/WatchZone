@@ -287,11 +287,13 @@ export const stageRuntimeStyles = css`
     box-sizing: border-box;
     block-size: 100%;
     max-block-size: calc(
-      5 * var(--wzc-event-tile-block-size) + 4 * var(--wzc-event-list-gap) + 2 *
+      var(--wzc-media-day-header-block-size) + 5 *
+        var(--wzc-event-tile-block-size) + 5 * var(--wzc-event-list-gap) + 2 *
         var(--wzc-event-list-padding)
     );
     min-block-size: calc(
-      3 * var(--wzc-event-tile-block-size) + 2 * var(--wzc-event-list-gap) + 2 *
+      var(--wzc-media-day-header-block-size) + 3 *
+        var(--wzc-event-tile-block-size) + 3 * var(--wzc-event-list-gap) + 2 *
         var(--wzc-event-list-padding)
     );
     gap: var(--wzc-event-list-gap);
@@ -306,6 +308,12 @@ export const stageRuntimeStyles = css`
     background: var(--wzc-event-tile-background);
     border-radius: var(--wzc-event-tile-radius);
     box-shadow: var(--wzc-event-tile-shadow);
+  }
+
+  .activity-skeleton-heading {
+    display: block;
+    block-size: var(--wzc-media-day-header-block-size);
+    inline-size: 100%;
   }
 
   .activity-skeleton.no-shadows .activity-skeleton-row {

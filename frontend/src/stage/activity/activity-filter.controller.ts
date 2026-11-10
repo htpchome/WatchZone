@@ -123,6 +123,10 @@ export class ActivityFilterController implements ReactiveController {
     );
   }
 
+  public selectedDate(): string | undefined {
+    return this._selectedDate;
+  }
+
   private _includesDate(timestampSeconds: number): boolean {
     return (
       !this._selectedDate ||

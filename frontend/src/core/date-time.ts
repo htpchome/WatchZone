@@ -117,6 +117,24 @@ export function formatHomeAssistantEventDate(
   ).format(date);
 }
 
+/** Format a civil `YYYY-MM-DD` date without shifting it through a time zone. */
+export function formatHomeAssistantDateKey(
+  dateKey: string,
+  locale: HomeAssistantLocale | undefined,
+): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateKey);
+  if (!match) return dateKey;
+  const [, year, month, day] = match;
+  const date = new Date(
+    Date.UTC(Number(year), Number(month) - 1, Number(day), 12),
+  );
+  return formatHomeAssistantEventDate(date, {
+    ...locale,
+    language: locale?.language ?? "en",
+    time_zone: "UTC",
+  });
+}
+
 /** Stable YYYY-MM-DD key for an instant in Home Assistant's selected zone. */
 export function homeAssistantDateKey(
   timestampSeconds: number,

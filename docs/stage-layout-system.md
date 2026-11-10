@@ -129,6 +129,10 @@ The media-list stack's trailing calendar is module-aware. Reviews and Events use
 review/event availability and their shared activity filters. Recordings uses
 recording availability and hides filters that do not apply to recording ranges.
 Only camera-scoped date selection crosses those independent module boundaries.
+Each active media list owns a localized sticky day heading inside its existing
+scroll viewport. Reviews and Events add a heading at every day boundary;
+Recordings displays the selected recording day. The Stage runtime does not
+derive, position, or synchronize those feature-owned headings.
 
 ## Runtime rules
 
