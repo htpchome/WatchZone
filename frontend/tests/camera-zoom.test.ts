@@ -182,6 +182,56 @@ describe("camera media zoom", () => {
     expect(doubleClick.defaultPrevented).toBe(true);
   });
 
+  it("dismisses live overlays when pointer or touch starts outside the video", () => {
+    vi.useFakeTimers();
+    const host = createHost();
+    const surface = createSurface();
+    const outside = document.createElement("button");
+    document.body.append(surface, outside);
+    const controller = new MediaPresentationController(host, {
+      dismissOverlayOnOutsidePointer: true,
+    });
+    controller.hostConnected();
+    controller.observe(surface);
+    connectMediaPointerEvents(surface, controller);
+
+    controller.overlay.reveal();
+    outside.dispatchEvent(
+      pointerEvent("pointerdown", {
+        clientX: 500,
+        clientY: 300,
+        pointerId: 1,
+        pointerType: "mouse",
+      }),
+    );
+    vi.runOnlyPendingTimers();
+    expect(controller.overlay.visible).toBe(false);
+
+    controller.overlay.reveal();
+    outside.dispatchEvent(
+      pointerEvent("pointerdown", {
+        clientX: 500,
+        clientY: 300,
+        pointerId: 2,
+        pointerType: "touch",
+      }),
+    );
+    vi.runOnlyPendingTimers();
+    expect(controller.overlay.visible).toBe(false);
+
+    controller.overlay.reveal();
+    surface.dispatchEvent(
+      pointerEvent("pointerdown", {
+        clientX: 200,
+        clientY: 112.5,
+        pointerId: 3,
+        pointerType: "mouse",
+      }),
+    );
+    expect(controller.overlay.visible).toBe(true);
+    controller.hostDisconnected();
+  });
+
   it("does not treat a completed pan as part of a double activation", () => {
     const surface = createSurface();
     const controller = new MediaZoomController(createHost());

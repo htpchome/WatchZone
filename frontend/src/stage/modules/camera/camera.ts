@@ -229,6 +229,7 @@ export class CameraModule extends LitElement {
         aria-hidden=${this._navigationVisible ? "false" : "true"}
         tabindex=${this._navigationVisible ? "0" : "-1"}
         ?disabled=${this.cameras.length < 2 || this._activeIndex === 0}
+        @pointerdown=${this._stopPointerPropagation}
         @pointerup=${releaseTouchFocus}
         @click=${this._previous}
       >
@@ -248,6 +249,7 @@ export class CameraModule extends LitElement {
           this.cameras.length < 2 ||
           this._activeIndex === this.cameras.length - 1
         }
+        @pointerdown=${this._stopPointerPropagation}
         @pointerup=${releaseTouchFocus}
         @click=${this._next}
       >
@@ -304,6 +306,10 @@ export class CameraModule extends LitElement {
 
   private readonly _next = (): void => {
     this._carousel.next();
+  };
+
+  private readonly _stopPointerPropagation = (event: PointerEvent): void => {
+    event.stopPropagation();
   };
 
   private readonly _handleGestureLock = (

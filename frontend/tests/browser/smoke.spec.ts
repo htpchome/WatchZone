@@ -1387,6 +1387,13 @@ test("filters alerts and events through the shared activity calendar", async ({
   expect(alignment.triggerWidth).toBeGreaterThanOrEqual(44);
 
   await trigger.click();
+  await expect
+    .poll(() =>
+      calendar
+        .locator(".popover")
+        .evaluate((element) => element.matches(":popover-open")),
+    )
+    .toBe(true);
   await expect(calendar.locator(".day.marked")).toHaveCount(2);
   await calendar.locator(".day.marked").first().click();
   await expect(page.locator("wzc-alerts .tile")).toHaveCount(1);
@@ -1403,6 +1410,24 @@ test("filters alerts and events through the shared activity calendar", async ({
 
   await filter.locator(".filter-trigger").click();
   await expect(filter.locator(".popover")).toBeVisible();
+  await expect
+    .poll(() =>
+      filter
+        .locator(".popover")
+        .evaluate((element) => element.matches(":popover-open")),
+    )
+    .toBe(true);
+  const popoverBounds = await filter.locator(".popover").boundingBox();
+  const viewportSize = page.viewportSize();
+  expect(popoverBounds).not.toBeNull();
+  expect(popoverBounds?.x).toBeGreaterThanOrEqual(0);
+  expect(popoverBounds?.y).toBeGreaterThanOrEqual(0);
+  expect(
+    (popoverBounds?.x ?? 0) + (popoverBounds?.width ?? 0),
+  ).toBeLessThanOrEqual(viewportSize?.width ?? 0);
+  expect(
+    (popoverBounds?.y ?? 0) + (popoverBounds?.height ?? 0),
+  ).toBeLessThanOrEqual(viewportSize?.height ?? 0);
   await filter.getByText("person", { exact: true }).click();
   await expect(page.locator("wzc-events .tile")).toHaveCount(1);
   await filter.locator('input[value="alert"]').click();
@@ -4056,6 +4081,7 @@ test("retains one live connection while the card presentation is replaced", asyn
   await expect(suspendDialog.locator('input[type="number"]')).toHaveCount(2);
   await suspendDialog.getByRole("button", { name: "Cancel" }).click();
   await expect(suspendDialog).toBeHidden();
+  await liveViewport.hover();
   await page.locator('wzc-camera-controls [data-control="suspend"]').click();
   await expect(suspendDialog).toBeVisible();
   await suspendDialog.getByRole("button", { name: "Suspend camera" }).click();
@@ -4346,6 +4372,42 @@ test("retains one live connection while the card presentation is replaced", asyn
   });
   await expect(controls.first()).toBeVisible();
   await expect(connectionIndicator).toHaveText("WebRTC");
+  await page
+    .locator("wzc-camera-navigation button")
+    .first()
+    .dispatchEvent("pointerdown", {
+      isPrimary: true,
+      pointerId: 20,
+      pointerType: "touch",
+    });
+  await expect(controls.first()).toBeHidden();
+  await page.waitForTimeout(400);
+  await viewport.dispatchEvent("pointerdown", {
+    isPrimary: true,
+    pointerId: 21,
+    pointerType: "touch",
+  });
+  await viewport.dispatchEvent("pointerup", {
+    isPrimary: true,
+    pointerId: 21,
+    pointerType: "touch",
+  });
+  await expect(controls.first()).toBeVisible();
+  await page.locator("body").dispatchEvent("pointerdown", {
+    isPrimary: true,
+    pointerId: 22,
+    pointerType: "mouse",
+  });
+  await expect(controls.first()).toBeHidden();
+  await page.waitForTimeout(400);
+  await viewport.evaluate((element) => {
+    (
+      (element.getRootNode() as ShadowRoot).host as HTMLElement & {
+        revealOverlay(): void;
+      }
+    ).revealOverlay();
+  });
+  await expect(controls.first()).toBeVisible();
   await page.waitForTimeout(400);
   await viewport.dispatchEvent("pointerdown", {
     isPrimary: true,

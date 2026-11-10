@@ -17,6 +17,7 @@ import type {
   ActivityReviewStatusFilter,
 } from "./activity-filter-context";
 import { activityFilterStyles } from "./activity-filter.styles";
+import { ActivityPopoverController } from "./activity-popover.controller";
 
 const EMPTY_STATE: ActivityFilterState = {
   classification: "all",
@@ -55,6 +56,11 @@ export class ActivityFilter extends LitElement {
   private _subscribedTarget = "";
   private _unsubscribeFilter?: () => void;
   private _unsubscribeSelection?: () => void;
+  private readonly _popover = new ActivityPopoverController(
+    this,
+    () => this._open,
+    ".filter-trigger",
+  );
 
   private readonly _reviewActivity =
     new ActiveCameraActivityController<ReviewItem>(
@@ -148,6 +154,7 @@ export class ActivityFilter extends LitElement {
     );
     return html`<section
       class="popover"
+      popover="manual"
       role="dialog"
       aria-label=${this.localize("filter.title")}
     >

@@ -16,6 +16,7 @@ import { ActiveCameraActivityController } from "./active-camera-activity.control
 import type { ActivityFilterContext } from "./activity-filter-context";
 import type { CameraSelectionContext } from "../camera-selection-context";
 import { activityCalendarStyles } from "./activity-calendar.styles";
+import { ActivityPopoverController } from "./activity-popover.controller";
 
 interface CalendarMonth {
   readonly month: number;
@@ -49,6 +50,11 @@ export class ActivityCalendar extends LitElement {
   private _subscribedEntityId?: string;
   private _subscribedFilter?: ActivityFilterContext;
   private _unsubscribeFilter?: () => void;
+  private readonly _popover = new ActivityPopoverController(
+    this,
+    () => this._open,
+    ".calendar-trigger",
+  );
 
   private readonly _activity = new ActiveCameraActivityController<ReviewItem>(
     this,
@@ -136,6 +142,7 @@ export class ActivityCalendar extends LitElement {
     const todayKey = this._todayKey();
     return html`<section
       class="popover"
+      popover="manual"
       role="dialog"
       aria-label=${this.localize("calendar.title")}
     >

@@ -105,6 +105,7 @@ export class CameraLivePresentation extends LitElement {
   private _snapshotPending = false;
   private _webRtcFrameRequest?: number;
   private readonly _media = new MediaPresentationController(this, {
+    dismissOverlayOnOutsidePointer: true,
     onVisibilityChange: (visible) => this._emitOverlayVisibility(visible),
   });
 

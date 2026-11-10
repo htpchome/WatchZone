@@ -54,10 +54,12 @@ export const activityCalendarStyles = css`
     box-shadow: var(--wzc-activity-popover-shadow);
     color: var(--wzc-color-text-1);
     inline-size: min(19rem, calc(100vw - 2rem));
-    inset-block-start: calc(100% + 0.25rem);
-    inset-inline-end: 0;
+    inset: auto;
+    margin: 0;
+    max-block-size: calc(100dvh - 2rem);
+    overflow-y: auto;
     padding: 0.75rem;
-    position: absolute;
+    position: fixed;
     z-index: 10;
   }
 
