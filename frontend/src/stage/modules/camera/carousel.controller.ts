@@ -110,8 +110,15 @@ export class CameraCarouselController implements ReactiveController {
         noSwipingClass: "swiper-no-swiping",
         on: {
           slideChange: (swiper) => {
+            const selectionChanged = swiper.activeIndex !== this._activeIndex;
             this._activeIndex = swiper.activeIndex;
-            this._onSelectionChanged?.(swiper.activeIndex, false);
+            // Camera-bar selection updates the requested index before Swiper
+            // performs its zero-duration DOM synchronization. That internal
+            // slideChange is already settled and must not replace the shared
+            // selection state with a transition that can never end.
+            if (selectionChanged) {
+              this._onSelectionChanged?.(swiper.activeIndex, false);
+            }
           },
           slideChangeTransitionEnd: (swiper) => {
             this._activeIndex = swiper.activeIndex;

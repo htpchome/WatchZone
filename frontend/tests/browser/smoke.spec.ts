@@ -978,6 +978,11 @@ test("keeps activity content in an independently scrolling viewport", async ({
     "aria-pressed",
     "true",
   );
+  await page
+    .locator('wzc-camera-navigation button[data-entity-id="camera.back"]')
+    .click();
+  await expect(page.locator("wzc-alerts .tile")).toHaveCount(6);
+  await expect(page.locator("wzc-alerts")).toContainText("back_yard");
   await stackButtons.nth(1).click();
   await expect(stackButtons.nth(1)).toHaveCSS(
     "background-color",
@@ -1003,9 +1008,13 @@ test("keeps activity content in an independently scrolling viewport", async ({
     "21px",
   );
   await expect(events.locator(".placeholder svg")).toHaveCount(1);
-  await expect(events).toContainText("driveway");
+  await expect(events).toContainText("back_yard");
   await expect(events).toContainText("5:13 PM");
   await expect(events.locator("wzc-badge").first()).toHaveText("Person");
+  await page
+    .locator('wzc-camera-navigation button[data-entity-id="camera.front"]')
+    .click();
+  await expect(events).toContainText("driveway");
   const scrolling = await viewport.evaluate((node) => ({
     clientHeight: node.clientHeight,
     scrollHeight: node.scrollHeight,
