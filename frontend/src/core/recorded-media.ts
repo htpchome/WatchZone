@@ -17,7 +17,9 @@ export interface RecordedMediaRequest {
   readonly title: string;
 }
 
-export interface RecordedMediaInitialSize {
+export interface RecordedMediaInitialGeometry {
+  readonly centerX: number;
+  readonly centerY: number;
   readonly height: number;
   readonly width: number;
 }

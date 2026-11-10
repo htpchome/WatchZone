@@ -1574,6 +1574,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   );
   const viewportSize = page.viewportSize();
   const fittedDialogBox = await mediaDialog.boundingBox();
+  const cardBox = await page.locator("watchzone-card").boundingBox();
   if (viewportSize && fittedDialogBox) {
     expect(fittedDialogBox.x).toBeGreaterThanOrEqual(0);
     expect(fittedDialogBox.y).toBeGreaterThanOrEqual(0);
@@ -1583,6 +1584,21 @@ test("keeps activity content in an independently scrolling viewport", async ({
     expect(fittedDialogBox.y + fittedDialogBox.height).toBeLessThanOrEqual(
       viewportSize.height,
     );
+    if (cardBox) {
+      const expectedX = Math.min(
+        Math.max(0, cardBox.x + cardBox.width / 2 - fittedDialogBox.width / 2),
+        viewportSize.width - fittedDialogBox.width,
+      );
+      const expectedY = Math.min(
+        Math.max(
+          0,
+          cardBox.y + cardBox.height / 2 - fittedDialogBox.height / 2,
+        ),
+        viewportSize.height - fittedDialogBox.height,
+      );
+      expect(fittedDialogBox.x).toBeCloseTo(expectedX, 0);
+      expect(fittedDialogBox.y).toBeCloseTo(expectedY, 0);
+    }
   }
   const transport = page.locator("wzc-recorded-video-transport");
   await page.mouse.move(0, 0);

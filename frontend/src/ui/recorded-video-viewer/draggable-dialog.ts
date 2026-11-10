@@ -13,7 +13,7 @@ import {
   type LocalizeFunction,
 } from "../../core/localization";
 import type {
-  RecordedMediaInitialSize,
+  RecordedMediaInitialGeometry,
   RecordedMediaRequest,
 } from "../../core/recorded-media";
 import type { ToastNotice } from "../toast-manager";
@@ -34,7 +34,7 @@ export class DraggableRecordedVideoDialog extends LitElement {
   };
 
   public api?: HomeAssistantApi;
-  public initialSize?: RecordedMediaInitialSize;
+  public initialSize?: RecordedMediaInitialGeometry;
   public localize: LocalizeFunction = englishLocalize;
   public notices: readonly ToastNotice[] = [];
   public request?: RecordedMediaRequest;
@@ -308,6 +308,12 @@ export class DraggableRecordedVideoDialog extends LitElement {
     const size = this.initialSize;
     if (!dialog || !size) return;
     this._setMediaWidth(size.width);
+    dialog.classList.add("dragged");
+    const rect = dialog.getBoundingClientRect();
+    this._positionDialog(
+      size.centerX - rect.width / 2,
+      size.centerY - rect.height / 2,
+    );
   }
 
   private _mediaSurface(): HTMLElement | null {

@@ -274,6 +274,59 @@ describe("recorded media player", () => {
     ).toBeNull();
   });
 
+  it("centers its stage-sized initial placement on the WatchZone card", async () => {
+    Object.defineProperty(HTMLDialogElement.prototype, "show", {
+      configurable: true,
+      value: function (this: HTMLDialogElement) {
+        this.setAttribute("open", "");
+      },
+    });
+    const viewer = document.createElement(
+      "wzc-recorded-video-viewer",
+    ) as RecordedVideoViewer;
+    document.body.append(viewer);
+    await viewer.updateComplete;
+    const container = viewer.shadowRoot?.querySelector(
+      "wzc-recorded-video-dialog",
+    ) as DraggableRecordedVideoDialog;
+    await container.updateComplete;
+    const dialog = container.shadowRoot?.querySelector("dialog");
+    expect(dialog).not.toBeNull();
+    if (!dialog) return;
+    vi.spyOn(dialog, "getBoundingClientRect").mockImplementation(() => {
+      const width = Number.parseFloat(dialog.style.width) || 300;
+      const height = 300;
+      const left = Number.parseFloat(dialog.style.left) || 0;
+      const top = Number.parseFloat(dialog.style.top) || 0;
+      return {
+        bottom: top + height,
+        height,
+        left,
+        right: left + width,
+        top,
+        width,
+        x: left,
+        y: top,
+        toJSON: () => ({}),
+      };
+    });
+
+    viewer.initialSize = {
+      centerX: 700,
+      centerY: 450,
+      height: 337.5,
+      width: 600,
+    };
+    viewer.request = request;
+    await viewer.updateComplete;
+    await container.updateComplete;
+
+    expect(dialog.classList.contains("dragged")).toBe(true);
+    expect(dialog.style.width).toBe("600px");
+    expect(dialog.style.left).toBe("400px");
+    expect(dialog.style.top).toBe("300px");
+  });
+
   it("opens snapshots in the shared dialog without muting live audio", async () => {
     const manager = new MediaSessionManager();
     (window as unknown as Record<string, unknown>)[MEDIA_SESSION_RUNTIME_KEY] =

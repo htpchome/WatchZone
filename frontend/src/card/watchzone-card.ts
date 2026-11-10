@@ -30,7 +30,7 @@ import {
 } from "../core/home-assistant";
 import { LocalizationController } from "../core/localization";
 import type {
-  RecordedMediaInitialSize,
+  RecordedMediaInitialGeometry,
   RecordedMediaRequest,
 } from "../core/recorded-media";
 import { CardHostAppearanceController } from "../styles/card-host-appearance.controller";
@@ -63,7 +63,7 @@ export class DashboardCard extends LitElement {
   private _recordedVideoViewerReady = false;
   private _recordedVideoViewerLoad?: Promise<void>;
   private _mediaRequest?: RecordedMediaRequest;
-  private _mediaInitialSize?: RecordedMediaInitialSize;
+  private _mediaInitialSize?: RecordedMediaInitialGeometry;
   private readonly _cameraImageCredentials =
     new HomeAssistantCameraImageCredentialGuard();
   private readonly _localization = new LocalizationController(this, () =>
@@ -261,13 +261,19 @@ export class DashboardCard extends LitElement {
         });
   }
 
-  private _activeCameraStageSize(): RecordedMediaInitialSize | undefined {
+  private _activeCameraStageSize(): RecordedMediaInitialGeometry | undefined {
     const camera = this.renderRoot.querySelector<
       HTMLElement & { getActiveStageRect?(): DOMRectReadOnly | undefined }
     >(CAMERA_TAG);
     const rect = camera?.getActiveStageRect?.();
     if (!rect || rect.width <= 0 || rect.height <= 0) return undefined;
-    return { height: rect.height, width: rect.width };
+    const cardRect = this.getBoundingClientRect();
+    return {
+      centerX: cardRect.left + cardRect.width / 2,
+      centerY: cardRect.top + cardRect.height / 2,
+      height: rect.height,
+      width: rect.width,
+    };
   }
 
   private _syncLayout(config: CardConfig): void {

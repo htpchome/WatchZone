@@ -14,7 +14,7 @@ import {
 } from "../../core/localization";
 import { getMediaSessionManager } from "../../core/media-session-manager";
 import type {
-  RecordedMediaInitialSize,
+  RecordedMediaInitialGeometry,
   RecordedMediaRequest,
 } from "../../core/recorded-media";
 import { ToastManager } from "../toast-manager";
@@ -33,7 +33,7 @@ export class RecordedVideoViewer extends LitElement {
   };
 
   public api?: HomeAssistantApi;
-  public initialSize?: RecordedMediaInitialSize;
+  public initialSize?: RecordedMediaInitialGeometry;
   public localize: LocalizeFunction = englishLocalize;
   public request?: RecordedMediaRequest;
 
