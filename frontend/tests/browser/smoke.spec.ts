@@ -826,7 +826,6 @@ test("keeps activity content in an independently scrolling viewport", async ({
     });
     card.style.setProperty("--restore-card-border-radius", "21px");
     card.style.setProperty("--ha-card-border-radius", "0px");
-    card.style.setProperty("--ha-card-backdrop-filter", "blur(7px)");
     card.style.setProperty("--ha-color-on-primary-normal", "#111111");
     card.style.setProperty("--primary-color", "#03a9f4");
     card.style.setProperty("--success-color", "#00a000");
@@ -944,10 +943,35 @@ test("keeps activity content in an independently scrolling viewport", async ({
         background: style.backgroundColor,
         borderColor: style.borderTopColor,
         color: style.color,
+        opacity: style.opacity,
       };
     });
   expect(unreviewedPresentation.background).toBe("rgba(0, 0, 0, 0)");
   expect(unreviewedPresentation.borderColor).toBe(unreviewedPresentation.color);
+  expect(unreviewedPresentation.opacity).toBe("0.7");
+  const reviewStatePlacement = await reviewState.evaluate((button) => {
+    const thumbnail = button
+      .closest(".tile")!
+      .querySelector(".thumbnail-wrap")!
+      .getBoundingClientRect();
+    const buttonBounds = button.getBoundingClientRect();
+    const indicator = button
+      .querySelector(".review-state-indicator")!
+      .getBoundingClientRect();
+    const icon = button.querySelector("svg")!.getBoundingClientRect();
+    return {
+      iconCenterDeltaX: Math.abs(
+        indicator.left + indicator.width / 2 - (icon.left + icon.width / 2),
+      ),
+      iconCenterDeltaY: Math.abs(
+        indicator.top + indicator.height / 2 - (icon.top + icon.height / 2),
+      ),
+      outsideThumbnail: buttonBounds.left >= thumbnail.right,
+    };
+  });
+  expect(reviewStatePlacement.outsideThumbnail).toBe(true);
+  expect(reviewStatePlacement.iconCenterDeltaX).toBeLessThanOrEqual(0.5);
+  expect(reviewStatePlacement.iconCenterDeltaY).toBeLessThanOrEqual(0.5);
   expect(previewRequests).toBe(0);
   await expect
     .poll(() =>
@@ -971,6 +995,16 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect.poll(() => previewRequests).toBe(1);
   await page.mouse.move(0, 0);
   await expect(page.locator("wzc-reviews .hover-preview")).toHaveCount(0);
+  await reviewState.hover();
+  await expect(reviewState.locator(".review-state-indicator")).toHaveCSS(
+    "opacity",
+    "1",
+  );
+  await page.mouse.move(0, 0);
+  await expect(reviewState.locator(".review-state-indicator")).toHaveCSS(
+    "opacity",
+    "0.7",
+  );
   await reviewState.click();
   await expect(reviewState).toHaveClass(/^review-state reviewed$/);
   await expect(reviewState).toHaveAttribute("aria-pressed", "true");
@@ -1090,88 +1124,6 @@ test("keeps activity content in an independently scrolling viewport", async ({
   const events = page.locator("wzc-events");
   const viewport = events.locator(".viewport");
   await expect(events.locator(".tile")).toHaveCount(6);
-  const [
-    liveBox,
-    cameraNavigationBox,
-    stackNavigationBox,
-    viewportBox,
-    tileBox,
-  ] = await Promise.all([
-    page.locator("wzc-camera-view .camera").first().boundingBox(),
-    page.locator("wzc-camera-navigation").boundingBox(),
-    stackNavigation.boundingBox(),
-    viewport.boundingBox(),
-    events.locator(".tile").first().boundingBox(),
-  ]);
-  if (
-    !liveBox ||
-    !cameraNavigationBox ||
-    !stackNavigationBox ||
-    !viewportBox ||
-    !tileBox
-  )
-    throw new Error("Activity underlay geometry was not rendered");
-  const underlayGeometry = {
-    cameraNavigationTop: cameraNavigationBox.y,
-    firstTileTop: tileBox.y,
-    liveBottom: liveBox.y + liveBox.height,
-    stackNavigationBottom: stackNavigationBox.y + stackNavigationBox.height,
-    viewportTop: viewportBox.y,
-  };
-  expect(underlayGeometry.viewportTop).toBeCloseTo(
-    underlayGeometry.liveBottom,
-    0,
-  );
-  expect(underlayGeometry.viewportTop).toBeLessThan(
-    underlayGeometry.cameraNavigationTop,
-  );
-  expect(underlayGeometry.firstTileTop).toBeGreaterThanOrEqual(
-    underlayGeometry.stackNavigationBottom,
-  );
-  const underlayCoverElement = page.locator(".activity-underlay-cover");
-  await expect(underlayCoverElement).toHaveAttribute("aria-hidden", "true");
-  const underlayCover = await underlayCoverElement.evaluate((cover) => ({
-    background: getComputedStyle(cover).backgroundColor,
-    backdropFilter: getComputedStyle(cover).backdropFilter,
-    borderRadius: getComputedStyle(cover).borderRadius,
-    borderWidth: getComputedStyle(cover).borderTopWidth,
-    boxShadow: getComputedStyle(cover).boxShadow,
-    pointerEvents: getComputedStyle(cover).pointerEvents,
-    tagName: cover.tagName,
-  }));
-  const cardBackground = await page
-    .locator("watchzone-card ha-card")
-    .evaluate((card) => getComputedStyle(card).backgroundColor);
-  expect(underlayCover.background).toBe(cardBackground);
-  expect(underlayCover.backdropFilter).toBe("blur(7px)");
-  expect(underlayCover.borderRadius).toBe("0px");
-  expect(underlayCover.borderWidth).toBe("0px");
-  expect(underlayCover.boxShadow).toBe("none");
-  expect(underlayCover.pointerEvents).toBe("none");
-  expect(underlayCover.tagName).toBe("DIV");
-  await viewport.evaluate((node) => {
-    node.scrollTop = 80;
-    node.dispatchEvent(new Event("scroll"));
-  });
-  await expect
-    .poll(() =>
-      events
-        .locator(".tile")
-        .first()
-        .evaluate((tile) => tile.getBoundingClientRect().top),
-    )
-    .toBeLessThan(underlayGeometry.stackNavigationBottom);
-  const underlayTileTop = await events
-    .locator(".tile")
-    .first()
-    .evaluate((tile) => tile.getBoundingClientRect().top);
-  expect(underlayTileTop).toBeGreaterThanOrEqual(
-    underlayGeometry.liveBottom - 1,
-  );
-  await viewport.evaluate((node) => {
-    node.scrollTop = 0;
-    node.dispatchEvent(new Event("scroll"));
-  });
   await expect(page.locator("watchzone-card ha-card")).toHaveCSS(
     "border-radius",
     "21px",
@@ -1249,7 +1201,6 @@ test("keeps activity content in an independently scrolling viewport", async ({
     .locator("wzc-activity-list")
     .evaluate((element) => {
       const list = element as HTMLElement;
-      list.style.setProperty("--wzc-activity-scroll-under-offset", "0px");
       list.style.blockSize = "400px";
       const viewportElement =
         list.shadowRoot?.querySelector<HTMLElement>(".viewport");
@@ -1258,7 +1209,6 @@ test("keeps activity content in an independently scrolling viewport", async ({
         scrollHeight: viewportElement?.scrollHeight ?? 0,
       };
       list.style.removeProperty("block-size");
-      list.style.removeProperty("--wzc-activity-scroll-under-offset");
       return geometry;
     });
   expect(constrained.clientHeight).toBeCloseTo(400, 0);

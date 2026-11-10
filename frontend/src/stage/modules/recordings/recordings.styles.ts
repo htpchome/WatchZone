@@ -15,22 +15,15 @@ export const recordingsStyles = css`
     block-size: 100%;
     max-block-size: calc(
       5 * var(--wzc-recording-tile-block-size) + 4 *
-        var(--wzc-recording-list-gap) + 2 * var(--wzc-recording-list-padding) +
-        var(--wzc-activity-scroll-under-offset, 0px)
+        var(--wzc-recording-list-gap) + 2 * var(--wzc-recording-list-padding)
     );
     min-block-size: calc(
       3 * var(--wzc-recording-tile-block-size) + 2 *
-        var(--wzc-recording-list-gap) + 2 * var(--wzc-recording-list-padding) +
-        var(--wzc-activity-scroll-under-offset, 0px)
+        var(--wzc-recording-list-gap) + 2 * var(--wzc-recording-list-padding)
     );
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding-block: calc(
-        var(--wzc-recording-list-padding) +
-          var(--wzc-activity-scroll-under-offset, 0px)
-      )
-      var(--wzc-recording-list-padding);
-    padding-inline: var(--wzc-recording-list-padding);
+    padding: var(--wzc-recording-list-padding);
   }
 
   .list {

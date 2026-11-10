@@ -284,34 +284,6 @@ export class ActivityList extends LitElement {
             : null
         }
       </div>
-      ${
-        item.reviewed !== undefined
-          ? html`<button
-              class=${`review-state ${item.reviewed ? "reviewed" : "unreviewed"}`}
-              type="button"
-              ?disabled=${item.reviewStatePending === true}
-              title=${this.localize(
-                item.reviewed
-                  ? "reviews.mark_unreviewed"
-                  : "reviews.mark_reviewed",
-              )}
-              aria-label=${this.localize(
-                item.reviewed
-                  ? "reviews.mark_unreviewed"
-                  : "reviews.mark_reviewed",
-              )}
-              aria-pressed=${item.reviewed ? "true" : "false"}
-              @click=${(event: MouseEvent) => {
-                event.stopPropagation();
-                this.toggleReviewed?.(item);
-              }}
-            >
-              <span class="review-state-indicator">
-                <ha-icon icon="mdi:check"></ha-icon>
-              </span>
-            </button>`
-          : null
-      }
       <div class="details">
         ${
           objectLabels.length > 0 || typeBadge
@@ -358,6 +330,34 @@ export class ActivityList extends LitElement {
                 <span class="metadata-icon">${renderIcon("mapMarker")}</span>
                 <span>${item.zones.join(", ")}</span>
               </div>`
+            : null
+        }
+        ${
+          item.reviewed !== undefined
+            ? html`<button
+                class=${`review-state ${item.reviewed ? "reviewed" : "unreviewed"}`}
+                type="button"
+                ?disabled=${item.reviewStatePending === true}
+                title=${this.localize(
+                  item.reviewed
+                    ? "reviews.mark_unreviewed"
+                    : "reviews.mark_reviewed",
+                )}
+                aria-label=${this.localize(
+                  item.reviewed
+                    ? "reviews.mark_unreviewed"
+                    : "reviews.mark_reviewed",
+                )}
+                aria-pressed=${item.reviewed ? "true" : "false"}
+                @click=${(event: MouseEvent) => {
+                  event.stopPropagation();
+                  this.toggleReviewed?.(item);
+                }}
+              >
+                <span class="review-state-indicator">
+                  ${renderIcon("check")}
+                </span>
+              </button>`
             : null
         }
       </div>

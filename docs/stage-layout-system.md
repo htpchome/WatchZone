@@ -130,12 +130,6 @@ review/event availability and their shared activity filters. Recordings uses
 recording availability and hides filters that do not apply to recording ranges.
 Only camera-scoped date selection crosses those independent module boundaries.
 
-The active media-list viewport extends beneath the camera-navigation and stack-
-navigation rows while those controls remain interactive layers above it. Its
-initial content inset preserves the ordinary tile position; scrolling allows
-real module content to paint beneath theme-owned navigation surfaces without
-changing their color, transparency, opacity, or effects.
-
 ## Runtime rules
 
 - Structural validation completes before a placeable loads.

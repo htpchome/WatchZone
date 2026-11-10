@@ -154,7 +154,6 @@ export const themeTokens = css`
     --wzc-line-height-normal: var(--ha-line-height-normal, 1.5);
 
     --wzc-card-background: var(--wzc-color-background);
-    --wzc-card-backdrop-filter: var(--ha-card-backdrop-filter, none);
     --wzc-card-radius: var(--wzc-radius-card);
     --wzc-card-border-color: var(--wzc-color-border);
     --wzc-card-border-width: var(--ha-card-border-width, 0);

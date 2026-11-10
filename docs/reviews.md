@@ -10,11 +10,13 @@
 
 ## Reviewed state
 
-- A review tile exposes its reviewed state as an accessible thumbnail control.
+- A review tile exposes its reviewed state as an accessible control in the
+  tile metadata area; it does not obscure the thumbnail.
 - Reviewed uses the Home Assistant success semantic; unreviewed uses the Home
   Assistant warning semantic. Both use a transparent circle outline with a
   centered checkmark in the same semantic color. The visible circle is small
-  while its touch and keyboard target remains at least 44 logical pixels.
+  and rests at 70% opacity until hover or keyboard focus, while its touch and
+  keyboard target remains at least 44 logical pixels.
 - Activating the control updates the local review immediately, calls the
   provider-neutral backend mutation, and rolls back with one toast if the
   provider rejects the change.
@@ -27,8 +29,3 @@
 
 - Reviews shares the activity-list presentation primitive with Events while
   retaining its own loading, filtering, mutation, and playback orchestration.
-- In the built-in Stage, the active list paints beneath the camera-navigation
-  and activity-navigation layers during scrolling. A noninteractive cover sits
-  between the content and controls and consumes the same Home Assistant card
-  background and backdrop-filter semantics as `ha-card`. It is deliberately
-  square, borderless, and shadowless so it cannot appear as a nested card.

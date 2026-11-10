@@ -11,7 +11,6 @@ import { CameraSessionContext } from "./camera-session-context";
 import { CameraSelectionContext } from "./camera-selection-context";
 import { ActivityFilterContext } from "./activity/activity-filter-context";
 import {
-  CAMERA_NAVIGATION_COMPONENT_TYPE,
   REVIEWS_MODULE_TYPE,
   EVENTS_MODULE_TYPE,
   RECORDINGS_MODULE_TYPE,
@@ -276,23 +275,11 @@ export class LayoutRuntime implements ReactiveController {
     const activeId =
       this._activeStackModules.get(node.id) ?? node.children[0]?.id;
     const active = node.children.find(({ id }) => id === activeId);
-    const activityUnderlay = node.children.some(({ moduleType }) =>
-      [
-        REVIEWS_MODULE_TYPE,
-        EVENTS_MODULE_TYPE,
-        RECORDINGS_MODULE_TYPE,
-      ].includes(moduleType),
-    );
     return html`<div
-      class=${`stage-placement stage-stack${activityUnderlay ? " activity-underlay-stack" : ""}`}
+      class="stage-placement stage-stack"
       data-layout-node=${node.id}
       style=${placementStyle}
     >
-      ${
-        activityUnderlay
-          ? html`<div class="activity-underlay-cover" aria-hidden="true"></div>`
-          : nothing
-      }
       <nav
         class="stage-stack-navigation"
         aria-label=${this._localize("navigation.activity")}
@@ -428,15 +415,8 @@ export class LayoutRuntime implements ReactiveController {
     const slotEntries = Object.entries(node.slots ?? {}) as Array<
       [StageSlotName, readonly StageComponentNode[]]
     >;
-    const cameraNavigation = Object.values(node.slots ?? {}).some(
-      (components) =>
-        components?.some(
-          ({ componentType }) =>
-            componentType === CAMERA_NAVIGATION_COMPONENT_TYPE,
-        ),
-    );
     return html`<div
-      class=${`stage-placement module-composition has-components${cameraNavigation ? " stage-camera-navigation" : ""}`}
+      class="stage-placement module-composition has-components"
       style=${placementStyle}
     >
       ${this._renderRecord(node)}

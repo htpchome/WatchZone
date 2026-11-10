@@ -13,22 +13,15 @@ export const activityListStyles = css`
     block-size: 100%;
     max-block-size: calc(
       5 * var(--wzc-event-tile-block-size) + 4 * var(--wzc-event-list-gap) + 2 *
-        var(--wzc-event-list-padding) +
-        var(--wzc-activity-scroll-under-offset, 0px)
+        var(--wzc-event-list-padding)
     );
     min-block-size: calc(
       3 * var(--wzc-event-tile-block-size) + 2 * var(--wzc-event-list-gap) + 2 *
-        var(--wzc-event-list-padding) +
-        var(--wzc-activity-scroll-under-offset, 0px)
+        var(--wzc-event-list-padding)
     );
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding-block: calc(
-        var(--wzc-event-list-padding) +
-          var(--wzc-activity-scroll-under-offset, 0px)
-      )
-      var(--wzc-event-list-padding);
-    padding-inline: var(--wzc-event-list-padding);
+    padding: var(--wzc-event-list-padding);
   }
 
   .list {
@@ -205,19 +198,29 @@ export const activityListStyles = css`
 
   .review-state {
     appearance: none;
-    position: absolute;
-    z-index: 4;
-    inset-block-end: 0;
-    inset-inline-start: 0;
     display: grid;
-    inline-size: 2.75rem;
-    block-size: 2.75rem;
+    inline-size: 1.15rem;
+    block-size: 1.15rem;
     place-items: center;
+    margin-block-start: 0.15rem;
     padding: 0;
     cursor: pointer;
     background: transparent;
     border: 0;
+    color: var(--wzc-review-state-color);
+    pointer-events: auto;
+    position: relative;
+    z-index: 2;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  .review-state::before {
+    content: "";
+    inset: 50% auto auto 50%;
+    min-block-size: 2.75rem;
+    min-inline-size: 2.75rem;
+    position: absolute;
+    transform: translate(-50%, -50%);
   }
 
   .review-state-indicator {
@@ -225,11 +228,13 @@ export const activityListStyles = css`
     inline-size: 1.15rem;
     block-size: 1.15rem;
     place-items: center;
-    color: var(--wzc-review-state-color);
+    color: inherit;
     background: transparent;
     border: 2px solid currentcolor;
     border-radius: var(--wzc-radius-pill);
     box-sizing: border-box;
+    opacity: 0.7;
+    transition: opacity 120ms ease-out;
   }
 
   .review-state.reviewed {
@@ -240,16 +245,29 @@ export const activityListStyles = css`
     --wzc-review-state-color: var(--wzc-color-warning);
   }
 
-  .review-state ha-icon {
+  .review-state svg {
     display: block;
-    --mdc-icon-size: 0.8rem;
-    inline-size: 0.8rem;
-    block-size: 0.8rem;
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
+  }
+
+  .review-state:focus-visible .review-state-indicator {
+    opacity: 1;
+  }
+
+  @media (hover: hover) {
+    .review-state:hover:not(:disabled) .review-state-indicator {
+      opacity: 1;
+    }
   }
 
   .review-state:focus-visible {
+    outline: none;
+  }
+
+  .review-state:focus-visible .review-state-indicator {
     outline: 2px solid var(--wzc-color-primary);
-    outline-offset: -0.3rem;
+    outline-offset: 2px;
   }
 
   .review-state:disabled {

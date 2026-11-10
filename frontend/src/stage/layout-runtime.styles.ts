@@ -34,48 +34,6 @@ export const stageRuntimeStyles = css`
     min-block-size: 0;
   }
 
-  .activity-underlay-stack {
-    position: relative;
-    --wzc-activity-camera-navigation-offset: calc(
-      2 * var(--wzc-stage-module-gap) + var(--wzc-camera-navigation-block-size)
-    );
-    --wzc-activity-scroll-under-offset: calc(
-      var(--wzc-activity-camera-navigation-offset) +
-        var(--wzc-stage-stack-button-size) + 2 *
-        var(--wzc-stage-stack-navigation-padding)
-    );
-  }
-
-  .activity-underlay-cover {
-    position: absolute;
-    z-index: 2;
-    inset-block-start: calc(-1 * var(--wzc-activity-camera-navigation-offset));
-    inset-inline: 0;
-    block-size: var(--wzc-activity-scroll-under-offset);
-    box-sizing: border-box;
-    color: var(--wzc-color-text-1);
-    background: var(--wzc-card-background);
-    backdrop-filter: var(--wzc-card-backdrop-filter);
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
-    pointer-events: none;
-  }
-
-  .stage-camera-navigation,
-  .activity-underlay-stack > .stage-stack-navigation {
-    position: relative;
-    z-index: 3;
-  }
-
-  .activity-underlay-stack > .stage-stack-content {
-    position: relative;
-    z-index: 1;
-    inset-block-start: calc(-1 * var(--wzc-activity-scroll-under-offset));
-    block-size: calc(100% + var(--wzc-activity-scroll-under-offset));
-    margin-block-end: calc(-1 * var(--wzc-activity-scroll-under-offset));
-  }
-
   .stage-stack-navigation {
     align-items: center;
     display: flex;
@@ -330,22 +288,15 @@ export const stageRuntimeStyles = css`
     block-size: 100%;
     max-block-size: calc(
       5 * var(--wzc-event-tile-block-size) + 4 * var(--wzc-event-list-gap) + 2 *
-        var(--wzc-event-list-padding) +
-        var(--wzc-activity-scroll-under-offset, 0px)
+        var(--wzc-event-list-padding)
     );
     min-block-size: calc(
       3 * var(--wzc-event-tile-block-size) + 2 * var(--wzc-event-list-gap) + 2 *
-        var(--wzc-event-list-padding) +
-        var(--wzc-activity-scroll-under-offset, 0px)
+        var(--wzc-event-list-padding)
     );
     gap: var(--wzc-event-list-gap);
     overflow: hidden;
-    padding-block: calc(
-        var(--wzc-event-list-padding) +
-          var(--wzc-activity-scroll-under-offset, 0px)
-      )
-      var(--wzc-event-list-padding);
-    padding-inline: var(--wzc-event-list-padding);
+    padding: var(--wzc-event-list-padding);
   }
 
   .activity-skeleton-row {
