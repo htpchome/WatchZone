@@ -68,6 +68,7 @@ export class CameraModule extends LitElement {
   };
 
   private _activeIndex = 0;
+  private _deepLinkLoad?: Promise<void>;
   private _navigationVisible = false;
   private readonly _overlayVisibilityByCamera = new Map<string, boolean>();
   private _stageSize: CameraStageSize = {
@@ -101,6 +102,26 @@ export class CameraModule extends LitElement {
 
   public connectedCallback(): void {
     super.connectedCallback();
+    this._deepLinkLoad ??= import("../../../features/deep-links").then(
+      ({ DeepLinkController }) => {
+        new DeepLinkController(this, () => ({
+          api: this.api,
+          cameras: this.cameras.map(({ entityId, label }) => ({
+            entityId,
+            title: label,
+          })),
+          cameraSelection: {
+            selectCamera: (entityId) =>
+              this.cameraSelection?.select(this.selectionId, entityId) ?? false,
+          },
+          enabled: !(
+            this.getRootNode() as ShadowRoot & {
+              host?: { preview?: boolean };
+            }
+          ).host?.preview,
+        }));
+      },
+    );
     this.addEventListener(
       CAMERA_GESTURE_LOCK_EVENT,
       this._handleGestureLock as EventListener,

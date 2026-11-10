@@ -20,6 +20,10 @@ import {
 } from "../core/localization";
 import { distinctBadgeColorsForLabels, type BadgeColor } from "./badge-colors";
 import { renderIcon } from "./icons";
+import {
+  activityMediaTitle,
+  activityRecordedMediaRequest,
+} from "./activity-media";
 import type { BadgeVariant } from "./badge";
 import "./badge";
 import { activityListStyles } from "./activity-list.styles";
@@ -153,16 +157,7 @@ export class ActivityList extends LitElement {
       objectLabels,
       typeBadge ? [reservedColor(typeBadge.variant)] : [],
     );
-    const title = `${capitalizeBadgeText(
-      item.cameraLabel.replaceAll("_", " "),
-      this.api?.locale?.language,
-    )} - ${formatHomeAssistantTime(start, this.api?.locale)} - ${formatHomeAssistantEventDate(
-      start,
-      this.api?.locale,
-    )}`;
-    const posterUrl = previewUrl
-      ? (this.api?.resolveUrl(previewUrl) ?? previewUrl)
-      : undefined;
+    const title = activityMediaTitle(item, this.api);
     return html`<article
       class="tile"
       @pointermove=${(event: PointerEvent) =>
@@ -177,15 +172,14 @@ export class ActivityList extends LitElement {
               type="button"
               title=${this.localize("media_player.open", { title })}
               aria-label=${this.localize("media_player.open", { title })}
-              @click=${() =>
-                openRecordedMedia(this, {
-                  id: item.id,
-                  kind: "video",
-                  posterUrl,
-                  preferredTransport: item.preferredTransport,
-                  sources: item.playbackSources,
-                  title,
-                })}
+              @click=${() => {
+                const request = activityRecordedMediaRequest(
+                  item,
+                  "video",
+                  this.api,
+                );
+                if (request) openRecordedMedia(this, request);
+              }}
             ></button>`
           : null
       }
@@ -292,21 +286,14 @@ export class ActivityList extends LitElement {
                 type="button"
                 title=${this.localize("events.view_snapshot")}
                 aria-label=${this.localize("events.view_snapshot")}
-                @click=${() =>
-                  openRecordedMedia(this, {
-                    id: `${item.id}:snapshot`,
-                    kind: "snapshot",
-                    posterUrl,
-                    preferredTransport: "file",
-                    sources: [
-                      {
-                        content_type: "image/jpeg",
-                        transport: "file",
-                        url: snapshotUrl,
-                      },
-                    ],
-                    title,
-                  })}
+                @click=${() => {
+                  const request = activityRecordedMediaRequest(
+                    item,
+                    "snapshot",
+                    this.api,
+                  );
+                  if (request) openRecordedMedia(this, request);
+                }}
               >
                 <ha-icon icon="mdi:camera"></ha-icon>
               </button>`

@@ -4,6 +4,7 @@ import { basename, relative, resolve, sep } from "node:path";
 const root = resolve(import.meta.dirname, "..");
 const sourceRoot = resolve(root, "frontend/src");
 const coreRoot = resolve(sourceRoot, "core");
+const featuresRoot = resolve(sourceRoot, "features");
 const stageRoot = resolve(sourceRoot, "stage");
 const modulesRoot = resolve(stageRoot, "modules");
 const componentsRoot = resolve(stageRoot, "components");
@@ -37,10 +38,14 @@ for (const path of await collectTypeScript(sourceRoot)) {
   const source = await readFile(path, "utf8");
   const displayPath = relative(root, path);
   const isCore = path.startsWith(`${coreRoot}${sep}`);
+  const isFeature = path.startsWith(`${featuresRoot}${sep}`);
   const isModule = path.startsWith(`${modulesRoot}${sep}`);
   const isComponent = path.startsWith(`${componentsRoot}${sep}`);
   const moduleName = isModule
     ? relative(modulesRoot, path).split(sep)[0]
+    : undefined;
+  const featureName = isFeature
+    ? relative(featuresRoot, path).split(sep)[0]
     : undefined;
   const componentName = isComponent
     ? relative(componentsRoot, path).split(sep)[0]
@@ -65,6 +70,35 @@ for (const path of await collectTypeScript(sourceRoot)) {
           `${displayPath}: module ${moduleName} cannot import module ${importedModule}`,
         );
       }
+    }
+    if (isFeature && resolved?.startsWith(`${featuresRoot}${sep}`)) {
+      const importedFeature = relative(featuresRoot, resolved).split(sep)[0];
+      if (importedFeature !== featureName) {
+        violations.push(
+          `${displayPath}: feature ${featureName} cannot import feature ${importedFeature}`,
+        );
+      }
+    }
+    if (!isFeature && resolved?.startsWith(`${featuresRoot}${sep}`)) {
+      const [importedFeature, privatePath] = relative(
+        featuresRoot,
+        resolved,
+      ).split(sep);
+      if (privatePath) {
+        violations.push(
+          `${displayPath}: feature ${importedFeature} must be imported through its public entry point`,
+        );
+      }
+    }
+    if (
+      isFeature &&
+      resolved &&
+      (resolved.startsWith(`${modulesRoot}${sep}`) ||
+        resolved.startsWith(`${componentsRoot}${sep}`))
+    ) {
+      violations.push(
+        `${displayPath}: application features cannot import Stage placeable implementations`,
+      );
     }
     if (isComponent && resolved?.startsWith(`${componentsRoot}${sep}`)) {
       const importedComponent = relative(componentsRoot, resolved).split(
@@ -124,4 +158,6 @@ if (violations.length > 0) {
   );
 }
 
-console.log("Validated core, module, and provider ownership boundaries.");
+console.log(
+  "Validated core, feature, module, and provider ownership boundaries.",
+);

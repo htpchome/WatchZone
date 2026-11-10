@@ -146,6 +146,7 @@ architecture decision recorded in this document or a future ADR.
 │   │   ├── card/                  # Lovelace shell and card lifecycle
 │   │   ├── core/                  # Application-wide contracts and services
 │   │   ├── api/                   # Typed backend client and wire types
+│   │   ├── features/              # Application-level frontend feature slices
 │   │   ├── stage/                 # Stage runtime, contracts, and templates
 │   │   │   ├── modules/           # Independently loaded Stage features
 │   │   │   ├── components/        # Portable placeables for module slots
@@ -206,12 +207,20 @@ Stable cross-feature contracts and document-scoped services belong in `core/`.
 Feature behavior does not. Provider capabilities remain outside UI features
 behind their public resolver boundaries.
 
+Application-level workflows that are not themselves Stage placeables belong in
+`frontend/src/features/<feature>/`. Each feature exposes a narrow public entry
+point and owns its orchestration and lifecycle internally. Deep-link handling,
+recording-segment management, exports, and cases are examples of this boundary.
+The application shell or a relevant placeable adapter may compose a feature
+through its public entry point, but feature implementation must not accumulate
+in `card/`, `stage/`, or `core/`.
+
 ## 6. Dependency and ownership rules
 
 These rules are mandatory:
 
-1. The card shell may depend on `core` and `api`, but not on a module's private
-   implementation.
+1. The card shell may depend on `core`, `api`, and public application-feature
+   entry points, but not on a feature or module's private implementation.
 2. A frontend module may depend on public contracts in `core` and `api`.
 3. A frontend module must never import another frontend module.
 4. A frontend module may use a public provider resolver but must not import a
@@ -229,6 +238,9 @@ These rules are mandatory:
 10. Circular imports and circular runtime dependencies are prohibited.
 11. Shared code must have at least two real consumers, unless it defines an
     external boundary or stable system contract.
+12. An application feature must not import another application feature. Shared
+    contracts move downward to `core`; shared presentation primitives remain in
+    `ui`.
 
 Import-boundary checks must be automated when the relevant directories exist.
 Code review alone is not sufficient enforcement.

@@ -26,6 +26,43 @@ providers have not been added yet.
 The Python integration registers the bundled card resource. No separate
 Lovelace resource is required.
 
+## Notification deep links
+
+WatchZone can select a configured camera and open activity media from a Home
+Assistant notification tap-action URL. Replace `YOUR_DASHBOARD/YOUR_VIEW` with
+the dashboard view containing the WatchZone card.
+
+Camera only:
+
+```text
+/YOUR_DASHBOARD/YOUR_VIEW?camera={{camera}}
+```
+
+Alert or event clip:
+
+```text
+/YOUR_DASHBOARD/YOUR_VIEW?camera={{camera}}&event={{id}}&review={{review_id}}
+```
+
+Alert or event snapshot:
+
+```text
+/YOUR_DASHBOARD/YOUR_VIEW?camera={{camera}}&event={{id}}&review={{review_id}}&media=snapshot
+```
+
+`camera` accepts the configured Home Assistant camera entity ID, its object
+ID, its WatchZone title, or the equivalent Frigate camera name. When both
+`event` and `review` are supplied, WatchZone tries the explicit event first and
+then falls back once to the review. Draft activity remains pending and opens
+when its requested clip or snapshot becomes available. This resolution is
+independent of the visible Alerts or Events module, so removing either module
+from a Stage Design does not disable deep links.
+
+After WatchZone selects the camera or opens the requested media, it removes
+only the supported deep-link parameters from the URL and preserves unrelated
+query parameters. Normal URL queries and query parameters inside hash-based
+Home Assistant routes are supported.
+
 ## Development update cycle
 
 Installing `0.0.4-dev.1` requires one Home Assistant restart because it changes

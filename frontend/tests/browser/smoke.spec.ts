@@ -126,6 +126,103 @@ test("does not load camera code for a camera-free layout", async ({ page }) => {
   );
 });
 
+test("opens notification deep links independently of activity presentation", async ({
+  page,
+}) => {
+  await installHaIconFixture(page);
+  await page.route("**/recording.mp4", (route) =>
+    route.fulfill({ body: "", contentType: "video/mp4" }),
+  );
+  await page.goto(
+    "/?camera=back&event=event-1&review=review-1&unrelated=preserved",
+  );
+  await waitForWatchZoneDefinition(page);
+  await page.locator("watchzone-card").evaluate((element) => {
+    const card = element as HTMLElement & {
+      hass: unknown;
+      setConfig(config: unknown): void;
+    };
+    card.setConfig({
+      type: "custom:watchzone-card",
+      cameras: [
+        { entity_id: "camera.front", title: "Front" },
+        { entity_id: "camera.back", title: "Back" },
+      ],
+    });
+    card.hass = {
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "streaming",
+          attributes: { friendly_name: "Front" },
+        },
+        "camera.back": {
+          entity_id: "camera.back",
+          state: "streaming",
+          attributes: { friendly_name: "Back" },
+        },
+      },
+      connection: { subscribeMessage: async () => () => undefined },
+      hassUrl: (path: string) => path,
+      callService: async () => undefined,
+      callWS: async (message: { type: string }) => {
+        if (message.type === "watchzone/events/list") {
+          return {
+            items: [
+              {
+                camera: "back",
+                clip_url: "/recording.mp4",
+                end_time: 20,
+                has_clip: true,
+                has_snapshot: true,
+                id: "frigate:event-1",
+                label: "person",
+                playback_sources: [
+                  {
+                    content_type: "video/mp4",
+                    transport: "file",
+                    url: "/recording.mp4",
+                  },
+                ],
+                preferred_transport: "file",
+                revision: "event-1-final",
+                snapshot_url: "/thumbnail.svg",
+                start_time: 10,
+                sub_label: null,
+                thumbnail_url: "/thumbnail.svg",
+                zones: [],
+              },
+            ],
+          };
+        }
+        if (message.type === "watchzone/activity/source") {
+          return {
+            camera_name: "back",
+            instance_id: "frigate",
+            type: "frigate",
+          };
+        }
+        if (message.type === "watchzone/reviews/list") return { items: [] };
+        if (message.type === "watchzone/live/camera/ready") {
+          return { ready: false };
+        }
+        return undefined;
+      },
+    };
+  });
+
+  await expect(
+    page.locator('wzc-camera-navigation button[aria-selected="true"]'),
+  ).toHaveText("Back");
+  await expect(page.locator("wzc-recorded-video-dialog dialog")).toBeVisible();
+  await expect(page.locator("wzc-recorded-video-dialog .title")).toContainText(
+    "Back",
+  );
+  await expect
+    .poll(() => new URL(page.url()).search)
+    .toBe("?unrelated=preserved");
+});
+
 test("starts the active camera poster before the full camera element loads", async ({
   page,
 }) => {

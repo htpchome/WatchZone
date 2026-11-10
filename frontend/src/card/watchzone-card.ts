@@ -235,7 +235,11 @@ export class DashboardCard extends LitElement {
     event: CustomEvent<RecordedMediaRequest>,
   ): void => {
     event.stopPropagation();
-    this._mediaRequest = event.detail;
+    this._openRecordedMedia(event.detail);
+  };
+
+  private _openRecordedMedia(request: RecordedMediaRequest): void {
+    this._mediaRequest = request;
     this._mediaInitialSize = this._activeCameraStageSize();
     if (this._recordedVideoViewerReady) {
       this.requestUpdate();
@@ -255,7 +259,7 @@ export class DashboardCard extends LitElement {
             { key: "recorded-video-viewer-load-failed" },
           );
         });
-  };
+  }
 
   private _activeCameraStageSize(): RecordedMediaInitialSize | undefined {
     const camera = this.renderRoot.querySelector<
