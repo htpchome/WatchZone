@@ -93,6 +93,22 @@ describe("activity filter", () => {
     });
   });
 
+  it("remains visible but non-interactive when disabled", async () => {
+    const filter = document.createElement(
+      ACTIVITY_FILTER_TAG,
+    ) as ActivityFilter;
+    filter.disabled = true;
+    document.body.append(filter);
+    await filter.updateComplete;
+
+    const trigger =
+      filter.shadowRoot?.querySelector<HTMLButtonElement>(".filter-trigger");
+    expect(trigger?.disabled).toBe(true);
+    trigger?.click();
+    await filter.updateComplete;
+    expect(filter.shadowRoot?.querySelector(".popover")).toBeNull();
+  });
+
   it("compacts inactive history facets without discarding filter choices", () => {
     const context = new ActivityFilterContext();
     const reviews = Array.from({ length: 25 }, (_, index) => ({

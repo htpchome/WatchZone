@@ -18,8 +18,6 @@ def test_recording_segments_are_grouped_into_hour_ranges() -> None:
     )
     start = datetime(2026, 11, 9, 22, tzinfo=UTC).timestamp()
     query = RecordingQuery(
-        after=start - 86400,
-        before=start + 86400,
         selected_date="2026-11-09",
         timezone="UTC",
     )
@@ -27,6 +25,7 @@ def test_recording_segments_are_grouped_into_hour_ranges() -> None:
     hours = _recording_hours(
         source,
         [
+            {"start_time": start, "end_time": start + 20},
             {"start_time": start, "end_time": start + 20},
             {"start_time": start + 40, "end_time": start + 100},
             {"start_time": start + 3600, "end_time": start + 3660},
@@ -44,29 +43,24 @@ def test_recording_segments_are_grouped_into_hour_ranges() -> None:
         "file",
         "hls",
     ]
+    assert hours[1].playback_sources[1].url.endswith(
+        f"/index.m3u8?v={hours[1].revision}"
+    )
     assert "/api/frigate/frigate-main/recording/front/start/" in hours[1].download_url
 
 
-def test_recording_days_are_bounded_by_the_requested_history() -> None:
-    """Provider summaries do not expose dates outside the card's history window."""
-    start = datetime(2026, 11, 8, tzinfo=UTC).timestamp()
-    query = RecordingQuery(
-        after=start,
-        before=start + 2 * 86400,
-        selected_date="2026-11-09",
-        timezone="UTC",
-    )
-
-    expected = ("2026-11-10", "2026-11-09")
+def test_recording_days_include_the_provider_retention_window() -> None:
+    """Recording dates are not truncated by the event-history preference."""
+    expected = ("2026-11-10", "2026-11-09", "2026-11-07")
     assert _recording_days(
         [
             {"day": "2026-11-10"},
             {"day": "2026-11-09"},
             {"day": "2026-11-07"},
         ],
-        query,
+        "UTC",
     ) == expected
     assert _recording_days(
         {"2026-11-10": True, "2026-11-09": True, "2026-11-07": True},
-        query,
+        "UTC",
     ) == expected

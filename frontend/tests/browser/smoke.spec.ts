@@ -1670,19 +1670,20 @@ test("switches activity and recordings through the shared media calendar", async
         }
         if (message.type === "watchzone/recordings/list") {
           const selectedDate = message.selected_date ?? "2026-11-09";
-          const start =
+          const latestStart =
             selectedDate === "2026-11-08"
               ? Date.UTC(2026, 10, 8, 10) / 1000
               : Date.UTC(2026, 10, 9, 10) / 1000;
           return {
             days: ["2026-11-09", "2026-11-08"],
-            hours: [
-              {
+            hours: Array.from({ length: 8 }, (_, index) => {
+              const start = latestStart - index * 3600;
+              return {
                 camera: "front",
                 download_url: "/recording.mp4",
                 duration: 1620,
                 end_time: start + 1620,
-                id: `front:${selectedDate}:10`,
+                id: `front:${selectedDate}:${10 - index}`,
                 playback_sources: [
                   {
                     content_type: "video/mp4",
@@ -1693,8 +1694,8 @@ test("switches activity and recordings through the shared media calendar", async
                 preferred_transport: "file",
                 revision: selectedDate,
                 start_time: start,
-              },
-            ],
+              };
+            }),
           };
         }
         return undefined;
@@ -1792,18 +1793,69 @@ test("switches activity and recordings through the shared media calendar", async
 
   await navigation.locator(".stage-stack-button").nth(2).click();
   const recordings = page.locator("wzc-recordings");
-  await expect(recordings.locator(".tile")).toHaveCount(1);
-  await expect(recordings.locator(".range")).toHaveText("10:00 AM – 10:27 AM");
-  await expect(filter).toHaveCount(0);
-  await expect(recordings.locator(".download")).toHaveAttribute(
-    "href",
-    /recording\.mp4$/,
+  await expect(recordings.locator(".tile")).toHaveCount(8);
+  await expect(recordings.locator(".range").first()).toHaveText(
+    "10:00 AM – 10:27 AM",
   );
+  const recordingViewport = recordings.locator(".viewport");
+  const recordingScroll = await recordingViewport.evaluate((viewport) => {
+    const before = viewport.scrollTop;
+    viewport.scrollTop = viewport.scrollHeight;
+    return {
+      before,
+      after: viewport.scrollTop,
+      clientHeight: viewport.clientHeight,
+      scrollHeight: viewport.scrollHeight,
+      overflowY: getComputedStyle(viewport).overflowY,
+      scrollbarGutter: getComputedStyle(viewport).scrollbarGutter,
+    };
+  });
+  expect(recordingScroll.overflowY).toBe("auto");
+  expect(recordingScroll.scrollbarGutter).toBe("auto");
+  expect(recordingScroll.scrollHeight).toBeGreaterThan(
+    recordingScroll.clientHeight,
+  );
+  expect(recordingScroll.after).toBeGreaterThan(recordingScroll.before);
+  await expect(filter).toHaveCount(1);
+  await expect(filter.locator(".filter-trigger")).toBeDisabled();
+  const recordingControlsAlignment = await navigation.evaluate((node) => {
+    const navigationRect = node.getBoundingClientRect();
+    const calendarRect = node
+      .querySelector("wzc-activity-calendar")
+      ?.getBoundingClientRect();
+    return calendarRect ? navigationRect.right - calendarRect.right : -1;
+  });
+  expect(recordingControlsAlignment).toBeLessThanOrEqual(1);
+  const downloadAlignment = await recordings
+    .locator(".download")
+    .first()
+    .evaluate((button) => {
+      const buttonRect = button.getBoundingClientRect();
+      const iconRect = button.querySelector("ha-icon")?.getBoundingClientRect();
+      return iconRect
+        ? {
+            x: Math.abs(
+              buttonRect.left +
+                buttonRect.width / 2 -
+                (iconRect.left + iconRect.width / 2),
+            ),
+            y: Math.abs(
+              buttonRect.top +
+                buttonRect.height / 2 -
+                (iconRect.top + iconRect.height / 2),
+            ),
+          }
+        : { x: -1, y: -1 };
+    });
+  expect(downloadAlignment.x).toBeLessThanOrEqual(1);
+  expect(downloadAlignment.y).toBeLessThanOrEqual(1);
   await trigger.click();
   await expect(calendar.locator(".day.marked")).toHaveCount(2);
   await calendar.locator('.day[aria-label^="November 8, 2026"]').click();
-  await expect(recordings.locator(".range")).toHaveText("10:00 AM – 10:27 AM");
-  await recordings.locator(".tile-player").click();
+  await expect(recordings.locator(".range").first()).toHaveText(
+    "10:00 AM – 10:27 AM",
+  );
+  await recordings.locator(".tile-player").first().click();
   await expect(page.locator("wzc-recorded-video-dialog dialog")).toBeVisible();
 });
 

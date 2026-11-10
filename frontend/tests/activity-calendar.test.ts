@@ -117,6 +117,7 @@ describe("activity calendar", () => {
     dateContext.publishAvailableDates("camera.front", calendar, [
       "2026-11-09",
       "2026-11-07",
+      "2026-09-01",
     ]);
 
     await calendar.updateComplete;
@@ -133,6 +134,25 @@ describe("activity calendar", () => {
       calendar.shadowRoot
         ?.querySelector<HTMLButtonElement>(
           '.day[aria-label^="November 7, 2026"]',
+        )
+        ?.getAttribute("aria-label"),
+    ).toContain("has recordings");
+
+    const previous = calendar.shadowRoot?.querySelector<HTMLButtonElement>(
+      '.month-button[aria-label="Previous month"]',
+    );
+    previous?.click();
+    await calendar.updateComplete;
+    calendar.shadowRoot
+      ?.querySelector<HTMLButtonElement>(
+        '.month-button[aria-label="Previous month"]',
+      )
+      ?.click();
+    await calendar.updateComplete;
+    expect(
+      calendar.shadowRoot
+        ?.querySelector<HTMLButtonElement>(
+          '.day[aria-label^="September 1, 2026"]',
         )
         ?.getAttribute("aria-label"),
     ).toContain("has recordings");

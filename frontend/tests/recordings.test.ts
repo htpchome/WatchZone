@@ -52,7 +52,6 @@ describe("recordings module", () => {
     const module = document.createElement(RECORDINGS_TAG) as RecordingsModule;
     module.api = api;
     module.cameraSelection = selection;
-    module.historyDays = 5;
     module.mediaDate = mediaDate;
     module.targetModuleId = "camera-module";
     document.body.append(module);
@@ -69,14 +68,12 @@ describe("recordings module", () => {
     await vi.waitFor(() =>
       expect(module.shadowRoot?.querySelectorAll(".tile")).toHaveLength(1),
     );
-    expect(callWS).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: "watchzone/recordings/list",
-        entity_id: "camera.front",
-        selected_date: "2026-11-09",
-        timezone: "UTC",
-      }),
-    );
+    expect(callWS).toHaveBeenCalledWith({
+      type: "watchzone/recordings/list",
+      entity_id: "camera.front",
+      selected_date: "2026-11-09",
+      timezone: "UTC",
+    });
     const availableDates = vi.fn();
     mediaDate.subscribeAvailableDates("camera.front", availableDates);
     expect(availableDates).toHaveBeenLastCalledWith([
@@ -89,9 +86,27 @@ describe("recordings module", () => {
     expect(module.shadowRoot?.querySelector(".duration")?.textContent).toBe(
       "27m 21s",
     );
-    expect(
-      module.shadowRoot?.querySelector<HTMLAnchorElement>(".download")?.href,
-    ).toBe("https://ha.local/recording.mp4");
+    const append = vi.spyOn(document.body, "append");
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => undefined);
+    callWS.mockResolvedValueOnce({
+      path: "/recording.mp4?download=true&authSig=test",
+    });
+    module.shadowRoot?.querySelector<HTMLButtonElement>(".download")?.click();
+    await vi.waitFor(() => expect(click).toHaveBeenCalledOnce());
+    expect(callWS).toHaveBeenLastCalledWith({
+      type: "auth/sign_path",
+      path: "/recording.mp4?download=true",
+      expires: 3600,
+    });
+    const anchor = append.mock.calls.find(
+      ([node]) => node instanceof HTMLAnchorElement,
+    )?.[0] as HTMLAnchorElement | undefined;
+    expect(anchor?.href).toBe(
+      "https://ha.local/recording.mp4?download=true&authSig=test",
+    );
+    expect(anchor?.download).toBe("front-1794261600.mp4");
 
     const open = vi.fn();
     module.addEventListener(RECORDED_MEDIA_OPEN_EVENT, open);
@@ -106,5 +121,50 @@ describe("recordings module", () => {
         preferredTransport: "hls",
       }),
     );
+  });
+
+  it("renders disabled, labeled hourly rows while the first request loads", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(Date.UTC(2026, 10, 9, 4, 30));
+    let resolveRequest: ((value: unknown) => void) | undefined;
+    const api = {
+      callWS: vi.fn(
+        () =>
+          new Promise((resolve) => {
+            resolveRequest = resolve;
+          }),
+      ),
+      identity: {},
+      locale: { language: "en", time_format: "12", time_zone: "UTC" },
+      resolveUrl: (path: string) => path,
+      subscribeMessage: vi.fn(),
+    } as unknown as HomeAssistantApi;
+    const selection = new CameraSelectionContext();
+    const module = document.createElement(RECORDINGS_TAG) as RecordingsModule;
+    module.api = api;
+    module.cameraSelection = selection;
+    module.mediaDate = new MediaDateContext();
+    module.targetModuleId = "camera-module";
+    document.body.append(module);
+    selection.publish(
+      "camera-module",
+      {},
+      {
+        activeEntityId: "camera.front",
+        items: [{ entityId: "camera.front", label: "Front" }],
+      },
+      vi.fn(),
+    );
+
+    await vi.waitFor(() =>
+      expect(module.shadowRoot?.querySelectorAll(".skeleton")).toHaveLength(5),
+    );
+    expect(
+      module.shadowRoot?.querySelector(".skeleton .range")?.textContent,
+    ).toBe("4:00 AM – 5:00 AM");
+    expect(
+      module.shadowRoot?.querySelector<HTMLButtonElement>(".skeleton .download")
+        ?.disabled,
+    ).toBe(true);
+    resolveRequest?.({ days: [], hours: [] });
   });
 });

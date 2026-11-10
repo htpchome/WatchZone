@@ -163,7 +163,9 @@ function hydrateModule(
       ...node,
       config: {
         ...moduleConfig,
-        historyDays: config.event_history_days,
+        ...(node.moduleType !== RECORDINGS_MODULE_TYPE
+          ? { historyDays: config.event_history_days }
+          : {}),
         ...(node.moduleType !== RECORDINGS_MODULE_TYPE
           ? {
               displayEventTypeBadges: config.display_event_type_badges,

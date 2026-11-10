@@ -12,10 +12,8 @@ from .media import PlaybackSource, PlaybackTransport
 
 @dataclass(frozen=True, slots=True)
 class RecordingQuery:
-    """One bounded, camera-scoped recording query."""
+    """One camera-scoped recording-day query."""
 
-    after: float
-    before: float
     selected_date: str
     timezone: str
 

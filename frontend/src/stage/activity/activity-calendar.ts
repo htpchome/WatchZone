@@ -171,11 +171,17 @@ export class ActivityCalendar extends LitElement {
 
   private _renderPopover(markedDates: ReadonlySet<string>) {
     const cells = calendarCells(this._visibleMonth, this._firstWeekday());
-    const oldestKey = homeAssistantDateKey(
-      Date.now() / 1000 - this.historyDays * 24 * 60 * 60,
-      this.api?.locale,
-    );
     const todayKey = this._todayKey();
+    const oldestKey =
+      this.mode === "recordings"
+        ? this._recordingDays.reduce(
+            (oldest, key) => (key < oldest ? key : oldest),
+            todayKey,
+          )
+        : homeAssistantDateKey(
+            Date.now() / 1000 - this.historyDays * 24 * 60 * 60,
+            this.api?.locale,
+          );
     return html`<section
       class="popover"
       popover="manual"

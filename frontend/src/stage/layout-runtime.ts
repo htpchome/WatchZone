@@ -341,30 +341,27 @@ export class LayoutRuntime implements ReactiveController {
       active.moduleType === EVENTS_MODULE_TYPE;
     const recordings = active.moduleType === RECORDINGS_MODULE_TYPE;
     if (!activity && !recordings) return nothing;
-    const activeConfig = isActivityConfig(active.config)
-      ? active.config
-      : alerts.config;
+    const targetModuleId = isTargetModuleConfig(active.config)
+      ? active.config.targetModuleId
+      : alerts.config.targetModuleId;
     void defineActivityControls();
-    return html`${
-        activity
-          ? html`<wzc-activity-filter
-              .api=${this._context.api}
-              .cameraSelection=${this._cameraSelection}
-              .filterContext=${this._activityFilter}
-              .historyDays=${alerts.config.historyDays}
-              .localize=${this._context.localize ?? englishLocalize}
-              .targetModuleId=${alerts.config.targetModuleId}
-            ></wzc-activity-filter>`
-          : nothing
-      }
+    return html`<wzc-activity-filter
+        .api=${this._context.api}
+        .cameraSelection=${this._cameraSelection}
+        .disabled=${recordings}
+        .filterContext=${this._activityFilter}
+        .historyDays=${alerts.config.historyDays}
+        .localize=${this._context.localize ?? englishLocalize}
+        .targetModuleId=${alerts.config.targetModuleId}
+      ></wzc-activity-filter>
       <wzc-activity-calendar
         .api=${this._context.api}
         .cameraSelection=${this._cameraSelection}
         .dateContext=${this._mediaDate}
-        .historyDays=${activeConfig.historyDays}
+        .historyDays=${alerts.config.historyDays}
         .localize=${this._context.localize ?? englishLocalize}
         .mode=${recordings ? "recordings" : "activity"}
-        .targetModuleId=${activeConfig.targetModuleId}
+        .targetModuleId=${targetModuleId}
       ></wzc-activity-calendar>`;
   }
 
@@ -745,6 +742,17 @@ function isActivityConfig(
   const config = value as Record<string, unknown>;
   return (
     typeof config.historyDays === "number" &&
+    typeof config.targetModuleId === "string" &&
+    config.targetModuleId.length > 0
+  );
+}
+
+function isTargetModuleConfig(
+  value: unknown,
+): value is { readonly targetModuleId: string } {
+  if (typeof value !== "object" || value === null) return false;
+  const config = value as Record<string, unknown>;
+  return (
     typeof config.targetModuleId === "string" &&
     config.targetModuleId.length > 0
   );

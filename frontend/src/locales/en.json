@@ -203,6 +203,7 @@
   "recordings.load_failed": "Unable to load camera recordings.",
   "recordings.open": "Play {title}",
   "recordings.download": "Download recording",
+  "recordings.download_failed": "Unable to download recording.",
   "recordings.duration": "{minutes}m {seconds}s",
   "recordings.calendar_open": "Open recordings calendar",
   "recordings.calendar_title": "Recordings calendar",

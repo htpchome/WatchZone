@@ -300,6 +300,7 @@ export const themeTokens = css`
     --wzc-recording-action-border-color: var(--wzc-color-border-control);
     --wzc-recording-action-color: var(--wzc-color-text-2);
     --wzc-recording-action-hover-color: var(--wzc-color-primary);
+    --wzc-recording-skeleton-color: var(--wzc-color-text-3);
     --wzc-alert-thumbnail-outline-width: 2px;
     --wzc-recorded-media-background: var(--wzc-camera-stage);
     --wzc-recorded-media-max-block-size: calc(90dvh - 3rem);

@@ -39,7 +39,7 @@ class FrigateRecordingsProvider:
         source = await async_resolve_source(hass, entity_id)
         headers = await source.client.get_auth_headers()
         summary, segments = await _fetch_recordings(hass, source, headers, query)
-        days = _recording_days(summary, query)
+        days = _recording_days(summary, query.timezone)
         return RecordingWindow(
             days=days,
             hours=_recording_hours(source, segments, query),
@@ -97,7 +97,7 @@ async def _get_json(
         return await response.json()
 
 
-def _recording_days(payload: object, query: RecordingQuery) -> tuple[str, ...]:
+def _recording_days(payload: object, timezone: str) -> tuple[str, ...]:
     raw_days: Iterable[object]
     if isinstance(payload, dict):
         raw_days = payload.keys()
@@ -112,11 +112,10 @@ def _recording_days(payload: object, query: RecordingQuery) -> tuple[str, ...]:
         if not isinstance(day, str):
             continue
         try:
-            start, end = _day_bounds(day, query.timezone)
+            _day_bounds(day, timezone)
         except ValueError:
             continue
-        if end > query.after and start <= query.before:
-            days.append(day)
+        days.append(day)
     return tuple(sorted(set(days), reverse=True))
 
 
@@ -152,12 +151,21 @@ def _normalize_hour(
 ) -> RecordingHour:
     hour_start = hour.timestamp()
     hour_end = (hour + timedelta(hours=1)).timestamp()
-    clipped = [
+    clipped = sorted(
         (max(start, hour_start), min(end, hour_end)) for start, end in segments
-    ]
-    start_time = min(start for start, _ in clipped)
-    end_time = max(end for _, end in clipped)
-    duration = sum(max(0.0, end - start) for start, end in clipped)
+    )
+    merged: list[tuple[float, float]] = []
+    for start, end in clipped:
+        if end <= start:
+            continue
+        if merged and start <= merged[-1][1]:
+            previous_start, previous_end = merged[-1]
+            merged[-1] = (previous_start, max(previous_end, end))
+        else:
+            merged.append((start, end))
+    start_time = merged[0][0]
+    end_time = merged[-1][1]
+    duration = sum(end - start for start, end in merged)
     material = {
         "camera": source.camera_name,
         "duration": round(duration, 3),
@@ -169,15 +177,19 @@ def _normalize_hour(
     ).hexdigest()[:16]
     instance = quote(source.frigate_instance_id, safe="")
     camera = quote(source.camera_name, safe="")
-    start = _timestamp_path(start_time)
-    end = _timestamp_path(end_time)
-    file_url = f"/api/frigate/{instance}/recording/{camera}/start/{start}/end/{end}"
+    path_start = _timestamp_path(start_time)
+    path_end = _timestamp_path(end_time)
+    file_url = (
+        f"/api/frigate/{instance}/recording/{camera}/"
+        f"start/{path_start}/end/{path_end}"
+    )
     hls_url = (
-        f"/api/frigate/{instance}/vod/{camera}/start/{start}/end/{end}/"
-        f"master.m3u8?v={revision}"
+        f"/api/frigate/{instance}/vod/{camera}/"
+        f"start/{path_start}/end/{path_end}/"
+        f"index.m3u8?v={revision}"
     )
     return RecordingHour(
-        id=f"{source.frigate_instance_id}:{source.camera_name}:{start}",
+        id=f"{source.frigate_instance_id}:{source.camera_name}:{path_start}",
         camera=source.camera_name,
         start_time=start_time,
         end_time=end_time,

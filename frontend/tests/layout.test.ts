@@ -150,7 +150,6 @@ describe("layout composition", () => {
         targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
       },
       {
-        historyDays: 5,
         targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
       },
     ]);
@@ -183,9 +182,12 @@ describe("layout composition", () => {
       }),
     );
 
-    for (const module of activityModules(layout)) {
+    for (const module of alertEventModules(layout)) {
       expect(module.config).toMatchObject({ historyDays: 12 });
     }
+    expect(activityModules(layout)[2]?.config).not.toHaveProperty(
+      "historyDays",
+    );
   });
 
   it("maps camera bar appearance at the navigation component boundary", () => {

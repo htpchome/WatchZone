@@ -12,7 +12,6 @@ import type { MediaDateContext } from "../../media-date-context";
 interface RecordingsControllerConfig {
   readonly api?: HomeAssistantApi;
   readonly cameraSelection?: CameraSelectionContext;
-  readonly historyDays: number;
   readonly mediaDate?: MediaDateContext;
   readonly targetModuleId: string;
 }
@@ -152,23 +151,19 @@ export class RecordingsController implements ReactiveController {
 
   private _load(): void {
     if (!this._connected) return;
-    const { api, historyDays } = this._config();
+    const { api } = this._config();
     const entityId = this.activeEntityId;
     if (!api || !entityId) return;
     const today = homeAssistantDateKey(Date.now() / 1000, api.locale);
     const selectedDate = this._selectedDate ?? today;
     const timezone = resolvedHomeAssistantTimeZone(api.locale);
-    const key = `${entityId}:${selectedDate}:${timezone}:${historyDays}`;
+    const key = `${entityId}:${selectedDate}:${timezone}`;
     if (key === this._requestKey) return;
     this._requestKey = key;
     this.loading = true;
     this._host.requestUpdate();
     const request = ++this._request;
-    const before = Date.now() / 1000;
-    const after = before - historyDays * 24 * 60 * 60;
     void listRecordings(api, entityId, {
-      after,
-      before,
       selectedDate,
       timezone,
     })

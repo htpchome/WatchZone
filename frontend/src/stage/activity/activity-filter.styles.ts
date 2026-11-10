@@ -44,6 +44,11 @@ export const activityFilterStyles = css`
     color: var(--wzc-stage-stack-button-hover-color);
   }
 
+  .filter-trigger:disabled {
+    color: var(--wzc-stage-stack-button-color);
+    cursor: default;
+  }
+
   .filter-trigger:focus-visible,
   .reset:focus-visible,
   input:focus-visible {

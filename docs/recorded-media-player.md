@@ -35,6 +35,9 @@ viewing. Recording discovery and grouping are governed by
   recorded transports.
 - Native HLS is used when the video element reports support. HLS.js is loaded
   lazily only when native HLS is unavailable.
+- Home Assistant-proxied Frigate ranges use a signed media manifest rather
+  than a signed multivariant master so native HLS and HLS.js can carry the
+  path-scoped signature to media segments without exposing credentials.
 - Home Assistant Catalyst may use HLS sources through native playback only. It
   must not load HLS.js or fall back to a direct file source.
 - A bounded readiness timeout advances to the next candidate. Final failure is

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import asdict
 from datetime import date
-from time import time
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -31,8 +30,6 @@ from . import runtime_from_hass
         vol.Required("entity_id"): cv.entity_id,
         vol.Required("selected_date"): cv.string,
         vol.Required("timezone"): cv.string,
-        vol.Optional("after"): vol.Coerce(float),
-        vol.Optional("before"): vol.Coerce(float),
     }
 )
 @async_response
@@ -56,14 +53,10 @@ async def ws_recordings_list(
             msg["id"], "recordings_invalid_query", "Invalid recording date or timezone"
         )
         return
-    before = msg.get("before", time())
-    after = msg.get("after", before - 5 * 24 * 60 * 60)
     try:
         window = await runtime_from_hass(hass).recordings.async_list(
             entity_id,
             RecordingQuery(
-                after=after,
-                before=before,
                 selected_date=msg["selected_date"],
                 timezone=msg["timezone"],
             ),

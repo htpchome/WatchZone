@@ -3,15 +3,32 @@ import { css } from "lit";
 export const recordingsStyles = css`
   :host {
     display: block;
+    block-size: 100%;
+    min-block-size: 0;
     min-inline-size: 0;
     color: var(--wzc-recording-color);
     font-family: var(--wzc-font-family);
   }
 
+  .viewport {
+    box-sizing: border-box;
+    block-size: 100%;
+    max-block-size: calc(
+      5 * var(--wzc-recording-tile-block-size) + 4 *
+        var(--wzc-recording-list-gap) + 2 * var(--wzc-recording-list-padding)
+    );
+    min-block-size: calc(
+      3 * var(--wzc-recording-tile-block-size) + 2 *
+        var(--wzc-recording-list-gap) + 2 * var(--wzc-recording-list-padding)
+    );
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: var(--wzc-recording-list-padding);
+  }
+
   .list {
     display: grid;
     gap: var(--wzc-recording-list-gap);
-    padding: var(--wzc-recording-list-padding);
   }
 
   .tile {
@@ -80,6 +97,7 @@ export const recordingsStyles = css`
   }
 
   .download {
+    appearance: none;
     position: relative;
     z-index: 2;
     display: grid;
@@ -87,11 +105,14 @@ export const recordingsStyles = css`
     inline-size: var(--wzc-recording-action-size);
     block-size: var(--wzc-recording-action-size);
     margin-inline: var(--wzc-recording-action-margin);
+    padding: 0;
+    font: inherit;
+    line-height: 0;
+    cursor: pointer;
     color: var(--wzc-recording-action-color);
     background: var(--wzc-recording-action-background);
     border: 1px solid var(--wzc-recording-action-border-color);
     border-radius: var(--wzc-radius-medium);
-    text-decoration: none;
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -101,6 +122,8 @@ export const recordingsStyles = css`
   }
 
   .download ha-icon {
+    display: block;
+    --mdc-icon-size: 1.35rem;
     inline-size: 1.35rem;
     block-size: 1.35rem;
   }
@@ -115,9 +138,18 @@ export const recordingsStyles = css`
   }
 
   .skeleton {
-    min-block-size: var(--wzc-recording-tile-block-size);
-    background: var(--wzc-recording-tile-background);
-    border-radius: var(--wzc-recording-tile-radius);
+    color: var(--wzc-recording-skeleton-color);
+    pointer-events: none;
+  }
+
+  .skeleton .movie,
+  .skeleton .duration,
+  .skeleton .download {
+    color: var(--wzc-recording-skeleton-color);
+  }
+
+  .skeleton .download {
+    cursor: default;
   }
 
   @media (hover: hover) and (pointer: fine) {

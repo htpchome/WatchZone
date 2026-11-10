@@ -33,6 +33,7 @@ export class ActivityFilter extends LitElement {
   public static properties = {
     api: { attribute: false },
     cameraSelection: { attribute: false },
+    disabled: { type: Boolean },
     filterContext: { attribute: false },
     historyDays: { attribute: false },
     localize: { attribute: false },
@@ -43,6 +44,7 @@ export class ActivityFilter extends LitElement {
 
   public api?: HomeAssistantApi;
   public cameraSelection?: CameraSelectionContext;
+  public disabled = false;
   public filterContext?: ActivityFilterContext;
   public historyDays = 5;
   public localize: LocalizeFunction = englishLocalize;
@@ -99,7 +101,10 @@ export class ActivityFilter extends LitElement {
     super.disconnectedCallback();
   }
 
-  protected updated(): void {
+  protected updated(changed: Map<PropertyKey, unknown>): void {
+    if (changed.has("disabled") && this.disabled && this._open) {
+      this._open = false;
+    }
     this._syncSelection();
     const entityId = this._activeEntityId;
     if (
@@ -129,6 +134,7 @@ export class ActivityFilter extends LitElement {
       <button
         class=${`filter-trigger${selected ? " selected" : ""}`}
         type="button"
+        ?disabled=${this.disabled}
         aria-expanded=${this._open ? "true" : "false"}
         aria-haspopup="dialog"
         aria-label=${this.localize("filter.open")}

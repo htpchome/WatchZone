@@ -1,6 +1,4 @@
 import {
-  MAX_EVENT_HISTORY_DAYS,
-  MIN_EVENT_HISTORY_DAYS,
   RECORDINGS_MODULE_TYPE,
   RECORDINGS_TAG,
 } from "../../../core/constants";
@@ -9,7 +7,6 @@ import type { ModuleDefinition } from "../../placeable";
 import type { RecordingsModule } from "./recordings";
 
 export interface RecordingsModuleConfig {
-  readonly historyDays: number;
   readonly targetModuleId: string;
 }
 
@@ -25,18 +22,7 @@ export const moduleDefinition: ModuleDefinition<RecordingsModuleConfig> = {
     if (typeof source.targetModuleId !== "string" || !source.targetModuleId) {
       throw new Error("Recordings modules require a target camera module.");
     }
-    if (
-      typeof source.historyDays !== "number" ||
-      !Number.isInteger(source.historyDays) ||
-      source.historyDays < MIN_EVENT_HISTORY_DAYS ||
-      source.historyDays > MAX_EVENT_HISTORY_DAYS
-    ) {
-      throw new Error(
-        `Recordings module historyDays must be an integer from ${MIN_EVENT_HISTORY_DAYS} to ${MAX_EVENT_HISTORY_DAYS}.`,
-      );
-    }
     return {
-      historyDays: source.historyDays,
       targetModuleId: source.targetModuleId,
     };
   },
@@ -51,7 +37,6 @@ export const moduleDefinition: ModuleDefinition<RecordingsModuleConfig> = {
     const recordings = element as RecordingsModule;
     recordings.api = context.api;
     recordings.cameraSelection = context.cameraSelection;
-    recordings.historyDays = config.historyDays;
     recordings.localize = context.localize ?? englishLocalize;
     recordings.mediaDate = context.mediaDate;
     recordings.targetModuleId = config.targetModuleId;

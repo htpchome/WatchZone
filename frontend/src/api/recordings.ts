@@ -22,8 +22,6 @@ export interface RecordingWindow {
 }
 
 export interface RecordingWindowOptions {
-  readonly after: number;
-  readonly before: number;
   readonly selectedDate: string;
   readonly timezone: string;
 }
@@ -36,8 +34,6 @@ export async function listRecordings(
   return api.callWS<RecordingWindow>({
     type: "watchzone/recordings/list",
     entity_id: entityId,
-    after: options.after,
-    before: options.before,
     selected_date: options.selectedDate,
     timezone: options.timezone,
   });
