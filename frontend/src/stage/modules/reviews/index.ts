@@ -1,14 +1,14 @@
 import {
-  ALERTS_MODULE_TYPE,
-  ALERTS_TAG,
+  REVIEWS_MODULE_TYPE,
+  REVIEWS_TAG,
   MAX_EVENT_HISTORY_DAYS,
   MIN_EVENT_HISTORY_DAYS,
 } from "../../../core/constants";
 import { englishLocalize } from "../../../core/localization";
 import type { ModuleDefinition } from "../../placeable";
-import type { AlertsModule } from "./alerts";
+import type { ReviewsModule } from "./reviews";
 
-export interface AlertsModuleConfig {
+export interface ReviewsModuleConfig {
   readonly displayEventTypeBadges: boolean;
   readonly displayObjectBadges: boolean;
   readonly displayZone: boolean;
@@ -21,32 +21,32 @@ export interface AlertsModuleConfig {
 
 let definitionPromise: Promise<void> | undefined;
 
-export const moduleDefinition: ModuleDefinition<AlertsModuleConfig> = {
-  type: ALERTS_MODULE_TYPE,
+export const moduleDefinition: ModuleDefinition<ReviewsModuleConfig> = {
+  type: REVIEWS_MODULE_TYPE,
   validateConfig(value) {
     if (typeof value !== "object" || value === null) {
-      throw new Error("Alerts module configuration must be an object.");
+      throw new Error("Reviews module configuration must be an object.");
     }
     const source = value as Record<string, unknown>;
     if (typeof source.targetModuleId !== "string" || !source.targetModuleId) {
-      throw new Error("Alerts modules require a target camera module.");
+      throw new Error("Reviews modules require a target camera module.");
     }
     if (typeof source.roundedCorners !== "boolean") {
-      throw new Error("Alerts module roundedCorners must be a boolean.");
+      throw new Error("Reviews module roundedCorners must be a boolean.");
     }
     if (typeof source.shadows !== "boolean") {
-      throw new Error("Alerts module shadows must be a boolean.");
+      throw new Error("Reviews module shadows must be a boolean.");
     }
     if (typeof source.displayEventTypeBadges !== "boolean") {
       throw new Error(
-        "Alerts module displayEventTypeBadges must be a boolean.",
+        "Reviews module displayEventTypeBadges must be a boolean.",
       );
     }
     if (typeof source.displayObjectBadges !== "boolean") {
-      throw new Error("Alerts module displayObjectBadges must be a boolean.");
+      throw new Error("Reviews module displayObjectBadges must be a boolean.");
     }
     if (typeof source.displayZone !== "boolean") {
-      throw new Error("Alerts module displayZone must be a boolean.");
+      throw new Error("Reviews module displayZone must be a boolean.");
     }
     if (
       typeof source.historyDays !== "number" ||
@@ -55,11 +55,11 @@ export const moduleDefinition: ModuleDefinition<AlertsModuleConfig> = {
       source.historyDays > MAX_EVENT_HISTORY_DAYS
     ) {
       throw new Error(
-        `Alerts module historyDays must be an integer from ${MIN_EVENT_HISTORY_DAYS} to ${MAX_EVENT_HISTORY_DAYS}.`,
+        `Reviews module historyDays must be an integer from ${MIN_EVENT_HISTORY_DAYS} to ${MAX_EVENT_HISTORY_DAYS}.`,
       );
     }
     if (typeof source.hoverPreviewEnabled !== "boolean") {
-      throw new Error("Alerts module hoverPreviewEnabled must be a boolean.");
+      throw new Error("Reviews module hoverPreviewEnabled must be a boolean.");
     }
     return {
       displayEventTypeBadges: source.displayEventTypeBadges,
@@ -74,27 +74,27 @@ export const moduleDefinition: ModuleDefinition<AlertsModuleConfig> = {
   },
   getEntityIds: () => [],
   define() {
-    return (definitionPromise ??= import("./alerts").then(() => undefined));
+    return (definitionPromise ??= import("./reviews").then(() => undefined));
   },
   createElement() {
-    return document.createElement(ALERTS_TAG);
+    return document.createElement(REVIEWS_TAG);
   },
   updateElement(element, config, context) {
-    const alerts = element as AlertsModule;
-    alerts.activityFilter = context.activityFilter;
-    alerts.api = context.api;
-    alerts.cameraSelection = context.cameraSelection;
-    alerts.displayEventTypeBadges = config.displayEventTypeBadges;
-    alerts.displayObjectBadges = config.displayObjectBadges;
-    alerts.displayZone = config.displayZone;
-    alerts.historyDays = config.historyDays;
-    alerts.hoverPreviewEnabled = config.hoverPreviewEnabled;
-    alerts.localize = context.localize ?? englishLocalize;
-    alerts.mediaDate = context.mediaDate;
-    alerts.roundedCorners = config.roundedCorners;
-    alerts.shadows = config.shadows;
-    alerts.targetModuleId = config.targetModuleId;
+    const reviews = element as ReviewsModule;
+    reviews.activityFilter = context.activityFilter;
+    reviews.api = context.api;
+    reviews.cameraSelection = context.cameraSelection;
+    reviews.displayEventTypeBadges = config.displayEventTypeBadges;
+    reviews.displayObjectBadges = config.displayObjectBadges;
+    reviews.displayZone = config.displayZone;
+    reviews.historyDays = config.historyDays;
+    reviews.hoverPreviewEnabled = config.hoverPreviewEnabled;
+    reviews.localize = context.localize ?? englishLocalize;
+    reviews.mediaDate = context.mediaDate;
+    reviews.roundedCorners = config.roundedCorners;
+    reviews.shadows = config.shadows;
+    reviews.targetModuleId = config.targetModuleId;
   },
 };
 
-export type { AlertsModule } from "./alerts";
+export type { ReviewsModule } from "./reviews";

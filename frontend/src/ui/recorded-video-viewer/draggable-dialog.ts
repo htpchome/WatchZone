@@ -61,7 +61,7 @@ export class DraggableRecordedVideoDialog extends LitElement {
 
   protected render() {
     return html`<dialog
-      aria-label=${this.request?.title ?? this.localize("alerts.activity")}
+      aria-label=${this.request?.title ?? this.localize("reviews.activity")}
       @cancel=${this._handleCancel}
       @close=${this._handleClose}
       @click=${this._handleBackdropClick}

@@ -87,7 +87,7 @@
   "events.download_clip": "Transferir clip",
   "events.view_snapshot": "Ver captura",
   "navigation.activity": "Módulos de atividade",
-  "navigation.alerts": "Alertas",
+  "navigation.reviews": "Revisões",
   "navigation.events": "Eventos",
   "calendar.open": "Abrir calendário de atividade",
   "calendar.title": "Calendário de atividade",
@@ -95,11 +95,11 @@
   "calendar.next_month": "Mês seguinte",
   "calendar.reset": "Repor",
   "calendar.day_with_activity": "{date}, tem atividade de alerta",
-  "alerts.list": "Alertas da câmara",
-  "alerts.loading": "A carregar alertas…",
-  "alerts.empty": "Não há atividade de alertas recente para esta câmara.",
-  "alerts.load_failed": "Não foi possível carregar os alertas da câmara.",
-  "alerts.activity": "Atividade da câmara",
-  "alerts.alert": "Alerta",
-  "alerts.detection": "Deteção"
+  "reviews.list": "Revisões da câmara",
+  "reviews.loading": "A carregar revisões…",
+  "reviews.empty": "Não há revisões recentes para esta câmara.",
+  "reviews.load_failed": "Não foi possível carregar as revisões da câmara.",
+  "reviews.activity": "Atividade da câmara",
+  "reviews.alert": "Alerta",
+  "reviews.detection": "Deteção"
 }

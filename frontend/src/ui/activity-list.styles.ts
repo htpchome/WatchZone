@@ -13,15 +13,22 @@ export const activityListStyles = css`
     block-size: 100%;
     max-block-size: calc(
       5 * var(--wzc-event-tile-block-size) + 4 * var(--wzc-event-list-gap) + 2 *
-        var(--wzc-event-list-padding)
+        var(--wzc-event-list-padding) +
+        var(--wzc-activity-scroll-under-offset, 0px)
     );
     min-block-size: calc(
       3 * var(--wzc-event-tile-block-size) + 2 * var(--wzc-event-list-gap) + 2 *
-        var(--wzc-event-list-padding)
+        var(--wzc-event-list-padding) +
+        var(--wzc-activity-scroll-under-offset, 0px)
     );
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: var(--wzc-event-list-padding);
+    padding-block: calc(
+        var(--wzc-event-list-padding) +
+          var(--wzc-activity-scroll-under-offset, 0px)
+      )
+      var(--wzc-event-list-padding);
+    padding-inline: var(--wzc-event-list-padding);
   }
 
   .list {
@@ -118,7 +125,7 @@ export const activityListStyles = css`
 
   .thumbnail-wrap.alert::after,
   .thumbnail-wrap.detection::after {
-    border: var(--wzc-alert-thumbnail-outline-width) solid
+    border: var(--wzc-activity-thumbnail-outline-width) solid
       var(--wzc-activity-thumbnail-outline-color);
     border-radius: inherit;
     box-sizing: border-box;
@@ -194,6 +201,59 @@ export const activityListStyles = css`
     transform: translateX(-50%);
     white-space: nowrap;
     z-index: 3;
+  }
+
+  .review-state {
+    appearance: none;
+    position: absolute;
+    z-index: 4;
+    inset-block-end: 0;
+    inset-inline-start: 0;
+    display: grid;
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+    place-items: center;
+    padding: 0;
+    cursor: pointer;
+    background: transparent;
+    border: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .review-state-indicator {
+    display: grid;
+    inline-size: 1.15rem;
+    block-size: 1.15rem;
+    place-items: center;
+    color: var(--wzc-review-state-color);
+    background: var(--wzc-review-state-background);
+    border-radius: var(--wzc-radius-pill);
+  }
+
+  .review-state.reviewed {
+    --wzc-review-state-color: var(--wzc-color-on-success);
+    --wzc-review-state-background: var(--wzc-color-fill-success);
+  }
+
+  .review-state.unreviewed {
+    --wzc-review-state-color: var(--wzc-color-on-warning);
+    --wzc-review-state-background: var(--wzc-color-fill-warning);
+  }
+
+  .review-state ha-icon {
+    display: block;
+    --mdc-icon-size: 0.8rem;
+    inline-size: 0.8rem;
+    block-size: 0.8rem;
+  }
+
+  .review-state:focus-visible {
+    outline: 2px solid var(--wzc-color-primary);
+    outline-offset: -0.3rem;
+  }
+
+  .review-state:disabled {
+    cursor: progress;
   }
 
   .details {

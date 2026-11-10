@@ -11,7 +11,8 @@ import { CameraSessionContext } from "./camera-session-context";
 import { CameraSelectionContext } from "./camera-selection-context";
 import { ActivityFilterContext } from "./activity/activity-filter-context";
 import {
-  ALERTS_MODULE_TYPE,
+  CAMERA_NAVIGATION_COMPONENT_TYPE,
+  REVIEWS_MODULE_TYPE,
   EVENTS_MODULE_TYPE,
   RECORDINGS_MODULE_TYPE,
 } from "../core/constants";
@@ -275,8 +276,15 @@ export class LayoutRuntime implements ReactiveController {
     const activeId =
       this._activeStackModules.get(node.id) ?? node.children[0]?.id;
     const active = node.children.find(({ id }) => id === activeId);
+    const activityUnderlay = node.children.some(({ moduleType }) =>
+      [
+        REVIEWS_MODULE_TYPE,
+        EVENTS_MODULE_TYPE,
+        RECORDINGS_MODULE_TYPE,
+      ].includes(moduleType),
+    );
     return html`<div
-      class="stage-placement stage-stack"
+      class=${`stage-placement stage-stack${activityUnderlay ? " activity-underlay-stack" : ""}`}
       data-layout-node=${node.id}
       style=${placementStyle}
     >
@@ -327,38 +335,43 @@ export class LayoutRuntime implements ReactiveController {
     node: StageStackNode,
     active: StageModuleNode | undefined,
   ): TemplateResult | typeof nothing {
-    const alerts = node.children.find(
-      ({ moduleType }) => moduleType === ALERTS_MODULE_TYPE,
+    const reviews = node.children.find(
+      ({ moduleType }) => moduleType === REVIEWS_MODULE_TYPE,
     );
     const hasEvents = node.children.some(
       ({ moduleType }) => moduleType === EVENTS_MODULE_TYPE,
     );
-    if (!alerts || !hasEvents || !isActivityConfig(alerts.config) || !active) {
+    if (
+      !reviews ||
+      !hasEvents ||
+      !isActivityConfig(reviews.config) ||
+      !active
+    ) {
       return nothing;
     }
     const activity =
-      active.moduleType === ALERTS_MODULE_TYPE ||
+      active.moduleType === REVIEWS_MODULE_TYPE ||
       active.moduleType === EVENTS_MODULE_TYPE;
     const recordings = active.moduleType === RECORDINGS_MODULE_TYPE;
     if (!activity && !recordings) return nothing;
     const targetModuleId = isTargetModuleConfig(active.config)
       ? active.config.targetModuleId
-      : alerts.config.targetModuleId;
+      : reviews.config.targetModuleId;
     void defineActivityControls();
     return html`<wzc-activity-filter
         .api=${this._context.api}
         .cameraSelection=${this._cameraSelection}
         .disabled=${recordings}
         .filterContext=${this._activityFilter}
-        .historyDays=${alerts.config.historyDays}
+        .historyDays=${reviews.config.historyDays}
         .localize=${this._context.localize ?? englishLocalize}
-        .targetModuleId=${alerts.config.targetModuleId}
+        .targetModuleId=${reviews.config.targetModuleId}
       ></wzc-activity-filter>
       <wzc-activity-calendar
         .api=${this._context.api}
         .cameraSelection=${this._cameraSelection}
         .dateContext=${this._mediaDate}
-        .historyDays=${alerts.config.historyDays}
+        .historyDays=${reviews.config.historyDays}
         .localize=${this._context.localize ?? englishLocalize}
         .mode=${recordings ? "recordings" : "activity"}
         .targetModuleId=${targetModuleId}
@@ -410,8 +423,15 @@ export class LayoutRuntime implements ReactiveController {
     const slotEntries = Object.entries(node.slots ?? {}) as Array<
       [StageSlotName, readonly StageComponentNode[]]
     >;
+    const cameraNavigation = Object.values(node.slots ?? {}).some(
+      (components) =>
+        components?.some(
+          ({ componentType }) =>
+            componentType === CAMERA_NAVIGATION_COMPONENT_TYPE,
+        ),
+    );
     return html`<div
-      class="stage-placement module-composition has-components"
+      class=${`stage-placement module-composition has-components${cameraNavigation ? " stage-camera-navigation" : ""}`}
       style=${placementStyle}
     >
       ${this._renderRecord(node)}

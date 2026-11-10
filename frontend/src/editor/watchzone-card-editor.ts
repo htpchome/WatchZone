@@ -279,11 +279,11 @@ export class CardEditor extends LitElement {
           .icon=${"events"}
         ></${accordionItemTag}>
         <${accordionItemTag}
-          heading=${this._t("editor.alerts_and_detections")}
-          item-key="alerts-and-detections"
-          .icon=${"alerts"}
+          heading=${this._t("editor.reviews")}
+          item-key="reviews"
+          .icon=${"reviews"}
         >
-          ${this._renderAlertsDetectionsSettings()}
+          ${this._renderReviewSettings()}
         </${accordionItemTag}>
         <${accordionItemTag}
           heading=${this._t("editor.general_settings")}
@@ -408,7 +408,7 @@ export class CardEditor extends LitElement {
     );
   }
 
-  private _renderAlertsDetectionsSettings() {
+  private _renderReviewSettings() {
     return this._renderBooleanOption(
       "view_timelapse_on_thumbnail_hover",
       this._t("editor.view_timelapse_on_thumbnail_hover"),

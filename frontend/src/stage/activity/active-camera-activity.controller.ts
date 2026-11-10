@@ -123,6 +123,20 @@ export class ActiveCameraActivityController<
     return this._refresh(true, false);
   }
 
+  public updateItem(id: string, update: (item: T) => T): void {
+    const entityId = this._activeEntityId;
+    if (!entityId) return;
+    let changed = false;
+    const items = this.items.map((item) => {
+      if (item.id !== id) return item;
+      changed = true;
+      return update(item);
+    });
+    if (!changed) return;
+    this._setItems(entityId, items);
+    this._host.requestUpdate();
+  }
+
   public get activeCameraLabel(): string | undefined {
     return this._activeCameraLabel;
   }

@@ -24,8 +24,20 @@ class ReviewsService:
         entry = er.async_get(self._hass).async_get(entity_id)
         provider = self._providers.reviews(entry.platform) if entry else None
         if provider is None:
-            raise HomeAssistantError("Alerts are unavailable for this camera")
+            raise HomeAssistantError("Reviews are unavailable for this camera")
         return await provider.async_list_reviews(self._hass, entity_id, query)
+
+    async def async_set_reviewed(
+        self, entity_id: str, review_id: str, reviewed: bool
+    ) -> None:
+        """Set one review's state through its owning provider."""
+        entry = er.async_get(self._hass).async_get(entity_id)
+        provider = self._providers.reviews(entry.platform) if entry else None
+        if provider is None:
+            raise HomeAssistantError("Reviews are unavailable for this camera")
+        await provider.async_set_reviewed(
+            self._hass, entity_id, review_id, reviewed
+        )
 
     async def async_close(self) -> None:
         """Release service resources."""

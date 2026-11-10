@@ -11,7 +11,7 @@ interface IconDefinition {
 }
 
 const ICONS = {
-  alerts: {
+  reviews: {
     paths: [
       {
         d: "M12 2L4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3zm-1 14l-4-4 1.4-1.4L11 13.2l5.6-5.6L18 9l-7 7z",

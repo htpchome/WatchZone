@@ -86,9 +86,9 @@
                     "roundedCorners": true,
                     "targetModuleId": "default-camera-module"
                   },
-                  "id": "default-alerts-module",
+                  "id": "default-reviews-module",
                   "kind": "module",
-                  "moduleType": "alerts"
+                  "moduleType": "reviews"
                 },
                 {
                   "config": {
@@ -201,9 +201,9 @@
                     "roundedCorners": true,
                     "targetModuleId": "default-camera-module"
                   },
-                  "id": "default-alerts-module",
+                  "id": "default-reviews-module",
                   "kind": "module",
-                  "moduleType": "alerts"
+                  "moduleType": "reviews"
                 },
                 {
                   "config": {

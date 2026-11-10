@@ -289,7 +289,7 @@ test("keeps picker and activity geometry stable across lazy loading", async ({
   });
   for (const path of [
     "**/src/stage/components/camera-navigation/camera-navigation.ts*",
-    "**/src/stage/modules/alerts/alerts.ts*",
+    "**/src/stage/modules/reviews/reviews.ts*",
   ]) {
     await page.route(path, async (route) => {
       await placeableGate;
@@ -363,9 +363,9 @@ test("keeps picker and activity geometry stable across lazy loading", async ({
 
   releasePlaceables();
   const navigation = card.locator("wzc-camera-navigation");
-  const activity = card.locator("wzc-alerts .viewport");
+  const activity = card.locator("wzc-reviews .viewport");
   await expect(navigation).toBeVisible();
-  await expect(card.locator("wzc-alerts .tile")).toHaveCount(5);
+  await expect(card.locator("wzc-reviews .tile")).toHaveCount(5);
   const loaded = await Promise.all([
     card.locator("ha-card").boundingBox(),
     navigation.boundingBox(),
@@ -828,7 +828,9 @@ test("keeps activity content in an independently scrolling viewport", async ({
     card.style.setProperty("--ha-card-border-radius", "0px");
     card.style.setProperty("--ha-color-on-primary-normal", "#111111");
     card.style.setProperty("--primary-color", "#03a9f4");
+    card.style.setProperty("--success-color", "#00a000");
     card.style.setProperty("--text-primary-color", "#ffffff");
+    card.style.setProperty("--warning-color", "#d09000");
     card.hass = {
       config: { time_zone: "America/New_York" },
       locale: {
@@ -929,11 +931,17 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(normalNavigation.activeIconColor).toBe("rgb(255, 255, 255)");
   expect(normalNavigation.activeIconOpacity).toBe("1");
   expect(normalNavigation.activePathFill).toBe("rgb(255, 255, 255)");
-  await expect(page.locator("wzc-alerts .tile")).toHaveCount(6);
+  await expect(page.locator("wzc-reviews .tile")).toHaveCount(6);
+  const reviewState = page.locator("wzc-reviews .review-state").first();
+  await expect(reviewState).toHaveClass(/unreviewed/);
+  await expect(reviewState).toHaveAttribute("aria-pressed", "false");
+  const unreviewedBackground = await reviewState
+    .locator(".review-state-indicator")
+    .evaluate((indicator) => getComputedStyle(indicator).backgroundColor);
   expect(previewRequests).toBe(0);
   await expect
     .poll(() =>
-      page.locator("wzc-alerts wzc-activity-list").evaluate(
+      page.locator("wzc-reviews wzc-activity-list").evaluate(
         (element) =>
           (
             element as HTMLElement & {
@@ -944,16 +952,26 @@ test("keeps activity content in an independently scrolling viewport", async ({
     )
     .toBe("/review-preview.gif");
   await page
-    .locator("wzc-alerts .tile")
+    .locator("wzc-reviews .tile")
     .first()
     .hover({
       position: { x: 10, y: 10 },
     });
-  await expect(page.locator("wzc-alerts .hover-preview")).toHaveCount(1);
+  await expect(page.locator("wzc-reviews .hover-preview")).toHaveCount(1);
   await expect.poll(() => previewRequests).toBe(1);
   await page.mouse.move(0, 0);
-  await expect(page.locator("wzc-alerts .hover-preview")).toHaveCount(0);
-  const alertList = page.locator("wzc-alerts wzc-activity-list");
+  await expect(page.locator("wzc-reviews .hover-preview")).toHaveCount(0);
+  await reviewState.click();
+  await expect(reviewState).toHaveClass(/^review-state reviewed$/);
+  await expect(reviewState).toHaveAttribute("aria-pressed", "true");
+  await expect
+    .poll(() =>
+      reviewState
+        .locator(".review-state-indicator")
+        .evaluate((indicator) => getComputedStyle(indicator).backgroundColor),
+    )
+    .not.toBe(unreviewedBackground);
+  const alertList = page.locator("wzc-reviews wzc-activity-list");
   await alertList.evaluate(async (element) => {
     const list = element as HTMLElement & {
       items: Array<{
@@ -1023,7 +1041,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   );
   await page.mouse.move(0, 0);
   const alertOutlines = await page
-    .locator("wzc-alerts .thumbnail-wrap")
+    .locator("wzc-reviews .thumbnail-wrap")
     .evaluateAll((thumbnails) =>
       thumbnails.slice(0, 2).map((thumbnail) => {
         const outline = getComputedStyle(thumbnail, "::after");
@@ -1044,8 +1062,8 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await page
     .locator('wzc-camera-navigation button[data-entity-id="camera.back"]')
     .click();
-  await expect(page.locator("wzc-alerts .tile")).toHaveCount(6);
-  await expect(page.locator("wzc-alerts")).toContainText("back_yard");
+  await expect(page.locator("wzc-reviews .tile")).toHaveCount(6);
+  await expect(page.locator("wzc-reviews")).toContainText("back_yard");
   await stackButtons.nth(1).click();
   await expect(stackButtons.nth(1)).toHaveCSS(
     "background-color",
@@ -1058,6 +1076,67 @@ test("keeps activity content in an independently scrolling viewport", async ({
   const events = page.locator("wzc-events");
   const viewport = events.locator(".viewport");
   await expect(events.locator(".tile")).toHaveCount(6);
+  const [
+    liveBox,
+    cameraNavigationBox,
+    stackNavigationBox,
+    viewportBox,
+    tileBox,
+  ] = await Promise.all([
+    page.locator("wzc-camera-view .camera").first().boundingBox(),
+    page.locator("wzc-camera-navigation").boundingBox(),
+    stackNavigation.boundingBox(),
+    viewport.boundingBox(),
+    events.locator(".tile").first().boundingBox(),
+  ]);
+  if (
+    !liveBox ||
+    !cameraNavigationBox ||
+    !stackNavigationBox ||
+    !viewportBox ||
+    !tileBox
+  )
+    throw new Error("Activity underlay geometry was not rendered");
+  const underlayGeometry = {
+    cameraNavigationTop: cameraNavigationBox.y,
+    firstTileTop: tileBox.y,
+    liveBottom: liveBox.y + liveBox.height,
+    stackNavigationBottom: stackNavigationBox.y + stackNavigationBox.height,
+    viewportTop: viewportBox.y,
+  };
+  expect(underlayGeometry.viewportTop).toBeCloseTo(
+    underlayGeometry.liveBottom,
+    0,
+  );
+  expect(underlayGeometry.viewportTop).toBeLessThan(
+    underlayGeometry.cameraNavigationTop,
+  );
+  expect(underlayGeometry.firstTileTop).toBeGreaterThanOrEqual(
+    underlayGeometry.stackNavigationBottom,
+  );
+  await viewport.evaluate((node) => {
+    node.scrollTop = 80;
+    node.dispatchEvent(new Event("scroll"));
+  });
+  await expect
+    .poll(() =>
+      events
+        .locator(".tile")
+        .first()
+        .evaluate((tile) => tile.getBoundingClientRect().top),
+    )
+    .toBeLessThan(underlayGeometry.stackNavigationBottom);
+  const underlayTileTop = await events
+    .locator(".tile")
+    .first()
+    .evaluate((tile) => tile.getBoundingClientRect().top);
+  expect(underlayTileTop).toBeGreaterThanOrEqual(
+    underlayGeometry.liveBottom - 1,
+  );
+  await viewport.evaluate((node) => {
+    node.scrollTop = 0;
+    node.dispatchEvent(new Event("scroll"));
+  });
   await expect(page.locator("watchzone-card ha-card")).toHaveCSS(
     "border-radius",
     "21px",
@@ -1135,6 +1214,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
     .locator("wzc-activity-list")
     .evaluate((element) => {
       const list = element as HTMLElement;
+      list.style.setProperty("--wzc-activity-scroll-under-offset", "0px");
       list.style.blockSize = "400px";
       const viewportElement =
         list.shadowRoot?.querySelector<HTMLElement>(".viewport");
@@ -1143,6 +1223,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
         scrollHeight: viewportElement?.scrollHeight ?? 0,
       };
       list.style.removeProperty("block-size");
+      list.style.removeProperty("--wzc-activity-scroll-under-offset");
       return geometry;
     });
   expect(constrained.clientHeight).toBeCloseTo(400, 0);
@@ -1707,8 +1788,8 @@ test("switches activity and recordings through the shared media calendar", async
   const filter = navigation.locator("wzc-activity-filter");
   const calendar = navigation.locator("wzc-activity-calendar");
   const trigger = calendar.locator(".calendar-trigger");
-  await expect(page.locator("wzc-alerts .tile")).toHaveCount(2);
-  const loadingSurface = page.locator("wzc-alerts .thumbnail-wrap").first();
+  await expect(page.locator("wzc-reviews .tile")).toHaveCount(2);
+  const loadingSurface = page.locator("wzc-reviews .thumbnail-wrap").first();
   await expect(loadingSurface).toHaveCSS("background-color", "rgb(36, 36, 36)");
   await expect(loadingSurface).toHaveCSS("color", "rgb(98, 98, 98)");
   await expect(trigger).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
@@ -1750,8 +1831,8 @@ test("switches activity and recordings through the shared media calendar", async
     .toBe(true);
   await expect(calendar.locator(".day.marked")).toHaveCount(2);
   await calendar.locator(".day.marked").first().click();
-  await expect(page.locator("wzc-alerts .tile")).toHaveCount(1);
-  await expect(page.locator("wzc-alerts")).toContainText("Bird");
+  await expect(page.locator("wzc-reviews .tile")).toHaveCount(1);
+  await expect(page.locator("wzc-reviews")).toContainText("Bird");
 
   await navigation.locator(".stage-stack-button").nth(1).click();
   await expect(page.locator("wzc-events .tile")).toHaveCount(1);

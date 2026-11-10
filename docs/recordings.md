@@ -3,7 +3,7 @@
 ## Ownership
 
 - Recordings is an independently lazy-loaded Stage module. It does not import
-  Alerts, Events, Camera, or another placeable.
+  Reviews, Events, Camera, or another placeable.
 - The Python recordings feature resolves a provider capability and returns
   WatchZone-owned recording days and hourly ranges. Provider response shapes
   and URLs do not leak into the module.
@@ -28,7 +28,7 @@
   localized clock ranges. Provider duration and availability replace those
   placeholders when the selected-day response arrives.
 - The row viewport uses the same bounded internal scrolling contract as the
-  Alerts and Events lists. It contains overscroll without expanding the Stage
+  Reviews and Events lists. It contains overscroll without expanding the Stage
   and does not reserve a stable scrollbar gutter.
 
 ## Calendar and selection
@@ -36,15 +36,15 @@
 - Recordings shares camera-scoped date selection and its normalized available
   date keys with the Stage calendar. Hour ranges and provider data remain
   private to the module.
-- Recording availability is not limited by the Alerts and Events history-days
+- Recording availability is not limited by the Reviews and Events history-days
   preference. The provider reports every retained recording date the server
   exposes; only the selected day's segment query is fetched.
 - When Recordings is active, the Stage calendar marks recording-available days,
   remains aligned to the navigation trailing edge, and leaves the activity
-  filter visibly disabled. When Alerts or Events is active, the calendar and
+  filter visibly disabled. When Reviews or Events is active, the calendar and
   filter retain their activity behavior.
 - With no explicit date selection, Recordings displays today. Resetting the
-  calendar returns to that default without changing Alerts or Events data.
+  calendar returns to that default without changing Reviews or Events data.
 
 ## Media and download
 

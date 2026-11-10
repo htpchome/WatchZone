@@ -96,7 +96,7 @@ describe("watchzone-card-editor", () => {
       "Camera Settings",
       "Live Media Player",
       "Recorded Media Player",
-      "Alerts and Detections",
+      "Reviews",
       "General Settings",
       "Layout Settings",
       "Display Settings",

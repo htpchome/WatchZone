@@ -44,3 +44,17 @@ export async function listReviews(
     options,
   );
 }
+
+export async function setReviewReviewed(
+  api: HomeAssistantApi,
+  entityId: string,
+  reviewId: string,
+  reviewed: boolean,
+): Promise<void> {
+  await api.callWS({
+    type: "watchzone/reviews/set_reviewed",
+    entity_id: entityId,
+    review_id: reviewId,
+    reviewed,
+  });
+}

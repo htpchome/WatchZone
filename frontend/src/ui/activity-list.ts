@@ -50,6 +50,8 @@ export interface ActivityListItem {
   readonly objectLabels: readonly string[];
   readonly playbackSources: readonly RecordedMediaSource[];
   readonly preferredTransport: RecordedMediaTransport;
+  readonly reviewed?: boolean;
+  readonly reviewStatePending?: boolean;
   readonly revision: string;
   readonly snapshotUrl: string | null;
   readonly startTime: number;
@@ -83,6 +85,7 @@ export class ActivityList extends LitElement {
     resolvePlayback: { attribute: false },
     roundedCorners: { attribute: false, type: Boolean },
     shadows: { attribute: false, type: Boolean },
+    toggleReviewed: { attribute: false },
   };
 
   public api?: HomeAssistantApi;
@@ -101,6 +104,7 @@ export class ActivityList extends LitElement {
   ) => Promise<ActivityPlaybackResolution | undefined>;
   public roundedCorners = true;
   public shadows = true;
+  public toggleReviewed?: (item: ActivityListItem) => void;
 
   private readonly _failedMedia = new Set<string>();
   private _hoveredPreviewId?: string;
@@ -248,7 +252,7 @@ export class ActivityList extends LitElement {
                 loading="lazy"
                 src=${this.api?.resolveUrl(previewUrl) ?? previewUrl}
                 alt=${this.localize("events.thumbnail", {
-                  label: objectLabels[0] ?? this.localize("alerts.activity"),
+                  label: objectLabels[0] ?? this.localize("reviews.activity"),
                 })}
                 @error=${() => this._mediaFailed(item, previewUrl)}
               />`
@@ -275,11 +279,39 @@ export class ActivityList extends LitElement {
         ${
           item.inProgress
             ? html`<span class="in-progress"
-                >${this.localize("alerts.progress")}</span
+                >${this.localize("reviews.progress")}</span
               >`
             : null
         }
       </div>
+      ${
+        item.reviewed !== undefined
+          ? html`<button
+              class=${`review-state ${item.reviewed ? "reviewed" : "unreviewed"}`}
+              type="button"
+              ?disabled=${item.reviewStatePending === true}
+              title=${this.localize(
+                item.reviewed
+                  ? "reviews.mark_unreviewed"
+                  : "reviews.mark_reviewed",
+              )}
+              aria-label=${this.localize(
+                item.reviewed
+                  ? "reviews.mark_unreviewed"
+                  : "reviews.mark_reviewed",
+              )}
+              aria-pressed=${item.reviewed ? "true" : "false"}
+              @click=${(event: MouseEvent) => {
+                event.stopPropagation();
+                this.toggleReviewed?.(item);
+              }}
+            >
+              <span class="review-state-indicator">
+                <ha-icon icon="mdi:check"></ha-icon>
+              </span>
+            </button>`
+          : null
+      }
       <div class="details">
         ${
           objectLabels.length > 0 || typeBadge

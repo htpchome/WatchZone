@@ -1,7 +1,7 @@
 import type { CardConfig } from "../../core/config";
 import {
   APP_ID,
-  ALERTS_MODULE_TYPE,
+  REVIEWS_MODULE_TYPE,
   CAMERA_NAVIGATION_COMPONENT_TYPE,
   CAMERA_MODULE_TYPE,
   EVENTS_MODULE_TYPE,
@@ -151,7 +151,7 @@ function hydrateModule(
   }
   if (
     node.moduleType === EVENTS_MODULE_TYPE ||
-    node.moduleType === ALERTS_MODULE_TYPE ||
+    node.moduleType === REVIEWS_MODULE_TYPE ||
     node.moduleType === RECORDINGS_MODULE_TYPE
   ) {
     if (config.cameras.length === 0) return undefined;
@@ -175,7 +175,7 @@ function hydrateModule(
               shadows: config.event_shadows,
             }
           : {}),
-        ...(node.moduleType === ALERTS_MODULE_TYPE
+        ...(node.moduleType === REVIEWS_MODULE_TYPE
           ? {
               hoverPreviewEnabled: config.view_timelapse_on_thumbnail_hover,
             }
@@ -222,7 +222,7 @@ function hydrateModule(
 function namespaceModuleConfig(node: StageModuleNode): unknown {
   if (
     node.moduleType !== EVENTS_MODULE_TYPE &&
-    node.moduleType !== ALERTS_MODULE_TYPE &&
+    node.moduleType !== REVIEWS_MODULE_TYPE &&
     node.moduleType !== RECORDINGS_MODULE_TYPE
   )
     return node.config;

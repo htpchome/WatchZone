@@ -68,7 +68,7 @@ describe("notification deep links", () => {
     const replaceState = vi.fn();
     removeDeepLinkParameters(
       {
-        hash: "#/view?review=review-1&panel=alerts",
+        hash: "#/view?review=review-1&panel=reviews",
         pathname: "/dashboard/security",
         search: "?camera=front&event=event-1&edit=1",
       },
@@ -77,7 +77,7 @@ describe("notification deep links", () => {
     expect(replaceState).toHaveBeenCalledWith(
       { navigation: true },
       "",
-      "/dashboard/security?edit=1#/view?panel=alerts",
+      "/dashboard/security?edit=1#/view?panel=reviews",
     );
   });
 });

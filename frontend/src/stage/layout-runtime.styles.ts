@@ -34,6 +34,29 @@ export const stageRuntimeStyles = css`
     min-block-size: 0;
   }
 
+  .activity-underlay-stack {
+    --wzc-activity-scroll-under-offset: calc(
+      2 * var(--wzc-stage-module-gap) +
+        var(--wzc-camera-navigation-block-size) +
+        var(--wzc-stage-stack-button-size) + 2 *
+        var(--wzc-stage-stack-navigation-padding)
+    );
+  }
+
+  .stage-camera-navigation,
+  .activity-underlay-stack > .stage-stack-navigation {
+    position: relative;
+    z-index: 2;
+  }
+
+  .activity-underlay-stack > .stage-stack-content {
+    position: relative;
+    z-index: 1;
+    inset-block-start: calc(-1 * var(--wzc-activity-scroll-under-offset));
+    block-size: calc(100% + var(--wzc-activity-scroll-under-offset));
+    margin-block-end: calc(-1 * var(--wzc-activity-scroll-under-offset));
+  }
+
   .stage-stack-navigation {
     align-items: center;
     display: flex;
@@ -288,15 +311,22 @@ export const stageRuntimeStyles = css`
     block-size: 100%;
     max-block-size: calc(
       5 * var(--wzc-event-tile-block-size) + 4 * var(--wzc-event-list-gap) + 2 *
-        var(--wzc-event-list-padding)
+        var(--wzc-event-list-padding) +
+        var(--wzc-activity-scroll-under-offset, 0px)
     );
     min-block-size: calc(
       3 * var(--wzc-event-tile-block-size) + 2 * var(--wzc-event-list-gap) + 2 *
-        var(--wzc-event-list-padding)
+        var(--wzc-event-list-padding) +
+        var(--wzc-activity-scroll-under-offset, 0px)
     );
     gap: var(--wzc-event-list-gap);
     overflow: hidden;
-    padding: var(--wzc-event-list-padding);
+    padding-block: calc(
+        var(--wzc-event-list-padding) +
+          var(--wzc-activity-scroll-under-offset, 0px)
+      )
+      var(--wzc-event-list-padding);
+    padding-inline: var(--wzc-event-list-padding);
   }
 
   .activity-skeleton-row {

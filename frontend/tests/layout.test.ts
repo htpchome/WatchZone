@@ -7,7 +7,7 @@ import { PlaceableLoader } from "../src/stage/placeable-loader";
 import { normalizeCardConfig } from "../src/core/config";
 import {
   DEFAULT_ACTIVITY_STACK_NODE_ID,
-  DEFAULT_ALERTS_MODULE_NODE_ID,
+  DEFAULT_REVIEWS_MODULE_NODE_ID,
   DEFAULT_CAMERA_MODULE_NODE_ID,
   DEFAULT_CAMERA_NAVIGATION_COMPONENT_NODE_ID,
   DEFAULT_EVENTS_MODULE_NODE_ID,
@@ -113,9 +113,9 @@ describe("layout composition", () => {
       kind: "stack",
       children: [
         {
-          id: DEFAULT_ALERTS_MODULE_NODE_ID,
+          id: DEFAULT_REVIEWS_MODULE_NODE_ID,
           kind: "module",
-          moduleType: "alerts",
+          moduleType: "reviews",
         },
         {
           id: DEFAULT_EVENTS_MODULE_NODE_ID,
@@ -165,7 +165,7 @@ describe("layout composition", () => {
       }),
     );
 
-    for (const module of alertEventModules(layout)) {
+    for (const module of reviewEventModules(layout)) {
       expect(module.config).toMatchObject({
         displayEventTypeBadges: false,
         displayObjectBadges: false,
@@ -182,7 +182,7 @@ describe("layout composition", () => {
       }),
     );
 
-    for (const module of alertEventModules(layout)) {
+    for (const module of reviewEventModules(layout)) {
       expect(module.config).toMatchObject({ historyDays: 12 });
     }
     expect(activityModules(layout)[2]?.config).not.toHaveProperty(
@@ -213,7 +213,7 @@ describe("layout composition", () => {
         event_shadows: false,
       }),
     );
-    for (const module of alertEventModules(layout)) {
+    for (const module of reviewEventModules(layout)) {
       expect(module.config).toMatchObject({ shadows: false });
     }
   });
@@ -474,12 +474,12 @@ describe("layout composition", () => {
       updateElement: () => undefined,
       validateConfig: (value) => value,
     });
-    const alertsLoad = vi.fn(async () => createDefinition("alerts"));
+    const reviewsLoad = vi.fn(async () => createDefinition("reviews"));
     const eventsLoad = vi.fn(async () => createDefinition("events"));
     const loader = new PlaceableLoader({
-      alerts: {
-        load: alertsLoad,
-        navigation: { icon: "alerts", labelKey: "navigation.alerts" },
+      reviews: {
+        load: reviewsLoad,
+        navigation: { icon: "reviews", labelKey: "navigation.reviews" },
       },
       events: {
         load: eventsLoad,
@@ -494,10 +494,10 @@ describe("layout composition", () => {
 
     await vi.waitFor(() => {
       render(runtime.render(), container);
-      expect(container.querySelector("article")?.dataset.type).toBe("alerts");
+      expect(container.querySelector("article")?.dataset.type).toBe("reviews");
     });
-    const alerts = container.querySelector("article");
-    expect(alertsLoad).toHaveBeenCalledOnce();
+    const reviews = container.querySelector("article");
+    expect(reviewsLoad).toHaveBeenCalledOnce();
     expect(eventsLoad).not.toHaveBeenCalled();
 
     container
@@ -507,15 +507,15 @@ describe("layout composition", () => {
       render(runtime.render(), container);
       expect(container.querySelector("article")?.dataset.type).toBe("events");
     });
-    expect(alerts?.isConnected).toBe(false);
+    expect(reviews?.isConnected).toBe(false);
     expect(eventsLoad).toHaveBeenCalledOnce();
 
     container
       .querySelectorAll<HTMLButtonElement>(".stage-stack-navigation button")[0]
       ?.click();
     render(runtime.render(), container);
-    expect(container.querySelector("article")).toBe(alerts);
-    expect(alertsLoad).toHaveBeenCalledOnce();
+    expect(container.querySelector("article")).toBe(reviews);
+    expect(reviewsLoad).toHaveBeenCalledOnce();
   });
 
   it("prepares a module while its visual definition loads and releases after mount", async () => {
@@ -621,11 +621,11 @@ function activityModules(
   return (node as StageStackNode).children;
 }
 
-function alertEventModules(
+function reviewEventModules(
   design: StageDesignDocument,
 ): readonly StageModuleNode[] {
   return activityModules(design).filter(
-    ({ moduleType }) => moduleType === "alerts" || moduleType === "events",
+    ({ moduleType }) => moduleType === "reviews" || moduleType === "events",
   );
 }
 
@@ -662,9 +662,9 @@ function layoutWithStack(): StageDesignDocument {
             children: [
               {
                 config: {},
-                id: "alerts-node",
+                id: "reviews-node",
                 kind: "module",
-                moduleType: "alerts",
+                moduleType: "reviews",
               },
               {
                 config: {},

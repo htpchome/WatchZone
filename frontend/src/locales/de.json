@@ -87,7 +87,7 @@
   "events.download_clip": "Clip herunterladen",
   "events.view_snapshot": "Schnappschuss anzeigen",
   "navigation.activity": "Aktivitätsmodule",
-  "navigation.alerts": "Alarme",
+  "navigation.reviews": "Überprüfungen",
   "navigation.events": "Ereignisse",
   "calendar.open": "Aktivitätskalender öffnen",
   "calendar.title": "Aktivitätskalender",
@@ -95,11 +95,11 @@
   "calendar.next_month": "Nächster Monat",
   "calendar.reset": "Zurücksetzen",
   "calendar.day_with_activity": "{date}, hat Alarmaktivität",
-  "alerts.list": "Kameraalarme",
-  "alerts.loading": "Alarme werden geladen…",
-  "alerts.empty": "Keine aktuellen Alarmaktivitäten für diese Kamera.",
-  "alerts.load_failed": "Kameraalarme konnten nicht geladen werden.",
-  "alerts.activity": "Kameraaktivität",
-  "alerts.alert": "Alarm",
-  "alerts.detection": "Erkennung"
+  "reviews.list": "Kameraüberprüfungen",
+  "reviews.loading": "Überprüfungen werden geladen…",
+  "reviews.empty": "Keine aktuellen Überprüfungen für diese Kamera.",
+  "reviews.load_failed": "Kameraüberprüfungen konnten nicht geladen werden.",
+  "reviews.activity": "Kameraaktivität",
+  "reviews.alert": "Alarm",
+  "reviews.detection": "Erkennung"
 }

@@ -101,7 +101,7 @@
   "events.download_clip": "Descargar clip",
   "events.view_snapshot": "Ver captura",
   "navigation.activity": "Módulos de actividad",
-  "navigation.alerts": "Alertas",
+  "navigation.reviews": "Revisiones",
   "navigation.events": "Eventos",
   "calendar.open": "Abrir calendario de actividad",
   "calendar.title": "Calendario de actividad",
@@ -109,11 +109,11 @@
   "calendar.next_month": "Mes siguiente",
   "calendar.reset": "Restablecer",
   "calendar.day_with_activity": "{date}, tiene actividad de alerta",
-  "alerts.list": "Alertas de la cámara",
-  "alerts.loading": "Cargando alertas…",
-  "alerts.empty": "No hay actividad de alertas reciente para esta cámara.",
-  "alerts.load_failed": "No se pudieron cargar las alertas de la cámara.",
-  "alerts.activity": "Actividad de la cámara",
-  "alerts.alert": "Alerta",
-  "alerts.detection": "Detección"
+  "reviews.list": "Revisiones de la cámara",
+  "reviews.loading": "Cargando revisiones…",
+  "reviews.empty": "No hay revisiones recientes para esta cámara.",
+  "reviews.load_failed": "No se pudieron cargar las revisiones de la cámara.",
+  "reviews.activity": "Actividad de la cámara",
+  "reviews.alert": "Alerta",
+  "reviews.detection": "Detección"
 }

@@ -87,7 +87,7 @@
   "events.download_clip": "Télécharger le clip",
   "events.view_snapshot": "Afficher l'instantané",
   "navigation.activity": "Modules d'activité",
-  "navigation.alerts": "Alertes",
+  "navigation.reviews": "Examens",
   "navigation.events": "Événements",
   "calendar.open": "Ouvrir le calendrier d'activité",
   "calendar.title": "Calendrier d'activité",
@@ -95,11 +95,11 @@
   "calendar.next_month": "Mois suivant",
   "calendar.reset": "Réinitialiser",
   "calendar.day_with_activity": "{date}, contient une activité d'alerte",
-  "alerts.list": "Alertes de la caméra",
-  "alerts.loading": "Chargement des alertes…",
-  "alerts.empty": "Aucune activité d'alerte récente pour cette caméra.",
-  "alerts.load_failed": "Impossible de charger les alertes de la caméra.",
-  "alerts.activity": "Activité de la caméra",
-  "alerts.alert": "Alerte",
-  "alerts.detection": "Détection"
+  "reviews.list": "Examens de la caméra",
+  "reviews.loading": "Chargement des examens…",
+  "reviews.empty": "Aucun examen récent pour cette caméra.",
+  "reviews.load_failed": "Impossible de charger les examens de la caméra.",
+  "reviews.activity": "Activité de la caméra",
+  "reviews.alert": "Alerte",
+  "reviews.detection": "Détection"
 }

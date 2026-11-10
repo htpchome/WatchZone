@@ -1,6 +1,10 @@
 import { html, LitElement, type PropertyValues } from "lit";
 
-import { listReviews, type ReviewItem } from "../../../api/reviews";
+import {
+  listReviews,
+  setReviewReviewed,
+  type ReviewItem,
+} from "../../../api/reviews";
 import {
   ActiveCameraActivityController,
   ActivityFilterController,
@@ -9,7 +13,7 @@ import {
 import type { CameraSelectionContext } from "../../camera-selection-context";
 import type { MediaDateContext } from "../../media-date-context";
 import {
-  ALERTS_TAG,
+  REVIEWS_TAG,
   DEFAULT_EVENT_HISTORY_DAYS,
 } from "../../../core/constants";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
@@ -24,12 +28,12 @@ import type {
 import "../../../ui/activity-list";
 import { ToastManager } from "../../../ui/toast-manager";
 import "../../../ui/toast-region";
-import { alertsStyles } from "./alerts.styles";
+import { reviewsStyles } from "./reviews.styles";
 
 const MEDIA_RESOLVE_DELAYS_MS = [0, 750, 1_500] as const;
 
-/** Active-camera Frigate review activity presented as WatchZone Alerts. */
-export class AlertsModule extends LitElement {
+/** Active-camera provider review activity presented as WatchZone Reviews. */
+export class ReviewsModule extends LitElement {
   public static properties = {
     api: { attribute: false },
     activityFilter: { attribute: false },
@@ -64,6 +68,7 @@ export class AlertsModule extends LitElement {
   private _publishedActivity?: readonly ReviewItem[];
   private _publishedEntityId?: string;
   private _publishedFilter?: ActivityFilterContext;
+  private readonly _pendingReviewIds = new Set<string>();
   private readonly _filter = new ActivityFilterController(
     this,
     () => this.activityFilter,
@@ -83,8 +88,8 @@ export class AlertsModule extends LitElement {
     }),
     listReviews,
     () =>
-      this._toasts.error(this.localize("alerts.load_failed"), {
-        key: "alerts-load-failed",
+      this._toasts.error(this.localize("reviews.load_failed"), {
+        key: "reviews-load-failed",
       }),
     "reviews",
     (notification) => notification.review,
@@ -135,17 +140,18 @@ export class AlertsModule extends LitElement {
         .displayObjectBadges=${this.displayObjectBadges}
         .displayTypeBadges=${this.displayEventTypeBadges}
         .displayZone=${this.displayZone}
-        .emptyKey=${"alerts.empty"}
+        .emptyKey=${"reviews.empty"}
         .items=${items}
-        .listKey=${"alerts.list"}
+        .listKey=${"reviews.list"}
         .loading=${this._activity.loading}
-        .loadingKey=${"alerts.loading"}
+        .loadingKey=${"reviews.loading"}
         .localize=${this.localize}
         .retryMedia=${(item: ActivityListItem, url: string) =>
           this._activity.retryMedia(item, url)}
         .resolvePlayback=${this._resolvePlayback}
         .roundedCorners=${this.roundedCorners}
         .shadows=${this.shadows}
+        .toggleReviewed=${this._toggleReviewed}
       ></wzc-activity-list>
       <wzc-toast-region .notices=${this._toasts.notices}></wzc-toast-region>
     `;
@@ -166,6 +172,8 @@ export class AlertsModule extends LitElement {
       objectLabels: [...review.labels, ...review.sub_labels],
       playbackSources: review.playback_sources,
       preferredTransport: review.preferred_transport,
+      reviewed: review.reviewed,
+      reviewStatePending: this._pendingReviewIds.has(review.id),
       revision: review.revision,
       snapshotUrl: review.snapshot_url,
       startTime: review.start_time,
@@ -173,14 +181,45 @@ export class AlertsModule extends LitElement {
       typeBadge: {
         label: this.localize(
           review.classification === "alert"
-            ? "alerts.alert"
-            : "alerts.detection",
+            ? "reviews.alert"
+            : "reviews.detection",
         ),
         variant: review.classification === "alert" ? "danger" : "warning",
       },
       zones: review.zones,
     };
   }
+
+  private readonly _toggleReviewed = (item: ActivityListItem): void => {
+    const api = this.api;
+    const entityId = this._activity.activeEntityId;
+    if (
+      !api ||
+      !entityId ||
+      item.reviewed === undefined ||
+      this._pendingReviewIds.has(item.id)
+    )
+      return;
+    const previous = item.reviewed;
+    const reviewed = !previous;
+    this._pendingReviewIds.add(item.id);
+    this._activity.updateItem(item.id, (review) => ({ ...review, reviewed }));
+    this.requestUpdate();
+    void setReviewReviewed(api, entityId, item.id, reviewed)
+      .catch(() => {
+        this._activity.updateItem(item.id, (review) => ({
+          ...review,
+          reviewed: previous,
+        }));
+        this._toasts.error(this.localize("reviews.update_failed"), {
+          key: `review-state-${item.id}`,
+        });
+      })
+      .finally(() => {
+        this._pendingReviewIds.delete(item.id);
+        this.requestUpdate();
+      });
+  };
 
   private readonly _resolvePlayback = async (
     item: ActivityListItem,
@@ -205,19 +244,19 @@ export class AlertsModule extends LitElement {
     return undefined;
   };
 
-  static styles = alertsStyles;
+  static styles = reviewsStyles;
 }
 
 function wait(delayMs: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, delayMs));
 }
 
-if (!customElements.get(ALERTS_TAG)) {
-  customElements.define(ALERTS_TAG, AlertsModule);
+if (!customElements.get(REVIEWS_TAG)) {
+  customElements.define(REVIEWS_TAG, ReviewsModule);
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    [ALERTS_TAG]: AlertsModule;
+    [REVIEWS_TAG]: ReviewsModule;
   }
 }

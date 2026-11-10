@@ -285,3 +285,57 @@ async def test_review_summary_skips_related_event_and_config_enrichment(
     assert [item.labels for item in items] == [("person",)]
     config.assert_not_awaited()
     related_events.assert_not_awaited()
+
+
+async def test_review_provider_sets_reviewed_state(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A normalized review ID is translated into Frigate's mutation payload."""
+
+    async def get_auth_headers() -> dict[str, str]:
+        return {"Authorization": "Bearer token"}
+
+    source = cast(
+        FrigateSource,
+        SimpleNamespace(
+            base_url="http://frigate.local",
+            camera_name="front",
+            client=SimpleNamespace(
+                get_auth_headers=get_auth_headers,
+                validate_ssl=True,
+            ),
+            frigate_instance_id="frigate_workshop",
+        ),
+    )
+    hass = cast(Any, SimpleNamespace())
+    post_json = AsyncMock(return_value={"success": True})
+
+    async def resolve_source(
+        resolved_hass: Any, entity_id: str
+    ) -> FrigateSource:
+        del resolved_hass, entity_id
+        return source
+
+    monkeypatch.setattr(
+        "custom_components.watchzone.providers.frigate.reviews.async_resolve_source",
+        resolve_source,
+    )
+    monkeypatch.setattr(
+        "custom_components.watchzone.providers.frigate.reviews._post_json",
+        post_json,
+    )
+
+    await FrigateReviewsProvider().async_set_reviewed(
+        hass,
+        "camera.front",
+        "frigate_workshop:review-1",
+        True,
+    )
+
+    post_json.assert_awaited_once_with(
+        hass,
+        source,
+        "api/reviews/viewed",
+        {"ids": ["review-1"], "reviewed": True},
+        {"Authorization": "Bearer token"},
+    )

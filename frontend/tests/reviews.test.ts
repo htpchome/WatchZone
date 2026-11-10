@@ -3,10 +3,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { CameraSelectionContext } from "../src/stage/camera-selection-context";
 import { ActivityFilterContext } from "../src/stage/activity";
 import { MediaDateContext } from "../src/stage/media-date-context";
-import { ACTIVITY_LIST_TAG, ALERTS_TAG } from "../src/core/constants";
+import { ACTIVITY_LIST_TAG, REVIEWS_TAG } from "../src/core/constants";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
-import type { AlertsModule } from "../src/stage/modules/alerts/alerts";
-import "../src/stage/modules/alerts/alerts";
+import type { ReviewsModule } from "../src/stage/modules/reviews/reviews";
+import "../src/stage/modules/reviews/reviews";
 
 vi.mock("../src/api/activity-updates", () => ({
   resolveActivityUpdateSource: vi.fn().mockResolvedValue({
@@ -69,7 +69,7 @@ const reviews = [
   },
 ] as const;
 
-describe("alerts module", () => {
+describe("reviews module", () => {
   afterEach(() => {
     document.body.replaceChildren();
     vi.restoreAllMocks();
@@ -87,7 +87,7 @@ describe("alerts module", () => {
     const selection = new CameraSelectionContext();
     const filterContext = new ActivityFilterContext();
     const dateContext = new MediaDateContext();
-    const module = document.createElement(ALERTS_TAG) as AlertsModule;
+    const module = document.createElement(REVIEWS_TAG) as ReviewsModule;
     module.api = api;
     module.activityFilter = filterContext;
     module.mediaDate = dateContext;
@@ -187,6 +187,58 @@ describe("alerts module", () => {
     expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(2);
   });
 
+  it("toggles reviewed state through the normalized reviews API", async () => {
+    const callWS = vi.fn(async (message: { type: string }) =>
+      message.type === "watchzone/reviews/list"
+        ? { items: reviews }
+        : { reviewed: true },
+    );
+    const api = {
+      callWS,
+      identity: {},
+      locale: { language: "en", time_zone: "server" },
+      resolveUrl: (path: string) => `https://ha.local${path}`,
+      subscribeMessage: vi.fn(),
+    } as unknown as HomeAssistantApi;
+    const selection = new CameraSelectionContext();
+    const module = document.createElement(REVIEWS_TAG) as ReviewsModule;
+    module.api = api;
+    module.cameraSelection = selection;
+    module.targetModuleId = "camera-module";
+    document.body.append(module);
+    selection.publish(
+      "camera-module",
+      {},
+      {
+        activeEntityId: "camera.front",
+        items: [{ entityId: "camera.front", label: "Front" }],
+      },
+      vi.fn(),
+    );
+
+    await vi.waitFor(() => {
+      expect(
+        activityRoot(module)?.querySelectorAll(".review-state"),
+      ).toHaveLength(2);
+    });
+    const unreviewed = activityRoot(module)?.querySelector<HTMLButtonElement>(
+      'button[aria-label="Mark reviewed"]',
+    );
+    unreviewed?.click();
+
+    await vi.waitFor(() => {
+      expect(callWS).toHaveBeenCalledWith({
+        type: "watchzone/reviews/set_reviewed",
+        entity_id: "camera.front",
+        review_id: "frigate:review-2",
+        reviewed: true,
+      });
+      expect(
+        activityRoot(module)?.querySelectorAll(".review-state.reviewed"),
+      ).toHaveLength(2);
+    });
+  });
+
   it("replaces one review tile through new, update, and end notifications", async () => {
     const startTime = Date.now() / 1000;
     const callWS = vi.fn().mockResolvedValue({ items: [] });
@@ -204,7 +256,7 @@ describe("alerts module", () => {
       }),
     } as unknown as HomeAssistantApi;
     const selection = new CameraSelectionContext();
-    const module = document.createElement(ALERTS_TAG) as AlertsModule;
+    const module = document.createElement(REVIEWS_TAG) as ReviewsModule;
     module.api = api;
     module.cameraSelection = selection;
     module.targetModuleId = "camera-module";
@@ -284,6 +336,6 @@ describe("alerts module", () => {
   });
 });
 
-function activityRoot(module: AlertsModule): ShadowRoot | null | undefined {
+function activityRoot(module: ReviewsModule): ShadowRoot | null | undefined {
   return module.shadowRoot?.querySelector(ACTIVITY_LIST_TAG)?.shadowRoot;
 }

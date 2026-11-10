@@ -87,7 +87,7 @@
   "events.download_clip": "Baixa el clip",
   "events.view_snapshot": "Mostra la captura",
   "navigation.activity": "Mòduls d'activitat",
-  "navigation.alerts": "Alertes",
+  "navigation.reviews": "Revisions",
   "navigation.events": "Esdeveniments",
   "calendar.open": "Obre el calendari d'activitat",
   "calendar.title": "Calendari d'activitat",
@@ -95,11 +95,11 @@
   "calendar.next_month": "Mes següent",
   "calendar.reset": "Restableix",
   "calendar.day_with_activity": "{date}, té activitat d'alerta",
-  "alerts.list": "Alertes de la càmera",
-  "alerts.loading": "S'estan carregant les alertes…",
-  "alerts.empty": "No hi ha activitat d'alerta recent per a aquesta càmera.",
-  "alerts.load_failed": "No s'han pogut carregar les alertes de la càmera.",
-  "alerts.activity": "Activitat de la càmera",
-  "alerts.alert": "Alerta",
-  "alerts.detection": "Detecció"
+  "reviews.list": "Revisions de la càmera",
+  "reviews.loading": "S'estan carregant les revisions…",
+  "reviews.empty": "No hi ha revisions recents per a aquesta càmera.",
+  "reviews.load_failed": "No s'han pogut carregar les revisions de la càmera.",
+  "reviews.activity": "Activitat de la càmera",
+  "reviews.alert": "Alerta",
+  "reviews.detection": "Detecció"
 }

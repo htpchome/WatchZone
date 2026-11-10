@@ -1,6 +1,6 @@
 import { css } from "lit";
 
-export const alertsStyles = css`
+export const reviewsStyles = css`
   :host {
     display: block;
     block-size: 100%;

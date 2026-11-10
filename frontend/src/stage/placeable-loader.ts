@@ -1,7 +1,7 @@
 import {
   CAMERA_NAVIGATION_COMPONENT_TYPE,
   CAMERA_MODULE_TYPE,
-  ALERTS_MODULE_TYPE,
+  REVIEWS_MODULE_TYPE,
   EVENTS_MODULE_TYPE,
   LIGHT_COMPONENT_TYPE,
   RECORDINGS_MODULE_TYPE,
@@ -16,12 +16,12 @@ import type {
 } from "./placeable";
 
 const moduleLoaders = {
-  [ALERTS_MODULE_TYPE]: {
+  [REVIEWS_MODULE_TYPE]: {
     load: () =>
-      import("./modules/alerts").then(
+      import("./modules/reviews").then(
         ({ moduleDefinition }) => moduleDefinition,
       ),
-    navigation: { icon: "alerts", labelKey: "navigation.alerts" },
+    navigation: { icon: "reviews", labelKey: "navigation.reviews" },
     placeholder: "activity",
   },
   [CAMERA_MODULE_TYPE]: {

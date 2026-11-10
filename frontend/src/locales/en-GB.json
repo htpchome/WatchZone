@@ -48,7 +48,7 @@
   "events.download_clip": "Download clip",
   "events.view_snapshot": "View snapshot",
   "navigation.activity": "Activity modules",
-  "navigation.alerts": "Alerts",
+  "navigation.reviews": "Reviews",
   "navigation.events": "Events",
   "calendar.open": "Open activity calendar",
   "calendar.title": "Activity calendar",
@@ -56,11 +56,11 @@
   "calendar.next_month": "Next month",
   "calendar.reset": "Reset",
   "calendar.day_with_activity": "{date}, has alert activity",
-  "alerts.list": "Camera alerts",
-  "alerts.loading": "Loading alerts…",
-  "alerts.empty": "No recent alert activity for this camera.",
-  "alerts.load_failed": "Unable to load camera alerts.",
-  "alerts.activity": "Camera activity",
-  "alerts.alert": "Alert",
-  "alerts.detection": "Detection"
+  "reviews.list": "Camera reviews",
+  "reviews.loading": "Loading reviews…",
+  "reviews.empty": "No recent review activity for this camera.",
+  "reviews.load_failed": "Unable to load camera reviews.",
+  "reviews.activity": "Camera activity",
+  "reviews.alert": "Alert",
+  "reviews.detection": "Detection"
 }

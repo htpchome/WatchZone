@@ -55,7 +55,7 @@ ID, its WatchZone title, or the equivalent Frigate camera name. When both
 `event` and `review` are supplied, WatchZone tries the explicit event first and
 then falls back once to the review. Draft activity remains pending and opens
 when its requested clip or snapshot becomes available. This resolution is
-independent of the visible Alerts or Events module, so removing either module
+independent of the visible Reviews or Events module, so removing either module
 from a Stage Design does not disable deep links.
 
 After WatchZone selects the camera or opens the requested media, it removes

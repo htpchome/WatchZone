@@ -55,3 +55,12 @@ class ReviewsProvider(Protocol):
         self, hass: HomeAssistant, entity_id: str, query: ReviewQuery
     ) -> list[ReviewItem]:
         """Return newest-first review activity for one camera."""
+
+    async def async_set_reviewed(
+        self,
+        hass: HomeAssistant,
+        entity_id: str,
+        review_id: str,
+        reviewed: bool,
+    ) -> None:
+        """Set the reviewed state of one provider-owned review."""

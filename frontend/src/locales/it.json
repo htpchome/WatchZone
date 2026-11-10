@@ -87,7 +87,7 @@
   "events.download_clip": "Scarica clip",
   "events.view_snapshot": "Visualizza istantanea",
   "navigation.activity": "Moduli attività",
-  "navigation.alerts": "Avvisi",
+  "navigation.reviews": "Revisioni",
   "navigation.events": "Eventi",
   "calendar.open": "Apri il calendario delle attività",
   "calendar.title": "Calendario delle attività",
@@ -95,11 +95,11 @@
   "calendar.next_month": "Mese successivo",
   "calendar.reset": "Reimposta",
   "calendar.day_with_activity": "{date}, contiene attività di avviso",
-  "alerts.list": "Avvisi della telecamera",
-  "alerts.loading": "Caricamento avvisi…",
-  "alerts.empty": "Nessuna attività di avviso recente per questa telecamera.",
-  "alerts.load_failed": "Impossibile caricare gli avvisi della telecamera.",
-  "alerts.activity": "Attività della telecamera",
-  "alerts.alert": "Avviso",
-  "alerts.detection": "Rilevamento"
+  "reviews.list": "Revisioni della telecamera",
+  "reviews.loading": "Caricamento revisioni…",
+  "reviews.empty": "Nessuna revisione recente per questa telecamera.",
+  "reviews.load_failed": "Impossibile caricare le revisioni della telecamera.",
+  "reviews.activity": "Attività della telecamera",
+  "reviews.alert": "Avviso",
+  "reviews.detection": "Rilevamento"
 }

@@ -75,11 +75,11 @@ class FrigateReviewsProvider:
                 ),
             )
         except (ClientError, TimeoutError, ValueError) as err:
-            raise HomeAssistantError("Unable to retrieve camera alerts") from err
+            raise HomeAssistantError("Unable to retrieve camera reviews") from err
         if not isinstance(alerts_payload, list) or not isinstance(
             detections_payload, list
         ):
-            raise HomeAssistantError("Frigate returned invalid alert data")
+            raise HomeAssistantError("Frigate returned invalid review data")
 
         raw_reviews = _merge_review_payloads(alerts_payload, detections_payload)
         if query.enrich:
@@ -118,6 +118,33 @@ class FrigateReviewsProvider:
         return sorted(reviews, key=lambda item: item.start_time, reverse=True)[
             : query.limit
         ]
+
+    async def async_set_reviewed(
+        self,
+        hass: HomeAssistant,
+        entity_id: str,
+        review_id: str,
+        reviewed: bool,
+    ) -> None:
+        """Set one Frigate review's reviewed state."""
+        source = await async_resolve_source(hass, entity_id)
+        prefix = f"{source.frigate_instance_id}:"
+        if not review_id.startswith(prefix) or not review_id.removeprefix(prefix):
+            raise HomeAssistantError("Review does not belong to this camera provider")
+        headers = await source.client.get_auth_headers()
+        try:
+            await _post_json(
+                hass,
+                source,
+                "api/reviews/viewed",
+                {
+                    "ids": [review_id.removeprefix(prefix)],
+                    "reviewed": reviewed,
+                },
+                headers,
+            )
+        except (ClientError, TimeoutError, ValueError) as err:
+            raise HomeAssistantError("Unable to update the review") from err
 
     async def _async_config(
         self,
@@ -160,6 +187,24 @@ async def _get_json(
     async with async_get_clientsession(hass).get(
         URL(source.base_url) / path,
         params=params,
+        headers=headers,
+        ssl=source.client.validate_ssl,
+        timeout=_REQUEST_TIMEOUT,
+    ) as response:
+        response.raise_for_status()
+        return await response.json()
+
+
+async def _post_json(
+    hass: HomeAssistant,
+    source: FrigateSource,
+    path: str,
+    payload: Mapping[str, object],
+    headers: dict[str, str],
+) -> object:
+    async with async_get_clientsession(hass).post(
+        URL(source.base_url) / path,
+        json=payload,
         headers=headers,
         ssl=source.client.validate_ssl,
         timeout=_REQUEST_TIMEOUT,

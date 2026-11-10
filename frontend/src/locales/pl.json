@@ -87,7 +87,7 @@
   "events.download_clip": "Pobierz klip",
   "events.view_snapshot": "Wyświetl migawkę",
   "navigation.activity": "Moduły aktywności",
-  "navigation.alerts": "Alerty",
+  "navigation.reviews": "Przeglądy",
   "navigation.events": "Zdarzenia",
   "calendar.open": "Otwórz kalendarz aktywności",
   "calendar.title": "Kalendarz aktywności",
@@ -95,11 +95,11 @@
   "calendar.next_month": "Następny miesiąc",
   "calendar.reset": "Resetuj",
   "calendar.day_with_activity": "{date}, zawiera aktywność alertów",
-  "alerts.list": "Alerty kamery",
-  "alerts.loading": "Wczytywanie alertów…",
-  "alerts.empty": "Brak ostatniej aktywności alertów dla tej kamery.",
-  "alerts.load_failed": "Nie udało się wczytać alertów kamery.",
-  "alerts.activity": "Aktywność kamery",
-  "alerts.alert": "Alert",
-  "alerts.detection": "Wykrycie"
+  "reviews.list": "Przeglądy kamery",
+  "reviews.loading": "Wczytywanie przeglądów…",
+  "reviews.empty": "Brak ostatnich przeglądów dla tej kamery.",
+  "reviews.load_failed": "Nie udało się wczytać przeglądów kamery.",
+  "reviews.activity": "Aktywność kamery",
+  "reviews.alert": "Alert",
+  "reviews.detection": "Wykrycie"
 }
