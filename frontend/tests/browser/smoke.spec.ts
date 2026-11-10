@@ -1143,6 +1143,23 @@ test("keeps activity content in an independently scrolling viewport", async ({
   const events = page.locator("wzc-events");
   const viewport = events.locator(".scroller");
   await expect(events.locator(".tile")).toHaveCount(6);
+  const activityHeaderOffset = await events
+    .locator("wzc-media-day-header")
+    .first()
+    .evaluate((header) => {
+      const label = header.shadowRoot?.querySelector<HTMLElement>(".label");
+      if (!label) throw new Error("Media day label was not rendered");
+      const headerBounds = header.getBoundingClientRect();
+      const labelRange = document.createRange();
+      labelRange.selectNodeContents(label);
+      const labelBounds = labelRange.getBoundingClientRect();
+      return (
+        labelBounds.left +
+        labelBounds.width / 2 -
+        (headerBounds.left + headerBounds.width / 2)
+      );
+    });
+  expect(Math.abs(activityHeaderOffset)).toBeLessThanOrEqual(1);
   const actionInset = await events
     .locator(".tile")
     .first()
@@ -1999,6 +2016,22 @@ test("switches activity and recordings through the shared media calendar", async
   const nextRecordingDay = recordings.locator('.day-navigation[slot="next"]');
   await expect(previousRecordingDay).toHaveCount(1);
   await expect(nextRecordingDay).toHaveCount(0);
+  const recordingHeaderOffset = await recordings
+    .locator("wzc-media-day-header")
+    .evaluate((header) => {
+      const label = header.shadowRoot?.querySelector<HTMLElement>(".label");
+      if (!label) throw new Error("Media day label was not rendered");
+      const headerBounds = header.getBoundingClientRect();
+      const labelRange = document.createRange();
+      labelRange.selectNodeContents(label);
+      const labelBounds = labelRange.getBoundingClientRect();
+      return (
+        labelBounds.left +
+        labelBounds.width / 2 -
+        (headerBounds.left + headerBounds.width / 2)
+      );
+    });
+  expect(Math.abs(recordingHeaderOffset)).toBeLessThanOrEqual(1);
   await previousRecordingDay.click();
   await expect(recordings.locator("wzc-media-day-header")).toContainText(
     "Sun, Nov 8 — Recordings",

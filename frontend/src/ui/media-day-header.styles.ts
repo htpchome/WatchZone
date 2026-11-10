@@ -31,6 +31,7 @@ export const mediaDayHeaderStyles = css`
 
   .label {
     overflow: hidden;
+    text-align: center;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
