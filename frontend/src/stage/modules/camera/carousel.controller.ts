@@ -19,7 +19,10 @@ export class CameraCarouselController implements ReactiveController {
 
   public constructor(
     private readonly _host: ReactiveControllerHost,
-    private readonly _onSelectionChanged?: (index: number) => void,
+    private readonly _onSelectionChanged?: (
+      index: number,
+      settled: boolean,
+    ) => void,
   ) {
     _host.addController(this);
   }
@@ -36,7 +39,13 @@ export class CameraCarouselController implements ReactiveController {
     );
     if (this._container === container) {
       this._setSlideCount(normalizedCount);
-      this._swiper?.slideTo(this._activeIndex, 0, false);
+      if (
+        this._swiper &&
+        !this._swiper.destroyed &&
+        this._swiper.activeIndex !== this._activeIndex
+      ) {
+        this._swiper.slideTo(this._activeIndex, 0, false);
+      }
       return;
     }
     this._replaceContainer(container, normalizedCount);
@@ -55,12 +64,13 @@ export class CameraCarouselController implements ReactiveController {
     else
       this._onSelectionChanged?.(
         Math.min(this._slideCount - 1, this._activeIndex + 1),
+        true,
       );
   }
 
   public previous(): void {
     if (this._swiper) this._swiper.slidePrev();
-    else this._onSelectionChanged?.(Math.max(0, this._activeIndex - 1));
+    else this._onSelectionChanged?.(Math.max(0, this._activeIndex - 1), true);
   }
 
   public setInteractionLocked(locked: boolean): void {
@@ -101,7 +111,11 @@ export class CameraCarouselController implements ReactiveController {
         on: {
           slideChange: (swiper) => {
             this._activeIndex = swiper.activeIndex;
-            this._onSelectionChanged?.(swiper.activeIndex);
+            this._onSelectionChanged?.(swiper.activeIndex, false);
+          },
+          slideChangeTransitionEnd: (swiper) => {
+            this._activeIndex = swiper.activeIndex;
+            this._onSelectionChanged?.(swiper.activeIndex, true);
           },
         },
         resizeObserver: true,

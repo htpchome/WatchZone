@@ -5,7 +5,10 @@ import {
 } from "../../../api/live-signaling";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
 import type { LiveStartupTiming } from "../../../core/live-startup-timing";
-import { setMediaElementMuted } from "../../../core/media-playback";
+import {
+  playMediaElement,
+  setMediaElementMuted,
+} from "../../../core/media-playback";
 import {
   MediaConnectionError,
   normalizeMediaConnectionError,
@@ -137,6 +140,8 @@ export async function createHomeAssistantWebRtcConnection(
   return {
     ...connection,
     video,
+    park: () => video.pause(),
+    resume: () => void playMediaElement(video).catch(() => undefined),
     close: () => {
       video.pause();
       video.srcObject = null;

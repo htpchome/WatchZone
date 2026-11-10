@@ -1,7 +1,10 @@
 import type { FrigateGo2RtcLiveSourceDescriptor } from "../../../api/live-source";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
 import type { LiveStartupTiming } from "../../../core/live-startup-timing";
-import { setMediaElementMuted } from "../../../core/media-playback";
+import {
+  playMediaElement,
+  setMediaElementMuted,
+} from "../../../core/media-playback";
 import type {
   MediaConnection,
   MediaConnectionOptions,
@@ -54,6 +57,7 @@ export async function createFrigateMseConnection(
   let sourceBuffer: SourceBuffer | undefined;
   let closed = false;
   let connected = false;
+  let parked = false;
   const pending: ArrayBuffer[] = [];
 
   const fail = (message: string): void => {
@@ -68,6 +72,15 @@ export async function createFrigateMseConnection(
   const handleBufferUpdate = (): void => {
     if (video.buffered.length) {
       const liveEdge = video.buffered.end(video.buffered.length - 1);
+      if (parked) {
+        pending.length = 0;
+        const bufferStart = video.buffered.start(0);
+        const keepAfter = Math.max(bufferStart, liveEdge - 1);
+        if (sourceBuffer && !sourceBuffer.updating && keepAfter > bufferStart) {
+          sourceBuffer.remove(bufferStart, keepAfter);
+        }
+        return;
+      }
       const delay = liveEdge - video.currentTime;
       if (delay > 4) {
         video.currentTime = Math.max(0, liveEdge - 0.25);
@@ -159,6 +172,7 @@ export async function createFrigateMseConnection(
         return;
       }
       if (event.data instanceof ArrayBuffer) {
+        if (parked) return;
         pending.push(event.data);
         append();
       }
@@ -190,6 +204,22 @@ export async function createFrigateMseConnection(
     timing,
     transport: "mse",
     video,
+    park: () => {
+      if (parked || closed) return;
+      parked = true;
+      pending.length = 0;
+      video.pause();
+      handleBufferUpdate();
+    },
+    resume: () => {
+      if (!parked || closed) return;
+      parked = false;
+      if (video.buffered.length) {
+        const liveEdge = video.buffered.end(video.buffered.length - 1);
+        video.currentTime = Math.max(0, liveEdge - 0.25);
+      }
+      void playMediaElement(video).catch(() => undefined);
+    },
     close: () => {
       if (closed) return;
       closed = true;

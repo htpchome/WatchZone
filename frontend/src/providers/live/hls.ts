@@ -308,5 +308,15 @@ export async function createHlsConnection(
   // prevents an intentional HLS-loser abort from becoming a transient
   // unhandled rejection before the connection factory returns to its manager.
   const [connection] = await Promise.all([ready, setup]);
-  return connection;
+  return {
+    ...connection,
+    park: () => {
+      video.pause();
+      hls?.stopLoad();
+    },
+    resume: () => {
+      hls?.startLoad(-1);
+      void playMediaElement(video).catch(() => undefined);
+    },
+  };
 }

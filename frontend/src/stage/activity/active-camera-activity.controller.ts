@@ -35,6 +35,8 @@ interface ActiveCameraActivityContext {
   readonly targetModuleId: string;
 }
 
+const INACTIVE_CAMERA_RECENT_ITEMS = 10;
+
 type ActivityFetcher<T extends ActiveCameraActivityItem> = (
   api: HomeAssistantApi,
   entityId: string,
@@ -65,7 +67,7 @@ export class ActiveCameraActivityController<
   private _emptyConfirmTimer?: number;
   private _generation = 0;
   private _historyLoadPending = false;
-  private readonly _itemsByEntityId = new Map<string, readonly T[]>();
+  private readonly _recentItemsByEntityId = new Map<string, readonly T[]>();
   private _refreshAfterHistory = false;
   private _refreshTimer?: number;
   private readonly _retriedMedia = new Set<string>();
@@ -160,7 +162,7 @@ export class ActiveCameraActivityController<
       apiChanged || context.historyDays !== this._lastHistoryDays;
     this._lastApiIdentity = context.api?.identity;
     this._lastHistoryDays = context.historyDays;
-    if (apiChanged) this._itemsByEntityId.clear();
+    if (apiChanged) this._recentItemsByEntityId.clear();
     if (!selectionChanged && queryChanged && this._activeEntityId) {
       this._generation += 1;
       if (apiChanged) {
@@ -174,6 +176,10 @@ export class ActiveCameraActivityController<
   }
 
   private _cameraChanged(state: CameraSelectionState): void {
+    // Keep network, sorting, and list rendering out of the carousel's active
+    // direct-manipulation transition. The camera itself has already selected
+    // and connected; activity catches up when the transition settles.
+    if (state.settled === false) return;
     const activeEntityId = state.activeEntityId;
     const activeCameraLabel = state.items.find(
       ({ entityId }) => entityId === activeEntityId,
@@ -199,7 +205,7 @@ export class ActiveCameraActivityController<
     this._stopEmptyConfirmation();
     this._generation += 1;
     if (activeEntityId && this._itemsEntityId !== activeEntityId) {
-      this.items = this._itemsByEntityId.get(activeEntityId) ?? [];
+      this.items = this._recentItemsByEntityId.get(activeEntityId) ?? [];
       this._itemsEntityId = activeEntityId;
     }
     this._host.requestUpdate();
@@ -382,7 +388,14 @@ export class ActiveCameraActivityController<
   private _setItems(entityId: string, items: readonly T[]): void {
     this.items = items;
     this._itemsEntityId = entityId;
-    this._itemsByEntityId.set(entityId, items);
+    // Preserve only the newest rows for instant return navigation. Keeping the
+    // complete history for every visited camera multiplies the largest data
+    // structure in the card; the full active-camera window is rehydrated in
+    // the background after the cached first paint.
+    this._recentItemsByEntityId.set(
+      entityId,
+      items.slice(0, INACTIVE_CAMERA_RECENT_ITEMS),
+    );
   }
 
   private _stopEmptyConfirmation(): void {

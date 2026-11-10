@@ -29,6 +29,17 @@ export const activityListStyles = css`
     gap: var(--wzc-event-list-gap);
   }
 
+  .list.virtualized {
+    display: block;
+    position: relative;
+  }
+
+  .list.virtualized .tile {
+    inset-block-start: 0;
+    inset-inline: 0;
+    position: absolute;
+  }
+
   .skeleton-row {
     display: block;
     block-size: var(--wzc-event-tile-block-size);

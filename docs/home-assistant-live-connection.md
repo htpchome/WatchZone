@@ -196,6 +196,10 @@ playlist; the setting deterministically controls WatchZone's HLS.js path.
 The HLS session owns its media element because its MediaSource playback state
 is element-bound. Closing destroys the playback engine, cancels in-flight
 requests, resets the element, and removes it from presentation.
+Parking pauses its media element and stops HLS.js loading so retained cameras
+do not keep growing buffers or decoding frames while offscreen. Reacquiring the
+same retained session restarts loading at the live edge and resumes the same
+player without requesting a new Home Assistant stream session.
 Cancellation of an in-progress losing HLS candidate is expected teardown. Its
 rejection remains observable by the session manager but must be observed from
 the moment startup begins so Firefox cannot report it as an unhandled promise.

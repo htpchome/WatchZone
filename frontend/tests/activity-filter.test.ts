@@ -92,4 +92,27 @@ describe("activity filter", () => {
       labels: ["person"],
     });
   });
+
+  it("compacts inactive history facets without discarding filter choices", () => {
+    const context = new ActivityFilterContext();
+    const reviews = Array.from({ length: 25 }, (_, index) => ({
+      classification: "alert" as const,
+      id: `review-${index}`,
+      labels: [`label-${index}`],
+      relatedEventIds: [`event-${index}`],
+      reviewed: false,
+      zones: [`zone-${index}`],
+    }));
+    context.publishReviews("camera.front", reviews);
+    context.setClassification("camera.front", "alert");
+    context.toggleLabel("camera.front", "person");
+
+    context.publishReviews("camera.back", []);
+
+    expect(context.stateFor("camera.front")).toMatchObject({
+      classification: "alert",
+      labels: ["person"],
+    });
+    expect(context.stateFor("camera.front").reviews).toEqual([]);
+  });
 });

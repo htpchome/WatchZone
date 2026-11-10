@@ -48,6 +48,14 @@ document-scoped retention policy may keep the released logical camera parked;
 reselecting it then reattaches without invoking a provider factory. If policy
 closed it, the normal provider connection path starts once.
 
+During a direct-manipulation swipe, the camera selection and live lease move as
+soon as Swiper selects the destination slide, but the shared selection remains
+marked unsettled until Swiper reports the transition complete. Activity
+consumers defer camera-specific requests, sorting, and list rendering while
+that flag is false. Camera rerenders must not issue a zero-duration `slideTo`
+for the index Swiper is already animating toward, because doing so interrupts
+the compositor transition the user is controlling.
+
 The carousel does not decide mobile network budgets, expiry, retry, or
 provider behavior. It reports selection and device class to the shared session
 manager. Backend HLS pre-warming is independent of slide mounting and does not

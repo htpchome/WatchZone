@@ -45,6 +45,10 @@ export interface MediaConnection {
   readonly transport?: MediaTransport;
   readonly video?: HTMLVideoElement;
   close(): void;
+  /** Suspend decoder/buffer work while retaining the transport identity. */
+  park?(): void;
+  /** Resume a previously parked transport without reconnecting it. */
+  resume?(): void;
 }
 
 export interface MediaConnectionOptions {
@@ -176,6 +180,7 @@ class ManagedMediaSession {
       this._closeConnection();
       this._setSnapshot({ state: "new" });
     } else if (this._snapshot.state === "parked") {
+      this._connection?.resume?.();
       this._setSnapshot({ ...this._snapshot, state: "live" });
     }
     if (api.identity.connected === false) {
@@ -435,6 +440,7 @@ class ManagedMediaSession {
       return;
     }
     if (this._snapshot.state === "live") {
+      this._connection?.park?.();
       this._setSnapshot({ ...this._snapshot, state: "parked" });
     }
     this._onRetained();

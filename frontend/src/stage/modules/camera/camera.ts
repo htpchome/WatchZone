@@ -30,6 +30,7 @@ import type { CameraOverlayVisibilityDetail } from "./live/presentation";
 import "./camera-view";
 import { cameraStyles } from "./camera.styles";
 import { CameraCarouselController } from "./carousel.controller";
+import type { DeepLinkController } from "../../../features/deep-links";
 import { LiveActivityHighlightController } from "./activity-highlight.controller";
 import {
   DEFAULT_CAMERA_STAGE_HEIGHT_RATIO,
@@ -69,14 +70,17 @@ export class CameraModule extends LitElement {
 
   private _activeIndex = 0;
   private _deepLinkLoad?: Promise<void>;
+  private _deepLink?: DeepLinkController;
   private _navigationVisible = false;
+  private _selectionSettled = true;
   private readonly _overlayVisibilityByCamera = new Map<string, boolean>();
   private _stageSize: CameraStageSize = {
     heightRatio: DEFAULT_CAMERA_STAGE_HEIGHT_RATIO,
     resized: false,
   };
-  private readonly _carousel = new CameraCarouselController(this, (index) =>
-    this._select(index),
+  private readonly _carousel = new CameraCarouselController(
+    this,
+    (index, settled) => this._select(index, settled),
   );
   private readonly _activityHighlight = new LiveActivityHighlightController(
     this,
@@ -104,7 +108,8 @@ export class CameraModule extends LitElement {
     super.connectedCallback();
     this._deepLinkLoad ??= import("../../../features/deep-links").then(
       ({ DeepLinkController }) => {
-        new DeepLinkController(this, () => ({
+        if (this._deepLink) return;
+        const controller = new DeepLinkController(this, () => ({
           api: this.api,
           cameras: this.cameras.map(({ entityId, label }) => ({
             entityId,
@@ -120,6 +125,11 @@ export class CameraModule extends LitElement {
             }
           ).host?.preview,
         }));
+        this._deepLink = controller;
+        // The controller is loaded lazily after Lit has already connected the
+        // host, so it needs the lifecycle edge that addController cannot
+        // retroactively deliver. Future reconnects are handled by Lit.
+        if (this.isConnected) controller.hostConnected();
       },
     );
     this.addEventListener(
@@ -288,9 +298,16 @@ export class CameraModule extends LitElement {
     );
   }
 
-  private _select(index: number): void {
+  private _select(index: number, settled = true): void {
     const next = Math.max(0, Math.min(this.cameras.length - 1, index));
-    if (next === this._activeIndex) return;
+    const selectionChanged = next !== this._activeIndex;
+    const settlementChanged = settled !== this._selectionSettled;
+    if (!selectionChanged && !settlementChanged) return;
+    this._selectionSettled = settled;
+    if (!selectionChanged) {
+      this._publishSelection();
+      return;
+    }
     this._activeIndex = next;
     this._syncCameraActivity();
     this._navigationVisible =
@@ -316,6 +333,7 @@ export class CameraModule extends LitElement {
       {
         activeEntityId: this.cameras[this._activeIndex]?.entityId,
         items: this.cameras.map(({ entityId, label }) => ({ entityId, label })),
+        settled: this._selectionSettled,
       },
       this._selectEntity,
     );

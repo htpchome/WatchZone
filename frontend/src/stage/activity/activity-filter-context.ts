@@ -39,10 +39,9 @@ const EMPTY_STATE: ActivityFilterState = {
 
 /** Owns camera-scoped activity filters and the facets that populate them. */
 export class ActivityFilterContext {
+  private _activeEntityId?: string;
   private readonly _listeners = new Map<string, Set<ActivityFilterListener>>();
   private readonly _states = new Map<string, ActivityFilterState>();
-  private readonly _eventSignatures = new Map<string, string>();
-  private readonly _reviewSignatures = new Map<string, string>();
 
   public stateFor(entityId: string): ActivityFilterState {
     return this._states.get(entityId) ?? EMPTY_STATE;
@@ -109,14 +108,7 @@ export class ActivityFilterContext {
     entityId: string,
     reviews: readonly ActivityReviewFacet[],
   ): void {
-    const signature = reviews
-      .map(
-        ({ id, reviewed, classification, labels, zones, relatedEventIds }) =>
-          `${id}:${reviewed}:${classification}:${labels.join(",")}:${zones.join(",")}:${relatedEventIds.join(",")}`,
-      )
-      .join("|");
-    if (this._reviewSignatures.get(entityId) === signature) return;
-    this._reviewSignatures.set(entityId, signature);
+    this._activate(entityId);
     this._update(entityId, { reviews });
   }
 
@@ -135,14 +127,7 @@ export class ActivityFilterContext {
     entityId: string,
     events: readonly ActivityEventFacet[],
   ): void {
-    const signature = events
-      .map(
-        ({ id, labels, zones }) =>
-          `${id}:${labels.join(",")}:${zones.join(",")}`,
-      )
-      .join("|");
-    if (this._eventSignatures.get(entityId) === signature) return;
-    this._eventSignatures.set(entityId, signature);
+    this._activate(entityId);
     this._update(entityId, { events });
   }
 
@@ -169,6 +154,14 @@ export class ActivityFilterContext {
     if (sameState(previous, next)) return;
     this._states.set(entityId, next);
     for (const listener of this._listeners.get(entityId) ?? []) listener(next);
+  }
+
+  private _activate(entityId: string): void {
+    const previous = this._activeEntityId;
+    if (previous && previous !== entityId) {
+      this._update(previous, { events: [], reviews: [] });
+    }
+    this._activeEntityId = entityId;
   }
 }
 

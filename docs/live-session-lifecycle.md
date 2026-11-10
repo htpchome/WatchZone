@@ -146,7 +146,10 @@ Required semantics:
 - `connecting`: Initial adapter connection is in progress.
 - `live`: Connection is healthy; it may be attached or temporarily detached.
 - `parked`: Retained without a visible attachment. Adapter-specific work that
-  can be paused without losing the connection may be paused.
+  can be paused without losing the connection is paused. Retained WebRTC
+  players pause decoding, retained HLS players stop loading, and retained MSE
+  players discard incoming media while bounding their existing buffer. The
+  transport identity remains available for resume without renegotiation.
 - `reconnecting`: A bounded reconnect attempt is in progress.
 - `failed`: Retry policy is exhausted or user action is required.
 - `closing`: Cleanup is in progress and no new lease may attach.

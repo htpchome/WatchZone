@@ -137,7 +137,8 @@ export class ActivityFilterController implements ReactiveController {
     if (selection && target) {
       this._unsubscribeSelection = selection.subscribe(
         target,
-        ({ activeEntityId }) => {
+        ({ activeEntityId, settled }) => {
+          if (settled === false) return;
           if (activeEntityId === this._activeEntityId) return;
           this._activeEntityId = activeEntityId;
           this._syncFilter();

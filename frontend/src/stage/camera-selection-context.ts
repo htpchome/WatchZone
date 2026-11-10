@@ -6,6 +6,8 @@ export interface CameraSelectionItem {
 export interface CameraSelectionState {
   readonly activeEntityId?: string;
   readonly items: readonly CameraSelectionItem[];
+  /** False while a direct-manipulation camera transition is still moving. */
+  readonly settled?: boolean;
 }
 
 type SelectionListener = (state: CameraSelectionState) => void;
@@ -90,6 +92,7 @@ function sameState(
 ): boolean {
   if (
     current.activeEntityId !== next.activeEntityId ||
+    (current.settled !== false) !== (next.settled !== false) ||
     current.items.length !== next.items.length
   ) {
     return false;

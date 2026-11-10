@@ -493,6 +493,110 @@ test("keeps the panel camera navigation and carousel selection bidirectional", a
   await expect(buttons.nth(0)).toHaveCSS("box-shadow", "none");
 });
 
+test("keeps activity loading out of an active camera transition", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  await page.locator("watchzone-card").evaluate((element) => {
+    const testWindow = window as typeof window & {
+      __wzcReviewCalls?: string[];
+    };
+    testWindow.__wzcReviewCalls = [];
+    const card = element as HTMLElement & {
+      hass: unknown;
+      setConfig(config: unknown): void;
+    };
+    card.setConfig({
+      type: "custom:watchzone-card",
+      cameras: [
+        { entity_id: "camera.front", title: "Front" },
+        { entity_id: "camera.back", title: "Back" },
+      ],
+    });
+    card.hass = {
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "unavailable",
+          attributes: { friendly_name: "Front" },
+        },
+        "camera.back": {
+          entity_id: "camera.back",
+          state: "unavailable",
+          attributes: { friendly_name: "Back" },
+        },
+      },
+      connection: {
+        subscribeMessage: async () => () => undefined,
+      },
+      hassUrl: (path: string) => path,
+      callService: async () => undefined,
+      callWS: async (message: { entity_id?: string; type: string }) => {
+        if (message.type === "watchzone/reviews/list") {
+          testWindow.__wzcReviewCalls?.push(message.entity_id ?? "");
+          return { items: [] };
+        }
+        if (message.type === "watchzone/events/list") return { items: [] };
+        return { ready: false };
+      },
+    };
+  });
+
+  const carousel = page.locator("wzc-camera .camera-carousel");
+  await expect(carousel).toHaveClass(/swiper-initialized/);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (
+            window as typeof window & { __wzcReviewCalls?: string[] }
+          ).__wzcReviewCalls?.filter((id) => id === "camera.front").length ?? 0,
+      ),
+    )
+    .toBeGreaterThan(0);
+
+  await carousel.evaluate((element) => {
+    const swiper = (
+      element as HTMLElement & {
+        swiper: { slideTo(index: number, speed: number): void };
+      }
+    ).swiper;
+    swiper.slideTo(1, 400);
+  });
+  await page.waitForTimeout(75);
+
+  expect(
+    await carousel.evaluate((element) => {
+      const swiper = (
+        element as HTMLElement & {
+          swiper: { activeIndex: number; animating: boolean };
+        }
+      ).swiper;
+      return { activeIndex: swiper.activeIndex, animating: swiper.animating };
+    }),
+  ).toEqual({ activeIndex: 1, animating: true });
+  expect(
+    await page.evaluate(
+      () =>
+        (
+          window as typeof window & { __wzcReviewCalls?: string[] }
+        ).__wzcReviewCalls?.includes("camera.back") ?? false,
+    ),
+  ).toBe(false);
+
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (
+            window as typeof window & { __wzcReviewCalls?: string[] }
+          ).__wzcReviewCalls?.includes("camera.back") ?? false,
+      ),
+    )
+    .toBe(true);
+});
+
 test("uses readable camera navigation labels before HA state is available", async ({
   page,
 }) => {
@@ -907,6 +1011,54 @@ test("keeps activity content in an independently scrolling viewport", async ({
     scrollHeight: node.scrollHeight,
   }));
   expect(scrolling.scrollHeight).toBeGreaterThan(scrolling.clientHeight);
+  const virtualized = await events
+    .locator("wzc-activity-list")
+    .evaluate(async (element) => {
+      const list = element as HTMLElement & {
+        items: Array<Record<string, unknown>>;
+        updateComplete: Promise<boolean>;
+      };
+      const originalItems = list.items;
+      list.items = Array.from({ length: 100 }, (_, index) => ({
+        ...originalItems[index % originalItems.length],
+        id: `virtualized-${index}`,
+        revision: `virtualized-${index}`,
+        startTime: Number(originalItems[0]?.startTime ?? 0) - index,
+      }));
+      await list.updateComplete;
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => resolve()),
+      );
+      await list.updateComplete;
+      const viewportElement =
+        list.shadowRoot?.querySelector<HTMLElement>(".viewport");
+      if (!viewportElement)
+        throw new Error("Activity viewport was not rendered");
+      const initialCount =
+        list.shadowRoot?.querySelectorAll(".tile").length ?? 0;
+      const scrollHeight = viewportElement.scrollHeight;
+      viewportElement.scrollTop = scrollHeight;
+      viewportElement.dispatchEvent(new Event("scroll"));
+      await list.updateComplete;
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => resolve()),
+      );
+      await list.updateComplete;
+      const positions = [
+        ...(list.shadowRoot?.querySelectorAll<HTMLElement>(".tile") ?? []),
+      ].map((tile) => Number(tile.getAttribute("aria-posinset")));
+      list.items = originalItems;
+      await list.updateComplete;
+      return {
+        initialCount,
+        lastPosition: Math.max(...positions),
+        scrollHeight,
+        visibleHeight: viewportElement.clientHeight,
+      };
+    });
+  expect(virtualized.initialCount).toBeLessThan(20);
+  expect(virtualized.scrollHeight).toBeGreaterThan(virtualized.visibleHeight);
+  expect(virtualized.lastPosition).toBe(100);
   const constrained = await events
     .locator("wzc-activity-list")
     .evaluate((element) => {

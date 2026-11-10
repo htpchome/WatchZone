@@ -117,7 +117,14 @@ describe("MediaSessionManager", () => {
     vi.useFakeTimers();
     const stream = createStream();
     const close = vi.fn();
-    const factory = vi.fn<ConnectionFactory>(async () => ({ stream, close }));
+    const park = vi.fn();
+    const resume = vi.fn();
+    const factory = vi.fn<ConnectionFactory>(async () => ({
+      stream,
+      close,
+      park,
+      resume,
+    }));
     const manager = new MediaSessionManager(factory);
     const api = createApi();
 
@@ -130,11 +137,13 @@ describe("MediaSessionManager", () => {
     first.release();
     second.release();
     expect(second.getSnapshot().state).toBe("parked");
+    expect(park).toHaveBeenCalledOnce();
 
     const returned = manager.acquireHomeAssistant(api, "camera.front");
     expect(returned.getSnapshot()).toMatchObject({ state: "live", stream });
     expect(factory).toHaveBeenCalledOnce();
     expect(close).not.toHaveBeenCalled();
+    expect(resume).toHaveBeenCalledOnce();
 
     returned.release();
     manager.closeAll();

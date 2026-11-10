@@ -50,6 +50,7 @@ export class ActivityFilter extends LitElement {
 
   private _activeEntityId?: string;
   private _open = false;
+  private _publishedReviewActivity?: readonly ReviewItem[];
   private _state = EMPTY_STATE;
   private _subscribedContext?: ActivityFilterContext;
   private _subscribedSelection?: CameraSelectionContext;
@@ -104,21 +105,22 @@ export class ActivityFilter extends LitElement {
     if (
       !entityId ||
       !this.filterContext ||
-      this._reviewActivity.activeEntityId !== entityId
+      this._reviewActivity.activeEntityId !== entityId ||
+      this._publishedReviewActivity === this._reviewActivity.items
     ) {
       return;
     }
-    this.filterContext.mergeReviews(
-      entityId,
-      this._reviewActivity.items.map((review) => ({
-        classification: review.classification,
-        id: review.id,
-        labels: [...review.labels, ...review.sub_labels],
-        relatedEventIds: review.related_event_ids,
-        reviewed: review.reviewed,
-        zones: review.zones,
-      })),
-    );
+    this._publishedReviewActivity = this._reviewActivity.items;
+    const context = this.filterContext;
+    const reviews = this._reviewActivity.items.map((review) => ({
+      classification: review.classification,
+      id: review.id,
+      labels: [...review.labels, ...review.sub_labels],
+      relatedEventIds: review.related_event_ids,
+      reviewed: review.reviewed,
+      zones: review.zones,
+    }));
+    queueMicrotask(() => context.mergeReviews(entityId, reviews));
   }
 
   protected render() {
@@ -318,7 +320,9 @@ export class ActivityFilter extends LitElement {
     if (selection && this.targetModuleId) {
       this._unsubscribeSelection = selection.subscribe(
         this.targetModuleId,
-        ({ activeEntityId }) => this._cameraChanged(activeEntityId),
+        ({ activeEntityId, settled }) => {
+          if (settled !== false) this._cameraChanged(activeEntityId);
+        },
       );
     }
   }

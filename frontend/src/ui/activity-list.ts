@@ -1,5 +1,6 @@
 import { html, LitElement } from "lit";
 import { repeat } from "lit/directives/repeat.js";
+import { styleMap } from "lit/directives/style-map.js";
 
 import { ACTIVITY_LIST_TAG } from "../core/constants";
 import {
@@ -55,6 +56,9 @@ export interface ActivityListItem {
   readonly zones: readonly string[];
 }
 
+const VIRTUALIZATION_THRESHOLD = 20;
+const VIRTUALIZATION_OVERSCAN_ROWS = 3;
+
 /** Shared activity-tile presentation used by independent media modules. */
 export class ActivityList extends LitElement {
   public static properties = {
@@ -89,19 +93,33 @@ export class ActivityList extends LitElement {
 
   private readonly _failedMedia = new Set<string>();
   private _hoveredPreviewId?: string;
+  private _rowGap = 0;
+  private _rowHeight = 0;
+  private _virtualFrame?: number;
+  private _windowEnd = VIRTUALIZATION_THRESHOLD;
+  private _windowStart = 0;
 
   protected updated(changed: Map<PropertyKey, unknown>): void {
-    if (!changed.has("items")) return;
-    const current = new Set(
-      this.items.flatMap((item) =>
-        [item.thumbnailUrl, item.snapshotUrl, item.hoverPreviewUrl]
-          .filter((url): url is string => typeof url === "string")
-          .map((url) => mediaKey(item, url)),
-      ),
-    );
-    for (const key of this._failedMedia) {
-      if (!current.has(key)) this._failedMedia.delete(key);
+    if (changed.has("items")) {
+      const current = new Set(
+        this.items.flatMap((item) =>
+          [item.thumbnailUrl, item.snapshotUrl, item.hoverPreviewUrl]
+            .filter((url): url is string => typeof url === "string")
+            .map((url) => mediaKey(item, url)),
+        ),
+      );
+      for (const key of this._failedMedia) {
+        if (!current.has(key)) this._failedMedia.delete(key);
+      }
     }
+    this._scheduleVirtualWindowSync();
+  }
+
+  public disconnectedCallback(): void {
+    if (this._virtualFrame !== undefined)
+      cancelAnimationFrame(this._virtualFrame);
+    this._virtualFrame = undefined;
+    super.disconnectedCallback();
   }
 
   protected render() {
@@ -115,6 +133,7 @@ export class ActivityList extends LitElement {
         .join(" ")}
       aria-label=${this.localize(this.listKey)}
       aria-busy=${this.loading ? "true" : "false"}
+      @scroll=${this._handleScroll}
     >
       ${
         this.loading && this.items.length === 0
@@ -129,18 +148,41 @@ export class ActivityList extends LitElement {
               </span>`
           : this.items.length === 0
             ? html`<div class="empty">${this.localize(this.emptyKey)}</div>`
-            : html`<div class="list">
-                ${repeat(
-                  this.items,
-                  (item) => item.id,
-                  (item) => this._renderItem(item),
-                )}
-              </div>`
+            : this._renderList()
       }
     </section>`;
   }
 
-  private _renderItem(item: ActivityListItem) {
+  private _renderList() {
+    const virtualized =
+      this.items.length > VIRTUALIZATION_THRESHOLD && this._rowHeight > 0;
+    const start = virtualized ? this._windowStart : 0;
+    const end = virtualized
+      ? Math.min(this.items.length, this._windowEnd)
+      : Math.min(this.items.length, VIRTUALIZATION_THRESHOLD);
+    const visibleItems = this.items
+      .slice(start, end)
+      .map((item, offset) => ({ index: start + offset, item }));
+    const totalHeight =
+      this.items.length * this._rowHeight +
+      Math.max(0, this.items.length - 1) * this._rowGap;
+    return html`<div
+      class=${virtualized ? "list virtualized" : "list"}
+      style=${styleMap(virtualized ? { blockSize: `${totalHeight}px` } : {})}
+    >
+      ${repeat(
+        visibleItems,
+        ({ item }) => item.id,
+        ({ index, item }) => this._renderItem(item, index, virtualized),
+      )}
+    </div>`;
+  }
+
+  private _renderItem(
+    item: ActivityListItem,
+    index: number,
+    virtualized: boolean,
+  ) {
     const start = new Date(item.startTime * 1000);
     const previewUrl = [item.thumbnailUrl, item.snapshotUrl].find(
       (url): url is string =>
@@ -160,6 +202,15 @@ export class ActivityList extends LitElement {
     const title = activityMediaTitle(item, this.api);
     return html`<article
       class="tile"
+      aria-posinset=${index + 1}
+      aria-setsize=${this.items.length}
+      style=${styleMap(
+        virtualized
+          ? {
+              transform: `translateY(${index * (this._rowHeight + this._rowGap)}px)`,
+            }
+          : {},
+      )}
       @pointermove=${(event: PointerEvent) =>
         this._updateHoverPreview(event, item)}
       @pointerleave=${() => this._clearHoverPreview(item.id)}
@@ -301,6 +352,60 @@ export class ActivityList extends LitElement {
         }
       </div>
     </article>`;
+  }
+
+  private readonly _handleScroll = (): void => {
+    this._scheduleVirtualWindowSync();
+  };
+
+  private _scheduleVirtualWindowSync(): void {
+    if (
+      this.items.length <= VIRTUALIZATION_THRESHOLD ||
+      this._virtualFrame !== undefined
+    )
+      return;
+    this._virtualFrame = requestAnimationFrame(() => {
+      this._virtualFrame = undefined;
+      this._syncVirtualWindow();
+    });
+  }
+
+  private _syncVirtualWindow(): void {
+    if (this.items.length <= VIRTUALIZATION_THRESHOLD) return;
+    const viewport = this.renderRoot.querySelector<HTMLElement>(".viewport");
+    const list = this.renderRoot.querySelector<HTMLElement>(".list");
+    const tile = list?.querySelector<HTMLElement>(".tile");
+    if (!viewport || !list || !tile) return;
+    const nextRowHeight =
+      Math.round(tile.getBoundingClientRect().height * 100) / 100;
+    const nextRowGap = list.classList.contains("virtualized")
+      ? this._rowGap
+      : Number.parseFloat(getComputedStyle(list).rowGap) || 0;
+    if (nextRowHeight <= 0) return;
+    const stride = nextRowHeight + nextRowGap;
+    const visibleRows = Math.max(1, Math.ceil(viewport.clientHeight / stride));
+    const lastWindowStart = Math.max(0, this.items.length - visibleRows);
+    const nextStart = Math.max(
+      0,
+      Math.min(
+        lastWindowStart,
+        Math.floor(viewport.scrollTop / stride) - VIRTUALIZATION_OVERSCAN_ROWS,
+      ),
+    );
+    const nextEnd = Math.min(
+      this.items.length,
+      nextStart + visibleRows + VIRTUALIZATION_OVERSCAN_ROWS * 2,
+    );
+    const changed =
+      this._rowHeight !== nextRowHeight ||
+      this._rowGap !== nextRowGap ||
+      this._windowStart !== nextStart ||
+      this._windowEnd !== nextEnd;
+    this._rowHeight = nextRowHeight;
+    this._rowGap = nextRowGap;
+    this._windowStart = nextStart;
+    this._windowEnd = nextEnd;
+    if (changed) this.requestUpdate();
   }
 
   private _mediaFailed(item: ActivityListItem, url: string): void {

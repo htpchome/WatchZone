@@ -53,6 +53,9 @@ export class AlertsModule extends LitElement {
   public targetModuleId = "";
 
   private readonly _toasts = new ToastManager(this);
+  private _publishedActivity?: readonly ReviewItem[];
+  private _publishedEntityId?: string;
+  private _publishedFilter?: ActivityFilterContext;
   private readonly _filter = new ActivityFilterController(
     this,
     () => this.activityFilter,
@@ -80,7 +83,16 @@ export class AlertsModule extends LitElement {
 
   protected update(changed: PropertyValues<this>): void {
     const entityId = this._activity.activeEntityId;
-    if (entityId && this.activityFilter) {
+    if (
+      entityId &&
+      this.activityFilter &&
+      (this._publishedActivity !== this._activity.items ||
+        this._publishedEntityId !== entityId ||
+        this._publishedFilter !== this.activityFilter)
+    ) {
+      this._publishedActivity = this._activity.items;
+      this._publishedEntityId = entityId;
+      this._publishedFilter = this.activityFilter;
       this.activityFilter.publishReviews(
         entityId,
         this._activity.items.map((review) => ({

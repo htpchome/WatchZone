@@ -162,6 +162,109 @@ describe("active camera activity controller", () => {
     controller.hostDisconnected();
   });
 
+  it("defers camera-specific loading until carousel selection settles", async () => {
+    const fetch = vi.fn(async (_api: HomeAssistantApi, entityId: string) => [
+      {
+        id: `${entityId}:review`,
+        revision: "loaded",
+        start_time: Date.now() / 1000,
+      },
+    ]);
+    const selection = new CameraSelectionContext();
+    const controller = new ActiveCameraActivityController(
+      new TestHost(),
+      () => ({
+        api: {} as HomeAssistantApi,
+        cameraSelection: selection,
+        historyDays: 5,
+        targetModuleId: "camera-module",
+      }),
+      fetch,
+      vi.fn(),
+      "reviews",
+    );
+    controller.hostConnected();
+    const owner = {};
+    const items = [
+      { entityId: "camera.front", label: "Front" },
+      { entityId: "camera.driveway", label: "Driveway" },
+    ];
+    const publish = (activeEntityId: string, settled: boolean) =>
+      selection.publish(
+        "camera-module",
+        owner,
+        { activeEntityId, items, settled },
+        vi.fn(),
+      );
+
+    publish("camera.front", true);
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledOnce());
+    await vi.waitFor(() =>
+      expect(controller.items[0]?.id).toBe("camera.front:review"),
+    );
+
+    publish("camera.driveway", false);
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(controller.items[0]?.id).toBe("camera.front:review");
+
+    publish("camera.driveway", true);
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() =>
+      expect(controller.items[0]?.id).toBe("camera.driveway:review"),
+    );
+    controller.hostDisconnected();
+  });
+
+  it("retains only the newest first-paint rows for inactive cameras", async () => {
+    const now = Date.now() / 1000;
+    const loaded = Array.from({ length: 25 }, (_, index) => ({
+      id: `front:${index}`,
+      revision: "loaded",
+      start_time: now - index,
+    }));
+    const fetch = vi.fn(async (_api: HomeAssistantApi, entityId: string) =>
+      entityId === "camera.front" ? loaded : [],
+    );
+    const selection = new CameraSelectionContext();
+    const controller = new ActiveCameraActivityController(
+      new TestHost(),
+      () => ({
+        api: {} as HomeAssistantApi,
+        cameraSelection: selection,
+        historyDays: 10,
+        targetModuleId: "camera-module",
+      }),
+      fetch,
+      vi.fn(),
+      "reviews",
+    );
+    controller.hostConnected();
+    const owner = {};
+    const publish = (activeEntityId: string) =>
+      selection.publish(
+        "camera-module",
+        owner,
+        {
+          activeEntityId,
+          items: [
+            { entityId: "camera.front", label: "Front" },
+            { entityId: "camera.back", label: "Back" },
+          ],
+        },
+        vi.fn(),
+      );
+
+    publish("camera.front");
+    await vi.waitFor(() => expect(controller.items).toHaveLength(25));
+    publish("camera.back");
+    publish("camera.front");
+    expect(controller.items).toHaveLength(10);
+    expect(controller.items.map(({ id }) => id)).toEqual(
+      loaded.slice(0, 10).map(({ id }) => id),
+    );
+    controller.hostDisconnected();
+  });
+
   it("reconciles within five seconds when the push transport is silent", async () => {
     vi.useFakeTimers();
     const item = {
