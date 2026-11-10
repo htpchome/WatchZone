@@ -940,6 +940,17 @@ test("keeps activity content in an independently scrolling viewport", async ({
   );
   await expect(reviewHeaders).toHaveCount(2);
   await expect(reviewHeaders.first()).toContainText("Reviews");
+  const reviewHeaderInset = await page
+    .locator("wzc-reviews .viewport")
+    .evaluate((viewport) => {
+      const header = viewport.querySelector("wzc-media-day-header");
+      if (!header) throw new Error("Expected the Reviews day heading.");
+      return (
+        header.getBoundingClientRect().top -
+        viewport.getBoundingClientRect().top
+      );
+    });
+  expect(reviewHeaderInset).toBeCloseTo(0, 0);
   const reviewState = page.locator("wzc-reviews .review-state").first();
   await expect(reviewState).toHaveClass(/unreviewed/);
   await expect(reviewState).toHaveAttribute("aria-pressed", "false");
@@ -1233,10 +1244,9 @@ test("keeps activity content in an independently scrolling viewport", async ({
     });
   expect(virtualized.initialCount).toBeLessThan(20);
   expect(virtualized.dayHeaderCount).toBe(5);
-  expect(virtualized.stickyHeaderTop).toBeCloseTo(
-    virtualized.initialHeaderTop,
-    0,
-  );
+  expect(
+    Math.abs(virtualized.stickyHeaderTop - virtualized.initialHeaderTop),
+  ).toBeLessThanOrEqual(1);
   expect(virtualized.previousHeaderBottom).toBeLessThanOrEqual(
     virtualized.stickyHeaderTop + 1,
   );

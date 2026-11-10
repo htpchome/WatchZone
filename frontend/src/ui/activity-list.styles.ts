@@ -13,17 +13,17 @@ export const activityListStyles = css`
     block-size: 100%;
     max-block-size: calc(
       var(--wzc-media-day-header-block-size) + 5 *
-        var(--wzc-event-tile-block-size) + 5 * var(--wzc-event-list-gap) + 2 *
+        var(--wzc-event-tile-block-size) + 5 * var(--wzc-event-list-gap) +
         var(--wzc-event-list-padding)
     );
     min-block-size: calc(
       var(--wzc-media-day-header-block-size) + 3 *
-        var(--wzc-event-tile-block-size) + 3 * var(--wzc-event-list-gap) + 2 *
+        var(--wzc-event-tile-block-size) + 3 * var(--wzc-event-list-gap) +
         var(--wzc-event-list-padding)
     );
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: var(--wzc-event-list-padding);
+    padding: 0 var(--wzc-event-list-padding) var(--wzc-event-list-padding);
   }
 
   .list {

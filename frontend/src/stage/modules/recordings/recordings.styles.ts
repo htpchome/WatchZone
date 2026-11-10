@@ -16,16 +16,17 @@ export const recordingsStyles = css`
     max-block-size: calc(
       var(--wzc-media-day-header-block-size) + 5 *
         var(--wzc-recording-tile-block-size) + 5 *
-        var(--wzc-recording-list-gap) + 2 * var(--wzc-recording-list-padding)
+        var(--wzc-recording-list-gap) + var(--wzc-recording-list-padding)
     );
     min-block-size: calc(
       var(--wzc-media-day-header-block-size) + 3 *
         var(--wzc-recording-tile-block-size) + 3 *
-        var(--wzc-recording-list-gap) + 2 * var(--wzc-recording-list-padding)
+        var(--wzc-recording-list-gap) + var(--wzc-recording-list-padding)
     );
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: var(--wzc-recording-list-padding);
+    padding: 0 var(--wzc-recording-list-padding)
+      var(--wzc-recording-list-padding);
   }
 
   .list {
