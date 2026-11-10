@@ -1002,6 +1002,9 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await alertList.locator(".tile-player").click();
   const draftDialog = page.locator("wzc-recorded-video-dialog dialog");
   await expect(draftDialog).toBeVisible();
+  await expect(
+    page.locator("wzc-recorded-video-dialog img.snapshot"),
+  ).toHaveAttribute("src", "/review-preview.gif");
   await page.getByRole("button", { name: "Close video player" }).click();
   await alertList.evaluate(async (element) => {
     const list = element as HTMLElement & {
@@ -1012,7 +1015,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
     delete list.restoreDraftFixture;
     await list.updateComplete;
   });
-  await expect(alertList.locator(".in-progress")).toHaveCount(0);
+  await expect(alertList.locator(".in-progress")).toHaveCount(4);
   await stackButtons.nth(1).hover();
   await expect(stackButtons.nth(1)).not.toHaveCSS(
     "color",

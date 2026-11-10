@@ -10,6 +10,7 @@ import {
 import type { HomeAssistantApi } from "../core/home-assistant";
 import {
   openRecordedMedia,
+  type RecordedMediaRequest,
   type RecordedMediaSource,
   type RecordedMediaTransport,
 } from "../core/recorded-media";
@@ -428,26 +429,63 @@ export class ActivityList extends LitElement {
 
   private async _playVideo(item: ActivityListItem): Promise<void> {
     if (this._resolvingPlayback.has(item.id)) return;
-    let playable = item;
-    if (
-      this.resolvePlayback &&
-      (item.inProgress || item.playbackSources.length === 0)
-    ) {
-      this._resolvingPlayback.add(item.id);
-      try {
-        const resolution = await this.resolvePlayback(item);
-        if (!resolution) return;
-        playable = {
-          ...item,
-          playbackSources: resolution.playbackSources,
-          preferredTransport: resolution.preferredTransport,
-        };
-      } finally {
-        this._resolvingPlayback.delete(item.id);
-      }
+    if (item.playbackSources.length > 0) {
+      this._openVideo(item);
+      return;
     }
-    const request = activityRecordedMediaRequest(playable, "video", this.api);
+    const preview = this._previewRequest(item);
+    if (preview) {
+      openRecordedMedia(this, preview);
+      void this._preparePlayback(item);
+      return;
+    }
+    const resolution = await this._preparePlayback(item);
+    if (!resolution) return;
+    this._openVideo({
+      ...item,
+      playbackSources: resolution.playbackSources,
+      preferredTransport: resolution.preferredTransport,
+    });
+  }
+
+  private async _preparePlayback(
+    item: ActivityListItem,
+  ): Promise<ActivityPlaybackResolution | undefined> {
+    if (!this.resolvePlayback || this._resolvingPlayback.has(item.id)) {
+      return undefined;
+    }
+    this._resolvingPlayback.add(item.id);
+    try {
+      return await this.resolvePlayback(item);
+    } finally {
+      this._resolvingPlayback.delete(item.id);
+    }
+  }
+
+  private _openVideo(item: ActivityListItem): void {
+    const request = activityRecordedMediaRequest(item, "video", this.api);
     if (request) openRecordedMedia(this, request);
+  }
+
+  private _previewRequest(
+    item: ActivityListItem,
+  ): RecordedMediaRequest | undefined {
+    const url = item.hoverPreviewUrl ?? item.thumbnailUrl ?? item.snapshotUrl;
+    if (!url) return undefined;
+    return {
+      id: `${item.id}:progress`,
+      kind: "snapshot",
+      posterUrl: this.api?.resolveUrl(url) ?? url,
+      preferredTransport: "file",
+      sources: [
+        {
+          content_type: item.hoverPreviewUrl ? "image/gif" : "image/jpeg",
+          transport: "file",
+          url,
+        },
+      ],
+      title: activityMediaTitle(item, this.api),
+    };
   }
 
   private _updateHoverPreview(

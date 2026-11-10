@@ -46,10 +46,13 @@ This document is normative for alert, event, snapshot, and recording viewing.
   viewer. Download remains independent; snapshot actions open the still image
   in the same viewer shell.
 - An alert or detection without an end time is visibly marked as in progress.
-  Its tile remains actionable: activation asks the owning activity controller
-  for current provider-normalized playback sources and performs a short,
-  bounded reconciliation while the provider prepares the recording. Failure
-  to obtain a source produces a warning toast rather than a dead interaction.
+  A closed alert also retains that marker while recording playback remains
+  unavailable. Its tile remains actionable: activation immediately opens the
+  provider-normalized review preview or thumbnail, while the owning activity
+  controller performs a short, bounded playback reconciliation in the
+  background. Once sources arrive, later activation uses recorded video.
+  Failure to obtain a source produces a warning toast rather than a dead
+  interaction.
 - The recorded video opens with native controls, autoplay requested,
   `playsinline`, and muted audio.
 - Recorded media uses the shared bounded display-zoom controller and shared

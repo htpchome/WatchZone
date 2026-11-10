@@ -155,7 +155,8 @@ export class AlertsModule extends LitElement {
       endTime: review.end_time,
       hoverPreviewUrl: this.hoverPreviewEnabled ? review.preview_url : null,
       id: review.id,
-      inProgress: review.end_time === null,
+      inProgress:
+        review.end_time === null || review.playback_sources.length === 0,
       mediaEndTime: review.media_end_time,
       mediaStartTime: review.media_start_time,
       objectLabels: [...review.labels, ...review.sub_labels],
