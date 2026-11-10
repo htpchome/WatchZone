@@ -59,40 +59,67 @@ export class RecordingsModule extends LitElement {
 
   protected render() {
     const hours = this._recordings.hours;
+    const previousDate = this._recordings.adjacentDate(-1);
+    const nextDate = this._recordings.adjacentDate(1);
     return html`
       <div class="viewport">
-        <wzc-media-day-header
-          .label=${this._dayLabel(hours)}
-        ></wzc-media-day-header>
-        ${
-          this._recordings.loading && hours.length === 0
-            ? html`<div
-                class="list"
-                aria-busy="true"
-                aria-label=${this.localize("recordings.loading")}
-              >
-                ${this._skeletonHours().map((hour) =>
-                  this._renderSkeletonHour(hour),
-                )}
-              </div>`
-            : hours.length === 0
-              ? html`<div class="empty">
-                  ${this.localize("recordings.empty")}
-                </div>`
-              : html`<div
+        <wzc-media-day-header .label=${this._dayLabel(hours)}
+          >${this._renderDayNavigation("previous", previousDate)}
+          ${this._renderDayNavigation("next", nextDate)}</wzc-media-day-header
+        >
+        <div class="scroller">
+          ${
+            this._recordings.loading && hours.length === 0
+              ? html`<div
                   class="list"
-                  aria-label=${this.localize("recordings.list")}
+                  aria-busy="true"
+                  aria-label=${this.localize("recordings.loading")}
                 >
-                  ${repeat(
-                    hours,
-                    ({ id }) => id,
-                    (hour) => this._renderHour(hour),
+                  ${this._skeletonHours().map((hour) =>
+                    this._renderSkeletonHour(hour),
                   )}
                 </div>`
-        }
+              : hours.length === 0
+                ? html`<div class="empty">
+                    ${this.localize("recordings.empty")}
+                  </div>`
+                : html`<div
+                    class="list"
+                    aria-label=${this.localize("recordings.list")}
+                  >
+                    ${repeat(
+                      hours,
+                      ({ id }) => id,
+                      (hour) => this._renderHour(hour),
+                    )}
+                  </div>`
+          }
+        </div>
       </div>
       <wzc-toast-region .notices=${this._toasts.notices}></wzc-toast-region>
     `;
+  }
+
+  private _renderDayNavigation(
+    direction: "previous" | "next",
+    date: string | undefined,
+  ) {
+    if (!date) return null;
+    const label = this.localize(`recordings.${direction}_day`, {
+      date: formatHomeAssistantDateKey(date, this.api?.locale),
+    });
+    return html`<button
+      slot=${direction}
+      class="day-navigation"
+      type="button"
+      title=${label}
+      aria-label=${label}
+      @click=${() => this._recordings.selectDate(date)}
+    >
+      <ha-icon
+        icon=${`mdi:arrow-${direction === "previous" ? "left" : "right"}`}
+      ></ha-icon>
+    </button>`;
   }
 
   private _renderHour(hour: RecordingHour) {

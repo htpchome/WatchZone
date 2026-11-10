@@ -10,17 +10,24 @@ export const activityListStyles = css`
 
   .viewport {
     box-sizing: border-box;
+    display: grid;
+    grid-template-rows: var(--wzc-media-day-header-block-size) minmax(0, 1fr);
     block-size: 100%;
     max-block-size: calc(
       var(--wzc-media-day-header-block-size) + 5 *
         var(--wzc-event-tile-block-size) + 5 * var(--wzc-event-list-gap) +
-        var(--wzc-event-list-padding)
+        var(--wzc-media-day-header-gap) + var(--wzc-event-list-padding)
     );
     min-block-size: calc(
       var(--wzc-media-day-header-block-size) + 3 *
         var(--wzc-event-tile-block-size) + 3 * var(--wzc-event-list-gap) +
-        var(--wzc-event-list-padding)
+        var(--wzc-media-day-header-gap) + var(--wzc-event-list-padding)
     );
+    overflow: hidden;
+  }
+
+  .scroller {
+    min-block-size: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
     padding: 0 var(--wzc-event-list-padding) var(--wzc-event-list-padding);
@@ -28,16 +35,13 @@ export const activityListStyles = css`
 
   .list {
     display: block;
+    margin-block-start: var(--wzc-media-day-header-gap);
   }
 
   .skeleton-list,
   .day-group {
     display: grid;
     gap: var(--wzc-event-list-gap);
-  }
-
-  .skeleton-list {
-    margin-block-start: var(--wzc-event-list-gap);
   }
 
   .list.virtualized {
@@ -51,11 +55,24 @@ export const activityListStyles = css`
   }
 
   .day-group.virtualized .tile {
-    inset-block-start: calc(
-      var(--wzc-media-day-header-block-size) + var(--wzc-event-list-gap)
-    );
     inset-inline: 0;
     position: absolute;
+  }
+
+  .day-group.virtualized:not(:first-child) .tile {
+    inset-block-start: calc(
+      var(--wzc-media-day-header-block-size) + var(--wzc-media-day-header-gap)
+    );
+  }
+
+  .day-group:not(.virtualized) > wzc-media-day-header {
+    margin-block-end: calc(
+      var(--wzc-media-day-header-gap) - var(--wzc-event-list-gap)
+    );
+  }
+
+  .day-group:not(.virtualized) + .day-group {
+    margin-block-start: var(--wzc-event-list-gap);
   }
 
   .skeleton-row {
@@ -342,7 +359,7 @@ export const activityListStyles = css`
   .actions {
     display: flex;
     gap: 0.2rem;
-    padding-inline-end: var(--wzc-event-content-padding);
+    margin-inline-end: var(--wzc-event-action-margin);
     position: relative;
     z-index: 2;
   }

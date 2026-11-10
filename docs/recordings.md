@@ -45,6 +45,10 @@
   filter retain their activity behavior.
 - With no explicit date selection, Recordings displays today. Resetting the
   calendar returns to that default without changing Reviews or Events data.
+- The selected-day heading provides previous and next navigation only when the
+  provider reports a recording date in that direction. Navigation selects the
+  nearest available older or newer date through the shared camera-scoped date
+  context; it does not probe empty dates.
 
 ## Media and download
 

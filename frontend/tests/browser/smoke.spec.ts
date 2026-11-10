@@ -1141,8 +1141,21 @@ test("keeps activity content in an independently scrolling viewport", async ({
     normalNavigation.activeColor,
   );
   const events = page.locator("wzc-events");
-  const viewport = events.locator(".viewport");
+  const viewport = events.locator(".scroller");
   await expect(events.locator(".tile")).toHaveCount(6);
+  const actionInset = await events
+    .locator(".tile")
+    .first()
+    .evaluate((tile) => {
+      const actions = tile.querySelector<HTMLElement>(".actions");
+      if (!actions) throw new Error("Activity actions were not rendered");
+      return (
+        tile.getBoundingClientRect().right -
+        actions.getBoundingClientRect().right
+      );
+    });
+  expect(actionInset).toBeGreaterThanOrEqual(9);
+  expect(actionInset).toBeLessThanOrEqual(12);
   await expect(page.locator("watchzone-card ha-card")).toHaveCSS(
     "border-radius",
     "21px",
@@ -1191,7 +1204,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
       );
       await list.updateComplete;
       const viewportElement =
-        list.shadowRoot?.querySelector<HTMLElement>(".viewport");
+        list.shadowRoot?.querySelector<HTMLElement>(".scroller");
       if (!viewportElement)
         throw new Error("Activity viewport was not rendered");
       const initialCount =
@@ -1204,6 +1217,9 @@ test("keeps activity content in an independently scrolling viewport", async ({
         ) ?? []),
       ];
       const initialHeaderTop = headers[0]?.getBoundingClientRect().top ?? 0;
+      const initialHeaderLabel =
+        (headers[0] as (HTMLElement & { label?: string }) | undefined)?.label ??
+        "";
       const secondHeaderOffset = headers[1]
         ? headers[1].getBoundingClientRect().top -
           viewportElement.getBoundingClientRect().top +
@@ -1215,9 +1231,14 @@ test("keeps activity content in an independently scrolling viewport", async ({
         requestAnimationFrame(() => resolve()),
       );
       await list.updateComplete;
-      const stickyHeaderTop = headers[1]?.getBoundingClientRect().top ?? 0;
-      const previousHeaderBottom =
-        headers[0]?.getBoundingClientRect().bottom ?? 0;
+      const activeHeader = list.shadowRoot?.querySelector<HTMLElement>(
+        ".viewport > wzc-media-day-header",
+      );
+      const activeHeaderLabel =
+        (activeHeader as (HTMLElement & { label?: string }) | null)?.label ??
+        "";
+      const headerBottom = activeHeader?.getBoundingClientRect().bottom ?? 0;
+      const scrollerTop = viewportElement.getBoundingClientRect().top;
       const scrollHeight = viewportElement.scrollHeight;
       viewportElement.scrollTop = scrollHeight;
       viewportElement.dispatchEvent(new Event("scroll"));
@@ -1235,21 +1256,23 @@ test("keeps activity content in an independently scrolling viewport", async ({
         initialCount,
         dayHeaderCount,
         lastPosition: Math.max(...positions),
-        previousHeaderBottom,
+        activeHeaderLabel,
+        headerBottom,
+        initialHeaderLabel,
         scrollHeight,
         initialHeaderTop,
-        stickyHeaderTop,
+        scrollerTop,
         visibleHeight: viewportElement.clientHeight,
       };
     });
   expect(virtualized.initialCount).toBeLessThan(20);
   expect(virtualized.dayHeaderCount).toBe(5);
-  expect(
-    Math.abs(virtualized.stickyHeaderTop - virtualized.initialHeaderTop),
-  ).toBeLessThanOrEqual(1);
-  expect(virtualized.previousHeaderBottom).toBeLessThanOrEqual(
-    virtualized.stickyHeaderTop + 1,
+  expect(virtualized.activeHeaderLabel).not.toBe(
+    virtualized.initialHeaderLabel,
   );
+  expect(
+    Math.abs(virtualized.headerBottom - virtualized.scrollerTop),
+  ).toBeLessThanOrEqual(1);
   expect(virtualized.scrollHeight).toBeGreaterThan(virtualized.visibleHeight);
   expect(virtualized.lastPosition).toBe(100);
   const constrained = await events
@@ -1258,16 +1281,19 @@ test("keeps activity content in an independently scrolling viewport", async ({
       const list = element as HTMLElement;
       list.style.blockSize = "400px";
       const viewportElement =
-        list.shadowRoot?.querySelector<HTMLElement>(".viewport");
+        list.shadowRoot?.querySelector<HTMLElement>(".scroller");
+      const shell = list.shadowRoot?.querySelector<HTMLElement>(".viewport");
       const geometry = {
         clientHeight: viewportElement?.clientHeight ?? 0,
+        shellHeight: shell?.clientHeight ?? 0,
         scrollHeight: viewportElement?.scrollHeight ?? 0,
       };
       list.style.removeProperty("block-size");
       return geometry;
     });
-  expect(constrained.clientHeight).toBeGreaterThanOrEqual(400);
-  expect(constrained.clientHeight).toBeLessThan(420);
+  expect(constrained.shellHeight).toBeGreaterThanOrEqual(400);
+  expect(constrained.shellHeight).toBeLessThan(420);
+  expect(constrained.clientHeight).toBeLessThan(constrained.shellHeight);
   expect(constrained.scrollHeight).toBeGreaterThan(constrained.clientHeight);
   const nonScrolling = await events
     .locator("wzc-activity-list")
@@ -1280,7 +1306,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
       list.items = list.items.slice(0, 1);
       await list.updateComplete;
       const viewportElement =
-        list.shadowRoot?.querySelector<HTMLElement>(".viewport");
+        list.shadowRoot?.querySelector<HTMLElement>(".scroller");
       if (!viewportElement)
         throw new Error("Activity viewport was not rendered");
       const geometry = {
@@ -1967,9 +1993,31 @@ test("switches activity and recordings through the shared media calendar", async
   await expect(recordings.locator(".range").first()).toHaveText(
     "10:00 AM – 10:27 AM",
   );
-  const recordingViewport = recordings.locator(".viewport");
+  const previousRecordingDay = recordings.locator(
+    '.day-navigation[slot="previous"]',
+  );
+  const nextRecordingDay = recordings.locator('.day-navigation[slot="next"]');
+  await expect(previousRecordingDay).toHaveCount(1);
+  await expect(nextRecordingDay).toHaveCount(0);
+  await previousRecordingDay.click();
+  await expect(recordings.locator("wzc-media-day-header")).toContainText(
+    "Sun, Nov 8 — Recordings",
+  );
+  await expect(previousRecordingDay).toHaveCount(0);
+  await expect(nextRecordingDay).toHaveCount(1);
+  await nextRecordingDay.click();
+  await expect(recordings.locator("wzc-media-day-header")).toContainText(
+    "Mon, Nov 9 — Recordings",
+  );
+  const recordingViewport = recordings.locator(".scroller");
   const recordingScroll = await recordingViewport.evaluate((viewport) => {
     const before = viewport.scrollTop;
+    const top = viewport.getBoundingClientRect().top;
+    const headerBottom =
+      viewport.previousElementSibling?.getBoundingClientRect().bottom ?? -1;
+    const firstTileGap =
+      (viewport.querySelector(".tile")?.getBoundingClientRect().top ?? -1) -
+      top;
     viewport.scrollTop = viewport.scrollHeight;
     return {
       before,
@@ -1978,10 +2026,17 @@ test("switches activity and recordings through the shared media calendar", async
       scrollHeight: viewport.scrollHeight,
       overflowY: getComputedStyle(viewport).overflowY,
       scrollbarGutter: getComputedStyle(viewport).scrollbarGutter,
+      top,
+      headerBottom,
+      firstTileGap,
     };
   });
   expect(recordingScroll.overflowY).toBe("auto");
   expect(recordingScroll.scrollbarGutter).toBe("auto");
+  expect(
+    Math.abs(recordingScroll.top - recordingScroll.headerBottom),
+  ).toBeLessThanOrEqual(1);
+  expect(recordingScroll.firstTileGap).toBeLessThanOrEqual(5);
   expect(recordingScroll.scrollHeight).toBeGreaterThan(
     recordingScroll.clientHeight,
   );

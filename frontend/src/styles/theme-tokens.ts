@@ -250,6 +250,8 @@ export const themeTokens = css`
     --wzc-event-list-gap: 0.5rem;
     --wzc-event-list-padding: 0.25rem;
     --wzc-media-day-header-block-size: 1.75rem;
+    --wzc-media-day-header-gap: 0.25rem;
+    --wzc-media-day-navigation-size: 1.5rem;
     --wzc-media-day-header-background: var(--wzc-card-background);
     --wzc-media-day-header-color: var(--wzc-color-text-2);
     --wzc-event-tile-block-size: 7.2rem;
@@ -277,6 +279,7 @@ export const themeTokens = css`
     --wzc-event-action-background: var(--wzc-color-surface);
     --wzc-event-action-color: var(--wzc-color-text-2);
     --wzc-event-action-size: 2.25rem;
+    --wzc-event-action-margin: 0.65rem;
 
     --wzc-recording-color: var(--wzc-color-text-1);
     --wzc-recording-secondary-color: var(--wzc-color-text-2);

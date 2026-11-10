@@ -12,27 +12,64 @@ export const recordingsStyles = css`
 
   .viewport {
     box-sizing: border-box;
+    display: grid;
+    grid-template-rows: var(--wzc-media-day-header-block-size) minmax(0, 1fr);
     block-size: 100%;
     max-block-size: calc(
       var(--wzc-media-day-header-block-size) + 5 *
         var(--wzc-recording-tile-block-size) + 5 *
-        var(--wzc-recording-list-gap) + var(--wzc-recording-list-padding)
+        var(--wzc-recording-list-gap) + var(--wzc-media-day-header-gap) +
+        var(--wzc-recording-list-padding)
     );
     min-block-size: calc(
       var(--wzc-media-day-header-block-size) + 3 *
         var(--wzc-recording-tile-block-size) + 3 *
-        var(--wzc-recording-list-gap) + var(--wzc-recording-list-padding)
+        var(--wzc-recording-list-gap) + var(--wzc-media-day-header-gap) +
+        var(--wzc-recording-list-padding)
     );
+    overflow: hidden;
+  }
+
+  .scroller {
+    min-block-size: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
     padding: 0 var(--wzc-recording-list-padding)
       var(--wzc-recording-list-padding);
   }
 
+  .day-navigation {
+    appearance: none;
+    display: grid;
+    place-items: center;
+    box-sizing: border-box;
+    inline-size: var(--wzc-media-day-navigation-size);
+    block-size: var(--wzc-media-day-navigation-size);
+    padding: 0;
+    color: var(--wzc-recording-action-color);
+    background: var(--wzc-recording-action-background);
+    border: 1px solid var(--wzc-recording-action-border-color);
+    border-radius: 50%;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .day-navigation:focus-visible {
+    outline: 2px solid var(--wzc-color-primary);
+    outline-offset: 1px;
+  }
+
+  .day-navigation ha-icon {
+    display: block;
+    inline-size: 1rem;
+    block-size: 1rem;
+    --mdc-icon-size: 1rem;
+  }
+
   .list {
     display: grid;
     gap: var(--wzc-recording-list-gap);
-    margin-block-start: var(--wzc-recording-list-gap);
+    margin-block-start: var(--wzc-media-day-header-gap);
   }
 
   .tile {
@@ -157,6 +194,7 @@ export const recordingsStyles = css`
   }
 
   @media (hover: hover) and (pointer: fine) {
+    .day-navigation:hover,
     .download:hover {
       color: var(--wzc-recording-action-hover-color);
     }

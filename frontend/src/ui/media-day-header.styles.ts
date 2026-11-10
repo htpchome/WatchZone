@@ -2,12 +2,12 @@ import { css } from "lit";
 
 export const mediaDayHeaderStyles = css`
   :host {
-    position: sticky;
     z-index: 5;
-    inset-block-start: 0;
-    display: flex;
+    display: grid;
+    grid-template-columns:
+      var(--wzc-media-day-navigation-size) minmax(0, 1fr)
+      var(--wzc-media-day-navigation-size);
     align-items: center;
-    justify-content: center;
     box-sizing: border-box;
     block-size: var(--wzc-media-day-header-block-size);
     min-block-size: var(--wzc-media-day-header-block-size);
@@ -18,6 +18,15 @@ export const mediaDayHeaderStyles = css`
     font-weight: var(--wzc-font-weight-semibold);
     line-height: var(--wzc-line-height-condensed);
     pointer-events: none;
+  }
+
+  slot {
+    display: grid;
+    place-items: center;
+  }
+
+  ::slotted(*) {
+    pointer-events: auto;
   }
 
   .label {

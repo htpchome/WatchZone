@@ -119,6 +119,7 @@ export class ActivityList extends LitElement {
   public toggleReviewed?: (item: ActivityListItem) => void;
 
   private readonly _failedMedia = new Set<string>();
+  private _activeDateKey?: string;
   private _hoveredPreviewId?: string;
   private readonly _resolvingPlayback = new Set<string>();
   private _dayHeaderHeight = 0;
@@ -130,6 +131,7 @@ export class ActivityList extends LitElement {
 
   protected updated(changed: Map<PropertyKey, unknown>): void {
     if (changed.has("items")) {
+      this._activeDateKey = undefined;
       this._windowStart = 0;
       this._windowEnd = VIRTUALIZATION_THRESHOLD;
       const current = new Set(
@@ -154,6 +156,11 @@ export class ActivityList extends LitElement {
   }
 
   protected render() {
+    const groups = this._dayGroups();
+    const dayLabel =
+      groups.find(({ dateKey }) => dateKey === this._activeDateKey)?.label ??
+      groups[0]?.label ??
+      this._fallbackDayLabel();
     return html`<section
       class=${[
         "viewport",
@@ -164,33 +171,29 @@ export class ActivityList extends LitElement {
         .join(" ")}
       aria-label=${this.localize(this.listKey)}
       aria-busy=${this.loading ? "true" : "false"}
-      @scroll=${this._handleScroll}
     >
-      ${
-        this.loading && this.items.length === 0
-          ? html`<wzc-media-day-header
-                .label=${this._fallbackDayLabel()}
-              ></wzc-media-day-header>
-              <div class="list skeleton-list" aria-hidden="true">
-                ${Array.from(
-                  { length: 5 },
-                  () => html`<span class="skeleton-row"></span>`,
-                )}
-              </div>
-              <span class="visually-hidden">
-                ${this.localize(this.loadingKey)}
-              </span>`
-          : this.items.length === 0
-            ? html`<wzc-media-day-header
-                  .label=${this._fallbackDayLabel()}
-                ></wzc-media-day-header>
-                <div class="empty">${this.localize(this.emptyKey)}</div>`
-            : this._renderList()
-      }
+      <wzc-media-day-header .label=${dayLabel}></wzc-media-day-header>
+      <div class="scroller" @scroll=${this._handleScroll}>
+        ${
+          this.loading && this.items.length === 0
+            ? html`<div class="list skeleton-list" aria-hidden="true">
+                  ${Array.from(
+                    { length: 5 },
+                    () => html`<span class="skeleton-row"></span>`,
+                  )}
+                </div>
+                <span class="visually-hidden">
+                  ${this.localize(this.loadingKey)}
+                </span>`
+            : this.items.length === 0
+              ? html`<div class="empty">${this.localize(this.emptyKey)}</div>`
+              : this._renderList(groups)
+        }
+      </div>
     </section>`;
   }
 
-  private _renderList() {
+  private _renderList(groups: readonly ActivityDayGroup[]) {
     const virtualized =
       this.items.length > VIRTUALIZATION_THRESHOLD &&
       this._rowHeight > 0 &&
@@ -199,7 +202,6 @@ export class ActivityList extends LitElement {
     const end = virtualized
       ? Math.min(this.items.length, this._windowEnd)
       : Math.min(this.items.length, VIRTUALIZATION_THRESHOLD);
-    const groups = this._dayGroups();
     const visibleGroups = virtualized
       ? groups
       : groups.filter(
@@ -229,15 +231,24 @@ export class ActivityList extends LitElement {
         localIndex,
       }))
       .filter(({ index }) => index >= start && index < end);
+    const hasDayHeading = group.startIndex > 0;
+    const headingHeight = hasDayHeading
+      ? this._dayHeaderHeight + this._dayHeaderGap()
+      : 0;
     const groupHeight =
-      this._dayHeaderHeight +
-      group.items.length * (this._rowHeight + this._rowGap);
+      headingHeight + group.items.length * (this._rowHeight + this._rowGap);
     return html`<section
       class=${virtualized ? "day-group virtualized" : "day-group"}
       data-date=${group.dateKey}
       style=${styleMap(virtualized ? { blockSize: `${groupHeight}px` } : {})}
     >
-      <wzc-media-day-header .label=${group.label}></wzc-media-day-header>
+      ${
+        hasDayHeading
+          ? html`<wzc-media-day-header
+              .label=${group.label}
+            ></wzc-media-day-header>`
+          : null
+      }
       ${repeat(
         visibleItems,
         ({ item }) => item.id,
@@ -455,7 +466,33 @@ export class ActivityList extends LitElement {
 
   private readonly _handleScroll = (): void => {
     this._scheduleVirtualWindowSync();
+    this._syncActiveDay();
   };
+
+  private _syncActiveDay(): void {
+    const scroller = this.renderRoot.querySelector<HTMLElement>(".scroller");
+    const groups = [
+      ...this.renderRoot.querySelectorAll<HTMLElement>(".day-group"),
+    ];
+    if (!scroller || groups.length === 0) return;
+    const top = scroller.getBoundingClientRect().top + 1;
+    let active = groups[0]?.dataset.date;
+    for (const group of groups) {
+      if (group.getBoundingClientRect().top > top) break;
+      active = group.dataset.date;
+    }
+    if (!active || active === this._activeDateKey) return;
+    this._activeDateKey = active;
+    this.requestUpdate();
+  }
+
+  private _dayHeaderGap(): number {
+    return (
+      Number.parseFloat(
+        getComputedStyle(this).getPropertyValue("--wzc-media-day-header-gap"),
+      ) || 0
+    );
+  }
 
   private _scheduleVirtualWindowSync(): void {
     if (
@@ -471,11 +508,13 @@ export class ActivityList extends LitElement {
 
   private _syncVirtualWindow(): void {
     if (this.items.length <= VIRTUALIZATION_THRESHOLD) return;
-    const viewport = this.renderRoot.querySelector<HTMLElement>(".viewport");
+    const viewport = this.renderRoot.querySelector<HTMLElement>(".scroller");
     const list = this.renderRoot.querySelector<HTMLElement>(".list");
     const tile = list?.querySelector<HTMLElement>(".tile");
     const group = list?.querySelector<HTMLElement>(".day-group");
-    const dayHeader = group?.querySelector<HTMLElement>("wzc-media-day-header");
+    const dayHeader = this.renderRoot.querySelector<HTMLElement>(
+      "wzc-media-day-header",
+    );
     if (!viewport || !list || !group || !tile || !dayHeader) return;
     const nextRowHeight =
       Math.round(tile.getBoundingClientRect().height * 100) / 100;
@@ -493,21 +532,24 @@ export class ActivityList extends LitElement {
     let nextEnd = 0;
     let groupOffset = 0;
     for (const dayGroup of this._dayGroups()) {
+      const headingHeight =
+        dayGroup.startIndex > 0
+          ? nextDayHeaderHeight + this._dayHeaderGap()
+          : 0;
       for (
         let localIndex = 0;
         localIndex < dayGroup.items.length;
         localIndex++
       ) {
         const index = dayGroup.startIndex + localIndex;
-        const itemStart =
-          groupOffset + nextDayHeaderHeight + nextRowGap + localIndex * stride;
+        const itemStart = groupOffset + headingHeight + localIndex * stride;
         const itemEnd = itemStart + nextRowHeight;
         if (itemEnd >= visibleStart && itemStart <= visibleEnd) {
           nextStart = Math.min(nextStart, index);
           nextEnd = Math.max(nextEnd, index + 1);
         }
       }
-      groupOffset += nextDayHeaderHeight + dayGroup.items.length * stride;
+      groupOffset += headingHeight + dayGroup.items.length * stride;
     }
     if (nextStart === this.items.length) {
       nextStart = Math.max(0, this.items.length - 1);

@@ -12,9 +12,11 @@ export class MediaDayHeader extends LitElement {
   public label = "";
 
   protected render() {
-    return html`<div class="label" role="heading" aria-level="3">
-      ${this.label}
-    </div>`;
+    return html`
+      <slot name="previous"></slot>
+      <div class="label" role="heading" aria-level="3">${this.label}</div>
+      <slot name="next"></slot>
+    `;
   }
 
   static styles = mediaDayHeaderStyles;

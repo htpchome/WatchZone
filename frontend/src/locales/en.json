@@ -211,6 +211,8 @@
   "recordings.calendar_open": "Open recordings calendar",
   "recordings.calendar_title": "Recordings calendar",
   "recordings.day_with_recordings": "{date}, has recordings",
+  "recordings.previous_day": "Show previous recordings day: {date}",
+  "recordings.next_day": "Show next recordings day: {date}",
   "media_player.open": "Play {title}",
   "media_player.close": "Close video player",
   "media_player.resize": "Resize video player",

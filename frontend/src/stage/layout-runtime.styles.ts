@@ -314,6 +314,9 @@ export const stageRuntimeStyles = css`
     display: block;
     block-size: var(--wzc-media-day-header-block-size);
     inline-size: 100%;
+    margin-block-end: calc(
+      var(--wzc-media-day-header-gap) - var(--wzc-event-list-gap)
+    );
   }
 
   .activity-skeleton.no-shadows .activity-skeleton-row {

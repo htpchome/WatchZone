@@ -80,6 +80,40 @@ describe("recordings module", () => {
       "2026-11-09",
       "2026-11-08",
     ]);
+    await vi.waitFor(() =>
+      expect(
+        module.shadowRoot?.querySelector('.day-navigation[slot="previous"]'),
+      ).not.toBeNull(),
+    );
+    const previousDay = module.shadowRoot?.querySelector<HTMLButtonElement>(
+      '.day-navigation[slot="previous"]',
+    );
+    expect(previousDay?.getAttribute("aria-label")).toContain("Nov 8");
+    expect(
+      module.shadowRoot?.querySelector('.day-navigation[slot="next"]'),
+    ).toBeNull();
+    previousDay?.click();
+    await vi.waitFor(() =>
+      expect(callWS).toHaveBeenLastCalledWith({
+        type: "watchzone/recordings/list",
+        entity_id: "camera.front",
+        selected_date: "2026-11-08",
+        timezone: "UTC",
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(
+        module.shadowRoot?.querySelector('.day-navigation[slot="next"]'),
+      ).not.toBeNull(),
+    );
+    expect(
+      module.shadowRoot?.querySelector('.day-navigation[slot="previous"]'),
+    ).toBeNull();
+    await vi.waitFor(() =>
+      expect(
+        module.shadowRoot?.querySelector(".tile:not(.skeleton)"),
+      ).not.toBeNull(),
+    );
     expect(module.shadowRoot?.querySelector(".range")?.textContent).toBe(
       "10:00 PM – 10:27 PM",
     );

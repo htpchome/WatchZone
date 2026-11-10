@@ -22,6 +22,7 @@ const CURRENT_DAY_REFRESH_MS = 60_000;
 export class RecordingsController implements ReactiveController {
   public activeCameraLabel?: string;
   public activeEntityId?: string;
+  public availableDates: readonly string[] = [];
   public hours: readonly RecordingHour[] = [];
   public loading = false;
 
@@ -80,6 +81,27 @@ export class RecordingsController implements ReactiveController {
     return this._selectedDate;
   }
 
+  public adjacentDate(direction: -1 | 1): string | undefined {
+    const { api } = this._config();
+    if (!api) return undefined;
+    const current =
+      this._selectedDate ?? homeAssistantDateKey(Date.now() / 1000, api.locale);
+    const dates = [...new Set(this.availableDates)].sort();
+    if (direction > 0) return dates.find((date) => date > current);
+    let previous: string | undefined;
+    for (const date of dates) {
+      if (date >= current) break;
+      previous = date;
+    }
+    return previous;
+  }
+
+  public selectDate(selectedDate: string): void {
+    const { mediaDate } = this._config();
+    const entityId = this.activeEntityId;
+    if (mediaDate && entityId) mediaDate.select(entityId, selectedDate);
+  }
+
   private _syncSelection(): void {
     if (!this._connected) return;
     const { cameraSelection, targetModuleId } = this._config();
@@ -113,6 +135,7 @@ export class RecordingsController implements ReactiveController {
     }
     this.activeEntityId = entityId;
     this.activeCameraLabel = title;
+    this.availableDates = [];
     this.hours = [];
     this._requestKey = "";
     this._syncDate();
@@ -142,6 +165,7 @@ export class RecordingsController implements ReactiveController {
       this._unsubscribeDate = mediaDate.subscribe(entityId, (selectedDate) => {
         if (selectedDate === this._selectedDate) return;
         this._selectedDate = selectedDate;
+        this.hours = [];
         this._requestKey = "";
         this._load();
         this._host.requestUpdate();
@@ -169,6 +193,7 @@ export class RecordingsController implements ReactiveController {
     })
       .then(({ days, hours }) => {
         if (request !== this._request) return;
+        this.availableDates = days;
         this._subscribedDate?.publishAvailableDates(entityId, this, days);
         this.hours = hours;
         this.loading = false;
@@ -178,6 +203,7 @@ export class RecordingsController implements ReactiveController {
       .catch(() => {
         if (request !== this._request) return;
         this.loading = false;
+        this.availableDates = [];
         this._requestKey = "";
         this._subscribedDate?.clearAvailableDates(entityId, this);
         this._onError();
