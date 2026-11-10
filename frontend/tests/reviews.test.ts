@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { LitElement } from "lit";
 
 import { CameraSelectionContext } from "../src/stage/camera-selection-context";
 import { ActivityFilterContext } from "../src/stage/activity";
@@ -18,6 +19,9 @@ vi.mock("../src/api/activity-updates", () => ({
 
 const reviews = [
   {
+    analysis_description:
+      "The resident enters the garage and approaches the red car.",
+    analysis_title: "Resident entering garage",
     camera: "front",
     classification: "alert",
     clip_url: "/alert.mp4",
@@ -41,6 +45,8 @@ const reviews = [
     zones: ["driveway"],
   },
   {
+    analysis_description: null,
+    analysis_title: null,
     camera: "front",
     classification: "detection",
     clip_url: "/detection.mp4",
@@ -70,6 +76,13 @@ const reviews = [
 ] as const;
 
 describe("reviews module", () => {
+  HTMLDialogElement.prototype.showModal ??= function (): void {
+    this.setAttribute("open", "");
+  };
+  HTMLDialogElement.prototype.close ??= function (): void {
+    this.removeAttribute("open");
+  };
+
   afterEach(() => {
     document.body.replaceChildren();
     vi.restoreAllMocks();
@@ -185,6 +198,56 @@ describe("reviews module", () => {
     filterContext.resetFilters("camera.front");
     await module.updateComplete;
     expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(2);
+  });
+
+  it("opens generated analysis for reviews with complete metadata", async () => {
+    const api = {
+      callWS: vi.fn().mockResolvedValue({ items: reviews }),
+      identity: {},
+      locale: { language: "en", time_zone: "server" },
+      resolveUrl: (path: string) => `https://ha.local${path}`,
+      subscribeMessage: vi.fn(),
+    } as unknown as HomeAssistantApi;
+    const selection = new CameraSelectionContext();
+    const module = document.createElement(REVIEWS_TAG) as ReviewsModule;
+    module.api = api;
+    module.cameraSelection = selection;
+    module.targetModuleId = "camera-module";
+    document.body.append(module);
+    selection.publish(
+      "camera-module",
+      {},
+      {
+        activeEntityId: "camera.front",
+        items: [{ entityId: "camera.front", label: "Front" }],
+      },
+      vi.fn(),
+    );
+
+    await vi.waitFor(() => {
+      expect(
+        activityRoot(module)?.querySelectorAll(".analysis-title"),
+      ).toHaveLength(1);
+    });
+    const analysisButton =
+      activityRoot(module)?.querySelector<HTMLButtonElement>(".analysis-title");
+    expect(analysisButton?.textContent).toContain("Resident entering garage");
+    expect(analysisButton?.querySelector("ha-icon")?.getAttribute("icon")).toBe(
+      "mdi:creation",
+    );
+    analysisButton?.click();
+    await module.updateComplete;
+
+    const analysisDialog = module.shadowRoot?.querySelector(
+      "wzc-review-analysis-dialog",
+    );
+    await (analysisDialog as LitElement | null)?.updateComplete;
+    const dialog = analysisDialog?.shadowRoot?.querySelector("dialog");
+    expect(dialog?.hasAttribute("open")).toBe(true);
+    expect(dialog?.textContent).toContain("AI Analysis");
+    expect(dialog?.textContent).toContain(
+      "The resident enters the garage and approaches the red car.",
+    );
   });
 
   it("toggles reviewed state through the normalized reviews API", async () => {

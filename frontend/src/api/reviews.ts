@@ -11,6 +11,8 @@ import {
 export type ReviewClassification = "alert" | "detection";
 
 export interface ReviewItem {
+  readonly analysis_description: string | null;
+  readonly analysis_title: string | null;
   readonly camera: string;
   readonly classification: ReviewClassification;
   readonly clip_url: string | null;

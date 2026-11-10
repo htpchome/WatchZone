@@ -36,3 +36,16 @@
   presents each category's choices as wrapping pills. Native radio semantics
   preserve single selection, while labels and zones remain multi-select
   checkboxes available to keyboard and assistive-technology users.
+
+## Generated analysis
+
+- Providers may normalize an optional generated-analysis title and description
+  onto a Review. Provider response shapes do not cross the backend boundary.
+- Frigate supplies these values from review metadata. They participate in the
+  review revision so analysis generated after initial detection replaces the
+  existing Review presentation during realtime reconciliation.
+- Only Reviews presents generated analysis. A Review with both values displays
+  a compact title action with the creation icon; activating it opens a small,
+  keyboard-accessible dialog containing the title and description. Reviews
+  without complete analysis display no action. Events neither receive nor
+  reserve presentation space for review analysis.

@@ -41,6 +41,8 @@ export interface ActivityTypeBadge {
 }
 
 export interface ActivityListItem {
+  readonly analysisDescription?: string;
+  readonly analysisTitle?: string;
   readonly cameraLabel: string;
   readonly classification?: ActivityClassification;
   readonly clipUrl: string | null;
@@ -91,6 +93,7 @@ export class ActivityList extends LitElement {
     loading: { attribute: false },
     loadingKey: { attribute: false },
     localize: { attribute: false },
+    openAnalysis: { attribute: false },
     retryMedia: { attribute: false },
     resolvePlayback: { attribute: false },
     roundedCorners: { attribute: false, type: Boolean },
@@ -109,6 +112,7 @@ export class ActivityList extends LitElement {
   public loading = false;
   public loadingKey: TranslationKey = "events.loading";
   public localize: LocalizeFunction = englishLocalize;
+  public openAnalysis?: (item: ActivityListItem) => void;
   public retryMedia?: (item: ActivityListItem, url: string) => void;
   public resolvePlayback?: (
     item: ActivityListItem,
@@ -349,83 +353,36 @@ export class ActivityList extends LitElement {
             : null
         }
       </div>
-      <div class="details">
-        ${
-          objectLabels.length > 0 || typeBadge
-            ? html`<div class="badges">
-                ${objectLabels.map(
-                  (label, index) =>
-                    html`<wzc-badge
-                      color=${objectColors[index] ?? "neutral"}
-                      shape="pill"
-                      size="small"
-                      >${capitalizeBadgeText(
-                        label,
-                        this.api?.locale?.language,
-                      )}</wzc-badge
-                    >`,
-                )}
-                ${
-                  typeBadge
-                    ? html`<wzc-badge
-                        shape="pill"
-                        size="small"
-                        variant=${typeBadge.variant}
-                        >${capitalizeBadgeText(
-                          typeBadge.label,
-                          this.api?.locale?.language,
-                        )}</wzc-badge
-                      >`
-                    : null
-                }
-              </div>`
-            : null
-        }
-        <div class="metadata">
-          <span class="metadata-icon">${renderIcon("clock")}</span>
-          <span>${formatHomeAssistantTime(start, this.api?.locale)}</span>
-        </div>
-        <div class="metadata">
-          <span class="metadata-icon">${renderIcon("calendar")}</span>
-          <span>${formatHomeAssistantEventDate(start, this.api?.locale)}</span>
-        </div>
-        ${
-          this.displayZone && item.zones.length > 0
-            ? html`<div class="metadata">
-                <span class="metadata-icon">${renderIcon("mapMarker")}</span>
-                <span>${item.zones.join(", ")}</span>
-              </div>`
-            : null
-        }
-        ${
-          item.reviewed !== undefined
-            ? html`<button
-                class=${`review-state ${item.reviewed ? "reviewed" : "unreviewed"}`}
+      ${
+        item.analysisTitle && item.analysisDescription && this.openAnalysis
+          ? html`<div class="review-content">
+              ${this._renderDetails(item, objectLabels, typeBadge, objectColors, start)}
+              <button
+                class="analysis-title"
                 type="button"
-                ?disabled=${item.reviewStatePending === true}
-                title=${this.localize(
-                  item.reviewed
-                    ? "reviews.mark_unreviewed"
-                    : "reviews.mark_reviewed",
-                )}
-                aria-label=${this.localize(
-                  item.reviewed
-                    ? "reviews.mark_unreviewed"
-                    : "reviews.mark_reviewed",
-                )}
-                aria-pressed=${item.reviewed ? "true" : "false"}
+                title=${this.localize("reviews.open_ai_analysis", {
+                  title: item.analysisTitle,
+                })}
+                aria-label=${this.localize("reviews.open_ai_analysis", {
+                  title: item.analysisTitle,
+                })}
                 @click=${(event: MouseEvent) => {
                   event.stopPropagation();
-                  this.toggleReviewed?.(item);
+                  this.openAnalysis?.(item);
                 }}
               >
-                <span class="review-state-indicator">
-                  ${renderIcon("check")}
-                </span>
-              </button>`
-            : null
-        }
-      </div>
+                <ha-icon icon="mdi:creation"></ha-icon>
+                <span>${item.analysisTitle}</span>
+              </button>
+            </div>`
+          : this._renderDetails(
+              item,
+              objectLabels,
+              typeBadge,
+              objectColors,
+              start,
+            )
+      }
       <div class="actions">
         ${
           item.clipUrl
@@ -462,6 +419,92 @@ export class ActivityList extends LitElement {
         }
       </div>
     </article>`;
+  }
+
+  private _renderDetails(
+    item: ActivityListItem,
+    objectLabels: readonly string[],
+    typeBadge: ActivityTypeBadge | undefined,
+    objectColors: readonly BadgeColor[],
+    start: Date,
+  ) {
+    return html`<div class="details">
+      ${
+        objectLabels.length > 0 || typeBadge
+          ? html`<div class="badges">
+              ${objectLabels.map(
+                (label, index) =>
+                  html`<wzc-badge
+                    color=${objectColors[index] ?? "neutral"}
+                    shape="pill"
+                    size="small"
+                    >${capitalizeBadgeText(
+                      label,
+                      this.api?.locale?.language,
+                    )}</wzc-badge
+                  >`,
+              )}
+              ${
+                typeBadge
+                  ? html`<wzc-badge
+                      shape="pill"
+                      size="small"
+                      variant=${typeBadge.variant}
+                      >${capitalizeBadgeText(
+                        typeBadge.label,
+                        this.api?.locale?.language,
+                      )}</wzc-badge
+                    >`
+                  : null
+              }
+            </div>`
+          : null
+      }
+      <div class="metadata">
+        <span class="metadata-icon">${renderIcon("clock")}</span>
+        <span>${formatHomeAssistantTime(start, this.api?.locale)}</span>
+      </div>
+      <div class="metadata">
+        <span class="metadata-icon">${renderIcon("calendar")}</span>
+        <span>${formatHomeAssistantEventDate(start, this.api?.locale)}</span>
+      </div>
+      ${
+        this.displayZone && item.zones.length > 0
+          ? html`<div class="metadata">
+              <span class="metadata-icon">${renderIcon("mapMarker")}</span>
+              <span>${item.zones.join(", ")}</span>
+            </div>`
+          : null
+      }
+      ${
+        item.reviewed !== undefined
+          ? html`<button
+              class=${`review-state ${item.reviewed ? "reviewed" : "unreviewed"}`}
+              type="button"
+              ?disabled=${item.reviewStatePending === true}
+              title=${this.localize(
+                item.reviewed
+                  ? "reviews.mark_unreviewed"
+                  : "reviews.mark_reviewed",
+              )}
+              aria-label=${this.localize(
+                item.reviewed
+                  ? "reviews.mark_unreviewed"
+                  : "reviews.mark_reviewed",
+              )}
+              aria-pressed=${item.reviewed ? "true" : "false"}
+              @click=${(event: MouseEvent) => {
+                event.stopPropagation();
+                this.toggleReviewed?.(item);
+              }}
+            >
+              <span class="review-state-indicator">
+                ${renderIcon("check")}
+              </span>
+            </button>`
+          : null
+      }
+    </div>`;
   }
 
   private readonly _handleScroll = (): void => {

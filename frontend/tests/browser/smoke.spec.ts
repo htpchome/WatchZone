@@ -872,6 +872,11 @@ test("keeps activity content in an independently scrolling viewport", async ({
           const camera = message.entity_id === "camera.back" ? "back" : "front";
           return {
             items: events(camera).map((event, index) => ({
+              analysis_description:
+                index === 0
+                  ? "The resident enters the garage and approaches the red car."
+                  : null,
+              analysis_title: index === 0 ? "Resident entering garage" : null,
               camera,
               classification: index === 0 ? "alert" : "detection",
               clip_url: event.clip_url,
@@ -935,6 +940,29 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(normalNavigation.activeIconOpacity).toBe("1");
   expect(normalNavigation.activePathFill).toBe("rgb(255, 255, 255)");
   await expect(page.locator("wzc-reviews .tile")).toHaveCount(6);
+  const analysisTitle = page.locator("wzc-reviews .analysis-title");
+  await expect(analysisTitle).toHaveCount(1);
+  await expect(analysisTitle).toContainText("Resident entering garage");
+  await expect(analysisTitle.locator("ha-icon")).toHaveAttribute(
+    "icon",
+    "mdi:creation",
+  );
+  await expect(page.locator("wzc-events .analysis-title")).toHaveCount(0);
+  await analysisTitle.click();
+  const analysisDialog = page.locator(
+    "wzc-reviews wzc-review-analysis-dialog dialog",
+  );
+  await expect(analysisDialog).toBeVisible();
+  await expect(analysisDialog).toContainText("AI Analysis");
+  await expect(analysisDialog).toContainText(
+    "The resident enters the garage and approaches the red car.",
+  );
+  await page
+    .locator(
+      'wzc-reviews wzc-review-analysis-dialog button[aria-label="Close AI analysis"]',
+    )
+    .click();
+  await expect(analysisDialog).not.toBeVisible();
   const reviewHeaders = page.locator(
     "wzc-reviews wzc-activity-list wzc-media-day-header",
   );

@@ -316,6 +316,69 @@ export const activityListStyles = css`
     pointer-events: none;
   }
 
+  .review-content {
+    align-items: center;
+    display: grid;
+    gap: clamp(0.75rem, 2vw, 2rem);
+    grid-template-columns: max-content minmax(0, 1fr);
+    min-inline-size: 0;
+  }
+
+  .review-content .details {
+    inline-size: max-content;
+    max-inline-size: 100%;
+  }
+
+  .analysis-title {
+    align-items: center;
+    appearance: none;
+    background: var(--wzc-color-surface);
+    border: 1px solid var(--wzc-color-border-control);
+    border-radius: var(--wzc-radius-pill);
+    color: var(--wzc-color-text-1);
+    cursor: pointer;
+    display: inline-flex;
+    gap: 0.35rem;
+    justify-self: start;
+    max-inline-size: 100%;
+    min-block-size: 2rem;
+    min-inline-size: 0;
+    padding: 0.25rem 0.65rem;
+    pointer-events: auto;
+    position: relative;
+    z-index: 2;
+  }
+
+  .analysis-title ha-icon {
+    flex: 0 0 auto;
+    --mdc-icon-size: 1rem;
+  }
+
+  .analysis-title::before {
+    content: "";
+    inset: 50% 0 auto;
+    min-block-size: 2.75rem;
+    position: absolute;
+    transform: translateY(-50%);
+  }
+
+  .analysis-title span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .analysis-title:focus-visible {
+    outline: 2px solid var(--wzc-color-primary);
+    outline-offset: 2px;
+  }
+
+  @media (hover: hover) {
+    .analysis-title:hover {
+      background: var(--wzc-color-surface-secondary);
+    }
+  }
+
   .badges {
     align-items: center;
     display: flex;
@@ -414,6 +477,15 @@ export const activityListStyles = css`
 
     .actions {
       display: none;
+    }
+
+    .review-content {
+      gap: 0.4rem;
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .analysis-title {
+      max-inline-size: 100%;
     }
   }
 `;

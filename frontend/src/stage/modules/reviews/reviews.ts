@@ -29,6 +29,8 @@ import "../../../ui/activity-list";
 import { ToastManager } from "../../../ui/toast-manager";
 import "../../../ui/toast-region";
 import { reviewsStyles } from "./reviews.styles";
+import type { ReviewAnalysis } from "./review-analysis-dialog";
+import "./review-analysis-dialog";
 
 const MEDIA_RESOLVE_DELAYS_MS = [0, 750, 1_500] as const;
 
@@ -65,6 +67,7 @@ export class ReviewsModule extends LitElement {
   public targetModuleId = "";
 
   private readonly _toasts = new ToastManager(this);
+  private _analysis?: ReviewAnalysis;
   private _publishedActivity?: readonly ReviewItem[];
   private _publishedEntityId?: string;
   private _publishedFilter?: ActivityFilterContext;
@@ -146,6 +149,7 @@ export class ReviewsModule extends LitElement {
         .loading=${this._activity.loading}
         .loadingKey=${"reviews.loading"}
         .localize=${this.localize}
+        .openAnalysis=${this._openAnalysis}
         .retryMedia=${(item: ActivityListItem, url: string) =>
           this._activity.retryMedia(item, url)}
         .resolvePlayback=${this._resolvePlayback}
@@ -154,12 +158,23 @@ export class ReviewsModule extends LitElement {
         .shadows=${this.shadows}
         .toggleReviewed=${this._toggleReviewed}
       ></wzc-activity-list>
+      <wzc-review-analysis-dialog
+        .analysis=${this._analysis}
+        .localize=${this.localize}
+        @wzc-review-analysis-close=${this._closeAnalysis}
+      ></wzc-review-analysis-dialog>
       <wzc-toast-region .notices=${this._toasts.notices}></wzc-toast-region>
     `;
   }
 
   private _listItem(review: ReviewItem): ActivityListItem {
     return {
+      ...(review.analysis_title && review.analysis_description
+        ? {
+            analysisDescription: review.analysis_description,
+            analysisTitle: review.analysis_title,
+          }
+        : {}),
       cameraLabel: this._activity.activeCameraLabel ?? review.camera,
       classification: review.classification,
       clipUrl: review.clip_url,
@@ -190,6 +205,20 @@ export class ReviewsModule extends LitElement {
       zones: review.zones,
     };
   }
+
+  private readonly _openAnalysis = (item: ActivityListItem): void => {
+    if (!item.analysisTitle || !item.analysisDescription) return;
+    this._analysis = {
+      description: item.analysisDescription,
+      title: item.analysisTitle,
+    };
+    this.requestUpdate();
+  };
+
+  private readonly _closeAnalysis = (): void => {
+    this._analysis = undefined;
+    this.requestUpdate();
+  };
 
   private readonly _toggleReviewed = (item: ActivityListItem): void => {
     const api = this.api;

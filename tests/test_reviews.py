@@ -38,6 +38,10 @@ def test_review_normalization_preserves_classification_and_media() -> None:
             "thumb_path": "/media/frigate/clips/review/thumb-front.webp",
             "data": {
                 "detections": ["event-bird", "event-goldfinch"],
+                "metadata": {
+                    "title": "Resident entering garage",
+                    "scene": "A resident walks toward the parked car.",
+                },
                 "objects": ["person", "car", "person"],
                 "sub_labels": ["Resident"],
                 "zones": ["driveway", "driveway"],
@@ -71,6 +75,10 @@ def test_review_normalization_preserves_classification_and_media() -> None:
     assert item is not None
     assert item.classification == "alert"
     assert item.reviewed is True
+    assert item.analysis_title == "Resident entering garage"
+    assert item.analysis_description == (
+        "A resident walks toward the parked car."
+    )
     assert item.labels == ("person", "car", "speech", "bird")
     assert item.sub_labels == (
         "Resident",
@@ -107,6 +115,25 @@ def test_review_normalization_preserves_classification_and_media() -> None:
         item.playback_sources[0].url
     )
     assert item.playback_sources[-1].url == item.clip_url
+
+
+def test_review_normalization_omits_incomplete_analysis() -> None:
+    """Malformed or partial provider metadata does not create analysis UI."""
+    item = _normalize_review(
+        {
+            "camera": "front",
+            "data": {"metadata": {"title": "  ", "scene": 42}},
+            "id": "review-without-analysis",
+            "severity": "detection",
+            "start_time": 100,
+        },
+        _source(),
+        110,
+    )
+
+    assert item is not None
+    assert item.analysis_title is None
+    assert item.analysis_description is None
 
 
 def test_capture_window_uses_camera_override_then_global_defaults() -> None:

@@ -64,7 +64,14 @@ describe("Frigate activity updates", () => {
         type: "update",
         after: {
           camera: "driveway",
-          data: { detections: ["event-1"], objects: ["person"] },
+          data: {
+            detections: ["event-1"],
+            metadata: {
+              scene: "A resident walks toward the car.",
+              title: "Resident approaching car",
+            },
+            objects: ["person"],
+          },
           id: "review-1",
           severity: "alert",
           start_time: 100,
@@ -112,6 +119,10 @@ describe("Frigate activity updates", () => {
         classification: "alert",
         id: "review-1",
         phase: "update",
+        review: expect.objectContaining({
+          analysis_description: "A resident walks toward the car.",
+          analysis_title: "Resident approaching car",
+        }),
         topic: "reviews",
       }),
     );

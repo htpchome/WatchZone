@@ -250,6 +250,9 @@ def _normalize_review(
     reviewed = raw.get("has_been_reviewed") is True
     raw_data = raw.get("data")
     data: dict[str, Any] = raw_data if isinstance(raw_data, dict) else {}
+    metadata = _mapping(data.get("metadata"))
+    analysis_title = _text(metadata.get("title"))
+    analysis_description = _text(metadata.get("scene"))
     event_ids = _review_event_ids(raw)
     events = related_events or {}
     event_payloads = [events[event_id] for event_id in event_ids if event_id in events]
@@ -276,6 +279,8 @@ def _normalize_review(
     media_start = max(0, start_time - pre_capture)
     media_end = (end_time + post_capture) if end_time is not None else now
     material = {
+        "analysis_description": analysis_description,
+        "analysis_title": analysis_title,
         "classification": classification,
         "end_time": end_time,
         "labels": labels,
@@ -315,6 +320,8 @@ def _normalize_review(
             f"{source.frigate_instance_id}:{event_id}" for event_id in event_ids
         ),
         reviewed=reviewed,
+        analysis_title=analysis_title,
+        analysis_description=analysis_description,
         preview_url=(
             f"/api/frigate/{encoded_instance}/notifications/{encoded_review}/"
             "review_preview.gif"

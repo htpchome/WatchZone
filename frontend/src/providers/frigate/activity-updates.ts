@@ -32,6 +32,10 @@ interface FrigateReviewData {
   readonly audio?: readonly unknown[];
   readonly detections?: readonly unknown[];
   readonly objects?: readonly unknown[];
+  readonly metadata?: {
+    readonly scene?: unknown;
+    readonly title?: unknown;
+  };
   readonly sub_labels?: readonly unknown[];
   readonly zones?: readonly unknown[];
 }
@@ -131,6 +135,8 @@ function normalizeReview(
   const subLabels = strings(activity.data?.sub_labels ?? []);
   const zones = strings(activity.data?.zones ?? []);
   const eventIds = strings(activity.data?.detections ?? []);
+  const analysisTitle = text(activity.data?.metadata?.title);
+  const analysisDescription = text(activity.data?.metadata?.scene);
   const endTime =
     typeof activity.end_time === "number" ? activity.end_time : null;
   const mediaEndTime = endTime ?? Date.now() / 1000;
@@ -143,11 +149,15 @@ function normalizeReview(
     subLabels.join(","),
     zones.join(","),
     eventIds.join(","),
+    analysisTitle ?? "",
+    analysisDescription ?? "",
   ].join(":");
   const instance = encodeURIComponent(source.instance_id);
   const reviewId = encodeURIComponent(activity.id);
   const camera = encodeURIComponent(activity.camera);
   return {
+    analysis_description: analysisDescription,
+    analysis_title: analysisTitle,
     camera: activity.camera,
     classification,
     clip_url: null,
@@ -172,6 +182,10 @@ function normalizeReview(
       `review_thumbnail.webp?v=${encodeURIComponent(revision)}`,
     zones,
   };
+}
+
+function text(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 function strings(values: readonly unknown[]): string[] {
