@@ -7,6 +7,7 @@ import {
   EVENTS_MODULE_TYPE,
   LIGHT_COMPONENT_TYPE,
   PTZ_COMPONENT_TYPE,
+  RECORDINGS_MODULE_TYPE,
   PANEL_MODULE_TYPE,
   TALK_COMPONENT_TYPE,
 } from "../../core/constants";
@@ -150,7 +151,8 @@ function hydrateModule(
   }
   if (
     node.moduleType === EVENTS_MODULE_TYPE ||
-    node.moduleType === ALERTS_MODULE_TYPE
+    node.moduleType === ALERTS_MODULE_TYPE ||
+    node.moduleType === RECORDINGS_MODULE_TYPE
   ) {
     if (config.cameras.length === 0) return undefined;
     const moduleConfig =
@@ -161,17 +163,21 @@ function hydrateModule(
       ...node,
       config: {
         ...moduleConfig,
-        displayEventTypeBadges: config.display_event_type_badges,
-        displayObjectBadges: config.display_object_badges,
-        displayZone: config.display_zone,
         historyDays: config.event_history_days,
+        ...(node.moduleType !== RECORDINGS_MODULE_TYPE
+          ? {
+              displayEventTypeBadges: config.display_event_type_badges,
+              displayObjectBadges: config.display_object_badges,
+              displayZone: config.display_zone,
+              roundedCorners: config.event_rounded_corners,
+              shadows: config.event_shadows,
+            }
+          : {}),
         ...(node.moduleType === ALERTS_MODULE_TYPE
           ? {
               hoverPreviewEnabled: config.view_timelapse_on_thumbnail_hover,
             }
           : {}),
-        roundedCorners: config.event_rounded_corners,
-        shadows: config.event_shadows,
       },
     };
   }
@@ -214,7 +220,8 @@ function hydrateModule(
 function namespaceModuleConfig(node: StageModuleNode): unknown {
   if (
     node.moduleType !== EVENTS_MODULE_TYPE &&
-    node.moduleType !== ALERTS_MODULE_TYPE
+    node.moduleType !== ALERTS_MODULE_TYPE &&
+    node.moduleType !== RECORDINGS_MODULE_TYPE
   )
     return node.config;
   if (typeof node.config !== "object" || node.config === null)

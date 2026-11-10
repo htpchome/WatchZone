@@ -90,6 +90,7 @@ export const moduleDefinition: ModuleDefinition<AlertsModuleConfig> = {
     alerts.historyDays = config.historyDays;
     alerts.hoverPreviewEnabled = config.hoverPreviewEnabled;
     alerts.localize = context.localize ?? englishLocalize;
+    alerts.mediaDate = context.mediaDate;
     alerts.roundedCorners = config.roundedCorners;
     alerts.shadows = config.shadows;
     alerts.targetModuleId = config.targetModuleId;

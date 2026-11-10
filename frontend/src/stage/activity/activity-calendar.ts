@@ -13,8 +13,8 @@ import {
 } from "../../core/localization";
 import { renderIcon } from "../../ui/icons";
 import { ActiveCameraActivityController } from "./active-camera-activity.controller";
-import type { ActivityFilterContext } from "./activity-filter-context";
 import type { CameraSelectionContext } from "../camera-selection-context";
+import type { MediaDateContext } from "../media-date-context";
 import { activityCalendarStyles } from "./activity-calendar.styles";
 import { ActivityPopoverController } from "./activity-popover.controller";
 
@@ -23,14 +23,17 @@ interface CalendarMonth {
   readonly year: number;
 }
 
+export type ActivityCalendarMode = "activity" | "recordings";
+
 /** Localized activity-date popover shared by the activity module stack. */
 export class ActivityCalendar extends LitElement {
   public static properties = {
     api: { attribute: false },
     cameraSelection: { attribute: false },
-    filterContext: { attribute: false },
+    dateContext: { attribute: false },
     historyDays: { attribute: false },
     localize: { attribute: false },
+    mode: { attribute: false },
     targetModuleId: { attribute: false },
     _open: { state: true },
     _selectedDate: { state: true },
@@ -39,17 +42,25 @@ export class ActivityCalendar extends LitElement {
 
   public api?: HomeAssistantApi;
   public cameraSelection?: CameraSelectionContext;
-  public filterContext?: ActivityFilterContext;
+  public dateContext?: MediaDateContext;
   public historyDays = 5;
   public localize: LocalizeFunction = englishLocalize;
+  public mode: ActivityCalendarMode = "activity";
   public targetModuleId = "";
 
   private _open = false;
   private _selectedDate?: string;
   private _visibleMonth = monthFromKey(this._todayKey());
+  private _activeEntityId?: string;
+  private _subscribedCameraSelection?: CameraSelectionContext;
+  private _subscribedTargetModuleId = "";
   private _subscribedEntityId?: string;
-  private _subscribedFilter?: ActivityFilterContext;
-  private _unsubscribeFilter?: () => void;
+  private _subscribedDateContext?: MediaDateContext;
+  private _subscribedAvailabilityEntityId?: string;
+  private _unsubscribeDate?: () => void;
+  private _unsubscribeAvailability?: () => void;
+  private _unsubscribeCameraSelection?: () => void;
+  private _recordingDays: readonly string[] = [];
   private readonly _popover = new ActivityPopoverController(
     this,
     () => this._open,
@@ -59,7 +70,7 @@ export class ActivityCalendar extends LitElement {
   private readonly _activity = new ActiveCameraActivityController<ReviewItem>(
     this,
     () => ({
-      api: this._open ? this.api : undefined,
+      api: this._open && this.mode === "activity" ? this.api : undefined,
       cameraSelection: this._open ? this.cameraSelection : undefined,
       historyDays: this.historyDays,
       targetModuleId: this._open ? this.targetModuleId : "",
@@ -82,30 +93,45 @@ export class ActivityCalendar extends LitElement {
       this._handleDocumentPointerDown,
     );
     document.removeEventListener("keydown", this._handleDocumentKeyDown);
-    this._unsubscribeFilter?.();
-    this._unsubscribeFilter = undefined;
-    this._subscribedFilter = undefined;
+    this._unsubscribeDate?.();
+    this._unsubscribeAvailability?.();
+    this._unsubscribeCameraSelection?.();
+    this._subscribedDateContext = undefined;
+    this._subscribedCameraSelection = undefined;
+    this._subscribedTargetModuleId = "";
     super.disconnectedCallback();
   }
 
   protected willUpdate(): void {
-    const entityId = this._activity.activeEntityId;
+    this._syncCameraSelection();
+    const entityId = this._activeEntityId;
     if (
-      this.filterContext === this._subscribedFilter &&
-      entityId === this._subscribedEntityId
+      this.dateContext === this._subscribedDateContext &&
+      entityId === this._subscribedEntityId &&
+      entityId === this._subscribedAvailabilityEntityId
     ) {
       return;
     }
-    this._unsubscribeFilter?.();
-    this._subscribedFilter = this.filterContext;
+    this._unsubscribeDate?.();
+    this._unsubscribeAvailability?.();
+    this._subscribedDateContext = this.dateContext;
     this._subscribedEntityId = entityId;
+    this._subscribedAvailabilityEntityId = entityId;
     this._selectedDate = undefined;
-    if (this.filterContext && entityId) {
-      this._unsubscribeFilter = this.filterContext.subscribe(
+    this._recordingDays = [];
+    if (this.dateContext && entityId) {
+      this._unsubscribeDate = this.dateContext.subscribe(
         entityId,
-        ({ selectedDate }) => {
+        (selectedDate) => {
           if (selectedDate === this._selectedDate) return;
           this._selectedDate = selectedDate;
+        },
+      );
+      this._unsubscribeAvailability = this.dateContext.subscribeAvailableDates(
+        entityId,
+        (availableDates) => {
+          this._recordingDays = availableDates;
+          this.requestUpdate();
         },
       );
     }
@@ -113,9 +139,11 @@ export class ActivityCalendar extends LitElement {
 
   protected render() {
     const markedDates = new Set(
-      this._activity.items.map(({ start_time }) =>
-        homeAssistantDateKey(start_time, this.api?.locale),
-      ),
+      this.mode === "recordings"
+        ? this._recordingDays
+        : this._activity.items.map(({ start_time }) =>
+            homeAssistantDateKey(start_time, this.api?.locale),
+          ),
     );
     return html`
       <button
@@ -123,8 +151,16 @@ export class ActivityCalendar extends LitElement {
         type="button"
         aria-expanded=${this._open ? "true" : "false"}
         aria-haspopup="dialog"
-        aria-label=${this.localize("calendar.open")}
-        title=${this.localize("calendar.open")}
+        aria-label=${this.localize(
+          this.mode === "recordings"
+            ? "recordings.calendar_open"
+            : "calendar.open",
+        )}
+        title=${this.localize(
+          this.mode === "recordings"
+            ? "recordings.calendar_open"
+            : "calendar.open",
+        )}
         @click=${this._toggle}
       >
         ${renderIcon("calendar")}
@@ -144,7 +180,11 @@ export class ActivityCalendar extends LitElement {
       class="popover"
       popover="manual"
       role="dialog"
-      aria-label=${this.localize("calendar.title")}
+      aria-label=${this.localize(
+        this.mode === "recordings"
+          ? "recordings.calendar_title"
+          : "calendar.title",
+      )}
     >
       <header class="header">
         <button
@@ -215,14 +255,14 @@ export class ActivityCalendar extends LitElement {
   };
 
   private _select(key: string): void {
-    const entityId = this._activity.activeEntityId;
-    if (entityId) this.filterContext?.selectDate(entityId, key);
+    const entityId = this._activeEntityId;
+    if (entityId) this.dateContext?.select(entityId, key);
     this._open = false;
   }
 
   private readonly _reset = (): void => {
-    const entityId = this._activity.activeEntityId;
-    if (entityId) this.filterContext?.resetDate(entityId);
+    const entityId = this._activeEntityId;
+    if (entityId) this.dateContext?.reset(entityId);
     this._open = false;
   };
 
@@ -280,7 +320,12 @@ export class ActivityCalendar extends LitElement {
       year: "numeric",
     }).format(new Date(Date.UTC(year, month - 1, day)));
     return marked
-      ? this.localize("calendar.day_with_activity", { date: label })
+      ? this.localize(
+          this.mode === "recordings"
+            ? "recordings.day_with_recordings"
+            : "calendar.day_with_activity",
+          { date: label },
+        )
       : label;
   }
 
@@ -293,6 +338,31 @@ export class ActivityCalendar extends LitElement {
 
   private _todayKey(): string {
     return homeAssistantDateKey(Date.now() / 1000, this.api?.locale);
+  }
+
+  private _syncCameraSelection(): void {
+    if (
+      this.cameraSelection === this._subscribedCameraSelection &&
+      this.targetModuleId === this._subscribedTargetModuleId
+    ) {
+      return;
+    }
+    this._unsubscribeCameraSelection?.();
+    this._subscribedCameraSelection = this.cameraSelection;
+    this._subscribedTargetModuleId = this.targetModuleId;
+    this._activeEntityId = undefined;
+    if (this.cameraSelection && this.targetModuleId) {
+      this._unsubscribeCameraSelection = this.cameraSelection.subscribe(
+        this.targetModuleId,
+        ({ activeEntityId, settled }) => {
+          if (settled === false || activeEntityId === this._activeEntityId) {
+            return;
+          }
+          this._activeEntityId = activeEntityId;
+          this.requestUpdate();
+        },
+      );
+    }
   }
 
   private readonly _handleDocumentPointerDown = (event: PointerEvent): void => {

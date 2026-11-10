@@ -4,6 +4,7 @@ import {
   ALERTS_MODULE_TYPE,
   EVENTS_MODULE_TYPE,
   LIGHT_COMPONENT_TYPE,
+  RECORDINGS_MODULE_TYPE,
   PTZ_COMPONENT_TYPE,
   PANEL_MODULE_TYPE,
   TALK_COMPONENT_TYPE,
@@ -42,6 +43,14 @@ const moduleLoaders = {
         ({ moduleDefinition }) => moduleDefinition,
       ),
     navigation: { icon: "events", labelKey: "navigation.events" },
+    placeholder: "activity",
+  },
+  [RECORDINGS_MODULE_TYPE]: {
+    load: () =>
+      import("./modules/recordings").then(
+        ({ moduleDefinition }) => moduleDefinition,
+      ),
+    navigation: { icon: "movie", labelKey: "navigation.recordings" },
     placeholder: "activity",
   },
 } satisfies PlaceableLoaderMap;

@@ -9,11 +9,11 @@ the integration runtime or adding concrete-provider branches to core features.
 The first public extension point is a provider capability registry. It supports
 both WatchZone's built-in providers and independently installed Home Assistant
 custom integrations. A companion integration can implement one or more narrow
-capabilities, such as camera runtime control, accelerated live signaling, or
-two-way-talk signaling, without being copied beneath WatchZone's source
-package. Live and talk signaling are registered separately even when one
-provider implementation can fulfill both; a feature resolves only the
-capability it owns.
+capabilities, such as camera runtime control, accelerated live signaling,
+recordings, or two-way-talk signaling, without being copied beneath
+WatchZone's source package. Live and talk signaling are registered separately
+even when one provider implementation can fulfill both; a feature resolves
+only the capability it owns.
 
 An extension is a companion custom integration, not a Home Assistant Supervisor
 add-on. WatchZone does not download, install, or execute unregistered Python

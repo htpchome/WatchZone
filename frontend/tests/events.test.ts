@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CameraSelectionContext } from "../src/stage/camera-selection-context";
 import { ActivityFilterContext } from "../src/stage/activity";
+import { MediaDateContext } from "../src/stage/media-date-context";
 import { ACTIVITY_LIST_TAG, EVENTS_TAG } from "../src/core/constants";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import type { EventsModule } from "../src/stage/modules/events/events";
@@ -212,9 +213,11 @@ describe("events module", () => {
     } as unknown as HomeAssistantApi;
     const selection = new CameraSelectionContext();
     const filterContext = new ActivityFilterContext();
+    const dateContext = new MediaDateContext();
     const module = document.createElement(EVENTS_TAG) as EventsModule;
     module.api = api;
     module.activityFilter = filterContext;
+    module.mediaDate = dateContext;
     module.cameraSelection = selection;
     module.historyDays = 7;
     module.targetModuleId = "camera-module";
@@ -300,10 +303,10 @@ describe("events module", () => {
         ?.classList.contains("square"),
     ).toBe(false);
 
-    filterContext.selectDate("camera.front", "1970-01-02");
+    dateContext.select("camera.front", "1970-01-02");
     await module.updateComplete;
     expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(0);
-    filterContext.resetDate("camera.front");
+    dateContext.reset("camera.front");
     await module.updateComplete;
     expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(1);
     filterContext.publishReviews("camera.front", [

@@ -896,7 +896,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
 
   const stackNavigation = page.locator(".stage-stack-navigation");
   const stackButtons = stackNavigation.locator(".stage-stack-button");
-  await expect(stackButtons).toHaveCount(2);
+  await expect(stackButtons).toHaveCount(3);
   const normalNavigation = await stackNavigation.evaluate((navigation) => {
     const buttons = [...navigation.querySelectorAll("button")];
     const active = getComputedStyle(buttons[0]!);
@@ -1561,12 +1561,15 @@ test("keeps activity content in an independently scrolling viewport", async ({
   );
 });
 
-test("filters alerts and events through the shared activity calendar", async ({
+test("switches activity and recordings through the shared media calendar", async ({
   page,
 }) => {
   await page.addInitScript(() => {
     Date.now = () => Date.UTC(2026, 10, 9, 12);
   });
+  await page.route("**/recording.mp4", (route) =>
+    route.fulfill({ body: "", contentType: "video/mp4" }),
+  );
   await page.goto("/");
   await waitForWatchZoneDefinition(page);
   await page.locator("watchzone-card").evaluate((element) => {
@@ -1616,7 +1619,7 @@ test("filters alerts and events through the shared activity calendar", async ({
       connection: { subscribeMessage: async () => () => undefined },
       hassUrl: (path: string) => path,
       callService: async () => undefined,
-      callWS: async (message: { type: string }) => {
+      callWS: async (message: { selected_date?: string; type: string }) => {
         if (message.type === "watchzone/live/camera/ready") {
           return { ready: false };
         }
@@ -1663,6 +1666,35 @@ test("filters alerts and events through the shared activity calendar", async ({
               thumbnail_url: null,
               zones: item.zones,
             })),
+          };
+        }
+        if (message.type === "watchzone/recordings/list") {
+          const selectedDate = message.selected_date ?? "2026-11-09";
+          const start =
+            selectedDate === "2026-11-08"
+              ? Date.UTC(2026, 10, 8, 10) / 1000
+              : Date.UTC(2026, 10, 9, 10) / 1000;
+          return {
+            days: ["2026-11-09", "2026-11-08"],
+            hours: [
+              {
+                camera: "front",
+                download_url: "/recording.mp4",
+                duration: 1620,
+                end_time: start + 1620,
+                id: `front:${selectedDate}:10`,
+                playback_sources: [
+                  {
+                    content_type: "video/mp4",
+                    transport: "file",
+                    url: "/recording.mp4",
+                  },
+                ],
+                preferred_transport: "file",
+                revision: selectedDate,
+                start_time: start,
+              },
+            ],
           };
         }
         return undefined;
@@ -1757,6 +1789,22 @@ test("filters alerts and events through the shared activity calendar", async ({
   await expect(page.locator("wzc-events .tile")).toHaveCount(1);
   await filter.locator(".reset").click();
   await expect(page.locator("wzc-events .tile")).toHaveCount(2);
+
+  await navigation.locator(".stage-stack-button").nth(2).click();
+  const recordings = page.locator("wzc-recordings");
+  await expect(recordings.locator(".tile")).toHaveCount(1);
+  await expect(recordings.locator(".range")).toHaveText("10:00 AM – 10:27 AM");
+  await expect(filter).toHaveCount(0);
+  await expect(recordings.locator(".download")).toHaveAttribute(
+    "href",
+    /recording\.mp4$/,
+  );
+  await trigger.click();
+  await expect(calendar.locator(".day.marked")).toHaveCount(2);
+  await calendar.locator('.day[aria-label^="November 8, 2026"]').click();
+  await expect(recordings.locator(".range")).toHaveText("10:00 AM – 10:27 AM");
+  await recordings.locator(".tile-player").click();
+  await expect(page.locator("wzc-recorded-video-dialog dialog")).toBeVisible();
 });
 
 test("lets the camera navigation shadow paint into the card padding", async ({

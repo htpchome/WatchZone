@@ -18,6 +18,7 @@ from .providers.live import (
     SendLiveSignalingEvent,
 )
 from .providers.ptz import PtzProvider
+from .providers.recordings import RecordingsProvider
 from .providers.reviews import ReviewsProvider
 
 __all__ = [
@@ -31,6 +32,7 @@ __all__ = [
     "ProviderExtension",
     "ProviderPreparationError",
     "PtzProvider",
+    "RecordingsProvider",
     "ReviewsProvider",
     "SendLiveSignalingEvent",
     "register_provider_extension",
@@ -54,6 +56,7 @@ class ProviderExtension:
     talk_signaling: LiveSignalingProvider | None = None
     ptz: PtzProvider | None = None
     events: EventsProvider | None = None
+    recordings: RecordingsProvider | None = None
     reviews: ReviewsProvider | None = None
 
 
@@ -141,6 +144,11 @@ class ProviderRegistry:
         """Resolve one platform's optional event capability."""
         extension = self._platforms.get(platform)
         return extension.events if extension else None
+
+    def recordings(self, platform: str) -> RecordingsProvider | None:
+        """Resolve one platform's optional recordings capability."""
+        extension = self._platforms.get(platform)
+        return extension.recordings if extension else None
 
     def reviews(self, platform: str) -> ReviewsProvider | None:
         """Resolve one platform's optional review capability."""

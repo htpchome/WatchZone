@@ -274,6 +274,32 @@ export const themeTokens = css`
     --wzc-event-action-background: var(--wzc-color-surface);
     --wzc-event-action-color: var(--wzc-color-text-2);
     --wzc-event-action-size: 2.25rem;
+
+    --wzc-recording-color: var(--wzc-color-text-1);
+    --wzc-recording-secondary-color: var(--wzc-color-text-2);
+    --wzc-recording-list-gap: 0.5rem;
+    --wzc-recording-list-padding: 0.25rem;
+    --wzc-recording-tile-block-size: 4rem;
+    --wzc-recording-tile-background: var(--wzc-color-surface-secondary);
+    --wzc-recording-tile-border-color: var(--wzc-color-border);
+    --wzc-recording-tile-border-width: var(--ha-card-border-width, 0);
+    --wzc-recording-tile-radius: var(--wzc-radius-card);
+    --wzc-recording-tile-shadow: var(--wzc-shadow-small);
+    --wzc-recording-icon-column-size: 4rem;
+    --wzc-recording-icon-background: color-mix(
+      in srgb,
+      var(--wzc-color-primary) 25%,
+      var(--wzc-color-surface-secondary)
+    );
+    --wzc-recording-icon-color: var(--wzc-color-primary);
+    --wzc-recording-icon-size: 1.15rem;
+    --wzc-recording-content-padding: 0.5rem;
+    --wzc-recording-action-size: 2.25rem;
+    --wzc-recording-action-margin: 0.65rem;
+    --wzc-recording-action-background: var(--wzc-color-surface);
+    --wzc-recording-action-border-color: var(--wzc-color-border-control);
+    --wzc-recording-action-color: var(--wzc-color-text-2);
+    --wzc-recording-action-hover-color: var(--wzc-color-primary);
     --wzc-alert-thumbnail-outline-width: 2px;
     --wzc-recorded-media-background: var(--wzc-camera-stage);
     --wzc-recorded-media-max-block-size: calc(90dvh - 3rem);

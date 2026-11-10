@@ -9,9 +9,13 @@ import { repeat } from "lit/directives/repeat.js";
 
 import { CameraSessionContext } from "./camera-session-context";
 import { CameraSelectionContext } from "./camera-selection-context";
-import { ActivityFilterContext } from "./activity";
-import { ALERTS_MODULE_TYPE, EVENTS_MODULE_TYPE } from "../core/constants";
-import "./activity";
+import { ActivityFilterContext } from "./activity/activity-filter-context";
+import {
+  ALERTS_MODULE_TYPE,
+  EVENTS_MODULE_TYPE,
+  RECORDINGS_MODULE_TYPE,
+} from "../core/constants";
+import { MediaDateContext } from "./media-date-context";
 import type {
   HomeAssistant,
   HomeAssistantApi,
@@ -37,6 +41,12 @@ import type {
   PlaceablePreparation,
   PlaceableRuntimeContext,
 } from "./placeable";
+
+let activityControlsDefinition: Promise<unknown> | undefined;
+
+function defineActivityControls(): Promise<unknown> {
+  return (activityControlsDefinition ??= import("./activity"));
+}
 import {
   componentLoader,
   moduleLoader,
@@ -65,10 +75,12 @@ export class LayoutRuntime implements ReactiveController {
   private _connected = false;
   private readonly _cameraSelection = new CameraSelectionContext();
   private readonly _cameraSession = new CameraSessionContext();
+  private readonly _mediaDate = new MediaDateContext();
   private _context: Omit<PlaceableRuntimeContext, "placeableId"> = {
     activityFilter: this._activityFilter,
     cameraSelection: this._cameraSelection,
     cameraSession: this._cameraSession,
+    mediaDate: this._mediaDate,
   };
   private readonly _activeStageIds: Partial<Record<StageVariantName, string>> =
     {};
@@ -172,6 +184,7 @@ export class LayoutRuntime implements ReactiveController {
       api,
       cameraSelection: this._cameraSelection,
       cameraSession: this._cameraSession,
+      mediaDate: this._mediaDate,
       hass,
       localize,
     };
@@ -302,7 +315,7 @@ export class LayoutRuntime implements ReactiveController {
             </button>`;
           },
         )}
-        ${this._renderActivityFilters(node)}
+        ${this._renderActivityFilters(node, active)}
       </nav>
       <div class="stage-stack-content">
         ${active ? this._renderStackModule(active) : nothing}
@@ -312,6 +325,7 @@ export class LayoutRuntime implements ReactiveController {
 
   private _renderActivityFilters(
     node: StageStackNode,
+    active: StageModuleNode | undefined,
   ): TemplateResult | typeof nothing {
     const alerts = node.children.find(
       ({ moduleType }) => moduleType === ALERTS_MODULE_TYPE,
@@ -319,24 +333,38 @@ export class LayoutRuntime implements ReactiveController {
     const hasEvents = node.children.some(
       ({ moduleType }) => moduleType === EVENTS_MODULE_TYPE,
     );
-    if (!alerts || !hasEvents || !isActivityConfig(alerts.config)) {
+    if (!alerts || !hasEvents || !isActivityConfig(alerts.config) || !active) {
       return nothing;
     }
-    return html`<wzc-activity-filter
-        .api=${this._context.api}
-        .cameraSelection=${this._cameraSelection}
-        .filterContext=${this._activityFilter}
-        .historyDays=${alerts.config.historyDays}
-        .localize=${this._context.localize ?? englishLocalize}
-        .targetModuleId=${alerts.config.targetModuleId}
-      ></wzc-activity-filter>
+    const activity =
+      active.moduleType === ALERTS_MODULE_TYPE ||
+      active.moduleType === EVENTS_MODULE_TYPE;
+    const recordings = active.moduleType === RECORDINGS_MODULE_TYPE;
+    if (!activity && !recordings) return nothing;
+    const activeConfig = isActivityConfig(active.config)
+      ? active.config
+      : alerts.config;
+    void defineActivityControls();
+    return html`${
+        activity
+          ? html`<wzc-activity-filter
+              .api=${this._context.api}
+              .cameraSelection=${this._cameraSelection}
+              .filterContext=${this._activityFilter}
+              .historyDays=${alerts.config.historyDays}
+              .localize=${this._context.localize ?? englishLocalize}
+              .targetModuleId=${alerts.config.targetModuleId}
+            ></wzc-activity-filter>`
+          : nothing
+      }
       <wzc-activity-calendar
         .api=${this._context.api}
         .cameraSelection=${this._cameraSelection}
-        .filterContext=${this._activityFilter}
-        .historyDays=${alerts.config.historyDays}
+        .dateContext=${this._mediaDate}
+        .historyDays=${activeConfig.historyDays}
         .localize=${this._context.localize ?? englishLocalize}
-        .targetModuleId=${alerts.config.targetModuleId}
+        .mode=${recordings ? "recordings" : "activity"}
+        .targetModuleId=${activeConfig.targetModuleId}
       ></wzc-activity-calendar>`;
   }
 

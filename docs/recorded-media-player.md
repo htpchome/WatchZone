@@ -1,6 +1,8 @@
 # Recorded Video Viewer Contract
 
-This document is normative for alert, event, snapshot, and recording viewing.
+This document is normative for alert, event, snapshot, and hourly recording
+viewing. Recording discovery and grouping are governed by
+`docs/recordings.md`; this viewer owns playback after a range is selected.
 
 ## Ownership
 

@@ -22,7 +22,6 @@ export interface ActivityFilterState {
   readonly labels: readonly string[];
   readonly reviews: readonly ActivityReviewFacet[];
   readonly reviewStatus: ActivityReviewStatusFilter;
-  readonly selectedDate?: string;
   readonly zones: readonly string[];
 }
 
@@ -45,14 +44,6 @@ export class ActivityFilterContext {
 
   public stateFor(entityId: string): ActivityFilterState {
     return this._states.get(entityId) ?? EMPTY_STATE;
-  }
-
-  public selectDate(entityId: string, selectedDate: string): void {
-    this._update(entityId, { selectedDate });
-  }
-
-  public resetDate(entityId: string): void {
-    this._update(entityId, { selectedDate: undefined });
   }
 
   public setClassification(
@@ -175,7 +166,6 @@ function sameState(
     previous.labels === next.labels &&
     previous.reviews === next.reviews &&
     previous.reviewStatus === next.reviewStatus &&
-    previous.selectedDate === next.selectedDate &&
     previous.zones === next.zones
   );
 }

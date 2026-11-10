@@ -68,7 +68,11 @@ export class CameraSelectionContext {
     listener(channel.state);
     return () => {
       channel.listeners.delete(listener);
-      if (!channel.owner && channel.listeners.size === 0) {
+      if (
+        !channel.owner &&
+        channel.listeners.size === 0 &&
+        this._channels.get(targetId) === channel
+      ) {
         this._channels.delete(targetId);
       }
     };

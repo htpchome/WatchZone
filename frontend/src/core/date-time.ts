@@ -28,6 +28,17 @@ export function intlTimeZone(value: string | undefined): string | undefined {
   }
 }
 
+/** Resolve Home Assistant's selected zone, including its local sentinel. */
+export function resolvedHomeAssistantTimeZone(
+  locale: HomeAssistantLocale | undefined,
+): string {
+  return (
+    intlTimeZone(locale?.time_zone) ??
+    Intl.DateTimeFormat().resolvedOptions().timeZone ??
+    "UTC"
+  );
+}
+
 export function homeAssistantHour12(
   locale: HomeAssistantLocale | undefined,
 ): boolean | undefined {

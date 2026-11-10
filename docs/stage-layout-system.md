@@ -90,9 +90,10 @@ root grid
 ├── panel module
     └── content slot
         └── camera-navigation component
-└── activity module stack
+└── media-list module stack
     ├── alerts module (initially active)
-    └── events module
+    ├── events module
+    └── recordings module
 ```
 
 Spacing between root Stage modules uses `--wzc-stage-module-gap`. It is
@@ -123,6 +124,11 @@ previously loaded custom element is retained by stable node ID and reconnected
 if selected again. An unvisited hidden child is not imported until selected.
 Navigation controls are leading-aligned above the active child and expose localized
 labels, pressed state, and keyboard focus.
+
+The media-list stack's trailing calendar is module-aware. Alerts and Events use
+alert/detection availability and their shared activity filters. Recordings uses
+recording availability and hides filters that do not apply to recording ranges.
+Only camera-scoped date selection crosses those independent module boundaries.
 
 ## Runtime rules
 

@@ -15,6 +15,7 @@ import {
   DEFAULT_LIGHT_COMPONENT_NODE_ID,
   DEFAULT_PANEL_MODULE_NODE_ID,
   DEFAULT_PTZ_COMPONENT_NODE_ID,
+  DEFAULT_RECORDINGS_MODULE_NODE_ID,
   DEFAULT_TALK_COMPONENT_NODE_ID,
 } from "../src/core/constants";
 import {
@@ -121,6 +122,11 @@ describe("layout composition", () => {
           kind: "module",
           moduleType: "events",
         },
+        {
+          id: DEFAULT_RECORDINGS_MODULE_NODE_ID,
+          kind: "module",
+          moduleType: "recordings",
+        },
       ],
     });
     expect(activityModules(layout).map(({ config }) => config)).toEqual([
@@ -143,6 +149,10 @@ describe("layout composition", () => {
         shadows: true,
         targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
       },
+      {
+        historyDays: 5,
+        targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
+      },
     ]);
   });
 
@@ -156,7 +166,7 @@ describe("layout composition", () => {
       }),
     );
 
-    for (const module of activityModules(layout)) {
+    for (const module of alertEventModules(layout)) {
       expect(module.config).toMatchObject({
         displayEventTypeBadges: false,
         displayObjectBadges: false,
@@ -201,7 +211,7 @@ describe("layout composition", () => {
         event_shadows: false,
       }),
     );
-    for (const module of activityModules(layout)) {
+    for (const module of alertEventModules(layout)) {
       expect(module.config).toMatchObject({ shadows: false });
     }
   });
@@ -607,6 +617,14 @@ function activityModules(
     throw new Error("Expected the built-in activity stack.");
   }
   return (node as StageStackNode).children;
+}
+
+function alertEventModules(
+  design: StageDesignDocument,
+): readonly StageModuleNode[] {
+  return activityModules(design).filter(
+    ({ moduleType }) => moduleType === "alerts" || moduleType === "events",
+  );
 }
 
 function setRuntimeStage(

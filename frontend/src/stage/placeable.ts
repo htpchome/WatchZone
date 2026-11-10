@@ -4,6 +4,7 @@ import type { ActivityFilterContext } from "./activity";
 import type { HomeAssistant, HomeAssistantApi } from "../core/home-assistant";
 import type { LocalizeFunction } from "../core/localization";
 import type { TranslationKey } from "../core/localization";
+import type { MediaDateContext } from "./media-date-context";
 
 export interface PlaceableRuntimeContext {
   readonly activityFilter: ActivityFilterContext;
@@ -12,6 +13,7 @@ export interface PlaceableRuntimeContext {
   readonly cameraSession: CameraSessionContext;
   readonly hass?: HomeAssistant;
   readonly localize?: LocalizeFunction;
+  readonly mediaDate: MediaDateContext;
   readonly placeableId: string;
 }
 

@@ -2,11 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ACTIVITY_CALENDAR_TAG } from "../src/core/constants";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
-import {
-  ActivityFilterContext,
-  type ActivityCalendar,
-} from "../src/stage/activity";
+import "../src/stage/activity";
+import type { ActivityCalendar } from "../src/stage/activity";
 import { CameraSelectionContext } from "../src/stage/camera-selection-context";
+import { MediaDateContext } from "../src/stage/media-date-context";
 
 describe("activity calendar", () => {
   afterEach(() => {
@@ -34,13 +33,13 @@ describe("activity calendar", () => {
       subscribeMessage: vi.fn(),
     } as unknown as HomeAssistantApi;
     const cameraSelection = new CameraSelectionContext();
-    const filterContext = new ActivityFilterContext();
+    const dateContext = new MediaDateContext();
     const calendar = document.createElement(
       ACTIVITY_CALENDAR_TAG,
     ) as ActivityCalendar;
     calendar.api = api;
     calendar.cameraSelection = cameraSelection;
-    calendar.filterContext = filterContext;
+    calendar.dateContext = dateContext;
     calendar.historyDays = 5;
     calendar.targetModuleId = "camera-module";
     document.body.append(calendar);
@@ -75,16 +74,68 @@ describe("activity calendar", () => {
     calendar.shadowRoot
       ?.querySelector<HTMLButtonElement>('.day[aria-label^="November 8, 2026"]')
       ?.click();
-    expect(filterContext.stateFor("camera.front").selectedDate).toBe(
-      "2026-11-08",
-    );
+    expect(dateContext.selectedDate("camera.front")).toBe("2026-11-08");
 
     calendar.shadowRoot
       ?.querySelector<HTMLButtonElement>(".calendar-trigger")
       ?.click();
     await calendar.updateComplete;
     calendar.shadowRoot?.querySelector<HTMLButtonElement>(".reset")?.click();
-    expect(filterContext.stateFor("camera.front").selectedDate).toBeUndefined();
+    expect(dateContext.selectedDate("camera.front")).toBeUndefined();
+  });
+
+  it("uses recording availability when the recordings module is active", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(Date.UTC(2026, 10, 9, 12));
+    const api = {
+      callWS: vi.fn(),
+      identity: {},
+      locale: { language: "en", time_zone: "UTC" },
+      resolveUrl: (path: string) => path,
+      subscribeMessage: vi.fn(),
+    } as unknown as HomeAssistantApi;
+    const cameraSelection = new CameraSelectionContext();
+    const dateContext = new MediaDateContext();
+    const calendar = document.createElement(
+      ACTIVITY_CALENDAR_TAG,
+    ) as ActivityCalendar;
+    calendar.api = api;
+    calendar.cameraSelection = cameraSelection;
+    calendar.dateContext = dateContext;
+    calendar.historyDays = 5;
+    calendar.mode = "recordings";
+    calendar.targetModuleId = "camera-module";
+    document.body.append(calendar);
+    cameraSelection.publish(
+      "camera-module",
+      {},
+      {
+        activeEntityId: "camera.front",
+        items: [{ entityId: "camera.front", label: "Front" }],
+      },
+      vi.fn(),
+    );
+    dateContext.publishAvailableDates("camera.front", calendar, [
+      "2026-11-09",
+      "2026-11-07",
+    ]);
+
+    await calendar.updateComplete;
+    calendar.shadowRoot
+      ?.querySelector<HTMLButtonElement>(".calendar-trigger")
+      ?.click();
+
+    await vi.waitFor(() =>
+      expect(calendar.shadowRoot?.querySelectorAll(".day.marked")).toHaveLength(
+        2,
+      ),
+    );
+    expect(
+      calendar.shadowRoot
+        ?.querySelector<HTMLButtonElement>(
+          '.day[aria-label^="November 7, 2026"]',
+        )
+        ?.getAttribute("aria-label"),
+    ).toContain("has recordings");
   });
 });
 

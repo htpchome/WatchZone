@@ -3,6 +3,7 @@ import type { ReactiveController, ReactiveControllerHost } from "lit";
 import { homeAssistantDateKey } from "../../core/date-time";
 import type { HomeAssistantLocale } from "../../core/home-assistant";
 import type { CameraSelectionContext } from "../camera-selection-context";
+import type { MediaDateContext } from "../media-date-context";
 import type {
   ActivityFilterContext,
   ActivityFilterState,
@@ -42,12 +43,17 @@ export class ActivityFilterController implements ReactiveController {
   private _subscribedEntityId?: string;
   private _subscribedSelection?: CameraSelectionContext;
   private _subscribedTarget = "";
+  private _selectedDate?: string;
+  private _subscribedDateContext?: MediaDateContext;
+  private _subscribedDateEntityId?: string;
+  private _unsubscribeDate?: () => void;
   private _unsubscribeFilter?: () => void;
   private _unsubscribeSelection?: () => void;
 
   public constructor(
     private readonly _host: ReactiveControllerHost,
     private readonly _context: () => ActivityFilterContext | undefined,
+    private readonly _dateContext: () => MediaDateContext | undefined,
     private readonly _cameraSelection: () => CameraSelectionContext | undefined,
     private readonly _targetModuleId: () => string,
     private readonly _locale: () => HomeAssistantLocale | undefined,
@@ -64,10 +70,14 @@ export class ActivityFilterController implements ReactiveController {
   public hostDisconnected(): void {
     this._connected = false;
     this._unsubscribeFilter?.();
+    this._unsubscribeDate?.();
     this._unsubscribeSelection?.();
     this._unsubscribeFilter = undefined;
+    this._unsubscribeDate = undefined;
     this._unsubscribeSelection = undefined;
     this._subscribedContext = undefined;
+    this._subscribedDateContext = undefined;
+    this._subscribedDateEntityId = undefined;
     this._subscribedEntityId = undefined;
     this._subscribedSelection = undefined;
   }
@@ -75,6 +85,7 @@ export class ActivityFilterController implements ReactiveController {
   public hostUpdated(): void {
     this._syncSelection();
     this._syncFilter();
+    this._syncDate();
   }
 
   public includesReview(review: ReviewCandidate): boolean {
@@ -114,9 +125,9 @@ export class ActivityFilterController implements ReactiveController {
 
   private _includesDate(timestampSeconds: number): boolean {
     return (
-      !this.state.selectedDate ||
+      !this._selectedDate ||
       homeAssistantDateKey(timestampSeconds, this._locale()) ===
-        this.state.selectedDate
+        this._selectedDate
     );
   }
 
@@ -142,6 +153,7 @@ export class ActivityFilterController implements ReactiveController {
           if (activeEntityId === this._activeEntityId) return;
           this._activeEntityId = activeEntityId;
           this._syncFilter();
+          this._syncDate();
         },
       );
     }
@@ -175,6 +187,28 @@ export class ActivityFilterController implements ReactiveController {
       });
     }
   }
+
+  private _syncDate(): void {
+    const context = this._dateContext();
+    const entityId = this._activeEntityId;
+    if (
+      context === this._subscribedDateContext &&
+      entityId === this._subscribedDateEntityId
+    ) {
+      return;
+    }
+    this._unsubscribeDate?.();
+    this._subscribedDateContext = context;
+    this._subscribedDateEntityId = entityId;
+    this._selectedDate = undefined;
+    if (context && entityId) {
+      this._unsubscribeDate = context.subscribe(entityId, (selectedDate) => {
+        if (selectedDate === this._selectedDate) return;
+        this._selectedDate = selectedDate;
+        this._host.requestUpdate();
+      });
+    }
+  }
 }
 
 function filterSelectionChanged(
@@ -185,7 +219,6 @@ function filterSelectionChanged(
     previous.classification !== next.classification ||
     previous.labels !== next.labels ||
     previous.reviewStatus !== next.reviewStatus ||
-    previous.selectedDate !== next.selectedDate ||
     previous.zones !== next.zones
   );
 }

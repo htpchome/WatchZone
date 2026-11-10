@@ -57,4 +57,39 @@ describe("camera selection context", () => {
     context.clear("camera", owner);
     expect(listener).toHaveBeenLastCalledWith({ items: [] });
   });
+
+  it("does not let a stale unsubscribe delete a replacement channel", () => {
+    const context = new CameraSelectionContext();
+    const oldOwner = {};
+    const unsubscribe = context.subscribe("camera", vi.fn());
+    context.publish(
+      "camera",
+      oldOwner,
+      {
+        activeEntityId: "camera.front",
+        items: [{ entityId: "camera.front", label: "Front" }],
+      },
+      vi.fn(),
+    );
+    unsubscribe();
+    context.clear("camera", oldOwner);
+
+    const select = vi.fn();
+    context.publish(
+      "camera",
+      {},
+      {
+        activeEntityId: "camera.front",
+        items: [
+          { entityId: "camera.front", label: "Front" },
+          { entityId: "camera.back", label: "Back" },
+        ],
+      },
+      select,
+    );
+    unsubscribe();
+
+    expect(context.select("camera", "camera.back")).toBe(true);
+    expect(select).toHaveBeenCalledWith("camera.back");
+  });
 });

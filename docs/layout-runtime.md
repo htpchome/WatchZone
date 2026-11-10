@@ -72,10 +72,11 @@ to designs already validated for the active flow. A stage may support one or
 both responsive profiles; the runtime never fabricates a missing variant.
 
 The initial built-in template contains one stable camera module node and one
-activity module stack whose Alerts child precedes Events. It is the sole entry
-in both flows. Without camera input, its composition is empty and no camera
-module, activity module, provider adapter, poster, or media session is
-requested. Adding backend designs or navigation changes the catalog and flow,
+media-list module stack whose Alerts child precedes Events and Recordings. It
+is the sole entry in both flows. Without camera input, its composition is empty
+and no camera module, activity module, provider adapter, poster, or media
+session is requested. Adding backend designs or navigation changes the catalog
+and flow,
 not the renderer.
 
 ## Invariants

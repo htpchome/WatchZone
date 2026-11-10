@@ -7,6 +7,7 @@ import {
   type ActivityFilterContext,
 } from "../../activity";
 import type { CameraSelectionContext } from "../../camera-selection-context";
+import type { MediaDateContext } from "../../media-date-context";
 import {
   ALERTS_TAG,
   DEFAULT_EVENT_HISTORY_DAYS,
@@ -39,6 +40,7 @@ export class AlertsModule extends LitElement {
     historyDays: { attribute: false },
     hoverPreviewEnabled: { attribute: false, type: Boolean },
     localize: { attribute: false },
+    mediaDate: { attribute: false },
     roundedCorners: { attribute: false, type: Boolean },
     shadows: { attribute: false, type: Boolean },
     targetModuleId: { attribute: false },
@@ -53,6 +55,7 @@ export class AlertsModule extends LitElement {
   public historyDays = DEFAULT_EVENT_HISTORY_DAYS;
   public hoverPreviewEnabled = true;
   public localize: LocalizeFunction = englishLocalize;
+  public mediaDate?: MediaDateContext;
   public roundedCorners = true;
   public shadows = true;
   public targetModuleId = "";
@@ -64,6 +67,7 @@ export class AlertsModule extends LitElement {
   private readonly _filter = new ActivityFilterController(
     this,
     () => this.activityFilter,
+    () => this.mediaDate,
     () => this.cameraSelection,
     () => this.targetModuleId,
     () => this.api?.locale,

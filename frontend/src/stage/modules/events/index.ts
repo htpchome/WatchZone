@@ -83,6 +83,7 @@ export const moduleDefinition: ModuleDefinition<EventsModuleConfig> = {
     events.displayObjectBadges = config.displayObjectBadges;
     events.displayZone = config.displayZone;
     events.localize = context.localize ?? englishLocalize;
+    events.mediaDate = context.mediaDate;
     events.historyDays = config.historyDays;
     events.roundedCorners = config.roundedCorners;
     events.shadows = config.shadows;

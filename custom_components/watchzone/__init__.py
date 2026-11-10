@@ -45,6 +45,7 @@ from .features.hls_prewarm import HlsPrewarmService
 from .features.layouts import StageDesignStore
 from .features.live import LiveSignalingService
 from .features.ptz import PtzService
+from .features.recordings import RecordingsService
 from .features.reviews import ReviewsService
 from .providers.frigate import camera as frigate_camera
 from .providers.frigate import live as frigate_live
@@ -53,6 +54,7 @@ from .providers.frigate.activity_updates import (
 )
 from .providers.frigate.events import events as frigate_events
 from .providers.frigate.ptz import ptz as frigate_ptz
+from .providers.frigate.recordings import recordings as frigate_recordings
 from .providers.frigate.reviews import reviews as frigate_reviews
 from .providers.home_assistant.ptz import ptz as home_assistant_ptz
 from .runtime import WatchZoneRuntime
@@ -101,6 +103,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     from .api.events import async_register as async_register_events_api
     from .api.live import async_register as async_register_live_api
     from .api.ptz import async_register as async_register_ptz_api
+    from .api.recordings import async_register as async_register_recordings_api
     from .api.reviews import async_register as async_register_reviews_api
     from .api.talk import async_register as async_register_talk_api
 
@@ -110,6 +113,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     async_register_live_api(hass)
     async_register_talk_api(hass)
     async_register_ptz_api(hass)
+    async_register_recordings_api(hass)
     async_register_reviews_api(hass)
     return True
 
@@ -131,6 +135,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WatchZoneConfigEntry) ->
         live_signaling=LiveSignalingService(hass, providers),
         stage_designs=stage_designs,
         ptz=PtzService(hass, providers),
+        recordings=RecordingsService(hass, providers),
         events=EventsService(hass, providers),
         reviews=ReviewsService(hass, providers),
     )
@@ -214,6 +219,7 @@ def _register_builtin_providers(hass: HomeAssistant) -> ProviderRegistry:
             live_signaling=frigate_live,
             talk_signaling=frigate_live,
             ptz=frigate_ptz,
+            recordings=frigate_recordings,
             events=frigate_events,
             reviews=frigate_reviews,
         )
