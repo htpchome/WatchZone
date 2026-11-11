@@ -2593,6 +2593,9 @@ test("shows and filters mixed-camera persistent exports", async ({ page }) => {
     };
   });
 
+  await expect(
+    page.locator("wzc-camera-navigation button[role='tab']"),
+  ).toHaveCount(2);
   const navigation = page.locator(".stage-stack-navigation");
   const exportsButton = navigation.getByRole("button", { name: "Exports" });
   await exportsButton.click();
