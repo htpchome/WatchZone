@@ -342,30 +342,36 @@ export const activityListStyles = css`
   }
 
   .review-aside {
-    align-content: start;
+    align-content: stretch;
     display: grid;
-    gap: 0.2rem;
     grid-column: 3;
-    grid-row: 2;
+    grid-row: 1 / -1;
+    grid-template-rows: 1fr var(--wzc-event-action-size) 1fr;
     min-inline-size: 0;
-    padding-block-end: var(--wzc-event-content-padding);
   }
 
-  .analysis-title {
+  .analysis-title,
+  .export-status {
     align-items: center;
-    appearance: none;
-    background: var(--wzc-color-surface);
-    border: 1px solid var(--wzc-color-border-control);
     border-radius: var(--wzc-radius-pill);
-    color: var(--wzc-color-text-1);
-    cursor: pointer;
+    box-sizing: border-box;
     display: inline-flex;
     gap: 0.35rem;
     justify-self: start;
+    line-height: var(--wzc-line-height-condensed);
     max-inline-size: 100%;
-    min-block-size: 2rem;
+    block-size: var(--wzc-event-action-size);
     min-inline-size: 0;
     padding: 0.25rem 0.65rem;
+  }
+
+  .analysis-title {
+    appearance: none;
+    background: var(--wzc-color-surface);
+    border: 1px solid var(--wzc-color-border-control);
+    color: var(--wzc-color-text-1);
+    cursor: pointer;
+    grid-row: 2;
     pointer-events: auto;
     position: relative;
     z-index: 2;
@@ -400,16 +406,22 @@ export const activityListStyles = css`
     z-index: 2;
   }
 
+  .review-aside:has(.analysis-title) .export-status,
+  .review-aside:has(.analysis-title) .export-progress-value {
+    align-self: start;
+    grid-row: 3;
+    margin-block-start: 0.2rem;
+  }
+
+  .review-aside:not(:has(.analysis-title)) .export-status,
+  .review-aside:not(:has(.analysis-title)) .export-progress-value {
+    align-self: center;
+    grid-row: 2;
+  }
+
   .export-status {
-    align-items: center;
     border: 1px solid currentcolor;
-    border-radius: var(--wzc-radius-pill);
-    display: inline-flex;
     font-weight: var(--wzc-font-weight-semibold);
-    gap: 0.35rem;
-    justify-self: start;
-    min-block-size: 2rem;
-    padding: 0.25rem 0.65rem;
   }
 
   .export-status.progress {
@@ -417,9 +429,17 @@ export const activityListStyles = css`
     color: var(--wzc-color-text-2);
   }
 
-  .export-status ha-spinner {
-    flex: 0 0 auto;
-    margin-inline: -0.3rem;
+  .export-spinner {
+    block-size: 1rem;
+    display: grid;
+    flex: 0 0 1rem;
+    inline-size: 1rem;
+    place-items: center;
+    position: relative;
+  }
+
+  .export-spinner ha-spinner {
+    position: absolute;
     transform: scale(0.62);
     transform-origin: center;
   }
@@ -460,11 +480,11 @@ export const activityListStyles = css`
     display: flex;
     flex-wrap: nowrap;
     gap: 0.25rem;
-    grid-column: 2 / -1;
+    grid-column: 2 / 4;
     grid-row: 1;
     min-inline-size: 0;
     overflow: hidden;
-    padding-block-start: calc(var(--wzc-event-content-padding) + 0.2rem);
+    padding-block-start: calc(var(--wzc-event-content-padding) + 0.4rem);
     padding-inline-end: var(--wzc-event-action-margin);
   }
 
@@ -505,7 +525,7 @@ export const activityListStyles = css`
     display: flex;
     gap: 0.2rem;
     grid-column: 4;
-    grid-row: 2;
+    grid-row: 1 / -1;
     margin-inline-end: var(--wzc-event-action-margin);
     position: relative;
     z-index: 2;

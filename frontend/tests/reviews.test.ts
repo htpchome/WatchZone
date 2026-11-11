@@ -624,7 +624,7 @@ describe("reviews module", () => {
     await vi.waitFor(() => {
       expect(
         activityRoot(module)?.querySelector(
-          ".export-status.progress ha-spinner",
+          ".export-status.progress .export-spinner ha-spinner",
         ),
       ).not.toBeNull();
     });

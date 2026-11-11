@@ -453,7 +453,9 @@ export class ActivityList extends LitElement {
     }
     if (item.exportStatus === "progress") {
       return html`<span class="export-status progress">
-        <ha-spinner size="small"></ha-spinner>
+        <span class="export-spinner" aria-hidden="true">
+          <ha-spinner size="small"></ha-spinner>
+        </span>
         <span>${item.exportStatusText}</span>
       </span>`;
     }

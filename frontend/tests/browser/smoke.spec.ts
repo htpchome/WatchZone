@@ -1039,13 +1039,24 @@ test("keeps activity content in an independently scrolling viewport", async ({
     const detailBounds = details.getBoundingClientRect();
     const asideBounds = aside.getBoundingClientRect();
     const actionBounds = actions.getBoundingClientRect();
+    const analysisBounds = element.getBoundingClientRect();
     return {
       actionsAfterAside: actionBounds.left >= asideBounds.right,
+      actionCenterDelta: Math.abs(
+        actionBounds.top +
+          actionBounds.height / 2 -
+          (tileBounds.top + tileBounds.height / 2),
+      ),
+      analysisActionHeightDelta: Math.abs(
+        analysisBounds.height - actionBounds.height,
+      ),
+      analysisActionTopDelta: Math.abs(analysisBounds.top - actionBounds.top),
+      analysisGap: analysisBounds.top - badgeBounds.bottom,
       asideAfterDetails: asideBounds.left >= detailBounds.right,
       badgeInset: badgeBounds.top - tileBounds.top,
       contentBelowBadges:
         detailBounds.top >= badgeBounds.bottom &&
-        asideBounds.top >= badgeBounds.bottom &&
+        analysisBounds.top >= badgeBounds.bottom &&
         actionBounds.top >= badgeBounds.bottom,
       standard: tile.classList.contains("standard"),
       thumbnailBottom: Math.abs(thumbnailBounds.bottom - tileBounds.bottom),
@@ -1055,10 +1066,14 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(standardTileLayout.standard).toBe(true);
   expect(standardTileLayout.thumbnailTop).toBeLessThanOrEqual(1);
   expect(standardTileLayout.thumbnailBottom).toBeLessThanOrEqual(1);
-  expect(standardTileLayout.badgeInset).toBeGreaterThanOrEqual(6);
+  expect(standardTileLayout.badgeInset).toBeGreaterThanOrEqual(9);
+  expect(standardTileLayout.analysisGap).toBeGreaterThanOrEqual(5);
   expect(standardTileLayout.contentBelowBadges).toBe(true);
   expect(standardTileLayout.asideAfterDetails).toBe(true);
   expect(standardTileLayout.actionsAfterAside).toBe(true);
+  expect(standardTileLayout.actionCenterDelta).toBeLessThanOrEqual(1);
+  expect(standardTileLayout.analysisActionHeightDelta).toBeLessThanOrEqual(1);
+  expect(standardTileLayout.analysisActionTopDelta).toBeLessThanOrEqual(1);
   await expect(page.locator("wzc-events .analysis-title")).toHaveCount(0);
   const reviewExportButtons = page.getByRole("button", {
     name: "Export review",
@@ -1148,6 +1163,50 @@ test("keeps activity content in an independently scrolling viewport", async ({
     exportPresentation.analysisHeight,
     0,
   );
+  await page
+    .locator("wzc-reviews wzc-activity-list")
+    .evaluate(async (element) => {
+      const list = element as HTMLElement & {
+        items: Array<{
+          analysisTitle?: string;
+          exportProgress?: number;
+          exportStatus?: string;
+          exportStatusText?: string;
+        }>;
+        updateComplete: Promise<boolean>;
+      };
+      list.items = list.items.map((item) =>
+        item.analysisTitle
+          ? {
+              ...item,
+              exportProgress: undefined,
+              exportStatus: "progress",
+              exportStatusText: "Export in progress",
+            }
+          : item,
+      );
+      await list.updateComplete;
+    });
+  const progressPresentation = await page
+    .locator("wzc-reviews .export-status.progress")
+    .evaluate((status) => {
+      const aside = status.closest(".review-aside");
+      const analysis = aside?.querySelector(".analysis-title");
+      const spinner = status.querySelector(".export-spinner");
+      if (!analysis || !spinner) {
+        throw new Error("Expected matched AI and export progress chips.");
+      }
+      return {
+        analysisHeight: analysis.getBoundingClientRect().height,
+        spinnerHeight: spinner.getBoundingClientRect().height,
+        statusHeight: status.getBoundingClientRect().height,
+      };
+    });
+  expect(progressPresentation.statusHeight).toBeCloseTo(
+    progressPresentation.analysisHeight,
+    0,
+  );
+  expect(progressPresentation.spinnerHeight).toBeLessThanOrEqual(16);
   await analysisTitle.click();
   const analysisDialog = page.locator(
     "wzc-reviews wzc-review-analysis-dialog dialog",
