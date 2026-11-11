@@ -308,7 +308,7 @@ export class ActivityList extends LitElement {
     const title = activityMediaTitle(item, this.api);
     const playLabel = this.localize("media_player.open", { title });
     return html`<article
-      class="tile"
+      class="tile standard"
       aria-posinset=${index + 1}
       aria-setsize=${this.items.length}
       style=${styleMap(
@@ -374,43 +374,8 @@ export class ActivityList extends LitElement {
             : null
         }
       </div>
-      ${
-        (item.analysisTitle && item.analysisDescription) || item.exportStatus
-          ? html`<div class="review-content">
-              ${this._renderDetails(item, objectLabels, typeBadge, objectColors, start)}
-              <div class="review-aside">
-                ${
-                  item.analysisTitle && item.analysisDescription
-                    ? html`<button
-                        class="analysis-title"
-                        type="button"
-                        title=${this.localize("reviews.open_ai_analysis", {
-                          title: item.analysisTitle,
-                        })}
-                        aria-label=${this.localize("reviews.open_ai_analysis", {
-                          title: item.analysisTitle,
-                        })}
-                        @click=${(event: MouseEvent) => {
-                          event.stopPropagation();
-                          this._dispatch({ kind: "open_analysis", item });
-                        }}
-                      >
-                        <ha-icon icon="mdi:creation"></ha-icon>
-                        <span>${item.analysisTitle}</span>
-                      </button>`
-                    : null
-                }
-                ${this._renderExportStatus(item)}
-              </div>
-            </div>`
-          : this._renderDetails(
-              item,
-              objectLabels,
-              typeBadge,
-              objectColors,
-              start,
-            )
-      }
+      ${this._renderBadges(objectLabels, typeBadge, objectColors)}
+      ${this._renderDetails(item, start)} ${this._renderReviewAside(item)}
       ${
         item.inProgress
           ? null
@@ -497,45 +462,72 @@ export class ActivityList extends LitElement {
     </span>`;
   }
 
-  private _renderDetails(
-    item: ActivityListItem,
+  private _renderReviewAside(item: ActivityListItem) {
+    const analysisTitle =
+      item.analysisTitle && item.analysisDescription
+        ? item.analysisTitle
+        : undefined;
+    if (!analysisTitle && !item.exportStatus) return null;
+    return html`<div class="review-aside">
+      ${
+        analysisTitle
+          ? html`<button
+              class="analysis-title"
+              type="button"
+              title=${this.localize("reviews.open_ai_analysis", {
+                title: analysisTitle,
+              })}
+              aria-label=${this.localize("reviews.open_ai_analysis", {
+                title: analysisTitle,
+              })}
+              @click=${(event: MouseEvent) => {
+                event.stopPropagation();
+                this._dispatch({ kind: "open_analysis", item });
+              }}
+            >
+              <ha-icon icon="mdi:creation"></ha-icon>
+              <span>${analysisTitle}</span>
+            </button>`
+          : null
+      }
+      ${this._renderExportStatus(item)}
+    </div>`;
+  }
+
+  private _renderBadges(
     objectLabels: readonly string[],
     typeBadge: ActivityTypeBadge | undefined,
     objectColors: readonly BadgeColor[],
-    start: Date,
   ) {
-    return html`<div class="details">
+    if (objectLabels.length === 0 && !typeBadge) return null;
+    return html`<div class="badges">
+      ${objectLabels.map(
+        (label, index) =>
+          html`<wzc-badge
+            color=${objectColors[index] ?? "neutral"}
+            shape="pill"
+            size="small"
+            >${capitalizeBadgeText(label, this.api?.locale?.language)}</wzc-badge
+          >`,
+      )}
       ${
-        objectLabels.length > 0 || typeBadge
-          ? html`<div class="badges">
-              ${objectLabels.map(
-                (label, index) =>
-                  html`<wzc-badge
-                    color=${objectColors[index] ?? "neutral"}
-                    shape="pill"
-                    size="small"
-                    >${capitalizeBadgeText(
-                      label,
-                      this.api?.locale?.language,
-                    )}</wzc-badge
-                  >`,
-              )}
-              ${
-                typeBadge
-                  ? html`<wzc-badge
-                      shape="pill"
-                      size="small"
-                      variant=${typeBadge.variant}
-                      >${capitalizeBadgeText(
-                        typeBadge.label,
-                        this.api?.locale?.language,
-                      )}</wzc-badge
-                    >`
-                  : null
-              }
-            </div>`
+        typeBadge
+          ? html`<wzc-badge
+              shape="pill"
+              size="small"
+              variant=${typeBadge.variant}
+              >${capitalizeBadgeText(
+                typeBadge.label,
+                this.api?.locale?.language,
+              )}</wzc-badge
+            >`
           : null
       }
+    </div>`;
+  }
+
+  private _renderDetails(item: ActivityListItem, start: Date) {
+    return html`<div class="details">
       <div class="metadata">
         <span class="metadata-icon">${renderIcon("clock")}</span>
         <span>${formatHomeAssistantTime(start, this.api?.locale)}</span>
@@ -574,9 +566,19 @@ export class ActivityList extends LitElement {
                 this._dispatch({ kind: "toggle_reviewed", item });
               }}
             >
-              <span class="review-state-indicator">
+              <span class="review-state-indicator" aria-hidden="true">
                 ${renderIcon("check")}
+                ${
+                  item.reviewed
+                    ? null
+                    : html`<span class="review-state-plus">+</span>`
+                }
               </span>
+              <span class="review-state-label"
+                >${this.localize(
+                  item.reviewed ? "reviews.reviewed" : "reviews.not_reviewed",
+                )}</span
+              >
             </button>`
           : null
       }

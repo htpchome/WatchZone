@@ -10,16 +10,20 @@
 
 ## Reviewed state
 
-- A review tile exposes its reviewed state as an accessible control in the
-  tile metadata area; it does not obscure the thumbnail.
+- A review tile exposes its reviewed state as a compact labeled control in the
+  tile metadata area; it does not obscure the thumbnail. Its visible label
+  names the current state while its accessible label names the toggle action.
 - Reviewed uses the Home Assistant success semantic; unreviewed uses the Home
-  Assistant warning semantic. Both use a transparent circle outline with a
-  centered checkmark in the same semantic color. The visible circle is small
-  and rests at 70% opacity until hover or keyboard focus, while its touch and
-  keyboard target remains at least 44 logical pixels.
+  Assistant warning semantic. Both use a short themed outline pill with a
+  checkmark; unreviewed adds a plus sign. The visible pill remains compact in
+  the standard tile while its touch and keyboard target remains at least 44
+  logical pixels.
 - Activating the control updates the local review immediately, calls the
   provider-neutral backend mutation, and rolls back with one toast if the
   provider rejects the change.
+- Opening a Review video marks an unreviewed item as reviewed through that same
+  mutation path. Snapshot viewing does not change review state, and opening an
+  already-reviewed video does not issue a redundant mutation.
 - The mutation requires camera-control permission. Providers translate the
   WatchZone review ID and desired boolean into their own authenticated API.
 - Review filtering and realtime reconciliation consume the same updated item;
@@ -29,6 +33,12 @@
 
 - Reviews shares the activity-list presentation primitive with Events while
   retaining its own loading, filtering, mutation, and playback orchestration.
+- The initial standard activity-tile presentation uses one shared grid for
+  Reviews and Events: the thumbnail spans both rows, badges occupy the top
+  strip, and metadata, optional analysis/export state, and actions occupy
+  independent columns below. Optional Review content must not displace the
+  metadata column. Future compact presentations change only placement and
+  visibility while retaining the same item model and typed intents.
 - Reviews and Events group tiles by the Home Assistant-localized civil date.
   Each date heading remains at the top of the list viewport while its tiles
   scroll beneath it; the next heading pushes it away at the group boundary.

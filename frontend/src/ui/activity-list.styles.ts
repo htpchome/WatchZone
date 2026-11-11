@@ -84,7 +84,7 @@ export const activityListStyles = css`
   }
 
   .tile {
-    align-items: center;
+    align-items: stretch;
     background: var(--wzc-event-tile-background);
     border: var(--wzc-event-tile-border-width) solid
       var(--wzc-event-tile-border-color);
@@ -92,10 +92,13 @@ export const activityListStyles = css`
     box-shadow: var(--wzc-event-tile-shadow);
     box-sizing: border-box;
     display: grid;
-    gap: var(--wzc-event-tile-gap);
+    column-gap: var(--wzc-event-tile-gap);
     grid-template-columns:
-      var(--wzc-event-thumbnail-inline-size) minmax(0, 1fr)
+      var(--wzc-event-thumbnail-inline-size)
+      var(--wzc-event-metadata-column-size) minmax(0, 1fr)
       auto;
+    grid-template-rows: max-content minmax(0, 1fr);
+    row-gap: 0.15rem;
     block-size: var(--wzc-event-tile-block-size);
     overflow: hidden;
     position: relative;
@@ -140,6 +143,8 @@ export const activityListStyles = css`
     min-block-size: 0;
     overflow: hidden;
     position: relative;
+    grid-column: 1;
+    grid-row: 1 / -1;
     z-index: 0;
   }
 
@@ -232,16 +237,19 @@ export const activityListStyles = css`
   }
 
   .review-state {
+    align-items: center;
     appearance: none;
-    display: grid;
-    inline-size: 1.15rem;
-    block-size: 1.15rem;
-    place-items: center;
+    background: var(--wzc-color-surface);
+    border: 1px solid currentcolor;
+    border-radius: var(--wzc-radius-small);
+    box-sizing: border-box;
+    display: inline-flex;
+    gap: 0.3rem;
+    min-block-size: 1.55rem;
+    max-inline-size: 100%;
     margin-block-start: 0.15rem;
-    padding: 0;
+    padding: 0.12rem 0.45rem 0.12rem 0.3rem;
     cursor: pointer;
-    background: transparent;
-    border: 0;
     color: var(--wzc-review-state-color);
     pointer-events: auto;
     position: relative;
@@ -259,17 +267,14 @@ export const activityListStyles = css`
   }
 
   .review-state-indicator {
-    display: grid;
-    inline-size: 1.15rem;
-    block-size: 1.15rem;
+    display: inline-grid;
+    flex: 0 0 auto;
+    grid-template-columns: 0.9rem 0.35rem;
+    inline-size: 1.25rem;
+    block-size: 1rem;
     place-items: center;
     color: inherit;
-    background: transparent;
-    border: 2px solid currentcolor;
-    border-radius: var(--wzc-radius-pill);
-    box-sizing: border-box;
-    opacity: 0.7;
-    transition: opacity 120ms ease-out;
+    transition: transform 120ms ease-out;
   }
 
   .review-state.reviewed {
@@ -282,17 +287,33 @@ export const activityListStyles = css`
 
   .review-state svg {
     display: block;
-    inline-size: 0.75rem;
-    block-size: 0.75rem;
+    inline-size: 1rem;
+    block-size: 1rem;
   }
 
-  .review-state:focus-visible .review-state-indicator {
-    opacity: 1;
+  .review-state-plus {
+    font-size: 0.8rem;
+    font-weight: var(--wzc-font-weight-semibold);
+    line-height: 1;
+    transform: translate(-0.08rem, 0.28rem);
+  }
+
+  .review-state-label {
+    font-size: var(--wzc-font-size-small);
+    font-weight: var(--wzc-font-weight-semibold);
+    line-height: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   @media (hover: hover) {
+    .review-state:hover:not(:disabled) {
+      background: var(--wzc-neutral-control-hover-background);
+    }
+
     .review-state:hover:not(:disabled) .review-state-indicator {
-      opacity: 1;
+      transform: scale(1.06);
     }
   }
 
@@ -300,40 +321,34 @@ export const activityListStyles = css`
     outline: none;
   }
 
-  .review-state:focus-visible .review-state-indicator {
+  .review-state:focus-visible {
     outline: 2px solid var(--wzc-color-primary);
     outline-offset: 2px;
   }
 
   .review-state:disabled {
     cursor: progress;
+    opacity: var(--wzc-control-disabled-opacity);
   }
 
   .details {
+    align-self: start;
+    grid-column: 2;
+    grid-row: 2;
     min-inline-size: 0;
     overflow: hidden;
-    padding-block: var(--wzc-event-content-padding);
+    padding-block: 0 var(--wzc-event-content-padding);
     pointer-events: none;
   }
 
-  .review-content {
-    align-items: center;
-    display: grid;
-    gap: clamp(0.75rem, 2vw, 2rem);
-    grid-template-columns: max-content minmax(0, 1fr);
-    min-inline-size: 0;
-  }
-
-  .review-content .details {
-    inline-size: max-content;
-    max-inline-size: 100%;
-  }
-
   .review-aside {
-    align-content: center;
+    align-content: start;
     display: grid;
-    gap: 0.35rem;
+    gap: 0.2rem;
+    grid-column: 3;
+    grid-row: 2;
     min-inline-size: 0;
+    padding-block-end: var(--wzc-event-content-padding);
   }
 
   .analysis-title {
@@ -393,7 +408,8 @@ export const activityListStyles = css`
     font-weight: var(--wzc-font-weight-semibold);
     gap: 0.35rem;
     justify-self: start;
-    padding: 0.2rem 0.55rem;
+    min-block-size: 2rem;
+    padding: 0.25rem 0.65rem;
   }
 
   .export-status.progress {
@@ -403,6 +419,9 @@ export const activityListStyles = css`
 
   .export-status ha-spinner {
     flex: 0 0 auto;
+    margin-inline: -0.3rem;
+    transform: scale(0.62);
+    transform-origin: center;
   }
 
   .export-progress-value {
@@ -439,9 +458,14 @@ export const activityListStyles = css`
   .badges {
     align-items: center;
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 0.25rem;
-    margin-block-end: 0.2rem;
+    grid-column: 2 / -1;
+    grid-row: 1;
+    min-inline-size: 0;
+    overflow: hidden;
+    padding-block-start: var(--wzc-event-content-padding);
+    padding-inline-end: var(--wzc-event-action-margin);
   }
 
   .badges wzc-badge {
@@ -477,8 +501,11 @@ export const activityListStyles = css`
   }
 
   .actions {
+    align-self: start;
     display: flex;
     gap: 0.2rem;
+    grid-column: 4;
+    grid-row: 2;
     margin-inline-end: var(--wzc-event-action-margin);
     position: relative;
     z-index: 2;
@@ -519,23 +546,28 @@ export const activityListStyles = css`
 
   @media (max-width: 420px) {
     .tile {
-      grid-template-columns: var(--wzc-event-thumbnail-inline-size) minmax(
-          0,
-          1fr
-        );
+      grid-template-columns:
+        var(--wzc-event-thumbnail-inline-size) minmax(0, 1fr)
+        0 0;
     }
 
     .actions {
       display: none;
     }
 
-    .review-content {
-      gap: 0.4rem;
-      grid-template-columns: minmax(0, 1fr);
+    .badges {
+      grid-column: 2;
     }
 
-    .analysis-title {
+    .review-aside {
+      grid-column: 2;
+      grid-row: 2;
+      justify-self: end;
       max-inline-size: 100%;
+    }
+
+    .tile:has(.review-aside) .details {
+      max-inline-size: 45%;
     }
   }
 `;

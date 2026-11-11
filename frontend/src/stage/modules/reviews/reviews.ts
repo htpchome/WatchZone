@@ -371,7 +371,10 @@ export class ReviewsModule extends LitElement {
         "review",
         this.api,
       );
-      if (request) openRecordedMedia(this, request);
+      if (request) {
+        openRecordedMedia(this, request);
+        this._markReviewed(item);
+      }
       return;
     }
     const preview = activityPreviewMediaRequest(
@@ -382,6 +385,7 @@ export class ReviewsModule extends LitElement {
     );
     if (preview) {
       openRecordedMedia(this, preview);
+      this._markReviewed(item);
       void this._resolvePlayback(item);
       return;
     }
@@ -393,7 +397,10 @@ export class ReviewsModule extends LitElement {
       "review",
       this.api,
     );
-    if (request) openRecordedMedia(this, request);
+    if (request) {
+      openRecordedMedia(this, request);
+      this._markReviewed(resolved);
+    }
   }
 
   private readonly _closeAnalysis = (): void => {
@@ -503,17 +510,26 @@ export class ReviewsModule extends LitElement {
   }
 
   private readonly _toggleReviewed = (item: ActivityListItem): void => {
+    if (item.reviewed === undefined) return;
+    this._setReviewed(item, !item.reviewed);
+  };
+
+  private readonly _markReviewed = (item: ActivityListItem): void => {
+    if (item.reviewed === false) this._setReviewed(item, true);
+  };
+
+  private _setReviewed(item: ActivityListItem, reviewed: boolean): void {
     const api = this.api;
     const entityId = this._activity.activeEntityId;
     if (
       !api ||
       !entityId ||
       item.reviewed === undefined ||
+      item.reviewed === reviewed ||
       this._pendingReviewIds.has(item.id)
     )
       return;
     const previous = item.reviewed;
-    const reviewed = !previous;
     this._pendingReviewIds.add(item.id);
     this._activity.updateItem(item.id, (review) => ({ ...review, reviewed }));
     this.requestUpdate();
@@ -531,7 +547,7 @@ export class ReviewsModule extends LitElement {
         this._pendingReviewIds.delete(item.id);
         this.requestUpdate();
       });
-  };
+  }
 
   private readonly _resolvePlayback = async (
     item: ActivityListItem,

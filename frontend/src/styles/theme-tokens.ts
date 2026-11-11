@@ -115,6 +115,7 @@ export const themeTokens = css`
       --ha-color-fill-primary-normal-resting,
       transparent
     );
+    --wzc-control-disabled-opacity: var(--disabled-opacity, 0.55);
     --wzc-camera-activity-outline-width: 0.25rem;
     --wzc-camera-alert-outline-color: var(--wzc-color-error);
     --wzc-camera-detection-outline-color: var(--wzc-color-warning);
@@ -262,6 +263,7 @@ export const themeTokens = css`
     --wzc-event-tile-shadow: var(--wzc-shadow-small);
     --wzc-event-tile-gap: 0.65rem;
     --wzc-event-content-padding: 0.25rem;
+    --wzc-event-metadata-column-size: 9.75rem;
     --wzc-event-thumbnail-inline-size: 12.8rem;
     --wzc-event-thumbnail-radius: var(--wzc-radius-card);
     --wzc-event-thumbnail-placeholder-background: var(

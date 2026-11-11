@@ -199,6 +199,8 @@
   "reviews.alert": "Alert",
   "reviews.detection": "Detection",
   "reviews.progress": "In progress",
+  "reviews.reviewed": "Reviewed",
+  "reviews.not_reviewed": "Not reviewed",
   "reviews.mark_reviewed": "Mark reviewed",
   "reviews.mark_unreviewed": "Mark unreviewed",
   "reviews.ai_analysis": "AI Analysis",

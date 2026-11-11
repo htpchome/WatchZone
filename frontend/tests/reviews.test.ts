@@ -393,6 +393,12 @@ describe("reviews module", () => {
         activityRoot(module)?.querySelectorAll(".review-state"),
       ).toHaveLength(2);
     });
+    expect(
+      [
+        ...(activityRoot(module)?.querySelectorAll(".review-state-label") ??
+          []),
+      ].map(({ textContent }) => textContent?.trim()),
+    ).toEqual(["Reviewed", "Not reviewed"]);
     const unreviewed = activityRoot(module)?.querySelector<HTMLButtonElement>(
       'button[aria-label="Mark reviewed"]',
     );
@@ -408,6 +414,80 @@ describe("reviews module", () => {
       expect(
         activityRoot(module)?.querySelectorAll(".review-state.reviewed"),
       ).toHaveLength(2);
+    });
+  });
+
+  it("marks an unreviewed review when its video is opened", async () => {
+    const callWS = vi.fn(async (message: { type: string }) =>
+      message.type === "watchzone/reviews/list"
+        ? { items: reviews }
+        : { reviewed: true },
+    );
+    const api = {
+      callWS,
+      identity: {},
+      locale: { language: "en", time_zone: "server" },
+      resolveUrl: (path: string) => `https://ha.local${path}`,
+      subscribeMessage: vi.fn(),
+    } as unknown as HomeAssistantApi;
+    const selection = new CameraSelectionContext();
+    const module = document.createElement(REVIEWS_TAG) as ReviewsModule;
+    module.api = api;
+    module.cameraSelection = selection;
+    module.targetModuleId = "camera-module";
+    document.body.append(module);
+    selection.publish(
+      "camera-module",
+      {},
+      {
+        activeEntityId: "camera.front",
+        items: [{ entityId: "camera.front", label: "Front" }],
+      },
+      vi.fn(),
+    );
+
+    await vi.waitFor(() => {
+      expect(
+        (
+          module.shadowRoot?.querySelector(ACTIVITY_LIST_TAG) as
+            (HTMLElement & { items: readonly ActivityListItem[] }) | null
+        )?.items,
+      ).toHaveLength(2);
+    });
+    const list = module.shadowRoot?.querySelector(ACTIVITY_LIST_TAG) as
+      (HTMLElement & { items: readonly ActivityListItem[] }) | null;
+    const item = list?.items.find(({ id }) => id === "frigate:review-2");
+    if (!item) throw new Error("Expected the unreviewed fixture item.");
+    expect(item?.reviewed).toBe(false);
+
+    list?.dispatchEvent(
+      new CustomEvent(ACTIVITY_LIST_INTENT_EVENT, {
+        bubbles: true,
+        composed: true,
+        detail: { kind: "open_media", media: "snapshot", item },
+      }),
+    );
+    expect(callWS).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: "watchzone/reviews/set_reviewed" }),
+    );
+
+    list?.dispatchEvent(
+      new CustomEvent(ACTIVITY_LIST_INTENT_EVENT, {
+        bubbles: true,
+        composed: true,
+        detail: { kind: "open_media", media: "video", item },
+      }),
+    );
+    await vi.waitFor(() => {
+      expect(callWS).toHaveBeenCalledWith({
+        type: "watchzone/reviews/set_reviewed",
+        entity_id: "camera.front",
+        review_id: "frigate:review-2",
+        reviewed: true,
+      });
+      expect(
+        list?.items.find(({ id }) => id === "frigate:review-2")?.reviewed,
+      ).toBe(true);
     });
   });
 

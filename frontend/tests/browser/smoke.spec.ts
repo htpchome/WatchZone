@@ -1006,6 +1006,48 @@ test("keeps activity content in an independently scrolling viewport", async ({
     "icon",
     "mdi:creation",
   );
+  const analysisTopBeforeExport = await analysisTitle.evaluate((element) => {
+    const tile = element.closest(".tile");
+    if (!tile)
+      throw new Error("Expected the AI title inside an activity tile.");
+    return (
+      element.getBoundingClientRect().top - tile.getBoundingClientRect().top
+    );
+  });
+  const standardTileLayout = await analysisTitle.evaluate((element) => {
+    const tile = element.closest(".tile");
+    const thumbnail = tile?.querySelector(".thumbnail-wrap");
+    const badges = tile?.querySelector(".badges");
+    const details = tile?.querySelector(".details");
+    const aside = tile?.querySelector(".review-aside");
+    const actions = tile?.querySelector(".actions");
+    if (!tile || !thumbnail || !badges || !details || !aside || !actions) {
+      throw new Error("Expected the complete standard activity-tile grid.");
+    }
+    const tileBounds = tile.getBoundingClientRect();
+    const thumbnailBounds = thumbnail.getBoundingClientRect();
+    const badgeBounds = badges.getBoundingClientRect();
+    const detailBounds = details.getBoundingClientRect();
+    const asideBounds = aside.getBoundingClientRect();
+    const actionBounds = actions.getBoundingClientRect();
+    return {
+      actionsAfterAside: actionBounds.left >= asideBounds.right,
+      asideAfterDetails: asideBounds.left >= detailBounds.right,
+      contentBelowBadges:
+        detailBounds.top >= badgeBounds.bottom &&
+        asideBounds.top >= badgeBounds.bottom &&
+        actionBounds.top >= badgeBounds.bottom,
+      standard: tile.classList.contains("standard"),
+      thumbnailBottom: Math.abs(thumbnailBounds.bottom - tileBounds.bottom),
+      thumbnailTop: Math.abs(thumbnailBounds.top - tileBounds.top),
+    };
+  });
+  expect(standardTileLayout.standard).toBe(true);
+  expect(standardTileLayout.thumbnailTop).toBeLessThanOrEqual(1);
+  expect(standardTileLayout.thumbnailBottom).toBeLessThanOrEqual(1);
+  expect(standardTileLayout.contentBelowBadges).toBe(true);
+  expect(standardTileLayout.asideAfterDetails).toBe(true);
+  expect(standardTileLayout.actionsAfterAside).toBe(true);
   await expect(page.locator("wzc-events .analysis-title")).toHaveCount(0);
   const reviewExportButtons = page.getByRole("button", {
     name: "Export review",
@@ -1069,6 +1111,32 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect(
     page.locator("wzc-reviews .export-status.success"),
   ).toContainText("Export successful");
+  const exportPresentation = await page
+    .locator("wzc-reviews .export-status.success")
+    .evaluate((status) => {
+      const analysis = status
+        .closest(".review-aside")
+        ?.querySelector(".analysis-title");
+      if (!analysis)
+        throw new Error("Expected the AI title beside export state.");
+      const tile = status.closest(".tile");
+      if (!tile) throw new Error("Expected the export state inside a tile.");
+      return {
+        analysisHeight: analysis.getBoundingClientRect().height,
+        analysisTop:
+          analysis.getBoundingClientRect().top -
+          tile.getBoundingClientRect().top,
+        statusHeight: status.getBoundingClientRect().height,
+      };
+    });
+  expect(exportPresentation.analysisTop).toBeCloseTo(
+    analysisTopBeforeExport,
+    0,
+  );
+  expect(exportPresentation.statusHeight).toBeCloseTo(
+    exportPresentation.analysisHeight,
+    0,
+  );
   await analysisTitle.click();
   const analysisDialog = page.locator(
     "wzc-reviews wzc-review-analysis-dialog dialog",
@@ -1143,43 +1211,33 @@ test("keeps activity content in an independently scrolling viewport", async ({
   const reviewState = page.locator("wzc-reviews .review-state").first();
   await expect(reviewState).toHaveClass(/unreviewed/);
   await expect(reviewState).toHaveAttribute("aria-pressed", "false");
-  const unreviewedPresentation = await reviewState
-    .locator(".review-state-indicator")
-    .evaluate((indicator) => {
-      const style = getComputedStyle(indicator);
-      return {
-        background: style.backgroundColor,
-        borderColor: style.borderTopColor,
-        color: style.color,
-        opacity: style.opacity,
-      };
-    });
-  expect(unreviewedPresentation.background).toBe("rgba(0, 0, 0, 0)");
+  await expect(reviewState.locator(".review-state-label")).toHaveText(
+    "Not reviewed",
+  );
+  await expect(reviewState.locator(".review-state-plus")).toHaveCount(1);
+  const unreviewedPresentation = await reviewState.evaluate((button) => {
+    const style = getComputedStyle(button);
+    return {
+      borderColor: style.borderTopColor,
+      color: style.color,
+      cursor: style.cursor,
+      height: button.getBoundingClientRect().height,
+    };
+  });
   expect(unreviewedPresentation.borderColor).toBe(unreviewedPresentation.color);
-  expect(unreviewedPresentation.opacity).toBe("0.7");
+  expect(unreviewedPresentation.cursor).toBe("pointer");
+  expect(unreviewedPresentation.height).toBeLessThan(32);
   const reviewStatePlacement = await reviewState.evaluate((button) => {
     const thumbnail = button
       .closest(".tile")!
       .querySelector(".thumbnail-wrap")!
       .getBoundingClientRect();
     const buttonBounds = button.getBoundingClientRect();
-    const indicator = button
-      .querySelector(".review-state-indicator")!
-      .getBoundingClientRect();
-    const icon = button.querySelector("svg")!.getBoundingClientRect();
     return {
-      iconCenterDeltaX: Math.abs(
-        indicator.left + indicator.width / 2 - (icon.left + icon.width / 2),
-      ),
-      iconCenterDeltaY: Math.abs(
-        indicator.top + indicator.height / 2 - (icon.top + icon.height / 2),
-      ),
       outsideThumbnail: buttonBounds.left >= thumbnail.right,
     };
   });
   expect(reviewStatePlacement.outsideThumbnail).toBe(true);
-  expect(reviewStatePlacement.iconCenterDeltaX).toBeLessThanOrEqual(0.5);
-  expect(reviewStatePlacement.iconCenterDeltaY).toBeLessThanOrEqual(0.5);
   expect(previewRequests).toBe(0);
   await expect
     .poll(() =>
@@ -1203,19 +1261,13 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect.poll(() => previewRequests).toBe(1);
   await page.mouse.move(0, 0);
   await expect(page.locator("wzc-reviews .hover-preview")).toHaveCount(0);
-  await reviewState.hover();
-  await expect(reviewState.locator(".review-state-indicator")).toHaveCSS(
-    "opacity",
-    "1",
-  );
-  await page.mouse.move(0, 0);
-  await expect(reviewState.locator(".review-state-indicator")).toHaveCSS(
-    "opacity",
-    "0.7",
-  );
   await reviewState.click();
   await expect(reviewState).toHaveClass(/^review-state reviewed$/);
   await expect(reviewState).toHaveAttribute("aria-pressed", "true");
+  await expect(reviewState.locator(".review-state-label")).toHaveText(
+    "Reviewed",
+  );
+  await expect(reviewState.locator(".review-state-plus")).toHaveCount(0);
   await expect
     .poll(() =>
       reviewState
@@ -1223,10 +1275,6 @@ test("keeps activity content in an independently scrolling viewport", async ({
         .evaluate((indicator) => getComputedStyle(indicator).color),
     )
     .not.toBe(unreviewedPresentation.color);
-  await expect(reviewState.locator(".review-state-indicator")).toHaveCSS(
-    "background-color",
-    "rgba(0, 0, 0, 0)",
-  );
   const alertList = page.locator("wzc-reviews wzc-activity-list");
   await alertList.evaluate(async (element) => {
     const list = element as HTMLElement & {
