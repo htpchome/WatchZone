@@ -239,16 +239,16 @@ export const activityListStyles = css`
   .review-state {
     align-items: center;
     appearance: none;
-    background: var(--wzc-color-surface);
+    background: transparent;
     border: 1px solid currentcolor;
     border-radius: var(--wzc-radius-small);
     box-sizing: border-box;
     display: inline-flex;
-    gap: 0.3rem;
-    min-block-size: 1.55rem;
+    gap: 0.225rem;
+    min-block-size: 1.1625rem;
     max-inline-size: 100%;
     margin-block-start: 0.15rem;
-    padding: 0.12rem 0.45rem 0.12rem 0.3rem;
+    padding: 0.09rem 0.3375rem 0.09rem 0.225rem;
     cursor: pointer;
     color: var(--wzc-review-state-color);
     pointer-events: auto;
@@ -269,9 +269,9 @@ export const activityListStyles = css`
   .review-state-indicator {
     display: inline-grid;
     flex: 0 0 auto;
-    grid-template-columns: 0.9rem 0.35rem;
-    inline-size: 1.25rem;
-    block-size: 1rem;
+    grid-template-columns: 0.675rem 0.2625rem;
+    inline-size: 0.9375rem;
+    block-size: 0.75rem;
     place-items: center;
     color: inherit;
     transition: transform 120ms ease-out;
@@ -287,19 +287,19 @@ export const activityListStyles = css`
 
   .review-state svg {
     display: block;
-    inline-size: 1rem;
-    block-size: 1rem;
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
   }
 
   .review-state-plus {
-    font-size: 0.8rem;
+    font-size: 0.6rem;
     font-weight: var(--wzc-font-weight-semibold);
     line-height: 1;
-    transform: translate(-0.08rem, 0.28rem);
+    transform: translate(-0.06rem, 0.21rem);
   }
 
   .review-state-label {
-    font-size: var(--wzc-font-size-small);
+    font-size: 0.5625rem;
     font-weight: var(--wzc-font-weight-semibold);
     line-height: 1;
     overflow: hidden;
@@ -309,7 +309,7 @@ export const activityListStyles = css`
 
   @media (hover: hover) {
     .review-state:hover:not(:disabled) {
-      background: var(--wzc-neutral-control-hover-background);
+      background: var(--wzc-color-surface);
     }
 
     .review-state:hover:not(:disabled) .review-state-indicator {
@@ -464,7 +464,7 @@ export const activityListStyles = css`
     grid-row: 1;
     min-inline-size: 0;
     overflow: hidden;
-    padding-block-start: var(--wzc-event-content-padding);
+    padding-block-start: calc(var(--wzc-event-content-padding) + 0.2rem);
     padding-inline-end: var(--wzc-event-action-margin);
   }
 
@@ -501,7 +501,7 @@ export const activityListStyles = css`
   }
 
   .actions {
-    align-self: start;
+    align-self: center;
     display: flex;
     gap: 0.2rem;
     grid-column: 4;

@@ -1021,18 +1021,28 @@ test("keeps activity content in an independently scrolling viewport", async ({
     const details = tile?.querySelector(".details");
     const aside = tile?.querySelector(".review-aside");
     const actions = tile?.querySelector(".actions");
-    if (!tile || !thumbnail || !badges || !details || !aside || !actions) {
+    const firstBadge = badges?.querySelector("wzc-badge");
+    if (
+      !tile ||
+      !thumbnail ||
+      !badges ||
+      !firstBadge ||
+      !details ||
+      !aside ||
+      !actions
+    ) {
       throw new Error("Expected the complete standard activity-tile grid.");
     }
     const tileBounds = tile.getBoundingClientRect();
     const thumbnailBounds = thumbnail.getBoundingClientRect();
-    const badgeBounds = badges.getBoundingClientRect();
+    const badgeBounds = firstBadge.getBoundingClientRect();
     const detailBounds = details.getBoundingClientRect();
     const asideBounds = aside.getBoundingClientRect();
     const actionBounds = actions.getBoundingClientRect();
     return {
       actionsAfterAside: actionBounds.left >= asideBounds.right,
       asideAfterDetails: asideBounds.left >= detailBounds.right,
+      badgeInset: badgeBounds.top - tileBounds.top,
       contentBelowBadges:
         detailBounds.top >= badgeBounds.bottom &&
         asideBounds.top >= badgeBounds.bottom &&
@@ -1045,6 +1055,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(standardTileLayout.standard).toBe(true);
   expect(standardTileLayout.thumbnailTop).toBeLessThanOrEqual(1);
   expect(standardTileLayout.thumbnailBottom).toBeLessThanOrEqual(1);
+  expect(standardTileLayout.badgeInset).toBeGreaterThanOrEqual(6);
   expect(standardTileLayout.contentBelowBadges).toBe(true);
   expect(standardTileLayout.asideAfterDetails).toBe(true);
   expect(standardTileLayout.actionsAfterAside).toBe(true);
@@ -1218,6 +1229,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   const unreviewedPresentation = await reviewState.evaluate((button) => {
     const style = getComputedStyle(button);
     return {
+      background: style.backgroundColor,
       borderColor: style.borderTopColor,
       color: style.color,
       cursor: style.cursor,
@@ -1225,8 +1237,9 @@ test("keeps activity content in an independently scrolling viewport", async ({
     };
   });
   expect(unreviewedPresentation.borderColor).toBe(unreviewedPresentation.color);
+  expect(unreviewedPresentation.background).toBe("rgba(0, 0, 0, 0)");
   expect(unreviewedPresentation.cursor).toBe("pointer");
-  expect(unreviewedPresentation.height).toBeLessThan(32);
+  expect(unreviewedPresentation.height).toBeLessThan(24);
   const reviewStatePlacement = await reviewState.evaluate((button) => {
     const thumbnail = button
       .closest(".tile")!
@@ -1251,6 +1264,15 @@ test("keeps activity content in an independently scrolling viewport", async ({
       ),
     )
     .toBe("/review-preview.gif");
+  await reviewState.hover();
+  await expect
+    .poll(() =>
+      reviewState.evaluate(
+        (button) => getComputedStyle(button).backgroundColor,
+      ),
+    )
+    .not.toBe(unreviewedPresentation.background);
+  await page.mouse.move(0, 0);
   await page
     .locator("wzc-reviews .tile")
     .first()
