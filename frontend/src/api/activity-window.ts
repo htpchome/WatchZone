@@ -43,21 +43,14 @@ export async function listActivityWindow<T extends ActivityWindowItem>(
       bypass_cache: options.bypassCache ?? false,
       ...(type === "watchzone/reviews/list"
         ? {
-            summary_only: firstPage && options.loadFullHistory !== false,
+            summary_only: false,
           }
         : {}),
     });
     for (const item of response.items) items.set(item.id, item);
     const snapshot = sortedItems(items);
     options.onProgress?.(snapshot);
-    const summaryNeedsEnrichment =
-      type === "watchzone/reviews/list" &&
-      firstPage &&
-      response.items.length > 0;
-    if (
-      options.loadFullHistory === false ||
-      (!summaryNeedsEnrichment && response.items.length < pageSize)
-    )
+    if (options.loadFullHistory === false || response.items.length < pageSize)
       return snapshot;
 
     if (firstPage) await allowFirstPagePaint();
@@ -66,10 +59,7 @@ export async function listActivityWindow<T extends ActivityWindowItem>(
       ...response.items.map(({ start_time }) => start_time),
     );
     if (!Number.isFinite(oldestStart) || oldestStart >= before) break;
-    before =
-      type === "watchzone/reviews/list" && firstPage
-        ? windowBefore
-        : oldestStart;
+    before = oldestStart;
     pageSize = ACTIVITY_BACKGROUND_PAGE_SIZE;
     firstPage = false;
   }

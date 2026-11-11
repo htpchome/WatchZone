@@ -395,53 +395,57 @@ export class ActivityList extends LitElement {
               start,
             )
       }
-      <div class="actions">
-        ${
-          item.exportable
-            ? html`<button
-                class="action wzc-icon-button"
-                type="button"
-                title=${this.localize("reviews.export")}
-                aria-label=${this.localize("reviews.export")}
-                ?disabled=${item.exportPending === true}
-                @click=${() => this._dispatch({ kind: "export", item })}
-              >
-                <ha-icon icon="mdi:export"></ha-icon>
-              </button>`
-            : null
-        }
-        ${
-          item.clipUrl
-            ? html`<a
-                class="action wzc-icon-button"
-                href=${this.api?.resolveUrl(item.clipUrl) ?? item.clipUrl}
-                download
-                title=${this.localize("events.download_clip")}
-                aria-label=${this.localize("events.download_clip")}
-                ><ha-icon icon="mdi:download"></ha-icon
-              ></a>`
-            : null
-        }
-        ${
-          snapshotUrl
-            ? html`<button
-                class="action wzc-icon-button"
-                data-recorded-media-opener="true"
-                type="button"
-                title=${this.localize("events.view_snapshot")}
-                aria-label=${this.localize("events.view_snapshot")}
-                @click=${() =>
-                  this._dispatch({
-                    kind: "open_media",
-                    media: "snapshot",
-                    item,
-                  })}
-              >
-                <ha-icon icon="mdi:camera"></ha-icon>
-              </button>`
-            : null
-        }
-      </div>
+      ${
+        item.inProgress
+          ? null
+          : html`<div class="actions">
+              ${
+                item.exportable
+                  ? html`<button
+                      class="action wzc-icon-button"
+                      type="button"
+                      title=${this.localize("reviews.export")}
+                      aria-label=${this.localize("reviews.export")}
+                      ?disabled=${item.exportPending === true}
+                      @click=${() => this._dispatch({ kind: "export", item })}
+                    >
+                      <ha-icon icon="mdi:export"></ha-icon>
+                    </button>`
+                  : null
+              }
+              ${
+                item.clipUrl
+                  ? html`<a
+                      class="action wzc-icon-button"
+                      href=${this.api?.resolveUrl(item.clipUrl) ?? item.clipUrl}
+                      download
+                      title=${this.localize("events.download_clip")}
+                      aria-label=${this.localize("events.download_clip")}
+                      ><ha-icon icon="mdi:download"></ha-icon
+                    ></a>`
+                  : null
+              }
+              ${
+                snapshotUrl
+                  ? html`<button
+                      class="action wzc-icon-button"
+                      data-recorded-media-opener="true"
+                      type="button"
+                      title=${this.localize("events.view_snapshot")}
+                      aria-label=${this.localize("events.view_snapshot")}
+                      @click=${() =>
+                        this._dispatch({
+                          kind: "open_media",
+                          media: "snapshot",
+                          item,
+                        })}
+                    >
+                      <ha-icon icon="mdi:camera"></ha-icon>
+                    </button>`
+                  : null
+              }
+            </div>`
+      }
     </article>`;
   }
 

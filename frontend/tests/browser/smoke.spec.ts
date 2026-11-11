@@ -973,7 +973,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   const reviewExportButtons = page.getByRole("button", {
     name: "Export review",
   });
-  await expect(reviewExportButtons).toHaveCount(6);
+  await expect(reviewExportButtons).toHaveCount(2);
   const cursor = (selector: string) =>
     page
       .locator(`wzc-reviews ${selector}`)
@@ -1225,6 +1225,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
     };
   });
   await expect(alertList.locator(".in-progress")).toHaveText("In progress");
+  await expect(alertList.locator(".actions")).toHaveCount(0);
   await expect(alertList.locator(".tile-player")).toHaveCount(1);
   await alertList.locator(".tile-player").click();
   const draftDialog = page.locator(

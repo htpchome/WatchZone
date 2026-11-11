@@ -16,8 +16,8 @@ but the Stage module and frontend transport remain provider-neutral.
 - Python owns provider discovery, normalization, authorization, mutations, and
   authenticated media proxying. The frontend never receives Frigate
   credentials or provider filesystem paths.
-- Frigate endpoint and version compatibility belongs only to the Frigate
-  provider adapter.
+- Frigate action, endpoint, and version compatibility belongs only to the
+  Frigate provider adapter.
 - Reviews may request export preparation and creation through the normalized
   Exports API contract. Reviews does not import or mutate the Exports Stage
   module.
@@ -49,10 +49,13 @@ but the Stage module and frontend transport remain provider-neutral.
 
 - Listing, single-export lookup, and rename use the endpoints shared by Frigate
   0.17 and 0.18.
-- Creation uses Frigate's recording-range endpoint. The adapter sends the exact
-  Frigate 0.17 realtime request first and retries with the Frigate 0.18
-  recordings-source shape only when the first schema is rejected. Creation is
-  successful only when Frigate returns a concrete export ID.
+- Creation delegates to the public `frigate.export_recording` entity action
+  registered by the Frigate Home Assistant integration. WatchZone passes the
+  originating user context and does not duplicate the integration's export
+  request or authentication behavior.
+- The Frigate action is asynchronous and does not return an export ID. After it
+  completes, the adapter briefly reconciles the provider library and reports
+  success only after the newly created, correctly titled export is present.
 - Successful creation publishes a provider-neutral library invalidation. An
   active Exports module reloads immediately and retries once for Frigate's
   asynchronous database insertion; a later activation also begins with a fresh

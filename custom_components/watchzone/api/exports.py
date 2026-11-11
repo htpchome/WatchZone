@@ -139,6 +139,7 @@ async def ws_exports_create(
             msg["start_time"],
             msg["end_time"],
             msg["name"],
+            connection.context(msg),
         )
     except HomeAssistantError as err:
         connection.send_error(msg["id"], "exports_create_failed", str(err))

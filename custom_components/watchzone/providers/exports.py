@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal, Protocol
 
-from homeassistant.core import HomeAssistant
+from homeassistant.core import Context, HomeAssistant
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,7 +60,11 @@ class ExportsProvider(Protocol):
         """Return the provider's default title for a recorded range."""
 
     async def async_create_export(
-        self, hass: HomeAssistant, entity_id: str, request: ExportRequest
+        self,
+        hass: HomeAssistant,
+        entity_id: str,
+        request: ExportRequest,
+        context: Context,
     ) -> str:
         """Create one persistent export and return its provider ID."""
 

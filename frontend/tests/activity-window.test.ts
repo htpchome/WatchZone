@@ -77,11 +77,15 @@ describe("activity window pagination", () => {
     await vi.waitFor(() => expect(firstPaint).toHaveBeenCalledOnce());
     expect(firstPaint).toHaveBeenCalledWith(firstPage);
     expect(callWS.mock.calls[0]?.[0]).toEqual(
-      expect.objectContaining({ limit: 10, summary_only: true }),
+      expect.objectContaining({ limit: 10, summary_only: false }),
     );
     await vi.waitFor(() => expect(callWS).toHaveBeenCalledTimes(2));
     expect(callWS.mock.calls[1]?.[0]).toEqual(
-      expect.objectContaining({ limit: 500, summary_only: false }),
+      expect.objectContaining({
+        before: 991,
+        limit: 500,
+        summary_only: false,
+      }),
     );
     finishBackground?.({ items: [] });
     await expect(complete).resolves.toHaveLength(10);

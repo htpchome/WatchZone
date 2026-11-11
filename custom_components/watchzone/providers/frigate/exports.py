@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 from datetime import datetime
@@ -9,7 +10,7 @@ from pathlib import PurePosixPath
 from typing import Any
 
 from aiohttp import ClientError, ClientResponse, ClientSession, ClientTimeout
-from homeassistant.core import HomeAssistant
+from homeassistant.core import Context, HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from yarl import URL
@@ -24,6 +25,9 @@ from ..exports import (
 from .source import FrigateSource, async_resolve_source
 
 _REQUEST_TIMEOUT = ClientTimeout(total=15)
+_EXPORT_SERVICE = "export_recording"
+_EXPORT_VERIFY_ATTEMPTS = 20
+_EXPORT_VERIFY_DELAY = 0.25
 
 
 class FrigateExportsProvider:
@@ -57,40 +61,47 @@ class FrigateExportsProvider:
         return f"{camera} {start} {end}"
 
     async def async_create_export(
-        self, hass: HomeAssistant, entity_id: str, request: ExportRequest
+        self,
+        hass: HomeAssistant,
+        entity_id: str,
+        request: ExportRequest,
+        context: Context,
     ) -> str:
-        source = await async_resolve_source(hass, entity_id)
-        path = (
-            f"api/export/{source.camera_name}/start/{request.start_time:g}"
-            f"/end/{request.end_time:g}"
+        if not hass.services.has_service("frigate", _EXPORT_SERVICE):
+            raise HomeAssistantError("Frigate export service is unavailable")
+
+        existing_ids = {
+            item.id for item in await self.async_list_exports(hass, entity_id)
+        }
+        await hass.services.async_call(
+            "frigate",
+            _EXPORT_SERVICE,
+            {
+                "playback_factor": "realtime",
+                "start_time": _service_time(request.start_time),
+                "end_time": _service_time(request.end_time),
+                "name": request.name,
+            },
+            blocking=True,
+            context=context,
+            target={"entity_id": entity_id},
         )
-        response = await self._request(
-            hass,
-            source,
-            "POST",
-            path,
-            json_body={"playback": "realtime", "name": request.name},
-            accepted_errors={422},
+
+        for attempt in range(_EXPORT_VERIFY_ATTEMPTS):
+            exports = await self.async_list_exports(hass, entity_id)
+            created = [
+                item
+                for item in exports
+                if item.id not in existing_ids and item.name == request.name
+            ]
+            if created:
+                return max(created, key=lambda item: item.created_time).id
+            if attempt + 1 < _EXPORT_VERIFY_ATTEMPTS:
+                await asyncio.sleep(_EXPORT_VERIFY_DELAY)
+
+        raise HomeAssistantError(
+            "Frigate accepted the export request but did not create an export"
         )
-        if response.status == 422:
-            response.release()
-            payload = await self._request_json(
-                hass,
-                source,
-                "POST",
-                path,
-                json_body={"source": "recordings", "name": request.name},
-            )
-        else:
-            payload = await _consume_json(response)
-        if not isinstance(payload, dict):
-            raise HomeAssistantError("Frigate did not start the export")
-        export_id = payload.get("export_id")
-        if not isinstance(export_id, str) or not export_id or not payload.get(
-            "success"
-        ):
-            raise HomeAssistantError("Frigate did not start the export")
-        return export_id
 
     async def async_rename_export(
         self, hass: HomeAssistant, entity_id: str, export_id: str, name: str
@@ -272,3 +283,8 @@ def _url(base_url: str, path: str) -> URL:
     for segment in path.split("/"):
         url = url / segment
     return url
+
+
+def _service_time(timestamp: float) -> str:
+    """Format an epoch for Frigate's Home Assistant entity service."""
+    return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")

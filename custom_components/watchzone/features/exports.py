@@ -6,7 +6,7 @@ import asyncio
 from dataclasses import dataclass
 from urllib.parse import quote
 
-from homeassistant.core import HomeAssistant
+from homeassistant.core import Context, HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 
@@ -65,7 +65,12 @@ class ExportsService:
         )
 
     async def async_create(
-        self, entity_id: str, start_time: float, end_time: float, name: str
+        self,
+        entity_id: str,
+        start_time: float,
+        end_time: float,
+        name: str,
+        context: Context,
     ) -> str:
         """Create one export through its owning provider."""
         provider = self._provider(entity_id)
@@ -73,6 +78,7 @@ class ExportsService:
             self._hass,
             entity_id,
             ExportRequest(start_time=start_time, end_time=end_time, name=name),
+            context,
         )
 
     async def async_delete(self, entity_id: str, export_id: str) -> None:

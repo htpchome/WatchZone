@@ -32,6 +32,13 @@
 - Reviews and Events group tiles by the Home Assistant-localized civil date.
   Each date heading remains at the top of the list viewport while its tiles
   scroll beneath it; the next heading pushes it away at the group boundary.
+- The first visible Reviews batch is fully enriched before publication. Action
+  availability must not pop in through a second summary-to-detail tile render
+  or remain incomplete when that follow-up request races; older history may
+  continue paging after the complete first batch is visible.
+- An in-progress Review exposes no export, download, or snapshot actions. Its
+  complete applicable action set appears only after the provider marks the
+  Review complete.
 - Their shared camera-scoped filter retains distinct category headings and
   presents each category's choices as wrapping pills. Native radio semantics
   preserve single selection, while labels and zones remain multi-select

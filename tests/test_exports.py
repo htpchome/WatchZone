@@ -4,8 +4,10 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+from homeassistant.core import Context
+from homeassistant.exceptions import HomeAssistantError
 
-from custom_components.watchzone.providers.exports import ExportRequest
+from custom_components.watchzone.providers.exports import ExportRecord, ExportRequest
 from custom_components.watchzone.providers.frigate.exports import (
     FrigateExportsProvider,
     _normalize_export,
@@ -115,69 +117,74 @@ async def test_default_name_matches_frigate_format(monkeypatch) -> None:
     assert name == "front door 1970-01-01 00:00:00 1970-01-01 00:01:05"
 
 
-async def test_create_uses_frigate_017_request(monkeypatch) -> None:
-    """Creation uses the exact request sent by Frigate 0.17's own UI."""
+async def test_create_uses_frigate_integration_service() -> None:
+    """Creation delegates to Frigate's public Home Assistant entity service."""
     provider = FrigateExportsProvider()
-    source = SimpleNamespace(camera_name="front")
-    response = SimpleNamespace(
-        status=200,
-        json=AsyncMock(
-            return_value={"success": True, "export_id": "front-abc123"}
-        ),
-        release=Mock(),
+    services = SimpleNamespace(
+        has_service=Mock(return_value=True), async_call=AsyncMock()
     )
-    request = AsyncMock(return_value=response)
-    monkeypatch.setattr(
-        "custom_components.watchzone.providers.frigate.exports.async_resolve_source",
-        AsyncMock(return_value=source),
+    hass = SimpleNamespace(services=services)
+    context = Context(user_id="user-1")
+    created = ExportRecord(
+        id="front-abc123",
+        camera="front",
+        name="Front visitor",
+        created_time=101,
+        in_progress=True,
+        revision="revision",
     )
-    monkeypatch.setattr(provider, "_request", request)
+    provider.async_list_exports = AsyncMock(side_effect=[(), (created,)])
 
     export_id = await provider.async_create_export(
-        SimpleNamespace(),
+        hass,
         "camera.front",
         ExportRequest(start_time=100.5, end_time=124.25, name="Front visitor"),
+        context,
     )
 
     assert export_id == "front-abc123"
-    request.assert_awaited_once_with(
-        SimpleNamespace(),
-        source,
-        "POST",
-        "api/export/front/start/100.5/end/124.25",
-        json_body={"playback": "realtime", "name": "Front visitor"},
-        accepted_errors={422},
+    services.async_call.assert_awaited_once_with(
+        "frigate",
+        "export_recording",
+        {
+            "playback_factor": "realtime",
+            "start_time": "1970-01-01 00:01:40",
+            "end_time": "1970-01-01 00:02:04",
+            "name": "Front visitor",
+        },
+        blocking=True,
+        context=context,
+        target={"entity_id": "camera.front"},
     )
 
 
-async def test_create_falls_back_to_frigate_018_request(monkeypatch) -> None:
-    """A schema rejection retries with Frigate 0.18's recordings source."""
+async def test_create_rejects_unverified_background_job(monkeypatch) -> None:
+    """An accepted action is not success until its export enters the library."""
     provider = FrigateExportsProvider()
-    source = SimpleNamespace(camera_name="front")
-    rejected = SimpleNamespace(status=422, release=Mock())
-    request = AsyncMock(return_value=rejected)
-    request_json = AsyncMock(
-        return_value={"success": True, "export_id": "front-def456"}
+    services = SimpleNamespace(
+        has_service=Mock(return_value=True), async_call=AsyncMock()
+    )
+    hass = SimpleNamespace(services=services)
+    provider.async_list_exports = AsyncMock(return_value=())
+    sleep = AsyncMock()
+    monkeypatch.setattr(
+        "custom_components.watchzone.providers.frigate.exports._EXPORT_VERIFY_ATTEMPTS",
+        2,
     )
     monkeypatch.setattr(
-        "custom_components.watchzone.providers.frigate.exports.async_resolve_source",
-        AsyncMock(return_value=source),
-    )
-    monkeypatch.setattr(provider, "_request", request)
-    monkeypatch.setattr(provider, "_request_json", request_json)
-
-    export_id = await provider.async_create_export(
-        SimpleNamespace(),
-        "camera.front",
-        ExportRequest(start_time=100, end_time=124, name="Front visitor"),
+        "custom_components.watchzone.providers.frigate.exports.asyncio.sleep", sleep
     )
 
-    assert export_id == "front-def456"
-    rejected.release.assert_called_once()
-    request_json.assert_awaited_once_with(
-        SimpleNamespace(),
-        source,
-        "POST",
-        "api/export/front/start/100/end/124",
-        json_body={"source": "recordings", "name": "Front visitor"},
-    )
+    with pytest.raises(
+        HomeAssistantError,
+        match="accepted the export request but did not create an export",
+    ):
+        await provider.async_create_export(
+            hass,
+            "camera.front",
+            ExportRequest(start_time=100, end_time=124, name="Front visitor"),
+            Context(user_id="user-1"),
+        )
+
+    services.async_call.assert_awaited_once()
+    sleep.assert_awaited_once_with(0.25)

@@ -480,6 +480,7 @@ describe("reviews module", () => {
         activityRoot(module)?.querySelector(".in-progress"),
       ).not.toBeNull();
     });
+    expect(activityRoot(module)?.querySelector(".actions")).toBeNull();
     expect(callWS).toHaveBeenCalledWith(
       expect.objectContaining({
         bypass_cache: true,
