@@ -198,13 +198,42 @@ export class RecordingScrubber extends LitElement {
     const start = selectionPercentage(startTime, timeline);
     const end = selectionPercentage(endTime, timeline);
     return html`
-      ${timeline.selectionSpans.map(
-        (span) =>
-          html`<span
-            class="selection-availability"
-            style=${selectionPositionStyle(span.startTime, span.endTime, timeline)}
-          ></span>`,
-      )}
+      ${timeline.selectionSpans.flatMap((span) => {
+        const portions = [];
+        if (span.startTime < startTime) {
+          portions.push(
+            this._renderSelectionAvailability(
+              span.startTime,
+              Math.min(span.endTime, startTime),
+              timeline,
+              "excluded-availability",
+            ),
+          );
+        }
+        const selectedStart = Math.max(span.startTime, startTime);
+        const selectedEnd = Math.min(span.endTime, endTime);
+        if (selectedEnd > selectedStart) {
+          portions.push(
+            this._renderSelectionAvailability(
+              selectedStart,
+              selectedEnd,
+              timeline,
+              "selected-availability",
+            ),
+          );
+        }
+        if (span.endTime > endTime) {
+          portions.push(
+            this._renderSelectionAvailability(
+              Math.max(span.startTime, endTime),
+              span.endTime,
+              timeline,
+              "excluded-availability",
+            ),
+          );
+        }
+        return portions;
+      })}
       <span class="excluded before" style=${`inline-size: ${start}%`}></span>
       <span
         class="selected"
@@ -217,6 +246,19 @@ export class RecordingScrubber extends LitElement {
       ${this._renderHandle("start", startTime, endTime - 1, start, timeline)}
       ${this._renderHandle("end", endTime, startTime + 1, end, timeline)}
     `;
+  }
+
+  private _renderSelectionAvailability(
+    startTime: number,
+    endTime: number,
+    timeline: RecordingTimeline,
+    state: "excluded-availability" | "selected-availability",
+  ) {
+    if (endTime <= startTime) return nothing;
+    return html`<span
+      class=${`selection-availability ${state}`}
+      style=${selectionPositionStyle(startTime, endTime, timeline)}
+    ></span>`;
   }
 
   private _renderHandle(

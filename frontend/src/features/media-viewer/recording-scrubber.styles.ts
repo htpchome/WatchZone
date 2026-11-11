@@ -35,7 +35,7 @@ export const recordingScrubberStyles = css`
     padding: 0;
     color: var(--wzc-recording-scrubber-text);
     background: transparent;
-    border: 1px solid var(--wzc-recording-scrubber-pointer-outline);
+    border: 1px solid var(--wzc-recording-scrubber-control-border);
     border-radius: 50%;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
@@ -66,7 +66,7 @@ export const recordingScrubberStyles = css`
   .handle:focus-visible,
   .range:focus-visible,
   .marker:focus-visible {
-    outline: 2px solid var(--wzc-recording-scrubber-pointer-outline);
+    outline: 2px solid var(--wzc-recording-scrubber-focus);
     outline-offset: 2px;
   }
 
@@ -152,11 +152,18 @@ export const recordingScrubberStyles = css`
   }
 
   .selection-availability {
-    z-index: 1;
+    z-index: 2;
     inset-block-start: 0;
     block-size: var(--wzc-recording-scrubber-track-block-size);
-    background: var(--wzc-recording-segment-context);
     pointer-events: none;
+  }
+
+  .selection-availability.selected-availability {
+    background: var(--wzc-recording-segment-selected);
+  }
+
+  .selection-availability.excluded-availability {
+    background: var(--wzc-recording-segment-excluded);
   }
 
   .segment-active .track {
@@ -172,7 +179,7 @@ export const recordingScrubberStyles = css`
   }
 
   .excluded {
-    background: var(--wzc-recording-segment-excluded);
+    background: transparent;
   }
 
   .selected {
@@ -234,7 +241,7 @@ export const recordingScrubberStyles = css`
     inline-size: 0.38rem;
     block-size: 0.38rem;
     background: var(--wzc-recording-segment-handle-accent);
-    border: 1px solid var(--wzc-recording-segment-primary-text);
+    border: 1px solid var(--wzc-recording-segment-handle-accent-outline);
     border-radius: 50%;
     transform: translateX(-50%);
   }
@@ -276,7 +283,7 @@ export const recordingScrubberStyles = css`
     inset-block-end: calc(100% + 0.16rem);
     inset-inline-start: 50%;
     padding: 0.08rem 0.28rem;
-    color: var(--wzc-recording-scrubber-text);
+    color: var(--wzc-recording-scrubber-pointer-text);
     background: var(--wzc-recording-scrubber-pointer);
     border: 1px solid var(--wzc-recording-scrubber-pointer-outline);
     border-radius: 0.25rem;

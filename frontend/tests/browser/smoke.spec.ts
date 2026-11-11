@@ -2287,6 +2287,28 @@ test("switches activity and recordings through the shared media calendar", async
   ).toBeVisible();
   const scrubber = page.locator("wzc-recording-scrubber");
   await expect(scrubber).toBeVisible();
+  await page.locator("watchzone-card").evaluate((element) => {
+    const host = element as HTMLElement;
+    host.style.setProperty("--wzc-color-background", "rgb(20, 21, 22)");
+    host.style.setProperty("--wzc-color-surface", "rgb(30, 31, 32)");
+    host.style.setProperty("--wzc-color-surface-secondary", "rgb(40, 41, 42)");
+    host.style.setProperty("--wzc-color-text-1", "rgb(230, 231, 232)");
+    host.style.setProperty("--wzc-color-border", "rgb(70, 71, 72)");
+    host.style.setProperty("--wzc-color-border-control", "rgb(80, 81, 82)");
+    host.style.setProperty("--wzc-color-primary", "rgb(10, 120, 200)");
+    host.style.setProperty("--wzc-color-on-primary", "rgb(250, 251, 252)");
+    host.style.setProperty("--wzc-color-error", "rgb(220, 60, 70)");
+  });
+  await expect(scrubber).toHaveCSS("background-color", "rgb(20, 21, 22)");
+  await expect(scrubber).toHaveCSS("color", "rgb(230, 231, 232)");
+  await expect(scrubber.locator('[data-control="toggle_play"]')).toHaveCSS(
+    "border-color",
+    "rgb(80, 81, 82)",
+  );
+  await expect(scrubber.locator(".span").first()).toHaveCSS(
+    "background-color",
+    "rgb(185, 239, 189)",
+  );
   await expect(scrubber.locator(".label")).toHaveCount(7);
   await expect(scrubber.locator(".marker.detection")).toHaveCount(1);
   await expect(scrubber.locator('[data-control="toggle_play"]')).toBeVisible();
@@ -2296,6 +2318,10 @@ test("switches activity and recordings through the shared media calendar", async
   );
   await scrubber.locator(".marker.detection").hover();
   await expect(scrubber.locator(".preview img")).toBeVisible();
+  await expect(scrubber.locator(".preview")).toHaveCSS(
+    "background-color",
+    "rgb(30, 31, 32)",
+  );
   await expect(scrubber.locator(".preview-label")).toContainText(
     "Detection - 10:07",
   );
@@ -2316,9 +2342,21 @@ test("switches activity and recordings through the shared media calendar", async
     "background-color",
     "rgba(0, 0, 0, 0)",
   );
+  await expect(scrubber.locator(".selected-availability").first()).toHaveCSS(
+    "background-color",
+    "rgb(131, 223, 154)",
+  );
+  await expect(scrubber.locator(".excluded.after")).toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  );
   await expect(page.locator("wzc-recorded-video-transport")).toHaveCount(1);
   const segmentManager = page.locator("wzc-recording-segment-manager");
   await expect(segmentManager).toBeVisible();
+  await expect(segmentManager).toHaveCSS("background-color", "rgb(40, 41, 42)");
+  await expect(
+    segmentManager.getByRole("button", { name: "Download Segment" }),
+  ).toHaveCSS("background-color", "rgb(10, 120, 200)");
   await expect(segmentManager).toContainText("Select a recording segment");
   await scrubber.locator(".handle.start").press("ArrowLeft");
   await expect(scrubber.locator(".handle.start")).toHaveAttribute(
