@@ -2,7 +2,10 @@ import { html, LitElement } from "lit";
 import { repeat } from "lit/directives/repeat.js";
 import { styleMap } from "lit/directives/style-map.js";
 
-import { ACTIVITY_LIST_TAG } from "../core/constants";
+import {
+  ACTIVITY_LIST_INTENT_EVENT,
+  ACTIVITY_LIST_TAG,
+} from "../core/constants";
 import {
   formatHomeAssistantDateKey,
   formatHomeAssistantEventDate,
@@ -10,11 +13,9 @@ import {
   homeAssistantDateKey,
 } from "../core/date-time";
 import type { HomeAssistantApi } from "../core/home-assistant";
-import {
-  openRecordedMedia,
-  type RecordedMediaRequest,
-  type RecordedMediaSource,
-  type RecordedMediaTransport,
+import type {
+  RecordedMediaSource,
+  RecordedMediaTransport,
 } from "../core/recorded-media";
 import { homeAssistantNumberFormat } from "../core/number-format";
 import {
@@ -24,10 +25,7 @@ import {
 } from "../core/localization";
 import { distinctBadgeColorsForLabels, type BadgeColor } from "./badge-colors";
 import { renderIcon } from "./icons";
-import {
-  activityMediaTitle,
-  activityRecordedMediaRequest,
-} from "./activity-media";
+import { activityMediaTitle } from "../core/activity-media";
 import type { BadgeVariant } from "./badge";
 import "./badge";
 import "./media-day-header";
@@ -56,6 +54,7 @@ export interface ActivityListItem {
   readonly mediaStartTime?: number;
   readonly objectLabels: readonly string[];
   readonly playbackSources: readonly RecordedMediaSource[];
+  readonly playable: boolean;
   readonly preferredTransport: RecordedMediaTransport;
   readonly reviewed?: boolean;
   readonly reviewStatePending?: boolean;
@@ -67,10 +66,25 @@ export interface ActivityListItem {
   readonly zones: readonly string[];
 }
 
-export interface ActivityPlaybackResolution {
-  readonly playbackSources: readonly RecordedMediaSource[];
-  readonly preferredTransport: RecordedMediaTransport;
-}
+export type ActivityListIntent =
+  | {
+      readonly item: ActivityListItem;
+      readonly kind: "open_analysis";
+    }
+  | {
+      readonly item: ActivityListItem;
+      readonly kind: "toggle_reviewed";
+    }
+  | {
+      readonly item: ActivityListItem;
+      readonly kind: "open_media";
+      readonly media: "snapshot" | "video";
+    }
+  | {
+      readonly item: ActivityListItem;
+      readonly kind: "retry_media";
+      readonly url: string;
+    };
 
 const VIRTUALIZATION_THRESHOLD = 20;
 const VIRTUALIZATION_OVERSCAN_ROWS = 3;
@@ -95,13 +109,9 @@ export class ActivityList extends LitElement {
     loading: { attribute: false },
     loadingKey: { attribute: false },
     localize: { attribute: false },
-    openAnalysis: { attribute: false },
-    retryMedia: { attribute: false },
-    resolvePlayback: { attribute: false },
     roundedCorners: { attribute: false, type: Boolean },
     selectedDate: { attribute: false },
     shadows: { attribute: false, type: Boolean },
-    toggleReviewed: { attribute: false },
   };
 
   public api?: HomeAssistantApi;
@@ -114,20 +124,13 @@ export class ActivityList extends LitElement {
   public loading = false;
   public loadingKey: TranslationKey = "events.loading";
   public localize: LocalizeFunction = englishLocalize;
-  public openAnalysis?: (item: ActivityListItem) => void;
-  public retryMedia?: (item: ActivityListItem, url: string) => void;
-  public resolvePlayback?: (
-    item: ActivityListItem,
-  ) => Promise<ActivityPlaybackResolution | undefined>;
   public roundedCorners = true;
   public selectedDate?: string;
   public shadows = true;
-  public toggleReviewed?: (item: ActivityListItem) => void;
 
   private readonly _failedMedia = new Set<string>();
   private _activeDateKey?: string;
   private _hoveredPreviewId?: string;
-  private readonly _resolvingPlayback = new Set<string>();
   private _dayHeaderHeight = 0;
   private _rowGap = 0;
   private _rowHeight = 0;
@@ -304,14 +307,14 @@ export class ActivityList extends LitElement {
       @pointerleave=${() => this._clearHoverPreview(item.id)}
     >
       ${
-        item.playbackSources.length > 0 || this.resolvePlayback
+        item.playable
           ? html`<button
               class="tile-player"
               data-recorded-media-opener="true"
               type="button"
               title=${playLabel}
               aria-label=${playLabel}
-              @click=${() => void this._playVideo(item)}
+              @click=${() => this._dispatch({ kind: "open_media", media: "video", item })}
             ></button>`
           : null
       }
@@ -356,7 +359,7 @@ export class ActivityList extends LitElement {
         }
       </div>
       ${
-        item.analysisTitle && item.analysisDescription && this.openAnalysis
+        item.analysisTitle && item.analysisDescription
           ? html`<div class="review-content">
               ${this._renderDetails(item, objectLabels, typeBadge, objectColors, start)}
               <button
@@ -370,7 +373,7 @@ export class ActivityList extends LitElement {
                 })}
                 @click=${(event: MouseEvent) => {
                   event.stopPropagation();
-                  this.openAnalysis?.(item);
+                  this._dispatch({ kind: "open_analysis", item });
                 }}
               >
                 <ha-icon icon="mdi:creation"></ha-icon>
@@ -406,14 +409,12 @@ export class ActivityList extends LitElement {
                 type="button"
                 title=${this.localize("events.view_snapshot")}
                 aria-label=${this.localize("events.view_snapshot")}
-                @click=${() => {
-                  const request = activityRecordedMediaRequest(
+                @click=${() =>
+                  this._dispatch({
+                    kind: "open_media",
+                    media: "snapshot",
                     item,
-                    "snapshot",
-                    this.api,
-                  );
-                  if (request) openRecordedMedia(this, request);
-                }}
+                  })}
               >
                 <ha-icon icon="mdi:camera"></ha-icon>
               </button>`
@@ -497,7 +498,7 @@ export class ActivityList extends LitElement {
               aria-pressed=${item.reviewed ? "true" : "false"}
               @click=${(event: MouseEvent) => {
                 event.stopPropagation();
-                this.toggleReviewed?.(item);
+                this._dispatch({ kind: "toggle_reviewed", item });
               }}
             >
               <span class="review-state-indicator">
@@ -652,69 +653,18 @@ export class ActivityList extends LitElement {
 
   private _mediaFailed(item: ActivityListItem, url: string): void {
     this._failedMedia.add(mediaKey(item, url));
-    this.retryMedia?.(item, url);
+    this._dispatch({ kind: "retry_media", item, url });
     this.requestUpdate();
   }
 
-  private async _playVideo(item: ActivityListItem): Promise<void> {
-    if (this._resolvingPlayback.has(item.id)) return;
-    if (item.playbackSources.length > 0) {
-      this._openVideo(item);
-      return;
-    }
-    const preview = this._previewRequest(item);
-    if (preview) {
-      openRecordedMedia(this, preview);
-      void this._preparePlayback(item);
-      return;
-    }
-    const resolution = await this._preparePlayback(item);
-    if (!resolution) return;
-    this._openVideo({
-      ...item,
-      playbackSources: resolution.playbackSources,
-      preferredTransport: resolution.preferredTransport,
-    });
-  }
-
-  private async _preparePlayback(
-    item: ActivityListItem,
-  ): Promise<ActivityPlaybackResolution | undefined> {
-    if (!this.resolvePlayback || this._resolvingPlayback.has(item.id)) {
-      return undefined;
-    }
-    this._resolvingPlayback.add(item.id);
-    try {
-      return await this.resolvePlayback(item);
-    } finally {
-      this._resolvingPlayback.delete(item.id);
-    }
-  }
-
-  private _openVideo(item: ActivityListItem): void {
-    const request = activityRecordedMediaRequest(item, "video", this.api);
-    if (request) openRecordedMedia(this, request);
-  }
-
-  private _previewRequest(
-    item: ActivityListItem,
-  ): RecordedMediaRequest | undefined {
-    const url = item.hoverPreviewUrl ?? item.thumbnailUrl ?? item.snapshotUrl;
-    if (!url) return undefined;
-    return {
-      id: `${item.id}:progress`,
-      kind: "snapshot",
-      posterUrl: this.api?.resolveUrl(url) ?? url,
-      preferredTransport: "file",
-      sources: [
-        {
-          content_type: item.hoverPreviewUrl ? "image/gif" : "image/jpeg",
-          transport: "file",
-          url,
-        },
-      ],
-      title: activityMediaTitle(item, this.api),
-    };
+  private _dispatch(detail: ActivityListIntent): void {
+    this.dispatchEvent(
+      new CustomEvent<ActivityListIntent>(ACTIVITY_LIST_INTENT_EVENT, {
+        bubbles: true,
+        composed: true,
+        detail,
+      }),
+    );
   }
 
   private _updateHoverPreview(
@@ -794,5 +744,9 @@ if (!customElements.get(ACTIVITY_LIST_TAG)) {
 declare global {
   interface HTMLElementTagNameMap {
     [ACTIVITY_LIST_TAG]: ActivityList;
+  }
+
+  interface HTMLElementEventMap {
+    [ACTIVITY_LIST_INTENT_EVENT]: CustomEvent<ActivityListIntent>;
   }
 }

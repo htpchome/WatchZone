@@ -16,8 +16,8 @@ import type {
   RecordedMediaInitialGeometry,
   RecordedMediaRequest,
 } from "../../core/recorded-media";
-import type { ToastNotice } from "../toast-manager";
-import "../toast-region";
+import type { ToastNotice } from "../../ui/toast-manager";
+import "../../ui/toast-region";
 import "./recorded-video-player";
 import { draggableDialogStyles } from "./draggable-dialog.styles";
 
@@ -40,7 +40,10 @@ export class DraggableRecordedVideoDialog extends LitElement {
   public request?: RecordedMediaRequest;
 
   private _active = false;
+  private _mediaResizeFrame?: number;
+  private _mediaResizeObserver?: ResizeObserver;
   private _pendingNativeCloses = 0;
+  private _userPositioned = false;
   private _drag?: {
     readonly offsetX: number;
     readonly offsetY: number;
@@ -56,6 +59,7 @@ export class DraggableRecordedVideoDialog extends LitElement {
     window.removeEventListener("resize", this._clampDialog);
     this._removeDocumentListeners();
     this._clearPointerInteractions();
+    this._disconnectMediaResizeObserver();
     super.disconnectedCallback();
   }
 
@@ -146,11 +150,13 @@ export class DraggableRecordedVideoDialog extends LitElement {
     const dialog = this._dialog();
     if (!dialog) return;
     if (!dialog.open) {
+      this._userPositioned = false;
       dialog.classList.remove("dragged");
       dialog.style.removeProperty("left");
       dialog.style.removeProperty("top");
       dialog.style.removeProperty("width");
       dialog.show();
+      this._observeMediaSurface();
       this._applyInitialSize();
       const media = this._mediaSurface();
       if (this.request?.timeline && media instanceof LitElement) {
@@ -183,6 +189,7 @@ export class DraggableRecordedVideoDialog extends LitElement {
   private _finishClose(): void {
     window.removeEventListener("resize", this._clampDialog);
     this._removeDocumentListeners();
+    this._disconnectMediaResizeObserver();
     this._active = false;
     this.requestUpdate();
     this.dispatchEvent(
@@ -215,6 +222,7 @@ export class DraggableRecordedVideoDialog extends LitElement {
     const dialog = this._dialog();
     if (!dialog) return;
     const rect = dialog.getBoundingClientRect();
+    this._userPositioned = true;
     dialog.classList.add("dragged");
     dialog.style.left = `${rect.left}px`;
     dialog.style.top = `${rect.top}px`;
@@ -232,6 +240,7 @@ export class DraggableRecordedVideoDialog extends LitElement {
     const dialog = this._dialog();
     if (!dialog) return;
     const rect = dialog.getBoundingClientRect();
+    this._userPositioned = true;
     this._prepareManualBounds(rect);
     const player = this._mediaSurface();
     this._resize = {
@@ -270,6 +279,7 @@ export class DraggableRecordedVideoDialog extends LitElement {
     event.preventDefault();
     const dialog = this._dialog();
     if (!dialog) return;
+    this._userPositioned = true;
     const rect = dialog.getBoundingClientRect();
     this._prepareManualBounds(rect);
     const step = event.shiftKey ? 32 : 16;
@@ -326,6 +336,34 @@ export class DraggableRecordedVideoDialog extends LitElement {
 
   private _mediaSurface(): HTMLElement | null {
     return this.renderRoot.querySelector<HTMLElement>(".media-surface");
+  }
+
+  private _observeMediaSurface(): void {
+    this._disconnectMediaResizeObserver();
+    if (typeof ResizeObserver === "undefined") return;
+    const media = this._mediaSurface();
+    if (!media) return;
+    this._mediaResizeObserver = new ResizeObserver(() => {
+      const current = this._mediaSurface();
+      if (!current || current !== media) return;
+      if (this._mediaResizeFrame !== undefined) return;
+      this._mediaResizeFrame = requestAnimationFrame(() => {
+        this._mediaResizeFrame = undefined;
+        if (this._mediaSurface() !== media) return;
+        if (this._userPositioned) this._clampDialog();
+        else this._applyInitialSize();
+      });
+    });
+    this._mediaResizeObserver.observe(media);
+  }
+
+  private _disconnectMediaResizeObserver(): void {
+    if (this._mediaResizeFrame !== undefined) {
+      cancelAnimationFrame(this._mediaResizeFrame);
+      this._mediaResizeFrame = undefined;
+    }
+    this._mediaResizeObserver?.disconnect();
+    this._mediaResizeObserver = undefined;
   }
 
   private _snapshotUrl(): string {
@@ -401,11 +439,10 @@ export class DraggableRecordedVideoDialog extends LitElement {
       mediaExtraHeight;
     const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
     const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
-    const manuallyPositioned = dialog.classList.contains("dragged");
-    const availableWidth = manuallyPositioned
+    const availableWidth = this._userPositioned
       ? viewportWidth - Math.max(8, rect.left) - 8
       : viewportWidth - 16;
-    const availableHeight = manuallyPositioned
+    const availableHeight = this._userPositioned
       ? viewportHeight - Math.max(8, rect.top) - 8
       : viewportHeight - 16;
     const maxMediaWidth = Math.max(

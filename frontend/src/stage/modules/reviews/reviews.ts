@@ -1,4 +1,5 @@
-import { html, LitElement, type PropertyValues } from "lit";
+import { LitElement, type PropertyValues } from "lit";
+import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import {
   listReviews,
@@ -15,17 +16,23 @@ import type { MediaDateContext } from "../../media-date-context";
 import {
   REVIEWS_TAG,
   DEFAULT_EVENT_HISTORY_DAYS,
+  ACTIVITY_LIST_INTENT_EVENT,
 } from "../../../core/constants";
+import {
+  activityPreviewMediaRequest,
+  activityRecordedMediaRequest,
+} from "../../../core/activity-media";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
 import {
   englishLocalize,
   type LocalizeFunction,
 } from "../../../core/localization";
 import type {
+  ActivityListIntent,
   ActivityListItem,
-  ActivityPlaybackResolution,
 } from "../../../ui/activity-list";
 import "../../../ui/activity-list";
+import { openRecordedMedia } from "../../../core/recorded-media";
 import { ToastManager } from "../../../ui/toast-manager";
 import "../../../ui/toast-region";
 import { reviewsStyles } from "./reviews.styles";
@@ -33,6 +40,7 @@ import type { ReviewAnalysis } from "./review-analysis-dialog";
 import "./review-analysis-dialog";
 
 const MEDIA_RESOLVE_DELAYS_MS = [0, 750, 1_500] as const;
+const activityListIntentEvent = unsafeStatic(ACTIVITY_LIST_INTENT_EVENT);
 
 /** Active-camera provider review activity presented as WatchZone Reviews. */
 export class ReviewsModule extends LitElement {
@@ -137,7 +145,7 @@ export class ReviewsModule extends LitElement {
         }),
       )
       .map((review) => this._listItem(review));
-    return html`
+    return staticHtml`
       <wzc-activity-list
         .api=${this.api}
         .displayObjectBadges=${this.displayObjectBadges}
@@ -149,14 +157,10 @@ export class ReviewsModule extends LitElement {
         .loading=${this._activity.loading}
         .loadingKey=${"reviews.loading"}
         .localize=${this.localize}
-        .openAnalysis=${this._openAnalysis}
-        .retryMedia=${(item: ActivityListItem, url: string) =>
-          this._activity.retryMedia(item, url)}
-        .resolvePlayback=${this._resolvePlayback}
         .roundedCorners=${this.roundedCorners}
         .selectedDate=${this._filter.selectedDate()}
         .shadows=${this.shadows}
-        .toggleReviewed=${this._toggleReviewed}
+        @${activityListIntentEvent}=${this._handleActivityIntent}
       ></wzc-activity-list>
       <wzc-review-analysis-dialog
         .analysis=${this._analysis}
@@ -192,6 +196,7 @@ export class ReviewsModule extends LitElement {
       mediaStartTime: review.media_start_time,
       objectLabels: [...review.labels, ...review.sub_labels],
       playbackSources: review.playback_sources,
+      playable: true,
       preferredTransport: review.preferred_transport,
       reviewed: review.reviewed,
       reviewStatePending: this._pendingReviewIds.has(review.id),
@@ -221,6 +226,68 @@ export class ReviewsModule extends LitElement {
     };
     this.requestUpdate();
   };
+
+  private readonly _handleActivityIntent = (
+    event: CustomEvent<ActivityListIntent>,
+  ): void => {
+    event.stopPropagation();
+    const intent = event.detail;
+    if (intent.kind === "retry_media") {
+      this._activity.retryMedia(intent.item, intent.url);
+    } else if (intent.kind === "open_analysis") {
+      this._openAnalysis(intent.item);
+    } else if (intent.kind === "toggle_reviewed") {
+      this._toggleReviewed(intent.item);
+    } else {
+      void this._openMedia(intent.item, intent.media);
+    }
+  };
+
+  private async _openMedia(
+    item: ActivityListItem,
+    kind: "snapshot" | "video",
+  ): Promise<void> {
+    if (kind === "snapshot") {
+      const request = activityRecordedMediaRequest(
+        item,
+        kind,
+        "review",
+        this.api,
+      );
+      if (request) openRecordedMedia(this, request);
+      return;
+    }
+    if (item.playbackSources.length > 0) {
+      const request = activityRecordedMediaRequest(
+        item,
+        kind,
+        "review",
+        this.api,
+      );
+      if (request) openRecordedMedia(this, request);
+      return;
+    }
+    const preview = activityPreviewMediaRequest(
+      item,
+      "review",
+      this.api,
+      item.hoverPreviewUrl,
+    );
+    if (preview) {
+      openRecordedMedia(this, preview);
+      void this._resolvePlayback(item);
+      return;
+    }
+    const resolved = await this._resolvePlayback(item);
+    if (!resolved) return;
+    const request = activityRecordedMediaRequest(
+      resolved,
+      kind,
+      "review",
+      this.api,
+    );
+    if (request) openRecordedMedia(this, request);
+  }
 
   private readonly _closeAnalysis = (): void => {
     this._analysis = undefined;
@@ -260,7 +327,7 @@ export class ReviewsModule extends LitElement {
 
   private readonly _resolvePlayback = async (
     item: ActivityListItem,
-  ): Promise<ActivityPlaybackResolution | undefined> => {
+  ): Promise<ActivityListItem | undefined> => {
     for (const delay of MEDIA_RESOLVE_DELAYS_MS) {
       if (delay > 0) await wait(delay);
       await this._activity.refresh();
@@ -269,10 +336,7 @@ export class ReviewsModule extends LitElement {
           candidate.id === item.id && candidate.playback_sources.length > 0,
       );
       if (review) {
-        return {
-          playbackSources: review.playback_sources,
-          preferredTransport: review.preferred_transport,
-        };
+        return this._listItem(review);
       }
     }
     this._toasts.warning(this.localize("media_player.load_failed"), {

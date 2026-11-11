@@ -94,6 +94,20 @@ const ICONS = {
       },
     ],
   },
+  download: {
+    paths: [
+      {
+        d: "M19 9h-4V3H9v6H5l7 7 7-7M5 18v2h14v-2H5Z",
+      },
+    ],
+  },
+  reset: {
+    paths: [
+      {
+        d: "M12 5a7 7 0 1 1-6.65 9.2l-1.9.63A9 9 0 1 0 6.2 4.1L3 1v8h8L7.65 5.65A6.96 6.96 0 0 1 12 5Z",
+      },
+    ],
+  },
   edit: {
     paths: [
       {

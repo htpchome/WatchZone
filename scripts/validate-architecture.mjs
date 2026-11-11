@@ -3,12 +3,14 @@ import { basename, relative, resolve, sep } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const sourceRoot = resolve(root, "frontend/src");
+const apiRoot = resolve(sourceRoot, "api");
 const coreRoot = resolve(sourceRoot, "core");
 const featuresRoot = resolve(sourceRoot, "features");
 const stageRoot = resolve(sourceRoot, "stage");
 const modulesRoot = resolve(stageRoot, "modules");
 const componentsRoot = resolve(stageRoot, "components");
 const providersRoot = resolve(sourceRoot, "providers");
+const uiRoot = resolve(sourceRoot, "ui");
 const obsoleteConnectionsRoot = resolve(sourceRoot, "connections");
 const obsoleteOwnershipRoots = [
   resolve(sourceRoot, "modules"),
@@ -39,6 +41,7 @@ for (const path of await collectTypeScript(sourceRoot)) {
   const displayPath = relative(root, path);
   const isCore = path.startsWith(`${coreRoot}${sep}`);
   const isFeature = path.startsWith(`${featuresRoot}${sep}`);
+  const isUi = path.startsWith(`${uiRoot}${sep}`);
   const isModule = path.startsWith(`${modulesRoot}${sep}`);
   const isComponent = path.startsWith(`${componentsRoot}${sep}`);
   const moduleName = isModule
@@ -62,6 +65,18 @@ for (const path of await collectTypeScript(sourceRoot)) {
       (resolved.startsWith(stageRoot) || resolved.startsWith(providersRoot))
     ) {
       violations.push(`${displayPath}: core cannot import stage or providers`);
+    }
+    if (
+      isUi &&
+      resolved &&
+      (resolved.startsWith(`${apiRoot}${sep}`) ||
+        resolved.startsWith(`${featuresRoot}${sep}`) ||
+        resolved.startsWith(`${providersRoot}${sep}`) ||
+        resolved.startsWith(`${stageRoot}${sep}`))
+    ) {
+      violations.push(
+        `${displayPath}: UI primitives cannot import API, feature, provider, or Stage ownership`,
+      );
     }
     if (isModule && resolved?.startsWith(`${modulesRoot}${sep}`)) {
       const importedModule = relative(modulesRoot, resolved).split(sep)[0];
@@ -128,6 +143,12 @@ for (const path of await collectTypeScript(sourceRoot)) {
       );
     }
   }
+
+  if (isUi && /\bopenRecordedMedia\s*\(/.test(source)) {
+    violations.push(
+      `${displayPath}: UI primitives emit typed intents and cannot open application media workflows`,
+    );
+  }
 }
 
 try {
@@ -159,5 +180,5 @@ if (violations.length > 0) {
 }
 
 console.log(
-  "Validated core, feature, module, and provider ownership boundaries.",
+  "Validated core, feature, UI, module, and provider ownership boundaries.",
 );

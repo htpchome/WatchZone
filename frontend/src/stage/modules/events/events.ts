@@ -1,6 +1,8 @@
-import { html, LitElement, type PropertyValues } from "lit";
+import { LitElement, type PropertyValues } from "lit";
+import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import { listEvents, type EventItem } from "../../../api/events";
+import { activityRecordedMediaRequest } from "../../../core/activity-media";
 import {
   ActiveCameraActivityController,
   ActivityFilterController,
@@ -11,6 +13,7 @@ import type { MediaDateContext } from "../../media-date-context";
 import {
   DEFAULT_EVENT_HISTORY_DAYS,
   EVENTS_TAG,
+  ACTIVITY_LIST_INTENT_EVENT,
 } from "../../../core/constants";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
 import {
@@ -18,10 +21,14 @@ import {
   type LocalizeFunction,
 } from "../../../core/localization";
 import type { ActivityListItem } from "../../../ui/activity-list";
+import type { ActivityListIntent } from "../../../ui/activity-list";
 import "../../../ui/activity-list";
+import { openRecordedMedia } from "../../../core/recorded-media";
 import { ToastManager } from "../../../ui/toast-manager";
 import "../../../ui/toast-region";
 import { eventsStyles } from "./events.styles";
+
+const activityListIntentEvent = unsafeStatic(ACTIVITY_LIST_INTENT_EVENT);
 
 /** Active-camera event list with authoritative refresh reconciliation. */
 export class EventsModule extends LitElement {
@@ -126,6 +133,7 @@ export class EventsModule extends LitElement {
           ...(event.sub_label ? [event.sub_label] : []),
         ],
         playbackSources: event.playback_sources,
+        playable: event.playback_sources.length > 0,
         preferredTransport: event.preferred_transport,
         revision: event.revision,
         snapshotUrl: event.snapshot_url,
@@ -136,7 +144,7 @@ export class EventsModule extends LitElement {
           : undefined,
         zones: event.zones,
       }));
-    return html`
+    return staticHtml`
       <wzc-activity-list
         .api=${this.api}
         .displayObjectBadges=${this.displayObjectBadges}
@@ -145,15 +153,33 @@ export class EventsModule extends LitElement {
         .items=${items}
         .loading=${this._activity.loading}
         .localize=${this.localize}
-        .retryMedia=${(item: ActivityListItem, url: string) =>
-          this._activity.retryMedia(item, url)}
         .roundedCorners=${this.roundedCorners}
         .selectedDate=${this._filter.selectedDate()}
         .shadows=${this.shadows}
+        @${activityListIntentEvent}=${this._handleActivityIntent}
       ></wzc-activity-list>
       <wzc-toast-region .notices=${this._toasts.notices}></wzc-toast-region>
     `;
   }
+
+  private readonly _handleActivityIntent = (
+    event: CustomEvent<ActivityListIntent>,
+  ): void => {
+    event.stopPropagation();
+    const intent = event.detail;
+    if (intent.kind === "retry_media") {
+      this._activity.retryMedia(intent.item, intent.url);
+      return;
+    }
+    if (intent.kind !== "open_media") return;
+    const request = activityRecordedMediaRequest(
+      intent.item,
+      intent.media,
+      "event",
+      this.api,
+    );
+    if (request) openRecordedMedia(this, request);
+  };
 
   static styles = eventsStyles;
 }

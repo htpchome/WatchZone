@@ -245,20 +245,19 @@ export class DashboardCard extends LitElement {
       this.requestUpdate();
       return;
     }
-    this._recordedVideoViewerLoad ??=
-      import("../ui/recorded-video-viewer/index")
-        .then(() => {
-          if (!this.isConnected) return;
-          this._recordedVideoViewerReady = true;
-          this.requestUpdate();
-        })
-        .catch(() => {
-          this._recordedVideoViewerLoad = undefined;
-          this._toasts.error(
-            this._localization.localize("media_player.load_failed"),
-            { key: "recorded-video-viewer-load-failed" },
-          );
-        });
+    this._recordedVideoViewerLoad ??= import("../features/media-viewer")
+      .then(() => {
+        if (!this.isConnected) return;
+        this._recordedVideoViewerReady = true;
+        this.requestUpdate();
+      })
+      .catch(() => {
+        this._recordedVideoViewerLoad = undefined;
+        this._toasts.error(
+          this._localization.localize("media_player.load_failed"),
+          { key: "recorded-video-viewer-load-failed" },
+        );
+      });
   }
 
   private _activeCameraStageSize(): RecordedMediaInitialGeometry | undefined {

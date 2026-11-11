@@ -11,7 +11,7 @@ import type {
 } from "../../core/home-assistant";
 import type { RecordedMediaRequest } from "../../core/recorded-media";
 import { subscribeActivityUpdates } from "../../providers/activity-update-resolver";
-import { activityRecordedMediaRequest } from "../../ui/activity-media";
+import { activityRecordedMediaRequest } from "../../core/activity-media";
 import { findEvent, findReview } from "./activity-lookup";
 
 interface ActivityDeepLinkResolverOptions {
@@ -165,6 +165,7 @@ export class ActivityDeepLinkResolver {
         thumbnailUrl: event.thumbnail_url,
       },
       this._options.media,
+      "event",
       this._options.api,
     );
   }
@@ -181,6 +182,7 @@ export class ActivityDeepLinkResolver {
         thumbnailUrl: review.thumbnail_url,
       },
       this._options.media,
+      "review",
       this._options.api,
     );
   }

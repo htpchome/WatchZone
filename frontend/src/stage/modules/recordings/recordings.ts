@@ -232,11 +232,14 @@ export class RecordingsModule extends LitElement {
     openRecordedMedia(this, {
       id: hour.id,
       kind: "video",
+      presentation: "recording",
       preferredTransport: hour.preferred_transport,
       sources: hour.playback_sources,
       title,
       timeline: {
+        camera: hour.camera,
         endTime: hour.timeline_end_time,
+        entityId: this._recordings.activeEntityId ?? "",
         markers: hour.markers.map((marker) => ({
           classification: marker.classification,
           endTime: marker.end_time,

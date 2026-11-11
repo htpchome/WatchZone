@@ -18,11 +18,11 @@ Give the next agent this instruction:
 ## Repository state
 
 - Branch: `main`
-- Current working version: `0.0.4-dev.234`
-- Current commit: `d08218e` —
-  `v0.0.4-dev.233 - feat(recordings): add activity-aware hourly scrubber`
-- The worktree contains the completed, uncommitted control-restoration change
-  described below.
+- Current working version: `0.0.4-dev.235`
+- Current commit: `d597070` —
+  `v0.0.4-dev.234 - fix(recordings): preserve existing video controls`
+- The worktree contains the completed, uncommitted segment-manager and
+  media-viewer boundary change described below.
 
 Always check `git status`, the canonical version in
 `custom_components/watchzone/const.py`, and the latest commit before starting.
@@ -48,28 +48,35 @@ The repository state takes precedence over this snapshot.
 
 ## Current completed change
 
-Working version `0.0.4-dev.234`:
+Working version `0.0.4-dev.235`:
 
-- Recording-hour playback has a dedicated scrubber below the video with a
-  play/pause control, a full clock-hour scale, ten-minute labels, a current-time
-  pointer, fixed product colors, rounded presentation, and striped gaps.
-- Provider-neutral recording hours expose clock bounds, playable spans with
-  concatenated-media offsets, and alert/detection markers. Frigate normalizes
-  segments and review thumbnails into that contract; review lookup failure
-  does not make recordings unavailable.
-- Hovering or focusing a marker presents its thumbnail and classification;
-  activating it seeks to the marker start and plays. Reviews and Events retain
-  their existing overlay transport and do not render the recording scrubber.
-- Recording playback retains the complete existing overlay transport; the
-  scrubber and its play/pause button are additive controls.
-- Dialog sizing accounts for the added recording controls after they render,
-  while preserving the existing shared modal fit, drag, resize, and centered
-  placement behavior.
+- The recorded-media viewer moved out of `frontend/src/ui/` into the bounded
+  lazy application feature `frontend/src/features/media-viewer/`. It remains
+  separate from the Recordings Stage module and from reusable UI primitives.
+- Recorded-media requests carry an explicit `review`, `event`, or `recording`
+  presentation identity. Presentation selection is independent of the shared
+  playback engine so the three shells can diverge without duplicating playback.
+- The reusable activity list no longer opens media or owns review/event
+  workflows. It emits typed intents; the owning Reviews and Events modules
+  resolve playback, retries, review state, analysis, and viewer requests.
+- Architecture validation now rejects UI imports of API, feature, provider, or
+  Stage ownership and rejects application media-opening commands in UI files.
+- Recording scrubber time readouts and segment handle accessible values include
+  seconds. Activating the recording-only segment control adds square selectable
+  five-minute pre/post regions, second-precision start/end handles,
+  selection/exclusion presentation, and Reset, Cancel, Preview, and Download
+  actions. The existing recorded-video transport remains intact.
+- Preview and Download send the entity and selected timestamps to a
+  permission-checked WatchZone WebSocket command. Python resolves the owning
+  recordings provider, and Frigate alone constructs the selected playback and
+  authenticated download paths. Export remains future work.
+- Dialog fitting responds to the expanded segment panel while preserving
+  centered card-relative placement until the user manually drags or resizes it.
 
 Validation is green:
 
-- 324 frontend unit tests
-- 77 backend tests
+- 326 frontend unit tests
+- 78 backend tests
 - 81 browser tests across Chromium, Firefox, and WebKit
 - Formatting, lint, type checking, architecture/style validation, production
   build, version consistency, release packaging, and `git diff --check`

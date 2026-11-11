@@ -18,14 +18,20 @@ export const recordingScrubberStyles = css`
     gap: 0.45rem;
   }
 
-  .playback {
+  .controls {
+    display: grid;
+    gap: 0.35rem;
+    margin-block-start: 1.15rem;
+  }
+
+  .playback,
+  .segment-toggle {
     appearance: none;
     display: grid;
     place-items: center;
     box-sizing: border-box;
     inline-size: 2rem;
     block-size: 2rem;
-    margin-block-start: 1.15rem;
     padding: 0;
     color: var(--wzc-recording-scrubber-text);
     background: transparent;
@@ -40,7 +46,24 @@ export const recordingScrubberStyles = css`
     block-size: 1.1rem;
   }
 
+  .segment-toggle {
+    border-radius: var(--wzc-radius-control);
+  }
+
+  .segment-toggle svg {
+    inline-size: 1.15rem;
+    block-size: 1.15rem;
+  }
+
+  .segment-toggle.active {
+    color: var(--wzc-recording-segment-primary-text);
+    background: var(--wzc-recording-segment-primary);
+    border-color: var(--wzc-recording-segment-primary);
+  }
+
   .playback:focus-visible,
+  .segment-toggle:focus-visible,
+  .handle:focus-visible,
   .range:focus-visible,
   .marker:focus-visible {
     outline: 2px solid var(--wzc-recording-scrubber-pointer-outline);
@@ -51,6 +74,48 @@ export const recordingScrubberStyles = css`
     position: relative;
     min-inline-size: 0;
     padding-block-start: 1.15rem;
+  }
+
+  .track-shell {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .segment-active .track-shell {
+    grid-template-columns: minmax(1.25rem, 1fr) minmax(0, 12fr) minmax(
+        1.25rem,
+        1fr
+      );
+  }
+
+  .track-column {
+    min-inline-size: 0;
+  }
+
+  .context {
+    position: relative;
+    display: block;
+    block-size: var(--wzc-recording-scrubber-track-block-size);
+    background: var(--wzc-recording-segment-context);
+  }
+
+  .context span {
+    position: absolute;
+    inset-block-start: calc(100% + 0.15rem);
+    font-size: 0.625rem;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .context.before span {
+    inset-inline-start: 0;
+  }
+
+  .context.after span {
+    inset-inline-end: 0;
   }
 
   .track {
@@ -68,7 +133,10 @@ export const recordingScrubberStyles = css`
   .span,
   .marker,
   .tick,
-  .pointer {
+  .pointer,
+  .excluded,
+  .selected,
+  .handle {
     position: absolute;
   }
 
@@ -76,6 +144,30 @@ export const recordingScrubberStyles = css`
     z-index: 1;
     inset-block: 0;
     background: var(--wzc-recording-scrubber-track);
+  }
+
+  .segment-active .track {
+    border-radius: 0;
+  }
+
+  .excluded,
+  .selected {
+    z-index: 2;
+    inset-block-start: 0;
+    block-size: var(--wzc-recording-scrubber-track-block-size);
+    pointer-events: none;
+  }
+
+  .excluded {
+    background: var(--wzc-recording-segment-excluded);
+  }
+
+  .selected {
+    background: color-mix(
+      in srgb,
+      var(--wzc-recording-segment-selected) 72%,
+      transparent
+    );
   }
 
   .span.first {
@@ -107,6 +199,35 @@ export const recordingScrubberStyles = css`
     cursor: pointer;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  .handle {
+    appearance: none;
+    z-index: 7;
+    inset-block-start: -0.28rem;
+    inline-size: 0.48rem;
+    block-size: calc(100% + 0.56rem);
+    margin: 0;
+    padding: 0;
+    background: var(--wzc-recording-segment-handle);
+    border: 1px solid var(--wzc-recording-segment-handle-outline);
+    border-radius: 0.12rem;
+    cursor: ew-resize;
+    touch-action: none;
+    transform: translateX(-50%);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .handle span {
+    position: absolute;
+    inset-block-start: -0.34rem;
+    inset-inline-start: 50%;
+    inline-size: 0.38rem;
+    block-size: 0.38rem;
+    background: var(--wzc-recording-segment-handle-accent);
+    border: 1px solid var(--wzc-recording-segment-primary-text);
+    border-radius: 50%;
+    transform: translateX(-50%);
   }
 
   .marker.alert {
@@ -213,6 +334,14 @@ export const recordingScrubberStyles = css`
   @media (hover: hover) and (pointer: fine) {
     .playback:hover {
       background: var(--wzc-recording-scrubber-hover);
+    }
+
+    .segment-toggle:hover {
+      background: var(--wzc-recording-scrubber-hover);
+    }
+
+    .segment-toggle.active:hover {
+      background: var(--wzc-recording-segment-primary);
     }
 
     .marker:hover {

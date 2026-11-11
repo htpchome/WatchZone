@@ -6,12 +6,16 @@ viewing. Recording discovery and grouping are governed by
 
 ## Ownership
 
-- `frontend/src/ui/recorded-video-viewer/recorded-video-player.ts` owns one
-  ephemeral recorded-media element, transport selection, startup, failure
-  fallback, and cleanup.
+- `frontend/src/features/media-viewer/` is the application-feature boundary.
+  Its recorded player owns one ephemeral recorded-media element, transport
+  selection, startup, failure fallback, and cleanup. It is not a UI primitive
+  or Stage placeable.
 - The recorded-video viewer owns viewer lifecycle, notices, and the temporary
-  live-audio mute lease. A concrete presentation owns geometry only. The first
-  presentation is a viewport-constrained draggable dialog.
+  live-audio mute lease. A concrete presentation owns geometry only. Requests
+  carry an `event`, `review`, or `recording` presentation identity; selection
+  of that presentation is independent of the shared playback engine. The
+  current identities may use the same viewport-constrained draggable geometry
+  while remaining independently replaceable.
 - Recorded-video viewers and presentations are not Stage placeables and do not
   enter the retained live-session pool.
 - Live and recorded video share media presentation primitives: overlay
@@ -80,9 +84,32 @@ viewing. Recording discovery and grouping are governed by
   live audio while another remains open.
 - Recording-hour requests may carry a normalized wall-clock timeline. Only
   those requests render the persistent scrubber below the `16:9` video. Its
-  play/pause action replaces the overlay transport's duplicate play and seek
-  controls; mute and volume remain in the transient media overlay. Reviews and
-  Events do not receive the recording scrubber.
+  play/pause action is additive: the existing video transport, seek, mute,
+  volume, fullscreen, and Picture-in-Picture controls remain intact. Reviews
+  and Events do not receive the recording scrubber.
+
+## Recording segment selection
+
+- The recording scrubber remains an ordinary seek control until the user
+  explicitly activates segment selection. Activation does not remove or
+  replace the existing video transport.
+- Segment state, preview bounds, and download orchestration belong to the
+  media-viewer feature. The Recordings Stage module does not manage handles or
+  construct download URLs.
+- Selection starts at the hour boundaries and uses independently operable
+  start and end handles. Pointer movement and keyboard arrows adjust to one
+  second; Shift+Arrow adjusts by ten seconds. Every handle and current-time
+  readout includes seconds.
+- The square-ended timeline extends five minutes before and after the loaded
+  recording hour while segment selection is active. Handles may select that
+  adjacent context; Reset returns them to the original hour boundaries.
+- Reset restores the complete hour, Cancel returns to the ordinary scrubber,
+  Preview asks the backend for provider-normalized playback sources for the
+  selected timestamps, and Download asks for the corresponding authenticated
+  path. Export is intentionally outside this contract.
+- Segment downloads preserve gaps as provider truth. The backend resolves the
+  selected wall-clock range through the owning provider, and unavailable time
+  is skipped by that provider rather than synthesized in the browser.
 
 ## Draggable modal
 

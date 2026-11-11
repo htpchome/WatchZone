@@ -9,11 +9,13 @@ import type { RecordingTimeline } from "../src/core/recorded-media";
 import type {
   RecordingScrubber,
   RecordingScrubberEventDetail,
-} from "../src/ui/recorded-video-viewer/recording-scrubber";
-import "../src/ui/recorded-video-viewer/recording-scrubber";
+} from "../src/features/media-viewer/recording-scrubber";
+import "../src/features/media-viewer/recording-scrubber";
 
 const start = Date.UTC(2026, 10, 10, 14) / 1000;
 const timeline: RecordingTimeline = {
+  camera: "front",
+  entityId: "camera.front",
   startTime: start,
   endTime: start + 3600,
   spans: [
@@ -59,7 +61,7 @@ describe("recording scrubber", () => {
     ).toEqual(["2:00", "2:10", "2:20", "2:30", "2:40", "2:50", "3:00"]);
     expect(
       scrubber.shadowRoot?.querySelector(".pointer-time")?.textContent,
-    ).toBe("2:30");
+    ).toBe("2:30:00");
     const marker =
       scrubber.shadowRoot?.querySelector<HTMLButtonElement>(
         ".marker.detection",
@@ -91,5 +93,49 @@ describe("recording scrubber", () => {
     expect(actions).toEqual([
       { action: "seek_and_play", timestamp: start + 900 },
     ]);
+  });
+
+  it("activates second-precise segment handles with keyboard adjustment", async () => {
+    const scrubber = document.createElement(
+      RECORDING_SCRUBBER_TAG,
+    ) as RecordingScrubber;
+    scrubber.api = {
+      locale: { language: "en", time_format: "12", time_zone: "UTC" },
+    } as HomeAssistantApi;
+    scrubber.timeline = timeline;
+    document.body.append(scrubber);
+    await scrubber.updateComplete;
+    const actions: RecordingScrubberEventDetail[] = [];
+    scrubber.addEventListener(RECORDING_SCRUBBER_EVENT, (event) => {
+      actions.push((event as CustomEvent<RecordingScrubberEventDetail>).detail);
+    });
+
+    scrubber.shadowRoot
+      ?.querySelector<HTMLButtonElement>(".segment-toggle")
+      ?.click();
+    expect(actions).toEqual([{ action: "activate_segment" }]);
+
+    scrubber.segmentActive = true;
+    scrubber.segmentSelection = {
+      startTime: start - 300,
+      endTime: start + 3900,
+    };
+    await scrubber.updateComplete;
+
+    expect(scrubber.shadowRoot?.querySelectorAll(".context")).toHaveLength(2);
+    expect(scrubber.shadowRoot?.querySelectorAll(".handle")).toHaveLength(2);
+    const startHandle =
+      scrubber.shadowRoot?.querySelector<HTMLButtonElement>(".handle.start");
+    expect(startHandle?.getAttribute("aria-valuemin")).toBe(
+      String(start - 300),
+    );
+    expect(startHandle?.getAttribute("aria-valuetext")).toBe("1:55:00");
+    startHandle?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
+    );
+    expect(actions.at(-1)).toEqual({
+      action: "set_segment_start",
+      timestamp: start - 299,
+    });
   });
 });

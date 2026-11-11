@@ -1,18 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { LitElement } from "lit";
 
-import { MEDIA_SESSION_RUNTIME_KEY } from "../src/core/constants";
+import {
+  MEDIA_SESSION_RUNTIME_KEY,
+  RECORDING_SCRUBBER_EVENT,
+} from "../src/core/constants";
 import { MediaSessionManager } from "../src/core/media-session-manager";
 import type { RecordedMediaRequest } from "../src/core/recorded-media";
-import type { DraggableRecordedVideoDialog } from "../src/ui/recorded-video-viewer/draggable-dialog";
-import type { RecordedVideoPlayer } from "../src/ui/recorded-video-viewer/recorded-video-player";
-import type { RecordedVideoTransport } from "../src/ui/recorded-video-viewer/transport-controls";
-import type { RecordedVideoViewer } from "../src/ui/recorded-video-viewer/recorded-video-viewer";
-import "../src/ui/recorded-video-viewer";
+import type { DraggableRecordedVideoDialog } from "../src/features/media-viewer/draggable-dialog";
+import type { RecordedVideoPlayer } from "../src/features/media-viewer/recorded-video-player";
+import type { RecordedVideoTransport } from "../src/features/media-viewer/transport-controls";
+import type { RecordedVideoViewer } from "../src/features/media-viewer/recorded-video-viewer";
+import "../src/features/media-viewer";
+import "../src/features/media-viewer/draggable-dialog";
+import "../src/features/media-viewer/recorded-video-player";
 
 const request: RecordedMediaRequest = {
   id: "frigate:event-1",
   kind: "video",
+  presentation: "review",
   posterUrl: "https://ha.local/poster.jpg",
   preferredTransport: "file",
   sources: [
@@ -213,7 +219,10 @@ describe("recorded media player", () => {
     player.request = {
       ...request,
       id: "frigate:front:recording-hour",
+      presentation: "recording",
       timeline: {
+        camera: "front",
+        entityId: "camera.front",
         startTime: start,
         endTime: start + 3600,
         spans: [
@@ -261,6 +270,121 @@ describe("recorded media player", () => {
     ).not.toBeNull();
   });
 
+  it("selects, previews, and downloads a bounded recording segment", async () => {
+    const start = Date.UTC(2026, 10, 10, 14) / 1000;
+    const callWS = vi.fn(async (message: { readonly type: string }) => {
+      if (message.type === "watchzone/recordings/segment") {
+        return {
+          filename: "front-segment.mp4",
+          path: "/segment.mp4",
+          playback_sources: [
+            {
+              content_type: "video/mp4",
+              transport: "file",
+              url: "/segment-preview.mp4",
+            },
+          ],
+          preferred_transport: "file",
+        };
+      }
+      return { path: "/signed.mp4" };
+    });
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => {});
+    const player = document.createElement(
+      "wzc-recorded-video-player",
+    ) as RecordedVideoPlayer;
+    player.api = {
+      callWS,
+      identity: { subscribeMessage: vi.fn() },
+      locale: { language: "en", time_format: "12", time_zone: "UTC" },
+      resolveUrl: (path: string) => `https://ha.local${path}`,
+      subscribeMessage: vi.fn(),
+    } as RecordedVideoPlayer["api"];
+    player.request = {
+      ...request,
+      id: "frigate:front:recording-hour",
+      presentation: "recording",
+      timeline: {
+        camera: "front",
+        entityId: "camera.front",
+        startTime: start,
+        endTime: start + 3600,
+        spans: [{ startTime: start, endTime: start + 3600, mediaOffset: 0 }],
+        markers: [],
+      },
+    };
+    document.body.append(player);
+    await player.updateComplete;
+    const video = player.shadowRoot?.querySelector("video");
+    expect(video).not.toBeNull();
+    if (!video) return;
+    Object.defineProperties(video, {
+      currentTime: { configurable: true, value: 0, writable: true },
+      duration: { configurable: true, value: 3600 },
+      paused: { configurable: true, value: true, writable: true },
+    });
+    video.dispatchEvent(new Event("durationchange"));
+    await player.updateComplete;
+    const scrubber = player.shadowRoot?.querySelector("wzc-recording-scrubber");
+    await (scrubber as LitElement | null)?.updateComplete;
+    scrubber?.shadowRoot
+      ?.querySelector<HTMLButtonElement>(".segment-toggle")
+      ?.click();
+    await player.updateComplete;
+
+    expect(
+      player.shadowRoot?.querySelector("wzc-recorded-video-transport"),
+    ).not.toBeNull();
+    const activeScrubber = player.shadowRoot?.querySelector(
+      "wzc-recording-scrubber",
+    );
+    activeScrubber?.dispatchEvent(
+      new CustomEvent(RECORDING_SCRUBBER_EVENT, {
+        bubbles: true,
+        composed: true,
+        detail: { action: "set_segment_start", timestamp: start - 60 },
+      }),
+    );
+    activeScrubber?.dispatchEvent(
+      new CustomEvent(RECORDING_SCRUBBER_EVENT, {
+        bubbles: true,
+        composed: true,
+        detail: { action: "set_segment_end", timestamp: start + 120 },
+      }),
+    );
+    await player.updateComplete;
+    const manager = player.shadowRoot?.querySelector(
+      "wzc-recording-segment-manager",
+    );
+    await (manager as LitElement | null)?.updateComplete;
+    const buttons = [
+      ...(manager?.shadowRoot?.querySelectorAll<HTMLButtonElement>("button") ??
+        []),
+    ];
+    buttons.find((button) => button.textContent?.includes("Preview"))?.click();
+    await vi.waitFor(() =>
+      expect(callWS).toHaveBeenCalledWith({
+        type: "watchzone/recordings/segment",
+        entity_id: "camera.front",
+        start_time: start - 60,
+        end_time: start + 120,
+      }),
+    );
+    video.dispatchEvent(new Event("loadeddata"));
+    await vi.waitFor(() => expect(video.play).toHaveBeenCalled());
+
+    buttons.find((button) => button.classList.contains("primary"))?.click();
+    await vi.waitFor(() => expect(click).toHaveBeenCalledOnce());
+    expect(callWS).toHaveBeenCalledWith({
+      type: "watchzone/recordings/segment",
+      entity_id: "camera.front",
+      start_time: start - 60,
+      end_time: start + 120,
+    });
+  });
+
   it("acquires and releases the global live-audio mute with the modal", async () => {
     const manager = new MediaSessionManager();
     (window as unknown as Record<string, unknown>)[MEDIA_SESSION_RUNTIME_KEY] =
@@ -289,6 +413,11 @@ describe("recorded media player", () => {
     viewer.request = request;
     document.body.append(viewer);
     await viewer.updateComplete;
+    await vi.waitFor(() =>
+      expect(
+        viewer.shadowRoot?.querySelector("wzc-recorded-video-dialog"),
+      ).not.toBeNull(),
+    );
     const container = viewer.shadowRoot?.querySelector(
       "wzc-recorded-video-dialog",
     ) as DraggableRecordedVideoDialog;
@@ -346,6 +475,11 @@ describe("recorded media player", () => {
     ) as RecordedVideoViewer;
     document.body.append(viewer);
     await viewer.updateComplete;
+    await vi.waitFor(() =>
+      expect(
+        viewer.shadowRoot?.querySelector("wzc-recorded-video-dialog"),
+      ).not.toBeNull(),
+    );
     const container = viewer.shadowRoot?.querySelector(
       "wzc-recorded-video-dialog",
     ) as DraggableRecordedVideoDialog;
@@ -411,6 +545,7 @@ describe("recorded media player", () => {
     viewer.request = {
       id: "frigate:event-1:snapshot",
       kind: "snapshot",
+      presentation: "review",
       preferredTransport: "file",
       sources: [
         {
@@ -423,6 +558,11 @@ describe("recorded media player", () => {
     };
     document.body.append(viewer);
     await viewer.updateComplete;
+    await vi.waitFor(() =>
+      expect(
+        viewer.shadowRoot?.querySelector("wzc-recorded-video-dialog"),
+      ).not.toBeNull(),
+    );
     const container = viewer.shadowRoot?.querySelector(
       "wzc-recorded-video-dialog",
     ) as DraggableRecordedVideoDialog;

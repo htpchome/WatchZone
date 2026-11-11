@@ -2241,6 +2241,27 @@ test("switches activity and recordings through the shared media calendar", async
   await expect(scrubber.locator(".preview-label")).toContainText(
     "Detection - 10:07",
   );
+  await scrubber
+    .getByRole("button", { name: "Select recording segment" })
+    .click();
+  await expect(scrubber.locator(".context")).toHaveCount(2);
+  await expect(scrubber.locator(".handle")).toHaveCount(2);
+  await expect(scrubber.locator(".handle.start")).toHaveAttribute(
+    "aria-valuetext",
+    "10:00:00",
+  );
+  await expect(page.locator("wzc-recorded-video-transport")).toHaveCount(1);
+  const segmentManager = page.locator("wzc-recording-segment-manager");
+  await expect(segmentManager).toBeVisible();
+  await expect(segmentManager).toContainText("Select a recording segment");
+  await scrubber.locator(".handle.start").press("ArrowLeft");
+  await expect(scrubber.locator(".handle.start")).toHaveAttribute(
+    "aria-valuetext",
+    "9:59:59",
+  );
+  await segmentManager.getByRole("button", { name: "Cancel" }).click();
+  await expect(segmentManager).toHaveCount(0);
+  await expect(scrubber).toBeVisible();
 });
 
 test("lets the camera navigation shadow paint into the card padding", async ({

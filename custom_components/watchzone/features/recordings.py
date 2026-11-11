@@ -7,7 +7,12 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 
 from ..extensions import ProviderRegistry
-from ..providers.recordings import RecordingQuery, RecordingWindow
+from ..providers.recordings import (
+    RecordingQuery,
+    RecordingSegmentMedia,
+    RecordingSegmentRequest,
+    RecordingWindow,
+)
 
 
 class RecordingsService:
@@ -26,6 +31,18 @@ class RecordingsService:
         if provider is None:
             raise HomeAssistantError("Recordings are unavailable for this camera")
         return await provider.async_list_recordings(self._hass, entity_id, query)
+
+    async def async_resolve_segment(
+        self, entity_id: str, request: RecordingSegmentRequest
+    ) -> RecordingSegmentMedia:
+        """Resolve one selected segment through the camera's provider."""
+        entry = er.async_get(self._hass).async_get(entity_id)
+        provider = self._providers.recordings(entry.platform) if entry else None
+        if provider is None:
+            raise HomeAssistantError("Recording downloads are unavailable")
+        return await provider.async_resolve_segment(
+            self._hass, entity_id, request
+        )
 
     async def async_close(self) -> None:
         """Release service resources."""

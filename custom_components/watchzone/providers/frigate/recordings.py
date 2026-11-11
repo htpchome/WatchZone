@@ -24,6 +24,8 @@ from ..recordings import (
     RecordingHour,
     RecordingMarker,
     RecordingQuery,
+    RecordingSegmentMedia,
+    RecordingSegmentRequest,
     RecordingSpan,
     RecordingsProvider,
     RecordingWindow,
@@ -49,6 +51,38 @@ class FrigateRecordingsProvider:
         return RecordingWindow(
             days=days,
             hours=_recording_hours(source, segments, query, reviews),
+        )
+
+    async def async_resolve_segment(
+        self,
+        hass: HomeAssistant,
+        entity_id: str,
+        request: RecordingSegmentRequest,
+    ) -> RecordingSegmentMedia:
+        """Resolve a selected range without exposing Frigate URL structure."""
+        source = await async_resolve_source(hass, entity_id)
+        instance = quote(source.frigate_instance_id, safe="")
+        camera = quote(source.camera_name, safe="")
+        path_start = _timestamp_path(request.start_time)
+        path_end = _timestamp_path(request.end_time)
+        file_path = (
+            f"/api/frigate/{instance}/recording/{camera}/"
+            f"start/{path_start}/end/{path_end}"
+        )
+        hls_path = (
+            f"/api/frigate/{instance}/vod/{camera}/"
+            f"start/{path_start}/end/{path_end}/index.m3u8"
+        )
+        return RecordingSegmentMedia(
+            path=(
+                f"{file_path}?download=true"
+            ),
+            filename=f"{source.camera_name}-{path_start}-{path_end}.mp4",
+            playback_sources=(
+                PlaybackSource(file_path, "video/mp4", "file"),
+                PlaybackSource(hls_path, "application/vnd.apple.mpegurl", "hls"),
+            ),
+            preferred_transport="hls",
         )
 
 

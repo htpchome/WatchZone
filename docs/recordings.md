@@ -64,9 +64,9 @@
 - The download action remains independent from row playback and uses the
   provider-normalized range URL with a fresh, short-lived Home Assistant path
   signature and an explicit download request.
-- Future gap navigation, segment selection, export jobs, and recording-range
-  editing extend the normalized recording domain; they do not move provider
-  logic into the module.
+- Segment selection extends the normalized recording domain without moving
+  provider logic into the module. Export jobs and recording-range editing
+  remain future capabilities.
 
 ## Hour scrubber
 
@@ -91,3 +91,24 @@
 - Scrubber availability, marker, gap, and pointer colors are fixed WatchZone
   product colors exposed through semantic `--wzc-recording-scrubber-*` tokens;
   they do not derive from Home Assistant theme colors.
+
+## Segment manager
+
+- The segment manager is recording-only and must be explicitly activated from
+  the scrubber. Before activation the control remains a normal scrubber.
+- Selection uses second-precision start and end handles. The current pointer,
+  handle accessible values, and manager range all include seconds while the
+  underlying ten-minute hour divisions retain their concise labels.
+- Square-ended five-minute selectable regions flank the hour. The initial and
+  Reset selection remains the original hour, while either handle may extend
+  into adjacent retained recording context.
+- Preview resolves a provider-normalized source for the complete selected
+  range, including adjacent context, and restores the loaded hour when it
+  finishes. Reset restores the complete hour and Cancel deactivates selection
+  without closing the viewer.
+- Download sends only the entity identity and selected wall-clock timestamps
+  to the WatchZone WebSocket boundary. Python checks camera read permission and
+  duration bounds, resolves the owning provider capability, and returns
+  provider-neutral preview sources, preferred transport, filename, and an
+  authenticated download path. The frontend never constructs a Frigate URL.
+- Selected-segment export is not part of this implementation.

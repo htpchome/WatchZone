@@ -56,3 +56,24 @@ export async function listRecordings(
     timezone: options.timezone,
   });
 }
+
+export interface RecordingSegmentMedia {
+  readonly filename: string;
+  readonly path: string;
+  readonly playback_sources: readonly RecordedMediaSource[];
+  readonly preferred_transport: RecordedMediaTransport;
+}
+
+export async function resolveRecordingSegment(
+  api: HomeAssistantApi,
+  entityId: string,
+  startTime: number,
+  endTime: number,
+): Promise<RecordingSegmentMedia> {
+  return api.callWS<RecordingSegmentMedia>({
+    type: "watchzone/recordings/segment",
+    entity_id: entityId,
+    start_time: startTime,
+    end_time: endTime,
+  });
+}

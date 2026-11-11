@@ -1,8 +1,6 @@
-import type HlsType from "hls.js";
 import { LitElement } from "lit";
 import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
-import { detectClientProfile } from "../../core/client-profile";
 import {
   MEDIA_CONTROL_EVENT,
   MEDIA_CONTROLS_TAG,
@@ -11,6 +9,8 @@ import {
   RECORDED_VIDEO_TRANSPORT_TAG,
   RECORDED_VIDEO_PLAYER_TAG,
   RECORDED_MEDIA_ERROR_EVENT,
+  RECORDING_SEGMENT_MANAGER_EVENT,
+  RECORDING_SEGMENT_MANAGER_TAG,
   RECORDING_SCRUBBER_EVENT,
   RECORDING_SCRUBBER_TAG,
 } from "../../core/constants";
@@ -32,21 +32,23 @@ import {
   isPictureInPictureActive,
   pictureInPictureMethod,
   refreshNativePictureInPictureSuppression,
-  suppressNativePictureInPicture,
   togglePictureInPicture,
 } from "../../core/picture-in-picture";
 import type {
   RecordedMediaRequest,
-  RecordedMediaSource,
   RecordingTimeline,
 } from "../../core/recorded-media";
-import { MediaPresentationController } from "../media-presentation.controller";
+import { MediaPresentationController } from "../../ui/media-presentation.controller";
 import type {
   MediaControlDescriptor,
   MediaControlEventDetail,
-} from "../media-controls-overlay";
-import "../media-controls-overlay";
+} from "../../ui/media-controls-overlay";
+import "../../ui/media-controls-overlay";
+import { RecordedMediaPlaybackController } from "./recorded-media-playback.controller";
 import { recordedVideoPlayerStyles } from "./recorded-video-player.styles";
+import { RecordingSegmentController } from "./recording-segment.controller";
+import type { RecordingSegmentManagerAction } from "./recording-segment-manager";
+import "./recording-segment-manager";
 import type {
   RecordedVideoTransportEventDetail,
   RecordedVideoTransportHoldDetail,
@@ -55,8 +57,6 @@ import "./transport-controls";
 import type { RecordingScrubberEventDetail } from "./recording-scrubber";
 import "./recording-scrubber";
 
-const HLS_CONTENT_TYPE = "application/vnd.apple.mpegurl";
-const SOURCE_READY_TIMEOUT_MS = 12_000;
 const mediaControlsTag = unsafeStatic(MEDIA_CONTROLS_TAG);
 const mediaControlEvent = unsafeStatic(MEDIA_CONTROL_EVENT);
 const transportTag = unsafeStatic(RECORDED_VIDEO_TRANSPORT_TAG);
@@ -64,6 +64,10 @@ const transportEvent = unsafeStatic(RECORDED_VIDEO_TRANSPORT_EVENT);
 const transportHoldEvent = unsafeStatic(RECORDED_VIDEO_TRANSPORT_HOLD_EVENT);
 const recordingScrubberTag = unsafeStatic(RECORDING_SCRUBBER_TAG);
 const recordingScrubberEvent = unsafeStatic(RECORDING_SCRUBBER_EVENT);
+const recordingSegmentManagerTag = unsafeStatic(RECORDING_SEGMENT_MANAGER_TAG);
+const recordingSegmentManagerEvent = unsafeStatic(
+  RECORDING_SEGMENT_MANAGER_EVENT,
+);
 type RecordedVideoControlAction = "fullscreen" | "picture_in_picture";
 
 /** Ephemeral recorded-media playback engine. */
@@ -79,16 +83,33 @@ export class RecordedVideoPlayer extends LitElement {
   public request?: RecordedMediaRequest;
 
   private _fullscreenActive = false;
-  private _generation = 0;
-  private _hls?: HlsType;
   private _currentTime = 0;
   private _duration = 0;
   private _muted = true;
   private _paused = true;
   private _pictureInPictureActive = false;
+  private _segmentPreviewActive = false;
+  private _segmentPreviewGeneration = 0;
   private _transportHoldRelease?: () => void;
   private _volume = 1;
   private readonly _media = new MediaPresentationController(this);
+  private readonly _playback = new RecordedMediaPlaybackController(
+    () => this.api,
+    () => this._reportError(),
+    () => this._syncControlState(),
+  );
+  private readonly _segment = new RecordingSegmentController(
+    () => this.api,
+    () => this.requestUpdate(),
+    (operation) =>
+      this._reportControlError(
+        this.localize(
+          operation === "preview"
+            ? "recording_segments.preview_failed"
+            : "recording_segments.download_failed",
+        ),
+      ),
+  );
 
   public connectedCallback(): void {
     super.connectedCallback();
@@ -103,7 +124,7 @@ export class RecordedVideoPlayer extends LitElement {
       this._syncControlState,
     );
     this._releaseTransportHold();
-    this._stopPlayback();
+    this._playback.stop(this._video());
     super.disconnectedCallback();
   }
 
@@ -170,6 +191,7 @@ export class RecordedVideoPlayer extends LitElement {
         @timeupdate=${this._syncControlState}
         @play=${this._syncControlState}
         @pause=${this._syncControlState}
+        @ended=${this._handleSegmentPreviewEnded}
         @volumechange=${this._syncControlState}
         @enterpictureinpicture=${this._syncControlState}
         @leavepictureinpicture=${this._syncControlState}
@@ -206,9 +228,22 @@ export class RecordedVideoPlayer extends LitElement {
             )}
             .localize=${this.localize}
             .paused=${this._paused}
+            .segmentActive=${this._segment.active}
+            .segmentSelection=${this._segment.selection}
             .timeline=${timeline}
             @${recordingScrubberEvent}=${this._handleRecordingScrubber}
           ></${recordingScrubberTag}>`
+        : null
+    }
+    ${
+      timeline && this._segment.active
+        ? staticHtml`<${recordingSegmentManagerTag}
+            .downloading=${this._segment.downloading}
+            .locale=${this.api?.locale}
+            .localize=${this.localize}
+            .selection=${this._segment.selection}
+            @${recordingSegmentManagerEvent}=${this._handleSegmentManager}
+          ></${recordingSegmentManagerTag}>`
         : null
     }`;
   }
@@ -220,11 +255,14 @@ export class RecordedVideoPlayer extends LitElement {
 
   protected willUpdate(changed: Map<PropertyKey, unknown>): void {
     if (changed.has("request")) {
+      this._segmentPreviewActive = false;
+      this._segmentPreviewGeneration += 1;
       this.toggleAttribute(
         "recording-timeline",
         Boolean(this.request?.timeline),
       );
       this._media.configure(this.request?.id);
+      this._segment.configure(this.request?.timeline);
     }
   }
 
@@ -237,96 +275,11 @@ export class RecordedVideoPlayer extends LitElement {
   }
 
   private async _loadRequest(): Promise<void> {
-    const video = this.renderRoot.querySelector("video");
+    const video = this._video();
     const request = this.request;
     if (!video || !request) return;
-    const generation = ++this._generation;
-    this._clearSource(video);
-    setMediaElementMuted(video, true);
-    suppressNativePictureInPicture(video);
     this._syncControlState();
-
-    for (const source of orderedSources(request)) {
-      if (generation !== this._generation) return;
-      try {
-        await this._trySource(video, source, generation);
-        if (generation !== this._generation) return;
-        await playMediaElement(video);
-        this._syncControlState();
-        refreshNativePictureInPictureSuppression(video);
-        return;
-      } catch {
-        if (generation !== this._generation) return;
-        this._clearSource(video);
-      }
-    }
-    if (generation === this._generation) {
-      this._reportError();
-    }
-  }
-
-  private async _trySource(
-    video: HTMLVideoElement,
-    source: RecordedMediaSource,
-    generation: number,
-  ): Promise<void> {
-    const url = await this._resolveSourceUrl(source.url);
-    if (generation !== this._generation) {
-      throw new DOMException("Playback superseded", "AbortError");
-    }
-    if (source.transport === "file") {
-      video.src = url;
-      video.load();
-      return waitForMediaReady(video, generation, () => this._generation);
-    }
-    if (video.canPlayType(source.content_type || HLS_CONTENT_TYPE)) {
-      video.src = url;
-      video.load();
-      return waitForMediaReady(video, generation, () => this._generation);
-    }
-    if (detectClientProfile().isCatalyst) {
-      throw new Error("Native HLS playback is unavailable");
-    }
-    const { default: Hls } = await import("hls.js/dist/hls.light.mjs");
-    if (!Hls.isSupported() || generation !== this._generation) {
-      throw new Error("HLS playback is unavailable");
-    }
-    const hls = new Hls();
-    this._hls = hls;
-    const ready = waitForMediaReady(video, generation, () => this._generation);
-    hls.attachMedia(video);
-    hls.loadSource(url);
-    await new Promise<void>((resolve, reject) => {
-      const handleStartupError = (
-        _event: string,
-        data: { readonly error?: Error; readonly fatal: boolean },
-      ): void => {
-        if (data.fatal) {
-          hls.off(Hls.Events.ERROR, handleStartupError);
-          reject(data.error ?? new Error("HLS playback failed"));
-        }
-      };
-      hls.on(Hls.Events.ERROR, handleStartupError);
-      void ready.then(
-        () => {
-          hls.off(Hls.Events.ERROR, handleStartupError);
-          resolve();
-        },
-        (error: unknown) => {
-          hls.off(Hls.Events.ERROR, handleStartupError);
-          reject(error);
-        },
-      );
-    });
-    hls.on(Hls.Events.ERROR, (_event, data) => {
-      if (data.fatal && this._hls === hls) this._reportError();
-    });
-  }
-
-  private _stopPlayback(): void {
-    this._generation += 1;
-    const video = this.renderRoot.querySelector("video");
-    if (video) this._clearSource(video);
+    await this._playback.load(video, request);
   }
 
   private _video(): HTMLVideoElement | undefined {
@@ -478,15 +431,34 @@ export class RecordedVideoPlayer extends LitElement {
     } else this._releaseTransportHold();
   };
 
-  private readonly _handleRecordingScrubber = (
+  private readonly _handleRecordingScrubber = async (
     event: CustomEvent<RecordingScrubberEventDetail>,
-  ): void => {
+  ): Promise<void> => {
     event.stopPropagation();
+    const timeline = this.request?.timeline;
+    if (this._segmentPreviewActive) {
+      await this._restoreOriginalPlayback(this._segment.selection?.startTime);
+    }
+    if (event.detail.action === "activate_segment") {
+      if (timeline) this._segment.activate(timeline);
+      return;
+    }
+    if (event.detail.action === "set_segment_start") {
+      if (timeline && event.detail.timestamp !== undefined) {
+        this._segment.setStart(event.detail.timestamp, timeline);
+      }
+      return;
+    }
+    if (event.detail.action === "set_segment_end") {
+      if (timeline && event.detail.timestamp !== undefined) {
+        this._segment.setEnd(event.detail.timestamp, timeline);
+      }
+      return;
+    }
     if (event.detail.action === "toggle_play") {
       void this._togglePlayback();
       return;
     }
-    const timeline = this.request?.timeline;
     if (!timeline || event.detail.timestamp === undefined) return;
     this._seek(
       recordingTimestampToMediaTime(
@@ -501,32 +473,82 @@ export class RecordedVideoPlayer extends LitElement {
     }
   };
 
+  private readonly _handleSegmentManager = async (
+    event: CustomEvent<RecordingSegmentManagerAction>,
+  ): Promise<void> => {
+    event.stopPropagation();
+    const timeline = this.request?.timeline;
+    if (!timeline) return;
+    if (event.detail === "cancel") {
+      await this._restoreOriginalPlayback(this._segment.selection?.startTime);
+      this._segment.cancel();
+    } else if (event.detail === "reset") {
+      await this._restoreOriginalPlayback(this._segment.selection?.startTime);
+      this._segment.reset(timeline);
+    } else if (event.detail === "download") {
+      void this._segment.download(timeline);
+    } else {
+      const selection = this._segment.beginPreview();
+      if (!selection) return;
+      const video = this._video();
+      const request = this.request;
+      if (!video || !request) return;
+      const generation = ++this._segmentPreviewGeneration;
+      const media = await this._segment.resolvePreview(timeline);
+      if (
+        !media ||
+        generation !== this._segmentPreviewGeneration ||
+        selection !== this._segment.selection
+      ) {
+        return;
+      }
+      this._segmentPreviewActive = true;
+      await this._playback.load(video, {
+        ...request,
+        id: `${request.id}:segment:${selection.startTime}:${selection.endTime}`,
+        preferredTransport: media.preferred_transport,
+        sources: media.playback_sources,
+      });
+      if (generation !== this._segmentPreviewGeneration) return;
+      try {
+        await playMediaElement(video);
+      } catch {
+        this._reportControlError(
+          this.localize("recording_segments.preview_failed"),
+        );
+      }
+    }
+  };
+
+  private readonly _handleSegmentPreviewEnded = (): void => {
+    if (!this._segmentPreviewActive) return;
+    void this._restoreOriginalPlayback(this._segment.selection?.endTime);
+  };
+
+  private async _restoreOriginalPlayback(timestamp?: number): Promise<void> {
+    const wasActive = this._segmentPreviewActive;
+    this._segmentPreviewActive = false;
+    this._segmentPreviewGeneration += 1;
+    if (!wasActive) return;
+    const video = this._video();
+    const request = this.request;
+    const timeline = request?.timeline;
+    if (!video || !request || !timeline) return;
+    await this._playback.load(video, request);
+    if (timestamp !== undefined) {
+      video.currentTime = recordingTimestampToMediaTime(
+        timestamp,
+        finiteMediaValue(video.duration),
+        timeline,
+      );
+    }
+    video.pause();
+    this._syncControlState();
+  }
+
   private _releaseTransportHold(): void {
     this._transportHoldRelease?.();
     this._transportHoldRelease = undefined;
-  }
-
-  private async _resolveSourceUrl(path: string): Promise<string> {
-    const api = this.api;
-    if (!api) return path;
-    try {
-      const signed = await api.callWS<{ readonly path?: string }>({
-        type: "auth/sign_path",
-        path,
-        expires: 3600,
-      });
-      return api.resolveUrl(signed.path ?? path);
-    } catch {
-      return api.resolveUrl(path);
-    }
-  }
-
-  private _clearSource(video: HTMLVideoElement): void {
-    this._hls?.destroy();
-    this._hls = undefined;
-    video.pause();
-    video.removeAttribute("src");
-    video.load();
   }
 
   private _reportError(): void {
@@ -608,50 +630,6 @@ function mediaTimeToRecordingTimestamp(
 function recordingTimelineMediaDuration(timeline: RecordingTimeline): number {
   const last = timeline.spans[timeline.spans.length - 1];
   return last ? last.mediaOffset + last.endTime - last.startTime : 0;
-}
-
-function orderedSources(request: RecordedMediaRequest): RecordedMediaSource[] {
-  const sources = [...request.sources];
-  if (detectClientProfile().isCatalyst) {
-    return sources.filter(({ transport }) => transport === "hls");
-  }
-  return sources.sort((left, right) => {
-    const leftPreferred = left.transport === request.preferredTransport;
-    const rightPreferred = right.transport === request.preferredTransport;
-    return Number(rightPreferred) - Number(leftPreferred);
-  });
-}
-
-function waitForMediaReady(
-  video: HTMLVideoElement,
-  generation: number,
-  currentGeneration: () => number,
-): Promise<void> {
-  if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-    return Promise.resolve();
-  }
-  return new Promise((resolve, reject) => {
-    const cleanup = (): void => {
-      clearTimeout(timeout);
-      video.removeEventListener("loadeddata", ready);
-      video.removeEventListener("error", failed);
-    };
-    const ready = (): void => {
-      cleanup();
-      if (generation === currentGeneration()) resolve();
-      else reject(new DOMException("Playback superseded", "AbortError"));
-    };
-    const failed = (): void => {
-      cleanup();
-      reject(video.error ?? new Error("Recorded media failed to load"));
-    };
-    const timeout = window.setTimeout(() => {
-      cleanup();
-      reject(new Error("Recorded media timed out"));
-    }, SOURCE_READY_TIMEOUT_MS);
-    video.addEventListener("loadeddata", ready, { once: true });
-    video.addEventListener("error", failed, { once: true });
-  });
 }
 
 if (!customElements.get(RECORDED_VIDEO_PLAYER_TAG)) {

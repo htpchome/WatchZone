@@ -18,7 +18,7 @@ const fullscreenCameraStyles = resolve(
 );
 const recordedVideoTransportStyles = resolve(
   sourceRoot,
-  "ui/recorded-video-viewer/transport-controls.styles.ts",
+  "features/media-viewer/transport-controls.styles.ts",
 );
 const allowedHomeAssistantTokens = new Map([
   [homeAssistantEditorBridge, new Set(["--ha-view-sections-column-max-width"])],

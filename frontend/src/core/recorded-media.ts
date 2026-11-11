@@ -11,6 +11,7 @@ export interface RecordedMediaSource {
 export interface RecordedMediaRequest {
   readonly id: string;
   readonly kind: "snapshot" | "video";
+  readonly presentation: "event" | "recording" | "review";
   readonly posterUrl?: string;
   readonly preferredTransport: RecordedMediaTransport;
   readonly sources: readonly RecordedMediaSource[];
@@ -33,7 +34,9 @@ export interface RecordingTimelineMarker {
 }
 
 export interface RecordingTimeline {
+  readonly camera: string;
   readonly endTime: number;
+  readonly entityId: string;
   readonly markers: readonly RecordingTimelineMarker[];
   readonly spans: readonly RecordingTimelineSpan[];
   readonly startTime: number;

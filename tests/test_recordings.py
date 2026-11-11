@@ -4,10 +4,14 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 
 from custom_components.watchzone.providers.frigate.recordings import (
+    FrigateRecordingsProvider,
     _recording_days,
     _recording_hours,
 )
-from custom_components.watchzone.providers.recordings import RecordingQuery
+from custom_components.watchzone.providers.recordings import (
+    RecordingQuery,
+    RecordingSegmentRequest,
+)
 
 
 def test_recording_segments_are_grouped_into_hour_ranges() -> None:
@@ -112,3 +116,38 @@ def test_recording_segments_are_clipped_across_clock_hour_boundaries() -> None:
         hour + 3590,
         hour + 3600,
     )
+
+
+async def test_segment_download_is_resolved_by_the_frigate_provider(
+    monkeypatch,
+) -> None:
+    """The shared API receives a normalized path rather than Frigate routing."""
+    source = SimpleNamespace(
+        camera_name="front door",
+        frigate_instance_id="frigate/main",
+    )
+
+    async def resolve_source(_hass, _entity_id):
+        return source
+
+    monkeypatch.setattr(
+        "custom_components.watchzone.providers.frigate.recordings.async_resolve_source",
+        resolve_source,
+    )
+
+    download = await FrigateRecordingsProvider().async_resolve_segment(
+        SimpleNamespace(),
+        "camera.front",
+        RecordingSegmentRequest(start_time=1_700_000_000, end_time=1_700_000_061),
+    )
+
+    assert download.path == (
+        "/api/frigate/frigate%2Fmain/recording/front%20door/"
+        "start/1700000000/end/1700000061?download=true"
+    )
+    assert download.filename == "front door-1700000000-1700000061.mp4"
+    assert [source.transport for source in download.playback_sources] == [
+        "file",
+        "hls",
+    ]
+    assert download.preferred_transport == "hls"

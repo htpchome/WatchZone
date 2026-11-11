@@ -4,7 +4,6 @@ import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 import {
   RECORDED_MEDIA_ERROR_EVENT,
   RECORDED_VIDEO_CLOSE_EVENT,
-  RECORDED_VIDEO_DIALOG_TAG,
   RECORDED_VIDEO_VIEWER_TAG,
 } from "../../core/constants";
 import type { HomeAssistantApi } from "../../core/home-assistant";
@@ -17,11 +16,9 @@ import type {
   RecordedMediaInitialGeometry,
   RecordedMediaRequest,
 } from "../../core/recorded-media";
-import { ToastManager } from "../toast-manager";
-import "./draggable-dialog";
+import { ToastManager } from "../../ui/toast-manager";
+import { mediaViewerPresentation } from "./presentation";
 import { recordedVideoViewerStyles } from "./recorded-video-viewer.styles";
-
-const dialogTag = unsafeStatic(RECORDED_VIDEO_DIALOG_TAG);
 
 /** Owns recorded-video viewing independently of any concrete presentation. */
 export class RecordedVideoViewer extends LitElement {
@@ -38,6 +35,8 @@ export class RecordedVideoViewer extends LitElement {
   public request?: RecordedMediaRequest;
 
   private _muteLeaseActive = false;
+  private _presentationGeneration = 0;
+  private _presentationTag = mediaViewerPresentation("review").tagName;
   private readonly _toasts = new ToastManager(this);
 
   public connectedCallback(): void {
@@ -54,19 +53,42 @@ export class RecordedVideoViewer extends LitElement {
   }
 
   protected render() {
-    return staticHtml`<${dialogTag}
+    if (!this._presentationTag) return null;
+    const presentationTag = unsafeStatic(this._presentationTag);
+    return staticHtml`<${presentationTag}
       .api=${this.api}
       .initialSize=${this.initialSize}
       .localize=${this.localize}
       .notices=${this._toasts.notices}
       .request=${this.request}
-    ></${dialogTag}>`;
+    ></${presentationTag}>`;
   }
 
   protected updated(changed: Map<PropertyKey, unknown>): void {
     if (!changed.has("request")) return;
+    void this._loadPresentation();
     if (this.request?.kind === "video") this._acquireLiveMute();
     else this._releaseLiveMute();
+  }
+
+  private async _loadPresentation(): Promise<void> {
+    const request = this.request;
+    const generation = ++this._presentationGeneration;
+    if (!request) {
+      this._presentationTag = mediaViewerPresentation("review").tagName;
+      this.requestUpdate();
+      return;
+    }
+    const presentation = mediaViewerPresentation(request.presentation);
+    await presentation.load();
+    if (
+      generation !== this._presentationGeneration ||
+      request !== this.request
+    ) {
+      return;
+    }
+    this._presentationTag = presentation.tagName;
+    this.requestUpdate();
   }
 
   private _acquireLiveMute(): void {

@@ -750,11 +750,15 @@ contract is defined in [docs/live-session-lifecycle.md](docs/live-session-lifecy
 ### 8.10 Recorded-media playback
 
 Recorded alerts, events, and recording ranges use the lazy
-`ui/recorded-video-viewer/` boundary. They are transient viewers, not Stage
-modules, Stage components, or retained live sessions. The recorded player owns
+`features/media-viewer/` application-feature boundary. They are transient
+viewers, not UI primitives, Stage modules, Stage components, or retained live
+sessions. Shared activity-list UI emits typed intents; its owning Events or
+Reviews module constructs the application request. The recorded player owns
 transport selection, its finite browser media element, and transport cleanup.
 The viewer owns recorded-playback lifecycle and delegates concrete geometry to
-a presentation such as the draggable dialog.
+a presentation selected by the request's `event`, `review`, or `recording`
+identity. Those presentations may diverge independently without duplicating
+the playback engine.
 
 Live and recorded video reuse the same provider-neutral media presentation
 primitives for overlay geometry, control sizing, touch behavior, fullscreen,
@@ -763,6 +767,11 @@ engine: live playback remains a retained document-scoped session, while
 recorded playback is an ephemeral finite source. Future dialog, drawer, or
 live-area-cover presentations compose the same primitives without creating a
 second media-control system.
+
+Recording-only scrubber and segment-selection behavior stays inside the media
+viewer feature. The Recordings Stage module supplies normalized recording
+timeline context and emits an open-media request; it does not own viewer
+controls, modal geometry, segment-selection state, or provider download URLs.
 
 Providers return ordered, authenticated playback candidates and a preferred
 transport. Shared modules never construct provider URLs. Playback attempts are

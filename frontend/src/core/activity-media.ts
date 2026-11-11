@@ -1,13 +1,13 @@
 import {
   formatHomeAssistantEventDate,
   formatHomeAssistantTime,
-} from "../core/date-time";
-import type { HomeAssistantApi } from "../core/home-assistant";
+} from "./date-time";
+import type { HomeAssistantApi } from "./home-assistant";
 import type {
   RecordedMediaRequest,
   RecordedMediaSource,
   RecordedMediaTransport,
-} from "../core/recorded-media";
+} from "./recorded-media";
 
 export interface ActivityMediaItem {
   readonly cameraLabel: string;
@@ -36,6 +36,7 @@ export function activityMediaTitle(
 export function activityRecordedMediaRequest(
   item: ActivityMediaItem,
   kind: "snapshot" | "video",
+  presentation: "event" | "review",
   api?: HomeAssistantApi,
 ): RecordedMediaRequest | undefined {
   const previewUrl = item.thumbnailUrl ?? item.snapshotUrl ?? undefined;
@@ -48,6 +49,7 @@ export function activityRecordedMediaRequest(
     return {
       id: `${item.id}:snapshot`,
       kind,
+      presentation,
       posterUrl,
       preferredTransport: "file",
       sources: [
@@ -64,10 +66,36 @@ export function activityRecordedMediaRequest(
   return {
     id: item.id,
     kind,
+    presentation,
     posterUrl,
     preferredTransport: item.preferredTransport,
     sources: item.playbackSources,
     title,
+  };
+}
+
+export function activityPreviewMediaRequest(
+  item: ActivityMediaItem,
+  presentation: "event" | "review",
+  api?: HomeAssistantApi,
+  previewUrl?: string | null,
+): RecordedMediaRequest | undefined {
+  const url = previewUrl ?? item.thumbnailUrl ?? item.snapshotUrl;
+  if (!url) return undefined;
+  return {
+    id: `${item.id}:progress`,
+    kind: "snapshot",
+    posterUrl: api?.resolveUrl(url) ?? url,
+    preferredTransport: "file",
+    presentation,
+    sources: [
+      {
+        content_type: previewUrl ? "image/gif" : "image/jpeg",
+        transport: "file",
+        url,
+      },
+    ],
+    title: activityMediaTitle(item, api),
   };
 }
 

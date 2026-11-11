@@ -51,6 +51,10 @@ export const recordedVideoPlayerStyles = css`
     transition: none;
   }
 
+  wzc-recording-segment-manager {
+    inline-size: 100%;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     video {
       transition: none;

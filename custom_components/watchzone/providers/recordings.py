@@ -65,6 +65,24 @@ class RecordingWindow:
     hours: tuple[RecordingHour, ...]
 
 
+@dataclass(frozen=True, slots=True)
+class RecordingSegmentRequest:
+    """One bounded user-selected recording segment."""
+
+    start_time: float
+    end_time: float
+
+
+@dataclass(frozen=True, slots=True)
+class RecordingSegmentMedia:
+    """Provider-normalized playback and download for a selected segment."""
+
+    path: str
+    filename: str
+    playback_sources: tuple[PlaybackSource, ...]
+    preferred_transport: PlaybackTransport
+
+
 class RecordingsProvider(Protocol):
     """Optional provider capability for recording availability and ranges."""
 
@@ -72,3 +90,11 @@ class RecordingsProvider(Protocol):
         self, hass: HomeAssistant, entity_id: str, query: RecordingQuery
     ) -> RecordingWindow:
         """Return available days and newest-first hourly ranges."""
+
+    async def async_resolve_segment(
+        self,
+        hass: HomeAssistant,
+        entity_id: str,
+        request: RecordingSegmentRequest,
+    ) -> RecordingSegmentMedia:
+        """Resolve one bounded recording segment for preview and download."""

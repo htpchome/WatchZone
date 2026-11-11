@@ -9,8 +9,8 @@ import {
   englishLocalize,
   type LocalizeFunction,
 } from "../../core/localization";
-import { releaseTouchFocus } from "../control-interaction";
-import { renderIcon } from "../icons";
+import { releaseTouchFocus } from "../../ui/control-interaction";
+import { renderIcon } from "../../ui/icons";
 import { recordedVideoTransportStyles } from "./transport-controls.styles";
 
 export type RecordedVideoTransportAction =
