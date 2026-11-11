@@ -53,6 +53,7 @@ import "./review-analysis-dialog";
 import "./review-export-dialog";
 
 const MEDIA_RESOLVE_DELAYS_MS = [0, 750, 1_500] as const;
+const DOWNLOAD_OBJECT_URL_REVOKE_DELAY_MS = 1_000;
 const activityListIntentEvent = unsafeStatic(ACTIVITY_LIST_INTENT_EVENT);
 const reviewExportCloseEvent = unsafeStatic(REVIEW_EXPORT_CLOSE_EVENT);
 const reviewExportConfirmEvent = unsafeStatic(REVIEW_EXPORT_CONFIRM_EVENT);
@@ -97,6 +98,7 @@ export class ReviewsModule extends LitElement {
 
   private readonly _toasts = new ToastManager(this);
   private _analysis?: ReviewAnalysis;
+  private _downloadAbort?: AbortController;
   private _exportJobs: readonly ExportJob[] = [];
   private _exportJobsApi?: HomeAssistantApi;
   private _exportJobsUnsubscribe?: () => void;
@@ -138,6 +140,8 @@ export class ReviewsModule extends LitElement {
   }
 
   public disconnectedCallback(): void {
+    this._downloadAbort?.abort();
+    this._downloadAbort = undefined;
     this._exportJobsUnsubscribe?.();
     this._exportJobsUnsubscribe = undefined;
     this._exportJobsApi = undefined;
@@ -294,10 +298,57 @@ export class ReviewsModule extends LitElement {
       this._toggleReviewed(intent.item);
     } else if (intent.kind === "export") {
       void this._beginExport(intent.item);
+    } else if (intent.kind === "download") {
+      void this._download(intent.item);
     } else {
       void this._openMedia(intent.item, intent.media);
     }
   };
+
+  private async _download(item: ActivityListItem): Promise<void> {
+    const api = this.api;
+    const path = item.downloadUrl;
+    if (!api || !path) return;
+    this._downloadAbort?.abort();
+    const abort = new AbortController();
+    this._downloadAbort = abort;
+    let objectUrl: string | undefined;
+    try {
+      const signed = await api.callWS<{ readonly path?: string }>({
+        type: "auth/sign_path",
+        path,
+        expires: 3600,
+      });
+      const response = await fetch(api.resolveUrl(signed.path ?? path), {
+        signal: abort.signal,
+      });
+      if (!response.ok) throw new Error(`Download failed: ${response.status}`);
+      objectUrl = URL.createObjectURL(await response.blob());
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = item.downloadFilename ?? "review.mp4";
+      document.body.append(anchor);
+      try {
+        anchor.click();
+      } finally {
+        anchor.remove();
+      }
+    } catch {
+      if (abort.signal.aborted) return;
+      this._toasts.error(this.localize("reviews.download_failed"), {
+        key: `review-download-${item.id}`,
+      });
+    } finally {
+      if (this._downloadAbort === abort) this._downloadAbort = undefined;
+      if (objectUrl) {
+        const completedUrl = objectUrl;
+        window.setTimeout(
+          () => URL.revokeObjectURL(completedUrl),
+          DOWNLOAD_OBJECT_URL_REVOKE_DELAY_MS,
+        );
+      }
+    }
+  }
 
   private async _openMedia(
     item: ActivityListItem,

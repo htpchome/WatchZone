@@ -219,6 +219,7 @@
   "reviews.export_failed_status": "Export failed",
   "reviews.export_prepare_failed": "Unable to prepare this export.",
   "reviews.export_failed": "Unable to start the export.",
+  "reviews.download_failed": "Unable to download the review.",
   "recordings.list": "Camera recordings",
   "recordings.loading": "Loading recordings…",
   "recordings.empty": "No recordings for this camera on this day.",

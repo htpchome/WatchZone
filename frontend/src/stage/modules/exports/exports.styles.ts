@@ -126,8 +126,7 @@ export const exportsStyles = css`
   }
 
   .draft-status ha-spinner {
-    block-size: 1rem;
-    inline-size: 1rem;
+    flex: 0 0 auto;
   }
 
   .details {

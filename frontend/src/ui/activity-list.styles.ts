@@ -402,8 +402,7 @@ export const activityListStyles = css`
   }
 
   .export-status ha-spinner {
-    block-size: 1rem;
-    inline-size: 1rem;
+    flex: 0 0 auto;
   }
 
   .export-progress-value {

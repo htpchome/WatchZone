@@ -4,9 +4,14 @@ import type { LitElement } from "lit";
 import { CameraSelectionContext } from "../src/stage/camera-selection-context";
 import { ActivityFilterContext } from "../src/stage/activity";
 import { MediaDateContext } from "../src/stage/media-date-context";
-import { ACTIVITY_LIST_TAG, REVIEWS_TAG } from "../src/core/constants";
+import {
+  ACTIVITY_LIST_INTENT_EVENT,
+  ACTIVITY_LIST_TAG,
+  REVIEWS_TAG,
+} from "../src/core/constants";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import type { ReviewsModule } from "../src/stage/modules/reviews/reviews";
+import type { ActivityListItem } from "../src/ui/activity-list";
 import "../src/stage/modules/reviews/reviews";
 
 vi.mock("../src/api/activity-updates", () => ({
@@ -92,6 +97,7 @@ describe("reviews module", () => {
   afterEach(() => {
     document.body.replaceChildren();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("presents alert and detection review activity", async () => {
@@ -160,15 +166,10 @@ describe("reviews module", () => {
       ),
     ).toHaveLength(1);
     expect(
-      activityRoot(module)
-        ?.querySelector<HTMLAnchorElement>('a[aria-label="Download clip"]')
-        ?.getAttribute("href"),
-    ).toBe("https://ha.local/alert.mp4?download=true");
-    expect(
-      activityRoot(module)
-        ?.querySelector<HTMLAnchorElement>('a[aria-label="Download clip"]')
-        ?.getAttribute("download"),
-    ).toBe("front-100.mp4");
+      activityRoot(module)?.querySelector<HTMLButtonElement>(
+        'button[aria-label="Download clip"]',
+      ),
+    ).not.toBeNull();
     const list = module.shadowRoot?.querySelector(ACTIVITY_LIST_TAG) as
       | (HTMLElement & {
           items: readonly { hoverPreviewUrl?: string | null }[];
@@ -214,6 +215,95 @@ describe("reviews module", () => {
     filterContext.resetFilters("camera.front");
     await module.updateComplete;
     expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(2);
+  });
+
+  it("downloads review media instead of navigating to the recording", async () => {
+    const callWS = vi.fn(async (message: { type: string }) => {
+      if (message.type === "watchzone/reviews/list") return { items: reviews };
+      if (message.type === "auth/sign_path") {
+        return { path: "/alert.mp4?download=true&authSig=signed" };
+      }
+      return {};
+    });
+    const api = {
+      callWS,
+      identity: {},
+      resolveUrl: (path: string) => `https://ha.local${path}`,
+      subscribeMessage: vi.fn(),
+    } as unknown as HomeAssistantApi;
+    const fetchMedia = vi.fn().mockResolvedValue({
+      blob: vi.fn().mockResolvedValue(new Blob(["review"])),
+      ok: true,
+      status: 200,
+    } as Partial<Response>);
+    vi.stubGlobal("fetch", fetchMedia);
+    const createObjectUrl = vi.fn().mockReturnValue("blob:review-download");
+    const revokeObjectUrl = vi.fn();
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: createObjectUrl,
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      value: revokeObjectUrl,
+    });
+    let downloadedFilename: string | undefined;
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      downloadedFilename = this.download;
+    });
+    const selection = new CameraSelectionContext();
+    const module = document.createElement(REVIEWS_TAG) as ReviewsModule;
+    module.api = api;
+    module.cameraSelection = selection;
+    module.targetModuleId = "camera-module";
+    document.body.append(module);
+    selection.publish(
+      "camera-module",
+      {},
+      {
+        activeEntityId: "camera.front",
+        items: [{ entityId: "camera.front", label: "Front" }],
+      },
+      vi.fn(),
+    );
+
+    let dispatched = false;
+    await vi.waitFor(() => {
+      const list = module.shadowRoot?.querySelector(ACTIVITY_LIST_TAG) as
+        (HTMLElement & { items: readonly ActivityListItem[] }) | null;
+      const item = list?.items[0];
+      expect(item).toBeDefined();
+      if (!dispatched && list && item) {
+        dispatched = true;
+        list.dispatchEvent(
+          new CustomEvent(ACTIVITY_LIST_INTENT_EVENT, {
+            bubbles: true,
+            composed: true,
+            detail: { kind: "download", item },
+          }),
+        );
+      }
+    });
+
+    await vi.waitFor(
+      () => {
+        expect(callWS).toHaveBeenCalledWith({
+          type: "auth/sign_path",
+          path: "/alert.mp4?download=true",
+          expires: 3600,
+        });
+        expect(fetchMedia).toHaveBeenCalledWith(
+          "https://ha.local/alert.mp4?download=true&authSig=signed",
+          { signal: expect.any(AbortSignal) },
+        );
+        expect(downloadedFilename).toBe("front-100.mp4");
+        expect(revokeObjectUrl).toHaveBeenCalledWith("blob:review-download");
+      },
+      { timeout: 2_000 },
+    );
+    module.remove();
   });
 
   it("opens generated analysis for reviews with complete metadata", async () => {

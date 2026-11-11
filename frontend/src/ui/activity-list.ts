@@ -89,6 +89,10 @@ export type ActivityListIntent =
     }
   | {
       readonly item: ActivityListItem;
+      readonly kind: "download";
+    }
+  | {
+      readonly item: ActivityListItem;
       readonly kind: "open_media";
       readonly media: "snapshot" | "video";
     }
@@ -426,22 +430,26 @@ export class ActivityList extends LitElement {
                   : null
               }
               ${
-                (item.downloadUrl ?? item.clipUrl)
-                  ? html`<a
+                item.downloadUrl
+                  ? html`<button
                       class="action wzc-icon-button"
-                      href=${
-                        this.api?.resolveUrl(
-                          item.downloadUrl ?? item.clipUrl!,
-                        ) ??
-                        item.downloadUrl ??
-                        item.clipUrl!
-                      }
-                      download=${item.downloadFilename ?? ""}
+                      type="button"
                       title=${this.localize("events.download_clip")}
                       aria-label=${this.localize("events.download_clip")}
-                      ><ha-icon icon="mdi:download"></ha-icon
-                    ></a>`
-                  : null
+                      @click=${() => this._dispatch({ kind: "download", item })}
+                    >
+                      <ha-icon icon="mdi:download"></ha-icon>
+                    </button>`
+                  : item.clipUrl
+                    ? html`<a
+                        class="action wzc-icon-button"
+                        href=${this.api?.resolveUrl(item.clipUrl) ?? item.clipUrl}
+                        download=${item.downloadFilename ?? ""}
+                        title=${this.localize("events.download_clip")}
+                        aria-label=${this.localize("events.download_clip")}
+                        ><ha-icon icon="mdi:download"></ha-icon
+                      ></a>`
+                    : null
               }
               ${
                 snapshotUrl

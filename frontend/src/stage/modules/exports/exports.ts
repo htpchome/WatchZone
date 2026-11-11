@@ -379,9 +379,9 @@ export class ExportsModule extends LitElement {
     this._mutating = true;
     try {
       await deleteExport(api, item);
+      this._exports.removeItem(item.entity_id, item.id);
       this._mutating = false;
       this._closeDialog();
-      this._exports.refresh();
       this._toasts.success(this.localize("exports.remove_success"), {
         key: "exports-remove",
       });

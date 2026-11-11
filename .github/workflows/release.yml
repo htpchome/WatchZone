@@ -1,6 +1,7 @@
 name: Release
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths-ignore:
@@ -33,7 +34,7 @@ jobs:
         env:
           GITHUB_SHA: ${{ github.sha }}
       - run: bash scripts/package-release.sh
-      - name: Create GitHub release
+      - name: Create or update GitHub release
         shell: bash
         run: |
           VERSION=$(node -p "require('./frontend/package.json').version")
@@ -42,10 +43,14 @@ jobs:
           if [[ "$VERSION" == *-* ]]; then
             EXTRA_ARGS+=(--prerelease)
           fi
-          gh release create "$TAG" dist/watchzone.zip \
-            --target "$GITHUB_SHA" \
-            --generate-notes \
-            "${EXTRA_ARGS[@]}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/watchzone.zip --clobber
+          else
+            gh release create "$TAG" dist/watchzone.zip \
+              --target "$GITHUB_SHA" \
+              --generate-notes \
+              "${EXTRA_ARGS[@]}"
+          fi
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Prune stale prereleases

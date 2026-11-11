@@ -187,4 +187,33 @@ async def test_create_rejects_unverified_background_job(monkeypatch) -> None:
         )
 
     services.async_call.assert_awaited_once()
-    sleep.assert_awaited_once_with(0.25)
+    sleep.assert_awaited_once_with(1.0)
+
+
+async def test_create_tolerates_transient_reconciliation_failure() -> None:
+    """A temporary list failure after acceptance does not report false failure."""
+    provider = FrigateExportsProvider()
+    services = SimpleNamespace(
+        has_service=Mock(return_value=True), async_call=AsyncMock()
+    )
+    hass = SimpleNamespace(services=services)
+    created = ExportRecord(
+        id="front-abc123",
+        camera="front",
+        name="Front visitor",
+        created_time=101,
+        in_progress=True,
+        revision="revision",
+    )
+    provider.async_list_exports = AsyncMock(
+        side_effect=[(), HomeAssistantError("temporary failure"), (created,)]
+    )
+
+    export_id = await provider.async_create_export(
+        hass,
+        "camera.front",
+        ExportRequest(start_time=100, end_time=124, name="Front visitor"),
+        Context(user_id="user-1"),
+    )
+
+    assert export_id == "front-abc123"

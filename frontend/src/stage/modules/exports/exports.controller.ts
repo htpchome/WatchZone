@@ -36,6 +36,7 @@ export class ExportsController implements ReactiveController {
 
   private _cameras: readonly CameraSelectionItem[] = [];
   private _connected = false;
+  private readonly _deletedKeys = new Set<string>();
   private _generation = 0;
   private _jobs: readonly ExportJob[] = [];
   private _jobsApi?: HomeAssistantApi;
@@ -122,6 +123,17 @@ export class ExportsController implements ReactiveController {
   public renameItem(entityId: string, id: string, name: string): void {
     this.items = this.items.map((item) =>
       item.entity_id === entityId && item.id === id ? { ...item, name } : item,
+    );
+    const { exportFilter, placeableId } = this._config();
+    this._publishFacets(exportFilter, placeableId);
+    this._host.requestUpdate();
+  }
+
+  public removeItem(entityId: string, id: string): void {
+    const key = exportKey(entityId, id);
+    this._deletedKeys.add(key);
+    this.items = this.items.filter(
+      (item) => exportKey(item.entity_id, item.id) !== key,
     );
     const { exportFilter, placeableId } = this._config();
     this._publishFacets(exportFilter, placeableId);
@@ -250,7 +262,15 @@ export class ExportsController implements ReactiveController {
     try {
       const items = await listExports(api, entityIds);
       if (!this._connected || generation !== this._generation) return;
-      this.items = items;
+      const providerKeys = new Set(
+        items.map((item) => exportKey(item.entity_id, item.id)),
+      );
+      for (const key of this._deletedKeys) {
+        if (!providerKeys.has(key)) this._deletedKeys.delete(key);
+      }
+      this.items = items.filter(
+        (item) => !this._deletedKeys.has(exportKey(item.entity_id, item.id)),
+      );
       this.loading = false;
       this._publishFacets(exportFilter, placeableId);
       const refreshAfterLoad = this._refreshAfterLoad;
@@ -296,4 +316,8 @@ export class ExportsController implements ReactiveController {
     window.clearTimeout(this._pollTimer);
     this._pollTimer = undefined;
   }
+}
+
+function exportKey(entityId: string, id: string): string {
+  return `${entityId}\n${id}`;
 }

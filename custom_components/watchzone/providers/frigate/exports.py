@@ -26,8 +26,8 @@ from .source import FrigateSource, async_resolve_source
 
 _REQUEST_TIMEOUT = ClientTimeout(total=15)
 _EXPORT_SERVICE = "export_recording"
-_EXPORT_VERIFY_ATTEMPTS = 20
-_EXPORT_VERIFY_DELAY = 0.25
+_EXPORT_VERIFY_ATTEMPTS = 60
+_EXPORT_VERIFY_DELAY = 1.0
 
 
 class FrigateExportsProvider:
@@ -88,7 +88,10 @@ class FrigateExportsProvider:
         )
 
         for attempt in range(_EXPORT_VERIFY_ATTEMPTS):
-            exports = await self.async_list_exports(hass, entity_id)
+            try:
+                exports = await self.async_list_exports(hass, entity_id)
+            except HomeAssistantError:
+                exports = ()
             created = [
                 item
                 for item in exports

@@ -294,6 +294,9 @@ describe("exports module", () => {
         export_id: "front-1",
       }),
     );
+    await vi.waitFor(() =>
+      expect(module.shadowRoot?.querySelectorAll(".tile")).toHaveLength(0),
+    );
     module.remove();
   });
 });

@@ -872,7 +872,11 @@ test("keeps activity content in an independently scrolling viewport", async ({
       connection: { subscribeMessage: async () => () => undefined },
       hassUrl: (path: string) => path,
       callService: async () => undefined,
-      callWS: async (message: { entity_id?: string; type: string }) => {
+      callWS: async (message: {
+        entity_id?: string;
+        path?: string;
+        type: string;
+      }) => {
         if (message.type === "watchzone/live/camera/ready") {
           return { ready: false };
         }
@@ -951,6 +955,9 @@ test("keeps activity content in an independently scrolling viewport", async ({
             ],
           };
         }
+        if (message.type === "auth/sign_path") {
+          return { path: message.path };
+        }
         return undefined;
       },
     };
@@ -1010,7 +1017,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
       .first()
       .evaluate((element) => getComputedStyle(element).cursor);
   const reviewActionCursors = {
-    download: await cursor('a[title="Download clip"]'),
+    download: await cursor('button[aria-label="Download clip"]'),
     export: await cursor('button[aria-label="Export review"]'),
     snapshot: await cursor('button[aria-label="View snapshot"]'),
   };
@@ -1020,7 +1027,10 @@ test("keeps activity content in an independently scrolling viewport", async ({
     snapshot: "pointer",
   });
   const reviewDownloadPromise = page.waitForEvent("download");
-  await page.locator('wzc-reviews a[title="Download clip"]').first().click();
+  await page
+    .locator('wzc-reviews button[aria-label="Download clip"]')
+    .first()
+    .click();
   const reviewDownload = await reviewDownloadPromise;
   expect(reviewDownload.suggestedFilename()).toMatch(/\.mp4$/);
   await expect(
