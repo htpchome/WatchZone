@@ -134,7 +134,7 @@ async def ws_exports_create(
         )
         return
     try:
-        await runtime_from_hass(hass).exports.async_create(
+        export_id = await runtime_from_hass(hass).exports.async_create(
             msg["entity_id"],
             msg["start_time"],
             msg["end_time"],
@@ -143,7 +143,7 @@ async def ws_exports_create(
     except HomeAssistantError as err:
         connection.send_error(msg["id"], "exports_create_failed", str(err))
         return
-    connection.send_result(msg["id"], {"success": True})
+    connection.send_result(msg["id"], {"export_id": export_id, "success": True})
 
 
 @websocket_command(

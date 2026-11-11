@@ -61,8 +61,8 @@ class ExportsProvider(Protocol):
 
     async def async_create_export(
         self, hass: HomeAssistant, entity_id: str, request: ExportRequest
-    ) -> None:
-        """Create one persistent export from a recorded range."""
+    ) -> str:
+        """Create one persistent export and return its provider ID."""
 
     async def async_rename_export(
         self, hass: HomeAssistant, entity_id: str, export_id: str, name: str

@@ -74,7 +74,7 @@ export const reviewExportDialogStyles = css`
   }
 
   input:focus-visible,
-  button:focus-visible {
+  .wzc-button:focus-visible {
     outline: 2px solid var(--wzc-color-primary);
     outline-offset: 2px;
   }
@@ -87,25 +87,12 @@ export const reviewExportDialogStyles = css`
   }
 
   button {
-    appearance: none;
     background: var(--wzc-color-surface);
     border: 1px solid var(--wzc-color-border-control);
     border-radius: var(--wzc-radius-medium);
     color: var(--wzc-color-text-1);
-    cursor: pointer;
     font: inherit;
     min-block-size: 2.75rem;
     padding: 0.5rem 0.9rem;
-  }
-
-  button.primary {
-    background: var(--wzc-color-primary);
-    border-color: var(--wzc-color-primary);
-    color: var(--wzc-color-on-primary);
-  }
-
-  button:disabled {
-    cursor: progress;
-    opacity: 0.55;
   }
 `;

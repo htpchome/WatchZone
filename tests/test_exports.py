@@ -115,29 +115,69 @@ async def test_default_name_matches_frigate_format(monkeypatch) -> None:
     assert name == "front door 1970-01-01 00:00:00 1970-01-01 00:01:05"
 
 
-async def test_create_uses_common_frigate_017_and_018_request(monkeypatch) -> None:
-    """Creation uses the recordings body supported by Frigate 0.17 and 0.18."""
+async def test_create_uses_frigate_017_request(monkeypatch) -> None:
+    """Creation uses the exact request sent by Frigate 0.17's own UI."""
     provider = FrigateExportsProvider()
     source = SimpleNamespace(camera_name="front")
-    request_json = AsyncMock(
-        return_value={"success": True, "export_id": "front-abc123"}
+    response = SimpleNamespace(
+        status=200,
+        json=AsyncMock(
+            return_value={"success": True, "export_id": "front-abc123"}
+        ),
+        release=Mock(),
     )
+    request = AsyncMock(return_value=response)
     monkeypatch.setattr(
         "custom_components.watchzone.providers.frigate.exports.async_resolve_source",
         AsyncMock(return_value=source),
     )
-    monkeypatch.setattr(provider, "_request_json", request_json)
+    monkeypatch.setattr(provider, "_request", request)
 
-    await provider.async_create_export(
+    export_id = await provider.async_create_export(
         SimpleNamespace(),
         "camera.front",
         ExportRequest(start_time=100.5, end_time=124.25, name="Front visitor"),
     )
 
-    request_json.assert_awaited_once_with(
+    assert export_id == "front-abc123"
+    request.assert_awaited_once_with(
         SimpleNamespace(),
         source,
         "POST",
         "api/export/front/start/100.5/end/124.25",
+        json_body={"playback": "realtime", "name": "Front visitor"},
+        accepted_errors={422},
+    )
+
+
+async def test_create_falls_back_to_frigate_018_request(monkeypatch) -> None:
+    """A schema rejection retries with Frigate 0.18's recordings source."""
+    provider = FrigateExportsProvider()
+    source = SimpleNamespace(camera_name="front")
+    rejected = SimpleNamespace(status=422, release=Mock())
+    request = AsyncMock(return_value=rejected)
+    request_json = AsyncMock(
+        return_value={"success": True, "export_id": "front-def456"}
+    )
+    monkeypatch.setattr(
+        "custom_components.watchzone.providers.frigate.exports.async_resolve_source",
+        AsyncMock(return_value=source),
+    )
+    monkeypatch.setattr(provider, "_request", request)
+    monkeypatch.setattr(provider, "_request_json", request_json)
+
+    export_id = await provider.async_create_export(
+        SimpleNamespace(),
+        "camera.front",
+        ExportRequest(start_time=100, end_time=124, name="Front visitor"),
+    )
+
+    assert export_id == "front-def456"
+    rejected.release.assert_called_once()
+    request_json.assert_awaited_once_with(
+        SimpleNamespace(),
+        source,
+        "POST",
+        "api/export/front/start/100/end/124",
         json_body={"source": "recordings", "name": "Front visitor"},
     )

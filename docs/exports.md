@@ -21,6 +21,9 @@ but the Stage module and frontend transport remain provider-neutral.
 - Reviews may request export preparation and creation through the normalized
   Exports API contract. Reviews does not import or mutate the Exports Stage
   module.
+- A shared UI button foundation owns cursor, focus, disabled, icon, and primary
+  contrast behavior. Activity and export presentations supply only their local
+  geometry and semantic variants.
 
 ## Library behavior
 
@@ -46,9 +49,14 @@ but the Stage module and frontend transport remain provider-neutral.
 
 - Listing, single-export lookup, and rename use the endpoints shared by Frigate
   0.17 and 0.18.
-- Creation uses Frigate's recording-range endpoint and the common `source` and
-  `name` request fields. The Frigate adapter owns its generated-title format;
-  the frontend receives that prepared title without encoding provider rules.
+- Creation uses Frigate's recording-range endpoint. The adapter sends the exact
+  Frigate 0.17 realtime request first and retries with the Frigate 0.18
+  recordings-source shape only when the first schema is rejected. Creation is
+  successful only when Frigate returns a concrete export ID.
+- Successful creation publishes a provider-neutral library invalidation. An
+  active Exports module reloads immediately and retries once for Frigate's
+  asynchronous database insertion; a later activation also begins with a fresh
+  authoritative load.
 - Deletion tries the Frigate 0.18 bulk-delete endpoint first and falls back to
   the 0.17 single-export DELETE endpoint only for endpoint-not-supported
   responses.

@@ -1,6 +1,7 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
 import { listExports, type ExportItem } from "../../../api/exports";
+import { EXPORTS_CHANGED_EVENT } from "../../../core/constants";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
 import type {
   CameraSelectionContext,
@@ -37,6 +38,7 @@ export class ExportsController implements ReactiveController {
   private _lastSelection?: CameraSelectionContext;
   private _lastTargetModuleId = "";
   private _pollTimer?: number;
+  private _refreshAfterLoad = false;
   private _unsubscribeFilter?: () => void;
   private _unsubscribeSelection?: () => void;
 
@@ -50,11 +52,20 @@ export class ExportsController implements ReactiveController {
 
   public hostConnected(): void {
     this._connected = true;
+    this._refreshAfterLoad = true;
+    this._lastApi = undefined;
+    this._lastEntityKey = "";
+    this._lastFilter = undefined;
+    this._lastPlaceableId = "";
+    this._lastSelection = undefined;
+    this._lastTargetModuleId = "";
+    window.addEventListener(EXPORTS_CHANGED_EVENT, this._exportsChanged);
     this._sync();
   }
 
   public hostDisconnected(): void {
     this._connected = false;
+    window.removeEventListener(EXPORTS_CHANGED_EVENT, this._exportsChanged);
     this._generation += 1;
     this._clearTimer();
     this._unsubscribeFilter?.();
@@ -85,6 +96,11 @@ export class ExportsController implements ReactiveController {
   public refresh(): void {
     void this._load();
   }
+
+  private readonly _exportsChanged = (): void => {
+    this._refreshAfterLoad = true;
+    this.refresh();
+  };
 
   public renameItem(entityId: string, id: string, name: string): void {
     this.items = this.items.map((item) =>
@@ -168,7 +184,11 @@ export class ExportsController implements ReactiveController {
       this.items = items;
       this.loading = false;
       this._publishFacets(exportFilter, placeableId);
-      this._schedulePoll(items.some(({ in_progress }) => in_progress));
+      const refreshAfterLoad = this._refreshAfterLoad;
+      this._refreshAfterLoad = false;
+      this._schedulePoll(
+        refreshAfterLoad || items.some(({ in_progress }) => in_progress),
+      );
       this._host.requestUpdate();
     } catch {
       if (!this._connected || generation !== this._generation) return;

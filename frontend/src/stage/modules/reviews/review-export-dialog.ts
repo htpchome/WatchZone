@@ -9,6 +9,7 @@ import {
   englishLocalize,
   type LocalizeFunction,
 } from "../../../core/localization";
+import { buttonBaseStyles } from "../../../ui/button.styles";
 import { centerDialogOnCard } from "../../../ui/dialog-position";
 import { reviewExportDialogStyles } from "./review-export-dialog.styles";
 
@@ -76,6 +77,7 @@ export class ReviewExportDialog extends LitElement {
               </section>
               <footer>
                 <button
+                  class="wzc-button"
                   type="button"
                   ?disabled=${this.submitting}
                   @click=${this._close}
@@ -83,7 +85,7 @@ export class ReviewExportDialog extends LitElement {
                   ${this.localize("exports.cancel")}
                 </button>
                 <button
-                  class="primary"
+                  class="wzc-button primary"
                   type="submit"
                   ?disabled=${this.submitting || !this._name.trim()}
                 >
@@ -141,7 +143,7 @@ export class ReviewExportDialog extends LitElement {
     );
   };
 
-  static styles = reviewExportDialogStyles;
+  static styles = [buttonBaseStyles, reviewExportDialogStyles];
 }
 
 if (!customElements.get(REVIEW_EXPORT_DIALOG_TAG)) {

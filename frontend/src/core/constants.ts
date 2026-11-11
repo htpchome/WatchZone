@@ -45,6 +45,7 @@ export const LIGHT_TAG = `${APP_ID}-light-control`;
 export const PANEL_TAG = `${APP_ID}-panel`;
 export const EVENTS_TAG = `${APP_ID}-events`;
 export const EXPORTS_TAG = `${APP_ID}-exports`;
+export const EXPORTS_CHANGED_EVENT = `${APP_ID}-exports-changed`;
 export const EXPORT_FILTER_TAG = `${APP_ID}-export-filter`;
 export const REVIEWS_TAG = `${APP_ID}-reviews`;
 export const REVIEW_ANALYSIS_DIALOG_TAG = `${APP_ID}-review-analysis-dialog`;

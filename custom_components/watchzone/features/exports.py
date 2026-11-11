@@ -66,10 +66,10 @@ class ExportsService:
 
     async def async_create(
         self, entity_id: str, start_time: float, end_time: float, name: str
-    ) -> None:
+    ) -> str:
         """Create one export through its owning provider."""
         provider = self._provider(entity_id)
-        await provider.async_create_export(
+        return await provider.async_create_export(
             self._hass,
             entity_id,
             ExportRequest(start_time=start_time, end_time=end_time, name=name),

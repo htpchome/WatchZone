@@ -17,6 +17,7 @@ import {
   type LocalizeFunction,
 } from "../../../core/localization";
 import { openRecordedMedia } from "../../../core/recorded-media";
+import { buttonBaseStyles } from "../../../ui/button.styles";
 import { renderIcon } from "../../../ui/icons";
 import { ToastManager } from "../../../ui/toast-manager";
 import "../../../ui/toast-region";
@@ -212,7 +213,7 @@ export class ExportsModule extends LitElement {
     className = "",
   ) {
     return html`<button
-      class=${`action ${className}`}
+      class=${`action wzc-icon-button ${className}`}
       type="button"
       title=${label}
       aria-label=${label}
@@ -240,11 +241,15 @@ export class ExportsModule extends LitElement {
             }}
           />
           <div class="dialog-actions">
-            <button type="button" @click=${this._closeDialog}>
+            <button
+              class="wzc-button"
+              type="button"
+              @click=${this._closeDialog}
+            >
               ${this.localize("exports.cancel")}
             </button>
             <button
-              class="primary"
+              class="wzc-button primary"
               type="submit"
               ?disabled=${this._mutating || !this._draftTitle.trim()}
             >
@@ -264,11 +269,15 @@ export class ExportsModule extends LitElement {
             })}
           </p>
           <div class="dialog-actions">
-            <button type="button" @click=${this._closeDialog}>
+            <button
+              class="wzc-button"
+              type="button"
+              @click=${this._closeDialog}
+            >
               ${this.localize("exports.cancel")}
             </button>
             <button
-              class="danger"
+              class="wzc-button danger"
               type="button"
               ?disabled=${this._mutating}
               @click=${this._confirmDelete}
@@ -418,7 +427,7 @@ export class ExportsModule extends LitElement {
     (event.currentTarget as HTMLVideoElement).playbackRate = 4;
   };
 
-  static styles = exportsStyles;
+  static styles = [buttonBaseStyles, exportsStyles];
 }
 
 if (!customElements.get(EXPORTS_TAG)) {

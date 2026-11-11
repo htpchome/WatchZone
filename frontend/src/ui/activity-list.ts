@@ -30,6 +30,7 @@ import type { BadgeVariant } from "./badge";
 import "./badge";
 import "./media-day-header";
 import { activityListStyles } from "./activity-list.styles";
+import { buttonBaseStyles } from "./button.styles";
 
 export type ActivityClassification = "alert" | "detection";
 
@@ -398,7 +399,7 @@ export class ActivityList extends LitElement {
         ${
           item.exportable
             ? html`<button
-                class="action"
+                class="action wzc-icon-button"
                 type="button"
                 title=${this.localize("reviews.export")}
                 aria-label=${this.localize("reviews.export")}
@@ -412,7 +413,7 @@ export class ActivityList extends LitElement {
         ${
           item.clipUrl
             ? html`<a
-                class="action"
+                class="action wzc-icon-button"
                 href=${this.api?.resolveUrl(item.clipUrl) ?? item.clipUrl}
                 download
                 title=${this.localize("events.download_clip")}
@@ -424,7 +425,7 @@ export class ActivityList extends LitElement {
         ${
           snapshotUrl
             ? html`<button
-                class="action"
+                class="action wzc-icon-button"
                 data-recorded-media-opener="true"
                 type="button"
                 title=${this.localize("events.view_snapshot")}
@@ -714,7 +715,7 @@ export class ActivityList extends LitElement {
     this.requestUpdate();
   }
 
-  static styles = activityListStyles;
+  static styles = [buttonBaseStyles, activityListStyles];
 }
 
 function mediaKey(item: ActivityListItem, url: string): string {

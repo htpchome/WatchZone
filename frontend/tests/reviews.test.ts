@@ -316,7 +316,7 @@ describe("reviews module", () => {
       if (message.type === "watchzone/exports/prepare") {
         return { name: defaultName };
       }
-      return { success: true };
+      return { export_id: "front-export", success: true };
     });
     const api = {
       callWS,

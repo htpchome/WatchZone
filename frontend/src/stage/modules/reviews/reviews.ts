@@ -22,6 +22,7 @@ import {
   REVIEWS_TAG,
   DEFAULT_EVENT_HISTORY_DAYS,
   ACTIVITY_LIST_INTENT_EVENT,
+  EXPORTS_CHANGED_EVENT,
   REVIEW_EXPORT_CLOSE_EVENT,
   REVIEW_EXPORT_CONFIRM_EVENT,
 } from "../../../core/constants";
@@ -381,6 +382,7 @@ export class ReviewsModule extends LitElement {
       .then(() => {
         this._exportCreating = false;
         this._pendingExport = undefined;
+        window.dispatchEvent(new CustomEvent(EXPORTS_CHANGED_EVENT));
         this._toasts.success(this.localize("reviews.export_success"), {
           key: "review-export-create",
         });

@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { EXPORTS_TAG, RECORDED_MEDIA_OPEN_EVENT } from "../src/core/constants";
+import {
+  EXPORTS_CHANGED_EVENT,
+  EXPORTS_TAG,
+  RECORDED_MEDIA_OPEN_EVENT,
+} from "../src/core/constants";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import type { RecordedMediaRequest } from "../src/core/recorded-media";
 import { CameraSelectionContext } from "../src/stage/camera-selection-context";
@@ -121,6 +125,37 @@ describe("exports module", () => {
       'button[title="Add to Case — coming soon"]',
     );
     expect(button?.disabled).toBe(true);
+    module.remove();
+  });
+
+  it("reloads the library when another workflow creates an export", async () => {
+    const callWS = vi.fn(async () => ({ items: [readyExport] }));
+    const api = {
+      callWS,
+      identity: {},
+      resolveUrl: (path: string) => path,
+    } as unknown as HomeAssistantApi;
+    const cameraSelection = new CameraSelectionContext();
+    const module = document.createElement(EXPORTS_TAG) as ExportsModule;
+    module.api = api;
+    module.cameraSelection = cameraSelection;
+    module.placeableId = "exports-module";
+    module.targetModuleId = "camera-module";
+    document.body.append(module);
+    cameraSelection.publish(
+      "camera-module",
+      {},
+      { items: [{ entityId: "camera.front", label: "Front" }] },
+      vi.fn(),
+    );
+    await vi.waitFor(() => expect(callWS).toHaveBeenCalled());
+    const initialCalls = callWS.mock.calls.length;
+
+    window.dispatchEvent(new CustomEvent(EXPORTS_CHANGED_EVENT));
+
+    await vi.waitFor(() =>
+      expect(callWS.mock.calls.length).toBeGreaterThan(initialCalls),
+    );
     module.remove();
   });
 

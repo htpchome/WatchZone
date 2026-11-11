@@ -128,7 +128,6 @@ export const exportsStyles = css`
   }
 
   .action {
-    appearance: none;
     display: grid;
     place-items: center;
     inline-size: 2.5rem;
@@ -138,9 +137,6 @@ export const exportsStyles = css`
     background: transparent;
     border: 0;
     border-radius: var(--wzc-radius-button);
-    cursor: pointer;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
   }
 
   .action ha-icon {
@@ -157,13 +153,7 @@ export const exportsStyles = css`
     background: var(--wzc-color-fill-error-quiet);
   }
 
-  .action:disabled {
-    cursor: default;
-    opacity: 0.42;
-  }
-
   .tile-player:focus-visible,
-  .action:focus-visible,
   dialog button:focus-visible,
   dialog input:focus-visible {
     outline: 2px solid var(--wzc-color-primary);
@@ -227,13 +217,6 @@ export const exportsStyles = css`
     border: 1px solid var(--wzc-color-border-control);
     border-radius: var(--wzc-radius-button);
     font: inherit;
-    cursor: pointer;
-  }
-
-  .dialog-actions .primary {
-    color: var(--wzc-color-text-reversed);
-    background: var(--wzc-color-primary);
-    border-color: var(--wzc-color-primary);
   }
 
   .dialog-actions .danger {

@@ -919,7 +919,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
             }
           ).reviewExportRequests ??= []);
           requests.push(message);
-          return { success: true };
+          return { export_id: "front-export", success: true };
         }
         return undefined;
       },
@@ -974,6 +974,21 @@ test("keeps activity content in an independently scrolling viewport", async ({
     name: "Export review",
   });
   await expect(reviewExportButtons).toHaveCount(6);
+  const cursor = (selector: string) =>
+    page
+      .locator(`wzc-reviews ${selector}`)
+      .first()
+      .evaluate((element) => getComputedStyle(element).cursor);
+  const reviewActionCursors = {
+    download: await cursor('a[title="Download clip"]'),
+    export: await cursor('button[aria-label="Export review"]'),
+    snapshot: await cursor('button[aria-label="View snapshot"]'),
+  };
+  expect(reviewActionCursors).toEqual({
+    download: "pointer",
+    export: "pointer",
+    snapshot: "pointer",
+  });
   await expect(
     page.locator('wzc-events button[aria-label="Export review"]'),
   ).toHaveCount(0);
@@ -985,8 +1000,15 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect(exportDialog.locator("input")).toHaveValue(
     "front 2026-11-10 15:59:55 2026-11-10 16:00:29",
   );
+  const confirmExport = exportDialog.getByRole("button", { name: "Export" });
+  await expect(confirmExport).toHaveText("Export");
+  const confirmColors = await confirmExport.evaluate((button) => {
+    const style = getComputedStyle(button);
+    return { background: style.backgroundColor, foreground: style.color };
+  });
+  expect(confirmColors.foreground).not.toBe(confirmColors.background);
   await exportDialog.locator("input").fill("Resident at garage");
-  await exportDialog.getByRole("button", { name: "Export" }).click();
+  await confirmExport.click();
   await expect(exportDialog).not.toBeVisible();
   await expect
     .poll(() =>

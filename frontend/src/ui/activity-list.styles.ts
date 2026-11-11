@@ -429,7 +429,6 @@ export const activityListStyles = css`
 
   .action {
     align-items: center;
-    appearance: none;
     background: var(--wzc-event-action-background);
     border: 0;
     border-radius: var(--wzc-radius-medium);
@@ -439,17 +438,6 @@ export const activityListStyles = css`
     min-block-size: var(--wzc-event-action-size);
     min-inline-size: var(--wzc-event-action-size);
     padding: 0;
-    text-decoration: none;
-  }
-
-  .action:focus-visible {
-    outline: 2px solid var(--wzc-color-primary);
-    outline-offset: 2px;
-  }
-
-  .action:disabled {
-    cursor: progress;
-    opacity: 0.55;
   }
 
   .empty,

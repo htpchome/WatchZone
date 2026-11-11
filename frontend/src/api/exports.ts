@@ -38,12 +38,14 @@ export async function createExport(
   api: HomeAssistantApi,
   range: ExportRange,
   name: string,
-): Promise<void> {
-  await api.callWS({
+): Promise<string> {
+  const result = await api.callWS<{ readonly export_id: string }>({
     type: "watchzone/exports/create",
     ...range,
     name,
   });
+  if (!result.export_id) throw new Error("Export creation returned no ID.");
+  return result.export_id;
 }
 
 export async function listExports(

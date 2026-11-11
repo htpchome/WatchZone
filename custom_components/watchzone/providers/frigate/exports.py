@@ -58,20 +58,39 @@ class FrigateExportsProvider:
 
     async def async_create_export(
         self, hass: HomeAssistant, entity_id: str, request: ExportRequest
-    ) -> None:
+    ) -> str:
         source = await async_resolve_source(hass, entity_id)
-        payload = await self._request_json(
+        path = (
+            f"api/export/{source.camera_name}/start/{request.start_time:g}"
+            f"/end/{request.end_time:g}"
+        )
+        response = await self._request(
             hass,
             source,
             "POST",
-            (
-                f"api/export/{source.camera_name}/start/{request.start_time:g}"
-                f"/end/{request.end_time:g}"
-            ),
-            json_body={"source": "recordings", "name": request.name},
+            path,
+            json_body={"playback": "realtime", "name": request.name},
+            accepted_errors={422},
         )
-        if not isinstance(payload, dict) or payload.get("success") is not True:
+        if response.status == 422:
+            response.release()
+            payload = await self._request_json(
+                hass,
+                source,
+                "POST",
+                path,
+                json_body={"source": "recordings", "name": request.name},
+            )
+        else:
+            payload = await _consume_json(response)
+        if not isinstance(payload, dict):
             raise HomeAssistantError("Frigate did not start the export")
+        export_id = payload.get("export_id")
+        if not isinstance(export_id, str) or not export_id or not payload.get(
+            "success"
+        ):
+            raise HomeAssistantError("Frigate did not start the export")
+        return export_id
 
     async def async_rename_export(
         self, hass: HomeAssistant, entity_id: str, export_id: str, name: str
