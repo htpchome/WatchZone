@@ -21,6 +21,7 @@ from yarl import URL
 
 from ..media import PlaybackSource
 from ..recordings import (
+    RecordingAvailabilitySpan,
     RecordingHour,
     RecordingMarker,
     RecordingQuery,
@@ -34,6 +35,7 @@ from .source import FrigateSource, async_resolve_source
 
 _REQUEST_TIMEOUT = ClientTimeout(total=15)
 _REVIEW_LIMIT = 1000
+_SEGMENT_CONTEXT_SECONDS = 5 * 60
 
 
 class FrigateRecordingsProvider:
@@ -74,9 +76,7 @@ class FrigateRecordingsProvider:
             f"start/{path_start}/end/{path_end}/index.m3u8"
         )
         return RecordingSegmentMedia(
-            path=(
-                f"{file_path}?download=true"
-            ),
+            path=(f"{file_path}?download=true"),
             filename=f"{source.camera_name}-{path_start}-{path_end}.mp4",
             playback_sources=(
                 PlaybackSource(file_path, "video/mp4", "file"),
@@ -109,13 +109,14 @@ async def _fetch_recordings(
             _get_json(
                 session,
                 URL(source.base_url) / "api" / source.camera_name / "recordings",
-                {"after": day_start, "before": day_end},
+                {
+                    "after": day_start - _SEGMENT_CONTEXT_SECONDS,
+                    "before": day_end + _SEGMENT_CONTEXT_SECONDS,
+                },
                 source,
                 headers,
             ),
-            _fetch_review_markers(
-                session, source, headers, day_start, day_end
-            ),
+            _fetch_review_markers(session, source, headers, day_start, day_end),
         )
     except (ClientError, TimeoutError, ValueError) as err:
         raise HomeAssistantError("Unable to retrieve camera recordings") from err
@@ -149,14 +150,9 @@ async def _fetch_review_markers(
                 for classification in ("alert", "detection")
             )
         )
-    except (ClientError, TimeoutError, ValueError):
+    except ClientError, TimeoutError, ValueError:
         return ()
-    return [
-        raw
-        for payload in payloads
-        if isinstance(payload, list)
-        for raw in payload
-    ]
+    return [raw for payload in payloads if isinstance(payload, list) for raw in payload]
 
 
 async def _get_json(
@@ -182,9 +178,7 @@ def _recording_days(payload: object, timezone: str) -> tuple[str, ...]:
     if isinstance(payload, dict):
         raw_days = payload.keys()
     elif isinstance(payload, list):
-        raw_days = (
-            raw.get("day") for raw in payload if isinstance(raw, dict)
-        )
+        raw_days = (raw.get("day") for raw in payload if isinstance(raw, dict))
     else:
         raise HomeAssistantError("Frigate returned invalid recording summary data")
     days: list[str] = []
@@ -208,7 +202,9 @@ def _recording_hours(
     if not isinstance(payload, list):
         raise HomeAssistantError("Frigate returned invalid recording segment data")
     zone = ZoneInfo(query.timezone)
+    day_start, day_end = _day_bounds(query.selected_date, query.timezone)
     grouped: dict[datetime, list[tuple[float, float]]] = defaultdict(list)
+    available: list[tuple[float, float]] = []
     for raw in payload:
         if not isinstance(raw, dict):
             continue
@@ -216,17 +212,21 @@ def _recording_hours(
         end = _number(raw.get("end_time"))
         if start is None or end is None or end <= start:
             continue
+        available.append((start, end))
+        if not day_start <= start < day_end:
+            continue
         hour = datetime.fromtimestamp(start, zone).replace(
             minute=0, second=0, microsecond=0
         )
         while hour.timestamp() < end:
-            grouped[hour].append((start, end))
+            if day_start <= hour.timestamp() < day_end:
+                grouped[hour].append((start, end))
             next_hour = hour + timedelta(hours=1)
             if next_hour.timestamp() <= hour.timestamp():
                 break
             hour = next_hour
     hours = [
-        _normalize_hour(source, hour, segments, reviews)
+        _normalize_hour(source, hour, segments, available, reviews)
         for hour, segments in grouped.items()
     ]
     return tuple(sorted(hours, key=lambda item: item.start_time, reverse=True))
@@ -236,6 +236,7 @@ def _normalize_hour(
     source: FrigateSource,
     hour: datetime,
     segments: list[tuple[float, float]],
+    available: list[tuple[float, float]],
     reviews: object,
 ) -> RecordingHour:
     hour_start = hour.timestamp()
@@ -266,6 +267,11 @@ def _normalize_hour(
             )
         )
         media_offset += end - start
+    selection_merged = _merge_spans(
+        available,
+        hour_start - _SEGMENT_CONTEXT_SECONDS,
+        hour_end + _SEGMENT_CONTEXT_SECONDS,
+    )
     markers = _recording_markers(source, reviews, hour_start, hour_end)
     material = {
         "camera": source.camera_name,
@@ -273,8 +279,7 @@ def _normalize_hour(
         "end": round(end_time, 3),
         "start": round(start_time, 3),
         "spans": [
-            (round(span.start_time, 3), round(span.end_time, 3))
-            for span in spans
+            (round(span.start_time, 3), round(span.end_time, 3)) for span in spans
         ],
     }
     revision = hashlib.sha256(
@@ -285,8 +290,7 @@ def _normalize_hour(
     path_start = _timestamp_path(start_time)
     path_end = _timestamp_path(end_time)
     file_url = (
-        f"/api/frigate/{instance}/recording/{camera}/"
-        f"start/{path_start}/end/{path_end}"
+        f"/api/frigate/{instance}/recording/{camera}/start/{path_start}/end/{path_end}"
     )
     hls_url = (
         f"/api/frigate/{instance}/vod/{camera}/"
@@ -302,6 +306,12 @@ def _normalize_hour(
         timeline_start_time=hour_start,
         timeline_end_time=hour_end,
         spans=tuple(spans),
+        selection_start_time=selection_merged[0][0],
+        selection_end_time=selection_merged[-1][1],
+        selection_spans=tuple(
+            RecordingAvailabilitySpan(start_time=start, end_time=end)
+            for start, end in selection_merged
+        ),
         markers=markers,
         playback_sources=(
             PlaybackSource(file_url, "video/mp4", "file"),
@@ -311,6 +321,23 @@ def _normalize_hour(
         download_url=file_url,
         revision=revision,
     )
+
+
+def _merge_spans(
+    spans: Iterable[tuple[float, float]], minimum: float, maximum: float
+) -> list[tuple[float, float]]:
+    """Clip and merge availability within one bounded window."""
+    clipped = sorted((max(start, minimum), min(end, maximum)) for start, end in spans)
+    merged: list[tuple[float, float]] = []
+    for start, end in clipped:
+        if end <= start:
+            continue
+        if merged and start <= merged[-1][1]:
+            previous_start, previous_end = merged[-1]
+            merged[-1] = (previous_start, max(previous_end, end))
+        else:
+            merged.append((start, end))
+    return merged
 
 
 def _recording_markers(

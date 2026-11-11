@@ -1,4 +1,4 @@
-import { html, LitElement } from "lit";
+import { html, LitElement, nothing } from "lit";
 
 import {
   RECORDING_SEGMENT_MANAGER_EVENT,
@@ -25,12 +25,14 @@ export class RecordingSegmentManager extends LitElement {
     downloading: { attribute: false, type: Boolean },
     locale: { attribute: false },
     localize: { attribute: false },
+    previewing: { attribute: false, type: Boolean },
     selection: { attribute: false },
   };
 
   public downloading = false;
   public locale?: HomeAssistantLocale;
   public localize: LocalizeFunction = englishLocalize;
+  public previewing = false;
   public selection?: RecordingSegmentSelection;
 
   protected render() {
@@ -58,7 +60,7 @@ export class RecordingSegmentManager extends LitElement {
       <div class="actions">
         ${this._button("reset", "reset")}
         ${this._button("cancel", "close", "cancel")}
-        ${this._button("preview", "play")}
+        ${this._button("preview", this.previewing ? "stop" : "play")}
         ${this._button("download", "download", "primary", this.downloading)}
       </div>
     </section>`;
@@ -66,14 +68,16 @@ export class RecordingSegmentManager extends LitElement {
 
   private _button(
     action: RecordingSegmentManagerAction,
-    icon: "close" | "download" | "play" | "reset",
+    icon: "close" | "download" | "play" | "reset" | "stop",
     className = "",
     disabled = false,
   ) {
     const label = this.localize(
-      action === "download" && disabled
-        ? "recording_segments.downloading"
-        : `recording_segments.${action}`,
+      action === "preview" && this.previewing
+        ? "recording_segments.stop_preview"
+        : action === "download" && disabled
+          ? "recording_segments.downloading"
+          : `recording_segments.${action}`,
     );
     return html`<button
       class=${className}
@@ -81,6 +85,7 @@ export class RecordingSegmentManager extends LitElement {
       ?disabled=${disabled}
       title=${label}
       aria-label=${label}
+      aria-pressed=${action === "preview" ? String(this.previewing) : nothing}
       @click=${() => this._dispatch(action)}
     >
       ${renderIcon(icon)}<span>${label}</span>

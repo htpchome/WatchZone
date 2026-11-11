@@ -4,7 +4,6 @@ import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 import {
   RECORDED_MEDIA_ERROR_EVENT,
   RECORDED_VIDEO_CLOSE_EVENT,
-  RECORDED_VIDEO_DIALOG_TAG,
   RECORDED_VIDEO_PLAYER_TAG,
 } from "../../core/constants";
 import type { HomeAssistantApi } from "../../core/home-assistant";
@@ -24,7 +23,7 @@ import { draggableDialogStyles } from "./draggable-dialog.styles";
 const playerTag = unsafeStatic(RECORDED_VIDEO_PLAYER_TAG);
 
 /** Draggable modal shell for ephemeral recorded-media playback. */
-export class DraggableRecordedVideoDialog extends LitElement {
+export abstract class DraggableRecordedMediaDialog extends LitElement {
   public static properties = {
     api: { attribute: false },
     initialSize: { attribute: false },
@@ -39,7 +38,7 @@ export class DraggableRecordedVideoDialog extends LitElement {
   public notices: readonly ToastNotice[] = [];
   public request?: RecordedMediaRequest;
 
-  private _active = false;
+  protected _active = false;
   private _mediaResizeFrame?: number;
   private _mediaResizeObserver?: ResizeObserver;
   private _pendingNativeCloses = 0;
@@ -90,23 +89,7 @@ export class DraggableRecordedVideoDialog extends LitElement {
         <span class="title">${this.request?.title ?? ""}</span>
       </div>
       <div class="body">
-        ${
-          this._active
-            ? this.request?.kind === "snapshot"
-              ? html`<img
-                  class="snapshot media-surface"
-                  src=${this._snapshotUrl()}
-                  alt=${this.request.title}
-                  @error=${this._handleSnapshotError}
-                />`
-              : staticHtml`<${playerTag}
-                  class="media-surface"
-                  .api=${this.api}
-                  .localize=${this.localize}
-                  .request=${this.request}
-                ></${playerTag}>`
-            : null
-        }
+        ${this.renderMediaContent()}
         <wzc-toast-region
           mode="overlay"
           .notices=${this.notices}
@@ -126,6 +109,25 @@ export class DraggableRecordedVideoDialog extends LitElement {
         <ha-icon icon="mdi:resize-bottom-right" aria-hidden="true"></ha-icon>
       </button>
     </dialog>`;
+  }
+
+  protected abstract renderMediaContent(): unknown;
+
+  protected renderDefaultMediaContent(): unknown {
+    if (!this._active || !this.request) return null;
+    return this.request.kind === "snapshot"
+      ? html`<img
+          class="snapshot media-surface"
+          src=${this._snapshotUrl()}
+          alt=${this.request.title}
+          @error=${this._handleSnapshotError}
+        />`
+      : staticHtml`<${playerTag}
+          class="media-surface"
+          .api=${this.api}
+          .localize=${this.localize}
+          .request=${this.request}
+        ></${playerTag}>`;
   }
 
   protected willUpdate(changed: Map<PropertyKey, unknown>): void {
@@ -485,17 +487,4 @@ function isRecordedMediaOpener(path: readonly EventTarget[]): boolean {
       target instanceof HTMLElement &&
       target.dataset.recordedMediaOpener === "true",
   );
-}
-
-if (!customElements.get(RECORDED_VIDEO_DIALOG_TAG)) {
-  customElements.define(
-    RECORDED_VIDEO_DIALOG_TAG,
-    DraggableRecordedVideoDialog,
-  );
-}
-
-declare global {
-  interface HTMLElementTagNameMap {
-    [RECORDED_VIDEO_DIALOG_TAG]: DraggableRecordedVideoDialog;
-  }
 }

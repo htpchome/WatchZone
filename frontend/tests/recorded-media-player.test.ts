@@ -7,12 +7,13 @@ import {
 } from "../src/core/constants";
 import { MediaSessionManager } from "../src/core/media-session-manager";
 import type { RecordedMediaRequest } from "../src/core/recorded-media";
-import type { DraggableRecordedVideoDialog } from "../src/features/media-viewer/draggable-dialog";
+import type { ReviewMediaDialog } from "../src/features/media-viewer/review-media-dialog";
+import { mediaViewerPresentation } from "../src/features/media-viewer/presentation";
 import type { RecordedVideoPlayer } from "../src/features/media-viewer/recorded-video-player";
 import type { RecordedVideoTransport } from "../src/features/media-viewer/transport-controls";
 import type { RecordedVideoViewer } from "../src/features/media-viewer/recorded-video-viewer";
 import "../src/features/media-viewer";
-import "../src/features/media-viewer/draggable-dialog";
+import "../src/features/media-viewer/review-media-dialog";
 import "../src/features/media-viewer/recorded-video-player";
 
 const request: RecordedMediaRequest = {
@@ -46,6 +47,18 @@ describe("recorded media player", () => {
     vi.restoreAllMocks();
     Reflect.deleteProperty(HTMLDialogElement.prototype, "show");
     Reflect.deleteProperty(HTMLDialogElement.prototype, "close");
+  });
+
+  it("keeps event, review, and recording modal implementations distinct", async () => {
+    const definitions = (["event", "review", "recording"] as const).map(
+      mediaViewerPresentation,
+    );
+
+    expect(new Set(definitions.map(({ tagName }) => tagName)).size).toBe(3);
+    await Promise.all(definitions.map(({ load }) => load()));
+    for (const { tagName } of definitions) {
+      expect(customElements.get(tagName)).toBeDefined();
+    }
   });
 
   it("opens direct file playback muted with custom transport controls and cleans up", async () => {
@@ -242,6 +255,12 @@ describe("recorded media player", () => {
             thumbnailUrl: "/review-1.webp",
           },
         ],
+        selectionEndTime: start + 3600,
+        selectionSpans: [
+          { startTime: start, endTime: start + 600 },
+          { startTime: start + 1200, endTime: start + 3600 },
+        ],
+        selectionStartTime: start,
       },
     };
     document.body.append(player);
@@ -292,6 +311,7 @@ describe("recorded media player", () => {
     const click = vi
       .spyOn(HTMLAnchorElement.prototype, "click")
       .mockImplementation(() => {});
+    const append = vi.spyOn(document.body, "append");
     const player = document.createElement(
       "wzc-recorded-video-player",
     ) as RecordedVideoPlayer;
@@ -313,6 +333,9 @@ describe("recorded media player", () => {
         endTime: start + 3600,
         spans: [{ startTime: start, endTime: start + 3600, mediaOffset: 0 }],
         markers: [],
+        selectionEndTime: start + 3600,
+        selectionSpans: [{ startTime: start - 60, endTime: start + 3600 }],
+        selectionStartTime: start - 60,
       },
     };
     document.body.append(player);
@@ -372,17 +395,88 @@ describe("recorded media player", () => {
         end_time: start + 120,
       }),
     );
+    await vi.waitFor(() =>
+      expect(callWS).toHaveBeenCalledWith({
+        type: "auth/sign_path",
+        path: "/segment-preview.mp4",
+        expires: 3600,
+      }),
+    );
     video.dispatchEvent(new Event("loadeddata"));
     await vi.waitFor(() => expect(video.play).toHaveBeenCalled());
+    await player.updateComplete;
+    const previewingManager = player.shadowRoot?.querySelector(
+      "wzc-recording-segment-manager",
+    );
+    await (previewingManager as LitElement | null)?.updateComplete;
+    await vi.waitFor(() =>
+      expect(previewingManager?.shadowRoot?.textContent).toContain(
+        "Stop Preview",
+      ),
+    );
+
+    Object.defineProperty(video, "duration", {
+      configurable: true,
+      value: 180,
+    });
+    video.dispatchEvent(new Event("durationchange"));
+    const signedBeforeSeek = callWS.mock.calls.filter(
+      ([message]) => message.type === "auth/sign_path",
+    ).length;
+    activeScrubber?.dispatchEvent(
+      new CustomEvent(RECORDING_SCRUBBER_EVENT, {
+        bubbles: true,
+        composed: true,
+        detail: { action: "seek", timestamp: start + 60 },
+      }),
+    );
+    expect(video.currentTime).toBe(120);
+    expect(
+      callWS.mock.calls.filter(
+        ([message]) => message.type === "auth/sign_path",
+      ),
+    ).toHaveLength(signedBeforeSeek);
+
+    previewingManager?.shadowRoot
+      ?.querySelector<HTMLButtonElement>('button[aria-pressed="true"]')
+      ?.click();
+    await vi.waitFor(() =>
+      expect(
+        callWS.mock.calls.filter(
+          ([message]) => message.type === "auth/sign_path",
+        ).length,
+      ).toBeGreaterThan(signedBeforeSeek),
+    );
+    video.dispatchEvent(new Event("loadeddata"));
+    await vi.waitFor(() =>
+      expect(
+        previewingManager?.shadowRoot?.querySelector<HTMLButtonElement>(
+          'button[aria-pressed="false"]',
+        )?.textContent,
+      ).toContain("Preview Segment"),
+    );
 
     buttons.find((button) => button.classList.contains("primary"))?.click();
     await vi.waitFor(() => expect(click).toHaveBeenCalledOnce());
+    const downloadAnchor = append.mock.calls.find(
+      ([node]) => node instanceof HTMLAnchorElement,
+    )?.[0] as HTMLAnchorElement | undefined;
+    expect(downloadAnchor?.dataset.recordedMediaOpener).toBe("true");
     expect(callWS).toHaveBeenCalledWith({
       type: "watchzone/recordings/segment",
       entity_id: "camera.front",
       start_time: start - 60,
       end_time: start + 120,
     });
+
+    activeScrubber?.shadowRoot
+      ?.querySelector<HTMLButtonElement>(".segment-toggle")
+      ?.click();
+    await vi.waitFor(() =>
+      expect(
+        player.shadowRoot?.querySelector("wzc-recording-segment-manager"),
+      ).toBeNull(),
+    );
   });
 
   it("acquires and releases the global live-audio mute with the modal", async () => {
@@ -415,12 +509,12 @@ describe("recorded media player", () => {
     await viewer.updateComplete;
     await vi.waitFor(() =>
       expect(
-        viewer.shadowRoot?.querySelector("wzc-recorded-video-dialog"),
+        viewer.shadowRoot?.querySelector("wzc-review-media-dialog"),
       ).not.toBeNull(),
     );
     const container = viewer.shadowRoot?.querySelector(
-      "wzc-recorded-video-dialog",
-    ) as DraggableRecordedVideoDialog;
+      "wzc-review-media-dialog",
+    ) as ReviewMediaDialog;
     await container.updateComplete;
     expect(container.shadowRoot?.querySelector("dialog")?.open).toBe(true);
     expect(states).toEqual([false, true]);
@@ -477,12 +571,12 @@ describe("recorded media player", () => {
     await viewer.updateComplete;
     await vi.waitFor(() =>
       expect(
-        viewer.shadowRoot?.querySelector("wzc-recorded-video-dialog"),
+        viewer.shadowRoot?.querySelector("wzc-review-media-dialog"),
       ).not.toBeNull(),
     );
     const container = viewer.shadowRoot?.querySelector(
-      "wzc-recorded-video-dialog",
-    ) as DraggableRecordedVideoDialog;
+      "wzc-review-media-dialog",
+    ) as ReviewMediaDialog;
     await container.updateComplete;
     const dialog = container.shadowRoot?.querySelector("dialog");
     expect(dialog).not.toBeNull();
@@ -560,12 +654,12 @@ describe("recorded media player", () => {
     await viewer.updateComplete;
     await vi.waitFor(() =>
       expect(
-        viewer.shadowRoot?.querySelector("wzc-recorded-video-dialog"),
+        viewer.shadowRoot?.querySelector("wzc-review-media-dialog"),
       ).not.toBeNull(),
     );
     const container = viewer.shadowRoot?.querySelector(
-      "wzc-recorded-video-dialog",
-    ) as DraggableRecordedVideoDialog;
+      "wzc-review-media-dialog",
+    ) as ReviewMediaDialog;
     await container.updateComplete;
 
     expect(container.shadowRoot?.querySelector("img.snapshot")).toMatchObject({

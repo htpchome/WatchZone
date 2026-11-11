@@ -214,10 +214,16 @@ test("opens notification deep links independently of activity presentation", asy
   await expect(
     page.locator('wzc-camera-navigation button[aria-selected="true"]'),
   ).toHaveText("Back");
-  await expect(page.locator("wzc-recorded-video-dialog dialog")).toBeVisible();
-  await expect(page.locator("wzc-recorded-video-dialog .title")).toContainText(
-    "Back",
-  );
+  await expect(
+    page.locator(
+      ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) dialog",
+    ),
+  ).toBeVisible();
+  await expect(
+    page.locator(
+      ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) .title",
+    ),
+  ).toContainText("Back");
   await expect
     .poll(() => new URL(page.url()).search)
     .toBe("?unrelated=preserved");
@@ -1155,10 +1161,14 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect(alertList.locator(".in-progress")).toHaveText("In progress");
   await expect(alertList.locator(".tile-player")).toHaveCount(1);
   await alertList.locator(".tile-player").click();
-  const draftDialog = page.locator("wzc-recorded-video-dialog dialog");
+  const draftDialog = page.locator(
+    ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) dialog",
+  );
   await expect(draftDialog).toBeVisible();
   await expect(
-    page.locator("wzc-recorded-video-dialog img.snapshot"),
+    page.locator(
+      ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) img.snapshot",
+    ),
   ).toHaveAttribute("src", "/review-preview.gif");
   await page.getByRole("button", { name: "Close video player" }).click();
   await alertList.evaluate(async (element) => {
@@ -1464,10 +1474,14 @@ test("keeps activity content in an independently scrolling viewport", async ({
     .first()
     .boundingBox();
   await events.locator(".tile-player").first().click();
-  const mediaDialog = page.locator("wzc-recorded-video-dialog dialog");
+  const mediaDialog = page.locator(
+    ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) dialog",
+  );
   await expect(mediaDialog).toBeVisible();
   const modalClose = page.getByRole("button", { name: "Close video player" });
-  const modalTitle = page.locator("wzc-recorded-video-dialog .title");
+  const modalTitle = page.locator(
+    ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) .title",
+  );
   const modalCloseBox = await modalClose.boundingBox();
   const modalTitleBox = await modalTitle.boundingBox();
   expect(modalCloseBox?.x).toBeLessThan(modalTitleBox?.x ?? 0);
@@ -1501,14 +1515,16 @@ test("keeps activity content in an independently scrolling viewport", async ({
     ),
   );
   const mediaErrorToast = page.locator(
-    "wzc-recorded-video-dialog wzc-toast-region .toast",
+    ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) wzc-toast-region .toast",
   );
   await expect(mediaErrorToast).toContainText("Unable to play this recording.");
   const mediaErrorBox = await mediaErrorToast.boundingBox();
   expect(mediaErrorBox?.height).toBeLessThan(80);
   expect(mediaErrorBox?.width).toBeLessThan(600);
   const mediaBodyPadding = await page
-    .locator("wzc-recorded-video-dialog .body")
+    .locator(
+      ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) .body",
+    )
     .evaluate((element) => {
       const style = getComputedStyle(element);
       return {
@@ -1539,7 +1555,9 @@ test("keeps activity content in an independently scrolling viewport", async ({
   const modalBackgrounds = await page.evaluate(() => {
     const container = document
       .querySelector("watchzone-card")
-      ?.shadowRoot?.querySelector("wzc-recorded-video-dialog")?.shadowRoot;
+      ?.shadowRoot?.querySelector(
+        ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog)",
+      )?.shadowRoot;
     const dialog = container?.querySelector("dialog");
     const header = container?.querySelector(".header");
     const body = container?.querySelector(".body");
@@ -1552,7 +1570,9 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(modalBackgrounds.dialog).toBe(modalBackgrounds.header);
   expect(modalBackgrounds.body).toBe(modalBackgrounds.header);
   const headerBeforeResizeBox = await page
-    .locator("wzc-recorded-video-dialog .header")
+    .locator(
+      ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) .header",
+    )
     .boundingBox();
   if (headerBeforeResizeBox && playerViewportBox) {
     expect(playerViewportBox.y).toBeCloseTo(
@@ -1563,7 +1583,11 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect(
     page.locator("wzc-recorded-video-player .media-surface"),
   ).toHaveCount(0);
-  await expect(page.locator("wzc-recorded-video-dialog .scrim")).toHaveCount(0);
+  await expect(
+    page.locator(
+      ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) .scrim",
+    ),
+  ).toHaveCount(0);
   const stablePlayerBox = await page
     .locator("wzc-recorded-video-player .viewport")
     .boundingBox();
@@ -1684,7 +1708,9 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(await dispatchRecordedDoubleClick()).toBe(true);
   await expect(recordedVideo).toHaveAttribute("style", /scale\(1\)/);
   expect(await page.evaluate(() => document.fullscreenElement)).toBeNull();
-  const resizeHandle = page.locator("wzc-recorded-video-dialog .resize-handle");
+  const resizeHandle = page.locator(
+    ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) .resize-handle",
+  );
   await expect(resizeHandle).toHaveAttribute(
     "aria-label",
     "Resize video player",
@@ -1743,9 +1769,11 @@ test("keeps activity content in an independently scrolling viewport", async ({
   const nextEventTile = events.locator(".tile-player").nth(1);
   await nextEventTile.scrollIntoViewIfNeeded();
   await nextEventTile.evaluate((button: HTMLButtonElement) => button.click());
-  await expect(page.locator("wzc-recorded-video-dialog .title")).toHaveText(
-    "Front - 5:12 PM - Mon, Nov 13",
-  );
+  await expect(
+    page.locator(
+      ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) .title",
+    ),
+  ).toHaveText("Front - 5:12 PM - Mon, Nov 13");
   await expect(mediaDialog).toBeVisible();
   await page.evaluate(() =>
     document.body.dispatchEvent(
@@ -1758,11 +1786,17 @@ test("keeps activity content in an independently scrolling viewport", async ({
   );
   await expect(mediaDialog).toBeHidden();
   await expect(recordedVideo).toHaveCount(0);
-  await expect(page.locator("wzc-recorded-video-dialog .scrim")).toHaveCount(0);
+  await expect(
+    page.locator(
+      ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) .scrim",
+    ),
+  ).toHaveCount(0);
 
   await events.locator('button[aria-label="View snapshot"]').first().click();
   await expect(mediaDialog).toBeVisible();
-  const snapshot = page.locator("wzc-recorded-video-dialog img.snapshot");
+  const snapshot = page.locator(
+    ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) img.snapshot",
+  );
   await expect(snapshot).toBeVisible();
   await expect(snapshot).toHaveAttribute("src", "/thumbnail.svg");
   await expect(page.locator("wzc-recorded-video-player")).toHaveCount(0);
@@ -1956,6 +1990,12 @@ test("switches activity and recordings through the shared media calendar", async
                 ],
                 preferred_transport: "file",
                 revision: selectedDate,
+                selection_end_time: start + 1620,
+                selection_spans: [
+                  { end_time: start + 600, start_time: start },
+                  { end_time: start + 1620, start_time: start + 720 },
+                ],
+                selection_start_time: start,
                 spans: [
                   {
                     end_time: start + 600,
@@ -1973,6 +2013,20 @@ test("switches activity and recordings through the shared media calendar", async
                 timeline_start_time: start,
               };
             }),
+          };
+        }
+        if (message.type === "watchzone/recordings/segment") {
+          return {
+            filename: "front-segment.mp4",
+            path: "/segment.mp4",
+            playback_sources: [
+              {
+                content_type: "video/mp4",
+                transport: "file",
+                url: "/recording.mp4",
+              },
+            ],
+            preferred_transport: "file",
           };
         }
         return undefined;
@@ -2226,7 +2280,11 @@ test("switches activity and recordings through the shared media calendar", async
     "10:00 AM – 10:27 AM",
   );
   await recordings.locator(".tile-player").first().click();
-  await expect(page.locator("wzc-recorded-video-dialog dialog")).toBeVisible();
+  await expect(
+    page.locator(
+      ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) dialog",
+    ),
+  ).toBeVisible();
   const scrubber = page.locator("wzc-recording-scrubber");
   await expect(scrubber).toBeVisible();
   await expect(scrubber.locator(".label")).toHaveCount(7);
@@ -2257,9 +2315,31 @@ test("switches activity and recordings through the shared media calendar", async
   await scrubber.locator(".handle.start").press("ArrowLeft");
   await expect(scrubber.locator(".handle.start")).toHaveAttribute(
     "aria-valuetext",
-    "9:59:59",
+    "10:00:00",
   );
-  await segmentManager.getByRole("button", { name: "Cancel" }).click();
+  await segmentManager
+    .getByRole("button", { name: "Download Segment" })
+    .click();
+  await expect(page.locator("wzc-recording-media-dialog dialog")).toBeVisible();
+  await segmentManager.getByRole("button", { name: "Preview Segment" }).click();
+  await expect(
+    segmentManager.getByRole("button", { name: "Stop Preview" }),
+  ).toBeVisible();
+  await scrubber.locator("input.range").evaluate((input) => {
+    const range = input as HTMLInputElement;
+    range.value = String(Number(range.min) + 60);
+    range.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+  });
+  await expect(
+    segmentManager.getByRole("button", { name: "Stop Preview" }),
+  ).toBeVisible();
+  await segmentManager.getByRole("button", { name: "Stop Preview" }).click();
+  await expect(
+    segmentManager.getByRole("button", { name: "Preview Segment" }),
+  ).toBeVisible();
+  await scrubber
+    .getByRole("button", { name: "Select recording segment" })
+    .click();
   await expect(segmentManager).toHaveCount(0);
   await expect(scrubber).toBeVisible();
 });

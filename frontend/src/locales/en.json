@@ -231,6 +231,7 @@
   "recording_segments.reset": "Reset",
   "recording_segments.cancel": "Cancel",
   "recording_segments.preview": "Preview Segment",
+  "recording_segments.stop_preview": "Stop Preview",
   "recording_segments.download": "Download Segment",
   "recording_segments.downloading": "Preparing segment download…",
   "recording_segments.download_failed": "Unable to download the selected recording segment.",

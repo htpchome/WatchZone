@@ -98,7 +98,11 @@ export const recordingScrubberStyles = css`
     position: relative;
     display: block;
     block-size: var(--wzc-recording-scrubber-track-block-size);
-    background: var(--wzc-recording-segment-context);
+    background: repeating-linear-gradient(
+      135deg,
+      var(--wzc-recording-scrubber-gap) 0 0.28rem,
+      var(--wzc-recording-scrubber-gap-stripe) 0.28rem 0.48rem
+    );
   }
 
   .context span {
@@ -131,6 +135,7 @@ export const recordingScrubberStyles = css`
   }
 
   .span,
+  .selection-availability,
   .marker,
   .tick,
   .pointer,
@@ -144,6 +149,14 @@ export const recordingScrubberStyles = css`
     z-index: 1;
     inset-block: 0;
     background: var(--wzc-recording-scrubber-track);
+  }
+
+  .selection-availability {
+    z-index: 1;
+    inset-block-start: 0;
+    block-size: var(--wzc-recording-scrubber-track-block-size);
+    background: var(--wzc-recording-segment-context);
+    pointer-events: none;
   }
 
   .segment-active .track {

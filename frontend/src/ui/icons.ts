@@ -198,6 +198,9 @@ const ICONS = {
   play: {
     paths: [{ d: "M8 5v14l11-7L8 5Z" }],
   },
+  stop: {
+    paths: [{ d: "M6 6h12v12H6z" }],
+  },
   dotsHorizontalCircleOutline: {
     paths: [
       {

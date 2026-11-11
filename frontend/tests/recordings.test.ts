@@ -37,6 +37,14 @@ describe("recordings module", () => {
           ],
           preferred_transport: "hls",
           revision: "revision",
+          selection_end_time: Date.UTC(2026, 10, 9, 22, 27, 21) / 1000,
+          selection_spans: [
+            {
+              end_time: Date.UTC(2026, 10, 9, 22, 27, 21) / 1000,
+              start_time: Date.UTC(2026, 10, 9, 22) / 1000,
+            },
+          ],
+          selection_start_time: Date.UTC(2026, 10, 9, 22) / 1000,
           spans: [
             {
               end_time: Date.UTC(2026, 10, 9, 22, 27, 21) / 1000,
@@ -124,6 +132,11 @@ describe("recordings module", () => {
         module.shadowRoot?.querySelector(".tile:not(.skeleton)"),
       ).not.toBeNull(),
     );
+    expect(
+      module.shadowRoot
+        ?.querySelector("wzc-media-day-header")
+        ?.shadowRoot?.querySelector(".label")?.textContent,
+    ).toContain("Sun, Nov 8 — Recordings");
     expect(module.shadowRoot?.querySelector(".range")?.textContent).toBe(
       "10:00 PM – 10:27 PM",
     );

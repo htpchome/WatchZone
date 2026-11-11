@@ -25,6 +25,11 @@ export interface RecordingTimelineSpan {
   readonly startTime: number;
 }
 
+export interface RecordingTimelineAvailabilitySpan {
+  readonly endTime: number;
+  readonly startTime: number;
+}
+
 export interface RecordingTimelineMarker {
   readonly classification: "alert" | "detection";
   readonly endTime: number;
@@ -38,6 +43,9 @@ export interface RecordingTimeline {
   readonly endTime: number;
   readonly entityId: string;
   readonly markers: readonly RecordingTimelineMarker[];
+  readonly selectionEndTime: number;
+  readonly selectionSpans: readonly RecordingTimelineAvailabilitySpan[];
+  readonly selectionStartTime: number;
   readonly spans: readonly RecordingTimelineSpan[];
   readonly startTime: number;
 }

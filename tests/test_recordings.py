@@ -53,8 +53,7 @@ def test_recording_segments_are_grouped_into_hour_ranges() -> None:
     assert hours[1].timeline_start_time == start
     assert hours[1].timeline_end_time == start + 3600
     assert [
-        (span.start_time, span.end_time, span.media_offset)
-        for span in hours[1].spans
+        (span.start_time, span.end_time, span.media_offset) for span in hours[1].spans
     ] == [
         (start, start + 20, 0),
         (start + 40, start + 100, 20),
@@ -71,8 +70,8 @@ def test_recording_segments_are_grouped_into_hour_ranges() -> None:
         "file",
         "hls",
     ]
-    assert hours[1].playback_sources[1].url.endswith(
-        f"/index.m3u8?v={hours[1].revision}"
+    assert (
+        hours[1].playback_sources[1].url.endswith(f"/index.m3u8?v={hours[1].revision}")
     )
     assert "/api/frigate/frigate-main/recording/front/start/" in hours[1].download_url
 
@@ -80,18 +79,24 @@ def test_recording_segments_are_grouped_into_hour_ranges() -> None:
 def test_recording_days_include_the_provider_retention_window() -> None:
     """Recording dates are not truncated by the event-history preference."""
     expected = ("2026-11-10", "2026-11-09", "2026-11-07")
-    assert _recording_days(
-        [
-            {"day": "2026-11-10"},
-            {"day": "2026-11-09"},
-            {"day": "2026-11-07"},
-        ],
-        "UTC",
-    ) == expected
-    assert _recording_days(
-        {"2026-11-10": True, "2026-11-09": True, "2026-11-07": True},
-        "UTC",
-    ) == expected
+    assert (
+        _recording_days(
+            [
+                {"day": "2026-11-10"},
+                {"day": "2026-11-09"},
+                {"day": "2026-11-07"},
+            ],
+            "UTC",
+        )
+        == expected
+    )
+    assert (
+        _recording_days(
+            {"2026-11-10": True, "2026-11-09": True, "2026-11-07": True},
+            "UTC",
+        )
+        == expected
+    )
 
 
 def test_recording_segments_are_clipped_across_clock_hour_boundaries() -> None:
@@ -116,6 +121,28 @@ def test_recording_segments_are_clipped_across_clock_hour_boundaries() -> None:
         hour + 3590,
         hour + 3600,
     )
+
+
+def test_recording_tail_after_midnight_does_not_create_an_adjacent_day_row() -> None:
+    """A prior-day request never exposes a short next-day tail as an hour."""
+    source = SimpleNamespace(
+        camera_name="front",
+        frigate_instance_id="frigate-main",
+    )
+    day_end = datetime(2026, 11, 10, tzinfo=UTC).timestamp()
+
+    hours = _recording_hours(
+        source,
+        [{"start_time": day_end - 19, "end_time": day_end + 6}],
+        RecordingQuery(selected_date="2026-11-09", timezone="UTC"),
+    )
+
+    assert len(hours) == 1
+    assert hours[0].timeline_start_time == day_end - 3600
+    assert hours[0].timeline_end_time == day_end
+    assert hours[0].end_time == day_end
+    assert hours[0].selection_end_time == day_end + 6
+    assert hours[0].selection_spans[-1].end_time == day_end + 6
 
 
 async def test_segment_download_is_resolved_by_the_frigate_provider(

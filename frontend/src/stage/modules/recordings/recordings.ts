@@ -247,6 +247,12 @@ export class RecordingsModule extends LitElement {
           startTime: marker.start_time,
           thumbnailUrl: marker.thumbnail_url,
         })),
+        selectionEndTime: hour.selection_end_time,
+        selectionSpans: hour.selection_spans.map((span) => ({
+          endTime: span.end_time,
+          startTime: span.start_time,
+        })),
+        selectionStartTime: hour.selection_start_time,
         spans: hour.spans.map((span) => ({
           endTime: span.end_time,
           mediaOffset: span.media_offset,
@@ -267,17 +273,13 @@ export class RecordingsModule extends LitElement {
 
   private _dayLabel(hours: readonly RecordingHour[]): string {
     const selectedDate = this._recordings.selectedDate();
-    let date: Date;
     const locale = this.api?.locale;
-    if (hours[0]) {
-      date = new Date(hours[0].start_time * 1000);
-    } else if (selectedDate) {
+    if (selectedDate) {
       return `${formatHomeAssistantDateKey(selectedDate, locale)} — ${this.localize(
         "navigation.recordings",
       )}`;
-    } else {
-      date = new Date();
     }
+    const date = hours[0] ? new Date(hours[0].start_time * 1000) : new Date();
     return `${formatHomeAssistantEventDate(date, locale)} — ${this.localize(
       "navigation.recordings",
     )}`;

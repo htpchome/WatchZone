@@ -46,7 +46,10 @@ import type {
 import "../../ui/media-controls-overlay";
 import { RecordedMediaPlaybackController } from "./recorded-media-playback.controller";
 import { recordedVideoPlayerStyles } from "./recorded-video-player.styles";
-import { RecordingSegmentController } from "./recording-segment.controller";
+import {
+  RecordingSegmentController,
+  type RecordingSegmentSelection,
+} from "./recording-segment.controller";
 import type { RecordingSegmentManagerAction } from "./recording-segment-manager";
 import "./recording-segment-manager";
 import type {
@@ -90,6 +93,7 @@ export class RecordedVideoPlayer extends LitElement {
   private _pictureInPictureActive = false;
   private _segmentPreviewActive = false;
   private _segmentPreviewGeneration = 0;
+  private _segmentPreviewTimeline?: RecordingTimeline;
   private _transportHoldRelease?: () => void;
   private _volume = 1;
   private readonly _media = new MediaPresentationController(this);
@@ -224,7 +228,7 @@ export class RecordedVideoPlayer extends LitElement {
             .currentTimestamp=${mediaTimeToRecordingTimestamp(
               this._currentTime,
               this._duration,
-              timeline,
+              this._segmentPreviewTimeline ?? timeline,
             )}
             .localize=${this.localize}
             .paused=${this._paused}
@@ -241,6 +245,7 @@ export class RecordedVideoPlayer extends LitElement {
             .downloading=${this._segment.downloading}
             .locale=${this.api?.locale}
             .localize=${this.localize}
+            .previewing=${this._segmentPreviewActive}
             .selection=${this._segment.selection}
             @${recordingSegmentManagerEvent}=${this._handleSegmentManager}
           ></${recordingSegmentManagerTag}>`
@@ -256,6 +261,7 @@ export class RecordedVideoPlayer extends LitElement {
   protected willUpdate(changed: Map<PropertyKey, unknown>): void {
     if (changed.has("request")) {
       this._segmentPreviewActive = false;
+      this._segmentPreviewTimeline = undefined;
       this._segmentPreviewGeneration += 1;
       this.toggleAttribute(
         "recording-timeline",
@@ -436,21 +442,26 @@ export class RecordedVideoPlayer extends LitElement {
   ): Promise<void> => {
     event.stopPropagation();
     const timeline = this.request?.timeline;
-    if (this._segmentPreviewActive) {
-      await this._restoreOriginalPlayback(this._segment.selection?.startTime);
-    }
-    if (event.detail.action === "activate_segment") {
-      if (timeline) this._segment.activate(timeline);
+    if (event.detail.action === "toggle_segment") {
+      if (!timeline) return;
+      if (this._segment.active) {
+        await this._restoreOriginalPlayback(this._previewTimestamp());
+        this._segment.cancel();
+      } else {
+        this._segment.activate(timeline);
+      }
       return;
     }
     if (event.detail.action === "set_segment_start") {
       if (timeline && event.detail.timestamp !== undefined) {
+        await this._restoreOriginalPlayback(this._previewTimestamp());
         this._segment.setStart(event.detail.timestamp, timeline);
       }
       return;
     }
     if (event.detail.action === "set_segment_end") {
       if (timeline && event.detail.timestamp !== undefined) {
+        await this._restoreOriginalPlayback(this._previewTimestamp());
         this._segment.setEnd(event.detail.timestamp, timeline);
       }
       return;
@@ -464,7 +475,7 @@ export class RecordedVideoPlayer extends LitElement {
       recordingTimestampToMediaTime(
         event.detail.timestamp,
         this._duration,
-        timeline,
+        this._segmentPreviewTimeline ?? timeline,
       ),
     );
     if (event.detail.action === "seek_and_play") {
@@ -488,6 +499,10 @@ export class RecordedVideoPlayer extends LitElement {
     } else if (event.detail === "download") {
       void this._segment.download(timeline);
     } else {
+      if (this._segmentPreviewActive) {
+        await this._restoreOriginalPlayback(this._previewTimestamp());
+        return;
+      }
       const selection = this._segment.beginPreview();
       if (!selection) return;
       const video = this._video();
@@ -503,6 +518,11 @@ export class RecordedVideoPlayer extends LitElement {
         return;
       }
       this._segmentPreviewActive = true;
+      this._segmentPreviewTimeline = segmentPreviewTimeline(
+        timeline,
+        selection,
+      );
+      this.requestUpdate();
       await this._playback.load(video, {
         ...request,
         id: `${request.id}:segment:${selection.startTime}:${selection.endTime}`,
@@ -522,12 +542,13 @@ export class RecordedVideoPlayer extends LitElement {
 
   private readonly _handleSegmentPreviewEnded = (): void => {
     if (!this._segmentPreviewActive) return;
-    void this._restoreOriginalPlayback(this._segment.selection?.endTime);
+    this._syncControlState();
   };
 
   private async _restoreOriginalPlayback(timestamp?: number): Promise<void> {
     const wasActive = this._segmentPreviewActive;
     this._segmentPreviewActive = false;
+    this._segmentPreviewTimeline = undefined;
     this._segmentPreviewGeneration += 1;
     if (!wasActive) return;
     const video = this._video();
@@ -544,6 +565,16 @@ export class RecordedVideoPlayer extends LitElement {
     }
     video.pause();
     this._syncControlState();
+  }
+
+  private _previewTimestamp(): number | undefined {
+    const timeline = this._segmentPreviewTimeline;
+    if (!this._segmentPreviewActive || !timeline) return undefined;
+    return mediaTimeToRecordingTimestamp(
+      this._currentTime,
+      this._duration,
+      timeline,
+    );
   }
 
   private _releaseTransportHold(): void {
@@ -630,6 +661,32 @@ function mediaTimeToRecordingTimestamp(
 function recordingTimelineMediaDuration(timeline: RecordingTimeline): number {
   const last = timeline.spans[timeline.spans.length - 1];
   return last ? last.mediaOffset + last.endTime - last.startTime : 0;
+}
+
+function segmentPreviewTimeline(
+  timeline: RecordingTimeline,
+  selection: RecordingSegmentSelection,
+): RecordingTimeline {
+  let mediaOffset = 0;
+  const spans = timeline.selectionSpans.flatMap((span) => {
+    const startTime = Math.max(span.startTime, selection.startTime);
+    const endTime = Math.min(span.endTime, selection.endTime);
+    if (endTime <= startTime) return [];
+    const previewSpan = { startTime, endTime, mediaOffset };
+    mediaOffset += endTime - startTime;
+    return [previewSpan];
+  });
+  return {
+    ...timeline,
+    endTime: selection.endTime,
+    markers: timeline.markers.filter(
+      (marker) =>
+        marker.endTime > selection.startTime &&
+        marker.startTime < selection.endTime,
+    ),
+    spans,
+    startTime: selection.startTime,
+  };
 }
 
 if (!customElements.get(RECORDED_VIDEO_PLAYER_TAG)) {

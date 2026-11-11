@@ -14,10 +14,18 @@ export interface RecordingHour {
   readonly playback_sources: readonly RecordedMediaSource[];
   readonly preferred_transport: RecordedMediaTransport;
   readonly revision: string;
+  readonly selection_end_time: number;
+  readonly selection_spans: readonly RecordingAvailabilitySpan[];
+  readonly selection_start_time: number;
   readonly spans: readonly RecordingSpan[];
   readonly start_time: number;
   readonly timeline_end_time: number;
   readonly timeline_start_time: number;
+}
+
+export interface RecordingAvailabilitySpan {
+  readonly end_time: number;
+  readonly start_time: number;
 }
 
 export interface RecordingSpan {

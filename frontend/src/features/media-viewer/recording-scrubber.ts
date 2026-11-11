@@ -32,7 +32,7 @@ import {
 
 export interface RecordingScrubberEventDetail {
   readonly action:
-    | "activate_segment"
+    | "toggle_segment"
     | "seek"
     | "seek_and_play"
     | "set_segment_end"
@@ -198,6 +198,13 @@ export class RecordingScrubber extends LitElement {
     const start = selectionPercentage(startTime, timeline);
     const end = selectionPercentage(endTime, timeline);
     return html`
+      ${timeline.selectionSpans.map(
+        (span) =>
+          html`<span
+            class="selection-availability"
+            style=${selectionPositionStyle(span.startTime, span.endTime, timeline)}
+          ></span>`,
+      )}
       <span class="excluded before" style=${`inline-size: ${start}%`}></span>
       <span
         class="selected"
@@ -296,7 +303,7 @@ export class RecordingScrubber extends LitElement {
   };
 
   private readonly _activateSegment = (): void => {
-    if (!this.segmentActive) this._dispatch({ action: "activate_segment" });
+    this._dispatch({ action: "toggle_segment" });
   };
 
   private _handlePointerDown(event: PointerEvent, edge: "end" | "start"): void {
@@ -329,8 +336,8 @@ export class RecordingScrubber extends LitElement {
     const bounds = track.getBoundingClientRect();
     if (bounds.width <= 0) return;
     const ratio = clamp((event.clientX - bounds.left) / bounds.width, 0, 1);
-    const start = selectableStart(timeline);
-    const timestamp = start + ratio * (selectableEnd(timeline) - start);
+    const start = selectionRailStart(timeline);
+    const timestamp = start + ratio * (selectionRailEnd(timeline) - start);
     this._dispatch({
       action: edge === "start" ? "set_segment_start" : "set_segment_end",
       timestamp,
@@ -424,9 +431,27 @@ function selectionPercentage(
   timestamp: number,
   timeline: RecordingTimeline,
 ): number {
-  const start = selectableStart(timeline);
-  const duration = selectableEnd(timeline) - start;
+  const start = selectionRailStart(timeline);
+  const duration = selectionRailEnd(timeline) - start;
   return clamp(((timestamp - start) / duration) * 100, 0, 100);
+}
+
+function selectionPositionStyle(
+  startTime: number,
+  endTime: number,
+  timeline: RecordingTimeline,
+): string {
+  const start = selectionPercentage(startTime, timeline);
+  const end = selectionPercentage(endTime, timeline);
+  return `inset-inline-start: ${start}%; inline-size: ${Math.max(0, end - start)}%`;
+}
+
+function selectionRailStart(timeline: RecordingTimeline): number {
+  return timeline.startTime - 5 * 60;
+}
+
+function selectionRailEnd(timeline: RecordingTimeline): number {
+  return timeline.endTime + 5 * 60;
 }
 
 function formatTimelineTime(

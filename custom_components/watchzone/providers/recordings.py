@@ -28,6 +28,14 @@ class RecordingSpan:
 
 
 @dataclass(frozen=True, slots=True)
+class RecordingAvailabilitySpan:
+    """One continuous playable span in the segment-selection window."""
+
+    start_time: float
+    end_time: float
+
+
+@dataclass(frozen=True, slots=True)
 class RecordingMarker:
     """One alert or detection positioned on a recording timeline."""
 
@@ -50,6 +58,9 @@ class RecordingHour:
     timeline_start_time: float
     timeline_end_time: float
     spans: tuple[RecordingSpan, ...]
+    selection_start_time: float
+    selection_end_time: float
+    selection_spans: tuple[RecordingAvailabilitySpan, ...]
     markers: tuple[RecordingMarker, ...]
     playback_sources: tuple[PlaybackSource, ...]
     preferred_transport: PlaybackTransport

@@ -10,6 +10,7 @@ import type {
   RecordingScrubber,
   RecordingScrubberEventDetail,
 } from "../src/features/media-viewer/recording-scrubber";
+import { RecordingSegmentController } from "../src/features/media-viewer/recording-segment.controller";
 import "../src/features/media-viewer/recording-scrubber";
 
 const start = Date.UTC(2026, 10, 10, 14) / 1000;
@@ -31,6 +32,12 @@ const timeline: RecordingTimeline = {
       thumbnailUrl: "/review-1.webp",
     },
   ],
+  selectionEndTime: start + 3780,
+  selectionSpans: [
+    { startTime: start - 120, endTime: start + 600 },
+    { startTime: start + 1200, endTime: start + 3780 },
+  ],
+  selectionStartTime: start - 120,
 };
 
 describe("recording scrubber", () => {
@@ -113,29 +120,49 @@ describe("recording scrubber", () => {
     scrubber.shadowRoot
       ?.querySelector<HTMLButtonElement>(".segment-toggle")
       ?.click();
-    expect(actions).toEqual([{ action: "activate_segment" }]);
+    expect(actions).toEqual([{ action: "toggle_segment" }]);
 
     scrubber.segmentActive = true;
     scrubber.segmentSelection = {
-      startTime: start - 300,
-      endTime: start + 3900,
+      startTime: start - 120,
+      endTime: start + 3780,
     };
     await scrubber.updateComplete;
+
+    scrubber.shadowRoot
+      ?.querySelector<HTMLButtonElement>(".segment-toggle")
+      ?.click();
+    expect(actions.at(-1)).toEqual({ action: "toggle_segment" });
 
     expect(scrubber.shadowRoot?.querySelectorAll(".context")).toHaveLength(2);
     expect(scrubber.shadowRoot?.querySelectorAll(".handle")).toHaveLength(2);
     const startHandle =
       scrubber.shadowRoot?.querySelector<HTMLButtonElement>(".handle.start");
     expect(startHandle?.getAttribute("aria-valuemin")).toBe(
-      String(start - 300),
+      String(start - 120),
     );
-    expect(startHandle?.getAttribute("aria-valuetext")).toBe("1:55:00");
+    expect(startHandle?.getAttribute("aria-valuetext")).toBe("1:58:00");
     startHandle?.dispatchEvent(
       new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
     );
     expect(actions.at(-1)).toEqual({
       action: "set_segment_start",
-      timestamp: start - 299,
+      timestamp: start - 119,
     });
+  });
+
+  it("keeps segment handles on retained recording availability", () => {
+    const controller = new RecordingSegmentController(
+      () => undefined,
+      () => undefined,
+      () => undefined,
+    );
+    controller.configure(timeline);
+    controller.setStart(start + 900, timeline);
+    expect(controller.selection?.startTime).toBe(start + 1200);
+
+    controller.reset(timeline);
+    controller.setEnd(start + 900, timeline);
+    expect(controller.selection?.endTime).toBe(start + 600);
   });
 });

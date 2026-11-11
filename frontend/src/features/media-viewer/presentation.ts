@@ -1,13 +1,14 @@
-import { RECORDED_VIDEO_DIALOG_TAG } from "../../core/constants";
+import {
+  EVENT_MEDIA_DIALOG_TAG,
+  RECORDING_MEDIA_DIALOG_TAG,
+  REVIEW_MEDIA_DIALOG_TAG,
+} from "../../core/constants";
 import type { RecordedMediaRequest } from "../../core/recorded-media";
 
 interface MediaViewerPresentationDefinition {
   readonly load: () => Promise<unknown>;
   readonly tagName: string;
 }
-
-const loadDraggableDialog = (): Promise<unknown> =>
-  import("./draggable-dialog");
 
 const presentations: Readonly<
   Record<
@@ -16,16 +17,16 @@ const presentations: Readonly<
   >
 > = {
   event: {
-    load: loadDraggableDialog,
-    tagName: RECORDED_VIDEO_DIALOG_TAG,
+    load: () => import("./event-media-dialog"),
+    tagName: EVENT_MEDIA_DIALOG_TAG,
   },
   recording: {
-    load: loadDraggableDialog,
-    tagName: RECORDED_VIDEO_DIALOG_TAG,
+    load: () => import("./recording-media-dialog"),
+    tagName: RECORDING_MEDIA_DIALOG_TAG,
   },
   review: {
-    load: loadDraggableDialog,
-    tagName: RECORDED_VIDEO_DIALOG_TAG,
+    load: () => import("./review-media-dialog"),
+    tagName: REVIEW_MEDIA_DIALOG_TAG,
   },
 };
 
