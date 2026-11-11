@@ -96,6 +96,40 @@ export const exportsStyles = css`
     text-align: center;
   }
 
+  .tile.draft {
+    opacity: 0.88;
+  }
+
+  .tile.draft.failed {
+    box-shadow: inset 0 0 0 1px var(--wzc-color-error);
+  }
+
+  .draft-status {
+    align-items: center;
+    border: 1px solid currentcolor;
+    border-radius: var(--wzc-radius-pill);
+    display: inline-flex;
+    font-size: var(--wzc-font-size-small);
+    font-weight: var(--wzc-font-weight-semibold);
+    gap: 0.35rem;
+    justify-self: start;
+    padding: 0.2rem 0.55rem;
+  }
+
+  .draft-status.progress {
+    color: var(--wzc-color-text-2);
+  }
+
+  .draft-status.failed {
+    background: var(--wzc-color-fill-error-quiet);
+    color: var(--wzc-color-error);
+  }
+
+  .draft-status ha-spinner {
+    block-size: 1rem;
+    inline-size: 1rem;
+  }
+
   .details {
     display: grid;
     align-content: center;

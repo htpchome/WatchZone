@@ -46,6 +46,7 @@ class ReviewItem:
     thumbnail_url: str | None
     snapshot_url: str | None
     clip_url: str | None
+    download_url: str | None
     playback_sources: tuple[PlaybackSource, ...]
     preferred_transport: PlaybackTransport
     zones: tuple[str, ...]

@@ -13,6 +13,11 @@ import {
 } from "../../../core/date-time";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
 import {
+  isExportJob,
+  type ExportJob,
+  type ExportLibraryItem,
+} from "../../../features/exports";
+import {
   englishLocalize,
   type LocalizeFunction,
 } from "../../../core/localization";
@@ -94,7 +99,10 @@ export class ExportsModule extends LitElement {
                 >
                   ${repeat(
                     items,
-                    (item) => `${item.entity_id}:${item.id}`,
+                    (item) =>
+                      isExportJob(item)
+                        ? item.requestId
+                        : `${item.entity_id}:${item.id}`,
                     (item) => this._renderItem(item),
                   )}
                 </div>`
@@ -104,7 +112,8 @@ export class ExportsModule extends LitElement {
       ${this._renderDialog()}`;
   }
 
-  private _renderItem(item: ExportItem) {
+  private _renderItem(item: ExportLibraryItem) {
+    if (isExportJob(item)) return this._renderDraft(item);
     const camera = this._exports.cameraLabel(item.entity_id, item.camera);
     const title = this.localize("exports.open", { title: item.name });
     return html`<article
@@ -202,6 +211,39 @@ export class ExportsModule extends LitElement {
           true,
         )}
       </div>
+    </article>`;
+  }
+
+  private _renderDraft(job: ExportJob) {
+    const camera = this._exports.cameraLabel(job.entityId, job.camera);
+    const failed = job.status === "failed";
+    return html`<article class=${`tile draft ${failed ? "failed" : ""}`}>
+      <div class="thumbnail">${renderIcon("export")}</div>
+      <div class="details">
+        <span class="title">${job.name}</span>
+        <span class="metadata"
+          >${camera} ·
+          ${formatHomeAssistantEventDate(
+            new Date(job.createdTime * 1000),
+            this.api?.locale,
+          )}
+          ${formatHomeAssistantTime(
+            new Date(job.createdTime * 1000),
+            this.api?.locale,
+          )}</span
+        >
+        ${
+          failed
+            ? html`<span class="draft-status failed"
+                >${this.localize("reviews.export_failed_status")}</span
+              >`
+            : html`<span class="draft-status progress">
+                <ha-spinner size="small"></ha-spinner>
+                <span>${this.localize("exports.processing")}</span>
+              </span>`
+        }
+      </div>
+      <div class="actions" aria-hidden="true"></div>
     </article>`;
   }
 

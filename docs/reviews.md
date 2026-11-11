@@ -53,8 +53,16 @@
   intent; it does not call the Exports module or a provider.
 - Opening the dialog requests the provider-prepared default title for the
   Review's complete media range, including configured pre- and post-capture.
-  The title is editable. Cancel performs no mutation; confirmation calls the
-  provider-neutral Exports API and reports success or failure with one toast.
+  The title is editable. Cancel performs no mutation. Confirmation closes the
+  dialog immediately and starts the provider-neutral export workflow.
+- The originating Review tile owns export feedback beneath its generated
+  analysis area. Providers with numeric progress use Home Assistant's progress
+  bar; Frigate 0.17 exposes only an active state, so it uses a themed status
+  bubble with `ha-spinner`. Completion replaces progress with a short-lived,
+  themed success or failure bubble.
+- Review playback and download are distinct URLs. The download action uses the
+  provider-normalized attachment URL and must not navigate to the playback
+  resource.
 
 ## Generated analysis
 

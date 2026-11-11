@@ -44,6 +44,11 @@ but the Stage module and frontend transport remain provider-neutral.
   name accepted by the backend without waiting for a list reload.
 - In-progress exports appear immediately, identify their processing state,
   disable item actions and playback, and refresh until processing completes.
+- A Review-initiated export publishes a frontend feature-owned draft before
+  the provider mutation returns. The Exports module observes that public job
+  contract, presents one draft tile, suppresses a duplicate provider
+  in-progress row, and atomically replaces the draft with the completed export.
+  Reviews and Exports never import one another.
 
 ## Frigate compatibility
 

@@ -343,6 +343,7 @@ def _normalize_review(
             else None
         ),
         clip_url=recording_url,
+        download_url=f"{recording_url}?download=true",
         playback_sources=(
             PlaybackSource(
                 f"{vod_base}/index.m3u8",

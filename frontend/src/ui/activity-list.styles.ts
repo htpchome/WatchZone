@@ -329,6 +329,13 @@ export const activityListStyles = css`
     max-inline-size: 100%;
   }
 
+  .review-aside {
+    align-content: center;
+    display: grid;
+    gap: 0.35rem;
+    min-inline-size: 0;
+  }
+
   .analysis-title {
     align-items: center;
     appearance: none;
@@ -366,6 +373,57 @@ export const activityListStyles = css`
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .export-status,
+  .export-progress-value {
+    box-sizing: border-box;
+    font-size: var(--wzc-font-size-small);
+    max-inline-size: min(24rem, 100%);
+    pointer-events: none;
+    position: relative;
+    z-index: 2;
+  }
+
+  .export-status {
+    align-items: center;
+    border: 1px solid currentcolor;
+    border-radius: var(--wzc-radius-pill);
+    display: inline-flex;
+    font-weight: var(--wzc-font-weight-semibold);
+    gap: 0.35rem;
+    justify-self: start;
+    padding: 0.2rem 0.55rem;
+  }
+
+  .export-status.progress {
+    background: var(--wzc-color-surface-secondary);
+    color: var(--wzc-color-text-2);
+  }
+
+  .export-status ha-spinner {
+    block-size: 1rem;
+    inline-size: 1rem;
+  }
+
+  .export-progress-value {
+    color: var(--wzc-color-text-2);
+    display: grid;
+    gap: 0.2rem;
+  }
+
+  .export-progress-value ha-progress-bar {
+    inline-size: 100%;
+  }
+
+  .export-status.success {
+    background: var(--wzc-color-fill-success-quiet);
+    color: var(--wzc-color-success);
+  }
+
+  .export-status.failed {
+    background: var(--wzc-color-fill-error-quiet);
+    color: var(--wzc-color-error);
   }
 
   .analysis-title:focus-visible {

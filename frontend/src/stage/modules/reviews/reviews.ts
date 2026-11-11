@@ -6,11 +6,7 @@ import {
   setReviewReviewed,
   type ReviewItem,
 } from "../../../api/reviews";
-import {
-  createExport,
-  prepareExport,
-  type ExportRange,
-} from "../../../api/exports";
+import { prepareExport, type ExportRange } from "../../../api/exports";
 import {
   ActiveCameraActivityController,
   ActivityFilterController,
@@ -22,10 +18,14 @@ import {
   REVIEWS_TAG,
   DEFAULT_EVENT_HISTORY_DAYS,
   ACTIVITY_LIST_INTENT_EVENT,
-  EXPORTS_CHANGED_EVENT,
   REVIEW_EXPORT_CLOSE_EVENT,
   REVIEW_EXPORT_CONFIRM_EVENT,
 } from "../../../core/constants";
+import {
+  startExportJob,
+  subscribeExportJobs,
+  type ExportJob,
+} from "../../../features/exports";
 import {
   activityPreviewMediaRequest,
   activityRecordedMediaRequest,
@@ -97,7 +97,9 @@ export class ReviewsModule extends LitElement {
 
   private readonly _toasts = new ToastManager(this);
   private _analysis?: ReviewAnalysis;
-  private _exportCreating = false;
+  private _exportJobs: readonly ExportJob[] = [];
+  private _exportJobsApi?: HomeAssistantApi;
+  private _exportJobsUnsubscribe?: () => void;
   private _pendingExport?: PendingReviewExport;
   private readonly _preparingExportIds = new Set<string>();
   private _publishedActivity?: readonly ReviewItem[];
@@ -130,7 +132,20 @@ export class ReviewsModule extends LitElement {
     (notification) => notification.review,
   );
 
+  public connectedCallback(): void {
+    super.connectedCallback();
+    this._syncExportJobs();
+  }
+
+  public disconnectedCallback(): void {
+    this._exportJobsUnsubscribe?.();
+    this._exportJobsUnsubscribe = undefined;
+    this._exportJobsApi = undefined;
+    super.disconnectedCallback();
+  }
+
   protected update(changed: PropertyValues<this>): void {
+    if (changed.has("api")) this._syncExportJobs();
     const entityId = this._activity.activeEntityId;
     if (
       entityId &&
@@ -195,7 +210,7 @@ export class ReviewsModule extends LitElement {
       <wzc-review-export-dialog
         .draft=${this._pendingExport?.draft}
         .localize=${this.localize}
-        .submitting=${this._exportCreating}
+        .submitting=${false}
         @${reviewExportCloseEvent}=${this._closeExport}
         @${reviewExportConfirmEvent}=${this._confirmExport}
       ></wzc-review-export-dialog>
@@ -218,11 +233,15 @@ export class ReviewsModule extends LitElement {
       cameraLabel: this._activity.activeCameraLabel ?? review.camera,
       classification: review.classification,
       clipUrl: review.clip_url,
+      downloadUrl: review.download_url ?? review.clip_url,
+      downloadFilename: `${review.camera}-${Math.floor(review.start_time)}.mp4`,
       endTime: review.end_time,
       exportable: true,
       exportPending:
         this._preparingExportIds.has(review.id) ||
-        (this._exportCreating && this._pendingExport?.reviewId === review.id),
+        this._exportJob(review.id)?.status === "submitting" ||
+        this._exportJob(review.id)?.status === "processing",
+      ...this._exportFeedback(review.id),
       hoverPreviewUrl: this.hoverPreviewEnabled ? review.preview_url : null,
       id: review.id,
       inProgress:
@@ -365,7 +384,6 @@ export class ReviewsModule extends LitElement {
   }
 
   private readonly _closeExport = (): void => {
-    if (this._exportCreating) return;
     this._pendingExport = undefined;
     this.requestUpdate();
   };
@@ -375,26 +393,63 @@ export class ReviewsModule extends LitElement {
   ): void => {
     const api = this.api;
     const pending = this._pendingExport;
-    if (!api || !pending || this._exportCreating) return;
-    this._exportCreating = true;
+    if (!api || !pending) return;
+    this._pendingExport = undefined;
     this.requestUpdate();
-    void createExport(api, pending.range, event.detail.name)
-      .then(() => {
-        this._exportCreating = false;
-        this._pendingExport = undefined;
-        window.dispatchEvent(new CustomEvent(EXPORTS_CHANGED_EVENT));
-        this._toasts.success(this.localize("reviews.export_success"), {
-          key: "review-export-create",
-        });
-      })
-      .catch(() => {
-        this._exportCreating = false;
-        this._toasts.error(this.localize("reviews.export_failed"), {
-          key: "review-export-create",
-        });
-      })
-      .finally(() => this.requestUpdate());
+    const review = this._activity.items.find(
+      (candidate) => candidate.id === pending.reviewId,
+    );
+    startExportJob(api, {
+      camera: this._activity.activeCameraLabel ?? review?.camera ?? "",
+      name: event.detail.name,
+      range: pending.range,
+      reviewId: pending.reviewId,
+    });
   };
+
+  private _syncExportJobs(): void {
+    const api = this.api;
+    if (api === this._exportJobsApi) return;
+    this._exportJobsUnsubscribe?.();
+    this._exportJobsUnsubscribe = undefined;
+    this._exportJobsApi = api;
+    this._exportJobs = [];
+    if (!api || !this.isConnected) return;
+    this._exportJobsUnsubscribe = subscribeExportJobs(api, (jobs) => {
+      this._exportJobs = jobs;
+      this.requestUpdate();
+    });
+  }
+
+  private _exportJob(reviewId: string): ExportJob | undefined {
+    const entityId = this._activity.activeEntityId;
+    return this._exportJobs.find(
+      (job) => job.reviewId === reviewId && job.entityId === entityId,
+    );
+  }
+
+  private _exportFeedback(reviewId: string): Partial<ActivityListItem> {
+    const status = this._exportJob(reviewId)?.status;
+    if (status === "submitting" || status === "processing") {
+      return {
+        exportStatus: "progress",
+        exportStatusText: this.localize("reviews.export_progress"),
+      };
+    }
+    if (status === "success") {
+      return {
+        exportStatus: "success",
+        exportStatusText: this.localize("reviews.export_complete"),
+      };
+    }
+    if (status === "failed") {
+      return {
+        exportStatus: "failed",
+        exportStatusText: this.localize("reviews.export_failed_status"),
+      };
+    }
+    return {};
+  }
 
   private readonly _toggleReviewed = (item: ActivityListItem): void => {
     const api = this.api;

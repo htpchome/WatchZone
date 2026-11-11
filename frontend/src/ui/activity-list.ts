@@ -47,9 +47,14 @@ export interface ActivityListItem {
   readonly cameraLabel: string;
   readonly classification?: ActivityClassification;
   readonly clipUrl: string | null;
+  readonly downloadUrl?: string | null;
+  readonly downloadFilename?: string;
   readonly endTime: number | null;
   readonly exportable?: boolean;
   readonly exportPending?: boolean;
+  readonly exportProgress?: number;
+  readonly exportStatus?: "failed" | "progress" | "success";
+  readonly exportStatusText?: string;
   readonly hoverPreviewUrl?: string | null;
   readonly id: string;
   readonly inProgress?: boolean;
@@ -366,26 +371,33 @@ export class ActivityList extends LitElement {
         }
       </div>
       ${
-        item.analysisTitle && item.analysisDescription
+        (item.analysisTitle && item.analysisDescription) || item.exportStatus
           ? html`<div class="review-content">
               ${this._renderDetails(item, objectLabels, typeBadge, objectColors, start)}
-              <button
-                class="analysis-title"
-                type="button"
-                title=${this.localize("reviews.open_ai_analysis", {
-                  title: item.analysisTitle,
-                })}
-                aria-label=${this.localize("reviews.open_ai_analysis", {
-                  title: item.analysisTitle,
-                })}
-                @click=${(event: MouseEvent) => {
-                  event.stopPropagation();
-                  this._dispatch({ kind: "open_analysis", item });
-                }}
-              >
-                <ha-icon icon="mdi:creation"></ha-icon>
-                <span>${item.analysisTitle}</span>
-              </button>
+              <div class="review-aside">
+                ${
+                  item.analysisTitle && item.analysisDescription
+                    ? html`<button
+                        class="analysis-title"
+                        type="button"
+                        title=${this.localize("reviews.open_ai_analysis", {
+                          title: item.analysisTitle,
+                        })}
+                        aria-label=${this.localize("reviews.open_ai_analysis", {
+                          title: item.analysisTitle,
+                        })}
+                        @click=${(event: MouseEvent) => {
+                          event.stopPropagation();
+                          this._dispatch({ kind: "open_analysis", item });
+                        }}
+                      >
+                        <ha-icon icon="mdi:creation"></ha-icon>
+                        <span>${item.analysisTitle}</span>
+                      </button>`
+                    : null
+                }
+                ${this._renderExportStatus(item)}
+              </div>
             </div>`
           : this._renderDetails(
               item,
@@ -414,11 +426,17 @@ export class ActivityList extends LitElement {
                   : null
               }
               ${
-                item.clipUrl
+                (item.downloadUrl ?? item.clipUrl)
                   ? html`<a
                       class="action wzc-icon-button"
-                      href=${this.api?.resolveUrl(item.clipUrl) ?? item.clipUrl}
-                      download
+                      href=${
+                        this.api?.resolveUrl(
+                          item.downloadUrl ?? item.clipUrl!,
+                        ) ??
+                        item.downloadUrl ??
+                        item.clipUrl!
+                      }
+                      download=${item.downloadFilename ?? ""}
                       title=${this.localize("events.download_clip")}
                       aria-label=${this.localize("events.download_clip")}
                       ><ha-icon icon="mdi:download"></ha-icon
@@ -447,6 +465,28 @@ export class ActivityList extends LitElement {
             </div>`
       }
     </article>`;
+  }
+
+  private _renderExportStatus(item: ActivityListItem) {
+    if (!item.exportStatus || !item.exportStatusText) return null;
+    if (
+      item.exportStatus === "progress" &&
+      typeof item.exportProgress === "number"
+    ) {
+      return html`<div class="export-progress-value">
+        <span>${item.exportStatusText}</span>
+        <ha-progress-bar .value=${item.exportProgress}></ha-progress-bar>
+      </div>`;
+    }
+    if (item.exportStatus === "progress") {
+      return html`<span class="export-status progress">
+        <ha-spinner size="small"></ha-spinner>
+        <span>${item.exportStatusText}</span>
+      </span>`;
+    }
+    return html`<span class=${`export-status ${item.exportStatus}`}>
+      ${item.exportStatusText}
+    </span>`;
   }
 
   private _renderDetails(

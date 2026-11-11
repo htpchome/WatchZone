@@ -18,6 +18,7 @@ export interface ReviewItem {
   readonly camera: string;
   readonly classification: ReviewClassification;
   readonly clip_url: string | null;
+  readonly download_url?: string | null;
   readonly end_time: number | null;
   readonly id: string;
   readonly playback_sources: readonly RecordedMediaSource[];

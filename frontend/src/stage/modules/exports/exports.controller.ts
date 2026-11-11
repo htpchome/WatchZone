@@ -3,6 +3,12 @@ import type { ReactiveController, ReactiveControllerHost } from "lit";
 import { listExports, type ExportItem } from "../../../api/exports";
 import { EXPORTS_CHANGED_EVENT } from "../../../core/constants";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
+import {
+  isExportJob,
+  subscribeExportJobs,
+  type ExportJob,
+  type ExportLibraryItem,
+} from "../../../features/exports";
 import type {
   CameraSelectionContext,
   CameraSelectionItem,
@@ -31,6 +37,9 @@ export class ExportsController implements ReactiveController {
   private _cameras: readonly CameraSelectionItem[] = [];
   private _connected = false;
   private _generation = 0;
+  private _jobs: readonly ExportJob[] = [];
+  private _jobsApi?: HomeAssistantApi;
+  private _jobsUnsubscribe?: () => void;
   private _lastApi?: HomeAssistantApi;
   private _lastEntityKey = "";
   private _lastFilter?: ExportFilterContext;
@@ -60,12 +69,17 @@ export class ExportsController implements ReactiveController {
     this._lastSelection = undefined;
     this._lastTargetModuleId = "";
     window.addEventListener(EXPORTS_CHANGED_EVENT, this._exportsChanged);
+    this._syncJobs(this._config().api);
     this._sync();
   }
 
   public hostDisconnected(): void {
     this._connected = false;
     window.removeEventListener(EXPORTS_CHANGED_EVENT, this._exportsChanged);
+    this._jobsUnsubscribe?.();
+    this._jobsUnsubscribe = undefined;
+    this._jobsApi = undefined;
+    this._jobs = [];
     this._generation += 1;
     this._clearTimer();
     this._unsubscribeFilter?.();
@@ -80,10 +94,13 @@ export class ExportsController implements ReactiveController {
     this._sync();
   }
 
-  public filteredItems(): readonly ExportItem[] {
-    if (this.selectedEntityIds.length === 0) return this.items;
+  public filteredItems(): readonly ExportLibraryItem[] {
+    const items = this._libraryItems();
+    if (this.selectedEntityIds.length === 0) return items;
     const selected = new Set(this.selectedEntityIds);
-    return this.items.filter(({ entity_id }) => selected.has(entity_id));
+    return items.filter((item) =>
+      selected.has(isExportJob(item) ? item.entityId : item.entity_id),
+    );
   }
 
   public cameraLabel(entityId: string, fallback: string): string {
@@ -114,6 +131,7 @@ export class ExportsController implements ReactiveController {
   private _sync(): void {
     if (!this._connected) return;
     const config = this._config();
+    this._syncJobs(config.api);
     if (
       config.cameraSelection !== this._lastSelection ||
       config.targetModuleId !== this._lastTargetModuleId
@@ -157,6 +175,57 @@ export class ExportsController implements ReactiveController {
       this._lastEntityKey = entityKey;
       void this._load();
     }
+  }
+
+  private _syncJobs(api: HomeAssistantApi | undefined): void {
+    if (api === this._jobsApi) return;
+    this._jobsUnsubscribe?.();
+    this._jobsUnsubscribe = undefined;
+    this._jobsApi = api;
+    this._jobs = [];
+    if (!api || !this._connected) return;
+    this._jobsUnsubscribe = subscribeExportJobs(api, (jobs) => {
+      this._jobs = jobs;
+      const completed = jobs.some(
+        (job) => job.status === "success" && job.completedItem,
+      );
+      if (completed) {
+        this._refreshAfterLoad = true;
+        this.refresh();
+      }
+      const { exportFilter, placeableId } = this._config();
+      this._publishFacets(exportFilter, placeableId);
+      this._host.requestUpdate();
+    });
+  }
+
+  private _libraryItems(): readonly ExportLibraryItem[] {
+    const activeExportIds = new Set(
+      this._jobs
+        .filter((job) => job.status !== "success")
+        .map((job) => job.exportId)
+        .filter((id): id is string => Boolean(id)),
+    );
+    const completed = this._jobs.flatMap((job) =>
+      job.status === "success" && job.completedItem ? [job.completedItem] : [],
+    );
+    const providerItems = this.items.filter(
+      (item) => !activeExportIds.has(item.id),
+    );
+    const drafts = this._jobs.filter((job) => job.status !== "success");
+    const merged = new Map<string, ExportLibraryItem>();
+    for (const item of providerItems) {
+      merged.set(`${item.entity_id}:${item.id}`, item);
+    }
+    for (const item of completed) {
+      merged.set(`${item.entity_id}:${item.id}`, item);
+    }
+    for (const job of drafts) merged.set(job.requestId, job);
+    return [...merged.values()].sort(
+      (left, right) =>
+        (isExportJob(right) ? right.createdTime : right.created_time) -
+        (isExportJob(left) ? left.createdTime : left.created_time),
+    );
   }
 
   private _filterChanged(state: ExportFilterState): void {
@@ -204,7 +273,11 @@ export class ExportsController implements ReactiveController {
     placeableId: string,
   ): void {
     if (!filter || !placeableId) return;
-    const withExports = new Set(this.items.map(({ entity_id }) => entity_id));
+    const withExports = new Set(
+      this._libraryItems().map((item) =>
+        isExportJob(item) ? item.entityId : item.entity_id,
+      ),
+    );
     filter.publish(
       placeableId,
       this,

@@ -27,6 +27,7 @@ const reviews = [
     camera: "front",
     classification: "alert",
     clip_url: "/alert.mp4",
+    download_url: "/alert.mp4?download=true",
     end_time: 124,
     id: "frigate:review-1",
     labels: ["person", "bird"],
@@ -54,6 +55,7 @@ const reviews = [
     camera: "front",
     classification: "detection",
     clip_url: "/detection.mp4",
+    download_url: "/detection.mp4?download=true",
     end_time: 90,
     id: "frigate:review-2",
     labels: ["cat"],
@@ -157,6 +159,16 @@ describe("reviews module", () => {
         'button[aria-label="View snapshot"]',
       ),
     ).toHaveLength(1);
+    expect(
+      activityRoot(module)
+        ?.querySelector<HTMLAnchorElement>('a[aria-label="Download clip"]')
+        ?.getAttribute("href"),
+    ).toBe("https://ha.local/alert.mp4?download=true");
+    expect(
+      activityRoot(module)
+        ?.querySelector<HTMLAnchorElement>('a[aria-label="Download clip"]')
+        ?.getAttribute("download"),
+    ).toBe("front-100.mp4");
     const list = module.shadowRoot?.querySelector(ACTIVITY_LIST_TAG) as
       | (HTMLElement & {
           items: readonly { hoverPreviewUrl?: string | null }[];
@@ -311,10 +323,33 @@ describe("reviews module", () => {
 
   it("exports both alert and detection reviews through a confirmation", async () => {
     const defaultName = "front 1970-01-01 00:01:35 1970-01-01 00:02:09";
+    let resolveCreate: ((value: { export_id: string }) => void) | undefined;
+    const create = new Promise<{ export_id: string }>((resolve) => {
+      resolveCreate = resolve;
+    });
     const callWS = vi.fn(async (message: { type: string }) => {
       if (message.type === "watchzone/reviews/list") return { items: reviews };
       if (message.type === "watchzone/exports/prepare") {
         return { name: defaultName };
+      }
+      if (message.type === "watchzone/exports/create") return create;
+      if (message.type === "watchzone/exports/list") {
+        return {
+          items: [
+            {
+              camera: "front",
+              created_time: 130,
+              download_path: "/export.mp4?download=true",
+              entity_id: "camera.front",
+              id: "front-export",
+              in_progress: false,
+              name: "Back yard cat",
+              revision: "export-revision",
+              thumbnail_path: "/export.webp",
+              video_path: "/export.mp4",
+            },
+          ],
+        };
       }
       return { export_id: "front-export", success: true };
     });
@@ -410,6 +445,25 @@ describe("reviews module", () => {
         end_time: 95,
         name: "Back yard cat",
       });
+    });
+    await vi.waitFor(() => {
+      expect(exportDialog?.shadowRoot?.querySelector("dialog")?.open).toBe(
+        false,
+      );
+    });
+    await vi.waitFor(() => {
+      expect(
+        activityRoot(module)?.querySelector(
+          ".export-status.progress ha-spinner",
+        ),
+      ).not.toBeNull();
+    });
+    resolveCreate?.({ export_id: "front-export" });
+    await vi.waitFor(() => {
+      expect(
+        activityRoot(module)?.querySelector(".export-status.success")
+          ?.textContent,
+      ).toContain("Export successful");
     });
     module.remove();
   });

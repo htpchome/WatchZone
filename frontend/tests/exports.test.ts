@@ -7,6 +7,7 @@ import {
 } from "../src/core/constants";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import type { RecordedMediaRequest } from "../src/core/recorded-media";
+import { startExportJob } from "../src/features/exports";
 import { CameraSelectionContext } from "../src/stage/camera-selection-context";
 import { ExportFilterContext } from "../src/stage/export-filter-context";
 import type { ExportsModule } from "../src/stage/modules/exports/exports";
@@ -156,6 +157,62 @@ describe("exports module", () => {
     await vi.waitFor(() =>
       expect(callWS.mock.calls.length).toBeGreaterThan(initialCalls),
     );
+    module.remove();
+  });
+
+  it("replaces a review export draft with the completed provider item", async () => {
+    let resolveCreate: ((value: { export_id: string }) => void) | undefined;
+    const create = new Promise<{ export_id: string }>((resolve) => {
+      resolveCreate = resolve;
+    });
+    let created = false;
+    const callWS = vi.fn(async (message: { type: string }) => {
+      if (message.type === "watchzone/exports/create") return create;
+      if (message.type === "watchzone/exports/list") {
+        return { items: created ? [readyExport] : [] };
+      }
+      return {};
+    });
+    const api = {
+      callWS,
+      identity: {},
+      locale: { language: "en", time_zone: "UTC" },
+      resolveUrl: (path: string) => path,
+    } as unknown as HomeAssistantApi;
+    const cameraSelection = new CameraSelectionContext();
+    const module = document.createElement(EXPORTS_TAG) as ExportsModule;
+    module.api = api;
+    module.cameraSelection = cameraSelection;
+    module.placeableId = "exports-module";
+    module.targetModuleId = "camera-module";
+    document.body.append(module);
+    cameraSelection.publish(
+      "camera-module",
+      {},
+      { items: [{ entityId: "camera.front", label: "Front Door" }] },
+      vi.fn(),
+    );
+    await vi.waitFor(() => expect(callWS).toHaveBeenCalled());
+
+    startExportJob(api, {
+      camera: "front",
+      name: "Front visitor",
+      range: { entity_id: "camera.front", start_time: 100, end_time: 120 },
+      reviewId: "review-1",
+    });
+    await vi.waitFor(() => {
+      expect(module.shadowRoot?.querySelector(".tile.draft")).not.toBeNull();
+      expect(module.shadowRoot?.querySelector("ha-spinner")).not.toBeNull();
+    });
+
+    created = true;
+    resolveCreate?.({ export_id: readyExport.id });
+    await vi.waitFor(() => {
+      expect(module.shadowRoot?.querySelector(".tile.draft")).toBeNull();
+      expect(module.shadowRoot?.querySelector(".title")?.textContent).toBe(
+        "Front visitor",
+      );
+    });
     module.remove();
   });
 

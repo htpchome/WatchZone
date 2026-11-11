@@ -781,6 +781,15 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await page.route("**/recording.mp4", async (route) => {
     await route.fulfill({ body: "", contentType: "video/mp4" });
   });
+  await page.route(/\/recording\.mp4\?download=true$/, async (route) => {
+    await route.fulfill({
+      body: "review recording",
+      contentType: "video/mp4",
+      headers: {
+        "Content-Disposition": 'attachment; filename="recording.mp4"',
+      },
+    });
+  });
   await page.route("**/review-preview.gif", async (route) => {
     previewRequests += 1;
     await route.fulfill({
@@ -888,6 +897,9 @@ test("keeps activity content in an independently scrolling viewport", async ({
               camera,
               classification: index === 0 ? "alert" : "detection",
               clip_url: event.clip_url,
+              download_url: event.clip_url
+                ? `${event.clip_url}?download=true`
+                : null,
               end_time: event.end_time,
               id: `review:${camera}:${index}`,
               labels: [event.label],
@@ -920,6 +932,24 @@ test("keeps activity content in an independently scrolling viewport", async ({
           ).reviewExportRequests ??= []);
           requests.push(message);
           return { export_id: "front-export", success: true };
+        }
+        if (message.type === "watchzone/exports/list") {
+          return {
+            items: [
+              {
+                camera: "front",
+                created_time: 1_794_352_800,
+                download_path: "/export-video.mp4?download=true",
+                entity_id: "camera.front",
+                id: "front-export",
+                in_progress: false,
+                name: "Resident at garage",
+                revision: "export-revision",
+                thumbnail_path: "/export-thumbnail.svg",
+                video_path: "/export-video.mp4",
+              },
+            ],
+          };
         }
         return undefined;
       },
@@ -989,6 +1019,10 @@ test("keeps activity content in an independently scrolling viewport", async ({
     export: "pointer",
     snapshot: "pointer",
   });
+  const reviewDownloadPromise = page.waitForEvent("download");
+  await page.locator('wzc-reviews a[title="Download clip"]').first().click();
+  const reviewDownload = await reviewDownloadPromise;
+  expect(reviewDownload.suggestedFilename()).toMatch(/\.mp4$/);
   await expect(
     page.locator('wzc-events button[aria-label="Export review"]'),
   ).toHaveCount(0);
@@ -1022,6 +1056,9 @@ test("keeps activity content in an independently scrolling viewport", async ({
       ),
     )
     .toBe(1);
+  await expect(
+    page.locator("wzc-reviews .export-status.success"),
+  ).toContainText("Export successful");
   await analysisTitle.click();
   const analysisDialog = page.locator(
     "wzc-reviews wzc-review-analysis-dialog dialog",

@@ -107,6 +107,7 @@ def test_review_normalization_preserves_classification_and_media() -> None:
     )
     assert item.clip_url is not None
     assert "/recording/front/start/1699999993.1/end/1700000029.2" in item.clip_url
+    assert item.download_url == f"{item.clip_url}?download=true"
     assert item.snapshot_url is not None
     assert "/notifications/event-bird/snapshot.jpg" in item.snapshot_url
     assert item.preferred_transport == "hls"
