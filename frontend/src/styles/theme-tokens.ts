@@ -378,7 +378,7 @@ export const themeTokens = css`
     --wzc-recording-segment-button: var(--wzc-color-surface);
     --wzc-recording-segment-button-border: var(--wzc-color-border-control);
     --wzc-recording-segment-primary: var(--wzc-color-primary);
-    --wzc-recording-segment-primary-text: var(--wzc-color-on-primary);
+    --wzc-recording-segment-primary-text: var(--wzc-color-text-reversed);
     --wzc-recording-segment-cancel: var(--wzc-color-error);
     --wzc-stage-stack-navigation-gap: 0.35rem;
     --wzc-stage-stack-navigation-padding: 0.25rem;

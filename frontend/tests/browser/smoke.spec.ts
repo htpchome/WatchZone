@@ -2296,7 +2296,7 @@ test("switches activity and recordings through the shared media calendar", async
     host.style.setProperty("--wzc-color-border", "rgb(70, 71, 72)");
     host.style.setProperty("--wzc-color-border-control", "rgb(80, 81, 82)");
     host.style.setProperty("--wzc-color-primary", "rgb(10, 120, 200)");
-    host.style.setProperty("--wzc-color-on-primary", "rgb(250, 251, 252)");
+    host.style.setProperty("--wzc-color-text-reversed", "rgb(250, 251, 252)");
     host.style.setProperty("--wzc-color-error", "rgb(220, 60, 70)");
   });
   await expect(scrubber).toHaveCSS("background-color", "rgb(20, 21, 22)");
@@ -2338,6 +2338,10 @@ test("switches activity and recordings through the shared media calendar", async
     "aria-valuetext",
     "10:27:00",
   );
+  await expect(scrubber.locator(".segment-toggle.active")).toHaveCSS(
+    "color",
+    "rgb(250, 251, 252)",
+  );
   await expect(scrubber.locator(".selected")).toHaveCSS(
     "background-color",
     "rgba(0, 0, 0, 0)",
@@ -2357,6 +2361,11 @@ test("switches activity and recordings through the shared media calendar", async
   await expect(
     segmentManager.getByRole("button", { name: "Download Segment" }),
   ).toHaveCSS("background-color", "rgb(10, 120, 200)");
+  await expect(
+    segmentManager
+      .getByRole("button", { name: "Download Segment" })
+      .locator("svg"),
+  ).toHaveCSS("fill", "rgb(250, 251, 252)");
   await expect(segmentManager).toContainText("Select a recording segment");
   await scrubber.locator(".handle.start").press("ArrowLeft");
   await expect(scrubber.locator(".handle.start")).toHaveAttribute(
