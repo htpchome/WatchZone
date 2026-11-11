@@ -176,11 +176,7 @@ export const recordingScrubberStyles = css`
   }
 
   .selected {
-    background: color-mix(
-      in srgb,
-      var(--wzc-recording-segment-selected) 72%,
-      transparent
-    );
+    background: transparent;
   }
 
   .span.first {

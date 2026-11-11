@@ -53,13 +53,12 @@ export class RecordingSegmentController {
 
   public setStart(timestamp: number, timeline: RecordingTimeline): void {
     const endTime = this.selection?.endTime ?? timeline.endTime;
-    const candidate = clamp(
-      Math.round(timestamp),
-      selectableStart(timeline),
-      endTime - 1,
-    );
     this.selection = {
-      startTime: snapToAvailableStart(candidate, timeline, endTime),
+      startTime: clamp(
+        Math.round(timestamp),
+        selectableStart(timeline),
+        endTime - 1,
+      ),
       endTime,
     };
     this._requestUpdate();
@@ -67,14 +66,13 @@ export class RecordingSegmentController {
 
   public setEnd(timestamp: number, timeline: RecordingTimeline): void {
     const startTime = this.selection?.startTime ?? timeline.startTime;
-    const candidate = clamp(
-      Math.round(timestamp),
-      startTime + 1,
-      selectableEnd(timeline),
-    );
     this.selection = {
       startTime,
-      endTime: snapToAvailableEnd(candidate, timeline, startTime),
+      endTime: clamp(
+        Math.round(timestamp),
+        startTime + 1,
+        selectableEnd(timeline),
+      ),
     };
     this._requestUpdate();
   }
@@ -140,61 +138,20 @@ export class RecordingSegmentController {
 }
 
 function fullSelection(timeline: RecordingTimeline): RecordingSegmentSelection {
-  return { startTime: timeline.startTime, endTime: timeline.endTime };
+  return {
+    startTime: timeline.availableStartTime,
+    endTime: timeline.availableEndTime,
+  };
 }
 
 export function selectableStart(timeline: RecordingTimeline): number {
-  return Math.min(timeline.startTime, timeline.selectionStartTime);
+  return timeline.selectionStartTime;
 }
 
 export function selectableEnd(timeline: RecordingTimeline): number {
-  return Math.max(timeline.endTime, timeline.selectionEndTime);
+  return timeline.selectionEndTime;
 }
 
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(Math.max(value, minimum), maximum);
-}
-
-function snapToAvailableStart(
-  timestamp: number,
-  timeline: RecordingTimeline,
-  endTime: number,
-): number {
-  const available = timeline.selectionSpans.filter(
-    (span) => span.endTime - span.startTime >= 1 && span.startTime < endTime,
-  );
-  for (const span of available) {
-    if (timestamp >= span.startTime && timestamp < span.endTime) {
-      return timestamp;
-    }
-    if (timestamp < span.startTime && span.startTime < endTime) {
-      return span.startTime;
-    }
-  }
-  const last = available.at(-1);
-  return last
-    ? clamp(last.endTime - 1, last.startTime, endTime - 1)
-    : Math.max(selectableStart(timeline), endTime - 1);
-}
-
-function snapToAvailableEnd(
-  timestamp: number,
-  timeline: RecordingTimeline,
-  startTime: number,
-): number {
-  const available = timeline.selectionSpans.filter(
-    (span) => span.endTime - span.startTime >= 1 && span.endTime > startTime,
-  );
-  for (const span of [...available].reverse()) {
-    if (timestamp > span.startTime && timestamp <= span.endTime) {
-      return timestamp;
-    }
-    if (timestamp > span.endTime && span.endTime > startTime) {
-      return span.endTime;
-    }
-  }
-  const first = available[0];
-  return first
-    ? clamp(first.startTime + 1, startTime + 1, first.endTime)
-    : Math.min(selectableEnd(timeline), startTime + 1);
 }

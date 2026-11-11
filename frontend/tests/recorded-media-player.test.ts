@@ -234,6 +234,8 @@ describe("recorded media player", () => {
       id: "frigate:front:recording-hour",
       presentation: "recording",
       timeline: {
+        availableEndTime: start + 3600,
+        availableStartTime: start,
         camera: "front",
         entityId: "camera.front",
         startTime: start,
@@ -327,6 +329,8 @@ describe("recorded media player", () => {
       id: "frigate:front:recording-hour",
       presentation: "recording",
       timeline: {
+        availableEndTime: start + 3600,
+        availableStartTime: start,
         camera: "front",
         entityId: "camera.front",
         startTime: start,

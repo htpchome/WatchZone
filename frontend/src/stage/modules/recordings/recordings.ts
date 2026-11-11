@@ -237,6 +237,8 @@ export class RecordingsModule extends LitElement {
       sources: hour.playback_sources,
       title,
       timeline: {
+        availableEndTime: hour.end_time,
+        availableStartTime: hour.start_time,
         camera: hour.camera,
         endTime: hour.timeline_end_time,
         entityId: this._recordings.activeEntityId ?? "",

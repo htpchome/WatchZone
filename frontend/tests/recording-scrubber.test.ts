@@ -15,6 +15,8 @@ import "../src/features/media-viewer/recording-scrubber";
 
 const start = Date.UTC(2026, 10, 10, 14) / 1000;
 const timeline: RecordingTimeline = {
+  availableEndTime: start + 3600,
+  availableStartTime: start,
   camera: "front",
   entityId: "camera.front",
   startTime: start,
@@ -151,7 +153,7 @@ describe("recording scrubber", () => {
     });
   });
 
-  it("keeps segment handles on retained recording availability", () => {
+  it("allows selection across missing spans while retaining outer bounds", () => {
     const controller = new RecordingSegmentController(
       () => undefined,
       () => undefined,
@@ -159,10 +161,27 @@ describe("recording scrubber", () => {
     );
     controller.configure(timeline);
     controller.setStart(start + 900, timeline);
-    expect(controller.selection?.startTime).toBe(start + 1200);
+    expect(controller.selection?.startTime).toBe(start + 900);
 
     controller.reset(timeline);
     controller.setEnd(start + 900, timeline);
-    expect(controller.selection?.endTime).toBe(start + 600);
+    expect(controller.selection?.endTime).toBe(start + 900);
+  });
+
+  it("initializes selection at the actual outer recording bounds", () => {
+    const controller = new RecordingSegmentController(
+      () => undefined,
+      () => undefined,
+      () => undefined,
+    );
+    controller.configure({
+      ...timeline,
+      availableEndTime: start + 1620,
+    });
+
+    expect(controller.selection).toEqual({
+      startTime: start,
+      endTime: start + 1620,
+    });
   });
 });

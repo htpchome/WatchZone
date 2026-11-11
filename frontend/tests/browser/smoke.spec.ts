@@ -2308,6 +2308,14 @@ test("switches activity and recordings through the shared media calendar", async
     "aria-valuetext",
     "10:00:00",
   );
+  await expect(scrubber.locator(".handle.end")).toHaveAttribute(
+    "aria-valuetext",
+    "10:27:00",
+  );
+  await expect(scrubber.locator(".selected")).toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  );
   await expect(page.locator("wzc-recorded-video-transport")).toHaveCount(1);
   const segmentManager = page.locator("wzc-recording-segment-manager");
   await expect(segmentManager).toBeVisible();

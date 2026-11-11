@@ -39,6 +39,8 @@ export interface RecordingTimelineMarker {
 }
 
 export interface RecordingTimeline {
+  readonly availableEndTime: number;
+  readonly availableStartTime: number;
   readonly camera: string;
   readonly endTime: number;
   readonly entityId: string;
