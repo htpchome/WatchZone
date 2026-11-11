@@ -2582,7 +2582,7 @@ test("shows and filters mixed-camera persistent exports", async ({ page }) => {
               },
               {
                 camera: "driveway",
-                created_time: 1_794_352_700,
+                created_time: Date.now() / 1_000,
                 download_path: "/export-video.mp4?download=true",
                 entity_id: "camera.driveway",
                 id: "driveway-export",

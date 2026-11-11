@@ -14,6 +14,7 @@ import {
 import type { HomeAssistantApi } from "../../../core/home-assistant";
 import {
   isExportJob,
+  isExportStalled,
   type ExportJob,
   type ExportLibraryItem,
 } from "../../../features/exports";
@@ -114,6 +115,7 @@ export class ExportsModule extends LitElement {
 
   private _renderItem(item: ExportLibraryItem) {
     if (isExportJob(item)) return this._renderDraft(item);
+    const stalled = isExportStalled(item);
     const camera = this._exports.cameraLabel(item.entity_id, item.camera);
     const title = this.localize("exports.open", { title: item.name });
     return html`<article
@@ -165,7 +167,9 @@ export class ExportsModule extends LitElement {
         ${
           item.in_progress
             ? html`<span class="processing"
-                >${this.localize("exports.processing")}</span
+                >${this.localize(
+                  stalled ? "exports.stalled" : "exports.processing",
+                )}</span
               >`
             : nothing
         }
@@ -195,7 +199,7 @@ export class ExportsModule extends LitElement {
           "mdi:delete",
           this.localize("exports.remove"),
           () => this._beginDelete(item),
-          item.in_progress,
+          item.in_progress && !stalled,
           "delete",
         )}
         ${this._action(

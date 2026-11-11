@@ -236,6 +236,7 @@
   "exports.load_failed": "Unable to load exports.",
   "exports.open": "Play {title}",
   "exports.processing": "Preparing export…",
+  "exports.stalled": "Export stalled in Frigate",
   "exports.filter_open": "Open export filters",
   "exports.filter_title": "Export filters",
   "exports.filter_cameras": "Cameras",

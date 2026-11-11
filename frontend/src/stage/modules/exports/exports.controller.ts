@@ -5,6 +5,7 @@ import { EXPORTS_CHANGED_EVENT } from "../../../core/constants";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
 import {
   isExportJob,
+  isExportStalled,
   subscribeExportJobs,
   type ExportJob,
   type ExportLibraryItem,
@@ -275,9 +276,21 @@ export class ExportsController implements ReactiveController {
       this._publishFacets(exportFilter, placeableId);
       const refreshAfterLoad = this._refreshAfterLoad;
       this._refreshAfterLoad = false;
-      this._schedulePoll(
-        refreshAfterLoad || items.some(({ in_progress }) => in_progress),
+      const activeJobExportIds = new Set(
+        this._jobs
+          .filter(
+            (job) => job.status === "submitting" || job.status === "processing",
+          )
+          .map(({ exportId }) => exportId)
+          .filter((id): id is string => Boolean(id)),
       );
+      const untrackedProcessing = items.some(
+        (item) =>
+          item.in_progress &&
+          !isExportStalled(item) &&
+          !activeJobExportIds.has(item.id),
+      );
+      this._schedulePoll(refreshAfterLoad || untrackedProcessing);
       this._host.requestUpdate();
     } catch {
       if (!this._connected || generation !== this._generation) return;

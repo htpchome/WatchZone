@@ -6,9 +6,10 @@ import {
 } from "../../api/exports";
 import type { HomeAssistantApi } from "../../core/home-assistant";
 
-const EXPORT_POLL_INTERVAL_MS = 3_000;
+const EXPORT_POLL_INTERVAL_MS = 5_000;
 const EXPORT_MISSING_LIMIT = 3;
-const EXPORT_JOB_TIMEOUT_MS = 30 * 60 * 1_000;
+export const EXPORT_STALLED_AFTER_MS = 5 * 60 * 1_000;
+const EXPORT_JOB_TIMEOUT_MS = EXPORT_STALLED_AFTER_MS;
 const EXPORT_RESULT_VISIBLE_MS = 3_500;
 
 export type ExportJobStatus =
@@ -37,6 +38,14 @@ export type ExportLibraryItem = ExportItem | ExportJob;
 
 export function isExportJob(item: ExportLibraryItem): item is ExportJob {
   return "requestId" in item;
+}
+
+/** Frigate 0.17 can retain an accepted export as in-progress indefinitely. */
+export function isExportStalled(item: ExportItem, now = Date.now()): boolean {
+  return (
+    item.in_progress &&
+    now - item.created_time * 1_000 >= EXPORT_STALLED_AFTER_MS
+  );
 }
 
 type ExportJobsListener = (jobs: readonly ExportJob[]) => void;

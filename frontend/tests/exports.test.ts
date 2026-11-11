@@ -29,11 +29,19 @@ const readyExport = {
 const processingExport = {
   ...readyExport,
   camera: "driveway",
+  created_time: Date.now() / 1_000,
   entity_id: "camera.driveway",
   id: "driveway-1",
   in_progress: true,
   name: "Driveway vehicle",
   revision: "two",
+};
+
+const stalledExport = {
+  ...processingExport,
+  created_time: 0,
+  id: "driveway-stalled",
+  name: "Stalled driveway vehicle",
 };
 
 describe("exports module", () => {
@@ -77,7 +85,9 @@ describe("exports module", () => {
       expect(module.shadowRoot?.querySelectorAll(".tile")).toHaveLength(2),
     );
     expect(module.shadowRoot?.textContent).toContain("Front Door");
-    const processing = module.shadowRoot?.querySelectorAll(".tile")[1];
+    const processing = [
+      ...(module.shadowRoot?.querySelectorAll<HTMLElement>(".tile") ?? []),
+    ].find((tile) => tile.textContent?.includes("Driveway vehicle"));
     expect(processing?.querySelectorAll("button:disabled")).toHaveLength(4);
 
     exportFilter.toggleCamera("exports-module", "camera.front");
@@ -126,6 +136,39 @@ describe("exports module", () => {
       'button[title="Add to Case — coming soon"]',
     );
     expect(button?.disabled).toBe(true);
+    module.remove();
+  });
+
+  it("marks stale Frigate jobs as stalled and allows removal", async () => {
+    const api = {
+      callWS: vi.fn(async () => ({ items: [stalledExport] })),
+      identity: {},
+      resolveUrl: (path: string) => path,
+    } as unknown as HomeAssistantApi;
+    const cameraSelection = new CameraSelectionContext();
+    const module = document.createElement(EXPORTS_TAG) as ExportsModule;
+    module.api = api;
+    module.cameraSelection = cameraSelection;
+    module.placeableId = "exports-module";
+    module.targetModuleId = "camera-module";
+    document.body.append(module);
+    cameraSelection.publish(
+      "camera-module",
+      {},
+      { items: [{ entityId: "camera.driveway", label: "Driveway" }] },
+      vi.fn(),
+    );
+
+    await vi.waitFor(() =>
+      expect(module.shadowRoot?.textContent).toContain(
+        "Export stalled in Frigate",
+      ),
+    );
+    expect(
+      module.shadowRoot?.querySelector<HTMLButtonElement>(
+        'button[title="Remove export"]',
+      )?.disabled,
+    ).toBe(false);
     module.remove();
   });
 

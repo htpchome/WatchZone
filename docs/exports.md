@@ -44,6 +44,13 @@ but the Stage module and frontend transport remain provider-neutral.
   name accepted by the backend without waiting for a list reload.
 - In-progress exports appear immediately, identify their processing state,
   disable item actions and playback, and refresh until processing completes.
+  One frontend export-job owner performs active reconciliation; the library
+  controller does not run a competing poll for that same export.
+- Frigate 0.17 may retain an accepted export in progress indefinitely. After a
+  bounded processing window, WatchZone identifies that provider row as stalled,
+  stops polling it, and enables its confirmed Remove action so the user can
+  clean up the provider-owned zombie record. Playback, rename, and download
+  remain unavailable.
 - A Review-initiated export publishes a frontend feature-owned draft before
   the provider mutation returns. The Exports module observes that public job
   contract, presents one draft tile, suppresses a duplicate provider
