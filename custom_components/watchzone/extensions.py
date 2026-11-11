@@ -11,6 +11,7 @@ from .const import DOMAIN
 from .providers.activity_updates import ActivityUpdatesProvider
 from .providers.camera import CameraRuntimeProvider, CameraRuntimeState
 from .providers.events import EventsProvider
+from .providers.exports import ExportsProvider
 from .providers.live import (
     LiveSignalingProvider,
     LiveSignalingSession,
@@ -27,6 +28,7 @@ __all__ = [
     "CameraRuntimeProvider",
     "CameraRuntimeState",
     "EventsProvider",
+    "ExportsProvider",
     "LiveSignalingProvider",
     "LiveSignalingSession",
     "ProviderExtension",
@@ -56,6 +58,7 @@ class ProviderExtension:
     talk_signaling: LiveSignalingProvider | None = None
     ptz: PtzProvider | None = None
     events: EventsProvider | None = None
+    exports: ExportsProvider | None = None
     recordings: RecordingsProvider | None = None
     reviews: ReviewsProvider | None = None
 
@@ -144,6 +147,11 @@ class ProviderRegistry:
         """Resolve one platform's optional event capability."""
         extension = self._platforms.get(platform)
         return extension.events if extension else None
+
+    def exports(self, platform: str) -> ExportsProvider | None:
+        """Resolve one platform's optional persistent-export capability."""
+        extension = self._platforms.get(platform)
+        return extension.exports if extension else None
 
     def recordings(self, platform: str) -> RecordingsProvider | None:
         """Resolve one platform's optional recordings capability."""

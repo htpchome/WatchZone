@@ -5,6 +5,7 @@ import {
   CAMERA_NAVIGATION_COMPONENT_TYPE,
   CAMERA_MODULE_TYPE,
   EVENTS_MODULE_TYPE,
+  EXPORTS_MODULE_TYPE,
   LIGHT_COMPONENT_TYPE,
   PTZ_COMPONENT_TYPE,
   RECORDINGS_MODULE_TYPE,
@@ -152,7 +153,8 @@ function hydrateModule(
   if (
     node.moduleType === EVENTS_MODULE_TYPE ||
     node.moduleType === REVIEWS_MODULE_TYPE ||
-    node.moduleType === RECORDINGS_MODULE_TYPE
+    node.moduleType === RECORDINGS_MODULE_TYPE ||
+    node.moduleType === EXPORTS_MODULE_TYPE
   ) {
     if (config.cameras.length === 0) return undefined;
     const moduleConfig =
@@ -163,10 +165,12 @@ function hydrateModule(
       ...node,
       config: {
         ...moduleConfig,
-        ...(node.moduleType !== RECORDINGS_MODULE_TYPE
+        ...(node.moduleType !== RECORDINGS_MODULE_TYPE &&
+        node.moduleType !== EXPORTS_MODULE_TYPE
           ? { historyDays: config.event_history_days }
           : {}),
-        ...(node.moduleType !== RECORDINGS_MODULE_TYPE
+        ...(node.moduleType !== RECORDINGS_MODULE_TYPE &&
+        node.moduleType !== EXPORTS_MODULE_TYPE
           ? {
               displayEventTypeBadges: config.display_event_type_badges,
               displayObjectBadges: config.display_object_badges,
@@ -223,7 +227,8 @@ function namespaceModuleConfig(node: StageModuleNode): unknown {
   if (
     node.moduleType !== EVENTS_MODULE_TYPE &&
     node.moduleType !== REVIEWS_MODULE_TYPE &&
-    node.moduleType !== RECORDINGS_MODULE_TYPE
+    node.moduleType !== RECORDINGS_MODULE_TYPE &&
+    node.moduleType !== EXPORTS_MODULE_TYPE
   )
     return node.config;
   if (typeof node.config !== "object" || node.config === null)

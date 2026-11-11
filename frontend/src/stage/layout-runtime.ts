@@ -10,9 +10,11 @@ import { repeat } from "lit/directives/repeat.js";
 import { CameraSessionContext } from "./camera-session-context";
 import { CameraSelectionContext } from "./camera-selection-context";
 import { ActivityFilterContext } from "./activity/activity-filter-context";
+import { ExportFilterContext } from "./export-filter-context";
 import {
   REVIEWS_MODULE_TYPE,
   EVENTS_MODULE_TYPE,
+  EXPORTS_MODULE_TYPE,
   RECORDINGS_MODULE_TYPE,
 } from "../core/constants";
 import { MediaDateContext } from "./media-date-context";
@@ -43,9 +45,14 @@ import type {
 } from "./placeable";
 
 let activityControlsDefinition: Promise<unknown> | undefined;
+let exportFilterDefinition: Promise<unknown> | undefined;
 
 function defineActivityControls(): Promise<unknown> {
   return (activityControlsDefinition ??= import("./activity"));
+}
+
+function defineExportFilter(): Promise<unknown> {
+  return (exportFilterDefinition ??= import("./export-filter"));
 }
 import {
   componentLoader,
@@ -75,11 +82,13 @@ export class LayoutRuntime implements ReactiveController {
   private _connected = false;
   private readonly _cameraSelection = new CameraSelectionContext();
   private readonly _cameraSession = new CameraSessionContext();
+  private readonly _exportFilter = new ExportFilterContext();
   private readonly _mediaDate = new MediaDateContext();
   private _context: Omit<PlaceableRuntimeContext, "placeableId"> = {
     activityFilter: this._activityFilter,
     cameraSelection: this._cameraSelection,
     cameraSession: this._cameraSession,
+    exportFilter: this._exportFilter,
     mediaDate: this._mediaDate,
   };
   private readonly _activeStageIds: Partial<Record<StageVariantName, string>> =
@@ -184,6 +193,7 @@ export class LayoutRuntime implements ReactiveController {
       api,
       cameraSelection: this._cameraSelection,
       cameraSession: this._cameraSession,
+      exportFilter: this._exportFilter,
       mediaDate: this._mediaDate,
       hass,
       localize,
@@ -315,7 +325,7 @@ export class LayoutRuntime implements ReactiveController {
             </button>`;
           },
         )}
-        ${this._renderActivityFilters(node, active)}
+        ${this._renderStackControls(node, active)}
       </nav>
       <div class="stage-stack-content">
         ${active ? this._renderStackModule(active) : nothing}
@@ -323,22 +333,27 @@ export class LayoutRuntime implements ReactiveController {
     </div>`;
   }
 
-  private _renderActivityFilters(
+  private _renderStackControls(
     node: StageStackNode,
     active: StageModuleNode | undefined,
   ): TemplateResult | typeof nothing {
+    if (!active) return nothing;
+    const exports = active.moduleType === EXPORTS_MODULE_TYPE;
+    if (exports) {
+      void defineExportFilter();
+      return html`<wzc-export-filter
+        .filterContext=${this._exportFilter}
+        .localize=${this._context.localize ?? englishLocalize}
+        .scopeId=${active.id}
+      ></wzc-export-filter>`;
+    }
     const reviews = node.children.find(
       ({ moduleType }) => moduleType === REVIEWS_MODULE_TYPE,
     );
     const hasEvents = node.children.some(
       ({ moduleType }) => moduleType === EVENTS_MODULE_TYPE,
     );
-    if (
-      !reviews ||
-      !hasEvents ||
-      !isActivityConfig(reviews.config) ||
-      !active
-    ) {
+    if (!reviews || !hasEvents || !isActivityConfig(reviews.config)) {
       return nothing;
     }
     const activity =

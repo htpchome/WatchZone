@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from .features.activity_updates import ActivityUpdatesService
 from .features.camera_runtime import CameraRuntimeService
 from .features.events import EventsService
+from .features.exports import ExportsService
 from .features.hls_prewarm import HlsPrewarmService
 from .features.layouts import StageDesignStore
 from .features.live import LiveSignalingService
@@ -26,6 +27,7 @@ class WatchZoneRuntime:
     ptz: PtzService
     recordings: RecordingsService
     events: EventsService
+    exports: ExportsService
     reviews: ReviewsService
 
     async def async_close(self) -> None:
@@ -36,4 +38,5 @@ class WatchZoneRuntime:
         await self.ptz.async_close()
         await self.recordings.async_close()
         await self.events.async_close()
+        await self.exports.async_close()
         await self.reviews.async_close()

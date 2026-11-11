@@ -1,5 +1,6 @@
 import {
   EVENT_MEDIA_DIALOG_TAG,
+  EXPORT_MEDIA_DIALOG_TAG,
   RECORDING_MEDIA_DIALOG_TAG,
   REVIEW_MEDIA_DIALOG_TAG,
 } from "../../core/constants";
@@ -19,6 +20,10 @@ const presentations: Readonly<
   event: {
     load: () => import("./event-media-dialog"),
     tagName: EVENT_MEDIA_DIALOG_TAG,
+  },
+  export: {
+    load: () => import("./export-media-dialog"),
+    tagName: EXPORT_MEDIA_DIALOG_TAG,
   },
   recording: {
     load: () => import("./recording-media-dialog"),

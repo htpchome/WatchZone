@@ -914,7 +914,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
 
   const stackNavigation = page.locator(".stage-stack-navigation");
   const stackButtons = stackNavigation.locator(".stage-stack-button");
-  await expect(stackButtons).toHaveCount(3);
+  await expect(stackButtons).toHaveCount(4);
   const normalNavigation = await stackNavigation.evaluate((navigation) => {
     const buttons = [...navigation.querySelectorAll("button")];
     const active = getComputedStyle(buttons[0]!);
@@ -2397,6 +2397,120 @@ test("switches activity and recordings through the shared media calendar", async
     .click();
   await expect(segmentManager).toHaveCount(0);
   await expect(scrubber).toBeVisible();
+});
+
+test("shows and filters mixed-camera persistent exports", async ({ page }) => {
+  await page.route("**/export-thumbnail.svg*", (route) =>
+    route.fulfill({
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="90"><rect width="160" height="90" fill="#567"/></svg>',
+      contentType: "image/svg+xml",
+    }),
+  );
+  await page.route("**/export-video.mp4*", (route) =>
+    route.fulfill({ body: "", contentType: "video/mp4" }),
+  );
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  await page.locator("watchzone-card").evaluate((element) => {
+    const card = element as HTMLElement & {
+      hass: unknown;
+      setConfig(config: unknown): void;
+    };
+    card.setConfig({
+      type: "custom:watchzone-card",
+      cameras: [
+        { entity_id: "camera.front", title: "Front Door" },
+        { entity_id: "camera.driveway", title: "Driveway" },
+      ],
+    });
+    card.hass = {
+      config: { time_zone: "UTC" },
+      locale: { language: "en", time_zone: "server" },
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "streaming",
+          attributes: { friendly_name: "Front Door" },
+        },
+        "camera.driveway": {
+          entity_id: "camera.driveway",
+          state: "streaming",
+          attributes: { friendly_name: "Driveway" },
+        },
+      },
+      connection: { subscribeMessage: async () => () => undefined },
+      hassUrl: (path: string) => path,
+      callService: async () => undefined,
+      callWS: async (message: { type: string }) => {
+        if (message.type === "watchzone/live/camera/ready") {
+          return { ready: false };
+        }
+        if (
+          message.type === "watchzone/reviews/list" ||
+          message.type === "watchzone/events/list"
+        ) {
+          return { items: [] };
+        }
+        if (message.type === "watchzone/exports/list") {
+          return {
+            items: [
+              {
+                camera: "front",
+                created_time: 1_794_352_800,
+                download_path: "/export-video.mp4?download=true",
+                entity_id: "camera.front",
+                id: "front-export",
+                in_progress: false,
+                name: "Front visitor",
+                revision: "one",
+                thumbnail_path: "/export-thumbnail.svg?front",
+                video_path: "/export-video.mp4",
+              },
+              {
+                camera: "driveway",
+                created_time: 1_794_352_700,
+                download_path: "/export-video.mp4?download=true",
+                entity_id: "camera.driveway",
+                id: "driveway-export",
+                in_progress: true,
+                name: "Driveway vehicle",
+                revision: "two",
+                thumbnail_path: "/export-thumbnail.svg?driveway",
+                video_path: "/export-video.mp4",
+              },
+            ],
+          };
+        }
+        if (message.type === "auth/sign_path") {
+          return { path: "/export-video.mp4?authSig=test" };
+        }
+        return undefined;
+      },
+    };
+  });
+
+  const navigation = page.locator(".stage-stack-navigation");
+  const exportsButton = navigation.getByRole("button", { name: "Exports" });
+  await exportsButton.click();
+  await expect(exportsButton).toHaveAttribute("aria-pressed", "true");
+  const exports = page.locator("wzc-exports");
+  await expect(exports.locator(".tile")).toHaveCount(2);
+  await expect(exports).toContainText("Front Door");
+  await expect(exports).toContainText("Driveway");
+  await expect(exports).toContainText("Preparing export…");
+  await expect(
+    exports.getByRole("button", { name: "Add to Case — coming soon" }).first(),
+  ).toBeDisabled();
+
+  const filter = navigation.locator("wzc-export-filter");
+  await filter.locator(".filter-trigger").click();
+  await expect(filter.locator(".popover")).toBeVisible();
+  await filter.getByText("Front Door", { exact: true }).click();
+  await expect(exports.locator(".tile")).toHaveCount(1);
+  await expect(exports).toContainText("Front visitor");
+
+  await exports.locator(".tile-player").click();
+  await expect(page.locator("wzc-export-media-dialog dialog")).toBeVisible();
 });
 
 test("lets the camera navigation shadow paint into the card padding", async ({

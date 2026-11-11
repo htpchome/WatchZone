@@ -11,7 +11,7 @@ export interface RecordedMediaSource {
 export interface RecordedMediaRequest {
   readonly id: string;
   readonly kind: "snapshot" | "video";
-  readonly presentation: "event" | "recording" | "review";
+  readonly presentation: "event" | "export" | "recording" | "review";
   readonly posterUrl?: string;
   readonly preferredTransport: RecordedMediaTransport;
   readonly sources: readonly RecordedMediaSource[];

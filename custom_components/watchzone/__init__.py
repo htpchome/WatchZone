@@ -41,6 +41,7 @@ from .extensions import (
 from .features.activity_updates import ActivityUpdatesService
 from .features.camera_runtime import CameraRuntimeService
 from .features.events import EventsService
+from .features.exports import ExportsService
 from .features.hls_prewarm import HlsPrewarmService
 from .features.layouts import StageDesignStore
 from .features.live import LiveSignalingService
@@ -53,6 +54,7 @@ from .providers.frigate.activity_updates import (
     activity_updates as frigate_activity_updates,
 )
 from .providers.frigate.events import events as frigate_events
+from .providers.frigate.exports import exports as frigate_exports
 from .providers.frigate.ptz import ptz as frigate_ptz
 from .providers.frigate.recordings import recordings as frigate_recordings
 from .providers.frigate.reviews import reviews as frigate_reviews
@@ -101,6 +103,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     )
     from .api.camera import async_register as async_register_camera_api
     from .api.events import async_register as async_register_events_api
+    from .api.exports import async_register as async_register_exports_api
     from .api.live import async_register as async_register_live_api
     from .api.ptz import async_register as async_register_ptz_api
     from .api.recordings import async_register as async_register_recordings_api
@@ -110,6 +113,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     async_register_activity_updates_api(hass)
     async_register_camera_api(hass)
     async_register_events_api(hass)
+    async_register_exports_api(hass)
     async_register_live_api(hass)
     async_register_talk_api(hass)
     async_register_ptz_api(hass)
@@ -137,6 +141,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WatchZoneConfigEntry) ->
         ptz=PtzService(hass, providers),
         recordings=RecordingsService(hass, providers),
         events=EventsService(hass, providers),
+        exports=ExportsService(hass, providers),
         reviews=ReviewsService(hass, providers),
     )
     entry.runtime_data = runtime
@@ -221,6 +226,7 @@ def _register_builtin_providers(hass: HomeAssistant) -> ProviderRegistry:
             ptz=frigate_ptz,
             recordings=frigate_recordings,
             events=frigate_events,
+            exports=frigate_exports,
             reviews=frigate_reviews,
         )
     )

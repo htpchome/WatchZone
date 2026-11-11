@@ -101,6 +101,13 @@ const ICONS = {
       },
     ],
   },
+  export: {
+    paths: [
+      {
+        d: "M23 12l-4-4v3h-8v2h8v3l4-4M21 19H3V5h7V3H3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2v-2h-2v2Z",
+      },
+    ],
+  },
   reset: {
     paths: [
       {

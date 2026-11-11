@@ -11,6 +11,7 @@ import {
   DEFAULT_CAMERA_MODULE_NODE_ID,
   DEFAULT_CAMERA_NAVIGATION_COMPONENT_NODE_ID,
   DEFAULT_EVENTS_MODULE_NODE_ID,
+  DEFAULT_EXPORTS_MODULE_NODE_ID,
   DEFAULT_LAYOUT_ROOT_NODE_ID,
   DEFAULT_LIGHT_COMPONENT_NODE_ID,
   DEFAULT_PANEL_MODULE_NODE_ID,
@@ -127,6 +128,11 @@ describe("layout composition", () => {
           kind: "module",
           moduleType: "recordings",
         },
+        {
+          id: DEFAULT_EXPORTS_MODULE_NODE_ID,
+          kind: "module",
+          moduleType: "exports",
+        },
       ],
     });
     expect(activityModules(layout).map(({ config }) => config)).toEqual([
@@ -147,6 +153,9 @@ describe("layout composition", () => {
         historyDays: 5,
         roundedCorners: true,
         shadows: true,
+        targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
+      },
+      {
         targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
       },
       {

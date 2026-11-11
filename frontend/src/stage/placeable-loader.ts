@@ -3,6 +3,7 @@ import {
   CAMERA_MODULE_TYPE,
   REVIEWS_MODULE_TYPE,
   EVENTS_MODULE_TYPE,
+  EXPORTS_MODULE_TYPE,
   LIGHT_COMPONENT_TYPE,
   RECORDINGS_MODULE_TYPE,
   PTZ_COMPONENT_TYPE,
@@ -51,6 +52,14 @@ const moduleLoaders = {
         ({ moduleDefinition }) => moduleDefinition,
       ),
     navigation: { icon: "movie", labelKey: "navigation.recordings" },
+    placeholder: "activity",
+  },
+  [EXPORTS_MODULE_TYPE]: {
+    load: () =>
+      import("./modules/exports").then(
+        ({ moduleDefinition }) => moduleDefinition,
+      ),
+    navigation: { icon: "export", labelKey: "navigation.exports" },
     placeholder: "activity",
   },
 } satisfies PlaceableLoaderMap;

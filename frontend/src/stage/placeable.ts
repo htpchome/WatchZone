@@ -5,12 +5,14 @@ import type { HomeAssistant, HomeAssistantApi } from "../core/home-assistant";
 import type { LocalizeFunction } from "../core/localization";
 import type { TranslationKey } from "../core/localization";
 import type { MediaDateContext } from "./media-date-context";
+import type { ExportFilterContext } from "./export-filter-context";
 
 export interface PlaceableRuntimeContext {
   readonly activityFilter: ActivityFilterContext;
   readonly api?: HomeAssistantApi;
   readonly cameraSelection: CameraSelectionContext;
   readonly cameraSession: CameraSessionContext;
+  readonly exportFilter: ExportFilterContext;
   readonly hass?: HomeAssistant;
   readonly localize?: LocalizeFunction;
   readonly mediaDate: MediaDateContext;
