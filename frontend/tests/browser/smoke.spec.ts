@@ -2514,12 +2514,13 @@ test("switches activity and recordings through the shared media calendar", async
 });
 
 test("shows and filters mixed-camera persistent exports", async ({ page }) => {
-  await page.route("**/export-thumbnail.svg*", (route) =>
-    route.fulfill({
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="90"><rect width="160" height="90" fill="#567"/></svg>',
+  await page.route("**/export-thumbnail.svg*", (route) => {
+    const fourByThree = route.request().url().includes("driveway");
+    return route.fulfill({
+      body: `<svg xmlns="http://www.w3.org/2000/svg" width="${fourByThree ? 120 : 160}" height="90"><rect width="100%" height="100%" fill="#567"/></svg>`,
       contentType: "image/svg+xml",
-    }),
-  );
+    });
+  });
   await page.route("**/export-video.mp4*", (route) =>
     route.fulfill({ body: "", contentType: "video/mp4" }),
   );
@@ -2621,6 +2622,12 @@ test("shows and filters mixed-camera persistent exports", async ({ page }) => {
   await expect(exports).toContainText("Front Door");
   await expect(exports).toContainText("Driveway");
   await expect(exports).toContainText("Preparing export…");
+  const tileHeights = await exports
+    .locator(".tile")
+    .evaluateAll((tiles) =>
+      tiles.map((tile) => tile.getBoundingClientRect().height),
+    );
+  expect(new Set(tileHeights).size).toBe(1);
   await expect(
     exports.getByRole("button", { name: "Add to Case — coming soon" }).first(),
   ).toBeDisabled();
@@ -2630,7 +2637,12 @@ test("shows and filters mixed-camera persistent exports", async ({ page }) => {
     .hover({
       position: { x: 20, y: 20 },
     });
-  await expect(exports.locator("video.hover-preview")).toHaveCount(1);
+  const hoverPreview = exports.locator("video.hover-preview");
+  await expect(hoverPreview).toHaveCount(1);
+  await expect(hoverPreview).toHaveAttribute(
+    "src",
+    "/export-video.mp4?authSig=test",
+  );
 
   const filter = navigation.locator("wzc-export-filter");
   await filter.locator(".filter-trigger").click();

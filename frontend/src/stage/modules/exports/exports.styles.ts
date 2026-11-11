@@ -55,6 +55,7 @@ export const exportsStyles = css`
     position: relative;
     display: grid;
     place-items: center;
+    block-size: 5.75rem;
     min-inline-size: 0;
     overflow: hidden;
     background: var(--wzc-media-placeholder-background);

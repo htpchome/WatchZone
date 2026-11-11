@@ -39,7 +39,7 @@ export function activityRecordedMediaRequest(
   presentation: "event" | "review",
   api?: HomeAssistantApi,
 ): RecordedMediaRequest | undefined {
-  const previewUrl = item.thumbnailUrl ?? item.snapshotUrl ?? undefined;
+  const previewUrl = item.snapshotUrl ?? item.thumbnailUrl ?? undefined;
   const posterUrl = previewUrl
     ? (api?.resolveUrl(previewUrl) ?? previewUrl)
     : undefined;

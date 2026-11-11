@@ -46,6 +46,9 @@ viewing. Recording discovery and grouping are governed by
   must not load HLS.js or fall back to a direct file source.
 - A bounded readiness timeout advances to the next candidate. Final failure is
   reported through the shared toast system, never inline over the media.
+- Completed Review and Event video requests use the full-frame provider
+  snapshot as their initial poster, falling back to the focused thumbnail only
+  when no snapshot exists. Activity tiles retain their focused thumbnails.
 - Replacing or closing playback destroys HLS.js, removes the source, and
   releases the browser media element immediately.
 

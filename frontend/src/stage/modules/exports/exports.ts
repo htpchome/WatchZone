@@ -59,7 +59,9 @@ export class ExportsModule extends LitElement {
   private _deleting?: ExportItem;
   private _draftTitle = "";
   private _editing?: ExportItem;
+  private _hoverPreviewGeneration = 0;
   private _hoveredPreviewId?: string;
+  private _hoveredPreviewUrl?: string;
   private _mutating = false;
   private readonly _toasts = new ToastManager(this);
   private readonly _exports = new ExportsController(
@@ -151,10 +153,11 @@ export class ExportsModule extends LitElement {
         ${
           !item.in_progress &&
           this.hoverPreviewEnabled &&
-          this._hoveredPreviewId === item.id
+          this._hoveredPreviewId === item.id &&
+          this._hoveredPreviewUrl
             ? html`<video
                 class="hover-preview"
-                src=${this.api?.resolveUrl(item.video_path) ?? item.video_path}
+                src=${this._hoveredPreviewUrl}
                 autoplay
                 loop
                 muted
@@ -457,15 +460,49 @@ export class ExportsModule extends LitElement {
       event.clientX <= bounds.right &&
       event.clientY >= bounds.top &&
       event.clientY <= bounds.bottom;
-    const nextId = hovered ? item.id : undefined;
-    if (nextId === this._hoveredPreviewId) return;
-    this._hoveredPreviewId = nextId;
+    if (!hovered) {
+      this._clearHoverPreview(item.id);
+      return;
+    }
+    if (item.id === this._hoveredPreviewId) return;
+    void this._showHoverPreview(item);
+  }
+
+  private async _showHoverPreview(item: ExportItem): Promise<void> {
+    const api = this.api;
+    if (!api) return;
+    const generation = ++this._hoverPreviewGeneration;
+    this._hoveredPreviewId = item.id;
+    this._hoveredPreviewUrl = undefined;
     this.requestUpdate();
+    try {
+      const signed = await api.callWS<{ readonly path?: string }>({
+        type: "auth/sign_path",
+        path: item.video_path,
+        expires: 3600,
+      });
+      if (!signed.path) throw new Error("Export preview signing failed.");
+      if (
+        generation !== this._hoverPreviewGeneration ||
+        this._hoveredPreviewId !== item.id
+      ) {
+        return;
+      }
+      this._hoveredPreviewUrl = api.resolveUrl(signed.path);
+      this.requestUpdate();
+    } catch {
+      if (generation !== this._hoverPreviewGeneration) return;
+      this._hoveredPreviewId = undefined;
+      this._hoveredPreviewUrl = undefined;
+      this.requestUpdate();
+    }
   }
 
   private _clearHoverPreview(itemId: string): void {
     if (this._hoveredPreviewId !== itemId) return;
+    this._hoverPreviewGeneration += 1;
     this._hoveredPreviewId = undefined;
+    this._hoveredPreviewUrl = undefined;
     this.requestUpdate();
   }
 
