@@ -30,6 +30,15 @@ class ExportMediaResource:
     filename: str
 
 
+@dataclass(frozen=True, slots=True)
+class ExportRequest:
+    """Provider-neutral request to preserve one recorded time range."""
+
+    start_time: float
+    end_time: float
+    name: str
+
+
 ExportMediaKind = Literal["thumbnail", "video"]
 
 
@@ -40,6 +49,20 @@ class ExportsProvider(Protocol):
         self, hass: HomeAssistant, entity_id: str
     ) -> tuple[ExportRecord, ...]:
         """Return exports belonging to one camera."""
+
+    async def async_default_export_name(
+        self,
+        hass: HomeAssistant,
+        entity_id: str,
+        start_time: float,
+        end_time: float,
+    ) -> str:
+        """Return the provider's default title for a recorded range."""
+
+    async def async_create_export(
+        self, hass: HomeAssistant, entity_id: str, request: ExportRequest
+    ) -> None:
+        """Create one persistent export from a recorded range."""
 
     async def async_rename_export(
         self, hass: HomeAssistant, entity_id: str, export_id: str, name: str

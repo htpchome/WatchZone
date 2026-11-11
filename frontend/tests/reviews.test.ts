@@ -309,6 +309,111 @@ describe("reviews module", () => {
     });
   });
 
+  it("exports both alert and detection reviews through a confirmation", async () => {
+    const defaultName = "front 1970-01-01 00:01:35 1970-01-01 00:02:09";
+    const callWS = vi.fn(async (message: { type: string }) => {
+      if (message.type === "watchzone/reviews/list") return { items: reviews };
+      if (message.type === "watchzone/exports/prepare") {
+        return { name: defaultName };
+      }
+      return { success: true };
+    });
+    const api = {
+      callWS,
+      identity: {},
+      locale: { language: "en", time_zone: "server" },
+      resolveUrl: (path: string) => path,
+      subscribeMessage: vi.fn(),
+    } as unknown as HomeAssistantApi;
+    const selection = new CameraSelectionContext();
+    const module = document.createElement(REVIEWS_TAG) as ReviewsModule;
+    module.api = api;
+    module.cameraSelection = selection;
+    module.targetModuleId = "camera-module";
+    document.body.append(module);
+    selection.publish(
+      "camera-module",
+      {},
+      {
+        activeEntityId: "camera.front",
+        items: [{ entityId: "camera.front", label: "Front" }],
+      },
+      vi.fn(),
+    );
+
+    await vi.waitFor(() => {
+      expect(
+        activityRoot(module)?.querySelectorAll<HTMLButtonElement>(
+          'button[aria-label="Export review"]',
+        ),
+      ).toHaveLength(2);
+    });
+    activityRoot(module)
+      ?.querySelector<HTMLButtonElement>('button[aria-label="Export review"]')
+      ?.click();
+    expect(callWS).toHaveBeenCalledWith({
+      type: "watchzone/exports/prepare",
+      entity_id: "camera.front",
+      start_time: 95,
+      end_time: 129,
+    });
+
+    const exportDialog = module.shadowRoot?.querySelector(
+      "wzc-review-export-dialog",
+    ) as LitElement | null;
+    await vi.waitFor(() => {
+      expect(exportDialog?.shadowRoot?.querySelector("dialog")?.open).toBe(
+        true,
+      );
+      expect(
+        exportDialog?.shadowRoot?.querySelector<HTMLInputElement>("input")
+          ?.value,
+      ).toBe(defaultName);
+    });
+    exportDialog?.shadowRoot
+      ?.querySelector<HTMLButtonElement>('button[type="button"]')
+      ?.click();
+    await module.updateComplete;
+    expect(
+      callWS.mock.calls.some(
+        ([message]) => message.type === "watchzone/exports/create",
+      ),
+    ).toBe(false);
+
+    const detectionButton = activityRoot(
+      module,
+    )?.querySelectorAll<HTMLButtonElement>(
+      'button[aria-label="Export review"]',
+    )[1];
+    detectionButton?.click();
+    await vi.waitFor(() =>
+      expect(exportDialog?.shadowRoot?.querySelector("dialog")?.open).toBe(
+        true,
+      ),
+    );
+    const input =
+      exportDialog?.shadowRoot?.querySelector<HTMLInputElement>("input");
+    if (!input) throw new Error("Expected export title input.");
+    input.value = "Back yard cat";
+    input.dispatchEvent(new InputEvent("input", { bubbles: true }));
+    exportDialog?.shadowRoot
+      ?.querySelector<HTMLFormElement>("form")
+      ?.dispatchEvent(
+        new SubmitEvent("submit", { bubbles: true, cancelable: true }),
+      );
+
+    await vi.waitFor(() => {
+      expect(callWS).toHaveBeenCalledWith({
+        type: "watchzone/exports/create",
+        entity_id: "camera.front",
+        start_time: 75,
+        end_time: 95,
+        name: "Back yard cat",
+      });
+    });
+    module.remove();
+  });
+
   it("loads an existing draft authoritatively when its camera becomes active", async () => {
     const draft = {
       ...reviews[0],

@@ -37,6 +37,18 @@
   preserve single selection, while labels and zones remain multi-select
   checkboxes available to keyboard and assistive-technology users.
 
+## Export workflow
+
+- Every Review tile, whether classified as Alert or Detection, exposes an
+  Export action. Events and Recordings do not gain this action.
+- Reviews owns the confirmation dialog and mutation lifecycle. The shared
+  activity-list primitive only renders the optional action and emits a typed
+  intent; it does not call the Exports module or a provider.
+- Opening the dialog requests the provider-prepared default title for the
+  Review's complete media range, including configured pre- and post-capture.
+  The title is editable. Cancel performs no mutation; confirmation calls the
+  provider-neutral Exports API and reports success or failure with one toast.
+
 ## Generated analysis
 
 - Providers may normalize an optional generated-analysis title, description,

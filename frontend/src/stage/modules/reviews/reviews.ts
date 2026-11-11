@@ -7,6 +7,11 @@ import {
   type ReviewItem,
 } from "../../../api/reviews";
 import {
+  createExport,
+  prepareExport,
+  type ExportRange,
+} from "../../../api/exports";
+import {
   ActiveCameraActivityController,
   ActivityFilterController,
   type ActivityFilterContext,
@@ -17,6 +22,8 @@ import {
   REVIEWS_TAG,
   DEFAULT_EVENT_HISTORY_DAYS,
   ACTIVITY_LIST_INTENT_EVENT,
+  REVIEW_EXPORT_CLOSE_EVENT,
+  REVIEW_EXPORT_CONFIRM_EVENT,
 } from "../../../core/constants";
 import {
   activityPreviewMediaRequest,
@@ -37,10 +44,23 @@ import { ToastManager } from "../../../ui/toast-manager";
 import "../../../ui/toast-region";
 import { reviewsStyles } from "./reviews.styles";
 import type { ReviewAnalysis } from "./review-analysis-dialog";
+import type {
+  ReviewExportConfirmation,
+  ReviewExportDraft,
+} from "./review-export-dialog";
 import "./review-analysis-dialog";
+import "./review-export-dialog";
 
 const MEDIA_RESOLVE_DELAYS_MS = [0, 750, 1_500] as const;
 const activityListIntentEvent = unsafeStatic(ACTIVITY_LIST_INTENT_EVENT);
+const reviewExportCloseEvent = unsafeStatic(REVIEW_EXPORT_CLOSE_EVENT);
+const reviewExportConfirmEvent = unsafeStatic(REVIEW_EXPORT_CONFIRM_EVENT);
+
+interface PendingReviewExport {
+  readonly draft: ReviewExportDraft;
+  readonly range: ExportRange;
+  readonly reviewId: string;
+}
 
 /** Active-camera provider review activity presented as WatchZone Reviews. */
 export class ReviewsModule extends LitElement {
@@ -76,6 +96,9 @@ export class ReviewsModule extends LitElement {
 
   private readonly _toasts = new ToastManager(this);
   private _analysis?: ReviewAnalysis;
+  private _exportCreating = false;
+  private _pendingExport?: PendingReviewExport;
+  private readonly _preparingExportIds = new Set<string>();
   private _publishedActivity?: readonly ReviewItem[];
   private _publishedEntityId?: string;
   private _publishedFilter?: ActivityFilterContext;
@@ -168,6 +191,13 @@ export class ReviewsModule extends LitElement {
         .locale=${this.api?.locale}
         @wzc-review-analysis-close=${this._closeAnalysis}
       ></wzc-review-analysis-dialog>
+      <wzc-review-export-dialog
+        .draft=${this._pendingExport?.draft}
+        .localize=${this.localize}
+        .submitting=${this._exportCreating}
+        @${reviewExportCloseEvent}=${this._closeExport}
+        @${reviewExportConfirmEvent}=${this._confirmExport}
+      ></wzc-review-export-dialog>
       <wzc-toast-region .notices=${this._toasts.notices}></wzc-toast-region>
     `;
   }
@@ -188,6 +218,10 @@ export class ReviewsModule extends LitElement {
       classification: review.classification,
       clipUrl: review.clip_url,
       endTime: review.end_time,
+      exportable: true,
+      exportPending:
+        this._preparingExportIds.has(review.id) ||
+        (this._exportCreating && this._pendingExport?.reviewId === review.id),
       hoverPreviewUrl: this.hoverPreviewEnabled ? review.preview_url : null,
       id: review.id,
       inProgress:
@@ -238,6 +272,8 @@ export class ReviewsModule extends LitElement {
       this._openAnalysis(intent.item);
     } else if (intent.kind === "toggle_reviewed") {
       this._toggleReviewed(intent.item);
+    } else if (intent.kind === "export") {
+      void this._beginExport(intent.item);
     } else {
       void this._openMedia(intent.item, intent.media);
     }
@@ -292,6 +328,70 @@ export class ReviewsModule extends LitElement {
   private readonly _closeAnalysis = (): void => {
     this._analysis = undefined;
     this.requestUpdate();
+  };
+
+  private async _beginExport(item: ActivityListItem): Promise<void> {
+    const api = this.api;
+    const entityId = this._activity.activeEntityId;
+    const startTime = item.mediaStartTime ?? item.startTime;
+    const endTime = item.mediaEndTime ?? item.endTime;
+    if (
+      !api ||
+      !entityId ||
+      endTime === null ||
+      endTime <= startTime ||
+      this._preparingExportIds.has(item.id)
+    )
+      return;
+    const range: ExportRange = {
+      end_time: endTime,
+      entity_id: entityId,
+      start_time: startTime,
+    };
+    this._preparingExportIds.add(item.id);
+    this.requestUpdate();
+    try {
+      const name = await prepareExport(api, range);
+      this._pendingExport = { draft: { name }, range, reviewId: item.id };
+    } catch {
+      this._toasts.error(this.localize("reviews.export_prepare_failed"), {
+        key: "review-export-prepare",
+      });
+    } finally {
+      this._preparingExportIds.delete(item.id);
+      this.requestUpdate();
+    }
+  }
+
+  private readonly _closeExport = (): void => {
+    if (this._exportCreating) return;
+    this._pendingExport = undefined;
+    this.requestUpdate();
+  };
+
+  private readonly _confirmExport = (
+    event: CustomEvent<ReviewExportConfirmation>,
+  ): void => {
+    const api = this.api;
+    const pending = this._pendingExport;
+    if (!api || !pending || this._exportCreating) return;
+    this._exportCreating = true;
+    this.requestUpdate();
+    void createExport(api, pending.range, event.detail.name)
+      .then(() => {
+        this._exportCreating = false;
+        this._pendingExport = undefined;
+        this._toasts.success(this.localize("reviews.export_success"), {
+          key: "review-export-create",
+        });
+      })
+      .catch(() => {
+        this._exportCreating = false;
+        this._toasts.error(this.localize("reviews.export_failed"), {
+          key: "review-export-create",
+        });
+      })
+      .finally(() => this.requestUpdate());
   };
 
   private readonly _toggleReviewed = (item: ActivityListItem): void => {

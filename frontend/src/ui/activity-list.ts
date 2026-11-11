@@ -47,6 +47,8 @@ export interface ActivityListItem {
   readonly classification?: ActivityClassification;
   readonly clipUrl: string | null;
   readonly endTime: number | null;
+  readonly exportable?: boolean;
+  readonly exportPending?: boolean;
   readonly hoverPreviewUrl?: string | null;
   readonly id: string;
   readonly inProgress?: boolean;
@@ -74,6 +76,10 @@ export type ActivityListIntent =
   | {
       readonly item: ActivityListItem;
       readonly kind: "toggle_reviewed";
+    }
+  | {
+      readonly item: ActivityListItem;
+      readonly kind: "export";
     }
   | {
       readonly item: ActivityListItem;
@@ -389,6 +395,20 @@ export class ActivityList extends LitElement {
             )
       }
       <div class="actions">
+        ${
+          item.exportable
+            ? html`<button
+                class="action"
+                type="button"
+                title=${this.localize("reviews.export")}
+                aria-label=${this.localize("reviews.export")}
+                ?disabled=${item.exportPending === true}
+                @click=${() => this._dispatch({ kind: "export", item })}
+              >
+                <ha-icon icon="mdi:export"></ha-icon>
+              </button>`
+            : null
+        }
         ${
           item.clipUrl
             ? html`<a

@@ -907,6 +907,20 @@ test("keeps activity content in an independently scrolling viewport", async ({
             })),
           };
         }
+        if (message.type === "watchzone/exports/prepare") {
+          return {
+            name: "front 2026-11-10 15:59:55 2026-11-10 16:00:29",
+          };
+        }
+        if (message.type === "watchzone/exports/create") {
+          const requests = ((
+            window as Window & {
+              reviewExportRequests?: unknown[];
+            }
+          ).reviewExportRequests ??= []);
+          requests.push(message);
+          return { success: true };
+        }
         return undefined;
       },
     };
@@ -956,6 +970,36 @@ test("keeps activity content in an independently scrolling viewport", async ({
     "mdi:creation",
   );
   await expect(page.locator("wzc-events .analysis-title")).toHaveCount(0);
+  const reviewExportButtons = page.getByRole("button", {
+    name: "Export review",
+  });
+  await expect(reviewExportButtons).toHaveCount(6);
+  await expect(
+    page.locator('wzc-events button[aria-label="Export review"]'),
+  ).toHaveCount(0);
+  await reviewExportButtons.first().click();
+  const exportDialog = page.locator(
+    "wzc-reviews wzc-review-export-dialog dialog",
+  );
+  await expect(exportDialog).toBeVisible();
+  await expect(exportDialog.locator("input")).toHaveValue(
+    "front 2026-11-10 15:59:55 2026-11-10 16:00:29",
+  );
+  await exportDialog.locator("input").fill("Resident at garage");
+  await exportDialog.getByRole("button", { name: "Export" }).click();
+  await expect(exportDialog).not.toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (
+            window as Window & {
+              reviewExportRequests?: unknown[];
+            }
+          ).reviewExportRequests?.length ?? 0,
+      ),
+    )
+    .toBe(1);
   await analysisTitle.click();
   const analysisDialog = page.locator(
     "wzc-reviews wzc-review-analysis-dialog dialog",
@@ -2495,12 +2539,25 @@ test("shows and filters mixed-camera persistent exports", async ({ page }) => {
   await expect(exportsButton).toHaveAttribute("aria-pressed", "true");
   const exports = page.locator("wzc-exports");
   await expect(exports.locator(".tile")).toHaveCount(2);
+  expect(
+    await exports
+      .locator(".tile")
+      .first()
+      .evaluate((tile) => getComputedStyle(tile).borderTopWidth),
+  ).toBe("0px");
   await expect(exports).toContainText("Front Door");
   await expect(exports).toContainText("Driveway");
   await expect(exports).toContainText("Preparing export…");
   await expect(
     exports.getByRole("button", { name: "Add to Case — coming soon" }).first(),
   ).toBeDisabled();
+  await exports
+    .locator(".tile-player")
+    .first()
+    .hover({
+      position: { x: 20, y: 20 },
+    });
+  await expect(exports.locator("video.hover-preview")).toHaveCount(1);
 
   const filter = navigation.locator("wzc-export-filter");
   await filter.locator(".filter-trigger").click();

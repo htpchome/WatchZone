@@ -17,6 +17,35 @@ interface ExportWindow {
   readonly items: readonly ExportItem[];
 }
 
+export interface ExportRange {
+  readonly end_time: number;
+  readonly entity_id: string;
+  readonly start_time: number;
+}
+
+export async function prepareExport(
+  api: HomeAssistantApi,
+  range: ExportRange,
+): Promise<string> {
+  const result = await api.callWS<{ readonly name: string }>({
+    type: "watchzone/exports/prepare",
+    ...range,
+  });
+  return result.name;
+}
+
+export async function createExport(
+  api: HomeAssistantApi,
+  range: ExportRange,
+  name: string,
+): Promise<void> {
+  await api.callWS({
+    type: "watchzone/exports/create",
+    ...range,
+    name,
+  });
+}
+
 export async function listExports(
   api: HomeAssistantApi,
   entityIds: readonly string[],

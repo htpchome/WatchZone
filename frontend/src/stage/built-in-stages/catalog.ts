@@ -179,7 +179,8 @@ function hydrateModule(
               shadows: config.event_shadows,
             }
           : {}),
-        ...(node.moduleType === REVIEWS_MODULE_TYPE
+        ...(node.moduleType === REVIEWS_MODULE_TYPE ||
+        node.moduleType === EXPORTS_MODULE_TYPE
           ? {
               hoverPreviewEnabled: config.view_timelapse_on_thumbnail_hover,
             }

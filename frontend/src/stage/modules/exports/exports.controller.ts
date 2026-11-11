@@ -86,6 +86,15 @@ export class ExportsController implements ReactiveController {
     void this._load();
   }
 
+  public renameItem(entityId: string, id: string, name: string): void {
+    this.items = this.items.map((item) =>
+      item.entity_id === entityId && item.id === id ? { ...item, name } : item,
+    );
+    const { exportFilter, placeableId } = this._config();
+    this._publishFacets(exportFilter, placeableId);
+    this._host.requestUpdate();
+  }
+
   private _sync(): void {
     if (!this._connected) return;
     const config = this._config();

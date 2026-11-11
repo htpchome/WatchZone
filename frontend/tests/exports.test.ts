@@ -176,6 +176,14 @@ describe("exports module", () => {
     await vi.waitFor(() =>
       expect(module.shadowRoot?.querySelector("dialog")).toBeNull(),
     );
+    expect(module.shadowRoot?.querySelector(".title")?.textContent).toBe(
+      "Renamed visitor",
+    );
+    expect(
+      module.shadowRoot
+        ?.querySelector<HTMLButtonElement>(".tile-player")
+        ?.getAttribute("aria-label"),
+    ).toBe("Play Renamed visitor");
 
     module.shadowRoot
       ?.querySelector<HTMLButtonElement>('button[title="Remove export"]')

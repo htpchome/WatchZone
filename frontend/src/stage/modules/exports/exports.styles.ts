@@ -35,7 +35,7 @@ export const exportsStyles = css`
     min-block-size: 5.75rem;
     overflow: hidden;
     background: var(--wzc-color-surface-secondary);
-    border: 1px solid var(--wzc-color-border);
+    border: 0;
     border-radius: var(--wzc-radius-medium);
     box-shadow: var(--wzc-shadow-small);
   }
@@ -61,11 +61,17 @@ export const exportsStyles = css`
     color: var(--wzc-media-placeholder-color);
   }
 
-  .thumbnail img {
+  .thumbnail img,
+  .thumbnail video {
     display: block;
     inline-size: 100%;
     block-size: 100%;
     object-fit: cover;
+  }
+
+  .thumbnail video {
+    inset: 0;
+    position: absolute;
   }
 
   .thumbnail > svg {

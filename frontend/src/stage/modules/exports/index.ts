@@ -4,6 +4,7 @@ import type { ModuleDefinition } from "../../placeable";
 import type { ExportsModule } from "./exports";
 
 export interface ExportsModuleConfig {
+  readonly hoverPreviewEnabled: boolean;
   readonly targetModuleId: string;
 }
 
@@ -19,7 +20,10 @@ export const moduleDefinition: ModuleDefinition<ExportsModuleConfig> = {
     if (typeof source.targetModuleId !== "string" || !source.targetModuleId) {
       throw new Error("Exports modules require a target camera module.");
     }
-    return { targetModuleId: source.targetModuleId };
+    return {
+      hoverPreviewEnabled: source.hoverPreviewEnabled !== false,
+      targetModuleId: source.targetModuleId,
+    };
   },
   getEntityIds: () => [],
   define() {
@@ -33,6 +37,7 @@ export const moduleDefinition: ModuleDefinition<ExportsModuleConfig> = {
     exports.api = context.api;
     exports.cameraSelection = context.cameraSelection;
     exports.exportFilter = context.exportFilter;
+    exports.hoverPreviewEnabled = config.hoverPreviewEnabled;
     exports.localize = context.localize ?? englishLocalize;
     exports.placeableId = context.placeableId;
     exports.targetModuleId = config.targetModuleId;

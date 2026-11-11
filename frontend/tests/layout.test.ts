@@ -159,6 +159,7 @@ describe("layout composition", () => {
         targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
       },
       {
+        hoverPreviewEnabled: true,
         targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
       },
     ]);

@@ -10,6 +10,7 @@ import {
 } from "../../../core/localization";
 import type { HomeAssistantLocale } from "../../../core/home-assistant";
 import { homeAssistantNumberFormat } from "../../../core/number-format";
+import { centerDialogOnCard } from "../../../ui/dialog-position";
 import { reviewAnalysisDialogStyles } from "./review-analysis-dialog.styles";
 
 export interface ReviewAnalysis {
@@ -98,32 +99,8 @@ export class ReviewAnalysisDialog extends LitElement {
     if (!dialog) return;
     if (this.analysis && !dialog.open) {
       dialog.showModal();
-      this._centerOnCard(dialog);
+      centerDialogOnCard(this, dialog);
     } else if (!this.analysis && dialog.open) dialog.close();
-  }
-
-  private _centerOnCard(dialog: HTMLDialogElement): void {
-    const card = composedAncestor(this, "watchzone-card");
-    if (!card) return;
-    const cardBounds = card.getBoundingClientRect();
-    const dialogBounds = dialog.getBoundingClientRect();
-    const inset = 8;
-    const left = Math.min(
-      Math.max(
-        inset,
-        cardBounds.left + (cardBounds.width - dialogBounds.width) / 2,
-      ),
-      window.innerWidth - dialogBounds.width - inset,
-    );
-    const top = Math.min(
-      Math.max(
-        inset,
-        cardBounds.top + (cardBounds.height - dialogBounds.height) / 2,
-      ),
-      window.innerHeight - dialogBounds.height - inset,
-    );
-    dialog.style.left = `${left}px`;
-    dialog.style.top = `${top}px`;
   }
 
   private readonly _backdropClick = (event: MouseEvent): void => {
@@ -141,21 +118,6 @@ export class ReviewAnalysisDialog extends LitElement {
   };
 
   static styles = reviewAnalysisDialogStyles;
-}
-
-function composedAncestor(
-  element: Element,
-  selector: string,
-): HTMLElement | null {
-  let current: Element | null = element;
-  while (current) {
-    if (current instanceof HTMLElement && current.matches(selector)) {
-      return current;
-    }
-    const root = current.getRootNode();
-    current = root instanceof ShadowRoot ? root.host : current.parentElement;
-  }
-  return null;
 }
 
 if (!customElements.get(REVIEW_ANALYSIS_DIALOG_TAG)) {

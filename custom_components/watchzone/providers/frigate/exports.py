@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import datetime
 from pathlib import PurePosixPath
 from typing import Any
 
@@ -17,6 +18,7 @@ from ..exports import (
     ExportMediaKind,
     ExportMediaResource,
     ExportRecord,
+    ExportRequest,
     ExportsProvider,
 )
 from .source import FrigateSource, async_resolve_source
@@ -40,6 +42,36 @@ class FrigateExportsProvider:
             if (record := _normalize_export(raw, source.camera_name)) is not None
         ]
         return tuple(sorted(records, key=lambda item: item.created_time, reverse=True))
+
+    async def async_default_export_name(
+        self,
+        hass: HomeAssistant,
+        entity_id: str,
+        start_time: float,
+        end_time: float,
+    ) -> str:
+        source = await async_resolve_source(hass, entity_id)
+        camera = source.camera_name.replace("_", " ")
+        start = datetime.fromtimestamp(start_time).strftime("%Y-%m-%d %H:%M:%S")
+        end = datetime.fromtimestamp(end_time).strftime("%Y-%m-%d %H:%M:%S")
+        return f"{camera} {start} {end}"
+
+    async def async_create_export(
+        self, hass: HomeAssistant, entity_id: str, request: ExportRequest
+    ) -> None:
+        source = await async_resolve_source(hass, entity_id)
+        payload = await self._request_json(
+            hass,
+            source,
+            "POST",
+            (
+                f"api/export/{source.camera_name}/start/{request.start_time:g}"
+                f"/end/{request.end_time:g}"
+            ),
+            json_body={"source": "recordings", "name": request.name},
+        )
+        if not isinstance(payload, dict) or payload.get("success") is not True:
+            raise HomeAssistantError("Frigate did not start the export")
 
     async def async_rename_export(
         self, hass: HomeAssistant, entity_id: str, export_id: str, name: str

@@ -11,7 +11,12 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 
 from ..extensions import ProviderRegistry
-from ..providers.exports import ExportMediaKind, ExportMediaResource, ExportsProvider
+from ..providers.exports import (
+    ExportMediaKind,
+    ExportMediaResource,
+    ExportRequest,
+    ExportsProvider,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,6 +54,26 @@ class ExportsService:
         """Rename one export through its owning provider."""
         provider = self._provider(entity_id)
         await provider.async_rename_export(self._hass, entity_id, export_id, name)
+
+    async def async_default_name(
+        self, entity_id: str, start_time: float, end_time: float
+    ) -> str:
+        """Return the owning provider's default title for a recorded range."""
+        provider = self._provider(entity_id)
+        return await provider.async_default_export_name(
+            self._hass, entity_id, start_time, end_time
+        )
+
+    async def async_create(
+        self, entity_id: str, start_time: float, end_time: float, name: str
+    ) -> None:
+        """Create one export through its owning provider."""
+        provider = self._provider(entity_id)
+        await provider.async_create_export(
+            self._hass,
+            entity_id,
+            ExportRequest(start_time=start_time, end_time=end_time, name=name),
+        )
 
     async def async_delete(self, entity_id: str, export_id: str) -> None:
         """Delete one export through its owning provider."""

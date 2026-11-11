@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import asdict
 from datetime import timedelta
 from typing import Any, cast
@@ -43,6 +44,13 @@ def _strip_name(value: str) -> str:
     return value.strip()
 
 
+_TIME_RANGE_SCHEMA: dict[Any, Any] = {
+    vol.Required("entity_id"): cv.entity_id,
+    vol.Required("start_time"): vol.Coerce(float),
+    vol.Required("end_time"): vol.Coerce(float),
+}
+
+
 @websocket_command(
     {
         vol.Required("type"): f"{DOMAIN}/exports/list",
@@ -78,6 +86,64 @@ async def ws_exports_list(
         )
         result.append(payload)
     connection.send_result(msg["id"], {"items": result})
+
+
+@websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/exports/prepare",
+        **_TIME_RANGE_SCHEMA,
+    }
+)
+@async_response
+async def ws_exports_prepare(
+    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Return the provider's default title for a proposed export."""
+    if not _valid_range(msg) or not _can_read(connection, msg["entity_id"]):
+        connection.send_error(
+            msg["id"], "exports_forbidden", "Export range is not permitted"
+        )
+        return
+    try:
+        name = await runtime_from_hass(hass).exports.async_default_name(
+            msg["entity_id"], msg["start_time"], msg["end_time"]
+        )
+    except HomeAssistantError as err:
+        connection.send_error(msg["id"], "exports_prepare_failed", str(err))
+        return
+    connection.send_result(msg["id"], {"name": name})
+
+
+@websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/exports/create",
+        **_TIME_RANGE_SCHEMA,
+        vol.Required("name"): vol.All(
+            cv.string, _strip_name, vol.Length(min=1, max=256)
+        ),
+    }
+)
+@async_response
+async def ws_exports_create(
+    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Create one persistent export from a recorded range."""
+    if not _valid_range(msg) or not _can_control(connection, msg["entity_id"]):
+        connection.send_error(
+            msg["id"], "exports_forbidden", "Export range is not permitted"
+        )
+        return
+    try:
+        await runtime_from_hass(hass).exports.async_create(
+            msg["entity_id"],
+            msg["start_time"],
+            msg["end_time"],
+            msg["name"],
+        )
+    except HomeAssistantError as err:
+        connection.send_error(msg["id"], "exports_create_failed", str(err))
+        return
+    connection.send_result(msg["id"], {"success": True})
 
 
 @websocket_command(
@@ -206,9 +272,27 @@ def _can_control(connection: ActiveConnection, entity_id: str) -> bool:
     )
 
 
+def _can_read(connection: ActiveConnection, entity_id: str) -> bool:
+    return bool(
+        connection.user
+        and connection.user.permissions.check_entity(entity_id, POLICY_READ)
+    )
+
+
+def _valid_range(msg: dict[str, Any]) -> bool:
+    return bool(
+        math.isfinite(msg["start_time"])
+        and math.isfinite(msg["end_time"])
+        and msg["start_time"] >= 0
+        and msg["end_time"] > msg["start_time"]
+    )
+
+
 @callback
 def async_register(hass: HomeAssistant) -> None:
     async_register_command(hass, ws_exports_list)
+    async_register_command(hass, ws_exports_prepare)
+    async_register_command(hass, ws_exports_create)
     async_register_command(hass, ws_exports_rename)
     async_register_command(hass, ws_exports_delete)
     hass.http.register_view(ExportMediaView())

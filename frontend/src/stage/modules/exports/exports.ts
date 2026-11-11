@@ -31,6 +31,7 @@ export class ExportsModule extends LitElement {
     api: { attribute: false },
     cameraSelection: { attribute: false },
     exportFilter: { attribute: false },
+    hoverPreviewEnabled: { attribute: false, type: Boolean },
     localize: { attribute: false },
     placeableId: { attribute: false },
     targetModuleId: { attribute: false },
@@ -43,6 +44,7 @@ export class ExportsModule extends LitElement {
   public api?: HomeAssistantApi;
   public cameraSelection?: CameraSelectionContext;
   public exportFilter?: ExportFilterContext;
+  public hoverPreviewEnabled = true;
   public localize: LocalizeFunction = englishLocalize;
   public placeableId = "";
   public targetModuleId = "";
@@ -50,6 +52,7 @@ export class ExportsModule extends LitElement {
   private _deleting?: ExportItem;
   private _draftTitle = "";
   private _editing?: ExportItem;
+  private _hoveredPreviewId?: string;
   private _mutating = false;
   private readonly _toasts = new ToastManager(this);
   private readonly _exports = new ExportsController(
@@ -103,7 +106,12 @@ export class ExportsModule extends LitElement {
   private _renderItem(item: ExportItem) {
     const camera = this._exports.cameraLabel(item.entity_id, item.camera);
     const title = this.localize("exports.open", { title: item.name });
-    return html`<article class="tile">
+    return html`<article
+      class="tile"
+      @pointermove=${(event: PointerEvent) =>
+        this._updateHoverPreview(event, item)}
+      @pointerleave=${() => this._clearHoverPreview(item.id)}
+    >
       ${
         item.in_progress
           ? nothing
@@ -127,6 +135,22 @@ export class ExportsModule extends LitElement {
                 }
                 alt=""
               />`
+        }
+        ${
+          !item.in_progress &&
+          this.hoverPreviewEnabled &&
+          this._hoveredPreviewId === item.id
+            ? html`<video
+                class="hover-preview"
+                src=${this.api?.resolveUrl(item.video_path) ?? item.video_path}
+                autoplay
+                loop
+                muted
+                playsinline
+                preload="metadata"
+                @loadedmetadata=${this._setPreviewRate}
+              ></video>`
+            : nothing
         }
         ${
           item.in_progress
@@ -283,9 +307,9 @@ export class ExportsModule extends LitElement {
     this._mutating = true;
     try {
       await renameExport(api, item, name);
+      this._exports.renameItem(item.entity_id, item.id, name);
       this._mutating = false;
       this._closeDialog();
-      this._exports.refresh();
       this._toasts.success(this.localize("exports.rename_success"), {
         key: "exports-rename",
       });
@@ -360,6 +384,39 @@ export class ExportsModule extends LitElement {
       title: item.name,
     });
   }
+
+  private _updateHoverPreview(event: PointerEvent, item: ExportItem): void {
+    if (
+      event.pointerType !== "mouse" ||
+      !this.hoverPreviewEnabled ||
+      item.in_progress
+    )
+      return;
+    const thumbnail = (event.currentTarget as HTMLElement).querySelector(
+      ".thumbnail",
+    );
+    if (!(thumbnail instanceof HTMLElement)) return;
+    const bounds = thumbnail.getBoundingClientRect();
+    const hovered =
+      event.clientX >= bounds.left &&
+      event.clientX <= bounds.right &&
+      event.clientY >= bounds.top &&
+      event.clientY <= bounds.bottom;
+    const nextId = hovered ? item.id : undefined;
+    if (nextId === this._hoveredPreviewId) return;
+    this._hoveredPreviewId = nextId;
+    this.requestUpdate();
+  }
+
+  private _clearHoverPreview(itemId: string): void {
+    if (this._hoveredPreviewId !== itemId) return;
+    this._hoveredPreviewId = undefined;
+    this.requestUpdate();
+  }
+
+  private readonly _setPreviewRate = (event: Event): void => {
+    (event.currentTarget as HTMLVideoElement).playbackRate = 4;
+  };
 
   static styles = exportsStyles;
 }

@@ -447,6 +447,11 @@ export const activityListStyles = css`
     outline-offset: 2px;
   }
 
+  .action:disabled {
+    cursor: progress;
+    opacity: 0.55;
+  }
+
   .empty,
   .loading {
     align-items: center;
