@@ -2,6 +2,7 @@ import {
   APP_NAME,
   CARD_TYPE,
   DEFAULT_CARD_TITLE,
+  MAX_CARD_TITLE_LENGTH,
   MAX_CAMERA_TITLE_LENGTH,
   MAX_CAMERAS,
   DEFAULT_EVENT_HISTORY_DAYS,
@@ -9,6 +10,7 @@ import {
   MIN_EVENT_HISTORY_DAYS,
   MAX_LIGHTS_PER_CAMERA,
 } from "./constants";
+import { normalizePlainText, sanitizePlainTextInput } from "./plain-text";
 
 export interface LinkedLightConfig {
   readonly entity_id: string;
@@ -62,8 +64,12 @@ export function normalizeCardConfig(value: unknown): CardConfig {
   }
   const source = value as Record<string, unknown>;
 
-  const title = "title" in source ? source.title : DEFAULT_CARD_TITLE;
-  if (typeof title !== "string" || title.trim().length === 0) {
+  const rawTitle = "title" in source ? source.title : DEFAULT_CARD_TITLE;
+  if (typeof rawTitle !== "string") {
+    throw new Error(`${APP_NAME} card title must be a non-empty string.`);
+  }
+  const title = normalizeCardTitle(rawTitle);
+  if (!title) {
     throw new Error(`${APP_NAME} card title must be a non-empty string.`);
   }
 
@@ -116,7 +122,7 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     ...source,
     cameras,
     type: CARD_TYPE,
-    title: title.trim(),
+    title,
   };
   for (const legacyKey of [
     "camera_entity",
@@ -183,14 +189,20 @@ export function createDefaultCameraConfig(entityId = ""): CameraConfig {
   };
 }
 
+export function sanitizeCardTitleInput(value: string): string {
+  return sanitizePlainTextInput(value, { maxLength: MAX_CARD_TITLE_LENGTH });
+}
+
+export function normalizeCardTitle(value: string): string {
+  return normalizePlainText(value, { maxLength: MAX_CARD_TITLE_LENGTH });
+}
+
 /** Keeps camera labels safe for plain-text presentation while supporting locales. */
 export function sanitizeCameraTitleInput(value: string): string {
-  return value
-    .normalize("NFKC")
-    .replace(/[^\p{L}\p{N} ]/gu, "")
-    .replace(/ {2,}/g, " ")
-    .trimStart()
-    .slice(0, MAX_CAMERA_TITLE_LENGTH);
+  return sanitizePlainTextInput(value, {
+    allowCharacter: (character) => /[\p{L}\p{N} ]/u.test(character),
+    maxLength: MAX_CAMERA_TITLE_LENGTH,
+  });
 }
 
 export function normalizeCameraTitle(value: string): string {

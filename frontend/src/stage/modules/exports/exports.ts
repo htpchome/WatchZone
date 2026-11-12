@@ -15,6 +15,8 @@ import type { HomeAssistantApi } from "../../../core/home-assistant";
 import {
   isExportJob,
   isExportStalled,
+  MAX_EXPORT_TITLE_LENGTH,
+  normalizeExportTitle,
   type ExportJob,
   type ExportLibraryItem,
 } from "../../../features/exports";
@@ -314,13 +316,14 @@ export class ExportsModule extends LitElement {
           <h3>${this.localize("exports.edit_title")}</h3>
           <input
             name="title"
-            maxlength="256"
+            maxlength=${String(MAX_EXPORT_TITLE_LENGTH)}
             .value=${this._draftTitle}
             aria-label=${this.localize("exports.title")}
             @input=${(event: InputEvent) => {
-              this._draftTitle = (
-                event.currentTarget as HTMLInputElement
-              ).value;
+              const input = event.currentTarget as HTMLInputElement;
+              const sanitized = normalizeExportTitle(input.value);
+              if (input.value !== sanitized) input.value = sanitized;
+              this._draftTitle = sanitized;
             }}
           />
           <div class="dialog-actions">
@@ -334,7 +337,9 @@ export class ExportsModule extends LitElement {
             <button
               class="wzc-button primary"
               type="submit"
-              ?disabled=${this._mutating || !this._draftTitle.trim()}
+              ?disabled=${
+                this._mutating || !normalizeExportTitle(this._draftTitle)
+              }
             >
               ${this.localize("exports.save")}
             </button>
@@ -394,7 +399,7 @@ export class ExportsModule extends LitElement {
     event.preventDefault();
     const api = this.api;
     const item = this._editing;
-    const name = this._draftTitle.trim();
+    const name = normalizeExportTitle(this._draftTitle);
     if (!api || !item || !name || this._mutating) return;
     this._mutating = true;
     try {

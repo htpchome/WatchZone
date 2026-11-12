@@ -2,8 +2,12 @@ import { css } from "lit";
 
 export const exportsStyles = css`
   :host {
+    --wzc-export-list-gap: 0.5rem;
+    --wzc-export-list-padding: 0.25rem;
+    --wzc-export-tile-block-size: 5.75rem;
     box-sizing: border-box;
     display: block;
+    block-size: 100%;
     inline-size: 100%;
     min-block-size: 0;
     min-inline-size: 0;
@@ -16,7 +20,16 @@ export const exportsStyles = css`
     inline-size: 100%;
     display: grid;
     grid-template-rows: var(--wzc-media-day-header-block-size) minmax(0, 1fr);
-    min-block-size: 0;
+    max-block-size: calc(
+      var(--wzc-media-day-header-block-size) + 5 *
+        var(--wzc-export-tile-block-size) + 5 * var(--wzc-export-list-gap) + 2 *
+        var(--wzc-export-list-padding)
+    );
+    min-block-size: calc(
+      var(--wzc-media-day-header-block-size) + 3 *
+        var(--wzc-export-tile-block-size) + 3 * var(--wzc-export-list-gap) + 2 *
+        var(--wzc-export-list-padding)
+    );
     overflow: hidden;
   }
 
@@ -51,9 +64,9 @@ export const exportsStyles = css`
   .collection {
     box-sizing: border-box;
     display: grid;
-    gap: 0.5rem;
+    gap: var(--wzc-export-list-gap);
     inline-size: 100%;
-    padding: 0.25rem;
+    padding: var(--wzc-export-list-padding);
   }
 
   .collection.grid {
@@ -71,7 +84,7 @@ export const exportsStyles = css`
     position: relative;
     display: grid;
     align-items: stretch;
-    min-block-size: 5.75rem;
+    min-block-size: var(--wzc-export-tile-block-size);
     overflow: hidden;
     background: var(--wzc-color-surface-secondary);
     border: 0;
@@ -103,7 +116,7 @@ export const exportsStyles = css`
     position: relative;
     display: grid;
     place-items: center;
-    block-size: 5.75rem;
+    block-size: var(--wzc-export-tile-block-size);
     min-inline-size: 0;
     overflow: hidden;
     background: var(--wzc-media-placeholder-background);

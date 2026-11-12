@@ -5,6 +5,13 @@ import {
   type ExportRange,
 } from "../../api/exports";
 import type { HomeAssistantApi } from "../../core/home-assistant";
+import { normalizeExportTitle } from "./title";
+
+export {
+  appendExportCameraLabel,
+  MAX_EXPORT_TITLE_LENGTH,
+  normalizeExportTitle,
+} from "./title";
 
 const EXPORT_POLL_INTERVAL_MS = 5_000;
 const EXPORT_MISSING_LIMIT = 3;
@@ -94,11 +101,13 @@ class ExportJobManager {
     );
     if (active) return active;
 
+    const name = normalizeExportTitle(input.name);
+    if (!name) throw new Error("Export title must not be empty.");
     const job: ExportJob = {
       camera: input.camera,
       createdTime: Date.now() / 1_000,
       entityId: input.range.entity_id,
-      name: input.name,
+      name,
       requestId: `export-${++nextRequestId}`,
       reviewId: input.reviewId,
       status: "submitting",

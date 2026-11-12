@@ -9,6 +9,10 @@ import {
   englishLocalize,
   type LocalizeFunction,
 } from "../../../core/localization";
+import {
+  MAX_EXPORT_TITLE_LENGTH,
+  normalizeExportTitle,
+} from "../../../features/exports";
 import { buttonBaseStyles } from "../../../ui/button.styles";
 import { centerDialogOnCard } from "../../../ui/dialog-position";
 import { reviewExportDialogStyles } from "./review-export-dialog.styles";
@@ -68,7 +72,7 @@ export class ReviewExportDialog extends LitElement {
                   <span>${this.localize("exports.title")}</span>
                   <input
                     name="title"
-                    maxlength="256"
+                    maxlength=${String(MAX_EXPORT_TITLE_LENGTH)}
                     required
                     .value=${this._name}
                     @input=${this._titleChanged}
@@ -87,7 +91,9 @@ export class ReviewExportDialog extends LitElement {
                 <button
                   class="wzc-button primary"
                   type="submit"
-                  ?disabled=${this.submitting || !this._name.trim()}
+                  ?disabled=${
+                    this.submitting || !normalizeExportTitle(this._name)
+                  }
                 >
                   ${this.localize("reviews.export_confirm")}
                 </button>
@@ -112,12 +118,15 @@ export class ReviewExportDialog extends LitElement {
   }
 
   private readonly _titleChanged = (event: InputEvent): void => {
-    this._name = (event.currentTarget as HTMLInputElement).value;
+    const input = event.currentTarget as HTMLInputElement;
+    const sanitized = normalizeExportTitle(input.value);
+    if (input.value !== sanitized) input.value = sanitized;
+    this._name = sanitized;
   };
 
   private readonly _confirm = (event: SubmitEvent): void => {
     event.preventDefault();
-    const name = this._name.trim();
+    const name = normalizeExportTitle(this._name);
     if (!name || this.submitting) return;
     this.dispatchEvent(
       new CustomEvent<ReviewExportConfirmation>(REVIEW_EXPORT_CONFIRM_EVENT, {

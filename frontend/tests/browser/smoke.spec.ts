@@ -1236,7 +1236,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   );
   await expect(exportDialog).toBeVisible();
   await expect(exportDialog.locator("input")).toHaveValue(
-    "front 2026-11-10 15:59:55 2026-11-10 16:00:29",
+    "front 2026-11-10 15:59:55 2026-11-10 16:00:29 — Front",
   );
   const confirmExport = exportDialog.getByRole("button", { name: "Export" });
   await expect(confirmExport).toHaveText("Export");
@@ -2981,6 +2981,24 @@ test("shows and filters mixed-camera persistent exports", async ({ page }) => {
 
   await exports.locator(".tile-player").click();
   await expect(page.locator("wzc-export-media-dialog dialog")).toBeVisible();
+
+  const scrollGeometry = await exports.locator(".scroller").evaluate((node) => {
+    const collection = node.querySelector(".collection");
+    const tile = collection?.querySelector(".tile");
+    if (!collection || !tile) throw new Error("Export list is incomplete");
+    for (let index = 0; index < 6; index += 1) {
+      collection.append(tile.cloneNode(true));
+    }
+    return {
+      clientHeight: node.clientHeight,
+      overflowY: getComputedStyle(node).overflowY,
+      scrollHeight: node.scrollHeight,
+    };
+  });
+  expect(scrollGeometry.overflowY).toBe("auto");
+  expect(scrollGeometry.scrollHeight).toBeGreaterThan(
+    scrollGeometry.clientHeight,
+  );
 });
 
 test("lets the camera navigation shadow paint into the card padding", async ({

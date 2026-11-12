@@ -7,7 +7,9 @@ import {
   createDefaultCameraConfig,
   normalizeCameraTitle,
   normalizeCardConfig,
+  normalizeCardTitle,
   sanitizeCameraTitleInput,
+  sanitizeCardTitleInput,
   type CameraConfig,
   type CardConfig,
   type FrigateFallbackTransport,
@@ -21,9 +23,10 @@ import {
   EDITOR_PREVIEW_DRAFT_EVENT,
   EDITOR_TAG,
   EDITOR_TEXT_PREVIEW_DELAY_MS,
-  MAX_EVENT_HISTORY_DAYS,
   MAX_CAMERA_TITLE_LENGTH,
+  MAX_CARD_TITLE_LENGTH,
   MAX_CAMERAS,
+  MAX_EVENT_HISTORY_DAYS,
   MAX_LIGHTS_PER_CAMERA,
   MIN_EVENT_HISTORY_DAYS,
   SORTABLE_LIST_TAG,
@@ -375,6 +378,7 @@ export class CardEditor extends LitElement {
       <ha-input
         required
         auto-validate
+        maxlength=${String(MAX_CARD_TITLE_LENGTH)}
         label=${this._t("editor.title")}
         .value=${this._config?.title ?? ""}
         @input=${this._handleTitleInput}
@@ -958,11 +962,18 @@ export class CardEditor extends LitElement {
   }
 
   private _handleTitleInput(event: Event): void {
-    this._updateTitle((event.currentTarget as InputElement).value, false);
+    this._updateTitleInput(event, false);
   }
 
   private _handleTitleChange(event: Event): void {
-    this._updateTitle((event.currentTarget as InputElement).value, true);
+    this._updateTitleInput(event, true);
+  }
+
+  private _updateTitleInput(event: Event, commitConfig: boolean): void {
+    const input = event.currentTarget as InputElement;
+    const sanitized = sanitizeCardTitleInput(input.value);
+    if (input.value !== sanitized) input.value = sanitized;
+    this._updateTitle(sanitized, commitConfig);
   }
 
   private readonly _handleEventHistoryDaysChange = (
@@ -984,7 +995,7 @@ export class CardEditor extends LitElement {
   };
 
   private _updateTitle(rawTitle: string, commitConfig: boolean): void {
-    const title = rawTitle.trim();
+    const title = normalizeCardTitle(rawTitle);
     if (!this._config || title.length === 0) {
       return;
     }

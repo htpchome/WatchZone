@@ -26,6 +26,8 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.http import KEY_HASS, HomeAssistantView
 
 from ..const import DOMAIN
+from ..features.exports import MAX_EXPORT_TITLE_LENGTH
+from ..plain_text import normalize_plain_text
 from ..providers.exports import ExportMediaKind
 from . import runtime_from_hass
 
@@ -40,8 +42,8 @@ _FORWARDED_HEADERS = {
 }
 
 
-def _strip_name(value: str) -> str:
-    return value.strip()
+def _normalize_name(value: str) -> str:
+    return normalize_plain_text(value, max_length=MAX_EXPORT_TITLE_LENGTH)
 
 
 _TIME_RANGE_SCHEMA: dict[Any, Any] = {
@@ -119,7 +121,9 @@ async def ws_exports_prepare(
         vol.Required("type"): f"{DOMAIN}/exports/create",
         **_TIME_RANGE_SCHEMA,
         vol.Required("name"): vol.All(
-            cv.string, _strip_name, vol.Length(min=1, max=256)
+            cv.string,
+            _normalize_name,
+            vol.Length(min=1, max=MAX_EXPORT_TITLE_LENGTH),
         ),
     }
 )
@@ -153,7 +157,9 @@ async def ws_exports_create(
         vol.Required("entity_id"): cv.entity_id,
         vol.Required("export_id"): cv.string,
         vol.Required("name"): vol.All(
-            cv.string, _strip_name, vol.Length(min=1, max=256)
+            cv.string,
+            _normalize_name,
+            vol.Length(min=1, max=MAX_EXPORT_TITLE_LENGTH),
         ),
     }
 )

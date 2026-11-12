@@ -743,7 +743,7 @@ describe("reviews module", () => {
       expect(
         exportDialog?.shadowRoot?.querySelector<HTMLInputElement>("input")
           ?.value,
-      ).toBe(defaultName);
+      ).toBe(`${defaultName} — Front`);
     });
     exportDialog?.shadowRoot
       ?.querySelector<HTMLButtonElement>('button[type="button"]')
@@ -769,7 +769,7 @@ describe("reviews module", () => {
     const input =
       exportDialog?.shadowRoot?.querySelector<HTMLInputElement>("input");
     if (!input) throw new Error("Expected export title input.");
-    input.value = "Back yard cat";
+    input.value = "  Back\u0000\n  yard   cat  ";
     input.dispatchEvent(new InputEvent("input", { bubbles: true }));
     exportDialog?.shadowRoot
       ?.querySelector<HTMLFormElement>("form")

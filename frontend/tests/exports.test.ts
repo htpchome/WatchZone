@@ -264,13 +264,19 @@ describe("exports module", () => {
 
     startExportJob(api, {
       camera: "front",
-      name: "Front visitor",
+      name: "  Front\u0000\n visitor  ",
       range: { entity_id: "camera.front", start_time: 100, end_time: 120 },
       reviewId: "review-1",
     });
     await vi.waitFor(() => {
       expect(module.shadowRoot?.querySelector(".tile.draft")).not.toBeNull();
       expect(module.shadowRoot?.querySelector("ha-spinner")).not.toBeNull();
+      expect(callWS).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "Front visitor",
+          type: "watchzone/exports/create",
+        }),
+      );
     });
 
     created = true;
@@ -318,7 +324,7 @@ describe("exports module", () => {
     await module.updateComplete;
     const input = module.shadowRoot?.querySelector<HTMLInputElement>("input");
     if (!input) throw new Error("Expected the export title input.");
-    input.value = "Renamed visitor";
+    input.value = "  Renamed\u0000\n visitor  ";
     input.dispatchEvent(new InputEvent("input", { bubbles: true }));
     module.shadowRoot
       ?.querySelector<HTMLFormElement>("form")

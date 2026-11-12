@@ -19,6 +19,7 @@ export const EXPORTS_MODULE_TYPE = "exports";
 export const REVIEWS_MODULE_TYPE = "reviews";
 export const RECORDINGS_MODULE_TYPE = "recordings";
 export const MAX_CAMERAS = 12;
+export const MAX_CARD_TITLE_LENGTH = 64;
 export const MAX_CAMERA_TITLE_LENGTH = 24;
 export const MAX_LIGHTS_PER_CAMERA = 2;
 export const MAX_RETAINED_CAMERA_SESSIONS = MAX_CAMERAS * 2;

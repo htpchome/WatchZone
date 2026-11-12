@@ -3,11 +3,19 @@ import { describe, expect, it } from "vitest";
 import { normalizeCardConfig } from "../src/core/config";
 import {
   CARD_TYPE,
+  MAX_CARD_TITLE_LENGTH,
   MAX_CAMERAS,
   MAX_LIGHTS_PER_CAMERA,
 } from "../src/core/constants";
 
 describe("WatchZone card configuration", () => {
+  it("sanitizes and bounds the card title", () => {
+    const title = `  Front\u0000\n  Door   ${"x".repeat(80)}`;
+    const normalized = normalizeCardConfig({ title }).title;
+    expect(normalized).toBe(`Front Door ${"x".repeat(53)}`);
+    expect(Array.from(normalized)).toHaveLength(MAX_CARD_TITLE_LENGTH);
+  });
+
   it("defaults card appearance and starts with no cameras", () => {
     expect(normalizeCardConfig({ type: CARD_TYPE, title: "Camera" })).toEqual({
       type: CARD_TYPE,
