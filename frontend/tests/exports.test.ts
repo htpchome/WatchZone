@@ -90,6 +90,25 @@ describe("exports module", () => {
           (HTMLElement & { label: string }) | null
       )?.label,
     ).toBe("Exports");
+    const layoutToggle =
+      module.shadowRoot?.querySelector<HTMLButtonElement>(".layout-toggle");
+    const collection = module.shadowRoot?.querySelector("#exports-collection");
+    expect(layoutToggle?.title).toBe("Show exports as grid");
+    expect(layoutToggle?.getAttribute("aria-pressed")).toBe("false");
+    expect(layoutToggle?.querySelector("ha-icon")?.getAttribute("icon")).toBe(
+      "mdi:view-grid",
+    );
+    expect(collection?.classList.contains("list")).toBe(true);
+    layoutToggle?.click();
+    await module.updateComplete;
+    expect(layoutToggle?.title).toBe("Show exports as list");
+    expect(layoutToggle?.getAttribute("aria-pressed")).toBe("true");
+    expect(layoutToggle?.querySelector("ha-icon")?.getAttribute("icon")).toBe(
+      "mdi:view-list",
+    );
+    expect(collection?.classList.contains("grid")).toBe(true);
+    layoutToggle?.click();
+    await module.updateComplete;
     expect(module.shadowRoot?.textContent).toContain("Front Door");
     const processing = [
       ...(module.shadowRoot?.querySelectorAll<HTMLElement>(".tile") ?? []),

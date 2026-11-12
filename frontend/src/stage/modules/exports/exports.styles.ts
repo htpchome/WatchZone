@@ -2,14 +2,18 @@ import { css } from "lit";
 
 export const exportsStyles = css`
   :host {
+    box-sizing: border-box;
     display: block;
+    inline-size: 100%;
     min-block-size: 0;
+    min-inline-size: 0;
     color: var(--wzc-color-text-1);
     font-family: var(--wzc-font-family);
   }
 
   .viewport {
     block-size: 100%;
+    inline-size: 100%;
     display: grid;
     grid-template-rows: var(--wzc-media-day-header-block-size) minmax(0, 1fr);
     min-block-size: 0;
@@ -17,15 +21,44 @@ export const exportsStyles = css`
   }
 
   .scroller {
+    inline-size: 100%;
     min-block-size: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
   }
 
-  .list {
+  .layout-toggle {
+    display: grid;
+    place-items: center;
+    inline-size: var(--wzc-media-day-navigation-size);
+    block-size: var(--wzc-media-day-navigation-size);
+    padding: 0;
+    color: var(--wzc-color-text-2);
+    background: transparent;
+    border: 0;
+    border-radius: var(--wzc-radius-button);
+  }
+
+  .layout-toggle ha-icon {
+    --mdc-icon-size: 1.25rem;
+  }
+
+  .layout-toggle:hover {
+    color: var(--wzc-color-primary);
+    background: var(--wzc-color-fill-primary);
+  }
+
+  .collection {
+    box-sizing: border-box;
     display: grid;
     gap: 0.5rem;
+    inline-size: 100%;
     padding: 0.25rem;
+  }
+
+  .collection.grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
   }
 
   .empty {
@@ -37,7 +70,6 @@ export const exportsStyles = css`
   .tile {
     position: relative;
     display: grid;
-    grid-template-columns: minmax(7rem, 10rem) minmax(0, 1fr) auto;
     align-items: stretch;
     min-block-size: 5.75rem;
     overflow: hidden;
@@ -45,6 +77,15 @@ export const exportsStyles = css`
     border: 0;
     border-radius: var(--wzc-radius-medium);
     box-shadow: var(--wzc-shadow-small);
+  }
+
+  .list .tile {
+    grid-template-columns: minmax(7rem, 10rem) minmax(0, 1fr) auto;
+  }
+
+  .grid .tile {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
   }
 
   .tile-player {
@@ -67,6 +108,12 @@ export const exportsStyles = css`
     overflow: hidden;
     background: var(--wzc-media-placeholder-background);
     color: var(--wzc-media-placeholder-color);
+  }
+
+  .grid .thumbnail {
+    aspect-ratio: 16 / 9;
+    block-size: auto;
+    inline-size: 100%;
   }
 
   .thumbnail img,
@@ -145,6 +192,10 @@ export const exportsStyles = css`
     padding: 0.65rem 0.75rem;
   }
 
+  .grid .details {
+    align-content: start;
+  }
+
   .title {
     overflow: hidden;
     font-weight: var(--wzc-font-weight-semibold);
@@ -166,6 +217,10 @@ export const exportsStyles = css`
     flex-wrap: wrap;
     gap: 0.2rem;
     padding: 0.45rem;
+  }
+
+  .grid .actions {
+    padding-block-start: 0;
   }
 
   .action {
@@ -266,12 +321,22 @@ export const exportsStyles = css`
     border-color: var(--wzc-color-fill-error);
   }
 
+  @container (max-width: 54rem) {
+    .collection.grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
   @container (max-width: 36rem) {
-    .tile {
+    .collection.grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .list .tile {
       grid-template-columns: 6rem minmax(0, 1fr);
     }
 
-    .actions {
+    .list .actions {
       grid-column: 1 / -1;
       justify-content: end;
       padding-block-start: 0;

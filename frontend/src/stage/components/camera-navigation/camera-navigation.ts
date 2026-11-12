@@ -1,5 +1,4 @@
 import { html, LitElement, nothing, type PropertyValues } from "lit";
-import { repeat } from "lit/directives/repeat.js";
 
 import type {
   CameraSelectionContext,
@@ -11,7 +10,8 @@ import {
   type LocalizeFunction,
 } from "../../../core/localization";
 import { cameraNavigationStyles } from "./camera-navigation.styles";
-import { segmentedControlStyles } from "../../../ui/segmented-control.styles";
+import type { SegmentedControlValueDetail } from "../../../ui/segmented-control";
+import "../../../ui/segmented-control";
 
 /** Static camera navigation bar backed by shared layout selection. */
 export class CameraNavigationComponent extends LitElement {
@@ -61,25 +61,17 @@ export class CameraNavigationComponent extends LitElement {
         .join(" ")}
       aria-label=${this.localize("camera.navigation")}
     >
-      <div class="items segmented-control" role="tablist">
-        ${repeat(
-          this._state.items,
-          ({ entityId }) => entityId,
-          ({ entityId, label }) =>
-            html`<button
-              class="segmented-control-option"
-              type="button"
-              role="tab"
-              data-entity-id=${entityId}
-              aria-selected=${
-                entityId === this._state.activeEntityId ? "true" : "false"
-              }
-              @click=${this._select}
-            >
-              ${label}
-            </button>`,
-        )}
-      </div>
+      <wzc-segmented-control
+        class="items"
+        mode="tab"
+        .label=${this.localize("camera.navigation")}
+        .options=${this._state.items.map(({ entityId, label }) => ({
+          label,
+          value: entityId,
+        }))}
+        .value=${this._state.activeEntityId ?? ""}
+        @wzc-segmented-control-value=${this._select}
+      ></wzc-segmented-control>
     </nav>`;
   }
 
@@ -99,12 +91,13 @@ export class CameraNavigationComponent extends LitElement {
     );
   }
 
-  private readonly _select = (event: Event): void => {
-    const entityId = (event.currentTarget as HTMLElement).dataset.entityId;
-    if (entityId) this.cameraSelection?.select(this.targetModuleId, entityId);
+  private readonly _select = (
+    event: CustomEvent<SegmentedControlValueDetail>,
+  ): void => {
+    this.cameraSelection?.select(this.targetModuleId, event.detail.value);
   };
 
-  static styles = [segmentedControlStyles, cameraNavigationStyles];
+  static styles = cameraNavigationStyles;
 }
 
 if (!customElements.get(CAMERA_NAVIGATION_TAG)) {

@@ -33,6 +33,10 @@ but the Stage module and frontend transport remain provider-neutral.
   The shared calendar control remains visible but disabled until Exports owns a
   real mixed-camera date-filter contract; it must not imply that selecting a
   date filters the all-date library before that support exists.
+- The heading exposes one localized presentation toggle. List view remains the
+  default. Grid view presents the same collection and workflows with a larger
+  fixed-aspect thumbnail and its metadata and actions beneath it; switching
+  presentation does not reload or duplicate export state.
 - Camera facets are derived from the returned exports. Selecting no camera
   means all cameras.
 - Ready items show a thumbnail, title, camera, creation date and time, and

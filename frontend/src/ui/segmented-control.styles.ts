@@ -2,6 +2,12 @@ import { css } from "lit";
 
 /** Shared structure for compact, single-selection control bars. */
 export const segmentedControlStyles = css`
+  :host {
+    display: block;
+    box-sizing: border-box;
+    min-inline-size: 0;
+  }
+
   .segmented-control {
     display: flex;
     box-sizing: border-box;

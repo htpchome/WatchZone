@@ -18,12 +18,12 @@ export const cameraNavigationStyles = css`
   }
 
   .bar.rounded,
-  .bar.rounded .items {
+  .bar.rounded .items::part(container) {
     border-radius: var(--wzc-radius-card);
   }
 
   .bar.square,
-  .bar.square .items {
+  .bar.square .items::part(container) {
     border-radius: 0;
   }
 
@@ -32,6 +32,12 @@ export const cameraNavigationStyles = css`
   }
 
   .items {
+    box-sizing: border-box;
+    block-size: 100%;
+    inline-size: 100%;
+  }
+
+  .items::part(container) {
     display: flex;
     box-sizing: border-box;
     align-items: center;
@@ -45,7 +51,7 @@ export const cameraNavigationStyles = css`
     background: var(--wzc-camera-navigation-background);
   }
 
-  button {
+  .items::part(option) {
     box-sizing: border-box;
     min-block-size: var(--wzc-camera-navigation-item-size);
     padding-inline: var(--wzc-camera-navigation-item-padding);
@@ -60,16 +66,16 @@ export const cameraNavigationStyles = css`
     -webkit-tap-highlight-color: transparent;
   }
 
-  button[aria-selected="true"] {
+  .items::part(selected) {
     color: var(--wzc-camera-navigation-active-color);
     background: var(--wzc-camera-navigation-active-background);
   }
 
-  .bar.shadows button[aria-selected="true"] {
+  .bar.shadows .items::part(selected) {
     box-shadow: var(--wzc-camera-navigation-active-shadow);
   }
 
-  button:focus-visible {
+  .items::part(option):focus-visible {
     outline: 2px solid var(--wzc-color-primary);
     outline-offset: -2px;
   }

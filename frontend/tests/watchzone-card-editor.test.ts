@@ -10,6 +10,7 @@ import {
   EDITOR_TEXT_PREVIEW_DELAY_MS,
 } from "../src/core/constants";
 import type { AccordionItem } from "../src/ui/accordion";
+import type { SegmentedControl } from "../src/ui/segmented-control";
 import type { ToastRegion } from "../src/ui/toast-region";
 import { iconPath } from "../src/ui/icons";
 import type { CardEditor } from "../src/editor/watchzone-card-editor";
@@ -107,13 +108,17 @@ describe("watchzone-card-editor", () => {
         '[data-config-key="highlight_camera_on_activity"]',
       ),
     ).not.toBeNull();
+    const ptzControl = items[1]?.querySelector<SegmentedControl>(
+      "wzc-segmented-control",
+    );
+    await ptzControl?.updateComplete;
     expect(
-      items[1]
-        ?.querySelector('[data-ptz-overlay-control="start_open"]')
+      ptzControl?.shadowRoot
+        ?.querySelector('[data-value="start_open"]')
         ?.getAttribute("aria-checked"),
     ).toBe("true");
     expect(
-      items[1]?.querySelector('[data-ptz-overlay-control="open_in_drawer"]'),
+      ptzControl?.shadowRoot?.querySelector('[data-value="open_in_drawer"]'),
     ).toHaveProperty("disabled", true);
     expect(items[2]?.childElementCount).toBe(0);
     expect(
@@ -608,13 +613,22 @@ describe("watchzone-card-editor", () => {
     document.body.append(editor);
     await editor.updateComplete;
 
-    const startClosed = editor.shadowRoot?.querySelector<HTMLButtonElement>(
-      '[data-ptz-overlay-control="start_closed"]',
+    const control = editor.shadowRoot?.querySelector<SegmentedControl>(
+      "wzc-segmented-control",
+    );
+    const startClosed = control?.shadowRoot?.querySelector<HTMLButtonElement>(
+      '[data-value="start_closed"]',
     );
     startClosed?.click();
     await editor.updateComplete;
+    await control?.updateComplete;
 
-    expect(startClosed?.getAttribute("aria-checked")).toBe("true");
+    expect(control?.value).toBe("start_closed");
+    expect(
+      control?.shadowRoot
+        ?.querySelector('[data-value="start_closed"]')
+        ?.getAttribute("aria-checked"),
+    ).toBe("true");
     expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
       type: CARD_TYPE,
       title: "Camera",

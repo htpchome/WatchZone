@@ -46,6 +46,7 @@ export class ExportsModule extends LitElement {
     _deleting: { state: true },
     _draftTitle: { state: true },
     _editing: { state: true },
+    _layout: { state: true },
     _mutating: { state: true },
   };
 
@@ -63,6 +64,7 @@ export class ExportsModule extends LitElement {
   private _hoverPreviewGeneration = 0;
   private _hoveredPreviewId?: string;
   private _hoveredPreviewUrl?: string;
+  private _layout: "grid" | "list" = "list";
   private _mutating = false;
   private readonly _toasts = new ToastManager(this);
   private readonly _exports = new ExportsController(
@@ -90,9 +92,32 @@ export class ExportsModule extends LitElement {
   protected render() {
     const items = this._exports.filteredItems();
     return html`<div class="viewport">
-        <wzc-media-day-header
-          .label=${this.localize("exports.header")}
-        ></wzc-media-day-header>
+        <wzc-media-day-header .label=${this.localize("exports.header")}>
+          <button
+            slot="next"
+            class="layout-toggle wzc-icon-button"
+            type="button"
+            title=${this.localize(
+              this._layout === "list"
+                ? "exports.show_grid"
+                : "exports.show_list",
+            )}
+            aria-label=${this.localize(
+              this._layout === "list"
+                ? "exports.show_grid"
+                : "exports.show_list",
+            )}
+            aria-controls="exports-collection"
+            aria-pressed=${this._layout === "grid"}
+            @click=${this._toggleLayout}
+          >
+            <ha-icon
+              icon=${
+                this._layout === "list" ? "mdi:view-grid" : "mdi:view-list"
+              }
+            ></ha-icon>
+          </button>
+        </wzc-media-day-header>
         <div class="scroller">
           ${
             this._exports.loading && this._exports.items.length === 0
@@ -104,7 +129,8 @@ export class ExportsModule extends LitElement {
                     ${this.localize("exports.empty")}
                   </div>`
                 : html`<div
-                    class="list"
+                    id="exports-collection"
+                    class=${`collection ${this._layout}`}
                     aria-label=${this.localize("exports.list")}
                   >
                     ${repeat(
@@ -516,6 +542,13 @@ export class ExportsModule extends LitElement {
 
   private readonly _setPreviewRate = (event: Event): void => {
     (event.currentTarget as HTMLVideoElement).playbackRate = 4;
+  };
+
+  private readonly _toggleLayout = (): void => {
+    this._hoverPreviewGeneration += 1;
+    this._hoveredPreviewId = undefined;
+    this._hoveredPreviewUrl = undefined;
+    this._layout = this._layout === "list" ? "grid" : "list";
   };
 
   static styles = [buttonBaseStyles, exportsStyles];

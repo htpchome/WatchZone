@@ -1027,6 +1027,8 @@ test("keeps activity content in an independently scrolling viewport", async ({
   const stackNavigation = page.locator(".stage-stack-navigation");
   const stackButtons = stackNavigation.locator(".stage-stack-button");
   await expect(stackButtons).toHaveCount(4);
+  const reviewTiles = page.locator("wzc-reviews .tile");
+  await expect(reviewTiles).toHaveCount(6);
   const normalNavigation = await stackNavigation.evaluate((navigation) => {
     const buttons = [...navigation.querySelectorAll("button")];
     const active = getComputedStyle(buttons[0]!);
@@ -1048,7 +1050,10 @@ test("keeps activity content in an independently scrolling viewport", async ({
       outlineStyle: inactive.outlineStyle,
     };
   });
-  expect(normalNavigation.leadingInset).toBeLessThanOrEqual(1);
+  const firstNavigationBox = await stackButtons.first().boundingBox();
+  const firstReviewTileBox = await reviewTiles.first().boundingBox();
+  expect(firstNavigationBox?.x).toBeCloseTo(firstReviewTileBox?.x ?? -1, 0);
+  expect(normalNavigation.leadingInset).toBeGreaterThan(0);
   expect(normalNavigation.firstHeight).toBeGreaterThanOrEqual(44);
   expect(normalNavigation.outlineStyle).toBe("none");
   expect(normalNavigation.activeBackground).not.toBe(
@@ -1059,7 +1064,6 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(normalNavigation.activeIconColor).toBe("rgb(255, 255, 255)");
   expect(normalNavigation.activeIconOpacity).toBe("1");
   expect(normalNavigation.activePathFill).toBe("rgb(255, 255, 255)");
-  await expect(page.locator("wzc-reviews .tile")).toHaveCount(6);
   const analysisTitle = page.locator("wzc-reviews .analysis-title");
   await expect(analysisTitle).toHaveCount(1);
   await expect(analysisTitle).toContainText("Resident entering garage");
@@ -1572,7 +1576,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
     "true",
   );
   await page
-    .locator('wzc-camera-navigation button[data-entity-id="camera.back"]')
+    .locator('wzc-camera-navigation button[data-value="camera.back"]')
     .click();
   await expect(page.locator("wzc-reviews .tile")).toHaveCount(6);
   await expect(page.locator("wzc-reviews")).toContainText("back_yard");
@@ -1635,7 +1639,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect(events).toContainText("5:13 PM");
   await expect(events.locator("wzc-badge").first()).toHaveText("Person");
   await page
-    .locator('wzc-camera-navigation button[data-entity-id="camera.front"]')
+    .locator('wzc-camera-navigation button[data-value="camera.front"]')
     .click();
   await expect(events).toContainText("driveway");
   const scrolling = await viewport.evaluate((node) => ({
@@ -2867,6 +2871,69 @@ test("shows and filters mixed-camera persistent exports", async ({ page }) => {
   await expect(exports.locator("wzc-media-day-header")).toContainText(
     "Exports",
   );
+  const collection = exports.locator("#exports-collection");
+  const navigationButtonBox = await navigation
+    .locator(".stage-stack-button")
+    .first()
+    .boundingBox();
+  const listTileBox = await exports.locator(".tile").first().boundingBox();
+  expect(navigationButtonBox?.x).toBeCloseTo(listTileBox?.x ?? -1, 0);
+  const layoutToggle = exports.getByRole("button", {
+    name: "Show exports as grid",
+  });
+  await expect(collection).toHaveClass(/\blist\b/);
+  await expect(layoutToggle.locator("ha-icon")).toHaveAttribute(
+    "icon",
+    "mdi:view-grid",
+  );
+  const listThumbnailBox = await exports
+    .locator(".thumbnail")
+    .first()
+    .boundingBox();
+  await layoutToggle.click();
+  await expect(collection).toHaveClass(/\bgrid\b/);
+  const listToggle = exports.getByRole("button", {
+    name: "Show exports as list",
+  });
+  await expect(listToggle.locator("ha-icon")).toHaveAttribute(
+    "icon",
+    "mdi:view-list",
+  );
+  const gridGeometry = await exports.locator(".tile").evaluateAll((tiles) =>
+    tiles.map((tile) => {
+      const thumbnail = tile.querySelector(".thumbnail");
+      const details = tile.querySelector(".details");
+      const actions = tile.querySelector(".actions");
+      if (!thumbnail || !details || !actions) {
+        throw new Error("Export grid tile is incomplete");
+      }
+      const tileRect = tile.getBoundingClientRect();
+      const thumbnailRect = thumbnail.getBoundingClientRect();
+      const detailsRect = details.getBoundingClientRect();
+      const actionsRect = actions.getBoundingClientRect();
+      return {
+        actionsTop: actionsRect.top,
+        detailsTop: detailsRect.top,
+        thumbnailBottom: thumbnailRect.bottom,
+        thumbnailWidth: thumbnailRect.width,
+        tileLeft: tileRect.left,
+      };
+    }),
+  );
+  expect(gridGeometry[0]?.thumbnailWidth).toBeGreaterThan(
+    listThumbnailBox?.width ?? Number.POSITIVE_INFINITY,
+  );
+  expect(gridGeometry[0]?.detailsTop).toBeGreaterThanOrEqual(
+    gridGeometry[0]?.thumbnailBottom ?? Number.POSITIVE_INFINITY,
+  );
+  expect(gridGeometry[0]?.actionsTop).toBeGreaterThanOrEqual(
+    gridGeometry[0]?.thumbnailBottom ?? Number.POSITIVE_INFINITY,
+  );
+  expect(gridGeometry[1]?.tileLeft).toBeGreaterThan(
+    gridGeometry[0]?.tileLeft ?? Number.POSITIVE_INFINITY,
+  );
+  await listToggle.click();
+  await expect(collection).toHaveClass(/\blist\b/);
   const exportCalendar = navigation.locator("wzc-activity-calendar");
   const exportCalendarTrigger = exportCalendar.locator(".calendar-trigger");
   await expect(exportCalendarTrigger).toBeDisabled();
@@ -3511,6 +3578,7 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   await expect
     .poll(async () => (await ptzControl.boundingBox())?.width ?? 0)
     .toBeGreaterThan(initialPtzTriggerBox.width * 2);
+  await ptzControl.hover();
   const expandedPtzControlBox = await ptzControl.boundingBox();
   expect(
     (expandedPtzControlBox?.x ?? 0) + (expandedPtzControlBox?.width ?? 0) / 2,
@@ -3525,6 +3593,7 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   await expect(ptzControl).toHaveClass(/\bcollapsed\b/);
   await ptzTrigger.click();
   await expect(ptzControl).toHaveClass(/\bexpanded\b/);
+  await ptzControl.hover();
   await expect(ptz.locator("xpath=..")).toHaveAttribute(
     "data-layout-node",
     "wzc:default-ptz-component",

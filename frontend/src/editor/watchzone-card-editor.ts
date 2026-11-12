@@ -45,9 +45,13 @@ import type { PtzCapability } from "../api/ptz";
 import { themeTokens } from "../styles/theme-tokens";
 import { ToastManager } from "../ui/toast-manager";
 import { iconPath, renderIcon } from "../ui/icons";
-import { segmentedControlStyles } from "../ui/segmented-control.styles";
+import type {
+  SegmentedControlOption,
+  SegmentedControlValueDetail,
+} from "../ui/segmented-control";
 import type { SortableReorderDetail } from "../ui/sortable-list";
 import "../ui/accordion";
+import "../ui/segmented-control";
 import "../ui/toast-region";
 import {
   type DirtyStateContext,
@@ -404,11 +408,7 @@ export class CardEditor extends LitElement {
 
   private _renderLiveMediaPlayerSettings() {
     const selected = this._config?.ptz_overlay_control ?? "start_open";
-    const options: readonly {
-      readonly disabled?: boolean;
-      readonly label: string;
-      readonly value: PtzOverlayControl | "open_in_drawer";
-    }[] = [
+    const options: readonly SegmentedControlOption[] = [
       { label: this._t("editor.ptz_overlay_none"), value: "none" },
       {
         label: this._t("editor.ptz_overlay_start_closed"),
@@ -434,26 +434,13 @@ export class CardEditor extends LitElement {
         <span class="segmented-setting-label" id="ptz-overlay-control-label">
           ${this._t("editor.ptz_overlay_control")}
         </span>
-        <div
-          class="editor-segmented-control segmented-control"
-          role="radiogroup"
-          aria-labelledby="ptz-overlay-control-label"
-        >
-          ${options.map(
-            ({ disabled, label, value }) =>
-              html`<button
-                class="segmented-control-option"
-                type="button"
-                role="radio"
-                data-ptz-overlay-control=${value}
-                aria-checked=${selected === value ? "true" : "false"}
-                ?disabled=${disabled}
-                @click=${this._handlePtzOverlayControlChange}
-              >
-                ${label}
-              </button>`,
-          )}
-        </div>
+        <wzc-segmented-control
+          class="editor-segmented-control"
+          .label=${this._t("editor.ptz_overlay_control")}
+          .options=${options}
+          .value=${selected}
+          @wzc-segmented-control-value=${this._handlePtzOverlayControlChange}
+        ></wzc-segmented-control>
       </div>
     `;
   }
@@ -1458,10 +1445,11 @@ export class CardEditor extends LitElement {
     this._applyDraft(normalizeCardConfig(next), true);
   };
 
-  private readonly _handlePtzOverlayControlChange = (event: Event): void => {
+  private readonly _handlePtzOverlayControlChange = (
+    event: CustomEvent<SegmentedControlValueDetail>,
+  ): void => {
     if (!this._config) return;
-    const value = (event.currentTarget as HTMLElement).dataset
-      .ptzOverlayControl as PtzOverlayControl | undefined;
+    const value = event.detail.value as PtzOverlayControl;
     if (
       value !== "none" &&
       value !== "start_closed" &&
@@ -1575,7 +1563,7 @@ export class CardEditor extends LitElement {
     }
   };
 
-  static styles = [themeTokens, segmentedControlStyles, cardEditorStyles];
+  static styles = [themeTokens, cardEditorStyles];
 }
 
 function eventString(event: ValueChangedEvent): string {

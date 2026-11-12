@@ -44,7 +44,7 @@ export const cardEditorStyles = css`
     font-weight: var(--wzc-font-weight-medium);
   }
 
-  .editor-segmented-control {
+  .editor-segmented-control::part(container) {
     overflow: hidden;
     inline-size: 100%;
     padding: 0.15rem;
@@ -53,7 +53,7 @@ export const cardEditorStyles = css`
     border-radius: var(--wzc-radius-pill);
   }
 
-  .editor-segmented-control .segmented-control-option {
+  .editor-segmented-control::part(option) {
     flex: 1 1 0;
     min-block-size: 2rem;
     padding: 0.25rem 0.45rem;
@@ -66,17 +66,17 @@ export const cardEditorStyles = css`
     text-overflow: ellipsis;
   }
 
-  .editor-segmented-control .segmented-control-option[aria-checked="true"] {
+  .editor-segmented-control::part(selected) {
     color: var(--wzc-color-primary);
     background: var(--wzc-color-background);
     box-shadow: var(--wzc-shadow-small);
   }
 
-  .editor-segmented-control .segmented-control-option:disabled {
+  .editor-segmented-control::part(disabled) {
     color: var(--wzc-color-text-3);
   }
 
-  .editor-segmented-control .segmented-control-option:focus-visible {
+  .editor-segmented-control::part(option):focus-visible {
     outline: 2px solid var(--wzc-color-primary);
     outline-offset: -2px;
   }

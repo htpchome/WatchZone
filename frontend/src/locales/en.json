@@ -258,6 +258,8 @@
   "recordings.calendar_title": "Recordings calendar",
   "exports.list": "Saved exports",
   "exports.header": "Exports",
+  "exports.show_grid": "Show exports as grid",
+  "exports.show_list": "Show exports as list",
   "exports.calendar_unavailable": "Export calendar unavailable",
   "exports.loading": "Loading exports…",
   "exports.empty": "No exports are available.",

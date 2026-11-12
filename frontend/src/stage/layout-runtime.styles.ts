@@ -54,6 +54,10 @@ export const stageRuntimeStyles = css`
     outline: none;
   }
 
+  .stage-stack-button:first-child {
+    margin-inline-start: var(--wzc-stage-stack-navigation-padding);
+  }
+
   .stage-stack-button.active {
     --wzc-round-button-background: var(
       --wzc-stage-stack-button-active-background
