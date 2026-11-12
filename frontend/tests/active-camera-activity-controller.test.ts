@@ -2,6 +2,7 @@ import type { ReactiveControllerHost } from "lit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { HomeAssistantApi } from "../src/core/home-assistant";
+import type { ReviewItem } from "../src/api/reviews";
 import type { ActivityUpdateNotification } from "../src/providers/activity-update-resolver";
 import { ActiveCameraActivityController } from "../src/stage/activity/active-camera-activity.controller";
 import { CameraSelectionContext } from "../src/stage/camera-selection-context";
@@ -158,6 +159,69 @@ describe("active camera activity controller", () => {
     expect(controller.items).toEqual([]);
     await vi.waitFor(() => expect(notify).toBeTypeOf("function"));
     publish("camera.front");
+    expect(controller.items).toEqual([draft]);
+    controller.hostDisconnected();
+  });
+
+  it("seeds a draft received before the takeover camera settles", async () => {
+    const selection = new CameraSelectionContext();
+    const draft = review({
+      camera: "driveway",
+      classification: "detection",
+      id: "frigate-main:review-2",
+      revision: "push:new:detection:draft",
+    });
+    const controller = new ActiveCameraActivityController(
+      new TestHost(),
+      () => ({
+        api: {} as HomeAssistantApi,
+        cameraSelection: selection,
+        historyDays: 5,
+        targetModuleId: "camera-module",
+      }),
+      vi.fn().mockResolvedValue([]),
+      vi.fn(),
+      "reviews",
+      (notification) => notification.review,
+      (state) => state.activeReviews ?? [],
+    );
+    controller.hostConnected();
+    const owner = {};
+    const items = [
+      { entityId: "camera.front", label: "Front" },
+      { entityId: "camera.driveway", label: "Driveway" },
+    ];
+
+    selection.publish(
+      "camera-module",
+      owner,
+      { activeEntityId: "camera.front", items, settled: true },
+      vi.fn(),
+    );
+    selection.publish(
+      "camera-module",
+      owner,
+      {
+        activeEntityId: "camera.driveway",
+        activeReviews: [draft],
+        items,
+        settled: false,
+      },
+      vi.fn(),
+    );
+    expect(controller.items).toEqual([]);
+
+    selection.publish(
+      "camera-module",
+      owner,
+      {
+        activeEntityId: "camera.driveway",
+        activeReviews: [draft],
+        items,
+        settled: true,
+      },
+      vi.fn(),
+    );
     expect(controller.items).toEqual([draft]);
     controller.hostDisconnected();
   });
@@ -364,3 +428,33 @@ describe("active camera activity controller", () => {
     controller.hostDisconnected();
   });
 });
+
+function review(overrides: Partial<ReviewItem> = {}): ReviewItem {
+  const now = Date.now() / 1000;
+  return {
+    analysis_description: null,
+    analysis_concerns: [],
+    analysis_score: null,
+    analysis_title: null,
+    camera: "front",
+    classification: "alert",
+    clip_url: null,
+    end_time: null,
+    id: "frigate-main:review-1",
+    labels: ["person"],
+    media_end_time: now,
+    media_start_time: now - 1,
+    playback_sources: [],
+    preferred_transport: "file",
+    preview_url: null,
+    related_event_ids: [],
+    reviewed: false,
+    revision: "push:new:alert:draft",
+    snapshot_url: null,
+    start_time: now - 1,
+    sub_labels: [],
+    thumbnail_url: null,
+    zones: [],
+    ...overrides,
+  };
+}

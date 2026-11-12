@@ -1,7 +1,8 @@
 import { css } from "lit";
 
-/** Shared filter trigger, popover, option-chip, and footer presentation. */
-export const filterPopoverStyles = css`
+import { toolbarIconButtonStyles } from "./toolbar-icon-button.styles";
+
+const filterPopoverPrivateStyles = css`
   :host {
     display: block;
     margin-inline-start: auto;
@@ -19,31 +20,6 @@ export const filterPopoverStyles = css`
     color: inherit;
     cursor: pointer;
   }
-  .filter-trigger {
-    align-items: center;
-    background: transparent;
-    border: 0;
-    color: var(--wzc-filter-trigger-color);
-    display: flex;
-    inline-size: var(--wzc-filter-trigger-size);
-    block-size: var(--wzc-filter-trigger-size);
-    justify-content: center;
-    padding: 0;
-  }
-  .filter-trigger svg {
-    block-size: var(--wzc-filter-trigger-icon-size);
-    inline-size: var(--wzc-filter-trigger-icon-size);
-  }
-  .filter-trigger.selected,
-  .filter-trigger:hover {
-    color: var(--wzc-filter-trigger-active-color);
-  }
-  .filter-trigger:disabled {
-    color: var(--wzc-filter-trigger-color);
-    cursor: default;
-    opacity: 0.45;
-  }
-  .filter-trigger:focus-visible,
   .reset:focus-visible {
     outline: 2px solid var(--wzc-color-primary);
     outline-offset: 2px;
@@ -151,3 +127,9 @@ export const filterPopoverStyles = css`
     opacity: 0.45;
   }
 `;
+
+/** Shared filter trigger, popover, option-chip, and footer presentation. */
+export const filterPopoverStyles = [
+  toolbarIconButtonStyles,
+  filterPopoverPrivateStyles,
+];

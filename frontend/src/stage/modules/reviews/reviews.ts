@@ -124,6 +124,7 @@ export class ReviewsModule extends LitElement {
       }),
     "reviews",
     (notification) => notification.review,
+    (state) => state.activeReviews ?? [],
   );
   private readonly _download = new ReviewDownloadController(
     this,

@@ -111,6 +111,7 @@ export class EventsModule extends LitElement {
       () => undefined,
       "reviews",
       (notification) => notification.review,
+      (state) => state.activeReviews ?? [],
     );
 
   public disconnectedCallback(): void {

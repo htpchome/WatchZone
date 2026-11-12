@@ -1,3 +1,5 @@
+import type { ReviewItem } from "../api/reviews";
+
 export interface CameraSelectionItem {
   readonly activity?: "alert" | "detection";
   readonly entityId: string;
@@ -5,6 +7,7 @@ export interface CameraSelectionItem {
 }
 
 export interface CameraSelectionState {
+  readonly activeReviews?: readonly ReviewItem[];
   readonly activeEntityId?: string;
   readonly items: readonly CameraSelectionItem[];
   /** False while a direct-manipulation camera transition is still moving. */
@@ -111,12 +114,24 @@ function sameState(
   current: CameraSelectionState,
   next: CameraSelectionState,
 ): boolean {
+  const currentReviews = current.activeReviews ?? [];
+  const nextReviews = next.activeReviews ?? [];
   if (
     current.activeEntityId !== next.activeEntityId ||
     current.takeoverAvailable !== next.takeoverAvailable ||
     current.takeoverEnabled !== next.takeoverEnabled ||
     (current.settled !== false) !== (next.settled !== false) ||
     current.items.length !== next.items.length
+  ) {
+    return false;
+  }
+  if (
+    currentReviews.length !== nextReviews.length ||
+    !currentReviews.every(
+      (review, index) =>
+        review.id === nextReviews[index]?.id &&
+        review.revision === nextReviews[index]?.revision,
+    )
   ) {
     return false;
   }

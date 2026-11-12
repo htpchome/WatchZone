@@ -57,7 +57,7 @@ export class ActivityTakeoverToggle extends LitElement {
         )
       : this.localize("camera.alert_takeover_unavailable");
     return html`<button
-      class=${enabled ? "active" : ""}
+      class=${`wzc-toolbar-icon-button${enabled ? " active" : ""}`}
       type="button"
       ?disabled=${!available}
       aria-label=${label}

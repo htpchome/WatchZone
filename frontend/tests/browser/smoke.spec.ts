@@ -886,13 +886,26 @@ test("highlights live video directly from draft review notifications", async ({
           type: "new",
           after: {
             camera: "driveway",
+            data: { objects: ["car"], zones: ["driveway"] },
             id: "review-2",
             severity: "detection",
+            start_time: Date.now() / 1000 - 2,
           },
         }),
       );
   });
   await expect(cameraButtons.nth(1)).toHaveAttribute("aria-selected", "true");
+  const activeDraft = page.locator("wzc-reviews .tile").first();
+  await expect(activeDraft.locator(".in-progress")).toHaveText("In progress");
+  await expect(activeDraft).toContainText("Detection");
+  const toolbarBackgrounds = await page
+    .locator(
+      "wzc-activity-takeover-toggle button, wzc-activity-filter .filter-trigger, wzc-activity-calendar .calendar-trigger",
+    )
+    .evaluateAll((buttons) =>
+      buttons.map((button) => getComputedStyle(button).backgroundColor),
+    );
+  expect(new Set(toolbarBackgrounds)).toEqual(new Set(["rgba(0, 0, 0, 0)"]));
   await page.evaluate(() => {
     for (const callback of (
       window as unknown as {
@@ -902,7 +915,13 @@ test("highlights live video directly from draft review notifications", async ({
       callback(
         JSON.stringify({
           type: "new",
-          after: { camera: "front", id: "review-3", severity: "alert" },
+          after: {
+            camera: "front",
+            data: { objects: ["person"], zones: ["porch"] },
+            id: "review-3",
+            severity: "alert",
+            start_time: Date.now() / 1000 - 1,
+          },
         }),
       );
   });
@@ -929,6 +948,8 @@ test("highlights live video directly from draft review notifications", async ({
       );
   });
   await expect(cameraButtons.nth(0)).toHaveAttribute("aria-selected", "true");
+  await expect(activeDraft.locator(".in-progress")).toHaveText("In progress");
+  await expect(activeDraft).toContainText("Alert");
 });
 
 test("keeps activity content in an independently scrolling viewport", async ({

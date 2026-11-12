@@ -126,7 +126,7 @@ export class ActivityCalendar extends LitElement {
     const markedDates = new Set(this._availableDays);
     return html`
       <button
-        class=${`calendar-trigger${this._selectedDate ? " selected" : ""}`}
+        class=${`calendar-trigger wzc-toolbar-icon-button${this._selectedDate ? " selected" : ""}`}
         type="button"
         ?disabled=${this.disabled}
         aria-expanded=${this._open ? "true" : "false"}

@@ -1,8 +1,18 @@
 import { css } from "lit";
 
-/** Private styles for the Stage activity-calendar navigation adjunct. */
-export const activityCalendarStyles = css`
+import { toolbarIconButtonStyles } from "../../ui/toolbar-icon-button.styles";
+
+const activityCalendarPrivateStyles = css`
   :host {
+    --wzc-toolbar-icon-button-active-color: var(
+      --wzc-stage-stack-button-hover-color
+    );
+    --wzc-toolbar-icon-button-color: var(--wzc-stage-stack-button-color);
+    --wzc-toolbar-icon-button-disabled-opacity: var(
+      --wzc-control-disabled-opacity
+    );
+    --wzc-toolbar-icon-button-icon-size: var(--wzc-stage-stack-icon-size);
+    --wzc-toolbar-icon-button-size: var(--wzc-stage-stack-button-size);
     display: block;
     position: relative;
   }
@@ -17,35 +27,6 @@ export const activityCalendarStyles = css`
     -webkit-tap-highlight-color: transparent;
   }
 
-  .calendar-trigger {
-    align-items: center;
-    background: transparent;
-    border: 0;
-    color: var(--wzc-stage-stack-button-color);
-    display: flex;
-    inline-size: var(--wzc-stage-stack-button-size);
-    block-size: var(--wzc-stage-stack-button-size);
-    justify-content: center;
-    padding: 0;
-  }
-
-  .calendar-trigger svg {
-    block-size: var(--wzc-stage-stack-icon-size);
-    inline-size: var(--wzc-stage-stack-icon-size);
-  }
-
-  .calendar-trigger.selected,
-  .calendar-trigger:hover {
-    color: var(--wzc-stage-stack-button-hover-color);
-  }
-
-  .calendar-trigger:disabled {
-    color: var(--wzc-stage-stack-button-color);
-    cursor: default;
-    opacity: var(--wzc-control-disabled-opacity);
-  }
-
-  .calendar-trigger:focus-visible,
   .month-button:focus-visible,
   .day:focus-visible,
   .reset:focus-visible {
@@ -195,3 +176,9 @@ export const activityCalendarStyles = css`
     opacity: 0.45;
   }
 `;
+
+/** Private styles for the Stage activity-calendar navigation adjunct. */
+export const activityCalendarStyles = [
+  toolbarIconButtonStyles,
+  activityCalendarPrivateStyles,
+];

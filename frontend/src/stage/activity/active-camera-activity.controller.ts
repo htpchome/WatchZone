@@ -88,6 +88,9 @@ export class ActiveCameraActivityController<
     private readonly _onError: () => void,
     private readonly _activityKind: ActivityUpdateKind,
     private readonly _mapUpdate?: ActivityUpdateMapper<T>,
+    private readonly _selectionItems?: (
+      state: CameraSelectionState,
+    ) => readonly T[],
   ) {
     _host.addController(this);
   }
@@ -202,10 +205,17 @@ export class ActiveCameraActivityController<
     const activeCameraLabel = state.items.find(
       ({ entityId }) => entityId === activeEntityId,
     )?.label;
+    const selectionItems = this._selectionItems?.(state) ?? [];
     if (
       activeEntityId === this._activeEntityId &&
       activeCameraLabel === this._activeCameraLabel
     ) {
+      if (
+        activeEntityId &&
+        this._mergeSelectionItems(activeEntityId, selectionItems)
+      ) {
+        this._host.requestUpdate();
+      }
       return;
     }
     const cameraChanged = activeEntityId !== this._activeEntityId;
@@ -226,6 +236,8 @@ export class ActiveCameraActivityController<
       this.items = this._recentItemsByEntityId.get(activeEntityId) ?? [];
       this._itemsEntityId = activeEntityId;
     }
+    if (activeEntityId)
+      this._mergeSelectionItems(activeEntityId, selectionItems);
     this._host.requestUpdate();
     if (!activeEntityId) return;
     // A review may have entered draft while this camera was inactive. The
@@ -417,6 +429,28 @@ export class ActiveCameraActivityController<
       entityId,
       items.slice(0, INACTIVE_CAMERA_RECENT_ITEMS),
     );
+  }
+
+  private _mergeSelectionItems(
+    entityId: string,
+    incoming: readonly T[],
+  ): boolean {
+    if (incoming.length === 0) return false;
+    const currentRevisions = new Map(
+      this.items.map(({ id, revision }) => [id, revision]),
+    );
+    if (
+      incoming.every(
+        ({ id, revision }) => currentRevisions.get(id) === revision,
+      )
+    ) {
+      return false;
+    }
+    this._setItems(
+      entityId,
+      mergeActivityItems(this.items, incoming, this._context().historyDays),
+    );
+    return true;
   }
 
   private _stopEmptyConfirmation(): void {

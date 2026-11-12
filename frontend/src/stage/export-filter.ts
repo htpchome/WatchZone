@@ -84,7 +84,7 @@ export class ExportFilter extends LitElement {
   protected render() {
     const selected = this._hasActiveFilter();
     return html`<button
-        class=${`filter-trigger${selected ? " selected" : ""}`}
+        class=${`filter-trigger wzc-toolbar-icon-button${selected ? " selected" : ""}`}
         type="button"
         aria-expanded=${this._open ? "true" : "false"}
         aria-haspopup="dialog"

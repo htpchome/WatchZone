@@ -3,6 +3,7 @@ import type { ReactiveController, ReactiveControllerHost } from "lit";
 import type { AlertTakeoverMode } from "../../../core/config";
 import { ACTIVITY_UPDATE_SUBSCRIBE_RETRY_MS } from "../../../core/constants";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
+import type { ReviewItem } from "../../../api/reviews";
 import {
   subscribeActivityUpdates,
   type ActivityUpdateNotification,
@@ -25,6 +26,7 @@ interface ActiveReview {
   readonly entityId: string;
   readonly id: string;
   readonly order: number;
+  review?: ReviewItem;
 }
 
 /** Owns live review activity state, camera highlighting, and takeover order. */
@@ -88,6 +90,18 @@ export class LiveActivityHighlightController implements ReactiveController {
       this._beginTakeover(this._nextEligibleReview());
     }
     this._host.requestUpdate();
+  }
+
+  /** Active normalized Review drafts for the owning camera selection channel. */
+  public reviewsFor(entityId: string | undefined): readonly ReviewItem[] {
+    if (!entityId) return [];
+    return [...(this._activeReviews.get(entityId)?.values() ?? [])]
+      .map(({ review }) => review)
+      .filter((review): review is ReviewItem => review !== undefined)
+      .sort(
+        (left, right) =>
+          right.start_time - left.start_time || left.id.localeCompare(right.id),
+      );
   }
 
   /** A direct user choice cancels only the current takeover, not the feature. */
@@ -231,6 +245,7 @@ export class LiveActivityHighlightController implements ReactiveController {
       order: ++this._order,
     };
     review.classification = notification.classification;
+    if (notification.review) review.review = notification.review;
     reviews.set(notification.id, review);
     if (
       this.takeoverEnabled &&

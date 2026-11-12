@@ -2,6 +2,7 @@ import type { ReactiveControllerHost } from "lit";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { HomeAssistantApi } from "../src/core/home-assistant";
+import type { ReviewItem } from "../src/api/reviews";
 import type { ActivityUpdateNotification } from "../src/providers/activity-update-resolver";
 import { LiveActivityHighlightController } from "../src/stage/modules/camera/activity-highlight.controller";
 
@@ -196,18 +197,22 @@ describe("live activity highlight controller", () => {
     controller.hostConnected();
     await vi.waitFor(() => expect(callbacks.size).toBe(2));
 
+    const draft = review();
     callbacks.get("camera.front")?.({
       cameraName: "front",
       classification: "alert",
       id: "review-1",
       phase: "new",
+      review: draft,
       topic: "reviews",
     });
     expect(controller.classification).toBe("alert");
+    expect(controller.reviewsFor("camera.front")).toEqual([draft]);
 
     context.activeEntityId = "camera.driveway";
     controller.hostUpdate();
     expect(controller.classification).toBeUndefined();
+    expect(controller.reviewsFor("camera.front")).toEqual([draft]);
     context.activeEntityId = "camera.front";
     controller.hostUpdate();
     expect(controller.classification).toBe("alert");
@@ -224,6 +229,7 @@ describe("live activity highlight controller", () => {
     context.activeEntityId = "camera.front";
     controller.hostUpdate();
     expect(controller.classification).toBeUndefined();
+    expect(controller.reviewsFor("camera.front")).toEqual([]);
   });
 
   it("keeps the current takeover until it ends, then advances and restores", async () => {
@@ -359,3 +365,33 @@ describe("live activity highlight controller", () => {
     expect(onTakeover).toHaveBeenLastCalledWith("camera.driveway");
   });
 });
+
+function review(overrides: Partial<ReviewItem> = {}): ReviewItem {
+  const now = Date.now() / 1000;
+  return {
+    analysis_description: null,
+    analysis_concerns: [],
+    analysis_score: null,
+    analysis_title: null,
+    camera: "front",
+    classification: "alert",
+    clip_url: null,
+    end_time: null,
+    id: "frigate-main:review-1",
+    labels: ["person"],
+    media_end_time: now,
+    media_start_time: now - 1,
+    playback_sources: [],
+    preferred_transport: "file",
+    preview_url: null,
+    related_event_ids: [],
+    reviewed: false,
+    revision: "push:new:alert:draft",
+    snapshot_url: null,
+    start_time: now - 1,
+    sub_labels: [],
+    thumbnail_url: null,
+    zones: [],
+    ...overrides,
+  };
+}

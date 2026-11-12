@@ -92,7 +92,7 @@ export class ActivityFilter extends LitElement {
     const selected = hasFilters(this._state);
     return html`
       <button
-        class=${`filter-trigger${selected ? " selected" : ""}`}
+        class=${`filter-trigger wzc-toolbar-icon-button${selected ? " selected" : ""}`}
         type="button"
         ?disabled=${this.disabled}
         aria-expanded=${this._open ? "true" : "false"}

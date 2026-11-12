@@ -365,6 +365,9 @@ export class CameraModule extends LitElement {
       this,
       {
         activeEntityId: this.cameras[this._activeIndex]?.entityId,
+        activeReviews: this._activityHighlight.reviewsFor(
+          this.cameras[this._activeIndex]?.entityId,
+        ),
         items: this.cameras.map(({ entityId, label }) => ({
           activity: this._activityHighlight.classifications.get(entityId),
           entityId,
