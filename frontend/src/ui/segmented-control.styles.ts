@@ -6,17 +6,19 @@ export const segmentedControlStyles = css`
     display: block;
     box-sizing: border-box;
     min-inline-size: 0;
-    --wzc-segmented-background: var(--wzc-color-surface-secondary);
-    --wzc-segmented-border: 1px solid var(--wzc-color-border-control);
+    --wzc-segmented-background: var(--wzc-selection-bar-background);
+    --wzc-segmented-border: 0;
     --wzc-segmented-radius: var(--wzc-radius-pill);
-    --wzc-segmented-gap: 0;
-    --wzc-segmented-padding: 0.15rem;
+    --wzc-segmented-gap: var(--wzc-selection-bar-gap);
+    --wzc-segmented-padding: var(--wzc-selection-bar-padding);
     --wzc-segmented-option-min-block-size: 2rem;
     --wzc-segmented-option-padding-inline: 0.45rem;
-    --wzc-segmented-option-color: var(--wzc-color-text-1);
-    --wzc-segmented-selected-color: var(--wzc-color-primary);
-    --wzc-segmented-selected-background: var(--wzc-color-background);
-    --wzc-segmented-selected-shadow: var(--wzc-shadow-small);
+    --wzc-segmented-option-color: var(--wzc-selection-bar-color);
+    --wzc-segmented-selected-color: var(--wzc-selection-bar-active-color);
+    --wzc-segmented-selected-background: var(
+      --wzc-selection-bar-active-background
+    );
+    --wzc-segmented-selected-shadow: var(--wzc-selection-bar-active-shadow);
   }
 
   .segmented-control {

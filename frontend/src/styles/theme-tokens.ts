@@ -235,14 +235,25 @@ export const themeTokens = css`
     --wzc-carousel-navigation-hover-opacity: 100%;
     --wzc-carousel-navigation-icon-size: 2.75rem;
     --wzc-carousel-navigation-control-gap: 0.75rem;
-    --wzc-camera-navigation-color: var(--wzc-color-text-1);
-    --wzc-camera-navigation-background: var(--wzc-color-surface-secondary);
-    --wzc-camera-navigation-active-color: var(--wzc-color-text-reversed);
-    --wzc-camera-navigation-active-background: var(--wzc-color-primary);
+    --wzc-selection-bar-color: var(--wzc-color-text-1);
+    --wzc-selection-bar-background: var(--wzc-color-surface-secondary);
+    --wzc-selection-bar-active-color: var(--wzc-color-text-reversed);
+    --wzc-selection-bar-active-background: var(--wzc-color-primary);
+    --wzc-selection-bar-active-shadow: var(--wzc-shadow-small);
+    --wzc-selection-bar-gap: 0.25rem;
+    --wzc-selection-bar-padding: 0.25rem;
+    --wzc-camera-navigation-color: var(--wzc-selection-bar-color);
+    --wzc-camera-navigation-background: var(--wzc-selection-bar-background);
+    --wzc-camera-navigation-active-color: var(--wzc-selection-bar-active-color);
+    --wzc-camera-navigation-active-background: var(
+      --wzc-selection-bar-active-background
+    );
     --wzc-camera-navigation-shadow: var(--wzc-shadow-medium);
-    --wzc-camera-navigation-active-shadow: var(--wzc-shadow-small);
-    --wzc-camera-navigation-gap: 0.25rem;
-    --wzc-camera-navigation-padding: 0.25rem;
+    --wzc-camera-navigation-active-shadow: var(
+      --wzc-selection-bar-active-shadow
+    );
+    --wzc-camera-navigation-gap: var(--wzc-selection-bar-gap);
+    --wzc-camera-navigation-padding: var(--wzc-selection-bar-padding);
     --wzc-camera-navigation-item-size: 2.25rem;
     --wzc-camera-navigation-block-size: calc(
       var(--wzc-camera-navigation-item-size) + 2 *

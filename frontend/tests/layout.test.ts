@@ -88,6 +88,7 @@ describe("layout composition", () => {
         roundedCorners: true,
         shadowStyle: "medium",
         retentionPreference: "automatic",
+        transition: "slide",
       },
     });
     expect(children[1].node).toMatchObject({
@@ -163,6 +164,17 @@ describe("layout composition", () => {
         targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
       },
     ]);
+  });
+
+  it("hydrates the configured carousel transition into the camera module", () => {
+    const layout = builtInStage(
+      normalizeCardConfig({
+        cameras: [{ entity_id: "camera.front" }],
+        slide_transition: "fade",
+      }),
+    );
+
+    expect(moduleAt(layout, 0).config).toMatchObject({ transition: "fade" });
   });
 
   it("maps event badge visibility at the events module boundary", () => {

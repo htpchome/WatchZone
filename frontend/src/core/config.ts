@@ -20,6 +20,7 @@ export interface LinkedLightConfig {
 export type LiveConnectionType = "home_assistant" | "frigate_go2rtc";
 export type FrigateFallbackTransport = "hls" | "mse";
 export type PtzOverlayControl = "none" | "start_closed" | "start_open";
+export type SlideTransition = "none" | "slide" | "fade";
 
 export interface CameraConfig {
   readonly connection: LiveConnectionType;
@@ -47,6 +48,7 @@ export interface CardConfig {
   readonly event_history_days: number;
   readonly highlight_camera_on_activity: boolean;
   readonly ptz_overlay_control: PtzOverlayControl;
+  readonly slide_transition: SlideTransition;
   readonly view_timelapse_on_thumbnail_hover: boolean;
   readonly cameras: readonly CameraConfig[];
   readonly mobile_data_saving?: boolean;
@@ -118,6 +120,16 @@ export function normalizeCardConfig(value: unknown): CardConfig {
       `${APP_NAME} ptz_overlay_control must be none, start_closed, or start_open.`,
     );
   }
+  if (
+    source.slide_transition !== undefined &&
+    source.slide_transition !== "none" &&
+    source.slide_transition !== "slide" &&
+    source.slide_transition !== "fade"
+  ) {
+    throw new Error(
+      `${APP_NAME} slide_transition must be none, slide, or fade.`,
+    );
+  }
   const normalized: Record<string, unknown> = {
     ...source,
     cameras,
@@ -157,6 +169,10 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     source.ptz_overlay_control === "start_closed"
       ? source.ptz_overlay_control
       : "start_open";
+  normalized.slide_transition =
+    source.slide_transition === "none" || source.slide_transition === "fade"
+      ? source.slide_transition
+      : "slide";
   normalized.view_timelapse_on_thumbnail_hover =
     source.view_timelapse_on_thumbnail_hover !== false;
   normalized.rounded_outer_corners =

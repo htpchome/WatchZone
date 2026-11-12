@@ -32,6 +32,7 @@ describe("WatchZone card configuration", () => {
       event_shadows: true,
       highlight_camera_on_activity: true,
       ptz_overlay_control: "start_open",
+      slide_transition: "slide",
       view_timelapse_on_thumbnail_hover: true,
       rounded_outer_corners: true,
       outer_shadows: true,
@@ -53,6 +54,19 @@ describe("WatchZone card configuration", () => {
     expect(() =>
       normalizeCardConfig({ ptz_overlay_control: "open_in_drawer" }),
     ).toThrow("ptz_overlay_control must be none, start_closed, or start_open");
+  });
+
+  it("defaults carousel transitions to slide and validates supported effects", () => {
+    expect(normalizeCardConfig({}).slide_transition).toBe("slide");
+    expect(
+      normalizeCardConfig({ slide_transition: "none" }).slide_transition,
+    ).toBe("none");
+    expect(
+      normalizeCardConfig({ slide_transition: "fade" }).slide_transition,
+    ).toBe("fade");
+    expect(() => normalizeCardConfig({ slide_transition: "flip" })).toThrow(
+      "slide_transition must be none, slide, or fade",
+    );
   });
 
   it("defaults thumbnail timelapse previews on and accepts an explicit opt-out", () => {

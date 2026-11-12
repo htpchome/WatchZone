@@ -219,6 +219,7 @@ function hydrateModule(
         : "automatic",
       roundedCorners: config.camera_rounded_corners,
       shadowStyle: config.camera_shadows ? "medium" : "none",
+      transition: config.slide_transition,
     },
     slots,
   };

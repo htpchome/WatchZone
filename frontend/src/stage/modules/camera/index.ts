@@ -3,6 +3,7 @@ import { cameraImageUrl } from "../../../core/home-assistant";
 import { englishLocalize } from "../../../core/localization";
 import type { MediaSessionLease } from "../../../core/media-session-manager";
 import type { MediaRetentionPreference } from "../../../core/media-retention-policy";
+import type { SlideTransition } from "../../../core/config";
 import type {
   ModuleDefinition,
   PlaceableRuntimeContext,
@@ -20,6 +21,7 @@ export interface CameraModuleConfig {
   readonly retentionPreference: MediaRetentionPreference;
   readonly roundedCorners: boolean;
   readonly shadowStyle: CameraShadowStyle;
+  readonly transition: SlideTransition;
 }
 
 type CameraModuleItemConfig = Omit<
@@ -121,6 +123,7 @@ function updateCameraElement(
   camera.retentionPreference = config.retentionPreference;
   camera.roundedCorners = config.roundedCorners;
   camera.shadowStyle = config.shadowStyle;
+  camera.transition = config.transition;
   camera.selectionId = context.placeableId;
   camera.cameras = config.cameras.map((item) => {
     const friendlyName = currentFriendlyName(
@@ -193,12 +196,20 @@ function validateCameraConfig(value: unknown): CameraModuleConfig {
   if (typeof source.highlightActivity !== "boolean") {
     throw new Error("Camera modules require a highlightActivity setting.");
   }
+  if (
+    source.transition !== "none" &&
+    source.transition !== "slide" &&
+    source.transition !== "fade"
+  ) {
+    throw new Error("Camera modules require a valid slide transition.");
+  }
   return {
     cameras,
     highlightActivity: source.highlightActivity,
     retentionPreference: source.retentionPreference,
     roundedCorners: source.roundedCorners,
     shadowStyle: source.shadowStyle,
+    transition: source.transition,
   };
 }
 

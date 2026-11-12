@@ -102,7 +102,7 @@ describe("watchzone-card-editor", () => {
       "Layout Settings",
       "Display Settings",
     ]);
-    expect(items[1]?.childElementCount).toBe(2);
+    expect(items[1]?.childElementCount).toBe(3);
     expect(
       items[1]?.querySelector(
         '[data-config-key="highlight_camera_on_activity"]',
@@ -120,6 +120,15 @@ describe("watchzone-card-editor", () => {
     expect(
       ptzControl?.shadowRoot?.querySelector('[data-value="open_in_drawer"]'),
     ).toHaveProperty("disabled", true);
+    const transitionControl = items[1]?.querySelectorAll<SegmentedControl>(
+      "wzc-segmented-control",
+    )[1];
+    await transitionControl?.updateComplete;
+    expect(
+      transitionControl?.shadowRoot
+        ?.querySelector('[data-value="slide"]')
+        ?.getAttribute("aria-checked"),
+    ).toBe("true");
     expect(items[2]?.childElementCount).toBe(0);
     expect(
       items[3]?.querySelector(
@@ -633,6 +642,34 @@ describe("watchzone-card-editor", () => {
       type: CARD_TYPE,
       title: "Camera",
       ptz_overlay_control: "start_closed",
+    });
+  });
+
+  it("saves the carousel transition from the segmented control", async () => {
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+
+    const controls = editor.shadowRoot?.querySelectorAll<SegmentedControl>(
+      "wzc-segmented-control",
+    );
+    const transition = controls?.[1];
+    transition?.shadowRoot
+      ?.querySelector<HTMLButtonElement>('[data-value="fade"]')
+      ?.click();
+    await editor.updateComplete;
+    await transition?.updateComplete;
+
+    expect(transition?.value).toBe("fade");
+    expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
+      type: CARD_TYPE,
+      title: "Camera",
+      slide_transition: "fade",
     });
   });
 

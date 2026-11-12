@@ -603,6 +603,70 @@ test("keeps activity loading out of an active camera transition", async ({
     .toBe(true);
 });
 
+test("applies configured camera carousel transitions to swipe and arrow navigation", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  const setTransition = (transition: "fade" | "none") =>
+    page.locator("watchzone-card").evaluate((element, slideTransition) => {
+      (
+        element as HTMLElement & {
+          setConfig(config: unknown): void;
+        }
+      ).setConfig({
+        type: "custom:watchzone-card",
+        slide_transition: slideTransition,
+        cameras: [
+          { entity_id: "camera.front", title: "Front" },
+          { entity_id: "camera.back", title: "Back" },
+        ],
+      });
+    }, transition);
+
+  await setTransition("fade");
+  const carousel = page.locator("wzc-camera .camera-carousel");
+  await expect(carousel).toHaveClass(/swiper-fade/, { timeout: 10_000 });
+  await expect
+    .poll(() =>
+      carousel.evaluate((element) => {
+        const swiper = (
+          element as HTMLElement & {
+            swiper?: { params: { effect?: string; speed?: number } };
+          }
+        ).swiper;
+        return { effect: swiper?.params.effect, speed: swiper?.params.speed };
+      }),
+    )
+    .toEqual({ effect: "fade", speed: 300 });
+
+  await carousel.locator(".carousel-navigation.next").click({ force: true });
+  await expect
+    .poll(() =>
+      carousel.evaluate(
+        (element) =>
+          (element as HTMLElement & { swiper?: { activeIndex: number } }).swiper
+            ?.activeIndex,
+      ),
+    )
+    .toBe(1);
+
+  await setTransition("none");
+  await expect(carousel).not.toHaveClass(/swiper-fade/);
+  await expect
+    .poll(() =>
+      carousel.evaluate((element) => {
+        const swiper = (
+          element as HTMLElement & {
+            swiper?: { params: { effect?: string; speed?: number } };
+          }
+        ).swiper;
+        return { effect: swiper?.params.effect, speed: swiper?.params.speed };
+      }),
+    )
+    .toEqual({ effect: "slide", speed: 0 });
+});
+
 test("uses readable camera navigation labels before HA state is available", async ({
   page,
 }) => {
@@ -4645,6 +4709,31 @@ test("editor uses exclusive accordions and shared draft status", async ({
   await items.nth(1).locator("summary").click();
   await expect(items.nth(0).locator("details")).not.toHaveAttribute("open", "");
   await expect(items.nth(1).locator("details")).toHaveAttribute("open", "");
+  const selectionBars = items.nth(1).locator("wzc-segmented-control");
+  await expect(selectionBars).toHaveCount(2);
+  const ptzSelection = selectionBars
+    .nth(0)
+    .locator('[data-value="start_open"]');
+  const transitionSelection = selectionBars
+    .nth(1)
+    .locator('[data-value="slide"]');
+  await expect(transitionSelection).toHaveAttribute("aria-checked", "true");
+  await expect(selectionBars.nth(1).locator(".segmented-control")).toHaveCSS(
+    "border-style",
+    "none",
+  );
+  expect(
+    await transitionSelection.evaluate(
+      (node) => getComputedStyle(node).backgroundColor,
+    ),
+  ).toBe(
+    await ptzSelection.evaluate(
+      (node) => getComputedStyle(node).backgroundColor,
+    ),
+  );
+  expect(
+    await transitionSelection.evaluate((node) => getComputedStyle(node).color),
+  ).toBe(await ptzSelection.evaluate((node) => getComputedStyle(node).color));
 
   const status = editor.locator(
     'wzc-toast-region .toast[data-severity="success"]',

@@ -15,6 +15,7 @@ import {
   type FrigateFallbackTransport,
   type LiveConnectionType,
   type PtzOverlayControl,
+  type SlideTransition,
 } from "../core/config";
 import {
   ACCORDION_ITEM_TAG,
@@ -400,8 +401,8 @@ export class CardEditor extends LitElement {
   }
 
   private _renderLiveMediaPlayerSettings() {
-    const selected = this._config?.ptz_overlay_control ?? "start_open";
-    const options: readonly SegmentedControlOption[] = [
+    const ptzSelected = this._config?.ptz_overlay_control ?? "start_open";
+    const ptzOptions: readonly SegmentedControlOption[] = [
       { label: this._t("editor.ptz_overlay_none"), value: "none" },
       {
         label: this._t("editor.ptz_overlay_start_closed"),
@@ -431,9 +432,37 @@ export class CardEditor extends LitElement {
           class="editor-segmented-control"
           appearance="compact"
           .label=${this._t("editor.ptz_overlay_control")}
-          .options=${options}
-          .value=${selected}
+          .options=${ptzOptions}
+          .value=${ptzSelected}
           @wzc-segmented-control-value=${this._handlePtzOverlayControlChange}
+        ></wzc-segmented-control>
+      </div>
+      <div class="segmented-setting">
+        <span class="segmented-setting-label">
+          ${this._t("editor.slide_transition")}
+        </span>
+        <wzc-segmented-control
+          class="editor-segmented-control"
+          appearance="compact"
+          .label=${this._t("editor.slide_transition")}
+          .options=${
+            [
+              {
+                label: this._t("editor.slide_transition_none"),
+                value: "none",
+              },
+              {
+                label: this._t("editor.slide_transition_slide"),
+                value: "slide",
+              },
+              {
+                label: this._t("editor.slide_transition_fade"),
+                value: "fade",
+              },
+            ] satisfies readonly SegmentedControlOption[]
+          }
+          .value=${this._config?.slide_transition ?? "slide"}
+          @wzc-segmented-control-value=${this._handleSlideTransitionChange}
         ></wzc-segmented-control>
       </div>
     `;
@@ -1370,6 +1399,18 @@ export class CardEditor extends LitElement {
     }
     this._applyDraft(
       normalizeCardConfig({ ...this._config, ptz_overlay_control: value }),
+      true,
+    );
+  };
+
+  private readonly _handleSlideTransitionChange = (
+    event: CustomEvent<SegmentedControlValueDetail>,
+  ): void => {
+    if (!this._config) return;
+    const value = event.detail.value as SlideTransition;
+    if (value !== "none" && value !== "slide" && value !== "fade") return;
+    this._applyDraft(
+      normalizeCardConfig({ ...this._config, slide_transition: value }),
       true,
     );
   };

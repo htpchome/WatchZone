@@ -97,6 +97,18 @@ cannot complete.
 - Touch-action restrictions are applied only while carousel movement is
   enabled.
 
+## Transition policy
+
+- Card configuration selects `none`, `slide`, or `fade`; `slide` is the
+  normalized default and is omitted from compact YAML output.
+- The camera carousel controller owns the Swiper effect for both touch swipes
+  and previous/next navigation. Presentation components do not implement a
+  second transition path.
+- `none` keeps navigation and touch arbitration intact while settling without
+  animation. `fade` loads Swiper's fade module only when selected.
+- Changing the configured transition preserves the selected camera and does
+  not replace or renegotiate its document-scoped media session.
+
 ## Verification
 
 Tests verify structural geometry before initialization, single-slide movement

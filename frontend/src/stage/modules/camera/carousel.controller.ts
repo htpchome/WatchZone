@@ -1,5 +1,6 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 import type Swiper from "swiper";
+import type { SlideTransition } from "../../../core/config";
 
 import {
   CAMERA_CAROUSEL_NAVIGATION_HEIGHT_RATIO,
@@ -16,6 +17,7 @@ export class CameraCarouselController implements ReactiveController {
   private _interactionLocked = false;
   private _resizeObserver?: ResizeObserver;
   private _swiper?: Swiper;
+  private _transition: SlideTransition = "slide";
 
   public constructor(
     private readonly _host: ReactiveControllerHost,
@@ -31,13 +33,14 @@ export class CameraCarouselController implements ReactiveController {
     container: HTMLElement | undefined,
     slideCount: number,
     activeIndex = 0,
+    transition: SlideTransition = "slide",
   ): void {
     const normalizedCount = Math.max(0, Math.trunc(slideCount));
     this._activeIndex = Math.max(
       0,
       Math.min(normalizedCount - 1, Math.trunc(activeIndex)),
     );
-    if (this._container === container) {
+    if (this._container === container && this._transition === transition) {
       this._setSlideCount(normalizedCount);
       if (
         this._swiper &&
@@ -48,6 +51,7 @@ export class CameraCarouselController implements ReactiveController {
       }
       return;
     }
+    this._transition = transition;
     this._replaceContainer(container, normalizedCount);
   }
 
@@ -100,11 +104,17 @@ export class CameraCarouselController implements ReactiveController {
   ): Promise<void> {
     try {
       const { default: SwiperConstructor } = await import("swiper");
+      const fadeModule =
+        this._transition === "fade"
+          ? (await import("swiper/modules")).EffectFade
+          : undefined;
       if (generation !== this._generation || this._container !== container)
         return;
       this._swiper = new SwiperConstructor(container, {
         allowTouchMove: this._canMove(),
+        effect: this._transition === "fade" ? "fade" : "slide",
         initialSlide: this._activeIndex,
+        modules: fadeModule ? [fadeModule] : [],
         nested: true,
         noSwiping: true,
         noSwipingClass: "swiper-no-swiping",
@@ -126,6 +136,7 @@ export class CameraCarouselController implements ReactiveController {
           },
         },
         resizeObserver: true,
+        speed: this._transition === "none" ? 0 : 300,
         touchStartPreventDefault: false,
         watchOverflow: true,
       });

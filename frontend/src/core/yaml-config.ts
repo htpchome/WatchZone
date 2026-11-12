@@ -47,6 +47,7 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
   if (config.ptz_overlay_control === "start_open") {
     delete yaml.ptz_overlay_control;
   }
+  if (config.slide_transition === "slide") delete yaml.slide_transition;
   if (config.view_timelapse_on_thumbnail_hover !== false) {
     delete yaml.view_timelapse_on_thumbnail_hover;
   }

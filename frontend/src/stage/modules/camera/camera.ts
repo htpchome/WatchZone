@@ -15,6 +15,7 @@ import type { CameraSelectionContext } from "../../camera-selection-context";
 import type {
   FrigateFallbackTransport,
   LiveConnectionType,
+  SlideTransition,
 } from "../../../core/config";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
 import {
@@ -65,6 +66,7 @@ export class CameraModule extends LitElement {
     retentionPreference: { attribute: false },
     roundedCorners: { attribute: false, type: Boolean },
     shadowStyle: { attribute: false },
+    transition: { attribute: false },
     selectionId: { attribute: false },
   };
 
@@ -102,6 +104,7 @@ export class CameraModule extends LitElement {
   public retentionPreference: MediaRetentionPreference = "automatic";
   public roundedCorners = true;
   public shadowStyle: CameraShadowStyle = "medium";
+  public transition: SlideTransition = "slide";
   public selectionId = "";
 
   public connectedCallback(): void {
@@ -295,6 +298,7 @@ export class CameraModule extends LitElement {
         undefined,
       this.cameras.length,
       this._activeIndex,
+      this.transition,
     );
   }
 
