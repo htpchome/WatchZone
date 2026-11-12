@@ -109,6 +109,10 @@ repeated `config-changed` events as a live-preview mechanism.
 - Unsupported Home Assistant internals are isolated behind a small adapter.
 - Use Home Assistant semantic theme tokens. WatchZone customization tokens
   begin with `--wzc-` and resolve to Home Assistant tokens by default.
+- The configuration editor and its nested dialogs preserve the active theme's
+  surface hue but render that surface opaquely and without backdrop filtering.
+  Glass-style theme transparency remains available to the card and preview but
+  may not expose underlying preview or dashboard content through editor forms.
 - Do not hardcode application colors, fonts, elevations, or light/dark mode
   assumptions.
 - Use logical dimensions and properties, bounded fluid sizing, and container

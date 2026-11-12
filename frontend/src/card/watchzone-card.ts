@@ -35,6 +35,7 @@ import type {
 } from "../core/recorded-media";
 import { CardHostAppearanceController } from "../styles/card-host-appearance.controller";
 import { themeTokens } from "../styles/theme-tokens";
+import { ThemeProfileController } from "../core/theme-profile";
 import { stageRuntimeStyles } from "../stage/layout-runtime.styles";
 import { roundButtonStyles } from "../ui/overlay-control.styles";
 import { ToastManager } from "../ui/toast-manager";
@@ -70,6 +71,7 @@ export class DashboardCard extends LitElement {
     this._syncRuntime(),
   );
   private readonly _toasts = new ToastManager(this);
+  private readonly _themeProfile = new ThemeProfileController(this);
   private readonly _layoutRuntime = new LayoutRuntime(
     this,
     undefined,
@@ -102,6 +104,7 @@ export class DashboardCard extends LitElement {
     }
     const transportChanged = this._hass?.connection !== value.connection;
     this._hass = value;
+    this._themeProfile.setHomeAssistant(value);
     this._localization.setLanguage(value.locale?.language ?? value.language);
     if (transportChanged || !this._haApi) {
       this._haApi = createHomeAssistantApi(value);

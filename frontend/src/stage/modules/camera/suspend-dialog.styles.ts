@@ -13,10 +13,12 @@ export const cameraSuspendDialogStyles = css`
     padding: 0;
     overflow: auto;
     color: var(--wzc-color-text-1);
-    background: var(--wzc-color-background);
+    background: var(--wzc-dialog-background);
     border: 1px solid var(--wzc-color-border);
     border-radius: var(--wzc-radius-large);
     box-shadow: var(--wzc-shadow-medium);
+    opacity: 1;
+    backdrop-filter: none;
   }
 
   dialog::backdrop {

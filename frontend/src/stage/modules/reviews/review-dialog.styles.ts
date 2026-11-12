@@ -8,7 +8,7 @@ export const reviewDialogBaseStyles = css`
   }
 
   dialog {
-    background: var(--wzc-color-background);
+    background: var(--wzc-dialog-background);
     border: 1px solid var(--wzc-color-border);
     border-radius: var(--wzc-radius-large);
     box-shadow: var(--wzc-shadow-medium);
@@ -21,6 +21,8 @@ export const reviewDialogBaseStyles = css`
     overflow: auto;
     padding: 0;
     position: fixed;
+    opacity: 1;
+    backdrop-filter: none;
   }
 
   dialog::backdrop {

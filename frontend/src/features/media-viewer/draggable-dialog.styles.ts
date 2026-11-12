@@ -104,6 +104,7 @@ export const draggableDialogStyles = css`
 
   .snapshot {
     aspect-ratio: 16 / 9;
+    background: var(--wzc-recorded-media-background);
     block-size: auto;
     display: block;
     inline-size: 100%;

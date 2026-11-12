@@ -48,12 +48,29 @@ export interface HomeAssistantLocale {
   readonly time_zone?: string;
 }
 
+export interface HomeAssistantTheme {
+  readonly modes?: {
+    readonly dark?: Readonly<Record<string, string>>;
+    readonly light?: Readonly<Record<string, string>>;
+  };
+  readonly [key: string]: unknown;
+}
+
+export interface HomeAssistantThemes {
+  readonly darkMode: boolean;
+  readonly default_dark_theme?: string | null;
+  readonly default_theme: string;
+  readonly theme: string;
+  readonly themes: Readonly<Record<string, HomeAssistantTheme>>;
+}
+
 export interface HomeAssistant {
   readonly config?: { readonly time_zone?: string };
   readonly states: Readonly<Record<string, HomeAssistantEntity>>;
   readonly connection: HomeAssistantConnection;
   readonly language?: string;
   readonly locale?: HomeAssistantLocale;
+  readonly themes?: HomeAssistantThemes;
   callService<T = unknown>(
     domain: string,
     service: string,

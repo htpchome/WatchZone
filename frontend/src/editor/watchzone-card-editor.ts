@@ -41,6 +41,7 @@ import {
   type HomeAssistant,
 } from "../core/home-assistant";
 import { LocalizationController } from "../core/localization";
+import { ThemeProfileController } from "../core/theme-profile";
 import { toYamlCardConfig, type YamlCardConfig } from "../core/yaml-config";
 import { themeTokens } from "../styles/theme-tokens";
 import { ToastManager } from "../ui/toast-manager";
@@ -155,6 +156,7 @@ export class CardEditor extends LitElement {
   private readonly _localization = new LocalizationController(this, () =>
     this._syncDraftStatus(),
   );
+  private readonly _themeProfile = new ThemeProfileController(this);
 
   public set hass(value: unknown) {
     if (!isHomeAssistant(value)) {
@@ -162,6 +164,7 @@ export class CardEditor extends LitElement {
     }
     const firstAssignment = !this._hass;
     this._hass = value;
+    this._themeProfile.setHomeAssistant(value);
     this._localization.setLanguage(value.locale?.language ?? value.language);
     const selectors = this.renderRoot?.querySelectorAll("ha-selector") as
       NodeListOf<SelectorElement> | undefined;

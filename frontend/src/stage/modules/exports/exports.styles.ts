@@ -274,11 +274,13 @@ export const exportsStyles = css`
     inline-size: min(26rem, calc(100vw - 2rem));
     padding: 0;
     color: var(--wzc-color-text-1);
-    background: var(--wzc-color-surface);
+    background: var(--wzc-dialog-background);
     border: 1px solid var(--wzc-color-border);
     border-radius: var(--wzc-radius-large);
     box-shadow: var(--wzc-shadow-medium);
     font: inherit;
+    opacity: 1;
+    backdrop-filter: none;
   }
 
   dialog::backdrop {

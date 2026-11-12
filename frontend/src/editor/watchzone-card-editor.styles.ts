@@ -6,6 +6,9 @@ export const cardEditorStyles = css`
     box-sizing: border-box;
     inline-size: 100%;
     color: var(--wzc-color-text-1);
+    background: var(--wzc-editor-background);
+    opacity: 1;
+    backdrop-filter: none;
   }
 
   ha-input,
@@ -129,10 +132,12 @@ export const cardEditorStyles = css`
     padding: 0;
     overflow: auto;
     color: var(--wzc-color-text-1);
-    background: var(--wzc-color-background);
+    background: var(--wzc-editor-background);
     border: 1px solid var(--wzc-color-border);
     border-radius: var(--wzc-radius-large);
     box-shadow: var(--wzc-shadow-medium);
+    opacity: 1;
+    backdrop-filter: none;
   }
 
   dialog::backdrop {
@@ -152,7 +157,7 @@ export const cardEditorStyles = css`
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     padding: 0.75rem 1rem;
-    background: var(--wzc-color-background);
+    background: var(--wzc-editor-background);
     border-block-end: 1px solid var(--wzc-color-border);
   }
 
@@ -340,7 +345,7 @@ export const cardEditorStyles = css`
     justify-content: flex-end;
     gap: 0.75rem;
     padding: 0.85rem 1rem;
-    background: var(--wzc-color-background);
+    background: var(--wzc-editor-background);
   }
 
   @media (hover: hover) and (pointer: fine) {

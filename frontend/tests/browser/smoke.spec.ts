@@ -2232,6 +2232,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   );
   await expect(snapshot).toBeVisible();
   await expect(snapshot).toHaveAttribute("src", "/thumbnail.svg");
+  await expect(snapshot).toHaveCSS("background-color", "rgb(36, 36, 36)");
   await expect(page.locator("wzc-recorded-video-player")).toHaveCount(0);
   await modalClose.click();
   await expect(mediaDialog).toBeHidden();
@@ -4459,6 +4460,9 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
       "--wzc-color-error",
       "--wzc-color-warning",
       "--wzc-color-success",
+      "--wzc-dialog-background",
+      "--wzc-editor-background",
+      "--wzc-opaque-surface-background",
       "--wzc-color-border",
       "--wzc-radius-card",
       "--wzc-shadow-card",
@@ -4752,6 +4756,185 @@ test("editor uses exclusive accordions and shared draft status", async ({
   await expect(
     editor.locator('wzc-toast-region .toast[data-severity="warning"]'),
   ).toContainText("Unsaved changes");
+});
+
+test("keeps glass themes opaque in the editor without changing card glass", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  await page.evaluate(async () => {
+    const card = document.querySelector("watchzone-card") as HTMLElement & {
+      setConfig(config: unknown): void;
+    };
+    card.style.setProperty("--ha-card-background", "rgba(255, 255, 255, 0.14)");
+    card.style.setProperty("--primary-background-color", "rgb(20, 30, 40)");
+    card.setConfig({ type: "custom:watchzone-card" });
+
+    const constructor = customElements.get(
+      "watchzone-card",
+    ) as typeof HTMLElement & {
+      getConfigElement(): Promise<
+        HTMLElement & {
+          setConfig(config: unknown): void;
+          updateComplete: Promise<boolean>;
+        }
+      >;
+    };
+    const editor = await constructor.getConfigElement();
+    editor.id = "glass-theme-editor";
+    editor.style.setProperty(
+      "--ha-card-background",
+      "rgba(255, 255, 255, 0.14)",
+    );
+    editor.style.setProperty("--primary-background-color", "rgb(20, 30, 40)");
+    (
+      editor as unknown as HTMLElement & {
+        hass: unknown;
+      }
+    ).hass = {
+      states: {},
+      connection: { subscribeMessage: async () => () => undefined },
+      callService: async () => undefined,
+      callWS: async () => undefined,
+      hassUrl: (path: string) => path,
+      themes: {
+        darkMode: true,
+        default_dark_theme: "Frosted Glass",
+        default_theme: "default",
+        theme: "Frosted Glass",
+        themes: { "Frosted Glass": { modes: { dark: {} } } },
+      },
+    };
+    editor.setConfig({ type: "custom:watchzone-card" });
+    document.body.append(editor);
+    await editor.updateComplete;
+  });
+
+  const cardSurface = page.locator("watchzone-card ha-card");
+  await expect(cardSurface).toHaveCSS(
+    "background-color",
+    "rgba(255, 255, 255, 0.14)",
+  );
+
+  const editor = page.locator("#glass-theme-editor");
+  await expect(editor).toHaveAttribute("data-theme-mode", "dark");
+  await expect(editor).toHaveAttribute("data-theme-name", "Frosted Glass");
+  await expect(editor).not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(editor).toHaveCSS("backdrop-filter", "none");
+  const darkLayers = await editor.evaluate(
+    (element) => getComputedStyle(element).backgroundImage,
+  );
+  expect(darkLayers).toContain("rgba(255, 255, 255, 0.14)");
+  expect(darkLayers).toContain("rgb(20, 30, 40)");
+
+  await editor.evaluate((element) => {
+    (element as HTMLElement).style.setProperty(
+      "--primary-background-color",
+      "rgb(235, 240, 245)",
+    );
+    (
+      element as HTMLElement & {
+        hass: unknown;
+      }
+    ).hass = {
+      states: {},
+      connection: { subscribeMessage: async () => () => undefined },
+      callService: async () => undefined,
+      callWS: async () => undefined,
+      hassUrl: (path: string) => path,
+      themes: {
+        darkMode: false,
+        default_dark_theme: "Frosted Glass",
+        default_theme: "default",
+        theme: "Frosted Glass",
+        themes: { "Frosted Glass": { modes: { dark: {}, light: {} } } },
+      },
+    };
+  });
+  await expect(editor).toHaveAttribute("data-theme-mode", "light");
+  expect(
+    await editor.evaluate(
+      (element) => getComputedStyle(element).backgroundImage,
+    ),
+  ).toContain("rgb(235, 240, 245)");
+
+  await editor.locator("wzc-accordion-item").first().locator("summary").click();
+  await editor.locator("button.add-camera").click();
+  const cameraDialog = editor.locator("dialog.camera-editor-dialog");
+  await expect(cameraDialog).toHaveAttribute("open", "");
+  await expect(cameraDialog).not.toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  );
+  await expect(cameraDialog).toHaveCSS("backdrop-filter", "none");
+});
+
+test("keeps form and confirmation dialogs opaque under glass themes", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  const card = page.locator("watchzone-card");
+  await card.evaluate((element) => {
+    const host = element as HTMLElement & {
+      setConfig(config: unknown): void;
+    };
+    host.style.setProperty("--ha-card-background", "rgba(255, 255, 255, 0.14)");
+    host.style.setProperty("--primary-background-color", "rgb(20, 30, 40)");
+    host.setConfig({
+      type: "custom:watchzone-card",
+      cameras: [{ entity_id: "camera.front" }],
+    });
+  });
+
+  const exportHost = page.locator("wzc-review-export-dialog");
+  await expect(exportHost).toHaveCount(1);
+  await exportHost.evaluate((element) => {
+    (
+      element as HTMLElement & {
+        draft?: { name: string };
+      }
+    ).draft = { name: "Glass theme export" };
+  });
+  const exportDialog = exportHost.locator("dialog");
+  await expect(exportDialog).toBeVisible();
+  await expect(exportDialog).not.toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  );
+  await expect(exportDialog).toHaveCSS("backdrop-filter", "none");
+  expect(
+    await exportDialog.evaluate(
+      (element) => getComputedStyle(element).backgroundImage,
+    ),
+  ).toContain("rgb(20, 30, 40)");
+  await exportHost.evaluate((element) => {
+    (
+      element as HTMLElement & {
+        draft?: { name: string };
+      }
+    ).draft = undefined;
+  });
+  await expect(exportDialog).toBeHidden();
+
+  const suspendHost = page.locator("wzc-camera-suspend-dialog").first();
+  await expect(suspendHost).toHaveCount(1);
+  await suspendHost.evaluate((element) => {
+    (element as HTMLElement & { active: boolean }).active = true;
+  });
+  const suspendDialog = suspendHost.locator("dialog");
+  await expect(suspendDialog).toBeVisible();
+  await expect(suspendDialog).not.toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  );
+  await expect(suspendDialog).toHaveCSS("backdrop-filter", "none");
+  expect(
+    await suspendDialog.evaluate(
+      (element) => getComputedStyle(element).backgroundImage,
+    ),
+  ).toContain("rgb(20, 30, 40)");
 });
 
 test("camera editor configures lights and confirms accessible removal", async ({

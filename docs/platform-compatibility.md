@@ -94,6 +94,28 @@ geometry, or input behavior. Those remain owned by the container-responsive
 and input-capability profile above. User-agent and platform parsing remains
 prohibited for presentation decisions.
 
+### 2.3 Theme profile
+
+The shared frontend theme profile uses `hass.themes.darkMode` as Home
+Assistant's authoritative effective light/dark mode and `hass.themes.theme` as
+the active theme identity. It records the configured default theme names and
+whether the active theme declares explicit light or dark variants without
+copying the complete theme registry. When Home Assistant theme data is not yet
+available, the profile temporarily follows `prefers-color-scheme` and reacts to
+changes until Home Assistant becomes authoritative.
+
+Theme identity supports diagnostics and future capability choices; features do
+not branch on a particular third-party theme name. Visual colors continue to
+flow through the semantic token boundary. The profile exposes stable mode data
+to the card and editor and synchronizes their `color-scheme` without replacing
+theme-provided colors.
+
+Form and confirmation dialogs use the shared opaque theme-surface token so a
+glass theme cannot expose dashboard or preview content through editable text.
+The token composites the theme's card tint over its primary surface and the
+mode-aware browser canvas. Popover panels and recorded-media dialogs retain
+their existing presentation because they do not share this readability issue.
+
 ## 3. Media rules
 
 Media support is capability-dependent even within one browser family.

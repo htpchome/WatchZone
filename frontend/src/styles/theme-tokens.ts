@@ -27,6 +27,12 @@ export const themeTokens = css`
       --secondary-background-color,
       var(--wzc-color-surface)
     );
+    --wzc-opaque-surface-background:
+      linear-gradient(var(--wzc-color-background), var(--wzc-color-background)),
+      linear-gradient(var(--wzc-color-surface), var(--wzc-color-surface)),
+      Canvas;
+    --wzc-dialog-background: var(--wzc-opaque-surface-background);
+    --wzc-editor-background: var(--wzc-opaque-surface-background);
 
     --wzc-color-text-1: var(
       --ha-color-text-primary,
@@ -511,5 +517,13 @@ export const themeTokens = css`
     );
     --wzc-toast-radius: var(--wzc-radius-pill);
     --wzc-toast-shadow: var(--wzc-shadow-small);
+  }
+
+  :host([data-theme-mode="dark"]) {
+    color-scheme: dark;
+  }
+
+  :host([data-theme-mode="light"]) {
+    color-scheme: light;
   }
 `;
