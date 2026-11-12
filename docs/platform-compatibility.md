@@ -115,9 +115,11 @@ boundary:
 
 - Informational dialogs use Home Assistant's native dialog surface,
   backdrop-filter, radius, shadow, and scrim hooks.
-- The Home Assistant card-editor shell uses the theme's opaque default surface
-  without a backdrop filter so the complete Config, Visibility, and Layout
-  dialog remains uniform over media and dashboard content.
+- The Home Assistant card-editor shell uses a mode-aware opaque surface without
+  a backdrop filter: Home Assistant's default surface in light mode and the
+  active theme's primary background in dark mode. The complete Config,
+  Visibility, and Layout dialog therefore remains uniform over media and
+  dashboard content without flattening distinct dark-theme palettes.
 - Configuration, form, destructive-confirmation, and other focused task
   dialogs use the theme's solid primary surface while retaining Home
   Assistant's dialog radius, shadow, and scrim. They do not apply a second

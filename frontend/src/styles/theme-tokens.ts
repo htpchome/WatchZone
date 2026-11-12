@@ -563,6 +563,10 @@ export const themeTokens = css`
   }
 
   :host([data-theme-mode="dark"]) {
+    --wzc-editor-dialog-background: var(
+      --primary-background-color,
+      var(--ha-color-surface-default, var(--wzc-color-surface))
+    );
     color-scheme: dark;
   }
 

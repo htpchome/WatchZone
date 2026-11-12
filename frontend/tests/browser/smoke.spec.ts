@@ -4940,7 +4940,7 @@ test("keeps the editor shell uniform and nested tasks independently solid", asyn
       })),
     )
     .toEqual({
-      background: "rgb(160, 161, 170)",
+      background: "rgb(120, 121, 122)",
       backgroundPriority: "important",
       backdropFilter: "none",
     });
