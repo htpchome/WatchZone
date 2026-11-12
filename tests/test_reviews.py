@@ -373,3 +373,127 @@ async def test_review_provider_sets_reviewed_state(
         {"ids": ["review-1"], "reviewed": True},
         {"Authorization": "Bearer token"},
     )
+
+
+async def test_review_tracking_details_normalize_timeline(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Tracking details validate review ownership and normalize lifecycle data."""
+
+    async def get_auth_headers() -> dict[str, str]:
+        return {"Authorization": "Bearer token"}
+
+    source = cast(
+        FrigateSource,
+        SimpleNamespace(
+            base_url="http://frigate.local",
+            camera_name="front",
+            client=SimpleNamespace(
+                get_auth_headers=get_auth_headers,
+                validate_ssl=True,
+            ),
+            frigate_instance_id="frigate_workshop",
+        ),
+    )
+
+    async def resolve_source(hass: Any, entity_id: str) -> FrigateSource:
+        del hass, entity_id
+        return source
+
+    async def get_json(
+        hass: Any,
+        resolved_source: FrigateSource,
+        path: str,
+        params: dict[str, str | int | float],
+        headers: dict[str, str],
+    ) -> object:
+        del hass, resolved_source, headers
+        if path == "api/review/review-1":
+            return {
+                "camera": "front",
+                "data": {"detections": ["event-1"]},
+                "id": "review-1",
+            }
+        if path == "api/event_ids":
+            assert params == {"ids": "event-1"}
+            return [
+                {
+                    "end_time": 108,
+                    "id": "event-1",
+                    "label": "person",
+                    "start_time": 100,
+                    "sub_label": ["Resident", 0.96],
+                }
+            ]
+        if path == "api/timeline":
+            assert params == {"source_id": "event-1", "limit": 500}
+            return [
+                {
+                    "camera": "front",
+                    "class_type": "visible",
+                    "data": {
+                        "box": [0.1, 0.2, 0.25, 0.5],
+                        "ratio": 0.5,
+                        "score": 0.73,
+                    },
+                    "source": "tracked_object",
+                    "source_id": "event-1",
+                    "timestamp": 100,
+                },
+                {
+                    "camera": "front",
+                    "class_type": "entered_zone",
+                    "data": {
+                        "box": [0.2, 0.2, 0.3, 0.5],
+                        "score": 0.86,
+                        "zones": ["garage"],
+                    },
+                    "source": "tracked_object",
+                    "source_id": "event-1",
+                    "timestamp": 103,
+                },
+                {
+                    "camera": "other",
+                    "class_type": "gone",
+                    "data": {},
+                    "source": "tracked_object",
+                    "source_id": "event-1",
+                    "timestamp": 104,
+                },
+            ]
+        if path == "api/config":
+            return {
+                "cameras": {"front": {"detect": {"height": 1080, "width": 1920}}}
+            }
+        raise AssertionError(f"Unexpected request: {path}")
+
+    monkeypatch.setattr(
+        "custom_components.watchzone.providers.frigate.reviews.async_resolve_source",
+        resolve_source,
+    )
+    monkeypatch.setattr(
+        "custom_components.watchzone.providers.frigate.reviews._get_json",
+        get_json,
+    )
+
+    details = await FrigateReviewsProvider().async_get_tracking_details(
+        cast(Any, SimpleNamespace()),
+        "camera.front",
+        "frigate_workshop:review-1",
+    )
+
+    assert details.review_id == "frigate_workshop:review-1"
+    assert len(details.objects) == 1
+    tracked = details.objects[0]
+    assert tracked.label == "person"
+    assert tracked.sub_label == "Resident"
+    assert [event.kind for event in tracked.events] == [
+        "detected",
+        "entered_zone",
+        "left",
+    ]
+    assert tracked.events[0].score == 0.73
+    assert tracked.events[0].ratio == 0.5
+    assert tracked.events[0].area == 259_200
+    assert tracked.events[0].area_percentage == 12.5
+    assert tracked.events[1].zones == ("garage",)

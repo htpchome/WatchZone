@@ -9,6 +9,32 @@ import {
 } from "./activity-window";
 
 export type ReviewClassification = "alert" | "detection";
+export type ReviewTrackingEventKind =
+  "detected" | "entered_zone" | "became_active" | "became_stationary" | "left";
+
+export interface ReviewTrackingEvent {
+  readonly area: number | null;
+  readonly area_percentage: number | null;
+  readonly kind: ReviewTrackingEventKind;
+  readonly ratio: number | null;
+  readonly score: number | null;
+  readonly timestamp: number;
+  readonly zones: readonly string[];
+}
+
+export interface ReviewTrackedObject {
+  readonly end_time: number | null;
+  readonly events: readonly ReviewTrackingEvent[];
+  readonly id: string;
+  readonly label: string;
+  readonly start_time: number;
+  readonly sub_label: string | null;
+}
+
+export interface ReviewTrackingDetails {
+  readonly objects: readonly ReviewTrackedObject[];
+  readonly review_id: string;
+}
 
 export interface ReviewItem {
   readonly analysis_description: string | null;
@@ -61,5 +87,17 @@ export async function setReviewReviewed(
     entity_id: entityId,
     review_id: reviewId,
     reviewed,
+  });
+}
+
+export async function getReviewTrackingDetails(
+  api: HomeAssistantApi,
+  entityId: string,
+  reviewId: string,
+): Promise<ReviewTrackingDetails> {
+  return api.callWS<ReviewTrackingDetails>({
+    type: "watchzone/reviews/tracking_details",
+    entity_id: entityId,
+    review_id: reviewId,
   });
 }

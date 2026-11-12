@@ -12,6 +12,7 @@ import type { HomeAssistantLocale } from "../../../core/home-assistant";
 import { homeAssistantNumberFormat } from "../../../core/number-format";
 import { centerDialogOnCard } from "../../../ui/dialog-position";
 import { reviewAnalysisDialogStyles } from "./review-analysis-dialog.styles";
+import { reviewDialogBaseStyles } from "./review-dialog.styles";
 
 export interface ReviewAnalysis {
   readonly concerns: readonly string[];
@@ -117,7 +118,7 @@ export class ReviewAnalysisDialog extends LitElement {
     );
   };
 
-  static styles = reviewAnalysisDialogStyles;
+  static styles = [reviewDialogBaseStyles, reviewAnalysisDialogStyles];
 }
 
 if (!customElements.get(REVIEW_ANALYSIS_DIALOG_TAG)) {

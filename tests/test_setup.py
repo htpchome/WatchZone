@@ -2,7 +2,7 @@
 
 from pathlib import Path
 from types import MappingProxyType, SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from homeassistant.components.lovelace.const import LOVELACE_DATA
 from homeassistant.components.lovelace.dashboard import LovelaceStorage
@@ -78,6 +78,7 @@ async def test_setup_registers_packaged_frontend(
     asset_path = tmp_path / "assets"
     asset_path.mkdir()
     register = AsyncMock()
+    register_view = Mock()
 
     with (
         patch("custom_components.watchzone._CARD_PATH", card_path),
@@ -85,7 +86,10 @@ async def test_setup_registers_packaged_frontend(
         patch.object(
             hass,
             "http",
-            SimpleNamespace(async_register_static_paths=register),
+            SimpleNamespace(
+                async_register_static_paths=register,
+                register_view=register_view,
+            ),
         ),
     ):
         assert await async_setup(hass, {})
@@ -93,6 +97,7 @@ async def test_setup_registers_packaged_frontend(
     paths = register.await_args.args[0]
     assert paths[0].cache_headers is False
     assert paths[1].cache_headers is True
+    register_view.assert_called_once()
 
 
 async def test_entry_adds_and_removes_card_module(hass: HomeAssistant) -> None:

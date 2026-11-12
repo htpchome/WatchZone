@@ -19,7 +19,15 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from yarl import URL
 
 from ..media import PlaybackSource
-from ..reviews import ReviewItem, ReviewQuery, ReviewsProvider
+from ..reviews import (
+    ReviewItem,
+    ReviewQuery,
+    ReviewsProvider,
+    ReviewTrackedObject,
+    ReviewTrackingDetails,
+    ReviewTrackingEvent,
+    ReviewTrackingEventKind,
+)
 from .source import FrigateSource, async_resolve_source
 
 _REQUEST_TIMEOUT = ClientTimeout(total=15)
@@ -27,7 +35,16 @@ _CONFIG_CACHE_TTL_SECONDS = 300
 _CONFIG_CACHE_MAX_ENTRIES = 16
 _EVENT_ID_BATCH_SIZE = 50
 _EVENT_LOOKUP_CONCURRENCY = 4
+_TRACKING_TIMELINE_LIMIT = 500
 _DEFAULT_CAPTURE_SECONDS = 5
+
+_TRACKING_EVENT_KINDS: dict[str, ReviewTrackingEventKind] = {
+    "visible": "detected",
+    "entered_zone": "entered_zone",
+    "active": "became_active",
+    "stationary": "became_stationary",
+    "gone": "left",
+}
 
 
 class FrigateReviewsProvider:
@@ -145,6 +162,62 @@ class FrigateReviewsProvider:
             )
         except (ClientError, TimeoutError, ValueError) as err:
             raise HomeAssistantError("Unable to update the review") from err
+
+    async def async_get_tracking_details(
+        self, hass: HomeAssistant, entity_id: str, review_id: str
+    ) -> ReviewTrackingDetails:
+        """Fetch and normalize the tracked-object lifecycle for one review."""
+        source = await async_resolve_source(hass, entity_id)
+        native_review_id = _native_id(review_id, source.frigate_instance_id)
+        headers = await source.client.get_auth_headers()
+        try:
+            review_payload = await _get_json(
+                hass,
+                source,
+                f"api/review/{quote(native_review_id, safe='')}",
+                {},
+                headers,
+            )
+        except (ClientError, TimeoutError, ValueError) as err:
+            raise HomeAssistantError(
+                "Unable to retrieve review tracking details"
+            ) from err
+        if not isinstance(review_payload, Mapping):
+            raise HomeAssistantError("Frigate returned invalid review tracking data")
+        if _text(review_payload.get("camera")) != source.camera_name:
+            raise HomeAssistantError("Review does not belong to this camera")
+
+        event_ids = _review_event_ids(review_payload)
+        if not event_ids:
+            return ReviewTrackingDetails(review_id, ())
+        config, events, timeline_payload = await asyncio.gather(
+            self._async_config(hass, source, headers, False),
+            _async_related_events(hass, source, headers, event_ids),
+            _async_tracking_timeline(hass, source, headers, event_ids),
+        )
+        timeline = (
+            tuple(item for item in timeline_payload if isinstance(item, Mapping))
+            if isinstance(timeline_payload, list)
+            else ()
+        )
+        dimensions = _detect_dimensions(config, source.camera_name)
+        objects = tuple(
+            tracked
+            for event_id in event_ids
+            if (event := events.get(event_id)) is not None
+            and (
+                tracked := _normalize_tracked_object(
+                    event_id,
+                    event,
+                    timeline,
+                    dimensions,
+                    source.camera_name,
+                    source.frigate_instance_id,
+                )
+            )
+            is not None
+        )
+        return ReviewTrackingDetails(review_id, objects)
 
     async def _async_config(
         self,
@@ -399,6 +472,128 @@ async def _async_related_events(
         if isinstance(event, Mapping)
         and (event_id := _text(event.get("id"))) is not None
     }
+
+
+async def _async_tracking_timeline(
+    hass: HomeAssistant,
+    source: FrigateSource,
+    headers: dict[str, str],
+    event_ids: tuple[str, ...],
+) -> object:
+    try:
+        return await _get_json(
+            hass,
+            source,
+            "api/timeline",
+            {
+                "source_id": ",".join(event_ids),
+                "limit": _TRACKING_TIMELINE_LIMIT,
+            },
+            headers,
+        )
+    except (ClientError, TimeoutError, ValueError):
+        return []
+
+
+def _normalize_tracked_object(
+    event_id: str,
+    event: Mapping[str, Any],
+    timeline: tuple[Mapping[str, Any], ...],
+    dimensions: tuple[int, int] | None,
+    camera: str,
+    instance_id: str,
+) -> ReviewTrackedObject | None:
+    label = _text(event.get("label"))
+    start_time = _timestamp(event.get("start_time"))
+    if label is None or start_time is None:
+        return None
+    end_time = _timestamp(event.get("end_time"))
+    lifecycle = [
+        normalized
+        for row in timeline
+        if _text(row.get("source_id")) == event_id
+        and _text(row.get("camera")) == camera
+        and _text(row.get("source")) in (None, "tracked_object")
+        and (normalized := _normalize_tracking_event(row, dimensions)) is not None
+    ]
+    if not any(item.kind == "detected" for item in lifecycle):
+        lifecycle.append(
+            _tracking_event("detected", start_time, event, dimensions)
+        )
+    if end_time is not None and not any(item.kind == "left" for item in lifecycle):
+        lifecycle.append(_tracking_event("left", end_time, event, dimensions))
+    lifecycle.sort(key=lambda item: item.timestamp)
+    return ReviewTrackedObject(
+        id=f"{instance_id}:{event_id}",
+        label=label,
+        sub_label=_text(_sub_label(event.get("sub_label"))),
+        start_time=start_time,
+        end_time=end_time,
+        events=tuple(lifecycle),
+    )
+
+
+def _normalize_tracking_event(
+    row: Mapping[str, Any], dimensions: tuple[int, int] | None
+) -> ReviewTrackingEvent | None:
+    kind = _TRACKING_EVENT_KINDS.get(_text(row.get("class_type")) or "")
+    timestamp = _timestamp(row.get("timestamp"))
+    if kind is None or timestamp is None:
+        return None
+    return _tracking_event(kind, timestamp, _mapping(row.get("data")), dimensions)
+
+
+def _tracking_event(
+    kind: ReviewTrackingEventKind,
+    timestamp: float,
+    data: Mapping[str, Any],
+    dimensions: tuple[int, int] | None,
+) -> ReviewTrackingEvent:
+    box = _box(data.get("box"))
+    box_area = box[2] * box[3] if box is not None else None
+    ratio = _number(data.get("ratio"))
+    if ratio is None and box is not None and box[3] > 0:
+        ratio = box[2] / box[3]
+    area_value = _number(data.get("area"))
+    if area_value is None and box_area is not None and dimensions is not None:
+        area_value = box_area * dimensions[0] * dimensions[1]
+    return ReviewTrackingEvent(
+        kind=kind,
+        timestamp=timestamp,
+        score=_confidence(data.get("score")),
+        ratio=ratio,
+        area=round(area_value) if area_value is not None else None,
+        area_percentage=box_area * 100 if box_area is not None else None,
+        zones=_string_list(data.get("zones")),
+    )
+
+
+def _detect_dimensions(
+    config: Mapping[str, Any], camera: str
+) -> tuple[int, int] | None:
+    camera_config = _mapping(_mapping(config.get("cameras")).get(camera))
+    detect = _mapping(camera_config.get("detect"))
+    width = _number(detect.get("width"))
+    height = _number(detect.get("height"))
+    if width is None or height is None or width <= 0 or height <= 0:
+        return None
+    return round(width), round(height)
+
+
+def _box(value: object) -> tuple[float, float, float, float] | None:
+    if not isinstance(value, list) or len(value) != 4:
+        return None
+    values = tuple(_number(part) for part in value)
+    if any(part is None for part in values):
+        return None
+    return values  # type: ignore[return-value]
+
+
+def _native_id(value: str, instance_id: str) -> str:
+    prefix = f"{instance_id}:"
+    if not value.startswith(prefix) or not value.removeprefix(prefix):
+        raise HomeAssistantError("Review does not belong to this camera provider")
+    return value.removeprefix(prefix)
 
 
 def _review_event_ids(raw: Mapping[str, Any]) -> tuple[str, ...]:

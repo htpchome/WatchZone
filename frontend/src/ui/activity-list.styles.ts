@@ -535,6 +535,45 @@ export const activityListStyles = css`
     z-index: 2;
   }
 
+  .review-info {
+    align-items: center;
+    appearance: none;
+    background: transparent;
+    border: 0;
+    border-radius: var(--wzc-radius-pill);
+    block-size: 1.5rem;
+    bottom: 0.12rem;
+    color: var(--wzc-color-text-1);
+    display: inline-flex;
+    inline-size: 1.5rem;
+    inset-inline-end: var(--wzc-event-action-margin);
+    justify-content: center;
+    padding: 0;
+    pointer-events: auto;
+    position: absolute;
+    z-index: 2;
+  }
+
+  .review-info::before {
+    content: "";
+    inset: 50% auto auto 50%;
+    min-block-size: 2.75rem;
+    min-inline-size: 2.75rem;
+    position: absolute;
+    transform: translate(-50%, -50%);
+  }
+
+  .review-info svg {
+    block-size: 1.25rem;
+    inline-size: 1.25rem;
+  }
+
+  @media (hover: hover) {
+    .review-info:hover {
+      color: var(--wzc-color-primary);
+    }
+  }
+
   .action {
     align-items: center;
     background: var(--wzc-event-action-background);

@@ -99,7 +99,40 @@ async def ws_reviews_set_reviewed(
     connection.send_result(msg["id"], {"reviewed": msg["reviewed"]})
 
 
+@websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/reviews/tracking_details",
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Required("review_id"): cv.string,
+    }
+)
+@async_response
+async def ws_reviews_tracking_details(
+    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Return normalized tracking details for one camera review."""
+    entity_id = msg["entity_id"]
+    if connection.user is None or not connection.user.permissions.check_entity(
+        entity_id, POLICY_READ
+    ):
+        connection.send_error(
+            msg["id"], "reviews_forbidden", "Camera access is not permitted"
+        )
+        return
+    try:
+        details = await runtime_from_hass(hass).reviews.async_get_tracking_details(
+            entity_id, msg["review_id"]
+        )
+    except HomeAssistantError as err:
+        connection.send_error(
+            msg["id"], "review_tracking_failed", str(err)
+        )
+        return
+    connection.send_result(msg["id"], asdict(details))
+
+
 @callback
 def async_register(hass: HomeAssistant) -> None:
     async_register_command(hass, ws_reviews_list)
     async_register_command(hass, ws_reviews_set_reviewed)
+    async_register_command(hass, ws_reviews_tracking_details)

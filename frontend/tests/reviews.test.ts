@@ -359,6 +359,176 @@ describe("reviews module", () => {
     expect(dialog?.textContent).toContain("None");
   });
 
+  it("loads tracking details only after the information control opens", async () => {
+    const callWS = vi.fn(
+      async (message: { review_id?: string; type: string }) => {
+        if (message.type === "watchzone/reviews/list")
+          return { items: reviews };
+        if (message.type === "watchzone/reviews/tracking_details") {
+          if (message.review_id === "frigate:review-2") {
+            return {
+              objects: [
+                {
+                  end_time: 90,
+                  events: [
+                    {
+                      area: 12000,
+                      area_percentage: 3.2,
+                      kind: "detected",
+                      ratio: 1.1,
+                      score: 0.72,
+                      timestamp: 80,
+                      zones: [],
+                    },
+                  ],
+                  id: "frigate:event-3",
+                  label: "cat",
+                  start_time: 80,
+                  sub_label: null,
+                },
+              ],
+              review_id: "frigate:review-2",
+            };
+          }
+          return {
+            objects: [
+              {
+                end_time: 108,
+                events: [
+                  {
+                    area: 37742,
+                    area_percentage: 7.28,
+                    kind: "detected",
+                    ratio: 0.74,
+                    score: 0.56,
+                    timestamp: 100,
+                    zones: [],
+                  },
+                  {
+                    area: 43860,
+                    area_percentage: 8.46,
+                    kind: "entered_zone",
+                    ratio: 0.67,
+                    score: 0.86,
+                    timestamp: 103,
+                    zones: ["garage"],
+                  },
+                  {
+                    area: 21780,
+                    area_percentage: 4.2,
+                    kind: "left",
+                    ratio: 1.49,
+                    score: 0.77,
+                    timestamp: 108,
+                    zones: [],
+                  },
+                ],
+                id: "frigate:event-1",
+                label: "person",
+                start_time: 100,
+                sub_label: "Resident",
+              },
+            ],
+            review_id: "frigate:review-1",
+          };
+        }
+        return {};
+      },
+    );
+    const api = {
+      callWS,
+      identity: {},
+      locale: { language: "en", time_zone: "server" },
+      resolveUrl: (path: string) => `https://ha.local${path}`,
+      subscribeMessage: vi.fn(),
+    } as unknown as HomeAssistantApi;
+    const selection = new CameraSelectionContext();
+    const module = document.createElement(REVIEWS_TAG) as ReviewsModule;
+    module.api = api;
+    module.cameraSelection = selection;
+    module.targetModuleId = "camera-module";
+    document.body.append(module);
+    selection.publish(
+      "camera-module",
+      {},
+      {
+        activeEntityId: "camera.front",
+        items: [{ entityId: "camera.front", label: "Front" }],
+      },
+      vi.fn(),
+    );
+
+    await vi.waitFor(() => {
+      expect(
+        activityRoot(module)?.querySelectorAll(".review-info"),
+      ).toHaveLength(2);
+    });
+    expect(callWS).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: "watchzone/reviews/tracking_details" }),
+    );
+    activityRoot(module)
+      ?.querySelector<HTMLButtonElement>(".review-info")
+      ?.click();
+    await vi.waitFor(() => {
+      expect(callWS).toHaveBeenCalledWith({
+        entity_id: "camera.front",
+        review_id: "frigate:review-1",
+        type: "watchzone/reviews/tracking_details",
+      });
+    });
+    await module.updateComplete;
+    const tracking = module.shadowRoot?.querySelector(
+      "wzc-review-tracking-dialog",
+    ) as LitElement | null;
+    await tracking?.updateComplete;
+    const dialog = tracking?.shadowRoot?.querySelector("dialog");
+    expect(dialog?.hasAttribute("open")).toBe(true);
+    expect(dialog?.textContent).toContain("Tracking details");
+    expect(dialog?.textContent).toContain("Resident entering garage");
+    await vi.waitFor(() => {
+      expect(dialog?.textContent).toContain("Resident detected");
+      expect(dialog?.textContent).toContain("Resident entered garage");
+    });
+    dialog?.querySelector<HTMLButtonElement>(".lifecycle-event")?.click();
+    await tracking?.updateComplete;
+    expect(dialog?.textContent).toContain("56%");
+    expect(dialog?.textContent).toContain("0.74");
+    expect(dialog?.textContent).toContain("37,742px");
+
+    dialog
+      ?.querySelector<HTMLButtonElement>(
+        'button[aria-label="Close tracking details"]',
+      )
+      ?.click();
+    await module.updateComplete;
+    const infoButtons =
+      activityRoot(module)?.querySelectorAll<HTMLButtonElement>(".review-info");
+    infoButtons?.[1]?.click();
+    await vi.waitFor(() => {
+      expect(callWS).toHaveBeenCalledWith({
+        entity_id: "camera.front",
+        review_id: "frigate:review-2",
+        type: "watchzone/reviews/tracking_details",
+      });
+    });
+    await module.updateComplete;
+    const detectionTracking = module.shadowRoot?.querySelector(
+      "wzc-review-tracking-dialog",
+    ) as LitElement | null;
+    await detectionTracking?.updateComplete;
+    const detectionDialog =
+      detectionTracking?.shadowRoot?.querySelector("dialog");
+    expect(
+      detectionDialog
+        ?.querySelector(".tracking")
+        ?.classList.contains("detection"),
+    ).toBe(true);
+    expect(detectionDialog?.querySelector(".analysis-summary")).toBeNull();
+    await vi.waitFor(() => {
+      expect(detectionDialog?.textContent).toContain("Cat detected");
+    });
+  });
+
   it("toggles reviewed state through the normalized reviews API", async () => {
     const callWS = vi.fn(async (message: { type: string }) =>
       message.type === "watchzone/reviews/list"

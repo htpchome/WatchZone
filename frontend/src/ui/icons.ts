@@ -18,6 +18,13 @@ const ICONS = {
       },
     ],
   },
+  informationOutline: {
+    paths: [
+      {
+        d: "M13 9h-2V7h2v2m0 8h-2v-6h2v6m-1-15A10 10 0 1 0 12 22 10 10 0 0 0 12 2m0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z",
+      },
+    ],
+  },
   reviews: {
     paths: [
       {

@@ -923,6 +923,40 @@ test("keeps activity content in an independently scrolling viewport", async ({
             })),
           };
         }
+        if (message.type === "watchzone/reviews/tracking_details") {
+          return {
+            objects: [
+              {
+                end_time: 1_700_000_024,
+                events: [
+                  {
+                    area: 37_742,
+                    area_percentage: 7.28,
+                    kind: "detected",
+                    ratio: 0.74,
+                    score: 0.56,
+                    timestamp: 1_700_000_000,
+                    zones: [],
+                  },
+                  {
+                    area: 43_860,
+                    area_percentage: 8.46,
+                    kind: "entered_zone",
+                    ratio: 0.67,
+                    score: 0.86,
+                    timestamp: 1_700_000_003,
+                    zones: ["garage"],
+                  },
+                ],
+                id: "frigate:front:0",
+                label: "person",
+                start_time: 1_700_000_000,
+                sub_label: "Resident",
+              },
+            ],
+            review_id: "review:front:0",
+          };
+        }
         if (message.type === "watchzone/exports/prepare") {
           return {
             name: "front 2026-11-10 15:59:55 2026-11-10 16:00:29",
@@ -1102,6 +1136,39 @@ test("keeps activity content in an independently scrolling viewport", async ({
     export: "pointer",
     snapshot: "pointer",
   });
+  const reviewInfo = page
+    .locator('wzc-reviews button[aria-label="View tracking details"]')
+    .first();
+  await expect(reviewInfo).toBeVisible();
+  const infoDefaultColor = await reviewInfo.evaluate((button) => ({
+    button: getComputedStyle(button).color,
+    tile: getComputedStyle(button.closest(".tile")!).color,
+  }));
+  expect(infoDefaultColor.button).toBe(infoDefaultColor.tile);
+  await reviewInfo.hover();
+  await expect
+    .poll(() => reviewInfo.evaluate((button) => getComputedStyle(button).color))
+    .toBe("rgb(3, 169, 244)");
+  await reviewInfo.click();
+  const trackingDialog = page.locator(
+    "wzc-reviews wzc-review-tracking-dialog dialog",
+  );
+  await expect(trackingDialog).toBeVisible();
+  await expect(trackingDialog).toContainText("Tracking details");
+  await expect(trackingDialog).toContainText("Resident entering garage");
+  await expect(trackingDialog).toContainText("Resident entered garage");
+  await expect(trackingDialog.locator(".tracking")).toHaveClass(/alert/);
+  const trackingEvent = trackingDialog.locator(".lifecycle-event").first();
+  await trackingEvent.hover();
+  const trackingMetrics = trackingDialog.locator(".event-metrics");
+  await expect(trackingMetrics).toBeVisible();
+  await expect(trackingMetrics).toContainText("56%");
+  await expect(trackingMetrics).toContainText("0.74");
+  await expect(trackingMetrics).toContainText("37,742px");
+  await trackingDialog
+    .locator('button[aria-label="Close tracking details"]')
+    .click();
+  await expect(trackingDialog).not.toBeVisible();
   const reviewDownloadPromise = page.waitForEvent("download");
   await page
     .locator('wzc-reviews button[aria-label="Download clip"]')

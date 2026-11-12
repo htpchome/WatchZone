@@ -10,6 +10,42 @@ from homeassistant.core import HomeAssistant
 from .media import PlaybackSource, PlaybackTransport
 
 ReviewClassification = Literal["alert", "detection"]
+ReviewTrackingEventKind = Literal[
+    "detected", "entered_zone", "became_active", "became_stationary", "left"
+]
+
+
+@dataclass(frozen=True, slots=True)
+class ReviewTrackingEvent:
+    """One provider-normalized moment in a tracked object's lifecycle."""
+
+    kind: ReviewTrackingEventKind
+    timestamp: float
+    score: float | None
+    ratio: float | None
+    area: int | None
+    area_percentage: float | None
+    zones: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ReviewTrackedObject:
+    """One object associated with a review and its ordered lifecycle."""
+
+    id: str
+    label: str
+    sub_label: str | None
+    start_time: float
+    end_time: float | None
+    events: tuple[ReviewTrackingEvent, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ReviewTrackingDetails:
+    """Tracking details for one provider-owned review."""
+
+    review_id: str
+    objects: tuple[ReviewTrackedObject, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,3 +105,8 @@ class ReviewsProvider(Protocol):
         reviewed: bool,
     ) -> None:
         """Set the reviewed state of one provider-owned review."""
+
+    async def async_get_tracking_details(
+        self, hass: HomeAssistant, entity_id: str, review_id: str
+    ) -> ReviewTrackingDetails:
+        """Return provider-normalized tracking details for one review."""

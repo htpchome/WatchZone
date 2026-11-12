@@ -58,6 +58,7 @@ export interface ActivityListItem {
   readonly hoverPreviewUrl?: string | null;
   readonly id: string;
   readonly inProgress?: boolean;
+  readonly trackingAvailable?: boolean;
   readonly mediaEndTime?: number;
   readonly mediaStartTime?: number;
   readonly objectLabels: readonly string[];
@@ -78,6 +79,10 @@ export type ActivityListIntent =
   | {
       readonly item: ActivityListItem;
       readonly kind: "open_analysis";
+    }
+  | {
+      readonly item: ActivityListItem;
+      readonly kind: "open_tracking";
     }
   | {
       readonly item: ActivityListItem;
@@ -376,6 +381,22 @@ export class ActivityList extends LitElement {
       </div>
       ${this._renderBadges(objectLabels, typeBadge, objectColors)}
       ${this._renderDetails(item, start)} ${this._renderReviewAside(item)}
+      ${
+        !item.inProgress && item.trackingAvailable
+          ? html`<button
+              class="review-info wzc-icon-button"
+              type="button"
+              title=${this.localize("reviews.open_tracking_details")}
+              aria-label=${this.localize("reviews.open_tracking_details")}
+              @click=${(event: MouseEvent) => {
+                event.stopPropagation();
+                this._dispatch({ kind: "open_tracking", item });
+              }}
+            >
+              ${renderIcon("informationOutline")}
+            </button>`
+          : null
+      }
       ${
         item.inProgress
           ? null
