@@ -7,6 +7,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.watchzone.const import (
     CAMERA_PRELOAD_TITLE,
+    CONF_DIAGNOSTIC_LOGGING,
     CONF_HLS_PREWARM_CAMERAS,
     DOMAIN,
     MAX_HLS_PREWARM_CAMERAS,
@@ -60,6 +61,29 @@ async def test_user_flow_rejects_second_entry(hass: HomeAssistant) -> None:
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "single_instance_allowed"
+
+
+async def test_options_flow_enables_volatile_diagnostic_logging(
+    hass: HomeAssistant,
+) -> None:
+    """Integration options expose one backend diagnostic logging switch."""
+    entry = MockConfigEntry(domain=DOMAIN, data={}, options={"future_option": True})
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "init"
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        user_input={CONF_DIAGNOSTIC_LOGGING: True},
+    )
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options == {
+        "future_option": True,
+        CONF_DIAGNOSTIC_LOGGING: True,
+    }
 
 
 async def test_subentry_flow_saves_explicit_hls_prewarm_allowlist(

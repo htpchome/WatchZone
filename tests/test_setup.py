@@ -1,9 +1,11 @@
 """Tests for WatchZone setup and frontend registration."""
 
+import logging
 from pathlib import Path
 from types import MappingProxyType, SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
+import pytest
 from homeassistant.components.lovelace.const import LOVELACE_DATA
 from homeassistant.components.lovelace.dashboard import LovelaceStorage
 from homeassistant.components.lovelace.resources import (
@@ -21,9 +23,11 @@ from custom_components.watchzone import (
     async_setup_entry,
     async_unload_entry,
 )
+from custom_components.watchzone.backend_log import BackendDiagnosticLog
 from custom_components.watchzone.const import (
     CAMERA_PRELOAD_TITLE,
     CARD_MODULE_URL,
+    CONF_DIAGNOSTIC_LOGGING,
     CONF_HLS_PREWARM_CAMERAS,
     DOMAIN,
     SUBENTRY_TYPE_CAMERA_PRELOAD,
@@ -159,6 +163,67 @@ async def test_preload_subentry_update_reconciles_running_service(
         "camera.garage",
         "camera.porch",
     ]
+
+
+async def test_option_update_reconciles_and_releases_diagnostic_log(
+    hass: HomeAssistant,
+) -> None:
+    """The logging switch takes effect without reload and releases its buffer."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={},
+        options={CONF_DIAGNOSTIC_LOGGING: True},
+    )
+    entry.add_to_hass(hass)
+    resources = ResourceStorageCollection(hass, LovelaceStorage(hass, None))
+    hass.data[LOVELACE_DATA] = SimpleNamespace(resources=resources)
+
+    assert await async_setup_entry(hass, entry)
+    assert entry.runtime_data.backend_log.enabled
+    entry.runtime_data.backend_log.record(
+        20,
+        "lifecycle",
+        "test_event",
+        "Retained only while enabled",
+    )
+    assert entry.runtime_data.backend_log.snapshot()["records"]
+
+    hass.config_entries.async_update_entry(
+        entry,
+        options={CONF_DIAGNOSTIC_LOGGING: False},
+    )
+    await hass.async_block_till_done()
+
+    assert entry.runtime_data.backend_log.snapshot()["enabled"] is False
+    assert entry.runtime_data.backend_log.snapshot()["records"] == []
+    assert await async_unload_entry(hass, entry)
+
+
+async def test_setup_failure_releases_diagnostic_handler(
+    hass: HomeAssistant,
+) -> None:
+    """A late setup failure cannot leave the diagnostic handler attached."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={},
+        options={CONF_DIAGNOSTIC_LOGGING: True},
+    )
+    entry.add_to_hass(hass)
+    resources = ResourceStorageCollection(hass, LovelaceStorage(hass, None))
+    hass.data[LOVELACE_DATA] = SimpleNamespace(resources=resources)
+
+    with patch(
+        "custom_components.watchzone._async_register_card_resource",
+        side_effect=RuntimeError("registration failed"),
+    ):
+        with pytest.raises(RuntimeError, match="registration failed"):
+            await async_setup_entry(hass, entry)
+
+    package_logger = logging.getLogger("custom_components.watchzone")
+    assert not any(
+        isinstance(handler, BackendDiagnosticLog)
+        for handler in package_logger.handlers
+    )
 
 
 async def test_entry_updates_existing_card_resource(hass: HomeAssistant) -> None:

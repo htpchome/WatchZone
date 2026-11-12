@@ -21,12 +21,15 @@ from homeassistant.const import CONF_ID, CONF_TYPE, CONF_URL
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 
+from .backend_log import BackendDiagnosticLog
 from .const import (
     CAMERA_PRELOAD_TITLE,
     CARD_FILENAME,
     CARD_MODULE_URL,
+    CONF_DIAGNOSTIC_LOGGING,
     CONF_HLS_PREWARM_CAMERAS,
     DATA_RUNTIME,
+    DEFAULT_DIAGNOSTIC_LOGGING,
     DOMAIN,
     FRONTEND_URL_BASE,
     SUBENTRY_TYPE_CAMERA_PRELOAD,
@@ -143,6 +146,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WatchZoneConfigEntry) ->
     await stage_designs.async_setup()
     runtime = WatchZoneRuntime(
         entry_id=entry.entry_id,
+        backend_log=BackendDiagnosticLog(enabled=_diagnostic_logging_enabled(entry)),
         activity_updates=ActivityUpdatesService(hass, providers),
         camera_runtime=camera_runtime,
         hls_prewarm=hls_prewarm,
@@ -158,7 +162,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: WatchZoneConfigEntry) ->
     entry.runtime_data = runtime
     hass.data.setdefault(DOMAIN, {})[DATA_RUNTIME] = runtime
     entry.async_on_unload(entry.add_update_listener(_async_entry_updated))
-    await _async_register_card_resource(hass)
+    try:
+        await _async_register_card_resource(hass)
+    except BaseException:
+        try:
+            await runtime.async_close()
+        finally:
+            hass.data[DOMAIN].pop(DATA_RUNTIME, None)
+        raise
     return True
 
 
@@ -167,7 +178,15 @@ async def _async_entry_updated(
 ) -> None:
     """Reconcile typed child settings without reloading frontend resources."""
     del hass
+    entry.runtime_data.backend_log.set_enabled(_diagnostic_logging_enabled(entry))
     await entry.runtime_data.hls_prewarm.async_set_entities(_prewarm_camera_ids(entry))
+
+
+def _diagnostic_logging_enabled(entry: ConfigEntry) -> bool:
+    """Return the integration-wide volatile logging preference."""
+    return (
+        entry.options.get(CONF_DIAGNOSTIC_LOGGING, DEFAULT_DIAGNOSTIC_LOGGING) is True
+    )
 
 
 def _prewarm_camera_ids(entry: ConfigEntry) -> list[str]:

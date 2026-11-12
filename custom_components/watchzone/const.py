@@ -2,9 +2,12 @@
 
 DOMAIN = "watchzone"
 NAME = "WatchZone"
-VERSION = "0.0.4-dev.270"
+VERSION = "0.0.4-dev.271"
 
 DATA_RUNTIME = "runtime"
+
+CONF_DIAGNOSTIC_LOGGING = "diagnostic_logging"
+DEFAULT_DIAGNOSTIC_LOGGING = False
 
 CONF_HLS_PREWARM_CAMERAS = "hls_prewarm_cameras"
 MAX_HLS_PREWARM_CAMERAS = 12

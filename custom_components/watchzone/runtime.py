@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 
+from .backend_log import BackendDiagnosticLog
 from .features.activity_updates import ActivityUpdatesService
 from .features.camera_runtime import CameraRuntimeService
 from .features.events import EventsService
@@ -20,6 +21,7 @@ class WatchZoneRuntime:
     """Runtime state owned by one WatchZone config entry."""
 
     entry_id: str
+    backend_log: BackendDiagnosticLog
     activity_updates: ActivityUpdatesService
     camera_runtime: CameraRuntimeService
     hls_prewarm: HlsPrewarmService
@@ -34,11 +36,14 @@ class WatchZoneRuntime:
 
     async def async_close(self) -> None:
         """Release integration-owned runtime resources."""
-        await self.camera_runtime.async_close()
-        await self.hls_prewarm.async_close()
-        await self.live_signaling.async_close()
-        await self.ptz.async_close()
-        await self.recordings.async_close()
-        await self.events.async_close()
-        await self.exports.async_close()
-        await self.reviews.async_close()
+        try:
+            await self.camera_runtime.async_close()
+            await self.hls_prewarm.async_close()
+            await self.live_signaling.async_close()
+            await self.ptz.async_close()
+            await self.recordings.async_close()
+            await self.events.async_close()
+            await self.exports.async_close()
+            await self.reviews.async_close()
+        finally:
+            self.backend_log.close()

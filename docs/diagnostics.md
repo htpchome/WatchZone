@@ -155,20 +155,41 @@ browser lifecycle behavior with controlled media fakes. They do not prove
 physical Safari, Companion, Catalyst, codec, proxy, or camera behavior; record
 those results using the procedures above.
 
-## 8. Future centralized logging
+## 8. Backend diagnostic logging
 
-The future logger will be one document-scoped frontend service and one
-integration-scoped backend facility, joined by a common severity and category
-model where useful. It will provide:
+WatchZone provides one integration-scoped backend diagnostic log. It is
+disabled by default and can be enabled or disabled from the WatchZone
+integration options. The enabled preference is stored as config-entry options;
+the log records are never persisted and never use Home Assistant's recorder
+database.
 
-- debug, informational, warning, and error levels;
-- category filtering and opt-in verbose diagnostics;
-- secret redaction before storage, transport, or display;
-- duplicate suppression and rate limiting;
-- bounded in-memory history with explicit export; and
-- adapters for user-facing notices without treating every log as a toast.
+When disabled, the facility has no event deque and does not intercept Python
+log records. Enabling it allocates one bounded buffer and captures sanitized
+structured events plus warnings and errors already emitted from the WatchZone
+Python package. Disabling it or unloading the integration detaches the Python
+handler, clears the buffer, resets its counters, and releases the deque.
+Restarting Home Assistant also discards the history.
 
-Feature code will report structured events to that boundary. It will not add
-independent console wrappers, global event buses, or per-feature log stores.
-Startup timings may be included in an exported diagnostic snapshot, but they
-remain measurements rather than log messages.
+The server enforces all of these limits:
+
+- at most 200 records;
+- an estimated retained-payload ceiling of 192 KiB;
+- source and retained message-length limits;
+- no more than 100 accepted events per second;
+- consecutive duplicate collapsing with a repeat count; and
+- eviction of the oldest records before either retention limit is exceeded.
+
+URLs, bearer credentials, JWT-like values, common token and credential fields,
+and control characters are redacted before retention. Log snapshots contain
+only detached JSON-safe values; callers never receive the live buffer.
+
+Administrators can download the current snapshot through Home Assistant's
+native config-entry diagnostics action. A download while logging is disabled
+reports the limits and disabled state with an empty record list. Home
+Assistant's standard warnings and errors remain independent of this switch so
+disabling diagnostic capture cannot hide operational failures.
+
+The frontend does not subscribe to, poll, or retain this backend history.
+Future frontend logging remains a separate document-scoped facility. Startup
+timings may eventually be included in an exported diagnostic snapshot, but
+they remain measurements rather than log messages.

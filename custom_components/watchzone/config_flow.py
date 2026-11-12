@@ -9,14 +9,21 @@ from homeassistant.config_entries import (
     ConfigFlow,
     ConfigFlowResult,
     ConfigSubentryFlow,
+    OptionsFlow,
     SubentryFlowResult,
 )
 from homeassistant.core import callback
-from homeassistant.helpers.selector import EntitySelector, EntitySelectorConfig
+from homeassistant.helpers.selector import (
+    BooleanSelector,
+    EntitySelector,
+    EntitySelectorConfig,
+)
 
 from .const import (
     CAMERA_PRELOAD_TITLE,
+    CONF_DIAGNOSTIC_LOGGING,
     CONF_HLS_PREWARM_CAMERAS,
+    DEFAULT_DIAGNOSTIC_LOGGING,
     DOMAIN,
     MAX_HLS_PREWARM_CAMERAS,
     NAME,
@@ -29,6 +36,13 @@ class WatchZoneConfigFlow(ConfigFlow, domain=DOMAIN):
     """Create the single WatchZone application entry."""
 
     VERSION = 2
+
+    @staticmethod
+    @callback
+    @override
+    def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
+        """Return the integration-wide runtime options flow."""
+        return WatchZoneOptionsFlow()
 
     @classmethod
     @callback
@@ -61,6 +75,35 @@ class WatchZoneConfigFlow(ConfigFlow, domain=DOMAIN):
             )
 
         return self.async_show_form(step_id="user", data_schema=vol.Schema({}))
+
+
+class WatchZoneOptionsFlow(OptionsFlow):
+    """Configure bounded integration-wide diagnostics."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Configure volatile backend diagnostic capture."""
+        if user_input is not None:
+            return self.async_create_entry(
+                title="",
+                data={**self.config_entry.options, **user_input},
+            )
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_DIAGNOSTIC_LOGGING,
+                        default=self.config_entry.options.get(
+                            CONF_DIAGNOSTIC_LOGGING,
+                            DEFAULT_DIAGNOSTIC_LOGGING,
+                        ),
+                    ): BooleanSelector()
+                }
+            ),
+        )
 
 
 class CameraPreloadSubentryFlow(ConfigSubentryFlow):

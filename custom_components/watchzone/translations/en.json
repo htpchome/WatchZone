@@ -38,5 +38,19 @@
         "reconfigure_successful": "Preloaded cameras updated successfully."
       }
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Diagnostics",
+        "description": "Diagnostic logging is retained only in bounded server memory. Disabling it or restarting Home Assistant clears all records.",
+        "data": {
+          "diagnostic_logging": "Enable diagnostic logging"
+        },
+        "data_description": {
+          "diagnostic_logging": "Captures a sanitized, rate-limited WatchZone history for Home Assistant diagnostics downloads. It does not use the recorder database."
+        }
+      }
+    }
   }
 }
