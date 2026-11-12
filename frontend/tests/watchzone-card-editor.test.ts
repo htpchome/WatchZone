@@ -1396,17 +1396,30 @@ describe("watchzone-card-editor", () => {
     document.removeEventListener("context-request", contextHandler);
   });
 
-  it("widens every HA editor tab until the dialog closes", async () => {
+  it("widens and applies the editor shell surface until the dialog closes", async () => {
     const dialog = document.createElement("hui-dialog-edit-card");
     dialog.style.setProperty(
       "--ha-view-sections-column-max-width",
       "480px",
       "important",
     );
+    dialog.style.setProperty(
+      "--ha-dialog-surface-background",
+      "rgba(255, 255, 255, 0.14)",
+    );
+    dialog.style.setProperty(
+      "--ha-dialog-surface-backdrop-filter",
+      "blur(7px)",
+    );
     const root = dialog.attachShadow({ mode: "open" });
     const editor = document.createElement(
       "watchzone-card-editor",
     ) as CardEditor;
+    editor.style.setProperty(
+      "--wzc-editor-dialog-background",
+      "rgb(160, 161, 170)",
+    );
+    editor.style.setProperty("--wzc-editor-dialog-backdrop-filter", "none");
     root.append(editor);
     document.body.append(dialog);
     await editor.updateComplete;
@@ -1419,6 +1432,17 @@ describe("watchzone-card-editor", () => {
     expect(
       dialog.style.getPropertyPriority("--ha-view-sections-column-max-width"),
     ).toBe("important");
+    expect(
+      dialog.style.getPropertyValue("--ha-dialog-surface-background").trim(),
+    ).toBe("rgb(160, 161, 170)");
+    expect(
+      dialog.style.getPropertyPriority("--ha-dialog-surface-background"),
+    ).toBe("important");
+    expect(
+      dialog.style
+        .getPropertyValue("--ha-dialog-surface-backdrop-filter")
+        .trim(),
+    ).toBe("none");
 
     editor.remove();
     expect(
@@ -1426,6 +1450,9 @@ describe("watchzone-card-editor", () => {
         .getPropertyValue("--ha-view-sections-column-max-width")
         .trim(),
     ).toBe("100%");
+    expect(
+      dialog.style.getPropertyValue("--ha-dialog-surface-background").trim(),
+    ).toBe("rgb(160, 161, 170)");
     expect(
       dialog.style.getPropertyPriority("--ha-view-sections-column-max-width"),
     ).toBe("important");
@@ -1439,7 +1466,11 @@ describe("watchzone-card-editor", () => {
         .trim(),
     ).toBe("100%");
 
+    root.append(editor);
+    await editor.updateComplete;
     dialog.dispatchEvent(new CustomEvent("dialog-closed"));
+    editor.requestUpdate();
+    await editor.updateComplete;
     expect(
       dialog.style
         .getPropertyValue("--ha-view-sections-column-max-width")
@@ -1448,6 +1479,14 @@ describe("watchzone-card-editor", () => {
     expect(
       dialog.style.getPropertyPriority("--ha-view-sections-column-max-width"),
     ).toBe("important");
+    expect(
+      dialog.style.getPropertyValue("--ha-dialog-surface-background").trim(),
+    ).toBe("rgba(255, 255, 255, 0.14)");
+    expect(
+      dialog.style
+        .getPropertyValue("--ha-dialog-surface-backdrop-filter")
+        .trim(),
+    ).toBe("blur(7px)");
   });
 
   it("commits the complete draft to Home Assistant immediately before Save", async () => {

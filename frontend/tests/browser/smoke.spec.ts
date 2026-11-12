@@ -4527,6 +4527,8 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
       "--wzc-dialog-scrim-backdrop-filter",
       "--wzc-dialog-scrim-background",
       "--wzc-dialog-shadow",
+      "--wzc-editor-dialog-background",
+      "--wzc-editor-dialog-backdrop-filter",
       "--wzc-task-dialog-background",
       "--wzc-task-dialog-backdrop-filter",
       "--wzc-task-dialog-radius",
@@ -4830,7 +4832,7 @@ test("editor uses exclusive accordions and shared draft status", async ({
   ).toContainText("Unsaved changes");
 });
 
-test("inherits the Home Assistant editor surface and keeps nested tasks solid", async ({
+test("keeps the editor shell uniform and nested tasks independently solid", async ({
   page,
 }) => {
   await page.goto("/");
@@ -4853,6 +4855,17 @@ test("inherits the Home Assistant editor surface and keeps nested tasks solid", 
       >;
     };
     const editor = await constructor.getConfigElement();
+    const dialog = document.createElement("hui-dialog-edit-card");
+    dialog.id = "glass-theme-dialog";
+    dialog.style.setProperty(
+      "--ha-dialog-surface-background",
+      "rgb(170, 171, 172)",
+    );
+    dialog.style.setProperty(
+      "--ha-dialog-surface-backdrop-filter",
+      "blur(7px)",
+    );
+    const dialogRoot = dialog.attachShadow({ mode: "open" });
     editor.id = "glass-theme-editor";
     editor.style.setProperty(
       "--ha-card-background",
@@ -4869,6 +4882,10 @@ test("inherits the Home Assistant editor surface and keeps nested tasks solid", 
     editor.style.setProperty(
       "--primary-background-color",
       "rgb(120, 121, 122)",
+    );
+    editor.style.setProperty(
+      "--ha-color-surface-default",
+      "rgb(160, 161, 170)",
     );
     editor.style.setProperty("--dialog-box-shadow", "rgb(1, 2, 3) 0px 4px 8px");
     editor.style.setProperty("--ha-dialog-border-radius", "28px");
@@ -4891,7 +4908,8 @@ test("inherits the Home Assistant editor surface and keeps nested tasks solid", 
       },
     };
     editor.setConfig({ type: "custom:watchzone-card" });
-    document.body.append(editor);
+    dialogRoot.append(editor);
+    document.body.append(dialog);
     await editor.updateComplete;
   });
 
@@ -4906,11 +4924,35 @@ test("inherits the Home Assistant editor surface and keeps nested tasks solid", 
   await expect(editor).toHaveAttribute("data-theme-name", "Frosted Glass");
   await expect(editor).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(editor).toHaveCSS("backdrop-filter", "none");
+  const editorDialog = page.locator("#glass-theme-dialog");
+  await expect
+    .poll(() =>
+      editorDialog.evaluate((element) => ({
+        background: element.style
+          .getPropertyValue("--ha-dialog-surface-background")
+          .trim(),
+        backgroundPriority: element.style.getPropertyPriority(
+          "--ha-dialog-surface-background",
+        ),
+        backdropFilter: element.style
+          .getPropertyValue("--ha-dialog-surface-backdrop-filter")
+          .trim(),
+      })),
+    )
+    .toEqual({
+      background: "rgb(160, 161, 170)",
+      backgroundPriority: "important",
+      backdropFilter: "none",
+    });
 
   await editor.evaluate((element) => {
     (element as HTMLElement).style.setProperty(
       "--primary-background-color",
       "rgb(210, 211, 212)",
+    );
+    (element as HTMLElement).style.setProperty(
+      "--ha-color-surface-default",
+      "rgb(180, 181, 190)",
     );
     (
       element as HTMLElement & {
@@ -4933,6 +4975,13 @@ test("inherits the Home Assistant editor surface and keeps nested tasks solid", 
   });
   await expect(editor).toHaveAttribute("data-theme-mode", "light");
   await expect(editor).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect
+    .poll(() =>
+      editorDialog.evaluate((element) =>
+        element.style.getPropertyValue("--ha-dialog-surface-background").trim(),
+      ),
+    )
+    .toBe("rgb(180, 181, 190)");
 
   await editor.locator("wzc-accordion-item").first().locator("summary").click();
   await editor.locator("button.add-camera").click();
@@ -4949,6 +4998,10 @@ test("inherits the Home Assistant editor surface and keeps nested tasks solid", 
       (element) => getComputedStyle(element).boxShadow,
     ),
   ).toContain("rgb(1, 2, 3)");
+  await cameraDialog
+    .locator("ha-icon-button.dialog-close")
+    .evaluate((element) => (element as HTMLElement).click());
+  await expect(cameraDialog).not.toHaveAttribute("open", "");
 });
 
 test("assigns native information and solid task dialog surfaces", async ({

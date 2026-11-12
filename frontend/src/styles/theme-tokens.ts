@@ -1,5 +1,10 @@
 import { css } from "lit";
 
+export const HA_DIALOG_SURFACE_BACKGROUND_PROPERTY =
+  "--ha-dialog-surface-background";
+export const HA_DIALOG_SURFACE_BACKDROP_FILTER_PROPERTY =
+  "--ha-dialog-surface-backdrop-filter";
+
 /**
  * The only Home Assistant theme boundary in WatchZone.
  *
@@ -54,6 +59,11 @@ export const themeTokens = css`
       --ha-dialog-scrim-backdrop-filter,
       var(--dialog-backdrop-filter, none)
     );
+    --wzc-editor-dialog-background: var(
+      --ha-color-surface-default,
+      var(--secondary-background-color, var(--wzc-color-surface))
+    );
+    --wzc-editor-dialog-backdrop-filter: none;
     --wzc-task-dialog-background: var(--wzc-color-surface);
     --wzc-task-dialog-backdrop-filter: none;
     --wzc-task-dialog-radius: var(--wzc-dialog-radius);

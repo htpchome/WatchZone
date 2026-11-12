@@ -110,11 +110,14 @@ flow through the semantic token boundary. The profile exposes stable mode data
 to the card and editor and synchronizes their `color-scheme` without replacing
 theme-provided colors.
 
-Overlay surfaces use four explicit semantic roles at the centralized theme
+Overlay surfaces use five explicit semantic roles at the centralized theme
 boundary:
 
 - Informational dialogs use Home Assistant's native dialog surface,
   backdrop-filter, radius, shadow, and scrim hooks.
+- The Home Assistant card-editor shell uses the theme's opaque default surface
+  without a backdrop filter so the complete Config, Visibility, and Layout
+  dialog remains uniform over media and dashboard content.
 - Configuration, form, destructive-confirmation, and other focused task
   dialogs use the theme's solid primary surface while retaining Home
   Assistant's dialog radius, shadow, and scrim. They do not apply a second
@@ -123,10 +126,12 @@ boundary:
   primary surface with the shared raised-popover radius and elevation.
 - Recorded-media dialogs retain their specialized media presentation.
 
-The editor inherits Home Assistant's owning dialog surface rather than painting
-a second editor surface. Features consume only these WatchZone roles and do not
-branch on a specific theme name or synthesize colors from multiple translucent
-card and page surfaces.
+The isolated editor bridge applies the editor-shell role to Home Assistant's
+owning card-edit dialog for its complete lifetime, including Home Assistant's
+Visibility and Layout tabs, then restores the original inline surface state on
+close. The custom editor does not paint a second editor surface. Features
+consume only these WatchZone roles and do not branch on a specific theme name
+or synthesize colors from multiple translucent card and page surfaces.
 
 ## 3. Media rules
 

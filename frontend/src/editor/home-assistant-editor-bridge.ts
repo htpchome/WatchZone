@@ -1,10 +1,18 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
+import {
+  HA_DIALOG_SURFACE_BACKGROUND_PROPERTY,
+  HA_DIALOG_SURFACE_BACKDROP_FILTER_PROPERTY,
+} from "../styles/theme-tokens";
+
 const EDIT_CARD_DIALOG_TAG = "HUI-DIALOG-EDIT-CARD";
 const SECTION_PREVIEW_MAX_WIDTH = "100%";
 const SECTION_PREVIEW_MAX_WIDTH_PROPERTY =
   "--ha-view-sections-column-max-width";
 const DIALOG_CLOSED_EVENT = "dialog-closed";
+const EDITOR_DIALOG_BACKGROUND_PROPERTY = "--wzc-editor-dialog-background";
+const EDITOR_DIALOG_BACKDROP_FILTER_PROPERTY =
+  "--wzc-editor-dialog-backdrop-filter";
 
 interface HomeAssistantEditCardDialog<T> extends HTMLElement {
   _cardConfig?: T;
@@ -22,6 +30,100 @@ interface PreviewWidthOverride {
 }
 
 const previewWidthOverrides = new WeakMap<HTMLElement, PreviewWidthOverride>();
+
+interface EditorSurfaceOverride {
+  readonly closeHandler: EventListener;
+  readonly previousBackground: InlinePropertyState;
+  readonly previousBackdropFilter: InlinePropertyState;
+}
+
+const editorSurfaceOverrides = new WeakMap<
+  HTMLElement,
+  EditorSurfaceOverride
+>();
+const closedEditorSurfaceDialogs = new WeakSet<HTMLElement>();
+
+function inlinePropertyState(
+  element: HTMLElement,
+  property: string,
+): InlinePropertyState {
+  return {
+    priority: element.style.getPropertyPriority(property),
+    value: element.style.getPropertyValue(property),
+  };
+}
+
+function restoreInlineProperty(
+  element: HTMLElement,
+  property: string,
+  previous: InlinePropertyState,
+): void {
+  if (previous.value) {
+    element.style.setProperty(property, previous.value, previous.priority);
+  } else {
+    element.style.removeProperty(property);
+  }
+}
+
+function releaseEditorSurface(dialog: HTMLElement): void {
+  const override = editorSurfaceOverrides.get(dialog);
+  if (!override) return;
+  dialog.removeEventListener(DIALOG_CLOSED_EVENT, override.closeHandler);
+  restoreInlineProperty(
+    dialog,
+    HA_DIALOG_SURFACE_BACKGROUND_PROPERTY,
+    override.previousBackground,
+  );
+  restoreInlineProperty(
+    dialog,
+    HA_DIALOG_SURFACE_BACKDROP_FILTER_PROPERTY,
+    override.previousBackdropFilter,
+  );
+  editorSurfaceOverrides.delete(dialog);
+}
+
+function retainEditorSurface(dialog: HTMLElement, host: HTMLElement): void {
+  if (closedEditorSurfaceDialogs.has(dialog)) return;
+  const hostStyle = getComputedStyle(host);
+  const background = hostStyle
+    .getPropertyValue(EDITOR_DIALOG_BACKGROUND_PROPERTY)
+    .trim();
+  if (!background) return;
+  const backdropFilter =
+    hostStyle.getPropertyValue(EDITOR_DIALOG_BACKDROP_FILTER_PROPERTY).trim() ||
+    "none";
+  let override = editorSurfaceOverrides.get(dialog);
+  if (!override) {
+    const closeHandler = (event: Event): void => {
+      if (event.target !== dialog) return;
+      closedEditorSurfaceDialogs.add(dialog);
+      releaseEditorSurface(dialog);
+    };
+    override = {
+      closeHandler,
+      previousBackground: inlinePropertyState(
+        dialog,
+        HA_DIALOG_SURFACE_BACKGROUND_PROPERTY,
+      ),
+      previousBackdropFilter: inlinePropertyState(
+        dialog,
+        HA_DIALOG_SURFACE_BACKDROP_FILTER_PROPERTY,
+      ),
+    };
+    editorSurfaceOverrides.set(dialog, override);
+    dialog.addEventListener(DIALOG_CLOSED_EVENT, closeHandler);
+  }
+  dialog.style.setProperty(
+    HA_DIALOG_SURFACE_BACKGROUND_PROPERTY,
+    background,
+    "important",
+  );
+  dialog.style.setProperty(
+    HA_DIALOG_SURFACE_BACKDROP_FILTER_PROPERTY,
+    backdropFilter,
+    "important",
+  );
+}
 
 function releasePreviewWidth(dialog: HTMLElement): void {
   const override = previewWidthOverrides.get(dialog);
@@ -48,7 +150,10 @@ function releasePreviewWidth(dialog: HTMLElement): void {
 
 function retainPreviewWidth(dialog: HTMLElement): void {
   if (previewWidthOverrides.has(dialog)) return;
-  const closeHandler = (): void => releasePreviewWidth(dialog);
+  const closeHandler = (event: Event): void => {
+    if (event.target !== dialog) return;
+    releasePreviewWidth(dialog);
+  };
   previewWidthOverrides.set(dialog, {
     closeHandler,
     previous: {
@@ -58,7 +163,7 @@ function retainPreviewWidth(dialog: HTMLElement): void {
       value: dialog.style.getPropertyValue(SECTION_PREVIEW_MAX_WIDTH_PROPERTY),
     },
   });
-  dialog.addEventListener(DIALOG_CLOSED_EVENT, closeHandler, { once: true });
+  dialog.addEventListener(DIALOG_CLOSED_EVENT, closeHandler);
   dialog.style.setProperty(
     SECTION_PREVIEW_MAX_WIDTH_PROPERTY,
     SECTION_PREVIEW_MAX_WIDTH,
@@ -79,12 +184,23 @@ export class HomeAssistantEditorBridge<T> implements ReactiveController {
   public hostConnected(): void {
     this._dialog = this._findDialog();
     if (!this._dialog) return;
+    closedEditorSurfaceDialogs.delete(this._dialog);
     retainPreviewWidth(this._dialog);
+    retainEditorSurface(this._dialog, this._host);
+  }
+
+  public hostUpdated(): void {
+    if (this._dialog) retainEditorSurface(this._dialog, this._host);
   }
 
   public hostDisconnected(): void {
-    if (this._dialog && !this._dialog.isConnected) {
-      releasePreviewWidth(this._dialog);
+    const dialog = this._dialog;
+    if (dialog) {
+      queueMicrotask(() => {
+        if (dialog.isConnected) return;
+        releasePreviewWidth(dialog);
+        releaseEditorSurface(dialog);
+      });
     }
     this._dialog = undefined;
   }
