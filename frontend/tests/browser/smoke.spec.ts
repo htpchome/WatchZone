@@ -459,6 +459,17 @@ test("keeps the panel camera navigation and carousel selection bidirectional", a
         ),
     )
     .toEqual([false, true]);
+  await expect
+    .poll(() =>
+      page
+        .locator("wzc-camera .camera-carousel")
+        .evaluate(
+          (element) =>
+            (element as HTMLElement & { swiper?: { animating: boolean } })
+              .swiper?.animating,
+        ),
+    )
+    .toBe(false);
 
   await page
     .locator("wzc-camera .carousel-navigation.previous")
@@ -640,7 +651,33 @@ test("applies configured camera carousel transitions to swipe and arrow navigati
     )
     .toEqual({ effect: "fade", speed: 300 });
 
-  await carousel.locator(".carousel-navigation.next").click({ force: true });
+  await page
+    .locator('wzc-camera-navigation button[data-value="camera.back"]')
+    .click();
+  await page.waitForTimeout(75);
+  expect(
+    await carousel.evaluate((element) => {
+      const swiper = (
+        element as HTMLElement & {
+          swiper?: { activeIndex: number; animating: boolean };
+        }
+      ).swiper;
+      return { activeIndex: swiper?.activeIndex, animating: swiper?.animating };
+    }),
+  ).toEqual({ activeIndex: 1, animating: true });
+  await expect
+    .poll(() =>
+      carousel.evaluate(
+        (element) =>
+          (element as HTMLElement & { swiper?: { animating: boolean } }).swiper
+            ?.animating,
+      ),
+    )
+    .toBe(false);
+
+  await carousel
+    .locator(".carousel-navigation.previous")
+    .click({ force: true });
   await expect
     .poll(() =>
       carousel.evaluate(
@@ -649,7 +686,7 @@ test("applies configured camera carousel transitions to swipe and arrow navigati
             ?.activeIndex,
       ),
     )
-    .toBe(1);
+    .toBe(0);
 
   await setTransition("none");
   await expect(carousel).not.toHaveClass(/swiper-fade/);
@@ -792,6 +829,9 @@ test("highlights live video directly from draft review notifications", async ({
   await expect(carousel).toHaveClass(/activity-detection/);
 
   const cameraButtons = page.locator("wzc-camera-navigation button");
+  await expect(
+    cameraButtons.nth(0).locator(".option-indicator.warning"),
+  ).toBeVisible();
   await cameraButtons.nth(1).click();
   await expect(carousel).not.toHaveClass(/activity-(alert|detection)/);
   await cameraButtons.nth(0).click();
@@ -829,6 +869,66 @@ test("highlights live video directly from draft review notifications", async ({
   });
   await cameraButtons.nth(0).click();
   await expect(carousel).not.toHaveClass(/activity-(alert|detection)/);
+
+  const takeoverToggle = page.locator("wzc-activity-takeover-toggle button");
+  await expect(takeoverToggle).toHaveAttribute("aria-pressed", "false");
+  await takeoverToggle.click();
+  await expect(takeoverToggle).toHaveAttribute("aria-pressed", "true");
+
+  await page.evaluate(() => {
+    for (const callback of (
+      window as unknown as {
+        reviewNotifications?: Array<(payload: unknown) => void>;
+      }
+    ).reviewNotifications ?? [])
+      callback(
+        JSON.stringify({
+          type: "new",
+          after: {
+            camera: "driveway",
+            id: "review-2",
+            severity: "detection",
+          },
+        }),
+      );
+  });
+  await expect(cameraButtons.nth(1)).toHaveAttribute("aria-selected", "true");
+  await page.evaluate(() => {
+    for (const callback of (
+      window as unknown as {
+        reviewNotifications?: Array<(payload: unknown) => void>;
+      }
+    ).reviewNotifications ?? [])
+      callback(
+        JSON.stringify({
+          type: "new",
+          after: { camera: "front", id: "review-3", severity: "alert" },
+        }),
+      );
+  });
+  await expect(cameraButtons.nth(1)).toHaveAttribute("aria-selected", "true");
+  await expect(
+    cameraButtons.nth(0).locator(".option-indicator.danger"),
+  ).toBeVisible();
+
+  await page.evaluate(() => {
+    for (const callback of (
+      window as unknown as {
+        reviewNotifications?: Array<(payload: unknown) => void>;
+      }
+    ).reviewNotifications ?? [])
+      callback(
+        JSON.stringify({
+          type: "end",
+          after: {
+            camera: "driveway",
+            id: "review-2",
+            severity: "detection",
+          },
+        }),
+      );
+  });
+  await expect(cameraButtons.nth(0)).toHaveAttribute("aria-selected", "true");
 });
 
 test("keeps activity content in an independently scrolling viewport", async ({
@@ -3777,11 +3877,13 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   }
   const collapsedPtzControlBox = await ptzControl.evaluate((element) => {
     const rect = element.getBoundingClientRect();
+    const host = element.getRootNode() as ShadowRoot;
+    const hostRect = (host.host as HTMLElement).getBoundingClientRect();
     return {
       height: rect.height,
       width: rect.width,
-      x: rect.x,
-      y: rect.y,
+      x: rect.x - hostRect.x,
+      y: rect.y - hostRect.y,
     };
   });
   await ptzTrigger.click();
@@ -3792,8 +3894,12 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   await ptzControl.hover();
   await expect
     .poll(async () => {
-      const box = await ptzControl.boundingBox();
-      return box ? box.x + box.width / 2 : 0;
+      return ptzControl.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        const host = element.getRootNode() as ShadowRoot;
+        const hostRect = (host.host as HTMLElement).getBoundingClientRect();
+        return rect.x - hostRect.x + rect.width / 2;
+      });
     })
     .toBeCloseTo(
       collapsedPtzControlBox.x + collapsedPtzControlBox.width / 2,
@@ -3801,8 +3907,12 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
     );
   await expect
     .poll(async () => {
-      const box = await ptzControl.boundingBox();
-      return box ? box.y + box.height / 2 : 0;
+      return ptzControl.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        const host = element.getRootNode() as ShadowRoot;
+        const hostRect = (host.host as HTMLElement).getBoundingClientRect();
+        return rect.y - hostRect.y + rect.height / 2;
+      });
     })
     .toBeCloseTo(
       collapsedPtzControlBox.y + collapsedPtzControlBox.height / 2,
@@ -4891,15 +5001,15 @@ test("editor uses exclusive accordions and shared draft status", async ({
   await expect(items.nth(0).locator("details")).not.toHaveAttribute("open", "");
   await expect(items.nth(1).locator("details")).toHaveAttribute("open", "");
   const selectionBars = items.nth(1).locator("wzc-segmented-control");
-  await expect(selectionBars).toHaveCount(2);
-  const ptzSelection = selectionBars
-    .nth(0)
-    .locator('[data-value="start_open"]');
-  const transitionSelection = selectionBars
+  await expect(selectionBars).toHaveCount(3);
+  const ptzBar = items.nth(1).locator('[data-setting="ptz-overlay-control"]');
+  const transitionBar = items
     .nth(1)
-    .locator('[data-value="slide"]');
+    .locator('[data-setting="slide-transition"]');
+  const ptzSelection = ptzBar.locator('[data-value="start_open"]');
+  const transitionSelection = transitionBar.locator('[data-value="slide"]');
   await expect(transitionSelection).toHaveAttribute("aria-checked", "true");
-  await expect(selectionBars.nth(1).locator(".segmented-control")).toHaveCSS(
+  await expect(transitionBar.locator(".segmented-control")).toHaveCSS(
     "border-style",
     "none",
   );

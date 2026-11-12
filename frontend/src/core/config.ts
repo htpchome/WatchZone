@@ -21,6 +21,7 @@ export type LiveConnectionType = "home_assistant" | "frigate_go2rtc";
 export type FrigateFallbackTransport = "hls" | "mse";
 export type PtzOverlayControl = "none" | "start_closed" | "start_open";
 export type SlideTransition = "none" | "slide" | "fade";
+export type AlertTakeoverMode = "off" | "alerts" | "detections" | "both";
 
 export interface CameraConfig {
   readonly connection: LiveConnectionType;
@@ -46,9 +47,11 @@ export interface CardConfig {
   readonly event_rounded_corners: boolean;
   readonly event_shadows: boolean;
   readonly event_history_days: number;
+  readonly alert_detection_takeover: AlertTakeoverMode;
   readonly highlight_camera_on_activity: boolean;
   readonly ptz_overlay_control: PtzOverlayControl;
   readonly slide_transition: SlideTransition;
+  readonly start_alert_takeover_on: boolean;
   readonly view_timelapse_on_thumbnail_hover: boolean;
   readonly cameras: readonly CameraConfig[];
   readonly mobile_data_saving?: boolean;
@@ -86,6 +89,7 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     "event_rounded_corners",
     "event_shadows",
     "highlight_camera_on_activity",
+    "start_alert_takeover_on",
     "view_timelapse_on_thumbnail_hover",
     "rounded_outer_corners",
     "outer_shadows",
@@ -108,6 +112,17 @@ export function normalizeCardConfig(value: unknown): CardConfig {
   ) {
     throw new Error(
       `${APP_NAME} event_history_days must be an integer from ${MIN_EVENT_HISTORY_DAYS} to ${MAX_EVENT_HISTORY_DAYS}.`,
+    );
+  }
+  if (
+    source.alert_detection_takeover !== undefined &&
+    source.alert_detection_takeover !== "off" &&
+    source.alert_detection_takeover !== "alerts" &&
+    source.alert_detection_takeover !== "detections" &&
+    source.alert_detection_takeover !== "both"
+  ) {
+    throw new Error(
+      `${APP_NAME} alert_detection_takeover must be off, alerts, detections, or both.`,
     );
   }
   if (
@@ -164,6 +179,12 @@ export function normalizeCardConfig(value: unknown): CardConfig {
       : DEFAULT_EVENT_HISTORY_DAYS;
   normalized.highlight_camera_on_activity =
     source.highlight_camera_on_activity !== false;
+  normalized.alert_detection_takeover =
+    source.alert_detection_takeover === "off" ||
+    source.alert_detection_takeover === "alerts" ||
+    source.alert_detection_takeover === "detections"
+      ? source.alert_detection_takeover
+      : "both";
   normalized.ptz_overlay_control =
     source.ptz_overlay_control === "none" ||
     source.ptz_overlay_control === "start_closed"
@@ -173,6 +194,7 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     source.slide_transition === "none" || source.slide_transition === "fade"
       ? source.slide_transition
       : "slide";
+  normalized.start_alert_takeover_on = source.start_alert_takeover_on === true;
   normalized.view_timelapse_on_thumbnail_hover =
     source.view_timelapse_on_thumbnail_hover !== false;
   normalized.rounded_outer_corners =

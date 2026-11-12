@@ -13,6 +13,7 @@ import { DeviceProfileController } from "../../../core/device-profile";
 import type { CameraSessionContext } from "../../camera-session-context";
 import type { CameraSelectionContext } from "../../camera-selection-context";
 import type {
+  AlertTakeoverMode,
   FrigateFallbackTransport,
   LiveConnectionType,
   SlideTransition,
@@ -58,6 +59,7 @@ const cameraViewTag = unsafeStatic(CAMERA_VIEW_TAG);
 export class CameraModule extends LitElement {
   public static properties = {
     api: { attribute: false },
+    alertTakeoverMode: { attribute: false },
     cameraSession: { attribute: false },
     cameraSelection: { attribute: false },
     cameras: { attribute: false },
@@ -67,6 +69,7 @@ export class CameraModule extends LitElement {
     roundedCorners: { attribute: false, type: Boolean },
     shadowStyle: { attribute: false },
     transition: { attribute: false },
+    startAlertTakeoverOn: { attribute: false, type: Boolean },
     selectionId: { attribute: false },
   };
 
@@ -80,6 +83,7 @@ export class CameraModule extends LitElement {
     heightRatio: DEFAULT_CAMERA_STAGE_HEIGHT_RATIO,
     resized: false,
   };
+  private _takeoverSelectionIndex?: number;
   private readonly _carousel = new CameraCarouselController(
     this,
     (index, settled) => this._select(index, settled),
@@ -89,13 +93,17 @@ export class CameraModule extends LitElement {
     () => ({
       activeEntityId: this.cameras[this._activeIndex]?.entityId,
       api: this.api,
-      enabled: this.highlightActivity,
       entityIds: this.cameras.map(({ entityId }) => entityId),
+      highlightEnabled: this.highlightActivity,
+      onTakeover: this._takeoverEntity,
+      startTakeoverEnabled: this.startAlertTakeoverOn,
+      takeoverMode: this.alertTakeoverMode,
     }),
   );
   private readonly _deviceProfile = new DeviceProfileController(this);
 
   public api?: HomeAssistantApi;
+  public alertTakeoverMode: AlertTakeoverMode = "both";
   public cameraSession?: CameraSessionContext;
   public cameraSelection?: CameraSelectionContext;
   public cameras: readonly CameraItemConfig[] = [];
@@ -105,6 +113,7 @@ export class CameraModule extends LitElement {
   public roundedCorners = true;
   public shadowStyle: CameraShadowStyle = "medium";
   public transition: SlideTransition = "slide";
+  public startAlertTakeoverOn = false;
   public selectionId = "";
 
   public connectedCallback(): void {
@@ -304,13 +313,22 @@ export class CameraModule extends LitElement {
 
   private _select(index: number, settled = true): void {
     const next = Math.max(0, Math.min(this.cameras.length - 1, index));
+    const takeoverSelection = this._takeoverSelectionIndex === next;
+    if (this._takeoverSelectionIndex !== undefined && !takeoverSelection) {
+      this._takeoverSelectionIndex = undefined;
+    }
     const selectionChanged = next !== this._activeIndex;
     const settlementChanged = settled !== this._selectionSettled;
+    if (settled) this._takeoverSelectionIndex = undefined;
     if (!selectionChanged && !settlementChanged) return;
     this._selectionSettled = settled;
     if (!selectionChanged) {
       this._publishSelection();
       return;
+    }
+    if (!takeoverSelection) {
+      const entityId = this.cameras[next]?.entityId;
+      if (entityId) this._activityHighlight.userSelected(entityId);
     }
     this._activeIndex = next;
     this._syncCameraActivity();
@@ -326,7 +344,18 @@ export class CameraModule extends LitElement {
     const index = this.cameras.findIndex(
       (camera) => camera.entityId === entityId,
     );
-    if (index >= 0) this._select(index);
+    if (index < 0) return;
+    this._activityHighlight.userSelected(entityId);
+    this._carousel.select(index);
+  };
+
+  private readonly _takeoverEntity = (entityId: string): void => {
+    const index = this.cameras.findIndex(
+      (camera) => camera.entityId === entityId,
+    );
+    if (index < 0 || index === this._activeIndex) return;
+    this._takeoverSelectionIndex = index;
+    this._carousel.select(index);
   };
 
   private _publishSelection(): void {
@@ -336,10 +365,17 @@ export class CameraModule extends LitElement {
       this,
       {
         activeEntityId: this.cameras[this._activeIndex]?.entityId,
-        items: this.cameras.map(({ entityId, label }) => ({ entityId, label })),
+        items: this.cameras.map(({ entityId, label }) => ({
+          activity: this._activityHighlight.classifications.get(entityId),
+          entityId,
+          label,
+        })),
         settled: this._selectionSettled,
+        takeoverAvailable: this.alertTakeoverMode !== "off",
+        takeoverEnabled: this._activityHighlight.takeoverEnabled,
       },
       this._selectEntity,
+      () => this._activityHighlight.toggleTakeover(),
     );
   }
 

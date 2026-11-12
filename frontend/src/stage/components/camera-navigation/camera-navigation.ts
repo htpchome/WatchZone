@@ -66,7 +66,19 @@ export class CameraNavigationComponent extends LitElement {
         appearance="navigation"
         mode="tab"
         .label=${this.localize("camera.navigation")}
-        .options=${this._state.items.map(({ entityId, label }) => ({
+        .options=${this._state.items.map(({ activity, entityId, label }) => ({
+          accessibleLabel: activity
+            ? this.localize(`camera.activity_${activity}`, { camera: label })
+            : label,
+          indicator: activity
+            ? {
+                icon: "alertCircle" as const,
+                tone:
+                  activity === "alert"
+                    ? ("danger" as const)
+                    : ("warning" as const),
+              }
+            : undefined,
           label,
           value: entityId,
         }))}

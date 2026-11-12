@@ -92,4 +92,37 @@ describe("camera selection context", () => {
     expect(context.select("camera", "camera.back")).toBe(true);
     expect(select).toHaveBeenCalledWith("camera.back");
   });
+
+  it("publishes activity indicators and routes the takeover toggle", () => {
+    const context = new CameraSelectionContext();
+    const listener = vi.fn();
+    const toggle = vi.fn();
+    context.subscribe("camera", listener);
+    context.publish(
+      "camera",
+      {},
+      {
+        activeEntityId: "camera.front",
+        items: [
+          {
+            activity: "alert",
+            entityId: "camera.front",
+            label: "Front",
+          },
+        ],
+        takeoverAvailable: true,
+        takeoverEnabled: false,
+      },
+      vi.fn(),
+      toggle,
+    );
+
+    expect(listener).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        items: [expect.objectContaining({ activity: "alert" })],
+      }),
+    );
+    expect(context.toggleTakeover("camera")).toBe(true);
+    expect(toggle).toHaveBeenCalledOnce();
+  });
 });

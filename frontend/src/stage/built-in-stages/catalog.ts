@@ -213,6 +213,7 @@ function hydrateModule(
         startUnmutedPhone: camera.start_live_unmuted_phone,
         title: camera.title,
       })),
+      alertTakeoverMode: config.alert_detection_takeover,
       highlightActivity: config.highlight_camera_on_activity,
       retentionPreference: config.mobile_data_saving
         ? "reduced_bandwidth"
@@ -220,6 +221,7 @@ function hydrateModule(
       roundedCorners: config.camera_rounded_corners,
       shadowStyle: config.camera_shadows ? "medium" : "none",
       transition: config.slide_transition,
+      startAlertTakeoverOn: config.start_alert_takeover_on,
     },
     slots,
   };

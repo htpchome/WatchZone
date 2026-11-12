@@ -3,7 +3,7 @@ import { cameraImageUrl } from "../../../core/home-assistant";
 import { englishLocalize } from "../../../core/localization";
 import type { MediaSessionLease } from "../../../core/media-session-manager";
 import type { MediaRetentionPreference } from "../../../core/media-retention-policy";
-import type { SlideTransition } from "../../../core/config";
+import type { AlertTakeoverMode, SlideTransition } from "../../../core/config";
 import type {
   ModuleDefinition,
   PlaceableRuntimeContext,
@@ -16,12 +16,14 @@ import type {
 } from "./camera";
 
 export interface CameraModuleConfig {
+  readonly alertTakeoverMode: AlertTakeoverMode;
   readonly cameras: readonly CameraModuleItemConfig[];
   readonly highlightActivity: boolean;
   readonly retentionPreference: MediaRetentionPreference;
   readonly roundedCorners: boolean;
   readonly shadowStyle: CameraShadowStyle;
   readonly transition: SlideTransition;
+  readonly startAlertTakeoverOn: boolean;
 }
 
 type CameraModuleItemConfig = Omit<
@@ -116,6 +118,7 @@ function updateCameraElement(
     if (!activeEntityIds.has(entityId)) friendlyNames.delete(entityId);
   }
   camera.api = context.api;
+  camera.alertTakeoverMode = config.alertTakeoverMode;
   camera.cameraSelection = context.cameraSelection;
   camera.cameraSession = context.cameraSession;
   camera.localize = context.localize ?? englishLocalize;
@@ -124,6 +127,7 @@ function updateCameraElement(
   camera.roundedCorners = config.roundedCorners;
   camera.shadowStyle = config.shadowStyle;
   camera.transition = config.transition;
+  camera.startAlertTakeoverOn = config.startAlertTakeoverOn;
   camera.selectionId = context.placeableId;
   camera.cameras = config.cameras.map((item) => {
     const friendlyName = currentFriendlyName(
@@ -197,6 +201,17 @@ function validateCameraConfig(value: unknown): CameraModuleConfig {
     throw new Error("Camera modules require a highlightActivity setting.");
   }
   if (
+    source.alertTakeoverMode !== "off" &&
+    source.alertTakeoverMode !== "alerts" &&
+    source.alertTakeoverMode !== "detections" &&
+    source.alertTakeoverMode !== "both"
+  ) {
+    throw new Error("Camera modules require a valid activity takeover mode.");
+  }
+  if (typeof source.startAlertTakeoverOn !== "boolean") {
+    throw new Error("Camera modules require an activity takeover start state.");
+  }
+  if (
     source.transition !== "none" &&
     source.transition !== "slide" &&
     source.transition !== "fade"
@@ -204,12 +219,14 @@ function validateCameraConfig(value: unknown): CameraModuleConfig {
     throw new Error("Camera modules require a valid slide transition.");
   }
   return {
+    alertTakeoverMode: source.alertTakeoverMode,
     cameras,
     highlightActivity: source.highlightActivity,
     retentionPreference: source.retentionPreference,
     roundedCorners: source.roundedCorners,
     shadowStyle: source.shadowStyle,
     transition: source.transition,
+    startAlertTakeoverOn: source.startAlertTakeoverOn,
   };
 }
 

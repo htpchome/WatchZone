@@ -10,6 +10,7 @@ import {
   normalizeCardTitle,
   sanitizeCameraTitleInput,
   sanitizeCardTitleInput,
+  type AlertTakeoverMode,
   type CameraConfig,
   type CardConfig,
   type FrigateFallbackTransport,
@@ -122,6 +123,7 @@ type BooleanConfigFlag =
   | "event_rounded_corners"
   | "event_shadows"
   | "highlight_camera_on_activity"
+  | "start_alert_takeover_on"
   | "view_timelapse_on_thumbnail_hover"
   | "mobile_data_saving"
   | "outer_padding"
@@ -409,6 +411,7 @@ export class CardEditor extends LitElement {
   }
 
   private _renderLiveMediaPlayerSettings() {
+    const takeoverSelected = this._config?.alert_detection_takeover ?? "both";
     const ptzSelected = this._config?.ptz_overlay_control ?? "start_open";
     const ptzOptions: readonly SegmentedControlOption[] = [
       { label: this._t("editor.ptz_overlay_none"), value: "none" },
@@ -433,11 +436,53 @@ export class CardEditor extends LitElement {
         this._config?.highlight_camera_on_activity !== false,
       )}
       <div class="segmented-setting">
+        <span class="segmented-setting-label">
+          ${this._t("editor.alert_detection_takeover")}
+        </span>
+        <span class="segmented-setting-description">
+          ${this._t("editor.alert_detection_takeover_description")}
+        </span>
+        <wzc-segmented-control
+          class="editor-segmented-control"
+          data-setting="alert-detection-takeover"
+          appearance="compact"
+          .label=${this._t("editor.alert_detection_takeover")}
+          .options=${
+            [
+              {
+                label: this._t("editor.alert_detection_takeover_off"),
+                value: "off",
+              },
+              {
+                label: this._t("editor.alert_detection_takeover_alerts"),
+                value: "alerts",
+              },
+              {
+                label: this._t("editor.alert_detection_takeover_detections"),
+                value: "detections",
+              },
+              {
+                label: this._t("editor.alert_detection_takeover_both"),
+                value: "both",
+              },
+            ] satisfies readonly SegmentedControlOption[]
+          }
+          .value=${takeoverSelected}
+          @wzc-segmented-control-value=${this._handleAlertTakeoverModeChange}
+        ></wzc-segmented-control>
+      </div>
+      ${this._renderBooleanOption(
+        "start_alert_takeover_on",
+        this._t("editor.start_alert_takeover_on"),
+        this._config?.start_alert_takeover_on === true,
+      )}
+      <div class="segmented-setting">
         <span class="segmented-setting-label" id="ptz-overlay-control-label">
           ${this._t("editor.ptz_overlay_control")}
         </span>
         <wzc-segmented-control
           class="editor-segmented-control"
+          data-setting="ptz-overlay-control"
           appearance="compact"
           .label=${this._t("editor.ptz_overlay_control")}
           .options=${ptzOptions}
@@ -451,6 +496,7 @@ export class CardEditor extends LitElement {
         </span>
         <wzc-segmented-control
           class="editor-segmented-control"
+          data-setting="slide-transition"
           appearance="compact"
           .label=${this._t("editor.slide_transition")}
           .options=${
@@ -1436,6 +1482,28 @@ export class CardEditor extends LitElement {
     }
     this._applyDraft(
       normalizeCardConfig({ ...this._config, ptz_overlay_control: value }),
+      true,
+    );
+  };
+
+  private readonly _handleAlertTakeoverModeChange = (
+    event: CustomEvent<SegmentedControlValueDetail>,
+  ): void => {
+    if (!this._config) return;
+    const value = event.detail.value as AlertTakeoverMode;
+    if (
+      value !== "off" &&
+      value !== "alerts" &&
+      value !== "detections" &&
+      value !== "both"
+    ) {
+      return;
+    }
+    this._applyDraft(
+      normalizeCardConfig({
+        ...this._config,
+        alert_detection_takeover: value,
+      }),
       true,
     );
   };

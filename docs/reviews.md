@@ -57,6 +57,27 @@
   preserve single selection, while labels and zones remain multi-select
   checkboxes available to keyboard and assistive-technology users.
 
+## Live activity takeover
+
+- The Camera module consumes the same normalized realtime Review activity used
+  by its live highlight. It retains one ordered active-review set across every
+  configured camera; the Reviews module and camera-navigation presentation do
+  not create parallel activity state.
+- Card configuration selects Off, Alerts Only, Detections Only, or Both and
+  separately selects whether takeover starts enabled. The runtime toolbar
+  toggle is session state and resets when the card is recreated.
+- One eligible activity owns takeover until it ends. Later activity remains
+  visible on the camera-navigation buttons and is handled oldest-first after
+  the current activity ends. When no eligible activity remains, Camera returns
+  through the shared selection path to the user's prior camera.
+- A manual camera selection immediately overrides the current takeover, becomes
+  the new return camera, and leaves takeover enabled for the next new eligible
+  activity. Already-active reviews do not reclaim selection after that manual
+  override.
+- Alert is the stronger visual classification when one camera has both active
+  classifications. Its navigation indicator uses the shared alert semantic;
+  Detection uses the shared warning semantic.
+
 ## Export workflow
 
 - Every Review tile, whether classified as Alert or Detection, exposes an

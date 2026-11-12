@@ -42,6 +42,17 @@ export const stageRuntimeStyles = css`
     padding-block: var(--wzc-stage-stack-navigation-padding);
   }
 
+  .stage-stack-accessories {
+    align-items: center;
+    display: flex;
+    gap: var(--wzc-stage-stack-navigation-gap);
+    margin-inline-start: auto;
+  }
+
+  .stage-stack-accessories > * {
+    margin-inline-start: 0;
+  }
+
   .stage-stack-button {
     --wzc-round-button-size: var(--wzc-stage-stack-button-size);
     --wzc-round-button-icon-size: var(--wzc-stage-stack-icon-size);

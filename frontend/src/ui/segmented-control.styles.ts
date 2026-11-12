@@ -56,6 +56,36 @@ export const segmentedControlStyles = css`
     -webkit-tap-highlight-color: transparent;
   }
 
+  .option-content {
+    align-items: center;
+    display: inline-flex;
+    gap: 0.25rem;
+    max-inline-size: 100%;
+  }
+
+  .option-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .option-indicator {
+    display: inline-flex;
+    flex: 0 0 auto;
+  }
+
+  .option-indicator svg {
+    block-size: 1em;
+    inline-size: 1em;
+  }
+
+  .option-indicator.danger {
+    color: var(--wzc-color-error);
+  }
+
+  .option-indicator.warning {
+    color: var(--wzc-color-warning);
+  }
+
   .segmented-control-option[aria-checked="true"],
   .segmented-control-option[aria-selected="true"] {
     color: var(--wzc-segmented-selected-color);

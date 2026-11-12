@@ -11,6 +11,13 @@ interface IconDefinition {
 }
 
 const ICONS = {
+  alertCircle: {
+    paths: [
+      {
+        d: "M13 13h-2V7h2v6m0 4h-2v-2h2v2M12 2A10 10 0 1 0 12 22 10 10 0 0 0 12 2Z",
+      },
+    ],
+  },
   check: {
     paths: [
       {
@@ -43,6 +50,13 @@ const ICONS = {
     paths: [
       {
         d: "M12 2L4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3zm-1 14l-4-4 1.4-1.4L11 13.2l5.6-5.6L18 9l-7 7z",
+      },
+    ],
+  },
+  shieldAlert: {
+    paths: [
+      {
+        d: "M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3m1 15h-2v-2h2v2m0-4h-2V7h2v6Z",
       },
     ],
   },

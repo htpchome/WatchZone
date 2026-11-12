@@ -1,5 +1,6 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
+import type { AlertTakeoverMode } from "../../../core/config";
 import { ACTIVITY_UPDATE_SUBSCRIBE_RETRY_MS } from "../../../core/constants";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
 import {
@@ -12,26 +13,47 @@ export type LiveActivityClassification = "alert" | "detection";
 interface LiveActivityHighlightContext {
   readonly activeEntityId?: string;
   readonly api?: HomeAssistantApi;
-  readonly enabled: boolean;
   readonly entityIds: readonly string[];
+  readonly highlightEnabled: boolean;
+  readonly onTakeover: (entityId: string) => void;
+  readonly startTakeoverEnabled: boolean;
+  readonly takeoverMode: AlertTakeoverMode;
 }
 
-/** Tracks active Frigate review notifications without waiting for REST convergence. */
+interface ActiveReview {
+  classification: LiveActivityClassification;
+  readonly entityId: string;
+  readonly id: string;
+  readonly order: number;
+}
+
+/** Owns live review activity state, camera highlighting, and takeover order. */
 export class LiveActivityHighlightController implements ReactiveController {
   public classification?: LiveActivityClassification;
+  public classifications: ReadonlyMap<string, LiveActivityClassification> =
+    new Map();
+  public takeoverEnabled = false;
 
   private readonly _activeReviews = new Map<
     string,
-    Map<string, LiveActivityClassification>
+    Map<string, ActiveReview>
   >();
   private readonly _endedReviews = new Map<string, Set<string>>();
   private _activeEntityId?: string;
   private _connected = false;
+  private _currentTakeover?: ActiveReview;
   private _entityIdsKey = "";
   private _generation = 0;
+  private _highlightEnabled = false;
   private _identity?: HomeAssistantApi["identity"];
-  private _enabled = false;
+  private _order = 0;
+  private _returnEntityId?: string;
+  private _returnCameraPinned = false;
   private readonly _retryTimers = new Map<string, number>();
+  private _startTakeoverEnabled = false;
+  private _subscriptionEnabled = false;
+  private readonly _suppressedReviews = new Set<string>();
+  private _takeoverMode: AlertTakeoverMode = "both";
   private readonly _unsubscribes = new Map<string, () => void>();
 
   public constructor(
@@ -55,32 +77,78 @@ export class LiveActivityHighlightController implements ReactiveController {
     this._stop();
   }
 
+  public toggleTakeover(): void {
+    if (this._takeoverMode === "off") return;
+    if (this.takeoverEnabled) {
+      this.takeoverEnabled = false;
+      this._cancelTakeover(true);
+    } else {
+      this.takeoverEnabled = true;
+      this._suppressedReviews.clear();
+      this._beginTakeover(this._nextEligibleReview());
+    }
+    this._host.requestUpdate();
+  }
+
+  /** A direct user choice cancels only the current takeover, not the feature. */
+  public userSelected(entityId: string): void {
+    if (!this._currentTakeover) return;
+    this._returnEntityId = entityId;
+    this._returnCameraPinned = true;
+    this._suppressCurrentReviews();
+    this._currentTakeover = undefined;
+    this._host.requestUpdate();
+  }
+
   private _sync(): void {
     if (!this._connected) return;
-    const { activeEntityId, api, enabled, entityIds } = this._context();
-    const normalizedEntityIds = [...new Set(entityIds.filter(Boolean))];
+    const context = this._context();
+    const normalizedEntityIds = [...new Set(context.entityIds.filter(Boolean))];
     const entityIdsKey = normalizedEntityIds.join("\u0000");
+    const takeoverConfigChanged =
+      context.takeoverMode !== this._takeoverMode ||
+      context.startTakeoverEnabled !== this._startTakeoverEnabled;
+    if (takeoverConfigChanged) this._configureTakeover(context);
+    this._highlightEnabled = context.highlightEnabled;
+    // Navigation indicators remain live even when outline and takeover are off.
+    const subscriptionEnabled = normalizedEntityIds.length > 0;
     if (
-      api?.identity === this._identity &&
+      context.api?.identity === this._identity &&
       entityIdsKey === this._entityIdsKey &&
-      enabled === this._enabled
+      subscriptionEnabled === this._subscriptionEnabled
     ) {
-      if (activeEntityId !== this._activeEntityId) {
-        this._activeEntityId = activeEntityId;
-        this._publishClassification();
+      if (context.activeEntityId !== this._activeEntityId) {
+        this._activeEntityId = context.activeEntityId;
+        this._publishActivity();
       }
       return;
     }
-    this._stop();
-    this._identity = api?.identity;
-    this._activeEntityId = activeEntityId;
+    this._stopSubscriptions();
+    this._cancelTakeover(true);
+    this._clearActivity();
+    this._identity = context.api?.identity;
+    this._activeEntityId = context.activeEntityId;
     this._entityIdsKey = entityIdsKey;
-    this._enabled = enabled;
-    if (!enabled || !api) return;
+    this._subscriptionEnabled = subscriptionEnabled;
+    if (!subscriptionEnabled || !context.api) {
+      this._clearActivity();
+      return;
+    }
     const generation = ++this._generation;
     for (const entityId of normalizedEntityIds) {
-      this._subscribe(api, entityId, generation);
+      this._subscribe(context.api, entityId, generation);
     }
+  }
+
+  private _configureTakeover(context: LiveActivityHighlightContext): void {
+    this._cancelTakeover(true);
+    this._takeoverMode = context.takeoverMode;
+    this._startTakeoverEnabled = context.startTakeoverEnabled;
+    this.takeoverEnabled =
+      context.takeoverMode !== "off" && context.startTakeoverEnabled;
+    this._suppressedReviews.clear();
+    if (this.takeoverEnabled) this._beginTakeover(this._nextEligibleReview());
+    this._host.requestUpdate();
   }
 
   private _subscribe(
@@ -92,21 +160,19 @@ export class LiveActivityHighlightController implements ReactiveController {
       this._received(generation, entityId, notification),
     )
       .then((unsubscribe) => {
-        if (generation !== this._generation || !this._enabled) {
+        if (generation !== this._generation) {
           unsubscribe();
           return;
         }
         this._unsubscribes.set(entityId, unsubscribe);
       })
       .catch(() => {
-        if (generation !== this._generation || !this._enabled) {
-          return;
-        }
+        if (generation !== this._generation) return;
         this._activeReviews.delete(entityId);
-        if (entityId === this._activeEntityId) this._publishClassification();
+        this._publishActivity();
         const retryTimer = window.setTimeout(() => {
           this._retryTimers.delete(entityId);
-          if (generation === this._generation && this._enabled) {
+          if (generation === this._generation) {
             this._subscribe(api, entityId, generation);
           }
         }, ACTIVITY_UPDATE_SUBSCRIBE_RETRY_MS);
@@ -126,22 +192,114 @@ export class LiveActivityHighlightController implements ReactiveController {
     ) {
       return;
     }
+    const key = reviewKey(entityId, notification.id);
     let reviews = this._activeReviews.get(entityId);
     if (!reviews) {
       reviews = new Map();
       this._activeReviews.set(entityId, reviews);
     }
     if (notification.phase === "end") {
+      const ended = reviews.get(notification.id);
       reviews.delete(notification.id);
+      this._suppressedReviews.delete(key);
       this._rememberEnded(entityId, notification.id);
-    } else if (
-      notification.classification &&
-      !this._endedReviews.get(entityId)?.has(notification.id)
-    ) {
-      reviews.set(notification.id, notification.classification);
+      if (reviews.size === 0) this._activeReviews.delete(entityId);
+      if (
+        ended &&
+        this._currentTakeover?.entityId === entityId &&
+        this._currentTakeover.id === notification.id
+      ) {
+        this._currentTakeover = undefined;
+        const next = this._nextEligibleReview();
+        if (next) this._beginTakeover(next, true);
+        else this._restoreUserCamera();
+      }
+      this._publishActivity();
+      return;
     }
-    if (reviews.size === 0) this._activeReviews.delete(entityId);
-    if (entityId === this._activeEntityId) this._publishClassification();
+    if (
+      !notification.classification ||
+      this._endedReviews.get(entityId)?.has(notification.id)
+    ) {
+      return;
+    }
+    const existing = reviews.get(notification.id);
+    const review: ActiveReview = existing ?? {
+      classification: notification.classification,
+      entityId,
+      id: notification.id,
+      order: ++this._order,
+    };
+    review.classification = notification.classification;
+    reviews.set(notification.id, review);
+    if (
+      this.takeoverEnabled &&
+      !this._currentTakeover &&
+      !this._suppressedReviews.has(key) &&
+      this._isEligible(review.classification)
+    ) {
+      this._beginTakeover(review);
+    }
+    this._publishActivity();
+  }
+
+  private _beginTakeover(
+    review: ActiveReview | undefined,
+    preserveReturnCamera = false,
+  ): void {
+    if (!review || !this.takeoverEnabled) return;
+    if (
+      !this._currentTakeover &&
+      !preserveReturnCamera &&
+      !this._returnCameraPinned
+    ) {
+      this._returnEntityId = this._activeEntityId;
+    }
+    this._returnCameraPinned = false;
+    this._currentTakeover = review;
+    this._context().onTakeover(review.entityId);
+  }
+
+  private _nextEligibleReview(): ActiveReview | undefined {
+    return [...this._activeReviews.entries()]
+      .flatMap(([entityId, reviews]) =>
+        [...reviews.values()].filter(
+          (review) =>
+            this._isEligible(review.classification) &&
+            !this._suppressedReviews.has(reviewKey(entityId, review.id)),
+        ),
+      )
+      .sort((left, right) => left.order - right.order)[0];
+  }
+
+  private _isEligible(classification: LiveActivityClassification): boolean {
+    return (
+      this._takeoverMode === "both" ||
+      (this._takeoverMode === "alerts" && classification === "alert") ||
+      (this._takeoverMode === "detections" && classification === "detection")
+    );
+  }
+
+  private _cancelTakeover(restore: boolean): void {
+    if (!this._currentTakeover) return;
+    this._suppressCurrentReviews();
+    this._currentTakeover = undefined;
+    if (restore) this._restoreUserCamera();
+  }
+
+  private _restoreUserCamera(): void {
+    const entityId = this._returnEntityId;
+    this._returnEntityId = undefined;
+    this._returnCameraPinned = false;
+    if (entityId) this._context().onTakeover(entityId);
+  }
+
+  private _suppressCurrentReviews(): void {
+    for (const [entityId, reviews] of this._activeReviews) {
+      for (const review of reviews.values()) {
+        this._suppressedReviews.add(reviewKey(entityId, review.id));
+      }
+    }
   }
 
   private _rememberEnded(entityId: string, reviewId: string): void {
@@ -155,38 +313,59 @@ export class LiveActivityHighlightController implements ReactiveController {
     this._endedReviews.set(entityId, ended);
   }
 
-  private _publishClassification(): void {
-    const reviews = this._activeEntityId
-      ? this._activeReviews.get(this._activeEntityId)
-      : undefined;
-    const classification = this._activeReviewsHas(reviews, "alert")
-      ? "alert"
-      : this._activeReviewsHas(reviews, "detection")
-        ? "detection"
+  private _publishActivity(): void {
+    const nextClassifications = new Map<string, LiveActivityClassification>();
+    for (const [entityId, reviews] of this._activeReviews) {
+      if (hasClassification(reviews, "alert")) {
+        nextClassifications.set(entityId, "alert");
+      } else if (hasClassification(reviews, "detection")) {
+        nextClassifications.set(entityId, "detection");
+      }
+    }
+    this.classifications = nextClassifications;
+    this.classification =
+      this._highlightEnabled && this._activeEntityId
+        ? nextClassifications.get(this._activeEntityId)
         : undefined;
-    if (classification === this.classification) return;
-    this.classification = classification;
     this._host.requestUpdate();
   }
 
-  private _activeReviewsHas(
-    reviews: ReadonlyMap<string, LiveActivityClassification> | undefined,
-    classification: LiveActivityClassification,
-  ) {
-    return reviews ? [...reviews.values()].includes(classification) : false;
+  private _clearActivity(): void {
+    this._activeReviews.clear();
+    this._endedReviews.clear();
+    this._suppressedReviews.clear();
+    this._currentTakeover = undefined;
+    this._returnEntityId = undefined;
+    this._returnCameraPinned = false;
+    this.classifications = new Map();
+    this.classification = undefined;
+    this._host.requestUpdate();
   }
 
-  private _stop(): void {
+  private _stopSubscriptions(): void {
     this._generation += 1;
     for (const unsubscribe of this._unsubscribes.values()) unsubscribe();
     this._unsubscribes.clear();
     for (const timer of this._retryTimers.values()) window.clearTimeout(timer);
     this._retryTimers.clear();
-    this._activeReviews.clear();
-    this._endedReviews.clear();
-    if (this.classification !== undefined) {
-      this.classification = undefined;
-      this._host.requestUpdate();
-    }
+    this._subscriptionEnabled = false;
   }
+
+  private _stop(): void {
+    this._stopSubscriptions();
+    this._clearActivity();
+  }
+}
+
+function hasClassification(
+  reviews: ReadonlyMap<string, ActiveReview>,
+  classification: LiveActivityClassification,
+): boolean {
+  return [...reviews.values()].some(
+    (review) => review.classification === classification,
+  );
+}
+
+function reviewKey(entityId: string, reviewId: string): string {
+  return `${entityId}\u0000${reviewId}`;
 }

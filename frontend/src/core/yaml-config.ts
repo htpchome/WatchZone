@@ -44,6 +44,10 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
   if (config.highlight_camera_on_activity !== false) {
     delete yaml.highlight_camera_on_activity;
   }
+  if (config.alert_detection_takeover === "both") {
+    delete yaml.alert_detection_takeover;
+  }
+  if (!config.start_alert_takeover_on) delete yaml.start_alert_takeover_on;
   if (config.ptz_overlay_control === "start_open") {
     delete yaml.ptz_overlay_control;
   }

@@ -35,10 +35,12 @@ function recordingsStackAccessories(config: unknown) {
   };
 }
 
-function exportsStackAccessories() {
+function exportsStackAccessories(config: unknown) {
+  const source = stackConfig(config);
   return {
     calendar: "disabled" as const,
     filter: "exports" as const,
+    targetModuleId: source.targetModuleId,
   };
 }
 

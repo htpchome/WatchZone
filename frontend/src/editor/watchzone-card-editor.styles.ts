@@ -45,6 +45,12 @@ export const cardEditorStyles = css`
     font-weight: var(--wzc-font-weight-medium);
   }
 
+  .segmented-setting-description {
+    color: var(--wzc-color-text-2);
+    font-size: var(--wzc-font-size-small);
+    line-height: var(--wzc-line-height-normal);
+  }
+
   .camera-list-heading {
     display: flex;
     align-items: baseline;

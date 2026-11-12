@@ -64,6 +64,7 @@ export const ACTIVITY_LIST_INTENT_EVENT = `${APP_ID}-activity-list-intent`;
 export const MEDIA_DAY_HEADER_TAG = `${APP_ID}-media-day-header`;
 export const ACTIVITY_CALENDAR_TAG = `${APP_ID}-activity-calendar`;
 export const ACTIVITY_FILTER_TAG = `${APP_ID}-activity-filter`;
+export const ACTIVITY_TAKEOVER_TOGGLE_TAG = `${APP_ID}-activity-takeover-toggle`;
 export const RECORDED_VIDEO_PLAYER_TAG = `${APP_ID}-recorded-video-player`;
 export const RECORDED_VIDEO_TRANSPORT_TAG = `${APP_ID}-recorded-video-transport`;
 export const RECORDED_VIDEO_TRANSPORT_EVENT = `${APP_ID}-recorded-video-transport`;

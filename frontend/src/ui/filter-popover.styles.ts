@@ -41,6 +41,7 @@ export const filterPopoverStyles = css`
   .filter-trigger:disabled {
     color: var(--wzc-filter-trigger-color);
     cursor: default;
+    opacity: 0.45;
   }
   .filter-trigger:focus-visible,
   .reset:focus-visible {

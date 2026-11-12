@@ -31,7 +31,9 @@ describe("WatchZone YAML configuration manager", () => {
           display_zone: false,
           event_history_days: 12,
           event_shadows: false,
+          alert_detection_takeover: "alerts",
           highlight_camera_on_activity: false,
+          start_alert_takeover_on: true,
           view_timelapse_on_thumbnail_hover: false,
           cameras: [
             {
@@ -71,7 +73,9 @@ describe("WatchZone YAML configuration manager", () => {
       display_zone: false,
       event_history_days: 12,
       event_shadows: false,
+      alert_detection_takeover: "alerts",
       highlight_camera_on_activity: false,
+      start_alert_takeover_on: true,
       view_timelapse_on_thumbnail_hover: false,
       cameras: [
         {

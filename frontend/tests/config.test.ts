@@ -30,9 +30,11 @@ describe("WatchZone card configuration", () => {
       event_history_days: 5,
       event_rounded_corners: true,
       event_shadows: true,
+      alert_detection_takeover: "both",
       highlight_camera_on_activity: true,
       ptz_overlay_control: "start_open",
       slide_transition: "slide",
+      start_alert_takeover_on: false,
       view_timelapse_on_thumbnail_hover: true,
       rounded_outer_corners: true,
       outer_shadows: true,
@@ -91,6 +93,25 @@ describe("WatchZone card configuration", () => {
     expect(() =>
       normalizeCardConfig({ highlight_camera_on_activity: "false" }),
     ).toThrow("highlight_camera_on_activity must be a boolean");
+  });
+
+  it("defaults activity takeover to both while starting disabled", () => {
+    expect(normalizeCardConfig({}).alert_detection_takeover).toBe("both");
+    expect(normalizeCardConfig({}).start_alert_takeover_on).toBe(false);
+    expect(
+      normalizeCardConfig({
+        alert_detection_takeover: "alerts",
+        start_alert_takeover_on: true,
+      }),
+    ).toMatchObject({
+      alert_detection_takeover: "alerts",
+      start_alert_takeover_on: true,
+    });
+    expect(() =>
+      normalizeCardConfig({ alert_detection_takeover: "clips" }),
+    ).toThrow(
+      "alert_detection_takeover must be off, alerts, detections, or both",
+    );
   });
 
   it("accepts an event history range from 1 through 15 days", () => {

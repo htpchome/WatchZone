@@ -103,14 +103,14 @@ describe("watchzone-card-editor", () => {
       "Layout Settings",
       "Display Settings",
     ]);
-    expect(items[1]?.childElementCount).toBe(3);
+    expect(items[1]?.childElementCount).toBe(5);
     expect(
       items[1]?.querySelector(
         '[data-config-key="highlight_camera_on_activity"]',
       ),
     ).not.toBeNull();
     const ptzControl = items[1]?.querySelector<SegmentedControl>(
-      "wzc-segmented-control",
+      '[data-setting="ptz-overlay-control"]',
     );
     await ptzControl?.updateComplete;
     expect(
@@ -121,9 +121,9 @@ describe("watchzone-card-editor", () => {
     expect(
       ptzControl?.shadowRoot?.querySelector('[data-value="open_in_drawer"]'),
     ).toHaveProperty("disabled", true);
-    const transitionControl = items[1]?.querySelectorAll<SegmentedControl>(
-      "wzc-segmented-control",
-    )[1];
+    const transitionControl = items[1]?.querySelector<SegmentedControl>(
+      '[data-setting="slide-transition"]',
+    );
     await transitionControl?.updateComplete;
     expect(
       transitionControl?.shadowRoot
@@ -672,7 +672,7 @@ describe("watchzone-card-editor", () => {
     await editor.updateComplete;
 
     const control = editor.shadowRoot?.querySelector<SegmentedControl>(
-      "wzc-segmented-control",
+      '[data-setting="ptz-overlay-control"]',
     );
     const startClosed = control?.shadowRoot?.querySelector<HTMLButtonElement>(
       '[data-value="start_closed"]',
@@ -694,6 +694,37 @@ describe("watchzone-card-editor", () => {
     });
   });
 
+  it("saves activity takeover eligibility and its initial runtime state", async () => {
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+
+    const takeover = editor.shadowRoot?.querySelector<SegmentedControl>(
+      '[data-setting="alert-detection-takeover"]',
+    );
+    takeover?.shadowRoot
+      ?.querySelector<HTMLButtonElement>('[data-value="alerts"]')
+      ?.click();
+    await editor.updateComplete;
+    setBooleanSelector(
+      editor,
+      '[data-config-key="start_alert_takeover_on"]',
+      true,
+    );
+
+    expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
+      type: CARD_TYPE,
+      title: "Camera",
+      alert_detection_takeover: "alerts",
+      start_alert_takeover_on: true,
+    });
+  });
+
   it("saves the carousel transition from the segmented control", async () => {
     const editor = document.createElement(
       "watchzone-card-editor",
@@ -704,10 +735,9 @@ describe("watchzone-card-editor", () => {
     document.body.append(editor);
     await editor.updateComplete;
 
-    const controls = editor.shadowRoot?.querySelectorAll<SegmentedControl>(
-      "wzc-segmented-control",
+    const transition = editor.shadowRoot?.querySelector<SegmentedControl>(
+      '[data-setting="slide-transition"]',
     );
-    const transition = controls?.[1];
     transition?.shadowRoot
       ?.querySelector<HTMLButtonElement>('[data-value="fade"]')
       ?.click();

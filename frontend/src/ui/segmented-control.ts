@@ -6,9 +6,15 @@ import {
   SEGMENTED_CONTROL_VALUE_EVENT,
 } from "../core/constants";
 import { segmentedControlStyles } from "./segmented-control.styles";
+import { renderIcon, type IconName } from "./icons";
 
 export interface SegmentedControlOption {
+  readonly accessibleLabel?: string;
   readonly disabled?: boolean;
+  readonly indicator?: {
+    readonly icon: IconName;
+    readonly tone: "danger" | "warning";
+  };
   readonly label: string;
   readonly value: string;
 }
@@ -50,7 +56,10 @@ export class SegmentedControl extends LitElement {
       ${repeat(
         this.options,
         ({ value }) => value,
-        ({ disabled = false, label, value }, index) => {
+        (
+          { accessibleLabel, disabled = false, indicator, label, value },
+          index,
+        ) => {
           const selected = value === this.value;
           const tabbable =
             index === (selectedIndex >= 0 ? selectedIndex : fallbackIndex);
@@ -64,12 +73,24 @@ export class SegmentedControl extends LitElement {
             data-value=${value}
             aria-selected=${this.mode === "tab" ? String(selected) : nothing}
             aria-checked=${this.mode === "radio" ? String(selected) : nothing}
+            aria-label=${accessibleLabel ?? nothing}
             tabindex=${tabbable ? "0" : "-1"}
             ?disabled=${disabled}
             @click=${this._handleClick}
             @keydown=${this._handleKeyDown}
           >
-            ${label}
+            <span class="option-content">
+              ${
+                indicator
+                  ? html`<span
+                      class=${`option-indicator ${indicator.tone}`}
+                      aria-hidden="true"
+                      >${renderIcon(indicator.icon)}</span
+                    >`
+                  : nothing
+              }
+              <span class="option-label">${label}</span>
+            </span>
           </button>`;
         },
       )}

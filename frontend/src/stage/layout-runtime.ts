@@ -329,7 +329,13 @@ export class LayoutRuntime implements ReactiveController {
       void defineExportFilter();
     }
     void defineActivityControls();
-    return html`${
+    return html`<span class="stage-stack-accessories">
+      <wzc-activity-takeover-toggle
+        .cameraSelection=${this._cameraSelection}
+        .localize=${this._context.localize ?? englishLocalize}
+        .targetModuleId=${accessories.targetModuleId ?? ""}
+      ></wzc-activity-takeover-toggle>
+      ${
         accessories.filter === "activity" || accessories.filter === "disabled"
           ? html`<wzc-activity-filter
               .cameraSelection=${this._cameraSelection}
@@ -365,7 +371,8 @@ export class LayoutRuntime implements ReactiveController {
           accessories.calendar === "recordings" ? "recordings" : "activity"
         }
         .targetModuleId=${accessories.targetModuleId ?? ""}
-      ></wzc-activity-calendar>`;
+      ></wzc-activity-calendar>
+    </span>`;
   }
 
   private _renderStackModule(

@@ -77,6 +77,17 @@ export class CameraCarouselController implements ReactiveController {
     else this._onSelectionChanged?.(Math.max(0, this._activeIndex - 1), true);
   }
 
+  public select(index: number): void {
+    const next = Math.max(0, Math.min(this._slideCount - 1, Math.trunc(index)));
+    if (next === this._activeIndex) return;
+    if (this._swiper && !this._swiper.destroyed) {
+      this._swiper.slideTo(next);
+      return;
+    }
+    this._activeIndex = next;
+    this._onSelectionChanged?.(next, true);
+  }
+
   public setInteractionLocked(locked: boolean): void {
     if (this._interactionLocked === locked) return;
     this._interactionLocked = locked;
