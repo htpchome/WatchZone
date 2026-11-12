@@ -484,7 +484,7 @@ export const activityListStyles = css`
     grid-row: 1;
     min-inline-size: 0;
     overflow: hidden;
-    padding-block-start: calc(var(--wzc-event-content-padding) + 0.4rem);
+    padding-block-start: calc(var(--wzc-event-content-padding) + 0.65rem);
     padding-inline-end: var(--wzc-event-action-margin);
   }
 
@@ -503,6 +503,10 @@ export const activityListStyles = css`
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .metadata + .metadata {
+    margin-block-start: var(--wzc-event-metadata-row-gap);
   }
 
   .metadata-icon {

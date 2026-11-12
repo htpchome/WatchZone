@@ -25,6 +25,7 @@ import {
 import { openRecordedMedia } from "../../../core/recorded-media";
 import { buttonBaseStyles } from "../../../ui/button.styles";
 import { renderIcon } from "../../../ui/icons";
+import "../../../ui/media-day-header";
 import { ToastManager } from "../../../ui/toast-manager";
 import "../../../ui/toast-region";
 import type { CameraSelectionContext } from "../../camera-selection-context";
@@ -89,27 +90,34 @@ export class ExportsModule extends LitElement {
   protected render() {
     const items = this._exports.filteredItems();
     return html`<div class="viewport">
-        ${
-          this._exports.loading && this._exports.items.length === 0
-            ? html`<div class="empty" aria-busy="true">
-                ${this.localize("exports.loading")}
-              </div>`
-            : items.length === 0
-              ? html`<div class="empty">${this.localize("exports.empty")}</div>`
-              : html`<div
-                  class="list"
-                  aria-label=${this.localize("exports.list")}
-                >
-                  ${repeat(
-                    items,
-                    (item) =>
-                      isExportJob(item)
-                        ? item.requestId
-                        : `${item.entity_id}:${item.id}`,
-                    (item) => this._renderItem(item),
-                  )}
+        <wzc-media-day-header
+          .label=${this.localize("exports.header")}
+        ></wzc-media-day-header>
+        <div class="scroller">
+          ${
+            this._exports.loading && this._exports.items.length === 0
+              ? html`<div class="empty" aria-busy="true">
+                  ${this.localize("exports.loading")}
                 </div>`
-        }
+              : items.length === 0
+                ? html`<div class="empty">
+                    ${this.localize("exports.empty")}
+                  </div>`
+                : html`<div
+                    class="list"
+                    aria-label=${this.localize("exports.list")}
+                  >
+                    ${repeat(
+                      items,
+                      (item) =>
+                        isExportJob(item)
+                          ? item.requestId
+                          : `${item.entity_id}:${item.id}`,
+                      (item) => this._renderItem(item),
+                    )}
+                  </div>`
+          }
+        </div>
       </div>
       <wzc-toast-region .notices=${this._toasts.notices}></wzc-toast-region>
       ${this._renderDialog()}`;

@@ -233,6 +233,8 @@
   "recordings.calendar_open": "Open recordings calendar",
   "recordings.calendar_title": "Recordings calendar",
   "exports.list": "Saved exports",
+  "exports.header": "Exports",
+  "exports.calendar_unavailable": "Export calendar unavailable",
   "exports.loading": "Loading exports…",
   "exports.empty": "No exports are available.",
   "exports.load_failed": "Unable to load exports.",

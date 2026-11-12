@@ -341,11 +341,19 @@ export class LayoutRuntime implements ReactiveController {
     const exports = active.moduleType === EXPORTS_MODULE_TYPE;
     if (exports) {
       void defineExportFilter();
+      void defineActivityControls();
       return html`<wzc-export-filter
-        .filterContext=${this._exportFilter}
-        .localize=${this._context.localize ?? englishLocalize}
-        .scopeId=${active.id}
-      ></wzc-export-filter>`;
+          .filterContext=${this._exportFilter}
+          .localize=${this._context.localize ?? englishLocalize}
+          .scopeId=${active.id}
+        ></wzc-export-filter>
+        <wzc-activity-calendar
+          .disabled=${true}
+          .disabledLabel=${(this._context.localize ?? englishLocalize)(
+            "exports.calendar_unavailable",
+          )}
+          .localize=${this._context.localize ?? englishLocalize}
+        ></wzc-activity-calendar>`;
     }
     const reviews = node.children.find(
       ({ moduleType }) => moduleType === REVIEWS_MODULE_TYPE,

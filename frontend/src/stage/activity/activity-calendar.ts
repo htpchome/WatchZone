@@ -31,6 +31,8 @@ export class ActivityCalendar extends LitElement {
     api: { attribute: false },
     cameraSelection: { attribute: false },
     dateContext: { attribute: false },
+    disabled: { type: Boolean },
+    disabledLabel: { attribute: false },
     historyDays: { attribute: false },
     localize: { attribute: false },
     mode: { attribute: false },
@@ -43,6 +45,8 @@ export class ActivityCalendar extends LitElement {
   public api?: HomeAssistantApi;
   public cameraSelection?: CameraSelectionContext;
   public dateContext?: MediaDateContext;
+  public disabled = false;
+  public disabledLabel = "";
   public historyDays = 5;
   public localize: LocalizeFunction = englishLocalize;
   public mode: ActivityCalendarMode = "activity";
@@ -149,18 +153,27 @@ export class ActivityCalendar extends LitElement {
       <button
         class=${`calendar-trigger${this._selectedDate ? " selected" : ""}`}
         type="button"
+        ?disabled=${this.disabled}
         aria-expanded=${this._open ? "true" : "false"}
         aria-haspopup="dialog"
-        aria-label=${this.localize(
-          this.mode === "recordings"
-            ? "recordings.calendar_open"
-            : "calendar.open",
-        )}
-        title=${this.localize(
-          this.mode === "recordings"
-            ? "recordings.calendar_open"
-            : "calendar.open",
-        )}
+        aria-label=${
+          this.disabled && this.disabledLabel
+            ? this.disabledLabel
+            : this.localize(
+                this.mode === "recordings"
+                  ? "recordings.calendar_open"
+                  : "calendar.open",
+              )
+        }
+        title=${
+          this.disabled && this.disabledLabel
+            ? this.disabledLabel
+            : this.localize(
+                this.mode === "recordings"
+                  ? "recordings.calendar_open"
+                  : "calendar.open",
+              )
+        }
         @click=${this._toggle}
       >
         ${renderIcon("calendar")}

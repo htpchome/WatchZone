@@ -1040,6 +1040,12 @@ test("keeps activity content in an independently scrolling viewport", async ({
     const asideBounds = aside.getBoundingClientRect();
     const actionBounds = actions.getBoundingClientRect();
     const analysisBounds = element.getBoundingClientRect();
+    const metadataRows = details.querySelectorAll(".metadata");
+    const firstMetadataBounds = metadataRows[0]?.getBoundingClientRect();
+    const secondMetadataBounds = metadataRows[1]?.getBoundingClientRect();
+    if (!firstMetadataBounds || !secondMetadataBounds) {
+      throw new Error("Expected adjacent activity metadata rows.");
+    }
     return {
       actionsAfterAside: actionBounds.left >= asideBounds.right,
       actionCenterDelta: Math.abs(
@@ -1058,6 +1064,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
         detailBounds.top >= badgeBounds.bottom &&
         analysisBounds.top >= badgeBounds.bottom &&
         actionBounds.top >= badgeBounds.bottom,
+      metadataRowGap: secondMetadataBounds.top - firstMetadataBounds.bottom,
       standard: tile.classList.contains("standard"),
       thumbnailBottom: Math.abs(thumbnailBounds.bottom - tileBounds.bottom),
       thumbnailTop: Math.abs(thumbnailBounds.top - tileBounds.top),
@@ -1066,9 +1073,10 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(standardTileLayout.standard).toBe(true);
   expect(standardTileLayout.thumbnailTop).toBeLessThanOrEqual(1);
   expect(standardTileLayout.thumbnailBottom).toBeLessThanOrEqual(1);
-  expect(standardTileLayout.badgeInset).toBeGreaterThanOrEqual(9);
+  expect(standardTileLayout.badgeInset).toBeGreaterThanOrEqual(13);
   expect(standardTileLayout.analysisGap).toBeGreaterThanOrEqual(5);
   expect(standardTileLayout.contentBelowBadges).toBe(true);
+  expect(standardTileLayout.metadataRowGap).toBeGreaterThanOrEqual(1);
   expect(standardTileLayout.asideAfterDetails).toBe(true);
   expect(standardTileLayout.actionsAfterAside).toBe(true);
   expect(standardTileLayout.actionCenterDelta).toBeLessThanOrEqual(1);
@@ -2742,6 +2750,16 @@ test("shows and filters mixed-camera persistent exports", async ({ page }) => {
   await expect(exportsButton).toHaveAttribute("aria-pressed", "true");
   const exports = page.locator("wzc-exports");
   await expect(exports.locator(".tile")).toHaveCount(2);
+  await expect(exports.locator("wzc-media-day-header")).toContainText(
+    "Exports",
+  );
+  const exportCalendar = navigation.locator("wzc-activity-calendar");
+  const exportCalendarTrigger = exportCalendar.locator(".calendar-trigger");
+  await expect(exportCalendarTrigger).toBeDisabled();
+  await expect(exportCalendarTrigger).toHaveAttribute(
+    "aria-label",
+    "Export calendar unavailable",
+  );
   expect(
     await exports
       .locator(".tile")

@@ -39,6 +39,12 @@ export const activityCalendarStyles = css`
     color: var(--wzc-stage-stack-button-hover-color);
   }
 
+  .calendar-trigger:disabled {
+    color: var(--wzc-stage-stack-button-color);
+    cursor: default;
+    opacity: var(--wzc-control-disabled-opacity);
+  }
+
   .calendar-trigger:focus-visible,
   .month-button:focus-visible,
   .day:focus-visible,

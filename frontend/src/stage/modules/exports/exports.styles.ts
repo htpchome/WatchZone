@@ -10,6 +10,13 @@ export const exportsStyles = css`
 
   .viewport {
     block-size: 100%;
+    display: grid;
+    grid-template-rows: var(--wzc-media-day-header-block-size) minmax(0, 1fr);
+    min-block-size: 0;
+    overflow: hidden;
+  }
+
+  .scroller {
     min-block-size: 0;
     overflow-y: auto;
     overscroll-behavior: contain;

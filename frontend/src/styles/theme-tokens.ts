@@ -274,6 +274,7 @@ export const themeTokens = css`
     --wzc-event-badge-font-size: 0.6875rem;
     --wzc-event-badge-padding: 0.08em 0.45em;
     --wzc-event-metadata-gap: 0.2rem;
+    --wzc-event-metadata-row-gap: 0.1rem;
     --wzc-event-metadata-icon-size: 0.75rem;
     --wzc-event-secondary-color: var(--wzc-color-text-2);
     --wzc-event-duration-background: var(--wzc-media-overlay-background);

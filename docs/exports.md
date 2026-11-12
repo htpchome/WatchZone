@@ -29,6 +29,10 @@ but the Stage module and frontend transport remain provider-neutral.
 
 - A newly activated Exports module requests exports for every camera exposed by
   its configured target camera module and presents one newest-first mixed list.
+- The library uses the shared centered media heading with the title Exports.
+  The shared calendar control remains visible but disabled until Exports owns a
+  real mixed-camera date-filter contract; it must not imply that selecting a
+  date filters the all-date library before that support exists.
 - Camera facets are derived from the returned exports. Selecting no camera
   means all cameras.
 - Ready items show a thumbnail, title, camera, creation date and time, and

@@ -84,6 +84,12 @@ describe("exports module", () => {
     await vi.waitFor(() =>
       expect(module.shadowRoot?.querySelectorAll(".tile")).toHaveLength(2),
     );
+    expect(
+      (
+        module.shadowRoot?.querySelector("wzc-media-day-header") as
+          (HTMLElement & { label: string }) | null
+      )?.label,
+    ).toBe("Exports");
     expect(module.shadowRoot?.textContent).toContain("Front Door");
     const processing = [
       ...(module.shadowRoot?.querySelectorAll<HTMLElement>(".tile") ?? []),
