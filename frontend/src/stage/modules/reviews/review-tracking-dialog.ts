@@ -50,6 +50,7 @@ export class ReviewTrackingDialog extends LitElement {
   public model?: ReviewTrackingDialogModel;
 
   private _activeEventId?: string;
+  private _activeEventPlacement: "above" | "below" = "below";
 
   protected render() {
     const model = this.model;
@@ -57,6 +58,7 @@ export class ReviewTrackingDialog extends LitElement {
       aria-labelledby="tracking-heading"
       @cancel=${this._close}
       @click=${this._backdropClick}
+      @scroll=${this._hideActiveEvent}
     >
       ${
         model
@@ -203,7 +205,9 @@ export class ReviewTrackingDialog extends LitElement {
         aria-describedby=${active ? metricsId : nothing}
         aria-expanded=${active ? "true" : "false"}
         @pointerenter=${(pointer: PointerEvent) => {
-          if (pointer.pointerType === "mouse") this._showEvent(eventId);
+          if (pointer.pointerType === "mouse") {
+            this._showEvent(eventId, pointer.currentTarget as HTMLElement);
+          }
         }}
         @pointerleave=${(pointer: PointerEvent) => {
           if (
@@ -213,16 +217,22 @@ export class ReviewTrackingDialog extends LitElement {
             this._hideEvent(eventId);
           }
         }}
-        @focus=${() => this._showEvent(eventId)}
+        @focus=${(event: FocusEvent) =>
+          this._showEvent(eventId, event.currentTarget as HTMLElement)}
         @blur=${() => this._hideEvent(eventId)}
-        @click=${() => this._showEvent(eventId)}
+        @click=${(event: MouseEvent) =>
+          this._showEvent(eventId, event.currentTarget as HTMLElement)}
       >
         <span>${this._eventLabel(event, label)}</span>
         <time
           >${formatHomeAssistantTime(new Date(event.timestamp * 1000), this.locale)}</time
         >
       </button>
-      ${active ? this._renderMetrics(event, metricsId) : nothing}
+      ${
+        active
+          ? this._renderMetrics(event, metricsId, this._activeEventPlacement)
+          : nothing
+      }
     </div>`;
   }
 
@@ -234,7 +244,11 @@ export class ReviewTrackingDialog extends LitElement {
     });
   }
 
-  private _renderMetrics(event: ReviewTrackingEvent, metricsId: string) {
+  private _renderMetrics(
+    event: ReviewTrackingEvent,
+    metricsId: string,
+    placement: "above" | "below",
+  ) {
     const percent = homeAssistantNumberFormat(this.locale, {
       maximumFractionDigits: 0,
       style: "percent",
@@ -247,7 +261,11 @@ export class ReviewTrackingDialog extends LitElement {
     });
     const hasMetrics =
       event.score !== null || event.ratio !== null || event.area !== null;
-    return html`<div class="event-metrics" id=${metricsId} role="tooltip">
+    return html`<div
+      class=${`event-metrics ${placement}`}
+      id=${metricsId}
+      role="tooltip"
+    >
       ${
         hasMetrics
           ? html`${
@@ -287,7 +305,17 @@ export class ReviewTrackingDialog extends LitElement {
     </div>`;
   }
 
-  private _showEvent(eventId: string): void {
+  private _showEvent(eventId: string, target: HTMLElement): void {
+    const dialog = this.renderRoot.querySelector("dialog");
+    if (dialog) {
+      const dialogBounds = dialog.getBoundingClientRect();
+      const targetBounds = target.getBoundingClientRect();
+      this._activeEventPlacement =
+        dialogBounds.bottom - targetBounds.bottom >=
+        targetBounds.top - dialogBounds.top
+          ? "below"
+          : "above";
+    }
     if (this._activeEventId === eventId) return;
     this._activeEventId = eventId;
     this.requestUpdate();
@@ -298,6 +326,12 @@ export class ReviewTrackingDialog extends LitElement {
     this._activeEventId = undefined;
     this.requestUpdate();
   }
+
+  private readonly _hideActiveEvent = (): void => {
+    if (this._activeEventId === undefined) return;
+    this._activeEventId = undefined;
+    this.requestUpdate();
+  };
 
   private readonly _backdropClick = (event: MouseEvent): void => {
     if (event.target === event.currentTarget) this._close(event);

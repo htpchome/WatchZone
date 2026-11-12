@@ -207,13 +207,20 @@ export const reviewTrackingDialogStyles = css`
     display: grid;
     font-size: var(--wzc-font-size-small);
     gap: 0.25rem;
-    inset-block-start: calc(100% - 0.15rem);
     inset-inline-start: 0.45rem;
     max-inline-size: calc(100% - 0.9rem);
     min-inline-size: 9rem;
     padding: 0.55rem 0.7rem;
     position: absolute;
     z-index: 3;
+  }
+
+  .event-metrics.below {
+    inset-block-start: calc(100% - 0.15rem);
+  }
+
+  .event-metrics.above {
+    inset-block-end: calc(100% - 0.15rem);
   }
 
   .event-metrics span {

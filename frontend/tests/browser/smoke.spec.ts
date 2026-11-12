@@ -947,6 +947,33 @@ test("keeps activity content in an independently scrolling viewport", async ({
                     timestamp: 1_700_000_003,
                     zones: ["garage"],
                   },
+                  {
+                    area: 41_200,
+                    area_percentage: 7.95,
+                    kind: "became_stationary",
+                    ratio: 0.71,
+                    score: 0.82,
+                    timestamp: 1_700_000_006,
+                    zones: ["garage"],
+                  },
+                  {
+                    area: 40_100,
+                    area_percentage: 7.74,
+                    kind: "became_active",
+                    ratio: 0.73,
+                    score: 0.8,
+                    timestamp: 1_700_000_010,
+                    zones: ["garage"],
+                  },
+                  {
+                    area: 39_000,
+                    area_percentage: 7.52,
+                    kind: "left",
+                    ratio: 0.76,
+                    score: 0.78,
+                    timestamp: 1_700_000_024,
+                    zones: [],
+                  },
                 ],
                 id: "frigate:front:0",
                 label: "person",
@@ -1165,6 +1192,26 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect(trackingMetrics).toContainText("56%");
   await expect(trackingMetrics).toContainText("0.74");
   await expect(trackingMetrics).toContainText("37,742px");
+  await trackingDialog.locator(".lifecycle-event").last().hover();
+  await expect(trackingMetrics).toBeVisible();
+  const containedMetrics = await trackingMetrics.evaluate((metrics) => {
+    const dialog = metrics.closest("dialog");
+    if (!dialog) throw new Error("Expected tracking metrics in a dialog.");
+    const dialogBounds = dialog.getBoundingClientRect();
+    const metricsBounds = metrics.getBoundingClientRect();
+    return {
+      bottom: metricsBounds.bottom <= dialogBounds.bottom,
+      left: metricsBounds.left >= dialogBounds.left,
+      right: metricsBounds.right <= dialogBounds.right,
+      top: metricsBounds.top >= dialogBounds.top,
+    };
+  });
+  expect(containedMetrics).toEqual({
+    bottom: true,
+    left: true,
+    right: true,
+    top: true,
+  });
   await trackingDialog
     .locator('button[aria-label="Close tracking details"]')
     .click();
