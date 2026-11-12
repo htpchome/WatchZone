@@ -117,6 +117,7 @@ type BooleanConfigFlag =
   | "camera_bar_shadows"
   | "camera_rounded_corners"
   | "camera_shadows"
+  | "camera_switcher_overlay"
   | "display_event_type_badges"
   | "display_object_badges"
   | "display_zone"
@@ -430,6 +431,11 @@ export class CardEditor extends LitElement {
       },
     ];
     return html`
+      ${this._renderBooleanOption(
+        "camera_switcher_overlay",
+        this._t("editor.camera_switcher_overlay"),
+        this._config?.camera_switcher_overlay === true,
+      )}
       ${this._renderBooleanOption(
         "highlight_camera_on_activity",
         this._t("editor.highlight_camera_on_activity"),

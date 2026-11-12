@@ -20,6 +20,17 @@
               "kind": "module",
               "moduleType": "camera",
               "slots": {
+                "overlay": [
+                  {
+                    "componentType": "camera_switcher",
+                    "config": {
+                      "targetModuleId": "default-camera-module"
+                    },
+                    "id": "default-camera-switcher-component",
+                    "kind": "component",
+                    "overlayRegion": "top-center"
+                  }
+                ],
                 "controls": [
                   {
                     "componentType": "light_control",
@@ -54,22 +65,12 @@
               "rowSpan": 1
             },
             "node": {
-              "config": {},
-              "id": "default-panel-module",
+              "config": {
+                "targetModuleId": "default-camera-module"
+              },
+              "id": "default-camera-navigation-module",
               "kind": "module",
-              "moduleType": "panel",
-              "slots": {
-                "content": [
-                  {
-                    "componentType": "camera_navigation",
-                    "config": {
-                      "targetModuleId": "default-camera-module"
-                    },
-                    "id": "default-camera-navigation-component",
-                    "kind": "component"
-                  }
-                ]
-              }
+              "moduleType": "camera-navigation"
             }
           },
           {
@@ -143,6 +144,17 @@
               "kind": "module",
               "moduleType": "camera",
               "slots": {
+                "overlay": [
+                  {
+                    "componentType": "camera_switcher",
+                    "config": {
+                      "targetModuleId": "default-camera-module"
+                    },
+                    "id": "default-camera-switcher-component",
+                    "kind": "component",
+                    "overlayRegion": "top-center"
+                  }
+                ],
                 "controls": [
                   {
                     "componentType": "light_control",
@@ -177,22 +189,12 @@
               "rowSpan": 1
             },
             "node": {
-              "config": {},
-              "id": "default-panel-module",
+              "config": {
+                "targetModuleId": "default-camera-module"
+              },
+              "id": "default-camera-navigation-module",
               "kind": "module",
-              "moduleType": "panel",
-              "slots": {
-                "content": [
-                  {
-                    "componentType": "camera_navigation",
-                    "config": {
-                      "targetModuleId": "default-camera-module"
-                    },
-                    "id": "default-camera-navigation-component",
-                    "kind": "component"
-                  }
-                ]
-              }
+              "moduleType": "camera-navigation"
             }
           },
           {

@@ -294,7 +294,7 @@ test("keeps picker and activity geometry stable across lazy loading", async ({
     releasePlaceables = resolve;
   });
   for (const path of [
-    "**/src/stage/components/camera-navigation/camera-navigation.ts*",
+    "**/src/stage/modules/camera-navigation/camera-navigation.ts*",
     "**/src/stage/modules/reviews/reviews.ts*",
   ]) {
     await page.route(path, async (route) => {
@@ -385,7 +385,7 @@ test("keeps picker and activity geometry stable across lazy loading", async ({
   }
 });
 
-test("keeps the panel camera navigation and carousel selection bidirectional", async ({
+test("keeps camera navigation module and carousel selection bidirectional", async ({
   page,
 }) => {
   await page.goto("/");
@@ -477,15 +477,17 @@ test("keeps the panel camera navigation and carousel selection bidirectional", a
   await expect(buttons.nth(0)).toHaveAttribute("aria-selected", "true");
 
   const cameraBox = await page.locator("wzc-camera").boundingBox();
-  const panelBox = await page.locator("wzc-panel").boundingBox();
+  const navigationModuleBox = await page
+    .locator('[data-layout-node="wzc:default-camera-navigation-module"]')
+    .boundingBox();
   const selectorBox = await navigation.boundingBox();
   expect(cameraBox).not.toBeNull();
-  expect(panelBox).not.toBeNull();
+  expect(navigationModuleBox).not.toBeNull();
   expect(selectorBox).not.toBeNull();
-  expect(panelBox?.y).toBeGreaterThanOrEqual(
+  expect(navigationModuleBox?.y).toBeGreaterThanOrEqual(
     (cameraBox?.y ?? 0) + (cameraBox?.height ?? 0),
   );
-  expect(panelBox?.height).toBeCloseTo(selectorBox?.height ?? 0, 1);
+  expect(navigationModuleBox?.height).toBeCloseTo(selectorBox?.height ?? 0, 1);
 
   await page.locator("watchzone-card").evaluate((element) => {
     (
@@ -3407,6 +3409,40 @@ test("restores camera navigation after an inner-dashboard detach", async ({
     "aria-selected",
     "true",
   );
+});
+
+test("keeps the camera switcher overlay in tandem with camera navigation", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  const card = page.locator("watchzone-card");
+  await card.evaluate((element) => {
+    (
+      element as HTMLElement & {
+        setConfig(config: unknown): void;
+      }
+    ).setConfig({
+      type: "custom:watchzone-card",
+      camera_switcher_overlay: true,
+      cameras: [
+        { entity_id: "camera.front", title: "Front Door" },
+        { entity_id: "camera.back", title: "Back Yard" },
+      ],
+    });
+  });
+
+  const switcher = card.locator("wzc-camera-switcher");
+  const navigation = card.locator("wzc-camera-navigation");
+  await expect(switcher.locator("button.trigger")).toContainText("Front Door");
+  await card.locator("wzc-camera-live .viewport").first().hover();
+  await switcher.locator("button.trigger").click();
+  await switcher.locator('button.option[data-entity-id="camera.back"]').click();
+
+  await expect(
+    navigation.locator('button[data-value="camera.back"]'),
+  ).toHaveAttribute("aria-selected", "true");
+  await expect(switcher.locator("button.trigger")).toContainText("Back Yard");
 });
 
 test("keeps the HA pre-editor wrapper stable without observing navigation geometry", async ({

@@ -443,9 +443,10 @@ The generic **panel module** is the Stage placement surface for a standalone
 component. It owns only its grid-sized surface and `content` slot: it does not
 absorb the component's behavior or styling. This keeps components off the raw
 Stage while allowing the same component to move between a panel and another
-module's compatible slot. Camera navigation is therefore one portable
-component, whether presented beneath Camera in a panel or later inside a
-camera overlay.
+module's compatible slot. Camera navigation is a standalone module because it
+is independently placed as a major Stage surface. A compact camera switcher is
+instead a component in Camera's `overlay` slot. Both consume the same narrow
+camera-selection context without importing or mutating one another.
 
 Modules and components never import one another or another placeable of their
 own kind. Composition belongs to the Stage renderer through stable Stage

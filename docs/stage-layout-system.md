@@ -19,7 +19,7 @@ second layout model.
 ## Placeable vocabulary
 
 - A **module** is a major stage content system that may publish semantic slots.
-  Camera and the future events surface are modules.
+  Camera, camera navigation, and the future events surface are modules.
 - A **component** is a portable capability presentation placed in a compatible
   module slot. PTZ and two-way talk are components.
 - A **container** owns logical grid placement. It owns no feature behavior.
@@ -83,13 +83,13 @@ The first built-in composition is:
 ```text
 root grid
 ├── camera module
+│   ├── overlay slot
+│   │   └── camera-switcher component (when enabled and multiple cameras exist)
 │   ├── controls slot (responsive intrinsic-size dock)
 │   │   ├── linked-light component (when configured)
 │   │   ├── two-way-talk component (when enabled)
 │   │   └── PTZ component (when enabled)
-├── panel module
-    └── content slot
-        └── camera-navigation component
+├── camera-navigation module
 └── media-list module stack
     ├── reviews module (initially active)
     ├── events module
@@ -112,6 +112,9 @@ changing the dock's measured control geometry.
 The overlay slot owns its three-by-three logical placement grid and local
 Stage-edge clearance. Its trailing clearance reserves the camera media-control
 rail for future overlay components without exposing camera-control geometry.
+The optional camera-switcher component occupies `top-center`, follows Camera's
+shared overlay timer, and publishes selection intent through the same typed
+camera-selection context as the standalone camera-navigation module.
 Neither Stage slot consumes
 device safe-area insets: a Stage is contained inside the Home Assistant card,
 not attached to a physical viewport edge. A true viewport-edge presentation

@@ -103,7 +103,7 @@ describe("watchzone-card-editor", () => {
       "Layout Settings",
       "Display Settings",
     ]);
-    expect(items[1]?.childElementCount).toBe(5);
+    expect(items[1]?.childElementCount).toBe(6);
     expect(
       items[1]?.querySelector(
         '[data-config-key="highlight_camera_on_activity"]',

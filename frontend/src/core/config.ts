@@ -37,6 +37,7 @@ export interface CameraConfig {
 }
 
 export interface CardConfig {
+  readonly camera_switcher_overlay: boolean;
   readonly camera_bar_rounded_corners: boolean;
   readonly camera_bar_shadows: boolean;
   readonly camera_rounded_corners: boolean;
@@ -83,6 +84,7 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     "camera_bar_shadows",
     "camera_rounded_corners",
     "camera_shadows",
+    "camera_switcher_overlay",
     "display_event_type_badges",
     "display_object_badges",
     "display_zone",
@@ -164,6 +166,7 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     "camera_rounded_corners",
   );
   normalized.camera_shadows = moduleAppearanceValue(source, "camera_shadows");
+  normalized.camera_switcher_overlay = source.camera_switcher_overlay === true;
   normalized.camera_bar_rounded_corners =
     source.camera_bar_rounded_corners !== false;
   normalized.camera_bar_shadows = source.camera_bar_shadows !== false;

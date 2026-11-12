@@ -23,6 +23,7 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
     delete yaml.camera_rounded_corners;
   }
   if (config.camera_shadows !== false) delete yaml.camera_shadows;
+  if (!config.camera_switcher_overlay) delete yaml.camera_switcher_overlay;
   if (config.camera_bar_rounded_corners !== false) {
     delete yaml.camera_bar_rounded_corners;
   }

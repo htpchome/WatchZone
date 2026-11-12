@@ -1,5 +1,6 @@
 import {
-  CAMERA_NAVIGATION_COMPONENT_TYPE,
+  CAMERA_NAVIGATION_MODULE_TYPE,
+  CAMERA_SWITCHER_COMPONENT_TYPE,
   CAMERA_MODULE_TYPE,
   REVIEWS_MODULE_TYPE,
   EVENTS_MODULE_TYPE,
@@ -61,6 +62,13 @@ function stackConfig(config: unknown): {
 }
 
 const moduleLoaders = {
+  [CAMERA_NAVIGATION_MODULE_TYPE]: {
+    load: () =>
+      import("./modules/camera-navigation").then(
+        ({ moduleDefinition }) => moduleDefinition,
+      ),
+    placeholder: "camera-navigation",
+  },
   [REVIEWS_MODULE_TYPE]: {
     load: () =>
       import("./modules/reviews").then(
@@ -113,12 +121,12 @@ const moduleLoaders = {
 } satisfies PlaceableLoaderMap;
 
 const componentLoaders = {
-  [CAMERA_NAVIGATION_COMPONENT_TYPE]: {
+  [CAMERA_SWITCHER_COMPONENT_TYPE]: {
     load: () =>
-      import("./components/camera-navigation").then(
+      import("./components/camera-switcher").then(
         ({ componentDefinition }) => componentDefinition,
       ),
-    placeholder: "camera-navigation",
+    placeholder: "control",
   },
   [TALK_COMPONENT_TYPE]: {
     load: () =>

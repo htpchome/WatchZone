@@ -13,8 +13,8 @@ import { cameraNavigationStyles } from "./camera-navigation.styles";
 import type { SegmentedControlValueDetail } from "../../../ui/segmented-control";
 import "../../../ui/segmented-control";
 
-/** Static camera navigation bar backed by shared layout selection. */
-export class CameraNavigationComponent extends LitElement {
+/** Standalone camera-navigation module backed by shared camera selection. */
+export class CameraNavigationModule extends LitElement {
   public static properties = {
     cameraSelection: { attribute: false },
     localize: { attribute: false },
@@ -114,11 +114,11 @@ export class CameraNavigationComponent extends LitElement {
 }
 
 if (!customElements.get(CAMERA_NAVIGATION_TAG)) {
-  customElements.define(CAMERA_NAVIGATION_TAG, CameraNavigationComponent);
+  customElements.define(CAMERA_NAVIGATION_TAG, CameraNavigationModule);
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    [CAMERA_NAVIGATION_TAG]: CameraNavigationComponent;
+    [CAMERA_NAVIGATION_TAG]: CameraNavigationModule;
   }
 }

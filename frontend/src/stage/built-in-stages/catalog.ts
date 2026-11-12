@@ -2,14 +2,14 @@ import type { CardConfig } from "../../core/config";
 import {
   APP_ID,
   REVIEWS_MODULE_TYPE,
-  CAMERA_NAVIGATION_COMPONENT_TYPE,
+  CAMERA_NAVIGATION_MODULE_TYPE,
+  CAMERA_SWITCHER_COMPONENT_TYPE,
   CAMERA_MODULE_TYPE,
   EVENTS_MODULE_TYPE,
   EXPORTS_MODULE_TYPE,
   LIGHT_COMPONENT_TYPE,
   PTZ_COMPONENT_TYPE,
   RECORDINGS_MODULE_TYPE,
-  PANEL_MODULE_TYPE,
   TALK_COMPONENT_TYPE,
 } from "../../core/constants";
 import {
@@ -134,20 +134,19 @@ function hydrateModule(
   node: StageModuleNode,
   config: CardConfig,
 ): StageModuleNode | undefined {
-  if (node.moduleType === PANEL_MODULE_TYPE && config.cameras.length === 0) {
-    return undefined;
-  }
-  if (node.moduleType === PANEL_MODULE_TYPE) {
+  if (node.moduleType === CAMERA_NAVIGATION_MODULE_TYPE) {
+    if (config.cameras.length === 0) return undefined;
+    const moduleConfig =
+      typeof node.config === "object" && node.config !== null
+        ? node.config
+        : {};
     return {
       ...node,
-      slots: Object.fromEntries(
-        Object.entries(node.slots ?? {}).map(([name, components]) => [
-          name,
-          components?.map((component) =>
-            hydrateRuntimeComponent(component, config),
-          ),
-        ]),
-      ),
+      config: {
+        ...moduleConfig,
+        roundedCorners: config.camera_bar_rounded_corners,
+        shadows: config.camera_bar_shadows,
+      },
     };
   }
   if (
@@ -194,9 +193,7 @@ function hydrateModule(
     Object.entries(node.slots ?? {}).flatMap(([name, components]) => {
       const hydrated = (components ?? []).flatMap((component) => {
         const cameraComponent = hydrateCameraComponent(component, config);
-        return cameraComponent
-          ? [hydrateRuntimeComponent(cameraComponent, config)]
-          : [];
+        return cameraComponent ? [cameraComponent] : [];
       });
       return hydrated.length ? [[name, hydrated]] : [];
     }),
@@ -229,6 +226,7 @@ function hydrateModule(
 
 function namespaceModuleConfig(node: StageModuleNode): unknown {
   if (
+    node.moduleType !== CAMERA_NAVIGATION_MODULE_TYPE &&
     node.moduleType !== EVENTS_MODULE_TYPE &&
     node.moduleType !== REVIEWS_MODULE_TYPE &&
     node.moduleType !== RECORDINGS_MODULE_TYPE &&
@@ -244,26 +242,8 @@ function namespaceModuleConfig(node: StageModuleNode): unknown {
     : node.config;
 }
 
-function hydrateRuntimeComponent(
-  node: StageComponentNode,
-  config: CardConfig,
-): StageComponentNode {
-  if (node.componentType !== CAMERA_NAVIGATION_COMPONENT_TYPE) return node;
-  const componentConfig =
-    typeof node.config === "object" && node.config !== null ? node.config : {};
-  return {
-    ...node,
-    config: {
-      ...componentConfig,
-      roundedCorners: config.camera_bar_rounded_corners,
-      shadows: config.camera_bar_shadows,
-    },
-  };
-}
-
 function namespaceComponentConfig(node: StageComponentNode): unknown {
-  if (node.componentType !== CAMERA_NAVIGATION_COMPONENT_TYPE)
-    return node.config;
+  if (node.componentType !== CAMERA_SWITCHER_COMPONENT_TYPE) return node.config;
   if (typeof node.config !== "object" || node.config === null)
     return node.config;
   const targetModuleId = (node.config as Record<string, unknown>)
@@ -277,6 +257,11 @@ function hydrateCameraComponent(
   node: StageComponentNode,
   config: CardConfig,
 ): StageComponentNode | undefined {
+  if (node.componentType === CAMERA_SWITCHER_COMPONENT_TYPE) {
+    return config.camera_switcher_overlay && config.cameras.length > 1
+      ? node
+      : undefined;
+  }
   if (node.componentType === TALK_COMPONENT_TYPE) {
     const cameras = config.cameras
       .filter(({ two_way_talk_enabled: enabled }) => enabled)

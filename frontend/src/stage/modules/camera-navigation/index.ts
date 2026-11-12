@@ -1,10 +1,10 @@
 import {
-  CAMERA_NAVIGATION_COMPONENT_TYPE,
+  CAMERA_NAVIGATION_MODULE_TYPE,
   CAMERA_NAVIGATION_TAG,
 } from "../../../core/constants";
 import { englishLocalize } from "../../../core/localization";
-import type { ComponentDefinition } from "../../placeable";
-import type { CameraNavigationComponent } from "./camera-navigation";
+import type { ModuleDefinition } from "../../placeable";
+import type { CameraNavigationModule } from "./camera-navigation";
 
 export interface CameraNavigationConfig {
   readonly roundedCorners: boolean;
@@ -14,18 +14,18 @@ export interface CameraNavigationConfig {
 
 let definitionPromise: Promise<void> | undefined;
 
-export const componentDefinition: ComponentDefinition<
+export const moduleDefinition: ModuleDefinition<
   CameraNavigationConfig,
   "cameraSelection"
 > = {
   contextKeys: ["cameraSelection"],
-  type: CAMERA_NAVIGATION_COMPONENT_TYPE,
+  type: CAMERA_NAVIGATION_MODULE_TYPE,
   createElement: () => document.createElement(CAMERA_NAVIGATION_TAG),
   define: () =>
     (definitionPromise ??= import("./camera-navigation").then(() => undefined)),
   getEntityIds: () => [],
   updateElement(element, config, context) {
-    const navigation = element as CameraNavigationComponent;
+    const navigation = element as CameraNavigationModule;
     navigation.cameraSelection = context.cameraSelection;
     navigation.localize = context.localize ?? englishLocalize;
     navigation.roundedCorners = config.roundedCorners;
@@ -56,4 +56,4 @@ export const componentDefinition: ComponentDefinition<
   },
 };
 
-export type { CameraNavigationComponent } from "./camera-navigation";
+export type { CameraNavigationModule } from "./camera-navigation";

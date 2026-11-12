@@ -9,12 +9,11 @@ import {
   DEFAULT_ACTIVITY_STACK_NODE_ID,
   DEFAULT_REVIEWS_MODULE_NODE_ID,
   DEFAULT_CAMERA_MODULE_NODE_ID,
-  DEFAULT_CAMERA_NAVIGATION_COMPONENT_NODE_ID,
+  DEFAULT_CAMERA_NAVIGATION_MODULE_NODE_ID,
   DEFAULT_EVENTS_MODULE_NODE_ID,
   DEFAULT_EXPORTS_MODULE_NODE_ID,
   DEFAULT_LAYOUT_ROOT_NODE_ID,
   DEFAULT_LIGHT_COMPONENT_NODE_ID,
-  DEFAULT_PANEL_MODULE_NODE_ID,
   DEFAULT_PTZ_COMPONENT_NODE_ID,
   DEFAULT_RECORDINGS_MODULE_NODE_ID,
   DEFAULT_TALK_COMPONENT_NODE_ID,
@@ -92,22 +91,13 @@ describe("layout composition", () => {
       },
     });
     expect(children[1].node).toMatchObject({
-      id: DEFAULT_PANEL_MODULE_NODE_ID,
+      id: DEFAULT_CAMERA_NAVIGATION_MODULE_NODE_ID,
       kind: "module",
-      moduleType: "panel",
-      slots: {
-        content: [
-          {
-            componentType: "camera_navigation",
-            config: {
-              roundedCorners: true,
-              shadows: true,
-              targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
-            },
-            id: DEFAULT_CAMERA_NAVIGATION_COMPONENT_NODE_ID,
-            kind: "component",
-          },
-        ],
+      moduleType: "camera-navigation",
+      config: {
+        roundedCorners: true,
+        shadows: true,
+        targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
       },
     });
     expect(children[2].node).toMatchObject({
@@ -212,7 +202,7 @@ describe("layout composition", () => {
     );
   });
 
-  it("maps camera bar appearance at the navigation component boundary", () => {
+  it("maps camera bar appearance at the navigation module boundary", () => {
     const layout = builtInStage(
       normalizeCardConfig({
         camera_entity: "camera.front",
@@ -220,12 +210,36 @@ describe("layout composition", () => {
         camera_bar_shadows: false,
       }),
     );
-    const panel = moduleAt(layout, 1);
-    expect(panel?.slots?.content?.[0]?.config).toMatchObject({
+    const navigation = moduleAt(layout, 1);
+    expect(navigation.config).toMatchObject({
       roundedCorners: false,
       shadows: false,
       targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
     });
+  });
+
+  it("adds the camera switcher overlay only when enabled with multiple cameras", () => {
+    const disabled = builtInStage(
+      normalizeCardConfig({
+        cameras: [{ entity_id: "camera.front" }, { entity_id: "camera.back" }],
+      }),
+    );
+    expect(moduleAt(disabled, 0).slots?.overlay).toBeUndefined();
+
+    const enabled = builtInStage(
+      normalizeCardConfig({
+        camera_switcher_overlay: true,
+        cameras: [{ entity_id: "camera.front" }, { entity_id: "camera.back" }],
+      }),
+    );
+    expect(moduleAt(enabled, 0).slots?.overlay).toEqual([
+      expect.objectContaining({
+        componentType: "camera_switcher",
+        config: { targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID },
+        kind: "component",
+        overlayRegion: "top-center",
+      }),
+    ]);
   });
 
   it("maps event shadows at both activity module boundaries", () => {

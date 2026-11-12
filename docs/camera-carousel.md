@@ -14,9 +14,9 @@ application-wide boundaries.
   responsive updates, interaction enablement, and destruction.
 - Live presentation remains unaware of Swiper. It owns its existing media,
   zoom, pan, controls, and browser-presentation behavior unchanged.
-- A camera-navigation component emits typed selection intent through the layout
-  runtime. It does not import or control the camera's Swiper instance and may
-  be placed in a generic panel or a compatible module slot.
+- The camera-navigation module and optional camera-switcher overlay component
+  emit typed selection intent through shared Stage context. Neither imports or
+  controls the camera's Swiper instance or imports the other placeable.
 
 ## Structure and identity
 
@@ -102,7 +102,7 @@ cannot complete.
 - Card configuration selects `none`, `slide`, or `fade`; `slide` is the
   normalized default and is omitted from compact YAML output.
 - The camera carousel controller owns the Swiper effect for both touch swipes
-  previous/next navigation, camera-navigation selection, and automatic
+  previous/next navigation, camera-navigation or camera-switcher selection, and automatic
   activity takeover. Presentation components emit selection intent and do not
   implement a second transition path.
 - `none` keeps navigation and touch arbitration intact while settling without

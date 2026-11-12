@@ -24,6 +24,7 @@ describe("WatchZone card configuration", () => {
       camera_bar_shadows: true,
       camera_rounded_corners: true,
       camera_shadows: true,
+      camera_switcher_overlay: false,
       display_event_type_badges: true,
       display_object_badges: true,
       display_zone: true,
@@ -112,6 +113,17 @@ describe("WatchZone card configuration", () => {
     ).toThrow(
       "alert_detection_takeover must be off, alerts, detections, or both",
     );
+  });
+
+  it("defaults the camera switcher overlay off and accepts an explicit opt-in", () => {
+    expect(normalizeCardConfig({}).camera_switcher_overlay).toBe(false);
+    expect(
+      normalizeCardConfig({ camera_switcher_overlay: true })
+        .camera_switcher_overlay,
+    ).toBe(true);
+    expect(() =>
+      normalizeCardConfig({ camera_switcher_overlay: "true" }),
+    ).toThrow("camera_switcher_overlay must be a boolean");
   });
 
   it("accepts an event history range from 1 through 15 days", () => {

@@ -18,11 +18,11 @@ Give the next agent this instruction:
 ## Repository state
 
 - Branch: `main`
-- Current working version: `0.0.4-dev.235`
-- Current commit: `d597070` —
-  `v0.0.4-dev.234 - fix(recordings): preserve existing video controls`
-- The worktree contains the completed, uncommitted segment-manager and
-  media-viewer boundary change described below.
+- Current working version: `0.0.4-dev.277`
+- Current commit: `6c542e5` —
+  `v0.0.4-dev.276 - fix(reviews): synchronize takeover drafts and toolbar controls`
+- The worktree contains the completed, uncommitted camera-navigation module
+  conversion and camera-switcher overlay described below.
 
 Always check `git status`, the canonical version in
 `custom_components/watchzone/const.py`, and the latest commit before starting.
@@ -48,60 +48,30 @@ The repository state takes precedence over this snapshot.
 
 ## Current completed change
 
-Working version `0.0.4-dev.235`:
+Working version `0.0.4-dev.277`:
 
-- The recorded-media viewer moved out of `frontend/src/ui/` into the bounded
-  lazy application feature `frontend/src/features/media-viewer/`. It remains
-  separate from the Recordings Stage module and from reusable UI primitives.
-- Recorded-media requests carry an explicit `review`, `event`, or `recording`
-  presentation identity. Presentation selection is independent of the shared
-  playback engine so the three shells can diverge without duplicating playback.
-- The reusable activity list no longer opens media or owns review/event
-  workflows. It emits typed intents; the owning Reviews and Events modules
-  resolve playback, retries, review state, analysis, and viewer requests.
-- Architecture validation now rejects UI imports of API, feature, provider, or
-  Stage ownership and rejects application media-opening commands in UI files.
-- Recording scrubber time readouts and segment handle accessible values include
-  seconds. Activating the recording-only segment control adds square selectable
-  five-minute pre/post regions, second-precision start/end handles,
-  selection/exclusion presentation, and Reset, Cancel, Preview, and Download
-  actions. The existing recorded-video transport remains intact.
-- Preview and Download send the entity and selected timestamps to a
-  permission-checked WatchZone WebSocket command. Python resolves the owning
-  recordings provider, and Frigate alone constructs the selected playback and
-  authenticated download paths. Export remains future work.
-- Dialog fitting responds to the expanded segment panel while preserving the
-  browser dialog's viewport-relative default placement until the user manually
-  drags or resizes it.
+- Camera navigation is now the standalone `camera-navigation` Stage module.
+  The built-in Stage no longer wraps it as a component in a generic Panel.
+- The optional Camera Switcher Overlay is a separate component in Camera's
+  `top-center` overlay slot. The Live Media Player editor toggle defaults off,
+  and the component is omitted entirely unless enabled with multiple cameras.
+- The switcher and navigation module independently consume the card-scoped
+  camera-selection context. Manual selection, carousel transitions, and
+  alert/detection takeover therefore remain synchronized without either
+  placeable importing the other.
+- The switcher uses the active camera session's existing overlay visibility,
+  reveal, and hold lifecycle. Its open menu keeps the shared overlay timer held,
+  and activity icons remain exclusive to camera navigation.
+- Architecture and Stage/carousel contracts now record the approved module and
+  component classification.
 
 Validation is green:
 
-- 326 frontend unit tests
-- 78 backend tests
-- 81 browser tests across Chromium, Firefox, and WebKit
+- 372 frontend unit tests
+- 96 browser tests across Chromium, Firefox, and WebKit
 - Formatting, lint, type checking, architecture/style validation, production
-  build, version consistency, release packaging, and `git diff --check`
-
-## Previously completed behavior
-
-Release `0.0.4-dev.231` added and validated:
-
-- Frigate GenAI score and concerns in the Reviews-only AI Analysis dialog.
-- AI Analysis dialog placement centered on the WatchZone card with viewport
-  clamping.
-- An authoritative cache-bypassed Reviews query when a camera becomes active,
-  so a draft that began while another camera was selected appears immediately.
-- Protection against late or out-of-order review updates restoring a camera
-  highlight after the review ended.
-- Stale highlight clearing when a realtime activity subscription fails.
-
-Validation for that release was green:
-
-- 320 frontend unit tests
-- 76 backend tests
-- 81 browser tests across Chromium, Firefox, and WebKit
-- Formatting, lint, type checking, architecture/style validation, production
-  build, version consistency, release packaging, and `git diff --check`
+  build, and version consistency. Release packaging and final diff checks are
+  rerun immediately before handoff.
 
 ## Working requirements
 
