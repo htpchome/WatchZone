@@ -193,7 +193,11 @@ export const recordingsStyles = css`
     cursor: default;
   }
 
-  @media (hover: hover) and (pointer: fine) {
+  @media (hover: hover) {
+    .tile:not(.skeleton):hover {
+      background: var(--wzc-recording-tile-hover-background);
+    }
+
     .day-navigation:hover,
     .download:hover {
       color: var(--wzc-recording-action-hover-color);

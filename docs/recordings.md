@@ -24,6 +24,8 @@
 - Empty hours are omitted. The active partial hour updates on a bounded timer.
 - Rows are newest first and use the Home Assistant-selected locale, clock, and
   time zone.
+- Rows share the media-tile surface and theme-aware darkened hover treatment
+  used by Reviews, Events, and Exports.
 - Initial loading paints disabled hourly row skeletons with the already-known
   localized clock ranges. Provider duration and availability replace those
   placeholders when the selected-day response arrives.
@@ -91,6 +93,10 @@
 - Scrubber availability, marker, gap, and pointer colors are fixed WatchZone
   product colors exposed through semantic `--wzc-recording-scrubber-*` tokens;
   they do not derive from Home Assistant theme colors.
+- The shell surrounding that fixed-color timeline inherits the recorded-media
+  dialog surface. Segment copy and neutral controls use subtle foreground-tint
+  layers over the same surface, so changing theme or effective light/dark mode
+  cannot combine unrelated card and dialog backgrounds.
 
 ## Segment manager
 

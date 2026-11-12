@@ -110,6 +110,14 @@ flow through the semantic token boundary. The profile exposes stable mode data
 to the card and editor and synchronizes their `color-scheme` without replacing
 theme-provided colors.
 
+Primary-action contrast prefers Home Assistant's current `on-primary` semantic
+tokens. When those tokens are unavailable, WatchZone preserves compatibility
+with established themes by falling back to the legacy `--text-primary-color`,
+then the theme's white color, and finally white. Current Home Assistant
+semantics therefore protect controls from themes that incorrectly alias the
+legacy on-primary variable to ordinary foreground text without discarding the
+legacy theme contract on older Home Assistant releases.
+
 Overlay surfaces use five explicit semantic roles at the centralized theme
 boundary:
 

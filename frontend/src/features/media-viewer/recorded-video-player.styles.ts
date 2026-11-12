@@ -11,6 +11,7 @@ export const recordedVideoPlayerStyles = css`
 
   :host([recording-timeline]) {
     aspect-ratio: auto;
+    background: var(--wzc-recording-scrubber-surface);
   }
 
   .viewport {

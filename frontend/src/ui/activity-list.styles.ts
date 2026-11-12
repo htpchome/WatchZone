@@ -569,6 +569,10 @@ export const activityListStyles = css`
   }
 
   @media (hover: hover) {
+    .tile:hover {
+      background: var(--wzc-event-tile-hover-background);
+    }
+
     .review-info:hover {
       color: var(--wzc-color-primary);
     }

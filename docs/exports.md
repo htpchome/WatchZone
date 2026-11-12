@@ -42,8 +42,9 @@ but the Stage module and frontend transport remain provider-neutral.
 - Ready items show a thumbnail, title, camera, creation date and time, and
   controls for rename, remove, download, and Add to Case.
 - Export tiles use the same borderless outer presentation as the other activity
-  tiles. When the card's thumbnail-hover timelapse setting is enabled, hovering
-  the thumbnail temporarily replaces it with a muted accelerated video preview.
+  tiles and the same theme-aware darkened hover surface. When the card's
+  thumbnail-hover timelapse setting is enabled, hovering the thumbnail
+  temporarily replaces it with a muted accelerated video preview.
   The preview uses a signed WatchZone media path, and the thumbnail viewport has
   fixed row geometry so source aspect ratio cannot resize the tile.
 - Selecting a ready tile outside its controls opens the export media dialog.

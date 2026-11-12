@@ -86,7 +86,7 @@ export const exportsStyles = css`
     align-items: stretch;
     min-block-size: var(--wzc-export-tile-block-size);
     overflow: hidden;
-    background: var(--wzc-color-surface-secondary);
+    background: var(--wzc-media-tile-background);
     border: 0;
     border-radius: var(--wzc-radius-medium);
     box-shadow: var(--wzc-shadow-small);
@@ -110,6 +110,12 @@ export const exportsStyles = css`
     background: transparent;
     border: 0;
     cursor: pointer;
+  }
+
+  @media (hover: hover) {
+    .tile:hover {
+      background: var(--wzc-media-tile-hover-background);
+    }
   }
 
   .thumbnail {

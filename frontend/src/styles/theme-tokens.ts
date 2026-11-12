@@ -86,12 +86,12 @@ export const themeTokens = css`
       color-mix(in srgb, var(--wzc-color-text-1) 50%, transparent)
     );
     --wzc-color-text-reversed: var(
-      --text-primary-color,
-      var(--ha-color-on-primary-loud, var(--white-color, #fff))
+      --ha-color-on-primary-loud,
+      var(--text-primary-color, var(--white-color, #fff))
     );
     --wzc-color-on-primary: var(
       --ha-color-on-primary-normal,
-      var(--text-primary-color, var(--wzc-color-text-reversed))
+      var(--wzc-color-text-reversed)
     );
 
     --wzc-color-error: var(
@@ -312,8 +312,15 @@ export const themeTokens = css`
     --wzc-media-day-navigation-size: 1.5rem;
     --wzc-media-day-header-background: transparent;
     --wzc-media-day-header-color: var(--wzc-color-text-2);
+    --wzc-media-tile-background: var(--wzc-color-surface-secondary);
+    --wzc-media-tile-hover-background: color-mix(
+      in srgb,
+      var(--wzc-media-tile-background) 92%,
+      black
+    );
     --wzc-event-tile-block-size: 7.2rem;
-    --wzc-event-tile-background: var(--wzc-color-surface-secondary);
+    --wzc-event-tile-background: var(--wzc-media-tile-background);
+    --wzc-event-tile-hover-background: var(--wzc-media-tile-hover-background);
     --wzc-event-tile-border-color: var(--wzc-color-border);
     --wzc-event-tile-border-width: var(--ha-card-border-width, 0);
     --wzc-event-tile-radius: var(--wzc-radius-card);
@@ -346,7 +353,10 @@ export const themeTokens = css`
     --wzc-recording-list-gap: 0.5rem;
     --wzc-recording-list-padding: 0.25rem;
     --wzc-recording-tile-block-size: 4rem;
-    --wzc-recording-tile-background: var(--wzc-color-surface-secondary);
+    --wzc-recording-tile-background: var(--wzc-media-tile-background);
+    --wzc-recording-tile-hover-background: var(
+      --wzc-media-tile-hover-background
+    );
     --wzc-recording-tile-border-color: var(--wzc-color-border);
     --wzc-recording-tile-border-width: var(--ha-card-border-width, 0);
     --wzc-recording-tile-radius: var(--wzc-radius-card);
@@ -408,7 +418,9 @@ export const themeTokens = css`
     --wzc-recorded-transport-padding: 0.25rem 0.35rem;
     --wzc-recorded-transport-control-size: 2rem;
     --wzc-recorded-transport-icon-size: 1.35rem;
-    --wzc-recording-scrubber-surface: var(--wzc-color-background);
+    --wzc-recording-scrubber-surface: var(
+      --wzc-recorded-media-header-background
+    );
     --wzc-recording-scrubber-text: var(--wzc-color-text-1);
     --wzc-recording-scrubber-control-border: var(--wzc-color-border-control);
     --wzc-recording-scrubber-focus: var(--wzc-color-primary);
@@ -433,9 +445,17 @@ export const themeTokens = css`
     --wzc-recording-segment-handle-outline: #9b2323;
     --wzc-recording-segment-handle-accent: #0097d5;
     --wzc-recording-segment-handle-accent-outline: #ffffff;
-    --wzc-recording-segment-panel: var(--wzc-color-surface-secondary);
+    --wzc-recording-segment-panel: color-mix(
+      in srgb,
+      var(--wzc-recording-scrubber-text) 5%,
+      var(--wzc-recording-scrubber-surface)
+    );
     --wzc-recording-segment-panel-border: var(--wzc-color-border);
-    --wzc-recording-segment-button: var(--wzc-color-surface);
+    --wzc-recording-segment-button: color-mix(
+      in srgb,
+      var(--wzc-recording-scrubber-text) 8%,
+      var(--wzc-recording-scrubber-surface)
+    );
     --wzc-recording-segment-button-border: var(--wzc-color-border-control);
     --wzc-recording-segment-primary: var(--wzc-color-primary);
     --wzc-recording-segment-primary-text: var(--wzc-color-text-reversed);

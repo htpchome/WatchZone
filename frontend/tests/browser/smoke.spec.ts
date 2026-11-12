@@ -1676,6 +1676,27 @@ test("keeps activity content in an independently scrolling viewport", async ({
   const events = page.locator("wzc-events");
   const viewport = events.locator(".scroller");
   await expect(events.locator(".tile")).toHaveCount(6);
+  await page.locator("watchzone-card").evaluate((element) => {
+    element.style.setProperty(
+      "--wzc-media-tile-background",
+      "rgb(200, 200, 200)",
+    );
+    element.style.setProperty(
+      "--wzc-media-tile-hover-background",
+      "rgb(180, 180, 180)",
+    );
+  });
+  const activityTile = events.locator(".tile").first();
+  await expect(activityTile).toHaveCSS(
+    "background-color",
+    "rgb(200, 200, 200)",
+  );
+  await activityTile.hover();
+  await expect(activityTile).toHaveCSS(
+    "background-color",
+    "rgb(180, 180, 180)",
+  );
+  await page.mouse.move(0, 0);
   const activityHeaderOffset = await events
     .locator("wzc-media-day-header")
     .first()
@@ -2649,6 +2670,25 @@ test("switches activity and recordings through the shared media calendar", async
   await navigation.locator(".stage-stack-button").nth(2).click();
   const recordings = page.locator("wzc-recordings");
   await expect(recordings.locator(".tile")).toHaveCount(8);
+  await page.locator("watchzone-card").evaluate((element) => {
+    const host = element as HTMLElement;
+    host.style.setProperty("--wzc-media-tile-background", "rgb(200, 200, 200)");
+    host.style.setProperty(
+      "--wzc-media-tile-hover-background",
+      "rgb(180, 180, 180)",
+    );
+  });
+  const recordingTile = recordings.locator(".tile").first();
+  await expect(recordingTile).toHaveCSS(
+    "background-color",
+    "rgb(200, 200, 200)",
+  );
+  await recordingTile.hover();
+  await expect(recordingTile).toHaveCSS(
+    "background-color",
+    "rgb(180, 180, 180)",
+  );
+  await page.mouse.move(0, 0);
   await expect(recordings.locator("wzc-media-day-header")).toContainText(
     "Mon, Nov 9 — Recordings",
   );
@@ -2778,7 +2818,7 @@ test("switches activity and recordings through the shared media calendar", async
     host.style.setProperty("--wzc-color-text-reversed", "rgb(250, 251, 252)");
     host.style.setProperty("--wzc-color-error", "rgb(220, 60, 70)");
   });
-  await expect(scrubber).toHaveCSS("background-color", "rgb(20, 21, 22)");
+  await expect(scrubber).toHaveCSS("background-color", "rgb(40, 41, 42)");
   await expect(scrubber).toHaveCSS("color", "rgb(230, 231, 232)");
   await expect(scrubber.locator('[data-control="toggle_play"]')).toHaveCSS(
     "border-color",
@@ -2836,7 +2876,16 @@ test("switches activity and recordings through the shared media calendar", async
   await expect(page.locator("wzc-recorded-video-transport")).toHaveCount(1);
   const segmentManager = page.locator("wzc-recording-segment-manager");
   await expect(segmentManager).toBeVisible();
-  await expect(segmentManager).toHaveCSS("background-color", "rgb(40, 41, 42)");
+  const resetSegment = segmentManager.getByRole("button", { name: "Reset" });
+  const darkSegmentSurfaces = await Promise.all([
+    segmentManager.evaluate(
+      (element) => getComputedStyle(element).backgroundColor,
+    ),
+    resetSegment.evaluate(
+      (element) => getComputedStyle(element).backgroundColor,
+    ),
+  ]);
+  expect(darkSegmentSurfaces[0]).not.toBe("rgb(40, 41, 42)");
   await expect(
     segmentManager.getByRole("button", { name: "Download Segment" }),
   ).toHaveCSS("background-color", "rgb(10, 120, 200)");
@@ -2846,6 +2895,26 @@ test("switches activity and recordings through the shared media calendar", async
       .locator("svg"),
   ).toHaveCSS("fill", "rgb(250, 251, 252)");
   await expect(segmentManager).toContainText("Select a recording segment");
+  await page.locator("watchzone-card").evaluate((element) => {
+    const host = element as HTMLElement;
+    host.style.setProperty(
+      "--wzc-color-surface-secondary",
+      "rgb(240, 241, 242)",
+    );
+    host.style.setProperty("--wzc-color-text-1", "rgb(20, 21, 22)");
+  });
+  await expect(scrubber).toHaveCSS("background-color", "rgb(240, 241, 242)");
+  await expect(scrubber).toHaveCSS("color", "rgb(20, 21, 22)");
+  const lightSegmentSurfaces = await Promise.all([
+    segmentManager.evaluate(
+      (element) => getComputedStyle(element).backgroundColor,
+    ),
+    resetSegment.evaluate(
+      (element) => getComputedStyle(element).backgroundColor,
+    ),
+  ]);
+  expect(lightSegmentSurfaces[0]).not.toBe("rgb(240, 241, 242)");
+  expect(lightSegmentSurfaces).not.toEqual(darkSegmentSurfaces);
   await scrubber.locator(".handle.start").press("ArrowLeft");
   await expect(scrubber.locator(".handle.start")).toHaveAttribute(
     "aria-valuetext",
@@ -2903,6 +2972,11 @@ test("shows and filters mixed-camera persistent exports", async ({ page }) => {
         { entity_id: "camera.driveway", title: "Driveway" },
       ],
     });
+    card.style.setProperty("--wzc-media-tile-background", "rgb(200, 200, 200)");
+    card.style.setProperty(
+      "--wzc-media-tile-hover-background",
+      "rgb(180, 180, 180)",
+    );
     card.hass = {
       config: { time_zone: "UTC" },
       locale: { language: "en", time_zone: "server" },
@@ -3057,6 +3131,8 @@ test("shows and filters mixed-camera persistent exports", async ({ page }) => {
       .first()
       .evaluate((tile) => getComputedStyle(tile).borderTopWidth),
   ).toBe("0px");
+  const exportTile = exports.locator(".tile:has(.tile-player)").first();
+  await expect(exportTile).toHaveCSS("background-color", "rgb(200, 200, 200)");
   await expect(exports).toContainText("Front Door");
   await expect(exports).toContainText("Driveway");
   await expect(exports).toContainText("Preparing export…");
@@ -3069,12 +3145,10 @@ test("shows and filters mixed-camera persistent exports", async ({ page }) => {
   await expect(
     exports.getByRole("button", { name: "Add to Case — coming soon" }).first(),
   ).toBeDisabled();
-  await exports
-    .locator(".tile-player")
-    .first()
-    .hover({
-      position: { x: 20, y: 20 },
-    });
+  await exportTile.locator(".tile-player").hover({
+    position: { x: 20, y: 20 },
+  });
+  await expect(exportTile).toHaveCSS("background-color", "rgb(180, 180, 180)");
   const hoverPreview = exports.locator("video.hover-preview");
   await expect(hoverPreview).toHaveCount(1);
   await expect(hoverPreview).toHaveAttribute(
@@ -4555,9 +4629,20 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
       "--wzc-media-overlay-hover-opacity",
       "--wzc-media-overlay-surface",
       "--wzc-media-overlay-border-color",
+      "--wzc-media-tile-background",
+      "--wzc-media-tile-hover-background",
+      "--wzc-recording-scrubber-surface",
+      "--wzc-recording-segment-panel",
+      "--wzc-recording-segment-button",
     ];
     const host = element as HTMLElement;
     host.style.setProperty("--wzc-color-text-1", "rgb(10, 20, 30)");
+    host.style.setProperty("--text-primary-color", "rgba(0, 0, 0, 0.95)");
+    host.style.setProperty("--ha-color-on-primary-loud", "rgb(245, 246, 247)");
+    host.style.setProperty(
+      "--ha-color-on-primary-normal",
+      "rgb(235, 236, 237)",
+    );
     host.style.setProperty("--wzc-card-background", "rgb(40, 50, 60)");
     host.style.setProperty("--wzc-card-radius", "18px");
     host.style.setProperty(
@@ -4573,6 +4658,16 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
     const defaultStageModuleGap = Number.parseFloat(
       stageGridStyle?.rowGap ?? "0",
     );
+    const reversedTextProbe = document.createElement("span");
+    reversedTextProbe.style.color = "var(--wzc-color-text-reversed)";
+    host.shadowRoot?.append(reversedTextProbe);
+    const reversedTextColor = getComputedStyle(reversedTextProbe).color;
+    reversedTextProbe.remove();
+    const onPrimaryProbe = document.createElement("span");
+    onPrimaryProbe.style.color = "var(--wzc-color-on-primary)";
+    host.shadowRoot?.append(onPrimaryProbe);
+    const onPrimaryColor = getComputedStyle(onPrimaryProbe).color;
+    onPrimaryProbe.remove();
     host.style.setProperty("--wzc-stage-module-gap", "7px");
     const placementRects = Array.from(stageGrid?.children ?? []).map((child) =>
       child.getBoundingClientRect(),
@@ -4598,6 +4693,8 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
       overlayHoverOpacity: hostStyle
         .getPropertyValue("--wzc-media-overlay-hover-opacity")
         .trim(),
+      onPrimaryColor,
+      reversedTextColor,
     };
   });
 
@@ -4608,7 +4705,9 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
     missingTokens: [],
     overlayHoverOpacity: "84%",
     overlayOpacity: "72%",
+    onPrimaryColor: "rgb(235, 236, 237)",
     overriddenPlacementGaps: [7, 7],
+    reversedTextColor: "rgb(245, 246, 247)",
     textColor: "rgb(10, 20, 30)",
   });
   expect(

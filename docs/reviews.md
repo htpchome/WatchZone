@@ -33,6 +33,9 @@
 
 - Reviews shares the activity-list presentation primitive with Events while
   retaining its own loading, filtering, mutation, and playback orchestration.
+- Review and Event tiles use the shared media-tile surface tokens. Fine-pointer
+  hover darkens the active theme surface slightly without changing touch or
+  keyboard behavior.
 - The initial standard activity-tile presentation uses one shared grid for
   Reviews and Events: the thumbnail spans both rows, badges occupy the top
   strip, and metadata, optional analysis/export state, and actions occupy
