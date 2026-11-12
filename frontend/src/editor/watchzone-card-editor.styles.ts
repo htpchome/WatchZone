@@ -33,6 +33,54 @@ export const cardEditorStyles = css`
     margin-block-start: 0.5rem;
   }
 
+  .segmented-setting {
+    display: grid;
+    gap: 0.35rem;
+    margin-block-start: 0.75rem;
+  }
+
+  .segmented-setting-label {
+    font-size: var(--wzc-font-size-small);
+    font-weight: var(--wzc-font-weight-medium);
+  }
+
+  .editor-segmented-control {
+    overflow: hidden;
+    inline-size: 100%;
+    padding: 0.15rem;
+    background: var(--wzc-color-surface-secondary);
+    border: 1px solid var(--wzc-color-border-control);
+    border-radius: var(--wzc-radius-pill);
+  }
+
+  .editor-segmented-control .segmented-control-option {
+    flex: 1 1 0;
+    min-block-size: 2rem;
+    padding: 0.25rem 0.45rem;
+    overflow: hidden;
+    color: var(--wzc-color-text-1);
+    background: transparent;
+    border: 0;
+    border-radius: var(--wzc-radius-pill);
+    font-size: var(--wzc-font-size-small);
+    text-overflow: ellipsis;
+  }
+
+  .editor-segmented-control .segmented-control-option[aria-checked="true"] {
+    color: var(--wzc-color-primary);
+    background: var(--wzc-color-background);
+    box-shadow: var(--wzc-shadow-small);
+  }
+
+  .editor-segmented-control .segmented-control-option:disabled {
+    color: var(--wzc-color-text-3);
+  }
+
+  .editor-segmented-control .segmented-control-option:focus-visible {
+    outline: 2px solid var(--wzc-color-primary);
+    outline-offset: -2px;
+  }
+
   .camera-list-heading {
     display: flex;
     align-items: baseline;

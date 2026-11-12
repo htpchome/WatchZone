@@ -101,12 +101,20 @@ describe("watchzone-card-editor", () => {
       "Layout Settings",
       "Display Settings",
     ]);
-    expect(items[1]?.childElementCount).toBe(1);
+    expect(items[1]?.childElementCount).toBe(2);
     expect(
       items[1]?.querySelector(
         '[data-config-key="highlight_camera_on_activity"]',
       ),
     ).not.toBeNull();
+    expect(
+      items[1]
+        ?.querySelector('[data-ptz-overlay-control="start_open"]')
+        ?.getAttribute("aria-checked"),
+    ).toBe("true");
+    expect(
+      items[1]?.querySelector('[data-ptz-overlay-control="open_in_drawer"]'),
+    ).toHaveProperty("disabled", true);
     expect(items[2]?.childElementCount).toBe(0);
     expect(
       items[3]?.querySelector(
@@ -587,6 +595,30 @@ describe("watchzone-card-editor", () => {
       type: CARD_TYPE,
       title: "Camera",
       highlight_camera_on_activity: false,
+    });
+  });
+
+  it("saves the PTZ overlay presentation from the segmented control", async () => {
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+
+    const startClosed = editor.shadowRoot?.querySelector<HTMLButtonElement>(
+      '[data-ptz-overlay-control="start_closed"]',
+    );
+    startClosed?.click();
+    await editor.updateComplete;
+
+    expect(startClosed?.getAttribute("aria-checked")).toBe("true");
+    expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
+      type: CARD_TYPE,
+      title: "Camera",
+      ptz_overlay_control: "start_closed",
     });
   });
 

@@ -3382,6 +3382,7 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
         { entity_id: "camera.birdfeeder" },
         { entity_id: "camera.driveway" },
       ],
+      ptz_overlay_control: "start_closed",
     });
     card.hass = {
       states: {
@@ -3473,12 +3474,29 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   const lights = page.locator("wzc-light-control");
   const talkButton = talk.locator("button.inactive");
   const ptzControl = ptz.locator(".ptz-control");
+  const ptzTrigger = ptz.locator("button.ptz-trigger");
   const ptzRightButton = ptz.locator("button.right");
   const ptzRightIcon = ptzRightButton.locator(":scope > svg");
   const lightButton = lights.locator(".light-button");
   const talkIcon = talkButton.locator(":scope > svg");
   const lightIcon = lightButton.locator(":scope > ha-icon svg");
   await expect(talkButton).toBeVisible();
+  await expect(ptzTrigger).toBeVisible();
+  const [initialPtzTriggerBox, initialTalkButtonBox] = await Promise.all([
+    ptzTrigger.boundingBox(),
+    talkButton.boundingBox(),
+  ]);
+  expect(initialPtzTriggerBox?.width).toBeCloseTo(
+    initialTalkButtonBox?.width ?? 0,
+    1,
+  );
+  expect(initialPtzTriggerBox?.height).toBeCloseTo(
+    initialTalkButtonBox?.height ?? 0,
+    1,
+  );
+  await ptz.evaluate((element) => {
+    (element as HTMLElement & { initialState: "open" }).initialState = "open";
+  });
   await expect(ptzControl).toHaveClass(/\bvisible\b/);
   await expect(ptz.locator("xpath=..")).toHaveAttribute(
     "data-layout-node",

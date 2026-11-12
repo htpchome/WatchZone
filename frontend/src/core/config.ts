@@ -17,6 +17,7 @@ export interface LinkedLightConfig {
 
 export type LiveConnectionType = "home_assistant" | "frigate_go2rtc";
 export type FrigateFallbackTransport = "hls" | "mse";
+export type PtzOverlayControl = "none" | "start_closed" | "start_open";
 
 export interface CameraConfig {
   readonly connection: LiveConnectionType;
@@ -43,6 +44,7 @@ export interface CardConfig {
   readonly event_shadows: boolean;
   readonly event_history_days: number;
   readonly highlight_camera_on_activity: boolean;
+  readonly ptz_overlay_control: PtzOverlayControl;
   readonly view_timelapse_on_thumbnail_hover: boolean;
   readonly cameras: readonly CameraConfig[];
   readonly mobile_data_saving?: boolean;
@@ -100,6 +102,16 @@ export function normalizeCardConfig(value: unknown): CardConfig {
       `${APP_NAME} event_history_days must be an integer from ${MIN_EVENT_HISTORY_DAYS} to ${MAX_EVENT_HISTORY_DAYS}.`,
     );
   }
+  if (
+    source.ptz_overlay_control !== undefined &&
+    source.ptz_overlay_control !== "none" &&
+    source.ptz_overlay_control !== "start_closed" &&
+    source.ptz_overlay_control !== "start_open"
+  ) {
+    throw new Error(
+      `${APP_NAME} ptz_overlay_control must be none, start_closed, or start_open.`,
+    );
+  }
   const normalized: Record<string, unknown> = {
     ...source,
     cameras,
@@ -134,6 +146,11 @@ export function normalizeCardConfig(value: unknown): CardConfig {
       : DEFAULT_EVENT_HISTORY_DAYS;
   normalized.highlight_camera_on_activity =
     source.highlight_camera_on_activity !== false;
+  normalized.ptz_overlay_control =
+    source.ptz_overlay_control === "none" ||
+    source.ptz_overlay_control === "start_closed"
+      ? source.ptz_overlay_control
+      : "start_open";
   normalized.view_timelapse_on_thumbnail_hover =
     source.view_timelapse_on_thumbnail_hover !== false;
   normalized.rounded_outer_corners =

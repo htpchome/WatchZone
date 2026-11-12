@@ -11,6 +11,7 @@ import {
   type LocalizeFunction,
 } from "../../../core/localization";
 import { cameraNavigationStyles } from "./camera-navigation.styles";
+import { segmentedControlStyles } from "../../../ui/segmented-control.styles";
 
 /** Static camera navigation bar backed by shared layout selection. */
 export class CameraNavigationComponent extends LitElement {
@@ -60,12 +61,13 @@ export class CameraNavigationComponent extends LitElement {
         .join(" ")}
       aria-label=${this.localize("camera.navigation")}
     >
-      <div class="items" role="tablist">
+      <div class="items segmented-control" role="tablist">
         ${repeat(
           this._state.items,
           ({ entityId }) => entityId,
           ({ entityId, label }) =>
             html`<button
+              class="segmented-control-option"
               type="button"
               role="tab"
               data-entity-id=${entityId}
@@ -102,7 +104,7 @@ export class CameraNavigationComponent extends LitElement {
     if (entityId) this.cameraSelection?.select(this.targetModuleId, entityId);
   };
 
-  static styles = cameraNavigationStyles;
+  static styles = [segmentedControlStyles, cameraNavigationStyles];
 }
 
 if (!customElements.get(CAMERA_NAVIGATION_TAG)) {

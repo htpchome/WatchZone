@@ -7,6 +7,7 @@ import type { PtzCameraSource } from "./session.controller";
 
 export interface PtzComponentConfig {
   readonly cameras: readonly PtzCameraSource[];
+  readonly initialState: "closed" | "open";
 }
 
 let definitionPromise: Promise<void> | undefined;
@@ -21,12 +22,14 @@ export const componentDefinition: ComponentDefinition<PtzComponentConfig> = {
     ptz.api = context.api;
     ptz.cameraSession = context.cameraSession;
     ptz.cameras = config.cameras;
+    ptz.initialState = config.initialState;
     ptz.localize = context.localize ?? englishLocalize;
   },
   validateConfig(value) {
     if (typeof value !== "object" || value === null)
       throw new Error("PTZ configuration must be an object.");
-    const cameras = (value as Record<string, unknown>).cameras;
+    const sourceConfig = value as Record<string, unknown>;
+    const cameras = sourceConfig.cameras;
     if (!Array.isArray(cameras))
       throw new Error("PTZ requires configured cameras.");
     const normalized = cameras.map((camera) => {
@@ -46,7 +49,17 @@ export const componentDefinition: ComponentDefinition<PtzComponentConfig> = {
         provider: source.provider as PtzProviderId,
       };
     });
-    return { cameras: normalized };
+    if (
+      sourceConfig.initialState !== undefined &&
+      sourceConfig.initialState !== "closed" &&
+      sourceConfig.initialState !== "open"
+    ) {
+      throw new Error("PTZ initial state must be closed or open.");
+    }
+    return {
+      cameras: normalized,
+      initialState: sourceConfig.initialState === "closed" ? "closed" : "open",
+    };
   },
 };
 

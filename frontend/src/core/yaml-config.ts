@@ -44,6 +44,9 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
   if (config.highlight_camera_on_activity !== false) {
     delete yaml.highlight_camera_on_activity;
   }
+  if (config.ptz_overlay_control === "start_open") {
+    delete yaml.ptz_overlay_control;
+  }
   if (config.view_timelapse_on_thumbnail_hover !== false) {
     delete yaml.view_timelapse_on_thumbnail_hover;
   }

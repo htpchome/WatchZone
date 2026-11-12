@@ -281,13 +281,23 @@ function hydrateCameraComponent(
     return cameras.length ? { ...node, config: { cameras } } : undefined;
   }
   if (node.componentType === PTZ_COMPONENT_TYPE) {
+    if (config.ptz_overlay_control === "none") return undefined;
     const cameras = config.cameras
       .filter(({ ptz_enabled: enabled }) => enabled)
       .map(({ connection: provider, entity_id: entityId }) => ({
         entityId,
         provider,
       }));
-    return cameras.length ? { ...node, config: { cameras } } : undefined;
+    return cameras.length
+      ? {
+          ...node,
+          config: {
+            cameras,
+            initialState:
+              config.ptz_overlay_control === "start_closed" ? "closed" : "open",
+          },
+        }
+      : undefined;
   }
   if (node.componentType === LIGHT_COMPONENT_TYPE) {
     const cameras = config.cameras

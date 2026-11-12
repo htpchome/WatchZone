@@ -23,6 +23,7 @@ describe("WatchZone card configuration", () => {
       event_rounded_corners: true,
       event_shadows: true,
       highlight_camera_on_activity: true,
+      ptz_overlay_control: "start_open",
       view_timelapse_on_thumbnail_hover: true,
       rounded_outer_corners: true,
       outer_shadows: true,
@@ -30,6 +31,20 @@ describe("WatchZone card configuration", () => {
       mobile_data_saving: false,
       cameras: [],
     });
+  });
+
+  it("defaults PTZ overlays open and validates supported presentations", () => {
+    expect(normalizeCardConfig({}).ptz_overlay_control).toBe("start_open");
+    expect(
+      normalizeCardConfig({ ptz_overlay_control: "start_closed" })
+        .ptz_overlay_control,
+    ).toBe("start_closed");
+    expect(
+      normalizeCardConfig({ ptz_overlay_control: "none" }).ptz_overlay_control,
+    ).toBe("none");
+    expect(() =>
+      normalizeCardConfig({ ptz_overlay_control: "open_in_drawer" }),
+    ).toThrow("ptz_overlay_control must be none, start_closed, or start_open");
   });
 
   it("defaults thumbnail timelapse previews on and accepts an explicit opt-out", () => {

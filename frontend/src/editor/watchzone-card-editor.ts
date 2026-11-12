@@ -12,6 +12,7 @@ import {
   type CardConfig,
   type FrigateFallbackTransport,
   type LiveConnectionType,
+  type PtzOverlayControl,
 } from "../core/config";
 import { resolveLiveSource } from "../api/live-source";
 import {
@@ -44,6 +45,7 @@ import type { PtzCapability } from "../api/ptz";
 import { themeTokens } from "../styles/theme-tokens";
 import { ToastManager } from "../ui/toast-manager";
 import { iconPath, renderIcon } from "../ui/icons";
+import { segmentedControlStyles } from "../ui/segmented-control.styles";
 import type { SortableReorderDetail } from "../ui/sortable-list";
 import "../ui/accordion";
 import "../ui/toast-region";
@@ -401,11 +403,59 @@ export class CardEditor extends LitElement {
   }
 
   private _renderLiveMediaPlayerSettings() {
-    return this._renderBooleanOption(
-      "highlight_camera_on_activity",
-      this._t("editor.highlight_camera_on_activity"),
-      this._config?.highlight_camera_on_activity !== false,
-    );
+    const selected = this._config?.ptz_overlay_control ?? "start_open";
+    const options: readonly {
+      readonly disabled?: boolean;
+      readonly label: string;
+      readonly value: PtzOverlayControl | "open_in_drawer";
+    }[] = [
+      { label: this._t("editor.ptz_overlay_none"), value: "none" },
+      {
+        label: this._t("editor.ptz_overlay_start_closed"),
+        value: "start_closed",
+      },
+      {
+        label: this._t("editor.ptz_overlay_start_open"),
+        value: "start_open",
+      },
+      {
+        disabled: true,
+        label: this._t("editor.ptz_overlay_open_in_drawer"),
+        value: "open_in_drawer",
+      },
+    ];
+    return html`
+      ${this._renderBooleanOption(
+        "highlight_camera_on_activity",
+        this._t("editor.highlight_camera_on_activity"),
+        this._config?.highlight_camera_on_activity !== false,
+      )}
+      <div class="segmented-setting">
+        <span class="segmented-setting-label" id="ptz-overlay-control-label">
+          ${this._t("editor.ptz_overlay_control")}
+        </span>
+        <div
+          class="editor-segmented-control segmented-control"
+          role="radiogroup"
+          aria-labelledby="ptz-overlay-control-label"
+        >
+          ${options.map(
+            ({ disabled, label, value }) =>
+              html`<button
+                class="segmented-control-option"
+                type="button"
+                role="radio"
+                data-ptz-overlay-control=${value}
+                aria-checked=${selected === value ? "true" : "false"}
+                ?disabled=${disabled}
+                @click=${this._handlePtzOverlayControlChange}
+              >
+                ${label}
+              </button>`,
+          )}
+        </div>
+      </div>
+    `;
   }
 
   private _renderReviewSettings() {
@@ -1408,6 +1458,23 @@ export class CardEditor extends LitElement {
     this._applyDraft(normalizeCardConfig(next), true);
   };
 
+  private readonly _handlePtzOverlayControlChange = (event: Event): void => {
+    if (!this._config) return;
+    const value = (event.currentTarget as HTMLElement).dataset
+      .ptzOverlayControl as PtzOverlayControl | undefined;
+    if (
+      value !== "none" &&
+      value !== "start_closed" &&
+      value !== "start_open"
+    ) {
+      return;
+    }
+    this._applyDraft(
+      normalizeCardConfig({ ...this._config, ptz_overlay_control: value }),
+      true,
+    );
+  };
+
   private _applyDraft(nextConfig: CardConfig, commitConfig: boolean): void {
     const changed =
       !this._config ||
@@ -1508,7 +1575,7 @@ export class CardEditor extends LitElement {
     }
   };
 
-  static styles = [themeTokens, cardEditorStyles];
+  static styles = [themeTokens, segmentedControlStyles, cardEditorStyles];
 }
 
 function eventString(event: ValueChangedEvent): string {

@@ -1,4 +1,4 @@
-import { html, LitElement, nothing } from "lit";
+import { html, LitElement, nothing, type PropertyValues } from "lit";
 import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import type { PtzDirection } from "../../../api/ptz";
@@ -42,10 +42,14 @@ export class PtzComponent extends LitElement {
     api: { attribute: false },
     cameraSession: { attribute: false },
     cameras: { attribute: false },
+    expanded: { type: Boolean, reflect: true },
+    initialState: { attribute: false },
     localize: { attribute: false },
   };
 
   private _activeDirection?: PtzDirection;
+  private _lastCameraEntityId?: string;
+  private _wasVisible = false;
   private readonly _overlay = new OverlayInteractionController(this);
   private readonly _press = new PressInteractionController<PtzDirection>(this, {
     actionFor: (target) => target.dataset.direction as PtzDirection,
@@ -61,12 +65,27 @@ export class PtzComponent extends LitElement {
   public api?: HomeAssistantApi;
   public cameraSession?: CameraSessionContext;
   public cameras: readonly PtzCameraSource[] = [];
+  public expanded = true;
+  public initialState: "closed" | "open" = "open";
   public localize: LocalizeFunction = englishLocalize;
 
-  protected willUpdate(): void {
+  protected willUpdate(changed: PropertyValues<this>): void {
     if (this.cameraSession)
       this._session.configure(this.api, this.cameraSession, this.cameras);
-    this._overlay.configure(this._session.camera);
+    const camera = this._session.camera;
+    this._overlay.configure(camera);
+    const visible =
+      (camera?.overlayVisible ?? false) || this._activeDirection !== undefined;
+    const cameraChanged = camera?.entityId !== this._lastCameraEntityId;
+    if (
+      cameraChanged ||
+      changed.has("initialState") ||
+      (this._wasVisible && !visible)
+    ) {
+      this.expanded = this.initialState === "open";
+    }
+    this._lastCameraEntityId = camera?.entityId;
+    this._wasVisible = visible;
   }
 
   protected render() {
@@ -82,37 +101,65 @@ export class PtzComponent extends LitElement {
         .notices=${this._toasts.notices}
       ></${toastRegionTag}>
       <div
-        class=${visible ? "ptz-control visible" : "ptz-control"}
-        role="group"
-        aria-label=${this.localize("ptz.controls")}
+        class=${[
+          this.expanded ? "ptz-control" : "ptz-trigger-wrap",
+          visible ? "visible" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        role=${this.expanded ? "group" : nothing}
+        aria-label=${this.expanded ? this.localize("ptz.controls") : nothing}
         @pointerenter=${this._overlay.handlePointerEnter}
         @pointerleave=${this._overlay.handlePointerLeave}
         @focusin=${this._overlay.handleFocusIn}
         @focusout=${this._overlay.handleFocusOut}
       >
-        ${DIRECTIONS.map(({ direction, icon }) => {
-          const supported =
-            direction === "left" || direction === "right"
-              ? capability.pan
-              : capability.tilt;
-          return supported
-            ? html`<button
-                class=${`${direction} round-button`}
+        ${
+          this.expanded
+            ? DIRECTIONS.map(({ direction, icon }) => {
+                const supported =
+                  direction === "left" || direction === "right"
+                    ? capability.pan
+                    : capability.tilt;
+                return supported
+                  ? html`<button
+                      class=${`${direction} round-button`}
+                      type="button"
+                      data-direction=${direction}
+                      aria-label=${this.localize(`ptz.${direction}`)}
+                      @contextmenu=${this._preventDefault}
+                      @pointerdown=${this._press.handlePointerDown}
+                      @pointerup=${this._press.handlePointerUp}
+                      @pointercancel=${this._press.handlePointerCancel}
+                      @lostpointercapture=${this._press.handlePointerCancel}
+                      @keydown=${this._press.handleKeyDown}
+                      @keyup=${this._press.handleKeyUp}
+                    >
+                      ${renderIcon(icon)}
+                    </button>`
+                  : nothing;
+              })
+            : html`<button
+                class="ptz-trigger round-button"
                 type="button"
-                data-direction=${direction}
-                aria-label=${this.localize(`ptz.${direction}`)}
-                @contextmenu=${this._preventDefault}
-                @pointerdown=${this._press.handlePointerDown}
-                @pointerup=${this._press.handlePointerUp}
-                @pointercancel=${this._press.handlePointerCancel}
-                @lostpointercapture=${this._press.handlePointerCancel}
-                @keydown=${this._press.handleKeyDown}
-                @keyup=${this._press.handleKeyUp}
+                aria-label=${this.localize("ptz.expand")}
+                @click=${this._expand}
               >
-                ${renderIcon(icon)}
+                ${renderIcon("ptz")}
               </button>`
-            : nothing;
-        })}
+        }
+        ${
+          this.expanded
+            ? html`<button
+                class="collapse round-button"
+                type="button"
+                aria-label=${this.localize("ptz.collapse")}
+                @click=${this._collapse}
+              >
+                ${renderIcon("arrowCollapseAll")}
+              </button>`
+            : nothing
+        }
       </div>
     </div>`;
   }
@@ -145,6 +192,16 @@ export class PtzComponent extends LitElement {
     this._activeDirection = undefined;
     this.requestUpdate();
   }
+
+  private readonly _expand = (): void => {
+    this.expanded = true;
+    this._overlay.reveal();
+  };
+
+  private readonly _collapse = (): void => {
+    this.expanded = false;
+    this._overlay.reveal();
+  };
 
   private readonly _preventDefault = (event: Event): void =>
     event.preventDefault();

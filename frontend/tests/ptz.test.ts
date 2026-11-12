@@ -47,7 +47,9 @@ describe("PTZ component", () => {
     context.publish({}, cameraSession());
 
     await vi.waitFor(() =>
-      expect(element.shadowRoot?.querySelectorAll("button")).toHaveLength(2),
+      expect(
+        element.shadowRoot?.querySelectorAll("button[data-direction]"),
+      ).toHaveLength(2),
     );
     const up =
       element.shadowRoot?.querySelector<HTMLButtonElement>("button.up");
@@ -80,6 +82,7 @@ describe("PTZ component", () => {
       }),
     ).toEqual({
       cameras: [{ entityId: "camera.front", provider: "frigate_go2rtc" }],
+      initialState: "open",
     });
   });
 
@@ -116,7 +119,88 @@ describe("PTZ component", () => {
         "camera.front",
       ),
     );
-    expect(element.shadowRoot?.querySelectorAll("button")).toHaveLength(4);
+    expect(
+      element.shadowRoot?.querySelectorAll("button[data-direction]"),
+    ).toHaveLength(4);
+  });
+
+  it("resets a temporary expansion to Start Closed after the overlay hides", async () => {
+    resolver.capability.mockResolvedValue({
+      focus: false,
+      pan: true,
+      presets: [],
+      supported: true,
+      tilt: true,
+      zoom: false,
+    });
+    const owner = {};
+    const context = new CameraSessionContext();
+    const element = document.createElement("wzc-ptz") as PtzComponent;
+    element.api = api();
+    element.cameraSession = context;
+    element.cameras = [
+      { entityId: "camera.front", provider: "home_assistant" },
+    ];
+    element.initialState = "closed";
+    document.body.append(element);
+    context.publish(owner, cameraSession());
+
+    await vi.waitFor(() =>
+      expect(
+        element.shadowRoot?.querySelector("button.ptz-trigger"),
+      ).not.toBeNull(),
+    );
+    element.shadowRoot
+      ?.querySelector<HTMLButtonElement>("button.ptz-trigger")
+      ?.click();
+    await element.updateComplete;
+    expect(element.shadowRoot?.querySelector("button.collapse")).not.toBeNull();
+
+    context.publish(owner, { ...cameraSession(), overlayVisible: false });
+    await element.updateComplete;
+    expect(element.expanded).toBe(false);
+    context.publish(owner, cameraSession());
+    await vi.waitFor(() =>
+      expect(
+        element.shadowRoot?.querySelector("button.ptz-trigger"),
+      ).not.toBeNull(),
+    );
+  });
+
+  it("resets a temporary collapse to Start Open after the overlay hides", async () => {
+    resolver.capability.mockResolvedValue({
+      focus: false,
+      pan: true,
+      presets: [],
+      supported: true,
+      tilt: true,
+      zoom: false,
+    });
+    const owner = {};
+    const context = new CameraSessionContext();
+    const element = document.createElement("wzc-ptz") as PtzComponent;
+    element.api = api();
+    element.cameraSession = context;
+    element.cameras = [
+      { entityId: "camera.front", provider: "home_assistant" },
+    ];
+    document.body.append(element);
+    context.publish(owner, cameraSession());
+
+    await vi.waitFor(() =>
+      expect(
+        element.shadowRoot?.querySelector("button.collapse"),
+      ).not.toBeNull(),
+    );
+    element.shadowRoot
+      ?.querySelector<HTMLButtonElement>("button.collapse")
+      ?.click();
+    await element.updateComplete;
+    expect(element.expanded).toBe(false);
+
+    context.publish(owner, { ...cameraSession(), overlayVisible: false });
+    await element.updateComplete;
+    expect(element.expanded).toBe(true);
   });
 });
 

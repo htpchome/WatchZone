@@ -340,8 +340,35 @@ describe("layout composition", () => {
           { entityId: "camera.front", provider: "home_assistant" },
           { entityId: "camera.back", provider: "frigate_go2rtc" },
         ],
+        initialState: "open",
       },
     });
+  });
+
+  it("uses the configured PTZ reset state and removes a disabled overlay", () => {
+    const closedLayout = builtInStage(
+      normalizeCardConfig({
+        cameras: [{ entity_id: "camera.front", ptz_enabled: true }],
+        ptz_overlay_control: "start_closed",
+      }),
+    );
+    const closedCamera = moduleAt(closedLayout, 0);
+    expect(closedCamera.slots?.controls?.[0]?.config).toMatchObject({
+      initialState: "closed",
+    });
+
+    const hiddenLayout = builtInStage(
+      normalizeCardConfig({
+        cameras: [{ entity_id: "camera.front", ptz_enabled: true }],
+        ptz_overlay_control: "none",
+      }),
+    );
+    const hiddenCamera = moduleAt(hiddenLayout, 0);
+    expect(
+      hiddenCamera.slots?.controls?.some(
+        ({ componentType }) => componentType === "ptz",
+      ) ?? false,
+    ).toBe(false);
   });
 
   it("rejects duplicate stable node IDs", () => {
