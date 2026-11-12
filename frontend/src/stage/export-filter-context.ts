@@ -3,9 +3,12 @@ export interface ExportCameraFacet {
   readonly label: string;
 }
 
+export type ExportSortDirection = "ascending" | "descending";
+
 export interface ExportFilterState {
   readonly cameras: readonly ExportCameraFacet[];
   readonly selectedEntityIds: readonly string[];
+  readonly sortDirection: ExportSortDirection;
 }
 
 type ExportFilterListener = (state: ExportFilterState) => void;
@@ -16,7 +19,11 @@ interface ExportFilterChannel {
   state: ExportFilterState;
 }
 
-const EMPTY_STATE: ExportFilterState = { cameras: [], selectedEntityIds: [] };
+const EMPTY_STATE: ExportFilterState = {
+  cameras: [],
+  selectedEntityIds: [],
+  sortDirection: "descending",
+};
 
 /** Coordinates one exports module with its Stage-owned camera filter. */
 export class ExportFilterContext {
@@ -35,6 +42,7 @@ export class ExportFilterContext {
       selectedEntityIds: channel.state.selectedEntityIds.filter((id) =>
         allowed.has(id),
       ),
+      sortDirection: channel.state.sortDirection,
     });
   }
 
@@ -63,6 +71,23 @@ export class ExportFilterContext {
   public clearSelection(scopeId: string): void {
     const channel = this._channel(scopeId);
     this._update(scopeId, channel, { ...channel.state, selectedEntityIds: [] });
+  }
+
+  public setSortDirection(
+    scopeId: string,
+    sortDirection: ExportSortDirection,
+  ): void {
+    const channel = this._channel(scopeId);
+    this._update(scopeId, channel, { ...channel.state, sortDirection });
+  }
+
+  public reset(scopeId: string): void {
+    const channel = this._channel(scopeId);
+    this._update(scopeId, channel, {
+      ...channel.state,
+      selectedEntityIds: [],
+      sortDirection: "descending",
+    });
   }
 
   public subscribe(
@@ -119,6 +144,7 @@ function sameState(
     current.selectedEntityIds.length === next.selectedEntityIds.length &&
     current.selectedEntityIds.every(
       (entityId, index) => entityId === next.selectedEntityIds[index],
-    )
+    ) &&
+    current.sortDirection === next.sortDirection
   );
 }

@@ -115,6 +115,22 @@ describe("exports module", () => {
     ].find((tile) => tile.textContent?.includes("Driveway vehicle"));
     expect(processing?.querySelectorAll("button:disabled")).toHaveLength(4);
 
+    exportFilter.setSortDirection("exports-module", "ascending");
+    await module.updateComplete;
+    expect(
+      [
+        ...(module.shadowRoot?.querySelectorAll<HTMLElement>(".title") ?? []),
+      ].map((title) => title.textContent),
+    ).toEqual(["Front visitor", "Driveway vehicle"]);
+
+    exportFilter.setSortDirection("exports-module", "descending");
+    await module.updateComplete;
+    expect(
+      [
+        ...(module.shadowRoot?.querySelectorAll<HTMLElement>(".title") ?? []),
+      ].map((title) => title.textContent),
+    ).toEqual(["Driveway vehicle", "Front visitor"]);
+
     exportFilter.toggleCamera("exports-module", "camera.front");
     await module.updateComplete;
     expect(module.shadowRoot?.querySelectorAll(".tile")).toHaveLength(1);

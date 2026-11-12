@@ -11,7 +11,11 @@ import type {
   ExportFilterState,
 } from "./export-filter-context";
 
-const EMPTY_STATE: ExportFilterState = { cameras: [], selectedEntityIds: [] };
+const EMPTY_STATE: ExportFilterState = {
+  cameras: [],
+  selectedEntityIds: [],
+  sortDirection: "descending",
+};
 
 /** Stage-owned camera filter for an independently placeable Exports module. */
 export class ExportFilter extends LitElement {
@@ -78,7 +82,7 @@ export class ExportFilter extends LitElement {
   }
 
   protected render() {
-    const selected = this._state.selectedEntityIds.length > 0;
+    const selected = this._hasActiveFilter();
     return html`<button
         class=${`filter-trigger${selected ? " selected" : ""}`}
         type="button"
@@ -96,7 +100,7 @@ export class ExportFilter extends LitElement {
   }
 
   private _renderPopover() {
-    const selected = this._state.selectedEntityIds.length > 0;
+    const selected = this._hasActiveFilter();
     return html`<section
       class="popover"
       popover="manual"
@@ -134,17 +138,53 @@ export class ExportFilter extends LitElement {
           )}
         </div>
       </fieldset>
+      <fieldset>
+        <legend>${this.localize("exports.sort_date")}</legend>
+        <div class="options">
+          ${this._sortOption(
+            "descending",
+            this.localize("exports.sort_date_descending"),
+          )}
+          ${this._sortOption(
+            "ascending",
+            this.localize("exports.sort_date_ascending"),
+          )}
+        </div>
+      </fieldset>
       <footer class="footer">
         <button
           class="reset"
           type="button"
           ?disabled=${!selected}
-          @click=${() => this.filterContext?.clearSelection(this.scopeId)}
+          @click=${() => this.filterContext?.reset(this.scopeId)}
         >
           ${this.localize("filter.reset")}
         </button>
       </footer>
     </section>`;
+  }
+
+  private _sortOption(
+    direction: ExportFilterState["sortDirection"],
+    label: string,
+  ) {
+    return html`<label class="chip">
+      <input
+        type="radio"
+        name="export-sort-direction"
+        .checked=${this._state.sortDirection === direction}
+        @change=${() =>
+          this.filterContext?.setSortDirection(this.scopeId, direction)}
+      />
+      <span>${label}</span>
+    </label>`;
+  }
+
+  private _hasActiveFilter(): boolean {
+    return (
+      this._state.selectedEntityIds.length > 0 ||
+      this._state.sortDirection !== "descending"
+    );
   }
 
   static styles = exportFilterStyles;

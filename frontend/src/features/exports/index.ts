@@ -7,11 +7,7 @@ import {
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import { normalizeExportTitle } from "./title";
 
-export {
-  appendExportCameraLabel,
-  MAX_EXPORT_TITLE_LENGTH,
-  normalizeExportTitle,
-} from "./title";
+export { MAX_EXPORT_TITLE_LENGTH, normalizeExportTitle } from "./title";
 
 const EXPORT_POLL_INTERVAL_MS = 5_000;
 const EXPORT_MISSING_LIMIT = 3;

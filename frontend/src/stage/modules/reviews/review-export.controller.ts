@@ -5,7 +5,7 @@ import type { ReviewItem } from "../../../api/reviews";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
 import type { LocalizeFunction } from "../../../core/localization";
 import {
-  appendExportCameraLabel,
+  normalizeExportTitle,
   startExportJob,
   subscribeExportJobs,
   type ExportJob,
@@ -90,9 +90,7 @@ export class ReviewExportController implements ReactiveController {
     try {
       const providerTitle = await prepareExport(api, range);
       this.pending = {
-        draft: {
-          name: appendExportCameraLabel(providerTitle, this._cameraLabel()),
-        },
+        draft: { name: normalizeExportTitle(providerTitle) },
         range,
         reviewId: item.id,
       };

@@ -17,6 +17,7 @@ import type {
 import type {
   ExportFilterContext,
   ExportFilterState,
+  ExportSortDirection,
 } from "../../export-filter-context";
 
 const POLL_INTERVAL_MS = 3_000;
@@ -34,6 +35,7 @@ export class ExportsController implements ReactiveController {
   public items: readonly ExportItem[] = [];
   public loading = false;
   public selectedEntityIds: readonly string[] = [];
+  public sortDirection: ExportSortDirection = "descending";
 
   private _cameras: readonly CameraSelectionItem[] = [];
   private _connected = false;
@@ -97,11 +99,17 @@ export class ExportsController implements ReactiveController {
   }
 
   public filteredItems(): readonly ExportLibraryItem[] {
-    const items = this._libraryItems();
-    if (this.selectedEntityIds.length === 0) return items;
-    const selected = new Set(this.selectedEntityIds);
-    return items.filter((item) =>
-      selected.has(isExportJob(item) ? item.entityId : item.entity_id),
+    let items = this._libraryItems();
+    if (this.selectedEntityIds.length > 0) {
+      const selected = new Set(this.selectedEntityIds);
+      items = items.filter((item) =>
+        selected.has(isExportJob(item) ? item.entityId : item.entity_id),
+      );
+    }
+    const direction = this.sortDirection === "ascending" ? 1 : -1;
+    return [...items].sort(
+      (left, right) =>
+        direction * (exportCreatedTime(left) - exportCreatedTime(right)),
     );
   }
 
@@ -175,6 +183,7 @@ export class ExportsController implements ReactiveController {
       this._lastFilter = config.exportFilter;
       this._lastPlaceableId = config.placeableId;
       this.selectedEntityIds = [];
+      this.sortDirection = "descending";
       if (config.exportFilter && config.placeableId) {
         this._unsubscribeFilter = config.exportFilter.subscribe(
           config.placeableId,
@@ -243,6 +252,7 @@ export class ExportsController implements ReactiveController {
 
   private _filterChanged(state: ExportFilterState): void {
     this.selectedEntityIds = state.selectedEntityIds;
+    this.sortDirection = state.sortDirection;
     this._host.requestUpdate();
   }
 
@@ -333,4 +343,8 @@ export class ExportsController implements ReactiveController {
 
 function exportKey(entityId: string, id: string): string {
   return `${entityId}\n${id}`;
+}
+
+function exportCreatedTime(item: ExportLibraryItem): number {
+  return isExportJob(item) ? item.createdTime : item.created_time;
 }

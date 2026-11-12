@@ -743,7 +743,7 @@ describe("reviews module", () => {
       expect(
         exportDialog?.shadowRoot?.querySelector<HTMLInputElement>("input")
           ?.value,
-      ).toBe(`${defaultName} — Front`);
+      ).toBe(defaultName);
     });
     exportDialog?.shadowRoot
       ?.querySelector<HTMLButtonElement>('button[type="button"]')

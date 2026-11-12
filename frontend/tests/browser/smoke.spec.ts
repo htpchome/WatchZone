@@ -1236,7 +1236,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   );
   await expect(exportDialog).toBeVisible();
   await expect(exportDialog.locator("input")).toHaveValue(
-    "front 2026-11-10 15:59:55 2026-11-10 16:00:29 — Front",
+    "front 2026-11-10 15:59:55 2026-11-10 16:00:29",
   );
   const confirmExport = exportDialog.getByRole("button", { name: "Export" });
   await expect(confirmExport).toHaveText("Export");
@@ -2975,6 +2975,15 @@ test("shows and filters mixed-camera persistent exports", async ({ page }) => {
   const filter = navigation.locator("wzc-export-filter");
   await filter.locator(".filter-trigger").click();
   await expect(filter.locator(".popover")).toBeVisible();
+  await expect(filter.getByLabel("Newest first")).toBeChecked();
+  await filter.getByText("Oldest first", { exact: true }).click();
+  await expect(filter.getByLabel("Oldest first")).toBeChecked();
+  await expect(exports.locator(".title").first()).toHaveText("Front visitor");
+  await filter.getByText("Newest first", { exact: true }).click();
+  await expect(filter.getByLabel("Newest first")).toBeChecked();
+  await expect(exports.locator(".title").first()).toHaveText(
+    "Driveway vehicle",
+  );
   await filter.getByText("Front Door", { exact: true }).click();
   await expect(exports.locator(".tile")).toHaveCount(1);
   await expect(exports).toContainText("Front visitor");

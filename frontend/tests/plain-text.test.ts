@@ -5,7 +5,6 @@ import {
   sanitizePlainTextInput,
 } from "../src/core/plain-text";
 import {
-  appendExportCameraLabel,
   MAX_EXPORT_TITLE_LENGTH,
   normalizeExportTitle,
 } from "../src/features/exports";
@@ -26,12 +25,11 @@ describe("plain-text normalization", () => {
     ).toBe("Front ドア 42 ");
   });
 
-  it("uses the same policy for export titles and preserves the camera suffix", () => {
+  it("uses the same normalization and length policy for export titles", () => {
     expect(normalizeExportTitle("  Visitor\u0000\n clip  ")).toBe(
       "Visitor clip",
     );
-    const title = appendExportCameraLabel("x".repeat(300), "Driveway");
-    expect(title.endsWith(" — Driveway")).toBe(true);
+    const title = normalizeExportTitle("x".repeat(300));
     expect(Array.from(title)).toHaveLength(MAX_EXPORT_TITLE_LENGTH);
   });
 });
