@@ -19,38 +19,26 @@ interface HomeAssistantEditCardDialog<T> extends HTMLElement {
   _updateDirtyState?(config: T): void;
 }
 
-interface InlinePropertyState {
-  readonly priority: string;
-  readonly value: string;
-}
+type InlinePropertyState = readonly [value: string, priority: string];
 
-interface PreviewWidthOverride {
-  readonly closeHandler: EventListener;
-  readonly previous: InlinePropertyState;
-}
+type EditorDialogOverride = readonly [
+  closeHandler: EventListener,
+  previousPreviewWidth: InlinePropertyState,
+  previousBackground: InlinePropertyState,
+  previousBackdropFilter: InlinePropertyState,
+];
 
-const previewWidthOverrides = new WeakMap<HTMLElement, PreviewWidthOverride>();
-
-interface EditorSurfaceOverride {
-  readonly closeHandler: EventListener;
-  readonly previousBackground: InlinePropertyState;
-  readonly previousBackdropFilter: InlinePropertyState;
-}
-
-const editorSurfaceOverrides = new WeakMap<
-  HTMLElement,
-  EditorSurfaceOverride
->();
-const closedEditorSurfaceDialogs = new WeakSet<HTMLElement>();
+const editorDialogOverrides = new WeakMap<HTMLElement, EditorDialogOverride>();
+const closedEditorDialogs = new WeakSet<HTMLElement>();
 
 function inlinePropertyState(
   element: HTMLElement,
   property: string,
 ): InlinePropertyState {
-  return {
-    priority: element.style.getPropertyPriority(property),
-    value: element.style.getPropertyValue(property),
-  };
+  return [
+    element.style.getPropertyValue(property),
+    element.style.getPropertyPriority(property),
+  ];
 }
 
 function restoreInlineProperty(
@@ -58,115 +46,67 @@ function restoreInlineProperty(
   property: string,
   previous: InlinePropertyState,
 ): void {
-  if (previous.value) {
-    element.style.setProperty(property, previous.value, previous.priority);
+  if (previous[0]) {
+    element.style.setProperty(property, previous[0], previous[1]);
   } else {
     element.style.removeProperty(property);
   }
 }
 
-function releaseEditorSurface(dialog: HTMLElement): void {
-  const override = editorSurfaceOverrides.get(dialog);
+function releaseEditorDialog(dialog: HTMLElement): void {
+  const override = editorDialogOverrides.get(dialog);
   if (!override) return;
-  dialog.removeEventListener(DIALOG_CLOSED_EVENT, override.closeHandler);
+  dialog.removeEventListener(DIALOG_CLOSED_EVENT, override[0]);
+  restoreInlineProperty(
+    dialog,
+    SECTION_PREVIEW_MAX_WIDTH_PROPERTY,
+    override[1],
+  );
   restoreInlineProperty(
     dialog,
     HA_DIALOG_SURFACE_BACKGROUND_PROPERTY,
-    override.previousBackground,
+    override[2],
   );
   restoreInlineProperty(
     dialog,
     HA_DIALOG_SURFACE_BACKDROP_FILTER_PROPERTY,
-    override.previousBackdropFilter,
+    override[3],
   );
-  editorSurfaceOverrides.delete(dialog);
+  editorDialogOverrides.delete(dialog);
 }
 
-function retainEditorSurface(dialog: HTMLElement, host: HTMLElement): void {
-  if (closedEditorSurfaceDialogs.has(dialog)) return;
+function retainEditorDialog(dialog: HTMLElement, host: HTMLElement): void {
+  if (closedEditorDialogs.has(dialog)) return;
   const hostStyle = getComputedStyle(host);
-  const background = hostStyle
-    .getPropertyValue(EDITOR_DIALOG_BACKGROUND_PROPERTY)
-    .trim();
-  if (!background) return;
-  const backdropFilter =
-    hostStyle.getPropertyValue(EDITOR_DIALOG_BACKDROP_FILTER_PROPERTY).trim() ||
-    "none";
-  let override = editorSurfaceOverrides.get(dialog);
+  let override = editorDialogOverrides.get(dialog);
   if (!override) {
     const closeHandler = (event: Event): void => {
       if (event.target !== dialog) return;
-      closedEditorSurfaceDialogs.add(dialog);
-      releaseEditorSurface(dialog);
+      closedEditorDialogs.add(dialog);
+      releaseEditorDialog(dialog);
     };
-    override = {
+    override = [
       closeHandler,
-      previousBackground: inlinePropertyState(
-        dialog,
-        HA_DIALOG_SURFACE_BACKGROUND_PROPERTY,
-      ),
-      previousBackdropFilter: inlinePropertyState(
-        dialog,
-        HA_DIALOG_SURFACE_BACKDROP_FILTER_PROPERTY,
-      ),
-    };
-    editorSurfaceOverrides.set(dialog, override);
+      inlinePropertyState(dialog, SECTION_PREVIEW_MAX_WIDTH_PROPERTY),
+      inlinePropertyState(dialog, HA_DIALOG_SURFACE_BACKGROUND_PROPERTY),
+      inlinePropertyState(dialog, HA_DIALOG_SURFACE_BACKDROP_FILTER_PROPERTY),
+    ];
+    editorDialogOverrides.set(dialog, override);
     dialog.addEventListener(DIALOG_CLOSED_EVENT, closeHandler);
   }
   dialog.style.setProperty(
+    SECTION_PREVIEW_MAX_WIDTH_PROPERTY,
+    SECTION_PREVIEW_MAX_WIDTH,
+    "important",
+  );
+  dialog.style.setProperty(
     HA_DIALOG_SURFACE_BACKGROUND_PROPERTY,
-    background,
+    hostStyle.getPropertyValue(EDITOR_DIALOG_BACKGROUND_PROPERTY).trim(),
     "important",
   );
   dialog.style.setProperty(
     HA_DIALOG_SURFACE_BACKDROP_FILTER_PROPERTY,
-    backdropFilter,
-    "important",
-  );
-}
-
-function releasePreviewWidth(dialog: HTMLElement): void {
-  const override = previewWidthOverrides.get(dialog);
-  if (!override) return;
-  dialog.removeEventListener(DIALOG_CLOSED_EVENT, override.closeHandler);
-  const ownsPreviewWidth =
-    dialog.style.getPropertyValue(SECTION_PREVIEW_MAX_WIDTH_PROPERTY).trim() ===
-      SECTION_PREVIEW_MAX_WIDTH &&
-    dialog.style.getPropertyPriority(SECTION_PREVIEW_MAX_WIDTH_PROPERTY) ===
-      "important";
-  if (ownsPreviewWidth) {
-    if (override.previous.value) {
-      dialog.style.setProperty(
-        SECTION_PREVIEW_MAX_WIDTH_PROPERTY,
-        override.previous.value,
-        override.previous.priority,
-      );
-    } else {
-      dialog.style.removeProperty(SECTION_PREVIEW_MAX_WIDTH_PROPERTY);
-    }
-  }
-  previewWidthOverrides.delete(dialog);
-}
-
-function retainPreviewWidth(dialog: HTMLElement): void {
-  if (previewWidthOverrides.has(dialog)) return;
-  const closeHandler = (event: Event): void => {
-    if (event.target !== dialog) return;
-    releasePreviewWidth(dialog);
-  };
-  previewWidthOverrides.set(dialog, {
-    closeHandler,
-    previous: {
-      priority: dialog.style.getPropertyPriority(
-        SECTION_PREVIEW_MAX_WIDTH_PROPERTY,
-      ),
-      value: dialog.style.getPropertyValue(SECTION_PREVIEW_MAX_WIDTH_PROPERTY),
-    },
-  });
-  dialog.addEventListener(DIALOG_CLOSED_EVENT, closeHandler);
-  dialog.style.setProperty(
-    SECTION_PREVIEW_MAX_WIDTH_PROPERTY,
-    SECTION_PREVIEW_MAX_WIDTH,
+    hostStyle.getPropertyValue(EDITOR_DIALOG_BACKDROP_FILTER_PROPERTY).trim(),
     "important",
   );
 }
@@ -184,13 +124,12 @@ export class HomeAssistantEditorBridge<T> implements ReactiveController {
   public hostConnected(): void {
     this._dialog = this._findDialog();
     if (!this._dialog) return;
-    closedEditorSurfaceDialogs.delete(this._dialog);
-    retainPreviewWidth(this._dialog);
-    retainEditorSurface(this._dialog, this._host);
+    closedEditorDialogs.delete(this._dialog);
+    retainEditorDialog(this._dialog, this._host);
   }
 
   public hostUpdated(): void {
-    if (this._dialog) retainEditorSurface(this._dialog, this._host);
+    if (this._dialog) retainEditorDialog(this._dialog, this._host);
   }
 
   public hostDisconnected(): void {
@@ -198,8 +137,7 @@ export class HomeAssistantEditorBridge<T> implements ReactiveController {
     if (dialog) {
       queueMicrotask(() => {
         if (dialog.isConnected) return;
-        releasePreviewWidth(dialog);
-        releaseEditorSurface(dialog);
+        releaseEditorDialog(dialog);
       });
     }
     this._dialog = undefined;
