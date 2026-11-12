@@ -62,7 +62,7 @@ import {
   updateDirtyState,
 } from "./dirty-state";
 import { HomeAssistantEditorBridge } from "./home-assistant-editor-bridge";
-import { CameraCapabilityController } from "./camera-capability.controller";
+import type { CameraCapabilityController } from "./camera-capability.controller";
 import { cardEditorStyles } from "./watchzone-card-editor.styles";
 
 interface InputElement extends HTMLElement {
@@ -153,9 +153,8 @@ export class CardEditor extends LitElement {
   private _hass?: HomeAssistant;
   private _previewTimer?: ReturnType<typeof setTimeout>;
   private readonly _toasts = new ToastManager(this);
-  private readonly _capabilities = new CameraCapabilityController(this, () =>
-    this._hass ? createHomeAssistantApi(this._hass) : undefined,
-  );
+  private _capabilities?: CameraCapabilityController;
+  private _capabilitiesLoad?: Promise<CameraCapabilityController>;
   private readonly _localization = new LocalizationController(this, () =>
     this._syncDraftStatus(),
   );
@@ -557,6 +556,7 @@ export class CardEditor extends LitElement {
 
   private _renderCameraDialog() {
     const camera = this._cameraDraft;
+    const capabilities = this._capabilities;
     const editing = this._editingCameraIndex !== undefined;
     return html`<dialog
       class="camera-editor-dialog"
@@ -700,14 +700,15 @@ export class CardEditor extends LitElement {
                           "two_way_talk_enabled",
                           this._t("editor.two_way_talk"),
                           camera.two_way_talk_enabled,
-                          this._capabilities.talkPending ||
-                            this._capabilities.talk !== true,
+                          !capabilities ||
+                            capabilities.talkPending ||
+                            capabilities.talk !== true,
                         )}
                         <small class="capability-status">
                           ${
-                            this._capabilities.talkPending
+                            !capabilities || capabilities.talkPending
                               ? this._t("editor.checking_two_way_talk")
-                              : this._capabilities.talk === true
+                              : capabilities.talk === true
                                 ? this._t("editor.two_way_talk_available")
                                 : this._t("editor.two_way_talk_unavailable")
                           }
@@ -718,14 +719,15 @@ export class CardEditor extends LitElement {
                           "ptz_enabled",
                           this._t("editor.ptz"),
                           camera.ptz_enabled,
-                          this._capabilities.ptzPending ||
-                            this._capabilities.ptz?.supported !== true,
+                          !capabilities ||
+                            capabilities.ptzPending ||
+                            capabilities.ptz?.supported !== true,
                         )}
                         <small class="capability-status">
                           ${
-                            this._capabilities.ptzPending
+                            !capabilities || capabilities.ptzPending
                               ? this._t("editor.checking_ptz")
-                              : this._capabilities.ptz?.supported === true
+                              : capabilities.ptz?.supported === true
                                 ? this._t("editor.ptz_available")
                                 : this._t("editor.ptz_unavailable")
                           }
@@ -950,6 +952,7 @@ export class CardEditor extends LitElement {
             label: this._t("editor.frigate_go2rtc"),
             value: "frigate_go2rtc",
             disabled:
+              !this._capabilities ||
               this._capabilities.frigatePending ||
               !this._capabilities.frigateAvailable,
           },
@@ -1048,7 +1051,7 @@ export class CardEditor extends LitElement {
     if (!this._cameraDraft) return;
     const value = eventString(event);
     this._cameraDraft = { ...this._cameraDraft, entity_id: value };
-    this._capabilities.check(value, this._cameraDraft.connection);
+    this._checkCapabilities(value, this._cameraDraft.connection);
     this.requestUpdate();
   };
 
@@ -1060,8 +1063,7 @@ export class CardEditor extends LitElement {
     if (connection !== "home_assistant" && connection !== "frigate_go2rtc")
       return;
     this._cameraDraft = { ...this._cameraDraft, connection };
-    this._capabilities.checkTalk(this._cameraDraft.entity_id, connection);
-    this._capabilities.checkPtz(this._cameraDraft.entity_id, connection);
+    this._checkCapabilities(this._cameraDraft.entity_id, connection);
     this.requestUpdate();
   };
 
@@ -1204,7 +1206,8 @@ export class CardEditor extends LitElement {
     this._cameraDraft = createDefaultCameraConfig();
     this._cameraTitleInput = "";
     this._cancelAddingLight();
-    this._capabilities.reset();
+    this._capabilities?.reset();
+    void this._loadCapabilities();
     this.requestUpdate();
   };
 
@@ -1219,7 +1222,7 @@ export class CardEditor extends LitElement {
     this._cameraDraft = { ...camera };
     this._cameraTitleInput = camera.title;
     this._cancelAddingLight();
-    this._capabilities.check(camera.entity_id, camera.connection);
+    this._checkCapabilities(camera.entity_id, camera.connection);
     this.requestUpdate();
   };
 
@@ -1254,7 +1257,7 @@ export class CardEditor extends LitElement {
     this._cameraDraft = undefined;
     this._cameraTitleInput = "";
     this._cancelAddingLight();
-    this._capabilities.reset();
+    this._capabilities?.reset();
     this._editingCameraIndex = undefined;
     this.requestUpdate();
   };
@@ -1273,6 +1276,31 @@ export class CardEditor extends LitElement {
     this._editingCameraIndex = undefined;
     this._applyCameraList(cameras);
   };
+
+  private _loadCapabilities(): Promise<CameraCapabilityController> {
+    return (this._capabilitiesLoad ??=
+      import("./camera-capability.controller").then(
+        ({ CameraCapabilityController }) =>
+          (this._capabilities ??= new CameraCapabilityController(this, () =>
+            this._hass ? createHomeAssistantApi(this._hass) : undefined,
+          )),
+      ));
+  }
+
+  private _checkCapabilities(
+    entityId: string,
+    connection: LiveConnectionType,
+  ): void {
+    void this._loadCapabilities().then((capabilities) => {
+      if (
+        this._cameraDraft?.entity_id !== entityId ||
+        this._cameraDraft.connection !== connection
+      ) {
+        return;
+      }
+      capabilities.check(entityId, connection);
+    });
+  }
 
   private readonly _handleCameraReorder = (
     event: CustomEvent<SortableReorderDetail>,

@@ -9,6 +9,8 @@ const manifest = JSON.parse(
 );
 const entry = manifest["src/main.ts"];
 const editor = manifest["src/editor/watchzone-card-editor.ts"];
+const cameraCapability =
+  manifest["src/editor/camera-capability.controller.ts"];
 const sortableList = manifest["src/ui/sortable-list.ts"];
 const camera = manifest["src/stage/modules/camera/index.ts"];
 const provider = manifest["src/providers/home-assistant/live/index.ts"];
@@ -20,6 +22,7 @@ if (!entry?.isEntry || entry.file !== "watchzone.js") {
 }
 for (const [name, asset] of Object.entries({
   editor,
+  cameraCapability,
   sortableList,
   camera,
   provider,
@@ -57,6 +60,7 @@ const collectEagerGraph = (source, graph = new Set()) => {
 const eagerGraph = collectEagerGraph(entry.src);
 for (const [name, asset] of Object.entries({
   editor,
+  cameraCapability,
   sortableList,
   camera,
   provider,
@@ -84,9 +88,13 @@ if (eagerGzipBytes > 50 * 1024) {
 const editorGzipBytes = gzipSync(
   await readFile(resolve(frontend, editor.file)),
 ).byteLength;
-if (editorGzipBytes > 12 * 1024) {
+const editorGzipBudgetBytes = 12 * 1024;
+const editorGzipSafetyMarginBytes = 256;
+const editorGzipValidationLimitBytes =
+  editorGzipBudgetBytes - editorGzipSafetyMarginBytes;
+if (editorGzipBytes > editorGzipValidationLimitBytes) {
   throw new Error(
-    `Lazy editor entry exceeds 12 KiB gzip: ${editorGzipBytes} bytes`,
+    `Lazy editor entry exceeds the ${editorGzipValidationLimitBytes}-byte validation limit (${editorGzipSafetyMarginBytes}-byte safety margin below the 12 KiB release budget): ${editorGzipBytes} bytes`,
   );
 }
 
