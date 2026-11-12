@@ -27,12 +27,35 @@ export const themeTokens = css`
       --secondary-background-color,
       var(--wzc-color-surface)
     );
-    --wzc-opaque-surface-background:
-      linear-gradient(var(--wzc-color-background), var(--wzc-color-background)),
-      linear-gradient(var(--wzc-color-surface), var(--wzc-color-surface)),
-      Canvas;
-    --wzc-dialog-background: var(--wzc-opaque-surface-background);
-    --wzc-editor-background: var(--wzc-opaque-surface-background);
+    --wzc-dialog-background: var(
+      --ha-dialog-surface-background,
+      var(
+        --card-background-color,
+        var(--ha-color-surface-default, var(--wzc-color-surface))
+      )
+    );
+    --wzc-dialog-backdrop-filter: var(
+      --ha-dialog-surface-backdrop-filter,
+      none
+    );
+    --wzc-dialog-radius: var(
+      --ha-dialog-border-radius,
+      var(--ha-border-radius-3xl, var(--wzc-radius-large))
+    );
+    --wzc-dialog-shadow: var(
+      --dialog-box-shadow,
+      var(--wa-shadow-l, var(--wzc-shadow-medium))
+    );
+    --wzc-dialog-scrim-background: var(
+      --mdc-dialog-scrim-color,
+      color-mix(in srgb, black 55%, transparent)
+    );
+    --wzc-dialog-scrim-backdrop-filter: var(
+      --ha-dialog-scrim-backdrop-filter,
+      var(--dialog-backdrop-filter, none)
+    );
+    --wzc-editor-background: var(--wzc-dialog-background);
+    --wzc-editor-backdrop-filter: var(--wzc-dialog-backdrop-filter);
 
     --wzc-color-text-1: var(
       --ha-color-text-primary,
@@ -189,10 +212,11 @@ export const themeTokens = css`
     --wzc-stage-resize-handle-inline-size: clamp(6rem, 24%, 10rem);
     --wzc-stage-resize-handle-visual-inline-size: clamp(4rem, 18cqi, 7rem);
     --wzc-stage-resize-handle-visible-bottom-inset: 0.15rem;
-    --wzc-activity-popover-background: var(--wzc-color-surface);
+    --wzc-activity-popover-background: var(--wzc-dialog-background);
+    --wzc-activity-popover-backdrop-filter: var(--wzc-dialog-backdrop-filter);
     --wzc-activity-popover-border-color: var(--wzc-color-border);
-    --wzc-activity-popover-radius: var(--wzc-radius-card);
-    --wzc-activity-popover-shadow: var(--wzc-shadow-medium);
+    --wzc-activity-popover-radius: var(--wzc-dialog-radius);
+    --wzc-activity-popover-shadow: var(--wzc-dialog-shadow);
 
     --wzc-media-overlay-color: var(--ha-color-neutral-90, #e6e6e6);
     --wzc-media-overlay-surface: var(--ha-color-neutral-05, #111111);
@@ -434,11 +458,12 @@ export const themeTokens = css`
     );
     --wzc-light-control-gap: 0.5rem;
     --wzc-light-fill-color: var(--wzc-color-primary);
-    --wzc-light-panel-background: color-mix(
-      in srgb,
-      var(--wzc-media-overlay-surface) 90%,
-      transparent
-    );
+    --wzc-light-panel-background: var(--wzc-dialog-background);
+    --wzc-light-panel-backdrop-filter: var(--wzc-dialog-backdrop-filter);
+    --wzc-light-panel-border-color: var(--wzc-color-border);
+    --wzc-light-panel-color: var(--wzc-color-text-1);
+    --wzc-light-panel-radius: var(--wzc-dialog-radius);
+    --wzc-light-panel-shadow: var(--wzc-dialog-shadow);
     --wzc-light-panel-inline-size: clamp(6.5rem, 24cqi, 8rem);
     --wzc-light-power-active-color: var(--wzc-color-primary);
     --wzc-light-slider-background: var(--ha-color-neutral-90, #e6e6e6);

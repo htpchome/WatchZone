@@ -62,11 +62,12 @@ export const lightControlStyles = css`
     box-sizing: border-box;
     inline-size: var(--wzc-light-panel-inline-size);
     padding: 0.65rem;
-    color: var(--wzc-media-overlay-color);
+    color: var(--wzc-light-panel-color);
+    backdrop-filter: var(--wzc-light-panel-backdrop-filter);
     background: var(--wzc-light-panel-background);
-    border: 1px solid var(--wzc-media-overlay-border-color);
-    border-radius: var(--wzc-radius-large);
-    box-shadow: var(--wzc-media-overlay-shadow);
+    border: 1px solid var(--wzc-light-panel-border-color);
+    border-radius: var(--wzc-light-panel-radius);
+    box-shadow: var(--wzc-light-panel-shadow);
     pointer-events: auto;
   }
 

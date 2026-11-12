@@ -48,6 +48,7 @@ export const filterPopoverStyles = css`
     outline-offset: 2px;
   }
   .popover {
+    backdrop-filter: var(--wzc-activity-popover-backdrop-filter);
     background: var(--wzc-activity-popover-background);
     border: 1px solid var(--wzc-activity-popover-border-color);
     border-radius: var(--wzc-activity-popover-radius);

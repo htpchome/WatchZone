@@ -9,8 +9,8 @@ export const reviewExportDialogStyles = css`
   dialog {
     background: var(--wzc-dialog-background);
     border: 1px solid var(--wzc-color-border);
-    border-radius: var(--wzc-radius-large);
-    box-shadow: var(--wzc-shadow-medium);
+    border-radius: var(--wzc-dialog-radius);
+    box-shadow: var(--wzc-dialog-shadow);
     box-sizing: border-box;
     color: var(--wzc-color-text-1);
     inline-size: min(34rem, calc(100vw - 2rem));
@@ -19,11 +19,12 @@ export const reviewExportDialogStyles = css`
     padding: 0;
     position: fixed;
     opacity: 1;
-    backdrop-filter: none;
+    backdrop-filter: var(--wzc-dialog-backdrop-filter);
   }
 
   dialog::backdrop {
-    background: color-mix(in srgb, black 55%, transparent);
+    background: var(--wzc-dialog-scrim-background);
+    backdrop-filter: var(--wzc-dialog-scrim-backdrop-filter);
   }
 
   form,

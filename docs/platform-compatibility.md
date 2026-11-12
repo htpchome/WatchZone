@@ -110,11 +110,11 @@ flow through the semantic token boundary. The profile exposes stable mode data
 to the card and editor and synchronizes their `color-scheme` without replacing
 theme-provided colors.
 
-Form and confirmation dialogs use the shared opaque theme-surface token so a
-glass theme cannot expose dashboard or preview content through editable text.
-The token composites the theme's card tint over its primary surface and the
-mode-aware browser canvas. Popover panels and recorded-media dialogs retain
-their existing presentation because they do not share this readability issue.
+The editor, form or confirmation dialogs, and interactive popover panels use
+shared semantic tokens mapped to Home Assistant's native dialog surface,
+backdrop-filter, radius, and shadow hooks. They do not synthesize dialog colors
+from card and page backgrounds. Recorded-media dialogs retain their specialized
+presentation.
 
 ## 3. Media rules
 

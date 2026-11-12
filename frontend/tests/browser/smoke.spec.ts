@@ -2316,6 +2316,12 @@ test("switches activity and recordings through the shared media calendar", async
       hass: unknown;
       setConfig(config: unknown): void;
     };
+    card.style.setProperty(
+      "--ha-dialog-surface-background",
+      "rgb(170, 171, 172)",
+    );
+    card.style.setProperty("--ha-dialog-surface-backdrop-filter", "blur(7px)");
+    card.style.setProperty("--ha-dialog-border-radius", "28px");
     card.setConfig({
       type: "custom:watchzone-card",
       event_history_days: 5,
@@ -2517,6 +2523,15 @@ test("switches activity and recordings through the shared media calendar", async
         .evaluate((element) => element.matches(":popover-open")),
     )
     .toBe(true);
+  await expect(calendar.locator(".popover")).toHaveCSS(
+    "background-color",
+    "rgb(170, 171, 172)",
+  );
+  await expect(calendar.locator(".popover")).toHaveCSS(
+    "backdrop-filter",
+    "blur(7px)",
+  );
+  await expect(calendar.locator(".popover")).toHaveCSS("border-radius", "28px");
   await expect(calendar.locator(".day.marked")).toHaveCount(2);
   await calendar.locator(".day.marked").first().click();
   await expect(page.locator("wzc-reviews .tile")).toHaveCount(1);
@@ -2538,6 +2553,15 @@ test("switches activity and recordings through the shared media calendar", async
 
   await filter.locator(".filter-trigger").click();
   await expect(filter.locator(".popover")).toBeVisible();
+  await expect(filter.locator(".popover")).toHaveCSS(
+    "background-color",
+    "rgb(170, 171, 172)",
+  );
+  await expect(filter.locator(".popover")).toHaveCSS(
+    "backdrop-filter",
+    "blur(7px)",
+  );
+  await expect(filter.locator(".popover")).toHaveCSS("border-radius", "28px");
   await expect(filter.locator("fieldset")).toHaveCount(4);
   const selectedFilterChip = filter
     .locator(".chip input:checked + span")
@@ -3980,6 +4004,15 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   expect(interactionLightButtonBox).not.toBeNull();
   if (!interactionLightButtonBox) return;
 
+  await lights.evaluate((element) => {
+    element.style.setProperty(
+      "--wzc-light-panel-background",
+      "rgb(170, 171, 172)",
+    );
+    element.style.setProperty("--wzc-light-panel-backdrop-filter", "blur(7px)");
+    element.style.setProperty("--wzc-light-panel-radius", "28px");
+  });
+
   await page.mouse.move(
     interactionLightButtonBox.x + interactionLightButtonBox.width / 2,
     interactionLightButtonBox.y + interactionLightButtonBox.height / 2,
@@ -3989,6 +4022,9 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   await page.mouse.up();
   const dimmer = lights.locator(".dimmer-panel");
   await expect(dimmer).toBeVisible();
+  await expect(dimmer).toHaveCSS("background-color", "rgb(170, 171, 172)");
+  await expect(dimmer).toHaveCSS("backdrop-filter", "blur(7px)");
+  await expect(dimmer).toHaveCSS("border-radius", "28px");
   const slider = dimmer.locator("ha-control-slider");
   await expect(slider).toHaveAttribute("vertical", "");
   await expect(slider).toHaveAttribute("show-handle", "");
@@ -4461,8 +4497,13 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
       "--wzc-color-warning",
       "--wzc-color-success",
       "--wzc-dialog-background",
+      "--wzc-dialog-backdrop-filter",
+      "--wzc-dialog-radius",
+      "--wzc-dialog-scrim-backdrop-filter",
+      "--wzc-dialog-scrim-background",
+      "--wzc-dialog-shadow",
       "--wzc-editor-background",
-      "--wzc-opaque-surface-background",
+      "--wzc-editor-backdrop-filter",
       "--wzc-color-border",
       "--wzc-radius-card",
       "--wzc-shadow-card",
@@ -4758,7 +4799,7 @@ test("editor uses exclusive accordions and shared draft status", async ({
   ).toContainText("Unsaved changes");
 });
 
-test("keeps glass themes opaque in the editor without changing card glass", async ({
+test("uses Home Assistant dialog semantics in the editor without changing card glass", async ({
   page,
 }) => {
   await page.goto("/");
@@ -4768,7 +4809,6 @@ test("keeps glass themes opaque in the editor without changing card glass", asyn
       setConfig(config: unknown): void;
     };
     card.style.setProperty("--ha-card-background", "rgba(255, 255, 255, 0.14)");
-    card.style.setProperty("--primary-background-color", "rgb(20, 30, 40)");
     card.setConfig({ type: "custom:watchzone-card" });
 
     const constructor = customElements.get(
@@ -4787,7 +4827,16 @@ test("keeps glass themes opaque in the editor without changing card glass", asyn
       "--ha-card-background",
       "rgba(255, 255, 255, 0.14)",
     );
-    editor.style.setProperty("--primary-background-color", "rgb(20, 30, 40)");
+    editor.style.setProperty(
+      "--ha-dialog-surface-background",
+      "rgb(170, 171, 172)",
+    );
+    editor.style.setProperty(
+      "--ha-dialog-surface-backdrop-filter",
+      "blur(7px)",
+    );
+    editor.style.setProperty("--dialog-box-shadow", "rgb(1, 2, 3) 0px 4px 8px");
+    editor.style.setProperty("--ha-dialog-border-radius", "28px");
     (
       editor as unknown as HTMLElement & {
         hass: unknown;
@@ -4820,18 +4869,13 @@ test("keeps glass themes opaque in the editor without changing card glass", asyn
   const editor = page.locator("#glass-theme-editor");
   await expect(editor).toHaveAttribute("data-theme-mode", "dark");
   await expect(editor).toHaveAttribute("data-theme-name", "Frosted Glass");
-  await expect(editor).not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
-  await expect(editor).toHaveCSS("backdrop-filter", "none");
-  const darkLayers = await editor.evaluate(
-    (element) => getComputedStyle(element).backgroundImage,
-  );
-  expect(darkLayers).toContain("rgba(255, 255, 255, 0.14)");
-  expect(darkLayers).toContain("rgb(20, 30, 40)");
+  await expect(editor).toHaveCSS("background-color", "rgb(170, 171, 172)");
+  await expect(editor).toHaveCSS("backdrop-filter", "blur(7px)");
 
   await editor.evaluate((element) => {
     (element as HTMLElement).style.setProperty(
-      "--primary-background-color",
-      "rgb(235, 240, 245)",
+      "--ha-dialog-surface-background",
+      "rgb(210, 211, 212)",
     );
     (
       element as HTMLElement & {
@@ -4853,24 +4897,26 @@ test("keeps glass themes opaque in the editor without changing card glass", asyn
     };
   });
   await expect(editor).toHaveAttribute("data-theme-mode", "light");
-  expect(
-    await editor.evaluate(
-      (element) => getComputedStyle(element).backgroundImage,
-    ),
-  ).toContain("rgb(235, 240, 245)");
+  await expect(editor).toHaveCSS("background-color", "rgb(210, 211, 212)");
 
   await editor.locator("wzc-accordion-item").first().locator("summary").click();
   await editor.locator("button.add-camera").click();
   const cameraDialog = editor.locator("dialog.camera-editor-dialog");
   await expect(cameraDialog).toHaveAttribute("open", "");
-  await expect(cameraDialog).not.toHaveCSS(
+  await expect(cameraDialog).toHaveCSS(
     "background-color",
-    "rgba(0, 0, 0, 0)",
+    "rgb(210, 211, 212)",
   );
-  await expect(cameraDialog).toHaveCSS("backdrop-filter", "none");
+  await expect(cameraDialog).toHaveCSS("backdrop-filter", "blur(7px)");
+  await expect(cameraDialog).toHaveCSS("border-radius", "28px");
+  expect(
+    await cameraDialog.evaluate(
+      (element) => getComputedStyle(element).boxShadow,
+    ),
+  ).toContain("rgb(1, 2, 3)");
 });
 
-test("keeps form and confirmation dialogs opaque under glass themes", async ({
+test("uses Home Assistant dialog semantics for form and confirmation dialogs", async ({
   page,
 }) => {
   await page.goto("/");
@@ -4881,7 +4927,14 @@ test("keeps form and confirmation dialogs opaque under glass themes", async ({
       setConfig(config: unknown): void;
     };
     host.style.setProperty("--ha-card-background", "rgba(255, 255, 255, 0.14)");
-    host.style.setProperty("--primary-background-color", "rgb(20, 30, 40)");
+    host.style.setProperty(
+      "--ha-dialog-surface-background",
+      "rgb(170, 171, 172)",
+    );
+    host.style.setProperty("--ha-dialog-surface-backdrop-filter", "blur(7px)");
+    host.style.setProperty("--ha-dialog-border-radius", "28px");
+    host.style.setProperty("--ha-dialog-scrim-backdrop-filter", "blur(3px)");
+    host.style.setProperty("--mdc-dialog-scrim-color", "rgba(1, 2, 3, 0.4)");
     host.setConfig({
       type: "custom:watchzone-card",
       cameras: [{ entity_id: "camera.front" }],
@@ -4899,16 +4952,24 @@ test("keeps form and confirmation dialogs opaque under glass themes", async ({
   });
   const exportDialog = exportHost.locator("dialog");
   await expect(exportDialog).toBeVisible();
-  await expect(exportDialog).not.toHaveCSS(
+  await expect(exportDialog).toHaveCSS(
     "background-color",
-    "rgba(0, 0, 0, 0)",
+    "rgb(170, 171, 172)",
   );
-  await expect(exportDialog).toHaveCSS("backdrop-filter", "none");
+  await expect(exportDialog).toHaveCSS("backdrop-filter", "blur(7px)");
+  await expect(exportDialog).toHaveCSS("border-radius", "28px");
   expect(
-    await exportDialog.evaluate(
-      (element) => getComputedStyle(element).backgroundImage,
-    ),
-  ).toContain("rgb(20, 30, 40)");
+    await exportDialog.evaluate((element) => {
+      const backdrop = getComputedStyle(element, "::backdrop");
+      return {
+        backdropFilter: backdrop.backdropFilter,
+        backgroundColor: backdrop.backgroundColor,
+      };
+    }),
+  ).toEqual({
+    backdropFilter: "blur(3px)",
+    backgroundColor: "rgba(1, 2, 3, 0.4)",
+  });
   await exportHost.evaluate((element) => {
     (
       element as HTMLElement & {
@@ -4925,16 +4986,12 @@ test("keeps form and confirmation dialogs opaque under glass themes", async ({
   });
   const suspendDialog = suspendHost.locator("dialog");
   await expect(suspendDialog).toBeVisible();
-  await expect(suspendDialog).not.toHaveCSS(
+  await expect(suspendDialog).toHaveCSS(
     "background-color",
-    "rgba(0, 0, 0, 0)",
+    "rgb(170, 171, 172)",
   );
-  await expect(suspendDialog).toHaveCSS("backdrop-filter", "none");
-  expect(
-    await suspendDialog.evaluate(
-      (element) => getComputedStyle(element).backgroundImage,
-    ),
-  ).toContain("rgb(20, 30, 40)");
+  await expect(suspendDialog).toHaveCSS("backdrop-filter", "blur(7px)");
+  await expect(suspendDialog).toHaveCSS("border-radius", "28px");
 });
 
 test("camera editor configures lights and confirms accessible removal", async ({
