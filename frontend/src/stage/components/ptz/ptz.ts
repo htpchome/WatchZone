@@ -102,7 +102,8 @@ export class PtzComponent extends LitElement {
       ></${toastRegionTag}>
       <div
         class=${[
-          this.expanded ? "ptz-control" : "ptz-trigger-wrap",
+          "ptz-control",
+          this.expanded ? "expanded" : "collapsed",
           visible ? "visible" : "",
         ]
           .filter(Boolean)
@@ -111,6 +112,7 @@ export class PtzComponent extends LitElement {
         aria-label=${this.expanded ? this.localize("ptz.controls") : nothing}
         @pointerenter=${this._overlay.handlePointerEnter}
         @pointerleave=${this._overlay.handlePointerLeave}
+        @pointerdown=${this._stopPropagation}
         @focusin=${this._overlay.handleFocusIn}
         @focusout=${this._overlay.handleFocusOut}
       >
@@ -139,27 +141,18 @@ export class PtzComponent extends LitElement {
                     </button>`
                   : nothing;
               })
-            : html`<button
-                class="ptz-trigger round-button"
-                type="button"
-                aria-label=${this.localize("ptz.expand")}
-                @click=${this._expand}
-              >
-                ${renderIcon("ptz")}
-              </button>`
-        }
-        ${
-          this.expanded
-            ? html`<button
-                class="collapse round-button"
-                type="button"
-                aria-label=${this.localize("ptz.collapse")}
-                @click=${this._collapse}
-              >
-                ${renderIcon("arrowCollapseAll")}
-              </button>`
             : nothing
         }
+        <button
+          class=${`${this.expanded ? "collapse" : "ptz-trigger"} round-button`}
+          type="button"
+          aria-label=${this.localize(
+            this.expanded ? "ptz.collapse" : "ptz.expand",
+          )}
+          @click=${this._toggleExpanded}
+        >
+          ${renderIcon(this.expanded ? "arrowCollapseAll" : "ptz")}
+        </button>
       </div>
     </div>`;
   }
@@ -193,18 +186,16 @@ export class PtzComponent extends LitElement {
     this.requestUpdate();
   }
 
-  private readonly _expand = (): void => {
-    this.expanded = true;
+  private readonly _toggleExpanded = (): void => {
     this._overlay.reveal();
-  };
-
-  private readonly _collapse = (): void => {
-    this.expanded = false;
-    this._overlay.reveal();
+    this.expanded = !this.expanded;
   };
 
   private readonly _preventDefault = (event: Event): void =>
     event.preventDefault();
+
+  private readonly _stopPropagation = (event: Event): void =>
+    event.stopPropagation();
 
   static styles = [roundButtonStyles, ptzStyles];
 }

@@ -5,19 +5,14 @@ export const ptzStyles = css`
     display: block;
     position: relative;
     z-index: 4;
-    inline-size: var(--wzc-camera-control-size);
-    block-size: var(--wzc-camera-control-size);
-    min-block-size: 0;
-    pointer-events: none;
-  }
-
-  :host([expanded]) {
     inline-size: calc(
       3 * var(--wzc-ptz-cell-size) + 2 * var(--wzc-ptz-panel-padding) + 2px
     );
     block-size: calc(
       3 * var(--wzc-ptz-cell-size) + 2 * var(--wzc-ptz-panel-padding) + 2px
     );
+    min-block-size: 0;
+    pointer-events: none;
   }
 
   .ptz-layer {
@@ -27,36 +22,51 @@ export const ptzStyles = css`
     pointer-events: none;
   }
 
-  .ptz-control,
-  .ptz-trigger-wrap {
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity var(--wzc-media-overlay-transition-duration) ease;
-  }
-
   .ptz-control {
-    display: grid;
-    position: relative;
-    grid-template:
-      repeat(3, var(--wzc-ptz-cell-size)) /
-      repeat(3, var(--wzc-ptz-cell-size));
-    place-items: center;
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
     box-sizing: border-box;
-    padding: var(--wzc-ptz-panel-padding);
     color: var(--wzc-media-overlay-color);
     background: var(--wzc-ptz-panel-background);
     border: 1px solid var(--wzc-media-overlay-border-color);
     border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    transform-origin: center;
+    transition:
+      opacity var(--wzc-media-overlay-transition-duration) ease,
+      inline-size var(--wzc-media-overlay-transition-duration) ease,
+      block-size var(--wzc-media-overlay-transition-duration) ease,
+      padding var(--wzc-media-overlay-transition-duration) ease;
   }
 
-  .ptz-trigger-wrap {
+  .ptz-control.expanded {
     display: grid;
-    inline-size: 100%;
-    block-size: 100%;
+    grid-template:
+      repeat(3, var(--wzc-ptz-cell-size)) /
+      repeat(3, var(--wzc-ptz-cell-size));
+    place-items: center;
+    inline-size: calc(
+      3 * var(--wzc-ptz-cell-size) + 2 * var(--wzc-ptz-panel-padding) + 2px
+    );
+    block-size: calc(
+      3 * var(--wzc-ptz-cell-size) + 2 * var(--wzc-ptz-panel-padding) + 2px
+    );
+    padding: var(--wzc-ptz-panel-padding);
   }
 
-  .ptz-control.visible,
-  .ptz-trigger-wrap.visible {
+  .ptz-control.collapsed {
+    display: grid;
+    grid-template: 1fr / 1fr;
+    place-items: center;
+    inline-size: var(--wzc-camera-control-size);
+    block-size: var(--wzc-camera-control-size);
+    padding: 0;
+  }
+
+  .ptz-control.visible {
     opacity: 1;
     pointer-events: auto;
   }
@@ -112,8 +122,8 @@ export const ptzStyles = css`
 
   button.ptz-trigger {
     --wzc-round-button-size: var(--wzc-camera-control-size);
-    --wzc-round-button-background: var(--wzc-media-overlay-background);
-    --wzc-round-button-border-color: var(--wzc-media-overlay-border-color);
+    --wzc-round-button-background: transparent;
+    --wzc-round-button-border-color: transparent;
     --wzc-round-button-hover-background: var(
       --wzc-neutral-control-hover-background
     );
@@ -161,8 +171,7 @@ export const ptzStyles = css`
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .ptz-control,
-    .ptz-trigger-wrap {
+    .ptz-control {
       transition: none;
     }
   }

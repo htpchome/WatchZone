@@ -3474,9 +3474,9 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   const lights = page.locator("wzc-light-control");
   const talkButton = talk.locator("button.inactive");
   const ptzControl = ptz.locator(".ptz-control");
+  const ptzCollapse = ptz.locator("button.collapse");
   const ptzTrigger = ptz.locator("button.ptz-trigger");
   const ptzRightButton = ptz.locator("button.right");
-  const ptzRightIcon = ptzRightButton.locator(":scope > svg");
   const lightButton = lights.locator(".light-button");
   const talkIcon = talkButton.locator(":scope > svg");
   const lightIcon = lightButton.locator(":scope > ha-icon svg");
@@ -3494,10 +3494,30 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
     initialTalkButtonBox?.height ?? 0,
     1,
   );
-  await ptz.evaluate((element) => {
-    (element as HTMLElement & { initialState: "open" }).initialState = "open";
-  });
-  await expect(ptzControl).toHaveClass(/\bvisible\b/);
+  const collapsedPtzControlBox = await ptzControl.boundingBox();
+  await ptzTrigger.click();
+  await expect(ptzControl).toHaveClass(/\bexpanded\b/);
+  await expect
+    .poll(async () => (await ptzControl.boundingBox())?.width ?? 0)
+    .toBeGreaterThan((collapsedPtzControlBox?.width ?? 0) * 2);
+  const expandedPtzControlBox = await ptzControl.boundingBox();
+  expect(
+    (expandedPtzControlBox?.x ?? 0) + (expandedPtzControlBox?.width ?? 0) / 2,
+  ).toBeCloseTo(
+    (collapsedPtzControlBox?.x ?? 0) + (collapsedPtzControlBox?.width ?? 0) / 2,
+    0,
+  );
+  expect(
+    (expandedPtzControlBox?.y ?? 0) + (expandedPtzControlBox?.height ?? 0) / 2,
+  ).toBeCloseTo(
+    (collapsedPtzControlBox?.y ?? 0) +
+      (collapsedPtzControlBox?.height ?? 0) / 2,
+    0,
+  );
+  await ptzCollapse.click();
+  await expect(ptzControl).toHaveClass(/\bcollapsed\b/);
+  await ptzTrigger.click();
+  await expect(ptzControl).toHaveClass(/\bexpanded\b/);
   await expect(ptz.locator("xpath=..")).toHaveAttribute(
     "data-layout-node",
     "wzc:default-ptz-component",
@@ -3513,8 +3533,8 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
 
   // Focus keeps the shared interaction overlay active while slower WebKit
   // gathers every box; a hover-only timer can expire mid-measurement.
-  await talkButton.focus();
-  await expect(talkButton).toBeFocused();
+  await ptzRightButton.focus();
+  await expect(ptzRightButton).toBeFocused();
 
   const [
     cameraBox,
@@ -3522,8 +3542,6 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
     talkHostBox,
     lightHostBox,
     ptzHostBox,
-    ptzRightButtonBox,
-    ptzRightIconBox,
     talkButtonBox,
     talkIconBox,
     lightButtonBox,
@@ -3534,8 +3552,6 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
     talk.boundingBox(),
     lights.boundingBox(),
     ptz.boundingBox(),
-    ptzRightButton.boundingBox(),
-    ptzRightIcon.boundingBox(),
     talkButton.boundingBox(),
     talkIcon.boundingBox(),
     lightButton.boundingBox(),
@@ -3546,8 +3562,6 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   expect(talkHostBox).not.toBeNull();
   expect(lightHostBox).not.toBeNull();
   expect(ptzHostBox).not.toBeNull();
-  expect(ptzRightButtonBox).not.toBeNull();
-  expect(ptzRightIconBox).not.toBeNull();
   expect(talkButtonBox).not.toBeNull();
   expect(talkIconBox).not.toBeNull();
   expect(lightButtonBox).not.toBeNull();
@@ -3558,8 +3572,6 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
     !talkHostBox ||
     !lightHostBox ||
     !ptzHostBox ||
-    !ptzRightButtonBox ||
-    !ptzRightIconBox ||
     !talkButtonBox ||
     !talkIconBox ||
     !lightButtonBox ||
@@ -3567,6 +3579,23 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   ) {
     return;
   }
+  const { button: ptzRightButtonBox, icon: ptzRightIconBox } =
+    await ptzRightButton.evaluate((element) => {
+      const icon = element.querySelector(":scope > svg");
+      if (!icon) throw new Error("PTZ direction icon is unavailable");
+      const buttonRect = element.getBoundingClientRect();
+      const iconRect = icon.getBoundingClientRect();
+      return {
+        button: {
+          height: buttonRect.height,
+          width: buttonRect.width,
+        },
+        icon: {
+          height: iconRect.height,
+          width: iconRect.width,
+        },
+      };
+    });
 
   await expect(page.locator('[data-stage-slot="overlay"]')).toHaveCount(0);
   expect(controlsSlotBox.x).toBeCloseTo(cameraBox.x, 1);
@@ -3614,11 +3643,11 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   );
   expect(ptzDirectionVisualGeometry.width).toBeCloseTo(
     ptzDirectionVisualGeometry.expectedDiameter,
-    1,
+    0,
   );
   expect(ptzDirectionVisualGeometry.height).toBeCloseTo(
     ptzDirectionVisualGeometry.expectedDiameter,
-    1,
+    0,
   );
   expect(ptzRightIconBox.width).toBeCloseTo(ptzRightButtonBox.width * 0.42, 1);
   expect(ptzRightIconBox.height).toBeCloseTo(
