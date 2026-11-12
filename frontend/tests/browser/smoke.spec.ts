@@ -3494,24 +3494,31 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
     initialTalkButtonBox?.height ?? 0,
     1,
   );
-  const collapsedPtzControlBox = await ptzControl.boundingBox();
+  if (!initialPtzTriggerBox) {
+    throw new Error("Expected the collapsed PTZ control to be measurable");
+  }
+  const collapsedPtzControlBox = await ptzControl.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return {
+      height: rect.height,
+      width: rect.width,
+      x: rect.x,
+      y: rect.y,
+    };
+  });
   await ptzTrigger.click();
   await expect(ptzControl).toHaveClass(/\bexpanded\b/);
   await expect
     .poll(async () => (await ptzControl.boundingBox())?.width ?? 0)
-    .toBeGreaterThan((collapsedPtzControlBox?.width ?? 0) * 2);
+    .toBeGreaterThan(initialPtzTriggerBox.width * 2);
   const expandedPtzControlBox = await ptzControl.boundingBox();
   expect(
     (expandedPtzControlBox?.x ?? 0) + (expandedPtzControlBox?.width ?? 0) / 2,
-  ).toBeCloseTo(
-    (collapsedPtzControlBox?.x ?? 0) + (collapsedPtzControlBox?.width ?? 0) / 2,
-    0,
-  );
+  ).toBeCloseTo(collapsedPtzControlBox.x + collapsedPtzControlBox.width / 2, 0);
   expect(
     (expandedPtzControlBox?.y ?? 0) + (expandedPtzControlBox?.height ?? 0) / 2,
   ).toBeCloseTo(
-    (collapsedPtzControlBox?.y ?? 0) +
-      (collapsedPtzControlBox?.height ?? 0) / 2,
+    collapsedPtzControlBox.y + collapsedPtzControlBox.height / 2,
     0,
   );
   await ptzCollapse.click();
@@ -3602,6 +3609,27 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   expect(controlsSlotBox.y).toBeCloseTo(cameraBox.y, 1);
   expect(controlsSlotBox.width).toBeCloseTo(cameraBox.width, 1);
   expect(controlsSlotBox.height).toBeCloseTo(cameraBox.height, 1);
+  const currentPtzControlBox = await ptzControl.boundingBox();
+  expect(currentPtzControlBox).not.toBeNull();
+  if (!currentPtzControlBox) return;
+  expect(currentPtzControlBox.x).toBeGreaterThanOrEqual(cameraBox.x);
+  expect(currentPtzControlBox.y).toBeGreaterThanOrEqual(cameraBox.y);
+  expect(
+    currentPtzControlBox.x + currentPtzControlBox.width,
+  ).toBeLessThanOrEqual(cameraBox.x + cameraBox.width);
+  expect(
+    currentPtzControlBox.y + currentPtzControlBox.height,
+  ).toBeLessThanOrEqual(cameraBox.y + cameraBox.height);
+  expect(
+    currentPtzControlBox.x +
+      currentPtzControlBox.width / 2 -
+      (ptzHostBox.x + ptzHostBox.width / 2),
+  ).toBeCloseTo(talkButtonBox.width / 2, 0);
+  expect(
+    currentPtzControlBox.y +
+      currentPtzControlBox.height / 2 -
+      (ptzHostBox.y + ptzHostBox.height / 2),
+  ).toBeCloseTo(0, 0);
 
   expect(talkHostBox.height).toBeCloseTo(talkButtonBox.height, 0);
   expect(cameraBox.width / cameraBox.height).toBeCloseTo(16 / 9, 1);

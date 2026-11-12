@@ -17,8 +17,13 @@ export const ptzStyles = css`
 
   .ptz-layer {
     position: relative;
-    inline-size: 100%;
-    block-size: 100%;
+    inset-inline-start: calc(var(--wzc-camera-control-size) / 2);
+    inline-size: calc(
+      3 * var(--wzc-ptz-cell-size) + 2 * var(--wzc-ptz-panel-padding) + 2px
+    );
+    block-size: calc(
+      3 * var(--wzc-ptz-cell-size) + 2 * var(--wzc-ptz-panel-padding) + 2px
+    );
     pointer-events: none;
   }
 
