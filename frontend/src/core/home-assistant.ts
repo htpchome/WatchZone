@@ -65,7 +65,10 @@ export interface HomeAssistantThemes {
 }
 
 export interface HomeAssistant {
-  readonly config?: { readonly time_zone?: string };
+  readonly config?: {
+    readonly time_zone?: string;
+    readonly version?: string;
+  };
   readonly states: Readonly<Record<string, HomeAssistantEntity>>;
   readonly connection: HomeAssistantConnection;
   readonly language?: string;

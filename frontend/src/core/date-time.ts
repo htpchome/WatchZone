@@ -39,6 +39,27 @@ export function resolvedHomeAssistantTimeZone(
   );
 }
 
+/** Format the effective IANA zone with a localized generic display name. */
+export function formatHomeAssistantTimeZone(
+  locale: HomeAssistantLocale | undefined,
+): string {
+  const timeZone = resolvedHomeAssistantTimeZone(locale);
+  try {
+    const displayName = new Intl.DateTimeFormat(locale?.language, {
+      timeZone,
+      timeZoneName: "longGeneric",
+    })
+      .formatToParts(new Date())
+      .find((part) => part.type === "timeZoneName")?.value;
+    return displayName && displayName !== timeZone
+      ? `${displayName} (${timeZone})`
+      : timeZone;
+  } catch (error) {
+    if (error instanceof RangeError) return timeZone;
+    throw error;
+  }
+}
+
 export function homeAssistantHour12(
   locale: HomeAssistantLocale | undefined,
 ): boolean | undefined {

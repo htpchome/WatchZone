@@ -661,6 +661,69 @@ describe("reviews module", () => {
     });
   });
 
+  it("does not mark an in-progress review when its video is opened", async () => {
+    const inProgress = {
+      ...reviews[1],
+      end_time: null,
+      id: "frigate:review-in-progress",
+      reviewed: false,
+    };
+    const callWS = vi.fn(async (message: { type: string }) =>
+      message.type === "watchzone/reviews/list"
+        ? { items: [inProgress] }
+        : { reviewed: true },
+    );
+    const api = {
+      callWS,
+      identity: {},
+      locale: { language: "en", time_zone: "server" },
+      resolveUrl: (path: string) => `https://ha.local${path}`,
+      subscribeMessage: vi.fn(),
+    } as unknown as HomeAssistantApi;
+    const selection = new CameraSelectionContext();
+    const module = document.createElement(REVIEWS_TAG) as ReviewsModule;
+    module.api = api;
+    module.cameraSelection = selection;
+    module.targetModuleId = "camera-module";
+    document.body.append(module);
+    selection.publish(
+      "camera-module",
+      {},
+      {
+        activeEntityId: "camera.front",
+        items: [{ entityId: "camera.front", label: "Front" }],
+      },
+      vi.fn(),
+    );
+
+    await vi.waitFor(() => {
+      expect(
+        (
+          module.shadowRoot?.querySelector(ACTIVITY_LIST_TAG) as
+            (HTMLElement & { items: readonly ActivityListItem[] }) | null
+        )?.items,
+      ).toHaveLength(1);
+    });
+    const list = module.shadowRoot?.querySelector(ACTIVITY_LIST_TAG) as
+      (HTMLElement & { items: readonly ActivityListItem[] }) | null;
+    const item = list?.items[0];
+    if (!item) throw new Error("Expected the in-progress review fixture.");
+    expect(item.inProgress).toBe(true);
+
+    list?.dispatchEvent(
+      new CustomEvent(ACTIVITY_LIST_INTENT_EVENT, {
+        bubbles: true,
+        composed: true,
+        detail: { kind: "open_media", media: "video", item },
+      }),
+    );
+    await Promise.resolve();
+
+    expect(callWS).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: "watchzone/reviews/set_reviewed" }),
+    );
+  });
+
   it("exports both alert and detection reviews through a confirmation", async () => {
     const defaultName = "front 1970-01-01 00:01:35 1970-01-01 00:02:09";
     let resolveCreate: ((value: { export_id: string }) => void) | undefined;

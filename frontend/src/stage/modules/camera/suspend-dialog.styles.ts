@@ -87,9 +87,9 @@ export const cameraSuspendDialogStyles = css`
 
   .warning {
     padding: 0.75rem;
-    color: var(--wzc-color-warning-text);
-    background: var(--wzc-color-fill-warning-quiet);
-    border: 1px solid var(--wzc-color-border-warning);
+    color: var(--wzc-suspend-warning-color);
+    background: var(--wzc-suspend-warning-background);
+    border: 1px solid var(--wzc-suspend-warning-border-color);
     border-radius: var(--wzc-radius-medium);
   }
 

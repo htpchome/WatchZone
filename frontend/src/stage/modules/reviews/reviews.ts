@@ -356,6 +356,7 @@ export class ReviewsModule extends LitElement {
     item: ActivityListItem,
     kind: "snapshot" | "video",
   ): Promise<void> {
+    const markReviewedOnOpen = item.inProgress !== true;
     if (kind === "snapshot") {
       const request = activityRecordedMediaRequest(
         item,
@@ -375,7 +376,7 @@ export class ReviewsModule extends LitElement {
       );
       if (request) {
         openRecordedMedia(this, request);
-        this._markReviewed(item);
+        if (markReviewedOnOpen) this._markReviewed(item);
       }
       return;
     }
@@ -387,7 +388,7 @@ export class ReviewsModule extends LitElement {
     );
     if (preview) {
       openRecordedMedia(this, preview);
-      this._markReviewed(item);
+      if (markReviewedOnOpen) this._markReviewed(item);
       void this._resolvePlayback(item);
       return;
     }
@@ -401,7 +402,7 @@ export class ReviewsModule extends LitElement {
     );
     if (request) {
       openRecordedMedia(this, request);
-      this._markReviewed(resolved);
+      if (markReviewedOnOpen) this._markReviewed(resolved);
     }
   }
 

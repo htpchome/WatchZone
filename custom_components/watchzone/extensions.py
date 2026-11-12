@@ -27,6 +27,7 @@ from .providers.live_connection import (
 from .providers.ptz import PtzProvider
 from .providers.recordings import RecordingsProvider
 from .providers.reviews import ReviewsProvider
+from .providers.system_info import SystemInfoProvider
 
 __all__ = [
     "EXTENSION_API_VERSION",
@@ -47,6 +48,7 @@ __all__ = [
     "ReviewsProvider",
     "SendLiveSignalingEvent",
     "TalkCapabilityProvider",
+    "SystemInfoProvider",
     "register_provider_extension",
 ]
 
@@ -75,6 +77,7 @@ class ProviderExtension:
     exports: ExportsProvider | None = None
     recordings: RecordingsProvider | None = None
     reviews: ReviewsProvider | None = None
+    system_info: SystemInfoProvider | None = None
 
 
 class ProviderRegistry:
@@ -133,9 +136,7 @@ class ProviderRegistry:
         extension = self._platforms.get(platform)
         return extension.live_signaling if extension else None
 
-    def live_signaling_provider(
-        self, provider_id: str
-    ) -> LiveSignalingProvider | None:
+    def live_signaling_provider(self, provider_id: str) -> LiveSignalingProvider | None:
         """Resolve live signaling by explicit connection-provider identity."""
         extension = self._providers.get(provider_id)
         return extension.live_signaling if extension else None
@@ -160,9 +161,7 @@ class ProviderRegistry:
         extension = self._platforms.get(platform)
         return extension.talk_signaling if extension else None
 
-    def talk_signaling_provider(
-        self, provider_id: str
-    ) -> LiveSignalingProvider | None:
+    def talk_signaling_provider(self, provider_id: str) -> LiveSignalingProvider | None:
         """Resolve talk signaling by explicit connection-provider identity."""
         extension = self._providers.get(provider_id)
         return extension.talk_signaling if extension else None
@@ -199,18 +198,23 @@ class ProviderRegistry:
         extension = self._platforms.get(platform)
         return extension.reviews if extension else None
 
+    def system_info_providers(self) -> tuple[SystemInfoProvider, ...]:
+        """Return registered provider environment-information capabilities."""
+        return tuple(
+            extension.system_info
+            for extension in self._providers.values()
+            if extension.system_info is not None
+        )
+
     @staticmethod
     def _validate(extension: ProviderExtension) -> None:
         if extension.api_version != EXTENSION_API_VERSION:
             raise ValueError(
-                "Unsupported provider extension API version: "
-                f"{extension.api_version}"
+                f"Unsupported provider extension API version: {extension.api_version}"
             )
         if not extension.provider_id.strip():
             raise ValueError("Provider extension ID must not be empty")
-        if any(
-            not platform.strip() for platform in extension.entity_platforms
-        ):
+        if any(not platform.strip() for platform in extension.entity_platforms):
             raise ValueError("Provider entity platforms must not be empty strings")
         if not extension.entity_platforms and all(
             capability is None
@@ -221,13 +225,9 @@ class ProviderRegistry:
                 extension.talk_capability,
             )
         ):
-            raise ValueError(
-                "Provider extension must declare entity platforms or PTZ"
-            )
+            raise ValueError("Provider extension must declare entity platforms or PTZ")
         interval = extension.camera_runtime_poll_interval
-        if interval is not None and (
-            isinstance(interval, bool) or interval <= 0
-        ):
+        if interval is not None and (isinstance(interval, bool) or interval <= 0):
             raise ValueError("Camera runtime poll interval must be positive")
         if interval is not None and extension.camera_runtime is None:
             raise ValueError(

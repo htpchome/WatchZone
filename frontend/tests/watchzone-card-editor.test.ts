@@ -7,6 +7,7 @@ import {
   ACCORDION_ITEM_TAG,
   CARD_TYPE,
   EDITOR_DIRTY_STATE_KEY,
+  EDITOR_GENERAL_INFO_TAG,
   EDITOR_TEXT_PREVIEW_DELAY_MS,
 } from "../src/core/constants";
 import type { AccordionItem } from "../src/ui/accordion";
@@ -583,6 +584,54 @@ describe("watchzone-card-editor", () => {
       title: "Camera",
       mobile_data_saving: true,
     });
+  });
+
+  it("shows system versions and the effective Home Assistant time zone", async () => {
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as CardEditor;
+    editor.hass = {
+      config: { time_zone: "UTC", version: "2026.11.2" },
+      states: {},
+      connection: { subscribeMessage: async () => () => undefined },
+      callService: async () => undefined,
+      callWS: async <T>(message: HomeAssistantMessage): Promise<T> => {
+        expect(message.type).toBe("watchzone/system_info");
+        return {
+          home_assistant_version: "2026.11.2",
+          providers: [
+            {
+              integration_installed: true,
+              integration_version: "5.15.6",
+              product_name: "Frigate",
+              product_versions: ["0.18.1"],
+              provider_id: "frigate_go2rtc",
+            },
+          ],
+          watchzone_version: "0.0.4-dev.272",
+        } as T;
+      },
+      hassUrl: (path: string) => path,
+      locale: { language: "en-US", time_zone: "America/Chicago" },
+    };
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    document.body.append(editor);
+
+    await vi.waitFor(() => {
+      const info = editor.shadowRoot?.querySelector(EDITOR_GENERAL_INFO_TAG);
+      const summary = info?.shadowRoot?.querySelector(".system-summary");
+      expect(summary?.textContent).toContain("Home Assistant Version");
+      expect(summary?.textContent).toContain("2026.11.2");
+      expect(summary?.textContent).toContain("0.18.1");
+      expect(summary?.textContent).toContain("Installed · v5.15.6");
+      expect(info?.shadowRoot?.textContent).toContain(
+        "Central Time (America/Chicago)",
+      );
+    });
+    const info = editor.shadowRoot?.querySelector(EDITOR_GENERAL_INFO_TAG);
+    expect(
+      info?.shadowRoot?.querySelector(".timezone-copy a")?.getAttribute("href"),
+    ).toBe("/profile/general");
   });
 
   it("defaults live activity highlighting on and saves an opt-out", async () => {

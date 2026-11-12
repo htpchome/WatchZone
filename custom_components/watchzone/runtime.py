@@ -14,6 +14,7 @@ from .features.live_connection import LiveConnectionService
 from .features.ptz import PtzService
 from .features.recordings import RecordingsService
 from .features.reviews import ReviewsService
+from .features.system_info import SystemInfoService
 
 
 @dataclass(slots=True)
@@ -33,6 +34,7 @@ class WatchZoneRuntime:
     events: EventsService
     exports: ExportsService
     reviews: ReviewsService
+    system_info: SystemInfoService
 
     async def async_close(self) -> None:
         """Release integration-owned runtime resources."""

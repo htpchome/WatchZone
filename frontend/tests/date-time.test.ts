@@ -5,6 +5,7 @@ import {
   formatHomeAssistantDateKey,
   formatHomeAssistantEventDate,
   formatHomeAssistantTime,
+  formatHomeAssistantTimeZone,
   homeAssistantDateTimeFormat,
   intlTimeZone,
 } from "../src/core/date-time";
@@ -25,6 +26,15 @@ describe("Home Assistant date and time formatting", () => {
 
   it("preserves a valid IANA time zone", () => {
     expect(intlTimeZone("America/New_York")).toBe("America/New_York");
+  });
+
+  it("formats the effective time zone with a localized display name", () => {
+    expect(
+      formatHomeAssistantTimeZone({
+        language: "en-US",
+        time_zone: "America/Chicago",
+      }),
+    ).toBe("Central Time (America/Chicago)");
   });
 
   it("formats compact event dates in the selected locale", () => {

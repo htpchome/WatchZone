@@ -21,6 +21,7 @@ import {
   ACCORDION_ITEM_TAG,
   ACCORDION_TAG,
   DEFAULT_EVENT_HISTORY_DAYS,
+  EDITOR_GENERAL_INFO_TAG,
   EDITOR_PREVIEW_DRAFT_EVENT,
   EDITOR_TAG,
   EDITOR_TEXT_PREVIEW_DELAY_MS,
@@ -102,11 +103,13 @@ const DEFAULT_LIGHT_ICON = "mdi:lightbulb";
 const accordionTag = unsafeStatic(ACCORDION_TAG);
 const accordionItemTag = unsafeStatic(ACCORDION_ITEM_TAG);
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
+const generalInfoTag = unsafeStatic(EDITOR_GENERAL_INFO_TAG);
 const sortableListTag = unsafeStatic(SORTABLE_LIST_TAG);
 const sortableTileTag = unsafeStatic(SORTABLE_TILE_TAG);
 const EDITOR_STATUS_KEY = "editor-draft-status";
 
 void import("../ui/sortable-list");
+void import("./general-settings-info");
 
 type BooleanConfigFlag =
   | "camera_bar_rounded_corners"
@@ -378,7 +381,10 @@ export class CardEditor extends LitElement {
   }
 
   private _renderGeneralSettings() {
-    return html`
+    return staticHtml`
+      <${generalInfoTag}
+        .hass=${this._hass}
+      ></${generalInfoTag}>
       <ha-input
         required
         auto-validate

@@ -52,6 +52,7 @@ from .features.live_connection import LiveConnectionService
 from .features.ptz import PtzService
 from .features.recordings import RecordingsService
 from .features.reviews import ReviewsService
+from .features.system_info import SystemInfoService
 from .providers.frigate import camera as frigate_camera
 from .providers.frigate import live as frigate_live
 from .providers.frigate.activity_updates import (
@@ -65,6 +66,7 @@ from .providers.frigate.ptz import ptz as frigate_ptz
 from .providers.frigate.recordings import recordings as frigate_recordings
 from .providers.frigate.reviews import reviews as frigate_reviews
 from .providers.frigate.source import live_source as frigate_live_source
+from .providers.frigate.system_info import system_info as frigate_system_info
 from .providers.home_assistant.live_connection import (
     live_source as home_assistant_live_source,
 )
@@ -121,6 +123,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     from .api.ptz import async_register as async_register_ptz_api
     from .api.recordings import async_register as async_register_recordings_api
     from .api.reviews import async_register as async_register_reviews_api
+    from .api.system_info import async_register as async_register_system_info_api
     from .api.talk import async_register as async_register_talk_api
 
     async_register_activity_updates_api(hass)
@@ -132,6 +135,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     async_register_ptz_api(hass)
     async_register_recordings_api(hass)
     async_register_reviews_api(hass)
+    async_register_system_info_api(hass)
     return True
 
 
@@ -158,6 +162,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WatchZoneConfigEntry) ->
         events=EventsService(hass, providers),
         exports=ExportsService(hass, providers),
         reviews=ReviewsService(hass, providers),
+        system_info=SystemInfoService(hass, providers),
     )
     entry.runtime_data = runtime
     hass.data.setdefault(DOMAIN, {})[DATA_RUNTIME] = runtime
@@ -264,6 +269,7 @@ def _register_builtin_providers(hass: HomeAssistant) -> ProviderRegistry:
             events=frigate_events,
             exports=frigate_exports,
             reviews=frigate_reviews,
+            system_info=frigate_system_info,
         )
     )
     domain_data[_DATA_BUILTIN_PROVIDERS] = True

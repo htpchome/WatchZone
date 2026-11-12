@@ -140,6 +140,21 @@ export const themeTokens = css`
       --ha-color-on-warning-quiet,
       var(--wzc-color-text-1)
     );
+    --wzc-suspend-warning-color: color-mix(
+      in srgb,
+      var(--wzc-color-warning-text) 55%,
+      var(--wzc-color-text-1)
+    );
+    --wzc-suspend-warning-background: color-mix(
+      in srgb,
+      var(--wzc-color-fill-warning-quiet) 55%,
+      var(--wzc-task-dialog-background)
+    );
+    --wzc-suspend-warning-border-color: color-mix(
+      in srgb,
+      var(--wzc-color-border-warning) 45%,
+      var(--wzc-color-border)
+    );
     --wzc-color-border: var(
       --ha-card-border-color,
       var(--divider-color, color-mix(in srgb, CanvasText 24%, transparent))

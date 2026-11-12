@@ -28,6 +28,9 @@ class FrigateClient(Protocol):
     async def get_auth_headers(self) -> dict[str, str]:
         """Return current Frigate authentication headers."""
 
+    async def async_get_version(self) -> str:
+        """Return the connected Frigate server version."""
+
 
 @dataclass(frozen=True, slots=True)
 class FrigateSource:

@@ -1,7 +1,7 @@
 {
   "name": "watchzone-frontend",
   "private": true,
-  "version": "0.0.4-dev.271",
+  "version": "0.0.4-dev.272",
   "type": "module",
   "packageManager": "yarn@4.18.1",
   "engines": {
