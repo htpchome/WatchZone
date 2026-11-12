@@ -105,6 +105,11 @@ export class MediaPresentationController implements ReactiveController {
     this.overlay.handlePointerEnd(event);
   };
 
+  public readonly handleLostPointerCapture = (event: PointerEvent): void => {
+    this.zoom.handleLostPointerCapture(event);
+    this.overlay.handlePointerEnd(event);
+  };
+
   public readonly handleWheel = (event: WheelEvent): void =>
     this.zoom.handleWheel(event);
 

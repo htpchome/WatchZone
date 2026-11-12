@@ -222,6 +222,7 @@ export class CameraLivePresentation extends LitElement {
         @pointerdown=${this._media.handlePointerDown}
         @pointerup=${this._media.handlePointerUp}
         @pointercancel=${this._media.handlePointerCancel}
+        @lostpointercapture=${this._media.handleLostPointerCapture}
         @focusin=${this._media.overlay.handleFocusIn}
         @focusout=${this._media.overlay.handleFocusOut}
         @wheel=${this._media.handleWheel}

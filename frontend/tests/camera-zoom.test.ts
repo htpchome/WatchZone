@@ -39,6 +39,7 @@ function createSurface(height = 225): HTMLElement {
 function pointerEvent(
   type: string,
   init: {
+    readonly buttons?: number;
     readonly clientX: number;
     readonly clientY: number;
     readonly pointerId: number;
@@ -63,6 +64,10 @@ function connectPointerEvents(
   surface.addEventListener("pointermove", controller.handlePointerMove);
   surface.addEventListener("pointerup", controller.handlePointerUp);
   surface.addEventListener("pointercancel", controller.handlePointerCancel);
+  surface.addEventListener(
+    "lostpointercapture",
+    controller.handleLostPointerCapture,
+  );
 }
 
 function connectMediaPointerEvents(
@@ -73,6 +78,10 @@ function connectMediaPointerEvents(
   surface.addEventListener("pointermove", controller.handlePointerMove);
   surface.addEventListener("pointerup", controller.handlePointerUp);
   surface.addEventListener("pointercancel", controller.handlePointerCancel);
+  surface.addEventListener(
+    "lostpointercapture",
+    controller.handleLostPointerCapture,
+  );
 }
 
 function tap(
@@ -180,6 +189,91 @@ describe("camera media zoom", () => {
     });
     surface.dispatchEvent(doubleClick);
     expect(doubleClick.defaultPrevented).toBe(true);
+  });
+
+  it("recovers overlay interaction when backgrounding interrupts a pan", () => {
+    const surface = createSurface(400);
+    const controller = new MediaPresentationController(createHost());
+    controller.observe(surface);
+    controller.zoom.setMediaDimensions(400, 300);
+    controller.zoom.setBasePresentationScale(4 / 3);
+    connectMediaPointerEvents(surface, controller);
+
+    surface.dispatchEvent(
+      pointerEvent("pointerdown", {
+        buttons: 1,
+        clientX: 200,
+        clientY: 200,
+        pointerId: 7,
+        pointerType: "mouse",
+      }),
+    );
+    surface.dispatchEvent(
+      pointerEvent("pointermove", {
+        buttons: 1,
+        clientX: 240,
+        clientY: 200,
+        pointerId: 7,
+        pointerType: "mouse",
+      }),
+    );
+    expect(controller.zoom.interacting).toBe(true);
+
+    window.dispatchEvent(new Event("blur"));
+    expect(controller.zoom.interacting).toBe(false);
+    expect(controller.zoom.pannable).toBe(true);
+
+    surface.dispatchEvent(
+      pointerEvent("pointermove", {
+        buttons: 0,
+        clientX: 250,
+        clientY: 200,
+        pointerId: 8,
+        pointerType: "mouse",
+      }),
+    );
+    expect(controller.overlay.visible).toBe(true);
+  });
+
+  it("self-heals a stranded gesture when an unpressed pointer returns", () => {
+    const surface = createSurface(400);
+    const controller = new MediaPresentationController(createHost());
+    controller.observe(surface);
+    controller.zoom.setMediaDimensions(400, 300);
+    controller.zoom.setBasePresentationScale(4 / 3);
+    connectMediaPointerEvents(surface, controller);
+
+    surface.dispatchEvent(
+      pointerEvent("pointerdown", {
+        buttons: 1,
+        clientX: 200,
+        clientY: 200,
+        pointerId: 9,
+        pointerType: "mouse",
+      }),
+    );
+    surface.dispatchEvent(
+      pointerEvent("pointermove", {
+        buttons: 1,
+        clientX: 240,
+        clientY: 200,
+        pointerId: 9,
+        pointerType: "mouse",
+      }),
+    );
+    expect(controller.zoom.interacting).toBe(true);
+
+    surface.dispatchEvent(
+      pointerEvent("pointermove", {
+        buttons: 0,
+        clientX: 260,
+        clientY: 200,
+        pointerId: 10,
+        pointerType: "mouse",
+      }),
+    );
+    expect(controller.zoom.interacting).toBe(false);
+    expect(controller.overlay.visible).toBe(true);
   });
 
   it("dismisses live overlays when pointer or touch starts outside the video", () => {

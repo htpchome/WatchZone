@@ -177,6 +177,7 @@ export class RecordedVideoPlayer extends LitElement {
       @pointermove=${this._media.handlePointerMove}
       @pointerup=${this._media.handlePointerUp}
       @pointercancel=${this._media.handlePointerCancel}
+      @lostpointercapture=${this._media.handleLostPointerCapture}
       @wheel=${this._media.handleWheel}
       @keydown=${this._media.handleKeyDown}
       @focusin=${this._media.overlay.handleFocusIn}

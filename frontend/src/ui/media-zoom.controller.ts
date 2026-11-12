@@ -54,6 +54,7 @@ export class MediaZoomController implements ReactiveController {
   private _basePresentationScale = 1;
   private _dragStart?: DragStart;
   private _gestureMoved = false;
+  private _interactionLifecycleListening = false;
   private _interacting = false;
   private _key?: string;
   private _mediaHeightRatio?: number;
@@ -167,6 +168,7 @@ export class MediaZoomController implements ReactiveController {
     this._surfaceWidth = 0;
     this._surfaceHeight = 0;
     this._releasePointers();
+    this._removeInteractionLifecycleListeners();
     this._dragStart = undefined;
     this._pinchStart = undefined;
     this._tapCandidate = undefined;
@@ -181,6 +183,7 @@ export class MediaZoomController implements ReactiveController {
     this._interacting = false;
     this._gestureMoved = false;
     this._releasePointers();
+    this._removeInteractionLifecycleListeners();
     this._dragStart = undefined;
     this._pinchStart = undefined;
     this._tapCandidate = undefined;
@@ -225,6 +228,7 @@ export class MediaZoomController implements ReactiveController {
       x: event.clientX,
       y: event.clientY,
     });
+    this._listenForInteractionCancellation();
     try {
       surface.setPointerCapture?.(event.pointerId);
     } catch (error) {
@@ -254,6 +258,12 @@ export class MediaZoomController implements ReactiveController {
   };
 
   public readonly handlePointerMove = (event: PointerEvent): void => {
+    // Browsers may suspend a backgrounded page without dispatching the final
+    // pointerup/pointercancel. Repair that stranded gesture as soon as an
+    // unpressed pointer returns so presentation overlays can recover too.
+    if (this._interacting && event.buttons === 0) {
+      this._cancelInteraction();
+    }
     if (!this._pointers.has(event.pointerId)) return;
     this._pointers.set(event.pointerId, {
       type: event.pointerType,
@@ -307,6 +317,11 @@ export class MediaZoomController implements ReactiveController {
 
   public readonly handlePointerCancel = (event: PointerEvent): void => {
     this._finishPointer(event, false);
+  };
+
+  public readonly handleLostPointerCapture = (event: PointerEvent): void => {
+    if (!this._pointers.has(event.pointerId)) return;
+    this._cancelInteraction();
   };
 
   public readonly handleWheel = (event: WheelEvent): void => {
@@ -384,6 +399,9 @@ export class MediaZoomController implements ReactiveController {
       !this._gestureMoved &&
       drag?.pointerId === event.pointerId;
     this._pointers.delete(event.pointerId);
+    if (this._pointers.size === 0) {
+      this._removeInteractionLifecycleListeners();
+    }
     const surface = event.currentTarget as HTMLElement;
     if (surface.hasPointerCapture?.(event.pointerId)) {
       surface.releasePointerCapture(event.pointerId);
@@ -563,4 +581,51 @@ export class MediaZoomController implements ReactiveController {
     }
     this._pointers.clear();
   }
+
+  private _listenForInteractionCancellation(): void {
+    if (this._interactionLifecycleListening) return;
+    this._interactionLifecycleListening = true;
+    window.addEventListener("blur", this._cancelFromEnvironment);
+    window.addEventListener("pagehide", this._cancelFromEnvironment);
+    document.addEventListener("freeze", this._cancelFromEnvironment);
+    document.addEventListener("visibilitychange", this._cancelFromEnvironment);
+  }
+
+  private _removeInteractionLifecycleListeners(): void {
+    if (!this._interactionLifecycleListening) return;
+    this._interactionLifecycleListening = false;
+    window.removeEventListener("blur", this._cancelFromEnvironment);
+    window.removeEventListener("pagehide", this._cancelFromEnvironment);
+    document.removeEventListener("freeze", this._cancelFromEnvironment);
+    document.removeEventListener(
+      "visibilitychange",
+      this._cancelFromEnvironment,
+    );
+  }
+
+  private _cancelInteraction(): void {
+    const active =
+      this._pointers.size > 0 ||
+      this._dragStart !== undefined ||
+      this._pinchStart !== undefined ||
+      this._interacting;
+    this._releasePointers();
+    this._removeInteractionLifecycleListeners();
+    this._dragStart = undefined;
+    this._pinchStart = undefined;
+    this._tapCandidate = undefined;
+    this._interacting = false;
+    this._gestureMoved = false;
+    if (active) this._host.requestUpdate();
+  }
+
+  private readonly _cancelFromEnvironment = (event: Event): void => {
+    if (
+      event.type === "visibilitychange" &&
+      document.visibilityState === "visible"
+    ) {
+      return;
+    }
+    this._cancelInteraction();
+  };
 }
