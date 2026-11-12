@@ -14,6 +14,7 @@ from homeassistant.helpers.importlib import async_import_module
 from yarl import URL
 
 from ..live import ProviderPreparationError
+from ..live_connection import LiveSourceDescriptor
 
 if TYPE_CHECKING:
     from homeassistant.components.camera import Camera
@@ -138,6 +139,24 @@ async def async_resolve_source(
         frigate_instance_id=instance_id,
         stream_name=stream_name,
     )
+
+
+class FrigateLiveSourceProvider:
+    """Resolve an explicitly selected Frigate go2rtc source."""
+
+    async def async_resolve_source(
+        self, hass: HomeAssistant, entity_id: str
+    ) -> LiveSourceDescriptor:
+        source = await async_resolve_source(hass, entity_id)
+        return LiveSourceDescriptor(
+            id=source.source_id,
+            type="frigate_go2rtc",
+            frigate_instance_id=source.frigate_instance_id,
+            stream_name=source.stream_name,
+        )
+
+
+live_source = FrigateLiveSourceProvider()
 
 
 async def async_get_frigate_client(

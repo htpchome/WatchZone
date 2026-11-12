@@ -18,6 +18,12 @@ from .providers.live import (
     ProviderPreparationError,
     SendLiveSignalingEvent,
 )
+from .providers.live_connection import (
+    LiveHlsProvider,
+    LiveSourceDescriptor,
+    LiveSourceProvider,
+    TalkCapabilityProvider,
+)
 from .providers.ptz import PtzProvider
 from .providers.recordings import RecordingsProvider
 from .providers.reviews import ReviewsProvider
@@ -31,12 +37,16 @@ __all__ = [
     "ExportsProvider",
     "LiveSignalingProvider",
     "LiveSignalingSession",
+    "LiveHlsProvider",
+    "LiveSourceDescriptor",
+    "LiveSourceProvider",
     "ProviderExtension",
     "ProviderPreparationError",
     "PtzProvider",
     "RecordingsProvider",
     "ReviewsProvider",
     "SendLiveSignalingEvent",
+    "TalkCapabilityProvider",
     "register_provider_extension",
 ]
 
@@ -51,11 +61,15 @@ class ProviderExtension:
     api_version: int
     provider_id: str
     entity_platforms: frozenset[str]
+    entity_signaling_acceleration: bool = False
     camera_runtime: CameraRuntimeProvider | None = None
     camera_runtime_poll_interval: float | None = None
     activity_updates: ActivityUpdatesProvider | None = None
     live_signaling: LiveSignalingProvider | None = None
+    live_source: LiveSourceProvider | None = None
+    live_hls: LiveHlsProvider | None = None
     talk_signaling: LiveSignalingProvider | None = None
+    talk_capability: TalkCapabilityProvider | None = None
     ptz: PtzProvider | None = None
     events: EventsProvider | None = None
     exports: ExportsProvider | None = None
@@ -126,6 +140,21 @@ class ProviderRegistry:
         extension = self._providers.get(provider_id)
         return extension.live_signaling if extension else None
 
+    def entity_signaling_acceleration(self, provider_id: str) -> bool:
+        """Return whether this connection may accelerate by entity owner."""
+        extension = self._providers.get(provider_id)
+        return bool(extension and extension.entity_signaling_acceleration)
+
+    def live_source_provider(self, provider_id: str) -> LiveSourceProvider | None:
+        """Resolve source discovery by explicit connection identity."""
+        extension = self._providers.get(provider_id)
+        return extension.live_source if extension else None
+
+    def live_hls_provider(self, provider_id: str) -> LiveHlsProvider | None:
+        """Resolve HLS preparation by explicit connection identity."""
+        extension = self._providers.get(provider_id)
+        return extension.live_hls if extension else None
+
     def talk_signaling(self, platform: str) -> LiveSignalingProvider | None:
         """Resolve one platform's optional talk-signaling capability."""
         extension = self._platforms.get(platform)
@@ -137,6 +166,13 @@ class ProviderRegistry:
         """Resolve talk signaling by explicit connection-provider identity."""
         extension = self._providers.get(provider_id)
         return extension.talk_signaling if extension else None
+
+    def talk_capability_provider(
+        self, provider_id: str
+    ) -> TalkCapabilityProvider | None:
+        """Resolve talk discovery by explicit connection identity."""
+        extension = self._providers.get(provider_id)
+        return extension.talk_capability if extension else None
 
     def ptz(self, provider_id: str) -> PtzProvider | None:
         """Resolve PTZ by explicit connection-provider identity."""
@@ -176,7 +212,15 @@ class ProviderRegistry:
             not platform.strip() for platform in extension.entity_platforms
         ):
             raise ValueError("Provider entity platforms must not be empty strings")
-        if not extension.entity_platforms and extension.ptz is None:
+        if not extension.entity_platforms and all(
+            capability is None
+            for capability in (
+                extension.ptz,
+                extension.live_source,
+                extension.live_hls,
+                extension.talk_capability,
+            )
+        ):
             raise ValueError(
                 "Provider extension must declare entity platforms or PTZ"
             )

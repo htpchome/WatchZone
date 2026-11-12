@@ -92,29 +92,35 @@ class LiveSignalingService:
         entity_id: str,
         send_event: SendLiveSignalingEvent,
         *,
+        connection_provider_id: str,
         force_standard: bool = False,
         purpose: str = "live",
-        provider_id: str | None = None,
     ) -> CreatedLiveSignalingSession:
-        """Create one signaling session without starting negotiation."""
+        """Create one signaling session without starting negotiation.
+
+        A registered connection may permit entity-owner acceleration. That
+        changes only signaling; connection identity and standard fallback stay
+        owned by the selected connection.
+        """
         from homeassistant.components.camera.const import StreamType
         from homeassistant.components.camera.helper import get_camera_from_entity_id
 
         await self._async_wait_for_closing(owner_id, entity_id, purpose)
         camera = get_camera_from_entity_id(self._hass, entity_id)
-        if (
-            provider_id is None
-            and StreamType.WEB_RTC
-            not in camera.camera_capabilities.frontend_stream_types
+        accelerated = self._providers.entity_signaling_acceleration(
+            connection_provider_id
+        )
+        if accelerated and StreamType.WEB_RTC not in (
+            camera.camera_capabilities.frontend_stream_types
         ):
             raise HomeAssistantError("Camera does not support WebRTC")
 
         session_id = ulid()
         session: LiveSignalingSession | None = None
         fallback_reason: str | None = "standard_requested"
-        if provider_id is not None:
+        if not accelerated:
             session = await self._async_prepare_explicit_provider_session(
-                provider_id, camera, entity_id, send_event, purpose
+                connection_provider_id, camera, entity_id, send_event, purpose
             )
             fallback_reason = None
         elif not force_standard:

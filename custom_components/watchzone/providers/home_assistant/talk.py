@@ -22,6 +22,18 @@ async def async_talk_capability(
     return await async_two_way_audio_capability(hass, entity_id) is True
 
 
+class HomeAssistantTalkCapabilityProvider:
+    """Discover talk support for the selected Home Assistant connection."""
+
+    async def async_talk_capability(
+        self, hass: HomeAssistant, entity_id: str
+    ) -> bool:
+        return await async_talk_capability(hass, entity_id)
+
+
+talk_capability = HomeAssistantTalkCapabilityProvider()
+
+
 def _resolve_native_talk_capability(capabilities: object) -> tuple[bool, bool]:
     """Return native two-way audio and legacy WebRTC eligibility."""
     supported = getattr(capabilities, "two_way_audio", False) is True

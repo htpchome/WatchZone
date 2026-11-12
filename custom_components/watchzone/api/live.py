@@ -25,8 +25,6 @@ from mashumaro import MissingField
 from webrtc_models import RTCIceCandidateInit
 
 from ..const import DOMAIN
-from ..providers.frigate.hls import async_prepare_hls_endpoint
-from ..providers.frigate.source import async_resolve_source
 from ..providers.live import ProviderPreparationError
 from . import runtime_from_hass
 
@@ -73,19 +71,17 @@ async def ws_live_source(
     entity_id = msg["entity_id"]
     try:
         _require_camera_read(connection, entity_id)
-        if msg["connection"] == "home_assistant":
-            descriptor = {
-                "id": f"home_assistant:{entity_id}",
-                "type": "home_assistant",
-            }
-        else:
-            source = await async_resolve_source(hass, entity_id)
-            descriptor = {
-                "id": source.source_id,
-                "type": "frigate_go2rtc",
-                "frigate_instance_id": source.frigate_instance_id,
-                "stream_name": source.stream_name,
-            }
+        source = await runtime_from_hass(hass).live_connection.async_resolve_source(
+            msg["connection"], entity_id
+        )
+        descriptor = {
+            "id": source.id,
+            "type": source.type,
+        }
+        if source.frigate_instance_id is not None:
+            descriptor["frigate_instance_id"] = source.frigate_instance_id
+        if source.stream_name is not None:
+            descriptor["stream_name"] = source.stream_name
     except (HomeAssistantError, ProviderPreparationError) as err:
         connection.send_error(msg["id"], "live_source_unavailable", str(err))
         return
@@ -108,7 +104,9 @@ async def ws_frigate_hls(
     entity_id = msg["entity_id"]
     try:
         _require_camera_read(connection, entity_id)
-        url = await async_prepare_hls_endpoint(hass, entity_id)
+        url = await runtime_from_hass(hass).live_connection.async_prepare_hls(
+            "frigate_go2rtc", entity_id
+        )
     except (HomeAssistantError, ProviderPreparationError) as err:
         connection.send_error(msg["id"], "frigate_hls_unavailable", str(err))
         return
@@ -173,11 +171,7 @@ async def ws_live_offer(
             _owner_id(connection),
             entity_id,
             send_event,
-            provider_id=(
-                "frigate_go2rtc"
-                if msg["provider"] == "frigate_go2rtc"
-                else None
-            ),
+            connection_provider_id=msg["provider"],
         )
     except HomeAssistantError as err:
         connection.send_error(msg["id"], "webrtc_offer_failed", str(err))

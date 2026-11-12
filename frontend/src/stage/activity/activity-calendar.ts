@@ -1,18 +1,13 @@
 import { html, LitElement, nothing } from "lit";
 
-import { listReviews, type ReviewItem } from "../../api/reviews";
 import { ACTIVITY_CALENDAR_TAG } from "../../core/constants";
 import { homeAssistantDateKey } from "../../core/date-time";
-import type {
-  HomeAssistantApi,
-  HomeAssistantLocale,
-} from "../../core/home-assistant";
+import type { HomeAssistantLocale } from "../../core/home-assistant";
 import {
   englishLocalize,
   type LocalizeFunction,
 } from "../../core/localization";
 import { renderIcon } from "../../ui/icons";
-import { ActiveCameraActivityController } from "./active-camera-activity.controller";
 import type { CameraSelectionContext } from "../camera-selection-context";
 import type { MediaDateContext } from "../media-date-context";
 import { activityCalendarStyles } from "./activity-calendar.styles";
@@ -28,13 +23,13 @@ export type ActivityCalendarMode = "activity" | "recordings";
 /** Localized activity-date popover shared by the activity module stack. */
 export class ActivityCalendar extends LitElement {
   public static properties = {
-    api: { attribute: false },
     cameraSelection: { attribute: false },
     dateContext: { attribute: false },
     disabled: { type: Boolean },
     disabledLabel: { attribute: false },
     historyDays: { attribute: false },
     localize: { attribute: false },
+    locale: { attribute: false },
     mode: { attribute: false },
     targetModuleId: { attribute: false },
     _open: { state: true },
@@ -42,13 +37,13 @@ export class ActivityCalendar extends LitElement {
     _visibleMonth: { state: true },
   };
 
-  public api?: HomeAssistantApi;
   public cameraSelection?: CameraSelectionContext;
   public dateContext?: MediaDateContext;
   public disabled = false;
   public disabledLabel = "";
   public historyDays = 5;
   public localize: LocalizeFunction = englishLocalize;
+  public locale?: HomeAssistantLocale;
   public mode: ActivityCalendarMode = "activity";
   public targetModuleId = "";
 
@@ -64,25 +59,11 @@ export class ActivityCalendar extends LitElement {
   private _unsubscribeDate?: () => void;
   private _unsubscribeAvailability?: () => void;
   private _unsubscribeCameraSelection?: () => void;
-  private _recordingDays: readonly string[] = [];
+  private _availableDays: readonly string[] = [];
   private readonly _popover = new ActivityPopoverController(
     this,
     () => this._open,
     ".calendar-trigger",
-  );
-
-  private readonly _activity = new ActiveCameraActivityController<ReviewItem>(
-    this,
-    () => ({
-      api: this._open && this.mode === "activity" ? this.api : undefined,
-      cameraSelection: this._open ? this.cameraSelection : undefined,
-      historyDays: this.historyDays,
-      targetModuleId: this._open ? this.targetModuleId : "",
-    }),
-    listReviews,
-    () => undefined,
-    "reviews",
-    (notification) => notification.review,
   );
 
   public connectedCallback(): void {
@@ -122,7 +103,7 @@ export class ActivityCalendar extends LitElement {
     this._subscribedEntityId = entityId;
     this._subscribedAvailabilityEntityId = entityId;
     this._selectedDate = undefined;
-    this._recordingDays = [];
+    this._availableDays = [];
     if (this.dateContext && entityId) {
       this._unsubscribeDate = this.dateContext.subscribe(
         entityId,
@@ -134,7 +115,7 @@ export class ActivityCalendar extends LitElement {
       this._unsubscribeAvailability = this.dateContext.subscribeAvailableDates(
         entityId,
         (availableDates) => {
-          this._recordingDays = availableDates;
+          this._availableDays = availableDates;
           this.requestUpdate();
         },
       );
@@ -142,13 +123,7 @@ export class ActivityCalendar extends LitElement {
   }
 
   protected render() {
-    const markedDates = new Set(
-      this.mode === "recordings"
-        ? this._recordingDays
-        : this._activity.items.map(({ start_time }) =>
-            homeAssistantDateKey(start_time, this.api?.locale),
-          ),
-    );
+    const markedDates = new Set(this._availableDays);
     return html`
       <button
         class=${`calendar-trigger${this._selectedDate ? " selected" : ""}`}
@@ -187,13 +162,13 @@ export class ActivityCalendar extends LitElement {
     const todayKey = this._todayKey();
     const oldestKey =
       this.mode === "recordings"
-        ? this._recordingDays.reduce(
+        ? this._availableDays.reduce(
             (oldest, key) => (key < oldest ? key : oldest),
             todayKey,
           )
         : homeAssistantDateKey(
             Date.now() / 1000 - this.historyDays * 24 * 60 * 60,
-            this.api?.locale,
+            this.locale,
           );
     return html`<section
       class="popover"
@@ -313,7 +288,7 @@ export class ActivityCalendar extends LitElement {
   }
 
   private _monthTitle(): string {
-    return abstractDateFormatter(this.api?.locale, {
+    return abstractDateFormatter(this.locale, {
       month: "long",
       year: "numeric",
     }).format(
@@ -323,7 +298,7 @@ export class ActivityCalendar extends LitElement {
 
   private _weekdayLabels(): readonly string[] {
     const first = this._firstWeekday();
-    const formatter = abstractDateFormatter(this.api?.locale, {
+    const formatter = abstractDateFormatter(this.locale, {
       weekday: "short",
     });
     return Array.from({ length: 7 }, (_, index) =>
@@ -333,7 +308,7 @@ export class ActivityCalendar extends LitElement {
 
   private _dayLabel(key: string, marked: boolean): string {
     const [year = 0, month = 1, day = 1] = key.split("-").map(Number);
-    const label = abstractDateFormatter(this.api?.locale, {
+    const label = abstractDateFormatter(this.locale, {
       day: "numeric",
       month: "long",
       year: "numeric",
@@ -349,14 +324,14 @@ export class ActivityCalendar extends LitElement {
   }
 
   private _firstWeekday(): number {
-    const configured = this.api?.locale?.first_weekday;
+    const configured = this.locale?.first_weekday;
     if (configured === "monday") return 1;
     if (configured === "saturday") return 6;
     return 0;
   }
 
   private _todayKey(): string {
-    return homeAssistantDateKey(Date.now() / 1000, this.api?.locale);
+    return homeAssistantDateKey(Date.now() / 1000, this.locale);
   }
 
   private _syncCameraSelection(): void {

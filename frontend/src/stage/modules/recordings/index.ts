@@ -12,7 +12,11 @@ export interface RecordingsModuleConfig {
 
 let definitionPromise: Promise<void> | undefined;
 
-export const moduleDefinition: ModuleDefinition<RecordingsModuleConfig> = {
+export const moduleDefinition: ModuleDefinition<
+  RecordingsModuleConfig,
+  "cameraSelection" | "mediaDate"
+> = {
+  contextKeys: ["cameraSelection", "mediaDate"],
   type: RECORDINGS_MODULE_TYPE,
   validateConfig(value) {
     if (typeof value !== "object" || value === null) {

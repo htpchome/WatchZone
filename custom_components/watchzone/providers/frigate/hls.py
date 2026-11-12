@@ -38,6 +38,18 @@ async def async_prepare_hls_endpoint(
     return stream.endpoint_url("hls")
 
 
+class FrigateLiveHlsProvider:
+    """Prepare HLS for the explicitly selected Frigate connection."""
+
+    async def async_prepare_hls(
+        self, hass: HomeAssistant, entity_id: str
+    ) -> str:
+        return await async_prepare_hls_endpoint(hass, entity_id)
+
+
+live_hls = FrigateLiveHlsProvider()
+
+
 def _camera(hass: HomeAssistant, entity_id: str) -> _Camera:
     """Resolve through Home Assistant lazily during runtime setup."""
     from homeassistant.components.camera.helper import get_camera_from_entity_id

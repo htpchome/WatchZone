@@ -9,6 +9,7 @@ from .features.exports import ExportsService
 from .features.hls_prewarm import HlsPrewarmService
 from .features.layouts import StageDesignStore
 from .features.live import LiveSignalingService
+from .features.live_connection import LiveConnectionService
 from .features.ptz import PtzService
 from .features.recordings import RecordingsService
 from .features.reviews import ReviewsService
@@ -23,6 +24,7 @@ class WatchZoneRuntime:
     camera_runtime: CameraRuntimeService
     hls_prewarm: HlsPrewarmService
     live_signaling: LiveSignalingService
+    live_connection: LiveConnectionService
     stage_designs: StageDesignStore
     ptz: PtzService
     recordings: RecordingsService

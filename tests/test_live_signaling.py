@@ -174,6 +174,61 @@ async def test_provider_resolver_loads_the_entity_owner_dynamically() -> None:
     assert fallback_reason is None
 
 
+async def test_home_assistant_keeps_entity_trickle_ice_acceleration() -> None:
+    """HA selection may accelerate signaling without becoming Frigate mode."""
+    from homeassistant.components.camera.const import StreamType
+
+    provider_session = SimpleNamespace(signaling_path="frigate:trickle_ice")
+    factory = AsyncMock(return_value=provider_session)
+    providers = ProviderRegistry()
+    providers.register(
+        ProviderExtension(
+            api_version=EXTENSION_API_VERSION,
+            provider_id="home_assistant",
+            entity_platforms=frozenset(),
+            entity_signaling_acceleration=True,
+            live_source=Mock(),
+        )
+    )
+    providers.register(
+        ProviderExtension(
+            api_version=EXTENSION_API_VERSION,
+            provider_id="frigate_go2rtc",
+            entity_platforms=frozenset({"frigate"}),
+            live_signaling=SimpleNamespace(async_prepare_session=factory),
+        )
+    )
+    camera = SimpleNamespace(
+        camera_capabilities=SimpleNamespace(
+            frontend_stream_types={StreamType.WEB_RTC}
+        )
+    )
+    service = LiveSignalingService(SimpleNamespace(), providers)  # type: ignore[arg-type]
+
+    with (
+        patch(
+            "homeassistant.components.camera.helper.get_camera_from_entity_id",
+            return_value=camera,
+        ),
+        patch(
+            "custom_components.watchzone.features.live.er.async_get",
+            return_value=SimpleNamespace(
+                async_get=Mock(return_value=SimpleNamespace(platform="frigate"))
+            ),
+        ),
+    ):
+        created = await service.async_create(
+            "owner",
+            "camera.porch",
+            Mock(),
+            connection_provider_id="home_assistant",
+        )
+
+    assert created.signaling_path == "frigate:trickle_ice"
+    assert created.fallback_reason is None
+    factory.assert_awaited_once()
+
+
 async def test_talk_resolver_uses_the_registered_talk_capability() -> None:
     """Talk resolution is separate from live and remains provider-neutral."""
     registry = SimpleNamespace(

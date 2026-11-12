@@ -11,3 +11,4 @@ export type {
   ActivityReviewFacet,
 } from "./activity-filter-context";
 export { ActivityFilterController } from "./activity-filter.controller";
+export { ActivityPopoverController } from "./activity-popover.controller";

@@ -436,6 +436,7 @@ export class CardEditor extends LitElement {
         </span>
         <wzc-segmented-control
           class="editor-segmented-control"
+          appearance="compact"
           .label=${this._t("editor.ptz_overlay_control")}
           .options=${options}
           .value=${selected}

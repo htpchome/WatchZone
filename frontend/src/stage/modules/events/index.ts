@@ -20,7 +20,11 @@ export interface EventsModuleConfig {
 
 let definitionPromise: Promise<void> | undefined;
 
-export const moduleDefinition: ModuleDefinition<EventsModuleConfig> = {
+export const moduleDefinition: ModuleDefinition<
+  EventsModuleConfig,
+  "activityFilter" | "cameraSelection" | "mediaDate"
+> = {
+  contextKeys: ["activityFilter", "cameraSelection", "mediaDate"],
   type: EVENTS_MODULE_TYPE,
   validateConfig(value) {
     if (typeof value !== "object" || value === null) {

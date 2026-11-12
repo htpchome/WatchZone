@@ -21,34 +21,37 @@ export interface LightControlComponentConfig {
 
 let definitionPromise: Promise<void> | undefined;
 
-export const componentDefinition: ComponentDefinition<LightControlComponentConfig> =
-  {
-    type: LIGHT_COMPONENT_TYPE,
-    createElement: () => document.createElement(LIGHT_TAG),
-    define: () =>
-      (definitionPromise ??= import("./light-control").then(() => undefined)),
-    getEntityIds: ({ cameras }) =>
-      cameras.flatMap(({ lights }) => lights.map(({ entityId }) => entityId)),
-    updateElement(element, config, context) {
-      const control = element as LightControlComponent;
-      control.cameraSession = context.cameraSession;
-      control.cameras = config.cameras;
-      control.hass = context.hass;
-      control.localize = context.localize ?? englishLocalize;
-    },
-    validateConfig(value) {
-      if (typeof value !== "object" || value === null) {
-        throw new Error("Light control configuration must be an object.");
-      }
-      const cameras = (value as Record<string, unknown>).cameras;
-      if (!Array.isArray(cameras)) {
-        throw new Error("Light control requires configured cameras.");
-      }
-      return {
-        cameras: cameras.map((camera) => validateCameraLights(camera)),
-      };
-    },
-  };
+export const componentDefinition: ComponentDefinition<
+  LightControlComponentConfig,
+  "cameraSession"
+> = {
+  contextKeys: ["cameraSession"],
+  type: LIGHT_COMPONENT_TYPE,
+  createElement: () => document.createElement(LIGHT_TAG),
+  define: () =>
+    (definitionPromise ??= import("./light-control").then(() => undefined)),
+  getEntityIds: ({ cameras }) =>
+    cameras.flatMap(({ lights }) => lights.map(({ entityId }) => entityId)),
+  updateElement(element, config, context) {
+    const control = element as LightControlComponent;
+    control.cameraSession = context.cameraSession;
+    control.cameras = config.cameras;
+    control.hass = context.hass;
+    control.localize = context.localize ?? englishLocalize;
+  },
+  validateConfig(value) {
+    if (typeof value !== "object" || value === null) {
+      throw new Error("Light control configuration must be an object.");
+    }
+    const cameras = (value as Record<string, unknown>).cameras;
+    if (!Array.isArray(cameras)) {
+      throw new Error("Light control requires configured cameras.");
+    }
+    return {
+      cameras: cameras.map((camera) => validateCameraLights(camera)),
+    };
+  },
+};
 
 function validateCameraLights(value: unknown): CameraLightConfig {
   if (typeof value !== "object" || value === null) {

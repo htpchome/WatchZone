@@ -44,43 +44,6 @@ export const cardEditorStyles = css`
     font-weight: var(--wzc-font-weight-medium);
   }
 
-  .editor-segmented-control::part(container) {
-    overflow: hidden;
-    inline-size: 100%;
-    padding: 0.15rem;
-    background: var(--wzc-color-surface-secondary);
-    border: 1px solid var(--wzc-color-border-control);
-    border-radius: var(--wzc-radius-pill);
-  }
-
-  .editor-segmented-control::part(option) {
-    flex: 1 1 0;
-    min-block-size: 2rem;
-    padding: 0.25rem 0.45rem;
-    overflow: hidden;
-    color: var(--wzc-color-text-1);
-    background: transparent;
-    border: 0;
-    border-radius: var(--wzc-radius-pill);
-    font-size: var(--wzc-font-size-small);
-    text-overflow: ellipsis;
-  }
-
-  .editor-segmented-control::part(selected) {
-    color: var(--wzc-color-primary);
-    background: var(--wzc-color-background);
-    box-shadow: var(--wzc-shadow-small);
-  }
-
-  .editor-segmented-control::part(disabled) {
-    color: var(--wzc-color-text-3);
-  }
-
-  .editor-segmented-control::part(option):focus-visible {
-    outline: 2px solid var(--wzc-color-primary);
-    outline-offset: -2px;
-  }
-
   .camera-list-heading {
     display: flex;
     align-items: baseline;

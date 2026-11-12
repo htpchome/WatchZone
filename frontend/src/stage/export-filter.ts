@@ -3,8 +3,9 @@ import { html, LitElement, nothing } from "lit";
 import { EXPORT_FILTER_TAG } from "../core/constants";
 import { englishLocalize, type LocalizeFunction } from "../core/localization";
 import { renderIcon } from "../ui/icons";
-import { activityFilterStyles } from "./activity/activity-filter.styles";
-import { ActivityPopoverController } from "./activity/activity-popover.controller";
+import { PopoverInteractionController } from "../ui/popover-interaction.controller";
+import { exportFilterStyles } from "./export-filter.styles";
+import { ActivityPopoverController } from "./activity";
 import type {
   ExportFilterContext,
   ExportFilterState,
@@ -36,19 +37,20 @@ export class ExportFilter extends LitElement {
     () => this._open,
     ".filter-trigger",
   );
+  private readonly _popoverInteraction = new PopoverInteractionController(
+    this,
+    () => this._open,
+    (open) => {
+      this._open = open;
+    },
+    ".filter-trigger",
+  );
 
   public connectedCallback(): void {
     super.connectedCallback();
-    document.addEventListener("pointerdown", this._handleDocumentPointerDown);
-    document.addEventListener("keydown", this._handleDocumentKeyDown);
   }
 
   public disconnectedCallback(): void {
-    document.removeEventListener(
-      "pointerdown",
-      this._handleDocumentPointerDown,
-    );
-    document.removeEventListener("keydown", this._handleDocumentKeyDown);
     this._unsubscribe?.();
     this._unsubscribe = undefined;
     super.disconnectedCallback();
@@ -145,20 +147,7 @@ export class ExportFilter extends LitElement {
     </section>`;
   }
 
-  private readonly _handleDocumentPointerDown = (event: PointerEvent): void => {
-    if (!this._open || event.composedPath().includes(this)) return;
-    this._open = false;
-  };
-
-  private readonly _handleDocumentKeyDown = (event: KeyboardEvent): void => {
-    if (!this._open || event.key !== "Escape") return;
-    this._open = false;
-    this.shadowRoot
-      ?.querySelector<HTMLButtonElement>(".filter-trigger")
-      ?.focus();
-  };
-
-  static styles = activityFilterStyles;
+  static styles = exportFilterStyles;
 }
 
 if (!customElements.get(EXPORT_FILTER_TAG)) {

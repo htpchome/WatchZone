@@ -7,42 +7,59 @@ import type { TranslationKey } from "../core/localization";
 import type { MediaDateContext } from "./media-date-context";
 import type { ExportFilterContext } from "./export-filter-context";
 
-export interface PlaceableRuntimeContext {
-  readonly activityFilter: ActivityFilterContext;
+export interface PlaceableBaseRuntimeContext {
   readonly api?: HomeAssistantApi;
+  readonly hass?: HomeAssistant;
+  readonly localize?: LocalizeFunction;
+  readonly placeableId: string;
+}
+
+export interface PlaceableContextBindings {
+  readonly activityFilter: ActivityFilterContext;
   readonly cameraSelection: CameraSelectionContext;
   readonly cameraSession: CameraSessionContext;
   readonly exportFilter: ExportFilterContext;
-  readonly hass?: HomeAssistant;
-  readonly localize?: LocalizeFunction;
   readonly mediaDate: MediaDateContext;
-  readonly placeableId: string;
 }
+
+export type PlaceableContextKey = keyof PlaceableContextBindings;
+export type PlaceableRuntimeContext<
+  TContext extends PlaceableContextKey = PlaceableContextKey,
+> = PlaceableBaseRuntimeContext & Pick<PlaceableContextBindings, TContext>;
 
 export interface PlaceablePreparation {
   release(): void;
 }
 
-export interface PlaceableDefinition<TConfig = unknown> {
+export interface PlaceableDefinition<
+  TConfig = unknown,
+  TContext extends PlaceableContextKey = PlaceableContextKey,
+> {
+  readonly contextKeys?: readonly TContext[];
   readonly type: string;
   createElement(): HTMLElement;
   define(): Promise<void>;
   getEntityIds(config: TConfig): readonly string[];
   prepare?(
     config: TConfig,
-    context: PlaceableRuntimeContext,
+    context: PlaceableRuntimeContext<TContext>,
   ): Promise<PlaceablePreparation | undefined>;
   updateElement(
     element: HTMLElement,
     config: TConfig,
-    context: PlaceableRuntimeContext,
+    context: PlaceableRuntimeContext<TContext>,
   ): void;
   validateConfig(value: unknown): TConfig;
 }
 
-export type ModuleDefinition<TConfig = unknown> = PlaceableDefinition<TConfig>;
-export type ComponentDefinition<TConfig = unknown> =
-  PlaceableDefinition<TConfig>;
+export type ModuleDefinition<
+  TConfig = unknown,
+  TContext extends PlaceableContextKey = PlaceableContextKey,
+> = PlaceableDefinition<TConfig, TContext>;
+export type ComponentDefinition<
+  TConfig = unknown,
+  TContext extends PlaceableContextKey = PlaceableContextKey,
+> = PlaceableDefinition<TConfig, TContext>;
 
 export interface PlaceableLoaderRegistration {
   readonly load: () => Promise<PlaceableDefinition>;
@@ -51,6 +68,16 @@ export interface PlaceableLoaderRegistration {
     readonly labelKey: TranslationKey;
   };
   readonly placeholder?: "activity" | "camera" | "camera-navigation";
+  readonly stackAccessories?: (
+    config: unknown,
+  ) => StageStackAccessoryConfiguration | undefined;
+}
+
+export interface StageStackAccessoryConfiguration {
+  readonly calendar: "activity" | "disabled" | "recordings";
+  readonly filter: "activity" | "exports" | "none";
+  readonly historyDays?: number;
+  readonly targetModuleId?: string;
 }
 
 export type PlaceableLoaderMap = Readonly<

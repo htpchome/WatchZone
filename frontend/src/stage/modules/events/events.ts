@@ -2,7 +2,9 @@ import { LitElement, type PropertyValues } from "lit";
 import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import { listEvents, type EventItem } from "../../../api/events";
+import { listReviews, type ReviewItem } from "../../../api/reviews";
 import { activityRecordedMediaRequest } from "../../../core/activity-media";
+import { homeAssistantDateKey } from "../../../core/date-time";
 import {
   ActiveCameraActivityController,
   ActivityFilterController,
@@ -15,7 +17,10 @@ import {
   EVENTS_TAG,
   ACTIVITY_LIST_INTENT_EVENT,
 } from "../../../core/constants";
-import type { HomeAssistantApi } from "../../../core/home-assistant";
+import type {
+  HomeAssistantApi,
+  HomeAssistantLocale,
+} from "../../../core/home-assistant";
 import {
   englishLocalize,
   type LocalizeFunction,
@@ -64,6 +69,9 @@ export class EventsModule extends LitElement {
   private _publishedActivity?: readonly EventItem[];
   private _publishedEntityId?: string;
   private _publishedFilter?: ActivityFilterContext;
+  private _publishedReviewActivity?: readonly ReviewItem[];
+  private _publishedDateEntityId?: string;
+  private _publishedDateContext?: MediaDateContext;
   private readonly _filter = new ActivityFilterController(
     this,
     () => this.activityFilter,
@@ -88,6 +96,27 @@ export class EventsModule extends LitElement {
       }),
     "events",
   );
+  private readonly _reviewActivity =
+    new ActiveCameraActivityController<ReviewItem>(
+      this,
+      () => ({
+        api: this._needsReviewFacets() ? this.api : undefined,
+        cameraSelection: this._needsReviewFacets()
+          ? this.cameraSelection
+          : undefined,
+        historyDays: this.historyDays,
+        targetModuleId: this._needsReviewFacets() ? this.targetModuleId : "",
+      }),
+      listReviews,
+      () => undefined,
+      "reviews",
+      (notification) => notification.review,
+    );
+
+  public disconnectedCallback(): void {
+    this._clearPublishedDates();
+    super.disconnectedCallback();
+  }
 
   protected update(changed: PropertyValues<this>): void {
     const entityId = this._activity.activeEntityId;
@@ -110,7 +139,70 @@ export class EventsModule extends LitElement {
         })),
       );
     }
+    if (
+      entityId &&
+      this.activityFilter &&
+      this._reviewActivity.activeEntityId === entityId &&
+      this._publishedReviewActivity !== this._reviewActivity.items
+    ) {
+      this._publishedReviewActivity = this._reviewActivity.items;
+      this.activityFilter.publishReviews(
+        entityId,
+        this._reviewActivity.items.map((review) => ({
+          classification: review.classification,
+          id: review.id,
+          labels: [...review.labels, ...review.sub_labels],
+          relatedEventIds: review.related_event_ids,
+          reviewed: review.reviewed,
+          zones: review.zones,
+        })),
+      );
+    }
+    this._publishAvailableDates();
     super.update(changed);
+  }
+
+  private _needsReviewFacets(): boolean {
+    return (
+      this._filter.state.reviews.length === 0 &&
+      (this._filter.state.classification !== "all" ||
+        this._filter.state.reviewStatus !== "all")
+    );
+  }
+
+  private _publishAvailableDates(): void {
+    const entityId = this._activity.activeEntityId;
+    const context = this.mediaDate;
+    if (
+      this._publishedDateContext &&
+      this._publishedDateEntityId &&
+      (this._publishedDateContext !== context ||
+        this._publishedDateEntityId !== entityId)
+    ) {
+      this._publishedDateContext.clearAvailableDates(
+        this._publishedDateEntityId,
+        this,
+      );
+    }
+    this._publishedDateContext = context;
+    this._publishedDateEntityId = entityId;
+    if (!context || !entityId) return;
+    context.publishAvailableDates(
+      entityId,
+      this,
+      activityDates(this._activity.items, this.api?.locale),
+    );
+  }
+
+  private _clearPublishedDates(): void {
+    if (this._publishedDateContext && this._publishedDateEntityId) {
+      this._publishedDateContext.clearAvailableDates(
+        this._publishedDateEntityId,
+        this,
+      );
+    }
+    this._publishedDateContext = undefined;
+    this._publishedDateEntityId = undefined;
   }
 
   protected render() {
@@ -186,6 +278,17 @@ export class EventsModule extends LitElement {
 
 if (!customElements.get(EVENTS_TAG)) {
   customElements.define(EVENTS_TAG, EventsModule);
+}
+
+function activityDates(
+  items: readonly EventItem[],
+  locale: HomeAssistantLocale | undefined,
+): readonly string[] {
+  return [
+    ...new Set(
+      items.map(({ start_time }) => homeAssistantDateKey(start_time, locale)),
+    ),
+  ].sort();
 }
 
 declare global {

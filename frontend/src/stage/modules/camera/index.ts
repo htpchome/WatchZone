@@ -32,7 +32,11 @@ const posterPreloads = new Map<string, HTMLImageElement>();
 const friendlyNameCaches = new WeakMap<CameraModule, Map<string, string>>();
 let definitionPromise: Promise<void> | undefined;
 
-export const moduleDefinition: ModuleDefinition<CameraModuleConfig> = {
+export const moduleDefinition: ModuleDefinition<
+  CameraModuleConfig,
+  "cameraSelection" | "cameraSession"
+> = {
+  contextKeys: ["cameraSelection", "cameraSession"],
   type: CAMERA_MODULE_TYPE,
   validateConfig: validateCameraConfig,
   getEntityIds: ({ cameras }) => cameras.map(({ entityId }) => entityId),
@@ -100,7 +104,7 @@ function preloadPoster(url: string): void {
 function updateCameraElement(
   camera: CameraModule,
   config: CameraModuleConfig,
-  context: PlaceableRuntimeContext,
+  context: PlaceableRuntimeContext<"cameraSelection" | "cameraSession">,
 ): void {
   const friendlyNames = cameraFriendlyNames(camera);
   const activeEntityIds = new Set(

@@ -11,12 +11,6 @@ import { CameraSessionContext } from "./camera-session-context";
 import { CameraSelectionContext } from "./camera-selection-context";
 import { ActivityFilterContext } from "./activity/activity-filter-context";
 import { ExportFilterContext } from "./export-filter-context";
-import {
-  REVIEWS_MODULE_TYPE,
-  EVENTS_MODULE_TYPE,
-  EXPORTS_MODULE_TYPE,
-  RECORDINGS_MODULE_TYPE,
-} from "../core/constants";
 import { MediaDateContext } from "./media-date-context";
 import type {
   HomeAssistant,
@@ -40,6 +34,7 @@ import {
 import { englishLocalize, type LocalizeFunction } from "../core/localization";
 import type {
   PlaceableDefinition,
+  PlaceableContextBindings,
   PlaceablePreparation,
   PlaceableRuntimeContext,
 } from "./placeable";
@@ -84,13 +79,7 @@ export class LayoutRuntime implements ReactiveController {
   private readonly _cameraSession = new CameraSessionContext();
   private readonly _exportFilter = new ExportFilterContext();
   private readonly _mediaDate = new MediaDateContext();
-  private _context: Omit<PlaceableRuntimeContext, "placeableId"> = {
-    activityFilter: this._activityFilter,
-    cameraSelection: this._cameraSelection,
-    cameraSession: this._cameraSession,
-    exportFilter: this._exportFilter,
-    mediaDate: this._mediaDate,
-  };
+  private _context: Omit<PlaceableRuntimeContext<never>, "placeableId"> = {};
   private readonly _activeStageIds: Partial<Record<StageVariantName, string>> =
     {};
   private _catalog?: StageCatalog;
@@ -189,12 +178,7 @@ export class LayoutRuntime implements ReactiveController {
     const transportChanged = this._context.api?.identity !== api?.identity;
     const localeChanged = this._context.localize !== localize;
     this._context = {
-      activityFilter: this._activityFilter,
       api,
-      cameraSelection: this._cameraSelection,
-      cameraSession: this._cameraSession,
-      exportFilter: this._exportFilter,
-      mediaDate: this._mediaDate,
       hass,
       localize,
     };
@@ -325,7 +309,7 @@ export class LayoutRuntime implements ReactiveController {
             </button>`;
           },
         )}
-        ${this._renderStackControls(node, active)}
+        ${this._renderStackControls(active)}
       </nav>
       <div class="stage-stack-content">
         ${active ? this._renderStackModule(active) : nothing}
@@ -334,62 +318,52 @@ export class LayoutRuntime implements ReactiveController {
   }
 
   private _renderStackControls(
-    node: StageStackNode,
     active: StageModuleNode | undefined,
   ): TemplateResult | typeof nothing {
     if (!active) return nothing;
-    const exports = active.moduleType === EXPORTS_MODULE_TYPE;
-    if (exports) {
+    const accessories = this._moduleLoader
+      .getRegistration(active.moduleType)
+      ?.stackAccessories?.(active.config);
+    if (!accessories) return nothing;
+    if (accessories.filter === "exports") {
       void defineExportFilter();
-      void defineActivityControls();
-      return html`<wzc-export-filter
-          .filterContext=${this._exportFilter}
-          .localize=${this._context.localize ?? englishLocalize}
-          .scopeId=${active.id}
-        ></wzc-export-filter>
-        <wzc-activity-calendar
-          .disabled=${true}
-          .disabledLabel=${(this._context.localize ?? englishLocalize)(
-            "exports.calendar_unavailable",
-          )}
-          .localize=${this._context.localize ?? englishLocalize}
-        ></wzc-activity-calendar>`;
     }
-    const reviews = node.children.find(
-      ({ moduleType }) => moduleType === REVIEWS_MODULE_TYPE,
-    );
-    const hasEvents = node.children.some(
-      ({ moduleType }) => moduleType === EVENTS_MODULE_TYPE,
-    );
-    if (!reviews || !hasEvents || !isActivityConfig(reviews.config)) {
-      return nothing;
-    }
-    const activity =
-      active.moduleType === REVIEWS_MODULE_TYPE ||
-      active.moduleType === EVENTS_MODULE_TYPE;
-    const recordings = active.moduleType === RECORDINGS_MODULE_TYPE;
-    if (!activity && !recordings) return nothing;
-    const targetModuleId = isTargetModuleConfig(active.config)
-      ? active.config.targetModuleId
-      : reviews.config.targetModuleId;
     void defineActivityControls();
-    return html`<wzc-activity-filter
-        .api=${this._context.api}
-        .cameraSelection=${this._cameraSelection}
-        .disabled=${recordings}
-        .filterContext=${this._activityFilter}
-        .historyDays=${reviews.config.historyDays}
-        .localize=${this._context.localize ?? englishLocalize}
-        .targetModuleId=${reviews.config.targetModuleId}
-      ></wzc-activity-filter>
+    return html`${
+        accessories.filter === "activity"
+          ? html`<wzc-activity-filter
+              .cameraSelection=${this._cameraSelection}
+              .filterContext=${this._activityFilter}
+              .locale=${this._context.api?.locale}
+              .localize=${this._context.localize ?? englishLocalize}
+              .targetModuleId=${accessories.targetModuleId ?? ""}
+            ></wzc-activity-filter>`
+          : accessories.filter === "exports"
+            ? html`<wzc-export-filter
+                .filterContext=${this._exportFilter}
+                .localize=${this._context.localize ?? englishLocalize}
+                .scopeId=${active.id}
+              ></wzc-export-filter>`
+            : nothing
+      }
       <wzc-activity-calendar
-        .api=${this._context.api}
         .cameraSelection=${this._cameraSelection}
         .dateContext=${this._mediaDate}
-        .historyDays=${reviews.config.historyDays}
+        .disabled=${accessories.calendar === "disabled"}
+        .disabledLabel=${
+          accessories.calendar === "disabled"
+            ? (this._context.localize ?? englishLocalize)(
+                "exports.calendar_unavailable",
+              )
+            : ""
+        }
+        .historyDays=${accessories.historyDays ?? 1}
         .localize=${this._context.localize ?? englishLocalize}
-        .mode=${recordings ? "recordings" : "activity"}
-        .targetModuleId=${targetModuleId}
+        .locale=${this._context.api?.locale}
+        .mode=${
+          accessories.calendar === "recordings" ? "recordings" : "activity"
+        }
+        .targetModuleId=${accessories.targetModuleId ?? ""}
       ></wzc-activity-calendar>`;
   }
 
@@ -679,7 +653,21 @@ export class LayoutRuntime implements ReactiveController {
   }
 
   private _runtimeContext(record: PlaceableRecord): PlaceableRuntimeContext {
-    return { ...this._context, placeableId: record.node.id };
+    const bindings: PlaceableContextBindings = {
+      activityFilter: this._activityFilter,
+      cameraSelection: this._cameraSelection,
+      cameraSession: this._cameraSession,
+      exportFilter: this._exportFilter,
+      mediaDate: this._mediaDate,
+    };
+    const selected = Object.fromEntries(
+      (record.definition?.contextKeys ?? []).map((key) => [key, bindings[key]]),
+    );
+    return {
+      ...this._context,
+      ...selected,
+      placeableId: record.node.id,
+    } as PlaceableRuntimeContext;
   }
 
   private _removeMissingRecords(ids: ReadonlySet<string>): void {
@@ -762,27 +750,4 @@ function sameEntityRefs(
 
 function messageFrom(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback;
-}
-
-function isActivityConfig(
-  value: unknown,
-): value is { readonly historyDays: number; readonly targetModuleId: string } {
-  if (typeof value !== "object" || value === null) return false;
-  const config = value as Record<string, unknown>;
-  return (
-    typeof config.historyDays === "number" &&
-    typeof config.targetModuleId === "string" &&
-    config.targetModuleId.length > 0
-  );
-}
-
-function isTargetModuleConfig(
-  value: unknown,
-): value is { readonly targetModuleId: string } {
-  if (typeof value !== "object" || value === null) return false;
-  const config = value as Record<string, unknown>;
-  return (
-    typeof config.targetModuleId === "string" &&
-    config.targetModuleId.length > 0
-  );
 }

@@ -25,8 +25,6 @@ from mashumaro import MissingField
 from webrtc_models import RTCIceCandidateInit
 
 from ..const import DOMAIN
-from ..providers.frigate.capabilities import async_two_way_audio_capability
-from ..providers.home_assistant.talk import async_talk_capability
 from . import runtime_from_hass
 
 _LOGGER = logging.getLogger(__name__)
@@ -68,10 +66,10 @@ async def ws_talk_capability(
     """Report whether Home Assistant exposes a usable two-way-audio path."""
     try:
         _require_camera_read(connection, msg["entity_id"])
-        supported = (
-            await async_two_way_audio_capability(hass, msg["entity_id"])
-            if msg["provider"] == "frigate_go2rtc"
-            else await async_talk_capability(hass, msg["entity_id"])
+        supported = await runtime_from_hass(
+            hass
+        ).live_connection.async_talk_capability(
+            msg["provider"], msg["entity_id"]
         )
     except HomeAssistantError as err:
         connection.send_error(msg["id"], "talk_capability_failed", str(err))
@@ -104,15 +102,12 @@ async def ws_talk_offer(
     entity_id = msg["entity_id"]
     try:
         _require_camera_read(connection, entity_id)
-        supported = (
-            await async_two_way_audio_capability(hass, entity_id)
-            if msg["provider"] == "frigate_go2rtc"
-            else await async_talk_capability(hass, entity_id)
+        runtime = runtime_from_hass(hass)
+        supported = await runtime.live_connection.async_talk_capability(
+            msg["provider"], entity_id
         )
         if not supported:
             raise HomeAssistantError("Camera does not support two-way audio")
-        runtime = runtime_from_hass(hass)
-
         @callback
         def send_event(event: dict[str, object]) -> None:
             connection.send_message(event_message(msg["id"], event))
@@ -121,13 +116,9 @@ async def ws_talk_offer(
             _owner_id(connection),
             entity_id,
             send_event,
+            connection_provider_id=msg["provider"],
             force_standard=msg["force_standard"] or msg["capability_probe"],
             purpose="talk_probe" if msg["capability_probe"] else "talk",
-            provider_id=(
-                "frigate_go2rtc"
-                if msg["provider"] == "frigate_go2rtc"
-                else None
-            ),
         )
     except HomeAssistantError as err:
         connection.send_error(msg["id"], "talk_offer_failed", str(err))

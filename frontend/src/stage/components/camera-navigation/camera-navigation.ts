@@ -63,6 +63,7 @@ export class CameraNavigationComponent extends LitElement {
     >
       <wzc-segmented-control
         class="items"
+        appearance="navigation"
         mode="tab"
         .label=${this.localize("camera.navigation")}
         .options=${this._state.items.map(({ entityId, label }) => ({

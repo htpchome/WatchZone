@@ -122,6 +122,18 @@ async def async_two_way_audio_capability(
     return payload is not None and _has_audio_backchannel(payload)
 
 
+class FrigateTalkCapabilityProvider:
+    """Discover talk support for an explicitly selected Frigate connection."""
+
+    async def async_talk_capability(
+        self, hass: HomeAssistant, entity_id: str
+    ) -> bool:
+        return await async_two_way_audio_capability(hass, entity_id) is True
+
+
+talk_capability = FrigateTalkCapabilityProvider()
+
+
 def _stream_metadata_requests(
     base_url: str, camera_name: str
 ) -> tuple[tuple[URL, dict[str, str]], ...]:

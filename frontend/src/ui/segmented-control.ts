@@ -18,16 +18,19 @@ export interface SegmentedControlValueDetail {
 }
 
 export type SegmentedControlMode = "radio" | "tab";
+export type SegmentedControlAppearance = "compact" | "navigation";
 
 /** Shared single-selection control with radio-group or tab-list semantics. */
 export class SegmentedControl extends LitElement {
   public static properties = {
+    appearance: { reflect: true, type: String },
     label: { type: String },
     mode: { reflect: true, type: String },
     options: { attribute: false },
     value: { type: String },
   };
 
+  public appearance: SegmentedControlAppearance = "compact";
   public label = "";
   public mode: SegmentedControlMode = "radio";
   public options: readonly SegmentedControlOption[] = [];

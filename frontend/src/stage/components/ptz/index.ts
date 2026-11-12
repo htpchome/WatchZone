@@ -12,7 +12,11 @@ export interface PtzComponentConfig {
 
 let definitionPromise: Promise<void> | undefined;
 
-export const componentDefinition: ComponentDefinition<PtzComponentConfig> = {
+export const componentDefinition: ComponentDefinition<
+  PtzComponentConfig,
+  "cameraSession"
+> = {
+  contextKeys: ["cameraSession"],
   type: PTZ_COMPONENT_TYPE,
   createElement: () => document.createElement(PTZ_TAG),
   define: () => (definitionPromise ??= import("./ptz").then(() => undefined)),

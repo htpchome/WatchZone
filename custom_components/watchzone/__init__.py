@@ -45,6 +45,7 @@ from .features.exports import ExportsService
 from .features.hls_prewarm import HlsPrewarmService
 from .features.layouts import StageDesignStore
 from .features.live import LiveSignalingService
+from .features.live_connection import LiveConnectionService
 from .features.ptz import PtzService
 from .features.recordings import RecordingsService
 from .features.reviews import ReviewsService
@@ -53,12 +54,21 @@ from .providers.frigate import live as frigate_live
 from .providers.frigate.activity_updates import (
     activity_updates as frigate_activity_updates,
 )
+from .providers.frigate.capabilities import talk_capability as frigate_talk_capability
 from .providers.frigate.events import events as frigate_events
 from .providers.frigate.exports import exports as frigate_exports
+from .providers.frigate.hls import live_hls as frigate_live_hls
 from .providers.frigate.ptz import ptz as frigate_ptz
 from .providers.frigate.recordings import recordings as frigate_recordings
 from .providers.frigate.reviews import reviews as frigate_reviews
+from .providers.frigate.source import live_source as frigate_live_source
+from .providers.home_assistant.live_connection import (
+    live_source as home_assistant_live_source,
+)
 from .providers.home_assistant.ptz import ptz as home_assistant_ptz
+from .providers.home_assistant.talk import (
+    talk_capability as home_assistant_talk_capability,
+)
 from .runtime import WatchZoneRuntime
 
 _LOGGER = logging.getLogger(__name__)
@@ -137,6 +147,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WatchZoneConfigEntry) ->
         camera_runtime=camera_runtime,
         hls_prewarm=hls_prewarm,
         live_signaling=LiveSignalingService(hass, providers),
+        live_connection=LiveConnectionService(hass, providers),
         stage_designs=stage_designs,
         ptz=PtzService(hass, providers),
         recordings=RecordingsService(hass, providers),
@@ -210,7 +221,10 @@ def _register_builtin_providers(hass: HomeAssistant) -> ProviderRegistry:
             api_version=EXTENSION_API_VERSION,
             provider_id="home_assistant",
             entity_platforms=frozenset(),
+            entity_signaling_acceleration=True,
+            live_source=home_assistant_live_source,
             ptz=home_assistant_ptz,
+            talk_capability=home_assistant_talk_capability,
         )
     )
     registry.register(
@@ -222,7 +236,10 @@ def _register_builtin_providers(hass: HomeAssistant) -> ProviderRegistry:
             camera_runtime=frigate_camera,
             camera_runtime_poll_interval=1.0,
             live_signaling=frigate_live,
+            live_source=frigate_live_source,
+            live_hls=frigate_live_hls,
             talk_signaling=frigate_live,
+            talk_capability=frigate_talk_capability,
             ptz=frigate_ptz,
             recordings=frigate_recordings,
             events=frigate_events,

@@ -1,15 +1,14 @@
 import { html, LitElement, nothing } from "lit";
 
-import { listReviews, type ReviewItem } from "../../api/reviews";
 import { ACTIVITY_FILTER_TAG } from "../../core/constants";
-import type { HomeAssistantApi } from "../../core/home-assistant";
+import type { HomeAssistantLocale } from "../../core/home-assistant";
 import {
   englishLocalize,
   type LocalizeFunction,
 } from "../../core/localization";
 import { renderIcon } from "../../ui/icons";
+import { PopoverInteractionController } from "../../ui/popover-interaction.controller";
 import type { CameraSelectionContext } from "../camera-selection-context";
-import { ActiveCameraActivityController } from "./active-camera-activity.controller";
 import type {
   ActivityClassificationFilter,
   ActivityFilterContext,
@@ -31,28 +30,25 @@ const EMPTY_STATE: ActivityFilterState = {
 /** Camera-scoped activity-filter popover shared by the activity module stack. */
 export class ActivityFilter extends LitElement {
   public static properties = {
-    api: { attribute: false },
     cameraSelection: { attribute: false },
     disabled: { type: Boolean },
     filterContext: { attribute: false },
-    historyDays: { attribute: false },
+    locale: { attribute: false },
     localize: { attribute: false },
     targetModuleId: { attribute: false },
     _open: { state: true },
     _state: { state: true },
   };
 
-  public api?: HomeAssistantApi;
   public cameraSelection?: CameraSelectionContext;
   public disabled = false;
   public filterContext?: ActivityFilterContext;
-  public historyDays = 5;
+  public locale?: HomeAssistantLocale;
   public localize: LocalizeFunction = englishLocalize;
   public targetModuleId = "";
 
   private _activeEntityId?: string;
   private _open = false;
-  private _publishedReviewActivity?: readonly ReviewItem[];
   private _state = EMPTY_STATE;
   private _subscribedContext?: ActivityFilterContext;
   private _subscribedSelection?: CameraSelectionContext;
@@ -64,36 +60,20 @@ export class ActivityFilter extends LitElement {
     () => this._open,
     ".filter-trigger",
   );
-
-  private readonly _reviewActivity =
-    new ActiveCameraActivityController<ReviewItem>(
-      this,
-      () => ({
-        api: this._needsReviewActivity() ? this.api : undefined,
-        cameraSelection: this._needsReviewActivity()
-          ? this.cameraSelection
-          : undefined,
-        historyDays: this.historyDays,
-        targetModuleId: this._needsReviewActivity() ? this.targetModuleId : "",
-      }),
-      listReviews,
-      () => undefined,
-      "reviews",
-      (notification) => notification.review,
-    );
+  private readonly _popoverInteraction = new PopoverInteractionController(
+    this,
+    () => this._open,
+    (open) => {
+      this._open = open;
+    },
+    ".filter-trigger",
+  );
 
   public connectedCallback(): void {
     super.connectedCallback();
-    document.addEventListener("pointerdown", this._handleDocumentPointerDown);
-    document.addEventListener("keydown", this._handleDocumentKeyDown);
   }
 
   public disconnectedCallback(): void {
-    document.removeEventListener(
-      "pointerdown",
-      this._handleDocumentPointerDown,
-    );
-    document.removeEventListener("keydown", this._handleDocumentKeyDown);
     this._unsubscribeFilter?.();
     this._unsubscribeSelection?.();
     this._unsubscribeFilter = undefined;
@@ -106,26 +86,6 @@ export class ActivityFilter extends LitElement {
       this._open = false;
     }
     this._syncSelection();
-    const entityId = this._activeEntityId;
-    if (
-      !entityId ||
-      !this.filterContext ||
-      this._reviewActivity.activeEntityId !== entityId ||
-      this._publishedReviewActivity === this._reviewActivity.items
-    ) {
-      return;
-    }
-    this._publishedReviewActivity = this._reviewActivity.items;
-    const context = this.filterContext;
-    const reviews = this._reviewActivity.items.map((review) => ({
-      classification: review.classification,
-      id: review.id,
-      labels: [...review.labels, ...review.sub_labels],
-      relatedEventIds: review.related_event_ids,
-      reviewed: review.reviewed,
-      zones: review.zones,
-    }));
-    queueMicrotask(() => context.mergeReviews(entityId, reviews));
   }
 
   protected render() {
@@ -152,13 +112,13 @@ export class ActivityFilter extends LitElement {
       this._state.reviews
         .flatMap(({ labels }) => labels)
         .concat(this._state.events.flatMap(({ labels }) => labels)),
-      this.api,
+      this.locale,
     );
     const zones = sortedValues(
       this._state.reviews
         .flatMap(({ zones }) => zones)
         .concat(this._state.events.flatMap(({ zones }) => zones)),
-      this.api,
+      this.locale,
     );
     return html`<section
       class="popover"
@@ -301,12 +261,6 @@ export class ActivityFilter extends LitElement {
     action(this.filterContext, this._activeEntityId);
   }
 
-  private _needsReviewActivity(): boolean {
-    return (
-      this._state.classification !== "all" || this._state.reviewStatus !== "all"
-    );
-  }
-
   private _syncSelection(): void {
     const selection = this.cameraSelection;
     if (
@@ -349,19 +303,6 @@ export class ActivityFilter extends LitElement {
     this.requestUpdate();
   }
 
-  private readonly _handleDocumentPointerDown = (event: PointerEvent): void => {
-    if (!this._open || event.composedPath().includes(this)) return;
-    this._open = false;
-  };
-
-  private readonly _handleDocumentKeyDown = (event: KeyboardEvent): void => {
-    if (!this._open || event.key !== "Escape") return;
-    this._open = false;
-    this.shadowRoot
-      ?.querySelector<HTMLButtonElement>(".filter-trigger")
-      ?.focus();
-  };
-
   static styles = activityFilterStyles;
 }
 
@@ -376,11 +317,11 @@ function hasFilters(state: ActivityFilterState): boolean {
 
 function sortedValues(
   values: readonly string[],
-  api: HomeAssistantApi | undefined,
+  locale: HomeAssistantLocale | undefined,
 ): readonly string[] {
   let collator: Intl.Collator;
   try {
-    collator = new Intl.Collator(api?.locale?.language, {
+    collator = new Intl.Collator(locale?.language, {
       sensitivity: "base",
     });
   } catch (error) {

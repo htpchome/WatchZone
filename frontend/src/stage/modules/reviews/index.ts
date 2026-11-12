@@ -21,7 +21,11 @@ export interface ReviewsModuleConfig {
 
 let definitionPromise: Promise<void> | undefined;
 
-export const moduleDefinition: ModuleDefinition<ReviewsModuleConfig> = {
+export const moduleDefinition: ModuleDefinition<
+  ReviewsModuleConfig,
+  "activityFilter" | "cameraSelection" | "mediaDate"
+> = {
+  contextKeys: ["activityFilter", "cameraSelection", "mediaDate"],
   type: REVIEWS_MODULE_TYPE,
   validateConfig(value) {
     if (typeof value !== "object" || value === null) {

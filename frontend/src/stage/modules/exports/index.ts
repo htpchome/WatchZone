@@ -10,7 +10,11 @@ export interface ExportsModuleConfig {
 
 let definitionPromise: Promise<void> | undefined;
 
-export const moduleDefinition: ModuleDefinition<ExportsModuleConfig> = {
+export const moduleDefinition: ModuleDefinition<
+  ExportsModuleConfig,
+  "cameraSelection" | "exportFilter"
+> = {
+  contextKeys: ["cameraSelection", "exportFilter"],
   type: EXPORTS_MODULE_TYPE,
   validateConfig(value) {
     if (typeof value !== "object" || value === null) {

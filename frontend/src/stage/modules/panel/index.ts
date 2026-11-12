@@ -5,7 +5,8 @@ export type PanelModuleConfig = Readonly<Record<string, never>>;
 
 let definitionPromise: Promise<void> | undefined;
 
-export const moduleDefinition: ModuleDefinition<PanelModuleConfig> = {
+export const moduleDefinition: ModuleDefinition<PanelModuleConfig, never> = {
+  contextKeys: [],
   type: PANEL_MODULE_TYPE,
   createElement: () => document.createElement(PANEL_TAG),
   define: () => (definitionPromise ??= import("./panel").then(() => undefined)),

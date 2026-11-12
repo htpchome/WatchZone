@@ -16,6 +16,48 @@ import type {
   PlaceableLoaderRegistration,
 } from "./placeable";
 
+function activityStackAccessories(config: unknown) {
+  const source = stackConfig(config);
+  return {
+    calendar: "activity" as const,
+    filter: "activity" as const,
+    historyDays: source.historyDays,
+    targetModuleId: source.targetModuleId,
+  };
+}
+
+function recordingsStackAccessories(config: unknown) {
+  const source = stackConfig(config);
+  return {
+    calendar: "recordings" as const,
+    filter: "none" as const,
+    targetModuleId: source.targetModuleId,
+  };
+}
+
+function exportsStackAccessories() {
+  return {
+    calendar: "disabled" as const,
+    filter: "exports" as const,
+  };
+}
+
+function stackConfig(config: unknown): {
+  readonly historyDays?: number;
+  readonly targetModuleId?: string;
+} {
+  if (typeof config !== "object" || config === null) return {};
+  const source = config as Record<string, unknown>;
+  return {
+    ...(typeof source.historyDays === "number"
+      ? { historyDays: source.historyDays }
+      : {}),
+    ...(typeof source.targetModuleId === "string"
+      ? { targetModuleId: source.targetModuleId }
+      : {}),
+  };
+}
+
 const moduleLoaders = {
   [REVIEWS_MODULE_TYPE]: {
     load: () =>
@@ -24,6 +66,7 @@ const moduleLoaders = {
       ),
     navigation: { icon: "reviews", labelKey: "navigation.reviews" },
     placeholder: "activity",
+    stackAccessories: activityStackAccessories,
   },
   [CAMERA_MODULE_TYPE]: {
     load: () =>
@@ -45,6 +88,7 @@ const moduleLoaders = {
       ),
     navigation: { icon: "events", labelKey: "navigation.events" },
     placeholder: "activity",
+    stackAccessories: activityStackAccessories,
   },
   [RECORDINGS_MODULE_TYPE]: {
     load: () =>
@@ -53,6 +97,7 @@ const moduleLoaders = {
       ),
     navigation: { icon: "movie", labelKey: "navigation.recordings" },
     placeholder: "activity",
+    stackAccessories: recordingsStackAccessories,
   },
   [EXPORTS_MODULE_TYPE]: {
     load: () =>
@@ -61,6 +106,7 @@ const moduleLoaders = {
       ),
     navigation: { icon: "export", labelKey: "navigation.exports" },
     placeholder: "activity",
+    stackAccessories: exportsStackAccessories,
   },
 } satisfies PlaceableLoaderMap;
 
