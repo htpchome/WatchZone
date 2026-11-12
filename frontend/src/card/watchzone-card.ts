@@ -269,10 +269,7 @@ export class DashboardCard extends LitElement {
     >(CAMERA_TAG);
     const rect = camera?.getActiveStageRect?.();
     if (!rect || rect.width <= 0 || rect.height <= 0) return undefined;
-    const cardRect = this.getBoundingClientRect();
     return {
-      centerX: cardRect.left + cardRect.width / 2,
-      centerY: cardRect.top + cardRect.height / 2,
       height: rect.height,
       width: rect.width,
     };

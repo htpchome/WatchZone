@@ -561,7 +561,7 @@ describe("recorded media player", () => {
     ).toBeNull();
   });
 
-  it("centers its stage-sized initial placement on the WatchZone card", async () => {
+  it("preserves native placement while matching the initial stage width", async () => {
     Object.defineProperty(HTMLDialogElement.prototype, "show", {
       configurable: true,
       value: function (this: HTMLDialogElement) {
@@ -604,8 +604,6 @@ describe("recorded media player", () => {
     });
 
     viewer.initialSize = {
-      centerX: 700,
-      centerY: 450,
       height: 337.5,
       width: 600,
     };
@@ -613,10 +611,10 @@ describe("recorded media player", () => {
     await viewer.updateComplete;
     await container.updateComplete;
 
-    expect(dialog.classList.contains("dragged")).toBe(true);
+    expect(dialog.classList.contains("dragged")).toBe(false);
     expect(dialog.style.width).toBe("600px");
-    expect(dialog.style.left).toBe("400px");
-    expect(dialog.style.top).toBe("300px");
+    expect(dialog.style.left).toBe("");
+    expect(dialog.style.top).toBe("");
   });
 
   it("opens snapshots in the shared dialog without muting live audio", async () => {

@@ -70,8 +70,9 @@ Working version `0.0.4-dev.235`:
   permission-checked WatchZone WebSocket command. Python resolves the owning
   recordings provider, and Frigate alone constructs the selected playback and
   authenticated download paths. Export remains future work.
-- Dialog fitting responds to the expanded segment panel while preserving
-  centered card-relative placement until the user manually drags or resizes it.
+- Dialog fitting responds to the expanded segment panel while preserving the
+  browser dialog's viewport-relative default placement until the user manually
+  drags or resizes it.
 
 Validation is green:
 

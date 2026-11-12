@@ -328,12 +328,6 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
     const size = this.initialSize;
     if (!dialog || !size) return;
     this._setMediaWidth(size.width);
-    dialog.classList.add("dragged");
-    const rect = dialog.getBoundingClientRect();
-    this._positionDialog(
-      size.centerX - rect.width / 2,
-      size.centerY - rect.height / 2,
-    );
   }
 
   private _mediaSurface(): HTMLElement | null {

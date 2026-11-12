@@ -53,8 +53,6 @@ export interface RecordingTimeline {
 }
 
 export interface RecordedMediaInitialGeometry {
-  readonly centerX: number;
-  readonly centerY: number;
   readonly height: number;
   readonly width: number;
 }

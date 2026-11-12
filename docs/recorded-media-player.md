@@ -123,8 +123,8 @@ viewing. Recording discovery and grouping are governed by
 - The modal is clamped to the viewport while dragging and after viewport
   resize. Its maximum dimensions preserve an on-screen close path.
 - The modal initially matches the visible live camera stage dimensions when a
-  stage is available, centers on the WatchZone card, and clamps that placement
-  to the visible viewport. It provides a diagonal bottom-right, pointer- and
+  stage is available while retaining the browser dialog's viewport-relative
+  default opening position. It provides a diagonal bottom-right, pointer- and
   keyboard-operable resize handle. Resizing is clamped to the visible viewport
   and preserves the header close path.
 - The non-blocking dialog has no visual scrim because activity tiles remain

@@ -1931,6 +1931,18 @@ test("keeps activity content in an independently scrolling viewport", async ({
     ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) dialog",
   );
   await expect(mediaDialog).toBeVisible();
+  const initialPlacement = await mediaDialog.evaluate((dialog) => {
+    return {
+      explicitlyPositioned: dialog.classList.contains("dragged"),
+      inlineLeft: dialog.style.left,
+      inlineTop: dialog.style.top,
+    };
+  });
+  expect(initialPlacement).toEqual({
+    explicitlyPositioned: false,
+    inlineLeft: "",
+    inlineTop: "",
+  });
   const modalClose = page.getByRole("button", { name: "Close video player" });
   const modalTitle = page.locator(
     ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) .title",
@@ -2051,7 +2063,6 @@ test("keeps activity content in an independently scrolling viewport", async ({
   );
   const viewportSize = page.viewportSize();
   const fittedDialogBox = await mediaDialog.boundingBox();
-  const cardBox = await page.locator("watchzone-card").boundingBox();
   if (viewportSize && fittedDialogBox) {
     expect(fittedDialogBox.x).toBeGreaterThanOrEqual(0);
     expect(fittedDialogBox.y).toBeGreaterThanOrEqual(0);
@@ -2061,21 +2072,6 @@ test("keeps activity content in an independently scrolling viewport", async ({
     expect(fittedDialogBox.y + fittedDialogBox.height).toBeLessThanOrEqual(
       viewportSize.height,
     );
-    if (cardBox) {
-      const expectedX = Math.min(
-        Math.max(0, cardBox.x + cardBox.width / 2 - fittedDialogBox.width / 2),
-        viewportSize.width - fittedDialogBox.width,
-      );
-      const expectedY = Math.min(
-        Math.max(
-          0,
-          cardBox.y + cardBox.height / 2 - fittedDialogBox.height / 2,
-        ),
-        viewportSize.height - fittedDialogBox.height,
-      );
-      expect(fittedDialogBox.x).toBeCloseTo(expectedX, 0);
-      expect(fittedDialogBox.y).toBeCloseTo(expectedY, 0);
-    }
   }
   const transport = page.locator("wzc-recorded-video-transport");
   await page.mouse.move(0, 0);
@@ -3720,16 +3716,24 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
     .poll(async () => (await ptzControl.boundingBox())?.width ?? 0)
     .toBeGreaterThan(initialPtzTriggerBox.width * 2);
   await ptzControl.hover();
-  const expandedPtzControlBox = await ptzControl.boundingBox();
-  expect(
-    (expandedPtzControlBox?.x ?? 0) + (expandedPtzControlBox?.width ?? 0) / 2,
-  ).toBeCloseTo(collapsedPtzControlBox.x + collapsedPtzControlBox.width / 2, 0);
-  expect(
-    (expandedPtzControlBox?.y ?? 0) + (expandedPtzControlBox?.height ?? 0) / 2,
-  ).toBeCloseTo(
-    collapsedPtzControlBox.y + collapsedPtzControlBox.height / 2,
-    0,
-  );
+  await expect
+    .poll(async () => {
+      const box = await ptzControl.boundingBox();
+      return box ? box.x + box.width / 2 : 0;
+    })
+    .toBeCloseTo(
+      collapsedPtzControlBox.x + collapsedPtzControlBox.width / 2,
+      0,
+    );
+  await expect
+    .poll(async () => {
+      const box = await ptzControl.boundingBox();
+      return box ? box.y + box.height / 2 : 0;
+    })
+    .toBeCloseTo(
+      collapsedPtzControlBox.y + collapsedPtzControlBox.height / 2,
+      0,
+    );
   await ptzCollapse.click();
   await expect(ptzControl).toHaveClass(/\bcollapsed\b/);
   await ptzTrigger.click();
