@@ -1211,6 +1211,26 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(standardTileLayout.actionCenterDelta).toBeLessThanOrEqual(1);
   expect(standardTileLayout.analysisActionHeightDelta).toBeLessThanOrEqual(1);
   expect(standardTileLayout.analysisActionTopDelta).toBeLessThanOrEqual(1);
+  const detectionTile = page
+    .locator("wzc-reviews .tile")
+    .filter({ has: page.locator(".thumbnail-wrap.detection") })
+    .first();
+  const detectionColors = await detectionTile.evaluate((tile) => {
+    const outline = tile.querySelector(".thumbnail-wrap.detection");
+    const badges = [...tile.querySelectorAll("wzc-badge")];
+    const detectionBadge = badges.find(
+      (badge) => badge.textContent?.trim() === "Detection",
+    );
+    const badgeSurface = detectionBadge?.shadowRoot?.querySelector(".badge");
+    if (!outline || !badgeSurface) {
+      throw new Error("Expected a detection outline and classification badge.");
+    }
+    return {
+      badge: getComputedStyle(badgeSurface).backgroundColor,
+      outline: getComputedStyle(outline, "::after").borderTopColor,
+    };
+  });
+  expect(detectionColors.badge).toBe(detectionColors.outline);
   await expect(page.locator("wzc-events .analysis-title")).toHaveCount(0);
   const reviewExportButtons = page.getByRole("button", {
     name: "Export review",
@@ -2320,8 +2340,12 @@ test("switches activity and recordings through the shared media calendar", async
       "--ha-dialog-surface-background",
       "rgb(170, 171, 172)",
     );
+    card.style.setProperty("--ha-card-background", "rgb(10, 11, 12)");
     card.style.setProperty("--ha-dialog-surface-backdrop-filter", "blur(7px)");
     card.style.setProperty("--ha-dialog-border-radius", "28px");
+    card.style.setProperty("--primary-background-color", "rgb(120, 121, 122)");
+    card.style.setProperty("--ha-card-border-radius", "18px");
+    card.style.setProperty("--wzc-popover-radius", "18px");
     card.setConfig({
       type: "custom:watchzone-card",
       event_history_days: 5,
@@ -2482,6 +2506,10 @@ test("switches activity and recordings through the shared media calendar", async
   const reviewDayHeaders = page.locator("wzc-reviews wzc-media-day-header");
   await expect(reviewDayHeaders).toHaveCount(2);
   await expect(reviewDayHeaders.first()).toContainText("Mon, Nov 9 — Reviews");
+  await expect(reviewDayHeaders.first()).toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  );
   await expect(reviewDayHeaders.nth(1)).toContainText("Sun, Nov 8 — Reviews");
   const loadingSurface = page.locator("wzc-reviews .thumbnail-wrap").first();
   await expect(loadingSurface).toHaveCSS("background-color", "rgb(36, 36, 36)");
@@ -2525,13 +2553,13 @@ test("switches activity and recordings through the shared media calendar", async
     .toBe(true);
   await expect(calendar.locator(".popover")).toHaveCSS(
     "background-color",
-    "rgb(170, 171, 172)",
+    "rgb(120, 121, 122)",
   );
   await expect(calendar.locator(".popover")).toHaveCSS(
     "backdrop-filter",
-    "blur(7px)",
+    "none",
   );
-  await expect(calendar.locator(".popover")).toHaveCSS("border-radius", "28px");
+  await expect(calendar.locator(".popover")).toHaveCSS("border-radius", "18px");
   await expect(calendar.locator(".day.marked")).toHaveCount(2);
   await calendar.locator(".day.marked").first().click();
   await expect(page.locator("wzc-reviews .tile")).toHaveCount(1);
@@ -2555,13 +2583,10 @@ test("switches activity and recordings through the shared media calendar", async
   await expect(filter.locator(".popover")).toBeVisible();
   await expect(filter.locator(".popover")).toHaveCSS(
     "background-color",
-    "rgb(170, 171, 172)",
+    "rgb(120, 121, 122)",
   );
-  await expect(filter.locator(".popover")).toHaveCSS(
-    "backdrop-filter",
-    "blur(7px)",
-  );
-  await expect(filter.locator(".popover")).toHaveCSS("border-radius", "28px");
+  await expect(filter.locator(".popover")).toHaveCSS("backdrop-filter", "none");
+  await expect(filter.locator(".popover")).toHaveCSS("border-radius", "18px");
   await expect(filter.locator("fieldset")).toHaveCount(4);
   const selectedFilterChip = filter
     .locator(".chip input:checked + span")
@@ -4007,10 +4032,10 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   await lights.evaluate((element) => {
     element.style.setProperty(
       "--wzc-light-panel-background",
-      "rgb(170, 171, 172)",
+      "rgb(120, 121, 122)",
     );
-    element.style.setProperty("--wzc-light-panel-backdrop-filter", "blur(7px)");
-    element.style.setProperty("--wzc-light-panel-radius", "28px");
+    element.style.setProperty("--wzc-light-panel-backdrop-filter", "none");
+    element.style.setProperty("--wzc-light-panel-radius", "18px");
   });
 
   await page.mouse.move(
@@ -4022,9 +4047,9 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   await page.mouse.up();
   const dimmer = lights.locator(".dimmer-panel");
   await expect(dimmer).toBeVisible();
-  await expect(dimmer).toHaveCSS("background-color", "rgb(170, 171, 172)");
-  await expect(dimmer).toHaveCSS("backdrop-filter", "blur(7px)");
-  await expect(dimmer).toHaveCSS("border-radius", "28px");
+  await expect(dimmer).toHaveCSS("background-color", "rgb(120, 121, 122)");
+  await expect(dimmer).toHaveCSS("backdrop-filter", "none");
+  await expect(dimmer).toHaveCSS("border-radius", "18px");
   const slider = dimmer.locator("ha-control-slider");
   await expect(slider).toHaveAttribute("vertical", "");
   await expect(slider).toHaveAttribute("show-handle", "");
@@ -4502,8 +4527,14 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
       "--wzc-dialog-scrim-backdrop-filter",
       "--wzc-dialog-scrim-background",
       "--wzc-dialog-shadow",
-      "--wzc-editor-background",
-      "--wzc-editor-backdrop-filter",
+      "--wzc-task-dialog-background",
+      "--wzc-task-dialog-backdrop-filter",
+      "--wzc-task-dialog-radius",
+      "--wzc-task-dialog-shadow",
+      "--wzc-popover-background",
+      "--wzc-popover-backdrop-filter",
+      "--wzc-popover-radius",
+      "--wzc-popover-shadow",
       "--wzc-color-border",
       "--wzc-radius-card",
       "--wzc-shadow-card",
@@ -4799,7 +4830,7 @@ test("editor uses exclusive accordions and shared draft status", async ({
   ).toContainText("Unsaved changes");
 });
 
-test("uses Home Assistant dialog semantics in the editor without changing card glass", async ({
+test("inherits the Home Assistant editor surface and keeps nested tasks solid", async ({
   page,
 }) => {
   await page.goto("/");
@@ -4835,6 +4866,10 @@ test("uses Home Assistant dialog semantics in the editor without changing card g
       "--ha-dialog-surface-backdrop-filter",
       "blur(7px)",
     );
+    editor.style.setProperty(
+      "--primary-background-color",
+      "rgb(120, 121, 122)",
+    );
     editor.style.setProperty("--dialog-box-shadow", "rgb(1, 2, 3) 0px 4px 8px");
     editor.style.setProperty("--ha-dialog-border-radius", "28px");
     (
@@ -4869,12 +4904,12 @@ test("uses Home Assistant dialog semantics in the editor without changing card g
   const editor = page.locator("#glass-theme-editor");
   await expect(editor).toHaveAttribute("data-theme-mode", "dark");
   await expect(editor).toHaveAttribute("data-theme-name", "Frosted Glass");
-  await expect(editor).toHaveCSS("background-color", "rgb(170, 171, 172)");
-  await expect(editor).toHaveCSS("backdrop-filter", "blur(7px)");
+  await expect(editor).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(editor).toHaveCSS("backdrop-filter", "none");
 
   await editor.evaluate((element) => {
     (element as HTMLElement).style.setProperty(
-      "--ha-dialog-surface-background",
+      "--primary-background-color",
       "rgb(210, 211, 212)",
     );
     (
@@ -4897,7 +4932,7 @@ test("uses Home Assistant dialog semantics in the editor without changing card g
     };
   });
   await expect(editor).toHaveAttribute("data-theme-mode", "light");
-  await expect(editor).toHaveCSS("background-color", "rgb(210, 211, 212)");
+  await expect(editor).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
 
   await editor.locator("wzc-accordion-item").first().locator("summary").click();
   await editor.locator("button.add-camera").click();
@@ -4907,7 +4942,7 @@ test("uses Home Assistant dialog semantics in the editor without changing card g
     "background-color",
     "rgb(210, 211, 212)",
   );
-  await expect(cameraDialog).toHaveCSS("backdrop-filter", "blur(7px)");
+  await expect(cameraDialog).toHaveCSS("backdrop-filter", "none");
   await expect(cameraDialog).toHaveCSS("border-radius", "28px");
   expect(
     await cameraDialog.evaluate(
@@ -4916,7 +4951,7 @@ test("uses Home Assistant dialog semantics in the editor without changing card g
   ).toContain("rgb(1, 2, 3)");
 });
 
-test("uses Home Assistant dialog semantics for form and confirmation dialogs", async ({
+test("assigns native information and solid task dialog surfaces", async ({
   page,
 }) => {
   await page.goto("/");
@@ -4932,6 +4967,7 @@ test("uses Home Assistant dialog semantics for form and confirmation dialogs", a
       "rgb(170, 171, 172)",
     );
     host.style.setProperty("--ha-dialog-surface-backdrop-filter", "blur(7px)");
+    host.style.setProperty("--primary-background-color", "rgb(120, 121, 122)");
     host.style.setProperty("--ha-dialog-border-radius", "28px");
     host.style.setProperty("--ha-dialog-scrim-backdrop-filter", "blur(3px)");
     host.style.setProperty("--mdc-dialog-scrim-color", "rgba(1, 2, 3, 0.4)");
@@ -4943,6 +4979,39 @@ test("uses Home Assistant dialog semantics for form and confirmation dialogs", a
 
   const exportHost = page.locator("wzc-review-export-dialog");
   await expect(exportHost).toHaveCount(1);
+  const analysisHost = page.locator("wzc-review-analysis-dialog");
+  await expect(analysisHost).toHaveCount(1);
+  await analysisHost.evaluate((element) => {
+    (
+      element as HTMLElement & {
+        analysis?: {
+          concerns: string[];
+          description: string;
+          title: string;
+        };
+      }
+    ).analysis = {
+      concerns: [],
+      description: "Theme role check",
+      title: "Native information surface",
+    };
+  });
+  const analysisDialog = analysisHost.locator("dialog");
+  await expect(analysisDialog).toBeVisible();
+  await expect(analysisDialog).toHaveCSS(
+    "background-color",
+    "rgb(170, 171, 172)",
+  );
+  await expect(analysisDialog).toHaveCSS("backdrop-filter", "blur(7px)");
+  await analysisHost.evaluate((element) => {
+    (
+      element as HTMLElement & {
+        analysis?: unknown;
+      }
+    ).analysis = undefined;
+  });
+  await expect(analysisDialog).toBeHidden();
+
   await exportHost.evaluate((element) => {
     (
       element as HTMLElement & {
@@ -4954,9 +5023,9 @@ test("uses Home Assistant dialog semantics for form and confirmation dialogs", a
   await expect(exportDialog).toBeVisible();
   await expect(exportDialog).toHaveCSS(
     "background-color",
-    "rgb(170, 171, 172)",
+    "rgb(120, 121, 122)",
   );
-  await expect(exportDialog).toHaveCSS("backdrop-filter", "blur(7px)");
+  await expect(exportDialog).toHaveCSS("backdrop-filter", "none");
   await expect(exportDialog).toHaveCSS("border-radius", "28px");
   expect(
     await exportDialog.evaluate((element) => {
@@ -4988,9 +5057,9 @@ test("uses Home Assistant dialog semantics for form and confirmation dialogs", a
   await expect(suspendDialog).toBeVisible();
   await expect(suspendDialog).toHaveCSS(
     "background-color",
-    "rgb(170, 171, 172)",
+    "rgb(120, 121, 122)",
   );
-  await expect(suspendDialog).toHaveCSS("backdrop-filter", "blur(7px)");
+  await expect(suspendDialog).toHaveCSS("backdrop-filter", "none");
   await expect(suspendDialog).toHaveCSS("border-radius", "28px");
 });
 

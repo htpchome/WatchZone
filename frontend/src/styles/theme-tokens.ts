@@ -54,8 +54,14 @@ export const themeTokens = css`
       --ha-dialog-scrim-backdrop-filter,
       var(--dialog-backdrop-filter, none)
     );
-    --wzc-editor-background: var(--wzc-dialog-background);
-    --wzc-editor-backdrop-filter: var(--wzc-dialog-backdrop-filter);
+    --wzc-task-dialog-background: var(--wzc-color-surface);
+    --wzc-task-dialog-backdrop-filter: none;
+    --wzc-task-dialog-radius: var(--wzc-dialog-radius);
+    --wzc-task-dialog-shadow: var(--wzc-dialog-shadow);
+    --wzc-popover-background: var(--wzc-color-surface);
+    --wzc-popover-backdrop-filter: none;
+    --wzc-popover-radius: var(--wzc-radius-card);
+    --wzc-popover-shadow: var(--wzc-shadow-medium);
 
     --wzc-color-text-1: var(
       --ha-color-text-primary,
@@ -212,11 +218,11 @@ export const themeTokens = css`
     --wzc-stage-resize-handle-inline-size: clamp(6rem, 24%, 10rem);
     --wzc-stage-resize-handle-visual-inline-size: clamp(4rem, 18cqi, 7rem);
     --wzc-stage-resize-handle-visible-bottom-inset: 0.15rem;
-    --wzc-activity-popover-background: var(--wzc-dialog-background);
-    --wzc-activity-popover-backdrop-filter: var(--wzc-dialog-backdrop-filter);
+    --wzc-activity-popover-background: var(--wzc-popover-background);
+    --wzc-activity-popover-backdrop-filter: var(--wzc-popover-backdrop-filter);
     --wzc-activity-popover-border-color: var(--wzc-color-border);
-    --wzc-activity-popover-radius: var(--wzc-dialog-radius);
-    --wzc-activity-popover-shadow: var(--wzc-dialog-shadow);
+    --wzc-activity-popover-radius: var(--wzc-popover-radius);
+    --wzc-activity-popover-shadow: var(--wzc-popover-shadow);
 
     --wzc-media-overlay-color: var(--ha-color-neutral-90, #e6e6e6);
     --wzc-media-overlay-surface: var(--ha-color-neutral-05, #111111);
@@ -294,7 +300,7 @@ export const themeTokens = css`
     --wzc-media-day-header-block-size: 1.75rem;
     --wzc-media-day-header-gap: 0.25rem;
     --wzc-media-day-navigation-size: 1.5rem;
-    --wzc-media-day-header-background: var(--wzc-card-background);
+    --wzc-media-day-header-background: transparent;
     --wzc-media-day-header-color: var(--wzc-color-text-2);
     --wzc-event-tile-block-size: 7.2rem;
     --wzc-event-tile-background: var(--wzc-color-surface-secondary);
@@ -458,12 +464,12 @@ export const themeTokens = css`
     );
     --wzc-light-control-gap: 0.5rem;
     --wzc-light-fill-color: var(--wzc-color-primary);
-    --wzc-light-panel-background: var(--wzc-dialog-background);
-    --wzc-light-panel-backdrop-filter: var(--wzc-dialog-backdrop-filter);
+    --wzc-light-panel-background: var(--wzc-popover-background);
+    --wzc-light-panel-backdrop-filter: var(--wzc-popover-backdrop-filter);
     --wzc-light-panel-border-color: var(--wzc-color-border);
     --wzc-light-panel-color: var(--wzc-color-text-1);
-    --wzc-light-panel-radius: var(--wzc-dialog-radius);
-    --wzc-light-panel-shadow: var(--wzc-dialog-shadow);
+    --wzc-light-panel-radius: var(--wzc-popover-radius);
+    --wzc-light-panel-shadow: var(--wzc-popover-shadow);
     --wzc-light-panel-inline-size: clamp(6.5rem, 24cqi, 8rem);
     --wzc-light-power-active-color: var(--wzc-color-primary);
     --wzc-light-slider-background: var(--ha-color-neutral-90, #e6e6e6);
@@ -497,6 +503,8 @@ export const themeTokens = css`
     --wzc-badge-green-color: var(--ha-color-neutral-100, #ffffff);
     --wzc-badge-amber-background: var(--ha-color-amber-60, #f59e0b);
     --wzc-badge-amber-color: var(--ha-color-neutral-05, #111111);
+    --wzc-badge-warning-background: var(--wzc-color-warning);
+    --wzc-badge-warning-color: var(--wzc-color-on-warning);
     --wzc-badge-red-background: var(--ha-color-red-60, #ef4444);
     --wzc-badge-red-color: var(--ha-color-neutral-100, #ffffff);
     --wzc-badge-cyan-background: var(--ha-color-cyan-60, #22d3ee);

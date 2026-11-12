@@ -7,10 +7,10 @@ export const reviewExportDialogStyles = css`
   }
 
   dialog {
-    background: var(--wzc-dialog-background);
+    background: var(--wzc-task-dialog-background);
     border: 1px solid var(--wzc-color-border);
-    border-radius: var(--wzc-dialog-radius);
-    box-shadow: var(--wzc-dialog-shadow);
+    border-radius: var(--wzc-task-dialog-radius);
+    box-shadow: var(--wzc-task-dialog-shadow);
     box-sizing: border-box;
     color: var(--wzc-color-text-1);
     inline-size: min(34rem, calc(100vw - 2rem));
@@ -19,7 +19,7 @@ export const reviewExportDialogStyles = css`
     padding: 0;
     position: fixed;
     opacity: 1;
-    backdrop-filter: var(--wzc-dialog-backdrop-filter);
+    backdrop-filter: var(--wzc-task-dialog-backdrop-filter);
   }
 
   dialog::backdrop {

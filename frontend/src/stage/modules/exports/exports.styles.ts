@@ -274,13 +274,13 @@ export const exportsStyles = css`
     inline-size: min(26rem, calc(100vw - 2rem));
     padding: 0;
     color: var(--wzc-color-text-1);
-    background: var(--wzc-dialog-background);
+    background: var(--wzc-task-dialog-background);
     border: 1px solid var(--wzc-color-border);
-    border-radius: var(--wzc-dialog-radius);
-    box-shadow: var(--wzc-dialog-shadow);
+    border-radius: var(--wzc-task-dialog-radius);
+    box-shadow: var(--wzc-task-dialog-shadow);
     font: inherit;
     opacity: 1;
-    backdrop-filter: var(--wzc-dialog-backdrop-filter);
+    backdrop-filter: var(--wzc-task-dialog-backdrop-filter);
   }
 
   dialog::backdrop {

@@ -32,3 +32,8 @@ pins are intentionally rare and belong in the shared label policy; Northern
 Cardinal is pinned to red wherever its object badge is rendered.
 The general collision fallback excludes the red family so ordinary object
 labels cannot be mistaken for semantic error or Alert badges.
+
+Review classification colors are shared semantics rather than independent
+decorations. The Detection badge background resolves to the same warning color
+as the detection thumbnail outline, while text and shape continue to distinguish
+the badge from the outline.

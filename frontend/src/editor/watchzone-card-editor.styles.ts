@@ -6,9 +6,7 @@ export const cardEditorStyles = css`
     box-sizing: border-box;
     inline-size: 100%;
     color: var(--wzc-color-text-1);
-    background: var(--wzc-editor-background);
-    opacity: 1;
-    backdrop-filter: var(--wzc-editor-backdrop-filter);
+    background: transparent;
   }
 
   ha-input,
@@ -132,12 +130,12 @@ export const cardEditorStyles = css`
     padding: 0;
     overflow: auto;
     color: var(--wzc-color-text-1);
-    background: var(--wzc-editor-background);
+    background: var(--wzc-task-dialog-background);
     border: 1px solid var(--wzc-color-border);
-    border-radius: var(--wzc-dialog-radius);
-    box-shadow: var(--wzc-dialog-shadow);
+    border-radius: var(--wzc-task-dialog-radius);
+    box-shadow: var(--wzc-task-dialog-shadow);
     opacity: 1;
-    backdrop-filter: var(--wzc-dialog-backdrop-filter);
+    backdrop-filter: var(--wzc-task-dialog-backdrop-filter);
   }
 
   dialog::backdrop {
@@ -158,7 +156,7 @@ export const cardEditorStyles = css`
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     padding: 0.75rem 1rem;
-    background: var(--wzc-editor-background);
+    background: var(--wzc-task-dialog-background);
     border-block-end: 1px solid var(--wzc-color-border);
   }
 
@@ -346,7 +344,7 @@ export const cardEditorStyles = css`
     justify-content: flex-end;
     gap: 0.75rem;
     padding: 0.85rem 1rem;
-    background: var(--wzc-editor-background);
+    background: var(--wzc-task-dialog-background);
   }
 
   @media (hover: hover) and (pointer: fine) {

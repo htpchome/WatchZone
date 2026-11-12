@@ -109,9 +109,12 @@ repeated `config-changed` events as a live-preview mechanism.
 - Unsupported Home Assistant internals are isolated behind a small adapter.
 - Use Home Assistant semantic theme tokens. WatchZone customization tokens
   begin with `--wzc-` and resolve to Home Assistant tokens by default.
-- The configuration editor and its nested dialogs consume Home Assistant's
-  native dialog surface, backdrop-filter, radius, and shadow semantics. They do
-  not derive a separate editor surface from card or page background colors.
+- The configuration editor inherits the surface of Home Assistant's owning
+  card-edit dialog; it does not paint a second editor-wide surface over it.
+  Nested configuration and confirmation dialogs use WatchZone's solid task
+  surface role with Home Assistant's dialog radius, elevation, and scrim
+  semantics so translucent themes do not reveal multiple editor layers through
+  the active task.
 - Do not hardcode application colors, fonts, elevations, or light/dark mode
   assumptions.
 - Use logical dimensions and properties, bounded fluid sizing, and container

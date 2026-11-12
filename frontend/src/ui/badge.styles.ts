@@ -80,8 +80,8 @@ export const badgeStyles = css`
   }
 
   :host([variant="warning"]) {
-    --wzc-badge-resolved-background: var(--wzc-color-fill-warning);
-    --wzc-badge-resolved-color: var(--wzc-color-on-warning);
+    --wzc-badge-resolved-background: var(--wzc-badge-warning-background);
+    --wzc-badge-resolved-color: var(--wzc-badge-warning-color);
   }
 
   :host([color="amber"]) {

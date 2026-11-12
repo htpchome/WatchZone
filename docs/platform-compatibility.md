@@ -110,11 +110,23 @@ flow through the semantic token boundary. The profile exposes stable mode data
 to the card and editor and synchronizes their `color-scheme` without replacing
 theme-provided colors.
 
-The editor, form or confirmation dialogs, and interactive popover panels use
-shared semantic tokens mapped to Home Assistant's native dialog surface,
-backdrop-filter, radius, and shadow hooks. They do not synthesize dialog colors
-from card and page backgrounds. Recorded-media dialogs retain their specialized
-presentation.
+Overlay surfaces use four explicit semantic roles at the centralized theme
+boundary:
+
+- Informational dialogs use Home Assistant's native dialog surface,
+  backdrop-filter, radius, shadow, and scrim hooks.
+- Configuration, form, destructive-confirmation, and other focused task
+  dialogs use the theme's solid primary surface while retaining Home
+  Assistant's dialog radius, shadow, and scrim. They do not apply a second
+  backdrop filter.
+- Interactive filters, calendars, and control panels use the theme's solid
+  primary surface with the shared raised-popover radius and elevation.
+- Recorded-media dialogs retain their specialized media presentation.
+
+The editor inherits Home Assistant's owning dialog surface rather than painting
+a second editor surface. Features consume only these WatchZone roles and do not
+branch on a specific theme name or synthesize colors from multiple translucent
+card and page surfaces.
 
 ## 3. Media rules
 
