@@ -17,6 +17,10 @@ const obsoleteOwnershipRoots = [
   resolve(sourceRoot, "components"),
   resolve(sourceRoot, "media"),
 ];
+const backendBoundaryRoots = [
+  resolve(root, "custom_components/watchzone/api"),
+  resolve(root, "custom_components/watchzone/features"),
+];
 const publicProviderResolvers = new Set([
   "activity-update-resolver",
   "live-source-resolver",
@@ -29,6 +33,15 @@ async function collectTypeScript(directory, files = []) {
     const path = resolve(directory, entry.name);
     if (entry.isDirectory()) await collectTypeScript(path, files);
     else if (entry.name.endsWith(".ts")) files.push(path);
+  }
+  return files;
+}
+
+async function collectFiles(directory, suffix, files = []) {
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const path = resolve(directory, entry.name);
+    if (entry.isDirectory()) await collectFiles(path, suffix, files);
+    else if (entry.name.endsWith(suffix)) files.push(path);
   }
   return files;
 }
@@ -149,6 +162,55 @@ for (const path of await collectTypeScript(sourceRoot)) {
       `${displayPath}: UI primitives emit typed intents and cannot open application media workflows`,
     );
   }
+  if (isUi && /\bHomeAssistantApi\b/.test(source)) {
+    violations.push(
+      `${displayPath}: UI primitives accept narrow presentation inputs, not the Home Assistant API`,
+    );
+  }
+  if (
+    path === resolve(stageRoot, "layout-runtime.ts") &&
+    /(?:from\s+["'][^"']*\/modules\/|\b(?:REVIEWS|EVENTS|RECORDINGS|EXPORTS)_MODULE_TYPE\b)/.test(
+      source,
+    )
+  ) {
+    violations.push(
+      `${displayPath}: the generic layout runtime cannot depend on built-in module identities`,
+    );
+  }
+  if (
+    (path === resolve(stageRoot, "activity/activity-filter.ts") ||
+      path === resolve(stageRoot, "activity/activity-calendar.ts")) &&
+    /from\s+["'][^"']*\/api\/(?:reviews|events|recordings|exports)["']/.test(
+      source,
+    )
+  ) {
+    violations.push(
+      `${displayPath}: shared activity controls consume published context and cannot load module data`,
+    );
+  }
+}
+
+for (const ownershipRoot of [modulesRoot, componentsRoot]) {
+  for (const path of await collectTypeScript(ownershipRoot)) {
+    if (basename(path) !== "index.ts") continue;
+    const source = await readFile(path, "utf8");
+    if (!/\bcontextKeys\s*:/.test(source)) {
+      violations.push(
+        `${relative(root, path)}: placeable definitions must declare finite contextKeys`,
+      );
+    }
+  }
+}
+
+for (const boundaryRoot of backendBoundaryRoots) {
+  for (const path of await collectFiles(boundaryRoot, ".py")) {
+    const source = await readFile(path, "utf8");
+    if (/providers(?:\.|\/)(?:frigate|home_assistant)\b/.test(source)) {
+      violations.push(
+        `${relative(root, path)}: backend API and features cannot import concrete providers`,
+      );
+    }
+  }
 }
 
 try {
@@ -180,5 +242,5 @@ if (violations.length > 0) {
 }
 
 console.log(
-  "Validated core, feature, UI, module, and provider ownership boundaries.",
+  "Validated frontend and backend ownership, placeable context, and provider boundaries.",
 );

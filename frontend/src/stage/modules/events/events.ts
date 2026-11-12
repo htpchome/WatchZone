@@ -238,13 +238,14 @@ export class EventsModule extends LitElement {
       }));
     return staticHtml`
       <wzc-activity-list
-        .api=${this.api}
         .displayObjectBadges=${this.displayObjectBadges}
         .displayTypeBadges=${this.displayEventTypeBadges}
         .displayZone=${this.displayZone}
         .items=${items}
         .loading=${this._activity.loading}
+        .locale=${this.api?.locale}
         .localize=${this.localize}
+        .resolveUrl=${this.api?.resolveUrl}
         .roundedCorners=${this.roundedCorners}
         .selectedDate=${this._filter.selectedDate()}
         .shadows=${this.shadows}

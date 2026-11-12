@@ -67,7 +67,8 @@ export interface PlaceableLoaderRegistration {
     readonly icon: string;
     readonly labelKey: TranslationKey;
   };
-  readonly placeholder?: "activity" | "camera" | "camera-navigation";
+  readonly placeholder?:
+    "activity" | "camera" | "camera-navigation" | "control";
   readonly stackAccessories?: (
     config: unknown,
   ) => StageStackAccessoryConfiguration | undefined;
@@ -75,7 +76,7 @@ export interface PlaceableLoaderRegistration {
 
 export interface StageStackAccessoryConfiguration {
   readonly calendar: "activity" | "disabled" | "recordings";
-  readonly filter: "activity" | "exports" | "none";
+  readonly filter: "activity" | "disabled" | "exports" | "none";
   readonly historyDays?: number;
   readonly targetModuleId?: string;
 }

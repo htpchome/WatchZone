@@ -49,6 +49,7 @@ export class PtzComponent extends LitElement {
 
   private _activeDirection?: PtzDirection;
   private _lastCameraEntityId?: string;
+  private _userToggled = false;
   private _wasVisible = false;
   private readonly _overlay = new OverlayInteractionController(this);
   private readonly _press = new PressInteractionController<PtzDirection>(this, {
@@ -82,6 +83,7 @@ export class PtzComponent extends LitElement {
       changed.has("initialState") ||
       (this._wasVisible && !visible)
     ) {
+      this._userToggled = false;
       this.expanded = this.initialState === "open";
     }
     this._lastCameraEntityId = camera?.entityId;
@@ -104,6 +106,7 @@ export class PtzComponent extends LitElement {
         class=${[
           "ptz-control",
           this.expanded ? "expanded" : "collapsed",
+          this._userToggled ? "user-toggled" : "",
           visible ? "visible" : "",
         ]
           .filter(Boolean)
@@ -188,6 +191,7 @@ export class PtzComponent extends LitElement {
 
   private readonly _toggleExpanded = (): void => {
     this._overlay.reveal();
+    this._userToggled = true;
     this.expanded = !this.expanded;
   };
 

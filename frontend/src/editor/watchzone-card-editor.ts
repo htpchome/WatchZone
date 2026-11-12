@@ -14,7 +14,6 @@ import {
   type LiveConnectionType,
   type PtzOverlayControl,
 } from "../core/config";
-import { resolveLiveSource } from "../api/live-source";
 import {
   ACCORDION_ITEM_TAG,
   ACCORDION_TAG,
@@ -39,9 +38,6 @@ import {
 } from "../core/home-assistant";
 import { LocalizationController } from "../core/localization";
 import { toYamlCardConfig, type YamlCardConfig } from "../core/yaml-config";
-import { TalkSourceResolver } from "../providers/talk-source-resolver";
-import { PtzSourceResolver } from "../providers/ptz-source-resolver";
-import type { PtzCapability } from "../api/ptz";
 import { themeTokens } from "../styles/theme-tokens";
 import { ToastManager } from "../ui/toast-manager";
 import { iconPath, renderIcon } from "../ui/icons";
@@ -60,6 +56,7 @@ import {
   updateDirtyState,
 } from "./dirty-state";
 import { HomeAssistantEditorBridge } from "./home-assistant-editor-bridge";
+import { CameraCapabilityController } from "./camera-capability.controller";
 import { cardEditorStyles } from "./watchzone-card-editor.styles";
 
 interface InputElement extends HTMLElement {
@@ -142,23 +139,15 @@ export class CardEditor extends LitElement {
   private _pendingLightEntityId = "";
   private _pendingLightIcon = DEFAULT_LIGHT_ICON;
   private _pendingRemoveCameraIndex?: number;
-  private _talkCapability?: boolean;
-  private _talkCapabilityGeneration = 0;
-  private _talkCapabilityPending = false;
-  private _ptzCapability?: PtzCapability;
-  private _ptzCapabilityGeneration = 0;
-  private _ptzCapabilityPending = false;
-  private _frigateConnectionAvailable = false;
-  private _frigateConnectionPending = false;
-  private _frigateConnectionGeneration = 0;
   private _editingCameraIndex?: number;
   private _dirtyContext?: DirtyStateContext<YamlCardConfig>;
   private _dirtySeeded = false;
   private _hass?: HomeAssistant;
   private _previewTimer?: ReturnType<typeof setTimeout>;
   private readonly _toasts = new ToastManager(this);
-  private readonly _talkResolver = new TalkSourceResolver();
-  private readonly _ptzResolver = new PtzSourceResolver();
+  private readonly _capabilities = new CameraCapabilityController(this, () =>
+    this._hass ? createHomeAssistantApi(this._hass) : undefined,
+  );
   private readonly _localization = new LocalizationController(this, () =>
     this._syncDraftStatus(),
   );
@@ -669,14 +658,14 @@ export class CardEditor extends LitElement {
                           "two_way_talk_enabled",
                           this._t("editor.two_way_talk"),
                           camera.two_way_talk_enabled,
-                          this._talkCapabilityPending ||
-                            this._talkCapability !== true,
+                          this._capabilities.talkPending ||
+                            this._capabilities.talk !== true,
                         )}
                         <small class="capability-status">
                           ${
-                            this._talkCapabilityPending
+                            this._capabilities.talkPending
                               ? this._t("editor.checking_two_way_talk")
-                              : this._talkCapability === true
+                              : this._capabilities.talk === true
                                 ? this._t("editor.two_way_talk_available")
                                 : this._t("editor.two_way_talk_unavailable")
                           }
@@ -687,14 +676,14 @@ export class CardEditor extends LitElement {
                           "ptz_enabled",
                           this._t("editor.ptz"),
                           camera.ptz_enabled,
-                          this._ptzCapabilityPending ||
-                            this._ptzCapability?.supported !== true,
+                          this._capabilities.ptzPending ||
+                            this._capabilities.ptz?.supported !== true,
                         )}
                         <small class="capability-status">
                           ${
-                            this._ptzCapabilityPending
+                            this._capabilities.ptzPending
                               ? this._t("editor.checking_ptz")
-                              : this._ptzCapability?.supported === true
+                              : this._capabilities.ptz?.supported === true
                                 ? this._t("editor.ptz_available")
                                 : this._t("editor.ptz_unavailable")
                           }
@@ -919,8 +908,8 @@ export class CardEditor extends LitElement {
             label: this._t("editor.frigate_go2rtc"),
             value: "frigate_go2rtc",
             disabled:
-              this._frigateConnectionPending ||
-              !this._frigateConnectionAvailable,
+              this._capabilities.frigatePending ||
+              !this._capabilities.frigateAvailable,
           },
         ],
       },
@@ -1010,9 +999,7 @@ export class CardEditor extends LitElement {
     if (!this._cameraDraft) return;
     const value = eventString(event);
     this._cameraDraft = { ...this._cameraDraft, entity_id: value };
-    this._checkConnectionCapability(value);
-    this._checkTalkCapability(value, this._cameraDraft.connection);
-    this._checkPtzCapability(value, this._cameraDraft.connection);
+    this._capabilities.check(value, this._cameraDraft.connection);
     this.requestUpdate();
   };
 
@@ -1024,8 +1011,8 @@ export class CardEditor extends LitElement {
     if (connection !== "home_assistant" && connection !== "frigate_go2rtc")
       return;
     this._cameraDraft = { ...this._cameraDraft, connection };
-    this._checkTalkCapability(this._cameraDraft.entity_id, connection);
-    this._checkPtzCapability(this._cameraDraft.entity_id, connection);
+    this._capabilities.checkTalk(this._cameraDraft.entity_id, connection);
+    this._capabilities.checkPtz(this._cameraDraft.entity_id, connection);
     this.requestUpdate();
   };
 
@@ -1168,12 +1155,7 @@ export class CardEditor extends LitElement {
     this._cameraDraft = createDefaultCameraConfig();
     this._cameraTitleInput = "";
     this._cancelAddingLight();
-    this._talkCapability = undefined;
-    this._talkCapabilityPending = false;
-    this._ptzCapability = undefined;
-    this._ptzCapabilityPending = false;
-    this._frigateConnectionAvailable = false;
-    this._frigateConnectionPending = false;
+    this._capabilities.reset();
     this.requestUpdate();
   };
 
@@ -1188,9 +1170,7 @@ export class CardEditor extends LitElement {
     this._cameraDraft = { ...camera };
     this._cameraTitleInput = camera.title;
     this._cancelAddingLight();
-    this._checkConnectionCapability(camera.entity_id);
-    this._checkTalkCapability(camera.entity_id, camera.connection);
-    this._checkPtzCapability(camera.entity_id, camera.connection);
+    this._capabilities.check(camera.entity_id, camera.connection);
     this.requestUpdate();
   };
 
@@ -1225,15 +1205,7 @@ export class CardEditor extends LitElement {
     this._cameraDraft = undefined;
     this._cameraTitleInput = "";
     this._cancelAddingLight();
-    this._talkCapabilityGeneration += 1;
-    this._talkCapability = undefined;
-    this._talkCapabilityPending = false;
-    this._ptzCapabilityGeneration += 1;
-    this._ptzCapability = undefined;
-    this._ptzCapabilityPending = false;
-    this._frigateConnectionGeneration += 1;
-    this._frigateConnectionAvailable = false;
-    this._frigateConnectionPending = false;
+    this._capabilities.reset();
     this._editingCameraIndex = undefined;
     this.requestUpdate();
   };
@@ -1316,79 +1288,6 @@ export class CardEditor extends LitElement {
     return (
       separator >= 0 ? entityId.slice(separator + 1) : entityId
     ).replaceAll("_", " ");
-  }
-
-  private _checkTalkCapability(
-    entityId: string,
-    connection: LiveConnectionType,
-  ): void {
-    const generation = ++this._talkCapabilityGeneration;
-    this._talkCapability = undefined;
-    if (!this._hass || !entityId.startsWith("camera.")) {
-      this._talkCapabilityPending = false;
-      this.requestUpdate();
-      return;
-    }
-    this._talkCapabilityPending = true;
-    this.requestUpdate();
-    void this._talkResolver
-      .supports(createHomeAssistantApi(this._hass), connection, entityId)
-      .catch(() => false)
-      .then((supported) => {
-        if (generation !== this._talkCapabilityGeneration) return;
-        this._talkCapability = supported;
-        this._talkCapabilityPending = false;
-        this.requestUpdate();
-      });
-  }
-
-  private _checkPtzCapability(
-    entityId: string,
-    connection: LiveConnectionType,
-  ): void {
-    const generation = ++this._ptzCapabilityGeneration;
-    this._ptzCapability = undefined;
-    if (!this._hass || !entityId.startsWith("camera.")) {
-      this._ptzCapabilityPending = false;
-      this.requestUpdate();
-      return;
-    }
-    this._ptzCapabilityPending = true;
-    this.requestUpdate();
-    void this._ptzResolver
-      .capability(createHomeAssistantApi(this._hass), connection, entityId)
-      .catch(() => undefined)
-      .then((capability) => {
-        if (generation !== this._ptzCapabilityGeneration) return;
-        this._ptzCapability = capability;
-        this._ptzCapabilityPending = false;
-        this.requestUpdate();
-      });
-  }
-
-  private _checkConnectionCapability(entityId: string): void {
-    const generation = ++this._frigateConnectionGeneration;
-    this._frigateConnectionAvailable = false;
-    if (!this._hass || !entityId.startsWith("camera.")) {
-      this._frigateConnectionPending = false;
-      this.requestUpdate();
-      return;
-    }
-    this._frigateConnectionPending = true;
-    this.requestUpdate();
-    void resolveLiveSource(
-      createHomeAssistantApi(this._hass),
-      "frigate_go2rtc",
-      entityId,
-    )
-      .then(() => true)
-      .catch(() => false)
-      .then((available) => {
-        if (generation !== this._frigateConnectionGeneration) return;
-        this._frigateConnectionAvailable = available;
-        this._frigateConnectionPending = false;
-        this.requestUpdate();
-      });
   }
 
   private _connectionName(connection: LiveConnectionType): string {

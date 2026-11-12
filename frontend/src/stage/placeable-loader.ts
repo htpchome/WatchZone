@@ -30,7 +30,7 @@ function recordingsStackAccessories(config: unknown) {
   const source = stackConfig(config);
   return {
     calendar: "recordings" as const,
-    filter: "none" as const,
+    filter: "disabled" as const,
     targetModuleId: source.targetModuleId,
   };
 }
@@ -123,18 +123,21 @@ const componentLoaders = {
       import("./components/two-way-talk").then(
         ({ componentDefinition }) => componentDefinition,
       ),
+    placeholder: "control",
   },
   [PTZ_COMPONENT_TYPE]: {
     load: () =>
       import("./components/ptz").then(
         ({ componentDefinition }) => componentDefinition,
       ),
+    placeholder: "control",
   },
   [LIGHT_COMPONENT_TYPE]: {
     load: () =>
       import("./components/light-control").then(
         ({ componentDefinition }) => componentDefinition,
       ),
+    placeholder: "control",
   },
 } satisfies PlaceableLoaderMap;
 

@@ -2,7 +2,7 @@ import {
   formatHomeAssistantEventDate,
   formatHomeAssistantTime,
 } from "./date-time";
-import type { HomeAssistantApi } from "./home-assistant";
+import type { HomeAssistantApi, HomeAssistantLocale } from "./home-assistant";
 import type {
   RecordedMediaRequest,
   RecordedMediaSource,
@@ -21,15 +21,15 @@ export interface ActivityMediaItem {
 
 export function activityMediaTitle(
   item: ActivityMediaItem,
-  api?: HomeAssistantApi,
+  locale?: HomeAssistantLocale,
 ): string {
   const start = new Date(item.startTime * 1000);
   return `${capitalize(
     item.cameraLabel.replaceAll("_", " "),
-    api?.locale?.language,
-  )} - ${formatHomeAssistantTime(start, api?.locale)} - ${formatHomeAssistantEventDate(
+    locale?.language,
+  )} - ${formatHomeAssistantTime(start, locale)} - ${formatHomeAssistantEventDate(
     start,
-    api?.locale,
+    locale,
   )}`;
 }
 
@@ -43,7 +43,7 @@ export function activityRecordedMediaRequest(
   const posterUrl = previewUrl
     ? (api?.resolveUrl(previewUrl) ?? previewUrl)
     : undefined;
-  const title = activityMediaTitle(item, api);
+  const title = activityMediaTitle(item, api?.locale);
   if (kind === "snapshot") {
     if (!item.snapshotUrl) return undefined;
     return {
@@ -95,7 +95,7 @@ export function activityPreviewMediaRequest(
         url,
       },
     ],
-    title: activityMediaTitle(item, api),
+    title: activityMediaTitle(item, api?.locale),
   };
 }
 

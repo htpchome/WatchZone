@@ -247,10 +247,16 @@ export const stageRuntimeStyles = css`
     );
   }
 
-  .control-region > .component-node,
-  .control-region > .component-node.placeable-ready > * {
+  .control-region > .component-node {
     inline-size: auto;
     block-size: auto;
+  }
+
+  .control-placeholder {
+    display: block;
+    inline-size: var(--wzc-camera-control-size);
+    block-size: var(--wzc-camera-control-size);
+    pointer-events: none;
   }
 
   .module-slot {
@@ -267,8 +273,7 @@ export const stageRuntimeStyles = css`
     min-inline-size: 0;
   }
 
-  .module-slot.placeable-ready > *,
-  .component-node.placeable-ready > * {
+  .module-slot.placeable-ready > * {
     block-size: 100%;
     min-block-size: 0;
   }

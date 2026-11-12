@@ -12,7 +12,7 @@ import {
   formatHomeAssistantTime,
   homeAssistantDateKey,
 } from "../core/date-time";
-import type { HomeAssistantApi } from "../core/home-assistant";
+import type { HomeAssistantLocale } from "../core/home-assistant";
 import type {
   RecordedMediaSource,
   RecordedMediaTransport,
@@ -120,7 +120,6 @@ interface ActivityDayGroup {
 /** Shared activity-tile presentation used by independent media modules. */
 export class ActivityList extends LitElement {
   public static properties = {
-    api: { attribute: false },
     displayObjectBadges: { attribute: false },
     displayTypeBadges: { attribute: false },
     displayZone: { attribute: false },
@@ -129,13 +128,14 @@ export class ActivityList extends LitElement {
     listKey: { attribute: false },
     loading: { attribute: false },
     loadingKey: { attribute: false },
+    locale: { attribute: false },
     localize: { attribute: false },
+    resolveUrl: { attribute: false },
     roundedCorners: { attribute: false, type: Boolean },
     selectedDate: { attribute: false },
     shadows: { attribute: false, type: Boolean },
   };
 
-  public api?: HomeAssistantApi;
   public displayObjectBadges = true;
   public displayTypeBadges = true;
   public displayZone = true;
@@ -144,7 +144,9 @@ export class ActivityList extends LitElement {
   public listKey: TranslationKey = "events.list";
   public loading = false;
   public loadingKey: TranslationKey = "events.loading";
+  public locale?: HomeAssistantLocale;
   public localize: LocalizeFunction = englishLocalize;
+  public resolveUrl?: (path: string) => string;
   public roundedCorners = true;
   public selectedDate?: string;
   public shadows = true;
@@ -310,7 +312,7 @@ export class ActivityList extends LitElement {
       objectLabels,
       typeBadge ? [reservedColor(typeBadge.variant)] : [],
     );
-    const title = activityMediaTitle(item, this.api);
+    const title = activityMediaTitle(item, this.locale);
     const playLabel = this.localize("media_player.open", { title });
     return html`<article
       class="tile standard"
@@ -345,7 +347,7 @@ export class ActivityList extends LitElement {
             ? html`<img
                 class="thumbnail"
                 loading="lazy"
-                src=${this.api?.resolveUrl(previewUrl) ?? previewUrl}
+                src=${this.resolveUrl?.(previewUrl) ?? previewUrl}
                 alt=${this.localize("events.thumbnail", {
                   label: objectLabels[0] ?? this.localize("reviews.activity"),
                 })}
@@ -361,16 +363,14 @@ export class ActivityList extends LitElement {
           !this._failedMedia.has(mediaKey(item, hoverPreviewUrl))
             ? html`<img
                 class="thumbnail hover-preview"
-                src=${this.api?.resolveUrl(hoverPreviewUrl) ?? hoverPreviewUrl}
+                src=${this.resolveUrl?.(hoverPreviewUrl) ?? hoverPreviewUrl}
                 alt=""
                 aria-hidden="true"
                 @error=${() => this._mediaFailed(item, hoverPreviewUrl)}
               />`
             : null
         }
-        <span class="duration"
-          >${formatDuration(duration, this.api?.locale)}</span
-        >
+        <span class="duration">${formatDuration(duration, this.locale)}</span>
         ${
           item.inProgress
             ? html`<span class="in-progress"
@@ -429,7 +429,7 @@ export class ActivityList extends LitElement {
                   : item.clipUrl
                     ? html`<a
                         class="action wzc-icon-button"
-                        href=${this.api?.resolveUrl(item.clipUrl) ?? item.clipUrl}
+                        href=${this.resolveUrl?.(item.clipUrl) ?? item.clipUrl}
                         download=${item.downloadFilename ?? ""}
                         title=${this.localize("events.download_clip")}
                         aria-label=${this.localize("events.download_clip")}
@@ -530,7 +530,7 @@ export class ActivityList extends LitElement {
             color=${objectColors[index] ?? "neutral"}
             shape="pill"
             size="small"
-            >${capitalizeBadgeText(label, this.api?.locale?.language)}</wzc-badge
+            >${capitalizeBadgeText(label, this.locale?.language)}</wzc-badge
           >`,
       )}
       ${
@@ -541,7 +541,7 @@ export class ActivityList extends LitElement {
               variant=${typeBadge.variant}
               >${capitalizeBadgeText(
                 typeBadge.label,
-                this.api?.locale?.language,
+                this.locale?.language,
               )}</wzc-badge
             >`
           : null
@@ -553,11 +553,11 @@ export class ActivityList extends LitElement {
     return html`<div class="details">
       <div class="metadata">
         <span class="metadata-icon">${renderIcon("clock")}</span>
-        <span>${formatHomeAssistantTime(start, this.api?.locale)}</span>
+        <span>${formatHomeAssistantTime(start, this.locale)}</span>
       </div>
       <div class="metadata">
         <span class="metadata-icon">${renderIcon("calendar")}</span>
-        <span>${formatHomeAssistantEventDate(start, this.api?.locale)}</span>
+        <span>${formatHomeAssistantEventDate(start, this.locale)}</span>
       </div>
       ${
         this.displayZone && item.zones.length > 0
@@ -718,7 +718,7 @@ export class ActivityList extends LitElement {
     const moduleLabel = this._moduleLabel();
     for (const [index, item] of this.items.entries()) {
       const date = new Date(item.startTime * 1000);
-      const dateKey = homeAssistantDateKey(item.startTime, this.api?.locale);
+      const dateKey = homeAssistantDateKey(item.startTime, this.locale);
       const current = groups.at(-1);
       if (current?.dateKey === dateKey) {
         current.items.push(item);
@@ -727,7 +727,7 @@ export class ActivityList extends LitElement {
       groups.push({
         dateKey,
         items: [item],
-        label: `${formatHomeAssistantEventDate(date, this.api?.locale)} — ${moduleLabel}`,
+        label: `${formatHomeAssistantEventDate(date, this.locale)} — ${moduleLabel}`,
         startIndex: index,
       });
     }
@@ -736,9 +736,8 @@ export class ActivityList extends LitElement {
 
   private _fallbackDayLabel(): string {
     const dateKey =
-      this.selectedDate ??
-      homeAssistantDateKey(Date.now() / 1000, this.api?.locale);
-    return `${formatHomeAssistantDateKey(dateKey, this.api?.locale)} — ${this._moduleLabel()}`;
+      this.selectedDate ?? homeAssistantDateKey(Date.now() / 1000, this.locale);
+    return `${formatHomeAssistantDateKey(dateKey, this.locale)} — ${this._moduleLabel()}`;
   }
 
   private _moduleLabel(): string {
@@ -817,7 +816,7 @@ function capitalizeBadgeText(value: string, locale?: string): string {
 
 function formatDuration(
   seconds: number,
-  locale: HomeAssistantApi["locale"],
+  locale: HomeAssistantLocale | undefined,
 ): string {
   if (seconds < 60) {
     return `${homeAssistantNumberFormat(locale, {

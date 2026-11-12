@@ -65,7 +65,7 @@ interface PlaceableRecord {
   entityRefs: ReadonlyMap<string, HomeAssistantEntity | undefined>;
   generation: number;
   node: PlaceableNode;
-  placeholder?: "activity" | "camera" | "camera-navigation";
+  placeholder?: "activity" | "camera" | "camera-navigation" | "control";
   preparation?: PlaceablePreparation;
   status: "error" | "idle" | "loading" | "ready";
   visible: boolean;
@@ -330,9 +330,10 @@ export class LayoutRuntime implements ReactiveController {
     }
     void defineActivityControls();
     return html`${
-        accessories.filter === "activity"
+        accessories.filter === "activity" || accessories.filter === "disabled"
           ? html`<wzc-activity-filter
               .cameraSelection=${this._cameraSelection}
+              .disabled=${accessories.filter === "disabled"}
               .filterContext=${this._activityFilter}
               .locale=${this._context.api?.locale}
               .localize=${this._context.localize ?? englishLocalize}
@@ -583,6 +584,11 @@ export class LayoutRuntime implements ReactiveController {
           () => html`<span class="camera-navigation-skeleton-item"></span>`,
         )}
       </div>`;
+    }
+    if (record.placeholder === "control") {
+      return html`<span class="control-placeholder" role="status">
+        ${status}
+      </span>`;
     }
     return html`<div class="module-placeholder" role="status">
       ${this._localize("layout.preparing_module")}

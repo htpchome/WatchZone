@@ -2,12 +2,10 @@ import { LitElement, type PropertyValues } from "lit";
 import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import {
-  getReviewTrackingDetails,
   listReviews,
   setReviewReviewed,
   type ReviewItem,
 } from "../../../api/reviews";
-import { prepareExport, type ExportRange } from "../../../api/exports";
 import {
   ActiveCameraActivityController,
   ActivityFilterController,
@@ -24,11 +22,6 @@ import {
   REVIEW_TRACKING_CLOSE_EVENT,
   REVIEW_TRACKING_RETRY_EVENT,
 } from "../../../core/constants";
-import {
-  startExportJob,
-  subscribeExportJobs,
-  type ExportJob,
-} from "../../../features/exports";
 import {
   activityPreviewMediaRequest,
   activityRecordedMediaRequest,
@@ -52,28 +45,20 @@ import { ToastManager } from "../../../ui/toast-manager";
 import "../../../ui/toast-region";
 import { reviewsStyles } from "./reviews.styles";
 import type { ReviewAnalysis } from "./review-analysis-dialog";
-import type {
-  ReviewExportConfirmation,
-  ReviewExportDraft,
-} from "./review-export-dialog";
+import type { ReviewExportConfirmation } from "./review-export-dialog";
 import "./review-analysis-dialog";
 import "./review-export-dialog";
-import type { ReviewTrackingDialogModel } from "./review-tracking-dialog";
 import "./review-tracking-dialog";
+import { ReviewDownloadController } from "./review-download.controller";
+import { ReviewExportController } from "./review-export.controller";
+import { ReviewTrackingController } from "./review-tracking.controller";
 
 const MEDIA_RESOLVE_DELAYS_MS = [0, 750, 1_500] as const;
-const DOWNLOAD_OBJECT_URL_REVOKE_DELAY_MS = 1_000;
 const activityListIntentEvent = unsafeStatic(ACTIVITY_LIST_INTENT_EVENT);
 const reviewExportCloseEvent = unsafeStatic(REVIEW_EXPORT_CLOSE_EVENT);
 const reviewExportConfirmEvent = unsafeStatic(REVIEW_EXPORT_CONFIRM_EVENT);
 const reviewTrackingCloseEvent = unsafeStatic(REVIEW_TRACKING_CLOSE_EVENT);
 const reviewTrackingRetryEvent = unsafeStatic(REVIEW_TRACKING_RETRY_EVENT);
-
-interface PendingReviewExport {
-  readonly draft: ReviewExportDraft;
-  readonly range: ExportRange;
-  readonly reviewId: string;
-}
 
 /** Active-camera provider review activity presented as WatchZone Reviews. */
 export class ReviewsModule extends LitElement {
@@ -109,22 +94,12 @@ export class ReviewsModule extends LitElement {
 
   private readonly _toasts = new ToastManager(this);
   private _analysis?: ReviewAnalysis;
-  private _downloadAbort?: AbortController;
-  private _exportJobs: readonly ExportJob[] = [];
-  private _exportJobsApi?: HomeAssistantApi;
-  private _exportJobsUnsubscribe?: () => void;
-  private _pendingExport?: PendingReviewExport;
-  private readonly _preparingExportIds = new Set<string>();
   private _publishedActivity?: readonly ReviewItem[];
   private _publishedEntityId?: string;
   private _publishedFilter?: ActivityFilterContext;
   private _publishedDateEntityId?: string;
   private _publishedDateContext?: MediaDateContext;
   private readonly _pendingReviewIds = new Set<string>();
-  private _tracking?: ReviewTrackingDialogModel;
-  private _trackingReviewId?: string;
-  private _trackingRequestGeneration = 0;
-  private _trackingSourceItem?: ActivityListItem;
   private readonly _filter = new ActivityFilterController(
     this,
     () => this.activityFilter,
@@ -150,25 +125,34 @@ export class ReviewsModule extends LitElement {
     "reviews",
     (notification) => notification.review,
   );
-
-  public connectedCallback(): void {
-    super.connectedCallback();
-    this._syncExportJobs();
-  }
+  private readonly _download = new ReviewDownloadController(
+    this,
+    () => this.api,
+    () => this.localize,
+    this._toasts,
+  );
+  private readonly _exports = new ReviewExportController(
+    this,
+    () => this.api,
+    () => this._activity.activeEntityId,
+    () => this._activity.activeCameraLabel,
+    () => this._activity.items,
+    () => this.localize,
+    this._toasts,
+  );
+  private readonly _tracking = new ReviewTrackingController(
+    this,
+    () => this.api,
+    () => this._activity.activeEntityId,
+  );
 
   public disconnectedCallback(): void {
     this._clearPublishedDates();
-    this._trackingRequestGeneration += 1;
-    this._downloadAbort?.abort();
-    this._downloadAbort = undefined;
-    this._exportJobsUnsubscribe?.();
-    this._exportJobsUnsubscribe = undefined;
-    this._exportJobsApi = undefined;
     super.disconnectedCallback();
   }
 
   protected update(changed: PropertyValues<this>): void {
-    if (changed.has("api")) this._syncExportJobs();
+    if (changed.has("api")) this._exports.syncApi();
     const entityId = this._activity.activeEntityId;
     if (
       entityId &&
@@ -245,7 +229,6 @@ export class ReviewsModule extends LitElement {
       .map((review) => this._listItem(review));
     return staticHtml`
       <wzc-activity-list
-        .api=${this.api}
         .displayObjectBadges=${this.displayObjectBadges}
         .displayTypeBadges=${this.displayEventTypeBadges}
         .displayZone=${this.displayZone}
@@ -254,7 +237,9 @@ export class ReviewsModule extends LitElement {
         .listKey=${"reviews.list"}
         .loading=${this._activity.loading}
         .loadingKey=${"reviews.loading"}
+        .locale=${this.api?.locale}
         .localize=${this.localize}
+        .resolveUrl=${this.api?.resolveUrl}
         .roundedCorners=${this.roundedCorners}
         .selectedDate=${this._filter.selectedDate()}
         .shadows=${this.shadows}
@@ -267,7 +252,7 @@ export class ReviewsModule extends LitElement {
         @wzc-review-analysis-close=${this._closeAnalysis}
       ></wzc-review-analysis-dialog>
       <wzc-review-export-dialog
-        .draft=${this._pendingExport?.draft}
+        .draft=${this._exports.pending?.draft}
         .localize=${this.localize}
         .submitting=${false}
         @${reviewExportCloseEvent}=${this._closeExport}
@@ -276,7 +261,7 @@ export class ReviewsModule extends LitElement {
       <wzc-review-tracking-dialog
         .localize=${this.localize}
         .locale=${this.api?.locale}
-        .model=${this._tracking}
+        .model=${this._tracking.model}
         @${reviewTrackingCloseEvent}=${this._closeTracking}
         @${reviewTrackingRetryEvent}=${this._retryTracking}
       ></wzc-review-tracking-dialog>
@@ -303,11 +288,8 @@ export class ReviewsModule extends LitElement {
       downloadFilename: `${review.camera}-${Math.floor(review.start_time)}.mp4`,
       endTime: review.end_time,
       exportable: true,
-      exportPending:
-        this._preparingExportIds.has(review.id) ||
-        this._exportJob(review.id)?.status === "submitting" ||
-        this._exportJob(review.id)?.status === "processing",
-      ...this._exportFeedback(review.id),
+      exportPending: this._exports.isPending(review.id),
+      ...this._exports.feedback(review.id),
       hoverPreviewUrl: this.hoverPreviewEnabled ? review.preview_url : null,
       id: review.id,
       inProgress:
@@ -358,112 +340,17 @@ export class ReviewsModule extends LitElement {
     } else if (intent.kind === "open_analysis") {
       this._openAnalysis(intent.item);
     } else if (intent.kind === "open_tracking") {
-      void this._openTracking(intent.item);
+      void this._tracking.open(intent.item);
     } else if (intent.kind === "toggle_reviewed") {
       this._toggleReviewed(intent.item);
     } else if (intent.kind === "export") {
-      void this._beginExport(intent.item);
+      void this._exports.begin(intent.item);
     } else if (intent.kind === "download") {
-      void this._download(intent.item);
+      void this._download.download(intent.item);
     } else {
       void this._openMedia(intent.item, intent.media);
     }
   };
-
-  private async _openTracking(item: ActivityListItem): Promise<void> {
-    const api = this.api;
-    const entityId = this._activity.activeEntityId;
-    if (!api || !entityId || !item.trackingAvailable) return;
-    this._trackingReviewId = item.id;
-    this._trackingSourceItem = item;
-    const generation = ++this._trackingRequestGeneration;
-    this._tracking = {
-      analysisTitle: item.analysisTitle,
-      classification: item.classification ?? "detection",
-      endTime: item.endTime,
-      failed: false,
-      loading: true,
-      startTime: item.startTime,
-    };
-    this.requestUpdate();
-    try {
-      const details = await getReviewTrackingDetails(api, entityId, item.id);
-      if (
-        generation !== this._trackingRequestGeneration ||
-        this._trackingReviewId !== item.id ||
-        !this._tracking
-      )
-        return;
-      this._tracking = { ...this._tracking, details, loading: false };
-    } catch {
-      if (
-        generation !== this._trackingRequestGeneration ||
-        this._trackingReviewId !== item.id ||
-        !this._tracking
-      )
-        return;
-      this._tracking = { ...this._tracking, failed: true, loading: false };
-    }
-    this.requestUpdate();
-  }
-
-  private readonly _closeTracking = (): void => {
-    this._trackingRequestGeneration += 1;
-    this._trackingReviewId = undefined;
-    this._trackingSourceItem = undefined;
-    this._tracking = undefined;
-    this.requestUpdate();
-  };
-
-  private readonly _retryTracking = (): void => {
-    const item = this._trackingSourceItem;
-    if (item) void this._openTracking(item);
-  };
-
-  private async _download(item: ActivityListItem): Promise<void> {
-    const api = this.api;
-    const path = item.downloadUrl;
-    if (!api || !path) return;
-    this._downloadAbort?.abort();
-    const abort = new AbortController();
-    this._downloadAbort = abort;
-    let objectUrl: string | undefined;
-    try {
-      const signed = await api.callWS<{ readonly path?: string }>({
-        type: "auth/sign_path",
-        path,
-        expires: 3600,
-      });
-      const response = await fetch(api.resolveUrl(signed.path ?? path), {
-        signal: abort.signal,
-      });
-      if (!response.ok) throw new Error(`Download failed: ${response.status}`);
-      objectUrl = URL.createObjectURL(await response.blob());
-      const anchor = document.createElement("a");
-      anchor.href = objectUrl;
-      anchor.download = item.downloadFilename ?? "review.mp4";
-      document.body.append(anchor);
-      try {
-        anchor.click();
-      } finally {
-        anchor.remove();
-      }
-    } catch {
-      if (abort.signal.aborted) return;
-      this._toasts.error(this.localize("reviews.download_failed"), {
-        key: `review-download-${item.id}`,
-      });
-    } finally {
-      if (this._downloadAbort === abort) this._downloadAbort = undefined;
-      if (objectUrl) {
-        const completedUrl = objectUrl;
-        window.setTimeout(
-          () => URL.revokeObjectURL(completedUrl),
-          DOWNLOAD_OBJECT_URL_REVOKE_DELAY_MS,
-        );
-      }
-    }
-  }
 
   private async _openMedia(
     item: ActivityListItem,
@@ -523,106 +410,15 @@ export class ReviewsModule extends LitElement {
     this.requestUpdate();
   };
 
-  private async _beginExport(item: ActivityListItem): Promise<void> {
-    const api = this.api;
-    const entityId = this._activity.activeEntityId;
-    const startTime = item.mediaStartTime ?? item.startTime;
-    const endTime = item.mediaEndTime ?? item.endTime;
-    if (
-      !api ||
-      !entityId ||
-      endTime === null ||
-      endTime <= startTime ||
-      this._preparingExportIds.has(item.id)
-    )
-      return;
-    const range: ExportRange = {
-      end_time: endTime,
-      entity_id: entityId,
-      start_time: startTime,
-    };
-    this._preparingExportIds.add(item.id);
-    this.requestUpdate();
-    try {
-      const name = await prepareExport(api, range);
-      this._pendingExport = { draft: { name }, range, reviewId: item.id };
-    } catch {
-      this._toasts.error(this.localize("reviews.export_prepare_failed"), {
-        key: "review-export-prepare",
-      });
-    } finally {
-      this._preparingExportIds.delete(item.id);
-      this.requestUpdate();
-    }
-  }
-
-  private readonly _closeExport = (): void => {
-    this._pendingExport = undefined;
-    this.requestUpdate();
-  };
+  private readonly _closeExport = (): void => this._exports.close();
 
   private readonly _confirmExport = (
     event: CustomEvent<ReviewExportConfirmation>,
-  ): void => {
-    const api = this.api;
-    const pending = this._pendingExport;
-    if (!api || !pending) return;
-    this._pendingExport = undefined;
-    this.requestUpdate();
-    const review = this._activity.items.find(
-      (candidate) => candidate.id === pending.reviewId,
-    );
-    startExportJob(api, {
-      camera: this._activity.activeCameraLabel ?? review?.camera ?? "",
-      name: event.detail.name,
-      range: pending.range,
-      reviewId: pending.reviewId,
-    });
-  };
+  ): void => this._exports.confirm(event.detail);
 
-  private _syncExportJobs(): void {
-    const api = this.api;
-    if (api === this._exportJobsApi) return;
-    this._exportJobsUnsubscribe?.();
-    this._exportJobsUnsubscribe = undefined;
-    this._exportJobsApi = api;
-    this._exportJobs = [];
-    if (!api || !this.isConnected) return;
-    this._exportJobsUnsubscribe = subscribeExportJobs(api, (jobs) => {
-      this._exportJobs = jobs;
-      this.requestUpdate();
-    });
-  }
+  private readonly _closeTracking = (): void => this._tracking.close();
 
-  private _exportJob(reviewId: string): ExportJob | undefined {
-    const entityId = this._activity.activeEntityId;
-    return this._exportJobs.find(
-      (job) => job.reviewId === reviewId && job.entityId === entityId,
-    );
-  }
-
-  private _exportFeedback(reviewId: string): Partial<ActivityListItem> {
-    const status = this._exportJob(reviewId)?.status;
-    if (status === "submitting" || status === "processing") {
-      return {
-        exportStatus: "progress",
-        exportStatusText: this.localize("reviews.export_progress"),
-      };
-    }
-    if (status === "success") {
-      return {
-        exportStatus: "success",
-        exportStatusText: this.localize("reviews.export_complete"),
-      };
-    }
-    if (status === "failed") {
-      return {
-        exportStatus: "failed",
-        exportStatusText: this.localize("reviews.export_failed_status"),
-      };
-    }
-    return {};
-  }
+  private readonly _retryTracking = (): void => this._tracking.retry();
 
   private readonly _toggleReviewed = (item: ActivityListItem): void => {
     if (item.reviewed === undefined) return;
