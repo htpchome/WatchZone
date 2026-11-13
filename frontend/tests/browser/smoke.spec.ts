@@ -26,6 +26,21 @@ async function waitForWatchZoneDefinition(page: Page): Promise<void> {
   );
 }
 
+async function emitReviewNotification(
+  page: Page,
+  payload: unknown,
+): Promise<void> {
+  await page.evaluate((notification) => {
+    for (const callback of (
+      window as unknown as {
+        reviewNotifications?: Array<(value: unknown) => void>;
+      }
+    ).reviewNotifications ?? []) {
+      callback(JSON.stringify(notification));
+    }
+  }, payload);
+}
+
 async function installHaIconFixture(page: Page): Promise<void> {
   await page.addInitScript(() => {
     if (customElements.get("ha-icon")) return;
@@ -748,6 +763,161 @@ test("releases grouped overlay and resize interaction before selecting another c
   await expect(hallHandle).toHaveAttribute("aria-valuenow", "56");
   await hallHandle.press("End");
   await expect(hallHandle).toHaveAttribute("aria-valuenow", "100");
+
+  await navigation.filter({ hasText: "Group A/B" }).click();
+  await expect
+    .poll(() =>
+      group.evaluate(
+        (element) => (element as HTMLElement & { active: boolean }).active,
+      ),
+    )
+    .toBe(true);
+  await group.hover();
+  await expect(group.locator(".feed-actions").first()).toHaveClass(/visible/);
+  await expect(camera.locator(".carousel-navigation.next")).toBeVisible();
+
+  await groupHandle.press("Home");
+  await expect(groupHandle).toHaveAttribute("aria-valuenow", "56");
+  await groupHandle.press("End");
+  await expect(groupHandle).toHaveAttribute("aria-valuenow", "100");
+
+  const groupViewport = group.locator("wzc-camera-live .viewport").first();
+  await groupViewport.dblclick();
+  await expect(groupViewport).toHaveAttribute("aria-label", /zoom 200 percent/);
+  await groupViewport.dblclick();
+  await expect(groupViewport).toHaveAttribute("aria-label", /zoom 100 percent/);
+});
+
+test("keeps grouped interaction alive across alert takeover", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  const card = page.locator("watchzone-card");
+  await card.evaluate((element) => {
+    const cardElement = element as HTMLElement & {
+      hass: unknown;
+      setConfig(config: unknown): void;
+    };
+    const connection = {
+      subscribeMessage: async (
+        callback: (payload: unknown) => void,
+        message: { type: string },
+      ) => {
+        if (message.type === "frigate/reviews/subscribe") {
+          const target = window as unknown as {
+            reviewNotifications?: Array<(payload: unknown) => void>;
+          };
+          target.reviewNotifications ??= [];
+          target.reviewNotifications.push(callback);
+        }
+        return () => undefined;
+      },
+    };
+    cardElement.setConfig({
+      type: "custom:watchzone-card",
+      alert_detection_takeover: "both",
+      start_alert_takeover_on: true,
+      cameras: [
+        {
+          additional_camera: {
+            entity_id: "camera.driveway",
+            layout: "stacked",
+          },
+          entity_id: "camera.porch",
+          title: "Group A/B",
+        },
+        { entity_id: "camera.driveway", title: "Driveway" },
+        { entity_id: "camera.hall", title: "Hall" },
+      ],
+    });
+    cardElement.hass = {
+      states: Object.fromEntries(
+        ["porch", "driveway", "hall"].map((camera) => [
+          `camera.${camera}`,
+          {
+            entity_id: `camera.${camera}`,
+            state: "streaming",
+            attributes: { friendly_name: camera },
+          },
+        ]),
+      ),
+      connection,
+      hassUrl: (path: string) => path,
+      callService: async () => undefined,
+      callWS: async (message: { entity_id?: string; type: string }) => {
+        if (message.type === "watchzone/activity/source") {
+          return {
+            type: "frigate",
+            instance_id: "frigate-main",
+            camera_name: message.entity_id?.replace("camera.", ""),
+          };
+        }
+        if (message.type === "watchzone/live/camera/ready") {
+          return { ready: false };
+        }
+        return undefined;
+      },
+    };
+  });
+
+  const navigation = card.locator("wzc-camera-navigation button");
+  const hallButton = navigation.filter({ hasText: "Hall" });
+  await hallButton.click();
+  await expect(hallButton).toHaveAttribute("aria-selected", "true");
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (
+            window as unknown as {
+              reviewNotifications?: Array<(payload: unknown) => void>;
+            }
+          ).reviewNotifications?.length ?? 0,
+      ),
+    )
+    .toBeGreaterThan(1);
+
+  await emitReviewNotification(page, {
+    type: "new",
+    after: {
+      camera: "driveway",
+      id: "group-review",
+      severity: "detection",
+      start_time: Date.now() / 1000 - 1,
+    },
+  });
+  await expect(navigation.filter({ hasText: "Group A/B" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+
+  const group = card.locator("wzc-camera-group-view");
+  await group.hover();
+  await expect(group.locator(".feed-actions").first()).toHaveClass(/visible/);
+  const viewport = group.locator("wzc-camera-live .viewport").first();
+  await viewport.dblclick();
+  await expect(viewport).toHaveAttribute("aria-label", /zoom 200 percent/);
+  const handle = group.locator(".stage-resize-handle:visible");
+  await handle.press("End");
+  await expect(handle).toHaveAttribute("aria-valuenow", "100");
+
+  await emitReviewNotification(page, {
+    type: "end",
+    after: {
+      camera: "driveway",
+      id: "group-review",
+      severity: "detection",
+    },
+  });
+  await expect(hallButton).toHaveAttribute("aria-selected", "true");
+  const hallViewport = card
+    .locator("wzc-camera .swiper-slide")
+    .nth(1)
+    .locator("wzc-camera-live .viewport");
+  await hallViewport.hover();
+  await hallViewport.dblclick();
+  await expect(hallViewport).toHaveAttribute("aria-label", /zoom 200 percent/);
 });
 
 test("keeps activity loading out of an active camera transition", async ({
@@ -1164,6 +1334,26 @@ test("highlights live video directly from draft review notifications", async ({
   const activeDraft = page.locator("wzc-reviews .tile").first();
   await expect(activeDraft.locator(".in-progress")).toHaveText("In progress");
   await expect(activeDraft).toContainText("Detection");
+  const takeoverViewport = page
+    .locator("wzc-camera .swiper-slide")
+    .nth(1)
+    .locator("wzc-camera-live .viewport");
+  await takeoverViewport.hover();
+  await expect(
+    page.locator("wzc-camera .carousel-navigation.previous"),
+  ).toBeVisible();
+  await takeoverViewport.dblclick();
+  await expect(takeoverViewport).toHaveAttribute(
+    "aria-label",
+    /zoom 200 percent/,
+  );
+  await takeoverViewport.dblclick();
+  const takeoverHandle = page
+    .locator("wzc-camera .swiper-slide")
+    .nth(1)
+    .locator(".stage-resize-handle:visible");
+  await takeoverHandle.press("End");
+  await expect(takeoverHandle).toHaveAttribute("aria-valuenow", "100");
   const toolbarBackgrounds = await page
     .locator(
       "wzc-activity-takeover-toggle button, wzc-activity-filter .filter-trigger, wzc-activity-calendar .calendar-trigger",

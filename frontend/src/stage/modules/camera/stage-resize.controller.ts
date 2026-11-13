@@ -40,6 +40,7 @@ export interface CameraStageSizeChangeDetail extends CameraStageSize {
 
 /** Owns transient camera-stage height without owning media zoom or pan. */
 export class CameraStageResizeController implements ReactiveController {
+  private _active = true;
   private _dragStart?: DragStart;
   private _handle?: HTMLButtonElement;
   private _heightRatio = DEFAULT_CAMERA_STAGE_HEIGHT_RATIO;
@@ -92,6 +93,16 @@ export class CameraStageResizeController implements ReactiveController {
     this._applyPresentation();
   }
 
+  /** Cancels transient ownership when another camera presentation activates. */
+  public setActive(active: boolean): void {
+    if (this._active === active) return;
+    this._active = active;
+    if (!active) {
+      this._finishDrag();
+      this._tapCandidate = undefined;
+    }
+  }
+
   public observe(
     stage: HTMLElement | undefined,
     handle: HTMLButtonElement | undefined,
@@ -136,6 +147,7 @@ export class CameraStageResizeController implements ReactiveController {
   }
 
   public readonly handlePointerDown = (event: PointerEvent): void => {
+    if (!this._active) return;
     if (event.pointerType === "mouse" && event.button !== 0) return;
     const stage = this._stage;
     const handle = event.currentTarget as HTMLButtonElement;
@@ -199,6 +211,11 @@ export class CameraStageResizeController implements ReactiveController {
 
   public readonly handlePointerCancel = (event: PointerEvent): void => {
     this._releasePointer(event);
+    this._finishDrag();
+    this._tapCandidate = undefined;
+  };
+
+  public readonly handleLostPointerCapture = (): void => {
     this._finishDrag();
     this._tapCandidate = undefined;
   };
@@ -293,6 +310,9 @@ export class CameraStageResizeController implements ReactiveController {
   private _finishDrag(): void {
     const interactionActive = this._dragStart !== undefined;
     const pointerId = this._dragStart?.pointerId;
+    this._dragStart = undefined;
+    this._returnAnchorHeightRatio = DEFAULT_CAMERA_STAGE_HEIGHT_RATIO;
+    this._moved = false;
     if (
       pointerId !== undefined &&
       this._handle?.hasPointerCapture?.(pointerId)
@@ -300,9 +320,6 @@ export class CameraStageResizeController implements ReactiveController {
       this._handle.releasePointerCapture(pointerId);
     }
     this._stage?.classList.remove("stage-resizing");
-    this._dragStart = undefined;
-    this._returnAnchorHeightRatio = DEFAULT_CAMERA_STAGE_HEIGHT_RATIO;
-    this._moved = false;
     if (interactionActive) this._onInteraction?.({ phase: "end" });
   }
 

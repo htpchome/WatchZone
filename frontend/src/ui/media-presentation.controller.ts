@@ -16,6 +16,7 @@ export class MediaPresentationController implements ReactiveController {
   public readonly zoom: MediaZoomController;
 
   private _surface?: HTMLElement;
+  private _active = true;
   private _outsidePointerTimer?: ReturnType<typeof setTimeout>;
 
   public constructor(
@@ -55,6 +56,15 @@ export class MediaPresentationController implements ReactiveController {
   public configure(key: string | undefined): void {
     this.zoom.configure(key);
     this._resetOverlayAfterZoom();
+  }
+
+  /** Transfers interaction ownership at a camera-selection boundary. */
+  public setActive(active: boolean): void {
+    if (this._active === active) return;
+    this._active = active;
+    this.zoom.cancelInteraction();
+    if (!active) this.zoom.reset();
+    this.overlay.setActive(active);
   }
 
   public resetZoom(): void {

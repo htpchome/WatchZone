@@ -18,10 +18,10 @@ Give the next agent this instruction:
 ## Repository state
 
 - Branch: `main`
-- Current working version: `0.0.4-dev.283`
-- Current commit: `02b1aff` —
-  `v0.0.4-dev.282 - fix(media): park retained WebRTC presentation resources`
-- The worktree contains the uncommitted camera-selection lifecycle correction
+- Current working version: `0.0.4-dev.284`
+- Current commit: `4c937a6` —
+  `v0.0.4-dev.283 - fix(cameras): restore settled selection after alert takeover`
+- The worktree contains the uncommitted live-interaction lifecycle correction
   described below.
 
 Always check `git status`, the canonical version in
@@ -48,7 +48,19 @@ The repository state takes precedence over this snapshot.
 
 ## Current completed change
 
-Working version `0.0.4-dev.283`:
+Working version `0.0.4-dev.284`:
+
+- A grouped camera stage now owns one shared overlay controller; child camera
+  presentations retain only their independent source, zoom, and pan state.
+- Camera activation explicitly cancels transient zoom, pointer-capture, and
+  stage-resize ownership so A/B navigation and alert takeover cannot strand
+  overlays, zoom/pan, or the pull-down handle.
+- Portable controls transfer active overlay holds by stable presentation owner,
+  and stale releases cannot affect a newly active presentation.
+- Browser regressions cover grouped navigation, grouped alert takeover, return
+  to a standalone camera, overlay reveal, zoom, and stage resizing.
+
+Previously completed in `0.0.4-dev.283`:
 
 - The camera carousel no longer owns an active index independently from the
   Camera module. Alert takeover, camera navigation, and carousel controls

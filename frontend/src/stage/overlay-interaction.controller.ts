@@ -5,6 +5,7 @@ import type { ActiveCameraSession } from "./camera-session-context";
 /** Shares camera-overlay reveal and hold behavior across portable controls. */
 export class OverlayInteractionController implements ReactiveController {
   private _camera?: ActiveCameraSession;
+  private _holding = false;
   private _releaseHold?: () => void;
 
   public constructor(host: ReactiveControllerHost) {
@@ -12,12 +13,17 @@ export class OverlayInteractionController implements ReactiveController {
   }
 
   public configure(camera: ActiveCameraSession | undefined): void {
-    if (camera?.entityId === this._camera?.entityId) {
+    if (
+      camera?.entityId === this._camera?.entityId &&
+      camera?.overlayOwner === this._camera?.overlayOwner
+    ) {
       this._camera = camera;
       return;
     }
-    this.release();
+    const holding = this._holding;
+    this._release();
     this._camera = camera;
+    if (holding) this._hold();
   }
 
   public hostDisconnected(): void {
@@ -45,11 +51,17 @@ export class OverlayInteractionController implements ReactiveController {
   };
 
   public release(): void {
+    this._holding = false;
+    this._release();
+  }
+
+  private _release(): void {
     this._releaseHold?.();
     this._releaseHold = undefined;
   }
 
   private _hold(): void {
+    this._holding = true;
     this._releaseHold ??= this._camera?.holdOverlay();
     this.reveal();
   }

@@ -55,6 +55,7 @@ export class CameraView extends LitElement {
     connection: { attribute: false },
     entityId: { attribute: false },
     frigateFallback: { attribute: false },
+    interactionActive: { attribute: false, type: Boolean },
     lowLatencyHls: { attribute: false, type: Boolean },
     localize: { attribute: false },
     overlayVisible: { attribute: false, type: Boolean },
@@ -110,6 +111,7 @@ export class CameraView extends LitElement {
   public connection: LiveConnectionType = "home_assistant";
   public entityId?: string;
   public frigateFallback: FrigateFallbackTransport = "mse";
+  public interactionActive = false;
   public lowLatencyHls = true;
   public localize: LocalizeFunction = englishLocalize;
   public overlayVisible = false;
@@ -130,6 +132,7 @@ export class CameraView extends LitElement {
   }
 
   protected willUpdate(): void {
+    this._stageResize.setActive(this.active && this.resizeEnabled);
     this._stageResize.configure(this.entityId);
     this._stageResize.setSize({
       heightRatio: this.stageHeightRatio,
@@ -171,6 +174,7 @@ export class CameraView extends LitElement {
         class="camera"
       >
         <${presentationTag}
+                .active=${this.interactionActive}
                 class="live-presentation"
                 .available=${this.connect && this.available}
                 .controlsEnabled=${this.controlsEnabled}
@@ -219,6 +223,7 @@ export class CameraView extends LitElement {
           @pointermove=${this._stageResize.handlePointerMove}
           @pointerup=${this._stageResize.handlePointerUp}
           @pointercancel=${this._stageResize.handlePointerCancel}
+          @lostpointercapture=${this._stageResize.handleLostPointerCapture}
           @keydown=${this._stageResize.handleKeyDown}
         >
           ${renderIcon("chevronDown")}
@@ -275,6 +280,7 @@ export class CameraView extends LitElement {
       incomingStream: this._session.webRtcStream,
       muted: this._audio.muted,
       overlayVisible: this.overlayVisible,
+      overlayOwner: this,
       holdOverlay: () => this._presentation?.holdOverlay() ?? (() => undefined),
       revealOverlay: () => this._presentation?.revealOverlay(),
       setMuted: (muted) => this._audio.setUserMuted(muted),
@@ -295,6 +301,7 @@ export class CameraView extends LitElement {
       incomingStream: this._session.webRtcStream,
       muted: this._audio.muted,
       overlayVisible: this.overlayVisible,
+      overlayOwner: this,
       holdOverlay: () => this._presentation?.holdOverlay() ?? (() => undefined),
       revealOverlay: () => this._presentation?.revealOverlay(),
       setMuted: (muted) => this._audio.setUserMuted(muted),

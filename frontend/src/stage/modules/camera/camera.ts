@@ -253,7 +253,10 @@ export class CameraModule extends LitElement {
       0,
       Math.min(this._presentationItems.length - 1, this._activeIndex),
     );
-    const cameraIds = new Set(this.cameras.map(({ entityId }) => entityId));
+    const cameraIds = new Set([
+      ...this.cameras.map(({ entityId }) => entityId),
+      ...this._presentationItems.map(({ id }) => id),
+    ]);
     for (const entityId of this._overlayVisibilityByCamera.keys()) {
       if (!cameraIds.has(entityId))
         this._overlayVisibilityByCamera.delete(entityId);
@@ -312,9 +315,7 @@ export class CameraModule extends LitElement {
                     .layout=${item.layout}
                     .localize=${this.localize}
                     .mode=${this._groupMode(item)}
-                    .overlayVisible=${
-                      this._overlayVisibilityByCamera.get(item.id) ?? false
-                    }
+                    .presentationId=${item.id}
                     .preview=${this.preview}
                     .stageHeightRatio=${this._stageSize.heightRatio}
                     .stageResized=${this._stageSize.resized}
@@ -331,6 +332,7 @@ export class CameraModule extends LitElement {
               .connection=${item.cameras[0].connection}
               .entityId=${item.cameras[0].entityId}
               .frigateFallback=${item.cameras[0].frigateFallback}
+              .interactionActive=${index === this._activeIndex}
               .lowLatencyHls=${item.cameras[0].lowLatencyHls}
               .localize=${this.localize}
               .overlayVisible=${
@@ -422,10 +424,11 @@ export class CameraModule extends LitElement {
     }
     this._activeIndex = next;
     this._syncCameraActivity();
-    this._navigationVisible =
-      this._overlayVisibilityByCamera.get(
-        this._presentationItems[next]?.id ?? "",
-      ) ?? false;
+    const nextPresentationId = this._presentationItems[next]?.id;
+    if (nextPresentationId) {
+      this._overlayVisibilityByCamera.set(nextPresentationId, false);
+    }
+    this._navigationVisible = false;
     this._carousel.setInteractionLocked(false);
     this.requestUpdate();
     this._publishSelection();
@@ -583,11 +586,8 @@ export class CameraModule extends LitElement {
   ): void => {
     event.stopPropagation();
     this._overlayVisibilityByCamera.set(event.detail.key, event.detail.visible);
-    if (!this._activeScopeEntityIds.includes(event.detail.key)) return;
     const activeId = this._activePresentation?.id;
-    if (activeId) {
-      this._overlayVisibilityByCamera.set(activeId, event.detail.visible);
-    }
+    if (event.detail.key !== activeId) return;
     this._navigationVisible = event.detail.visible;
     this.requestUpdate();
   };

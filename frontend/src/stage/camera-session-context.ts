@@ -8,6 +8,8 @@ export interface ActiveCameraSession {
   readonly lightEntityIds?: readonly string[];
   readonly muted: boolean;
   readonly overlayVisible: boolean;
+  /** Stable identity for the presentation that owns overlay interaction. */
+  readonly overlayOwner?: object;
   holdOverlay(): () => void;
   revealOverlay(): void;
   setMuted(muted: boolean): void;

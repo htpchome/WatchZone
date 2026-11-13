@@ -75,6 +75,7 @@ const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
 /** Renders one camera's live presentation and owns browser presentation APIs. */
 export class CameraLivePresentation extends LitElement {
   public static properties = {
+    active: { attribute: false, type: Boolean },
     available: { attribute: false, type: Boolean },
     controlsEnabled: { attribute: false, type: Boolean },
     failed: { attribute: false, type: Boolean },
@@ -110,6 +111,7 @@ export class CameraLivePresentation extends LitElement {
     onVisibilityChange: (visible) => this._emitOverlayVisibility(visible),
   });
 
+  public active = true;
   public available = false;
   public controlsEnabled = true;
   public failed = false;
@@ -198,6 +200,7 @@ export class CameraLivePresentation extends LitElement {
   }
 
   protected willUpdate(changed: Map<PropertyKey, unknown>): void {
+    if (changed.has("active")) this._media.setActive(this.active);
     if (changed.has("posterUrl")) {
       this._posterDimensions = undefined;
       this._posterFailed = false;

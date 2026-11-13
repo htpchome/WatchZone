@@ -68,6 +68,10 @@ function connectPointerEvents(
   handle.addEventListener("pointermove", controller.handlePointerMove);
   handle.addEventListener("pointerup", controller.handlePointerUp);
   handle.addEventListener("pointercancel", controller.handlePointerCancel);
+  handle.addEventListener(
+    "lostpointercapture",
+    controller.handleLostPointerCapture,
+  );
 }
 
 describe("camera stage resizing", () => {
@@ -132,6 +136,31 @@ describe("camera stage resizing", () => {
         stage.style.getPropertyValue("--wzc-camera-stage-runtime-aspect-ratio"),
       ),
     ).toBeCloseTo(16 / 9);
+  });
+
+  it("cancels an owned drag when its camera presentation deactivates", () => {
+    const { handle, stage } = createElements();
+    const interactions: string[] = [];
+    const controller = new CameraStageResizeController(
+      createHost(),
+      ({ phase }) => interactions.push(phase),
+    );
+    controller.observe(stage, handle);
+    connectPointerEvents(handle, controller);
+
+    handle.dispatchEvent(
+      pointerEvent("pointerdown", { clientX: 200, clientY: 100 }),
+    );
+    controller.setActive(false);
+    handle.dispatchEvent(
+      pointerEvent("pointermove", { clientX: 200, clientY: 200 }),
+    );
+
+    expect(interactions).toEqual(["start", "end"]);
+    expect(stage.classList.contains("stage-resizing")).toBe(false);
+    expect(
+      stage.style.getPropertyValue("--wzc-camera-stage-runtime-aspect-ratio"),
+    ).toBe("");
   });
 
   it("reports continuous progress while returning toward default height", () => {

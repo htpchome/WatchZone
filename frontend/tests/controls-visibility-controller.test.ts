@@ -121,6 +121,24 @@ describe("media overlay visibility controller", () => {
     expect(controller.visible).toBe(false);
   });
 
+  it("invalidates stale holds when presentation ownership changes", () => {
+    vi.useFakeTimers();
+    const controller = new MediaOverlayVisibilityController(new TestHost());
+    const staleRelease = controller.hold();
+
+    controller.setActive(false);
+    expect(controller.visible).toBe(false);
+    controller.setActive(true);
+    const currentRelease = controller.hold();
+    staleRelease();
+    vi.advanceTimersByTime(MEDIA_OVERLAY_HIDE_DELAY_MS);
+    expect(controller.visible).toBe(true);
+
+    currentRelease();
+    vi.advanceTimersByTime(MEDIA_OVERLAY_HIDE_DELAY_MS);
+    expect(controller.visible).toBe(false);
+  });
+
   it("introduces the source independently, then shares the hide deadline", () => {
     vi.useFakeTimers();
     const controller = new MediaOverlayVisibilityController(new TestHost());

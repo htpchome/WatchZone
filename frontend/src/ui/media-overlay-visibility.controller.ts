@@ -11,8 +11,9 @@ export class MediaOverlayVisibilityController implements ReactiveController {
   public sourceVisible = false;
   public visible = false;
 
+  private _active = true;
   private _focused = false;
-  private _holds = 0;
+  private readonly _holds = new Set<symbol>();
   private _hideTimer?: ReturnType<typeof setTimeout>;
   private _hovered = false;
   private _interactionRoot?: HTMLElement;
@@ -27,18 +28,25 @@ export class MediaOverlayVisibilityController implements ReactiveController {
   }
 
   public hostDisconnected(): void {
+    this.setActive(false);
+  }
+
+  /** Clears transient interaction whenever presentation ownership changes. */
+  public setActive(active: boolean): void {
+    if (this._active === active) return;
+    this._active = active;
     this._clearHideTimer();
     this._focused = false;
     this._hovered = false;
-    this._holds = 0;
+    this._holds.clear();
+    this._interactionRoot = undefined;
     this._pointerFocusPending = false;
     this._suppressed = false;
-    this.sourceVisible = false;
-    this.visible = false;
-    this._options.onVisibilityChange?.(false);
+    if (!active) this.hide();
   }
 
   public revealSource(): void {
+    if (!this._active) return;
     this._clearHideTimer();
     this.sourceVisible = true;
     this._host.requestUpdate();
@@ -65,13 +73,12 @@ export class MediaOverlayVisibilityController implements ReactiveController {
   }
 
   public hold(): () => void {
-    this._holds += 1;
+    if (!this._active) return () => undefined;
+    const hold = Symbol("media-overlay-hold");
+    this._holds.add(hold);
     this._show();
-    let released = false;
     return () => {
-      if (released) return;
-      released = true;
-      this._holds = Math.max(0, this._holds - 1);
+      if (!this._holds.delete(hold)) return;
       this._scheduleHide();
     };
   }
@@ -137,7 +144,7 @@ export class MediaOverlayVisibilityController implements ReactiveController {
   };
 
   private _show(): void {
-    if (this._suppressed) return;
+    if (!this._active || this._suppressed) return;
     this._clearHideTimer();
     if (this.visible && this.sourceVisible) return;
     this.visible = true;
@@ -148,10 +155,10 @@ export class MediaOverlayVisibilityController implements ReactiveController {
 
   private _scheduleHide(): void {
     this._clearHideTimer();
-    if (this._hovered || this._focused || this._holds > 0) return;
+    if (this._hovered || this._focused || this._holds.size > 0) return;
     this._hideTimer = setTimeout(() => {
       this._hideTimer = undefined;
-      if (this._hovered || this._focused || this._holds > 0) {
+      if (this._hovered || this._focused || this._holds.size > 0) {
         return;
       }
       this.visible = false;

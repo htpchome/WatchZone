@@ -235,6 +235,27 @@ describe("camera media zoom", () => {
     expect(controller.overlay.visible).toBe(true);
   });
 
+  it("resets zoom and transient overlay state across presentation ownership", () => {
+    const surface = createSurface(400);
+    const controller = new MediaPresentationController(createHost());
+    controller.observe(surface);
+    connectMediaPointerEvents(surface, controller);
+
+    controller.zoom.handleDoubleClick(
+      new MouseEvent("dblclick", { clientX: 200, clientY: 112.5 }),
+    );
+    expect(controller.zoom.zoomed).toBe(true);
+    controller.setActive(false);
+    expect(controller.zoom.zoomed).toBe(false);
+    expect(controller.overlay.visible).toBe(false);
+
+    controller.overlay.reveal();
+    expect(controller.overlay.visible).toBe(false);
+    controller.setActive(true);
+    controller.overlay.reveal();
+    expect(controller.overlay.visible).toBe(true);
+  });
+
   it("self-heals a stranded gesture when an unpressed pointer returns", () => {
     const surface = createSurface(400);
     const controller = new MediaPresentationController(createHost());

@@ -192,6 +192,11 @@ export class MediaZoomController implements ReactiveController {
     this._host.requestUpdate();
   }
 
+  /** Ends transient pointer ownership without changing this camera's view. */
+  public cancelInteraction(): void {
+    this._cancelInteraction();
+  }
+
   public beginStageResizeReturn(): void {
     this._stageResizeStart = this._presentationTransform();
     this._stageResizeProgress = 0;
