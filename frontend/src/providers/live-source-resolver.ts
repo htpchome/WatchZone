@@ -134,8 +134,11 @@ export class LiveSourceResolver {
     return `${source.id}:mse`;
   }
 
-  public frigateHlsKey(source: FrigateGo2RtcLiveSourceDescriptor): string {
-    return `${source.id}:hls`;
+  public frigateHlsKey(
+    source: FrigateGo2RtcLiveSourceDescriptor,
+    lowLatencyHls = true,
+  ): string {
+    return lowLatencyHls ? `${source.id}:hls` : `${source.id}:hls:standard`;
   }
 
   public acquireUsableFrigateWebRtc(
@@ -166,7 +169,7 @@ export class LiveSourceResolver {
     options: MediaConnectionOptions,
   ): MediaSessionLease | undefined {
     return getMediaSessionManager().acquireUsable(
-      this.frigateHlsKey(source),
+      this.frigateHlsKey(source, options.lowLatencyHls !== false),
       api,
       options,
     );
@@ -208,7 +211,7 @@ export class LiveSourceResolver {
     return (await getFrigateProvider()).acquireHls(
       api,
       entityId,
-      this.frigateHlsKey(source),
+      this.frigateHlsKey(source, options.lowLatencyHls !== false),
       options,
     );
   }

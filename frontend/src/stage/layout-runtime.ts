@@ -174,17 +174,23 @@ export class LayoutRuntime implements ReactiveController {
     hass: HomeAssistant | undefined,
     api: HomeAssistantApi | undefined,
     localize?: LocalizeFunction,
+    preview = false,
   ): void {
     const transportChanged = this._context.api?.identity !== api?.identity;
     const localeChanged = this._context.localize !== localize;
+    const previewChanged = this._context.preview !== preview;
     this._context = {
       api,
       hass,
       localize,
+      preview,
     };
     for (const record of this._records.values()) {
       if (record.status === "ready") {
-        this._updateRecord(record, transportChanged || localeChanged);
+        this._updateRecord(
+          record,
+          transportChanged || localeChanged || previewChanged,
+        );
       }
     }
   }

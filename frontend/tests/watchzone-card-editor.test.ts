@@ -1388,6 +1388,13 @@ describe("watchzone-card-editor", () => {
     expect(
       (
         editor.shadowRoot?.querySelector(
+          '[data-camera-config-key="low_latency_hls"]',
+        ) as TestBooleanSelector
+      ).value,
+    ).toBe(false);
+    expect(
+      (
+        editor.shadowRoot?.querySelector(
           '[data-camera-config-key="two_way_talk_enabled"]',
         ) as TestBooleanSelector
       ).value,
@@ -1427,6 +1434,13 @@ describe("watchzone-card-editor", () => {
         ) as TestBooleanSelector
       ).value,
     ).toBe("hls");
+    expect(
+      (
+        editor.shadowRoot?.querySelector(
+          '[data-camera-config-key="low_latency_hls"]',
+        ) as TestBooleanSelector
+      ).value,
+    ).toBe(false);
   });
 
   it("uses a one-time dirty-state writer without subscribing", async () => {

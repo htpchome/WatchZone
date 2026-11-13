@@ -48,6 +48,7 @@ export class CameraView extends LitElement {
     active: { attribute: false, type: Boolean },
     connect: { attribute: false, type: Boolean },
     controlsEnabled: { attribute: false, type: Boolean },
+    discardSessionsOnDisconnect: { attribute: false, type: Boolean },
     api: { attribute: false },
     cameraSession: { attribute: false },
     available: { attribute: false, type: Boolean },
@@ -102,6 +103,7 @@ export class CameraView extends LitElement {
   public active = false;
   public connect = false;
   public controlsEnabled = true;
+  public discardSessionsOnDisconnect = false;
   public api?: HomeAssistantApi;
   public cameraSession?: CameraSessionContext;
   public available = false;
@@ -157,6 +159,7 @@ export class CameraView extends LitElement {
       this.lowLatencyHls,
       this.frigateFallback,
       !suspended,
+      this.discardSessionsOnDisconnect,
     );
   }
 

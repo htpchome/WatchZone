@@ -89,6 +89,7 @@ export class CameraModule extends LitElement {
     highlightActivity: { attribute: false, type: Boolean },
     localize: { attribute: false },
     retentionPreference: { attribute: false },
+    preview: { attribute: false, type: Boolean },
     roundedCorners: { attribute: false, type: Boolean },
     shadowStyle: { attribute: false },
     transition: { attribute: false },
@@ -135,6 +136,7 @@ export class CameraModule extends LitElement {
   public highlightActivity = true;
   public localize: LocalizeFunction = englishLocalize;
   public retentionPreference: MediaRetentionPreference = "automatic";
+  public preview = false;
   public roundedCorners = true;
   public shadowStyle: CameraShadowStyle = "medium";
   public transition: SlideTransition = "slide";
@@ -313,6 +315,7 @@ export class CameraModule extends LitElement {
                     .overlayVisible=${
                       this._overlayVisibilityByCamera.get(item.id) ?? false
                     }
+                    .preview=${this.preview}
                     .stageHeightRatio=${this._stageSize.heightRatio}
                     .stageResized=${this._stageSize.resized}
                     @camera-group-cycle=${this._handleGroupCycle}
@@ -333,6 +336,7 @@ export class CameraModule extends LitElement {
               .overlayVisible=${
                 this._overlayVisibilityByCamera.get(item.id) ?? false
               }
+              .preview=${this.preview}
               .posterUrl=${item.cameras[0].posterUrl}
               .stageHeightRatio=${this._stageSize.heightRatio}
               .stageResized=${this._stageSize.resized}

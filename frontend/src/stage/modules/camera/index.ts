@@ -72,7 +72,7 @@ export const moduleDefinition: ModuleDefinition<
             source,
             {
               initialMuted: true,
-              lowLatencyHls: true,
+              lowLatencyHls: first.lowLatencyHls,
               nativeHlsOnly: true,
             },
           )
@@ -87,7 +87,10 @@ export const moduleDefinition: ModuleDefinition<
         first.entityId,
       );
     }
-    return { release: () => lease.release() };
+    return {
+      release: () =>
+        context.preview === true ? lease.discard() : lease.release(),
+    };
   },
   define() {
     return (definitionPromise ??= import("./camera").then(() => undefined));
@@ -131,6 +134,7 @@ function updateCameraElement(
   camera.cameraSelection = context.cameraSelection;
   camera.cameraSession = context.cameraSession;
   camera.localize = context.localize ?? englishLocalize;
+  camera.preview = context.preview === true;
   camera.highlightActivity = config.highlightActivity;
   camera.retentionPreference = config.retentionPreference;
   camera.roundedCorners = config.roundedCorners;

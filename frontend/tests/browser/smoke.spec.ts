@@ -5766,7 +5766,10 @@ test("camera editor configures and sanitizes an additional-camera group", async 
       return (element as HTMLElement & { selector?: unknown }).selector;
     }),
   ).toEqual({ entity: { filter: { domain: "camera" } } });
-  await additional.locator("ha-selector").evaluate((element) => {
+  const secondaryCameraPicker = additional.locator(
+    'ha-selector[label="Second Camera"]',
+  );
+  await secondaryCameraPicker.evaluate((element) => {
     element.dispatchEvent(
       new CustomEvent("value-changed", {
         bubbles: true,
@@ -5778,7 +5781,7 @@ test("camera editor configures and sanitizes an additional-camera group", async 
   await expect(additional.locator(".field-error")).toHaveText(
     "This camera is already configured in the card and cannot be added twice.",
   );
-  await additional.locator("ha-selector").evaluate((element) => {
+  await secondaryCameraPicker.evaluate((element) => {
     element.dispatchEvent(
       new CustomEvent("value-changed", {
         bubbles: true,
@@ -5793,6 +5796,38 @@ test("camera editor configures and sanitizes an additional-camera group", async 
   await expect(cameraName).toHaveJSProperty("value", "Porch");
   await expect(groupName).toHaveJSProperty("value", "Group A/B");
   await expect(additional.locator(".field-error")).toHaveCount(0);
+  const secondarySettings = additional.locator(".secondary-camera-settings");
+  const secondaryName = secondarySettings.locator("ha-input");
+  await secondaryName.evaluate((element) => {
+    const input = element as HTMLElement & { value: string };
+    input.value = "Street View";
+    input.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+  });
+  await secondarySettings
+    .locator(".secondary-connection-source")
+    .evaluate((element) => {
+      element.dispatchEvent(
+        new CustomEvent("value-changed", {
+          bubbles: true,
+          composed: true,
+          detail: { value: "frigate_go2rtc" },
+        }),
+      );
+    });
+  await secondarySettings
+    .locator(".secondary-frigate-fallback")
+    .evaluate((element) => {
+      element.dispatchEvent(
+        new CustomEvent("value-changed", {
+          bubbles: true,
+          composed: true,
+          detail: { value: "hls" },
+        }),
+      );
+    });
+  await expect(
+    secondarySettings.locator(".secondary-low-latency-hls"),
+  ).toHaveCount(1);
   await expect(additional.locator(".remove-additional-camera")).toHaveAttribute(
     "appearance",
     "filled",
@@ -5840,8 +5875,10 @@ test("camera editor configures and sanitizes an additional-camera group", async 
       title: "Porch",
     }),
     expect.objectContaining({
+      connection: "frigate_go2rtc",
       entity_id: "camera.driveway",
-      title: "",
+      frigate_fallback: "hls",
+      title: "Street View",
     }),
     expect.objectContaining({
       entity_id: "camera.back",
@@ -5854,14 +5891,11 @@ test("camera editor configures and sanitizes an additional-camera group", async 
   ).toHaveText(["Entry Pair", "Back"]);
   await expect(
     editor.locator("wzc-sortable-tile .camera-tile-copy small").first(),
-  ).toContainText("A: Porch · B: driveway");
+  ).toContainText("A: Porch · B: Street View");
   const secondaryTile = editor.locator(".secondary-camera-tile");
   await expect(secondaryTile).toHaveCount(1);
-  await expect(secondaryTile.locator(".camera-tile-copy span")).toHaveText(
-    "driveway",
-  );
-  await expect(secondaryTile.locator(".camera-tile-copy small")).toHaveText(
-    "Grouped with Entry Pair",
+  await expect(secondaryTile.locator(".secondary-camera-copy")).toHaveText(
+    "Street View · Grouped with Entry Pair",
   );
   await expect(editor.locator(".camera-list-heading")).toContainText(
     "3 of 12 configured",
@@ -5870,8 +5904,11 @@ test("camera editor configures and sanitizes an additional-camera group", async 
   await expect(editor.locator(".camera-editor-dialog")).toBeVisible();
   await expect(editor.locator(".camera-title-field ha-input")).toHaveJSProperty(
     "value",
-    "",
+    "Street View",
   );
+  await expect(
+    editor.locator('ha-selector[label="Connection"]'),
+  ).toHaveJSProperty("value", "frigate_go2rtc");
   await expect(editor.locator(".camera-group-name-field")).toHaveCount(0);
 });
 

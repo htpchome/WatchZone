@@ -91,12 +91,24 @@ export const cardEditorStyles = css`
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    min-block-size: 2.75rem;
-    padding: 0.35rem 0.45rem 0.35rem 0.65rem;
+    min-block-size: 2.25rem;
+    padding: 0.2rem 0.35rem 0.2rem 0.65rem;
     background: var(--wzc-color-surface-secondary);
     border: 1px solid var(--wzc-color-border-subtle);
     border-inline-start: 3px solid var(--wzc-color-primary);
     border-radius: var(--wzc-radius-medium);
+  }
+
+  .secondary-camera-copy {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .secondary-camera-settings {
+    display: grid;
+    gap: 0.65rem;
+    padding-block: 0.25rem;
   }
 
   .tile-action,

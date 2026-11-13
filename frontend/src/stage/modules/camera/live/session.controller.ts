@@ -26,6 +26,7 @@ export class CameraLiveSessionController implements ReactiveController {
   private _api?: HomeAssistantApi;
   private _available = false;
   private _connected = false;
+  private _discardSessionsOnRelease = false;
   private _connection: LiveConnectionType = "home_assistant";
   private _entityId?: string;
   private _frigateSource?: FrigateGo2RtcLiveSourceDescriptor;
@@ -74,9 +75,7 @@ export class CameraLiveSessionController implements ReactiveController {
   }
 
   public get effectiveLowLatencyHls(): boolean {
-    return this._connection === "frigate_go2rtc"
-      ? this._effectiveFrigateFallback() === "hls"
-      : this._lowLatencyHls;
+    return this._lowLatencyHls;
   }
 
   public get selected(): PresentedSource | undefined {
@@ -102,7 +101,8 @@ export class CameraLiveSessionController implements ReactiveController {
 
   public hostDisconnected(): void {
     this._connected = false;
-    this._releaseAll();
+    if (this._discardSessionsOnRelease) this._discardAll();
+    else this._releaseAll();
   }
 
   public configure(
@@ -113,6 +113,7 @@ export class CameraLiveSessionController implements ReactiveController {
     lowLatencyHls = true,
     frigateFallback: FrigateFallbackTransport = "mse",
     retainWhenInactive = true,
+    discardSessionsOnRelease = false,
   ): void {
     const providerChanged = this._connection !== connection;
     const frigateFallbackChanged =
@@ -131,6 +132,7 @@ export class CameraLiveSessionController implements ReactiveController {
     this._available = available;
     this._lowLatencyHls = lowLatencyHls;
     this._frigateFallback = frigateFallback;
+    this._discardSessionsOnRelease = discardSessionsOnRelease;
     if (identityChanged) {
       this._sourceGeneration += 1;
       this._frigateSource =
@@ -140,7 +142,11 @@ export class CameraLiveSessionController implements ReactiveController {
       this._frigateSourcePending = false;
     }
     if (changed || !available) {
-      if (providerChanged || (!available && !retainWhenInactive))
+      if (
+        discardSessionsOnRelease ||
+        providerChanged ||
+        (!available && !retainWhenInactive)
+      )
         this._discardAll();
       else if (frigateFallbackChanged) {
         if (this._selected === "fallback") this._clearSelection();
@@ -276,11 +282,11 @@ export class CameraLiveSessionController implements ReactiveController {
         this._entityId !== entityId ||
         lease.key !== expectedKey
       ) {
-        lease.release();
+        this._releaseUnusedLease(lease);
         return;
       }
       if (this._webRtcLease?.key === expectedKey) {
-        lease.release();
+        this._releaseUnusedLease(lease);
         return;
       }
       this._adoptWebRtcLease(lease, false);
@@ -342,7 +348,10 @@ export class CameraLiveSessionController implements ReactiveController {
     const key =
       this._connection === "frigate_go2rtc"
         ? frigateFallback === "hls"
-          ? this._resolver.frigateHlsKey(this._frigateSource!)
+          ? this._resolver.frigateHlsKey(
+              this._frigateSource!,
+              this._lowLatencyHls,
+            )
           : this._resolver.frigateMseKey(this._frigateSource!)
         : this._resolver.homeAssistantHlsKey(
             this._entityId,
@@ -353,8 +362,7 @@ export class CameraLiveSessionController implements ReactiveController {
     this._releaseFallback();
     const options = {
       initialMuted: this._callbacks.getInitialMuted(),
-      lowLatencyHls:
-        this._connection === "frigate_go2rtc" ? true : this._lowLatencyHls,
+      lowLatencyHls: this._lowLatencyHls,
       nativeHlsOnly: this._isFrigateHlsOnly(),
     };
     if (this._connection === "frigate_go2rtc") {
@@ -420,7 +428,10 @@ export class CameraLiveSessionController implements ReactiveController {
         (this._connection === "frigate_go2rtc"
           ? !this._frigateSource ||
             (this._effectiveFrigateFallback() === "hls"
-              ? this._resolver.frigateHlsKey(this._frigateSource)
+              ? this._resolver.frigateHlsKey(
+                  this._frigateSource,
+                  this._lowLatencyHls,
+                )
               : this._resolver.frigateMseKey(this._frigateSource)) !==
               expectedKey
           : this._resolver.homeAssistantHlsKey(
@@ -429,11 +440,11 @@ export class CameraLiveSessionController implements ReactiveController {
             ) !== expectedKey) ||
         this._selected === "webrtc"
       ) {
-        lease.release();
+        this._releaseUnusedLease(lease);
         return;
       }
       if (this._fallbackLease?.key === expectedKey) {
-        lease.release();
+        this._releaseUnusedLease(lease);
         return;
       }
       this._adoptFallbackLease(lease);
@@ -516,7 +527,7 @@ export class CameraLiveSessionController implements ReactiveController {
     this._webRtcPendingKey = undefined;
     this._webRtcUnsubscribe?.();
     this._webRtcUnsubscribe = undefined;
-    if (discard) this._webRtcLease?.discard();
+    if (discard || this._discardSessionsOnRelease) this._webRtcLease?.discard();
     else this._webRtcLease?.release();
     this._webRtcLease = undefined;
     this._webRtcSnapshot = { state: "new" };
@@ -527,10 +538,16 @@ export class CameraLiveSessionController implements ReactiveController {
     this._fallbackSnapshot.video?.remove();
     this._fallbackUnsubscribe?.();
     this._fallbackUnsubscribe = undefined;
-    if (discard) this._fallbackLease?.discard();
+    if (discard || this._discardSessionsOnRelease)
+      this._fallbackLease?.discard();
     else this._fallbackLease?.release();
     this._fallbackLease = undefined;
     this._fallbackSnapshot = { state: "new" };
+  }
+
+  private _releaseUnusedLease(lease: MediaSessionLease): void {
+    if (this._discardSessionsOnRelease) lease.discard();
+    else lease.release();
   }
 
   private _effectiveFrigateFallback(): FrigateFallbackTransport {

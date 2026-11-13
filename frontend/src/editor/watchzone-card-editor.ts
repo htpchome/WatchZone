@@ -156,6 +156,9 @@ export class CardEditor extends LitElement {
   private _config?: CardConfig;
   private _cameraBaseline?: CameraConfig;
   private _cameraDraft?: CameraConfig;
+  private _secondaryCameraBaseline?: CameraConfig;
+  private _secondaryCameraDraft?: CameraConfig;
+  private _secondaryCameraTitleInput = "";
   private _cameraGroupNameInput = "";
   private _cameraTitleInput = "";
   private _addingLight = false;
@@ -401,10 +404,9 @@ export class CardEditor extends LitElement {
           const name = camera.title || this._cameraName(camera.entity_id);
           const group = owner.group_name || this._cameraName(owner.entity_id);
           return html`<div class="secondary-camera-tile">
-            <div class="camera-tile-copy">
-              <span>${name}</span>
-              <small>${this._t("editor.grouped_with", { group })}</small>
-            </div>
+            <span class="secondary-camera-copy">
+              ${name} · ${this._t("editor.grouped_with", { group })}
+            </span>
             <button
               class="tile-action"
               type="button"
@@ -763,16 +765,25 @@ export class CardEditor extends LitElement {
                               camera.low_latency_hls,
                             )
                           : html`<ha-selector
-                              data-camera-config-key="frigate_fallback"
-                              label=${this._t("editor.frigate_fallback")}
-                              .hass=${this._hass}
-                              .selector=${this._frigateFallbackSelector()}
-                              .value=${camera.frigate_fallback}
-                              .required=${true}
-                              @value-changed=${
-                                this._handleFrigateFallbackChange
-                              }
-                            ></ha-selector>`
+                                data-camera-config-key="frigate_fallback"
+                                label=${this._t("editor.frigate_fallback")}
+                                .hass=${this._hass}
+                                .selector=${this._frigateFallbackSelector()}
+                                .value=${camera.frigate_fallback}
+                                .required=${true}
+                                @value-changed=${
+                                  this._handleFrigateFallbackChange
+                                }
+                              ></ha-selector>
+                              ${
+                                camera.frigate_fallback === "hls"
+                                  ? this._renderCameraBoolean(
+                                      "low_latency_hls",
+                                      this._t("editor.low_latency_hls"),
+                                      camera.low_latency_hls,
+                                    )
+                                  : nothing
+                              }`
                       }
                     </div>
                   </${accordionItemTag}>
@@ -1091,6 +1102,11 @@ export class CardEditor extends LitElement {
         ></ha-selector>
       </div>`;
     }
+    const secondary =
+      this._secondaryCameraDraft?.entity_id ===
+      camera.additional_camera.entity_id
+        ? this._secondaryCameraDraft
+        : undefined;
     return html`<div class="camera-section-fields additional-camera-settings">
       <ha-selector
         label=${this._t("editor.second_camera")}
@@ -1101,6 +1117,52 @@ export class CardEditor extends LitElement {
         @value-changed=${this._handleAdditionalCameraChange}
       ></ha-selector>
       ${this._renderAdditionalCameraError(camera)}
+      ${
+        secondary
+          ? html`<div class="secondary-camera-settings">
+              <ha-input
+                label=${this._t("editor.camera_title")}
+                placeholder=${this._t("editor.camera_title_placeholder")}
+                maxlength=${String(MAX_CAMERA_TITLE_LENGTH)}
+                .value=${this._secondaryCameraTitleInput}
+                @input=${this._handleSecondaryCameraTitleInput}
+              >
+                <span class="character-count" slot="end" aria-live="polite">
+                  ${this._secondaryCameraTitleInput.length}/${MAX_CAMERA_TITLE_LENGTH}
+                </span>
+              </ha-input>
+              <ha-selector
+                class="secondary-connection-source"
+                label=${this._t("editor.connection_source")}
+                .hass=${this._hass}
+                .selector=${this._connectionSourceSelector()}
+                .value=${secondary.connection}
+                .required=${true}
+                @value-changed=${this._handleSecondaryConnectionChange}
+              ></ha-selector>
+              ${
+                secondary.connection === "home_assistant"
+                  ? this._renderSecondaryLowLatencyOption(secondary)
+                  : html`<ha-selector
+                        class="secondary-frigate-fallback"
+                        label=${this._t("editor.frigate_fallback")}
+                        .hass=${this._hass}
+                        .selector=${this._frigateFallbackSelector()}
+                        .value=${secondary.frigate_fallback}
+                        .required=${true}
+                        @value-changed=${
+                          this._handleSecondaryFrigateFallbackChange
+                        }
+                      ></ha-selector>
+                      ${
+                        secondary.frigate_fallback === "hls"
+                          ? this._renderSecondaryLowLatencyOption(secondary)
+                          : nothing
+                      }`
+              }
+            </div>`
+          : nothing
+      }
       <label class="field-label">${this._t("editor.live_view_layout")}</label>
       <wzc-segmented-control
         appearance="compact"
@@ -1132,6 +1194,17 @@ export class CardEditor extends LitElement {
         ${this._t("editor.remove_camera")}
       </ha-button>
     </div>`;
+  }
+
+  private _renderSecondaryLowLatencyOption(camera: CameraConfig) {
+    return html`<ha-selector
+      class="secondary-low-latency-hls"
+      label=${this._t("editor.low_latency_hls")}
+      .hass=${this._hass}
+      .selector=${BOOLEAN_SELECTOR}
+      .value=${camera.low_latency_hls}
+      @value-changed=${this._handleSecondaryLowLatencyChange}
+    ></ha-selector>`;
   }
 
   private _renderAdditionalCameraError(camera: CameraConfig) {
@@ -1335,6 +1408,58 @@ export class CardEditor extends LitElement {
     this.requestUpdate();
   };
 
+  private readonly _handleSecondaryCameraTitleInput = (event: Event): void => {
+    if (!this._secondaryCameraDraft) return;
+    const input = event.currentTarget as InputElement;
+    const sanitized = sanitizeCameraTitleInput(input.value);
+    if (input.value !== sanitized) input.value = sanitized;
+    this._secondaryCameraTitleInput = sanitized;
+    this._secondaryCameraDraft = {
+      ...this._secondaryCameraDraft,
+      title: normalizeCameraTitle(sanitized),
+    };
+    this.requestUpdate();
+  };
+
+  private readonly _handleSecondaryConnectionChange = (
+    event: ValueChangedEvent,
+  ): void => {
+    if (!this._secondaryCameraDraft) return;
+    const connection = eventString(event) as LiveConnectionType;
+    if (connection !== "home_assistant" && connection !== "frigate_go2rtc")
+      return;
+    this._secondaryCameraDraft = {
+      ...this._secondaryCameraDraft,
+      connection,
+    };
+    this.requestUpdate();
+  };
+
+  private readonly _handleSecondaryFrigateFallbackChange = (
+    event: ValueChangedEvent,
+  ): void => {
+    if (!this._secondaryCameraDraft) return;
+    const frigateFallback = eventString(event) as FrigateFallbackTransport;
+    if (frigateFallback !== "mse" && frigateFallback !== "hls") return;
+    this._secondaryCameraDraft = {
+      ...this._secondaryCameraDraft,
+      frigate_fallback: frigateFallback,
+    };
+    this.requestUpdate();
+  };
+
+  private readonly _handleSecondaryLowLatencyChange = (
+    event: ValueChangedEvent,
+  ): void => {
+    if (!this._secondaryCameraDraft || typeof event.detail.value !== "boolean")
+      return;
+    this._secondaryCameraDraft = {
+      ...this._secondaryCameraDraft,
+      low_latency_hls: event.detail.value,
+    };
+    this.requestUpdate();
+  };
+
   private readonly _handleAdditionalCameraChange = (
     event: ValueChangedEvent,
   ): void => {
@@ -1345,6 +1470,14 @@ export class CardEditor extends LitElement {
     const groupName = existing
       ? this._cameraDraft.group_name
       : nextCameraGroupTitle(this._config?.cameras ?? []);
+    const existingSecondary = this._config?.cameras.find(
+      ({ entity_id: configuredId }) => configuredId === entityId,
+    );
+    this._secondaryCameraBaseline = existingSecondary;
+    this._secondaryCameraDraft = existingSecondary
+      ? { ...existingSecondary }
+      : this._createGroupedSecondary(this._cameraDraft, entityId);
+    this._secondaryCameraTitleInput = this._secondaryCameraDraft.title;
     this._cameraDraft = {
       ...this._cameraDraft,
       group_name: groupName,
@@ -1377,6 +1510,9 @@ export class CardEditor extends LitElement {
       additional_camera: undefined,
       group_name: undefined,
     };
+    this._secondaryCameraBaseline = undefined;
+    this._secondaryCameraDraft = undefined;
+    this._secondaryCameraTitleInput = "";
     this._cameraGroupNameInput = "";
     this.requestUpdate();
   };
@@ -1495,6 +1631,9 @@ export class CardEditor extends LitElement {
     this._editingCameraIndex = undefined;
     this._cameraBaseline = undefined;
     this._cameraDraft = createDefaultCameraConfig();
+    this._secondaryCameraBaseline = undefined;
+    this._secondaryCameraDraft = undefined;
+    this._secondaryCameraTitleInput = "";
     this._cameraGroupNameInput = "";
     this._cameraTitleInput = "";
     this._cancelAddingLight();
@@ -1512,6 +1651,15 @@ export class CardEditor extends LitElement {
     this._editingCameraIndex = index;
     this._cameraBaseline = camera;
     this._cameraDraft = { ...camera };
+    const secondary = camera.additional_camera
+      ? this._config?.cameras.find(
+          ({ entity_id: entityId }) =>
+            entityId === camera.additional_camera?.entity_id,
+        )
+      : undefined;
+    this._secondaryCameraBaseline = secondary;
+    this._secondaryCameraDraft = secondary ? { ...secondary } : undefined;
+    this._secondaryCameraTitleInput = secondary?.title ?? "";
     this._cameraGroupNameInput = camera.group_name ?? "";
     this._cameraTitleInput = camera.title;
     this._cancelAddingLight();
@@ -1571,6 +1719,9 @@ export class CardEditor extends LitElement {
     event.preventDefault();
     this._cameraBaseline = undefined;
     this._cameraDraft = undefined;
+    this._secondaryCameraBaseline = undefined;
+    this._secondaryCameraDraft = undefined;
+    this._secondaryCameraTitleInput = "";
     this._cameraGroupNameInput = "";
     this._cameraTitleInput = "";
     this._cancelAddingLight();
@@ -1618,21 +1769,25 @@ export class CardEditor extends LitElement {
       if (previousSecondaryIndex >= 0)
         cameras.splice(previousSecondaryIndex, 1);
     }
-    if (
-      nextSecondaryId &&
-      !cameras.some(({ entity_id: entityId }) => entityId === nextSecondaryId)
-    ) {
+    if (nextSecondaryId) {
       const mainIndex = cameras.findIndex(
         ({ entity_id: entityId }) => entityId === this._cameraDraft?.entity_id,
       );
-      const secondary = this._createGroupedSecondary(
-        this._cameraDraft,
-        nextSecondaryId,
+      const secondary =
+        this._secondaryCameraDraft?.entity_id === nextSecondaryId
+          ? this._secondaryCameraDraft
+          : this._createGroupedSecondary(this._cameraDraft, nextSecondaryId);
+      const secondaryIndex = cameras.findIndex(
+        ({ entity_id: entityId }) => entityId === nextSecondaryId,
       );
-      cameras.splice(mainIndex + 1, 0, secondary);
+      if (secondaryIndex >= 0) cameras[secondaryIndex] = secondary;
+      else cameras.splice(mainIndex + 1, 0, secondary);
     }
     this._cameraBaseline = undefined;
     this._cameraDraft = undefined;
+    this._secondaryCameraBaseline = undefined;
+    this._secondaryCameraDraft = undefined;
+    this._secondaryCameraTitleInput = "";
     this._cameraGroupNameInput = "";
     this._cameraTitleInput = "";
     this._cancelAddingLight();
@@ -1712,13 +1867,11 @@ export class CardEditor extends LitElement {
     if (!group) return true;
     if (this._additionalCameraSelectionError(draft) || !draft.group_name)
       return false;
+    if (this._secondaryCameraDraft?.entity_id !== group.entity_id) return false;
     const normalizedTitle = draft.group_name.trim().toLocaleLowerCase();
-    const secondary = this._config?.cameras.find(
-      ({ entity_id: entityId }) => entityId === group.entity_id,
-    );
     const memberNames = [
       draft.title || this._cameraName(draft.entity_id),
-      secondary?.title || this._cameraName(group.entity_id),
+      this._secondaryCameraDraft.title || this._cameraName(group.entity_id),
     ];
     if (
       memberNames.some(
@@ -1778,7 +1931,16 @@ export class CardEditor extends LitElement {
   private _cameraDraftCanCommit(): boolean {
     if (!this._cameraDraftIsValid() || !this._cameraDraft) return false;
     if (!this._cameraBaseline) return true;
-    return !cameraConfigEquals(this._cameraDraft, this._cameraBaseline);
+    if (!cameraConfigEquals(this._cameraDraft, this._cameraBaseline))
+      return true;
+    return Boolean(
+      this._secondaryCameraDraft &&
+      (!this._secondaryCameraBaseline ||
+        !cameraConfigEquals(
+          this._secondaryCameraDraft,
+          this._secondaryCameraBaseline,
+        )),
+    );
   }
 
   private _cameraName(entityId: string): string {

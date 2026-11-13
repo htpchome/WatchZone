@@ -18,7 +18,7 @@ Give the next agent this instruction:
 ## Repository state
 
 - Branch: `main`
-- Current working version: `0.0.4-dev.278`
+- Current working version: `0.0.4-dev.281`
 - Current commit: `ee769c7` —
   `v0.0.4-dev.277 - refactor(stage): promote camera navigation and add switcher overlay`
 - The worktree contains the completed, uncommitted additional-camera grouping
@@ -48,7 +48,7 @@ The repository state takes precedence over this snapshot.
 
 ## Current completed change
 
-Working version `0.0.4-dev.280`:
+Working version `0.0.4-dev.281`:
 
 - A configured additional camera forms one Camera-owned presentation group and
   replaces the two standalone navigation entries with the group title.
@@ -71,6 +71,16 @@ Working version `0.0.4-dev.280`:
   Name, the group has a separate auto-named Group Name, and grouped secondaries
   have compact non-sortable edit tiles. Both members count toward the
   twelve-camera limit.
+- The Additional Camera editor configures the secondary Camera Name and live
+  Connection Source directly beneath the camera picker in the same atomic
+  group draft. Its compact summary tile presents camera and group identity on
+  one line.
+- Frigate go2rtc cameras using the HLS fallback expose and honor the
+  Low-Latency HLS setting for both primary and additional cameras.
+- Editor-preview live sessions are disposable: draft-only sessions are closed
+  on replacement or editor teardown, while a session shared with the dashboard
+  remains protected by its active lease. This prevents editor use from leaving
+  parked media decoders behind.
 - Grouped first paint preserves the standard camera-stage ratio. Per-feed
   controls respond on first activation without colliding with carousel
   navigation, directional state uses arrows, and only physically active feeds
@@ -78,7 +88,8 @@ Working version `0.0.4-dev.280`:
 - Pointer presence anywhere in a grouped stage holds both child overlay timers,
   so per-feed controls remain available while the user is interacting with
   them. Group-stage drag updates apply geometry directly and defer the wider
-  camera render until the drag settles.
+  camera render until the drag settles; stacked group propagation is also
+  frame-coalesced to avoid redundant two-feed layout work.
 - Mixed grouped Reviews and Events begin with the configured physical camera
   name, while single-camera activity keeps the existing badge set.
 - Activity return-navigation caches are pruned when the configured selection
@@ -90,7 +101,7 @@ Working version `0.0.4-dev.280`:
 
 Validation is green:
 
-- 380 frontend unit tests
+- 384 frontend unit tests
 - 105 browser tests across Chromium, Firefox, and WebKit
 - Formatting, lint, type checking, architecture/style validation, production
   build, version consistency, release packaging, and final diff checks. The

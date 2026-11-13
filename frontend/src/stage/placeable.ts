@@ -12,6 +12,8 @@ export interface PlaceableBaseRuntimeContext {
   readonly hass?: HomeAssistant;
   readonly localize?: LocalizeFunction;
   readonly placeableId: string;
+  /** True when Home Assistant is rendering the disposable editor preview. */
+  readonly preview?: boolean;
 }
 
 export interface PlaceableContextBindings {

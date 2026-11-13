@@ -71,6 +71,7 @@ export class CameraGroupView extends LitElement {
     localize: { attribute: false },
     mode: { attribute: false },
     overlayVisible: { attribute: false, type: Boolean },
+    preview: { attribute: false, type: Boolean },
     stageHeightRatio: { attribute: false, type: Number },
     stageResized: { attribute: false, type: Boolean },
   };
@@ -83,6 +84,8 @@ export class CameraGroupView extends LitElement {
   private _pointerInside = false;
   private _snapshotPending = false;
   private _stageResizeActive = false;
+  private _stageResizeFrame?: number;
+  private _pendingStageSize?: CameraStageSize;
   private _suspendDialogActive = false;
   private readonly _stageResize = new CameraStageResizeController(
     this,
@@ -102,6 +105,7 @@ export class CameraGroupView extends LitElement {
   public localize: LocalizeFunction = englishLocalize;
   public mode: CameraGroupMode = "combined";
   public overlayVisible = false;
+  public preview = false;
   public stageHeightRatio = DEFAULT_CAMERA_STAGE_HEIGHT_RATIO;
   public stageResized = false;
 
@@ -150,6 +154,7 @@ export class CameraGroupView extends LitElement {
               .lowLatencyHls=${camera.lowLatencyHls}
               .localize=${this.localize}
               .overlayVisible=${visible}
+              .discardSessionsOnDisconnect=${this.preview}
               .posterUrl=${camera.posterUrl}
               .startUnmutedPcTablet=${camera.startUnmutedPcTablet}
               .startUnmutedPhone=${camera.startUnmutedPhone}
@@ -330,6 +335,7 @@ export class CameraGroupView extends LitElement {
     this._releaseOverlayHolds();
     this._overlayVisibilityByCamera.clear();
     this._pointerInside = false;
+    this._cancelPendingStageSize();
     this.cameraSession?.clear(this);
     super.disconnectedCallback();
   }
@@ -556,13 +562,38 @@ export class CameraGroupView extends LitElement {
   };
 
   private _handleStageSizeChange(size: CameraStageSize): void {
+    if (this._stageResizeActive) {
+      this._pendingStageSize = size;
+      this._stageResizeFrame ??= requestAnimationFrame(
+        this._flushPendingStageSize,
+      );
+      return;
+    }
+    this._dispatchStageSize(size, false);
+  }
+
+  private readonly _flushPendingStageSize = (): void => {
+    this._stageResizeFrame = undefined;
+    const size = this._pendingStageSize;
+    this._pendingStageSize = undefined;
+    if (size) this._dispatchStageSize(size, true);
+  };
+
+  private _dispatchStageSize(size: CameraStageSize, transient: boolean): void {
     this.dispatchEvent(
       new CustomEvent(CAMERA_STAGE_SIZE_CHANGE_EVENT, {
         bubbles: true,
         composed: true,
-        detail: { ...size, transient: this._stageResizeActive },
+        detail: { ...size, transient },
       }),
     );
+  }
+
+  private _cancelPendingStageSize(): void {
+    if (this._stageResizeFrame !== undefined)
+      cancelAnimationFrame(this._stageResizeFrame);
+    this._stageResizeFrame = undefined;
+    this._pendingStageSize = undefined;
   }
 
   private _handleStageResizeInteraction(
@@ -574,6 +605,7 @@ export class CameraGroupView extends LitElement {
     }
     if (interaction.phase !== "end") return;
     this._stageResizeActive = false;
+    this._cancelPendingStageSize();
     this._handleStageSizeChange(this._stageResize.size);
   }
 

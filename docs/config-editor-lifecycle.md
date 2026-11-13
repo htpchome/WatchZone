@@ -113,12 +113,18 @@ field appears below the main Camera Name and defaults to `Group A/B`, then
 `Group C/D`, and so on. The secondary camera remains a full physical record for
 media and activity and is represented by a compact, non-sortable editor tile
 after the sortable primary/group list. Its edit action opens that physical
-camera record. It cannot own PTZ, two-way talk, lights, or another additional
-camera; the group uses the main camera's controls and linked lights. Changing
-or deleting the group updates both physical records in the same normalized
-draft. Group names are sanitized like camera names, must be unique, and must
-differ from both member camera names. Both physical records count toward the
-twelve-camera limit.
+camera record. The same Camera Name and Connection Source fields are available
+directly below the secondary picker while creating or editing the group, and
+commit atomically with the group draft. It cannot own PTZ, two-way talk,
+lights, or another additional camera; the group uses the main camera's controls
+and linked lights. Changing or deleting the group updates both physical records
+in the same normalized draft. Group names are sanitized like camera names, must
+be unique, and must differ from both member camera names. Both physical records
+count toward the twelve-camera limit.
+
+When either physical camera uses Frigate go2rtc with HLS as its transport
+fallback, the same Low-Latency HLS choice used by the Home Assistant HLS path
+is shown beside that fallback and remains part of that camera's configuration.
 
 ## 5. Controls, themes, and responsive layout
 

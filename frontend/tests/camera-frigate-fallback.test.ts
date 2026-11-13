@@ -73,6 +73,57 @@ describe("Frigate fallback selection", () => {
     expect(acquireMse).not.toHaveBeenCalled();
   });
 
+  it("discards preview-owned sessions when the preview disconnects", () => {
+    const source: FrigateGo2RtcLiveSourceDescriptor = {
+      id: "frigate_go2rtc:entry-home:front",
+      type: "frigate_go2rtc",
+      frigate_instance_id: "frigate",
+      stream_name: "front",
+    };
+    const api = {
+      identity: {},
+      callWS: vi.fn(),
+      resolveUrl: (path: string) => path,
+      subscribeMessage: vi.fn(),
+    } as unknown as HomeAssistantApi;
+    const previewLease = lease(`${source.id}:webrtc`);
+    vi.spyOn(LiveSourceResolver.prototype, "cachedFrigate").mockReturnValue(
+      source,
+    );
+    vi.spyOn(
+      LiveSourceResolver.prototype,
+      "acquireUsableFrigateWebRtc",
+    ).mockReturnValue(previewLease);
+    const controller = new CameraLiveSessionController(
+      {
+        addController: vi.fn(),
+        removeController: vi.fn(),
+        requestUpdate: vi.fn(),
+        updateComplete: Promise.resolve(true),
+      },
+      {
+        getInitialMuted: () => true,
+        onActiveVideoChanged: vi.fn(),
+      },
+    );
+
+    controller.hostConnected();
+    controller.configure(
+      api,
+      "camera.front",
+      true,
+      "frigate_go2rtc",
+      true,
+      "mse",
+      true,
+      true,
+    );
+    controller.hostDisconnected();
+
+    expect(previewLease.discard).toHaveBeenCalledOnce();
+    expect(previewLease.release).not.toHaveBeenCalled();
+  });
+
   it("acquires only HLS when the client policy requires it", () => {
     const source: FrigateGo2RtcLiveSourceDescriptor = {
       id: "frigate_go2rtc:entry-home:front",

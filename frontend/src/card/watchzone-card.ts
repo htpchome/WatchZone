@@ -330,6 +330,7 @@ export class DashboardCard extends LitElement {
       hass,
       this._haApi,
       this._localization.localize,
+      this.preview,
     );
   }
 
