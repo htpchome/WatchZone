@@ -15,22 +15,27 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.289`
-- Current commit: `7b403ee` —
-  `v0.0.4-dev.288 - feat(camera): add coordinated camera slideshow`
-- The worktree contains the uncommitted grouped-camera icon change described
-  below. Always verify `git status`, the canonical version in
+- Working version: `0.0.4-dev.290`
+- Current commit: `d40e700` —
+  `v0.0.4-dev.289 - feat(camera): add grouped view mode icons`
+- The worktree contains the uncommitted camera-navigation overflow change
+  described below. Always verify `git status`, the canonical version in
   `custom_components/watchzone/const.py`, and the latest commit.
 
-## Active change: grouped-camera view icons
+## Active change: camera-navigation overflow
 
-- Grouped-camera view controls use centralized semantic icons: the combined
-  view offers the single-camera outline, while a solo feed offers the stacked
-  or side-by-side return icon that matches the configured group layout.
-- The existing group mode and layout remain authoritative. The icon mapping
-  adds no parallel state, control path, overlay lifecycle, or media behavior.
-- Registry tests preserve the supplied SVG geometry. Browser tests verify the
-  correct icon through combined, solo, side-by-side, and stacked transitions.
+- Camera navigation reserves equal inline-start and inline-end control areas.
+  A themed chevron and hidden-camera count appear only while camera options are
+  outside the local viewport in that direction.
+- The shared navigation appearance owns the bounded horizontal scroll surface.
+  Touch supports native horizontal panning plus non-mandatory proximity snap
+  points; vertical page panning remains allowed.
+- Edge controls scroll the local strip smoothly. Carousel, switcher,
+  slideshow, and takeover selection reveal the authoritative selected option
+  without scrolling the card, dashboard, or document.
+- One Camera Navigation-owned overflow controller owns geometry measurement,
+  resize observation, scrolling, and cleanup. It does not own camera selection
+  or introduce another carousel/navigation path.
 
 ## Live camera and group invariants
 
@@ -81,18 +86,17 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 
 ## Validation status
 
-Validated for `0.0.4-dev.289`:
+Validated for `0.0.4-dev.290`:
 
 - 402 frontend unit tests
 - 114 Playwright tests across Chromium, Firefox, and WebKit (38 per engine)
 - Formatting, lint, type checking, architecture/style checks, production build,
   version consistency, and `git diff --check`
 
-Browser coverage verifies automatic and manual advancement, synchronized
-navigation and switcher state, overlay countdown/dimming, takeover Hold and
-resume, Fade transitions, per-camera zoom reset, and persistent stage-handle
-geometry. Existing transition coverage continues to exercise `none`, `slide`,
-and `fade`.
+Browser coverage verifies directional control visibility and counts, smooth
+local scrolling, selected-option reveal, touch panning, proximity snap,
+responsive observation, theme tokens, and unchanged document scroll across
+Chromium, Firefox, and WebKit.
 
 ## Handoff rules
 

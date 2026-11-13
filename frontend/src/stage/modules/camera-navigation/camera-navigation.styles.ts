@@ -11,10 +11,16 @@ export const cameraNavigationStyles = css`
   }
 
   .bar {
+    display: grid;
     box-sizing: border-box;
+    grid-template-columns:
+      var(--wzc-camera-navigation-overflow-control-size) minmax(0, 1fr)
+      var(--wzc-camera-navigation-overflow-control-size);
+    align-items: center;
     block-size: 100%;
     inline-size: 100%;
     overflow: clip;
+    background: var(--wzc-camera-navigation-background);
   }
 
   .bar.rounded,
@@ -58,9 +64,76 @@ export const cameraNavigationStyles = css`
   }
 
   .items::part(container) {
-    justify-content: center;
-    inline-size: max-content;
+    justify-content: flex-start;
+    inline-size: 100%;
     block-size: 100%;
-    min-inline-size: 100%;
+  }
+
+  .viewport {
+    min-inline-size: 0;
+    block-size: 100%;
+    overflow: hidden;
+  }
+
+  .overflow-slot {
+    display: grid;
+    place-items: center;
+    inline-size: var(--wzc-camera-navigation-overflow-control-size);
+    block-size: 100%;
+  }
+
+  .overflow-control {
+    position: relative;
+    display: grid;
+    place-items: center;
+    inline-size: var(--wzc-camera-navigation-item-size);
+    block-size: var(--wzc-camera-navigation-item-size);
+    padding: 0;
+    color: var(--wzc-camera-navigation-overflow-control-color);
+    background: var(--wzc-camera-navigation-overflow-control-background);
+    border: 0;
+    border-radius: var(--wzc-radius-pill);
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .overflow-control svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
+
+  .overflow-control:focus-visible {
+    outline: 2px solid var(--wzc-color-primary);
+    outline-offset: -2px;
+  }
+
+  .overflow-control:active {
+    background: var(--wzc-camera-navigation-overflow-control-hover-background);
+  }
+
+  .overflow-count {
+    position: absolute;
+    inset-block-start: 0.05rem;
+    inset-inline-end: 0.05rem;
+    display: grid;
+    place-items: center;
+    min-inline-size: 0.85rem;
+    block-size: 0.85rem;
+    padding-inline: 0.12rem;
+    color: var(--wzc-camera-navigation-overflow-count-color);
+    background: var(--wzc-camera-navigation-overflow-count-background);
+    border-radius: var(--wzc-radius-pill);
+    font-size: 0.625rem;
+    font-weight: var(--wzc-font-weight-bold);
+    line-height: 1;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .overflow-control:hover {
+      background: var(
+        --wzc-camera-navigation-overflow-control-hover-background
+      );
+    }
   }
 `;

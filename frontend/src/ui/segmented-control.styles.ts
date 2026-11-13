@@ -115,4 +115,22 @@ export const segmentedControlStyles = css`
     flex: 0 0 auto;
     font-size: inherit;
   }
+
+  :host([appearance="navigation"]) .segmented-control {
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    touch-action: pan-x pan-y;
+  }
+
+  :host([appearance="navigation"]) .segmented-control::-webkit-scrollbar {
+    display: none;
+  }
+
+  :host([appearance="navigation"]) .segmented-control-option {
+    scroll-snap-align: start;
+    scroll-snap-stop: normal;
+  }
 `;

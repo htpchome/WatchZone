@@ -43,6 +43,13 @@ export class SegmentedControl extends LitElement {
   public options: readonly SegmentedControlOption[] = [];
   public value = "";
 
+  public get scrollViewport(): HTMLElement | undefined {
+    return (
+      this.renderRoot.querySelector<HTMLElement>(".segmented-control") ??
+      undefined
+    );
+  }
+
   protected render() {
     const selectedIndex = this.options.findIndex(
       ({ disabled, value }) => !disabled && value === this.value,

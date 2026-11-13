@@ -4099,7 +4099,7 @@ test("keeps the camera switcher overlay in tandem with camera navigation", async
   await expect(switcher.locator("button.trigger")).toContainText("Back Yard");
 });
 
-test("keeps the HA pre-editor wrapper stable without observing navigation geometry", async ({
+test("keeps the HA pre-editor wrapper stable with bounded navigation observation", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -4224,19 +4224,19 @@ test("keeps the HA pre-editor wrapper stable without observing navigation geomet
     resizeNotifications: 0,
     widthDelta: 0,
   });
-  expect(
-    await page.evaluate(
-      () =>
-        (
-          window as typeof window & {
-            __wzcNavigationResizeObservations?: number;
-          }
-        ).__wzcNavigationResizeObservations,
-    ),
-  ).toBe(0);
+  const navigationObservations = await page.evaluate(
+    () =>
+      (
+        window as typeof window & {
+          __wzcNavigationResizeObservations?: number;
+        }
+      ).__wzcNavigationResizeObservations ?? 0,
+  );
+  expect(navigationObservations).toBeGreaterThanOrEqual(2);
+  expect(navigationObservations).toBeLessThanOrEqual(4);
 });
 
-test("does not create a scroll container for overflow camera navigation", async ({
+test("scrolls overflow camera navigation with directional counts", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -4266,23 +4266,55 @@ test("does not create a scroll container for overflow camera navigation", async 
   });
 
   const navigation = page.locator("wzc-camera-navigation");
-  await expect(navigation.locator("button")).toHaveCount(8);
+  const cameraButtons = navigation.locator(".items button");
+  await expect(cameraButtons).toHaveCount(8);
   await navigation.evaluate((element) => {
-    element.style.inlineSize = "14rem";
+    element.style.inlineSize = "20rem";
   });
+  const viewport = navigation.locator(".items .segmented-control");
+  const previous = navigation.locator(
+    ".overflow-slot.previous .overflow-control",
+  );
+  const next = navigation.locator(".overflow-slot.next .overflow-control");
+  await viewport.evaluate((element) => {
+    element.scrollLeft = 0;
+    element.dispatchEvent(new Event("scroll"));
+  });
+  await expect(previous).toHaveCount(0);
+  await expect(next).toBeVisible();
+  const initialNext = await next.evaluate((button) => ({
+    count: Number(button.querySelector(".overflow-count")?.textContent),
+    label: button.getAttribute("aria-label"),
+  }));
+  const initialNextCount = initialNext.count;
+  expect(initialNextCount).toBeGreaterThan(0);
+  expect(initialNext.label).toBe(`Show ${initialNextCount} later cameras`);
+  await expect(viewport).toHaveCSS("overflow-x", "auto");
+  await expect(viewport).toHaveCSS("touch-action", /pan-x/);
+  await expect(viewport).toHaveCSS("scroll-snap-type", "x");
   const pagePosition = await page.evaluate(() => ({
     x: window.scrollX,
     y: window.scrollY,
   }));
-  await navigation
-    .locator("button")
+  await next.evaluate((button) => (button as HTMLButtonElement).click());
+  await expect
+    .poll(() => viewport.evaluate((element) => element.scrollLeft))
+    .toBeGreaterThan(0);
+  await expect(previous).toBeVisible();
+  await expect
+    .poll(async () =>
+      (await next.count()) === 0
+        ? 0
+        : Number(await next.locator(".overflow-count").textContent()),
+    )
+    .toBeLessThan(initialNextCount);
+
+  await cameraButtons
     .last()
     .evaluate((button) => (button as HTMLButtonElement).click());
-
-  await expect
-    .poll(() => navigation.locator(".bar").evaluate((bar) => bar.scrollLeft))
-    .toBe(0);
-  await expect(navigation.locator(".bar")).toHaveCSS("overflow-x", "clip");
+  await expect(next).toHaveCount(0);
+  await expect(previous).toBeVisible();
+  await expect(cameraButtons.last()).toHaveAttribute("aria-selected", "true");
   expect(
     await page.evaluate(
       () =>
@@ -5450,6 +5482,12 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
       "--wzc-card-outer-shadow",
       "--wzc-stage-module-gap",
       "--wzc-camera-stage",
+      "--wzc-camera-navigation-overflow-control-size",
+      "--wzc-camera-navigation-overflow-control-color",
+      "--wzc-camera-navigation-overflow-control-background",
+      "--wzc-camera-navigation-overflow-control-hover-background",
+      "--wzc-camera-navigation-overflow-count-color",
+      "--wzc-camera-navigation-overflow-count-background",
       "--wzc-live-radius",
       "--wzc-live-shadow",
       "--wzc-media-overlay-opacity",

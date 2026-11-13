@@ -317,6 +317,22 @@ export const themeTokens = css`
     --wzc-camera-navigation-gap: var(--wzc-selection-bar-gap);
     --wzc-camera-navigation-padding: var(--wzc-selection-bar-padding);
     --wzc-camera-navigation-item-size: 2.25rem;
+    --wzc-camera-navigation-overflow-control-size: var(
+      --wzc-camera-navigation-block-size
+    );
+    --wzc-camera-navigation-overflow-control-color: var(
+      --wzc-camera-navigation-color
+    );
+    --wzc-camera-navigation-overflow-control-background: transparent;
+    --wzc-camera-navigation-overflow-control-hover-background: var(
+      --wzc-neutral-control-hover-background
+    );
+    --wzc-camera-navigation-overflow-count-color: var(
+      --wzc-camera-navigation-active-color
+    );
+    --wzc-camera-navigation-overflow-count-background: var(
+      --wzc-camera-navigation-active-background
+    );
     --wzc-camera-navigation-block-size: calc(
       var(--wzc-camera-navigation-item-size) + 2 *
         var(--wzc-camera-navigation-padding)

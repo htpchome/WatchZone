@@ -140,6 +140,8 @@
   "layout.preparing_module": "Preparing module…",
   "camera.views": "Camera views",
   "camera.navigation": "Camera navigation",
+  "camera.navigation_previous": "Show {count} earlier cameras",
+  "camera.navigation_next": "Show {count} later cameras",
   "camera.switcher": "Camera switcher",
   "camera.select": "Select camera",
   "camera.position": "Camera {position} of {total}",

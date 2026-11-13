@@ -18,6 +18,23 @@ application-wide boundaries.
   emit typed selection intent through shared Stage context. Neither imports or
   controls the camera's Swiper instance or imports the other placeable.
 
+## Camera-navigation overflow
+
+- Camera navigation owns one bounded horizontal scroll viewport. It never
+  scrolls the card, dashboard, or document to reveal a camera option.
+- Equal edge slots remain available at the inline start and end. A directional
+  control is rendered only while one or more camera options are outside the
+  viewport in that direction, and its badge reports that hidden-option count.
+- Pointer and touch users may activate those controls. Touch users may also pan
+  the navigation viewport directly. Inline `proximity` snap points gently
+  settle camera options without requiring every gesture to stop on one.
+- A selection originating from the carousel, camera switcher, slideshow, or
+  activity takeover reveals the selected navigation option within the local
+  viewport. Overflow navigation never creates a second camera-selection path.
+- Resize observation and scroll measurement belong to the navigation module
+  and are disconnected with it. Hidden counts derive from rendered option
+  geometry rather than label length or device-class assumptions.
+
 ## Structure and identity
 
 The camera stage contains one `.camera-carousel.swiper`, one
