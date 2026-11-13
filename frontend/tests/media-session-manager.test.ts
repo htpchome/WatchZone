@@ -149,6 +149,30 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
+  it("parks a connection that finishes after its last lease is released", async () => {
+    let finishConnection:
+      | ((connection: Awaited<ReturnType<ConnectionFactory>>) => void)
+      | undefined;
+    const park = vi.fn();
+    const close = vi.fn();
+    const factory = vi.fn<ConnectionFactory>(
+      () =>
+        new Promise((resolve) => {
+          finishConnection = resolve;
+        }),
+    );
+    const manager = new MediaSessionManager(factory);
+    const lease = manager.acquireHomeAssistant(createApi(), "camera.front");
+
+    lease.release();
+    finishConnection?.({ close, park });
+
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("parked"));
+    expect(park).toHaveBeenCalledOnce();
+    expect(close).not.toHaveBeenCalled();
+    manager.closeAll();
+  });
+
   it("reacquires only a retained player that proved usable", async () => {
     const stream = createStream();
     const video = document.createElement("video");

@@ -5,15 +5,12 @@ import {
 } from "../../../api/live-signaling";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
 import type { LiveStartupTiming } from "../../../core/live-startup-timing";
-import {
-  playMediaElement,
-  setMediaElementMuted,
-} from "../../../core/media-playback";
 import type {
   MediaConnection,
   MediaConnectionOptions,
 } from "../../../core/media-session-manager";
 import {
+  attachWebRtcVideo,
   createWebRtcPeerConnection,
   type WebRtcSignalingEvent,
 } from "../../../core/webrtc-peer-connection";
@@ -68,21 +65,5 @@ export async function createFrigateWebRtcConnection(
     },
     timing,
   });
-  const video = document.createElement("video");
-  video.autoplay = true;
-  video.playsInline = true;
-  setMediaElementMuted(video, options.initialMuted);
-  video.srcObject = connection.stream ?? null;
-  return {
-    ...connection,
-    video,
-    park: () => video.pause(),
-    resume: () => void playMediaElement(video).catch(() => undefined),
-    close: () => {
-      video.pause();
-      video.srcObject = null;
-      video.remove();
-      connection.close();
-    },
-  };
+  return attachWebRtcVideo(connection, options.initialMuted);
 }

@@ -18,11 +18,11 @@ Give the next agent this instruction:
 ## Repository state
 
 - Branch: `main`
-- Current working version: `0.0.4-dev.281`
-- Current commit: `ee769c7` —
-  `v0.0.4-dev.277 - refactor(stage): promote camera navigation and add switcher overlay`
-- The worktree contains the completed, uncommitted additional-camera grouping
-  feature described below.
+- Current working version: `0.0.4-dev.282`
+- Current commit: `1c9b5e9` —
+  `v0.0.4-dev.281 - fix(cameras): complete secondary settings and release editor media`
+- The worktree contains the uncommitted retained-media lifecycle correction
+  described below.
 
 Always check `git status`, the canonical version in
 `custom_components/watchzone/const.py`, and the latest commit before starting.
@@ -48,7 +48,16 @@ The repository state takes precedence over this snapshot.
 
 ## Current completed change
 
-Working version `0.0.4-dev.281`:
+Working version `0.0.4-dev.282`:
+
+- Firefox heap snapshots show transient growth rather than a persistent
+  JavaScript/DOM leak: shallow heap moves from 91.9 MB to 113.5 MB and returns
+  to 87.8 MB after cleanup.
+- Connections that finish after their final lease is released now invoke their
+  transport parking lifecycle instead of only being labelled parked.
+- Retained Home Assistant and Frigate WebRTC video elements now pause and
+  detach their stream while parked, then reattach the same stream on resume;
+  peer identity, signaling, and Home Assistant trickle ICE remain intact.
 
 - A configured additional camera forms one Camera-owned presentation group and
   replaces the two standalone navigation entries with the group title.

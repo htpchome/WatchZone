@@ -227,6 +227,12 @@ describe("Home Assistant WebRTC connection", () => {
     expect(timing.snapshot().signalingFallbackReason).toBeUndefined();
     expect(onFailure).not.toHaveBeenCalled();
 
+    connection.park?.();
+    expect(connection.video?.srcObject).toBeNull();
+    expect(peer.close).not.toHaveBeenCalled();
+    connection.resume?.();
+    expect(connection.video?.srcObject).toBe(connection.stream);
+
     vi.useFakeTimers();
     peer.connectionState = "disconnected";
     peer.onconnectionstatechange?.();

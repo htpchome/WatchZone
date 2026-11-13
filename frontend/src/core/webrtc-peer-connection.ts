@@ -1,4 +1,5 @@
 import type { LiveStartupTiming } from "./live-startup-timing";
+import { playMediaElement, setMediaElementMuted } from "./media-playback";
 import {
   MediaConnectionError,
   normalizeMediaConnectionError,
@@ -51,6 +52,37 @@ export interface WebRtcTalkPeerConnectionOptions {
   readonly signaling: WebRtcSignalingAdapter;
   onFailure(error: Error): void;
   onSignalingPath(path: string): void;
+}
+
+/** Own a retained WebRTC video without retaining decoder presentation work. */
+export function attachWebRtcVideo(
+  connection: MediaConnection,
+  initialMuted: boolean,
+): MediaConnection {
+  const video = document.createElement("video");
+  video.autoplay = true;
+  video.playsInline = true;
+  setMediaElementMuted(video, initialMuted);
+  video.srcObject = connection.stream ?? null;
+
+  return {
+    ...connection,
+    video,
+    park: () => {
+      video.pause();
+      video.srcObject = null;
+    },
+    resume: () => {
+      video.srcObject = connection.stream ?? null;
+      void playMediaElement(video).catch(() => undefined);
+    },
+    close: () => {
+      video.pause();
+      video.srcObject = null;
+      video.remove();
+      connection.close();
+    },
+  };
 }
 
 function abortError(): DOMException {

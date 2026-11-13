@@ -325,6 +325,7 @@ class ManagedMediaSession {
         return;
       }
       this._connection = connection;
+      if (this._leaseCount === 0) connection.park?.();
       if (this._reconnectAttempts > 0) {
         this._stabilityTimer = setTimeout(() => {
           this._stabilityTimer = undefined;
