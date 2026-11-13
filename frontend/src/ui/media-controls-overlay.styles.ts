@@ -9,6 +9,8 @@ export const mediaControlsOverlayStyles = css`
     overflow: hidden;
     pointer-events: none;
     container-type: size;
+    outline: var(--wzc-overlay-debug-border);
+    outline-offset: -1px;
 
     --wzc-control-size: var(--wzc-camera-control-size);
     --wzc-control-icon-size: var(--wzc-camera-control-icon-size);
@@ -29,6 +31,8 @@ export const mediaControlsOverlayStyles = css`
     transition:
       opacity var(--wzc-media-overlay-transition-duration) ease,
       visibility 0s linear var(--wzc-media-overlay-transition-duration);
+    outline: var(--wzc-overlay-debug-border);
+    outline-offset: -1px;
   }
 
   :host([visible]) .control-group {

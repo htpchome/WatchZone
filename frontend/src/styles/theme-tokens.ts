@@ -269,7 +269,9 @@ export const themeTokens = css`
       var(--ha-color-neutral-50, #737373) 84%,
       transparent
     );
-    --wzc-media-overlay-border-color: var(--ha-color-neutral-30, #4a4a4a);
+    /* Temporary overlay-layout diagnostic. */
+    --wzc-overlay-debug-border: 1px solid #ff0000;
+    --wzc-media-overlay-border-color: #ff0000;
     --wzc-media-overlay-radius: var(--wzc-radius-small);
     --wzc-media-overlay-shadow: var(--wzc-shadow-card);
     --wzc-media-overlay-transition-duration: 140ms;

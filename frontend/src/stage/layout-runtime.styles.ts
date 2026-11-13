@@ -161,6 +161,8 @@ export const stageRuntimeStyles = css`
     );
     padding-inline-start: var(--wzc-camera-overlay-inline-inset);
     padding-inline-end: var(--wzc-camera-overlay-trailing-clearance);
+    outline: var(--wzc-overlay-debug-border);
+    outline-offset: -1px;
   }
 
   .component-slot-overlay > .overlay-region {
@@ -171,6 +173,8 @@ export const stageRuntimeStyles = css`
     gap: var(--wzc-control-dock-gap);
     min-inline-size: 0;
     pointer-events: none;
+    outline: var(--wzc-overlay-debug-border);
+    outline-offset: -1px;
   }
 
   .component-slot-overlay > .overlay-region > .component-node {
@@ -258,6 +262,8 @@ export const stageRuntimeStyles = css`
     padding: 0 var(--wzc-camera-side-lane-inline-size)
       var(--wzc-camera-control-bottom-inset);
     column-gap: var(--wzc-control-dock-gap);
+    outline: var(--wzc-overlay-debug-border);
+    outline-offset: -1px;
   }
 
   .control-region {
@@ -270,6 +276,8 @@ export const stageRuntimeStyles = css`
     min-inline-size: 0;
     gap: var(--wzc-control-dock-gap);
     pointer-events: none;
+    outline: var(--wzc-overlay-debug-border);
+    outline-offset: -1px;
   }
 
   .control-region-leading {

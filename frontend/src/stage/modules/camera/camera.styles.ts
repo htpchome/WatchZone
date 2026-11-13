@@ -109,6 +109,8 @@ export const cameraStyles = css`
       opacity var(--wzc-media-overlay-transition-duration) ease,
       visibility 0s linear var(--wzc-media-overlay-transition-duration);
     -webkit-tap-highlight-color: transparent;
+    outline: var(--wzc-overlay-debug-border);
+    outline-offset: -1px;
   }
 
   .carousel-navigation.previous {

@@ -17,6 +17,8 @@ export const ptzStyles = css`
     inline-size: 100%;
     block-size: 100%;
     pointer-events: none;
+    outline: var(--wzc-overlay-debug-border);
+    outline-offset: -1px;
   }
 
   .ptz-control {

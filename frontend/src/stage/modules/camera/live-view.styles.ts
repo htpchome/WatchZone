@@ -192,6 +192,8 @@ export const cameraLiveViewStyles = css`
     transition:
       opacity var(--wzc-media-overlay-transition-duration) ease,
       visibility 0s linear var(--wzc-media-overlay-transition-duration);
+    outline: var(--wzc-overlay-debug-border);
+    outline-offset: -1px;
   }
 
   .source-indicator.visible {

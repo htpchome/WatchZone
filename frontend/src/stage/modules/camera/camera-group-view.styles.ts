@@ -102,6 +102,8 @@ export const cameraGroupViewStyles = css`
     opacity: 0;
     pointer-events: none;
     transition: opacity var(--wzc-media-overlay-transition-duration) ease;
+    outline: var(--wzc-overlay-debug-border);
+    outline-offset: -1px;
   }
 
   .feed-actions.visible {
@@ -142,6 +144,8 @@ export const cameraGroupViewStyles = css`
     z-index: 4;
     inset: 0;
     pointer-events: none;
+    outline: var(--wzc-overlay-debug-border);
+    outline-offset: -1px;
   }
 
   .group-controls > * {
