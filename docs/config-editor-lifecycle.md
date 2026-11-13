@@ -107,15 +107,18 @@ camera or an entity already configured anywhere in the card produces a visible
 validation error and cannot be committed. A valid selection creates the
 secondary camera configuration as part of the same atomic draft.
 
-The main camera's ordinary Camera Name becomes the group name and defaults to
-`Group A/B`, then `Group C/D`, and so on. There is no second group-name field or
-mirrored title inside the additional-camera object. The secondary camera is a
-full physical camera record for media and activity but is hidden as a separate
-editor tile while grouped. It cannot own PTZ, two-way talk, or lights; the group
-uses the main camera's controls and linked lights. Changing or deleting the
-group updates both physical records in the same normalized draft. Group names
-are sanitized like other camera names, must be unique, and must differ from
-both member camera names.
+Each physical camera keeps its own optional Camera Name and normal entity-name
+fallback. When a main camera owns an additional camera, a separate Group Name
+field appears below the main Camera Name and defaults to `Group A/B`, then
+`Group C/D`, and so on. The secondary camera remains a full physical record for
+media and activity and is represented by a compact, non-sortable editor tile
+after the sortable primary/group list. Its edit action opens that physical
+camera record. It cannot own PTZ, two-way talk, lights, or another additional
+camera; the group uses the main camera's controls and linked lights. Changing
+or deleting the group updates both physical records in the same normalized
+draft. Group names are sanitized like camera names, must be unique, and must
+differ from both member camera names. Both physical records count toward the
+twelve-camera limit.
 
 ## 5. Controls, themes, and responsive layout
 

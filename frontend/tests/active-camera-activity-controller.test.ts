@@ -462,6 +462,10 @@ describe("active camera activity controller", () => {
           {
             entityId: "camera.porch",
             entityIds: ["camera.porch", "camera.driveway"],
+            entityLabels: [
+              { entityId: "camera.porch", label: "Package camera" },
+              { entityId: "camera.driveway", label: "Street camera" },
+            ],
             label: "Group A/B",
           },
         ],
@@ -485,7 +489,14 @@ describe("active camera activity controller", () => {
       "camera.driveway:review",
       "camera.porch:review",
     ]);
+    expect(controller.cameraLabelFor("camera.driveway:review")).toBe(
+      "Street camera",
+    );
+    expect(controller.cameraLabelFor("camera.porch:review")).toBe(
+      "Package camera",
+    );
     controller.hostDisconnected();
+    expect(controller.cameraLabelFor("camera.driveway:review")).toBeUndefined();
   });
 
   it("keeps the available group member when its companion request fails", async () => {

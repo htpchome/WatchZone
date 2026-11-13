@@ -568,7 +568,17 @@ test("cycles a grouped camera from combined to each member and back", async ({
   );
 
   await group.hover();
-  await group.locator(".feed").first().locator(".solo-target").click();
+  const firstFeedActions = group
+    .locator(".feed")
+    .first()
+    .locator(".feed-actions");
+  const firstSoloTarget = firstFeedActions.locator(".solo-target");
+  await expect(firstFeedActions).toHaveClass(/visible/);
+  await firstSoloTarget.hover();
+  await page.waitForTimeout(MEDIA_OVERLAY_HIDE_DELAY_MS + 250);
+  await expect(firstFeedActions).toHaveClass(/visible/);
+  await expect(firstSoloTarget).toBeVisible();
+  await firstSoloTarget.click();
   await expect(group.locator(".feed:not(.hidden)")).toHaveCount(1);
   await expect(leadingIcon).toHaveCount(1);
   await expect(leadingIcon).toHaveAttribute("data-icon", "arrowLeft");
@@ -5778,7 +5788,9 @@ test("camera editor configures and sanitizes an additional-camera group", async 
     );
   });
 
-  const groupName = editor.locator(".camera-title-field ha-input");
+  const cameraName = editor.locator(".camera-title-field ha-input");
+  const groupName = editor.locator(".camera-group-name-field ha-input");
+  await expect(cameraName).toHaveJSProperty("value", "Porch");
   await expect(groupName).toHaveJSProperty("value", "Group A/B");
   await expect(additional.locator(".field-error")).toHaveCount(0);
   await expect(additional.locator(".remove-additional-camera")).toHaveAttribute(
@@ -5809,6 +5821,7 @@ test("camera editor configures and sanitizes an additional-camera group", async 
             cameras?: Array<{
               additional_camera?: unknown;
               entity_id?: string;
+              group_name?: string;
               title?: string;
             }>;
           };
@@ -5823,7 +5836,8 @@ test("camera editor configures and sanitizes an additional-camera group", async 
         layout: "stacked",
       },
       entity_id: "camera.porch",
-      title: "Entry Pair",
+      group_name: "Entry Pair",
+      title: "Porch",
     }),
     expect.objectContaining({
       entity_id: "camera.driveway",
@@ -5835,13 +5849,30 @@ test("camera editor configures and sanitizes an additional-camera group", async 
     }),
   ]);
   await expect(editor.locator("wzc-sortable-tile")).toHaveCount(2);
-  await expect(editor.locator(".camera-tile-copy span")).toHaveText([
-    "Entry Pair",
-    "Back",
-  ]);
-  await expect(editor.locator(".camera-tile-copy small").first()).toContainText(
-    "A: porch · B: driveway",
+  await expect(
+    editor.locator("wzc-sortable-tile .camera-tile-copy span"),
+  ).toHaveText(["Entry Pair", "Back"]);
+  await expect(
+    editor.locator("wzc-sortable-tile .camera-tile-copy small").first(),
+  ).toContainText("A: Porch · B: driveway");
+  const secondaryTile = editor.locator(".secondary-camera-tile");
+  await expect(secondaryTile).toHaveCount(1);
+  await expect(secondaryTile.locator(".camera-tile-copy span")).toHaveText(
+    "driveway",
   );
+  await expect(secondaryTile.locator(".camera-tile-copy small")).toHaveText(
+    "Grouped with Entry Pair",
+  );
+  await expect(editor.locator(".camera-list-heading")).toContainText(
+    "3 of 12 configured",
+  );
+  await secondaryTile.locator('[title="Edit Camera"]').click();
+  await expect(editor.locator(".camera-editor-dialog")).toBeVisible();
+  await expect(editor.locator(".camera-title-field ha-input")).toHaveJSProperty(
+    "value",
+    "",
+  );
+  await expect(editor.locator(".camera-group-name-field")).toHaveCount(0);
 });
 
 test("editor camera drag handles reorder the configured cameras", async ({

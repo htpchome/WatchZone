@@ -40,6 +40,7 @@ import { stageResizeHandleStyles } from "./stage-resize-handle.styles";
 import {
   CameraStageResizeController,
   DEFAULT_CAMERA_STAGE_HEIGHT_RATIO,
+  type CameraStageResizeInteraction,
   type CameraStageSize,
 } from "./stage-resize.controller";
 
@@ -77,12 +78,15 @@ export class CameraGroupView extends LitElement {
   private _audioFocus: 0 | 1 = 0;
   private readonly _deviceProfile = new DeviceProfileController(this);
   private _fullscreenActive = false;
-  private _overlayVisible = false;
+  private _overlayHoldReleases: (() => void)[] = [];
+  private readonly _overlayVisibilityByCamera = new Map<string, boolean>();
+  private _pointerInside = false;
   private _snapshotPending = false;
+  private _stageResizeActive = false;
   private _suspendDialogActive = false;
   private readonly _stageResize = new CameraStageResizeController(
     this,
-    undefined,
+    (interaction) => this._handleStageResizeInteraction(interaction),
     undefined,
     (size) => this._handleStageSizeChange(size),
   );
@@ -108,10 +112,12 @@ export class CameraGroupView extends LitElement {
     const visibleIndex = this.mode === "secondary" ? 1 : 0;
     const combined = !phone && this.mode === "combined";
     const focus = this._audioFocus === 1 ? this._secondaryView : this._mainView;
-    const visible = this._overlayVisible || this.overlayVisible;
+    const visible = this._localOverlayVisible || this.overlayVisible;
     return staticHtml`<div
       class="group"
       @camera-view-session-changed=${this._handleSessionChanged}
+      @pointerenter=${this._handlePointerEnter}
+      @pointerleave=${this._handlePointerLeave}
     >
       <div class=${`feeds ${
         combined
@@ -284,6 +290,11 @@ export class CameraGroupView extends LitElement {
   }
 
   protected willUpdate(): void {
+    const cameraIds = new Set(this.cameras.map(({ entityId }) => entityId));
+    for (const entityId of this._overlayVisibilityByCamera.keys()) {
+      if (!cameraIds.has(entityId))
+        this._overlayVisibilityByCamera.delete(entityId);
+    }
     this._stageResize.configure(this.cameras[0]?.entityId);
     this._stageResize.setSize({
       heightRatio: this.stageHeightRatio,
@@ -316,6 +327,9 @@ export class CameraGroupView extends LitElement {
       "webkitfullscreenchange",
       this._syncFullscreenState,
     );
+    this._releaseOverlayHolds();
+    this._overlayVisibilityByCamera.clear();
+    this._pointerInside = false;
     this.cameraSession?.clear(this);
     super.disconnectedCallback();
   }
@@ -346,6 +360,10 @@ export class CameraGroupView extends LitElement {
     ].filter((view): view is CameraView => Boolean(view));
   }
 
+  private get _localOverlayVisible(): boolean {
+    return [...this._overlayVisibilityByCamera.values()].some(Boolean);
+  }
+
   private _publishSession(): void {
     if (!this.active) {
       this.cameraSession?.clear(this);
@@ -359,7 +377,7 @@ export class CameraGroupView extends LitElement {
     this.cameraSession?.publish(this, {
       ...main,
       muted: focus.muted,
-      overlayVisible: this._overlayVisible,
+      overlayVisible: this._localOverlayVisible,
       holdOverlay: () => {
         const releases = this._visibleViews.map((view) =>
           view.getSession()?.holdOverlay(),
@@ -380,20 +398,54 @@ export class CameraGroupView extends LitElement {
 
   private readonly _handleSessionChanged = (event: Event): void => {
     event.stopPropagation();
+    if (this._pointerInside) this._syncOverlayHolds();
     this._publishSession();
     this.requestUpdate();
   };
 
   private readonly _handleOverlayVisibility = (
-    event: CustomEvent<{ visible: boolean }>,
+    event: CustomEvent<{ key: string; visible: boolean }>,
   ): void => {
-    if (this._overlayVisible === event.detail.visible) return;
-    this._overlayVisible = event.detail.visible;
+    if (!this.cameras.some(({ entityId }) => entityId === event.detail.key))
+      return;
+    const wasVisible = this._localOverlayVisible;
     if (event.detail.visible) {
+      this._overlayVisibilityByCamera.set(event.detail.key, true);
+    } else {
+      this._overlayVisibilityByCamera.delete(event.detail.key);
+    }
+    const visible = this._localOverlayVisible;
+    if (wasVisible === visible) return;
+    if (visible) {
       this._visibleViews.forEach((view) => view.getSession()?.revealOverlay());
     }
     this.requestUpdate();
   };
+
+  private readonly _handlePointerEnter = (event: PointerEvent): void => {
+    if (event.pointerType === "touch") return;
+    this._pointerInside = true;
+    this._syncOverlayHolds();
+    this._views.forEach((view) => view.getSession()?.revealOverlay());
+  };
+
+  private readonly _handlePointerLeave = (event: PointerEvent): void => {
+    if (event.pointerType === "touch") return;
+    this._pointerInside = false;
+    this._releaseOverlayHolds();
+  };
+
+  private _syncOverlayHolds(): void {
+    this._releaseOverlayHolds();
+    this._overlayHoldReleases = this._views.map(
+      (view) => view.getSession()?.holdOverlay() ?? (() => undefined),
+    );
+  }
+
+  private _releaseOverlayHolds(): void {
+    this._overlayHoldReleases.forEach((release) => release());
+    this._overlayHoldReleases = [];
+  }
 
   private readonly _toggleFeed = (): void => {
     this.dispatchEvent(
@@ -508,9 +560,21 @@ export class CameraGroupView extends LitElement {
       new CustomEvent(CAMERA_STAGE_SIZE_CHANGE_EVENT, {
         bubbles: true,
         composed: true,
-        detail: size,
+        detail: { ...size, transient: this._stageResizeActive },
       }),
     );
+  }
+
+  private _handleStageResizeInteraction(
+    interaction: CameraStageResizeInteraction,
+  ): void {
+    if (interaction.phase === "start") {
+      this._stageResizeActive = true;
+      return;
+    }
+    if (interaction.phase !== "end") return;
+    this._stageResizeActive = false;
+    this._handleStageSizeChange(this._stageResize.size);
   }
 
   private _fullscreenSupported(video?: HTMLVideoElement): boolean {

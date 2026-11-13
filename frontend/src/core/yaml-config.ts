@@ -76,6 +76,7 @@ function compactCameraConfig(camera: CameraConfig): Record<string, unknown> {
   if (camera.frigate_fallback !== "mse") {
     compact.frigate_fallback = camera.frigate_fallback;
   }
+  if (camera.group_name) compact.group_name = camera.group_name;
   if (camera.lights.length) {
     compact.lights = camera.lights.map((light) => ({
       entity_id: light.entity_id,

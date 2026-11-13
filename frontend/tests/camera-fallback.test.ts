@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
+import { CAMERA_STAGE_SIZE_CHANGE_EVENT } from "../src/core/constants";
 import type { CameraModule } from "../src/stage/modules/camera/camera";
 import type { CameraView } from "../src/stage/modules/camera/camera-view";
 import type { CameraLivePresentation } from "../src/stage/modules/camera/live/presentation";
@@ -240,6 +241,41 @@ describe("camera component appearance", () => {
         ?.querySelector<HTMLElement>(".camera")
         ?.style.getPropertyValue("--wzc-camera-stage-runtime-aspect-ratio"),
     ).toBe("1");
+  });
+
+  it("defers child rerenders during a transient grouped-stage drag", async () => {
+    const camera = document.createElement("wzc-camera") as CameraModule;
+    camera.cameras = [cameraItem("camera.zero"), cameraItem("camera.one")];
+    document.body.append(camera);
+    await camera.updateComplete;
+    const views = [
+      ...(camera.shadowRoot?.querySelectorAll<CameraView>("wzc-camera-view") ??
+        []),
+    ];
+    const dispatchSize = (transient: boolean): void => {
+      views[0]?.dispatchEvent(
+        new CustomEvent(CAMERA_STAGE_SIZE_CHANGE_EVENT, {
+          bubbles: true,
+          composed: true,
+          detail: { heightRatio: 0.75, resized: true, transient },
+        }),
+      );
+    };
+
+    dispatchSize(true);
+    await camera.updateComplete;
+    expect(camera.style.aspectRatio).toBe(`${1 / 0.75} / 1`);
+    expect(views.map(({ stageHeightRatio }) => stageHeightRatio)).toEqual([
+      9 / 16,
+      9 / 16,
+    ]);
+
+    dispatchSize(false);
+    await camera.updateComplete;
+    await Promise.all(views.map((view) => view.updateComplete));
+    expect(views.map(({ stageHeightRatio }) => stageHeightRatio)).toEqual([
+      0.75, 0.75,
+    ]);
   });
 });
 

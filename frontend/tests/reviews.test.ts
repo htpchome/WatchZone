@@ -217,6 +217,65 @@ describe("reviews module", () => {
     expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(2);
   });
 
+  it("places the physical camera name first for grouped review activity", async () => {
+    const callWS = vi.fn(async (message: { entity_id?: string }) => ({
+      items: [
+        {
+          ...reviews[1],
+          camera:
+            message.entity_id === "camera.driveway" ? "driveway" : "porch",
+          id:
+            message.entity_id === "camera.driveway"
+              ? "frigate:driveway-review"
+              : "frigate:porch-review",
+          start_time: message.entity_id === "camera.driveway" ? 200 : 100,
+        },
+      ],
+    }));
+    const api = {
+      callWS,
+      identity: {},
+      locale: { language: "en", time_zone: "server" },
+      resolveUrl: (path: string) => `https://ha.local${path}`,
+      subscribeMessage: vi.fn(),
+    } as unknown as HomeAssistantApi;
+    const selection = new CameraSelectionContext();
+    const module = document.createElement(REVIEWS_TAG) as ReviewsModule;
+    module.api = api;
+    module.cameraSelection = selection;
+    module.targetModuleId = "camera-module";
+    document.body.append(module);
+    selection.publish(
+      "camera-module",
+      {},
+      {
+        activeEntityId: "camera.porch",
+        activeEntityIds: ["camera.porch", "camera.driveway"],
+        activeSelectionId: "camera.porch",
+        items: [
+          {
+            entityId: "camera.porch",
+            entityIds: ["camera.porch", "camera.driveway"],
+            entityLabels: [
+              { entityId: "camera.porch", label: "Package camera" },
+              { entityId: "camera.driveway", label: "Street camera" },
+            ],
+            label: "Group A/B",
+          },
+        ],
+      },
+      vi.fn(),
+    );
+
+    await vi.waitFor(() => {
+      expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(2);
+    });
+    const firstBadges = [
+      ...(activityRoot(module)?.querySelectorAll(".tile") ?? []),
+    ].map((tile) => tile.querySelector("wzc-badge")?.textContent?.trim());
+    expect(firstBadges).toEqual(["Street camera", "Package camera"]);
+  });
+
   it("downloads review media instead of navigating to the recording", async () => {
     const callWS = vi.fn(async (message: { type: string }) => {
       if (message.type === "watchzone/reviews/list") return { items: reviews };

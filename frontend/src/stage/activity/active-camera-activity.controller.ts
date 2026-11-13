@@ -69,6 +69,7 @@ export class ActiveCameraActivityController<
   private _generation = 0;
   private _historyLoadPending = false;
   private readonly _entityIdByItemId = new Map<string, string>();
+  private readonly _cameraLabelByEntityId = new Map<string, string>();
   private readonly _recentItemsByScope = new Map<string, readonly T[]>();
   private _refreshAfterHistory = false;
   private _refreshTimer?: number;
@@ -110,6 +111,10 @@ export class ActiveCameraActivityController<
     this._stopRefresh();
     this._stopUpdates();
     this._stopEmptyConfirmation();
+    this._entityIdByItemId.clear();
+    this._cameraLabelByEntityId.clear();
+    this._recentItemsByScope.clear();
+    this._retriedMedia.clear();
     this._generation += 1;
   }
 
@@ -158,6 +163,11 @@ export class ActiveCameraActivityController<
     return this._entityIdByItemId.get(itemId) ?? this._activeEntityId;
   }
 
+  public cameraLabelFor(itemId: string): string | undefined {
+    const entityId = this.entityIdFor(itemId);
+    return entityId ? this._cameraLabelByEntityId.get(entityId) : undefined;
+  }
+
   private _syncContext(): void {
     if (!this._connected) return;
     const context = this._context();
@@ -172,6 +182,8 @@ export class ActiveCameraActivityController<
       this._activeEntityId = undefined;
       this._activeEntityIds = [];
       this._activeCameraLabel = undefined;
+      this._entityIdByItemId.clear();
+      this._cameraLabelByEntityId.clear();
       this._retriedMedia.clear();
       this._stopRefresh();
       this._stopUpdates();
@@ -212,6 +224,13 @@ export class ActiveCameraActivityController<
     // direct-manipulation transition. The camera itself has already selected
     // and connected; activity catches up when the transition settles.
     if (state.settled === false) return;
+    this._cameraLabelByEntityId.clear();
+    for (const item of state.items) {
+      for (const member of item.entityLabels ?? []) {
+        this._cameraLabelByEntityId.set(member.entityId, member.label);
+      }
+    }
+    this._pruneSelectionCaches(state);
     const activeEntityId = state.activeEntityId;
     const activeEntityIds = [
       ...new Set(
@@ -541,6 +560,23 @@ export class ActiveCameraActivityController<
     for (const id of this._entityIdByItemId.keys()) {
       if (!retained.has(id)) this._entityIdByItemId.delete(id);
     }
+  }
+
+  private _pruneSelectionCaches(state: CameraSelectionState): void {
+    const validScopes = new Set<string>();
+    for (const item of state.items) {
+      const entityIds = item.entityIds?.length
+        ? [...new Set(item.entityIds.filter(Boolean))]
+        : item.entityId
+          ? [item.entityId]
+          : [];
+      for (const entityId of entityIds) validScopes.add(entityId);
+      if (entityIds.length > 1) validScopes.add(entityIds.join("\u0000"));
+    }
+    for (const scopeKey of this._recentItemsByScope.keys()) {
+      if (!validScopes.has(scopeKey)) this._recentItemsByScope.delete(scopeKey);
+    }
+    this._pruneItemSources();
   }
 }
 

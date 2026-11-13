@@ -34,6 +34,7 @@ export interface CameraConfig {
   readonly connection: LiveConnectionType;
   readonly entity_id: string;
   readonly frigate_fallback: FrigateFallbackTransport;
+  readonly group_name?: string;
   readonly lights: readonly LinkedLightConfig[];
   readonly low_latency_hls: boolean;
   readonly ptz_enabled: boolean;
@@ -362,6 +363,31 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
   ) {
     throw new Error(`${APP_NAME} camera ${index + 1} title must be a string.`);
   }
+  if (
+    "group_name" in source &&
+    source.group_name !== undefined &&
+    typeof source.group_name !== "string"
+  ) {
+    throw new Error(
+      `${APP_NAME} camera ${index + 1} group_name must be a string.`,
+    );
+  }
+  const hasAdditionalCamera = source.additional_camera !== undefined;
+  const explicitGroupName =
+    typeof source.group_name === "string" ? source.group_name : undefined;
+  const groupName = hasAdditionalCamera
+    ? normalizeCameraTitle(
+        explicitGroupName ??
+          legacyGroupTitle ??
+          (typeof source.title === "string" ? source.title : ""),
+      )
+    : undefined;
+  const cameraTitle =
+    hasAdditionalCamera && explicitGroupName === undefined
+      ? defaults.title
+      : normalizeCameraTitle(
+          typeof source.title === "string" ? source.title : defaults.title,
+        );
   return {
     ...(source.additional_camera === undefined
       ? {}
@@ -378,6 +404,7 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
     entity_id: defaults.entity_id,
     frigate_fallback:
       source.frigate_fallback === "hls" ? "hls" : defaults.frigate_fallback,
+    ...(groupName === undefined ? {} : { group_name: groupName }),
     lights,
     low_latency_hls:
       typeof source.low_latency_hls === "boolean"
@@ -386,10 +413,7 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
     ptz_enabled: source.ptz_enabled === true,
     start_live_unmuted_pc_tablet: source.start_live_unmuted_pc_tablet === true,
     start_live_unmuted_phone: source.start_live_unmuted_phone === true,
-    title: normalizeCameraTitle(
-      legacyGroupTitle ??
-        (typeof source.title === "string" ? source.title : defaults.title),
-    ),
+    title: cameraTitle,
     two_way_talk_enabled: source.two_way_talk_enabled === true,
   };
 }
@@ -463,16 +487,14 @@ function validateCameraGroups(
         `${APP_NAME} grouped secondary cameras cannot own PTZ, two-way talk, or lights.`,
       );
     }
-    const normalizedTitle = camera.title.trim().toLocaleLowerCase();
+    const normalizedTitle = camera.group_name?.trim().toLocaleLowerCase();
     if (!normalizedTitle) {
-      throw new Error(
-        `${APP_NAME} grouped cameras must use the camera title as their group name.`,
-      );
+      throw new Error(`${APP_NAME} grouped cameras must have a group name.`);
     }
     if (groupTitles.has(normalizedTitle)) {
       throw new Error(`${APP_NAME} camera group titles must be unique.`);
     }
-    for (const memberTitle of [secondary?.title]) {
+    for (const memberTitle of [camera.title, secondary?.title]) {
       if (
         memberTitle &&
         memberTitle.trim().toLocaleLowerCase() === normalizedTitle

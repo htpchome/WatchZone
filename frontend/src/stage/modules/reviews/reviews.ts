@@ -286,6 +286,10 @@ export class ReviewsModule extends LitElement {
         this._activity.activeEntityIds.length > 1
           ? review.camera
           : (this._activity.activeCameraLabel ?? review.camera),
+      cameraBadgeLabel:
+        this._activity.activeEntityIds.length > 1
+          ? (this._activity.cameraLabelFor(review.id) ?? review.camera)
+          : undefined,
       classification: review.classification,
       clipUrl: review.clip_url,
       downloadUrl: review.download_url ?? review.clip_url,

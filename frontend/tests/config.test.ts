@@ -183,8 +183,30 @@ describe("WatchZone card configuration", () => {
       entity_id: "camera.driveway",
       layout: "stacked",
     });
-    expect(config.cameras[0]?.title).toBe("Group A/B");
+    expect(config.cameras[0]?.group_name).toBe("Group A/B");
+    expect(config.cameras[0]?.title).toBe("");
     expect(config.cameras[1]?.additional_camera).toBeUndefined();
+  });
+
+  it("keeps physical camera names separate from an explicit group name", () => {
+    const config = normalizeCardConfig({
+      cameras: [
+        {
+          additional_camera: {
+            entity_id: "camera.driveway",
+            layout: "side_by_side",
+          },
+          entity_id: "camera.porch",
+          group_name: "Group A/B",
+          title: "Package camera",
+        },
+        { entity_id: "camera.driveway", title: "Street camera" },
+      ],
+    });
+
+    expect(config.cameras[0]?.title).toBe("Package camera");
+    expect(config.cameras[0]?.group_name).toBe("Group A/B");
+    expect(config.cameras[1]?.title).toBe("Street camera");
   });
 
   it("rejects invalid or overlapping additional-camera groups", () => {

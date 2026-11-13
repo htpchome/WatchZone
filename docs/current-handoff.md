@@ -48,7 +48,7 @@ The repository state takes precedence over this snapshot.
 
 ## Current completed change
 
-Working version `0.0.4-dev.279`:
+Working version `0.0.4-dev.280`:
 
 - A configured additional camera forms one Camera-owned presentation group and
   replaces the two standalone navigation entries with the group title.
@@ -66,13 +66,25 @@ Working version `0.0.4-dev.279`:
 - Group activity is merged without losing source identity, and overlapping
   recording rows remain separate with A/B markers.
 - The editor uses the full Home Assistant camera picker, rejects any entity
-  already configured as either a main or secondary camera, creates the valid
-  secondary record atomically, and presents the pair as one tile. The main
-  Camera Name is the group name; no duplicate group-name field exists.
+  already configured as either a main or secondary camera, and creates the
+  valid secondary record atomically. Each physical camera keeps its own Camera
+  Name, the group has a separate auto-named Group Name, and grouped secondaries
+  have compact non-sortable edit tiles. Both members count toward the
+  twelve-camera limit.
 - Grouped first paint preserves the standard camera-stage ratio. Per-feed
   controls respond on first activation without colliding with carousel
   navigation, directional state uses arrows, and only physically active feeds
   receive alert/detection outlines.
+- Pointer presence anywhere in a grouped stage holds both child overlay timers,
+  so per-feed controls remain available while the user is interacting with
+  them. Group-stage drag updates apply geometry directly and defer the wider
+  camera render until the drag settles.
+- Mixed grouped Reviews and Events begin with the configured physical camera
+  name, while single-camera activity keeps the existing badge set.
+- Activity return-navigation caches are pruned when the configured selection
+  changes and all source, label, timer, and subscription state is released on
+  disconnect. Group overlay holds are also released on pointer exit and
+  disconnect.
 - The PTZ overlay retains its established transform center and viewport anchor;
   camera-group layout does not reposition it.
 

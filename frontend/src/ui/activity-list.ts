@@ -45,6 +45,7 @@ export interface ActivityListItem {
   readonly analysisConcerns?: readonly string[];
   readonly analysisScore?: number;
   readonly analysisTitle?: string;
+  readonly cameraBadgeLabel?: string;
   readonly cameraLabel: string;
   readonly classification?: ActivityClassification;
   readonly clipUrl: string | null;
@@ -309,8 +310,12 @@ export class ActivityList extends LitElement {
     const duration = Math.max(1, Math.round(durationEnd - durationStart));
     const objectLabels = this.displayObjectBadges ? item.objectLabels : [];
     const typeBadge = this.displayTypeBadges ? item.typeBadge : undefined;
+    const badgeLabels = [
+      ...(item.cameraBadgeLabel ? [item.cameraBadgeLabel] : []),
+      ...objectLabels,
+    ];
     const objectColors = distinctBadgeColorsForLabels(
-      objectLabels,
+      badgeLabels,
       typeBadge ? [reservedColor(typeBadge.variant)] : [],
     );
     const title = activityMediaTitle(item, this.locale);
@@ -380,7 +385,12 @@ export class ActivityList extends LitElement {
             : null
         }
       </div>
-      ${this._renderBadges(objectLabels, typeBadge, objectColors)}
+      ${this._renderBadges(
+        item.cameraBadgeLabel,
+        objectLabels,
+        typeBadge,
+        objectColors,
+      )}
       ${this._renderDetails(item, start)} ${this._renderReviewAside(item)}
       ${
         !item.inProgress && item.trackingAvailable
@@ -519,16 +529,27 @@ export class ActivityList extends LitElement {
   }
 
   private _renderBadges(
+    cameraLabel: string | undefined,
     objectLabels: readonly string[],
     typeBadge: ActivityTypeBadge | undefined,
     objectColors: readonly BadgeColor[],
   ) {
-    if (objectLabels.length === 0 && !typeBadge) return null;
+    if (!cameraLabel && objectLabels.length === 0 && !typeBadge) return null;
     return html`<div class="badges">
+      ${
+        cameraLabel
+          ? html`<wzc-badge
+              color=${objectColors[0] ?? "neutral"}
+              shape="pill"
+              size="small"
+              >${cameraLabel}</wzc-badge
+            >`
+          : null
+      }
       ${objectLabels.map(
         (label, index) =>
           html`<wzc-badge
-            color=${objectColors[index] ?? "neutral"}
+            color=${objectColors[index + (cameraLabel ? 1 : 0)] ?? "neutral"}
             shape="pill"
             size="small"
             >${capitalizeBadgeText(label, this.locale?.language)}</wzc-badge

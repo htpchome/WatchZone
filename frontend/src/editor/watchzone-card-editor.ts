@@ -142,6 +142,7 @@ type CameraBooleanConfigFlag = Exclude<
   | "connection"
   | "entity_id"
   | "frigate_fallback"
+  | "group_name"
   | "lights"
   | "title"
 >;
@@ -155,6 +156,7 @@ export class CardEditor extends LitElement {
   private _config?: CardConfig;
   private _cameraBaseline?: CameraConfig;
   private _cameraDraft?: CameraConfig;
+  private _cameraGroupNameInput = "";
   private _cameraTitleInput = "";
   private _addingLight = false;
   private _pendingLightEntityId = "";
@@ -332,10 +334,16 @@ export class CardEditor extends LitElement {
   private _renderCameraSettings() {
     const cameras = this._config?.cameras ?? [];
     const presentationItems = cameraPresentationItems(cameras);
+    const secondaryCameras = cameras.flatMap((camera, index) => {
+      const owner = cameras.find(
+        ({ additional_camera: group }) => group?.entity_id === camera.entity_id,
+      );
+      return owner ? [{ camera, index, owner }] : [];
+    });
     return staticHtml`<div class="camera-list-heading">
         <strong>${this._t("editor.cameras")}</strong>
         <span>${this._t("editor.camera_count", {
-          count: presentationItems.length,
+          count: cameras.length,
           maximum: MAX_CAMERAS,
         })}</span>
       </div>
@@ -349,12 +357,13 @@ export class CardEditor extends LitElement {
           (item) => {
             const camera = item.cameras[0];
             const index = cameras.indexOf(camera);
+            const displayName = this._cameraDisplayName(camera);
             return staticHtml`<${sortableTileTag}
             item-key=${camera.entity_id}
             .localize=${this._localization.localize}
           >
             <div class="camera-tile-copy">
-              <span>${camera.title || this._cameraName(camera.entity_id)}</span>
+              <span>${displayName}</span>
               <small>${this._cameraSummary(camera)}</small>
             </div>
             <button
@@ -363,7 +372,7 @@ export class CardEditor extends LitElement {
               type="button"
               title=${this._t("editor.edit_camera")}
               aria-label=${this._t("editor.edit_camera_named", {
-                name: camera.title || this._cameraName(camera.entity_id),
+                name: displayName,
               })}
               data-camera-index=${String(index)}
               @click=${this._editCamera}
@@ -376,7 +385,7 @@ export class CardEditor extends LitElement {
               type="button"
               title=${this._t("editor.remove_camera")}
               aria-label=${this._t("editor.remove_camera_named", {
-                name: camera.title || this._cameraName(camera.entity_id),
+                name: displayName,
               })}
               data-camera-index=${String(index)}
               @click=${this._requestRemoveCamera}
@@ -387,6 +396,28 @@ export class CardEditor extends LitElement {
           },
         )}
       </${sortableListTag}>
+      <div class="secondary-camera-list">
+        ${secondaryCameras.map(({ camera, index, owner }) => {
+          const name = camera.title || this._cameraName(camera.entity_id);
+          const group = owner.group_name || this._cameraName(owner.entity_id);
+          return html`<div class="secondary-camera-tile">
+            <div class="camera-tile-copy">
+              <span>${name}</span>
+              <small>${this._t("editor.grouped_with", { group })}</small>
+            </div>
+            <button
+              class="tile-action"
+              type="button"
+              title=${this._t("editor.edit_camera")}
+              aria-label=${this._t("editor.edit_camera_named", { name })}
+              data-camera-index=${String(index)}
+              @click=${this._editCamera}
+            >
+              ${renderIcon("edit")}
+            </button>
+          </div>`;
+        })}
+      </div>
       <button
         class="add-camera"
         type="button"
@@ -625,6 +656,9 @@ export class CardEditor extends LitElement {
     const camera = this._cameraDraft;
     const capabilities = this._capabilities;
     const editing = this._editingCameraIndex !== undefined;
+    const secondaryOwner = camera
+      ? this._groupOwner(this._cameraBaseline?.entity_id ?? camera.entity_id)
+      : undefined;
     return html`<dialog
       class="camera-editor-dialog"
       @cancel=${this._cancelCameraEdit}
@@ -684,6 +718,26 @@ export class CardEditor extends LitElement {
                           </span>
                         </ha-input>
                       </div>
+                      ${
+                        camera.additional_camera
+                          ? html`<div class="camera-group-name-field">
+                              <ha-input
+                                label=${this._t("editor.group_name")}
+                                maxlength=${String(MAX_CAMERA_TITLE_LENGTH)}
+                                .value=${this._cameraGroupNameInput}
+                                @input=${this._handleCameraGroupNameInput}
+                              >
+                                <span
+                                  class="character-count"
+                                  slot="end"
+                                  aria-live="polite"
+                                >
+                                  ${this._cameraGroupNameInput.length}/${MAX_CAMERA_TITLE_LENGTH}
+                                </span>
+                              </ha-input>
+                            </div>`
+                          : nothing
+                      }
                     </div>
                   </${accordionItemTag}>
                   <${accordionItemTag}
@@ -739,15 +793,31 @@ export class CardEditor extends LitElement {
                     heading=${this._t("editor.lights")}
                     item-key="lights"
                     summary-text=${
-                      camera.lights.length
-                        ? this._t("editor.light_count", {
-                            count: camera.lights.length,
-                            maximum: MAX_LIGHTS_PER_CAMERA,
+                      secondaryOwner
+                        ? this._t("editor.shared_with_group", {
+                            group:
+                              secondaryOwner.group_name ||
+                              this._cameraName(secondaryOwner.entity_id),
                           })
-                        : this._t("editor.not_configured")
+                        : camera.lights.length
+                          ? this._t("editor.light_count", {
+                              count: camera.lights.length,
+                              maximum: MAX_LIGHTS_PER_CAMERA,
+                            })
+                          : this._t("editor.not_configured")
                     }
                   >
-                    ${this._renderLightSettings(camera)}
+                    ${
+                      secondaryOwner
+                        ? html`<p class="empty-camera-section">
+                            ${this._t("editor.shared_with_group", {
+                              group:
+                                secondaryOwner.group_name ||
+                                this._cameraName(secondaryOwner.entity_id),
+                            })}
+                          </p>`
+                        : this._renderLightSettings(camera)
+                    }
                   </${accordionItemTag}>
                   <${accordionItemTag}
                     density="compact"
@@ -765,44 +835,52 @@ export class CardEditor extends LitElement {
                         this._t("editor.start_unmuted_phone"),
                         camera.start_live_unmuted_phone,
                       )}
-                      <div class="capability-option">
-                        ${this._renderCameraBoolean(
-                          "two_way_talk_enabled",
-                          this._t("editor.two_way_talk"),
-                          camera.two_way_talk_enabled,
-                          !capabilities ||
-                            capabilities.talkPending ||
-                            capabilities.talk !== true,
-                        )}
-                        <small class="capability-status">
-                          ${
-                            !capabilities || capabilities.talkPending
-                              ? this._t("editor.checking_two_way_talk")
-                              : capabilities.talk === true
-                                ? this._t("editor.two_way_talk_available")
-                                : this._t("editor.two_way_talk_unavailable")
-                          }
-                        </small>
-                      </div>
-                      <div class="capability-option">
-                        ${this._renderCameraBoolean(
-                          "ptz_enabled",
-                          this._t("editor.ptz"),
-                          camera.ptz_enabled,
-                          !capabilities ||
-                            capabilities.ptzPending ||
-                            capabilities.ptz?.supported !== true,
-                        )}
-                        <small class="capability-status">
-                          ${
-                            !capabilities || capabilities.ptzPending
-                              ? this._t("editor.checking_ptz")
-                              : capabilities.ptz?.supported === true
-                                ? this._t("editor.ptz_available")
-                                : this._t("editor.ptz_unavailable")
-                          }
-                        </small>
-                      </div>
+                      ${
+                        secondaryOwner
+                          ? nothing
+                          : html`<div class="capability-option">
+                                ${this._renderCameraBoolean(
+                                  "two_way_talk_enabled",
+                                  this._t("editor.two_way_talk"),
+                                  camera.two_way_talk_enabled,
+                                  !capabilities ||
+                                    capabilities.talkPending ||
+                                    capabilities.talk !== true,
+                                )}
+                                <small class="capability-status">
+                                  ${
+                                    !capabilities || capabilities.talkPending
+                                      ? this._t("editor.checking_two_way_talk")
+                                      : capabilities.talk === true
+                                        ? this._t(
+                                            "editor.two_way_talk_available",
+                                          )
+                                        : this._t(
+                                            "editor.two_way_talk_unavailable",
+                                          )
+                                  }
+                                </small>
+                              </div>
+                              <div class="capability-option">
+                                ${this._renderCameraBoolean(
+                                  "ptz_enabled",
+                                  this._t("editor.ptz"),
+                                  camera.ptz_enabled,
+                                  !capabilities ||
+                                    capabilities.ptzPending ||
+                                    capabilities.ptz?.supported !== true,
+                                )}
+                                <small class="capability-status">
+                                  ${
+                                    !capabilities || capabilities.ptzPending
+                                      ? this._t("editor.checking_ptz")
+                                      : capabilities.ptz?.supported === true
+                                        ? this._t("editor.ptz_available")
+                                        : this._t("editor.ptz_unavailable")
+                                  }
+                                </small>
+                              </div>`
+                      }
                     </div>
                   </${accordionItemTag}>
                 </${accordionTag}>`
@@ -839,9 +917,7 @@ export class CardEditor extends LitElement {
       this._pendingRemoveCameraIndex === undefined
         ? undefined
         : this._config?.cameras[this._pendingRemoveCameraIndex];
-    const name = camera
-      ? camera.title || this._cameraName(camera.entity_id)
-      : "";
+    const name = camera ? this._cameraDisplayName(camera) : "";
     return html`<dialog
       class="remove-camera-dialog"
       @cancel=${this._cancelRemoveCamera}
@@ -999,7 +1075,7 @@ export class CardEditor extends LitElement {
     if (owner) {
       return html`<p class="empty-camera-section">
         ${this._t("editor.camera_group_secondary", {
-          group: owner.title,
+          group: owner.group_name || this._cameraName(owner.entity_id),
         })}
       </p>`;
     }
@@ -1246,6 +1322,19 @@ export class CardEditor extends LitElement {
     this.requestUpdate();
   };
 
+  private readonly _handleCameraGroupNameInput = (event: Event): void => {
+    if (!this._cameraDraft?.additional_camera) return;
+    const input = event.currentTarget as InputElement;
+    const sanitized = sanitizeCameraTitleInput(input.value);
+    if (input.value !== sanitized) input.value = sanitized;
+    this._cameraGroupNameInput = sanitized;
+    this._cameraDraft = {
+      ...this._cameraDraft,
+      group_name: normalizeCameraTitle(sanitized),
+    };
+    this.requestUpdate();
+  };
+
   private readonly _handleAdditionalCameraChange = (
     event: ValueChangedEvent,
   ): void => {
@@ -1253,18 +1342,18 @@ export class CardEditor extends LitElement {
     const entityId = eventString(event);
     if (!entityId) return;
     const existing = this._cameraDraft.additional_camera;
-    const title = existing
-      ? this._cameraDraft.title
+    const groupName = existing
+      ? this._cameraDraft.group_name
       : nextCameraGroupTitle(this._config?.cameras ?? []);
     this._cameraDraft = {
       ...this._cameraDraft,
-      title,
+      group_name: groupName,
       additional_camera: {
         entity_id: entityId,
         layout: existing?.layout ?? "side_by_side",
       },
     };
-    this._cameraTitleInput = title;
+    this._cameraGroupNameInput = groupName ?? "";
     this.requestUpdate();
   };
 
@@ -1286,11 +1375,9 @@ export class CardEditor extends LitElement {
     this._cameraDraft = {
       ...this._cameraDraft,
       additional_camera: undefined,
-      title: this._cameraBaseline?.additional_camera
-        ? ""
-        : (this._cameraBaseline?.title ?? ""),
+      group_name: undefined,
     };
-    this._cameraTitleInput = this._cameraDraft.title;
+    this._cameraGroupNameInput = "";
     this.requestUpdate();
   };
 
@@ -1408,6 +1495,7 @@ export class CardEditor extends LitElement {
     this._editingCameraIndex = undefined;
     this._cameraBaseline = undefined;
     this._cameraDraft = createDefaultCameraConfig();
+    this._cameraGroupNameInput = "";
     this._cameraTitleInput = "";
     this._cancelAddingLight();
     this._capabilities?.reset();
@@ -1424,6 +1512,7 @@ export class CardEditor extends LitElement {
     this._editingCameraIndex = index;
     this._cameraBaseline = camera;
     this._cameraDraft = { ...camera };
+    this._cameraGroupNameInput = camera.group_name ?? "";
     this._cameraTitleInput = camera.title;
     this._cancelAddingLight();
     this._checkCapabilities(camera.entity_id, camera.connection);
@@ -1470,6 +1559,7 @@ export class CardEditor extends LitElement {
         cameras[cameraIndex] = {
           ...camera,
           additional_camera: undefined,
+          group_name: undefined,
         };
       }
     }
@@ -1481,6 +1571,7 @@ export class CardEditor extends LitElement {
     event.preventDefault();
     this._cameraBaseline = undefined;
     this._cameraDraft = undefined;
+    this._cameraGroupNameInput = "";
     this._cameraTitleInput = "";
     this._cancelAddingLight();
     this._capabilities?.reset();
@@ -1542,6 +1633,7 @@ export class CardEditor extends LitElement {
     }
     this._cameraBaseline = undefined;
     this._cameraDraft = undefined;
+    this._cameraGroupNameInput = "";
     this._cameraTitleInput = "";
     this._cancelAddingLight();
     this._editingCameraIndex = undefined;
@@ -1618,12 +1710,15 @@ export class CardEditor extends LitElement {
     if (duplicate) return false;
     const group = draft.additional_camera;
     if (!group) return true;
-    if (this._additionalCameraSelectionError(draft) || !draft.title)
+    if (this._additionalCameraSelectionError(draft) || !draft.group_name)
       return false;
-    const normalizedTitle = draft.title.trim().toLocaleLowerCase();
+    const normalizedTitle = draft.group_name.trim().toLocaleLowerCase();
+    const secondary = this._config?.cameras.find(
+      ({ entity_id: entityId }) => entityId === group.entity_id,
+    );
     const memberNames = [
-      this._cameraName(draft.entity_id),
-      this._cameraName(group.entity_id),
+      draft.title || this._cameraName(draft.entity_id),
+      secondary?.title || this._cameraName(group.entity_id),
     ];
     if (
       memberNames.some(
@@ -1637,7 +1732,7 @@ export class CardEditor extends LitElement {
         (camera, index) =>
           index !== this._editingCameraIndex &&
           camera.additional_camera &&
-          camera.title.trim().toLocaleLowerCase() === normalizedTitle,
+          camera.group_name?.trim().toLocaleLowerCase() === normalizedTitle,
       ) ?? false
     );
   }
@@ -1690,6 +1785,18 @@ export class CardEditor extends LitElement {
     return this._entityName(entityId).replace(/^camera\./, "");
   }
 
+  private _cameraDisplayName(camera: CameraConfig): string {
+    return camera.additional_camera
+      ? camera.group_name || this._cameraName(camera.entity_id)
+      : camera.title || this._cameraName(camera.entity_id);
+  }
+
+  private _groupOwner(entityId: string): CameraConfig | undefined {
+    return this._config?.cameras.find(
+      ({ additional_camera: group }) => group?.entity_id === entityId,
+    );
+  }
+
   private _entityName(entityId: string): string {
     const friendlyName = this._hass?.states[entityId]?.attributes.friendly_name;
     if (typeof friendlyName === "string" && friendlyName.trim())
@@ -1710,8 +1817,11 @@ export class CardEditor extends LitElement {
     const group = camera.additional_camera;
     const groupSummary = group
       ? `${this._t("editor.camera_group_members", {
-          main: this._cameraName(camera.entity_id),
-          secondary: this._cameraName(group.entity_id),
+          main: camera.title || this._cameraName(camera.entity_id),
+          secondary:
+            this._config?.cameras.find(
+              ({ entity_id: entityId }) => entityId === group.entity_id,
+            )?.title || this._cameraName(group.entity_id),
         })} · ${this._t(
           group.layout === "stacked" ? "editor.stacked" : "editor.side_by_side",
         )} · `
@@ -1931,6 +2041,7 @@ function cameraConfigEquals(left: CameraConfig, right: CameraConfig): boolean {
     left.entity_id === right.entity_id &&
     left.connection === right.connection &&
     left.frigate_fallback === right.frigate_fallback &&
+    left.group_name === right.group_name &&
     linkedLightsEqual(left.lights, right.lights) &&
     left.low_latency_hls === right.low_latency_hls &&
     left.ptz_enabled === right.ptz_enabled &&

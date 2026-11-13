@@ -40,6 +40,7 @@ import type { ReviewItem } from "../../../api/reviews";
 import { LiveActivityHighlightController } from "./activity-highlight.controller";
 import {
   DEFAULT_CAMERA_STAGE_HEIGHT_RATIO,
+  type CameraStageSizeChangeDetail,
   type CameraStageSize,
 } from "./stage-resize.controller";
 
@@ -519,6 +520,10 @@ export class CameraModule extends LitElement {
           ),
           entityId: item.id,
           entityIds: item.cameras.map(({ entityId }) => entityId),
+          entityLabels: item.cameras.map(({ entityId, label }) => ({
+            entityId,
+            label,
+          })),
           label: item.label,
           position:
             item.id === this._activePresentation?.id
@@ -555,7 +560,7 @@ export class CameraModule extends LitElement {
   };
 
   private readonly _handleStageSizeChange = (
-    event: CustomEvent<CameraStageSize>,
+    event: CustomEvent<CameraStageSizeChangeDetail>,
   ): void => {
     event.stopPropagation();
     this._stageSize = event.detail;
@@ -566,7 +571,7 @@ export class CameraModule extends LitElement {
       this.style.removeProperty("block-size");
       this.style.removeProperty("aspect-ratio");
     }
-    this.requestUpdate();
+    if (event.detail.transient !== true) this.requestUpdate();
   };
 
   private readonly _handleOverlayVisibility = (

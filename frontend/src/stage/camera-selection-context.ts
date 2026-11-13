@@ -4,6 +4,10 @@ export interface CameraSelectionItem {
   readonly activity?: "alert" | "detection";
   readonly entityId: string;
   readonly entityIds?: readonly string[];
+  readonly entityLabels?: readonly {
+    readonly entityId: string;
+    readonly label: string;
+  }[];
   readonly label: string;
   readonly position?: "down" | "left" | "right" | "up";
 }
@@ -171,6 +175,12 @@ function sameState(
       item.activity === next.items[index]?.activity &&
       item.position === next.items[index]?.position &&
       (item.entityIds ?? []).join("\u0000") ===
-        (next.items[index]?.entityIds ?? []).join("\u0000"),
+        (next.items[index]?.entityIds ?? []).join("\u0000") &&
+      (item.entityLabels ?? [])
+        .map(({ entityId, label }) => `${entityId}\u0001${label}`)
+        .join("\u0000") ===
+        (next.items[index]?.entityLabels ?? [])
+          .map(({ entityId, label }) => `${entityId}\u0001${label}`)
+          .join("\u0000"),
   );
 }

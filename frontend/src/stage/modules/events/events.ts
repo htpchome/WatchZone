@@ -221,6 +221,10 @@ export class EventsModule extends LitElement {
           this._activity.activeEntityIds.length > 1
             ? event.camera
             : (this._activity.activeCameraLabel ?? event.camera),
+        cameraBadgeLabel:
+          this._activity.activeEntityIds.length > 1
+            ? (this._activity.cameraLabelFor(event.id) ?? event.camera)
+            : undefined,
         clipUrl: event.clip_url,
         endTime: event.end_time,
         id: event.id,

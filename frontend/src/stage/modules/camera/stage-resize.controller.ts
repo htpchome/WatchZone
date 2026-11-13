@@ -34,6 +34,10 @@ export interface CameraStageSize {
   readonly resized: boolean;
 }
 
+export interface CameraStageSizeChangeDetail extends CameraStageSize {
+  readonly transient?: boolean;
+}
+
 /** Owns transient camera-stage height without owning media zoom or pan. */
 export class CameraStageResizeController implements ReactiveController {
   private _dragStart?: DragStart;

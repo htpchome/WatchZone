@@ -81,6 +81,24 @@ export const cardEditorStyles = css`
     white-space: nowrap;
   }
 
+  .secondary-camera-list {
+    display: grid;
+    gap: 0.35rem;
+    margin-block-start: 0.5rem;
+  }
+
+  .secondary-camera-tile {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    min-block-size: 2.75rem;
+    padding: 0.35rem 0.45rem 0.35rem 0.65rem;
+    background: var(--wzc-color-surface-secondary);
+    border: 1px solid var(--wzc-color-border-subtle);
+    border-inline-start: 3px solid var(--wzc-color-primary);
+    border-radius: var(--wzc-radius-medium);
+  }
+
   .tile-action,
   .remove-light {
     display: grid;

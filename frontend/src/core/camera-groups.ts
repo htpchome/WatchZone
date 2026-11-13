@@ -31,7 +31,7 @@ export function cameraPresentationItems(
     items.push({
       cameras: [camera, secondary],
       id: camera.entity_id,
-      label: camera.title,
+      label: camera.group_name ?? camera.title,
       layout: group.layout,
     });
   }
@@ -41,7 +41,9 @@ export function cameraPresentationItems(
 export function nextCameraGroupTitle(cameras: readonly CameraConfig[]): string {
   const titles = new Set(
     cameras.flatMap((camera) =>
-      camera.additional_camera ? [camera.title.trim().toLocaleLowerCase()] : [],
+      camera.additional_camera && camera.group_name
+        ? [camera.group_name.trim().toLocaleLowerCase()]
+        : [],
     ),
   );
   for (let index = 0; index < 13; index += 1) {

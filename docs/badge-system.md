@@ -37,3 +37,8 @@ Review classification colors are shared semantics rather than independent
 decorations. The Detection badge background resolves to the same warning color
 as the detection thumbnail outline, while text and shape continue to distinguish
 the badge from the outline.
+
+When an activity module is scoped to a grouped camera presentation, each review
+or event begins with the configured name of the physical camera that produced
+it. This camera badge participates in the same ordered palette resolution as
+the remaining badges. Single-camera activity omits the redundant camera badge.
