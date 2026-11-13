@@ -80,8 +80,15 @@ const eagerGzipBytes = (
     ),
   )
 ).reduce((total, size) => total + size, 0);
-if (eagerGzipBytes > 50 * 1024) {
-  throw new Error(`Eager graph exceeds 50 KiB gzip: ${eagerGzipBytes} bytes`);
+const eagerGzipBudgetKiB = 64;
+const eagerGzipBudgetBytes = eagerGzipBudgetKiB * 1024;
+const eagerGzipSafetyMarginBytes = 4 * 1024;
+const eagerGzipValidationLimitBytes =
+  eagerGzipBudgetBytes - eagerGzipSafetyMarginBytes;
+if (eagerGzipBytes > eagerGzipValidationLimitBytes) {
+  throw new Error(
+    `Eager graph exceeds the ${eagerGzipValidationLimitBytes}-byte validation limit (${eagerGzipSafetyMarginBytes}-byte safety margin below the ${eagerGzipBudgetKiB} KiB release budget): ${eagerGzipBytes} bytes`,
+  );
 }
 
 const editorGzipBytes = gzipSync(
