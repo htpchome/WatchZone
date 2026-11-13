@@ -1187,6 +1187,81 @@ test("uses readable camera navigation labels before HA state is available", asyn
   await expect(buttons.nth(1)).toHaveText("Front Door");
 });
 
+test("advances the authoritative camera selection through slideshow controls", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  await page.locator("watchzone-card").evaluate((element) => {
+    (
+      element as HTMLElement & {
+        setConfig(config: unknown): void;
+      }
+    ).setConfig({
+      type: "custom:watchzone-card",
+      camera_switcher_overlay: true,
+      slide_advance_time: 5,
+      slide_transition: "fade",
+      cameras: [
+        { entity_id: "camera.front", title: "Front" },
+        { entity_id: "camera.back", title: "Back" },
+      ],
+    });
+  });
+
+  const navigation = page.locator("wzc-camera-navigation button");
+  await expect(page.locator("wzc-camera .camera-carousel")).toHaveClass(
+    /swiper-fade/,
+    { timeout: 10_000 },
+  );
+  const toolbarToggle = page.locator("wzc-activity-slideshow-toggle button");
+  const overlayToggle = page.locator("wzc-slideshow button");
+  await expect(navigation.nth(0)).toHaveAttribute("aria-selected", "true");
+  const frontViewport = page
+    .locator("wzc-camera .swiper-slide")
+    .nth(0)
+    .locator("wzc-camera-live .viewport");
+  await frontViewport.dblclick();
+  await expect(frontViewport).toHaveAttribute("aria-label", /zoom 200 percent/);
+  const frontHandle = page
+    .locator("wzc-camera .swiper-slide")
+    .nth(0)
+    .locator(".stage-resize-handle");
+  await frontHandle.press("End");
+  await expect(frontHandle).toHaveAttribute("aria-valuenow", "100");
+  await expect(toolbarToggle).toHaveAttribute("aria-pressed", "false");
+  await toolbarToggle.click();
+  await expect(toolbarToggle).toHaveAttribute("aria-pressed", "true");
+  await expect(overlayToggle).toHaveAttribute("aria-pressed", "true");
+  await expect(overlayToggle.locator(".status")).toHaveText("5s");
+  await expect(overlayToggle).toHaveClass(/dimmed/);
+
+  await expect(navigation.nth(1)).toHaveAttribute("aria-selected", "true", {
+    timeout: 7_000,
+  });
+  await expect(page.locator("wzc-camera-switcher .trigger span")).toHaveText(
+    "Back",
+  );
+  const backViewport = page
+    .locator("wzc-camera .swiper-slide")
+    .nth(1)
+    .locator("wzc-camera-live .viewport");
+  await expect(backViewport).toHaveAttribute("aria-label", /zoom 100 percent/);
+  await expect(
+    page
+      .locator("wzc-camera .swiper-slide")
+      .nth(1)
+      .locator(".stage-resize-handle"),
+  ).toHaveAttribute("aria-valuenow", "100");
+
+  await navigation.nth(0).click();
+  await expect(navigation.nth(0)).toHaveAttribute("aria-selected", "true");
+  await expect(frontViewport).toHaveAttribute("aria-label", /zoom 100 percent/);
+  await expect(overlayToggle.locator(".status")).toHaveText("5s");
+  await toolbarToggle.click();
+  await expect(toolbarToggle).toHaveAttribute("aria-pressed", "false");
+});
+
 test("highlights live video directly from draft review notifications", async ({
   page,
 }) => {
@@ -1214,6 +1289,8 @@ test("highlights live video directly from draft review notifications", async ({
     };
     card.setConfig({
       type: "custom:watchzone-card",
+      camera_switcher_overlay: true,
+      slide_advance_time: 30,
       slide_transition: "fade",
       cameras: [
         { entity_id: "camera.front" },
@@ -1363,9 +1440,12 @@ test("highlights live video directly from draft review notifications", async ({
     .poll(() =>
       takeoverToggle.evaluate((button) => getComputedStyle(button).color),
     )
-    .toBe(activeTakeoverColor);
+    .toBe(inactiveTakeoverColor);
   await takeoverToggle.click();
   await expect(takeoverToggle).toHaveAttribute("aria-pressed", "true");
+  const slideshowToggle = page.locator("wzc-activity-slideshow-toggle button");
+  await slideshowToggle.click();
+  await expect(slideshowToggle).toHaveAttribute("aria-pressed", "true");
 
   await page.evaluate(() => {
     for (const callback of (
@@ -1387,6 +1467,8 @@ test("highlights live video directly from draft review notifications", async ({
       );
   });
   await expect(cameraButtons.nth(1)).toHaveAttribute("aria-selected", "true");
+  const slideshowOverlay = page.locator("wzc-slideshow button");
+  await expect(slideshowOverlay.locator(".status")).toHaveText("Hold");
   const activeDraft = page.locator("wzc-reviews .tile").first();
   await expect(activeDraft.locator(".in-progress")).toHaveText("In progress");
   await expect(activeDraft).toContainText("Detection");
@@ -1462,6 +1544,50 @@ test("highlights live video directly from draft review notifications", async ({
   await expect(cameraButtons.nth(0)).toHaveAttribute("aria-selected", "true");
   await expect(activeDraft.locator(".in-progress")).toHaveText("In progress");
   await expect(activeDraft).toContainText("Alert");
+  await expect(slideshowOverlay.locator(".status")).toHaveText("Hold");
+  await page.evaluate(() => {
+    for (const callback of (
+      window as unknown as {
+        reviewNotifications?: Array<(payload: unknown) => void>;
+      }
+    ).reviewNotifications ?? [])
+      callback(
+        JSON.stringify({
+          type: "end",
+          after: {
+            camera: "front",
+            id: "review-3",
+            severity: "alert",
+          },
+        }),
+      );
+  });
+  await expect(cameraButtons.nth(1)).toHaveAttribute("aria-selected", "true");
+  await expect(slideshowOverlay.locator(".status")).toHaveText("30s");
+
+  await page.evaluate(() => {
+    for (const callback of (
+      window as unknown as {
+        reviewNotifications?: Array<(payload: unknown) => void>;
+      }
+    ).reviewNotifications ?? [])
+      callback(
+        JSON.stringify({
+          type: "new",
+          after: {
+            camera: "front",
+            id: "review-4",
+            severity: "alert",
+            start_time: Date.now() / 1000,
+          },
+        }),
+      );
+  });
+  await expect(cameraButtons.nth(0)).toHaveAttribute("aria-selected", "true");
+  await expect(slideshowOverlay.locator(".status")).toHaveText("Hold");
+  await slideshowOverlay.click();
+  await expect(cameraButtons.nth(1)).toHaveAttribute("aria-selected", "true");
+  await expect(slideshowOverlay.locator(".status")).toHaveText("30s");
 });
 
 test("keeps activity content in an independently scrolling viewport", async ({
@@ -5310,6 +5436,7 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
       "--wzc-live-shadow",
       "--wzc-media-overlay-opacity",
       "--wzc-media-overlay-hover-opacity",
+      "--wzc-media-overlay-dimmed-opacity",
       "--wzc-media-overlay-surface",
       "--wzc-media-overlay-border-color",
       "--wzc-media-tile-background",
@@ -5376,6 +5503,9 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
       overlayHoverOpacity: hostStyle
         .getPropertyValue("--wzc-media-overlay-hover-opacity")
         .trim(),
+      overlayDimmedOpacity: hostStyle
+        .getPropertyValue("--wzc-media-overlay-dimmed-opacity")
+        .trim(),
       onPrimaryColor,
       reversedTextColor,
     };
@@ -5387,6 +5517,7 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
     overriddenStageModuleGap: "7px",
     missingTokens: [],
     overlayHoverOpacity: "84%",
+    overlayDimmedOpacity: "52%",
     overlayOpacity: "72%",
     onPrimaryColor: "rgb(235, 236, 237)",
     overriddenPlacementGaps: [7, 7],
@@ -5574,7 +5705,7 @@ test("editor uses exclusive accordions and shared draft status", async ({
   await expect(items.nth(0).locator("details")).not.toHaveAttribute("open", "");
   await expect(items.nth(1).locator("details")).toHaveAttribute("open", "");
   const selectionBars = items.nth(1).locator("wzc-segmented-control");
-  await expect(selectionBars).toHaveCount(3);
+  await expect(selectionBars).toHaveCount(4);
   const ptzBar = items.nth(1).locator('[data-setting="ptz-overlay-control"]');
   const transitionBar = items
     .nth(1)

@@ -26,6 +26,7 @@ import {
   type StageControlRegion,
   type StageFlow,
   type StageModuleNode,
+  type StageOverlayRegion,
   type StagePlacement,
   type StageSlotName,
   type StageStackNode,
@@ -57,6 +58,18 @@ import {
 import { isIconName, renderIcon } from "../ui/icons";
 
 type PlaceableNode = StageModuleNode | StageComponentNode;
+
+const OVERLAY_REGIONS: readonly StageOverlayRegion[] = [
+  "top-leading",
+  "top-center",
+  "top-trailing",
+  "center-leading",
+  "center",
+  "center-trailing",
+  "bottom-leading",
+  "bottom-center",
+  "bottom-trailing",
+];
 
 interface PlaceableRecord {
   config?: unknown;
@@ -336,6 +349,11 @@ export class LayoutRuntime implements ReactiveController {
     }
     void defineActivityControls();
     return html`<span class="stage-stack-accessories">
+      <wzc-activity-slideshow-toggle
+        .cameraSelection=${this._cameraSelection}
+        .localize=${this._context.localize ?? englishLocalize}
+        .targetModuleId=${accessories.targetModuleId ?? ""}
+      ></wzc-activity-slideshow-toggle>
       <wzc-activity-takeover-toggle
         .cameraSelection=${this._cameraSelection}
         .localize=${this._context.localize ?? englishLocalize}
@@ -450,18 +468,35 @@ export class LayoutRuntime implements ReactiveController {
           ? (["leading", "center", "trailing"] as const).map((region) =>
               this._renderControlRegion(region, components),
             )
-          : repeat(
-              components,
-              ({ id }) => id,
-              (component) =>
-                this._renderRecord(
-                  component,
-                  name === "overlay"
-                    ? `overlay-region-${component.overlayRegion ?? "center"}`
-                    : "",
-                ),
-            )
+          : name === "overlay"
+            ? OVERLAY_REGIONS.map((region) =>
+                this._renderOverlayRegion(region, components),
+              )
+            : repeat(
+                components,
+                ({ id }) => id,
+                (component) => this._renderRecord(component, ""),
+              )
       }
+    </div>`;
+  }
+
+  private _renderOverlayRegion(
+    region: StageOverlayRegion,
+    components: readonly StageComponentNode[],
+  ): TemplateResult {
+    const overlays = components.filter(
+      ({ overlayRegion }) => (overlayRegion ?? "center") === region,
+    );
+    return html`<div
+      class=${`overlay-region overlay-region-${region}`}
+      data-overlay-region=${region}
+    >
+      ${repeat(
+        overlays,
+        ({ id }) => id,
+        (component) => this._renderRecord(component),
+      )}
     </div>`;
   }
 

@@ -101,5 +101,14 @@
   "reviews.load_failed": "Impossibile caricare le revisioni della telecamera.",
   "reviews.activity": "Attività della telecamera",
   "reviews.alert": "Avviso",
-  "reviews.detection": "Rilevamento"
+  "reviews.detection": "Rilevamento",
+  "camera.slideshow_enable": "Avvia presentazione",
+  "camera.slideshow_disable": "Interrompi presentazione",
+  "camera.slideshow_resume": "Riprendi la presentazione dalla fotocamera successiva",
+  "camera.slideshow_unavailable": "La presentazione richiede almeno due fotocamere",
+  "camera.slideshow_disable_remaining": "Interrompi presentazione, {seconds} secondi rimanenti",
+  "camera.slideshow_hold": "In attesa",
+  "camera.slideshow_seconds": "{seconds}s",
+  "editor.slide_advance_time": "Tempo di avanzamento diapositiva",
+  "editor.slide_advance_seconds": "{seconds}s"
 }

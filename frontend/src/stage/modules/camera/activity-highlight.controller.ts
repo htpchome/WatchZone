@@ -21,6 +21,7 @@ interface LiveActivityHighlightContext {
   readonly entityIds: readonly string[];
   readonly highlightEnabled: boolean;
   readonly onTakeover: (entityId: string) => void;
+  readonly onTakeoverEnd?: (returnEntityId: string | undefined) => boolean;
   readonly startTakeoverEnabled: boolean;
   readonly takeoverMode: AlertTakeoverMode;
 }
@@ -299,6 +300,7 @@ export class LiveActivityHighlightController implements ReactiveController {
     const entityId = this._returnEntityId;
     this._returnEntityId = undefined;
     this._returnCameraPinned = false;
+    if (this._context().onTakeoverEnd?.(entityId)) return;
     if (entityId) this._context().onTakeover(entityId);
   }
 

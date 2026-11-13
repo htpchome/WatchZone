@@ -5,6 +5,7 @@ import {
   REVIEWS_MODULE_TYPE,
   CAMERA_NAVIGATION_MODULE_TYPE,
   CAMERA_SWITCHER_COMPONENT_TYPE,
+  SLIDESHOW_COMPONENT_TYPE,
   CAMERA_MODULE_TYPE,
   EVENTS_MODULE_TYPE,
   EXPORTS_MODULE_TYPE,
@@ -232,6 +233,7 @@ function hydrateModule(
       roundedCorners: config.camera_rounded_corners,
       shadowStyle: config.camera_shadows ? "medium" : "none",
       transition: config.slide_transition,
+      slideAdvanceSeconds: config.slide_advance_time,
       startAlertTakeoverOn: config.start_alert_takeover_on,
     },
     slots,
@@ -257,7 +259,11 @@ function namespaceModuleConfig(node: StageModuleNode): unknown {
 }
 
 function namespaceComponentConfig(node: StageComponentNode): unknown {
-  if (node.componentType !== CAMERA_SWITCHER_COMPONENT_TYPE) return node.config;
+  if (
+    node.componentType !== CAMERA_SWITCHER_COMPONENT_TYPE &&
+    node.componentType !== SLIDESHOW_COMPONENT_TYPE
+  )
+    return node.config;
   if (typeof node.config !== "object" || node.config === null)
     return node.config;
   const targetModuleId = (node.config as Record<string, unknown>)
@@ -272,6 +278,11 @@ function hydrateCameraComponent(
   config: CardConfig,
 ): StageComponentNode | undefined {
   if (node.componentType === CAMERA_SWITCHER_COMPONENT_TYPE) {
+    return config.camera_switcher_overlay && config.cameras.length > 1
+      ? node
+      : undefined;
+  }
+  if (node.componentType === SLIDESHOW_COMPONENT_TYPE) {
     return config.camera_switcher_overlay && config.cameras.length > 1
       ? node
       : undefined;

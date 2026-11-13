@@ -62,5 +62,14 @@
   "reviews.load_failed": "Unable to load camera reviews.",
   "reviews.activity": "Camera activity",
   "reviews.alert": "Alert",
-  "reviews.detection": "Detection"
+  "reviews.detection": "Detection",
+  "camera.slideshow_enable": "Start slideshow",
+  "camera.slideshow_disable": "Stop slideshow",
+  "camera.slideshow_resume": "Resume slideshow on the next camera",
+  "camera.slideshow_unavailable": "Slideshow requires at least two cameras",
+  "camera.slideshow_disable_remaining": "Stop slideshow, {seconds} seconds remaining",
+  "camera.slideshow_hold": "Hold",
+  "camera.slideshow_seconds": "{seconds}s",
+  "editor.slide_advance_time": "Slide Advance Time",
+  "editor.slide_advance_seconds": "{seconds}s"
 }

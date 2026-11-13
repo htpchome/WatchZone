@@ -17,6 +17,7 @@ import {
   type FrigateFallbackTransport,
   type LiveConnectionType,
   type PtzOverlayControl,
+  type SlideAdvanceSeconds,
   type SlideTransition,
 } from "../core/config";
 import {
@@ -571,6 +572,25 @@ export class CardEditor extends LitElement {
           }
           .value=${this._config?.slide_transition ?? "slide"}
           @wzc-segmented-control-value=${this._handleSlideTransitionChange}
+        ></wzc-segmented-control>
+      </div>
+      <div class="segmented-setting">
+        <span class="segmented-setting-label">
+          ${this._t("editor.slide_advance_time")}
+        </span>
+        <wzc-segmented-control
+          class="editor-segmented-control"
+          data-setting="slide-advance-time"
+          appearance="compact"
+          .label=${this._t("editor.slide_advance_time")}
+          .options=${
+            [5, 10, 20, 30].map((seconds) => ({
+              label: this._t("editor.slide_advance_seconds", { seconds }),
+              value: String(seconds),
+            })) satisfies readonly SegmentedControlOption[]
+          }
+          .value=${String(this._config?.slide_advance_time ?? 10)}
+          @wzc-segmented-control-value=${this._handleSlideAdvanceTimeChange}
         ></wzc-segmented-control>
       </div>
     `;
@@ -2084,6 +2104,18 @@ export class CardEditor extends LitElement {
     if (value !== "none" && value !== "slide" && value !== "fade") return;
     this._applyDraft(
       normalizeCardConfig({ ...this._config, slide_transition: value }),
+      true,
+    );
+  };
+
+  private readonly _handleSlideAdvanceTimeChange = (
+    event: CustomEvent<SegmentedControlValueDetail>,
+  ): void => {
+    if (!this._config) return;
+    const value = Number(event.detail.value) as SlideAdvanceSeconds;
+    if (value !== 5 && value !== 10 && value !== 20 && value !== 30) return;
+    this._applyDraft(
+      normalizeCardConfig({ ...this._config, slide_advance_time: value }),
       true,
     );
   };

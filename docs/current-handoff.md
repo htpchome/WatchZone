@@ -15,25 +15,34 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.287`
-- Current commit: `d185560` —
-  `v0.0.4-dev.286 - fix(activity): reconcile missed review end state`
-- The worktree contains the uncommitted takeover-toggle hover reconciliation
-  described below. Always verify `git status`, the canonical version in
+- Working version: `0.0.4-dev.288`
+- Current commit: `c0f30c2` —
+  `v0.0.4-dev.287 - fix(activity): clarify takeover toggle-off state`
+- The worktree contains the uncommitted camera slideshow feature described
+  below. Always verify `git status`, the canonical version in
   `custom_components/watchzone/const.py`, and the latest commit.
 
-## Active change: takeover-toggle hover reconciliation
+## Active change: coordinated camera slideshow
 
-- The Alert Takeover toolbar toggle keeps the existing theme-token colors for
-  inactive, hover, and active states.
-- Turning the active toggle off while the pointer remains over it suppresses
-  only that stale inactive hover paint, so the control immediately presents its
-  inactive color. Pointer leave restores the ordinary hover behavior.
-- The shared toolbar icon-button foundation owns the reusable suppression
-  modifier; the takeover component owns only the interaction state that opts
-  into it. Filters and calendars retain their existing behavior.
-- Unit coverage verifies the component lifecycle, and browser coverage verifies
-  the actual computed-color transition without hardcoding product colors.
+- Alert Takeover no longer has a hover color. Its active and inactive states
+  remain theme-token driven, including immediately after toggle-off.
+- The new `mdi:presentation-play` slideshow toggle sits immediately before
+  Alert Takeover. Its 5, 10, 20, or 30 second interval is configured under Live
+  Media Player; 10 seconds is the default.
+- Slideshow advances through Camera's authoritative carousel selection, so
+  navigation, the camera-switcher overlay, Reviews, Events, and Recordings stay
+  synchronized. Manual camera selection restarts a full interval on that
+  camera. Swiper continues to own `none`, `slide`, and `fade` transitions.
+- The slideshow overlay control sits immediately before the camera switcher.
+  When inactive it follows ordinary overlay visibility. When active it remains
+  mounted, shows the countdown, and uses the shared overlay controller to dim
+  while the rest of the controls are hidden. The switcher and slideshow share
+  one reusable semantic overlay-button style foundation.
+- Alert takeover holds an active slideshow and presents `Hold`. Clearing the
+  final queued alert advances immediately to the next slide and starts a fresh
+  interval. Pressing the held slideshow overlay does the same immediately.
+- Slideshow timing has one Camera-owned controller and no parallel selection,
+  overlay, zoom, resize-handle, or transition lifecycle.
 
 ## Live camera and group invariants
 
@@ -69,7 +78,8 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 - Stage code follows `architecture.md`; do not use `src/stage` as a dumping
   ground. Modules/components do not import or mutate other placeables.
 - Camera navigation is a module. The optional camera-switcher overlay is a
-  Camera-owned component; both remain synchronized through Camera selection.
+  Camera-owned component. The slideshow overlay is another Camera-owned
+  component; all remain synchronized through Camera selection.
 - Additional-camera selection uses the full Home Assistant camera picker but
   rejects an entity already configured as a main or secondary. Both members
   count toward the twelve-camera limit and retain independent names and source
@@ -83,16 +93,18 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 
 ## Validation status
 
-Validated for `0.0.4-dev.287`:
+Validated for `0.0.4-dev.288`:
 
-- 393 frontend unit tests
-- 111 Playwright tests across Chromium, Firefox, and WebKit
+- 399 frontend unit tests
+- 114 Playwright tests across Chromium, Firefox, and WebKit (38 per engine)
 - Formatting, lint, type checking, architecture/style checks, production build,
   version consistency, and `git diff --check`
 
-Slide takeover coverage verifies activity-indicator clearing, camera return,
-overlay reveal, zoom, and resize-handle interaction. Fade interaction remains
-covered separately.
+Browser coverage verifies automatic and manual advancement, synchronized
+navigation and switcher state, overlay countdown/dimming, takeover Hold and
+resume, Fade transitions, per-camera zoom reset, and persistent stage-handle
+geometry. Existing transition coverage continues to exercise `none`, `slide`,
+and `fade`.
 
 ## Handoff rules
 

@@ -20,6 +20,10 @@ export interface CameraSelectionState {
   readonly items: readonly CameraSelectionItem[];
   /** False while a direct-manipulation camera transition is still moving. */
   readonly settled?: boolean;
+  readonly slideshowAvailable?: boolean;
+  readonly slideshowEnabled?: boolean;
+  readonly slideshowHeld?: boolean;
+  readonly slideshowRemainingSeconds?: number;
   readonly takeoverAvailable?: boolean;
   readonly takeoverEnabled?: boolean;
 }
@@ -27,6 +31,7 @@ export interface CameraSelectionState {
 type SelectionListener = (state: CameraSelectionState) => void;
 type SelectionHandler = (entityId: string) => void;
 type TakeoverToggleHandler = () => void;
+type SlideshowToggleHandler = () => void;
 
 interface SelectionChannel {
   activate?: SelectionHandler;
@@ -34,6 +39,7 @@ interface SelectionChannel {
   owner?: object;
   select?: SelectionHandler;
   toggleTakeover?: TakeoverToggleHandler;
+  toggleSlideshow?: SlideshowToggleHandler;
   state: CameraSelectionState;
 }
 
@@ -50,12 +56,14 @@ export class CameraSelectionContext {
     select: SelectionHandler,
     toggleTakeover?: TakeoverToggleHandler,
     activate?: SelectionHandler,
+    toggleSlideshow?: SlideshowToggleHandler,
   ): void {
     const channel = this._channel(targetId);
     channel.owner = owner;
     channel.select = select;
     channel.toggleTakeover = toggleTakeover;
     channel.activate = activate;
+    channel.toggleSlideshow = toggleSlideshow;
     if (sameState(channel.state, state)) return;
     channel.state = state;
     for (const listener of channel.listeners) listener(state);
@@ -68,6 +76,7 @@ export class CameraSelectionContext {
     channel.select = undefined;
     channel.toggleTakeover = undefined;
     channel.activate = undefined;
+    channel.toggleSlideshow = undefined;
     if (!sameState(channel.state, EMPTY_STATE)) {
       channel.state = EMPTY_STATE;
       for (const listener of channel.listeners) listener(EMPTY_STATE);
@@ -101,6 +110,15 @@ export class CameraSelectionContext {
       return false;
     }
     channel.toggleTakeover();
+    return true;
+  }
+
+  public toggleSlideshow(targetId: string): boolean {
+    const channel = this._channels.get(targetId);
+    if (!channel?.toggleSlideshow || !channel.state.slideshowAvailable) {
+      return false;
+    }
+    channel.toggleSlideshow();
     return true;
   }
 
@@ -143,6 +161,10 @@ function sameState(
     current.activeSelectionId !== next.activeSelectionId ||
     current.takeoverAvailable !== next.takeoverAvailable ||
     current.takeoverEnabled !== next.takeoverEnabled ||
+    current.slideshowAvailable !== next.slideshowAvailable ||
+    current.slideshowEnabled !== next.slideshowEnabled ||
+    current.slideshowHeld !== next.slideshowHeld ||
+    current.slideshowRemainingSeconds !== next.slideshowRemainingSeconds ||
     (current.settled !== false) !== (next.settled !== false) ||
     current.items.length !== next.items.length
   ) {

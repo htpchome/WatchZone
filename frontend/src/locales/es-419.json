@@ -99,5 +99,14 @@
   "reviews.load_failed": "No se pudieron cargar las revisiones de la cámara.",
   "reviews.activity": "Actividad de la cámara",
   "reviews.alert": "Alerta",
-  "reviews.detection": "Detección"
+  "reviews.detection": "Detección",
+  "camera.slideshow_enable": "Iniciar presentación",
+  "camera.slideshow_disable": "Detener presentación",
+  "camera.slideshow_resume": "Continuar la presentación en la siguiente cámara",
+  "camera.slideshow_unavailable": "La presentación requiere al menos dos cámaras",
+  "camera.slideshow_disable_remaining": "Detener presentación, quedan {seconds} segundos",
+  "camera.slideshow_hold": "En espera",
+  "camera.slideshow_seconds": "{seconds}s",
+  "editor.slide_advance_time": "Tiempo de avance de diapositiva",
+  "editor.slide_advance_seconds": "{seconds}s"
 }

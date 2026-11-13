@@ -253,6 +253,7 @@ export const themeTokens = css`
     --wzc-media-overlay-surface: var(--ha-color-neutral-05, #111111);
     --wzc-media-overlay-opacity: 72%;
     --wzc-media-overlay-hover-opacity: 84%;
+    --wzc-media-overlay-dimmed-opacity: 52%;
     --wzc-media-overlay-background: color-mix(
       in srgb,
       var(--wzc-media-overlay-surface) var(--wzc-media-overlay-opacity),

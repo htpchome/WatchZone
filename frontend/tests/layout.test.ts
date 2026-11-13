@@ -218,7 +218,7 @@ describe("layout composition", () => {
     });
   });
 
-  it("adds the camera switcher overlay only when enabled with multiple cameras", () => {
+  it("adds the camera switcher and slideshow overlays only when enabled with multiple cameras", () => {
     const disabled = builtInStage(
       normalizeCardConfig({
         cameras: [{ entity_id: "camera.front" }, { entity_id: "camera.back" }],
@@ -233,6 +233,12 @@ describe("layout composition", () => {
       }),
     );
     expect(moduleAt(enabled, 0).slots?.overlay).toEqual([
+      expect.objectContaining({
+        componentType: "slideshow",
+        config: { targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID },
+        kind: "component",
+        overlayRegion: "top-center",
+      }),
       expect.objectContaining({
         componentType: "camera_switcher",
         config: { targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID },

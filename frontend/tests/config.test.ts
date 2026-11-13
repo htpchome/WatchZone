@@ -34,6 +34,7 @@ describe("WatchZone card configuration", () => {
       alert_detection_takeover: "both",
       highlight_camera_on_activity: true,
       ptz_overlay_control: "start_open",
+      slide_advance_time: 10,
       slide_transition: "slide",
       start_alert_takeover_on: false,
       view_timelapse_on_thumbnail_hover: true,
@@ -69,6 +70,18 @@ describe("WatchZone card configuration", () => {
     ).toBe("fade");
     expect(() => normalizeCardConfig({ slide_transition: "flip" })).toThrow(
       "slide_transition must be none, slide, or fade",
+    );
+  });
+
+  it("defaults slideshow advance time to ten seconds and validates its choices", () => {
+    expect(normalizeCardConfig({}).slide_advance_time).toBe(10);
+    for (const seconds of [5, 10, 20, 30] as const) {
+      expect(
+        normalizeCardConfig({ slide_advance_time: seconds }).slide_advance_time,
+      ).toBe(seconds);
+    }
+    expect(() => normalizeCardConfig({ slide_advance_time: 15 })).toThrow(
+      "slide_advance_time must be 5, 10, 20, or 30 seconds",
     );
   });
 

@@ -60,6 +60,13 @@ const ICONS = {
       },
     ],
   },
+  presentationPlay: {
+    paths: [
+      {
+        d: "M2 3h20v2H2V3m2 4h16v12h-7v2h-2v-2H4V7m5 3v6l5-3-5-3Z",
+      },
+    ],
+  },
   account: {
     paths: [
       {

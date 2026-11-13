@@ -3,7 +3,11 @@ import { cameraImageUrl } from "../../../core/home-assistant";
 import { englishLocalize } from "../../../core/localization";
 import type { MediaSessionLease } from "../../../core/media-session-manager";
 import type { MediaRetentionPreference } from "../../../core/media-retention-policy";
-import type { AlertTakeoverMode, SlideTransition } from "../../../core/config";
+import type {
+  AlertTakeoverMode,
+  SlideAdvanceSeconds,
+  SlideTransition,
+} from "../../../core/config";
 import type {
   ModuleDefinition,
   PlaceableRuntimeContext,
@@ -23,6 +27,7 @@ export interface CameraModuleConfig {
   readonly retentionPreference: MediaRetentionPreference;
   readonly roundedCorners: boolean;
   readonly shadowStyle: CameraShadowStyle;
+  readonly slideAdvanceSeconds: SlideAdvanceSeconds;
   readonly transition: SlideTransition;
   readonly startAlertTakeoverOn: boolean;
 }
@@ -139,6 +144,7 @@ function updateCameraElement(
   camera.retentionPreference = config.retentionPreference;
   camera.roundedCorners = config.roundedCorners;
   camera.shadowStyle = config.shadowStyle;
+  camera.slideAdvanceSeconds = config.slideAdvanceSeconds;
   camera.transition = config.transition;
   camera.startAlertTakeoverOn = config.startAlertTakeoverOn;
   camera.selectionId = context.placeableId;
@@ -227,6 +233,14 @@ function validateCameraConfig(value: unknown): CameraModuleConfig {
     throw new Error("Camera modules require an activity takeover start state.");
   }
   if (
+    source.slideAdvanceSeconds !== 5 &&
+    source.slideAdvanceSeconds !== 10 &&
+    source.slideAdvanceSeconds !== 20 &&
+    source.slideAdvanceSeconds !== 30
+  ) {
+    throw new Error("Camera modules require a valid slide advance time.");
+  }
+  if (
     source.transition !== "none" &&
     source.transition !== "slide" &&
     source.transition !== "fade"
@@ -241,6 +255,7 @@ function validateCameraConfig(value: unknown): CameraModuleConfig {
     retentionPreference: source.retentionPreference,
     roundedCorners: source.roundedCorners,
     shadowStyle: source.shadowStyle,
+    slideAdvanceSeconds: source.slideAdvanceSeconds,
     transition: source.transition,
     startAlertTakeoverOn: source.startAlertTakeoverOn,
   };

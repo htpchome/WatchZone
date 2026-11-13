@@ -58,6 +58,7 @@ describe("WatchZone YAML configuration manager", () => {
           outer_padding: false,
           ptz_overlay_control: "start_closed",
           slide_transition: "fade",
+          slide_advance_time: 20,
           mobile_data_saving: true,
           grid_options: { columns: 8 },
         }),
@@ -101,6 +102,7 @@ describe("WatchZone YAML configuration manager", () => {
       outer_padding: false,
       ptz_overlay_control: "start_closed",
       slide_transition: "fade",
+      slide_advance_time: 20,
       mobile_data_saving: true,
       grid_options: { columns: 8 },
     });

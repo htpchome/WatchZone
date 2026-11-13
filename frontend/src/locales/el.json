@@ -101,5 +101,14 @@
   "reviews.load_failed": "Δεν ήταν δυνατή η φόρτωση των ανασκοπήσεων κάμερας.",
   "reviews.activity": "Δραστηριότητα κάμερας",
   "reviews.alert": "Ειδοποίηση",
-  "reviews.detection": "Ανίχνευση"
+  "reviews.detection": "Ανίχνευση",
+  "camera.slideshow_enable": "Έναρξη παρουσίασης",
+  "camera.slideshow_disable": "Διακοπή παρουσίασης",
+  "camera.slideshow_resume": "Συνέχιση παρουσίασης στην επόμενη κάμερα",
+  "camera.slideshow_unavailable": "Η παρουσίαση απαιτεί τουλάχιστον δύο κάμερες",
+  "camera.slideshow_disable_remaining": "Διακοπή παρουσίασης, απομένουν {seconds} δευτερόλεπτα",
+  "camera.slideshow_hold": "Αναμονή",
+  "camera.slideshow_seconds": "{seconds}δ",
+  "editor.slide_advance_time": "Χρόνος εναλλαγής διαφανειών",
+  "editor.slide_advance_seconds": "{seconds}δ"
 }

@@ -20,15 +20,8 @@ export const toolbarIconButtonStyles = css`
   }
 
   .wzc-toolbar-icon-button:is(.active, .selected),
-  .wzc-toolbar-icon-button:hover:not(:disabled) {
+  .wzc-toolbar-icon-button:hover:not(:disabled, .no-hover) {
     color: var(--wzc-toolbar-icon-button-active-color);
-  }
-
-  .wzc-toolbar-icon-button.suppress-inactive-hover:not(
-      .active,
-      .selected
-    ):hover:not(:disabled) {
-    color: var(--wzc-toolbar-icon-button-color);
   }
 
   .wzc-toolbar-icon-button:disabled {

@@ -3,6 +3,7 @@ import {
   CARD_TYPE,
   DEFAULT_CARD_TITLE,
   DEFAULT_EVENT_HISTORY_DAYS,
+  DEFAULT_SLIDE_ADVANCE_SECONDS,
 } from "./constants";
 
 export interface YamlCardConfig {
@@ -53,6 +54,9 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
     delete yaml.ptz_overlay_control;
   }
   if (config.slide_transition === "slide") delete yaml.slide_transition;
+  if (config.slide_advance_time === DEFAULT_SLIDE_ADVANCE_SECONDS) {
+    delete yaml.slide_advance_time;
+  }
   if (config.view_timelapse_on_thumbnail_hover !== false) {
     delete yaml.view_timelapse_on_thumbnail_hover;
   }

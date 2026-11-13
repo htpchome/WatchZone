@@ -101,5 +101,14 @@
   "reviews.load_failed": "Impossible de charger les examens de la caméra.",
   "reviews.activity": "Activité de la caméra",
   "reviews.alert": "Alerte",
-  "reviews.detection": "Détection"
+  "reviews.detection": "Détection",
+  "camera.slideshow_enable": "Démarrer le diaporama",
+  "camera.slideshow_disable": "Arrêter le diaporama",
+  "camera.slideshow_resume": "Reprendre le diaporama à la caméra suivante",
+  "camera.slideshow_unavailable": "Le diaporama nécessite au moins deux caméras",
+  "camera.slideshow_disable_remaining": "Arrêter le diaporama, {seconds} secondes restantes",
+  "camera.slideshow_hold": "En attente",
+  "camera.slideshow_seconds": "{seconds}s",
+  "editor.slide_advance_time": "Délai d'avancement",
+  "editor.slide_advance_seconds": "{seconds}s"
 }

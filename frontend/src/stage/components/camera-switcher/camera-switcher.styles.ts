@@ -1,6 +1,8 @@
 import { css } from "lit";
 
-export const cameraSwitcherStyles = css`
+import { mediaOverlayButtonStyles } from "../../../ui/media-overlay-button.styles";
+
+const cameraSwitcherPrivateStyles = css`
   :host {
     display: block;
     position: relative;
@@ -23,19 +25,11 @@ export const cameraSwitcherStyles = css`
   }
 
   button {
-    box-sizing: border-box;
     inline-size: 100%;
-    min-block-size: 2rem;
     padding: 0.35rem 0.55rem;
-    color: inherit;
-    font: inherit;
     font-size: 0.78rem;
     font-weight: 600;
     text-align: start;
-    background: var(--wzc-media-overlay-background);
-    border: 1px solid var(--wzc-media-overlay-border-color);
-    border-radius: var(--wzc-media-overlay-radius);
-    cursor: pointer;
   }
 
   .trigger {
@@ -81,20 +75,8 @@ export const cameraSwitcherStyles = css`
     background: transparent;
   }
 
-  .option.selected,
-  button:focus-visible {
+  .option.selected {
     background: var(--wzc-media-overlay-hover-background);
-  }
-
-  button:focus-visible {
-    outline: 2px solid var(--wzc-media-overlay-color);
-    outline-offset: -2px;
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    button:hover {
-      background: var(--wzc-media-overlay-hover-background);
-    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -104,3 +86,8 @@ export const cameraSwitcherStyles = css`
     }
   }
 `;
+
+export const cameraSwitcherStyles = [
+  mediaOverlayButtonStyles,
+  cameraSwitcherPrivateStyles,
+];

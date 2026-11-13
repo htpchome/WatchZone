@@ -101,5 +101,14 @@
   "reviews.load_failed": "Kameraüberprüfungen konnten nicht geladen werden.",
   "reviews.activity": "Kameraaktivität",
   "reviews.alert": "Alarm",
-  "reviews.detection": "Erkennung"
+  "reviews.detection": "Erkennung",
+  "camera.slideshow_enable": "Diashow starten",
+  "camera.slideshow_disable": "Diashow stoppen",
+  "camera.slideshow_resume": "Diashow mit der nächsten Kamera fortsetzen",
+  "camera.slideshow_unavailable": "Die Diashow erfordert mindestens zwei Kameras",
+  "camera.slideshow_disable_remaining": "Diashow stoppen, noch {seconds} Sekunden",
+  "camera.slideshow_hold": "Halten",
+  "camera.slideshow_seconds": "{seconds}s",
+  "editor.slide_advance_time": "Folienwechselzeit",
+  "editor.slide_advance_seconds": "{seconds}s"
 }

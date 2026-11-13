@@ -126,6 +126,41 @@ describe("camera selection context", () => {
     expect(toggle).toHaveBeenCalledOnce();
   });
 
+  it("publishes slideshow timing and routes its shared toggle", () => {
+    const context = new CameraSelectionContext();
+    const listener = vi.fn();
+    const toggleSlideshow = vi.fn();
+    context.subscribe("camera", listener);
+    context.publish(
+      "camera",
+      {},
+      {
+        activeEntityId: "camera.front",
+        items: [
+          { entityId: "camera.front", label: "Front" },
+          { entityId: "camera.back", label: "Back" },
+        ],
+        slideshowAvailable: true,
+        slideshowEnabled: true,
+        slideshowHeld: false,
+        slideshowRemainingSeconds: 8,
+      },
+      vi.fn(),
+      undefined,
+      undefined,
+      toggleSlideshow,
+    );
+
+    expect(listener).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        slideshowEnabled: true,
+        slideshowRemainingSeconds: 8,
+      }),
+    );
+    expect(context.toggleSlideshow("camera")).toBe(true);
+    expect(toggleSlideshow).toHaveBeenCalledOnce();
+  });
+
   it("routes repeated activation separately from initial group selection", () => {
     const context = new CameraSelectionContext();
     const select = vi.fn();

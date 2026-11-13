@@ -82,6 +82,30 @@ dynamic import cannot initialize a detached or replaced container. The static
 single-slide structure remains usable if optional carousel initialization
 cannot complete.
 
+## Slideshow
+
+- Camera owns one slideshow timer and publishes its enabled, held, and
+  whole-second countdown state through the existing camera-selection context.
+  Swiper, camera navigation, the camera-switcher overlay, and activity modules
+  do not create parallel slideshow state.
+- The configured interval is 5, 10, 20, or 30 seconds and defaults to 10.
+  Advancing wraps through Camera's presentation items and uses the configured
+  carousel transition.
+- Every automatic advance uses Camera's authoritative selection path, so camera
+  navigation, the overlay selector, Reviews, Events, Recordings, leases, and
+  active physical-camera scope update together.
+- A manual camera selection keeps slideshow enabled and restarts the complete
+  interval on that presentation.
+- An active alert takeover holds slideshow advancement. The overlay countdown
+  reads Hold until the takeover queue clears, then Camera advances to the next
+  presentation and starts a fresh interval. Activating the held slideshow
+  control suppresses the current takeover for selection purposes, advances
+  immediately, and starts the fresh interval.
+- The activity-toolbar toggle and Camera overlay component are presentations of
+  that shared state. The active overlay remains mounted when the shared media
+  overlay hides, using the shared dimmed opacity; interaction reveals the
+  ordinary overlay controls again.
+
 ## Sizing and stability
 
 - The carousel and every slide fill the camera-owned stage.

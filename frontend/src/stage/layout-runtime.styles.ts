@@ -163,9 +163,16 @@ export const stageRuntimeStyles = css`
     padding-inline-end: var(--wzc-camera-overlay-trailing-clearance);
   }
 
-  .component-slot-overlay > .component-node {
+  .component-slot-overlay > .overlay-region {
+    align-items: center;
+    display: flex;
+    gap: var(--wzc-control-dock-gap);
+    min-inline-size: 0;
+    pointer-events: none;
+  }
+
+  .component-slot-overlay > .overlay-region > .component-node {
     align-self: center;
-    justify-self: center;
     inline-size: auto;
     block-size: auto;
   }
@@ -179,6 +186,7 @@ export const stageRuntimeStyles = css`
   .component-slot-overlay > .overlay-region-top-center {
     grid-area: 1 / 2;
     align-self: start;
+    justify-content: center;
   }
 
   .component-slot-overlay > .overlay-region-top-trailing {
@@ -194,6 +202,7 @@ export const stageRuntimeStyles = css`
 
   .component-slot-overlay > .overlay-region-center {
     grid-area: 2 / 2;
+    justify-content: center;
   }
 
   .component-slot-overlay > .overlay-region-center-trailing {
@@ -210,6 +219,7 @@ export const stageRuntimeStyles = css`
   .component-slot-overlay > .overlay-region-bottom-center {
     grid-area: 3 / 2;
     align-self: end;
+    justify-content: center;
   }
 
   .component-slot-overlay > .overlay-region-bottom-trailing {

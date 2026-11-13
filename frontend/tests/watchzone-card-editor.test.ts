@@ -103,7 +103,7 @@ describe("watchzone-card-editor", () => {
       "Layout Settings",
       "Display Settings",
     ]);
-    expect(items[1]?.childElementCount).toBe(6);
+    expect(items[1]?.childElementCount).toBe(7);
     expect(
       items[1]?.querySelector(
         '[data-config-key="highlight_camera_on_activity"]',
@@ -725,7 +725,7 @@ describe("watchzone-card-editor", () => {
     });
   });
 
-  it("saves the carousel transition from the segmented control", async () => {
+  it("saves carousel transition and slide advance time from segmented controls", async () => {
     const editor = document.createElement(
       "watchzone-card-editor",
     ) as CardEditor;
@@ -741,14 +741,23 @@ describe("watchzone-card-editor", () => {
     transition?.shadowRoot
       ?.querySelector<HTMLButtonElement>('[data-value="fade"]')
       ?.click();
+    const advanceTime = editor.shadowRoot?.querySelector<SegmentedControl>(
+      '[data-setting="slide-advance-time"]',
+    );
+    advanceTime?.shadowRoot
+      ?.querySelector<HTMLButtonElement>('[data-value="20"]')
+      ?.click();
     await editor.updateComplete;
     await transition?.updateComplete;
+    await advanceTime?.updateComplete;
 
     expect(transition?.value).toBe("fade");
+    expect(advanceTime?.value).toBe("20");
     expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
       type: CARD_TYPE,
       title: "Camera",
       slide_transition: "fade",
+      slide_advance_time: 20,
     });
   });
 

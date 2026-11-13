@@ -101,5 +101,14 @@
   "reviews.load_failed": "No s'han pogut carregar les revisions de la càmera.",
   "reviews.activity": "Activitat de la càmera",
   "reviews.alert": "Alerta",
-  "reviews.detection": "Detecció"
+  "reviews.detection": "Detecció",
+  "camera.slideshow_enable": "Inicia la presentació",
+  "camera.slideshow_disable": "Atura la presentació",
+  "camera.slideshow_resume": "Reprèn la presentació a la càmera següent",
+  "camera.slideshow_unavailable": "La presentació requereix almenys dues càmeres",
+  "camera.slideshow_disable_remaining": "Atura la presentació, queden {seconds} segons",
+  "camera.slideshow_hold": "En espera",
+  "camera.slideshow_seconds": "{seconds}s",
+  "editor.slide_advance_time": "Temps d'avanç de diapositiva",
+  "editor.slide_advance_seconds": "{seconds}s"
 }

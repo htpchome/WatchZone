@@ -91,7 +91,7 @@ export class CameraSwitcherComponent extends LitElement {
       @keydown=${this._handleKeyDown}
     >
       <button
-        class="trigger"
+        class="trigger wzc-media-overlay-button"
         type="button"
         aria-controls=${MENU_ID}
         aria-expanded=${this._open ? "true" : "false"}
@@ -115,8 +115,8 @@ export class CameraSwitcherComponent extends LitElement {
                   html`<button
                     class=${
                       entityId === active?.entityId
-                        ? "option selected"
-                        : "option"
+                        ? "option selected wzc-media-overlay-button"
+                        : "option wzc-media-overlay-button"
                     }
                     type="button"
                     role="option"

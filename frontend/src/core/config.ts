@@ -21,6 +21,7 @@ export type LiveConnectionType = "home_assistant" | "frigate_go2rtc";
 export type FrigateFallbackTransport = "hls" | "mse";
 export type PtzOverlayControl = "none" | "start_closed" | "start_open";
 export type SlideTransition = "none" | "slide" | "fade";
+export type SlideAdvanceSeconds = 5 | 10 | 20 | 30;
 export type AlertTakeoverMode = "off" | "alerts" | "detections" | "both";
 export type AdditionalCameraLayout = "side_by_side" | "stacked";
 
@@ -60,6 +61,7 @@ export interface CardConfig {
   readonly highlight_camera_on_activity: boolean;
   readonly ptz_overlay_control: PtzOverlayControl;
   readonly slide_transition: SlideTransition;
+  readonly slide_advance_time: SlideAdvanceSeconds;
   readonly start_alert_takeover_on: boolean;
   readonly view_timelapse_on_thumbnail_hover: boolean;
   readonly cameras: readonly CameraConfig[];
@@ -155,6 +157,17 @@ export function normalizeCardConfig(value: unknown): CardConfig {
       `${APP_NAME} slide_transition must be none, slide, or fade.`,
     );
   }
+  if (
+    source.slide_advance_time !== undefined &&
+    source.slide_advance_time !== 5 &&
+    source.slide_advance_time !== 10 &&
+    source.slide_advance_time !== 20 &&
+    source.slide_advance_time !== 30
+  ) {
+    throw new Error(
+      `${APP_NAME} slide_advance_time must be 5, 10, 20, or 30 seconds.`,
+    );
+  }
   const normalized: Record<string, unknown> = {
     ...source,
     cameras,
@@ -205,6 +218,12 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     source.slide_transition === "none" || source.slide_transition === "fade"
       ? source.slide_transition
       : "slide";
+  normalized.slide_advance_time =
+    source.slide_advance_time === 5 ||
+    source.slide_advance_time === 20 ||
+    source.slide_advance_time === 30
+      ? source.slide_advance_time
+      : 10;
   normalized.start_alert_takeover_on = source.start_alert_takeover_on === true;
   normalized.view_timelapse_on_thumbnail_hover =
     source.view_timelapse_on_thumbnail_hover !== false;

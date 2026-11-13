@@ -8,7 +8,7 @@ import { CameraSelectionContext } from "../src/stage/camera-selection-context";
 describe("activity takeover toggle", () => {
   afterEach(() => document.body.replaceChildren());
 
-  it("shows the inactive color immediately after toggling off under a pointer", async () => {
+  it("uses only active and inactive presentation states", async () => {
     const cameraSelection = new CameraSelectionContext();
     const toggle = vi.fn();
     const owner = {};
@@ -49,10 +49,7 @@ describe("activity takeover toggle", () => {
       element.shadowRoot?.querySelector<HTMLButtonElement>("button");
     expect(toggle).toHaveBeenCalledOnce();
     expect(button?.getAttribute("aria-pressed")).toBe("false");
-    expect(button?.classList.contains("suppress-inactive-hover")).toBe(true);
-
-    button?.dispatchEvent(new PointerEvent("pointerleave"));
-    await element.updateComplete;
-    expect(button?.classList.contains("suppress-inactive-hover")).toBe(false);
+    expect(button?.classList.contains("no-hover")).toBe(true);
+    expect(button?.classList.contains("active")).toBe(false);
   });
 });

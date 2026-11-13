@@ -7,6 +7,7 @@ import {
   EXPORTS_MODULE_TYPE,
   LIGHT_COMPONENT_TYPE,
   RECORDINGS_MODULE_TYPE,
+  SLIDESHOW_COMPONENT_TYPE,
   PTZ_COMPONENT_TYPE,
   PANEL_MODULE_TYPE,
   TALK_COMPONENT_TYPE,
@@ -121,6 +122,13 @@ const moduleLoaders = {
 } satisfies PlaceableLoaderMap;
 
 const componentLoaders = {
+  [SLIDESHOW_COMPONENT_TYPE]: {
+    load: () =>
+      import("./components/slideshow").then(
+        ({ componentDefinition }) => componentDefinition,
+      ),
+    placeholder: "control",
+  },
   [CAMERA_SWITCHER_COMPONENT_TYPE]: {
     load: () =>
       import("./components/camera-switcher").then(

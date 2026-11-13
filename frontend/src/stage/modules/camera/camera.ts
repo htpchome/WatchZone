@@ -17,6 +17,7 @@ import type {
   AlertTakeoverMode,
   FrigateFallbackTransport,
   LiveConnectionType,
+  SlideAdvanceSeconds,
   SlideTransition,
 } from "../../../core/config";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
@@ -43,6 +44,7 @@ import {
   type CameraStageSizeChangeDetail,
   type CameraStageSize,
 } from "./stage-resize.controller";
+import { CameraSlideshowController } from "./slideshow.controller";
 
 export type CameraShadowStyle = "medium" | "none" | "small";
 
@@ -92,6 +94,7 @@ export class CameraModule extends LitElement {
     preview: { attribute: false, type: Boolean },
     roundedCorners: { attribute: false, type: Boolean },
     shadowStyle: { attribute: false },
+    slideAdvanceSeconds: { attribute: false },
     transition: { attribute: false },
     startAlertTakeoverOn: { attribute: false, type: Boolean },
     selectionId: { attribute: false },
@@ -109,6 +112,7 @@ export class CameraModule extends LitElement {
     resized: false,
   };
   private _takeoverSelectionIndex?: number;
+  private _slideshowAdvancing = false;
   private readonly _carousel = new CameraCarouselController(
     this,
     (index, settled) => this._select(index, settled),
@@ -121,11 +125,17 @@ export class CameraModule extends LitElement {
       entityIds: this.cameras.map(({ entityId }) => entityId),
       highlightEnabled: this.highlightActivity,
       onTakeover: this._takeoverEntity,
+      onTakeoverEnd: () => this._slideshow.resumeAfterTakeover(),
       startTakeoverEnabled: this.startAlertTakeoverOn,
       takeoverMode: this.alertTakeoverMode,
     }),
   );
   private readonly _deviceProfile = new DeviceProfileController(this);
+  private readonly _slideshow = new CameraSlideshowController(this, () => ({
+    advance: this._advanceSlideshow,
+    intervalSeconds: this.slideAdvanceSeconds,
+    itemCount: this._presentationItems.length,
+  }));
 
   public api?: HomeAssistantApi;
   public alertTakeoverMode: AlertTakeoverMode = "both";
@@ -139,6 +149,7 @@ export class CameraModule extends LitElement {
   public preview = false;
   public roundedCorners = true;
   public shadowStyle: CameraShadowStyle = "medium";
+  public slideAdvanceSeconds: SlideAdvanceSeconds = 10;
   public transition: SlideTransition = "slide";
   public startAlertTakeoverOn = false;
   public selectionId = "";
@@ -423,6 +434,7 @@ export class CameraModule extends LitElement {
     if (!takeoverSelection) {
       const entityId = this._presentationItems[next]?.cameras[0].entityId;
       if (entityId) this._activityHighlight.userSelected(entityId);
+      if (!this._slideshowAdvancing) this._slideshow.manualSelection();
     }
     this._activeIndex = next;
     this._syncCameraActivity();
@@ -441,6 +453,7 @@ export class CameraModule extends LitElement {
       ({ id }) => id === entityId,
     );
     if (index < 0) return;
+    this._slideshow.manualSelection();
     this._activityHighlight.userSelected(entityId);
     this._carousel.select(index);
   };
@@ -473,6 +486,7 @@ export class CameraModule extends LitElement {
       ({ id }) => id === entityId,
     );
     if (index < 0) return;
+    this._slideshow.manualSelection();
     if (index !== this._activeIndex) {
       this._selectEntity(entityId);
       return;
@@ -487,6 +501,7 @@ export class CameraModule extends LitElement {
       cameras.some((camera) => camera.entityId === entityId),
     );
     if (index < 0) return;
+    this._slideshow.hold();
     const item = this._presentationItems[index];
     if (item?.cameras.length === 2) {
       this._groupModes.set(
@@ -540,20 +555,38 @@ export class CameraModule extends LitElement {
               : undefined,
         })),
         settled: this._selectionSettled,
+        slideshowAvailable: this._presentationItems.length > 1,
+        slideshowEnabled: this._slideshow.enabled,
+        slideshowHeld: this._slideshow.held,
+        slideshowRemainingSeconds: this._slideshow.remainingSeconds,
         takeoverAvailable: this.alertTakeoverMode !== "off",
         takeoverEnabled: this._activityHighlight.takeoverEnabled,
       },
       this._selectEntity,
       () => this._activityHighlight.toggleTakeover(),
       this._activateEntity,
+      () => this._slideshow.toggle(),
     );
   }
 
+  private readonly _advanceSlideshow = (): void => {
+    const count = this._presentationItems.length;
+    if (count <= 1) return;
+    this._slideshowAdvancing = true;
+    try {
+      this._carousel.select((this._activeIndex + 1) % count);
+    } finally {
+      this._slideshowAdvancing = false;
+    }
+  };
+
   private readonly _previous = (): void => {
+    this._slideshow.manualSelection();
     this._carousel.previous();
   };
 
   private readonly _next = (): void => {
+    this._slideshow.manualSelection();
     this._carousel.next();
   };
 

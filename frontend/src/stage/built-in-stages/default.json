@@ -22,6 +22,15 @@
               "slots": {
                 "overlay": [
                   {
+                    "componentType": "slideshow",
+                    "config": {
+                      "targetModuleId": "default-camera-module"
+                    },
+                    "id": "default-slideshow-component",
+                    "kind": "component",
+                    "overlayRegion": "top-center"
+                  },
+                  {
                     "componentType": "camera_switcher",
                     "config": {
                       "targetModuleId": "default-camera-module"
@@ -145,6 +154,15 @@
               "moduleType": "camera",
               "slots": {
                 "overlay": [
+                  {
+                    "componentType": "slideshow",
+                    "config": {
+                      "targetModuleId": "default-camera-module"
+                    },
+                    "id": "default-slideshow-component",
+                    "kind": "component",
+                    "overlayRegion": "top-center"
+                  },
                   {
                     "componentType": "camera_switcher",
                     "config": {

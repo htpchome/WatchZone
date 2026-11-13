@@ -84,6 +84,7 @@ The first built-in composition is:
 root grid
 ├── camera module
 │   ├── overlay slot
+│   │   ├── slideshow component (when enabled and multiple cameras exist)
 │   │   └── camera-switcher component (when enabled and multiple cameras exist)
 │   ├── controls slot (responsive intrinsic-size dock)
 │   │   ├── linked-light component (when configured)
@@ -112,9 +113,13 @@ changing the dock's measured control geometry.
 The overlay slot owns its three-by-three logical placement grid and local
 Stage-edge clearance. Its trailing clearance reserves the camera media-control
 rail for future overlay components without exposing camera-control geometry.
+Multiple components assigned to one region retain document order and use the
+slot's shared gap; components never position themselves against a sibling.
 The optional camera-switcher component occupies `top-center`, follows Camera's
 shared overlay timer, and publishes selection intent through the same typed
 camera-selection context as the standalone camera-navigation module.
+The slideshow component precedes that selector in the same region and presents
+Camera's shared countdown/hold state without owning its timer or selection.
 Additional-camera grouping remains inside Camera's private presentation. The
 camera-navigation module and camera-switcher receive one group selection item
 instead of importing group configuration or coordinating either member.

@@ -101,5 +101,14 @@
   "reviews.load_failed": "Nie udało się wczytać przeglądów kamery.",
   "reviews.activity": "Aktywność kamery",
   "reviews.alert": "Alert",
-  "reviews.detection": "Wykrycie"
+  "reviews.detection": "Wykrycie",
+  "camera.slideshow_enable": "Uruchom pokaz slajdów",
+  "camera.slideshow_disable": "Zatrzymaj pokaz slajdów",
+  "camera.slideshow_resume": "Wznów pokaz od następnej kamery",
+  "camera.slideshow_unavailable": "Pokaz slajdów wymaga co najmniej dwóch kamer",
+  "camera.slideshow_disable_remaining": "Zatrzymaj pokaz, pozostało {seconds} s",
+  "camera.slideshow_hold": "Wstrzymano",
+  "camera.slideshow_seconds": "{seconds}s",
+  "editor.slide_advance_time": "Czas zmiany slajdu",
+  "editor.slide_advance_seconds": "{seconds}s"
 }
