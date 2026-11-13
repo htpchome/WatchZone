@@ -76,6 +76,7 @@ const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
 export class CameraLivePresentation extends LitElement {
   public static properties = {
     available: { attribute: false, type: Boolean },
+    controlsEnabled: { attribute: false, type: Boolean },
     failed: { attribute: false, type: Boolean },
     fallbackVideo: { attribute: false },
     lowLatencyHls: { attribute: false, type: Boolean },
@@ -110,6 +111,7 @@ export class CameraLivePresentation extends LitElement {
   });
 
   public available = false;
+  public controlsEnabled = true;
   public failed = false;
   public fallbackVideo?: HTMLVideoElement;
   public lowLatencyHls = true;
@@ -130,6 +132,27 @@ export class CameraLivePresentation extends LitElement {
 
   public get webRtcVideo(): HTMLVideoElement | undefined {
     return this._attachedWebRtcVideo ?? this.webRtcMedia;
+  }
+
+  public get activeVideo(): HTMLVideoElement | undefined {
+    return this._activeVideo;
+  }
+
+  public get snapshotPending(): boolean {
+    return this._snapshotPending;
+  }
+
+  public captureFrame(): Promise<Blob> {
+    if (!this._activeVideo) {
+      return Promise.reject(new Error("The live frame is not ready yet."));
+    }
+    return captureVideoFrame(this._activeVideo);
+  }
+
+  public performControl(action: CameraControlEventDetail["action"]): void {
+    this._handleCameraControl(
+      new CustomEvent("camera-control", { detail: { action } }),
+    );
   }
 
   public beginStageResizeReturn(): void {
@@ -289,7 +312,7 @@ export class CameraLivePresentation extends LitElement {
             : nothing
         }
         ${
-          this.selected || this.suspended
+          this.controlsEnabled && (this.selected || this.suspended)
             ? staticHtml`<${controlsTag}
                 class="swiper-no-swiping"
                 .visible=${this.suspended || this._media.overlay.visible}
@@ -544,10 +567,7 @@ export class CameraLivePresentation extends LitElement {
     this._snapshotPending = true;
     this.requestUpdate();
     try {
-      downloadSnapshot(
-        await captureVideoFrame(this._activeVideo),
-        this.zoomKey,
-      );
+      downloadSnapshot(await this.captureFrame(), this.zoomKey);
       this._requestToast(
         "success",
         this.localize("camera.snapshot_downloaded"),

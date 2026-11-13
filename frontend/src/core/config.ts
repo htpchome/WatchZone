@@ -22,8 +22,16 @@ export type FrigateFallbackTransport = "hls" | "mse";
 export type PtzOverlayControl = "none" | "start_closed" | "start_open";
 export type SlideTransition = "none" | "slide" | "fade";
 export type AlertTakeoverMode = "off" | "alerts" | "detections" | "both";
+export type AdditionalCameraLayout = "side_by_side" | "stacked";
+
+export interface AdditionalCameraConfig {
+  readonly entity_id: string;
+  readonly layout: AdditionalCameraLayout;
+  readonly title: string;
+}
 
 export interface CameraConfig {
+  readonly additional_camera?: AdditionalCameraConfig;
   readonly connection: LiveConnectionType;
   readonly entity_id: string;
   readonly frigate_fallback: FrigateFallbackTransport;
@@ -230,6 +238,14 @@ export function createDefaultCameraConfig(entityId = ""): CameraConfig {
   };
 }
 
+export function sanitizeCameraGroupTitleInput(value: string): string {
+  return sanitizePlainTextInput(value, { maxLength: MAX_CAMERA_TITLE_LENGTH });
+}
+
+export function normalizeCameraGroupTitle(value: string): string {
+  return normalizePlainText(value, { maxLength: MAX_CAMERA_TITLE_LENGTH });
+}
+
 export function sanitizeCardTitleInput(value: string): string {
   return sanitizePlainTextInput(value, { maxLength: MAX_CARD_TITLE_LENGTH });
 }
@@ -269,6 +285,7 @@ function normalizeCameras(
     }
     entityIds.add(camera.entity_id);
   }
+  validateCameraGroups(cameras, entityIds);
   return cameras;
 }
 
@@ -350,6 +367,14 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
     throw new Error(`${APP_NAME} camera ${index + 1} title must be a string.`);
   }
   return {
+    ...(source.additional_camera === undefined
+      ? {}
+      : {
+          additional_camera: normalizeAdditionalCamera(
+            source.additional_camera,
+            index,
+          ),
+        }),
     connection:
       source.connection === "frigate_go2rtc"
         ? "frigate_go2rtc"
@@ -371,6 +396,98 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
         : defaults.title,
     two_way_talk_enabled: source.two_way_talk_enabled === true,
   };
+}
+
+function normalizeAdditionalCamera(
+  value: unknown,
+  cameraIndex: number,
+): AdditionalCameraConfig {
+  if (typeof value !== "object" || value === null) {
+    throw new Error(
+      `${APP_NAME} camera ${cameraIndex + 1} additional camera must be an object.`,
+    );
+  }
+  const source = value as Record<string, unknown>;
+  if (
+    typeof source.entity_id !== "string" ||
+    !source.entity_id.trim().startsWith("camera.")
+  ) {
+    throw new Error(
+      `${APP_NAME} camera ${cameraIndex + 1} additional camera must use a camera entity.`,
+    );
+  }
+  if (source.layout !== "side_by_side" && source.layout !== "stacked") {
+    throw new Error(
+      `${APP_NAME} camera ${cameraIndex + 1} additional camera layout must be side_by_side or stacked.`,
+    );
+  }
+  if (typeof source.title !== "string") {
+    throw new Error(
+      `${APP_NAME} camera ${cameraIndex + 1} group title must be a string.`,
+    );
+  }
+  const title = normalizeCameraGroupTitle(source.title);
+  if (!title) {
+    throw new Error(
+      `${APP_NAME} camera ${cameraIndex + 1} group title must not be empty.`,
+    );
+  }
+  return {
+    entity_id: source.entity_id.trim(),
+    layout: source.layout,
+    title,
+  };
+}
+
+function validateCameraGroups(
+  cameras: readonly CameraConfig[],
+  entityIds: ReadonlySet<string>,
+): void {
+  const groupedMembers = new Set<string>();
+  const groupTitles = new Set<string>();
+  for (const camera of cameras) {
+    const group = camera.additional_camera;
+    if (!group) continue;
+    if (
+      !entityIds.has(group.entity_id) ||
+      group.entity_id === camera.entity_id
+    ) {
+      throw new Error(
+        `${APP_NAME} additional cameras must reference another configured camera.`,
+      );
+    }
+    if (
+      groupedMembers.has(camera.entity_id) ||
+      groupedMembers.has(group.entity_id)
+    ) {
+      throw new Error(`${APP_NAME} cameras may belong to only one group.`);
+    }
+    const secondary = cameras.find(
+      ({ entity_id: entityId }) => entityId === group.entity_id,
+    );
+    if (secondary?.additional_camera) {
+      throw new Error(
+        `${APP_NAME} grouped secondary cameras cannot own a group.`,
+      );
+    }
+    const normalizedTitle = group.title.toLocaleLowerCase();
+    if (groupTitles.has(normalizedTitle)) {
+      throw new Error(`${APP_NAME} camera group titles must be unique.`);
+    }
+    for (const memberTitle of [camera.title, secondary?.title]) {
+      if (
+        memberTitle &&
+        memberTitle.trim().toLocaleLowerCase() === normalizedTitle
+      ) {
+        throw new Error(
+          `${APP_NAME} camera group titles must differ from member camera titles.`,
+        );
+      }
+    }
+    groupTitles.add(normalizedTitle);
+    groupedMembers.add(camera.entity_id);
+    groupedMembers.add(group.entity_id);
+  }
 }
 
 function normalizeLights(

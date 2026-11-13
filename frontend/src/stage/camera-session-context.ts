@@ -5,6 +5,7 @@ export interface ActiveCameraSession {
   readonly connection: LiveConnectionType;
   readonly entityId: string;
   readonly incomingStream?: MediaStream;
+  readonly lightEntityIds?: readonly string[];
   readonly muted: boolean;
   readonly overlayVisible: boolean;
   holdOverlay(): () => void;

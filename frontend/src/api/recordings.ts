@@ -21,6 +21,9 @@ export interface RecordingHour {
   readonly start_time: number;
   readonly timeline_end_time: number;
   readonly timeline_start_time: number;
+  /** Frontend scope metadata added when grouped camera results are merged. */
+  readonly source_entity_id?: string;
+  readonly group_position?: "A" | "B";
 }
 
 export interface RecordingAvailabilitySpan {

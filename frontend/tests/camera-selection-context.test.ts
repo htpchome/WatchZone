@@ -125,4 +125,34 @@ describe("camera selection context", () => {
     expect(context.toggleTakeover("camera")).toBe(true);
     expect(toggle).toHaveBeenCalledOnce();
   });
+
+  it("routes repeated activation separately from initial group selection", () => {
+    const context = new CameraSelectionContext();
+    const select = vi.fn();
+    const activate = vi.fn();
+    context.publish(
+      "camera",
+      {},
+      {
+        activeEntityId: "camera.porch",
+        activeEntityIds: ["camera.porch", "camera.driveway"],
+        activeSelectionId: "camera.porch",
+        items: [
+          {
+            entityId: "camera.porch",
+            entityIds: ["camera.porch", "camera.driveway"],
+            label: "Group A/B",
+          },
+        ],
+      },
+      select,
+      undefined,
+      activate,
+    );
+
+    expect(context.select("camera", "camera.porch")).toBe(true);
+    expect(select).toHaveBeenCalledWith("camera.porch");
+    expect(context.activate("camera", "camera.porch")).toBe(true);
+    expect(activate).toHaveBeenCalledWith("camera.porch");
+  });
 });

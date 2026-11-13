@@ -20,6 +20,7 @@ import {
 import { ToastManager } from "../../../ui/toast-manager";
 import { renderIcon } from "../../../ui/icons";
 import { cameraViewStyles } from "./camera-view.styles";
+import { stageResizeHandleStyles } from "./stage-resize-handle.styles";
 import { CameraAudioController } from "./live/audio.controller";
 import type {
   CameraLivePresentation,
@@ -46,6 +47,7 @@ export class CameraView extends LitElement {
   public static properties = {
     active: { attribute: false, type: Boolean },
     connect: { attribute: false, type: Boolean },
+    controlsEnabled: { attribute: false, type: Boolean },
     api: { attribute: false },
     cameraSession: { attribute: false },
     available: { attribute: false, type: Boolean },
@@ -55,6 +57,8 @@ export class CameraView extends LitElement {
     lowLatencyHls: { attribute: false, type: Boolean },
     localize: { attribute: false },
     overlayVisible: { attribute: false, type: Boolean },
+    publishSession: { attribute: false, type: Boolean },
+    resizeEnabled: { attribute: false, type: Boolean },
     posterUrl: { attribute: false },
     stageHeightRatio: { attribute: false, type: Number },
     stageResized: { attribute: false, type: Boolean },
@@ -97,6 +101,7 @@ export class CameraView extends LitElement {
 
   public active = false;
   public connect = false;
+  public controlsEnabled = true;
   public api?: HomeAssistantApi;
   public cameraSession?: CameraSessionContext;
   public available = false;
@@ -106,6 +111,8 @@ export class CameraView extends LitElement {
   public lowLatencyHls = true;
   public localize: LocalizeFunction = englishLocalize;
   public overlayVisible = false;
+  public publishSession = true;
+  public resizeEnabled = true;
   public posterUrl?: string;
   public stageHeightRatio = DEFAULT_CAMERA_STAGE_HEIGHT_RATIO;
   public stageResized = false;
@@ -163,6 +170,7 @@ export class CameraView extends LitElement {
         <${presentationTag}
                 class="live-presentation"
                 .available=${this.connect && this.available}
+                .controlsEnabled=${this.controlsEnabled}
                 .failed=${this._session.failed}
                 .fallbackVideo=${this._session.fallbackVideo}
                 .lowLatencyHls=${this._session.effectiveLowLatencyHls}
@@ -201,7 +209,9 @@ export class CameraView extends LitElement {
           aria-valuetext=${this.localize("camera.stage_height_value", {
             percent: this._stageResize.heightPercentage,
           })}
-          ?hidden=${!this.active || suspended || !this.entityId}
+          ?hidden=${
+            !this.resizeEnabled || !this.active || suspended || !this.entityId
+          }
           @pointerdown=${this._stageResize.handlePointerDown}
           @pointermove=${this._stageResize.handlePointerMove}
           @pointerup=${this._stageResize.handlePointerUp}
@@ -234,6 +244,12 @@ export class CameraView extends LitElement {
     );
     this._audio.syncMediaState();
     this._publishCameraSession();
+    this.dispatchEvent(
+      new CustomEvent("camera-view-session-changed", {
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   public disconnectedCallback(): void {
@@ -242,7 +258,7 @@ export class CameraView extends LitElement {
   }
 
   private _publishCameraSession(): void {
-    if (!this.active || !this.entityId) {
+    if (!this.publishSession || !this.active || !this.entityId) {
       this.cameraSession?.clear(this);
       return;
     }
@@ -261,6 +277,67 @@ export class CameraView extends LitElement {
       setMuted: (muted) => this._audio.setUserMuted(muted),
       setTalkAudioActive: (active) => this._audio.setTalkAudioActive(active),
     });
+  }
+
+  public getSession():
+    import("../../camera-session-context").ActiveCameraSession | undefined {
+    if (!this.entityId) return undefined;
+    return {
+      available:
+        this.available &&
+        this._runtime.snapshot?.available !== false &&
+        this._runtime.snapshot?.suspended !== true,
+      entityId: this.entityId,
+      connection: this.connection,
+      incomingStream: this._session.webRtcStream,
+      muted: this._audio.muted,
+      overlayVisible: this.overlayVisible,
+      holdOverlay: () => this._presentation?.holdOverlay() ?? (() => undefined),
+      revealOverlay: () => this._presentation?.revealOverlay(),
+      setMuted: (muted) => this._audio.setUserMuted(muted),
+      setTalkAudioActive: (active) => this._audio.setTalkAudioActive(active),
+    };
+  }
+
+  public captureFrame(): Promise<Blob> {
+    return (
+      this._presentation?.captureFrame() ??
+      Promise.reject(new Error("The live frame is not ready yet."))
+    );
+  }
+
+  public get activeVideo(): HTMLVideoElement | undefined {
+    return this._presentation?.activeVideo;
+  }
+
+  public performControl(
+    action: import("./controls-overlay").CameraControlAction,
+  ): void {
+    this._presentation?.performControl(action);
+  }
+
+  public setMuted(muted: boolean): void {
+    this._audio.setUserMuted(muted);
+  }
+
+  public async setSuspended(
+    suspended: boolean,
+    resumeAfterSeconds?: number,
+  ): Promise<void> {
+    await this._runtime.setSuspended(suspended, resumeAfterSeconds);
+    this.requestUpdate();
+  }
+
+  public get suspendPending(): boolean {
+    return this._runtime.pending;
+  }
+
+  public get suspendSupported(): boolean {
+    return this._runtime.snapshot?.supported === true;
+  }
+
+  public get suspended(): boolean {
+    return this._runtime.snapshot?.suspended === true;
   }
 
   private readonly _handleMediaAttached = (): void => {
@@ -375,7 +452,7 @@ export class CameraView extends LitElement {
       ?.getBoundingClientRect();
   }
 
-  static styles = cameraViewStyles;
+  static styles = [stageResizeHandleStyles, cameraViewStyles];
 }
 
 if (!customElements.get(CAMERA_VIEW_TAG)) {

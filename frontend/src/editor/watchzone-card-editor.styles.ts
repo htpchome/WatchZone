@@ -199,6 +199,16 @@ export const cardEditorStyles = css`
     gap: 0.5rem;
   }
 
+  .additional-camera-settings {
+    gap: 0.65rem;
+  }
+
+  .field-label {
+    color: var(--wzc-color-text-1);
+    font-size: var(--wzc-font-size-small);
+    font-weight: var(--wzc-font-weight-medium);
+  }
+
   .camera-title-field {
     display: grid;
   }

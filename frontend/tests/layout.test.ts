@@ -371,6 +371,75 @@ describe("layout composition", () => {
     });
   });
 
+  it("hydrates grouped cameras while keeping talk and PTZ on the main camera", () => {
+    const layout = builtInStage(
+      normalizeCardConfig({
+        cameras: [
+          {
+            additional_camera: {
+              entity_id: "camera.driveway",
+              layout: "side_by_side",
+              title: "Group A/B",
+            },
+            entity_id: "camera.porch",
+            lights: [{ entity_id: "light.porch" }],
+            ptz_enabled: true,
+            two_way_talk_enabled: true,
+          },
+          {
+            entity_id: "camera.driveway",
+            lights: [{ entity_id: "light.driveway" }],
+            ptz_enabled: true,
+            two_way_talk_enabled: true,
+          },
+        ],
+      }),
+    );
+    const camera = moduleAt(layout, 0);
+
+    expect(camera.config).toMatchObject({
+      groups: [
+        {
+          id: "camera.porch",
+          label: "Group A/B",
+          layout: "side_by_side",
+          mainEntityId: "camera.porch",
+          secondaryEntityId: "camera.driveway",
+        },
+      ],
+    });
+    expect(
+      camera.slots?.controls?.find(
+        ({ componentType }) => componentType === "two_way_talk",
+      )?.config,
+    ).toEqual({
+      cameras: [{ connection: "home_assistant", entityId: "camera.porch" }],
+    });
+    expect(
+      camera.slots?.controls?.find(
+        ({ componentType }) => componentType === "ptz",
+      )?.config,
+    ).toMatchObject({
+      cameras: [{ entityId: "camera.porch", provider: "home_assistant" }],
+    });
+    expect(
+      camera.slots?.controls?.find(
+        ({ componentType }) => componentType === "light_control",
+      )?.config,
+    ).toMatchObject({
+      cameras: [
+        {
+          cameraEntityId: "camera.porch",
+          lights: [{ entityId: "light.porch" }],
+        },
+        {
+          cameraEntityId: "camera.driveway",
+          lights: [{ entityId: "light.driveway" }],
+        },
+      ],
+    });
+  });
+
   it("uses the configured PTZ reset state and removes a disabled overlay", () => {
     const closedLayout = builtInStage(
       normalizeCardConfig({

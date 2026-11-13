@@ -3,12 +3,16 @@ import type { ReviewItem } from "../api/reviews";
 export interface CameraSelectionItem {
   readonly activity?: "alert" | "detection";
   readonly entityId: string;
+  readonly entityIds?: readonly string[];
   readonly label: string;
+  readonly position?: "down" | "left" | "right" | "up";
 }
 
 export interface CameraSelectionState {
   readonly activeReviews?: readonly ReviewItem[];
   readonly activeEntityId?: string;
+  readonly activeEntityIds?: readonly string[];
+  readonly activeSelectionId?: string;
   readonly items: readonly CameraSelectionItem[];
   /** False while a direct-manipulation camera transition is still moving. */
   readonly settled?: boolean;
@@ -21,6 +25,7 @@ type SelectionHandler = (entityId: string) => void;
 type TakeoverToggleHandler = () => void;
 
 interface SelectionChannel {
+  activate?: SelectionHandler;
   readonly listeners: Set<SelectionListener>;
   owner?: object;
   select?: SelectionHandler;
@@ -40,11 +45,13 @@ export class CameraSelectionContext {
     state: CameraSelectionState,
     select: SelectionHandler,
     toggleTakeover?: TakeoverToggleHandler,
+    activate?: SelectionHandler,
   ): void {
     const channel = this._channel(targetId);
     channel.owner = owner;
     channel.select = select;
     channel.toggleTakeover = toggleTakeover;
+    channel.activate = activate;
     if (sameState(channel.state, state)) return;
     channel.state = state;
     for (const listener of channel.listeners) listener(state);
@@ -56,6 +63,7 @@ export class CameraSelectionContext {
     channel.owner = undefined;
     channel.select = undefined;
     channel.toggleTakeover = undefined;
+    channel.activate = undefined;
     if (!sameState(channel.state, EMPTY_STATE)) {
       channel.state = EMPTY_STATE;
       for (const listener of channel.listeners) listener(EMPTY_STATE);
@@ -70,6 +78,16 @@ export class CameraSelectionContext {
       return false;
     }
     channel.select(entityId);
+    return true;
+  }
+
+  public activate(targetId: string, entityId: string): boolean {
+    const channel = this._channels.get(targetId);
+    if (!channel?.activate) return this.select(targetId, entityId);
+    if (!channel.state.items.some((item) => item.entityId === entityId)) {
+      return false;
+    }
+    channel.activate(entityId);
     return true;
   }
 
@@ -118,10 +136,21 @@ function sameState(
   const nextReviews = next.activeReviews ?? [];
   if (
     current.activeEntityId !== next.activeEntityId ||
+    current.activeSelectionId !== next.activeSelectionId ||
     current.takeoverAvailable !== next.takeoverAvailable ||
     current.takeoverEnabled !== next.takeoverEnabled ||
     (current.settled !== false) !== (next.settled !== false) ||
     current.items.length !== next.items.length
+  ) {
+    return false;
+  }
+  const currentEntityIds = current.activeEntityIds ?? [];
+  const nextEntityIds = next.activeEntityIds ?? [];
+  if (
+    currentEntityIds.length !== nextEntityIds.length ||
+    !currentEntityIds.every(
+      (entityId, index) => entityId === nextEntityIds[index],
+    )
   ) {
     return false;
   }
@@ -139,6 +168,9 @@ function sameState(
     (item, index) =>
       item.entityId === next.items[index]?.entityId &&
       item.label === next.items[index]?.label &&
-      item.activity === next.items[index]?.activity,
+      item.activity === next.items[index]?.activity &&
+      item.position === next.items[index]?.position &&
+      (item.entityIds ?? []).join("\u0000") ===
+        (next.items[index]?.entityIds ?? []).join("\u0000"),
   );
 }

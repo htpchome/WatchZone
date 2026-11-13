@@ -101,6 +101,7 @@ export const LIGHT_ERROR_TOAST_DURATION_MS = 3_600;
 export const PTZ_ERROR_TOAST_DURATION_MS = 3_600;
 export const CAMERA_TAG = `${APP_ID}-camera`;
 export const CAMERA_VIEW_TAG = `${CAMERA_TAG}-view`;
+export const CAMERA_GROUP_VIEW_TAG = `${CAMERA_TAG}-group-view`;
 export const CAMERA_GESTURE_LOCK_EVENT = `${CAMERA_TAG}-gesture-lock`;
 export const CAMERA_OVERLAY_VISIBILITY_EVENT = `${CAMERA_TAG}-overlay-visibility`;
 export const CAMERA_STAGE_SIZE_CHANGE_EVENT = `${CAMERA_TAG}-stage-size-change`;

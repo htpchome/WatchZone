@@ -78,6 +78,14 @@ export const segmentedControlStyles = css`
     inline-size: 1em;
   }
 
+  .option-leading-icon,
+  .option-leading-icon svg {
+    display: block;
+    inline-size: 0.9rem;
+    block-size: 0.9rem;
+    flex: none;
+  }
+
   .option-indicator.danger {
     color: var(--wzc-color-error);
   }

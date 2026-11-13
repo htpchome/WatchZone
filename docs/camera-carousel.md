@@ -21,13 +21,28 @@ application-wide boundaries.
 ## Structure and identity
 
 The camera stage contains one `.camera-carousel.swiper`, one
-`.swiper-wrapper`, and one stable `.swiper-slide` per configured camera. Each
-slide is keyed by camera entity identity so selection and reordering do not
+`.swiper-wrapper`, and one stable `.swiper-slide` per presentation item. A
+presentation item is either one configured camera or one configured
+additional-camera pair. A pair replaces both member cameras in navigation; it
+does not add a third slide or merge either camera's source identity. Each slide
+is keyed by its main camera entity identity so selection and reordering do not
 replace a healthy live presentation or its media-session leases. The camera
-module accepts at most the centralized `MAX_CAMERAS` limit of twelve entries.
+module accepts at most the centralized `MAX_CAMERAS` limit of twelve source
+cameras.
+
+On tablet and desktop, repeatedly activating the selected group navigation
+item cycles `combined → main → secondary → combined`. The label remains the
+group title; main or secondary focus adds only the layout-relative directional
+icon. In a phone-width camera container, one feed is visible and activation
+toggles main/secondary without a combined stop. The shared activity scope
+remains both group members on phone, while desktop solo focus narrows it to the
+visible member. Activity takeover selects the combined desktop group or the
+alerting member on phone.
 
 The selected slide owns its frontend transport leases, visible controls,
-resize interaction, and audible presentation. Non-selected slides remain
+resize interaction, and audible presentation. A selected combined group may
+hold one lease for each member, but only its chosen audio target is audible.
+Non-selected slides remain
 mounted but release transport leases into the document retention policy. One
 slide disables movement; multiple slides enable swipe and the
 camera-local previous/next chevrons. Those chevrons consume the selected live

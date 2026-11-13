@@ -16,6 +16,9 @@ document remains authoritative for application-wide boundaries.
   dashboard dimensions from media metadata, and it does not own the module
   shadow. Its clipping radius inherits the module's stage radius.
 - Media elements own only how their intrinsic content fits inside the stage.
+- An additional-camera pair is private Camera-module composition. Its two live
+  presentations keep independent provider, session, zoom, and pan identity;
+  it is not another Stage module or component.
 
 ## Default sizing
 
@@ -47,6 +50,10 @@ allowed to clip content or escape Home Assistant's allocated grid area.
 - A `16:9` source fills the default stage.
 - A `4:3` source is pillarboxed inside the default stage.
 - Source metadata and first-frame events never resize the stage.
+- Grouped feeds use the configured side-by-side or stacked split at tablet and
+  desktop widths. At phone-width camera containers, only one member is
+  presented and the overlay selector toggles A/B. The responsive change does
+  not rewrite the saved group layout.
 - The runtime stage-height handle may expand the stage from its `16:9` default
   to a guarded maximum of `1:1`. It is transient presentation state, keyed by
   the camera-module instance, and does not alter YAML or provider state. Every
@@ -56,6 +63,9 @@ allowed to clip content or escape Home Assistant's allocated grid area.
 - The resize handle is positioned against the card-local camera stage. Mobile
   viewport safe-area insets do not offset it because the stage is not a
   viewport-edge surface; fullscreen controls own safe-area treatment instead.
+- A grouped stage has one resize handle and one shared stage-height ratio. Each
+  member independently derives media fit and pan bounds inside its own half (or
+  its phone-width solo viewport).
 - Until the expanded stage reaches the active media's intrinsic ratio, media
   remains contained so sources such as `4:3` reveal their available height.
   Expansion beyond the source ratio increases a centered base presentation

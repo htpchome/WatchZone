@@ -427,6 +427,110 @@ describe("active camera activity controller", () => {
     expect(fetch).toHaveBeenCalledTimes(2);
     controller.hostDisconnected();
   });
+
+  it("loads and merges activity for every camera in a grouped scope", async () => {
+    const now = Date.now() / 1000;
+    const fetch = vi.fn(async (_api: HomeAssistantApi, entityId: string) => [
+      {
+        id: `${entityId}:review`,
+        revision: "loaded",
+        start_time: entityId === "camera.driveway" ? now : now - 1,
+      },
+    ]);
+    const selection = new CameraSelectionContext();
+    const controller = new ActiveCameraActivityController(
+      new TestHost(),
+      () => ({
+        api: {} as HomeAssistantApi,
+        cameraSelection: selection,
+        historyDays: 5,
+        targetModuleId: "camera-module",
+      }),
+      fetch,
+      vi.fn(),
+      "reviews",
+    );
+    controller.hostConnected();
+    selection.publish(
+      "camera-module",
+      {},
+      {
+        activeEntityId: "camera.porch",
+        activeEntityIds: ["camera.porch", "camera.driveway"],
+        activeSelectionId: "camera.porch",
+        items: [
+          {
+            entityId: "camera.porch",
+            entityIds: ["camera.porch", "camera.driveway"],
+            label: "Group A/B",
+          },
+        ],
+      },
+      vi.fn(),
+    );
+
+    await vi.waitFor(() => expect(controller.items).toHaveLength(2));
+    expect(fetch).toHaveBeenCalledWith(
+      expect.anything(),
+      "camera.porch",
+      expect.objectContaining({ loadFullHistory: true }),
+    );
+    expect(fetch).toHaveBeenCalledWith(
+      expect.anything(),
+      "camera.driveway",
+      expect.objectContaining({ loadFullHistory: true }),
+    );
+    expect(controller.activeCameraLabel).toBe("Group A/B");
+    expect(controller.items.map(({ id }) => id)).toEqual([
+      "camera.driveway:review",
+      "camera.porch:review",
+    ]);
+    controller.hostDisconnected();
+  });
+
+  it("keeps the available group member when its companion request fails", async () => {
+    const onError = vi.fn();
+    const fetch = vi.fn(async (_api: HomeAssistantApi, entityId: string) => {
+      if (entityId === "camera.driveway") throw new Error("unavailable");
+      return [
+        {
+          id: "porch-review",
+          revision: "loaded",
+          start_time: Date.now() / 1000,
+        },
+      ];
+    });
+    const selection = new CameraSelectionContext();
+    const controller = new ActiveCameraActivityController(
+      new TestHost(),
+      () => ({
+        api: {} as HomeAssistantApi,
+        cameraSelection: selection,
+        historyDays: 5,
+        targetModuleId: "camera-module",
+      }),
+      fetch,
+      onError,
+      "reviews",
+    );
+    controller.hostConnected();
+    selection.publish(
+      "camera-module",
+      {},
+      {
+        activeEntityId: "camera.porch",
+        activeEntityIds: ["camera.porch", "camera.driveway"],
+        activeSelectionId: "camera.porch",
+        items: [{ entityId: "camera.porch", label: "Group A/B" }],
+      },
+      vi.fn(),
+    );
+
+    await vi.waitFor(() => expect(controller.items).toHaveLength(1));
+    expect(controller.items[0]?.id).toBe("porch-review");
+    expect(onError).not.toHaveBeenCalled();
+    controller.hostDisconnected();
+  });
 });
 
 function review(overrides: Partial<ReviewItem> = {}): ReviewItem {

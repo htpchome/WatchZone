@@ -6,10 +6,13 @@ import {
   cardConfigSignature,
   createDefaultCameraConfig,
   normalizeCameraTitle,
+  normalizeCameraGroupTitle,
   normalizeCardConfig,
   normalizeCardTitle,
   sanitizeCameraTitleInput,
+  sanitizeCameraGroupTitleInput,
   sanitizeCardTitleInput,
+  type AdditionalCameraLayout,
   type AlertTakeoverMode,
   type CameraConfig,
   type CardConfig,
@@ -18,6 +21,10 @@ import {
   type PtzOverlayControl,
   type SlideTransition,
 } from "../core/config";
+import {
+  groupedCameraEntityIds,
+  nextCameraGroupTitle,
+} from "../core/camera-groups";
 import {
   ACCORDION_ITEM_TAG,
   ACCORDION_TAG,
@@ -133,7 +140,12 @@ type BooleanConfigFlag =
 
 type CameraBooleanConfigFlag = Exclude<
   keyof CameraConfig,
-  "connection" | "entity_id" | "frigate_fallback" | "lights" | "title"
+  | "additional_camera"
+  | "connection"
+  | "entity_id"
+  | "frigate_fallback"
+  | "lights"
+  | "title"
 >;
 
 export class CardEditor extends LitElement {
@@ -710,11 +722,12 @@ export class CardEditor extends LitElement {
                     density="compact"
                     heading=${this._t("editor.additional_camera")}
                     item-key="additional-camera"
-                    summary-text=${this._t("editor.not_configured")}
+                    summary-text=${
+                      camera.additional_camera?.title ??
+                      this._t("editor.not_configured")
+                    }
                   >
-                    <p class="empty-camera-section">
-                      ${this._t("editor.no_settings_available")}
-                    </p>
+                    ${this._renderAdditionalCameraSettings(camera)}
                   </${accordionItemTag}>
                   <${accordionItemTag}
                     density="compact"
@@ -973,6 +986,108 @@ export class CardEditor extends LitElement {
     </div>`;
   }
 
+  private _renderAdditionalCameraSettings(camera: CameraConfig) {
+    const owner = this._config?.cameras.find(
+      ({ entity_id: entityId, additional_camera: group }) =>
+        group?.entity_id === camera.entity_id && entityId !== camera.entity_id,
+    );
+    if (owner) {
+      return html`<p class="empty-camera-section">
+        ${this._t("editor.camera_group_secondary", {
+          group: owner.additional_camera?.title ?? "",
+        })}
+      </p>`;
+    }
+    const options = this._additionalCameraOptions(camera);
+    if (!camera.additional_camera) {
+      if (options.length === 0) {
+        return html`<p class="empty-camera-section">
+          ${this._t("editor.no_additional_camera_available")}
+        </p>`;
+      }
+      return html`<div class="camera-section-fields">
+        <ha-selector
+          label=${this._t("editor.second_camera")}
+          .hass=${this._hass}
+          .selector=${this._additionalCameraSelector(options)}
+          .value=${""}
+          .required=${false}
+          @value-changed=${this._handleAdditionalCameraChange}
+        ></ha-selector>
+      </div>`;
+    }
+    return html`<div class="camera-section-fields additional-camera-settings">
+      <ha-selector
+        label=${this._t("editor.second_camera")}
+        .hass=${this._hass}
+        .selector=${this._additionalCameraSelector(options)}
+        .value=${camera.additional_camera.entity_id}
+        .required=${true}
+        @value-changed=${this._handleAdditionalCameraChange}
+      ></ha-selector>
+      <ha-input
+        label=${this._t("editor.camera_group_name")}
+        maxlength=${String(MAX_CAMERA_TITLE_LENGTH)}
+        .value=${camera.additional_camera.title}
+        @input=${this._handleCameraGroupTitleInput}
+      ></ha-input>
+      <label class="field-label">${this._t("editor.live_view_layout")}</label>
+      <wzc-segmented-control
+        appearance="compact"
+        mode="radio"
+        .label=${this._t("editor.live_view_layout")}
+        .options=${
+          [
+            {
+              label: this._t("editor.side_by_side"),
+              value: "side_by_side",
+            },
+            { label: this._t("editor.stacked"), value: "stacked" },
+          ] satisfies readonly SegmentedControlOption[]
+        }
+        .value=${camera.additional_camera.layout}
+        @wzc-segmented-control-value=${this._handleAdditionalCameraLayoutChange}
+      ></wzc-segmented-control>
+      <small class="capability-status">
+        ${this._t("editor.main_camera_controls_group")}
+      </small>
+      <ha-button
+        appearance="plain"
+        variant="danger"
+        size="s"
+        type="button"
+        @click=${this._removeAdditionalCamera}
+      >
+        ${this._t("editor.remove_additional_camera")}
+      </ha-button>
+    </div>`;
+  }
+
+  private _additionalCameraOptions(
+    camera: CameraConfig,
+  ): readonly CameraConfig[] {
+    const cameras = this._config?.cameras ?? [];
+    const unavailable = groupedCameraEntityIds(cameras, camera.entity_id);
+    return cameras.filter(
+      ({ entity_id: entityId }) =>
+        entityId !== camera.entity_id &&
+        (!unavailable.has(entityId) ||
+          entityId === camera.additional_camera?.entity_id),
+    );
+  }
+
+  private _additionalCameraSelector(options: readonly CameraConfig[]) {
+    return {
+      select: {
+        mode: "dropdown",
+        options: options.map(({ entity_id: entityId, title }) => ({
+          label: title || this._cameraName(entityId),
+          value: entityId,
+        })),
+      },
+    } as const;
+  }
+
   private _renderCameraBoolean(
     key: CameraBooleanConfigFlag,
     label: string,
@@ -1142,6 +1257,62 @@ export class CardEditor extends LitElement {
     this.requestUpdate();
   };
 
+  private readonly _handleAdditionalCameraChange = (
+    event: ValueChangedEvent,
+  ): void => {
+    if (!this._cameraDraft) return;
+    const entityId = eventString(event);
+    if (!entityId) return;
+    const existing = this._cameraDraft.additional_camera;
+    this._cameraDraft = {
+      ...this._cameraDraft,
+      additional_camera: {
+        entity_id: entityId,
+        layout: existing?.layout ?? "side_by_side",
+        title:
+          existing?.title ?? nextCameraGroupTitle(this._config?.cameras ?? []),
+      },
+    };
+    this.requestUpdate();
+  };
+
+  private readonly _handleCameraGroupTitleInput = (event: Event): void => {
+    if (!this._cameraDraft?.additional_camera) return;
+    const input = event.currentTarget as InputElement;
+    const sanitized = sanitizeCameraGroupTitleInput(input.value);
+    if (input.value !== sanitized) input.value = sanitized;
+    this._cameraDraft = {
+      ...this._cameraDraft,
+      additional_camera: {
+        ...this._cameraDraft.additional_camera,
+        title: normalizeCameraGroupTitle(sanitized),
+      },
+    };
+    this.requestUpdate();
+  };
+
+  private readonly _handleAdditionalCameraLayoutChange = (
+    event: CustomEvent<SegmentedControlValueDetail>,
+  ): void => {
+    if (!this._cameraDraft?.additional_camera) return;
+    const layout = event.detail.value as AdditionalCameraLayout;
+    if (layout !== "side_by_side" && layout !== "stacked") return;
+    this._cameraDraft = {
+      ...this._cameraDraft,
+      additional_camera: { ...this._cameraDraft.additional_camera, layout },
+    };
+    this.requestUpdate();
+  };
+
+  private readonly _removeAdditionalCamera = (): void => {
+    if (!this._cameraDraft?.additional_camera) return;
+    this._cameraDraft = {
+      ...this._cameraDraft,
+      additional_camera: undefined,
+    };
+    this.requestUpdate();
+  };
+
   private readonly _handleCameraBooleanChange = (
     event: ValueChangedEvent,
   ): void => {
@@ -1298,7 +1469,22 @@ export class CardEditor extends LitElement {
     const index = this._pendingRemoveCameraIndex;
     if (index === undefined || !this._config?.cameras[index]) return;
     const cameras = [...this._config.cameras];
-    cameras.splice(index, 1);
+    const [removed] = cameras.splice(index, 1);
+    if (removed) {
+      for (
+        let cameraIndex = 0;
+        cameraIndex < cameras.length;
+        cameraIndex += 1
+      ) {
+        const camera = cameras[cameraIndex];
+        if (camera?.additional_camera?.entity_id !== removed.entity_id)
+          continue;
+        cameras[cameraIndex] = {
+          ...camera,
+          additional_camera: undefined,
+        };
+      }
+    }
     this._pendingRemoveCameraIndex = undefined;
     this._applyCameraList(cameras);
   };
@@ -1320,7 +1506,27 @@ export class CardEditor extends LitElement {
       return;
     const cameras = [...this._config.cameras];
     if (this._editingCameraIndex === undefined) cameras.push(this._cameraDraft);
-    else cameras[this._editingCameraIndex] = this._cameraDraft;
+    else {
+      const previousEntityId = cameras[this._editingCameraIndex]?.entity_id;
+      cameras[this._editingCameraIndex] = this._cameraDraft;
+      if (
+        previousEntityId &&
+        previousEntityId !== this._cameraDraft.entity_id
+      ) {
+        for (let index = 0; index < cameras.length; index += 1) {
+          const camera = cameras[index];
+          if (camera?.additional_camera?.entity_id !== previousEntityId)
+            continue;
+          cameras[index] = {
+            ...camera,
+            additional_camera: {
+              ...camera.additional_camera,
+              entity_id: this._cameraDraft.entity_id,
+            },
+          };
+        }
+      }
+    }
     this._cameraBaseline = undefined;
     this._cameraDraft = undefined;
     this._cameraTitleInput = "";
@@ -1390,11 +1596,45 @@ export class CardEditor extends LitElement {
   private _cameraDraftIsValid(): boolean {
     const draft = this._cameraDraft;
     if (!draft?.entity_id.startsWith("camera.")) return false;
-    return !(
+    const duplicate =
       this._config?.cameras.some(
         (camera, index) =>
           camera.entity_id === draft.entity_id &&
           index !== this._editingCameraIndex,
+      ) ?? false;
+    if (duplicate) return false;
+    const group = draft.additional_camera;
+    if (!group) return true;
+    if (
+      group.entity_id === draft.entity_id ||
+      !group.title ||
+      !this._additionalCameraOptions(draft).some(
+        ({ entity_id: entityId }) => entityId === group.entity_id,
+      )
+    ) {
+      return false;
+    }
+    const secondary = this._config?.cameras.find(
+      ({ entity_id: entityId }) => entityId === group.entity_id,
+    );
+    const normalizedTitle = group.title.trim().toLocaleLowerCase();
+    const memberNames = [
+      draft.title || this._cameraName(draft.entity_id),
+      secondary?.title || this._cameraName(group.entity_id),
+    ];
+    if (
+      memberNames.some(
+        (name) => name.trim().toLocaleLowerCase() === normalizedTitle,
+      )
+    ) {
+      return false;
+    }
+    return !(
+      this._config?.cameras.some(
+        (camera, index) =>
+          index !== this._editingCameraIndex &&
+          camera.additional_camera?.title.trim().toLocaleLowerCase() ===
+            normalizedTitle,
       ) ?? false
     );
   }
@@ -1637,6 +1877,7 @@ function eventString(event: ValueChangedEvent): string {
 
 function cameraConfigEquals(left: CameraConfig, right: CameraConfig): boolean {
   return (
+    additionalCameraEqual(left.additional_camera, right.additional_camera) &&
     left.entity_id === right.entity_id &&
     left.connection === right.connection &&
     left.frigate_fallback === right.frigate_fallback &&
@@ -1647,6 +1888,17 @@ function cameraConfigEquals(left: CameraConfig, right: CameraConfig): boolean {
     left.start_live_unmuted_phone === right.start_live_unmuted_phone &&
     left.title === right.title &&
     left.two_way_talk_enabled === right.two_way_talk_enabled
+  );
+}
+
+function additionalCameraEqual(
+  left: CameraConfig["additional_camera"],
+  right: CameraConfig["additional_camera"],
+): boolean {
+  return (
+    left?.entity_id === right?.entity_id &&
+    left?.layout === right?.layout &&
+    left?.title === right?.title
   );
 }
 

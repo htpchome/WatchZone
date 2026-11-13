@@ -40,6 +40,7 @@ export interface ActivityTypeBadge {
 }
 
 export interface ActivityListItem {
+  readonly sourceEntityId?: string;
   readonly analysisDescription?: string;
   readonly analysisConcerns?: readonly string[];
   readonly analysisScore?: number;

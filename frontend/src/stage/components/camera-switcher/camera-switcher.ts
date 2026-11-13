@@ -73,7 +73,10 @@ export class CameraSwitcherComponent extends LitElement {
       return nothing;
     }
     const active = this._selectionState.items.find(
-      ({ entityId }) => entityId === this._selectionState.activeEntityId,
+      ({ entityId }) =>
+        entityId ===
+        (this._selectionState.activeSelectionId ??
+          this._selectionState.activeEntityId),
     );
     const visible = this._activeCamera.overlayVisible || this._open;
     return html`<div

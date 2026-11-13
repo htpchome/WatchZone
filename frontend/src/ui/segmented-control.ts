@@ -16,6 +16,7 @@ export interface SegmentedControlOption {
     readonly tone: "danger" | "warning";
   };
   readonly label: string;
+  readonly leadingIcon?: IconName;
   readonly value: string;
 }
 
@@ -57,7 +58,14 @@ export class SegmentedControl extends LitElement {
         this.options,
         ({ value }) => value,
         (
-          { accessibleLabel, disabled = false, indicator, label, value },
+          {
+            accessibleLabel,
+            disabled = false,
+            indicator,
+            label,
+            leadingIcon,
+            value,
+          },
           index,
         ) => {
           const selected = value === this.value;
@@ -81,6 +89,16 @@ export class SegmentedControl extends LitElement {
           >
             <span class="option-content">
               ${
+                leadingIcon
+                  ? html`<span
+                      class="option-leading-icon"
+                      data-icon=${leadingIcon}
+                      aria-hidden="true"
+                      >${renderIcon(leadingIcon)}</span
+                    >`
+                  : nothing
+              }
+              ${
                 indicator
                   ? html`<span
                       class=${`option-indicator ${indicator.tone}`}
@@ -99,7 +117,12 @@ export class SegmentedControl extends LitElement {
 
   private _select(value: string): void {
     const option = this.options.find((candidate) => candidate.value === value);
-    if (!option || option.disabled || value === this.value) return;
+    if (
+      !option ||
+      option.disabled ||
+      (value === this.value && this.appearance !== "navigation")
+    )
+      return;
     this.dispatchEvent(
       new CustomEvent<SegmentedControlValueDetail>(
         SEGMENTED_CONTROL_VALUE_EVENT,

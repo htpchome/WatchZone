@@ -115,6 +115,12 @@ rail for future overlay components without exposing camera-control geometry.
 The optional camera-switcher component occupies `top-center`, follows Camera's
 shared overlay timer, and publishes selection intent through the same typed
 camera-selection context as the standalone camera-navigation module.
+Additional-camera grouping remains inside Camera's private presentation. The
+camera-navigation module and camera-switcher receive one group selection item
+instead of importing group configuration or coordinating either member.
+Review, event, and recording modules consume the active physical-camera scope
+published through context; overlapping grouped recordings remain separate
+source rows.
 Neither Stage slot consumes
 device safe-area insets: a Stage is contained inside the Home Assistant card,
 not attached to a physical viewport edge. A true viewport-edge presentation

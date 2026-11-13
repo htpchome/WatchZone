@@ -105,11 +105,29 @@ export const recordingsStyles = css`
   }
 
   .movie {
+    position: relative;
     display: grid;
     align-self: stretch;
     place-items: center;
     color: var(--wzc-recording-icon-color);
     background: var(--wzc-recording-icon-background);
+  }
+
+  .group-position {
+    position: absolute;
+    inset-inline-end: 0.25rem;
+    inset-block-end: 0.2rem;
+    display: grid;
+    place-items: center;
+    min-inline-size: 1rem;
+    block-size: 1rem;
+    padding-inline: 0.15rem;
+    color: var(--wzc-recording-secondary-color);
+    background: var(--wzc-recording-action-background);
+    border-radius: var(--wzc-radius-pill);
+    font-size: var(--wzc-font-size-small);
+    font-weight: var(--wzc-font-weight-semibold);
+    line-height: 1;
   }
 
   .movie svg {

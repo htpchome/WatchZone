@@ -4,6 +4,7 @@ import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import {
   CAMERA_GESTURE_LOCK_EVENT,
+  CAMERA_GROUP_VIEW_TAG,
   CAMERA_OVERLAY_VISIBILITY_EVENT,
   CAMERA_STAGE_SIZE_CHANGE_EVENT,
   CAMERA_TAG,
@@ -30,9 +31,12 @@ import { releaseTouchFocus } from "../../../ui/control-interaction";
 import type { CameraGestureLockDetail } from "./live/presentation";
 import type { CameraOverlayVisibilityDetail } from "./live/presentation";
 import "./camera-view";
+import "./camera-group-view";
+import type { CameraGroupMode } from "./camera-group-view";
 import { cameraStyles } from "./camera.styles";
 import { CameraCarouselController } from "./carousel.controller";
 import type { DeepLinkController } from "../../../features/deep-links";
+import type { ReviewItem } from "../../../api/reviews";
 import { LiveActivityHighlightController } from "./activity-highlight.controller";
 import {
   DEFAULT_CAMERA_STAGE_HEIGHT_RATIO,
@@ -53,7 +57,24 @@ export interface CameraItemConfig {
   readonly startUnmutedPhone: boolean;
 }
 
+export interface CameraGroupConfig {
+  readonly id: string;
+  readonly label: string;
+  readonly layout: "side_by_side" | "stacked";
+  readonly mainEntityId: string;
+  readonly secondaryEntityId: string;
+}
+
+interface CameraPresentationItem {
+  readonly cameras:
+    readonly [CameraItemConfig] | readonly [CameraItemConfig, CameraItemConfig];
+  readonly id: string;
+  readonly label: string;
+  readonly layout?: "side_by_side" | "stacked";
+}
+
 const cameraViewTag = unsafeStatic(CAMERA_VIEW_TAG);
+const cameraGroupViewTag = unsafeStatic(CAMERA_GROUP_VIEW_TAG);
 
 /** Camera module root: owns ordered views and carousel selection only. */
 export class CameraModule extends LitElement {
@@ -63,6 +84,7 @@ export class CameraModule extends LitElement {
     cameraSession: { attribute: false },
     cameraSelection: { attribute: false },
     cameras: { attribute: false },
+    groups: { attribute: false },
     highlightActivity: { attribute: false, type: Boolean },
     localize: { attribute: false },
     retentionPreference: { attribute: false },
@@ -74,6 +96,7 @@ export class CameraModule extends LitElement {
   };
 
   private _activeIndex = 0;
+  private readonly _groupModes = new Map<string, CameraGroupMode>();
   private _deepLinkLoad?: Promise<void>;
   private _deepLink?: DeepLinkController;
   private _navigationVisible = false;
@@ -91,7 +114,7 @@ export class CameraModule extends LitElement {
   private readonly _activityHighlight = new LiveActivityHighlightController(
     this,
     () => ({
-      activeEntityId: this.cameras[this._activeIndex]?.entityId,
+      activeEntityId: this._activeEntityId,
       api: this.api,
       entityIds: this.cameras.map(({ entityId }) => entityId),
       highlightEnabled: this.highlightActivity,
@@ -107,6 +130,7 @@ export class CameraModule extends LitElement {
   public cameraSession?: CameraSessionContext;
   public cameraSelection?: CameraSelectionContext;
   public cameras: readonly CameraItemConfig[] = [];
+  public groups: readonly CameraGroupConfig[] = [];
   public highlightActivity = true;
   public localize: LocalizeFunction = englishLocalize;
   public retentionPreference: MediaRetentionPreference = "automatic";
@@ -128,8 +152,7 @@ export class CameraModule extends LitElement {
             title: label,
           })),
           cameraSelection: {
-            selectCamera: (entityId) =>
-              this.cameraSelection?.select(this.selectionId, entityId) ?? false,
+            selectCamera: (entityId) => this._selectPhysicalEntity(entityId),
           },
           enabled: !(
             this.getRootNode() as ShadowRoot & {
@@ -163,11 +186,45 @@ export class CameraModule extends LitElement {
   /** Returns the visible live-stage bounds without exposing camera internals. */
   public getActiveStageRect(): DOMRectReadOnly | undefined {
     return this.renderRoot
-      .querySelectorAll<HTMLElement & { getStageRect?(): DOMRectReadOnly }>(
-        CAMERA_VIEW_TAG,
+      .querySelector<HTMLElement & { getStageRect?(): DOMRectReadOnly }>(
+        `.swiper-slide:nth-child(${this._activeIndex + 1}) .camera-view`,
       )
-      .item(this._activeIndex)
       ?.getStageRect?.();
+  }
+
+  private get _presentationItems(): readonly CameraPresentationItem[] {
+    const groupsByMain = new Map(
+      this.groups.map((group) => [group.mainEntityId, group]),
+    );
+    const secondaryIds = new Set(
+      this.groups.map(({ secondaryEntityId }) => secondaryEntityId),
+    );
+    const camerasById = new Map(
+      this.cameras.map((camera) => [camera.entityId, camera]),
+    );
+    const items: CameraPresentationItem[] = [];
+    for (const camera of this.cameras) {
+      if (secondaryIds.has(camera.entityId)) continue;
+      const group = groupsByMain.get(camera.entityId);
+      const secondary = group
+        ? camerasById.get(group.secondaryEntityId)
+        : undefined;
+      if (group && secondary) {
+        items.push({
+          cameras: [camera, secondary],
+          id: group.id,
+          label: group.label,
+          layout: group.layout,
+        });
+      } else {
+        items.push({
+          cameras: [camera],
+          id: camera.entityId,
+          label: camera.label,
+        });
+      }
+    }
+    return items;
   }
 
   public disconnectedCallback(): void {
@@ -191,7 +248,7 @@ export class CameraModule extends LitElement {
   protected willUpdate(): void {
     this._activeIndex = Math.max(
       0,
-      Math.min(this.cameras.length - 1, this._activeIndex),
+      Math.min(this._presentationItems.length - 1, this._activeIndex),
     );
     const cameraIds = new Set(this.cameras.map(({ entityId }) => entityId));
     for (const entityId of this._overlayVisibilityByCamera.keys()) {
@@ -199,9 +256,8 @@ export class CameraModule extends LitElement {
         this._overlayVisibilityByCamera.delete(entityId);
     }
     this._navigationVisible =
-      this._overlayVisibilityByCamera.get(
-        this.cameras[this._activeIndex]?.entityId ?? "",
-      ) ?? false;
+      this._overlayVisibilityByCamera.get(this._activePresentation?.id ?? "") ??
+      false;
     this._syncCameraActivity();
     this._publishSelection();
   }
@@ -214,8 +270,8 @@ export class CameraModule extends LitElement {
               this.roundedCorners ? "" : "square-camera-corners",
               this.shadowStyle === "small" ? "camera-shadow-small" : "",
               this.shadowStyle === "none" ? "camera-shadow-none" : "",
-              this._activityHighlight.classification
-                ? `activity-${this._activityHighlight.classification}`
+              this._activeClassification
+                ? `activity-${this._activeClassification}`
                 : "",
             ]
               .filter(Boolean)
@@ -226,38 +282,60 @@ export class CameraModule extends LitElement {
     >
       <div class="swiper-wrapper">
         ${repeat(
-          this.cameras,
-          ({ entityId }) => entityId,
-          (camera, index) => staticHtml`<div
+          this._presentationItems,
+          ({ id }) => id,
+          (item, index) => staticHtml`<div
             class="swiper-slide"
             role="group"
             aria-label=${this.localize("camera.position", {
               position: index + 1,
-              total: this.cameras.length,
+              total: this._presentationItems.length,
             })}
             aria-roledescription="slide"
           >
-            <${cameraViewTag}
+            ${
+              item.cameras.length === 2
+                ? staticHtml`<${cameraGroupViewTag}
+                    class="camera-view"
+                    .active=${index === this._activeIndex}
+                    .api=${this.api}
+                    .cameraSession=${this.cameraSession}
+                    .cameras=${item.cameras}
+                    .classifications=${this._activityHighlight.classifications}
+                    .layout=${item.layout}
+                    .localize=${this.localize}
+                    .mode=${this._groupMode(item)}
+                    .overlayVisible=${
+                      this._overlayVisibilityByCamera.get(item.id) ?? false
+                    }
+                    .stageHeightRatio=${this._stageSize.heightRatio}
+                    .stageResized=${this._stageSize.resized}
+                    @camera-group-cycle=${this._handleGroupCycle}
+                    @camera-group-mode=${this._handleGroupMode}
+                  ></${cameraGroupViewTag}>`
+                : staticHtml`<${cameraViewTag}
               class="camera-view"
               .active=${index === this._activeIndex}
               .connect=${index === this._activeIndex}
               .api=${this.api}
               .cameraSession=${this.cameraSession}
-              .available=${camera.available}
-              .connection=${camera.connection}
-              .entityId=${camera.entityId}
-              .frigateFallback=${camera.frigateFallback}
-              .lowLatencyHls=${camera.lowLatencyHls}
+              .available=${item.cameras[0].available}
+              .connection=${item.cameras[0].connection}
+              .entityId=${item.cameras[0].entityId}
+              .frigateFallback=${item.cameras[0].frigateFallback}
+              .lowLatencyHls=${item.cameras[0].lowLatencyHls}
               .localize=${this.localize}
               .overlayVisible=${
-                this._overlayVisibilityByCamera.get(camera.entityId) ?? false
+                this._overlayVisibilityByCamera.get(item.id) ?? false
               }
-              .posterUrl=${camera.posterUrl}
+              .posterUrl=${item.cameras[0].posterUrl}
               .stageHeightRatio=${this._stageSize.heightRatio}
               .stageResized=${this._stageSize.resized}
-              .startUnmutedPcTablet=${camera.startUnmutedPcTablet}
-              .startUnmutedPhone=${camera.startUnmutedPhone}
+              .startUnmutedPcTablet=${item.cameras[0].startUnmutedPcTablet}
+              .startUnmutedPhone=${item.cameras[0].startUnmutedPhone}
             ></${cameraViewTag}>
+            `
+            }
           </div>`,
         )}
       </div>
@@ -271,7 +349,7 @@ export class CameraModule extends LitElement {
         aria-label=${this.localize("camera.previous")}
         aria-hidden=${this._navigationVisible ? "false" : "true"}
         tabindex=${this._navigationVisible ? "0" : "-1"}
-        ?disabled=${this.cameras.length < 2 || this._activeIndex === 0}
+        ?disabled=${this._presentationItems.length < 2 || this._activeIndex === 0}
         @pointerdown=${this._stopPointerPropagation}
         @pointerup=${releaseTouchFocus}
         @click=${this._previous}
@@ -289,8 +367,8 @@ export class CameraModule extends LitElement {
         aria-hidden=${this._navigationVisible ? "false" : "true"}
         tabindex=${this._navigationVisible ? "0" : "-1"}
         ?disabled=${
-          this.cameras.length < 2 ||
-          this._activeIndex === this.cameras.length - 1
+          this._presentationItems.length < 2 ||
+          this._activeIndex === this._presentationItems.length - 1
         }
         @pointerdown=${this._stopPointerPropagation}
         @pointerup=${releaseTouchFocus}
@@ -305,14 +383,17 @@ export class CameraModule extends LitElement {
     this._carousel.observe(
       this.renderRoot.querySelector<HTMLElement>(".camera-carousel") ??
         undefined,
-      this.cameras.length,
+      this._presentationItems.length,
       this._activeIndex,
       this.transition,
     );
   }
 
   private _select(index: number, settled = true): void {
-    const next = Math.max(0, Math.min(this.cameras.length - 1, index));
+    const next = Math.max(
+      0,
+      Math.min(this._presentationItems.length - 1, index),
+    );
     const takeoverSelection = this._takeoverSelectionIndex === next;
     if (this._takeoverSelectionIndex !== undefined && !takeoverSelection) {
       this._takeoverSelectionIndex = undefined;
@@ -327,33 +408,87 @@ export class CameraModule extends LitElement {
       return;
     }
     if (!takeoverSelection) {
-      const entityId = this.cameras[next]?.entityId;
+      const entityId = this._presentationItems[next]?.cameras[0].entityId;
       if (entityId) this._activityHighlight.userSelected(entityId);
     }
     this._activeIndex = next;
     this._syncCameraActivity();
     this._navigationVisible =
-      this._overlayVisibilityByCamera.get(this.cameras[next]?.entityId ?? "") ??
-      false;
+      this._overlayVisibilityByCamera.get(
+        this._presentationItems[next]?.id ?? "",
+      ) ?? false;
     this._carousel.setInteractionLocked(false);
     this.requestUpdate();
     this._publishSelection();
   }
 
   private _selectEntity = (entityId: string): void => {
-    const index = this.cameras.findIndex(
-      (camera) => camera.entityId === entityId,
+    const index = this._presentationItems.findIndex(
+      ({ id }) => id === entityId,
     );
     if (index < 0) return;
     this._activityHighlight.userSelected(entityId);
     this._carousel.select(index);
   };
 
-  private readonly _takeoverEntity = (entityId: string): void => {
-    const index = this.cameras.findIndex(
-      (camera) => camera.entityId === entityId,
+  private _selectPhysicalEntity(entityId: string): boolean {
+    const index = this._presentationItems.findIndex(({ cameras }) =>
+      cameras.some((camera) => camera.entityId === entityId),
     );
-    if (index < 0 || index === this._activeIndex) return;
+    const item = this._presentationItems[index];
+    if (!item) return false;
+    let groupModeChanged = false;
+    if (item.cameras.length === 2) {
+      const nextMode =
+        item.cameras[1].entityId === entityId ? "secondary" : "main";
+      groupModeChanged = this._groupMode(item) !== nextMode;
+      this._groupModes.set(item.id, nextMode);
+    }
+    if (index === this._activeIndex) {
+      if (groupModeChanged) {
+        this._activityHighlight.userSelected(entityId);
+        this.requestUpdate();
+      }
+      return true;
+    }
+    return this.cameraSelection?.select(this.selectionId, item.id) ?? false;
+  }
+
+  private readonly _activateEntity = (entityId: string): void => {
+    const index = this._presentationItems.findIndex(
+      ({ id }) => id === entityId,
+    );
+    if (index < 0) return;
+    if (index !== this._activeIndex) {
+      this._selectEntity(entityId);
+      return;
+    }
+    const item = this._presentationItems[index];
+    if (item?.cameras.length !== 2) return;
+    this._cycleGroup(item);
+  };
+
+  private readonly _takeoverEntity = (entityId: string): void => {
+    const index = this._presentationItems.findIndex(({ cameras }) =>
+      cameras.some((camera) => camera.entityId === entityId),
+    );
+    if (index < 0) return;
+    const item = this._presentationItems[index];
+    if (item?.cameras.length === 2) {
+      this._groupModes.set(
+        item.id,
+        this._deviceProfile.profile.deviceClass === "phone"
+          ? item.cameras[1].entityId === entityId
+            ? "secondary"
+            : "main"
+          : "combined",
+      );
+    }
+    if (index === this._activeIndex) {
+      this.requestUpdate();
+      this._publishSelection();
+      return;
+    }
     this._takeoverSelectionIndex = index;
     this._carousel.select(index);
   };
@@ -364,14 +499,27 @@ export class CameraModule extends LitElement {
       this.selectionId,
       this,
       {
-        activeEntityId: this.cameras[this._activeIndex]?.entityId,
-        activeReviews: this._activityHighlight.reviewsFor(
-          this.cameras[this._activeIndex]?.entityId,
+        activeEntityId: this._activeEntityId,
+        activeEntityIds: this._activeScopeEntityIds,
+        activeSelectionId: this._activePresentation?.id,
+        activeReviews: mergeActiveReviews(
+          this._activeScopeEntityIds.flatMap((entityId) =>
+            this._activityHighlight.reviewsFor(entityId),
+          ),
         ),
-        items: this.cameras.map(({ entityId, label }) => ({
-          activity: this._activityHighlight.classifications.get(entityId),
-          entityId,
-          label,
+        items: this._presentationItems.map((item) => ({
+          activity: strongestClassification(
+            item.cameras.map(({ entityId }) =>
+              this._activityHighlight.classifications.get(entityId),
+            ),
+          ),
+          entityId: item.id,
+          entityIds: item.cameras.map(({ entityId }) => entityId),
+          label: item.label,
+          position:
+            item.id === this._activePresentation?.id
+              ? this._groupPosition(item)
+              : undefined,
         })),
         settled: this._selectionSettled,
         takeoverAvailable: this.alertTakeoverMode !== "off",
@@ -379,6 +527,7 @@ export class CameraModule extends LitElement {
       },
       this._selectEntity,
       () => this._activityHighlight.toggleTakeover(),
+      this._activateEntity,
     );
   }
 
@@ -397,7 +546,7 @@ export class CameraModule extends LitElement {
   private readonly _handleGestureLock = (
     event: CustomEvent<CameraGestureLockDetail>,
   ): void => {
-    if (event.detail.key !== this.cameras[this._activeIndex]?.entityId) return;
+    if (!this._activeScopeEntityIds.includes(event.detail.key ?? "")) return;
     this._carousel.setInteractionLocked(event.detail.locked);
   };
 
@@ -421,14 +570,18 @@ export class CameraModule extends LitElement {
   ): void => {
     event.stopPropagation();
     this._overlayVisibilityByCamera.set(event.detail.key, event.detail.visible);
-    if (event.detail.key !== this.cameras[this._activeIndex]?.entityId) return;
+    if (!this._activeScopeEntityIds.includes(event.detail.key)) return;
+    const activeId = this._activePresentation?.id;
+    if (activeId) {
+      this._overlayVisibilityByCamera.set(activeId, event.detail.visible);
+    }
     this._navigationVisible = event.detail.visible;
     this.requestUpdate();
   };
 
   private _syncCameraActivity(): void {
     const manager = getMediaSessionManager();
-    manager.setCameraActivity(this, this.cameras[this._activeIndex]?.entityId);
+    manager.setCameraActivity(this, this._activeEntityId);
     manager.setCameraRetentionPreference(
       this,
       this.cameras.map(({ entityId }) => entityId),
@@ -436,7 +589,109 @@ export class CameraModule extends LitElement {
     );
   }
 
+  private get _activePresentation(): CameraPresentationItem | undefined {
+    return this._presentationItems[this._activeIndex];
+  }
+
+  private _groupMode(item: CameraPresentationItem): CameraGroupMode {
+    const mode = this._groupModes.get(item.id) ?? "combined";
+    if (this._deviceProfile.profile.deviceClass !== "phone") return mode;
+    return mode === "secondary" ? "secondary" : "main";
+  }
+
+  private get _activeScopeEntityIds(): readonly string[] {
+    const item = this._activePresentation;
+    if (!item) return [];
+    if (item.cameras.length === 1) return [item.cameras[0].entityId];
+    if (this._deviceProfile.profile.deviceClass === "phone") {
+      return item.cameras.map(({ entityId }) => entityId);
+    }
+    const mode = this._groupMode(item);
+    if (mode === "main") return [item.cameras[0].entityId];
+    if (mode === "secondary") return [item.cameras[1].entityId];
+    return item.cameras.map(({ entityId }) => entityId);
+  }
+
+  private get _activeEntityId(): string | undefined {
+    const item = this._activePresentation;
+    if (!item) return undefined;
+    return this._groupMode(item) === "secondary" && item.cameras.length === 2
+      ? item.cameras[1].entityId
+      : item.cameras[0].entityId;
+  }
+
+  private get _activeClassification(): "alert" | "detection" | undefined {
+    return strongestClassification(
+      this._activeScopeEntityIds.map((entityId) =>
+        this._activityHighlight.classifications.get(entityId),
+      ),
+    );
+  }
+
+  private _groupPosition(
+    item: CameraPresentationItem,
+  ): "down" | "left" | "right" | "up" | undefined {
+    if (item.cameras.length !== 2) return undefined;
+    const mode = this._groupMode(item);
+    if (mode === "combined") return undefined;
+    if (item.layout === "stacked") return mode === "main" ? "up" : "down";
+    return mode === "main" ? "left" : "right";
+  }
+
+  private _cycleGroup(item: CameraPresentationItem): void {
+    const current = this._groupMode(item);
+    const phone = this._deviceProfile.profile.deviceClass === "phone";
+    const next = phone
+      ? current === "secondary"
+        ? "main"
+        : "secondary"
+      : current === "combined"
+        ? "main"
+        : current === "main"
+          ? "secondary"
+          : "combined";
+    this._groupModes.set(item.id, next);
+    this.requestUpdate();
+    this._publishSelection();
+  }
+
+  private readonly _handleGroupCycle = (): void => {
+    const item = this._activePresentation;
+    if (item?.cameras.length === 2) this._cycleGroup(item);
+  };
+
+  private readonly _handleGroupMode = (
+    event: CustomEvent<{ mode: CameraGroupMode }>,
+  ): void => {
+    event.stopPropagation();
+    const item = this._activePresentation;
+    if (item?.cameras.length !== 2) return;
+    this._groupModes.set(item.id, event.detail.mode);
+    this.requestUpdate();
+    this._publishSelection();
+  };
+
   static styles = cameraStyles;
+}
+
+function strongestClassification(
+  values: readonly ("alert" | "detection" | undefined)[],
+): "alert" | "detection" | undefined {
+  return values.includes("alert")
+    ? "alert"
+    : values.includes("detection")
+      ? "detection"
+      : undefined;
+}
+
+function mergeActiveReviews(
+  reviews: readonly ReviewItem[],
+): readonly ReviewItem[] {
+  const byId = new Map(reviews.map((review) => [review.id, review]));
+  return [...byId.values()].sort(
+    (left, right) =>
+      right.start_time - left.start_time || left.id.localeCompare(right.id),
+  );
 }
 
 if (!customElements.get(CAMERA_TAG)) {

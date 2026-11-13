@@ -1,4 +1,5 @@
 import type { CardConfig } from "../../core/config";
+import { cameraPresentationItems } from "../../core/camera-groups";
 import {
   APP_ID,
   REVIEWS_MODULE_TYPE,
@@ -210,6 +211,19 @@ function hydrateModule(
         startUnmutedPhone: camera.start_live_unmuted_phone,
         title: camera.title,
       })),
+      groups: cameraPresentationItems(config.cameras).flatMap((item) =>
+        item.cameras.length === 2
+          ? [
+              {
+                id: item.id,
+                label: item.label,
+                layout: item.layout,
+                mainEntityId: item.cameras[0].entity_id,
+                secondaryEntityId: item.cameras[1].entity_id,
+              },
+            ]
+          : [],
+      ),
       alertTakeoverMode: config.alert_detection_takeover,
       highlightActivity: config.highlight_camera_on_activity,
       retentionPreference: config.mobile_data_saving
@@ -263,15 +277,23 @@ function hydrateCameraComponent(
       : undefined;
   }
   if (node.componentType === TALK_COMPONENT_TYPE) {
+    const secondaryIds = groupedSecondaryIds(config);
     const cameras = config.cameras
-      .filter(({ two_way_talk_enabled: enabled }) => enabled)
+      .filter(
+        ({ entity_id: entityId, two_way_talk_enabled: enabled }) =>
+          enabled && !secondaryIds.has(entityId),
+      )
       .map(({ connection, entity_id: entityId }) => ({ connection, entityId }));
     return cameras.length ? { ...node, config: { cameras } } : undefined;
   }
   if (node.componentType === PTZ_COMPONENT_TYPE) {
     if (config.ptz_overlay_control === "none") return undefined;
+    const secondaryIds = groupedSecondaryIds(config);
     const cameras = config.cameras
-      .filter(({ ptz_enabled: enabled }) => enabled)
+      .filter(
+        ({ entity_id: entityId, ptz_enabled: enabled }) =>
+          enabled && !secondaryIds.has(entityId),
+      )
       .map(({ connection: provider, entity_id: entityId }) => ({
         entityId,
         provider,
@@ -300,6 +322,14 @@ function hydrateCameraComponent(
     return cameras.length ? { ...node, config: { cameras } } : undefined;
   }
   return node;
+}
+
+function groupedSecondaryIds(config: CardConfig): ReadonlySet<string> {
+  return new Set(
+    config.cameras.flatMap(({ additional_camera: group }) =>
+      group ? [group.entity_id] : [],
+    ),
+  );
 }
 
 function mapVariants(

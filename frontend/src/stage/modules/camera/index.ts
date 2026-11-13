@@ -18,12 +18,21 @@ import type {
 export interface CameraModuleConfig {
   readonly alertTakeoverMode: AlertTakeoverMode;
   readonly cameras: readonly CameraModuleItemConfig[];
+  readonly groups: readonly CameraModuleGroupConfig[];
   readonly highlightActivity: boolean;
   readonly retentionPreference: MediaRetentionPreference;
   readonly roundedCorners: boolean;
   readonly shadowStyle: CameraShadowStyle;
   readonly transition: SlideTransition;
   readonly startAlertTakeoverOn: boolean;
+}
+
+export interface CameraModuleGroupConfig {
+  readonly id: string;
+  readonly label: string;
+  readonly layout: "side_by_side" | "stacked";
+  readonly mainEntityId: string;
+  readonly secondaryEntityId: string;
 }
 
 type CameraModuleItemConfig = Omit<
@@ -145,6 +154,7 @@ function updateCameraElement(
       posterUrl: cameraImageUrl(context.hass, item.entityId),
     };
   });
+  camera.groups = config.groups;
 }
 
 function cameraFriendlyNames(camera: CameraModule): Map<string, string> {
@@ -181,6 +191,7 @@ function validateCameraConfig(value: unknown): CameraModuleConfig {
   const cameras = source.cameras.map((camera, index) =>
     validateCameraItem(camera, index),
   );
+  const groups = validateCameraGroups(source.groups, cameras);
   if (
     source.retentionPreference !== "automatic" &&
     source.retentionPreference !== "reduced_bandwidth"
@@ -221,6 +232,7 @@ function validateCameraConfig(value: unknown): CameraModuleConfig {
   return {
     alertTakeoverMode: source.alertTakeoverMode,
     cameras,
+    groups,
     highlightActivity: source.highlightActivity,
     retentionPreference: source.retentionPreference,
     roundedCorners: source.roundedCorners,
@@ -228,6 +240,48 @@ function validateCameraConfig(value: unknown): CameraModuleConfig {
     transition: source.transition,
     startAlertTakeoverOn: source.startAlertTakeoverOn,
   };
+}
+
+function validateCameraGroups(
+  value: unknown,
+  cameras: readonly CameraModuleItemConfig[],
+): readonly CameraModuleGroupConfig[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) {
+    throw new Error("Camera module groups must be an array.");
+  }
+  const entityIds = new Set(cameras.map(({ entityId }) => entityId));
+  const members = new Set<string>();
+  return value.map((entry, index) => {
+    if (typeof entry !== "object" || entry === null) {
+      throw new Error(`Camera module group ${index + 1} must be an object.`);
+    }
+    const group = entry as Record<string, unknown>;
+    if (
+      typeof group.id !== "string" ||
+      typeof group.label !== "string" ||
+      !group.label.trim() ||
+      typeof group.mainEntityId !== "string" ||
+      typeof group.secondaryEntityId !== "string" ||
+      !entityIds.has(group.mainEntityId) ||
+      !entityIds.has(group.secondaryEntityId) ||
+      group.mainEntityId === group.secondaryEntityId ||
+      (group.layout !== "side_by_side" && group.layout !== "stacked") ||
+      members.has(group.mainEntityId) ||
+      members.has(group.secondaryEntityId)
+    ) {
+      throw new Error(`Camera module group ${index + 1} is invalid.`);
+    }
+    members.add(group.mainEntityId);
+    members.add(group.secondaryEntityId);
+    return {
+      id: group.id,
+      label: group.label.trim(),
+      layout: group.layout,
+      mainEntityId: group.mainEntityId,
+      secondaryEntityId: group.secondaryEntityId,
+    } as CameraModuleGroupConfig;
+  });
 }
 
 function validateCameraItem(

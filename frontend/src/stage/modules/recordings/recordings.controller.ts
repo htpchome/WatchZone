@@ -22,6 +22,7 @@ const CURRENT_DAY_REFRESH_MS = 60_000;
 export class RecordingsController implements ReactiveController {
   public activeCameraLabel?: string;
   public activeEntityId?: string;
+  public activeEntityIds: readonly string[] = [];
   public availableDates: readonly string[] = [];
   public hours: readonly RecordingHour[] = [];
   public loading = false;
@@ -98,8 +99,8 @@ export class RecordingsController implements ReactiveController {
 
   public selectDate(selectedDate: string): void {
     const { mediaDate } = this._config();
-    const entityId = this.activeEntityId;
-    if (mediaDate && entityId) mediaDate.select(entityId, selectedDate);
+    const scopeId = this._dateScopeId;
+    if (mediaDate && scopeId) mediaDate.select(scopeId, selectedDate);
   }
 
   private _syncSelection(): void {
@@ -114,37 +115,66 @@ export class RecordingsController implements ReactiveController {
     this._unsubscribeSelection?.();
     this._subscribedSelection = cameraSelection;
     this._subscribedTarget = targetModuleId;
-    this._setCamera(undefined, undefined);
+    this._setCamera([], undefined, undefined, undefined);
     if (cameraSelection && targetModuleId) {
       this._unsubscribeSelection = cameraSelection.subscribe(
         targetModuleId,
-        ({ activeEntityId, items, settled }) => {
+        ({
+          activeEntityId,
+          activeEntityIds,
+          activeSelectionId,
+          items,
+          settled,
+        }) => {
           if (settled === false) return;
+          const entityIds = activeEntityIds?.length
+            ? activeEntityIds
+            : activeEntityId
+              ? [activeEntityId]
+              : [];
           this._setCamera(
+            entityIds,
             activeEntityId,
-            items.find(({ entityId }) => entityId === activeEntityId)?.label,
+            activeSelectionId,
+            items.find(
+              ({ entityId }) =>
+                entityId === (activeSelectionId ?? activeEntityId),
+            )?.label,
           );
         },
       );
     }
   }
 
-  private _setCamera(entityId: string | undefined, title: string | undefined) {
-    if (entityId === this.activeEntityId && title === this.activeCameraLabel) {
+  private _setCamera(
+    entityIds: readonly string[],
+    entityId: string | undefined,
+    selectionId: string | undefined,
+    title: string | undefined,
+  ) {
+    const previousScope = this._dateScopeId;
+    if (
+      entityIds.join("\u0000") === this.activeEntityIds.join("\u0000") &&
+      entityId === this.activeEntityId &&
+      selectionId === this._activeSelectionId &&
+      title === this.activeCameraLabel
+    ) {
       return;
     }
+    this.activeEntityIds = entityIds;
     this.activeEntityId = entityId;
+    this._activeSelectionId = selectionId;
     this.activeCameraLabel = title;
     this.availableDates = [];
     this.hours = [];
     this._requestKey = "";
-    this._syncDate();
+    if (previousScope !== this._dateScopeId) this._syncDate();
     this._host.requestUpdate();
   }
 
   private _syncDate(): void {
     const { mediaDate } = this._config();
-    const entityId = this.activeEntityId;
+    const entityId = this._dateScopeId;
     if (
       mediaDate === this._subscribedDate &&
       entityId === this._subscribedDateEntityId
@@ -176,26 +206,65 @@ export class RecordingsController implements ReactiveController {
   private _load(): void {
     if (!this._connected) return;
     const { api } = this._config();
-    const entityId = this.activeEntityId;
-    if (!api || !entityId) return;
+    const entityIds = this.activeEntityIds;
+    const scopeId = this._dateScopeId;
+    if (!api || entityIds.length === 0 || !scopeId) return;
     const today = homeAssistantDateKey(Date.now() / 1000, api.locale);
     const selectedDate = this._selectedDate ?? today;
     const timezone = resolvedHomeAssistantTimeZone(api.locale);
-    const key = `${entityId}:${selectedDate}:${timezone}`;
+    const key = `${entityIds.join("\u0000")}:${selectedDate}:${timezone}`;
     if (key === this._requestKey) return;
     this._requestKey = key;
     this.loading = true;
     this._host.requestUpdate();
     const request = ++this._request;
-    void listRecordings(api, entityId, {
-      selectedDate,
-      timezone,
-    })
-      .then(({ days, hours }) => {
+    void Promise.allSettled(
+      entityIds.map((entityId, index) =>
+        listRecordings(api, entityId, { selectedDate, timezone }).then(
+          ({ days, hours }) => ({
+            days,
+            hours: hours.map((hour) => ({
+              ...hour,
+              source_entity_id: entityId,
+              group_position:
+                entityIds.length > 1
+                  ? index === 0
+                    ? ("A" as const)
+                    : ("B" as const)
+                  : undefined,
+            })),
+          }),
+        ),
+      ),
+    )
+      .then((results) => {
         if (request !== this._request) return;
-        this.availableDates = days;
-        this._subscribedDate?.publishAvailableDates(entityId, this, days);
-        this.hours = hours;
+        const windows = results.flatMap((result) =>
+          result.status === "fulfilled" ? [result.value] : [],
+        );
+        if (windows.length === 0) {
+          const failure = results.find(
+            (result): result is PromiseRejectedResult =>
+              result.status === "rejected",
+          );
+          throw failure?.reason;
+        }
+        this.availableDates = [...new Set(windows.flatMap(({ days }) => days))];
+        this._subscribedDate?.publishAvailableDates(
+          scopeId,
+          this,
+          this.availableDates,
+        );
+        this.hours = windows
+          .flatMap(({ hours }) => hours)
+          .sort(
+            (left, right) =>
+              right.start_time - left.start_time ||
+              (left.group_position ?? "").localeCompare(
+                right.group_position ?? "",
+              ) ||
+              left.id.localeCompare(right.id),
+          );
         this.loading = false;
         this._scheduleRefresh(selectedDate === today);
         this._host.requestUpdate();
@@ -205,7 +274,7 @@ export class RecordingsController implements ReactiveController {
         this.loading = false;
         this.availableDates = [];
         this._requestKey = "";
-        this._subscribedDate?.clearAvailableDates(entityId, this);
+        this._subscribedDate?.clearAvailableDates(scopeId, this);
         this._onError();
         this._host.requestUpdate();
       });
@@ -224,5 +293,11 @@ export class RecordingsController implements ReactiveController {
     if (this._refreshTimer === undefined) return;
     window.clearTimeout(this._refreshTimer);
     this._refreshTimer = undefined;
+  }
+
+  private _activeSelectionId?: string;
+
+  private get _dateScopeId(): string | undefined {
+    return this._activeSelectionId ?? this.activeEntityId;
   }
 }

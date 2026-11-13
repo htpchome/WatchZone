@@ -164,6 +164,69 @@ describe("WatchZone card configuration", () => {
     ]);
   });
 
+  it("normalizes one additional-camera group without duplicating ownership", () => {
+    const config = normalizeCardConfig({
+      cameras: [
+        {
+          additional_camera: {
+            entity_id: "camera.driveway",
+            layout: "stacked",
+            title: "Group A/B",
+          },
+          entity_id: "camera.porch",
+        },
+        { entity_id: "camera.driveway" },
+      ],
+    });
+
+    expect(config.cameras[0]?.additional_camera).toEqual({
+      entity_id: "camera.driveway",
+      layout: "stacked",
+      title: "Group A/B",
+    });
+    expect(config.cameras[1]?.additional_camera).toBeUndefined();
+  });
+
+  it("rejects invalid or overlapping additional-camera groups", () => {
+    expect(() =>
+      normalizeCardConfig({
+        cameras: [
+          {
+            additional_camera: {
+              entity_id: "camera.missing",
+              layout: "side_by_side",
+              title: "Group A/B",
+            },
+            entity_id: "camera.porch",
+          },
+        ],
+      }),
+    ).toThrow("must reference another configured camera");
+    expect(() =>
+      normalizeCardConfig({
+        cameras: [
+          {
+            additional_camera: {
+              entity_id: "camera.driveway",
+              layout: "side_by_side",
+              title: "Group A/B",
+            },
+            entity_id: "camera.porch",
+          },
+          {
+            additional_camera: {
+              entity_id: "camera.garage",
+              layout: "stacked",
+              title: "Group C/D",
+            },
+            entity_id: "camera.driveway",
+          },
+          { entity_id: "camera.garage" },
+        ],
+      }),
+    ).toThrow("grouped secondary cameras cannot own a group");
+  });
+
   it("normalizes the opt-in two-way-talk camera capability", () => {
     expect(
       normalizeCardConfig({

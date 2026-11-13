@@ -100,6 +100,14 @@ configuration.
 Future fields may use an appropriate coalescing strategy, but none may use
 repeated `config-changed` events as a live-preview mechanism.
 
+Camera grouping is edited atomically with its owning main-camera draft. The
+additional-camera selector may reference only another configured, ungrouped
+camera. Group title and layout remain on the main camera; the secondary camera
+does not receive a mirrored group object. Changing or deleting either member
+updates or removes that reference in the same normalized draft. Group titles
+are sanitized like other user-visible card text and must be unique and differ
+from both member camera names.
+
 ## 5. Controls, themes, and responsive layout
 
 - Prefer current Home Assistant controls and interaction conventions. The

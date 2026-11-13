@@ -37,6 +37,12 @@ moving between fallback and live media retains the current transform. Selecting
 a different camera resets to `1x` so one camera cannot inherit another camera's
 view.
 
+Each member of an additional-camera group owns a separate live presentation
+and `MediaZoomController`. Zooming or panning A never transforms B. Switching a
+phone-width group between A and B or focusing one member on desktop preserves
+the other member's independent transform for as long as that camera view
+remains mounted.
+
 Camera-stage resizing is a separate presentation layer. It changes the stage
 ratio and the base contain/cover fit before this controller's transform is
 applied. While a user drags an expanded stage back toward its default height,

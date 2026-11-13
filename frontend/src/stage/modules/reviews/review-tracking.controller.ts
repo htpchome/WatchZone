@@ -16,7 +16,9 @@ export class ReviewTrackingController implements ReactiveController {
   public constructor(
     private readonly _host: ReactiveControllerHost,
     private readonly _api: () => HomeAssistantApi | undefined,
-    private readonly _entityId: () => string | undefined,
+    private readonly _entityId: (
+      item: Pick<ActivityListItem, "id">,
+    ) => string | undefined,
   ) {
     _host.addController(this);
   }
@@ -30,7 +32,7 @@ export class ReviewTrackingController implements ReactiveController {
 
   public async open(item: ActivityListItem): Promise<void> {
     const api = this._api();
-    const entityId = this._entityId();
+    const entityId = this._entityId(item);
     if (!api || !entityId || !item.trackingAvailable) return;
     this._reviewId = item.id;
     this._sourceItem = item;

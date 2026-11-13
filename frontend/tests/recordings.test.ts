@@ -228,4 +228,139 @@ describe("recordings module", () => {
     ).toBe(true);
     resolveRequest?.({ days: [], hours: [] });
   });
+
+  it("keeps overlapping grouped-camera recordings as distinct A/B rows", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(Date.UTC(2026, 10, 9, 22, 27));
+    const callWS = vi.fn(async (message: Record<string, unknown>) => ({
+      days: ["2026-11-09"],
+      hours: [
+        recordingHour(
+          String(message.entity_id).endsWith("driveway") ? "driveway" : "porch",
+        ),
+      ],
+    }));
+    const api = {
+      callWS,
+      identity: {},
+      locale: { language: "en", time_format: "12", time_zone: "UTC" },
+      resolveUrl: (path: string) => path,
+      subscribeMessage: vi.fn(),
+    } as unknown as HomeAssistantApi;
+    const selection = new CameraSelectionContext();
+    const module = document.createElement(RECORDINGS_TAG) as RecordingsModule;
+    module.api = api;
+    module.cameraSelection = selection;
+    module.mediaDate = new MediaDateContext();
+    module.targetModuleId = "camera-module";
+    document.body.append(module);
+    selection.publish(
+      "camera-module",
+      {},
+      {
+        activeEntityId: "camera.porch",
+        activeEntityIds: ["camera.porch", "camera.driveway"],
+        activeSelectionId: "camera.porch",
+        items: [
+          {
+            entityId: "camera.porch",
+            entityIds: ["camera.porch", "camera.driveway"],
+            label: "Group A/B",
+          },
+        ],
+      },
+      vi.fn(),
+    );
+
+    await vi.waitFor(() =>
+      expect(module.shadowRoot?.querySelectorAll(".tile")).toHaveLength(2),
+    );
+    expect(
+      [...(module.shadowRoot?.querySelectorAll(".group-position") ?? [])].map(
+        ({ textContent }) => textContent,
+      ),
+    ).toEqual(["A", "B"]);
+    expect(callWS).toHaveBeenCalledWith(
+      expect.objectContaining({ entity_id: "camera.porch" }),
+    );
+    expect(callWS).toHaveBeenCalledWith(
+      expect.objectContaining({ entity_id: "camera.driveway" }),
+    );
+
+    const open = vi.fn();
+    module.addEventListener(RECORDED_MEDIA_OPEN_EVENT, open);
+    module.shadowRoot
+      ?.querySelectorAll<HTMLButtonElement>(".tile-player")[1]
+      ?.click();
+    expect(open.mock.calls[0]?.[0].detail.timeline.entityId).toBe(
+      "camera.driveway",
+    );
+  });
+
+  it("keeps recordings from an available group member after a partial failure", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(Date.UTC(2026, 10, 9, 22, 27));
+    const callWS = vi.fn(async (message: Record<string, unknown>) => {
+      if (message.entity_id === "camera.driveway") {
+        throw new Error("unavailable");
+      }
+      return {
+        days: ["2026-11-09"],
+        hours: [recordingHour("porch")],
+      };
+    });
+    const api = {
+      callWS,
+      identity: {},
+      locale: { language: "en", time_format: "12", time_zone: "UTC" },
+      resolveUrl: (path: string) => path,
+      subscribeMessage: vi.fn(),
+    } as unknown as HomeAssistantApi;
+    const selection = new CameraSelectionContext();
+    const module = document.createElement(RECORDINGS_TAG) as RecordingsModule;
+    module.api = api;
+    module.cameraSelection = selection;
+    module.mediaDate = new MediaDateContext();
+    module.targetModuleId = "camera-module";
+    document.body.append(module);
+    selection.publish(
+      "camera-module",
+      {},
+      {
+        activeEntityId: "camera.porch",
+        activeEntityIds: ["camera.porch", "camera.driveway"],
+        activeSelectionId: "camera.porch",
+        items: [{ entityId: "camera.porch", label: "Group A/B" }],
+      },
+      vi.fn(),
+    );
+
+    await vi.waitFor(() =>
+      expect(module.shadowRoot?.querySelectorAll(".tile")).toHaveLength(1),
+    );
+    expect(
+      module.shadowRoot?.querySelector(".group-position")?.textContent,
+    ).toBe("A");
+  });
 });
+
+function recordingHour(camera: string) {
+  const start = Date.UTC(2026, 10, 9, 22) / 1000;
+  const end = start + 60;
+  return {
+    camera,
+    download_url: `/${camera}.mp4`,
+    duration: 60,
+    end_time: end,
+    id: `frigate:${camera}:hour`,
+    markers: [],
+    playback_sources: [],
+    preferred_transport: "file",
+    revision: "revision",
+    selection_end_time: end,
+    selection_spans: [{ end_time: end, start_time: start }],
+    selection_start_time: start,
+    spans: [{ end_time: end, media_offset: 0, start_time: start }],
+    start_time: start,
+    timeline_end_time: start + 3600,
+    timeline_start_time: start,
+  };
+}

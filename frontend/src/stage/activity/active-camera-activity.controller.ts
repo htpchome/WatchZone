@@ -60,14 +60,16 @@ export class ActiveCameraActivityController<
   public loading = false;
 
   private _activeEntityId?: string;
+  private _activeEntityIds: readonly string[] = [];
   private _activeCameraLabel?: string;
-  private _itemsEntityId?: string;
+  private _itemsScopeKey = "";
   private _connected = false;
   private _emptyConfirmationPending = false;
   private _emptyConfirmTimer?: number;
   private _generation = 0;
   private _historyLoadPending = false;
-  private readonly _recentItemsByEntityId = new Map<string, readonly T[]>();
+  private readonly _entityIdByItemId = new Map<string, string>();
+  private readonly _recentItemsByScope = new Map<string, readonly T[]>();
   private _refreshAfterHistory = false;
   private _refreshTimer?: number;
   private readonly _retriedMedia = new Set<string>();
@@ -77,9 +79,9 @@ export class ActiveCameraActivityController<
   private _lastApiIdentity?: HomeAssistantApi["identity"];
   private _lastHistoryDays?: number;
   private readonly _updateReconcileTimers = new Set<number>();
-  private _updateSubscribeRetryTimer?: number;
+  private readonly _updateSubscribeRetryTimers = new Map<string, number>();
   private _updatesGeneration = 0;
-  private _updatesUnsubscribe?: () => void;
+  private readonly _updatesUnsubscribes = new Map<string, () => void>();
 
   public constructor(
     private readonly _host: ReactiveControllerHost,
@@ -127,8 +129,8 @@ export class ActiveCameraActivityController<
   }
 
   public updateItem(id: string, update: (item: T) => T): void {
-    const entityId = this._activeEntityId;
-    if (!entityId) return;
+    const scopeKey = this._activeScopeKey;
+    if (!scopeKey) return;
     let changed = false;
     const items = this.items.map((item) => {
       if (item.id !== id) return item;
@@ -136,7 +138,7 @@ export class ActiveCameraActivityController<
       return update(item);
     });
     if (!changed) return;
-    this._setItems(entityId, items);
+    this._setItems(scopeKey, items);
     this._host.requestUpdate();
   }
 
@@ -146,6 +148,14 @@ export class ActiveCameraActivityController<
 
   public get activeEntityId(): string | undefined {
     return this._activeEntityId;
+  }
+
+  public get activeEntityIds(): readonly string[] {
+    return this._activeEntityIds;
+  }
+
+  public entityIdFor(itemId: string): string | undefined {
+    return this._entityIdByItemId.get(itemId) ?? this._activeEntityId;
   }
 
   private _syncContext(): void {
@@ -160,6 +170,7 @@ export class ActiveCameraActivityController<
       this._subscribedSelection = context.cameraSelection;
       this._subscribedTarget = context.targetModuleId;
       this._activeEntityId = undefined;
+      this._activeEntityIds = [];
       this._activeCameraLabel = undefined;
       this._retriedMedia.clear();
       this._stopRefresh();
@@ -168,7 +179,7 @@ export class ActiveCameraActivityController<
       this._generation += 1;
       if (!context.cameraSelection || !context.targetModuleId) {
         this.items = [];
-        this._itemsEntityId = undefined;
+        this._itemsScopeKey = "";
         this._host.requestUpdate();
       }
       if (context.cameraSelection && context.targetModuleId) {
@@ -183,13 +194,13 @@ export class ActiveCameraActivityController<
       apiChanged || context.historyDays !== this._lastHistoryDays;
     this._lastApiIdentity = context.api?.identity;
     this._lastHistoryDays = context.historyDays;
-    if (apiChanged) this._recentItemsByEntityId.clear();
-    if (!selectionChanged && queryChanged && this._activeEntityId) {
+    if (apiChanged) this._recentItemsByScope.clear();
+    if (!selectionChanged && queryChanged && this._activeEntityIds.length > 0) {
       this._generation += 1;
       if (apiChanged) {
         this._stopUpdates();
         if (context.api) {
-          this._subscribeUpdates(context.api, this._activeEntityId);
+          this._subscribeUpdates(context.api, this._activeEntityIds);
         }
       }
       void this._refresh(false, true);
@@ -202,24 +213,34 @@ export class ActiveCameraActivityController<
     // and connected; activity catches up when the transition settles.
     if (state.settled === false) return;
     const activeEntityId = state.activeEntityId;
+    const activeEntityIds = [
+      ...new Set(
+        (state.activeEntityIds?.length
+          ? state.activeEntityIds
+          : activeEntityId
+            ? [activeEntityId]
+            : []
+        ).filter(Boolean),
+      ),
+    ];
+    const scopeKey = activeEntityIds.join("\u0000");
     const activeCameraLabel = state.items.find(
-      ({ entityId }) => entityId === activeEntityId,
+      ({ entityId }) =>
+        entityId === (state.activeSelectionId ?? activeEntityId),
     )?.label;
     const selectionItems = this._selectionItems?.(state) ?? [];
     if (
-      activeEntityId === this._activeEntityId &&
+      scopeKey === this._activeScopeKey &&
       activeCameraLabel === this._activeCameraLabel
     ) {
-      if (
-        activeEntityId &&
-        this._mergeSelectionItems(activeEntityId, selectionItems)
-      ) {
+      if (scopeKey && this._mergeSelectionItems(scopeKey, selectionItems)) {
         this._host.requestUpdate();
       }
       return;
     }
-    const cameraChanged = activeEntityId !== this._activeEntityId;
+    const cameraChanged = scopeKey !== this._activeScopeKey;
     this._activeEntityId = activeEntityId;
+    this._activeEntityIds = activeEntityIds;
     if (activeCameraLabel !== undefined) {
       this._activeCameraLabel = activeCameraLabel;
     }
@@ -232,20 +253,19 @@ export class ActiveCameraActivityController<
     this._stopUpdates();
     this._stopEmptyConfirmation();
     this._generation += 1;
-    if (activeEntityId && this._itemsEntityId !== activeEntityId) {
-      this.items = this._recentItemsByEntityId.get(activeEntityId) ?? [];
-      this._itemsEntityId = activeEntityId;
+    if (scopeKey && this._itemsScopeKey !== scopeKey) {
+      this.items = this._recentItemsByScope.get(scopeKey) ?? [];
+      this._itemsScopeKey = scopeKey;
     }
-    if (activeEntityId)
-      this._mergeSelectionItems(activeEntityId, selectionItems);
+    if (scopeKey) this._mergeSelectionItems(scopeKey, selectionItems);
     this._host.requestUpdate();
-    if (!activeEntityId) return;
+    if (activeEntityIds.length === 0) return;
     // A review may have entered draft while this camera was inactive. The
     // active-only update subscription cannot replay that earlier notification,
     // so activation starts with one authoritative, cache-bypassed query.
     void this._refresh(true, true);
     const api = this._context().api;
-    if (api) this._subscribeUpdates(api, activeEntityId);
+    if (api) this._subscribeUpdates(api, activeEntityIds);
     this._refreshTimer = window.setInterval(
       () => void this._refresh(true, false),
       ACTIVITY_FALLBACK_RECONCILE_INTERVAL_MS,
@@ -258,8 +278,9 @@ export class ActiveCameraActivityController<
   ): Promise<void> {
     const context = this._context();
     const api = context.api;
-    const entityId = this._activeEntityId;
-    if (!api || !entityId) return;
+    const entityIds = this._activeEntityIds;
+    const scopeKey = this._activeScopeKey;
+    if (!api || entityIds.length === 0 || !scopeKey) return;
     if (!loadFullHistory && this._historyLoadPending) {
       this._refreshAfterHistory = true;
     }
@@ -268,35 +289,59 @@ export class ActiveCameraActivityController<
     this.loading = true;
     this._host.requestUpdate();
     try {
-      const items = await this._fetch(api, entityId, {
-        bypassCache,
-        historyDays: context.historyDays,
-        loadFullHistory,
-        onProgress: (progressItems) => {
-          if (
-            generation !== this._generation ||
-            entityId !== this._activeEntityId
-          )
-            return;
-          if (
-            loadFullHistory &&
-            progressItems.length === 0 &&
-            this.items.length > 0
-          )
-            return;
-          this._setItems(
-            entityId,
-            mergeActivityItems(this.items, progressItems, context.historyDays),
-          );
-          this._host.requestUpdate();
-        },
+      const results = await Promise.allSettled(
+        entityIds.map((entityId) =>
+          this._fetch(api, entityId, {
+            bypassCache,
+            historyDays: context.historyDays,
+            loadFullHistory,
+            onProgress: (progressItems) => {
+              if (
+                generation !== this._generation ||
+                scopeKey !== this._activeScopeKey
+              )
+                return;
+              this._rememberItemSources(entityId, progressItems);
+              if (
+                loadFullHistory &&
+                progressItems.length === 0 &&
+                this.items.length > 0
+              )
+                return;
+              this._setItems(
+                scopeKey,
+                mergeActivityItems(
+                  this.items,
+                  progressItems,
+                  context.historyDays,
+                ),
+              );
+              this._host.requestUpdate();
+            },
+          }),
+        ),
+      );
+      const responses = results.map((result) =>
+        result.status === "fulfilled" ? result.value : [],
+      );
+      if (results.every(({ status }) => status === "rejected")) {
+        const failure = results.find(
+          (result): result is PromiseRejectedResult =>
+            result.status === "rejected",
+        );
+        throw failure?.reason;
+      }
+      const items = responses.flat();
+      responses.forEach((response, index) => {
+        const entityId = entityIds[index];
+        if (entityId) this._rememberItemSources(entityId, response);
       });
-      if (generation !== this._generation || entityId !== this._activeEntityId)
+      if (generation !== this._generation || scopeKey !== this._activeScopeKey)
         return;
       if (!loadFullHistory) {
         this._stopEmptyConfirmation();
         this._setItems(
-          entityId,
+          scopeKey,
           mergeActivityItems(this.items, items, context.historyDays),
         );
         return;
@@ -313,7 +358,7 @@ export class ActiveCameraActivityController<
       }
       this._stopEmptyConfirmation();
       this._setItems(
-        entityId,
+        scopeKey,
         mergeActivityItems(this.items, items, context.historyDays),
       );
     } catch {
@@ -337,8 +382,21 @@ export class ActiveCameraActivityController<
     this._refreshTimer = undefined;
   }
 
-  private _subscribeUpdates(api: HomeAssistantApi, entityId: string): void {
+  private _subscribeUpdates(
+    api: HomeAssistantApi,
+    entityIds: readonly string[],
+  ): void {
     const generation = ++this._updatesGeneration;
+    for (const entityId of entityIds) {
+      this._subscribeEntityUpdates(api, entityId, generation);
+    }
+  }
+
+  private _subscribeEntityUpdates(
+    api: HomeAssistantApi,
+    entityId: string,
+    generation: number,
+  ): void {
     void Promise.resolve(
       subscribeActivityUpdates(
         api,
@@ -347,13 +405,14 @@ export class ActiveCameraActivityController<
         (notification) => {
           if (
             generation !== this._updatesGeneration ||
-            entityId !== this._activeEntityId
+            !this._activeEntityIds.includes(entityId)
           )
             return;
           const update = this._mapUpdate?.(notification);
           if (update) {
+            this._rememberItemSources(entityId, [update]);
             this._setItems(
-              entityId,
+              this._activeScopeKey,
               mergeActivityItems(
                 this.items,
                 [update],
@@ -377,37 +436,41 @@ export class ActiveCameraActivityController<
       .then((unsubscribe) => {
         if (
           generation !== this._updatesGeneration ||
-          entityId !== this._activeEntityId
+          !this._activeEntityIds.includes(entityId)
         ) {
           unsubscribe?.();
           return;
         }
-        this._updatesUnsubscribe = unsubscribe;
+        if (unsubscribe) this._updatesUnsubscribes.set(entityId, unsubscribe);
       })
       .catch(() => {
         if (
           generation !== this._updatesGeneration ||
-          entityId !== this._activeEntityId
+          !this._activeEntityIds.includes(entityId)
         )
           return;
-        this._updateSubscribeRetryTimer = window.setTimeout(() => {
-          this._updateSubscribeRetryTimer = undefined;
-          if (entityId === this._activeEntityId) {
-            this._subscribeUpdates(api, entityId);
+        const timer = window.setTimeout(() => {
+          this._updateSubscribeRetryTimers.delete(entityId);
+          if (
+            generation === this._updatesGeneration &&
+            this._activeEntityIds.includes(entityId)
+          ) {
+            this._subscribeEntityUpdates(api, entityId, generation);
           }
         }, ACTIVITY_UPDATE_SUBSCRIBE_RETRY_MS);
+        this._updateSubscribeRetryTimers.set(entityId, timer);
       });
   }
 
   private _stopUpdates(): void {
     this._updatesGeneration += 1;
-    this._updatesUnsubscribe?.();
-    this._updatesUnsubscribe = undefined;
+    for (const unsubscribe of this._updatesUnsubscribes.values()) unsubscribe();
+    this._updatesUnsubscribes.clear();
     this._clearUpdateReconcileTimers();
-    if (this._updateSubscribeRetryTimer !== undefined) {
-      window.clearTimeout(this._updateSubscribeRetryTimer);
+    for (const timer of this._updateSubscribeRetryTimers.values()) {
+      window.clearTimeout(timer);
     }
-    this._updateSubscribeRetryTimer = undefined;
+    this._updateSubscribeRetryTimers.clear();
     this._refreshAfterHistory = false;
   }
 
@@ -418,21 +481,22 @@ export class ActiveCameraActivityController<
     this._updateReconcileTimers.clear();
   }
 
-  private _setItems(entityId: string, items: readonly T[]): void {
+  private _setItems(scopeKey: string, items: readonly T[]): void {
     this.items = items;
-    this._itemsEntityId = entityId;
+    this._itemsScopeKey = scopeKey;
     // Preserve only the newest rows for instant return navigation. Keeping the
     // complete history for every visited camera multiplies the largest data
     // structure in the card; the full active-camera window is rehydrated in
     // the background after the cached first paint.
-    this._recentItemsByEntityId.set(
-      entityId,
+    this._recentItemsByScope.set(
+      scopeKey,
       items.slice(0, INACTIVE_CAMERA_RECENT_ITEMS),
     );
+    this._pruneItemSources();
   }
 
   private _mergeSelectionItems(
-    entityId: string,
+    scopeKey: string,
     incoming: readonly T[],
   ): boolean {
     if (incoming.length === 0) return false;
@@ -447,7 +511,7 @@ export class ActiveCameraActivityController<
       return false;
     }
     this._setItems(
-      entityId,
+      scopeKey,
       mergeActivityItems(this.items, incoming, this._context().historyDays),
     );
     return true;
@@ -459,6 +523,24 @@ export class ActiveCameraActivityController<
     }
     this._emptyConfirmTimer = undefined;
     this._emptyConfirmationPending = false;
+  }
+
+  private get _activeScopeKey(): string {
+    return this._activeEntityIds.join("\u0000");
+  }
+
+  private _rememberItemSources(entityId: string, items: readonly T[]): void {
+    for (const item of items) this._entityIdByItemId.set(item.id, entityId);
+  }
+
+  private _pruneItemSources(): void {
+    const retained = new Set(this.items.map(({ id }) => id));
+    for (const items of this._recentItemsByScope.values()) {
+      for (const item of items) retained.add(item.id);
+    }
+    for (const id of this._entityIdByItemId.keys()) {
+      if (!retained.has(id)) this._entityIdByItemId.delete(id);
+    }
   }
 }
 

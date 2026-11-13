@@ -18,11 +18,11 @@ Give the next agent this instruction:
 ## Repository state
 
 - Branch: `main`
-- Current working version: `0.0.4-dev.277`
-- Current commit: `6c542e5` —
-  `v0.0.4-dev.276 - fix(reviews): synchronize takeover drafts and toolbar controls`
-- The worktree contains the completed, uncommitted camera-navigation module
-  conversion and camera-switcher overlay described below.
+- Current working version: `0.0.4-dev.278`
+- Current commit: `ee769c7` —
+  `v0.0.4-dev.277 - refactor(stage): promote camera navigation and add switcher overlay`
+- The worktree contains the completed, uncommitted additional-camera grouping
+  feature described below.
 
 Always check `git status`, the canonical version in
 `custom_components/watchzone/const.py`, and the latest commit before starting.
@@ -48,27 +48,29 @@ The repository state takes precedence over this snapshot.
 
 ## Current completed change
 
-Working version `0.0.4-dev.277`:
+Working version `0.0.4-dev.278`:
 
-- Camera navigation is now the standalone `camera-navigation` Stage module.
-  The built-in Stage no longer wraps it as a component in a generic Panel.
-- The optional Camera Switcher Overlay is a separate component in Camera's
-  `top-center` overlay slot. The Live Media Player editor toggle defaults off,
-  and the component is omitted entirely unless enabled with multiple cameras.
-- The switcher and navigation module independently consume the card-scoped
-  camera-selection context. Manual selection, carousel transitions, and
-  alert/detection takeover therefore remain synchronized without either
-  placeable importing the other.
-- The switcher uses the active camera session's existing overlay visibility,
-  reveal, and hold lifecycle. Its open menu keeps the shared overlay timer held,
-  and activity icons remain exclusive to camera navigation.
-- Architecture and Stage/carousel contracts now record the approved module and
-  component classification.
+- A configured additional camera forms one Camera-owned presentation group and
+  replaces the two standalone navigation entries with the group title.
+- Desktop/tablet groups support side-by-side or stacked combined presentation
+  and cycle `combined → A → B → combined`; focused states retain the group name
+  and add only a layout-relative directional icon.
+- Phone-width groups show one feed and toggle A/B without a combined stop while
+  retaining mixed review, event, and recording scope.
+- Each member keeps independent live transport, zoom, and pan state. Audio focus
+  is explicit; TWT/PTZ remain bound to the main camera, while linked lights,
+  combined snapshot, and combined suspension include both members.
+- Alerts/detections highlight the physical member. Takeover selects the
+  combined desktop group or the alerting phone member.
+- Group activity is merged without losing source identity, and overlapping
+  recording rows remain separate with A/B markers.
+- The editor owns group selection, sanitized unique title, layout, validation,
+  reference maintenance, and removal within the camera draft lifecycle.
 
 Validation is green:
 
-- 372 frontend unit tests
-- 96 browser tests across Chromium, Firefox, and WebKit
+- 380 frontend unit tests
+- 105 browser tests across Chromium, Firefox, and WebKit
 - Formatting, lint, type checking, architecture/style validation, production
   build, and version consistency. Release packaging and final diff checks are
   rerun immediately before handoff.

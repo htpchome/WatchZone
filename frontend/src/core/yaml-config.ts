@@ -67,6 +67,9 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
 
 function compactCameraConfig(camera: CameraConfig): Record<string, unknown> {
   const compact: Record<string, unknown> = { entity_id: camera.entity_id };
+  if (camera.additional_camera) {
+    compact.additional_camera = { ...camera.additional_camera };
+  }
   if (camera.connection !== "home_assistant") {
     compact.connection = camera.connection;
   }

@@ -135,7 +135,7 @@ export class ReviewsModule extends LitElement {
   private readonly _exports = new ReviewExportController(
     this,
     () => this.api,
-    () => this._activity.activeEntityId,
+    (item) => this._activity.entityIdFor(item.id),
     () => this._activity.activeCameraLabel,
     () => this._activity.items,
     () => this.localize,
@@ -144,7 +144,7 @@ export class ReviewsModule extends LitElement {
   private readonly _tracking = new ReviewTrackingController(
     this,
     () => this.api,
-    () => this._activity.activeEntityId,
+    (item) => this._activity.entityIdFor(item.id),
   );
 
   public disconnectedCallback(): void {
@@ -282,7 +282,10 @@ export class ReviewsModule extends LitElement {
             analysisTitle: review.analysis_title,
           }
         : {}),
-      cameraLabel: this._activity.activeCameraLabel ?? review.camera,
+      cameraLabel:
+        this._activity.activeEntityIds.length > 1
+          ? review.camera
+          : (this._activity.activeCameraLabel ?? review.camera),
       classification: review.classification,
       clipUrl: review.clip_url,
       downloadUrl: review.download_url ?? review.clip_url,
@@ -293,6 +296,7 @@ export class ReviewsModule extends LitElement {
       ...this._exports.feedback(review.id),
       hoverPreviewUrl: this.hoverPreviewEnabled ? review.preview_url : null,
       id: review.id,
+      sourceEntityId: this._activity.entityIdFor(review.id),
       inProgress:
         review.end_time === null || review.playback_sources.length === 0,
       mediaEndTime: review.media_end_time,
@@ -433,7 +437,7 @@ export class ReviewsModule extends LitElement {
 
   private _setReviewed(item: ActivityListItem, reviewed: boolean): void {
     const api = this.api;
-    const entityId = this._activity.activeEntityId;
+    const entityId = item.sourceEntityId ?? this._activity.entityIdFor(item.id);
     if (
       !api ||
       !entityId ||

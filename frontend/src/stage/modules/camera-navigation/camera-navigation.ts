@@ -66,23 +66,31 @@ export class CameraNavigationModule extends LitElement {
         appearance="navigation"
         mode="tab"
         .label=${this.localize("camera.navigation")}
-        .options=${this._state.items.map(({ activity, entityId, label }) => ({
-          accessibleLabel: activity
-            ? this.localize(`camera.activity_${activity}`, { camera: label })
-            : label,
-          indicator: activity
-            ? {
-                icon: "alertCircle" as const,
-                tone:
-                  activity === "alert"
-                    ? ("danger" as const)
-                    : ("warning" as const),
-              }
-            : undefined,
-          label,
-          value: entityId,
-        }))}
-        .value=${this._state.activeEntityId ?? ""}
+        .options=${this._state.items.map(
+          ({ activity, entityId, label, position }) => ({
+            accessibleLabel: activity
+              ? this.localize(`camera.activity_${activity}`, { camera: label })
+              : label,
+            indicator: activity
+              ? {
+                  icon: "alertCircle" as const,
+                  tone:
+                    activity === "alert"
+                      ? ("danger" as const)
+                      : ("warning" as const),
+                }
+              : undefined,
+            label,
+            leadingIcon: position
+              ? (`chevron${position[0]?.toUpperCase()}${position.slice(1)}` as
+                  "chevronDown" | "chevronLeft" | "chevronRight" | "chevronUp")
+              : undefined,
+            value: entityId,
+          }),
+        )}
+        .value=${
+          this._state.activeSelectionId ?? this._state.activeEntityId ?? ""
+        }
         @wzc-segmented-control-value=${this._select}
       ></wzc-segmented-control>
     </nav>`;
@@ -107,7 +115,7 @@ export class CameraNavigationModule extends LitElement {
   private readonly _select = (
     event: CustomEvent<SegmentedControlValueDetail>,
   ): void => {
-    this.cameraSelection?.select(this.targetModuleId, event.detail.value);
+    this.cameraSelection?.activate(this.targetModuleId, event.detail.value);
   };
 
   static styles = cameraNavigationStyles;

@@ -87,9 +87,15 @@ export class LightControlComponent extends LitElement {
 
   protected render() {
     const camera = this._activeCamera;
-    const config = this._activeConfig();
-    if (!camera || !config || !this.hass) return nothing;
-    const lights = config.lights.map(({ entityId, icon }) => ({
+    const configs = this._activeConfigs();
+    if (!camera || configs.length === 0 || !this.hass) return nothing;
+    const lights = [
+      ...new Map(
+        configs
+          .flatMap(({ lights }) => lights)
+          .map((light) => [light.entityId, light]),
+      ).values(),
+    ].map(({ entityId, icon }) => ({
       entity: this.hass?.states[entityId],
       entityId,
       icon,
@@ -237,9 +243,14 @@ export class LightControlComponent extends LitElement {
     });
   }
 
-  private _activeConfig(): CameraLightConfig | undefined {
-    return this.cameras.find(
-      ({ cameraEntityId }) => cameraEntityId === this._activeCamera?.entityId,
+  private _activeConfigs(): readonly CameraLightConfig[] {
+    const camera = this._activeCamera;
+    if (!camera) return [];
+    const entityIds = new Set(
+      camera.lightEntityIds?.length ? camera.lightEntityIds : [camera.entityId],
+    );
+    return this.cameras.filter(({ cameraEntityId }) =>
+      entityIds.has(cameraEntityId),
     );
   }
 

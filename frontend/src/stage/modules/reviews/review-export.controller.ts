@@ -34,7 +34,9 @@ export class ReviewExportController implements ReactiveController {
   public constructor(
     private readonly _host: ReactiveControllerHost,
     private readonly _api: () => HomeAssistantApi | undefined,
-    private readonly _entityId: () => string | undefined,
+    private readonly _entityId: (
+      item: Pick<ActivityListItem, "id">,
+    ) => string | undefined,
     private readonly _cameraLabel: () => string | undefined,
     private readonly _items: () => readonly ReviewItem[],
     private readonly _localize: () => LocalizeFunction,
@@ -69,7 +71,7 @@ export class ReviewExportController implements ReactiveController {
 
   public async begin(item: ActivityListItem): Promise<void> {
     const api = this._api();
-    const entityId = this._entityId();
+    const entityId = this._entityId(item);
     const startTime = item.mediaStartTime ?? item.startTime;
     const endTime = item.mediaEndTime ?? item.endTime;
     if (
@@ -119,7 +121,7 @@ export class ReviewExportController implements ReactiveController {
       (candidate) => candidate.id === pending.reviewId,
     );
     startExportJob(api, {
-      camera: this._cameraLabel() ?? review?.camera ?? "",
+      camera: review?.camera ?? this._cameraLabel() ?? "",
       name: detail.name,
       range: pending.range,
       reviewId: pending.reviewId,
@@ -159,7 +161,7 @@ export class ReviewExportController implements ReactiveController {
   }
 
   private _job(reviewId: string): ExportJob | undefined {
-    const entityId = this._entityId();
+    const entityId = this._entityId({ id: reviewId });
     return this._jobs.find(
       (job) => job.reviewId === reviewId && job.entityId === entityId,
     );

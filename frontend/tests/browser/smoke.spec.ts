@@ -512,6 +512,93 @@ test("keeps camera navigation module and carousel selection bidirectional", asyn
   await expect(buttons.nth(0)).toHaveCSS("box-shadow", "none");
 });
 
+test("cycles a grouped camera from combined to each member and back", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  const card = page.locator("watchzone-card");
+  await card.evaluate((element) => {
+    (
+      element as HTMLElement & {
+        setConfig(config: unknown): void;
+      }
+    ).setConfig({
+      type: "custom:watchzone-card",
+      cameras: [
+        {
+          additional_camera: {
+            entity_id: "camera.driveway",
+            layout: "side_by_side",
+            title: "Group A/B",
+          },
+          entity_id: "camera.porch",
+          title: "Porch",
+        },
+        { entity_id: "camera.driveway", title: "Driveway" },
+      ],
+    });
+  });
+
+  const button = card.locator("wzc-camera-navigation button");
+  const leadingIcon = button.locator(".option-leading-icon");
+  await expect(button).toHaveCount(1);
+  await expect(button).toContainText("Group A/B");
+  await expect(leadingIcon).toHaveCount(0);
+
+  await button.click();
+  await expect(leadingIcon).toHaveCount(1);
+  await expect(leadingIcon).toHaveAttribute("data-icon", "chevronLeft");
+
+  await button.click();
+  await expect(leadingIcon).toHaveAttribute("data-icon", "chevronRight");
+
+  await button.click();
+  await expect(leadingIcon).toHaveCount(0);
+});
+
+test("keeps grouped phone navigation to one visible A or B feed", async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 800, width: 500 });
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  const card = page.locator("watchzone-card");
+  await card.evaluate((element) => {
+    (
+      element as HTMLElement & {
+        setConfig(config: unknown): void;
+      }
+    ).setConfig({
+      type: "custom:watchzone-card",
+      cameras: [
+        {
+          additional_camera: {
+            entity_id: "camera.driveway",
+            layout: "side_by_side",
+            title: "Group A/B",
+          },
+          entity_id: "camera.porch",
+        },
+        { entity_id: "camera.driveway" },
+      ],
+    });
+  });
+
+  const group = card.locator("wzc-camera-group-view");
+  const button = card.locator("wzc-camera-navigation button");
+  const leadingIcon = button.locator(".option-leading-icon");
+  await expect(group.locator(".feed:not(.hidden)")).toHaveCount(1);
+  await expect(leadingIcon).toHaveAttribute("data-icon", "chevronLeft");
+
+  await button.click();
+  await expect(group.locator(".feed:not(.hidden)")).toHaveCount(1);
+  await expect(leadingIcon).toHaveAttribute("data-icon", "chevronRight");
+
+  await button.click();
+  await expect(leadingIcon).toHaveAttribute("data-icon", "chevronLeft");
+});
+
 test("keeps activity loading out of an active camera transition", async ({
   page,
 }) => {
@@ -3953,8 +4040,11 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
     .poll(async () => {
       return ptzControl.evaluate((element) => {
         const rect = element.getBoundingClientRect();
-        const host = element.getRootNode() as ShadowRoot;
-        const hostRect = (host.host as HTMLElement).getBoundingClientRect();
+        const root = element.getRootNode();
+        if (!(root instanceof ShadowRoot) || !root.host.isConnected) {
+          return Number.NaN;
+        }
+        const hostRect = root.host.getBoundingClientRect();
         return rect.x - hostRect.x + rect.width / 2;
       });
     })
@@ -3966,8 +4056,11 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
     .poll(async () => {
       return ptzControl.evaluate((element) => {
         const rect = element.getBoundingClientRect();
-        const host = element.getRootNode() as ShadowRoot;
-        const hostRect = (host.host as HTMLElement).getBoundingClientRect();
+        const root = element.getRootNode();
+        if (!(root instanceof ShadowRoot) || !root.host.isConnected) {
+          return Number.NaN;
+        }
+        const hostRect = root.host.getBoundingClientRect();
         return rect.y - hostRect.y + rect.height / 2;
       });
     })
@@ -5592,6 +5685,84 @@ test("camera editor configures lights and confirms accessible removal", async ({
   await removeAction.click();
   await removeDialog.locator('ha-button[variant="danger"]').click();
   await expect(editor.locator("wzc-sortable-tile")).toHaveCount(0);
+});
+
+test("camera editor configures and sanitizes an additional-camera group", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  await page.evaluate(async () => {
+    const constructor = customElements.get(
+      "watchzone-card",
+    ) as typeof HTMLElement & {
+      getConfigElement(): Promise<
+        HTMLElement & {
+          setConfig(config: unknown): void;
+          updateComplete: Promise<boolean>;
+        }
+      >;
+    };
+    const editor = await constructor.getConfigElement();
+    editor.id = "group-config-editor";
+    editor.setConfig({
+      type: "custom:watchzone-card",
+      cameras: [
+        { entity_id: "camera.porch", title: "Porch" },
+        { entity_id: "camera.driveway", title: "Driveway" },
+      ],
+    });
+    document.body.append(editor);
+    await editor.updateComplete;
+  });
+
+  const editor = page.locator("#group-config-editor");
+  await editor.locator("wzc-accordion-item").first().locator("summary").click();
+  await editor.locator('[aria-label="Edit camera: Porch"]').click();
+  const additional = editor
+    .locator(".camera-dialog-accordion > wzc-accordion-item")
+    .nth(2);
+  await additional.locator("summary").click();
+  await additional.locator("ha-selector").evaluate((element) => {
+    element.dispatchEvent(
+      new CustomEvent("value-changed", {
+        bubbles: true,
+        composed: true,
+        detail: { value: "camera.driveway" },
+      }),
+    );
+  });
+
+  const groupName = additional.locator("ha-input");
+  await expect(groupName).toHaveJSProperty("value", "Group A/B");
+  await groupName.evaluate((element) => {
+    const input = element as HTMLElement & { value: string };
+    input.value = "  Entry \n\n Pair  ";
+    input.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+  });
+  await additional
+    .locator('wzc-segmented-control button[data-value="stacked"]')
+    .click();
+  await editor
+    .locator('ha-button[appearance="accent"][variant="brand"]')
+    .click();
+
+  expect(
+    await editor.evaluate((element) => {
+      const config = (
+        element as HTMLElement & {
+          _config?: {
+            cameras?: Array<{ additional_camera?: unknown }>;
+          };
+        }
+      )._config;
+      return config?.cameras?.[0]?.additional_camera;
+    }),
+  ).toEqual({
+    entity_id: "camera.driveway",
+    layout: "stacked",
+    title: "Entry Pair",
+  });
 });
 
 test("editor camera drag handles reorder the configured cameras", async ({

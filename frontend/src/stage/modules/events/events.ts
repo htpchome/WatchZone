@@ -217,7 +217,10 @@ export class EventsModule extends LitElement {
         }),
       )
       .map((event): ActivityListItem => ({
-        cameraLabel: this._activity.activeCameraLabel ?? event.camera,
+        cameraLabel:
+          this._activity.activeEntityIds.length > 1
+            ? event.camera
+            : (this._activity.activeCameraLabel ?? event.camera),
         clipUrl: event.clip_url,
         endTime: event.end_time,
         id: event.id,

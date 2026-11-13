@@ -133,7 +133,20 @@ export class RecordingsModule extends LitElement {
         aria-label=${this.localize("recordings.open", { title })}
         @click=${() => this._open(hour, title)}
       ></button>
-      <span class="movie">${renderIcon("movie")}</span>
+      <span class="movie"
+        >${renderIcon("movie")}
+        ${
+          hour.group_position
+            ? html`<span
+                class="group-position"
+                aria-label=${this.localize("recordings.group_camera", {
+                  position: hour.group_position,
+                })}
+                >${hour.group_position}</span
+              >`
+            : null
+        }</span
+      >
       <span class="details">
         <span class="range">${this._range(hour)}</span>
         <span class="duration">${this._duration(hour.duration)}</span>
@@ -241,7 +254,8 @@ export class RecordingsModule extends LitElement {
         availableStartTime: hour.start_time,
         camera: hour.camera,
         endTime: hour.timeline_end_time,
-        entityId: this._recordings.activeEntityId ?? "",
+        entityId:
+          hour.source_entity_id ?? this._recordings.activeEntityId ?? "",
         markers: hour.markers.map((marker) => ({
           classification: marker.classification,
           endTime: marker.end_time,
