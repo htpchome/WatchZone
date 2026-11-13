@@ -379,19 +379,14 @@ describe("layout composition", () => {
             additional_camera: {
               entity_id: "camera.driveway",
               layout: "side_by_side",
-              title: "Group A/B",
             },
             entity_id: "camera.porch",
+            title: "Group A/B",
             lights: [{ entity_id: "light.porch" }],
             ptz_enabled: true,
             two_way_talk_enabled: true,
           },
-          {
-            entity_id: "camera.driveway",
-            lights: [{ entity_id: "light.driveway" }],
-            ptz_enabled: true,
-            two_way_talk_enabled: true,
-          },
+          { entity_id: "camera.driveway" },
         ],
       }),
     );
@@ -431,10 +426,6 @@ describe("layout composition", () => {
         {
           cameraEntityId: "camera.porch",
           lights: [{ entityId: "light.porch" }],
-        },
-        {
-          cameraEntityId: "camera.driveway",
-          lights: [{ entityId: "light.driveway" }],
         },
       ],
     });

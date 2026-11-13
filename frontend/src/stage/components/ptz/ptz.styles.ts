@@ -5,16 +5,19 @@ export const ptzStyles = css`
     display: block;
     position: relative;
     z-index: 4;
-    inline-size: var(--wzc-camera-control-size);
-    block-size: var(--wzc-camera-control-size);
+    inline-size: calc(
+      3 * var(--wzc-ptz-cell-size) + 2 * var(--wzc-ptz-panel-padding) + 2px
+    );
+    block-size: calc(
+      3 * var(--wzc-ptz-cell-size) + 2 * var(--wzc-ptz-panel-padding) + 2px
+    );
     min-block-size: 0;
     pointer-events: none;
   }
 
   .ptz-layer {
-    position: absolute;
-    inset-block-start: 50%;
-    inset-inline-start: 100%;
+    position: relative;
+    inset-inline-start: calc(var(--wzc-camera-control-size) / 2);
     inline-size: calc(
       3 * var(--wzc-ptz-cell-size) + 2 * var(--wzc-ptz-panel-padding) + 2px
     );
@@ -22,11 +25,12 @@ export const ptzStyles = css`
       3 * var(--wzc-ptz-cell-size) + 2 * var(--wzc-ptz-panel-padding) + 2px
     );
     pointer-events: none;
-    transform: translate(-50%, -50%);
   }
 
   .ptz-control {
     position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
     box-sizing: border-box;
     color: var(--wzc-media-overlay-color);
     background: var(--wzc-ptz-panel-background);
@@ -34,6 +38,7 @@ export const ptzStyles = css`
     border-radius: 50%;
     opacity: 0;
     pointer-events: none;
+    transform: translate(-50%, -50%);
     transform-origin: center;
   }
 
@@ -42,8 +47,6 @@ export const ptzStyles = css`
       opacity var(--wzc-media-overlay-transition-duration) ease,
       inline-size var(--wzc-media-overlay-transition-duration) ease,
       block-size var(--wzc-media-overlay-transition-duration) ease,
-      inset-block-start var(--wzc-media-overlay-transition-duration) ease,
-      inset-inline-start var(--wzc-media-overlay-transition-duration) ease,
       padding var(--wzc-media-overlay-transition-duration) ease;
   }
 
@@ -60,8 +63,6 @@ export const ptzStyles = css`
       3 * var(--wzc-ptz-cell-size) + 2 * var(--wzc-ptz-panel-padding) + 2px
     );
     padding: var(--wzc-ptz-panel-padding);
-    inset-block-start: 0;
-    inset-inline-start: 0;
   }
 
   .ptz-control.collapsed {
@@ -71,8 +72,6 @@ export const ptzStyles = css`
     inline-size: var(--wzc-camera-control-size);
     block-size: var(--wzc-camera-control-size);
     padding: 0;
-    inset-block-start: calc((100% - var(--wzc-camera-control-size)) / 2);
-    inset-inline-start: calc((100% - var(--wzc-camera-control-size)) / 2);
   }
 
   .ptz-control.visible {

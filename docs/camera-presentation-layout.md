@@ -54,6 +54,10 @@ allowed to clip content or escape Home Assistant's allocated grid area.
   desktop widths. At phone-width camera containers, only one member is
   presented and the overlay selector toggles A/B. The responsive change does
   not rewrite the saved group layout.
+- The split is always contained inside the same camera-stage rectangle used by
+  a standalone camera. Child feeds never contribute intrinsic height to the
+  carousel, so configuring a group cannot resize that group, another slide, or
+  the surrounding card on first paint.
 - The runtime stage-height handle may expand the stage from its `16:9` default
   to a guarded maximum of `1:1`. It is transient presentation state, keyed by
   the camera-module instance, and does not alter YAML or provider state. Every

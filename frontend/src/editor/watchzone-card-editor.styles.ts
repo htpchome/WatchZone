@@ -129,6 +129,14 @@ export const cardEditorStyles = css`
     cursor: not-allowed;
   }
 
+  .remove-additional-camera {
+    justify-self: end;
+  }
+
+  .field-error {
+    color: var(--wzc-color-error);
+  }
+
   dialog {
     box-sizing: border-box;
     inline-size: min(38rem, calc(100vw - 2rem));

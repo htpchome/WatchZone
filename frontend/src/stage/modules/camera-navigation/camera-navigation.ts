@@ -82,8 +82,8 @@ export class CameraNavigationModule extends LitElement {
               : undefined,
             label,
             leadingIcon: position
-              ? (`chevron${position[0]?.toUpperCase()}${position.slice(1)}` as
-                  "chevronDown" | "chevronLeft" | "chevronRight" | "chevronUp")
+              ? (`arrow${position[0]?.toUpperCase()}${position.slice(1)}` as
+                  "arrowDown" | "arrowLeft" | "arrowRight" | "arrowUp")
               : undefined,
             value: entityId,
           }),

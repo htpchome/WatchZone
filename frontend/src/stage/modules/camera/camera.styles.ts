@@ -123,6 +123,14 @@ export const cameraStyles = css`
     );
   }
 
+  .camera-carousel.camera-group-active .carousel-navigation.previous {
+    inset-inline-start: calc(
+      var(--wzc-camera-control-inline-inset) +
+        (var(--wzc-camera-control-size) * 2) +
+        (var(--wzc-carousel-navigation-control-gap) * 2)
+    );
+  }
+
   .carousel-navigation.next {
     inset-inline-end: calc(
       var(--wzc-camera-control-inline-inset) + var(--wzc-camera-control-size) +

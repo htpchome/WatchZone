@@ -27,7 +27,6 @@ export type AdditionalCameraLayout = "side_by_side" | "stacked";
 export interface AdditionalCameraConfig {
   readonly entity_id: string;
   readonly layout: AdditionalCameraLayout;
-  readonly title: string;
 }
 
 export interface CameraConfig {
@@ -238,14 +237,6 @@ export function createDefaultCameraConfig(entityId = ""): CameraConfig {
   };
 }
 
-export function sanitizeCameraGroupTitleInput(value: string): string {
-  return sanitizePlainTextInput(value, { maxLength: MAX_CAMERA_TITLE_LENGTH });
-}
-
-export function normalizeCameraGroupTitle(value: string): string {
-  return normalizePlainText(value, { maxLength: MAX_CAMERA_TITLE_LENGTH });
-}
-
 export function sanitizeCardTitleInput(value: string): string {
   return sanitizePlainTextInput(value, { maxLength: MAX_CARD_TITLE_LENGTH });
 }
@@ -257,7 +248,7 @@ export function normalizeCardTitle(value: string): string {
 /** Keeps camera labels safe for plain-text presentation while supporting locales. */
 export function sanitizeCameraTitleInput(value: string): string {
   return sanitizePlainTextInput(value, {
-    allowCharacter: (character) => /[\p{L}\p{N} ]/u.test(character),
+    allowCharacter: (character) => /[\p{L}\p{N} /]/u.test(character),
     maxLength: MAX_CAMERA_TITLE_LENGTH,
   });
 }
@@ -331,6 +322,11 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
     );
   }
   const defaults = createDefaultCameraConfig(source.entity_id.trim());
+  const legacyGroupTitle =
+    typeof (source.additional_camera as Record<string, unknown> | undefined)
+      ?.title === "string"
+      ? ((source.additional_camera as Record<string, unknown>).title as string)
+      : undefined;
   const lights = normalizeLights(source, index);
   if (
     "connection" in source &&
@@ -390,10 +386,10 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
     ptz_enabled: source.ptz_enabled === true,
     start_live_unmuted_pc_tablet: source.start_live_unmuted_pc_tablet === true,
     start_live_unmuted_phone: source.start_live_unmuted_phone === true,
-    title:
-      typeof source.title === "string"
-        ? normalizeCameraTitle(source.title)
-        : defaults.title,
+    title: normalizeCameraTitle(
+      legacyGroupTitle ??
+        (typeof source.title === "string" ? source.title : defaults.title),
+    ),
     two_way_talk_enabled: source.two_way_talk_enabled === true,
   };
 }
@@ -421,21 +417,9 @@ function normalizeAdditionalCamera(
       `${APP_NAME} camera ${cameraIndex + 1} additional camera layout must be side_by_side or stacked.`,
     );
   }
-  if (typeof source.title !== "string") {
-    throw new Error(
-      `${APP_NAME} camera ${cameraIndex + 1} group title must be a string.`,
-    );
-  }
-  const title = normalizeCameraGroupTitle(source.title);
-  if (!title) {
-    throw new Error(
-      `${APP_NAME} camera ${cameraIndex + 1} group title must not be empty.`,
-    );
-  }
   return {
     entity_id: source.entity_id.trim(),
     layout: source.layout,
-    title,
   };
 }
 
@@ -470,11 +454,25 @@ function validateCameraGroups(
         `${APP_NAME} grouped secondary cameras cannot own a group.`,
       );
     }
-    const normalizedTitle = group.title.toLocaleLowerCase();
+    if (
+      secondary?.ptz_enabled ||
+      secondary?.two_way_talk_enabled ||
+      secondary?.lights.length
+    ) {
+      throw new Error(
+        `${APP_NAME} grouped secondary cameras cannot own PTZ, two-way talk, or lights.`,
+      );
+    }
+    const normalizedTitle = camera.title.trim().toLocaleLowerCase();
+    if (!normalizedTitle) {
+      throw new Error(
+        `${APP_NAME} grouped cameras must use the camera title as their group name.`,
+      );
+    }
     if (groupTitles.has(normalizedTitle)) {
       throw new Error(`${APP_NAME} camera group titles must be unique.`);
     }
-    for (const memberTitle of [camera.title, secondary?.title]) {
+    for (const memberTitle of [secondary?.title]) {
       if (
         memberTitle &&
         memberTitle.trim().toLocaleLowerCase() === normalizedTitle

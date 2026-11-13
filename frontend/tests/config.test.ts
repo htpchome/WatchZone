@@ -171,9 +171,9 @@ describe("WatchZone card configuration", () => {
           additional_camera: {
             entity_id: "camera.driveway",
             layout: "stacked",
-            title: "Group A/B",
           },
           entity_id: "camera.porch",
+          title: "Group A/B",
         },
         { entity_id: "camera.driveway" },
       ],
@@ -182,8 +182,8 @@ describe("WatchZone card configuration", () => {
     expect(config.cameras[0]?.additional_camera).toEqual({
       entity_id: "camera.driveway",
       layout: "stacked",
-      title: "Group A/B",
     });
+    expect(config.cameras[0]?.title).toBe("Group A/B");
     expect(config.cameras[1]?.additional_camera).toBeUndefined();
   });
 
@@ -195,9 +195,9 @@ describe("WatchZone card configuration", () => {
             additional_camera: {
               entity_id: "camera.missing",
               layout: "side_by_side",
-              title: "Group A/B",
             },
             entity_id: "camera.porch",
+            title: "Group A/B",
           },
         ],
       }),
@@ -209,22 +209,42 @@ describe("WatchZone card configuration", () => {
             additional_camera: {
               entity_id: "camera.driveway",
               layout: "side_by_side",
-              title: "Group A/B",
             },
             entity_id: "camera.porch",
+            title: "Group A/B",
           },
           {
             additional_camera: {
               entity_id: "camera.garage",
               layout: "stacked",
-              title: "Group C/D",
             },
             entity_id: "camera.driveway",
+            title: "Group C/D",
           },
           { entity_id: "camera.garage" },
         ],
       }),
     ).toThrow("grouped secondary cameras cannot own a group");
+    expect(() =>
+      normalizeCardConfig({
+        cameras: [
+          {
+            additional_camera: {
+              entity_id: "camera.driveway",
+              layout: "side_by_side",
+            },
+            entity_id: "camera.porch",
+            title: "Group A/B",
+          },
+          {
+            entity_id: "camera.driveway",
+            lights: [{ entity_id: "light.driveway" }],
+          },
+        ],
+      }),
+    ).toThrow(
+      "grouped secondary cameras cannot own PTZ, two-way talk, or lights",
+    );
   });
 
   it("normalizes the opt-in two-way-talk camera capability", () => {
@@ -357,7 +377,7 @@ describe("WatchZone card configuration", () => {
           },
         ],
       }).cameras[0]?.title,
-    ).toBe("Café 42 Patio 1234567890");
+    ).toBe("Café 42 / Patio 12345678");
     expect(() =>
       normalizeCardConfig({
         cameras: [{ entity_id: "camera.front", title: 42 }],

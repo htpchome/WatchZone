@@ -26,6 +26,10 @@ export const cameraGroupViewStyles = css`
 
   .group {
     position: relative;
+    aspect-ratio: var(
+      --wzc-camera-stage-runtime-aspect-ratio,
+      var(--wzc-camera-stage-aspect-ratio)
+    );
     overflow: hidden;
     background: var(--wzc-camera-stage);
   }
@@ -100,6 +104,7 @@ export const cameraGroupViewStyles = css`
     justify-content: center;
     gap: 0.15rem;
     min-inline-size: var(--wzc-camera-control-size);
+    min-block-size: var(--wzc-camera-control-size);
     block-size: var(--wzc-camera-control-size);
     padding-inline: 0.45rem;
     color: var(--wzc-media-overlay-color);
@@ -108,6 +113,7 @@ export const cameraGroupViewStyles = css`
     border-radius: var(--wzc-radius-pill);
     box-shadow: var(--wzc-media-overlay-shadow);
     cursor: pointer;
+    touch-action: manipulation;
   }
 
   .feed-action.selected {

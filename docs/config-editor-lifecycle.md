@@ -101,12 +101,21 @@ Future fields may use an appropriate coalescing strategy, but none may use
 repeated `config-changed` events as a live-preview mechanism.
 
 Camera grouping is edited atomically with its owning main-camera draft. The
-additional-camera selector may reference only another configured, ungrouped
-camera. Group title and layout remain on the main camera; the secondary camera
-does not receive a mirrored group object. Changing or deleting either member
-updates or removes that reference in the same normalized draft. Group titles
-are sanitized like other user-visible card text and must be unique and differ
-from both member camera names.
+additional-camera selector uses the standard Home Assistant camera-entity
+picker and therefore displays every discovered camera. Selecting the main
+camera or an entity already configured anywhere in the card produces a visible
+validation error and cannot be committed. A valid selection creates the
+secondary camera configuration as part of the same atomic draft.
+
+The main camera's ordinary Camera Name becomes the group name and defaults to
+`Group A/B`, then `Group C/D`, and so on. There is no second group-name field or
+mirrored title inside the additional-camera object. The secondary camera is a
+full physical camera record for media and activity but is hidden as a separate
+editor tile while grouped. It cannot own PTZ, two-way talk, or lights; the group
+uses the main camera's controls and linked lights. Changing or deleting the
+group updates both physical records in the same normalized draft. Group names
+are sanitized like other camera names, must be unique, and must differ from
+both member camera names.
 
 ## 5. Controls, themes, and responsive layout
 

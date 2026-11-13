@@ -115,6 +115,18 @@ const ICONS = {
   chevronRight: {
     paths: [{ d: "M8.59 16.59 10 18l6-6-6-6-1.41 1.41L13.17 12l-4.58 4.59Z" }],
   },
+  arrowUp: {
+    paths: [{ d: "M12 3 3 12h6v9h6v-9h6Z" }],
+  },
+  arrowDown: {
+    paths: [{ d: "M12 21 3 12h6V3h6v9h6Z" }],
+  },
+  arrowLeft: {
+    paths: [{ d: "M3 12 12 3v6h9v6h-9v6Z" }],
+  },
+  arrowRight: {
+    paths: [{ d: "m21 12-9-9v6H3v6h9v6Z" }],
+  },
   remove: {
     paths: [
       {

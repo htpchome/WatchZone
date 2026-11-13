@@ -48,7 +48,7 @@ The repository state takes precedence over this snapshot.
 
 ## Current completed change
 
-Working version `0.0.4-dev.278`:
+Working version `0.0.4-dev.279`:
 
 - A configured additional camera forms one Camera-owned presentation group and
   replaces the two standalone navigation entries with the group title.
@@ -57,23 +57,32 @@ Working version `0.0.4-dev.278`:
   and add only a layout-relative directional icon.
 - Phone-width groups show one feed and toggle A/B without a combined stop while
   retaining mixed review, event, and recording scope.
-- Each member keeps independent live transport, zoom, and pan state. Audio focus
-  is explicit; TWT/PTZ remain bound to the main camera, while linked lights,
-  combined snapshot, and combined suspension include both members.
+- Each member keeps independent live transport, zoom, pan, activity, and
+  recorded-media identity. Audio focus is explicit; TWT/PTZ and linked lights
+  remain bound to the main camera, while combined snapshot and combined
+  suspension include both members.
 - Alerts/detections highlight the physical member. Takeover selects the
   combined desktop group or the alerting phone member.
 - Group activity is merged without losing source identity, and overlapping
   recording rows remain separate with A/B markers.
-- The editor owns group selection, sanitized unique title, layout, validation,
-  reference maintenance, and removal within the camera draft lifecycle.
+- The editor uses the full Home Assistant camera picker, rejects any entity
+  already configured as either a main or secondary camera, creates the valid
+  secondary record atomically, and presents the pair as one tile. The main
+  Camera Name is the group name; no duplicate group-name field exists.
+- Grouped first paint preserves the standard camera-stage ratio. Per-feed
+  controls respond on first activation without colliding with carousel
+  navigation, directional state uses arrows, and only physically active feeds
+  receive alert/detection outlines.
+- The PTZ overlay retains its established transform center and viewport anchor;
+  camera-group layout does not reposition it.
 
 Validation is green:
 
 - 380 frontend unit tests
 - 105 browser tests across Chromium, Firefox, and WebKit
 - Formatting, lint, type checking, architecture/style validation, production
-  build, and version consistency. Release packaging and final diff checks are
-  rerun immediately before handoff.
+  build, version consistency, release packaging, and final diff checks. The
+  validated HACS archive is `dist/watchzone.zip`.
 
 ## Working requirements
 

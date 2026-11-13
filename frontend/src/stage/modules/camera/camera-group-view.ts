@@ -166,7 +166,9 @@ export class CameraGroupView extends LitElement {
                       aria-label=${this.localize("camera.group_audio_target", {
                         position: index === 0 ? "A" : "B",
                       })}
-                      @click=${() => this._selectAudioFocus(index)}
+                      @pointerdown=${this._stopControlPointerPropagation}
+                      @click=${(event: Event) =>
+                        this._selectAudioFocus(event, index)}
                     >
                       ${renderIcon(
                         this._audioFocus === index &&
@@ -185,7 +187,9 @@ export class CameraGroupView extends LitElement {
                       aria-label=${this.localize("camera.group_solo_target", {
                         position: index === 0 ? "A" : "B",
                       })}
-                      @click=${() => this._selectSoloFeed(index)}
+                      @pointerdown=${this._stopControlPointerPropagation}
+                      @click=${(event: Event) =>
+                        this._selectSoloFeed(event, index)}
                     >
                       ${renderIcon("fullscreen")}
                     </button>
@@ -354,7 +358,6 @@ export class CameraGroupView extends LitElement {
     if (!main || !focus) return;
     this.cameraSession?.publish(this, {
       ...main,
-      lightEntityIds: this.cameras.map(({ entityId }) => entityId),
       muted: focus.muted,
       overlayVisible: this._overlayVisible,
       holdOverlay: () => {
@@ -401,7 +404,14 @@ export class CameraGroupView extends LitElement {
     );
   };
 
-  private _selectAudioFocus(index: number): void {
+  private readonly _stopControlPointerPropagation = (
+    event: PointerEvent,
+  ): void => {
+    event.stopPropagation();
+  };
+
+  private _selectAudioFocus(event: Event, index: number): void {
+    event.stopPropagation();
     this._audioFocus = index === 1 ? 1 : 0;
     this._views.forEach((view, viewIndex) => {
       if (viewIndex !== this._audioFocus) view.setMuted(true);
@@ -409,7 +419,8 @@ export class CameraGroupView extends LitElement {
     this.requestUpdate();
   }
 
-  private _selectSoloFeed(index: number): void {
+  private _selectSoloFeed(event: Event, index: number): void {
+    event.stopPropagation();
     const target = index === 1 ? "secondary" : "main";
     this.dispatchEvent(
       new CustomEvent("camera-group-mode", {

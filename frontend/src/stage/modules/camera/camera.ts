@@ -270,8 +270,12 @@ export class CameraModule extends LitElement {
               this.roundedCorners ? "" : "square-camera-corners",
               this.shadowStyle === "small" ? "camera-shadow-small" : "",
               this.shadowStyle === "none" ? "camera-shadow-none" : "",
-              this._activeClassification
+              this._activeClassification &&
+              this._activePresentation?.cameras.length === 1
                 ? `activity-${this._activeClassification}`
+                : "",
+              this._activePresentation?.cameras.length === 2
+                ? "camera-group-active"
                 : "",
             ]
               .filter(Boolean)
