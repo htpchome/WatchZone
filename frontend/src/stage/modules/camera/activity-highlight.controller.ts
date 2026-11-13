@@ -1,9 +1,13 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
 import type { AlertTakeoverMode } from "../../../core/config";
-import { ACTIVITY_UPDATE_SUBSCRIBE_RETRY_MS } from "../../../core/constants";
+import {
+  ACTIVITY_FALLBACK_RECONCILE_INTERVAL_MS,
+  ACTIVITY_UPDATE_SUBSCRIBE_RETRY_MS,
+} from "../../../core/constants";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
 import type { ReviewItem } from "../../../api/reviews";
+import { listRecentReviewStates } from "../../../api/reviews";
 import {
   subscribeActivityUpdates,
   type ActivityUpdateNotification,
@@ -49,6 +53,9 @@ export class LiveActivityHighlightController implements ReactiveController {
   private _highlightEnabled = false;
   private _identity?: HomeAssistantApi["identity"];
   private _order = 0;
+  private _reconcileInFlight = false;
+  private _reconcileRequest = 0;
+  private _reconcileTimer?: number;
   private _returnEntityId?: string;
   private _returnCameraPinned = false;
   private readonly _retryTimers = new Map<string, number>();
@@ -213,22 +220,7 @@ export class LiveActivityHighlightController implements ReactiveController {
       this._activeReviews.set(entityId, reviews);
     }
     if (notification.phase === "end") {
-      const ended = reviews.get(notification.id);
-      reviews.delete(notification.id);
-      this._suppressedReviews.delete(key);
-      this._rememberEnded(entityId, notification.id);
-      if (reviews.size === 0) this._activeReviews.delete(entityId);
-      if (
-        ended &&
-        this._currentTakeover?.entityId === entityId &&
-        this._currentTakeover.id === notification.id
-      ) {
-        this._currentTakeover = undefined;
-        const next = this._nextEligibleReview();
-        if (next) this._beginTakeover(next, true);
-        else this._restoreUserCamera();
-      }
-      this._publishActivity();
+      this._endReviews([{ entityId, id: notification.id }]);
       return;
     }
     if (
@@ -247,6 +239,7 @@ export class LiveActivityHighlightController implements ReactiveController {
     review.classification = notification.classification;
     if (notification.review) review.review = notification.review;
     reviews.set(notification.id, review);
+    this._syncReconciliation();
     if (
       this.takeoverEnabled &&
       !this._currentTakeover &&
@@ -328,6 +321,99 @@ export class LiveActivityHighlightController implements ReactiveController {
     this._endedReviews.set(entityId, ended);
   }
 
+  private _endReviews(
+    endedReviews: readonly { readonly entityId: string; readonly id: string }[],
+  ): void {
+    let changed = false;
+    let currentEnded = false;
+    for (const { entityId, id } of endedReviews) {
+      const reviews = this._activeReviews.get(entityId);
+      const ended = reviews?.get(id);
+      if (ended) {
+        reviews?.delete(id);
+        changed = true;
+      }
+      this._suppressedReviews.delete(reviewKey(entityId, id));
+      this._rememberEnded(entityId, id);
+      if (reviews?.size === 0) this._activeReviews.delete(entityId);
+      if (
+        ended &&
+        this._currentTakeover?.entityId === entityId &&
+        this._currentTakeover.id === id
+      ) {
+        currentEnded = true;
+      }
+    }
+    if (currentEnded) {
+      this._currentTakeover = undefined;
+      const next = this._nextEligibleReview();
+      if (next) this._beginTakeover(next, true);
+      else this._restoreUserCamera();
+    }
+    this._syncReconciliation();
+    if (changed) this._publishActivity();
+  }
+
+  private _syncReconciliation(): void {
+    const shouldReconcile = this._connected && this._activeReviews.size > 0;
+    if (!shouldReconcile) {
+      if (this._reconcileTimer !== undefined) {
+        window.clearInterval(this._reconcileTimer);
+        this._reconcileTimer = undefined;
+      }
+      return;
+    }
+    this._reconcileTimer ??= window.setInterval(
+      () => void this._reconcileActivity(),
+      ACTIVITY_FALLBACK_RECONCILE_INTERVAL_MS,
+    );
+  }
+
+  private async _reconcileActivity(): Promise<void> {
+    if (this._reconcileInFlight) return;
+    const api = this._context().api;
+    if (!api || this._activeReviews.size === 0) return;
+    const generation = this._generation;
+    const request = ++this._reconcileRequest;
+    const activeByEntity = [...this._activeReviews.entries()]
+      .map(([entityId, reviews]) => ({
+        entityId,
+        reviews: [...reviews.values()],
+      }))
+      .filter(({ reviews }) => reviews.some(({ review }) => review));
+    if (activeByEntity.length === 0) return;
+    this._reconcileInFlight = true;
+    try {
+      const results = await Promise.allSettled(
+        activeByEntity.map(({ entityId }) =>
+          listRecentReviewStates(api, entityId),
+        ),
+      );
+      if (generation !== this._generation || !this._connected) return;
+      const ended: { entityId: string; id: string }[] = [];
+      results.forEach((result, index) => {
+        if (result.status !== "fulfilled") return;
+        const local = activeByEntity[index];
+        if (!local) return;
+        const endedIds = new Set(
+          result.value
+            .filter(({ end_time }) => end_time !== null)
+            .map(({ id }) => id),
+        );
+        for (const review of local.reviews) {
+          if (review.review && endedIds.has(review.review.id)) {
+            ended.push({ entityId: local.entityId, id: review.id });
+          }
+        }
+      });
+      if (ended.length > 0) this._endReviews(ended);
+    } finally {
+      if (request === this._reconcileRequest) {
+        this._reconcileInFlight = false;
+      }
+    }
+  }
+
   private _publishActivity(): void {
     const nextClassifications = new Map<string, LiveActivityClassification>();
     for (const [entityId, reviews] of this._activeReviews) {
@@ -346,6 +432,12 @@ export class LiveActivityHighlightController implements ReactiveController {
   }
 
   private _clearActivity(): void {
+    if (this._reconcileTimer !== undefined) {
+      window.clearInterval(this._reconcileTimer);
+      this._reconcileTimer = undefined;
+    }
+    this._reconcileRequest += 1;
+    this._reconcileInFlight = false;
     this._activeReviews.clear();
     this._endedReviews.clear();
     this._suppressedReviews.clear();

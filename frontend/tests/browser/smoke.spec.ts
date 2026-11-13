@@ -803,7 +803,7 @@ test("releases grouped overlay and resize interaction before selecting another c
   await expect(groupViewport).toHaveAttribute("aria-label", /zoom 100 percent/);
 });
 
-test("keeps grouped interaction alive across alert takeover", async ({
+test("keeps grouped interaction alive across slide alert takeover", async ({
   page,
 }) => {
   await page.goto("/");
@@ -832,7 +832,6 @@ test("keeps grouped interaction alive across alert takeover", async ({
     cardElement.setConfig({
       type: "custom:watchzone-card",
       alert_detection_takeover: "both",
-      slide_transition: "fade",
       start_alert_takeover_on: true,
       cameras: [
         {
@@ -903,10 +902,9 @@ test("keeps grouped interaction alive across alert takeover", async ({
       start_time: Date.now() / 1000 - 1,
     },
   });
-  await expect(navigation.filter({ hasText: "Group A/B" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
+  const groupButton = navigation.filter({ hasText: "Group A/B" });
+  await expect(groupButton).toHaveAttribute("aria-selected", "true");
+  await expect(groupButton.locator(".option-indicator")).toHaveCount(1);
   const takeoverSlides = card.locator("wzc-camera .swiper-slide");
   await expect(takeoverSlides.nth(0)).not.toHaveAttribute("inert");
   await expect(takeoverSlides.nth(1)).toHaveAttribute("inert", "");
@@ -922,14 +920,17 @@ test("keeps grouped interaction alive across alert takeover", async ({
   await expect(handle).toHaveAttribute("aria-valuenow", "100");
 
   await emitReviewNotification(page, {
-    type: "end",
+    type: "update",
     after: {
       camera: "driveway",
+      end_time: Date.now() / 1000,
       id: "group-review",
       severity: "detection",
+      start_time: Date.now() / 1000 - 1,
     },
   });
   await expect(hallButton).toHaveAttribute("aria-selected", "true");
+  await expect(groupButton.locator(".option-indicator")).toHaveCount(0);
   await expect(takeoverSlides.nth(0)).toHaveAttribute("inert", "");
   await expect(takeoverSlides.nth(1)).not.toHaveAttribute("inert");
   const hallViewport = card

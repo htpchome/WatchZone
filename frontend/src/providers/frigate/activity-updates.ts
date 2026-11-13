@@ -96,11 +96,13 @@ function normalizePayload(
     return undefined;
   }
   const phase =
-    payload.type === "new" ||
-    payload.type === "update" ||
-    payload.type === "end"
-      ? payload.type
-      : undefined;
+    typeof activity.end_time === "number"
+      ? "end"
+      : payload.type === "new" ||
+          payload.type === "update" ||
+          payload.type === "end"
+        ? payload.type
+        : undefined;
   const review =
     topic === "reviews" && kind === "reviews"
       ? normalizeReview(payload, source, classification, phase)

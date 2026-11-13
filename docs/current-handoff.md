@@ -18,11 +18,11 @@ Give the next agent this instruction:
 ## Repository state
 
 - Branch: `main`
-- Current working version: `0.0.4-dev.285`
-- Current commit: `5b8a126` —
-  `v0.0.4-dev.284 - fix(cameras): harden live interaction lifecycle`
-- The worktree contains the uncommitted fade-transition interaction correction
-  described below.
+- Current working version: `0.0.4-dev.286`
+- Current commit: `588c525` —
+  `v0.0.4-dev.285 - fix(camera): isolate inactive fade slides`
+- The worktree contains the uncommitted activity-end reconciliation described
+  below.
 
 Always check `git status`, the canonical version in
 `custom_components/watchzone/const.py`, and the latest commit before starting.
@@ -48,7 +48,21 @@ The repository state takes precedence over this snapshot.
 
 ## Current completed change
 
-Working version `0.0.4-dev.285`:
+Working version `0.0.4-dev.286`:
+
+- Review updates with an authoritative numeric `end_time` now end activity even
+  if their provider phase remains stale, clearing the camera outline and the
+  camera-navigation activity indicator from their single shared state owner.
+- While active reviews exist, a bounded five-second reconciliation checks a
+  small authoritative review window and self-heals a missed end notification.
+  It stops when idle, does not clear state on request failure, and discards
+  stale requests after reconfiguration or disconnection.
+- Slide alert takeover now has explicit browser coverage across Chromium,
+  Firefox, and WebKit, including activity-indicator clearing, camera return,
+  overlay reveal, zoom, and resize-handle interaction. Fade interaction remains
+  covered separately.
+
+Previously completed in `0.0.4-dev.285`:
 
 - Every inactive carousel slide is inert and hidden from the accessibility tree,
   leaving exactly one interactive live presentation during every transition.

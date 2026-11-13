@@ -63,6 +63,11 @@ export interface ReviewItem {
   readonly zones: readonly string[];
 }
 
+export interface RecentReviewState {
+  readonly end_time: number | null;
+  readonly id: string;
+}
+
 export async function listReviews(
   api: HomeAssistantApi,
   entityId: string,
@@ -74,6 +79,26 @@ export async function listReviews(
     "watchzone/reviews/list",
     options,
   );
+}
+
+/** Retrieve a small authoritative review window for push-state reconciliation. */
+export async function listRecentReviewStates(
+  api: HomeAssistantApi,
+  entityId: string,
+): Promise<readonly RecentReviewState[]> {
+  const before = Date.now() / 1000;
+  const response = await api.callWS<{
+    readonly items: readonly RecentReviewState[];
+  }>({
+    type: "watchzone/reviews/list",
+    entity_id: entityId,
+    after: before - 24 * 60 * 60,
+    before,
+    limit: 10,
+    bypass_cache: true,
+    summary_only: true,
+  });
+  return response.items;
 }
 
 export async function setReviewReviewed(

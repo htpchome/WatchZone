@@ -164,4 +164,42 @@ describe("Frigate activity updates", () => {
     release();
     expect(unsubscribe).toHaveBeenCalledOnce();
   });
+
+  it("treats an authoritative end time as ended despite a stale phase", async () => {
+    let callback: ((payload: unknown) => void) | undefined;
+    const api = {
+      subscribeMessage: vi.fn(async (next: (payload: unknown) => void) => {
+        callback = next;
+        return vi.fn();
+      }),
+    } as unknown as HomeAssistantApi;
+    const update = vi.fn();
+
+    await subscribeFrigateActivityUpdates(
+      api,
+      {
+        type: "frigate",
+        instance_id: "frigate-main",
+        camera_name: "front",
+      },
+      "reviews",
+      update,
+    );
+    callback?.(
+      JSON.stringify({
+        type: "update",
+        after: {
+          camera: "front",
+          end_time: 101,
+          id: "review-1",
+          severity: "alert",
+          start_time: 100,
+        },
+      }),
+    );
+
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "review-1", phase: "end" }),
+    );
+  });
 });

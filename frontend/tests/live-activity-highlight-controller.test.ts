@@ -106,6 +106,65 @@ describe("live activity highlight controller", () => {
     expect(unsubscribe).toHaveBeenCalledOnce();
   });
 
+  it("reconciles a missed end notification from authoritative review state", async () => {
+    let notify:
+      ((notification: ActivityUpdateNotification) => void) | undefined;
+    mocks.subscribe.mockImplementation(
+      async (
+        _api: HomeAssistantApi,
+        _entityId: string,
+        _kind: string,
+        callback: (notification: ActivityUpdateNotification) => void,
+      ) => {
+        notify = callback;
+        return vi.fn();
+      },
+    );
+    const callWS = vi.fn().mockResolvedValue({
+      items: [{ end_time: 101, id: "frigate-main:review-1" }],
+    });
+    const controller = new LiveActivityHighlightController(
+      new TestHost(),
+      () => ({
+        activeEntityId: "camera.front",
+        api: { callWS, identity: {} } as unknown as HomeAssistantApi,
+        entityIds: ["camera.front"],
+        highlightEnabled: true,
+        onTakeover: vi.fn(),
+        startTakeoverEnabled: false,
+        takeoverMode: "both",
+      }),
+    );
+    controller.hostConnected();
+    await vi.waitFor(() => expect(notify).toBeTypeOf("function"));
+    vi.useFakeTimers();
+
+    notify?.({
+      cameraName: "front",
+      classification: "alert",
+      id: "review-1",
+      phase: "new",
+      review: review(),
+      topic: "reviews",
+    });
+    expect(controller.classifications.get("camera.front")).toBe("alert");
+
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(callWS).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bypass_cache: true,
+        entity_id: "camera.front",
+        limit: 10,
+        summary_only: true,
+        type: "watchzone/reviews/list",
+      }),
+    );
+    expect(controller.classification).toBeUndefined();
+    expect(controller.classifications.size).toBe(0);
+
+    controller.hostDisconnected();
+  });
+
   it("keeps the strongest remaining review and ignores event notifications", async () => {
     let notify:
       ((notification: ActivityUpdateNotification) => void) | undefined;
