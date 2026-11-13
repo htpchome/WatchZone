@@ -331,7 +331,7 @@ export class CameraLivePresentation extends LitElement {
         ${
           this.controlsEnabled && (this.selected || this.suspended)
             ? staticHtml`<${controlsTag}
-                class="swiper-no-swiping"
+                class="player-tools swiper-no-swiping"
                 .visible=${this.suspended || this._media.overlay.visible}
                 .fullscreenActive=${this._fullscreenActive}
                 .fullscreenSupported=${this._fullscreenSupported()}

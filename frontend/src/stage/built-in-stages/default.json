@@ -28,7 +28,7 @@
                     },
                     "id": "default-slideshow-component",
                     "kind": "component",
-                    "overlayRegion": "top-center"
+                    "overlayRegion": "top"
                   },
                   {
                     "componentType": "camera_switcher",
@@ -37,7 +37,7 @@
                     },
                     "id": "default-camera-switcher-component",
                     "kind": "component",
-                    "overlayRegion": "top-center"
+                    "overlayRegion": "top"
                   }
                 ],
                 "controls": [
@@ -161,7 +161,7 @@
                     },
                     "id": "default-slideshow-component",
                     "kind": "component",
-                    "overlayRegion": "top-center"
+                    "overlayRegion": "top"
                   },
                   {
                     "componentType": "camera_switcher",
@@ -170,7 +170,7 @@
                     },
                     "id": "default-camera-switcher-component",
                     "kind": "component",
-                    "overlayRegion": "top-center"
+                    "overlayRegion": "top"
                   }
                 ],
                 "controls": [

@@ -409,27 +409,31 @@ export class CameraGroupView extends LitElement {
       return html`<div
         class=${visible ? "feed-actions visible" : "feed-actions"}
       >
-        <button
-          class="control-button feed-action feed-selector"
-          type="button"
-          title=${this.localize("camera.switch_group_feed")}
-          aria-label=${this.localize("camera.switch_group_feed")}
-          @pointerdown=${this._stopControlPointerPropagation}
-          @pointerup=${releaseTouchFocus}
-          @pointercancel=${releaseTouchFocus}
-          @click=${this._toggleFeed}
-        >
-          ${renderIcon(
-            this.layout === "stacked"
-              ? visibleIndex === 0
-                ? "chevronDown"
-                : "chevronUp"
-              : visibleIndex === 0
-                ? "chevronRight"
-                : "chevronLeft",
-          )}
-          <span class="position-label">${visibleIndex === 0 ? "A" : "B"}</span>
-        </button>
+        <div class="feed-action-set" data-feed-index=${visibleIndex}>
+          <button
+            class="control-button feed-action feed-selector"
+            type="button"
+            title=${this.localize("camera.switch_group_feed")}
+            aria-label=${this.localize("camera.switch_group_feed")}
+            @pointerdown=${this._stopControlPointerPropagation}
+            @pointerup=${releaseTouchFocus}
+            @pointercancel=${releaseTouchFocus}
+            @click=${this._toggleFeed}
+          >
+            ${renderIcon(
+              this.layout === "stacked"
+                ? visibleIndex === 0
+                  ? "chevronDown"
+                  : "chevronUp"
+                : visibleIndex === 0
+                  ? "chevronRight"
+                  : "chevronLeft",
+            )}
+            <span class="position-label"
+              >${visibleIndex === 0 ? "A" : "B"}</span
+            >
+          </button>
+        </div>
       </div>`;
     }
     const actionIndexes =
@@ -440,7 +444,7 @@ export class CameraGroupView extends LitElement {
       ${actionIndexes.map((index) => {
         const position = index === 0 ? "A" : "B";
         const target = index === 0 ? "main" : "secondary";
-        return html`
+        return html`<div class="feed-action-set" data-feed-index=${index}>
           <button
             class=${
               this._audioFocus === index
@@ -485,7 +489,7 @@ export class CameraGroupView extends LitElement {
             )}
             <span class="position-label">${position}</span>
           </button>
-        `;
+        </div>`;
       })}
     </div>`;
   }

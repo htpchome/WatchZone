@@ -12,7 +12,13 @@ export const cameraLiveViewStyles = css`
   .viewport {
     position: relative;
     display: grid;
-    place-items: center;
+    grid-template-areas:
+      "top top top top top"
+      "left media media media right"
+      "left lower lower lower right"
+      "metadata metadata metadata metadata metadata";
+    grid-template-columns: var(--wzc-camera-overlay-grid-columns);
+    grid-template-rows: var(--wzc-camera-overlay-grid-rows);
     inline-size: 100%;
     block-size: 100%;
     overflow: hidden;
@@ -30,8 +36,9 @@ export const cameraLiveViewStyles = css`
   }
 
   .media-surface {
-    position: absolute;
-    inset: 0;
+    position: relative;
+    grid-column: 1 / -1;
+    grid-row: 1 / -1;
     inline-size: 100%;
     block-size: 100%;
     overflow: hidden;
@@ -165,10 +172,12 @@ export const cameraLiveViewStyles = css`
   }
 
   .source-indicator {
-    position: absolute;
+    grid-area: top;
+    align-self: start;
+    justify-self: end;
     z-index: 1;
-    inset-block-start: 0.5rem;
-    inset-inline-end: var(--wzc-live-indicator-inline-end, 0.5rem);
+    margin-block-start: 0.5rem;
+    margin-inline-end: var(--wzc-live-indicator-inline-end, 0.5rem);
     display: inline-flex;
     --wzc-badge-color: var(
       --wzc-live-indicator-color,
@@ -192,8 +201,6 @@ export const cameraLiveViewStyles = css`
     transition:
       opacity var(--wzc-media-overlay-transition-duration) ease,
       visibility 0s linear var(--wzc-media-overlay-transition-duration);
-    outline: var(--wzc-overlay-debug-border);
-    outline-offset: -1px;
   }
 
   .source-indicator.visible {
@@ -204,8 +211,15 @@ export const cameraLiveViewStyles = css`
 
   .viewport:fullscreen .source-indicator,
   .viewport:-webkit-full-screen .source-indicator {
-    inset-block-start: max(0.5rem, env(safe-area-inset-top, 0px));
-    inset-inline-end: calc(0.5rem + env(safe-area-inset-right, 0px));
+    margin-block-start: max(0.5rem, env(safe-area-inset-top, 0px));
+    margin-inline-end: calc(0.5rem + env(safe-area-inset-right, 0px));
+  }
+
+  .player-tools {
+    grid-area: right;
+    align-self: stretch;
+    justify-self: stretch;
+    z-index: 2;
   }
 
   .connection-spinner {

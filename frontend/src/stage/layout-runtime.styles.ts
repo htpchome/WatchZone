@@ -114,25 +114,21 @@ export const stageRuntimeStyles = css`
   .module-composition {
     position: relative;
     display: grid;
+    grid-template-areas:
+      "top top top top top"
+      "left media media media right"
+      "left lower lower lower right"
+      "metadata metadata metadata metadata metadata";
+    grid-template-columns: var(--wzc-camera-overlay-grid-columns);
+    grid-template-rows: var(--wzc-camera-overlay-grid-rows);
     min-block-size: 0;
     container-type: inline-size;
   }
 
-  .module-composition.has-components {
-    grid-template: "overlay" minmax(0, 1fr) / minmax(0, 1fr);
-  }
-
   .module-composition.has-components > .module-slot,
   .module-composition.has-components > .component-slot-content {
-    grid-area: overlay;
-  }
-
-  .module-composition.has-components > .component-slot-overlay,
-  .module-composition.has-components > .component-slot-controls {
-    position: absolute;
-    inset: 0;
-    inline-size: 100%;
-    block-size: 100%;
+    grid-column: 1 / -1;
+    grid-row: 1 / -1;
   }
 
   .component-slot,
@@ -148,153 +144,122 @@ export const stageRuntimeStyles = css`
     block-size: auto;
   }
 
-  .component-slot-overlay {
+  .camera-overlay-grid {
+    grid-column: 1 / -1;
+    grid-row: 1 / -1;
     z-index: 3;
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-template-rows: repeat(3, minmax(0, 1fr));
+    grid-template-areas:
+      "top top top top top"
+      "left media media media right"
+      "left lower lower lower right"
+      "metadata metadata metadata metadata metadata";
+    grid-template-columns: var(--wzc-camera-overlay-grid-columns);
+    grid-template-rows: var(--wzc-camera-overlay-grid-rows);
     box-sizing: border-box;
-    padding-block-start: var(--wzc-camera-overlay-block-inset);
-    padding-block-end: calc(
-      var(--wzc-stage-resize-handle-block-size) +
-        var(--wzc-camera-overlay-block-inset)
-    );
-    padding-inline-start: var(--wzc-camera-overlay-inline-inset);
-    padding-inline-end: var(--wzc-camera-overlay-trailing-clearance);
-    outline: var(--wzc-overlay-debug-border);
-    outline-offset: -1px;
+    min-inline-size: 0;
+    min-block-size: 0;
+    pointer-events: none;
   }
 
-  .component-slot-overlay > .overlay-region {
-    align-items: center;
-    display: grid;
-    grid-auto-columns: max-content;
-    grid-auto-flow: column;
-    gap: var(--wzc-control-dock-gap);
+  .camera-overlay-area {
+    box-sizing: border-box;
     min-inline-size: 0;
+    min-block-size: 0;
     pointer-events: none;
     outline: var(--wzc-overlay-debug-border);
     outline-offset: -1px;
   }
 
-  .component-slot-overlay > .overlay-region > .component-node {
-    align-self: center;
+  .camera-overlay-area > .component-node {
     inline-size: auto;
     block-size: auto;
   }
 
-  .component-slot-overlay > .overlay-region-top-leading {
-    grid-area: 1 / 1;
-    align-self: start;
-    justify-self: start;
+  .camera-overlay-area-top {
+    grid-area: top;
+    display: grid;
+    grid-template-columns:
+      minmax(0, 1fr) var(--wzc-slideshow-control-inline-size)
+      var(--wzc-control-dock-gap) var(--wzc-camera-switcher-inline-size)
+      var(--wzc-control-dock-gap) var(--wzc-slideshow-control-inline-size)
+      minmax(0, 1fr);
+    align-items: center;
+    padding-block: var(--wzc-camera-overlay-block-inset);
   }
 
-  .component-slot-overlay > .overlay-region-top-center {
-    grid-area: 1 / 2;
-    align-self: start;
-    justify-content: center;
-    position: relative;
-    min-block-size: var(--wzc-camera-control-size);
-  }
-
-  .overlay-region-top-center
+  .camera-overlay-area-top
     > .component-node[data-component-type="camera_switcher"] {
-    position: absolute;
-    inset-inline-start: 50%;
-    transform: translateX(-50%);
+    grid-column: 4;
+    justify-self: stretch;
   }
 
-  .overlay-region-top-center
-    > .component-node[data-component-type="slideshow"] {
-    position: absolute;
-    inset-inline-end: calc(
-      50% + var(--wzc-camera-switcher-inline-size) / 2 +
-        var(--wzc-control-dock-gap)
-    );
+  .camera-overlay-area-top > .component-node[data-component-type="slideshow"] {
+    grid-column: 2;
+    justify-self: stretch;
   }
 
-  .component-slot-overlay > .overlay-region-top-trailing {
-    grid-area: 1 / 3;
-    align-self: start;
-    justify-self: end;
+  .camera-overlay-area-left {
+    grid-area: left;
+    display: grid;
+    align-items: stretch;
+    justify-items: center;
   }
 
-  .component-slot-overlay > .overlay-region-center-leading {
-    grid-area: 2 / 1;
-    justify-self: start;
+  .camera-overlay-area-media {
+    grid-area: media;
+    display: grid;
+    place-items: center;
   }
 
-  .component-slot-overlay > .overlay-region-center {
-    grid-area: 2 / 2;
-    justify-content: center;
+  .camera-overlay-area-right {
+    grid-area: right;
+    display: grid;
+    place-items: center;
   }
 
-  .component-slot-overlay > .overlay-region-center-trailing {
-    grid-area: 2 / 3;
-    justify-self: end;
-  }
-
-  .component-slot-overlay > .overlay-region-bottom-leading {
-    grid-area: 3 / 1;
-    align-self: end;
-    justify-self: start;
-  }
-
-  .component-slot-overlay > .overlay-region-bottom-center {
-    grid-area: 3 / 2;
-    align-self: end;
-    justify-content: center;
-  }
-
-  .component-slot-overlay > .overlay-region-bottom-trailing {
-    grid-area: 3 / 3;
-    align-self: end;
-    justify-self: end;
-  }
-
-  .component-slot-controls {
-    z-index: 4;
+  .camera-overlay-area-lower {
+    grid-area: lower;
     display: grid;
     grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1fr);
-    align-items: flex-end;
-    box-sizing: border-box;
-    min-inline-size: 0;
-    padding: 0 var(--wzc-camera-side-lane-inline-size)
-      var(--wzc-camera-control-bottom-inset);
-    column-gap: var(--wzc-control-dock-gap);
-    outline: var(--wzc-overlay-debug-border);
-    outline-offset: -1px;
+    align-items: end;
+    gap: var(--wzc-control-dock-gap);
   }
 
-  .control-region {
+  .lower-control-group {
     display: grid;
     grid-auto-columns: max-content;
     grid-auto-flow: column;
-    align-content: flex-end;
-    align-items: flex-end;
-    box-sizing: border-box;
-    min-inline-size: 0;
+    align-items: end;
     gap: var(--wzc-control-dock-gap);
+    min-inline-size: 0;
     pointer-events: none;
-    outline: var(--wzc-overlay-debug-border);
-    outline-offset: -1px;
   }
 
-  .control-region-leading {
-    justify-content: flex-end;
-  }
-
-  .control-region-center {
-    justify-content: center;
-  }
-
-  .control-region-trailing {
-    justify-content: flex-end;
-  }
-
-  .control-region > .component-node {
+  .lower-control-group > .component-node {
     inline-size: auto;
     block-size: auto;
+  }
+
+  .lower-control-group.leading {
+    grid-column: 1;
+    justify-self: end;
+  }
+
+  .lower-control-group.center {
+    grid-column: 2;
+    justify-self: center;
+  }
+
+  .lower-control-group.trailing {
+    grid-column: 3;
+    justify-self: end;
+  }
+
+  .camera-overlay-area-metadata {
+    grid-area: metadata;
+    display: grid;
+    align-items: center;
   }
 
   .control-placeholder {
@@ -421,15 +386,5 @@ export const stageRuntimeStyles = css`
     inline-size: 1px;
     block-size: 1px;
     white-space: nowrap;
-  }
-
-  @container (max-width: 480px) {
-    .component-slot-overlay {
-      padding-block-end: 0.25rem;
-    }
-
-    .component-slot-controls {
-      --wzc-camera-control-bottom-inset: 1.25rem;
-    }
   }
 `;

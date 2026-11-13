@@ -17,6 +17,7 @@ export class CameraCarouselController implements ReactiveController {
   private _generation = 0;
   private _slideCount = 0;
   private _interactionLocked = false;
+  private _resizeFrame?: number;
   private _resizeObserver?: ResizeObserver;
   private _settlementTimer?: ReturnType<typeof setTimeout>;
   private _swiper?: Swiper;
@@ -216,7 +217,14 @@ export class CameraCarouselController implements ReactiveController {
   private _observeSize(container: HTMLElement): void {
     this._syncNavigationSize();
     if (typeof ResizeObserver === "undefined") return;
-    this._resizeObserver = new ResizeObserver(() => this._syncNavigationSize());
+    this._resizeObserver = new ResizeObserver(() => {
+      if (this._resizeFrame !== undefined)
+        cancelAnimationFrame(this._resizeFrame);
+      this._resizeFrame = requestAnimationFrame(() => {
+        this._resizeFrame = undefined;
+        this._syncNavigationSize();
+      });
+    });
     this._resizeObserver.observe(container);
   }
 
@@ -239,6 +247,9 @@ export class CameraCarouselController implements ReactiveController {
 
   private _destroy(): void {
     this._clearSettlement();
+    if (this._resizeFrame !== undefined)
+      cancelAnimationFrame(this._resizeFrame);
+    this._resizeFrame = undefined;
     this._resizeObserver?.disconnect();
     this._resizeObserver = undefined;
     this._container?.style.removeProperty(

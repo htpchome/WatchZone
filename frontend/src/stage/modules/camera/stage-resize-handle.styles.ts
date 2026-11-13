@@ -3,9 +3,7 @@ import { css } from "lit";
 /** Shared presentation for the camera stage's single resize affordance. */
 export const stageResizeHandleStyles = css`
   .stage-resize-handle {
-    position: absolute;
-    bottom: 0;
-    left: 50%;
+    position: relative;
     box-sizing: border-box;
     inline-size: var(--wzc-stage-resize-handle-inline-size);
     block-size: var(--wzc-stage-resize-handle-block-size);
@@ -15,7 +13,6 @@ export const stageResizeHandleStyles = css`
     border: 0;
     border-radius: var(--wzc-radius-pill);
     opacity: var(--wzc-stage-resize-handle-opacity);
-    transform: translateX(-50%);
     cursor: ns-resize;
     touch-action: none;
     user-select: none;

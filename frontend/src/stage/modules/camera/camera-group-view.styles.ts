@@ -26,6 +26,14 @@ export const cameraGroupViewStyles = css`
 
   .group {
     position: relative;
+    display: grid;
+    grid-template-areas:
+      "top top top top top"
+      "left media media media right"
+      "left lower lower lower right"
+      "metadata metadata metadata metadata metadata";
+    grid-template-columns: var(--wzc-camera-overlay-grid-columns);
+    grid-template-rows: var(--wzc-camera-overlay-grid-rows);
     container-type: size;
     aspect-ratio: var(
       --wzc-camera-stage-runtime-aspect-ratio,
@@ -36,6 +44,8 @@ export const cameraGroupViewStyles = css`
   }
 
   .feeds {
+    grid-column: 1 / -1;
+    grid-row: 1 / -1;
     display: grid;
   }
 
@@ -90,20 +100,18 @@ export const cameraGroupViewStyles = css`
   }
 
   .feed-actions {
-    position: absolute;
+    grid-area: left;
     z-index: 7;
-    inset-inline-start: var(--wzc-camera-control-inline-inset);
-    inset-block-start: var(--wzc-camera-overlay-block-inset);
     display: grid;
-    grid-auto-flow: row;
-    grid-auto-rows: max-content;
-    justify-items: start;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    justify-items: center;
     gap: 0.25rem;
+    padding-block: var(--wzc-camera-overlay-block-inset);
+    container-type: size;
     opacity: 0;
     pointer-events: none;
     transition: opacity var(--wzc-media-overlay-transition-duration) ease;
-    outline: var(--wzc-overlay-debug-border);
-    outline-offset: -1px;
   }
 
   .feed-actions.visible {
@@ -116,6 +124,16 @@ export const cameraGroupViewStyles = css`
     grid-auto-flow: column;
     grid-template-columns: auto auto;
     gap: 0.12rem;
+  }
+
+  .feed-action-set {
+    display: grid;
+    gap: 0.25rem;
+    justify-items: center;
+  }
+
+  .feed-action-set[data-feed-index="1"] {
+    align-self: end;
   }
 
   .feed-action svg {
@@ -140,12 +158,11 @@ export const cameraGroupViewStyles = css`
   }
 
   .group-controls {
-    position: absolute;
+    grid-area: right;
+    align-self: stretch;
+    justify-self: stretch;
     z-index: 4;
-    inset: 0;
     pointer-events: none;
-    outline: var(--wzc-overlay-debug-border);
-    outline-offset: -1px;
   }
 
   .group-controls > * {
@@ -153,6 +170,8 @@ export const cameraGroupViewStyles = css`
   }
 
   .stage-resize-handle {
+    grid-area: metadata;
+    place-self: end center;
     z-index: 7;
   }
 

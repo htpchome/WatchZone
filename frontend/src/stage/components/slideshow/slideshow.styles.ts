@@ -5,6 +5,7 @@ import { mediaOverlayButtonStyles } from "../../../ui/media-overlay-button.style
 const slideshowPrivateStyles = css`
   :host {
     display: block;
+    inline-size: 100%;
     pointer-events: none;
   }
 
@@ -14,6 +15,7 @@ const slideshowPrivateStyles = css`
     display: grid;
     grid-auto-flow: column;
     gap: var(--wzc-overlay-control-gap);
+    inline-size: 100%;
     opacity: 0;
     padding: 0 var(--wzc-overlay-control-inline-padding);
     pointer-events: none;

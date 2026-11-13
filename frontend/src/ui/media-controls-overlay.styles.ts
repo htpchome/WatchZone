@@ -2,15 +2,9 @@ import { css } from "lit";
 
 export const mediaControlsOverlayStyles = css`
   :host {
-    position: absolute;
     z-index: 2;
-    inset: 0;
     display: block;
-    overflow: hidden;
     pointer-events: none;
-    container-type: size;
-    outline: var(--wzc-overlay-debug-border);
-    outline-offset: -1px;
 
     --wzc-control-size: var(--wzc-camera-control-size);
     --wzc-control-icon-size: var(--wzc-camera-control-icon-size);
@@ -18,21 +12,16 @@ export const mediaControlsOverlayStyles = css`
   }
 
   .control-group {
-    position: absolute;
-    inset-block-start: 50%;
-    inset-inline-end: var(--wzc-camera-control-inline-inset);
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: var(--wzc-control-gap);
-    transform: translateY(-50%);
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
     transition:
       opacity var(--wzc-media-overlay-transition-duration) ease,
       visibility 0s linear var(--wzc-media-overlay-transition-duration);
-    outline: var(--wzc-overlay-debug-border);
-    outline-offset: -1px;
   }
 
   :host([visible]) .control-group {
@@ -43,21 +32,7 @@ export const mediaControlsOverlayStyles = css`
   }
 
   :host([viewport-edge]) .control-group {
-    inset-inline-end: calc(
-      var(--wzc-camera-control-inline-inset) + env(safe-area-inset-right, 0px)
-    );
-  }
-
-  @container (max-height: 360px) {
-    .control-group {
-      --wzc-control-gap: 0.3rem;
-    }
-  }
-
-  @container (max-height: 240px) {
-    .control-group {
-      --wzc-control-gap: 0.2rem;
-    }
+    margin-inline-end: env(safe-area-inset-right, 0px);
   }
 
   @media (prefers-reduced-motion: reduce) {

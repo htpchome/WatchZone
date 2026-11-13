@@ -12,19 +12,17 @@ export const ptzStyles = css`
   }
 
   .ptz-layer {
-    position: relative;
-    inset-inline-start: var(--wzc-ptz-right-rail-overlap);
+    display: grid;
+    place-items: center;
     inline-size: 100%;
     block-size: 100%;
     pointer-events: none;
-    outline: var(--wzc-overlay-debug-border);
-    outline-offset: -1px;
   }
 
   .ptz-control {
-    position: absolute;
-    inset-block-start: 50%;
-    inset-inline-start: 50%;
+    position: relative;
+    grid-column: 1;
+    grid-row: 1;
     box-sizing: border-box;
     color: var(--wzc-media-overlay-color);
     background: var(--wzc-ptz-panel-background);
@@ -39,7 +37,6 @@ export const ptzStyles = css`
     overflow: hidden;
     opacity: 0;
     pointer-events: none;
-    transform: translate(-50%, -50%);
     transform-origin: center;
   }
 
@@ -124,12 +121,12 @@ export const ptzStyles = css`
   }
 
   button.ptz-trigger {
-    position: absolute;
-    inset-block-start: 50%;
-    inset-inline-start: 50%;
+    position: relative;
+    grid-column: 1;
+    grid-row: 1;
     --wzc-round-button-size: var(--wzc-control-size);
-    --wzc-round-button-background: transparent;
-    --wzc-round-button-border-color: transparent;
+    --wzc-round-button-background: var(--wzc-media-overlay-background);
+    --wzc-round-button-border-color: var(--wzc-media-overlay-border-color);
     --wzc-round-button-hover-background: var(
       --wzc-neutral-control-hover-background
     );
@@ -139,7 +136,6 @@ export const ptzStyles = css`
     block-size: var(--wzc-control-size);
     opacity: 0;
     pointer-events: none;
-    transform: translate(-50%, -50%);
   }
 
   button.ptz-trigger.user-toggled {

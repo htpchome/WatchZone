@@ -59,7 +59,7 @@ export const mediaOverlayControlSizingStyles = css`
       --wzc-overlay-control-inline-padding: 0.42rem;
       --wzc-overlay-control-text-size: 0.7rem;
       --wzc-overlay-control-status-size: 0.64rem;
-      --wzc-overlay-control-label-size: 0.62rem;
+      --wzc-overlay-control-label-size: 0.68rem;
     }
   }
 

@@ -237,13 +237,13 @@ describe("layout composition", () => {
         componentType: "slideshow",
         config: { targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID },
         kind: "component",
-        overlayRegion: "top-center",
+        overlayRegion: "top",
       }),
       expect.objectContaining({
         componentType: "camera_switcher",
         config: { targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID },
         kind: "component",
-        overlayRegion: "top-center",
+        overlayRegion: "top",
       }),
     ]);
   });

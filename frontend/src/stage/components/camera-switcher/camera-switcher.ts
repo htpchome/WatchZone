@@ -19,7 +19,7 @@ import { cameraSwitcherStyles } from "./camera-switcher.styles";
 
 const MENU_ID = "camera-switcher-options";
 
-/** Optional top-center selector for the camera module's active camera. */
+/** Optional top-rail selector for the camera module's active camera. */
 export class CameraSwitcherComponent extends LitElement {
   public static properties = {
     cameraSelection: { attribute: false },

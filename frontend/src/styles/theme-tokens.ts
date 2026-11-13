@@ -271,7 +271,7 @@ export const themeTokens = css`
     );
     /* Temporary overlay-layout diagnostic. */
     --wzc-overlay-debug-border: 1px solid #ff0000;
-    --wzc-media-overlay-border-color: #ff0000;
+    --wzc-media-overlay-border-color: var(--ha-color-neutral-30, #4a4a4a);
     --wzc-media-overlay-radius: var(--wzc-radius-small);
     --wzc-media-overlay-shadow: var(--wzc-shadow-card);
     --wzc-media-overlay-transition-duration: 140ms;
@@ -287,15 +287,24 @@ export const themeTokens = css`
       --wzc-neutral-control-hover-background
     );
     --wzc-camera-control-inline-inset: 0.75rem;
-    --wzc-camera-control-bottom-inset: 2.25rem;
     --wzc-camera-side-lane-inline-size: calc(
       var(--wzc-camera-control-inline-inset) + var(--wzc-camera-control-size)
     );
     --wzc-camera-overlay-block-inset: 0.5rem;
-    --wzc-camera-overlay-inline-inset: var(--wzc-camera-side-lane-inline-size);
-    --wzc-camera-overlay-trailing-clearance: var(
-      --wzc-camera-side-lane-inline-size
+    --wzc-camera-overlay-top-row-size: calc(
+      var(--wzc-camera-control-size) + var(--wzc-camera-overlay-block-inset) +
+        var(--wzc-camera-overlay-block-inset)
     );
+    --wzc-camera-overlay-lower-row-size: max(
+      var(--wzc-ptz-panel-size),
+      var(--wzc-camera-control-size)
+    );
+    --wzc-camera-overlay-metadata-row-size: 1.75rem;
+    --wzc-camera-overlay-grid-columns: var(--wzc-camera-side-lane-inline-size)
+      repeat(3, minmax(0, 1fr)) var(--wzc-camera-side-lane-inline-size);
+    --wzc-camera-overlay-grid-rows: var(--wzc-camera-overlay-top-row-size)
+      minmax(0, 1fr) var(--wzc-camera-overlay-lower-row-size)
+      var(--wzc-camera-overlay-metadata-row-size);
     --wzc-control-dock-gap: 0.5rem;
     --wzc-camera-switcher-inline-size: clamp(
       calc(
@@ -305,13 +314,13 @@ export const themeTokens = css`
       24cqi,
       14rem
     );
+    --wzc-slideshow-control-inline-size: calc(
+      var(--wzc-camera-control-size) + 2.2rem
+    );
     --wzc-carousel-navigation-opacity: 72%;
     --wzc-carousel-navigation-hover-opacity: 100%;
     --wzc-carousel-navigation-icon-size: 2.75rem;
     --wzc-carousel-navigation-control-gap: 0.75rem;
-    --wzc-carousel-navigation-inline-inset: var(
-      --wzc-camera-side-lane-inline-size
-    );
     --wzc-selection-bar-color: var(--wzc-color-text-1);
     --wzc-selection-bar-background: var(--wzc-color-surface-secondary);
     --wzc-selection-bar-active-color: var(--wzc-color-text-reversed);
@@ -534,7 +543,6 @@ export const themeTokens = css`
     );
     --wzc-ptz-icon-size: 42%;
     --wzc-ptz-panel-padding: 0.18rem;
-    --wzc-ptz-right-rail-overlap: var(--wzc-control-dock-gap);
     --wzc-ptz-panel-size: calc(
       var(--wzc-ptz-cell-size) + var(--wzc-ptz-cell-size) +
         var(--wzc-ptz-cell-size) + var(--wzc-ptz-panel-padding) +

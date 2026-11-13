@@ -21,6 +21,14 @@ export const cameraStyles = css`
 
   .camera-carousel {
     position: relative;
+    display: grid;
+    grid-template-areas:
+      "top top top top top"
+      "left media media media right"
+      "left lower lower lower right"
+      "metadata metadata metadata metadata metadata";
+    grid-template-columns: var(--wzc-camera-overlay-grid-columns);
+    grid-template-rows: var(--wzc-camera-overlay-grid-rows);
     overflow: hidden;
     background: var(--wzc-camera-stage);
     border-radius: var(--wzc-live-radius);
@@ -63,6 +71,8 @@ export const cameraStyles = css`
   }
 
   .swiper-wrapper {
+    grid-column: 1 / -1;
+    grid-row: 1 / -1;
     position: relative;
     display: flex;
     box-sizing: content-box;
@@ -86,9 +96,8 @@ export const cameraStyles = css`
   }
 
   .carousel-navigation {
-    position: absolute;
+    grid-area: media;
     z-index: 4;
-    inset-block-start: 50%;
     display: grid;
     place-items: center;
     box-sizing: border-box;
@@ -102,23 +111,22 @@ export const cameraStyles = css`
     box-shadow: none;
     opacity: 0;
     visibility: hidden;
-    transform: translateY(-50%);
     cursor: pointer;
     pointer-events: none;
     transition:
       opacity var(--wzc-media-overlay-transition-duration) ease,
       visibility 0s linear var(--wzc-media-overlay-transition-duration);
     -webkit-tap-highlight-color: transparent;
-    outline: var(--wzc-overlay-debug-border);
-    outline-offset: -1px;
   }
 
   .carousel-navigation.previous {
-    inset-inline-start: var(--wzc-carousel-navigation-inline-inset);
+    align-self: center;
+    justify-self: start;
   }
 
   .carousel-navigation.next {
-    inset-inline-end: var(--wzc-carousel-navigation-inline-inset);
+    align-self: center;
+    justify-self: end;
   }
 
   .carousel-navigation svg {

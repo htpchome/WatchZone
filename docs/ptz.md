@@ -48,16 +48,15 @@ defaults to `false` and is omitted from YAML at its default.
 - Pointer press or keyboard activation starts movement; release stops it.
 - The PTZ overlay consumes the camera controller's shared overlay state and
   hide timer. It does not create a second visibility timer.
-- Stage placement is supplied by the controls slot's trailing logical region.
-  PTZ renders at its intrinsic size and does not position itself against the
-  Stage or consume viewport safe-area insets.
+- Stage placement is supplied by the trailing control group inside the shared
+  `lower` area. PTZ renders at its intrinsic size and does not position itself
+  against the Stage or consume viewport safe-area insets.
 - Collapsed trigger and expanded directional panel share one immutable center.
   Opening and closing animate the panel dimensions symmetrically around that
   center while the trigger cross-fades; neither state may jump or establish a
-  second positioning origin. The shared center and collapsed trigger remain in
-  Camera's lower-trailing zone. Only the expanded panel edge intentionally
-  overlaps the lower portion of Camera's right rail, by the shared overlap
-  token defined in the camera presentation layout contract.
+  second positioning origin. The shared center, collapsed trigger, and expanded
+  panel remain wholly inside Camera's `lower` area and never enter the right
+  rail or metadata strip.
 - Active movement holds the shared overlay visible. Releasing movement releases
   that hold and returns visibility to the shared timer.
 - The configured open/closed state initializes each active camera. A user's

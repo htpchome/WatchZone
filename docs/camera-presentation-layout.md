@@ -130,23 +130,23 @@ and toasts remain outside both transformations.
 
 ## Live overlay zones
 
-The live stage uses fixed presentation zones. Controls are assigned to a zone;
+The live stage uses exactly six fixed presentation areas: `top`, `left`,
+`media`, `right`, `lower`, and `metadata`. Controls are assigned to one area;
 they must not derive their position from the number of controls in another
-zone.
+area. No parallel three-by-three overlay, separate controls grid, or corrective
+absolute-offset system may coexist with this grid.
 
 ```text
 ┌──────────────────────────────────────────────────────────────────────┐
-│ [group A/B]        [slideshow] [camera picker]        [source badge]│
-│                                                                      │
-│ left lane │  ‹       unobstructed live media        ›  │ right lane │
-│           │                                           │ player tools│
-│           │                                           │ power / PiP │
-│           │                                           │ snapshot    │
-│           │                                           │ fullscreen  │
-│           │                                           │ mute        │
-│                                                                      │
-│                     [light] [talk]                    [PTZ]          │
-│ camera name                 [resize handle]              timestamp   │
+│ TOP:              [slideshow] [camera picker]       [source badge] │
+├───────────┬───────────────────────────────────────────┬──────────────┤
+│ LEFT      │ MEDIA                                     │ RIGHT        │
+│ [A audio] │  ‹         unobstructed video          ›  │ power / PiP  │
+│ [A view]  │                                           │ snapshot     │
+│ [B audio] │                                           │ fullscreen   │
+│ [B view]  │                                           │ mute         │
+├───────────┤ LOWER: [light] [talk]             [PTZ]  ├──────────────┤
+│ METADATA: camera name       [resize handle]        timestamp       │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -168,11 +168,10 @@ zone.
   `--wzc-camera-side-lane-inline-size`; carousel navigation, the top overlay
   row, and the lower control band all derive from that boundary.
 - The fixed right lane owns the vertical player-tool dock. Adding or removing a
-  player tool does not move either carousel arrow horizontally. Expanded PTZ is
-  the deliberate lower-band exception: its anchor and collapsed trigger remain
-  inside the lower-trailing zone, while its expanded edge crosses into the
-  right lane only by `--wzc-ptz-right-rail-overlap`, as drawn. It remains
-  vertically separate from the player-tool dock.
+  player tool does not move either carousel arrow horizontally. PTZ belongs
+  wholly to the trailing edge of `lower`; its collapsed trigger, immutable
+  expansion center, and expanded panel never enter the right rail or metadata
+  strip. It remains vertically separate from the player-tool dock.
 - Each feed in an additional-camera group retains its own source badge because
   A and B may resolve different transports. A grouped feed badge follows the
   trailing edge of that feed's fitted media instead of the Stage edge, so a

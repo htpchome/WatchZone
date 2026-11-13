@@ -5,15 +5,7 @@ export type StageVariantName = "default" | "phone";
 export type StageSlotName = "content" | "controls" | "footer" | "overlay";
 export type StageControlRegion = "leading" | "center" | "trailing";
 export type StageOverlayRegion =
-  | "top-leading"
-  | "top-center"
-  | "top-trailing"
-  | "center-leading"
-  | "center"
-  | "center-trailing"
-  | "bottom-leading"
-  | "bottom-center"
-  | "bottom-trailing";
+  "top" | "left" | "media" | "right" | "lower" | "metadata";
 export type StageGridRowSize = "content" | "fraction";
 
 export interface StageGridArea {
@@ -313,15 +305,12 @@ function validateComponent(
   }
   const overlayRegion = source.overlayRegion;
   const overlayRegions: readonly StageOverlayRegion[] = [
-    "top-leading",
-    "top-center",
-    "top-trailing",
-    "center-leading",
-    "center",
-    "center-trailing",
-    "bottom-leading",
-    "bottom-center",
-    "bottom-trailing",
+    "top",
+    "left",
+    "media",
+    "right",
+    "lower",
+    "metadata",
   ];
   if (
     overlayRegion !== undefined &&

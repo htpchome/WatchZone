@@ -63,12 +63,12 @@ A component node may declare an optional logical `controlRegion` of `leading`,
 an omitted value defaults to `center`. This is placement metadata owned by the
 slot and is never passed through component configuration.
 
-A component in an `overlay` slot may similarly declare `overlayRegion` using a
-three-by-three logical grid: `top-leading`, `top-center`, `top-trailing`,
-`center-leading`, `center`, `center-trailing`, `bottom-leading`,
-`bottom-center`, or `bottom-trailing`. The omitted default is `center`. An
-overlay component remains intrinsically sized; the slot renderer, not the
-component, owns its position.
+A component in an `overlay` slot may declare `overlayRegion` using the six-area
+camera presentation grid: `top`, `left`, `media`, `right`, `lower`, or
+`metadata`. The omitted default is `media`. An overlay component remains
+intrinsically sized; the slot renderer, not the component, owns its position.
+The runtime emits exactly one element for each of those six areas and no
+parallel overlay-placement grid.
 
 A Stage Flow is an ordered list of Stage Design IDs for one responsive profile.
 Cards have independent `default` and `phone` flows. The first entry is the
@@ -101,21 +101,23 @@ Spacing between root Stage modules uses `--wzc-stage-module-gap`. It is
 independent from the outer card padding and defaults to half that padding's
 responsive scale.
 
-The controls slot owns placement, shared gaps, local Stage-edge clearance, and
-responsive wrapping for its three logical regions. Its center region remains
-geometrically centered while the leading and trailing regions flex equally.
-The trailing region aligns to the Stage edge while reserving the camera media
-control rail. Components in that slot render at their intrinsic control size
+The controls slot feeds the shared `lower` area and owns shared gaps and
+responsive wrapping for its three internal control groups. Its center group
+remains geometrically centered while the leading and trailing groups flex
+equally. The trailing group aligns to the lower area's edge without entering
+the camera media-control rail. Components in that slot render at their intrinsic control size
 and must not position themselves relative to sibling components or the Stage
 center. Panels and transient notices may paint outside their dock item without
 changing the dock's measured control geometry.
 
-The overlay slot owns its three-by-three logical placement grid and local
-Stage-edge clearance. Its trailing clearance reserves the camera media-control
-rail for future overlay components without exposing camera-control geometry.
-Multiple components assigned to one region retain document order and use the
-slot's shared gap; components never position themselves against a sibling.
-The optional camera-switcher component occupies `top-center`, follows Camera's
+The overlay slot owns the six-area grid and its fixed rail geometry. The `top`
+and `metadata` areas span the full Stage width; `left` and `right` are fixed
+rails; `media` is protected between them; and `lower` spans the same protected
+center width beneath media. Multiple components assigned to one area retain
+document order and use the area's shared gap; components never position
+themselves against a sibling. Controls-slot `leading`, `center`, and `trailing`
+metadata partitions controls only inside the `lower` area and does not create a
+second placement grid. The optional camera-switcher component occupies `top`, follows Camera's
 shared overlay timer, and publishes selection intent through the same typed
 camera-selection context as the standalone camera-navigation module.
 The slideshow component precedes that selector in the same region and presents

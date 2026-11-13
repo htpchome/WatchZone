@@ -23,10 +23,8 @@ import {
   validateStageFlow,
   type StageCatalog,
   type StageComponentNode,
-  type StageControlRegion,
   type StageFlow,
   type StageModuleNode,
-  type StageOverlayRegion,
   type StagePlacement,
   type StageSlotName,
   type StageStackNode,
@@ -59,17 +57,27 @@ import { isIconName, renderIcon } from "../ui/icons";
 
 type PlaceableNode = StageModuleNode | StageComponentNode;
 
-const OVERLAY_REGIONS: readonly StageOverlayRegion[] = [
-  "top-leading",
-  "top-center",
-  "top-trailing",
-  "center-leading",
-  "center",
-  "center-trailing",
-  "bottom-leading",
-  "bottom-center",
-  "bottom-trailing",
-];
+const OVERLAY_AREAS = [
+  "top",
+  "left",
+  "media",
+  "right",
+  "lower",
+  "metadata",
+] as const;
+
+type OverlayArea = (typeof OVERLAY_AREAS)[number];
+
+function overlayArea(component: StageComponentNode): OverlayArea {
+  return component.overlayRegion ?? "media";
+}
+
+function lowerRegion(
+  component: StageComponentNode,
+): "leading" | "center" | "trailing" {
+  if (component.controlRegion) return component.controlRegion;
+  return "center";
+}
 
 interface PlaceableRecord {
   config?: unknown;
@@ -441,9 +449,11 @@ export class LayoutRuntime implements ReactiveController {
     node: StageModuleNode,
     placementStyle: string,
   ): TemplateResult {
-    const slotEntries = Object.entries(node.slots ?? {}) as Array<
-      [StageSlotName, readonly StageComponentNode[]]
-    >;
+    const slotEntries = Object.entries(node.slots ?? {}).filter(
+      ([name]) => name !== "overlay" && name !== "controls",
+    ) as Array<[StageSlotName, readonly StageComponentNode[]]>;
+    const overlays = node.slots?.overlay ?? [];
+    const controls = node.slots?.controls ?? [];
     return html`<div
       class="stage-placement module-composition has-components"
       style=${placementStyle}
@@ -452,7 +462,55 @@ export class LayoutRuntime implements ReactiveController {
       ${slotEntries.map(([name, components]) =>
         this._renderComponentSlot(name, components),
       )}
+      ${
+        overlays.length > 0 || controls.length > 0
+          ? this._renderOverlayGrid(overlays, controls)
+          : nothing
+      }
     </div>`;
+  }
+
+  private _renderOverlayGrid(
+    overlays: readonly StageComponentNode[],
+    controls: readonly StageComponentNode[],
+  ): TemplateResult {
+    return html`<div class="camera-overlay-grid" data-stage-slot="overlay">
+      ${OVERLAY_AREAS.map((area) => {
+        const components = [
+          ...overlays.filter((component) => overlayArea(component) === area),
+          ...(area === "lower" ? controls : []),
+        ];
+        return html`<div
+          class=${`camera-overlay-area camera-overlay-area-${area}`}
+          data-overlay-area=${area}
+        >
+          ${
+            area === "lower"
+              ? this._renderLowerControls(components)
+              : repeat(
+                  components,
+                  ({ id }) => id,
+                  (component) => this._renderRecord(component),
+                )
+          }
+        </div>`;
+      })}
+    </div>`;
+  }
+
+  private _renderLowerControls(
+    components: readonly StageComponentNode[],
+  ): TemplateResult {
+    return html`${(["leading", "center", "trailing"] as const).map(
+      (region) =>
+        html`<div class=${`lower-control-group ${region}`}>
+          ${repeat(
+            components.filter((component) => lowerRegion(component) === region),
+            ({ id }) => id,
+            (component) => this._renderRecord(component),
+          )}
+        </div>`,
+    )}`;
   }
 
   private _renderComponentSlot(
@@ -463,58 +521,10 @@ export class LayoutRuntime implements ReactiveController {
       class=${`component-slot component-slot-${name}`}
       data-stage-slot=${name}
     >
-      ${
-        name === "controls"
-          ? (["leading", "center", "trailing"] as const).map((region) =>
-              this._renderControlRegion(region, components),
-            )
-          : name === "overlay"
-            ? OVERLAY_REGIONS.map((region) =>
-                this._renderOverlayRegion(region, components),
-              )
-            : repeat(
-                components,
-                ({ id }) => id,
-                (component) => this._renderRecord(component, ""),
-              )
-      }
-    </div>`;
-  }
-
-  private _renderOverlayRegion(
-    region: StageOverlayRegion,
-    components: readonly StageComponentNode[],
-  ): TemplateResult {
-    const overlays = components.filter(
-      ({ overlayRegion }) => (overlayRegion ?? "center") === region,
-    );
-    return html`<div
-      class=${`overlay-region overlay-region-${region}`}
-      data-overlay-region=${region}
-    >
       ${repeat(
-        overlays,
+        components,
         ({ id }) => id,
-        (component) => this._renderRecord(component),
-      )}
-    </div>`;
-  }
-
-  private _renderControlRegion(
-    region: StageControlRegion,
-    components: readonly StageComponentNode[],
-  ): TemplateResult {
-    const controls = components.filter(
-      ({ controlRegion }) => (controlRegion ?? "center") === region,
-    );
-    return html`<div
-      class=${`control-region control-region-${region}`}
-      data-control-region=${region}
-    >
-      ${repeat(
-        controls,
-        ({ id }) => id,
-        (component) => this._renderRecord(component),
+        (component) => this._renderRecord(component, ""),
       )}
     </div>`;
   }
@@ -539,6 +549,12 @@ export class LayoutRuntime implements ReactiveController {
       data-layout-node=${node.id}
       data-component-type=${
         node.kind === "component" ? node.componentType : nothing
+      }
+      data-control-region=${
+        node.kind === "component" ? (node.controlRegion ?? nothing) : nothing
+      }
+      data-overlay-region=${
+        node.kind === "component" ? (node.overlayRegion ?? nothing) : nothing
       }
       style=${style ?? nothing}
     >

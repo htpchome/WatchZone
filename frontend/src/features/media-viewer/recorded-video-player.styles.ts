@@ -58,6 +58,17 @@ export const recordedVideoPlayerStyles = css`
     transition: none;
   }
 
+  .player-tools {
+    position: absolute;
+    z-index: 2;
+    inset-block: 0;
+    inset-inline-end: var(--wzc-camera-control-inline-inset);
+    inline-size: var(--wzc-camera-side-lane-inline-size);
+    display: grid;
+    place-items: center;
+    container-type: size;
+  }
+
   wzc-recording-segment-manager {
     inline-size: 100%;
   }

@@ -207,6 +207,7 @@ export class RecordedVideoPlayer extends LitElement {
         @webkitpresentationmodechanged=${this._syncControlState}
       ></video>
       <${mediaControlsTag}
+        class="player-tools"
         .controls=${controls}
         .label=${this.localize("media_player.controls")}
         .visible=${this._media.overlay.visible}
