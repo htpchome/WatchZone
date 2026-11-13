@@ -1,12 +1,9 @@
 # Current Development Handoff
 
-This is a replaceable snapshot for starting a new development chat. It is not
-an architectural contract and must not override `AGENTS.md`, `architecture.md`,
-or a governing feature contract in `docs/`.
+This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
+`architecture.md`, and the governing contracts in `docs/` take precedence.
 
 ## Starting a new chat
-
-Give the next agent this instruction:
 
 > Work in `/workspaces/WatchZone`. Read `AGENTS.md` completely, then read
 > `docs/current-handoff.md`. Before changing code, read every repository
@@ -18,178 +15,108 @@ Give the next agent this instruction:
 ## Repository state
 
 - Branch: `main`
-- Current working version: `0.0.4-dev.286`
+- Working version: `0.0.4-dev.286`
 - Current commit: `588c525` —
   `v0.0.4-dev.285 - fix(camera): isolate inactive fade slides`
 - The worktree contains the uncommitted activity-end reconciliation described
-  below.
+  below. Always verify `git status`, the canonical version in
+  `custom_components/watchzone/const.py`, and the latest commit.
 
-Always check `git status`, the canonical version in
-`custom_components/watchzone/const.py`, and the latest commit before starting.
-The repository state takes precedence over this snapshot.
+## Active change: activity-end reconciliation
 
-## Current product direction
-
-- WatchZone is an early-stage Home Assistant camera card with a mandatory
-  Python integration and packaged Lit/TypeScript frontend.
-- Stage code follows the ownership boundaries in `architecture.md`. Do not use
-  `src/stage` as a general feature dumping ground.
-- Provider-specific transport and normalization stay below provider-neutral
-  frontend and backend contracts. Future providers may include systems other
-  than Frigate.
-- Reviews are the primary activity presentation. The Events module remains for
-  comparison and testing for now and must not be removed without an explicit
-  request.
-- Recordings are a separate stackable module organized by localized day and
-  hourly rows.
-- Shared media behavior, touch behavior, overlay timing, zoom, pan, and modal
-  playback must remain reusable and consistent rather than being reimplemented
-  per player or control.
-
-## Current completed change
-
-Working version `0.0.4-dev.286`:
-
-- Review updates with an authoritative numeric `end_time` now end activity even
-  if their provider phase remains stale, clearing the camera outline and the
-  camera-navigation activity indicator from their single shared state owner.
-- While active reviews exist, a bounded five-second reconciliation checks a
-  small authoritative review window and self-heals a missed end notification.
-  It stops when idle, does not clear state on request failure, and discards
-  stale requests after reconfiguration or disconnection.
-- Slide alert takeover now has explicit browser coverage across Chromium,
-  Firefox, and WebKit, including activity-indicator clearing, camera return,
-  overlay reveal, zoom, and resize-handle interaction. Fade interaction remains
-  covered separately.
-
-Previously completed in `0.0.4-dev.285`:
-
-- Every inactive carousel slide is inert and hidden from the accessibility tree,
-  leaving exactly one interactive live presentation during every transition.
-  This prevents invisible, geometrically stacked fade slides and their shadow
-  descendants from intercepting overlay, zoom/pan, or resize-handle input.
-- The obsolete fade-only parent `pointer-events` workaround was removed so the
-  carousel owns one explicit interaction boundary for all transition modes.
-- Browser regressions exercise grouped navigation and alert takeover with the
-  Fade transition while verifying overlay reveal, zoom, stage resizing, and
-  active/inactive slide isolation.
-
-Previously completed in `0.0.4-dev.284`:
-
-- A grouped camera stage now owns one shared overlay controller; child camera
-  presentations retain only their independent source, zoom, and pan state.
-- Camera activation explicitly cancels transient zoom, pointer-capture, and
-  stage-resize ownership so A/B navigation and alert takeover cannot strand
-  overlays, zoom/pan, or the pull-down handle.
-- Portable controls transfer active overlay holds by stable presentation owner,
-  and stale releases cannot affect a newly active presentation.
-- Browser regressions cover grouped navigation, grouped alert takeover, return
-  to a standalone camera, overlay reveal, zoom, and stage resizing.
-
-Previously completed in `0.0.4-dev.283`:
-
-- The camera carousel no longer owns an active index independently from the
-  Camera module. Alert takeover, camera navigation, and carousel controls
-  commit one authoritative selection immediately, while direct swipes retain
-  their transient state until settled.
-- Interrupted swipe transitions have a bounded settlement fallback, preventing
-  Reviews, Events, Recordings, timed overlays, and stage resizing from being
-  left on stale or permanently unsettled camera state after visiting a group.
-- Explicit camera navigation begins activity loading during the visual slide
-  transition rather than waiting for the animation to finish.
-
-- Firefox heap snapshots show transient growth rather than a persistent
-  JavaScript/DOM leak: shallow heap moves from 91.9 MB to 113.5 MB and returns
-  to 87.8 MB after cleanup.
-- Connections that finish after their final lease is released now invoke their
-  transport parking lifecycle instead of only being labelled parked.
-- Retained Home Assistant and Frigate WebRTC video elements now pause and
-  detach their stream while parked, then reattach the same stream on resume;
-  peer identity, signaling, and Home Assistant trickle ICE remain intact.
-
-- A configured additional camera forms one Camera-owned presentation group and
-  replaces the two standalone navigation entries with the group title.
-- Desktop/tablet groups support side-by-side or stacked combined presentation
-  and cycle `combined → A → B → combined`; focused states retain the group name
-  and add only a layout-relative directional icon.
-- Phone-width groups show one feed and toggle A/B without a combined stop while
-  retaining mixed review, event, and recording scope.
-- Each member keeps independent live transport, zoom, pan, activity, and
-  recorded-media identity. Audio focus is explicit; TWT/PTZ and linked lights
-  remain bound to the main camera, while combined snapshot and combined
-  suspension include both members.
-- Alerts/detections highlight the physical member. Takeover selects the
-  combined desktop group or the alerting phone member.
-- Group activity is merged without losing source identity, and overlapping
-  recording rows remain separate with A/B markers.
-- The editor uses the full Home Assistant camera picker, rejects any entity
-  already configured as either a main or secondary camera, and creates the
-  valid secondary record atomically. Each physical camera keeps its own Camera
-  Name, the group has a separate auto-named Group Name, and grouped secondaries
-  have compact non-sortable edit tiles. Both members count toward the
-  twelve-camera limit.
-- The Additional Camera editor configures the secondary Camera Name and live
-  Connection Source directly beneath the camera picker in the same atomic
-  group draft. Its compact summary tile presents camera and group identity on
-  one line.
-- Frigate go2rtc cameras using the HLS fallback expose and honor the
-  Low-Latency HLS setting for both primary and additional cameras.
-- Editor-preview live sessions are disposable: draft-only sessions are closed
-  on replacement or editor teardown, while a session shared with the dashboard
-  remains protected by its active lease. This prevents editor use from leaving
-  parked media decoders behind.
-- Grouped first paint preserves the standard camera-stage ratio. Per-feed
-  controls respond on first activation without colliding with carousel
-  navigation, directional state uses arrows, and only physically active feeds
-  receive alert/detection outlines.
-- Pointer presence anywhere in a grouped stage holds both child overlay timers,
-  so per-feed controls remain available while the user is interacting with
-  them. Group-stage drag updates apply geometry directly and defer the wider
-  camera render until the drag settles; stacked group propagation is also
-  frame-coalesced to avoid redundant two-feed layout work.
-- Mixed grouped Reviews and Events begin with the configured physical camera
-  name, while single-camera activity keeps the existing badge set.
-- Activity return-navigation caches are pruned when the configured selection
-  changes and all source, label, timer, and subscription state is released on
-  disconnect. Group overlay holds are also released on pointer exit and
+- Camera outlines and camera-navigation activity indicators derive from one
+  shared classification map owned by `LiveActivityHighlightController`.
+- A numeric provider `end_time` is authoritative even if Frigate labels the
+  message as an `update`. This prevents a stale phase from retaining activity.
+- While normalized active reviews exist, a bounded five-second reconciliation
+  checks a small authoritative review window. It stops when idle, preserves
+  state on request failure, and discards stale work after reconfiguration or
   disconnect.
-- The PTZ overlay retains its established transform center and viewport anchor;
-  camera-group layout does not reposition it.
+- Activity is keyed by camera and review ID. Duplicate updates replace one
+  record, ending one review preserves other active reviews, alerts outrank
+  detections visually, and recently ended IDs prevent late updates from
+  resurrecting activity.
+- Rapid eligible reviews are handled in arrival order: the current takeover
+  finishes, the next begins, then the prior user camera is restored.
+- The reported stuck outline/navigation icon was intermittent and could not be
+  reproduced consistently. Slide timing was suspected but not established as
+  the cause. No Slide-specific workaround or carousel behavior change was
+  added; monitor real Frigate traffic after release.
 
-Validation is green:
+## Live camera and group invariants
 
-- 390 frontend unit tests
-- 111 browser tests across Chromium, Firefox, and WebKit
-- Formatting, lint, type checking, architecture/style validation, production
-  build, version consistency, release packaging, and final diff checks. The
-  validated HACS archive is `dist/watchzone.zip`.
+- The Camera module owns authoritative selection. Carousel, camera navigation,
+  alert takeover, Reviews, Events, and Recordings consume that selection rather
+  than maintaining parallel active-camera state.
+- Exactly one carousel slide is interactive. Inactive slides are `inert` and
+  hidden from the accessibility tree for every transition mode, preventing
+  invisible Fade slides from intercepting input.
+- A grouped A/B stage owns one shared overlay controller. Member feeds retain
+  independent source, zoom, pan, activity, and recorded-media identity.
+  Activation cancels stale pointer capture, gestures, overlay holds, and resize
+  ownership. Do not introduce a second stage or transition-specific lifecycle.
+- Desktop/tablet groups support side-by-side or stacked combined presentation
+  and cycle `combined → A → B → combined`. Phone groups show one member and
+  toggle A/B while retaining mixed group activity scope.
+- TWT/PTZ belong only to the main member; linked lights are shared for
+  presentation. Combined snapshot and suspension include both members.
+- Alert/detection outlines apply only to the physical member with activity.
+  Takeover selects the combined desktop group or the alerting phone member.
+- Home Assistant and Frigate WebRTC sessions are document-owned. Parking
+  detaches retained media while preserving peer identity, signaling, and Home
+  Assistant trickle ICE. Editor-only draft sessions must close on replacement
+  or editor teardown.
+- The PTZ overlay transform center and viewport anchor are established behavior
+  and must not move during camera/group work.
 
-## Working requirements
+## Configuration and architecture notes
 
-- Trace the complete affected path before editing. Do not patch symptoms or
-  make browser-specific fixes.
-- Preserve intentional behavior and unrelated user changes. Do not remove a
-  feature to make a test or layout pass.
-- Keep changes in small, reviewable slices unless the user explicitly approves
-  a broader coordinated change.
-- Maintain separation and reusability without speculative abstraction,
-  compatibility layers, or generic utility dumping grounds.
+- WatchZone is one mandatory Python integration with a packaged Lit/TypeScript
+  frontend. Provider transport/normalization stays below provider-neutral
+  contracts; features must not branch on provider names.
+- Stage code follows `architecture.md`; do not use `src/stage` as a dumping
+  ground. Modules/components do not import or mutate other placeables.
+- Camera navigation is a module. The optional camera-switcher overlay is a
+  Camera-owned component; both remain synchronized through Camera selection.
+- Additional-camera selection uses the full Home Assistant camera picker but
+  rejects an entity already configured as a main or secondary. Both members
+  count toward the twelve-camera limit and retain independent names and source
+  settings; the group has its own auto-named Group Name.
+- Reviews are the primary activity presentation. Events remain for comparison
+  and testing unless explicitly removed. Recordings remain a separate stackable
+  module organized by localized day and hourly rows.
+- Keep media behavior, overlay timing, zoom/pan, controls, dialogs, buttons,
+  theme semantics, and editor controls reusable. Do not duplicate presentation
+  logic to fix a local defect.
+
+## Validation status
+
+Validated for `0.0.4-dev.286`:
+
+- 392 frontend unit tests
+- 111 Playwright tests across Chromium, Firefox, and WebKit
+- Formatting, lint, type checking, architecture/style checks, production build,
+  version consistency, release packaging, and `git diff --check`
+- HACS archive: `dist/watchzone.zip`
+
+Slide takeover coverage verifies activity-indicator clearing, camera return,
+overlay reveal, zoom, and resize-handle interaction. Fade interaction remains
+covered separately.
+
+## Handoff rules
+
+- Trace the complete affected path before editing; do not patch symptoms or add
+  browser/transition-specific workarounds.
+- Preserve unrelated user changes and intentional behavior. Keep changes small,
+  cohesive, and reviewable without speculative abstractions or compatibility
+  layers.
 - Treat mobile Safari/Home Assistant Companion, Chromium, Firefox, WebKit, and
-  Home Assistant editor-preview behavior as real supported environments.
-- Do not change Home Assistant editor layout or global card geometry to conceal
-  a local component defect.
-- Browser-visible work is not ready for handoff until the complete required
-  browser matrix passes.
-- Release-affecting work handed off for commit needs a unique synchronized
-  version. Workflow-, test-, or documentation-only commits do not.
-- Do not commit or sync. The user reviews, commits, and pushes changes.
-- Every implementation handoff must include the exact proposed version-prefixed
-  commit subject and must not claim GitHub release success based only on local
-  validation.
-
-## Handoff maintenance
-
-Replace this file with a fresh concise snapshot when the active task or version
-changes materially. Do not append a running conversation log. Durable rules
-belong in the appropriate repository contract only when the user explicitly
-approves that contract change.
+  editor preview as supported environments. Complete the required browser
+  matrix before handing off browser-visible work.
+- Release-affecting work handed off for commit requires a unique synchronized
+  version. Documentation/test/workflow-only changes keep the current version.
+- Do not commit or sync. Provide the exact version-prefixed proposed commit
+  subject after validation; local packaging is not evidence of GitHub release
+  success.
+- Replace this snapshot when the active task or version changes materially. Do
+  not append a chronological conversation log.
