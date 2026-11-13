@@ -109,11 +109,10 @@ export class MediaOverlayVisibilityController implements ReactiveController {
     this._focused = false;
     this._pointerFocusPending = true;
     if (event.pointerType === "touch") {
-      if (this.visible) this.hide();
-      else {
-        this._show();
-        this._scheduleHide();
-      }
+      // Touch never acts as a second, implicit close command. Every contact
+      // reveals the controls (if needed) and restarts the same hide deadline.
+      this._show();
+      this._scheduleHide();
       return;
     }
     queueMicrotask(() => {
@@ -130,8 +129,14 @@ export class MediaOverlayVisibilityController implements ReactiveController {
     }, 0);
   };
 
-  public readonly handleFocusIn = (): void => {
+  public readonly handleFocusIn = (event: FocusEvent): void => {
     if (this._pointerFocusPending) return;
+    const target = event.target;
+    // Only keyboard-visible focus may hold an overlay. Pointer-created focus
+    // is deliberately transient, especially on touch browsers.
+    if (target instanceof HTMLElement && !target.matches(":focus-visible")) {
+      return;
+    }
     this._focused = true;
     this._show();
   };

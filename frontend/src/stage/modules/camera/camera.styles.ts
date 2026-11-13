@@ -112,25 +112,11 @@ export const cameraStyles = css`
   }
 
   .carousel-navigation.previous {
-    inset-inline-start: calc(
-      var(--wzc-camera-control-inline-inset) + var(--wzc-camera-control-size) +
-        var(--wzc-carousel-navigation-control-gap)
-    );
-  }
-
-  .camera-carousel.camera-group-active .carousel-navigation.previous {
-    inset-inline-start: calc(
-      var(--wzc-camera-control-inline-inset) +
-        (var(--wzc-camera-control-size) * 2) +
-        (var(--wzc-carousel-navigation-control-gap) * 2)
-    );
+    inset-inline-start: var(--wzc-carousel-navigation-inline-inset);
   }
 
   .carousel-navigation.next {
-    inset-inline-end: calc(
-      var(--wzc-camera-control-inline-inset) + var(--wzc-camera-control-size) +
-        var(--wzc-carousel-navigation-control-gap)
-    );
+    inset-inline-end: var(--wzc-carousel-navigation-inline-inset);
   }
 
   .carousel-navigation svg {

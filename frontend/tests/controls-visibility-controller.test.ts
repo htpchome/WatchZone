@@ -70,16 +70,19 @@ describe("media overlay visibility controller", () => {
     expect(controller.sourceVisible).toBe(false);
   });
 
-  it("hides immediately when touched again while visible", () => {
+  it("restarts the timer when touched again while visible", () => {
     vi.useFakeTimers();
     const controller = new MediaOverlayVisibilityController(new TestHost());
 
     controller.handlePointerDown(pointerEvent("touch"));
     expect(controller.visible).toBe(true);
+    vi.advanceTimersByTime(MEDIA_OVERLAY_HIDE_DELAY_MS - 1);
     controller.handlePointerDown(pointerEvent("touch"));
-    expect(controller.visible).toBe(false);
+    expect(controller.visible).toBe(true);
 
-    vi.advanceTimersByTime(MEDIA_OVERLAY_HIDE_DELAY_MS);
+    vi.advanceTimersByTime(MEDIA_OVERLAY_HIDE_DELAY_MS - 1);
+    expect(controller.visible).toBe(true);
+    vi.advanceTimersByTime(1);
     expect(controller.visible).toBe(false);
   });
 
@@ -92,7 +95,7 @@ describe("media overlay visibility controller", () => {
     const controller = new MediaOverlayVisibilityController(new TestHost());
 
     controller.handlePointerDown(pointerEvent("touch", root));
-    controller.handleFocusIn();
+    controller.handleFocusIn({ target: root } as unknown as FocusEvent);
     controller.handlePointerEnd(pointerEvent("touch", root));
     vi.runOnlyPendingTimers();
 

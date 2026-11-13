@@ -84,6 +84,7 @@ export const RECORDING_MEDIA_DIALOG_TAG = `${APP_ID}-recording-media-dialog`;
 export const RECORDED_VIDEO_CLOSE_EVENT = `${APP_ID}-recorded-video-close`;
 export const MEDIA_CONTROLS_TAG = `${APP_ID}-media-controls`;
 export const MEDIA_CONTROL_EVENT = `${APP_ID}-media-control`;
+export const MEDIA_OVERLAY_INTERACTION_EVENT = `${APP_ID}-media-overlay-interaction`;
 export const RECORDED_MEDIA_OPEN_EVENT = `${APP_ID}-recorded-media-open`;
 export const RECORDED_MEDIA_ERROR_EVENT = `${APP_ID}-recorded-media-error`;
 export const ACTIVITY_FALLBACK_RECONCILE_INTERVAL_MS = 5_000;

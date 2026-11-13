@@ -3,11 +3,13 @@ import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import {
   CAMERA_CONTROLS_TAG,
+  CAMERA_GESTURE_LOCK_EVENT,
   CAMERA_GROUP_VIEW_TAG,
   CAMERA_OVERLAY_VISIBILITY_EVENT,
   CAMERA_STAGE_SIZE_CHANGE_EVENT,
   CAMERA_SUSPEND_DIALOG_TAG,
   CAMERA_VIEW_TAG,
+  MEDIA_OVERLAY_INTERACTION_EVENT,
 } from "../../../core/constants";
 import { DeviceProfileController } from "../../../core/device-profile";
 import {
@@ -22,7 +24,9 @@ import {
 } from "../../../core/localization";
 import { pictureInPictureMethod } from "../../../core/picture-in-picture";
 import { renderIcon } from "../../../ui/icons";
+import { releaseTouchFocus } from "../../../ui/control-interaction";
 import { MediaOverlayVisibilityController } from "../../../ui/media-overlay-visibility.controller";
+import { mediaOverlayControlButtonStyles } from "../../../ui/overlay-control.styles";
 import type { CameraSessionContext } from "../../camera-session-context";
 import type {
   FrigateFallbackTransport,
@@ -59,6 +63,10 @@ export interface GroupCameraItem {
 }
 
 const controlsTag = unsafeStatic(CAMERA_CONTROLS_TAG);
+const gestureLockEvent = unsafeStatic(CAMERA_GESTURE_LOCK_EVENT);
+const mediaOverlayInteractionEvent = unsafeStatic(
+  MEDIA_OVERLAY_INTERACTION_EVENT,
+);
 const suspendDialogTag = unsafeStatic(CAMERA_SUSPEND_DIALOG_TAG);
 
 export class CameraGroupView extends LitElement {
@@ -80,6 +88,7 @@ export class CameraGroupView extends LitElement {
   private _audioFocus: 0 | 1 = 0;
   private readonly _deviceProfile = new DeviceProfileController(this);
   private _fullscreenActive = false;
+  private readonly _gestureLocks = new Set<string>();
   private readonly _overlay = new MediaOverlayVisibilityController(this, {
     onVisibilityChange: (visible) => this._emitOverlayVisibility(visible),
   });
@@ -121,6 +130,7 @@ export class CameraGroupView extends LitElement {
     return staticHtml`<div
       class="group"
       @camera-view-session-changed=${this._handleSessionChanged}
+      @${gestureLockEvent}=${this._handleGestureLock}
       @pointerenter=${this._handlePointerEnter}
       @pointermove=${this._handlePointerMove}
       @pointerleave=${this._handlePointerLeave}
@@ -140,7 +150,6 @@ export class CameraGroupView extends LitElement {
         ${[main, secondary].map((camera, index) => {
           const shown = combined || index === visibleIndex;
           const classification = this.classifications.get(camera.entityId);
-          const target = index === 1 ? "secondary" : "main";
           return staticHtml`<div class=${[
             "feed",
             shown ? "visible-mobile" : "hidden",
@@ -162,87 +171,17 @@ export class CameraGroupView extends LitElement {
               .interactionActive=${this.active}
               .lowLatencyHls=${camera.lowLatencyHls}
               .localize=${this.localize}
+              .overlayInteractionEnabled=${false}
+              .overlayVisible=${visible}
               .discardSessionsOnDisconnect=${this.preview}
               .posterUrl=${camera.posterUrl}
               .startUnmutedPcTablet=${camera.startUnmutedPcTablet}
               .startUnmutedPhone=${camera.startUnmutedPhone}
             ></wzc-camera-view>
-            ${
-              !phone && shown
-                ? staticHtml`<div class=${
-                    visible ? "feed-actions visible" : "feed-actions"
-                  }>
-                    <button
-                      class=${
-                        this._audioFocus === index
-                          ? "feed-action audio-target selected"
-                          : "feed-action audio-target"
-                      }
-                      type="button"
-                      title=${this.localize("camera.group_audio_target", {
-                        position: index === 0 ? "A" : "B",
-                      })}
-                      aria-label=${this.localize("camera.group_audio_target", {
-                        position: index === 0 ? "A" : "B",
-                      })}
-                      @pointerdown=${this._stopControlPointerPropagation}
-                      @click=${(event: Event) =>
-                        this._selectAudioFocus(event, index)}
-                    >
-                      ${renderIcon(
-                        this._audioFocus === index &&
-                          !cameraViewMuted(this._views[index])
-                          ? "volumeOn"
-                          : "volumeOff",
-                      )}
-                      <span>${index === 0 ? "A" : "B"}</span>
-                    </button>
-                    <button
-                      class="feed-action solo-target"
-                      type="button"
-                      title=${this.localize("camera.group_solo_target", {
-                        position: index === 0 ? "A" : "B",
-                      })}
-                      aria-label=${this.localize("camera.group_solo_target", {
-                        position: index === 0 ? "A" : "B",
-                      })}
-                      @pointerdown=${this._stopControlPointerPropagation}
-                      @click=${(event: Event) =>
-                        this._selectSoloFeed(event, index)}
-                    >
-                      ${renderIcon(
-                        this.mode === target
-                          ? this.layout === "stacked"
-                            ? "cameraGroupStacked"
-                            : "cameraGroupSideBySide"
-                          : "cameraGroupSingle",
-                      )}
-                    </button>
-                  </div>`
-                : html``
-            }
           </div>`;
         })}
       </div>
-      <button
-        class=${visible ? "feed-selector visible" : "feed-selector"}
-        type="button"
-        title=${this.localize("camera.switch_group_feed")}
-        aria-label=${this.localize("camera.switch_group_feed")}
-        @click=${this._toggleFeed}
-        ?hidden=${!phone}
-      >
-        <span>${visibleIndex === 0 ? "A" : "B"}</span>
-        ${renderIcon(
-          this.layout === "stacked"
-            ? visibleIndex === 0
-              ? "chevronDown"
-              : "chevronUp"
-            : visibleIndex === 0
-              ? "chevronRight"
-              : "chevronLeft",
-        )}
-      </button>
+      ${this._renderGroupActions(phone, visibleIndex, visible)}
       <${controlsTag}
         class="group-controls"
         .visible=${visible}
@@ -264,6 +203,7 @@ export class CameraGroupView extends LitElement {
           this._visibleViews.every((view) => view.suspended)
         }
         @camera-control=${this._handleControl}
+        @${mediaOverlayInteractionEvent}=${this._revealOverlay}
       ></${controlsTag}>
       <${suspendDialogTag}
         .active=${this._suspendDialogActive}
@@ -390,10 +330,7 @@ export class CameraGroupView extends LitElement {
       muted: focus.muted,
       overlayVisible: this._overlay.visible,
       overlayOwner: this,
-      holdOverlay: () => {
-        this._revealChildOverlays();
-        return this._overlay.hold();
-      },
+      holdOverlay: () => this._overlay.hold(),
       revealOverlay: () => this._revealOverlay(),
       setMuted: (muted) =>
         (this._audioFocus === 1
@@ -423,7 +360,6 @@ export class CameraGroupView extends LitElement {
   private readonly _handlePointerEnter = (event: PointerEvent): void => {
     if (event.pointerType === "touch") return;
     this._overlay.handlePointerEnter(event);
-    this._revealChildOverlays();
   };
 
   private readonly _handlePointerMove = (event: PointerEvent): void => {
@@ -435,14 +371,20 @@ export class CameraGroupView extends LitElement {
     this._overlay.handlePointerLeave(event);
   };
 
-  private _revealOverlay(): void {
+  private readonly _revealOverlay = (): void => {
     this._overlay.reveal();
-    this._revealChildOverlays();
-  }
+  };
 
-  private _revealChildOverlays(): void {
-    this._visibleViews.forEach((view) => view.getSession()?.revealOverlay());
-  }
+  private readonly _handleGestureLock = (
+    event: CustomEvent<{ key?: string; locked: boolean }>,
+  ): void => {
+    const key = event.detail.key;
+    if (!key || !this.cameras.some((camera) => camera.entityId === key)) return;
+    event.stopPropagation();
+    if (event.detail.locked) this._gestureLocks.add(key);
+    else this._gestureLocks.delete(key);
+    this._overlay.setSuppressed(this._gestureLocks.size > 0);
+  };
 
   private _emitOverlayVisibility(visible: boolean): void {
     if (!this.presentationId) return;
@@ -464,10 +406,97 @@ export class CameraGroupView extends LitElement {
     );
   };
 
+  private _renderGroupActions(
+    phone: boolean,
+    visibleIndex: number,
+    visible: boolean,
+  ) {
+    if (phone) {
+      return html`<div
+        class=${visible ? "feed-actions visible" : "feed-actions"}
+      >
+        <button
+          class="control-button feed-action feed-selector"
+          type="button"
+          title=${this.localize("camera.switch_group_feed")}
+          aria-label=${this.localize("camera.switch_group_feed")}
+          @pointerdown=${this._stopControlPointerPropagation}
+          @pointerup=${releaseTouchFocus}
+          @pointercancel=${releaseTouchFocus}
+          @click=${this._toggleFeed}
+        >
+          ${renderIcon(
+            this.layout === "stacked"
+              ? visibleIndex === 0
+                ? "chevronDown"
+                : "chevronUp"
+              : visibleIndex === 0
+                ? "chevronRight"
+                : "chevronLeft",
+          )}
+          <span class="position-label">${visibleIndex === 0 ? "A" : "B"}</span>
+        </button>
+      </div>`;
+    }
+    return html`<div class=${visible ? "feed-actions visible" : "feed-actions"}>
+      ${this.cameras.map((camera, index) => {
+        const position = index === 0 ? "A" : "B";
+        const target = index === 0 ? "main" : "secondary";
+        return html`
+          <button
+            class=${
+              this._audioFocus === index
+                ? "control-button feed-action audio-target selected"
+                : "control-button feed-action audio-target"
+            }
+            type="button"
+            title=${this.localize("camera.group_audio_target", { position })}
+            aria-label=${this.localize("camera.group_audio_target", {
+              position,
+            })}
+            @pointerdown=${this._stopControlPointerPropagation}
+            @pointerup=${releaseTouchFocus}
+            @pointercancel=${releaseTouchFocus}
+            @click=${(event: Event) => this._selectAudioFocus(event, index)}
+          >
+            ${renderIcon(
+              this._audioFocus === index && !cameraViewMuted(this._views[index])
+                ? "volumeOn"
+                : "volumeOff",
+            )}
+            <span class="position-label">${position}</span>
+          </button>
+          <button
+            class="control-button feed-action solo-target"
+            type="button"
+            title=${this.localize("camera.group_solo_target", { position })}
+            aria-label=${this.localize("camera.group_solo_target", {
+              position,
+            })}
+            @pointerdown=${this._stopControlPointerPropagation}
+            @pointerup=${releaseTouchFocus}
+            @pointercancel=${releaseTouchFocus}
+            @click=${(event: Event) => this._selectSoloFeed(event, index)}
+          >
+            ${renderIcon(
+              this.mode === target
+                ? this.layout === "stacked"
+                  ? "cameraGroupStacked"
+                  : "cameraGroupSideBySide"
+                : "cameraGroupSingle",
+            )}
+            <span class="position-label">${position}</span>
+          </button>
+        `;
+      })}
+    </div>`;
+  }
+
   private readonly _stopControlPointerPropagation = (
     event: PointerEvent,
   ): void => {
     event.stopPropagation();
+    this._overlay.reveal();
   };
 
   private _selectAudioFocus(event: Event, index: number): void {
@@ -661,7 +690,11 @@ export class CameraGroupView extends LitElement {
     );
   }
 
-  static styles = [stageResizeHandleStyles, cameraGroupViewStyles];
+  static styles = [
+    stageResizeHandleStyles,
+    mediaOverlayControlButtonStyles,
+    cameraGroupViewStyles,
+  ];
 }
 
 async function combineFrames(

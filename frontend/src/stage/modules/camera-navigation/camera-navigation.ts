@@ -88,7 +88,7 @@ export class CameraNavigationModule extends LitElement {
       </span>
       <div class="viewport">
         <wzc-segmented-control
-          class="items"
+          class=${this._overflow.overflowing ? "items overflowing" : "items"}
           appearance="navigation"
           mode="tab"
           .label=${this.localize("camera.navigation")}

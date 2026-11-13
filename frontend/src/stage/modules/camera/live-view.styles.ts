@@ -36,7 +36,10 @@ export const cameraLiveViewStyles = css`
     block-size: 100%;
     overflow: hidden;
     transform-origin: center;
-    touch-action: pan-x pan-y;
+    /* Vertical motion remains page scroll; horizontal motion belongs to the
+       camera carousel. This also prevents native double-tap zoom from racing
+       the shared display-zoom gesture. */
+    touch-action: pan-y;
     user-select: none;
     will-change: transform;
     transition: transform var(--wzc-zoom-transition-duration) ease;

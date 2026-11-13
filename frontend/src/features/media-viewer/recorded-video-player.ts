@@ -4,6 +4,7 @@ import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 import {
   MEDIA_CONTROL_EVENT,
   MEDIA_CONTROLS_TAG,
+  MEDIA_OVERLAY_INTERACTION_EVENT,
   RECORDED_VIDEO_TRANSPORT_EVENT,
   RECORDED_VIDEO_TRANSPORT_HOLD_EVENT,
   RECORDED_VIDEO_TRANSPORT_TAG,
@@ -62,6 +63,9 @@ import "./recording-scrubber";
 
 const mediaControlsTag = unsafeStatic(MEDIA_CONTROLS_TAG);
 const mediaControlEvent = unsafeStatic(MEDIA_CONTROL_EVENT);
+const mediaOverlayInteractionEvent = unsafeStatic(
+  MEDIA_OVERLAY_INTERACTION_EVENT,
+);
 const transportTag = unsafeStatic(RECORDED_VIDEO_TRANSPORT_TAG);
 const transportEvent = unsafeStatic(RECORDED_VIDEO_TRANSPORT_EVENT);
 const transportHoldEvent = unsafeStatic(RECORDED_VIDEO_TRANSPORT_HOLD_EVENT);
@@ -208,6 +212,7 @@ export class RecordedVideoPlayer extends LitElement {
         .visible=${this._media.overlay.visible}
         .viewportEdge=${this._fullscreenActive}
         @${mediaControlEvent}=${this._handleControl}
+        @${mediaOverlayInteractionEvent}=${this._handleOverlayControlInteraction}
       ></${mediaControlsTag}>
       <${transportTag}
         .currentTime=${this._currentTime}
@@ -416,6 +421,10 @@ export class RecordedVideoPlayer extends LitElement {
     } else {
       void this._togglePictureInPicture();
     }
+  };
+
+  private readonly _handleOverlayControlInteraction = (): void => {
+    this._media.overlay.reveal();
   };
 
   private readonly _handleTransport = (

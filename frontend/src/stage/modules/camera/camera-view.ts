@@ -58,6 +58,7 @@ export class CameraView extends LitElement {
     interactionActive: { attribute: false, type: Boolean },
     lowLatencyHls: { attribute: false, type: Boolean },
     localize: { attribute: false },
+    overlayInteractionEnabled: { attribute: false, type: Boolean },
     overlayVisible: { attribute: false, type: Boolean },
     publishSession: { attribute: false, type: Boolean },
     resizeEnabled: { attribute: false, type: Boolean },
@@ -114,6 +115,7 @@ export class CameraView extends LitElement {
   public interactionActive = false;
   public lowLatencyHls = true;
   public localize: LocalizeFunction = englishLocalize;
+  public overlayInteractionEnabled = true;
   public overlayVisible = false;
   public publishSession = true;
   public resizeEnabled = true;
@@ -184,6 +186,8 @@ export class CameraView extends LitElement {
                 .localize=${this.localize}
                 .muted=${this._audio.muted}
                 .notices=${this._toasts.notices}
+                .externalOverlayVisible=${this.overlayVisible}
+                .overlayInteractionEnabled=${this.overlayInteractionEnabled}
                 .posterUrl=${this.posterUrl}
                 .posterPriority=${this.active}
                 .selected=${this._session.selected}

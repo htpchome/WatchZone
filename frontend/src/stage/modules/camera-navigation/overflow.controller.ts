@@ -7,6 +7,7 @@ const GEOMETRY_EPSILON_PX = 1;
 /** Owns camera-navigation overflow measurement and horizontal scrolling. */
 export class CameraNavigationOverflowController implements ReactiveController {
   public nextCount = 0;
+  public overflowing = false;
   public previousCount = 0;
 
   private _frame?: number;
@@ -85,7 +86,7 @@ export class CameraNavigationOverflowController implements ReactiveController {
 
   private _measure(): void {
     const viewport = this._viewport;
-    if (!viewport) return this._setCounts(0, 0);
+    if (!viewport) return this._setMeasurement(0, 0, false);
     const viewportRect = viewport.getBoundingClientRect();
     let previous = 0;
     let next = 0;
@@ -96,13 +97,33 @@ export class CameraNavigationOverflowController implements ReactiveController {
       if (buttonRect.right > viewportRect.right + GEOMETRY_EPSILON_PX)
         next += 1;
     }
-    this._setCounts(previous, next);
+    const overflowing =
+      viewport.scrollWidth > viewport.clientWidth + GEOMETRY_EPSILON_PX ||
+      previous + next > 0;
+    if (overflowing !== this.overflowing) {
+      // Alignment changes the button geometry. Publish that mode first, then
+      // measure counts only after the centered/start-aligned layout settles.
+      this._setMeasurement(0, 0, overflowing);
+      void this._host.updateComplete.then(() => this._scheduleMeasurement());
+      return;
+    }
+    this._setMeasurement(previous, next, overflowing);
   }
 
-  private _setCounts(previous: number, next: number): void {
-    if (previous === this.previousCount && next === this.nextCount) return;
+  private _setMeasurement(
+    previous: number,
+    next: number,
+    overflowing: boolean,
+  ): void {
+    if (
+      previous === this.previousCount &&
+      next === this.nextCount &&
+      overflowing === this.overflowing
+    )
+      return;
     this.previousCount = previous;
     this.nextCount = next;
+    this.overflowing = overflowing;
     this._host.requestUpdate();
   }
 

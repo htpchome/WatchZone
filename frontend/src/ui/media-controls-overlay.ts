@@ -1,6 +1,10 @@
 import { html, LitElement } from "lit";
 
-import { MEDIA_CONTROL_EVENT, MEDIA_CONTROLS_TAG } from "../core/constants";
+import {
+  MEDIA_CONTROL_EVENT,
+  MEDIA_CONTROLS_TAG,
+  MEDIA_OVERLAY_INTERACTION_EVENT,
+} from "../core/constants";
 import { renderIcon, type IconName } from "./icons";
 import { releaseTouchFocus } from "./control-interaction";
 import { mediaControlsOverlayStyles } from "./media-controls-overlay.styles";
@@ -42,7 +46,7 @@ export class MediaControlsOverlay extends LitElement {
       class="control-group"
       role="toolbar"
       aria-label=${this.label}
-      @pointerdown=${this._stopPropagation}
+      @pointerdown=${this._handlePointerDown}
       @keydown=${this._stopPropagation}
     >
       ${this.controls.map(
@@ -57,6 +61,7 @@ export class MediaControlsOverlay extends LitElement {
             aria-pressed=${control.active ? "true" : "false"}
             ?disabled=${control.disabled || control.pending}
             @pointerup=${releaseTouchFocus}
+            @pointercancel=${releaseTouchFocus}
             @click=${() => this._dispatch(control.action)}
           >
             ${renderIcon(control.icon)}
@@ -67,6 +72,16 @@ export class MediaControlsOverlay extends LitElement {
 
   private readonly _stopPropagation = (event: Event): void =>
     event.stopPropagation();
+
+  private readonly _handlePointerDown = (event: PointerEvent): void => {
+    event.stopPropagation();
+    this.dispatchEvent(
+      new CustomEvent(MEDIA_OVERLAY_INTERACTION_EVENT, {
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  };
 
   private _dispatch(action: string): void {
     this.dispatchEvent(

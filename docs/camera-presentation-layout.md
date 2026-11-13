@@ -128,6 +128,43 @@ and toasts remain outside both transformations.
   reserved default ratio, preventing avoidable layout shifts outside the
   user's resize action.
 
+## Live overlay zones
+
+The live stage uses fixed presentation zones. Controls are assigned to a zone;
+they must not derive their position from the number of controls in another
+zone.
+
+```text
+┌──────────────────────────────────────────────────────────────────────┐
+│ [group A/B]        [slideshow] [camera picker]        [source badge]│
+│                                                                      │
+│ left lane │  ‹       unobstructed live media        ›  │ right lane │
+│           │                                           │ player tools│
+│           │                                           │ power / PiP │
+│           │                                           │ snapshot    │
+│           │                                           │ fullscreen  │
+│           │                                           │ mute        │
+│                                                                      │
+│                     [light] [talk]                    [PTZ]          │
+│ camera name                 [resize handle]              timestamp   │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+- Group A/B controls are square shared media-overlay controls in the top-leading
+  zone. Slideshow and camera selection own top-center. Source state owns
+  top-trailing.
+- The outer side lanes are reserved. Carousel arrows sit inside the live-media
+  boundary, immediately after the left lane and immediately before the right
+  lane; they never occupy either lane. Both positions derive from
+  `--wzc-carousel-navigation-inline-inset`.
+- The fixed right lane owns the vertical player-tool dock. Adding or removing a
+  player tool does not move either carousel arrow horizontally.
+- Light and talk occupy the lower center band. PTZ occupies the lower trailing
+  band. The resize handle owns the bottom center edge. Camera name and timestamp
+  remain unobstructed in the bottom metadata strip.
+- Module-private overlays and Stage components follow the same zone geometry;
+  they do not create competing offsets or duplicate touch visibility owners.
+
 ## Verification
 
 Browser coverage must verify automatic `16:9` stage sizing, explicit-height

@@ -7,6 +7,7 @@ import {
   CAMERA_LIVE_PRESENTATION_TAG,
   CAMERA_OVERLAY_VISIBILITY_EVENT,
   BADGE_TAG,
+  MEDIA_OVERLAY_INTERACTION_EVENT,
   TOAST_REGION_TAG,
 } from "../../../../core/constants";
 import {
@@ -69,6 +70,9 @@ export interface CameraOverlayVisibilityDetail {
 }
 
 const controlsTag = unsafeStatic(CAMERA_CONTROLS_TAG);
+const mediaOverlayInteractionEvent = unsafeStatic(
+  MEDIA_OVERLAY_INTERACTION_EVENT,
+);
 const badgeTag = unsafeStatic(BADGE_TAG);
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
 
@@ -78,12 +82,14 @@ export class CameraLivePresentation extends LitElement {
     active: { attribute: false, type: Boolean },
     available: { attribute: false, type: Boolean },
     controlsEnabled: { attribute: false, type: Boolean },
+    externalOverlayVisible: { attribute: false, type: Boolean },
     failed: { attribute: false, type: Boolean },
     fallbackVideo: { attribute: false },
     lowLatencyHls: { attribute: false, type: Boolean },
     localize: { attribute: false },
     muted: { attribute: false, type: Boolean },
     notices: { attribute: false },
+    overlayInteractionEnabled: { attribute: false, type: Boolean },
     posterUrl: { attribute: false },
     posterPriority: { attribute: false, type: Boolean },
     selected: { attribute: false },
@@ -114,12 +120,14 @@ export class CameraLivePresentation extends LitElement {
   public active = true;
   public available = false;
   public controlsEnabled = true;
+  public externalOverlayVisible = false;
   public failed = false;
   public fallbackVideo?: HTMLVideoElement;
   public lowLatencyHls = true;
   public localize: LocalizeFunction = englishLocalize;
   public muted = true;
   public notices: readonly ToastNotice[] = [];
+  public overlayInteractionEnabled = true;
   public posterUrl?: string;
   public posterPriority = false;
   public selected?: PresentedSource;
@@ -231,7 +239,9 @@ export class CameraLivePresentation extends LitElement {
     const sourceVisible = Boolean(
       connecting ||
       (resolvedSource &&
-        (this._media.overlay.sourceVisible || this._media.overlay.visible)),
+        (this.externalOverlayVisible ||
+          this._media.overlay.sourceVisible ||
+          this._media.overlay.visible)),
     );
     return staticHtml`
       <div
@@ -242,15 +252,15 @@ export class CameraLivePresentation extends LitElement {
         })}
         aria-keyshortcuts="Enter Space + - 0 Escape ArrowLeft ArrowRight ArrowUp ArrowDown"
         @keydown=${this._media.handleKeyDown}
-        @pointerenter=${this._media.overlay.handlePointerEnter}
-        @pointerleave=${this._media.overlay.handlePointerLeave}
-        @pointermove=${this._media.handlePointerMove}
-        @pointerdown=${this._media.handlePointerDown}
-        @pointerup=${this._media.handlePointerUp}
-        @pointercancel=${this._media.handlePointerCancel}
-        @lostpointercapture=${this._media.handleLostPointerCapture}
-        @focusin=${this._media.overlay.handleFocusIn}
-        @focusout=${this._media.overlay.handleFocusOut}
+        @pointerenter=${this._handlePointerEnter}
+        @pointerleave=${this._handlePointerLeave}
+        @pointermove=${this._handlePointerMove}
+        @pointerdown=${this._handlePointerDown}
+        @pointerup=${this._handlePointerUp}
+        @pointercancel=${this._handlePointerCancel}
+        @lostpointercapture=${this._handleLostPointerCapture}
+        @focusin=${this._handleFocusIn}
+        @focusout=${this._handleFocusOut}
         @wheel=${this._media.handleWheel}
       >
         <div
@@ -332,6 +342,7 @@ export class CameraLivePresentation extends LitElement {
                 .suspendSupported=${this.suspendSupported}
                 .suspended=${this.suspended}
                 @camera-control=${this._handleCameraControl}
+                @${mediaOverlayInteractionEvent}=${this._handleOverlayControlInteraction}
               ></${controlsTag}>`
             : nothing
         }
@@ -388,6 +399,60 @@ export class CameraLivePresentation extends LitElement {
       );
     }
   }
+
+  private readonly _handlePointerEnter = (event: PointerEvent): void => {
+    if (this.overlayInteractionEnabled)
+      this._media.overlay.handlePointerEnter(event);
+  };
+
+  private readonly _handleOverlayControlInteraction = (): void => {
+    this._media.overlay.reveal();
+  };
+
+  private readonly _handlePointerLeave = (event: PointerEvent): void => {
+    if (this.overlayInteractionEnabled)
+      this._media.overlay.handlePointerLeave(event);
+  };
+
+  private readonly _handlePointerMove = (event: PointerEvent): void => {
+    this._media.zoom.handlePointerMove(event);
+    if (this.overlayInteractionEnabled && !this._media.zoom.interacting)
+      this._media.overlay.handlePointerMove(event);
+  };
+
+  private readonly _handlePointerDown = (event: PointerEvent): void => {
+    this._media.zoom.handlePointerDown(event);
+    if (this.overlayInteractionEnabled)
+      this._media.overlay.handlePointerDown(event);
+  };
+
+  private readonly _handlePointerUp = (event: PointerEvent): void => {
+    this._media.zoom.handlePointerUp(event);
+    if (this.overlayInteractionEnabled)
+      this._media.overlay.handlePointerEnd(event);
+  };
+
+  private readonly _handlePointerCancel = (event: PointerEvent): void => {
+    this._media.zoom.handlePointerCancel(event);
+    if (this.overlayInteractionEnabled)
+      this._media.overlay.handlePointerEnd(event);
+  };
+
+  private readonly _handleLostPointerCapture = (event: PointerEvent): void => {
+    this._media.zoom.handleLostPointerCapture(event);
+    if (this.overlayInteractionEnabled)
+      this._media.overlay.handlePointerEnd(event);
+  };
+
+  private readonly _handleFocusIn = (event: FocusEvent): void => {
+    if (this.overlayInteractionEnabled)
+      this._media.overlay.handleFocusIn(event);
+  };
+
+  private readonly _handleFocusOut = (event: FocusEvent): void => {
+    if (this.overlayInteractionEnabled)
+      this._media.overlay.handleFocusOut(event);
+  };
 
   private _renderFallback() {
     return html`<div class="generic-fallback" aria-hidden="true">

@@ -98,19 +98,24 @@ every presentation using that controller:
    hide timer immediately.
 2. The timer hides the controls without requiring focus loss, pointer exit, or
    another touch outside the presentation.
-3. A single touch while controls are visible hides them immediately.
-4. Double activation zooms the media and hides the controls. The presentation
+3. A single touch while controls are visible restarts the same hide timer; it
+   never acts as an implicit close command.
+4. Holding a touch on otherwise inactive media does not create a separate
+   visibility state. The normal timer remains authoritative.
+5. Double activation zooms the media and hides the controls. The presentation
    captures the browser `dblclick` default so a recorded video's native controls
    cannot substitute fullscreen for WatchZone display zoom.
-5. Drag or pinch interaction hides the controls. Controls remain suppressed
+6. Drag or pinch interaction hides the controls. Controls remain suppressed
    while display zoom is active and become eligible for the normal touch policy
    after zoom returns to `1x`.
 
-Mouse hover and intentional keyboard focus may hold controls visible when media
-is not zoomed. Focus or sticky hover synthesized from a touch must not hold them
-visible. Overlay buttons stop pointer propagation and retain their own shared
-touch-focus-release behavior, so activating a control does not also toggle the
-overlay.
+Mouse hover and `:focus-visible` keyboard focus may hold controls visible when
+media is not zoomed. Focus or sticky hover synthesized from a touch must not
+hold them visible. Overlay buttons stop pointer propagation and retain their
+own shared touch-focus-release behavior, so activating a control does not also
+restart the presentation gesture path. At `1x`, the live surface reserves
+horizontal touch motion for the camera carousel and leaves vertical motion to
+the page. While zoomed, the media surface owns touch pan and pinch.
 
 ## Bounds and lifecycle
 

@@ -83,11 +83,10 @@ export const cameraGroupViewStyles = css`
   .feed-actions {
     position: absolute;
     z-index: 7;
-    inset-inline-start: var(--wzc-camera-control-inline-inset);
-    inset-block-start: 50%;
+    inset-inline-start: var(--wzc-camera-overlay-inline-inset);
+    inset-block-start: var(--wzc-camera-overlay-block-inset);
     display: flex;
     gap: 0.25rem;
-    transform: translateY(-50%);
     opacity: 0;
     pointer-events: none;
     transition: opacity var(--wzc-media-overlay-transition-duration) ease;
@@ -99,72 +98,26 @@ export const cameraGroupViewStyles = css`
   }
 
   .feed-action {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.15rem;
-    min-inline-size: var(--wzc-camera-control-size);
-    min-block-size: var(--wzc-camera-control-size);
-    block-size: var(--wzc-camera-control-size);
-    padding-inline: 0.45rem;
-    color: var(--wzc-media-overlay-color);
-    background: var(--wzc-media-overlay-background);
-    border: 1px solid var(--wzc-media-overlay-border-color);
-    border-radius: var(--wzc-radius-pill);
-    box-shadow: var(--wzc-media-overlay-shadow);
-    cursor: pointer;
-    touch-action: manipulation;
+    position: relative;
   }
 
   .feed-action.selected {
-    border-color: var(--wzc-color-primary);
+    --wzc-control-border-color: var(--wzc-color-primary);
   }
 
-  .feed-action svg {
-    inline-size: 1rem;
-    block-size: 1rem;
+  .position-label {
+    position: absolute;
+    inset-inline-end: 0.18rem;
+    inset-block-end: 0.08rem;
+    color: currentcolor;
+    font-size: 0.55rem;
+    font-weight: var(--wzc-font-weight-bold);
+    line-height: 1;
+    pointer-events: none;
   }
 
   .feeds.solo {
     display: block;
-  }
-
-  .feed-selector {
-    position: absolute;
-    z-index: 5;
-    inset-inline-start: var(--wzc-camera-control-inline-inset);
-    inset-block-start: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.15rem;
-    min-inline-size: var(--wzc-camera-control-size);
-    block-size: var(--wzc-camera-control-size);
-    padding-inline: 0.45rem;
-    color: var(--wzc-media-overlay-color);
-    background: var(--wzc-media-overlay-background);
-    border: 1px solid var(--wzc-media-overlay-border-color);
-    border-radius: var(--wzc-radius-pill);
-    box-shadow: var(--wzc-media-overlay-shadow);
-    opacity: 0;
-    transform: translateY(-50%);
-    cursor: pointer;
-    pointer-events: none;
-    transition: opacity var(--wzc-media-overlay-transition-duration) ease;
-  }
-
-  .feed-selector.visible {
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  .feed-selector[hidden] {
-    display: none;
-  }
-
-  .feed-selector svg {
-    inline-size: 1.25rem;
-    block-size: 1.25rem;
   }
 
   .group-controls {

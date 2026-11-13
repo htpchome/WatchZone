@@ -297,6 +297,10 @@ export const themeTokens = css`
     --wzc-carousel-navigation-hover-opacity: 100%;
     --wzc-carousel-navigation-icon-size: 2.75rem;
     --wzc-carousel-navigation-control-gap: 0.75rem;
+    --wzc-carousel-navigation-inline-inset: calc(
+      var(--wzc-camera-control-inline-inset) + var(--wzc-camera-control-size) +
+        var(--wzc-carousel-navigation-control-gap)
+    );
     --wzc-selection-bar-color: var(--wzc-color-text-1);
     --wzc-selection-bar-background: var(--wzc-color-surface-secondary);
     --wzc-selection-bar-active-color: var(--wzc-color-text-reversed);

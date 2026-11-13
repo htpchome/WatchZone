@@ -64,9 +64,13 @@ export const cameraNavigationStyles = css`
   }
 
   .items::part(container) {
-    justify-content: flex-start;
+    justify-content: center;
     inline-size: 100%;
     block-size: 100%;
+  }
+
+  .items.overflowing::part(container) {
+    justify-content: flex-start;
   }
 
   .viewport {

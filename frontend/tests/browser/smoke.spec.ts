@@ -424,6 +424,28 @@ test("keeps camera navigation module and carousel selection bidirectional", asyn
   await expect(buttons).toHaveCount(2);
   await expect(buttons.nth(0)).toHaveText("Front Door");
   await expect(buttons.nth(0)).toHaveAttribute("aria-selected", "true");
+  const navigationCentering = await navigation.evaluate((element) => {
+    const root = element.shadowRoot;
+    const items = root?.querySelector("wzc-segmented-control");
+    const itemRoot = items?.shadowRoot;
+    const viewport = itemRoot?.querySelector(".segmented-control");
+    const options = itemRoot?.querySelectorAll("button");
+    const first = options?.item(0).getBoundingClientRect();
+    const last = options
+      ?.item((options?.length ?? 1) - 1)
+      .getBoundingClientRect();
+    const viewportRect = viewport?.getBoundingClientRect();
+    return {
+      itemsCenter: first && last ? (first.left + last.right) / 2 : 0,
+      viewportCenter: viewportRect
+        ? (viewportRect.left + viewportRect.right) / 2
+        : 0,
+    };
+  });
+  expect(navigationCentering.itemsCenter).toBeCloseTo(
+    navigationCentering.viewportCenter,
+    1,
+  );
   await page.locator("watchzone-card").evaluate((element) => {
     (element as HTMLElement).style.setProperty(
       "--wzc-color-text-reversed",
@@ -583,11 +605,8 @@ test("cycles a grouped camera from combined to each member and back", async ({
   );
 
   await group.hover();
-  const firstFeedActions = group
-    .locator(".feed")
-    .first()
-    .locator(".feed-actions");
-  const firstSoloTarget = firstFeedActions.locator(".solo-target");
+  const firstFeedActions = group.locator(".feed-actions");
+  const firstSoloTarget = firstFeedActions.locator(".solo-target").nth(0);
   await expect(firstFeedActions).toHaveClass(/visible/);
   await expect(firstSoloTarget.locator("path")).toHaveAttribute("d", /^m4 20c/);
   await firstSoloTarget.hover();
@@ -607,7 +626,7 @@ test("cycles a grouped camera from combined to each member and back", async ({
   await expect(leadingIcon).toHaveCount(0);
 
   await group.hover();
-  await group.locator(".feed").nth(1).locator(".solo-target").click();
+  await group.locator(".solo-target").nth(1).click();
   await expect(group.locator(".feed:not(.hidden)")).toHaveCount(1);
   await expect(leadingIcon).toHaveAttribute("data-icon", "arrowRight");
 });
@@ -691,7 +710,8 @@ test("releases grouped overlay and resize interaction before selecting another c
   const stackedSoloTarget = group
     .locator(".feed-actions")
     .first()
-    .locator(".solo-target");
+    .locator(".solo-target")
+    .first();
   await expect(stackedSoloTarget.locator("path")).toHaveAttribute(
     "d",
     /^m4 20c/,
@@ -7630,7 +7650,7 @@ test("retains one live connection while the card presentation is replaced", asyn
     pointerId: 1,
     pointerType: "touch",
   });
-  await expect(controls.first()).toBeVisible();
+  await expect(controls.first()).toBeHidden();
   await expect(connectionIndicator).toHaveText("WebRTC");
   await page
     .locator("wzc-camera-navigation button")
@@ -7658,7 +7678,7 @@ test("retains one live connection while the card presentation is replaced", asyn
     pointerId: 22,
     pointerType: "mouse",
   });
-  await expect(controls.first()).toBeHidden();
+  await expect(controls.first()).toBeVisible();
   await page.waitForTimeout(400);
   await viewport.evaluate((element) => {
     (
@@ -7679,7 +7699,7 @@ test("retains one live connection while the card presentation is replaced", asyn
     pointerId: 2,
     pointerType: "touch",
   });
-  await expect(controls.first()).toBeHidden();
+  await expect(controls.first()).toBeVisible();
 
   await page.waitForTimeout(400);
   await viewport.dispatchEvent("pointerdown", {
@@ -7729,6 +7749,45 @@ test("retains one live connection while the card presentation is replaced", asyn
         (element.getRootNode() as ShadowRoot).activeElement === element,
     ),
   ).toBe(false);
+
+  await page.waitForTimeout(400);
+  await viewport.dispatchEvent("pointerdown", {
+    clientX: 120,
+    clientY: 80,
+    isPrimary: true,
+    pointerId: 5,
+    pointerType: "touch",
+  });
+  await expect(controls.first()).toBeVisible();
+  await expect(controls.first()).toBeHidden({
+    timeout: MEDIA_OVERLAY_HIDE_DELAY_MS + 1_000,
+  });
+  await viewport.dispatchEvent("pointercancel", {
+    clientX: 120,
+    clientY: 80,
+    isPrimary: true,
+    pointerId: 5,
+    pointerType: "touch",
+  });
+
+  for (const pointerId of [6, 7]) {
+    await viewport.dispatchEvent("pointerdown", {
+      clientX: 120,
+      clientY: 80,
+      isPrimary: true,
+      pointerId,
+      pointerType: "touch",
+    });
+    await viewport.dispatchEvent("pointerup", {
+      clientX: 120,
+      clientY: 80,
+      isPrimary: true,
+      pointerId,
+      pointerType: "touch",
+    });
+  }
+  await expect(viewport).toHaveAttribute("aria-label", /zoom 200 percent/);
+  await expect(controls.first()).toBeHidden();
 
   expect(
     await page.evaluate(
