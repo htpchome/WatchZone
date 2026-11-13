@@ -27,6 +27,7 @@ export class ActivityTakeoverToggle extends LitElement {
   public targetModuleId = "";
 
   private _state = EMPTY_STATE;
+  private _suppressInactiveHover = false;
   private _unsubscribe?: () => void;
 
   public connectedCallback(): void {
@@ -57,13 +58,14 @@ export class ActivityTakeoverToggle extends LitElement {
         )
       : this.localize("camera.alert_takeover_unavailable");
     return html`<button
-      class=${`wzc-toolbar-icon-button${enabled ? " active" : ""}`}
+      class=${`wzc-toolbar-icon-button${enabled ? " active" : ""}${this._suppressInactiveHover ? " suppress-inactive-hover" : ""}`}
       type="button"
       ?disabled=${!available}
       aria-label=${label}
       aria-pressed=${enabled ? "true" : "false"}
       title=${label}
       @click=${this._toggle}
+      @pointerleave=${this._releaseInactiveHoverSuppression}
     >
       ${renderIcon("shieldAlert")}
     </button>`;
@@ -84,7 +86,15 @@ export class ActivityTakeoverToggle extends LitElement {
   }
 
   private readonly _toggle = (): void => {
+    this._suppressInactiveHover = this._state.takeoverEnabled === true;
+    this.requestUpdate();
     this.cameraSelection?.toggleTakeover(this.targetModuleId);
+  };
+
+  private readonly _releaseInactiveHoverSuppression = (): void => {
+    if (!this._suppressInactiveHover) return;
+    this._suppressInactiveHover = false;
+    this.requestUpdate();
   };
 
   static styles = activityTakeoverToggleStyles;

@@ -1330,7 +1330,40 @@ test("highlights live video directly from draft review notifications", async ({
   await expect(carousel).not.toHaveClass(/activity-(alert|detection)/);
 
   const takeoverToggle = page.locator("wzc-activity-takeover-toggle button");
+  await page.locator("wzc-activity-takeover-toggle").evaluate((element) => {
+    element.style.setProperty(
+      "--wzc-stage-stack-button-color",
+      "rgb(90, 90, 90)",
+    );
+    element.style.setProperty(
+      "--wzc-stage-stack-button-hover-color",
+      "rgb(0, 120, 200)",
+    );
+  });
   await expect(takeoverToggle).toHaveAttribute("aria-pressed", "false");
+  const inactiveTakeoverColor = await takeoverToggle.evaluate(
+    (button) => getComputedStyle(button).color,
+  );
+  await takeoverToggle.click();
+  await expect(takeoverToggle).toHaveAttribute("aria-pressed", "true");
+  const activeTakeoverColor = await takeoverToggle.evaluate(
+    (button) => getComputedStyle(button).color,
+  );
+  expect(activeTakeoverColor).not.toBe(inactiveTakeoverColor);
+  await takeoverToggle.click();
+  await expect(takeoverToggle).toHaveAttribute("aria-pressed", "false");
+  await expect
+    .poll(() =>
+      takeoverToggle.evaluate((button) => getComputedStyle(button).color),
+    )
+    .toBe(inactiveTakeoverColor);
+  await page.mouse.move(0, 0);
+  await takeoverToggle.hover();
+  await expect
+    .poll(() =>
+      takeoverToggle.evaluate((button) => getComputedStyle(button).color),
+    )
+    .toBe(activeTakeoverColor);
   await takeoverToggle.click();
   await expect(takeoverToggle).toHaveAttribute("aria-pressed", "true");
 

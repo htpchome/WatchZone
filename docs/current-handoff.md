@@ -15,33 +15,25 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.286`
-- Current commit: `588c525` —
-  `v0.0.4-dev.285 - fix(camera): isolate inactive fade slides`
-- The worktree contains the uncommitted activity-end reconciliation described
-  below. Always verify `git status`, the canonical version in
+- Working version: `0.0.4-dev.287`
+- Current commit: `d185560` —
+  `v0.0.4-dev.286 - fix(activity): reconcile missed review end state`
+- The worktree contains the uncommitted takeover-toggle hover reconciliation
+  described below. Always verify `git status`, the canonical version in
   `custom_components/watchzone/const.py`, and the latest commit.
 
-## Active change: activity-end reconciliation
+## Active change: takeover-toggle hover reconciliation
 
-- Camera outlines and camera-navigation activity indicators derive from one
-  shared classification map owned by `LiveActivityHighlightController`.
-- A numeric provider `end_time` is authoritative even if Frigate labels the
-  message as an `update`. This prevents a stale phase from retaining activity.
-- While normalized active reviews exist, a bounded five-second reconciliation
-  checks a small authoritative review window. It stops when idle, preserves
-  state on request failure, and discards stale work after reconfiguration or
-  disconnect.
-- Activity is keyed by camera and review ID. Duplicate updates replace one
-  record, ending one review preserves other active reviews, alerts outrank
-  detections visually, and recently ended IDs prevent late updates from
-  resurrecting activity.
-- Rapid eligible reviews are handled in arrival order: the current takeover
-  finishes, the next begins, then the prior user camera is restored.
-- The reported stuck outline/navigation icon was intermittent and could not be
-  reproduced consistently. Slide timing was suspected but not established as
-  the cause. No Slide-specific workaround or carousel behavior change was
-  added; monitor real Frigate traffic after release.
+- The Alert Takeover toolbar toggle keeps the existing theme-token colors for
+  inactive, hover, and active states.
+- Turning the active toggle off while the pointer remains over it suppresses
+  only that stale inactive hover paint, so the control immediately presents its
+  inactive color. Pointer leave restores the ordinary hover behavior.
+- The shared toolbar icon-button foundation owns the reusable suppression
+  modifier; the takeover component owns only the interaction state that opts
+  into it. Filters and calendars retain their existing behavior.
+- Unit coverage verifies the component lifecycle, and browser coverage verifies
+  the actual computed-color transition without hardcoding product colors.
 
 ## Live camera and group invariants
 
@@ -91,13 +83,12 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 
 ## Validation status
 
-Validated for `0.0.4-dev.286`:
+Validated for `0.0.4-dev.287`:
 
-- 392 frontend unit tests
+- 393 frontend unit tests
 - 111 Playwright tests across Chromium, Firefox, and WebKit
 - Formatting, lint, type checking, architecture/style checks, production build,
-  version consistency, release packaging, and `git diff --check`
-- HACS archive: `dist/watchzone.zip`
+  version consistency, and `git diff --check`
 
 Slide takeover coverage verifies activity-indicator clearing, camera return,
 overlay reveal, zoom, and resize-handle interaction. Fade interaction remains
