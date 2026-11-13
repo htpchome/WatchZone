@@ -54,9 +54,10 @@ defaults to `false` and is omitted from YAML at its default.
 - Collapsed trigger and expanded directional panel share one immutable center.
   Opening and closing animate the panel dimensions symmetrically around that
   center while the trigger cross-fades; neither state may jump or establish a
-  second positioning origin. The expanded panel intentionally overlaps the
-  lower portion of Camera's right rail as defined by the camera presentation
-  layout contract.
+  second positioning origin. The shared center and collapsed trigger remain in
+  Camera's lower-trailing zone. Only the expanded panel edge intentionally
+  overlaps the lower portion of Camera's right rail, by the shared overlap
+  token defined in the camera presentation layout contract.
 - Active movement holds the shared overlay visible. Releasing movement releases
   that hold and returns visibility to the shared timer.
 - The configured open/closed state initializes each active camera. A user's

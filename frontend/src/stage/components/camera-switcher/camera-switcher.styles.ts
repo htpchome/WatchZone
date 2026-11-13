@@ -7,7 +7,7 @@ const cameraSwitcherPrivateStyles = css`
     display: block;
     position: relative;
     z-index: 5;
-    inline-size: clamp(9rem, 24cqi, 14rem);
+    inline-size: var(--wzc-camera-switcher-inline-size);
     pointer-events: none;
   }
 
@@ -26,17 +26,17 @@ const cameraSwitcherPrivateStyles = css`
 
   button {
     inline-size: 100%;
-    padding: 0.35rem 0.55rem;
-    font-size: 0.78rem;
+    padding: 0 var(--wzc-overlay-control-inline-padding);
+    font-size: var(--wzc-overlay-control-text-size);
     font-weight: 600;
     text-align: start;
   }
 
   .trigger {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 1rem;
+    grid-template-columns: minmax(0, 1fr) var(--wzc-control-icon-size);
     align-items: center;
-    gap: 0.4rem;
+    gap: var(--wzc-overlay-control-gap);
   }
 
   .trigger span {
@@ -47,8 +47,8 @@ const cameraSwitcherPrivateStyles = css`
   }
 
   .trigger svg {
-    inline-size: 1rem;
-    block-size: 1rem;
+    inline-size: var(--wzc-control-icon-size);
+    block-size: var(--wzc-control-icon-size);
     transition: transform var(--wzc-media-overlay-transition-duration) ease;
   }
 

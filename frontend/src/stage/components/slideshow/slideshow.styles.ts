@@ -11,10 +11,11 @@ const slideshowPrivateStyles = css`
   button {
     align-items: center;
     box-shadow: var(--wzc-media-overlay-shadow);
-    display: flex;
-    gap: 0.32rem;
+    display: grid;
+    grid-auto-flow: column;
+    gap: var(--wzc-overlay-control-gap);
     opacity: 0;
-    padding: 0.3rem 0.48rem;
+    padding: 0 var(--wzc-overlay-control-inline-padding);
     pointer-events: none;
     transition:
       opacity var(--wzc-media-overlay-transition-duration) ease,
@@ -35,12 +36,12 @@ const slideshowPrivateStyles = css`
   }
 
   svg {
-    block-size: 1.1rem;
-    inline-size: 1.1rem;
+    block-size: var(--wzc-control-icon-size);
+    inline-size: var(--wzc-control-icon-size);
   }
 
   .status {
-    font-size: 0.72rem;
+    font-size: var(--wzc-overlay-control-status-size);
     font-variant-numeric: tabular-nums;
     font-weight: 700;
     line-height: 1;

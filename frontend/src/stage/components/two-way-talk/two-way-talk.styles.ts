@@ -24,9 +24,9 @@ export const twoWayTalkStyles = css`
   .talk-controls {
     display: grid;
     position: relative;
-    grid-template-columns: repeat(3, var(--wzc-camera-control-size));
+    grid-template-columns: repeat(3, var(--wzc-control-size));
     align-items: center;
-    min-block-size: var(--wzc-camera-control-size);
+    min-block-size: var(--wzc-control-size);
     color: var(--wzc-media-overlay-color);
     background: var(--wzc-talk-panel-background);
     border: 1px solid var(--wzc-talk-panel-border-color);

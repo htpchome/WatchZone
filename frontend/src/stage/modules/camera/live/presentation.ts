@@ -30,6 +30,7 @@ import "../../../../ui/badge";
 import "../../../../ui/toast-region";
 import type { CameraControlEventDetail } from "../controls-overlay";
 import "../controls-overlay";
+import { mediaOverlayBadgeSizingStyles } from "../../../../ui/overlay-control.styles";
 import { cameraLiveViewStyles } from "../live-view.styles";
 import {
   isPictureInPictureActive,
@@ -780,7 +781,7 @@ export class CameraLivePresentation extends LitElement {
     );
   }
 
-  static styles = cameraLiveViewStyles;
+  static styles = [mediaOverlayBadgeSizingStyles, cameraLiveViewStyles];
 }
 
 if (!customElements.get(CAMERA_LIVE_PRESENTATION_TAG)) {

@@ -13,7 +13,7 @@ export const ptzStyles = css`
 
   .ptz-layer {
     position: relative;
-    inset-inline-start: calc(var(--wzc-camera-control-size) / 2);
+    inset-inline-start: var(--wzc-ptz-right-rail-overlap);
     inline-size: 100%;
     block-size: 100%;
     pointer-events: none;
@@ -56,8 +56,8 @@ export const ptzStyles = css`
   }
 
   .ptz-control.collapsed {
-    inline-size: var(--wzc-camera-control-size, 2.75rem);
-    block-size: var(--wzc-camera-control-size, 2.75rem);
+    inline-size: var(--wzc-control-size);
+    block-size: var(--wzc-control-size);
     padding: 0;
   }
 
@@ -125,7 +125,7 @@ export const ptzStyles = css`
     position: absolute;
     inset-block-start: 50%;
     inset-inline-start: 50%;
-    --wzc-round-button-size: var(--wzc-camera-control-size);
+    --wzc-round-button-size: var(--wzc-control-size);
     --wzc-round-button-background: transparent;
     --wzc-round-button-border-color: transparent;
     --wzc-round-button-hover-background: var(
@@ -133,8 +133,8 @@ export const ptzStyles = css`
     );
     --wzc-round-button-icon-size: var(--wzc-camera-control-icon-size);
     --wzc-round-button-touch-action: manipulation;
-    inline-size: var(--wzc-camera-control-size);
-    block-size: var(--wzc-camera-control-size);
+    inline-size: var(--wzc-control-size);
+    block-size: var(--wzc-control-size);
     opacity: 0;
     pointer-events: none;
     transform: translate(-50%, -50%);

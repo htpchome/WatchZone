@@ -26,7 +26,9 @@ export const lightControlStyles = css`
   }
 
   .light-buttons {
-    display: flex;
+    display: grid;
+    grid-auto-columns: max-content;
+    grid-auto-flow: column;
     gap: var(--wzc-light-control-gap);
     pointer-events: auto;
   }

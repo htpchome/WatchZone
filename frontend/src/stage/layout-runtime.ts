@@ -537,6 +537,9 @@ export class LayoutRuntime implements ReactiveController {
     return html`<div
       class=${classes}
       data-layout-node=${node.id}
+      data-component-type=${
+        node.kind === "component" ? node.componentType : nothing
+      }
       style=${style ?? nothing}
     >
       ${

@@ -150,8 +150,13 @@ zone.
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-- Group A/B controls are square shared media-overlay controls in the top-leading
-  zone. Slideshow and camera selection own top-center. Source state owns
+- Group A/B controls are square shared media-overlay controls owned by the
+  fixed left rail and begin at its top inset. They stack within that rail; they
+  are never positioned from a percentage of the Stage width. Camera selection
+  is the immutable top-center anchor: its center always equals the Stage
+  centerline and no sibling control may participate in or alter that
+  calculation. Slideshow sits immediately before that anchored picker. Source
+  state owns
   top-trailing. Every top-row control uses
   the shared media-overlay control sizing contract; text controls may be wider,
   but their height, border, radius, and vertical alignment are uniform. Compact
@@ -164,12 +169,14 @@ zone.
   row, and the lower control band all derive from that boundary.
 - The fixed right lane owns the vertical player-tool dock. Adding or removing a
   player tool does not move either carousel arrow horizontally. Expanded PTZ is
-  the deliberate lower-band exception: it crosses into the right lane as drawn
-  while remaining vertically separate from the player-tool dock.
+  the deliberate lower-band exception: its anchor and collapsed trigger remain
+  inside the lower-trailing zone, while its expanded edge crosses into the
+  right lane only by `--wzc-ptz-right-rail-overlap`, as drawn. It remains
+  vertically separate from the player-tool dock.
 - Each feed in an additional-camera group retains its own source badge because
-  A and B may resolve different transports. Group feed badges use the shared
-  trailing lane boundary as their logical end inset, so neither badge can
-  occupy the player-tool dock.
+  A and B may resolve different transports. A grouped feed badge follows the
+  trailing edge of that feed's fitted media instead of the Stage edge, so a
+  stacked feed cannot place its badge in the player-tool rail.
 - Light and talk occupy the lower center band. PTZ occupies the lower trailing
   band. The resize handle owns the bottom center edge. Camera name and timestamp
   remain unobstructed in the bottom metadata strip.

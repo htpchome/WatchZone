@@ -50,10 +50,14 @@ export const cameraGroupViewStyles = css`
   .feed {
     position: relative;
     overflow: hidden;
+    container-type: size;
   }
 
   .feed wzc-camera-view {
-    --wzc-live-indicator-inline-end: var(--wzc-camera-side-lane-inline-size);
+    --wzc-live-indicator-inline-end: max(
+      0.5rem,
+      calc(50cqi - 88.8889cqb + 0.5rem)
+    );
   }
 
   .feed::after {
@@ -88,10 +92,12 @@ export const cameraGroupViewStyles = css`
   .feed-actions {
     position: absolute;
     z-index: 7;
-    inset-inline-end: calc(66.6667% + var(--wzc-control-dock-gap));
+    inset-inline-start: var(--wzc-camera-control-inline-inset);
     inset-block-start: var(--wzc-camera-overlay-block-inset);
-    display: flex;
-    justify-content: flex-end;
+    display: grid;
+    grid-auto-flow: row;
+    grid-auto-rows: max-content;
+    justify-items: start;
     gap: 0.25rem;
     opacity: 0;
     pointer-events: none;
@@ -121,7 +127,7 @@ export const cameraGroupViewStyles = css`
 
   .position-label {
     color: currentcolor;
-    font-size: 0.68rem;
+    font-size: var(--wzc-overlay-control-label-size);
     font-weight: var(--wzc-font-weight-bold);
     line-height: 1;
     pointer-events: none;

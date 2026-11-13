@@ -576,7 +576,9 @@ test("cycles a grouped camera from combined to each member and back", async ({
     });
   });
 
-  const button = card.locator("wzc-camera-navigation button");
+  const button = card
+    .locator("wzc-camera-navigation button")
+    .filter({ hasText: "Group A/B" });
   const group = card.locator("wzc-camera-group-view");
   const leadingIcon = button.locator(".option-leading-icon");
   await expect(button).toHaveCount(1);
@@ -629,14 +631,27 @@ test("cycles a grouped camera from combined to each member and back", async ({
   expect(groupBox).not.toBeNull();
   expect(groupActionsBox).not.toBeNull();
   if (groupBox && groupActionsBox) {
-    const leadingZoneEnd = groupBox.x + groupBox.width / 3;
-    expect(
-      leadingZoneEnd - (groupActionsBox.x + groupActionsBox.width),
-    ).toBeGreaterThanOrEqual(0);
-    expect(
-      leadingZoneEnd - (groupActionsBox.x + groupActionsBox.width),
-    ).toBeLessThan(16);
-    expect(groupActionsBox.x).toBeGreaterThan(groupBox.x);
+    const railGeometry = await group.evaluate((element) => {
+      const railProbe = document.createElement("span");
+      const insetProbe = document.createElement("span");
+      railProbe.style.cssText =
+        "position:absolute;inline-size:var(--wzc-camera-side-lane-inline-size)";
+      insetProbe.style.cssText =
+        "position:absolute;inline-size:var(--wzc-camera-control-inline-inset)";
+      element.shadowRoot?.append(railProbe, insetProbe);
+      const geometry = {
+        inset: insetProbe.getBoundingClientRect().width,
+        rail: railProbe.getBoundingClientRect().width,
+      };
+      railProbe.remove();
+      insetProbe.remove();
+      return geometry;
+    });
+    expect(groupActionsBox.x - groupBox.x).toBeCloseTo(railGeometry.inset, 1);
+    expect(groupActionsBox.x + groupActionsBox.width).toBeLessThanOrEqual(
+      groupBox.x + railGeometry.rail + 1,
+    );
+    expect(groupActionsBox.width).toBeCloseTo(groupControlBox?.width ?? 0, 1);
   }
   const groupLabelFontSize = await firstFeedActions
     .locator(".position-label")
@@ -694,6 +709,7 @@ test("keeps grouped phone navigation to one visible A or B feed", async ({
       }
     ).setConfig({
       type: "custom:watchzone-card",
+      camera_switcher_overlay: true,
       cameras: [
         {
           additional_camera: {
@@ -703,21 +719,37 @@ test("keeps grouped phone navigation to one visible A or B feed", async ({
           entity_id: "camera.porch",
           title: "Group A/B",
         },
-        { entity_id: "camera.driveway" },
+        { entity_id: "camera.driveway", title: "Driveway" },
+        { entity_id: "camera.hall", title: "Hall" },
       ],
     });
   });
 
   const group = card.locator("wzc-camera-group-view");
-  const button = card.locator("wzc-camera-navigation button");
+  const button = card
+    .locator("wzc-camera-navigation button")
+    .filter({ hasText: "Group A/B" });
   const leadingIcon = button.locator(".option-leading-icon");
   await expect(group.locator(".feed:not(.hidden)")).toHaveCount(1);
   await expect(leadingIcon).toHaveAttribute("data-icon", "arrowLeft");
   await group.hover();
-  const [phoneSelectorBox, phonePlayerControlBox] = await Promise.all([
+  const [
+    phoneGroupBox,
+    phoneSelectorBox,
+    phonePlayerControlBox,
+    phonePickerBox,
+    phoneSlideshowBox,
+  ] = await Promise.all([
+    group.boundingBox(),
     group.locator(".feed-selector").boundingBox(),
     group.locator('[data-control="mute"]').boundingBox(),
+    card.locator("wzc-camera-switcher .trigger").boundingBox(),
+    card.locator("wzc-slideshow button").boundingBox(),
   ]);
+  expect(phoneGroupBox).not.toBeNull();
+  expect(phoneSelectorBox).not.toBeNull();
+  expect(phonePickerBox).not.toBeNull();
+  expect(phoneSlideshowBox).not.toBeNull();
   expect(phoneSelectorBox?.width).toBeCloseTo(
     phonePlayerControlBox?.width ?? 0,
     1,
@@ -726,6 +758,46 @@ test("keeps grouped phone navigation to one visible A or B feed", async ({
     phonePlayerControlBox?.height ?? 0,
     1,
   );
+  if (
+    phoneGroupBox &&
+    phoneSelectorBox &&
+    phonePickerBox &&
+    phoneSlideshowBox
+  ) {
+    const phoneRailGeometry = await group.evaluate((element) => {
+      const railProbe = document.createElement("span");
+      const insetProbe = document.createElement("span");
+      railProbe.style.cssText =
+        "position:absolute;inline-size:var(--wzc-camera-side-lane-inline-size)";
+      insetProbe.style.cssText =
+        "position:absolute;inline-size:var(--wzc-camera-control-inline-inset)";
+      element.shadowRoot?.append(railProbe, insetProbe);
+      const result = {
+        inset: insetProbe.getBoundingClientRect().width,
+        rail: railProbe.getBoundingClientRect().width,
+      };
+      railProbe.remove();
+      insetProbe.remove();
+      return result;
+    });
+    expect(phoneSelectorBox.x - phoneGroupBox.x).toBeCloseTo(
+      phoneRailGeometry.inset,
+      1,
+    );
+    expect(phoneSelectorBox.x + phoneSelectorBox.width).toBeLessThanOrEqual(
+      phoneGroupBox.x + phoneRailGeometry.rail + 1,
+    );
+    expect(phonePickerBox.x + phonePickerBox.width / 2).toBeCloseTo(
+      phoneGroupBox.x + phoneGroupBox.width / 2,
+      0,
+    );
+    expect(
+      phonePickerBox.x - (phoneSlideshowBox.x + phoneSlideshowBox.width),
+    ).toBeCloseTo(8, 1);
+    expect(phoneSelectorBox.x + phoneSelectorBox.width).toBeLessThanOrEqual(
+      phoneSlideshowBox.x,
+    );
+  }
 
   await button.click();
   await expect(group.locator(".feed:not(.hidden)")).toHaveCount(1);
@@ -769,6 +841,50 @@ test("releases grouped overlay and resize interaction before selecting another c
   const navigation = card.locator("wzc-camera-navigation button");
   await group.hover();
   await expect(group.locator(".feed-actions").first()).toHaveClass(/visible/);
+  const groupViewports = group.locator("wzc-camera-live .viewport");
+  await expect(groupViewports).toHaveCount(2);
+  await groupViewports.evaluateAll((viewports) => {
+    for (const viewport of viewports) {
+      const badge = document.createElement("wzc-badge");
+      badge.className = "source-indicator visible source-placement-probe";
+      badge.setAttribute("shape", "pill");
+      badge.textContent = "MSE";
+      viewport.append(badge);
+    }
+  });
+  const [stackedFeedBoxes, stackedSourceBoxes] = await Promise.all([
+    group.locator(".feed").evaluateAll((feeds) =>
+      feeds.map((feed) => {
+        const rect = feed.getBoundingClientRect();
+        return {
+          height: rect.height,
+          width: rect.width,
+          x: rect.x,
+          y: rect.y,
+        };
+      }),
+    ),
+    group.locator(".source-placement-probe").evaluateAll((badges) =>
+      badges.map((badge) => {
+        const rect = badge.getBoundingClientRect();
+        return {
+          height: rect.height,
+          right: rect.right,
+          top: rect.top,
+        };
+      }),
+    ),
+  ]);
+  expect(stackedSourceBoxes).toHaveLength(2);
+  for (const [index, feedBox] of stackedFeedBoxes.entries()) {
+    const sourceBox = stackedSourceBoxes[index];
+    expect(sourceBox).toBeDefined();
+    if (!sourceBox) continue;
+    const fittedMediaWidth = Math.min(feedBox.width, (feedBox.height * 16) / 9);
+    const fittedMediaRight = feedBox.x + (feedBox.width + fittedMediaWidth) / 2;
+    expect(sourceBox.right).toBeCloseTo(fittedMediaRight - 8, 1);
+    expect(sourceBox.top).toBeCloseTo(feedBox.y + 8, 1);
+  }
   const stackedSoloTarget = group
     .locator(".feed-actions")
     .first()
@@ -4608,6 +4724,7 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
     };
     card.setConfig({
       type: "custom:watchzone-card",
+      camera_switcher_overlay: true,
       cameras: [
         {
           entity_id: "camera.front",
@@ -4709,6 +4826,9 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   const talk = page.locator("wzc-two-way-talk");
   const ptz = page.locator("wzc-ptz");
   const lights = page.locator("wzc-light-control");
+  const cameraPicker = page.locator("wzc-camera-switcher .trigger");
+  const slideshowButton = page.locator("wzc-slideshow button");
+  const sourceBadge = selectedLiveViewport.locator(".source-indicator .badge");
   const talkButton = talk.locator("button.inactive");
   const ptzControl = ptz.locator(".ptz-control");
   const ptzCollapse = ptz.locator("button.collapse");
@@ -4719,6 +4839,21 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   const lightIcon = lightButton.locator(":scope > ha-icon svg");
   await expect(talkButton).toBeVisible();
   await expect(ptzTrigger).toBeVisible();
+  await selectedLiveViewport.evaluate((viewport) => {
+    const badge = document.createElement("wzc-badge");
+    badge.className = "source-indicator visible";
+    badge.setAttribute("shape", "pill");
+    badge.textContent = "MSE";
+    viewport.append(badge);
+  });
+  await expect(sourceBadge).toBeVisible();
+  const desktopSourceBadgeMetrics = await sourceBadge.evaluate((element) => {
+    const styles = getComputedStyle(element);
+    return {
+      fontSize: Number.parseFloat(styles.fontSize),
+      paddingInline: Number.parseFloat(styles.paddingInlineStart),
+    };
+  });
   const [initialPtzTriggerBox, initialTalkButtonBox] = await Promise.all([
     ptzTrigger.boundingBox(),
     talkButton.boundingBox(),
@@ -4845,6 +4980,8 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
     talkHostBox,
     lightHostBox,
     ptzHostBox,
+    cameraPickerBox,
+    slideshowButtonBox,
     talkButtonBox,
     talkIconBox,
     lightButtonBox,
@@ -4855,6 +4992,8 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
     talk.boundingBox(),
     lights.boundingBox(),
     ptz.boundingBox(),
+    cameraPicker.boundingBox(),
+    slideshowButton.boundingBox(),
     talkButton.boundingBox(),
     talkIcon.boundingBox(),
     lightButton.boundingBox(),
@@ -4865,6 +5004,8 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   expect(talkHostBox).not.toBeNull();
   expect(lightHostBox).not.toBeNull();
   expect(ptzHostBox).not.toBeNull();
+  expect(cameraPickerBox).not.toBeNull();
+  expect(slideshowButtonBox).not.toBeNull();
   expect(talkButtonBox).not.toBeNull();
   expect(talkIconBox).not.toBeNull();
   expect(lightButtonBox).not.toBeNull();
@@ -4875,6 +5016,8 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
     !talkHostBox ||
     !lightHostBox ||
     !ptzHostBox ||
+    !cameraPickerBox ||
+    !slideshowButtonBox ||
     !talkButtonBox ||
     !talkIconBox ||
     !lightButtonBox ||
@@ -4900,11 +5043,18 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
       };
     });
 
-  await expect(page.locator('[data-stage-slot="overlay"]')).toHaveCount(0);
+  await expect(page.locator('[data-stage-slot="overlay"]')).toHaveCount(1);
   expect(controlsSlotBox.x).toBeCloseTo(cameraBox.x, 1);
   expect(controlsSlotBox.y).toBeCloseTo(cameraBox.y, 1);
   expect(controlsSlotBox.width).toBeCloseTo(cameraBox.width, 1);
   expect(controlsSlotBox.height).toBeCloseTo(cameraBox.height, 1);
+  expect(cameraPickerBox.x + cameraPickerBox.width / 2).toBeCloseTo(
+    cameraBox.x + cameraBox.width / 2,
+    0,
+  );
+  expect(
+    cameraPickerBox.x - (slideshowButtonBox.x + slideshowButtonBox.width),
+  ).toBeCloseTo(8, 1);
   const currentPtzControlBox = await ptzControl.boundingBox();
   expect(currentPtzControlBox).not.toBeNull();
   if (!currentPtzControlBox) return;
@@ -4916,11 +5066,20 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   expect(
     currentPtzControlBox.y + currentPtzControlBox.height,
   ).toBeLessThanOrEqual(cameraBox.y + cameraBox.height);
+  const ptzRailOverlap = await controlsSlot.evaluate((element) => {
+    const probe = document.createElement("div");
+    probe.style.cssText =
+      "position:absolute;inline-size:var(--wzc-ptz-right-rail-overlap)";
+    element.append(probe);
+    const width = probe.getBoundingClientRect().width;
+    probe.remove();
+    return width;
+  });
   expect(
     currentPtzControlBox.x +
       currentPtzControlBox.width / 2 -
       (ptzHostBox.x + ptzHostBox.width / 2),
-  ).toBeCloseTo(talkButtonBox.width / 2, 0);
+  ).toBeCloseTo(ptzRailOverlap, 0);
   expect(
     currentPtzControlBox.y +
       currentPtzControlBox.height / 2 -
@@ -4952,9 +5111,15 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   ).toBeCloseTo(desktopTrailingClearance, 0);
   const rightRailBoundary =
     cameraBox.x + cameraBox.width - desktopTrailingClearance;
-  expect(currentPtzControlBox.x + currentPtzControlBox.width).toBeGreaterThan(
+  expect(
+    initialPtzTriggerBox.x + initialPtzTriggerBox.width,
+  ).toBeLessThanOrEqual(rightRailBoundary + 1);
+  expect(initialPtzTriggerBox.x + initialPtzTriggerBox.width / 2).toBeLessThan(
     rightRailBoundary,
   );
+  expect(
+    currentPtzControlBox.x + currentPtzControlBox.width - rightRailBoundary,
+  ).toBeCloseTo(ptzRailOverlap, 0);
   const ptzDirectionVisualGeometry = await ptzRightButton.evaluate(
     (element) => {
       const styles = getComputedStyle(element, "::before");
@@ -5023,9 +5188,15 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   expect(dockLayout).toEqual({ columnGap: "8px", display: "grid" });
   await expect
     .poll(() =>
-      leadingControls.evaluate((element) => getComputedStyle(element).flexWrap),
+      leadingControls.evaluate((element) => {
+        const styles = getComputedStyle(element);
+        return {
+          display: styles.display,
+          gridAutoFlow: styles.gridAutoFlow,
+        };
+      }),
     )
-    .toBe("wrap");
+    .toEqual({ display: "grid", gridAutoFlow: "column" });
 
   await talk.evaluate((element) => {
     element.style.inlineSize = "calc(var(--wzc-camera-control-size) * 3)";
@@ -5195,11 +5366,26 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
     .toBe(true);
   const mobileCameraBox = await selectedCameraStage.boundingBox();
   const mobileControlsSlotBox = await controlsSlot.boundingBox();
-  const [mobileTalkBox, mobileLightBox, mobilePtzBox] = await Promise.all([
+  const [
+    mobileTalkBox,
+    mobileLightBox,
+    mobilePtzBox,
+    mobilePickerBox,
+    mobileSlideshowBox,
+  ] = await Promise.all([
     talkButton.boundingBox(),
     lightButton.boundingBox(),
     ptz.boundingBox(),
+    cameraPicker.boundingBox(),
+    slideshowButton.boundingBox(),
   ]);
+  const mobileSourceBadgeMetrics = await sourceBadge.evaluate((element) => {
+    const styles = getComputedStyle(element);
+    return {
+      fontSize: Number.parseFloat(styles.fontSize),
+      paddingInline: Number.parseFloat(styles.paddingInlineStart),
+    };
+  });
   const mobileResizeHandle = camera
     .locator('.swiper-slide-active [aria-label="Camera stage height"]')
     .first();
@@ -5207,6 +5393,26 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   expect(mobileCameraBox).not.toBeNull();
   if (mobileCameraBox) {
     expect(mobileControlsSlotBox).not.toBeNull();
+    expect(mobilePickerBox).not.toBeNull();
+    expect(mobileSlideshowBox).not.toBeNull();
+    if (mobilePickerBox && mobileSlideshowBox) {
+      expect(mobilePickerBox.x + mobilePickerBox.width / 2).toBeCloseTo(
+        mobileCameraBox.x + mobileCameraBox.width / 2,
+        0,
+      );
+      expect(
+        mobilePickerBox.x - (mobileSlideshowBox.x + mobileSlideshowBox.width),
+      ).toBeCloseTo(8, 0);
+      expect(mobilePickerBox.width).toBeLessThan(cameraPickerBox.width);
+      expect(mobilePickerBox.height).toBeLessThan(cameraPickerBox.height);
+      expect(mobileSlideshowBox.height).toBeLessThan(slideshowButtonBox.height);
+    }
+    expect(mobileSourceBadgeMetrics.fontSize).toBeLessThan(
+      desktopSourceBadgeMetrics.fontSize,
+    );
+    expect(mobileSourceBadgeMetrics.paddingInline).toBeLessThan(
+      desktopSourceBadgeMetrics.paddingInline,
+    );
     if (mobileControlsSlotBox) {
       expect(mobileControlsSlotBox.x).toBeCloseTo(mobileCameraBox.x, 1);
       expect(
@@ -5229,6 +5435,10 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
     ] as const) {
       expect(controlBox).not.toBeNull();
       if (controlBox) {
+        const desktopControlBox =
+          controlBox === mobileTalkBox ? talkButtonBox : lightButtonBox;
+        expect(controlBox.width).toBeLessThan(desktopControlBox.width);
+        expect(controlBox.height).toBeLessThan(desktopControlBox.height);
         const mobileBottomInset =
           mobileCameraBox.y +
           mobileCameraBox.height -
@@ -5245,6 +5455,15 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
       mobileLightBox &&
       mobilePtzBox
     ) {
+      const mobileTrailingClearance = await controlsSlot.evaluate((element) => {
+        const probe = document.createElement("div");
+        probe.style.cssText =
+          "position:absolute;inline-size:var(--wzc-camera-overlay-trailing-clearance)";
+        element.append(probe);
+        const width = probe.getBoundingClientRect().width;
+        probe.remove();
+        return width;
+      });
       expect(mobilePtzBox.y + mobilePtzBox.height).toBeCloseTo(
         mobileLightBox.y + mobileLightBox.height,
         0,
@@ -5253,7 +5472,8 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
         mobileCameraBox.x +
           mobileCameraBox.width -
           (mobilePtzBox.x + mobilePtzBox.width),
-      ).toBeCloseTo(desktopTrailingClearance, 0);
+      ).toBeCloseTo(mobileTrailingClearance, 0);
+      expect(mobileTrailingClearance).toBeLessThan(desktopTrailingClearance);
       const mobileHandleVisualTop = await mobileResizeHandle.evaluate(
         (element) => {
           const handle = element.getBoundingClientRect();

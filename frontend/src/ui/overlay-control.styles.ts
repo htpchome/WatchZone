@@ -30,22 +30,43 @@ const overlayControlBaseStyles = css`
 
 /** One responsive size contract shared by every media-overlay control. */
 export const mediaOverlayControlSizingStyles = css`
+  :host,
   .control-button,
+  .round-button,
   .wzc-media-overlay-button {
     --wzc-control-size: var(--wzc-camera-control-size);
     --wzc-control-icon-size: var(--wzc-camera-control-icon-size);
+    --wzc-overlay-control-gap: 0.4rem;
+    --wzc-overlay-control-inline-padding: 0.55rem;
+    --wzc-overlay-control-text-size: 0.78rem;
+    --wzc-overlay-control-status-size: 0.72rem;
+    --wzc-overlay-control-label-size: 0.68rem;
+  }
+
+  .round-button {
+    --wzc-round-button-size: var(--wzc-control-size);
+    --wzc-overlay-control-min-size: var(--wzc-control-size);
   }
 
   @container (max-width: 480px) {
+    :host,
     .control-button,
+    .round-button,
     .wzc-media-overlay-button {
       --wzc-control-size: 2.35rem;
       --wzc-control-icon-size: 1.4rem;
+      --wzc-overlay-control-gap: 0.3rem;
+      --wzc-overlay-control-inline-padding: 0.42rem;
+      --wzc-overlay-control-text-size: 0.7rem;
+      --wzc-overlay-control-status-size: 0.64rem;
+      --wzc-overlay-control-label-size: 0.62rem;
     }
   }
 
   @container (max-height: 360px) {
+    :host,
     .control-button,
+    .round-button,
     .wzc-media-overlay-button {
       --wzc-control-size: 2.25rem;
       --wzc-control-icon-size: 1.3rem;
@@ -53,7 +74,9 @@ export const mediaOverlayControlSizingStyles = css`
   }
 
   @container (max-height: 240px) {
+    :host,
     .control-button,
+    .round-button,
     .wzc-media-overlay-button {
       --wzc-control-size: 1.875rem;
       --wzc-control-icon-size: 1.15rem;
@@ -61,9 +84,39 @@ export const mediaOverlayControlSizingStyles = css`
   }
 `;
 
+/** Responsive badge geometry for status presented inside media overlays. */
+export const mediaOverlayBadgeSizingStyles = css`
+  .source-indicator {
+    --wzc-badge-font-size: var(--wzc-font-size-small);
+    --wzc-badge-padding: 0.25em 0.6em;
+  }
+
+  @container (max-width: 480px) {
+    .source-indicator {
+      --wzc-badge-font-size: 0.65rem;
+      --wzc-badge-padding: 0.18em 0.45em;
+    }
+  }
+
+  @container (max-height: 360px) {
+    .source-indicator {
+      --wzc-badge-font-size: 0.625rem;
+      --wzc-badge-padding: 0.16em 0.4em;
+    }
+  }
+
+  @container (max-height: 240px) {
+    .source-indicator {
+      --wzc-badge-font-size: 0.55rem;
+      --wzc-badge-padding: 0.12em 0.36em;
+    }
+  }
+`;
+
 /** Shared geometry and interaction contract for circular overlay controls. */
 export const roundButtonStyles = [
   overlayControlBaseStyles,
+  mediaOverlayControlSizingStyles,
   css`
     .round-button {
       position: relative;
