@@ -18,10 +18,10 @@ Give the next agent this instruction:
 ## Repository state
 
 - Branch: `main`
-- Current working version: `0.0.4-dev.284`
-- Current commit: `4c937a6` —
-  `v0.0.4-dev.283 - fix(cameras): restore settled selection after alert takeover`
-- The worktree contains the uncommitted live-interaction lifecycle correction
+- Current working version: `0.0.4-dev.285`
+- Current commit: `5b8a126` —
+  `v0.0.4-dev.284 - fix(cameras): harden live interaction lifecycle`
+- The worktree contains the uncommitted fade-transition interaction correction
   described below.
 
 Always check `git status`, the canonical version in
@@ -48,7 +48,19 @@ The repository state takes precedence over this snapshot.
 
 ## Current completed change
 
-Working version `0.0.4-dev.284`:
+Working version `0.0.4-dev.285`:
+
+- Every inactive carousel slide is inert and hidden from the accessibility tree,
+  leaving exactly one interactive live presentation during every transition.
+  This prevents invisible, geometrically stacked fade slides and their shadow
+  descendants from intercepting overlay, zoom/pan, or resize-handle input.
+- The obsolete fade-only parent `pointer-events` workaround was removed so the
+  carousel owns one explicit interaction boundary for all transition modes.
+- Browser regressions exercise grouped navigation and alert takeover with the
+  Fade transition while verifying overlay reveal, zoom, stage resizing, and
+  active/inactive slide isolation.
+
+Previously completed in `0.0.4-dev.284`:
 
 - A grouped camera stage now owns one shared overlay controller; child camera
   presentations retain only their independent source, zoom, and pan state.
@@ -132,8 +144,8 @@ Previously completed in `0.0.4-dev.283`:
 
 Validation is green:
 
-- 385 frontend unit tests
-- 108 browser tests across Chromium, Firefox, and WebKit
+- 390 frontend unit tests
+- 111 browser tests across Chromium, Firefox, and WebKit
 - Formatting, lint, type checking, architecture/style validation, production
   build, version consistency, release packaging, and final diff checks. The
   validated HACS archive is `dist/watchzone.zip`.

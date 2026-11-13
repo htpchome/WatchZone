@@ -665,6 +665,7 @@ test("releases grouped overlay and resize interaction before selecting another c
       }
     ).setConfig({
       type: "custom:watchzone-card",
+      slide_transition: "fade",
       cameras: [
         {
           additional_camera: {
@@ -691,6 +692,13 @@ test("releases grouped overlay and resize interaction before selecting another c
   await expect(groupHandle).toHaveAttribute("aria-valuenow", "100");
 
   await navigation.filter({ hasText: "Hall" }).click();
+  await expect(camera.locator(".swiper-slide").nth(0)).toHaveAttribute(
+    "inert",
+    "",
+  );
+  await expect(camera.locator(".swiper-slide").nth(1)).not.toHaveAttribute(
+    "inert",
+  );
   const hall = camera
     .locator(".swiper-slide")
     .nth(1)
@@ -765,6 +773,13 @@ test("releases grouped overlay and resize interaction before selecting another c
   await expect(hallHandle).toHaveAttribute("aria-valuenow", "100");
 
   await navigation.filter({ hasText: "Group A/B" }).click();
+  await expect(camera.locator(".swiper-slide").nth(0)).not.toHaveAttribute(
+    "inert",
+  );
+  await expect(camera.locator(".swiper-slide").nth(1)).toHaveAttribute(
+    "inert",
+    "",
+  );
   await expect
     .poll(() =>
       group.evaluate(
@@ -817,6 +832,7 @@ test("keeps grouped interaction alive across alert takeover", async ({
     cardElement.setConfig({
       type: "custom:watchzone-card",
       alert_detection_takeover: "both",
+      slide_transition: "fade",
       start_alert_takeover_on: true,
       cameras: [
         {
@@ -891,6 +907,9 @@ test("keeps grouped interaction alive across alert takeover", async ({
     "aria-selected",
     "true",
   );
+  const takeoverSlides = card.locator("wzc-camera .swiper-slide");
+  await expect(takeoverSlides.nth(0)).not.toHaveAttribute("inert");
+  await expect(takeoverSlides.nth(1)).toHaveAttribute("inert", "");
 
   const group = card.locator("wzc-camera-group-view");
   await group.hover();
@@ -911,6 +930,8 @@ test("keeps grouped interaction alive across alert takeover", async ({
     },
   });
   await expect(hallButton).toHaveAttribute("aria-selected", "true");
+  await expect(takeoverSlides.nth(0)).toHaveAttribute("inert", "");
+  await expect(takeoverSlides.nth(1)).not.toHaveAttribute("inert");
   const hallViewport = card
     .locator("wzc-camera .swiper-slide")
     .nth(1)
@@ -1192,6 +1213,7 @@ test("highlights live video directly from draft review notifications", async ({
     };
     card.setConfig({
       type: "custom:watchzone-card",
+      slide_transition: "fade",
       cameras: [
         { entity_id: "camera.front" },
         { entity_id: "camera.driveway" },

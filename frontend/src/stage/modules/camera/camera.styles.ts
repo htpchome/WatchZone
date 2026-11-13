@@ -78,12 +78,7 @@ export const cameraStyles = css`
   }
 
   .camera-carousel.swiper-fade .swiper-slide {
-    pointer-events: none;
     transition-property: opacity;
-  }
-
-  .camera-carousel.swiper-fade .swiper-slide-active {
-    pointer-events: auto;
   }
 
   .camera-carousel:not(.camera-carousel-interactive) .swiper-slide {

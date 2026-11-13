@@ -297,11 +297,13 @@ export class CameraModule extends LitElement {
           (item, index) => staticHtml`<div
             class="swiper-slide"
             role="group"
+            aria-hidden=${index === this._activeIndex ? "false" : "true"}
             aria-label=${this.localize("camera.position", {
               position: index + 1,
               total: this._presentationItems.length,
             })}
             aria-roledescription="slide"
+            ?inert=${index !== this._activeIndex}
           >
             ${
               item.cameras.length === 2
