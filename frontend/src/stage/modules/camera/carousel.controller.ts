@@ -10,12 +10,15 @@ import {
 
 /** Owns the camera-local Swiper instance without owning slides or selection. */
 export class CameraCarouselController implements ReactiveController {
+  private static readonly SETTLEMENT_FALLBACK_MS = 450;
+
   private _activeIndex = 0;
   private _container?: HTMLElement;
   private _generation = 0;
   private _slideCount = 0;
   private _interactionLocked = false;
   private _resizeObserver?: ResizeObserver;
+  private _settlementTimer?: ReturnType<typeof setTimeout>;
   private _swiper?: Swiper;
   private _transition: SlideTransition = "slide";
 
@@ -64,27 +67,31 @@ export class CameraCarouselController implements ReactiveController {
   }
 
   public next(): void {
-    if (this._swiper) this._swiper.slideNext();
-    else
-      this._onSelectionChanged?.(
-        Math.min(this._slideCount - 1, this._activeIndex + 1),
-        true,
-      );
+    this.select(Math.min(this._slideCount - 1, this._activeIndex + 1));
   }
 
   public previous(): void {
-    if (this._swiper) this._swiper.slidePrev();
-    else this._onSelectionChanged?.(Math.max(0, this._activeIndex - 1), true);
+    this.select(Math.max(0, this._activeIndex - 1));
   }
 
   public select(index: number): void {
     const next = Math.max(0, Math.min(this._slideCount - 1, Math.trunc(index)));
-    if (next === this._activeIndex) return;
-    if (this._swiper && !this._swiper.destroyed) {
-      this._swiper.slideTo(next);
+    if (next === this._activeIndex) {
+      this._onSelectionChanged?.(next, true);
       return;
     }
-    this._activeIndex = next;
+    if (this._swiper && !this._swiper.destroyed) {
+      if (this._swiper.activeIndex === next) {
+        this._onSelectionChanged?.(next, true);
+        return;
+      }
+      this._swiper.slideTo(next);
+      // Button navigation and alert takeover have an explicit destination.
+      // Commit that destination immediately so activity modules can begin
+      // loading while Swiper performs the visual transition.
+      this._onSelectionChanged?.(next, true);
+      return;
+    }
     this._onSelectionChanged?.(next, true);
   }
 
@@ -132,17 +139,17 @@ export class CameraCarouselController implements ReactiveController {
         on: {
           slideChange: (swiper) => {
             const selectionChanged = swiper.activeIndex !== this._activeIndex;
-            this._activeIndex = swiper.activeIndex;
             // Camera-bar selection updates the requested index before Swiper
             // performs its zero-duration DOM synchronization. That internal
             // slideChange is already settled and must not replace the shared
             // selection state with a transition that can never end.
             if (selectionChanged) {
               this._onSelectionChanged?.(swiper.activeIndex, false);
+              this._scheduleSettlement(swiper);
             }
           },
           slideChangeTransitionEnd: (swiper) => {
-            this._activeIndex = swiper.activeIndex;
+            this._clearSettlement();
             this._onSelectionChanged?.(swiper.activeIndex, true);
           },
         },
@@ -184,6 +191,28 @@ export class CameraCarouselController implements ReactiveController {
     this._swiper.params.allowTouchMove = this._canMove();
   }
 
+  private _scheduleSettlement(swiper: Swiper): void {
+    this._clearSettlement();
+    const generation = this._generation;
+    this._settlementTimer = setTimeout(() => {
+      this._settlementTimer = undefined;
+      if (
+        generation !== this._generation ||
+        swiper.destroyed ||
+        swiper !== this._swiper
+      ) {
+        return;
+      }
+      this._onSelectionChanged?.(swiper.activeIndex, true);
+    }, CameraCarouselController.SETTLEMENT_FALLBACK_MS);
+  }
+
+  private _clearSettlement(): void {
+    if (this._settlementTimer === undefined) return;
+    clearTimeout(this._settlementTimer);
+    this._settlementTimer = undefined;
+  }
+
   private _observeSize(container: HTMLElement): void {
     this._syncNavigationSize();
     if (typeof ResizeObserver === "undefined") return;
@@ -209,6 +238,7 @@ export class CameraCarouselController implements ReactiveController {
   }
 
   private _destroy(): void {
+    this._clearSettlement();
     this._resizeObserver?.disconnect();
     this._resizeObserver = undefined;
     this._container?.style.removeProperty(

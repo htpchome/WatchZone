@@ -637,6 +637,119 @@ test("keeps grouped phone navigation to one visible A or B feed", async ({
   await expect(leadingIcon).toHaveAttribute("data-icon", "arrowLeft");
 });
 
+test("releases grouped overlay and resize interaction before selecting another camera", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  const card = page.locator("watchzone-card");
+  await card.evaluate((element) => {
+    (
+      element as HTMLElement & {
+        setConfig(config: unknown): void;
+      }
+    ).setConfig({
+      type: "custom:watchzone-card",
+      cameras: [
+        {
+          additional_camera: {
+            entity_id: "camera.driveway",
+            layout: "stacked",
+          },
+          entity_id: "camera.porch",
+          title: "Group A/B",
+        },
+        { entity_id: "camera.driveway", title: "Driveway" },
+        { entity_id: "camera.hall", title: "Hall" },
+      ],
+    });
+  });
+
+  const camera = card.locator("wzc-camera");
+  const group = camera.locator("wzc-camera-group-view");
+  const navigation = card.locator("wzc-camera-navigation button");
+  await group.hover();
+  await expect(group.locator(".feed-actions").first()).toHaveClass(/visible/);
+
+  const groupHandle = group.locator(".stage-resize-handle:visible").first();
+  await groupHandle.press("End");
+  await expect(groupHandle).toHaveAttribute("aria-valuenow", "100");
+
+  await navigation.filter({ hasText: "Hall" }).click();
+  const hall = camera
+    .locator(".swiper-slide")
+    .nth(1)
+    .locator("wzc-camera-view")
+    .first();
+  await expect
+    .poll(() =>
+      group.evaluate(
+        (element) => !(element as HTMLElement & { active: boolean }).active,
+      ),
+    )
+    .toBe(true);
+  await expect
+    .poll(() =>
+      hall.evaluate(
+        (element) => (element as HTMLElement & { active: boolean }).active,
+      ),
+    )
+    .toBe(true);
+  await expect
+    .poll(() =>
+      camera.evaluate((element) => {
+        const module = element as HTMLElement & {
+          cameraSelection?: {
+            subscribe(
+              targetId: string,
+              listener: (state: {
+                activeEntityId?: string;
+                activeEntityIds?: readonly string[];
+                settled?: boolean;
+              }) => void,
+            ): () => void;
+          };
+          selectionId?: string;
+        };
+        let snapshot:
+          | {
+              activeEntityId?: string;
+              activeEntityIds?: readonly string[];
+              settled?: boolean;
+            }
+          | undefined;
+        if (!module.cameraSelection || !module.selectionId) return undefined;
+        const unsubscribe = module.cameraSelection.subscribe(
+          module.selectionId,
+          (state) => {
+            snapshot = state;
+          },
+        );
+        unsubscribe();
+        return snapshot
+          ? {
+              activeEntityId: snapshot.activeEntityId,
+              activeEntityIds: snapshot.activeEntityIds,
+              settled: snapshot.settled,
+            }
+          : undefined;
+      }),
+    )
+    .toEqual({
+      activeEntityId: "camera.hall",
+      activeEntityIds: ["camera.hall"],
+      settled: true,
+    });
+  await hall.locator("wzc-camera-live .viewport").hover();
+  await expect(camera.locator(".carousel-navigation.previous")).toBeVisible();
+
+  const hallHandle = hall.locator(".stage-resize-handle:visible").first();
+  await hallHandle.press("Home");
+  await expect(hallHandle).toHaveAttribute("aria-valuenow", "56");
+  await hallHandle.press("End");
+  await expect(hallHandle).toHaveAttribute("aria-valuenow", "100");
+});
+
 test("keeps activity loading out of an active camera transition", async ({
   page,
 }) => {
@@ -739,6 +852,32 @@ test("keeps activity loading out of an active camera transition", async ({
       ),
     )
     .toBe(true);
+
+  await page.evaluate(() => {
+    (
+      window as typeof window & { __wzcReviewCalls?: string[] }
+    ).__wzcReviewCalls = [];
+  });
+  await page
+    .locator('wzc-camera-navigation button[data-value="camera.front"]')
+    .click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (
+            window as typeof window & { __wzcReviewCalls?: string[] }
+          ).__wzcReviewCalls?.includes("camera.front") ?? false,
+      ),
+    )
+    .toBe(true);
+  expect(
+    await carousel.evaluate(
+      (element) =>
+        (element as HTMLElement & { swiper: { animating: boolean } }).swiper
+          .animating,
+    ),
+  ).toBe(true);
 });
 
 test("applies configured camera carousel transitions to swipe and arrow navigation", async ({

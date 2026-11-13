@@ -18,10 +18,10 @@ Give the next agent this instruction:
 ## Repository state
 
 - Branch: `main`
-- Current working version: `0.0.4-dev.282`
-- Current commit: `1c9b5e9` —
-  `v0.0.4-dev.281 - fix(cameras): complete secondary settings and release editor media`
-- The worktree contains the uncommitted retained-media lifecycle correction
+- Current working version: `0.0.4-dev.283`
+- Current commit: `02b1aff` —
+  `v0.0.4-dev.282 - fix(media): park retained WebRTC presentation resources`
+- The worktree contains the uncommitted camera-selection lifecycle correction
   described below.
 
 Always check `git status`, the canonical version in
@@ -48,7 +48,17 @@ The repository state takes precedence over this snapshot.
 
 ## Current completed change
 
-Working version `0.0.4-dev.282`:
+Working version `0.0.4-dev.283`:
+
+- The camera carousel no longer owns an active index independently from the
+  Camera module. Alert takeover, camera navigation, and carousel controls
+  commit one authoritative selection immediately, while direct swipes retain
+  their transient state until settled.
+- Interrupted swipe transitions have a bounded settlement fallback, preventing
+  Reviews, Events, Recordings, timed overlays, and stage resizing from being
+  left on stale or permanently unsettled camera state after visiting a group.
+- Explicit camera navigation begins activity loading during the visual slide
+  transition rather than waiting for the animation to finish.
 
 - Firefox heap snapshots show transient growth rather than a persistent
   JavaScript/DOM leak: shallow heap moves from 91.9 MB to 113.5 MB and returns
@@ -110,8 +120,8 @@ Working version `0.0.4-dev.282`:
 
 Validation is green:
 
-- 384 frontend unit tests
-- 105 browser tests across Chromium, Firefox, and WebKit
+- 385 frontend unit tests
+- 108 browser tests across Chromium, Firefox, and WebKit
 - Formatting, lint, type checking, architecture/style validation, production
   build, version consistency, release packaging, and final diff checks. The
   validated HACS archive is `dist/watchzone.zip`.
