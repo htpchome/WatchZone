@@ -589,12 +589,14 @@ test("cycles a grouped camera from combined to each member and back", async ({
     .locator(".feed-actions");
   const firstSoloTarget = firstFeedActions.locator(".solo-target");
   await expect(firstFeedActions).toHaveClass(/visible/);
+  await expect(firstSoloTarget.locator("path")).toHaveAttribute("d", /^m4 20c/);
   await firstSoloTarget.hover();
   await page.waitForTimeout(MEDIA_OVERLAY_HIDE_DELAY_MS + 250);
   await expect(firstFeedActions).toHaveClass(/visible/);
   await expect(firstSoloTarget).toBeVisible();
   await firstSoloTarget.click();
   await expect(group.locator(".feed:not(.hidden)")).toHaveCount(1);
+  await expect(firstSoloTarget.locator("path")).toHaveAttribute("d", /^M13,16/);
   await expect(leadingIcon).toHaveCount(1);
   await expect(leadingIcon).toHaveAttribute("data-icon", "arrowLeft");
 
@@ -686,6 +688,22 @@ test("releases grouped overlay and resize interaction before selecting another c
   const navigation = card.locator("wzc-camera-navigation button");
   await group.hover();
   await expect(group.locator(".feed-actions").first()).toHaveClass(/visible/);
+  const stackedSoloTarget = group
+    .locator(".feed-actions")
+    .first()
+    .locator(".solo-target");
+  await expect(stackedSoloTarget.locator("path")).toHaveAttribute(
+    "d",
+    /^m4 20c/,
+  );
+  await stackedSoloTarget.click();
+  await expect(group.locator(".feed:not(.hidden)")).toHaveCount(1);
+  await expect(stackedSoloTarget.locator("path")).toHaveAttribute(
+    "d",
+    /^M8,18/,
+  );
+  await stackedSoloTarget.click();
+  await expect(group.locator(".feed:not(.hidden)")).toHaveCount(2);
 
   const groupHandle = group.locator(".stage-resize-handle:visible").first();
   await groupHandle.press("End");

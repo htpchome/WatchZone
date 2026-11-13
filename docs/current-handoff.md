@@ -15,34 +15,22 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.288`
-- Current commit: `c0f30c2` —
-  `v0.0.4-dev.287 - fix(activity): clarify takeover toggle-off state`
-- The worktree contains the uncommitted camera slideshow feature described
+- Working version: `0.0.4-dev.289`
+- Current commit: `7b403ee` —
+  `v0.0.4-dev.288 - feat(camera): add coordinated camera slideshow`
+- The worktree contains the uncommitted grouped-camera icon change described
   below. Always verify `git status`, the canonical version in
   `custom_components/watchzone/const.py`, and the latest commit.
 
-## Active change: coordinated camera slideshow
+## Active change: grouped-camera view icons
 
-- Alert Takeover no longer has a hover color. Its active and inactive states
-  remain theme-token driven, including immediately after toggle-off.
-- The new `mdi:presentation-play` slideshow toggle sits immediately before
-  Alert Takeover. Its 5, 10, 20, or 30 second interval is configured under Live
-  Media Player; 10 seconds is the default.
-- Slideshow advances through Camera's authoritative carousel selection, so
-  navigation, the camera-switcher overlay, Reviews, Events, and Recordings stay
-  synchronized. Manual camera selection restarts a full interval on that
-  camera. Swiper continues to own `none`, `slide`, and `fade` transitions.
-- The slideshow overlay control sits immediately before the camera switcher.
-  When inactive it follows ordinary overlay visibility. When active it remains
-  mounted, shows the countdown, and uses the shared overlay controller to dim
-  while the rest of the controls are hidden. The switcher and slideshow share
-  one reusable semantic overlay-button style foundation.
-- Alert takeover holds an active slideshow and presents `Hold`. Clearing the
-  final queued alert advances immediately to the next slide and starts a fresh
-  interval. Pressing the held slideshow overlay does the same immediately.
-- Slideshow timing has one Camera-owned controller and no parallel selection,
-  overlay, zoom, resize-handle, or transition lifecycle.
+- Grouped-camera view controls use centralized semantic icons: the combined
+  view offers the single-camera outline, while a solo feed offers the stacked
+  or side-by-side return icon that matches the configured group layout.
+- The existing group mode and layout remain authoritative. The icon mapping
+  adds no parallel state, control path, overlay lifecycle, or media behavior.
+- Registry tests preserve the supplied SVG geometry. Browser tests verify the
+  correct icon through combined, solo, side-by-side, and stacked transitions.
 
 ## Live camera and group invariants
 
@@ -93,9 +81,9 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 
 ## Validation status
 
-Validated for `0.0.4-dev.288`:
+Validated for `0.0.4-dev.289`:
 
-- 399 frontend unit tests
+- 402 frontend unit tests
 - 114 Playwright tests across Chromium, Firefox, and WebKit (38 per engine)
 - Formatting, lint, type checking, architecture/style checks, production build,
   version consistency, and `git diff --check`

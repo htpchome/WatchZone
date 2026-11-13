@@ -140,6 +140,7 @@ export class CameraGroupView extends LitElement {
         ${[main, secondary].map((camera, index) => {
           const shown = combined || index === visibleIndex;
           const classification = this.classifications.get(camera.entityId);
+          const target = index === 1 ? "secondary" : "main";
           return staticHtml`<div class=${[
             "feed",
             shown ? "visible-mobile" : "hidden",
@@ -209,7 +210,13 @@ export class CameraGroupView extends LitElement {
                       @click=${(event: Event) =>
                         this._selectSoloFeed(event, index)}
                     >
-                      ${renderIcon("fullscreen")}
+                      ${renderIcon(
+                        this.mode === target
+                          ? this.layout === "stacked"
+                            ? "cameraGroupStacked"
+                            : "cameraGroupSideBySide"
+                          : "cameraGroupSingle",
+                      )}
                     </button>
                   </div>`
                 : html``
