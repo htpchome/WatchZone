@@ -217,6 +217,9 @@ export class CameraLivePresentation extends LitElement {
       this._media.overlay.revealSource();
     if (changed.has("zoomKey")) this._media.configure(this.zoomKey);
     if (changed.has("suspended") && this.suspended) this._media.resetZoom();
+    if (changed.has("overlayInteractionEnabled")) {
+      this._media.setOverlayInteractionEnabled(this.overlayInteractionEnabled);
+    }
   }
 
   protected render() {
@@ -415,33 +418,23 @@ export class CameraLivePresentation extends LitElement {
   };
 
   private readonly _handlePointerMove = (event: PointerEvent): void => {
-    this._media.zoom.handlePointerMove(event);
-    if (this.overlayInteractionEnabled && !this._media.zoom.interacting)
-      this._media.overlay.handlePointerMove(event);
+    this._media.handlePointerMove(event);
   };
 
   private readonly _handlePointerDown = (event: PointerEvent): void => {
-    this._media.zoom.handlePointerDown(event);
-    if (this.overlayInteractionEnabled)
-      this._media.overlay.handlePointerDown(event);
+    this._media.handlePointerDown(event);
   };
 
   private readonly _handlePointerUp = (event: PointerEvent): void => {
-    this._media.zoom.handlePointerUp(event);
-    if (this.overlayInteractionEnabled)
-      this._media.overlay.handlePointerEnd(event);
+    this._media.handlePointerUp(event);
   };
 
   private readonly _handlePointerCancel = (event: PointerEvent): void => {
-    this._media.zoom.handlePointerCancel(event);
-    if (this.overlayInteractionEnabled)
-      this._media.overlay.handlePointerEnd(event);
+    this._media.handlePointerCancel(event);
   };
 
   private readonly _handleLostPointerCapture = (event: PointerEvent): void => {
-    this._media.zoom.handleLostPointerCapture(event);
-    if (this.overlayInteractionEnabled)
-      this._media.overlay.handlePointerEnd(event);
+    this._media.handleLostPointerCapture(event);
   };
 
   private readonly _handleFocusIn = (event: FocusEvent): void => {

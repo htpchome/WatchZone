@@ -51,8 +51,17 @@ defaults to `false` and is omitted from YAML at its default.
 - Stage placement is supplied by the controls slot's trailing logical region.
   PTZ renders at its intrinsic size and does not position itself against the
   Stage or consume viewport safe-area insets.
+- Collapsed trigger and expanded directional panel share one immutable center.
+  Opening and closing animate the panel dimensions symmetrically around that
+  center while the trigger cross-fades; neither state may jump or establish a
+  second positioning origin. The expanded panel intentionally overlaps the
+  lower portion of Camera's right rail as defined by the camera presentation
+  layout contract.
 - Active movement holds the shared overlay visible. Releasing movement releases
   that hold and returns visibility to the shared timer.
+- The configured open/closed state initializes each active camera. A user's
+  open or collapsed choice then persists across transient overlay visibility;
+  the shared hide timer never rewrites component state.
 - Unsupported axes are not rendered. The initial UI exposes only pan and tilt;
   zoom, focus, and preset presentations are future work against the existing
   normalized capability contract.

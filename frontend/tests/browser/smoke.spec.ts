@@ -608,6 +608,43 @@ test("cycles a grouped camera from combined to each member and back", async ({
   const firstFeedActions = group.locator(".feed-actions");
   const firstSoloTarget = firstFeedActions.locator(".solo-target").nth(0);
   await expect(firstFeedActions).toHaveClass(/visible/);
+  await expect(firstFeedActions.locator(".audio-target")).toHaveCount(2);
+  await expect(firstFeedActions.locator(".solo-target")).toHaveCount(2);
+  await expect(firstFeedActions.locator(".position-label")).toHaveText([
+    "A",
+    "A",
+    "B",
+    "B",
+  ]);
+  const [groupControlBox, playerControlBox] = await Promise.all([
+    firstFeedActions.locator(".feed-action").first().boundingBox(),
+    group.locator('[data-control="mute"]').boundingBox(),
+  ]);
+  expect(groupControlBox?.height).toBeCloseTo(playerControlBox?.height ?? 0, 1);
+  expect(groupControlBox?.width).toBeCloseTo(playerControlBox?.width ?? 0, 1);
+  const [groupBox, groupActionsBox] = await Promise.all([
+    group.boundingBox(),
+    firstFeedActions.boundingBox(),
+  ]);
+  expect(groupBox).not.toBeNull();
+  expect(groupActionsBox).not.toBeNull();
+  if (groupBox && groupActionsBox) {
+    const leadingZoneEnd = groupBox.x + groupBox.width / 3;
+    expect(
+      leadingZoneEnd - (groupActionsBox.x + groupActionsBox.width),
+    ).toBeGreaterThanOrEqual(0);
+    expect(
+      leadingZoneEnd - (groupActionsBox.x + groupActionsBox.width),
+    ).toBeLessThan(16);
+    expect(groupActionsBox.x).toBeGreaterThan(groupBox.x);
+  }
+  const groupLabelFontSize = await firstFeedActions
+    .locator(".position-label")
+    .first()
+    .evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).fontSize),
+    );
+  expect(groupLabelFontSize).toBeGreaterThanOrEqual(10);
   await expect(firstSoloTarget.locator("path")).toHaveAttribute("d", /^m4 20c/);
   await firstSoloTarget.hover();
   await page.waitForTimeout(MEDIA_OVERLAY_HIDE_DELAY_MS + 250);
@@ -615,6 +652,12 @@ test("cycles a grouped camera from combined to each member and back", async ({
   await expect(firstSoloTarget).toBeVisible();
   await firstSoloTarget.click();
   await expect(group.locator(".feed:not(.hidden)")).toHaveCount(1);
+  await expect(firstFeedActions.locator(".audio-target")).toHaveCount(1);
+  await expect(firstFeedActions.locator(".solo-target")).toHaveCount(1);
+  await expect(firstFeedActions.locator(".position-label")).toHaveText([
+    "A",
+    "A",
+  ]);
   await expect(firstSoloTarget.locator("path")).toHaveAttribute("d", /^M13,16/);
   await expect(leadingIcon).toHaveCount(1);
   await expect(leadingIcon).toHaveAttribute("data-icon", "arrowLeft");
@@ -624,11 +667,17 @@ test("cycles a grouped camera from combined to each member and back", async ({
 
   await button.click();
   await expect(leadingIcon).toHaveCount(0);
+  await expect(firstFeedActions.locator(".audio-target")).toHaveCount(2);
+  await expect(firstFeedActions.locator(".solo-target")).toHaveCount(2);
 
   await group.hover();
   await group.locator(".solo-target").nth(1).click();
   await expect(group.locator(".feed:not(.hidden)")).toHaveCount(1);
   await expect(leadingIcon).toHaveAttribute("data-icon", "arrowRight");
+  await expect(firstFeedActions.locator(".position-label")).toHaveText([
+    "B",
+    "B",
+  ]);
 });
 
 test("keeps grouped phone navigation to one visible A or B feed", async ({
@@ -664,6 +713,19 @@ test("keeps grouped phone navigation to one visible A or B feed", async ({
   const leadingIcon = button.locator(".option-leading-icon");
   await expect(group.locator(".feed:not(.hidden)")).toHaveCount(1);
   await expect(leadingIcon).toHaveAttribute("data-icon", "arrowLeft");
+  await group.hover();
+  const [phoneSelectorBox, phonePlayerControlBox] = await Promise.all([
+    group.locator(".feed-selector").boundingBox(),
+    group.locator('[data-control="mute"]').boundingBox(),
+  ]);
+  expect(phoneSelectorBox?.width).toBeCloseTo(
+    phonePlayerControlBox?.width ?? 0,
+    1,
+  );
+  expect(phoneSelectorBox?.height).toBeCloseTo(
+    phonePlayerControlBox?.height ?? 0,
+    1,
+  );
 
   await button.click();
   await expect(group.locator(".feed:not(.hidden)")).toHaveCount(1);
@@ -2970,11 +3032,36 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect(recordedVideo).toHaveAttribute("style", /scale\(2\)/);
   await expect(
     page.getByRole("button", { name: "Mute recorded video" }),
-  ).toBeHidden();
+  ).toBeVisible();
   expect(await page.evaluate(() => document.fullscreenElement)).toBeNull();
   expect(await dispatchRecordedDoubleClick()).toBe(true);
   await expect(recordedVideo).toHaveAttribute("style", /scale\(1\)/);
   expect(await page.evaluate(() => document.fullscreenElement)).toBeNull();
+  const dispatchRecordedTouchTap = (): Promise<void> =>
+    recordedVideo.evaluate((element) => {
+      const pointerId = Number(element.dataset.testTouchPointer ?? "20") + 1;
+      element.dataset.testTouchPointer = String(pointerId);
+      for (const type of ["pointerdown", "pointerup"] as const) {
+        element.dispatchEvent(
+          new PointerEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            clientX: 120,
+            clientY: 80,
+            composed: true,
+            pointerId,
+            pointerType: "touch",
+          }),
+        );
+      }
+    });
+  await dispatchRecordedTouchTap();
+  await dispatchRecordedTouchTap();
+  await expect(recordedVideo).toHaveAttribute("style", /scale\(2\)/);
+  await expect(recordedMute).toBeVisible();
+  await dispatchRecordedTouchTap();
+  await dispatchRecordedTouchTap();
+  await expect(recordedVideo).toHaveAttribute("style", /scale\(1\)/);
   const resizeHandle = page.locator(
     ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) .resize-handle",
   );
@@ -4424,6 +4511,12 @@ test("preserves expanded camera-stage geometry across carousel selection", async
     const previousIconRect = previous
       ?.querySelector("svg")
       ?.getBoundingClientRect();
+    const laneProbe = document.createElement("span");
+    laneProbe.style.cssText =
+      "position:absolute;inline-size:var(--wzc-camera-side-lane-inline-size)";
+    camera.shadowRoot?.append(laneProbe);
+    const laneWidth = laneProbe.getBoundingClientRect().width;
+    laneProbe.remove();
 
     return {
       active: views.map((view) => view.active),
@@ -4438,6 +4531,7 @@ test("preserves expanded camera-stage geometry across carousel selection", async
         carouselRight: carouselRect?.right,
         carouselTop: carouselRect?.top,
         iconHeight: previousIconRect?.height,
+        laneWidth,
         nextTop: next?.getBoundingClientRect().top,
         nextRight: nextRect?.right,
         previousHeight: previousRect?.height,
@@ -4473,6 +4567,8 @@ test("preserves expanded camera-stage geometry across carousel selection", async
     (result.navigation.carouselRight ?? 0) - (result.navigation.nextRight ?? 0);
   expect(previousInset).toBeGreaterThan(0);
   expect(previousInset).toBeCloseTo(nextInset, 1);
+  expect(previousInset).toBeCloseTo(result.navigation.laneWidth, 1);
+  expect(nextInset).toBeCloseTo(result.navigation.laneWidth, 1);
   expect(
     (result.navigation.previousTop ?? 0) +
       (result.navigation.previousHeight ?? 0) / 2,
@@ -4651,9 +4747,42 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   });
   await ptzTrigger.click();
   await expect(ptzControl).toHaveClass(/\bexpanded\b/);
-  await expect
-    .poll(async () => (await ptzControl.boundingBox())?.width ?? 0)
-    .toBeGreaterThan(initialPtzTriggerBox.width * 2);
+  const expansionFrames = await ptzControl.evaluate(async (element) => {
+    const frames: Array<{
+      computedWidth: string;
+      width: number;
+      x: number;
+      y: number;
+    }> = [];
+    for (let frame = 0; frame < 10; frame += 1) {
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => resolve()),
+      );
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      frames.push({
+        computedWidth: style.width,
+        width: rect.width,
+        x: rect.x + rect.width / 2,
+        y: rect.y + rect.height / 2,
+      });
+    }
+    return frames;
+  });
+  expect(
+    Math.max(...expansionFrames.map(({ x }) => x)) -
+      Math.min(...expansionFrames.map(({ x }) => x)),
+  ).toBeLessThan(1);
+  expect(expansionFrames.at(-1)).toMatchObject({
+    computedWidth: expect.not.stringMatching(/^0px$/),
+  });
+  expect(
+    Math.max(...expansionFrames.map(({ y }) => y)) -
+      Math.min(...expansionFrames.map(({ y }) => y)),
+  ).toBeLessThan(1);
+  expect(
+    Math.max(...expansionFrames.map(({ width }) => width)),
+  ).toBeGreaterThan(initialPtzTriggerBox.width * 1.75);
   await ptzControl.hover();
   await expect
     .poll(async () => {
@@ -4821,6 +4950,11 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   expect(
     cameraBox.x + cameraBox.width - (ptzHostBox.x + ptzHostBox.width),
   ).toBeCloseTo(desktopTrailingClearance, 0);
+  const rightRailBoundary =
+    cameraBox.x + cameraBox.width - desktopTrailingClearance;
+  expect(currentPtzControlBox.x + currentPtzControlBox.width).toBeGreaterThan(
+    rightRailBoundary,
+  );
   const ptzDirectionVisualGeometry = await ptzRightButton.evaluate(
     (element) => {
       const styles = getComputedStyle(element, "::before");
@@ -7333,6 +7467,34 @@ test("retains one live connection while the card presentation is replaced", asyn
   await expect(controls.first()).toBeHidden({
     timeout: MEDIA_OVERLAY_HIDE_DELAY_MS + 1_000,
   });
+  const dispatchLiveTouchTap = (): Promise<void> =>
+    mediaSurface.evaluate((element) => {
+      const pointerId = Number(element.dataset.testTouchPointer ?? "40") + 1;
+      element.dataset.testTouchPointer = String(pointerId);
+      for (const type of ["pointerdown", "pointerup"] as const) {
+        element.dispatchEvent(
+          new PointerEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            clientX: 120,
+            clientY: 80,
+            composed: true,
+            pointerId,
+            pointerType: "touch",
+          }),
+        );
+      }
+    });
+  await dispatchLiveTouchTap();
+  await expect(controls.first()).toBeVisible();
+  await page.waitForTimeout(500);
+  await dispatchLiveTouchTap();
+  await dispatchLiveTouchTap();
+  await expect(mediaSurface).toHaveAttribute("style", /scale\(2\)/);
+  await expect(controls.first()).toBeVisible();
+  await dispatchLiveTouchTap();
+  await dispatchLiveTouchTap();
+  await expect(mediaSurface).toHaveAttribute("style", /scale\(1\)/);
   await video.evaluate((element) => {
     Object.defineProperties(element, {
       readyState: { configurable: true, value: 4 },
@@ -7769,25 +7931,6 @@ test("retains one live connection while the card presentation is replaced", asyn
     pointerId: 5,
     pointerType: "touch",
   });
-
-  for (const pointerId of [6, 7]) {
-    await viewport.dispatchEvent("pointerdown", {
-      clientX: 120,
-      clientY: 80,
-      isPrimary: true,
-      pointerId,
-      pointerType: "touch",
-    });
-    await viewport.dispatchEvent("pointerup", {
-      clientX: 120,
-      clientY: 80,
-      isPrimary: true,
-      pointerId,
-      pointerType: "touch",
-    });
-  }
-  await expect(viewport).toHaveAttribute("aria-label", /zoom 200 percent/);
-  await expect(controls.first()).toBeHidden();
 
   expect(
     await page.evaluate(

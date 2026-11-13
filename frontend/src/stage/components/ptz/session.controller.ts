@@ -152,7 +152,16 @@ export class PtzSessionController implements ReactiveController {
           ({ entityId }) => entityId === camera.entityId,
         )
       : undefined;
-    if (!force && camera === this._camera && sameSource(source, this._source)) {
+    if (
+      !force &&
+      camera?.entityId === this._camera?.entityId &&
+      sameSource(source, this._source)
+    ) {
+      // Overlay visibility and callbacks are republished as a new session
+      // object. Retain the resolved capability and active DOM presentation for
+      // the same physical camera while refreshing those live callbacks.
+      this._camera = camera;
+      this._host.requestUpdate();
       return;
     }
     this.stop();

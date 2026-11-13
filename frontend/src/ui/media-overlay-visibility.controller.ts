@@ -18,7 +18,6 @@ export class MediaOverlayVisibilityController implements ReactiveController {
   private _hovered = false;
   private _interactionRoot?: HTMLElement;
   private _pointerFocusPending = false;
-  private _suppressed = false;
 
   public constructor(
     private readonly _host: ReactiveControllerHost,
@@ -41,7 +40,6 @@ export class MediaOverlayVisibilityController implements ReactiveController {
     this._holds.clear();
     this._interactionRoot = undefined;
     this._pointerFocusPending = false;
-    this._suppressed = false;
     if (!active) this.hide();
   }
 
@@ -65,11 +63,6 @@ export class MediaOverlayVisibilityController implements ReactiveController {
     this.sourceVisible = false;
     this._options.onVisibilityChange?.(false);
     this._host.requestUpdate();
-  }
-
-  public setSuppressed(suppressed: boolean): void {
-    this._suppressed = suppressed;
-    if (suppressed) this.hide();
   }
 
   public hold(): () => void {
@@ -104,17 +97,13 @@ export class MediaOverlayVisibilityController implements ReactiveController {
   };
 
   public readonly handlePointerDown = (event: PointerEvent): void => {
+    // Touch interpretation is centralized by MediaTouchGestureController.
+    // This controller owns visibility policy and its timer, not gestures.
+    if (event.pointerType === "touch") return;
     this._interactionRoot = event.currentTarget as HTMLElement;
     // Pointer-origin focus must not pin the overlay open after pointer exit.
     this._focused = false;
     this._pointerFocusPending = true;
-    if (event.pointerType === "touch") {
-      // Touch never acts as a second, implicit close command. Every contact
-      // reveals the controls (if needed) and restarts the same hide deadline.
-      this._show();
-      this._scheduleHide();
-      return;
-    }
     queueMicrotask(() => {
       this._pointerFocusPending = false;
     });
@@ -122,11 +111,7 @@ export class MediaOverlayVisibilityController implements ReactiveController {
   };
 
   public readonly handlePointerEnd = (event: PointerEvent): void => {
-    if (event.pointerType !== "touch") return;
-    this._interactionRoot?.blur();
-    setTimeout(() => {
-      this._pointerFocusPending = false;
-    }, 0);
+    if (event.pointerType === "touch") return;
   };
 
   public readonly handleFocusIn = (event: FocusEvent): void => {
@@ -149,7 +134,7 @@ export class MediaOverlayVisibilityController implements ReactiveController {
   };
 
   private _show(): void {
-    if (!this._active || this._suppressed) return;
+    if (!this._active) return;
     this._clearHideTimer();
     if (this.visible && this.sourceVisible) return;
     this.visible = true;

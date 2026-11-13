@@ -26,6 +26,7 @@ export const cameraGroupViewStyles = css`
 
   .group {
     position: relative;
+    container-type: size;
     aspect-ratio: var(
       --wzc-camera-stage-runtime-aspect-ratio,
       var(--wzc-camera-stage-aspect-ratio)
@@ -49,6 +50,10 @@ export const cameraGroupViewStyles = css`
   .feed {
     position: relative;
     overflow: hidden;
+  }
+
+  .feed wzc-camera-view {
+    --wzc-live-indicator-inline-end: var(--wzc-camera-side-lane-inline-size);
   }
 
   .feed::after {
@@ -83,9 +88,10 @@ export const cameraGroupViewStyles = css`
   .feed-actions {
     position: absolute;
     z-index: 7;
-    inset-inline-start: var(--wzc-camera-overlay-inline-inset);
+    inset-inline-end: calc(66.6667% + var(--wzc-control-dock-gap));
     inset-block-start: var(--wzc-camera-overlay-block-inset);
     display: flex;
+    justify-content: flex-end;
     gap: 0.25rem;
     opacity: 0;
     pointer-events: none;
@@ -99,6 +105,14 @@ export const cameraGroupViewStyles = css`
 
   .feed-action {
     position: relative;
+    grid-auto-flow: column;
+    grid-template-columns: auto auto;
+    gap: 0.12rem;
+  }
+
+  .feed-action svg {
+    inline-size: min(var(--wzc-control-icon-size), 1.25rem);
+    block-size: min(var(--wzc-control-icon-size), 1.25rem);
   }
 
   .feed-action.selected {
@@ -106,11 +120,8 @@ export const cameraGroupViewStyles = css`
   }
 
   .position-label {
-    position: absolute;
-    inset-inline-end: 0.18rem;
-    inset-block-end: 0.08rem;
     color: currentcolor;
-    font-size: 0.55rem;
+    font-size: 0.68rem;
     font-weight: var(--wzc-font-weight-bold);
     line-height: 1;
     pointer-events: none;

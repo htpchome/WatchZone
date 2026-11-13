@@ -57,12 +57,12 @@ describe("media overlay visibility controller", () => {
     expect(visibility).toEqual([true, false]);
   });
 
-  it("reveals on one touch and hides from the timer without an outside touch", () => {
+  it("hides a revealed overlay from the timer without an outside action", () => {
     vi.useFakeTimers();
     const host = new TestHost();
     const controller = new MediaOverlayVisibilityController(host);
 
-    controller.handlePointerDown(pointerEvent("touch"));
+    controller.reveal();
     vi.advanceTimersByTime(MEDIA_OVERLAY_HIDE_DELAY_MS - 1);
     expect(controller.visible).toBe(true);
     vi.advanceTimersByTime(1);
@@ -70,14 +70,14 @@ describe("media overlay visibility controller", () => {
     expect(controller.sourceVisible).toBe(false);
   });
 
-  it("restarts the timer when touched again while visible", () => {
+  it("restarts the timer when revealed again while visible", () => {
     vi.useFakeTimers();
     const controller = new MediaOverlayVisibilityController(new TestHost());
 
-    controller.handlePointerDown(pointerEvent("touch"));
+    controller.reveal();
     expect(controller.visible).toBe(true);
     vi.advanceTimersByTime(MEDIA_OVERLAY_HIDE_DELAY_MS - 1);
-    controller.handlePointerDown(pointerEvent("touch"));
+    controller.reveal();
     expect(controller.visible).toBe(true);
 
     vi.advanceTimersByTime(MEDIA_OVERLAY_HIDE_DELAY_MS - 1);
@@ -86,7 +86,7 @@ describe("media overlay visibility controller", () => {
     expect(controller.visible).toBe(false);
   });
 
-  it("does not let touch-origin focus or sticky hover pin the overlay", () => {
+  it("does not let pointer-origin focus pin the overlay", () => {
     vi.useFakeTimers();
     const root = {
       blur: vi.fn(),
@@ -94,31 +94,19 @@ describe("media overlay visibility controller", () => {
     } as unknown as HTMLElement;
     const controller = new MediaOverlayVisibilityController(new TestHost());
 
-    controller.handlePointerDown(pointerEvent("touch", root));
+    controller.handlePointerDown(pointerEvent("mouse", root));
     controller.handleFocusIn({ target: root } as unknown as FocusEvent);
-    controller.handlePointerEnd(pointerEvent("touch", root));
-    vi.runOnlyPendingTimers();
+    controller.handlePointerLeave(pointerEvent("mouse", root));
+    vi.advanceTimersByTime(MEDIA_OVERLAY_HIDE_DELAY_MS);
 
-    expect(root.blur).toHaveBeenCalledOnce();
     expect(controller.visible).toBe(false);
-  });
-
-  it("suppresses reveals while media is zoomed and restores touch toggling after reset", () => {
-    const controller = new MediaOverlayVisibilityController(new TestHost());
-
-    controller.setSuppressed(true);
-    controller.handlePointerDown(pointerEvent("touch"));
-    expect(controller.visible).toBe(false);
-    controller.setSuppressed(false);
-    controller.handlePointerDown(pointerEvent("touch"));
-    expect(controller.visible).toBe(true);
   });
 
   it("cleans up a pending timer on disconnect", () => {
     vi.useFakeTimers();
     const controller = new MediaOverlayVisibilityController(new TestHost());
 
-    controller.handlePointerDown(pointerEvent("touch"));
+    controller.reveal();
     controller.hostDisconnected();
     vi.advanceTimersByTime(MEDIA_OVERLAY_HIDE_DELAY_MS);
     expect(controller.visible).toBe(false);

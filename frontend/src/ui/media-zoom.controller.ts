@@ -1,8 +1,6 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
 const CLICK_MOVE_TOLERANCE_PX = 6;
-const DOUBLE_ACTIVATION_DELAY_MS = 350;
-const DOUBLE_ACTIVATION_DISTANCE_PX = 24;
 const DISCRETE_PIXEL_WHEEL_DELTA = 80;
 const KEYBOARD_PAN_FRACTION = 0.05;
 const MAX_ZOOM = 3;
@@ -32,11 +30,6 @@ interface PinchStart {
   readonly panX: number;
   readonly panY: number;
   readonly scale: number;
-}
-
-interface TapCandidate extends Point {
-  readonly pointerType: string;
-  readonly time: number;
 }
 
 interface ZoomTransform {
@@ -69,7 +62,6 @@ export class MediaZoomController implements ReactiveController {
   private _surface?: HTMLElement;
   private _surfaceHeight = 0;
   private _surfaceWidth = 0;
-  private _tapCandidate?: TapCandidate;
 
   public constructor(
     private readonly _host: ReactiveControllerHost,
@@ -171,7 +163,6 @@ export class MediaZoomController implements ReactiveController {
     this._removeInteractionLifecycleListeners();
     this._dragStart = undefined;
     this._pinchStart = undefined;
-    this._tapCandidate = undefined;
     this._stageResizeStart = undefined;
     this._stageResizeProgress = 0;
   }
@@ -186,7 +177,6 @@ export class MediaZoomController implements ReactiveController {
     this._removeInteractionLifecycleListeners();
     this._dragStart = undefined;
     this._pinchStart = undefined;
-    this._tapCandidate = undefined;
     this._stageResizeStart = undefined;
     this._stageResizeProgress = 0;
     this._host.requestUpdate();
@@ -234,16 +224,17 @@ export class MediaZoomController implements ReactiveController {
       y: event.clientY,
     });
     this._listenForInteractionCancellation();
-    try {
-      surface.setPointerCapture?.(event.pointerId);
-    } catch (error) {
-      if (!(error instanceof DOMException && error.name === "NotFoundError"))
-        throw error;
+    // At 1x a single touch belongs to native page scrolling or the camera
+    // carousel. Capture only after the media genuinely owns the gesture.
+    if (event.pointerType !== "touch" || this.pannable) {
+      this._capturePointer(surface, event.pointerId);
     }
     this._gestureMoved = false;
 
     if (this._touchPointers().length >= 2) {
-      this._tapCandidate = undefined;
+      for (const pointerId of this._pointers.keys()) {
+        this._capturePointer(surface, pointerId);
+      }
       this._startPinch();
       this._gestureMoved = true;
       this._interacting = true;
@@ -317,11 +308,11 @@ export class MediaZoomController implements ReactiveController {
   };
 
   public readonly handlePointerUp = (event: PointerEvent): void => {
-    this._finishPointer(event, true);
+    this._finishPointer(event);
   };
 
   public readonly handlePointerCancel = (event: PointerEvent): void => {
-    this._finishPointer(event, false);
+    this._finishPointer(event);
   };
 
   public readonly handleLostPointerCapture = (event: PointerEvent): void => {
@@ -337,7 +328,6 @@ export class MediaZoomController implements ReactiveController {
         Math.abs(event.deltaX) < Math.abs(event.deltaY) / 2);
     if (!discreteWheel) return;
 
-    this._tapCandidate = undefined;
     const nextScale = this._clampScale(
       this._scale + (event.deltaY < 0 ? WHEEL_ZOOM_STEP : -WHEEL_ZOOM_STEP),
     );
@@ -348,27 +338,34 @@ export class MediaZoomController implements ReactiveController {
   };
 
   public readonly handleDoubleClick = (event: MouseEvent): void => {
-    this._tapCandidate = undefined;
     event.preventDefault();
-    this._toggleAt(event.clientX, event.clientY);
+    this.toggleAt(event.clientX, event.clientY);
   };
+
+  /** Applies the shared 1x/2x activation at a gesture-owned focal point. */
+  public toggleAt(clientX: number, clientY: number): void {
+    if (this.zoomed) {
+      this.reset();
+      this._callbacks.onInteraction?.();
+      return;
+    }
+    this._setScaleAt(TOGGLE_ZOOM, clientX, clientY);
+    this._host.requestUpdate();
+  }
 
   public readonly handleKeyDown = (event: KeyboardEvent): void => {
     const rect = this._surface?.getBoundingClientRect();
     const centerX = rect ? rect.left + rect.width / 2 : 0;
     const centerY = rect ? rect.top + rect.height / 2 : 0;
     if (event.key === "Enter" || event.key === " ") {
-      this._tapCandidate = undefined;
       event.preventDefault();
-      this._toggleAt(centerX, centerY);
+      this.toggleAt(centerX, centerY);
       return;
     }
     if (event.key === "+" || event.key === "=") {
-      this._tapCandidate = undefined;
       event.preventDefault();
       this._setScaleAt(this._scale + WHEEL_ZOOM_STEP, centerX, centerY);
     } else if (event.key === "-") {
-      this._tapCandidate = undefined;
       event.preventDefault();
       this._setScaleAt(this._scale - WHEEL_ZOOM_STEP, centerX, centerY);
     } else if (event.key === "0" || event.key === "Escape") {
@@ -395,14 +392,7 @@ export class MediaZoomController implements ReactiveController {
     this._host.requestUpdate();
   };
 
-  private _finishPointer(event: PointerEvent, activate: boolean): void {
-    const wasPinching = Boolean(this._pinchStart);
-    const drag = this._dragStart;
-    const eligible =
-      activate &&
-      !wasPinching &&
-      !this._gestureMoved &&
-      drag?.pointerId === event.pointerId;
+  private _finishPointer(event: PointerEvent): void {
     this._pointers.delete(event.pointerId);
     if (this._pointers.size === 0) {
       this._removeInteractionLifecycleListeners();
@@ -414,49 +404,6 @@ export class MediaZoomController implements ReactiveController {
     if (this._touchPointers().length < 2) this._pinchStart = undefined;
     this._dragStart = undefined;
     this._interacting = false;
-    if (eligible) this._activateTap(event);
-    else {
-      this._tapCandidate = undefined;
-      this._host.requestUpdate();
-    }
-  }
-
-  private _activateTap(event: PointerEvent): void {
-    if (event.pointerType === "mouse") {
-      this._tapCandidate = undefined;
-      this._host.requestUpdate();
-      return;
-    }
-    const now = performance.now();
-    const previous = this._tapCandidate;
-    const isDoubleActivation = Boolean(
-      previous &&
-      previous.pointerType === event.pointerType &&
-      now - previous.time <= DOUBLE_ACTIVATION_DELAY_MS &&
-      Math.hypot(event.clientX - previous.x, event.clientY - previous.y) <=
-        DOUBLE_ACTIVATION_DISTANCE_PX,
-    );
-    if (isDoubleActivation) {
-      this._tapCandidate = undefined;
-      this._toggleAt(event.clientX, event.clientY);
-      return;
-    }
-    this._tapCandidate = {
-      pointerType: event.pointerType,
-      time: now,
-      x: event.clientX,
-      y: event.clientY,
-    };
-    this._host.requestUpdate();
-  }
-
-  private _toggleAt(clientX: number, clientY: number): void {
-    if (this.zoomed) {
-      this.reset();
-      this._callbacks.onInteraction?.();
-      return;
-    }
-    this._setScaleAt(TOGGLE_ZOOM, clientX, clientY);
     this._host.requestUpdate();
   }
 
@@ -587,6 +534,15 @@ export class MediaZoomController implements ReactiveController {
     this._pointers.clear();
   }
 
+  private _capturePointer(surface: HTMLElement, pointerId: number): void {
+    try {
+      surface.setPointerCapture?.(pointerId);
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "NotFoundError"))
+        throw error;
+    }
+  }
+
   private _listenForInteractionCancellation(): void {
     if (this._interactionLifecycleListening) return;
     this._interactionLifecycleListening = true;
@@ -618,7 +574,6 @@ export class MediaZoomController implements ReactiveController {
     this._removeInteractionLifecycleListeners();
     this._dragStart = undefined;
     this._pinchStart = undefined;
-    this._tapCandidate = undefined;
     this._interacting = false;
     this._gestureMoved = false;
     if (active) this._host.requestUpdate();

@@ -124,7 +124,7 @@ describe("PTZ component", () => {
     ).toHaveLength(4);
   });
 
-  it("resets a temporary expansion to Start Closed after the overlay hides", async () => {
+  it("preserves a user expansion after the overlay hides", async () => {
     resolver.capability.mockResolvedValue({
       focus: false,
       pan: true,
@@ -158,7 +158,7 @@ describe("PTZ component", () => {
 
     context.publish(owner, { ...cameraSession(), overlayVisible: false });
     await element.updateComplete;
-    expect(element.expanded).toBe(false);
+    expect(element.expanded).toBe(true);
     context.publish(owner, cameraSession());
     await vi.waitFor(() =>
       expect(
@@ -167,7 +167,7 @@ describe("PTZ component", () => {
     );
   });
 
-  it("resets a temporary collapse to Start Open after the overlay hides", async () => {
+  it("preserves a user collapse after the overlay hides", async () => {
     resolver.capability.mockResolvedValue({
       focus: false,
       pan: true,
@@ -200,7 +200,7 @@ describe("PTZ component", () => {
 
     context.publish(owner, { ...cameraSession(), overlayVisible: false });
     await element.updateComplete;
-    expect(element.expanded).toBe(true);
+    expect(element.expanded).toBe(false);
   });
 });
 

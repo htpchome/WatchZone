@@ -5,12 +5,8 @@ export const ptzStyles = css`
     display: block;
     position: relative;
     z-index: 4;
-    inline-size: calc(
-      3 * var(--wzc-ptz-cell-size) + 2 * var(--wzc-ptz-panel-padding) + 2px
-    );
-    block-size: calc(
-      3 * var(--wzc-ptz-cell-size) + 2 * var(--wzc-ptz-panel-padding) + 2px
-    );
+    inline-size: var(--wzc-ptz-panel-size);
+    block-size: var(--wzc-ptz-panel-size);
     min-block-size: 0;
     pointer-events: none;
   }
@@ -18,12 +14,8 @@ export const ptzStyles = css`
   .ptz-layer {
     position: relative;
     inset-inline-start: calc(var(--wzc-camera-control-size) / 2);
-    inline-size: calc(
-      3 * var(--wzc-ptz-cell-size) + 2 * var(--wzc-ptz-panel-padding) + 2px
-    );
-    block-size: calc(
-      3 * var(--wzc-ptz-cell-size) + 2 * var(--wzc-ptz-panel-padding) + 2px
-    );
+    inline-size: 100%;
+    block-size: 100%;
     pointer-events: none;
   }
 
@@ -36,6 +28,13 @@ export const ptzStyles = css`
     background: var(--wzc-ptz-panel-background);
     border: 1px solid var(--wzc-media-overlay-border-color);
     border-radius: 50%;
+    display: grid;
+    grid-template:
+      repeat(3, var(--wzc-ptz-cell-size, 1.7rem)) /
+      repeat(3, var(--wzc-ptz-cell-size, 1.7rem));
+    place-items: center;
+    place-content: center;
+    overflow: hidden;
     opacity: 0;
     pointer-events: none;
     transform: translate(-50%, -50%);
@@ -51,46 +50,40 @@ export const ptzStyles = css`
   }
 
   .ptz-control.expanded {
-    display: grid;
-    grid-template:
-      repeat(3, var(--wzc-ptz-cell-size)) /
-      repeat(3, var(--wzc-ptz-cell-size));
-    place-items: center;
-    inline-size: calc(
-      3 * var(--wzc-ptz-cell-size) + 2 * var(--wzc-ptz-panel-padding) + 2px
-    );
-    block-size: calc(
-      3 * var(--wzc-ptz-cell-size) + 2 * var(--wzc-ptz-panel-padding) + 2px
-    );
-    padding: var(--wzc-ptz-panel-padding);
+    inline-size: var(--wzc-ptz-panel-size);
+    block-size: var(--wzc-ptz-panel-size);
+    padding: var(--wzc-ptz-panel-padding, 0.18rem);
   }
 
   .ptz-control.collapsed {
-    display: grid;
-    grid-template: 1fr / 1fr;
-    place-items: center;
-    inline-size: var(--wzc-camera-control-size);
-    block-size: var(--wzc-camera-control-size);
+    inline-size: var(--wzc-camera-control-size, 2.75rem);
+    block-size: var(--wzc-camera-control-size, 2.75rem);
     padding: 0;
   }
 
-  .ptz-control.visible {
+  .ptz-control.expanded.visible {
     opacity: 1;
     pointer-events: auto;
   }
 
+  .ptz-control.collapsed .direction,
+  .ptz-control.collapsed .collapse {
+    opacity: 0;
+  }
+
   button {
-    --wzc-round-button-size: var(--wzc-ptz-cell-size);
+    --wzc-round-button-size: var(--wzc-ptz-cell-size, 1.7rem);
     --wzc-round-button-background: transparent;
     --wzc-round-button-border-color: transparent;
     --wzc-round-button-hover-background: transparent;
     --wzc-round-button-icon-size: var(--wzc-ptz-icon-size);
     --wzc-round-button-touch-action: none;
-    inline-size: var(--wzc-ptz-cell-size);
-    block-size: var(--wzc-ptz-cell-size);
+    inline-size: var(--wzc-ptz-cell-size, 1.7rem);
+    block-size: var(--wzc-ptz-cell-size, 1.7rem);
     min-inline-size: 0;
     min-block-size: 0;
     color: inherit;
+    transition: opacity var(--wzc-media-overlay-transition-duration) ease;
   }
 
   button::before {
@@ -129,6 +122,9 @@ export const ptzStyles = css`
   }
 
   button.ptz-trigger {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
     --wzc-round-button-size: var(--wzc-camera-control-size);
     --wzc-round-button-background: transparent;
     --wzc-round-button-border-color: transparent;
@@ -139,6 +135,18 @@ export const ptzStyles = css`
     --wzc-round-button-touch-action: manipulation;
     inline-size: var(--wzc-camera-control-size);
     block-size: var(--wzc-camera-control-size);
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+  }
+
+  button.ptz-trigger.user-toggled {
+    transition: opacity var(--wzc-media-overlay-transition-duration) ease;
+  }
+
+  button.ptz-trigger.visible {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   button.ptz-trigger::before {
@@ -158,8 +166,9 @@ export const ptzStyles = css`
     position: absolute;
     inset-inline: 1rem;
     inset-block-end: calc(
-      var(--wzc-stage-resize-handle-block-size) + var(--wzc-ptz-cell-size) +
-        var(--wzc-ptz-cell-size) + var(--wzc-ptz-cell-size) + 2rem
+      var(--wzc-stage-resize-handle-block-size) +
+        var(--wzc-ptz-cell-size, 1.7rem) + var(--wzc-ptz-cell-size, 1.7rem) +
+        var(--wzc-ptz-cell-size, 1.7rem) + 2rem
     );
     margin-inline: auto;
     inline-size: min(22rem, calc(100% - 2rem));
@@ -179,7 +188,8 @@ export const ptzStyles = css`
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .ptz-control {
+    .ptz-control,
+    button.ptz-trigger {
       transition: none;
     }
   }

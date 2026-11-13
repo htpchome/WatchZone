@@ -50,7 +50,6 @@ export class PtzComponent extends LitElement {
   private _activeDirection?: PtzDirection;
   private _lastCameraEntityId?: string;
   private _userToggled = false;
-  private _wasVisible = false;
   private readonly _overlay = new OverlayInteractionController(this);
   private readonly _press = new PressInteractionController<PtzDirection>(this, {
     actionFor: (target) => target.dataset.direction as PtzDirection,
@@ -75,19 +74,15 @@ export class PtzComponent extends LitElement {
       this._session.configure(this.api, this.cameraSession, this.cameras);
     const camera = this._session.camera;
     this._overlay.configure(camera);
-    const visible =
-      (camera?.overlayVisible ?? false) || this._activeDirection !== undefined;
-    const cameraChanged = camera?.entityId !== this._lastCameraEntityId;
-    if (
-      cameraChanged ||
-      changed.has("initialState") ||
-      (this._wasVisible && !visible)
-    ) {
+    const cameraEntityId = camera?.entityId;
+    const cameraChanged =
+      cameraEntityId !== undefined &&
+      cameraEntityId !== this._lastCameraEntityId;
+    if (cameraChanged || changed.has("initialState")) {
       this._userToggled = false;
       this.expanded = this.initialState === "open";
     }
-    this._lastCameraEntityId = camera?.entityId;
-    this._wasVisible = visible;
+    if (cameraEntityId !== undefined) this._lastCameraEntityId = cameraEntityId;
   }
 
   protected render() {
@@ -112,6 +107,7 @@ export class PtzComponent extends LitElement {
           .filter(Boolean)
           .join(" ")}
         role=${this.expanded ? "group" : nothing}
+        aria-hidden=${this.expanded ? "false" : "true"}
         aria-label=${this.expanded ? this.localize("ptz.controls") : nothing}
         @pointerenter=${this._overlay.handlePointerEnter}
         @pointerleave=${this._overlay.handlePointerLeave}
@@ -119,44 +115,60 @@ export class PtzComponent extends LitElement {
         @focusin=${this._overlay.handleFocusIn}
         @focusout=${this._overlay.handleFocusOut}
       >
-        ${
-          this.expanded
-            ? DIRECTIONS.map(({ direction, icon }) => {
-                const supported =
-                  direction === "left" || direction === "right"
-                    ? capability.pan
-                    : capability.tilt;
-                return supported
-                  ? html`<button
-                      class=${`${direction} round-button`}
-                      type="button"
-                      data-direction=${direction}
-                      aria-label=${this.localize(`ptz.${direction}`)}
-                      @contextmenu=${this._preventDefault}
-                      @pointerdown=${this._press.handlePointerDown}
-                      @pointerup=${this._press.handlePointerUp}
-                      @pointercancel=${this._press.handlePointerCancel}
-                      @lostpointercapture=${this._press.handlePointerCancel}
-                      @keydown=${this._press.handleKeyDown}
-                      @keyup=${this._press.handleKeyUp}
-                    >
-                      ${renderIcon(icon)}
-                    </button>`
-                  : nothing;
-              })
-            : nothing
-        }
+        ${DIRECTIONS.map(({ direction, icon }) => {
+          const supported =
+            direction === "left" || direction === "right"
+              ? capability.pan
+              : capability.tilt;
+          return supported
+            ? html`<button
+                class=${`${direction} direction round-button`}
+                type="button"
+                data-direction=${direction}
+                aria-label=${this.localize(`ptz.${direction}`)}
+                ?disabled=${!this.expanded}
+                tabindex=${this.expanded ? "0" : "-1"}
+                @contextmenu=${this._preventDefault}
+                @pointerdown=${this._press.handlePointerDown}
+                @pointerup=${this._press.handlePointerUp}
+                @pointercancel=${this._press.handlePointerCancel}
+                @lostpointercapture=${this._press.handlePointerCancel}
+                @keydown=${this._press.handleKeyDown}
+                @keyup=${this._press.handleKeyUp}
+              >
+                ${renderIcon(icon)}
+              </button>`
+            : nothing;
+        })}
         <button
-          class=${`${this.expanded ? "collapse" : "ptz-trigger"} round-button`}
+          class="collapse round-button"
           type="button"
-          aria-label=${this.localize(
-            this.expanded ? "ptz.collapse" : "ptz.expand",
-          )}
+          aria-label=${this.localize("ptz.collapse")}
+          ?disabled=${!this.expanded}
+          tabindex=${this.expanded ? "0" : "-1"}
           @click=${this._toggleExpanded}
         >
-          ${renderIcon(this.expanded ? "arrowCollapseAll" : "ptz")}
+          ${renderIcon("arrowCollapseAll")}
         </button>
       </div>
+      <button
+        class=${[
+          "ptz-trigger",
+          "round-button",
+          this._userToggled ? "user-toggled" : "",
+          !this.expanded && visible ? "visible" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        type="button"
+        aria-label=${this.localize("ptz.expand")}
+        ?disabled=${this.expanded}
+        tabindex=${this.expanded ? "-1" : "0"}
+        @pointerdown=${this._stopPropagation}
+        @click=${this._toggleExpanded}
+      >
+        ${renderIcon("ptz")}
+      </button>
     </div>`;
   }
 

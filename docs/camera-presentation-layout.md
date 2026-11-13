@@ -152,13 +152,24 @@ zone.
 
 - Group A/B controls are square shared media-overlay controls in the top-leading
   zone. Slideshow and camera selection own top-center. Source state owns
-  top-trailing.
+  top-trailing. Every top-row control uses
+  the shared media-overlay control sizing contract; text controls may be wider,
+  but their height, border, radius, and vertical alignment are uniform. Compact
+  container reductions are defined once in `overlay-control.styles.ts` and are
+  not repeated by individual controls.
 - The outer side lanes are reserved. Carousel arrows sit inside the live-media
   boundary, immediately after the left lane and immediately before the right
-  lane; they never occupy either lane. Both positions derive from
-  `--wzc-carousel-navigation-inline-inset`.
+  lane; they never occupy either lane. The shared boundary is
+  `--wzc-camera-side-lane-inline-size`; carousel navigation, the top overlay
+  row, and the lower control band all derive from that boundary.
 - The fixed right lane owns the vertical player-tool dock. Adding or removing a
-  player tool does not move either carousel arrow horizontally.
+  player tool does not move either carousel arrow horizontally. Expanded PTZ is
+  the deliberate lower-band exception: it crosses into the right lane as drawn
+  while remaining vertically separate from the player-tool dock.
+- Each feed in an additional-camera group retains its own source badge because
+  A and B may resolve different transports. Group feed badges use the shared
+  trailing lane boundary as their logical end inset, so neither badge can
+  occupy the player-tool dock.
 - Light and talk occupy the lower center band. PTZ occupies the lower trailing
   band. The resize handle owns the bottom center edge. Camera name and timestamp
   remain unobstructed in the bottom metadata strip.

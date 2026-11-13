@@ -3,7 +3,6 @@ import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import {
   CAMERA_CONTROLS_TAG,
-  CAMERA_GESTURE_LOCK_EVENT,
   CAMERA_GROUP_VIEW_TAG,
   CAMERA_OVERLAY_VISIBILITY_EVENT,
   CAMERA_STAGE_SIZE_CHANGE_EVENT,
@@ -26,6 +25,7 @@ import { pictureInPictureMethod } from "../../../core/picture-in-picture";
 import { renderIcon } from "../../../ui/icons";
 import { releaseTouchFocus } from "../../../ui/control-interaction";
 import { MediaOverlayVisibilityController } from "../../../ui/media-overlay-visibility.controller";
+import { mediaTouchOriginatesFromControl } from "../../../ui/media-touch-gesture.controller";
 import { mediaOverlayControlButtonStyles } from "../../../ui/overlay-control.styles";
 import type { CameraSessionContext } from "../../camera-session-context";
 import type {
@@ -63,7 +63,6 @@ export interface GroupCameraItem {
 }
 
 const controlsTag = unsafeStatic(CAMERA_CONTROLS_TAG);
-const gestureLockEvent = unsafeStatic(CAMERA_GESTURE_LOCK_EVENT);
 const mediaOverlayInteractionEvent = unsafeStatic(
   MEDIA_OVERLAY_INTERACTION_EVENT,
 );
@@ -88,7 +87,6 @@ export class CameraGroupView extends LitElement {
   private _audioFocus: 0 | 1 = 0;
   private readonly _deviceProfile = new DeviceProfileController(this);
   private _fullscreenActive = false;
-  private readonly _gestureLocks = new Set<string>();
   private readonly _overlay = new MediaOverlayVisibilityController(this, {
     onVisibilityChange: (visible) => this._emitOverlayVisibility(visible),
   });
@@ -130,11 +128,10 @@ export class CameraGroupView extends LitElement {
     return staticHtml`<div
       class="group"
       @camera-view-session-changed=${this._handleSessionChanged}
-      @${gestureLockEvent}=${this._handleGestureLock}
       @pointerenter=${this._handlePointerEnter}
       @pointermove=${this._handlePointerMove}
       @pointerleave=${this._handlePointerLeave}
-      @pointerdown=${this._overlay.handlePointerDown}
+      @pointerdown=${this._handlePointerDown}
       @pointerup=${this._overlay.handlePointerEnd}
       @pointercancel=${this._overlay.handlePointerEnd}
       @focusin=${this._overlay.handleFocusIn}
@@ -366,6 +363,14 @@ export class CameraGroupView extends LitElement {
     this._overlay.handlePointerMove(event);
   };
 
+  private readonly _handlePointerDown = (event: PointerEvent): void => {
+    if (event.pointerType !== "touch") {
+      this._overlay.handlePointerDown(event);
+      return;
+    }
+    if (!mediaTouchOriginatesFromControl(event)) this._overlay.reveal();
+  };
+
   private readonly _handlePointerLeave = (event: PointerEvent): void => {
     if (event.pointerType === "touch") return;
     this._overlay.handlePointerLeave(event);
@@ -373,17 +378,6 @@ export class CameraGroupView extends LitElement {
 
   private readonly _revealOverlay = (): void => {
     this._overlay.reveal();
-  };
-
-  private readonly _handleGestureLock = (
-    event: CustomEvent<{ key?: string; locked: boolean }>,
-  ): void => {
-    const key = event.detail.key;
-    if (!key || !this.cameras.some((camera) => camera.entityId === key)) return;
-    event.stopPropagation();
-    if (event.detail.locked) this._gestureLocks.add(key);
-    else this._gestureLocks.delete(key);
-    this._overlay.setSuppressed(this._gestureLocks.size > 0);
   };
 
   private _emitOverlayVisibility(visible: boolean): void {
@@ -438,8 +432,12 @@ export class CameraGroupView extends LitElement {
         </button>
       </div>`;
     }
+    const actionIndexes =
+      this.mode === "combined"
+        ? ([0, 1] as const)
+        : ([this.mode === "secondary" ? 1 : 0] as const);
     return html`<div class=${visible ? "feed-actions visible" : "feed-actions"}>
-      ${this.cameras.map((camera, index) => {
+      ${actionIndexes.map((index) => {
         const position = index === 0 ? "A" : "B";
         const target = index === 0 ? "main" : "secondary";
         return html`

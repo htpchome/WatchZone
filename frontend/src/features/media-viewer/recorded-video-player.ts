@@ -170,7 +170,7 @@ export class RecordedVideoPlayer extends LitElement {
         },
       ];
     return staticHtml`<div
-      class="viewport"
+      class=${this._media.zoom.pannable ? "viewport pannable" : "viewport"}
       tabindex="0"
       aria-label=${this.localize("media_player.zoom_view", {
         percent: Math.round(this._media.zoom.scale * 100),

@@ -125,7 +125,7 @@ describe("camera media zoom", () => {
     vi.useRealTimers();
   });
 
-  it("toggles between 1x and 2x with double-click or double-tap", () => {
+  it("toggles between 1x and 2x with desktop double-click", () => {
     const surface = createSurface();
     const controller = new MediaZoomController(createHost());
     controller.observe(surface);
@@ -138,14 +138,6 @@ describe("camera media zoom", () => {
 
     doubleClick(surface);
     expect(controller.scale).toBe(1);
-
-    tap(surface, "touch");
-    expect(controller.scale).toBe(1);
-    tap(surface, "touch");
-    expect(controller.scale).toBe(2);
-    tap(surface, "touch");
-    tap(surface, "touch");
-    expect(controller.transform).toBe("translate3d(0px, 0px, 0) scale(1)");
   });
 
   it("applies one overlay contract to touch, zoom, pan, and native double-click", () => {
@@ -163,8 +155,28 @@ describe("camera media zoom", () => {
     tap(surface, "touch");
     tap(surface, "touch");
     expect(controller.zoom.scale).toBe(2);
+    expect(controller.overlay.visible).toBe(true);
+
+    vi.advanceTimersByTime(500);
+    tap(surface, "touch");
+    expect(controller.overlay.visible).toBe(true);
+
+    vi.advanceTimersByTime(500);
+    tap(surface, "touch");
+    tap(surface, "touch");
+    expect(controller.zoom.scale).toBe(1);
+
+    tap(surface, "touch");
+    vi.advanceTimersByTime(500);
+    tap(surface, "touch");
+    expect(controller.overlay.visible).toBe(true);
+    vi.advanceTimersByTime(MEDIA_OVERLAY_HIDE_DELAY_MS - 1);
+    expect(controller.overlay.visible).toBe(true);
+    vi.advanceTimersByTime(1);
     expect(controller.overlay.visible).toBe(false);
 
+    tap(surface, "touch");
+    tap(surface, "touch");
     surface.dispatchEvent(
       pointerEvent("pointerdown", {
         clientX: 200,
@@ -181,7 +193,7 @@ describe("camera media zoom", () => {
         pointerType: "touch",
       }),
     );
-    expect(controller.overlay.visible).toBe(false);
+    expect(controller.overlay.visible).toBe(true);
 
     const doubleClick = new MouseEvent("dblclick", {
       bubbles: true,
@@ -189,6 +201,97 @@ describe("camera media zoom", () => {
     });
     surface.dispatchEvent(doubleClick);
     expect(doubleClick.defaultPrevented).toBe(true);
+    expect(controller.zoom.scale).toBe(2);
+  });
+
+  it("does not interpret a control touch as a media gesture", () => {
+    const surface = createSurface();
+    const button = document.createElement("button");
+    surface.append(button);
+    const controller = new MediaPresentationController(createHost());
+    controller.observe(surface);
+    connectMediaPointerEvents(surface, controller);
+    const activated = vi.fn();
+    button.addEventListener("click", activated);
+
+    tap(button, "touch");
+    button.click();
+
+    expect(activated).toHaveBeenCalledOnce();
+    expect(controller.overlay.visible).toBe(false);
+    expect(controller.zoom.scale).toBe(1);
+  });
+
+  it("pinches in and back to 1x through the shared media touch owner", () => {
+    const surface = createSurface();
+    const controller = new MediaPresentationController(createHost());
+    controller.observe(surface);
+    connectMediaPointerEvents(surface, controller);
+
+    surface.dispatchEvent(
+      pointerEvent("pointerdown", {
+        clientX: 150,
+        clientY: 112.5,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+    surface.dispatchEvent(
+      pointerEvent("pointerdown", {
+        clientX: 250,
+        clientY: 112.5,
+        pointerId: 2,
+        pointerType: "touch",
+      }),
+    );
+    surface.dispatchEvent(
+      pointerEvent("pointermove", {
+        clientX: 350,
+        clientY: 112.5,
+        pointerId: 2,
+        pointerType: "touch",
+      }),
+    );
+    expect(controller.zoom.scale).toBe(2);
+    expect(controller.overlay.visible).toBe(true);
+
+    surface.dispatchEvent(
+      pointerEvent("pointermove", {
+        clientX: 250,
+        clientY: 112.5,
+        pointerId: 2,
+        pointerType: "touch",
+      }),
+    );
+    expect(controller.zoom.scale).toBe(1);
+  });
+
+  it("pans with one touch only while media is zoomed", () => {
+    const surface = createSurface();
+    const controller = new MediaPresentationController(createHost());
+    controller.observe(surface);
+    connectMediaPointerEvents(surface, controller);
+    tap(surface, "touch");
+    tap(surface, "touch");
+
+    surface.dispatchEvent(
+      pointerEvent("pointerdown", {
+        clientX: 200,
+        clientY: 112.5,
+        pointerId: 4,
+        pointerType: "touch",
+      }),
+    );
+    surface.dispatchEvent(
+      pointerEvent("pointermove", {
+        clientX: 250,
+        clientY: 140,
+        pointerId: 4,
+        pointerType: "touch",
+      }),
+    );
+
+    expect(controller.zoom.transform).not.toContain("translate3d(0px, 0px, 0)");
   });
 
   it("recovers overlay interaction when backgrounding interrupts a pan", () => {

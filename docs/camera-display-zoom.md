@@ -8,9 +8,12 @@ authoritative for application-wide boundaries.
 
 - Camera is the parent module. Display zoom is private camera presentation
   behavior under `frontend/src/stage/modules/camera/live/`.
+- The shared `MediaTouchGestureController` is the sole interpreter of media
+  touch sequences for live and recorded presentations. It classifies control
+  contact, tap, double tap, pan, and pinch before delegating transforms.
 - The shared `MediaZoomController` exclusively owns zoom scale, bounded pan,
-  pointer and keyboard gesture state, resize handling, and cleanup for live and
-  recorded media presentations.
+  pointer transforms, keyboard input, resize handling, and cleanup. It does not
+  independently interpret taps.
 - The live presentation supplies the media surface and renders controller
   state. It does not implement a second gesture path.
 - Provider adapters and retained media sessions do not know about display
@@ -68,8 +71,8 @@ space or create a second transform owner.
 | Discrete mouse wheel              | Zoom in fixed increments between `1x` and `3x`.                                |
 | Trackpad pinch or modified wheel  | Leave unconsumed so native browser and operating-system behavior is preserved. |
 | Unmodified smooth pixel scrolling | Leave unconsumed so compact dashboard and page navigation continue to scroll.  |
-| Double touch or pen tap           | Toggle `1x` and `2x` at the contact position.                                  |
-| Two touch or pen contacts         | Pinch continuously between `1x` and `3x`.                                      |
+| Double touch tap                  | Toggle `1x` and `2x` at the contact position.                                  |
+| Two touch contacts                | Pinch continuously between `1x` and `3x`, including a return to `1x`.          |
 | Pointer drag while zoomed         | Pan within the visible media bounds.                                           |
 | Enter or Space                    | Toggle `1x` and `2x` from the center.                                          |
 | Plus or Minus                     | Zoom in or out in fixed increments.                                            |
@@ -85,14 +88,16 @@ permanent device class from one gesture.
 
 At `1x`, native one-finger page panning remains available. While zoomed, the
 media surface owns drag gestures so panning cannot leak into dashboard
-navigation. A drag or pinch clears the pending double-activation sequence and
-never activates zoom toggling.
+navigation. A drag, pinch, cancellation, or control contact clears the pending
+double-tap sequence and never activates zoom toggling. A single touch is not
+captured at `1x`; the media captures one-finger movement only while pannable.
 
 ## Shared media-overlay interaction
 
-Live and recorded video use one `MediaPresentationController` to compose zoom
-with transient overlay visibility. The following behavior is normative for
-every presentation using that controller:
+Live and recorded video use one `MediaPresentationController` and one
+`MediaTouchGestureController` to compose zoom with transient overlay
+visibility. The following behavior is normative for every presentation using
+that controller:
 
 1. A single touch on the media surface shows hidden controls and starts the
    hide timer immediately.
@@ -102,18 +107,25 @@ every presentation using that controller:
    never acts as an implicit close command.
 4. Holding a touch on otherwise inactive media does not create a separate
    visibility state. The normal timer remains authoritative.
-5. Double activation zooms the media and hides the controls. The presentation
+5. Double activation zooms the media and leaves actionable controls on their
+   normal hide timer. A second double activation returns it to `1x`. The presentation
    captures the browser `dblclick` default so a recorded video's native controls
    cannot substitute fullscreen for WatchZone display zoom.
-6. Drag or pinch interaction hides the controls. Controls remain suppressed
-   while display zoom is active and become eligible for the normal touch policy
-   after zoom returns to `1x`.
+6. Touching an overlay control activates only that control. It cannot also be
+   interpreted as a media tap, double tap, pan, or pinch.
+7. Toggle controls use their explicit active state on touch and do not retain a
+   synthetic hover appearance after the state changes.
+8. Pinch-out zooms and pinch-in may return fully to `1x`. One-finger drag pans
+   within bounds while zoomed.
+9. Zoom, pan, and pinch do not create a separate overlay policy. The complete
+   fixed overlay remains governed by the same reveal and hide timer at every
+   zoom level.
 
 Mouse hover and `:focus-visible` keyboard focus may hold controls visible when
 media is not zoomed. Focus or sticky hover synthesized from a touch must not
-hold them visible. Overlay buttons stop pointer propagation and retain their
-own shared touch-focus-release behavior, so activating a control does not also
-restart the presentation gesture path. At `1x`, the live surface reserves
+hold them visible. The touch owner excludes interactive origins from media
+gesture recognition, and overlay controls retain shared touch-focus-release
+behavior. At `1x`, the live surface reserves
 horizontal touch motion for the camera carousel and leaves vertical motion to
 the page. While zoomed, the media surface owns touch pan and pinch.
 
@@ -140,7 +152,7 @@ branch, or duplicate zoom state.
 
 ## Verification
 
-Unit coverage must verify click/tap toggling, the five shared overlay rules,
+Unit coverage must verify click/tap toggling, the nine shared touch rules,
 wheel and trackpad policy, pinch and pan bounds, media-identity reset, keyboard
 access, and the media/overlay boundary. Browser coverage must prove recorded
 double-click zoom does not enter fullscreen. Browser-visible changes require

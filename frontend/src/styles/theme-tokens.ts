@@ -286,20 +286,21 @@ export const themeTokens = css`
     );
     --wzc-camera-control-inline-inset: 0.75rem;
     --wzc-camera-control-bottom-inset: 2.25rem;
+    --wzc-camera-side-lane-inline-size: calc(
+      var(--wzc-camera-control-inline-inset) + var(--wzc-camera-control-size)
+    );
     --wzc-camera-overlay-block-inset: 0.5rem;
-    --wzc-camera-overlay-inline-inset: 0.75rem;
-    --wzc-camera-overlay-trailing-clearance: calc(
-      var(--wzc-camera-control-inline-inset) + var(--wzc-camera-control-size) +
-        var(--wzc-control-dock-gap)
+    --wzc-camera-overlay-inline-inset: var(--wzc-camera-side-lane-inline-size);
+    --wzc-camera-overlay-trailing-clearance: var(
+      --wzc-camera-side-lane-inline-size
     );
     --wzc-control-dock-gap: 0.5rem;
     --wzc-carousel-navigation-opacity: 72%;
     --wzc-carousel-navigation-hover-opacity: 100%;
     --wzc-carousel-navigation-icon-size: 2.75rem;
     --wzc-carousel-navigation-control-gap: 0.75rem;
-    --wzc-carousel-navigation-inline-inset: calc(
-      var(--wzc-camera-control-inline-inset) + var(--wzc-camera-control-size) +
-        var(--wzc-carousel-navigation-control-gap)
+    --wzc-carousel-navigation-inline-inset: var(
+      --wzc-camera-side-lane-inline-size
     );
     --wzc-selection-bar-color: var(--wzc-color-text-1);
     --wzc-selection-bar-background: var(--wzc-color-surface-secondary);
@@ -523,6 +524,11 @@ export const themeTokens = css`
     );
     --wzc-ptz-icon-size: 42%;
     --wzc-ptz-panel-padding: 0.18rem;
+    --wzc-ptz-panel-size: calc(
+      var(--wzc-ptz-cell-size) + var(--wzc-ptz-cell-size) +
+        var(--wzc-ptz-cell-size) + var(--wzc-ptz-panel-padding) +
+        var(--wzc-ptz-panel-padding) + 2px
+    );
     --wzc-ptz-panel-background: color-mix(
       in srgb,
       var(--wzc-media-overlay-surface) var(--wzc-media-overlay-opacity),

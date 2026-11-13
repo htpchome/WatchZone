@@ -28,6 +28,39 @@ const overlayControlBaseStyles = css`
   }
 `;
 
+/** One responsive size contract shared by every media-overlay control. */
+export const mediaOverlayControlSizingStyles = css`
+  .control-button,
+  .wzc-media-overlay-button {
+    --wzc-control-size: var(--wzc-camera-control-size);
+    --wzc-control-icon-size: var(--wzc-camera-control-icon-size);
+  }
+
+  @container (max-width: 480px) {
+    .control-button,
+    .wzc-media-overlay-button {
+      --wzc-control-size: 2.35rem;
+      --wzc-control-icon-size: 1.4rem;
+    }
+  }
+
+  @container (max-height: 360px) {
+    .control-button,
+    .wzc-media-overlay-button {
+      --wzc-control-size: 2.25rem;
+      --wzc-control-icon-size: 1.3rem;
+    }
+  }
+
+  @container (max-height: 240px) {
+    .control-button,
+    .wzc-media-overlay-button {
+      --wzc-control-size: 1.875rem;
+      --wzc-control-icon-size: 1.15rem;
+    }
+  }
+`;
+
 /** Shared geometry and interaction contract for circular overlay controls. */
 export const roundButtonStyles = [
   overlayControlBaseStyles,
@@ -91,6 +124,7 @@ export const roundButtonStyles = [
 /** Shared geometry and states for square media-overlay controls. */
 export const mediaOverlayControlButtonStyles = [
   overlayControlBaseStyles,
+  mediaOverlayControlSizingStyles,
   css`
     .control-button {
       background: var(

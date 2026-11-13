@@ -168,7 +168,7 @@ export const cameraLiveViewStyles = css`
     position: absolute;
     z-index: 1;
     inset-block-start: 0.5rem;
-    inset-inline-end: 0.5rem;
+    inset-inline-end: var(--wzc-live-indicator-inline-end, 0.5rem);
     display: inline-flex;
     --wzc-badge-color: var(
       --wzc-live-indicator-color,

@@ -21,7 +21,13 @@ export const recordedVideoPlayerStyles = css`
     inline-size: 100%;
     overflow: hidden;
     position: relative;
-    touch-action: pan-x pan-y;
+    /* Match live media: vertical motion remains page scroll at 1x while the
+       shared gesture owner receives double-tap and two-contact pinch input. */
+    touch-action: pan-y;
+  }
+
+  .viewport.pannable {
+    touch-action: none;
   }
 
   .viewport:fullscreen,
