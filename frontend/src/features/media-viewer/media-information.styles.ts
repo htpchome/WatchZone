@@ -56,19 +56,6 @@ export const mediaInformationStyles = css`
     padding-block-start: 0.75rem;
   }
 
-  .actions .wzc-button {
-    align-items: center;
-    display: inline-flex;
-    gap: 0.4rem;
-    min-block-size: 2.5rem;
-  }
-
-  .actions svg {
-    block-size: 1.1rem;
-    display: block;
-    inline-size: 1.1rem;
-  }
-
   @container (max-width: 36rem) {
     .metadata {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -78,16 +65,6 @@ export const mediaInformationStyles = css`
   @container (max-width: 22rem) {
     .metadata {
       grid-template-columns: 1fr;
-    }
-
-    .actions {
-      align-items: stretch;
-      flex-direction: column;
-    }
-
-    .actions .wzc-button {
-      justify-content: center;
-      width: 100%;
     }
   }
 `;

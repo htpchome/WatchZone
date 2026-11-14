@@ -140,6 +140,9 @@ viewing. Recording discovery and grouping are governed by
   directly actionable while it is open. An activity-tile activation may
   replace the current media without closing the viewer; any other click outside
   the dialog closes it before the background action runs.
+- Its shell uses the same Home Assistant native dialog surface, matching
+  backdrop filter, radius, and shadow as the AI analysis presentation. The
+  media canvas remains independently dark.
 - The player viewport is always `16:9`. Only the diagonal bottom-right resize
   handle changes its dimensions, and width and height remain locked to that
   ratio. The header sits directly above the player; the container owns side and
