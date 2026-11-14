@@ -15,19 +15,20 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.307`
-- Current commit: `089084c` —
-  `v0.0.4-dev.306 - fix(editor): refine camera disclosure summaries`
-- The worktree contains the uncommitted Reviews history-setting relocation
-  described below. Always verify `git status`, the canonical version in
+- Working version: `0.0.4-dev.308`
+- Current commit: `4b1cd07` —
+  `v0.0.4-dev.307 - fix(editor): relocate review history control`
+- The worktree contains the uncommitted Reviews slider-marker change described
+  below. Always verify `git status`, the canonical version in
   `custom_components/watchzone/const.py`, and the latest commit.
 
 ## Active change: Reviews history setting
 
 - The shared Reviews and Events history window now appears in the Reviews
   editor section as Days of Reviews to Display. It uses Home Assistant's native
-  bounded slider and exact-value input without adding a frontend dependency;
-  the persisted `event_history_days` key still controls both modules.
+  bounded slider, one marker per selectable day, and an exact-value input
+  without adding a frontend dependency; the persisted `event_history_days` key
+  still controls both modules.
 
 ## Live camera and group invariants
 
@@ -78,7 +79,7 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 
 ## Validation status
 
-Validated for `v0.0.4-dev.307`:
+Validated for `v0.0.4-dev.308`:
 
 - frontend unit tests (422 tests)
 - Playwright tests across Chromium, Firefox, and WebKit (39 per engine)
@@ -86,8 +87,8 @@ Validated for `v0.0.4-dev.307`:
   version consistency, and `git diff --check`
 
 Focused coverage verifies the renamed control is owned by Reviews, uses the
-bounded Home Assistant slider, preserves the shared configuration key, and
-continues to publish one normalized semantic update.
+bounded Home Assistant slider with step markers, preserves the shared
+configuration key, and continues to publish one normalized semantic update.
 
 ## Handoff rules
 

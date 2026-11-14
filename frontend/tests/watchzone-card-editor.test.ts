@@ -848,12 +848,13 @@ describe("watchzone-card-editor", () => {
 
     const selector = editor.shadowRoot?.querySelector<
       HTMLElement & {
-        selector: { number: { mode: string } };
+        selector: { number: { mode: string; slider_ticks: boolean } };
         value: number;
       }
     >('ha-selector[label="Days of Reviews to Display"]');
     expect(selector?.value).toBe(5);
     expect(selector?.selector.number.mode).toBe("slider");
+    expect(selector?.selector.number.slider_ticks).toBe(true);
     expect(
       selector?.closest(ACCORDION_ITEM_TAG)?.getAttribute("item-key"),
     ).toBe("reviews");

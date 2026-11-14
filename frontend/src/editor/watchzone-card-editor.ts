@@ -102,6 +102,7 @@ const REVIEW_HISTORY_DAYS_SELECTOR = {
     max: MAX_EVENT_HISTORY_DAYS,
     min: MIN_EVENT_HISTORY_DAYS,
     mode: "slider",
+    slider_ticks: true,
     step: 1,
   },
 } as const;

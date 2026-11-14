@@ -6623,10 +6623,15 @@ test("editor uses exclusive accordions and shared draft status", async ({
   ).toHaveCount(0);
   expect(
     await reviewHistory.evaluate(
-      (element: HTMLElement & { selector?: { number?: { mode?: string } } }) =>
-        element.selector?.number?.mode,
+      (
+        element: HTMLElement & {
+          selector?: {
+            number?: { mode?: string; slider_ticks?: boolean };
+          };
+        },
+      ) => element.selector?.number,
     ),
-  ).toBe("slider");
+  ).toMatchObject({ mode: "slider", slider_ticks: true });
   await items.nth(1).locator("summary").click();
   const selectionBars = items.nth(1).locator("wzc-segmented-control");
   await expect(selectionBars).toHaveCount(4);
