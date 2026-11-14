@@ -33,6 +33,9 @@
 
 - Reviews shares the activity-list presentation primitive with Events while
   retaining its own loading, filtering, mutation, and playback orchestration.
+- The card editor presents the shared Reviews and Events history window under
+  Reviews as Days of Reviews to Display. The persisted `event_history_days`
+  value continues to bound both modules while Events remains available.
 - Review and Event tiles use the shared media-tile surface tokens. Fine-pointer
   hover darkens the active theme surface slightly without changing touch or
   keyboard behavior.

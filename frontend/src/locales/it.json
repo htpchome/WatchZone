@@ -15,7 +15,7 @@
   "editor.display_object_badges": "Mostra badge oggetto",
   "editor.display_event_type_badges": "Mostra badge clip/avvisi/rilevamenti",
   "editor.display_zone": "Mostra zona",
-  "editor.event_history_days": "Giorni di cronologia eventi",
+  "editor.event_history_days": "Giorni di revisioni da visualizzare",
   "editor.rounded_outer_corners": "Angoli esterni arrotondati",
   "editor.outer_shadows": "Ombre esterne",
   "editor.outer_padding": "Spaziatura esterna",

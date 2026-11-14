@@ -15,39 +15,19 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.306`
-- Current commit: `c03c280` —
-  `v0.0.4-dev.305 - fix(editor): clarify grouped camera editing`
-- The worktree contains the uncommitted camera-editor disclosure, summary, and
-  dirty-state optimization described below. Always verify `git status`, the
-  canonical version in `custom_components/watchzone/const.py`, and the latest
-  commit.
+- Working version: `0.0.4-dev.307`
+- Current commit: `089084c` —
+  `v0.0.4-dev.306 - fix(editor): refine camera disclosure summaries`
+- The worktree contains the uncommitted Reviews history-setting relocation
+  described below. Always verify `git status`, the canonical version in
+  `custom_components/watchzone/const.py`, and the latest commit.
 
-## Active change: camera-editor disclosure and summaries
+## Active change: Reviews history setting
 
-- The nested camera editor initially opens Camera and requires exactly one of
-  Camera, Connection Source, Additional Camera, Lights, or Options and Controls
-  to remain open. Opening one closes the prior section; clicking the sole open
-  section leaves it open.
-- The shared accordion exposes opt-in `require-open` behavior without an
-  observer, polling loop, or persistent timer. It synchronizes rejected native
-  `details` closes, ignores nested disclosure events, and coalesces reveal
-  scrolling to one cancelable animation frame.
-- Camera, Additional Camera, and Options and Controls headers expose compact
-  identifying summaries. Additional Camera includes the secondary camera,
-  layout, and source without duplicating field labels.
-- Both connection sections have an internal Connection Source heading. The
-  secondary Live View Layout appears before its connection settings.
-- Editing the compact secondary-camera tile still resolves its owning primary
-  camera and opens that atomic group draft, with Additional Camera as the sole
-  initial section.
-- Dirty-state comparison reuses one cached serialized configuration and avoids
-  redundant status-toast replacement and dirty-state writes. Nested camera
-  draft edits still remain local until Update.
-- The native `details` implementation still keeps closed content mounted.
-  Lazy-unmounting controls is intentionally deferred because it would change
-  editor control, focus, and draft lifecycles rather than being a safe
-  accordion-only optimization.
+- The shared Reviews and Events history window now appears in the Reviews
+  editor section as Days of Reviews to Display. It uses Home Assistant's native
+  bounded slider and exact-value input without adding a frontend dependency;
+  the persisted `event_history_days` key still controls both modules.
 
 ## Live camera and group invariants
 
@@ -98,18 +78,16 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 
 ## Validation status
 
-Validated for `v0.0.4-dev.306`:
+Validated for `v0.0.4-dev.307`:
 
 - frontend unit tests (422 tests)
 - Playwright tests across Chromium, Firefox, and WebKit (39 per engine)
 - formatting, lint, type checking, architecture/style checks, production build,
   version consistency, and `git diff --check`
 
-Focused coverage verifies required-open disclosure, native details
-synchronization, unchanged ordinary exclusivity, nested-accordion isolation,
-cancelable reveal scrolling, compact summaries, field ordering, dirty-state
-deduplication, camera draft behavior, and secondary-tile navigation into the
-owning group draft.
+Focused coverage verifies the renamed control is owned by Reviews, uses the
+bounded Home Assistant slider, preserves the shared configuration key, and
+continues to publish one normalized semantic update.
 
 ## Handoff rules
 

@@ -97,11 +97,11 @@ const LIGHT_SELECTOR = {
 } as const;
 const ICON_SELECTOR = { icon: {} } as const;
 const BOOLEAN_SELECTOR = { boolean: {} } as const;
-const EVENT_HISTORY_DAYS_SELECTOR = {
+const REVIEW_HISTORY_DAYS_SELECTOR = {
   number: {
     max: MAX_EVENT_HISTORY_DAYS,
     min: MIN_EVENT_HISTORY_DAYS,
-    mode: "box",
+    mode: "slider",
     step: 1,
   },
 } as const;
@@ -456,13 +456,6 @@ export class CardEditor extends LitElement {
         this._t("editor.mobile_data_saving"),
         this._config?.mobile_data_saving === true,
       )}
-      <ha-selector
-        label=${this._t("editor.event_history_days")}
-        .hass=${this._hass}
-        .selector=${EVENT_HISTORY_DAYS_SELECTOR}
-        .value=${this._config?.event_history_days ?? DEFAULT_EVENT_HISTORY_DAYS}
-        @value-changed=${this._handleEventHistoryDaysChange}
-      ></ha-selector>
     `;
   }
 
@@ -603,11 +596,20 @@ export class CardEditor extends LitElement {
   }
 
   private _renderReviewSettings() {
-    return this._renderBooleanOption(
-      "view_timelapse_on_thumbnail_hover",
-      this._t("editor.view_timelapse_on_thumbnail_hover"),
-      this._config?.view_timelapse_on_thumbnail_hover !== false,
-    );
+    return html`
+      <ha-selector
+        label=${this._t("editor.event_history_days")}
+        .hass=${this._hass}
+        .selector=${REVIEW_HISTORY_DAYS_SELECTOR}
+        .value=${this._config?.event_history_days ?? DEFAULT_EVENT_HISTORY_DAYS}
+        @value-changed=${this._handleEventHistoryDaysChange}
+      ></ha-selector>
+      ${this._renderBooleanOption(
+        "view_timelapse_on_thumbnail_hover",
+        this._t("editor.view_timelapse_on_thumbnail_hover"),
+        this._config?.view_timelapse_on_thumbnail_hover !== false,
+      )}
+    `;
   }
 
   private _renderLayoutSettings() {

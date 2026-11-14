@@ -15,7 +15,7 @@
   "editor.display_object_badges": "Objekt-Badges anzeigen",
   "editor.display_event_type_badges": "Clip-/Alarm-/Erkennungs-Badges anzeigen",
   "editor.display_zone": "Zone anzeigen",
-  "editor.event_history_days": "Tage des Ereignisverlaufs",
+  "editor.event_history_days": "Anzuzeigende Review-Tage",
   "editor.rounded_outer_corners": "Abgerundete Außenkanten",
   "editor.outer_shadows": "Äußere Schatten",
   "editor.outer_padding": "Äußerer Abstand",

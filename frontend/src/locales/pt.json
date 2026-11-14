@@ -15,7 +15,7 @@
   "editor.display_object_badges": "Mostrar emblemas de objetos",
   "editor.display_event_type_badges": "Mostrar emblemas de clipes/alertas/deteções",
   "editor.display_zone": "Mostrar zona",
-  "editor.event_history_days": "Dias do histórico de eventos",
+  "editor.event_history_days": "Dias de análises a apresentar",
   "editor.rounded_outer_corners": "Cantos exteriores arredondados",
   "editor.outer_shadows": "Sombras exteriores",
   "editor.outer_padding": "Espaçamento exterior",

@@ -15,7 +15,7 @@
   "editor.display_object_badges": "Afficher les badges d'objets",
   "editor.display_event_type_badges": "Afficher les badges de clips/alertes/détections",
   "editor.display_zone": "Afficher la zone",
-  "editor.event_history_days": "Jours d'historique des événements",
+  "editor.event_history_days": "Jours de révisions à afficher",
   "editor.rounded_outer_corners": "Coins extérieurs arrondis",
   "editor.outer_shadows": "Ombres extérieures",
   "editor.outer_padding": "Marge extérieure",

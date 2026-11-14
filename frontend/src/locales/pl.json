@@ -15,7 +15,7 @@
   "editor.display_object_badges": "Wyświetlaj plakietki obiektów",
   "editor.display_event_type_badges": "Wyświetlaj plakietki klipów/alertów/wykryć",
   "editor.display_zone": "Wyświetlaj strefę",
-  "editor.event_history_days": "Dni historii zdarzeń",
+  "editor.event_history_days": "Dni przeglądów do wyświetlenia",
   "editor.rounded_outer_corners": "Zaokrąglone zewnętrzne narożniki",
   "editor.outer_shadows": "Cienie zewnętrzne",
   "editor.outer_padding": "Odstęp zewnętrzny",

@@ -836,7 +836,7 @@ describe("watchzone-card-editor", () => {
     });
   });
 
-  it("exposes and saves the event history day range", async () => {
+  it("exposes the shared activity history range under Reviews and saves it", async () => {
     const editor = document.createElement(
       "watchzone-card-editor",
     ) as CardEditor;
@@ -847,9 +847,21 @@ describe("watchzone-card-editor", () => {
     await editor.updateComplete;
 
     const selector = editor.shadowRoot?.querySelector<
-      HTMLElement & { value: number }
-    >('ha-selector[label="Event History Days"]');
+      HTMLElement & {
+        selector: { number: { mode: string } };
+        value: number;
+      }
+    >('ha-selector[label="Days of Reviews to Display"]');
     expect(selector?.value).toBe(5);
+    expect(selector?.selector.number.mode).toBe("slider");
+    expect(
+      selector?.closest(ACCORDION_ITEM_TAG)?.getAttribute("item-key"),
+    ).toBe("reviews");
+    expect(
+      editor.shadowRoot?.querySelector(
+        'wzc-accordion-item[item-key="general"] ha-selector[label="Days of Reviews to Display"]',
+      ),
+    ).toBeNull();
     selector?.dispatchEvent(
       new CustomEvent("value-changed", {
         detail: { value: 12 },

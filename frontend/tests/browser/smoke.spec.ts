@@ -6613,6 +6613,21 @@ test("editor uses exclusive accordions and shared draft status", async ({
   await items.nth(1).locator("summary").click();
   await expect(items.nth(0).locator("details")).not.toHaveAttribute("open", "");
   await expect(items.nth(1).locator("details")).toHaveAttribute("open", "");
+  await items.nth(3).locator("summary").click();
+  const reviewHistory = items
+    .nth(3)
+    .locator('ha-selector[label="Days of Reviews to Display"]');
+  await expect(reviewHistory).toHaveCount(1);
+  await expect(
+    items.nth(4).locator('ha-selector[label="Days of Reviews to Display"]'),
+  ).toHaveCount(0);
+  expect(
+    await reviewHistory.evaluate(
+      (element: HTMLElement & { selector?: { number?: { mode?: string } } }) =>
+        element.selector?.number?.mode,
+    ),
+  ).toBe("slider");
+  await items.nth(1).locator("summary").click();
   const selectionBars = items.nth(1).locator("wzc-segmented-control");
   await expect(selectionBars).toHaveCount(4);
   const ptzBar = items.nth(1).locator('[data-setting="ptz-overlay-control"]');
