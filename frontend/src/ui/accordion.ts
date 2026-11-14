@@ -136,6 +136,7 @@ export class Accordion extends LitElement {
 
   public connectedCallback(): void {
     super.connectedCallback();
+    this.addEventListener("click", this._handleClick);
     this.addEventListener(
       ACCORDION_TOGGLE_EVENT,
       this._handleItemToggle as EventListener,
@@ -143,6 +144,7 @@ export class Accordion extends LitElement {
   }
 
   public disconnectedCallback(): void {
+    this.removeEventListener("click", this._handleClick);
     this.removeEventListener(
       ACCORDION_TOGGLE_EVENT,
       this._handleItemToggle as EventListener,
@@ -191,6 +193,24 @@ export class Accordion extends LitElement {
     const items = this._items;
     if (!items.some((item) => item.open) && items[0]) items[0].setOpen(true);
   }
+
+  private readonly _handleClick = (event: MouseEvent): void => {
+    if (!this.requireOpen) return;
+    const path = event.composedPath();
+    const item = path.find(
+      (target): target is AccordionItem => target instanceof AccordionItem,
+    );
+    const items = this._items;
+    if (!item || !items.includes(item) || !item.open) return;
+    const summary = item.renderRoot.querySelector("summary");
+    if (
+      summary &&
+      path.includes(summary) &&
+      items.filter(({ open }) => open).length === 1
+    ) {
+      event.preventDefault();
+    }
+  };
 
   private readonly _handleItemToggle = (
     event: CustomEvent<AccordionToggleDetail>,

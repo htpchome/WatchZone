@@ -95,6 +95,45 @@ describe("shared accordion", () => {
     expect(second.open).toBe(true);
   });
 
+  it("prevents the sole open item from entering a native close cycle", async () => {
+    const accordion = document.createElement(ACCORDION_TAG) as Accordion;
+    accordion.initialOpen = "first";
+    accordion.requireOpen = true;
+    const first = createItem("first");
+    const second = createItem("second");
+    accordion.append(first, second);
+    document.body.append(accordion);
+    await Promise.all([
+      accordion.updateComplete,
+      first.updateComplete,
+      second.updateComplete,
+    ]);
+
+    const summary = first.shadowRoot?.querySelector("summary");
+    if (!summary) throw new Error("Accordion summary was not rendered");
+    const click = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+    });
+
+    expect(summary.dispatchEvent(click)).toBe(false);
+    expect(click.defaultPrevented).toBe(true);
+    expect(first.open).toBe(true);
+
+    const nestedDetails = document.createElement("details");
+    const nestedSummary = document.createElement("summary");
+    nestedDetails.append(nestedSummary);
+    first.append(nestedDetails);
+    const nestedClick = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+    });
+    expect(nestedSummary.dispatchEvent(nestedClick)).toBe(true);
+    expect(nestedClick.defaultPrevented).toBe(false);
+  });
+
   it("ignores disclosure events from nested accordions", async () => {
     const outer = document.createElement(ACCORDION_TAG) as Accordion;
     const outerItem = createItem("outer");

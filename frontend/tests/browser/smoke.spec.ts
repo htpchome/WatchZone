@@ -7021,7 +7021,23 @@ test("camera editor configures lights and confirms accessible removal", async ({
   await expect(items.locator("details[open]")).toHaveCount(1);
   await expect(items.nth(0).locator("details")).toHaveAttribute("open", "");
   await expect(items.nth(3).locator("details")).not.toHaveAttribute("open", "");
-  await items.nth(0).locator("summary").click();
+  const rejectedCloseMutations = await items
+    .nth(0)
+    .locator("details")
+    .evaluate(async (details) => {
+      let mutations = 0;
+      const observer = new MutationObserver((records) => {
+        mutations += records.length;
+      });
+      observer.observe(details, { attributeFilter: ["open"] });
+      details.querySelector("summary")?.click();
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      );
+      observer.disconnect();
+      return mutations;
+    });
+  expect(rejectedCloseMutations).toBe(0);
   await expect(items.nth(0).locator("details")).toHaveAttribute("open", "");
   await items.nth(3).locator("summary").click();
   await editor.locator(".add-light").click();

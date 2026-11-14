@@ -15,20 +15,18 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.308`
-- Current commit: `4b1cd07` —
-  `v0.0.4-dev.307 - fix(editor): relocate review history control`
-- The worktree contains the uncommitted Reviews slider-marker change described
+- Working version: `0.0.4-dev.309`
+- Current commit: `2edb656` —
+  `v0.0.4-dev.308 - fix(editor): mark review history slider steps`
+- The worktree contains the uncommitted required-open accordion fix described
   below. Always verify `git status`, the canonical version in
   `custom_components/watchzone/const.py`, and the latest commit.
 
-## Active change: Reviews history setting
+## Active change: required-open accordion stability
 
-- The shared Reviews and Events history window now appears in the Reviews
-  editor section as Days of Reviews to Display. It uses Home Assistant's native
-  bounded slider, one marker per selectable day, and an exact-value input
-  without adding a frontend dependency; the persisted `event_history_days` key
-  still controls both modules.
+- The camera editor's required-open accordion cancels activation of its sole
+  open summary before native `details` can close. This removes the visible
+  close/reopen fight while retaining the programmatic state-repair fallback.
 
 ## Live camera and group invariants
 
@@ -79,16 +77,16 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 
 ## Validation status
 
-Validated for `v0.0.4-dev.308`:
+Validated for `v0.0.4-dev.309`:
 
-- frontend unit tests (422 tests)
+- frontend unit tests (423 tests)
 - Playwright tests across Chromium, Firefox, and WebKit (39 per engine)
 - formatting, lint, type checking, architecture/style checks, production build,
   version consistency, and `git diff --check`
 
-Focused coverage verifies the renamed control is owned by Reviews, uses the
-bounded Home Assistant slider with step markers, preserves the shared
-configuration key, and continues to publish one normalized semantic update.
+Focused coverage verifies pointer activation cannot mutate the sole open native
+`details`, ordinary zero-or-one accordions remain unchanged, and programmatic
+required-open state repair still works.
 
 ## Handoff rules
 

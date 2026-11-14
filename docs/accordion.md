@@ -12,7 +12,9 @@ application module and owns no configuration or feature state.
 - All items start closed unless the parent receives one `initial-open` key.
 - Opening an item closes every other item in the same accordion.
 - An accordion marked `require-open` restores its active item if a user tries
-  to close it, so exactly one item remains expanded. Other accordions retain
+  to close it programmatically, so exactly one item remains expanded. User
+  activation of the sole open summary is canceled before native `details`
+  state changes, avoiding a visible close/reopen cycle. Other accordions retain
   the normal zero-or-one-open behavior.
 - Feature and editor code own headings, icons, and slotted content. The
   accordion owns only disclosure state, presentation, and reveal scrolling.
