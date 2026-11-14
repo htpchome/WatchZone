@@ -155,7 +155,9 @@ absolute-offset system may coexist with this grid.
   are never positioned from a percentage of the Stage width. Camera selection
   is the immutable top-center anchor: its center always equals the Stage
   centerline and no sibling control may participate in or alter that
-  calculation. Slideshow sits immediately before that anchored picker. Its
+  calculation. On phone containers the picker keeps a useful text width rather
+  than collapsing to control-icon dimensions. Slideshow sits immediately
+  before that anchored picker. Its
   idle state is square and its countdown/hold state uses one stable wider
   width; a two-digit to one-digit countdown never changes its geometry. Source
   state owns the top of the right rail. Every top-row control uses
@@ -176,18 +178,23 @@ absolute-offset system may coexist with this grid.
   player tool does not move either carousel arrow horizontally. PTZ belongs
   wholly to the trailing edge of `lower`; its collapsed trigger, immutable
   expansion center, and expanded panel never enter the right rail or metadata
-  strip. It remains vertically separate from the player-tool dock.
+  strip. It remains vertically separate from the player-tool dock. The
+  collapsed trigger follows the shared responsive button size, but the expanded
+  directional panel retains its full precision-control geometry at phone,
+  tablet, and desktop sizes.
 - Each feed in an additional-camera group retains its own source badge because
   A and B may resolve different transports. A grouped feed badge follows the
   trailing edge of that feed's fitted media instead of the Stage edge, so a
   stacked feed cannot place its badge in the player-tool rail.
 - Light and talk occupy the lower center band. PTZ occupies the lower trailing
-  band. The resize handle owns the bottom center edge. Camera name and timestamp
-  remain unobstructed in the bottom metadata strip.
+  band. These precision and communication controls retain their full target
+  size at phone, tablet, and desktop widths. The resize handle owns the bottom
+  center edge. Camera name and timestamp remain unobstructed in the bottom
+  metadata strip.
 - Module-private overlays and Stage components follow the same zone geometry;
   they do not create competing offsets or duplicate touch visibility owners.
-- Live picture-in-picture is omitted from phone layouts. Tablet and desktop
-  layouts retain it when the active browser video supports the capability.
+- Live picture-in-picture remains available at every responsive size when the
+  active browser video supports the capability.
 
 ## Verification
 

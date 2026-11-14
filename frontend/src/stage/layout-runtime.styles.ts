@@ -167,8 +167,6 @@ export const stageRuntimeStyles = css`
     min-inline-size: 0;
     min-block-size: 0;
     pointer-events: none;
-    outline: var(--wzc-overlay-debug-border);
-    outline-offset: -1px;
   }
 
   .camera-overlay-area > .component-node {
@@ -220,6 +218,8 @@ export const stageRuntimeStyles = css`
 
   .camera-overlay-area-lower {
     grid-area: lower;
+    --wzc-camera-control-size: var(--wzc-camera-lower-control-size);
+    --wzc-camera-control-icon-size: var(--wzc-camera-lower-control-icon-size);
     display: grid;
     grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1fr);
     align-items: end;

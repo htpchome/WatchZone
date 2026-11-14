@@ -25,7 +25,9 @@
   a persistent handle, bottom-up primary-color fill, an interaction-only
   percentage tooltip, and an explicit on/off control. Pointer or touch input
   outside the panel closes it; there is no redundant close button. While open
-  it holds the camera overlay visible.
+  it holds the camera overlay visible. On a phone-sized card the panel narrows
+  to fit the stage without shrinking the light button, slider thickness, or
+  power button below their usable control sizes.
 - The circular light button fills from bottom to top using the reported or
   pending brightness percentage. An off light has no fill.
 - Hovering a light control acquires the same shared overlay hold used by the

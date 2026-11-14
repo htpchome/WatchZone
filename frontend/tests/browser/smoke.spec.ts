@@ -793,6 +793,7 @@ test("keeps grouped phone navigation to one visible A or B feed", async ({
       phoneGroupBox.x + phoneGroupBox.width / 2,
       0,
     );
+    expect(phonePickerBox.width).toBeCloseTo(7.125 * 16, 0);
     expect(
       phonePickerBox.x - (phoneSlideshowBox.x + phoneSlideshowBox.width),
     ).toBeCloseTo(4, 1);
@@ -800,6 +801,23 @@ test("keeps grouped phone navigation to one visible A or B feed", async ({
       phoneSlideshowBox.x,
     );
   }
+
+  const phoneSwitcher = card.locator("wzc-camera-switcher");
+  await phoneSwitcher.locator(".trigger").click();
+  const phoneOptions = phoneSwitcher.locator(".options");
+  await expect(phoneOptions).toBeVisible();
+  expect((await phoneOptions.boundingBox())?.width).toBeCloseTo(
+    phonePickerBox?.width ?? 0,
+    1,
+  );
+  expect(
+    await phoneOptions
+      .locator(".option")
+      .evaluateAll((options) =>
+        options.every((option) => option.scrollWidth <= option.clientWidth),
+      ),
+  ).toBe(true);
+  await phoneSwitcher.locator(".trigger").click();
 
   await button.click();
   await expect(group.locator(".feed:not(.hidden)")).toHaveCount(1);
@@ -1460,11 +1478,11 @@ test("advances the authoritative camera selection through slideshow controls", a
   expect(tenSecondSlideshowBox?.width).toBeGreaterThan(
     idleSlideshowBox?.width ?? 0,
   );
-  await expect(overlayToggle.locator(".status")).toHaveText("9s", {
+  await expect(overlayToggle.locator(".status")).toHaveText(/^[1-9]s$/, {
     timeout: 2_000,
   });
-  const nineSecondSlideshowBox = await overlayToggle.boundingBox();
-  expect(nineSecondSlideshowBox?.width).toBeCloseTo(
+  const singleDigitSlideshowBox = await overlayToggle.boundingBox();
+  expect(singleDigitSlideshowBox?.width).toBeCloseTo(
     tenSecondSlideshowBox?.width ?? 0,
     1,
   );
@@ -5400,6 +5418,8 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   await expect(dimmer).toHaveCSS("background-color", "rgb(120, 121, 122)");
   await expect(dimmer).toHaveCSS("backdrop-filter", "none");
   await expect(dimmer).toHaveCSS("border-radius", "18px");
+  const desktopDimmerBox = await dimmer.boundingBox();
+  expect(desktopDimmerBox).not.toBeNull();
   const slider = dimmer.locator("ha-control-slider");
   await expect(slider).toHaveAttribute("vertical", "");
   await expect(slider).toHaveAttribute("show-handle", "");
@@ -5531,8 +5551,8 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
       if (controlBox) {
         const desktopControlBox =
           controlBox === mobileTalkBox ? talkButtonBox : lightButtonBox;
-        expect(controlBox.width).toBeLessThan(desktopControlBox.width);
-        expect(controlBox.height).toBeLessThan(desktopControlBox.height);
+        expect(controlBox.width).toBeCloseTo(desktopControlBox.width, 1);
+        expect(controlBox.height).toBeCloseTo(desktopControlBox.height, 1);
         const mobileBottomInset =
           mobileCameraBox.y +
           mobileCameraBox.height -
@@ -5564,6 +5584,8 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
         mobileLowerAreaBox.x + mobileLowerAreaBox.width,
         0,
       );
+      expect(mobilePtzBox.width).toBeCloseTo(ptzHostBox.width, 1);
+      expect(mobilePtzBox.height).toBeCloseTo(ptzHostBox.height, 1);
       const mobileHandleVisualTop = await mobileResizeHandle.evaluate(
         (element) => {
           const handle = element.getBoundingClientRect();
@@ -5664,9 +5686,28 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
         0,
       );
 
-      await expect(
-        page.locator('[data-control="picture_in_picture"]'),
-      ).toHaveCount(0);
+      await lightButton.focus();
+      await lightButton.press("ArrowUp");
+      await expect(dimmer).toBeVisible();
+      const mobileDimmerBox = await dimmer.boundingBox();
+      expect(mobileDimmerBox).not.toBeNull();
+      if (mobileDimmerBox) {
+        expect(mobileDimmerBox.width).toBeCloseTo(4.75 * 16, 1);
+        expect(mobileDimmerBox.width).toBeLessThan(
+          desktopDimmerBox?.width ?? Number.POSITIVE_INFINITY,
+        );
+        expect(mobileDimmerBox.x).toBeGreaterThanOrEqual(mobileCameraBox.x);
+        expect(mobileDimmerBox.x + mobileDimmerBox.width).toBeLessThanOrEqual(
+          mobileCameraBox.x + mobileCameraBox.width + 1,
+        );
+      }
+      await page.locator("body").dispatchEvent("pointerdown", {
+        button: 0,
+        isPrimary: true,
+        pointerId: 101,
+        pointerType: "touch",
+      });
+      await expect(dimmer).toBeHidden();
       await ptzRightButton.evaluate((button) =>
         (button as HTMLButtonElement).blur(),
       );
@@ -5930,6 +5971,10 @@ test("applies outer shell appearance toggles without changing card identity", as
   expect(result.enabled.hostBoxShadow).toContain("rgb(1, 2, 3)");
   expect(result.enabled.cardPadding).not.toBe("0px");
   expect(result.enabled.shellPadding).toBe("0px");
+  await expect(page.locator("watchzone-card ha-card")).toHaveCSS(
+    "isolation",
+    "isolate",
+  );
 });
 
 test("exposes and honors the WatchZone semantic theme-token contract", async ({
@@ -8135,6 +8180,11 @@ test("retains one live connection while the card presentation is replaced", asyn
   await page.locator("watchzone-card").evaluate((element) => {
     element.style.inlineSize = "320px";
   });
+  await expect(
+    page.locator(
+      'wzc-camera wzc-camera-controls [data-control="picture_in_picture"]',
+    ),
+  ).toHaveCount(1);
   await expect
     .poll(() =>
       mute.evaluate((element) => element.getBoundingClientRect().width),

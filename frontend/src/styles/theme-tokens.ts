@@ -269,14 +269,14 @@ export const themeTokens = css`
       var(--ha-color-neutral-50, #737373) 84%,
       transparent
     );
-    /* Temporary overlay-layout diagnostic. */
-    --wzc-overlay-debug-border: 1px solid #ff0000;
     --wzc-media-overlay-border-color: var(--ha-color-neutral-30, #4a4a4a);
     --wzc-media-overlay-radius: var(--wzc-radius-small);
     --wzc-media-overlay-shadow: var(--wzc-shadow-card);
     --wzc-media-overlay-transition-duration: 140ms;
     --wzc-camera-control-size: 2.75rem;
     --wzc-camera-control-icon-size: 1.65rem;
+    --wzc-camera-lower-control-size: 2.75rem;
+    --wzc-camera-lower-control-icon-size: 1.65rem;
     --wzc-overlay-control-min-size: var(--wzc-camera-control-size);
     --wzc-round-button-size: var(--wzc-camera-control-size);
     --wzc-round-button-icon-size: 60%;

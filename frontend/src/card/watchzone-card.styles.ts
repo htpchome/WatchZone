@@ -11,6 +11,7 @@ export const cardStyles = css`
   }
 
   ha-card {
+    isolation: isolate;
     box-sizing: border-box;
     inline-size: 100%;
     block-size: 100%;
@@ -74,22 +75,12 @@ export const cardStyles = css`
       );
       --wzc-camera-overlay-metadata-row-size: 1.25rem;
       --wzc-control-dock-gap: 0.25rem;
-      --wzc-camera-switcher-inline-size: 4.75rem;
+      --wzc-camera-switcher-inline-size: 7.125rem;
+      --wzc-light-panel-inline-size: 4.75rem;
       --wzc-slideshow-control-inline-size: calc(
         var(--wzc-camera-control-size) + 2.2rem
       );
       --wzc-carousel-navigation-icon-size: var(--wzc-camera-control-size);
-      --wzc-ptz-cell-size: 0.85rem;
-      --wzc-ptz-panel-padding: 0.12rem;
-      --wzc-ptz-button-size: calc(
-        var(--wzc-ptz-cell-size) + var(--wzc-ptz-panel-padding) +
-          var(--wzc-ptz-panel-padding) + 2px
-      );
-      --wzc-ptz-panel-size: calc(
-        var(--wzc-ptz-cell-size) + var(--wzc-ptz-cell-size) +
-          var(--wzc-ptz-cell-size) + var(--wzc-ptz-panel-padding) +
-          var(--wzc-ptz-panel-padding) + 2px
-      );
       --wzc-camera-overlay-lower-row-size: max(
         var(--wzc-ptz-panel-size),
         var(--wzc-camera-control-size)
