@@ -15,24 +15,35 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.305`
-- Current commit: `a22cd53` —
-  `v0.0.4-dev.304 - refactor(camera): isolate live control lifecycle`
-- The worktree contains the uncommitted camera-editor accordion and group
-  navigation change described below. Always verify `git status`, the canonical version in
-  `custom_components/watchzone/const.py`, and the latest commit.
+- Working version: `0.0.4-dev.306`
+- Current commit: `c03c280` —
+  `v0.0.4-dev.305 - fix(editor): clarify grouped camera editing`
+- The worktree contains the uncommitted camera-editor disclosure, summary, and
+  dirty-state optimization described below. Always verify `git status`, the
+  canonical version in `custom_components/watchzone/const.py`, and the latest
+  commit.
 
-## Active change: camera-editor disclosure and group navigation
+## Active change: camera-editor disclosure and summaries
 
-- The nested camera editor keeps Camera expanded and non-collapsible. One of
-  Connection Source, Additional Camera, Lights, or Options and Controls may be
-  open beside it; the main card-editor accordion remains unchanged.
-- The shared accordion supports explicit `always-open` items without adding an
-  observer, polling loop, or persistent timer. It ignores nested disclosure
-  events and coalesces reveal scrolling to one cancelable animation frame.
-- Editing the compact secondary-camera tile resolves its owning primary camera
-  and opens that atomic group draft with Additional Camera expanded. It no
-  longer presents the secondary record as a standalone top-level camera.
+- The nested camera editor initially opens Camera and requires exactly one of
+  Camera, Connection Source, Additional Camera, Lights, or Options and Controls
+  to remain open. Opening one closes the prior section; clicking the sole open
+  section leaves it open.
+- The shared accordion exposes opt-in `require-open` behavior without an
+  observer, polling loop, or persistent timer. It synchronizes rejected native
+  `details` closes, ignores nested disclosure events, and coalesces reveal
+  scrolling to one cancelable animation frame.
+- Camera, Additional Camera, and Options and Controls headers expose compact
+  identifying summaries. Additional Camera includes the secondary camera,
+  layout, and source without duplicating field labels.
+- Both connection sections have an internal Connection Source heading. The
+  secondary Live View Layout appears before its connection settings.
+- Editing the compact secondary-camera tile still resolves its owning primary
+  camera and opens that atomic group draft, with Additional Camera as the sole
+  initial section.
+- Dirty-state comparison reuses one cached serialized configuration and avoids
+  redundant status-toast replacement and dirty-state writes. Nested camera
+  draft edits still remain local until Update.
 - The native `details` implementation still keeps closed content mounted.
   Lazy-unmounting controls is intentionally deferred because it would change
   editor control, focus, and draft lifecycles rather than being a safe
@@ -87,16 +98,18 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 
 ## Validation status
 
-Validated for `v0.0.4-dev.305`:
+Validated for `v0.0.4-dev.306`:
 
 - frontend unit tests (422 tests)
 - Playwright tests across Chromium, Firefox, and WebKit (39 per engine)
 - formatting, lint, type checking, architecture/style checks, production build,
   version consistency, and `git diff --check`
 
-Focused coverage verifies pinned-open disclosure, unchanged ordinary
-exclusivity, nested-accordion isolation, cancelable reveal scrolling, camera
-draft behavior, and secondary-tile navigation into the owning group draft.
+Focused coverage verifies required-open disclosure, native details
+synchronization, unchanged ordinary exclusivity, nested-accordion isolation,
+cancelable reveal scrolling, compact summaries, field ordering, dirty-state
+deduplication, camera draft behavior, and secondary-tile navigation into the
+owning group draft.
 
 ## Handoff rules
 

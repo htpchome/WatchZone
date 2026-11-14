@@ -155,6 +155,7 @@ export class CardEditor extends LitElement {
   private _baseline?: CardConfig;
   private _baselineSignature = "";
   private _config?: CardConfig;
+  private _configSignature = "";
   private _cameraBaseline?: CameraConfig;
   private _cameraDraft?: CameraConfig;
   private _secondaryCameraBaseline?: CameraConfig;
@@ -167,17 +168,19 @@ export class CardEditor extends LitElement {
   private _pendingLightIcon = DEFAULT_LIGHT_ICON;
   private _pendingRemoveCameraIndex?: number;
   private _editingCameraIndex?: number;
-  private _cameraDialogInitialOpen?: string;
+  private _cameraDialogInitialOpen = "camera";
   private _dirtyContext?: DirtyStateContext<YamlCardConfig>;
   private _dirtySeeded = false;
   private _hass?: HomeAssistant;
   private _previewTimer?: ReturnType<typeof setTimeout>;
+  private _draftStatusChanged?: boolean;
   private readonly _toasts = new ToastManager(this);
   private _capabilities?: CameraCapabilityController;
   private _capabilitiesLoad?: Promise<CameraCapabilityController>;
-  private readonly _localization = new LocalizationController(this, () =>
-    this._syncDraftStatus(),
-  );
+  private readonly _localization = new LocalizationController(this, () => {
+    this._draftStatusChanged = undefined;
+    this._syncDraftStatus();
+  });
   private readonly _themeProfile = new ThemeProfileController(this);
 
   public set hass(value: unknown) {
@@ -207,17 +210,17 @@ export class CardEditor extends LitElement {
       this._baseline = config;
       this._baselineSignature = signature;
       this._config = config;
+      this._configSignature = signature;
       this._syncDraftStatus();
       this._seedDirtyState();
       this.requestUpdate();
       return;
     }
 
-    if (signature === cardConfigSignature(this._config ?? this._baseline)) {
-      return;
-    }
+    if (signature === this._configSignature) return;
 
     this._config = config;
+    this._configSignature = signature;
     this._syncDraftStatus();
     this.requestUpdate();
   }
@@ -244,6 +247,7 @@ export class CardEditor extends LitElement {
     );
     this._dirtyContext = undefined;
     this._dirtySeeded = false;
+    this._draftStatusChanged = undefined;
     if (this._previewTimer) {
       clearTimeout(this._previewTimer);
       this._previewTimer = undefined;
@@ -709,12 +713,15 @@ export class CardEditor extends LitElement {
               ? staticHtml`<${accordionTag}
                   class="camera-dialog-accordion"
                   .initialOpen=${this._cameraDialogInitialOpen}
+                  require-open
                 >
                   <${accordionItemTag}
-                    always-open
                     density="compact"
                     heading=${this._t("editor.camera")}
                     item-key="camera"
+                    summary-text=${
+                      camera.title || this._cameraName(camera.entity_id)
+                    }
                   >
                     <div class="camera-section-fields">
                       <ha-selector
@@ -772,6 +779,7 @@ export class CardEditor extends LitElement {
                     summary-text=${this._connectionName(camera.connection)}
                   >
                     <div class="camera-section-fields">
+                      <h3>${this._t("editor.connection_source")}</h3>
                       <ha-selector
                         label=${this._t("editor.connection")}
                         .hass=${this._hass}
@@ -814,11 +822,7 @@ export class CardEditor extends LitElement {
                     density="compact"
                     heading=${this._t("editor.additional_camera")}
                     item-key="additional-camera"
-                    summary-text=${
-                      camera.additional_camera
-                        ? this._cameraName(camera.additional_camera.entity_id)
-                        : this._t("editor.not_configured")
-                    }
+                    summary-text=${this._additionalCameraSummary(camera)}
                   >
                     ${this._renderAdditionalCameraSettings(camera)}
                   </${accordionItemTag}>
@@ -857,6 +861,7 @@ export class CardEditor extends LitElement {
                     density="compact"
                     heading=${this._t("editor.options_controls")}
                     item-key="options"
+                    summary-text=${this._cameraOptionsSummary(camera)}
                   >
                     <div class="camera-section-fields">
                       ${this._renderCameraBoolean(
@@ -1154,6 +1159,31 @@ export class CardEditor extends LitElement {
                   ${this._secondaryCameraTitleInput.length}/${MAX_CAMERA_TITLE_LENGTH}
                 </span>
               </ha-input>
+              <label class="field-label"
+                >${this._t("editor.live_view_layout")}</label
+              >
+              <wzc-segmented-control
+                appearance="compact"
+                mode="radio"
+                .label=${this._t("editor.live_view_layout")}
+                .options=${
+                  [
+                    {
+                      label: this._t("editor.side_by_side"),
+                      value: "side_by_side",
+                    },
+                    { label: this._t("editor.stacked"), value: "stacked" },
+                  ] satisfies readonly SegmentedControlOption[]
+                }
+                .value=${camera.additional_camera.layout}
+                @wzc-segmented-control-value=${
+                  this._handleAdditionalCameraLayoutChange
+                }
+              ></wzc-segmented-control>
+              <small class="capability-status">
+                ${this._t("editor.main_camera_controls_group")}
+              </small>
+              <h3>${this._t("editor.connection_source")}</h3>
               <ha-selector
                 class="secondary-connection-source"
                 label=${this._t("editor.connection_source")}
@@ -1186,26 +1216,6 @@ export class CardEditor extends LitElement {
             </div>`
           : nothing
       }
-      <label class="field-label">${this._t("editor.live_view_layout")}</label>
-      <wzc-segmented-control
-        appearance="compact"
-        mode="radio"
-        .label=${this._t("editor.live_view_layout")}
-        .options=${
-          [
-            {
-              label: this._t("editor.side_by_side"),
-              value: "side_by_side",
-            },
-            { label: this._t("editor.stacked"), value: "stacked" },
-          ] satisfies readonly SegmentedControlOption[]
-        }
-        .value=${camera.additional_camera.layout}
-        @wzc-segmented-control-value=${this._handleAdditionalCameraLayoutChange}
-      ></wzc-segmented-control>
-      <small class="capability-status">
-        ${this._t("editor.main_camera_controls_group")}
-      </small>
       <ha-button
         class="remove-additional-camera"
         appearance="filled"
@@ -1321,10 +1331,7 @@ export class CardEditor extends LitElement {
     if (this._dirtyContext && this._baseline && !this._dirtySeeded) {
       this._dirtySeeded = true;
       seedDirtyState(this._dirtyContext, toYamlCardConfig(this._baseline));
-      if (
-        this._config &&
-        cardConfigSignature(this._config) !== this._baselineSignature
-      ) {
+      if (this._config && this._configSignature !== this._baselineSignature) {
         updateDirtyState(this._dirtyContext, toYamlCardConfig(this._config));
       }
     }
@@ -1652,7 +1659,7 @@ export class CardEditor extends LitElement {
   private readonly _addCamera = (): void => {
     if ((this._config?.cameras.length ?? 0) >= MAX_CAMERAS) return;
     this._editingCameraIndex = undefined;
-    this._cameraDialogInitialOpen = undefined;
+    this._cameraDialogInitialOpen = "camera";
     this._cameraBaseline = undefined;
     this._cameraDraft = createDefaultCameraConfig();
     this._secondaryCameraBaseline = undefined;
@@ -1680,7 +1687,7 @@ export class CardEditor extends LitElement {
     this._openCameraEditor(index, "additional-camera");
   };
 
-  private _openCameraEditor(index: number, initialOpen?: string): void {
+  private _openCameraEditor(index: number, initialOpen = "camera"): void {
     const camera = this._config?.cameras[index];
     if (!camera) return;
     this._editingCameraIndex = index;
@@ -1763,7 +1770,7 @@ export class CardEditor extends LitElement {
     this._cancelAddingLight();
     this._capabilities?.reset();
     this._editingCameraIndex = undefined;
-    this._cameraDialogInitialOpen = undefined;
+    this._cameraDialogInitialOpen = "camera";
     this.requestUpdate();
   };
 
@@ -1829,7 +1836,7 @@ export class CardEditor extends LitElement {
     this._cameraTitleInput = "";
     this._cancelAddingLight();
     this._editingCameraIndex = undefined;
-    this._cameraDialogInitialOpen = undefined;
+    this._cameraDialogInitialOpen = "camera";
     this._applyCameraList(cameras);
   };
 
@@ -2013,6 +2020,48 @@ export class CardEditor extends LitElement {
       : this._t("editor.home_assistant");
   }
 
+  private _additionalCameraSummary(camera: CameraConfig): string {
+    const group = camera.additional_camera;
+    if (!group) return this._t("editor.not_configured");
+    const secondary =
+      this._secondaryCameraDraft?.entity_id === group.entity_id
+        ? this._secondaryCameraDraft
+        : this._config?.cameras.find(
+            ({ entity_id: entityId }) => entityId === group.entity_id,
+          );
+    return [
+      secondary?.title || this._cameraName(group.entity_id),
+      this._t(
+        group.layout === "stacked" ? "editor.stacked" : "editor.side_by_side",
+      ),
+      this._connectionName(secondary?.connection ?? camera.connection),
+    ].join(" · ");
+  }
+
+  private _cameraAudioSummary(camera: CameraConfig): string {
+    const devices = [
+      camera.start_live_unmuted_pc_tablet
+        ? this._t("editor.pc_tablet")
+        : undefined,
+      camera.start_live_unmuted_phone
+        ? this._t("editor.mobile_phone")
+        : undefined,
+    ].filter((device): device is string => Boolean(device));
+    return devices.length
+      ? this._t("editor.unmuted", { devices: devices.join(", ") })
+      : this._t("editor.muted");
+  }
+
+  private _cameraOptionsSummary(camera: CameraConfig): string {
+    return [
+      this._cameraAudioSummary(camera),
+      camera.two_way_talk_enabled ? this._t("editor.two_way_talk") : undefined,
+      camera.ptz_enabled ? this._t("editor.ptz") : undefined,
+    ]
+      .filter((option): option is string => Boolean(option))
+      .join(" · ");
+  }
+
   private _cameraSummary(camera: CameraConfig): string {
     const group = camera.additional_camera;
     const groupSummary = group
@@ -2036,23 +2085,13 @@ export class CardEditor extends LitElement {
         : camera.low_latency_hls
           ? this._t("editor.low_latency_hls")
           : this._t("editor.standard_hls");
-    const audio = [
-      camera.start_live_unmuted_pc_tablet
-        ? this._t("editor.pc_tablet")
-        : undefined,
-      camera.start_live_unmuted_phone
-        ? this._t("editor.mobile_phone")
-        : undefined,
-    ].filter(Boolean);
     const talk = camera.two_way_talk_enabled
       ? ` · ${this._t("editor.two_way_talk")}`
       : "";
     const ptz = camera.ptz_enabled ? ` · ${this._t("editor.ptz")}` : "";
-    return `${groupSummary}${connection} · ${
-      audio.length
-        ? this._t("editor.unmuted", { devices: audio.join(", ") })
-        : this._t("editor.muted")
-    }${talk}${ptz}`;
+    return `${groupSummary}${connection} · ${this._cameraAudioSummary(
+      camera,
+    )}${talk}${ptz}`;
   }
 
   private readonly _handleBooleanChange = (event: ValueChangedEvent): void => {
@@ -2139,11 +2178,11 @@ export class CardEditor extends LitElement {
   };
 
   private _applyDraft(nextConfig: CardConfig, commitConfig: boolean): void {
-    const changed =
-      !this._config ||
-      cardConfigSignature(nextConfig) !== cardConfigSignature(this._config);
+    const nextSignature = cardConfigSignature(nextConfig);
+    const changed = !this._config || nextSignature !== this._configSignature;
     if (changed) {
       this._config = nextConfig;
+      this._configSignature = nextSignature;
       this._syncDraftStatus();
       this.requestUpdate();
 
@@ -2155,7 +2194,7 @@ export class CardEditor extends LitElement {
     if (
       commitConfig &&
       !this._dirtyContext &&
-      cardConfigSignature(nextConfig) !== this._baselineSignature
+      nextSignature !== this._baselineSignature
     ) {
       this._dispatchConfigChange(nextConfig);
     }
@@ -2166,11 +2205,11 @@ export class CardEditor extends LitElement {
     if (changed) {
       if (commitConfig) {
         this._previewTimer = undefined;
-        this._publishDraftPreview(nextConfig);
+        this._publishDraftPreview(nextConfig, nextSignature);
       } else {
         this._previewTimer = setTimeout(() => {
           this._previewTimer = undefined;
-          this._publishDraftPreview(nextConfig);
+          this._publishDraftPreview(nextConfig, nextSignature);
         }, EDITOR_TEXT_PREVIEW_DELAY_MS);
       }
     }
@@ -2178,8 +2217,9 @@ export class CardEditor extends LitElement {
 
   private _syncDraftStatus(): void {
     if (!this._baseline || !this._config) return;
-    const changed =
-      cardConfigSignature(this._config) !== this._baselineSignature;
+    const changed = this._configSignature !== this._baselineSignature;
+    if (changed === this._draftStatusChanged) return;
+    this._draftStatusChanged = changed;
     if (changed) {
       this._toasts.warning(this._t("editor.unsaved_changes"), {
         icon: "packageOutline",
@@ -2201,10 +2241,8 @@ export class CardEditor extends LitElement {
     return this._localization.localize(...parameters);
   }
 
-  private _publishDraftPreview(config: CardConfig): void {
-    this._publishPreview(
-      cardConfigSignature(config) === this._baselineSignature ? null : config,
-    );
+  private _publishDraftPreview(config: CardConfig, signature: string): void {
+    this._publishPreview(signature === this._baselineSignature ? null : config);
   }
 
   private _publishPreview(config: CardConfig | null): void {

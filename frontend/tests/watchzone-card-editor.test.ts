@@ -534,6 +534,11 @@ describe("watchzone-card-editor", () => {
     ).toBe("Draft title");
     expect(card.shadowRoot?.querySelector("ha-card")).toBe(originalCard);
 
+    const writesAfterChange = states.length;
+    inputTitle(editor, "Draft title");
+    await vi.advanceTimersByTimeAsync(EDITOR_TEXT_PREVIEW_DELAY_MS);
+    expect(states).toHaveLength(writesAfterChange);
+
     editor.remove();
     await card.updateComplete;
     expect(

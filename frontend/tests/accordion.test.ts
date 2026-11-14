@@ -18,6 +18,13 @@ function openItem(item: AccordionItem): void {
   details.dispatchEvent(new Event("toggle"));
 }
 
+function closeItem(item: AccordionItem): void {
+  const details = item.shadowRoot?.querySelector("details");
+  if (!details) throw new Error("Accordion item was not rendered");
+  details.open = false;
+  details.dispatchEvent(new Event("toggle"));
+}
+
 describe("shared accordion", () => {
   afterEach(() => {
     document.body.replaceChildren();
@@ -63,32 +70,29 @@ describe("shared accordion", () => {
     expect(second.open).toBe(true);
   });
 
-  it("keeps an always-open item outside the exclusive disclosure set", async () => {
+  it("can require exactly one item to remain open", async () => {
     const accordion = document.createElement(ACCORDION_TAG) as Accordion;
-    const pinned = createItem("pinned");
-    pinned.alwaysOpen = true;
+    accordion.initialOpen = "first";
+    accordion.requireOpen = true;
     const first = createItem("first");
     const second = createItem("second");
-    accordion.append(pinned, first, second);
+    accordion.append(first, second);
     document.body.append(accordion);
     await Promise.all([
       accordion.updateComplete,
-      pinned.updateComplete,
       first.updateComplete,
       second.updateComplete,
     ]);
 
-    expect(pinned.open).toBe(true);
-    openItem(first);
-    expect(pinned.open).toBe(true);
+    expect(first.open).toBe(true);
+    expect(second.open).toBe(false);
+    closeItem(first);
     expect(first.open).toBe(true);
     openItem(second);
-    expect(pinned.open).toBe(true);
     expect(first.open).toBe(false);
     expect(second.open).toBe(true);
-
-    pinned.shadowRoot?.querySelector("summary")?.click();
-    expect(pinned.shadowRoot?.querySelector("details")?.open).toBe(true);
+    closeItem(second);
+    expect(second.open).toBe(true);
   });
 
   it("ignores disclosure events from nested accordions", async () => {
