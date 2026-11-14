@@ -6,8 +6,7 @@ export const draggableDialogStyles = css`
   }
 
   dialog {
-    backdrop-filter: var(--wzc-dialog-backdrop-filter);
-    background: var(--wzc-dialog-background);
+    background: var(--wzc-recorded-media-header-background);
     border: var(--wzc-recorded-media-dialog-border);
     border-radius: var(--wzc-recorded-media-dialog-radius);
     box-shadow: var(--wzc-recorded-media-dialog-shadow);
@@ -39,7 +38,7 @@ export const draggableDialogStyles = css`
 
   .header {
     align-items: center;
-    background: transparent;
+    background: var(--wzc-recorded-media-header-background);
     cursor: move;
     display: flex;
     gap: 0.75rem;
@@ -86,7 +85,7 @@ export const draggableDialogStyles = css`
   }
 
   .body {
-    background: transparent;
+    background: var(--wzc-recorded-media-header-background);
     box-sizing: border-box;
     display: grid;
     gap: 0.8rem;

@@ -27,10 +27,6 @@ new browser API makes another platform easier or faster.
   that the Home Assistant client keeps an ordinary browser-tab lifecycle.
 - Interactive targets must work with touch, mouse, keyboard, and assistive
   technology. Do not make hover the only way to expose an action.
-- Decorative hover outlines, color changes, and icon transforms are gated by
-  both `(hover: hover)` and `(pointer: fine)`. Touch feedback uses `:active`
-  and must clear when the press ends; it must not depend on a synthetic hover
-  state that can remain latched until the next tap.
 - Every icon-only interactive control has a localized accessible name and a
   matching hover title. Visible button text remains its own accessible name;
   decorative icons are hidden from assistive technology.
@@ -122,44 +118,23 @@ semantics therefore protect controls from themes that incorrectly alias the
 legacy on-primary variable to ordinary foreground text without discarding the
 legacy theme contract on older Home Assistant releases.
 
-Overlay surfaces use three explicit presentation roles at the centralized theme
+Overlay surfaces use five explicit semantic roles at the centralized theme
 boundary:
 
-- Informational and specialized viewing dialogs, including AI analysis and
-  recorded media, use Home Assistant's native dialog surface, matching
-  backdrop-filter, radius, and shadow. Modal information uses Home Assistant's
-  scrim hooks; the non-blocking recorded-media viewer retains no scrim.
+- Informational dialogs use Home Assistant's native dialog surface,
+  backdrop-filter, radius, shadow, and scrim hooks.
 - The Home Assistant card-editor shell uses a mode-aware opaque surface without
   a backdrop filter: Home Assistant's default surface in light mode and the
   active theme's primary background in dark mode. The complete Config,
   Visibility, and Layout dialog therefore remains uniform over media and
   dashboard content without flattening distinct dark-theme palettes.
-- Configuration, form, destructive-confirmation, filter, calendar, and other
-  focused task surfaces use the theme's solid primary surface while retaining
-  Home Assistant's dialog radius and shadow. Modal tasks also retain the Home
-  Assistant scrim. These surfaces do not apply a second backdrop filter.
-
-Use this matrix when selecting tokens for a new overlay surface:
-
-| Presentation role | Examples                                                  | Background                       | Backdrop filter                                | Radius and shadow                                      | Scrim                                                                            |
-| ----------------- | --------------------------------------------------------- | -------------------------------- | ---------------------------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------- |
-| HA glass          | AI analysis, recorded-media viewer, informational dialogs | `--wzc-dialog-background`        | `--wzc-dialog-backdrop-filter`                 | `--wzc-dialog-radius`, `--wzc-dialog-shadow`           | `--wzc-dialog-scrim-*` for modal dialogs; none for the non-blocking media viewer |
-| Solid task        | Filter, calendar, Suspend Camera, forms, confirmations    | `--wzc-task-dialog-background`   | `--wzc-task-dialog-backdrop-filter` (`none`)   | `--wzc-task-dialog-radius`, `--wzc-task-dialog-shadow` | `--wzc-dialog-scrim-*` for modal tasks; none for popovers                        |
-| Editor shell      | Home Assistant card editor, WatchZone editor content      | `--wzc-editor-dialog-background` | `--wzc-editor-dialog-backdrop-filter` (`none`) | Owned by the Home Assistant editor shell               | Owned by the Home Assistant editor shell                                         |
-
-`--wzc-popover-*` is a compatibility alias of the solid-task family, not a
-fourth presentation. Filter and calendar components may consume that alias for
-placement-specific styling, but it must resolve to the solid-task background,
-filter, radius, and shadow tokens.
-
-An owning surface paints a translucent semantic background exactly once.
-Nested headers, bodies, segmented controls, and similar structural children
-remain transparent unless they represent a deliberately distinct surface.
-Reapplying the same translucent token creates theme-dependent opacity bands
-and is prohibited. Camera navigation therefore paints
-`--wzc-camera-navigation-background` on its outer bar while its nested
-segmented-control track stays transparent; only the active option paints
-`--wzc-camera-navigation-active-background`.
+- Configuration, form, destructive-confirmation, and other focused task
+  dialogs use the theme's solid primary surface while retaining Home
+  Assistant's dialog radius, shadow, and scrim. They do not apply a second
+  backdrop filter.
+- Interactive filters, calendars, and control panels use the theme's solid
+  primary surface with the shared raised-popover radius and elevation.
+- Recorded-media dialogs retain their specialized media presentation.
 
 The isolated editor bridge applies the editor-shell role to Home Assistant's
 owning card-edit dialog for its complete lifetime, including Home Assistant's

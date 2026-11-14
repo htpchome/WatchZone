@@ -22,7 +22,7 @@ import {
   type BadgeColor,
 } from "../../ui/badge-colors";
 import "../../ui/badge";
-import { activityActionStyles } from "../../ui/activity-action.styles";
+import { renderIcon } from "../../ui/icons";
 import { buttonBaseStyles } from "../../ui/button.styles";
 import { mediaInformationStyles } from "./media-information.styles";
 
@@ -131,6 +131,7 @@ export class RecordedMediaInformation extends LitElement {
               ${
                 classification
                   ? staticHtml`<${badgeTag}
+                      appearance="filled-outlined"
                       shape="pill"
                       size="small"
                       variant=${
@@ -143,8 +144,9 @@ export class RecordedMediaInformation extends LitElement {
               }
               ${objects.map(
                 (label, index) => staticHtml`<${badgeTag}
+                  appearance="filled"
                   color=${colors[index] ?? "neutral"}
-                  shape="pill"
+                  shape="rounded"
                   size="small"
                 >${label}</${badgeTag}>`,
               )}
@@ -166,66 +168,52 @@ export class RecordedMediaInformation extends LitElement {
               ${
                 alternate
                   ? html`<button
-                      class="wzc-icon-button wzc-activity-action"
+                      class="wzc-button"
                       type="button"
-                      title=${this.localize(
-                        alternate.kind === "snapshot"
-                          ? "media_player.view_snapshot"
-                          : "media_player.view_review",
-                      )}
-                      aria-label=${this.localize(
-                        alternate.kind === "snapshot"
-                          ? "media_player.view_snapshot"
-                          : "media_player.view_review",
-                      )}
                       @click=${() =>
                         this._action({
                           kind: "view",
                           media: alternate.kind,
                         })}
                     >
-                      <ha-icon
-                        icon=${
-                          alternate.kind === "snapshot"
-                            ? "mdi:camera"
-                            : "mdi:play"
-                        }
-                        aria-hidden="true"
-                      ></ha-icon>
+                      <span aria-hidden="true"
+                        >${renderIcon(
+                          alternate.kind === "snapshot" ? "camera" : "play",
+                        )}</span
+                      >
+                      ${this.localize(
+                        alternate.kind === "snapshot"
+                          ? "media_player.view_snapshot"
+                          : "media_player.view_review",
+                      )}
                     </button>`
                   : nothing
               }
               ${
                 download
                   ? html`<button
-                      class="wzc-icon-button wzc-activity-action"
+                      class="wzc-button"
                       type="button"
-                      title=${this.localize(
-                        request.kind === "snapshot"
-                          ? "media_player.download_snapshot"
-                          : "media_player.download_review",
-                      )}
-                      aria-label=${this.localize(
-                        request.kind === "snapshot"
-                          ? "media_player.download_snapshot"
-                          : "media_player.download_review",
-                      )}
                       @click=${() => this._action({ kind: "download" })}
                     >
-                      <ha-icon icon="mdi:download" aria-hidden="true"></ha-icon>
+                      <span aria-hidden="true">${renderIcon("download")}</span>
+                      ${this.localize(
+                        request.kind === "snapshot"
+                          ? "media_player.download_snapshot"
+                          : "media_player.download_review",
+                      )}
                     </button>`
                   : nothing
               }
               ${
                 canExport
                   ? html`<button
-                      class="wzc-icon-button wzc-activity-action"
+                      class="wzc-button"
                       type="button"
-                      title=${this.localize("reviews.export")}
-                      aria-label=${this.localize("reviews.export")}
                       @click=${() => this._action({ kind: "export_review" })}
                     >
-                      <ha-icon icon="mdi:export" aria-hidden="true"></ha-icon>
+                      <span aria-hidden="true">${renderIcon("export")}</span>
+                      ${this.localize("reviews.export")}
                     </button>`
                   : nothing
               }
@@ -245,11 +233,7 @@ export class RecordedMediaInformation extends LitElement {
     );
   }
 
-  static styles = [
-    buttonBaseStyles,
-    activityActionStyles,
-    mediaInformationStyles,
-  ];
+  static styles = [buttonBaseStyles, mediaInformationStyles];
 }
 
 export function recordedMediaHeading(

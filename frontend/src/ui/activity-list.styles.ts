@@ -578,6 +578,19 @@ export const activityListStyles = css`
     }
   }
 
+  .action {
+    align-items: center;
+    background: var(--wzc-event-action-background);
+    border: 0;
+    border-radius: var(--wzc-radius-medium);
+    color: var(--wzc-event-action-color);
+    display: inline-flex;
+    justify-content: center;
+    min-block-size: var(--wzc-event-action-size);
+    min-inline-size: var(--wzc-event-action-size);
+    padding: 0;
+  }
+
   .empty,
   .loading {
     align-items: center;

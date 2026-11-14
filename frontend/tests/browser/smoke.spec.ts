@@ -565,10 +565,6 @@ test("keeps camera navigation module and carousel selection bidirectional", asyn
   });
   await expect(buttons.nth(0)).toHaveCSS("color", "rgb(246, 247, 248)");
   await expect(navigation.locator(".items")).toHaveCSS("border-style", "none");
-  await expect(navigation.locator(".items .segmented-control")).toHaveCSS(
-    "background-color",
-    "rgba(0, 0, 0, 0)",
-  );
   await expect(navigation.locator(".bar")).toHaveCSS(
     "box-shadow",
     "rgb(20, 21, 22) 0px 4px 8px 0px",
@@ -2631,15 +2627,6 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect(analysisDialog).toContainText("98%");
   await expect(analysisDialog).toContainText("Concerns");
   await expect(analysisDialog).toContainText("None");
-  const analysisSurface = await analysisDialog.evaluate((dialog) => {
-    const style = getComputedStyle(dialog);
-    return {
-      backdropFilter: style.backdropFilter,
-      background: style.backgroundColor,
-      borderRadius: style.borderRadius,
-      boxShadow: style.boxShadow,
-    };
-  });
   const dialogPosition = await analysisDialog.evaluate((dialogElement) => {
     let current: Element | null = dialogElement;
     let card: HTMLElement | null = null;
@@ -3165,69 +3152,11 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect(mediaDialog).toBeVisible();
   const mediaInformation = page.locator("wzc-recorded-media-information");
   await expect(mediaInformation).toBeVisible();
-  const mediaSurface = await mediaDialog.evaluate((dialog) => {
-    const style = getComputedStyle(dialog);
-    return {
-      backdropFilter: style.backdropFilter,
-      background: style.backgroundColor,
-      borderRadius: style.borderRadius,
-      boxShadow: style.boxShadow,
-    };
-  });
-  expect(mediaSurface).toEqual(analysisSurface);
   await expect(mediaInformation.locator(".metadata")).toContainText("Camera");
   await expect(mediaInformation.locator(".metadata")).toContainText("Duration");
   await expect(
     mediaInformation.getByRole("button", { name: "View Snapshot" }),
   ).toBeVisible();
-  const activityAction = events.locator(".action").first();
-  const mediaAction = mediaInformation.getByRole("button", {
-    name: "View Snapshot",
-  });
-  const actionPresentations = await Promise.all(
-    [activityAction, mediaAction].map((action) =>
-      action.evaluate((element) => {
-        const bounds = element.getBoundingClientRect();
-        const style = getComputedStyle(element);
-        return {
-          background: style.backgroundColor,
-          borderRadius: style.borderRadius,
-          color: style.color,
-          height: bounds.height,
-          width: bounds.width,
-        };
-      }),
-    ),
-  );
-  expect(actionPresentations[1]).toEqual(actionPresentations[0]);
-  await mediaAction.hover();
-  await expect
-    .poll(() =>
-      mediaAction.evaluate((element) => getComputedStyle(element).borderColor),
-    )
-    .not.toBe("rgba(0, 0, 0, 0)");
-  const hoveredAction = await mediaAction.evaluate((element) => {
-    const icon = element.querySelector("ha-icon");
-    const style = getComputedStyle(element);
-    return {
-      borderColor: style.borderColor,
-      color: style.color,
-      iconTransform: icon ? getComputedStyle(icon).transform : "none",
-    };
-  });
-  expect(hoveredAction.borderColor).not.toBe("rgba(0, 0, 0, 0)");
-  expect(hoveredAction.color).not.toBe(actionPresentations[1]?.color);
-  expect(hoveredAction.iconTransform).not.toBe("none");
-  await page.mouse.move(0, 0);
-  await expect
-    .poll(() =>
-      mediaAction.evaluate((element) => ({
-        borderColor: getComputedStyle(element).borderColor,
-        iconTransform: getComputedStyle(element.querySelector("ha-icon")!)
-          .transform,
-      })),
-    )
-    .toEqual({ borderColor: "rgba(0, 0, 0, 0)", iconTransform: "none" });
   const initialPlacement = await mediaDialog.evaluate((dialog) => {
     return {
       explicitlyPositioned: dialog.classList.contains("dragged"),
@@ -3314,23 +3243,23 @@ test("keeps activity content in an independently scrolling viewport", async ({
     expect(recordedVideoBox.width).toBeCloseTo(playerViewportBox.width, 1);
     expect(recordedVideoBox.height).toBeCloseTo(playerViewportBox.height, 1);
   }
-  const modalFrame = page.locator(
-    ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog)",
-  );
-  const modalBackgrounds = {
-    body: await modalFrame
-      .locator(".body")
-      .evaluate((element) => getComputedStyle(element).backgroundColor),
-    dialog: await mediaDialog.evaluate(
-      (element) => getComputedStyle(element).backgroundColor,
-    ),
-    header: await modalFrame
-      .locator(".header")
-      .evaluate((element) => getComputedStyle(element).backgroundColor),
-  };
-  expect(modalBackgrounds.dialog).not.toBe("rgba(0, 0, 0, 0)");
-  expect(modalBackgrounds.header).toBe("rgba(0, 0, 0, 0)");
-  expect(modalBackgrounds.body).toBe("rgba(0, 0, 0, 0)");
+  const modalBackgrounds = await page.evaluate(() => {
+    const container = document
+      .querySelector("watchzone-card")
+      ?.shadowRoot?.querySelector(
+        ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog)",
+      )?.shadowRoot;
+    const dialog = container?.querySelector("dialog");
+    const header = container?.querySelector(".header");
+    const body = container?.querySelector(".body");
+    return {
+      dialog: dialog ? getComputedStyle(dialog).backgroundColor : "",
+      header: header ? getComputedStyle(header).backgroundColor : "",
+      body: body ? getComputedStyle(body).backgroundColor : "",
+    };
+  });
+  expect(modalBackgrounds.dialog).toBe(modalBackgrounds.header);
+  expect(modalBackgrounds.body).toBe(modalBackgrounds.header);
   const headerBeforeResizeBox = await page
     .locator(
       ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) .header",
@@ -3590,7 +3519,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
     },
   );
   expect(compactInformationLayout).toEqual({
-    actionDirection: "row",
+    actionDirection: "column",
     metadataColumns: 1,
   });
   const compactDialogBox = await mediaDialog.boundingBox();
@@ -6525,23 +6454,7 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
         .getPropertyValue("--wzc-media-overlay-dimmed-opacity")
         .trim(),
       onPrimaryColor,
-      popoverBackground: hostStyle
-        .getPropertyValue("--wzc-popover-background")
-        .trim(),
-      popoverBackdropFilter: hostStyle
-        .getPropertyValue("--wzc-popover-backdrop-filter")
-        .trim(),
-      popoverRadius: hostStyle.getPropertyValue("--wzc-popover-radius").trim(),
-      popoverShadow: hostStyle.getPropertyValue("--wzc-popover-shadow").trim(),
       reversedTextColor,
-      taskBackground: hostStyle
-        .getPropertyValue("--wzc-task-dialog-background")
-        .trim(),
-      taskBackdropFilter: hostStyle
-        .getPropertyValue("--wzc-task-dialog-backdrop-filter")
-        .trim(),
-      taskRadius: hostStyle.getPropertyValue("--wzc-task-dialog-radius").trim(),
-      taskShadow: hostStyle.getPropertyValue("--wzc-task-dialog-shadow").trim(),
     };
   });
 
@@ -6566,10 +6479,6 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
     1,
   );
   expect(result.boxShadow).toContain("rgb(1, 2, 3)");
-  expect(result.popoverBackground).toBe(result.taskBackground);
-  expect(result.popoverBackdropFilter).toBe(result.taskBackdropFilter);
-  expect(result.popoverRadius).toBe(result.taskRadius);
-  expect(result.popoverShadow).toBe(result.taskShadow);
 });
 
 test("camera selection does not recursively republish dirty state", async ({

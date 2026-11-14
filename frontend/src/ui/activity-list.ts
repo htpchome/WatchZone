@@ -29,7 +29,6 @@ import { activityMediaTitle } from "../core/activity-media";
 import type { BadgeVariant } from "./badge";
 import "./badge";
 import "./media-day-header";
-import { activityActionStyles } from "./activity-action.styles";
 import { activityListStyles } from "./activity-list.styles";
 import { buttonBaseStyles } from "./button.styles";
 
@@ -418,7 +417,7 @@ export class ActivityList extends LitElement {
               ${
                 item.exportable
                   ? html`<button
-                      class="action wzc-icon-button wzc-activity-action"
+                      class="action wzc-icon-button"
                       type="button"
                       title=${this.localize("reviews.export")}
                       aria-label=${this.localize("reviews.export")}
@@ -432,7 +431,7 @@ export class ActivityList extends LitElement {
               ${
                 item.downloadUrl
                   ? html`<button
-                      class="action wzc-icon-button wzc-activity-action"
+                      class="action wzc-icon-button"
                       type="button"
                       title=${this.localize("events.download_clip")}
                       aria-label=${this.localize("events.download_clip")}
@@ -442,7 +441,7 @@ export class ActivityList extends LitElement {
                     </button>`
                   : item.clipUrl
                     ? html`<a
-                        class="action wzc-icon-button wzc-activity-action"
+                        class="action wzc-icon-button"
                         href=${this.resolveUrl?.(item.clipUrl) ?? item.clipUrl}
                         download=${item.downloadFilename ?? ""}
                         title=${this.localize("events.download_clip")}
@@ -454,7 +453,7 @@ export class ActivityList extends LitElement {
               ${
                 snapshotUrl
                   ? html`<button
-                      class="action wzc-icon-button wzc-activity-action"
+                      class="action wzc-icon-button"
                       data-recorded-media-opener="true"
                       type="button"
                       title=${this.localize("events.view_snapshot")}
@@ -823,7 +822,7 @@ export class ActivityList extends LitElement {
     this.requestUpdate();
   }
 
-  static styles = [buttonBaseStyles, activityActionStyles, activityListStyles];
+  static styles = [buttonBaseStyles, activityListStyles];
 }
 
 function mediaKey(item: ActivityListItem, url: string): string {

@@ -710,25 +710,9 @@ describe("recorded media player", () => {
     expect(information.shadowRoot?.textContent).toContain("0:20");
     expect(information.shadowRoot?.textContent).toContain("Delivery driver");
     expect(information.shadowRoot?.textContent).toContain("92%");
-    const badges = [
-      ...(information.shadowRoot?.querySelectorAll("wzc-badge") ?? []),
-    ];
-    expect(
-      badges.map((badge) => ({
-        appearance: badge.getAttribute("appearance"),
-        shape: badge.getAttribute("shape"),
-        size: badge.getAttribute("size"),
-      })),
-    ).toEqual([
-      { appearance: "filled", shape: "pill", size: "small" },
-      { appearance: "filled", shape: "pill", size: "small" },
-      { appearance: "filled", shape: "pill", size: "small" },
-    ]);
-    const viewReviewButton =
-      information.shadowRoot?.querySelector<HTMLButtonElement>(
-        'button[aria-label="View Review"]',
-      );
-    expect(viewReviewButton?.textContent?.trim()).toBe("");
+    const viewReviewButton = [
+      ...(information.shadowRoot?.querySelectorAll("button") ?? []),
+    ].find((button) => button.textContent?.includes("View Review"));
     viewReviewButton?.click();
 
     await vi.waitFor(() =>
@@ -738,10 +722,9 @@ describe("recorded media player", () => {
     );
     expect(viewReview).toHaveBeenCalledOnce();
     await information.updateComplete;
-    const viewSnapshotButton =
-      information.shadowRoot?.querySelector<HTMLButtonElement>(
-        'button[aria-label="View Snapshot"]',
-      );
+    const viewSnapshotButton = [
+      ...(information.shadowRoot?.querySelectorAll("button") ?? []),
+    ].find((button) => button.textContent?.includes("View Snapshot"));
     viewSnapshotButton?.click();
     await vi.waitFor(() =>
       expect(
