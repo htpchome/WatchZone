@@ -3150,6 +3150,13 @@ test("keeps activity content in an independently scrolling viewport", async ({
     ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) dialog",
   );
   await expect(mediaDialog).toBeVisible();
+  const mediaInformation = page.locator("wzc-recorded-media-information");
+  await expect(mediaInformation).toBeVisible();
+  await expect(mediaInformation.locator(".metadata")).toContainText("Camera");
+  await expect(mediaInformation.locator(".metadata")).toContainText("Duration");
+  await expect(
+    mediaInformation.getByRole("button", { name: "View Snapshot" }),
+  ).toBeVisible();
   const initialPlacement = await mediaDialog.evaluate((dialog) => {
     return {
       explicitlyPositioned: dialog.classList.contains("dragged"),
@@ -3466,7 +3473,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
     page.locator(
       ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) .title",
     ),
-  ).toHaveText("Front - 5:12 PM - Mon, Nov 13");
+  ).toHaveText("Front · 5:12 PM · Mon, Nov 13");
   await expect(mediaDialog).toBeVisible();
   await page.evaluate(() =>
     document.body.dispatchEvent(
@@ -3494,6 +3501,37 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect(snapshot).toHaveAttribute("src", "/thumbnail.svg");
   await expect(snapshot).toHaveCSS("background-color", "rgb(36, 36, 36)");
   await expect(page.locator("wzc-recorded-video-player")).toHaveCount(0);
+  await expect(
+    mediaInformation.getByRole("button", { name: "View Review" }),
+  ).toBeVisible();
+  const desktopViewport = page.viewportSize();
+  await page.setViewportSize({ height: 568, width: 320 });
+  const compactInformationLayout = await mediaInformation.evaluate(
+    (element) => {
+      const metadata = element.shadowRoot?.querySelector(".metadata");
+      const actions = element.shadowRoot?.querySelector(".actions");
+      return {
+        actionDirection: actions ? getComputedStyle(actions).flexDirection : "",
+        metadataColumns: metadata
+          ? getComputedStyle(metadata).gridTemplateColumns.split(" ").length
+          : 0,
+      };
+    },
+  );
+  expect(compactInformationLayout).toEqual({
+    actionDirection: "column",
+    metadataColumns: 1,
+  });
+  const compactDialogBox = await mediaDialog.boundingBox();
+  expect(compactDialogBox?.x).toBeGreaterThanOrEqual(0);
+  expect(compactDialogBox?.y).toBeGreaterThanOrEqual(0);
+  expect(
+    (compactDialogBox?.x ?? 0) + (compactDialogBox?.width ?? 0),
+  ).toBeLessThanOrEqual(320);
+  expect(
+    (compactDialogBox?.y ?? 0) + (compactDialogBox?.height ?? 0),
+  ).toBeLessThanOrEqual(568);
+  if (desktopViewport) await page.setViewportSize(desktopViewport);
   await modalClose.click();
   await expect(mediaDialog).toBeHidden();
 

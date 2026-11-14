@@ -88,6 +88,9 @@ export const draggableDialogStyles = css`
     background: var(--wzc-recorded-media-header-background);
     box-sizing: border-box;
     display: grid;
+    gap: 0.8rem;
+    overflow: auto;
+    overscroll-behavior: contain;
     padding: 0 var(--wzc-recorded-media-dialog-padding)
       var(--wzc-recorded-media-dialog-bottom-padding);
     position: relative;

@@ -15,14 +15,25 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.313`
-- Current commit: `36bb7f4` —
-  `v0.0.4-dev.312 - fix(camera): restore active overlay after editor reparent`
-- The worktree contains the uncommitted WebRTC reparent correction described
+- Working version: `0.0.4-dev.314`
+- Current commit: `a28710f` —
+  `v0.0.4-dev.313 - fix(camera): preserve WebRTC presentation during editor reparent`
+- The worktree contains the uncommitted media-viewer information work described
   below. Always verify `git status`, the canonical version in
   `custom_components/watchzone/const.py`, and the latest commit.
 
-## Active change: correct pre-editor overlay restoration
+## Active change: recorded-media information and startup
+
+- The current draggable media presentation places a reusable information panel
+  beneath Review and Event media when normalized metadata is available. The
+  panel is independent of dialog geometry so future viewer presentations can
+  place the same content differently.
+- Completed Reviews can switch between Review and snapshot media, download the
+  active variant, and start the existing Review-owned export confirmation.
+- HLS.js warming now overlaps presentation loading, and HLS chunk loading
+  overlaps URL signing. Provider source order is unchanged.
+
+## Retained camera behavior
 
 - The presentation-activation and media-attachment overlay changes from
   `v0.0.4-dev.310` are reverted because they could leave retained video black

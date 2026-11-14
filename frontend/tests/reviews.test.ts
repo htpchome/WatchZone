@@ -7,9 +7,11 @@ import { MediaDateContext } from "../src/stage/media-date-context";
 import {
   ACTIVITY_LIST_INTENT_EVENT,
   ACTIVITY_LIST_TAG,
+  RECORDED_MEDIA_OPEN_EVENT,
   REVIEWS_TAG,
 } from "../src/core/constants";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
+import type { RecordedMediaRequest } from "../src/core/recorded-media";
 import type { ReviewsModule } from "../src/stage/modules/reviews/reviews";
 import type { ActivityListItem } from "../src/ui/activity-list";
 import "../src/stage/modules/reviews/reviews";
@@ -688,17 +690,28 @@ describe("reviews module", () => {
     const item = list?.items.find(({ id }) => id === "frigate:review-2");
     if (!item) throw new Error("Expected the unreviewed fixture item.");
     expect(item?.reviewed).toBe(false);
+    let snapshotRequest: RecordedMediaRequest | undefined;
+    module.addEventListener(RECORDED_MEDIA_OPEN_EVENT, (event) => {
+      snapshotRequest = event.detail;
+    });
 
     list?.dispatchEvent(
       new CustomEvent(ACTIVITY_LIST_INTENT_EVENT, {
         bubbles: true,
         composed: true,
-        detail: { kind: "open_media", media: "snapshot", item },
+        detail: {
+          kind: "open_media",
+          media: "snapshot",
+          item: { ...item, snapshotUrl: "/detection.jpg" },
+        },
       }),
     );
     expect(callWS).not.toHaveBeenCalledWith(
       expect.objectContaining({ type: "watchzone/reviews/set_reviewed" }),
     );
+    expect(snapshotRequest?.kind).toBe("snapshot");
+    expect(snapshotRequest?.metadata?.duration).toBe(20);
+    expect(snapshotRequest?.actions?.viewReview).toBeTypeOf("function");
 
     list?.dispatchEvent(
       new CustomEvent(ACTIVITY_LIST_INTENT_EVENT, {

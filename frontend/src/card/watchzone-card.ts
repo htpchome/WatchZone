@@ -16,6 +16,7 @@ import {
   EDITOR_TAG,
   CAMERA_TAG,
   RECORDED_VIDEO_VIEWER_TAG,
+  RECORDED_VIDEO_CLOSE_EVENT,
   RECORDED_MEDIA_OPEN_EVENT,
   TOAST_REGION_TAG,
 } from "../core/constants";
@@ -148,6 +149,10 @@ export class DashboardCard extends LitElement {
       RECORDED_MEDIA_OPEN_EVENT,
       this._handleRecordedMediaOpen,
     );
+    this.addEventListener(
+      RECORDED_VIDEO_CLOSE_EVENT,
+      this._handleRecordedMediaClose,
+    );
     this._syncLayout(this._previewConfig ?? this._config);
     if (this._hass) this._observeConnection(this._hass.connection);
     this._syncRuntime();
@@ -168,6 +173,10 @@ export class DashboardCard extends LitElement {
     this.removeEventListener(
       RECORDED_MEDIA_OPEN_EVENT,
       this._handleRecordedMediaOpen,
+    );
+    this.removeEventListener(
+      RECORDED_VIDEO_CLOSE_EVENT,
+      this._handleRecordedMediaClose,
     );
     this._unobserveConnection();
     super.disconnectedCallback();
@@ -239,6 +248,12 @@ export class DashboardCard extends LitElement {
   ): void => {
     event.stopPropagation();
     this._openRecordedMedia(event.detail);
+  };
+
+  private readonly _handleRecordedMediaClose = (): void => {
+    this._mediaRequest = undefined;
+    this._mediaInitialSize = undefined;
+    this.requestUpdate();
   };
 
   private _openRecordedMedia(request: RecordedMediaRequest): void {

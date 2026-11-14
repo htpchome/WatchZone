@@ -617,6 +617,123 @@ describe("recorded media player", () => {
     expect(dialog.style.top).toBe("");
   });
 
+  it("presents review details and switches media variants in place", async () => {
+    Object.defineProperty(HTMLDialogElement.prototype, "show", {
+      configurable: true,
+      value: function (this: HTMLDialogElement) {
+        this.setAttribute("open", "");
+      },
+    });
+    const viewReview = vi.fn();
+    const viewer = document.createElement(
+      "wzc-recorded-video-viewer",
+    ) as RecordedVideoViewer;
+    viewer.api = {
+      callWS: vi.fn().mockResolvedValue({ path: "/signed/review.mp4" }),
+      identity: { subscribeMessage: vi.fn() },
+      locale: { language: "en" },
+      resolveUrl: (path: string) => `https://ha.local${path}`,
+      subscribeMessage: vi.fn(),
+    } as RecordedVideoViewer["api"];
+    viewer.request = {
+      actions: {
+        variants: {
+          snapshot: {
+            download: { filename: "front.jpg", path: "/snapshot.jpg" },
+            id: "review-1:snapshot",
+            kind: "snapshot",
+            preferredTransport: "file",
+            sources: [
+              {
+                content_type: "image/jpeg",
+                transport: "file",
+                url: "/snapshot.jpg",
+              },
+            ],
+          },
+          video: {
+            download: { filename: "front.mp4", path: "/review.mp4" },
+            id: "review-1",
+            kind: "video",
+            posterUrl: "/snapshot.jpg",
+            preferredTransport: "file",
+            sources: [
+              {
+                content_type: "video/mp4",
+                transport: "file",
+                url: "/review.mp4",
+              },
+            ],
+          },
+        },
+        viewReview,
+      },
+      id: "review-1:snapshot",
+      kind: "snapshot",
+      metadata: {
+        camera: "front_door",
+        classification: "alert",
+        endTime: 1_700_000_020,
+        objects: ["person", "delivery_driver"],
+        score: 0.92,
+        startTime: 1_700_000_000,
+        zones: ["porch"],
+      },
+      presentation: "review",
+      preferredTransport: "file",
+      sources: [
+        {
+          content_type: "image/jpeg",
+          transport: "file",
+          url: "/snapshot.jpg",
+        },
+      ],
+      title: "Front door snapshot",
+    };
+    document.body.append(viewer);
+    await viewer.updateComplete;
+    await vi.waitFor(() =>
+      expect(
+        viewer.shadowRoot?.querySelector("wzc-review-media-dialog"),
+      ).not.toBeNull(),
+    );
+    const container = viewer.shadowRoot?.querySelector(
+      "wzc-review-media-dialog",
+    ) as ReviewMediaDialog;
+    await container.updateComplete;
+    const information = container.shadowRoot?.querySelector(
+      "wzc-recorded-media-information",
+    ) as LitElement;
+    await information.updateComplete;
+
+    expect(information.shadowRoot?.textContent).toContain("Front door");
+    expect(information.shadowRoot?.textContent).toContain("0:20");
+    expect(information.shadowRoot?.textContent).toContain("Delivery driver");
+    expect(information.shadowRoot?.textContent).toContain("92%");
+    const viewReviewButton = [
+      ...(information.shadowRoot?.querySelectorAll("button") ?? []),
+    ].find((button) => button.textContent?.includes("View Review"));
+    viewReviewButton?.click();
+
+    await vi.waitFor(() =>
+      expect(
+        container.shadowRoot?.querySelector("wzc-recorded-video-player"),
+      ).not.toBeNull(),
+    );
+    expect(viewReview).toHaveBeenCalledOnce();
+    await information.updateComplete;
+    const viewSnapshotButton = [
+      ...(information.shadowRoot?.querySelectorAll("button") ?? []),
+    ].find((button) => button.textContent?.includes("View Snapshot"));
+    viewSnapshotButton?.click();
+    await vi.waitFor(() =>
+      expect(
+        container.shadowRoot?.querySelector("img.snapshot"),
+      ).not.toBeNull(),
+    );
+    expect(viewReview).toHaveBeenCalledOnce();
+  });
+
   it("opens snapshots in the shared dialog without muting live audio", async () => {
     const manager = new MediaSessionManager();
     (window as unknown as Record<string, unknown>)[MEDIA_SESSION_RUNTIME_KEY] =

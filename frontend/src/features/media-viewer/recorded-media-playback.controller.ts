@@ -17,6 +17,8 @@ import type {
 
 const HLS_CONTENT_TYPE = "application/vnd.apple.mpegurl";
 const SOURCE_READY_TIMEOUT_MS = 12_000;
+let hlsModuleLoad:
+  Promise<typeof import("hls.js/dist/hls.light.mjs")> | undefined;
 
 /** Owns recorded-source selection, startup, fallback, and complete cleanup. */
 export class RecordedMediaPlaybackController {
@@ -66,14 +68,14 @@ export class RecordedMediaPlaybackController {
     source: RecordedMediaSource,
     generation: number,
   ): Promise<void> {
-    const url = await this._resolveSourceUrl(source.url);
-    if (generation !== this._generation) {
-      throw new DOMException("Playback superseded", "AbortError");
-    }
     if (
       source.transport === "file" ||
       video.canPlayType(source.content_type || HLS_CONTENT_TYPE)
     ) {
+      const url = await this._resolveSourceUrl(source.url);
+      if (generation !== this._generation) {
+        throw new DOMException("Playback superseded", "AbortError");
+      }
       video.src = url;
       video.load();
       return waitForMediaReady(video, generation, () => this._generation);
@@ -81,7 +83,10 @@ export class RecordedMediaPlaybackController {
     if (detectClientProfile().isCatalyst) {
       throw new Error("Native HLS playback is unavailable");
     }
-    const { default: Hls } = await import("hls.js/dist/hls.light.mjs");
+    const [{ default: Hls }, url] = await Promise.all([
+      loadHlsModule(),
+      this._resolveSourceUrl(source.url),
+    ]);
     if (!Hls.isSupported() || generation !== this._generation) {
       throw new Error("HLS playback is unavailable");
     }
@@ -142,6 +147,35 @@ export class RecordedMediaPlaybackController {
     this._hls?.destroy();
     this._hls = undefined;
   }
+}
+
+/** Warm the large HLS fallback chunk while the concrete dialog is loading. */
+export async function preloadRecordedMediaPlayback(
+  request: RecordedMediaRequest,
+): Promise<void> {
+  if (
+    request.kind !== "video" ||
+    detectClientProfile().isCatalyst ||
+    !request.sources.some(
+      ({ content_type, transport }) =>
+        transport === "hls" &&
+        !document
+          .createElement("video")
+          .canPlayType(content_type || HLS_CONTENT_TYPE),
+    )
+  ) {
+    return;
+  }
+  try {
+    await loadHlsModule();
+  } catch {
+    // Normal source fallback remains authoritative when the chunk cannot load.
+  }
+}
+
+function loadHlsModule(): Promise<typeof import("hls.js/dist/hls.light.mjs")> {
+  hlsModuleLoad ??= import("hls.js/dist/hls.light.mjs");
+  return hlsModuleLoad;
 }
 
 function orderedSources(request: RecordedMediaRequest): RecordedMediaSource[] {

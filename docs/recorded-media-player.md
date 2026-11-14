@@ -24,6 +24,10 @@ viewing. Recording discovery and grouping are governed by
   live sessions are retained and recorded sources are finite and ephemeral.
 - A future drawer or live-area-cover viewer presentation composes those same
   primitives and recorded player. It does not add a parallel control overlay.
+- Normalized activity requests may carry presentation-independent metadata,
+  snapshot and Review variants, downloads, and a short-lived typed Review
+  export intent. Each concrete presentation decides where to place the shared
+  information component; the draggable dialog places it beneath the media.
 - Providers normalize media URLs into provider-neutral playback sources. UI
   modules and shared tiles do not construct provider-specific URLs.
 - Snapshot actions reuse the same draggable viewer shell and render the
@@ -57,6 +61,11 @@ viewing. Recording discovery and grouping are governed by
 - Any non-action area of a playable activity tile opens the recorded-media
   viewer. Download remains independent; snapshot actions open the still image
   in the same viewer shell.
+- The current information area presents classification and object badges,
+  camera, localized day/date and time, duration, objects, zones, optional
+  score, and only the actions supported by the normalized request. On narrow
+  containers its metadata reduces from four columns to two and then one, while
+  actions wrap and finally stack without shrinking their touch targets.
 - An alert or detection without an end time is visibly marked as in progress.
   A closed alert also retains that marker while recording playback remains
   unavailable. Its tile remains actionable: activation immediately opens the

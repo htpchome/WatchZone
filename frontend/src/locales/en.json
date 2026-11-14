@@ -386,5 +386,21 @@
   "media_player.fullscreen_failed": "Unable to change fullscreen mode.",
   "media_player.pip_failed": "Unable to change Picture-in-Picture mode.",
   "media_player.zoom_view": "Recorded video, zoom {percent} percent",
-  "media_player.load_failed": "Unable to play this recording."
+  "media_player.load_failed": "Unable to play this recording.",
+  "media_player.information": "Media information",
+  "media_player.camera": "Camera",
+  "media_player.day_date": "Day / Date",
+  "media_player.time": "Time",
+  "media_player.duration": "Duration",
+  "media_player.objects": "Objects",
+  "media_player.zone": "Zone",
+  "media_player.score": "Score",
+  "media_player.none": "None",
+  "media_player.unavailable": "Unavailable",
+  "media_player.in_progress": "In progress",
+  "media_player.view_snapshot": "View Snapshot",
+  "media_player.view_review": "View Review",
+  "media_player.download_snapshot": "Download Snapshot",
+  "media_player.download_review": "Download Review",
+  "media_player.download_failed": "Unable to download this media."
 }

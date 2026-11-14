@@ -372,6 +372,12 @@ export class ReviewsModule extends LitElement {
         kind,
         "review",
         this.api,
+        {
+          exportReview: () => void this._exports.begin(item),
+          viewReview: () => {
+            if (markReviewedOnOpen) this._markReviewed(item);
+          },
+        },
       );
       if (request) openRecordedMedia(this, request);
       return;
@@ -382,6 +388,7 @@ export class ReviewsModule extends LitElement {
         kind,
         "review",
         this.api,
+        { exportReview: () => void this._exports.begin(item) },
       );
       if (request) {
         openRecordedMedia(this, request);
@@ -408,6 +415,7 @@ export class ReviewsModule extends LitElement {
       kind,
       "review",
       this.api,
+      { exportReview: () => void this._exports.begin(resolved) },
     );
     if (request) {
       openRecordedMedia(this, request);

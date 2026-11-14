@@ -3,6 +3,7 @@ import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import {
   RECORDED_MEDIA_ERROR_EVENT,
+  RECORDED_MEDIA_INFORMATION_TAG,
   RECORDED_VIDEO_CLOSE_EVENT,
   RECORDED_VIDEO_PLAYER_TAG,
 } from "../../core/constants";
@@ -18,9 +19,15 @@ import type {
 import type { ToastNotice } from "../../ui/toast-manager";
 import "../../ui/toast-region";
 import "./recorded-video-player";
+import {
+  recordedMediaHeading,
+  type RecordedMediaInformation,
+} from "./media-information";
+import "./media-information";
 import { draggableDialogStyles } from "./draggable-dialog.styles";
 
 const playerTag = unsafeStatic(RECORDED_VIDEO_PLAYER_TAG);
+const informationTag = unsafeStatic(RECORDED_MEDIA_INFORMATION_TAG);
 
 /** Draggable modal shell for ephemeral recorded-media playback. */
 export abstract class DraggableRecordedMediaDialog extends LitElement {
@@ -64,7 +71,10 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
 
   protected render() {
     return html`<dialog
-      aria-label=${this.request?.title ?? this.localize("reviews.activity")}
+      aria-label=${
+        recordedMediaHeading(this.request, this.localize, this.api?.locale) ||
+        this.localize("reviews.activity")
+      }
       @cancel=${this._handleCancel}
       @close=${this._handleClose}
       @click=${this._handleBackdropClick}
@@ -86,10 +96,16 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
         >
           <ha-icon icon="mdi:close"></ha-icon>
         </button>
-        <span class="title">${this.request?.title ?? ""}</span>
+        <span class="title"
+          >${recordedMediaHeading(
+            this.request,
+            this.localize,
+            this.api?.locale,
+          )}</span
+        >
       </div>
       <div class="body">
-        ${this.renderMediaContent()}
+        ${this.renderMediaContent()} ${this._renderMediaInformation()}
         <wzc-toast-region
           mode="overlay"
           .notices=${this.notices}
@@ -112,6 +128,15 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
   }
 
   protected abstract renderMediaContent(): unknown;
+
+  private _renderMediaInformation(): unknown {
+    return staticHtml`<${informationTag}
+      class="media-information"
+      .locale=${this.api?.locale}
+      .localize=${this.localize}
+      .request=${this.request}
+    ></${informationTag}>`;
+  }
 
   protected renderDefaultMediaContent(): unknown {
     if (!this._active || !this.request) return null;
@@ -426,13 +451,20 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
     const mediaExtraHeight = mediaRect
       ? Math.max(0, mediaRect.height - mediaRect.width * (9 / 16))
       : 0;
+    const informationHeight =
+      this.renderRoot
+        .querySelector<RecordedMediaInformation>(RECORDED_MEDIA_INFORMATION_TAG)
+        ?.getBoundingClientRect().height ?? 0;
+    const bodyGap = px(bodyStyle.rowGap);
     const verticalChrome =
       header.getBoundingClientRect().height +
       px(bodyStyle.paddingTop) +
       px(bodyStyle.paddingBottom) +
       px(dialogStyle.borderTopWidth) +
       px(dialogStyle.borderBottomWidth) +
-      mediaExtraHeight;
+      mediaExtraHeight +
+      informationHeight +
+      (informationHeight > 0 ? bodyGap : 0);
     const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
     const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
     const availableWidth = this._userPositioned

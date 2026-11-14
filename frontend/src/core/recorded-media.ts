@@ -8,15 +8,67 @@ export interface RecordedMediaSource {
   readonly url: string;
 }
 
-export interface RecordedMediaRequest {
+export interface RecordedMediaDownload {
+  readonly filename: string;
+  readonly path: string;
+}
+
+export interface RecordedMediaMetadata {
+  readonly camera: string;
+  readonly classification?: "alert" | "detection";
+  readonly duration?: number;
+  readonly endTime?: number | null;
+  readonly objects: readonly string[];
+  readonly score?: number;
+  readonly startTime: number;
+  readonly zones: readonly string[];
+}
+
+export interface RecordedMediaVariant {
+  readonly download?: RecordedMediaDownload;
   readonly id: string;
   readonly kind: "snapshot" | "video";
+  readonly posterUrl?: string;
+  readonly preferredTransport: RecordedMediaTransport;
+  readonly sources: readonly RecordedMediaSource[];
+}
+
+export interface RecordedMediaActions {
+  readonly exportReview?: () => void;
+  readonly viewReview?: () => void;
+  readonly variants?: Partial<
+    Record<RecordedMediaVariant["kind"], RecordedMediaVariant>
+  >;
+}
+
+export interface RecordedMediaRequest {
+  readonly actions?: RecordedMediaActions;
+  readonly id: string;
+  readonly kind: "snapshot" | "video";
+  readonly metadata?: RecordedMediaMetadata;
   readonly presentation: "event" | "export" | "recording" | "review";
   readonly posterUrl?: string;
   readonly preferredTransport: RecordedMediaTransport;
   readonly sources: readonly RecordedMediaSource[];
   readonly title: string;
   readonly timeline?: RecordingTimeline;
+}
+
+export function recordedMediaVariantRequest(
+  request: RecordedMediaRequest,
+  kind: RecordedMediaVariant["kind"],
+): RecordedMediaRequest | undefined {
+  const variant = request.actions?.variants?.[kind];
+  if (!variant) return undefined;
+  return {
+    ...request,
+    actions: request.actions,
+    id: variant.id,
+    kind: variant.kind,
+    posterUrl: variant.posterUrl,
+    preferredTransport: variant.preferredTransport,
+    sources: variant.sources,
+  };
 }
 
 export interface RecordingTimelineSpan {

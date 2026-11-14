@@ -226,6 +226,8 @@ export class EventsModule extends LitElement {
             ? (this._activity.cameraLabelFor(event.id) ?? event.camera)
             : undefined,
         clipUrl: event.clip_url,
+        downloadUrl: event.clip_url,
+        downloadFilename: `${event.camera}-${Math.floor(event.start_time)}.mp4`,
         endTime: event.end_time,
         id: event.id,
         objectLabels: [
