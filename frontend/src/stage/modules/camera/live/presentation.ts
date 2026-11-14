@@ -14,11 +14,6 @@ import {
   playMediaElement,
   setMediaElementMuted,
 } from "../../../../core/media-playback";
-import {
-  isMediaFullscreenActive,
-  mediaFullscreenSupported,
-  toggleMediaFullscreen,
-} from "../../../../core/fullscreen";
 import type { MediaTransport } from "../../../../core/media-session-manager";
 import {
   englishLocalize,
@@ -29,20 +24,21 @@ import type { ToastNotice, ToastSeverity } from "../../../../ui/toast-manager";
 import { renderIcon } from "../../../../ui/icons";
 import "../../../../ui/badge";
 import "../../../../ui/toast-region";
-import type { CameraControlEventDetail } from "../controls-overlay";
+import type {
+  CameraControlAction,
+  CameraControlEventDetail,
+} from "../controls-overlay";
 import "../controls-overlay";
 import { mediaOverlayBadgeSizingStyles } from "../../../../ui/overlay-control.styles";
 import { cameraLiveViewStyles } from "../live-view.styles";
 import {
-  isPictureInPictureActive,
-  pictureInPictureMethod,
   refreshNativePictureInPictureSuppression,
   suppressNativePictureInPicture,
-  togglePictureInPicture,
 } from "../../../../core/picture-in-picture";
 import { MediaPresentationController } from "../../../../ui/media-presentation.controller";
 import type { PresentedSource } from "./session.controller";
-import { captureVideoFrame, downloadSnapshot } from "./frame-capture";
+import { CameraLiveControlController } from "./control.controller";
+import { captureVideoFrame } from "./frame-capture";
 
 interface MediaDimensions {
   readonly height: number;
@@ -107,17 +103,37 @@ export class CameraLivePresentation extends LitElement {
 
   private _activeVideo?: HTMLVideoElement;
   private _attachedWebRtcVideo?: HTMLVideoElement;
-  private _fullscreenActive = false;
-  private _pictureInPictureActive = false;
   private _posterDimensions?: MediaDimensions;
   private _posterFailed = false;
   private _reportedGestureLocked = false;
-  private _snapshotPending = false;
   private _webRtcFrameRequest?: number;
   private readonly _deviceProfile = new DeviceProfileController(this);
   private readonly _media = new MediaPresentationController(this, {
     dismissOverlayOnOutsidePointer: true,
     onVisibilityChange: (visible) => this._emitOverlayVisibility(visible),
+  });
+  private readonly _controls = new CameraLiveControlController(this, {
+    captureFrame: () => this.captureFrame(),
+    getFullscreenTarget: () =>
+      this.renderRoot.querySelector<HTMLElement>(".viewport") ?? undefined,
+    getLocalize: () => this.localize,
+    getSnapshotKey: () => this.zoomKey,
+    onMuteToggle: () =>
+      this.dispatchEvent(
+        new CustomEvent("camera-mute-toggle", {
+          bubbles: true,
+          composed: true,
+        }),
+      ),
+    onSuspendToggle: () =>
+      this.dispatchEvent(
+        new CustomEvent("camera-suspend-toggle", {
+          bubbles: true,
+          composed: true,
+        }),
+      ),
+    requestToast: (severity, message, key) =>
+      this._requestToast(severity, message, key),
   });
 
   public active = true;
@@ -152,7 +168,7 @@ export class CameraLivePresentation extends LitElement {
   }
 
   public get snapshotPending(): boolean {
-    return this._snapshotPending;
+    return this._controls.snapshotPending;
   }
 
   public captureFrame(): Promise<Blob> {
@@ -162,10 +178,8 @@ export class CameraLivePresentation extends LitElement {
     return captureVideoFrame(this._activeVideo);
   }
 
-  public performControl(action: CameraControlEventDetail["action"]): void {
-    this._handleCameraControl(
-      new CustomEvent("camera-control", { detail: { action } }),
-    );
+  public performControl(action: CameraControlAction): void {
+    this._controls.perform(action);
   }
 
   public beginStageResizeReturn(): void {
@@ -192,18 +206,7 @@ export class CameraLivePresentation extends LitElement {
     return this._media.overlay.hold();
   }
 
-  public connectedCallback(): void {
-    super.connectedCallback();
-    document.addEventListener("fullscreenchange", this._syncControlState);
-    document.addEventListener("webkitfullscreenchange", this._syncControlState);
-  }
-
   public disconnectedCallback(): void {
-    document.removeEventListener("fullscreenchange", this._syncControlState);
-    document.removeEventListener(
-      "webkitfullscreenchange",
-      this._syncControlState,
-    );
     this._cancelWebRtcFrameRequest();
     this._detachWebRtcVideo();
     this._setActiveVideo(undefined);
@@ -336,15 +339,15 @@ export class CameraLivePresentation extends LitElement {
             ? staticHtml`<${controlsTag}
                 class="player-tools swiper-no-swiping"
                 .visible=${this.suspended || this._media.overlay.visible}
-                .fullscreenActive=${this._fullscreenActive}
-                .fullscreenSupported=${this._fullscreenSupported()}
+                .fullscreenActive=${this._controls.fullscreenActive}
+                .fullscreenSupported=${this._controls.fullscreenSupported()}
                 .muted=${this.muted}
                 .localize=${this.localize}
-                .pictureInPictureActive=${this._pictureInPictureActive}
-                .pictureInPictureSupported=${Boolean(
-                  pictureInPictureMethod(this._selectedVideoForRender),
+                .pictureInPictureActive=${this._controls.pictureInPictureActive}
+                .pictureInPictureSupported=${this._controls.pictureInPictureSupported(
+                  this._selectedVideoForRender,
                 )}
-                .snapshotPending=${this._snapshotPending}
+                .snapshotPending=${this._controls.snapshotPending}
                 .suspendPending=${this.suspendPending}
                 .suspendSupported=${this.suspendSupported}
                 .suspended=${this.suspended}
@@ -604,78 +607,20 @@ export class CameraLivePresentation extends LitElement {
   private readonly _handleCameraControl = (
     event: CustomEvent<CameraControlEventDetail>,
   ): void => {
-    if (event.detail.action === "mute") {
-      this.dispatchEvent(
-        new CustomEvent("camera-mute-toggle", {
-          bubbles: true,
-          composed: true,
-        }),
-      );
-    } else if (event.detail.action === "picture_in_picture") {
-      void this._togglePictureInPicture();
-    } else if (event.detail.action === "fullscreen") {
-      void this._toggleFullscreen();
-    } else if (event.detail.action === "snapshot") {
-      void this._takeSnapshot();
-    } else if (event.detail.action === "suspend") {
-      this.dispatchEvent(
-        new CustomEvent("camera-suspend-toggle", {
-          bubbles: true,
-          composed: true,
-        }),
-      );
-    }
+    this._controls.perform(event.detail.action);
   };
-
-  private async _takeSnapshot(): Promise<void> {
-    if (!this._activeVideo || this._snapshotPending) return;
-    this._snapshotPending = true;
-    this.requestUpdate();
-    try {
-      downloadSnapshot(await this.captureFrame(), this.zoomKey);
-      this._requestToast(
-        "success",
-        this.localize("camera.snapshot_downloaded"),
-        "camera-snapshot",
-      );
-    } catch (error) {
-      this._requestToast(
-        "error",
-        error instanceof Error
-          ? error.message
-          : this.localize("camera.snapshot_failed"),
-        "camera-snapshot",
-      );
-    } finally {
-      this._snapshotPending = false;
-      this.requestUpdate();
-    }
-  }
 
   private _setActiveVideo(video: HTMLVideoElement | undefined): void {
     if (this._activeVideo === video) return;
-    for (const eventName of [
-      "enterpictureinpicture",
-      "leavepictureinpicture",
-      "webkitpresentationmodechanged",
-      "webkitbeginfullscreen",
-      "webkitendfullscreen",
-      "loadedmetadata",
-      "resize",
-      "emptied",
-    ]) {
-      const handler =
-        eventName === "loadedmetadata" ||
-        eventName === "resize" ||
-        eventName === "emptied"
-          ? this._syncStageMediaDimensions
-          : this._syncControlState;
-      this._activeVideo?.removeEventListener(eventName, handler);
-      video?.addEventListener(eventName, handler);
+    for (const eventName of ["loadedmetadata", "resize", "emptied"]) {
+      this._activeVideo?.removeEventListener(
+        eventName,
+        this._syncStageMediaDimensions,
+      );
+      video?.addEventListener(eventName, this._syncStageMediaDimensions);
     }
     this._activeVideo = video;
-    suppressNativePictureInPicture(video);
-    this._syncControlState();
+    this._controls.setActiveVideo(video);
     this._syncStageMediaDimensions();
   }
 
@@ -717,58 +662,6 @@ export class CameraLivePresentation extends LitElement {
       }),
     );
   };
-
-  private readonly _syncControlState = (): void => {
-    const pictureInPictureActive = isPictureInPictureActive(this._activeVideo);
-    const fullscreenActive = isMediaFullscreenActive(this._activeVideo);
-    if (
-      this._pictureInPictureActive === pictureInPictureActive &&
-      this._fullscreenActive === fullscreenActive
-    )
-      return;
-    this._pictureInPictureActive = pictureInPictureActive;
-    this._fullscreenActive = fullscreenActive;
-    this.requestUpdate();
-  };
-
-  private _fullscreenSupported(): boolean {
-    return mediaFullscreenSupported(
-      this.renderRoot.querySelector<HTMLElement>(".viewport"),
-      this._activeVideo,
-    );
-  }
-
-  private async _togglePictureInPicture(): Promise<void> {
-    if (!this._activeVideo) return;
-    try {
-      await togglePictureInPicture(this._activeVideo);
-    } catch (error) {
-      this._requestToast(
-        "error",
-        error instanceof Error
-          ? error.message
-          : this.localize("camera.pip_failed"),
-        "camera-picture-in-picture",
-      );
-    }
-    this._syncControlState();
-  }
-
-  private async _toggleFullscreen(): Promise<void> {
-    const target = this.renderRoot.querySelector<HTMLElement>(".viewport");
-    try {
-      await toggleMediaFullscreen(target, this._activeVideo);
-    } catch (error) {
-      this._requestToast(
-        "error",
-        error instanceof Error
-          ? error.message
-          : this.localize("camera.fullscreen_failed"),
-        "camera-fullscreen",
-      );
-    }
-    this._syncControlState();
-  }
 
   private _requestToast(
     severity: ToastSeverity,

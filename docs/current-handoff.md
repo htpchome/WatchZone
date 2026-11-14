@@ -15,27 +15,28 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.303`
-- Current commit: `139bc6c` —
-  `v0.0.4-dev.302 - fix(camera): isolate grouped side-by-side resizing`
-- The worktree contains the uncommitted live-media lifecycle hardening described
+- Working version: `0.0.4-dev.304`
+- Current commit: `0411216` —
+  `v0.0.4-dev.303 - fix(media): bound live session resources`
+- The worktree contains the uncommitted live-overlay separation described
   below. Always verify `git status`, the canonical version in
   `custom_components/watchzone/const.py`, and the latest commit.
 
-## Active change: live-media lifecycle hardening
+## Active change: live-overlay separation
 
-- Frigate MSE now bounds queued, not-yet-appended media at 16 MiB. Falling
-  behind fails through the normal media-connection boundary instead of
-  retaining an unbounded sequence of `ArrayBuffer` payloads.
-- Frigate MSE owns one idempotent cleanup path for startup, normal close,
-  timeout, abort, WebSocket, SourceBuffer, video, and object-URL resources.
-- The document-scoped media-session manager enforces its 24-session ceiling.
-  When every retained session is actively leased, a new acquisition is
-  rejected with a typed `capacity_exceeded` media error without constructing a
-  transport or Home Assistant observer.
-- Active camera-stage pull-down resizing listens for page hide, document
-  freeze, visibility loss, and window blur. An interrupted gesture releases
-  pointer/lifecycle ownership while preserving the last committed stage size.
+- One Camera-owned live-control controller now owns fullscreen,
+  Picture-in-Picture, snapshot command state, active-video control listeners,
+  document fullscreen listeners, and their cleanup.
+- The live presentation continues to own media attachment, dimensions,
+  zoom/pan, overlay visibility, and the existing render tree. Mute and suspend
+  remain typed intents to their existing owners rather than moving policy into
+  the controller.
+- Overlay markup, Shadow DOM boundaries, classes, grid placement, z-indexes,
+  visibility timing, semantic theme tokens, styles, and public events are
+  unchanged. The grouped A/B stage retains its one shared overlay owner.
+- Focused tests cover listener transfer and cleanup, intent routing, snapshot
+  failure cleanup, retained HLS handoff, fallback media, zoom/pan, and
+  Picture-in-Picture behavior.
 
 ## Live camera and group invariants
 
@@ -86,19 +87,20 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 
 ## Validation status
 
-Validated for `v0.0.4-dev.303`:
+Validated for `v0.0.4-dev.304`:
 
-- frontend unit tests (417 tests)
+- frontend unit tests (420 tests)
 - Playwright tests across Chromium, Firefox, and WebKit (39 per engine)
 - formatting, lint, type checking, architecture/style checks, and production
   build
 
-Focused unit coverage verifies Frigate MSE listener cleanup and bounded
-backpressure, hard media-session admission, and pull-down interruption cleanup.
-Browser coverage verifies the existing live-session retention, carousel,
-zoom/pan-adjacent interaction, pull-down geometry, editor, and responsive
-behavior across all three required engines. Version consistency and
-`git diff --check` also pass.
+Focused unit coverage verifies live-control listener transfer and cleanup,
+intent routing, snapshot failure cleanup, retained HLS handoff, fallback media,
+zoom/pan, and Picture-in-Picture behavior. Browser coverage verifies unchanged
+overlay rail alignment, source-badge non-overlap, transition timing, styling,
+zoom/pan, carousel, grouped feeds, fullscreen, snapshot, suspension, retained
+sessions, and responsive geometry across all three required engines. Version
+consistency and `git diff --check` also pass.
 
 ## Handoff rules
 
