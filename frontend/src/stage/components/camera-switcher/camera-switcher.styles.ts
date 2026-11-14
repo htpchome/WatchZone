@@ -15,13 +15,18 @@ const cameraSwitcherPrivateStyles = css`
     position: relative;
     color: var(--wzc-media-overlay-color);
     opacity: 0;
+    visibility: hidden;
     pointer-events: none;
-    transition: opacity var(--wzc-media-overlay-transition-duration) ease;
+    transition:
+      opacity var(--wzc-media-overlay-transition-duration) ease,
+      visibility 0s linear var(--wzc-media-overlay-transition-duration);
   }
 
   .switcher.visible {
     opacity: 1;
+    visibility: visible;
     pointer-events: auto;
+    transition-delay: 0s;
   }
 
   button {

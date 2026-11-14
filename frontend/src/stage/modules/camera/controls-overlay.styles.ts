@@ -15,6 +15,6 @@ export const cameraControlsStyles = css`
     place-items: center;
     inline-size: 100%;
     block-size: 100%;
-    pointer-events: auto;
+    pointer-events: none;
   }
 `;

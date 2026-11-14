@@ -825,6 +825,30 @@ test("keeps grouped phone navigation to one visible A or B feed", async ({
 
   await button.click();
   await expect(leadingIcon).toHaveAttribute("data-icon", "arrowLeft");
+
+  await page.mouse.move(0, 0);
+  const feedActions = group.locator(".feed-actions");
+  await expect(feedActions).toBeHidden({
+    timeout: MEDIA_OVERLAY_HIDE_DELAY_MS + 1_000,
+  });
+  await expect(feedActions).toHaveCSS("pointer-events", "none");
+  await expect(feedActions).toHaveCSS("visibility", "hidden");
+  const hiddenFeedActionHit = await group
+    .locator(".feed-action")
+    .first()
+    .evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      const x = bounds.x + bounds.width / 2;
+      const y = bounds.y + bounds.height / 2;
+      let target = document.elementFromPoint(x, y);
+      while (target?.shadowRoot) {
+        const nested = target.shadowRoot.elementFromPoint(x, y);
+        if (!nested || nested === target) break;
+        target = nested;
+      }
+      return target === element || Boolean(target && element.contains(target));
+    });
+  expect(hiddenFeedActionHit).toBe(false);
 });
 
 test("releases grouped overlay and resize interaction before selecting another camera", async ({
@@ -5686,6 +5710,17 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
         0,
       );
 
+      await selectedLiveViewport.dispatchEvent("pointerdown", {
+        isPrimary: true,
+        pointerId: 100,
+        pointerType: "touch",
+      });
+      await selectedLiveViewport.dispatchEvent("pointerup", {
+        isPrimary: true,
+        pointerId: 100,
+        pointerType: "touch",
+      });
+      await expect(lightButton).toBeVisible();
       await lightButton.focus();
       await lightButton.press("ArrowUp");
       await expect(dimmer).toBeVisible();
@@ -5716,6 +5751,53 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
         timeout: MEDIA_OVERLAY_HIDE_DELAY_MS + 1_000,
       });
       await expect(ptz.locator("button.ptz-trigger")).toHaveCount(0);
+      await expect(lights.locator(".light-stack")).toHaveCSS(
+        "pointer-events",
+        "none",
+      );
+      await expect(lights.locator(".light-stack")).toHaveCSS(
+        "visibility",
+        "hidden",
+      );
+      await expect(talk.locator(".inactive-control")).toHaveCSS(
+        "pointer-events",
+        "none",
+      );
+      await expect(talk.locator(".inactive-control")).toHaveCSS(
+        "visibility",
+        "hidden",
+      );
+      await expect(page.locator("wzc-camera-switcher .switcher")).toHaveCSS(
+        "pointer-events",
+        "none",
+      );
+      await expect(page.locator("wzc-slideshow button")).toHaveCSS(
+        "pointer-events",
+        "none",
+      );
+      await expect(camera.locator(".carousel-navigation").first()).toHaveCSS(
+        "pointer-events",
+        "none",
+      );
+      const hiddenLowerControlHits = await Promise.all(
+        [lightButton, talkButton, ptzRightButton].map((control) =>
+          control.evaluate((element) => {
+            const bounds = element.getBoundingClientRect();
+            const x = bounds.x + bounds.width / 2;
+            const y = bounds.y + bounds.height / 2;
+            let target = document.elementFromPoint(x, y);
+            while (target?.shadowRoot) {
+              const nested = target.shadowRoot.elementFromPoint(x, y);
+              if (!nested || nested === target) break;
+              target = nested;
+            }
+            return (
+              target === element || Boolean(target && element.contains(target))
+            );
+          }),
+        ),
+      );
+      expect(hiddenLowerControlHits).toEqual([false, false, false]);
     }
   }
 });
@@ -8057,6 +8139,32 @@ test("retains one live connection while the card presentation is replaced", asyn
   await viewport.hover();
   await expect(controls.first()).toBeVisible();
   await expect(connectionIndicator).toHaveText("WebRTC");
+  const mediaControlGroup = page.locator(
+    "wzc-camera wzc-camera-controls wzc-media-controls .control-group",
+  );
+  const [rightRailBox, mediaControlGroupBox, sourceIndicatorBox] =
+    await Promise.all([
+      page.locator("wzc-camera wzc-camera-controls").boundingBox(),
+      mediaControlGroup.boundingBox(),
+      connectionIndicator.boundingBox(),
+    ]);
+  expect(rightRailBox).not.toBeNull();
+  expect(mediaControlGroupBox).not.toBeNull();
+  expect(sourceIndicatorBox).not.toBeNull();
+  if (rightRailBox && mediaControlGroupBox && sourceIndicatorBox) {
+    expect(
+      mediaControlGroupBox.y + mediaControlGroupBox.height / 2,
+    ).toBeCloseTo(rightRailBox.y + rightRailBox.height / 2, 1);
+    const sourceOverlapsControls =
+      sourceIndicatorBox.x <
+        mediaControlGroupBox.x + mediaControlGroupBox.width &&
+      sourceIndicatorBox.x + sourceIndicatorBox.width >
+        mediaControlGroupBox.x &&
+      sourceIndicatorBox.y <
+        mediaControlGroupBox.y + mediaControlGroupBox.height &&
+      sourceIndicatorBox.y + sourceIndicatorBox.height > mediaControlGroupBox.y;
+    expect(sourceOverlapsControls).toBe(false);
+  }
   const controlPresentation = await controls.evaluateAll((buttons) => {
     const group = buttons[0]?.parentElement;
     const rectangles = buttons.map((button) => button.getBoundingClientRect());
@@ -8216,6 +8324,20 @@ test("retains one live connection while the card presentation is replaced", asyn
   await expect(controls.first()).toBeHidden({
     timeout: MEDIA_OVERLAY_HIDE_DELAY_MS + 1_000,
   });
+  await expect(mediaControlGroup).toHaveCSS("pointer-events", "none");
+  const hiddenRightRailHit = await mute.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    const x = bounds.x + bounds.width / 2;
+    const y = bounds.y + bounds.height / 2;
+    let target = document.elementFromPoint(x, y);
+    while (target?.shadowRoot) {
+      const nested = target.shadowRoot.elementFromPoint(x, y);
+      if (!nested || nested === target) break;
+      target = nested;
+    }
+    return Boolean(target?.closest("[data-control]"));
+  });
+  expect(hiddenRightRailHit).toBe(false);
   await expect(connectionIndicator).toHaveText("WebRTC");
   await page
     .locator("wzc-camera-navigation button")

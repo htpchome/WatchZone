@@ -18,16 +18,20 @@ const slideshowPrivateStyles = css`
     gap: var(--wzc-overlay-control-gap);
     inline-size: var(--wzc-control-size);
     opacity: 0;
+    visibility: hidden;
     padding: 0 var(--wzc-overlay-control-inline-padding);
     pointer-events: none;
     transition:
       opacity var(--wzc-media-overlay-transition-duration) ease,
-      background var(--wzc-media-overlay-transition-duration) ease;
+      background var(--wzc-media-overlay-transition-duration) ease,
+      visibility 0s linear var(--wzc-media-overlay-transition-duration);
   }
 
   button.visible {
     opacity: 1;
+    visibility: visible;
     pointer-events: auto;
+    transition-delay: 0s;
   }
 
   button.active {

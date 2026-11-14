@@ -357,7 +357,8 @@ export class ActivityList extends LitElement {
                 alt=${this.localize("events.thumbnail", {
                   label: objectLabels[0] ?? this.localize("reviews.activity"),
                 })}
-                @error=${() => this._mediaFailed(item, previewUrl)}
+                @error=${(event: Event) =>
+                  this._mediaFailed(event, item, previewUrl)}
               />`
             : html`<div class="placeholder" aria-hidden="true">
                 ${renderIcon("account")}
@@ -372,7 +373,8 @@ export class ActivityList extends LitElement {
                 src=${this.resolveUrl?.(hoverPreviewUrl) ?? hoverPreviewUrl}
                 alt=""
                 aria-hidden="true"
-                @error=${() => this._mediaFailed(item, hoverPreviewUrl)}
+                @error=${(event: Event) =>
+                  this._mediaFailed(event, item, hoverPreviewUrl)}
               />`
             : null
         }
@@ -770,7 +772,14 @@ export class ActivityList extends LitElement {
     );
   }
 
-  private _mediaFailed(item: ActivityListItem, url: string): void {
+  private _mediaFailed(
+    event: Event,
+    item: ActivityListItem,
+    url: string,
+  ): void {
+    if (event.currentTarget instanceof HTMLImageElement) {
+      event.currentTarget.hidden = true;
+    }
     this._failedMedia.add(mediaKey(item, url));
     this._dispatch({ kind: "retry_media", item, url });
     this.requestUpdate();
@@ -817,7 +826,7 @@ export class ActivityList extends LitElement {
 }
 
 function mediaKey(item: ActivityListItem, url: string): string {
-  return `${item.id}:${item.revision}:${url}`;
+  return `${item.id}:${url}`;
 }
 
 function reservedColor(variant: BadgeVariant): BadgeColor {

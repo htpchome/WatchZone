@@ -77,13 +77,19 @@ export const twoWayTalkStyles = css`
   }
 
   .inactive-control {
-    pointer-events: auto;
     opacity: 0;
-    transition: opacity var(--wzc-media-overlay-transition-duration) ease;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity var(--wzc-media-overlay-transition-duration) ease,
+      visibility 0s linear var(--wzc-media-overlay-transition-duration);
   }
 
   .inactive-control.visible {
     opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition-delay: 0s;
   }
 
   .talk-toast {

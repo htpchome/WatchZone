@@ -143,6 +143,46 @@ def test_review_normalization_omits_incomplete_analysis() -> None:
     assert item.analysis_concerns == ()
 
 
+def test_active_review_keeps_stable_thumbnail_identity() -> None:
+    """Elapsed wall time must not churn an active review's thumbnail URL."""
+    payload = {
+        "camera": "front",
+        "data": {"detections": ["event-person"], "objects": ["person"]},
+        "id": "active-review",
+        "severity": "alert",
+        "start_time": 100,
+    }
+    events = {
+        "event-person": {
+            "has_snapshot": True,
+            "id": "event-person",
+            "label": "person",
+        }
+    }
+
+    first = _normalize_review(payload, _source(), 110, events)
+    later = _normalize_review(payload, _source(), 125, events)
+
+    assert first is not None
+    assert later is not None
+    assert first.revision == later.revision
+    assert first.thumbnail_url == later.thumbnail_url
+    assert first.thumbnail_url is not None
+    assert first.thumbnail_url.endswith("review_thumbnail.webp?v=active")
+    assert first.snapshot_url == later.snapshot_url
+    assert first.media_end_time != later.media_end_time
+
+    complete = _normalize_review(
+        {**payload, "end_time": 120},
+        _source(),
+        125,
+        events,
+    )
+    assert complete is not None
+    assert complete.thumbnail_url != first.thumbnail_url
+    assert not complete.thumbnail_url.endswith("?v=active")
+
+
 def test_capture_window_uses_camera_override_then_global_defaults() -> None:
     """Effective category padding respects partial per-camera overrides."""
     config = {

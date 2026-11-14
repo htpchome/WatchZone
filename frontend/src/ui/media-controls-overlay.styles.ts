@@ -3,7 +3,10 @@ import { css } from "lit";
 export const mediaControlsOverlayStyles = css`
   :host {
     z-index: 2;
-    display: block;
+    display: grid;
+    place-items: center;
+    inline-size: 100%;
+    block-size: 100%;
     pointer-events: none;
 
     --wzc-control-size: var(--wzc-camera-control-size);

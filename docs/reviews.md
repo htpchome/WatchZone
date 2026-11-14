@@ -52,6 +52,11 @@
 - An in-progress Review exposes no export, download, or snapshot actions. Its
   complete applicable action set appears only after the provider marks the
   Review complete.
+- An in-progress Review keeps one stable thumbnail resource identity across
+  reconciliation. Wall-clock duration and metadata revisions must not reload
+  the same thumbnail. A failed resource is retired by item ID and URL, falls
+  back without leaving broken-image text visible, and is tried again only when
+  the provider publishes a different media URL.
 - Their shared camera-scoped filter retains distinct category headings and
   presents each category's choices as wrapping pills. Native radio semantics
   preserve single selection, while labels and zones remain multi-select

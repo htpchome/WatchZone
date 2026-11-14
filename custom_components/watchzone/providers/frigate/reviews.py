@@ -361,7 +361,10 @@ def _normalize_review(
         "classification": classification,
         "end_time": end_time,
         "labels": labels,
-        "media_end_time": media_end,
+        # Wall-clock growth is presentation state, not a review revision.
+        # Keeping it out of an active review's revision prevents every
+        # reconciliation pass from replacing the same thumbnail URL.
+        "media_end_time": media_end if end_time is not None else None,
         "media_start_time": media_start,
         "related_event_ids": event_ids,
         "reviewed": reviewed,
@@ -370,6 +373,7 @@ def _normalize_review(
         "zones": zones,
     }
     revision = _revision(material)
+    media_revision = revision if end_time is not None else "active"
     encoded_instance = quote(source.frigate_instance_id, safe="")
     encoded_review = quote(review_id, safe="")
     encoded_camera = quote(camera, safe="")
@@ -407,11 +411,11 @@ def _normalize_review(
         ),
         thumbnail_url=(
             f"/api/frigate/{encoded_instance}/notifications/{encoded_review}/"
-            f"{encoded_camera}/review_thumbnail.webp?v={revision}"
+            f"{encoded_camera}/review_thumbnail.webp?v={media_revision}"
         ),
         snapshot_url=(
             f"/api/frigate/{encoded_instance}/notifications/"
-            f"{quote(snapshot_event_id, safe='')}/snapshot.jpg?v={revision}"
+            f"{quote(snapshot_event_id, safe='')}/snapshot.jpg?v={media_revision}"
             if snapshot_event_id
             else None
         ),

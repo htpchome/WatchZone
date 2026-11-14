@@ -17,12 +17,17 @@ export const lightControlStyles = css`
   .light-stack {
     position: relative;
     opacity: 0;
-    transition: opacity var(--wzc-media-overlay-transition-duration) ease;
+    visibility: hidden;
+    transition:
+      opacity var(--wzc-media-overlay-transition-duration) ease,
+      visibility 0s linear var(--wzc-media-overlay-transition-duration);
     pointer-events: none;
   }
 
   .light-stack.visible {
     opacity: 1;
+    visibility: visible;
+    transition-delay: 0s;
   }
 
   .light-buttons {
@@ -30,6 +35,10 @@ export const lightControlStyles = css`
     grid-auto-columns: max-content;
     grid-auto-flow: column;
     gap: var(--wzc-light-control-gap);
+    pointer-events: none;
+  }
+
+  .light-stack.visible .light-buttons {
     pointer-events: auto;
   }
 

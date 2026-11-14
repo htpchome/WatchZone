@@ -25,7 +25,6 @@ export interface ActiveCameraActivityItem {
 
 interface RetriableActivityItem {
   readonly id: string;
-  readonly revision: string;
 }
 
 interface ActiveCameraActivityContext {
@@ -123,7 +122,7 @@ export class ActiveCameraActivityController<
   }
 
   public retryMedia(item: RetriableActivityItem, url: string): void {
-    const key = `${item.id}:${item.revision}:${url}`;
+    const key = `${item.id}:${url}`;
     if (this._retriedMedia.has(key)) return;
     this._retriedMedia.add(key);
     void this._refresh(true, true);

@@ -110,13 +110,18 @@ export const cameraGroupViewStyles = css`
     padding-block: var(--wzc-camera-overlay-block-inset);
     container-type: size;
     opacity: 0;
+    visibility: hidden;
     pointer-events: none;
-    transition: opacity var(--wzc-media-overlay-transition-duration) ease;
+    transition:
+      opacity var(--wzc-media-overlay-transition-duration) ease,
+      visibility 0s linear var(--wzc-media-overlay-transition-duration);
   }
 
   .feed-actions.visible {
     opacity: 1;
+    visibility: visible;
     pointer-events: auto;
+    transition-delay: 0s;
   }
 
   .feed-action {
@@ -163,10 +168,6 @@ export const cameraGroupViewStyles = css`
     justify-self: stretch;
     z-index: 4;
     pointer-events: none;
-  }
-
-  .group-controls > * {
-    pointer-events: auto;
   }
 
   .stage-resize-handle {
