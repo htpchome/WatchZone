@@ -15,9 +15,9 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.317`
-- Current commit: `f8c3d0c` —
-  `v0.0.4-dev.316 - revert(theme): restore dev.314 presentation`
+- Working version: `0.0.4-dev.318`
+- Current commit: `40b31d3` —
+  `v0.0.4-dev.317 - style(theme): restore unified modal presentation`
 - The worktree contains the uncommitted theme-surface consolidation described
   below. Always verify `git status`, the canonical version in
   `custom_components/watchzone/const.py`, and the latest commit.
@@ -33,6 +33,13 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
   three-role surface-token matrix and single-paint rule.
 - Camera navigation paints its themed translucent background only on the outer
   bar; its nested segmented track is transparent to prevent opacity bands.
+- Recorded-media metadata now paints one borderless, rounded solid-task
+  surface inside the glass viewer. It shares activity-tile badge sizing,
+  preserves icon geometry during hover, reserves space for a larger
+  bottom-right resize handle, and displays provider-normalized activity
+  confidence separately from AI-analysis confidence.
+- The slideshow overlay is hydrated whenever Camera has multiple presentation
+  items. Disabling Camera Switcher Overlay now removes only the switcher.
 - HLS.js warming now overlaps presentation loading, and HLS chunk loading
   overlaps URL signing. Provider source order is unchanged.
 

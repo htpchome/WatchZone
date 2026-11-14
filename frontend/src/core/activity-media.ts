@@ -11,6 +11,7 @@ import type {
 
 export interface ActivityMediaItem {
   readonly analysisScore?: number;
+  readonly score?: number;
   readonly cameraLabel: string;
   readonly classification?: "alert" | "detection";
   readonly downloadFilename?: string;
@@ -115,7 +116,7 @@ export function activityRecordedMediaRequest(
         : undefined,
     endTime: item.endTime,
     objects: item.objectLabels ?? [],
-    score: item.analysisScore,
+    score: item.score,
     startTime: item.startTime,
     zones: item.zones ?? [],
   };
@@ -159,7 +160,7 @@ export function activityPreviewMediaRequest(
           : undefined,
       endTime: item.endTime,
       objects: item.objectLabels ?? [],
-      score: item.analysisScore,
+      score: item.score,
       startTime: item.startTime,
       zones: item.zones ?? [],
     },

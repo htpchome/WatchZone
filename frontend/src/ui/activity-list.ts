@@ -46,6 +46,7 @@ export interface ActivityListItem {
   readonly analysisConcerns?: readonly string[];
   readonly analysisScore?: number;
   readonly analysisTitle?: string;
+  readonly score?: number;
   readonly cameraBadgeLabel?: string;
   readonly cameraLabel: string;
   readonly classification?: ActivityClassification;

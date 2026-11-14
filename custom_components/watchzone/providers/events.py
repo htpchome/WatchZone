@@ -28,6 +28,7 @@ class EventItem:
     camera: str
     label: str
     sub_label: str | None
+    score: float | None
     start_time: float
     end_time: float | None
     has_snapshot: bool

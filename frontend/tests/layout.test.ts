@@ -218,21 +218,28 @@ describe("layout composition", () => {
     });
   });
 
-  it("adds the camera switcher and slideshow overlays only when enabled with multiple cameras", () => {
-    const disabled = builtInStage(
+  it("keeps slideshow independent from the optional camera switcher overlay", () => {
+    const switcherDisabled = builtInStage(
       normalizeCardConfig({
         cameras: [{ entity_id: "camera.front" }, { entity_id: "camera.back" }],
       }),
     );
-    expect(moduleAt(disabled, 0).slots?.overlay).toBeUndefined();
+    expect(moduleAt(switcherDisabled, 0).slots?.overlay).toEqual([
+      expect.objectContaining({
+        componentType: "slideshow",
+        config: { targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID },
+        kind: "component",
+        overlayRegion: "top",
+      }),
+    ]);
 
-    const enabled = builtInStage(
+    const switcherEnabled = builtInStage(
       normalizeCardConfig({
         camera_switcher_overlay: true,
         cameras: [{ entity_id: "camera.front" }, { entity_id: "camera.back" }],
       }),
     );
-    expect(moduleAt(enabled, 0).slots?.overlay).toEqual([
+    expect(moduleAt(switcherEnabled, 0).slots?.overlay).toEqual([
       expect.objectContaining({
         componentType: "slideshow",
         config: { targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID },
@@ -361,7 +368,9 @@ describe("layout composition", () => {
     );
 
     const camera = moduleAt(layout, 0);
-    expect(camera?.slots?.overlay).toBeUndefined();
+    expect(camera?.slots?.overlay).toEqual([
+      expect.objectContaining({ componentType: "slideshow" }),
+    ]);
     expect(camera?.slots?.controls?.[0]).toMatchObject({
       id: DEFAULT_PTZ_COMPONENT_NODE_ID,
       kind: "component",

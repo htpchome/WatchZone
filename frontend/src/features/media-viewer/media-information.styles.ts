@@ -8,10 +8,11 @@ export const mediaInformationStyles = css`
   }
 
   .information {
-    border-block-start: 1px solid var(--wzc-color-border);
+    background: var(--wzc-task-dialog-background);
+    border-radius: var(--wzc-task-dialog-radius);
     display: grid;
     gap: 0.8rem;
-    padding-block-start: 0.8rem;
+    padding: var(--wzc-recorded-media-dialog-padding);
   }
 
   .badges,
@@ -20,6 +21,11 @@ export const mediaInformationStyles = css`
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
+  }
+
+  .badges wzc-badge {
+    --wzc-badge-font-size: var(--wzc-event-badge-font-size);
+    --wzc-badge-padding: var(--wzc-event-badge-padding);
   }
 
   .metadata {
@@ -51,9 +57,8 @@ export const mediaInformationStyles = css`
   }
 
   .actions {
-    border-block-start: 1px solid var(--wzc-color-border);
     justify-content: flex-end;
-    padding-block-start: 0.75rem;
+    padding-inline-end: var(--wzc-recorded-media-resize-handle-size);
   }
 
   @container (max-width: 36rem) {

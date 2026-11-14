@@ -310,6 +310,7 @@ export class ReviewsModule extends LitElement {
       playable: true,
       preferredTransport: review.preferred_transport,
       reviewed: review.reviewed,
+      ...(review.score !== null ? { score: review.score } : {}),
       reviewStatePending: this._pendingReviewIds.has(review.id),
       revision: review.revision,
       snapshotUrl: review.snapshot_url,

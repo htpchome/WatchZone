@@ -61,11 +61,13 @@ viewing. Recording discovery and grouping are governed by
 - Any non-action area of a playable activity tile opens the recorded-media
   viewer. Download remains independent; snapshot actions open the still image
   in the same viewer shell.
-- The current information area presents classification and object badges,
-  camera, localized day/date and time, duration, objects, zones, optional
-  score, and only the actions supported by the normalized request. On narrow
+- The current information area is a deliberately distinct solid-task surface
+  within the glass viewer shell. It presents classification and object badges,
+  camera, localized day/date and time, duration, objects, zones,
+  provider-normalized activity confidence, and only the actions supported by
+  the normalized request. AI-analysis confidence remains separate. On narrow
   containers its metadata reduces from four columns to two and then one, while
-  actions wrap and finally stack without shrinking their touch targets.
+  actions wrap without shrinking their touch targets.
 - An alert or detection without an end time is visibly marked as in progress.
   A closed alert also retains that marker while recording playback remains
   unavailable. Its tile remains actionable: activation immediately opens the

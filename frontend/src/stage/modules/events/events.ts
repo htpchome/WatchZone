@@ -238,6 +238,7 @@ export class EventsModule extends LitElement {
         playable: event.playback_sources.length > 0,
         preferredTransport: event.preferred_transport,
         revision: event.revision,
+        ...(event.score !== null ? { score: event.score } : {}),
         snapshotUrl: event.snapshot_url,
         startTime: event.start_time,
         thumbnailUrl: event.thumbnail_url,

@@ -125,7 +125,7 @@ export const draggableDialogStyles = css`
     background: transparent;
     border: 0;
     bottom: 0;
-    color: var(--wzc-color-text-2);
+    color: var(--wzc-color-text-1);
     cursor: nwse-resize;
     display: flex;
     height: var(--wzc-recorded-media-resize-handle-size);
@@ -149,7 +149,7 @@ export const draggableDialogStyles = css`
   }
 
   .resize-handle ha-icon {
-    --mdc-icon-size: 1.25rem;
+    --mdc-icon-size: 1.75rem;
     display: block;
   }
 

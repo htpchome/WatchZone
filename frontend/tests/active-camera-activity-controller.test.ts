@@ -565,6 +565,7 @@ function review(overrides: Partial<ReviewItem> = {}): ReviewItem {
     related_event_ids: [],
     reviewed: false,
     revision: "push:new:alert:draft",
+    score: null,
     snapshot_url: null,
     start_time: now - 1,
     sub_labels: [],

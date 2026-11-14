@@ -186,6 +186,7 @@ function normalizeReview(
     related_event_ids: eventIds.map((id) => `${source.instance_id}:${id}`),
     reviewed: activity.has_been_reviewed === true,
     revision,
+    score: null,
     snapshot_url: null,
     start_time: activity.start_time,
     sub_labels: subLabels,

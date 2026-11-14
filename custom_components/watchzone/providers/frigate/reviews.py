@@ -331,6 +331,12 @@ def _normalize_review(
     event_ids = _review_event_ids(raw)
     events = related_events or {}
     event_payloads = [events[event_id] for event_id in event_ids if event_id in events]
+    event_scores = tuple(
+        score
+        for event in event_payloads
+        if (score := _event_score(event)) is not None
+    )
+    score = max(event_scores, default=None)
     labels = _unique_strings(
         [
             *_list(data.get("objects")),
@@ -368,6 +374,7 @@ def _normalize_review(
         "media_start_time": media_start,
         "related_event_ids": event_ids,
         "reviewed": reviewed,
+        "score": score,
         "start_time": start_time,
         "sub_labels": sub_labels,
         "zones": zones,
@@ -404,6 +411,7 @@ def _normalize_review(
         analysis_title=analysis_title,
         analysis_description=analysis_description,
         analysis_score=analysis_score,
+        score=score,
         analysis_concerns=analysis_concerns,
         preview_url=(
             f"/api/frigate/{encoded_instance}/notifications/{encoded_review}/"
@@ -692,6 +700,16 @@ def _confidence(value: object) -> float | None:
     if confidence > 1:
         confidence /= 100
     return min(confidence, 1)
+
+
+def _event_score(event: Mapping[str, Any]) -> float | None:
+    data = _mapping(event.get("data"))
+    scores = tuple(
+        score
+        for value in (event.get("top_score"), event.get("score"), data.get("score"))
+        if (score := _confidence(value)) is not None
+    )
+    return max(scores, default=None)
 
 
 def _text(value: object) -> str | None:

@@ -29,6 +29,7 @@ const event = {
   ],
   preferred_transport: "file",
   revision: "revision-1",
+  score: 0.88,
   snapshot_url: "/snapshot.jpg",
   start_time: 100,
   sub_label: "Resident",
@@ -276,6 +277,7 @@ describe("events module", () => {
       expect.objectContaining({
         id: event.id,
         kind: "video",
+        metadata: expect.objectContaining({ score: 0.88 }),
         posterUrl: "https://ha.local/snapshot.jpg",
         preferredTransport: "file",
         title: expect.stringMatching(/^Front - .+ - .+$/),

@@ -48,6 +48,7 @@ const reviews = [
     revision: "revision-1",
     related_event_ids: ["frigate:event-1", "frigate:event-2"],
     reviewed: true,
+    score: 0.87,
     snapshot_url: "/alert-snapshot.jpg",
     start_time: 100,
     sub_labels: ["Resident", "Northern Mockingbird", "American Goldfinch"],
@@ -80,6 +81,7 @@ const reviews = [
     revision: "revision-2",
     related_event_ids: ["frigate:event-3"],
     reviewed: false,
+    score: 0.79,
     snapshot_url: null,
     start_time: 80,
     sub_labels: [],
@@ -711,6 +713,7 @@ describe("reviews module", () => {
     );
     expect(snapshotRequest?.kind).toBe("snapshot");
     expect(snapshotRequest?.metadata?.duration).toBe(20);
+    expect(snapshotRequest?.metadata?.score).toBe(0.79);
     expect(snapshotRequest?.actions?.viewReview).toBeTypeOf("function");
 
     list?.dispatchEvent(

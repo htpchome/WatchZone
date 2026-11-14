@@ -77,6 +77,7 @@ class ReviewItem:
     analysis_title: str | None
     analysis_description: str | None
     analysis_score: float | None
+    score: float | None
     analysis_concerns: tuple[str, ...]
     preview_url: str | None
     thumbnail_url: str | None

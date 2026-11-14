@@ -122,6 +122,10 @@ cannot complete.
   that shared state. The active overlay remains mounted when the shared media
   overlay hides, using the shared dimmed opacity; interaction reveals the
   ordinary overlay controls again.
+- The slideshow overlay is available whenever Camera has more than one
+  presentation item. The independent Camera Switcher Overlay preference may
+  remove only the camera-switcher component; it never removes or gates the
+  slideshow control or countdown.
 
 ## Sizing and stability
 

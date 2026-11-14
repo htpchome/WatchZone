@@ -19,6 +19,7 @@ export interface EventItem {
   readonly playback_sources: readonly RecordedMediaSource[];
   readonly preferred_transport: RecordedMediaTransport;
   readonly revision: string;
+  readonly score: number | null;
   readonly snapshot_url: string | null;
   readonly start_time: number;
   readonly sub_label: string | null;

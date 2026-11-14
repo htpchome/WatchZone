@@ -440,7 +440,7 @@ export const themeTokens = css`
     --wzc-recorded-media-dialog-bottom-padding: 1.25rem;
     --wzc-recorded-media-dialog-min-inline-size: min(16rem, calc(100vw - 1rem));
     --wzc-recorded-media-dialog-min-block-size: min(10rem, calc(100dvh - 1rem));
-    --wzc-recorded-media-resize-handle-size: 1.5rem;
+    --wzc-recorded-media-resize-handle-size: 2.75rem;
     --wzc-recorded-media-close-size: 2.75rem;
     --wzc-recorded-media-close-background: transparent;
     --wzc-recorded-media-close-hover-background: color-mix(

@@ -283,9 +283,7 @@ function hydrateCameraComponent(
       : undefined;
   }
   if (node.componentType === SLIDESHOW_COMPONENT_TYPE) {
-    return config.camera_switcher_overlay && config.cameras.length > 1
-      ? node
-      : undefined;
+    return config.cameras.length > 1 ? node : undefined;
   }
   if (node.componentType === TALK_COMPONENT_TYPE) {
     const secondaryIds = groupedSecondaryIds(config);

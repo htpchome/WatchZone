@@ -5,7 +5,7 @@ export const activityActionStyles = css`
   .wzc-activity-action {
     align-items: center;
     background: var(--wzc-event-action-background);
-    border: 1px solid transparent;
+    border: 0;
     border-radius: var(--wzc-radius-medium);
     color: var(--wzc-event-action-color);
     display: inline-flex;
@@ -13,13 +13,7 @@ export const activityActionStyles = css`
     min-block-size: var(--wzc-event-action-size);
     min-inline-size: var(--wzc-event-action-size);
     padding: 0;
-    transition:
-      border-color var(--wzc-media-overlay-transition-duration) ease,
-      color var(--wzc-media-overlay-transition-duration) ease;
-  }
-
-  .wzc-activity-action > :is(ha-icon, svg) {
-    transition: transform var(--wzc-media-overlay-transition-duration) ease;
+    transition: color var(--wzc-media-overlay-transition-duration) ease;
   }
 
   .wzc-activity-action:active:not(:disabled) {
@@ -27,18 +21,11 @@ export const activityActionStyles = css`
     color: var(--wzc-color-primary);
   }
 
-  .wzc-activity-action:active:not(:disabled) > :is(ha-icon, svg) {
-    transform: scale(0.96);
-  }
-
   @media (hover: hover) and (pointer: fine) {
     .wzc-activity-action:hover:not(:disabled) {
-      border-color: var(--wzc-color-primary);
       color: var(--wzc-color-primary);
-    }
-
-    .wzc-activity-action:hover:not(:disabled) > :is(ha-icon, svg) {
-      transform: scale(1.08);
+      outline: 1px solid var(--wzc-color-primary);
+      outline-offset: -1px;
     }
   }
 `;

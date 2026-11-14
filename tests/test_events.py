@@ -10,6 +10,7 @@ def test_event_revision_changes_with_mutable_media_and_end_time() -> None:
             "id": "1700000000.1-abc",
             "camera": "front",
             "label": "person",
+            "top_score": 0.94,
             "start_time": 1700000000.1,
             "end_time": None,
             "has_snapshot": False,
@@ -37,6 +38,7 @@ def test_event_revision_changes_with_mutable_media_and_end_time() -> None:
     assert pending.id == complete.id == "frigate_workshop:1700000000.1-abc"
     assert pending.revision != complete.revision
     assert complete.sub_label == "Resident"
+    assert complete.score == 0.94
     assert complete.zones == ("driveway", "front_yard")
     assert complete.thumbnail_url is not None
     assert complete.thumbnail_url.startswith(

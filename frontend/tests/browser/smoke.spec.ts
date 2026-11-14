@@ -1705,6 +1705,30 @@ test("advances the authoritative camera selection through slideshow controls", a
   await expect(toolbarToggle).toHaveAttribute("aria-pressed", "false");
 });
 
+test("keeps the slideshow overlay when the camera switcher is disabled", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  await page.locator("watchzone-card").evaluate((element) => {
+    (
+      element as HTMLElement & {
+        setConfig(config: unknown): void;
+      }
+    ).setConfig({
+      type: "custom:watchzone-card",
+      camera_switcher_overlay: false,
+      cameras: [
+        { entity_id: "camera.front", title: "Front" },
+        { entity_id: "camera.back", title: "Back" },
+      ],
+    });
+  });
+
+  await expect(page.locator("wzc-slideshow button")).toHaveCount(1);
+  await expect(page.locator("wzc-camera-switcher")).toHaveCount(0);
+});
+
 test("highlights live video directly from draft review notifications", async ({
   page,
 }) => {
@@ -2093,6 +2117,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
               : [],
           preferred_transport: "file",
           revision: `revision-${index}`,
+          score: 0.88 - index * 0.01,
           snapshot_url: index === 3 ? null : "/thumbnail.svg",
           start_time: start,
           sub_label: index === 0 ? "Resident" : null,
@@ -2181,6 +2206,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
               revision: event.revision,
               related_event_ids: [event.id],
               reviewed: false,
+              score: event.score,
               snapshot_url: event.snapshot_url,
               start_time: event.start_time,
               sub_labels: event.sub_label ? [event.sub_label] : [],
@@ -3177,6 +3203,40 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(mediaSurface).toEqual(analysisSurface);
   await expect(mediaInformation.locator(".metadata")).toContainText("Camera");
   await expect(mediaInformation.locator(".metadata")).toContainText("Duration");
+  await expect(mediaInformation.locator(".metadata")).toContainText("88%");
+  const informationPresentation = await mediaInformation
+    .locator(".information")
+    .evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        backdropFilter: style.backdropFilter,
+        background: style.backgroundColor,
+        borderStyle: style.borderStyle,
+        padding: Number.parseFloat(style.paddingTop),
+        radius: Number.parseFloat(style.borderRadius),
+      };
+    });
+  expect(informationPresentation.background).not.toBe("rgba(0, 0, 0, 0)");
+  expect(informationPresentation.backdropFilter).toBe("none");
+  expect(informationPresentation.borderStyle).toBe("none");
+  expect(informationPresentation.padding).toBeGreaterThan(0);
+  expect(informationPresentation.radius).toBeGreaterThan(0);
+  const mediaBadge = mediaInformation.locator(".badges wzc-badge").first();
+  const tileBadge = events.locator(".badges wzc-badge").first();
+  const badgePresentations = await Promise.all(
+    [mediaBadge, tileBadge].map((badge) =>
+      badge.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return {
+          fontSize: style.getPropertyValue("--wzc-badge-font-size").trim(),
+          padding: style.getPropertyValue("--wzc-badge-padding").trim(),
+          shape: element.getAttribute("shape"),
+          size: element.getAttribute("size"),
+        };
+      }),
+    ),
+  );
+  expect(badgePresentations[0]).toEqual(badgePresentations[1]);
   await expect(
     mediaInformation.getByRole("button", { name: "View Snapshot" }),
   ).toBeVisible();
@@ -3203,31 +3263,31 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await mediaAction.hover();
   await expect
     .poll(() =>
-      mediaAction.evaluate((element) => getComputedStyle(element).borderColor),
+      mediaAction.evaluate((element) => getComputedStyle(element).outlineStyle),
     )
-    .not.toBe("rgba(0, 0, 0, 0)");
+    .toBe("solid");
   const hoveredAction = await mediaAction.evaluate((element) => {
     const icon = element.querySelector("ha-icon");
     const style = getComputedStyle(element);
     return {
-      borderColor: style.borderColor,
       color: style.color,
       iconTransform: icon ? getComputedStyle(icon).transform : "none",
+      outlineStyle: style.outlineStyle,
     };
   });
-  expect(hoveredAction.borderColor).not.toBe("rgba(0, 0, 0, 0)");
+  expect(hoveredAction.outlineStyle).toBe("solid");
   expect(hoveredAction.color).not.toBe(actionPresentations[1]?.color);
-  expect(hoveredAction.iconTransform).not.toBe("none");
+  expect(hoveredAction.iconTransform).toBe("none");
   await page.mouse.move(0, 0);
   await expect
     .poll(() =>
       mediaAction.evaluate((element) => ({
-        borderColor: getComputedStyle(element).borderColor,
+        outlineStyle: getComputedStyle(element).outlineStyle,
         iconTransform: getComputedStyle(element.querySelector("ha-icon")!)
           .transform,
       })),
     )
-    .toEqual({ borderColor: "rgba(0, 0, 0, 0)", iconTransform: "none" });
+    .toEqual({ outlineStyle: "none", iconTransform: "none" });
   const initialPlacement = await mediaDialog.evaluate((dialog) => {
     return {
       explicitlyPositioned: dialog.classList.contains("dragged"),
@@ -3494,8 +3554,18 @@ test("keeps activity content in an independently scrolling viewport", async ({
     .locator("wzc-recorded-video-player .viewport")
     .boundingBox();
   const resizeBox = await resizeHandle.boundingBox();
+  const finalMediaActionBox = await mediaInformation
+    .locator(".actions .wzc-activity-action")
+    .last()
+    .boundingBox();
   expect(initialDialogBox).not.toBeNull();
   expect(resizeBox).not.toBeNull();
+  expect(resizeBox?.width).toBeGreaterThanOrEqual(44);
+  expect(resizeBox?.height).toBeGreaterThanOrEqual(44);
+  expect(finalMediaActionBox?.x).toBeLessThan(resizeBox?.x ?? 0);
+  expect(
+    (finalMediaActionBox?.x ?? 0) + (finalMediaActionBox?.width ?? 0),
+  ).toBeLessThanOrEqual(resizeBox?.x ?? 0);
   if (initialDialogBox && resizeBox) {
     await page.mouse.move(
       resizeBox.x + resizeBox.width / 2,

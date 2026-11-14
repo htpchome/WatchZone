@@ -56,6 +56,7 @@ def test_review_normalization_preserves_classification_and_media() -> None:
             "event-bird": {
                 "id": "event-bird",
                 "label": "bird",
+                "top_score": 0.87,
                 "sub_label": "Northern Mockingbird",
                 "zones": ["bird_feeder"],
                 "has_snapshot": True,
@@ -63,6 +64,7 @@ def test_review_normalization_preserves_classification_and_media() -> None:
             "event-goldfinch": {
                 "id": "event-goldfinch",
                 "label": "bird",
+                "top_score": 0.93,
                 "sub_label": ["American Goldfinch", 0.96],
                 "zones": ["bird_feeder", "back_yard"],
                 "has_snapshot": True,
@@ -82,6 +84,7 @@ def test_review_normalization_preserves_classification_and_media() -> None:
         "A resident walks toward the parked car."
     )
     assert item.analysis_score == 0.98
+    assert item.score == 0.93
     assert item.analysis_concerns == ("Gate left open",)
     assert item.labels == ("person", "car", "speech", "bird")
     assert item.sub_labels == (
@@ -140,6 +143,7 @@ def test_review_normalization_omits_incomplete_analysis() -> None:
     assert item.analysis_title is None
     assert item.analysis_description is None
     assert item.analysis_score is None
+    assert item.score is None
     assert item.analysis_concerns == ()
 
 

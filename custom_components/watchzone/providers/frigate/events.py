@@ -68,6 +68,7 @@ def _normalize_event(raw: dict[str, Any], instance_id: str) -> EventItem | None:
     has_snapshot = raw.get("has_snapshot") is True
     has_clip = raw.get("has_clip") is True
     sub_label = _sub_label(raw.get("sub_label"))
+    score = _confidence(raw.get("top_score"))
     zones = _string_list(raw.get("zones"))
     material = {
         "camera": camera,
@@ -75,6 +76,7 @@ def _normalize_event(raw: dict[str, Any], instance_id: str) -> EventItem | None:
         "has_clip": has_clip,
         "has_snapshot": has_snapshot,
         "label": label,
+        "score": score,
         "start_time": start_time,
         "sub_label": sub_label,
         "zones": zones,
@@ -94,6 +96,7 @@ def _normalize_event(raw: dict[str, Any], instance_id: str) -> EventItem | None:
         camera=camera,
         label=label,
         sub_label=sub_label,
+        score=score,
         start_time=start_time,
         end_time=end_time,
         has_snapshot=has_snapshot,
@@ -125,6 +128,15 @@ def _number(value: object) -> float | None:
     if isinstance(value, bool) or not isinstance(value, int | float):
         return None
     return float(value)
+
+
+def _confidence(value: object) -> float | None:
+    confidence = _number(value)
+    if confidence is None or confidence < 0:
+        return None
+    if confidence > 1:
+        confidence /= 100
+    return min(confidence, 1)
 
 
 def _sub_label(value: object) -> str | None:
