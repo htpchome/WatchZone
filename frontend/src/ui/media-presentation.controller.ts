@@ -30,7 +30,7 @@ export class MediaPresentationController implements ReactiveController {
     this.overlay = new MediaOverlayVisibilityController(host, _options);
     this.zoom = new MediaZoomController(host);
     this.touch = new MediaTouchGestureController(this.zoom, {
-      revealOverlay: () => this.overlay.reveal(),
+      revealOverlay: () => this.overlay.revealFromTouch(),
       touchOverlayEnabled: () => this._overlayInteractionEnabled,
     });
   }

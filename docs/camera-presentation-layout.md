@@ -138,14 +138,14 @@ absolute-offset system may coexist with this grid.
 
 ```text
 ┌──────────────────────────────────────────────────────────────────────┐
-│ TOP:              [slideshow] [camera picker]       [source badge] │
-├───────────┬───────────────────────────────────────────┬──────────────┤
-│ LEFT      │ MEDIA                                     │ RIGHT        │
-│ [A audio] │  ‹         unobstructed video          ›  │ power / PiP  │
-│ [A view]  │                                           │ snapshot     │
-│ [B audio] │                                           │ fullscreen   │
-│ [B view]  │                                           │ mute         │
-├───────────┤ LOWER: [light] [talk]             [PTZ]  ├──────────────┤
+│ LEFT      │ TOP: [slideshow] [camera picker]           │ RIGHT        │
+│ [A audio] ├────────────────────────────────────────────┤ source badge │
+│ [A view]  │ MEDIA                                      │ power / PiP  │
+│ [B audio] │  ‹          unobstructed video          ›  │ snapshot     │
+│ [B view]  │                                            │ fullscreen   │
+│           ├────────────────────────────────────────────┤ mute         │
+│           │ LOWER: [light] [talk]              [PTZ]  │              │
+├───────────┴────────────────────────────────────────────┴──────────────┤
 │ METADATA: camera name       [resize handle]        timestamp       │
 └──────────────────────────────────────────────────────────────────────┘
 ```
@@ -155,9 +155,10 @@ absolute-offset system may coexist with this grid.
   are never positioned from a percentage of the Stage width. Camera selection
   is the immutable top-center anchor: its center always equals the Stage
   centerline and no sibling control may participate in or alter that
-  calculation. Slideshow sits immediately before that anchored picker. Source
-  state owns
-  top-trailing. Every top-row control uses
+  calculation. Slideshow sits immediately before that anchored picker. Its
+  idle state is square and its countdown/hold state uses one stable wider
+  width; a two-digit to one-digit countdown never changes its geometry. Source
+  state owns the top of the right rail. Every top-row control uses
   the shared media-overlay control sizing contract; text controls may be wider,
   but their height, border, radius, and vertical alignment are uniform. Compact
   container reductions are defined once in `overlay-control.styles.ts` and are
@@ -167,6 +168,10 @@ absolute-offset system may coexist with this grid.
   lane; they never occupy either lane. The shared boundary is
   `--wzc-camera-side-lane-inline-size`; carousel navigation, the top overlay
   row, and the lower control band all derive from that boundary.
+- Both side rails extend from the Stage's top edge through the lower band. Rail
+  width, top-row height, lower-row height, gaps, and every overlay control size
+  derive from the same Stage-owned responsive token system, so a short
+  phone stage cannot retain desktop rail geometry.
 - The fixed right lane owns the vertical player-tool dock. Adding or removing a
   player tool does not move either carousel arrow horizontally. PTZ belongs
   wholly to the trailing edge of `lower`; its collapsed trigger, immutable
@@ -181,6 +186,8 @@ absolute-offset system may coexist with this grid.
   remain unobstructed in the bottom metadata strip.
 - Module-private overlays and Stage components follow the same zone geometry;
   they do not create competing offsets or duplicate touch visibility owners.
+- Live picture-in-picture is omitted from phone layouts. Tablet and desktop
+  layouts retain it when the active browser video supports the capability.
 
 ## Verification
 

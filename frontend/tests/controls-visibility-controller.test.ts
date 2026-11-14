@@ -70,6 +70,18 @@ describe("media overlay visibility controller", () => {
     expect(controller.sourceVisible).toBe(false);
   });
 
+  it("lets touch replace stale hover with the normal hide timer", () => {
+    vi.useFakeTimers();
+    const controller = new MediaOverlayVisibilityController(new TestHost());
+
+    controller.handlePointerEnter(pointerEvent("mouse"));
+    controller.revealFromTouch();
+    vi.advanceTimersByTime(MEDIA_OVERLAY_HIDE_DELAY_MS);
+
+    expect(controller.visible).toBe(false);
+    expect(controller.sourceVisible).toBe(false);
+  });
+
   it("restarts the timer when revealed again while visible", () => {
     vi.useFakeTimers();
     const controller = new MediaOverlayVisibilityController(new TestHost());

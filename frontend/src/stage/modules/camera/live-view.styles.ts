@@ -13,7 +13,7 @@ export const cameraLiveViewStyles = css`
     position: relative;
     display: grid;
     grid-template-areas:
-      "top top top top top"
+      "left top top top right"
       "left media media media right"
       "left lower lower lower right"
       "metadata metadata metadata metadata metadata";
@@ -172,7 +172,7 @@ export const cameraLiveViewStyles = css`
   }
 
   .source-indicator {
-    grid-area: top;
+    grid-area: right;
     align-self: start;
     justify-self: end;
     z-index: 1;

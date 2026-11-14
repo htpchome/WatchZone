@@ -23,7 +23,7 @@ export const cameraStyles = css`
     position: relative;
     display: grid;
     grid-template-areas:
-      "top top top top top"
+      "left top top top right"
       "left media media media right"
       "left lower lower lower right"
       "metadata metadata metadata metadata metadata";
@@ -101,7 +101,7 @@ export const cameraStyles = css`
     display: grid;
     place-items: center;
     box-sizing: border-box;
-    inline-size: 2.75rem;
+    inline-size: var(--wzc-camera-control-size);
     block-size: var(--wzc-carousel-navigation-icon-size);
     padding: 0;
     color: var(--wzc-media-overlay-color);
@@ -131,8 +131,15 @@ export const cameraStyles = css`
 
   .carousel-navigation svg {
     display: block;
-    inline-size: var(--wzc-carousel-navigation-icon-size);
-    block-size: var(--wzc-carousel-navigation-icon-size);
+    inline-size: min(
+      var(--wzc-carousel-navigation-icon-size),
+      var(--wzc-camera-control-size)
+    );
+    block-size: min(
+      var(--wzc-carousel-navigation-icon-size),
+      var(--wzc-camera-control-size)
+    );
+    filter: drop-shadow(0 1px 2px var(--wzc-media-overlay-surface));
     pointer-events: none;
   }
 

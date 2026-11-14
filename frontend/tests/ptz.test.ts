@@ -162,9 +162,10 @@ describe("PTZ component", () => {
     context.publish(owner, cameraSession());
     await vi.waitFor(() =>
       expect(
-        element.shadowRoot?.querySelector("button.ptz-trigger"),
+        element.shadowRoot?.querySelector("button.collapse"),
       ).not.toBeNull(),
     );
+    expect(element.shadowRoot?.querySelector("button.ptz-trigger")).toBeNull();
   });
 
   it("preserves a user collapse after the overlay hides", async () => {

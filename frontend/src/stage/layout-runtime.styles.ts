@@ -115,7 +115,7 @@ export const stageRuntimeStyles = css`
     position: relative;
     display: grid;
     grid-template-areas:
-      "top top top top top"
+      "left top top top right"
       "left media media media right"
       "left lower lower lower right"
       "metadata metadata metadata metadata metadata";
@@ -150,7 +150,7 @@ export const stageRuntimeStyles = css`
     z-index: 3;
     display: grid;
     grid-template-areas:
-      "top top top top top"
+      "left top top top right"
       "left media media media right"
       "left lower lower lower right"
       "metadata metadata metadata metadata metadata";

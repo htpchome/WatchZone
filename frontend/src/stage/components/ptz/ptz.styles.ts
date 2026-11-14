@@ -36,6 +36,7 @@ export const ptzStyles = css`
     place-content: center;
     overflow: hidden;
     opacity: 0;
+    visibility: hidden;
     pointer-events: none;
     transform-origin: center;
   }
@@ -62,6 +63,7 @@ export const ptzStyles = css`
 
   .ptz-control.expanded.visible {
     opacity: 1;
+    visibility: visible;
     pointer-events: auto;
   }
 
@@ -135,6 +137,7 @@ export const ptzStyles = css`
     inline-size: var(--wzc-control-size);
     block-size: var(--wzc-control-size);
     opacity: 0;
+    visibility: hidden;
     pointer-events: none;
   }
 
@@ -144,6 +147,7 @@ export const ptzStyles = css`
 
   button.ptz-trigger.visible {
     opacity: 1;
+    visibility: visible;
     pointer-events: auto;
   }
 

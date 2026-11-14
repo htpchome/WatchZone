@@ -53,33 +53,11 @@ export const mediaOverlayControlSizingStyles = css`
     .control-button,
     .round-button,
     .wzc-media-overlay-button {
-      --wzc-control-size: 2.35rem;
-      --wzc-control-icon-size: 1.4rem;
       --wzc-overlay-control-gap: 0.3rem;
       --wzc-overlay-control-inline-padding: 0.42rem;
       --wzc-overlay-control-text-size: 0.7rem;
       --wzc-overlay-control-status-size: 0.64rem;
       --wzc-overlay-control-label-size: 0.68rem;
-    }
-  }
-
-  @container (max-height: 360px) {
-    :host,
-    .control-button,
-    .round-button,
-    .wzc-media-overlay-button {
-      --wzc-control-size: 2.25rem;
-      --wzc-control-icon-size: 1.3rem;
-    }
-  }
-
-  @container (max-height: 240px) {
-    :host,
-    .control-button,
-    .round-button,
-    .wzc-media-overlay-button {
-      --wzc-control-size: 1.875rem;
-      --wzc-control-icon-size: 1.15rem;
     }
   }
 `;

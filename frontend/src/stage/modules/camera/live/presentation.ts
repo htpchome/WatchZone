@@ -24,6 +24,7 @@ import {
   englishLocalize,
   type LocalizeFunction,
 } from "../../../../core/localization";
+import { DeviceProfileController } from "../../../../core/device-profile";
 import type { ToastNotice, ToastSeverity } from "../../../../ui/toast-manager";
 import { renderIcon } from "../../../../ui/icons";
 import "../../../../ui/badge";
@@ -113,6 +114,7 @@ export class CameraLivePresentation extends LitElement {
   private _reportedGestureLocked = false;
   private _snapshotPending = false;
   private _webRtcFrameRequest?: number;
+  private readonly _deviceProfile = new DeviceProfileController(this);
   private readonly _media = new MediaPresentationController(this, {
     dismissOverlayOnOutsidePointer: true,
     onVisibilityChange: (visible) => this._emitOverlayVisibility(visible),
@@ -333,6 +335,7 @@ export class CameraLivePresentation extends LitElement {
             ? staticHtml`<${controlsTag}
                 class="player-tools swiper-no-swiping"
                 .visible=${this.suspended || this._media.overlay.visible}
+                .deviceClass=${this._deviceProfile.profile.deviceClass}
                 .fullscreenActive=${this._fullscreenActive}
                 .fullscreenSupported=${this._fullscreenSupported()}
                 .muted=${this.muted}

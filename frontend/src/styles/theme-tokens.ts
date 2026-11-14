@@ -275,8 +275,8 @@ export const themeTokens = css`
     --wzc-media-overlay-radius: var(--wzc-radius-small);
     --wzc-media-overlay-shadow: var(--wzc-shadow-card);
     --wzc-media-overlay-transition-duration: 140ms;
-    --wzc-camera-control-size: clamp(1.875rem, 10cqi, 2.75rem);
-    --wzc-camera-control-icon-size: clamp(1.15rem, 6cqi, 1.65rem);
+    --wzc-camera-control-size: 2.75rem;
+    --wzc-camera-control-icon-size: 1.65rem;
     --wzc-overlay-control-min-size: var(--wzc-camera-control-size);
     --wzc-round-button-size: var(--wzc-camera-control-size);
     --wzc-round-button-icon-size: 60%;
@@ -307,11 +307,8 @@ export const themeTokens = css`
       var(--wzc-camera-overlay-metadata-row-size);
     --wzc-control-dock-gap: 0.5rem;
     --wzc-camera-switcher-inline-size: clamp(
-      calc(
-        var(--wzc-camera-control-size) + var(--wzc-camera-control-size) +
-          var(--wzc-camera-control-size)
-      ),
-      24cqi,
+      calc(var(--wzc-camera-control-size) + var(--wzc-camera-control-size)),
+      20cqi,
       14rem
     );
     --wzc-slideshow-control-inline-size: calc(
@@ -536,7 +533,7 @@ export const themeTokens = css`
     --wzc-talk-panel-border-color: var(--ha-color-purple-50, #a78bfa);
     --wzc-talk-wave-incoming-color: var(--ha-color-blue-40, #60a5fa);
     --wzc-talk-wave-outgoing-color: var(--ha-color-purple-40, #c084fc);
-    --wzc-ptz-cell-size: clamp(1.15rem, 4.5cqi, 1.7rem);
+    --wzc-ptz-cell-size: 1.7rem;
     --wzc-ptz-button-size: calc(
       var(--wzc-ptz-cell-size) + var(--wzc-ptz-panel-padding) +
         var(--wzc-ptz-panel-padding) + 2px

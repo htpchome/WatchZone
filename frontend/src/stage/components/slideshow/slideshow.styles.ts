@@ -4,7 +4,8 @@ import { mediaOverlayButtonStyles } from "../../../ui/media-overlay-button.style
 
 const slideshowPrivateStyles = css`
   :host {
-    display: block;
+    display: grid;
+    justify-items: end;
     inline-size: 100%;
     pointer-events: none;
   }
@@ -15,7 +16,7 @@ const slideshowPrivateStyles = css`
     display: grid;
     grid-auto-flow: column;
     gap: var(--wzc-overlay-control-gap);
-    inline-size: 100%;
+    inline-size: var(--wzc-control-size);
     opacity: 0;
     padding: 0 var(--wzc-overlay-control-inline-padding);
     pointer-events: none;
@@ -31,6 +32,7 @@ const slideshowPrivateStyles = css`
 
   button.active {
     background: var(--wzc-media-overlay-hover-background);
+    inline-size: 100%;
   }
 
   button.active.dimmed {

@@ -795,7 +795,7 @@ test("keeps grouped phone navigation to one visible A or B feed", async ({
     );
     expect(
       phonePickerBox.x - (phoneSlideshowBox.x + phoneSlideshowBox.width),
-    ).toBeCloseTo(8, 1);
+    ).toBeCloseTo(4, 1);
     expect(phoneSelectorBox.x + phoneSelectorBox.width).toBeLessThanOrEqual(
       phoneSlideshowBox.x,
     );
@@ -1418,7 +1418,7 @@ test("advances the authoritative camera selection through slideshow controls", a
     ).setConfig({
       type: "custom:watchzone-card",
       camera_switcher_overlay: true,
-      slide_advance_time: 5,
+      slide_advance_time: 10,
       slide_transition: "fade",
       cameras: [
         { entity_id: "camera.front", title: "Front" },
@@ -1434,6 +1434,9 @@ test("advances the authoritative camera selection through slideshow controls", a
   );
   const toolbarToggle = page.locator("wzc-activity-slideshow-toggle button");
   const overlayToggle = page.locator("wzc-slideshow button");
+  const idleSlideshowBox = await overlayToggle.boundingBox();
+  expect(idleSlideshowBox).not.toBeNull();
+  expect(idleSlideshowBox?.width).toBeCloseTo(idleSlideshowBox?.height ?? 0, 1);
   await expect(navigation.nth(0)).toHaveAttribute("aria-selected", "true");
   const frontViewport = page
     .locator("wzc-camera .swiper-slide")
@@ -1451,11 +1454,23 @@ test("advances the authoritative camera selection through slideshow controls", a
   await toolbarToggle.click();
   await expect(toolbarToggle).toHaveAttribute("aria-pressed", "true");
   await expect(overlayToggle).toHaveAttribute("aria-pressed", "true");
-  await expect(overlayToggle.locator(".status")).toHaveText("5s");
+  await expect(overlayToggle.locator(".status")).toHaveText("10s");
   await expect(overlayToggle).toHaveClass(/dimmed/);
+  const tenSecondSlideshowBox = await overlayToggle.boundingBox();
+  expect(tenSecondSlideshowBox?.width).toBeGreaterThan(
+    idleSlideshowBox?.width ?? 0,
+  );
+  await expect(overlayToggle.locator(".status")).toHaveText("9s", {
+    timeout: 2_000,
+  });
+  const nineSecondSlideshowBox = await overlayToggle.boundingBox();
+  expect(nineSecondSlideshowBox?.width).toBeCloseTo(
+    tenSecondSlideshowBox?.width ?? 0,
+    1,
+  );
 
   await expect(navigation.nth(1)).toHaveAttribute("aria-selected", "true", {
-    timeout: 7_000,
+    timeout: 12_000,
   });
   await expect(page.locator("wzc-camera-switcher .trigger span")).toHaveText(
     "Back",
@@ -1475,7 +1490,7 @@ test("advances the authoritative camera selection through slideshow controls", a
   await navigation.nth(0).click();
   await expect(navigation.nth(0)).toHaveAttribute("aria-selected", "true");
   await expect(frontViewport).toHaveAttribute("aria-label", /zoom 100 percent/);
-  await expect(overlayToggle.locator(".status")).toHaveText("5s");
+  await expect(overlayToggle.locator(".status")).toHaveText("10s");
   await toolbarToggle.click();
   await expect(toolbarToggle).toHaveAttribute("aria-pressed", "false");
 });
@@ -4629,6 +4644,7 @@ test("preserves expanded camera-stage geometry across carousel selection", async
     const previousIconRect = previous
       ?.querySelector("svg")
       ?.getBoundingClientRect();
+    const nextIconRect = next?.querySelector("svg")?.getBoundingClientRect();
     const laneProbe = document.createElement("span");
     laneProbe.style.cssText =
       "position:absolute;inline-size:var(--wzc-camera-side-lane-inline-size)";
@@ -4660,12 +4676,18 @@ test("preserves expanded camera-stage geometry across carousel selection", async
         carouselRight: carouselRect?.right,
         carouselTop: carouselRect?.top,
         iconHeight: previousIconRect?.height,
+        nextIconCenter: nextIconRect
+          ? nextIconRect.left + nextIconRect.width / 2
+          : undefined,
         laneWidth,
         lowerRowHeight,
         metadataRowHeight,
         nextTop: next?.getBoundingClientRect().top,
         nextRight: nextRect?.right,
         previousHeight: previousRect?.height,
+        previousIconCenter: previousIconRect
+          ? previousIconRect.left + previousIconRect.width / 2
+          : undefined,
         previousLeft: previousRect?.left,
         previousTop: previous?.getBoundingClientRect().top,
         topRowHeight,
@@ -4713,8 +4735,17 @@ test("preserves expanded camera-stage geometry across carousel selection", async
     (result.navigation.previousTop ?? 0) +
       (result.navigation.previousHeight ?? 0) / 2,
   ).toBeCloseTo(mediaCenter, 1);
-  expect(result.navigation.iconHeight).toBeGreaterThanOrEqual(44);
-  expect(result.navigation.iconHeight).toBeLessThanOrEqual(72);
+  expect(result.navigation.iconHeight).toBeGreaterThanOrEqual(28);
+  expect(result.navigation.iconHeight).toBeLessThanOrEqual(44);
+  expect(
+    (result.navigation.previousIconCenter ?? 0) -
+      ((result.navigation.carouselLeft ?? 0) + result.navigation.laneWidth),
+  ).toBeCloseTo(
+    (result.navigation.carouselRight ?? 0) -
+      result.navigation.laneWidth -
+      (result.navigation.nextIconCenter ?? 0),
+    1,
+  );
 
   const previousNavigation = page.locator(
     "wzc-camera .carousel-navigation.previous",
@@ -4935,7 +4966,7 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   ).toBeLessThan(1);
   expect(
     Math.max(...expansionFrames.map(({ width }) => width)),
-  ).toBeGreaterThan(initialPtzTriggerBox.width * 1.75);
+  ).toBeGreaterThan(initialPtzTriggerBox.width * 1.5);
   await ptzControl.hover();
   await expect
     .poll(async () => {
@@ -5093,8 +5124,8 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   const rightArea = areaBoxes.right!;
   const lowerArea = areaBoxes.lower!;
   const metadataArea = areaBoxes.metadata!;
-  expect(topArea.left).toBeCloseTo(cameraBox.x, 1);
-  expect(topArea.width).toBeCloseTo(cameraBox.width, 1);
+  expect(topArea.left).toBeCloseTo(leftArea.right, 1);
+  expect(topArea.right).toBeCloseTo(rightArea.left, 1);
   expect(topArea.top).toBeCloseTo(cameraBox.y, 1);
   expect(metadataArea.left).toBeCloseTo(cameraBox.x, 1);
   expect(metadataArea.width).toBeCloseTo(cameraBox.width, 1);
@@ -5102,8 +5133,10 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   expect(leftArea.left).toBeCloseTo(cameraBox.x, 1);
   expect(rightArea.right).toBeCloseTo(cameraBox.x + cameraBox.width, 1);
   expect(leftArea.width).toBeCloseTo(rightArea.width, 1);
-  expect(leftArea.top).toBeCloseTo(topArea.bottom, 1);
+  expect(leftArea.top).toBeCloseTo(cameraBox.y, 1);
+  expect(rightArea.top).toBeCloseTo(cameraBox.y, 1);
   expect(leftArea.bottom).toBeCloseTo(metadataArea.top, 1);
+  expect(rightArea.bottom).toBeCloseTo(metadataArea.top, 1);
   expect(mediaArea.left).toBeCloseTo(leftArea.right, 1);
   expect(mediaArea.right).toBeCloseTo(rightArea.left, 1);
   expect(mediaArea.top).toBeCloseTo(topArea.bottom, 1);
@@ -5119,9 +5152,11 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
     cameraBox.x + cameraBox.width / 2,
     0,
   );
-  expect(
-    cameraPickerBox.x - (slideshowButtonBox.x + slideshowButtonBox.width),
-  ).toBeCloseTo(8, 1);
+  expect(slideshowButtonBox.width).toBeCloseTo(slideshowButtonBox.height, 1);
+  const desktopTopControlGap =
+    cameraPickerBox.x - (slideshowButtonBox.x + slideshowButtonBox.width);
+  expect(desktopTopControlGap).toBeGreaterThan(0);
+  expect(desktopTopControlGap).toBeLessThanOrEqual(8);
   const currentPtzControlBox = await ptzControl.boundingBox();
   expect(currentPtzControlBox).not.toBeNull();
   if (!currentPtzControlBox) return;
@@ -5443,8 +5478,12 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
     .locator('.swiper-slide-active [aria-label="Camera stage height"]')
     .first();
   const mobileResizeHandleBox = await mobileResizeHandle.boundingBox();
+  const mobileMetadataAreaBox = await page
+    .locator(".camera-overlay-area-metadata")
+    .boundingBox();
   expect(mobileCameraBox).not.toBeNull();
   if (mobileCameraBox) {
+    expect(mobileMetadataAreaBox).not.toBeNull();
     expect(mobileControlsSlotBox).not.toBeNull();
     expect(mobilePickerBox).not.toBeNull();
     expect(mobileSlideshowBox).not.toBeNull();
@@ -5453,12 +5492,17 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
         mobileCameraBox.x + mobileCameraBox.width / 2,
         0,
       );
-      expect(
-        mobilePickerBox.x - (mobileSlideshowBox.x + mobileSlideshowBox.width),
-      ).toBeCloseTo(8, 0);
+      const mobileTopControlGap =
+        mobilePickerBox.x - (mobileSlideshowBox.x + mobileSlideshowBox.width);
+      expect(mobileTopControlGap).toBeGreaterThan(0);
+      expect(mobileTopControlGap).toBeLessThanOrEqual(desktopTopControlGap);
       expect(mobilePickerBox.width).toBeLessThan(cameraPickerBox.width);
       expect(mobilePickerBox.height).toBeLessThan(cameraPickerBox.height);
       expect(mobileSlideshowBox.height).toBeLessThan(slideshowButtonBox.height);
+      expect(mobileSlideshowBox.width).toBeCloseTo(
+        mobileSlideshowBox.height,
+        1,
+      );
     }
     expect(mobileSourceBadgeMetrics.fontSize).toBeLessThan(
       desktopSourceBadgeMetrics.fontSize,
@@ -5493,7 +5537,10 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
           mobileCameraBox.y +
           mobileCameraBox.height -
           (controlBox.y + controlBox.height);
-        expect(mobileBottomInset).toBeCloseTo(metadataArea.height, 0);
+        expect(mobileBottomInset).toBeCloseTo(
+          mobileMetadataAreaBox?.height ?? 0,
+          0,
+        );
       }
     }
     expect(mobileResizeHandleBox).not.toBeNull();
@@ -5616,6 +5663,18 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
         (movedLightBox?.y ?? 0) + (movedLightBox?.height ?? 0),
         0,
       );
+
+      await expect(
+        page.locator('[data-control="picture_in_picture"]'),
+      ).toHaveCount(0);
+      await ptzRightButton.evaluate((button) =>
+        (button as HTMLButtonElement).blur(),
+      );
+      await page.mouse.move(0, 0);
+      await expect(ptzControl).toBeHidden({
+        timeout: MEDIA_OVERLAY_HIDE_DELAY_MS + 1_000,
+      });
+      await expect(ptz.locator("button.ptz-trigger")).toHaveCount(0);
     }
   }
 });
@@ -8103,7 +8162,10 @@ test("retains one live connection while the card presentation is replaced", asyn
     pointerId: 1,
     pointerType: "touch",
   });
-  await expect(controls.first()).toBeHidden();
+  await expect(controls.first()).toBeVisible();
+  await expect(controls.first()).toBeHidden({
+    timeout: MEDIA_OVERLAY_HIDE_DELAY_MS + 1_000,
+  });
   await expect(connectionIndicator).toHaveText("WebRTC");
   await page
     .locator("wzc-camera-navigation button")

@@ -1,10 +1,7 @@
 import { LitElement } from "lit";
 import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
-import {
-  DeviceProfileController,
-  type DeviceClass,
-} from "../../../core/device-profile";
+import type { DeviceClass } from "../../../core/device-profile";
 import {
   CAMERA_CONTROLS_TAG,
   MEDIA_CONTROL_EVENT,
@@ -46,7 +43,7 @@ export const CAMERA_CONTROL_DEVICE_MATRIX: Readonly<
   Record<CameraControlAction, readonly DeviceClass[]>
 > = {
   suspend: ALL_DEVICE_CLASSES,
-  picture_in_picture: ALL_DEVICE_CLASSES,
+  picture_in_picture: ["tablet", "desktop"],
   snapshot: ALL_DEVICE_CLASSES,
   fullscreen: ALL_DEVICE_CLASSES,
   mute: ALL_DEVICE_CLASSES,
@@ -78,6 +75,7 @@ export class CameraControls extends LitElement {
   public static properties = {
     fullscreenActive: { attribute: false, type: Boolean },
     fullscreenSupported: { attribute: false, type: Boolean },
+    deviceClass: { attribute: false },
     muted: { attribute: false, type: Boolean },
     localize: { attribute: false },
     pictureInPictureActive: { attribute: false, type: Boolean },
@@ -91,6 +89,7 @@ export class CameraControls extends LitElement {
 
   public fullscreenActive = false;
   public fullscreenSupported = false;
+  public deviceClass: DeviceClass = "desktop";
   public muted = true;
   public localize: LocalizeFunction = englishLocalize;
   public pictureInPictureActive = false;
@@ -101,13 +100,11 @@ export class CameraControls extends LitElement {
   public suspended = false;
   public visible = false;
 
-  private readonly _deviceProfile = new DeviceProfileController(this);
-
   protected render() {
     const controls = CONTROLS.filter(
       (control) =>
         CAMERA_CONTROL_DEVICE_MATRIX[control.action].includes(
-          this._deviceProfile.profile.deviceClass,
+          this.deviceClass,
         ) &&
         (control.action !== "suspend" || this.suspendSupported) &&
         (!this.suspended || control.action === "suspend"),

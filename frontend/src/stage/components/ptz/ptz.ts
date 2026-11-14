@@ -13,6 +13,7 @@ import {
   englishLocalize,
   type LocalizeFunction,
 } from "../../../core/localization";
+import { releaseTouchFocus } from "../../../ui/control-interaction";
 import { renderIcon, type IconName } from "../../../ui/icons";
 import { ToastManager } from "../../../ui/toast-manager";
 import "../../../ui/toast-region";
@@ -130,8 +131,8 @@ export class PtzComponent extends LitElement {
                 tabindex=${this.expanded ? "0" : "-1"}
                 @contextmenu=${this._preventDefault}
                 @pointerdown=${this._press.handlePointerDown}
-                @pointerup=${this._press.handlePointerUp}
-                @pointercancel=${this._press.handlePointerCancel}
+                @pointerup=${this._handleDirectionPointerUp}
+                @pointercancel=${this._handleDirectionPointerCancel}
                 @lostpointercapture=${this._press.handlePointerCancel}
                 @keydown=${this._press.handleKeyDown}
                 @keyup=${this._press.handleKeyUp}
@@ -147,30 +148,46 @@ export class PtzComponent extends LitElement {
           ?disabled=${!this.expanded}
           tabindex=${this.expanded ? "0" : "-1"}
           @click=${this._toggleExpanded}
+          @pointerup=${releaseTouchFocus}
         >
           ${renderIcon("arrowCollapseAll")}
         </button>
       </div>
-      <button
-        class=${[
-          "ptz-trigger",
-          "round-button",
-          this._userToggled ? "user-toggled" : "",
-          !this.expanded && visible ? "visible" : "",
-        ]
-          .filter(Boolean)
-          .join(" ")}
-        type="button"
-        aria-label=${this.localize("ptz.expand")}
-        ?disabled=${this.expanded}
-        tabindex=${this.expanded ? "-1" : "0"}
-        @pointerdown=${this._stopPropagation}
-        @click=${this._toggleExpanded}
-      >
-        ${renderIcon("ptz")}
-      </button>
+      ${
+        !this.expanded
+          ? html`<button
+              class=${[
+                "ptz-trigger",
+                "round-button",
+                this._userToggled ? "user-toggled" : "",
+                visible ? "visible" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              type="button"
+              aria-label=${this.localize("ptz.expand")}
+              @pointerdown=${this._stopPropagation}
+              @pointerup=${releaseTouchFocus}
+              @click=${this._toggleExpanded}
+            >
+              ${renderIcon("ptz")}
+            </button>`
+          : nothing
+      }
     </div>`;
   }
+
+  private readonly _handleDirectionPointerUp = (event: PointerEvent): void => {
+    this._press.handlePointerUp(event);
+    releaseTouchFocus(event);
+  };
+
+  private readonly _handleDirectionPointerCancel = (
+    event: PointerEvent,
+  ): void => {
+    this._press.handlePointerCancel(event);
+    releaseTouchFocus(event);
+  };
 
   private _start(direction: PtzDirection): void {
     if (this._activeDirection === direction) return;

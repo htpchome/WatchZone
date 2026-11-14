@@ -53,12 +53,17 @@ defaults to `false` and is omitted from YAML at its default.
   against the Stage or consume viewport safe-area insets.
 - Collapsed trigger and expanded directional panel share one immutable center.
   Opening and closing animate the panel dimensions symmetrically around that
-  center while the trigger cross-fades; neither state may jump or establish a
-  second positioning origin. The shared center, collapsed trigger, and expanded
+  center. Only one of those two interactive surfaces is rendered at a time, so
+  the collapsed glyph cannot remain beneath the expanded panel. Neither state
+  may jump or establish a second positioning origin. The shared center,
+  collapsed trigger, and expanded
   panel remain wholly inside Camera's `lower` area and never enter the right
   rail or metadata strip.
 - Active movement holds the shared overlay visible. Releasing movement releases
   that hold and returns visibility to the shared timer.
+- Touch-created focus is released after every PTZ button activation. An idle
+  expanded panel therefore follows the shared overlay timer and becomes fully
+  hidden with the other controls; focus cannot leave a center glyph painted.
 - The configured open/closed state initializes each active camera. A user's
   open or collapsed choice then persists across transient overlay visibility;
   the shared hide timer never rewrites component state.

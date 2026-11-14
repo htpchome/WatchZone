@@ -56,6 +56,13 @@ export class MediaOverlayVisibilityController implements ReactiveController {
     this._scheduleHide();
   }
 
+  /** Touch must use its timer even after a browser leaves stale hover/focus. */
+  public revealFromTouch(): void {
+    this._hovered = false;
+    this._focused = false;
+    this.reveal();
+  }
+
   public hide(): void {
     this._clearHideTimer();
     if (!this.visible && !this.sourceVisible) return;

@@ -182,6 +182,7 @@ export class CameraGroupView extends LitElement {
       <${controlsTag}
         class="group-controls"
         .visible=${visible}
+        .deviceClass=${this._deviceProfile.profile.deviceClass}
         .fullscreenActive=${this._fullscreenActive}
         .fullscreenSupported=${this._fullscreenSupported(focus?.activeVideo)}
         .muted=${focus?.getSession()?.muted ?? true}

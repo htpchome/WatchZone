@@ -110,10 +110,11 @@ and must not position themselves relative to sibling components or the Stage
 center. Panels and transient notices may paint outside their dock item without
 changing the dock's measured control geometry.
 
-The overlay slot owns the six-area grid and its fixed rail geometry. The `top`
-and `metadata` areas span the full Stage width; `left` and `right` are fixed
-rails; `media` is protected between them; and `lower` spans the same protected
-center width beneath media. Multiple components assigned to one area retain
+The overlay slot owns the six-area grid and its shared responsive rail
+geometry. The `left` and `right` rails extend from the Stage's top edge through
+the lower-control row, while `top`, `media`, and `lower` occupy the protected
+center width between them. `metadata` spans the full Stage width beneath the
+rails. Multiple components assigned to one area retain
 document order and use the area's shared gap; components never position
 themselves against a sibling. Controls-slot `leading`, `center`, and `trailing`
 metadata partitions controls only inside the `lower` area and does not create a
@@ -121,7 +122,9 @@ second placement grid. The optional camera-switcher component occupies `top`, fo
 shared overlay timer, and publishes selection intent through the same typed
 camera-selection context as the standalone camera-navigation module.
 The slideshow component precedes that selector in the same region and presents
-Camera's shared countdown/hold state without owning its timer or selection.
+Camera's shared countdown/hold state without owning its timer or selection. Its
+idle surface is square; the active countdown/hold surface uses one stable wider
+width so changing countdown digits cannot move the selector.
 Additional-camera grouping remains inside Camera's private presentation. The
 camera-navigation module and camera-switcher receive one group selection item
 instead of importing group configuration or coordinating either member.
