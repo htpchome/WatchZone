@@ -194,8 +194,8 @@ same key merely because the preview uses a different component tree.
   remaining presentation reclaims the same media element; this handoff must
   not invoke the connection factory or renegotiate the source.
 - Leaving Home Assistant's dashboard pre-editor reveals the existing active
-  presentation's transient overlay on the next frame. This preview transition
-  must not reconfigure, detach, or replace live media.
+  presentation's transient overlay when its host reconnects. This overlay-only
+  transition must not reconfigure, detach, or replace live media.
 - A retained session that reports failure while parked is not considered
   reusable. Its next visible lease starts one bounded reconnect rather than
   presenting the stale media object as live.

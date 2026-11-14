@@ -7988,9 +7988,7 @@ test("restores controls after pre-editor and retains a replaced live connection"
 
   expect(
     await page.evaluate(async () => {
-      const card = document.querySelector("watchzone-card") as HTMLElement & {
-        preview: boolean;
-      };
+      const card = document.querySelector("watchzone-card") as HTMLElement;
       const camera = card.shadowRoot?.querySelector("wzc-camera");
       const view = camera?.shadowRoot?.querySelector("wzc-camera-view");
       const presentation = view?.shadowRoot?.querySelector(
@@ -8008,13 +8006,17 @@ test("restores controls after pre-editor and retains a replaced live connection"
 
       presentation.revealOverlay();
       await presentation.updateComplete;
-      card.preview = true;
+      const editWrapper = document.createElement("hui-section-edit-mode");
+      card.replaceWith(editWrapper);
+      editWrapper.append(card);
+      await presentation.updateComplete;
       document.body.dispatchEvent(
         new PointerEvent("pointerdown", { bubbles: true, composed: true }),
       );
       await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+      await presentation.updateComplete;
       const hiddenInPreview = controls.visible === false;
-      card.preview = false;
+      editWrapper.replaceWith(card);
       return hiddenInPreview;
     }),
   ).toBe(true);

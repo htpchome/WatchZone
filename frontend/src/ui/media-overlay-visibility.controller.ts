@@ -13,6 +13,7 @@ export class MediaOverlayVisibilityController implements ReactiveController {
 
   private _active = true;
   private _focused = false;
+  private _hasConnected = false;
   private readonly _holds = new Set<symbol>();
   private _hideTimer?: ReturnType<typeof setTimeout>;
   private _hovered = false;
@@ -26,20 +27,22 @@ export class MediaOverlayVisibilityController implements ReactiveController {
     _host.addController(this);
   }
 
+  public hostConnected(): void {
+    const reconnecting = this._hasConnected;
+    this._hasConnected = true;
+    if (reconnecting) this.reveal();
+  }
+
   public hostDisconnected(): void {
-    this.setActive(false);
+    this._resetInteraction();
+    this.hide();
   }
 
   /** Clears transient interaction whenever presentation ownership changes. */
   public setActive(active: boolean): void {
     if (this._active === active) return;
     this._active = active;
-    this._clearHideTimer();
-    this._focused = false;
-    this._hovered = false;
-    this._holds.clear();
-    this._interactionRoot = undefined;
-    this._pointerFocusPending = false;
+    this._resetInteraction();
     if (!active) this.hide();
   }
 
@@ -169,5 +172,14 @@ export class MediaOverlayVisibilityController implements ReactiveController {
     if (this._hideTimer === undefined) return;
     clearTimeout(this._hideTimer);
     this._hideTimer = undefined;
+  }
+
+  private _resetInteraction(): void {
+    this._clearHideTimer();
+    this._focused = false;
+    this._hovered = false;
+    this._holds.clear();
+    this._interactionRoot = undefined;
+    this._pointerFocusPending = false;
   }
 }

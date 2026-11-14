@@ -15,9 +15,9 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.311`
-- Current commit: `0aa8874` —
-  `v0.0.4-dev.310 - fix(editor): stabilize camera modal and overlay return`
+- Working version: `0.0.4-dev.312`
+- Current commit: `edd0fc9` —
+  `v0.0.4-dev.311 - fix(camera): restore controls after pre-editor exit`
 - The worktree contains the uncommitted pre-editor overlay correction described
   below. Always verify `git status`, the canonical version in
   `custom_components/watchzone/const.py`, and the latest commit.
@@ -27,9 +27,13 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 - The presentation-activation and media-attachment overlay changes from
   `v0.0.4-dev.310` are reverted because they could leave retained video black
   after returning from dashboard editing.
-- Home Assistant's `preview` lifecycle transition restores transient camera
-  controls on the existing presentation after dashboard edit mode ends. The
-  transition does not reconfigure, detach, or replace retained media.
+- The card-preview and layout-runtime restoration workaround from
+  `v0.0.4-dev.311` is removed; Home Assistant's Sections pre-editor reparents
+  the existing card rather than changing that preview property.
+- When Home Assistant reparents the card through dashboard editing, the active
+  overlay controller preserves its ownership state and reveals on host
+  reconnection. The return path does not reconfigure, detach, or replace
+  retained media.
 
 ## Live camera and group invariants
 

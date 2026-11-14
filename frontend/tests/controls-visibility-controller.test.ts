@@ -124,6 +124,31 @@ describe("media overlay visibility controller", () => {
     expect(controller.visible).toBe(false);
   });
 
+  it("reveals an active overlay when its host reconnects", () => {
+    vi.useFakeTimers();
+    const controller = new MediaOverlayVisibilityController(new TestHost());
+
+    controller.hostConnected();
+    controller.hostDisconnected();
+    expect(controller.visible).toBe(false);
+
+    controller.hostConnected();
+    expect(controller.visible).toBe(true);
+    vi.advanceTimersByTime(MEDIA_OVERLAY_HIDE_DELAY_MS);
+    expect(controller.visible).toBe(false);
+  });
+
+  it("does not reveal an inactive overlay when its host reconnects", () => {
+    const controller = new MediaOverlayVisibilityController(new TestHost());
+
+    controller.hostConnected();
+    controller.setActive(false);
+    controller.hostDisconnected();
+    controller.hostConnected();
+
+    expect(controller.visible).toBe(false);
+  });
+
   it("invalidates stale holds when presentation ownership changes", () => {
     vi.useFakeTimers();
     const controller = new MediaOverlayVisibilityController(new TestHost());
