@@ -15,9 +15,9 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.290`
-- Current commit: `d40e700` —
-  `v0.0.4-dev.289 - feat(camera): add grouped view mode icons`
+- Working version: `0.0.4-dev.302`
+- Current commit: `139bc6c` —
+  `v0.0.4-dev.302 - fix(camera): isolate grouped side-by-side resizing`
 - The worktree contains the uncommitted camera-navigation overflow change
   described below. Always verify `git status`, the canonical version in
   `custom_components/watchzone/const.py`, and the latest commit.
@@ -86,10 +86,10 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 
 ## Validation status
 
-Validated for `0.0.4-dev.290`:
+Validated for `v0.0.4-dev.302`:
 
-- 402 frontend unit tests
-- 114 Playwright tests across Chromium, Firefox, and WebKit (38 per engine)
+- frontend unit tests
+- Playwright tests across Chromium, Firefox, and WebKit (38 per engine)
 - Formatting, lint, type checking, architecture/style checks, production build,
   version consistency, and `git diff --check`
 
