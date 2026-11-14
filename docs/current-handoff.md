@@ -15,10 +15,10 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.312`
-- Current commit: `edd0fc9` —
-  `v0.0.4-dev.311 - fix(camera): restore controls after pre-editor exit`
-- The worktree contains the uncommitted pre-editor overlay correction described
+- Working version: `0.0.4-dev.313`
+- Current commit: `36bb7f4` —
+  `v0.0.4-dev.312 - fix(camera): restore active overlay after editor reparent`
+- The worktree contains the uncommitted WebRTC reparent correction described
   below. Always verify `git status`, the canonical version in
   `custom_components/watchzone/const.py`, and the latest commit.
 
@@ -34,6 +34,10 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
   overlay controller preserves its ownership state and reveals on host
   reconnection. The return path does not reconfigure, detach, or replace
   retained media.
+- Camera live controllers defer disconnect cleanup by one microtask so a
+  synchronous Home Assistant reparent neither parks the retained WebRTC lease
+  nor removes its video element. A true removal still releases and detaches in
+  that microtask.
 
 ## Live camera and group invariants
 

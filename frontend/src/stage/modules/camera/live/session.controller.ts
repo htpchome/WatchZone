@@ -28,6 +28,7 @@ export class CameraLiveSessionController implements ReactiveController {
   private _connected = false;
   private _discardSessionsOnRelease = false;
   private _connection: LiveConnectionType = "home_assistant";
+  private _disconnectGeneration = 0;
   private _entityId?: string;
   private _frigateSource?: FrigateGo2RtcLiveSourceDescriptor;
   private _frigateSourcePending = false;
@@ -95,14 +96,22 @@ export class CameraLiveSessionController implements ReactiveController {
   }
 
   public hostConnected(): void {
+    this._disconnectGeneration += 1;
     this._connected = true;
     this._sync();
   }
 
   public hostDisconnected(): void {
     this._connected = false;
-    if (this._discardSessionsOnRelease) this._discardAll();
-    else this._releaseAll();
+    const generation = ++this._disconnectGeneration;
+    // Home Assistant synchronously reparents cards while entering and leaving
+    // dashboard editing. Let that matching reconnect keep the existing lease
+    // instead of parking WebRTC and clearing its media element's srcObject.
+    queueMicrotask(() => {
+      if (this._connected || generation !== this._disconnectGeneration) return;
+      if (this._discardSessionsOnRelease) this._discardAll();
+      else this._releaseAll();
+    });
   }
 
   public configure(

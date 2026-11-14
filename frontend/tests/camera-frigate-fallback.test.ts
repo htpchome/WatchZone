@@ -73,7 +73,7 @@ describe("Frigate fallback selection", () => {
     expect(acquireMse).not.toHaveBeenCalled();
   });
 
-  it("discards preview-owned sessions when the preview disconnects", () => {
+  it("discards preview-owned sessions when the preview disconnects", async () => {
     const source: FrigateGo2RtcLiveSourceDescriptor = {
       id: "frigate_go2rtc:entry-home:front",
       type: "frigate_go2rtc",
@@ -119,9 +119,63 @@ describe("Frigate fallback selection", () => {
       true,
     );
     controller.hostDisconnected();
+    await Promise.resolve();
 
     expect(previewLease.discard).toHaveBeenCalledOnce();
     expect(previewLease.release).not.toHaveBeenCalled();
+  });
+
+  it("keeps the same preview lease across a synchronous host reparent", async () => {
+    const source: FrigateGo2RtcLiveSourceDescriptor = {
+      id: "frigate_go2rtc:entry-home:front",
+      type: "frigate_go2rtc",
+      frigate_instance_id: "frigate",
+      stream_name: "front",
+    };
+    const api = {
+      identity: {},
+      callWS: vi.fn(),
+      resolveUrl: (path: string) => path,
+      subscribeMessage: vi.fn(),
+    } as unknown as HomeAssistantApi;
+    const retainedLease = lease(`${source.id}:webrtc`);
+    vi.spyOn(LiveSourceResolver.prototype, "cachedFrigate").mockReturnValue(
+      source,
+    );
+    vi.spyOn(
+      LiveSourceResolver.prototype,
+      "acquireUsableFrigateWebRtc",
+    ).mockReturnValue(retainedLease);
+    const controller = new CameraLiveSessionController(
+      {
+        addController: vi.fn(),
+        removeController: vi.fn(),
+        requestUpdate: vi.fn(),
+        updateComplete: Promise.resolve(true),
+      },
+      {
+        getInitialMuted: () => true,
+        onActiveVideoChanged: vi.fn(),
+      },
+    );
+
+    controller.hostConnected();
+    controller.configure(
+      api,
+      "camera.front",
+      true,
+      "frigate_go2rtc",
+      true,
+      "mse",
+      true,
+      true,
+    );
+    controller.hostDisconnected();
+    controller.hostConnected();
+    await Promise.resolve();
+
+    expect(retainedLease.discard).not.toHaveBeenCalled();
+    expect(retainedLease.release).not.toHaveBeenCalled();
   });
 
   it("acquires only HLS when the client policy requires it", () => {

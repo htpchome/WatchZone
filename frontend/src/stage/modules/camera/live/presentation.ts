@@ -103,6 +103,7 @@ export class CameraLivePresentation extends LitElement {
 
   private _activeVideo?: HTMLVideoElement;
   private _attachedWebRtcVideo?: HTMLVideoElement;
+  private _disconnectGeneration = 0;
   private _posterDimensions?: MediaDimensions;
   private _posterFailed = false;
   private _reportedGestureLocked = false;
@@ -206,10 +207,22 @@ export class CameraLivePresentation extends LitElement {
     return this._media.overlay.hold();
   }
 
+  public connectedCallback(): void {
+    this._disconnectGeneration += 1;
+    super.connectedCallback();
+  }
+
   public disconnectedCallback(): void {
-    this._cancelWebRtcFrameRequest();
-    this._detachWebRtcVideo();
-    this._setActiveVideo(undefined);
+    const generation = ++this._disconnectGeneration;
+    // Preserve the decoded WebRTC frame across a synchronous DOM reparent.
+    // A presentation that remains disconnected still detaches immediately
+    // after the current task, so route changes retain no element-owned work.
+    queueMicrotask(() => {
+      if (this.isConnected || generation !== this._disconnectGeneration) return;
+      this._cancelWebRtcFrameRequest();
+      this._detachWebRtcVideo();
+      this._setActiveVideo(undefined);
+    });
     super.disconnectedCallback();
   }
 

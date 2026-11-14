@@ -7781,11 +7781,15 @@ test("restores controls after pre-editor and retains a replaced live connection"
       __wzcTestHlsConnectionCount: number;
       __wzcTestHass: unknown;
       __wzcTestRetainedVideo?: HTMLVideoElement;
+      __wzcTestWebRtcPauseCount: number;
+      __wzcTestWebRtcRemoveCount: number;
     }
 
     const testWindow = window as unknown as TestWindow;
     testWindow.__wzcTestConnectionCount = 0;
     testWindow.__wzcTestHlsConnectionCount = 0;
+    testWindow.__wzcTestWebRtcPauseCount = 0;
+    testWindow.__wzcTestWebRtcRemoveCount = 0;
 
     class TestPeerConnection {
       public connectionState: RTCPeerConnectionState = "new";
@@ -7979,11 +7983,25 @@ test("restores controls after pre-editor and retains a replaced live connection"
     "WebRTC",
   );
   await initialVideo.evaluate((element) => {
+    const testWindow = window as typeof window & {
+      __wzcTestRetainedVideo?: HTMLVideoElement;
+      __wzcTestWebRtcPauseCount: number;
+      __wzcTestWebRtcRemoveCount: number;
+    };
+    const video = element as HTMLVideoElement;
+    const nativePause = video.pause.bind(video);
+    const nativeRemove = video.remove.bind(video);
+    video.pause = () => {
+      testWindow.__wzcTestWebRtcPauseCount += 1;
+      nativePause();
+    };
+    video.remove = () => {
+      testWindow.__wzcTestWebRtcRemoveCount += 1;
+      nativeRemove();
+    };
     (
-      window as typeof window & {
-        __wzcTestRetainedVideo?: HTMLVideoElement;
-      }
-    ).__wzcTestRetainedVideo = element as HTMLVideoElement;
+      window as typeof window & { __wzcTestRetainedVideo?: HTMLVideoElement }
+    ).__wzcTestRetainedVideo = video;
   });
 
   expect(
@@ -8020,6 +8038,20 @@ test("restores controls after pre-editor and retains a replaced live connection"
       return hiddenInPreview;
     }),
   ).toBe(true);
+  expect(
+    await page.evaluate(
+      () =>
+        (window as typeof window & { __wzcTestWebRtcPauseCount: number })
+          .__wzcTestWebRtcPauseCount,
+    ),
+  ).toBe(0);
+  expect(
+    await page.evaluate(
+      () =>
+        (window as typeof window & { __wzcTestWebRtcRemoveCount: number })
+          .__wzcTestWebRtcRemoveCount,
+    ),
+  ).toBe(0);
   await expect(page.locator("wzc-camera wzc-camera-controls")).toHaveJSProperty(
     "visible",
     true,

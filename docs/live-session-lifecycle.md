@@ -196,6 +196,10 @@ same key merely because the preview uses a different component tree.
 - Leaving Home Assistant's dashboard pre-editor reveals the existing active
   presentation's transient overlay when its host reconnects. This overlay-only
   transition must not reconfigure, detach, or replace live media.
+- A synchronous custom-element disconnect/reconnect caused by DOM reparenting
+  keeps the existing lease and presentation attachment. Disconnect cleanup may
+  be deferred through one microtask to distinguish that move from a true
+  removal; a still-disconnected presentation then releases normally.
 - A retained session that reports failure while parked is not considered
   reusable. Its next visible lease starts one bounded reconnect rather than
   presenting the stale media object as live.
