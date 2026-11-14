@@ -3554,18 +3554,41 @@ test("keeps activity content in an independently scrolling viewport", async ({
     .locator("wzc-recorded-video-player .viewport")
     .boundingBox();
   const resizeBox = await resizeHandle.boundingBox();
+  const resizePresentation = await resizeHandle.evaluate((element) => {
+    const style = getComputedStyle(element);
+    const icon = element.querySelector("ha-icon");
+    return {
+      background: style.backgroundColor,
+      color: style.color,
+      iconSize: icon
+        ? Number.parseFloat(getComputedStyle(icon).width)
+        : 0,
+    };
+  });
   const finalMediaActionBox = await mediaInformation
     .locator(".actions .wzc-activity-action")
     .last()
     .boundingBox();
   expect(initialDialogBox).not.toBeNull();
   expect(resizeBox).not.toBeNull();
-  expect(resizeBox?.width).toBeGreaterThanOrEqual(44);
-  expect(resizeBox?.height).toBeGreaterThanOrEqual(44);
+  expect(resizeBox?.width).toBeCloseTo(finalMediaActionBox?.width ?? 0, 1);
+  expect(resizeBox?.height).toBeCloseTo(finalMediaActionBox?.height ?? 0, 1);
+  expect(resizePresentation.background).toBe(
+    actionPresentations[1]?.background,
+  );
+  expect(resizePresentation.color).toBe(actionPresentations[1]?.color);
+  expect(resizePresentation.iconSize).toBeGreaterThanOrEqual(24);
   expect(finalMediaActionBox?.x).toBeLessThan(resizeBox?.x ?? 0);
   expect(
     (finalMediaActionBox?.x ?? 0) + (finalMediaActionBox?.width ?? 0),
   ).toBeLessThanOrEqual(resizeBox?.x ?? 0);
+  expect(
+    Math.abs(
+      (finalMediaActionBox?.y ?? 0) +
+        (finalMediaActionBox?.height ?? 0) / 2 -
+        ((resizeBox?.y ?? 0) + (resizeBox?.height ?? 0) / 2),
+    ),
+  ).toBeLessThanOrEqual(1);
   if (initialDialogBox && resizeBox) {
     await page.mouse.move(
       resizeBox.x + resizeBox.width / 2,

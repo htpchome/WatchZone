@@ -120,19 +120,23 @@ export const draggableDialogStyles = css`
   }
 
   .resize-handle {
-    align-items: flex-end;
+    align-items: center;
     appearance: none;
-    background: transparent;
+    background: var(--wzc-event-action-background);
     border: 0;
-    bottom: 0;
-    color: var(--wzc-color-text-1);
+    border-radius: var(--wzc-radius-medium);
+    bottom: calc(
+      var(--wzc-recorded-media-dialog-bottom-padding) +
+        var(--wzc-recorded-media-dialog-padding)
+    );
+    color: var(--wzc-event-action-color);
     cursor: nwse-resize;
     display: flex;
     height: var(--wzc-recorded-media-resize-handle-size);
-    justify-content: flex-end;
+    justify-content: center;
     padding: 0;
     position: absolute;
-    right: 0;
+    right: calc(2 * var(--wzc-recorded-media-dialog-padding));
     touch-action: none;
     width: var(--wzc-recorded-media-resize-handle-size);
     z-index: 3;
@@ -149,7 +153,7 @@ export const draggableDialogStyles = css`
   }
 
   .resize-handle ha-icon {
-    --mdc-icon-size: 1.75rem;
+    --mdc-icon-size: 1.5rem;
     display: block;
   }
 

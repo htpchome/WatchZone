@@ -15,9 +15,9 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.318`
-- Current commit: `40b31d3` —
-  `v0.0.4-dev.317 - style(theme): restore unified modal presentation`
+- Working version: `0.0.4-dev.319`
+- Current commit: `d356ed1` —
+  `v0.0.4-dev.318 - feat(media): refine metadata presentation and activity score`
 - The worktree contains the uncommitted theme-surface consolidation described
   below. Always verify `git status`, the canonical version in
   `custom_components/watchzone/const.py`, and the latest commit.
@@ -35,8 +35,8 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
   bar; its nested segmented track is transparent to prevent opacity bands.
 - Recorded-media metadata now paints one borderless, rounded solid-task
   surface inside the glass viewer. It shares activity-tile badge sizing,
-  preserves icon geometry during hover, reserves space for a larger
-  bottom-right resize handle, and displays provider-normalized activity
+  preserves icon geometry during hover, reserves space for a clearly visible
+  bottom-right resize handle aligned and sized with its action row, and displays provider-normalized activity
   confidence separately from AI-analysis confidence.
 - The slideshow overlay is hydrated whenever Camera has multiple presentation
   items. Disabling Camera Switcher Overlay now removes only the switcher.

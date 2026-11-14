@@ -57,8 +57,12 @@ export const mediaInformationStyles = css`
   }
 
   .actions {
+    box-sizing: border-box;
     justify-content: flex-end;
-    padding-inline-end: var(--wzc-recorded-media-resize-handle-size);
+    min-block-size: var(--wzc-recorded-media-resize-handle-size);
+    padding-inline-end: calc(
+      var(--wzc-recorded-media-resize-handle-size) + 0.4rem
+    );
   }
 
   @container (max-width: 36rem) {
