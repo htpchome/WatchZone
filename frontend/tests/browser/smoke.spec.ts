@@ -119,6 +119,99 @@ test("loads the responsive WatchZone card shell", async ({ page }) => {
   ).toBe("function");
 });
 
+test("uses the first real touch only to reveal hidden media controls", async ({
+  browser,
+}) => {
+  const context = await browser.newContext({
+    hasTouch: true,
+    viewport: { height: 844, width: 390 },
+  });
+  const touchPage = await context.newPage();
+  const errors: string[] = [];
+  touchPage.on("pageerror", (error) => errors.push(error.message));
+  try {
+    await touchPage.route("**/poster.svg", (route) =>
+      route.fulfill({
+        body: '<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900"><rect width="1600" height="900" fill="black"/></svg>',
+        contentType: "image/svg+xml",
+      }),
+    );
+    await touchPage.goto("/");
+    await waitForWatchZoneDefinition(touchPage);
+    const card = touchPage.locator("watchzone-card");
+    await card.evaluate((element) => {
+      const cardElement = element as HTMLElement & {
+        hass: unknown;
+        setConfig(config: unknown): void;
+      };
+      cardElement.setConfig({
+        type: "custom:watchzone-card",
+        camera_switcher_overlay: true,
+        cameras: [
+          { entity_id: "camera.front", title: "Front" },
+          { entity_id: "camera.back", title: "Back" },
+        ],
+      });
+      cardElement.hass = {
+        states: {
+          "camera.front": {
+            entity_id: "camera.front",
+            state: "streaming",
+            attributes: { entity_picture: "/poster.svg" },
+          },
+          "camera.back": {
+            entity_id: "camera.back",
+            state: "streaming",
+            attributes: { entity_picture: "/poster.svg" },
+          },
+        },
+        connection: { subscribeMessage: async () => () => undefined },
+        hassUrl: (path: string) => path,
+        callService: async () => undefined,
+        callWS: async (message: { type: string }) =>
+          message.type === "watchzone/reviews/list"
+            ? { items: [] }
+            : { ready: false },
+      };
+    });
+
+    const viewport = card.locator("wzc-camera-live .viewport").first();
+    const slideshow = card.locator("wzc-slideshow button");
+    await expect(slideshow).toHaveCount(1);
+    await expect(slideshow).toBeHidden({
+      timeout: MEDIA_OVERLAY_HIDE_DELAY_MS + 1_000,
+    });
+    const slideshowBox = await slideshow.boundingBox();
+    expect(slideshowBox).not.toBeNull();
+    if (!slideshowBox) return;
+    const initialPressed = await slideshow.getAttribute("aria-pressed");
+
+    await touchPage.touchscreen.tap(
+      slideshowBox.x + slideshowBox.width / 2,
+      slideshowBox.y + slideshowBox.height / 2,
+    );
+
+    await expect(viewport).toBeVisible();
+    await expect(slideshow).toBeVisible();
+    await expect(slideshow).toHaveAttribute(
+      "aria-pressed",
+      initialPressed ?? "false",
+    );
+
+    await touchPage.touchscreen.tap(
+      slideshowBox.x + slideshowBox.width / 2,
+      slideshowBox.y + slideshowBox.height / 2,
+    );
+    await expect(slideshow).not.toHaveAttribute(
+      "aria-pressed",
+      initialPressed ?? "false",
+    );
+    expect(errors).toEqual([]);
+  } finally {
+    await context.close();
+  }
+});
+
 test("does not load camera code for a camera-free layout", async ({ page }) => {
   await page.goto("/");
   await waitForWatchZoneDefinition(page);
@@ -849,6 +942,23 @@ test("keeps grouped phone navigation to one visible A or B feed", async ({
       return target === element || Boolean(target && element.contains(target));
     });
   expect(hiddenFeedActionHit).toBe(false);
+  const groupedRevealTouchAccepted = await group
+    .locator(".group")
+    .evaluate((element) =>
+      element.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          isPrimary: true,
+          pointerId: 91,
+          pointerType: "touch",
+        }),
+      ),
+    );
+  expect(groupedRevealTouchAccepted).toBe(false);
+  await expect(feedActions).toBeVisible();
+  await expect(leadingIcon).toHaveAttribute("data-icon", "arrowLeft");
 });
 
 test("releases grouped overlay and resize interaction before selecting another camera", async ({
@@ -919,14 +1029,24 @@ test("releases grouped overlay and resize interaction before selecting another c
       }),
     ),
   ]);
+  const groupedSideLaneWidth = await group.evaluate((element) => {
+    const probe = document.createElement("span");
+    probe.style.cssText =
+      "position:absolute;inline-size:var(--wzc-camera-side-lane-inline-size)";
+    element.shadowRoot?.append(probe);
+    const width = probe.getBoundingClientRect().width;
+    probe.remove();
+    return width;
+  });
   expect(stackedSourceBoxes).toHaveLength(2);
   for (const [index, feedBox] of stackedFeedBoxes.entries()) {
     const sourceBox = stackedSourceBoxes[index];
     expect(sourceBox).toBeDefined();
     if (!sourceBox) continue;
-    const fittedMediaWidth = Math.min(feedBox.width, (feedBox.height * 16) / 9);
-    const fittedMediaRight = feedBox.x + (feedBox.width + fittedMediaWidth) / 2;
-    expect(sourceBox.right).toBeCloseTo(fittedMediaRight - 8, 1);
+    expect(sourceBox.right).toBeCloseTo(
+      feedBox.x + feedBox.width - groupedSideLaneWidth - 8,
+      1,
+    );
     expect(sourceBox.top).toBeCloseTo(feedBox.y + 8, 1);
   }
   const stackedSoloTarget = group
@@ -4693,18 +4813,6 @@ test("preserves expanded camera-stage geometry across carousel selection", async
     camera.shadowRoot?.append(laneProbe);
     const laneWidth = laneProbe.getBoundingClientRect().width;
     laneProbe.remove();
-    const rowProbe = document.createElement("span");
-    rowProbe.style.cssText = "position:absolute";
-    camera.shadowRoot?.append(rowProbe);
-    const rowSize = (token: string) => {
-      rowProbe.style.blockSize = `var(${token})`;
-      return rowProbe.getBoundingClientRect().height;
-    };
-    const topRowHeight = rowSize("--wzc-camera-overlay-top-row-size");
-    const lowerRowHeight = rowSize("--wzc-camera-overlay-lower-row-size");
-    const metadataRowHeight = rowSize("--wzc-camera-overlay-metadata-row-size");
-    rowProbe.remove();
-
     return {
       active: views.map((view) => view.active),
       beforeHeight: before?.height,
@@ -4722,8 +4830,6 @@ test("preserves expanded camera-stage geometry across carousel selection", async
           ? nextIconRect.left + nextIconRect.width / 2
           : undefined,
         laneWidth,
-        lowerRowHeight,
-        metadataRowHeight,
         nextTop: next?.getBoundingClientRect().top,
         nextRight: nextRect?.right,
         previousHeight: previousRect?.height,
@@ -4732,7 +4838,6 @@ test("preserves expanded camera-stage geometry across carousel selection", async
           : undefined,
         previousLeft: previousRect?.left,
         previousTop: previous?.getBoundingClientRect().top,
-        topRowHeight,
       },
       selectedSecondHeight: selectedSecond?.height,
     };
@@ -4767,12 +4872,7 @@ test("preserves expanded camera-stage geometry across carousel selection", async
   expect(nextInset).toBeCloseTo(result.navigation.laneWidth, 1);
   const mediaCenter =
     (result.navigation.carouselTop ?? 0) +
-    result.navigation.topRowHeight +
-    ((result.navigation.carouselHeight ?? 0) -
-      result.navigation.topRowHeight -
-      result.navigation.lowerRowHeight -
-      result.navigation.metadataRowHeight) /
-      2;
+    (result.navigation.carouselHeight ?? 0) / 2;
   expect(
     (result.navigation.previousTop ?? 0) +
       (result.navigation.previousHeight ?? 0) / 2,
@@ -5647,6 +5747,38 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
           mobileCameraBox.height -
           (mobileResizeHandleBox.y + mobileResizeHandleBox.height),
       ).toBeCloseTo(0, 1);
+
+      await selectedLiveViewport.dispatchEvent("pointerdown", {
+        isPrimary: true,
+        pointerId: 98,
+        pointerType: "touch",
+      });
+      await selectedLiveViewport.dispatchEvent("pointerup", {
+        isPrimary: true,
+        pointerId: 98,
+        pointerType: "touch",
+      });
+      await lightButton.focus();
+      await lightButton.press("ArrowUp");
+      await expect(dimmer).toBeVisible();
+      const unresizedMobileDimmerBox = await dimmer.boundingBox();
+      expect(unresizedMobileDimmerBox).not.toBeNull();
+      if (unresizedMobileDimmerBox) {
+        expect(unresizedMobileDimmerBox.y).toBeGreaterThanOrEqual(
+          mobileCameraBox.y,
+        );
+        expect(
+          unresizedMobileDimmerBox.y + unresizedMobileDimmerBox.height,
+        ).toBeLessThanOrEqual(mobileCameraBox.y + mobileCameraBox.height + 1);
+      }
+      await page.locator("body").dispatchEvent("pointerdown", {
+        button: 0,
+        isPrimary: true,
+        pointerId: 99,
+        pointerType: "touch",
+      });
+      await expect(dimmer).toBeHidden();
+
       await mobileResizeHandle.focus();
       await expect(mobileResizeHandle).toHaveCSS("outline-style", "none");
       const cameraComposition = page.locator(".module-composition").first();
@@ -5725,8 +5857,10 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
       await lightButton.press("ArrowUp");
       await expect(dimmer).toBeVisible();
       const mobileDimmerBox = await dimmer.boundingBox();
+      const resizedMobileCameraBox = await selectedCameraStage.boundingBox();
       expect(mobileDimmerBox).not.toBeNull();
-      if (mobileDimmerBox) {
+      expect(resizedMobileCameraBox).not.toBeNull();
+      if (mobileDimmerBox && resizedMobileCameraBox) {
         expect(mobileDimmerBox.width).toBeCloseTo(4.75 * 16, 1);
         expect(mobileDimmerBox.width).toBeLessThan(
           desktopDimmerBox?.width ?? Number.POSITIVE_INFINITY,
@@ -5734,6 +5868,12 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
         expect(mobileDimmerBox.x).toBeGreaterThanOrEqual(mobileCameraBox.x);
         expect(mobileDimmerBox.x + mobileDimmerBox.width).toBeLessThanOrEqual(
           mobileCameraBox.x + mobileCameraBox.width + 1,
+        );
+        expect(mobileDimmerBox.y).toBeGreaterThanOrEqual(
+          resizedMobileCameraBox.y,
+        );
+        expect(mobileDimmerBox.y + mobileDimmerBox.height).toBeLessThanOrEqual(
+          resizedMobileCameraBox.y + resizedMobileCameraBox.height + 1,
         );
       }
       await page.locator("body").dispatchEvent("pointerdown", {
@@ -5743,9 +5883,11 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
         pointerType: "touch",
       });
       await expect(dimmer).toBeHidden();
-      await ptzRightButton.evaluate((button) =>
-        (button as HTMLButtonElement).blur(),
-      );
+      await ptzRightButton.evaluate((button) => {
+        button.dispatchEvent(
+          new FocusEvent("focusin", { bubbles: true, composed: true }),
+        );
+      });
       await page.mouse.move(0, 0);
       await expect(ptzControl).toBeHidden({
         timeout: MEDIA_OVERLAY_HIDE_DELAY_MS + 1_000,
@@ -5855,6 +5997,11 @@ test("aligns phone carousel controls and stage handle to the active stage", asyn
       const controlButton = controls?.shadowRoot
         ?.querySelector("wzc-media-controls")
         ?.shadowRoot?.querySelector<HTMLElement>(".control-button");
+      const controlButtons = [
+        ...(controls?.shadowRoot
+          ?.querySelector("wzc-media-controls")
+          ?.shadowRoot?.querySelectorAll<HTMLElement>(".control-button") ?? []),
+      ];
       const carousel =
         camera.shadowRoot?.querySelector<HTMLElement>(".camera-carousel");
       const previous = camera.shadowRoot?.querySelector<HTMLElement>(
@@ -5865,40 +6012,32 @@ test("aligns phone carousel controls and stage handle to the active stage", asyn
       );
       const rect = (target?: HTMLElement | null) =>
         target?.getBoundingClientRect();
-      const rowProbe = document.createElement("span");
-      rowProbe.style.cssText = "position:absolute";
-      view.shadowRoot?.append(rowProbe);
-      const rowSize = (token: string) => {
-        rowProbe.style.blockSize = `var(${token})`;
-        return rowProbe.getBoundingClientRect().height;
-      };
-      const rows = {
-        lower: rowSize("--wzc-camera-overlay-lower-row-size"),
-        metadata: rowSize("--wzc-camera-overlay-metadata-row-size"),
-        top: rowSize("--wzc-camera-overlay-top-row-size"),
-      };
-      rowProbe.remove();
+      const insetProbe = document.createElement("span");
+      insetProbe.style.cssText =
+        "position:absolute;inline-size:var(--wzc-camera-control-inline-inset)";
+      view.shadowRoot?.append(insetProbe);
+      const controlInset = insetProbe.getBoundingClientRect().width;
+      insetProbe.remove();
       return {
         carousel: rect(carousel),
         control: rect(controlButton),
+        controlInset,
+        controlRight: Math.max(
+          ...controlButtons.map(
+            (button) => button.getBoundingClientRect().right,
+          ),
+        ),
         handle: rect(handle),
         next: rect(next),
         previous: rect(previous),
-        rows,
         stage: rect(stage),
       };
     });
 
   const stageCenterX =
     (geometry.stage?.left ?? 0) + (geometry.stage?.width ?? 0) / 2;
-  const mediaCenterY =
-    (geometry.stage?.top ?? 0) +
-    geometry.rows.top +
-    ((geometry.stage?.height ?? 0) -
-      geometry.rows.top -
-      geometry.rows.lower -
-      geometry.rows.metadata) /
-      2;
+  const stageCenterY =
+    (geometry.stage?.top ?? 0) + (geometry.stage?.height ?? 0) / 2;
   expect(
     (geometry.handle?.left ?? 0) + (geometry.handle?.width ?? 0) / 2,
   ).toBeCloseTo(stageCenterX, 0);
@@ -5910,21 +6049,25 @@ test("aligns phone carousel controls and stage handle to the active stage", asyn
     Math.abs(
       (geometry.next?.top ?? 0) +
         (geometry.next?.height ?? 0) / 2 -
-        mediaCenterY,
+        stageCenterY,
     ),
   ).toBeLessThan(1);
   expect(
     Math.abs(
       (geometry.previous?.top ?? 0) +
         (geometry.previous?.height ?? 0) / 2 -
-        mediaCenterY,
+        stageCenterY,
     ),
   ).toBeLessThan(1);
-  expect(geometry.control?.left ?? 0).toBeGreaterThan(
+  expect(geometry.control?.left ?? 0).toBeGreaterThanOrEqual(
     geometry.next?.right ?? 0,
   );
   expect(geometry.control?.width).toBeGreaterThanOrEqual(30);
   expect(geometry.control?.width).toBeLessThan(36);
+  expect((geometry.stage?.right ?? 0) - geometry.controlRight).toBeCloseTo(
+    geometry.controlInset,
+    1,
+  );
   expect(
     (geometry.stage?.width ?? 0) / (geometry.stage?.height ?? 1),
   ).toBeCloseTo(16 / 9, 1);
@@ -7944,12 +8087,13 @@ test("retains one live connection while the card presentation is replaced", asyn
   await expect(controls.first()).toBeHidden({
     timeout: MEDIA_OVERLAY_HIDE_DELAY_MS + 1_000,
   });
-  const dispatchLiveTouchTap = (): Promise<void> =>
+  const dispatchLiveTouchTap = (): Promise<boolean> =>
     mediaSurface.evaluate((element) => {
       const pointerId = Number(element.dataset.testTouchPointer ?? "40") + 1;
       element.dataset.testTouchPointer = String(pointerId);
+      let pointerDownAccepted = true;
       for (const type of ["pointerdown", "pointerup"] as const) {
-        element.dispatchEvent(
+        const accepted = element.dispatchEvent(
           new PointerEvent(type, {
             bubbles: true,
             cancelable: true,
@@ -7960,9 +8104,11 @@ test("retains one live connection while the card presentation is replaced", asyn
             pointerType: "touch",
           }),
         );
+        if (type === "pointerdown") pointerDownAccepted = accepted;
       }
+      return pointerDownAccepted;
     });
-  await dispatchLiveTouchTap();
+  expect(await dispatchLiveTouchTap()).toBe(false);
   await expect(controls.first()).toBeVisible();
   await page.waitForTimeout(500);
   await dispatchLiveTouchTap();
@@ -8142,19 +8288,30 @@ test("retains one live connection while the card presentation is replaced", asyn
   const mediaControlGroup = page.locator(
     "wzc-camera wzc-camera-controls wzc-media-controls .control-group",
   );
-  const [rightRailBox, mediaControlGroupBox, sourceIndicatorBox] =
-    await Promise.all([
-      page.locator("wzc-camera wzc-camera-controls").boundingBox(),
-      mediaControlGroup.boundingBox(),
-      connectionIndicator.boundingBox(),
-    ]);
+  const [
+    cameraStageBox,
+    rightRailBox,
+    mediaControlGroupBox,
+    sourceIndicatorBox,
+  ] = await Promise.all([
+    cameraStage.boundingBox(),
+    page.locator("wzc-camera wzc-camera-controls").boundingBox(),
+    mediaControlGroup.boundingBox(),
+    connectionIndicator.boundingBox(),
+  ]);
+  expect(cameraStageBox).not.toBeNull();
   expect(rightRailBox).not.toBeNull();
   expect(mediaControlGroupBox).not.toBeNull();
   expect(sourceIndicatorBox).not.toBeNull();
-  if (rightRailBox && mediaControlGroupBox && sourceIndicatorBox) {
+  if (
+    cameraStageBox &&
+    rightRailBox &&
+    mediaControlGroupBox &&
+    sourceIndicatorBox
+  ) {
     expect(
       mediaControlGroupBox.y + mediaControlGroupBox.height / 2,
-    ).toBeCloseTo(rightRailBox.y + rightRailBox.height / 2, 1);
+    ).toBeCloseTo(cameraStageBox.y + cameraStageBox.height / 2, 1);
     const sourceOverlapsControls =
       sourceIndicatorBox.x <
         mediaControlGroupBox.x + mediaControlGroupBox.width &&
@@ -8164,6 +8321,12 @@ test("retains one live connection while the card presentation is replaced", asyn
         mediaControlGroupBox.y + mediaControlGroupBox.height &&
       sourceIndicatorBox.y + sourceIndicatorBox.height > mediaControlGroupBox.y;
     expect(sourceOverlapsControls).toBe(false);
+    expect(
+      await connectionIndicator.evaluate((element) => {
+        const badge = element.shadowRoot?.querySelector<HTMLElement>(".badge");
+        return badge ? badge.scrollWidth <= badge.clientWidth : false;
+      }),
+    ).toBe(true);
   }
   const controlPresentation = await controls.evaluateAll((buttons) => {
     const group = buttons[0]?.parentElement;

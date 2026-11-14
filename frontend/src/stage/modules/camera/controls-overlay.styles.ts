@@ -12,9 +12,12 @@ export const cameraControlsStyles = css`
 
   wzc-media-controls {
     display: grid;
-    place-items: center;
+    align-items: center;
+    justify-items: var(--wzc-media-controls-inline-alignment);
     inline-size: 100%;
     block-size: 100%;
     pointer-events: none;
+
+    --wzc-media-controls-inline-alignment: start;
   }
 `;

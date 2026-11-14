@@ -172,12 +172,14 @@ export const cameraLiveViewStyles = css`
   }
 
   .source-indicator {
-    grid-area: right;
+    grid-area: top;
     align-self: start;
     justify-self: end;
     z-index: 1;
+    inline-size: max-content;
+    max-inline-size: none;
     margin-block-start: 0.5rem;
-    margin-inline-end: var(--wzc-live-indicator-inline-end, 0.5rem);
+    margin-inline-end: 0.5rem;
     display: inline-flex;
     --wzc-badge-color: var(
       --wzc-live-indicator-color,
@@ -216,7 +218,8 @@ export const cameraLiveViewStyles = css`
   }
 
   .player-tools {
-    grid-area: right;
+    grid-column: 5;
+    grid-row: 1 / -1;
     align-self: stretch;
     justify-self: stretch;
     z-index: 2;

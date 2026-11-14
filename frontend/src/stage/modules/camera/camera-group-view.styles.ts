@@ -63,13 +63,6 @@ export const cameraGroupViewStyles = css`
     container-type: size;
   }
 
-  .feed wzc-camera-view {
-    --wzc-live-indicator-inline-end: max(
-      0.5rem,
-      calc(50cqi - 88.8889cqb + 0.5rem)
-    );
-  }
-
   .feed::after {
     position: absolute;
     z-index: 6;
@@ -163,7 +156,8 @@ export const cameraGroupViewStyles = css`
   }
 
   .group-controls {
-    grid-area: right;
+    grid-column: 5;
+    grid-row: 1 / -1;
     align-self: stretch;
     justify-self: stretch;
     z-index: 4;

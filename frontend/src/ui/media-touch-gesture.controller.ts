@@ -1,4 +1,5 @@
 import type { MediaZoomController } from "./media-zoom.controller";
+import { MediaTouchRevealGuard } from "./media-touch-reveal-guard";
 
 const DOUBLE_TAP_DELAY_MS = 450;
 const DOUBLE_TAP_DISTANCE_PX = 48;
@@ -48,6 +49,7 @@ export class MediaTouchGestureController {
   private _lastCompletedTap?: CompletedTap;
   private _lastTouchToggleTime = Number.NEGATIVE_INFINITY;
   private _multiTouchSequence = false;
+  private readonly _revealGuard = new MediaTouchRevealGuard();
 
   public constructor(
     private readonly _zoom: MediaZoomController,
@@ -61,6 +63,13 @@ export class MediaTouchGestureController {
       this._ignoredPointers.add(event.pointerId);
       return true;
     }
+
+    // A surface touch can reveal a control beneath the still-active contact.
+    // Consume that touch before rendering the controls so the browser cannot
+    // retarget its compatibility click to the newly visible control. A later,
+    // deliberate touch that starts on a control follows the branch above.
+    event.preventDefault();
+    this._revealGuard.begin(event);
 
     this._contacts.set(event.pointerId, {
       moved: false,
@@ -100,6 +109,7 @@ export class MediaTouchGestureController {
   public handlePointerUp(event: PointerEvent): boolean {
     if (event.pointerType !== "touch") return false;
     if (this._ignoredPointers.delete(event.pointerId)) return true;
+    this._revealGuard.end(event);
     const contact = this._contacts.get(event.pointerId);
     this._zoom.handlePointerUp(event);
     this._contacts.delete(event.pointerId);
@@ -120,6 +130,7 @@ export class MediaTouchGestureController {
   public handlePointerCancel(event: PointerEvent): boolean {
     if (event.pointerType !== "touch") return false;
     if (this._ignoredPointers.delete(event.pointerId)) return true;
+    this._revealGuard.cancel();
     this._contacts.delete(event.pointerId);
     this._lastCompletedTap = undefined;
     this._zoom.handlePointerCancel(event);
@@ -130,6 +141,7 @@ export class MediaTouchGestureController {
   public handleLostPointerCapture(event: PointerEvent): boolean {
     if (event.pointerType !== "touch") return false;
     if (this._ignoredPointers.delete(event.pointerId)) return true;
+    this._revealGuard.end(event);
     this._contacts.delete(event.pointerId);
     this._lastCompletedTap = undefined;
     this._zoom.handleLostPointerCapture(event);
@@ -145,6 +157,7 @@ export class MediaTouchGestureController {
   }
 
   public reset(): void {
+    this._revealGuard.cancel();
     this._contacts.clear();
     this._ignoredPointers.clear();
     this._lastCompletedTap = undefined;

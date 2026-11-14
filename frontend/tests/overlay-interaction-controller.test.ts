@@ -38,6 +38,30 @@ describe("overlay interaction controller", () => {
     controller.handlePointerLeave();
     expect(first.release).toHaveBeenCalledOnce();
   });
+
+  it("does not let touch-created focus hold the overlay open", () => {
+    const controller = new OverlayInteractionController(host());
+    const camera = session({});
+    const button = document.createElement("button");
+    vi.spyOn(button, "matches").mockReturnValue(false);
+
+    controller.configure(camera);
+    controller.handleFocusIn({ target: button } as unknown as FocusEvent);
+
+    expect(camera.holdOverlay).not.toHaveBeenCalled();
+  });
+
+  it("retains the overlay for keyboard-visible focus", () => {
+    const controller = new OverlayInteractionController(host());
+    const camera = session({});
+    const button = document.createElement("button");
+    vi.spyOn(button, "matches").mockReturnValue(true);
+
+    controller.configure(camera);
+    controller.handleFocusIn({ target: button } as unknown as FocusEvent);
+
+    expect(camera.holdOverlay).toHaveBeenCalledOnce();
+  });
 });
 
 function host(): ReactiveControllerHost {

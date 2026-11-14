@@ -96,7 +96,8 @@ export const cameraStyles = css`
   }
 
   .carousel-navigation {
-    grid-area: media;
+    grid-column: 2 / 5;
+    grid-row: 1 / -1;
     z-index: 4;
     display: grid;
     place-items: center;

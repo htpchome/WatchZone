@@ -29,7 +29,17 @@ export class PressInteractionController<Action> implements ReactiveController {
   }
 
   public readonly handlePointerDown = (event: PointerEvent): void => {
-    if (!isPrimaryControlPointer(event) || this._action !== undefined) return;
+    if (!isPrimaryControlPointer(event)) return;
+    // Recover from a WebView dropping the previous pointer-end event. Without
+    // this reset, one stranded capture permanently rejects every later press.
+    if (
+      this._action !== undefined &&
+      this._pointerId !== undefined &&
+      event.pointerId !== this._pointerId
+    ) {
+      this._finish(true);
+    }
+    if (this._action !== undefined) return;
     const target = event.currentTarget as HTMLElement;
     const action = this._callbacks.actionFor(target);
     if (action === undefined) return;
@@ -97,11 +107,15 @@ export class PressInteractionController<Action> implements ReactiveController {
 
   private _listenForCancellation(): void {
     window.addEventListener("blur", this._cancelFromEnvironment);
+    window.addEventListener("pointercancel", this._finishFromWindow);
+    window.addEventListener("pointerup", this._finishFromWindow);
     document.addEventListener("visibilitychange", this._cancelFromEnvironment);
   }
 
   private _removeCancellationListeners(): void {
     window.removeEventListener("blur", this._cancelFromEnvironment);
+    window.removeEventListener("pointercancel", this._finishFromWindow);
+    window.removeEventListener("pointerup", this._finishFromWindow);
     document.removeEventListener(
       "visibilitychange",
       this._cancelFromEnvironment,
@@ -111,5 +125,11 @@ export class PressInteractionController<Action> implements ReactiveController {
   private readonly _cancelFromEnvironment = (): void => {
     if (document.visibilityState === "visible" && document.hasFocus()) return;
     this._finish(true);
+  };
+
+  private readonly _finishFromWindow = (event: PointerEvent): void => {
+    if (event.pointerId !== this._pointerId) return;
+    if (event.pointerType === "touch") this._target?.blur();
+    this._finish(event.type === "pointercancel");
   };
 }

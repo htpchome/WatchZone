@@ -42,7 +42,15 @@ export class OverlayInteractionController implements ReactiveController {
 
   public readonly handlePointerLeave = (): void => this.release();
 
-  public readonly handleFocusIn = (): void => this._hold();
+  public readonly handleFocusIn = (event: FocusEvent): void => {
+    const target = event.target;
+    // Pointer-created focus must not pin the overlay open. Only keyboard focus
+    // receives :focus-visible and owns a persistent overlay hold.
+    if (target instanceof HTMLElement && !target.matches(":focus-visible")) {
+      return;
+    }
+    this._hold();
+  };
 
   public readonly handleFocusOut = (event: FocusEvent): void => {
     const owner = event.currentTarget as Node;

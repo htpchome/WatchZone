@@ -77,6 +77,13 @@ export const cardStyles = css`
       --wzc-control-dock-gap: 0.25rem;
       --wzc-camera-switcher-inline-size: 7.125rem;
       --wzc-light-panel-inline-size: 4.75rem;
+      --wzc-light-panel-inline-start: 50%;
+      --wzc-light-panel-inline-end: auto;
+      --wzc-light-panel-block-end: -0.25rem;
+      --wzc-light-panel-padding: 0.4rem;
+      --wzc-light-panel-transform: translateX(-50%);
+      --wzc-light-slider-block-size: 3.5rem;
+      --wzc-light-slider-margin-block: 0.35rem;
       --wzc-slideshow-control-inline-size: calc(
         var(--wzc-camera-control-size) + 2.2rem
       );

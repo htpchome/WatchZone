@@ -26,6 +26,7 @@ import { renderIcon } from "../../../ui/icons";
 import { releaseTouchFocus } from "../../../ui/control-interaction";
 import { MediaOverlayVisibilityController } from "../../../ui/media-overlay-visibility.controller";
 import { mediaTouchOriginatesFromControl } from "../../../ui/media-touch-gesture.controller";
+import { MediaTouchRevealGuard } from "../../../ui/media-touch-reveal-guard";
 import { mediaOverlayControlButtonStyles } from "../../../ui/overlay-control.styles";
 import type { CameraSessionContext } from "../../camera-session-context";
 import type {
@@ -92,6 +93,7 @@ export class CameraGroupView extends LitElement {
   });
   private _snapshotPending = false;
   private _stageResizeActive = false;
+  private readonly _touchRevealGuard = new MediaTouchRevealGuard();
   private _stageResizeFrame?: number;
   private _pendingStageSize?: CameraStageSize;
   private _suspendDialogActive = false;
@@ -132,8 +134,8 @@ export class CameraGroupView extends LitElement {
       @pointermove=${this._handlePointerMove}
       @pointerleave=${this._handlePointerLeave}
       @pointerdown=${this._handlePointerDown}
-      @pointerup=${this._overlay.handlePointerEnd}
-      @pointercancel=${this._overlay.handlePointerEnd}
+      @pointerup=${this._handlePointerEnd}
+      @pointercancel=${this._handlePointerCancel}
       @focusin=${this._overlay.handleFocusIn}
       @focusout=${this._overlay.handleFocusOut}
     >
@@ -282,6 +284,7 @@ export class CameraGroupView extends LitElement {
       this._syncFullscreenState,
     );
     this._cancelPendingStageSize();
+    this._touchRevealGuard.cancel();
     this.cameraSession?.clear(this);
     super.disconnectedCallback();
   }
@@ -368,7 +371,22 @@ export class CameraGroupView extends LitElement {
       this._overlay.handlePointerDown(event);
       return;
     }
-    if (!mediaTouchOriginatesFromControl(event)) this._overlay.reveal();
+    if (mediaTouchOriginatesFromControl(event)) return;
+    // Match the shared media gesture contract: the touch that reveals hidden
+    // controls must not become a click on a control rendered under it.
+    event.preventDefault();
+    this._touchRevealGuard.begin(event);
+    this._overlay.reveal();
+  };
+
+  private readonly _handlePointerEnd = (event: PointerEvent): void => {
+    if (event.pointerType === "touch") this._touchRevealGuard.end(event);
+    this._overlay.handlePointerEnd(event);
+  };
+
+  private readonly _handlePointerCancel = (event: PointerEvent): void => {
+    if (event.pointerType === "touch") this._touchRevealGuard.cancel();
+    this._overlay.handlePointerEnd(event);
   };
 
   private readonly _handlePointerLeave = (event: PointerEvent): void => {

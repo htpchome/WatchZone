@@ -62,8 +62,12 @@ export const lightControlStyles = css`
   .dimmer-panel {
     display: grid;
     position: absolute;
-    inset-inline-end: 0;
-    inset-block-end: calc(100% + var(--wzc-light-control-gap));
+    inset-inline-start: var(--wzc-light-panel-inline-start, auto);
+    inset-inline-end: var(--wzc-light-panel-inline-end, 0);
+    inset-block-end: var(
+      --wzc-light-panel-block-end,
+      calc(100% + var(--wzc-light-control-gap))
+    );
     grid-template:
       "name" auto
       "slider" minmax(7rem, 1fr)
@@ -72,7 +76,7 @@ export const lightControlStyles = css`
     justify-items: center;
     box-sizing: border-box;
     inline-size: var(--wzc-light-panel-inline-size);
-    padding: 0.65rem;
+    padding: var(--wzc-light-panel-padding, 0.65rem);
     color: var(--wzc-light-panel-color);
     backdrop-filter: var(--wzc-light-panel-backdrop-filter);
     background: var(--wzc-light-panel-background);
@@ -80,6 +84,8 @@ export const lightControlStyles = css`
     border-radius: var(--wzc-light-panel-radius);
     box-shadow: var(--wzc-light-panel-shadow);
     pointer-events: auto;
+    transform: var(--wzc-light-panel-transform, none);
+    z-index: 1;
   }
 
   .dimmer-name {
@@ -97,7 +103,7 @@ export const lightControlStyles = css`
     grid-area: slider;
     inline-size: var(--wzc-light-slider-thickness);
     block-size: var(--wzc-light-slider-block-size);
-    margin-block: 0.65rem;
+    margin-block: var(--wzc-light-slider-margin-block, 0.65rem);
     --control-slider-background: var(--wzc-light-slider-background);
     --control-slider-background-opacity: 1;
     --control-slider-border-radius: var(--wzc-radius-large);

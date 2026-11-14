@@ -202,6 +202,7 @@ describe("camera media zoom", () => {
     surface.dispatchEvent(doubleClick);
     expect(doubleClick.defaultPrevented).toBe(true);
     expect(controller.zoom.scale).toBe(2);
+    controller.hostDisconnected();
   });
 
   it("does not interpret a control touch as a media gesture", () => {
@@ -220,6 +221,7 @@ describe("camera media zoom", () => {
     expect(activated).toHaveBeenCalledOnce();
     expect(controller.overlay.visible).toBe(false);
     expect(controller.zoom.scale).toBe(1);
+    controller.hostDisconnected();
   });
 
   it("pinches in and back to 1x through the shared media touch owner", () => {

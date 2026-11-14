@@ -4,7 +4,8 @@ export const mediaControlsOverlayStyles = css`
   :host {
     z-index: 2;
     display: grid;
-    place-items: center;
+    align-items: center;
+    justify-items: var(--wzc-media-controls-inline-alignment, center);
     inline-size: 100%;
     block-size: 100%;
     pointer-events: none;
