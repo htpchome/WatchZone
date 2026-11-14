@@ -17,7 +17,7 @@ import {
 import { roundButtonStyles } from "../../../ui/overlay-control.styles";
 import { renderIcon } from "../../../ui/icons";
 import { ToastManager } from "../../../ui/toast-manager";
-import { releaseTouchFocus } from "../../../ui/control-interaction";
+import { PressInteractionController } from "../../../ui/press-interaction.controller";
 import "../../../ui/toast-region";
 import type { TalkConnection } from "../../../providers/talk-source-resolver";
 import { OverlayInteractionController } from "../../overlay-interaction.controller";
@@ -27,6 +27,7 @@ import { twoWayTalkStyles } from "./two-way-talk.styles";
 
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
 const TALK_TOAST_KEY = "two-way-talk-status";
+type TalkControlAction = "connect" | "microphone" | "speaker" | "stop";
 
 /** User-placeable two-way-talk presentation over the active camera. */
 export class TwoWayTalkComponent extends LitElement {
@@ -40,6 +41,17 @@ export class TwoWayTalkComponent extends LitElement {
   private readonly _toasts = new ToastManager(this);
   private readonly _soundwave = new TalkSoundwaveController();
   private readonly _overlay = new OverlayInteractionController(this);
+  private readonly _press = new PressInteractionController<TalkControlAction>(
+    this,
+    {
+      actionFor: (target) =>
+        target.dataset.talkAction as TalkControlAction | undefined,
+      start: () => undefined,
+      end: (action, cancelled) => {
+        if (!cancelled) this._activate(action);
+      },
+    },
+  );
   private _talkStream?: MediaStream;
   private readonly _session = new TalkSessionController(this, {
     onConnected: (connection) => this._handleConnected(connection),
@@ -83,45 +95,32 @@ export class TwoWayTalkComponent extends LitElement {
                 aria-label=${this.localize("talk.controls")}
               >
                 <canvas aria-hidden="true"></canvas>
-                <button
-                  class="round-button talk-button"
-                  type="button"
-                  aria-label=${
-                    this._session.microphoneMuted
-                      ? this.localize("talk.unmute_microphone")
-                      : this.localize("talk.mute_microphone")
-                  }
-                  @pointerup=${releaseTouchFocus}
-                  @click=${this._toggleMicrophone}
-                >
-                  ${renderIcon(
+                ${this._renderTalkButton(
+                  "microphone",
+                  "round-button talk-button",
+                  this._session.microphoneMuted
+                    ? this.localize("talk.unmute_microphone")
+                    : this.localize("talk.mute_microphone"),
+                  renderIcon(
                     this._session.microphoneMuted
                       ? "microphoneOff"
                       : "microphone",
-                  )}
-                </button>
-                <button
-                  class="round-button talk-button center"
-                  type="button"
-                  aria-label=${this.localize("talk.disconnect")}
-                  @pointerup=${releaseTouchFocus}
-                  @click=${this._stop}
-                >
-                  ${renderIcon("microphone")}
-                </button>
-                <button
-                  class="round-button talk-button"
-                  type="button"
-                  aria-label=${
-                    camera.muted
-                      ? this.localize("camera.unmute")
-                      : this.localize("camera.mute")
-                  }
-                  @pointerup=${releaseTouchFocus}
-                  @click=${this._toggleSpeaker}
-                >
-                  ${renderIcon(camera.muted ? "volumeOff" : "volumeOn")}
-                </button>
+                  ),
+                )}
+                ${this._renderTalkButton(
+                  "stop",
+                  "round-button talk-button center",
+                  this.localize("talk.disconnect"),
+                  renderIcon("microphone"),
+                )}
+                ${this._renderTalkButton(
+                  "speaker",
+                  "round-button talk-button",
+                  camera.muted
+                    ? this.localize("camera.unmute")
+                    : this.localize("camera.mute"),
+                  renderIcon(camera.muted ? "volumeOff" : "volumeOn"),
+                )}
               </div>`
             : html`<div
                 class=${visible ? "inactive-control visible" : "inactive-control"}
@@ -132,25 +131,18 @@ export class TwoWayTalkComponent extends LitElement {
                 @focusin=${this._overlay.handleFocusIn}
                 @focusout=${this._overlay.handleFocusOut}
               >
-                <button
-                  class=${
-                    connecting
-                      ? "round-button talk-button inactive connecting"
-                      : "round-button talk-button inactive"
-                  }
-                  type="button"
-                  aria-busy=${connecting ? "true" : "false"}
-                  aria-label=${
-                    connecting
-                      ? this.localize("talk.cancel_connecting")
-                      : this.localize("talk.connect")
-                  }
-                  ?disabled=${!camera.available}
-                  @pointerup=${releaseTouchFocus}
-                  @click=${this._toggleConnection}
-                >
-                  ${renderIcon("microphoneOff")}
-                </button>
+                ${this._renderTalkButton(
+                  "connect",
+                  connecting
+                    ? "round-button talk-button inactive connecting"
+                    : "round-button talk-button inactive",
+                  connecting
+                    ? this.localize("talk.cancel_connecting")
+                    : this.localize("talk.connect"),
+                  renderIcon("microphoneOff"),
+                  !camera.available,
+                  connecting,
+                )}
               </div>`
         }
       </div>
@@ -201,6 +193,40 @@ export class TwoWayTalkComponent extends LitElement {
     }
     void this._session.start();
   };
+  private _activate(action: TalkControlAction): void {
+    if (action === "connect") this._toggleConnection();
+    else if (action === "microphone") this._toggleMicrophone();
+    else if (action === "speaker") this._toggleSpeaker();
+    else this._stop();
+  }
+  private _renderTalkButton(
+    action: TalkControlAction,
+    className: string,
+    label: string,
+    icon: unknown,
+    disabled = false,
+    busy = false,
+  ) {
+    return html`<button
+      class=${className}
+      type="button"
+      data-talk-action=${action}
+      aria-busy=${busy ? "true" : "false"}
+      aria-label=${label}
+      ?disabled=${disabled}
+      @click=${this._preventClick}
+      @pointerdown=${this._press.handlePointerDown}
+      @pointerup=${this._press.handlePointerUp}
+      @pointercancel=${this._press.handlePointerCancel}
+      @lostpointercapture=${this._press.handlePointerCancel}
+      @keydown=${this._press.handleKeyDown}
+      @keyup=${this._press.handleKeyUp}
+    >
+      ${icon}
+    </button>`;
+  }
+  private readonly _preventClick = (event: Event): void =>
+    event.preventDefault();
   private readonly _stop = (): void => this._session.stop();
   private readonly _toggleMicrophone = (): void =>
     this._session.toggleMicrophoneMute();

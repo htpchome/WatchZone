@@ -74,7 +74,68 @@ describe("two-way-talk component", () => {
     control.dispatchEvent(new Event("pointerleave"));
     expect(release).toHaveBeenCalledOnce();
   });
+
+  it("owns a visible touch press without dismissing the live overlay", async () => {
+    const callWS = vi.fn().mockResolvedValue({ supported: true });
+    const context = new CameraSessionContext();
+    const element = document.createElement(
+      "wzc-two-way-talk",
+    ) as TwoWayTalkComponent;
+    element.api = api(callWS);
+    element.cameraSession = context;
+    element.cameras = [
+      { connection: "home_assistant" as const, entityId: "camera.front" },
+    ];
+    document.body.append(element);
+    context.publish({}, cameraSession(true));
+
+    await vi.waitFor(() =>
+      expect(
+        element.shadowRoot?.querySelector("button[data-talk-action=connect]"),
+      ).not.toBeNull(),
+    );
+    const start = vi.fn();
+    (
+      element as unknown as {
+        _session: { start(): Promise<void> };
+      }
+    )._session.start = start;
+    const button = element.shadowRoot?.querySelector<HTMLButtonElement>(
+      "button[data-talk-action=connect]",
+    );
+    expect(button).toBeDefined();
+    if (!button) return;
+    Object.assign(button, {
+      hasPointerCapture: vi.fn(() => false),
+      releasePointerCapture: vi.fn(),
+      setPointerCapture: vi.fn(),
+    });
+    const outsidePointer = vi.fn();
+    document.addEventListener("pointerdown", outsidePointer);
+
+    button.dispatchEvent(touchPointerEvent("pointerdown", 1));
+    button.dispatchEvent(touchPointerEvent("pointerup", 1));
+
+    document.removeEventListener("pointerdown", outsidePointer);
+    expect(outsidePointer).not.toHaveBeenCalled();
+    expect(start).toHaveBeenCalledOnce();
+  });
 });
+
+function touchPointerEvent(type: string, pointerId: number): PointerEvent {
+  const event = new Event(type, {
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+  });
+  Object.defineProperties(event, {
+    button: { value: 0 },
+    isPrimary: { value: true },
+    pointerId: { value: pointerId },
+    pointerType: { value: "touch" },
+  });
+  return event as PointerEvent;
+}
 
 function cameraSession(overlayVisible: boolean) {
   return {

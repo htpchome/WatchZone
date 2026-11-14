@@ -245,6 +245,9 @@ export class CameraGroupView extends LitElement {
         ".stage-resize-handle",
       ) ?? undefined,
     );
+    for (const view of this._views) {
+      view.setBasePresentationCover(this.stageResized);
+    }
     this._publishSession();
   }
 
@@ -664,9 +667,16 @@ export class CameraGroupView extends LitElement {
   ): void {
     if (interaction.phase === "start") {
       this._stageResizeActive = true;
+      for (const view of this._views) view.beginStageResizeReturn();
       return;
     }
-    if (interaction.phase !== "end") return;
+    if (interaction.phase === "update") {
+      for (const view of this._views) {
+        view.updateStageResizeReturn(interaction.returnProgress);
+      }
+      return;
+    }
+    for (const view of this._views) view.endStageResizeReturn();
     this._stageResizeActive = false;
     this._cancelPendingStageSize();
     this._handleStageSizeChange(this._stageResize.size);

@@ -747,6 +747,24 @@ describe("camera media zoom", () => {
     expect(controller.stageResizeActive).toBe(false);
   });
 
+  it("derives cover fit from a resized grouped-feed viewport", () => {
+    const surface = createSurface(400);
+    const controller = new MediaZoomController(createHost());
+    controller.observe(surface);
+    controller.setMediaDimensions(160, 90);
+
+    controller.setBasePresentationCover(true);
+
+    expect(controller.transform).toBe(
+      "translate3d(0px, 0px, 0) scale(1.7777777777777777)",
+    );
+    expect(controller.pannable).toBe(true);
+
+    controller.setBasePresentationCover(false);
+    expect(controller.transform).toBe("translate3d(0px, 0px, 0) scale(1)");
+    expect(controller.pannable).toBe(false);
+  });
+
   it("transforms fallback and live media without transforming overlays", async () => {
     const presentation = document.createElement(
       CAMERA_LIVE_PRESENTATION_TAG,

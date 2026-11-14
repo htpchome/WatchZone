@@ -764,6 +764,34 @@ test("cycles a grouped camera from combined to each member and back", async ({
       Number.parseFloat(getComputedStyle(element).fontSize),
     );
   expect(groupLabelFontSize).toBeGreaterThanOrEqual(10);
+  const groupPresentations = group.locator("wzc-camera-live");
+  await groupPresentations.evaluateAll((presentations) => {
+    for (const presentation of presentations) {
+      const live = presentation as HTMLElement & {
+        posterUrl?: string;
+        requestUpdate(): void;
+      };
+      live.posterUrl =
+        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='90'/%3E";
+      live.requestUpdate();
+    }
+  });
+  await expect(group.locator(".fallback-image")).toHaveCount(2);
+  const sideBySideHandle = group.locator(".stage-resize-handle:visible");
+  await sideBySideHandle.press("End");
+  await expect(sideBySideHandle).toHaveAttribute("aria-valuenow", "100");
+  await expect
+    .poll(() =>
+      group.locator(".media-surface").evaluateAll((surfaces) =>
+        surfaces.every((surface) => {
+          const transform = getComputedStyle(surface).transform;
+          return Number.parseFloat(transform.split("(")[1] ?? "1") > 3.4;
+        }),
+      ),
+    )
+    .toBe(true);
+  await sideBySideHandle.press("Home");
+  await expect(sideBySideHandle).toHaveAttribute("aria-valuenow", "56");
   await expect(firstSoloTarget.locator("path")).toHaveAttribute("d", /^m4 20c/);
   await firstSoloTarget.hover();
   await page.waitForTimeout(MEDIA_OVERLAY_HIDE_DELAY_MS + 250);
@@ -5035,6 +5063,39 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   const lightIcon = lightButton.locator(":scope > ha-icon svg");
   await expect(talkButton).toBeVisible();
   await expect(ptzTrigger).toBeVisible();
+  await talk.evaluate((element) => {
+    (
+      window as typeof window & {
+        __wzcTalkTouchStarts?: number;
+      }
+    ).__wzcTalkTouchStarts = 0;
+    (
+      element as HTMLElement & {
+        _session: { start(): Promise<void> };
+      }
+    )._session.start = () => {
+      const testWindow = window as typeof window & {
+        __wzcTalkTouchStarts?: number;
+      };
+      testWindow.__wzcTalkTouchStarts =
+        (testWindow.__wzcTalkTouchStarts ?? 0) + 1;
+      return Promise.resolve();
+    };
+  });
+  await talkButton.click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (
+            window as typeof window & {
+              __wzcTalkTouchStarts?: number;
+            }
+          ).__wzcTalkTouchStarts,
+      ),
+    )
+    .toBe(1);
+  await expect(talkButton).toBeVisible();
   await selectedLiveViewport.evaluate((viewport) => {
     const badge = document.createElement("wzc-badge");
     badge.className = "source-indicator visible";

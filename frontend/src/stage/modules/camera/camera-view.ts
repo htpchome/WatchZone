@@ -334,6 +334,22 @@ export class CameraView extends LitElement {
     this._audio.setUserMuted(muted);
   }
 
+  public setBasePresentationCover(cover: boolean): void {
+    this._presentation?.setBasePresentationCover(cover);
+  }
+
+  public beginStageResizeReturn(): void {
+    this._presentation?.beginStageResizeReturn();
+  }
+
+  public updateStageResizeReturn(progress: number): void {
+    this._presentation?.updateStageResizeReturn(progress);
+  }
+
+  public endStageResizeReturn(): void {
+    this._presentation?.endStageResizeReturn();
+  }
+
   public async setSuspended(
     suspended: boolean,
     resumeAfterSeconds?: number,

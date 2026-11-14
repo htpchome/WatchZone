@@ -44,6 +44,7 @@ interface MediaZoomCallbacks {
 
 /** Owns media zoom, bounded pan, gestures, and lifecycle cleanup. */
 export class MediaZoomController implements ReactiveController {
+  private _basePresentationCover = false;
   private _basePresentationScale = 1;
   private _dragStart?: DragStart;
   private _gestureMoved = false;
@@ -84,7 +85,7 @@ export class MediaZoomController implements ReactiveController {
 
   public get transform(): string {
     const { panX, panY, scale } = this._presentationTransform();
-    return `translate3d(${panX}px, ${panY}px, 0) scale(${scale * this._basePresentationScale})`;
+    return `translate3d(${panX}px, ${panY}px, 0) scale(${scale * this._effectiveBasePresentationScale()})`;
   }
 
   public get zoomed(): boolean {
@@ -92,7 +93,14 @@ export class MediaZoomController implements ReactiveController {
   }
 
   public get pannable(): boolean {
-    return this.scale * this._basePresentationScale > MIN_ZOOM;
+    return this.scale * this._effectiveBasePresentationScale() > MIN_ZOOM;
+  }
+
+  public setBasePresentationCover(cover: boolean): void {
+    if (cover === this._basePresentationCover) return;
+    this._basePresentationCover = cover;
+    this._clampPan();
+    this._host.requestUpdate();
   }
 
   public setBasePresentationScale(scale: number): void {
@@ -146,7 +154,11 @@ export class MediaZoomController implements ReactiveController {
         this._surfaceHeight = entry.contentRect.height;
       }
       if (!this.stageResizeActive) this._clampPan();
-      if (this._panX !== previousPanX || this._panY !== previousPanY) {
+      if (
+        this._basePresentationCover ||
+        this._panX !== previousPanX ||
+        this._panY !== previousPanY
+      ) {
         this._host.requestUpdate();
       }
     });
@@ -499,7 +511,7 @@ export class MediaZoomController implements ReactiveController {
     panY: number,
     userScale: number,
   ): Point {
-    const scale = userScale * this._basePresentationScale;
+    const scale = userScale * this._effectiveBasePresentationScale();
     if (scale <= MIN_ZOOM) return { x: 0, y: 0 };
     const width = this._surfaceWidth;
     const height = this._surfaceHeight;
@@ -521,6 +533,23 @@ export class MediaZoomController implements ReactiveController {
       x: Math.min(maxX, Math.max(-maxX, panX)),
       y: Math.min(maxY, Math.max(-maxY, panY)),
     };
+  }
+
+  private _effectiveBasePresentationScale(): number {
+    if (
+      !this._basePresentationCover ||
+      this._mediaHeightRatio === undefined ||
+      !this._surfaceWidth ||
+      !this._surfaceHeight
+    ) {
+      return this._basePresentationScale;
+    }
+    const surfaceHeightRatio = this._surfaceHeight / this._surfaceWidth;
+    const coverScale = Math.max(
+      surfaceHeightRatio / this._mediaHeightRatio,
+      this._mediaHeightRatio / surfaceHeightRatio,
+    );
+    return Math.max(this._basePresentationScale, coverScale);
   }
 
   private _releasePointers(): void {

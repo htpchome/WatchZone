@@ -184,6 +184,10 @@ export class CameraLivePresentation extends LitElement {
     this._media.zoom.setBasePresentationScale(scale);
   }
 
+  public setBasePresentationCover(cover: boolean): void {
+    this._media.zoom.setBasePresentationCover(cover);
+  }
+
   public revealOverlay(): void {
     this._media.overlay.reveal();
   }
