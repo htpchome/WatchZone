@@ -785,7 +785,8 @@ test("cycles a grouped camera from combined to each member and back", async ({
       group.locator(".media-surface").evaluateAll((surfaces) =>
         surfaces.every((surface) => {
           const transform = getComputedStyle(surface).transform;
-          return Number.parseFloat(transform.split("(")[1] ?? "1") > 3.4;
+          const scale = Number.parseFloat(transform.split("(")[1] ?? "1");
+          return scale > 1.7 && scale < 1.8;
         }),
       ),
     )
@@ -1103,6 +1104,16 @@ test("releases grouped overlay and resize interaction before selecting another c
   const groupHandle = group.locator(".stage-resize-handle:visible").first();
   await groupHandle.press("End");
   await expect(groupHandle).toHaveAttribute("aria-valuenow", "100");
+  await expect
+    .poll(() =>
+      group.locator(".media-surface").evaluateAll((surfaces) =>
+        surfaces.every((surface) => {
+          const transform = getComputedStyle(surface).transform;
+          return Number.parseFloat(transform.split("(")[1] ?? "1") === 1;
+        }),
+      ),
+    )
+    .toBe(true);
 
   await navigation.filter({ hasText: "Hall" }).click();
   await expect(camera.locator(".swiper-slide").nth(0)).toHaveAttribute(

@@ -94,6 +94,7 @@ export class CameraView extends LitElement {
         this._audio.handleActiveVideoChanged(video),
     });
   private readonly _runtime = new CameraRuntimeController(this);
+  private _groupPresentationScale?: number;
   private readonly _stageResize = new CameraStageResizeController(
     this,
     (interaction) => this._handleStageResizeInteraction(interaction),
@@ -252,7 +253,7 @@ export class CameraView extends LitElement {
       ) ?? undefined,
     );
     this._presentation?.setBasePresentationScale(
-      this._stageResize.mediaPresentationScale,
+      this._groupPresentationScale ?? this._stageResize.mediaPresentationScale,
     );
     this._audio.syncMediaState();
     this._publishCameraSession();
@@ -334,20 +335,9 @@ export class CameraView extends LitElement {
     this._audio.setUserMuted(muted);
   }
 
-  public setBasePresentationCover(cover: boolean): void {
-    this._presentation?.setBasePresentationCover(cover);
-  }
-
-  public beginStageResizeReturn(): void {
-    this._presentation?.beginStageResizeReturn();
-  }
-
-  public updateStageResizeReturn(progress: number): void {
-    this._presentation?.updateStageResizeReturn(progress);
-  }
-
-  public endStageResizeReturn(): void {
-    this._presentation?.endStageResizeReturn();
+  public setGroupPresentationScale(scale: number): void {
+    this._groupPresentationScale = scale;
+    this._presentation?.setBasePresentationScale(scale);
   }
 
   public async setSuspended(

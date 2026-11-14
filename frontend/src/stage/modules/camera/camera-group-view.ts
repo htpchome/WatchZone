@@ -245,9 +245,10 @@ export class CameraGroupView extends LitElement {
         ".stage-resize-handle",
       ) ?? undefined,
     );
-    for (const view of this._views) {
-      view.setBasePresentationCover(this.stageResized);
-    }
+    this._syncChildPresentationScale({
+      heightRatio: this.stageHeightRatio,
+      resized: this.stageResized,
+    });
     this._publishSession();
   }
 
@@ -628,6 +629,7 @@ export class CameraGroupView extends LitElement {
   };
 
   private _handleStageSizeChange(size: CameraStageSize): void {
+    this._syncChildPresentationScale(size);
     if (this._stageResizeActive) {
       this._pendingStageSize = size;
       this._stageResizeFrame ??= requestAnimationFrame(
@@ -667,19 +669,24 @@ export class CameraGroupView extends LitElement {
   ): void {
     if (interaction.phase === "start") {
       this._stageResizeActive = true;
-      for (const view of this._views) view.beginStageResizeReturn();
       return;
     }
-    if (interaction.phase === "update") {
-      for (const view of this._views) {
-        view.updateStageResizeReturn(interaction.returnProgress);
-      }
-      return;
-    }
-    for (const view of this._views) view.endStageResizeReturn();
+    if (interaction.phase !== "end") return;
     this._stageResizeActive = false;
     this._cancelPendingStageSize();
     this._handleStageSizeChange(this._stageResize.size);
+  }
+
+  private _syncChildPresentationScale(size: CameraStageSize): void {
+    const combinedSideBySide =
+      this.layout === "side_by_side" &&
+      this.mode === "combined" &&
+      this._deviceProfile.profile.deviceClass !== "phone";
+    const scale =
+      combinedSideBySide && size.resized
+        ? size.heightRatio / DEFAULT_CAMERA_STAGE_HEIGHT_RATIO
+        : 1;
+    for (const view of this._views) view.setGroupPresentationScale(scale);
   }
 
   private _fullscreenSupported(video?: HTMLVideoElement): boolean {
