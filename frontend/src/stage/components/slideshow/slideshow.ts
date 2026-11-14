@@ -88,8 +88,10 @@ export class SlideshowComponent extends LitElement {
         .filter(Boolean)
         .join(" ")}
       type="button"
+      aria-hidden=${visible ? "false" : "true"}
       aria-label=${label}
       aria-pressed=${active ? "true" : "false"}
+      ?inert=${!visible}
       title=${label}
       @click=${this._toggle}
       @pointerdown=${this._handlePointerDown}

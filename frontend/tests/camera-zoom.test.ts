@@ -78,6 +78,7 @@ function connectMediaPointerEvents(
   surface.addEventListener("pointermove", controller.handlePointerMove);
   surface.addEventListener("pointerup", controller.handlePointerUp);
   surface.addEventListener("pointercancel", controller.handlePointerCancel);
+  surface.addEventListener("click", controller.handleClick);
   surface.addEventListener(
     "lostpointercapture",
     controller.handleLostPointerCapture,
@@ -98,6 +99,14 @@ function tap(
   );
   surface.dispatchEvent(
     pointerEvent("pointerup", {
+      clientX: 200,
+      clientY: 112.5,
+      pointerId: 1,
+      pointerType,
+    }),
+  );
+  surface.dispatchEvent(
+    pointerEvent("click", {
       clientX: 200,
       clientY: 112.5,
       pointerId: 1,
@@ -216,7 +225,6 @@ describe("camera media zoom", () => {
     button.addEventListener("click", activated);
 
     tap(button, "touch");
-    button.click();
 
     expect(activated).toHaveBeenCalledOnce();
     expect(controller.overlay.visible).toBe(false);

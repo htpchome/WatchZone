@@ -83,6 +83,8 @@ export class CameraSwitcherComponent extends LitElement {
       class=${["switcher", visible ? "visible" : "", this._open ? "open" : ""]
         .filter(Boolean)
         .join(" ")}
+      aria-hidden=${visible ? "false" : "true"}
+      ?inert=${!visible}
       @pointerenter=${this._overlay.handlePointerEnter}
       @pointerleave=${this._overlay.handlePointerLeave}
       @pointerdown=${this._stopPropagation}

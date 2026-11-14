@@ -181,6 +181,11 @@ test("uses the first real touch only to reveal hidden media controls", async ({
     await expect(slideshow).toBeHidden({
       timeout: MEDIA_OVERLAY_HIDE_DELAY_MS + 1_000,
     });
+    await expect(slideshow).toHaveAttribute("inert", "");
+    await expect(card.locator("wzc-camera-switcher .switcher")).toHaveAttribute(
+      "inert",
+      "",
+    );
     const slideshowBox = await slideshow.boundingBox();
     expect(slideshowBox).not.toBeNull();
     if (!slideshowBox) return;
@@ -193,6 +198,7 @@ test("uses the first real touch only to reveal hidden media controls", async ({
 
     await expect(viewport).toBeVisible();
     await expect(slideshow).toBeVisible();
+    await expect(slideshow).not.toHaveAttribute("inert", "");
     await expect(slideshow).toHaveAttribute(
       "aria-pressed",
       initialPressed ?? "false",
@@ -942,21 +948,20 @@ test("keeps grouped phone navigation to one visible A or B feed", async ({
       return target === element || Boolean(target && element.contains(target));
     });
   expect(hiddenFeedActionHit).toBe(false);
-  const groupedRevealTouchAccepted = await group
-    .locator(".group")
-    .evaluate((element) =>
-      element.dispatchEvent(
-        new PointerEvent("pointerdown", {
-          bubbles: true,
-          cancelable: true,
-          composed: true,
-          isPrimary: true,
-          pointerId: 91,
-          pointerType: "touch",
-        }),
-      ),
-    );
-  expect(groupedRevealTouchAccepted).toBe(false);
+  const groupedSurface = group.locator(".group");
+  await groupedSurface.dispatchEvent("pointerdown", {
+    isPrimary: true,
+    pointerId: 91,
+    pointerType: "touch",
+  });
+  await expect(feedActions).toBeHidden();
+  await groupedSurface.dispatchEvent("pointerup", {
+    isPrimary: true,
+    pointerId: 91,
+    pointerType: "touch",
+  });
+  await expect(feedActions).toBeHidden();
+  await groupedSurface.dispatchEvent("click");
   await expect(feedActions).toBeVisible();
   await expect(leadingIcon).toHaveAttribute("data-icon", "arrowLeft");
 });
@@ -5758,6 +5763,7 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
         pointerId: 98,
         pointerType: "touch",
       });
+      await selectedLiveViewport.dispatchEvent("click");
       await lightButton.focus();
       await lightButton.press("ArrowUp");
       await expect(dimmer).toBeVisible();
@@ -5852,6 +5858,7 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
         pointerId: 100,
         pointerType: "touch",
       });
+      await selectedLiveViewport.dispatchEvent("click");
       await expect(lightButton).toBeVisible();
       await lightButton.focus();
       await lightButton.press("ArrowUp");
@@ -8106,9 +8113,18 @@ test("retains one live connection while the card presentation is replaced", asyn
         );
         if (type === "pointerdown") pointerDownAccepted = accepted;
       }
+      element.dispatchEvent(
+        new PointerEvent("click", {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
       return pointerDownAccepted;
     });
-  expect(await dispatchLiveTouchTap()).toBe(false);
+  expect(await dispatchLiveTouchTap()).toBe(true);
   await expect(controls.first()).toBeVisible();
   await page.waitForTimeout(500);
   await dispatchLiveTouchTap();
@@ -8483,11 +8499,13 @@ test("retains one live connection while the card presentation is replaced", asyn
     pointerId: 1,
     pointerType: "touch",
   });
+  await viewport.dispatchEvent("click");
   await expect(controls.first()).toBeVisible();
   await expect(controls.first()).toBeHidden({
     timeout: MEDIA_OVERLAY_HIDE_DELAY_MS + 1_000,
   });
   await expect(mediaControlGroup).toHaveCSS("pointer-events", "none");
+  await expect(mediaControlGroup).toHaveAttribute("inert", "");
   const hiddenRightRailHit = await mute.evaluate((element) => {
     const bounds = element.getBoundingClientRect();
     const x = bounds.x + bounds.width / 2;
@@ -8522,6 +8540,7 @@ test("retains one live connection while the card presentation is replaced", asyn
     pointerId: 21,
     pointerType: "touch",
   });
+  await viewport.dispatchEvent("click");
   await expect(controls.first()).toBeVisible();
   await page.locator("body").dispatchEvent("pointerdown", {
     isPrimary: true,
@@ -8549,6 +8568,7 @@ test("retains one live connection while the card presentation is replaced", asyn
     pointerId: 2,
     pointerType: "touch",
   });
+  await viewport.dispatchEvent("click");
   await expect(controls.first()).toBeVisible();
 
   await page.waitForTimeout(400);
@@ -8562,6 +8582,7 @@ test("retains one live connection while the card presentation is replaced", asyn
     pointerId: 3,
     pointerType: "touch",
   });
+  await viewport.dispatchEvent("click");
   await expect(controls.first()).toBeVisible();
   await expect(controls.first()).toBeHidden({
     timeout: MEDIA_OVERLAY_HIDE_DELAY_MS + 1_000,
@@ -8580,6 +8601,7 @@ test("retains one live connection while the card presentation is replaced", asyn
     pointerId: 4,
     pointerType: "touch",
   });
+  await viewport.dispatchEvent("click");
   await expect(mute).toBeVisible();
   await mute.evaluate((element) => (element as HTMLButtonElement).focus());
   expect(
@@ -8600,7 +8622,9 @@ test("retains one live connection while the card presentation is replaced", asyn
     ),
   ).toBe(false);
 
-  await page.waitForTimeout(400);
+  await expect(controls.first()).toBeHidden({
+    timeout: MEDIA_OVERLAY_HIDE_DELAY_MS + 1_000,
+  });
   await viewport.dispatchEvent("pointerdown", {
     clientX: 120,
     clientY: 80,
@@ -8608,10 +8632,7 @@ test("retains one live connection while the card presentation is replaced", asyn
     pointerId: 5,
     pointerType: "touch",
   });
-  await expect(controls.first()).toBeVisible();
-  await expect(controls.first()).toBeHidden({
-    timeout: MEDIA_OVERLAY_HIDE_DELAY_MS + 1_000,
-  });
+  await expect(controls.first()).toBeHidden();
   await viewport.dispatchEvent("pointercancel", {
     clientX: 120,
     clientY: 80,
@@ -8619,6 +8640,7 @@ test("retains one live connection while the card presentation is replaced", asyn
     pointerId: 5,
     pointerType: "touch",
   });
+  await expect(controls.first()).toBeHidden();
 
   expect(
     await page.evaluate(

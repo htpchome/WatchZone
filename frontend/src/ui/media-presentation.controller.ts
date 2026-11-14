@@ -5,7 +5,10 @@ import {
   type MediaOverlayVisibilityOptions,
 } from "./media-overlay-visibility.controller";
 import { MediaZoomController } from "./media-zoom.controller";
-import { MediaTouchGestureController } from "./media-touch-gesture.controller";
+import {
+  mediaInteractionOriginatesFromControl,
+  MediaTouchGestureController,
+} from "./media-touch-gesture.controller";
 
 export interface MediaPresentationOptions extends MediaOverlayVisibilityOptions {
   readonly dismissOverlayOnOutsidePointer?: boolean;
@@ -29,10 +32,7 @@ export class MediaPresentationController implements ReactiveController {
     host.addController(this);
     this.overlay = new MediaOverlayVisibilityController(host, _options);
     this.zoom = new MediaZoomController(host);
-    this.touch = new MediaTouchGestureController(this.zoom, {
-      revealOverlay: () => this.overlay.revealFromTouch(),
-      touchOverlayEnabled: () => this._overlayInteractionEnabled,
-    });
+    this.touch = new MediaTouchGestureController(this.zoom);
   }
 
   public hostConnected(): void {
@@ -110,7 +110,12 @@ export class MediaPresentationController implements ReactiveController {
   };
 
   public readonly handlePointerMove = (event: PointerEvent): void => {
-    if (this.touch.handlePointerMove(event)) return;
+    if (this.touch.handlePointerMove(event)) {
+      if (this._overlayInteractionEnabled && this.zoom.interacting) {
+        this.overlay.revealFromTouch();
+      }
+      return;
+    }
     this.zoom.handlePointerMove(event);
     if (this._overlayInteractionEnabled && !this.zoom.interacting)
       this.overlay.handlePointerMove(event);
@@ -135,6 +140,20 @@ export class MediaPresentationController implements ReactiveController {
     if (this.touch.handleLostPointerCapture(event)) return;
     this.zoom.handleLostPointerCapture(event);
     if (this._overlayInteractionEnabled) this.overlay.handlePointerEnd(event);
+  };
+
+  public readonly handleClick = (event: MouseEvent): void => {
+    if (
+      !this._overlayInteractionEnabled ||
+      mediaInteractionOriginatesFromControl(event)
+    ) {
+      return;
+    }
+    if (this.touch.consumeSurfaceActivation()) {
+      this.overlay.revealFromTouch();
+      return;
+    }
+    this.overlay.reveal();
   };
 
   public readonly handleWheel = (event: WheelEvent): void =>

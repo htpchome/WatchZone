@@ -61,6 +61,8 @@ export class RecordedVideoTransport extends LitElement {
       class="transport"
       role="toolbar"
       aria-label=${this.localize("media_player.controls")}
+      aria-hidden=${this.visible ? "false" : "true"}
+      ?inert=${!this.visible}
       @click=${stopPropagation}
       @keydown=${stopPropagation}
       @pointerdown=${this._beginPointerInteraction}

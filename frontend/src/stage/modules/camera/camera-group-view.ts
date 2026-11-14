@@ -25,8 +25,7 @@ import { pictureInPictureMethod } from "../../../core/picture-in-picture";
 import { renderIcon } from "../../../ui/icons";
 import { releaseTouchFocus } from "../../../ui/control-interaction";
 import { MediaOverlayVisibilityController } from "../../../ui/media-overlay-visibility.controller";
-import { mediaTouchOriginatesFromControl } from "../../../ui/media-touch-gesture.controller";
-import { MediaTouchRevealGuard } from "../../../ui/media-touch-reveal-guard";
+import { mediaInteractionOriginatesFromControl } from "../../../ui/media-touch-gesture.controller";
 import { mediaOverlayControlButtonStyles } from "../../../ui/overlay-control.styles";
 import type { CameraSessionContext } from "../../camera-session-context";
 import type {
@@ -93,7 +92,7 @@ export class CameraGroupView extends LitElement {
   });
   private _snapshotPending = false;
   private _stageResizeActive = false;
-  private readonly _touchRevealGuard = new MediaTouchRevealGuard();
+  private _touchSurfaceActivation = false;
   private _stageResizeFrame?: number;
   private _pendingStageSize?: CameraStageSize;
   private _suspendDialogActive = false;
@@ -136,6 +135,7 @@ export class CameraGroupView extends LitElement {
       @pointerdown=${this._handlePointerDown}
       @pointerup=${this._handlePointerEnd}
       @pointercancel=${this._handlePointerCancel}
+      @click=${this._handleClick}
       @focusin=${this._overlay.handleFocusIn}
       @focusout=${this._overlay.handleFocusOut}
     >
@@ -284,7 +284,7 @@ export class CameraGroupView extends LitElement {
       this._syncFullscreenState,
     );
     this._cancelPendingStageSize();
-    this._touchRevealGuard.cancel();
+    this._touchSurfaceActivation = false;
     this.cameraSession?.clear(this);
     super.disconnectedCallback();
   }
@@ -367,26 +367,32 @@ export class CameraGroupView extends LitElement {
   };
 
   private readonly _handlePointerDown = (event: PointerEvent): void => {
+    this._touchSurfaceActivation = false;
     if (event.pointerType !== "touch") {
       this._overlay.handlePointerDown(event);
       return;
     }
-    if (mediaTouchOriginatesFromControl(event)) return;
-    // Match the shared media gesture contract: the touch that reveals hidden
-    // controls must not become a click on a control rendered under it.
-    event.preventDefault();
-    this._touchRevealGuard.begin(event);
-    this._overlay.reveal();
+    if (mediaInteractionOriginatesFromControl(event)) return;
+    this._touchSurfaceActivation = true;
   };
 
   private readonly _handlePointerEnd = (event: PointerEvent): void => {
-    if (event.pointerType === "touch") this._touchRevealGuard.end(event);
     this._overlay.handlePointerEnd(event);
   };
 
   private readonly _handlePointerCancel = (event: PointerEvent): void => {
-    if (event.pointerType === "touch") this._touchRevealGuard.cancel();
+    this._touchSurfaceActivation = false;
     this._overlay.handlePointerEnd(event);
+  };
+
+  private readonly _handleClick = (event: MouseEvent): void => {
+    if (mediaInteractionOriginatesFromControl(event)) return;
+    if (this._touchSurfaceActivation) {
+      this._touchSurfaceActivation = false;
+      this._overlay.revealFromTouch();
+      return;
+    }
+    this._overlay.reveal();
   };
 
   private readonly _handlePointerLeave = (event: PointerEvent): void => {
@@ -426,6 +432,8 @@ export class CameraGroupView extends LitElement {
     if (phone) {
       return html`<div
         class=${visible ? "feed-actions visible" : "feed-actions"}
+        aria-hidden=${visible ? "false" : "true"}
+        ?inert=${!visible}
       >
         <div class="feed-action-set" data-feed-index=${visibleIndex}>
           <button
@@ -458,7 +466,11 @@ export class CameraGroupView extends LitElement {
       this.mode === "combined"
         ? ([0, 1] as const)
         : ([this.mode === "secondary" ? 1 : 0] as const);
-    return html`<div class=${visible ? "feed-actions visible" : "feed-actions"}>
+    return html`<div
+      class=${visible ? "feed-actions visible" : "feed-actions"}
+      aria-hidden=${visible ? "false" : "true"}
+      ?inert=${!visible}
+    >
       ${actionIndexes.map((index) => {
         const position = index === 0 ? "A" : "B";
         const target = index === 0 ? "main" : "secondary";

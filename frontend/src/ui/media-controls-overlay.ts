@@ -46,6 +46,8 @@ export class MediaControlsOverlay extends LitElement {
       class="control-group"
       role="toolbar"
       aria-label=${this.label}
+      aria-hidden=${this.visible ? "false" : "true"}
+      ?inert=${!this.visible}
       @pointerdown=${this._handlePointerDown}
       @keydown=${this._stopPropagation}
     >

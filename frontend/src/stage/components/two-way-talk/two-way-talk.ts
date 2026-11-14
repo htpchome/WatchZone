@@ -125,6 +125,8 @@ export class TwoWayTalkComponent extends LitElement {
               </div>`
             : html`<div
                 class=${visible ? "inactive-control visible" : "inactive-control"}
+                aria-hidden=${visible ? "false" : "true"}
+                ?inert=${!visible}
                 @pointerenter=${this._overlay.handlePointerEnter}
                 @pointerleave=${this._overlay.handlePointerLeave}
                 @focusin=${this._overlay.handleFocusIn}

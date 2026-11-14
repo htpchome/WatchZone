@@ -372,6 +372,7 @@ export class CameraModule extends LitElement {
         type="button"
         aria-label=${this.localize("camera.previous")}
         aria-hidden=${this._navigationVisible ? "false" : "true"}
+        ?inert=${!this._navigationVisible}
         tabindex=${this._navigationVisible ? "0" : "-1"}
         ?disabled=${this._presentationItems.length < 2 || this._activeIndex === 0}
         @pointerdown=${this._stopPointerPropagation}
@@ -389,6 +390,7 @@ export class CameraModule extends LitElement {
         type="button"
         aria-label=${this.localize("camera.next")}
         aria-hidden=${this._navigationVisible ? "false" : "true"}
+        ?inert=${!this._navigationVisible}
         tabindex=${this._navigationVisible ? "0" : "-1"}
         ?disabled=${
           this._presentationItems.length < 2 ||

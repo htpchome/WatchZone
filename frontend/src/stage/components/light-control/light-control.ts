@@ -111,7 +111,11 @@ export class LightControlComponent extends LitElement {
         mode="overlay"
         .notices=${this._toasts.notices}
       ></${toastRegionTag}>
-      <div class=${visible ? "light-stack visible" : "light-stack"}>
+      <div
+        class=${visible ? "light-stack visible" : "light-stack"}
+        aria-hidden=${visible ? "false" : "true"}
+        ?inert=${!visible}
+      >
         ${
           openLight
             ? this._renderDimmer(openLight.entityId, openLight.entity)

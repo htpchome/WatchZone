@@ -1,5 +1,4 @@
 import type { MediaZoomController } from "./media-zoom.controller";
-import { MediaTouchRevealGuard } from "./media-touch-reveal-guard";
 
 const DOUBLE_TAP_DELAY_MS = 450;
 const DOUBLE_TAP_DISTANCE_PX = 48;
@@ -20,12 +19,7 @@ interface CompletedTap {
   readonly y: number;
 }
 
-interface MediaTouchGestureOptions {
-  readonly revealOverlay: () => void;
-  readonly touchOverlayEnabled: () => boolean;
-}
-
-export function mediaTouchOriginatesFromControl(event: PointerEvent): boolean {
+export function mediaInteractionOriginatesFromControl(event: Event): boolean {
   return event
     .composedPath()
     .some(
@@ -49,27 +43,18 @@ export class MediaTouchGestureController {
   private _lastCompletedTap?: CompletedTap;
   private _lastTouchToggleTime = Number.NEGATIVE_INFINITY;
   private _multiTouchSequence = false;
-  private readonly _revealGuard = new MediaTouchRevealGuard();
+  private _surfaceActivationCompleted = false;
 
-  public constructor(
-    private readonly _zoom: MediaZoomController,
-    private readonly _options: MediaTouchGestureOptions,
-  ) {}
+  public constructor(private readonly _zoom: MediaZoomController) {}
 
   public handlePointerDown(event: PointerEvent): boolean {
+    this._surfaceActivationCompleted = false;
     if (event.pointerType !== "touch") return false;
-    if (mediaTouchOriginatesFromControl(event)) {
+    if (mediaInteractionOriginatesFromControl(event)) {
       this._lastCompletedTap = undefined;
       this._ignoredPointers.add(event.pointerId);
       return true;
     }
-
-    // A surface touch can reveal a control beneath the still-active contact.
-    // Consume that touch before rendering the controls so the browser cannot
-    // retarget its compatibility click to the newly visible control. A later,
-    // deliberate touch that starts on a control follows the branch above.
-    event.preventDefault();
-    this._revealGuard.begin(event);
 
     this._contacts.set(event.pointerId, {
       moved: false,
@@ -81,8 +66,6 @@ export class MediaTouchGestureController {
       this._multiTouchSequence = true;
       this._lastCompletedTap = undefined;
       for (const contact of this._contacts.values()) contact.moved = true;
-    } else if (this._options.touchOverlayEnabled()) {
-      this._options.revealOverlay();
     }
     this._zoom.handlePointerDown(event);
     return true;
@@ -109,7 +92,6 @@ export class MediaTouchGestureController {
   public handlePointerUp(event: PointerEvent): boolean {
     if (event.pointerType !== "touch") return false;
     if (this._ignoredPointers.delete(event.pointerId)) return true;
-    this._revealGuard.end(event);
     const contact = this._contacts.get(event.pointerId);
     this._zoom.handlePointerUp(event);
     this._contacts.delete(event.pointerId);
@@ -121,8 +103,13 @@ export class MediaTouchGestureController {
       !contact.moved &&
       now - contact.startTime <= TAP_DURATION_MS &&
       this._contacts.size === 0;
-    if (eligible) this._completeTap(event, now);
-    else this._lastCompletedTap = undefined;
+    if (eligible) {
+      this._surfaceActivationCompleted = true;
+      this._completeTap(event, now);
+    } else {
+      this._surfaceActivationCompleted = false;
+      this._lastCompletedTap = undefined;
+    }
     if (this._contacts.size === 0) this._multiTouchSequence = false;
     return true;
   }
@@ -130,7 +117,7 @@ export class MediaTouchGestureController {
   public handlePointerCancel(event: PointerEvent): boolean {
     if (event.pointerType !== "touch") return false;
     if (this._ignoredPointers.delete(event.pointerId)) return true;
-    this._revealGuard.cancel();
+    this._surfaceActivationCompleted = false;
     this._contacts.delete(event.pointerId);
     this._lastCompletedTap = undefined;
     this._zoom.handlePointerCancel(event);
@@ -141,7 +128,7 @@ export class MediaTouchGestureController {
   public handleLostPointerCapture(event: PointerEvent): boolean {
     if (event.pointerType !== "touch") return false;
     if (this._ignoredPointers.delete(event.pointerId)) return true;
-    this._revealGuard.end(event);
+    this._surfaceActivationCompleted = false;
     this._contacts.delete(event.pointerId);
     this._lastCompletedTap = undefined;
     this._zoom.handleLostPointerCapture(event);
@@ -156,12 +143,18 @@ export class MediaTouchGestureController {
     );
   }
 
+  public consumeSurfaceActivation(): boolean {
+    const completed = this._surfaceActivationCompleted;
+    this._surfaceActivationCompleted = false;
+    return completed;
+  }
+
   public reset(): void {
-    this._revealGuard.cancel();
     this._contacts.clear();
     this._ignoredPointers.clear();
     this._lastCompletedTap = undefined;
     this._multiTouchSequence = false;
+    this._surfaceActivationCompleted = false;
   }
 
   private _completeTap(event: PointerEvent, now: number): void {
@@ -185,6 +178,5 @@ export class MediaTouchGestureController {
     this._lastTouchToggleTime = now;
     event.preventDefault();
     this._zoom.toggleAt(event.clientX, event.clientY);
-    if (this._options.touchOverlayEnabled()) this._options.revealOverlay();
   }
 }

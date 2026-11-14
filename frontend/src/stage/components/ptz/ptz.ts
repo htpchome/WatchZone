@@ -108,8 +108,9 @@ export class PtzComponent extends LitElement {
           .filter(Boolean)
           .join(" ")}
         role=${this.expanded ? "group" : nothing}
-        aria-hidden=${this.expanded ? "false" : "true"}
+        aria-hidden=${this.expanded && visible ? "false" : "true"}
         aria-label=${this.expanded ? this.localize("ptz.controls") : nothing}
+        ?inert=${!this.expanded || !visible}
         @pointerenter=${this._overlay.handlePointerEnter}
         @pointerleave=${this._overlay.handlePointerLeave}
         @pointerdown=${this._stopPropagation}
@@ -165,7 +166,9 @@ export class PtzComponent extends LitElement {
                 .filter(Boolean)
                 .join(" ")}
               type="button"
+              aria-hidden=${visible ? "false" : "true"}
               aria-label=${this.localize("ptz.expand")}
+              ?inert=${!visible}
               @pointerdown=${this._stopPropagation}
               @pointerup=${releaseTouchFocus}
               @click=${this._toggleExpanded}
