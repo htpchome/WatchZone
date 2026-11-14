@@ -65,6 +65,9 @@ export class DashboardCard extends LitElement {
   private _recordedVideoViewerLoad?: Promise<void>;
   private _mediaRequest?: RecordedMediaRequest;
   private _mediaInitialSize?: RecordedMediaInitialGeometry;
+  private _preview = false;
+  private _previewOverlayFrame?: number;
+  private _restoreOverlayAfterPreview = false;
   private readonly _cameraImageCredentials =
     new HomeAssistantCameraImageCredentialGuard();
   private readonly _localization = new LocalizationController(this, () =>
@@ -95,8 +98,20 @@ export class DashboardCard extends LitElement {
           });
         });
 
-  /** Set by Home Assistant for the card shown inside its editor preview. */
-  public preview = false;
+  /** Set by Home Assistant while the card is wrapped by dashboard edit mode. */
+  public get preview(): boolean {
+    return this._preview;
+  }
+
+  public set preview(value: boolean) {
+    const next = value === true;
+    if (next === this._preview) return;
+    const leavingPreview = this._preview && !next;
+    this._preview = next;
+    if (!leavingPreview) return;
+    this._restoreOverlayAfterPreview = true;
+    this._scheduleOverlayRestore();
+  }
 
   public set hass(value: unknown) {
     if (!isHomeAssistant(value)) {
@@ -153,6 +168,7 @@ export class DashboardCard extends LitElement {
     this._syncRuntime();
     this._stageResizeObserver?.observe(this);
     this._layoutRuntime.setInlineSize(this.getBoundingClientRect().width);
+    this._scheduleOverlayRestore();
   }
 
   public disconnectedCallback(): void {
@@ -160,6 +176,10 @@ export class DashboardCard extends LitElement {
     if (this._stageResizeFrame !== undefined) {
       cancelAnimationFrame(this._stageResizeFrame);
       this._stageResizeFrame = undefined;
+    }
+    if (this._previewOverlayFrame !== undefined) {
+      cancelAnimationFrame(this._previewOverlayFrame);
+      this._previewOverlayFrame = undefined;
     }
     window.removeEventListener(
       EDITOR_PREVIEW_DRAFT_EVENT,
@@ -279,6 +299,23 @@ export class DashboardCard extends LitElement {
     const { designs, flow } = createBuiltInStageSet(config);
     this._layoutRuntime.setStageSet(designs, flow);
     this._syncRuntime();
+  }
+
+  private _scheduleOverlayRestore(): void {
+    if (
+      !this._restoreOverlayAfterPreview ||
+      this._preview ||
+      !this.isConnected ||
+      this._previewOverlayFrame !== undefined
+    ) {
+      return;
+    }
+    this._previewOverlayFrame = requestAnimationFrame(() => {
+      this._previewOverlayFrame = undefined;
+      if (!this.isConnected || this._preview) return;
+      this._restoreOverlayAfterPreview = false;
+      this._layoutRuntime.revealActiveCameraOverlay();
+    });
   }
 
   private readonly _handleConnectionDisconnected: HomeAssistantConnectionEventListener =

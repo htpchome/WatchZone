@@ -215,15 +215,6 @@ export class CameraLivePresentation extends LitElement {
 
   protected willUpdate(changed: Map<PropertyKey, unknown>): void {
     if (changed.has("active")) this._media.setActive(this.active);
-    if (
-      this.active &&
-      (this.selected || this.suspended) &&
-      (changed.has("active") ||
-        changed.has("selected") ||
-        changed.has("suspended"))
-    ) {
-      this._media.overlay.revealBeforeHostUpdate();
-    }
     if (changed.has("posterUrl")) {
       this._posterDimensions = undefined;
       this._posterFailed = false;
@@ -522,7 +513,6 @@ export class CameraLivePresentation extends LitElement {
 
   private _emitMediaAttached(video: HTMLVideoElement): void {
     void playMediaElement(video).catch(() => undefined);
-    if (this.active) this._media.overlay.reveal();
     this.dispatchEvent(
       new CustomEvent<CameraMediaAttachedDetail>("camera-media-attached", {
         bubbles: true,

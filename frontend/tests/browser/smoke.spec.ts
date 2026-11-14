@@ -7758,7 +7758,7 @@ test("round-trips boolean toggles through defaults before Save", async ({
   });
 });
 
-test("retains one live connection while the card presentation is replaced", async ({
+test("restores controls after pre-editor and retains a replaced live connection", async ({
   page,
 }) => {
   await page.route("**/api/camera_proxy/**", (route) =>
@@ -7986,6 +7986,66 @@ test("retains one live connection while the card presentation is replaced", asyn
     ).__wzcTestRetainedVideo = element as HTMLVideoElement;
   });
 
+  expect(
+    await page.evaluate(async () => {
+      const card = document.querySelector("watchzone-card") as HTMLElement & {
+        preview: boolean;
+      };
+      const camera = card.shadowRoot?.querySelector("wzc-camera");
+      const view = camera?.shadowRoot?.querySelector("wzc-camera-view");
+      const presentation = view?.shadowRoot?.querySelector(
+        "wzc-camera-live",
+      ) as
+        | (HTMLElement & {
+            revealOverlay(): void;
+            updateComplete: Promise<unknown>;
+          })
+        | null;
+      const controls = presentation?.shadowRoot?.querySelector(
+        "wzc-camera-controls",
+      ) as (HTMLElement & { visible: boolean }) | null;
+      if (!presentation || !controls) return false;
+
+      presentation.revealOverlay();
+      await presentation.updateComplete;
+      card.preview = true;
+      document.body.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true, composed: true }),
+      );
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+      const hiddenInPreview = controls.visible === false;
+      card.preview = false;
+      return hiddenInPreview;
+    }),
+  ).toBe(true);
+  await expect(page.locator("wzc-camera wzc-camera-controls")).toHaveJSProperty(
+    "visible",
+    true,
+  );
+  expect(
+    await initialVideo.evaluate(
+      (element) =>
+        element ===
+        (
+          window as typeof window & {
+            __wzcTestRetainedVideo?: HTMLVideoElement;
+          }
+        ).__wzcTestRetainedVideo,
+    ),
+  ).toBe(true);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (
+            window as typeof window & {
+              __wzcTestConnectionCount: number;
+            }
+          ).__wzcTestConnectionCount,
+      ),
+    )
+    .toBe(1);
+
   await page.evaluate(() => {
     const testWindow = window as unknown as Window & {
       __wzcTestHass: unknown;
@@ -8035,10 +8095,6 @@ test("retains one live connection while the card presentation is replaced", asyn
         ).__wzcTestRetainedVideo,
     ),
   ).toBe(true);
-  await expect(page.locator("wzc-camera wzc-camera-controls")).toHaveJSProperty(
-    "visible",
-    true,
-  );
   await expect(video).toHaveAttribute("disablepictureinpicture", "");
   await expect(video).toHaveAttribute("controlslist", /nopictureinpicture/);
   await expect(video).toHaveCSS("pointer-events", "none");

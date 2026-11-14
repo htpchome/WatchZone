@@ -252,10 +252,8 @@ export class CameraGroupView extends LitElement {
     this._publishSession();
   }
 
-  protected willUpdate(changed: Map<PropertyKey, unknown>): void {
+  protected willUpdate(): void {
     this._overlay.setActive(this.active);
-    if (changed.has("active") && this.active)
-      this._overlay.revealBeforeHostUpdate();
     this._stageResize.setActive(this.active);
     this._stageResize.configure(this.cameras[0]?.entityId);
     this._stageResize.setSize({

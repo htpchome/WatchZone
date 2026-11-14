@@ -56,12 +56,6 @@ export class MediaOverlayVisibilityController implements ReactiveController {
     this._scheduleHide();
   }
 
-  /** Reveals as part of the host's pending render without scheduling another. */
-  public revealBeforeHostUpdate(): void {
-    this._show(false);
-    this._scheduleHide();
-  }
-
   /** Touch must use its timer even after a browser leaves stale hover/focus. */
   public revealFromTouch(): void {
     this._hovered = false;
@@ -146,14 +140,14 @@ export class MediaOverlayVisibilityController implements ReactiveController {
     this._scheduleHide();
   };
 
-  private _show(requestHostUpdate = true): void {
+  private _show(): void {
     if (!this._active) return;
     this._clearHideTimer();
     if (this.visible && this.sourceVisible) return;
     this.visible = true;
     this.sourceVisible = true;
     this._options.onVisibilityChange?.(true);
-    if (requestHostUpdate) this._host.requestUpdate();
+    this._host.requestUpdate();
   }
 
   private _scheduleHide(): void {

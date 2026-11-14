@@ -191,6 +191,11 @@ export class LayoutRuntime implements ReactiveController {
     return true;
   }
 
+  /** Restores transient controls after Home Assistant releases its preview. */
+  public revealActiveCameraOverlay(): void {
+    this._cameraSession.session?.revealOverlay();
+  }
+
   public setRuntime(
     hass: HomeAssistant | undefined,
     api: HomeAssistantApi | undefined,

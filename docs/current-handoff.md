@@ -15,24 +15,21 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.310`
-- Current commit: `0f17c2e` —
-  `v0.0.4-dev.309 - fix(editor): prevent camera accordion close flicker`
-- The worktree contains the uncommitted camera-dialog behavior and geometry
-  change described below. Always verify `git status`, the canonical version in
+- Working version: `0.0.4-dev.311`
+- Current commit: `0aa8874` —
+  `v0.0.4-dev.310 - fix(editor): stabilize camera modal and overlay return`
+- The worktree contains the uncommitted pre-editor overlay correction described
+  below. Always verify `git status`, the canonical version in
   `custom_components/watchzone/const.py`, and the latest commit.
 
-## Active change: stable camera-editor disclosure and return presentation
+## Active change: correct pre-editor overlay restoration
 
-- Camera opens initially in the camera task dialog. After that, the dialog uses
-  the main editor's ordinary zero-or-one-open accordion behavior: opening one
-  section closes another, and clicking the active section closes all sections.
-- The camera dialog keeps one stable viewport-bounded height. Its header and
-  action footer remain fixed while the content region scrolls, preventing
-  disclosure changes from recentering or jumping the modal.
-- Returning from the editor or pre-editor reintroduces the active camera's
-  transient overlay controls immediately while retaining the existing live
-  session. Camera navigation or a new pointer interaction is not required.
+- The presentation-activation and media-attachment overlay changes from
+  `v0.0.4-dev.310` are reverted because they could leave retained video black
+  after returning from dashboard editing.
+- Home Assistant's `preview` lifecycle transition restores transient camera
+  controls on the existing presentation after dashboard edit mode ends. The
+  transition does not reconfigure, detach, or replace retained media.
 
 ## Live camera and group invariants
 
@@ -83,18 +80,18 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 
 ## Validation status
 
-Validated for `v0.0.4-dev.310`:
+Validated for `v0.0.4-dev.311`:
 
-- frontend unit tests (422 tests)
+- frontend unit tests (421 tests)
 - Playwright tests across Chromium, Firefox, and WebKit (39 per engine)
 - formatting, lint, type checking, architecture/style checks, production build,
   version consistency, and `git diff --check`
 
 Focused coverage verifies initial Camera disclosure, ordinary zero-or-one
 behavior, stable dialog geometry across section changes, and independent
-content scrolling for taller sections. The retained-session browser scenario
-also verifies that a replacement presentation restores its overlay controls
-without reconnecting or navigating cameras.
+content scrolling for taller sections. The pre-editor regression additionally
+proves controls return without changing the retained video element or creating
+a second live connection.
 
 ## Handoff rules
 
