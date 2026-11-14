@@ -68,10 +68,10 @@ export const themeTokens = css`
     --wzc-task-dialog-backdrop-filter: none;
     --wzc-task-dialog-radius: var(--wzc-dialog-radius);
     --wzc-task-dialog-shadow: var(--wzc-dialog-shadow);
-    --wzc-popover-background: var(--wzc-color-surface);
-    --wzc-popover-backdrop-filter: none;
-    --wzc-popover-radius: var(--wzc-radius-card);
-    --wzc-popover-shadow: var(--wzc-shadow-medium);
+    --wzc-popover-background: var(--wzc-task-dialog-background);
+    --wzc-popover-backdrop-filter: var(--wzc-task-dialog-backdrop-filter);
+    --wzc-popover-radius: var(--wzc-task-dialog-radius);
+    --wzc-popover-shadow: var(--wzc-task-dialog-shadow);
 
     --wzc-color-text-1: var(
       --ha-color-text-primary,
@@ -434,14 +434,13 @@ export const themeTokens = css`
     --wzc-recorded-media-background: var(--wzc-camera-stage);
     --wzc-recorded-media-max-block-size: calc(90dvh - 3rem);
     --wzc-recorded-media-dialog-border: 1px solid var(--wzc-color-border);
-    --wzc-recorded-media-dialog-radius: var(--wzc-radius-card);
-    --wzc-recorded-media-dialog-shadow: var(--wzc-shadow-medium);
+    --wzc-recorded-media-dialog-radius: var(--wzc-dialog-radius);
+    --wzc-recorded-media-dialog-shadow: var(--wzc-dialog-shadow);
     --wzc-recorded-media-dialog-padding: 0.75rem;
     --wzc-recorded-media-dialog-bottom-padding: 1.25rem;
     --wzc-recorded-media-dialog-min-inline-size: min(16rem, calc(100vw - 1rem));
     --wzc-recorded-media-dialog-min-block-size: min(10rem, calc(100dvh - 1rem));
     --wzc-recorded-media-resize-handle-size: 1.5rem;
-    --wzc-recorded-media-header-background: var(--wzc-color-surface-secondary);
     --wzc-recorded-media-close-size: 2.75rem;
     --wzc-recorded-media-close-background: transparent;
     --wzc-recorded-media-close-hover-background: color-mix(
@@ -471,9 +470,7 @@ export const themeTokens = css`
     --wzc-recorded-transport-padding: 0.25rem 0.35rem;
     --wzc-recorded-transport-control-size: 2rem;
     --wzc-recorded-transport-icon-size: 1.35rem;
-    --wzc-recording-scrubber-surface: var(
-      --wzc-recorded-media-header-background
-    );
+    --wzc-recording-scrubber-surface: var(--wzc-color-surface-secondary);
     --wzc-recording-scrubber-text: var(--wzc-color-text-1);
     --wzc-recording-scrubber-control-border: var(--wzc-color-border-control);
     --wzc-recording-scrubber-focus: var(--wzc-color-primary);

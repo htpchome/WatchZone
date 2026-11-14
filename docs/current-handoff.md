@@ -15,21 +15,24 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.314`
-- Current commit: `a28710f` —
-  `v0.0.4-dev.313 - fix(camera): preserve WebRTC presentation during editor reparent`
-- The worktree contains the uncommitted media-viewer information work described
+- Working version: `0.0.4-dev.317`
+- Current commit: `f8c3d0c` —
+  `v0.0.4-dev.316 - revert(theme): restore dev.314 presentation`
+- The worktree contains the uncommitted theme-surface consolidation described
   below. Always verify `git status`, the canonical version in
   `custom_components/watchzone/const.py`, and the latest commit.
 
-## Active change: recorded-media information and startup
+## Active change: theme surfaces and shared media actions
 
-- The current draggable media presentation places a reusable information panel
-  beneath Review and Event media when normalized metadata is available. The
-  panel is independent of dialog geometry so future viewer presentations can
-  place the same content differently.
-- Completed Reviews can switch between Review and snapshot media, download the
-  active variant, and start the existing Review-owned export confirmation.
+- The media shell now uses the same Home Assistant glass surface and matching
+  backdrop filter as AI Analysis. Its badges and square icon actions share the
+  Review-tile presentations. Shared square actions use fine-pointer-only hover
+  outlines/icon scaling and non-sticky `:active` touch feedback.
+- Filter, calendar, Suspend Camera, and other focused task surfaces share the
+  solid task-dialog token family. The platform contract contains the canonical
+  three-role surface-token matrix and single-paint rule.
+- Camera navigation paints its themed translucent background only on the outer
+  bar; its nested segmented track is transparent to prevent opacity bands.
 - HLS.js warming now overlaps presentation loading, and HLS chunk loading
   overlaps URL signing. Provider source order is unchanged.
 

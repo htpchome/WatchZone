@@ -41,7 +41,7 @@ export const cameraNavigationStyles = css`
     box-sizing: border-box;
     block-size: 100%;
     inline-size: 100%;
-    --wzc-segmented-background: var(--wzc-camera-navigation-background);
+    --wzc-segmented-background: transparent;
     --wzc-segmented-border: 0;
     --wzc-segmented-gap: var(--wzc-camera-navigation-gap);
     --wzc-segmented-padding: var(--wzc-camera-navigation-padding);
