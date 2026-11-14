@@ -125,18 +125,15 @@ export class AccordionItem extends LitElement {
 export class Accordion extends LitElement {
   public static properties = {
     initialOpen: { attribute: "initial-open", type: String },
-    requireOpen: { attribute: "require-open", reflect: true, type: Boolean },
   };
 
   public initialOpen?: string;
-  public requireOpen = false;
   private _initialized = false;
   private _revealFrame?: number;
   private _revealRequest = 0;
 
   public connectedCallback(): void {
     super.connectedCallback();
-    this.addEventListener("click", this._handleClick);
     this.addEventListener(
       ACCORDION_TOGGLE_EVENT,
       this._handleItemToggle as EventListener,
@@ -144,7 +141,6 @@ export class Accordion extends LitElement {
   }
 
   public disconnectedCallback(): void {
-    this.removeEventListener("click", this._handleClick);
     this.removeEventListener(
       ACCORDION_TOGGLE_EVENT,
       this._handleItemToggle as EventListener,
@@ -175,7 +171,6 @@ export class Accordion extends LitElement {
         this.initialOpen && item.itemKey === this.initialOpen,
       );
     }
-    this._ensureOpen();
   };
 
   private _enforceSingleOpen(): void {
@@ -185,32 +180,7 @@ export class Accordion extends LitElement {
       if (foundOpen) item.setOpen(false);
       else foundOpen = true;
     }
-    this._ensureOpen();
   }
-
-  private _ensureOpen(): void {
-    if (!this.requireOpen) return;
-    const items = this._items;
-    if (!items.some((item) => item.open) && items[0]) items[0].setOpen(true);
-  }
-
-  private readonly _handleClick = (event: MouseEvent): void => {
-    if (!this.requireOpen) return;
-    const path = event.composedPath();
-    const item = path.find(
-      (target): target is AccordionItem => target instanceof AccordionItem,
-    );
-    const items = this._items;
-    if (!item || !items.includes(item) || !item.open) return;
-    const summary = item.renderRoot.querySelector("summary");
-    if (
-      summary &&
-      path.includes(summary) &&
-      items.filter(({ open }) => open).length === 1
-    ) {
-      event.preventDefault();
-    }
-  };
 
   private readonly _handleItemToggle = (
     event: CustomEvent<AccordionToggleDetail>,
@@ -219,12 +189,7 @@ export class Accordion extends LitElement {
     if (!items.includes(event.detail.item)) return;
     this._cancelReveal();
     const opened = event.detail.item;
-    if (!event.detail.open) {
-      if (this.requireOpen && !items.some((item) => item.open)) {
-        opened.setOpen(true);
-      }
-      return;
-    }
+    if (!event.detail.open) return;
     for (const item of items) {
       if (item !== opened) item.setOpen(false);
     }

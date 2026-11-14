@@ -11,11 +11,8 @@ application module and owns no configuration or feature state.
   technology support.
 - All items start closed unless the parent receives one `initial-open` key.
 - Opening an item closes every other item in the same accordion.
-- An accordion marked `require-open` restores its active item if a user tries
-  to close it programmatically, so exactly one item remains expanded. User
-  activation of the sole open summary is canceled before native `details`
-  state changes, avoiding a visible close/reopen cycle. Other accordions retain
-  the normal zero-or-one-open behavior.
+- Clicking an open item closes it, so every accordion permits either zero or
+  one open item.
 - Feature and editor code own headings, icons, and slotted content. The
   accordion owns only disclosure state, presentation, and reveal scrolling.
 - Items use the comfortable density by default. Nested editor dialogs may use
@@ -38,6 +35,7 @@ Live Media Player, Recorded Media Player, General Settings, Layout Settings,
 and Display Settings. Opening and closing a group is presentation state only and
 never changes dirty state or card YAML.
 
-The nested camera editor initially opens Camera and requires exactly one of its
-five sections to remain open. Editing a compact secondary-camera tile instead
-initially opens Additional Camera in the owning group draft.
+The nested camera editor initially opens Camera, then follows the same
+zero-or-one-open behavior as the main editor. Editing a compact
+secondary-camera tile instead initially opens Additional Camera in the owning
+group draft.

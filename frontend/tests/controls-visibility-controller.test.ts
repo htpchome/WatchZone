@@ -70,6 +70,21 @@ describe("media overlay visibility controller", () => {
     expect(controller.sourceVisible).toBe(false);
   });
 
+  it("can reveal within a pending host update without scheduling another", () => {
+    vi.useFakeTimers();
+    const host = new TestHost();
+    const controller = new MediaOverlayVisibilityController(host);
+
+    controller.revealBeforeHostUpdate();
+
+    expect(controller.visible).toBe(true);
+    expect(controller.sourceVisible).toBe(true);
+    expect(host.requestUpdate).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(MEDIA_OVERLAY_HIDE_DELAY_MS);
+    expect(controller.visible).toBe(false);
+    expect(host.requestUpdate).toHaveBeenCalledOnce();
+  });
+
   it("lets touch replace stale hover with the normal hide timer", () => {
     vi.useFakeTimers();
     const controller = new MediaOverlayVisibilityController(new TestHost());

@@ -156,6 +156,9 @@ is shown beside that fallback and remains part of that camera's configuration.
 - Use logical dimensions and properties, bounded fluid sizing, and container
   responsiveness. Do not assume a viewport, dashboard column count, panel
   mode, input method, or writing direction.
+- The camera task dialog uses a stable viewport-bounded height with scrolling
+  owned by its content region. Accordion changes do not recenter the dialog or
+  move its header and actions.
 
 ## 6. Required field checklist
 

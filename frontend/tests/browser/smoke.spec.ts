@@ -6992,6 +6992,7 @@ test("camera editor configures lights and confirms accessible removal", async ({
   await editor.locator("wzc-accordion-item").first().locator("summary").click();
   await editor.locator('[aria-label="Edit camera: front"]').click();
 
+  const cameraDialog = editor.locator(".camera-editor-dialog");
   const items = editor.locator(".camera-dialog-accordion > wzc-accordion-item");
   await expect(items).toHaveCount(5);
   await expect(items.locator(".heading")).toHaveText([
@@ -7005,6 +7006,11 @@ test("camera editor configures lights and confirms accessible removal", async ({
   await expect(items.nth(0).locator(".summary-text")).toHaveText("front");
   await expect(items.nth(1).locator(".summary-text")).toHaveText(
     "Home Assistant",
+  );
+  const initialDialogBounds = await cameraDialog.boundingBox();
+  expect(initialDialogBounds).not.toBeNull();
+  expect(initialDialogBounds?.height).toBeLessThanOrEqual(
+    (page.viewportSize()?.height ?? 0) - 32,
   );
   const compactHeader = await items.nth(1).locator("summary").boundingBox();
   expect(compactHeader?.height).toBeLessThanOrEqual(44);
@@ -7021,24 +7027,23 @@ test("camera editor configures lights and confirms accessible removal", async ({
   await expect(items.locator("details[open]")).toHaveCount(1);
   await expect(items.nth(0).locator("details")).toHaveAttribute("open", "");
   await expect(items.nth(3).locator("details")).not.toHaveAttribute("open", "");
-  const rejectedCloseMutations = await items
-    .nth(0)
-    .locator("details")
-    .evaluate(async (details) => {
-      let mutations = 0;
-      const observer = new MutationObserver((records) => {
-        mutations += records.length;
-      });
-      observer.observe(details, { attributeFilter: ["open"] });
-      details.querySelector("summary")?.click();
-      await new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-      );
-      observer.disconnect();
-      return mutations;
-    });
-  expect(rejectedCloseMutations).toBe(0);
-  await expect(items.nth(0).locator("details")).toHaveAttribute("open", "");
+  await items.nth(0).locator("summary").click();
+  await expect(items.locator("details[open]")).toHaveCount(0);
+  const collapsedDialogBounds = await cameraDialog.boundingBox();
+  expect(collapsedDialogBounds?.y).toBeCloseTo(initialDialogBounds?.y ?? 0, 1);
+  expect(collapsedDialogBounds?.height).toBeCloseTo(
+    initialDialogBounds?.height ?? 0,
+    1,
+  );
+  await items.nth(4).locator("summary").click();
+  await expect(items.nth(4).locator("details")).toHaveAttribute("open", "");
+  const optionsDialogBounds = await cameraDialog.boundingBox();
+  expect(optionsDialogBounds?.y).toBeCloseTo(initialDialogBounds?.y ?? 0, 1);
+  expect(optionsDialogBounds?.height).toBeCloseTo(
+    initialDialogBounds?.height ?? 0,
+    1,
+  );
+  await expect(cameraDialog.locator("footer")).toBeInViewport();
   await items.nth(3).locator("summary").click();
   await editor.locator(".add-light").click();
   await expect(editor.locator(".add-light-form")).toContainText("Linked Light");
@@ -8030,6 +8035,10 @@ test("retains one live connection while the card presentation is replaced", asyn
         ).__wzcTestRetainedVideo,
     ),
   ).toBe(true);
+  await expect(page.locator("wzc-camera wzc-camera-controls")).toHaveJSProperty(
+    "visible",
+    true,
+  );
   await expect(video).toHaveAttribute("disablepictureinpicture", "");
   await expect(video).toHaveAttribute("controlslist", /nopictureinpicture/);
   await expect(video).toHaveCSS("pointer-events", "none");

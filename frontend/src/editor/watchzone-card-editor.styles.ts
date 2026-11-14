@@ -224,8 +224,20 @@ export const cardEditorStyles = css`
   }
 
   .camera-dialog-content {
+    min-block-size: 0;
     padding: 0.75rem 1rem;
+    overflow: auto;
     container-type: inline-size;
+  }
+
+  .camera-editor-dialog {
+    block-size: min(42rem, calc(100vh - 2rem));
+    overflow: hidden;
+  }
+
+  .camera-editor-dialog form {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    block-size: 100%;
   }
 
   .camera-dialog-accordion {

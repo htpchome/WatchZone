@@ -716,7 +716,6 @@ export class CardEditor extends LitElement {
               ? staticHtml`<${accordionTag}
                   class="camera-dialog-accordion"
                   .initialOpen=${this._cameraDialogInitialOpen}
-                  require-open
                 >
                   <${accordionItemTag}
                     density="compact"

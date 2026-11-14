@@ -193,6 +193,9 @@ same key merely because the preview uses a different component tree.
   existing live session snapshot to remaining pre-editor/card leases. The
   remaining presentation reclaims the same media element; this handoff must
   not invoke the connection factory or renegotiate the source.
+- A presentation that becomes active after an editor or pre-editor handoff
+  reintroduces its transient overlay controls immediately. The user must not
+  need to navigate cameras or generate a pointer event to restore them.
 - A retained session that reports failure while parked is not considered
   reusable. Its next visible lease starts one bounded reconnect rather than
   presenting the stale media object as live.

@@ -15,18 +15,24 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.309`
-- Current commit: `2edb656` —
-  `v0.0.4-dev.308 - fix(editor): mark review history slider steps`
-- The worktree contains the uncommitted required-open accordion fix described
-  below. Always verify `git status`, the canonical version in
+- Working version: `0.0.4-dev.310`
+- Current commit: `0f17c2e` —
+  `v0.0.4-dev.309 - fix(editor): prevent camera accordion close flicker`
+- The worktree contains the uncommitted camera-dialog behavior and geometry
+  change described below. Always verify `git status`, the canonical version in
   `custom_components/watchzone/const.py`, and the latest commit.
 
-## Active change: required-open accordion stability
+## Active change: stable camera-editor disclosure and return presentation
 
-- The camera editor's required-open accordion cancels activation of its sole
-  open summary before native `details` can close. This removes the visible
-  close/reopen fight while retaining the programmatic state-repair fallback.
+- Camera opens initially in the camera task dialog. After that, the dialog uses
+  the main editor's ordinary zero-or-one-open accordion behavior: opening one
+  section closes another, and clicking the active section closes all sections.
+- The camera dialog keeps one stable viewport-bounded height. Its header and
+  action footer remain fixed while the content region scrolls, preventing
+  disclosure changes from recentering or jumping the modal.
+- Returning from the editor or pre-editor reintroduces the active camera's
+  transient overlay controls immediately while retaining the existing live
+  session. Camera navigation or a new pointer interaction is not required.
 
 ## Live camera and group invariants
 
@@ -77,16 +83,18 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 
 ## Validation status
 
-Validated for `v0.0.4-dev.309`:
+Validated for `v0.0.4-dev.310`:
 
-- frontend unit tests (423 tests)
+- frontend unit tests (422 tests)
 - Playwright tests across Chromium, Firefox, and WebKit (39 per engine)
 - formatting, lint, type checking, architecture/style checks, production build,
   version consistency, and `git diff --check`
 
-Focused coverage verifies pointer activation cannot mutate the sole open native
-`details`, ordinary zero-or-one accordions remain unchanged, and programmatic
-required-open state repair still works.
+Focused coverage verifies initial Camera disclosure, ordinary zero-or-one
+behavior, stable dialog geometry across section changes, and independent
+content scrolling for taller sections. The retained-session browser scenario
+also verifies that a replacement presentation restores its overlay controls
+without reconnecting or navigating cameras.
 
 ## Handoff rules
 
