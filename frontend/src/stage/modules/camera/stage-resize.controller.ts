@@ -44,6 +44,7 @@ export class CameraStageResizeController implements ReactiveController {
   private _dragStart?: DragStart;
   private _handle?: HTMLButtonElement;
   private _heightRatio = DEFAULT_CAMERA_STAGE_HEIGHT_RATIO;
+  private _interactionLifecycleListening = false;
   private _key?: string;
   private _mediaHeightRatio?: number;
   private _mediaPresentationScale = 1;
@@ -167,6 +168,7 @@ export class CameraStageResizeController implements ReactiveController {
     this._onInteraction?.({ phase: "start" });
     this._moved = false;
     handle.setPointerCapture?.(event.pointerId);
+    this._listenForInteractionCancellation();
     stage.classList.add("stage-resizing");
     event.preventDefault();
   };
@@ -310,6 +312,7 @@ export class CameraStageResizeController implements ReactiveController {
   private _finishDrag(): void {
     const interactionActive = this._dragStart !== undefined;
     const pointerId = this._dragStart?.pointerId;
+    this._removeInteractionLifecycleListeners();
     this._dragStart = undefined;
     this._returnAnchorHeightRatio = DEFAULT_CAMERA_STAGE_HEIGHT_RATIO;
     this._moved = false;
@@ -322,6 +325,38 @@ export class CameraStageResizeController implements ReactiveController {
     this._stage?.classList.remove("stage-resizing");
     if (interactionActive) this._onInteraction?.({ phase: "end" });
   }
+
+  private _listenForInteractionCancellation(): void {
+    if (this._interactionLifecycleListening) return;
+    this._interactionLifecycleListening = true;
+    window.addEventListener("blur", this._cancelFromEnvironment);
+    window.addEventListener("pagehide", this._cancelFromEnvironment);
+    document.addEventListener("freeze", this._cancelFromEnvironment);
+    document.addEventListener("visibilitychange", this._cancelFromEnvironment);
+  }
+
+  private _removeInteractionLifecycleListeners(): void {
+    if (!this._interactionLifecycleListening) return;
+    this._interactionLifecycleListening = false;
+    window.removeEventListener("blur", this._cancelFromEnvironment);
+    window.removeEventListener("pagehide", this._cancelFromEnvironment);
+    document.removeEventListener("freeze", this._cancelFromEnvironment);
+    document.removeEventListener(
+      "visibilitychange",
+      this._cancelFromEnvironment,
+    );
+  }
+
+  private readonly _cancelFromEnvironment = (event: Event): void => {
+    if (
+      event.type === "visibilitychange" &&
+      document.visibilityState === "visible"
+    ) {
+      return;
+    }
+    this._finishDrag();
+    this._tapCandidate = undefined;
+  };
 
   private _releasePointer(event: PointerEvent): void {
     const handle = event.currentTarget as HTMLButtonElement;

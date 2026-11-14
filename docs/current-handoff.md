@@ -15,27 +15,27 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.302`
+- Working version: `0.0.4-dev.303`
 - Current commit: `139bc6c` —
   `v0.0.4-dev.302 - fix(camera): isolate grouped side-by-side resizing`
-- The worktree contains the uncommitted camera-navigation overflow change
-  described below. Always verify `git status`, the canonical version in
+- The worktree contains the uncommitted live-media lifecycle hardening described
+  below. Always verify `git status`, the canonical version in
   `custom_components/watchzone/const.py`, and the latest commit.
 
-## Active change: camera-navigation overflow
+## Active change: live-media lifecycle hardening
 
-- Camera navigation reserves equal inline-start and inline-end control areas.
-  A themed chevron and hidden-camera count appear only while camera options are
-  outside the local viewport in that direction.
-- The shared navigation appearance owns the bounded horizontal scroll surface.
-  Touch supports native horizontal panning plus non-mandatory proximity snap
-  points; vertical page panning remains allowed.
-- Edge controls scroll the local strip smoothly. Carousel, switcher,
-  slideshow, and takeover selection reveal the authoritative selected option
-  without scrolling the card, dashboard, or document.
-- One Camera Navigation-owned overflow controller owns geometry measurement,
-  resize observation, scrolling, and cleanup. It does not own camera selection
-  or introduce another carousel/navigation path.
+- Frigate MSE now bounds queued, not-yet-appended media at 16 MiB. Falling
+  behind fails through the normal media-connection boundary instead of
+  retaining an unbounded sequence of `ArrayBuffer` payloads.
+- Frigate MSE owns one idempotent cleanup path for startup, normal close,
+  timeout, abort, WebSocket, SourceBuffer, video, and object-URL resources.
+- The document-scoped media-session manager enforces its 24-session ceiling.
+  When every retained session is actively leased, a new acquisition is
+  rejected with a typed `capacity_exceeded` media error without constructing a
+  transport or Home Assistant observer.
+- Active camera-stage pull-down resizing listens for page hide, document
+  freeze, visibility loss, and window blur. An interrupted gesture releases
+  pointer/lifecycle ownership while preserving the last committed stage size.
 
 ## Live camera and group invariants
 
@@ -86,17 +86,19 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 
 ## Validation status
 
-Validated for `v0.0.4-dev.302`:
+Validated for `v0.0.4-dev.303`:
 
-- frontend unit tests
-- Playwright tests across Chromium, Firefox, and WebKit (38 per engine)
-- Formatting, lint, type checking, architecture/style checks, production build,
-  version consistency, and `git diff --check`
+- frontend unit tests (417 tests)
+- Playwright tests across Chromium, Firefox, and WebKit (39 per engine)
+- formatting, lint, type checking, architecture/style checks, and production
+  build
 
-Browser coverage verifies directional control visibility and counts, smooth
-local scrolling, selected-option reveal, touch panning, proximity snap,
-responsive observation, theme tokens, and unchanged document scroll across
-Chromium, Firefox, and WebKit.
+Focused unit coverage verifies Frigate MSE listener cleanup and bounded
+backpressure, hard media-session admission, and pull-down interruption cleanup.
+Browser coverage verifies the existing live-session retention, carousel,
+zoom/pan-adjacent interaction, pull-down geometry, editor, and responsive
+behavior across all three required engines. Version consistency and
+`git diff --check` also pass.
 
 ## Handoff rules
 

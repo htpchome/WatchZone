@@ -12,6 +12,7 @@ import {
   type LiveStartupTiming,
 } from "./live-startup-timing";
 import {
+  MediaConnectionError,
   mediaConnectionErrorCode,
   type MediaConnectionErrorCode,
 } from "./media-connection-error";
@@ -638,10 +639,15 @@ export class MediaSessionManager {
     mediaReconnectPolicy: MediaReconnectPolicy,
     options: MediaConnectionOptions = { initialMuted: true },
   ): MediaSessionLease {
-    this._observeConnection(api.identity);
     let session = this._sessions.get(key);
     if (!session) {
       this._evictIfNeeded();
+      if (this._sessions.size >= MAX_RETAINED_CAMERA_SESSIONS) {
+        throw new MediaConnectionError(
+          "capacity_exceeded",
+          "The live-session capacity is currently in use",
+        );
+      }
       session = new ManagedMediaSession(
         key,
         cameraKey,
@@ -663,6 +669,7 @@ export class MediaSessionManager {
       );
       this._sessions.set(key, session);
     }
+    this._observeConnection(api.identity);
     const lease = session.acquire(api, options);
     this._pruneConnectionObservers();
     this._applyRetentionPolicy();

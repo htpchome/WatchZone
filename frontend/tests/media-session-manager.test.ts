@@ -714,6 +714,30 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
+  it("rejects a new session when every capacity slot has an active lease", () => {
+    const factory = vi.fn<ConnectionFactory>(async () => ({
+      stream: createStream(),
+      close: vi.fn(),
+    }));
+    const manager = new MediaSessionManager(factory);
+    const api = createApi();
+
+    for (let index = 0; index < MAX_RETAINED_CAMERA_SESSIONS; index += 1) {
+      manager.acquireHomeAssistant(api, `camera.${index}`);
+    }
+
+    expect(() =>
+      manager.acquireHomeAssistant(api, "camera.over-capacity"),
+    ).toThrowError(
+      expect.objectContaining({
+        code: "capacity_exceeded",
+        message: "The live-session capacity is currently in use",
+      }),
+    );
+    expect(factory).toHaveBeenCalledTimes(MAX_RETAINED_CAMERA_SESSIONS);
+    manager.closeAll();
+  });
+
   it("publishes the HLS media element while an unmuted connection is starting", async () => {
     const video = document.createElement("video");
     let resolveConnection:

@@ -86,11 +86,16 @@ describe("Frigate MSE connection", () => {
   });
 
   it("uses the instance-qualified signed proxy, corrects drift, and cleans up", async () => {
+    const controller = new AbortController();
+    const removeAbortListener = vi.spyOn(
+      controller.signal,
+      "removeEventListener",
+    );
     let video: HTMLVideoElement | undefined;
     const connectionPromise = createFrigateMseConnection(
       api(),
       "camera.front",
-      new AbortController().signal,
+      controller.signal,
       vi.fn(),
       new LiveStartupTiming("frigate-mse"),
       {
@@ -136,12 +141,90 @@ describe("Frigate MSE connection", () => {
     video!.dispatchEvent(new Event("loadeddata"));
     const connection = await connectionPromise;
     expect(connection.transport).toBe("mse");
+    expect(removeAbortListener).toHaveBeenCalledWith(
+      "abort",
+      expect.any(Function),
+    );
 
     connection.close();
     expect(socket.close).toHaveBeenCalledOnce();
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:frigate-mse");
     expect(video!.hasAttribute("src")).toBe(false);
     expect(video!.isConnected).toBe(false);
+  });
+
+  it("fails a stalled decoder before queued media can grow without bound", async () => {
+    const onFailure = vi.fn();
+    let video: HTMLVideoElement | undefined;
+    const connectionPromise = createFrigateMseConnection(
+      api(),
+      "camera.front",
+      new AbortController().signal,
+      onFailure,
+      new LiveStartupTiming("frigate-mse-backpressure"),
+      {
+        initialMuted: true,
+        onVideo: (element) => {
+          video = element;
+        },
+      },
+      source,
+    );
+    await nextMicrotask();
+
+    const mediaSource = FakeMediaSource.instances[0]!;
+    const socket = FakeWebSocket.instances[0]!;
+    mediaSource.dispatchEvent(new Event("sourceopen"));
+    socket.dispatchEvent(new Event("open"));
+    socket.message('{"type":"mse","value":"video/mp4"}');
+    video!.dispatchEvent(new Event("loadeddata"));
+    const connection = await connectionPromise;
+
+    mediaSource.buffer.updating = true;
+    const oneMegabyte = new ArrayBuffer(1024 * 1024);
+    for (let index = 0; index < 17; index += 1) {
+      socket.message(oneMegabyte);
+    }
+
+    expect(onFailure).toHaveBeenCalledOnce();
+    expect(onFailure.mock.calls[0]?.[0]).toMatchObject({
+      message: "Frigate MSE decoder fell behind the live stream",
+    });
+    connection.close();
+    expect(socket.close).toHaveBeenCalledOnce();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:frigate-mse");
+  });
+
+  it("cleans up a timed-out startup and removes its abort listener", async () => {
+    vi.useFakeTimers();
+    const controller = new AbortController();
+    const removeAbortListener = vi.spyOn(
+      controller.signal,
+      "removeEventListener",
+    );
+    const connectionPromise = createFrigateMseConnection(
+      api(),
+      "camera.front",
+      controller.signal,
+      vi.fn(),
+      new LiveStartupTiming("frigate-mse-timeout"),
+      { initialMuted: true },
+      source,
+    );
+    await nextMicrotask();
+    const rejected = expect(connectionPromise).rejects.toThrow(
+      "Timed out connecting to Frigate MSE",
+    );
+    await vi.advanceTimersByTimeAsync(15_000);
+
+    await rejected;
+    expect(removeAbortListener).toHaveBeenCalledWith(
+      "abort",
+      expect.any(Function),
+    );
+    expect(FakeWebSocket.instances[0]?.close).toHaveBeenCalledOnce();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:frigate-mse");
+    vi.useRealTimers();
   });
 
   it("fully cleans up when connection is cancelled before first media", async () => {

@@ -1,5 +1,6 @@
 export type MediaConnectionErrorCode =
   | "cancelled"
+  | "capacity_exceeded"
   | "configuration_timeout"
   | "connection_timeout"
   | "peer_failed"

@@ -163,6 +163,38 @@ describe("camera stage resizing", () => {
     ).toBe("");
   });
 
+  it("ends an interrupted drag without discarding the committed stage size", () => {
+    const { handle, stage } = createElements();
+    const interactions: string[] = [];
+    const controller = new CameraStageResizeController(
+      createHost(),
+      ({ phase }) => interactions.push(phase),
+    );
+    controller.observe(stage, handle);
+    connectPointerEvents(handle, controller);
+
+    handle.dispatchEvent(
+      pointerEvent("pointerdown", { clientX: 200, clientY: 100 }),
+    );
+    handle.dispatchEvent(
+      pointerEvent("pointermove", { clientX: 200, clientY: 175 }),
+    );
+    const committedRatio = stage.style.getPropertyValue(
+      "--wzc-camera-stage-runtime-aspect-ratio",
+    );
+    window.dispatchEvent(new Event("pagehide"));
+    window.dispatchEvent(new Event("pagehide"));
+    handle.dispatchEvent(
+      pointerEvent("pointermove", { clientX: 200, clientY: 250 }),
+    );
+
+    expect(interactions).toEqual(["start", "update", "end"]);
+    expect(stage.classList.contains("stage-resizing")).toBe(false);
+    expect(
+      stage.style.getPropertyValue("--wzc-camera-stage-runtime-aspect-ratio"),
+    ).toBe(committedRatio);
+  });
+
   it("reports continuous progress while returning toward default height", () => {
     const { handle, stage } = createElements();
     let stageHeight = 225;
