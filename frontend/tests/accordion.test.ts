@@ -63,6 +63,60 @@ describe("shared accordion", () => {
     expect(second.open).toBe(true);
   });
 
+  it("keeps an always-open item outside the exclusive disclosure set", async () => {
+    const accordion = document.createElement(ACCORDION_TAG) as Accordion;
+    const pinned = createItem("pinned");
+    pinned.alwaysOpen = true;
+    const first = createItem("first");
+    const second = createItem("second");
+    accordion.append(pinned, first, second);
+    document.body.append(accordion);
+    await Promise.all([
+      accordion.updateComplete,
+      pinned.updateComplete,
+      first.updateComplete,
+      second.updateComplete,
+    ]);
+
+    expect(pinned.open).toBe(true);
+    openItem(first);
+    expect(pinned.open).toBe(true);
+    expect(first.open).toBe(true);
+    openItem(second);
+    expect(pinned.open).toBe(true);
+    expect(first.open).toBe(false);
+    expect(second.open).toBe(true);
+
+    pinned.shadowRoot?.querySelector("summary")?.click();
+    expect(pinned.shadowRoot?.querySelector("details")?.open).toBe(true);
+  });
+
+  it("ignores disclosure events from nested accordions", async () => {
+    const outer = document.createElement(ACCORDION_TAG) as Accordion;
+    const outerItem = createItem("outer");
+    const sibling = createItem("sibling");
+    const inner = document.createElement(ACCORDION_TAG) as Accordion;
+    const innerItem = createItem("inner");
+    inner.append(innerItem);
+    outerItem.append(inner);
+    outer.append(outerItem, sibling);
+    document.body.append(outer);
+    await Promise.all([
+      outer.updateComplete,
+      outerItem.updateComplete,
+      sibling.updateComplete,
+      inner.updateComplete,
+      innerItem.updateComplete,
+    ]);
+
+    openItem(outerItem);
+    openItem(innerItem);
+
+    expect(outerItem.open).toBe(true);
+    expect(sibling.open).toBe(false);
+    expect(innerItem.open).toBe(true);
+  });
+
   it("aligns an opened item only when its content does not fit", async () => {
     vi.stubGlobal(
       "requestAnimationFrame",

@@ -63,6 +63,7 @@ function scrollPort(element: Element): ScrollPort | undefined {
 
 export class AccordionItem extends LitElement {
   public static properties = {
+    alwaysOpen: { attribute: "always-open", reflect: true, type: Boolean },
     density: { reflect: true, type: String },
     heading: { type: String },
     icon: { attribute: false },
@@ -71,6 +72,7 @@ export class AccordionItem extends LitElement {
     summaryText: { attribute: "summary-text", type: String },
   };
 
+  public alwaysOpen = false;
   public density: "comfortable" | "compact" = "comfortable";
   public heading = "";
   public icon?: IconName;
@@ -80,8 +82,14 @@ export class AccordionItem extends LitElement {
 
   protected render() {
     return html`
-      <details .open=${this.open} @toggle=${this._handleToggle}>
-        <summary>
+      <details
+        .open=${this.alwaysOpen || this.open}
+        @toggle=${this._handleToggle}
+      >
+        <summary
+          aria-disabled=${this.alwaysOpen ? "true" : "false"}
+          @click=${this._handleSummaryClick}
+        >
           ${
             this.icon
               ? html`<span class="icon">${renderIcon(this.icon)}</span>`
@@ -101,7 +109,13 @@ export class AccordionItem extends LitElement {
   }
 
   private readonly _handleToggle = (event: Event): void => {
-    const open = (event.currentTarget as HTMLDetailsElement).open;
+    const details = event.currentTarget as HTMLDetailsElement;
+    if (this.alwaysOpen) {
+      if (!details.open) details.open = true;
+      if (!this.open) this.open = true;
+      return;
+    }
+    const open = details.open;
     if (this.open === open) return;
     this.open = open;
     this.dispatchEvent(
@@ -111,6 +125,10 @@ export class AccordionItem extends LitElement {
         detail: { item: this, open },
       }),
     );
+  };
+
+  private readonly _handleSummaryClick = (event: MouseEvent): void => {
+    if (this.alwaysOpen) event.preventDefault();
   };
 
   static styles = accordionItemStyles;
@@ -123,6 +141,8 @@ export class Accordion extends LitElement {
 
   public initialOpen?: string;
   private _initialized = false;
+  private _revealFrame?: number;
+  private _revealRequest = 0;
 
   public connectedCallback(): void {
     super.connectedCallback();
@@ -137,6 +157,7 @@ export class Accordion extends LitElement {
       ACCORDION_TOGGLE_EVENT,
       this._handleItemToggle as EventListener,
     );
+    this._cancelReveal();
     super.disconnectedCallback();
   }
 
@@ -158,15 +179,19 @@ export class Accordion extends LitElement {
     }
     this._initialized = true;
     for (const item of this._items) {
-      item.open = Boolean(
-        this.initialOpen && item.itemKey === this.initialOpen,
-      );
+      item.open =
+        item.alwaysOpen ||
+        Boolean(this.initialOpen && item.itemKey === this.initialOpen);
     }
   };
 
   private _enforceSingleOpen(): void {
     let foundOpen = false;
     for (const item of this._items) {
+      if (item.alwaysOpen) {
+        item.open = true;
+        continue;
+      }
       if (!item.open) continue;
       if (foundOpen) item.open = false;
       else foundOpen = true;
@@ -176,15 +201,31 @@ export class Accordion extends LitElement {
   private readonly _handleItemToggle = (
     event: CustomEvent<AccordionToggleDetail>,
   ): void => {
+    const items = this._items;
+    if (!items.includes(event.detail.item)) return;
+    this._cancelReveal();
     if (!event.detail.open) return;
     const opened = event.detail.item;
-    for (const item of this._items) {
-      if (item !== opened) item.open = false;
+    if (opened.alwaysOpen) return;
+    for (const item of items) {
+      if (item !== opened && !item.alwaysOpen) item.open = false;
     }
+    const revealRequest = this._revealRequest;
     void opened.updateComplete.then(() => {
-      requestAnimationFrame(() => this._reveal(opened));
+      if (!this.isConnected || revealRequest !== this._revealRequest) return;
+      this._revealFrame = requestAnimationFrame(() => {
+        this._revealFrame = undefined;
+        if (revealRequest === this._revealRequest) this._reveal(opened);
+      });
     });
   };
+
+  private _cancelReveal(): void {
+    this._revealRequest += 1;
+    if (this._revealFrame === undefined) return;
+    cancelAnimationFrame(this._revealFrame);
+    this._revealFrame = undefined;
+  }
 
   private _reveal(opened: AccordionItem): void {
     const port = scrollPort(opened);

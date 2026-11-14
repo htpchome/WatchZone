@@ -51,6 +51,10 @@ export const accordionItemStyles = css`
     outline-offset: -2px;
   }
 
+  :host([always-open]) summary {
+    cursor: default;
+  }
+
   details[open] > summary {
     color: var(--wzc-accordion-header-open-color);
     background: var(--wzc-accordion-header-open-background);

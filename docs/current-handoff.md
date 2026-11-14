@@ -15,28 +15,28 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.304`
-- Current commit: `0411216` —
-  `v0.0.4-dev.303 - fix(media): bound live session resources`
-- The worktree contains the uncommitted live-overlay separation described
-  below. Always verify `git status`, the canonical version in
+- Working version: `0.0.4-dev.305`
+- Current commit: `a22cd53` —
+  `v0.0.4-dev.304 - refactor(camera): isolate live control lifecycle`
+- The worktree contains the uncommitted camera-editor accordion and group
+  navigation change described below. Always verify `git status`, the canonical version in
   `custom_components/watchzone/const.py`, and the latest commit.
 
-## Active change: live-overlay separation
+## Active change: camera-editor disclosure and group navigation
 
-- One Camera-owned live-control controller now owns fullscreen,
-  Picture-in-Picture, snapshot command state, active-video control listeners,
-  document fullscreen listeners, and their cleanup.
-- The live presentation continues to own media attachment, dimensions,
-  zoom/pan, overlay visibility, and the existing render tree. Mute and suspend
-  remain typed intents to their existing owners rather than moving policy into
-  the controller.
-- Overlay markup, Shadow DOM boundaries, classes, grid placement, z-indexes,
-  visibility timing, semantic theme tokens, styles, and public events are
-  unchanged. The grouped A/B stage retains its one shared overlay owner.
-- Focused tests cover listener transfer and cleanup, intent routing, snapshot
-  failure cleanup, retained HLS handoff, fallback media, zoom/pan, and
-  Picture-in-Picture behavior.
+- The nested camera editor keeps Camera expanded and non-collapsible. One of
+  Connection Source, Additional Camera, Lights, or Options and Controls may be
+  open beside it; the main card-editor accordion remains unchanged.
+- The shared accordion supports explicit `always-open` items without adding an
+  observer, polling loop, or persistent timer. It ignores nested disclosure
+  events and coalesces reveal scrolling to one cancelable animation frame.
+- Editing the compact secondary-camera tile resolves its owning primary camera
+  and opens that atomic group draft with Additional Camera expanded. It no
+  longer presents the secondary record as a standalone top-level camera.
+- The native `details` implementation still keeps closed content mounted.
+  Lazy-unmounting controls is intentionally deferred because it would change
+  editor control, focus, and draft lifecycles rather than being a safe
+  accordion-only optimization.
 
 ## Live camera and group invariants
 
@@ -87,20 +87,16 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 
 ## Validation status
 
-Validated for `v0.0.4-dev.304`:
+Validated for `v0.0.4-dev.305`:
 
-- frontend unit tests (420 tests)
+- frontend unit tests (422 tests)
 - Playwright tests across Chromium, Firefox, and WebKit (39 per engine)
-- formatting, lint, type checking, architecture/style checks, and production
-  build
+- formatting, lint, type checking, architecture/style checks, production build,
+  version consistency, and `git diff --check`
 
-Focused unit coverage verifies live-control listener transfer and cleanup,
-intent routing, snapshot failure cleanup, retained HLS handoff, fallback media,
-zoom/pan, and Picture-in-Picture behavior. Browser coverage verifies unchanged
-overlay rail alignment, source-badge non-overlap, transition timing, styling,
-zoom/pan, carousel, grouped feeds, fullscreen, snapshot, suspension, retained
-sessions, and responsive geometry across all three required engines. Version
-consistency and `git diff --check` also pass.
+Focused coverage verifies pinned-open disclosure, unchanged ordinary
+exclusivity, nested-accordion isolation, cancelable reveal scrolling, camera
+draft behavior, and secondary-tile navigation into the owning group draft.
 
 ## Handoff rules
 

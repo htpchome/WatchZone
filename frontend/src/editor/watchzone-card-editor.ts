@@ -167,6 +167,7 @@ export class CardEditor extends LitElement {
   private _pendingLightIcon = DEFAULT_LIGHT_ICON;
   private _pendingRemoveCameraIndex?: number;
   private _editingCameraIndex?: number;
+  private _cameraDialogInitialOpen?: string;
   private _dirtyContext?: DirtyStateContext<YamlCardConfig>;
   private _dirtySeeded = false;
   private _hass?: HomeAssistant;
@@ -338,11 +339,11 @@ export class CardEditor extends LitElement {
   private _renderCameraSettings() {
     const cameras = this._config?.cameras ?? [];
     const presentationItems = cameraPresentationItems(cameras);
-    const secondaryCameras = cameras.flatMap((camera, index) => {
+    const secondaryCameras = cameras.flatMap((camera) => {
       const owner = cameras.find(
         ({ additional_camera: group }) => group?.entity_id === camera.entity_id,
       );
-      return owner ? [{ camera, index, owner }] : [];
+      return owner ? [{ camera, owner }] : [];
     });
     return staticHtml`<div class="camera-list-heading">
         <strong>${this._t("editor.cameras")}</strong>
@@ -401,9 +402,10 @@ export class CardEditor extends LitElement {
         )}
       </${sortableListTag}>
       <div class="secondary-camera-list">
-        ${secondaryCameras.map(({ camera, index, owner }) => {
+        ${secondaryCameras.map(({ camera, owner }) => {
           const name = camera.title || this._cameraName(camera.entity_id);
           const group = owner.group_name || this._cameraName(owner.entity_id);
+          const ownerIndex = cameras.indexOf(owner);
           return html`<div class="secondary-camera-tile">
             <span class="secondary-camera-copy">
               ${name} · ${this._t("editor.grouped_with", { group })}
@@ -413,8 +415,8 @@ export class CardEditor extends LitElement {
               type="button"
               title=${this._t("editor.edit_camera")}
               aria-label=${this._t("editor.edit_camera_named", { name })}
-              data-camera-index=${String(index)}
-              @click=${this._editCamera}
+              data-camera-index=${String(ownerIndex)}
+              @click=${this._editAdditionalCamera}
             >
               ${renderIcon("edit")}
             </button>
@@ -706,9 +708,10 @@ export class CardEditor extends LitElement {
             camera
               ? staticHtml`<${accordionTag}
                   class="camera-dialog-accordion"
-                  initial-open="camera"
+                  .initialOpen=${this._cameraDialogInitialOpen}
                 >
                   <${accordionItemTag}
+                    always-open
                     density="compact"
                     heading=${this._t("editor.camera")}
                     item-key="camera"
@@ -1649,6 +1652,7 @@ export class CardEditor extends LitElement {
   private readonly _addCamera = (): void => {
     if ((this._config?.cameras.length ?? 0) >= MAX_CAMERAS) return;
     this._editingCameraIndex = undefined;
+    this._cameraDialogInitialOpen = undefined;
     this._cameraBaseline = undefined;
     this._cameraDraft = createDefaultCameraConfig();
     this._secondaryCameraBaseline = undefined;
@@ -1666,9 +1670,21 @@ export class CardEditor extends LitElement {
     const index = Number(
       (event.currentTarget as HTMLElement).dataset.cameraIndex,
     );
+    this._openCameraEditor(index);
+  };
+
+  private readonly _editAdditionalCamera = (event: Event): void => {
+    const index = Number(
+      (event.currentTarget as HTMLElement).dataset.cameraIndex,
+    );
+    this._openCameraEditor(index, "additional-camera");
+  };
+
+  private _openCameraEditor(index: number, initialOpen?: string): void {
     const camera = this._config?.cameras[index];
     if (!camera) return;
     this._editingCameraIndex = index;
+    this._cameraDialogInitialOpen = initialOpen;
     this._cameraBaseline = camera;
     this._cameraDraft = { ...camera };
     const secondary = camera.additional_camera
@@ -1685,7 +1701,7 @@ export class CardEditor extends LitElement {
     this._cancelAddingLight();
     this._checkCapabilities(camera.entity_id, camera.connection);
     this.requestUpdate();
-  };
+  }
 
   private readonly _requestRemoveCamera = (event: Event): void => {
     const index = Number(
@@ -1747,6 +1763,7 @@ export class CardEditor extends LitElement {
     this._cancelAddingLight();
     this._capabilities?.reset();
     this._editingCameraIndex = undefined;
+    this._cameraDialogInitialOpen = undefined;
     this.requestUpdate();
   };
 
@@ -1812,6 +1829,7 @@ export class CardEditor extends LitElement {
     this._cameraTitleInput = "";
     this._cancelAddingLight();
     this._editingCameraIndex = undefined;
+    this._cameraDialogInitialOpen = undefined;
     this._applyCameraList(cameras);
   };
 

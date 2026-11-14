@@ -6982,6 +6982,10 @@ test("camera editor configures lights and confirms accessible removal", async ({
     "Options and Controls",
   ]);
   await expect(items.nth(0).locator("details")).toHaveAttribute("open", "");
+  await expect(items.nth(0).locator("summary")).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
   await expect(items.nth(1).locator(".summary-text")).toHaveText(
     "Home Assistant",
   );
@@ -6989,6 +6993,11 @@ test("camera editor configures lights and confirms accessible removal", async ({
   expect(compactHeader?.height).toBeLessThanOrEqual(44);
 
   await items.nth(3).locator("summary").click();
+  await expect(items.nth(0).locator("details")).toHaveAttribute("open", "");
+  await expect(items.nth(3).locator("details")).toHaveAttribute("open", "");
+  await items.nth(0).locator("summary").click();
+  await expect(items.nth(0).locator("details")).toHaveAttribute("open", "");
+  await expect(items.nth(3).locator("details")).toHaveAttribute("open", "");
   await editor.locator(".add-light").click();
   await expect(editor.locator(".add-light-form")).toContainText("Linked Light");
   await expect(editor.locator(".pending-light-icon-selector")).toHaveJSProperty(
@@ -7329,12 +7338,28 @@ test("camera editor configures and sanitizes an additional-camera group", async 
   await expect(editor.locator(".camera-editor-dialog")).toBeVisible();
   await expect(editor.locator(".camera-title-field ha-input")).toHaveJSProperty(
     "value",
-    "Street View",
+    "Porch",
+  );
+  const reopenedItems = editor.locator(
+    ".camera-dialog-accordion > wzc-accordion-item",
+  );
+  await expect(reopenedItems.nth(0).locator("details")).toHaveAttribute(
+    "open",
+    "",
+  );
+  await expect(reopenedItems.nth(2).locator("details")).toHaveAttribute(
+    "open",
+    "",
   );
   await expect(
-    editor.locator('ha-selector[label="Connection"]'),
+    reopenedItems.nth(2).locator('ha-selector[label="Second Camera"]'),
+  ).toHaveJSProperty("value", "camera.driveway");
+  await expect(
+    reopenedItems.nth(2).locator(".secondary-connection-source"),
   ).toHaveJSProperty("value", "frigate_go2rtc");
-  await expect(editor.locator(".camera-group-name-field")).toHaveCount(0);
+  await expect(
+    editor.locator(".camera-group-name-field ha-input"),
+  ).toHaveJSProperty("value", "Entry Pair");
 });
 
 test("editor camera drag handles reorder the configured cameras", async ({
