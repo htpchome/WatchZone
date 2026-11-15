@@ -34,9 +34,27 @@ export class CardPickerPreview extends LitElement {
           <span class="camera-name">${this.localize("picker.camera_2")}</span>
         </div>
         <div class="controls" aria-label=${this.localize("navigation.activity")}>
-          ${this._control("reviews", "navigation.reviews", true)}
-          ${this._control("movie", "navigation.recordings")}
-          ${this._control("export", "navigation.exports")}
+          <span class="module-controls">
+            ${this._control("reviews", "navigation.reviews", true)}
+            ${this._control("movie", "navigation.recordings")}
+            ${this._control("export", "navigation.exports")}
+          </span>
+          <span class="accessories">
+            ${this._control(
+              "presentationPlay",
+              "camera.slideshow_enable",
+              false,
+              true,
+            )}
+            ${this._control(
+              "shieldAlert",
+              "camera.alert_takeover_enable",
+              false,
+              true,
+            )}
+            ${this._control("filter", "filter.open", false, true)}
+            ${this._control("calendar", "calendar.open", false, true)}
+          </span>
         </div>
         <div class="day">
           ${this.localize("picker.today")} —
@@ -59,13 +77,27 @@ export class CardPickerPreview extends LitElement {
   }
 
   private _control(
-    icon: "reviews" | "movie" | "export",
+    icon:
+      | "reviews"
+      | "movie"
+      | "export"
+      | "presentationPlay"
+      | "shieldAlert"
+      | "filter"
+      | "calendar",
     label:
-      "navigation.reviews" | "navigation.recordings" | "navigation.exports",
+      | "navigation.reviews"
+      | "navigation.recordings"
+      | "navigation.exports"
+      | "camera.slideshow_enable"
+      | "camera.alert_takeover_enable"
+      | "filter.open"
+      | "calendar.open",
     active = false,
+    accessory = false,
   ) {
     return staticHtml`<span
-      class="control ${active ? "active" : ""}"
+      class="control ${active ? "active" : ""} ${accessory ? "accessory" : ""}"
       title=${this.localize(label)}
       aria-label=${this.localize(label)}
       >${renderIcon(icon)}</span

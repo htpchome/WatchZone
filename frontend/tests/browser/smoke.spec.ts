@@ -171,9 +171,28 @@ test("renders the fixed zero-network community card picker preview", async ({
   await expect(preview).toBeVisible();
   await expect(preview.locator(".brand")).toHaveText("WatchZone");
   await expect(preview.locator(".camera-name")).toHaveCount(2);
-  await expect(preview.locator(".control")).toHaveCount(3);
+  await expect(preview.locator(".module-controls .control")).toHaveCount(3);
+  await expect(preview.locator(".accessories .control")).toHaveCount(4);
   await expect(preview.locator(".tile")).toHaveCount(2);
   await expect(page.locator("watchzone-card .shell")).toHaveCount(0);
+  const presentation = await preview.evaluate((element) => {
+    const root = element.shadowRoot;
+    const live = root?.querySelector(".live");
+    const thumbnail = root?.querySelector(".thumbnail");
+    const active = root?.querySelector(".control.active");
+    const activeIcon = active?.querySelector("svg");
+    return {
+      activeColor: active ? getComputedStyle(active).color : "",
+      activeIconFill: activeIcon ? getComputedStyle(activeIcon).fill : "",
+      liveBackground: live ? getComputedStyle(live).backgroundColor : "",
+      thumbnailBackground: thumbnail
+        ? getComputedStyle(thumbnail).backgroundColor
+        : "",
+    };
+  });
+  expect(presentation.liveBackground).toBe("rgb(36, 36, 36)");
+  expect(presentation.thumbnailBackground).toBe(presentation.liveBackground);
+  expect(presentation.activeIconFill).toBe(presentation.activeColor);
   const heights = await page
     .locator("watchzone-card")
     .evaluate(async (element) => {

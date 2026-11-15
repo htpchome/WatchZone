@@ -34,7 +34,7 @@ export const cardPickerPreviewStyles = css`
     min-block-size: 0;
     overflow: hidden;
     color: var(--wzc-media-placeholder-color);
-    background: var(--wzc-live-background);
+    background: var(--wzc-camera-stage);
     border-radius: var(--wzc-live-radius);
     box-shadow: var(--wzc-live-shadow);
   }
@@ -47,7 +47,7 @@ export const cardPickerPreviewStyles = css`
     position: absolute;
     inset-inline: 0;
     inset-block-end: 0.45rem;
-    color: var(--wzc-color-text-2);
+    color: var(--wzc-media-overlay-color);
     font-size: 0.8rem;
     font-weight: var(--wzc-font-weight-semibold);
     text-align: center;
@@ -82,23 +82,43 @@ export const cardPickerPreviewStyles = css`
   .controls {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
+    justify-content: space-between;
+    gap: 0.25rem;
+    min-inline-size: 0;
+  }
+
+  .module-controls,
+  .accessories {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-inline-size: 0;
   }
 
   .control {
     display: grid;
     place-items: center;
-    inline-size: 2rem;
-    block-size: 2rem;
-    color: var(--wzc-color-text-2);
-    background: var(--wzc-color-surface-secondary);
+    flex: 0 0 auto;
+    inline-size: min(var(--wzc-stage-stack-button-size), 2.1rem);
+    block-size: min(var(--wzc-stage-stack-button-size), 2.1rem);
+    color: var(--wzc-stage-stack-button-color);
+    background: var(--wzc-stage-stack-button-background);
     border-radius: var(--wzc-radius-pill);
-    font-size: 1.1rem;
+  }
+
+  .control svg {
+    inline-size: min(var(--wzc-stage-stack-icon-size), 1.15rem);
+    block-size: min(var(--wzc-stage-stack-icon-size), 1.15rem);
   }
 
   .control.active {
-    color: var(--wzc-color-on-primary);
-    background: var(--wzc-color-primary);
+    color: var(--wzc-stage-stack-button-active-color);
+    background: var(--wzc-stage-stack-button-active-background);
+  }
+
+  .control.accessory {
+    background: transparent;
+    border-radius: 0;
   }
 
   .day {
@@ -130,7 +150,7 @@ export const cardPickerPreviewStyles = css`
     display: grid;
     place-items: center;
     color: var(--wzc-event-thumbnail-placeholder-color);
-    background: var(--wzc-live-background);
+    background: var(--wzc-camera-stage);
     font-size: 1.65rem;
   }
 
