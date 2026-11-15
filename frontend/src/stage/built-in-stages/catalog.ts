@@ -234,6 +234,7 @@ function hydrateModule(
         showFullscreenButton: config.minimal_camera_show_fullscreen_button,
         showMuteButton: config.minimal_camera_show_mute_button,
         showPictureInPictureButton: config.minimal_camera_show_pip_button,
+        showSourceLabel: config.minimal_camera_show_source_label,
         tapAction: config.tap_action,
       },
     };

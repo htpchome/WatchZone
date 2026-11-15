@@ -29,6 +29,7 @@ export interface MinimalCameraModuleConfig {
   readonly showFullscreenButton: boolean;
   readonly showMuteButton: boolean;
   readonly showPictureInPictureButton: boolean;
+  readonly showSourceLabel: boolean;
   readonly tapAction: HomeAssistantActionConfig;
 }
 
@@ -64,6 +65,7 @@ export const moduleDefinition: ModuleDefinition<MinimalCameraModuleConfig> = {
     camera.showFullscreenButton = config.showFullscreenButton;
     camera.showMuteButton = config.showMuteButton;
     camera.showPictureInPictureButton = config.showPictureInPictureButton;
+    camera.showSourceLabel = config.showSourceLabel;
     camera.tapAction = config.tapAction;
   },
 };
@@ -87,6 +89,7 @@ function validateMinimalCameraConfig(
     ["showFullscreenButton", source.showFullscreenButton],
     ["showMuteButton", source.showMuteButton],
     ["showPictureInPictureButton", source.showPictureInPictureButton],
+    ["showSourceLabel", source.showSourceLabel],
   ] as const) {
     if (typeof setting !== "boolean") {
       throw new Error(`Minimal camera requires a ${name} setting.`);

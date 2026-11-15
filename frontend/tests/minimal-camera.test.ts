@@ -42,6 +42,25 @@ describe("minimal camera module", () => {
   it("settles after presenting a ready WebRTC session", async () => {
     vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
     const video = document.createElement("video");
+    Object.defineProperties(video, {
+      readyState: { configurable: true, value: 2 },
+      videoHeight: { configurable: true, value: 360 },
+      videoWidth: { configurable: true, value: 640 },
+    });
+    const drawImage = vi.fn();
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+      drawImage,
+    } as unknown as CanvasRenderingContext2D);
+    vi.spyOn(HTMLCanvasElement.prototype, "toBlob").mockImplementation(
+      (callback) => callback(new Blob(["snapshot"], { type: "image/jpeg" })),
+    );
+    const objectUrl = vi
+      .spyOn(URL, "createObjectURL")
+      .mockReturnValue("blob:watchzone-snapshot");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(
+      () => undefined,
+    );
     const stream = { getTracks: () => [] } as unknown as MediaStream;
     const webRtcFactory = vi.fn<ConnectionFactory>(async () =>
       webRtcConnection(video, stream),
@@ -98,9 +117,23 @@ describe("minimal camera module", () => {
     expect(
       camera.shadowRoot?.querySelector<HTMLDialogElement>(".live-dialog")?.open,
     ).toBe(true);
-    expect(camera.shadowRoot?.querySelector(".source-label")?.textContent).toBe(
-      "WebRTC",
+    expect(
+      camera.shadowRoot?.querySelector(".source-control")?.textContent,
+    ).toBe("WebRTC");
+    const controls = camera.shadowRoot?.querySelector<HTMLElement>(".controls");
+    expect(controls?.hidden).toBe(true);
+    camera.shadowRoot
+      ?.querySelector<HTMLButtonElement>(".menu-toggle")
+      ?.click();
+    await camera.updateComplete;
+    expect(controls?.hidden).toBe(false);
+    const download = camera.shadowRoot?.querySelector<HTMLElement>(
+      ".live-dialog-footer ha-button",
     );
+    expect(download?.textContent).toContain("Download Snapshot");
+    download?.click();
+    await vi.waitFor(() => expect(objectUrl).toHaveBeenCalledOnce());
+    expect(drawImage).toHaveBeenCalledWith(video, 0, 0, 640, 360);
     camera.shadowRoot
       ?.querySelector<HTMLButtonElement>(".dialog-close")
       ?.click();

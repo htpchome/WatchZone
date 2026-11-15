@@ -14,6 +14,7 @@
   "editor.minimal_camera_show_mute_button": "Show Mute Button",
   "editor.minimal_camera_show_fullscreen_button": "Show Fullscreen Button",
   "editor.minimal_camera_show_pip_button": "Show PIP Button",
+  "editor.minimal_camera_show_source_label": "Show Source Label",
   "editor.minimal_camera_menu_position": "Menu Button Position",
   "editor.minimal_camera_menu_left": "Top Left",
   "editor.minimal_camera_menu_right": "Top Right",

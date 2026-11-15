@@ -59,6 +59,9 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
   if (config.minimal_camera_show_pip_button !== false) {
     delete yaml.minimal_camera_show_pip_button;
   }
+  if (config.minimal_camera_show_source_label !== false) {
+    delete yaml.minimal_camera_show_source_label;
+  }
   if (config.alert_detection_takeover === "both") {
     delete yaml.alert_detection_takeover;
   }

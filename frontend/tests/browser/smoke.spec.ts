@@ -2280,10 +2280,19 @@ test("keeps minimal camera actions and media controls independent", async ({
     .getByRole("button", { name: "Resize video player" })
     .press("ArrowLeft");
   await expect(liveDialog).toHaveAttribute("style", /width:/);
-  await liveDialog.getByRole("button", { name: "Close live view" }).click();
+  await expect(
+    liveDialog.locator(".live-dialog-footer ha-button"),
+  ).toContainText("Download Snapshot");
+  const closeIcon = liveDialog.locator(".dialog-close ha-icon");
+  await closeIcon.dispatchEvent("pointerdown", { button: 0, pointerId: 1 });
+  await closeIcon.dispatchEvent("pointerup", { button: 0, pointerId: 1 });
+  await closeIcon.dispatchEvent("click");
   await expect(liveDialog).toBeHidden();
 
-  await minimal.getByRole("button", { name: "Camera controls" }).click();
+  const controlMenu = minimal.getByRole("button", { name: "Camera controls" });
+  await expect(controlMenu).toHaveClass(/control-button/);
+  await expect(controlMenu).toHaveCSS("border-radius", "50%");
+  await controlMenu.click();
 
   const mute = minimal.getByRole("button", { name: "Unmute" });
   await mute.click();
@@ -7775,6 +7784,23 @@ test("editor uses exclusive accordions and shared draft status", async ({
   await expect(
     editor.locator('wzc-toast-region .toast[data-severity="warning"]'),
   ).toContainText("Unsaved changes");
+
+  await stageManagement.locator("summary").click();
+  await stageManagement.locator('input[value="minimal_camera_only"]').check();
+  const interactions = editor.locator(
+    'wzc-accordion-item[item-key="interactions"]',
+  );
+  await expect(interactions).toHaveCount(1);
+  await interactions.locator("summary").click();
+  await expect(
+    interactions.locator('input[value="open-live-view"]'),
+  ).toBeChecked();
+  await expect(interactions.locator("ha-form")).toHaveCount(1);
+  await expect(
+    editor.locator(
+      'wzc-accordion-item[item-key="minimal-camera-configuration"] ha-selector[label="Show Source Label"]',
+    ),
+  ).toHaveCount(1);
 });
 
 test("keeps the editor shell uniform and nested tasks independently solid", async ({

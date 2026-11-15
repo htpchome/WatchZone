@@ -269,6 +269,11 @@ describe("watchzone-card-editor", () => {
         ?.querySelector('[data-config-key="minimal_camera_show_pip_button"]')
         ?.getAttribute("label"),
     ).toBe("Show PIP Button");
+    expect(
+      minimalConfiguration
+        ?.querySelector('[data-config-key="minimal_camera_show_source_label"]')
+        ?.getAttribute("label"),
+    ).toBe("Show Source Label");
     const interactionForm = editor.shadowRoot?.querySelector<
       HTMLElement & { data?: Record<string, unknown> }
     >("ha-form");

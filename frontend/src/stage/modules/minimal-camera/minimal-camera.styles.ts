@@ -1,6 +1,10 @@
 import { css } from "lit";
+import {
+  mediaOverlayBadgeSizingStyles,
+  mediaOverlayControlButtonStyles,
+} from "../../../ui/overlay-control.styles";
 
-export const minimalCameraStyles = css`
+const minimalCameraComponentStyles = css`
   :host,
   .viewport,
   .media {
@@ -117,29 +121,12 @@ export const minimalCameraStyles = css`
     touch-action: manipulation;
   }
 
-  .control {
-    display: grid;
-    place-items: center;
-    box-sizing: border-box;
-    inline-size: var(--wzc-camera-control-size);
-    block-size: var(--wzc-camera-control-size);
-    padding: 0;
-    color: var(--wzc-media-overlay-color);
-    background: var(--wzc-media-overlay-surface);
-    border: 0;
+  .control-button.round {
     border-radius: 50%;
-    cursor: pointer;
-    touch-action: manipulation;
   }
 
-  .control svg {
-    inline-size: var(--wzc-camera-control-icon-size);
-    block-size: var(--wzc-camera-control-icon-size);
-  }
-
-  .control:focus-visible {
-    outline: 2px solid var(--wzc-color-primary);
-    outline-offset: 2px;
+  .source-control {
+    align-self: center;
   }
 
   .interaction-surface:focus-visible {
@@ -200,13 +187,6 @@ export const minimalCameraStyles = css`
     user-select: none;
   }
 
-  .source-label {
-    margin-inline-start: auto;
-    color: var(--wzc-color-text-2);
-    font-size: var(--wzc-font-size-small);
-    font-weight: var(--wzc-font-weight-medium);
-  }
-
   .dialog-close {
     display: grid;
     place-items: center;
@@ -264,6 +244,24 @@ export const minimalCameraStyles = css`
     opacity: 1;
   }
 
+  .live-dialog-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    box-sizing: border-box;
+    min-block-size: 4.5rem;
+    gap: 0.75rem;
+    padding: 0.75rem calc(var(--wzc-recorded-media-resize-handle-size) + 0.5rem)
+      0.75rem 1rem;
+  }
+
+  .snapshot-status {
+    min-inline-size: 0;
+    margin-inline-end: auto;
+    color: var(--wzc-color-text-2);
+    font-size: var(--wzc-font-size-small);
+  }
+
   .resize-handle {
     position: absolute;
     z-index: 3;
@@ -296,9 +294,14 @@ export const minimalCameraStyles = css`
   }
 
   @media (hover: hover) and (pointer: fine) {
-    .control:hover,
     .dialog-close:hover {
       color: var(--wzc-color-primary);
     }
   }
 `;
+
+export const minimalCameraStyles = [
+  mediaOverlayControlButtonStyles,
+  mediaOverlayBadgeSizingStyles,
+  minimalCameraComponentStyles,
+];

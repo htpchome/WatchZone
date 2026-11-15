@@ -74,14 +74,17 @@ uses the shared single-camera session and audio controllers without importing
 the Camera module, carousel, zoom, resize, or capability controls. Its optional
 mute, fullscreen, and picture-in-picture controls are direct lightweight
 browser-media actions behind one five-second control menu. The menu is shown
-only when at least one control is enabled and may anchor at either upper
-corner. Activity integration is limited to the configurable alert/detection
-outline and never loads takeover or navigation behavior.
+only when at least one control or the optional source label is enabled and may
+anchor at either upper corner. Its circular controls use the shared media
+overlay surface and state contract; only their shape differs from the square
+Camera controls. Activity integration is limited to the configurable
+alert/detection outline and never loads takeover or navigation behavior.
 
 The Minimal Camera Stage's default tap action is WatchZone's Open Live View,
 not Home Assistant more-info. It opens a draggable and resizable HA-glass live
 dialog that reparents the same session-owned media element into the dialog and
-returns it to the stage on close. The dialog does not instantiate the Camera
+returns it to the stage on close. Its footer offers a snapshot download from
+the currently presented frame. The dialog does not instantiate the Camera
 module or acquire a second transport. Future Full Stage designs may place
 multiple independently configured minimal-camera modules without changing
 that ownership boundary.

@@ -84,6 +84,7 @@ export interface CardConfig {
   readonly minimal_camera_menu_position: MinimalCameraMenuPosition;
   readonly minimal_camera_show_mute_button: boolean;
   readonly minimal_camera_show_pip_button: boolean;
+  readonly minimal_camera_show_source_label: boolean;
   readonly ptz_overlay_control: PtzOverlayControl;
   readonly slide_transition: SlideTransition;
   readonly slide_advance_time: SlideAdvanceSeconds;
@@ -154,6 +155,7 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     "minimal_camera_show_fullscreen_button",
     "minimal_camera_show_mute_button",
     "minimal_camera_show_pip_button",
+    "minimal_camera_show_source_label",
     "start_alert_takeover_on",
     "view_timelapse_on_thumbnail_hover",
     "rounded_outer_corners",
@@ -280,6 +282,8 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     source.minimal_camera_show_mute_button !== false;
   normalized.minimal_camera_show_pip_button =
     source.minimal_camera_show_pip_button !== false;
+  normalized.minimal_camera_show_source_label =
+    source.minimal_camera_show_source_label !== false;
   normalized.alert_detection_takeover =
     source.alert_detection_takeover === "off" ||
     source.alert_detection_takeover === "alerts" ||

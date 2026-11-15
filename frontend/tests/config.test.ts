@@ -37,6 +37,7 @@ describe("WatchZone card configuration", () => {
       minimal_camera_show_fullscreen_button: true,
       minimal_camera_show_mute_button: true,
       minimal_camera_show_pip_button: true,
+      minimal_camera_show_source_label: true,
       ptz_overlay_control: "start_open",
       slide_advance_time: 10,
       slide_transition: "slide",
@@ -169,21 +170,27 @@ describe("WatchZone card configuration", () => {
       minimal_camera_show_fullscreen_button: true,
       minimal_camera_show_mute_button: true,
       minimal_camera_show_pip_button: true,
+      minimal_camera_show_source_label: true,
     });
     expect(
       normalizeCardConfig({
         minimal_camera_show_fullscreen_button: false,
         minimal_camera_show_mute_button: false,
         minimal_camera_show_pip_button: false,
+        minimal_camera_show_source_label: false,
       }),
     ).toMatchObject({
       minimal_camera_show_fullscreen_button: false,
       minimal_camera_show_mute_button: false,
       minimal_camera_show_pip_button: false,
+      minimal_camera_show_source_label: false,
     });
     expect(() =>
       normalizeCardConfig({ minimal_camera_show_pip_button: "false" }),
     ).toThrow("minimal_camera_show_pip_button must be a boolean");
+    expect(() =>
+      normalizeCardConfig({ minimal_camera_show_source_label: "false" }),
+    ).toThrow("minimal_camera_show_source_label must be a boolean");
   });
 
   it("defaults activity takeover to both while starting disabled", () => {

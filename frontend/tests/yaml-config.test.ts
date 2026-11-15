@@ -74,6 +74,7 @@ describe("WatchZone YAML configuration manager", () => {
           minimal_camera_show_fullscreen_button: false,
           minimal_camera_show_mute_button: false,
           minimal_camera_show_pip_button: false,
+          minimal_camera_show_source_label: false,
           start_alert_takeover_on: true,
           view_timelapse_on_thumbnail_hover: false,
           cameras: [
@@ -121,6 +122,7 @@ describe("WatchZone YAML configuration manager", () => {
       minimal_camera_show_fullscreen_button: false,
       minimal_camera_show_mute_button: false,
       minimal_camera_show_pip_button: false,
+      minimal_camera_show_source_label: false,
       start_alert_takeover_on: true,
       view_timelapse_on_thumbnail_hover: false,
       cameras: [

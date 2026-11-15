@@ -27,12 +27,17 @@ import {
   setMediaElementMuted,
 } from "../../../core/media-playback";
 import { renderIcon } from "../../../ui/icons";
+import "../../../ui/badge";
 import {
   englishLocalize,
   type LocalizeFunction,
 } from "../../../core/localization";
 import { CameraAudioController } from "../../camera-presentation/live/audio.controller";
 import { CameraLiveSessionController } from "../../camera-presentation/live/session.controller";
+import {
+  captureVideoFrame,
+  downloadSnapshot,
+} from "../../camera-presentation/live/frame-capture";
 import { mediaTransportLabel } from "../../camera-presentation/live/source-label";
 import { CameraActivityHighlightController } from "../../camera-presentation/activity-highlight.controller";
 import { minimalCameraStyles } from "./minimal-camera.styles";
@@ -67,8 +72,11 @@ export class MinimalCameraModule extends LitElement {
     showFullscreenButton: { attribute: false, type: Boolean },
     showMuteButton: { attribute: false, type: Boolean },
     showPictureInPictureButton: { attribute: false, type: Boolean },
+    showSourceLabel: { attribute: false, type: Boolean },
     tapAction: { attribute: false },
     _controlsExpanded: { state: true },
+    _snapshotError: { state: true },
+    _snapshotPending: { state: true },
   };
 
   private _activeVideo?: HTMLVideoElement;
@@ -77,14 +85,22 @@ export class MinimalCameraModule extends LitElement {
   private _holdTimer?: ReturnType<typeof setTimeout>;
   private _controlsTimer?: ReturnType<typeof setTimeout>;
   private _controlsExpanded = false;
+  private _snapshotError?: string;
+  private _snapshotPending = false;
   private _tapTimer?: ReturnType<typeof setTimeout>;
   private readonly _activity = new CameraActivityHighlightController(this);
   private readonly _dialog = new MinimalLiveDialogController(this, {
     getAspectRatio: () => this._dialogMediaAspectRatio(),
+    getChromeHeight: () =>
+      [".live-dialog-header", ".live-dialog-footer"].reduce(
+        (height, selector) =>
+          height +
+          (this.renderRoot.querySelector<HTMLElement>(selector)?.offsetHeight ??
+            0),
+        0,
+      ),
     getDialog: () =>
       this.renderRoot.querySelector<HTMLDialogElement>(".live-dialog"),
-    getHeader: () =>
-      this.renderRoot.querySelector<HTMLElement>(".live-dialog-header"),
     onClose: () => this._closeControlMenu(),
   });
   private readonly _audio: CameraAudioController = new CameraAudioController(
@@ -138,6 +154,7 @@ export class MinimalCameraModule extends LitElement {
   public showFullscreenButton = true;
   public showMuteButton = true;
   public showPictureInPictureButton = true;
+  public showSourceLabel = true;
   public tapAction: HomeAssistantActionConfig = { action: "open-live-view" };
   public holdAction: HomeAssistantActionConfig = { action: "none" };
   public doubleTapAction: HomeAssistantActionConfig = { action: "none" };
@@ -188,6 +205,13 @@ export class MinimalCameraModule extends LitElement {
       fullscreen: showFullscreen,
       mute: this.showMuteButton,
       pictureInPicture: showPictureInPicture,
+      source:
+        this.showSourceLabel && this._session.transport
+          ? mediaTransportLabel(
+              this._session.transport,
+              this._session.effectiveLowLatencyHls,
+            )
+          : undefined,
     };
     const videoAspectRatio =
       this._activeVideo?.videoWidth && this._activeVideo.videoHeight
@@ -244,19 +268,12 @@ export class MinimalCameraModule extends LitElement {
             class="dialog-close"
             type="button"
             aria-label=${this.localize("camera.close_live_view")}
+            @pointerdown=${this._stopControlEvent}
             @click=${this._dialog.close}
           >
             <ha-icon icon="mdi:close"></ha-icon>
           </button>
           <span>${this.camera?.title || this.camera?.entityId}</span>
-          <span class="source-label"
-            >${
-              mediaTransportLabel(
-                this._session.transport,
-                this._session.effectiveLowLatencyHls,
-              ) ?? nothing
-            }</span
-          >
         </header>
         <div
           class="live-dialog-media"
@@ -272,6 +289,26 @@ export class MinimalCameraModule extends LitElement {
           ></div>
           ${this._renderControlMenu(controls)}
         </div>
+        <footer class="live-dialog-footer">
+          <span class="snapshot-status" role="status" aria-live="polite">
+            ${
+              this._snapshotError ??
+              (this._snapshotPending
+                ? this.localize("camera.saving_snapshot")
+                : nothing)
+            }
+          </span>
+          <ha-button
+            appearance="accent"
+            variant="brand"
+            size="m"
+            type="button"
+            .disabled=${this._snapshotPending || !this._activeVideo}
+            @click=${this._downloadLiveSnapshot}
+          >
+            ${this.localize("media_player.download_snapshot")}
+          </ha-button>
+        </footer>
         <button
           class="resize-handle"
           type="button"
@@ -434,19 +471,44 @@ export class MinimalCameraModule extends LitElement {
     this._audio.toggleUserMute();
   };
 
+  private readonly _downloadLiveSnapshot = async (
+    event: Event,
+  ): Promise<void> => {
+    event.stopPropagation();
+    if (!this._activeVideo || this._snapshotPending) return;
+    this._snapshotPending = true;
+    this._snapshotError = undefined;
+    try {
+      downloadSnapshot(
+        await captureVideoFrame(this._activeVideo),
+        this.camera?.entityId,
+      );
+    } catch {
+      this._snapshotError = this.localize("camera.snapshot_failed");
+    } finally {
+      this._snapshotPending = false;
+    }
+  };
+
   private _renderControlMenu(controls: {
     readonly fullscreen: boolean;
     readonly mute: boolean;
     readonly pictureInPicture: boolean;
+    readonly source?: string;
   }) {
-    if (!controls.fullscreen && !controls.mute && !controls.pictureInPicture) {
+    if (
+      !controls.fullscreen &&
+      !controls.mute &&
+      !controls.pictureInPicture &&
+      !controls.source
+    ) {
       return nothing;
     }
     return html`<div
       class=${`control-menu ${this.menuPosition === "top_right" ? "right" : "left"}`}
     >
       <button
-        class="control menu-toggle"
+        class="control-button round menu-toggle"
         type="button"
         aria-label=${this.localize("camera.controls_menu")}
         aria-expanded=${String(this._controlsExpanded)}
@@ -459,7 +521,7 @@ export class MinimalCameraModule extends LitElement {
         ${
           controls.mute
             ? html`<button
-                class="control"
+                class="control-button round"
                 type="button"
                 aria-label=${
                   this._audio.muted
@@ -476,7 +538,7 @@ export class MinimalCameraModule extends LitElement {
         ${
           controls.fullscreen
             ? html`<button
-                class="control"
+                class="control-button round"
                 type="button"
                 aria-label=${this.localize(
                   isMediaFullscreenActive(this._activeVideo)
@@ -497,7 +559,7 @@ export class MinimalCameraModule extends LitElement {
         ${
           controls.pictureInPicture
             ? html`<button
-                class="control"
+                class="control-button round"
                 type="button"
                 aria-label=${this.localize(
                   isPictureInPictureActive(this._activeVideo)
@@ -509,6 +571,18 @@ export class MinimalCameraModule extends LitElement {
               >
                 ${renderIcon("pipPopOut")}
               </button>`
+            : nothing
+        }
+        ${
+          controls.source
+            ? html`<wzc-badge
+                class="source-control source-indicator"
+                role="status"
+                shape="pill"
+                size="small"
+                variant="neutral"
+                >${controls.source}</wzc-badge
+              >`
             : nothing
         }
       </div>

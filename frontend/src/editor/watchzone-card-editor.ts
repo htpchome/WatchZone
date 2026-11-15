@@ -167,6 +167,7 @@ type BooleanConfigFlag =
   | "minimal_camera_show_fullscreen_button"
   | "minimal_camera_show_mute_button"
   | "minimal_camera_show_pip_button"
+  | "minimal_camera_show_source_label"
   | "start_alert_takeover_on"
   | "view_timelapse_on_thumbnail_hover"
   | "mobile_data_saving"
@@ -699,6 +700,11 @@ export class CardEditor extends LitElement {
         "minimal_camera_show_pip_button",
         this._t("editor.minimal_camera_show_pip_button"),
         this._config?.minimal_camera_show_pip_button !== false,
+      )}
+      ${this._renderBooleanOption(
+        "minimal_camera_show_source_label",
+        this._t("editor.minimal_camera_show_source_label"),
+        this._config?.minimal_camera_show_source_label !== false,
       )}
       <div class="segmented-setting">
         <span class="segmented-setting-label">

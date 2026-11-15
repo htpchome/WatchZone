@@ -2,8 +2,8 @@ import type { ReactiveController, ReactiveControllerHost } from "lit";
 
 interface MinimalLiveDialogCallbacks {
   getAspectRatio(): number;
+  getChromeHeight(): number;
   getDialog(): HTMLDialogElement | null;
-  getHeader(): HTMLElement | null;
   onClose(): void;
 }
 
@@ -69,7 +69,11 @@ export class MinimalLiveDialogController implements ReactiveController {
   }
 
   public startDrag = (event: PointerEvent): void => {
-    if (event.button !== 0 || event.target instanceof HTMLButtonElement) return;
+    if (
+      event.button !== 0 ||
+      event.composedPath().some((target) => target instanceof HTMLButtonElement)
+    )
+      return;
     const dialog = this._callbacks.getDialog();
     if (!dialog) return;
     const rect = dialog.getBoundingClientRect();
@@ -171,8 +175,7 @@ export class MinimalLiveDialogController implements ReactiveController {
 
   private _setWidth(width: number): void {
     const dialog = this._callbacks.getDialog();
-    const header = this._callbacks.getHeader();
-    if (!dialog || !header) return;
+    if (!dialog) return;
     const rect = dialog.getBoundingClientRect();
     const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
     const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
@@ -180,7 +183,10 @@ export class MinimalLiveDialogController implements ReactiveController {
       1,
       Math.min(
         viewportWidth - Math.max(8, rect.left) - 8,
-        (viewportHeight - Math.max(8, rect.top) - header.offsetHeight - 8) *
+        (viewportHeight -
+          Math.max(8, rect.top) -
+          this._callbacks.getChromeHeight() -
+          8) *
           this._callbacks.getAspectRatio(),
       ),
     );
