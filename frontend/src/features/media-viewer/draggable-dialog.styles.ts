@@ -111,6 +111,10 @@ export const draggableDialogStyles = css`
       calc(var(--wzc-recorded-media-resize-handle-size) + 0.4rem);
   }
 
+  .footer-actions .wzc-activity-action {
+    background: transparent;
+  }
+
   wzc-recorded-video-player:not([recording-timeline]) {
     aspect-ratio: 16 / 9;
   }

@@ -3791,7 +3791,11 @@ test("keeps activity content in an independently scrolling viewport", async ({
       }),
     ),
   );
-  expect(actionPresentations[1]).toEqual(actionPresentations[0]);
+  expect(actionPresentations[0]?.background).not.toBe("rgba(0, 0, 0, 0)");
+  expect(actionPresentations[1]).toEqual({
+    ...actionPresentations[0],
+    background: "rgba(0, 0, 0, 0)",
+  });
   const earlyMediaActionBox = await mediaAction.boundingBox();
   const earlyMediaDialogBox = await mediaDialog.boundingBox();
   expect(
