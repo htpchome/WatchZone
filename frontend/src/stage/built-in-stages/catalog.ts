@@ -8,6 +8,7 @@ import {
   CAMERA_SWITCHER_COMPONENT_TYPE,
   SLIDESHOW_COMPONENT_TYPE,
   CAMERA_MODULE_TYPE,
+  MINIMAL_CAMERA_MODULE_TYPE,
   EVENTS_MODULE_TYPE,
   EXPORTS_MODULE_TYPE,
   LIGHT_COMPONENT_TYPE,
@@ -28,6 +29,7 @@ import {
 } from "../layout";
 import defaultStageJson from "./default.json";
 import standardCameraStageJson from "./standard_camera.json";
+import minimalCameraStageJson from "./minimal_camera.json";
 
 export interface BuiltInStageSet {
   readonly designs: readonly StageDesignDocument[];
@@ -43,6 +45,7 @@ export interface BuiltInStageOption {
 const sourceTemplates = [
   validateStageDesign(defaultStageJson),
   validateStageDesign(standardCameraStageJson),
+  validateStageDesign(minimalCameraStageJson),
 ] as const;
 const namespacedTemplates = sourceTemplates.map(namespaceTemplate);
 
@@ -206,6 +209,27 @@ function hydrateModule(
               hoverPreviewEnabled: config.view_timelapse_on_thumbnail_hover,
             }
           : {}),
+      },
+    };
+  }
+  if (node.moduleType === MINIMAL_CAMERA_MODULE_TYPE) {
+    const first = cameraPresentationItems(config.cameras)[0]?.cameras[0];
+    if (!first) return undefined;
+    return {
+      ...node,
+      config: {
+        camera: {
+          connection: first.connection,
+          entityId: first.entity_id,
+          frigateFallback: first.frigate_fallback,
+          lowLatencyHls: first.low_latency_hls,
+          startUnmutedPcTablet: first.start_live_unmuted_pc_tablet,
+          startUnmutedPhone: first.start_live_unmuted_phone,
+          title: first.title,
+        },
+        doubleTapAction: config.double_tap_action,
+        holdAction: config.hold_action,
+        tapAction: config.tap_action,
       },
     };
   }

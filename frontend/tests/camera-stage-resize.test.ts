@@ -7,7 +7,7 @@ import {
   DEFAULT_CAMERA_STAGE_HEIGHT_RATIO,
   type CameraStageResizeInteraction,
   type CameraStageSize,
-} from "../src/stage/modules/camera/stage-resize.controller";
+} from "../src/stage/camera-presentation/stage-resize.controller";
 
 function createHost(): ReactiveControllerHost {
   return {

@@ -2,7 +2,7 @@ import type { ReactiveController, ReactiveControllerHost } from "lit";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { englishLocalize } from "../src/core/localization";
-import { CameraLiveControlController } from "../src/stage/modules/camera/live/control.controller";
+import { CameraLiveControlController } from "../src/stage/camera-presentation/live/control.controller";
 
 class TestHost implements ReactiveControllerHost {
   public readonly requestUpdate = vi.fn<() => void>();

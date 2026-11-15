@@ -7573,7 +7573,7 @@ test("editor uses exclusive accordions and shared draft status", async ({
   await expect(stageManagement.locator("details")).toHaveAttribute("open", "");
   const stageTypeInputs = stageManagement.locator('input[name="stage-type"]');
   await expect(stageTypeInputs).toHaveCount(3);
-  await expect(stageTypeInputs.nth(0)).toBeDisabled();
+  await expect(stageTypeInputs.nth(0)).toBeEnabled();
   await expect(stageTypeInputs.nth(2)).toBeChecked();
   await expect(
     stageManagement.locator('input[data-stage-profile="default"]'),

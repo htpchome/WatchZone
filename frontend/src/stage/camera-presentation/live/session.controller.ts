@@ -1,18 +1,18 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
-import type { HomeAssistantApi } from "../../../../core/home-assistant";
+import type { HomeAssistantApi } from "../../../core/home-assistant";
 import type {
   FrigateFallbackTransport,
   LiveConnectionType,
-} from "../../../../core/config";
-import type { FrigateGo2RtcLiveSourceDescriptor } from "../../../../api/live-source";
+} from "../../../core/config";
+import type { FrigateGo2RtcLiveSourceDescriptor } from "../../../api/live-source";
 import type {
   MediaConnectionOptions,
   MediaSessionLease,
   MediaSessionSnapshot,
   MediaTransport,
-} from "../../../../core/media-session-manager";
-import { LiveSourceResolver } from "../../../../providers/live-source-resolver";
+} from "../../../core/media-session-manager";
+import { LiveSourceResolver } from "../../../providers/live-source-resolver";
 
 export type PresentedSource = "fallback" | "webrtc";
 

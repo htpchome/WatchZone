@@ -31,23 +31,23 @@ import type {
   FrigateFallbackTransport,
   LiveConnectionType,
 } from "../../../core/config";
-import type { CameraControlEventDetail } from "./controls-overlay";
-import "./controls-overlay";
-import type { CameraView } from "./camera-view";
-import "./camera-view";
-import { downloadSnapshot } from "./live/frame-capture";
-import type { CameraToastRequestDetail } from "./live/presentation";
-import type { CameraSuspendConfirmDetail } from "./suspend-dialog";
-import "./suspend-dialog";
+import type { CameraControlEventDetail } from "../../camera-presentation/controls-overlay";
+import "../../camera-presentation/controls-overlay";
+import type { CameraView } from "../../camera-presentation/camera-view";
+import "../../camera-presentation/camera-view";
+import { downloadSnapshot } from "../../camera-presentation/live/frame-capture";
+import type { CameraToastRequestDetail } from "../../camera-presentation/live/presentation";
+import type { CameraSuspendConfirmDetail } from "../../camera-presentation/suspend-dialog";
+import "../../camera-presentation/suspend-dialog";
 import { cameraGroupViewStyles } from "./camera-group-view.styles";
-import { stageResizeHandleStyles } from "./stage-resize-handle.styles";
+import { stageResizeHandleStyles } from "../../camera-presentation/stage-resize-handle.styles";
 import {
   CameraStageResizeController,
   CameraStageSizeEventController,
   DEFAULT_CAMERA_STAGE_HEIGHT_RATIO,
   type CameraStageResizeInteraction,
   type CameraStageSize,
-} from "./stage-resize.controller";
+} from "../../camera-presentation/stage-resize.controller";
 
 export type CameraGroupMode = "combined" | "main" | "secondary";
 

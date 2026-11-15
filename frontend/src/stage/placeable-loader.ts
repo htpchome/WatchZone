@@ -2,6 +2,7 @@ import {
   CAMERA_NAVIGATION_MODULE_TYPE,
   CAMERA_SWITCHER_COMPONENT_TYPE,
   CAMERA_MODULE_TYPE,
+  MINIMAL_CAMERA_MODULE_TYPE,
   REVIEWS_MODULE_TYPE,
   EVENTS_MODULE_TYPE,
   EXPORTS_MODULE_TYPE,
@@ -82,6 +83,13 @@ const moduleLoaders = {
   [CAMERA_MODULE_TYPE]: {
     load: () =>
       import("./modules/camera").then(
+        ({ moduleDefinition }) => moduleDefinition,
+      ),
+    placeholder: "camera",
+  },
+  [MINIMAL_CAMERA_MODULE_TYPE]: {
+    load: () =>
+      import("./modules/minimal-camera").then(
         ({ moduleDefinition }) => moduleDefinition,
       ),
     placeholder: "camera",

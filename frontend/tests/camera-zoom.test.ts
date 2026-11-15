@@ -2,8 +2,8 @@ import type { ReactiveControllerHost } from "lit";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CAMERA_LIVE_PRESENTATION_TAG } from "../src/core/constants";
-import "../src/stage/modules/camera/live/presentation";
-import type { CameraLivePresentation } from "../src/stage/modules/camera/live/presentation";
+import "../src/stage/camera-presentation/live/presentation";
+import type { CameraLivePresentation } from "../src/stage/camera-presentation/live/presentation";
 import { MediaPresentationController } from "../src/ui/media-presentation.controller";
 import { MediaZoomController } from "../src/ui/media-zoom.controller";
 import { MEDIA_OVERLAY_HIDE_DELAY_MS } from "../src/ui/media-overlay-visibility.controller";

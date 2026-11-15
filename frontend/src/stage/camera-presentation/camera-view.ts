@@ -5,19 +5,19 @@ import {
   CAMERA_LIVE_PRESENTATION_TAG,
   CAMERA_SUSPEND_DIALOG_TAG,
   CAMERA_VIEW_TAG,
-} from "../../../core/constants";
-import type { HomeAssistantApi } from "../../../core/home-assistant";
-import type { CameraSessionContext } from "../../camera-session-context";
+} from "../../core/constants";
+import type { HomeAssistantApi } from "../../core/home-assistant";
+import type { CameraSessionContext } from "../camera-session-context";
 import type {
   FrigateFallbackTransport,
   LiveConnectionType,
-} from "../../../core/config";
+} from "../../core/config";
 import {
   englishLocalize,
   type LocalizeFunction,
-} from "../../../core/localization";
-import { ToastManager } from "../../../ui/toast-manager";
-import { renderIcon } from "../../../ui/icons";
+} from "../../core/localization";
+import { ToastManager } from "../../ui/toast-manager";
+import { renderIcon } from "../../ui/icons";
 import { cameraViewStyles } from "./camera-view.styles";
 import { stageResizeHandleStyles } from "./stage-resize-handle.styles";
 import { CameraAudioController } from "./live/audio.controller";
@@ -295,7 +295,7 @@ export class CameraView extends LitElement {
   }
 
   public getSession():
-    import("../../camera-session-context").ActiveCameraSession | undefined {
+    import("../camera-session-context").ActiveCameraSession | undefined {
     if (!this.entityId) return undefined;
     return {
       available:

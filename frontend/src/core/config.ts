@@ -30,6 +30,20 @@ export type SlideAdvanceSeconds = 5 | 10 | 20 | 30;
 export type AlertTakeoverMode = "off" | "alerts" | "detections" | "both";
 export type AdditionalCameraLayout = "side_by_side" | "stacked";
 
+export type HomeAssistantAction =
+  | "assist"
+  | "more-info"
+  | "navigate"
+  | "none"
+  | "perform-action"
+  | "toggle"
+  | "url";
+
+export interface HomeAssistantActionConfig {
+  readonly action: HomeAssistantAction;
+  readonly [key: string]: unknown;
+}
+
 export interface AdditionalCameraConfig {
   readonly entity_id: string;
   readonly layout: AdditionalCameraLayout;
@@ -70,6 +84,9 @@ export interface CardConfig {
   readonly start_alert_takeover_on: boolean;
   readonly stage_flow: ConfiguredStageFlow;
   readonly stage_type: AvailableStageType;
+  readonly tap_action: HomeAssistantActionConfig;
+  readonly hold_action: HomeAssistantActionConfig;
+  readonly double_tap_action: HomeAssistantActionConfig;
   readonly view_timelapse_on_thumbnail_hover: boolean;
   readonly cameras: readonly CameraConfig[];
   readonly mobile_data_saving?: boolean;
@@ -98,6 +115,12 @@ export function normalizeCardConfig(value: unknown): CardConfig {
 
   const stageType = normalizeStageType(source.stage_type);
   const stageFlow = normalizeStageFlow(source.stage_flow, stageType);
+  const tapAction = normalizeActionConfig(source.tap_action, "more-info");
+  const holdAction = normalizeActionConfig(source.hold_action, "none");
+  const doubleTapAction = normalizeActionConfig(
+    source.double_tap_action,
+    "none",
+  );
 
   for (const key of [
     "camera_bar_rounded_corners",
@@ -183,6 +206,9 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     cameras,
     stage_flow: stageFlow,
     stage_type: stageType,
+    tap_action: tapAction,
+    hold_action: holdAction,
+    double_tap_action: doubleTapAction,
     type: CARD_TYPE,
     title,
   };
@@ -607,18 +633,41 @@ function isIconName(value: string): boolean {
 function normalizeStageType(value: unknown): AvailableStageType {
   if (value === undefined || value === "full") return "full";
   if (value === "camera_only") return "camera_only";
-  if (value === "tiny_camera_only") {
-    throw new Error(
-      `${APP_NAME} tiny camera-only stages are not available yet.`,
-    );
+  if (value === "tiny_camera_only") return "tiny_camera_only";
+  throw new Error(
+    `${APP_NAME} stage_type must be full, camera_only, or tiny_camera_only.`,
+  );
+}
+
+function normalizeActionConfig(
+  value: unknown,
+  fallback: HomeAssistantAction,
+): HomeAssistantActionConfig {
+  if (value === undefined) return { action: fallback };
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error(`${APP_NAME} interaction actions must be objects.`);
   }
-  throw new Error(`${APP_NAME} stage_type must be full or camera_only.`);
+  const source = value as Record<string, unknown>;
+  const action = source.action;
+  if (
+    action !== "assist" &&
+    action !== "more-info" &&
+    action !== "navigate" &&
+    action !== "none" &&
+    action !== "perform-action" &&
+    action !== "toggle" &&
+    action !== "url"
+  ) {
+    throw new Error(`${APP_NAME} interaction action is not supported.`);
+  }
+  return { ...source, action } as HomeAssistantActionConfig;
 }
 
 function normalizeStageFlow(
   value: unknown,
   stageType: AvailableStageType,
 ): ConfiguredStageFlow {
+  if (stageType === "tiny_camera_only") return defaultStageFlow(stageType);
   if (value === undefined) return defaultStageFlow(stageType);
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new Error(`${APP_NAME} stage_flow must be an object.`);

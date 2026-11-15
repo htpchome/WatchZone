@@ -2,11 +2,11 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { CAMERA_STAGE_SIZE_CHANGE_EVENT } from "../src/core/constants";
 import type { CameraModule } from "../src/stage/modules/camera/camera";
-import type { CameraView } from "../src/stage/modules/camera/camera-view";
-import type { CameraLivePresentation } from "../src/stage/modules/camera/live/presentation";
+import type { CameraView } from "../src/stage/camera-presentation/camera-view";
+import type { CameraLivePresentation } from "../src/stage/camera-presentation/live/presentation";
 import "../src/stage/modules/camera/camera";
-import "../src/stage/modules/camera/camera-view";
-import "../src/stage/modules/camera/live/presentation";
+import "../src/stage/camera-presentation/camera-view";
+import "../src/stage/camera-presentation/live/presentation";
 
 afterEach(() => {
   document.body.replaceChildren();

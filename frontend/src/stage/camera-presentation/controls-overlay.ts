@@ -5,17 +5,17 @@ import {
   CAMERA_CONTROLS_TAG,
   MEDIA_CONTROL_EVENT,
   MEDIA_CONTROLS_TAG,
-} from "../../../core/constants";
+} from "../../core/constants";
 import {
   englishLocalize,
   type LocalizeFunction,
-} from "../../../core/localization";
-import type { IconName } from "../../../ui/icons";
+} from "../../core/localization";
+import type { IconName } from "../../ui/icons";
 import type {
   MediaControlDescriptor,
   MediaControlEventDetail,
-} from "../../../ui/media-controls-overlay";
-import "../../../ui/media-controls-overlay";
+} from "../../ui/media-controls-overlay";
+import "../../ui/media-controls-overlay";
 import { cameraControlsStyles } from "./controls-overlay.styles";
 
 const mediaControlsTag = unsafeStatic(MEDIA_CONTROLS_TAG);

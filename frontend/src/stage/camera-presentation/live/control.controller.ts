@@ -4,15 +4,15 @@ import {
   isMediaFullscreenActive,
   mediaFullscreenSupported,
   toggleMediaFullscreen,
-} from "../../../../core/fullscreen";
-import type { LocalizeFunction } from "../../../../core/localization";
+} from "../../../core/fullscreen";
+import type { LocalizeFunction } from "../../../core/localization";
 import {
   isPictureInPictureActive,
   pictureInPictureMethod,
   suppressNativePictureInPicture,
   togglePictureInPicture,
-} from "../../../../core/picture-in-picture";
-import type { ToastSeverity } from "../../../../ui/toast-manager";
+} from "../../../core/picture-in-picture";
+import type { ToastSeverity } from "../../../ui/toast-manager";
 import type { CameraControlAction } from "../controls-overlay";
 import { downloadSnapshot } from "./frame-capture";
 

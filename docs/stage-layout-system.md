@@ -43,8 +43,10 @@ mechanics remain below public provider resolvers.
 A Stage Design contains a stable ID, name, schema version, optimistic revision,
 a `stageType` classification, and at least one responsive variant: `default`
 for tablet/desktop, `phone`, or both. `stageType` is one of `full`,
-`camera_only`, or the reserved `tiny_camera_only`; the last classification is
-not yet user-selectable. Variant presence declares where the design is
+`camera_only`, or `tiny_camera_only`. The user-facing name of the last
+classification is Minimal Camera Stage; it has one implicit built-in design,
+so its desktop and phone lineups are not exposed in the card editor. Variant
+presence declares where the design is
 eligible. Each variant
 owns a root grid container. Grid coordinates are positive logical columns and
 rows, never CSS pixels. Each grid row declares either `fraction` sizing for
@@ -64,6 +66,14 @@ Slots contain component nodes with their own validated configuration. Node IDs
 must be unique within a variant. Corresponding nodes use the same stable IDs in
 both variants so switching variants preserves loaded custom elements and live
 session leases.
+
+The built-in Minimal Camera Stage contains one `minimal_camera` module. Its
+runtime binding resolves the first user-facing camera item and, for an A/B
+item, binds only its main camera. The module is independently lazy loaded and
+uses the shared single-camera session and audio controllers without importing
+the Camera module, carousel, zoom, resize, or capability controls. Future Full
+Stage designs may place multiple independently configured minimal-camera
+modules without changing that ownership boundary.
 
 A component node may declare an optional logical `controlRegion` of `leading`,
 `center`, or `trailing`. The renderer applies it only inside a `controls` slot;

@@ -9,33 +9,33 @@ import {
   BADGE_TAG,
   MEDIA_OVERLAY_INTERACTION_EVENT,
   TOAST_REGION_TAG,
-} from "../../../../core/constants";
+} from "../../../core/constants";
 import {
   playMediaElement,
   setMediaElementMuted,
-} from "../../../../core/media-playback";
-import type { MediaTransport } from "../../../../core/media-session-manager";
+} from "../../../core/media-playback";
+import type { MediaTransport } from "../../../core/media-session-manager";
 import {
   englishLocalize,
   type LocalizeFunction,
-} from "../../../../core/localization";
-import { DeviceProfileController } from "../../../../core/device-profile";
-import type { ToastNotice, ToastSeverity } from "../../../../ui/toast-manager";
-import { renderIcon } from "../../../../ui/icons";
-import "../../../../ui/badge";
-import "../../../../ui/toast-region";
+} from "../../../core/localization";
+import { DeviceProfileController } from "../../../core/device-profile";
+import type { ToastNotice, ToastSeverity } from "../../../ui/toast-manager";
+import { renderIcon } from "../../../ui/icons";
+import "../../../ui/badge";
+import "../../../ui/toast-region";
 import type {
   CameraControlAction,
   CameraControlEventDetail,
 } from "../controls-overlay";
 import "../controls-overlay";
-import { mediaOverlayBadgeSizingStyles } from "../../../../ui/overlay-control.styles";
+import { mediaOverlayBadgeSizingStyles } from "../../../ui/overlay-control.styles";
 import { cameraLiveViewStyles } from "../live-view.styles";
 import {
   refreshNativePictureInPictureSuppression,
   suppressNativePictureInPicture,
-} from "../../../../core/picture-in-picture";
-import { MediaPresentationController } from "../../../../ui/media-presentation.controller";
+} from "../../../core/picture-in-picture";
+import { MediaPresentationController } from "../../../ui/media-presentation.controller";
 import type { PresentedSource } from "./session.controller";
 import { CameraLiveControlController } from "./control.controller";
 import { captureVideoFrame } from "./frame-capture";

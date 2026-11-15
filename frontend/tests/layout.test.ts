@@ -204,6 +204,42 @@ describe("layout composition", () => {
     ]);
   });
 
+  it("hydrates the minimal stage with only the first presentation item's main camera", () => {
+    const stageSet = createBuiltInStageSet(
+      normalizeCardConfig({
+        cameras: [
+          {
+            additional_camera: {
+              entity_id: "camera.porch",
+              layout: "side_by_side",
+            },
+            entity_id: "camera.doorbell",
+            title: "Doorbell",
+          },
+          { entity_id: "camera.porch", title: "Porch" },
+          { entity_id: "camera.driveway", title: "Driveway" },
+        ],
+        stage_type: "tiny_camera_only",
+      }),
+    );
+
+    expect(stageSet.flow).toEqual({
+      default: ["wzc:minimal-camera-stage"],
+      phone: ["wzc:minimal-camera-stage"],
+    });
+    expect(stageSet.designs).toHaveLength(1);
+    const module = moduleAt(stageSet.designs[0]!, 0);
+    expect(module).toMatchObject({
+      moduleType: "minimal_camera",
+      config: {
+        camera: { entityId: "camera.doorbell", title: "" },
+        doubleTapAction: { action: "none" },
+        holdAction: { action: "none" },
+        tapAction: { action: "more-info" },
+      },
+    });
+  });
+
   it("hydrates the configured carousel transition into the camera module", () => {
     const layout = builtInStage(
       normalizeCardConfig({

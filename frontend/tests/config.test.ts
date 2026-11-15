@@ -42,6 +42,9 @@ describe("WatchZone card configuration", () => {
         phone: ["default-stage"],
       },
       stage_type: "full",
+      tap_action: { action: "more-info" },
+      hold_action: { action: "none" },
+      double_tap_action: { action: "none" },
       view_timelapse_on_thumbnail_hover: true,
       rounded_outer_corners: true,
       outer_shadows: true,
@@ -71,11 +74,23 @@ describe("WatchZone card configuration", () => {
       default: ["standard-camera-stage", "future-camera-stage"],
       phone: ["future-camera-stage", "standard-camera-stage"],
     });
-    expect(() =>
-      normalizeCardConfig({ stage_type: "tiny_camera_only" }),
-    ).toThrow("tiny camera-only stages are not available yet");
+    expect(
+      normalizeCardConfig({
+        stage_flow: {
+          default: ["default-stage"],
+          phone: ["standard-camera-stage"],
+        },
+        stage_type: "tiny_camera_only",
+      }),
+    ).toMatchObject({
+      stage_flow: {
+        default: ["minimal-camera-stage"],
+        phone: ["minimal-camera-stage"],
+      },
+      stage_type: "tiny_camera_only",
+    });
     expect(() => normalizeCardConfig({ stage_type: "wide" })).toThrow(
-      "stage_type must be full or camera_only",
+      "stage_type must be full, camera_only, or tiny_camera_only",
     );
     expect(() =>
       normalizeCardConfig({ stage_flow: { default: [], phone: [] } }),

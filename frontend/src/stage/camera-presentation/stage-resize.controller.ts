@@ -1,6 +1,6 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
-import { CAMERA_STAGE_SIZE_CHANGE_EVENT } from "../../../core/constants";
+import { CAMERA_STAGE_SIZE_CHANGE_EVENT } from "../../core/constants";
 
 export const DEFAULT_CAMERA_STAGE_HEIGHT_RATIO = 9 / 16;
 const DOUBLE_ACTIVATION_DELAY_MS = 350;

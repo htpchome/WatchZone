@@ -63,6 +63,21 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
   }
   if (!config.mobile_data_saving) delete yaml.mobile_data_saving;
   if (config.stage_type === "full") delete yaml.stage_type;
+  if (
+    config.tap_action.action === "more-info" &&
+    Object.keys(config.tap_action).length === 1
+  )
+    delete yaml.tap_action;
+  if (
+    config.hold_action.action === "none" &&
+    Object.keys(config.hold_action).length === 1
+  )
+    delete yaml.hold_action;
+  if (
+    config.double_tap_action.action === "none" &&
+    Object.keys(config.double_tap_action).length === 1
+  )
+    delete yaml.double_tap_action;
   if (stageFlowsEqual(config.stage_flow, defaultStageFlow(config.stage_type))) {
     delete yaml.stage_flow;
   }

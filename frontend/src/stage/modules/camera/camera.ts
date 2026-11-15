@@ -29,9 +29,9 @@ import { getMediaSessionManager } from "../../../core/media-session-manager";
 import type { MediaRetentionPreference } from "../../../core/media-retention-policy";
 import { renderIcon } from "../../../ui/icons";
 import { releaseTouchFocus } from "../../../ui/control-interaction";
-import type { CameraGestureLockDetail } from "./live/presentation";
-import type { CameraOverlayVisibilityDetail } from "./live/presentation";
-import "./camera-view";
+import type { CameraGestureLockDetail } from "../../camera-presentation/live/presentation";
+import type { CameraOverlayVisibilityDetail } from "../../camera-presentation/live/presentation";
+import "../../camera-presentation/camera-view";
 import "./camera-group-view";
 import type { CameraGroupMode } from "./camera-group-view";
 import { cameraStyles } from "./camera.styles";
@@ -43,7 +43,7 @@ import {
   DEFAULT_CAMERA_STAGE_HEIGHT_RATIO,
   type CameraStageSizeChangeDetail,
   type CameraStageSize,
-} from "./stage-resize.controller";
+} from "../../camera-presentation/stage-resize.controller";
 import { CameraSlideshowController } from "./slideshow.controller";
 
 export type CameraShadowStyle = "medium" | "none" | "small";

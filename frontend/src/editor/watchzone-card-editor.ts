@@ -104,6 +104,46 @@ const LIGHT_SELECTOR = {
 } as const;
 const ICON_SELECTOR = { icon: {} } as const;
 const BOOLEAN_SELECTOR = { boolean: {} } as const;
+const TAP_ACTION_SELECTOR = {
+  ui_action: {
+    actions: [
+      "more-info",
+      "toggle",
+      "navigate",
+      "url",
+      "perform-action",
+      "assist",
+      "none",
+    ],
+    default_action: "more-info",
+  },
+} as const;
+const OPTIONAL_ACTION_SELECTOR = {
+  ui_action: {
+    actions: [
+      "more-info",
+      "toggle",
+      "navigate",
+      "url",
+      "perform-action",
+      "assist",
+      "none",
+    ],
+    default_action: "none",
+  },
+} as const;
+const INTERACTION_FORM_SCHEMA = [
+  { name: "tap_action", selector: TAP_ACTION_SELECTOR },
+  {
+    name: "",
+    type: "optional_actions",
+    flatten: true,
+    schema: [
+      { name: "hold_action", selector: OPTIONAL_ACTION_SELECTOR },
+      { name: "double_tap_action", selector: OPTIONAL_ACTION_SELECTOR },
+    ],
+  },
+] as const;
 const REVIEW_HISTORY_DAYS_SELECTOR = {
   number: {
     max: MAX_EVENT_HISTORY_DAYS,
@@ -294,6 +334,7 @@ export class CardEditor extends LitElement {
   }
 
   protected render() {
+    const minimal = this._config?.stage_type === "tiny_camera_only";
     return staticHtml`
       <${toastRegionTag}
         class="editor-status"
@@ -315,25 +356,48 @@ export class CardEditor extends LitElement {
         >
           ${this._renderStageManagement()}
         </${accordionItemTag}>
-        <${accordionItemTag}
+        ${
+          minimal
+            ? staticHtml`<${accordionItemTag}
+          heading=${this._t("editor.interactions")}
+          item-key="interactions"
+          .icon=${"tune"}
+        >
+          ${this._renderInteractionSettings()}
+        </${accordionItemTag}>`
+            : null
+        }
+        ${
+          minimal
+            ? null
+            : staticHtml`<${accordionItemTag}
           heading=${this._t("editor.live_media_player")}
           item-key="live-media-player"
           .icon=${"play"}
         >
           ${this._renderLiveMediaPlayerSettings()}
-        </${accordionItemTag}>
-        <${accordionItemTag}
+        </${accordionItemTag}>`
+        }
+        ${
+          minimal
+            ? null
+            : staticHtml`<${accordionItemTag}
           heading=${this._t("editor.recorded_media_player")}
           item-key="recorded-media-player"
           .icon=${"events"}
-        ></${accordionItemTag}>
-        <${accordionItemTag}
+        ></${accordionItemTag}>`
+        }
+        ${
+          minimal
+            ? null
+            : staticHtml`<${accordionItemTag}
           heading=${this._t("editor.reviews")}
           item-key="reviews"
           .icon=${"reviews"}
         >
           ${this._renderReviewSettings()}
-        </${accordionItemTag}>
+        </${accordionItemTag}>`
+        }
         <${accordionItemTag}
           heading=${this._t("editor.general_settings")}
           item-key="general"
@@ -341,20 +405,28 @@ export class CardEditor extends LitElement {
         >
           ${this._renderGeneralSettings()}
         </${accordionItemTag}>
-        <${accordionItemTag}
+        ${
+          minimal
+            ? null
+            : staticHtml`<${accordionItemTag}
           heading=${this._t("editor.layout_settings")}
           item-key="layout"
           .icon=${"layout"}
         >
           ${this._renderLayoutSettings()}
-        </${accordionItemTag}>
-        <${accordionItemTag}
+        </${accordionItemTag}>`
+        }
+        ${
+          minimal
+            ? null
+            : staticHtml`<${accordionItemTag}
           heading=${this._t("editor.display_settings")}
           item-key="display"
           .icon=${"tune"}
         >
           ${this._renderDisplaySettings()}
-        </${accordionItemTag}>
+        </${accordionItemTag}>`
+        }
       </${accordionTag}>
       ${this._renderCameraDialog()}
       ${this._renderRemoveCameraDialog()}
@@ -370,7 +442,7 @@ export class CardEditor extends LitElement {
       );
       return owner ? [{ camera, owner }] : [];
     });
-    return staticHtml`<div class="camera-list-heading">
+    return staticHtml`${this._config?.stage_type === "tiny_camera_only" ? html`<p class="editor-guidance">${this._t("editor.minimal_camera_first_only")}</p>` : null}<div class="camera-list-heading">
         <strong>${this._t("editor.cameras")}</strong>
         <span>${this._t("editor.camera_count", {
           count: cameras.length,
@@ -488,10 +560,9 @@ export class CardEditor extends LitElement {
         <div class="stage-type-options">
           ${this._renderStageTypeOption(
             "tiny_camera_only",
-            this._t("editor.tiny_camera_only_stage"),
-            this._t("editor.tiny_camera_only_stage_description"),
+            this._t("editor.minimal_camera_stage"),
+            this._t("editor.minimal_camera_stage_description"),
             stageType,
-            true,
           )}
           ${this._renderStageTypeOption(
             "camera_only",
@@ -507,16 +578,24 @@ export class CardEditor extends LitElement {
           )}
         </div>
       </fieldset>
-      ${this._renderStageLayoutOptions(
-        "default",
-        this._t("editor.stage_layout"),
-        stageType,
-      )}
-      ${this._renderStageLayoutOptions(
-        "phone",
-        this._t("editor.mobile_stage_layout"),
-        stageType,
-      )}
+      ${
+        stageType === "tiny_camera_only"
+          ? null
+          : this._renderStageLayoutOptions(
+              "default",
+              this._t("editor.stage_layout"),
+              stageType,
+            )
+      }
+      ${
+        stageType === "tiny_camera_only"
+          ? null
+          : this._renderStageLayoutOptions(
+              "phone",
+              this._t("editor.mobile_stage_layout"),
+              stageType,
+            )
+      }
     `;
   }
 
@@ -545,6 +624,29 @@ export class CardEditor extends LitElement {
         <small>${description}</small>
       </span>
     </label>`;
+  }
+
+  private _renderInteractionSettings() {
+    const holdAction = this._config?.hold_action;
+    const doubleTapAction = this._config?.double_tap_action;
+    return html`<ha-form
+      .hass=${this._hass}
+      .data=${{
+        tap_action: this._config?.tap_action,
+        ...(holdAction?.action !== "none" ? { hold_action: holdAction } : {}),
+        ...(doubleTapAction?.action !== "none"
+          ? { double_tap_action: doubleTapAction }
+          : {}),
+      }}
+      .schema=${INTERACTION_FORM_SCHEMA}
+      .computeLabel=${(schema: { readonly name?: string }) =>
+        schema.name === "tap_action"
+          ? this._t("editor.tap_behavior")
+          : schema.name === "hold_action"
+            ? this._t("editor.hold_behavior")
+            : this._t("editor.double_tap_behavior")}
+      @value-changed=${this._handleActionsChange}
+    ></ha-form>`;
   }
 
   private _renderStageLayoutOptions(
@@ -2250,12 +2352,33 @@ export class CardEditor extends LitElement {
     const input = event.currentTarget as HTMLInputElement;
     if (!input.checked) return;
     const stageType = input.value;
-    if (stageType !== "full" && stageType !== "camera_only") return;
+    if (
+      stageType !== "full" &&
+      stageType !== "camera_only" &&
+      stageType !== "tiny_camera_only"
+    )
+      return;
     this._applyDraft(
       normalizeCardConfig({
         ...this._config,
         stage_flow: defaultStageFlow(stageType),
         stage_type: stageType,
+      }),
+      true,
+    );
+  };
+
+  private readonly _handleActionsChange = (event: ValueChangedEvent): void => {
+    if (!this._config) return;
+    if (typeof event.detail.value !== "object" || event.detail.value === null)
+      return;
+    const actions = event.detail.value as Record<string, unknown>;
+    this._applyDraft(
+      normalizeCardConfig({
+        ...this._config,
+        ...actions,
+        hold_action: actions.hold_action ?? { action: "none" },
+        double_tap_action: actions.double_tap_action ?? { action: "none" },
       }),
       true,
     );

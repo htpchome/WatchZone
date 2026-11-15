@@ -179,7 +179,7 @@ describe("watchzone-card-editor", () => {
       "camera_only",
       "full",
     ]);
-    expect(stageTypeInputs[0]?.disabled).toBe(true);
+    expect(stageTypeInputs[0]?.disabled).toBe(false);
     expect(stageTypeInputs[2]?.checked).toBe(true);
 
     const fullLayoutInputs = [
@@ -219,7 +219,48 @@ describe("watchzone-card-editor", () => {
     ]);
     expect(cameraOnlyInputs.every(({ checked }) => checked)).toBe(true);
     expect(stageItem?.textContent).toContain("Standard Camera");
-    expect(stageItem?.querySelectorAll("input:disabled")).toHaveLength(3);
+    expect(stageItem?.querySelectorAll("input:disabled")).toHaveLength(2);
+  });
+
+  it("presents the minimal camera editor flow without stage lineups or unrelated settings", async () => {
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as CardEditor;
+    editor.setConfig({
+      cameras: [{ entity_id: "camera.front" }],
+      type: CARD_TYPE,
+    });
+    document.body.append(editor);
+    await editor.updateComplete;
+
+    const stageItem = editor.shadowRoot?.querySelector<AccordionItem>(
+      `${ACCORDION_ITEM_TAG}[item-key="stage-management"]`,
+    );
+    const minimal = stageItem?.querySelector<HTMLInputElement>(
+      'input[value="tiny_camera_only"]',
+    );
+    minimal!.checked = true;
+    minimal!.dispatchEvent(new Event("change", { bubbles: true }));
+    await editor.updateComplete;
+
+    expect(stageItem?.querySelector("[data-stage-profile]")).toBeNull();
+    expect(
+      [
+        ...(editor.shadowRoot?.querySelectorAll<HTMLElement>(
+          `${ACCORDION_ITEM_TAG}[item-key]`,
+        ) ?? []),
+      ].map((item) => item.getAttribute("item-key")),
+    ).toEqual(["camera", "stage-management", "interactions", "general"]);
+    expect(editor.shadowRoot?.textContent).toContain(
+      "only the first camera listed",
+    );
+    const interactionForm = editor.shadowRoot?.querySelector<
+      HTMLElement & { data?: Record<string, unknown> }
+    >("ha-form");
+    expect(interactionForm).not.toBeNull();
+    expect(interactionForm?.data).toEqual({
+      tap_action: { action: "more-info" },
+    });
   });
 
   it("uses a compact camera accordion and saves a sanitized camera title", async () => {

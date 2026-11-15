@@ -4,6 +4,13 @@ This document defines the sizing contract between the Home Assistant card,
 camera module, and live presentation. It supplements `architecture.md`; that
 document remains authoritative for application-wide boundaries.
 
+The lightweight `minimal_camera` module is a separate Stage placeable. It owns
+one physical camera presentation, including the primary camera of an A/B pair,
+and does not load the Camera module's carousel, zoom/pan, resize, slideshow, or
+capability controls. It shares only the document-scoped live-session and audio
+controllers. Its fixed controls are mute and fullscreen, while the surrounding
+surface owns configured Home Assistant tap, hold, and double-tap actions.
+
 ## Ownership
 
 - Home Assistant owns the card's allocated grid rectangle.

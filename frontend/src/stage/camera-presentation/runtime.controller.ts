@@ -4,13 +4,16 @@ import {
   setCameraSuspended,
   subscribeCameraRuntime,
   type CameraRuntimeSnapshot,
-} from "../../../api/camera-runtime";
+} from "../../api/camera-runtime";
 import type {
   HomeAssistantApi,
   HomeAssistantConnection,
   HomeAssistantConnectionEventListener,
-} from "../../../core/home-assistant";
-import { CAMERA_RUNTIME_RESUBSCRIBE_DELAYS_MS } from "./constants";
+} from "../../core/home-assistant";
+
+const CAMERA_RUNTIME_RESUBSCRIBE_DELAYS_MS = [
+  250, 500, 1000, 2000, 4000, 8000, 16000,
+] as const;
 
 export class CameraRuntimeController implements ReactiveController {
   private _api?: HomeAssistantApi;

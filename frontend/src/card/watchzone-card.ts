@@ -233,10 +233,13 @@ export class DashboardCard extends LitElement {
       </ha-card>`;
     }
     const config = this._previewConfig ?? this._config;
+    const minimal = config.stage_type === "tiny_camera_only";
     const cardClasses = [
-      config.rounded_outer_corners === false ? "square-outer-corners" : "",
-      config.outer_shadows === false ? "no-outer-shadow" : "",
-      config.outer_padding === false ? "no-outer-padding" : "",
+      !minimal && config.rounded_outer_corners === false
+        ? "square-outer-corners"
+        : "",
+      !minimal && config.outer_shadows === false ? "no-outer-shadow" : "",
+      minimal || config.outer_padding === false ? "no-outer-padding" : "",
     ]
       .filter(Boolean)
       .join(" ");

@@ -1,8 +1,9 @@
 export const DEFAULT_FULL_STAGE_ID = "default-stage";
 export const DEFAULT_CAMERA_ONLY_STAGE_ID = "standard-camera-stage";
+export const DEFAULT_MINIMAL_CAMERA_STAGE_ID = "minimal-camera-stage";
 
 export type StageType = "camera_only" | "full" | "tiny_camera_only";
-export type AvailableStageType = Exclude<StageType, "tiny_camera_only">;
+export type AvailableStageType = StageType;
 
 export interface ConfiguredStageFlow {
   readonly default: readonly string[];
@@ -15,7 +16,9 @@ export function defaultStageFlow(
   const stageId =
     stageType === "camera_only"
       ? DEFAULT_CAMERA_ONLY_STAGE_ID
-      : DEFAULT_FULL_STAGE_ID;
+      : stageType === "tiny_camera_only"
+        ? DEFAULT_MINIMAL_CAMERA_STAGE_ID
+        : DEFAULT_FULL_STAGE_ID;
   return { default: [stageId], phone: [stageId] };
 }
 

@@ -1,0 +1,57 @@
+{
+  "id": "minimal-camera-stage",
+  "name": "Minimal Camera",
+  "revision": 0,
+  "schemaVersion": 2,
+  "stageType": "tiny_camera_only",
+  "variants": {
+    "default": {
+      "root": {
+        "children": [
+          {
+            "grid": {
+              "column": 1,
+              "columnSpan": 12,
+              "row": 1,
+              "rowSpan": 1
+            },
+            "node": {
+              "config": {},
+              "id": "minimal-camera-module",
+              "kind": "module",
+              "moduleType": "minimal_camera"
+            }
+          }
+        ],
+        "columns": 12,
+        "id": "minimal-layout-root",
+        "kind": "container",
+        "rows": ["fraction"]
+      }
+    },
+    "phone": {
+      "root": {
+        "children": [
+          {
+            "grid": {
+              "column": 1,
+              "columnSpan": 4,
+              "row": 1,
+              "rowSpan": 1
+            },
+            "node": {
+              "config": {},
+              "id": "minimal-camera-module",
+              "kind": "module",
+              "moduleType": "minimal_camera"
+            }
+          }
+        ],
+        "columns": 4,
+        "id": "minimal-layout-root",
+        "kind": "container",
+        "rows": ["fraction"]
+      }
+    }
+  }
+}

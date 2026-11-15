@@ -14,7 +14,7 @@ const homeAssistantEditorBridge = resolve(
 );
 const fullscreenCameraStyles = resolve(
   sourceRoot,
-  "stage/modules/camera/live-view.styles.ts",
+  "stage/camera-presentation/live-view.styles.ts",
 );
 const recordedVideoTransportStyles = resolve(
   sourceRoot,

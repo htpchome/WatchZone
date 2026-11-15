@@ -9,7 +9,7 @@ import type {
   HomeAssistantMessage,
 } from "../src/core/home-assistant";
 import type { CameraRuntimeSnapshot } from "../src/api/camera-runtime";
-import { CameraRuntimeController } from "../src/stage/modules/camera/runtime.controller";
+import { CameraRuntimeController } from "../src/stage/camera-presentation/runtime.controller";
 import { CAMERA_RUNTIME_RESUBSCRIBE_DELAYS_MS } from "../src/stage/modules/camera/constants";
 
 class TestHost implements ReactiveControllerHost {

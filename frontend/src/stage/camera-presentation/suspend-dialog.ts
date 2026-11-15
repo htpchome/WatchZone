@@ -1,11 +1,11 @@
 import { html, LitElement, nothing } from "lit";
 
-import { APP_NAME, CAMERA_SUSPEND_DIALOG_TAG } from "../../../core/constants";
+import { APP_NAME, CAMERA_SUSPEND_DIALOG_TAG } from "../../core/constants";
 import {
   englishLocalize,
   type LocalizeFunction,
-} from "../../../core/localization";
-import { renderIcon } from "../../../ui/icons";
+} from "../../core/localization";
+import { renderIcon } from "../../ui/icons";
 import { cameraSuspendDialogStyles } from "./suspend-dialog.styles";
 
 export interface CameraSuspendConfirmDetail {

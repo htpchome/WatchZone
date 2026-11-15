@@ -1,11 +1,11 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
-import { detectClientProfile } from "../../../../core/client-profile";
+import { detectClientProfile } from "../../../core/client-profile";
 import {
   playMediaElement,
   setMediaElementMuted,
-} from "../../../../core/media-playback";
-import { getMediaSessionManager } from "../../../../core/media-session-manager";
+} from "../../../core/media-playback";
+import { getMediaSessionManager } from "../../../core/media-session-manager";
 import type { PresentedSource } from "./session.controller";
 
 interface AudioMediaState {

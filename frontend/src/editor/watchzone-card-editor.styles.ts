@@ -16,6 +16,14 @@ export const cardEditorStyles = css`
     inline-size: 100%;
   }
 
+  .editor-guidance {
+    margin: 0 0 0.75rem;
+    padding: 0.75rem;
+    color: var(--wzc-color-text-2);
+    background: var(--wzc-color-fill-primary);
+    border-radius: var(--wzc-radius-small);
+  }
+
   ha-selector {
     display: block;
   }

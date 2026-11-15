@@ -5,8 +5,8 @@ import {
   suppressNativePictureInPicture,
   togglePictureInPicture,
 } from "../src/core/picture-in-picture";
-import type { CameraLivePresentation } from "../src/stage/modules/camera/live/presentation";
-import "../src/stage/modules/camera/live/presentation";
+import type { CameraLivePresentation } from "../src/stage/camera-presentation/live/presentation";
+import "../src/stage/camera-presentation/live/presentation";
 
 describe("camera Picture-in-Picture", () => {
   const pictureInPictureElementDescriptor = Object.getOwnPropertyDescriptor(
