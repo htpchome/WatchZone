@@ -367,6 +367,19 @@ test("uses the first real touch only to reveal hidden media controls", async ({
       "aria-pressed",
       initialPressed ?? "false",
     );
+
+    const viewportBox = await viewport.boundingBox();
+    expect(viewportBox).not.toBeNull();
+    if (!viewportBox) return;
+    const mediaSurface = card.locator("wzc-camera-live .media-surface").first();
+    const zoomX = viewportBox.x + viewportBox.width / 2;
+    const zoomY = viewportBox.y + viewportBox.height / 2;
+    await touchPage.touchscreen.tap(zoomX, zoomY);
+    await touchPage.touchscreen.tap(zoomX, zoomY);
+    await expect(mediaSurface).toHaveAttribute("style", /scale\(2\)/);
+    await touchPage.touchscreen.tap(zoomX, zoomY);
+    await touchPage.touchscreen.tap(zoomX, zoomY);
+    await expect(mediaSurface).toHaveAttribute("style", /scale\(1\)/);
     expect(errors).toEqual([]);
   } finally {
     await context.close();
@@ -4190,6 +4203,15 @@ test("keeps activity content in an independently scrolling viewport", async ({
           }),
         );
       }
+      element.dispatchEvent(
+        new MouseEvent("click", {
+          bubbles: true,
+          cancelable: true,
+          clientX: 120,
+          clientY: 80,
+          composed: true,
+        }),
+      );
     });
   await dispatchRecordedTouchTap();
   await dispatchRecordedTouchTap();

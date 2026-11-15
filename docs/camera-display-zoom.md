@@ -8,9 +8,14 @@ authoritative for application-wide boundaries.
 
 - Camera is the parent module. Display zoom is private camera presentation
   behavior under `frontend/src/stage/modules/camera/live/`.
-- The shared `MediaTouchGestureController` is the sole interpreter of media
-  touch sequences for live and recorded presentations. It classifies control
-  contact, tap, double tap, pan, and pinch before delegating transforms.
+- The shared `MediaTouchGestureController` classifies control contact,
+  completed surface taps, pan, and pinch for live and recorded presentations.
+  It does not own double-activation timing or zoom policy.
+- The shared `MediaPresentationController` is the sole coordinator of discrete
+  media activation. It normalizes completed touch taps at `pointerup` and mouse
+  activations at `click`, then applies one timing-and-distance policy before
+  delegating the zoom toggle. Browser-synthesized touch clicks affect overlay
+  visibility only and cannot activate zoom a second time.
 - The shared `MediaZoomController` exclusively owns zoom scale, bounded pan,
   pointer transforms, keyboard input, resize handling, and cleanup. It does not
   independently interpret taps.
@@ -96,8 +101,10 @@ captured at `1x`; the media captures one-finger movement only while pannable.
 
 Live and recorded video use one `MediaPresentationController` and one
 `MediaTouchGestureController` to compose zoom with transient overlay
-visibility. The following behavior is normative for every presentation using
-that controller:
+visibility. Normal release of pointer capture is not cancellation and must not
+clear a pending activation; true cancellation, drag, pinch, or control contact
+does. The following behavior is normative for every presentation using that
+controller:
 
 1. A single touch on the media surface shows hidden controls and starts the
    hide timer immediately.
@@ -108,9 +115,9 @@ that controller:
 4. Holding a touch on otherwise inactive media does not create a separate
    visibility state. The normal timer remains authoritative.
 5. Double activation zooms the media and leaves actionable controls on their
-   normal hide timer. A second double activation returns it to `1x`. The presentation
-   captures the browser `dblclick` default so a recorded video's native controls
-   cannot substitute fullscreen for WatchZone display zoom.
+   normal hide timer. A second double activation returns it to `1x`. The
+   presentation captures the browser `dblclick` default so a recorded video's
+   native controls cannot substitute fullscreen for WatchZone display zoom.
 6. Touching an overlay control activates only that control. It cannot also be
    interpreted as a media tap, double tap, pan, or pinch.
 7. Toggle controls use their explicit active state on touch and do not retain a
@@ -155,7 +162,8 @@ branch, or duplicate zoom state.
 Unit coverage must verify click/tap toggling, the nine shared touch rules,
 wheel and trackpad policy, pinch and pan bounds, media-identity reset, keyboard
 access, and the media/overlay boundary. Browser coverage must prove recorded
-double-click zoom does not enter fullscreen. Browser-visible changes require
-the Chromium, Firefox, and WebKit Playwright matrix before handoff.
+double-click zoom does not enter fullscreen and real touch input toggles both
+into and out of display zoom after pointer capture. Browser-visible changes
+require the Chromium, Firefox, and WebKit Playwright matrix before handoff.
 Physical-device validation remains required for native touch and Catalyst
 behavior.

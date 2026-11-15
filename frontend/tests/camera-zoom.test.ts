@@ -230,6 +230,44 @@ describe("camera media zoom", () => {
     controller.hostDisconnected();
   });
 
+  it("uses one completed-activation path when live overlay interaction is disabled", () => {
+    const surface = createSurface();
+    const controller = new MediaPresentationController(createHost());
+    controller.observe(surface);
+    controller.setOverlayInteractionEnabled(false);
+    connectMediaPointerEvents(surface, controller);
+
+    tap(surface, "touch");
+    tap(surface, "touch");
+
+    expect(controller.zoom.scale).toBe(2);
+    expect(controller.overlay.visible).toBe(false);
+    controller.hostDisconnected();
+  });
+
+  it("suppresses the native double-click that follows a completed click pair", () => {
+    const surface = createSurface();
+    const controller = new MediaPresentationController(createHost());
+    controller.observe(surface);
+    connectMediaPointerEvents(surface, controller);
+
+    tap(surface, "mouse");
+    tap(surface, "mouse");
+    expect(controller.zoom.scale).toBe(2);
+
+    const nativeDoubleClick = new MouseEvent("dblclick", {
+      bubbles: true,
+      cancelable: true,
+      clientX: 200,
+      clientY: 112.5,
+    });
+    surface.dispatchEvent(nativeDoubleClick);
+
+    expect(nativeDoubleClick.defaultPrevented).toBe(true);
+    expect(controller.zoom.scale).toBe(2);
+    controller.hostDisconnected();
+  });
+
   it("does not interpret a control touch as a media gesture", () => {
     const surface = createSurface();
     const button = document.createElement("button");
