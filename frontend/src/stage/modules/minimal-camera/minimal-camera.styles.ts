@@ -102,6 +102,10 @@ const minimalCameraComponentStyles = css`
     flex-direction: row-reverse;
   }
 
+  .control-menu.right .controls {
+    flex-direction: row-reverse;
+  }
+
   .controls {
     display: flex;
     gap: 0.5rem;
@@ -126,6 +130,111 @@ const minimalCameraComponentStyles = css`
 
   .control-button.round {
     border-radius: 50%;
+  }
+
+  .audio-control {
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    inline-size: var(--wzc-control-size);
+    block-size: var(--wzc-control-size);
+    min-inline-size: var(--wzc-control-size);
+    overflow: hidden;
+    color: var(--wzc-media-overlay-color);
+    background: var(--wzc-media-overlay-background);
+    border: 1px solid var(--wzc-media-overlay-border-color);
+    border-radius: var(--wzc-radius-pill);
+    box-shadow: var(--wzc-media-overlay-shadow);
+    transition: inline-size var(--wzc-media-overlay-transition-duration) ease;
+  }
+
+  .audio-control.expanded {
+    inline-size: calc(var(--wzc-control-size) + 5rem);
+  }
+
+  .control-menu.right .audio-control {
+    flex-direction: row-reverse;
+  }
+
+  .audio-control .volume-toggle {
+    flex: 0 0 var(--wzc-control-size);
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .volume-slider {
+    appearance: none;
+    box-sizing: border-box;
+    flex: 0 0 4.25rem;
+    inline-size: 4.25rem;
+    block-size: var(--wzc-control-size);
+    min-inline-size: 0;
+    margin: 0 0.5rem 0 0;
+    padding: 0;
+    opacity: 0;
+    background: transparent;
+    cursor: pointer;
+    pointer-events: none;
+    touch-action: none;
+    transition: opacity var(--wzc-media-overlay-transition-duration) ease;
+  }
+
+  .control-menu.right .volume-slider {
+    margin: 0 0 0 0.5rem;
+  }
+
+  .audio-control.expanded .volume-slider {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .volume-slider::-webkit-slider-runnable-track {
+    block-size: 0.25rem;
+    background: linear-gradient(
+      to right,
+      var(--wzc-media-volume-accent) 0%,
+      var(--wzc-media-volume-accent) var(--wzc-media-volume-progress, 100%),
+      var(--wzc-media-volume-track) var(--wzc-media-volume-progress, 100%),
+      var(--wzc-media-volume-track) 100%
+    );
+    border-radius: var(--wzc-radius-pill);
+  }
+
+  .volume-slider::-webkit-slider-thumb {
+    appearance: none;
+    inline-size: 0.8rem;
+    block-size: 0.8rem;
+    margin-block-start: -0.275rem;
+    background: var(--wzc-media-volume-accent);
+    border: 0;
+    border-radius: 50%;
+  }
+
+  .volume-slider::-moz-range-track {
+    block-size: 0.25rem;
+    background: var(--wzc-media-volume-track);
+    border: 0;
+    border-radius: var(--wzc-radius-pill);
+  }
+
+  .volume-slider::-moz-range-progress {
+    block-size: 0.25rem;
+    background: var(--wzc-media-volume-accent);
+    border-radius: var(--wzc-radius-pill);
+  }
+
+  .volume-slider::-moz-range-thumb {
+    inline-size: 0.8rem;
+    block-size: 0.8rem;
+    background: var(--wzc-media-volume-accent);
+    border: 0;
+    border-radius: 50%;
+  }
+
+  .volume-slider:focus-visible {
+    outline: 2px solid var(--wzc-color-primary);
+    outline-offset: -2px;
   }
 
   .source-control {
@@ -304,6 +413,13 @@ const minimalCameraComponentStyles = css`
   @media (hover: hover) and (pointer: fine) {
     .dialog-close:hover {
       color: var(--wzc-color-primary);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .audio-control,
+    .volume-slider {
+      transition: none;
     }
   }
 `;

@@ -18,6 +18,10 @@ controls inside that dialog derive their responsive size from the dialog rather
 than inheriting compact control geometry from the Stage placement that opened
 it. Moving the retained player from a small tile into a large dialog therefore
 restores full touch targets without changing the inline tile's compact controls.
+The minimal-camera mute control remains one stable overlay control: muted state
+is circular, while unmuting smoothly expands that same control into a pill with
+a volume slider. It collapses without replacing the button or changing the
+retained session, and respects reduced-motion preference.
 
 ## Ownership
 

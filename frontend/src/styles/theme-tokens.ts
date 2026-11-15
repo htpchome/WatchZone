@@ -273,6 +273,12 @@ export const themeTokens = css`
     --wzc-media-overlay-radius: var(--wzc-radius-small);
     --wzc-media-overlay-shadow: var(--wzc-shadow-card);
     --wzc-media-overlay-transition-duration: 140ms;
+    --wzc-media-volume-accent: var(--wzc-color-primary);
+    --wzc-media-volume-track: color-mix(
+      in srgb,
+      var(--wzc-media-overlay-color) 45%,
+      transparent
+    );
     --wzc-camera-control-size: 2.75rem;
     --wzc-camera-control-icon-size: 1.65rem;
     --wzc-live-dialog-control-size: clamp(2.25rem, 5cqi, 2.75rem);

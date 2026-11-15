@@ -2304,9 +2304,29 @@ test("keeps minimal camera actions and media controls independent", async ({
   await expect(controlMenu).toHaveCSS("border-radius", "50%");
   await controlMenu.click();
 
+  const audioControl = minimal.locator(
+    ".viewport > .control-menu .audio-control",
+  );
+  const mutedAudioWidth = await audioControl.evaluate(
+    (element) => element.getBoundingClientRect().width,
+  );
   const mute = minimal.getByRole("button", { name: "Unmute" });
   await mute.click();
   await expect(minimal.getByRole("button", { name: "Mute" })).toBeVisible();
+  await expect(audioControl).toHaveClass(/expanded/);
+  await expect(
+    minimal.getByRole("slider", { name: "Camera volume" }),
+  ).toBeVisible();
+  await expect
+    .poll(() =>
+      audioControl.evaluate((element) => element.getBoundingClientRect().width),
+    )
+    .toBeGreaterThan(mutedAudioWidth);
+  expect(
+    await audioControl.evaluate(
+      (element) => getComputedStyle(element).transitionDuration,
+    ),
+  ).not.toBe("0s");
   expect(
     await page.evaluate(
       () =>

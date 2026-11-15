@@ -473,6 +473,17 @@ export class MinimalCameraModule extends LitElement {
     this._audio.toggleUserMute();
   };
 
+  private readonly _setVolume = (event: Event): void => {
+    event.stopPropagation();
+    const input = event.currentTarget as HTMLInputElement;
+    const volume = Number(input.value);
+    this._audio.setUserVolume(volume);
+    input.style.setProperty(
+      "--wzc-media-volume-progress",
+      `${this._audio.volume * 100}%`,
+    );
+  };
+
   private readonly _downloadLiveSnapshot = async (
     event: Event,
   ): Promise<void> => {
@@ -521,23 +532,6 @@ export class MinimalCameraModule extends LitElement {
       </button>
       <div class="controls" ?hidden=${!this._controlsExpanded}>
         ${
-          controls.mute
-            ? html`<button
-                class="control-button round"
-                type="button"
-                aria-label=${
-                  this._audio.muted
-                    ? this.localize("camera.unmute")
-                    : this.localize("camera.mute")
-                }
-                @pointerdown=${this._stopControlEvent}
-                @click=${this._toggleMute}
-              >
-                ${renderIcon(this._audio.muted ? "volumeOff" : "volumeOn")}
-              </button>`
-            : nothing
-        }
-        ${
           controls.fullscreen
             ? html`<button
                 class="control-button round"
@@ -573,6 +567,42 @@ export class MinimalCameraModule extends LitElement {
               >
                 ${renderIcon("pipPopOut")}
               </button>`
+            : nothing
+        }
+        ${
+          controls.mute
+            ? html`<div
+                class=${`audio-control${this._audio.muted ? "" : " expanded"}`}
+              >
+                <button
+                  class="control-button volume-toggle"
+                  type="button"
+                  aria-label=${
+                    this._audio.muted
+                      ? this.localize("camera.unmute")
+                      : this.localize("camera.mute")
+                  }
+                  @pointerdown=${this._stopControlEvent}
+                  @click=${this._toggleMute}
+                >
+                  ${renderIcon(this._audio.muted ? "volumeOff" : "volumeOn")}
+                </button>
+                <input
+                  class="volume-slider"
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  .value=${String(this._audio.volume)}
+                  style=${`--wzc-media-volume-progress: ${this._audio.volume * 100}%`}
+                  aria-label=${this.localize("camera.volume")}
+                  aria-hidden=${String(this._audio.muted)}
+                  tabindex=${this._audio.muted ? "-1" : "0"}
+                  @pointerdown=${this._stopControlEvent}
+                  @click=${this._stopControlEvent}
+                  @input=${this._setVolume}
+                />
+              </div>`
             : nothing
         }
         ${

@@ -141,6 +141,23 @@ describe("minimal camera module", () => {
       ?.click();
     await camera.updateComplete;
     expect(controls?.hidden).toBe(false);
+    const audioControl = controls?.querySelector<HTMLElement>(".audio-control");
+    expect(audioControl?.nextElementSibling).toBe(
+      controls?.querySelector(".source-control"),
+    );
+    audioControl?.querySelector<HTMLButtonElement>(".volume-toggle")?.click();
+    await camera.updateComplete;
+    expect(audioControl?.classList.contains("expanded")).toBe(true);
+    const volume =
+      audioControl?.querySelector<HTMLInputElement>(".volume-slider");
+    if (volume) {
+      volume.value = "0.35";
+      volume.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    expect(video.volume).toBe(0.35);
+    audioControl?.querySelector<HTMLButtonElement>(".volume-toggle")?.click();
+    await camera.updateComplete;
+    expect(audioControl?.classList.contains("expanded")).toBe(false);
     const download = camera.shadowRoot?.querySelector<HTMLElement>(
       ".live-dialog-footer ha-button",
     );

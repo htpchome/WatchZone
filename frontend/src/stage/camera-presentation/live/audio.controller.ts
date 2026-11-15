@@ -43,6 +43,7 @@ export class CameraAudioController implements ReactiveController {
   private _talkAudioActive = false;
   private _talkUnmuteOverride = false;
   private _unsubscribeForcedMute?: () => void;
+  private _volume = 1;
 
   public constructor(
     private readonly _host: ReactiveControllerHost & HTMLElement,
@@ -53,6 +54,10 @@ export class CameraAudioController implements ReactiveController {
 
   public get muted(): boolean {
     return this._muted;
+  }
+
+  public get volume(): number {
+    return this._volume;
   }
 
   public hostConnected(): void {
@@ -127,12 +132,14 @@ export class CameraAudioController implements ReactiveController {
         webRtc,
         selected && selected !== "webrtc" ? true : this._muted,
       );
+      webRtc.volume = this._volume;
     }
     if (fallback) {
       setMediaElementMuted(
         fallback,
         selected === "webrtc" ? true : this._muted,
       );
+      fallback.volume = this._volume;
     }
   }
 
@@ -152,6 +159,14 @@ export class CameraAudioController implements ReactiveController {
       );
     }
     this._syncEffectiveMute(!this._desiredMuted);
+  }
+
+  public setUserVolume(volume: number): void {
+    if (!Number.isFinite(volume)) return;
+    const nextVolume = Math.max(0, Math.min(1, volume));
+    if (nextVolume === this._volume) return;
+    this._volume = nextVolume;
+    this.syncMediaState();
   }
 
   public setTalkAudioActive(active: boolean): void {

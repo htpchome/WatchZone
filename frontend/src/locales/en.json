@@ -190,6 +190,7 @@
   "camera.controls": "Camera controls",
   "camera.unmute": "Unmute camera",
   "camera.mute": "Mute camera",
+  "camera.volume": "Camera volume",
   "camera.exit_fullscreen": "Exit fullscreen",
   "camera.enter_fullscreen": "Enter fullscreen",
   "camera.exit_pip": "Exit Picture-in-Picture",

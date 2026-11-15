@@ -2,7 +2,7 @@
 
 DOMAIN = "watchzone"
 NAME = "WatchZone"
-VERSION = "0.0.4-dev.352"
+VERSION = "0.0.4-dev.353"
 
 DATA_RUNTIME = "runtime"
 
