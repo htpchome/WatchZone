@@ -41,6 +41,7 @@ export const cardPickerPreviewStyles = css`
 
   .live .camera-icon {
     font-size: clamp(2.75rem, 18cqi, 4.75rem);
+    opacity: 0.55;
   }
 
   .brand {
@@ -149,9 +150,13 @@ export const cardPickerPreviewStyles = css`
   .thumbnail {
     display: grid;
     place-items: center;
-    color: var(--wzc-event-thumbnail-placeholder-color);
+    color: var(--wzc-media-placeholder-color);
     background: var(--wzc-camera-stage);
     font-size: 1.65rem;
+  }
+
+  .thumbnail svg {
+    opacity: 0.55;
   }
 
   .metadata {

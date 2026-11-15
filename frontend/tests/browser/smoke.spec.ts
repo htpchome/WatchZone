@@ -178,20 +178,32 @@ test("renders the fixed zero-network community card picker preview", async ({
   const presentation = await preview.evaluate((element) => {
     const root = element.shadowRoot;
     const live = root?.querySelector(".live");
+    const cameraIcon = root?.querySelector(".camera-icon");
     const thumbnail = root?.querySelector(".thumbnail");
+    const thumbnailIcon = thumbnail?.querySelector("svg");
     const active = root?.querySelector(".control.active");
     const activeIcon = active?.querySelector("svg");
     return {
       activeColor: active ? getComputedStyle(active).color : "",
       activeIconFill: activeIcon ? getComputedStyle(activeIcon).fill : "",
+      cameraIconOpacity: cameraIcon ? getComputedStyle(cameraIcon).opacity : "",
+      cameraIconColor: live ? getComputedStyle(live).color : "",
       liveBackground: live ? getComputedStyle(live).backgroundColor : "",
       thumbnailBackground: thumbnail
         ? getComputedStyle(thumbnail).backgroundColor
         : "",
+      thumbnailIconOpacity: thumbnailIcon
+        ? getComputedStyle(thumbnailIcon).opacity
+        : "",
     };
   });
   expect(presentation.liveBackground).toBe("rgb(36, 36, 36)");
+  expect(presentation.cameraIconColor).toBe("rgb(98, 98, 98)");
+  expect(presentation.cameraIconOpacity).toBe("0.55");
   expect(presentation.thumbnailBackground).toBe(presentation.liveBackground);
+  expect(presentation.thumbnailIconOpacity).toBe(
+    presentation.cameraIconOpacity,
+  );
   expect(presentation.activeIconFill).toBe(presentation.activeColor);
   const heights = await page
     .locator("watchzone-card")
