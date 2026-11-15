@@ -47,8 +47,6 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
   public request?: RecordedMediaRequest;
 
   protected _active = false;
-  private _mediaResizeFrame?: number;
-  private _mediaResizeObserver?: ResizeObserver;
   private _pendingNativeCloses = 0;
   private _userPositioned = false;
   private _drag?: {
@@ -66,7 +64,6 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
     window.removeEventListener("resize", this._clampDialog);
     this._removeDocumentListeners();
     this._clearPointerInteractions();
-    this._disconnectMediaResizeObserver();
     super.disconnectedCallback();
   }
 
@@ -184,7 +181,6 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
       dialog.style.removeProperty("top");
       dialog.style.removeProperty("width");
       dialog.show();
-      this._observeMediaSurface();
       this._applyInitialSize();
       const media = this._mediaSurface();
       if (this.request?.timeline && media instanceof LitElement) {
@@ -217,7 +213,6 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
   private _finishClose(): void {
     window.removeEventListener("resize", this._clampDialog);
     this._removeDocumentListeners();
-    this._disconnectMediaResizeObserver();
     this._active = false;
     this.requestUpdate();
     this.dispatchEvent(
@@ -360,34 +355,6 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
     return this.renderRoot.querySelector<HTMLElement>(".media-surface");
   }
 
-  private _observeMediaSurface(): void {
-    this._disconnectMediaResizeObserver();
-    if (typeof ResizeObserver === "undefined") return;
-    const media = this._mediaSurface();
-    if (!media) return;
-    this._mediaResizeObserver = new ResizeObserver(() => {
-      const current = this._mediaSurface();
-      if (!current || current !== media) return;
-      if (this._mediaResizeFrame !== undefined) return;
-      this._mediaResizeFrame = requestAnimationFrame(() => {
-        this._mediaResizeFrame = undefined;
-        if (this._mediaSurface() !== media) return;
-        if (this._userPositioned) this._clampDialog();
-        else this._applyInitialSize();
-      });
-    });
-    this._mediaResizeObserver.observe(media);
-  }
-
-  private _disconnectMediaResizeObserver(): void {
-    if (this._mediaResizeFrame !== undefined) {
-      cancelAnimationFrame(this._mediaResizeFrame);
-      this._mediaResizeFrame = undefined;
-    }
-    this._mediaResizeObserver?.disconnect();
-    this._mediaResizeObserver = undefined;
-  }
-
   private _snapshotUrl(): string {
     const path = this.request?.sources[0]?.url ?? "";
     return this.api?.resolveUrl(path) ?? path;
@@ -486,7 +453,15 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
       Math.max(minMediaWidth, mediaWidth),
       maxMediaWidth,
     );
-    dialog.style.width = `${constrainedMediaWidth + horizontalChrome}px`;
+    const dialogWidth = constrainedMediaWidth + horizontalChrome;
+    const currentWidth = Number.parseFloat(dialog.style.width);
+    if (
+      Number.isFinite(currentWidth) &&
+      Math.abs(currentWidth - dialogWidth) <= 0.5
+    ) {
+      return;
+    }
+    dialog.style.width = `${dialogWidth}px`;
   }
 
   private _positionDialog(left: number, top: number): void {

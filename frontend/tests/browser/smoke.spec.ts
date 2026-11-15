@@ -4029,6 +4029,35 @@ test("keeps activity content in an independently scrolling viewport", async ({
     page.getByRole("button", { name: "Mute recorded video" }),
   ).toBeVisible();
   expect(await page.evaluate(() => document.fullscreenElement)).toBeNull();
+  const dialogBeforePan = await mediaDialog.boundingBox();
+  const viewportBeforePan = await page
+    .locator("wzc-recorded-video-player .viewport")
+    .boundingBox();
+  if (viewportBeforePan) {
+    const startX = viewportBeforePan.x + viewportBeforePan.width / 2;
+    const startY = viewportBeforePan.y + viewportBeforePan.height / 2;
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(startX + 80, startY + 40, { steps: 12 });
+    await page.mouse.up();
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    );
+  }
+  const dialogAfterPan = await mediaDialog.boundingBox();
+  const viewportAfterPan = await page
+    .locator("wzc-recorded-video-player .viewport")
+    .boundingBox();
+  expect(dialogAfterPan?.width).toBeCloseTo(dialogBeforePan?.width ?? 0, 1);
+  expect(dialogAfterPan?.height).toBeCloseTo(dialogBeforePan?.height ?? 0, 1);
+  expect(viewportAfterPan?.width).toBeCloseTo(viewportBeforePan?.width ?? 0, 1);
+  expect(viewportAfterPan?.height).toBeCloseTo(
+    viewportBeforePan?.height ?? 0,
+    1,
+  );
   expect(await dispatchRecordedDoubleClick()).toBe(true);
   await expect(recordedVideo).toHaveAttribute("style", /scale\(1\)/);
   expect(await page.evaluate(() => document.fullscreenElement)).toBeNull();

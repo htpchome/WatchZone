@@ -4,6 +4,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   CameraStageResizeController,
   CameraStageSizeEventController,
+  DEFAULT_CAMERA_STAGE_HEIGHT_RATIO,
+  type CameraStageResizeInteraction,
+  type CameraStageSize,
 } from "../src/stage/modules/camera/stage-resize.controller";
 
 function createHost(): ReactiveControllerHost {
@@ -77,13 +80,37 @@ function connectPointerEvents(
   );
 }
 
+function stubAnimationFrames(): Map<number, FrameRequestCallback> {
+  const frames = new Map<number, FrameRequestCallback>();
+  let nextFrame = 1;
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+    const frame = nextFrame++;
+    frames.set(frame, callback);
+    return frame;
+  });
+  vi.stubGlobal("cancelAnimationFrame", (frame: number) => {
+    frames.delete(frame);
+  });
+  return frames;
+}
+
+function flushAnimationFrame(frames: Map<number, FrameRequestCallback>): void {
+  const next = frames.entries().next().value;
+  if (!next) throw new Error("No animation frame is pending.");
+  const [frame, callback] = next;
+  frames.delete(frame);
+  callback(performance.now());
+}
+
 describe("camera stage resizing", () => {
   afterEach(() => {
     document.body.replaceChildren();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("reveals a 4:3 source before switching to centered crop", () => {
+    const frames = stubAnimationFrames();
     const { handle, stage } = createElements();
     const presentationScales: number[] = [];
     const controller = new CameraStageResizeController(
@@ -101,6 +128,7 @@ describe("camera stage resizing", () => {
     handle.dispatchEvent(
       pointerEvent("pointermove", { clientX: 200, clientY: 175 }),
     );
+    flushAnimationFrame(frames);
     expect(
       Number(
         stage.style.getPropertyValue("--wzc-camera-stage-runtime-aspect-ratio"),
@@ -111,21 +139,13 @@ describe("camera stage resizing", () => {
     handle.dispatchEvent(
       pointerEvent("pointermove", { clientX: 200, clientY: 200 }),
     );
+    flushAnimationFrame(frames);
     expect(controller.mediaPresentationScale).toBeCloseTo(0.8125 / 0.75);
     expect(presentationScales.at(-1)).toBeCloseTo(0.8125 / 0.75);
   });
 
   it("coalesces transient size events and preserves the final size", () => {
-    const frames = new Map<number, FrameRequestCallback>();
-    let nextFrame = 1;
-    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
-      const frame = nextFrame++;
-      frames.set(frame, callback);
-      return frame;
-    });
-    vi.stubGlobal("cancelAnimationFrame", (frame: number) => {
-      frames.delete(frame);
-    });
+    const frames = stubAnimationFrames();
     const host = Object.assign(document.createElement("div"), createHost());
     const details: unknown[] = [];
     host.addEventListener("wzc-camera-stage-size-change", (event) => {
@@ -138,9 +158,7 @@ describe("camera stage resizing", () => {
     events.update({ heightRatio: 0.7, resized: true });
     expect(details).toEqual([]);
     expect(frames.size).toBe(1);
-    const [[frame, callback]] = [...frames];
-    frames.delete(frame);
-    callback(0);
+    flushAnimationFrame(frames);
     expect(details).toEqual([
       { heightRatio: 0.7, resized: true, transient: true },
     ]);
@@ -154,7 +172,114 @@ describe("camera stage resizing", () => {
     ]);
   });
 
+  it("commits one complete presentation transaction per drag frame", () => {
+    const frames = stubAnimationFrames();
+    const { handle, stage } = createElements();
+    const interactions: CameraStageResizeInteraction[] = [];
+    const presentationScales: number[] = [];
+    const sizes: CameraStageSize[] = [];
+    const controller = new CameraStageResizeController(
+      createHost(),
+      (interaction) => interactions.push(interaction),
+      (scale) => presentationScales.push(scale),
+      (size) => sizes.push(size),
+    );
+    controller.observe(stage, handle);
+    controller.setMediaDimensions(400, 300);
+    connectPointerEvents(handle, controller);
+
+    handle.dispatchEvent(
+      pointerEvent("pointerdown", { clientX: 200, clientY: 225 }),
+    );
+    for (const clientY of [250, 300, 350]) {
+      handle.dispatchEvent(
+        pointerEvent("pointermove", { clientX: 200, clientY }),
+      );
+    }
+    controller.setSize({
+      heightRatio: DEFAULT_CAMERA_STAGE_HEIGHT_RATIO,
+      resized: false,
+    });
+
+    expect(frames.size).toBe(1);
+    expect(interactions).toEqual([{ phase: "start" }]);
+    expect(presentationScales).toEqual([]);
+    expect(sizes).toEqual([]);
+    expect(
+      stage.style.getPropertyValue("--wzc-camera-stage-runtime-aspect-ratio"),
+    ).toBe("");
+
+    flushAnimationFrame(frames);
+
+    expect(interactions).toEqual([
+      { phase: "start" },
+      { phase: "update", returnProgress: 0 },
+    ]);
+    expect(presentationScales).toHaveLength(1);
+    expect(presentationScales[0]).toBeCloseTo(0.875 / 0.75);
+    expect(sizes).toEqual([{ heightRatio: 0.875, resized: true }]);
+    expect(
+      Number(
+        stage.style.getPropertyValue("--wzc-camera-stage-runtime-aspect-ratio"),
+      ),
+    ).toBeCloseTo(1 / 0.875);
+
+    handle.dispatchEvent(
+      pointerEvent("pointermove", { clientX: 200, clientY: 375 }),
+    );
+    expect(frames.size).toBe(1);
+    handle.dispatchEvent(
+      pointerEvent("pointerup", { clientX: 200, clientY: 375 }),
+    );
+
+    expect(frames.size).toBe(0);
+    expect(sizes.at(-1)).toEqual({ heightRatio: 0.9375, resized: true });
+    expect(interactions.at(-2)).toEqual({
+      phase: "update",
+      returnProgress: 0,
+    });
+    expect(interactions.at(-1)).toEqual({ phase: "end" });
+    expect(
+      Number(
+        stage.style.getPropertyValue("--wzc-camera-stage-runtime-aspect-ratio"),
+      ),
+    ).toBeCloseTo(1 / 0.9375);
+  });
+
+  it("cancels a pending drag transaction when disconnected", () => {
+    const frames = stubAnimationFrames();
+    const { handle, stage } = createElements();
+    const interactions: CameraStageResizeInteraction[] = [];
+    const sizes: CameraStageSize[] = [];
+    const controller = new CameraStageResizeController(
+      createHost(),
+      (interaction) => interactions.push(interaction),
+      undefined,
+      (size) => sizes.push(size),
+    );
+    controller.observe(stage, handle);
+    connectPointerEvents(handle, controller);
+
+    handle.dispatchEvent(
+      pointerEvent("pointerdown", { clientX: 200, clientY: 225 }),
+    );
+    handle.dispatchEvent(
+      pointerEvent("pointermove", { clientX: 200, clientY: 300 }),
+    );
+    expect(frames.size).toBe(1);
+
+    controller.hostDisconnected();
+
+    expect(frames.size).toBe(0);
+    expect(interactions).toEqual([{ phase: "start" }, { phase: "end" }]);
+    expect(sizes).toEqual([]);
+    expect(
+      stage.style.getPropertyValue("--wzc-camera-stage-runtime-aspect-ratio"),
+    ).toBe("");
+  });
+
   it("clamps stage height between 16:9 and 1:1", () => {
+    const frames = stubAnimationFrames();
     const { handle, stage } = createElements();
     const controller = new CameraStageResizeController(createHost());
     controller.observe(stage, handle);
@@ -166,6 +291,7 @@ describe("camera stage resizing", () => {
     handle.dispatchEvent(
       pointerEvent("pointermove", { clientX: 200, clientY: 1000 }),
     );
+    flushAnimationFrame(frames);
     expect(
       stage.style.getPropertyValue("--wzc-camera-stage-runtime-aspect-ratio"),
     ).toBe("1");
@@ -173,6 +299,7 @@ describe("camera stage resizing", () => {
     handle.dispatchEvent(
       pointerEvent("pointermove", { clientX: 200, clientY: -1000 }),
     );
+    flushAnimationFrame(frames);
     expect(
       Number(
         stage.style.getPropertyValue("--wzc-camera-stage-runtime-aspect-ratio"),
@@ -206,6 +333,7 @@ describe("camera stage resizing", () => {
   });
 
   it("ends an interrupted drag without discarding the committed stage size", () => {
+    const frames = stubAnimationFrames();
     const { handle, stage } = createElements();
     const interactions: string[] = [];
     const controller = new CameraStageResizeController(
@@ -221,10 +349,11 @@ describe("camera stage resizing", () => {
     handle.dispatchEvent(
       pointerEvent("pointermove", { clientX: 200, clientY: 175 }),
     );
+    expect(frames.size).toBe(1);
+    window.dispatchEvent(new Event("pagehide"));
     const committedRatio = stage.style.getPropertyValue(
       "--wzc-camera-stage-runtime-aspect-ratio",
     );
-    window.dispatchEvent(new Event("pagehide"));
     window.dispatchEvent(new Event("pagehide"));
     handle.dispatchEvent(
       pointerEvent("pointermove", { clientX: 200, clientY: 250 }),
@@ -291,6 +420,7 @@ describe("camera stage resizing", () => {
   });
 
   it("establishes a return range when a drag begins at default height", () => {
+    const frames = stubAnimationFrames();
     const { handle, stage } = createElements();
     const interactions: Array<
       | { readonly phase: "start" }
@@ -309,9 +439,11 @@ describe("camera stage resizing", () => {
     handle.dispatchEvent(
       pointerEvent("pointermove", { clientX: 200, clientY: 325 }),
     );
+    flushAnimationFrame(frames);
     handle.dispatchEvent(
       pointerEvent("pointermove", { clientX: 200, clientY: 275 }),
     );
+    flushAnimationFrame(frames);
 
     const updates = interactions.flatMap((interaction) =>
       interaction.phase === "update" ? [interaction.returnProgress] : [],

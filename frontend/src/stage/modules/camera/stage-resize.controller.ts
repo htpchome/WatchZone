@@ -122,6 +122,7 @@ export class CameraStageSizeEventController implements ReactiveController {
 export class CameraStageResizeController implements ReactiveController {
   private _active = true;
   private _dragStart?: DragStart;
+  private _dragUpdateFrame?: number;
   private _handle?: HTMLButtonElement;
   private _heightRatio = DEFAULT_CAMERA_STAGE_HEIGHT_RATIO;
   private _interactionLifecycleListening = false;
@@ -165,6 +166,7 @@ export class CameraStageResizeController implements ReactiveController {
   }
 
   public setSize(size: CameraStageSize): void {
+    if (this._dragStart) return;
     const heightRatio = this._clampHeightRatio(size.heightRatio);
     const resized =
       size.resized && heightRatio > DEFAULT_CAMERA_STAGE_HEIGHT_RATIO;
@@ -210,6 +212,7 @@ export class CameraStageResizeController implements ReactiveController {
   }
 
   public reset(): void {
+    this._cancelDragUpdate();
     this._heightRatio = DEFAULT_CAMERA_STAGE_HEIGHT_RATIO;
     this._resized = false;
     this._finishDrag();
@@ -220,6 +223,7 @@ export class CameraStageResizeController implements ReactiveController {
   }
 
   public hostDisconnected(): void {
+    this._cancelDragUpdate();
     this._finishDrag();
     this._clearStage(this._stage);
     this._stage = undefined;
@@ -273,12 +277,7 @@ export class CameraStageResizeController implements ReactiveController {
       this._heightRatio,
     );
     this._resized = true;
-    this._applyPresentation();
-    this._notifySizeChange();
-    this._onInteraction?.({
-      phase: "update",
-      returnProgress: this._returnProgress(),
-    });
+    this._scheduleDragUpdate();
     event.preventDefault();
   };
 
@@ -392,6 +391,7 @@ export class CameraStageResizeController implements ReactiveController {
   private _finishDrag(): void {
     const interactionActive = this._dragStart !== undefined;
     const pointerId = this._dragStart?.pointerId;
+    this._flushDragUpdate();
     this._removeInteractionLifecycleListeners();
     this._dragStart = undefined;
     this._returnAnchorHeightRatio = DEFAULT_CAMERA_STAGE_HEIGHT_RATIO;
@@ -404,6 +404,32 @@ export class CameraStageResizeController implements ReactiveController {
     }
     this._stage?.classList.remove("stage-resizing");
     if (interactionActive) this._onInteraction?.({ phase: "end" });
+  }
+
+  private _scheduleDragUpdate(): void {
+    this._dragUpdateFrame ??= requestAnimationFrame(this._commitDragUpdate);
+  }
+
+  private readonly _commitDragUpdate = (): void => {
+    this._dragUpdateFrame = undefined;
+    this._applyPresentation();
+    this._notifySizeChange();
+    this._onInteraction?.({
+      phase: "update",
+      returnProgress: this._returnProgress(),
+    });
+  };
+
+  private _flushDragUpdate(): void {
+    if (this._dragUpdateFrame === undefined) return;
+    cancelAnimationFrame(this._dragUpdateFrame);
+    this._commitDragUpdate();
+  }
+
+  private _cancelDragUpdate(): void {
+    if (this._dragUpdateFrame === undefined) return;
+    cancelAnimationFrame(this._dragUpdateFrame);
+    this._dragUpdateFrame = undefined;
   }
 
   private _listenForInteractionCancellation(): void {

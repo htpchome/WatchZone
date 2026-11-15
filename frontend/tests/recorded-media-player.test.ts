@@ -45,6 +45,7 @@ describe("recorded media player", () => {
       MEDIA_SESSION_RUNTIME_KEY
     ];
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
     Reflect.deleteProperty(HTMLDialogElement.prototype, "show");
     Reflect.deleteProperty(HTMLDialogElement.prototype, "close");
   });
@@ -615,6 +616,52 @@ describe("recorded media player", () => {
     expect(dialog.style.width).toBe("600px");
     expect(dialog.style.left).toBe("");
     expect(dialog.style.top).toBe("");
+  });
+
+  it("keeps ordinary clip sizing independent from media zoom rerenders", async () => {
+    const observed: Element[] = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        public disconnect(): void {}
+
+        public observe(target: Element): void {
+          observed.push(target);
+        }
+
+        public unobserve(): void {}
+      },
+    );
+    Object.defineProperty(HTMLDialogElement.prototype, "show", {
+      configurable: true,
+      value: function (this: HTMLDialogElement) {
+        this.setAttribute("open", "");
+      },
+    });
+    const viewer = document.createElement(
+      "wzc-recorded-video-viewer",
+    ) as RecordedVideoViewer;
+    viewer.request = request;
+    document.body.append(viewer);
+    await viewer.updateComplete;
+    await vi.waitFor(() =>
+      expect(
+        viewer.shadowRoot?.querySelector("wzc-review-media-dialog"),
+      ).not.toBeNull(),
+    );
+    const container = viewer.shadowRoot?.querySelector(
+      "wzc-review-media-dialog",
+    ) as ReviewMediaDialog;
+    await container.updateComplete;
+    const player = container.shadowRoot?.querySelector(
+      "wzc-recorded-video-player",
+    ) as RecordedVideoPlayer;
+    await player.updateComplete;
+
+    expect(observed).toContain(
+      player.shadowRoot?.querySelector(".viewport") as Element,
+    );
+    expect(observed).not.toContain(player);
   });
 
   it("presents review details and switches media variants in place", async () => {
