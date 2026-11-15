@@ -3,23 +3,29 @@ import { css } from "lit";
 import { responsiveWidths } from "../../../styles/responsive-widths";
 
 export const reviewTrackingDialogStyles = css`
-  dialog {
-    overflow-x: hidden;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    touch-action: pan-y;
-    -webkit-overflow-scrolling: touch;
+  dialog[open] {
+    display: grid;
+    grid-template-rows: max-content minmax(0, 1fr);
+    overflow: hidden;
   }
 
   .tracking {
     --wzc-tracking-accent: var(--wzc-color-warning);
     display: grid;
     gap: 1rem;
+    grid-template-rows: max-content minmax(0, 1fr);
+    min-block-size: 0;
+    overflow: hidden;
     padding: 0.25rem 1rem 1rem;
   }
 
   .tracking.alert {
     --wzc-tracking-accent: var(--wzc-color-error);
+  }
+
+  .tracking-overview {
+    display: grid;
+    gap: 1rem;
   }
 
   .badges {
@@ -123,6 +129,12 @@ export const reviewTrackingDialogStyles = css`
   .objects {
     display: grid;
     gap: 1rem;
+    min-block-size: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
   }
 
   .tracked-object {

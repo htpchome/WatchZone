@@ -2801,10 +2801,11 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect(trackingMetrics).toContainText("56%");
   await expect(trackingMetrics).toContainText("0.74");
   await expect(trackingMetrics).toContainText("37,742px");
-  await trackingDialog.evaluate(
-    (dialog) =>
+  const trackingObjects = trackingDialog.locator(".objects");
+  await trackingObjects.evaluate(
+    (objects) =>
       new Promise<void>((resolve) => {
-        dialog.scrollTop = dialog.scrollHeight;
+        objects.scrollTop = objects.scrollHeight;
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
       }),
   );
@@ -2836,13 +2837,18 @@ test("keeps activity content in an independently scrolling viewport", async ({
     height: 600,
     width: trackingViewport?.width ?? 1280,
   });
-  const trackingOverflow = await trackingDialog.evaluate((dialog) => {
-    const style = getComputedStyle(dialog);
+  const trackingOverflow = await trackingObjects.evaluate((objects) => {
+    const style = getComputedStyle(objects);
+    const dialog = objects.closest("dialog");
+    if (!dialog) throw new Error("Expected tracking dialog.");
+    const dialogBounds = dialog.getBoundingClientRect();
     return {
       horizontallyContained: dialog.scrollWidth <= dialog.clientWidth,
       overflowY: style.overflowY,
-      scrollable: dialog.scrollHeight > dialog.clientHeight,
+      scrollable: objects.scrollHeight > objects.clientHeight,
       touchAction: style.touchAction,
+      viewportContained:
+        dialogBounds.top >= 0 && dialogBounds.bottom <= window.innerHeight,
     };
   });
   expect(trackingOverflow).toEqual({
@@ -2850,11 +2856,15 @@ test("keeps activity content in an independently scrolling viewport", async ({
     overflowY: "auto",
     scrollable: true,
     touchAction: "pan-y",
+    viewportContained: true,
   });
-  await trackingDialog.hover();
+  await trackingObjects.evaluate((objects) => {
+    objects.scrollTop = 0;
+  });
+  await trackingObjects.hover();
   await page.mouse.wheel(0, 400);
   await expect
-    .poll(() => trackingDialog.evaluate((dialog) => dialog.scrollTop))
+    .poll(() => trackingObjects.evaluate((objects) => objects.scrollTop))
     .toBeGreaterThan(0);
   await trackingDialog
     .locator('button[aria-label="Close tracking details"]')

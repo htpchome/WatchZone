@@ -24,6 +24,9 @@ export function centerDialogOnCard(
   );
   dialog.style.left = `${left}px`;
   dialog.style.top = `${top}px`;
+  // The dialog can grow after it opens (for example, when async details
+  // arrive). Keep that growth inside the viewport from its final position.
+  dialog.style.maxBlockSize = `max(0px, calc(100dvh - ${top + inset}px))`;
 }
 
 function composedAncestor(

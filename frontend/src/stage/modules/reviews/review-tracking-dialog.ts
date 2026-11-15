@@ -64,7 +64,6 @@ export class ReviewTrackingDialog extends LitElement {
       aria-labelledby="tracking-heading"
       @cancel=${this._close}
       @click=${this._backdropClick}
-      @scroll=${this._hideActiveEvent}
     >
       ${
         model
@@ -83,7 +82,9 @@ export class ReviewTrackingDialog extends LitElement {
                 </h2>
               </header>
               <section class=${`tracking ${model.classification}`}>
-                ${this._renderBadges(model)} ${this._renderSummary(model)}
+                <div class="tracking-overview">
+                  ${this._renderBadges(model)} ${this._renderSummary(model)}
+                </div>
                 ${this._renderContent(model)}
               </section>`
           : nothing
@@ -192,7 +193,7 @@ export class ReviewTrackingDialog extends LitElement {
         ${this.localize("reviews.tracking_empty")}
       </p>`;
     }
-    return html`<div class="objects">
+    return html`<div class="objects" @scroll=${this._hideActiveEvent}>
       ${objects.map((object) => this._renderObject(object))}
     </div>`;
   }
@@ -347,11 +348,13 @@ export class ReviewTrackingDialog extends LitElement {
   private _showEvent(eventId: string, target: HTMLElement): void {
     const dialog = this.renderRoot.querySelector("dialog");
     if (dialog) {
-      const dialogBounds = dialog.getBoundingClientRect();
+      const scrollViewport =
+        this.renderRoot.querySelector<HTMLElement>(".objects") ?? dialog;
+      const viewportBounds = scrollViewport.getBoundingClientRect();
       const targetBounds = target.getBoundingClientRect();
       this._activeEventPlacement =
-        dialogBounds.bottom - targetBounds.bottom >=
-        targetBounds.top - dialogBounds.top
+        viewportBounds.bottom - targetBounds.bottom >=
+        targetBounds.top - viewportBounds.top
           ? "below"
           : "above";
     }
