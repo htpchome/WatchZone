@@ -226,5 +226,5 @@ Reusable ordered editor tiles use a local Pointer Events/pointer-capture path
 inside the lazy editor graph. They do not rely on document-level drag matching,
 which cannot identify internal elements after Home Assistant's nested shadow
 roots retarget events. Keyboard reordering remains a first-class path and
-reduced motion removes reorder animation. The generated editor entry is
-mechanically capped at 12 KiB gzip by build validation.
+reduced motion removes reorder animation. The generated editor entry has a
+20 KiB gzip release budget with a build-validation safety margin.

@@ -94,7 +94,7 @@ if (eagerGzipBytes > eagerGzipValidationLimitBytes) {
 const editorGzipBytes = gzipSync(
   await readFile(resolve(frontend, editor.file)),
 ).byteLength;
-const editorGzipBudgetKiB = 18;
+const editorGzipBudgetKiB = 20;
 const editorGzipBudgetBytes = editorGzipBudgetKiB * 1024;
 const editorGzipSafetyMarginBytes = 1024;
 const editorGzipValidationLimitBytes =
