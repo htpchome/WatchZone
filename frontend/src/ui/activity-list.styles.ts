@@ -501,6 +501,11 @@ export const activityListStyles = css`
     display: none;
   }
 
+  .badges wzc-badge[hidden],
+  .compact-badges wzc-badge[hidden] {
+    display: none;
+  }
+
   .metadata {
     align-items: center;
     color: var(--wzc-event-secondary-color);
@@ -618,6 +623,7 @@ export const activityListStyles = css`
 
   @container (max-width: ${responsiveWidths.narrow}) {
     .analysis-title {
+      align-items: center;
       background: transparent;
       border: 0;
       block-size: 1.5rem;
@@ -627,6 +633,10 @@ export const activityListStyles = css`
       justify-content: center;
       padding: 0;
       position: absolute;
+    }
+
+    .analysis-title ha-icon {
+      --mdc-icon-size: 1.25rem;
     }
 
     .analysis-title::before {
@@ -645,13 +655,20 @@ export const activityListStyles = css`
       grid-row: 2;
       margin-block-start: 0;
     }
+
+    @media (hover: hover) {
+      .analysis-title:hover {
+        background: transparent;
+        color: var(--wzc-color-primary);
+      }
+    }
   }
 
   @container (max-width: ${responsiveWidths.compact}) {
     .tile {
       grid-template-columns:
-        var(--wzc-event-thumbnail-inline-size) minmax(0, 1fr)
-        minmax(0, 45%) 0;
+        var(--wzc-event-thumbnail-inline-size) minmax(0, max-content)
+        minmax(0, 1fr) 0;
     }
 
     .actions {
@@ -662,8 +679,8 @@ export const activityListStyles = css`
       grid-column: 2 / 4;
     }
 
-    .badges wzc-badge:nth-child(n + 4) {
-      display: none;
+    .badges wzc-badge {
+      flex: 0 0 auto;
     }
 
     .compact-badges {

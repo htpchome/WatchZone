@@ -81,7 +81,7 @@ describe("activity list media failures", () => {
     expect(retries).toHaveLength(2);
   });
 
-  it("prepares two fixed compact badge slots and collapses further labels", async () => {
+  it("renders measurable compact badge copies for width-aware allocation", async () => {
     const list = document.createElement(ACTIVITY_LIST_TAG) as ActivityList;
     list.items = [
       {
@@ -98,10 +98,17 @@ describe("activity list media failures", () => {
       8,
     );
     expect(
-      [
-        ...(list.shadowRoot?.querySelectorAll(".compact-badges wzc-badge") ??
-          []),
-      ].map((badge) => badge.textContent?.trim()),
-    ).toEqual(["Three", "+4"]);
+      list.shadowRoot?.querySelectorAll(
+        ".compact-badges wzc-badge[data-badge-index]",
+      ),
+    ).toHaveLength(8);
+    expect(
+      list.shadowRoot?.querySelectorAll(
+        ".compact-badges wzc-badge[data-badge-index]:not([hidden])",
+      ),
+    ).toHaveLength(0);
+    expect(
+      list.shadowRoot?.querySelector(".compact-badge-summary"),
+    ).not.toBeNull();
   });
 });

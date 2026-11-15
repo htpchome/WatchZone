@@ -2480,17 +2480,31 @@ test("keeps activity content in an independently scrolling viewport", async ({
   const narrowTileLayout = await analysisTitle.evaluate((element) => {
     const tile = element.closest(".tile");
     const actions = tile?.querySelector<HTMLElement>(".actions");
+    const information = tile?.querySelector<HTMLElement>(".review-info");
     const list = (element.getRootNode() as ShadowRoot).host;
-    if (!tile || !actions || !list) {
+    const analysisIcon = element.querySelector<HTMLElement>("ha-icon");
+    const informationIcon = information?.querySelector<HTMLElement>("svg");
+    if (
+      !tile ||
+      !actions ||
+      !information ||
+      !analysisIcon ||
+      !informationIcon ||
+      !list
+    ) {
       throw new Error("Expected the complete narrow activity-tile grid.");
     }
     const style = getComputedStyle(element);
     return {
       actionDisplay: getComputedStyle(actions).display,
+      analysisIconSize:
+        getComputedStyle(analysisIcon).getPropertyValue("--mdc-icon-size"),
       background: style.backgroundColor,
       borderWidth: style.borderTopWidth,
       containerWidth: list.getBoundingClientRect().width,
       height: tile.getBoundingClientRect().height,
+      informationIconSize: informationIcon.getBoundingClientRect().width,
+      informationWidth: information.getBoundingClientRect().width,
       titleDisplay: getComputedStyle(element.querySelector("span")!).display,
       width: element.getBoundingClientRect().width,
     };
@@ -2500,11 +2514,20 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(narrowTileLayout.actionDisplay).toBe("flex");
   expect(narrowTileLayout.background).toBe("rgba(0, 0, 0, 0)");
   expect(narrowTileLayout.borderWidth).toBe("0px");
+  expect(narrowTileLayout.analysisIconSize).toBe("1.25rem");
+  expect(narrowTileLayout.informationIconSize).toBeCloseTo(20, 0);
+  expect(narrowTileLayout.informationWidth).toBeCloseTo(
+    narrowTileLayout.width,
+    0,
+  );
   expect(narrowTileLayout.titleDisplay).toBe("none");
   expect(narrowTileLayout.width).toBeCloseTo(24, 0);
   expect(narrowTileLayout.height).toBeCloseTo(mediumTileLayout.height, 0);
 
   await page.setViewportSize({ height: 844, width: 495 });
+  await expect(
+    page.locator("wzc-reviews .badges wzc-badge[hidden]").first(),
+  ).toBeAttached();
   const compactTileLayout = await analysisTitle.evaluate((element) => {
     const tile = element.closest(".tile");
     const actions = tile?.querySelector<HTMLElement>(".actions");
@@ -2519,33 +2542,151 @@ test("keeps activity content in an independently scrolling viewport", async ({
     const badgeBounds = badges.getBoundingClientRect();
     const compactBounds = compactBadges.getBoundingClientRect();
     const detailBounds = details.getBoundingClientRect();
+    const primaryBadges = [
+      ...badges.querySelectorAll<HTMLElement>("wzc-badge[data-badge-index]"),
+    ];
+    const visiblePrimary = primaryBadges.filter((badge) => !badge.hidden);
+    const visibleCompact = [
+      ...compactBadges.querySelectorAll<HTMLElement>("wzc-badge:not([hidden])"),
+    ];
+    const summary = compactBadges.querySelector<HTMLElement>(
+      ".compact-badge-summary:not([hidden])",
+    );
+    const collapsedCount = Number(summary?.textContent?.trim().slice(1) ?? 0);
+    const metadata = [...details.querySelectorAll<HTMLElement>(".metadata")];
+    const reviewState = details.querySelector<HTMLElement>(".review-state");
+    const lastPrimary = visiblePrimary.at(-1);
+    const nextPrimary = primaryBadges[visiblePrimary.length];
+    let nextBadgeWidth = 0;
+    if (nextPrimary) {
+      nextPrimary.hidden = false;
+      nextBadgeWidth = nextPrimary.getBoundingClientRect().width;
+      nextPrimary.hidden = true;
+    }
+    const laneStyle = getComputedStyle(badges);
+    const laneContentEnd =
+      badgeBounds.right - (Number.parseFloat(laneStyle.paddingInlineEnd) || 0);
+    const unusedPrimaryWidth = lastPrimary
+      ? laneContentEnd - lastPrimary.getBoundingClientRect().right
+      : 0;
     return {
       actionDisplay: getComputedStyle(actions).display,
-      compactBadgeCount: compactBadges.querySelectorAll("wzc-badge").length,
+      allocatedBadgeCount:
+        visiblePrimary.length +
+        visibleCompact.filter(
+          (badge) => !badge.classList.contains("compact-badge-summary"),
+        ).length +
+        collapsedCount,
+      compactBadgeCount: visibleCompact.length,
       compactBadgesBelowPrimary: compactBounds.top >= badgeBounds.bottom,
       compactBadgesBesideDetails: compactBounds.left >= detailBounds.right,
       compactBadgesInsideTile: compactBounds.bottom <= tileBounds.bottom,
-      compactBadgeText: [...compactBadges.querySelectorAll("wzc-badge")].map(
-        (badge) => badge.textContent?.trim(),
+      compactBadgeText: visibleCompact.map((badge) =>
+        badge.textContent?.trim(),
       ),
       containerWidth: list.getBoundingClientRect().width,
+      detailsUnclipped:
+        metadata.every((row) => row.scrollWidth <= row.clientWidth + 1) &&
+        (!reviewState ||
+          reviewState.scrollWidth <= reviewState.clientWidth + 1),
       height: tile.getBoundingClientRect().height,
-      primaryBadgeCount: [...badges.querySelectorAll("wzc-badge")].filter(
-        (badge) => getComputedStyle(badge).display !== "none",
-      ).length,
+      nextBadgeWidth,
+      primaryBadgeCount: visiblePrimary.length,
       titleDisplay: getComputedStyle(element.querySelector("span")!).display,
+      totalBadgeCount: primaryBadges.length,
+      unusedPrimaryWidth,
     };
   });
   expect(compactTileLayout.containerWidth).toBeLessThanOrEqual(480);
   expect(compactTileLayout.actionDisplay).toBe("none");
-  expect(compactTileLayout.primaryBadgeCount).toBe(3);
-  expect(compactTileLayout.compactBadgeCount).toBe(2);
-  expect(compactTileLayout.compactBadgeText).toEqual(["Dog", "+2"]);
+  expect(compactTileLayout.primaryBadgeCount).toBeGreaterThan(0);
+  expect(compactTileLayout.allocatedBadgeCount).toBe(
+    compactTileLayout.totalBadgeCount,
+  );
+  expect(compactTileLayout.compactBadgeCount).toBeGreaterThan(0);
+  expect(compactTileLayout.compactBadgeText).not.toContain("");
+  expect(compactTileLayout.unusedPrimaryWidth).toBeLessThan(
+    compactTileLayout.nextBadgeWidth + 5,
+  );
   expect(compactTileLayout.compactBadgesBelowPrimary).toBe(true);
   expect(compactTileLayout.compactBadgesBesideDetails).toBe(true);
   expect(compactTileLayout.compactBadgesInsideTile).toBe(true);
+  expect(compactTileLayout.detailsUnclipped).toBe(true);
   expect(compactTileLayout.titleDisplay).toBe("none");
   expect(compactTileLayout.height).toBeCloseTo(mediumTileLayout.height, 0);
+  for (const targetWidth of [390, 375, 300]) {
+    await analysisTitle.evaluate((element, width) => {
+      const activityList = (element.getRootNode() as ShadowRoot)
+        .host as HTMLElement;
+      activityList.style.inlineSize = `${width}px`;
+    }, targetWidth);
+    await expect
+      .poll(() =>
+        analysisTitle.evaluate(
+          (element) =>
+            (element.getRootNode() as ShadowRoot).host.getBoundingClientRect()
+              .width,
+        ),
+      )
+      .toBeCloseTo(targetWidth, 0);
+    const phoneLayout = await analysisTitle.evaluate((element) => {
+      const tile = element.closest<HTMLElement>(".tile");
+      const activityList = (element.getRootNode() as ShadowRoot)
+        .host as HTMLElement;
+      const scroller = tile?.closest<HTMLElement>(".scroller");
+      const badges = tile?.querySelector<HTMLElement>(".badges");
+      const details = tile?.querySelector<HTMLElement>(".details");
+      const compactBadges = tile?.querySelector<HTMLElement>(".compact-badges");
+      if (!tile || !scroller || !badges || !details || !compactBadges) {
+        throw new Error("Expected the complete phone activity-tile grid.");
+      }
+      const primary = [
+        ...badges.querySelectorAll<HTMLElement>("wzc-badge[data-badge-index]"),
+      ];
+      const visiblePrimary = primary.filter((badge) => !badge.hidden);
+      const visibleOverflow = [
+        ...compactBadges.querySelectorAll<HTMLElement>(
+          "wzc-badge:not([hidden])",
+        ),
+      ];
+      const summary = compactBadges.querySelector<HTMLElement>(
+        ".compact-badge-summary:not([hidden])",
+      );
+      const collapsed = Number(summary?.textContent?.trim().slice(1) ?? 0);
+      const actualOverflow = visibleOverflow.filter(
+        (badge) => !badge.classList.contains("compact-badge-summary"),
+      );
+      const metadata = [...details.querySelectorAll<HTMLElement>(".metadata")];
+      const reviewState = details.querySelector<HTMLElement>(".review-state");
+      const tileBounds = tile.getBoundingClientRect();
+      const scrollerBounds = scroller.getBoundingClientRect();
+      return {
+        allocated: visiblePrimary.length + actualOverflow.length + collapsed,
+        containerWidth: activityList.getBoundingClientRect().width,
+        fixedHeight: tileBounds.height,
+        metadataUnclipped:
+          metadata.every((row) => row.scrollWidth <= row.clientWidth + 1) &&
+          (!reviewState ||
+            reviewState.scrollWidth <= reviewState.clientWidth + 1),
+        noHorizontalScroll: scroller.scrollWidth <= scroller.clientWidth + 1,
+        primaryNowrap: getComputedStyle(badges).flexWrap,
+        tileInsideScroller: tileBounds.right <= scrollerBounds.right + 1,
+        total: primary.length,
+      };
+    });
+    expect(phoneLayout.containerWidth).toBeCloseTo(targetWidth, 0);
+    expect(phoneLayout.allocated).toBe(phoneLayout.total);
+    expect(phoneLayout.fixedHeight).toBeCloseTo(mediumTileLayout.height, 0);
+    expect(phoneLayout.metadataUnclipped).toBe(true);
+    expect(phoneLayout.noHorizontalScroll).toBe(true);
+    expect(phoneLayout.primaryNowrap).toBe("nowrap");
+    expect(phoneLayout.tileInsideScroller).toBe(true);
+  }
+  await analysisTitle.evaluate((element) => {
+    const activityList = (element.getRootNode() as ShadowRoot)
+      .host as HTMLElement;
+    activityList.style.removeProperty("inline-size");
+  });
   if (originalActivityViewport) {
     await page.setViewportSize(originalActivityViewport);
   }

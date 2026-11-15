@@ -45,8 +45,12 @@ the remaining badges. Single-camera activity omits the redundant camera badge.
 
 Activity tiles keep a fixed block size and never gain height to accommodate
 badges. At medium widths the single primary badge lane spans the complete tile
-content width above its actions. At the compact width, its first three badges
-remain in that lane and two fixed overflow slots use the otherwise open space
-beside metadata. When more than two overflow badges remain, the final slot
-becomes a `+N` summary whose accessible label and title retain the collapsed
-labels. This is deliberate fixed-slot placement, not flex wrapping.
+content width above its actions. At the compact width, a single list-level
+layout pass measures the actual badge lane and keeps every badge that fits in
+that primary row. Remaining badges may use two overflow slots in the otherwise
+open space beside metadata; metadata, zone, and review state retain their
+natural usable width before those slots receive space. Labels that do not fit
+there collapse into a `+N` summary whose accessible label and title retain the
+collapsed labels. This is deliberate measured placement, not flex wrapping or
+a fixed badge count. One host observer and one animation-frame-coalesced pass
+serve the rendered list; tiles do not own individual observers.

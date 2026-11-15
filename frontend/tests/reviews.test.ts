@@ -161,10 +161,19 @@ describe("reviews module", () => {
     expect(
       [
         ...(activityRoot(module)?.querySelectorAll(
-          ".compact-badges wzc-badge",
+          ".compact-badges wzc-badge[data-badge-index]",
         ) ?? []),
       ].map(({ textContent }) => textContent?.trim()),
-    ).toEqual(["Northern Mockingbird", "+2"]);
+    ).toEqual([
+      "Person",
+      "Bird",
+      "Resident",
+      "Northern Mockingbird",
+      "American Goldfinch",
+      "Alert",
+      "Cat",
+      "Detection",
+    ]);
     expect(
       activityRoot(module)?.querySelectorAll(".thumbnail-wrap.alert"),
     ).toHaveLength(1);

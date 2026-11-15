@@ -254,9 +254,9 @@ describe("events module", () => {
       activityRoot(module)?.querySelectorAll(".metadata-icon svg"),
     ).toHaveLength(3);
     expect(
-      [...(activityRoot(module)?.querySelectorAll("wzc-badge") ?? [])].map(
-        (badge) => badge.textContent?.trim(),
-      ),
+      [
+        ...(activityRoot(module)?.querySelectorAll(".badges wzc-badge") ?? []),
+      ].map((badge) => badge.textContent?.trim()),
     ).toEqual(["Person", "Resident", "Clip"]);
     expect(
       activityRoot(module)?.querySelector<HTMLImageElement>(".thumbnail")?.src,

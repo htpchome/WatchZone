@@ -1,4 +1,4 @@
-import { html, LitElement, type TemplateResult } from "lit";
+import { html, LitElement } from "lit";
 import { repeat } from "lit/directives/repeat.js";
 import { styleMap } from "lit/directives/style-map.js";
 
@@ -6,6 +6,7 @@ import {
   ACTIVITY_LIST_INTENT_EVENT,
   ACTIVITY_LIST_TAG,
 } from "../core/constants";
+import { RESPONSIVE_WIDTHS } from "../core/responsive-widths";
 import {
   formatHomeAssistantDateKey,
   formatHomeAssistantEventDate,
@@ -121,6 +122,12 @@ interface ActivityDayGroup {
   readonly startIndex: number;
 }
 
+interface ActivityBadgeDefinition {
+  readonly color?: BadgeColor;
+  readonly label: string;
+  readonly variant?: BadgeVariant;
+}
+
 /** Shared activity-tile presentation used by independent media modules. */
 export class ActivityList extends LitElement {
   public static properties = {
@@ -157,6 +164,8 @@ export class ActivityList extends LitElement {
 
   private readonly _failedMedia = new Set<string>();
   private _activeDateKey?: string;
+  private _badgeLayoutFrame?: number;
+  private _badgeResizeObserver?: ResizeObserver;
   private _hoveredPreviewId?: string;
   private _dayHeaderHeight = 0;
   private _rowGap = 0;
@@ -182,9 +191,23 @@ export class ActivityList extends LitElement {
       }
     }
     this._scheduleVirtualWindowSync();
+    this._scheduleCompactBadgeLayout();
+  }
+
+  public connectedCallback(): void {
+    super.connectedCallback();
+    if (typeof ResizeObserver === "undefined") return;
+    this._badgeResizeObserver ??= new ResizeObserver(() =>
+      this._scheduleCompactBadgeLayout(),
+    );
+    this._badgeResizeObserver.observe(this);
   }
 
   public disconnectedCallback(): void {
+    this._badgeResizeObserver?.disconnect();
+    if (this._badgeLayoutFrame !== undefined)
+      cancelAnimationFrame(this._badgeLayoutFrame);
+    this._badgeLayoutFrame = undefined;
     if (this._virtualFrame !== undefined)
       cancelAnimationFrame(this._virtualFrame);
     this._virtualFrame = undefined;
@@ -510,7 +533,7 @@ export class ActivityList extends LitElement {
       ${
         analysisTitle
           ? html`<button
-              class="analysis-title"
+              class="analysis-title wzc-icon-button"
               type="button"
               title=${this.localize("reviews.open_ai_analysis", {
                 title: analysisTitle,
@@ -539,28 +562,18 @@ export class ActivityList extends LitElement {
     objectColors: readonly BadgeColor[],
   ) {
     if (!cameraLabel && objectLabels.length === 0 && !typeBadge) return null;
-    const badges: Array<{ label: string; template: TemplateResult }> = [];
+    const badges: ActivityBadgeDefinition[] = [];
     if (cameraLabel) {
       badges.push({
+        color: objectColors[0] ?? "neutral",
         label: cameraLabel,
-        template: html`<wzc-badge
-          color=${objectColors[0] ?? "neutral"}
-          shape="pill"
-          size="small"
-          >${cameraLabel}</wzc-badge
-        >`,
       });
     }
     objectLabels.forEach((label, index) => {
       const displayLabel = capitalizeBadgeText(label, this.locale?.language);
       badges.push({
+        color: objectColors[index + (cameraLabel ? 1 : 0)] ?? "neutral",
         label: displayLabel,
-        template: html`<wzc-badge
-          color=${objectColors[index + (cameraLabel ? 1 : 0)] ?? "neutral"}
-          shape="pill"
-          size="small"
-          >${displayLabel}</wzc-badge
-        >`,
       });
     });
     if (typeBadge) {
@@ -570,40 +583,133 @@ export class ActivityList extends LitElement {
       );
       badges.push({
         label: displayLabel,
-        template: html`<wzc-badge
-          shape="pill"
-          size="small"
-          variant=${typeBadge.variant}
-          >${displayLabel}</wzc-badge
-        >`,
-      });
-    }
-    const compactOverflow = badges.slice(3, 5);
-    if (badges.length > 5) {
-      const collapsed = badges.slice(4);
-      const collapsedLabels = collapsed.map(({ label }) => label).join(", ");
-      compactOverflow.splice(1, 1, {
-        label: collapsedLabels,
-        template: html`<wzc-badge
-          aria-label=${collapsedLabels}
-          shape="pill"
-          size="small"
-          title=${collapsedLabels}
-          variant="neutral"
-          >+${collapsed.length}</wzc-badge
-        >`,
+        variant: typeBadge.variant,
       });
     }
     return html`<div class="badges">
-        ${badges.map(({ template }) => template)}
+        ${badges.map((badge, index) => this._renderBadge(badge, index))}
       </div>
-      ${
-        compactOverflow.length > 0
-          ? html`<div class="compact-badges">
-              ${compactOverflow.map(({ template }) => template)}
-            </div>`
-          : null
-      }`;
+      <div class="compact-badges" aria-live="off">
+        ${badges.map((badge, index) => this._renderBadge(badge, index, true))}
+        <wzc-badge
+          class="compact-badge-summary"
+          hidden
+          shape="pill"
+          size="small"
+          variant="neutral"
+        ></wzc-badge>
+      </div>`;
+  }
+
+  private _renderBadge(
+    badge: ActivityBadgeDefinition,
+    index: number,
+    compactDuplicate = false,
+  ) {
+    const common = {
+      "data-badge-index": String(index),
+      hidden: compactDuplicate,
+    };
+    return badge.variant
+      ? html`<wzc-badge
+          data-badge-index=${common["data-badge-index"]}
+          ?hidden=${common.hidden}
+          shape="pill"
+          size="small"
+          variant=${badge.variant}
+          >${badge.label}</wzc-badge
+        >`
+      : html`<wzc-badge
+          color=${badge.color ?? "neutral"}
+          data-badge-index=${common["data-badge-index"]}
+          ?hidden=${common.hidden}
+          shape="pill"
+          size="small"
+          >${badge.label}</wzc-badge
+        >`;
+  }
+
+  private _scheduleCompactBadgeLayout(): void {
+    if (
+      this._badgeLayoutFrame !== undefined ||
+      typeof requestAnimationFrame === "undefined"
+    )
+      return;
+    this._badgeLayoutFrame = requestAnimationFrame(() => {
+      this._badgeLayoutFrame = undefined;
+      this._syncCompactBadgeLayout();
+    });
+  }
+
+  private _syncCompactBadgeLayout(): void {
+    const compact =
+      this.getBoundingClientRect().width <= RESPONSIVE_WIDTHS.compact;
+    for (const tile of this.renderRoot.querySelectorAll<HTMLElement>(".tile")) {
+      const lane = tile.querySelector<HTMLElement>(".badges");
+      const overflowLane = tile.querySelector<HTMLElement>(".compact-badges");
+      if (!lane || !overflowLane) continue;
+      const primary = [
+        ...lane.querySelectorAll<HTMLElement>("wzc-badge[data-badge-index]"),
+      ];
+      const duplicates = [
+        ...overflowLane.querySelectorAll<HTMLElement>(
+          "wzc-badge[data-badge-index]",
+        ),
+      ];
+      const summary = overflowLane.querySelector<HTMLElement>(
+        ".compact-badge-summary",
+      );
+      for (const badge of primary) badge.hidden = false;
+      for (const badge of duplicates) badge.hidden = true;
+      if (summary) summary.hidden = true;
+      if (!compact || primary.length === 0) continue;
+
+      const style = getComputedStyle(lane);
+      const available =
+        lane.clientWidth -
+        (Number.parseFloat(style.paddingInlineStart) || 0) -
+        (Number.parseFloat(style.paddingInlineEnd) || 0);
+      if (available <= 0) continue;
+      const gap = Number.parseFloat(style.columnGap) || 0;
+      const badgeWidths = primary.map(
+        (badge) => badge.getBoundingClientRect().width,
+      );
+      let used = 0;
+      let primaryCount = 0;
+      for (const width of badgeWidths) {
+        const next = used + (primaryCount > 0 ? gap : 0) + width;
+        if (primaryCount > 0 && next > available + 0.5) break;
+        used = next;
+        primaryCount++;
+      }
+      for (const badge of primary.slice(primaryCount)) badge.hidden = true;
+
+      const overflowCount = primary.length - primaryCount;
+      if (overflowCount <= 0) continue;
+      const secondaryAvailable = overflowLane.clientWidth;
+      const firstOverflowFits =
+        badgeWidths[primaryCount]! <= secondaryAvailable + 0.5;
+      const firstCollapsedIndex = firstOverflowFits
+        ? primaryCount + 1
+        : primaryCount;
+      if (firstOverflowFits) duplicates[primaryCount]!.hidden = false;
+      if (
+        overflowCount === 2 &&
+        badgeWidths[primaryCount + 1]! <= secondaryAvailable + 0.5
+      ) {
+        duplicates[primaryCount + 1]!.hidden = false;
+        continue;
+      }
+      const collapsed = primary.slice(firstCollapsedIndex);
+      if (collapsed.length === 0 || !summary) continue;
+      const collapsedLabels = collapsed
+        .map((badge) => badge.textContent?.trim())
+        .filter((label): label is string => Boolean(label));
+      summary.textContent = `+${collapsed.length}`;
+      summary.title = collapsedLabels.join(", ");
+      summary.setAttribute("aria-label", collapsedLabels.join(", "));
+      summary.hidden = false;
+    }
   }
 
   private _renderDetails(item: ActivityListItem, start: Date) {
