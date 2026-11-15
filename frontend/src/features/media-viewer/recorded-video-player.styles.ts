@@ -53,9 +53,11 @@ export const recordedVideoPlayerStyles = css`
     inline-size: 100%;
     max-block-size: 100%;
     object-fit: contain;
+    pointer-events: none;
     position: absolute;
     transform-origin: center;
     transition: transform var(--wzc-zoom-transition-duration) ease;
+    user-select: none;
   }
 
   video.interacting {

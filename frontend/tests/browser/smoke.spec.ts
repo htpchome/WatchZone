@@ -3843,11 +3843,13 @@ test("keeps activity content in an independently scrolling viewport", async ({
     .not.toBe("rgba(0, 0, 0, 0)");
   await expect(modalClose).toHaveCSS("color", modalCloseColor);
   const recordedVideo = page.locator("wzc-recorded-video-player video");
+  const recordedViewport = page.locator("wzc-recorded-video-player .viewport");
   const recordedMediaSurface = recordedVideo;
   await expect(recordedVideo).not.toHaveAttribute("controls", "");
   await expect(recordedVideo).toHaveAttribute("autoplay", "");
   await expect(recordedVideo).toHaveAttribute("muted", "");
   await expect(recordedVideo).toHaveAttribute("playsinline", "");
+  await expect(recordedVideo).toHaveCSS("pointer-events", "none");
   await recordedVideo.evaluate((element) =>
     element.dispatchEvent(
       new CustomEvent("wzc-recorded-media-error", {
@@ -4172,7 +4174,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect(recordedMediaSurface).toHaveAttribute("style", /scale\(1\)/);
   expect(await page.evaluate(() => document.fullscreenElement)).toBeNull();
   const dispatchRecordedTouchTap = (): Promise<void> =>
-    recordedVideo.evaluate((element) => {
+    recordedViewport.evaluate((element) => {
       const pointerId = Number(element.dataset.testTouchPointer ?? "20") + 1;
       element.dataset.testTouchPointer = String(pointerId);
       for (const type of ["pointerdown", "pointerup"] as const) {
