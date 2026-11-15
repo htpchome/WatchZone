@@ -154,8 +154,9 @@ export class DashboardCard extends LitElement {
   }
 
   public connectedCallback(): void {
-    super.connectedCallback();
     this._cardPickerPreview = isHomeAssistantCardPickerPreview(this);
+    this.classList.toggle("card-picker-preview-host", this._cardPickerPreview);
+    super.connectedCallback();
     if (this._cardPickerPreview) {
       this._cardPickerPreviewLoad ??= import("./card-picker-preview").then(
         () => undefined,

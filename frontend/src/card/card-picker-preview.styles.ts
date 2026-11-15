@@ -5,7 +5,7 @@ export const cardPickerPreviewStyles = css`
     display: block;
     box-sizing: border-box;
     inline-size: 100%;
-    block-size: 100%;
+    block-size: auto;
     min-inline-size: 0;
     color: var(--wzc-color-text-1);
     font-family: var(--wzc-font-family);
@@ -20,12 +20,12 @@ export const cardPickerPreviewStyles = css`
   .preview {
     box-sizing: border-box;
     display: grid;
-    grid-template-rows: auto auto auto auto 7.15rem;
+    grid-template-rows: auto auto auto auto auto;
     align-content: start;
     gap: 0.35rem;
-    block-size: 100%;
+    block-size: auto;
     min-block-size: 0;
-    padding: 0.55rem 0.55rem 0.1rem;
+    padding: 0.55rem;
   }
 
   .live {
@@ -136,6 +136,7 @@ export const cardPickerPreviewStyles = css`
     display: grid;
     grid-auto-rows: 4.5rem;
     gap: 0.35rem;
+    block-size: calc(4.5rem + 0.35rem + 4.5rem + 0.35rem + 2.25rem);
     min-block-size: 0;
     overflow: hidden;
   }

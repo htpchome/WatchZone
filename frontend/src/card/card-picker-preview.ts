@@ -71,6 +71,11 @@ export class CardPickerPreview extends LitElement {
             this.localize("reviews.detection"),
             `2:31 PM · ${this.localize("picker.driveway")}`,
           )}
+          ${this._tile(
+            this.localize("picker.person"),
+            this.localize("reviews.detection"),
+            `2:28 PM · ${this.localize("picker.front_door")}`,
+          )}
         </div>
       </div>
     `;

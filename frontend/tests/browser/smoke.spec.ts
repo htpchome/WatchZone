@@ -154,12 +154,16 @@ test("renders the fixed zero-network community card picker preview", async ({
     };
     const config = Card.getStubConfig(hass) as Record<string, unknown>;
     const picker = document.createElement("hui-card-picker");
+    picker.style.display = "block";
+    picker.style.inlineSize = "18rem";
+    picker.style.blockSize = "45rem";
     const root = picker.attachShadow({ mode: "open" });
     const card = document.createElement("watchzone-card") as HTMLElement & {
       hass: unknown;
       setConfig(value: unknown): void;
     };
-    card.style.inlineSize = "18rem";
+    card.style.inlineSize = "100%";
+    card.style.blockSize = "100%";
     card.setConfig({ type: "custom:watchzone-card", ...config });
     root.append(card);
     document.body.replaceChildren(picker);
@@ -174,7 +178,7 @@ test("renders the fixed zero-network community card picker preview", async ({
   await expect(preview.locator(".camera-name")).toHaveCount(2);
   await expect(preview.locator(".module-controls .control")).toHaveCount(3);
   await expect(preview.locator(".accessories .control")).toHaveCount(4);
-  await expect(preview.locator(".tile")).toHaveCount(2);
+  await expect(preview.locator(".tile")).toHaveCount(3);
   await expect(page.locator("watchzone-card .shell")).toHaveCount(0);
   const presentation = await preview.evaluate((element) => {
     const root = element.shadowRoot;
@@ -211,18 +215,51 @@ test("renders the fixed zero-network community card picker preview", async ({
     return width / height;
   });
   expect(liveRatio).toBeCloseTo(16 / 9, 2);
-  const bottomInset = await preview.evaluate((element) => {
+  const geometry = await page.locator("watchzone-card").evaluate((element) => {
     const root = element.shadowRoot;
-    const previewBottom = root
+    const shell = root?.querySelector("ha-card")?.getBoundingClientRect();
+    const previewElement = root?.querySelector(
+      "wzc-card-picker-preview",
+    ) as HTMLElement | null;
+    const previewRoot = previewElement?.shadowRoot;
+    const previewRect = previewRoot
       ?.querySelector(".preview")
-      ?.getBoundingClientRect().bottom;
-    const tilesBottom = root
+      ?.getBoundingClientRect();
+    const liveRect = previewRoot
+      ?.querySelector(".live")
+      ?.getBoundingClientRect();
+    const cameraBarRect = previewRoot
+      ?.querySelector(".camera-bar")
+      ?.getBoundingClientRect();
+    const tilesRect = previewRoot
       ?.querySelector(".tiles")
-      ?.getBoundingClientRect().bottom;
-    return (previewBottom ?? 0) - (tilesBottom ?? 0);
+      ?.getBoundingClientRect();
+    const tileRects = [...(previewRoot?.querySelectorAll(".tile") ?? [])].map(
+      (tile) => tile.getBoundingClientRect(),
+    );
+    const pickerRect = (
+      element.getRootNode() as ShadowRoot
+    ).host?.getBoundingClientRect();
+    return {
+      shellBottom: shell?.bottom ?? 0,
+      shellHeight: shell?.height ?? 0,
+      previewBottom: previewRect?.bottom ?? 0,
+      previewHeight: previewRect?.height ?? 0,
+      pickerBottom: pickerRect?.bottom ?? 0,
+      liveBottom: liveRect?.bottom ?? 0,
+      cameraBarTop: cameraBarRect?.top ?? 0,
+      tilesBottom: tilesRect?.bottom ?? 0,
+      thirdTileTop: tileRects[2]?.top ?? 0,
+      thirdTileHeight: tileRects[2]?.height ?? 0,
+    };
   });
-  expect(bottomInset).toBeGreaterThanOrEqual(-8);
-  expect(bottomInset).toBeLessThanOrEqual(4);
+  expect(geometry.shellHeight).toBeCloseTo(geometry.previewHeight, 0);
+  expect(geometry.shellBottom).toBeCloseTo(geometry.previewBottom, 0);
+  expect(geometry.pickerBottom - geometry.shellBottom).toBeGreaterThan(100);
+  expect(geometry.cameraBarTop).toBeGreaterThan(geometry.liveBottom);
+  expect(
+    (geometry.tilesBottom - geometry.thirdTileTop) / geometry.thirdTileHeight,
+  ).toBeCloseTo(0.5, 1);
   const heights = await page
     .locator("watchzone-card")
     .evaluate(async (element) => {
@@ -233,7 +270,8 @@ test("renders the fixed zero-network community card picker preview", async ({
       return [before, Math.round(card?.getBoundingClientRect().height ?? 0)];
     });
   expect(heights[0]).toBeGreaterThan(300);
-  expect(heights[1]).toBe(heights[0]);
+  expect(heights[1]).toBeGreaterThan(300);
+  expect(heights[1]).toBeLessThan(heights[0]);
 });
 
 test("uses the first real touch only to reveal hidden media controls", async ({
