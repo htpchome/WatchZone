@@ -7,6 +7,8 @@ export const recordedVideoPlayerStyles = css`
     block-size: auto;
     display: block;
     inline-size: 100%;
+    min-block-size: 0;
+    min-inline-size: 0;
   }
 
   :host([recording-timeline]) {
@@ -19,6 +21,8 @@ export const recordedVideoPlayerStyles = css`
     aspect-ratio: 16 / 9;
     block-size: auto;
     inline-size: 100%;
+    min-block-size: 0;
+    min-inline-size: 0;
     overflow: hidden;
     position: relative;
     /* Match live media: vertical motion remains page scroll at 1x while the
@@ -43,11 +47,13 @@ export const recordedVideoPlayerStyles = css`
 
   video {
     background: var(--wzc-recorded-media-background);
+    inset: 0;
     display: block;
     block-size: 100%;
     inline-size: 100%;
     max-block-size: 100%;
     object-fit: contain;
+    position: absolute;
     transform-origin: center;
     transition: transform var(--wzc-zoom-transition-duration) ease;
     will-change: transform;

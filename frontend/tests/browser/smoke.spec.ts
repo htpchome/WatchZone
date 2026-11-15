@@ -4029,6 +4029,23 @@ test("keeps activity content in an independently scrolling viewport", async ({
     page.getByRole("button", { name: "Mute recorded video" }),
   ).toBeVisible();
   expect(await page.evaluate(() => document.fullscreenElement)).toBeNull();
+  const dialogBeforeManualResize = await mediaDialog.boundingBox();
+  const prePanResizeHandle = page.locator(
+    ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) .resize-handle",
+  );
+  const resizeHandleBox = await prePanResizeHandle.boundingBox();
+  if (resizeHandleBox) {
+    const resizeX = resizeHandleBox.x + resizeHandleBox.width / 2;
+    const resizeY = resizeHandleBox.y + resizeHandleBox.height / 2;
+    await page.mouse.move(resizeX, resizeY);
+    await page.mouse.down();
+    await page.mouse.move(resizeX - 48, resizeY - 27, { steps: 6 });
+    await page.mouse.up();
+  }
+  const dialogAfterManualResize = await mediaDialog.boundingBox();
+  expect(dialogAfterManualResize?.width ?? 0).toBeLessThan(
+    (dialogBeforeManualResize?.width ?? 0) - 10,
+  );
   const dialogBeforePan = await mediaDialog.boundingBox();
   const viewportBeforePan = await page
     .locator("wzc-recorded-video-player .viewport")
@@ -4039,7 +4056,6 @@ test("keeps activity content in an independently scrolling viewport", async ({
     await page.mouse.move(startX, startY);
     await page.mouse.down();
     await page.mouse.move(startX + 80, startY + 40, { steps: 12 });
-    await page.mouse.up();
     await page.evaluate(
       () =>
         new Promise<void>((resolve) =>
@@ -4047,17 +4063,21 @@ test("keeps activity content in an independently scrolling viewport", async ({
         ),
     );
   }
-  const dialogAfterPan = await mediaDialog.boundingBox();
-  const viewportAfterPan = await page
+  const dialogDuringPan = await mediaDialog.boundingBox();
+  const viewportDuringPan = await page
     .locator("wzc-recorded-video-player .viewport")
     .boundingBox();
-  expect(dialogAfterPan?.width).toBeCloseTo(dialogBeforePan?.width ?? 0, 1);
-  expect(dialogAfterPan?.height).toBeCloseTo(dialogBeforePan?.height ?? 0, 1);
-  expect(viewportAfterPan?.width).toBeCloseTo(viewportBeforePan?.width ?? 0, 1);
-  expect(viewportAfterPan?.height).toBeCloseTo(
+  expect(dialogDuringPan?.width).toBeCloseTo(dialogBeforePan?.width ?? 0, 1);
+  expect(dialogDuringPan?.height).toBeCloseTo(dialogBeforePan?.height ?? 0, 1);
+  expect(viewportDuringPan?.width).toBeCloseTo(
+    viewportBeforePan?.width ?? 0,
+    1,
+  );
+  expect(viewportDuringPan?.height).toBeCloseTo(
     viewportBeforePan?.height ?? 0,
     1,
   );
+  await page.mouse.up();
   expect(await dispatchRecordedDoubleClick()).toBe(true);
   await expect(recordedVideo).toHaveAttribute("style", /scale\(1\)/);
   expect(await page.evaluate(() => document.fullscreenElement)).toBeNull();
