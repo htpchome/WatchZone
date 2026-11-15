@@ -37,6 +37,11 @@ describe("WatchZone card configuration", () => {
       slide_advance_time: 10,
       slide_transition: "slide",
       start_alert_takeover_on: false,
+      stage_flow: {
+        default: ["default-stage"],
+        phone: ["default-stage"],
+      },
+      stage_type: "full",
       view_timelapse_on_thumbnail_hover: true,
       rounded_outer_corners: true,
       outer_shadows: true,
@@ -44,6 +49,37 @@ describe("WatchZone card configuration", () => {
       mobile_data_saving: false,
       cameras: [],
     });
+  });
+
+  it("normalizes stage type as the gatekeeper for desktop and phone flows", () => {
+    expect(normalizeCardConfig({ stage_type: "camera_only" })).toMatchObject({
+      stage_flow: {
+        default: ["standard-camera-stage"],
+        phone: ["standard-camera-stage"],
+      },
+      stage_type: "camera_only",
+    });
+    expect(
+      normalizeCardConfig({
+        stage_flow: {
+          default: ["standard-camera-stage", "future-camera-stage"],
+          phone: ["future-camera-stage", "standard-camera-stage"],
+        },
+        stage_type: "camera_only",
+      }).stage_flow,
+    ).toEqual({
+      default: ["standard-camera-stage", "future-camera-stage"],
+      phone: ["future-camera-stage", "standard-camera-stage"],
+    });
+    expect(() =>
+      normalizeCardConfig({ stage_type: "tiny_camera_only" }),
+    ).toThrow("tiny camera-only stages are not available yet");
+    expect(() => normalizeCardConfig({ stage_type: "wide" })).toThrow(
+      "stage_type must be full or camera_only",
+    );
+    expect(() =>
+      normalizeCardConfig({ stage_flow: { default: [], phone: [] } }),
+    ).toThrow("default stage flow must not be empty");
   });
 
   it("defaults PTZ overlays open and validates supported presentations", () => {

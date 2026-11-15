@@ -16,6 +16,35 @@ describe("WatchZone YAML configuration manager", () => {
     ).toEqual({ type: CARD_TYPE });
   });
 
+  it("persists the stage gate while omitting that type's default lineup", () => {
+    expect(
+      toYamlCardConfig(
+        normalizeCardConfig({
+          stage_type: "camera_only",
+          type: CARD_TYPE,
+        }),
+      ),
+    ).toEqual({ stage_type: "camera_only", type: CARD_TYPE });
+    expect(
+      toYamlCardConfig(
+        normalizeCardConfig({
+          stage_flow: {
+            default: ["standard-camera-stage", "future-camera-stage"],
+            phone: ["standard-camera-stage"],
+          },
+          stage_type: "camera_only",
+          type: CARD_TYPE,
+        }),
+      ),
+    ).toMatchObject({
+      stage_flow: {
+        default: ["standard-camera-stage", "future-camera-stage"],
+        phone: ["standard-camera-stage"],
+      },
+      stage_type: "camera_only",
+    });
+  });
+
   it("keeps non-default values and unknown HA configuration", () => {
     expect(
       toYamlCardConfig(

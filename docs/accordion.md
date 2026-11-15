@@ -30,10 +30,10 @@ application module and owns no configuration or feature state.
 - Styling consumes semantic `--wzc-accordion-*` tokens defined at the sole
   Home Assistant theme boundary.
 
-The current card editor uses six closed-by-default groups: Camera Settings,
-Live Media Player, Recorded Media Player, General Settings, Layout Settings,
-and Display Settings. Opening and closing a group is presentation state only and
-never changes dirty state or card YAML.
+The current card editor uses eight closed-by-default groups: Camera Settings,
+Stage Management, Live Media Player, Recorded Media Player, Reviews, General
+Settings, Layout Settings, and Display Settings. Opening and closing a group is
+presentation state only and never changes dirty state or card YAML.
 
 The nested camera editor initially opens Camera, then follows the same
 zero-or-one-open behavior as the main editor. Editing a compact

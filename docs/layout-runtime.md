@@ -66,18 +66,21 @@ module and component inputs without adding provider or session behavior to the
 template. User-created designs will enter through the backend catalog and the
 same validation and rendering path.
 
-Each card supplies an ordered `default` flow and an ordered `phone` flow. The
-first compatible design is the landing stage. Runtime selection can move only
-to designs already validated for the active flow. A stage may support one or
-both responsive profiles; the runtime never fabricates a missing variant.
+Each card first selects a Stage Type. The catalog adapter filters designs by
+that classification before supplying an ordered `default` flow and an ordered
+`phone` flow. The first compatible design is the landing stage. Runtime
+selection can move only to designs already validated for the active flow. A
+stage may support one or both responsive profiles; the runtime never fabricates
+a missing variant.
 
-The initial built-in template contains one stable camera module node and one
-media-list module stack whose Reviews child precedes Events and Recordings. It
-is the sole entry in both flows. Without camera input, its composition is empty
-and no camera module, activity module, provider adapter, poster, or media
-session is requested. Adding backend designs or navigation changes the catalog
-and flow,
-not the renderer.
+The built-in Full Stage template contains one stable camera module node,
+standalone camera navigation, and one media-list module stack whose Reviews
+child precedes Events and Recordings. The built-in Camera Only template contains
+only Camera while retaining Camera's normal overlay and controls slots. Each is
+the default entry in both flows for its Stage Type. Without camera input, the
+composition is empty and no camera module, activity module, provider adapter,
+poster, or media session is requested. Adding backend designs or navigation
+changes the catalog and flow, not the renderer.
 
 ## Invariants
 

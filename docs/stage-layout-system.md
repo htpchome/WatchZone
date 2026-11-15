@@ -38,16 +38,23 @@ Modules and components are independently lazy loaded. Neither imports another
 placeable. Shared behavior uses core contracts and typed context. Provider
 mechanics remain below public provider resolvers.
 
-## Version 1 schema
+## Version 2 schema
 
 A Stage Design contains a stable ID, name, schema version, optimistic revision,
-and at least one responsive variant: `default` for tablet/desktop, `phone`, or
-both. Variant presence declares where the design is eligible. Each variant
+a `stageType` classification, and at least one responsive variant: `default`
+for tablet/desktop, `phone`, or both. `stageType` is one of `full`,
+`camera_only`, or the reserved `tiny_camera_only`; the last classification is
+not yet user-selectable. Variant presence declares where the design is
+eligible. Each variant
 owns a root grid container. Grid coordinates are positive logical columns and
 rows, never CSS pixels. Each grid row declares either `fraction` sizing for
 shared remaining space or `content` sizing for intrinsic controls such as a
 standalone camera navigation bar. This keeps fixed-height cards bounded without
 assigning feature-specific layout behavior to Panel.
+
+Store loading migrates schema-one designs, which predate Stage Type, to schema
+two `full` designs. New saves and direct validation require the current schema
+and an explicit classification.
 
 Container children are placements containing one module node or one module
 stack and one grid area. A module stack contains an ordered, non-empty list of
@@ -70,15 +77,21 @@ intrinsically sized; the slot renderer, not the component, owns its position.
 The runtime emits exactly one element for each of those six areas and no
 parallel overlay-placement grid.
 
-A Stage Flow is an ordered list of Stage Design IDs for one responsive profile.
-Cards have independent `default` and `phone` flows. The first entry is the
-landing stage and later entries are navigation targets. A design may appear in
-both flows only when it supplies both variants. Flow validation rejects missing
-designs, incompatible variants, duplicate IDs, and empty flows before any
-placeable loads. Lovelace configuration stores these ordered references, never
-copies of the Stage Design documents.
+A card's Stage Type is the catalog gatekeeper. Only Stage Designs with the
+selected classification are eligible for its lineups. Changing Stage Type
+resets both responsive lineups to that type's defaults so references from the
+previous catalog cannot leak into the new one.
 
-The first built-in composition is:
+A Stage Flow is an ordered list of eligible Stage Design IDs for one responsive
+profile. Cards have independent `default` and `phone` flows. The first entry is
+the landing stage and later entries are navigation targets. A design may appear
+in both flows only when it supplies both variants. Flow validation rejects
+missing designs, incompatible variants, duplicate IDs, and empty flows before
+any placeable loads. A lineup must retain at least one selection; the editor
+cannot remove its final entry. Lovelace configuration stores these ordered
+references, never copies of the Stage Design documents.
+
+The built-in `full` composition is:
 
 ```text
 root grid
@@ -96,6 +109,11 @@ root grid
     ├── events module
     └── recordings module
 ```
+
+The built-in `camera_only` composition contains the same camera module and its
+private overlay and controls slots, but no standalone camera-navigation or
+media-list modules. Its normal camera switcher, slideshow, linked-light,
+two-way-talk, and PTZ capabilities therefore remain available when configured.
 
 Spacing between root Stage modules uses `--wzc-stage-module-gap`. It is
 independent from the outer card padding and defaults to half that padding's

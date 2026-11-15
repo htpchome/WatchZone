@@ -35,7 +35,8 @@ def _design(*, revision: int = 0) -> dict[str, object]:
         "id": "default",
         "name": "Default",
         "revision": revision,
-        "schemaVersion": 1,
+        "schemaVersion": 2,
+        "stageType": "full",
         "variants": {
             name: {
                 "root": {
@@ -69,6 +70,15 @@ def test_stage_schema_preserves_module_component_and_slot_boundaries() -> None:
     assert camera.module_type == "camera"
     assert camera.slots["overlay"][0].component_type == "ptz"
     assert design.as_json() == _design()
+
+
+def test_stage_schema_requires_a_valid_stage_type() -> None:
+    """Stage type classifies designs before responsive flows are selected."""
+    value = _design()
+    value["stageType"] = "wide"
+
+    with pytest.raises(HomeAssistantError, match="valid stage type"):
+        validate_stage_design(value)
 
 
 def test_stage_schema_preserves_optional_control_regions() -> None:
@@ -284,6 +294,26 @@ async def test_stage_store_uses_optimistic_revisions(hass: HomeAssistant) -> Non
     assert store.get("default") is saved
     with pytest.raises(StageRevisionConflict):
         await store.async_save(_design(revision=1), expected_revision=0)
+
+
+async def test_stage_store_migrates_pre_gatekeeper_designs(
+    hass: HomeAssistant,
+) -> None:
+    """Stored schema-one designs retain their former Full Stage behavior."""
+    value = _design()
+    value["schemaVersion"] = 1
+    value.pop("stageType")
+    store = StageDesignStore(hass)
+    store._store.async_load = AsyncMock(  # type: ignore[method-assign]
+        return_value={"designs": [value]}
+    )
+
+    await store.async_setup()
+
+    design = store.get("default")
+    assert design is not None
+    assert design.stage_type == "full"
+    assert design.schema_version == 2
 
 
 async def test_stage_store_serializes_competing_writes(hass: HomeAssistant) -> None:

@@ -1,0 +1,147 @@
+{
+  "id": "standard-camera-stage",
+  "name": "Standard Camera",
+  "revision": 0,
+  "schemaVersion": 2,
+  "stageType": "camera_only",
+  "variants": {
+    "default": {
+      "root": {
+        "children": [
+          {
+            "grid": {
+              "column": 1,
+              "columnSpan": 12,
+              "row": 1,
+              "rowSpan": 1
+            },
+            "node": {
+              "config": {},
+              "id": "standard-camera-module",
+              "kind": "module",
+              "moduleType": "camera",
+              "slots": {
+                "overlay": [
+                  {
+                    "componentType": "slideshow",
+                    "config": {
+                      "targetModuleId": "standard-camera-module"
+                    },
+                    "id": "standard-slideshow-component",
+                    "kind": "component",
+                    "overlayRegion": "top"
+                  },
+                  {
+                    "componentType": "camera_switcher",
+                    "config": {
+                      "targetModuleId": "standard-camera-module"
+                    },
+                    "id": "standard-camera-switcher-component",
+                    "kind": "component",
+                    "overlayRegion": "top"
+                  }
+                ],
+                "controls": [
+                  {
+                    "componentType": "light_control",
+                    "config": {},
+                    "controlRegion": "leading",
+                    "id": "standard-light-component",
+                    "kind": "component"
+                  },
+                  {
+                    "componentType": "two_way_talk",
+                    "config": {},
+                    "controlRegion": "center",
+                    "id": "standard-talk-component",
+                    "kind": "component"
+                  },
+                  {
+                    "componentType": "ptz",
+                    "config": {},
+                    "controlRegion": "trailing",
+                    "id": "standard-ptz-component",
+                    "kind": "component"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "columns": 12,
+        "id": "standard-layout-root",
+        "kind": "container",
+        "rows": ["fraction"]
+      }
+    },
+    "phone": {
+      "root": {
+        "children": [
+          {
+            "grid": {
+              "column": 1,
+              "columnSpan": 4,
+              "row": 1,
+              "rowSpan": 1
+            },
+            "node": {
+              "config": {},
+              "id": "standard-camera-module",
+              "kind": "module",
+              "moduleType": "camera",
+              "slots": {
+                "overlay": [
+                  {
+                    "componentType": "slideshow",
+                    "config": {
+                      "targetModuleId": "standard-camera-module"
+                    },
+                    "id": "standard-slideshow-component",
+                    "kind": "component",
+                    "overlayRegion": "top"
+                  },
+                  {
+                    "componentType": "camera_switcher",
+                    "config": {
+                      "targetModuleId": "standard-camera-module"
+                    },
+                    "id": "standard-camera-switcher-component",
+                    "kind": "component",
+                    "overlayRegion": "top"
+                  }
+                ],
+                "controls": [
+                  {
+                    "componentType": "light_control",
+                    "config": {},
+                    "controlRegion": "leading",
+                    "id": "standard-light-component",
+                    "kind": "component"
+                  },
+                  {
+                    "componentType": "two_way_talk",
+                    "config": {},
+                    "controlRegion": "center",
+                    "id": "standard-talk-component",
+                    "kind": "component"
+                  },
+                  {
+                    "componentType": "ptz",
+                    "config": {},
+                    "controlRegion": "trailing",
+                    "id": "standard-ptz-component",
+                    "kind": "component"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "columns": 4,
+        "id": "standard-layout-root",
+        "kind": "container",
+        "rows": ["fraction"]
+      }
+    }
+  }
+}

@@ -9,7 +9,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.storage import Store
 
 from ...const import DOMAIN
-from .models import StageDesign, validate_stage_design
+from .models import STAGE_SCHEMA_VERSION, StageDesign, validate_stage_design
 
 _STORAGE_KEY = f"{DOMAIN}.stage_designs"
 _STORAGE_VERSION = 1
@@ -37,7 +37,7 @@ class StageDesignStore:
             return
         for raw in raw_designs:
             try:
-                design = validate_stage_design(raw)
+                design = validate_stage_design(_migrate_stored_design(raw))
             except HomeAssistantError:
                 continue
             self._designs[design.id] = design
@@ -69,3 +69,10 @@ class StageDesignStore:
             )
             self._designs = next_designs
             return saved
+
+
+def _migrate_stored_design(value: object) -> object:
+    """Classify pre-gatekeeper designs as Full Stage during store loading."""
+    if not isinstance(value, dict) or value.get("schemaVersion") != 1:
+        return value
+    return {**value, "schemaVersion": STAGE_SCHEMA_VERSION, "stageType": "full"}

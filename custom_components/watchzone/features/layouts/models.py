@@ -7,7 +7,8 @@ from typing import Any, Literal, cast
 
 from homeassistant.exceptions import HomeAssistantError
 
-STAGE_SCHEMA_VERSION = 1
+STAGE_SCHEMA_VERSION = 2
+StageType = Literal["camera_only", "full", "tiny_camera_only"]
 StageSlotName = Literal["content", "controls", "footer", "overlay"]
 StageControlRegion = Literal["leading", "center", "trailing"]
 StageOverlayRegion = Literal[
@@ -100,6 +101,7 @@ class StageDesign:
     id: str
     name: str
     revision: int
+    stage_type: StageType
     variants: dict[StageVariantName, StageVariant]
     schema_version: int = STAGE_SCHEMA_VERSION
 
@@ -130,8 +132,15 @@ def validate_stage_design(value: object) -> StageDesign:
         id=_text(source.get("id"), "Stage design ID"),
         name=_text(source.get("name"), "Stage design name"),
         revision=_non_negative(source.get("revision"), "Stage revision"),
+        stage_type=_stage_type(source.get("stageType")),
         variants=validated_variants,
     )
+
+
+def _stage_type(value: object) -> StageType:
+    if value not in ("camera_only", "full", "tiny_camera_only"):
+        raise HomeAssistantError("Stage designs require a valid stage type")
+    return value
 
 
 def _variant(value: object, name: str) -> StageVariant:

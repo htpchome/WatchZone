@@ -1,5 +1,6 @@
 import type { CardConfig } from "../../core/config";
 import { cameraPresentationItems } from "../../core/camera-groups";
+import type { AvailableStageType } from "../../core/stage";
 import {
   APP_ID,
   REVIEWS_MODULE_TYPE,
@@ -26,24 +27,43 @@ import {
   type StageVariantName,
 } from "../layout";
 import defaultStageJson from "./default.json";
+import standardCameraStageJson from "./standard_camera.json";
 
 export interface BuiltInStageSet {
   readonly designs: readonly StageDesignDocument[];
   readonly flow: StageFlow;
 }
 
-const defaultTemplate = namespaceTemplate(
+export interface BuiltInStageOption {
+  readonly id: string;
+  readonly name: string;
+  readonly stageType: AvailableStageType;
+}
+
+const sourceTemplates = [
   validateStageDesign(defaultStageJson),
-);
+  validateStageDesign(standardCameraStageJson),
+] as const;
+const namespacedTemplates = sourceTemplates.map(namespaceTemplate);
+
+export function builtInStageOptions(
+  stageType: AvailableStageType,
+): readonly BuiltInStageOption[] {
+  return sourceTemplates
+    .filter((template) => template.stageType === stageType)
+    .map(({ id, name }) => ({ id, name, stageType }));
+}
 
 /** Materializes immutable frontend templates with card-scoped runtime input. */
 export function createBuiltInStageSet(config: CardConfig): BuiltInStageSet {
-  const design = hydrateTemplate(defaultTemplate, config);
+  const designs = namespacedTemplates
+    .filter((template) => template.stageType === config.stage_type)
+    .map((template) => hydrateTemplate(template, config));
   return {
-    designs: [design],
+    designs,
     flow: {
-      default: [design.id],
-      phone: [design.id],
+      default: config.stage_flow.default.map(namespacedId),
+      phone: config.stage_flow.phone.map(namespacedId),
     },
   };
 }

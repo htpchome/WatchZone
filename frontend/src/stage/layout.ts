@@ -1,4 +1,6 @@
-export const STAGE_SCHEMA_VERSION = 1;
+import type { StageType } from "../core/stage";
+
+export const STAGE_SCHEMA_VERSION = 2;
 export const PHONE_STAGE_MAX_INLINE_SIZE = 599;
 
 export type StageVariantName = "default" | "phone";
@@ -62,6 +64,7 @@ export interface StageDesignDocument {
   readonly name: string;
   readonly revision: number;
   readonly schemaVersion: typeof STAGE_SCHEMA_VERSION;
+  readonly stageType: StageType;
   readonly variants: Readonly<Partial<Record<StageVariantName, StageVariant>>>;
 }
 
@@ -98,8 +101,20 @@ export function validateStageDesign(value: unknown): StageDesignDocument {
     name: nonEmptyString(source.name, "Stage design names"),
     revision: nonNegativeInteger(source.revision, "Stage design revisions"),
     schemaVersion: STAGE_SCHEMA_VERSION,
+    stageType: validateStageType(source.stageType),
     variants: validatedVariants,
   };
+}
+
+function validateStageType(value: unknown): StageType {
+  if (
+    value !== "full" &&
+    value !== "camera_only" &&
+    value !== "tiny_camera_only"
+  ) {
+    throw new Error("Stage designs require a valid stage type.");
+  }
+  return value;
 }
 
 export function validateStageCatalog(values: readonly unknown[]): StageCatalog {

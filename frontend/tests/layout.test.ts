@@ -17,6 +17,11 @@ import {
   DEFAULT_PTZ_COMPONENT_NODE_ID,
   DEFAULT_RECORDINGS_MODULE_NODE_ID,
   DEFAULT_TALK_COMPONENT_NODE_ID,
+  STANDARD_CAMERA_LAYOUT_ROOT_NODE_ID,
+  STANDARD_CAMERA_MODULE_NODE_ID,
+  STANDARD_LIGHT_COMPONENT_NODE_ID,
+  STANDARD_PTZ_COMPONENT_NODE_ID,
+  STANDARD_TALK_COMPONENT_NODE_ID,
 } from "../src/core/constants";
 import {
   validateStageCatalog,
@@ -153,6 +158,49 @@ describe("layout composition", () => {
         hoverPreviewEnabled: true,
         targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
       },
+    ]);
+  });
+
+  it("gates the camera-only flow to the standard camera design", () => {
+    const stageSet = createBuiltInStageSet(
+      normalizeCardConfig({
+        cameras: [
+          {
+            entity_id: "camera.front",
+            lights: [{ entity_id: "light.porch" }],
+            ptz_enabled: true,
+            two_way_talk_enabled: true,
+          },
+        ],
+        stage_type: "camera_only",
+      }),
+    );
+    expect(stageSet.designs).toHaveLength(1);
+    expect(stageSet.flow).toEqual({
+      default: ["wzc:standard-camera-stage"],
+      phone: ["wzc:standard-camera-stage"],
+    });
+    const design = stageSet.designs[0];
+    expect(design?.stageType).toBe("camera_only");
+    const root = design && defaultVariant(design).root;
+    expect(root).toMatchObject({
+      id: STANDARD_CAMERA_LAYOUT_ROOT_NODE_ID,
+      rows: ["fraction"],
+    });
+    expect(root?.children).toHaveLength(1);
+    const camera = root?.children[0]?.node;
+    expect(camera).toMatchObject({
+      id: STANDARD_CAMERA_MODULE_NODE_ID,
+      kind: "module",
+      moduleType: "camera",
+    });
+    if (!camera || camera.kind !== "module") {
+      throw new Error("Expected the standard camera module.");
+    }
+    expect(camera.slots?.controls?.map(({ id }) => id)).toEqual([
+      STANDARD_LIGHT_COMPONENT_NODE_ID,
+      STANDARD_TALK_COMPONENT_NODE_ID,
+      STANDARD_PTZ_COMPONENT_NODE_ID,
     ]);
   });
 
@@ -782,7 +830,8 @@ function layoutWithModules(...ids: string[]): StageDesignDocument {
     id: "test-stage",
     name: "Test",
     revision: 0,
-    schemaVersion: 1,
+    schemaVersion: 2,
+    stageType: "full",
     variants: {
       default: variantWithNodes(...ids),
       phone: variantWithNodes(...ids),
@@ -826,7 +875,8 @@ function layoutWithStack(): StageDesignDocument {
     id: "stack-stage",
     name: "Stack",
     revision: 0,
-    schemaVersion: 1,
+    schemaVersion: 2,
+    stageType: "full",
     variants: { default: variant, phone: variant },
   };
 }

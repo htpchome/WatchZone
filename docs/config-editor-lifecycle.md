@@ -86,6 +86,14 @@ If the dirty-state context or Save boundary is unavailable, the compatibility
 path emits one public `config-changed` event with the complete draft. Typing may
 update WatchZone's soft preview, but it does not repeatedly emit that event.
 
+Stage Management follows the same semantic-control path. `stage_type` is the
+persisted master selection that filters the Stage Design choices shown for both
+responsive lineups. Changing it atomically resets `stage_flow.default` and
+`stage_flow.phone` to the selected type's defaults. Each lineup is ordered and
+must retain at least one selected design. Default Full Stage configuration
+omits both fields from YAML; the default Camera Only configuration persists
+only `stage_type: camera_only` because its implied flow is deterministic.
+
 ## 4. Soft preview updates
 
 Draft preview is a WatchZone-owned presentation path. It never mutates saved

@@ -5,6 +5,7 @@ import {
   DEFAULT_EVENT_HISTORY_DAYS,
   DEFAULT_SLIDE_ADVANCE_SECONDS,
 } from "./constants";
+import { defaultStageFlow, stageFlowsEqual } from "./stage";
 
 export interface YamlCardConfig {
   readonly type: typeof CARD_TYPE;
@@ -61,6 +62,10 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
     delete yaml.view_timelapse_on_thumbnail_hover;
   }
   if (!config.mobile_data_saving) delete yaml.mobile_data_saving;
+  if (config.stage_type === "full") delete yaml.stage_type;
+  if (stageFlowsEqual(config.stage_flow, defaultStageFlow(config.stage_type))) {
+    delete yaml.stage_flow;
+  }
   if (config.cameras.length === 0) delete yaml.cameras;
   else yaml.cameras = config.cameras.map(compactCameraConfig);
   for (const [key, value] of Object.entries(yaml)) {

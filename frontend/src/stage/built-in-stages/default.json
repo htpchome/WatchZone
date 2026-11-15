@@ -2,7 +2,8 @@
   "id": "default-stage",
   "name": "Default",
   "revision": 0,
-  "schemaVersion": 1,
+  "schemaVersion": 2,
+  "stageType": "full",
   "variants": {
     "default": {
       "root": {

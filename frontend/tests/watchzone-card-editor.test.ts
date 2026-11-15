@@ -96,6 +96,7 @@ describe("watchzone-card-editor", () => {
     ];
     expect(items.map((item) => item.heading)).toEqual([
       "Camera Settings",
+      "Stage Management",
       "Live Media Player",
       "Recorded Media Player",
       "Reviews",
@@ -103,13 +104,13 @@ describe("watchzone-card-editor", () => {
       "Layout Settings",
       "Display Settings",
     ]);
-    expect(items[1]?.childElementCount).toBe(7);
+    expect(items[2]?.childElementCount).toBe(7);
     expect(
-      items[1]?.querySelector(
+      items[2]?.querySelector(
         '[data-config-key="highlight_camera_on_activity"]',
       ),
     ).not.toBeNull();
-    const ptzControl = items[1]?.querySelector<SegmentedControl>(
+    const ptzControl = items[2]?.querySelector<SegmentedControl>(
       '[data-setting="ptz-overlay-control"]',
     );
     await ptzControl?.updateComplete;
@@ -121,7 +122,7 @@ describe("watchzone-card-editor", () => {
     expect(
       ptzControl?.shadowRoot?.querySelector('[data-value="open_in_drawer"]'),
     ).toHaveProperty("disabled", true);
-    const transitionControl = items[1]?.querySelector<SegmentedControl>(
+    const transitionControl = items[2]?.querySelector<SegmentedControl>(
       '[data-setting="slide-transition"]',
     );
     await transitionControl?.updateComplete;
@@ -130,9 +131,9 @@ describe("watchzone-card-editor", () => {
         ?.querySelector('[data-value="slide"]')
         ?.getAttribute("aria-checked"),
     ).toBe("true");
-    expect(items[2]?.childElementCount).toBe(0);
+    expect(items[3]?.childElementCount).toBe(0);
     expect(
-      items[3]?.querySelector(
+      items[4]?.querySelector(
         '[data-config-key="view_timelapse_on_thumbnail_hover"]',
       ),
     ).not.toBeNull();
@@ -151,6 +152,74 @@ describe("watchzone-card-editor", () => {
     expect(status.notices[0]).toMatchObject({
       severity: "warning",
     });
+  });
+
+  it("uses stage type as the gatekeeper for desktop and mobile stage designs", async () => {
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as CardEditor;
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    editor.setConfig({ type: CARD_TYPE });
+    document.body.append(editor);
+    await editor.updateComplete;
+
+    const stageItem = editor.shadowRoot?.querySelector<AccordionItem>(
+      `${ACCORDION_ITEM_TAG}[item-key="stage-management"]`,
+    );
+    expect(stageItem).not.toBeNull();
+
+    const stageTypeInputs = [
+      ...(stageItem?.querySelectorAll<HTMLInputElement>(
+        'input[name="stage-type"]',
+      ) ?? []),
+    ];
+    expect(stageTypeInputs.map(({ value }) => value)).toEqual([
+      "tiny_camera_only",
+      "camera_only",
+      "full",
+    ]);
+    expect(stageTypeInputs[0]?.disabled).toBe(true);
+    expect(stageTypeInputs[2]?.checked).toBe(true);
+
+    const fullLayoutInputs = [
+      ...(stageItem?.querySelectorAll<HTMLInputElement>(
+        'input[data-stage-profile="default"]',
+      ) ?? []),
+    ];
+    expect(fullLayoutInputs).toHaveLength(1);
+    expect(fullLayoutInputs[0]).toMatchObject({
+      checked: true,
+      value: "default-stage",
+    });
+
+    fullLayoutInputs[0]!.checked = false;
+    fullLayoutInputs[0]!.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(fullLayoutInputs[0]?.checked).toBe(true);
+    expect(changed).not.toHaveBeenCalled();
+
+    stageTypeInputs[1]!.checked = true;
+    stageTypeInputs[1]!.dispatchEvent(new Event("change", { bubbles: true }));
+    await editor.updateComplete;
+
+    expect(changed).toHaveBeenCalledOnce();
+    expect(changed.mock.calls[0][0].detail.config).toMatchObject({
+      stage_type: "camera_only",
+    });
+    expect(changed.mock.calls[0][0].detail.config.stage_flow).toBeUndefined();
+
+    const cameraOnlyInputs = [
+      ...(stageItem?.querySelectorAll<HTMLInputElement>(
+        "input[data-stage-profile]",
+      ) ?? []),
+    ];
+    expect(cameraOnlyInputs.map(({ value }) => value)).toEqual([
+      "standard-camera-stage",
+      "standard-camera-stage",
+    ]);
+    expect(cameraOnlyInputs.every(({ checked }) => checked)).toBe(true);
+    expect(stageItem?.textContent).toContain("Standard Camera");
+    expect(stageItem?.querySelectorAll("input:disabled")).toHaveLength(3);
   });
 
   it("uses a compact camera accordion and saves a sanitized camera title", async () => {

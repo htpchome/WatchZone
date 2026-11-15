@@ -52,6 +52,12 @@ import {
 import { LocalizationController } from "../core/localization";
 import { ThemeProfileController } from "../core/theme-profile";
 import { toYamlCardConfig, type YamlCardConfig } from "../core/yaml-config";
+import {
+  defaultStageFlow,
+  type AvailableStageType,
+  type ConfiguredStageFlow,
+} from "../core/stage";
+import { builtInStageOptions } from "../stage/built-in-stages/catalog";
 import { themeTokens } from "../styles/theme-tokens";
 import { ToastManager } from "../ui/toast-manager";
 import { iconPath, renderIcon } from "../ui/icons";
@@ -303,6 +309,13 @@ export class CardEditor extends LitElement {
           ${this._renderCameraSettings()}
         </${accordionItemTag}>
         <${accordionItemTag}
+          heading=${this._t("editor.stage_management")}
+          item-key="stage-management"
+          .icon=${"layout"}
+        >
+          ${this._renderStageManagement()}
+        </${accordionItemTag}>
+        <${accordionItemTag}
           heading=${this._t("editor.live_media_player")}
           item-key="live-media-player"
           .icon=${"play"}
@@ -465,6 +478,115 @@ export class CardEditor extends LitElement {
         this._config?.mobile_data_saving === true,
       )}
     `;
+  }
+
+  private _renderStageManagement() {
+    const stageType = this._config?.stage_type ?? "full";
+    return html`
+      <fieldset class="stage-type-setting">
+        <legend>${this._t("editor.stage_type")}</legend>
+        <div class="stage-type-options">
+          ${this._renderStageTypeOption(
+            "tiny_camera_only",
+            this._t("editor.tiny_camera_only_stage"),
+            this._t("editor.tiny_camera_only_stage_description"),
+            stageType,
+            true,
+          )}
+          ${this._renderStageTypeOption(
+            "camera_only",
+            this._t("editor.camera_only_stage"),
+            this._t("editor.camera_only_stage_description"),
+            stageType,
+          )}
+          ${this._renderStageTypeOption(
+            "full",
+            this._t("editor.full_stage"),
+            this._t("editor.full_stage_description"),
+            stageType,
+          )}
+        </div>
+      </fieldset>
+      ${this._renderStageLayoutOptions(
+        "default",
+        this._t("editor.stage_layout"),
+        stageType,
+      )}
+      ${this._renderStageLayoutOptions(
+        "phone",
+        this._t("editor.mobile_stage_layout"),
+        stageType,
+      )}
+    `;
+  }
+
+  private _renderStageTypeOption(
+    value: "camera_only" | "full" | "tiny_camera_only",
+    label: string,
+    description: string,
+    selected: AvailableStageType,
+    disabled = false,
+  ) {
+    return html`<label
+      class=${`stage-type-option${selected === value ? " selected" : ""}${
+        disabled ? " disabled" : ""
+      }`}
+    >
+      <input
+        type="radio"
+        name="stage-type"
+        value=${value}
+        .checked=${selected === value}
+        ?disabled=${disabled}
+        @change=${this._handleStageTypeChange}
+      />
+      <span class="stage-type-copy">
+        <strong>${label}</strong>
+        <small>${description}</small>
+      </span>
+    </label>`;
+  }
+
+  private _renderStageLayoutOptions(
+    profile: keyof ConfiguredStageFlow,
+    heading: string,
+    stageType: AvailableStageType,
+  ) {
+    const selected = this._config?.stage_flow[profile] ?? [];
+    return html`<fieldset class="stage-layout-setting">
+      <legend>${heading}</legend>
+      <div class="stage-layout-options">
+        ${builtInStageOptions(stageType).map(
+          (option) =>
+            html`<label
+              class=${`stage-layout-option${
+                selected.includes(option.id) ? " selected" : ""
+              }`}
+            >
+              <input
+                type="checkbox"
+                data-stage-profile=${profile}
+                value=${option.id}
+                .checked=${selected.includes(option.id)}
+                @change=${this._handleStageLayoutChange}
+              />
+              <span>${this._stageDesignLabel(option.id, option.name)}</span>
+            </label>`,
+        )}
+        <label class="stage-layout-option disabled">
+          <input type="checkbox" disabled />
+          <span>${this._t("editor.future_stage_layout")}</span>
+        </label>
+      </div>
+    </fieldset>`;
+  }
+
+  private _stageDesignLabel(id: string, fallback: string): string {
+    if (id === "default-stage") return this._t("editor.default_stage_layout");
+    if (id === "standard-camera-stage") {
+      return this._t("editor.standard_camera_stage_layout");
+    }
+    return fallback;
   }
 
   private _renderLiveMediaPlayerSettings() {
@@ -2121,6 +2243,46 @@ export class CardEditor extends LitElement {
       [key]: event.detail.value,
     };
     this._applyDraft(normalizeCardConfig(next), true);
+  };
+
+  private readonly _handleStageTypeChange = (event: Event): void => {
+    if (!this._config) return;
+    const input = event.currentTarget as HTMLInputElement;
+    if (!input.checked) return;
+    const stageType = input.value;
+    if (stageType !== "full" && stageType !== "camera_only") return;
+    this._applyDraft(
+      normalizeCardConfig({
+        ...this._config,
+        stage_flow: defaultStageFlow(stageType),
+        stage_type: stageType,
+      }),
+      true,
+    );
+  };
+
+  private readonly _handleStageLayoutChange = (event: Event): void => {
+    if (!this._config) return;
+    const input = event.currentTarget as HTMLInputElement;
+    const profile = input.dataset.stageProfile;
+    if (profile !== "default" && profile !== "phone") return;
+    const current = this._config.stage_flow[profile];
+    const next = input.checked
+      ? current.includes(input.value)
+        ? current
+        : [...current, input.value]
+      : current.filter((id) => id !== input.value);
+    if (next.length === 0) {
+      input.checked = true;
+      return;
+    }
+    this._applyDraft(
+      normalizeCardConfig({
+        ...this._config,
+        stage_flow: { ...this._config.stage_flow, [profile]: next },
+      }),
+      true,
+    );
   };
 
   private readonly _handlePtzOverlayControlChange = (

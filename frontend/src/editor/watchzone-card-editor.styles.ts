@@ -53,6 +53,149 @@ export const cardEditorStyles = css`
     line-height: var(--wzc-line-height-normal);
   }
 
+  .stage-type-setting,
+  .stage-layout-setting {
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .stage-layout-setting {
+    margin-block-start: 1rem;
+  }
+
+  .stage-type-setting legend,
+  .stage-layout-setting legend {
+    margin-block-end: 0.45rem;
+    padding: 0;
+    color: var(--wzc-color-text-1);
+    font-size: var(--wzc-font-size-small);
+    font-weight: var(--wzc-font-weight-medium);
+  }
+
+  .stage-type-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: 0.5rem;
+  }
+
+  .stage-type-option {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 0.5rem;
+    box-sizing: border-box;
+    min-block-size: 6.5rem;
+    padding: 0.65rem;
+    color: var(--wzc-color-text-1);
+    background: transparent;
+    border: 1px solid var(--wzc-color-border-control);
+    border-radius: var(--wzc-radius-medium);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .stage-type-option.selected {
+    background: var(--wzc-color-fill-primary);
+    border-color: var(--wzc-color-primary);
+  }
+
+  .stage-type-option.disabled {
+    color: var(--wzc-color-text-3);
+    cursor: not-allowed;
+  }
+
+  .stage-type-option input {
+    appearance: none;
+    box-sizing: border-box;
+    inline-size: 1rem;
+    block-size: 1rem;
+    margin: 0.05rem 0 0;
+    background: var(--wzc-color-surface);
+    border: 1px solid var(--wzc-color-border-control);
+    border-radius: 50%;
+  }
+
+  .stage-type-option input:checked {
+    background: var(--wzc-color-primary);
+    border-color: var(--wzc-color-primary);
+    box-shadow: inset 0 0 0 0.2rem var(--wzc-color-surface);
+  }
+
+  .stage-type-option input:focus-visible,
+  .stage-layout-option input:focus-visible {
+    outline: 2px solid var(--wzc-color-primary);
+    outline-offset: 2px;
+  }
+
+  .stage-type-copy {
+    display: grid;
+    gap: 0.25rem;
+    min-inline-size: 0;
+  }
+
+  .stage-type-copy strong {
+    font-size: var(--wzc-font-size-small);
+    line-height: var(--wzc-line-height-condensed);
+  }
+
+  .stage-type-copy small {
+    color: var(--wzc-color-text-2);
+    font-size: var(--wzc-font-size-small);
+    line-height: var(--wzc-line-height-normal);
+  }
+
+  .stage-type-option.disabled .stage-type-copy small {
+    color: var(--wzc-color-text-3);
+  }
+
+  .stage-layout-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .stage-layout-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-block-size: 2rem;
+    padding: 0.25rem 0.55rem;
+    color: var(--wzc-color-text-1);
+    background: transparent;
+    border: 1px solid var(--wzc-color-border-control);
+    border-radius: var(--wzc-radius-medium);
+    font-size: var(--wzc-font-size-small);
+    font-weight: var(--wzc-font-weight-medium);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .stage-layout-option.selected {
+    background: var(--wzc-color-fill-primary);
+    border-color: var(--wzc-color-primary);
+  }
+
+  .stage-layout-option.disabled {
+    color: var(--wzc-color-text-3);
+    cursor: not-allowed;
+  }
+
+  .stage-layout-option input {
+    inline-size: 1rem;
+    block-size: 1rem;
+    margin: 0;
+    accent-color: var(--wzc-color-primary);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .stage-type-option:not(.disabled):hover,
+    .stage-layout-option:not(.disabled):hover {
+      border-color: var(--wzc-color-primary);
+    }
+  }
+
   .camera-list-heading {
     display: flex;
     align-items: baseline;

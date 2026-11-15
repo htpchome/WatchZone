@@ -11,6 +11,11 @@ import {
   MAX_LIGHTS_PER_CAMERA,
 } from "./constants";
 import { normalizePlainText, sanitizePlainTextInput } from "./plain-text";
+import {
+  defaultStageFlow,
+  type AvailableStageType,
+  type ConfiguredStageFlow,
+} from "./stage";
 
 export interface LinkedLightConfig {
   readonly entity_id: string;
@@ -63,6 +68,8 @@ export interface CardConfig {
   readonly slide_transition: SlideTransition;
   readonly slide_advance_time: SlideAdvanceSeconds;
   readonly start_alert_takeover_on: boolean;
+  readonly stage_flow: ConfiguredStageFlow;
+  readonly stage_type: AvailableStageType;
   readonly view_timelapse_on_thumbnail_hover: boolean;
   readonly cameras: readonly CameraConfig[];
   readonly mobile_data_saving?: boolean;
@@ -88,6 +95,9 @@ export function normalizeCardConfig(value: unknown): CardConfig {
   if (!title) {
     throw new Error(`${APP_NAME} card title must be a non-empty string.`);
   }
+
+  const stageType = normalizeStageType(source.stage_type);
+  const stageFlow = normalizeStageFlow(source.stage_flow, stageType);
 
   for (const key of [
     "camera_bar_rounded_corners",
@@ -171,6 +181,8 @@ export function normalizeCardConfig(value: unknown): CardConfig {
   const normalized: Record<string, unknown> = {
     ...source,
     cameras,
+    stage_flow: stageFlow,
+    stage_type: stageType,
     type: CARD_TYPE,
     title,
   };
@@ -590,6 +602,53 @@ function normalizeLights(
 
 function isIconName(value: string): boolean {
   return value.length <= 128 && /^[a-z0-9_-]+:[a-z0-9-]+$/i.test(value);
+}
+
+function normalizeStageType(value: unknown): AvailableStageType {
+  if (value === undefined || value === "full") return "full";
+  if (value === "camera_only") return "camera_only";
+  if (value === "tiny_camera_only") {
+    throw new Error(
+      `${APP_NAME} tiny camera-only stages are not available yet.`,
+    );
+  }
+  throw new Error(`${APP_NAME} stage_type must be full or camera_only.`);
+}
+
+function normalizeStageFlow(
+  value: unknown,
+  stageType: AvailableStageType,
+): ConfiguredStageFlow {
+  if (value === undefined) return defaultStageFlow(stageType);
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error(`${APP_NAME} stage_flow must be an object.`);
+  }
+  const source = value as Record<string, unknown>;
+  return {
+    default: normalizeStageFlowEntries(source.default, "default"),
+    phone: normalizeStageFlowEntries(source.phone, "phone"),
+  };
+}
+
+function normalizeStageFlowEntries(
+  value: unknown,
+  profile: "default" | "phone",
+): readonly string[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error(`${APP_NAME} ${profile} stage flow must not be empty.`);
+  }
+  const ids = value.map((entry) => {
+    if (typeof entry !== "string" || entry.trim().length === 0) {
+      throw new Error(`${APP_NAME} stage flow IDs must be non-empty strings.`);
+    }
+    return entry.trim();
+  });
+  if (new Set(ids).size !== ids.length) {
+    throw new Error(
+      `${APP_NAME} ${profile} stage flow contains duplicate IDs.`,
+    );
+  }
+  return ids;
 }
 
 type CameraAppearanceKey = "camera_rounded_corners" | "camera_shadows";

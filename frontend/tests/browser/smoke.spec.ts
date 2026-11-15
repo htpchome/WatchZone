@@ -7557,20 +7557,37 @@ test("editor uses exclusive accordions and shared draft status", async ({
 
   const editor = page.locator("#accordion-editor");
   const items = editor.locator("wzc-accordion-item");
-  await expect(items).toHaveCount(7);
+  const stageManagement = editor.locator(
+    'wzc-accordion-item[item-key="stage-management"]',
+  );
+  const liveMedia = editor.locator(
+    'wzc-accordion-item[item-key="live-media-player"]',
+  );
+  const reviews = editor.locator('wzc-accordion-item[item-key="reviews"]');
+  await expect(items).toHaveCount(8);
   await expect(items.locator("details[open]")).toHaveCount(0);
   await items.nth(0).locator("summary").click();
   await expect(items.nth(0).locator("details")).toHaveAttribute("open", "");
-  await items.nth(1).locator("summary").click();
+  await stageManagement.locator("summary").click();
   await expect(items.nth(0).locator("details")).not.toHaveAttribute("open", "");
-  await expect(items.nth(1).locator("details")).toHaveAttribute("open", "");
-  await items.nth(3).locator("summary").click();
-  const reviewHistory = items
-    .nth(3)
-    .locator('ha-selector[label="Days of Reviews to Display"]');
+  await expect(stageManagement.locator("details")).toHaveAttribute("open", "");
+  const stageTypeInputs = stageManagement.locator('input[name="stage-type"]');
+  await expect(stageTypeInputs).toHaveCount(3);
+  await expect(stageTypeInputs.nth(0)).toBeDisabled();
+  await expect(stageTypeInputs.nth(2)).toBeChecked();
+  await expect(
+    stageManagement.locator('input[data-stage-profile="default"]'),
+  ).toBeChecked();
+  await expect(stageManagement).toContainText("Default");
+  await reviews.locator("summary").click();
+  const reviewHistory = reviews.locator(
+    'ha-selector[label="Days of Reviews to Display"]',
+  );
   await expect(reviewHistory).toHaveCount(1);
   await expect(
-    items.nth(4).locator('ha-selector[label="Days of Reviews to Display"]'),
+    editor
+      .locator('wzc-accordion-item[item-key="general"]')
+      .locator('ha-selector[label="Days of Reviews to Display"]'),
   ).toHaveCount(0);
   expect(
     await reviewHistory.evaluate(
@@ -7583,13 +7600,11 @@ test("editor uses exclusive accordions and shared draft status", async ({
       ) => element.selector?.number,
     ),
   ).toMatchObject({ mode: "slider", slider_ticks: true });
-  await items.nth(1).locator("summary").click();
-  const selectionBars = items.nth(1).locator("wzc-segmented-control");
+  await liveMedia.locator("summary").click();
+  const selectionBars = liveMedia.locator("wzc-segmented-control");
   await expect(selectionBars).toHaveCount(4);
-  const ptzBar = items.nth(1).locator('[data-setting="ptz-overlay-control"]');
-  const transitionBar = items
-    .nth(1)
-    .locator('[data-setting="slide-transition"]');
+  const ptzBar = liveMedia.locator('[data-setting="ptz-overlay-control"]');
+  const transitionBar = liveMedia.locator('[data-setting="slide-transition"]');
   const ptzSelection = ptzBar.locator('[data-value="start_open"]');
   const transitionSelection = transitionBar.locator('[data-value="slide"]');
   await expect(transitionSelection).toHaveAttribute("aria-checked", "true");
