@@ -20,11 +20,12 @@ export const cardPickerPreviewStyles = css`
   .preview {
     box-sizing: border-box;
     display: grid;
-    grid-template-rows: minmax(0, 1fr) auto auto auto minmax(0, 7.15rem);
+    grid-template-rows: auto auto auto auto 7.15rem;
+    align-content: start;
     gap: 0.35rem;
     block-size: 100%;
     min-block-size: 0;
-    padding: 0.55rem;
+    padding: 0.55rem 0.55rem 0.1rem;
   }
 
   .live {
@@ -32,6 +33,8 @@ export const cardPickerPreviewStyles = css`
     display: grid;
     place-items: center;
     min-block-size: 0;
+    inline-size: 100%;
+    aspect-ratio: var(--wzc-camera-stage-aspect-ratio);
     overflow: hidden;
     color: var(--wzc-media-placeholder-color);
     background: var(--wzc-camera-stage);

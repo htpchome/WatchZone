@@ -159,6 +159,7 @@ test("renders the fixed zero-network community card picker preview", async ({
       hass: unknown;
       setConfig(value: unknown): void;
     };
+    card.style.inlineSize = "18rem";
     card.setConfig({ type: "custom:watchzone-card", ...config });
     root.append(card);
     document.body.replaceChildren(picker);
@@ -205,12 +206,29 @@ test("renders the fixed zero-network community card picker preview", async ({
     presentation.cameraIconOpacity,
   );
   expect(presentation.activeIconFill).toBe(presentation.activeColor);
+  const liveRatio = await preview.locator(".live").evaluate((element) => {
+    const { height, width } = element.getBoundingClientRect();
+    return width / height;
+  });
+  expect(liveRatio).toBeCloseTo(16 / 9, 2);
+  const bottomInset = await preview.evaluate((element) => {
+    const root = element.shadowRoot;
+    const previewBottom = root
+      ?.querySelector(".preview")
+      ?.getBoundingClientRect().bottom;
+    const tilesBottom = root
+      ?.querySelector(".tiles")
+      ?.getBoundingClientRect().bottom;
+    return (previewBottom ?? 0) - (tilesBottom ?? 0);
+  });
+  expect(bottomInset).toBeGreaterThanOrEqual(-8);
+  expect(bottomInset).toBeLessThanOrEqual(4);
   const heights = await page
     .locator("watchzone-card")
     .evaluate(async (element) => {
       const card = element.shadowRoot?.querySelector("ha-card");
       const before = Math.round(card?.getBoundingClientRect().height ?? 0);
-      (element as HTMLElement).style.inlineSize = "18rem";
+      (element as HTMLElement).style.inlineSize = "17rem";
       await new Promise(requestAnimationFrame);
       return [before, Math.round(card?.getBoundingClientRect().height ?? 0)];
     });

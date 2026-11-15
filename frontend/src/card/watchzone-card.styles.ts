@@ -44,7 +44,8 @@ export const cardStyles = css`
   }
 
   ha-card.card-picker-preview-shell {
-    block-size: 24rem;
+    display: block;
+    block-size: 23.5rem;
     padding: 0;
   }
 
