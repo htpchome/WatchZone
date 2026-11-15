@@ -119,6 +119,74 @@ test("loads the responsive WatchZone card shell", async ({ page }) => {
   ).toBe("function");
 });
 
+test("renders the fixed zero-network community card picker preview", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+
+  const stub = await page.evaluate(() => {
+    const hass = {
+      states: {
+        "camera.porch": {
+          entity_id: "camera.porch",
+          state: "idle",
+          attributes: { friendly_name: "Porch" },
+        },
+        "camera.entry": {
+          entity_id: "camera.entry",
+          state: "idle",
+          attributes: { friendly_name: "Front Door" },
+        },
+      },
+      connection: {
+        subscribeMessage: async () => () => undefined,
+      },
+      locale: { language: "en" },
+      callService: async () => undefined,
+      callWS: async () => undefined,
+      hassUrl: (path: string) => path,
+    };
+    const Card = customElements.get(
+      "watchzone-card",
+    ) as CustomElementConstructor & {
+      getStubConfig(value: unknown): unknown;
+    };
+    const config = Card.getStubConfig(hass) as Record<string, unknown>;
+    const picker = document.createElement("hui-card-picker");
+    const root = picker.attachShadow({ mode: "open" });
+    const card = document.createElement("watchzone-card") as HTMLElement & {
+      hass: unknown;
+      setConfig(value: unknown): void;
+    };
+    card.setConfig({ type: "custom:watchzone-card", ...config });
+    root.append(card);
+    document.body.replaceChildren(picker);
+    card.hass = hass;
+    return config;
+  });
+
+  expect(stub).toEqual({ cameras: [{ entity_id: "camera.entry" }] });
+  const preview = page.locator("wzc-card-picker-preview");
+  await expect(preview).toBeVisible();
+  await expect(preview.locator(".brand")).toHaveText("WatchZone");
+  await expect(preview.locator(".camera-name")).toHaveCount(2);
+  await expect(preview.locator(".control")).toHaveCount(3);
+  await expect(preview.locator(".tile")).toHaveCount(2);
+  await expect(page.locator("watchzone-card .shell")).toHaveCount(0);
+  const heights = await page
+    .locator("watchzone-card")
+    .evaluate(async (element) => {
+      const card = element.shadowRoot?.querySelector("ha-card");
+      const before = Math.round(card?.getBoundingClientRect().height ?? 0);
+      (element as HTMLElement).style.inlineSize = "18rem";
+      await new Promise(requestAnimationFrame);
+      return [before, Math.round(card?.getBoundingClientRect().height ?? 0)];
+    });
+  expect(heights[0]).toBeGreaterThan(300);
+  expect(heights[1]).toBe(heights[0]);
+});
+
 test("uses the first real touch only to reveal hidden media controls", async ({
   browser,
 }) => {

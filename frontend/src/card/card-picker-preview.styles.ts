@@ -1,0 +1,161 @@
+import { css } from "lit";
+
+export const cardPickerPreviewStyles = css`
+  :host {
+    display: block;
+    box-sizing: border-box;
+    inline-size: 100%;
+    block-size: 100%;
+    min-inline-size: 0;
+    color: var(--wzc-color-text-1);
+    font-family: var(--wzc-font-family);
+  }
+
+  svg {
+    display: block;
+    inline-size: 1em;
+    block-size: 1em;
+  }
+
+  .preview {
+    box-sizing: border-box;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto auto auto minmax(0, 7.15rem);
+    gap: 0.35rem;
+    block-size: 100%;
+    min-block-size: 0;
+    padding: 0.55rem;
+  }
+
+  .live {
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-block-size: 0;
+    overflow: hidden;
+    color: var(--wzc-media-placeholder-color);
+    background: var(--wzc-live-background);
+    border-radius: var(--wzc-live-radius);
+    box-shadow: var(--wzc-live-shadow);
+  }
+
+  .live .camera-icon {
+    font-size: clamp(2.75rem, 18cqi, 4.75rem);
+  }
+
+  .brand {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 0.45rem;
+    color: var(--wzc-color-text-2);
+    font-size: 0.8rem;
+    font-weight: var(--wzc-font-weight-semibold);
+    text-align: center;
+  }
+
+  .camera-bar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--wzc-camera-navigation-gap);
+    padding: var(--wzc-camera-navigation-padding);
+    color: var(--wzc-camera-navigation-color);
+    background: var(--wzc-camera-navigation-background);
+    border-radius: var(--wzc-radius-pill);
+    box-shadow: var(--wzc-camera-navigation-shadow);
+  }
+
+  .camera-name {
+    display: grid;
+    place-items: center;
+    min-block-size: 1.75rem;
+    border-radius: var(--wzc-radius-pill);
+    font-size: 0.75rem;
+    font-weight: var(--wzc-font-weight-semibold);
+  }
+
+  .camera-name.active {
+    color: var(--wzc-camera-navigation-active-color);
+    background: var(--wzc-camera-navigation-active-background);
+    box-shadow: var(--wzc-camera-navigation-active-shadow);
+  }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .control {
+    display: grid;
+    place-items: center;
+    inline-size: 2rem;
+    block-size: 2rem;
+    color: var(--wzc-color-text-2);
+    background: var(--wzc-color-surface-secondary);
+    border-radius: var(--wzc-radius-pill);
+    font-size: 1.1rem;
+  }
+
+  .control.active {
+    color: var(--wzc-color-on-primary);
+    background: var(--wzc-color-primary);
+  }
+
+  .day {
+    color: var(--wzc-media-day-header-color);
+    font-size: 0.72rem;
+    font-weight: var(--wzc-font-weight-semibold);
+    text-align: center;
+  }
+
+  .tiles {
+    display: grid;
+    grid-auto-rows: 4.5rem;
+    gap: 0.35rem;
+    min-block-size: 0;
+    overflow: hidden;
+  }
+
+  .tile {
+    display: grid;
+    grid-template-columns: 5.5rem minmax(0, 1fr);
+    min-inline-size: 0;
+    overflow: hidden;
+    background: var(--wzc-event-tile-background);
+    border-radius: var(--wzc-event-tile-radius);
+    box-shadow: var(--wzc-event-tile-shadow);
+  }
+
+  .thumbnail {
+    display: grid;
+    place-items: center;
+    color: var(--wzc-event-thumbnail-placeholder-color);
+    background: var(--wzc-live-background);
+    font-size: 1.65rem;
+  }
+
+  .metadata {
+    display: grid;
+    align-content: center;
+    gap: 0.2rem;
+    min-inline-size: 0;
+    padding: 0.35rem 0.45rem;
+    font-size: 0.68rem;
+  }
+
+  .badges {
+    display: flex;
+    gap: 0.2rem;
+    min-inline-size: 0;
+    overflow: hidden;
+    --wzc-badge-font-size: 0.58rem;
+    --wzc-badge-padding: 0.06em 0.35em;
+  }
+
+  .details {
+    overflow: hidden;
+    color: var(--wzc-event-secondary-color);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+`;

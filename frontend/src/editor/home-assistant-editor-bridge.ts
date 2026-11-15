@@ -117,6 +117,7 @@ export class HomeAssistantEditorBridge<T> implements ReactiveController {
 
   public constructor(
     private readonly _host: ReactiveControllerHost & HTMLElement,
+    private readonly _ownsConfig: (config: unknown) => boolean,
   ) {
     _host.addController(this);
   }
@@ -145,10 +146,27 @@ export class HomeAssistantEditorBridge<T> implements ReactiveController {
 
   public commitDraftForSave(draft: T): boolean {
     const dialog = this._dialog ?? this._findDialog();
-    if (!dialog || !("_cardConfig" in dialog)) return false;
+    if (
+      !dialog ||
+      !("_cardConfig" in dialog) ||
+      !this._ownsConfig(dialog._cardConfig)
+    ) {
+      return false;
+    }
     dialog._cardConfig = draft;
     dialog._updateDirtyState?.(draft);
     return true;
+  }
+
+  /** Nested cards must update their owning container through config-changed. */
+  public isNestedCardEdit(): boolean {
+    const dialog = this._dialog ?? this._findDialog();
+    return Boolean(
+      dialog &&
+      "_cardConfig" in dialog &&
+      dialog._cardConfig !== undefined &&
+      !this._ownsConfig(dialog._cardConfig),
+    );
   }
 
   public isSaveClick(event: Event): boolean {

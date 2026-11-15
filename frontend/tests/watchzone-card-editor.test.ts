@@ -961,6 +961,57 @@ describe("watchzone-card-editor", () => {
     document.removeEventListener("context-request", contextHandler);
   });
 
+  it("preserves a nested stack and its sibling when the child editor saves", async () => {
+    const dirtyStates: CardConfig[] = [];
+    const contextHandler = (event: Event) => {
+      const request = event as ContextRequest;
+      request.callback?.({
+        setState: (config) => dirtyStates.push(config),
+      });
+    };
+    document.addEventListener("context-request", contextHandler);
+    const dialog = document.createElement(
+      "hui-dialog-edit-card",
+    ) as TestEditCardDialog;
+    const wrapper = {
+      type: "vertical-stack",
+      cards: [
+        { type: CARD_TYPE, title: "Original" },
+        { type: "markdown", content: "Sibling" },
+      ],
+    };
+    dialog._cardConfig = wrapper as unknown as CardConfig;
+    dialog._updateDirtyState = vi.fn();
+    const root = dialog.attachShadow({ mode: "open" });
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as CardEditor;
+    editor.setConfig(wrapper.cards[0]);
+    const save = document.createElement("button");
+    save.slot = "primaryAction";
+    dialog.addEventListener("config-changed", (event) => {
+      const child = (event as CustomEvent<{ config: CardConfig }>).detail
+        .config;
+      wrapper.cards[0] = child;
+    });
+    root.append(editor, save);
+    document.body.append(dialog);
+    await editor.updateComplete;
+
+    inputTitle(editor, "Nested update");
+    await vi.advanceTimersByTimeAsync(EDITOR_TEXT_PREVIEW_DELAY_MS);
+    save.click();
+
+    expect(dialog._cardConfig).toBe(wrapper);
+    expect(wrapper.cards).toEqual([
+      { type: CARD_TYPE, title: "Nested update" },
+      { type: "markdown", content: "Sibling" },
+    ]);
+    expect(dialog._updateDirtyState).not.toHaveBeenCalled();
+    expect(dirtyStates).toEqual([]);
+    document.removeEventListener("context-request", contextHandler);
+  });
+
   it("previews, saves, and restores default-on toggles", async () => {
     const states: CardConfig[] = [];
     const contextHandler = (event: Event) => {

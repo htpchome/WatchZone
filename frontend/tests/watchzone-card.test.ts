@@ -3,9 +3,40 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import "../src/main";
 import { DashboardCard } from "../src/card/watchzone-card";
 import type {
+  HomeAssistant,
   HomeAssistantConnectionEvent,
   HomeAssistantConnectionEventListener,
 } from "../src/core/home-assistant";
+import {
+  createCardPickerStubConfig,
+  preferredCameraEntityId,
+} from "../src/card/home-assistant-card-picker";
+
+function createHass(
+  cameras: Readonly<Record<string, string>>,
+  language = "en",
+): HomeAssistant {
+  const connection = {
+    subscribeMessage: vi.fn(async () => () => undefined),
+  };
+  return {
+    states: Object.fromEntries(
+      Object.entries(cameras).map(([entityId, friendlyName]) => [
+        entityId,
+        {
+          entity_id: entityId,
+          state: "idle",
+          attributes: { friendly_name: friendlyName },
+        },
+      ]),
+    ),
+    connection,
+    locale: { language },
+    callService: vi.fn(),
+    callWS: vi.fn(),
+    hassUrl: (path: string) => path,
+  };
+}
 
 describe("watchzone-card", () => {
   afterEach(() => {
@@ -26,6 +57,54 @@ describe("watchzone-card", () => {
       min_columns: 3,
       rows: "auto",
     });
+  });
+
+  it("selects a preferred camera for minimal card-picker configuration", () => {
+    const hass = createHass({
+      "camera.door_bell": "Side Entry",
+      "camera.porch": "Porch",
+      "camera.entry": "Front Door",
+      "camera.doorbell": "Doorbell",
+    });
+
+    expect(preferredCameraEntityId(hass)).toBe("camera.doorbell");
+    expect(createCardPickerStubConfig(hass)).toEqual({
+      cameras: [{ entity_id: "camera.doorbell" }],
+    });
+    expect(DashboardCard.getStubConfig(hass)).toEqual({
+      cameras: [{ entity_id: "camera.doorbell" }],
+    });
+  });
+
+  it("matches a mild localized camera name and otherwise keeps the stub empty", () => {
+    expect(
+      preferredCameraEntityId(
+        createHass({ "camera.entree": "Porte d’entrée" }, "fr-FR"),
+      ),
+    ).toBe("camera.entree");
+    expect(
+      createCardPickerStubConfig(createHass({ "camera.garden": "Garden" })),
+    ).toEqual({});
+  });
+
+  it("renders a fixed static picker preview without constructing the Stage", async () => {
+    const picker = document.createElement("hui-card-picker");
+    const root = picker.attachShadow({ mode: "open" });
+    const element = document.createElement("watchzone-card") as DashboardCard;
+    element.setConfig({ type: "custom:watchzone-card" });
+    root.append(element);
+    document.body.append(picker);
+
+    await vi.waitFor(() => {
+      expect(
+        element.shadowRoot?.querySelector("wzc-card-picker-preview"),
+      ).not.toBeNull();
+    });
+    expect(element.shadowRoot?.querySelector(".shell")).toBeNull();
+    expect(element.shadowRoot?.textContent).not.toContain(
+      "No modules are configured.",
+    );
+    expect(element.getCardSize()).toBe(7);
   });
 
   it("observes the reusable Stage content boundary and disconnects cleanly", async () => {

@@ -27,6 +27,7 @@ import {
 import {
   ACCORDION_ITEM_TAG,
   ACCORDION_TAG,
+  CARD_TYPE,
   DEFAULT_EVENT_HISTORY_DAYS,
   EDITOR_GENERAL_INFO_TAG,
   EDITOR_PREVIEW_DRAFT_EVENT,
@@ -152,6 +153,11 @@ type CameraBooleanConfigFlag = Exclude<
 export class CardEditor extends LitElement {
   private readonly _haEditor = new HomeAssistantEditorBridge<YamlCardConfig>(
     this,
+    (config) =>
+      typeof config === "object" &&
+      config !== null &&
+      "type" in config &&
+      config.type === CARD_TYPE,
   );
   private _baseline?: CardConfig;
   private _baselineSignature = "";
@@ -174,6 +180,7 @@ export class CardEditor extends LitElement {
   private _dirtySeeded = false;
   private _hass?: HomeAssistant;
   private _previewTimer?: ReturnType<typeof setTimeout>;
+  private _lastDispatchedConfigSignature = "";
   private _draftStatusChanged?: boolean;
   private readonly _toasts = new ToastManager(this);
   private _capabilities?: CameraCapabilityController;
@@ -1330,6 +1337,7 @@ export class CardEditor extends LitElement {
   }
 
   private _seedDirtyState(): void {
+    if (this._haEditor.isNestedCardEdit()) return;
     if (this._dirtyContext && this._baseline && !this._dirtySeeded) {
       this._dirtySeeded = true;
       seedDirtyState(this._dirtyContext, toYamlCardConfig(this._baseline));
@@ -2182,21 +2190,22 @@ export class CardEditor extends LitElement {
   private _applyDraft(nextConfig: CardConfig, commitConfig: boolean): void {
     const nextSignature = cardConfigSignature(nextConfig);
     const changed = !this._config || nextSignature !== this._configSignature;
+    const nestedEdit = this._haEditor.isNestedCardEdit();
     if (changed) {
       this._config = nextConfig;
       this._configSignature = nextSignature;
       this._syncDraftStatus();
       this.requestUpdate();
 
-      if (this._dirtyContext) {
+      if (this._dirtyContext && !nestedEdit) {
         updateDirtyState(this._dirtyContext, toYamlCardConfig(nextConfig));
       }
     }
 
     if (
       commitConfig &&
-      !this._dirtyContext &&
-      nextSignature !== this._baselineSignature
+      (nestedEdit ||
+        (!this._dirtyContext && nextSignature !== this._baselineSignature))
     ) {
       this._dispatchConfigChange(nextConfig);
     }
@@ -2212,6 +2221,7 @@ export class CardEditor extends LitElement {
         this._previewTimer = setTimeout(() => {
           this._previewTimer = undefined;
           this._publishDraftPreview(nextConfig, nextSignature);
+          if (nestedEdit) this._dispatchConfigChange(nextConfig);
         }, EDITOR_TEXT_PREVIEW_DELAY_MS);
       }
     }
@@ -2259,6 +2269,9 @@ export class CardEditor extends LitElement {
   }
 
   private _dispatchConfigChange(config: CardConfig): void {
+    const signature = cardConfigSignature(config);
+    if (signature === this._lastDispatchedConfigSignature) return;
+    this._lastDispatchedConfigSignature = signature;
     this.dispatchEvent(
       new CustomEvent("config-changed", {
         detail: { config: toYamlCardConfig(config) },

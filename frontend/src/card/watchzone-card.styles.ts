@@ -43,6 +43,16 @@ export const cardStyles = css`
     padding: 0;
   }
 
+  ha-card.card-picker-preview-shell {
+    block-size: 24rem;
+    padding: 0;
+  }
+
+  ha-card.card-picker-preview-shell > wzc-card-picker-preview {
+    display: block;
+    block-size: 100%;
+  }
+
   .shell {
     position: relative;
     box-sizing: border-box;

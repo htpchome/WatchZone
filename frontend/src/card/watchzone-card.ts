@@ -9,9 +9,8 @@ import {
 import {
   APP_NAME,
   APP_VERSION,
+  CARD_PICKER_PREVIEW_TAG,
   CARD_TAG,
-  CARD_TYPE,
-  DEFAULT_CARD_TITLE,
   EDITOR_PREVIEW_DRAFT_EVENT,
   EDITOR_TAG,
   CAMERA_TAG,
@@ -44,9 +43,15 @@ import "../ui/toast-region";
 import { createBuiltInStageSet } from "../stage/built-in-stages/catalog";
 import { LayoutRuntime } from "../stage/layout-runtime";
 import { cardStyles } from "./watchzone-card.styles";
+import {
+  createCardPickerStubConfig,
+  isHomeAssistantCardPickerPreview,
+  type CardPickerStubConfig,
+} from "./home-assistant-card-picker";
 
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
 const recordedVideoViewerTag = unsafeStatic(RECORDED_VIDEO_VIEWER_TAG);
+const cardPickerPreviewTag = unsafeStatic(CARD_PICKER_PREVIEW_TAG);
 
 interface PreviewDraftDetail {
   readonly baselineSignature: string;
@@ -66,6 +71,8 @@ export class DashboardCard extends LitElement {
   private _recordedVideoViewerLoad?: Promise<void>;
   private _mediaRequest?: RecordedMediaRequest;
   private _mediaInitialSize?: RecordedMediaInitialGeometry;
+  private _cardPickerPreview = false;
+  private _cardPickerPreviewLoad?: Promise<void>;
   private readonly _cameraImageCredentials =
     new HomeAssistantCameraImageCredentialGuard();
   private readonly _localization = new LocalizationController(this, () =>
@@ -111,6 +118,10 @@ export class DashboardCard extends LitElement {
     this._hass = value;
     this._themeProfile.setHomeAssistant(value);
     this._localization.setLanguage(value.locale?.language ?? value.language);
+    if (this._cardPickerPreview) {
+      this.requestUpdate();
+      return;
+    }
     if (transportChanged || !this._haApi) {
       this._haApi = createHomeAssistantApi(value);
     }
@@ -120,8 +131,8 @@ export class DashboardCard extends LitElement {
     if (transportChanged) this.requestUpdate();
   }
 
-  public static getStubConfig(): CardConfig {
-    return normalizeCardConfig({ type: CARD_TYPE, title: DEFAULT_CARD_TITLE });
+  public static getStubConfig(hass?: unknown): CardPickerStubConfig {
+    return createCardPickerStubConfig(hass);
   }
 
   public static async getConfigElement(): Promise<HTMLElement> {
@@ -138,12 +149,20 @@ export class DashboardCard extends LitElement {
     this._config = next;
     this._previewConfig = undefined;
     this._cardHostAppearance.configure(next);
-    this._syncLayout(next);
+    if (this.isConnected && !this._cardPickerPreview) this._syncLayout(next);
     this.requestUpdate();
   }
 
   public connectedCallback(): void {
     super.connectedCallback();
+    this._cardPickerPreview = isHomeAssistantCardPickerPreview(this);
+    if (this._cardPickerPreview) {
+      this._cardPickerPreviewLoad ??= import("./card-picker-preview").then(
+        () => undefined,
+      );
+      this.requestUpdate();
+      return;
+    }
     this._cardHostAppearance.configure(this._previewConfig ?? this._config);
     window.addEventListener(
       EDITOR_PREVIEW_DRAFT_EVENT,
@@ -188,11 +207,12 @@ export class DashboardCard extends LitElement {
   }
 
   protected firstUpdated(): void {
+    if (this._cardPickerPreview) return;
     this._observeStageSizeBoundary();
   }
 
   public getCardSize(): number {
-    return 5;
+    return this._cardPickerPreview ? 7 : 5;
   }
 
   public getGridOptions() {
@@ -204,6 +224,13 @@ export class DashboardCard extends LitElement {
   }
 
   protected render() {
+    if (this._cardPickerPreview) {
+      return staticHtml`<ha-card class="card-picker-preview-shell">
+        <${cardPickerPreviewTag}
+          .localize=${this._localization.localize}
+        ></${cardPickerPreviewTag}>
+      </ha-card>`;
+    }
     const config = this._previewConfig ?? this._config;
     const cardClasses = [
       config.rounded_outer_corners === false ? "square-outer-corners" : "",

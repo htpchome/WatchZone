@@ -6,6 +6,7 @@ export const APP_BUILD = __APP_BUILD__;
 
 export const CARD_TAG = `${INTEGRATION_ID}-card`;
 export const CARD_TYPE = `custom:${CARD_TAG}`;
+export const CARD_PICKER_PREVIEW_TAG = `${APP_ID}-card-picker-preview`;
 export const EDITOR_TAG = `${CARD_TAG}-editor`;
 export const EDITOR_GENERAL_INFO_TAG = `${APP_ID}-editor-general-info`;
 
