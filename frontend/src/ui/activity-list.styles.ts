@@ -4,6 +4,7 @@ import { responsiveWidths } from "../styles/responsive-widths";
 
 export const activityListStyles = css`
   :host {
+    container-type: inline-size;
     display: block;
     block-size: 100%;
     min-block-size: 0;
@@ -490,9 +491,14 @@ export const activityListStyles = css`
     padding-inline-end: var(--wzc-event-action-margin);
   }
 
-  .badges wzc-badge {
+  .badges wzc-badge,
+  .compact-badges wzc-badge {
     --wzc-badge-font-size: var(--wzc-event-badge-font-size);
     --wzc-badge-padding: var(--wzc-event-badge-padding);
+  }
+
+  .compact-badges {
+    display: none;
   }
 
   .metadata {
@@ -600,11 +606,52 @@ export const activityListStyles = css`
     white-space: nowrap;
   }
 
-  @media (max-width: ${responsiveWidths.compact}) {
+  @container (max-width: ${responsiveWidths.medium}) {
+    .badges {
+      grid-column: 2 / -1;
+    }
+
+    .actions {
+      grid-row: 2;
+    }
+  }
+
+  @container (max-width: ${responsiveWidths.narrow}) {
+    .analysis-title {
+      background: transparent;
+      border: 0;
+      block-size: 1.5rem;
+      bottom: 0.12rem;
+      inline-size: 1.5rem;
+      inset-inline-end: calc(var(--wzc-event-action-margin) + 1.5rem + 0.25rem);
+      justify-content: center;
+      padding: 0;
+      position: absolute;
+    }
+
+    .analysis-title::before {
+      inset: 50% auto auto 50%;
+      min-inline-size: 2.75rem;
+      transform: translate(-50%, -50%);
+    }
+
+    .analysis-title span {
+      display: none;
+    }
+
+    .review-aside:has(.analysis-title) .export-status,
+    .review-aside:has(.analysis-title) .export-progress-value {
+      align-self: center;
+      grid-row: 2;
+      margin-block-start: 0;
+    }
+  }
+
+  @container (max-width: ${responsiveWidths.compact}) {
     .tile {
       grid-template-columns:
         var(--wzc-event-thumbnail-inline-size) minmax(0, 1fr)
-        0 0;
+        minmax(0, 45%) 0;
     }
 
     .actions {
@@ -612,18 +659,36 @@ export const activityListStyles = css`
     }
 
     .badges {
-      grid-column: 2;
+      grid-column: 2 / 4;
+    }
+
+    .badges wzc-badge:nth-child(n + 4) {
+      display: none;
+    }
+
+    .compact-badges {
+      align-content: start;
+      display: grid;
+      gap: var(--wzc-event-metadata-row-gap);
+      grid-column: 3;
+      grid-row: 2;
+      min-inline-size: 0;
+      overflow: hidden;
+    }
+
+    .compact-badges wzc-badge {
+      justify-self: start;
     }
 
     .review-aside {
-      grid-column: 2;
+      grid-column: 3;
       grid-row: 2;
       justify-self: end;
       max-inline-size: 100%;
     }
 
-    .tile:has(.review-aside) .details {
-      max-inline-size: 45%;
+    .tile:has(.export-status, .export-progress-value) .compact-badges {
+      display: none;
     }
   }
 `;

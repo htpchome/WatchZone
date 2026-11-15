@@ -42,3 +42,11 @@ When an activity module is scoped to a grouped camera presentation, each review
 or event begins with the configured name of the physical camera that produced
 it. This camera badge participates in the same ordered palette resolution as
 the remaining badges. Single-camera activity omits the redundant camera badge.
+
+Activity tiles keep a fixed block size and never gain height to accommodate
+badges. At medium widths the single primary badge lane spans the complete tile
+content width above its actions. At the compact width, its first three badges
+remain in that lane and two fixed overflow slots use the otherwise open space
+beside metadata. When more than two overflow badges remain, the final slot
+becomes a `+N` summary whose accessible label and title retain the collapsed
+labels. This is deliberate fixed-slot placement, not flex wrapping.

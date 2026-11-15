@@ -1,4 +1,4 @@
-import { html, LitElement } from "lit";
+import { html, LitElement, type TemplateResult } from "lit";
 import { repeat } from "lit/directives/repeat.js";
 import { styleMap } from "lit/directives/style-map.js";
 
@@ -539,40 +539,71 @@ export class ActivityList extends LitElement {
     objectColors: readonly BadgeColor[],
   ) {
     if (!cameraLabel && objectLabels.length === 0 && !typeBadge) return null;
+    const badges: Array<{ label: string; template: TemplateResult }> = [];
+    if (cameraLabel) {
+      badges.push({
+        label: cameraLabel,
+        template: html`<wzc-badge
+          color=${objectColors[0] ?? "neutral"}
+          shape="pill"
+          size="small"
+          >${cameraLabel}</wzc-badge
+        >`,
+      });
+    }
+    objectLabels.forEach((label, index) => {
+      const displayLabel = capitalizeBadgeText(label, this.locale?.language);
+      badges.push({
+        label: displayLabel,
+        template: html`<wzc-badge
+          color=${objectColors[index + (cameraLabel ? 1 : 0)] ?? "neutral"}
+          shape="pill"
+          size="small"
+          >${displayLabel}</wzc-badge
+        >`,
+      });
+    });
+    if (typeBadge) {
+      const displayLabel = capitalizeBadgeText(
+        typeBadge.label,
+        this.locale?.language,
+      );
+      badges.push({
+        label: displayLabel,
+        template: html`<wzc-badge
+          shape="pill"
+          size="small"
+          variant=${typeBadge.variant}
+          >${displayLabel}</wzc-badge
+        >`,
+      });
+    }
+    const compactOverflow = badges.slice(3, 5);
+    if (badges.length > 5) {
+      const collapsed = badges.slice(4);
+      const collapsedLabels = collapsed.map(({ label }) => label).join(", ");
+      compactOverflow.splice(1, 1, {
+        label: collapsedLabels,
+        template: html`<wzc-badge
+          aria-label=${collapsedLabels}
+          shape="pill"
+          size="small"
+          title=${collapsedLabels}
+          variant="neutral"
+          >+${collapsed.length}</wzc-badge
+        >`,
+      });
+    }
     return html`<div class="badges">
+        ${badges.map(({ template }) => template)}
+      </div>
       ${
-        cameraLabel
-          ? html`<wzc-badge
-              color=${objectColors[0] ?? "neutral"}
-              shape="pill"
-              size="small"
-              >${cameraLabel}</wzc-badge
-            >`
+        compactOverflow.length > 0
+          ? html`<div class="compact-badges">
+              ${compactOverflow.map(({ template }) => template)}
+            </div>`
           : null
-      }
-      ${objectLabels.map(
-        (label, index) =>
-          html`<wzc-badge
-            color=${objectColors[index + (cameraLabel ? 1 : 0)] ?? "neutral"}
-            shape="pill"
-            size="small"
-            >${capitalizeBadgeText(label, this.locale?.language)}</wzc-badge
-          >`,
-      )}
-      ${
-        typeBadge
-          ? html`<wzc-badge
-              shape="pill"
-              size="small"
-              variant=${typeBadge.variant}
-              >${capitalizeBadgeText(
-                typeBadge.label,
-                this.locale?.language,
-              )}</wzc-badge
-            >`
-          : null
-      }
-    </div>`;
+      }`;
   }
 
   private _renderDetails(item: ActivityListItem, start: Date) {

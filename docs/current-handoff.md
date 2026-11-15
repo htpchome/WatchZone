@@ -15,15 +15,21 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.321`
-- Current commit: `127a6e5` —
-  `v0.0.4-dev.319 - fix(media): align and clarify resize control`
+- Working version: `0.0.4-dev.322`
+- Current commit: `b3c4340` —
+  `v0.0.4-dev.321 - refactor(responsive): consolidate width breakpoints`
 - The worktree contains the uncommitted theme-surface consolidation described
   below. Always verify `git status`, the canonical version in
   `custom_components/watchzone/const.py`, and the latest commit.
 
 ## Active change: theme surfaces and shared media actions
 
+- Review and Event tiles retain their fixed height across responsive states.
+  At medium width the badge lane spans the tile content width; at compact width
+  three primary badges remain above metadata, two fixed overflow slots use the
+  open lower-right area, and further badges collapse into `+N`. At and below
+  `600px`, the AI title pill becomes an accessible icon-only control; at and
+  below `480px`, media action buttons remain hidden.
 - Responsive width decisions now use one enforced four-point scale: `480px`,
   `600px`, `768px`, and `1024px`. Runtime device classification and CSS
   viewport/container queries consume the same contract; the style validator

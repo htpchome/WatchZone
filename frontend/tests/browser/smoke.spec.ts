@@ -2197,7 +2197,10 @@ test("keeps activity content in an independently scrolling viewport", async ({
                 : null,
               end_time: event.end_time,
               id: `review:${camera}:${index}`,
-              labels: [event.label],
+              labels:
+                index === 0
+                  ? [event.label, "car", "package", "dog"]
+                  : [event.label],
               media_end_time: event.end_time + 5,
               media_start_time: event.start_time - 5,
               playback_sources: event.playback_sources,
@@ -2439,6 +2442,113 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(standardTileLayout.actionCenterDelta).toBeLessThanOrEqual(1);
   expect(standardTileLayout.analysisActionHeightDelta).toBeLessThanOrEqual(1);
   expect(standardTileLayout.analysisActionTopDelta).toBeLessThanOrEqual(1);
+  const originalActivityViewport = page.viewportSize();
+  await page.setViewportSize({ height: 844, width: 780 });
+  const mediumTileLayout = await analysisTitle.evaluate((element) => {
+    const tile = element.closest(".tile");
+    const badges = tile?.querySelector<HTMLElement>(".badges");
+    const actions = tile?.querySelector<HTMLElement>(".actions");
+    const list = (element.getRootNode() as ShadowRoot).host;
+    if (!tile || !badges || !actions || !list) {
+      throw new Error("Expected the complete medium activity-tile grid.");
+    }
+    const tileBounds = tile.getBoundingClientRect();
+    const badgeBounds = badges.getBoundingClientRect();
+    const actionBounds = actions.getBoundingClientRect();
+    return {
+      actionsBelowBadges: actionBounds.top >= badgeBounds.bottom,
+      badgeEndInset: tileBounds.right - badgeBounds.right,
+      badgeEndPadding: Number.parseFloat(
+        getComputedStyle(badges).paddingInlineEnd,
+      ),
+      badgeWrap: getComputedStyle(badges).flexWrap,
+      containerWidth: list.getBoundingClientRect().width,
+      height: tileBounds.height,
+      titleVisible: getComputedStyle(element.querySelector("span")!).display,
+    };
+  });
+  expect(mediumTileLayout.containerWidth).toBeGreaterThan(600);
+  expect(mediumTileLayout.containerWidth).toBeLessThanOrEqual(768);
+  expect(mediumTileLayout.actionsBelowBadges).toBe(true);
+  expect(mediumTileLayout.badgeEndInset).toBeLessThanOrEqual(1);
+  expect(mediumTileLayout.badgeEndPadding).toBeGreaterThanOrEqual(9);
+  expect(mediumTileLayout.badgeEndPadding).toBeLessThanOrEqual(12);
+  expect(mediumTileLayout.badgeWrap).toBe("nowrap");
+  expect(mediumTileLayout.titleVisible).not.toBe("none");
+
+  await page.setViewportSize({ height: 844, width: 615 });
+  const narrowTileLayout = await analysisTitle.evaluate((element) => {
+    const tile = element.closest(".tile");
+    const actions = tile?.querySelector<HTMLElement>(".actions");
+    const list = (element.getRootNode() as ShadowRoot).host;
+    if (!tile || !actions || !list) {
+      throw new Error("Expected the complete narrow activity-tile grid.");
+    }
+    const style = getComputedStyle(element);
+    return {
+      actionDisplay: getComputedStyle(actions).display,
+      background: style.backgroundColor,
+      borderWidth: style.borderTopWidth,
+      containerWidth: list.getBoundingClientRect().width,
+      height: tile.getBoundingClientRect().height,
+      titleDisplay: getComputedStyle(element.querySelector("span")!).display,
+      width: element.getBoundingClientRect().width,
+    };
+  });
+  expect(narrowTileLayout.containerWidth).toBeGreaterThan(480);
+  expect(narrowTileLayout.containerWidth).toBeLessThanOrEqual(600);
+  expect(narrowTileLayout.actionDisplay).toBe("flex");
+  expect(narrowTileLayout.background).toBe("rgba(0, 0, 0, 0)");
+  expect(narrowTileLayout.borderWidth).toBe("0px");
+  expect(narrowTileLayout.titleDisplay).toBe("none");
+  expect(narrowTileLayout.width).toBeCloseTo(24, 0);
+  expect(narrowTileLayout.height).toBeCloseTo(mediumTileLayout.height, 0);
+
+  await page.setViewportSize({ height: 844, width: 495 });
+  const compactTileLayout = await analysisTitle.evaluate((element) => {
+    const tile = element.closest(".tile");
+    const actions = tile?.querySelector<HTMLElement>(".actions");
+    const badges = tile?.querySelector<HTMLElement>(".badges");
+    const compactBadges = tile?.querySelector<HTMLElement>(".compact-badges");
+    const details = tile?.querySelector<HTMLElement>(".details");
+    const list = (element.getRootNode() as ShadowRoot).host;
+    if (!tile || !actions || !badges || !compactBadges || !details || !list) {
+      throw new Error("Expected the complete compact activity-tile grid.");
+    }
+    const tileBounds = tile.getBoundingClientRect();
+    const badgeBounds = badges.getBoundingClientRect();
+    const compactBounds = compactBadges.getBoundingClientRect();
+    const detailBounds = details.getBoundingClientRect();
+    return {
+      actionDisplay: getComputedStyle(actions).display,
+      compactBadgeCount: compactBadges.querySelectorAll("wzc-badge").length,
+      compactBadgesBelowPrimary: compactBounds.top >= badgeBounds.bottom,
+      compactBadgesBesideDetails: compactBounds.left >= detailBounds.right,
+      compactBadgesInsideTile: compactBounds.bottom <= tileBounds.bottom,
+      compactBadgeText: [...compactBadges.querySelectorAll("wzc-badge")].map(
+        (badge) => badge.textContent?.trim(),
+      ),
+      containerWidth: list.getBoundingClientRect().width,
+      height: tile.getBoundingClientRect().height,
+      primaryBadgeCount: [...badges.querySelectorAll("wzc-badge")].filter(
+        (badge) => getComputedStyle(badge).display !== "none",
+      ).length,
+      titleDisplay: getComputedStyle(element.querySelector("span")!).display,
+    };
+  });
+  expect(compactTileLayout.containerWidth).toBeLessThanOrEqual(480);
+  expect(compactTileLayout.actionDisplay).toBe("none");
+  expect(compactTileLayout.primaryBadgeCount).toBe(3);
+  expect(compactTileLayout.compactBadgeCount).toBe(2);
+  expect(compactTileLayout.compactBadgeText).toEqual(["Dog", "+2"]);
+  expect(compactTileLayout.compactBadgesBelowPrimary).toBe(true);
+  expect(compactTileLayout.compactBadgesBesideDetails).toBe(true);
+  expect(compactTileLayout.compactBadgesInsideTile).toBe(true);
+  expect(compactTileLayout.titleDisplay).toBe("none");
+  expect(compactTileLayout.height).toBeCloseTo(mediumTileLayout.height, 0);
+  if (originalActivityViewport) {
+    await page.setViewportSize(originalActivityViewport);
+  }
   const detectionTile = page
     .locator("wzc-reviews .tile")
     .filter({ has: page.locator(".thumbnail-wrap.detection") })

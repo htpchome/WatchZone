@@ -80,4 +80,28 @@ describe("activity list media failures", () => {
     expect(list.shadowRoot?.querySelector(".thumbnail")).toBeNull();
     expect(retries).toHaveLength(2);
   });
+
+  it("prepares two fixed compact badge slots and collapses further labels", async () => {
+    const list = document.createElement(ACTIVITY_LIST_TAG) as ActivityList;
+    list.items = [
+      {
+        ...item("badge-layout"),
+        cameraBadgeLabel: "Front",
+        objectLabels: ["one", "two", "three", "four", "five", "six"],
+        typeBadge: { label: "alert", variant: "danger" },
+      },
+    ];
+    document.body.append(list);
+    await list.updateComplete;
+
+    expect(list.shadowRoot?.querySelectorAll(".badges wzc-badge")).toHaveLength(
+      8,
+    );
+    expect(
+      [
+        ...(list.shadowRoot?.querySelectorAll(".compact-badges wzc-badge") ??
+          []),
+      ].map((badge) => badge.textContent?.trim()),
+    ).toEqual(["Three", "+4"]);
+  });
 });
