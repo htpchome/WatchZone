@@ -13,6 +13,12 @@ picture-in-picture. A separate camera action surface owns configured Home
 Assistant tap, hold, and double-tap actions, so those gestures never compete
 with the media controls.
 
+Its live dialog is an independent inline-size container. Shared overlay
+controls inside that dialog derive their responsive size from the dialog rather
+than inheriting compact control geometry from the Stage placement that opened
+it. Moving the retained player from a small tile into a large dialog therefore
+restores full touch targets without changing the inline tile's compact controls.
+
 ## Ownership
 
 - Home Assistant owns the card's allocated grid rectangle.

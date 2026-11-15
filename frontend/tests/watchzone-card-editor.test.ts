@@ -37,6 +37,10 @@ interface TestEditCardDialog extends HTMLElement {
   _updateDirtyState?: (config: CardConfig) => void;
 }
 
+interface LocalizingTestHass {
+  localize(key: string): string;
+}
+
 function inputTitle(editor: CardEditor, title: string): InputElement {
   const input = editor.shadowRoot?.querySelector("ha-input") as InputElement;
   input.value = title;
@@ -226,6 +230,13 @@ describe("watchzone-card-editor", () => {
     const editor = document.createElement(
       "watchzone-card-editor",
     ) as CardEditor;
+    editor.hass = {
+      callWS: vi.fn(),
+      connection: { subscribeMessage: vi.fn() },
+      hassUrl: (path: string) => path,
+      localize: (key: string) => key,
+      states: {},
+    };
     editor.setConfig({
       cameras: [{ entity_id: "camera.front" }],
       type: CARD_TYPE,
@@ -244,6 +255,9 @@ describe("watchzone-card-editor", () => {
     await editor.updateComplete;
 
     expect(stageItem?.querySelector("[data-stage-profile]")).toBeNull();
+    expect(stageItem?.textContent).toContain(
+      "This Stage presents one lightweight Camera View for One Camera",
+    );
     expect(
       [
         ...(editor.shadowRoot?.querySelectorAll<HTMLElement>(
@@ -275,23 +289,57 @@ describe("watchzone-card-editor", () => {
         ?.getAttribute("label"),
     ).toBe("Show Source Label");
     const interactionForm = editor.shadowRoot?.querySelector<
-      HTMLElement & { data?: Record<string, unknown> }
-    >("ha-form");
-    expect(interactionForm).not.toBeNull();
-    expect(interactionForm?.data).toEqual({});
-    const tapMode = editor.shadowRoot?.querySelector<
       HTMLElement & {
-        selector?: {
-          select?: { options?: Array<{ label: string; value: string }> };
-        };
-        value?: string;
+        data?: Record<string, unknown>;
+        hass?: LocalizingTestHass;
+        schema?: Array<{
+          selector: { ui_action?: Record<string, unknown> };
+        }>;
       }
-    >("ha-selector.minimal-tap-mode");
-    expect(tapMode?.value).toBe("open-live-view");
-    expect(tapMode?.selector?.select?.options).toEqual([
-      { label: "Open Live View", value: "open-live-view" },
-      { label: "Other Action", value: "other" },
-    ]);
+    >("ha-form.primary-interaction");
+    expect(interactionForm).not.toBeNull();
+    expect(interactionForm?.data).toMatchObject({
+      tap_action: { action: "open-live-view" },
+    });
+    expect(interactionForm?.schema?.[0]?.selector.ui_action).toEqual({
+      actions: [
+        "open-live-view",
+        "toggle",
+        "navigate",
+        "url",
+        "perform-action",
+        "assist",
+        "none",
+      ],
+      default_action: "open-live-view",
+    });
+    expect(
+      interactionForm?.hass?.localize(
+        "ui.panel.lovelace.editor.action-editor.actions.open-live-view",
+      ),
+    ).toBe("Open Live View");
+    const addInteraction = editor.shadowRoot?.querySelector<HTMLElement>(
+      "ha-form.add-interaction",
+    );
+    addInteraction?.dispatchEvent(
+      new CustomEvent("value-changed", {
+        bubbles: true,
+        composed: true,
+        detail: { value: { double_tap_action: { action: "none" } } },
+      }),
+    );
+    await editor.updateComplete;
+    const removeInteraction = editor.shadowRoot?.querySelector<HTMLElement>(
+      '[data-interaction="double_tap_action"]',
+    );
+    expect(removeInteraction?.textContent).toContain("Remove");
+    removeInteraction?.click();
+    await editor.updateComplete;
+    expect(
+      editor.shadowRoot?.querySelector(
+        '[data-interaction="double_tap_action"]',
+      ),
+    ).toBeNull();
   });
 
   it("uses a compact camera accordion and saves a sanitized camera title", async () => {

@@ -275,6 +275,8 @@ export const themeTokens = css`
     --wzc-media-overlay-transition-duration: 140ms;
     --wzc-camera-control-size: 2.75rem;
     --wzc-camera-control-icon-size: 1.65rem;
+    --wzc-live-dialog-control-size: clamp(2.25rem, 5cqi, 2.75rem);
+    --wzc-live-dialog-control-icon-size: clamp(1.35rem, 3cqi, 1.65rem);
     --wzc-camera-lower-control-size: 2.75rem;
     --wzc-camera-lower-control-icon-size: 1.65rem;
     --wzc-overlay-control-min-size: var(--wzc-camera-control-size);

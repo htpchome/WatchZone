@@ -146,6 +146,7 @@ const minimalCameraComponentStyles = css`
 
   .live-dialog {
     box-sizing: border-box;
+    container-type: inline-size;
     inline-size: min(64rem, calc(100vw - 1rem));
     max-block-size: calc(100dvh - 1rem);
     max-inline-size: calc(100vw - 1rem);
@@ -216,6 +217,10 @@ const minimalCameraComponentStyles = css`
   .live-dialog-media {
     position: relative;
     box-sizing: border-box;
+    --wzc-camera-control-size: var(--wzc-live-dialog-control-size);
+    --wzc-camera-control-icon-size: var(--wzc-live-dialog-control-icon-size);
+    --wzc-overlay-control-min-size: var(--wzc-camera-control-size);
+    --wzc-round-button-size: var(--wzc-camera-control-size);
     inline-size: 100%;
     aspect-ratio: var(
       --wzc-minimal-live-dialog-aspect-ratio,

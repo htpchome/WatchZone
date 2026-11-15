@@ -151,11 +151,22 @@ export const cardEditorStyles = css`
   .stage-type-copy small {
     color: var(--wzc-color-text-2);
     font-size: var(--wzc-font-size-small);
-    line-height: var(--wzc-line-height-normal);
+    line-height: var(--wzc-line-height-condensed);
   }
 
   .stage-type-option.disabled .stage-type-copy small {
     color: var(--wzc-color-text-3);
+  }
+
+  .optional-interaction {
+    margin-block-start: 0.5rem;
+  }
+
+  .remove-interaction-action {
+    display: flex;
+    justify-content: flex-end;
+    min-block-size: 2rem;
+    padding-inline-end: 0.25rem;
   }
 
   .stage-layout-options {

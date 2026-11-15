@@ -97,6 +97,10 @@ interface SelectorElement extends HTMLElement {
   hass?: HomeAssistant;
 }
 
+interface LocalizingHomeAssistant extends HomeAssistant {
+  localize(key: string, ...args: unknown[]): string;
+}
+
 const CAMERA_SELECTOR = {
   entity: { filter: { domain: "camera" } },
 } as const;
@@ -107,8 +111,16 @@ const ICON_SELECTOR = { icon: {} } as const;
 const BOOLEAN_SELECTOR = { boolean: {} } as const;
 const TAP_ACTION_SELECTOR = {
   ui_action: {
-    actions: ["toggle", "navigate", "url", "perform-action", "assist", "none"],
-    default_action: "none",
+    actions: [
+      "open-live-view",
+      "toggle",
+      "navigate",
+      "url",
+      "perform-action",
+      "assist",
+      "none",
+    ],
+    default_action: "open-live-view",
   },
 } as const;
 const OPTIONAL_ACTION_SELECTOR = {
@@ -129,7 +141,9 @@ const INTERACTION_FORM_SCHEMA = [
     ],
   },
 ] as const;
-const OPTIONAL_INTERACTION_FORM_SCHEMA = [INTERACTION_FORM_SCHEMA[1]] as const;
+type OptionalInteractionName = "double_tap_action" | "hold_action";
+const OPEN_LIVE_VIEW_LOCALIZATION_KEY =
+  "ui.panel.lovelace.editor.action-editor.actions.open-live-view";
 const REVIEW_HISTORY_DAYS_SELECTOR = {
   number: {
     max: MAX_EVENT_HISTORY_DAYS,
@@ -215,6 +229,9 @@ export class CardEditor extends LitElement {
   private _dirtyContext?: DirtyStateContext<YamlCardConfig>;
   private _dirtySeeded = false;
   private _hass?: HomeAssistant;
+  private _interactionHass?: HomeAssistant;
+  private _interactionHassSource?: HomeAssistant;
+  private _visibleOptionalInteractions = new Set<OptionalInteractionName>();
   private _previewTimer?: ReturnType<typeof setTimeout>;
   private _lastDispatchedConfigSignature = "";
   private _draftStatusChanged?: boolean;
@@ -248,6 +265,17 @@ export class CardEditor extends LitElement {
 
   public setConfig(value: unknown): void {
     const config = normalizeCardConfig(value);
+    if (!this._baseline) {
+      const source = value as Record<string, unknown>;
+      this._visibleOptionalInteractions = new Set(
+        (["hold_action", "double_tap_action"] as const).filter(
+          (name) =>
+            name in source &&
+            typeof source[name] === "object" &&
+            source[name] !== null,
+        ),
+      );
+    }
     const signature = cardConfigSignature(config);
 
     if (!this._baseline) {
@@ -630,43 +658,21 @@ export class CardEditor extends LitElement {
   private _renderInteractionSettings() {
     const holdAction = this._config?.hold_action;
     const doubleTapAction = this._config?.double_tap_action;
-    const openLiveView = this._config?.tap_action.action === "open-live-view";
-    return html`<ha-selector
-        class="minimal-tap-mode"
-        label=${this._t("editor.tap_behavior")}
-        .hass=${this._hass}
-        .selector=${{
-          select: {
-            mode: "dropdown",
-            options: [
-              {
-                label: this._t("editor.open_live_view"),
-                value: "open-live-view",
-              },
-              {
-                label: this._t("editor.other_interaction"),
-                value: "other",
-              },
-            ],
-          },
-        }}
-        .value=${openLiveView ? "open-live-view" : "other"}
-        @value-changed=${this._handleTapActionModeChange}
-      ></ha-selector>
-      <ha-form
-        .hass=${this._hass}
-        .data=${{
-          ...(!openLiveView ? { tap_action: this._config?.tap_action } : {}),
-          ...(holdAction?.action !== "none" ? { hold_action: holdAction } : {}),
-          ...(doubleTapAction?.action !== "none"
-            ? { double_tap_action: doubleTapAction }
-            : {}),
-        }}
-        .schema=${
-          openLiveView
-            ? OPTIONAL_INTERACTION_FORM_SCHEMA
-            : INTERACTION_FORM_SCHEMA
-        }
+    const showHold =
+      this._visibleOptionalInteractions.has("hold_action") ||
+      holdAction?.action !== "none";
+    const showDoubleTap =
+      this._visibleOptionalInteractions.has("double_tap_action") ||
+      doubleTapAction?.action !== "none";
+    const addable = [
+      ...(!showHold ? [INTERACTION_FORM_SCHEMA[1].schema[0]] : []),
+      ...(!showDoubleTap ? [INTERACTION_FORM_SCHEMA[1].schema[1]] : []),
+    ];
+    return html`<ha-form
+        class="primary-interaction"
+        .hass=${this._interactionActionHass()}
+        .data=${{ tap_action: this._config?.tap_action }}
+        .schema=${[INTERACTION_FORM_SCHEMA[0]]}
         .computeLabel=${(schema: { readonly name?: string }) =>
           schema.name === "tap_action"
             ? this._t("editor.tap_behavior")
@@ -674,7 +680,104 @@ export class CardEditor extends LitElement {
               ? this._t("editor.hold_behavior")
               : this._t("editor.double_tap_behavior")}
         @value-changed=${this._handleActionsChange}
-      ></ha-form>`;
+      ></ha-form>
+      ${
+        showHold
+          ? this._renderOptionalInteraction("hold_action", holdAction)
+          : nothing
+      }
+      ${
+        showDoubleTap
+          ? this._renderOptionalInteraction(
+              "double_tap_action",
+              doubleTapAction,
+            )
+          : nothing
+      }
+      ${
+        addable.length
+          ? html`<ha-form
+              class="add-interaction"
+              .hass=${this._interactionActionHass()}
+              .data=${{}}
+              .schema=${[
+                {
+                  name: "",
+                  type: "optional_actions",
+                  flatten: true,
+                  schema: addable,
+                },
+              ]}
+              .computeLabel=${(schema: { readonly name?: string }) =>
+                schema.name === "hold_action"
+                  ? this._t("editor.hold_behavior")
+                  : this._t("editor.double_tap_behavior")}
+              @value-changed=${this._handleActionsChange}
+            ></ha-form>`
+          : nothing
+      }`;
+  }
+
+  private _renderOptionalInteraction(
+    name: OptionalInteractionName,
+    action: CardConfig[OptionalInteractionName] | undefined,
+  ) {
+    const schema =
+      name === "hold_action"
+        ? INTERACTION_FORM_SCHEMA[1].schema[0]
+        : INTERACTION_FORM_SCHEMA[1].schema[1];
+    return html`<div class="optional-interaction">
+      <ha-form
+        .hass=${this._interactionActionHass()}
+        .data=${{ [name]: action }}
+        .schema=${[schema]}
+        .computeLabel=${() =>
+          name === "hold_action"
+            ? this._t("editor.hold_behavior")
+            : this._t("editor.double_tap_behavior")}
+        @value-changed=${this._handleActionsChange}
+      ></ha-form>
+      <div class="remove-interaction-action">
+        <ha-button
+          appearance="plain"
+          variant="brand"
+          size="s"
+          type="button"
+          data-interaction=${name}
+          aria-label=${`${this._t("common.remove")} ${
+            name === "hold_action"
+              ? this._t("editor.hold_behavior")
+              : this._t("editor.double_tap_behavior")
+          }`}
+          @click=${this._removeOptionalInteraction}
+        >
+          ${this._t("common.remove")}
+        </ha-button>
+      </div>
+    </div>`;
+  }
+
+  private _interactionActionHass(): HomeAssistant | undefined {
+    const source = this._hass;
+    if (!source) return undefined;
+    if (this._interactionHassSource === source) return this._interactionHass;
+    this._interactionHassSource = source;
+    const localizingSource = source as LocalizingHomeAssistant;
+    if (typeof localizingSource.localize !== "function") {
+      this._interactionHass = source;
+      return source;
+    }
+    this._interactionHass = new Proxy(source, {
+      get: (target, property, receiver) => {
+        if (property !== "localize")
+          return Reflect.get(target, property, receiver);
+        return (key: string, ...args: unknown[]): string =>
+          key === OPEN_LIVE_VIEW_LOCALIZATION_KEY
+            ? this._t("editor.open_live_view")
+            : localizingSource.localize(key, ...args);
+      },
+    });
+    return this._interactionHass;
   }
 
   private _renderMinimalCameraConfiguration() {
@@ -2455,33 +2558,47 @@ export class CardEditor extends LitElement {
 
   private readonly _handleActionsChange = (event: ValueChangedEvent): void => {
     if (!this._config) return;
-    if (typeof event.detail.value !== "object" || event.detail.value === null)
+    if (typeof event.detail?.value !== "object" || event.detail.value === null)
       return;
     const actions = event.detail.value as Record<string, unknown>;
+    let visibilityChanged = false;
+    for (const name of ["hold_action", "double_tap_action"] as const) {
+      if (name in actions && !this._visibleOptionalInteractions.has(name)) {
+        this._visibleOptionalInteractions.add(name);
+        visibilityChanged = true;
+      }
+    }
     this._applyDraft(
       normalizeCardConfig({
         ...this._config,
         ...actions,
-        hold_action: actions.hold_action ?? { action: "none" },
-        double_tap_action: actions.double_tap_action ?? { action: "none" },
+        hold_action:
+          "hold_action" in actions
+            ? (actions.hold_action ?? { action: "none" })
+            : this._config.hold_action,
+        double_tap_action:
+          "double_tap_action" in actions
+            ? (actions.double_tap_action ?? { action: "none" })
+            : this._config.double_tap_action,
       }),
       true,
     );
+    if (visibilityChanged) this.requestUpdate();
   };
 
-  private readonly _handleTapActionModeChange = (event: Event): void => {
+  private readonly _removeOptionalInteraction = (event: Event): void => {
     if (!this._config) return;
-    const value = (event as ValueChangedEvent).detail.value;
-    if (value !== "open-live-view" && value !== "other") return;
+    const name = (event.currentTarget as HTMLElement).dataset.interaction;
+    if (name !== "hold_action" && name !== "double_tap_action") return;
+    this._visibleOptionalInteractions.delete(name);
     this._applyDraft(
       normalizeCardConfig({
         ...this._config,
-        tap_action: {
-          action: value === "open-live-view" ? "open-live-view" : "none",
-        },
+        [name]: { action: "none" },
       }),
       true,
     );
+    this.requestUpdate();
   };
 
   private readonly _handleStageLayoutChange = (event: Event): void => {

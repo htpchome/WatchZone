@@ -2273,9 +2273,19 @@ test("keeps minimal camera actions and media controls independent", async ({
 
   const minimal = page.locator("wzc-minimal-camera");
   await expect(minimal).toBeVisible();
+  await minimal.evaluate((element) => {
+    element.style.setProperty("--wzc-camera-control-size", "1.875rem");
+  });
+  const inlineControlSize = await minimal
+    .getByRole("button", { name: "Camera controls" })
+    .evaluate((element) => element.getBoundingClientRect().width);
   await minimal.locator(".interaction-surface").click();
   const liveDialog = minimal.locator(".live-dialog");
   await expect(liveDialog).toBeVisible();
+  const dialogControlSize = await liveDialog
+    .getByRole("button", { name: "Camera controls" })
+    .evaluate((element) => element.getBoundingClientRect().width);
+  expect(dialogControlSize).toBeGreaterThan(inlineControlSize);
   await liveDialog
     .getByRole("button", { name: "Resize video player" })
     .press("ArrowLeft");
@@ -7792,15 +7802,51 @@ test("editor uses exclusive accordions and shared draft status", async ({
   );
   await expect(interactions).toHaveCount(1);
   await interactions.locator("summary").click();
-  await expect(
-    interactions.locator('ha-selector[label="Tap behavior (optional)"]'),
-  ).toHaveCount(1);
+  const interactionForm = interactions.locator("ha-form.primary-interaction");
+  await expect(interactionForm).toHaveCount(1);
   expect(
-    await interactions
-      .locator("ha-selector.minimal-tap-mode")
-      .evaluate((element: HTMLElement & { value?: string }) => element.value),
-  ).toBe("open-live-view");
-  await expect(interactions.locator("ha-form")).toHaveCount(1);
+    await interactionForm.evaluate(
+      (
+        element: HTMLElement & {
+          data?: { tap_action?: { action?: string } };
+          schema?: Array<{
+            selector?: { ui_action?: { actions?: string[] } };
+          }>;
+        },
+      ) => ({
+        actions: element.schema?.[0]?.selector?.ui_action?.actions,
+        tapAction: element.data?.tap_action?.action,
+      }),
+    ),
+  ).toEqual({
+    actions: [
+      "open-live-view",
+      "toggle",
+      "navigate",
+      "url",
+      "perform-action",
+      "assist",
+      "none",
+    ],
+    tapAction: "open-live-view",
+  });
+  const addInteraction = interactions.locator("ha-form.add-interaction");
+  await expect(addInteraction).toHaveCount(1);
+  await addInteraction.evaluate((element) => {
+    element.dispatchEvent(
+      new CustomEvent("value-changed", {
+        bubbles: true,
+        composed: true,
+        detail: { value: { double_tap_action: { action: "none" } } },
+      }),
+    );
+  });
+  const removeInteraction = interactions.locator(
+    '[data-interaction="double_tap_action"]',
+  );
+  await expect(removeInteraction).toContainText("Remove");
+  await removeInteraction.click();
+  await expect(removeInteraction).toHaveCount(0);
   await expect(
     editor.locator(
       'wzc-accordion-item[item-key="minimal-camera-configuration"] ha-selector[label="Show Source Label"]',
