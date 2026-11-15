@@ -506,14 +506,16 @@ export class MediaZoomController implements ReactiveController {
     const width = this._surfaceWidth;
     const height = this._surfaceHeight;
     if (!width || !height) return { x: panX, y: panY };
+    // An unknown content ratio has no safe pan boundary. Keep the media
+    // centered until its intrinsic dimensions are available rather than
+    // assuming that it fills the viewport and exposing blank space.
+    if (this._mediaHeightRatio === undefined) return { x: 0, y: 0 };
     const stageHeightRatio = height / width;
     const contentWidth =
-      this._mediaHeightRatio !== undefined &&
       stageHeightRatio < this._mediaHeightRatio
         ? height / this._mediaHeightRatio
         : width;
     const contentHeight =
-      this._mediaHeightRatio !== undefined &&
       stageHeightRatio > this._mediaHeightRatio
         ? width * this._mediaHeightRatio
         : height;

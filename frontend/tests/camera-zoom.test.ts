@@ -169,6 +169,7 @@ describe("camera media zoom", () => {
     const surface = createSurface();
     const controller = new MediaPresentationController(createHost());
     controller.observe(surface);
+    controller.zoom.setMediaDimensions(400, 225);
     connectMediaPointerEvents(surface, controller);
 
     tap(surface, "touch");
@@ -295,6 +296,7 @@ describe("camera media zoom", () => {
     const surface = createSurface();
     const controller = new MediaPresentationController(createHost());
     controller.observe(surface);
+    controller.zoom.setMediaDimensions(400, 225);
     connectMediaPointerEvents(surface, controller);
     tap(surface, "touch");
     tap(surface, "touch");
@@ -326,6 +328,7 @@ describe("camera media zoom", () => {
     const surface = createSurface();
     const controller = new MediaZoomController(host);
     controller.observe(surface);
+    controller.setMediaDimensions(400, 225);
     connectPointerEvents(surface, controller);
     controller.toggleAt(200, 112.5);
     requestUpdate.mockClear();
@@ -621,6 +624,7 @@ describe("camera media zoom", () => {
     const surface = createSurface();
     const controller = new MediaZoomController(createHost());
     controller.observe(surface);
+    controller.setMediaDimensions(400, 225);
     connectPointerEvents(surface, controller);
     controller.handleDoubleClick(
       new MouseEvent("dblclick", { clientX: 200, clientY: 112.5 }),
@@ -659,6 +663,7 @@ describe("camera media zoom", () => {
     const surface = createSurface();
     const controller = new MediaZoomController(createHost());
     controller.observe(surface);
+    controller.setMediaDimensions(400, 225);
     surface.addEventListener("wheel", controller.handleWheel);
 
     const smoothScroll = new WheelEvent("wheel", {
@@ -708,6 +713,7 @@ describe("camera media zoom", () => {
     const surface = createSurface();
     const controller = new MediaZoomController(createHost());
     controller.observe(surface);
+    controller.setMediaDimensions(400, 225);
     connectPointerEvents(surface, controller);
 
     surface.dispatchEvent(
@@ -772,6 +778,59 @@ describe("camera media zoom", () => {
     expect(controller.transform).toContain("translate3d(400px, 225px, 0)");
   });
 
+  it("keeps unknown media centered until safe pan bounds are available", () => {
+    const surface = createSurface();
+    const controller = new MediaZoomController(createHost());
+    controller.observe(surface);
+    connectPointerEvents(surface, controller);
+
+    controller.toggleAt(200, 112.5);
+    surface.dispatchEvent(
+      pointerEvent("pointerdown", {
+        clientX: 200,
+        clientY: 112.5,
+        pointerId: 1,
+        pointerType: "mouse",
+      }),
+    );
+    surface.dispatchEvent(
+      pointerEvent("pointermove", {
+        clientX: 800,
+        clientY: 600,
+        pointerId: 1,
+        pointerType: "mouse",
+      }),
+    );
+    expect(controller.transform).toContain("translate3d(0px, 0px, 0)");
+
+    controller.setMediaDimensions(400, 225);
+    surface.dispatchEvent(
+      pointerEvent("pointerup", {
+        clientX: 800,
+        clientY: 600,
+        pointerId: 1,
+        pointerType: "mouse",
+      }),
+    );
+    surface.dispatchEvent(
+      pointerEvent("pointerdown", {
+        clientX: 200,
+        clientY: 112.5,
+        pointerId: 2,
+        pointerType: "mouse",
+      }),
+    );
+    surface.dispatchEvent(
+      pointerEvent("pointermove", {
+        clientX: 800,
+        clientY: 600,
+        pointerId: 2,
+        pointerType: "mouse",
+      }),
+    );
+    expect(controller.transform).toContain("translate3d(200px, 112.5px, 0)");
+  });
+
   it("pans a stage-created crop before the user adds display zoom", () => {
     const surface = createSurface(400);
     const controller = new MediaZoomController(createHost());
@@ -827,6 +886,7 @@ describe("camera media zoom", () => {
     const surface = createSurface();
     const controller = new MediaZoomController(createHost());
     controller.observe(surface);
+    controller.setMediaDimensions(400, 225);
 
     const zoom = new KeyboardEvent("keydown", {
       cancelable: true,
@@ -857,6 +917,7 @@ describe("camera media zoom", () => {
     const surface = createSurface();
     const controller = new MediaZoomController(createHost());
     controller.observe(surface);
+    controller.setMediaDimensions(400, 225);
     connectPointerEvents(surface, controller);
     controller.handleDoubleClick(
       new MouseEvent("dblclick", { clientX: 200, clientY: 112.5 }),

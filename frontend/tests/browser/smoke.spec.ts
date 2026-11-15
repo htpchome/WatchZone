@@ -3843,9 +3843,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
     .not.toBe("rgba(0, 0, 0, 0)");
   await expect(modalClose).toHaveCSS("color", modalCloseColor);
   const recordedVideo = page.locator("wzc-recorded-video-player video");
-  const recordedMediaSurface = page.locator(
-    "wzc-recorded-video-player .media-surface",
-  );
+  const recordedMediaSurface = recordedVideo;
   await expect(recordedVideo).not.toHaveAttribute("controls", "");
   await expect(recordedVideo).toHaveAttribute("autoplay", "");
   await expect(recordedVideo).toHaveAttribute("muted", "");
@@ -3925,7 +3923,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   }
   await expect(
     page.locator("wzc-recorded-video-player .media-surface"),
-  ).toHaveCount(1);
+  ).toHaveCount(0);
   await expect(
     page.locator(
       ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) .scrim",
@@ -4027,23 +4025,23 @@ test("keeps activity content in an independently scrolling viewport", async ({
       return event.defaultPrevented;
     });
   await recordedVideo.evaluate((element) => {
+    element.dispatchEvent(new Event("loadedmetadata"));
     Object.defineProperties(element, {
       videoHeight: { configurable: true, value: 480 },
       videoWidth: { configurable: true, value: 640 },
     });
-    element.dispatchEvent(new Event("loadedmetadata"));
+    element.dispatchEvent(new Event("resize"));
   });
   expect(await dispatchRecordedDoubleClick()).toBe(true);
   await expect(recordedMediaSurface).toHaveAttribute("style", /scale\(2\)/);
   const recordedPresentationContract = await recordedMediaSurface.evaluate(
-    (surface) => {
-      const viewport = surface.parentElement;
-      const video = surface.querySelector("video");
+    (video) => {
+      const element = video as HTMLVideoElement;
+      const viewport = video.parentElement;
       return {
-        surfaceHeight: (surface as HTMLElement).offsetHeight,
-        surfaceWidth: (surface as HTMLElement).offsetWidth,
-        videoPosition: video ? getComputedStyle(video).position : "",
-        videoTransform: video ? getComputedStyle(video).transform : "",
+        surfaceHeight: element.offsetHeight,
+        surfaceWidth: element.offsetWidth,
+        videoPosition: getComputedStyle(video).position,
         viewportHeight: viewport?.clientHeight ?? 0,
         viewportWidth: viewport?.clientWidth ?? 0,
       };
@@ -4056,7 +4054,6 @@ test("keeps activity content in an independently scrolling viewport", async ({
     recordedPresentationContract.viewportHeight,
   );
   expect(recordedPresentationContract.videoPosition).toBe("absolute");
-  expect(recordedPresentationContract.videoTransform).toBe("none");
   await expect(
     page.getByRole("button", { name: "Mute recorded video" }),
   ).toBeVisible();
@@ -4110,13 +4107,13 @@ test("keeps activity content in an independently scrolling viewport", async ({
     1,
   );
   const recordedContentCoverage = await recordedMediaSurface.evaluate(
-    (surface) => {
-      const viewport = surface.parentElement;
-      const video = surface.querySelector("video");
-      if (!viewport || !video) return undefined;
+    (video) => {
+      const element = video as HTMLVideoElement;
+      const viewport = video.parentElement;
+      if (!viewport) return undefined;
       const viewportRect = viewport.getBoundingClientRect();
-      const surfaceRect = surface.getBoundingClientRect();
-      const mediaRatio = video.videoWidth / video.videoHeight;
+      const surfaceRect = video.getBoundingClientRect();
+      const mediaRatio = element.videoWidth / element.videoHeight;
       const viewportRatio = viewportRect.width / viewportRect.height;
       const fittedWidth =
         mediaRatio > viewportRatio
