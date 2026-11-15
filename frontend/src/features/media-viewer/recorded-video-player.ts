@@ -104,7 +104,7 @@ export class RecordedVideoPlayer extends LitElement {
   private readonly _playback = new RecordedMediaPlaybackController(
     () => this.api,
     () => this._reportError(),
-    () => this._syncControlState(),
+    () => this._handlePlaybackReady(),
   );
   private readonly _segment = new RecordingSegmentController(
     () => this.api,
@@ -188,25 +188,32 @@ export class RecordedVideoPlayer extends LitElement {
       @focusin=${this._media.overlay.handleFocusIn}
       @focusout=${this._media.overlay.handleFocusOut}
     >
-      <video
-        class=${this._media.zoom.interacting ? "interacting" : ""}
+      <div
+        class=${
+          this._media.zoom.interacting
+            ? "media-surface interacting"
+            : "media-surface"
+        }
         style=${`transform: ${this._media.zoom.transform}`}
-        autoplay
-        muted
-        playsinline
-        preload="auto"
-        poster=${this.request?.posterUrl ?? ""}
-        @loadedmetadata=${this._handleLoadedMetadata}
-        @durationchange=${this._syncControlState}
-        @timeupdate=${this._syncControlState}
-        @play=${this._syncControlState}
-        @pause=${this._syncControlState}
-        @ended=${this._handleSegmentPreviewEnded}
-        @volumechange=${this._syncControlState}
-        @enterpictureinpicture=${this._syncControlState}
-        @leavepictureinpicture=${this._syncControlState}
-        @webkitpresentationmodechanged=${this._syncControlState}
-      ></video>
+      >
+        <video
+          autoplay
+          muted
+          playsinline
+          preload="auto"
+          poster=${this.request?.posterUrl ?? ""}
+          @loadedmetadata=${this._handleLoadedMetadata}
+          @durationchange=${this._syncControlState}
+          @timeupdate=${this._syncControlState}
+          @play=${this._syncControlState}
+          @pause=${this._syncControlState}
+          @ended=${this._handleSegmentPreviewEnded}
+          @volumechange=${this._syncControlState}
+          @enterpictureinpicture=${this._syncControlState}
+          @leavepictureinpicture=${this._syncControlState}
+          @webkitpresentationmodechanged=${this._syncControlState}
+        ></video>
+      </div>
       <${mediaControlsTag}
         class="player-tools"
         .controls=${controls}
@@ -307,14 +314,23 @@ export class RecordedVideoPlayer extends LitElement {
   }
 
   private readonly _handleLoadedMetadata = (): void => {
+    this._syncMediaDimensions();
+    refreshNativePictureInPictureSuppression(this._video());
+    this._syncControlState();
+  };
+
+  private _handlePlaybackReady(): void {
+    this._syncMediaDimensions();
+    this._syncControlState();
+  }
+
+  private _syncMediaDimensions(): void {
     const video = this._video();
     this._media.zoom.setMediaDimensions(
       video?.videoWidth ?? 0,
       video?.videoHeight ?? 0,
     );
-    refreshNativePictureInPictureSuppression(video);
-    this._syncControlState();
-  };
+  }
 
   private readonly _syncControlState = (): void => {
     const video = this._video();

@@ -45,23 +45,34 @@ export const recordedVideoPlayerStyles = css`
     outline-offset: -2px;
   }
 
-  video {
+  .media-surface {
     background: var(--wzc-recorded-media-background);
     inset: 0;
     display: block;
     block-size: 100%;
     inline-size: 100%;
-    max-block-size: 100%;
-    object-fit: contain;
+    overflow: hidden;
     position: absolute;
     transform-origin: center;
     transition: transform var(--wzc-zoom-transition-duration) ease;
     will-change: transform;
   }
 
-  video.interacting {
+  .media-surface.interacting {
     cursor: move;
     transition: none;
+  }
+
+  video {
+    background: var(--wzc-recorded-media-background);
+    block-size: 100%;
+    display: block;
+    inline-size: 100%;
+    inset: 0;
+    max-block-size: 100%;
+    object-fit: contain;
+    pointer-events: none;
+    position: absolute;
   }
 
   .player-tools {
@@ -80,7 +91,7 @@ export const recordedVideoPlayerStyles = css`
   }
 
   @media (prefers-reduced-motion: reduce) {
-    video {
+    .media-surface {
       transition: none;
     }
   }
