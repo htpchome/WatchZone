@@ -1,7 +1,10 @@
 import type { ReactiveControllerHost } from "lit";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CameraStageResizeController } from "../src/stage/modules/camera/stage-resize.controller";
+import {
+  CameraStageResizeController,
+  CameraStageSizeEventController,
+} from "../src/stage/modules/camera/stage-resize.controller";
 
 function createHost(): ReactiveControllerHost {
   return {
@@ -110,6 +113,45 @@ describe("camera stage resizing", () => {
     );
     expect(controller.mediaPresentationScale).toBeCloseTo(0.8125 / 0.75);
     expect(presentationScales.at(-1)).toBeCloseTo(0.8125 / 0.75);
+  });
+
+  it("coalesces transient size events and preserves the final size", () => {
+    const frames = new Map<number, FrameRequestCallback>();
+    let nextFrame = 1;
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      const frame = nextFrame++;
+      frames.set(frame, callback);
+      return frame;
+    });
+    vi.stubGlobal("cancelAnimationFrame", (frame: number) => {
+      frames.delete(frame);
+    });
+    const host = Object.assign(document.createElement("div"), createHost());
+    const details: unknown[] = [];
+    host.addEventListener("wzc-camera-stage-size-change", (event) => {
+      details.push((event as CustomEvent).detail);
+    });
+    const events = new CameraStageSizeEventController(host);
+
+    events.begin();
+    events.update({ heightRatio: 0.65, resized: true });
+    events.update({ heightRatio: 0.7, resized: true });
+    expect(details).toEqual([]);
+    expect(frames.size).toBe(1);
+    const [[frame, callback]] = [...frames];
+    frames.delete(frame);
+    callback(0);
+    expect(details).toEqual([
+      { heightRatio: 0.7, resized: true, transient: true },
+    ]);
+
+    events.update({ heightRatio: 0.75, resized: true });
+    events.end({ heightRatio: 0.75, resized: true });
+    expect(frames.size).toBe(0);
+    expect(details).toEqual([
+      { heightRatio: 0.7, resized: true, transient: true },
+      { heightRatio: 0.75, resized: true, transient: false },
+    ]);
   });
 
   it("clamps stage height between 16:9 and 1:1", () => {

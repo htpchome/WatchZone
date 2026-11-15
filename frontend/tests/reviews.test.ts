@@ -550,6 +550,18 @@ describe("reviews module", () => {
     expect(dialog?.hasAttribute("open")).toBe(true);
     expect(dialog?.textContent).toContain("Tracking details");
     expect(dialog?.textContent).toContain("Resident entering garage");
+    expect(
+      [...(dialog?.querySelectorAll(".badges wzc-badge") ?? [])].map((badge) =>
+        badge.textContent?.trim(),
+      ),
+    ).toEqual([
+      "Person",
+      "Bird",
+      "Resident",
+      "Northern Mockingbird",
+      "American Goldfinch",
+      "Alert",
+    ]);
     await vi.waitFor(() => {
       expect(dialog?.textContent).toContain("Resident detected");
       expect(dialog?.textContent).toContain("Resident entered garage");
@@ -589,6 +601,11 @@ describe("reviews module", () => {
         ?.classList.contains("detection"),
     ).toBe(true);
     expect(detectionDialog?.querySelector(".analysis-summary")).toBeNull();
+    expect(
+      [...(detectionDialog?.querySelectorAll(".badges wzc-badge") ?? [])].map(
+        (badge) => badge.textContent?.trim(),
+      ),
+    ).toEqual(["Cat", "Detection"]);
     await vi.waitFor(() => {
       expect(detectionDialog?.textContent).toContain("Cat detected");
     });

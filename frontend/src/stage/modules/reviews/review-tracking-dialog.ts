@@ -23,18 +23,24 @@ import {
 } from "../../../core/localization";
 import { homeAssistantNumberFormat } from "../../../core/number-format";
 import { centerDialogOnCard } from "../../../ui/dialog-position";
+import { activityBadgePresentations } from "../../../ui/activity-badge-presentations";
+import type { ActivityTypeBadge } from "../../../ui/activity-list";
+import "../../../ui/badge";
 import { renderIcon } from "../../../ui/icons";
 import { reviewDialogBaseStyles } from "./review-dialog.styles";
 import { reviewTrackingDialogStyles } from "./review-tracking-dialog.styles";
 
 export interface ReviewTrackingDialogModel {
   readonly analysisTitle?: string;
+  readonly cameraBadgeLabel: string | undefined;
   readonly classification: ReviewClassification;
   readonly details?: ReviewTrackingDetails;
   readonly endTime: number | null;
   readonly failed: boolean;
   readonly loading: boolean;
+  readonly objectLabels: readonly string[];
   readonly startTime: number;
+  readonly typeBadge: ActivityTypeBadge | undefined;
 }
 
 /** Reviews-only presentation for provider-normalized object tracking details. */
@@ -77,7 +83,8 @@ export class ReviewTrackingDialog extends LitElement {
                 </h2>
               </header>
               <section class=${`tracking ${model.classification}`}>
-                ${this._renderSummary(model)} ${this._renderContent(model)}
+                ${this._renderBadges(model)} ${this._renderSummary(model)}
+                ${this._renderContent(model)}
               </section>`
           : nothing
       }
@@ -93,6 +100,38 @@ export class ReviewTrackingDialog extends LitElement {
       dialog.showModal();
       centerDialogOnCard(this, dialog);
     } else if (!this.model && dialog.open) dialog.close();
+  }
+
+  private _renderBadges(model: ReviewTrackingDialogModel) {
+    const badges = activityBadgePresentations(
+      model.cameraBadgeLabel
+        ? capitalize(model.cameraBadgeLabel, this.locale?.language)
+        : undefined,
+      model.objectLabels.map((label) =>
+        capitalize(label, this.locale?.language),
+      ),
+      model.typeBadge
+        ? {
+            label: capitalize(model.typeBadge.label, this.locale?.language),
+            variant: model.typeBadge.variant,
+          }
+        : undefined,
+    );
+    if (badges.length === 0) return nothing;
+    return html`<div class="badges">
+      ${badges.map((badge) =>
+        badge.variant
+          ? html`<wzc-badge shape="pill" size="small" variant=${badge.variant}
+              >${badge.label}</wzc-badge
+            >`
+          : html`<wzc-badge
+              color=${badge.color ?? "neutral"}
+              shape="pill"
+              size="small"
+              >${badge.label}</wzc-badge
+            >`,
+      )}
+    </div>`;
   }
 
   private _renderSummary(model: ReviewTrackingDialogModel) {

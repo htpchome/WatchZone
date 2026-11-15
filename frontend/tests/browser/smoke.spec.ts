@@ -2125,6 +2125,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
           zones: [camera === "back" ? "back_yard" : "driveway"],
         };
       });
+    let firstReviewReviewed = false;
     card.setConfig({
       type: "custom:watchzone-card",
       event_history_days: 7,
@@ -2166,6 +2167,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
       callWS: async (message: {
         entity_id?: string;
         path?: string;
+        reviewed?: boolean;
         type: string;
       }) => {
         if (message.type === "watchzone/live/camera/ready") {
@@ -2177,6 +2179,10 @@ test("keeps activity content in an independently scrolling viewport", async ({
               message.entity_id === "camera.back" ? "back" : "front",
             ),
           };
+        }
+        if (message.type === "watchzone/reviews/set_reviewed") {
+          firstReviewReviewed = message.reviewed === true;
+          return { reviewed: firstReviewReviewed };
         }
         if (message.type === "watchzone/reviews/list") {
           const camera = message.entity_id === "camera.back" ? "back" : "front";
@@ -2208,7 +2214,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
               preview_url: "/review-preview.gif",
               revision: event.revision,
               related_event_ids: [event.id],
-              reviewed: false,
+              reviewed: index === 0 ? firstReviewReviewed : false,
               score: event.score,
               snapshot_url: event.snapshot_url,
               start_time: event.start_time,
@@ -2242,6 +2248,15 @@ test("keeps activity content in an independently scrolling viewport", async ({
                     timestamp: 1_700_000_003,
                     zones: ["garage"],
                   },
+                  ...Array.from({ length: 12 }, (_, index) => ({
+                    area: 43_000 - index * 100,
+                    area_percentage: 8.3 - index * 0.1,
+                    kind: "entered_zone",
+                    ratio: 0.7,
+                    score: 0.8,
+                    timestamp: 1_700_000_004 + index,
+                    zones: ["garage"],
+                  })),
                   {
                     area: 41_200,
                     area_percentage: 7.95,
@@ -2418,6 +2433,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
       ),
       analysisActionTopDelta: Math.abs(analysisBounds.top - actionBounds.top),
       analysisGap: analysisBounds.top - badgeBounds.bottom,
+      analysisStart: analysisBounds.left - detailBounds.left,
       asideAfterDetails: asideBounds.left >= detailBounds.right,
       badgeInset: badgeBounds.top - tileBounds.top,
       contentBelowBadges:
@@ -2443,13 +2459,35 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(standardTileLayout.analysisActionHeightDelta).toBeLessThanOrEqual(1);
   expect(standardTileLayout.analysisActionTopDelta).toBeLessThanOrEqual(1);
   const originalActivityViewport = page.viewportSize();
+  await page.setViewportSize({ height: 844, width: 940 });
+  const fluidTitleLayout = await analysisTitle.evaluate((element) => {
+    const tile = element.closest<HTMLElement>(".tile");
+    const details = tile?.querySelector<HTMLElement>(".details");
+    const list = (element.getRootNode() as ShadowRoot).host;
+    if (!tile || !details || !list) {
+      throw new Error("Expected the fluid activity-title grid.");
+    }
+    return {
+      analysisStart:
+        element.getBoundingClientRect().left -
+        details.getBoundingClientRect().left,
+      containerWidth: list.getBoundingClientRect().width,
+    };
+  });
+  expect(fluidTitleLayout.containerWidth).toBeGreaterThan(768);
+  expect(fluidTitleLayout.containerWidth).toBeLessThanOrEqual(1024);
+  expect(fluidTitleLayout.analysisStart).toBeLessThan(
+    standardTileLayout.analysisStart,
+  );
+
   await page.setViewportSize({ height: 844, width: 780 });
   const mediumTileLayout = await analysisTitle.evaluate((element) => {
     const tile = element.closest(".tile");
     const badges = tile?.querySelector<HTMLElement>(".badges");
     const actions = tile?.querySelector<HTMLElement>(".actions");
+    const details = tile?.querySelector<HTMLElement>(".details");
     const list = (element.getRootNode() as ShadowRoot).host;
-    if (!tile || !badges || !actions || !list) {
+    if (!tile || !badges || !actions || !details || !list) {
       throw new Error("Expected the complete medium activity-tile grid.");
     }
     const tileBounds = tile.getBoundingClientRect();
@@ -2461,6 +2499,9 @@ test("keeps activity content in an independently scrolling viewport", async ({
           actionBounds.height / 2 -
           (tileBounds.top + tileBounds.height / 2),
       ),
+      analysisStart:
+        element.getBoundingClientRect().left -
+        details.getBoundingClientRect().left,
       actionsBelowBadges: actionBounds.top >= badgeBounds.bottom,
       badgesBeforeActions: badgeBounds.right <= actionBounds.left,
       badgeEndPadding: Number.parseFloat(
@@ -2474,6 +2515,9 @@ test("keeps activity content in an independently scrolling viewport", async ({
   });
   expect(mediumTileLayout.containerWidth).toBeGreaterThan(600);
   expect(mediumTileLayout.containerWidth).toBeLessThanOrEqual(768);
+  expect(mediumTileLayout.analysisStart).toBeLessThan(
+    fluidTitleLayout.analysisStart,
+  );
   expect(mediumTileLayout.actionCenterDelta).toBeLessThanOrEqual(1);
   expect(mediumTileLayout.actionsBelowBadges).toBe(true);
   expect(mediumTileLayout.badgesBeforeActions).toBe(true);
@@ -2725,6 +2769,31 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect(trackingDialog).toContainText("Resident entering garage");
   await expect(trackingDialog).toContainText("Resident entered garage");
   await expect(trackingDialog.locator(".tracking")).toHaveClass(/alert/);
+  await expect(trackingDialog.locator(".badges wzc-badge")).toHaveText([
+    "Person",
+    "Car",
+    "Package",
+    "Dog",
+    "Resident",
+    "Alert",
+  ]);
+  const trackingBadgePlacement = await trackingDialog.evaluate((dialog) => {
+    const badges = dialog.querySelector<HTMLElement>(".badges");
+    const summary = dialog.querySelector<HTMLElement>(".summary");
+    if (!badges || !summary) throw new Error("Expected tracking badges.");
+    const badgeBounds = badges.getBoundingClientRect();
+    const summaryBounds = summary.getBoundingClientRect();
+    return {
+      aboveSummary: badgeBounds.bottom <= summaryBounds.top,
+      insideDialog:
+        badgeBounds.left >= dialog.getBoundingClientRect().left &&
+        badgeBounds.right <= dialog.getBoundingClientRect().right,
+    };
+  });
+  expect(trackingBadgePlacement).toEqual({
+    aboveSummary: true,
+    insideDialog: true,
+  });
   const trackingEvent = trackingDialog.locator(".lifecycle-event").first();
   await trackingEvent.hover();
   const trackingMetrics = trackingDialog.locator(".event-metrics");
@@ -2732,11 +2801,21 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect(trackingMetrics).toContainText("56%");
   await expect(trackingMetrics).toContainText("0.74");
   await expect(trackingMetrics).toContainText("37,742px");
-  await trackingDialog.locator(".lifecycle-event").last().hover();
+  await trackingDialog.evaluate(
+    (dialog) =>
+      new Promise<void>((resolve) => {
+        dialog.scrollTop = dialog.scrollHeight;
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      }),
+  );
+  await trackingDialog
+    .locator(".lifecycle-event")
+    .last()
+    .evaluate((event) => event.focus({ preventScroll: true }));
   await expect(trackingMetrics).toBeVisible();
-  const containedMetrics = await trackingMetrics.evaluate((metrics) => {
-    const dialog = metrics.closest("dialog");
-    if (!dialog) throw new Error("Expected tracking metrics in a dialog.");
+  const containedMetrics = await trackingDialog.evaluate((dialog) => {
+    const metrics = dialog.querySelector<HTMLElement>(".event-metrics");
+    if (!metrics) throw new Error("Expected tracking metrics in the dialog.");
     const dialogBounds = dialog.getBoundingClientRect();
     const metricsBounds = metrics.getBoundingClientRect();
     return {
@@ -2752,10 +2831,36 @@ test("keeps activity content in an independently scrolling viewport", async ({
     right: true,
     top: true,
   });
+  const trackingViewport = page.viewportSize();
+  await page.setViewportSize({
+    height: 600,
+    width: trackingViewport?.width ?? 1280,
+  });
+  const trackingOverflow = await trackingDialog.evaluate((dialog) => {
+    const style = getComputedStyle(dialog);
+    return {
+      horizontallyContained: dialog.scrollWidth <= dialog.clientWidth,
+      overflowY: style.overflowY,
+      scrollable: dialog.scrollHeight > dialog.clientHeight,
+      touchAction: style.touchAction,
+    };
+  });
+  expect(trackingOverflow).toEqual({
+    horizontallyContained: true,
+    overflowY: "auto",
+    scrollable: true,
+    touchAction: "pan-y",
+  });
+  await trackingDialog.hover();
+  await page.mouse.wheel(0, 400);
+  await expect
+    .poll(() => trackingDialog.evaluate((dialog) => dialog.scrollTop))
+    .toBeGreaterThan(0);
   await trackingDialog
     .locator('button[aria-label="Close tracking details"]')
     .click();
   await expect(trackingDialog).not.toBeVisible();
+  if (trackingViewport) await page.setViewportSize(trackingViewport);
   const reviewDownloadPromise = page.waitForEvent("download");
   await page
     .locator('wzc-reviews button[aria-label="Download clip"]')
@@ -3029,15 +3134,21 @@ test("keeps activity content in an independently scrolling viewport", async ({
     .not.toBe(unreviewedPresentation.color);
   const alertList = page.locator("wzc-reviews wzc-activity-list");
   const reviewsModule = page.locator("wzc-reviews");
-  await reviewsModule.evaluate((element) => {
+  await reviewsModule.evaluate(async (element) => {
     const module = element as HTMLElement & {
       _resolvePlayback: () => Promise<unknown>;
+      requestUpdate(): void;
       restorePlaybackResolver?: () => void;
+      updateComplete: Promise<boolean>;
     };
+    await module.updateComplete;
     const originalResolver = module._resolvePlayback;
+    const originalRequestUpdate = module.requestUpdate.bind(module);
     module._resolvePlayback = () => new Promise(() => undefined);
+    module.requestUpdate = () => undefined;
     module.restorePlaybackResolver = () => {
       module._resolvePlayback = originalResolver;
+      module.requestUpdate = originalRequestUpdate;
     };
   });
   await alertList.evaluate(async (element) => {

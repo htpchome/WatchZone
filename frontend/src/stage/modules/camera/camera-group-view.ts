@@ -5,7 +5,6 @@ import {
   CAMERA_CONTROLS_TAG,
   CAMERA_GROUP_VIEW_TAG,
   CAMERA_OVERLAY_VISIBILITY_EVENT,
-  CAMERA_STAGE_SIZE_CHANGE_EVENT,
   CAMERA_SUSPEND_DIALOG_TAG,
   CAMERA_VIEW_TAG,
   MEDIA_OVERLAY_INTERACTION_EVENT,
@@ -44,6 +43,7 @@ import { cameraGroupViewStyles } from "./camera-group-view.styles";
 import { stageResizeHandleStyles } from "./stage-resize-handle.styles";
 import {
   CameraStageResizeController,
+  CameraStageSizeEventController,
   DEFAULT_CAMERA_STAGE_HEIGHT_RATIO,
   type CameraStageResizeInteraction,
   type CameraStageSize,
@@ -91,11 +91,9 @@ export class CameraGroupView extends LitElement {
     onVisibilityChange: (visible) => this._emitOverlayVisibility(visible),
   });
   private _snapshotPending = false;
-  private _stageResizeActive = false;
   private _touchSurfaceActivation = false;
-  private _stageResizeFrame?: number;
-  private _pendingStageSize?: CameraStageSize;
   private _suspendDialogActive = false;
+  private readonly _stageSizeEvents = new CameraStageSizeEventController(this);
   private readonly _stageResize = new CameraStageResizeController(
     this,
     (interaction) => this._handleStageResizeInteraction(interaction),
@@ -287,7 +285,6 @@ export class CameraGroupView extends LitElement {
       "webkitfullscreenchange",
       this._syncFullscreenState,
     );
-    this._cancelPendingStageSize();
     this._touchSurfaceActivation = false;
     this.cameraSession?.clear(this);
     super.disconnectedCallback();
@@ -630,51 +627,18 @@ export class CameraGroupView extends LitElement {
 
   private _handleStageSizeChange(size: CameraStageSize): void {
     this._syncChildPresentationScale(size);
-    if (this._stageResizeActive) {
-      this._pendingStageSize = size;
-      this._stageResizeFrame ??= requestAnimationFrame(
-        this._flushPendingStageSize,
-      );
-      return;
-    }
-    this._dispatchStageSize(size, false);
-  }
-
-  private readonly _flushPendingStageSize = (): void => {
-    this._stageResizeFrame = undefined;
-    const size = this._pendingStageSize;
-    this._pendingStageSize = undefined;
-    if (size) this._dispatchStageSize(size, true);
-  };
-
-  private _dispatchStageSize(size: CameraStageSize, transient: boolean): void {
-    this.dispatchEvent(
-      new CustomEvent(CAMERA_STAGE_SIZE_CHANGE_EVENT, {
-        bubbles: true,
-        composed: true,
-        detail: { ...size, transient },
-      }),
-    );
-  }
-
-  private _cancelPendingStageSize(): void {
-    if (this._stageResizeFrame !== undefined)
-      cancelAnimationFrame(this._stageResizeFrame);
-    this._stageResizeFrame = undefined;
-    this._pendingStageSize = undefined;
+    this._stageSizeEvents.update(size);
   }
 
   private _handleStageResizeInteraction(
     interaction: CameraStageResizeInteraction,
   ): void {
     if (interaction.phase === "start") {
-      this._stageResizeActive = true;
+      this._stageSizeEvents.begin();
       return;
     }
     if (interaction.phase !== "end") return;
-    this._stageResizeActive = false;
-    this._cancelPendingStageSize();
-    this._handleStageSizeChange(this._stageResize.size);
+    this._stageSizeEvents.end(this._stageResize.size);
   }
 
   private _syncChildPresentationScale(size: CameraStageSize): void {

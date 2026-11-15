@@ -3,6 +3,14 @@ import { css } from "lit";
 import { responsiveWidths } from "../../../styles/responsive-widths";
 
 export const reviewTrackingDialogStyles = css`
+  dialog {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .tracking {
     --wzc-tracking-accent: var(--wzc-color-warning);
     display: grid;
@@ -12,6 +20,19 @@ export const reviewTrackingDialogStyles = css`
 
   .tracking.alert {
     --wzc-tracking-accent: var(--wzc-color-error);
+  }
+
+  .badges {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--wzc-event-badge-gap);
+    min-inline-size: 0;
+  }
+
+  .badges wzc-badge {
+    --wzc-badge-font-size: var(--wzc-event-badge-font-size);
+    --wzc-badge-padding: var(--wzc-event-badge-padding);
   }
 
   .summary {

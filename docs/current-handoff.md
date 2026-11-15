@@ -15,9 +15,9 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.324`
-- Current commit: `c55e389` —
-  `v0.0.4-dev.322 - feat(activity): add fixed-height compact tile presentation`
+- Working version: `0.0.4-dev.326`
+- Current commit: `00414b9` —
+  `v0.0.4-dev.324 - fix(activity): unify badge overflow and ordering`
 - The worktree contains the uncommitted compact activity-tile correction
   described below. Always verify `git status`, the canonical version in
   `custom_components/watchzone/const.py`, and the latest commit.
@@ -34,6 +34,16 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
   allocation; tiles do not add observers. At and below `600px`, the AI title
   pill becomes an accessible icon-only control; at and below `480px`, media
   action buttons remain hidden.
+- Between the canonical `1024px` and `600px` transitions, the activity AI
+  title follows a fluid metadata track that moves left only as far as the
+  semantic date/time/zone safety width. Its remaining space then contracts
+  naturally before the established icon-only presentation takes over.
+- Review tracking details repeat the selected review's shared badge
+  presentation directly below the dialog heading and above its summary. The
+  row uses the same camera → object and identity → type ordering, palette, and
+  compact badge sizing as activity tiles and recorded-media information. Long
+  tracking timelines have explicit contained vertical momentum/touch scrolling
+  and never create horizontal dialog overflow.
 - Responsive width decisions now use one enforced four-point scale: `480px`,
   `600px`, `768px`, and `1024px`. Runtime device classification and CSS
   viewport/container queries consume the same contract; the style validator
@@ -89,6 +99,10 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
   independent source, zoom, pan, activity, and recorded-media identity.
   Activation cancels stale pointer capture, gestures, overlay holds, and resize
   ownership. Do not introduce a second stage or transition-specific lifecycle.
+- Single and grouped camera presentations share one animation-frame-coalesced
+  stage-size publisher, followed by one final non-transient size. The card
+  observes the rendered Stage content boundary rather than its padded outer
+  host; observer and queued-frame cleanup remains owner-local on disconnect.
 - Desktop/tablet groups support side-by-side or stacked combined presentation
   and cycle `combined → A → B → combined`. Phone groups show one member and
   toggle A/B while retaining mixed group activity scope.

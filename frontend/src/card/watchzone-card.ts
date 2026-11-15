@@ -81,6 +81,7 @@ export class DashboardCard extends LitElement {
   );
   private readonly _cardHostAppearance = new CardHostAppearanceController(this);
   private _stageResizeFrame?: number;
+  private _stageSizeBoundary?: HTMLElement;
   private readonly _stageResizeObserver =
     typeof ResizeObserver === "undefined"
       ? undefined
@@ -89,7 +90,10 @@ export class DashboardCard extends LitElement {
           if (this._stageResizeFrame !== undefined) {
             cancelAnimationFrame(this._stageResizeFrame);
           }
-          const inlineSize = entry.contentRect.width;
+          const contentBox = Array.isArray(entry.contentBoxSize)
+            ? entry.contentBoxSize[0]
+            : entry.contentBoxSize;
+          const inlineSize = contentBox?.inlineSize ?? entry.contentRect.width;
           this._stageResizeFrame = requestAnimationFrame(() => {
             this._stageResizeFrame = undefined;
             this._layoutRuntime.setInlineSize(inlineSize);
@@ -156,12 +160,13 @@ export class DashboardCard extends LitElement {
     this._syncLayout(this._previewConfig ?? this._config);
     if (this._hass) this._observeConnection(this._hass.connection);
     this._syncRuntime();
-    this._stageResizeObserver?.observe(this);
     this._layoutRuntime.setInlineSize(this.getBoundingClientRect().width);
+    this._observeStageSizeBoundary();
   }
 
   public disconnectedCallback(): void {
     this._stageResizeObserver?.disconnect();
+    this._stageSizeBoundary = undefined;
     if (this._stageResizeFrame !== undefined) {
       cancelAnimationFrame(this._stageResizeFrame);
       this._stageResizeFrame = undefined;
@@ -180,6 +185,10 @@ export class DashboardCard extends LitElement {
     );
     this._unobserveConnection();
     super.disconnectedCallback();
+  }
+
+  protected firstUpdated(): void {
+    this._observeStageSizeBoundary();
   }
 
   public getCardSize(): number {
@@ -225,6 +234,16 @@ export class DashboardCard extends LitElement {
         </div>
       </ha-card>
     `;
+  }
+
+  private _observeStageSizeBoundary(): void {
+    const boundary =
+      this.renderRoot.querySelector<HTMLElement>(".shell") ?? undefined;
+    if (!boundary || boundary === this._stageSizeBoundary) return;
+    this._stageResizeObserver?.disconnect();
+    this._stageSizeBoundary = boundary;
+    this._stageResizeObserver?.observe(boundary);
+    this._layoutRuntime.setInlineSize(boundary.getBoundingClientRect().width);
   }
 
   private readonly _handlePreviewDraft = (

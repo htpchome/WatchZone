@@ -10,6 +10,7 @@ import type {
 describe("watchzone-card", () => {
   afterEach(() => {
     document.body.replaceChildren();
+    vi.unstubAllGlobals();
   });
 
   it("keeps the stable Lovelace custom-element contract", () => {
@@ -25,6 +26,34 @@ describe("watchzone-card", () => {
       min_columns: 3,
       rows: "auto",
     });
+  });
+
+  it("observes the reusable Stage content boundary and disconnects cleanly", async () => {
+    const observed: Element[] = [];
+    const disconnect = vi.fn();
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        public constructor() {}
+
+        public disconnect = disconnect;
+
+        public observe(target: Element): void {
+          observed.push(target);
+        }
+      },
+    );
+    const element = document.createElement("watchzone-card") as DashboardCard;
+    document.body.append(element);
+    await element.updateComplete;
+
+    const shell = element.shadowRoot?.querySelector(".shell");
+    expect(shell).not.toBeNull();
+    expect(observed).toContain(shell);
+    expect(observed).not.toContain(element);
+
+    element.remove();
+    expect(disconnect).toHaveBeenCalled();
   });
 
   it("uses the configured title as an accessible name without a visual heading", async () => {

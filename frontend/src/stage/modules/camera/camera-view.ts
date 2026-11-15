@@ -3,7 +3,6 @@ import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import {
   CAMERA_LIVE_PRESENTATION_TAG,
-  CAMERA_STAGE_SIZE_CHANGE_EVENT,
   CAMERA_SUSPEND_DIALOG_TAG,
   CAMERA_VIEW_TAG,
 } from "../../../core/constants";
@@ -32,6 +31,7 @@ import { CameraLiveSessionController } from "./live/session.controller";
 import { CameraRuntimeController } from "./runtime.controller";
 import {
   CameraStageResizeController,
+  CameraStageSizeEventController,
   DEFAULT_CAMERA_STAGE_HEIGHT_RATIO,
   type CameraStageSize,
   type CameraStageResizeInteraction,
@@ -95,6 +95,7 @@ export class CameraView extends LitElement {
     });
   private readonly _runtime = new CameraRuntimeController(this);
   private _groupPresentationScale?: number;
+  private readonly _stageSizeEvents = new CameraStageSizeEventController(this);
   private readonly _stageResize = new CameraStageResizeController(
     this,
     (interaction) => this._handleStageResizeInteraction(interaction),
@@ -377,21 +378,19 @@ export class CameraView extends LitElement {
     interaction: CameraStageResizeInteraction,
   ): void {
     const presentation = this._presentation;
-    if (!presentation) return;
-    if (interaction.phase === "start") presentation.beginStageResizeReturn();
-    else if (interaction.phase === "update")
-      presentation.updateStageResizeReturn(interaction.returnProgress);
-    else presentation.endStageResizeReturn();
+    if (interaction.phase === "start") {
+      this._stageSizeEvents.begin();
+      presentation?.beginStageResizeReturn();
+    } else if (interaction.phase === "update")
+      presentation?.updateStageResizeReturn(interaction.returnProgress);
+    else {
+      presentation?.endStageResizeReturn();
+      this._stageSizeEvents.end(this._stageResize.size);
+    }
   }
 
   private _handleStageSizeChange(size: CameraStageSize): void {
-    this.dispatchEvent(
-      new CustomEvent(CAMERA_STAGE_SIZE_CHANGE_EVENT, {
-        bubbles: true,
-        composed: true,
-        detail: size,
-      }),
-    );
+    this._stageSizeEvents.update(size);
   }
 
   private readonly _handleMuteToggle = (): void => {

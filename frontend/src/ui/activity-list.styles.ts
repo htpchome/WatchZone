@@ -605,6 +605,19 @@ export const activityListStyles = css`
     white-space: nowrap;
   }
 
+  @container (max-width: ${responsiveWidths.wide}) {
+    .tile {
+      grid-template-columns:
+        var(--wzc-event-thumbnail-inline-size)
+        clamp(
+          var(--wzc-event-metadata-safety-inline-size),
+          16cqi,
+          var(--wzc-event-metadata-column-size)
+        )
+        minmax(0, 1fr) auto;
+    }
+  }
+
   @container (max-width: ${responsiveWidths.narrow}) {
     .analysis-title {
       align-items: center;

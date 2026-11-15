@@ -1,5 +1,7 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
+import { CAMERA_STAGE_SIZE_CHANGE_EVENT } from "../../../core/constants";
+
 export const DEFAULT_CAMERA_STAGE_HEIGHT_RATIO = 9 / 16;
 const DOUBLE_ACTIVATION_DELAY_MS = 350;
 const DOUBLE_ACTIVATION_DISTANCE_PX = 24;
@@ -36,6 +38,84 @@ export interface CameraStageSize {
 
 export interface CameraStageSizeChangeDetail extends CameraStageSize {
   readonly transient?: boolean;
+}
+
+type CameraStageSizeEventHost = HTMLElement & ReactiveControllerHost;
+
+/** Coalesces transient stage-size intents while preserving one final update. */
+export class CameraStageSizeEventController implements ReactiveController {
+  private _active = false;
+  private _frame?: number;
+  private _interactionUpdated = false;
+  private _lastDetail?: CameraStageSizeChangeDetail;
+  private _pending?: CameraStageSize;
+
+  public constructor(private readonly _host: CameraStageSizeEventHost) {
+    _host.addController(this);
+  }
+
+  public begin(): void {
+    this._active = true;
+    this._interactionUpdated = false;
+  }
+
+  public update(size: CameraStageSize): void {
+    if (!this._active) {
+      this._cancelPending();
+      this._dispatch(size, false);
+      return;
+    }
+    this._interactionUpdated = true;
+    this._pending = size;
+    this._frame ??= requestAnimationFrame(this._flush);
+  }
+
+  public end(size: CameraStageSize): void {
+    const interactionUpdated = this._interactionUpdated;
+    this._active = false;
+    this._interactionUpdated = false;
+    this._cancelPending();
+    if (interactionUpdated) this._dispatch(size, false);
+  }
+
+  public hostDisconnected(): void {
+    this._active = false;
+    this._interactionUpdated = false;
+    this._cancelPending();
+    this._lastDetail = undefined;
+  }
+
+  private readonly _flush = (): void => {
+    this._frame = undefined;
+    const size = this._pending;
+    this._pending = undefined;
+    if (size) this._dispatch(size, true);
+  };
+
+  private _cancelPending(): void {
+    if (this._frame !== undefined) cancelAnimationFrame(this._frame);
+    this._frame = undefined;
+    this._pending = undefined;
+  }
+
+  private _dispatch(size: CameraStageSize, transient: boolean): void {
+    const detail = { ...size, transient };
+    if (
+      detail.heightRatio === this._lastDetail?.heightRatio &&
+      detail.resized === this._lastDetail.resized &&
+      detail.transient === this._lastDetail.transient
+    ) {
+      return;
+    }
+    this._lastDetail = detail;
+    this._host.dispatchEvent(
+      new CustomEvent(CAMERA_STAGE_SIZE_CHANGE_EVENT, {
+        bubbles: true,
+        composed: true,
+        detail,
+      }),
+    );
+  }
 }
 
 /** Owns transient camera-stage height without owning media zoom or pan. */

@@ -39,11 +39,14 @@ export class ReviewTrackingController implements ReactiveController {
     const generation = ++this._generation;
     this.model = {
       analysisTitle: item.analysisTitle,
+      cameraBadgeLabel: item.cameraBadgeLabel,
       classification: item.classification ?? "detection",
       endTime: item.endTime,
       failed: false,
       loading: true,
+      objectLabels: item.objectLabels,
       startTime: item.startTime,
+      typeBadge: item.typeBadge,
     };
     this._host.requestUpdate();
     try {
