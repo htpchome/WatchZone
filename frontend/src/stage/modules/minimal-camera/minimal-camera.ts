@@ -42,6 +42,8 @@ import {
 } from "../../camera-presentation/live/frame-capture";
 import { mediaTransportLabel } from "../../camera-presentation/live/source-label";
 import { CameraActivityHighlightController } from "../../camera-presentation/activity-highlight.controller";
+import { CameraRuntimeController } from "../../camera-presentation/runtime.controller";
+import { renderCameraSuspendedPresentation } from "../../camera-presentation/suspended-presentation";
 import { minimalCameraStyles } from "./minimal-camera.styles";
 import { MinimalLiveDialogController } from "./minimal-live-dialog.controller";
 
@@ -89,6 +91,7 @@ export class MinimalCameraModule extends LitElement {
   private _snapshotPending = false;
   private _tapTimer?: ReturnType<typeof setTimeout>;
   private readonly _activity = new CameraActivityHighlightController(this);
+  private readonly _runtime = new CameraRuntimeController(this);
   private readonly _dialog = new MinimalLiveDialogController(this, {
     getAspectRatio: () => this._dialogMediaAspectRatio(),
     getChromeHeight: () =>
@@ -170,6 +173,9 @@ export class MinimalCameraModule extends LitElement {
 
   protected willUpdate(): void {
     const camera = this.camera;
+    this._runtime.configure(this.api, camera?.entityId);
+    const runtime = this._runtime.snapshot;
+    const suspended = runtime?.suspended === true;
     this._audio.configure(
       camera?.entityId,
       camera?.startUnmutedPcTablet ?? false,
@@ -180,11 +186,14 @@ export class MinimalCameraModule extends LitElement {
     this._session.configure(
       this.api,
       camera?.entityId,
-      this.available,
+      this.available &&
+        runtime !== undefined &&
+        runtime.available !== false &&
+        !suspended,
       camera?.connection,
       camera?.lowLatencyHls,
       camera?.frigateFallback,
-      true,
+      !suspended,
       false,
     );
     this._activity.configure(
@@ -195,18 +204,21 @@ export class MinimalCameraModule extends LitElement {
 
   protected render() {
     const selected = this._session.selected;
+    const suspended = this._runtime.snapshot?.suspended === true;
     const showFullscreen =
+      !suspended &&
       this.showFullscreenButton &&
       mediaFullscreenSupported(this._viewport ?? this, this._activeVideo);
     const showPictureInPicture =
+      !suspended &&
       this.showPictureInPictureButton &&
       pictureInPictureMethod(this._activeVideo) !== undefined;
     const controls = {
       fullscreen: showFullscreen,
-      mute: this.showMuteButton,
+      mute: !suspended && this.showMuteButton,
       pictureInPicture: showPictureInPicture,
       source:
-        this.showSourceLabel && this._session.transport
+        !suspended && this.showSourceLabel && this._session.transport
           ? mediaTransportLabel(
               this._session.transport,
               this._session.effectiveLowLatencyHls,
@@ -222,33 +234,51 @@ export class MinimalCameraModule extends LitElement {
       >
         <div class="media">
           ${
-            !selected
-              ? this.camera?.posterUrl
-                ? html`<img src=${this.camera.posterUrl} alt="" />`
-                : html`<div class="placeholder" aria-hidden="true">
-                    ${renderIcon("camera")}
-                  </div>`
-              : nothing
+            suspended
+              ? renderCameraSuspendedPresentation(this.localize)
+              : !selected
+                ? this.camera?.posterUrl
+                  ? html`<img src=${this.camera.posterUrl} alt="" />`
+                  : html`<div class="placeholder" aria-hidden="true">
+                      ${renderIcon("camera")}
+                    </div>`
+                : nothing
           }
-          <div
-            class="video-host fallback"
-            ?hidden=${selected !== "fallback"}
-          ></div>
-          <div
-            class=${`video-host webrtc${selected === "webrtc" ? " selected" : ""}`}
-          ></div>
+          ${
+            suspended
+              ? nothing
+              : html`<div
+                    class="video-host fallback"
+                    ?hidden=${selected !== "fallback"}
+                  ></div>
+                  <div
+                    class=${`video-host webrtc${selected === "webrtc" ? " selected" : ""}`}
+                  ></div>`
+          }
         </div>
-        <button
-          class="interaction-surface"
-          type="button"
-          aria-label=${this.camera?.title || this.camera?.entityId || this.localize("camera.live")}
-          @pointerdown=${this._handlePointerDown}
-          @pointerup=${this._handlePointerUp}
-          @pointercancel=${this._cancelHold}
-          @dblclick=${this._handleDoubleTap}
-          @click=${this._handleClick}
-        ></button>
-        ${!this._dialog.openState ? this._renderControlMenu(controls) : nothing}
+        ${
+          suspended
+            ? nothing
+            : html`<button
+                  class="interaction-surface"
+                  type="button"
+                  aria-label=${
+                    this.camera?.title ||
+                    this.camera?.entityId ||
+                    this.localize("camera.live")
+                  }
+                  @pointerdown=${this._handlePointerDown}
+                  @pointerup=${this._handlePointerUp}
+                  @pointercancel=${this._cancelHold}
+                  @dblclick=${this._handleDoubleTap}
+                  @click=${this._handleClick}
+                ></button>
+                ${
+                  !this._dialog.openState
+                    ? this._renderControlMenu(controls)
+                    : nothing
+                }`
+        }
       </div>
       <dialog
         class="live-dialog"
@@ -283,11 +313,15 @@ export class MinimalCameraModule extends LitElement {
               : nothing
           }
         >
-          <div class="dialog-video-host fallback"></div>
-          <div
-            class=${`dialog-video-host webrtc${selected === "webrtc" ? " selected" : ""}`}
-          ></div>
-          ${this._renderControlMenu(controls)}
+          ${
+            suspended
+              ? renderCameraSuspendedPresentation(this.localize)
+              : html`<div class="dialog-video-host fallback"></div>
+                  <div
+                    class=${`dialog-video-host webrtc${selected === "webrtc" ? " selected" : ""}`}
+                  ></div>
+                  ${this._renderControlMenu(controls)}`
+          }
         </div>
         <footer class="live-dialog-footer">
           <span class="snapshot-status" role="status" aria-live="polite">
@@ -635,6 +669,7 @@ export class MinimalCameraModule extends LitElement {
   }
 
   private _openLiveDialog(): void {
+    if (this._runtime.snapshot?.suspended === true) return;
     this._dialog.open();
   }
 

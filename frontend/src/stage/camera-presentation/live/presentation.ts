@@ -21,7 +21,6 @@ import {
 } from "../../../core/localization";
 import { DeviceProfileController } from "../../../core/device-profile";
 import type { ToastNotice, ToastSeverity } from "../../../ui/toast-manager";
-import { renderIcon } from "../../../ui/icons";
 import "../../../ui/badge";
 import "../../../ui/toast-region";
 import type {
@@ -40,6 +39,7 @@ import type { PresentedSource } from "./session.controller";
 import { CameraLiveControlController } from "./control.controller";
 import { captureVideoFrame } from "./frame-capture";
 import { mediaTransportLabel } from "./source-label";
+import { renderCameraSuspendedPresentation } from "../suspended-presentation";
 
 interface MediaDimensions {
   readonly height: number;
@@ -291,7 +291,7 @@ export class CameraLivePresentation extends LitElement {
         >
           ${
             this.suspended
-              ? this._renderSuspended()
+              ? renderCameraSuspendedPresentation(this.localize)
               : html`${!this.selected ? this._renderFallback() : nothing}
                   <div
                     class=${
@@ -505,16 +505,6 @@ export class CameraLivePresentation extends LitElement {
         },
       ),
     );
-  }
-
-  private _renderSuspended() {
-    return html`<div class="suspended-presentation" role="status">
-      <span class="suspended-icon" aria-hidden="true"
-        >${renderIcon("videoOff")}</span
-      >
-      <strong>${this.localize("camera.suspended")}</strong>
-      <span>${this.localize("camera.suspended_description")}</span>
-    </div>`;
   }
 
   private _emitMediaAttached(video: HTMLVideoElement): void {

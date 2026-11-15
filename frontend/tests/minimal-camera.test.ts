@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { HomeAssistantApi } from "../src/core/home-assistant";
+import type {
+  HomeAssistantApi,
+  HomeAssistantMessage,
+} from "../src/core/home-assistant";
+import type { CameraRuntimeSnapshot } from "../src/api/camera-runtime";
 import type {
   ConnectionFactory,
   MediaConnection,
@@ -176,6 +180,112 @@ describe("minimal camera module", () => {
     expect(webRtcFactory).toHaveBeenCalledOnce();
   });
 
+  it.each(["home_assistant", "frigate_go2rtc"] as const)(
+    "blocks %s playback in every minimal card while suspended",
+    async (connection) => {
+      vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
+      const video = document.createElement("video");
+      const stream = { getTracks: () => [] } as unknown as MediaStream;
+      const close = vi.fn();
+      const webRtcFactory = vi.fn<ConnectionFactory>(async () => {
+        video.srcObject = stream;
+        return { close, stream, transport: "webrtc", video };
+      });
+      installTestMediaSessionManager(
+        new MediaSessionManager(
+          webRtcFactory,
+          vi.fn<ConnectionFactory>(async () => new Promise(() => undefined)),
+        ),
+      );
+      let suspended = false;
+      const runtimeSubscribers: Array<
+        (snapshot: CameraRuntimeSnapshot) => void
+      > = [];
+      const api: HomeAssistantApi = {
+        identity: {} as HomeAssistantApi["identity"],
+        callWS: async <T>(message: HomeAssistantMessage): Promise<T> => {
+          if (message.type.endsWith("/live/source")) {
+            return {
+              frigate_instance_id: "frigate",
+              id: "frigate_go2rtc:entry-front:front",
+              stream_name: "front",
+              type: "frigate_go2rtc",
+            } as T;
+          }
+          return undefined as T;
+        },
+        resolveUrl: (path) => path,
+        subscribeMessage: vi.fn(async (callback, message) => {
+          if (message.type.endsWith("/camera/runtime/subscribe")) {
+            runtimeSubscribers.push(
+              callback as (snapshot: CameraRuntimeSnapshot) => void,
+            );
+            callback({
+              available: true,
+              entity_id: "camera.front",
+              provider: "frigate",
+              resume_at: null,
+              supported: true,
+              suspended,
+            });
+          }
+          return () => undefined;
+        }),
+      };
+      const createCamera = (): MinimalCameraModule => {
+        const camera = document.createElement(
+          "wzc-minimal-camera",
+        ) as MinimalCameraModule;
+        camera.api = api;
+        camera.available = true;
+        camera.camera = {
+          connection,
+          entityId: "camera.front",
+          frigateFallback: "mse",
+          lowLatencyHls: true,
+          startUnmutedPcTablet: false,
+          startUnmutedPhone: false,
+          title: "Front",
+        };
+        return camera;
+      };
+
+      const first = createCamera();
+      document.body.append(first);
+      await vi.waitFor(() => expect(webRtcFactory).toHaveBeenCalledOnce());
+
+      suspended = true;
+      for (const subscriber of runtimeSubscribers) {
+        subscriber({
+          available: true,
+          entity_id: "camera.front",
+          provider: "frigate",
+          resume_at: null,
+          supported: true,
+          suspended: true,
+        });
+      }
+      await vi.waitFor(() =>
+        expect(
+          first.shadowRoot?.querySelector(".suspended-presentation"),
+        ).not.toBeNull(),
+      );
+      expect(
+        first.shadowRoot?.querySelector(".interaction-surface"),
+      ).toBeNull();
+      expect(close).toHaveBeenCalledOnce();
+
+      const second = createCamera();
+      document.body.append(second);
+      await vi.waitFor(() =>
+        expect(
+          second.shadowRoot?.querySelector(".suspended-presentation"),
+        ).not.toBeNull(),
+      );
+      expect(webRtcFactory).toHaveBeenCalledOnce();
+    },
+  );
+
   it("opens its live dialog by default without treating controls as taps", async () => {
     vi.useFakeTimers();
     const camera = document.createElement(
@@ -276,7 +386,19 @@ function createApi(): HomeAssistantApi {
     identity: {} as HomeAssistantApi["identity"],
     callWS: vi.fn(),
     resolveUrl: (path) => path,
-    subscribeMessage: vi.fn(),
+    subscribeMessage: vi.fn(async (callback, message) => {
+      if (message.type.endsWith("/camera/runtime/subscribe")) {
+        callback({
+          available: true,
+          entity_id: message.entity_id,
+          provider: "frigate",
+          resume_at: null,
+          supported: true,
+          suspended: false,
+        });
+      }
+      return () => undefined;
+    }),
   };
 }
 

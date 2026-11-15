@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Protocol, cast
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_URL
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.importlib import async_import_module
 from yarl import URL
@@ -107,12 +108,23 @@ async def async_resolve_source(
     if not isinstance(base_url, str):
         raise ProviderPreparationError("frigate_url_missing")
 
+    camera_name = _camera_name(hass, entity_id)
     if camera is None:
         from homeassistant.components.camera.helper import get_camera_from_entity_id
 
-        camera = get_camera_from_entity_id(hass, entity_id)
-    stream_source = await camera.stream_source()
-    camera_name = _camera_name(hass, entity_id)
+        try:
+            camera = get_camera_from_entity_id(hass, entity_id)
+        except HomeAssistantError:
+            camera = None
+    stream_source: str | None = None
+    if camera is not None:
+        try:
+            stream_source = await camera.stream_source()
+        except HomeAssistantError:
+            pass
+    # Frigate's public camera entity can reject access while it is turned off.
+    # Its stable public camera_name still identifies the configured go2rtc
+    # source; suspension is enforced independently by camera runtime.
     stream_name = _stream_name(stream_source, base_url) or camera_name
     if stream_name is None:
         reason = (

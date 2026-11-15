@@ -2260,7 +2260,22 @@ test("keeps minimal camera actions and media controls independent", async ({
         },
       },
       connection: {
-        subscribeMessage: async () => () => undefined,
+        subscribeMessage: async (
+          callback: (message: unknown) => void,
+          message: { type: string },
+        ) => {
+          if (message.type.endsWith("/camera/runtime/subscribe")) {
+            callback({
+              available: true,
+              entity_id: "camera.front",
+              provider: "frigate",
+              resume_at: null,
+              supported: true,
+              suspended: false,
+            });
+          }
+          return () => undefined;
+        },
       },
       hassUrl: (path: string) => path,
       callService: async () => undefined,
@@ -2409,6 +2424,83 @@ test("keeps minimal camera actions and media controls independent", async ({
       () =>
         (window as unknown as { minimalMoreInfoCount?: number })
           .minimalMoreInfoCount,
+    ),
+  ).toBe(0);
+});
+
+test("blocks suspended Frigate playback in the minimal camera stage", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  await page.locator("watchzone-card").evaluate((element) => {
+    const target = window as unknown as { minimalLiveSourceCalls?: number };
+    target.minimalLiveSourceCalls = 0;
+    const card = element as HTMLElement & {
+      hass: unknown;
+      setConfig(config: unknown): void;
+    };
+    card.setConfig({
+      type: "custom:watchzone-card",
+      stage_type: "minimal_camera_only",
+      cameras: [
+        {
+          connection: "frigate_go2rtc",
+          entity_id: "camera.deck",
+          title: "Deck",
+        },
+      ],
+    });
+    card.hass = {
+      states: {
+        "camera.deck": {
+          entity_id: "camera.deck",
+          state: "idle",
+          attributes: { camera_name: "deck", friendly_name: "Deck" },
+        },
+      },
+      connection: {
+        subscribeMessage: async (
+          callback: (message: unknown) => void,
+          message: { type: string },
+        ) => {
+          if (message.type.endsWith("/camera/runtime/subscribe")) {
+            callback({
+              available: true,
+              entity_id: "camera.deck",
+              provider: "frigate",
+              resume_at: null,
+              supported: true,
+              suspended: true,
+            });
+          }
+          return () => undefined;
+        },
+      },
+      hassUrl: (path: string) => path,
+      callService: async () => undefined,
+      callWS: async (message: { type: string }) => {
+        if (message.type.endsWith("/live/source")) {
+          target.minimalLiveSourceCalls =
+            (target.minimalLiveSourceCalls ?? 0) + 1;
+        }
+        return undefined;
+      },
+    };
+  });
+
+  const minimal = page.locator("wzc-minimal-camera");
+  await expect(minimal.getByRole("status")).toContainText("Camera suspended");
+  await expect(minimal.getByRole("status")).toContainText(
+    "Resume this camera to restore live video.",
+  );
+  await expect(minimal.locator(".interaction-surface")).toHaveCount(0);
+  await expect(minimal.locator(".control-menu")).toHaveCount(0);
+  expect(
+    await page.evaluate(
+      () =>
+        (window as unknown as { minimalLiveSourceCalls?: number })
+          .minimalLiveSourceCalls,
     ),
   ).toBe(0);
 });

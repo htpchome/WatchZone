@@ -4,6 +4,7 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
+from homeassistant.exceptions import HomeAssistantError
 from webrtc_models import RTCIceCandidateInit
 from yarl import URL
 
@@ -423,6 +424,51 @@ async def test_frigate_sources_are_scoped_to_their_owning_instance() -> None:
     assert workshop.frigate_instance_id == "myWorkshop"
     assert home.stream_name == workshop.stream_name == "front"
     assert home.source_id != workshop.source_id
+
+
+async def test_frigate_source_identity_survives_camera_suspension() -> None:
+    """Suspension blocks playback without making go2rtc unconfigurable."""
+    entry = SimpleNamespace(
+        entry_id="entry-home", data={"url": "http://frigate:5000"}
+    )
+    registry = SimpleNamespace(
+        async_get=lambda _entity_id: SimpleNamespace(
+            platform="frigate", config_entry_id="entry-home"
+        )
+    )
+    hass = SimpleNamespace(
+        config_entries=SimpleNamespace(async_get_entry=lambda _entry_id: entry),
+        states={
+            "camera.deck": SimpleNamespace(
+                attributes={"camera_name": "deck", "client_id": "frigate"}
+            )
+        },
+    )
+    client = SimpleNamespace(validate_ssl=True, get_auth_headers=AsyncMock())
+    module = SimpleNamespace(
+        get_client_for_config_entry=Mock(return_value=client),
+        get_frigate_instance_id_for_config_entry=Mock(return_value="frigate"),
+    )
+    camera = SimpleNamespace(
+        stream_source=AsyncMock(side_effect=HomeAssistantError("Camera is off"))
+    )
+
+    with (
+        patch(
+            "custom_components.watchzone.providers.frigate.source.er.async_get",
+            return_value=registry,
+        ),
+        patch(
+            "custom_components.watchzone.providers.frigate.source.async_import_module",
+            new=AsyncMock(return_value=module),
+        ),
+    ):
+        source = await async_resolve_source(
+            hass, "camera.deck", camera  # type: ignore[arg-type]
+        )
+
+    assert source.stream_name == "deck"
+    assert source.source_id == "frigate_go2rtc:entry-home:deck"
 
 
 def test_frigate_stream_name_requires_its_go2rtc_source() -> None:

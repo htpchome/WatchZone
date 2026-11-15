@@ -74,6 +74,15 @@ connection rather than attempting to reuse a stream that may be stale.
 Every runtime command and provider state change is broadcast to all subscribed
 cards. A suspend or resume initiated in one browser therefore updates the
 presentation and media lifecycle in every other open browser without a refresh.
+The Minimal Camera module subscribes to this same normalized runtime state even
+though it does not expose suspend controls. While suspended it discards its
+media lease, does not open its live dialog, and renders the shared suspended
+presentation for every configured connection type.
+
+Suspension does not invalidate camera configuration. In particular, a Frigate
+camera that is currently turned off may still resolve its stable go2rtc source
+identity for the editor. Runtime suspension blocks lease acquisition and live
+presentation; it does not remove Frigate go2rtc from the connection selector.
 
 The frontend runtime controller observes Home Assistant connection readiness.
 Its subscription disables the WebSocket library's automatic resubscribe so
