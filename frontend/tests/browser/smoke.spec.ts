@@ -3770,10 +3770,10 @@ test("keeps activity content in an independently scrolling viewport", async ({
   );
   expect(badgePresentations[0]).toEqual(badgePresentations[1]);
   await expect(
-    mediaInformation.getByRole("button", { name: "View Snapshot" }),
+    mediaDialog.getByRole("button", { name: "View Snapshot" }),
   ).toBeVisible();
   const activityAction = events.locator(".action").first();
-  const mediaAction = mediaInformation.getByRole("button", {
+  const mediaAction = mediaDialog.getByRole("button", {
     name: "View Snapshot",
   });
   const actionPresentations = await Promise.all(
@@ -3792,6 +3792,13 @@ test("keeps activity content in an independently scrolling viewport", async ({
     ),
   );
   expect(actionPresentations[1]).toEqual(actionPresentations[0]);
+  const earlyMediaActionBox = await mediaAction.boundingBox();
+  const earlyMediaDialogBox = await mediaDialog.boundingBox();
+  expect(
+    (earlyMediaActionBox?.y ?? 0) + (earlyMediaActionBox?.height ?? 0),
+  ).toBeLessThanOrEqual(
+    (earlyMediaDialogBox?.y ?? 0) + (earlyMediaDialogBox?.height ?? 0),
+  );
   await mediaAction.hover();
   await expect
     .poll(() =>
@@ -4239,14 +4246,35 @@ test("keeps activity content in an independently scrolling viewport", async ({
       iconSize: icon ? Number.parseFloat(getComputedStyle(icon).width) : 0,
     };
   });
-  const finalMediaActionBox = await mediaInformation
-    .locator(".actions .wzc-activity-action")
+  const finalMediaActionBox = await mediaDialog
+    .locator(".footer-actions .wzc-activity-action")
     .last()
     .boundingBox();
+  const informationFooterLayout = await mediaDialog.evaluate((element) => {
+    const information = element
+      .querySelector("wzc-recorded-media-information")
+      ?.shadowRoot?.querySelector(".information");
+    const actions = element.querySelector(".footer-actions");
+    return {
+      actionsBottom: actions?.getBoundingClientRect().bottom ?? 0,
+      bodyOwnedActions: Boolean(actions?.closest(".body")),
+      dialogBottom: element.getBoundingClientRect().bottom,
+      nestedActions: Boolean(information?.querySelector(".footer-actions")),
+    };
+  });
   expect(initialDialogBox).not.toBeNull();
   expect(resizeBox).not.toBeNull();
+  expect(informationFooterLayout.nestedActions).toBe(false);
+  expect(informationFooterLayout.bodyOwnedActions).toBe(false);
+  expect(
+    Math.abs(
+      informationFooterLayout.actionsBottom -
+        informationFooterLayout.dialogBottom,
+    ),
+  ).toBeLessThanOrEqual(1);
   expect(resizeBox?.width).toBeCloseTo(finalMediaActionBox?.width ?? 0, 1);
   expect(resizeBox?.height).toBeCloseTo(finalMediaActionBox?.height ?? 0, 1);
+  expect(resizeBox?.y).toBeCloseTo(finalMediaActionBox?.y ?? 0, 1);
   expect(resizePresentation.iconSize).toBeGreaterThanOrEqual(24);
   expect(finalMediaActionBox?.x).toBeLessThan(resizeBox?.x ?? 0);
   expect(
@@ -4345,7 +4373,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect(snapshot).toHaveCSS("background-color", "rgb(36, 36, 36)");
   await expect(page.locator("wzc-recorded-video-player")).toHaveCount(0);
   await expect(
-    mediaInformation.getByRole("button", { name: "View Review" }),
+    mediaDialog.getByRole("button", { name: "View Review" }),
   ).toBeVisible();
   const desktopViewport = page.viewportSize();
   await page.setViewportSize({ height: 720, width: 600 });
@@ -4359,20 +4387,30 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await page.setViewportSize({ height: 568, width: 320 });
   const compactInformationLayout = await mediaInformation.evaluate(
     (element) => {
+      const information = element.shadowRoot?.querySelector(".information");
       const metadata = element.shadowRoot?.querySelector(".metadata");
-      const actions = element.shadowRoot?.querySelector(".actions");
       return {
-        actionDirection: actions ? getComputedStyle(actions).flexDirection : "",
+        informationInlinePadding: information
+          ? Number.parseFloat(getComputedStyle(information).paddingInlineStart)
+          : Number.POSITIVE_INFINITY,
         metadataColumns: metadata
           ? getComputedStyle(metadata).gridTemplateColumns.split(" ").length
           : 0,
+        metadataRowGap: metadata
+          ? Number.parseFloat(getComputedStyle(metadata).rowGap)
+          : Number.POSITIVE_INFINITY,
       };
     },
   );
-  expect(compactInformationLayout).toEqual({
-    actionDirection: "row",
-    metadataColumns: 3,
-  });
+  await expect(mediaDialog.locator(".footer-actions")).toHaveCSS(
+    "flex-direction",
+    "row",
+  );
+  expect(compactInformationLayout.informationInlinePadding).toBeLessThanOrEqual(
+    8,
+  );
+  expect(compactInformationLayout.metadataColumns).toBe(3);
+  expect(compactInformationLayout.metadataRowGap).toBeLessThanOrEqual(4);
   const compactDialogBox = await mediaDialog.boundingBox();
   expect(compactDialogBox?.x).toBeGreaterThanOrEqual(0);
   expect(compactDialogBox?.y).toBeGreaterThanOrEqual(0);

@@ -63,11 +63,13 @@ viewing. Recording discovery and grouping are governed by
   in the same viewer shell.
 - The current information area is a deliberately distinct solid-task surface
   within the glass viewer shell. It presents classification and object badges,
-  camera, localized day/date and time, duration, objects, zones,
-  provider-normalized activity confidence, and only the actions supported by
-  the normalized request. AI-analysis confidence remains separate. On narrow
-  containers its metadata reduces from four columns to three and then two, while
-  actions wrap without shrinking their touch targets.
+  camera, localized day/date and time, duration, objects, zones, and
+  provider-normalized activity confidence. AI-analysis confidence remains
+  separate. On narrow containers its metadata reduces from four columns to
+  three with tighter panel padding and grid spacing. Supported actions occupy
+  a transparent footer beneath the solid information surface, on the same
+  visual row as the dialog-owned resize handle without shrinking their touch
+  targets.
 - An alert or detection without an end time is visibly marked as in progress.
   A closed alert also retains that marker while recording playback remains
   unavailable. Its tile remains actionable: activation immediately opens the

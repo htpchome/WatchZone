@@ -777,7 +777,7 @@ describe("recorded media player", () => {
       { appearance: "filled", shape: "pill", size: "small" },
     ]);
     const viewReviewButton =
-      information.shadowRoot?.querySelector<HTMLButtonElement>(
+      container.shadowRoot?.querySelector<HTMLButtonElement>(
         'button[aria-label="View Review"]',
       );
     expect(viewReviewButton?.textContent?.trim()).toBe("");
@@ -791,7 +791,7 @@ describe("recorded media player", () => {
     expect(viewReview).toHaveBeenCalledOnce();
     await information.updateComplete;
     const viewSnapshotButton =
-      information.shadowRoot?.querySelector<HTMLButtonElement>(
+      container.shadowRoot?.querySelector<HTMLButtonElement>(
         'button[aria-label="View Snapshot"]',
       );
     viewSnapshotButton?.click();

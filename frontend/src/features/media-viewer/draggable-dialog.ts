@@ -16,6 +16,8 @@ import type {
   RecordedMediaInitialGeometry,
   RecordedMediaRequest,
 } from "../../core/recorded-media";
+import { activityActionStyles } from "../../ui/activity-action.styles";
+import { buttonBaseStyles } from "../../ui/button.styles";
 import type { ToastNotice } from "../../ui/toast-manager";
 import { renderIcon } from "../../ui/icons";
 import "../../ui/toast-region";
@@ -25,6 +27,7 @@ import {
   type RecordedMediaInformation,
 } from "./media-information";
 import "./media-information";
+import { renderRecordedMediaActions } from "./media-actions";
 import { draggableDialogStyles } from "./draggable-dialog.styles";
 
 const playerTag = unsafeStatic(RECORDED_VIDEO_PLAYER_TAG);
@@ -110,6 +113,9 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
           mode="overlay"
           .notices=${this.notices}
         ></wzc-toast-region>
+      </div>
+      <div class="footer-actions">
+        ${renderRecordedMediaActions(this.request, this.localize, this)}
       </div>
       <button
         class="resize-handle"
@@ -512,7 +518,11 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
     dialog.style.top = `${Math.min(Math.max(0, top), maxTop)}px`;
   }
 
-  static styles = draggableDialogStyles;
+  static styles = [
+    buttonBaseStyles,
+    activityActionStyles,
+    draggableDialogStyles,
+  ];
 }
 
 function px(value: string): number {

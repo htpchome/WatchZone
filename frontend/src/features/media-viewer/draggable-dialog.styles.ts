@@ -13,7 +13,6 @@ export const draggableDialogStyles = css`
     box-shadow: var(--wzc-recorded-media-dialog-shadow);
     box-sizing: border-box;
     color: var(--wzc-color-text-1);
-    grid-template-rows: max-content max-content;
     inline-size: min(52rem, calc(100vw - 1rem));
     inset: 0;
     margin: auto;
@@ -28,7 +27,8 @@ export const draggableDialogStyles = css`
   }
 
   dialog[open] {
-    display: grid;
+    display: flex;
+    flex-direction: column;
   }
 
   dialog.dragged {
@@ -89,11 +89,26 @@ export const draggableDialogStyles = css`
     background: transparent;
     box-sizing: border-box;
     display: grid;
+    flex: 0 1 auto;
     gap: 0.8rem;
+    min-block-size: 0;
     overflow: auto;
     overscroll-behavior: contain;
     padding: 0 var(--wzc-recorded-media-dialog-padding);
     position: relative;
+  }
+
+  .footer-actions {
+    align-items: center;
+    box-sizing: border-box;
+    display: flex;
+    flex-wrap: nowrap;
+    flex: none;
+    gap: 0.4rem;
+    justify-content: flex-end;
+    min-block-size: var(--wzc-recorded-media-resize-handle-size);
+    padding-inline: var(--wzc-recorded-media-dialog-padding)
+      calc(var(--wzc-recorded-media-resize-handle-size) + 0.4rem);
   }
 
   wzc-recorded-video-player:not([recording-timeline]) {

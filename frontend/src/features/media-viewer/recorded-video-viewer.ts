@@ -21,7 +21,7 @@ import {
 import { ToastManager } from "../../ui/toast-manager";
 import { mediaViewerPresentation } from "./presentation";
 import { recordedVideoViewerStyles } from "./recorded-video-viewer.styles";
-import type { RecordedMediaActionDetail } from "./media-information";
+import type { RecordedMediaActionDetail } from "./media-actions";
 import { preloadRecordedMediaPlayback } from "./recorded-media-playback.controller";
 
 const OBJECT_URL_REVOKE_DELAY_MS = 1_000;

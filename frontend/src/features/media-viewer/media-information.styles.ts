@@ -21,8 +21,7 @@ export const mediaInformationStyles = css`
     );
   }
 
-  .badges,
-  .actions {
+  .badges {
     align-items: center;
     display: flex;
     flex-wrap: wrap;
@@ -63,18 +62,6 @@ export const mediaInformationStyles = css`
     overflow-wrap: anywhere;
   }
 
-  .actions {
-    box-sizing: border-box;
-    justify-content: flex-end;
-    min-block-size: var(--wzc-recorded-media-resize-handle-size);
-    padding-inline-end: calc(
-      var(--wzc-recorded-media-resize-handle-size) - var(
-          --wzc-recorded-media-dialog-padding
-        ) - var(--wzc-recorded-media-dialog-padding) +
-        0.4rem
-    );
-  }
-
   @container (max-width: ${responsiveWidths.medium}) {
     .metadata {
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -83,11 +70,13 @@ export const mediaInformationStyles = css`
 
   @container (max-width: ${responsiveWidths.compact}) {
     .information {
-      gap: 0.4rem;
+      gap: 0.3rem;
+      padding: 0.5rem;
+      padding-block-start: 0.375rem;
     }
 
     .metadata {
-      gap: 0.35rem 0.5rem;
+      gap: 0.25rem 0.4rem;
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
