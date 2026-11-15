@@ -2286,6 +2286,22 @@ test("keeps minimal camera actions and media controls independent", async ({
     .getByRole("button", { name: "Camera controls" })
     .evaluate((element) => element.getBoundingClientRect().width);
   expect(dialogControlSize).toBeGreaterThan(inlineControlSize);
+  await liveDialog.getByRole("button", { name: "Camera controls" }).click();
+  const dialogFullscreen = liveDialog.getByRole("button", {
+    name: "Enter fullscreen",
+  });
+  const dialogAudio = liveDialog.locator(".audio-control");
+  const dialogUnmute = liveDialog.getByRole("button", { name: "Unmute" });
+  const [fullscreenBox, audioBox, unmuteBox] = await Promise.all([
+    dialogFullscreen.boundingBox(),
+    dialogAudio.boundingBox(),
+    dialogUnmute.boundingBox(),
+  ]);
+  expect(audioBox?.height).toBe(fullscreenBox?.height);
+  expect(audioBox?.width).toBe(fullscreenBox?.width);
+  expect(unmuteBox?.height).toBe(fullscreenBox?.height);
+  expect(unmuteBox?.width).toBe(fullscreenBox?.width);
+  await liveDialog.getByRole("button", { name: "Camera controls" }).click();
   await liveDialog
     .getByRole("button", { name: "Resize video player" })
     .press("ArrowLeft");

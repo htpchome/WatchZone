@@ -258,7 +258,7 @@ describe("watchzone-card-editor", () => {
 
     expect(stageItem?.querySelector("[data-stage-profile]")).toBeNull();
     expect(stageItem?.textContent).toContain(
-      "This Stage presents one lightweight Camera View for One Camera",
+      "This Stage presents one lightweight Camera View for One Camera. Limited Controls.",
     );
     expect(
       [

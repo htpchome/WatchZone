@@ -91,6 +91,8 @@ const minimalCameraComponentStyles = css`
     inset-block-start: 0.5rem;
     display: flex;
     gap: 0.5rem;
+    --wzc-control-size: var(--wzc-camera-control-size);
+    --wzc-control-icon-size: var(--wzc-camera-control-icon-size);
   }
 
   .control-menu.left {
