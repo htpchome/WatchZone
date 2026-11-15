@@ -5,6 +5,7 @@ import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 import {
   cardConfigSignature,
   createDefaultCameraConfig,
+  hasExplicitConfigKey,
   normalizeCameraTitle,
   normalizeCardConfig,
   normalizeCardTitle,
@@ -125,22 +126,29 @@ const TAP_ACTION_SELECTOR = {
 } as const;
 const OPTIONAL_ACTION_SELECTOR = {
   ui_action: {
-    actions: ["toggle", "navigate", "url", "perform-action", "assist", "none"],
+    actions: [
+      "open-live-view",
+      "toggle",
+      "navigate",
+      "url",
+      "perform-action",
+      "assist",
+      "none",
+    ],
     default_action: "none",
   },
 } as const;
-const INTERACTION_FORM_SCHEMA = [
-  { name: "tap_action", selector: TAP_ACTION_SELECTOR },
-  {
-    name: "",
-    type: "optional_actions",
-    flatten: true,
-    schema: [
-      { name: "hold_action", selector: OPTIONAL_ACTION_SELECTOR },
-      { name: "double_tap_action", selector: OPTIONAL_ACTION_SELECTOR },
-    ],
+const TAP_ACTION_SCHEMA = {
+  name: "tap_action",
+  selector: TAP_ACTION_SELECTOR,
+} as const;
+const OPTIONAL_ACTION_SCHEMAS = {
+  hold_action: { name: "hold_action", selector: OPTIONAL_ACTION_SELECTOR },
+  double_tap_action: {
+    name: "double_tap_action",
+    selector: OPTIONAL_ACTION_SELECTOR,
   },
-] as const;
+} as const;
 type OptionalInteractionName = "double_tap_action" | "hold_action";
 const OPEN_LIVE_VIEW_LOCALIZATION_KEY =
   "ui.panel.lovelace.editor.action-editor.actions.open-live-view";
@@ -232,6 +240,8 @@ export class CardEditor extends LitElement {
   private _interactionHass?: HomeAssistant;
   private _interactionHassSource?: HomeAssistant;
   private _visibleOptionalInteractions = new Set<OptionalInteractionName>();
+  private _baselineOptionalInteractions = new Set<OptionalInteractionName>();
+  private _choosingOptionalInteraction = false;
   private _previewTimer?: ReturnType<typeof setTimeout>;
   private _lastDispatchedConfigSignature = "";
   private _draftStatusChanged?: boolean;
@@ -268,12 +278,12 @@ export class CardEditor extends LitElement {
     if (!this._baseline) {
       const source = value as Record<string, unknown>;
       this._visibleOptionalInteractions = new Set(
-        (["hold_action", "double_tap_action"] as const).filter(
-          (name) =>
-            name in source &&
-            typeof source[name] === "object" &&
-            source[name] !== null,
+        (["hold_action", "double_tap_action"] as const).filter((name) =>
+          hasExplicitConfigKey(source, name),
         ),
+      );
+      this._baselineOptionalInteractions = new Set(
+        this._visibleOptionalInteractions,
       );
     }
     const signature = cardConfigSignature(config);
@@ -664,15 +674,15 @@ export class CardEditor extends LitElement {
     const showDoubleTap =
       this._visibleOptionalInteractions.has("double_tap_action") ||
       doubleTapAction?.action !== "none";
-    const addable = [
-      ...(!showHold ? [INTERACTION_FORM_SCHEMA[1].schema[0]] : []),
-      ...(!showDoubleTap ? [INTERACTION_FORM_SCHEMA[1].schema[1]] : []),
+    const addable: OptionalInteractionName[] = [
+      ...(!showHold ? (["hold_action"] as const) : []),
+      ...(!showDoubleTap ? (["double_tap_action"] as const) : []),
     ];
     return html`<ha-form
         class="primary-interaction"
         .hass=${this._interactionActionHass()}
         .data=${{ tap_action: this._config?.tap_action }}
-        .schema=${[INTERACTION_FORM_SCHEMA[0]]}
+        .schema=${[TAP_ACTION_SCHEMA]}
         .computeLabel=${(schema: { readonly name?: string }) =>
           schema.name === "tap_action"
             ? this._t("editor.tap_behavior")
@@ -696,24 +706,42 @@ export class CardEditor extends LitElement {
       }
       ${
         addable.length
-          ? html`<ha-form
-              class="add-interaction"
-              .hass=${this._interactionActionHass()}
-              .data=${{}}
-              .schema=${[
-                {
-                  name: "",
-                  type: "optional_actions",
-                  flatten: true,
-                  schema: addable,
-                },
-              ]}
-              .computeLabel=${(schema: { readonly name?: string }) =>
-                schema.name === "hold_action"
-                  ? this._t("editor.hold_behavior")
-                  : this._t("editor.double_tap_behavior")}
-              @value-changed=${this._handleActionsChange}
-            ></ha-form>`
+          ? html`<div class="add-interaction">
+              <ha-button
+                appearance="filled"
+                variant="brand"
+                size="s"
+                type="button"
+                aria-expanded=${String(this._choosingOptionalInteraction)}
+                @click=${this._toggleOptionalInteractionChoices}
+              >
+                <ha-icon icon="mdi:plus" slot="start"></ha-icon>
+                ${this._t("editor.add_interaction")}
+              </ha-button>
+              ${
+                this._choosingOptionalInteraction
+                  ? html`<div class="add-interaction-choices">
+                      ${addable.map(
+                        (name) =>
+                          html`<ha-button
+                            appearance="plain"
+                            variant="neutral"
+                            size="s"
+                            type="button"
+                            data-interaction=${name}
+                            @click=${this._addOptionalInteraction}
+                          >
+                            ${
+                              name === "hold_action"
+                                ? this._t("editor.hold_behavior")
+                                : this._t("editor.double_tap_behavior")
+                            }
+                          </ha-button>`,
+                      )}
+                    </div>`
+                  : nothing
+              }
+            </div>`
           : nothing
       }`;
   }
@@ -722,10 +750,7 @@ export class CardEditor extends LitElement {
     name: OptionalInteractionName,
     action: CardConfig[OptionalInteractionName] | undefined,
   ) {
-    const schema =
-      name === "hold_action"
-        ? INTERACTION_FORM_SCHEMA[1].schema[0]
-        : INTERACTION_FORM_SCHEMA[1].schema[1];
+    const schema = OPTIONAL_ACTION_SCHEMAS[name];
     return html`<div class="optional-interaction">
       <ha-form
         .hass=${this._interactionActionHass()}
@@ -1752,9 +1777,25 @@ export class CardEditor extends LitElement {
     if (this._haEditor.isNestedCardEdit()) return;
     if (this._dirtyContext && this._baseline && !this._dirtySeeded) {
       this._dirtySeeded = true;
-      seedDirtyState(this._dirtyContext, toYamlCardConfig(this._baseline));
-      if (this._config && this._configSignature !== this._baselineSignature) {
-        updateDirtyState(this._dirtyContext, toYamlCardConfig(this._config));
+      seedDirtyState(
+        this._dirtyContext,
+        this._serializeDraft(
+          this._baseline,
+          this._baselineOptionalInteractions,
+        ),
+      );
+      if (
+        this._config &&
+        (this._configSignature !== this._baselineSignature ||
+          !interactionSetsEqual(
+            this._visibleOptionalInteractions,
+            this._baselineOptionalInteractions,
+          ))
+      ) {
+        updateDirtyState(
+          this._dirtyContext,
+          this._serializeDraft(this._config),
+        );
       }
     }
   }
@@ -2561,13 +2602,6 @@ export class CardEditor extends LitElement {
     if (typeof event.detail?.value !== "object" || event.detail.value === null)
       return;
     const actions = event.detail.value as Record<string, unknown>;
-    let visibilityChanged = false;
-    for (const name of ["hold_action", "double_tap_action"] as const) {
-      if (name in actions && !this._visibleOptionalInteractions.has(name)) {
-        this._visibleOptionalInteractions.add(name);
-        visibilityChanged = true;
-      }
-    }
     this._applyDraft(
       normalizeCardConfig({
         ...this._config,
@@ -2583,7 +2617,20 @@ export class CardEditor extends LitElement {
       }),
       true,
     );
-    if (visibilityChanged) this.requestUpdate();
+  };
+
+  private readonly _toggleOptionalInteractionChoices = (): void => {
+    this._choosingOptionalInteraction = !this._choosingOptionalInteraction;
+    this.requestUpdate();
+  };
+
+  private readonly _addOptionalInteraction = (event: Event): void => {
+    if (!this._config) return;
+    const name = (event.currentTarget as HTMLElement).dataset.interaction;
+    if (name !== "hold_action" && name !== "double_tap_action") return;
+    this._visibleOptionalInteractions.add(name);
+    this._choosingOptionalInteraction = false;
+    this._interactionStructureChanged();
   };
 
   private readonly _removeOptionalInteraction = (event: Event): void => {
@@ -2598,8 +2645,20 @@ export class CardEditor extends LitElement {
       }),
       true,
     );
-    this.requestUpdate();
+    this._interactionStructureChanged();
   };
+
+  private _interactionStructureChanged(): void {
+    if (!this._config) return;
+    this._syncDraftStatus();
+    this.requestUpdate();
+    const nestedEdit = this._haEditor.isNestedCardEdit();
+    if (this._dirtyContext && !nestedEdit) {
+      updateDirtyState(this._dirtyContext, this._serializeDraft(this._config));
+    } else {
+      this._dispatchConfigChange(this._config);
+    }
+  }
 
   private readonly _handleStageLayoutChange = (event: Event): void => {
     if (!this._config) return;
@@ -2715,7 +2774,7 @@ export class CardEditor extends LitElement {
       this.requestUpdate();
 
       if (this._dirtyContext && !nestedEdit) {
-        updateDirtyState(this._dirtyContext, toYamlCardConfig(nextConfig));
+        updateDirtyState(this._dirtyContext, this._serializeDraft(nextConfig));
       }
     }
 
@@ -2746,7 +2805,12 @@ export class CardEditor extends LitElement {
 
   private _syncDraftStatus(): void {
     if (!this._baseline || !this._config) return;
-    const changed = this._configSignature !== this._baselineSignature;
+    const changed =
+      this._configSignature !== this._baselineSignature ||
+      !interactionSetsEqual(
+        this._visibleOptionalInteractions,
+        this._baselineOptionalInteractions,
+      );
     if (changed === this._draftStatusChanged) return;
     this._draftStatusChanged = changed;
     if (changed) {
@@ -2786,12 +2850,13 @@ export class CardEditor extends LitElement {
   }
 
   private _dispatchConfigChange(config: CardConfig): void {
-    const signature = cardConfigSignature(config);
+    const yamlConfig = this._serializeDraft(config);
+    const signature = JSON.stringify(yamlConfig);
     if (signature === this._lastDispatchedConfigSignature) return;
     this._lastDispatchedConfigSignature = signature;
     this.dispatchEvent(
       new CustomEvent("config-changed", {
-        detail: { config: toYamlCardConfig(config) },
+        detail: { config: yamlConfig },
         bubbles: true,
         composed: true,
       }),
@@ -2802,11 +2867,22 @@ export class CardEditor extends LitElement {
     if (!this._config || !this._haEditor.isSaveClick(event)) {
       return;
     }
-    const yamlConfig = toYamlCardConfig(this._config);
+    const yamlConfig = this._serializeDraft(this._config);
     if (!this._haEditor.commitDraftForSave(yamlConfig)) {
       this._dispatchConfigChange(this._config);
     }
   };
+
+  private _serializeDraft(
+    config: CardConfig,
+    visibleInteractions = this._visibleOptionalInteractions,
+  ): YamlCardConfig {
+    const yaml = toYamlCardConfig(config) as Record<string, unknown>;
+    for (const name of visibleInteractions) {
+      yaml[name] = config[name];
+    }
+    return yaml as YamlCardConfig;
+  }
 
   static styles = [themeTokens, cardEditorStyles];
 }
@@ -2853,6 +2929,13 @@ function linkedLightsEqual(
         value.icon === right[index]?.icon,
     )
   );
+}
+
+function interactionSetsEqual(
+  left: ReadonlySet<OptionalInteractionName>,
+  right: ReadonlySet<OptionalInteractionName>,
+): boolean {
+  return left.size === right.size && [...left].every((name) => right.has(name));
 }
 
 if (!customElements.get(EDITOR_TAG)) {

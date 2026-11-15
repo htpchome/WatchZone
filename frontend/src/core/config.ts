@@ -105,6 +105,15 @@ export interface CardConfig {
   readonly [key: string]: unknown;
 }
 
+const explicitConfigKeys = new WeakMap<object, ReadonlySet<string>>();
+
+export function hasExplicitConfigKey(value: unknown, key: string): boolean {
+  if (typeof value !== "object" || value === null) return false;
+  return (explicitConfigKeys.get(value) ?? new Set(Object.keys(value))).has(
+    key,
+  );
+}
+
 export function normalizeCardConfig(value: unknown): CardConfig {
   if (typeof value !== "object" || value === null) {
     throw new Error(`${APP_NAME} card configuration must be an object.`);
@@ -320,7 +329,12 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     typeof source.mobile_data_saving === "boolean"
       ? source.mobile_data_saving
       : false;
-  return normalized as CardConfig;
+  const config = normalized as CardConfig;
+  explicitConfigKeys.set(
+    config,
+    explicitConfigKeys.get(value) ?? new Set(Object.keys(source)),
+  );
+  return config;
 }
 
 export function createDefaultCameraConfig(entityId = ""): CameraConfig {

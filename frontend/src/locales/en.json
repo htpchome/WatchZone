@@ -20,6 +20,7 @@
   "editor.minimal_camera_menu_right": "Top Right",
   "editor.open_live_view": "Open Live View",
   "editor.interactions": "Interactions",
+  "editor.add_interaction": "Add Interaction",
   "editor.tap_behavior": "Tap behavior (optional)",
   "editor.hold_behavior": "Hold behavior (optional)",
   "editor.double_tap_behavior": "Double tap behavior (optional)",

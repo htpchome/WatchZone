@@ -241,6 +241,8 @@ describe("watchzone-card-editor", () => {
       cameras: [{ entity_id: "camera.front" }],
       type: CARD_TYPE,
     });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
     document.body.append(editor);
     await editor.updateComplete;
 
@@ -318,26 +320,54 @@ describe("watchzone-card-editor", () => {
         "ui.panel.lovelace.editor.action-editor.actions.open-live-view",
       ),
     ).toBe("Open Live View");
-    const addInteraction = editor.shadowRoot?.querySelector<HTMLElement>(
-      "ha-form.add-interaction",
+    editor.shadowRoot
+      ?.querySelector<HTMLElement>(".add-interaction > ha-button")
+      ?.click();
+    await editor.updateComplete;
+    editor.shadowRoot
+      ?.querySelector<HTMLElement>(
+        '.add-interaction-choices [data-interaction="double_tap_action"]',
+      )
+      ?.click();
+    await editor.updateComplete;
+    const optionalForm = editor.shadowRoot?.querySelector<
+      HTMLElement & {
+        schema?: Array<{
+          selector: { ui_action?: { actions?: string[] } };
+        }>;
+      }
+    >(".optional-interaction ha-form");
+    expect(optionalForm?.schema?.[0]?.selector.ui_action?.actions).toContain(
+      "open-live-view",
     );
-    addInteraction?.dispatchEvent(
+    expect(changed).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        detail: expect.objectContaining({
+          config: expect.objectContaining({
+            double_tap_action: { action: "none" },
+          }),
+        }),
+      }),
+    );
+    optionalForm?.dispatchEvent(
       new CustomEvent("value-changed", {
         bubbles: true,
         composed: true,
-        detail: { value: { double_tap_action: { action: "none" } } },
+        detail: {
+          value: { double_tap_action: { action: "open-live-view" } },
+        },
       }),
     );
     await editor.updateComplete;
     const removeInteraction = editor.shadowRoot?.querySelector<HTMLElement>(
-      '[data-interaction="double_tap_action"]',
+      '.remove-interaction-action [data-interaction="double_tap_action"]',
     );
     expect(removeInteraction?.textContent).toContain("Remove");
     removeInteraction?.click();
     await editor.updateComplete;
     expect(
       editor.shadowRoot?.querySelector(
-        '[data-interaction="double_tap_action"]',
+        '.remove-interaction-action [data-interaction="double_tap_action"]',
       ),
     ).toBeNull();
   });

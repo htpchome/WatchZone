@@ -7830,21 +7830,40 @@ test("editor uses exclusive accordions and shared draft status", async ({
     ],
     tapAction: "open-live-view",
   });
-  const addInteraction = interactions.locator("ha-form.add-interaction");
+  const addInteraction = interactions.locator(".add-interaction > ha-button");
   await expect(addInteraction).toHaveCount(1);
-  await addInteraction.evaluate((element) => {
-    element.dispatchEvent(
-      new CustomEvent("value-changed", {
-        bubbles: true,
-        composed: true,
-        detail: { value: { double_tap_action: { action: "none" } } },
-      }),
-    );
-  });
+  await addInteraction.click();
+  await interactions
+    .locator('.add-interaction-choices [data-interaction="double_tap_action"]')
+    .click();
   const removeInteraction = interactions.locator(
-    '[data-interaction="double_tap_action"]',
+    '.remove-interaction-action [data-interaction="double_tap_action"]',
   );
   await expect(removeInteraction).toContainText("Remove");
+  expect(
+    await interactions.locator(".optional-interaction ha-form").evaluate(
+      (
+        element: HTMLElement & {
+          schema?: Array<{
+            selector?: { ui_action?: { actions?: string[] } };
+          }>;
+        },
+      ) => element.schema?.[0]?.selector?.ui_action?.actions,
+    ),
+  ).toContain("open-live-view");
+  await interactions
+    .locator(".optional-interaction ha-form")
+    .evaluate((element) => {
+      element.dispatchEvent(
+        new CustomEvent("value-changed", {
+          bubbles: true,
+          composed: true,
+          detail: {
+            value: { double_tap_action: { action: "open-live-view" } },
+          },
+        }),
+      );
+    });
   await removeInteraction.click();
   await expect(removeInteraction).toHaveCount(0);
   await expect(

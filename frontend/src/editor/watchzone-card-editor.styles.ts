@@ -162,6 +162,20 @@ export const cardEditorStyles = css`
     margin-block-start: 0.5rem;
   }
 
+  .add-interaction {
+    display: grid;
+    justify-items: start;
+    gap: 0.25rem;
+    margin-block-start: 0.5rem;
+  }
+
+  .add-interaction-choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding-inline-start: 0.25rem;
+  }
+
   .remove-interaction-action {
     display: flex;
     justify-content: flex-end;
