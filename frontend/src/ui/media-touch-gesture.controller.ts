@@ -39,6 +39,7 @@ export function mediaInteractionOriginatesFromControl(event: Event): boolean {
  */
 export class MediaTouchGestureController {
   private readonly _contacts = new Map<number, Contact>();
+  private readonly _doubleTapPointers = new Set<number>();
   private readonly _ignoredPointers = new Set<number>();
   private _lastCompletedTap?: CompletedTap;
   private _lastTouchToggleTime = Number.NEGATIVE_INFINITY;
@@ -54,6 +55,18 @@ export class MediaTouchGestureController {
       this._lastCompletedTap = undefined;
       this._ignoredPointers.add(event.pointerId);
       return true;
+    }
+
+    const now = performance.now();
+    if (this._isDoubleTap(event.clientX, event.clientY, now)) {
+      // WebKit may reserve or cancel the second tap before pointerup. Claim
+      // the completed two-tap sequence at its second pointerdown, which is the
+      // last event consistently delivered by Safari and WKWebView.
+      this._lastCompletedTap = undefined;
+      this._lastTouchToggleTime = now;
+      this._doubleTapPointers.add(event.pointerId);
+      event.preventDefault();
+      this._zoom.toggleAt(event.clientX, event.clientY);
     }
 
     this._contacts.set(event.pointerId, {
@@ -93,6 +106,7 @@ export class MediaTouchGestureController {
     if (event.pointerType !== "touch") return false;
     if (this._ignoredPointers.delete(event.pointerId)) return true;
     const contact = this._contacts.get(event.pointerId);
+    const completedDoubleTap = this._doubleTapPointers.delete(event.pointerId);
     this._zoom.handlePointerUp(event);
     this._contacts.delete(event.pointerId);
     if (!contact) return true;
@@ -105,7 +119,7 @@ export class MediaTouchGestureController {
       this._contacts.size === 0;
     if (eligible) {
       this._surfaceActivationCompleted = true;
-      this._completeTap(event, now);
+      if (!completedDoubleTap) this._completeTap(event, now);
     } else {
       this._surfaceActivationCompleted = false;
       this._lastCompletedTap = undefined;
@@ -118,6 +132,7 @@ export class MediaTouchGestureController {
     if (event.pointerType !== "touch") return false;
     if (this._ignoredPointers.delete(event.pointerId)) return true;
     this._surfaceActivationCompleted = false;
+    this._doubleTapPointers.delete(event.pointerId);
     this._contacts.delete(event.pointerId);
     this._lastCompletedTap = undefined;
     this._zoom.handlePointerCancel(event);
@@ -129,6 +144,7 @@ export class MediaTouchGestureController {
     if (event.pointerType !== "touch") return false;
     if (this._ignoredPointers.delete(event.pointerId)) return true;
     this._surfaceActivationCompleted = false;
+    this._doubleTapPointers.delete(event.pointerId);
     this._contacts.delete(event.pointerId);
     this._lastCompletedTap = undefined;
     this._zoom.handleLostPointerCapture(event);
@@ -151,6 +167,7 @@ export class MediaTouchGestureController {
 
   public reset(): void {
     this._contacts.clear();
+    this._doubleTapPointers.clear();
     this._ignoredPointers.clear();
     this._lastCompletedTap = undefined;
     this._multiTouchSequence = false;
@@ -158,14 +175,7 @@ export class MediaTouchGestureController {
   }
 
   private _completeTap(event: PointerEvent, now: number): void {
-    const previous = this._lastCompletedTap;
-    const doubleTap = Boolean(
-      previous &&
-      now - previous.time <= DOUBLE_TAP_DELAY_MS &&
-      Math.hypot(event.clientX - previous.x, event.clientY - previous.y) <=
-        DOUBLE_TAP_DISTANCE_PX,
-    );
-    if (!doubleTap) {
+    if (!this._isDoubleTap(event.clientX, event.clientY, now)) {
       this._lastCompletedTap = {
         time: now,
         x: event.clientX,
@@ -178,5 +188,14 @@ export class MediaTouchGestureController {
     this._lastTouchToggleTime = now;
     event.preventDefault();
     this._zoom.toggleAt(event.clientX, event.clientY);
+  }
+
+  private _isDoubleTap(x: number, y: number, now: number): boolean {
+    const previous = this._lastCompletedTap;
+    return Boolean(
+      previous &&
+      now - previous.time <= DOUBLE_TAP_DELAY_MS &&
+      Math.hypot(x - previous.x, y - previous.y) <= DOUBLE_TAP_DISTANCE_PX,
+    );
   }
 }

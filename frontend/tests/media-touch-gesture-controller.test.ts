@@ -7,6 +7,7 @@ function zoomController(): MediaZoomController {
   return {
     handlePointerDown: vi.fn(),
     handlePointerUp: vi.fn(),
+    toggleAt: vi.fn(),
   } as unknown as MediaZoomController;
 }
 
@@ -51,5 +52,24 @@ describe("media touch gesture controller", () => {
     expect(controller.handlePointerDown(event)).toBe(true);
     expect(event.preventDefault).not.toHaveBeenCalled();
     expect(zoom.handlePointerDown).not.toHaveBeenCalled();
+  });
+
+  it("claims a WebKit double tap when its second pointer starts", () => {
+    const zoom = zoomController();
+    const controller = new MediaTouchGestureController(zoom);
+    const surface = document.createElement("div");
+    const firstDown = touchEvent([surface]);
+    const firstUp = touchEvent([surface], "pointerup");
+    const secondDown = {
+      ...touchEvent([surface]),
+      pointerId: 2,
+    } as unknown as PointerEvent;
+
+    controller.handlePointerDown(firstDown);
+    controller.handlePointerUp(firstUp);
+    controller.handlePointerDown(secondDown);
+
+    expect(secondDown.preventDefault).toHaveBeenCalledOnce();
+    expect(zoom.toggleAt).toHaveBeenCalledWith(40, 60);
   });
 });

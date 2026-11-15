@@ -4349,7 +4349,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   );
   expect(compactInformationLayout).toEqual({
     actionDirection: "row",
-    metadataColumns: 2,
+    metadataColumns: 3,
   });
   const compactDialogBox = await mediaDialog.boundingBox();
   expect(compactDialogBox?.x).toBeGreaterThanOrEqual(0);
