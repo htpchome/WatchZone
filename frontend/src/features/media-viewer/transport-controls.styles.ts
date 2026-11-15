@@ -1,5 +1,7 @@
 import { css } from "lit";
 
+import { responsiveWidths } from "../../styles/responsive-widths";
+
 export const recordedVideoTransportStyles = css`
   :host {
     position: absolute;
@@ -156,7 +158,7 @@ export const recordedVideoTransportStyles = css`
     }
   }
 
-  @media (max-width: 600px), (max-height: 500px) {
+  @media (max-width: ${responsiveWidths.narrow}), (max-height: 500px) {
     :host {
       --wzc-recorded-transport-control-size: 1.75rem;
       --wzc-recorded-transport-icon-size: 1.1rem;

@@ -58,14 +58,20 @@ prohibited for layout or interaction decisions.
 
 The shared responsive profile uses these container inline-size classes:
 
-| Presentation class | Detailed size class | Inline size   |
-| ------------------ | ------------------- | ------------- |
-| Phone              | Compact phone       | `< 360px`     |
-| Phone              | Phone               | `360–599px`   |
-| Tablet             | Compact tablet      | `600–767px`   |
-| Tablet             | Tablet              | `768–1023px`  |
-| Desktop            | Desktop             | `1024–1439px` |
-| Desktop            | Wide desktop        | `>= 1440px`   |
+| Presentation class | Detailed size class | Inline size  |
+| ------------------ | ------------------- | ------------ |
+| Phone              | Compact phone       | `< 480px`    |
+| Phone              | Phone               | `480–599px`  |
+| Tablet             | Compact tablet      | `600–767px`  |
+| Tablet             | Tablet              | `768–1023px` |
+| Desktop            | Desktop             | `>= 1024px`  |
+
+All responsive width decisions use the canonical `480px`, `600px`, `768px`,
+and `1024px` points. Runtime classification consumes their numeric contract;
+CSS viewport and container queries consume its CSS-safe projection. Arbitrary
+feature-local width points are prohibited. A component still chooses the
+canonical point appropriate to its content; this shared scale does not require
+viewport queries where a container query correctly owns the decision.
 
 These categories may select behavior from a typed device matrix. Purely visual
 size changes remain CSS container-query responsibilities.
@@ -141,11 +147,11 @@ boundary:
 
 Use this matrix when selecting tokens for a new overlay surface:
 
-| Presentation role | Examples                                                  | Background                       | Backdrop filter                                | Radius and shadow                                      | Scrim                                                                            |
-| ----------------- | --------------------------------------------------------- | -------------------------------- | ---------------------------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------- |
-| HA glass          | AI analysis, recorded-media viewer, informational dialogs | `--wzc-dialog-background`        | `--wzc-dialog-backdrop-filter`                 | `--wzc-dialog-radius`, `--wzc-dialog-shadow`           | `--wzc-dialog-scrim-*` for modal dialogs; none for the non-blocking media viewer |
+| Presentation role | Examples                                                                           | Background                       | Backdrop filter                                | Radius and shadow                                      | Scrim                                                                            |
+| ----------------- | ---------------------------------------------------------------------------------- | -------------------------------- | ---------------------------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| HA glass          | AI analysis, recorded-media viewer, informational dialogs                          | `--wzc-dialog-background`        | `--wzc-dialog-backdrop-filter`                 | `--wzc-dialog-radius`, `--wzc-dialog-shadow`           | `--wzc-dialog-scrim-*` for modal dialogs; none for the non-blocking media viewer |
 | Solid task        | Filter, calendar, Suspend Camera, recorded-media information, forms, confirmations | `--wzc-task-dialog-background`   | `--wzc-task-dialog-backdrop-filter` (`none`)   | `--wzc-task-dialog-radius`, `--wzc-task-dialog-shadow` | `--wzc-dialog-scrim-*` for modal tasks; none for popovers                        |
-| Editor shell      | Home Assistant card editor, WatchZone editor content      | `--wzc-editor-dialog-background` | `--wzc-editor-dialog-backdrop-filter` (`none`) | Owned by the Home Assistant editor shell               | Owned by the Home Assistant editor shell                                         |
+| Editor shell      | Home Assistant card editor, WatchZone editor content                               | `--wzc-editor-dialog-background` | `--wzc-editor-dialog-backdrop-filter` (`none`) | Owned by the Home Assistant editor shell               | Owned by the Home Assistant editor shell                                         |
 
 `--wzc-popover-*` is a compatibility alias of the solid-task family, not a
 fourth presentation. Filter and calendar components may consume that alias for

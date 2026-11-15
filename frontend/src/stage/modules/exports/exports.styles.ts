@@ -1,5 +1,7 @@
 import { css } from "lit";
 
+import { responsiveWidths } from "../../../styles/responsive-widths";
+
 export const exportsStyles = css`
   :host {
     --wzc-export-list-gap: 0.5rem;
@@ -339,13 +341,13 @@ export const exportsStyles = css`
     border-color: var(--wzc-color-fill-error);
   }
 
-  @container (max-width: 54rem) {
+  @container (max-width: ${responsiveWidths.wide}) {
     .collection.grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
-  @container (max-width: 36rem) {
+  @container (max-width: ${responsiveWidths.narrow}) {
     .collection.grid {
       grid-template-columns: minmax(0, 1fr);
     }

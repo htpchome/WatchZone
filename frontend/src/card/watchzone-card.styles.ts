@@ -1,5 +1,7 @@
 import { css } from "lit";
 
+import { responsiveWidths } from "../styles/responsive-widths";
+
 export const cardStyles = css`
   :host {
     display: block;
@@ -58,7 +60,7 @@ export const cardStyles = css`
     z-index: 8;
   }
 
-  @container (max-width: 599px) {
+  @container (max-width: ${responsiveWidths.narrow}) {
     .stage-grid {
       --wzc-camera-control-size: 1.875rem;
       --wzc-camera-control-icon-size: 1.15rem;

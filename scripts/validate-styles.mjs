@@ -45,6 +45,24 @@ for (const path of await collectTypeScript(sourceRoot)) {
   const isStyleBoundary =
     path === themeBoundary || path === homeAssistantCardHostAppearance;
 
+  const normalizedQueries = source.replace(
+    /\$\{responsiveWidths\.(compact|narrow|medium|wide)\}/g,
+    "RESPONSIVE_WIDTH",
+  );
+  for (const match of normalizedQueries.matchAll(
+    /@(media|container)\s*([^{}]*)\{/g,
+  )) {
+    const condition = match[2];
+    const hasWidthCondition =
+      /\b(?:min|max)-width\s*:/.test(condition) ||
+      /\bwidth\s*[<>=]/.test(condition);
+    if (hasWidthCondition && !condition.includes("RESPONSIVE_WIDTH")) {
+      violations.push(
+        `${relativePath}: responsive width queries must use responsiveWidths`,
+      );
+    }
+  }
+
   if (!isStyleFile && path !== themeBoundary && /\bcss\s*`/.test(source)) {
     violations.push(`${relativePath}: embedded Lit CSS is prohibited`);
   }

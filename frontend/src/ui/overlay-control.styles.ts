@@ -1,5 +1,7 @@
 import { css } from "lit";
 
+import { responsiveWidths } from "../styles/responsive-widths";
+
 const overlayControlBaseStyles = css`
   .round-button,
   .control-button {
@@ -48,7 +50,7 @@ export const mediaOverlayControlSizingStyles = css`
     --wzc-overlay-control-min-size: var(--wzc-control-size);
   }
 
-  @container (max-width: 480px) {
+  @container (max-width: ${responsiveWidths.compact}) {
     :host,
     .control-button,
     .round-button,
@@ -69,7 +71,7 @@ export const mediaOverlayBadgeSizingStyles = css`
     --wzc-badge-padding: 0.25em 0.6em;
   }
 
-  @container (max-width: 480px) {
+  @container (max-width: ${responsiveWidths.compact}) {
     .source-indicator {
       --wzc-badge-font-size: 0.65rem;
       --wzc-badge-padding: 0.18em 0.45em;

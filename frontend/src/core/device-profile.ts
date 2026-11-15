@@ -1,13 +1,10 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
+import { RESPONSIVE_WIDTHS } from "./responsive-widths";
+
 export type DeviceClass = "desktop" | "phone" | "tablet";
 export type DeviceSizeClass =
-  | "compact_phone"
-  | "phone"
-  | "compact_tablet"
-  | "tablet"
-  | "desktop"
-  | "wide_desktop";
+  "compact_phone" | "phone" | "compact_tablet" | "tablet" | "desktop";
 export type InputMode = "hybrid" | "none" | "pointer" | "touch";
 export type Orientation = "landscape" | "portrait" | "square";
 export type PointerAccuracy = "coarse" | "fine" | "none";
@@ -49,14 +46,6 @@ export interface DeviceProfileEnvironment {
   readonly navigator?: NavigatorCapabilities;
   readonly window?: WindowCapabilities;
 }
-
-export const DEVICE_SIZE_BREAKPOINTS = Object.freeze({
-  compactPhone: 360,
-  phone: 600,
-  compactTablet: 768,
-  tablet: 1024,
-  wideDesktop: 1440,
-});
 
 const CAPABILITY_QUERIES = [
   "(pointer: coarse)",
@@ -137,16 +126,15 @@ function getInputCapabilityMonitor(): InputCapabilityMonitor {
 }
 
 function classifySize(inlineSize: number): DeviceSizeClass {
-  if (inlineSize < DEVICE_SIZE_BREAKPOINTS.compactPhone) {
+  if (inlineSize < RESPONSIVE_WIDTHS.compact) {
     return "compact_phone";
   }
-  if (inlineSize < DEVICE_SIZE_BREAKPOINTS.phone) return "phone";
-  if (inlineSize < DEVICE_SIZE_BREAKPOINTS.compactTablet) {
+  if (inlineSize < RESPONSIVE_WIDTHS.narrow) return "phone";
+  if (inlineSize < RESPONSIVE_WIDTHS.medium) {
     return "compact_tablet";
   }
-  if (inlineSize < DEVICE_SIZE_BREAKPOINTS.tablet) return "tablet";
-  if (inlineSize < DEVICE_SIZE_BREAKPOINTS.wideDesktop) return "desktop";
-  return "wide_desktop";
+  if (inlineSize < RESPONSIVE_WIDTHS.wide) return "tablet";
+  return "desktop";
 }
 
 function deviceClassForSize(sizeClass: DeviceSizeClass): DeviceClass {

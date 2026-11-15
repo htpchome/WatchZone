@@ -13,7 +13,7 @@ describe("device profile", () => {
     [600, "tablet", "compact_tablet"],
     [768, "tablet", "tablet"],
     [1024, "desktop", "desktop"],
-    [1440, "desktop", "wide_desktop"],
+    [1440, "desktop", "desktop"],
   ] as const)(
     "classifies a %ipx container as %s/%s",
     (inlineSize, deviceClass, deviceSizeClass) => {

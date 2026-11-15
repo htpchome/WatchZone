@@ -1,5 +1,7 @@
 import { css } from "lit";
 
+import { responsiveWidths } from "../styles/responsive-widths";
+
 export const generalSettingsInfoStyles = css`
   :host {
     display: block;
@@ -99,7 +101,7 @@ export const generalSettingsInfoStyles = css`
     color: var(--wzc-color-text-2);
   }
 
-  @container (max-width: 30rem) {
+  @container (max-width: ${responsiveWidths.compact}) {
     .timezone-summary {
       grid-template-columns: 1fr;
     }

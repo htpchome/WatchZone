@@ -1,5 +1,7 @@
 import { css } from "lit";
 
+import { responsiveWidths } from "../styles/responsive-widths";
+
 export const activityListStyles = css`
   :host {
     display: block;
@@ -598,7 +600,7 @@ export const activityListStyles = css`
     white-space: nowrap;
   }
 
-  @media (max-width: 420px) {
+  @media (max-width: ${responsiveWidths.compact}) {
     .tile {
       grid-template-columns:
         var(--wzc-event-thumbnail-inline-size) minmax(0, 1fr)

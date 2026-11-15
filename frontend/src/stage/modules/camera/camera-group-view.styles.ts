@@ -1,5 +1,7 @@
 import { css } from "lit";
 
+import { responsiveWidths } from "../../../styles/responsive-widths";
+
 export const cameraGroupViewStyles = css`
   :host,
   .group,
@@ -179,7 +181,7 @@ export const cameraGroupViewStyles = css`
     display: none;
   }
 
-  @container (max-width: 599px) {
+  @container (max-width: ${responsiveWidths.narrow}) {
     .feeds {
       display: block;
     }

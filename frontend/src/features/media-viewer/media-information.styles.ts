@@ -1,5 +1,7 @@
 import { css } from "lit";
 
+import { responsiveWidths } from "../../styles/responsive-widths";
+
 export const mediaInformationStyles = css`
   :host {
     container-type: inline-size;
@@ -68,13 +70,13 @@ export const mediaInformationStyles = css`
     );
   }
 
-  @container (max-width: 44rem) {
+  @container (max-width: ${responsiveWidths.medium}) {
     .metadata {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
 
-  @container (max-width: 28rem) {
+  @container (max-width: ${responsiveWidths.compact}) {
     .metadata {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }

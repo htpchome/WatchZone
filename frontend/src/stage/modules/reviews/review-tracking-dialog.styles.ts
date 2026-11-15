@@ -1,5 +1,7 @@
 import { css } from "lit";
 
+import { responsiveWidths } from "../../../styles/responsive-widths";
+
 export const reviewTrackingDialogStyles = css`
   .tracking {
     --wzc-tracking-accent: var(--wzc-color-warning);
@@ -227,7 +229,7 @@ export const reviewTrackingDialogStyles = css`
     display: block;
   }
 
-  @media (max-width: 420px) {
+  @media (max-width: ${responsiveWidths.compact}) {
     .tracking {
       padding-inline: 0.65rem;
     }

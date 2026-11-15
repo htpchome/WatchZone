@@ -1,5 +1,7 @@
 import { css } from "lit";
 
+import { responsiveWidths } from "../../styles/responsive-widths";
+
 export const recordingSegmentManagerStyles = css`
   :host {
     display: block;
@@ -100,7 +102,7 @@ export const recordingSegmentManagerStyles = css`
     outline-offset: 2px;
   }
 
-  @media (max-width: 40rem) {
+  @media (max-width: ${responsiveWidths.medium}) {
     .manager {
       grid-template-columns: 1fr;
     }

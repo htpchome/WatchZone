@@ -15,7 +15,7 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.320`
+- Working version: `0.0.4-dev.321`
 - Current commit: `127a6e5` —
   `v0.0.4-dev.319 - fix(media): align and clarify resize control`
 - The worktree contains the uncommitted theme-surface consolidation described
@@ -23,6 +23,11 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
   `custom_components/watchzone/const.py`, and the latest commit.
 
 ## Active change: theme surfaces and shared media actions
+
+- Responsive width decisions now use one enforced four-point scale: `480px`,
+  `600px`, `768px`, and `1024px`. Runtime device classification and CSS
+  viewport/container queries consume the same contract; the style validator
+  rejects feature-local width-query literals.
 
 - The media shell now uses the same Home Assistant glass surface and matching
   backdrop filter as AI Analysis. Its badges and square icon actions share the

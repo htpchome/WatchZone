@@ -1,5 +1,7 @@
 import { css } from "lit";
 
+import { responsiveWidths } from "../styles/responsive-widths";
+
 export const cardEditorStyles = css`
   :host {
     display: block;
@@ -429,7 +431,7 @@ export const cardEditorStyles = css`
     }
   }
 
-  @container (max-width: 30rem) {
+  @container (max-width: ${responsiveWidths.compact}) {
     .linked-light-row {
       grid-template-columns:
         1.5rem minmax(0, 1fr) minmax(12.5rem, 14.5rem)
