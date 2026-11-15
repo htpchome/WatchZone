@@ -127,10 +127,25 @@ function doubleClick(surface: HTMLElement): void {
   );
 }
 
+function stubAnimationFrames(): Map<number, FrameRequestCallback> {
+  const frames = new Map<number, FrameRequestCallback>();
+  let nextFrame = 1;
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+    const frame = nextFrame++;
+    frames.set(frame, callback);
+    return frame;
+  });
+  vi.stubGlobal("cancelAnimationFrame", (frame: number) => {
+    frames.delete(frame);
+  });
+  return frames;
+}
+
 describe("camera media zoom", () => {
   afterEach(() => {
     document.body.replaceChildren();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
     vi.useRealTimers();
   });
 
@@ -302,6 +317,148 @@ describe("camera media zoom", () => {
     );
 
     expect(controller.zoom.transform).not.toContain("translate3d(0px, 0px, 0)");
+  });
+
+  it("coalesces pointer pan presentation updates and flushes the final state", () => {
+    const frames = stubAnimationFrames();
+    const host = createHost();
+    const requestUpdate = vi.mocked(host.requestUpdate);
+    const surface = createSurface();
+    const controller = new MediaZoomController(host);
+    controller.observe(surface);
+    connectPointerEvents(surface, controller);
+    controller.toggleAt(200, 112.5);
+    requestUpdate.mockClear();
+
+    surface.dispatchEvent(
+      pointerEvent("pointerdown", {
+        buttons: 1,
+        clientX: 200,
+        clientY: 112.5,
+        pointerId: 1,
+        pointerType: "mouse",
+      }),
+    );
+    requestUpdate.mockClear();
+    for (const clientX of [220, 240, 260]) {
+      surface.dispatchEvent(
+        pointerEvent("pointermove", {
+          buttons: 1,
+          clientX,
+          clientY: 112.5,
+          pointerId: 1,
+          pointerType: "mouse",
+        }),
+      );
+    }
+
+    expect(requestUpdate).not.toHaveBeenCalled();
+    expect(frames.size).toBe(1);
+    expect(controller.transform).toContain("translate3d(60px, 0px, 0)");
+
+    surface.dispatchEvent(
+      pointerEvent("pointerup", {
+        buttons: 0,
+        clientX: 260,
+        clientY: 112.5,
+        pointerId: 1,
+        pointerType: "mouse",
+      }),
+    );
+
+    expect(frames.size).toBe(0);
+    expect(requestUpdate).toHaveBeenCalledOnce();
+    expect(controller.transform).toContain("translate3d(60px, 0px, 0)");
+  });
+
+  it("coalesces pinch zoom presentation updates and flushes the final scale", () => {
+    const frames = stubAnimationFrames();
+    const host = createHost();
+    const requestUpdate = vi.mocked(host.requestUpdate);
+    const surface = createSurface();
+    const controller = new MediaZoomController(host);
+    controller.observe(surface);
+    connectPointerEvents(surface, controller);
+
+    surface.dispatchEvent(
+      pointerEvent("pointerdown", {
+        clientX: 150,
+        clientY: 112.5,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+    surface.dispatchEvent(
+      pointerEvent("pointerdown", {
+        clientX: 250,
+        clientY: 112.5,
+        pointerId: 2,
+        pointerType: "touch",
+      }),
+    );
+    requestUpdate.mockClear();
+    for (const clientX of [300, 350, 400]) {
+      surface.dispatchEvent(
+        pointerEvent("pointermove", {
+          clientX,
+          clientY: 112.5,
+          pointerId: 2,
+          pointerType: "touch",
+        }),
+      );
+    }
+
+    expect(requestUpdate).not.toHaveBeenCalled();
+    expect(frames.size).toBe(1);
+    expect(controller.scale).toBe(2.5);
+
+    surface.dispatchEvent(
+      pointerEvent("pointerup", {
+        clientX: 400,
+        clientY: 112.5,
+        pointerId: 2,
+        pointerType: "touch",
+      }),
+    );
+
+    expect(frames.size).toBe(0);
+    expect(requestUpdate).toHaveBeenCalledOnce();
+    expect(controller.scale).toBe(2.5);
+  });
+
+  it("cancels a pending pan presentation update when disconnected", () => {
+    const frames = stubAnimationFrames();
+    const host = createHost();
+    const requestUpdate = vi.mocked(host.requestUpdate);
+    const surface = createSurface();
+    const controller = new MediaZoomController(host);
+    controller.observe(surface);
+    connectPointerEvents(surface, controller);
+    controller.toggleAt(200, 112.5);
+    surface.dispatchEvent(
+      pointerEvent("pointerdown", {
+        buttons: 1,
+        clientX: 200,
+        clientY: 112.5,
+        pointerId: 1,
+        pointerType: "mouse",
+      }),
+    );
+    requestUpdate.mockClear();
+    surface.dispatchEvent(
+      pointerEvent("pointermove", {
+        buttons: 1,
+        clientX: 240,
+        clientY: 112.5,
+        pointerId: 1,
+        pointerType: "mouse",
+      }),
+    );
+
+    expect(frames.size).toBe(1);
+    controller.hostDisconnected();
+    expect(frames.size).toBe(0);
+    expect(requestUpdate).not.toHaveBeenCalled();
   });
 
   it("recovers overlay interaction when backgrounding interrupts a pan", () => {

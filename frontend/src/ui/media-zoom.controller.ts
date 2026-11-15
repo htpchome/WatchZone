@@ -56,6 +56,7 @@ export class MediaZoomController implements ReactiveController {
   private _pinchStart?: PinchStart;
   private readonly _pointers = new Map<number, PointerPoint>();
   private _resizeObserver?: ResizeObserver;
+  private _scheduledUpdateFrame?: number;
   private _scale = MIN_ZOOM;
   private _stageResizeProgress = 0;
   private _stageResizeStart?: ZoomTransform;
@@ -154,6 +155,7 @@ export class MediaZoomController implements ReactiveController {
   }
 
   public hostDisconnected(): void {
+    this._cancelScheduledUpdate();
     this._resizeObserver?.disconnect();
     this._resizeObserver = undefined;
     this._surface = undefined;
@@ -179,7 +181,7 @@ export class MediaZoomController implements ReactiveController {
     this._pinchStart = undefined;
     this._stageResizeStart = undefined;
     this._stageResizeProgress = 0;
-    this._host.requestUpdate();
+    this._flushScheduledUpdate();
   }
 
   /** Ends transient pointer ownership without changing this camera's view. */
@@ -285,7 +287,7 @@ export class MediaZoomController implements ReactiveController {
       this._clampPan();
       event.preventDefault();
       this._callbacks.onInteraction?.();
-      this._host.requestUpdate();
+      this._scheduleUpdate();
       return;
     }
 
@@ -303,7 +305,7 @@ export class MediaZoomController implements ReactiveController {
       this._clampPan();
       event.preventDefault();
       this._callbacks.onInteraction?.();
-      this._host.requestUpdate();
+      this._scheduleUpdate();
     }
   };
 
@@ -404,7 +406,7 @@ export class MediaZoomController implements ReactiveController {
     if (this._touchPointers().length < 2) this._pinchStart = undefined;
     this._dragStart = undefined;
     this._interacting = false;
-    this._host.requestUpdate();
+    this._flushScheduledUpdate();
   }
 
   private _setScaleAt(scale: number, clientX: number, clientY: number): void {
@@ -576,7 +578,27 @@ export class MediaZoomController implements ReactiveController {
     this._pinchStart = undefined;
     this._interacting = false;
     this._gestureMoved = false;
-    if (active) this._host.requestUpdate();
+    if (active) this._flushScheduledUpdate();
+    else this._cancelScheduledUpdate();
+  }
+
+  private _scheduleUpdate(): void {
+    if (this._scheduledUpdateFrame !== undefined) return;
+    this._scheduledUpdateFrame = requestAnimationFrame(() => {
+      this._scheduledUpdateFrame = undefined;
+      this._host.requestUpdate();
+    });
+  }
+
+  private _flushScheduledUpdate(): void {
+    this._cancelScheduledUpdate();
+    this._host.requestUpdate();
+  }
+
+  private _cancelScheduledUpdate(): void {
+    if (this._scheduledUpdateFrame === undefined) return;
+    cancelAnimationFrame(this._scheduledUpdateFrame);
+    this._scheduledUpdateFrame = undefined;
   }
 
   private readonly _cancelFromEnvironment = (event: Event): void => {
