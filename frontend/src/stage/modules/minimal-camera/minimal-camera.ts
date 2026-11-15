@@ -20,6 +20,8 @@ import {
 import {
   isPictureInPictureActive,
   pictureInPictureMethod,
+  refreshNativePictureInPictureSuppression,
+  suppressNativePictureInPicture,
   togglePictureInPicture,
 } from "../../../core/picture-in-picture";
 import {
@@ -56,7 +58,6 @@ interface MinimalCameraConfig {
 
 const HOLD_DELAY_MS = 500;
 const DOUBLE_TAP_DELAY_MS = 250;
-const CONTROL_MENU_TIMEOUT_MS = 5_000;
 
 export class MinimalCameraModule extends LitElement {
   public static properties = {
@@ -83,7 +84,6 @@ export class MinimalCameraModule extends LitElement {
   private _attachedWebRtcVideo?: HTMLVideoElement;
   private _holdFired = false;
   private _holdTimer?: ReturnType<typeof setTimeout>;
-  private _controlsTimer?: ReturnType<typeof setTimeout>;
   private _controlsExpanded = false;
   private _snapshotError?: string;
   private _snapshotPending = false;
@@ -101,7 +101,6 @@ export class MinimalCameraModule extends LitElement {
       ),
     getDialog: () =>
       this.renderRoot.querySelector<HTMLDialogElement>(".live-dialog"),
-    onClose: () => this._closeControlMenu(),
   });
   private readonly _audio: CameraAudioController = new CameraAudioController(
     this,
@@ -134,6 +133,7 @@ export class MinimalCameraModule extends LitElement {
           );
         }
         this._activeVideo = video;
+        suppressNativePictureInPicture(video);
         for (const event of [
           "enterpictureinpicture",
           "leavepictureinpicture",
@@ -276,7 +276,7 @@ export class MinimalCameraModule extends LitElement {
           <span>${this.camera?.title || this.camera?.entityId}</span>
         </header>
         <div
-          class="live-dialog-media"
+          class=${`live-dialog-media${this._activity.classification ? ` activity-${this._activity.classification}` : ""}`}
           style=${
             videoAspectRatio
               ? `--wzc-minimal-live-dialog-aspect-ratio: ${videoAspectRatio}`
@@ -367,6 +367,7 @@ export class MinimalCameraModule extends LitElement {
       fallback.playsInline = true;
       setMediaElementMuted(fallback, this._audio.muted);
       fallbackHost.append(fallback);
+      refreshNativePictureInPictureSuppression(fallback);
       void playMediaElement(fallback).catch(() => undefined);
     }
 
@@ -388,6 +389,7 @@ export class MinimalCameraModule extends LitElement {
       webRtc.playsInline = true;
       setMediaElementMuted(webRtc, this._audio.muted);
       webRtcHost.append(webRtc);
+      refreshNativePictureInPictureSuppression(webRtc);
       void playMediaElement(webRtc).catch(() => undefined);
     }
     if (this._session.selected === "webrtc") {
@@ -596,20 +598,13 @@ export class MinimalCameraModule extends LitElement {
       return;
     }
     this._controlsExpanded = true;
-    this._controlsTimer = setTimeout(
-      () => this._closeControlMenu(),
-      CONTROL_MENU_TIMEOUT_MS,
-    );
   };
 
   private _closeControlMenu(): void {
-    if (this._controlsTimer !== undefined) clearTimeout(this._controlsTimer);
-    this._controlsTimer = undefined;
     this._controlsExpanded = false;
   }
 
   private _openLiveDialog(): void {
-    this._closeControlMenu();
     this._dialog.open();
   }
 

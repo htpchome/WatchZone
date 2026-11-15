@@ -4,7 +4,6 @@ interface MinimalLiveDialogCallbacks {
   getAspectRatio(): number;
   getChromeHeight(): number;
   getDialog(): HTMLDialogElement | null;
-  onClose(): void;
 }
 
 /** Owns minimal live-dialog visibility, drag, resize, and viewport clamping. */
@@ -160,7 +159,6 @@ export class MinimalLiveDialogController implements ReactiveController {
     this._cleanup();
     if (!this.openState) return;
     this.openState = false;
-    this._callbacks.onClose();
     this._host.requestUpdate();
   }
 

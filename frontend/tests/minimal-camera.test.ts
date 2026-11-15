@@ -93,6 +93,8 @@ describe("minimal camera module", () => {
         video,
       ),
     );
+    expect(video.disablePictureInPicture).toBe(true);
+    expect(video.getAttribute("controlslist")).toContain("nopictureinpicture");
     video.dispatchEvent(new Event("canplay"));
     await vi.waitFor(() =>
       expect(
@@ -117,6 +119,18 @@ describe("minimal camera module", () => {
     expect(
       camera.shadowRoot?.querySelector<HTMLDialogElement>(".live-dialog")?.open,
     ).toBe(true);
+    expect(video.disablePictureInPicture).toBe(true);
+    expect(video.getAttribute("controlslist")).toContain("nopictureinpicture");
+    (
+      camera as unknown as {
+        _activity: { classification?: "alert" | "detection" };
+      }
+    )._activity.classification = "alert";
+    camera.requestUpdate();
+    await camera.updateComplete;
+    expect(
+      camera.shadowRoot?.querySelector(".live-dialog-media.activity-alert"),
+    ).not.toBeNull();
     expect(
       camera.shadowRoot?.querySelector(".source-control")?.textContent,
     ).toBe("WebRTC");
@@ -177,7 +191,7 @@ describe("minimal camera module", () => {
     expect(dialog?.open).toBe(true);
   });
 
-  it("hides the expanded control menu after five seconds", async () => {
+  it("keeps the control menu open until the menu button closes it", async () => {
     vi.useFakeTimers();
     const camera = document.createElement(
       "wzc-minimal-camera",
@@ -200,9 +214,10 @@ describe("minimal camera module", () => {
     menu?.click();
     await camera.updateComplete;
     expect(controls?.hidden).toBe(false);
-    await vi.advanceTimersByTimeAsync(4_999);
+    await vi.advanceTimersByTimeAsync(10_000);
+    await camera.updateComplete;
     expect(controls?.hidden).toBe(false);
-    await vi.advanceTimersByTimeAsync(1);
+    menu?.click();
     await camera.updateComplete;
     expect(controls?.hidden).toBe(true);
   });

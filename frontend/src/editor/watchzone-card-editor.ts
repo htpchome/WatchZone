@@ -631,30 +631,28 @@ export class CardEditor extends LitElement {
     const holdAction = this._config?.hold_action;
     const doubleTapAction = this._config?.double_tap_action;
     const openLiveView = this._config?.tap_action.action === "open-live-view";
-    return html`<div class="stage-layout-options interaction-primary-options">
-        <label class=${`stage-layout-option${openLiveView ? " selected" : ""}`}>
-          <input
-            type="radio"
-            name="minimal-camera-tap-action"
-            value="open-live-view"
-            .checked=${openLiveView}
-            @change=${this._handleTapActionModeChange}
-          />
-          <span>${this._t("editor.open_live_view")}</span>
-        </label>
-        <label
-          class=${`stage-layout-option${!openLiveView ? " selected" : ""}`}
-        >
-          <input
-            type="radio"
-            name="minimal-camera-tap-action"
-            value="other"
-            .checked=${!openLiveView}
-            @change=${this._handleTapActionModeChange}
-          />
-          <span>${this._t("editor.other_interaction")}</span>
-        </label>
-      </div>
+    return html`<ha-selector
+        class="minimal-tap-mode"
+        label=${this._t("editor.tap_behavior")}
+        .hass=${this._hass}
+        .selector=${{
+          select: {
+            mode: "dropdown",
+            options: [
+              {
+                label: this._t("editor.open_live_view"),
+                value: "open-live-view",
+              },
+              {
+                label: this._t("editor.other_interaction"),
+                value: "other",
+              },
+            ],
+          },
+        }}
+        .value=${openLiveView ? "open-live-view" : "other"}
+        @value-changed=${this._handleTapActionModeChange}
+      ></ha-selector>
       <ha-form
         .hass=${this._hass}
         .data=${{
@@ -2473,13 +2471,13 @@ export class CardEditor extends LitElement {
 
   private readonly _handleTapActionModeChange = (event: Event): void => {
     if (!this._config) return;
-    const input = event.currentTarget as HTMLInputElement;
-    if (!input.checked) return;
+    const value = (event as ValueChangedEvent).detail.value;
+    if (value !== "open-live-view" && value !== "other") return;
     this._applyDraft(
       normalizeCardConfig({
         ...this._config,
         tap_action: {
-          action: input.value === "open-live-view" ? "open-live-view" : "none",
+          action: value === "open-live-view" ? "open-live-view" : "none",
         },
       }),
       true,

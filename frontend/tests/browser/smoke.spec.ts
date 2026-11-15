@@ -7793,8 +7793,13 @@ test("editor uses exclusive accordions and shared draft status", async ({
   await expect(interactions).toHaveCount(1);
   await interactions.locator("summary").click();
   await expect(
-    interactions.locator('input[value="open-live-view"]'),
-  ).toBeChecked();
+    interactions.locator('ha-selector[label="Tap behavior (optional)"]'),
+  ).toHaveCount(1);
+  expect(
+    await interactions
+      .locator("ha-selector.minimal-tap-mode")
+      .evaluate((element: HTMLElement & { value?: string }) => element.value),
+  ).toBe("open-live-view");
   await expect(interactions.locator("ha-form")).toHaveCount(1);
   await expect(
     editor.locator(

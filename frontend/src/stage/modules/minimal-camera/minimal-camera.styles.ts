@@ -27,7 +27,8 @@ const minimalCameraComponentStyles = css`
     -webkit-tap-highlight-color: transparent;
   }
 
-  .viewport::after {
+  .viewport::after,
+  .live-dialog-media::after {
     position: absolute;
     z-index: 3;
     inset: 0;
@@ -37,11 +38,13 @@ const minimalCameraComponentStyles = css`
     pointer-events: none;
   }
 
-  .viewport.activity-alert::after {
+  .viewport.activity-alert::after,
+  .live-dialog-media.activity-alert::after {
     border-color: var(--wzc-camera-alert-outline-color);
   }
 
-  .viewport.activity-detection::after {
+  .viewport.activity-detection::after,
+  .live-dialog-media.activity-detection::after {
     border-color: var(--wzc-camera-detection-outline-color);
   }
 

@@ -279,7 +279,19 @@ describe("watchzone-card-editor", () => {
     >("ha-form");
     expect(interactionForm).not.toBeNull();
     expect(interactionForm?.data).toEqual({});
-    expect(editor.shadowRoot?.textContent).toContain("Open Live View");
+    const tapMode = editor.shadowRoot?.querySelector<
+      HTMLElement & {
+        selector?: {
+          select?: { options?: Array<{ label: string; value: string }> };
+        };
+        value?: string;
+      }
+    >("ha-selector.minimal-tap-mode");
+    expect(tapMode?.value).toBe("open-live-view");
+    expect(tapMode?.selector?.select?.options).toEqual([
+      { label: "Open Live View", value: "open-live-view" },
+      { label: "Other Action", value: "other" },
+    ]);
   });
 
   it("uses a compact camera accordion and saves a sanitized camera title", async () => {
