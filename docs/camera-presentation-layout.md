@@ -8,8 +8,10 @@ The lightweight `minimal_camera` module is a separate Stage placeable. It owns
 one physical camera presentation, including the primary camera of an A/B pair,
 and does not load the Camera module's carousel, zoom/pan, resize, slideshow, or
 capability controls. It shares only the document-scoped live-session and audio
-controllers. Its fixed controls are mute and fullscreen, while the surrounding
-surface owns configured Home Assistant tap, hold, and double-tap actions.
+controllers. Its independently configurable controls are mute, fullscreen, and
+picture-in-picture. A separate camera action surface owns configured Home
+Assistant tap, hold, and double-tap actions, so those gestures never compete
+with the media controls.
 
 ## Ownership
 

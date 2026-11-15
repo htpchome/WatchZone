@@ -43,6 +43,14 @@ describe("WatchZone YAML configuration manager", () => {
       },
       stage_type: "camera_only",
     });
+    expect(
+      toYamlCardConfig(
+        normalizeCardConfig({
+          stage_type: "minimal_camera_only",
+          type: CARD_TYPE,
+        }),
+      ),
+    ).toEqual({ stage_type: "minimal_camera_only", type: CARD_TYPE });
   });
 
   it("keeps non-default values and unknown HA configuration", () => {
@@ -63,6 +71,9 @@ describe("WatchZone YAML configuration manager", () => {
           event_shadows: false,
           alert_detection_takeover: "alerts",
           highlight_camera_on_activity: false,
+          minimal_camera_show_fullscreen_button: false,
+          minimal_camera_show_mute_button: false,
+          minimal_camera_show_pip_button: false,
           start_alert_takeover_on: true,
           view_timelapse_on_thumbnail_hover: false,
           cameras: [
@@ -107,6 +118,9 @@ describe("WatchZone YAML configuration manager", () => {
       event_shadows: false,
       alert_detection_takeover: "alerts",
       highlight_camera_on_activity: false,
+      minimal_camera_show_fullscreen_button: false,
+      minimal_camera_show_mute_button: false,
+      minimal_camera_show_pip_button: false,
       start_alert_takeover_on: true,
       view_timelapse_on_thumbnail_hover: false,
       cameras: [

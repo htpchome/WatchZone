@@ -29,7 +29,7 @@ describe("minimal camera module", () => {
     await camera.updateComplete;
 
     camera.shadowRoot
-      ?.querySelector<HTMLElement>(".viewport")
+      ?.querySelector<HTMLElement>(".interaction-surface")
       ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await vi.advanceTimersByTimeAsync(250);
     expect(moreInfo).toHaveBeenCalledOnce();
@@ -37,7 +37,7 @@ describe("minimal camera module", () => {
       entityId: "camera.front",
     });
 
-    camera.shadowRoot?.querySelector<HTMLButtonElement>("button")?.click();
+    camera.shadowRoot?.querySelector<HTMLButtonElement>(".control")?.click();
     await vi.advanceTimersByTimeAsync(250);
     expect(moreInfo).toHaveBeenCalledOnce();
   });
@@ -62,7 +62,9 @@ describe("minimal camera module", () => {
     camera.addEventListener("hass-more-info", moreInfo);
     document.body.append(camera);
     await camera.updateComplete;
-    const viewport = camera.shadowRoot?.querySelector<HTMLElement>(".viewport");
+    const viewport = camera.shadowRoot?.querySelector<HTMLElement>(
+      ".interaction-surface",
+    );
 
     viewport?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     viewport?.dispatchEvent(new MouseEvent("click", { bubbles: true }));

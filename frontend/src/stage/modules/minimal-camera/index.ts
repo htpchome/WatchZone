@@ -22,7 +22,11 @@ export interface MinimalCameraModuleConfig {
     readonly title: string;
   };
   readonly doubleTapAction: HomeAssistantActionConfig;
+  readonly highlightActivity: boolean;
   readonly holdAction: HomeAssistantActionConfig;
+  readonly showFullscreenButton: boolean;
+  readonly showMuteButton: boolean;
+  readonly showPictureInPictureButton: boolean;
   readonly tapAction: HomeAssistantActionConfig;
 }
 
@@ -52,7 +56,11 @@ export const moduleDefinition: ModuleDefinition<MinimalCameraModuleConfig> = {
       posterUrl: cameraImageUrl(context.hass, config.camera.entityId),
     };
     camera.doubleTapAction = config.doubleTapAction;
+    camera.highlightActivity = config.highlightActivity;
     camera.holdAction = config.holdAction;
+    camera.showFullscreenButton = config.showFullscreenButton;
+    camera.showMuteButton = config.showMuteButton;
+    camera.showPictureInPictureButton = config.showPictureInPictureButton;
     camera.tapAction = config.tapAction;
   },
 };
@@ -70,6 +78,16 @@ function validateMinimalCameraConfig(
     typeof source.camera.entityId !== "string"
   ) {
     throw new Error("Minimal camera requires one camera entity.");
+  }
+  for (const [name, setting] of [
+    ["highlightActivity", source.highlightActivity],
+    ["showFullscreenButton", source.showFullscreenButton],
+    ["showMuteButton", source.showMuteButton],
+    ["showPictureInPictureButton", source.showPictureInPictureButton],
+  ] as const) {
+    if (typeof setting !== "boolean") {
+      throw new Error(`Minimal camera requires a ${name} setting.`);
+    }
   }
   return value as MinimalCameraModuleConfig;
 }

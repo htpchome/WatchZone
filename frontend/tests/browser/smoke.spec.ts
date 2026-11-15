@@ -2225,6 +2225,138 @@ test("highlights live video directly from draft review notifications", async ({
   await expect(slideshowOverlay.locator(".status")).toHaveText("30s");
 });
 
+test("keeps minimal camera actions and media controls independent", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  await page.locator("watchzone-card").evaluate((element) => {
+    const target = window as unknown as {
+      minimalMoreInfoCount?: number;
+      minimalPipCount?: number;
+      minimalFullscreenCount?: number;
+    };
+    target.minimalMoreInfoCount = 0;
+    target.minimalPipCount = 0;
+    target.minimalFullscreenCount = 0;
+    element.addEventListener("hass-more-info", () => {
+      target.minimalMoreInfoCount = (target.minimalMoreInfoCount ?? 0) + 1;
+    });
+    const card = element as HTMLElement & {
+      hass: unknown;
+      setConfig(config: unknown): void;
+    };
+    card.setConfig({
+      type: "custom:watchzone-card",
+      stage_type: "minimal_camera_only",
+      cameras: [{ entity_id: "camera.front", title: "Front" }],
+    });
+    card.hass = {
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "streaming",
+          attributes: { friendly_name: "Front" },
+        },
+      },
+      connection: {
+        subscribeMessage: async () => () => undefined,
+      },
+      hassUrl: (path: string) => path,
+      callService: async () => undefined,
+      callWS: async (message: { type: string }) =>
+        message.type === "watchzone/live/camera/ready"
+          ? { ready: false }
+          : undefined,
+    };
+  });
+
+  const minimal = page.locator("wzc-minimal-camera");
+  await expect(minimal).toBeVisible();
+  await minimal.locator(".interaction-surface").click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as unknown as { minimalMoreInfoCount?: number })
+            .minimalMoreInfoCount,
+      ),
+    )
+    .toBe(1);
+
+  const mute = minimal.getByRole("button", { name: "Unmute" });
+  await mute.click();
+  await expect(minimal.getByRole("button", { name: "Mute" })).toBeVisible();
+  expect(
+    await page.evaluate(
+      () =>
+        (window as unknown as { minimalMoreInfoCount?: number })
+          .minimalMoreInfoCount,
+    ),
+  ).toBe(1);
+
+  await minimal.locator(".viewport").evaluate((element) => {
+    element.requestFullscreen = async () => {
+      (
+        window as unknown as { minimalFullscreenCount?: number }
+      ).minimalFullscreenCount =
+        ((window as unknown as { minimalFullscreenCount?: number })
+          .minimalFullscreenCount ?? 0) + 1;
+    };
+  });
+  await minimal.getByRole("button", { name: "Enter fullscreen" }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as unknown as { minimalFullscreenCount?: number })
+            .minimalFullscreenCount,
+      ),
+    )
+    .toBe(1);
+  expect(
+    await page.evaluate(
+      () =>
+        (window as unknown as { minimalMoreInfoCount?: number })
+          .minimalMoreInfoCount,
+    ),
+  ).toBe(1);
+
+  await minimal.evaluate((element) => {
+    const video = document.createElement("video");
+    video.requestPictureInPicture = async () => {
+      (window as unknown as { minimalPipCount?: number }).minimalPipCount =
+        ((window as unknown as { minimalPipCount?: number }).minimalPipCount ??
+          0) + 1;
+      return {} as PictureInPictureWindow;
+    };
+    const camera = element as HTMLElement & {
+      _activeVideo?: HTMLVideoElement;
+      requestUpdate(): void;
+    };
+    camera._activeVideo = video;
+    camera.requestUpdate();
+  });
+  await minimal
+    .getByRole("button", { name: "Enter Picture-in-Picture" })
+    .click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as unknown as { minimalPipCount?: number }).minimalPipCount,
+      ),
+    )
+    .toBe(1);
+  expect(
+    await page.evaluate(
+      () =>
+        (window as unknown as { minimalMoreInfoCount?: number })
+          .minimalMoreInfoCount,
+    ),
+  ).toBe(1);
+});
+
 test("keeps activity content in an independently scrolling viewport", async ({
   page,
 }) => {

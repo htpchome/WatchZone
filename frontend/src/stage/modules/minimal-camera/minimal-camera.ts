@@ -17,6 +17,11 @@ import {
   toggleMediaFullscreen,
 } from "../../../core/fullscreen";
 import {
+  isPictureInPictureActive,
+  pictureInPictureMethod,
+  togglePictureInPicture,
+} from "../../../core/picture-in-picture";
+import {
   playMediaElement,
   setMediaElementMuted,
 } from "../../../core/media-playback";
@@ -52,7 +57,11 @@ export class MinimalCameraModule extends LitElement {
     doubleTapAction: { attribute: false },
     hass: { attribute: false },
     holdAction: { attribute: false },
+    highlightActivity: { attribute: false, type: Boolean },
     localize: { attribute: false },
+    showFullscreenButton: { attribute: false, type: Boolean },
+    showMuteButton: { attribute: false, type: Boolean },
+    showPictureInPictureButton: { attribute: false, type: Boolean },
     tapAction: { attribute: false },
   };
 
@@ -83,8 +92,24 @@ export class MinimalCameraModule extends LitElement {
     new CameraLiveSessionController(this, {
       getInitialMuted: (): boolean => this._audio.muted,
       onActiveVideoChanged: (video) => {
+        for (const event of [
+          "enterpictureinpicture",
+          "leavepictureinpicture",
+        ]) {
+          this._activeVideo?.removeEventListener(
+            event,
+            this._handleMediaModeChange,
+          );
+        }
         this._activeVideo = video;
+        for (const event of [
+          "enterpictureinpicture",
+          "leavepictureinpicture",
+        ]) {
+          video?.addEventListener(event, this._handleMediaModeChange);
+        }
         this._audio.handleActiveVideoChanged(video);
+        this.requestUpdate();
       },
     });
 
@@ -92,7 +117,11 @@ export class MinimalCameraModule extends LitElement {
   public available = false;
   public camera?: MinimalCameraConfig;
   public hass?: HomeAssistant;
+  public highlightActivity = true;
   public localize: LocalizeFunction = englishLocalize;
+  public showFullscreenButton = true;
+  public showMuteButton = true;
+  public showPictureInPictureButton = true;
   public tapAction: HomeAssistantActionConfig = { action: "more-info" };
   public holdAction: HomeAssistantActionConfig = { action: "none" };
   public doubleTapAction: HomeAssistantActionConfig = { action: "none" };
@@ -125,22 +154,22 @@ export class MinimalCameraModule extends LitElement {
       true,
       false,
     );
-    this._activity.configure(this.api, camera?.entityId);
+    this._activity.configure(
+      this.highlightActivity ? this.api : undefined,
+      this.highlightActivity ? camera?.entityId : undefined,
+    );
   }
 
   protected render() {
     const selected = this._session.selected;
+    const showFullscreen =
+      this.showFullscreenButton &&
+      mediaFullscreenSupported(this._viewport ?? this, this._activeVideo);
+    const showPictureInPicture =
+      this.showPictureInPictureButton &&
+      pictureInPictureMethod(this._activeVideo) !== undefined;
     return html`<div
       class=${`viewport${this._activity.classification ? ` activity-${this._activity.classification}` : ""}`}
-      role="button"
-      tabindex="0"
-      aria-label=${this.camera?.title || this.camera?.entityId || this.localize("camera.live")}
-      @pointerdown=${this._handlePointerDown}
-      @pointerup=${this._handlePointerUp}
-      @pointercancel=${this._cancelHold}
-      @dblclick=${this._handleDoubleTap}
-      @click=${this._handleClick}
-      @keydown=${this._handleKeyDown}
     >
       <div class="media">
         ${
@@ -160,40 +189,77 @@ export class MinimalCameraModule extends LitElement {
           class=${`video-host webrtc${selected === "webrtc" ? " selected" : ""}`}
         ></div>
       </div>
-      <div class="controls">
-        <button
-          type="button"
-          aria-label=${
-            this._audio.muted
-              ? this.localize("camera.unmute")
-              : this.localize("camera.mute")
-          }
-          @pointerdown=${this._stopControlEvent}
-          @click=${this._toggleMute}
-        >
-          ${renderIcon(this._audio.muted ? "volumeOff" : "volumeOn")}
-        </button>
-        ${
-          mediaFullscreenSupported(this._viewport, this._activeVideo)
-            ? html`<button
-                type="button"
-                aria-label=${this.localize(
-                  isMediaFullscreenActive(this._activeVideo)
-                    ? "camera.exit_fullscreen"
-                    : "camera.enter_fullscreen",
-                )}
-                @pointerdown=${this._stopControlEvent}
-                @click=${this._toggleFullscreen}
-              >
-                ${renderIcon(
-                  isMediaFullscreenActive(this._activeVideo)
-                    ? "fullscreenExit"
-                    : "fullscreen",
-                )}
-              </button>`
-            : nothing
-        }
-      </div>
+      <button
+        class="interaction-surface"
+        type="button"
+        aria-label=${this.camera?.title || this.camera?.entityId || this.localize("camera.live")}
+        @pointerdown=${this._handlePointerDown}
+        @pointerup=${this._handlePointerUp}
+        @pointercancel=${this._cancelHold}
+        @dblclick=${this._handleDoubleTap}
+        @click=${this._handleClick}
+      ></button>
+      ${
+        this.showMuteButton || showFullscreen || showPictureInPicture
+          ? html`<div class="controls">
+              ${
+                this.showMuteButton
+                  ? html`<button
+                      class="control"
+                      type="button"
+                      aria-label=${
+                        this._audio.muted
+                          ? this.localize("camera.unmute")
+                          : this.localize("camera.mute")
+                      }
+                      @pointerdown=${this._stopControlEvent}
+                      @click=${this._toggleMute}
+                    >
+                      ${renderIcon(this._audio.muted ? "volumeOff" : "volumeOn")}
+                    </button>`
+                  : nothing
+              }
+              ${
+                showFullscreen
+                  ? html`<button
+                      class="control"
+                      type="button"
+                      aria-label=${this.localize(
+                        isMediaFullscreenActive(this._activeVideo)
+                          ? "camera.exit_fullscreen"
+                          : "camera.enter_fullscreen",
+                      )}
+                      @pointerdown=${this._stopControlEvent}
+                      @click=${this._toggleFullscreen}
+                    >
+                      ${renderIcon(
+                        isMediaFullscreenActive(this._activeVideo)
+                          ? "fullscreenExit"
+                          : "fullscreen",
+                      )}
+                    </button>`
+                  : nothing
+              }
+              ${
+                showPictureInPicture
+                  ? html`<button
+                      class="control"
+                      type="button"
+                      aria-label=${this.localize(
+                        isPictureInPictureActive(this._activeVideo)
+                          ? "camera.exit_pip"
+                          : "camera.enter_pip",
+                      )}
+                      @pointerdown=${this._stopControlEvent}
+                      @click=${this._togglePictureInPicture}
+                    >
+                      ${renderIcon("pipPopOut")}
+                    </button>`
+                  : nothing
+              }
+            </div>`
+          : nothing
+      }
     </div>`;
   }
 
@@ -293,7 +359,12 @@ export class MinimalCameraModule extends LitElement {
       this._holdFired = false;
       return;
     }
-    if (this._tapTimer !== undefined) return;
+    if (this._tapTimer !== undefined) {
+      clearTimeout(this._tapTimer);
+      this._tapTimer = undefined;
+      void this._perform(this.doubleTapAction);
+      return;
+    }
     this._tapTimer = setTimeout(() => {
       this._tapTimer = undefined;
       void this._perform(this.tapAction);
@@ -302,15 +373,6 @@ export class MinimalCameraModule extends LitElement {
 
   private readonly _handleDoubleTap = (event: MouseEvent): void => {
     event.preventDefault();
-    if (this._tapTimer !== undefined) clearTimeout(this._tapTimer);
-    this._tapTimer = undefined;
-    void this._perform(this.doubleTapAction);
-  };
-
-  private readonly _handleKeyDown = (event: KeyboardEvent): void => {
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    void this._perform(this.tapAction);
   };
 
   private _perform(config: HomeAssistantActionConfig): Promise<void> {
@@ -337,6 +399,19 @@ export class MinimalCameraModule extends LitElement {
     void toggleMediaFullscreen(this._viewport, this._activeVideo).catch(
       () => undefined,
     );
+  };
+
+  private readonly _togglePictureInPicture = (event: Event): void => {
+    event.stopPropagation();
+    const video = this._activeVideo;
+    if (!video) return;
+    void togglePictureInPicture(video)
+      .then(() => this.requestUpdate())
+      .catch(() => undefined);
+  };
+
+  private readonly _handleMediaModeChange = (): void => {
+    this.requestUpdate();
   };
 
   private readonly _handleFullscreenChange = (): void => {

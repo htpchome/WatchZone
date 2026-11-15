@@ -20,9 +20,7 @@ export const minimalCameraStyles = css`
     background: var(--wzc-camera-stage);
     border-radius: var(--wzc-live-radius);
     box-shadow: var(--wzc-live-shadow);
-    outline: none;
     -webkit-tap-highlight-color: transparent;
-    touch-action: pan-y;
   }
 
   .viewport::after {
@@ -41,11 +39,6 @@ export const minimalCameraStyles = css`
 
   .viewport.activity-detection::after {
     border-color: var(--wzc-camera-detection-outline-color);
-  }
-
-  .viewport:focus-visible {
-    outline: 2px solid var(--wzc-color-primary);
-    outline-offset: -2px;
   }
 
   .media,
@@ -95,7 +88,20 @@ export const minimalCameraStyles = css`
     transform: translateX(-50%);
   }
 
-  button {
+  .interaction-surface {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  .control {
     display: grid;
     place-items: center;
     box-sizing: border-box;
@@ -110,14 +116,19 @@ export const minimalCameraStyles = css`
     touch-action: manipulation;
   }
 
-  button svg {
+  .control svg {
     inline-size: var(--wzc-camera-control-icon-size);
     block-size: var(--wzc-camera-control-icon-size);
   }
 
-  button:focus-visible {
+  .control:focus-visible {
     outline: 2px solid var(--wzc-color-primary);
     outline-offset: 2px;
+  }
+
+  .interaction-surface:focus-visible {
+    outline: 2px solid var(--wzc-color-primary);
+    outline-offset: -2px;
   }
 
   .viewport:fullscreen,

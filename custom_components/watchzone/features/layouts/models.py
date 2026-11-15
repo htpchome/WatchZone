@@ -8,7 +8,7 @@ from typing import Any, Literal, cast
 from homeassistant.exceptions import HomeAssistantError
 
 STAGE_SCHEMA_VERSION = 2
-StageType = Literal["camera_only", "full", "tiny_camera_only"]
+StageType = Literal["camera_only", "full", "minimal_camera_only"]
 StageSlotName = Literal["content", "controls", "footer", "overlay"]
 StageControlRegion = Literal["leading", "center", "trailing"]
 StageOverlayRegion = Literal[
@@ -138,7 +138,7 @@ def validate_stage_design(value: object) -> StageDesign:
 
 
 def _stage_type(value: object) -> StageType:
-    if value not in ("camera_only", "full", "tiny_camera_only"):
+    if value not in ("camera_only", "full", "minimal_camera_only"):
         raise HomeAssistantError("Stage designs require a valid stage type")
     return value
 

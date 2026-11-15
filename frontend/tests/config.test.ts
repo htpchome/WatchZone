@@ -33,6 +33,9 @@ describe("WatchZone card configuration", () => {
       event_shadows: true,
       alert_detection_takeover: "both",
       highlight_camera_on_activity: true,
+      minimal_camera_show_fullscreen_button: true,
+      minimal_camera_show_mute_button: true,
+      minimal_camera_show_pip_button: true,
       ptz_overlay_control: "start_open",
       slide_advance_time: 10,
       slide_transition: "slide",
@@ -80,17 +83,17 @@ describe("WatchZone card configuration", () => {
           default: ["default-stage"],
           phone: ["standard-camera-stage"],
         },
-        stage_type: "tiny_camera_only",
+        stage_type: "minimal_camera_only",
       }),
     ).toMatchObject({
       stage_flow: {
         default: ["minimal-camera-stage"],
         phone: ["minimal-camera-stage"],
       },
-      stage_type: "tiny_camera_only",
+      stage_type: "minimal_camera_only",
     });
     expect(() => normalizeCardConfig({ stage_type: "wide" })).toThrow(
-      "stage_type must be full, camera_only, or tiny_camera_only",
+      "stage_type must be full, camera_only, or minimal_camera_only",
     );
     expect(() =>
       normalizeCardConfig({ stage_flow: { default: [], phone: [] } }),
@@ -158,6 +161,28 @@ describe("WatchZone card configuration", () => {
     expect(() =>
       normalizeCardConfig({ highlight_camera_on_activity: "false" }),
     ).toThrow("highlight_camera_on_activity must be a boolean");
+  });
+
+  it("defaults minimal camera controls on and accepts explicit opt-outs", () => {
+    expect(normalizeCardConfig({})).toMatchObject({
+      minimal_camera_show_fullscreen_button: true,
+      minimal_camera_show_mute_button: true,
+      minimal_camera_show_pip_button: true,
+    });
+    expect(
+      normalizeCardConfig({
+        minimal_camera_show_fullscreen_button: false,
+        minimal_camera_show_mute_button: false,
+        minimal_camera_show_pip_button: false,
+      }),
+    ).toMatchObject({
+      minimal_camera_show_fullscreen_button: false,
+      minimal_camera_show_mute_button: false,
+      minimal_camera_show_pip_button: false,
+    });
+    expect(() =>
+      normalizeCardConfig({ minimal_camera_show_pip_button: "false" }),
+    ).toThrow("minimal_camera_show_pip_button must be a boolean");
   });
 
   it("defaults activity takeover to both while starting disabled", () => {

@@ -54,7 +54,7 @@ export class CardHostAppearanceController implements ReactiveController {
   }
 
   public configure(config: CardConfig): void {
-    const minimal = config.stage_type === "tiny_camera_only";
+    const minimal = config.stage_type === "minimal_camera_only";
     this._appearance = {
       outerShadows: minimal || config.outer_shadows !== false,
       roundedCorners: minimal || config.rounded_outer_corners !== false,

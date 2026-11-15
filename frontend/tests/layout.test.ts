@@ -219,7 +219,7 @@ describe("layout composition", () => {
           { entity_id: "camera.porch", title: "Porch" },
           { entity_id: "camera.driveway", title: "Driveway" },
         ],
-        stage_type: "tiny_camera_only",
+        stage_type: "minimal_camera_only",
       }),
     );
 

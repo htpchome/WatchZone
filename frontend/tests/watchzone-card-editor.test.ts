@@ -175,7 +175,7 @@ describe("watchzone-card-editor", () => {
       ) ?? []),
     ];
     expect(stageTypeInputs.map(({ value }) => value)).toEqual([
-      "tiny_camera_only",
+      "minimal_camera_only",
       "camera_only",
       "full",
     ]);
@@ -237,7 +237,7 @@ describe("watchzone-card-editor", () => {
       `${ACCORDION_ITEM_TAG}[item-key="stage-management"]`,
     );
     const minimal = stageItem?.querySelector<HTMLInputElement>(
-      'input[value="tiny_camera_only"]',
+      'input[value="minimal_camera_only"]',
     );
     minimal!.checked = true;
     minimal!.dispatchEvent(new Event("change", { bubbles: true }));
@@ -250,10 +250,25 @@ describe("watchzone-card-editor", () => {
           `${ACCORDION_ITEM_TAG}[item-key]`,
         ) ?? []),
       ].map((item) => item.getAttribute("item-key")),
-    ).toEqual(["camera", "stage-management", "interactions", "general"]);
+    ).toEqual([
+      "camera",
+      "stage-management",
+      "minimal-camera-configuration",
+      "interactions",
+      "general",
+    ]);
     expect(editor.shadowRoot?.textContent).toContain(
       "only the first camera listed",
     );
+    const minimalConfiguration = editor.shadowRoot?.querySelector<
+      AccordionItem & { heading?: string }
+    >(`${ACCORDION_ITEM_TAG}[item-key="minimal-camera-configuration"]`);
+    expect(minimalConfiguration?.heading).toBe("Minimal Camera Configuration");
+    expect(
+      minimalConfiguration
+        ?.querySelector('[data-config-key="minimal_camera_show_pip_button"]')
+        ?.getAttribute("label"),
+    ).toBe("Show PIP Button");
     const interactionForm = editor.shadowRoot?.querySelector<
       HTMLElement & { data?: Record<string, unknown> }
     >("ha-form");

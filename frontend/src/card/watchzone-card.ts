@@ -233,7 +233,7 @@ export class DashboardCard extends LitElement {
       </ha-card>`;
     }
     const config = this._previewConfig ?? this._config;
-    const minimal = config.stage_type === "tiny_camera_only";
+    const minimal = config.stage_type === "minimal_camera_only";
     const cardClasses = [
       !minimal && config.rounded_outer_corners === false
         ? "square-outer-corners"

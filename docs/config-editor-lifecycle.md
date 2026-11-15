@@ -93,6 +93,9 @@ responsive lineups. Changing it atomically resets `stage_flow.default` and
 must retain at least one selected design. Default Full Stage configuration
 omits both fields from YAML; the default Camera Only configuration persists
 only `stage_type: camera_only` because its implied flow is deterministic.
+Minimal Camera Stage persists `stage_type: minimal_camera_only`, hides both
+lineup controls, and exposes its lightweight camera controls in a dedicated
+Minimal Camera Configuration disclosure directly below Stage Management.
 
 ## 4. Soft preview updates
 

@@ -178,6 +178,9 @@ type BooleanConfigFlag =
   | "event_rounded_corners"
   | "event_shadows"
   | "highlight_camera_on_activity"
+  | "minimal_camera_show_fullscreen_button"
+  | "minimal_camera_show_mute_button"
+  | "minimal_camera_show_pip_button"
   | "start_alert_takeover_on"
   | "view_timelapse_on_thumbnail_hover"
   | "mobile_data_saving"
@@ -334,7 +337,7 @@ export class CardEditor extends LitElement {
   }
 
   protected render() {
-    const minimal = this._config?.stage_type === "tiny_camera_only";
+    const minimal = this._config?.stage_type === "minimal_camera_only";
     return staticHtml`
       <${toastRegionTag}
         class="editor-status"
@@ -356,6 +359,17 @@ export class CardEditor extends LitElement {
         >
           ${this._renderStageManagement()}
         </${accordionItemTag}>
+        ${
+          minimal
+            ? staticHtml`<${accordionItemTag}
+          heading=${this._t("editor.minimal_camera_configuration")}
+          item-key="minimal-camera-configuration"
+          .icon=${"camera"}
+        >
+          ${this._renderMinimalCameraConfiguration()}
+        </${accordionItemTag}>`
+            : null
+        }
         ${
           minimal
             ? staticHtml`<${accordionItemTag}
@@ -442,7 +456,7 @@ export class CardEditor extends LitElement {
       );
       return owner ? [{ camera, owner }] : [];
     });
-    return staticHtml`${this._config?.stage_type === "tiny_camera_only" ? html`<p class="editor-guidance">${this._t("editor.minimal_camera_first_only")}</p>` : null}<div class="camera-list-heading">
+    return staticHtml`${this._config?.stage_type === "minimal_camera_only" ? html`<p class="editor-guidance">${this._t("editor.minimal_camera_first_only")}</p>` : null}<div class="camera-list-heading">
         <strong>${this._t("editor.cameras")}</strong>
         <span>${this._t("editor.camera_count", {
           count: cameras.length,
@@ -559,7 +573,7 @@ export class CardEditor extends LitElement {
         <legend>${this._t("editor.stage_type")}</legend>
         <div class="stage-type-options">
           ${this._renderStageTypeOption(
-            "tiny_camera_only",
+            "minimal_camera_only",
             this._t("editor.minimal_camera_stage"),
             this._t("editor.minimal_camera_stage_description"),
             stageType,
@@ -579,7 +593,7 @@ export class CardEditor extends LitElement {
         </div>
       </fieldset>
       ${
-        stageType === "tiny_camera_only"
+        stageType === "minimal_camera_only"
           ? null
           : this._renderStageLayoutOptions(
               "default",
@@ -588,7 +602,7 @@ export class CardEditor extends LitElement {
             )
       }
       ${
-        stageType === "tiny_camera_only"
+        stageType === "minimal_camera_only"
           ? null
           : this._renderStageLayoutOptions(
               "phone",
@@ -600,7 +614,7 @@ export class CardEditor extends LitElement {
   }
 
   private _renderStageTypeOption(
-    value: "camera_only" | "full" | "tiny_camera_only",
+    value: "camera_only" | "full" | "minimal_camera_only",
     label: string,
     description: string,
     selected: AvailableStageType,
@@ -647,6 +661,31 @@ export class CardEditor extends LitElement {
             : this._t("editor.double_tap_behavior")}
       @value-changed=${this._handleActionsChange}
     ></ha-form>`;
+  }
+
+  private _renderMinimalCameraConfiguration() {
+    return html`
+      ${this._renderBooleanOption(
+        "highlight_camera_on_activity",
+        this._t("editor.highlight_camera_on_activity"),
+        this._config?.highlight_camera_on_activity !== false,
+      )}
+      ${this._renderBooleanOption(
+        "minimal_camera_show_mute_button",
+        this._t("editor.minimal_camera_show_mute_button"),
+        this._config?.minimal_camera_show_mute_button !== false,
+      )}
+      ${this._renderBooleanOption(
+        "minimal_camera_show_fullscreen_button",
+        this._t("editor.minimal_camera_show_fullscreen_button"),
+        this._config?.minimal_camera_show_fullscreen_button !== false,
+      )}
+      ${this._renderBooleanOption(
+        "minimal_camera_show_pip_button",
+        this._t("editor.minimal_camera_show_pip_button"),
+        this._config?.minimal_camera_show_pip_button !== false,
+      )}
+    `;
   }
 
   private _renderStageLayoutOptions(
@@ -2355,7 +2394,7 @@ export class CardEditor extends LitElement {
     if (
       stageType !== "full" &&
       stageType !== "camera_only" &&
-      stageType !== "tiny_camera_only"
+      stageType !== "minimal_camera_only"
     )
       return;
     this._applyDraft(

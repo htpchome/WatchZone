@@ -3,7 +3,7 @@
   "name": "Minimal Camera",
   "revision": 0,
   "schemaVersion": 2,
-  "stageType": "tiny_camera_only",
+  "stageType": "minimal_camera_only",
   "variants": {
     "default": {
       "root": {

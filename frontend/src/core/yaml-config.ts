@@ -47,6 +47,15 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
   if (config.highlight_camera_on_activity !== false) {
     delete yaml.highlight_camera_on_activity;
   }
+  if (config.minimal_camera_show_fullscreen_button !== false) {
+    delete yaml.minimal_camera_show_fullscreen_button;
+  }
+  if (config.minimal_camera_show_mute_button !== false) {
+    delete yaml.minimal_camera_show_mute_button;
+  }
+  if (config.minimal_camera_show_pip_button !== false) {
+    delete yaml.minimal_camera_show_pip_button;
+  }
   if (config.alert_detection_takeover === "both") {
     delete yaml.alert_detection_takeover;
   }

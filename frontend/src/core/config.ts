@@ -78,6 +78,9 @@ export interface CardConfig {
   readonly event_history_days: number;
   readonly alert_detection_takeover: AlertTakeoverMode;
   readonly highlight_camera_on_activity: boolean;
+  readonly minimal_camera_show_fullscreen_button: boolean;
+  readonly minimal_camera_show_mute_button: boolean;
+  readonly minimal_camera_show_pip_button: boolean;
   readonly ptz_overlay_control: PtzOverlayControl;
   readonly slide_transition: SlideTransition;
   readonly slide_advance_time: SlideAdvanceSeconds;
@@ -134,6 +137,9 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     "event_rounded_corners",
     "event_shadows",
     "highlight_camera_on_activity",
+    "minimal_camera_show_fullscreen_button",
+    "minimal_camera_show_mute_button",
+    "minimal_camera_show_pip_button",
     "start_alert_takeover_on",
     "view_timelapse_on_thumbnail_hover",
     "rounded_outer_corners",
@@ -241,6 +247,12 @@ export function normalizeCardConfig(value: unknown): CardConfig {
       : DEFAULT_EVENT_HISTORY_DAYS;
   normalized.highlight_camera_on_activity =
     source.highlight_camera_on_activity !== false;
+  normalized.minimal_camera_show_fullscreen_button =
+    source.minimal_camera_show_fullscreen_button !== false;
+  normalized.minimal_camera_show_mute_button =
+    source.minimal_camera_show_mute_button !== false;
+  normalized.minimal_camera_show_pip_button =
+    source.minimal_camera_show_pip_button !== false;
   normalized.alert_detection_takeover =
     source.alert_detection_takeover === "off" ||
     source.alert_detection_takeover === "alerts" ||
@@ -633,9 +645,9 @@ function isIconName(value: string): boolean {
 function normalizeStageType(value: unknown): AvailableStageType {
   if (value === undefined || value === "full") return "full";
   if (value === "camera_only") return "camera_only";
-  if (value === "tiny_camera_only") return "tiny_camera_only";
+  if (value === "minimal_camera_only") return "minimal_camera_only";
   throw new Error(
-    `${APP_NAME} stage_type must be full, camera_only, or tiny_camera_only.`,
+    `${APP_NAME} stage_type must be full, camera_only, or minimal_camera_only.`,
   );
 }
 
@@ -667,7 +679,7 @@ function normalizeStageFlow(
   value: unknown,
   stageType: AvailableStageType,
 ): ConfiguredStageFlow {
-  if (stageType === "tiny_camera_only") return defaultStageFlow(stageType);
+  if (stageType === "minimal_camera_only") return defaultStageFlow(stageType);
   if (value === undefined) return defaultStageFlow(stageType);
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new Error(`${APP_NAME} stage_flow must be an object.`);

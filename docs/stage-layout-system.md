@@ -43,7 +43,7 @@ mechanics remain below public provider resolvers.
 A Stage Design contains a stable ID, name, schema version, optimistic revision,
 a `stageType` classification, and at least one responsive variant: `default`
 for tablet/desktop, `phone`, or both. `stageType` is one of `full`,
-`camera_only`, or `tiny_camera_only`. The user-facing name of the last
+`camera_only`, or `minimal_camera_only`. The user-facing name of the last
 classification is Minimal Camera Stage; it has one implicit built-in design,
 so its desktop and phone lineups are not exposed in the card editor. Variant
 presence declares where the design is
@@ -71,8 +71,11 @@ The built-in Minimal Camera Stage contains one `minimal_camera` module. Its
 runtime binding resolves the first user-facing camera item and, for an A/B
 item, binds only its main camera. The module is independently lazy loaded and
 uses the shared single-camera session and audio controllers without importing
-the Camera module, carousel, zoom, resize, or capability controls. Future Full
-Stage designs may place multiple independently configured minimal-camera
+the Camera module, carousel, zoom, resize, or capability controls. Its optional
+mute, fullscreen, and picture-in-picture controls are direct lightweight
+browser-media actions. Activity integration is limited to the configurable
+alert/detection outline and never loads takeover or navigation behavior. Future
+Full Stage designs may place multiple independently configured minimal-camera
 modules without changing that ownership boundary.
 
 A component node may declare an optional logical `controlRegion` of `leading`,

@@ -110,7 +110,7 @@ function validateStageType(value: unknown): StageType {
   if (
     value !== "full" &&
     value !== "camera_only" &&
-    value !== "tiny_camera_only"
+    value !== "minimal_camera_only"
   ) {
     throw new Error("Stage designs require a valid stage type.");
   }

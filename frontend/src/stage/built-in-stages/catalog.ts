@@ -228,7 +228,11 @@ function hydrateModule(
           title: first.title,
         },
         doubleTapAction: config.double_tap_action,
+        highlightActivity: config.highlight_camera_on_activity,
         holdAction: config.hold_action,
+        showFullscreenButton: config.minimal_camera_show_fullscreen_button,
+        showMuteButton: config.minimal_camera_show_mute_button,
+        showPictureInPictureButton: config.minimal_camera_show_pip_button,
         tapAction: config.tap_action,
       },
     };
