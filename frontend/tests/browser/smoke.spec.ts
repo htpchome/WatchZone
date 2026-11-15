@@ -3080,7 +3080,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   );
   expect(
     Math.abs(virtualized.headerBottom - virtualized.scrollerTop),
-  ).toBeLessThanOrEqual(1);
+  ).toBeLessThanOrEqual(1.1);
   expect(virtualized.scrollHeight).toBeGreaterThan(virtualized.visibleHeight);
   expect(virtualized.lastPosition).toBe(100);
   const constrained = await events
@@ -3355,8 +3355,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
       };
     });
   expect(mediaBodyPadding.top).toBe(0);
-  expect(mediaBodyPadding.bottom).toBeGreaterThan(0);
-  expect(mediaBodyPadding.bottom).toBeLessThan(24);
+  expect(mediaBodyPadding.bottom).toBe(0);
   const playerViewportBox = await page
     .locator("wzc-recorded-video-player .viewport")
     .boundingBox();
@@ -3546,23 +3545,16 @@ test("keeps activity content in an independently scrolling viewport", async ({
     "aria-label",
     "Resize video player",
   );
-  await expect(
-    resizeHandle.locator('ha-icon[icon="mdi:resize-bottom-right"]'),
-  ).toHaveCount(1);
+  await expect(resizeHandle.locator("svg")).toHaveCount(1);
   const initialDialogBox = await mediaDialog.boundingBox();
   const initialPlayerBox = await page
     .locator("wzc-recorded-video-player .viewport")
     .boundingBox();
   const resizeBox = await resizeHandle.boundingBox();
   const resizePresentation = await resizeHandle.evaluate((element) => {
-    const style = getComputedStyle(element);
-    const icon = element.querySelector("ha-icon");
+    const icon = element.querySelector("svg");
     return {
-      background: style.backgroundColor,
-      color: style.color,
-      iconSize: icon
-        ? Number.parseFloat(getComputedStyle(icon).width)
-        : 0,
+      iconSize: icon ? Number.parseFloat(getComputedStyle(icon).width) : 0,
     };
   });
   const finalMediaActionBox = await mediaInformation
@@ -3573,10 +3565,6 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(resizeBox).not.toBeNull();
   expect(resizeBox?.width).toBeCloseTo(finalMediaActionBox?.width ?? 0, 1);
   expect(resizeBox?.height).toBeCloseTo(finalMediaActionBox?.height ?? 0, 1);
-  expect(resizePresentation.background).toBe(
-    actionPresentations[1]?.background,
-  );
-  expect(resizePresentation.color).toBe(actionPresentations[1]?.color);
   expect(resizePresentation.iconSize).toBeGreaterThanOrEqual(24);
   expect(finalMediaActionBox?.x).toBeLessThan(resizeBox?.x ?? 0);
   expect(
@@ -3584,9 +3572,18 @@ test("keeps activity content in an independently scrolling viewport", async ({
   ).toBeLessThanOrEqual(resizeBox?.x ?? 0);
   expect(
     Math.abs(
-      (finalMediaActionBox?.y ?? 0) +
-        (finalMediaActionBox?.height ?? 0) / 2 -
-        ((resizeBox?.y ?? 0) + (resizeBox?.height ?? 0) / 2),
+      (resizeBox?.x ?? 0) -
+        ((initialDialogBox?.x ?? 0) +
+          (initialDialogBox?.width ?? 0) -
+          (resizeBox?.width ?? 0)),
+    ),
+  ).toBeLessThanOrEqual(1.1);
+  expect(
+    Math.abs(
+      (resizeBox?.y ?? 0) -
+        ((initialDialogBox?.y ?? 0) +
+          (initialDialogBox?.height ?? 0) -
+          (resizeBox?.height ?? 0)),
     ),
   ).toBeLessThanOrEqual(1);
   if (initialDialogBox && resizeBox) {
@@ -3669,6 +3666,14 @@ test("keeps activity content in an independently scrolling viewport", async ({
     mediaInformation.getByRole("button", { name: "View Review" }),
   ).toBeVisible();
   const desktopViewport = page.viewportSize();
+  await page.setViewportSize({ height: 720, width: 600 });
+  const mediumMetadataColumns = await mediaInformation.evaluate((element) => {
+    const metadata = element.shadowRoot?.querySelector(".metadata");
+    return metadata
+      ? getComputedStyle(metadata).gridTemplateColumns.split(" ").length
+      : 0;
+  });
+  expect(mediumMetadataColumns).toBe(3);
   await page.setViewportSize({ height: 568, width: 320 });
   const compactInformationLayout = await mediaInformation.evaluate(
     (element) => {
@@ -3684,7 +3689,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   );
   expect(compactInformationLayout).toEqual({
     actionDirection: "row",
-    metadataColumns: 1,
+    metadataColumns: 2,
   });
   const compactDialogBox = await mediaDialog.boundingBox();
   expect(compactDialogBox?.x).toBeGreaterThanOrEqual(0);

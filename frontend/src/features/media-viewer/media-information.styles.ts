@@ -61,19 +61,22 @@ export const mediaInformationStyles = css`
     justify-content: flex-end;
     min-block-size: var(--wzc-recorded-media-resize-handle-size);
     padding-inline-end: calc(
-      var(--wzc-recorded-media-resize-handle-size) + 0.4rem
+      var(--wzc-recorded-media-resize-handle-size) - var(
+          --wzc-recorded-media-dialog-padding
+        ) - var(--wzc-recorded-media-dialog-padding) +
+        0.4rem
     );
   }
 
-  @container (max-width: 36rem) {
+  @container (max-width: 44rem) {
     .metadata {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
 
-  @container (max-width: 22rem) {
+  @container (max-width: 28rem) {
     .metadata {
-      grid-template-columns: 1fr;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 `;

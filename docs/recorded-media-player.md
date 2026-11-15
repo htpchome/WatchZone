@@ -66,7 +66,7 @@ viewing. Recording discovery and grouping are governed by
   camera, localized day/date and time, duration, objects, zones,
   provider-normalized activity confidence, and only the actions supported by
   the normalized request. AI-analysis confidence remains separate. On narrow
-  containers its metadata reduces from four columns to two and then one, while
+  containers its metadata reduces from four columns to three and then two, while
   actions wrap without shrinking their touch targets.
 - An alert or detection without an end time is visibly marked as in progress.
   A closed alert also retains that marker while recording playback remains
@@ -136,8 +136,10 @@ viewing. Recording discovery and grouping are governed by
 - The modal initially matches the visible live camera stage dimensions when a
   stage is available while retaining the browser dialog's viewport-relative
   default opening position. It provides a diagonal bottom-right, pointer- and
-  keyboard-operable resize handle. Resizing is clamped to the visible viewport
-  and preserves the header close path.
+  keyboard-operable resize handle. The handle's full touch target owns the
+  outer dialog corner while its triangular grip artwork is inset so either a
+  rounded or square themed corner remains legible. Resizing is clamped to the
+  visible viewport and preserves the header close path.
 - The non-blocking dialog has no visual scrim because activity tiles remain
   directly actionable while it is open. An activity-tile activation may
   replace the current media without closing the viewer; any other click outside

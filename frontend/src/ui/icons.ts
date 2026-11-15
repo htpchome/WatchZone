@@ -309,6 +309,13 @@ const ICONS = {
       },
     ],
   },
+  resizeGrip: {
+    paths: [
+      {
+        d: "M19 19h3v3h-3v-3Zm-6 0h3v3h-3v-3Zm-6 0h3v3H7v-3Zm12-6h3v3h-3v-3Zm-6 0h3v3h-3v-3Zm6-6h3v3h-3V7Z",
+      },
+    ],
+  },
   settings: {
     paths: [
       {

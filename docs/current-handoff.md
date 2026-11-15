@@ -15,9 +15,9 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.319`
-- Current commit: `d356ed1` —
-  `v0.0.4-dev.318 - feat(media): refine metadata presentation and activity score`
+- Working version: `0.0.4-dev.320`
+- Current commit: `127a6e5` —
+  `v0.0.4-dev.319 - fix(media): align and clarify resize control`
 - The worktree contains the uncommitted theme-surface consolidation described
   below. Always verify `git status`, the canonical version in
   `custom_components/watchzone/const.py`, and the latest commit.
@@ -35,9 +35,11 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
   bar; its nested segmented track is transparent to prevent opacity bands.
 - Recorded-media metadata now paints one borderless, rounded solid-task
   surface inside the glass viewer. It shares activity-tile badge sizing,
-  preserves icon geometry during hover, reserves space for a clearly visible
-  bottom-right resize handle aligned and sized with its action row, and displays provider-normalized activity
-  confidence separately from AI-analysis confidence.
+  preserves icon geometry during hover, reserves the actual bottom-right corner
+  for a radius-safe triangular resize grip with an action-sized hit target, and
+  displays provider-normalized activity confidence separately from AI-analysis
+  confidence. Its responsive metadata uses only three layouts: four, three,
+  and two columns.
 - The slideshow overlay is hydrated whenever Camera has multiple presentation
   items. Disabling Camera Switcher Overlay now removes only the switcher.
 - HLS.js warming now overlaps presentation loading, and HLS chunk loading

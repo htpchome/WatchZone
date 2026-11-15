@@ -17,6 +17,7 @@ import type {
   RecordedMediaRequest,
 } from "../../core/recorded-media";
 import type { ToastNotice } from "../../ui/toast-manager";
+import { renderIcon } from "../../ui/icons";
 import "../../ui/toast-region";
 import "./recorded-video-player";
 import {
@@ -122,7 +123,7 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
         @pointercancel=${this._endResize}
         @keydown=${this._handleResizeKey}
       >
-        <ha-icon icon="mdi:resize-bottom-right" aria-hidden="true"></ha-icon>
+        ${renderIcon("resizeGrip")}
       </button>
     </dialog>`;
   }

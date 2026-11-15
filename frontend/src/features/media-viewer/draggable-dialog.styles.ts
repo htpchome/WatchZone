@@ -92,8 +92,7 @@ export const draggableDialogStyles = css`
     gap: 0.8rem;
     overflow: auto;
     overscroll-behavior: contain;
-    padding: 0 var(--wzc-recorded-media-dialog-padding)
-      var(--wzc-recorded-media-dialog-bottom-padding);
+    padding: 0 var(--wzc-recorded-media-dialog-padding);
     position: relative;
   }
 
@@ -120,23 +119,16 @@ export const draggableDialogStyles = css`
   }
 
   .resize-handle {
-    align-items: center;
     appearance: none;
-    background: var(--wzc-event-action-background);
+    background: transparent;
     border: 0;
-    border-radius: var(--wzc-radius-medium);
-    bottom: calc(
-      var(--wzc-recorded-media-dialog-bottom-padding) +
-        var(--wzc-recorded-media-dialog-padding)
-    );
+    bottom: 0;
     color: var(--wzc-event-action-color);
     cursor: nwse-resize;
-    display: flex;
     height: var(--wzc-recorded-media-resize-handle-size);
-    justify-content: center;
     padding: 0;
     position: absolute;
-    right: calc(2 * var(--wzc-recorded-media-dialog-padding));
+    right: 0;
     touch-action: none;
     width: var(--wzc-recorded-media-resize-handle-size);
     z-index: 3;
@@ -152,9 +144,13 @@ export const draggableDialogStyles = css`
     outline-offset: -2px;
   }
 
-  .resize-handle ha-icon {
-    --mdc-icon-size: 1.5rem;
+  .resize-handle svg {
+    block-size: 1.5rem;
+    bottom: 0.25rem;
     display: block;
+    inline-size: 1.5rem;
+    position: absolute;
+    right: 0.25rem;
   }
 
   @media (hover: hover) and (pointer: fine) {
