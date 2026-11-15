@@ -109,7 +109,6 @@ export class MinimalCameraModule extends LitElement {
           video?.addEventListener(event, this._handleMediaModeChange);
         }
         this._audio.handleActiveVideoChanged(video);
-        this.requestUpdate();
       },
     });
 

@@ -163,7 +163,6 @@ export class CameraLiveSessionController implements ReactiveController {
       } else this._releaseAll();
     }
     this._sync();
-    this._host.requestUpdate();
   }
 
   public handleWebRtcDecoded(video: HTMLVideoElement): void {
@@ -182,6 +181,12 @@ export class CameraLiveSessionController implements ReactiveController {
 
   public handleWebRtcPresented(): void {
     if (this._selected !== "webrtc") return;
+    if (
+      !this._fallbackLease &&
+      !this._fallbackPendingKey &&
+      this._fallbackSnapshot.state === "new"
+    )
+      return;
     this._releaseFallback(true);
     this._host.requestUpdate();
   }
