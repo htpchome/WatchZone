@@ -377,6 +377,7 @@ export class CameraLivePresentation extends LitElement {
   protected updated(changed: Map<PropertyKey, unknown>): void {
     this._media.observe(
       this.renderRoot.querySelector<HTMLElement>(".viewport") ?? undefined,
+      this.renderRoot.querySelector<HTMLElement>(".media-surface") ?? undefined,
     );
     const gestureLocked = this._media.zoom.pannable;
     if (gestureLocked !== this._reportedGestureLocked) {

@@ -326,8 +326,10 @@ describe("camera media zoom", () => {
     const host = createHost();
     const requestUpdate = vi.mocked(host.requestUpdate);
     const surface = createSurface();
+    const presentationTarget = document.createElement("video");
+    surface.append(presentationTarget);
     const controller = new MediaZoomController(host);
-    controller.observe(surface);
+    controller.observe(surface, presentationTarget);
     controller.setMediaDimensions(400, 225);
     connectPointerEvents(surface, controller);
     controller.toggleAt(200, 112.5);
@@ -358,6 +360,18 @@ describe("camera media zoom", () => {
     expect(requestUpdate).not.toHaveBeenCalled();
     expect(frames.size).toBe(1);
     expect(controller.transform).toContain("translate3d(60px, 0px, 0)");
+    expect(presentationTarget.style.transform).toContain(
+      "translate3d(0px, 0px, 0)",
+    );
+
+    const scheduledPan = [...frames.values()][0];
+    frames.clear();
+    scheduledPan?.(performance.now());
+
+    expect(presentationTarget.style.transform).toContain(
+      "translate3d(60px, 0px, 0)",
+    );
+    expect(requestUpdate).not.toHaveBeenCalled();
 
     surface.dispatchEvent(
       pointerEvent("pointerup", {
@@ -379,8 +393,10 @@ describe("camera media zoom", () => {
     const host = createHost();
     const requestUpdate = vi.mocked(host.requestUpdate);
     const surface = createSurface();
+    const presentationTarget = document.createElement("video");
+    surface.append(presentationTarget);
     const controller = new MediaZoomController(host);
-    controller.observe(surface);
+    controller.observe(surface, presentationTarget);
     connectPointerEvents(surface, controller);
 
     surface.dispatchEvent(
@@ -414,6 +430,13 @@ describe("camera media zoom", () => {
     expect(requestUpdate).not.toHaveBeenCalled();
     expect(frames.size).toBe(1);
     expect(controller.scale).toBe(2.5);
+
+    const scheduledPinch = [...frames.values()][0];
+    frames.clear();
+    scheduledPinch?.(performance.now());
+
+    expect(presentationTarget.style.transform).toContain("scale(2.5)");
+    expect(requestUpdate).not.toHaveBeenCalled();
 
     surface.dispatchEvent(
       pointerEvent("pointerup", {

@@ -48,6 +48,8 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
 
   protected _active = false;
   private _pendingNativeCloses = 0;
+  private _resizeFrame?: number;
+  private _resizePendingMediaWidth?: number;
   private _userPositioned = false;
   private _drag?: {
     readonly offsetX: number;
@@ -118,6 +120,7 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
         @pointermove=${this._moveResize}
         @pointerup=${this._endResize}
         @pointercancel=${this._endResize}
+        @lostpointercapture=${this._endResize}
         @keydown=${this._handleResizeKey}
       >
         ${renderIcon("resizeGrip")}
@@ -279,13 +282,14 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
     if (!this._resize || event.pointerId !== this._resize.pointerId) return;
     const deltaX = event.clientX - this._resize.startX;
     const deltaY = event.clientY - this._resize.startY;
-    this._setMediaWidth(
-      this._resize.mediaWidth + (deltaX + deltaY * (16 / 9)) / 2,
-    );
+    this._resizePendingMediaWidth =
+      this._resize.mediaWidth + (deltaX + deltaY * (16 / 9)) / 2;
+    this._scheduleResizeWrite();
   };
 
   private readonly _endResize = (event: PointerEvent): void => {
     if (!this._resize || event.pointerId !== this._resize.pointerId) return;
+    this._flushResizeWrite();
     this._resize = undefined;
     const target = event.currentTarget as HTMLElement;
     if (target.hasPointerCapture(event.pointerId)) {
@@ -390,6 +394,38 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
       }
       this._resize = undefined;
     }
+    this._cancelResizeWrite();
+  }
+
+  private _scheduleResizeWrite(): void {
+    // The corner handle resizes the complete recorded-media composition:
+    // video plus information and actions. Coalescing only limits layout work;
+    // it deliberately does not adopt the live stage's height-only contract.
+    if (this._resizeFrame !== undefined) return;
+    this._resizeFrame = requestAnimationFrame(() => {
+      this._resizeFrame = undefined;
+      const mediaWidth = this._resizePendingMediaWidth;
+      this._resizePendingMediaWidth = undefined;
+      if (mediaWidth !== undefined) this._setMediaWidth(mediaWidth);
+    });
+  }
+
+  private _flushResizeWrite(): void {
+    if (this._resizeFrame !== undefined) {
+      cancelAnimationFrame(this._resizeFrame);
+      this._resizeFrame = undefined;
+    }
+    const mediaWidth = this._resizePendingMediaWidth;
+    this._resizePendingMediaWidth = undefined;
+    if (mediaWidth !== undefined) this._setMediaWidth(mediaWidth);
+  }
+
+  private _cancelResizeWrite(): void {
+    if (this._resizeFrame !== undefined) {
+      cancelAnimationFrame(this._resizeFrame);
+      this._resizeFrame = undefined;
+    }
+    this._resizePendingMediaWidth = undefined;
   }
 
   private _prepareManualBounds(rect: DOMRect): void {

@@ -56,7 +56,6 @@ export const recordedVideoPlayerStyles = css`
     position: absolute;
     transform-origin: center;
     transition: transform var(--wzc-zoom-transition-duration) ease;
-    will-change: transform;
   }
 
   video.interacting {

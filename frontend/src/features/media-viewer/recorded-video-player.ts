@@ -264,7 +264,7 @@ export class RecordedVideoPlayer extends LitElement {
   }
 
   protected firstUpdated(): void {
-    this._media.observe(this._viewport() ?? undefined);
+    this._observeMediaPresentation();
     void this._loadRequest();
   }
 
@@ -286,7 +286,7 @@ export class RecordedVideoPlayer extends LitElement {
     if (changed.has("request") && changed.get("request") !== undefined) {
       void this._loadRequest();
     }
-    this._media.observe(this._viewport() ?? undefined);
+    this._observeMediaPresentation();
     refreshNativePictureInPictureSuppression(this._video());
   }
 
@@ -306,6 +306,10 @@ export class RecordedVideoPlayer extends LitElement {
 
   private _viewport(): HTMLElement | undefined {
     return this.renderRoot.querySelector<HTMLElement>(".viewport") ?? undefined;
+  }
+
+  private _observeMediaPresentation(): void {
+    this._media.observe(this._viewport(), this._video());
   }
 
   private readonly _handleMediaDimensionsChanged = (): void => {

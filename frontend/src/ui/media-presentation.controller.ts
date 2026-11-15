@@ -41,7 +41,10 @@ export class MediaPresentationController implements ReactiveController {
     }
   }
 
-  public observe(surface: HTMLElement | undefined): void {
+  public observe(
+    surface: HTMLElement | undefined,
+    presentationTarget: HTMLElement | undefined = surface,
+  ): void {
     if (surface !== this._surface) {
       this._surface?.removeEventListener(
         "dblclick",
@@ -55,7 +58,7 @@ export class MediaPresentationController implements ReactiveController {
         true,
       );
     }
-    this.zoom.observe(surface);
+    this.zoom.observe(surface, presentationTarget);
   }
 
   public configure(key: string | undefined): void {

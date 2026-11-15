@@ -60,6 +60,7 @@ export class MediaZoomController implements ReactiveController {
   private _scale = MIN_ZOOM;
   private _stageResizeProgress = 0;
   private _stageResizeStart?: ZoomTransform;
+  private _presentationTarget?: HTMLElement;
   private _surface?: HTMLElement;
   private _surfaceHeight = 0;
   private _surfaceWidth = 0;
@@ -102,6 +103,7 @@ export class MediaZoomController implements ReactiveController {
       return;
     this._basePresentationScale = nextScale;
     this._clampPan();
+    this._renderPresentation();
     this._host.requestUpdate();
   }
 
@@ -116,6 +118,7 @@ export class MediaZoomController implements ReactiveController {
     if (nextRatio === this._mediaHeightRatio) return;
     this._mediaHeightRatio = nextRatio;
     this._clampPan();
+    this._renderPresentation();
     this._host.requestUpdate();
   }
 
@@ -126,11 +129,25 @@ export class MediaZoomController implements ReactiveController {
     this.reset();
   }
 
-  public observe(surface: HTMLElement | undefined): void {
-    if (this._surface === surface) return;
+  public observe(
+    surface: HTMLElement | undefined,
+    presentationTarget: HTMLElement | undefined = surface,
+  ): void {
+    if (
+      this._surface === surface &&
+      this._presentationTarget === presentationTarget
+    ) {
+      this._renderPresentation();
+      return;
+    }
+    if (this._presentationTarget !== presentationTarget) {
+      this._clearPresentation(this._presentationTarget);
+    }
+    if (this._surface !== surface) this._surface?.classList.remove("pannable");
     this._resizeObserver?.disconnect();
     this._resizeObserver = undefined;
     this._surface = surface;
+    this._presentationTarget = presentationTarget;
     this._surfaceWidth = surface?.clientWidth || 0;
     this._surfaceHeight = surface?.clientHeight || 0;
     if (surface && (!this._surfaceWidth || !this._surfaceHeight)) {
@@ -138,6 +155,7 @@ export class MediaZoomController implements ReactiveController {
       this._surfaceWidth ||= rect.width;
       this._surfaceHeight ||= rect.height;
     }
+    this._renderPresentation();
     if (!surface || typeof ResizeObserver === "undefined") return;
     this._resizeObserver = new ResizeObserver(([entry]) => {
       const previousPanX = this._panX;
@@ -148,7 +166,7 @@ export class MediaZoomController implements ReactiveController {
       }
       if (!this.stageResizeActive) this._clampPan();
       if (this._panX !== previousPanX || this._panY !== previousPanY) {
-        this._host.requestUpdate();
+        this._renderPresentation();
       }
     });
     this._resizeObserver.observe(surface);
@@ -158,6 +176,9 @@ export class MediaZoomController implements ReactiveController {
     this._cancelScheduledUpdate();
     this._resizeObserver?.disconnect();
     this._resizeObserver = undefined;
+    this._clearPresentation(this._presentationTarget);
+    this._surface?.classList.remove("pannable");
+    this._presentationTarget = undefined;
     this._surface = undefined;
     this._surfaceWidth = 0;
     this._surfaceHeight = 0;
@@ -192,6 +213,7 @@ export class MediaZoomController implements ReactiveController {
   public beginStageResizeReturn(): void {
     this._stageResizeStart = this._presentationTransform();
     this._stageResizeProgress = 0;
+    this._renderPresentation();
     this._host.requestUpdate();
   }
 
@@ -336,6 +358,7 @@ export class MediaZoomController implements ReactiveController {
     if (nextScale === this._scale) return;
     event.preventDefault();
     this._setScaleAt(nextScale, event.clientX, event.clientY);
+    this._renderPresentation();
     this._host.requestUpdate();
   };
 
@@ -352,6 +375,7 @@ export class MediaZoomController implements ReactiveController {
       return;
     }
     this._setScaleAt(TOGGLE_ZOOM, clientX, clientY);
+    this._renderPresentation();
     this._host.requestUpdate();
   }
 
@@ -391,6 +415,7 @@ export class MediaZoomController implements ReactiveController {
     } else {
       return;
     }
+    this._renderPresentation();
     this._host.requestUpdate();
   };
 
@@ -588,13 +613,32 @@ export class MediaZoomController implements ReactiveController {
     if (this._scheduledUpdateFrame !== undefined) return;
     this._scheduledUpdateFrame = requestAnimationFrame(() => {
       this._scheduledUpdateFrame = undefined;
-      this._host.requestUpdate();
+      this._renderPresentation();
     });
   }
 
   private _flushScheduledUpdate(): void {
     this._cancelScheduledUpdate();
+    this._renderPresentation();
     this._host.requestUpdate();
+  }
+
+  private _renderPresentation(): void {
+    if (!this._surface || !this._presentationTarget) return;
+    this._presentationTarget.style.transform = this.transform;
+    this._presentationTarget.classList.toggle("interacting", this._interacting);
+    this._presentationTarget.classList.toggle("pannable", this.pannable);
+    this._presentationTarget.classList.toggle(
+      "stage-resize-active",
+      this.stageResizeActive,
+    );
+    this._surface.classList.toggle("pannable", this.pannable);
+  }
+
+  private _clearPresentation(target: HTMLElement | undefined): void {
+    if (!target) return;
+    target.style.removeProperty("transform");
+    target.classList.remove("interacting", "pannable", "stage-resize-active");
   }
 
   private _cancelScheduledUpdate(): void {

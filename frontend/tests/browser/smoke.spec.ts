@@ -4059,6 +4059,10 @@ test("keeps activity content in an independently scrolling viewport", async ({
   ).toBeVisible();
   expect(await page.evaluate(() => document.fullscreenElement)).toBeNull();
   const dialogBeforeManualResize = await mediaDialog.boundingBox();
+  const playerBeforeManualResize = await page
+    .locator("wzc-recorded-video-player")
+    .boundingBox();
+  const informationBeforeManualResize = await mediaInformation.boundingBox();
   const prePanResizeHandle = page.locator(
     ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) .resize-handle",
   );
@@ -4072,13 +4076,24 @@ test("keeps activity content in an independently scrolling viewport", async ({
     await page.mouse.up();
   }
   const dialogAfterManualResize = await mediaDialog.boundingBox();
+  const playerAfterManualResize = await page
+    .locator("wzc-recorded-video-player")
+    .boundingBox();
+  const informationAfterManualResize = await mediaInformation.boundingBox();
   expect(dialogAfterManualResize?.width ?? 0).toBeLessThan(
     (dialogBeforeManualResize?.width ?? 0) - 10,
+  );
+  expect(playerAfterManualResize?.width ?? 0).toBeLessThan(
+    (playerBeforeManualResize?.width ?? 0) - 10,
+  );
+  expect(informationAfterManualResize?.width ?? 0).toBeLessThan(
+    (informationBeforeManualResize?.width ?? 0) - 10,
   );
   const dialogBeforePan = await mediaDialog.boundingBox();
   const viewportBeforePan = await page
     .locator("wzc-recorded-video-player .viewport")
     .boundingBox();
+  const informationBeforePan = await mediaInformation.boundingBox();
   if (viewportBeforePan) {
     const startX = viewportBeforePan.x + viewportBeforePan.width / 2;
     const startY = viewportBeforePan.y + viewportBeforePan.height / 2;
@@ -4096,6 +4111,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   const viewportDuringPan = await page
     .locator("wzc-recorded-video-player .viewport")
     .boundingBox();
+  const informationDuringPan = await mediaInformation.boundingBox();
   expect(dialogDuringPan?.width).toBeCloseTo(dialogBeforePan?.width ?? 0, 1);
   expect(dialogDuringPan?.height).toBeCloseTo(dialogBeforePan?.height ?? 0, 1);
   expect(viewportDuringPan?.width).toBeCloseTo(
@@ -4104,6 +4120,14 @@ test("keeps activity content in an independently scrolling viewport", async ({
   );
   expect(viewportDuringPan?.height).toBeCloseTo(
     viewportBeforePan?.height ?? 0,
+    1,
+  );
+  expect(informationDuringPan?.width).toBeCloseTo(
+    informationBeforePan?.width ?? 0,
+    1,
+  );
+  expect(informationDuringPan?.height).toBeCloseTo(
+    informationBeforePan?.height ?? 0,
     1,
   );
   const recordedContentCoverage = await recordedMediaSurface.evaluate(
