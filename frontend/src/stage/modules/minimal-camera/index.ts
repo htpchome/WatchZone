@@ -7,6 +7,7 @@ import type {
   FrigateFallbackTransport,
   HomeAssistantActionConfig,
   LiveConnectionType,
+  MinimalCameraMenuPosition,
 } from "../../../core/config";
 import type { ModuleDefinition } from "../../placeable";
 import type { MinimalCameraModule } from "./minimal-camera";
@@ -24,6 +25,7 @@ export interface MinimalCameraModuleConfig {
   readonly doubleTapAction: HomeAssistantActionConfig;
   readonly highlightActivity: boolean;
   readonly holdAction: HomeAssistantActionConfig;
+  readonly menuPosition: MinimalCameraMenuPosition;
   readonly showFullscreenButton: boolean;
   readonly showMuteButton: boolean;
   readonly showPictureInPictureButton: boolean;
@@ -58,6 +60,7 @@ export const moduleDefinition: ModuleDefinition<MinimalCameraModuleConfig> = {
     camera.doubleTapAction = config.doubleTapAction;
     camera.highlightActivity = config.highlightActivity;
     camera.holdAction = config.holdAction;
+    camera.menuPosition = config.menuPosition;
     camera.showFullscreenButton = config.showFullscreenButton;
     camera.showMuteButton = config.showMuteButton;
     camera.showPictureInPictureButton = config.showPictureInPictureButton;
@@ -88,6 +91,12 @@ function validateMinimalCameraConfig(
     if (typeof setting !== "boolean") {
       throw new Error(`Minimal camera requires a ${name} setting.`);
     }
+  }
+  if (
+    source.menuPosition !== "top_left" &&
+    source.menuPosition !== "top_right"
+  ) {
+    throw new Error("Minimal camera requires a valid menuPosition setting.");
   }
   return value as MinimalCameraModuleConfig;
 }

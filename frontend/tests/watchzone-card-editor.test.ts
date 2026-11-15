@@ -273,9 +273,8 @@ describe("watchzone-card-editor", () => {
       HTMLElement & { data?: Record<string, unknown> }
     >("ha-form");
     expect(interactionForm).not.toBeNull();
-    expect(interactionForm?.data).toEqual({
-      tap_action: { action: "more-info" },
-    });
+    expect(interactionForm?.data).toEqual({});
+    expect(editor.shadowRoot?.textContent).toContain("Open Live View");
   });
 
   it("uses a compact camera accordion and saves a sanitized camera title", async () => {

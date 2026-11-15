@@ -39,6 +39,7 @@ import { MediaPresentationController } from "../../../ui/media-presentation.cont
 import type { PresentedSource } from "./session.controller";
 import { CameraLiveControlController } from "./control.controller";
 import { captureVideoFrame } from "./frame-capture";
+import { mediaTransportLabel } from "./source-label";
 
 interface MediaDimensions {
   readonly height: number;
@@ -242,17 +243,8 @@ export class CameraLivePresentation extends LitElement {
   }
 
   protected render() {
-    const hlsLabel = this.lowLatencyHls ? "HLS-LL" : "HLS";
     const sourceLabel =
-      this.transport === "webrtc"
-        ? "WebRTC"
-        : this.transport === "mse"
-          ? "MSE"
-          : this.transport === "hls_native"
-            ? `${hlsLabel} · native`
-            : this.transport === "hls_mse"
-              ? `${hlsLabel} · HLS.js`
-              : hlsLabel;
+      mediaTransportLabel(this.transport, this.lowLatencyHls) ?? "HLS";
     const connecting =
       !this.suspended && this.available && !this.failed && !this.selected;
     const resolvedSource = Boolean(

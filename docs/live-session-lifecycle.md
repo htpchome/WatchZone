@@ -99,6 +99,10 @@ An adapter declares one supported attachment strategy:
   element.
 - **Element attachment:** A session-owned media element is reparented into the
   active presentation host.
+- **Minimal live dialog:** Open Live View reparents the selected session-owned
+  player from its minimal-camera stage host into the dialog. Closing the dialog
+  returns that exact player to the stage host; neither transition acquires a
+  replacement transport or creates a second decoder.
 - **Adapter attachment:** The adapter provides another explicit attach/detach
   mechanism with equivalent retention behavior.
 

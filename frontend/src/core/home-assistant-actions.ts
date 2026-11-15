@@ -8,6 +8,8 @@ export async function performHomeAssistantAction(
   entityId: string,
 ): Promise<void> {
   switch (config.action) {
+    case "open-live-view":
+      return;
     case "none":
       return;
     case "more-info":

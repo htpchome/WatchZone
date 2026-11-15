@@ -2274,15 +2274,16 @@ test("keeps minimal camera actions and media controls independent", async ({
   const minimal = page.locator("wzc-minimal-camera");
   await expect(minimal).toBeVisible();
   await minimal.locator(".interaction-surface").click();
-  await expect
-    .poll(() =>
-      page.evaluate(
-        () =>
-          (window as unknown as { minimalMoreInfoCount?: number })
-            .minimalMoreInfoCount,
-      ),
-    )
-    .toBe(1);
+  const liveDialog = minimal.locator(".live-dialog");
+  await expect(liveDialog).toBeVisible();
+  await liveDialog
+    .getByRole("button", { name: "Resize video player" })
+    .press("ArrowLeft");
+  await expect(liveDialog).toHaveAttribute("style", /width:/);
+  await liveDialog.getByRole("button", { name: "Close live view" }).click();
+  await expect(liveDialog).toBeHidden();
+
+  await minimal.getByRole("button", { name: "Camera controls" }).click();
 
   const mute = minimal.getByRole("button", { name: "Unmute" });
   await mute.click();
@@ -2293,7 +2294,7 @@ test("keeps minimal camera actions and media controls independent", async ({
         (window as unknown as { minimalMoreInfoCount?: number })
           .minimalMoreInfoCount,
     ),
-  ).toBe(1);
+  ).toBe(0);
 
   await minimal.locator(".viewport").evaluate((element) => {
     element.requestFullscreen = async () => {
@@ -2320,7 +2321,7 @@ test("keeps minimal camera actions and media controls independent", async ({
         (window as unknown as { minimalMoreInfoCount?: number })
           .minimalMoreInfoCount,
     ),
-  ).toBe(1);
+  ).toBe(0);
 
   await minimal.evaluate((element) => {
     const video = document.createElement("video");
@@ -2354,7 +2355,7 @@ test("keeps minimal camera actions and media controls independent", async ({
         (window as unknown as { minimalMoreInfoCount?: number })
           .minimalMoreInfoCount,
     ),
-  ).toBe(1);
+  ).toBe(0);
 });
 
 test("keeps activity content in an independently scrolling viewport", async ({

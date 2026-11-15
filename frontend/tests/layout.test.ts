@@ -235,7 +235,8 @@ describe("layout composition", () => {
         camera: { entityId: "camera.doorbell", title: "" },
         doubleTapAction: { action: "none" },
         holdAction: { action: "none" },
-        tapAction: { action: "more-info" },
+        menuPosition: "top_left",
+        tapAction: { action: "open-live-view" },
       },
     });
   });

@@ -29,9 +29,11 @@ export type SlideTransition = "none" | "slide" | "fade";
 export type SlideAdvanceSeconds = 5 | 10 | 20 | 30;
 export type AlertTakeoverMode = "off" | "alerts" | "detections" | "both";
 export type AdditionalCameraLayout = "side_by_side" | "stacked";
+export type MinimalCameraMenuPosition = "top_left" | "top_right";
 
 export type HomeAssistantAction =
   | "assist"
+  | "open-live-view"
   | "more-info"
   | "navigate"
   | "none"
@@ -79,6 +81,7 @@ export interface CardConfig {
   readonly alert_detection_takeover: AlertTakeoverMode;
   readonly highlight_camera_on_activity: boolean;
   readonly minimal_camera_show_fullscreen_button: boolean;
+  readonly minimal_camera_menu_position: MinimalCameraMenuPosition;
   readonly minimal_camera_show_mute_button: boolean;
   readonly minimal_camera_show_pip_button: boolean;
   readonly ptz_overlay_control: PtzOverlayControl;
@@ -118,7 +121,18 @@ export function normalizeCardConfig(value: unknown): CardConfig {
 
   const stageType = normalizeStageType(source.stage_type);
   const stageFlow = normalizeStageFlow(source.stage_flow, stageType);
-  const tapAction = normalizeActionConfig(source.tap_action, "more-info");
+  const configuredTapAction = normalizeActionConfig(
+    source.tap_action,
+    stageType === "minimal_camera_only" ? "open-live-view" : "more-info",
+  );
+  const tapAction =
+    stageType === "minimal_camera_only" &&
+    configuredTapAction.action === "more-info"
+      ? { action: "open-live-view" as const }
+      : stageType !== "minimal_camera_only" &&
+          configuredTapAction.action === "open-live-view"
+        ? { action: "more-info" as const }
+        : configuredTapAction;
   const holdAction = normalizeActionConfig(source.hold_action, "none");
   const doubleTapAction = normalizeActionConfig(
     source.double_tap_action,
@@ -154,6 +168,15 @@ export function normalizeCardConfig(value: unknown): CardConfig {
 
   const cameras = normalizeCameras(source);
   const eventHistoryDays = source.event_history_days;
+  if (
+    source.minimal_camera_menu_position !== undefined &&
+    source.minimal_camera_menu_position !== "top_left" &&
+    source.minimal_camera_menu_position !== "top_right"
+  ) {
+    throw new Error(
+      `${APP_NAME} minimal_camera_menu_position must be top_left or top_right.`,
+    );
+  }
   if (
     eventHistoryDays !== undefined &&
     (typeof eventHistoryDays !== "number" ||
@@ -249,6 +272,10 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     source.highlight_camera_on_activity !== false;
   normalized.minimal_camera_show_fullscreen_button =
     source.minimal_camera_show_fullscreen_button !== false;
+  normalized.minimal_camera_menu_position =
+    source.minimal_camera_menu_position === "top_right"
+      ? "top_right"
+      : "top_left";
   normalized.minimal_camera_show_mute_button =
     source.minimal_camera_show_mute_button !== false;
   normalized.minimal_camera_show_pip_button =
@@ -663,6 +690,7 @@ function normalizeActionConfig(
   const action = source.action;
   if (
     action !== "assist" &&
+    action !== "open-live-view" &&
     action !== "more-info" &&
     action !== "navigate" &&
     action !== "none" &&

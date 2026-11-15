@@ -50,6 +50,9 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
   if (config.minimal_camera_show_fullscreen_button !== false) {
     delete yaml.minimal_camera_show_fullscreen_button;
   }
+  if (config.minimal_camera_menu_position === "top_left") {
+    delete yaml.minimal_camera_menu_position;
+  }
   if (config.minimal_camera_show_mute_button !== false) {
     delete yaml.minimal_camera_show_mute_button;
   }
@@ -73,7 +76,10 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
   if (!config.mobile_data_saving) delete yaml.mobile_data_saving;
   if (config.stage_type === "full") delete yaml.stage_type;
   if (
-    config.tap_action.action === "more-info" &&
+    config.tap_action.action ===
+      (config.stage_type === "minimal_camera_only"
+        ? "open-live-view"
+        : "more-info") &&
     Object.keys(config.tap_action).length === 1
   )
     delete yaml.tap_action;

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import type {
@@ -14,6 +14,24 @@ import {
 } from "./test-media-session-manager";
 
 describe("minimal camera module", () => {
+  beforeEach(() => {
+    Object.defineProperties(HTMLDialogElement.prototype, {
+      close: {
+        configurable: true,
+        value(this: HTMLDialogElement) {
+          this.removeAttribute("open");
+          this.dispatchEvent(new Event("close"));
+        },
+      },
+      showModal: {
+        configurable: true,
+        value(this: HTMLDialogElement) {
+          this.setAttribute("open", "");
+        },
+      },
+    });
+  });
+
   afterEach(() => {
     vi.useRealTimers();
     removeTestMediaSessionManager();
@@ -68,9 +86,33 @@ describe("minimal camera module", () => {
     await new Promise((resolve) => setTimeout(resolve, 30));
     expect(requestUpdate).toHaveBeenCalledTimes(settledUpdateCount);
     expect(webRtcFactory).toHaveBeenCalledOnce();
+
+    camera.shadowRoot
+      ?.querySelector<HTMLButtonElement>(".interaction-surface")
+      ?.click();
+    await vi.waitFor(() =>
+      expect(
+        camera.shadowRoot?.querySelector(".dialog-video-host.webrtc video"),
+      ).toBe(video),
+    );
+    expect(
+      camera.shadowRoot?.querySelector<HTMLDialogElement>(".live-dialog")?.open,
+    ).toBe(true);
+    expect(camera.shadowRoot?.querySelector(".source-label")?.textContent).toBe(
+      "WebRTC",
+    );
+    camera.shadowRoot
+      ?.querySelector<HTMLButtonElement>(".dialog-close")
+      ?.click();
+    await vi.waitFor(() =>
+      expect(camera.shadowRoot?.querySelector(".video-host.webrtc video")).toBe(
+        video,
+      ),
+    );
+    expect(webRtcFactory).toHaveBeenCalledOnce();
   });
 
-  it("performs the default surface action without treating controls as taps", async () => {
+  it("opens its live dialog by default without treating controls as taps", async () => {
     vi.useFakeTimers();
     const camera = document.createElement(
       "wzc-minimal-camera",
@@ -84,8 +126,6 @@ describe("minimal camera module", () => {
       startUnmutedPhone: false,
       title: "Front",
     };
-    const moreInfo = vi.fn();
-    camera.addEventListener("hass-more-info", moreInfo);
     document.body.append(camera);
     await camera.updateComplete;
 
@@ -93,14 +133,45 @@ describe("minimal camera module", () => {
       ?.querySelector<HTMLElement>(".interaction-surface")
       ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await vi.advanceTimersByTimeAsync(250);
-    expect(moreInfo).toHaveBeenCalledOnce();
-    expect((moreInfo.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({
-      entityId: "camera.front",
-    });
+    const dialog =
+      camera.shadowRoot?.querySelector<HTMLDialogElement>(".live-dialog");
+    expect(dialog?.open).toBe(true);
 
-    camera.shadowRoot?.querySelector<HTMLButtonElement>(".control")?.click();
+    camera.shadowRoot
+      ?.querySelector<HTMLButtonElement>(".menu-toggle")
+      ?.click();
     await vi.advanceTimersByTimeAsync(250);
-    expect(moreInfo).toHaveBeenCalledOnce();
+    expect(dialog?.open).toBe(true);
+  });
+
+  it("hides the expanded control menu after five seconds", async () => {
+    vi.useFakeTimers();
+    const camera = document.createElement(
+      "wzc-minimal-camera",
+    ) as MinimalCameraModule;
+    camera.camera = {
+      connection: "home_assistant",
+      entityId: "camera.front",
+      frigateFallback: "mse",
+      lowLatencyHls: true,
+      startUnmutedPcTablet: false,
+      startUnmutedPhone: false,
+      title: "Front",
+    };
+    document.body.append(camera);
+    await camera.updateComplete;
+    const menu =
+      camera.shadowRoot?.querySelector<HTMLButtonElement>(".menu-toggle");
+    const controls = camera.shadowRoot?.querySelector<HTMLElement>(".controls");
+
+    menu?.click();
+    await camera.updateComplete;
+    expect(controls?.hidden).toBe(false);
+    await vi.advanceTimersByTimeAsync(4_999);
+    expect(controls?.hidden).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    await camera.updateComplete;
+    expect(controls?.hidden).toBe(true);
   });
 
   it("uses the configured double-tap action instead of also firing tap", async () => {

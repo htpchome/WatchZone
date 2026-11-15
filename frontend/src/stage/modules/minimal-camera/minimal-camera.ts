@@ -5,6 +5,7 @@ import type {
   FrigateFallbackTransport,
   HomeAssistantActionConfig,
   LiveConnectionType,
+  MinimalCameraMenuPosition,
 } from "../../../core/config";
 import type {
   HomeAssistant,
@@ -32,8 +33,10 @@ import {
 } from "../../../core/localization";
 import { CameraAudioController } from "../../camera-presentation/live/audio.controller";
 import { CameraLiveSessionController } from "../../camera-presentation/live/session.controller";
+import { mediaTransportLabel } from "../../camera-presentation/live/source-label";
 import { CameraActivityHighlightController } from "../../camera-presentation/activity-highlight.controller";
 import { minimalCameraStyles } from "./minimal-camera.styles";
+import { MinimalLiveDialogController } from "./minimal-live-dialog.controller";
 
 interface MinimalCameraConfig {
   readonly connection: LiveConnectionType;
@@ -48,6 +51,7 @@ interface MinimalCameraConfig {
 
 const HOLD_DELAY_MS = 500;
 const DOUBLE_TAP_DELAY_MS = 250;
+const CONTROL_MENU_TIMEOUT_MS = 5_000;
 
 export class MinimalCameraModule extends LitElement {
   public static properties = {
@@ -59,18 +63,30 @@ export class MinimalCameraModule extends LitElement {
     holdAction: { attribute: false },
     highlightActivity: { attribute: false, type: Boolean },
     localize: { attribute: false },
+    menuPosition: { attribute: false },
     showFullscreenButton: { attribute: false, type: Boolean },
     showMuteButton: { attribute: false, type: Boolean },
     showPictureInPictureButton: { attribute: false, type: Boolean },
     tapAction: { attribute: false },
+    _controlsExpanded: { state: true },
   };
 
   private _activeVideo?: HTMLVideoElement;
   private _attachedWebRtcVideo?: HTMLVideoElement;
   private _holdFired = false;
   private _holdTimer?: ReturnType<typeof setTimeout>;
+  private _controlsTimer?: ReturnType<typeof setTimeout>;
+  private _controlsExpanded = false;
   private _tapTimer?: ReturnType<typeof setTimeout>;
   private readonly _activity = new CameraActivityHighlightController(this);
+  private readonly _dialog = new MinimalLiveDialogController(this, {
+    getAspectRatio: () => this._dialogMediaAspectRatio(),
+    getDialog: () =>
+      this.renderRoot.querySelector<HTMLDialogElement>(".live-dialog"),
+    getHeader: () =>
+      this.renderRoot.querySelector<HTMLElement>(".live-dialog-header"),
+    onClose: () => this._closeControlMenu(),
+  });
   private readonly _audio: CameraAudioController = new CameraAudioController(
     this,
     {
@@ -118,10 +134,11 @@ export class MinimalCameraModule extends LitElement {
   public hass?: HomeAssistant;
   public highlightActivity = true;
   public localize: LocalizeFunction = englishLocalize;
+  public menuPosition: MinimalCameraMenuPosition = "top_left";
   public showFullscreenButton = true;
   public showMuteButton = true;
   public showPictureInPictureButton = true;
-  public tapAction: HomeAssistantActionConfig = { action: "more-info" };
+  public tapAction: HomeAssistantActionConfig = { action: "open-live-view" };
   public holdAction: HomeAssistantActionConfig = { action: "none" };
   public doubleTapAction: HomeAssistantActionConfig = { action: "none" };
 
@@ -167,108 +184,119 @@ export class MinimalCameraModule extends LitElement {
     const showPictureInPicture =
       this.showPictureInPictureButton &&
       pictureInPictureMethod(this._activeVideo) !== undefined;
+    const controls = {
+      fullscreen: showFullscreen,
+      mute: this.showMuteButton,
+      pictureInPicture: showPictureInPicture,
+    };
+    const videoAspectRatio =
+      this._activeVideo?.videoWidth && this._activeVideo.videoHeight
+        ? this._activeVideo.videoWidth / this._activeVideo.videoHeight
+        : undefined;
     return html`<div
-      class=${`viewport${this._activity.classification ? ` activity-${this._activity.classification}` : ""}`}
-    >
-      <div class="media">
-        ${
-          !selected
-            ? this.camera?.posterUrl
-              ? html`<img src=${this.camera.posterUrl} alt="" />`
-              : html`<div class="placeholder" aria-hidden="true">
-                  ${renderIcon("camera")}
-                </div>`
-            : nothing
-        }
-        <div
-          class="video-host fallback"
-          ?hidden=${selected !== "fallback"}
-        ></div>
-        <div
-          class=${`video-host webrtc${selected === "webrtc" ? " selected" : ""}`}
-        ></div>
+        class=${`viewport${this._activity.classification ? ` activity-${this._activity.classification}` : ""}`}
+      >
+        <div class="media">
+          ${
+            !selected
+              ? this.camera?.posterUrl
+                ? html`<img src=${this.camera.posterUrl} alt="" />`
+                : html`<div class="placeholder" aria-hidden="true">
+                    ${renderIcon("camera")}
+                  </div>`
+              : nothing
+          }
+          <div
+            class="video-host fallback"
+            ?hidden=${selected !== "fallback"}
+          ></div>
+          <div
+            class=${`video-host webrtc${selected === "webrtc" ? " selected" : ""}`}
+          ></div>
+        </div>
+        <button
+          class="interaction-surface"
+          type="button"
+          aria-label=${this.camera?.title || this.camera?.entityId || this.localize("camera.live")}
+          @pointerdown=${this._handlePointerDown}
+          @pointerup=${this._handlePointerUp}
+          @pointercancel=${this._cancelHold}
+          @dblclick=${this._handleDoubleTap}
+          @click=${this._handleClick}
+        ></button>
+        ${!this._dialog.openState ? this._renderControlMenu(controls) : nothing}
       </div>
-      <button
-        class="interaction-surface"
-        type="button"
-        aria-label=${this.camera?.title || this.camera?.entityId || this.localize("camera.live")}
-        @pointerdown=${this._handlePointerDown}
-        @pointerup=${this._handlePointerUp}
-        @pointercancel=${this._cancelHold}
-        @dblclick=${this._handleDoubleTap}
-        @click=${this._handleClick}
-      ></button>
-      ${
-        this.showMuteButton || showFullscreen || showPictureInPicture
-          ? html`<div class="controls">
-              ${
-                this.showMuteButton
-                  ? html`<button
-                      class="control"
-                      type="button"
-                      aria-label=${
-                        this._audio.muted
-                          ? this.localize("camera.unmute")
-                          : this.localize("camera.mute")
-                      }
-                      @pointerdown=${this._stopControlEvent}
-                      @click=${this._toggleMute}
-                    >
-                      ${renderIcon(this._audio.muted ? "volumeOff" : "volumeOn")}
-                    </button>`
-                  : nothing
-              }
-              ${
-                showFullscreen
-                  ? html`<button
-                      class="control"
-                      type="button"
-                      aria-label=${this.localize(
-                        isMediaFullscreenActive(this._activeVideo)
-                          ? "camera.exit_fullscreen"
-                          : "camera.enter_fullscreen",
-                      )}
-                      @pointerdown=${this._stopControlEvent}
-                      @click=${this._toggleFullscreen}
-                    >
-                      ${renderIcon(
-                        isMediaFullscreenActive(this._activeVideo)
-                          ? "fullscreenExit"
-                          : "fullscreen",
-                      )}
-                    </button>`
-                  : nothing
-              }
-              ${
-                showPictureInPicture
-                  ? html`<button
-                      class="control"
-                      type="button"
-                      aria-label=${this.localize(
-                        isPictureInPictureActive(this._activeVideo)
-                          ? "camera.exit_pip"
-                          : "camera.enter_pip",
-                      )}
-                      @pointerdown=${this._stopControlEvent}
-                      @click=${this._togglePictureInPicture}
-                    >
-                      ${renderIcon("pipPopOut")}
-                    </button>`
-                  : nothing
-              }
-            </div>`
-          : nothing
-      }
-    </div>`;
+      <dialog
+        class="live-dialog"
+        aria-label=${this.camera?.title || this.localize("camera.live")}
+        @cancel=${this._dialog.close}
+        @close=${this._dialog.handleClosed}
+        @click=${this._dialog.handleBackdropClick}
+      >
+        <header
+          class="live-dialog-header"
+          @pointerdown=${this._dialog.startDrag}
+          @pointermove=${this._dialog.moveDrag}
+          @pointerup=${this._dialog.endDrag}
+          @pointercancel=${this._dialog.endDrag}
+        >
+          <button
+            class="dialog-close"
+            type="button"
+            aria-label=${this.localize("camera.close_live_view")}
+            @click=${this._dialog.close}
+          >
+            <ha-icon icon="mdi:close"></ha-icon>
+          </button>
+          <span>${this.camera?.title || this.camera?.entityId}</span>
+          <span class="source-label"
+            >${
+              mediaTransportLabel(
+                this._session.transport,
+                this._session.effectiveLowLatencyHls,
+              ) ?? nothing
+            }</span
+          >
+        </header>
+        <div
+          class="live-dialog-media"
+          style=${
+            videoAspectRatio
+              ? `--wzc-minimal-live-dialog-aspect-ratio: ${videoAspectRatio}`
+              : nothing
+          }
+        >
+          <div class="dialog-video-host fallback"></div>
+          <div
+            class=${`dialog-video-host webrtc${selected === "webrtc" ? " selected" : ""}`}
+          ></div>
+          ${this._renderControlMenu(controls)}
+        </div>
+        <button
+          class="resize-handle"
+          type="button"
+          aria-label=${this.localize("media_player.resize")}
+          @pointerdown=${this._dialog.startResize}
+          @pointermove=${this._dialog.moveResize}
+          @pointerup=${this._dialog.endResize}
+          @pointercancel=${this._dialog.endResize}
+          @lostpointercapture=${this._dialog.endResize}
+          @keydown=${this._dialog.handleResizeKey}
+        >
+          ${renderIcon("resizeGrip")}
+        </button>
+      </dialog>`;
   }
 
   protected updated(): void {
+    this._dialog.sync();
     this._attachMedia();
     this._audio.syncMediaState();
   }
 
   public disconnectedCallback(): void {
     this._cancelHold();
+    this._closeControlMenu();
     if (this._tapTimer !== undefined) clearTimeout(this._tapTimer);
     this._detachWebRtcVideo();
     document.removeEventListener(
@@ -283,13 +311,19 @@ export class MinimalCameraModule extends LitElement {
   }
 
   private get _viewport(): HTMLElement | undefined {
-    return this.renderRoot.querySelector<HTMLElement>(".viewport") ?? undefined;
+    return (
+      this.renderRoot.querySelector<HTMLElement>(
+        this._dialog.openState ? ".live-dialog-media" : ".viewport",
+      ) ?? undefined
+    );
   }
 
   private _attachMedia(): void {
     const fallback = this._session.fallbackVideo;
     const fallbackHost = this.renderRoot.querySelector<HTMLElement>(
-      ".video-host.fallback",
+      this._dialog.openState
+        ? ".dialog-video-host.fallback"
+        : ".video-host.fallback",
     );
     if (fallback && fallbackHost && fallback.parentElement !== fallbackHost) {
       fallback.autoplay = true;
@@ -307,8 +341,11 @@ export class MinimalCameraModule extends LitElement {
         webRtc?.addEventListener(event, this._handleWebRtcDecoded);
       }
     }
-    const webRtcHost =
-      this.renderRoot.querySelector<HTMLElement>(".video-host.webrtc");
+    const webRtcHost = this.renderRoot.querySelector<HTMLElement>(
+      this._dialog.openState
+        ? ".dialog-video-host.webrtc"
+        : ".video-host.webrtc",
+    );
     if (webRtc && webRtcHost && webRtc.parentElement !== webRtcHost) {
       webRtc.autoplay = true;
       webRtc.playsInline = true;
@@ -376,6 +413,10 @@ export class MinimalCameraModule extends LitElement {
 
   private _perform(config: HomeAssistantActionConfig): Promise<void> {
     if (!this.camera) return Promise.resolve();
+    if (config.action === "open-live-view") {
+      this._openLiveDialog();
+      return Promise.resolve();
+    }
     return performHomeAssistantAction(
       this,
       this.hass,
@@ -392,6 +433,117 @@ export class MinimalCameraModule extends LitElement {
     event.stopPropagation();
     this._audio.toggleUserMute();
   };
+
+  private _renderControlMenu(controls: {
+    readonly fullscreen: boolean;
+    readonly mute: boolean;
+    readonly pictureInPicture: boolean;
+  }) {
+    if (!controls.fullscreen && !controls.mute && !controls.pictureInPicture) {
+      return nothing;
+    }
+    return html`<div
+      class=${`control-menu ${this.menuPosition === "top_right" ? "right" : "left"}`}
+    >
+      <button
+        class="control menu-toggle"
+        type="button"
+        aria-label=${this.localize("camera.controls_menu")}
+        aria-expanded=${String(this._controlsExpanded)}
+        @pointerdown=${this._stopControlEvent}
+        @click=${this._toggleControlMenu}
+      >
+        ${renderIcon("menu")}
+      </button>
+      <div class="controls" ?hidden=${!this._controlsExpanded}>
+        ${
+          controls.mute
+            ? html`<button
+                class="control"
+                type="button"
+                aria-label=${
+                  this._audio.muted
+                    ? this.localize("camera.unmute")
+                    : this.localize("camera.mute")
+                }
+                @pointerdown=${this._stopControlEvent}
+                @click=${this._toggleMute}
+              >
+                ${renderIcon(this._audio.muted ? "volumeOff" : "volumeOn")}
+              </button>`
+            : nothing
+        }
+        ${
+          controls.fullscreen
+            ? html`<button
+                class="control"
+                type="button"
+                aria-label=${this.localize(
+                  isMediaFullscreenActive(this._activeVideo)
+                    ? "camera.exit_fullscreen"
+                    : "camera.enter_fullscreen",
+                )}
+                @pointerdown=${this._stopControlEvent}
+                @click=${this._toggleFullscreen}
+              >
+                ${renderIcon(
+                  isMediaFullscreenActive(this._activeVideo)
+                    ? "fullscreenExit"
+                    : "fullscreen",
+                )}
+              </button>`
+            : nothing
+        }
+        ${
+          controls.pictureInPicture
+            ? html`<button
+                class="control"
+                type="button"
+                aria-label=${this.localize(
+                  isPictureInPictureActive(this._activeVideo)
+                    ? "camera.exit_pip"
+                    : "camera.enter_pip",
+                )}
+                @pointerdown=${this._stopControlEvent}
+                @click=${this._togglePictureInPicture}
+              >
+                ${renderIcon("pipPopOut")}
+              </button>`
+            : nothing
+        }
+      </div>
+    </div>`;
+  }
+
+  private readonly _toggleControlMenu = (event: Event): void => {
+    event.stopPropagation();
+    if (this._controlsExpanded) {
+      this._closeControlMenu();
+      return;
+    }
+    this._controlsExpanded = true;
+    this._controlsTimer = setTimeout(
+      () => this._closeControlMenu(),
+      CONTROL_MENU_TIMEOUT_MS,
+    );
+  };
+
+  private _closeControlMenu(): void {
+    if (this._controlsTimer !== undefined) clearTimeout(this._controlsTimer);
+    this._controlsTimer = undefined;
+    this._controlsExpanded = false;
+  }
+
+  private _openLiveDialog(): void {
+    this._closeControlMenu();
+    this._dialog.open();
+  }
+
+  private _dialogMediaAspectRatio(): number {
+    return this._activeVideo?.videoWidth && this._activeVideo.videoHeight
+      ? this._activeVideo.videoWidth / this._activeVideo.videoHeight
+      : 16 / 9;
+  }
 
   private readonly _toggleFullscreen = (event: Event): void => {
     event.stopPropagation();

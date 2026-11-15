@@ -33,6 +33,7 @@ describe("WatchZone card configuration", () => {
       event_shadows: true,
       alert_detection_takeover: "both",
       highlight_camera_on_activity: true,
+      minimal_camera_menu_position: "top_left",
       minimal_camera_show_fullscreen_button: true,
       minimal_camera_show_mute_button: true,
       minimal_camera_show_pip_button: true,

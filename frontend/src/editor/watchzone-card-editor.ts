@@ -16,6 +16,7 @@ import {
   type CardConfig,
   type FrigateFallbackTransport,
   type LiveConnectionType,
+  type MinimalCameraMenuPosition,
   type PtzOverlayControl,
   type SlideAdvanceSeconds,
   type SlideTransition,
@@ -106,29 +107,13 @@ const ICON_SELECTOR = { icon: {} } as const;
 const BOOLEAN_SELECTOR = { boolean: {} } as const;
 const TAP_ACTION_SELECTOR = {
   ui_action: {
-    actions: [
-      "more-info",
-      "toggle",
-      "navigate",
-      "url",
-      "perform-action",
-      "assist",
-      "none",
-    ],
-    default_action: "more-info",
+    actions: ["toggle", "navigate", "url", "perform-action", "assist", "none"],
+    default_action: "none",
   },
 } as const;
 const OPTIONAL_ACTION_SELECTOR = {
   ui_action: {
-    actions: [
-      "more-info",
-      "toggle",
-      "navigate",
-      "url",
-      "perform-action",
-      "assist",
-      "none",
-    ],
+    actions: ["toggle", "navigate", "url", "perform-action", "assist", "none"],
     default_action: "none",
   },
 } as const;
@@ -144,6 +129,7 @@ const INTERACTION_FORM_SCHEMA = [
     ],
   },
 ] as const;
+const OPTIONAL_INTERACTION_FORM_SCHEMA = [INTERACTION_FORM_SCHEMA[1]] as const;
 const REVIEW_HISTORY_DAYS_SELECTOR = {
   number: {
     max: MAX_EVENT_HISTORY_DAYS,
@@ -643,24 +629,53 @@ export class CardEditor extends LitElement {
   private _renderInteractionSettings() {
     const holdAction = this._config?.hold_action;
     const doubleTapAction = this._config?.double_tap_action;
-    return html`<ha-form
-      .hass=${this._hass}
-      .data=${{
-        tap_action: this._config?.tap_action,
-        ...(holdAction?.action !== "none" ? { hold_action: holdAction } : {}),
-        ...(doubleTapAction?.action !== "none"
-          ? { double_tap_action: doubleTapAction }
-          : {}),
-      }}
-      .schema=${INTERACTION_FORM_SCHEMA}
-      .computeLabel=${(schema: { readonly name?: string }) =>
-        schema.name === "tap_action"
-          ? this._t("editor.tap_behavior")
-          : schema.name === "hold_action"
-            ? this._t("editor.hold_behavior")
-            : this._t("editor.double_tap_behavior")}
-      @value-changed=${this._handleActionsChange}
-    ></ha-form>`;
+    const openLiveView = this._config?.tap_action.action === "open-live-view";
+    return html`<div class="stage-layout-options interaction-primary-options">
+        <label class=${`stage-layout-option${openLiveView ? " selected" : ""}`}>
+          <input
+            type="radio"
+            name="minimal-camera-tap-action"
+            value="open-live-view"
+            .checked=${openLiveView}
+            @change=${this._handleTapActionModeChange}
+          />
+          <span>${this._t("editor.open_live_view")}</span>
+        </label>
+        <label
+          class=${`stage-layout-option${!openLiveView ? " selected" : ""}`}
+        >
+          <input
+            type="radio"
+            name="minimal-camera-tap-action"
+            value="other"
+            .checked=${!openLiveView}
+            @change=${this._handleTapActionModeChange}
+          />
+          <span>${this._t("editor.other_interaction")}</span>
+        </label>
+      </div>
+      <ha-form
+        .hass=${this._hass}
+        .data=${{
+          ...(!openLiveView ? { tap_action: this._config?.tap_action } : {}),
+          ...(holdAction?.action !== "none" ? { hold_action: holdAction } : {}),
+          ...(doubleTapAction?.action !== "none"
+            ? { double_tap_action: doubleTapAction }
+            : {}),
+        }}
+        .schema=${
+          openLiveView
+            ? OPTIONAL_INTERACTION_FORM_SCHEMA
+            : INTERACTION_FORM_SCHEMA
+        }
+        .computeLabel=${(schema: { readonly name?: string }) =>
+          schema.name === "tap_action"
+            ? this._t("editor.tap_behavior")
+            : schema.name === "hold_action"
+              ? this._t("editor.hold_behavior")
+              : this._t("editor.double_tap_behavior")}
+        @value-changed=${this._handleActionsChange}
+      ></ha-form>`;
   }
 
   private _renderMinimalCameraConfiguration() {
@@ -685,6 +700,33 @@ export class CardEditor extends LitElement {
         this._t("editor.minimal_camera_show_pip_button"),
         this._config?.minimal_camera_show_pip_button !== false,
       )}
+      <div class="segmented-setting">
+        <span class="segmented-setting-label">
+          ${this._t("editor.minimal_camera_menu_position")}
+        </span>
+        <wzc-segmented-control
+          class="editor-segmented-control"
+          data-setting="minimal-camera-menu-position"
+          appearance="compact"
+          .label=${this._t("editor.minimal_camera_menu_position")}
+          .options=${
+            [
+              {
+                label: this._t("editor.minimal_camera_menu_left"),
+                value: "top_left",
+              },
+              {
+                label: this._t("editor.minimal_camera_menu_right"),
+                value: "top_right",
+              },
+            ] satisfies readonly SegmentedControlOption[]
+          }
+          .value=${this._config?.minimal_camera_menu_position ?? "top_left"}
+          @wzc-segmented-control-value=${
+            this._handleMinimalCameraMenuPositionChange
+          }
+        ></wzc-segmented-control>
+      </div>
     `;
   }
 
@@ -2423,6 +2465,21 @@ export class CardEditor extends LitElement {
     );
   };
 
+  private readonly _handleTapActionModeChange = (event: Event): void => {
+    if (!this._config) return;
+    const input = event.currentTarget as HTMLInputElement;
+    if (!input.checked) return;
+    this._applyDraft(
+      normalizeCardConfig({
+        ...this._config,
+        tap_action: {
+          action: input.value === "open-live-view" ? "open-live-view" : "none",
+        },
+      }),
+      true,
+    );
+  };
+
   private readonly _handleStageLayoutChange = (event: Event): void => {
     if (!this._config) return;
     const input = event.currentTarget as HTMLInputElement;
@@ -2461,6 +2518,21 @@ export class CardEditor extends LitElement {
     }
     this._applyDraft(
       normalizeCardConfig({ ...this._config, ptz_overlay_control: value }),
+      true,
+    );
+  };
+
+  private readonly _handleMinimalCameraMenuPositionChange = (
+    event: CustomEvent<SegmentedControlValueDetail>,
+  ): void => {
+    if (!this._config) return;
+    const value = event.detail.value as MinimalCameraMenuPosition;
+    if (value !== "top_left" && value !== "top_right") return;
+    this._applyDraft(
+      normalizeCardConfig({
+        ...this._config,
+        minimal_camera_menu_position: value,
+      }),
       true,
     );
   };
