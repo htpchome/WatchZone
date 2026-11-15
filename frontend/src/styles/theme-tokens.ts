@@ -380,7 +380,7 @@ export const themeTokens = css`
     --wzc-event-tile-shadow: var(--wzc-shadow-small);
     --wzc-event-tile-gap: 0.65rem;
     --wzc-event-content-padding: 0.25rem;
-    --wzc-event-metadata-column-size: 9.75rem;
+    --wzc-event-metadata-column-size: 10.25rem;
     --wzc-event-thumbnail-inline-size: 12.8rem;
     --wzc-event-thumbnail-radius: var(--wzc-radius-card);
     --wzc-event-thumbnail-placeholder-background: var(

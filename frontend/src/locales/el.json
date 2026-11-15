@@ -102,6 +102,7 @@
   "reviews.activity": "Δραστηριότητα κάμερας",
   "reviews.alert": "Ειδοποίηση",
   "reviews.detection": "Ανίχνευση",
+  "reviews.more_badges": "+{count} ακόμη",
   "camera.slideshow_enable": "Έναρξη παρουσίασης",
   "camera.slideshow_disable": "Διακοπή παρουσίασης",
   "camera.slideshow_resume": "Συνέχιση παρουσίασης στην επόμενη κάμερα",

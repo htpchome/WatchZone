@@ -63,6 +63,7 @@
   "reviews.activity": "Camera activity",
   "reviews.alert": "Alert",
   "reviews.detection": "Detection",
+  "reviews.more_badges": "+{count} more",
   "camera.slideshow_enable": "Start slideshow",
   "camera.slideshow_disable": "Stop slideshow",
   "camera.slideshow_resume": "Resume slideshow on the next camera",

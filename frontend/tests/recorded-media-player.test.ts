@@ -713,6 +713,11 @@ describe("recorded media player", () => {
     const badges = [
       ...(information.shadowRoot?.querySelectorAll("wzc-badge") ?? []),
     ];
+    expect(badges.map((badge) => badge.textContent?.trim())).toEqual([
+      "Person",
+      "Delivery driver",
+      "Alert",
+    ]);
     expect(
       badges.map((badge) => ({
         appearance: badge.getAttribute("appearance"),

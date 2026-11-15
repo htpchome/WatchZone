@@ -15,7 +15,7 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.323`
+- Working version: `0.0.4-dev.324`
 - Current commit: `c55e389` —
   `v0.0.4-dev.322 - feat(activity): add fixed-height compact tile presentation`
 - The worktree contains the uncommitted compact activity-tile correction
@@ -25,13 +25,15 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Active change: theme surfaces and shared media actions
 
 - Review and Event tiles retain their fixed height across responsive states.
-  At medium width the badge lane spans the tile content width; at compact width
-  the primary row receives every badge that actually fits, and measured
-  overflow uses up to two lower-right slots without taking natural width from
-  time, date, zone, or review state. Further labels collapse into `+N`. One
-  coalesced list-level observer owns this allocation; tiles do not add
-  observers. At and below `600px`, the AI title pill becomes an accessible
-  icon-only control; at and below `480px`, media action buttons remain hidden.
+  One non-wrapping badge lane retains every badge that fits and replaces the
+  remainder with a localized neutral `+N more` badge. Badge overflow never
+  enters the metadata area. Actions remain vertically centered across the
+  former `768px` transition, and the metadata column has additional room for
+  localized values. Tiles and recorded-media information share camera → object
+  and identity → type ordering. One coalesced list-level observer owns badge
+  allocation; tiles do not add observers. At and below `600px`, the AI title
+  pill becomes an accessible icon-only control; at and below `480px`, media
+  action buttons remain hidden.
 - Responsive width decisions now use one enforced four-point scale: `480px`,
   `600px`, `768px`, and `1024px`. Runtime device classification and CSS
   viewport/container queries consume the same contract; the style validator

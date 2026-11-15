@@ -102,6 +102,7 @@
   "reviews.activity": "Kameraaktivität",
   "reviews.alert": "Alarm",
   "reviews.detection": "Erkennung",
+  "reviews.more_badges": "+{count} weitere",
   "camera.slideshow_enable": "Diashow starten",
   "camera.slideshow_disable": "Diashow stoppen",
   "camera.slideshow_resume": "Diashow mit der nächsten Kamera fortsetzen",

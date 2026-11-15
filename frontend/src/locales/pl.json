@@ -102,6 +102,7 @@
   "reviews.activity": "Aktywność kamery",
   "reviews.alert": "Alert",
   "reviews.detection": "Wykrycie",
+  "reviews.more_badges": "+{count} więcej",
   "camera.slideshow_enable": "Uruchom pokaz slajdów",
   "camera.slideshow_disable": "Zatrzymaj pokaz slajdów",
   "camera.slideshow_resume": "Wznów pokaz od następnej kamery",

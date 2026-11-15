@@ -6,7 +6,6 @@ import {
   ACTIVITY_LIST_INTENT_EVENT,
   ACTIVITY_LIST_TAG,
 } from "../core/constants";
-import { RESPONSIVE_WIDTHS } from "../core/responsive-widths";
 import {
   formatHomeAssistantDateKey,
   formatHomeAssistantEventDate,
@@ -24,10 +23,13 @@ import {
   type LocalizeFunction,
   type TranslationKey,
 } from "../core/localization";
-import { distinctBadgeColorsForLabels, type BadgeColor } from "./badge-colors";
 import { renderIcon } from "./icons";
 import { activityMediaTitle } from "../core/activity-media";
 import type { BadgeVariant } from "./badge";
+import {
+  activityBadgePresentations,
+  type ActivityBadgePresentation,
+} from "./activity-badge-presentations";
 import "./badge";
 import "./media-day-header";
 import { activityActionStyles } from "./activity-action.styles";
@@ -122,12 +124,6 @@ interface ActivityDayGroup {
   readonly startIndex: number;
 }
 
-interface ActivityBadgeDefinition {
-  readonly color?: BadgeColor;
-  readonly label: string;
-  readonly variant?: BadgeVariant;
-}
-
 /** Shared activity-tile presentation used by independent media modules. */
 export class ActivityList extends LitElement {
   public static properties = {
@@ -191,14 +187,14 @@ export class ActivityList extends LitElement {
       }
     }
     this._scheduleVirtualWindowSync();
-    this._scheduleCompactBadgeLayout();
+    this._scheduleBadgeLayout();
   }
 
   public connectedCallback(): void {
     super.connectedCallback();
     if (typeof ResizeObserver === "undefined") return;
     this._badgeResizeObserver ??= new ResizeObserver(() =>
-      this._scheduleCompactBadgeLayout(),
+      this._scheduleBadgeLayout(),
     );
     this._badgeResizeObserver.observe(this);
   }
@@ -335,14 +331,6 @@ export class ActivityList extends LitElement {
     const duration = Math.max(1, Math.round(durationEnd - durationStart));
     const objectLabels = this.displayObjectBadges ? item.objectLabels : [];
     const typeBadge = this.displayTypeBadges ? item.typeBadge : undefined;
-    const badgeLabels = [
-      ...(item.cameraBadgeLabel ? [item.cameraBadgeLabel] : []),
-      ...objectLabels,
-    ];
-    const objectColors = distinctBadgeColorsForLabels(
-      badgeLabels,
-      typeBadge ? [reservedColor(typeBadge.variant)] : [],
-    );
     const title = activityMediaTitle(item, this.locale);
     const playLabel = this.localize("media_player.open", { title });
     return html`<article
@@ -412,12 +400,7 @@ export class ActivityList extends LitElement {
             : null
         }
       </div>
-      ${this._renderBadges(
-        item.cameraBadgeLabel,
-        objectLabels,
-        typeBadge,
-        objectColors,
-      )}
+      ${this._renderBadges(item.cameraBadgeLabel, objectLabels, typeBadge)}
       ${this._renderDetails(item, start)} ${this._renderReviewAside(item)}
       ${
         !item.inProgress && item.trackingAvailable
@@ -559,61 +542,36 @@ export class ActivityList extends LitElement {
     cameraLabel: string | undefined,
     objectLabels: readonly string[],
     typeBadge: ActivityTypeBadge | undefined,
-    objectColors: readonly BadgeColor[],
   ) {
     if (!cameraLabel && objectLabels.length === 0 && !typeBadge) return null;
-    const badges: ActivityBadgeDefinition[] = [];
-    if (cameraLabel) {
-      badges.push({
-        color: objectColors[0] ?? "neutral",
-        label: cameraLabel,
-      });
-    }
-    objectLabels.forEach((label, index) => {
-      const displayLabel = capitalizeBadgeText(label, this.locale?.language);
-      badges.push({
-        color: objectColors[index + (cameraLabel ? 1 : 0)] ?? "neutral",
-        label: displayLabel,
-      });
-    });
-    if (typeBadge) {
-      const displayLabel = capitalizeBadgeText(
-        typeBadge.label,
-        this.locale?.language,
-      );
-      badges.push({
-        label: displayLabel,
-        variant: typeBadge.variant,
-      });
-    }
+    const badges = activityBadgePresentations(
+      cameraLabel,
+      objectLabels.map((label) =>
+        capitalizeBadgeText(label, this.locale?.language),
+      ),
+      typeBadge
+        ? {
+            label: capitalizeBadgeText(typeBadge.label, this.locale?.language),
+            variant: typeBadge.variant,
+          }
+        : undefined,
+    );
     return html`<div class="badges">
-        ${badges.map((badge, index) => this._renderBadge(badge, index))}
-      </div>
-      <div class="compact-badges" aria-live="off">
-        ${badges.map((badge, index) => this._renderBadge(badge, index, true))}
-        <wzc-badge
-          class="compact-badge-summary"
-          hidden
-          shape="pill"
-          size="small"
-          variant="neutral"
-        ></wzc-badge>
-      </div>`;
+      ${badges.map((badge, index) => this._renderBadge(badge, index))}
+      <wzc-badge
+        class="badge-summary"
+        hidden
+        shape="pill"
+        size="small"
+        variant="neutral"
+      ></wzc-badge>
+    </div>`;
   }
 
-  private _renderBadge(
-    badge: ActivityBadgeDefinition,
-    index: number,
-    compactDuplicate = false,
-  ) {
-    const common = {
-      "data-badge-index": String(index),
-      hidden: compactDuplicate,
-    };
+  private _renderBadge(badge: ActivityBadgePresentation, index: number) {
     return badge.variant
       ? html`<wzc-badge
-          data-badge-index=${common["data-badge-index"]}
-          ?hidden=${common.hidden}
+          data-badge-index=${index}
           shape="pill"
           size="small"
           variant=${badge.variant}
@@ -621,15 +579,14 @@ export class ActivityList extends LitElement {
         >`
       : html`<wzc-badge
           color=${badge.color ?? "neutral"}
-          data-badge-index=${common["data-badge-index"]}
-          ?hidden=${common.hidden}
+          data-badge-index=${index}
           shape="pill"
           size="small"
           >${badge.label}</wzc-badge
         >`;
   }
 
-  private _scheduleCompactBadgeLayout(): void {
+  private _scheduleBadgeLayout(): void {
     if (
       this._badgeLayoutFrame !== undefined ||
       typeof requestAnimationFrame === "undefined"
@@ -637,32 +594,21 @@ export class ActivityList extends LitElement {
       return;
     this._badgeLayoutFrame = requestAnimationFrame(() => {
       this._badgeLayoutFrame = undefined;
-      this._syncCompactBadgeLayout();
+      this._syncBadgeLayout();
     });
   }
 
-  private _syncCompactBadgeLayout(): void {
-    const compact =
-      this.getBoundingClientRect().width <= RESPONSIVE_WIDTHS.compact;
+  private _syncBadgeLayout(): void {
     for (const tile of this.renderRoot.querySelectorAll<HTMLElement>(".tile")) {
       const lane = tile.querySelector<HTMLElement>(".badges");
-      const overflowLane = tile.querySelector<HTMLElement>(".compact-badges");
-      if (!lane || !overflowLane) continue;
-      const primary = [
+      if (!lane) continue;
+      const badges = [
         ...lane.querySelectorAll<HTMLElement>("wzc-badge[data-badge-index]"),
       ];
-      const duplicates = [
-        ...overflowLane.querySelectorAll<HTMLElement>(
-          "wzc-badge[data-badge-index]",
-        ),
-      ];
-      const summary = overflowLane.querySelector<HTMLElement>(
-        ".compact-badge-summary",
-      );
-      for (const badge of primary) badge.hidden = false;
-      for (const badge of duplicates) badge.hidden = true;
+      const summary = lane.querySelector<HTMLElement>(".badge-summary");
+      for (const badge of badges) badge.hidden = false;
       if (summary) summary.hidden = true;
-      if (!compact || primary.length === 0) continue;
+      if (badges.length === 0 || !summary) continue;
 
       const style = getComputedStyle(lane);
       const available =
@@ -671,41 +617,42 @@ export class ActivityList extends LitElement {
         (Number.parseFloat(style.paddingInlineEnd) || 0);
       if (available <= 0) continue;
       const gap = Number.parseFloat(style.columnGap) || 0;
-      const badgeWidths = primary.map(
+      const badgeWidths = badges.map(
         (badge) => badge.getBoundingClientRect().width,
       );
-      let used = 0;
-      let primaryCount = 0;
-      for (const width of badgeWidths) {
-        const next = used + (primaryCount > 0 ? gap : 0) + width;
-        if (primaryCount > 0 && next > available + 0.5) break;
-        used = next;
-        primaryCount++;
-      }
-      for (const badge of primary.slice(primaryCount)) badge.hidden = true;
+      const allBadgeWidth = badgeWidths.reduce(
+        (total, width, index) => total + width + (index > 0 ? gap : 0),
+        0,
+      );
+      if (allBadgeWidth <= available + 0.5) continue;
 
-      const overflowCount = primary.length - primaryCount;
-      if (overflowCount <= 0) continue;
-      const secondaryAvailable = overflowLane.clientWidth;
-      const firstOverflowFits =
-        badgeWidths[primaryCount]! <= secondaryAvailable + 0.5;
-      const firstCollapsedIndex = firstOverflowFits
-        ? primaryCount + 1
-        : primaryCount;
-      if (firstOverflowFits) duplicates[primaryCount]!.hidden = false;
-      if (
-        overflowCount === 2 &&
-        badgeWidths[primaryCount + 1]! <= secondaryAvailable + 0.5
-      ) {
-        duplicates[primaryCount + 1]!.hidden = false;
-        continue;
+      let visibleCount = badges.length - 1;
+      for (; visibleCount >= 0; visibleCount--) {
+        const collapsedCount = badges.length - visibleCount;
+        summary.textContent = this.localize("reviews.more_badges", {
+          count: collapsedCount,
+        });
+        summary.hidden = false;
+        const summaryWidth = summary.getBoundingClientRect().width;
+        const visibleWidth = badgeWidths
+          .slice(0, visibleCount)
+          .reduce(
+            (total, width, index) => total + width + (index > 0 ? gap : 0),
+            0,
+          );
+        const combinedWidth =
+          visibleWidth + (visibleCount > 0 ? gap : 0) + summaryWidth;
+        if (combinedWidth <= available + 0.5) break;
       }
-      const collapsed = primary.slice(firstCollapsedIndex);
-      if (collapsed.length === 0 || !summary) continue;
+      visibleCount = Math.max(0, visibleCount);
+      const collapsed = badges.slice(visibleCount);
+      for (const badge of collapsed) badge.hidden = true;
       const collapsedLabels = collapsed
         .map((badge) => badge.textContent?.trim())
         .filter((label): label is string => Boolean(label));
-      summary.textContent = `+${collapsed.length}`;
+      summary.textContent = this.localize("reviews.more_badges", {
+        count: collapsed.length,
+      });
       summary.title = collapsedLabels.join(", ");
       summary.setAttribute("aria-label", collapsedLabels.join(", "));
       summary.hidden = false;
@@ -966,14 +913,6 @@ export class ActivityList extends LitElement {
 
 function mediaKey(item: ActivityListItem, url: string): string {
   return `${item.id}:${url}`;
-}
-
-function reservedColor(variant: BadgeVariant): BadgeColor {
-  if (variant === "danger") return "red";
-  if (variant === "warning") return "amber";
-  if (variant === "success") return "green";
-  if (variant === "accent") return "blue";
-  return "neutral";
 }
 
 function capitalizeBadgeText(value: string, locale?: string): string {

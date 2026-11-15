@@ -255,7 +255,9 @@ describe("events module", () => {
     ).toHaveLength(3);
     expect(
       [
-        ...(activityRoot(module)?.querySelectorAll(".badges wzc-badge") ?? []),
+        ...(activityRoot(module)?.querySelectorAll(
+          ".badges wzc-badge[data-badge-index]",
+        ) ?? []),
       ].map((badge) => badge.textContent?.trim()),
     ).toEqual(["Person", "Resident", "Clip"]);
     expect(

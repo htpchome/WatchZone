@@ -102,6 +102,7 @@
   "reviews.activity": "Attività della telecamera",
   "reviews.alert": "Avviso",
   "reviews.detection": "Rilevamento",
+  "reviews.more_badges": "+{count} altri",
   "camera.slideshow_enable": "Avvia presentazione",
   "camera.slideshow_disable": "Interrompi presentazione",
   "camera.slideshow_resume": "Riprendi la presentazione dalla fotocamera successiva",

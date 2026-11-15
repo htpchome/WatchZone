@@ -81,7 +81,7 @@ describe("activity list media failures", () => {
     expect(retries).toHaveLength(2);
   });
 
-  it("renders measurable compact badge copies for width-aware allocation", async () => {
+  it("renders one badge lane with a terminal overflow summary", async () => {
     const list = document.createElement(ACTIVITY_LIST_TAG) as ActivityList;
     list.items = [
       {
@@ -94,21 +94,11 @@ describe("activity list media failures", () => {
     document.body.append(list);
     await list.updateComplete;
 
-    expect(list.shadowRoot?.querySelectorAll(".badges wzc-badge")).toHaveLength(
-      8,
-    );
     expect(
-      list.shadowRoot?.querySelectorAll(
-        ".compact-badges wzc-badge[data-badge-index]",
-      ),
+      list.shadowRoot?.querySelectorAll(".badges wzc-badge[data-badge-index]"),
     ).toHaveLength(8);
     expect(
-      list.shadowRoot?.querySelectorAll(
-        ".compact-badges wzc-badge[data-badge-index]:not([hidden])",
-      ),
-    ).toHaveLength(0);
-    expect(
-      list.shadowRoot?.querySelector(".compact-badge-summary"),
+      list.shadowRoot?.querySelector(".badges .badge-summary[hidden]"),
     ).not.toBeNull();
   });
 });

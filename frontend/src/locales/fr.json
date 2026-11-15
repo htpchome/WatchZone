@@ -102,6 +102,7 @@
   "reviews.activity": "Activité de la caméra",
   "reviews.alert": "Alerte",
   "reviews.detection": "Détection",
+  "reviews.more_badges": "+{count} de plus",
   "camera.slideshow_enable": "Démarrer le diaporama",
   "camera.slideshow_disable": "Arrêter le diaporama",
   "camera.slideshow_resume": "Reprendre le diaporama à la caméra suivante",

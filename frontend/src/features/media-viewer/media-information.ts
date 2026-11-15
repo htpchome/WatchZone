@@ -17,10 +17,7 @@ import {
 } from "../../core/localization";
 import { homeAssistantNumberFormat } from "../../core/number-format";
 import type { RecordedMediaRequest } from "../../core/recorded-media";
-import {
-  distinctBadgeColorsForLabels,
-  type BadgeColor,
-} from "../../ui/badge-colors";
+import { activityBadgePresentations } from "../../ui/activity-badge-presentations";
 import "../../ui/badge";
 import { activityActionStyles } from "../../ui/activity-action.styles";
 import { buttonBaseStyles } from "../../ui/button.styles";
@@ -68,13 +65,15 @@ export class RecordedMediaInformation extends LitElement {
     const zones = distinct(
       metadata.zones.map((value) => displayLabel(value, this.locale)),
     );
-    const colors = distinctBadgeColorsForLabels(
+    const badges = activityBadgePresentations(
+      undefined,
       objects,
-      metadata.classification === "alert"
-        ? (["red"] satisfies BadgeColor[])
-        : metadata.classification === "detection"
-          ? (["amber"] satisfies BadgeColor[])
-          : [],
+      classification
+        ? {
+            label: classification,
+            variant: metadata.classification === "alert" ? "danger" : "warning",
+          }
+        : undefined,
     );
     const fields = [
       [
@@ -126,27 +125,20 @@ export class RecordedMediaInformation extends LitElement {
       aria-label=${this.localize("media_player.information")}
     >
       ${
-        classification || objects.length > 0
+        badges.length > 0
           ? staticHtml`<div class="badges">
-              ${
-                classification
+              ${badges.map((badge) =>
+                badge.variant
                   ? staticHtml`<${badgeTag}
                       shape="pill"
                       size="small"
-                      variant=${
-                        metadata.classification === "alert"
-                          ? "danger"
-                          : "warning"
-                      }
-                    >${classification}</${badgeTag}>`
-                  : nothing
-              }
-              ${objects.map(
-                (label, index) => staticHtml`<${badgeTag}
-                  color=${colors[index] ?? "neutral"}
-                  shape="pill"
-                  size="small"
-                >${label}</${badgeTag}>`,
+                      variant=${badge.variant}
+                    >${badge.label}</${badgeTag}>`
+                  : staticHtml`<${badgeTag}
+                      color=${badge.color ?? "neutral"}
+                      shape="pill"
+                      size="small"
+                    >${badge.label}</${badgeTag}>`,
               )}
             </div>`
           : nothing

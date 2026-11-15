@@ -265,6 +265,7 @@
   "reviews.activity": "Camera activity",
   "reviews.alert": "Alert",
   "reviews.detection": "Detection",
+  "reviews.more_badges": "+{count} more",
   "reviews.progress": "In progress",
   "reviews.reviewed": "Reviewed",
   "reviews.not_reviewed": "Not reviewed",

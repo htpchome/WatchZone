@@ -116,6 +116,7 @@
   "reviews.activity": "Actividad de la cámara",
   "reviews.alert": "Alerta",
   "reviews.detection": "Detección",
+  "reviews.more_badges": "+{count} más",
   "camera.slideshow_enable": "Iniciar presentación",
   "camera.slideshow_disable": "Detener presentación",
   "camera.slideshow_resume": "Continuar la presentación en la siguiente cámara",

@@ -491,18 +491,12 @@ export const activityListStyles = css`
     padding-inline-end: var(--wzc-event-action-margin);
   }
 
-  .badges wzc-badge,
-  .compact-badges wzc-badge {
+  .badges wzc-badge {
     --wzc-badge-font-size: var(--wzc-event-badge-font-size);
     --wzc-badge-padding: var(--wzc-event-badge-padding);
   }
 
-  .compact-badges {
-    display: none;
-  }
-
-  .badges wzc-badge[hidden],
-  .compact-badges wzc-badge[hidden] {
+  .badges wzc-badge[hidden] {
     display: none;
   }
 
@@ -611,16 +605,6 @@ export const activityListStyles = css`
     white-space: nowrap;
   }
 
-  @container (max-width: ${responsiveWidths.medium}) {
-    .badges {
-      grid-column: 2 / -1;
-    }
-
-    .actions {
-      grid-row: 2;
-    }
-  }
-
   @container (max-width: ${responsiveWidths.narrow}) {
     .analysis-title {
       align-items: center;
@@ -683,29 +667,11 @@ export const activityListStyles = css`
       flex: 0 0 auto;
     }
 
-    .compact-badges {
-      align-content: start;
-      display: grid;
-      gap: var(--wzc-event-metadata-row-gap);
-      grid-column: 3;
-      grid-row: 2;
-      min-inline-size: 0;
-      overflow: hidden;
-    }
-
-    .compact-badges wzc-badge {
-      justify-self: start;
-    }
-
     .review-aside {
       grid-column: 3;
       grid-row: 2;
       justify-self: end;
       max-inline-size: 100%;
-    }
-
-    .tile:has(.export-status, .export-progress-value) .compact-badges {
-      display: none;
     }
   }
 `;
