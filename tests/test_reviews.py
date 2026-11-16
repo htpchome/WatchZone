@@ -290,6 +290,78 @@ async def test_review_provider_filters_motion_before_frigate_limit(
     assert all(request["limit"] == 500 for request in requests)
 
 
+async def test_review_provider_gets_one_normalized_id_without_listing_history(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Direct lookup enriches one provider-owned review by its stable ID."""
+
+    async def get_auth_headers() -> dict[str, str]:
+        return {"Authorization": "Bearer token"}
+
+    source = cast(
+        FrigateSource,
+        SimpleNamespace(
+            base_url="http://frigate.local",
+            camera_name="front",
+            client=SimpleNamespace(
+                get_auth_headers=get_auth_headers,
+                validate_ssl=True,
+            ),
+            frigate_instance_id="frigate_workshop",
+        ),
+    )
+    requests: list[str] = []
+
+    async def resolve_source(hass: Any, entity_id: str) -> FrigateSource:
+        del hass, entity_id
+        return source
+
+    async def get_json(
+        hass: Any,
+        resolved_source: FrigateSource,
+        path: str,
+        params: dict[str, str | int | float],
+        headers: dict[str, str],
+    ) -> object:
+        del hass, resolved_source, params, headers
+        requests.append(path)
+        return {
+            "camera": "front",
+            "data": {"objects": ["person"]},
+            "end_time": 110,
+            "id": "review-1",
+            "severity": "alert",
+            "start_time": 100,
+        }
+
+    monkeypatch.setattr(
+        "custom_components.watchzone.providers.frigate.reviews.async_resolve_source",
+        resolve_source,
+    )
+    monkeypatch.setattr(
+        "custom_components.watchzone.providers.frigate.reviews._get_json", get_json
+    )
+    related_events = AsyncMock(return_value={})
+    monkeypatch.setattr(
+        "custom_components.watchzone.providers.frigate.reviews._async_related_events",
+        related_events,
+    )
+    provider = FrigateReviewsProvider()
+    monkeypatch.setattr(provider, "_async_config", AsyncMock(return_value={}))
+
+    item = await provider.async_get_review(
+        cast(Any, SimpleNamespace()),
+        "camera.front",
+        "frigate_workshop:review-1",
+    )
+
+    assert item is not None
+    assert item.id == "frigate_workshop:review-1"
+    assert item.labels == ("person",)
+    assert requests == ["api/review/review-1"]
+    related_events.assert_awaited_once()
+
+
 async def test_review_summary_skips_related_event_and_config_enrichment(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

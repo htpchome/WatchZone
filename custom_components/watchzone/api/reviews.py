@@ -25,6 +25,36 @@ from . import runtime_from_hass
 
 @websocket_command(
     {
+        vol.Required("type"): f"{DOMAIN}/reviews/get",
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Required("review_id"): cv.string,
+    }
+)
+@async_response
+async def ws_reviews_get(
+    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Return one provider-owned review without scanning activity history."""
+    entity_id = msg["entity_id"]
+    if connection.user is None or not connection.user.permissions.check_entity(
+        entity_id, POLICY_READ
+    ):
+        connection.send_error(
+            msg["id"], "reviews_forbidden", "Camera access is not permitted"
+        )
+        return
+    try:
+        item = await runtime_from_hass(hass).reviews.async_get(
+            entity_id, msg["review_id"]
+        )
+    except HomeAssistantError as err:
+        connection.send_error(msg["id"], "review_get_failed", str(err))
+        return
+    connection.send_result(msg["id"], {"item": asdict(item) if item else None})
+
+
+@websocket_command(
+    {
         vol.Required("type"): f"{DOMAIN}/reviews/list",
         vol.Required("entity_id"): cv.entity_id,
         vol.Optional("after"): vol.Coerce(float),
@@ -133,6 +163,7 @@ async def ws_reviews_tracking_details(
 
 @callback
 def async_register(hass: HomeAssistant) -> None:
+    async_register_command(hass, ws_reviews_get)
     async_register_command(hass, ws_reviews_list)
     async_register_command(hass, ws_reviews_set_reviewed)
     async_register_command(hass, ws_reviews_tracking_details)

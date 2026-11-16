@@ -8,11 +8,11 @@ import json
 from collections import OrderedDict
 from collections.abc import Mapping
 from datetime import datetime
-from time import monotonic
+from time import monotonic, time
 from typing import Any
 from urllib.parse import quote
 
-from aiohttp import ClientError, ClientTimeout
+from aiohttp import ClientError, ClientResponseError, ClientTimeout
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -54,6 +54,45 @@ class FrigateReviewsProvider:
         self._config_cache: OrderedDict[str, tuple[float, Mapping[str, Any]]] = (
             OrderedDict()
         )
+
+    async def async_get_review(
+        self, hass: HomeAssistant, entity_id: str, review_id: str
+    ) -> ReviewItem | None:
+        source = await async_resolve_source(hass, entity_id)
+        native_review_id = _lookup_native_id(review_id, source.frigate_instance_id)
+        headers = await source.client.get_auth_headers()
+        try:
+            review_payload = await _get_json(
+                hass,
+                source,
+                f"api/review/{quote(native_review_id, safe='')}",
+                {},
+                headers,
+            )
+        except ClientResponseError as err:
+            if err.status == 404:
+                return None
+            raise HomeAssistantError("Unable to retrieve camera review") from err
+        except (ClientError, TimeoutError, ValueError) as err:
+            raise HomeAssistantError("Unable to retrieve camera review") from err
+        if not isinstance(review_payload, Mapping):
+            raise HomeAssistantError("Frigate returned invalid review data")
+        if _text(review_payload.get("camera")) != source.camera_name:
+            raise HomeAssistantError("Review does not belong to this camera")
+        event_ids = _review_event_ids(review_payload)
+        try:
+            config, related_events = await asyncio.gather(
+                self._async_config(hass, source, headers, False),
+                _async_related_events(hass, source, headers, event_ids),
+            )
+        except (ClientError, TimeoutError, ValueError) as err:
+            raise HomeAssistantError("Unable to enrich camera review") from err
+        item = _normalize_review(
+            dict(review_payload), source, time(), related_events, config
+        )
+        if item is None:
+            raise HomeAssistantError("Frigate returned invalid review data")
+        return item
 
     async def async_list_reviews(
         self, hass: HomeAssistant, entity_id: str, query: ReviewQuery
@@ -606,6 +645,16 @@ def _native_id(value: str, instance_id: str) -> str:
     if not value.startswith(prefix) or not value.removeprefix(prefix):
         raise HomeAssistantError("Review does not belong to this camera provider")
     return value.removeprefix(prefix)
+
+
+def _lookup_native_id(value: str, instance_id: str) -> str:
+    candidate = value.strip()
+    prefix = f"{instance_id}:"
+    if candidate.startswith(prefix) and candidate.removeprefix(prefix):
+        return candidate.removeprefix(prefix)
+    if candidate and ":" not in candidate:
+        return candidate
+    raise HomeAssistantError("Review does not belong to this camera provider")
 
 
 def _review_event_ids(raw: Mapping[str, Any]) -> tuple[str, ...]:

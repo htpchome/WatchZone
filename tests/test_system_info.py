@@ -8,7 +8,11 @@ from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import __version__ as HA_VERSION
 
 from custom_components.watchzone.const import VERSION
-from custom_components.watchzone.extensions import ProviderExtension, ProviderRegistry
+from custom_components.watchzone.extensions import (
+    EXTENSION_API_VERSION,
+    ProviderExtension,
+    ProviderRegistry,
+)
 from custom_components.watchzone.features.system_info import SystemInfoService
 from custom_components.watchzone.providers.frigate import system_info as frigate_module
 from custom_components.watchzone.providers.frigate.system_info import (
@@ -34,7 +38,7 @@ async def test_service_collects_registered_provider_information(hass) -> None:
     registry = ProviderRegistry()
     registry.register(
         ProviderExtension(
-            api_version=2,
+            api_version=EXTENSION_API_VERSION,
             provider_id="test",
             entity_platforms=frozenset({"test"}),
             system_info=_SystemInfoProvider(),

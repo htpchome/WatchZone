@@ -17,6 +17,14 @@ class ReviewsService:
         self._hass = hass
         self._providers = providers
 
+    async def async_get(self, entity_id: str, review_id: str) -> ReviewItem | None:
+        """Return one review through the camera's owning provider."""
+        entry = er.async_get(self._hass).async_get(entity_id)
+        provider = self._providers.reviews(entry.platform) if entry else None
+        if provider is None:
+            raise HomeAssistantError("Reviews are unavailable for this camera")
+        return await provider.async_get_review(self._hass, entity_id, review_id)
+
     async def async_list(
         self, entity_id: str, query: ReviewQuery
     ) -> list[ReviewItem]:

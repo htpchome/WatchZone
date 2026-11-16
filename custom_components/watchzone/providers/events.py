@@ -45,6 +45,11 @@ class EventItem:
 class EventsProvider(Protocol):
     """Optional provider capability for authoritative event windows."""
 
+    async def async_get_event(
+        self, hass: HomeAssistant, entity_id: str, event_id: str
+    ) -> EventItem | None:
+        """Return one provider-owned event by ID when it exists."""
+
     async def async_list_events(
         self, hass: HomeAssistant, entity_id: str, query: EventQuery
     ) -> list[EventItem]:

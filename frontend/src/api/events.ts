@@ -27,6 +27,19 @@ export interface EventItem {
   readonly zones: readonly string[];
 }
 
+export async function getEvent(
+  api: HomeAssistantApi,
+  entityId: string,
+  eventId: string,
+): Promise<EventItem | undefined> {
+  const response = await api.callWS<{ readonly item: EventItem | null }>({
+    type: "watchzone/events/get",
+    entity_id: entityId,
+    event_id: eventId,
+  });
+  return response.item ?? undefined;
+}
+
 export async function listEvents(
   api: HomeAssistantApi,
   entityId: string,

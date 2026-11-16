@@ -7,7 +7,7 @@ import json
 from typing import Any
 from urllib.parse import quote
 
-from aiohttp import ClientError, ClientTimeout
+from aiohttp import ClientError, ClientResponseError, ClientTimeout
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -15,13 +15,42 @@ from yarl import URL
 
 from ..events import EventItem, EventQuery, EventsProvider
 from ..media import PlaybackSource
-from .source import async_resolve_source
+from .source import FrigateSource, async_resolve_source
 
 _REQUEST_TIMEOUT = ClientTimeout(total=15)
 
 
 class FrigateEventsProvider:
     """Fetch mutable Frigate events without the integration event cache."""
+
+    async def async_get_event(
+        self, hass: HomeAssistant, entity_id: str, event_id: str
+    ) -> EventItem | None:
+        source = await async_resolve_source(hass, entity_id)
+        native_event_id = _lookup_native_id(event_id, source.frigate_instance_id)
+        headers = await source.client.get_auth_headers()
+        try:
+            payload = await _get_json(
+                hass,
+                source,
+                f"api/events/{quote(native_event_id, safe='')}",
+                {},
+                headers,
+            )
+        except ClientResponseError as err:
+            if err.status == 404:
+                return None
+            raise HomeAssistantError("Unable to retrieve camera event") from err
+        except (ClientError, TimeoutError, ValueError) as err:
+            raise HomeAssistantError("Unable to retrieve camera event") from err
+        if not isinstance(payload, dict):
+            raise HomeAssistantError("Frigate returned invalid event data")
+        if _text(payload.get("camera")) != source.camera_name:
+            raise HomeAssistantError("Event does not belong to this camera")
+        item = _normalize_event(payload, source.frigate_instance_id)
+        if item is None:
+            raise HomeAssistantError("Frigate returned invalid event data")
+        return item
 
     async def async_list_events(
         self, hass: HomeAssistant, entity_id: str, query: EventQuery
@@ -31,20 +60,18 @@ class FrigateEventsProvider:
         if query.bypass_cache:
             headers = {**headers, "Cache-Control": "no-cache"}
         try:
-            async with async_get_clientsession(hass).get(
-                URL(source.base_url) / "api/events",
-                params={
+            payload = await _get_json(
+                hass,
+                source,
+                "api/events",
+                {
                     "after": query.after,
                     "before": query.before,
                     "cameras": source.camera_name,
                     "limit": query.limit,
                 },
-                headers=headers,
-                ssl=source.client.validate_ssl,
-                timeout=_REQUEST_TIMEOUT,
-            ) as response:
-                response.raise_for_status()
-                payload = await response.json()
+                headers,
+            )
         except (ClientError, TimeoutError, ValueError) as err:
             raise HomeAssistantError("Unable to retrieve camera events") from err
         if not isinstance(payload, list):
@@ -55,6 +82,34 @@ class FrigateEventsProvider:
             if isinstance(raw, dict)
             and (item := _normalize_event(raw, source.frigate_instance_id)) is not None
         ]
+
+
+async def _get_json(
+    hass: HomeAssistant,
+    source: FrigateSource,
+    path: str,
+    params: dict[str, str | int | float],
+    headers: dict[str, str],
+) -> object:
+    async with async_get_clientsession(hass).get(
+        URL(source.base_url) / path,
+        params=params,
+        headers=headers,
+        ssl=source.client.validate_ssl,
+        timeout=_REQUEST_TIMEOUT,
+    ) as response:
+        response.raise_for_status()
+        return await response.json()
+
+
+def _lookup_native_id(value: str, instance_id: str) -> str:
+    candidate = value.strip()
+    prefix = f"{instance_id}:"
+    if candidate.startswith(prefix) and candidate.removeprefix(prefix):
+        return candidate.removeprefix(prefix)
+    if candidate and ":" not in candidate:
+        return candidate
+    raise HomeAssistantError("Event does not belong to this camera provider")
 
 
 def _normalize_event(raw: dict[str, Any], instance_id: str) -> EventItem | None:

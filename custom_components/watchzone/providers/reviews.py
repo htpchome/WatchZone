@@ -93,6 +93,11 @@ class ReviewItem:
 class ReviewsProvider(Protocol):
     """Optional provider capability for authoritative review windows."""
 
+    async def async_get_review(
+        self, hass: HomeAssistant, entity_id: str, review_id: str
+    ) -> ReviewItem | None:
+        """Return one provider-owned review by ID when it exists."""
+
     async def async_list_reviews(
         self, hass: HomeAssistant, entity_id: str, query: ReviewQuery
     ) -> list[ReviewItem]:

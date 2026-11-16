@@ -69,6 +69,19 @@ export interface RecentReviewState {
   readonly id: string;
 }
 
+export async function getReview(
+  api: HomeAssistantApi,
+  entityId: string,
+  reviewId: string,
+): Promise<ReviewItem | undefined> {
+  const response = await api.callWS<{ readonly item: ReviewItem | null }>({
+    type: "watchzone/reviews/get",
+    entity_id: entityId,
+    review_id: reviewId,
+  });
+  return response.item ?? undefined;
+}
+
 export async function listReviews(
   api: HomeAssistantApi,
   entityId: string,

@@ -25,6 +25,36 @@ from . import runtime_from_hass
 
 @websocket_command(
     {
+        vol.Required("type"): f"{DOMAIN}/events/get",
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Required("event_id"): cv.string,
+    }
+)
+@async_response
+async def ws_events_get(
+    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Return one provider-owned event without scanning activity history."""
+    entity_id = msg["entity_id"]
+    if connection.user is None or not connection.user.permissions.check_entity(
+        entity_id, POLICY_READ
+    ):
+        connection.send_error(
+            msg["id"], "events_forbidden", "Camera access is not permitted"
+        )
+        return
+    try:
+        item = await runtime_from_hass(hass).events.async_get(
+            entity_id, msg["event_id"]
+        )
+    except HomeAssistantError as err:
+        connection.send_error(msg["id"], "event_get_failed", str(err))
+        return
+    connection.send_result(msg["id"], {"item": asdict(item) if item else None})
+
+
+@websocket_command(
+    {
         vol.Required("type"): f"{DOMAIN}/events/list",
         vol.Required("entity_id"): cv.entity_id,
         vol.Optional("after"): vol.Coerce(float),
@@ -63,4 +93,5 @@ async def ws_events_list(
 
 @callback
 def async_register(hass: HomeAssistant) -> None:
+    async_register_command(hass, ws_events_get)
     async_register_command(hass, ws_events_list)

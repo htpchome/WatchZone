@@ -1,6 +1,76 @@
 """Tests for normalized Frigate event data."""
 
-from custom_components.watchzone.providers.frigate.events import _normalize_event
+from types import SimpleNamespace
+from typing import Any, cast
+
+import pytest
+
+from custom_components.watchzone.providers.frigate.events import (
+    FrigateEventsProvider,
+    _normalize_event,
+)
+from custom_components.watchzone.providers.frigate.source import FrigateSource
+
+
+async def test_event_provider_gets_one_native_id_without_listing_history(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Direct lookup validates camera ownership and returns normalized media."""
+
+    async def get_auth_headers() -> dict[str, str]:
+        return {"Authorization": "Bearer token"}
+
+    source = cast(
+        FrigateSource,
+        SimpleNamespace(
+            base_url="http://frigate.local",
+            camera_name="front",
+            client=SimpleNamespace(
+                get_auth_headers=get_auth_headers,
+                validate_ssl=True,
+            ),
+            frigate_instance_id="frigate_workshop",
+        ),
+    )
+    requests: list[str] = []
+
+    async def resolve_source(hass: Any, entity_id: str) -> FrigateSource:
+        del hass, entity_id
+        return source
+
+    async def get_json(
+        hass: Any,
+        resolved_source: FrigateSource,
+        path: str,
+        params: dict[str, str | int | float],
+        headers: dict[str, str],
+    ) -> object:
+        del hass, resolved_source, params, headers
+        requests.append(path)
+        return {
+            "camera": "front",
+            "has_clip": True,
+            "has_snapshot": True,
+            "id": "event-1",
+            "label": "person",
+            "start_time": 100,
+        }
+
+    monkeypatch.setattr(
+        "custom_components.watchzone.providers.frigate.events.async_resolve_source",
+        resolve_source,
+    )
+    monkeypatch.setattr(
+        "custom_components.watchzone.providers.frigate.events._get_json", get_json
+    )
+
+    item = await FrigateEventsProvider().async_get_event(
+        cast(Any, SimpleNamespace()), "camera.front", "event-1"
+    )
+
+    assert item is not None
+    assert item.id == "frigate_workshop:event-1"
+    assert requests == ["api/events/event-1"]
 
 
 def test_event_revision_changes_with_mutable_media_and_end_time() -> None:

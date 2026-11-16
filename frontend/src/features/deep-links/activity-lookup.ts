@@ -1,5 +1,5 @@
-import type { EventItem } from "../../api/events";
-import type { ReviewItem } from "../../api/reviews";
+import { getEvent, type EventItem } from "../../api/events";
+import { getReview, type ReviewItem } from "../../api/reviews";
 import type { HomeAssistantApi } from "../../core/home-assistant";
 
 const INITIAL_PAGE_SIZE = 10;
@@ -20,12 +20,17 @@ export function findEvent(
   eventId: string,
   historyDays: number,
 ): Promise<EventItem | undefined> {
-  return findActivity(
-    api,
-    entityId,
-    "watchzone/events/list",
-    eventId,
-    historyDays,
+  return findDirectOrPaged(
+    () => getEvent(api, entityId, eventId),
+    () =>
+      findActivity(
+        api,
+        entityId,
+        "watchzone/events/list",
+        eventId,
+        historyDays,
+      ),
+    (item) => isEligibleDirectItem(item, eventId, historyDays),
   );
 }
 
@@ -35,13 +40,42 @@ export function findReview(
   reviewId: string,
   historyDays: number,
 ): Promise<ReviewItem | undefined> {
-  return findActivity(
-    api,
-    entityId,
-    "watchzone/reviews/list",
-    reviewId,
-    historyDays,
+  return findDirectOrPaged(
+    () => getReview(api, entityId, reviewId),
+    () =>
+      findActivity(
+        api,
+        entityId,
+        "watchzone/reviews/list",
+        reviewId,
+        historyDays,
+      ),
+    (item) => isEligibleDirectItem(item, reviewId, historyDays),
   );
+}
+
+async function findDirectOrPaged<T extends ActivityItem>(
+  direct: () => Promise<T | undefined>,
+  paged: () => Promise<T | undefined>,
+  eligible: (item: T) => boolean,
+): Promise<T | undefined> {
+  try {
+    const item = await direct();
+    if (item && eligible(item)) return item;
+  } catch {
+    // The bounded paged lookup remains available while direct lookup parity is
+    // proven across supported provider and Home Assistant versions.
+  }
+  return paged();
+}
+
+function isEligibleDirectItem(
+  item: ActivityItem,
+  targetId: string,
+  historyDays: number,
+): boolean {
+  const windowAfter = Date.now() / 1000 - historyDays * 24 * 60 * 60;
+  return matchesId(item.id, targetId) && item.start_time >= windowAfter;
 }
 
 async function findActivity<T extends ActivityItem>(

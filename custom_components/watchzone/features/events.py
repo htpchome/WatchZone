@@ -17,6 +17,14 @@ class EventsService:
         self._hass = hass
         self._providers = providers
 
+    async def async_get(self, entity_id: str, event_id: str) -> EventItem | None:
+        """Return one event through the camera's owning provider."""
+        entry = er.async_get(self._hass).async_get(entity_id)
+        provider = self._providers.events(entry.platform) if entry else None
+        if provider is None:
+            raise HomeAssistantError("Events are unavailable for this camera")
+        return await provider.async_get_event(self._hass, entity_id, event_id)
+
     async def async_list(self, entity_id: str, query: EventQuery) -> list[EventItem]:
         """Return one authoritative event window for an HA camera."""
         entry = er.async_get(self._hass).async_get(entity_id)
