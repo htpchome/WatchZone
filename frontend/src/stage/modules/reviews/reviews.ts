@@ -234,6 +234,7 @@ export class ReviewsModule extends LitElement {
         .displayTypeBadges=${this.displayEventTypeBadges}
         .displayZone=${this.displayZone}
         .emptyKey=${"reviews.empty"}
+        .hasMore=${this._activity.hasMore}
         .items=${items}
         .listKey=${"reviews.list"}
         .loading=${this._activity.loading}
@@ -345,7 +346,9 @@ export class ReviewsModule extends LitElement {
   ): void => {
     event.stopPropagation();
     const intent = event.detail;
-    if (intent.kind === "retry_media") {
+    if (intent.kind === "load_more") {
+      void this._activity.loadMore();
+    } else if (intent.kind === "retry_media") {
       this._activity.retryMedia(intent.item, intent.url);
     } else if (intent.kind === "open_analysis") {
       this._openAnalysis(intent.item);

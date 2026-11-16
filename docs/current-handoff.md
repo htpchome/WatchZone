@@ -15,7 +15,7 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.362`
+- Working version: `0.0.4-dev.363`
 - Current commit: `aea3491` —
   `v0.0.4-dev.360 - docs(handoff): record audit priorities and current baseline`
 - The worktree was clean when this snapshot was replaced. Always verify
@@ -92,26 +92,28 @@ lifecycle, lazy transport loading, theme ownership, and listener/observer
 cleanup sound. No broad memory leak or uncontrolled dependency problem was
 identified. The next agreed work is deliberately incremental:
 
-1. Replace eager full-window activity retrieval with bounded, progressive
-   loading and stable deduplication.
-2. Extract cohesive editor sections while retaining one top-level draft,
+1. Extract cohesive editor sections while retaining one top-level draft,
    dirty-state, preview, and serialization owner.
-3. Only after extraction is stable, avoid mounting expensive closed accordion
+2. Only after extraction is stable, avoid mounting expensive closed accordion
    content while preserving draft values, validation, focus, and Home Assistant
    control behavior.
-4. Move raw Frigate activity subscriptions and normalization behind a
+3. Move raw Frigate activity subscriptions and normalization behind a
    provider-neutral Python subscription, prove message parity, then remove the
    frontend-specific route.
-5. Consider a read-only normalized backend camera catalog later, without
+4. Consider a read-only normalized backend camera catalog later, without
    migrating stored camera configuration until a concrete provider or Stage
    Designer requirement needs it.
-6. Consolidate media download preparation one media type at a time, preserving
+5. Consolidate media download preparation one media type at a time, preserving
    Safari and Companion user-gesture behavior.
 
 Completed at `0.0.4-dev.362`: provider-neutral direct Event and Review lookup
 routes resolve one ID through the owning backend provider. Deep links use the
 direct route first and retain the bounded paged lookup as a temporary parity
 fallback.
+
+Completed at `0.0.4-dev.363`: Reviews and Events request only the newest bounded
+page on entry. Older pages load near the list boundary with stable sorting,
+deduplication, independent grouped-camera cursors, and serialized refreshes.
 
 Explicitly deferred:
 

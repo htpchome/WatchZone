@@ -115,7 +115,7 @@ describe("events module", () => {
     expect(unsubscribe).toHaveBeenCalledOnce();
   });
 
-  it("applies provider updates while background history is still loading", async () => {
+  it("queues a provider refresh while the initial page is still loading", async () => {
     const now = Date.now() / 1000;
     const initialEvents = Array.from({ length: 10 }, (_, index) => ({
       ...event,
@@ -137,7 +137,6 @@ describe("events module", () => {
       },
     );
     const eventResponses = [
-      Promise.resolve({ items: initialEvents }),
       background,
       Promise.resolve({
         items: [newestEvent, ...initialEvents.slice(0, 9)],
@@ -184,20 +183,24 @@ describe("events module", () => {
         callWS.mock.calls.filter(([message]) =>
           String((message as { type: string }).type).endsWith("/events/list"),
         ),
-      ).toHaveLength(2);
+      ).toHaveLength(1);
       expect(activityUpdate).toBeTypeOf("function");
     });
     activityUpdate?.(JSON.stringify({ after: { camera: "front" } }));
+    expect(
+      callWS.mock.calls.filter(([message]) =>
+        String((message as { type: string }).type).endsWith("/events/list"),
+      ),
+    ).toHaveLength(1);
+    finishBackground?.({ items: initialEvents });
     await vi.waitFor(() => {
       expect(
         callWS.mock.calls.filter(([message]) =>
           String((message as { type: string }).type).endsWith("/events/list"),
         ),
-      ).toHaveLength(3);
+      ).toHaveLength(2);
       expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(11);
     });
-
-    finishBackground?.({ items: [] });
   });
 
   it("queries the active camera and replaces an authoritative event window", async () => {

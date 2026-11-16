@@ -33,7 +33,7 @@ describe("active camera activity controller", () => {
     vi.restoreAllMocks();
   });
 
-  it("refreshes on the leading edge without notification timer starvation", async () => {
+  it("coalesces notification bursts without starving reconciliation", async () => {
     vi.useFakeTimers();
     let notify: (() => void) | undefined;
     mocks.subscribe.mockImplementation(
@@ -47,7 +47,7 @@ describe("active camera activity controller", () => {
         return () => undefined;
       },
     );
-    const fetch = vi.fn().mockResolvedValue([]);
+    const fetch = vi.fn().mockResolvedValue(page([]));
     const selection = new CameraSelectionContext();
     const api = {} as HomeAssistantApi;
     const controller = new ActiveCameraActivityController(
@@ -80,10 +80,13 @@ describe("active camera activity controller", () => {
     notify?.();
     expect(fetch).toHaveBeenCalledTimes(baselineCalls + 1);
     for (let index = 0; index < 10; index += 1) notify?.();
-    expect(fetch).toHaveBeenCalledTimes(baselineCalls + 11);
+    expect(fetch).toHaveBeenCalledTimes(baselineCalls + 1);
+    await vi.waitFor(() =>
+      expect(fetch).toHaveBeenCalledTimes(baselineCalls + 2),
+    );
 
     await vi.advanceTimersByTimeAsync(1_500);
-    expect(fetch).toHaveBeenCalledTimes(baselineCalls + 12);
+    expect(fetch).toHaveBeenCalledTimes(baselineCalls + 3);
 
     controller.hostDisconnected();
   });
@@ -116,7 +119,7 @@ describe("active camera activity controller", () => {
         historyDays: 5,
         targetModuleId: "camera-module",
       }),
-      vi.fn().mockResolvedValue([]),
+      vi.fn().mockResolvedValue(page([])),
       vi.fn(),
       "reviews",
       (notification) =>
@@ -179,7 +182,7 @@ describe("active camera activity controller", () => {
         historyDays: 5,
         targetModuleId: "camera-module",
       }),
-      vi.fn().mockResolvedValue([]),
+      vi.fn().mockResolvedValue(page([])),
       vi.fn(),
       "reviews",
       (notification) => notification.review,
@@ -227,13 +230,15 @@ describe("active camera activity controller", () => {
   });
 
   it("defers camera-specific loading until carousel selection settles", async () => {
-    const fetch = vi.fn(async (_api: HomeAssistantApi, entityId: string) => [
-      {
-        id: `${entityId}:review`,
-        revision: "loaded",
-        start_time: Date.now() / 1000,
-      },
-    ]);
+    const fetch = vi.fn(async (_api: HomeAssistantApi, entityId: string) =>
+      page([
+        {
+          id: `${entityId}:review`,
+          revision: "loaded",
+          start_time: Date.now() / 1000,
+        },
+      ]),
+    );
     const selection = new CameraSelectionContext();
     const controller = new ActiveCameraActivityController(
       new TestHost(),
@@ -277,7 +282,7 @@ describe("active camera activity controller", () => {
       2,
       expect.anything(),
       "camera.driveway",
-      expect.objectContaining({ bypassCache: true, loadFullHistory: true }),
+      expect.objectContaining({ bypassCache: true, limit: 10 }),
     );
     await vi.waitFor(() =>
       expect(controller.items[0]?.id).toBe("camera.driveway:review"),
@@ -293,7 +298,7 @@ describe("active camera activity controller", () => {
       start_time: now - index,
     }));
     const fetch = vi.fn(async (_api: HomeAssistantApi, entityId: string) =>
-      entityId === "camera.front" ? loaded : [],
+      page(entityId === "camera.front" ? loaded : []),
     );
     const selection = new CameraSelectionContext();
     const controller = new ActiveCameraActivityController(
@@ -344,8 +349,8 @@ describe("active camera activity controller", () => {
     };
     const fetch = vi
       .fn()
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([item]);
+      .mockResolvedValueOnce(page([]))
+      .mockResolvedValueOnce(page([item]));
     const selection = new CameraSelectionContext();
     const host = new TestHost();
     const api = {} as HomeAssistantApi;
@@ -380,7 +385,7 @@ describe("active camera activity controller", () => {
     expect(fetch).toHaveBeenLastCalledWith(
       api,
       "camera.front",
-      expect.objectContaining({ bypassCache: true, loadFullHistory: false }),
+      expect.objectContaining({ bypassCache: true, limit: 10 }),
     );
     controller.hostDisconnected();
   });
@@ -388,13 +393,15 @@ describe("active camera activity controller", () => {
   it("exposes an immediate authoritative refresh for draft media", async () => {
     const now = Date.now() / 1000;
     let mediaReady = false;
-    const fetch = vi.fn(async () => [
-      {
-        id: "front:draft",
-        revision: mediaReady ? "ready" : "draft",
-        start_time: now,
-      },
-    ]);
+    const fetch = vi.fn(async () =>
+      page([
+        {
+          id: "front:draft",
+          revision: mediaReady ? "ready" : "draft",
+          start_time: now,
+        },
+      ]),
+    );
     const selection = new CameraSelectionContext();
     const controller = new ActiveCameraActivityController(
       new TestHost(),
@@ -430,13 +437,15 @@ describe("active camera activity controller", () => {
 
   it("loads and merges activity for every camera in a grouped scope", async () => {
     const now = Date.now() / 1000;
-    const fetch = vi.fn(async (_api: HomeAssistantApi, entityId: string) => [
-      {
-        id: `${entityId}:review`,
-        revision: "loaded",
-        start_time: entityId === "camera.driveway" ? now : now - 1,
-      },
-    ]);
+    const fetch = vi.fn(async (_api: HomeAssistantApi, entityId: string) =>
+      page([
+        {
+          id: `${entityId}:review`,
+          revision: "loaded",
+          start_time: entityId === "camera.driveway" ? now : now - 1,
+        },
+      ]),
+    );
     const selection = new CameraSelectionContext();
     const controller = new ActiveCameraActivityController(
       new TestHost(),
@@ -477,12 +486,12 @@ describe("active camera activity controller", () => {
     expect(fetch).toHaveBeenCalledWith(
       expect.anything(),
       "camera.porch",
-      expect.objectContaining({ loadFullHistory: true }),
+      expect.objectContaining({ limit: 10 }),
     );
     expect(fetch).toHaveBeenCalledWith(
       expect.anything(),
       "camera.driveway",
-      expect.objectContaining({ loadFullHistory: true }),
+      expect.objectContaining({ limit: 10 }),
     );
     expect(controller.activeCameraLabel).toBe("Group A/B");
     expect(controller.items.map(({ id }) => id)).toEqual([
@@ -503,13 +512,13 @@ describe("active camera activity controller", () => {
     const onError = vi.fn();
     const fetch = vi.fn(async (_api: HomeAssistantApi, entityId: string) => {
       if (entityId === "camera.driveway") throw new Error("unavailable");
-      return [
+      return page([
         {
           id: "porch-review",
           revision: "loaded",
           start_time: Date.now() / 1000,
         },
-      ];
+      ]);
     });
     const selection = new CameraSelectionContext();
     const controller = new ActiveCameraActivityController(
@@ -542,7 +551,70 @@ describe("active camera activity controller", () => {
     expect(onError).not.toHaveBeenCalled();
     controller.hostDisconnected();
   });
+
+  it("loads one bounded older page only when requested", async () => {
+    const now = Date.now() / 1000;
+    const newest = {
+      id: "front:newest",
+      revision: "newest",
+      start_time: now,
+    };
+    const older = {
+      id: "front:older",
+      revision: "older",
+      start_time: now - 60,
+    };
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(page([newest], true, now - 1))
+      .mockResolvedValueOnce(page([older]));
+    const selection = new CameraSelectionContext();
+    const controller = new ActiveCameraActivityController(
+      new TestHost(),
+      () => ({
+        api: {} as HomeAssistantApi,
+        cameraSelection: selection,
+        historyDays: 5,
+        targetModuleId: "camera-module",
+      }),
+      fetch,
+      vi.fn(),
+      "reviews",
+    );
+    controller.hostConnected();
+    selection.publish(
+      "camera-module",
+      {},
+      {
+        activeEntityId: "camera.front",
+        items: [{ entityId: "camera.front", label: "Front" }],
+      },
+      vi.fn(),
+    );
+    await vi.waitFor(() => expect(controller.items).toEqual([newest]));
+    expect(controller.hasMore).toBe(true);
+    expect(fetch).toHaveBeenCalledOnce();
+
+    await controller.loadMore();
+
+    expect(controller.items).toEqual([newest, older]);
+    expect(controller.hasMore).toBe(false);
+    expect(fetch).toHaveBeenLastCalledWith(
+      expect.anything(),
+      "camera.front",
+      expect.objectContaining({ before: now - 1, limit: 50 }),
+    );
+    controller.hostDisconnected();
+  });
 });
+
+function page<T>(items: readonly T[], hasMore = false, nextBefore?: number) {
+  return {
+    hasMore,
+    items,
+    ...(nextBefore !== undefined ? { nextBefore } : {}),
+  };
+}
 
 function review(overrides: Partial<ReviewItem> = {}): ReviewItem {
   const now = Date.now() / 1000;

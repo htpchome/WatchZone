@@ -1,5 +1,10 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
+import {
+  ACTIVITY_INITIAL_PAGE_SIZE,
+  ACTIVITY_OLDER_PAGE_SIZE,
+  type ActivityWindowPage,
+} from "../../api/activity-window";
 import type {
   CameraSelectionContext,
   CameraSelectionState,
@@ -40,12 +45,12 @@ type ActivityFetcher<T extends ActiveCameraActivityItem> = (
   api: HomeAssistantApi,
   entityId: string,
   options: {
+    readonly before?: number;
     readonly bypassCache: boolean;
     readonly historyDays: number;
-    readonly loadFullHistory: boolean;
-    readonly onProgress: (items: readonly T[]) => void;
+    readonly limit: number;
   },
-) => Promise<readonly T[]>;
+) => Promise<ActivityWindowPage<T>>;
 
 type ActivityUpdateMapper<T extends ActiveCameraActivityItem> = (
   notification: ActivityUpdateNotification,
@@ -66,11 +71,19 @@ export class ActiveCameraActivityController<
   private _emptyConfirmationPending = false;
   private _emptyConfirmTimer?: number;
   private _generation = 0;
-  private _historyLoadPending = false;
+  private _olderLoadPending = false;
+  private _refreshPending = false;
+  private _queuedRefresh?: {
+    readonly bypassCache: boolean;
+    readonly resetWindow: boolean;
+  };
   private readonly _entityIdByItemId = new Map<string, string>();
   private readonly _cameraLabelByEntityId = new Map<string, string>();
+  private readonly _pageByEntityId = new Map<
+    string,
+    Pick<ActivityWindowPage<T>, "hasMore" | "nextBefore">
+  >();
   private readonly _recentItemsByScope = new Map<string, readonly T[]>();
-  private _refreshAfterHistory = false;
   private _refreshTimer?: number;
   private readonly _retriedMedia = new Set<string>();
   private _subscribedSelection?: CameraSelectionContext;
@@ -110,8 +123,10 @@ export class ActiveCameraActivityController<
     this._stopRefresh();
     this._stopUpdates();
     this._stopEmptyConfirmation();
+    this._queuedRefresh = undefined;
     this._entityIdByItemId.clear();
     this._cameraLabelByEntityId.clear();
+    this._pageByEntityId.clear();
     this._recentItemsByScope.clear();
     this._retriedMedia.clear();
     this._generation += 1;
@@ -130,6 +145,10 @@ export class ActiveCameraActivityController<
 
   public refresh(): Promise<void> {
     return this._refresh(true, false);
+  }
+
+  public loadMore(): Promise<void> {
+    return this._loadOlder();
   }
 
   public updateItem(id: string, update: (item: T) => T): void {
@@ -156,6 +175,12 @@ export class ActiveCameraActivityController<
 
   public get activeEntityIds(): readonly string[] {
     return this._activeEntityIds;
+  }
+
+  public get hasMore(): boolean {
+    return this._activeEntityIds.some(
+      (entityId) => this._pageByEntityId.get(entityId)?.hasMore === true,
+    );
   }
 
   public entityIdFor(itemId: string): string | undefined {
@@ -208,6 +233,7 @@ export class ActiveCameraActivityController<
     if (apiChanged) this._recentItemsByScope.clear();
     if (!selectionChanged && queryChanged && this._activeEntityIds.length > 0) {
       this._generation += 1;
+      this._pageByEntityId.clear();
       if (apiChanged) {
         this._stopUpdates();
         if (context.api) {
@@ -267,6 +293,7 @@ export class ActiveCameraActivityController<
       return;
     }
     this._retriedMedia.clear();
+    this._pageByEntityId.clear();
     this._stopRefresh();
     this._stopUpdates();
     this._stopEmptyConfirmation();
@@ -292,18 +319,22 @@ export class ActiveCameraActivityController<
 
   private async _refresh(
     bypassCache: boolean,
-    loadFullHistory: boolean,
+    resetWindow: boolean,
   ): Promise<void> {
+    if (this._refreshPending || this._olderLoadPending) {
+      this._queueRefresh(bypassCache, resetWindow);
+      return;
+    }
     const context = this._context();
     const api = context.api;
     const entityIds = this._activeEntityIds;
     const scopeKey = this._activeScopeKey;
     if (!api || entityIds.length === 0 || !scopeKey) return;
-    if (!loadFullHistory && this._historyLoadPending) {
-      this._refreshAfterHistory = true;
-    }
     const generation = this._generation;
-    if (loadFullHistory) this._historyLoadPending = true;
+    this._refreshPending = true;
+    if (resetWindow) {
+      this._pageByEntityId.clear();
+    }
     this.loading = true;
     this._host.requestUpdate();
     try {
@@ -312,35 +343,12 @@ export class ActiveCameraActivityController<
           this._fetch(api, entityId, {
             bypassCache,
             historyDays: context.historyDays,
-            loadFullHistory,
-            onProgress: (progressItems) => {
-              if (
-                generation !== this._generation ||
-                scopeKey !== this._activeScopeKey
-              )
-                return;
-              this._rememberItemSources(entityId, progressItems);
-              if (
-                loadFullHistory &&
-                progressItems.length === 0 &&
-                this.items.length > 0
-              )
-                return;
-              this._setItems(
-                scopeKey,
-                mergeActivityItems(
-                  this.items,
-                  progressItems,
-                  context.historyDays,
-                ),
-              );
-              this._host.requestUpdate();
-            },
+            limit: ACTIVITY_INITIAL_PAGE_SIZE,
           }),
         ),
       );
       const responses = results.map((result) =>
-        result.status === "fulfilled" ? result.value : [],
+        result.status === "fulfilled" ? result.value.items : [],
       );
       if (results.every(({ status }) => status === "rejected")) {
         const failure = results.find(
@@ -356,7 +364,19 @@ export class ActiveCameraActivityController<
       });
       if (generation !== this._generation || scopeKey !== this._activeScopeKey)
         return;
-      if (!loadFullHistory) {
+      if (resetWindow) {
+        results.forEach((result, index) => {
+          const entityId = entityIds[index];
+          if (!entityId || result.status !== "fulfilled") return;
+          this._pageByEntityId.set(entityId, {
+            hasMore: result.value.hasMore,
+            ...(result.value.nextBefore !== undefined
+              ? { nextBefore: result.value.nextBefore }
+              : {}),
+          });
+        });
+      }
+      if (!resetWindow) {
         this._stopEmptyConfirmation();
         this._setItems(
           scopeKey,
@@ -383,15 +403,99 @@ export class ActiveCameraActivityController<
       if (generation === this._generation) this._onError();
     } finally {
       if (generation === this._generation) {
-        if (loadFullHistory) this._historyLoadPending = false;
         this.loading = false;
         this._host.requestUpdate();
-        if (loadFullHistory && this._refreshAfterHistory) {
-          this._refreshAfterHistory = false;
-          void this._refresh(true, false);
-        }
       }
+      this._refreshPending = false;
+      this._runQueuedRefresh();
     }
+  }
+
+  private async _loadOlder(): Promise<void> {
+    const context = this._context();
+    const api = context.api;
+    const scopeKey = this._activeScopeKey;
+    if (!api || !scopeKey || this.loading) return;
+    const requests = this._activeEntityIds.flatMap((entityId) => {
+      const page = this._pageByEntityId.get(entityId);
+      return page?.hasMore && page.nextBefore !== undefined
+        ? [{ before: page.nextBefore, entityId }]
+        : [];
+    });
+    if (requests.length === 0) return;
+
+    const generation = this._generation;
+    this._olderLoadPending = true;
+    this.loading = true;
+    this._host.requestUpdate();
+    try {
+      const results = await Promise.allSettled(
+        requests.map(({ before, entityId }) =>
+          this._fetch(api, entityId, {
+            before,
+            bypassCache: false,
+            historyDays: context.historyDays,
+            limit: ACTIVITY_OLDER_PAGE_SIZE,
+          }),
+        ),
+      );
+      if (results.every(({ status }) => status === "rejected")) {
+        const failure = results.find(
+          (result): result is PromiseRejectedResult =>
+            result.status === "rejected",
+        );
+        throw failure?.reason;
+      }
+      if (generation !== this._generation || scopeKey !== this._activeScopeKey)
+        return;
+      const incoming: T[] = [];
+      results.forEach((result, index) => {
+        if (result.status !== "fulfilled") return;
+        const entityId = requests[index]?.entityId;
+        if (!entityId) return;
+        this._pageByEntityId.set(entityId, {
+          hasMore: result.value.hasMore,
+          ...(result.value.nextBefore !== undefined
+            ? { nextBefore: result.value.nextBefore }
+            : {}),
+        });
+        this._rememberItemSources(entityId, result.value.items);
+        incoming.push(...result.value.items);
+      });
+      this._setItems(
+        scopeKey,
+        mergeActivityItems(this.items, incoming, context.historyDays),
+      );
+    } catch {
+      if (generation === this._generation) this._onError();
+    } finally {
+      if (generation === this._generation) {
+        this.loading = false;
+        this._host.requestUpdate();
+      }
+      this._olderLoadPending = false;
+      this._runQueuedRefresh();
+    }
+  }
+
+  private _queueRefresh(bypassCache: boolean, resetWindow: boolean): void {
+    this._queuedRefresh = {
+      bypassCache: bypassCache || this._queuedRefresh?.bypassCache === true,
+      resetWindow: resetWindow || this._queuedRefresh?.resetWindow === true,
+    };
+  }
+
+  private _runQueuedRefresh(): void {
+    if (
+      !this._connected ||
+      this._refreshPending ||
+      this._olderLoadPending ||
+      !this._queuedRefresh
+    )
+      return;
+    const queued = this._queuedRefresh;
+    this._queuedRefresh = undefined;
+    void this._refresh(queued.bypassCache, queued.resetWindow);
   }
 
   private _stopRefresh(): void {
@@ -489,7 +593,6 @@ export class ActiveCameraActivityController<
       window.clearTimeout(timer);
     }
     this._updateSubscribeRetryTimers.clear();
-    this._refreshAfterHistory = false;
   }
 
   private _clearUpdateReconcileTimers(): void {

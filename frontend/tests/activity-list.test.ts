@@ -101,4 +101,29 @@ describe("activity list media failures", () => {
       list.shadowRoot?.querySelector(".badges .badge-summary[hidden]"),
     ).not.toBeNull();
   });
+
+  it("requests one older page when scrolling near the loaded boundary", async () => {
+    const list = document.createElement(ACTIVITY_LIST_TAG) as ActivityList;
+    const intents: ActivityListIntent[] = [];
+    list.addEventListener(ACTIVITY_LIST_INTENT_EVENT, (event) => {
+      intents.push((event as CustomEvent<ActivityListIntent>).detail);
+    });
+    list.hasMore = true;
+    list.items = [item("progressive")];
+    document.body.append(list);
+    await list.updateComplete;
+
+    const scroller = list.shadowRoot?.querySelector<HTMLElement>(".scroller");
+    expect(scroller).not.toBeNull();
+    Object.defineProperties(scroller, {
+      clientHeight: { configurable: true, value: 200 },
+      scrollHeight: { configurable: true, value: 1_000 },
+      scrollTop: { configurable: true, value: 750, writable: true },
+    });
+    scroller?.dispatchEvent(new Event("scroll"));
+
+    expect(intents).toContainEqual({ kind: "load_more" });
+    scroller?.dispatchEvent(new Event("scroll"));
+    expect(intents.filter(({ kind }) => kind === "load_more")).toHaveLength(1);
+  });
 });

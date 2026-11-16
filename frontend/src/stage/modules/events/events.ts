@@ -252,6 +252,7 @@ export class EventsModule extends LitElement {
         .displayObjectBadges=${this.displayObjectBadges}
         .displayTypeBadges=${this.displayEventTypeBadges}
         .displayZone=${this.displayZone}
+        .hasMore=${this._activity.hasMore}
         .items=${items}
         .loading=${this._activity.loading}
         .locale=${this.api?.locale}
@@ -271,6 +272,11 @@ export class EventsModule extends LitElement {
   ): void => {
     event.stopPropagation();
     const intent = event.detail;
+    if (intent.kind === "load_more") {
+      void this._activity.loadMore();
+      if (this._needsReviewFacets()) void this._reviewActivity.loadMore();
+      return;
+    }
     if (intent.kind === "retry_media") {
       this._activity.retryMedia(intent.item, intent.url);
       return;

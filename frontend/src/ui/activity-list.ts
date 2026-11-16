@@ -84,6 +84,9 @@ export interface ActivityListItem {
 
 export type ActivityListIntent =
   | {
+      readonly kind: "load_more";
+    }
+  | {
       readonly item: ActivityListItem;
       readonly kind: "open_analysis";
     }
@@ -131,6 +134,7 @@ export class ActivityList extends LitElement {
     displayTypeBadges: { attribute: false },
     displayZone: { attribute: false },
     emptyKey: { attribute: false },
+    hasMore: { attribute: false },
     items: { attribute: false },
     listKey: { attribute: false },
     loading: { attribute: false },
@@ -147,6 +151,7 @@ export class ActivityList extends LitElement {
   public displayTypeBadges = true;
   public displayZone = true;
   public emptyKey: TranslationKey = "events.empty";
+  public hasMore = false;
   public items: readonly ActivityListItem[] = [];
   public listKey: TranslationKey = "events.list";
   public loading = false;
@@ -163,6 +168,8 @@ export class ActivityList extends LitElement {
   private _badgeLayoutFrame?: number;
   private _badgeResizeObserver?: ResizeObserver;
   private _hoveredPreviewId?: string;
+  private _loadMoreFrame?: number;
+  private _loadMoreRequested = false;
   private _dayHeaderHeight = 0;
   private _rowGap = 0;
   private _rowHeight = 0;
@@ -172,6 +179,7 @@ export class ActivityList extends LitElement {
 
   protected updated(changed: Map<PropertyKey, unknown>): void {
     if (changed.has("items")) {
+      this._loadMoreRequested = false;
       this._activeDateKey = undefined;
       this._windowStart = 0;
       this._windowEnd = VIRTUALIZATION_THRESHOLD;
@@ -186,8 +194,11 @@ export class ActivityList extends LitElement {
         if (!current.has(key)) this._failedMedia.delete(key);
       }
     }
+    if (changed.has("loading") && !this.loading)
+      this._loadMoreRequested = false;
     this._scheduleVirtualWindowSync();
     this._scheduleBadgeLayout();
+    this._scheduleLoadMoreCheck();
   }
 
   public connectedCallback(): void {
@@ -207,6 +218,9 @@ export class ActivityList extends LitElement {
     if (this._virtualFrame !== undefined)
       cancelAnimationFrame(this._virtualFrame);
     this._virtualFrame = undefined;
+    if (this._loadMoreFrame !== undefined)
+      cancelAnimationFrame(this._loadMoreFrame);
+    this._loadMoreFrame = undefined;
     super.disconnectedCallback();
   }
 
@@ -721,7 +735,31 @@ export class ActivityList extends LitElement {
   private readonly _handleScroll = (): void => {
     this._scheduleVirtualWindowSync();
     this._syncActiveDay();
+    this._requestMoreIfNeeded();
   };
+
+  private _requestMoreIfNeeded(): void {
+    if (!this.hasMore || this.loading || this._loadMoreRequested) return;
+    const scroller = this.renderRoot.querySelector<HTMLElement>(".scroller");
+    if (!scroller || scroller.clientHeight <= 0) return;
+    const remaining =
+      scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight;
+    const threshold = Math.max(
+      this._rowHeight * 2,
+      scroller.clientHeight * 0.25,
+    );
+    if (remaining > threshold) return;
+    this._loadMoreRequested = true;
+    this._dispatch({ kind: "load_more" });
+  }
+
+  private _scheduleLoadMoreCheck(): void {
+    if (this._loadMoreFrame !== undefined) return;
+    this._loadMoreFrame = requestAnimationFrame(() => {
+      this._loadMoreFrame = undefined;
+      this._requestMoreIfNeeded();
+    });
+  }
 
   private _syncActiveDay(): void {
     const scroller = this.renderRoot.querySelector<HTMLElement>(".scroller");

@@ -1,7 +1,7 @@
 import type { HomeAssistantApi } from "../core/home-assistant";
 
-const ACTIVITY_INITIAL_PAGE_SIZE = 10;
-const ACTIVITY_BACKGROUND_PAGE_SIZE = 500;
+export const ACTIVITY_INITIAL_PAGE_SIZE = 10;
+export const ACTIVITY_OLDER_PAGE_SIZE = 50;
 
 interface ActivityWindowItem {
   readonly id: string;
@@ -12,69 +12,60 @@ interface ActivityWindowResponse<T extends ActivityWindowItem> {
   readonly items: readonly T[];
 }
 
-export interface ActivityWindowOptions<T extends ActivityWindowItem> {
-  readonly bypassCache?: boolean;
-  readonly historyDays: number;
-  readonly loadFullHistory?: boolean;
-  readonly onProgress?: (items: readonly T[]) => void;
+export interface ActivityWindowPage<T extends ActivityWindowItem> {
+  readonly hasMore: boolean;
+  readonly items: readonly T[];
+  readonly nextBefore?: number;
 }
 
-/** Retrieve the complete newest-first activity window through bounded pages. */
+export interface ActivityWindowOptions {
+  readonly before?: number;
+  readonly bypassCache?: boolean;
+  readonly historyDays: number;
+  readonly limit?: number;
+}
+
+/** Retrieve one newest-first activity page within the configured history. */
 export async function listActivityWindow<T extends ActivityWindowItem>(
   api: HomeAssistantApi,
   entityId: string,
   type: "watchzone/events/list" | "watchzone/reviews/list",
-  options: ActivityWindowOptions<T>,
-): Promise<readonly T[]> {
+  options: ActivityWindowOptions,
+): Promise<ActivityWindowPage<T>> {
   const windowBefore = Date.now() / 1000;
   const windowAfter = windowBefore - options.historyDays * 24 * 60 * 60;
-  const items = new Map<string, T>();
-  let before = windowBefore;
-  let pageSize = ACTIVITY_INITIAL_PAGE_SIZE;
-  let firstPage = true;
+  const before = Math.min(options.before ?? windowBefore, windowBefore);
+  const limit = options.limit ?? ACTIVITY_INITIAL_PAGE_SIZE;
+  if (before <= windowAfter) return { hasMore: false, items: [] };
 
-  while (before > windowAfter) {
-    const response = await api.callWS<ActivityWindowResponse<T>>({
-      type,
-      entity_id: entityId,
-      after: windowAfter,
-      before,
-      limit: pageSize,
-      bypass_cache: options.bypassCache ?? false,
-      ...(type === "watchzone/reviews/list"
-        ? {
-            summary_only: false,
-          }
-        : {}),
-    });
-    for (const item of response.items) items.set(item.id, item);
-    const snapshot = sortedItems(items);
-    options.onProgress?.(snapshot);
-    if (options.loadFullHistory === false || response.items.length < pageSize)
-      return snapshot;
-
-    if (firstPage) await allowFirstPagePaint();
-
-    const oldestStart = Math.min(
-      ...response.items.map(({ start_time }) => start_time),
-    );
-    if (!Number.isFinite(oldestStart) || oldestStart >= before) break;
-    before = oldestStart;
-    pageSize = ACTIVITY_BACKGROUND_PAGE_SIZE;
-    firstPage = false;
-  }
-
-  return sortedItems(items);
-}
-
-function allowFirstPagePaint(): Promise<void> {
-  return new Promise((resolve) => window.setTimeout(resolve, 0));
+  const response = await api.callWS<ActivityWindowResponse<T>>({
+    type,
+    entity_id: entityId,
+    after: windowAfter,
+    before,
+    limit,
+    bypass_cache: options.bypassCache ?? false,
+    ...(type === "watchzone/reviews/list" ? { summary_only: false } : {}),
+  });
+  const items = sortedItems(response.items);
+  const oldestStart = items.at(-1)?.start_time;
+  const hasMore =
+    items.length === limit &&
+    oldestStart !== undefined &&
+    Number.isFinite(oldestStart) &&
+    oldestStart < before &&
+    oldestStart > windowAfter;
+  return {
+    hasMore,
+    items,
+    ...(hasMore ? { nextBefore: oldestStart } : {}),
+  };
 }
 
 function sortedItems<T extends ActivityWindowItem>(
-  items: ReadonlyMap<string, T>,
+  items: readonly T[],
 ): readonly T[] {
-  return [...items.values()].sort(
+  return [...new Map(items.map((item) => [item.id, item])).values()].sort(
     (left, right) =>
       right.start_time - left.start_time || left.id.localeCompare(right.id),
   );

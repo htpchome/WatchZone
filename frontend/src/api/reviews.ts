@@ -6,6 +6,7 @@ import type {
 import {
   listActivityWindow,
   type ActivityWindowOptions,
+  type ActivityWindowPage,
 } from "./activity-window";
 
 export type ReviewClassification = "alert" | "detection";
@@ -85,8 +86,8 @@ export async function getReview(
 export async function listReviews(
   api: HomeAssistantApi,
   entityId: string,
-  options: ActivityWindowOptions<ReviewItem>,
-): Promise<readonly ReviewItem[]> {
+  options: ActivityWindowOptions,
+): Promise<ActivityWindowPage<ReviewItem>> {
   return listActivityWindow<ReviewItem>(
     api,
     entityId,

@@ -6,6 +6,7 @@ import type {
 import {
   listActivityWindow,
   type ActivityWindowOptions,
+  type ActivityWindowPage,
 } from "./activity-window";
 
 export interface EventItem {
@@ -43,8 +44,8 @@ export async function getEvent(
 export async function listEvents(
   api: HomeAssistantApi,
   entityId: string,
-  options: ActivityWindowOptions<EventItem>,
-): Promise<readonly EventItem[]> {
+  options: ActivityWindowOptions,
+): Promise<ActivityWindowPage<EventItem>> {
   return listActivityWindow<EventItem>(
     api,
     entityId,
