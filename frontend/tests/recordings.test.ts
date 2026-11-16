@@ -176,6 +176,16 @@ describe("recordings module", () => {
         id: "frigate:front:hour",
         kind: "video",
         preferredTransport: "hls",
+        actions: {
+          variants: {
+            video: expect.objectContaining({
+              download: {
+                filename: "front-1794261600.mp4",
+                path: "/recording.mp4?download=true",
+              },
+            }),
+          },
+        },
         timeline: expect.objectContaining({
           endTime: Date.UTC(2026, 10, 9, 23) / 1000,
           startTime: Date.UTC(2026, 10, 9, 22) / 1000,

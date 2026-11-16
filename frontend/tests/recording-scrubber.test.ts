@@ -104,7 +104,7 @@ describe("recording scrubber", () => {
     ]);
   });
 
-  it("activates second-precise segment handles with keyboard adjustment", async () => {
+  it("renders second-precise segment handles with keyboard adjustment", async () => {
     const scrubber = document.createElement(
       RECORDING_SCRUBBER_TAG,
     ) as RecordingScrubber;
@@ -119,22 +119,12 @@ describe("recording scrubber", () => {
       actions.push((event as CustomEvent<RecordingScrubberEventDetail>).detail);
     });
 
-    scrubber.shadowRoot
-      ?.querySelector<HTMLButtonElement>(".segment-toggle")
-      ?.click();
-    expect(actions).toEqual([{ action: "toggle_segment" }]);
-
     scrubber.segmentActive = true;
     scrubber.segmentSelection = {
       startTime: start - 120,
       endTime: start + 3780,
     };
     await scrubber.updateComplete;
-
-    scrubber.shadowRoot
-      ?.querySelector<HTMLButtonElement>(".segment-toggle")
-      ?.click();
-    expect(actions.at(-1)).toEqual({ action: "toggle_segment" });
 
     expect(scrubber.shadowRoot?.querySelectorAll(".context")).toHaveLength(2);
     expect(scrubber.shadowRoot?.querySelectorAll(".handle")).toHaveLength(2);
@@ -158,6 +148,7 @@ describe("recording scrubber", () => {
       () => undefined,
       () => undefined,
       () => undefined,
+      () => undefined,
     );
     controller.configure(timeline);
     controller.setStart(start + 900, timeline);
@@ -170,6 +161,7 @@ describe("recording scrubber", () => {
 
   it("initializes selection at the actual outer recording bounds", () => {
     const controller = new RecordingSegmentController(
+      () => undefined,
       () => undefined,
       () => undefined,
       () => undefined,

@@ -17,6 +17,7 @@ import {
   RECORDED_VIDEO_VIEWER_TAG,
   RECORDED_VIDEO_CLOSE_EVENT,
   RECORDED_MEDIA_OPEN_EVENT,
+  RECORDED_MEDIA_EXPORT_EVENT,
   TOAST_REGION_TAG,
 } from "../core/constants";
 import {
@@ -30,6 +31,7 @@ import {
 } from "../core/home-assistant";
 import { LocalizationController } from "../core/localization";
 import type {
+  RecordedMediaExportIntent,
   RecordedMediaInitialGeometry,
   RecordedMediaRequest,
 } from "../core/recorded-media";
@@ -174,6 +176,10 @@ export class DashboardCard extends LitElement {
       this._handleRecordedMediaOpen,
     );
     this.addEventListener(
+      RECORDED_MEDIA_EXPORT_EVENT,
+      this._handleRecordedMediaExport,
+    );
+    this.addEventListener(
       RECORDED_VIDEO_CLOSE_EVENT,
       this._handleRecordedMediaClose,
     );
@@ -198,6 +204,10 @@ export class DashboardCard extends LitElement {
     this.removeEventListener(
       RECORDED_MEDIA_OPEN_EVENT,
       this._handleRecordedMediaOpen,
+    );
+    this.removeEventListener(
+      RECORDED_MEDIA_EXPORT_EVENT,
+      this._handleRecordedMediaExport,
     );
     this.removeEventListener(
       RECORDED_VIDEO_CLOSE_EVENT,
@@ -304,6 +314,37 @@ export class DashboardCard extends LitElement {
     this._mediaRequest = undefined;
     this._mediaInitialSize = undefined;
     this.requestUpdate();
+  };
+
+  private readonly _handleRecordedMediaExport = async (
+    event: CustomEvent<RecordedMediaExportIntent>,
+  ): Promise<void> => {
+    event.stopPropagation();
+    const api = this._haApi;
+    if (!api) return;
+    const intent = event.detail;
+    try {
+      const { startExportJob } = await import("../features/exports");
+      startExportJob(api, {
+        camera: intent.camera,
+        name: intent.name,
+        range: {
+          end_time: intent.endTime,
+          entity_id: intent.entityId,
+          start_time: intent.startTime,
+        },
+        sourceId: intent.sourceId,
+      });
+      this._toasts.success(
+        this._localization.localize("recording_segments.export_started"),
+        { key: "recording-segment-export" },
+      );
+    } catch {
+      this._toasts.error(
+        this._localization.localize("recording_segments.export_failed"),
+        { key: "recording-segment-export" },
+      );
+    }
   };
 
   private _openRecordedMedia(request: RecordedMediaRequest): void {

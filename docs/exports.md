@@ -18,9 +18,9 @@ but the Stage module and frontend transport remain provider-neutral.
   credentials or provider filesystem paths.
 - Frigate action, endpoint, and version compatibility belongs only to the
   Frigate provider adapter.
-- Reviews may request export preparation and creation through the normalized
-  Exports API contract. Reviews does not import or mutate the Exports Stage
-  module.
+- Reviews and the recording segment manager may request export preparation and
+  creation through the normalized Exports API contract. Neither origin imports
+  or mutates the Exports Stage module.
 - A shared UI button foundation owns cursor, focus, disabled, icon, and primary
   contrast behavior. Activity and export presentations supply only their local
   geometry and semantic variants.
@@ -62,11 +62,12 @@ but the Stage module and frontend transport remain provider-neutral.
   stops polling it, and enables its confirmed Remove action so the user can
   clean up the provider-owned zombie record. Playback, rename, and download
   remain unavailable.
-- A Review-initiated export publishes a frontend feature-owned draft before
-  the provider mutation returns. The Exports module observes that public job
-  contract, presents one draft tile, suppresses a duplicate provider
-  in-progress row, and atomically replaces the draft with the completed export.
-  Reviews and Exports never import one another.
+- An export initiated by a Review or selected recording segment publishes a
+  frontend feature-owned draft before the provider mutation returns. The
+  Exports module observes that public job contract, presents one draft tile,
+  suppresses a duplicate provider in-progress row, and atomically replaces the
+  draft with the completed export. Export origins and Exports never import one
+  another.
 
 ## Frigate compatibility
 

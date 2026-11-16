@@ -6,6 +6,7 @@ import {
   RECORDED_MEDIA_INFORMATION_TAG,
   RECORDED_VIDEO_CLOSE_EVENT,
   RECORDED_VIDEO_PLAYER_TAG,
+  RECORDING_SEGMENT_STATE_EVENT,
 } from "../../core/constants";
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import {
@@ -22,6 +23,7 @@ import type { ToastNotice } from "../../ui/toast-manager";
 import { renderIcon } from "../../ui/icons";
 import "../../ui/toast-region";
 import "./recorded-video-player";
+import type { RecordedVideoPlayer } from "./recorded-video-player";
 import {
   recordedMediaHeading,
   type RecordedMediaInformation,
@@ -32,6 +34,7 @@ import { draggableDialogStyles } from "./draggable-dialog.styles";
 
 const playerTag = unsafeStatic(RECORDED_VIDEO_PLAYER_TAG);
 const informationTag = unsafeStatic(RECORDED_MEDIA_INFORMATION_TAG);
+const recordingSegmentStateEvent = unsafeStatic(RECORDING_SEGMENT_STATE_EVENT);
 
 /** Draggable non-modal shell for ephemeral recorded-media playback. */
 export abstract class DraggableRecordedMediaDialog extends LitElement {
@@ -54,6 +57,7 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
   private _resizeFrame?: number;
   private _resizePendingMediaWidth?: number;
   private _userPositioned = false;
+  private _segmentSelectionActive = false;
   private _drag?: {
     readonly offsetX: number;
     readonly offsetY: number;
@@ -114,6 +118,22 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
         ></wzc-toast-region>
       </div>
       <div class="footer-actions">
+        ${
+          this.request?.timeline
+            ? html`<button
+                class=${`wzc-icon-button wzc-activity-action segment-action ${
+                  this._segmentSelectionActive ? "active" : ""
+                }`}
+                type="button"
+                title=${this.localize("recording_segments.activate")}
+                aria-label=${this.localize("recording_segments.activate")}
+                aria-pressed=${this._segmentSelectionActive ? "true" : "false"}
+                @click=${this._toggleSegmentSelection}
+              >
+                <ha-icon icon="mdi:movie"></ha-icon>
+              </button>`
+            : null
+        }
         ${renderRecordedMediaActions(this.request, this.localize, this)}
       </div>
       <button
@@ -158,11 +178,15 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
           .api=${this.api}
           .localize=${this.localize}
           .request=${this.request}
+          @${recordingSegmentStateEvent}=${this._handleSegmentState}
         ></${playerTag}>`;
   }
 
   protected willUpdate(changed: Map<PropertyKey, unknown>): void {
-    if (changed.has("request") && this.request) this._active = true;
+    if (changed.has("request") && this.request) {
+      this._active = true;
+      this._segmentSelectionActive = false;
+    }
   }
 
   protected updated(changed: Map<PropertyKey, unknown>): void {
@@ -179,6 +203,21 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
     if (presentation === "popover") dialog.hidePopover();
     else dialog.close();
     this._finishClose();
+  };
+
+  private readonly _toggleSegmentSelection = (): void => {
+    const player = this.renderRoot.querySelector<RecordedVideoPlayer>(
+      RECORDED_VIDEO_PLAYER_TAG,
+    );
+    void player?.toggleSegmentSelection();
+  };
+
+  private readonly _handleSegmentState = (
+    event: CustomEvent<{ readonly active: boolean }>,
+  ): void => {
+    event.stopPropagation();
+    this._segmentSelectionActive = event.detail.active;
+    this.requestUpdate();
   };
 
   private _open(): void {

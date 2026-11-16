@@ -67,8 +67,9 @@
   provider-normalized range URL with a fresh, short-lived Home Assistant path
   signature and an explicit download request.
 - Segment selection extends the normalized recording domain without moving
-  provider logic into the module. Export jobs and recording-range editing
-  remain future capabilities.
+  provider logic into the module. Recording-range editing and segment export
+  remain owned by the shared recorded-media viewer rather than this Stage
+  module.
 
 ## Hour scrubber
 
@@ -101,7 +102,8 @@
 ## Segment manager
 
 - The segment manager is recording-only and must be explicitly activated from
-  the scrubber. Before activation the control remains a normal scrubber.
+  the recording dialog footer. Before activation the timeline remains a normal
+  scrubber.
 - Selection uses second-precision start and end handles. The current pointer,
   handle accessible values, and manager range all include seconds while the
   underlying ten-minute hour divisions retain their concise labels.
@@ -117,4 +119,7 @@
   duration bounds, resolves the owning provider capability, and returns
   provider-neutral preview sources, preferred transport, filename, and an
   authenticated download path. The frontend never constructs a Frigate URL.
-- Selected-segment export is not part of this implementation.
+- Export Segment sends that same provider-neutral entity identity and selected
+  wall-clock range through the shared Exports API. The frontend requests the
+  provider-prepared default title, starts one shared export job, and publishes
+  it to an active Exports module without importing or mutating that module.

@@ -3,6 +3,7 @@ import type { LitElement } from "lit";
 
 import {
   MEDIA_SESSION_RUNTIME_KEY,
+  RECORDED_MEDIA_EXPORT_EVENT,
   RECORDING_SCRUBBER_EVENT,
 } from "../src/core/constants";
 import { MediaSessionManager } from "../src/core/media-session-manager";
@@ -92,9 +93,7 @@ describe("recorded media player", () => {
     expect(
       player.shadowRoot?.querySelector("wzc-recording-scrubber"),
     ).toBeNull();
-    expect(
-      transport?.shadowRoot?.querySelector('[data-control="future"]'),
-    ).toMatchObject({ disabled: true });
+    expect(player.shadowRoot?.querySelector(".rate-control")).toBeNull();
     await vi.waitFor(() =>
       expect(video?.src).toBe("https://ha.local/signed/clip.mp4?authSig=test"),
     );
@@ -227,6 +226,57 @@ describe("recorded media player", () => {
     expect(video.muted).toBe(true);
   });
 
+  it("steps recorded playback speed and resets it for new media", async () => {
+    const player = document.createElement(
+      "wzc-recorded-video-player",
+    ) as RecordedVideoPlayer;
+    player.request = {
+      ...request,
+      presentation: "recording",
+      timeline: {
+        availableEndTime: 3600,
+        availableStartTime: 0,
+        camera: "front",
+        entityId: "camera.front",
+        startTime: 0,
+        endTime: 3600,
+        spans: [{ startTime: 0, endTime: 3600, mediaOffset: 0 }],
+        markers: [],
+        selectionEndTime: 3600,
+        selectionSpans: [{ startTime: 0, endTime: 3600 }],
+        selectionStartTime: 0,
+      },
+    };
+    document.body.append(player);
+    await player.updateComplete;
+    const video = player.shadowRoot?.querySelector("video");
+    const rateControl = player.shadowRoot?.querySelector(".rate-control");
+    expect(rateControl).not.toBeNull();
+    const buttons = rateControl?.querySelectorAll<HTMLButtonElement>("button");
+    expect(video?.playbackRate).toBe(1);
+
+    buttons?.[1]?.click();
+    await player.updateComplete;
+    expect(video?.playbackRate).toBe(2);
+    expect(rateControl?.textContent).toContain("2×");
+
+    buttons?.[1]?.click();
+    buttons?.[1]?.click();
+    buttons?.[1]?.click();
+    await player.updateComplete;
+    expect(video?.playbackRate).toBe(10);
+    expect(buttons?.[1]?.disabled).toBe(true);
+
+    buttons?.[0]?.click();
+    await player.updateComplete;
+    expect(video?.playbackRate).toBe(5);
+
+    player.request = { ...player.request, id: "frigate:event-2" };
+    await player.updateComplete;
+    expect(video?.playbackRate).toBe(1);
+    expect(rateControl?.textContent).toContain("1×");
+  });
+
   it("maps recording activity markers across timeline gaps and starts playback", async () => {
     const start = Date.UTC(2026, 10, 10, 14) / 1000;
     const player = document.createElement(
@@ -297,6 +347,9 @@ describe("recorded media player", () => {
   it("selects, previews, and downloads a bounded recording segment", async () => {
     const start = Date.UTC(2026, 10, 10, 14) / 1000;
     const callWS = vi.fn(async (message: { readonly type: string }) => {
+      if (message.type === "watchzone/exports/prepare") {
+        return { name: "Front selected recording" };
+      }
       if (message.type === "watchzone/recordings/segment") {
         return {
           filename: "front-segment.mp4",
@@ -359,9 +412,7 @@ describe("recorded media player", () => {
     await player.updateComplete;
     const scrubber = player.shadowRoot?.querySelector("wzc-recording-scrubber");
     await (scrubber as LitElement | null)?.updateComplete;
-    scrubber?.shadowRoot
-      ?.querySelector<HTMLButtonElement>(".segment-toggle")
-      ?.click();
+    await player.toggleSegmentSelection();
     await player.updateComplete;
 
     expect(
@@ -463,6 +514,21 @@ describe("recorded media player", () => {
       ).toContain("Preview Segment"),
     );
 
+    const exportIntent = vi.fn();
+    player.addEventListener(RECORDED_MEDIA_EXPORT_EVENT, exportIntent);
+    previewingManager?.shadowRoot
+      ?.querySelector<HTMLButtonElement>('button[aria-label="Export Segment"]')
+      ?.click();
+    await vi.waitFor(() => expect(exportIntent).toHaveBeenCalledOnce());
+    expect(exportIntent.mock.calls[0]?.[0].detail).toEqual({
+      camera: "front",
+      endTime: start + 120,
+      entityId: "camera.front",
+      name: "Front selected recording",
+      sourceId: "frigate:front:recording-hour",
+      startTime: start - 60,
+    });
+
     buttons.find((button) => button.classList.contains("primary"))?.click();
     await vi.waitFor(() => expect(click).toHaveBeenCalledOnce());
     const downloadAnchor = append.mock.calls.find(
@@ -476,9 +542,7 @@ describe("recorded media player", () => {
       end_time: start + 120,
     });
 
-    activeScrubber?.shadowRoot
-      ?.querySelector<HTMLButtonElement>(".segment-toggle")
-      ?.click();
+    await player.toggleSegmentSelection();
     await vi.waitFor(() =>
       expect(
         player.shadowRoot?.querySelector("wzc-recording-segment-manager"),
@@ -676,6 +740,7 @@ describe("recorded media player", () => {
       },
     });
     const viewReview = vi.fn();
+    const exportReview = vi.fn();
     const viewer = document.createElement(
       "wzc-recorded-video-viewer",
     ) as RecordedVideoViewer;
@@ -688,6 +753,7 @@ describe("recorded media player", () => {
     } as RecordedVideoViewer["api"];
     viewer.request = {
       actions: {
+        exportReview,
         variants: {
           snapshot: {
             download: { filename: "front.jpg", path: "/snapshot.jpg" },
@@ -798,6 +864,12 @@ describe("recorded media player", () => {
       container.shadowRoot?.querySelector<HTMLButtonElement>(
         'button[aria-label="View Snapshot"]',
       );
+    expect(
+      [
+        ...(container.shadowRoot?.querySelectorAll(".footer-actions button") ??
+          []),
+      ].map((button) => button.getAttribute("aria-label")),
+    ).toEqual(["Export review", "Download Review", "View Snapshot"]);
     viewSnapshotButton?.click();
     await vi.waitFor(() =>
       expect(

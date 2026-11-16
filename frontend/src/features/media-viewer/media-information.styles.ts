@@ -15,6 +15,9 @@ export const mediaInformationStyles = css`
     display: grid;
     gap: 0.5rem;
     padding: var(--wzc-recorded-media-dialog-padding);
+    padding-inline-start: calc(
+      var(--wzc-recorded-media-dialog-padding) + 0.5rem
+    );
     padding-block-start: max(
       0px,
       calc(var(--wzc-recorded-media-dialog-padding) - 0.25rem)
@@ -73,6 +76,7 @@ export const mediaInformationStyles = css`
       gap: 0.3rem;
       padding: 0.5rem;
       padding-block-start: 0.375rem;
+      padding-inline-start: 1rem;
     }
 
     .metadata {

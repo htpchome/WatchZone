@@ -36,6 +36,44 @@ export function renderRecordedMediaActions(
   };
 
   return html`${
+    canExport
+      ? html`<button
+          class="wzc-icon-button wzc-activity-action"
+          type="button"
+          title=${localize("reviews.export")}
+          aria-label=${localize("reviews.export")}
+          @click=${() => dispatch({ kind: "export_review" })}
+        >
+          <ha-icon icon="mdi:export" aria-hidden="true"></ha-icon>
+        </button>`
+      : nothing
+  }
+  ${
+    download
+      ? html`<button
+          class="wzc-icon-button wzc-activity-action"
+          type="button"
+          title=${localize(
+            request.kind === "snapshot"
+              ? "media_player.download_snapshot"
+              : request.presentation === "recording"
+                ? "recordings.download"
+                : "media_player.download_review",
+          )}
+          aria-label=${localize(
+            request.kind === "snapshot"
+              ? "media_player.download_snapshot"
+              : request.presentation === "recording"
+                ? "recordings.download"
+                : "media_player.download_review",
+          )}
+          @click=${() => dispatch({ kind: "download" })}
+        >
+          <ha-icon icon="mdi:download" aria-hidden="true"></ha-icon>
+        </button>`
+      : nothing
+  }
+  ${
     alternate
       ? html`<button
           class="wzc-icon-button wzc-activity-action"
@@ -56,40 +94,6 @@ export function renderRecordedMediaActions(
             icon=${alternate.kind === "snapshot" ? "mdi:camera" : "mdi:play"}
             aria-hidden="true"
           ></ha-icon>
-        </button>`
-      : nothing
-  }
-  ${
-    download
-      ? html`<button
-          class="wzc-icon-button wzc-activity-action"
-          type="button"
-          title=${localize(
-            request.kind === "snapshot"
-              ? "media_player.download_snapshot"
-              : "media_player.download_review",
-          )}
-          aria-label=${localize(
-            request.kind === "snapshot"
-              ? "media_player.download_snapshot"
-              : "media_player.download_review",
-          )}
-          @click=${() => dispatch({ kind: "download" })}
-        >
-          <ha-icon icon="mdi:download" aria-hidden="true"></ha-icon>
-        </button>`
-      : nothing
-  }
-  ${
-    canExport
-      ? html`<button
-          class="wzc-icon-button wzc-activity-action"
-          type="button"
-          title=${localize("reviews.export")}
-          aria-label=${localize("reviews.export")}
-          @click=${() => dispatch({ kind: "export_review" })}
-        >
-          <ha-icon icon="mdi:export" aria-hidden="true"></ha-icon>
         </button>`
       : nothing
   }`;

@@ -124,7 +124,7 @@ export class ReviewExportController implements ReactiveController {
       camera: review?.camera ?? this._cameraLabel() ?? "",
       name: detail.name,
       range: pending.range,
-      reviewId: pending.reviewId,
+      sourceId: pending.reviewId,
     });
   }
 
@@ -163,7 +163,7 @@ export class ReviewExportController implements ReactiveController {
   private _job(reviewId: string): ExportJob | undefined {
     const entityId = this._entityId({ id: reviewId });
     return this._jobs.find(
-      (job) => job.reviewId === reviewId && job.entityId === entityId,
+      (job) => job.sourceId === reviewId && job.entityId === entityId,
     );
   }
 }

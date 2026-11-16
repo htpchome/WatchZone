@@ -448,7 +448,12 @@ export const themeTokens = css`
     --wzc-recorded-media-dialog-padding: 0.75rem;
     --wzc-recorded-media-dialog-min-inline-size: min(16rem, calc(100vw - 1rem));
     --wzc-recorded-media-dialog-min-block-size: min(10rem, calc(100dvh - 1rem));
-    --wzc-recorded-media-resize-handle-size: var(--wzc-event-action-size);
+    --wzc-recorded-media-footer-min-block-size: 3.5rem;
+    --wzc-recorded-media-footer-action-size: 2.75rem;
+    --wzc-recorded-media-footer-action-icon-size: 1.5rem;
+    --wzc-recorded-media-resize-handle-size: var(
+      --wzc-recorded-media-footer-action-size
+    );
     --wzc-recorded-media-close-size: 2.75rem;
     --wzc-recorded-media-close-background: transparent;
     --wzc-recorded-media-close-hover-background: color-mix(
@@ -478,6 +483,10 @@ export const themeTokens = css`
     --wzc-recorded-transport-padding: 0.25rem 0.35rem;
     --wzc-recorded-transport-control-size: 2rem;
     --wzc-recorded-transport-icon-size: 1.35rem;
+    --wzc-recorded-rate-background: var(--wzc-color-surface);
+    --wzc-recorded-rate-color: var(--wzc-color-text-1);
+    --wzc-recorded-rate-border: var(--wzc-color-border-control);
+    --wzc-recorded-rate-shadow: var(--wzc-shadow-small);
     --wzc-recording-scrubber-surface: var(--wzc-color-surface-secondary);
     --wzc-recording-scrubber-text: var(--wzc-color-text-1);
     --wzc-recording-scrubber-control-border: var(--wzc-color-border-control);

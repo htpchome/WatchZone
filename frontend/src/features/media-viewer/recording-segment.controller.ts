@@ -2,8 +2,12 @@ import {
   resolveRecordingSegment,
   type RecordingSegmentMedia,
 } from "../../api/recordings";
+import { prepareExport, type ExportRange } from "../../api/exports";
 import type { HomeAssistantApi } from "../../core/home-assistant";
-import type { RecordingTimeline } from "../../core/recorded-media";
+import type {
+  RecordedMediaExportIntent,
+  RecordingTimeline,
+} from "../../core/recorded-media";
 
 export interface RecordingSegmentSelection {
   readonly endTime: number;
@@ -14,6 +18,7 @@ export interface RecordingSegmentSelection {
 export class RecordingSegmentController {
   public active = false;
   public downloading = false;
+  public exporting = false;
   public selection?: RecordingSegmentSelection;
 
   private _timelineIdentity = "";
@@ -21,7 +26,12 @@ export class RecordingSegmentController {
   public constructor(
     private readonly _api: () => HomeAssistantApi | undefined,
     private readonly _requestUpdate: () => void,
-    private readonly _onError: (operation: "download" | "preview") => void,
+    private readonly _onError: (
+      operation: "download" | "export" | "preview",
+    ) => void,
+    private readonly _onExportPrepared: (
+      intent: RecordedMediaExportIntent,
+    ) => void,
   ) {}
 
   public configure(timeline: RecordingTimeline | undefined): void {
@@ -32,6 +42,7 @@ export class RecordingSegmentController {
     this._timelineIdentity = identity;
     this.active = false;
     this.downloading = false;
+    this.exporting = false;
     this.selection = timeline ? fullSelection(timeline) : undefined;
   }
 
@@ -132,6 +143,38 @@ export class RecordingSegmentController {
       this._onError("download");
     } finally {
       this.downloading = false;
+      this._requestUpdate();
+    }
+  }
+
+  public async export(
+    timeline: RecordingTimeline,
+    sourceId: string,
+  ): Promise<void> {
+    const api = this._api();
+    const selection = this.selection;
+    if (!api || !selection || this.exporting) return;
+    const range: ExportRange = {
+      end_time: selection.endTime,
+      entity_id: timeline.entityId,
+      start_time: selection.startTime,
+    };
+    this.exporting = true;
+    this._requestUpdate();
+    try {
+      const name = await prepareExport(api, range);
+      this._onExportPrepared({
+        camera: timeline.camera,
+        endTime: range.end_time,
+        entityId: range.entity_id,
+        name,
+        sourceId,
+        startTime: range.start_time,
+      });
+    } catch {
+      this._onError("export");
+    } finally {
+      this.exporting = false;
       this._requestUpdate();
     }
   }

@@ -1,4 +1,7 @@
-import { RECORDED_MEDIA_OPEN_EVENT } from "./constants";
+import {
+  RECORDED_MEDIA_EXPORT_EVENT,
+  RECORDED_MEDIA_OPEN_EVENT,
+} from "./constants";
 
 export type RecordedMediaTransport = "file" | "hls";
 
@@ -109,6 +112,15 @@ export interface RecordedMediaInitialGeometry {
   readonly width: number;
 }
 
+export interface RecordedMediaExportIntent {
+  readonly camera: string;
+  readonly endTime: number;
+  readonly entityId: string;
+  readonly name: string;
+  readonly sourceId: string;
+  readonly startTime: number;
+}
+
 export function openRecordedMedia(
   target: EventTarget,
   request: RecordedMediaRequest,
@@ -124,6 +136,7 @@ export function openRecordedMedia(
 
 declare global {
   interface HTMLElementEventMap {
+    [RECORDED_MEDIA_EXPORT_EVENT]: CustomEvent<RecordedMediaExportIntent>;
     [RECORDED_MEDIA_OPEN_EVENT]: CustomEvent<RecordedMediaRequest>;
   }
 }

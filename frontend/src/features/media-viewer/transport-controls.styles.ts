@@ -36,7 +36,7 @@ export const recordedVideoTransportStyles = css`
     grid-template-columns:
       var(--wzc-recorded-transport-control-size) minmax(2rem, 1fr)
       max-content var(--wzc-recorded-transport-control-size)
-      minmax(3.25rem, 6rem) var(--wzc-recorded-transport-control-size);
+      minmax(3.25rem, 6rem);
     align-items: center;
     box-sizing: border-box;
     gap: var(--wzc-recorded-transport-gap);
@@ -169,7 +169,7 @@ export const recordedVideoTransportStyles = css`
       grid-template-columns:
         var(--wzc-recorded-transport-control-size) minmax(1.5rem, 1fr)
         max-content var(--wzc-recorded-transport-control-size)
-        minmax(2.5rem, 4rem) var(--wzc-recorded-transport-control-size);
+        minmax(2.5rem, 4rem);
     }
 
     .time {

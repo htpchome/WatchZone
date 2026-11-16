@@ -22,7 +22,7 @@ describe("export job workflow", () => {
       camera: "Front",
       name: "Visitor",
       range: { entity_id: "camera.front", start_time: 100, end_time: 120 },
-      reviewId: "review-1",
+      sourceId: "review-1",
     });
 
     await vi.waitFor(() => expect(jobs[0]?.status).toBe("failed"));

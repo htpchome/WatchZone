@@ -123,16 +123,6 @@ export class RecordedVideoTransport extends LitElement {
         aria-label=${this.localize("media_player.volume")}
         @input=${this._changeVolume}
       />
-      <button
-        class="transport-button future-control"
-        type="button"
-        data-control="future"
-        title=${this.localize("media_player.future_control")}
-        aria-label=${this.localize("media_player.future_control")}
-        disabled
-      >
-        ${renderIcon("dotsHorizontalCircleOutline")}
-      </button>
     </div>`;
   }
 

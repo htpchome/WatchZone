@@ -26,7 +26,7 @@ export interface ExportJob {
   readonly exportId?: string;
   readonly name: string;
   readonly requestId: string;
-  readonly reviewId: string;
+  readonly sourceId: string;
   readonly status: ExportJobStatus;
 }
 
@@ -34,7 +34,7 @@ export interface StartExportJob {
   readonly camera: string;
   readonly name: string;
   readonly range: ExportRange;
-  readonly reviewId: string;
+  readonly sourceId: string;
 }
 
 export type ExportLibraryItem = ExportItem | ExportJob;
@@ -91,7 +91,7 @@ class ExportJobManager {
     const active = [...this._jobs.values()].find(
       (job) =>
         job.entityId === input.range.entity_id &&
-        job.reviewId === input.reviewId &&
+        job.sourceId === input.sourceId &&
         job.status !== "success" &&
         job.status !== "failed",
     );
@@ -105,7 +105,7 @@ class ExportJobManager {
       entityId: input.range.entity_id,
       name,
       requestId: `export-${++nextRequestId}`,
-      reviewId: input.reviewId,
+      sourceId: input.sourceId,
       status: "submitting",
     };
     this._jobs.set(job.requestId, job);

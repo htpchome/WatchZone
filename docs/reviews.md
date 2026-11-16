@@ -112,7 +112,9 @@
 ## Export workflow
 
 - Every Review tile, whether classified as Alert or Detection, exposes an
-  Export action. Events and Recordings do not gain this action.
+  Export action. Events do not gain this action. Recordings expose a distinct
+  Export Segment action only after the user activates and bounds a recording
+  selection in the media viewer.
 - Reviews owns the confirmation dialog and mutation lifecycle. The shared
   activity-list primitive only renders the optional action and emits a typed
   intent; it does not call the Exports module or a provider.

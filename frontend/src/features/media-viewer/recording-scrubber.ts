@@ -32,7 +32,6 @@ import {
 
 export interface RecordingScrubberEventDetail {
   readonly action:
-    | "toggle_segment"
     | "seek"
     | "seek_and_play"
     | "set_segment_end"
@@ -97,17 +96,6 @@ export class RecordingScrubber extends LitElement {
           @click=${this._togglePlayback}
         >
           ${renderIcon(this.paused ? "play" : "pause")}
-        </button>
-        <button
-          class=${`segment-toggle ${this.segmentActive ? "active" : ""}`}
-          type="button"
-          title=${this.localize("recording_segments.activate")}
-          aria-label=${this.localize("recording_segments.activate")}
-          aria-pressed=${this.segmentActive ? "true" : "false"}
-          @pointerup=${releaseTouchFocus}
-          @click=${this._activateSegment}
-        >
-          ${renderIcon("movie")}
         </button>
       </div>
       <div class=${`timeline ${this.segmentActive ? "segment-active" : ""}`}>
@@ -342,10 +330,6 @@ export class RecordingScrubber extends LitElement {
 
   private readonly _togglePlayback = (): void => {
     this._dispatch({ action: "toggle_play" });
-  };
-
-  private readonly _activateSegment = (): void => {
-    this._dispatch({ action: "toggle_segment" });
   };
 
   private _handlePointerDown(event: PointerEvent, edge: "end" | "start"): void {

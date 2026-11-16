@@ -67,9 +67,12 @@ viewing. Recording discovery and grouping are governed by
   provider-normalized activity confidence. AI-analysis confidence remains
   separate. On narrow containers its metadata reduces from four columns to
   three with tighter panel padding and grid spacing. Supported actions occupy
-  a transparent footer beneath the solid information surface, on the same
-  visual row as the dialog-owned resize handle without shrinking their touch
-  targets.
+  a transparent, consistently sized footer beneath the solid information
+  surface, on the same visual row as the dialog-owned resize handle. Footer
+  actions use enlarged touch targets and follow the Review tile order: export,
+  download, then snapshot or video variant. The metadata surface retains an
+  additional logical leading inset so its badges and fields do not visually
+  collide with the dialog edge at compact widths.
 - An alert or detection without an end time is visibly marked as in progress.
   A closed alert also retains that marker while recording playback remains
   unavailable. Its tile remains actionable: activation immediately opens the
@@ -80,6 +83,13 @@ viewing. Recording discovery and grouping are governed by
   interaction.
 - The recorded video opens with native controls, autoplay requested,
   `playsinline`, and muted audio.
+- Recording-hour video exposes one persistent stepped playback-speed control
+  in a dedicated lower-right footer row beneath the scrubber, with slower and
+  faster actions around its current-rate readout. It does not overlap the video
+  or timeline. Each new media request starts at `1×`; the supported forward
+  rates are `0.5×`, `1×`, `2×`, `5×`, and `10×`. Segment previews retain
+  the current viewer rate. Reverse playback is excluded because browser and
+  HLS implementations do not support it consistently.
 - Recorded media uses the shared bounded display-zoom controller and shared
   browser fullscreen and Picture-in-Picture capability boundaries. Mute,
   fullscreen, and Picture-in-Picture remain fixed overlay controls outside the
@@ -107,8 +117,9 @@ viewing. Recording discovery and grouping are governed by
 ## Recording segment selection
 
 - The recording scrubber remains an ordinary seek control until the user
-  explicitly activates segment selection. Activation does not remove or
-  replace the existing video transport.
+  explicitly activates segment selection from the dialog footer. The
+  recording footer places that action before the full-recording download
+  action. Activation does not remove or replace the existing video transport.
 - Segment state, preview bounds, and download orchestration belong to the
   media-viewer feature. The Recordings Stage module does not manage handles or
   construct download URLs.
@@ -122,7 +133,12 @@ viewing. Recording discovery and grouping are governed by
 - Reset restores the complete hour, Cancel returns to the ordinary scrubber,
   Preview asks the backend for provider-normalized playback sources for the
   selected timestamps, and Download asks for the corresponding authenticated
-  path. Export is intentionally outside this contract.
+  path. Export Segment prepares the provider title and starts the shared
+  persistent-export workflow for the same selected wall-clock range; it does
+  not route through or mutate the Exports Stage module.
+- While selection is active, its heading and instructions span the complete
+  panel width. The selected time summary and action group occupy the row below
+  so actions cannot squeeze the explanatory copy into a narrow column.
 - Segment downloads preserve gaps as provider truth. The backend resolves the
   selected wall-clock range through the owning provider, and unavailable time
   is skipped by that provider rather than synthesized in the browser.

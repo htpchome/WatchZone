@@ -242,7 +242,22 @@ export class RecordingsModule extends LitElement {
   }
 
   private _open(hour: RecordingHour, title: string): void {
+    const separator = hour.download_url.includes("?") ? "&" : "?";
     openRecordedMedia(this, {
+      actions: {
+        variants: {
+          video: {
+            download: {
+              filename: `${hour.camera}-${Math.floor(hour.start_time)}.mp4`,
+              path: `${hour.download_url}${separator}download=true`,
+            },
+            id: hour.id,
+            kind: "video",
+            preferredTransport: hour.preferred_transport,
+            sources: hour.playback_sources,
+          },
+        },
+      },
       id: hour.id,
       kind: "video",
       presentation: "recording",

@@ -20,6 +20,7 @@ export const recordingSegmentManagerStyles = css`
   }
 
   .copy {
+    grid-column: 1 / -1;
     min-inline-size: 0;
   }
 
@@ -40,7 +41,7 @@ export const recordingSegmentManagerStyles = css`
   }
 
   .selection {
-    margin-block-start: 0.5rem;
+    align-self: end;
     font-size: 0.75rem;
     font-variant-numeric: tabular-nums;
     font-weight: var(--wzc-font-weight-semibold);
@@ -105,6 +106,10 @@ export const recordingSegmentManagerStyles = css`
   @media (max-width: ${responsiveWidths.medium}) {
     .manager {
       grid-template-columns: 1fr;
+    }
+
+    .copy {
+      grid-column: auto;
     }
 
     .actions {

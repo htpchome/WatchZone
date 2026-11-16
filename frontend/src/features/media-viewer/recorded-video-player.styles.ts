@@ -76,6 +76,64 @@ export const recordedVideoPlayerStyles = css`
     container-type: size;
   }
 
+  .playback-options {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0.5rem;
+  }
+
+  .rate-control {
+    display: grid;
+    grid-template-columns: 2rem minmax(2.75rem, max-content) 2rem;
+    align-items: center;
+    min-block-size: 2rem;
+    color: var(--wzc-recorded-rate-color);
+    background: var(--wzc-recorded-rate-background);
+    border: 1px solid var(--wzc-recorded-rate-border);
+    border-radius: var(--wzc-radius-pill);
+    box-shadow: var(--wzc-recorded-rate-shadow);
+  }
+
+  .rate-control button {
+    appearance: none;
+    display: grid;
+    place-items: center;
+    block-size: 100%;
+    min-block-size: 2rem;
+    min-inline-size: 0;
+    padding: 0;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    border-radius: var(--wzc-radius-pill);
+    cursor: pointer;
+    font: inherit;
+    font-size: 1.1rem;
+    line-height: 1;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .rate-control button:disabled {
+    cursor: default;
+    opacity: 0.4;
+  }
+
+  .rate-control button:focus-visible {
+    outline: 2px solid var(--wzc-color-primary);
+    outline-offset: -2px;
+  }
+
+  .rate-control output {
+    font-size: var(--wzc-font-size-small);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+  }
+
   wzc-recording-segment-manager {
     inline-size: 100%;
   }
@@ -83,6 +141,13 @@ export const recordedVideoPlayerStyles = css`
   @media (prefers-reduced-motion: reduce) {
     video {
       transition: none;
+    }
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .rate-control button:hover:not(:disabled) {
+      color: var(--wzc-color-primary);
+      background: var(--wzc-recorded-media-control-hover-background);
     }
   }
 `;

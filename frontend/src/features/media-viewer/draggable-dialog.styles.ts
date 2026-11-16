@@ -112,13 +112,24 @@ export const draggableDialogStyles = css`
     flex: none;
     gap: 0.4rem;
     justify-content: flex-end;
-    min-block-size: var(--wzc-recorded-media-resize-handle-size);
+    min-block-size: var(--wzc-recorded-media-footer-min-block-size);
     padding-inline: var(--wzc-recorded-media-dialog-padding)
       calc(var(--wzc-recorded-media-resize-handle-size) + 0.4rem);
   }
 
   .footer-actions .wzc-activity-action {
     background: transparent;
+    min-block-size: var(--wzc-recorded-media-footer-action-size);
+    min-inline-size: var(--wzc-recorded-media-footer-action-size);
+  }
+
+  .footer-actions .wzc-activity-action ha-icon {
+    --mdc-icon-size: var(--wzc-recorded-media-footer-action-icon-size);
+  }
+
+  .footer-actions .segment-action.active {
+    background: var(--wzc-color-fill-primary);
+    color: var(--wzc-color-primary);
   }
 
   wzc-recorded-video-player:not([recording-timeline]) {

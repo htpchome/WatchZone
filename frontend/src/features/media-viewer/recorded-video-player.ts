@@ -10,7 +10,9 @@ import {
   RECORDED_VIDEO_TRANSPORT_TAG,
   RECORDED_VIDEO_PLAYER_TAG,
   RECORDED_MEDIA_ERROR_EVENT,
+  RECORDED_MEDIA_EXPORT_EVENT,
   RECORDING_SEGMENT_MANAGER_EVENT,
+  RECORDING_SEGMENT_STATE_EVENT,
   RECORDING_SEGMENT_MANAGER_TAG,
   RECORDING_SCRUBBER_EVENT,
   RECORDING_SCRUBBER_TAG,
@@ -36,6 +38,7 @@ import {
   togglePictureInPicture,
 } from "../../core/picture-in-picture";
 import type {
+  RecordedMediaExportIntent,
   RecordedMediaRequest,
   RecordingTimeline,
 } from "../../core/recorded-media";
@@ -44,6 +47,7 @@ import type {
   MediaControlDescriptor,
   MediaControlEventDetail,
 } from "../../ui/media-controls-overlay";
+import { releaseTouchFocus } from "../../ui/control-interaction";
 import "../../ui/media-controls-overlay";
 import { RecordedMediaPlaybackController } from "./recorded-media-playback.controller";
 import { recordedVideoPlayerStyles } from "./recorded-video-player.styles";
@@ -76,6 +80,7 @@ const recordingSegmentManagerEvent = unsafeStatic(
   RECORDING_SEGMENT_MANAGER_EVENT,
 );
 type RecordedVideoControlAction = "fullscreen" | "picture_in_picture";
+const PLAYBACK_RATES = [0.5, 1, 2, 5, 10] as const;
 
 /** Ephemeral recorded-media playback engine. */
 export class RecordedVideoPlayer extends LitElement {
@@ -89,12 +94,25 @@ export class RecordedVideoPlayer extends LitElement {
   public localize: LocalizeFunction = englishLocalize;
   public request?: RecordedMediaRequest;
 
+  public readonly toggleSegmentSelection = async (): Promise<void> => {
+    const timeline = this.request?.timeline;
+    if (!timeline) return;
+    if (this._segment.active) {
+      await this._restoreOriginalPlayback(this._previewTimestamp());
+      this._segment.cancel();
+    } else {
+      this._segment.activate(timeline);
+    }
+    this._emitSegmentState();
+  };
+
   private _fullscreenActive = false;
   private _currentTime = 0;
   private _duration = 0;
   private _muted = true;
   private _paused = true;
   private _pictureInPictureActive = false;
+  private _playbackRate = 1;
   private _segmentPreviewActive = false;
   private _segmentPreviewGeneration = 0;
   private _segmentPreviewTimeline?: RecordingTimeline;
@@ -114,9 +132,12 @@ export class RecordedVideoPlayer extends LitElement {
         this.localize(
           operation === "preview"
             ? "recording_segments.preview_failed"
-            : "recording_segments.download_failed",
+            : operation === "export"
+              ? "recording_segments.export_failed"
+              : "recording_segments.download_failed",
         ),
       ),
+    (intent) => this._dispatchExport(intent),
   );
 
   public connectedCallback(): void {
@@ -250,9 +271,46 @@ export class RecordedVideoPlayer extends LitElement {
         : null
     }
     ${
+      timeline
+        ? staticHtml`<div class="playback-options">
+            <div
+              class="rate-control"
+              role="group"
+              aria-label=${this.localize("media_player.playback_speed")}
+              @click=${stopPropagation}
+              @keydown=${stopPropagation}
+            >
+              <button
+                type="button"
+                title=${this.localize("media_player.decrease_speed")}
+                aria-label=${this.localize("media_player.decrease_speed")}
+                ?disabled=${this._playbackRate === PLAYBACK_RATES[0]}
+                @pointerup=${releaseTouchFocus}
+                @click=${this._decreasePlaybackRate}
+              >−</button>
+              <output aria-live="polite">${formatPlaybackRate(
+                this._playbackRate,
+              )}</output>
+              <button
+                type="button"
+                title=${this.localize("media_player.increase_speed")}
+                aria-label=${this.localize("media_player.increase_speed")}
+                ?disabled=${
+                  this._playbackRate ===
+                  PLAYBACK_RATES[PLAYBACK_RATES.length - 1]
+                }
+                @pointerup=${releaseTouchFocus}
+                @click=${this._increasePlaybackRate}
+              >+</button>
+            </div>
+          </div>`
+        : null
+    }
+    ${
       timeline && this._segment.active
         ? staticHtml`<${recordingSegmentManagerTag}
             .downloading=${this._segment.downloading}
+            .exporting=${this._segment.exporting}
             .locale=${this.api?.locale}
             .localize=${this.localize}
             .previewing=${this._segmentPreviewActive}
@@ -270,6 +328,7 @@ export class RecordedVideoPlayer extends LitElement {
 
   protected willUpdate(changed: Map<PropertyKey, unknown>): void {
     if (changed.has("request")) {
+      this._playbackRate = 1;
       this._segmentPreviewActive = false;
       this._segmentPreviewTimeline = undefined;
       this._segmentPreviewGeneration += 1;
@@ -294,8 +353,10 @@ export class RecordedVideoPlayer extends LitElement {
     const video = this._video();
     const request = this.request;
     if (!video || !request) return;
+    this._applyPlaybackRate(video);
     this._syncControlState();
     await this._playback.load(video, request);
+    this._applyPlaybackRate(video);
   }
 
   private _video(): HTMLVideoElement | undefined {
@@ -401,6 +462,40 @@ export class RecordedVideoPlayer extends LitElement {
     this._syncControlState();
   }
 
+  private _setPlaybackRate(value: number): void {
+    const video = this._video();
+    if (
+      !video ||
+      !PLAYBACK_RATES.includes(value as (typeof PLAYBACK_RATES)[number])
+    ) {
+      return;
+    }
+    this._playbackRate = value;
+    this._applyPlaybackRate(video);
+    this.requestUpdate();
+  }
+
+  private _applyPlaybackRate(video: HTMLVideoElement): void {
+    video.defaultPlaybackRate = this._playbackRate;
+    video.playbackRate = this._playbackRate;
+  }
+
+  private readonly _decreasePlaybackRate = (): void => {
+    const index = PLAYBACK_RATES.indexOf(
+      this._playbackRate as (typeof PLAYBACK_RATES)[number],
+    );
+    this._setPlaybackRate(PLAYBACK_RATES[Math.max(0, index - 1)] ?? 1);
+  };
+
+  private readonly _increasePlaybackRate = (): void => {
+    const index = PLAYBACK_RATES.indexOf(
+      this._playbackRate as (typeof PLAYBACK_RATES)[number],
+    );
+    this._setPlaybackRate(
+      PLAYBACK_RATES[Math.min(PLAYBACK_RATES.length - 1, index + 1)] ?? 1,
+    );
+  };
+
   private readonly _toggleFullscreen = async (): Promise<void> => {
     const video = this._video();
     const viewport = this._viewport();
@@ -469,16 +564,6 @@ export class RecordedVideoPlayer extends LitElement {
   ): Promise<void> => {
     event.stopPropagation();
     const timeline = this.request?.timeline;
-    if (event.detail.action === "toggle_segment") {
-      if (!timeline) return;
-      if (this._segment.active) {
-        await this._restoreOriginalPlayback(this._previewTimestamp());
-        this._segment.cancel();
-      } else {
-        this._segment.activate(timeline);
-      }
-      return;
-    }
     if (event.detail.action === "set_segment_start") {
       if (timeline && event.detail.timestamp !== undefined) {
         await this._restoreOriginalPlayback(this._previewTimestamp());
@@ -520,11 +605,15 @@ export class RecordedVideoPlayer extends LitElement {
     if (event.detail === "cancel") {
       await this._restoreOriginalPlayback(this._segment.selection?.startTime);
       this._segment.cancel();
+      this._emitSegmentState();
     } else if (event.detail === "reset") {
       await this._restoreOriginalPlayback(this._segment.selection?.startTime);
       this._segment.reset(timeline);
     } else if (event.detail === "download") {
       void this._segment.download(timeline);
+    } else if (event.detail === "export") {
+      const request = this.request;
+      if (request) void this._segment.export(timeline, request.id);
     } else {
       if (this._segmentPreviewActive) {
         await this._restoreOriginalPlayback(this._previewTimestamp());
@@ -556,6 +645,7 @@ export class RecordedVideoPlayer extends LitElement {
         preferredTransport: media.preferred_transport,
         sources: media.playback_sources,
       });
+      this._applyPlaybackRate(video);
       if (generation !== this._segmentPreviewGeneration) return;
       try {
         await playMediaElement(video);
@@ -583,6 +673,7 @@ export class RecordedVideoPlayer extends LitElement {
     const timeline = request?.timeline;
     if (!video || !request || !timeline) return;
     await this._playback.load(video, request);
+    this._applyPlaybackRate(video);
     if (timestamp !== undefined) {
       video.currentTime = recordingTimestampToMediaTime(
         timestamp,
@@ -618,12 +709,32 @@ export class RecordedVideoPlayer extends LitElement {
     );
   }
 
+  private _emitSegmentState(): void {
+    this.dispatchEvent(
+      new CustomEvent(RECORDING_SEGMENT_STATE_EVENT, {
+        bubbles: true,
+        composed: true,
+        detail: { active: this._segment.active },
+      }),
+    );
+  }
+
   private _reportControlError(message: string): void {
     this.dispatchEvent(
       new CustomEvent(RECORDED_MEDIA_ERROR_EVENT, {
         bubbles: true,
         composed: true,
         detail: { message },
+      }),
+    );
+  }
+
+  private _dispatchExport(intent: RecordedMediaExportIntent): void {
+    this.dispatchEvent(
+      new CustomEvent<RecordedMediaExportIntent>(RECORDED_MEDIA_EXPORT_EVENT, {
+        bubbles: true,
+        composed: true,
+        detail: intent,
       }),
     );
   }
@@ -639,6 +750,14 @@ function finiteVolume(value: number | undefined): number {
   return value !== undefined && Number.isFinite(value)
     ? Math.max(0, Math.min(1, value))
     : 1;
+}
+
+function formatPlaybackRate(value: number): string {
+  return `${value}×`;
+}
+
+function stopPropagation(event: Event): void {
+  event.stopPropagation();
 }
 
 function recordingTimestampToMediaTime(

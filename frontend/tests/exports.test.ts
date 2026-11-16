@@ -282,7 +282,7 @@ describe("exports module", () => {
       camera: "front",
       name: "  Front\u0000\n visitor  ",
       range: { entity_id: "camera.front", start_time: 100, end_time: 120 },
-      reviewId: "review-1",
+      sourceId: "review-1",
     });
     await vi.waitFor(() => {
       expect(module.shadowRoot?.querySelector(".tile.draft")).not.toBeNull();

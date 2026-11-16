@@ -24,8 +24,7 @@ export const recordingScrubberStyles = css`
     margin-block-start: 1.15rem;
   }
 
-  .playback,
-  .segment-toggle {
+  .playback {
     appearance: none;
     display: grid;
     place-items: center;
@@ -46,23 +45,7 @@ export const recordingScrubberStyles = css`
     block-size: 1.1rem;
   }
 
-  .segment-toggle {
-    border-radius: var(--wzc-radius-control);
-  }
-
-  .segment-toggle svg {
-    inline-size: 1.15rem;
-    block-size: 1.15rem;
-  }
-
-  .segment-toggle.active {
-    color: var(--wzc-recording-segment-primary-text);
-    background: var(--wzc-recording-segment-primary);
-    border-color: var(--wzc-recording-segment-primary);
-  }
-
   .playback:focus-visible,
-  .segment-toggle:focus-visible,
   .handle:focus-visible,
   .range:focus-visible,
   .marker:focus-visible {
@@ -350,14 +333,6 @@ export const recordingScrubberStyles = css`
   @media (hover: hover) and (pointer: fine) {
     .playback:hover {
       background: var(--wzc-recording-scrubber-hover);
-    }
-
-    .segment-toggle:hover {
-      background: var(--wzc-recording-scrubber-hover);
-    }
-
-    .segment-toggle.active:hover {
-      background: var(--wzc-recording-segment-primary);
     }
 
     .marker:hover {

@@ -18,11 +18,12 @@ import type { RecordingSegmentSelection } from "./recording-segment.controller";
 import { recordingSegmentManagerStyles } from "./recording-segment-manager.styles";
 
 export type RecordingSegmentManagerAction =
-  "cancel" | "download" | "preview" | "reset";
+  "cancel" | "download" | "export" | "preview" | "reset";
 
 export class RecordingSegmentManager extends LitElement {
   public static properties = {
     downloading: { attribute: false, type: Boolean },
+    exporting: { attribute: false, type: Boolean },
     locale: { attribute: false },
     localize: { attribute: false },
     previewing: { attribute: false, type: Boolean },
@@ -30,6 +31,7 @@ export class RecordingSegmentManager extends LitElement {
   };
 
   public downloading = false;
+  public exporting = false;
   public locale?: HomeAssistantLocale;
   public localize: LocalizeFunction = englishLocalize;
   public previewing = false;
@@ -46,21 +48,22 @@ export class RecordingSegmentManager extends LitElement {
       <div class="copy">
         <h3>${this.localize("recording_segments.title")}</h3>
         <p>${this.localize("recording_segments.instructions")}</p>
-        <div class="selection">
-          ${formatTime(selection.startTime, this.locale)} –
-          ${formatTime(selection.endTime, this.locale)}
-          <span class="duration"
-            >${this.localize("recording_segments.duration", {
-              minutes: Math.floor(duration / 60),
-              seconds: String(duration % 60).padStart(2, "0"),
-            })}</span
-          >
-        </div>
+      </div>
+      <div class="selection">
+        ${formatTime(selection.startTime, this.locale)} –
+        ${formatTime(selection.endTime, this.locale)}
+        <span class="duration"
+          >${this.localize("recording_segments.duration", {
+            minutes: Math.floor(duration / 60),
+            seconds: String(duration % 60).padStart(2, "0"),
+          })}</span
+        >
       </div>
       <div class="actions">
         ${this._button("reset", "reset")}
         ${this._button("cancel", "close", "cancel")}
         ${this._button("preview", this.previewing ? "stop" : "play")}
+        ${this._button("export", "export", "", this.exporting)}
         ${this._button("download", "download", "primary", this.downloading)}
       </div>
     </section>`;
@@ -68,16 +71,18 @@ export class RecordingSegmentManager extends LitElement {
 
   private _button(
     action: RecordingSegmentManagerAction,
-    icon: "close" | "download" | "play" | "reset" | "stop",
+    icon: "close" | "download" | "export" | "play" | "reset" | "stop",
     className = "",
     disabled = false,
   ) {
     const label = this.localize(
       action === "preview" && this.previewing
         ? "recording_segments.stop_preview"
-        : action === "download" && disabled
-          ? "recording_segments.downloading"
-          : `recording_segments.${action}`,
+        : action === "export" && disabled
+          ? "recording_segments.exporting"
+          : action === "download" && disabled
+            ? "recording_segments.downloading"
+            : `recording_segments.${action}`,
     );
     return html`<button
       class=${className}

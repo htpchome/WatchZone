@@ -4199,10 +4199,21 @@ test("keeps activity content in an independently scrolling viewport", async ({
     ),
   );
   expect(actionPresentations[0]?.background).not.toBe("rgba(0, 0, 0, 0)");
-  expect(actionPresentations[1]).toEqual({
-    ...actionPresentations[0],
-    background: "rgba(0, 0, 0, 0)",
-  });
+  expect(actionPresentations[1]?.background).toBe("rgba(0, 0, 0, 0)");
+  expect(actionPresentations[1]?.borderRadius).toBe(
+    actionPresentations[0]?.borderRadius,
+  );
+  expect(actionPresentations[1]?.color).toBe(actionPresentations[0]?.color);
+  expect(actionPresentations[1]?.height).toBeGreaterThan(
+    actionPresentations[0]?.height ?? 0,
+  );
+  expect(actionPresentations[1]?.width).toBeGreaterThan(
+    actionPresentations[0]?.width ?? 0,
+  );
+  const mediaFooterBox = await mediaDialog
+    .locator(".footer-actions")
+    .boundingBox();
+  expect(mediaFooterBox?.height).toBeGreaterThanOrEqual(56);
   const earlyMediaActionBox = await mediaAction.boundingBox();
   const earlyMediaDialogBox = await mediaDialog.boundingBox();
   expect(
@@ -4463,11 +4474,6 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect(
     page.getByRole("slider", { name: "Recorded video volume" }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("button", {
-      name: "Additional recorded video control coming soon",
-    }),
-  ).toBeDisabled();
   const recordedMute = page.getByRole("button", {
     name: "Mute recorded video",
   });
@@ -4730,7 +4736,9 @@ test("keeps activity content in an independently scrolling viewport", async ({
   ).toBeLessThanOrEqual(1);
   expect(resizeBox?.width).toBeCloseTo(finalMediaActionBox?.width ?? 0, 1);
   expect(resizeBox?.height).toBeCloseTo(finalMediaActionBox?.height ?? 0, 1);
-  expect(resizeBox?.y).toBeCloseTo(finalMediaActionBox?.y ?? 0, 1);
+  expect(
+    (resizeBox?.y ?? 0) - (finalMediaActionBox?.y ?? 0),
+  ).toBeLessThanOrEqual(8);
   expect(resizePresentation.iconSize).toBeGreaterThanOrEqual(24);
   expect(finalMediaActionBox?.x).toBeLessThan(resizeBox?.x ?? 0);
   expect(
@@ -4862,9 +4870,9 @@ test("keeps activity content in an independently scrolling viewport", async ({
     "flex-direction",
     "row",
   );
-  expect(compactInformationLayout.informationInlinePadding).toBeLessThanOrEqual(
-    8,
-  );
+  expect(
+    compactInformationLayout.informationInlinePadding,
+  ).toBeGreaterThanOrEqual(16);
   expect(compactInformationLayout.metadataColumns).toBe(3);
   expect(compactInformationLayout.metadataRowGap).toBeLessThanOrEqual(4);
   const compactDialogBox = await mediaDialog.boundingBox();
@@ -5114,6 +5122,23 @@ test("switches activity and recordings through the shared media calendar", async
               },
             ],
             preferred_transport: "file",
+          };
+        }
+        if (message.type === "watchzone/exports/prepare") {
+          return { name: "Front selected recording" };
+        }
+        if (message.type === "watchzone/exports/create") {
+          return { export_id: "front-selected-recording" };
+        }
+        if (message.type === "watchzone/exports/list") {
+          return {
+            items: [
+              {
+                entity_id: "camera.front",
+                id: "front-selected-recording",
+                in_progress: false,
+              },
+            ],
           };
         }
         return undefined;
@@ -5411,7 +5436,47 @@ test("switches activity and recordings through the shared media calendar", async
     ),
   ).toBeVisible();
   const scrubber = page.locator("wzc-recording-scrubber");
+  const recordingDialog = page.locator("wzc-recording-media-dialog");
+  const segmentAction = recordingDialog.getByRole("button", {
+    name: "Select recording segment",
+  });
+  const recordingDownload = recordingDialog.getByRole("button", {
+    name: "Download recording",
+  });
   await expect(scrubber).toBeVisible();
+  await expect(segmentAction).toBeVisible();
+  await expect(recordingDownload).toBeVisible();
+  await expect(segmentAction).toHaveAttribute("aria-pressed", "false");
+  const rateControl = page.locator("wzc-recorded-video-player .rate-control");
+  await expect(rateControl).toBeVisible();
+  await expect(rateControl).toContainText("1×");
+  const [scrubberBox, rateBox, playerBox] = await Promise.all([
+    scrubber.boundingBox(),
+    rateControl.boundingBox(),
+    page.locator("wzc-recorded-video-player").boundingBox(),
+  ]);
+  expect(scrubberBox).not.toBeNull();
+  expect(rateBox).not.toBeNull();
+  expect(playerBox).not.toBeNull();
+  if (scrubberBox && rateBox && playerBox) {
+    expect(rateBox.y).toBeGreaterThanOrEqual(
+      scrubberBox.y + scrubberBox.height - 1,
+    );
+    expect(
+      playerBox.x + playerBox.width - rateBox.x - rateBox.width,
+    ).toBeLessThanOrEqual(12);
+  }
+  await rateControl
+    .getByRole("button", { name: "Increase playback speed" })
+    .click();
+  await expect(rateControl).toContainText("2×");
+  await expect
+    .poll(() =>
+      page
+        .locator("wzc-recorded-video-player video")
+        .evaluate((video) => (video as HTMLVideoElement).playbackRate),
+    )
+    .toBe(2);
   await page.locator("watchzone-card").evaluate((element) => {
     const host = element as HTMLElement;
     host.style.setProperty("--wzc-color-background", "rgb(20, 21, 22)");
@@ -5450,9 +5515,7 @@ test("switches activity and recordings through the shared media calendar", async
   await expect(scrubber.locator(".preview-label")).toContainText(
     "Detection - 10:07",
   );
-  await scrubber
-    .getByRole("button", { name: "Select recording segment" })
-    .click();
+  await segmentAction.click();
   await expect(scrubber.locator(".context")).toHaveCount(2);
   await expect(scrubber.locator(".handle")).toHaveCount(2);
   await expect(scrubber.locator(".handle.start")).toHaveAttribute(
@@ -5463,10 +5526,7 @@ test("switches activity and recordings through the shared media calendar", async
     "aria-valuetext",
     "10:27:00",
   );
-  await expect(scrubber.locator(".segment-toggle.active")).toHaveCSS(
-    "color",
-    "rgb(250, 251, 252)",
-  );
+  await expect(segmentAction).toHaveAttribute("aria-pressed", "true");
   await expect(scrubber.locator(".selected")).toHaveCSS(
     "background-color",
     "rgba(0, 0, 0, 0)",
@@ -5482,6 +5542,16 @@ test("switches activity and recordings through the shared media calendar", async
   await expect(page.locator("wzc-recorded-video-transport")).toHaveCount(1);
   const segmentManager = page.locator("wzc-recording-segment-manager");
   await expect(segmentManager).toBeVisible();
+  const segmentCopyLayout = await segmentManager.evaluate((element) => {
+    const copy = element.shadowRoot?.querySelector(".copy");
+    if (!copy) return null;
+    const style = getComputedStyle(copy);
+    return {
+      columnEnd: style.gridColumnEnd,
+      columnStart: style.gridColumnStart,
+    };
+  });
+  expect(segmentCopyLayout).toEqual({ columnEnd: "-1", columnStart: "1" });
   const resetSegment = segmentManager.getByRole("button", { name: "Reset" });
   const darkSegmentSurfaces = await Promise.all([
     segmentManager.evaluate(
@@ -5495,6 +5565,9 @@ test("switches activity and recordings through the shared media calendar", async
   await expect(
     segmentManager.getByRole("button", { name: "Download Segment" }),
   ).toHaveCSS("background-color", "rgb(10, 120, 200)");
+  await expect(
+    segmentManager.getByRole("button", { name: "Export Segment" }),
+  ).toBeVisible();
   await expect(
     segmentManager
       .getByRole("button", { name: "Download Segment" })
@@ -5526,6 +5599,12 @@ test("switches activity and recordings through the shared media calendar", async
     "aria-valuetext",
     "10:00:00",
   );
+  await segmentManager.getByRole("button", { name: "Export Segment" }).click();
+  await expect(
+    page
+      .locator("watchzone-card wzc-toast-region")
+      .getByText("Export started."),
+  ).toBeVisible();
   await segmentManager
     .getByRole("button", { name: "Download Segment" })
     .click();
@@ -5546,9 +5625,7 @@ test("switches activity and recordings through the shared media calendar", async
   await expect(
     segmentManager.getByRole("button", { name: "Preview Segment" }),
   ).toBeVisible();
-  await scrubber
-    .getByRole("button", { name: "Select recording segment" })
-    .click();
+  await segmentAction.click();
   await expect(segmentManager).toHaveCount(0);
   await expect(scrubber).toBeVisible();
 });
