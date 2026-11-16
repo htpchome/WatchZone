@@ -618,22 +618,22 @@ export class CardEditor extends LitElement {
         </div>
       </fieldset>
       ${
-        stageType === "minimal_camera_only"
-          ? null
-          : this._renderStageLayoutOptions(
+        stageType === "full"
+          ? this._renderStageLayoutOptions(
               "default",
               this._t("editor.stage_layout"),
               stageType,
             )
+          : null
       }
       ${
-        stageType === "minimal_camera_only"
-          ? null
-          : this._renderStageLayoutOptions(
+        stageType === "full"
+          ? this._renderStageLayoutOptions(
               "phone",
               this._t("editor.mobile_stage_layout"),
               stageType,
             )
+          : null
       }
     `;
   }
@@ -898,9 +898,6 @@ export class CardEditor extends LitElement {
 
   private _stageDesignLabel(id: string, fallback: string): string {
     if (id === "default-stage") return this._t("editor.default_stage_layout");
-    if (id === "standard-camera-stage") {
-      return this._t("editor.standard_camera_stage_layout");
-    }
     return fallback;
   }
 

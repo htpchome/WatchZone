@@ -76,8 +76,8 @@ describe("WatchZone card configuration", () => {
         stage_type: "camera_only",
       }).stage_flow,
     ).toEqual({
-      default: ["standard-camera-stage", "future-camera-stage"],
-      phone: ["future-camera-stage", "standard-camera-stage"],
+      default: ["standard-camera-stage"],
+      phone: ["standard-camera-stage"],
     });
     expect(
       normalizeCardConfig({

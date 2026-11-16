@@ -36,13 +36,7 @@ describe("WatchZone YAML configuration manager", () => {
           type: CARD_TYPE,
         }),
       ),
-    ).toMatchObject({
-      stage_flow: {
-        default: ["standard-camera-stage", "future-camera-stage"],
-        phone: ["standard-camera-stage"],
-      },
-      stage_type: "camera_only",
-    });
+    ).toEqual({ stage_type: "camera_only", type: CARD_TYPE });
     expect(
       toYamlCardConfig(
         normalizeCardConfig({

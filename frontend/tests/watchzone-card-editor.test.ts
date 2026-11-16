@@ -217,13 +217,9 @@ describe("watchzone-card-editor", () => {
         "input[data-stage-profile]",
       ) ?? []),
     ];
-    expect(cameraOnlyInputs.map(({ value }) => value)).toEqual([
-      "standard-camera-stage",
-      "standard-camera-stage",
-    ]);
-    expect(cameraOnlyInputs.every(({ checked }) => checked)).toBe(true);
-    expect(stageItem?.textContent).toContain("Standard Camera");
-    expect(stageItem?.querySelectorAll("input:disabled")).toHaveLength(2);
+    expect(cameraOnlyInputs).toHaveLength(0);
+    expect(stageItem?.textContent).not.toContain("Stage Layout");
+    expect(stageItem?.textContent).not.toContain("Mobile Stage Layout");
   });
 
   it("presents the minimal camera editor flow without stage lineups or unrelated settings", async () => {

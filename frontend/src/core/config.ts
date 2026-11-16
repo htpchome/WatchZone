@@ -725,7 +725,7 @@ function normalizeStageFlow(
   value: unknown,
   stageType: AvailableStageType,
 ): ConfiguredStageFlow {
-  if (stageType === "minimal_camera_only") return defaultStageFlow(stageType);
+  if (stageType !== "full") return defaultStageFlow(stageType);
   if (value === undefined) return defaultStageFlow(stageType);
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new Error(`${APP_NAME} stage_flow must be an object.`);
