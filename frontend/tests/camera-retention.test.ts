@@ -304,6 +304,29 @@ describe("camera presentation retention", () => {
   it("reattaches retained Frigate MSE without presenting a connecting state", async () => {
     vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
     const mseVideo = document.createElement("video");
+    const requestPictureInPicture = vi.fn(async () => {
+      mseVideo.remove();
+      (
+        document as Document & {
+          pictureInPictureElement: Element | null;
+        }
+      ).pictureInPictureElement = mseVideo;
+      mseVideo.dispatchEvent(new Event("enterpictureinpicture"));
+      return {} as PictureInPictureWindow;
+    });
+    Object.defineProperty(document, "pictureInPictureEnabled", {
+      configurable: true,
+      value: true,
+    });
+    Object.defineProperty(document, "pictureInPictureElement", {
+      configurable: true,
+      value: null,
+      writable: true,
+    });
+    Object.defineProperty(mseVideo, "requestPictureInPicture", {
+      configurable: true,
+      value: requestPictureInPicture,
+    });
     const webRtcFactory = vi.fn<ConnectionFactory>(async () => ({
       close: vi.fn(),
     }));
@@ -345,6 +368,33 @@ describe("camera presentation retention", () => {
     expect(api.callWS).toHaveBeenCalledOnce();
     expect(webRtcFactory).toHaveBeenCalledOnce();
     expect(mseFactory).toHaveBeenCalledOnce();
+
+    cameraControl(returned).dispatchEvent(
+      new CustomEvent("camera-control", {
+        bubbles: true,
+        composed: true,
+        detail: { action: "picture_in_picture" },
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(requestPictureInPicture).toHaveBeenCalledOnce(),
+    );
+    returnedPresentation?.requestUpdate();
+    await returnedPresentation?.updateComplete;
+    expect(document.pictureInPictureElement).toBe(mseVideo);
+    expect(mseVideo.parentElement).toBeNull();
+
+    (
+      document as Document & {
+        pictureInPictureElement: Element | null;
+      }
+    ).pictureInPictureElement = null;
+    mseVideo.dispatchEvent(new Event("leavepictureinpicture"));
+    await vi.waitFor(() =>
+      expect(
+        returnedPresentation?.shadowRoot?.querySelector(".fallback-host video"),
+      ).toBe(mseVideo),
+    );
   });
 
   it("reattaches retained Frigate WebRTC without presenting a connecting state", async () => {

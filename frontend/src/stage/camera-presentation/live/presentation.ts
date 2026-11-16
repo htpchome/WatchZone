@@ -31,6 +31,7 @@ import "../controls-overlay";
 import { mediaOverlayBadgeSizingStyles } from "../../../ui/overlay-control.styles";
 import { cameraLiveViewStyles } from "../live-view.styles";
 import {
+  isPictureInPictureActive,
   refreshNativePictureInPictureSuppression,
   suppressNativePictureInPicture,
 } from "../../../core/picture-in-picture";
@@ -388,7 +389,8 @@ export class CameraLivePresentation extends LitElement {
     if (
       hlsHost &&
       this.fallbackVideo &&
-      this.fallbackVideo.parentElement !== hlsHost
+      this.fallbackVideo.parentElement !== hlsHost &&
+      !isPictureInPictureActive(this.fallbackVideo)
     ) {
       this.fallbackVideo.setAttribute(
         "aria-label",
