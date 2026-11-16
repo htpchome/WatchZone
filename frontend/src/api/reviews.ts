@@ -70,6 +70,17 @@ export interface RecentReviewState {
   readonly id: string;
 }
 
+export interface ReviewIndexItem {
+  readonly classification: ReviewClassification;
+  readonly id: string;
+  readonly labels: readonly string[];
+  readonly related_event_ids: readonly string[];
+  readonly reviewed: boolean;
+  readonly start_time: number;
+  readonly sub_labels: readonly string[];
+  readonly zones: readonly string[];
+}
+
 export async function getReview(
   api: HomeAssistantApi,
   entityId: string,
@@ -93,6 +104,45 @@ export async function listReviews(
     entityId,
     "watchzone/reviews/list",
     options,
+  );
+}
+
+/** Retrieve lightweight metadata for the complete configured review window. */
+export async function listReviewIndex(
+  api: HomeAssistantApi,
+  entityId: string,
+  historyDays: number,
+): Promise<readonly ReviewIndexItem[]> {
+  const windowBefore = Date.now() / 1000;
+  const windowAfter = windowBefore - historyDays * 24 * 60 * 60;
+  const items = new Map<string, ReviewIndexItem>();
+  let before = windowBefore;
+  const limit = 500;
+
+  while (before > windowAfter) {
+    const response = await api.callWS<{
+      readonly items: readonly ReviewIndexItem[];
+    }>({
+      type: "watchzone/reviews/list",
+      entity_id: entityId,
+      after: windowAfter,
+      before,
+      limit,
+      bypass_cache: false,
+      summary_only: true,
+    });
+    for (const item of response.items) items.set(item.id, item);
+    if (response.items.length < limit) break;
+    const nextBefore = Math.min(
+      ...response.items.map(({ start_time }) => start_time),
+    );
+    if (!Number.isFinite(nextBefore) || nextBefore >= before) break;
+    before = nextBefore;
+  }
+
+  return [...items.values()].sort(
+    (left, right) =>
+      right.start_time - left.start_time || left.id.localeCompare(right.id),
   );
 }
 

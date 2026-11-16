@@ -4,10 +4,12 @@ import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 import {
   listReviews,
   setReviewReviewed,
+  type ReviewIndexItem,
   type ReviewItem,
 } from "../../../api/reviews";
 import {
   ActiveCameraActivityController,
+  ActiveCameraReviewIndexController,
   ActivityFilterController,
   type ActivityFilterContext,
 } from "../../activity";
@@ -95,11 +97,15 @@ export class ReviewsModule extends LitElement {
   private readonly _toasts = new ToastManager(this);
   private _analysis?: ReviewAnalysis;
   private _publishedActivity?: readonly ReviewItem[];
+  private _publishedIndex?: readonly ReviewIndexItem[];
   private _publishedEntityId?: string;
   private _publishedFilter?: ActivityFilterContext;
   private _publishedDateEntityId?: string;
   private _publishedDateContext?: MediaDateContext;
   private readonly _pendingReviewIds = new Set<string>();
+  private _filteredLoadFrame?: number;
+  private _filteredLoadItems?: readonly ReviewItem[];
+  private _filteredLoadSignature = "";
   private readonly _filter = new ActivityFilterController(
     this,
     () => this.activityFilter,
@@ -126,6 +132,19 @@ export class ReviewsModule extends LitElement {
     (notification) => notification.review,
     (state) => state.activeReviews ?? [],
   );
+  private readonly _index = new ActiveCameraReviewIndexController(
+    this,
+    () => ({
+      api: this.api,
+      cameraSelection: this.cameraSelection,
+      historyDays: this.historyDays,
+      targetModuleId: this.targetModuleId,
+    }),
+    () =>
+      this._toasts.error(this.localize("reviews.load_failed"), {
+        key: "review-index-load-failed",
+      }),
+  );
   private readonly _download = new ReviewDownloadController(
     this,
     () => this.api,
@@ -149,6 +168,9 @@ export class ReviewsModule extends LitElement {
 
   public disconnectedCallback(): void {
     this._clearPublishedDates();
+    if (this._filteredLoadFrame !== undefined)
+      cancelAnimationFrame(this._filteredLoadFrame);
+    this._filteredLoadFrame = undefined;
     super.disconnectedCallback();
   }
 
@@ -159,15 +181,17 @@ export class ReviewsModule extends LitElement {
       entityId &&
       this.activityFilter &&
       (this._publishedActivity !== this._activity.items ||
+        this._publishedIndex !== this._index.items ||
         this._publishedEntityId !== entityId ||
         this._publishedFilter !== this.activityFilter)
     ) {
       this._publishedActivity = this._activity.items;
+      this._publishedIndex = this._index.items;
       this._publishedEntityId = entityId;
       this._publishedFilter = this.activityFilter;
       this.activityFilter.publishReviews(
         entityId,
-        this._activity.items.map((review) => ({
+        this._reviewIndex().map((review) => ({
           classification: review.classification,
           id: review.id,
           labels: [...review.labels, ...review.sub_labels],
@@ -179,6 +203,10 @@ export class ReviewsModule extends LitElement {
     }
     this._publishAvailableDates();
     super.update(changed);
+  }
+
+  protected updated(): void {
+    this._scheduleFilteredLoading();
   }
 
   private _publishAvailableDates(): void {
@@ -201,8 +229,66 @@ export class ReviewsModule extends LitElement {
     context.publishAvailableDates(
       entityId,
       this,
-      activityDates(this._activity.items, this.api?.locale),
+      activityDates(this._reviewIndex(), this.api?.locale),
     );
+  }
+
+  private _reviewIndex(): readonly ReviewIndexItem[] {
+    const items = new Map(
+      this._index.items.map((review) => [review.id, review]),
+    );
+    for (const review of this._activity.items) items.set(review.id, review);
+    return [...items.values()].sort(
+      (left, right) =>
+        right.start_time - left.start_time || left.id.localeCompare(right.id),
+    );
+  }
+
+  private _scheduleFilteredLoading(): void {
+    const state = this._filter.state;
+    const signature = JSON.stringify([
+      state.classification,
+      state.reviewStatus,
+      state.labels,
+      state.zones,
+      this._filter.selectedDate(),
+    ]);
+    if (signature !== this._filteredLoadSignature) {
+      this._filteredLoadSignature = signature;
+      this._filteredLoadItems = undefined;
+    }
+    const filtered =
+      state.classification !== "all" ||
+      state.reviewStatus !== "all" ||
+      state.labels.length > 0 ||
+      state.zones.length > 0 ||
+      this._filter.selectedDate() !== undefined;
+    if (
+      !filtered ||
+      this._index.loading ||
+      !this._activity.hasMore ||
+      this._filteredLoadItems === this._activity.items ||
+      this._filteredLoadFrame !== undefined
+    )
+      return;
+    const loaded = new Set(this._activity.items.map(({ id }) => id));
+    const missingMatch = this._index.items.some(
+      (review) =>
+        !loaded.has(review.id) &&
+        this._filter.includesReview({
+          classification: review.classification,
+          labels: [...review.labels, ...review.sub_labels],
+          reviewed: review.reviewed,
+          startTime: review.start_time,
+          zones: review.zones,
+        }),
+    );
+    if (!missingMatch) return;
+    this._filteredLoadFrame = requestAnimationFrame(() => {
+      this._filteredLoadFrame = undefined;
+      this._filteredLoadItems = this._activity.items;
+      void this._activity.loadMore();
+    });
   }
 
   private _clearPublishedDates(): void {
@@ -217,6 +303,15 @@ export class ReviewsModule extends LitElement {
   }
 
   protected render() {
+    const indexedItems = this._reviewIndex().filter((review) =>
+      this._filter.includesReview({
+        classification: review.classification,
+        labels: [...review.labels, ...review.sub_labels],
+        reviewed: review.reviewed,
+        startTime: review.start_time,
+        zones: review.zones,
+      }),
+    );
     const items = this._activity.items
       .filter((review) =>
         this._filter.includesReview({
@@ -234,6 +329,8 @@ export class ReviewsModule extends LitElement {
         .displayTypeBadges=${this.displayEventTypeBadges}
         .displayZone=${this.displayZone}
         .emptyKey=${"reviews.empty"}
+        .estimatedDayCount=${activityDates(indexedItems, this.api?.locale).length}
+        .estimatedItemCount=${indexedItems.length}
         .hasMore=${this._activity.hasMore}
         .items=${items}
         .listKey=${"reviews.list"}
@@ -510,7 +607,7 @@ function wait(delayMs: number): Promise<void> {
 }
 
 function activityDates(
-  items: readonly ReviewItem[],
+  items: readonly { readonly start_time: number }[],
   locale: HomeAssistantLocale | undefined,
 ): readonly string[] {
   return [

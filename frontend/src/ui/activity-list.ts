@@ -1,4 +1,4 @@
-import { html, LitElement } from "lit";
+import { html, LitElement, type PropertyValues } from "lit";
 import { repeat } from "lit/directives/repeat.js";
 import { styleMap } from "lit/directives/style-map.js";
 
@@ -134,6 +134,8 @@ export class ActivityList extends LitElement {
     displayTypeBadges: { attribute: false },
     displayZone: { attribute: false },
     emptyKey: { attribute: false },
+    estimatedDayCount: { attribute: false },
+    estimatedItemCount: { attribute: false },
     hasMore: { attribute: false },
     items: { attribute: false },
     listKey: { attribute: false },
@@ -151,6 +153,8 @@ export class ActivityList extends LitElement {
   public displayTypeBadges = true;
   public displayZone = true;
   public emptyKey: TranslationKey = "events.empty";
+  public estimatedDayCount = 0;
+  public estimatedItemCount = 0;
   public hasMore = false;
   public items: readonly ActivityListItem[] = [];
   public listKey: TranslationKey = "events.list";
@@ -170,6 +174,8 @@ export class ActivityList extends LitElement {
   private _hoveredPreviewId?: string;
   private _loadMoreFrame?: number;
   private _loadMoreRequested = false;
+  private _preserveWindow = false;
+  private _scrollAnchor?: { readonly id: string; readonly offset: number };
   private _dayHeaderHeight = 0;
   private _rowGap = 0;
   private _rowHeight = 0;
@@ -177,12 +183,21 @@ export class ActivityList extends LitElement {
   private _windowEnd = VIRTUALIZATION_THRESHOLD;
   private _windowStart = 0;
 
+  protected willUpdate(changed: PropertyValues<this>): void {
+    if (!changed.has("items")) return;
+    this._captureScrollAnchor(
+      (changed.get("items") as readonly ActivityListItem[] | undefined) ?? [],
+    );
+  }
+
   protected updated(changed: Map<PropertyKey, unknown>): void {
     if (changed.has("items")) {
       this._loadMoreRequested = false;
       this._activeDateKey = undefined;
-      this._windowStart = 0;
-      this._windowEnd = VIRTUALIZATION_THRESHOLD;
+      if (!this._preserveWindow) {
+        this._windowStart = 0;
+        this._windowEnd = VIRTUALIZATION_THRESHOLD;
+      }
       const current = new Set(
         this.items.flatMap((item) =>
           [item.thumbnailUrl, item.snapshotUrl, item.hoverPreviewUrl]
@@ -194,6 +209,7 @@ export class ActivityList extends LitElement {
         if (!current.has(key)) this._failedMedia.delete(key);
       }
     }
+    this._restoreScrollAnchor();
     if (changed.has("loading") && !this.loading)
       this._loadMoreRequested = false;
     this._scheduleVirtualWindowSync();
@@ -256,7 +272,7 @@ export class ActivityList extends LitElement {
                 </span>`
             : this.items.length === 0
               ? html`<div class="empty">${this.localize(this.emptyKey)}</div>`
-              : this._renderList(groups)
+              : html`${this._renderList(groups)}${this._unloadedSpace(groups)}`
         }
       </div>
     </section>`;
@@ -349,6 +365,7 @@ export class ActivityList extends LitElement {
     const playLabel = this.localize("media_player.open", { title });
     return html`<article
       class="tile standard"
+      data-activity-id=${item.id}
       aria-posinset=${index + 1}
       aria-setsize=${this.items.length}
       style=${styleMap(
@@ -742,8 +759,11 @@ export class ActivityList extends LitElement {
     if (!this.hasMore || this.loading || this._loadMoreRequested) return;
     const scroller = this.renderRoot.querySelector<HTMLElement>(".scroller");
     if (!scroller || scroller.clientHeight <= 0) return;
-    const remaining =
-      scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight;
+    const list = scroller.querySelector<HTMLElement>(".list");
+    const remaining = list
+      ? list.getBoundingClientRect().bottom -
+        scroller.getBoundingClientRect().bottom
+      : 0;
     const threshold = Math.max(
       this._rowHeight * 2,
       scroller.clientHeight * 0.25,
@@ -751,6 +771,74 @@ export class ActivityList extends LitElement {
     if (remaining > threshold) return;
     this._loadMoreRequested = true;
     this._dispatch({ kind: "load_more" });
+  }
+
+  private _unloadedSpace(groups: readonly ActivityDayGroup[]) {
+    const unloadedItems = Math.max(
+      0,
+      this.estimatedItemCount - this.items.length,
+    );
+    const unloadedDays = Math.max(0, this.estimatedDayCount - groups.length);
+    if (unloadedItems === 0 && unloadedDays === 0) return null;
+    return html`<div
+      class="unloaded-space"
+      aria-hidden="true"
+      style=${styleMap({
+        blockSize: `calc(${unloadedItems} * (var(--wzc-event-tile-block-size) + var(--wzc-event-list-gap)) + ${unloadedDays} * (var(--wzc-media-day-header-block-size) + var(--wzc-media-day-header-gap)))`,
+      })}
+    ></div>`;
+  }
+
+  private _captureScrollAnchor(
+    previousItems: readonly ActivityListItem[],
+  ): void {
+    this._preserveWindow = false;
+    this._scrollAnchor = undefined;
+    if (previousItems.length === 0 || this.items.length <= previousItems.length)
+      return;
+    const nextIndex = new Map(this.items.map(({ id }, index) => [id, index]));
+    if (!previousItems.every(({ id }) => nextIndex.has(id))) return;
+    const scroller = this.renderRoot.querySelector<HTMLElement>(".scroller");
+    if (!scroller) return;
+    const scrollerTop = scroller.getBoundingClientRect().top;
+    const tiles = [
+      ...this.renderRoot.querySelectorAll<HTMLElement>(
+        ".tile[data-activity-id]",
+      ),
+    ];
+    const anchor = tiles.find(
+      (tile) => tile.getBoundingClientRect().bottom > scrollerTop,
+    );
+    const id = anchor?.dataset.activityId;
+    if (!anchor || !id) return;
+    const previousIndex = previousItems.findIndex((item) => item.id === id);
+    const currentIndex = nextIndex.get(id);
+    if (previousIndex < 0 || currentIndex === undefined) return;
+    const indexShift = currentIndex - previousIndex;
+    this._windowStart = Math.max(0, this._windowStart + indexShift);
+    this._windowEnd = Math.min(this.items.length, this._windowEnd + indexShift);
+    this._preserveWindow = true;
+    this._scrollAnchor = {
+      id,
+      offset: anchor.getBoundingClientRect().top - scrollerTop,
+    };
+  }
+
+  private _restoreScrollAnchor(): void {
+    const pending = this._scrollAnchor;
+    this._scrollAnchor = undefined;
+    this._preserveWindow = false;
+    if (!pending) return;
+    const scroller = this.renderRoot.querySelector<HTMLElement>(".scroller");
+    const anchor = [
+      ...this.renderRoot.querySelectorAll<HTMLElement>(
+        ".tile[data-activity-id]",
+      ),
+    ].find(({ dataset }) => dataset.activityId === pending.id);
+    if (!scroller || !anchor) return;
+    const nextOffset =
+      anchor.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+    scroller.scrollTop += nextOffset - pending.offset;
   }
 
   private _scheduleLoadMoreCheck(): void {

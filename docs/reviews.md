@@ -52,6 +52,14 @@
   availability must not pop in through a second summary-to-detail tile render
   or remain incomplete when that follow-up request races; older history may
   continue paging after the complete first batch is visible.
+- Calendar availability and filter facets use a separate lightweight metadata
+  index for the complete configured history window. They never depend on how
+  many enriched tiles the user has scrolled through. Selecting an older date
+  or facet automatically pages enriched tiles until its matching results are
+  available, without replacing visible tiles with summary data.
+- Appending or merging an older tile page preserves the current visible tile as
+  the list's scroll anchor. Virtualization must not reset the rendered window
+  or move the user upward when grouped-camera pages interleave.
 - An in-progress Review exposes no export, download, or snapshot actions. Its
   complete applicable action set appears only after the provider marks the
   Review complete.

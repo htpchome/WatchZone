@@ -1041,6 +1041,104 @@ describe("reviews module", () => {
     );
   });
 
+  it("loads complete calendar and filter metadata before older review tiles", async () => {
+    const now = Date.now() / 1000;
+    const initial = Array.from({ length: 10 }, (_, index) => ({
+      ...reviews[0],
+      id: `frigate:recent-${index}`,
+      labels: ["person"],
+      related_event_ids: [`frigate:event-${index}`],
+      revision: `recent-${index}`,
+      start_time: now - index,
+      sub_labels: [],
+    }));
+    const older = {
+      ...reviews[0],
+      id: "frigate:older-cardinal",
+      labels: ["bird"],
+      related_event_ids: ["frigate:event-cardinal"],
+      revision: "older-cardinal",
+      start_time: now - 2 * 24 * 60 * 60,
+      sub_labels: ["Northern Cardinal"],
+    };
+    const index = [...initial, older].map(
+      ({
+        classification,
+        id,
+        labels,
+        related_event_ids,
+        reviewed,
+        start_time,
+        sub_labels,
+        zones,
+      }) => ({
+        classification,
+        id,
+        labels,
+        related_event_ids,
+        reviewed,
+        start_time,
+        sub_labels,
+        zones,
+      }),
+    );
+    const callWS = vi.fn((message: Record<string, unknown>) => {
+      if (message.summary_only === true)
+        return Promise.resolve({ items: index });
+      if (message.limit === 50) return Promise.resolve({ items: [older] });
+      return Promise.resolve({ items: initial });
+    });
+    const api = {
+      callWS,
+      identity: {},
+      locale: { language: "en", time_zone: "UTC" },
+      resolveUrl: (path: string) => `https://ha.local${path}`,
+      subscribeMessage: vi.fn(),
+    } as unknown as HomeAssistantApi;
+    const selection = new CameraSelectionContext();
+    const filterContext = new ActivityFilterContext();
+    const dateContext = new MediaDateContext();
+    let availableDates: readonly string[] = [];
+    dateContext.subscribeAvailableDates("camera.front", (dates) => {
+      availableDates = dates;
+    });
+    const module = document.createElement(REVIEWS_TAG) as ReviewsModule;
+    module.api = api;
+    module.activityFilter = filterContext;
+    module.mediaDate = dateContext;
+    module.cameraSelection = selection;
+    module.historyDays = 5;
+    module.targetModuleId = "camera-module";
+    document.body.append(module);
+    selection.publish(
+      "camera-module",
+      {},
+      {
+        activeEntityId: "camera.front",
+        items: [{ entityId: "camera.front", label: "Front" }],
+      },
+      vi.fn(),
+    );
+
+    await vi.waitFor(() => {
+      expect(filterContext.stateFor("camera.front").reviews).toHaveLength(11);
+      expect(availableDates).toHaveLength(2);
+      expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(10);
+    });
+
+    filterContext.toggleLabel("camera.front", "Northern Cardinal");
+    await vi.waitFor(() => {
+      expect(
+        activityRoot(module)?.querySelector(
+          '[data-activity-id="frigate:older-cardinal"]',
+        ),
+      ).not.toBeNull();
+    });
+    expect(callWS).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 50, summary_only: false }),
+    );
+  });
+
   it("replaces one review tile through new, update, and end notifications", async () => {
     const startTime = Date.now() / 1000;
     const callWS = vi.fn().mockResolvedValue({ items: [] });

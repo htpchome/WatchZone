@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from custom_components.watchzone.api.reviews import _review_summary
 from custom_components.watchzone.providers.frigate.reviews import (
     FrigateReviewsProvider,
     _capture_window,
@@ -145,6 +146,44 @@ def test_review_normalization_omits_incomplete_analysis() -> None:
     assert item.analysis_score is None
     assert item.score is None
     assert item.analysis_concerns == ()
+
+
+def test_review_summary_excludes_media_and_analysis_payloads() -> None:
+    """Calendar and filter metadata does not retain enriched media fields."""
+    item = _normalize_review(
+        {
+            "camera": "front",
+            "data": {
+                "detections": ["event-person"],
+                "metadata": {"scene": "Long analysis", "title": "Person"},
+                "objects": ["person"],
+                "zones": ["porch"],
+            },
+            "end_time": 110,
+            "has_been_reviewed": True,
+            "id": "review-summary",
+            "severity": "alert",
+            "start_time": 100,
+        },
+        _source(),
+        115,
+    )
+
+    assert item is not None
+    summary = _review_summary(item)
+    assert summary == {
+        "classification": "alert",
+        "end_time": 110,
+        "id": "frigate_workshop:review-summary",
+        "labels": ("person",),
+        "related_event_ids": ("frigate_workshop:event-person",),
+        "reviewed": True,
+        "start_time": 100,
+        "sub_labels": (),
+        "zones": ("porch",),
+    }
+    assert "playback_sources" not in summary
+    assert "analysis_description" not in summary
 
 
 def test_active_review_keeps_stable_thumbnail_identity() -> None:

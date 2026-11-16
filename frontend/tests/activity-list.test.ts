@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   ACTIVITY_LIST_INTENT_EVENT,
@@ -126,4 +126,76 @@ describe("activity list media failures", () => {
     scroller?.dispatchEvent(new Event("scroll"));
     expect(intents.filter(({ kind }) => kind === "load_more")).toHaveLength(1);
   });
+
+  it("keeps the visible tile anchored when a merged page inserts above it", async () => {
+    const list = document.createElement(ACTIVITY_LIST_TAG) as ActivityList;
+    const existing = { ...item("existing"), id: "existing" };
+    list.items = [existing];
+    document.body.append(list);
+    await list.updateComplete;
+
+    const scroller = list.shadowRoot?.querySelector<HTMLElement>(".scroller");
+    const existingTile = list.shadowRoot?.querySelector<HTMLElement>(
+      '[data-activity-id="existing"]',
+    );
+    expect(scroller).not.toBeNull();
+    expect(existingTile).not.toBeNull();
+    Object.defineProperty(scroller, "scrollTop", {
+      configurable: true,
+      value: 100,
+      writable: true,
+    });
+    vi.spyOn(scroller!, "getBoundingClientRect").mockReturnValue(rect(0, 200));
+    vi.spyOn(existingTile!, "getBoundingClientRect").mockImplementation(() =>
+      list.shadowRoot?.querySelectorAll(".tile").length === 1
+        ? rect(10, 60)
+        : rect(60, 110),
+    );
+
+    list.items = [
+      { ...item("inserted"), id: "inserted", startTime: 101 },
+      existing,
+    ];
+    await list.updateComplete;
+
+    expect(scroller?.scrollTop).toBe(150);
+  });
+
+  it("reserves scroll space for indexed rows that are not loaded yet", async () => {
+    const list = document.createElement(ACTIVITY_LIST_TAG) as ActivityList;
+    list.estimatedDayCount = 3;
+    list.estimatedItemCount = 100;
+    list.items = [{ ...item("first"), id: "first" }];
+    document.body.append(list);
+    await list.updateComplete;
+
+    expect(
+      list.shadowRoot?.querySelector<HTMLElement>(".unloaded-space")?.style
+        .blockSize,
+    ).toContain("99 *");
+
+    list.items = [
+      { ...item("first"), id: "first" },
+      { ...item("second"), id: "second" },
+    ];
+    await list.updateComplete;
+    expect(
+      list.shadowRoot?.querySelector<HTMLElement>(".unloaded-space")?.style
+        .blockSize,
+    ).toContain("98 *");
+  });
 });
+
+function rect(top: number, bottom: number): DOMRect {
+  return {
+    bottom,
+    height: bottom - top,
+    left: 0,
+    right: 100,
+    top,
+    width: 100,
+    x: 0,
+    y: top,
+    toJSON: () => ({}),
+  };
+}

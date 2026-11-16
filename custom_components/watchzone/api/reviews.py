@@ -19,7 +19,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
 from ..const import DOMAIN
-from ..providers.reviews import ReviewQuery
+from ..providers.reviews import ReviewItem, ReviewQuery
 from . import runtime_from_hass
 
 
@@ -95,7 +95,32 @@ async def ws_reviews_list(
     except HomeAssistantError as err:
         connection.send_error(msg["id"], "reviews_list_failed", str(err))
         return
-    connection.send_result(msg["id"], {"items": [asdict(item) for item in items]})
+    connection.send_result(
+        msg["id"],
+        {
+            "items": [
+                _review_summary(item)
+                if msg["summary_only"]
+                else asdict(item)
+                for item in items
+            ]
+        },
+    )
+
+
+def _review_summary(item: ReviewItem) -> dict[str, object]:
+    """Serialize only calendar, filter, and live-state review metadata."""
+    return {
+        "classification": item.classification,
+        "end_time": item.end_time,
+        "id": item.id,
+        "labels": item.labels,
+        "related_event_ids": item.related_event_ids,
+        "reviewed": item.reviewed,
+        "start_time": item.start_time,
+        "sub_labels": item.sub_labels,
+        "zones": item.zones,
+    }
 
 
 @websocket_command(

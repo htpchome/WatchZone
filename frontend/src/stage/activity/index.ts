@@ -4,6 +4,7 @@ import "./activity-slideshow-toggle";
 import "./activity-takeover-toggle";
 
 export { ActiveCameraActivityController } from "./active-camera-activity.controller";
+export { ActiveCameraReviewIndexController } from "./active-camera-review-index.controller";
 export { ActivityCalendar } from "./activity-calendar";
 export { ActivityFilter } from "./activity-filter";
 export { ActivitySlideshowToggle } from "./activity-slideshow-toggle";

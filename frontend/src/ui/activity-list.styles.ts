@@ -41,6 +41,11 @@ export const activityListStyles = css`
     margin-block-start: var(--wzc-media-day-header-gap);
   }
 
+  .unloaded-space {
+    min-block-size: 0;
+    pointer-events: none;
+  }
+
   .skeleton-list,
   .day-group {
     display: grid;

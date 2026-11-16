@@ -15,7 +15,7 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.363`
+- Working version: `0.0.4-dev.364`
 - Current commit: `aea3491` —
   `v0.0.4-dev.360 - docs(handoff): record audit priorities and current baseline`
 - The worktree was clean when this snapshot was replaced. Always verify
@@ -114,6 +114,11 @@ fallback.
 Completed at `0.0.4-dev.363`: Reviews and Events request only the newest bounded
 page on entry. Older pages load near the list boundary with stable sorting,
 deduplication, independent grouped-camera cursors, and serialized refreshes.
+
+Corrected at `0.0.4-dev.364`: Reviews load a separate lightweight metadata
+index for complete calendar availability and filter facets. Enriched tiles stay
+paged, selected filters and dates automatically retrieve missing matching tile
+pages, and page merges preserve the visible scroll anchor.
 
 Explicitly deferred:
 
