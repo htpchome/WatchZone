@@ -52,10 +52,11 @@ class FrigateSource:
 
 @dataclass(frozen=True, slots=True)
 class FrigateActivityIdentity:
-    """Identity required by Frigate's activity WebSocket proxies."""
+    """Identity required by Frigate's activity MQTT feed."""
 
     camera_name: str
     frigate_instance_id: str
+    topic_prefix: str
 
 
 async def async_resolve_activity_identity(
@@ -82,10 +83,21 @@ async def async_resolve_activity_identity(
             instance_id = _instance_id(module, hass, config_entry)
     if not instance_id:
         raise ProviderPreparationError("frigate_instance_id_unavailable")
+    if registry_entry.config_entry_id is None:
+        raise ProviderPreparationError("frigate_config_entry_missing")
+    frigate_data = hass.data.get("frigate", {}).get(registry_entry.config_entry_id, {})
+    config = frigate_data.get("config") if isinstance(frigate_data, dict) else None
+    mqtt_config = config.get("mqtt") if isinstance(config, dict) else None
+    topic_prefix = (
+        mqtt_config.get("topic_prefix") if isinstance(mqtt_config, dict) else None
+    )
+    if not isinstance(topic_prefix, str) or not topic_prefix.strip():
+        raise ProviderPreparationError("frigate_activity_topic_unavailable")
 
     return FrigateActivityIdentity(
         camera_name=camera_name,
         frigate_instance_id=instance_id,
+        topic_prefix=topic_prefix.strip(),
     )
 
 

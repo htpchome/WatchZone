@@ -50,6 +50,12 @@ work only when configured or requested. A capability can be a module
 implementing the structural protocol or a stateful instance when identity and
 lifecycle justify a class.
 
+The version 4 activity-update capability subscribes and normalizes inside the
+provider adapter. Frontend clients receive only WatchZone activity messages
+through `watchzone/activity/subscribe`; provider subscription identities, raw
+MQTT payloads, and provider-specific Home Assistant WebSocket commands do not
+cross that boundary.
+
 WatchZone's composition root imports its built-in capability modules as part of
 Home Assistant's integration-module load, then registers those already-loaded
 objects during setup. Optional integration modules discovered later must use

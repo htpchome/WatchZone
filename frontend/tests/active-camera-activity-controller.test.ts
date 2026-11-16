@@ -3,13 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import type { ReviewItem } from "../src/api/reviews";
-import type { ActivityUpdateNotification } from "../src/providers/activity-update-resolver";
+import type { ActivityUpdateNotification } from "../src/api/activity-updates";
 import { ActiveCameraActivityController } from "../src/stage/activity/active-camera-activity.controller";
 import { CameraSelectionContext } from "../src/stage/camera-selection-context";
 
 const mocks = vi.hoisted(() => ({ subscribe: vi.fn() }));
 
-vi.mock("../src/providers/activity-update-resolver", () => ({
+vi.mock("../src/api/activity-updates", () => ({
   subscribeActivityUpdates: mocks.subscribe,
 }));
 

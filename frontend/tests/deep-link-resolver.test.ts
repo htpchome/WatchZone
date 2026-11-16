@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { EventItem } from "../src/api/events";
 import type { ReviewItem } from "../src/api/reviews";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
-import type { ActivityUpdateNotification } from "../src/providers/activity-update-resolver";
+import type { ActivityUpdateNotification } from "../src/api/activity-updates";
 
 const mocks = vi.hoisted(() => ({
   findEvent: vi.fn(),
@@ -16,7 +16,7 @@ vi.mock("../src/features/deep-links/activity-lookup", () => ({
   findEvent: mocks.findEvent,
   findReview: mocks.findReview,
 }));
-vi.mock("../src/providers/activity-update-resolver", () => ({
+vi.mock("../src/api/activity-updates", () => ({
   subscribeActivityUpdates: vi.fn(
     async (
       _api: HomeAssistantApi,

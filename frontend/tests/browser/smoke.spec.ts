@@ -477,13 +477,6 @@ test("opens notification deep links independently of activity presentation", asy
             ],
           };
         }
-        if (message.type === "watchzone/activity/source") {
-          return {
-            camera_name: "back",
-            instance_id: "frigate",
-            type: "frigate",
-          };
-        }
         if (message.type === "watchzone/reviews/list") return { items: [] };
         if (message.type === "watchzone/live/camera/ready") {
           return { ready: false };
@@ -1413,14 +1406,59 @@ test("keeps grouped interaction alive across slide alert takeover", async ({
     const connection = {
       subscribeMessage: async (
         callback: (payload: unknown) => void,
-        message: { type: string },
+        message: { entity_id?: string; type: string },
       ) => {
-        if (message.type === "frigate/reviews/subscribe") {
+        if (message.type === "watchzone/activity/subscribe") {
           const target = window as unknown as {
             reviewNotifications?: Array<(payload: unknown) => void>;
           };
           target.reviewNotifications ??= [];
-          target.reviewNotifications.push(callback);
+          target.reviewNotifications.push((value) => {
+            const payload =
+              typeof value === "string" ? JSON.parse(value) : value;
+            const activity = payload.after ?? payload.before;
+            if (activity?.camera !== message.entity_id?.replace("camera.", ""))
+              return;
+            const phase =
+              typeof activity?.end_time === "number" ? "end" : payload.type;
+            callback({
+              cameraName: activity?.camera,
+              classification: activity?.severity,
+              id: activity?.id,
+              phase,
+              review:
+                typeof activity?.start_time === "number"
+                  ? {
+                      analysis_description: null,
+                      analysis_concerns: [],
+                      analysis_score: null,
+                      analysis_title: null,
+                      camera: activity.camera,
+                      classification: activity.severity,
+                      clip_url: null,
+                      download_url: null,
+                      end_time: activity.end_time ?? null,
+                      id: `frigate-main:${activity.id}`,
+                      labels: activity.data?.objects ?? [],
+                      media_end_time: activity.end_time ?? Date.now() / 1000,
+                      media_start_time: activity.start_time,
+                      playback_sources: [],
+                      preferred_transport: "file",
+                      preview_url: null,
+                      related_event_ids: [],
+                      reviewed: false,
+                      revision: `push:${phase}`,
+                      score: null,
+                      snapshot_url: null,
+                      start_time: activity.start_time,
+                      sub_labels: activity.data?.sub_labels ?? [],
+                      thumbnail_url: null,
+                      zones: activity.data?.zones ?? [],
+                    }
+                  : undefined,
+              topic: "reviews",
+            });
+          });
         }
         return () => undefined;
       },
@@ -1457,13 +1495,6 @@ test("keeps grouped interaction alive across slide alert takeover", async ({
       hassUrl: (path: string) => path,
       callService: async () => undefined,
       callWS: async (message: { entity_id?: string; type: string }) => {
-        if (message.type === "watchzone/activity/source") {
-          return {
-            type: "frigate",
-            instance_id: "frigate-main",
-            camera_name: message.entity_id?.replace("camera.", ""),
-          };
-        }
         if (message.type === "watchzone/live/camera/ready") {
           return { ready: false };
         }
@@ -1924,14 +1955,59 @@ test("highlights live video directly from draft review notifications", async ({
     const connection = {
       subscribeMessage: async (
         callback: (payload: unknown) => void,
-        message: { type: string },
+        message: { entity_id?: string; type: string },
       ) => {
-        if (message.type === "frigate/reviews/subscribe") {
+        if (message.type === "watchzone/activity/subscribe") {
           const target = window as unknown as {
             reviewNotifications?: Array<(payload: unknown) => void>;
           };
           target.reviewNotifications ??= [];
-          target.reviewNotifications.push(callback);
+          target.reviewNotifications.push((value) => {
+            const payload =
+              typeof value === "string" ? JSON.parse(value) : value;
+            const activity = payload.after ?? payload.before;
+            if (activity?.camera !== message.entity_id?.replace("camera.", ""))
+              return;
+            const phase =
+              typeof activity?.end_time === "number" ? "end" : payload.type;
+            callback({
+              cameraName: activity?.camera,
+              classification: activity?.severity,
+              id: activity?.id,
+              phase,
+              review:
+                typeof activity?.start_time === "number"
+                  ? {
+                      analysis_description: null,
+                      analysis_concerns: [],
+                      analysis_score: null,
+                      analysis_title: null,
+                      camera: activity.camera,
+                      classification: activity.severity,
+                      clip_url: null,
+                      download_url: null,
+                      end_time: activity.end_time ?? null,
+                      id: `frigate-main:${activity.id}`,
+                      labels: activity.data?.objects ?? [],
+                      media_end_time: activity.end_time ?? Date.now() / 1000,
+                      media_start_time: activity.start_time,
+                      playback_sources: [],
+                      preferred_transport: "file",
+                      preview_url: null,
+                      related_event_ids: [],
+                      reviewed: false,
+                      revision: `push:${phase}`,
+                      score: null,
+                      snapshot_url: null,
+                      start_time: activity.start_time,
+                      sub_labels: activity.data?.sub_labels ?? [],
+                      thumbnail_url: null,
+                      zones: activity.data?.zones ?? [],
+                    }
+                  : undefined,
+              topic: "reviews",
+            });
+          });
         }
         return () => undefined;
       },
@@ -1963,14 +2039,6 @@ test("highlights live video directly from draft review notifications", async ({
       hassUrl: (path: string) => path,
       callService: async () => undefined,
       callWS: async (message: { entity_id?: string; type: string }) => {
-        if (message.type === "watchzone/activity/source") {
-          return {
-            type: "frigate",
-            instance_id: "frigate-main",
-            camera_name:
-              message.entity_id === "camera.driveway" ? "driveway" : "front",
-          };
-        }
         if (message.type === "watchzone/live/camera/ready") {
           return { ready: false };
         }

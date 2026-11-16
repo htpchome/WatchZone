@@ -79,6 +79,10 @@
   by its live highlight. It retains one ordered active-review set across every
   configured camera; the Reviews module and camera-navigation presentation do
   not create parallel activity state.
+- Realtime activity is subscribed and normalized by the owning Python provider
+  capability. The browser consumes the authenticated provider-neutral
+  WatchZone subscription and never parses Frigate MQTT or subscribes to a
+  provider's Home Assistant WebSocket commands directly.
 - Card configuration selects Off, Alerts Only, Detections Only, or Both and
   separately selects whether takeover starts enabled. The runtime toolbar
   toggle is session state and resets when the card is recreated.

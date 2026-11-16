@@ -10,7 +10,7 @@ import type {
   HomeAssistantUnsubscribe,
 } from "../../core/home-assistant";
 import type { RecordedMediaRequest } from "../../core/recorded-media";
-import { subscribeActivityUpdates } from "../../providers/activity-update-resolver";
+import { subscribeActivityUpdates } from "../../api/activity-updates";
 import { activityRecordedMediaRequest } from "../../core/activity-media";
 import { findEvent, findReview } from "./activity-lookup";
 

@@ -17,11 +17,23 @@ import type { ActivityListItem } from "../src/ui/activity-list";
 import "../src/stage/modules/reviews/reviews";
 
 vi.mock("../src/api/activity-updates", () => ({
-  resolveActivityUpdateSource: vi.fn().mockResolvedValue({
-    type: "frigate",
-    instance_id: "frigate-main",
-    camera_name: "front",
-  }),
+  subscribeActivityUpdates: vi.fn(
+    async (
+      api: HomeAssistantApi,
+      entityId: string,
+      kind: "events" | "reviews",
+      callback: (payload: unknown) => void,
+    ) =>
+      api.subscribeMessage(
+        callback,
+        {
+          type: "watchzone/activity/subscribe",
+          entity_id: entityId,
+          kind,
+        },
+        { resubscribe: true },
+      ),
+  ),
 }));
 
 const reviews = [
@@ -1149,7 +1161,7 @@ describe("reviews module", () => {
       locale: { language: "en", time_zone: "server" },
       resolveUrl: (path: string) => `https://ha.local${path}`,
       subscribeMessage: vi.fn(async (callback, message: { type: string }) => {
-        if (message.type === "frigate/reviews/subscribe") {
+        if (message.type === "watchzone/activity/subscribe") {
           reviewUpdate = callback as (payload: unknown) => void;
         }
         return () => undefined;
@@ -1172,18 +1184,34 @@ describe("reviews module", () => {
     );
 
     await vi.waitFor(() => expect(reviewUpdate).toBeTypeOf("function"));
-    reviewUpdate?.(
-      JSON.stringify({
-        type: "new",
-        after: {
-          camera: "front",
-          data: { objects: ["person"] },
-          id: "review-live",
-          severity: "detection",
-          start_time: startTime,
-        },
-      }),
-    );
+    const liveReview = {
+      ...reviews[0],
+      analysis_description: null,
+      analysis_concerns: [],
+      analysis_score: null,
+      analysis_title: null,
+      classification: "detection",
+      clip_url: null,
+      download_url: null,
+      end_time: null,
+      id: "frigate:review-live",
+      labels: ["person"],
+      media_end_time: startTime,
+      media_start_time: startTime,
+      playback_sources: [],
+      preferred_transport: "file",
+      revision: "push:new:detection:draft:person",
+      snapshot_url: null,
+      start_time: startTime,
+    };
+    reviewUpdate?.({
+      cameraName: "front",
+      classification: "detection",
+      id: "review-live",
+      phase: "new",
+      review: liveReview,
+      topic: "reviews",
+    });
     await vi.waitFor(() => {
       expect(activityRoot(module)?.querySelectorAll(".tile")).toHaveLength(1);
       expect(
@@ -1191,18 +1219,19 @@ describe("reviews module", () => {
       ).not.toBeNull();
     });
 
-    reviewUpdate?.(
-      JSON.stringify({
-        type: "update",
-        after: {
-          camera: "front",
-          data: { objects: ["person", "package"] },
-          id: "review-live",
-          severity: "alert",
-          start_time: startTime,
-        },
-      }),
-    );
+    reviewUpdate?.({
+      cameraName: "front",
+      classification: "alert",
+      id: "review-live",
+      phase: "update",
+      review: {
+        ...liveReview,
+        classification: "alert",
+        labels: ["person", "package"],
+        revision: "push:update:alert:draft:person,package",
+      },
+      topic: "reviews",
+    });
     await vi.waitFor(() => {
       expect(
         [...(activityRoot(module)?.querySelectorAll("wzc-badge") ?? [])].map(
@@ -1214,19 +1243,21 @@ describe("reviews module", () => {
       ).not.toBeNull();
     });
 
-    reviewUpdate?.(
-      JSON.stringify({
-        type: "end",
-        after: {
-          camera: "front",
-          data: { objects: ["person", "package"] },
-          end_time: startTime + 10,
-          id: "review-live",
-          severity: "alert",
-          start_time: startTime,
-        },
-      }),
-    );
+    reviewUpdate?.({
+      cameraName: "front",
+      classification: "alert",
+      id: "review-live",
+      phase: "end",
+      review: {
+        ...liveReview,
+        classification: "alert",
+        end_time: startTime + 10,
+        labels: ["person", "package"],
+        media_end_time: startTime + 10,
+        revision: "push:end:alert:final:person,package",
+      },
+      topic: "reviews",
+    });
     await vi.waitFor(() => {
       expect(
         activityRoot(module)?.querySelector(".duration")?.textContent,

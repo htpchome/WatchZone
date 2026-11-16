@@ -9,11 +9,23 @@ import type { EventsModule } from "../src/stage/modules/events/events";
 import "../src/stage/modules/events/events";
 
 vi.mock("../src/api/activity-updates", () => ({
-  resolveActivityUpdateSource: vi.fn().mockResolvedValue({
-    type: "frigate",
-    instance_id: "frigate-main",
-    camera_name: "front",
-  }),
+  subscribeActivityUpdates: vi.fn(
+    async (
+      api: HomeAssistantApi,
+      entityId: string,
+      kind: "events" | "reviews",
+      callback: (payload: unknown) => void,
+    ) =>
+      api.subscribeMessage(
+        callback,
+        {
+          type: "watchzone/activity/subscribe",
+          entity_id: entityId,
+          kind,
+        },
+        { resubscribe: true },
+      ),
+  ),
 }));
 
 const event = {
@@ -54,15 +66,10 @@ describe("events module", () => {
       { items: [event] },
       { items: [newestEvent, event] },
     ];
-    const callWS = vi.fn(async (message: { type: string }) =>
-      message.type === "watchzone/activity/source"
-        ? {
-            type: "frigate",
-            instance_id: "frigate-main",
-            camera_name: "front",
-          }
-        : eventResponses.shift(),
-    );
+    const callWS = vi.fn(async (message: { type: string }) => {
+      void message;
+      return eventResponses.shift();
+    });
     let activityUpdate: ((payload: unknown) => void) | undefined;
     const unsubscribe = vi.fn();
     const subscribeMessage = vi.fn(async (callback) => {
@@ -96,12 +103,13 @@ describe("events module", () => {
     expect(subscribeMessage).toHaveBeenCalledWith(
       expect.any(Function),
       {
-        type: "frigate/events/subscribe",
-        instance_id: "frigate-main",
+        type: "watchzone/activity/subscribe",
+        entity_id: "camera.front",
+        kind: "events",
       },
       { resubscribe: true },
     );
-    activityUpdate?.(JSON.stringify({ after: { camera: "front" } }));
+    activityUpdate?.({ cameraName: "front", topic: "events" });
     await vi.waitFor(() => {
       expect(
         callWS.mock.calls.filter(([message]) =>
@@ -142,15 +150,10 @@ describe("events module", () => {
         items: [newestEvent, ...initialEvents.slice(0, 9)],
       }),
     ];
-    const callWS = vi.fn((message: { type: string }) =>
-      message.type === "watchzone/activity/source"
-        ? Promise.resolve({
-            type: "frigate",
-            instance_id: "frigate-main",
-            camera_name: "front",
-          })
-        : eventResponses.shift(),
-    );
+    const callWS = vi.fn((message: { type: string }) => {
+      void message;
+      return eventResponses.shift();
+    });
     let activityUpdate: ((payload: unknown) => void) | undefined;
     const api = {
       callWS,
@@ -186,7 +189,7 @@ describe("events module", () => {
       ).toHaveLength(1);
       expect(activityUpdate).toBeTypeOf("function");
     });
-    activityUpdate?.(JSON.stringify({ after: { camera: "front" } }));
+    activityUpdate?.({ cameraName: "front", topic: "events" });
     expect(
       callWS.mock.calls.filter(([message]) =>
         String((message as { type: string }).type).endsWith("/events/list"),

@@ -2,7 +2,7 @@ import type { ReactiveController, ReactiveControllerHost } from "lit";
 
 import { ACTIVITY_UPDATE_SUBSCRIBE_RETRY_MS } from "../../core/constants";
 import type { HomeAssistantApi } from "../../core/home-assistant";
-import { subscribeActivityUpdates } from "../../providers/activity-update-resolver";
+import { subscribeActivityUpdates } from "../../api/activity-updates";
 
 export type CameraActivityClassification = "alert" | "detection";
 

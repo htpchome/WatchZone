@@ -20,7 +20,7 @@ import {
   subscribeActivityUpdates,
   type ActivityUpdateKind,
   type ActivityUpdateNotification,
-} from "../../providers/activity-update-resolver";
+} from "../../api/activity-updates";
 
 export interface ActiveCameraActivityItem {
   readonly id: string;

@@ -1,28 +1,43 @@
-"""Provider-neutral activity update source contract."""
+"""Provider-neutral real-time activity update contract."""
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Literal, Protocol
 
 from homeassistant.core import HomeAssistant
 
+from .reviews import ReviewClassification, ReviewItem
+
+ActivityUpdateKind = Literal["events", "reviews"]
+ActivityUpdatePhase = Literal["end", "new", "update"]
+
 
 @dataclass(frozen=True, slots=True)
-class ActivityUpdateSource:
-    """Frontend subscription identity for one provider-owned camera."""
+class ActivityUpdateNotification:
+    """One provider-normalized activity change."""
 
-    type: Literal["frigate"]
-    instance_id: str
     camera_name: str
+    topic: ActivityUpdateKind
+    classification: ReviewClassification | None = None
+    id: str | None = None
+    phase: ActivityUpdatePhase | None = None
+    review: ReviewItem | None = None
+
+
+ActivityUpdateCallback = Callable[[ActivityUpdateNotification], None]
+ActivityUpdateUnsubscribe = Callable[[], None]
 
 
 class ActivityUpdatesProvider(Protocol):
-    """Optional provider capability for resolving real-time activity."""
+    """Optional provider capability for normalized real-time activity."""
 
-    async def async_activity_update_source(
+    async def async_subscribe_activity_updates(
         self,
         hass: HomeAssistant,
         entity_id: str,
-    ) -> ActivityUpdateSource:
-        """Resolve one camera to its provider-owned update source."""
+        kind: ActivityUpdateKind,
+        callback: ActivityUpdateCallback,
+    ) -> ActivityUpdateUnsubscribe:
+        """Subscribe to normalized activity for one provider-owned camera."""

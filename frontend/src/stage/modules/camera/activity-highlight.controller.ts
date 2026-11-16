@@ -11,7 +11,7 @@ import { listRecentReviewStates } from "../../../api/reviews";
 import {
   subscribeActivityUpdates,
   type ActivityUpdateNotification,
-} from "../../../providers/activity-update-resolver";
+} from "../../../api/activity-updates";
 
 export type LiveActivityClassification = "alert" | "detection";
 
