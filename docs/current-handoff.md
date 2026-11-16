@@ -15,158 +15,148 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.326`
-- Current commit: `00414b9` —
-  `v0.0.4-dev.324 - fix(activity): unify badge overflow and ordering`
-- The worktree contains the uncommitted compact activity-tile correction
-  described below. Always verify `git status`, the canonical version in
+- Working version: `0.0.4-dev.360`
+- Current commit: `2f0b893` —
+  `v0.0.4-dev.360 - fix(camera): preserve MSE PiP after dashboard navigation`
+- The worktree was clean when this snapshot was replaced. Always verify
+  `git status`, the canonical version in
   `custom_components/watchzone/const.py`, and the latest commit.
 
-## Active change: theme surfaces and shared media actions
+## Current camera and media baseline
 
-- Review and Event tiles retain their fixed height across responsive states.
-  One non-wrapping badge lane retains every badge that fits and replaces the
-  remainder with a localized neutral `+N more` badge. Badge overflow never
-  enters the metadata area. Actions remain vertically centered across the
-  former `768px` transition, and the metadata column has additional room for
-  localized values. Tiles and recorded-media information share camera → object
-  and identity → type ordering. One coalesced list-level observer owns badge
-  allocation; tiles do not add observers. At and below `600px`, the AI title
-  pill becomes an accessible icon-only control; at and below `480px`, media
-  action buttons remain hidden.
-- Between the canonical `1024px` and `600px` transitions, the activity AI
-  title follows a fluid metadata track that moves left only as far as the
-  semantic date/time/zone safety width. Its remaining space then contracts
-  naturally before the established icon-only presentation takes over.
-- Review tracking details repeat the selected review's shared badge
-  presentation directly below the dialog heading and above its summary. The
-  row uses the same camera → object and identity → type ordering, palette, and
-  compact badge sizing as activity tiles and recorded-media information. Long
-  tracking timelines have explicit contained vertical momentum/touch scrolling
-  and never create horizontal dialog overflow.
-- Responsive width decisions now use one enforced four-point scale: `480px`,
-  `600px`, `768px`, and `1024px`. Runtime device classification and CSS
-  viewport/container queries consume the same contract; the style validator
-  rejects feature-local width-query literals.
+- Camera live sessions remain document-owned and lease-based. Editor
+  transitions, Home Assistant route navigation, dialogs, and ordinary
+  reparenting must preserve a healthy retained connection rather than create a
+  replacement player.
+- Picture-in-Picture is working across the retained WebRTC, HLS, and MSE paths.
+  MSE PiP survives leaving and returning to the dashboard by resolving the
+  current attached presentation video rather than retaining a stale element.
+  Do not add transport-specific PiP workarounds without tracing session and
+  presentation ownership first.
+- Camera owns authoritative selection. Carousel, navigation, activity modules,
+  alert takeover, and recorded-media flows consume that selection rather than
+  maintaining parallel camera state.
+- Grouped A/B presentations retain independent media identity, zoom, pan, and
+  activity while sharing the owning Camera stage and overlay coordination.
+- Recorded-media dialogs use an isolated zoom/pan viewport, coalesced modal
+  resizing, touch double-tap zoom, and a corner resize grip. Their metadata
+  surface excludes dialog actions and the resize grip.
+- Review and Event tiles use a fixed-height compact presentation with one
+  non-wrapping badge lane, a neutral `+N more` overflow badge, and the shared
+  responsive width contract.
 
-- The media shell now uses the same Home Assistant glass surface and matching
-  backdrop filter as AI Analysis. Its badges and square icon actions share the
-  Review-tile presentations. Shared square actions use fine-pointer-only hover
-  outlines/icon scaling and non-sticky `:active` touch feedback.
-- Filter, calendar, Suspend Camera, and other focused task surfaces share the
-  solid task-dialog token family. The platform contract contains the canonical
-  three-role surface-token matrix and single-paint rule.
-- Camera navigation paints its themed translucent background only on the outer
-  bar; its nested segmented track is transparent to prevent opacity bands.
-- Recorded-media metadata now paints one borderless, rounded solid-task
-  surface inside the glass viewer. It shares activity-tile badge sizing,
-  preserves icon geometry during hover, reserves the actual bottom-right corner
-  for a radius-safe triangular resize grip with an action-sized hit target, and
-  displays provider-normalized activity confidence separately from AI-analysis
-  confidence. Its responsive metadata uses only three layouts: four, three,
-  and two columns.
-- The slideshow overlay is hydrated whenever Camera has multiple presentation
-  items. Disabling Camera Switcher Overlay now removes only the switcher.
-- HLS.js warming now overlaps presentation loading, and HLS chunk loading
-  overlaps URL signing. Provider source order is unchanged.
+## Stage types and minimal camera baseline
 
-## Retained camera behavior
+- The editor currently offers Minimal Camera Stage, Camera Only Stage, and Full
+  Stage. Immutable built-in JSON Stage templates are frontend defaults. The
+  future Python-owned Stage Designer and user-created Stage Design persistence
+  are intentionally not being connected yet.
+- Camera Only Stage uses its single standard built-in layout for normal and
+  mobile presentation; it does not expose redundant layout selectors.
+- Minimal Camera Stage renders only the first configured main camera. An A/B
+  secondary is not presented. It uses the reusable lightweight camera
+  presentation rather than instantiating the full Camera module, carousel,
+  zoom/pan, PTZ, TWT, lights, or full side controls.
+- Minimal Camera controls are configurable behind one menu button and include
+  fullscreen, PiP, mute/volume, and optional source label. The expanded control
+  lane remains visible until the menu is explicitly closed.
+- Minimal interactions support tap, hold, and double-tap actions through the
+  Home Assistant-style editor. `Open Live View` transfers the retained player
+  into the draggable/resizable WatchZone live dialog and restores it on close.
+- Minimal presentations enforce backend-reported suspension regardless of live
+  connection type. Suspension must prevent presentation without preventing the
+  user from configuring a Frigate go2rtc source.
+- Alert/detection highlighting applies to both the inline minimal camera and
+  its live dialog.
 
-- The presentation-activation and media-attachment overlay changes from
-  `v0.0.4-dev.310` are reverted because they could leave retained video black
-  after returning from dashboard editing.
-- The card-preview and layout-runtime restoration workaround from
-  `v0.0.4-dev.311` is removed; Home Assistant's Sections pre-editor reparents
-  the existing card rather than changing that preview property.
-- When Home Assistant reparents the card through dashboard editing, the active
-  overlay controller preserves its ownership state and reveals on host
-  reconnection. The return path does not reconfigure, detach, or replace
-  retained media.
-- Camera live controllers defer disconnect cleanup by one microtask so a
-  synchronous Home Assistant reparent neither parks the retained WebRTC lease
-  nor removes its video element. A true removal still releases and detaches in
-  that microtask.
+## Responsive, theme, and editor invariants
 
-## Live camera and group invariants
+- Responsive width decisions use the enforced `480px`, `600px`, `768px`, and
+  `1024px` scale. Runtime device classification and CSS container/viewport
+  queries consume the same contract.
+- Home Assistant theme variables remain isolated to
+  `frontend/src/styles/theme-tokens.ts`; feature styles consume semantic
+  `--wzc-*` tokens.
+- Media and AI information dialogs share the Home Assistant glass treatment.
+  Filter, calendar, suspension, and other focused task dialogs use the solid
+  task surface.
+- Editor typing updates Home Assistant dirty state and a coalesced preview. The
+  isolated editor lifecycle adapter commits the complete draft immediately
+  before Save. Extracted editor sections must not become independent draft or
+  persistence owners.
 
-- The Camera module owns authoritative selection. Carousel, camera navigation,
-  alert takeover, Reviews, Events, and Recordings consume that selection rather
-  than maintaining parallel active-camera state.
-- Exactly one carousel slide is interactive. Inactive slides are `inert` and
-  hidden from the accessibility tree for every transition mode, preventing
-  invisible Fade slides from intercepting input.
-- A grouped A/B stage owns one shared overlay controller. Member feeds retain
-  independent source, zoom, pan, activity, and recorded-media identity.
-  Activation cancels stale pointer capture, gestures, overlay holds, and resize
-  ownership. Do not introduce a second stage or transition-specific lifecycle.
-- Single and grouped camera presentations share one animation-frame-coalesced
-  stage-size publisher, followed by one final non-transient size. The card
-  observes the rendered Stage content boundary rather than its padded outer
-  host; observer and queued-frame cleanup remains owner-local on disconnect.
-- Desktop/tablet groups support side-by-side or stacked combined presentation
-  and cycle `combined → A → B → combined`. Phone groups show one member and
-  toggle A/B while retaining mixed group activity scope.
-- TWT/PTZ belong only to the main member; linked lights are shared for
-  presentation. Combined snapshot and suspension include both members.
-- Alert/detection outlines apply only to the physical member with activity.
-  Takeover selects the combined desktop group or the alerting phone member.
-- Home Assistant and Frigate WebRTC sessions are document-owned. Parking
-  detaches retained media while preserving peer identity, signaling, and Home
-  Assistant trickle ICE. Editor-only draft sessions must close on replacement
-  or editor teardown.
-- The PTZ overlay transform center and viewport anchor are established behavior
-  and must not move during camera/group work.
+## Architecture audit and next work
 
-## Configuration and architecture notes
+The November 16 audit found the overall feature boundaries, retained-session
+lifecycle, lazy transport loading, theme ownership, and listener/observer
+cleanup sound. No broad memory leak or uncontrolled dependency problem was
+identified. The next agreed work is deliberately incremental:
 
-- WatchZone is one mandatory Python integration with a packaged Lit/TypeScript
-  frontend. Provider transport/normalization stays below provider-neutral
-  contracts; features must not branch on provider names.
-- Stage code follows `architecture.md`; do not use `src/stage` as a dumping
-  ground. Modules/components do not import or mutate other placeables.
-- Camera navigation is a module. The optional camera-switcher overlay is a
-  Camera-owned component. The slideshow overlay is another Camera-owned
-  component; all remain synchronized through Camera selection.
-- Additional-camera selection uses the full Home Assistant camera picker but
-  rejects an entity already configured as a main or secondary. Both members
-  count toward the twelve-camera limit and retain independent names and source
-  settings; the group has its own auto-named Group Name.
-- Reviews are the primary activity presentation. Events remain for comparison
-  and testing unless explicitly removed. Recordings remain a separate stackable
-  module organized by localized day and hourly rows.
-- Keep media behavior, overlay timing, zoom/pan, controls, dialogs, buttons,
-  theme semantics, and editor controls reusable. Do not duplicate presentation
-  logic to fix a local defect.
+1. Add a direct activity get-by-ID path while retaining the existing paged
+   fallback until parity is proven.
+2. Replace eager full-window activity retrieval with bounded, progressive
+   loading and stable deduplication.
+3. Extract cohesive editor sections while retaining one top-level draft,
+   dirty-state, preview, and serialization owner.
+4. Only after extraction is stable, avoid mounting expensive closed accordion
+   content while preserving draft values, validation, focus, and Home Assistant
+   control behavior.
+5. Move raw Frigate activity subscriptions and normalization behind a
+   provider-neutral Python subscription, prove message parity, then remove the
+   frontend-specific route.
+6. Consider a read-only normalized backend camera catalog later, without
+   migrating stored camera configuration until a concrete provider or Stage
+   Designer requirement needs it.
+7. Consolidate media download preparation one media type at a time, preserving
+   Safari and Companion user-gesture behavior.
+
+Explicitly deferred:
+
+- Do not connect Python Stage Design persistence merely for the current
+  immutable built-in JSON defaults. Revisit it with the Stage Designer and
+  user-created Stage Designs.
+- Do not change the GitHub release pipeline or make publication depend on the
+  complete validation workflow during the current prerelease development
+  cycle.
+
+## Performance-budget snapshot
+
+- `architecture.md` retains the long-term eager-entry target of 50 KiB gzip.
+- The current build validator temporarily uses a 64 KiB release ceiling with a
+  4 KiB safety margin. This is implementation headroom, not a replacement
+  architectural target.
+- At `0.0.4-dev.360`, validation measures the eager graph at 57,332 bytes gzip
+  and the lazy editor entry at 18,564 bytes gzip.
+- The built-in Stage catalog is the largest practical eager-splitting target.
+  Measure and reduce the graph before requesting another ceiling increase.
+- The editor is close to its current 20 KiB gzip release budget and should be
+  decomposed before adding substantial editor features.
 
 ## Validation status
 
-Validated for `v0.0.4-dev.311`:
+Validated for `v0.0.4-dev.360`:
 
-- frontend unit tests (421 tests)
-- Playwright tests across Chromium, Firefox, and WebKit (39 per engine)
-- formatting, lint, type checking, architecture/style checks, production build,
-  version consistency, and `git diff --check`
+- 455 frontend unit tests
+- 129 Playwright tests across Chromium, Firefox, and WebKit
+- formatting, lint, type checking, architecture/style/license checks,
+  production build, version consistency, and `git diff --check`
+- Ruff and strict mypy checks for the Python integration
 
-Focused coverage verifies initial Camera disclosure, ordinary zero-or-one
-behavior, stable dialog geometry across section changes, and independent
-content scrolling for taller sections. The pre-editor regression additionally
-proves controls return without changing the retained video element or creating
-a second live connection.
+The Python pytest suite was not completed during the architecture audit; do not
+infer a pass or failure from that audit run.
 
 ## Handoff rules
 
-- Trace the complete affected path before editing; do not patch symptoms or add
-  browser/transition-specific workarounds.
-- Preserve unrelated user changes and intentional behavior. Keep changes small,
-  cohesive, and reviewable without speculative abstractions or compatibility
-  layers.
-- Treat mobile Safari/Home Assistant Companion, Chromium, Firefox, WebKit, and
-  editor preview as supported environments. Complete the required browser
-  matrix before handing off browser-visible work.
+- Trace the complete affected path before editing. Do not stack local patches
+  over symptoms or add browser-specific workarounds without identifying the
+  owning lifecycle.
+- Preserve unrelated user changes and established behavior. Keep changes
+  small, cohesive, and independently testable.
+- Treat mobile Safari, Home Assistant Companion, Chromium, Firefox, WebKit,
+  editor preview, and dashboard navigation as supported environments.
 - Release-affecting work handed off for commit requires a unique synchronized
-  version. Documentation/test/workflow-only changes keep the current version.
+  version. Documentation/test/workflow-only work keeps the current version.
 - Do not commit or sync. Provide the exact version-prefixed proposed commit
-  subject after validation; local packaging is not evidence of GitHub release
-  success.
+  subject after validation.
 - Replace this snapshot when the active task or version changes materially. Do
   not append a chronological conversation log.
