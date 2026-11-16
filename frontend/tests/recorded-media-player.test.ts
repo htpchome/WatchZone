@@ -251,46 +251,58 @@ describe("recorded media player", () => {
     await player.updateComplete;
     const video = player.shadowRoot?.querySelector("video");
     const rateControl = player.shadowRoot?.querySelector(".rate-control");
-    const rateSelect = rateControl?.querySelector<
-      HTMLElement & { value: string }
-    >("ha-select");
+    const rateDropdown = rateControl?.querySelector("ha-dropdown");
     expect(rateControl).not.toBeNull();
     expect(
       player.shadowRoot?.querySelector(".rate-label")?.textContent,
     ).toContain("Playback speed");
-    expect(rateControl?.querySelectorAll("ha-list-item")).toHaveLength(7);
-    expect(rateSelect?.value).toBe("1");
-    const buttons = rateControl?.querySelectorAll<HTMLButtonElement>("button");
+    expect(rateControl?.querySelectorAll("ha-dropdown-item")).toHaveLength(7);
+    expect(rateControl?.querySelector(".rate-trigger")?.textContent).toContain(
+      "1×",
+    );
+    const decrease =
+      rateControl?.querySelector<HTMLButtonElement>("button.decrease");
+    const increase =
+      rateControl?.querySelector<HTMLButtonElement>("button.increase");
     expect(video?.playbackRate).toBe(1);
 
-    buttons?.[1]?.click();
+    increase?.click();
     await player.updateComplete;
     expect(video?.playbackRate).toBe(2);
-    expect(rateSelect?.value).toBe("2");
+    expect(rateControl?.querySelector(".rate-trigger")?.textContent).toContain(
+      "2×",
+    );
 
-    buttons?.[1]?.click();
-    buttons?.[1]?.click();
-    buttons?.[1]?.click();
+    increase?.click();
+    increase?.click();
+    increase?.click();
     await player.updateComplete;
     expect(video?.playbackRate).toBe(25);
-    expect(buttons?.[1]?.disabled).toBe(true);
+    expect(increase?.disabled).toBe(true);
 
-    buttons?.[0]?.click();
+    decrease?.click();
     await player.updateComplete;
     expect(video?.playbackRate).toBe(10);
 
-    if (rateSelect) {
-      rateSelect.value = "0.25";
-      rateSelect.dispatchEvent(new Event("selected"));
+    const quarterRate = rateControl?.querySelector<
+      HTMLElement & { value?: string }
+    >('ha-dropdown-item[value="0.25"]');
+    if (rateDropdown && quarterRate) {
+      quarterRate.value = "0.25";
+      rateDropdown.dispatchEvent(
+        new CustomEvent("wa-select", { detail: { item: quarterRate } }),
+      );
     }
     await player.updateComplete;
     expect(video?.playbackRate).toBe(0.25);
-    expect(rateSelect?.value).toBe("0.25");
+    expect(quarterRate?.hasAttribute("selected")).toBe(true);
 
     player.request = { ...player.request, id: "frigate:event-2" };
     await player.updateComplete;
     expect(video?.playbackRate).toBe(1);
-    expect(rateSelect?.value).toBe("1");
+    expect(rateControl?.querySelector(".rate-trigger")?.textContent).toContain(
+      "1×",
+    );
   });
 
   it("maps recording activity markers across timeline gaps and starts playback", async () => {

@@ -91,9 +91,11 @@ export const recordedVideoPlayerStyles = css`
   }
 
   .rate-control {
+    box-sizing: content-box;
     display: grid;
-    grid-template-columns: 2rem minmax(2.75rem, max-content) 2rem;
+    grid-template-columns: 1.75rem 3.25rem 1.75rem;
     align-items: center;
+    inline-size: 6.75rem;
     min-block-size: 2rem;
     color: var(--wzc-recorded-rate-color);
     background: var(--wzc-recorded-rate-background);
@@ -133,21 +135,31 @@ export const recordedVideoPlayerStyles = css`
     outline-offset: -2px;
   }
 
-  .rate-select {
-    --mdc-select-fill-color: transparent;
-    --mdc-select-idle-line-color: transparent;
-    --mdc-select-hover-line-color: transparent;
-    --mdc-select-dropdown-icon-color: var(--wzc-recorded-rate-color);
-    --mdc-select-ink-color: var(--wzc-recorded-rate-color);
+  .rate-dropdown {
+    contain: inline-size;
     display: block;
-    min-inline-size: 4.25rem;
+    block-size: 2rem;
+    inline-size: 3.25rem;
+    max-inline-size: 3.25rem;
+    min-inline-size: 0;
+  }
+
+  .rate-control .rate-trigger {
+    align-items: center;
+    display: flex;
+    gap: 0.1rem;
+    inline-size: 100%;
+    justify-content: center;
     color: var(--wzc-recorded-rate-color);
     font-size: var(--wzc-font-size-small);
     font-variant-numeric: tabular-nums;
     font-weight: 600;
-    line-height: 1;
-    text-align: center;
     white-space: nowrap;
+  }
+
+  .rate-trigger ha-icon {
+    --mdc-icon-size: 0.75rem;
+    pointer-events: none;
   }
 
   wzc-recording-segment-manager {

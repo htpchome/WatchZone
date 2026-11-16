@@ -288,6 +288,7 @@ export class RecordedVideoPlayer extends LitElement {
               @keydown=${stopPropagation}
             >
               <button
+                class="rate-step decrease"
                 type="button"
                 title=${this.localize("media_player.decrease_speed")}
                 aria-label=${this.localize("media_player.decrease_speed")}
@@ -295,20 +296,30 @@ export class RecordedVideoPlayer extends LitElement {
                 @pointerup=${releaseTouchFocus}
                 @click=${this._decreasePlaybackRate}
               >−</button>
-              <ha-select
-                class="rate-select"
-                aria-label=${this.localize("media_player.playback_speed")}
-                .value=${String(this._playbackRate)}
-                @selected=${this._selectPlaybackRate}
-                @change=${this._selectPlaybackRate}
+              <ha-dropdown
+                class="rate-dropdown"
+                placement="top-end"
+                @wa-select=${this._selectPlaybackRate}
               >
+                <button
+                  class="rate-trigger"
+                  type="button"
+                  slot="trigger"
+                  aria-label=${this.localize("media_player.playback_speed")}
+                >
+                  <span>${formatPlaybackRate(this._playbackRate)}</span>
+                  <ha-icon icon="mdi:menu-down" aria-hidden="true"></ha-icon>
+                </button>
                 ${PLAYBACK_RATES.map(
-                  (rate) => staticHtml`<ha-list-item value=${String(rate)}
-                    >${formatPlaybackRate(rate)}</ha-list-item
+                  (rate) => staticHtml`<ha-dropdown-item
+                    value=${String(rate)}
+                    ?selected=${this._playbackRate === rate}
+                    >${formatPlaybackRate(rate)}</ha-dropdown-item
                   >`,
                 )}
-              </ha-select>
+              </ha-dropdown>
               <button
+                class="rate-step increase"
                 type="button"
                 title=${this.localize("media_player.increase_speed")}
                 aria-label=${this.localize("media_player.increase_speed")}
@@ -573,12 +584,12 @@ export class RecordedVideoPlayer extends LitElement {
     );
   };
 
-  private readonly _selectPlaybackRate = (event: Event): void => {
+  private readonly _selectPlaybackRate = (
+    event: CustomEvent<{ readonly item?: HTMLElement & { value?: string } }>,
+  ): void => {
     event.stopPropagation();
-    const select = event.currentTarget as HTMLElement & {
-      readonly value?: string;
-    };
-    this._setPlaybackRate(Number(select.value));
+    const item = event.detail.item;
+    this._setPlaybackRate(Number(item?.value ?? item?.getAttribute("value")));
   };
 
   private readonly _toggleFullscreen = async (): Promise<void> => {

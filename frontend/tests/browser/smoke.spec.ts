@@ -5440,6 +5440,7 @@ test("switches activity and recordings through the shared media calendar", async
     ),
   ).toBeVisible();
   const scrubber = page.locator("wzc-recording-scrubber");
+  const recordedPlayer = page.locator("wzc-recorded-video-player");
   const recordingDialog = page.locator("wzc-recording-media-dialog");
   const segmentAction = recordingDialog.getByRole("button", {
     name: "Select recording segment",
@@ -5456,22 +5457,25 @@ test("switches activity and recordings through the shared media calendar", async
   await expect(recordingDownload).toBeVisible();
   await expect(segmentAction).toHaveAttribute("aria-pressed", "false");
   const rateControl = page.locator("wzc-recorded-video-player .rate-control");
-  const rateSelect = rateControl.locator("ha-select");
+  const rateDropdown = rateControl.locator("ha-dropdown");
   await expect(rateControl).toBeVisible();
   await expect(
     page.locator("wzc-recorded-video-player .rate-label"),
   ).toHaveText("Playback speed");
-  await expect(rateSelect).toHaveJSProperty("value", "1");
-  await expect(rateControl.locator("ha-list-item")).toHaveCount(7);
+  await expect(rateControl.locator(".rate-trigger")).toContainText("1×");
+  await expect(rateControl.locator("ha-dropdown-item")).toHaveCount(7);
   const [scrubberBox, rateBox, playerBox] = await Promise.all([
     scrubber.boundingBox(),
     rateControl.boundingBox(),
-    page.locator("wzc-recorded-video-player").boundingBox(),
+    recordedPlayer.boundingBox(),
   ]);
   expect(scrubberBox).not.toBeNull();
   expect(rateBox).not.toBeNull();
   expect(playerBox).not.toBeNull();
+  const initialRateWidth = rateBox?.width;
   if (scrubberBox && rateBox && playerBox) {
+    expect(rateBox.width).toBeLessThanOrEqual(112);
+    expect(rateBox.height).toBeLessThanOrEqual(34);
     expect(rateBox.y).toBeGreaterThanOrEqual(
       scrubberBox.y + scrubberBox.height - 1,
     );
@@ -5482,7 +5486,7 @@ test("switches activity and recordings through the shared media calendar", async
   await rateControl
     .getByRole("button", { name: "Increase playback speed" })
     .click();
-  await expect(rateSelect).toHaveJSProperty("value", "2");
+  await expect(rateControl.locator(".rate-trigger")).toContainText("2×");
   await expect
     .poll(() =>
       page
@@ -5490,12 +5494,19 @@ test("switches activity and recordings through the shared media calendar", async
         .evaluate((video) => (video as HTMLVideoElement).playbackRate),
     )
     .toBe(2);
-  await rateSelect.evaluate((element) => {
-    const select = element as HTMLElement & { value: string };
-    select.value = "25";
-    select.dispatchEvent(new Event("selected"));
+  await rateDropdown.evaluate((element) => {
+    const item = element.querySelector<HTMLElement & { value?: string }>(
+      'ha-dropdown-item[value="25"]',
+    );
+    if (!item) throw new Error("Expected 25× playback-rate item.");
+    item.value = "25";
+    element.dispatchEvent(new CustomEvent("wa-select", { detail: { item } }));
   });
-  await expect(rateSelect).toHaveJSProperty("value", "25");
+  await expect(rateControl.locator(".rate-trigger")).toContainText("25×");
+  expect((await rateControl.boundingBox())?.width).toBeCloseTo(
+    initialRateWidth ?? 0,
+    0,
+  );
   await expect
     .poll(() =>
       page
@@ -5505,6 +5516,19 @@ test("switches activity and recordings through the shared media calendar", async
         ),
     )
     .toBe(true);
+  await rateDropdown.evaluate((element) => {
+    const item = element.querySelector<HTMLElement & { value?: string }>(
+      'ha-dropdown-item[value="0.25"]',
+    );
+    if (!item) throw new Error("Expected 0.25× playback-rate item.");
+    item.value = "0.25";
+    element.dispatchEvent(new CustomEvent("wa-select", { detail: { item } }));
+  });
+  await expect(rateControl.locator(".rate-trigger")).toContainText("0.25×");
+  expect((await rateControl.boundingBox())?.width).toBeCloseTo(
+    initialRateWidth ?? 0,
+    0,
+  );
   await page.locator("watchzone-card").evaluate((element) => {
     const host = element as HTMLElement;
     host.style.setProperty("--wzc-color-background", "rgb(20, 21, 22)");
@@ -5517,7 +5541,8 @@ test("switches activity and recordings through the shared media calendar", async
     host.style.setProperty("--wzc-color-text-reversed", "rgb(250, 251, 252)");
     host.style.setProperty("--wzc-color-error", "rgb(220, 60, 70)");
   });
-  await expect(scrubber).toHaveCSS("background-color", "rgb(40, 41, 42)");
+  await expect(recordedPlayer).toHaveCSS("background-color", "rgb(40, 41, 42)");
+  await expect(scrubber).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(scrubber).toHaveCSS("color", "rgb(230, 231, 232)");
   await expect(scrubber.locator('[data-control="toggle_play"]')).toHaveCSS(
     "border-color",
@@ -5610,7 +5635,11 @@ test("switches activity and recordings through the shared media calendar", async
     );
     host.style.setProperty("--wzc-color-text-1", "rgb(20, 21, 22)");
   });
-  await expect(scrubber).toHaveCSS("background-color", "rgb(240, 241, 242)");
+  await expect(recordedPlayer).toHaveCSS(
+    "background-color",
+    "rgb(240, 241, 242)",
+  );
+  await expect(scrubber).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(scrubber).toHaveCSS("color", "rgb(20, 21, 22)");
   const lightSegmentSurfaces = await Promise.all([
     segmentManager.evaluate(

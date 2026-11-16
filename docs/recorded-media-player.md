@@ -85,15 +85,20 @@ viewing. Recording discovery and grouping are governed by
   `playsinline`, and muted audio.
 - Recording-hour video exposes one persistent stepped playback-speed control
   in a labeled lower-right footer row beneath the scrubber, with slower and
-  faster actions around a Home Assistant rate selector. It does not overlap the
-  video or timeline. Each new media request starts at `1×`; the supported
+  faster actions around a compact `ha-dropdown` rate trigger. Its direct-rate
+  items use `ha-dropdown-item` and the Home Assistant `wa-select` event
+  contract. It does not overlap the video or timeline. Each new media request
+  starts at `1×`; the supported
   forward rates are `0.25×`, `0.5×`, `1×`, `2×`, `5×`, `10×`, and `25×`.
-  The selector permits direct rate changes while the adjacent buttons step
+  The dropdown permits direct rate changes while the adjacent buttons step
   through the same ordered set. Segment previews retain the current viewer
   rate. When a browser rejects `25×` as a native media rate, WatchZone combines
   the highest supported native step with frame-timed forward advancement to
   preserve the requested effective rate. Reverse playback is excluded because
   browser and HLS implementations do not support it consistently.
+- The recording player owns one footer surface behind both the scrubber row
+  and playback-speed row. The scrubber remains transparent so translucent
+  theme colors are painted once rather than producing a darker stacked band.
 - Recorded media uses the shared bounded display-zoom controller and shared
   browser fullscreen and Picture-in-Picture capability boundaries. Mute,
   fullscreen, and Picture-in-Picture remain fixed overlay controls outside the

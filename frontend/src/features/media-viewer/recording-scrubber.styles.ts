@@ -7,7 +7,9 @@ export const recordingScrubberStyles = css`
     inline-size: 100%;
     padding: 0.45rem 0.5rem 0.35rem;
     color: var(--wzc-recording-scrubber-text);
-    background: var(--wzc-recording-scrubber-surface);
+    /* The recorded player owns this shared footer surface. Keeping the
+       scrubber transparent avoids double-compositing translucent theme colors. */
+    background: transparent;
     font-family: var(--wzc-font-family);
   }
 
