@@ -51,14 +51,13 @@ export const accordionItemStyles = css`
     outline-offset: -2px;
   }
 
-  :host([pending]) details:not([open]) > summary {
-    color: var(--wzc-accordion-header-pending-color);
-    background: var(--wzc-accordion-header-pending-background);
+  details[open] > summary,
+  :host([pending]) summary {
+    color: var(--wzc-accordion-header-open-color);
+    background: var(--wzc-accordion-header-open-background);
   }
 
   details[open] > summary {
-    color: var(--wzc-accordion-header-open-color);
-    background: var(--wzc-accordion-header-open-background);
     border-block-end: 1px solid var(--wzc-accordion-border-color);
   }
 
@@ -125,16 +124,8 @@ export const accordionItemStyles = css`
   }
 
   @media (hover: none) {
-    summary:hover {
+    details:not([open]) > summary:hover {
       background: inherit;
-    }
-
-    details[open] > summary:hover {
-      background: var(--wzc-accordion-header-open-background);
-    }
-
-    :host([pending]) details:not([open]) > summary:hover {
-      background: var(--wzc-accordion-header-pending-background);
     }
   }
 

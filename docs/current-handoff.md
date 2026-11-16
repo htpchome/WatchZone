@@ -15,11 +15,11 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.370`
-- Current commit: `6ee63dd` —
-  `v0.0.4-dev.369 - perf(editor): mount only open settings sections`
-- The worktree contains the uncommitted editor pending-section highlight
-  described below. Always verify
+- Working version: `0.0.4-dev.371`
+- Current commit: `b6b2c52` —
+  `v0.0.4-dev.370 - feat(editor): highlight sections with pending changes`
+- The worktree contains the uncommitted release-budget correction described
+  below. Always verify
   `git status`, the canonical version in
   `custom_components/watchzone/const.py`, and the latest commit.
 
@@ -146,7 +146,7 @@ controls from the same top-level normalized draft, so disclosure changes do not
 alter dirty state, preview state, or saved YAML. Nested camera-dialog accordions
 retain their existing transaction and mounting behavior.
 
-In progress at `0.0.4-dev.370`: each main editor section derives pending state
+Completed at `0.0.4-dev.370`: each main editor section derives pending state
 from its normalized fields compared with the editor baseline. A closed section
 with unsaved changes retains the shared highlighted header treatment; opening
 and closing sections remains presentation-only, and reverting a section clears
@@ -175,8 +175,10 @@ Explicitly deferred:
   state measure approximately 19.23 KiB gzip. This changes runtime DOM work,
   not the transferred lazy-editor graph.
 - At `0.0.4-dev.370`, section-level pending-state mapping and presentation
-  measure approximately 19.69 KiB gzip and remain within the 20 KiB editor
-  budget.
+  initially exceeded the editor validation ceiling.
+- At `0.0.4-dev.371`, compact edit-ownership tracking preserves the same
+  section behavior at 19,425 bytes gzip, below the 19,456-byte validation
+  ceiling that maintains the 1 KiB safety margin beneath the 20 KiB budget.
 - The built-in Stage catalog is the largest practical eager-splitting target.
   Measure and reduce the graph before requesting another ceiling increase.
 - The editor remains close to its current 20 KiB gzip release budget. Keep
@@ -184,7 +186,7 @@ Explicitly deferred:
 
 ## Validation status
 
-Validated for the uncommitted `v0.0.4-dev.370` change:
+Validated for the uncommitted `v0.0.4-dev.371` correction:
 
 - 464 frontend unit tests
 - 129 Playwright tests across Chromium, Firefox, and WebKit

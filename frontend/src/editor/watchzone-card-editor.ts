@@ -58,7 +58,7 @@ import type {
   SegmentedControlValueDetail,
 } from "../ui/segmented-control";
 import type { SortableReorderDetail } from "../ui/sortable-list";
-import type { AccordionToggleDetail } from "../ui/accordion";
+import type { AccordionItem, AccordionToggleDetail } from "../ui/accordion";
 import "../ui/accordion";
 import "../ui/segmented-control";
 import "../ui/toast-region";
@@ -120,48 +120,6 @@ type EditorSectionKey =
   | "reviews"
   | "stage-management";
 
-const SECTION_CONFIG_KEYS = {
-  camera: ["cameras"],
-  display: [
-    "display_event_type_badges",
-    "display_object_badges",
-    "display_zone",
-  ],
-  general: ["mobile_data_saving", "title"],
-  interactions: ["double_tap_action", "hold_action", "tap_action"],
-  layout: [
-    "camera_bar_rounded_corners",
-    "camera_bar_shadows",
-    "camera_rounded_corners",
-    "camera_shadows",
-    "event_rounded_corners",
-    "event_shadows",
-    "outer_padding",
-    "outer_shadows",
-    "rounded_outer_corners",
-  ],
-  "live-media-player": [
-    "alert_detection_takeover",
-    "camera_switcher_overlay",
-    "highlight_camera_on_activity",
-    "ptz_overlay_control",
-    "slide_advance_time",
-    "slide_transition",
-    "start_alert_takeover_on",
-  ],
-  "minimal-camera-configuration": [
-    "highlight_camera_on_activity",
-    "minimal_camera_menu_position",
-    "minimal_camera_show_fullscreen_button",
-    "minimal_camera_show_mute_button",
-    "minimal_camera_show_pip_button",
-    "minimal_camera_show_source_label",
-  ],
-  "recorded-media-player": [],
-  reviews: ["event_history_days", "view_timelapse_on_thumbnail_hover"],
-  "stage-management": ["stage_flow", "stage_type"],
-} as const satisfies Record<EditorSectionKey, readonly string[]>;
-
 const CAMERA_SELECTOR = {
   entity: { filter: { domain: "camera" } },
 } as const;
@@ -177,7 +135,7 @@ const DEFAULT_LIGHT_ICON = "mdi:lightbulb";
 const accordionTag = unsafeStatic(ACCORDION_TAG);
 const accordionItemTag = unsafeStatic(ACCORDION_ITEM_TAG);
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
-const EDITOR_STATUS_KEY = "editor-draft-status";
+const EDITOR_STATUS_KEY = "draft";
 
 void import("../ui/sortable-list");
 void import("./general-settings-info");
@@ -213,8 +171,9 @@ export class CardEditor extends LitElement {
   private _secondaryCameraTitleInput = "";
   private _cameraGroupNameInput = "";
   private _cameraTitleInput = "";
-  private _openEditorSection?: EditorSectionKey;
-  private _pendingEditorSections = new Set<EditorSectionKey>();
+  private _openSection?: EditorSectionKey;
+  private _sectionKeys = new Map<string, EditorSectionKey>();
+  private _pendingSections = new Set<EditorSectionKey>();
   private _addingLight = false;
   private _pendingLightEntityId = "";
   private _pendingLightIcon = DEFAULT_LIGHT_ICON;
@@ -308,7 +267,7 @@ export class CardEditor extends LitElement {
     );
     this.addEventListener(
       ACCORDION_TOGGLE_EVENT,
-      this._handleEditorSectionToggle as EventListener,
+      this._handleSectionToggle as EventListener,
     );
   }
 
@@ -320,7 +279,7 @@ export class CardEditor extends LitElement {
     );
     this.removeEventListener(
       ACCORDION_TOGGLE_EVENT,
-      this._handleEditorSectionToggle as EventListener,
+      this._handleSectionToggle as EventListener,
     );
     this._dirtyContext = undefined;
     this._dirtySeeded = false;
@@ -354,6 +313,14 @@ export class CardEditor extends LitElement {
         removeDialog.close();
       }
     }
+    for (const item of this.renderRoot.querySelectorAll<AccordionItem>(
+      "[data-s]>*",
+    )) {
+      item.toggleAttribute(
+        "pending",
+        this._pendingSections.has(item.itemKey as EditorSectionKey),
+      );
+    }
   }
 
   protected render() {
@@ -370,14 +337,13 @@ export class CardEditor extends LitElement {
         mode="inline"
         .notices=${this._toasts.notices}
       ></${toastRegionTag}>
-      <${accordionTag} data-editor-sections>
+      <${accordionTag} data-s>
         <${accordionItemTag}
           heading=${this._t("editor.camera_settings")}
           item-key="camera"
           .icon=${"camera"}
-          .pending=${this._isEditorSectionPending("camera")}
         >
-          ${this._renderEditorSection("camera", () =>
+          ${this._renderSection("camera", () =>
             renderCameraSettings({
               cameraDisplayName: (camera) => this._cameraDisplayName(camera),
               cameraName: (entityId) => this._cameraName(entityId),
@@ -395,9 +361,8 @@ export class CardEditor extends LitElement {
           heading=${this._t("editor.stage_management")}
           item-key="stage-management"
           .icon=${"layout"}
-          .pending=${this._isEditorSectionPending("stage-management")}
         >
-          ${this._renderEditorSection("stage-management", () =>
+          ${this._renderSection("stage-management", () =>
             renderStageManagement({
               config: this._config,
               localize: this._localization.localize,
@@ -412,11 +377,8 @@ export class CardEditor extends LitElement {
           heading=${this._t("editor.minimal_camera_configuration")}
           item-key="minimal-camera-configuration"
           .icon=${"camera"}
-          .pending=${this._isEditorSectionPending(
-            "minimal-camera-configuration",
-          )}
         >
-          ${this._renderEditorSection("minimal-camera-configuration", () =>
+          ${this._renderSection("minimal-camera-configuration", () =>
             renderMinimalCameraSettings({
               ...commonSettings,
               onMenuPositionChange: this._handleMinimalCameraMenuPositionChange,
@@ -431,9 +393,8 @@ export class CardEditor extends LitElement {
           heading=${this._t("editor.interactions")}
           item-key="interactions"
           .icon=${"tune"}
-          .pending=${this._isEditorSectionPending("interactions")}
         >
-          ${this._renderEditorSection("interactions", () =>
+          ${this._renderSection("interactions", () =>
             renderInteractionSettings({
               choosingOptionalInteraction: this._choosingOptionalInteraction,
               config: this._config,
@@ -457,9 +418,8 @@ export class CardEditor extends LitElement {
           heading=${this._t("editor.live_media_player")}
           item-key="live-media-player"
           .icon=${"play"}
-          .pending=${this._isEditorSectionPending("live-media-player")}
         >
-          ${this._renderEditorSection("live-media-player", () =>
+          ${this._renderSection("live-media-player", () =>
             renderLiveMediaPlayerSettings({
               ...commonSettings,
               onAlertTakeoverModeChange: this._handleAlertTakeoverModeChange,
@@ -477,7 +437,6 @@ export class CardEditor extends LitElement {
           heading=${this._t("editor.recorded_media_player")}
           item-key="recorded-media-player"
           .icon=${"events"}
-          .pending=${this._isEditorSectionPending("recorded-media-player")}
         ></${accordionItemTag}>`
         }
         ${
@@ -487,9 +446,8 @@ export class CardEditor extends LitElement {
           heading=${this._t("editor.reviews")}
           item-key="reviews"
           .icon=${"reviews"}
-          .pending=${this._isEditorSectionPending("reviews")}
         >
-          ${this._renderEditorSection("reviews", () =>
+          ${this._renderSection("reviews", () =>
             renderReviewSettings({
               ...commonSettings,
               onEventHistoryDaysChange: this._handleEventHistoryDaysChange,
@@ -501,9 +459,8 @@ export class CardEditor extends LitElement {
           heading=${this._t("editor.general_settings")}
           item-key="general"
           .icon=${"settings"}
-          .pending=${this._isEditorSectionPending("general")}
         >
-          ${this._renderEditorSection("general", () =>
+          ${this._renderSection("general", () =>
             renderGeneralSettings({
               ...commonSettings,
               onTitleChange: this._handleTitleChange,
@@ -518,9 +475,8 @@ export class CardEditor extends LitElement {
           heading=${this._t("editor.layout_settings")}
           item-key="layout"
           .icon=${"layout"}
-          .pending=${this._isEditorSectionPending("layout")}
         >
-          ${this._renderEditorSection("layout", () =>
+          ${this._renderSection("layout", () =>
             renderLayoutSettings(commonSettings),
           )}
         </${accordionItemTag}>`
@@ -532,9 +488,8 @@ export class CardEditor extends LitElement {
           heading=${this._t("editor.display_settings")}
           item-key="display"
           .icon=${"tune"}
-          .pending=${this._isEditorSectionPending("display")}
         >
-          ${this._renderEditorSection("display", () =>
+          ${this._renderSection("display", () =>
             renderDisplaySettings(commonSettings),
           )}
         </${accordionItemTag}>`
@@ -545,30 +500,26 @@ export class CardEditor extends LitElement {
     `;
   }
 
-  private _renderEditorSection(
+  private _renderSection(
     key: EditorSectionKey,
     renderSection: () => unknown,
   ): unknown {
-    return this._openEditorSection === key ? renderSection() : nothing;
+    return this._openSection === key ? renderSection() : nothing;
   }
 
-  private _isEditorSectionPending(key: EditorSectionKey): boolean {
-    return this._pendingEditorSections.has(key);
-  }
-
-  private readonly _handleEditorSectionToggle = (
+  private readonly _handleSectionToggle = (
     event: CustomEvent<AccordionToggleDetail>,
   ): void => {
     const item = event.detail.item;
-    if (!item.parentElement?.hasAttribute("data-editor-sections")) return;
+    if (!item.parentElement?.hasAttribute("data-s")) return;
     const key = item.itemKey as EditorSectionKey;
     const next = event.detail.open
       ? key
-      : this._openEditorSection === key
+      : this._openSection === key
         ? undefined
-        : this._openEditorSection;
-    if (next === this._openEditorSection) return;
-    this._openEditorSection = next;
+        : this._openSection;
+    if (next === this._openSection) return;
+    this._openSection = next;
     this.requestUpdate();
   };
 
@@ -2220,6 +2171,7 @@ export class CardEditor extends LitElement {
     const changed = !this._config || nextSignature !== this._configSignature;
     const nestedEdit = this._haEditor.isNestedCardEdit();
     if (changed) {
+      if (this._config) this._trackSectionKeys(this._config, nextConfig);
       this._config = nextConfig;
       this._configSignature = nextSignature;
       this._syncDraftStatus();
@@ -2257,16 +2209,24 @@ export class CardEditor extends LitElement {
 
   private _syncDraftStatus(): void {
     if (!this._baseline || !this._config) return;
-    this._pendingEditorSections = pendingEditorSections(
-      this._serializeDraft(this._baseline, this._baselineOptionalInteractions),
-      this._serializeDraft(this._config),
+    this._pendingSections.clear();
+    for (const [key, section] of this._sectionKeys) {
+      if (
+        JSON.stringify(this._baseline[key]) !==
+        JSON.stringify(this._config[key])
+      ) {
+        this._pendingSections.add(section);
+      }
+    }
+    const interactionsChanged = !interactionSetsEqual(
+      this._visibleOptionalInteractions,
+      this._baselineOptionalInteractions,
     );
+    if (interactionsChanged) {
+      this._pendingSections.add("interactions");
+    }
     const changed =
-      this._configSignature !== this._baselineSignature ||
-      !interactionSetsEqual(
-        this._visibleOptionalInteractions,
-        this._baselineOptionalInteractions,
-      );
+      this._configSignature !== this._baselineSignature || interactionsChanged;
     if (changed === this._draftStatusChanged) return;
     this._draftStatusChanged = changed;
     if (changed) {
@@ -2281,6 +2241,15 @@ export class CardEditor extends LitElement {
         key: EDITOR_STATUS_KEY,
         persistent: true,
       });
+    }
+  }
+
+  private _trackSectionKeys(previous: CardConfig, current: CardConfig): void {
+    if (!this._openSection) return;
+    for (const key in current) {
+      if (JSON.stringify(previous[key]) !== JSON.stringify(current[key])) {
+        this._sectionKeys.set(key, this._openSection);
+      }
     }
   }
 
@@ -2392,26 +2361,6 @@ function interactionSetsEqual(
   right: ReadonlySet<OptionalInteractionName>,
 ): boolean {
   return left.size === right.size && [...left].every((name) => right.has(name));
-}
-
-function pendingEditorSections(
-  baseline: YamlCardConfig,
-  current: YamlCardConfig,
-): Set<EditorSectionKey> {
-  const pending = new Set<EditorSectionKey>();
-  for (const [section, keys] of Object.entries(SECTION_CONFIG_KEYS) as [
-    EditorSectionKey,
-    readonly string[],
-  ][]) {
-    if (
-      keys.some(
-        (key) => JSON.stringify(baseline[key]) !== JSON.stringify(current[key]),
-      )
-    ) {
-      pending.add(section);
-    }
-  }
-  return pending;
 }
 
 if (!customElements.get(EDITOR_TAG)) {
