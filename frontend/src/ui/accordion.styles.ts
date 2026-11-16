@@ -51,6 +51,11 @@ export const accordionItemStyles = css`
     outline-offset: -2px;
   }
 
+  :host([pending]) details:not([open]) > summary {
+    color: var(--wzc-accordion-header-pending-color);
+    background: var(--wzc-accordion-header-pending-background);
+  }
+
   details[open] > summary {
     color: var(--wzc-accordion-header-open-color);
     background: var(--wzc-accordion-header-open-background);
@@ -126,6 +131,10 @@ export const accordionItemStyles = css`
 
     details[open] > summary:hover {
       background: var(--wzc-accordion-header-open-background);
+    }
+
+    :host([pending]) details:not([open]) > summary:hover {
+      background: var(--wzc-accordion-header-pending-background);
     }
   }
 

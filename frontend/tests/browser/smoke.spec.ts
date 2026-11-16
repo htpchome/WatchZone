@@ -8062,6 +8062,7 @@ test("editor uses exclusive accordions and shared draft status", async ({
   await expect(status).toHaveCSS("backdrop-filter", "none");
   const general = editor.locator('wzc-accordion-item[item-key="general"]');
   await general.locator("summary").click();
+  await expect(general.locator("ha-input")).toHaveCount(1);
   await editor.evaluate(async (element) => {
     const input = element.shadowRoot?.querySelector("ha-input") as
       (HTMLElement & { value: string }) | undefined;
@@ -8074,8 +8075,20 @@ test("editor uses exclusive accordions and shared draft status", async ({
   await expect(
     editor.locator('wzc-toast-region .toast[data-severity="warning"]'),
   ).toContainText("Unsaved changes");
+  await expect(general).toHaveAttribute("pending", "");
 
   await stageManagement.locator("summary").click();
+  await expect(general.locator("details")).not.toHaveAttribute("open", "");
+  await expect(general).toHaveAttribute("pending", "");
+  expect(
+    await general
+      .locator("summary")
+      .evaluate((node) => getComputedStyle(node).backgroundColor),
+  ).toBe(
+    await stageManagement
+      .locator("summary")
+      .evaluate((node) => getComputedStyle(node).backgroundColor),
+  );
   await stageManagement.locator('input[value="minimal_camera_only"]').check();
   const interactions = editor.locator(
     'wzc-accordion-item[item-key="interactions"]',

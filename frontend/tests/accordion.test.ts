@@ -63,6 +63,20 @@ describe("shared accordion", () => {
     expect(second.open).toBe(true);
   });
 
+  it("reflects pending presentation state independently of disclosure state", async () => {
+    const item = createItem("pending");
+    item.pending = true;
+    document.body.append(item);
+    await item.updateComplete;
+
+    expect(item.hasAttribute("pending")).toBe(true);
+    expect(item.open).toBe(false);
+
+    openItem(item);
+    expect(item.pending).toBe(true);
+    expect(item.open).toBe(true);
+  });
+
   it("ignores disclosure events from nested accordions", async () => {
     const outer = document.createElement(ACCORDION_TAG) as Accordion;
     const outerItem = createItem("outer");

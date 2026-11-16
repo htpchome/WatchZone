@@ -68,6 +68,7 @@ export class AccordionItem extends LitElement {
     icon: { attribute: false },
     itemKey: { attribute: "item-key", type: String },
     open: { type: Boolean },
+    pending: { reflect: true, type: Boolean },
     summaryText: { attribute: "summary-text", type: String },
   };
 
@@ -76,6 +77,7 @@ export class AccordionItem extends LitElement {
   public icon?: IconName;
   public itemKey = "";
   public open = false;
+  public pending = false;
   public summaryText = "";
 
   public setOpen(open: boolean): void {

@@ -216,6 +216,17 @@ describe("watchzone-card-editor", () => {
     expect(status.notices[0]).toMatchObject({
       severity: "warning",
     });
+    const general = editor.shadowRoot?.querySelector<AccordionItem>(
+      `${ACCORDION_ITEM_TAG}[item-key="general"]`,
+    );
+    expect(general?.pending).toBe(true);
+    await openEditorSection(editor, "reviews");
+    expect(general?.open).toBe(false);
+    expect(general?.pending).toBe(true);
+
+    await inputTitle(editor, "Original");
+    await editor.updateComplete;
+    expect(general?.pending).toBe(false);
   });
 
   it("uses stage type as the gatekeeper for desktop and mobile stage designs", async () => {
@@ -308,6 +319,12 @@ describe("watchzone-card-editor", () => {
     minimal!.dispatchEvent(new Event("change", { bubbles: true }));
     await editor.updateComplete;
 
+    expect(stageItem?.pending).toBe(true);
+    expect(
+      editor.shadowRoot?.querySelector<AccordionItem>(
+        `${ACCORDION_ITEM_TAG}[item-key="interactions"]`,
+      )?.pending,
+    ).toBe(false);
     expect(stageItem?.querySelector("[data-stage-profile]")).toBeNull();
     expect(stageItem?.textContent).toContain(
       "This Stage presents one lightweight Camera View for One Camera. Limited Controls.",
@@ -1117,6 +1134,10 @@ describe("watchzone-card-editor", () => {
       false,
     );
     await setBooleanSelector(editor, '[data-config-key="display_zone"]', false);
+    const display = editor.shadowRoot?.querySelector<AccordionItem>(
+      `${ACCORDION_ITEM_TAG}[item-key="display"]`,
+    );
+    expect(display?.pending).toBe(true);
     expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
       type: CARD_TYPE,
       title: "Camera",

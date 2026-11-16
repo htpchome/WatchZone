@@ -15,6 +15,10 @@ application module and owns no configuration or feature state.
   one open item.
 - Feature and editor code own headings, icons, and slotted content. The
   accordion owns only disclosure state, presentation, and reveal scrolling.
+- An owner may mark an item `pending` to highlight its closed header. Pending
+  state is presentation input only: the accordion does not derive, clear, or
+  persist it, and the existing open-header treatment remains authoritative
+  while the item is open.
 - Each item publishes the centralized composed toggle event with its item and
   resolved open state. Owners may use that event to mount disclosed content;
   nested accordion events remain scoped to their direct accordion.
@@ -38,6 +42,12 @@ open group's body. Closing a group removes its controls from the DOM; reopening
 reconstructs them from the top-level normalized draft. Disclosure changes are
 presentation state only and never change dirty state or card YAML. Section
 renderers and Home Assistant controls do not own a second draft.
+
+The editor derives each header's pending state from that section's normalized
+draft fields compared with the normalized baseline. Optional interaction
+presence is part of the Interactions section state. Reverting all fields owned
+by a section removes its pending highlight even when other sections still have
+unsaved changes.
 
 The nested camera editor initially opens Camera, then follows the same
 zero-or-one-open behavior as the main editor. Editing a compact

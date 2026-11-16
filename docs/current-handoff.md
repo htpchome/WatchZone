@@ -15,11 +15,11 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.369`
-- Current commit: `dad25b1` —
-  `v0.0.4-dev.368 - refactor(editor): extract controlled settings sections`
-- The worktree contains the uncommitted Phase 5 editor changes described
-  below. Always verify
+- Working version: `0.0.4-dev.370`
+- Current commit: `6ee63dd` —
+  `v0.0.4-dev.369 - perf(editor): mount only open settings sections`
+- The worktree contains the uncommitted editor pending-section highlight
+  described below. Always verify
   `git status`, the canonical version in
   `custom_components/watchzone/const.py`, and the latest commit.
 
@@ -146,6 +146,12 @@ controls from the same top-level normalized draft, so disclosure changes do not
 alter dirty state, preview state, or saved YAML. Nested camera-dialog accordions
 retain their existing transaction and mounting behavior.
 
+In progress at `0.0.4-dev.370`: each main editor section derives pending state
+from its normalized fields compared with the editor baseline. A closed section
+with unsaved changes retains the shared highlighted header treatment; opening
+and closing sections remains presentation-only, and reverting a section clears
+only that section's highlight.
+
 Explicitly deferred:
 
 - Do not connect Python Stage Design persistence merely for the current
@@ -168,17 +174,19 @@ Explicitly deferred:
 - At `0.0.4-dev.369`, conditional section mounting and its explicit ownership
   state measure approximately 19.23 KiB gzip. This changes runtime DOM work,
   not the transferred lazy-editor graph.
+- At `0.0.4-dev.370`, section-level pending-state mapping and presentation
+  measure approximately 19.69 KiB gzip and remain within the 20 KiB editor
+  budget.
 - The built-in Stage catalog is the largest practical eager-splitting target.
   Measure and reduce the graph before requesting another ceiling increase.
-- The editor remains close to its current 20 KiB gzip release budget. Phase 5
-  should focus on closed-section mounting cost without assuming extraction
-  alone reduces transferred bytes.
+- The editor remains close to its current 20 KiB gzip release budget. Keep
+  future editor changes compact and measure the built output before handoff.
 
 ## Validation status
 
-Validated for `v0.0.4-dev.369`:
+Validated for the uncommitted `v0.0.4-dev.370` change:
 
-- 463 frontend unit tests
+- 464 frontend unit tests
 - 129 Playwright tests across Chromium, Firefox, and WebKit
 - formatting, lint, type checking, architecture/style/license checks,
   production build, version consistency, and `git diff --check`
