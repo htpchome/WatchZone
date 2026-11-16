@@ -15,6 +15,9 @@ application module and owns no configuration or feature state.
   one open item.
 - Feature and editor code own headings, icons, and slotted content. The
   accordion owns only disclosure state, presentation, and reveal scrolling.
+- Each item publishes the centralized composed toggle event with its item and
+  resolved open state. Owners may use that event to mount disclosed content;
+  nested accordion events remain scoped to their direct accordion.
 - Items use the comfortable density by default. Nested editor dialogs may use
   the compact density and an optional short summary value without creating a
   second disclosure implementation.
@@ -30,10 +33,11 @@ application module and owns no configuration or feature state.
 - Styling consumes semantic `--wzc-accordion-*` tokens defined at the sole
   Home Assistant theme boundary.
 
-The current card editor uses eight closed-by-default groups: Camera Settings,
-Stage Management, Live Media Player, Recorded Media Player, Reviews, General
-Settings, Layout Settings, and Display Settings. Opening and closing a group is
-presentation state only and never changes dirty state or card YAML.
+The main card editor keeps every applicable header mounted but mounts only the
+open group's body. Closing a group removes its controls from the DOM; reopening
+reconstructs them from the top-level normalized draft. Disclosure changes are
+presentation state only and never change dirty state or card YAML. Section
+renderers and Home Assistant controls do not own a second draft.
 
 The nested camera editor initially opens Camera, then follows the same
 zero-or-one-open behavior as the main editor. Editing a compact

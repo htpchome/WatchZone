@@ -28,6 +28,7 @@ import {
 import {
   ACCORDION_ITEM_TAG,
   ACCORDION_TAG,
+  ACCORDION_TOGGLE_EVENT,
   CARD_TYPE,
   EDITOR_PREVIEW_DRAFT_EVENT,
   EDITOR_TAG,
@@ -57,6 +58,7 @@ import type {
   SegmentedControlValueDetail,
 } from "../ui/segmented-control";
 import type { SortableReorderDetail } from "../ui/sortable-list";
+import type { AccordionToggleDetail } from "../ui/accordion";
 import "../ui/accordion";
 import "../ui/segmented-control";
 import "../ui/toast-region";
@@ -105,6 +107,18 @@ interface SelectorElement extends HTMLElement {
 interface LocalizingHomeAssistant extends HomeAssistant {
   localize(key: string, ...args: unknown[]): string;
 }
+
+type EditorSectionKey =
+  | "camera"
+  | "display"
+  | "general"
+  | "interactions"
+  | "layout"
+  | "live-media-player"
+  | "minimal-camera-configuration"
+  | "recorded-media-player"
+  | "reviews"
+  | "stage-management";
 
 const CAMERA_SELECTOR = {
   entity: { filter: { domain: "camera" } },
@@ -157,6 +171,7 @@ export class CardEditor extends LitElement {
   private _secondaryCameraTitleInput = "";
   private _cameraGroupNameInput = "";
   private _cameraTitleInput = "";
+  private _openEditorSection?: EditorSectionKey;
   private _addingLight = false;
   private _pendingLightEntityId = "";
   private _pendingLightIcon = DEFAULT_LIGHT_ICON;
@@ -248,6 +263,10 @@ export class CardEditor extends LitElement {
       SORTABLE_REORDER_EVENT,
       this._handleCameraReorder as EventListener,
     );
+    this.addEventListener(
+      ACCORDION_TOGGLE_EVENT,
+      this._handleEditorSectionToggle as EventListener,
+    );
   }
 
   public disconnectedCallback(): void {
@@ -255,6 +274,10 @@ export class CardEditor extends LitElement {
     this.removeEventListener(
       SORTABLE_REORDER_EVENT,
       this._handleCameraReorder as EventListener,
+    );
+    this.removeEventListener(
+      ACCORDION_TOGGLE_EVENT,
+      this._handleEditorSectionToggle as EventListener,
     );
     this._dirtyContext = undefined;
     this._dirtySeeded = false;
@@ -304,35 +327,39 @@ export class CardEditor extends LitElement {
         mode="inline"
         .notices=${this._toasts.notices}
       ></${toastRegionTag}>
-      <${accordionTag}>
+      <${accordionTag} data-editor-sections>
         <${accordionItemTag}
           heading=${this._t("editor.camera_settings")}
           item-key="camera"
           .icon=${"camera"}
         >
-          ${renderCameraSettings({
-            cameraDisplayName: (camera) => this._cameraDisplayName(camera),
-            cameraName: (entityId) => this._cameraName(entityId),
-            cameraSummary: (camera) => this._cameraSummary(camera),
-            config: this._config,
-            localize: this._localization.localize,
-            onAddCamera: this._addCamera,
-            onEditAdditionalCamera: this._editAdditionalCamera,
-            onEditCamera: this._editCamera,
-            onRequestRemoveCamera: this._requestRemoveCamera,
-          })}
+          ${this._renderEditorSection("camera", () =>
+            renderCameraSettings({
+              cameraDisplayName: (camera) => this._cameraDisplayName(camera),
+              cameraName: (entityId) => this._cameraName(entityId),
+              cameraSummary: (camera) => this._cameraSummary(camera),
+              config: this._config,
+              localize: this._localization.localize,
+              onAddCamera: this._addCamera,
+              onEditAdditionalCamera: this._editAdditionalCamera,
+              onEditCamera: this._editCamera,
+              onRequestRemoveCamera: this._requestRemoveCamera,
+            }),
+          )}
         </${accordionItemTag}>
         <${accordionItemTag}
           heading=${this._t("editor.stage_management")}
           item-key="stage-management"
           .icon=${"layout"}
         >
-          ${renderStageManagement({
-            config: this._config,
-            localize: this._localization.localize,
-            onStageLayoutChange: this._handleStageLayoutChange,
-            onStageTypeChange: this._handleStageTypeChange,
-          })}
+          ${this._renderEditorSection("stage-management", () =>
+            renderStageManagement({
+              config: this._config,
+              localize: this._localization.localize,
+              onStageLayoutChange: this._handleStageLayoutChange,
+              onStageTypeChange: this._handleStageTypeChange,
+            }),
+          )}
         </${accordionItemTag}>
         ${
           minimal
@@ -341,10 +368,12 @@ export class CardEditor extends LitElement {
           item-key="minimal-camera-configuration"
           .icon=${"camera"}
         >
-          ${renderMinimalCameraSettings({
-            ...commonSettings,
-            onMenuPositionChange: this._handleMinimalCameraMenuPositionChange,
-          })}
+          ${this._renderEditorSection("minimal-camera-configuration", () =>
+            renderMinimalCameraSettings({
+              ...commonSettings,
+              onMenuPositionChange: this._handleMinimalCameraMenuPositionChange,
+            }),
+          )}
         </${accordionItemTag}>`
             : null
         }
@@ -355,18 +384,20 @@ export class CardEditor extends LitElement {
           item-key="interactions"
           .icon=${"tune"}
         >
-          ${renderInteractionSettings({
-            choosingOptionalInteraction: this._choosingOptionalInteraction,
-            config: this._config,
-            hass: this._interactionActionHass(),
-            localize: this._localization.localize,
-            onActionsChange: this._handleActionsChange,
-            onAddOptionalInteraction: this._addOptionalInteraction,
-            onRemoveOptionalInteraction: this._removeOptionalInteraction,
-            onToggleOptionalInteractionChoices:
-              this._toggleOptionalInteractionChoices,
-            visibleOptionalInteractions: this._visibleOptionalInteractions,
-          })}
+          ${this._renderEditorSection("interactions", () =>
+            renderInteractionSettings({
+              choosingOptionalInteraction: this._choosingOptionalInteraction,
+              config: this._config,
+              hass: this._interactionActionHass(),
+              localize: this._localization.localize,
+              onActionsChange: this._handleActionsChange,
+              onAddOptionalInteraction: this._addOptionalInteraction,
+              onRemoveOptionalInteraction: this._removeOptionalInteraction,
+              onToggleOptionalInteractionChoices:
+                this._toggleOptionalInteractionChoices,
+              visibleOptionalInteractions: this._visibleOptionalInteractions,
+            }),
+          )}
         </${accordionItemTag}>`
             : null
         }
@@ -378,13 +409,15 @@ export class CardEditor extends LitElement {
           item-key="live-media-player"
           .icon=${"play"}
         >
-          ${renderLiveMediaPlayerSettings({
-            ...commonSettings,
-            onAlertTakeoverModeChange: this._handleAlertTakeoverModeChange,
-            onPtzOverlayControlChange: this._handlePtzOverlayControlChange,
-            onSlideAdvanceTimeChange: this._handleSlideAdvanceTimeChange,
-            onSlideTransitionChange: this._handleSlideTransitionChange,
-          })}
+          ${this._renderEditorSection("live-media-player", () =>
+            renderLiveMediaPlayerSettings({
+              ...commonSettings,
+              onAlertTakeoverModeChange: this._handleAlertTakeoverModeChange,
+              onPtzOverlayControlChange: this._handlePtzOverlayControlChange,
+              onSlideAdvanceTimeChange: this._handleSlideAdvanceTimeChange,
+              onSlideTransitionChange: this._handleSlideTransitionChange,
+            }),
+          )}
         </${accordionItemTag}>`
         }
         ${
@@ -404,10 +437,12 @@ export class CardEditor extends LitElement {
           item-key="reviews"
           .icon=${"reviews"}
         >
-          ${renderReviewSettings({
-            ...commonSettings,
-            onEventHistoryDaysChange: this._handleEventHistoryDaysChange,
-          })}
+          ${this._renderEditorSection("reviews", () =>
+            renderReviewSettings({
+              ...commonSettings,
+              onEventHistoryDaysChange: this._handleEventHistoryDaysChange,
+            }),
+          )}
         </${accordionItemTag}>`
         }
         <${accordionItemTag}
@@ -415,11 +450,13 @@ export class CardEditor extends LitElement {
           item-key="general"
           .icon=${"settings"}
         >
-          ${renderGeneralSettings({
-            ...commonSettings,
-            onTitleChange: this._handleTitleChange,
-            onTitleInput: this._handleTitleInput,
-          })}
+          ${this._renderEditorSection("general", () =>
+            renderGeneralSettings({
+              ...commonSettings,
+              onTitleChange: this._handleTitleChange,
+              onTitleInput: this._handleTitleInput,
+            }),
+          )}
         </${accordionItemTag}>
         ${
           minimal
@@ -429,7 +466,9 @@ export class CardEditor extends LitElement {
           item-key="layout"
           .icon=${"layout"}
         >
-          ${renderLayoutSettings(commonSettings)}
+          ${this._renderEditorSection("layout", () =>
+            renderLayoutSettings(commonSettings),
+          )}
         </${accordionItemTag}>`
         }
         ${
@@ -440,7 +479,9 @@ export class CardEditor extends LitElement {
           item-key="display"
           .icon=${"tune"}
         >
-          ${renderDisplaySettings(commonSettings)}
+          ${this._renderEditorSection("display", () =>
+            renderDisplaySettings(commonSettings),
+          )}
         </${accordionItemTag}>`
         }
       </${accordionTag}>
@@ -448,6 +489,29 @@ export class CardEditor extends LitElement {
       ${this._renderRemoveCameraDialog()}
     `;
   }
+
+  private _renderEditorSection(
+    key: EditorSectionKey,
+    renderSection: () => unknown,
+  ): unknown {
+    return this._openEditorSection === key ? renderSection() : nothing;
+  }
+
+  private readonly _handleEditorSectionToggle = (
+    event: CustomEvent<AccordionToggleDetail>,
+  ): void => {
+    const item = event.detail.item;
+    if (!item.parentElement?.hasAttribute("data-editor-sections")) return;
+    const key = item.itemKey as EditorSectionKey;
+    const next = event.detail.open
+      ? key
+      : this._openEditorSection === key
+        ? undefined
+        : this._openEditorSection;
+    if (next === this._openEditorSection) return;
+    this._openEditorSection = next;
+    this.requestUpdate();
+  };
 
   private _interactionActionHass(): HomeAssistant | undefined {
     const source = this._hass;

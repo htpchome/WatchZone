@@ -41,21 +41,77 @@ interface LocalizingTestHass {
   localize(key: string): string;
 }
 
-function inputTitle(editor: CardEditor, title: string): InputElement {
+async function openEditorSection(
+  editor: CardEditor,
+  key: string,
+): Promise<AccordionItem> {
+  const item = editor.shadowRoot?.querySelector<AccordionItem>(
+    `${ACCORDION_ITEM_TAG}[item-key="${key}"]`,
+  );
+  if (!item) throw new Error(`Editor section ${key} was not rendered`);
+  await item.updateComplete;
+  const details = item.shadowRoot?.querySelector("details");
+  if (!details) throw new Error(`Editor section ${key} has no disclosure`);
+  if (!details.open) {
+    details.open = true;
+    details.dispatchEvent(new Event("toggle"));
+    await Promise.all([editor.updateComplete, item.updateComplete]);
+  }
+  return item;
+}
+
+async function inputTitle(
+  editor: CardEditor,
+  title: string,
+): Promise<InputElement> {
+  await openEditorSection(editor, "general");
   const input = editor.shadowRoot?.querySelector("ha-input") as InputElement;
   input.value = title;
   input.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
   return input;
 }
 
-function setBooleanSelector(
+async function setBooleanSelector(
   editor: CardEditor,
   selector: string,
   checked: boolean,
-): TestBooleanSelector {
-  const control = editor.shadowRoot?.querySelector(
+): Promise<TestBooleanSelector> {
+  let control = editor.shadowRoot?.querySelector(
     selector,
-  ) as TestBooleanSelector;
+  ) as TestBooleanSelector | null;
+  if (!control && selector.includes("data-config-key")) {
+    const key = selector.match(/data-config-key="([^"]+)"/)?.[1] ?? "";
+    const section =
+      key === "mobile_data_saving"
+        ? "general"
+        : key === "view_timelapse_on_thumbnail_hover"
+          ? "reviews"
+          : key.startsWith("display_")
+            ? "display"
+            : [
+                  "rounded_outer_corners",
+                  "outer_shadows",
+                  "outer_padding",
+                  "camera_rounded_corners",
+                  "camera_shadows",
+                  "camera_bar_rounded_corners",
+                  "camera_bar_shadows",
+                  "event_rounded_corners",
+                  "event_shadows",
+                ].includes(key)
+              ? "layout"
+              : editor.shadowRoot?.querySelector(
+                    `${ACCORDION_ITEM_TAG}[item-key="minimal-camera-configuration"]`,
+                  )
+                ? "minimal-camera-configuration"
+                : "live-media-player";
+    await openEditorSection(editor, section);
+    control = editor.shadowRoot?.querySelector(
+      selector,
+    ) as TestBooleanSelector | null;
+  }
+  if (!control)
+    throw new Error(`Boolean selector ${selector} was not rendered`);
   control.value = checked;
   control.dispatchEvent(
     new CustomEvent("value-changed", {
@@ -108,13 +164,16 @@ describe("watchzone-card-editor", () => {
       "Layout Settings",
       "Display Settings",
     ]);
-    expect(items[2]?.childElementCount).toBe(7);
+    expect(items.every((item) => item.childElementCount === 0)).toBe(true);
+    expect(items.every((item) => !item.open)).toBe(true);
+    const liveMedia = await openEditorSection(editor, "live-media-player");
+    expect(liveMedia.childElementCount).toBe(7);
     expect(
-      items[2]?.querySelector(
+      liveMedia.querySelector(
         '[data-config-key="highlight_camera_on_activity"]',
       ),
     ).not.toBeNull();
-    const ptzControl = items[2]?.querySelector<SegmentedControl>(
+    const ptzControl = liveMedia.querySelector<SegmentedControl>(
       '[data-setting="ptz-overlay-control"]',
     );
     await ptzControl?.updateComplete;
@@ -126,7 +185,7 @@ describe("watchzone-card-editor", () => {
     expect(
       ptzControl?.shadowRoot?.querySelector('[data-value="open_in_drawer"]'),
     ).toHaveProperty("disabled", true);
-    const transitionControl = items[2]?.querySelector<SegmentedControl>(
+    const transitionControl = liveMedia.querySelector<SegmentedControl>(
       '[data-setting="slide-transition"]',
     );
     await transitionControl?.updateComplete;
@@ -136,12 +195,13 @@ describe("watchzone-card-editor", () => {
         ?.getAttribute("aria-checked"),
     ).toBe("true");
     expect(items[3]?.childElementCount).toBe(0);
+    const reviews = await openEditorSection(editor, "reviews");
+    expect(liveMedia.childElementCount).toBe(0);
     expect(
-      items[4]?.querySelector(
+      reviews.querySelector(
         '[data-config-key="view_timelapse_on_thumbnail_hover"]',
       ),
     ).not.toBeNull();
-    expect(items.every((item) => !item.open)).toBe(true);
     const status = editor.shadowRoot?.querySelector(
       "wzc-toast-region",
     ) as ToastRegion;
@@ -150,7 +210,7 @@ describe("watchzone-card-editor", () => {
       severity: "success",
     });
 
-    inputTitle(editor, "Changed");
+    await inputTitle(editor, "Changed");
     await editor.updateComplete;
     expect(status.notices).toHaveLength(1);
     expect(status.notices[0]).toMatchObject({
@@ -168,9 +228,7 @@ describe("watchzone-card-editor", () => {
     document.body.append(editor);
     await editor.updateComplete;
 
-    const stageItem = editor.shadowRoot?.querySelector<AccordionItem>(
-      `${ACCORDION_ITEM_TAG}[item-key="stage-management"]`,
-    );
+    const stageItem = await openEditorSection(editor, "stage-management");
     expect(stageItem).not.toBeNull();
 
     const stageTypeInputs = [
@@ -242,9 +300,7 @@ describe("watchzone-card-editor", () => {
     document.body.append(editor);
     await editor.updateComplete;
 
-    const stageItem = editor.shadowRoot?.querySelector<AccordionItem>(
-      `${ACCORDION_ITEM_TAG}[item-key="stage-management"]`,
-    );
+    const stageItem = await openEditorSection(editor, "stage-management");
     const minimal = stageItem?.querySelector<HTMLInputElement>(
       'input[value="minimal_camera_only"]',
     );
@@ -269,12 +325,14 @@ describe("watchzone-card-editor", () => {
       "interactions",
       "general",
     ]);
-    expect(editor.shadowRoot?.textContent).toContain(
+    const cameraSettings = await openEditorSection(editor, "camera");
+    expect(cameraSettings.textContent).toContain(
       "only the first camera listed",
     );
-    const minimalConfiguration = editor.shadowRoot?.querySelector<
-      AccordionItem & { heading?: string }
-    >(`${ACCORDION_ITEM_TAG}[item-key="minimal-camera-configuration"]`);
+    const minimalConfiguration = await openEditorSection(
+      editor,
+      "minimal-camera-configuration",
+    );
     expect(minimalConfiguration?.heading).toBe("Minimal Camera Configuration");
     expect(
       minimalConfiguration
@@ -286,7 +344,8 @@ describe("watchzone-card-editor", () => {
         ?.querySelector('[data-config-key="minimal_camera_show_source_label"]')
         ?.getAttribute("label"),
     ).toBe("Show Source Label");
-    const interactionForm = editor.shadowRoot?.querySelector<
+    const interactions = await openEditorSection(editor, "interactions");
+    const interactionForm = interactions.querySelector<
       HTMLElement & {
         data?: Record<string, unknown>;
         hass?: LocalizingTestHass;
@@ -316,17 +375,17 @@ describe("watchzone-card-editor", () => {
         "ui.panel.lovelace.editor.action-editor.actions.open-live-view",
       ),
     ).toBe("Open Live View");
-    editor.shadowRoot
+    interactions
       ?.querySelector<HTMLElement>(".add-interaction > ha-button")
       ?.click();
     await editor.updateComplete;
-    editor.shadowRoot
+    interactions
       ?.querySelector<HTMLElement>(
         '.add-interaction-choices [data-interaction="double_tap_action"]',
       )
       ?.click();
     await editor.updateComplete;
-    const optionalForm = editor.shadowRoot?.querySelector<
+    const optionalForm = interactions.querySelector<
       HTMLElement & {
         schema?: Array<{
           selector: { ui_action?: { actions?: string[] } };
@@ -355,14 +414,14 @@ describe("watchzone-card-editor", () => {
       }),
     );
     await editor.updateComplete;
-    const removeInteraction = editor.shadowRoot?.querySelector<HTMLElement>(
+    const removeInteraction = interactions.querySelector<HTMLElement>(
       '.remove-interaction-action [data-interaction="double_tap_action"]',
     );
     expect(removeInteraction?.textContent).toContain("Remove");
     removeInteraction?.click();
     await editor.updateComplete;
     expect(
-      editor.shadowRoot?.querySelector(
+      interactions.querySelector(
         '.remove-interaction-action [data-interaction="double_tap_action"]',
       ),
     ).toBeNull();
@@ -380,6 +439,7 @@ describe("watchzone-card-editor", () => {
     editor.addEventListener("config-changed", changed);
     document.body.append(editor);
     await editor.updateComplete;
+    await openEditorSection(editor, "camera");
 
     (
       editor.shadowRoot?.querySelector(
@@ -460,6 +520,7 @@ describe("watchzone-card-editor", () => {
     editor.addEventListener("config-changed", changed);
     document.body.append(editor);
     await editor.updateComplete;
+    await openEditorSection(editor, "camera");
 
     const edit = editor.shadowRoot?.querySelector('[title="Edit Camera"]');
     const remove = editor.shadowRoot?.querySelector(
@@ -531,6 +592,7 @@ describe("watchzone-card-editor", () => {
     editor.addEventListener("config-changed", changed);
     document.body.append(editor);
     await editor.updateComplete;
+    await openEditorSection(editor, "camera");
     (
       editor.shadowRoot?.querySelector(
         '[aria-label="Edit camera: Front"]',
@@ -735,7 +797,7 @@ describe("watchzone-card-editor", () => {
     await Promise.all([card.updateComplete, editor.updateComplete]);
     const originalCard = card.shadowRoot?.querySelector("ha-card");
 
-    inputTitle(editor, "Draft title");
+    await inputTitle(editor, "Draft title");
     await vi.advanceTimersByTimeAsync(EDITOR_TEXT_PREVIEW_DELAY_MS);
     await card.updateComplete;
 
@@ -750,7 +812,7 @@ describe("watchzone-card-editor", () => {
     expect(card.shadowRoot?.querySelector("ha-card")).toBe(originalCard);
 
     const writesAfterChange = states.length;
-    inputTitle(editor, "Draft title");
+    await inputTitle(editor, "Draft title");
     await vi.advanceTimersByTimeAsync(EDITOR_TEXT_PREVIEW_DELAY_MS);
     expect(states).toHaveLength(writesAfterChange);
 
@@ -773,7 +835,7 @@ describe("watchzone-card-editor", () => {
     document.body.append(editor);
     await editor.updateComplete;
 
-    const input = inputTitle(editor, "Compatible draft");
+    const input = await inputTitle(editor, "Compatible draft");
     expect(changed).not.toHaveBeenCalled();
     input.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
 
@@ -793,12 +855,17 @@ describe("watchzone-card-editor", () => {
     editor.addEventListener("config-changed", changed);
     document.body.append(editor);
     await editor.updateComplete;
+    await openEditorSection(editor, "general");
     const selector = editor.shadowRoot?.querySelector(
       '[data-config-key="mobile_data_saving"]',
     ) as TestBooleanSelector | null;
     expect(selector?.value).toBe(false);
 
-    setBooleanSelector(editor, '[data-config-key="mobile_data_saving"]', true);
+    await setBooleanSelector(
+      editor,
+      '[data-config-key="mobile_data_saving"]',
+      true,
+    );
     expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
       type: CARD_TYPE,
       title: "Camera",
@@ -836,6 +903,8 @@ describe("watchzone-card-editor", () => {
     };
     editor.setConfig({ type: CARD_TYPE, title: "Camera" });
     document.body.append(editor);
+    await editor.updateComplete;
+    await openEditorSection(editor, "general");
 
     await vi.waitFor(() => {
       const info = editor.shadowRoot?.querySelector(EDITOR_GENERAL_INFO_TAG);
@@ -863,13 +932,14 @@ describe("watchzone-card-editor", () => {
     editor.addEventListener("config-changed", changed);
     document.body.append(editor);
     await editor.updateComplete;
+    await openEditorSection(editor, "live-media-player");
 
     const selector = editor.shadowRoot?.querySelector(
       '[data-config-key="highlight_camera_on_activity"]',
     ) as TestBooleanSelector | null;
     expect(selector?.value).toBe(true);
 
-    setBooleanSelector(
+    await setBooleanSelector(
       editor,
       '[data-config-key="highlight_camera_on_activity"]',
       false,
@@ -890,6 +960,7 @@ describe("watchzone-card-editor", () => {
     editor.addEventListener("config-changed", changed);
     document.body.append(editor);
     await editor.updateComplete;
+    await openEditorSection(editor, "live-media-player");
 
     const control = editor.shadowRoot?.querySelector<SegmentedControl>(
       '[data-setting="ptz-overlay-control"]',
@@ -923,6 +994,7 @@ describe("watchzone-card-editor", () => {
     editor.addEventListener("config-changed", changed);
     document.body.append(editor);
     await editor.updateComplete;
+    await openEditorSection(editor, "live-media-player");
 
     const takeover = editor.shadowRoot?.querySelector<SegmentedControl>(
       '[data-setting="alert-detection-takeover"]',
@@ -931,7 +1003,7 @@ describe("watchzone-card-editor", () => {
       ?.querySelector<HTMLButtonElement>('[data-value="alerts"]')
       ?.click();
     await editor.updateComplete;
-    setBooleanSelector(
+    await setBooleanSelector(
       editor,
       '[data-config-key="start_alert_takeover_on"]',
       true,
@@ -954,6 +1026,7 @@ describe("watchzone-card-editor", () => {
     editor.addEventListener("config-changed", changed);
     document.body.append(editor);
     await editor.updateComplete;
+    await openEditorSection(editor, "live-media-player");
 
     const transition = editor.shadowRoot?.querySelector<SegmentedControl>(
       '[data-setting="slide-transition"]',
@@ -990,13 +1063,14 @@ describe("watchzone-card-editor", () => {
     editor.addEventListener("config-changed", changed);
     document.body.append(editor);
     await editor.updateComplete;
+    await openEditorSection(editor, "reviews");
 
     const selector = editor.shadowRoot?.querySelector(
       '[data-config-key="view_timelapse_on_thumbnail_hover"]',
     ) as TestBooleanSelector | null;
     expect(selector?.value).toBe(true);
 
-    setBooleanSelector(
+    await setBooleanSelector(
       editor,
       '[data-config-key="view_timelapse_on_thumbnail_hover"]',
       false,
@@ -1017,6 +1091,7 @@ describe("watchzone-card-editor", () => {
     editor.addEventListener("config-changed", changed);
     document.body.append(editor);
     await editor.updateComplete;
+    await openEditorSection(editor, "display");
 
     const objectSelector = editor.shadowRoot?.querySelector(
       '[data-config-key="display_object_badges"]',
@@ -1031,17 +1106,17 @@ describe("watchzone-card-editor", () => {
     expect(eventTypeSelector?.value).toBe(true);
     expect(zoneSelector?.value).toBe(true);
 
-    setBooleanSelector(
+    await setBooleanSelector(
       editor,
       '[data-config-key="display_object_badges"]',
       false,
     );
-    setBooleanSelector(
+    await setBooleanSelector(
       editor,
       '[data-config-key="display_event_type_badges"]',
       false,
     );
-    setBooleanSelector(editor, '[data-config-key="display_zone"]', false);
+    await setBooleanSelector(editor, '[data-config-key="display_zone"]', false);
     expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
       type: CARD_TYPE,
       title: "Camera",
@@ -1060,6 +1135,7 @@ describe("watchzone-card-editor", () => {
     editor.addEventListener("config-changed", changed);
     document.body.append(editor);
     await editor.updateComplete;
+    await openEditorSection(editor, "reviews");
 
     const selector = editor.shadowRoot?.querySelector<
       HTMLElement & {
@@ -1130,6 +1206,7 @@ describe("watchzone-card-editor", () => {
     dialogRoot.append(editor, save);
     document.body.append(card, dialog);
     await Promise.all([card.updateComplete, editor.updateComplete]);
+    await openEditorSection(editor, "camera");
     (editor.shadowRoot?.querySelector(".add-camera") as HTMLElement).click();
     await editor.updateComplete;
     const selector = editor.shadowRoot?.querySelector(
@@ -1170,6 +1247,7 @@ describe("watchzone-card-editor", () => {
     reopened.setConfig(configSeenBySave);
     document.body.append(reopened);
     await reopened.updateComplete;
+    await openEditorSection(reopened, "camera");
     expect(
       reopened.shadowRoot?.querySelectorAll("wzc-sortable-tile"),
     ).toHaveLength(1);
@@ -1213,7 +1291,7 @@ describe("watchzone-card-editor", () => {
     document.body.append(dialog);
     await editor.updateComplete;
 
-    inputTitle(editor, "Nested update");
+    await inputTitle(editor, "Nested update");
     await vi.advanceTimersByTimeAsync(EDITOR_TEXT_PREVIEW_DELAY_MS);
     save.click();
 
@@ -1267,7 +1345,7 @@ describe("watchzone-card-editor", () => {
       "camera_bar_shadows",
       "event_shadows",
     ]) {
-      setBooleanSelector(editor, `[data-config-key="${key}"]`, false);
+      await setBooleanSelector(editor, `[data-config-key="${key}"]`, false);
       await card.updateComplete;
     }
 
@@ -1303,6 +1381,7 @@ describe("watchzone-card-editor", () => {
     reopened.setConfig(dialog._cardConfig);
     document.body.append(reopened);
     await reopened.updateComplete;
+    await openEditorSection(reopened, "layout");
     for (const key of [
       "rounded_outer_corners",
       "outer_shadows",
@@ -1367,7 +1446,7 @@ describe("watchzone-card-editor", () => {
       "camera_bar_shadows",
       "event_shadows",
     ] as const) {
-      setBooleanSelector(editor, `[data-config-key="${key}"]`, false);
+      await setBooleanSelector(editor, `[data-config-key="${key}"]`, false);
       await card.updateComplete;
       const outerClass =
         key === "rounded_outer_corners"
@@ -1382,8 +1461,24 @@ describe("watchzone-card-editor", () => {
           outerClass,
         );
       }
+      if (key === "rounded_outer_corners") {
+        await openEditorSection(editor, "display");
+        expect(
+          editor.shadowRoot?.querySelector(
+            '[data-config-key="rounded_outer_corners"]',
+          ),
+        ).toBeNull();
+        await openEditorSection(editor, "layout");
+        expect(
+          (
+            editor.shadowRoot?.querySelector(
+              '[data-config-key="rounded_outer_corners"]',
+            ) as TestBooleanSelector
+          ).value,
+        ).toBe(false);
+      }
 
-      setBooleanSelector(editor, `[data-config-key="${key}"]`, true);
+      await setBooleanSelector(editor, `[data-config-key="${key}"]`, true);
       await card.updateComplete;
       if (outerClass) {
         expect(
@@ -1406,6 +1501,7 @@ describe("watchzone-card-editor", () => {
     reopened.setConfig(dialog._cardConfig);
     document.body.append(reopened);
     await reopened.updateComplete;
+    await openEditorSection(reopened, "layout");
     for (const key of [
       "rounded_outer_corners",
       "outer_shadows",
@@ -1463,6 +1559,7 @@ describe("watchzone-card-editor", () => {
     root.append(editor, save);
     document.body.append(dialog);
     await editor.updateComplete;
+    await openEditorSection(editor, "camera");
 
     (
       editor.shadowRoot?.querySelector(
@@ -1479,7 +1576,11 @@ describe("watchzone-card-editor", () => {
         `[data-camera-config-key="${key}"]`,
       ) as TestBooleanSelector;
       expect(selector.value).toBe(false);
-      setBooleanSelector(editor, `[data-camera-config-key="${key}"]`, true);
+      await setBooleanSelector(
+        editor,
+        `[data-camera-config-key="${key}"]`,
+        true,
+      );
     }
 
     editor.shadowRoot
@@ -1513,6 +1614,7 @@ describe("watchzone-card-editor", () => {
     reopened.setConfig(dialog._cardConfig);
     document.body.append(reopened);
     await reopened.updateComplete;
+    await openEditorSection(reopened, "camera");
     (
       reopened.shadowRoot?.querySelector(
         '[aria-label="Edit camera: front"]',
@@ -1547,6 +1649,7 @@ describe("watchzone-card-editor", () => {
     });
     document.body.append(editor);
     await editor.updateComplete;
+    await openEditorSection(editor, "camera");
 
     (
       editor.shadowRoot?.querySelector(
@@ -1559,7 +1662,7 @@ describe("watchzone-card-editor", () => {
     ) as HTMLElement & { disabled: boolean };
     expect(update.disabled).toBe(true);
 
-    setBooleanSelector(
+    await setBooleanSelector(
       editor,
       '[data-camera-config-key="low_latency_hls"]',
       false,
@@ -1567,7 +1670,7 @@ describe("watchzone-card-editor", () => {
     await editor.updateComplete;
     expect(update.disabled).toBe(false);
 
-    setBooleanSelector(
+    await setBooleanSelector(
       editor,
       '[data-camera-config-key="low_latency_hls"]',
       true,
@@ -1575,7 +1678,7 @@ describe("watchzone-card-editor", () => {
     await editor.updateComplete;
     expect(update.disabled).toBe(true);
 
-    setBooleanSelector(
+    await setBooleanSelector(
       editor,
       '[data-camera-config-key="low_latency_hls"]',
       false,
@@ -1645,6 +1748,7 @@ describe("watchzone-card-editor", () => {
     });
     document.body.append(editor);
     await editor.updateComplete;
+    await openEditorSection(editor, "camera");
     (
       editor.shadowRoot?.querySelector(
         '[aria-label="Edit camera: Front"]',
@@ -1759,6 +1863,7 @@ describe("watchzone-card-editor", () => {
     editor.setConfig({ type: CARD_TYPE, title: "Camera" });
     document.body.append(editor);
     await editor.updateComplete;
+    await openEditorSection(editor, "camera");
 
     (editor.shadowRoot?.querySelector(".add-camera") as HTMLElement).click();
     await editor.updateComplete;
@@ -1771,6 +1876,7 @@ describe("watchzone-card-editor", () => {
           composed: true,
         }),
       );
+    await editor.updateComplete;
     editor.shadowRoot
       ?.querySelector(".camera-editor-dialog form")
       ?.dispatchEvent(
@@ -1909,7 +2015,7 @@ describe("watchzone-card-editor", () => {
     document.body.append(dialog);
     await editor.updateComplete;
 
-    const input = inputTitle(editor, "Saved draft");
+    const input = await inputTitle(editor, "Saved draft");
     input.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
     save.click();
 

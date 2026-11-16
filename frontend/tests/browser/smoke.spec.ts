@@ -7880,6 +7880,15 @@ test("camera selection does not recursively republish dirty state", async ({
     root.append(editor, save);
     document.body.append(dialog);
     await editor.updateComplete;
+    const cameraSection = editor.shadowRoot?.querySelector(
+      'wzc-accordion-item[item-key="camera"]',
+    );
+    const cameraDetails = cameraSection?.shadowRoot?.querySelector("details");
+    if (cameraDetails) {
+      cameraDetails.open = true;
+      cameraDetails.dispatchEvent(new Event("toggle"));
+    }
+    await editor.updateComplete;
     (editor.shadowRoot?.querySelector(".add-camera") as HTMLElement).click();
     await editor.updateComplete;
     editor.shadowRoot
@@ -7908,6 +7917,16 @@ test("camera selection does not recursively republish dirty state", async ({
     const reopened = await cardConstructor.getConfigElement();
     reopened.setConfig(dialog._cardConfig);
     document.body.append(reopened);
+    await reopened.updateComplete;
+    const reopenedCameraSection = reopened.shadowRoot?.querySelector(
+      'wzc-accordion-item[item-key="camera"]',
+    );
+    const reopenedCameraDetails =
+      reopenedCameraSection?.shadowRoot?.querySelector("details");
+    if (reopenedCameraDetails) {
+      reopenedCameraDetails.open = true;
+      reopenedCameraDetails.dispatchEvent(new Event("toggle"));
+    }
     await reopened.updateComplete;
     const reopenedCamera = reopened.shadowRoot
       ?.querySelector("wzc-sortable-tile")
@@ -7973,6 +7992,9 @@ test("editor uses exclusive accordions and shared draft status", async ({
   const reviews = editor.locator('wzc-accordion-item[item-key="reviews"]');
   await expect(items).toHaveCount(8);
   await expect(items.locator("details[open]")).toHaveCount(0);
+  await expect(
+    items.locator("ha-selector, ha-input, wzc-segmented-control"),
+  ).toHaveCount(0);
   await items.nth(0).locator("summary").click();
   await expect(items.nth(0).locator("details")).toHaveAttribute("open", "");
   await stageManagement.locator("summary").click();
@@ -8031,12 +8053,15 @@ test("editor uses exclusive accordions and shared draft status", async ({
   expect(
     await transitionSelection.evaluate((node) => getComputedStyle(node).color),
   ).toBe(await ptzSelection.evaluate((node) => getComputedStyle(node).color));
+  await expect(reviews.locator("ha-selector")).toHaveCount(0);
 
   const status = editor.locator(
     'wzc-toast-region .toast[data-severity="success"]',
   );
   await expect(status).toContainText("No pending changes.");
   await expect(status).toHaveCSS("backdrop-filter", "none");
+  const general = editor.locator('wzc-accordion-item[item-key="general"]');
+  await general.locator("summary").click();
   await editor.evaluate(async (element) => {
     const input = element.shadowRoot?.querySelector("ha-input") as
       (HTMLElement & { value: string }) | undefined;
@@ -8121,10 +8146,13 @@ test("editor uses exclusive accordions and shared draft status", async ({
     });
   await removeInteraction.click();
   await expect(removeInteraction).toHaveCount(0);
+  const minimalConfiguration = editor.locator(
+    'wzc-accordion-item[item-key="minimal-camera-configuration"]',
+  );
+  await minimalConfiguration.locator("summary").click();
+  await expect(interactionForm).toHaveCount(0);
   await expect(
-    editor.locator(
-      'wzc-accordion-item[item-key="minimal-camera-configuration"] ha-selector[label="Show Source Label"]',
-    ),
+    minimalConfiguration.locator('ha-selector[label="Show Source Label"]'),
   ).toHaveCount(1);
 });
 
@@ -9068,6 +9096,20 @@ test("round-trips boolean toggles through defaults before Save", async ({
     document.body.append(dialog);
     await Promise.all([card.updateComplete, editor.updateComplete]);
 
+    const openSection = async (key: string): Promise<void> => {
+      const section = editor.shadowRoot?.querySelector(
+        `wzc-accordion-item[item-key="${key}"]`,
+      );
+      const details = section?.shadowRoot?.querySelector("details");
+      if (!details) throw new Error(`Editor section ${key} was not rendered`);
+      if (!details.open) {
+        details.open = true;
+        details.dispatchEvent(new Event("toggle"));
+      }
+      await editor.updateComplete;
+    };
+    await openSection("camera");
+
     const openCameraEditor = async (): Promise<void> => {
       (
         editor.shadowRoot?.querySelector(
@@ -9127,6 +9169,7 @@ test("round-trips boolean toggles through defaults before Save", async ({
     const phoneAudioEnabled =
       updatedCameras?.[0]?.start_live_unmuted_phone === true;
 
+    await openSection("layout");
     const selector = editor.shadowRoot?.querySelector(
       '[data-config-key="rounded_outer_corners"]',
     );
