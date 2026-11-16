@@ -77,9 +77,17 @@ export const recordedVideoPlayerStyles = css`
   }
 
   .playback-options {
+    align-items: center;
     display: flex;
+    gap: 0.5rem;
     justify-content: flex-end;
     padding: 0.5rem;
+  }
+
+  .rate-label {
+    color: var(--wzc-recorded-rate-color);
+    font-size: var(--wzc-font-size-small);
+    font-weight: var(--wzc-font-weight-semibold);
   }
 
   .rate-control {
@@ -125,7 +133,15 @@ export const recordedVideoPlayerStyles = css`
     outline-offset: -2px;
   }
 
-  .rate-control output {
+  .rate-select {
+    --mdc-select-fill-color: transparent;
+    --mdc-select-idle-line-color: transparent;
+    --mdc-select-hover-line-color: transparent;
+    --mdc-select-dropdown-icon-color: var(--wzc-recorded-rate-color);
+    --mdc-select-ink-color: var(--wzc-recorded-rate-color);
+    display: block;
+    min-inline-size: 4.25rem;
+    color: var(--wzc-recorded-rate-color);
     font-size: var(--wzc-font-size-small);
     font-variant-numeric: tabular-nums;
     font-weight: 600;

@@ -94,6 +94,20 @@ export class RecordingsModule extends LitElement {
                     )}
                   </div>`
           }
+          ${
+            hours.length > 0
+              ? html`<button
+                  class="scroll-top"
+                  type="button"
+                  title=${this.localize("common.top")}
+                  aria-label=${this.localize("common.top")}
+                  @click=${this._scrollToTop}
+                >
+                  <ha-icon icon="mdi:arrow-up" aria-hidden="true"></ha-icon>
+                  <span>${this.localize("common.top")}</span>
+                </button>`
+              : null
+          }
         </div>
       </div>
       <wzc-toast-region .notices=${this._toasts.notices}></wzc-toast-region>
@@ -121,6 +135,13 @@ export class RecordingsModule extends LitElement {
       ></ha-icon>
     </button>`;
   }
+
+  private readonly _scrollToTop = (): void => {
+    this.renderRoot.querySelector<HTMLElement>(".scroller")?.scrollTo({
+      behavior: "smooth",
+      top: 0,
+    });
+  };
 
   private _renderHour(hour: RecordingHour) {
     const title = this._title(hour);

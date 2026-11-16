@@ -130,7 +130,7 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
                 aria-pressed=${this._segmentSelectionActive ? "true" : "false"}
                 @click=${this._toggleSegmentSelection}
               >
-                <ha-icon icon="mdi:movie"></ha-icon>
+                <ha-icon icon="mdi:filmstrip"></ha-icon>
               </button>`
             : null
         }

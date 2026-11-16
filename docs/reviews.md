@@ -47,7 +47,9 @@
   visibility while retaining the same item model and typed intents.
 - Reviews and Events group tiles by the Home Assistant-localized civil date.
   Each date heading remains at the top of the list viewport while its tiles
-  scroll beneath it; the next heading pushes it away at the group boundary.
+  scroll beneath it; the next heading pushes it away at the group boundary. A
+  labeled Top action follows the final item and smoothly returns only that
+  module's internal viewport to its beginning.
 - The first visible Reviews batch is fully enriched before publication. Action
   availability must not pop in through a second summary-to-detail tile render
   or remain incomplete when that follow-up request races; older history may
@@ -115,9 +117,10 @@
   Export action. Events do not gain this action. Recordings expose a distinct
   Export Segment action only after the user activates and bounds a recording
   selection in the media viewer.
-- Reviews owns the confirmation dialog and mutation lifecycle. The shared
-  activity-list primitive only renders the optional action and emits a typed
-  intent; it does not call the Exports module or a provider.
+- The shared Exports feature owns the reusable naming dialog and job lifecycle;
+  Reviews owns its pending Review identity and feedback presentation. The
+  shared activity-list primitive only renders the optional action and emits a
+  typed intent; it does not call the Exports module or a provider.
 - Opening the dialog requests the provider-prepared default title for the
   Review's complete media range, including configured pre- and post-capture.
   The title is editable. Cancel performs no mutation. Confirmation closes the

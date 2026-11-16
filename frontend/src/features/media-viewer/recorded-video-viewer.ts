@@ -3,6 +3,7 @@ import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import {
   RECORDED_MEDIA_ERROR_EVENT,
+  RECORDED_MEDIA_NOTICE_EVENT,
   RECORDED_MEDIA_ACTION_EVENT,
   RECORDED_VIDEO_CLOSE_EVENT,
   RECORDED_VIDEO_VIEWER_TAG,
@@ -54,11 +55,13 @@ export class RecordedVideoViewer extends LitElement {
       this._handleMediaAction as EventListener,
     );
     this.addEventListener(RECORDED_MEDIA_ERROR_EVENT, this._handleError);
+    this.addEventListener(RECORDED_MEDIA_NOTICE_EVENT, this._handleNotice);
     this.addEventListener(RECORDED_VIDEO_CLOSE_EVENT, this._handleClose);
   }
 
   public disconnectedCallback(): void {
     this.removeEventListener(RECORDED_MEDIA_ERROR_EVENT, this._handleError);
+    this.removeEventListener(RECORDED_MEDIA_NOTICE_EVENT, this._handleNotice);
     this.removeEventListener(
       RECORDED_MEDIA_ACTION_EVENT,
       this._handleMediaAction as EventListener,
@@ -219,6 +222,18 @@ export class RecordedVideoViewer extends LitElement {
       ?.message;
     this._toasts.error(message ?? this.localize("media_player.load_failed"), {
       key: "recorded-media-load-failed",
+    });
+  };
+
+  private readonly _handleNotice = (
+    event: CustomEvent<{
+      readonly message: string;
+      readonly severity: "error" | "success";
+    }>,
+  ): void => {
+    event.stopPropagation();
+    this._toasts[event.detail.severity](event.detail.message, {
+      key: "recorded-media-notice",
     });
   };
 

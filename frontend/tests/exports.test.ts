@@ -1,13 +1,20 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  EXPORT_NAME_CONFIRM_EVENT,
+  EXPORT_NAME_DIALOG_TAG,
   EXPORTS_CHANGED_EVENT,
   EXPORTS_TAG,
   RECORDED_MEDIA_OPEN_EVENT,
 } from "../src/core/constants";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 import type { RecordedMediaRequest } from "../src/core/recorded-media";
-import { startExportJob } from "../src/features/exports";
+import {
+  type ExportNameConfirmation,
+  type ExportNameDialog,
+  startExportJob,
+} from "../src/features/exports";
+import "../src/features/exports/export-name-dialog";
 import { CameraSelectionContext } from "../src/stage/camera-selection-context";
 import { ExportFilterContext } from "../src/stage/export-filter-context";
 import type { ExportsModule } from "../src/stage/modules/exports/exports";
@@ -48,6 +55,39 @@ describe("exports module", () => {
   afterEach(() => {
     document.body.replaceChildren();
     vi.restoreAllMocks();
+  });
+
+  it("confirms an edited export name from the primary button", async () => {
+    const dialog = document.createElement(
+      EXPORT_NAME_DIALOG_TAG,
+    ) as ExportNameDialog;
+    dialog.variant = "segment";
+    document.body.append(dialog);
+    await dialog.updateComplete;
+    const nativeDialog = dialog.shadowRoot?.querySelector("dialog");
+    if (!nativeDialog) throw new Error("Expected export dialog.");
+    nativeDialog.showModal = vi.fn(() => {
+      nativeDialog.open = true;
+    });
+    nativeDialog.close = vi.fn(() => {
+      nativeDialog.open = false;
+    });
+    dialog.draft = { name: "Front selected recording" };
+    await dialog.updateComplete;
+    const input = dialog.shadowRoot?.querySelector<HTMLInputElement>("input");
+    if (!input) throw new Error("Expected export title input.");
+    input.value = "Front porch visitor";
+    input.dispatchEvent(new InputEvent("input", { bubbles: true }));
+    let confirmation: ExportNameConfirmation | undefined;
+    dialog.addEventListener(EXPORT_NAME_CONFIRM_EVENT, (event) => {
+      confirmation = event.detail;
+    });
+
+    dialog.shadowRoot
+      ?.querySelector<HTMLButtonElement>("button.primary")
+      ?.click();
+
+    expect(confirmation).toEqual({ name: "Front porch visitor" });
   });
 
   it("shows a mixed-camera library, filters it, and opens ready video", async () => {

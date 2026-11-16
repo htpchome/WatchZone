@@ -84,12 +84,16 @@ viewing. Recording discovery and grouping are governed by
 - The recorded video opens with native controls, autoplay requested,
   `playsinline`, and muted audio.
 - Recording-hour video exposes one persistent stepped playback-speed control
-  in a dedicated lower-right footer row beneath the scrubber, with slower and
-  faster actions around its current-rate readout. It does not overlap the video
-  or timeline. Each new media request starts at `1×`; the supported forward
-  rates are `0.5×`, `1×`, `2×`, `5×`, and `10×`. Segment previews retain
-  the current viewer rate. Reverse playback is excluded because browser and
-  HLS implementations do not support it consistently.
+  in a labeled lower-right footer row beneath the scrubber, with slower and
+  faster actions around a Home Assistant rate selector. It does not overlap the
+  video or timeline. Each new media request starts at `1×`; the supported
+  forward rates are `0.25×`, `0.5×`, `1×`, `2×`, `5×`, `10×`, and `25×`.
+  The selector permits direct rate changes while the adjacent buttons step
+  through the same ordered set. Segment previews retain the current viewer
+  rate. When a browser rejects `25×` as a native media rate, WatchZone combines
+  the highest supported native step with frame-timed forward advancement to
+  preserve the requested effective rate. Reverse playback is excluded because
+  browser and HLS implementations do not support it consistently.
 - Recorded media uses the shared bounded display-zoom controller and shared
   browser fullscreen and Picture-in-Picture capability boundaries. Mute,
   fullscreen, and Picture-in-Picture remain fixed overlay controls outside the
@@ -133,9 +137,11 @@ viewing. Recording discovery and grouping are governed by
 - Reset restores the complete hour, Cancel returns to the ordinary scrubber,
   Preview asks the backend for provider-normalized playback sources for the
   selected timestamps, and Download asks for the corresponding authenticated
-  path. Export Segment prepares the provider title and starts the shared
-  persistent-export workflow for the same selected wall-clock range; it does
-  not route through or mutate the Exports Stage module.
+  path. Export Segment prepares the provider title and opens the shared editable
+  export naming dialog for the same selected wall-clock range. Cancel performs
+  no mutation; confirmation starts the persistent-export workflow without
+  routing through or mutating the Exports Stage module. Result toasts remain
+  inside the recorded-media modal.
 - While selection is active, its heading and instructions span the complete
   panel width. The selected time summary and action group occupy the row below
   so actions cannot squeeze the explanatory copy into a narrow column.

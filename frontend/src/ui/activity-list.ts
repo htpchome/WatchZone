@@ -274,6 +274,22 @@ export class ActivityList extends LitElement {
               ? html`<div class="empty">${this.localize(this.emptyKey)}</div>`
               : html`${this._renderList(groups)}${this._unloadedSpace(groups)}`
         }
+        ${
+          this.items.length > 0
+            ? html`<div class="scroll-top-anchor">
+                <button
+                  class="scroll-top"
+                  type="button"
+                  title=${this.localize("common.top")}
+                  aria-label=${this.localize("common.top")}
+                  @click=${this._scrollToTop}
+                >
+                  <ha-icon icon="mdi:arrow-up" aria-hidden="true"></ha-icon>
+                  <span>${this.localize("common.top")}</span>
+                </button>
+              </div>`
+            : null
+        }
       </div>
     </section>`;
   }
@@ -1006,6 +1022,13 @@ export class ActivityList extends LitElement {
       }),
     );
   }
+
+  private readonly _scrollToTop = (): void => {
+    this.renderRoot.querySelector<HTMLElement>(".scroller")?.scrollTo({
+      behavior: "smooth",
+      top: 0,
+    });
+  };
 
   private _updateHoverPreview(
     event: PointerEvent,

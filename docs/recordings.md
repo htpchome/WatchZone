@@ -31,7 +31,8 @@
   placeholders when the selected-day response arrives.
 - The row viewport uses the same bounded internal scrolling contract as the
   Reviews and Events lists. It contains overscroll without expanding the Stage
-  and does not reserve a stable scrollbar gutter.
+  and does not reserve a stable scrollbar gutter. A labeled Top action follows
+  the final row and smoothly returns the recording viewport to its beginning.
 
 ## Calendar and selection
 

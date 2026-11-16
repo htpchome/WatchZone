@@ -68,6 +68,9 @@ but the Stage module and frontend transport remain provider-neutral.
   suppresses a duplicate provider in-progress row, and atomically replaces the
   draft with the completed export. Export origins and Exports never import one
   another.
+- Both origins use the shared editable export naming dialog. The provider's
+  prepared title is the initial value; cancel performs no mutation, and only
+  explicit confirmation starts the shared export job.
 
 ## Frigate compatibility
 

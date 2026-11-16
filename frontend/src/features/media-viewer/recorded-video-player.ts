@@ -80,7 +80,7 @@ const recordingSegmentManagerEvent = unsafeStatic(
   RECORDING_SEGMENT_MANAGER_EVENT,
 );
 type RecordedVideoControlAction = "fullscreen" | "picture_in_picture";
-const PLAYBACK_RATES = [0.5, 1, 2, 5, 10] as const;
+const PLAYBACK_RATES = [0.25, 0.5, 1, 2, 5, 10, 25] as const;
 
 /** Ephemeral recorded-media playback engine. */
 export class RecordedVideoPlayer extends LitElement {
@@ -110,12 +110,15 @@ export class RecordedVideoPlayer extends LitElement {
   private _currentTime = 0;
   private _duration = 0;
   private _muted = true;
+  private _nativePlaybackRate = 1;
   private _paused = true;
   private _pictureInPictureActive = false;
   private _playbackRate = 1;
   private _segmentPreviewActive = false;
   private _segmentPreviewGeneration = 0;
   private _segmentPreviewTimeline?: RecordingTimeline;
+  private _rateAccelerationFrame?: number;
+  private _rateAccelerationTimestamp?: number;
   private _transportHoldRelease?: () => void;
   private _volume = 1;
   private readonly _media = new MediaPresentationController(this);
@@ -153,6 +156,7 @@ export class RecordedVideoPlayer extends LitElement {
       this._syncControlState,
     );
     this._releaseTransportHold();
+    this._stopRateAcceleration();
     this._playback.stop(this._video());
     super.disconnectedCallback();
   }
@@ -273,6 +277,9 @@ export class RecordedVideoPlayer extends LitElement {
     ${
       timeline
         ? staticHtml`<div class="playback-options">
+            <span class="rate-label"
+              >${this.localize("media_player.playback_speed")}</span
+            >
             <div
               class="rate-control"
               role="group"
@@ -288,9 +295,19 @@ export class RecordedVideoPlayer extends LitElement {
                 @pointerup=${releaseTouchFocus}
                 @click=${this._decreasePlaybackRate}
               >−</button>
-              <output aria-live="polite">${formatPlaybackRate(
-                this._playbackRate,
-              )}</output>
+              <ha-select
+                class="rate-select"
+                aria-label=${this.localize("media_player.playback_speed")}
+                .value=${String(this._playbackRate)}
+                @selected=${this._selectPlaybackRate}
+                @change=${this._selectPlaybackRate}
+              >
+                ${PLAYBACK_RATES.map(
+                  (rate) => staticHtml`<ha-list-item value=${String(rate)}
+                    >${formatPlaybackRate(rate)}</ha-list-item
+                  >`,
+                )}
+              </ha-select>
               <button
                 type="button"
                 title=${this.localize("media_player.increase_speed")}
@@ -413,12 +430,14 @@ export class RecordedVideoPlayer extends LitElement {
       return;
     }
     this._muted = muted;
+    const pausedChanged = paused !== this._paused;
     this._paused = paused;
     this._currentTime = currentTime;
     this._duration = duration;
     this._volume = volume;
     this._fullscreenActive = fullscreenActive;
     this._pictureInPictureActive = pictureInPictureActive;
+    if (pausedChanged) this._syncRateAcceleration();
     this.requestUpdate();
   };
 
@@ -476,8 +495,66 @@ export class RecordedVideoPlayer extends LitElement {
   }
 
   private _applyPlaybackRate(video: HTMLVideoElement): void {
-    video.defaultPlaybackRate = this._playbackRate;
-    video.playbackRate = this._playbackRate;
+    let nativeRate = this._playbackRate;
+    try {
+      video.defaultPlaybackRate = nativeRate;
+      video.playbackRate = nativeRate;
+    } catch {
+      nativeRate =
+        [...PLAYBACK_RATES]
+          .reverse()
+          .find((rate) => rate < this._playbackRate) ?? 1;
+      video.defaultPlaybackRate = nativeRate;
+      video.playbackRate = nativeRate;
+    }
+    this._nativePlaybackRate = nativeRate;
+    this._syncRateAcceleration();
+  }
+
+  private _syncRateAcceleration(): void {
+    this._stopRateAcceleration();
+    const video = this._video();
+    if (
+      !video ||
+      video.paused ||
+      this._playbackRate <= this._nativePlaybackRate
+    ) {
+      return;
+    }
+    const tick = (timestamp: number): void => {
+      if (
+        video.paused ||
+        this._playbackRate <= this._nativePlaybackRate ||
+        !video.isConnected
+      ) {
+        this._stopRateAcceleration();
+        return;
+      }
+      const previous = this._rateAccelerationTimestamp ?? timestamp;
+      const elapsed = Math.min(
+        0.25,
+        Math.max(0, (timestamp - previous) / 1000),
+      );
+      this._rateAccelerationTimestamp = timestamp;
+      const duration = finiteMediaValue(video.duration);
+      if (duration > 0) {
+        video.currentTime = Math.min(
+          duration,
+          video.currentTime +
+            elapsed * (this._playbackRate - this._nativePlaybackRate),
+        );
+      }
+      this._rateAccelerationFrame = requestAnimationFrame(tick);
+    };
+    this._rateAccelerationFrame = requestAnimationFrame(tick);
+  }
+
+  private _stopRateAcceleration(): void {
+    if (this._rateAccelerationFrame !== undefined) {
+      cancelAnimationFrame(this._rateAccelerationFrame);
+    }
+    this._rateAccelerationFrame = undefined;
+    this._rateAccelerationTimestamp = undefined;
   }
 
   private readonly _decreasePlaybackRate = (): void => {
@@ -494,6 +571,14 @@ export class RecordedVideoPlayer extends LitElement {
     this._setPlaybackRate(
       PLAYBACK_RATES[Math.min(PLAYBACK_RATES.length - 1, index + 1)] ?? 1,
     );
+  };
+
+  private readonly _selectPlaybackRate = (event: Event): void => {
+    event.stopPropagation();
+    const select = event.currentTarget as HTMLElement & {
+      readonly value?: string;
+    };
+    this._setPlaybackRate(Number(select.value));
   };
 
   private readonly _toggleFullscreen = async (): Promise<void> => {

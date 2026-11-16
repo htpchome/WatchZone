@@ -1,6 +1,6 @@
 import { css } from "lit";
 
-export const reviewExportDialogStyles = css`
+export const exportNameDialogStyles = css`
   :host {
     color: var(--wzc-color-text-1);
     font-family: var(--wzc-font-family);

@@ -127,6 +127,23 @@ describe("activity list media failures", () => {
     expect(intents.filter(({ kind }) => kind === "load_more")).toHaveLength(1);
   });
 
+  it("returns reviews and events to the top of their shared list", async () => {
+    const list = document.createElement(ACTIVITY_LIST_TAG) as ActivityList;
+    list.items = [item("top-control")];
+    document.body.append(list);
+    await list.updateComplete;
+    const scroller = list.shadowRoot?.querySelector<HTMLElement>(".scroller");
+    if (!scroller) throw new Error("Expected activity scroller.");
+    const scrollTo = vi.fn();
+    scroller.scrollTo = scrollTo;
+
+    list.shadowRoot
+      ?.querySelector<HTMLButtonElement>('button[aria-label="Top"]')
+      ?.click();
+
+    expect(scrollTo).toHaveBeenCalledWith({ behavior: "smooth", top: 0 });
+  });
+
   it("keeps the visible tile anchored when a merged page inserts above it", async () => {
     const list = document.createElement(ACTIVITY_LIST_TAG) as ActivityList;
     const existing = { ...item("existing"), id: "existing" };

@@ -19,8 +19,8 @@ import {
   REVIEWS_TAG,
   DEFAULT_EVENT_HISTORY_DAYS,
   ACTIVITY_LIST_INTENT_EVENT,
-  REVIEW_EXPORT_CLOSE_EVENT,
-  REVIEW_EXPORT_CONFIRM_EVENT,
+  EXPORT_NAME_CLOSE_EVENT,
+  EXPORT_NAME_CONFIRM_EVENT,
   REVIEW_TRACKING_CLOSE_EVENT,
   REVIEW_TRACKING_RETRY_EVENT,
 } from "../../../core/constants";
@@ -57,8 +57,8 @@ import { ReviewTrackingController } from "./review-tracking.controller";
 
 const MEDIA_RESOLVE_DELAYS_MS = [0, 750, 1_500] as const;
 const activityListIntentEvent = unsafeStatic(ACTIVITY_LIST_INTENT_EVENT);
-const reviewExportCloseEvent = unsafeStatic(REVIEW_EXPORT_CLOSE_EVENT);
-const reviewExportConfirmEvent = unsafeStatic(REVIEW_EXPORT_CONFIRM_EVENT);
+const reviewExportCloseEvent = unsafeStatic(EXPORT_NAME_CLOSE_EVENT);
+const reviewExportConfirmEvent = unsafeStatic(EXPORT_NAME_CONFIRM_EVENT);
 const reviewTrackingCloseEvent = unsafeStatic(REVIEW_TRACKING_CLOSE_EVENT);
 const reviewTrackingRetryEvent = unsafeStatic(REVIEW_TRACKING_RETRY_EVENT);
 
@@ -529,11 +529,17 @@ export class ReviewsModule extends LitElement {
     this.requestUpdate();
   };
 
-  private readonly _closeExport = (): void => this._exports.close();
+  private readonly _closeExport = (event: Event): void => {
+    event.stopPropagation();
+    this._exports.close();
+  };
 
   private readonly _confirmExport = (
     event: CustomEvent<ReviewExportConfirmation>,
-  ): void => this._exports.confirm(event.detail);
+  ): void => {
+    event.stopPropagation();
+    this._exports.confirm(event.detail);
+  };
 
   private readonly _closeTracking = (): void => this._tracking.close();
 

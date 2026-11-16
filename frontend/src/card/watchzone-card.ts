@@ -13,11 +13,15 @@ import {
   CARD_TAG,
   EDITOR_PREVIEW_DRAFT_EVENT,
   EDITOR_TAG,
+  EXPORT_NAME_CLOSE_EVENT,
+  EXPORT_NAME_CONFIRM_EVENT,
+  EXPORT_NAME_DIALOG_TAG,
   CAMERA_TAG,
   RECORDED_VIDEO_VIEWER_TAG,
   RECORDED_VIDEO_CLOSE_EVENT,
   RECORDED_MEDIA_OPEN_EVENT,
   RECORDED_MEDIA_EXPORT_EVENT,
+  RECORDED_MEDIA_NOTICE_EVENT,
   TOAST_REGION_TAG,
 } from "../core/constants";
 import {
@@ -33,6 +37,7 @@ import { LocalizationController } from "../core/localization";
 import type {
   RecordedMediaExportIntent,
   RecordedMediaInitialGeometry,
+  RecordedMediaNotice,
   RecordedMediaRequest,
 } from "../core/recorded-media";
 import { CardHostAppearanceController } from "../styles/card-host-appearance.controller";
@@ -54,10 +59,16 @@ import {
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
 const recordedVideoViewerTag = unsafeStatic(RECORDED_VIDEO_VIEWER_TAG);
 const cardPickerPreviewTag = unsafeStatic(CARD_PICKER_PREVIEW_TAG);
+const exportNameDialogTag = unsafeStatic(EXPORT_NAME_DIALOG_TAG);
 
 interface PreviewDraftDetail {
   readonly baselineSignature: string;
   readonly config: CardConfig | null;
+}
+
+interface PendingRecordedExport {
+  readonly draft: { readonly name: string };
+  readonly intent: RecordedMediaExportIntent;
 }
 
 export class DashboardCard extends LitElement {
@@ -71,6 +82,8 @@ export class DashboardCard extends LitElement {
   private _transportConnected = true;
   private _recordedVideoViewerReady = false;
   private _recordedVideoViewerLoad?: Promise<void>;
+  private _exportNameDialogReady = false;
+  private _pendingRecordedExport?: PendingRecordedExport;
   private _mediaRequest?: RecordedMediaRequest;
   private _mediaInitialSize?: RecordedMediaInitialGeometry;
   private _cardPickerPreview = false;
@@ -179,6 +192,11 @@ export class DashboardCard extends LitElement {
       RECORDED_MEDIA_EXPORT_EVENT,
       this._handleRecordedMediaExport,
     );
+    this.addEventListener(EXPORT_NAME_CLOSE_EVENT, this._closeRecordedExport);
+    this.addEventListener(
+      EXPORT_NAME_CONFIRM_EVENT,
+      this._confirmRecordedExport,
+    );
     this.addEventListener(
       RECORDED_VIDEO_CLOSE_EVENT,
       this._handleRecordedMediaClose,
@@ -208,6 +226,14 @@ export class DashboardCard extends LitElement {
     this.removeEventListener(
       RECORDED_MEDIA_EXPORT_EVENT,
       this._handleRecordedMediaExport,
+    );
+    this.removeEventListener(
+      EXPORT_NAME_CLOSE_EVENT,
+      this._closeRecordedExport,
+    );
+    this.removeEventListener(
+      EXPORT_NAME_CONFIRM_EVENT,
+      this._confirmRecordedExport,
     );
     this.removeEventListener(
       RECORDED_VIDEO_CLOSE_EVENT,
@@ -267,6 +293,15 @@ export class DashboardCard extends LitElement {
                 ></${recordedVideoViewerTag}>`
               : null
           }
+          ${
+            this._exportNameDialogReady
+              ? staticHtml`<${exportNameDialogTag}
+                  variant="segment"
+                  .draft=${this._pendingRecordedExport?.draft}
+                  .localize=${this._localization.localize}
+                ></${exportNameDialogTag}>`
+              : null
+          }
           <${toastRegionTag}
             class="card-toast"
             mode="overlay"
@@ -320,14 +355,54 @@ export class DashboardCard extends LitElement {
     event: CustomEvent<RecordedMediaExportIntent>,
   ): Promise<void> => {
     event.stopPropagation();
-    const api = this._haApi;
-    if (!api) return;
     const intent = event.detail;
+    try {
+      await import("../features/exports");
+      if (!this.isConnected) return;
+      this._exportNameDialogReady = true;
+      this._pendingRecordedExport = { draft: { name: intent.name }, intent };
+      this.requestUpdate();
+    } catch {
+      this._showRecordedMediaNotice({
+        message: this._localization.localize(
+          "recording_segments.export_failed",
+        ),
+        severity: "error",
+      });
+    }
+  };
+
+  private readonly _closeRecordedExport = (event: Event): void => {
+    if (!this._pendingRecordedExport) return;
+    event.stopPropagation();
+    this._pendingRecordedExport = undefined;
+    this.requestUpdate();
+  };
+
+  private readonly _confirmRecordedExport = async (
+    event: CustomEvent<{ readonly name: string }>,
+  ): Promise<void> => {
+    const pending = this._pendingRecordedExport;
+    if (!pending) return;
+    event.stopPropagation();
+    this._pendingRecordedExport = undefined;
+    this.requestUpdate();
+    const api = this._haApi;
+    if (!api) {
+      this._showRecordedMediaNotice({
+        message: this._localization.localize(
+          "recording_segments.export_failed",
+        ),
+        severity: "error",
+      });
+      return;
+    }
+    const intent = pending.intent;
     try {
       const { startExportJob } = await import("../features/exports");
       startExportJob(api, {
         camera: intent.camera,
-        name: intent.name,
+        name: event.detail.name,
         range: {
           end_time: intent.endTime,
           entity_id: intent.entityId,
@@ -335,17 +410,36 @@ export class DashboardCard extends LitElement {
         },
         sourceId: intent.sourceId,
       });
-      this._toasts.success(
-        this._localization.localize("recording_segments.export_started"),
-        { key: "recording-segment-export" },
-      );
+      this._showRecordedMediaNotice({
+        message: this._localization.localize(
+          "recording_segments.export_started",
+        ),
+        severity: "success",
+      });
     } catch {
-      this._toasts.error(
-        this._localization.localize("recording_segments.export_failed"),
-        { key: "recording-segment-export" },
-      );
+      this._showRecordedMediaNotice({
+        message: this._localization.localize(
+          "recording_segments.export_failed",
+        ),
+        severity: "error",
+      });
     }
   };
+
+  private _showRecordedMediaNotice(notice: RecordedMediaNotice): void {
+    const viewer = this.renderRoot.querySelector(RECORDED_VIDEO_VIEWER_TAG);
+    if (viewer) {
+      viewer.dispatchEvent(
+        new CustomEvent<RecordedMediaNotice>(RECORDED_MEDIA_NOTICE_EVENT, {
+          detail: notice,
+        }),
+      );
+      return;
+    }
+    this._toasts[notice.severity](notice.message, {
+      key: "recording-segment-export",
+    });
+  }
 
   private _openRecordedMedia(request: RecordedMediaRequest): void {
     this._mediaRequest = request;

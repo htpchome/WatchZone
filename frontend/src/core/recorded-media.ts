@@ -1,5 +1,6 @@
 import {
   RECORDED_MEDIA_EXPORT_EVENT,
+  RECORDED_MEDIA_NOTICE_EVENT,
   RECORDED_MEDIA_OPEN_EVENT,
 } from "./constants";
 
@@ -121,6 +122,11 @@ export interface RecordedMediaExportIntent {
   readonly startTime: number;
 }
 
+export interface RecordedMediaNotice {
+  readonly message: string;
+  readonly severity: "error" | "success";
+}
+
 export function openRecordedMedia(
   target: EventTarget,
   request: RecordedMediaRequest,
@@ -137,6 +143,7 @@ export function openRecordedMedia(
 declare global {
   interface HTMLElementEventMap {
     [RECORDED_MEDIA_EXPORT_EVENT]: CustomEvent<RecordedMediaExportIntent>;
+    [RECORDED_MEDIA_NOTICE_EVENT]: CustomEvent<RecordedMediaNotice>;
     [RECORDED_MEDIA_OPEN_EVENT]: CustomEvent<RecordedMediaRequest>;
   }
 }

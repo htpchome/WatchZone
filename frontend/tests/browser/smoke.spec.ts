@@ -5390,6 +5390,10 @@ test("switches activity and recordings through the shared media calendar", async
     recordingScroll.clientHeight,
   );
   expect(recordingScroll.after).toBeGreaterThan(recordingScroll.before);
+  await recordings.getByRole("button", { name: "Top" }).click();
+  await expect
+    .poll(() => recordingViewport.evaluate((viewport) => viewport.scrollTop))
+    .toBe(0);
   await expect(filter).toHaveCount(1);
   await expect(filter.locator(".filter-trigger")).toBeDisabled();
   const recordingControlsAlignment = await navigation.evaluate((node) => {
@@ -5445,11 +5449,20 @@ test("switches activity and recordings through the shared media calendar", async
   });
   await expect(scrubber).toBeVisible();
   await expect(segmentAction).toBeVisible();
+  await expect(segmentAction.locator("ha-icon")).toHaveAttribute(
+    "icon",
+    "mdi:filmstrip",
+  );
   await expect(recordingDownload).toBeVisible();
   await expect(segmentAction).toHaveAttribute("aria-pressed", "false");
   const rateControl = page.locator("wzc-recorded-video-player .rate-control");
+  const rateSelect = rateControl.locator("ha-select");
   await expect(rateControl).toBeVisible();
-  await expect(rateControl).toContainText("1×");
+  await expect(
+    page.locator("wzc-recorded-video-player .rate-label"),
+  ).toHaveText("Playback speed");
+  await expect(rateSelect).toHaveJSProperty("value", "1");
+  await expect(rateControl.locator("ha-list-item")).toHaveCount(7);
   const [scrubberBox, rateBox, playerBox] = await Promise.all([
     scrubber.boundingBox(),
     rateControl.boundingBox(),
@@ -5469,7 +5482,7 @@ test("switches activity and recordings through the shared media calendar", async
   await rateControl
     .getByRole("button", { name: "Increase playback speed" })
     .click();
-  await expect(rateControl).toContainText("2×");
+  await expect(rateSelect).toHaveJSProperty("value", "2");
   await expect
     .poll(() =>
       page
@@ -5477,6 +5490,21 @@ test("switches activity and recordings through the shared media calendar", async
         .evaluate((video) => (video as HTMLVideoElement).playbackRate),
     )
     .toBe(2);
+  await rateSelect.evaluate((element) => {
+    const select = element as HTMLElement & { value: string };
+    select.value = "25";
+    select.dispatchEvent(new Event("selected"));
+  });
+  await expect(rateSelect).toHaveJSProperty("value", "25");
+  await expect
+    .poll(() =>
+      page
+        .locator("wzc-recorded-video-player video")
+        .evaluate((video) =>
+          [10, 25].includes((video as HTMLVideoElement).playbackRate),
+        ),
+    )
+    .toBe(true);
   await page.locator("watchzone-card").evaluate((element) => {
     const host = element as HTMLElement;
     host.style.setProperty("--wzc-color-background", "rgb(20, 21, 22)");
@@ -5600,10 +5628,17 @@ test("switches activity and recordings through the shared media calendar", async
     "10:00:00",
   );
   await segmentManager.getByRole("button", { name: "Export Segment" }).click();
+  const exportNameDialog = page.locator("wzc-export-name-dialog");
+  await expect(exportNameDialog.locator("dialog")).toBeVisible();
+  await expect(exportNameDialog.locator("input")).toHaveValue(
+    "Front selected recording",
+  );
+  await exportNameDialog.locator("input").fill("Front porch visitor");
+  await expect(exportNameDialog.locator("button.primary")).toBeEnabled();
+  await exportNameDialog.locator("button.primary").click();
+  await expect(exportNameDialog.locator("dialog")).toBeHidden();
   await expect(
-    page
-      .locator("watchzone-card wzc-toast-region")
-      .getByText("Export started."),
+    recordingDialog.locator("wzc-toast-region").getByText("Export started."),
   ).toBeVisible();
   await segmentManager
     .getByRole("button", { name: "Download Segment" })

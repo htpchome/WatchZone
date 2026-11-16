@@ -41,6 +41,42 @@ export const activityListStyles = css`
     margin-block-start: var(--wzc-media-day-header-gap);
   }
 
+  .scroll-top-anchor {
+    block-size: 0;
+    position: relative;
+  }
+
+  .scroll-top {
+    align-items: center;
+    appearance: none;
+    display: flex;
+    gap: 0.35rem;
+    inset-block-start: var(--wzc-event-list-gap);
+    inset-inline-start: 50%;
+    position: absolute;
+    transform: translateX(-50%);
+    min-block-size: 2.5rem;
+    padding: 0.4rem 0.8rem;
+    color: var(--wzc-color-text-1);
+    background: var(--wzc-event-action-background);
+    border: 1px solid var(--wzc-color-border-control);
+    border-radius: var(--wzc-radius-pill);
+    box-shadow: var(--wzc-event-tile-shadow);
+    cursor: pointer;
+    font: inherit;
+    font-size: var(--wzc-font-size-small);
+    font-weight: var(--wzc-font-weight-semibold);
+  }
+
+  .scroll-top ha-icon {
+    --mdc-icon-size: 1rem;
+  }
+
+  .scroll-top:focus-visible {
+    outline: 2px solid var(--wzc-color-primary);
+    outline-offset: 2px;
+  }
+
   .unloaded-space {
     min-block-size: 0;
     pointer-events: none;

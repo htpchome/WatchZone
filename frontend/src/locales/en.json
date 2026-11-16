@@ -1,4 +1,5 @@
 {
+  "common.top": "Top",
   "common.add": "Add",
   "common.cancel": "Cancel",
   "common.retry": "Retry",
@@ -405,6 +406,9 @@
   "recording_segments.download_failed": "Unable to download the selected recording segment.",
   "recording_segments.export": "Export Segment",
   "recording_segments.exporting": "Preparing segment export…",
+  "recording_segments.export_title": "Export recording segment",
+  "recording_segments.export_explanation": "Name this recording segment before saving it to Exports.",
+  "recording_segments.export_confirm": "Export Segment",
   "recording_segments.export_started": "Export started.",
   "recording_segments.export_failed": "Unable to export the selected recording segment.",
   "recording_segments.preview_failed": "Unable to preview the selected recording segment.",
