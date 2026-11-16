@@ -127,15 +127,18 @@ viewing. Recording discovery and grouping are governed by
   selected wall-clock range through the owning provider, and unavailable time
   is skipped by that provider rather than synthesized in the browser.
 
-## Draggable modal
+## Draggable viewer
 
-- The modal uses a non-modal browser dialog and supports Escape and a labeled
-  close control. It does not use the modal top layer because activity tiles
-  must remain actionable behind it.
+- The viewer uses a manual popover on a non-modal browser dialog and supports
+  Escape and a labeled close control. The popover top layer keeps its
+  viewport-relative geometry outside card clipping, transforms, and filtered
+  containing blocks while activity tiles remain actionable behind it. Browsers
+  without the Popover API retain the non-modal dialog presentation as a
+  deterministic fallback.
 - Only its header initiates pointer dragging. Controls in the header do not.
-- The modal is clamped to the viewport while dragging and after viewport
+- The viewer is clamped to the viewport while dragging and after viewport
   resize. Its maximum dimensions preserve an on-screen close path.
-- The modal initially matches the visible live camera stage dimensions when a
+- The viewer initially matches the visible live camera stage dimensions when a
   stage is available while retaining the browser dialog's viewport-relative
   default opening position. It provides a diagonal bottom-right, pointer- and
   keyboard-operable resize handle. The handle's full touch target owns the
@@ -152,7 +155,7 @@ viewing. Recording discovery and grouping are governed by
 - The player viewport is always `16:9`. Only the diagonal bottom-right resize
   handle changes its dimensions, and width and height remain locked to that
   ratio. The header sits directly above the player; the container owns side and
-  bottom padding, while the player owns no modal spacing.
+  bottom padding, while the player owns no viewer spacing.
 - Recorded and live video render one shared media-control overlay. The
   recorded dialog supplies Picture-in-Picture, fullscreen, and mute in the
   same vertical geometry and sizing as live video; from bottom to top their

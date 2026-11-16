@@ -33,7 +33,7 @@ import { draggableDialogStyles } from "./draggable-dialog.styles";
 const playerTag = unsafeStatic(RECORDED_VIDEO_PLAYER_TAG);
 const informationTag = unsafeStatic(RECORDED_MEDIA_INFORMATION_TAG);
 
-/** Draggable modal shell for ephemeral recorded-media playback. */
+/** Draggable non-modal shell for ephemeral recorded-media playback. */
 export abstract class DraggableRecordedMediaDialog extends LitElement {
   public static properties = {
     api: { attribute: false },
@@ -50,7 +50,7 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
   public request?: RecordedMediaRequest;
 
   protected _active = false;
-  private _pendingNativeCloses = 0;
+  private _presentation?: "dialog" | "popover";
   private _resizeFrame?: number;
   private _resizePendingMediaWidth?: number;
   private _userPositioned = false;
@@ -69,18 +69,17 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
     window.removeEventListener("resize", this._clampDialog);
     this._removeDocumentListeners();
     this._clearPointerInteractions();
+    this._presentation = undefined;
     super.disconnectedCallback();
   }
 
   protected render() {
     return html`<dialog
+      popover="manual"
       aria-label=${
         recordedMediaHeading(this.request, this.localize, this.api?.locale) ||
         this.localize("reviews.activity")
       }
-      @cancel=${this._handleCancel}
-      @close=${this._handleClose}
-      @click=${this._handleBackdropClick}
     >
       <div
         class="header"
@@ -174,27 +173,38 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
     this._removeDocumentListeners();
     this._clearPointerInteractions();
     const dialog = this._dialog();
-    if (!dialog?.open) return;
-    this._pendingNativeCloses += 1;
-    dialog.close();
+    const presentation = this._presentation;
+    if (!dialog || !presentation) return;
+    this._presentation = undefined;
+    if (presentation === "popover") dialog.hidePopover();
+    else dialog.close();
     this._finishClose();
   };
 
   private _open(): void {
     const dialog = this._dialog();
     if (!dialog) return;
-    if (!dialog.open) {
+    if (!this._presentation) {
       this._userPositioned = false;
       dialog.classList.remove("dragged");
       dialog.style.removeProperty("left");
       dialog.style.removeProperty("top");
       dialog.style.removeProperty("width");
-      dialog.show();
+      if (
+        typeof dialog.showPopover === "function" &&
+        typeof dialog.hidePopover === "function"
+      ) {
+        dialog.showPopover();
+        this._presentation = "popover";
+      } else {
+        dialog.show();
+        this._presentation = "dialog";
+      }
       this._applyInitialSize();
       const media = this._mediaSurface();
       if (this.request?.timeline && media instanceof LitElement) {
         void media.updateComplete.then(() => {
-          if (dialog.open && media === this._mediaSurface()) {
+          if (this._presentation && media === this._mediaSurface()) {
             this._applyInitialSize();
           }
         });
@@ -209,16 +219,6 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
     return this.renderRoot.querySelector("dialog");
   }
 
-  private readonly _handleCancel = (): void => undefined;
-
-  private readonly _handleClose = (): void => {
-    if (this._pendingNativeCloses > 0) {
-      this._pendingNativeCloses -= 1;
-      return;
-    }
-    this._finishClose();
-  };
-
   private _finishClose(): void {
     window.removeEventListener("resize", this._clampDialog);
     this._removeDocumentListeners();
@@ -232,11 +232,9 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
     );
   }
 
-  private readonly _handleBackdropClick = (): void => undefined;
-
   private readonly _handleDocumentClick = (event: MouseEvent): void => {
     const dialog = this._dialog();
-    if (!dialog?.open) return;
+    if (!dialog || !this._presentation) return;
     const path = event.composedPath();
     if (path.includes(dialog) || isRecordedMediaOpener(path)) return;
     event.preventDefault();
@@ -342,7 +340,7 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
 
   private readonly _clampDialog = (): void => {
     const dialog = this._dialog();
-    if (!dialog?.open) return;
+    if (!dialog || !this._presentation) return;
     const rect = dialog.getBoundingClientRect();
     if (dialog.classList.contains("dragged")) {
       const player = this._mediaSurface();

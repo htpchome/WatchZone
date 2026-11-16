@@ -4250,6 +4250,51 @@ test("keeps activity content in an independently scrolling viewport", async ({
     inlineLeft: "",
     inlineTop: "",
   });
+  await expect
+    .poll(() =>
+      mediaDialog.evaluate((dialog) => dialog.matches(":popover-open")),
+    )
+    .toBe(true);
+  const topLayerGeometry = await page.evaluate(async () => {
+    const card = document
+      .querySelector("watchzone-card")
+      ?.shadowRoot?.querySelector<HTMLElement>("ha-card");
+    const viewer = card?.querySelector("wzc-recorded-video-viewer");
+    const presentation = viewer?.shadowRoot?.querySelector(
+      "wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog",
+    );
+    const dialog =
+      presentation?.shadowRoot?.querySelector<HTMLDialogElement>("dialog");
+    if (!card || !dialog) throw new Error("Recorded viewer was not rendered");
+    const cardStyle = card.getAttribute("style");
+    const dialogStyle = dialog.getAttribute("style");
+    const wasDragged = dialog.classList.contains("dragged");
+    card.style.position = "relative";
+    card.style.left = "96px";
+    card.style.width = "calc(100% - 96px)";
+    card.style.overflow = "clip";
+    card.style.backdropFilter = "blur(2px)";
+    dialog.classList.add("dragged");
+    dialog.style.left = "0px";
+    dialog.style.top = "0px";
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve()),
+    );
+    const left = dialog.getBoundingClientRect().left;
+    dialog.style.left = `${window.innerWidth - dialog.getBoundingClientRect().width}px`;
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve()),
+    );
+    const right = dialog.getBoundingClientRect().right;
+    if (cardStyle === null) card.removeAttribute("style");
+    else card.setAttribute("style", cardStyle);
+    if (dialogStyle === null) dialog.removeAttribute("style");
+    else dialog.setAttribute("style", dialogStyle);
+    if (!wasDragged) dialog.classList.remove("dragged");
+    return { left, right, viewportWidth: window.innerWidth };
+  });
+  expect(topLayerGeometry.left).toBeCloseTo(0, 0);
+  expect(topLayerGeometry.right).toBeCloseTo(topLayerGeometry.viewportWidth, 0);
   const modalClose = page.getByRole("button", { name: "Close video player" });
   const modalTitle = page.locator(
     ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) .title",

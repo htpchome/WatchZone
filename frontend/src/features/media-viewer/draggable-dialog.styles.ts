@@ -26,9 +26,15 @@ export const draggableDialogStyles = css`
     z-index: 1001;
   }
 
+  dialog:popover-open,
   dialog[open] {
     display: flex;
     flex-direction: column;
+  }
+
+  dialog:popover-open::backdrop {
+    background: transparent;
+    pointer-events: none;
   }
 
   dialog.dragged {

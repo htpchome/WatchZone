@@ -48,6 +48,8 @@ describe("recorded media player", () => {
     vi.unstubAllGlobals();
     Reflect.deleteProperty(HTMLDialogElement.prototype, "show");
     Reflect.deleteProperty(HTMLDialogElement.prototype, "close");
+    Reflect.deleteProperty(HTMLDialogElement.prototype, "showPopover");
+    Reflect.deleteProperty(HTMLDialogElement.prototype, "hidePopover");
   });
 
   it("keeps event, review, and recording modal implementations distinct", async () => {
@@ -491,17 +493,16 @@ describe("recorded media player", () => {
     const states: boolean[] = [];
     manager.subscribeForcedMute((active) => states.push(active));
     Object.defineProperties(HTMLDialogElement.prototype, {
-      show: {
+      showPopover: {
         configurable: true,
         value: function (this: HTMLDialogElement) {
-          this.setAttribute("open", "");
+          this.dataset.testPopoverOpen = "true";
         },
       },
-      close: {
+      hidePopover: {
         configurable: true,
         value: function (this: HTMLDialogElement) {
-          this.removeAttribute("open");
-          this.dispatchEvent(new Event("close"));
+          delete this.dataset.testPopoverOpen;
         },
       },
     });
@@ -521,7 +522,9 @@ describe("recorded media player", () => {
       "wzc-review-media-dialog",
     ) as ReviewMediaDialog;
     await container.updateComplete;
-    expect(container.shadowRoot?.querySelector("dialog")?.open).toBe(true);
+    const openDialog = container.shadowRoot?.querySelector("dialog");
+    expect(openDialog?.getAttribute("popover")).toBe("manual");
+    expect(openDialog?.dataset.testPopoverOpen).toBe("true");
     expect(states).toEqual([false, true]);
     const dialog = container.shadowRoot?.querySelector("dialog");
     vi.spyOn(dialog!, "getBoundingClientRect").mockReturnValue({
@@ -556,6 +559,7 @@ describe("recorded media player", () => {
 
     container.close();
     expect(states).toEqual([false, true, false]);
+    expect(openDialog?.dataset.testPopoverOpen).toBeUndefined();
     await container.updateComplete;
     expect(
       container.shadowRoot?.querySelector("wzc-recorded-video-player"),
