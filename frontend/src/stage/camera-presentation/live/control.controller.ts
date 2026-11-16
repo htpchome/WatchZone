@@ -89,14 +89,7 @@ export class CameraLiveControlController implements ReactiveController {
     );
   }
 
-  public perform(
-    action: CameraControlAction,
-    activeVideo = this._activeVideo,
-  ): void {
-    // The retained session may move its video between presentations while the
-    // card is disconnected. Resolve the presentation-owned element at the
-    // command boundary so controls never act on a pre-navigation reference.
-    if (activeVideo !== this._activeVideo) this.setActiveVideo(activeVideo);
+  public perform(action: CameraControlAction): void {
     if (action === "mute") {
       this._options.onMuteToggle();
     } else if (action === "picture_in_picture") {

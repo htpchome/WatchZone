@@ -9148,6 +9148,7 @@ test("restores controls after pre-editor and retains a replaced live connection"
       __wzcTestConnectionCount: number;
       __wzcTestHlsConnectionCount: number;
       __wzcTestHass: unknown;
+      __wzcTestPipCount: number;
       __wzcTestRetainedVideo?: HTMLVideoElement;
       __wzcTestWebRtcPauseCount: number;
       __wzcTestWebRtcRemoveCount: number;
@@ -9156,8 +9157,14 @@ test("restores controls after pre-editor and retains a replaced live connection"
     const testWindow = window as unknown as TestWindow;
     testWindow.__wzcTestConnectionCount = 0;
     testWindow.__wzcTestHlsConnectionCount = 0;
+    testWindow.__wzcTestPipCount = 0;
     testWindow.__wzcTestWebRtcPauseCount = 0;
     testWindow.__wzcTestWebRtcRemoveCount = 0;
+    Object.defineProperty(document, "pictureInPictureElement", {
+      configurable: true,
+      value: null,
+      writable: true,
+    });
 
     class TestPeerConnection {
       public connectionState: RTCPeerConnectionState = "new";
@@ -9352,6 +9359,7 @@ test("restores controls after pre-editor and retains a replaced live connection"
   );
   await initialVideo.evaluate((element) => {
     const testWindow = window as typeof window & {
+      __wzcTestPipCount: number;
       __wzcTestRetainedVideo?: HTMLVideoElement;
       __wzcTestWebRtcPauseCount: number;
       __wzcTestWebRtcRemoveCount: number;
@@ -9366,6 +9374,16 @@ test("restores controls after pre-editor and retains a replaced live connection"
     video.remove = () => {
       testWindow.__wzcTestWebRtcRemoveCount += 1;
       nativeRemove();
+    };
+    video.requestPictureInPicture = async () => {
+      testWindow.__wzcTestPipCount += 1;
+      (
+        document as Document & {
+          pictureInPictureElement: Element | null;
+        }
+      ).pictureInPictureElement = video;
+      video.dispatchEvent(new Event("enterpictureinpicture"));
+      return {} as PictureInPictureWindow;
     };
     (
       window as typeof window & { __wzcTestRetainedVideo?: HTMLVideoElement }
@@ -9500,6 +9518,29 @@ test("restores controls after pre-editor and retains a replaced live connection"
   await expect(video).toHaveAttribute("disablepictureinpicture", "");
   await expect(video).toHaveAttribute("controlslist", /nopictureinpicture/);
   await expect(video).toHaveCSS("pointer-events", "none");
+  const pip = page.locator(
+    'wzc-camera wzc-camera-controls [data-control="picture_in_picture"]',
+  );
+  await page.locator("wzc-camera wzc-camera-live .viewport").hover();
+  await expect(pip).toBeVisible();
+  await expect(pip).toBeEnabled();
+  await pip.click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as typeof window & { __wzcTestPipCount: number })
+            .__wzcTestPipCount,
+      ),
+    )
+    .toBe(1);
+  await expect(video).not.toHaveAttribute("disablepictureinpicture", "");
+  expect(
+    await video.evaluate(
+      (element) => document.pictureInPictureElement === element,
+    ),
+  ).toBe(true);
+  await page.mouse.move(0, 0);
   await expect(page.locator("wzc-camera .camera-carousel")).toHaveClass(
     /swiper-initialized/,
   );

@@ -83,7 +83,7 @@ export function isPictureInPictureActive(video?: HTMLVideoElement): boolean {
 }
 
 export function suppressNativePictureInPicture(video?: HTMLVideoElement): void {
-  if (!video) {
+  if (!video || isPictureInPictureActive(video)) {
     return;
   }
   video.disablePictureInPicture = true;

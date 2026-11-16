@@ -181,7 +181,7 @@ export class CameraLivePresentation extends LitElement {
   }
 
   public performControl(action: CameraControlAction): void {
-    this._controls.perform(action, this._selectedVideoForRender);
+    this._controls.perform(action);
   }
 
   public beginStageResizeReturn(): void {
@@ -603,7 +603,7 @@ export class CameraLivePresentation extends LitElement {
   private readonly _handleCameraControl = (
     event: CustomEvent<CameraControlEventDetail>,
   ): void => {
-    this._controls.perform(event.detail.action, this._selectedVideoForRender);
+    this._controls.perform(event.detail.action);
   };
 
   private _setActiveVideo(video: HTMLVideoElement | undefined): void {

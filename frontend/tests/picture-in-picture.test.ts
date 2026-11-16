@@ -179,6 +179,65 @@ describe("camera Picture-in-Picture", () => {
     await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(2));
   });
 
+  it("keeps custom PiP open across the live presentation update", async () => {
+    Object.defineProperty(document, "pictureInPictureEnabled", {
+      configurable: true,
+      value: true,
+    });
+    Object.defineProperty(document, "pictureInPictureElement", {
+      configurable: true,
+      value: null,
+      writable: true,
+    });
+    const video = document.createElement("video");
+    vi.spyOn(video, "play").mockResolvedValue();
+    const request = vi.fn(async () => {
+      (
+        document as Document & {
+          pictureInPictureElement: Element | null;
+        }
+      ).pictureInPictureElement = video;
+      video.dispatchEvent(new Event("enterpictureinpicture"));
+      return {} as PictureInPictureWindow;
+    });
+    Object.defineProperty(video, "requestPictureInPicture", {
+      configurable: true,
+      value: request,
+    });
+    const presentation = document.createElement(
+      "wzc-camera-live",
+    ) as CameraLivePresentation;
+    presentation.available = true;
+    presentation.selected = "webrtc";
+    presentation.transport = "webrtc";
+    presentation.webRtcMedia = video;
+    document.body.append(presentation);
+
+    const button = (): HTMLButtonElement | null =>
+      presentation.shadowRoot
+        ?.querySelector("wzc-camera-controls")
+        ?.shadowRoot?.querySelector("wzc-media-controls")
+        ?.shadowRoot?.querySelector<HTMLButtonElement>(
+          '[data-control="picture_in_picture"]',
+        ) ?? null;
+    await vi.waitFor(() => expect(button()?.disabled).toBe(false));
+    button()?.click();
+    await vi.waitFor(() => expect(request).toHaveBeenCalledOnce());
+    await presentation.updateComplete;
+
+    expect(document.pictureInPictureElement).toBe(video);
+    expect(video.disablePictureInPicture).toBe(false);
+    expect(video.hasAttribute("disablepictureinpicture")).toBe(false);
+
+    (
+      document as Document & {
+        pictureInPictureElement: Element | null;
+      }
+    ).pictureInPictureElement = null;
+    video.dispatchEvent(new Event("leavepictureinpicture"));
+    expect(video.disablePictureInPicture).toBe(true);
+  });
+
   it("suppresses native PiP before the rendered WebRTC video is painted", async () => {
     const presentation = document.createElement(
       "wzc-camera-live",

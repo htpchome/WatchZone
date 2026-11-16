@@ -98,32 +98,6 @@ describe("camera live control controller", () => {
     expect(onSuspendToggle).toHaveBeenCalledOnce();
   });
 
-  it("uses the presentation's current video after retained navigation", async () => {
-    Object.defineProperty(document, "pictureInPictureEnabled", {
-      configurable: true,
-      value: true,
-    });
-    const { controller } = createController();
-    const beforeNavigation = document.createElement("video");
-    const afterNavigation = document.createElement("video");
-    const staleRequest = vi.fn();
-    const currentRequest = vi.fn(async () => ({}) as PictureInPictureWindow);
-    Object.defineProperty(beforeNavigation, "requestPictureInPicture", {
-      configurable: true,
-      value: staleRequest,
-    });
-    Object.defineProperty(afterNavigation, "requestPictureInPicture", {
-      configurable: true,
-      value: currentRequest,
-    });
-    controller.setActiveVideo(beforeNavigation);
-
-    controller.perform("picture_in_picture", afterNavigation);
-
-    await vi.waitFor(() => expect(currentRequest).toHaveBeenCalledOnce());
-    expect(staleRequest).not.toHaveBeenCalled();
-  });
-
   it("clears snapshot pending state and translates failures once", async () => {
     const captureFrame = vi.fn(() => Promise.reject(new Error("Frame failed")));
     const { controller, host, requestToast } = createController(captureFrame);
