@@ -15,9 +15,9 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.360`
-- Current commit: `2f0b893` —
-  `v0.0.4-dev.360 - fix(camera): preserve MSE PiP after dashboard navigation`
+- Working version: `0.0.4-dev.361`
+- Current commit: `aea3491` —
+  `v0.0.4-dev.360 - docs(handoff): record audit priorities and current baseline`
 - The worktree was clean when this snapshot was replaced. Always verify
   `git status`, the canonical version in
   `custom_components/watchzone/const.py`, and the latest commit.
