@@ -32,6 +32,7 @@ interface ActiveReview {
   readonly id: string;
   readonly order: number;
   review?: ReviewItem;
+  readonly sourceId: string;
 }
 
 /** Owns live review activity state, camera highlighting, and takeover order. */
@@ -134,9 +135,11 @@ export class LiveActivityHighlightController implements ReactiveController {
     this._highlightEnabled = context.highlightEnabled;
     // Navigation indicators remain live even when outline and takeover are off.
     const subscriptionEnabled = normalizedEntityIds.length > 0;
+    const activityContextChanged =
+      context.api?.identity !== this._identity ||
+      entityIdsKey !== this._entityIdsKey;
     if (
-      context.api?.identity === this._identity &&
-      entityIdsKey === this._entityIdsKey &&
+      !activityContextChanged &&
       subscriptionEnabled === this._subscriptionEnabled
     ) {
       if (context.activeEntityId !== this._activeEntityId) {
@@ -146,8 +149,10 @@ export class LiveActivityHighlightController implements ReactiveController {
       return;
     }
     this._stopSubscriptions();
-    this._cancelTakeover(true);
-    this._clearActivity();
+    if (activityContextChanged) {
+      this._cancelTakeover(true);
+      this._clearActivity();
+    }
     this._identity = context.api?.identity;
     this._activeEntityId = context.activeEntityId;
     this._entityIdsKey = entityIdsKey;
@@ -160,6 +165,7 @@ export class LiveActivityHighlightController implements ReactiveController {
     for (const entityId of normalizedEntityIds) {
       this._subscribe(context.api, entityId, generation);
     }
+    void this._reconcileActivity();
   }
 
   private _configureTakeover(context: LiveActivityHighlightContext): void {
@@ -214,32 +220,43 @@ export class LiveActivityHighlightController implements ReactiveController {
     ) {
       return;
     }
-    const key = reviewKey(entityId, notification.id);
+    const reviewsForEntity = this._activeReviews.get(entityId);
+    const reviewId =
+      [...(reviewsForEntity?.values() ?? [])].find(
+        (review) =>
+          review.id === notification.id ||
+          review.sourceId === notification.id ||
+          (notification.review && review.id === notification.review.id),
+      )?.id ??
+      notification.review?.id ??
+      notification.id;
+    const key = reviewKey(entityId, reviewId);
     let reviews = this._activeReviews.get(entityId);
     if (!reviews) {
       reviews = new Map();
       this._activeReviews.set(entityId, reviews);
     }
     if (notification.phase === "end") {
-      this._endReviews([{ entityId, id: notification.id }]);
+      this._endReviews([{ entityId, id: reviewId }]);
       return;
     }
     if (
       !notification.classification ||
-      this._endedReviews.get(entityId)?.has(notification.id)
+      this._endedReviews.get(entityId)?.has(reviewId)
     ) {
       return;
     }
-    const existing = reviews.get(notification.id);
+    const existing = reviews.get(reviewId);
     const review: ActiveReview = existing ?? {
       classification: notification.classification,
       entityId,
-      id: notification.id,
+      id: reviewId,
       order: ++this._order,
+      sourceId: notification.id,
     };
     review.classification = notification.classification;
     if (notification.review) review.review = notification.review;
-    reviews.set(notification.id, review);
+    reviews.set(reviewId, review);
     this._syncReconciliation();
     if (
       this.takeoverEnabled &&
@@ -382,7 +399,7 @@ export class LiveActivityHighlightController implements ReactiveController {
         entityId,
         reviews: [...reviews.values()],
       }))
-      .filter(({ reviews }) => reviews.some(({ review }) => review));
+      .filter(({ reviews }) => reviews.length > 0);
     if (activeByEntity.length === 0) return;
     this._reconcileInFlight = true;
     try {
@@ -403,7 +420,7 @@ export class LiveActivityHighlightController implements ReactiveController {
             .map(({ id }) => id),
         );
         for (const review of local.reviews) {
-          if (review.review && endedIds.has(review.review.id)) {
+          if (endedIds.has(review.id)) {
             ended.push({ entityId: local.entityId, id: review.id });
           }
         }
@@ -462,7 +479,12 @@ export class LiveActivityHighlightController implements ReactiveController {
 
   private _stop(): void {
     this._stopSubscriptions();
-    this._clearActivity();
+    if (this._reconcileTimer !== undefined) {
+      window.clearInterval(this._reconcileTimer);
+      this._reconcileTimer = undefined;
+    }
+    this._reconcileRequest += 1;
+    this._reconcileInFlight = false;
   }
 }
 

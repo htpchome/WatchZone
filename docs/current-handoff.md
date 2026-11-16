@@ -15,7 +15,7 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.365`
+- Working version: `0.0.4-dev.366`
 - Current commit: `aea3491` —
   `v0.0.4-dev.360 - docs(handoff): record audit priorities and current baseline`
 - The worktree was clean when this snapshot was replaced. Always verify
@@ -126,6 +126,12 @@ provider, the Frigate adapter owns its MQTT subscription and payload
 normalization, and the frontend consumes only normalized
 `watchzone/activity/subscribe` messages.
 
+Corrected at `0.0.4-dev.366`: dashboard detachment no longer erases an active
+camera takeover. Reconnection retains the last known presentation and
+immediately reconciles it with cache-bypassed provider Review summaries, so an
+ongoing alert survives a fast dashboard return while an alert that ended while
+away is cleared.
+
 Explicitly deferred:
 
 - Do not connect Python Stage Design persistence merely for the current
@@ -150,9 +156,9 @@ Explicitly deferred:
 
 ## Validation status
 
-Validated for `v0.0.4-dev.360`:
+Validated for `v0.0.4-dev.366`:
 
-- 455 frontend unit tests
+- 461 frontend unit tests
 - 129 Playwright tests across Chromium, Firefox, and WebKit
 - formatting, lint, type checking, architecture/style/license checks,
   production build, version consistency, and `git diff --check`

@@ -83,6 +83,10 @@
   capability. The browser consumes the authenticated provider-neutral
   WatchZone subscription and never parses Frigate MQTT or subscribes to a
   provider's Home Assistant WebSocket commands directly.
+- Dashboard detachment pauses realtime subscriptions without discarding the
+  current takeover. Reconnection immediately reconciles the retained state
+  against an authoritative, cache-bypassed Review summary so an ongoing alert
+  remains active and an alert that ended while detached is cleared.
 - Card configuration selects Off, Alerts Only, Detections Only, or Both and
   separately selects whether takeover starts enabled. The runtime toolbar
   toggle is session state and resets when the card is recreated.

@@ -2186,6 +2186,20 @@ test("highlights live video directly from draft review notifications", async ({
   await expect(cameraButtons.nth(1)).toHaveAttribute("aria-selected", "true");
   const slideshowOverlay = page.locator("wzc-slideshow button");
   await expect(slideshowOverlay.locator(".status")).toHaveText("Hold");
+  await page.locator("watchzone-card").evaluate((element) => {
+    const parent = element.parentNode;
+    if (!parent) throw new Error("WatchZone card has no parent");
+    const marker = document.createComment("dashboard-navigation");
+    parent.insertBefore(marker, element);
+    element.remove();
+    parent.insertBefore(element, marker);
+    marker.remove();
+  });
+  await expect(cameraButtons.nth(1)).toHaveAttribute("aria-selected", "true");
+  await expect(
+    cameraButtons.nth(1).locator(".option-indicator.warning"),
+  ).toBeVisible();
+  await expect(slideshowOverlay.locator(".status")).toHaveText("Hold");
   const activeDraft = page.locator("wzc-reviews .tile").first();
   await expect(activeDraft.locator(".in-progress")).toHaveText("In progress");
   await expect(activeDraft).toContainText("Detection");

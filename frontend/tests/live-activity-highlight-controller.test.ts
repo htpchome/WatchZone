@@ -165,6 +165,69 @@ describe("live activity highlight controller", () => {
     controller.hostDisconnected();
   });
 
+  it("retains takeover across reconnect and clears it after an ended review", async () => {
+    let notify:
+      ((notification: ActivityUpdateNotification) => void) | undefined;
+    mocks.subscribe.mockImplementation(
+      async (
+        _api: HomeAssistantApi,
+        _entityId: string,
+        _kind: string,
+        callback: (notification: ActivityUpdateNotification) => void,
+      ) => {
+        notify = callback;
+        return vi.fn();
+      },
+    );
+    const callWS = vi
+      .fn()
+      .mockResolvedValueOnce({
+        items: [{ end_time: null, id: "frigate-main:review-1" }],
+      })
+      .mockResolvedValueOnce({
+        items: [{ end_time: 105, id: "frigate-main:review-1" }],
+      });
+    const api = { callWS, identity: {} } as unknown as HomeAssistantApi;
+    const onTakeover = vi.fn();
+    const controller = new LiveActivityHighlightController(
+      new TestHost(),
+      () => ({
+        activeEntityId: "camera.front",
+        api,
+        entityIds: ["camera.front"],
+        highlightEnabled: true,
+        onTakeover,
+        startTakeoverEnabled: true,
+        takeoverMode: "both",
+      }),
+    );
+    controller.hostConnected();
+    await vi.waitFor(() => expect(notify).toBeTypeOf("function"));
+    notify?.({
+      cameraName: "front",
+      classification: "alert",
+      id: "review-1",
+      phase: "new",
+      review: review(),
+      topic: "reviews",
+    });
+    expect(controller.classification).toBe("alert");
+
+    controller.hostDisconnected();
+    expect(controller.classification).toBe("alert");
+    controller.hostConnected();
+    await vi.waitFor(() => expect(callWS).toHaveBeenCalledTimes(1));
+    expect(controller.classification).toBe("alert");
+
+    controller.hostDisconnected();
+    expect(controller.classification).toBe("alert");
+    controller.hostConnected();
+
+    await vi.waitFor(() => expect(controller.classification).toBeUndefined());
+    expect(onTakeover).toHaveBeenLastCalledWith("camera.front");
+    controller.hostDisconnected();
+  });
+
   it("keeps the strongest remaining review and ignores event notifications", async () => {
     let notify:
       ((notification: ActivityUpdateNotification) => void) | undefined;
