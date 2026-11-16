@@ -5,7 +5,7 @@ import { mediaOverlayButtonStyles } from "../../../ui/media-overlay-button.style
 const slideshowPrivateStyles = css`
   :host {
     display: grid;
-    justify-items: end;
+    justify-items: var(--wzc-slideshow-justify-items, end);
     inline-size: 100%;
     pointer-events: none;
   }

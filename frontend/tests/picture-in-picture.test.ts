@@ -126,7 +126,7 @@ describe("camera Picture-in-Picture", () => {
     expect(video.disablePictureInPicture).toBe(true);
   });
 
-  it("enables the custom action when a retained HLS video becomes active", async () => {
+  it("keeps the custom action bound to retained HLS after navigation", async () => {
     Object.defineProperty(document, "pictureInPictureEnabled", {
       configurable: true,
       value: true,
@@ -168,6 +168,15 @@ describe("camera Picture-in-Picture", () => {
 
     pictureInPictureButton()?.click();
     await vi.waitFor(() => expect(request).toHaveBeenCalledOnce());
+
+    presentation.remove();
+    await Promise.resolve();
+    document.body.append(presentation);
+    await vi.waitFor(() =>
+      expect(pictureInPictureButton()?.disabled).toBe(false),
+    );
+    pictureInPictureButton()?.click();
+    await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(2));
   });
 
   it("suppresses native PiP before the rendered WebRTC video is painted", async () => {

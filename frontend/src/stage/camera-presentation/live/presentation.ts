@@ -104,6 +104,7 @@ export class CameraLivePresentation extends LitElement {
 
   private _activeVideo?: HTMLVideoElement;
   private _attachedWebRtcVideo?: HTMLVideoElement;
+  private _connectedOnce = false;
   private _disconnectGeneration = 0;
   private _posterDimensions?: MediaDimensions;
   private _posterFailed = false;
@@ -209,8 +210,13 @@ export class CameraLivePresentation extends LitElement {
   }
 
   public connectedCallback(): void {
+    const reconnecting = this._connectedOnce;
+    this._connectedOnce = true;
     this._disconnectGeneration += 1;
     super.connectedCallback();
+    if (reconnecting) {
+      this._controls.setActiveVideo(this._selectedVideoForRender);
+    }
   }
 
   public disconnectedCallback(): void {

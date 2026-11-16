@@ -1,9 +1,11 @@
 import { css } from "lit";
 
+import { mediaOverlayBadgeSurfaceStyles } from "../../ui/overlay-control.styles";
 import { cameraSuspendedPresentationStyles } from "./suspended-presentation.styles";
 
 export const cameraLiveViewStyles = css`
   ${cameraSuspendedPresentationStyles}
+  ${mediaOverlayBadgeSurfaceStyles}
 
   :host {
     display: block;
@@ -145,22 +147,6 @@ export const cameraLiveViewStyles = css`
     margin-block-start: 0.5rem;
     margin-inline-end: 0.5rem;
     display: inline-flex;
-    --wzc-badge-color: var(
-      --wzc-live-indicator-color,
-      var(--wzc-media-overlay-color)
-    );
-    --wzc-badge-background: var(
-      --wzc-live-indicator-background,
-      var(--wzc-media-overlay-background)
-    );
-    --wzc-badge-border-color: var(
-      --wzc-live-indicator-border-color,
-      var(--wzc-media-overlay-border-color)
-    );
-    --wzc-badge-shadow: var(
-      --wzc-live-indicator-shadow,
-      var(--wzc-media-overlay-shadow)
-    );
     opacity: 0;
     visibility: hidden;
     pointer-events: none;

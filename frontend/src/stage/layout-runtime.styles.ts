@@ -197,6 +197,14 @@ export const stageRuntimeStyles = css`
     justify-self: stretch;
   }
 
+  .camera-overlay-area-top
+    > .component-node[data-component-type="slideshow"]:only-child {
+    --wzc-slideshow-justify-items: center;
+    grid-column: 1 / -1;
+    justify-self: center;
+    inline-size: var(--wzc-slideshow-control-inline-size);
+  }
+
   .camera-overlay-area-left {
     grid-area: left;
     display: grid;

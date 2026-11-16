@@ -93,6 +93,16 @@ export const mediaOverlayBadgeSizingStyles = css`
   }
 `;
 
+/** Shared media-overlay surface for source and transport status pills. */
+export const mediaOverlayBadgeSurfaceStyles = css`
+  .source-indicator {
+    --wzc-badge-color: var(--wzc-media-overlay-color);
+    --wzc-badge-background: var(--wzc-media-overlay-background);
+    --wzc-badge-border-color: var(--wzc-media-overlay-border-color);
+    --wzc-badge-shadow: var(--wzc-media-overlay-shadow);
+  }
+`;
+
 /** Shared geometry and interaction contract for circular overlay controls. */
 export const roundButtonStyles = [
   overlayControlBaseStyles,

@@ -1,6 +1,7 @@
 import { css } from "lit";
 import {
   mediaOverlayBadgeSizingStyles,
+  mediaOverlayBadgeSurfaceStyles,
   mediaOverlayControlButtonStyles,
 } from "../../../ui/overlay-control.styles";
 import { cameraSuspendedPresentationStyles } from "../../camera-presentation/suspended-presentation.styles";
@@ -432,5 +433,6 @@ const minimalCameraComponentStyles = css`
 export const minimalCameraStyles = [
   mediaOverlayControlButtonStyles,
   mediaOverlayBadgeSizingStyles,
+  mediaOverlayBadgeSurfaceStyles,
   minimalCameraComponentStyles,
 ];

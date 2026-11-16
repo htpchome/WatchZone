@@ -1895,6 +1895,20 @@ test("keeps the slideshow overlay when the camera switcher is disabled", async (
 
   await expect(page.locator("wzc-slideshow button")).toHaveCount(1);
   await expect(page.locator("wzc-camera-switcher")).toHaveCount(0);
+  await page.locator("watchzone-card").evaluate((element) => {
+    (element as HTMLElement).style.inlineSize = "320px";
+  });
+  const [topAreaBox, slideshowBox] = await Promise.all([
+    page.locator(".camera-overlay-area-top").boundingBox(),
+    page.locator("wzc-slideshow button").boundingBox(),
+  ]);
+  expect(
+    Math.abs(
+      (slideshowBox?.x ?? 0) -
+        ((topAreaBox?.x ?? 0) +
+          ((topAreaBox?.width ?? 0) - (slideshowBox?.width ?? 0)) / 2),
+    ),
+  ).toBeLessThan(0.5);
 });
 
 test("highlights live video directly from draft review notifications", async ({
@@ -2294,6 +2308,14 @@ test("keeps minimal camera actions and media controls independent", async ({
   const inlineControlSize = await minimal
     .getByRole("button", { name: "Camera controls" })
     .evaluate((element) => element.getBoundingClientRect().width);
+  await minimal.evaluate((element) => {
+    const camera = element as HTMLElement & {
+      _session: { _transport?: "mse" };
+      requestUpdate(): void;
+    };
+    camera._session._transport = "mse";
+    camera.requestUpdate();
+  });
   await minimal.locator(".interaction-surface").click();
   const liveDialog = minimal.locator(".live-dialog");
   await expect(liveDialog).toBeVisible();
@@ -2307,6 +2329,8 @@ test("keeps minimal camera actions and media controls independent", async ({
   });
   const dialogAudio = liveDialog.locator(".audio-control");
   const dialogUnmute = liveDialog.getByRole("button", { name: "Unmute" });
+  const dialogSource = liveDialog.locator(".source-control");
+  await expect(dialogSource).toBeVisible();
   const [fullscreenBox, audioBox, unmuteBox] = await Promise.all([
     dialogFullscreen.boundingBox(),
     dialogAudio.boundingBox(),
@@ -2316,6 +2340,27 @@ test("keeps minimal camera actions and media controls independent", async ({
   expect(audioBox?.width).toBe(fullscreenBox?.width);
   expect(unmuteBox?.height).toBe(fullscreenBox?.height);
   expect(unmuteBox?.width).toBe(fullscreenBox?.width);
+  const [dialogButtonSurface, dialogSourceSurface] = await Promise.all([
+    dialogFullscreen.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        background: style.backgroundColor,
+        border: style.borderColor,
+        color: style.color,
+      };
+    }),
+    dialogSource.evaluate((element) => {
+      const badge = element.shadowRoot?.querySelector(".badge");
+      if (!badge) throw new Error("Minimal Camera source surface is missing");
+      const style = getComputedStyle(badge);
+      return {
+        background: style.backgroundColor,
+        border: style.borderColor,
+        color: style.color,
+      };
+    }),
+  ]);
+  expect(dialogSourceSurface).toEqual(dialogButtonSurface);
   await liveDialog.getByRole("button", { name: "Camera controls" }).click();
   await liveDialog
     .getByRole("button", { name: "Resize video player" })
