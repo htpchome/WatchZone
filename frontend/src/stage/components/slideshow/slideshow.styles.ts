@@ -34,6 +34,12 @@ const slideshowPrivateStyles = css`
     transition-delay: 0s;
   }
 
+  button:not(.active) {
+    grid-auto-flow: row;
+    padding: 0;
+    place-items: center;
+  }
+
   button.active {
     background: var(--wzc-media-overlay-hover-background);
     inline-size: 100%;

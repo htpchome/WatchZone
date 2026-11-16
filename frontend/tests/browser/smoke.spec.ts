@@ -1873,7 +1873,7 @@ test("advances the authoritative camera selection through slideshow controls", a
   await expect(toolbarToggle).toHaveAttribute("aria-pressed", "false");
 });
 
-test("keeps the slideshow overlay when the camera switcher is disabled", async ({
+test("centers the slideshow icon inside its compact overlay button", async ({
   page,
 }) => {
   await page.goto("/");
@@ -1885,7 +1885,7 @@ test("keeps the slideshow overlay when the camera switcher is disabled", async (
       }
     ).setConfig({
       type: "custom:watchzone-card",
-      camera_switcher_overlay: false,
+      camera_switcher_overlay: true,
       cameras: [
         { entity_id: "camera.front", title: "Front" },
         { entity_id: "camera.back", title: "Back" },
@@ -1894,19 +1894,19 @@ test("keeps the slideshow overlay when the camera switcher is disabled", async (
   });
 
   await expect(page.locator("wzc-slideshow button")).toHaveCount(1);
-  await expect(page.locator("wzc-camera-switcher")).toHaveCount(0);
+  await expect(page.locator("wzc-camera-switcher")).toHaveCount(1);
   await page.locator("watchzone-card").evaluate((element) => {
     (element as HTMLElement).style.inlineSize = "320px";
   });
-  const [topAreaBox, slideshowBox] = await Promise.all([
-    page.locator(".camera-overlay-area-top").boundingBox(),
+  const [slideshowBox, iconBox] = await Promise.all([
     page.locator("wzc-slideshow button").boundingBox(),
+    page.locator("wzc-slideshow button svg").boundingBox(),
   ]);
   expect(
     Math.abs(
-      (slideshowBox?.x ?? 0) -
-        ((topAreaBox?.x ?? 0) +
-          ((topAreaBox?.width ?? 0) - (slideshowBox?.width ?? 0)) / 2),
+      (iconBox?.x ?? 0) +
+        (iconBox?.width ?? 0) / 2 -
+        ((slideshowBox?.x ?? 0) + (slideshowBox?.width ?? 0) / 2),
     ),
   ).toBeLessThan(0.5);
 });

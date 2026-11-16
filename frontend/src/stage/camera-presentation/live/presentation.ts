@@ -104,7 +104,6 @@ export class CameraLivePresentation extends LitElement {
 
   private _activeVideo?: HTMLVideoElement;
   private _attachedWebRtcVideo?: HTMLVideoElement;
-  private _connectedOnce = false;
   private _disconnectGeneration = 0;
   private _posterDimensions?: MediaDimensions;
   private _posterFailed = false;
@@ -182,7 +181,7 @@ export class CameraLivePresentation extends LitElement {
   }
 
   public performControl(action: CameraControlAction): void {
-    this._controls.perform(action);
+    this._controls.perform(action, this._selectedVideoForRender);
   }
 
   public beginStageResizeReturn(): void {
@@ -210,13 +209,8 @@ export class CameraLivePresentation extends LitElement {
   }
 
   public connectedCallback(): void {
-    const reconnecting = this._connectedOnce;
-    this._connectedOnce = true;
     this._disconnectGeneration += 1;
     super.connectedCallback();
-    if (reconnecting) {
-      this._controls.setActiveVideo(this._selectedVideoForRender);
-    }
   }
 
   public disconnectedCallback(): void {
@@ -609,7 +603,7 @@ export class CameraLivePresentation extends LitElement {
   private readonly _handleCameraControl = (
     event: CustomEvent<CameraControlEventDetail>,
   ): void => {
-    this._controls.perform(event.detail.action);
+    this._controls.perform(event.detail.action, this._selectedVideoForRender);
   };
 
   private _setActiveVideo(video: HTMLVideoElement | undefined): void {
