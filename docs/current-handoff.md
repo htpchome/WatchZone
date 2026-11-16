@@ -15,10 +15,11 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.367`
-- Current commit: `aea3491` —
-  `v0.0.4-dev.360 - docs(handoff): record audit priorities and current baseline`
-- The worktree was clean when this snapshot was replaced. Always verify
+- Working version: `0.0.4-dev.368`
+- Current commit: `aa1239e` —
+  `v0.0.4-dev.367 - fix(activity): retain highlights across dashboard replacement`
+- The worktree contains the uncommitted Phase 4 editor decomposition described
+  below. Always verify
   `git status`, the canonical version in
   `custom_components/watchzone/const.py`, and the latest commit.
 
@@ -92,18 +93,12 @@ lifecycle, lazy transport loading, theme ownership, and listener/observer
 cleanup sound. No broad memory leak or uncontrolled dependency problem was
 identified. The next agreed work is deliberately incremental:
 
-1. Extract cohesive editor sections while retaining one top-level draft,
-   dirty-state, preview, and serialization owner.
-2. Only after extraction is stable, avoid mounting expensive closed accordion
-   content while preserving draft values, validation, focus, and Home Assistant
-   control behavior.
-3. Move raw Frigate activity subscriptions and normalization behind a
-   provider-neutral Python subscription, prove message parity, then remove the
-   frontend-specific route.
-4. Consider a read-only normalized backend camera catalog later, without
+1. Avoid mounting expensive closed accordion content while preserving draft
+   values, validation, focus, and Home Assistant control behavior.
+2. Consider a read-only normalized backend camera catalog later, without
    migrating stored camera configuration until a concrete provider or Stage
    Designer requirement needs it.
-5. Consolidate media download preparation one media type at a time, preserving
+3. Consolidate media download preparation one media type at a time, preserving
    Safari and Companion user-gesture behavior.
 
 Completed at `0.0.4-dev.362`: provider-neutral direct Event and Review lookup
@@ -139,6 +134,13 @@ active Review replay, while Reviews that end during the absence are removed
 before the replacement subscribes. Full and Minimal Camera presentations both
 consume this continuity path; Minimal Camera remains independently lightweight.
 
+Completed at `0.0.4-dev.368`: the card editor delegates Camera Settings, Stage
+Management, interactions, and the controlled settings groups to cohesive
+stateless renderers. The top-level editor remains the sole owner of the
+normalized draft, dirty state, preview, YAML serialization, Save bridge,
+capability probing, and nested camera transaction. Accordion content remains
+mounted while closed; conditional mounting is the next separate phase.
+
 Explicitly deferred:
 
 - Do not connect Python Stage Design persistence merely for the current
@@ -156,14 +158,17 @@ Explicitly deferred:
   architectural target.
 - At `0.0.4-dev.360`, validation measures the eager graph at 57,332 bytes gzip
   and the lazy editor entry at 18,564 bytes gzip.
+- At `0.0.4-dev.368`, the decomposed lazy editor entry measures approximately
+  19.01 KiB gzip and remains within its 20 KiB release budget.
 - The built-in Stage catalog is the largest practical eager-splitting target.
   Measure and reduce the graph before requesting another ceiling increase.
-- The editor is close to its current 20 KiB gzip release budget and should be
-  decomposed before adding substantial editor features.
+- The editor remains close to its current 20 KiB gzip release budget. Phase 5
+  should focus on closed-section mounting cost without assuming extraction
+  alone reduces transferred bytes.
 
 ## Validation status
 
-Validated for `v0.0.4-dev.367`:
+Validated for `v0.0.4-dev.368`:
 
 - 463 frontend unit tests
 - 129 Playwright tests across Chromium, Firefox, and WebKit

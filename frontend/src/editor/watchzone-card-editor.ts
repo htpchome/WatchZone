@@ -1,5 +1,4 @@
 import { html, LitElement, nothing } from "lit";
-import { repeat } from "lit/directives/repeat.js";
 import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import {
@@ -30,20 +29,15 @@ import {
   ACCORDION_ITEM_TAG,
   ACCORDION_TAG,
   CARD_TYPE,
-  DEFAULT_EVENT_HISTORY_DAYS,
-  EDITOR_GENERAL_INFO_TAG,
   EDITOR_PREVIEW_DRAFT_EVENT,
   EDITOR_TAG,
   EDITOR_TEXT_PREVIEW_DELAY_MS,
   MAX_CAMERA_TITLE_LENGTH,
-  MAX_CARD_TITLE_LENGTH,
   MAX_CAMERAS,
   MAX_EVENT_HISTORY_DAYS,
   MAX_LIGHTS_PER_CAMERA,
   MIN_EVENT_HISTORY_DAYS,
-  SORTABLE_LIST_TAG,
   SORTABLE_REORDER_EVENT,
-  SORTABLE_TILE_TAG,
   TOAST_REGION_TAG,
 } from "../core/constants";
 import {
@@ -54,12 +48,7 @@ import {
 import { LocalizationController } from "../core/localization";
 import { ThemeProfileController } from "../core/theme-profile";
 import { toYamlCardConfig, type YamlCardConfig } from "../core/yaml-config";
-import {
-  defaultStageFlow,
-  type AvailableStageType,
-  type ConfiguredStageFlow,
-} from "../core/stage";
-import { builtInStageOptions } from "../stage/built-in-stages/catalog";
+import { defaultStageFlow } from "../core/stage";
 import { themeTokens } from "../styles/theme-tokens";
 import { ToastManager } from "../ui/toast-manager";
 import { iconPath, renderIcon } from "../ui/icons";
@@ -79,6 +68,21 @@ import {
 } from "./dirty-state";
 import { HomeAssistantEditorBridge } from "./home-assistant-editor-bridge";
 import type { CameraCapabilityController } from "./camera-capability.controller";
+import { renderCameraSettings } from "./camera-settings-section";
+import {
+  renderInteractionSettings,
+  type OptionalInteractionName,
+} from "./interaction-settings-section";
+import {
+  renderDisplaySettings,
+  renderGeneralSettings,
+  renderLayoutSettings,
+  renderLiveMediaPlayerSettings,
+  renderMinimalCameraSettings,
+  renderReviewSettings,
+  type BooleanConfigFlag,
+} from "./settings-sections";
+import { renderStageManagement } from "./stage-management-section";
 import { cardEditorStyles } from "./watchzone-card-editor.styles";
 
 interface InputElement extends HTMLElement {
@@ -110,92 +114,17 @@ const LIGHT_SELECTOR = {
 } as const;
 const ICON_SELECTOR = { icon: {} } as const;
 const BOOLEAN_SELECTOR = { boolean: {} } as const;
-const TAP_ACTION_SELECTOR = {
-  ui_action: {
-    actions: [
-      "open-live-view",
-      "toggle",
-      "navigate",
-      "url",
-      "perform-action",
-      "assist",
-      "none",
-    ],
-    default_action: "open-live-view",
-  },
-} as const;
-const OPTIONAL_ACTION_SELECTOR = {
-  ui_action: {
-    actions: [
-      "open-live-view",
-      "toggle",
-      "navigate",
-      "url",
-      "perform-action",
-      "assist",
-      "none",
-    ],
-    default_action: "none",
-  },
-} as const;
-const TAP_ACTION_SCHEMA = {
-  name: "tap_action",
-  selector: TAP_ACTION_SELECTOR,
-} as const;
-const OPTIONAL_ACTION_SCHEMAS = {
-  hold_action: { name: "hold_action", selector: OPTIONAL_ACTION_SELECTOR },
-  double_tap_action: {
-    name: "double_tap_action",
-    selector: OPTIONAL_ACTION_SELECTOR,
-  },
-} as const;
-type OptionalInteractionName = "double_tap_action" | "hold_action";
 const OPEN_LIVE_VIEW_LOCALIZATION_KEY =
   "ui.panel.lovelace.editor.action-editor.actions.open-live-view";
-const REVIEW_HISTORY_DAYS_SELECTOR = {
-  number: {
-    max: MAX_EVENT_HISTORY_DAYS,
-    min: MIN_EVENT_HISTORY_DAYS,
-    mode: "slider",
-    slider_ticks: true,
-    step: 1,
-  },
-} as const;
 const DEFAULT_LIGHT_ICON = "mdi:lightbulb";
 
 const accordionTag = unsafeStatic(ACCORDION_TAG);
 const accordionItemTag = unsafeStatic(ACCORDION_ITEM_TAG);
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
-const generalInfoTag = unsafeStatic(EDITOR_GENERAL_INFO_TAG);
-const sortableListTag = unsafeStatic(SORTABLE_LIST_TAG);
-const sortableTileTag = unsafeStatic(SORTABLE_TILE_TAG);
 const EDITOR_STATUS_KEY = "editor-draft-status";
 
 void import("../ui/sortable-list");
 void import("./general-settings-info");
-
-type BooleanConfigFlag =
-  | "camera_bar_rounded_corners"
-  | "camera_bar_shadows"
-  | "camera_rounded_corners"
-  | "camera_shadows"
-  | "camera_switcher_overlay"
-  | "display_event_type_badges"
-  | "display_object_badges"
-  | "display_zone"
-  | "event_rounded_corners"
-  | "event_shadows"
-  | "highlight_camera_on_activity"
-  | "minimal_camera_show_fullscreen_button"
-  | "minimal_camera_show_mute_button"
-  | "minimal_camera_show_pip_button"
-  | "minimal_camera_show_source_label"
-  | "start_alert_takeover_on"
-  | "view_timelapse_on_thumbnail_hover"
-  | "mobile_data_saving"
-  | "outer_padding"
-  | "outer_shadows"
-  | "rounded_outer_corners";
 
 type CameraBooleanConfigFlag = Exclude<
   keyof CameraConfig,
@@ -363,6 +292,12 @@ export class CardEditor extends LitElement {
 
   protected render() {
     const minimal = this._config?.stage_type === "minimal_camera_only";
+    const commonSettings = {
+      config: this._config,
+      hass: this._hass,
+      localize: this._localization.localize,
+      onBooleanChange: this._handleBooleanChange,
+    };
     return staticHtml`
       <${toastRegionTag}
         class="editor-status"
@@ -375,14 +310,29 @@ export class CardEditor extends LitElement {
           item-key="camera"
           .icon=${"camera"}
         >
-          ${this._renderCameraSettings()}
+          ${renderCameraSettings({
+            cameraDisplayName: (camera) => this._cameraDisplayName(camera),
+            cameraName: (entityId) => this._cameraName(entityId),
+            cameraSummary: (camera) => this._cameraSummary(camera),
+            config: this._config,
+            localize: this._localization.localize,
+            onAddCamera: this._addCamera,
+            onEditAdditionalCamera: this._editAdditionalCamera,
+            onEditCamera: this._editCamera,
+            onRequestRemoveCamera: this._requestRemoveCamera,
+          })}
         </${accordionItemTag}>
         <${accordionItemTag}
           heading=${this._t("editor.stage_management")}
           item-key="stage-management"
           .icon=${"layout"}
         >
-          ${this._renderStageManagement()}
+          ${renderStageManagement({
+            config: this._config,
+            localize: this._localization.localize,
+            onStageLayoutChange: this._handleStageLayoutChange,
+            onStageTypeChange: this._handleStageTypeChange,
+          })}
         </${accordionItemTag}>
         ${
           minimal
@@ -391,7 +341,10 @@ export class CardEditor extends LitElement {
           item-key="minimal-camera-configuration"
           .icon=${"camera"}
         >
-          ${this._renderMinimalCameraConfiguration()}
+          ${renderMinimalCameraSettings({
+            ...commonSettings,
+            onMenuPositionChange: this._handleMinimalCameraMenuPositionChange,
+          })}
         </${accordionItemTag}>`
             : null
         }
@@ -402,7 +355,18 @@ export class CardEditor extends LitElement {
           item-key="interactions"
           .icon=${"tune"}
         >
-          ${this._renderInteractionSettings()}
+          ${renderInteractionSettings({
+            choosingOptionalInteraction: this._choosingOptionalInteraction,
+            config: this._config,
+            hass: this._interactionActionHass(),
+            localize: this._localization.localize,
+            onActionsChange: this._handleActionsChange,
+            onAddOptionalInteraction: this._addOptionalInteraction,
+            onRemoveOptionalInteraction: this._removeOptionalInteraction,
+            onToggleOptionalInteractionChoices:
+              this._toggleOptionalInteractionChoices,
+            visibleOptionalInteractions: this._visibleOptionalInteractions,
+          })}
         </${accordionItemTag}>`
             : null
         }
@@ -414,7 +378,13 @@ export class CardEditor extends LitElement {
           item-key="live-media-player"
           .icon=${"play"}
         >
-          ${this._renderLiveMediaPlayerSettings()}
+          ${renderLiveMediaPlayerSettings({
+            ...commonSettings,
+            onAlertTakeoverModeChange: this._handleAlertTakeoverModeChange,
+            onPtzOverlayControlChange: this._handlePtzOverlayControlChange,
+            onSlideAdvanceTimeChange: this._handleSlideAdvanceTimeChange,
+            onSlideTransitionChange: this._handleSlideTransitionChange,
+          })}
         </${accordionItemTag}>`
         }
         ${
@@ -434,7 +404,10 @@ export class CardEditor extends LitElement {
           item-key="reviews"
           .icon=${"reviews"}
         >
-          ${this._renderReviewSettings()}
+          ${renderReviewSettings({
+            ...commonSettings,
+            onEventHistoryDaysChange: this._handleEventHistoryDaysChange,
+          })}
         </${accordionItemTag}>`
         }
         <${accordionItemTag}
@@ -442,7 +415,11 @@ export class CardEditor extends LitElement {
           item-key="general"
           .icon=${"settings"}
         >
-          ${this._renderGeneralSettings()}
+          ${renderGeneralSettings({
+            ...commonSettings,
+            onTitleChange: this._handleTitleChange,
+            onTitleInput: this._handleTitleInput,
+          })}
         </${accordionItemTag}>
         ${
           minimal
@@ -452,7 +429,7 @@ export class CardEditor extends LitElement {
           item-key="layout"
           .icon=${"layout"}
         >
-          ${this._renderLayoutSettings()}
+          ${renderLayoutSettings(commonSettings)}
         </${accordionItemTag}>`
         }
         ${
@@ -463,323 +440,13 @@ export class CardEditor extends LitElement {
           item-key="display"
           .icon=${"tune"}
         >
-          ${this._renderDisplaySettings()}
+          ${renderDisplaySettings(commonSettings)}
         </${accordionItemTag}>`
         }
       </${accordionTag}>
       ${this._renderCameraDialog()}
       ${this._renderRemoveCameraDialog()}
     `;
-  }
-
-  private _renderCameraSettings() {
-    const cameras = this._config?.cameras ?? [];
-    const presentationItems = cameraPresentationItems(cameras);
-    const secondaryCameras = cameras.flatMap((camera) => {
-      const owner = cameras.find(
-        ({ additional_camera: group }) => group?.entity_id === camera.entity_id,
-      );
-      return owner ? [{ camera, owner }] : [];
-    });
-    return staticHtml`${this._config?.stage_type === "minimal_camera_only" ? html`<p class="editor-guidance">${this._t("editor.minimal_camera_first_only")}</p>` : null}<div class="camera-list-heading">
-        <strong>${this._t("editor.cameras")}</strong>
-        <span>${this._t("editor.camera_count", {
-          count: cameras.length,
-          maximum: MAX_CAMERAS,
-        })}</span>
-      </div>
-      <${sortableListTag}
-        data-sortable-scope="cameras"
-        aria-label=${this._t("editor.configured_cameras")}
-      >
-        ${repeat(
-          presentationItems,
-          (item) => item.id,
-          (item) => {
-            const camera = item.cameras[0];
-            const index = cameras.indexOf(camera);
-            const displayName = this._cameraDisplayName(camera);
-            return staticHtml`<${sortableTileTag}
-            item-key=${camera.entity_id}
-            .localize=${this._localization.localize}
-          >
-            <div class="camera-tile-copy">
-              <span>${displayName}</span>
-              <small>${this._cameraSummary(camera)}</small>
-            </div>
-            <button
-              slot="actions"
-              class="tile-action"
-              type="button"
-              title=${this._t("editor.edit_camera")}
-              aria-label=${this._t("editor.edit_camera_named", {
-                name: displayName,
-              })}
-              data-camera-index=${String(index)}
-              @click=${this._editCamera}
-            >
-              ${renderIcon("edit")}
-            </button>
-            <button
-              slot="actions"
-              class="tile-action"
-              type="button"
-              title=${this._t("editor.remove_camera")}
-              aria-label=${this._t("editor.remove_camera_named", {
-                name: displayName,
-              })}
-              data-camera-index=${String(index)}
-              @click=${this._requestRemoveCamera}
-            >
-              ${renderIcon("remove")}
-            </button>
-          </${sortableTileTag}>`;
-          },
-        )}
-      </${sortableListTag}>
-      <div class="secondary-camera-list">
-        ${secondaryCameras.map(({ camera, owner }) => {
-          const name = camera.title || this._cameraName(camera.entity_id);
-          const group = owner.group_name || this._cameraName(owner.entity_id);
-          const ownerIndex = cameras.indexOf(owner);
-          return html`<div class="secondary-camera-tile">
-            <span class="secondary-camera-copy">
-              ${name} · ${this._t("editor.grouped_with", { group })}
-            </span>
-            <button
-              class="tile-action"
-              type="button"
-              title=${this._t("editor.edit_camera")}
-              aria-label=${this._t("editor.edit_camera_named", { name })}
-              data-camera-index=${String(ownerIndex)}
-              @click=${this._editAdditionalCamera}
-            >
-              ${renderIcon("edit")}
-            </button>
-          </div>`;
-        })}
-      </div>
-      <button
-        class="add-camera"
-        type="button"
-        ?disabled=${cameras.length >= MAX_CAMERAS}
-        @click=${this._addCamera}
-      >
-        ${this._t("editor.add_camera")}
-      </button>`;
-  }
-
-  private _renderGeneralSettings() {
-    return staticHtml`
-      <${generalInfoTag}
-        .hass=${this._hass}
-      ></${generalInfoTag}>
-      <ha-input
-        required
-        auto-validate
-        maxlength=${String(MAX_CARD_TITLE_LENGTH)}
-        label=${this._t("editor.title")}
-        .value=${this._config?.title ?? ""}
-        @input=${this._handleTitleInput}
-        @change=${this._handleTitleChange}
-      ></ha-input>
-      ${this._renderBooleanOption(
-        "mobile_data_saving",
-        this._t("editor.mobile_data_saving"),
-        this._config?.mobile_data_saving === true,
-      )}
-    `;
-  }
-
-  private _renderStageManagement() {
-    const stageType = this._config?.stage_type ?? "full";
-    return html`
-      <fieldset class="stage-type-setting">
-        <legend>${this._t("editor.stage_type")}</legend>
-        <div class="stage-type-options">
-          ${this._renderStageTypeOption(
-            "minimal_camera_only",
-            this._t("editor.minimal_camera_stage"),
-            this._t("editor.minimal_camera_stage_description"),
-            stageType,
-          )}
-          ${this._renderStageTypeOption(
-            "camera_only",
-            this._t("editor.camera_only_stage"),
-            this._t("editor.camera_only_stage_description"),
-            stageType,
-          )}
-          ${this._renderStageTypeOption(
-            "full",
-            this._t("editor.full_stage"),
-            this._t("editor.full_stage_description"),
-            stageType,
-          )}
-        </div>
-      </fieldset>
-      ${
-        stageType === "full"
-          ? this._renderStageLayoutOptions(
-              "default",
-              this._t("editor.stage_layout"),
-              stageType,
-            )
-          : null
-      }
-      ${
-        stageType === "full"
-          ? this._renderStageLayoutOptions(
-              "phone",
-              this._t("editor.mobile_stage_layout"),
-              stageType,
-            )
-          : null
-      }
-    `;
-  }
-
-  private _renderStageTypeOption(
-    value: "camera_only" | "full" | "minimal_camera_only",
-    label: string,
-    description: string,
-    selected: AvailableStageType,
-    disabled = false,
-  ) {
-    return html`<label
-      class=${`stage-type-option${selected === value ? " selected" : ""}${
-        disabled ? " disabled" : ""
-      }`}
-    >
-      <input
-        type="radio"
-        name="stage-type"
-        value=${value}
-        .checked=${selected === value}
-        ?disabled=${disabled}
-        @change=${this._handleStageTypeChange}
-      />
-      <span class="stage-type-copy">
-        <strong>${label}</strong>
-        <small>${description}</small>
-      </span>
-    </label>`;
-  }
-
-  private _renderInteractionSettings() {
-    const holdAction = this._config?.hold_action;
-    const doubleTapAction = this._config?.double_tap_action;
-    const showHold =
-      this._visibleOptionalInteractions.has("hold_action") ||
-      holdAction?.action !== "none";
-    const showDoubleTap =
-      this._visibleOptionalInteractions.has("double_tap_action") ||
-      doubleTapAction?.action !== "none";
-    const addable: OptionalInteractionName[] = [
-      ...(!showHold ? (["hold_action"] as const) : []),
-      ...(!showDoubleTap ? (["double_tap_action"] as const) : []),
-    ];
-    return html`<ha-form
-        class="primary-interaction"
-        .hass=${this._interactionActionHass()}
-        .data=${{ tap_action: this._config?.tap_action }}
-        .schema=${[TAP_ACTION_SCHEMA]}
-        .computeLabel=${(schema: { readonly name?: string }) =>
-          schema.name === "tap_action"
-            ? this._t("editor.tap_behavior")
-            : schema.name === "hold_action"
-              ? this._t("editor.hold_behavior")
-              : this._t("editor.double_tap_behavior")}
-        @value-changed=${this._handleActionsChange}
-      ></ha-form>
-      ${
-        showHold
-          ? this._renderOptionalInteraction("hold_action", holdAction)
-          : nothing
-      }
-      ${
-        showDoubleTap
-          ? this._renderOptionalInteraction(
-              "double_tap_action",
-              doubleTapAction,
-            )
-          : nothing
-      }
-      ${
-        addable.length
-          ? html`<div class="add-interaction">
-              <ha-button
-                appearance="filled"
-                variant="brand"
-                size="s"
-                type="button"
-                aria-expanded=${String(this._choosingOptionalInteraction)}
-                @click=${this._toggleOptionalInteractionChoices}
-              >
-                <ha-icon icon="mdi:plus" slot="start"></ha-icon>
-                ${this._t("editor.add_interaction")}
-              </ha-button>
-              ${
-                this._choosingOptionalInteraction
-                  ? html`<div class="add-interaction-choices">
-                      ${addable.map(
-                        (name) =>
-                          html`<ha-button
-                            appearance="plain"
-                            variant="neutral"
-                            size="s"
-                            type="button"
-                            data-interaction=${name}
-                            @click=${this._addOptionalInteraction}
-                          >
-                            ${
-                              name === "hold_action"
-                                ? this._t("editor.hold_behavior")
-                                : this._t("editor.double_tap_behavior")
-                            }
-                          </ha-button>`,
-                      )}
-                    </div>`
-                  : nothing
-              }
-            </div>`
-          : nothing
-      }`;
-  }
-
-  private _renderOptionalInteraction(
-    name: OptionalInteractionName,
-    action: CardConfig[OptionalInteractionName] | undefined,
-  ) {
-    const schema = OPTIONAL_ACTION_SCHEMAS[name];
-    return html`<div class="optional-interaction">
-      <ha-form
-        .hass=${this._interactionActionHass()}
-        .data=${{ [name]: action }}
-        .schema=${[schema]}
-        .computeLabel=${() =>
-          name === "hold_action"
-            ? this._t("editor.hold_behavior")
-            : this._t("editor.double_tap_behavior")}
-        @value-changed=${this._handleActionsChange}
-      ></ha-form>
-      <div class="remove-interaction-action">
-        <ha-button
-          appearance="plain"
-          variant="brand"
-          size="s"
-          type="button"
-          data-interaction=${name}
-          aria-label=${`${this._t("common.remove")} ${
-            name === "hold_action"
-              ? this._t("editor.hold_behavior")
-              : this._t("editor.double_tap_behavior")
-          }`}
-          @click=${this._removeOptionalInteraction}
-        >
-          ${this._t("common.remove")}
-        </ha-button>
-      </div>
-    </div>`;
   }
 
   private _interactionActionHass(): HomeAssistant | undefined {
@@ -803,325 +470,6 @@ export class CardEditor extends LitElement {
       },
     });
     return this._interactionHass;
-  }
-
-  private _renderMinimalCameraConfiguration() {
-    return html`
-      ${this._renderBooleanOption(
-        "highlight_camera_on_activity",
-        this._t("editor.highlight_camera_on_activity"),
-        this._config?.highlight_camera_on_activity !== false,
-      )}
-      ${this._renderBooleanOption(
-        "minimal_camera_show_mute_button",
-        this._t("editor.minimal_camera_show_mute_button"),
-        this._config?.minimal_camera_show_mute_button !== false,
-      )}
-      ${this._renderBooleanOption(
-        "minimal_camera_show_fullscreen_button",
-        this._t("editor.minimal_camera_show_fullscreen_button"),
-        this._config?.minimal_camera_show_fullscreen_button !== false,
-      )}
-      ${this._renderBooleanOption(
-        "minimal_camera_show_pip_button",
-        this._t("editor.minimal_camera_show_pip_button"),
-        this._config?.minimal_camera_show_pip_button !== false,
-      )}
-      ${this._renderBooleanOption(
-        "minimal_camera_show_source_label",
-        this._t("editor.minimal_camera_show_source_label"),
-        this._config?.minimal_camera_show_source_label !== false,
-      )}
-      <div class="segmented-setting">
-        <span class="segmented-setting-label">
-          ${this._t("editor.minimal_camera_menu_position")}
-        </span>
-        <wzc-segmented-control
-          class="editor-segmented-control"
-          data-setting="minimal-camera-menu-position"
-          appearance="compact"
-          .label=${this._t("editor.minimal_camera_menu_position")}
-          .options=${
-            [
-              {
-                label: this._t("editor.minimal_camera_menu_left"),
-                value: "top_left",
-              },
-              {
-                label: this._t("editor.minimal_camera_menu_right"),
-                value: "top_right",
-              },
-            ] satisfies readonly SegmentedControlOption[]
-          }
-          .value=${this._config?.minimal_camera_menu_position ?? "top_left"}
-          @wzc-segmented-control-value=${
-            this._handleMinimalCameraMenuPositionChange
-          }
-        ></wzc-segmented-control>
-      </div>
-    `;
-  }
-
-  private _renderStageLayoutOptions(
-    profile: keyof ConfiguredStageFlow,
-    heading: string,
-    stageType: AvailableStageType,
-  ) {
-    const selected = this._config?.stage_flow[profile] ?? [];
-    return html`<fieldset class="stage-layout-setting">
-      <legend>${heading}</legend>
-      <div class="stage-layout-options">
-        ${builtInStageOptions(stageType).map(
-          (option) =>
-            html`<label
-              class=${`stage-layout-option${
-                selected.includes(option.id) ? " selected" : ""
-              }`}
-            >
-              <input
-                type="checkbox"
-                data-stage-profile=${profile}
-                value=${option.id}
-                .checked=${selected.includes(option.id)}
-                @change=${this._handleStageLayoutChange}
-              />
-              <span>${this._stageDesignLabel(option.id, option.name)}</span>
-            </label>`,
-        )}
-        <label class="stage-layout-option disabled">
-          <input type="checkbox" disabled />
-          <span>${this._t("editor.future_stage_layout")}</span>
-        </label>
-      </div>
-    </fieldset>`;
-  }
-
-  private _stageDesignLabel(id: string, fallback: string): string {
-    if (id === "default-stage") return this._t("editor.default_stage_layout");
-    return fallback;
-  }
-
-  private _renderLiveMediaPlayerSettings() {
-    const takeoverSelected = this._config?.alert_detection_takeover ?? "both";
-    const ptzSelected = this._config?.ptz_overlay_control ?? "start_open";
-    const ptzOptions: readonly SegmentedControlOption[] = [
-      { label: this._t("editor.ptz_overlay_none"), value: "none" },
-      {
-        label: this._t("editor.ptz_overlay_start_closed"),
-        value: "start_closed",
-      },
-      {
-        label: this._t("editor.ptz_overlay_start_open"),
-        value: "start_open",
-      },
-      {
-        disabled: true,
-        label: this._t("editor.ptz_overlay_open_in_drawer"),
-        value: "open_in_drawer",
-      },
-    ];
-    return html`
-      ${this._renderBooleanOption(
-        "camera_switcher_overlay",
-        this._t("editor.camera_switcher_overlay"),
-        this._config?.camera_switcher_overlay === true,
-      )}
-      ${this._renderBooleanOption(
-        "highlight_camera_on_activity",
-        this._t("editor.highlight_camera_on_activity"),
-        this._config?.highlight_camera_on_activity !== false,
-      )}
-      <div class="segmented-setting">
-        <span class="segmented-setting-label">
-          ${this._t("editor.alert_detection_takeover")}
-        </span>
-        <span class="segmented-setting-description">
-          ${this._t("editor.alert_detection_takeover_description")}
-        </span>
-        <wzc-segmented-control
-          class="editor-segmented-control"
-          data-setting="alert-detection-takeover"
-          appearance="compact"
-          .label=${this._t("editor.alert_detection_takeover")}
-          .options=${
-            [
-              {
-                label: this._t("editor.alert_detection_takeover_off"),
-                value: "off",
-              },
-              {
-                label: this._t("editor.alert_detection_takeover_alerts"),
-                value: "alerts",
-              },
-              {
-                label: this._t("editor.alert_detection_takeover_detections"),
-                value: "detections",
-              },
-              {
-                label: this._t("editor.alert_detection_takeover_both"),
-                value: "both",
-              },
-            ] satisfies readonly SegmentedControlOption[]
-          }
-          .value=${takeoverSelected}
-          @wzc-segmented-control-value=${this._handleAlertTakeoverModeChange}
-        ></wzc-segmented-control>
-      </div>
-      ${this._renderBooleanOption(
-        "start_alert_takeover_on",
-        this._t("editor.start_alert_takeover_on"),
-        this._config?.start_alert_takeover_on === true,
-      )}
-      <div class="segmented-setting">
-        <span class="segmented-setting-label" id="ptz-overlay-control-label">
-          ${this._t("editor.ptz_overlay_control")}
-        </span>
-        <wzc-segmented-control
-          class="editor-segmented-control"
-          data-setting="ptz-overlay-control"
-          appearance="compact"
-          .label=${this._t("editor.ptz_overlay_control")}
-          .options=${ptzOptions}
-          .value=${ptzSelected}
-          @wzc-segmented-control-value=${this._handlePtzOverlayControlChange}
-        ></wzc-segmented-control>
-      </div>
-      <div class="segmented-setting">
-        <span class="segmented-setting-label">
-          ${this._t("editor.slide_transition")}
-        </span>
-        <wzc-segmented-control
-          class="editor-segmented-control"
-          data-setting="slide-transition"
-          appearance="compact"
-          .label=${this._t("editor.slide_transition")}
-          .options=${
-            [
-              {
-                label: this._t("editor.slide_transition_none"),
-                value: "none",
-              },
-              {
-                label: this._t("editor.slide_transition_slide"),
-                value: "slide",
-              },
-              {
-                label: this._t("editor.slide_transition_fade"),
-                value: "fade",
-              },
-            ] satisfies readonly SegmentedControlOption[]
-          }
-          .value=${this._config?.slide_transition ?? "slide"}
-          @wzc-segmented-control-value=${this._handleSlideTransitionChange}
-        ></wzc-segmented-control>
-      </div>
-      <div class="segmented-setting">
-        <span class="segmented-setting-label">
-          ${this._t("editor.slide_advance_time")}
-        </span>
-        <wzc-segmented-control
-          class="editor-segmented-control"
-          data-setting="slide-advance-time"
-          appearance="compact"
-          .label=${this._t("editor.slide_advance_time")}
-          .options=${
-            [5, 10, 20, 30].map((seconds) => ({
-              label: this._t("editor.slide_advance_seconds", { seconds }),
-              value: String(seconds),
-            })) satisfies readonly SegmentedControlOption[]
-          }
-          .value=${String(this._config?.slide_advance_time ?? 10)}
-          @wzc-segmented-control-value=${this._handleSlideAdvanceTimeChange}
-        ></wzc-segmented-control>
-      </div>
-    `;
-  }
-
-  private _renderReviewSettings() {
-    return html`
-      <ha-selector
-        label=${this._t("editor.event_history_days")}
-        .hass=${this._hass}
-        .selector=${REVIEW_HISTORY_DAYS_SELECTOR}
-        .value=${this._config?.event_history_days ?? DEFAULT_EVENT_HISTORY_DAYS}
-        @value-changed=${this._handleEventHistoryDaysChange}
-      ></ha-selector>
-      ${this._renderBooleanOption(
-        "view_timelapse_on_thumbnail_hover",
-        this._t("editor.view_timelapse_on_thumbnail_hover"),
-        this._config?.view_timelapse_on_thumbnail_hover !== false,
-      )}
-    `;
-  }
-
-  private _renderLayoutSettings() {
-    return html`
-      ${this._renderBooleanOption(
-        "rounded_outer_corners",
-        this._t("editor.rounded_outer_corners"),
-        this._config?.rounded_outer_corners !== false,
-      )}
-      ${this._renderBooleanOption(
-        "outer_shadows",
-        this._t("editor.outer_shadows"),
-        this._config?.outer_shadows !== false,
-      )}
-      ${this._renderBooleanOption(
-        "outer_padding",
-        this._t("editor.outer_padding"),
-        this._config?.outer_padding !== false,
-      )}
-      ${this._renderBooleanOption(
-        "camera_rounded_corners",
-        this._t("editor.camera_rounded_corners"),
-        this._config?.camera_rounded_corners !== false,
-      )}
-      ${this._renderBooleanOption(
-        "camera_shadows",
-        this._t("editor.camera_shadows"),
-        this._config?.camera_shadows !== false,
-      )}
-      ${this._renderBooleanOption(
-        "camera_bar_rounded_corners",
-        this._t("editor.camera_bar_rounded_corners"),
-        this._config?.camera_bar_rounded_corners !== false,
-      )}
-      ${this._renderBooleanOption(
-        "camera_bar_shadows",
-        this._t("editor.camera_bar_shadows"),
-        this._config?.camera_bar_shadows !== false,
-      )}
-      ${this._renderBooleanOption(
-        "event_rounded_corners",
-        this._t("editor.event_rounded_corners"),
-        this._config?.event_rounded_corners !== false,
-      )}
-      ${this._renderBooleanOption(
-        "event_shadows",
-        this._t("editor.event_shadows"),
-        this._config?.event_shadows !== false,
-      )}
-    `;
-  }
-
-  private _renderDisplaySettings() {
-    return html`
-      ${this._renderBooleanOption(
-        "display_object_badges",
-        this._t("editor.display_object_badges"),
-        this._config?.display_object_badges !== false,
-      )}
-      ${this._renderBooleanOption(
-        "display_event_type_badges",
-        this._t("editor.display_event_type_badges"),
-        this._config?.display_event_type_badges !== false,
-      )}
-      ${this._renderBooleanOption(
-        "display_zone",
-        this._t("editor.display_zone"),
-        this._config?.display_zone !== false,
-      )}
-    `;
   }
 
   private _renderCameraDialog() {
@@ -1752,22 +1100,6 @@ export class CardEditor extends LitElement {
         ],
       },
     } as const;
-  }
-
-  private _renderBooleanOption(
-    key: BooleanConfigFlag,
-    label: string,
-    value: boolean,
-  ) {
-    return html`<ha-selector
-      class="boolean-option"
-      data-config-key=${key}
-      label=${label}
-      .hass=${this._hass}
-      .selector=${BOOLEAN_SELECTOR}
-      .value=${value}
-      @value-changed=${this._handleBooleanChange}
-    ></ha-selector>`;
   }
 
   private _seedDirtyState(): void {
