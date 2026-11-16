@@ -83,10 +83,17 @@
   capability. The browser consumes the authenticated provider-neutral
   WatchZone subscription and never parses Frigate MQTT or subscribes to a
   provider's Home Assistant WebSocket commands directly.
-- Dashboard detachment pauses realtime subscriptions without discarding the
-  current takeover. Reconnection immediately reconciles the retained state
-  against an authoritative, cache-bypassed Review summary so an ongoing alert
-  remains active and an alert that ended while detached is cleared.
+- Dashboard detachment pauses the card subscription without discarding the
+  current takeover. The backend retains one shared provider channel and its
+  active-review replay state for a bounded navigation grace period. A
+  replacement card created after cross-dashboard navigation receives the
+  ongoing alert immediately, while an end received during the absence removes
+  it before replay. A reconnected card also reconciles its retained state
+  against an authoritative, cache-bypassed Review summary.
+- Full Camera and Minimal Camera presentations consume that same retained
+  channel. Minimal Camera preserves its lightweight outline state across a
+  same-card detach and consumes backend replay when Home Assistant creates a
+  replacement card; it does not load the full takeover controller.
 - Card configuration selects Off, Alerts Only, Detections Only, or Both and
   separately selects whether takeover starts enabled. The runtime toolbar
   toggle is session state and resets when the card is recreated.

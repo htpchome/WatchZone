@@ -15,7 +15,7 @@ This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.366`
+- Working version: `0.0.4-dev.367`
 - Current commit: `aea3491` —
   `v0.0.4-dev.360 - docs(handoff): record audit priorities and current baseline`
 - The worktree was clean when this snapshot was replaced. Always verify
@@ -132,6 +132,13 @@ immediately reconciles it with cache-bypassed provider Review summaries, so an
 ongoing alert survives a fast dashboard return while an alert that ended while
 away is cleared.
 
+Corrected at `0.0.4-dev.367`: provider activity subscriptions are shared and
+retained by the backend for a bounded navigation grace period. A replacement
+card created after navigating to another Home Assistant dashboard receives the
+active Review replay, while Reviews that end during the absence are removed
+before the replacement subscribes. Full and Minimal Camera presentations both
+consume this continuity path; Minimal Camera remains independently lightweight.
+
 Explicitly deferred:
 
 - Do not connect Python Stage Design persistence merely for the current
@@ -156,9 +163,9 @@ Explicitly deferred:
 
 ## Validation status
 
-Validated for `v0.0.4-dev.366`:
+Validated for `v0.0.4-dev.367`:
 
-- 461 frontend unit tests
+- 463 frontend unit tests
 - 129 Playwright tests across Chromium, Firefox, and WebKit
 - formatting, lint, type checking, architecture/style/license checks,
   production build, version consistency, and `git diff --check`

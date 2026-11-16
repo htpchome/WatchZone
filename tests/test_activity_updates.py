@@ -36,7 +36,7 @@ class FakeActivityUpdatesProvider:
     def __init__(self) -> None:
         self.calls: list[tuple[str, ActivityUpdateKind]] = []
         self.callback: ActivityUpdateCallback | None = None
-        self.unsubscribe = AsyncMock()
+        self.unsubscribe = Mock()
 
     async def async_subscribe_activity_updates(
         self,
@@ -68,15 +68,89 @@ async def test_service_subscribes_through_entity_platform(
             activity_updates=provider,
         )
     )
-    callback = AsyncMock()
+    callback = Mock()
+    service = ActivityUpdatesService(hass, providers)
 
-    unsubscribe = await ActivityUpdatesService(hass, providers).async_subscribe(
-        entity.entity_id, "reviews", callback
-    )
+    unsubscribe = await service.async_subscribe(entity.entity_id, "reviews", callback)
 
-    assert unsubscribe is provider.unsubscribe
+    assert callable(unsubscribe)
     assert provider.calls == [(entity.entity_id, "reviews")]
-    assert provider.callback is callback
+    assert provider.callback is not None
+    notification = ActivityUpdateNotification(
+        camera_name="front",
+        topic="reviews",
+        classification="alert",
+        id="review-1",
+        phase="new",
+    )
+    provider.callback(notification)
+    callback.assert_called_once_with(notification)
+    unsubscribe()
+    await service.async_close()
+    provider.unsubscribe.assert_called_once_with()
+
+
+async def test_service_replays_active_review_across_dashboard_replacement(
+    hass: HomeAssistant,
+) -> None:
+    """A replacement card reuses one retained provider activity channel."""
+    entity = er.async_get(hass).async_get_or_create(
+        "camera", "frigate", "front", suggested_object_id="front"
+    )
+    provider = FakeActivityUpdatesProvider()
+    providers = ProviderRegistry()
+    providers.register(
+        ProviderExtension(
+            api_version=EXTENSION_API_VERSION,
+            provider_id="frigate",
+            entity_platforms=frozenset({"frigate"}),
+            activity_updates=provider,
+        )
+    )
+    service = ActivityUpdatesService(hass, providers)
+    first_callback = Mock()
+    first_release = await service.async_subscribe(
+        entity.entity_id, "reviews", first_callback
+    )
+    notification = ActivityUpdateNotification(
+        camera_name="front",
+        topic="reviews",
+        classification="alert",
+        id="review-1",
+        phase="new",
+    )
+    assert provider.callback is not None
+    provider.callback(notification)
+    first_release()
+
+    replacement_callback = Mock()
+    replacement_release = await service.async_subscribe(
+        entity.entity_id, "reviews", replacement_callback
+    )
+    await hass.async_block_till_done()
+
+    assert provider.calls == [(entity.entity_id, "reviews")]
+    replacement_callback.assert_called_once_with(notification)
+    replacement_release()
+
+    provider.callback(
+        ActivityUpdateNotification(
+            camera_name="front",
+            topic="reviews",
+            classification="alert",
+            id="review-1",
+            phase="end",
+        )
+    )
+    after_end_callback = Mock()
+    after_end_release = await service.async_subscribe(
+        entity.entity_id, "reviews", after_end_callback
+    )
+    await hass.async_block_till_done()
+    after_end_callback.assert_not_called()
+    after_end_release()
+    await service.async_close()
+    provider.unsubscribe.assert_called_once_with()
 
 
 async def test_frigate_provider_normalizes_review_change_feed(

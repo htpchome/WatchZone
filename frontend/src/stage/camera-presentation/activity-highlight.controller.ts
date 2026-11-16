@@ -28,7 +28,8 @@ export class CameraActivityHighlightController implements ReactiveController {
   ): void {
     if (this._api?.identity === api?.identity && this._entityId === entityId)
       return;
-    this._stop();
+    this._stopSubscription();
+    this._clearActivity();
     this._api = api;
     this._entityId = entityId;
     if (this._connected) this._start();
@@ -41,7 +42,7 @@ export class CameraActivityHighlightController implements ReactiveController {
 
   public hostDisconnected(): void {
     this._connected = false;
-    this._stop();
+    this._stopSubscription();
   }
 
   private _start(): void {
@@ -86,12 +87,15 @@ export class CameraActivityHighlightController implements ReactiveController {
     this._host.requestUpdate();
   }
 
-  private _stop(): void {
+  private _stopSubscription(): void {
     this._generation += 1;
     this._unsubscribe?.();
     this._unsubscribe = undefined;
     if (this._retryTimer !== undefined) window.clearTimeout(this._retryTimer);
     this._retryTimer = undefined;
+  }
+
+  private _clearActivity(): void {
     this._reviews.clear();
     this.classification = undefined;
   }
