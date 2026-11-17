@@ -35,7 +35,7 @@
   gesture, while the viewport remains bounded without expanding the Stage or
   reserving a stable scrollbar gutter. After approximately two rendered rows
   have passed, a labeled Top action floats at the bottom center of the visible
-  viewport and immediately returns the recording viewport to its beginning. It
+  viewport and smoothly returns the recording viewport to its beginning. It
   remains hidden for a non-scrolling collection.
 
 ## Calendar and selection

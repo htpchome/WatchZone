@@ -57,7 +57,7 @@ Always recheck `git status`, `git log -1`, and
 - Reviews, Events, Recordings, and Exports use bounded internal scrolling. A
   shared floating Top control appears at the bottom center only after roughly
   two rendered tile heights of scrolling, stays hidden for non-scrolling
-  collections, and returns immediately to `scrollTop = 0`.
+  collections, and smoothly returns that internal viewport to its beginning.
 
 ### Card layout and mobile behavior
 

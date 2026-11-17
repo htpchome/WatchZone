@@ -135,12 +135,17 @@ describe("activity list media failures", () => {
     const scroller = list.shadowRoot?.querySelector<HTMLElement>(".scroller");
     if (!scroller) throw new Error("Expected activity scroller.");
     scroller.scrollTop = 750;
+    const scrollTo = vi.fn((options: ScrollToOptions) => {
+      scroller.scrollTop = options.top ?? scroller.scrollTop;
+    });
+    scroller.scrollTo = scrollTo as typeof scroller.scrollTo;
 
     list.shadowRoot
       ?.querySelector("wzc-scroll-top")
       ?.shadowRoot?.querySelector<HTMLButtonElement>('button[aria-label="Top"]')
       ?.click();
 
+    expect(scrollTo).toHaveBeenCalledWith({ behavior: "smooth", top: 0 });
     expect(scroller.scrollTop).toBe(0);
   });
 

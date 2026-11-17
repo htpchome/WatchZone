@@ -19,7 +19,10 @@ import { RECORDINGS_TAG } from "../../../core/constants";
 import { homeAssistantNumberFormat } from "../../../core/number-format";
 import { renderIcon } from "../../../ui/icons";
 import "../../../ui/media-day-header";
-import { shouldShowScrollTop } from "../../../ui/scroll-top";
+import {
+  scrollMediaViewportToTop,
+  shouldShowScrollTop,
+} from "../../../ui/scroll-top";
 import { ToastManager } from "../../../ui/toast-manager";
 import "../../../ui/toast-region";
 import type { CameraSelectionContext } from "../../camera-selection-context";
@@ -134,8 +137,7 @@ export class RecordingsModule extends LitElement {
   private readonly _scrollToTop = (): void => {
     const scroller = this.renderRoot.querySelector<HTMLElement>(".scroller");
     if (!scroller) return;
-    scroller.scrollTop = 0;
-    this._showScrollTop = false;
+    scrollMediaViewportToTop(scroller);
   };
 
   private readonly _handleScroll = (event: Event): void => {

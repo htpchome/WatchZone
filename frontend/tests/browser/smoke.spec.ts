@@ -3908,6 +3908,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
     });
   expect(actionInset).toBeGreaterThanOrEqual(9);
   expect(actionInset).toBeLessThanOrEqual(12);
+  await expect(events.locator(".actions").first()).toHaveCSS("gap", "8px");
   const tileActionRadius = await events
     .locator(".wzc-activity-action")
     .first()
@@ -4016,7 +4017,20 @@ test("keeps activity content in an independently scrolling viewport", async ({
       const topControl = list.shadowRoot?.querySelector("wzc-scroll-top");
       const topVisible = topControl?.hasAttribute("hidden") === false;
       topControl?.shadowRoot?.querySelector("button")?.click();
-      await list.updateComplete;
+      await new Promise<void>((resolve) => {
+        const startedAt = performance.now();
+        const waitForTop = () => {
+          if (
+            viewportElement.scrollTop === 0 ||
+            performance.now() - startedAt >= 2_000
+          ) {
+            resolve();
+            return;
+          }
+          requestAnimationFrame(waitForTop);
+        };
+        requestAnimationFrame(waitForTop);
+      });
       const scrollAfterTop = viewportElement.scrollTop;
       list.items = originalItems;
       await list.updateComplete;
@@ -4485,6 +4499,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   );
   await expect(recordedControls).toHaveCount(2);
   await expect(recordedControls.first()).toHaveCSS("border-radius", "4px");
+  await expect(mediaDialog.locator(".footer-actions")).toHaveCSS("gap", "8px");
   expect(
     await mediaDialog
       .locator(".footer-actions .wzc-activity-action")

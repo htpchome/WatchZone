@@ -1,11 +1,16 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SCROLL_TOP_TAG } from "../src/core/constants";
-import { ScrollTop, shouldShowScrollTop } from "../src/ui/scroll-top";
+import {
+  ScrollTop,
+  scrollMediaViewportToTop,
+  shouldShowScrollTop,
+} from "../src/ui/scroll-top";
 
 describe("scroll-to-top control", () => {
   afterEach(() => {
     document.body.replaceChildren();
+    vi.unstubAllGlobals();
   });
 
   it("appears only after a scrolling viewport passes two rendered tiles", () => {
@@ -40,5 +45,33 @@ describe("scroll-to-top control", () => {
     const button = control.shadowRoot?.querySelector("button");
     expect(button?.textContent?.trim()).toBe("Top");
     expect(button?.getAttribute("aria-label")).toBe("Top");
+  });
+
+  it("smoothly returns the bounded viewport to the top", () => {
+    const scroller = document.createElement("div");
+    const scrollTo = vi.fn();
+    scroller.scrollTo = scrollTo;
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn(() => ({ matches: false })),
+    );
+
+    scrollMediaViewportToTop(scroller);
+
+    expect(scrollTo).toHaveBeenCalledWith({ behavior: "smooth", top: 0 });
+  });
+
+  it("returns immediately when reduced motion is requested", () => {
+    const scroller = document.createElement("div");
+    const scrollTo = vi.fn();
+    scroller.scrollTo = scrollTo;
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn(() => ({ matches: true })),
+    );
+
+    scrollMediaViewportToTop(scroller);
+
+    expect(scrollTo).toHaveBeenCalledWith({ behavior: "auto", top: 0 });
   });
 });

@@ -543,7 +543,7 @@ export const activityListStyles = css`
   .actions {
     align-self: center;
     display: flex;
-    gap: 0.2rem;
+    gap: var(--wzc-media-action-gap);
     grid-column: 4;
     grid-row: 1 / -1;
     margin-inline-end: var(--wzc-event-action-margin);

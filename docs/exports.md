@@ -49,7 +49,7 @@ but the Stage module and frontend transport remain provider-neutral.
   fixed row geometry so source aspect ratio cannot resize the tile.
 - After approximately two rendered tiles have passed, a labeled Top action
   floats at the bottom center of the visible list or grid viewport and
-  immediately returns that internal viewport to its beginning. It remains
+  smoothly returns that internal viewport to its beginning. It remains
   hidden when the collection cannot scroll.
 - Selecting a ready tile outside its controls opens the export media dialog.
 - Rename is inline module workflow. Remove requires confirmation. Add to Case is

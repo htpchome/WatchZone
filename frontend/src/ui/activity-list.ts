@@ -32,7 +32,7 @@ import {
 } from "./activity-badge-presentations";
 import "./badge";
 import "./media-day-header";
-import { shouldShowScrollTop } from "./scroll-top";
+import { scrollMediaViewportToTop, shouldShowScrollTop } from "./scroll-top";
 import { activityActionStyles } from "./activity-action.styles";
 import { activityListStyles } from "./activity-list.styles";
 import { buttonBaseStyles } from "./button.styles";
@@ -1023,8 +1023,7 @@ export class ActivityList extends LitElement {
   private readonly _scrollToTop = (): void => {
     const scroller = this.renderRoot.querySelector<HTMLElement>(".scroller");
     if (!scroller) return;
-    scroller.scrollTop = 0;
-    this._showScrollTop = false;
+    scrollMediaViewportToTop(scroller);
   };
 
   private _updateHoverPreview(

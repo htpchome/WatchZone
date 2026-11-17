@@ -28,7 +28,10 @@ import { openRecordedMedia } from "../../../core/recorded-media";
 import { buttonBaseStyles } from "../../../ui/button.styles";
 import { renderIcon } from "../../../ui/icons";
 import "../../../ui/media-day-header";
-import { shouldShowScrollTop } from "../../../ui/scroll-top";
+import {
+  scrollMediaViewportToTop,
+  shouldShowScrollTop,
+} from "../../../ui/scroll-top";
 import { ToastManager } from "../../../ui/toast-manager";
 import "../../../ui/toast-region";
 import type { CameraSelectionContext } from "../../camera-selection-context";
@@ -572,8 +575,7 @@ export class ExportsModule extends LitElement {
   private readonly _scrollToTop = (): void => {
     const scroller = this.renderRoot.querySelector<HTMLElement>(".scroller");
     if (!scroller) return;
-    scroller.scrollTop = 0;
-    this._showScrollTop = false;
+    scrollMediaViewportToTop(scroller);
   };
 
   static styles = [buttonBaseStyles, exportsStyles];

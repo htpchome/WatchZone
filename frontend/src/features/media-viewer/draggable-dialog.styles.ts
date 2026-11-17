@@ -110,7 +110,7 @@ export const draggableDialogStyles = css`
     display: flex;
     flex-wrap: nowrap;
     flex: none;
-    gap: 0.4rem;
+    gap: var(--wzc-media-action-gap);
     justify-content: flex-end;
     min-block-size: var(--wzc-recorded-media-footer-min-block-size);
     padding-inline: var(--wzc-recorded-media-dialog-padding)
