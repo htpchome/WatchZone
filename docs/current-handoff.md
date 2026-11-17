@@ -83,7 +83,10 @@ Always recheck `git status`, `git log -1`, and
   capped visually at `1.5rem`, plus trailing scroll padding for the complete
   hardware inset. Tiles remain visible through glass themes without stranding
   the final tile under the home indicator. The floating Top control is offset
-  above the complete hardware inset.
+  above the complete hardware inset. Companion applies an equal trailing layout
+  overlap without adding that inset to the card viewport height, so HA's own
+  safe-area spacing cannot create outer-window scrolling; only the active media
+  list scrolls beneath the stationary veil.
 - Native Companion pull-to-refresh is preserved. Internal media scrollers hand
   overscroll back to HA; no WatchZone-specific reload gesture exists. On iOS,
   list-origin pulls may require a longer pull-and-hold, consistent with other

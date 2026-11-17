@@ -42,7 +42,11 @@ retained session, and respects reduced-motion preference.
   beneath the home indicator. Home Assistant's reported
   `--safe-area-inset-bottom` is authoritative, with the browser environment
   inset as fallback. WatchZone does not reduce the hardware inset itself or
-  apply it to ordinary card-contained surfaces.
+  apply it to ordinary card-contained surfaces. In Companion, the card uses an
+  equal trailing layout overlap without adding that inset to the card viewport
+  height. Home Assistant's own safe-area spacing therefore does not create
+  outer-window scrolling; only the media viewport moves beneath the stationary
+  veil.
 - The camera module owns the camera stage, including its clipping radius and
   stage shadow. Appearance is applied to that stable module boundary, not to an
   individual carousel slide.

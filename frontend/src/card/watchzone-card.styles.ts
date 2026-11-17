@@ -129,6 +129,11 @@ export const cardStyles = css`
     --wzc-media-safe-area-underlap: var(--wzc-safe-area-inset-bottom, 0px);
   }
 
+  :host(.companion-edge-to-edge-fit-viewport.height-mode-fit-viewport) {
+    --wzc-mobile-bottom-underlap: 0px;
+    margin-block-end: calc(-1 * var(--wzc-safe-area-inset-bottom, 0px));
+  }
+
   :host(.height-mode-fill-container) ha-card {
     block-size: 100%;
     height: 100%;

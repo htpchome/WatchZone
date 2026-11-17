@@ -8410,6 +8410,76 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
   });
 });
 
+test("keeps Companion edge-to-edge fit viewport inside the outer window", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 500, height: 1200 });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      get: () =>
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Home Assistant/2026.9 Mobile/HomeAssistant, like Safari",
+    });
+  });
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+
+  const result = await page
+    .locator("watchzone-card")
+    .evaluate(async (element) => {
+      const card = element as HTMLElement & {
+        setConfig(config: unknown): void;
+        updateComplete: Promise<boolean>;
+      };
+      document.body.style.margin = "0";
+      document.documentElement.style.setProperty(
+        "--safe-area-inset-bottom",
+        "36px",
+      );
+      const view = document.createElement("div");
+      view.style.paddingBlockEnd = "36px";
+      element.replaceWith(view);
+      view.append(element);
+      card.setConfig({
+        card_height_mode_phone: "fit_viewport",
+        type: "custom:watchzone-card",
+      });
+      await card.updateComplete;
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      );
+      const style = getComputedStyle(card);
+      const surface = card.shadowRoot?.querySelector("ha-card");
+      if (!(surface instanceof HTMLElement))
+        throw new Error("Card surface was not rendered");
+      return {
+        cardHeight: surface.getBoundingClientRect().height,
+        companionFitClass: card.classList.contains(
+          "companion-edge-to-edge-fit-viewport",
+        ),
+        documentHeight: document.documentElement.scrollHeight,
+        marginBlockEnd: style.marginBlockEnd,
+        mediaSafeAreaUnderlap: style
+          .getPropertyValue("--wzc-media-safe-area-underlap")
+          .trim(),
+        viewportHeightAddition: style
+          .getPropertyValue("--wzc-mobile-bottom-underlap")
+          .trim(),
+        viewportHeight: window.innerHeight,
+      };
+    });
+
+  expect(result).toEqual({
+    cardHeight: 1200,
+    companionFitClass: true,
+    documentHeight: 1200,
+    marginBlockEnd: "-36px",
+    mediaSafeAreaUnderlap: "36px",
+    viewportHeightAddition: "0px",
+    viewportHeight: 1200,
+  });
+});
+
 test("exposes and honors the WatchZone semantic theme-token contract", async ({
   page,
 }) => {

@@ -46,7 +46,10 @@ new browser API makes another platform easier or faster.
   chain as `ha-card`. Its visible height is capped at `1.5rem`, independently
   of the complete hardware inset retained for underlap and scroll clearance.
   Floating media-list controls are offset above that complete inset and never
-  occupy the unsafe band. Home Assistant's
+  occupy the unsafe band. In Companion, the edge-to-edge card overlaps Home
+  Assistant's equal trailing safe-area space without adding that inset to the
+  card viewport height, so the outer window remains fixed; only the media
+  viewport scrolls beneath the stationary veil. Home Assistant's
   Companion-aware safe-area custom property is authoritative and the browser
   environment inset is only its fallback. Respect text scaling, reduced
   motion, orientation changes, and Home Assistant theme tokens where they
