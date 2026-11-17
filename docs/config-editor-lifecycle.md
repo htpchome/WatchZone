@@ -19,6 +19,13 @@ physical-phone values. Each selected value applies uniformly to the module
 rather than individual cameras. YAML output omits default values while
 preserving list order and stable entity identity.
 
+The Minimal Camera Stage does not render Layout Settings. Its intrinsic camera
+presentation ignores the general card-height and appearance matrix. Any
+presentation option that is intentionally supported by that Stage belongs in
+Minimal Camera Configuration and must not be exposed through the general
+layout section. Edge-to-edge on mobile phones is currently supported there and
+removes Home Assistant's outer Sections spacing for the Minimal Camera Stage.
+
 The camera dialog is a nested draft transaction. Update remains disabled until
 the normalized camera draft is valid and differs from the camera being edited;
 Cancel discards the nested draft. Dialog actions use Home Assistant button

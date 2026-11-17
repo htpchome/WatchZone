@@ -8105,6 +8105,27 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
       sections.attachShadow({ mode: "open" }).append(wrapper);
       document.body.replaceChildren(sections);
 
+      card.setConfig({
+        stage_type: "minimal_camera_only",
+        type: "custom:watchzone-card",
+      });
+      await card.updateComplete;
+      const minimalEdge = {
+        containerPadding: container.style.padding,
+        wrapperPadding: wrapper.style.padding,
+      };
+
+      card.setConfig({
+        edge_to_edge_phone: false,
+        stage_type: "minimal_camera_only",
+        type: "custom:watchzone-card",
+      });
+      await card.updateComplete;
+      const minimalRestored = {
+        containerPadding: container.style.padding,
+        wrapperPadding: wrapper.style.padding,
+      };
+
       card.setConfig({ type: "custom:watchzone-card" });
       await card.updateComplete;
       const edge = {
@@ -8121,6 +8142,8 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
       await card.updateComplete;
       return {
         edge,
+        minimalEdge,
+        minimalRestored,
         restored: {
           containerPadding: container.style.padding,
           wrapperPadding: wrapper.style.padding,
@@ -8134,6 +8157,14 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
       gap: "24px 8px",
       rowGap: "8px",
       wrapperPadding: "0px",
+    },
+    minimalEdge: {
+      containerPadding: "0px",
+      wrapperPadding: "0px",
+    },
+    minimalRestored: {
+      containerPadding: "24px 0px",
+      wrapperPadding: "0px 32px",
     },
     restored: {
       containerPadding: "24px 0px",

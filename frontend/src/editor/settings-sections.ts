@@ -149,6 +149,12 @@ export function renderMinimalCameraSettings(
   return html`
     ${renderBooleanOption(
       options,
+      "edge_to_edge_phone",
+      localize("editor.edge_to_edge_phone"),
+      config?.edge_to_edge_phone !== false,
+    )}
+    ${renderBooleanOption(
+      options,
       "highlight_camera_on_activity",
       localize("editor.highlight_camera_on_activity"),
       config?.highlight_camera_on_activity !== false,
@@ -357,15 +363,11 @@ export function renderReviewSettings(options: ReviewSettingsOptions) {
   `;
 }
 
-export function renderLayoutSettings(
-  options: CommonSectionOptions,
-  minimal = false,
-) {
+export function renderLayoutSettings(options: CommonSectionOptions) {
   return staticHtml`
     <${heightSelectorTag}
       .hass=${options.hass}
       .config=${options.config}
-      .minimal=${minimal}
       @value-changed=${options.onChange}
     ></${heightSelectorTag}>
   `;

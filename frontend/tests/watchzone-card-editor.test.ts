@@ -93,6 +93,11 @@ async function setBooleanSelector(
   let control = queryBooleanSelector(editor, selector);
   if (!control && selector.includes("data-config-key")) {
     const key = selector.match(/data-config-key="([^"]+)"/)?.[1] ?? "";
+    const hasMinimalCameraSettings = Boolean(
+      editor.shadowRoot?.querySelector(
+        `${ACCORDION_ITEM_TAG}[item-key="minimal-camera-configuration"]`,
+      ),
+    );
     const section =
       key === "mobile_data_saving"
         ? "general"
@@ -100,25 +105,27 @@ async function setBooleanSelector(
           ? "reviews"
           : key.startsWith("display_")
             ? "display"
-            : [
-                  "rounded_outer_corners",
-                  "outer_shadows",
-                  "outer_padding",
-                  "edge_to_edge_phone",
-                  "camera_rounded_corners",
-                  "camera_shadows",
-                  "camera_bar_rounded_corners",
-                  "camera_bar_shadows",
-                  "event_rounded_corners",
-                  "event_shadows",
-                ].includes(key.replace(/_phone$/, "")) ||
-                key === "edge_to_edge_phone"
-              ? "layout"
-              : editor.shadowRoot?.querySelector(
-                    `${ACCORDION_ITEM_TAG}[item-key="minimal-camera-configuration"]`,
-                  )
-                ? "minimal-camera-configuration"
-                : "live-media-player";
+            : key === "edge_to_edge_phone" && hasMinimalCameraSettings
+              ? "minimal-camera-configuration"
+              : [
+                    "rounded_outer_corners",
+                    "outer_shadows",
+                    "outer_padding",
+                    "edge_to_edge_phone",
+                    "camera_rounded_corners",
+                    "camera_shadows",
+                    "camera_bar_rounded_corners",
+                    "camera_bar_shadows",
+                    "event_rounded_corners",
+                    "event_shadows",
+                  ].includes(key.replace(/_phone$/, "")) ||
+                  key === "edge_to_edge_phone"
+                ? "layout"
+                : editor.shadowRoot?.querySelector(
+                      `${ACCORDION_ITEM_TAG}[item-key="minimal-camera-configuration"]`,
+                    )
+                  ? "minimal-camera-configuration"
+                  : "live-media-player";
     await openEditorSection(editor, section);
     control = queryBooleanSelector(editor, selector);
     if (!control && section === "layout") {
@@ -362,7 +369,6 @@ describe("watchzone-card-editor", () => {
       "minimal-camera-configuration",
       "interactions",
       "general",
-      "layout",
     ]);
     const cameraSettings = await openEditorSection(editor, "camera");
     expect(cameraSettings.textContent).toContain(
@@ -383,19 +389,16 @@ describe("watchzone-card-editor", () => {
         ?.querySelector('[data-config-key="minimal_camera_show_source_label"]')
         ?.getAttribute("label"),
     ).toBe("Show Source Label");
-    const layout = await openEditorSection(editor, "layout");
-    await customElements.whenDefined("wzc-editor-height-selector");
-    const heightSettings = layout.querySelector("wzc-editor-height-selector");
-    await heightSettings?.updateComplete;
-    expect(heightSettings?.shadowRoot?.textContent).toContain(
-      "How card height works",
-    );
     expect(
-      [
-        ...(heightSettings?.shadowRoot?.querySelectorAll(".boolean-option") ??
-          []),
-      ].map((control) => (control as HTMLElement).dataset.configKey),
-    ).toEqual(["edge_to_edge_phone"]);
+      minimalConfiguration?.querySelector<TestBooleanSelector>(
+        '[data-config-key="edge_to_edge_phone"]',
+      )?.value,
+    ).toBe(true);
+    expect(
+      editor.shadowRoot?.querySelector(
+        `${ACCORDION_ITEM_TAG}[item-key="layout"]`,
+      ),
+    ).toBeNull();
     const interactions = await openEditorSection(editor, "interactions");
     const interactionForm = interactions.querySelector<
       HTMLElement & {

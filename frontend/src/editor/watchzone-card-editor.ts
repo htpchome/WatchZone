@@ -467,15 +467,19 @@ export class CardEditor extends LitElement {
             }),
           )}
         </${accordionItemTag}>
-        <${accordionItemTag}
+        ${
+          minimal
+            ? null
+            : staticHtml`<${accordionItemTag}
           heading=${this._t("editor.layout_settings")}
           item-key="layout"
           .icon=${"layout"}
         >
           ${this._renderSection("layout", () =>
-            renderLayoutSettings(commonSettings, minimal),
+            renderLayoutSettings(commonSettings),
           )}
-        </${accordionItemTag}>
+        </${accordionItemTag}>`
+        }
         ${
           minimal
             ? null

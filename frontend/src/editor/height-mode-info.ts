@@ -36,14 +36,12 @@ export class HeightModeSelector extends LitElement {
   public static properties = {
     hass: { attribute: false },
     config: { attribute: false },
-    minimal: { type: Boolean },
   };
 
   public static styles = [heightModeSelectorStyles, heightModeInfoStyles];
 
   public config?: CardConfig;
   public hass?: HomeAssistant;
-  public minimal = false;
   private readonly _localization = new LocalizationController(this);
 
   protected willUpdate(): void {
@@ -91,11 +89,7 @@ export class HeightModeSelector extends LitElement {
           "edge_to_edge_phone",
           this.config?.edge_to_edge_phone !== false,
         )}
-        ${
-          this.minimal
-            ? null
-            : APPEARANCE_KEYS.map((key) => this._renderAppearanceRow(key))
-        }
+        ${APPEARANCE_KEYS.map((key) => this._renderAppearanceRow(key))}
       </div>
     `;
   }

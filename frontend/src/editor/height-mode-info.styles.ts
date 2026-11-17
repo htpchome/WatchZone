@@ -67,7 +67,7 @@ export const heightModeSelectorStyles = css`
   .appearance-header,
   .appearance-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 6rem 6rem;
+    grid-template-columns: minmax(0, 1fr) 10rem 6rem;
     align-items: center;
   }
 
@@ -87,9 +87,10 @@ export const heightModeSelectorStyles = css`
 
   .device-info {
     display: grid;
+    flex: 0 0 1rem;
     place-items: center;
-    inline-size: 1.25rem;
-    block-size: 1.25rem;
+    inline-size: 1rem;
+    block-size: 1rem;
     color: var(--wzc-color-text-2);
     cursor: help;
   }
@@ -156,7 +157,7 @@ export const heightModeSelectorStyles = css`
   @container (max-width: ${responsiveWidths.compact}) {
     .appearance-header,
     .appearance-row {
-      grid-template-columns: minmax(0, 1fr) 5rem 5rem;
+      grid-template-columns: minmax(0, 1fr) 8rem 5rem;
     }
 
     .device-heading {
