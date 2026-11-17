@@ -4,9 +4,6 @@ import { responsiveWidths } from "../../../styles/responsive-widths";
 
 export const exportsStyles = css`
   :host {
-    --wzc-export-list-gap: 0.5rem;
-    --wzc-export-list-padding: 0.25rem;
-    --wzc-export-tile-block-size: 5.75rem;
     box-sizing: border-box;
     display: block;
     block-size: 100%;

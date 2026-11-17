@@ -29,9 +29,10 @@ export const stageRuntimeStyles = css`
   }
 
   .stage-stack {
+    contain: var(--wzc-stage-flex-containment, none);
     display: grid;
     grid-template-rows: max-content minmax(0, 1fr);
-    min-block-size: var(--wzc-stage-flex-content-min, 0);
+    min-block-size: var(--wzc-stage-flex-stack-min, 0);
   }
 
   .stage-stack-navigation {

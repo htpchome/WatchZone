@@ -7847,10 +7847,47 @@ test("applies viewport and parent height modes without shrinking the Full Stage 
     });
   expect(fitListHeight).toBeGreaterThanOrEqual(threeTileMinimum - 1);
 
+  await page.locator("wzc-activity-list").evaluate(async (element) => {
+    const list = element as HTMLElement & {
+      items: Array<Record<string, unknown>>;
+      updateComplete: Promise<boolean>;
+    };
+    list.items = Array.from({ length: 100 }, (_, index) => ({
+      cameraLabel: "Front",
+      clipUrl: null,
+      endTime: 1_700_000_030 - index,
+      id: `height-mode-${index}`,
+      objectLabels: ["person"],
+      playable: false,
+      playbackSources: [],
+      preferredTransport: "file",
+      revision: `height-mode-${index}`,
+      snapshotUrl: null,
+      startTime: 1_700_000_000 - index,
+      thumbnailUrl: null,
+      zones: [],
+    }));
+    await list.updateComplete;
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve()),
+    );
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve()),
+    );
+    await list.updateComplete;
+  });
+  expect((await card.boundingBox())?.height).toBeCloseTo(
+    fitBounds?.height ?? Number.NaN,
+    0,
+  );
+
   await page.setViewportSize({ width: 500, height: 500 });
   await expect
     .poll(async () => (await card.boundingBox())?.height ?? 0)
     .toBeGreaterThan(500 - headerHeight);
+  expect((await card.boundingBox())?.height).toBeLessThan(
+    fitBounds?.height ?? Number.POSITIVE_INFINITY,
+  );
   await expect
     .poll(() =>
       page
@@ -7882,6 +7919,35 @@ test("applies viewport and parent height modes without shrinking the Full Stage 
     .locator("wzc-activity-list .viewport")
     .evaluate((element) => element.getBoundingClientRect().height);
   expect(filledListHeight).toBeGreaterThan(fitListHeight);
+  await page.locator("wzc-activity-list").evaluate(async (element) => {
+    const list = element as HTMLElement & {
+      items: Array<Record<string, unknown>>;
+      updateComplete: Promise<boolean>;
+    };
+    list.items = Array.from({ length: 100 }, (_, index) => ({
+      cameraLabel: "Front",
+      clipUrl: null,
+      endTime: 1_700_000_030 - index,
+      id: `fill-height-mode-${index}`,
+      objectLabels: ["person"],
+      playable: false,
+      playbackSources: [],
+      preferredTransport: "file",
+      revision: `fill-height-mode-${index}`,
+      snapshotUrl: null,
+      startTime: 1_700_000_000 - index,
+      thumbnailUrl: null,
+      zones: [],
+    }));
+    await list.updateComplete;
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve()),
+    );
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve()),
+    );
+  });
+  expect((await card.boundingBox())?.height).toBeCloseTo(1200, 0);
 });
 
 test("applies outer shell appearance toggles without changing card identity", async ({

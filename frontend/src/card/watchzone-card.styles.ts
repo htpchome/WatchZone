@@ -31,8 +31,10 @@ export const cardStyles = css`
   }
 
   :host(.height-mode-fit-viewport) {
-    --wzc-stage-flex-track-min: min-content;
-    --wzc-stage-flex-content-min: min-content;
+    --wzc-stage-flex-track-min: var(--wzc-stage-flex-stack-min-block-size);
+    --wzc-stage-flex-stack-min: var(--wzc-stage-flex-stack-min-block-size);
+    --wzc-stage-flex-content-min: var(--wzc-stage-flex-media-min-block-size);
+    --wzc-stage-flex-containment: size;
     --wzc-activity-list-max-block-size: none;
     --wzc-recording-list-max-block-size: none;
     --wzc-export-list-max-block-size: none;
@@ -41,8 +43,10 @@ export const cardStyles = css`
   }
 
   :host(.height-mode-fill-container) {
-    --wzc-stage-flex-track-min: min-content;
-    --wzc-stage-flex-content-min: min-content;
+    --wzc-stage-flex-track-min: var(--wzc-stage-flex-stack-min-block-size);
+    --wzc-stage-flex-stack-min: var(--wzc-stage-flex-stack-min-block-size);
+    --wzc-stage-flex-content-min: var(--wzc-stage-flex-media-min-block-size);
+    --wzc-stage-flex-containment: size;
     --wzc-activity-list-max-block-size: none;
     --wzc-recording-list-max-block-size: none;
     --wzc-export-list-max-block-size: none;

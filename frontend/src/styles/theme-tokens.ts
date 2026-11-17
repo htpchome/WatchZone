@@ -416,6 +416,9 @@ export const themeTokens = css`
     --wzc-recording-list-gap: 0.5rem;
     --wzc-recording-list-padding: 0.25rem;
     --wzc-recording-tile-block-size: 4rem;
+    --wzc-export-list-gap: 0.5rem;
+    --wzc-export-list-padding: 0.25rem;
+    --wzc-export-tile-block-size: 5.75rem;
     --wzc-recording-tile-background: var(--wzc-media-tile-background);
     --wzc-recording-tile-hover-background: var(
       --wzc-media-tile-hover-background
@@ -531,6 +534,29 @@ export const themeTokens = css`
     --wzc-stage-stack-navigation-gap: 0.35rem;
     --wzc-stage-stack-navigation-padding: 0.25rem;
     --wzc-stage-stack-button-size: 2.75rem;
+    --wzc-stage-flex-media-min-block-size: max(
+      calc(
+        var(--wzc-media-day-header-block-size) + 3 *
+          var(--wzc-event-tile-block-size) + 3 * var(--wzc-event-list-gap) +
+          var(--wzc-media-day-header-gap) + var(--wzc-event-list-padding)
+      ),
+      calc(
+        var(--wzc-media-day-header-block-size) + 3 *
+          var(--wzc-recording-tile-block-size) + 3 *
+          var(--wzc-recording-list-gap) + var(--wzc-media-day-header-gap) +
+          var(--wzc-recording-list-padding)
+      ),
+      calc(
+        var(--wzc-media-day-header-block-size) + 3 *
+          var(--wzc-export-tile-block-size) + 3 * var(--wzc-export-list-gap) +
+          2 * var(--wzc-export-list-padding)
+      )
+    );
+    --wzc-stage-flex-stack-min-block-size: calc(
+      var(--wzc-stage-stack-button-size) + 2 *
+        var(--wzc-stage-stack-navigation-padding) +
+        var(--wzc-stage-flex-media-min-block-size)
+    );
     --wzc-stage-stack-button-color: var(--wzc-color-text-2);
     --wzc-stage-stack-button-hover-color: var(--wzc-color-primary);
     --wzc-stage-stack-button-background: var(--wzc-color-surface-secondary);
