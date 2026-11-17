@@ -1514,6 +1514,36 @@ describe("watchzone-card-editor", () => {
       "Applies only to physical mobile phones, not to a narrow desktop browser or card.",
     ]);
     expect(root?.querySelector(".appearance-row .device-info")).toBeNull();
+    expect(
+      [...(root?.querySelectorAll(".device-heading") ?? [])].map((element) =>
+        element.textContent?.replaceAll(/\s+/g, " ").trim(),
+      ),
+    ).toEqual([
+      "Standard Applies to desktop computers and tablets, including narrow browser windows.",
+      "Mobile Applies only to physical mobile phones, not to a narrow desktop browser or card.",
+    ]);
+
+    const heightControls = [
+      ...(root?.querySelectorAll<SegmentedControl>(".height-mode-control") ??
+        []),
+    ];
+    expect(heightControls.map(({ value }) => value)).toEqual(["auto", "auto"]);
+    expect(
+      heightControls.map(({ options }) =>
+        options.map(({ label, value }) => ({ label, value })),
+      ),
+    ).toEqual([
+      [
+        { label: "Auto", value: "auto" },
+        { label: "Fit to viewport", value: "fit_viewport" },
+        { label: "Fill container", value: "fill_container" },
+      ],
+      [
+        { label: "Auto", value: "auto" },
+        { label: "Fit to viewport", value: "fit_viewport" },
+        { label: "Fill container", value: "fill_container" },
+      ],
+    ]);
 
     const values = Object.fromEntries(
       [

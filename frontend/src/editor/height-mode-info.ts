@@ -5,6 +5,8 @@ import { EDITOR_HEIGHT_SELECTOR_TAG } from "../core/constants";
 import type { HomeAssistant } from "../core/home-assistant";
 import { LocalizationController } from "../core/localization";
 import { renderIcon } from "../ui/icons";
+import type { SegmentedControlOption } from "../ui/segmented-control";
+import "../ui/segmented-control";
 import {
   heightModeInfoStyles,
   heightModeSelectorStyles,
@@ -100,7 +102,7 @@ export class HeightModeSelector extends LitElement {
 
   private _renderDeviceHeading(device: "standard" | "mobile") {
     const label = this._localization.localize(
-      device === "standard" ? "editor.standard_device" : "editor.mobile_phone",
+      device === "standard" ? "editor.standard_device" : "editor.mobile_device",
     );
     const description = this._localization.localize(
       device === "standard"
@@ -163,7 +165,7 @@ export class HeightModeSelector extends LitElement {
         : (key.replace(/_phone$/, "") as AppearanceKey);
     const label = this._localization.localize(`editor.${appearanceKey}`);
     const deviceLabel = this._localization.localize(
-      device === "standard" ? "editor.standard_device" : "editor.mobile_phone",
+      device === "standard" ? "editor.standard_device" : "editor.mobile_device",
     );
     return html`
       <ha-selector
@@ -180,30 +182,30 @@ export class HeightModeSelector extends LitElement {
 
   private _renderSelector(key: HeightModeKey, value: CardHeightMode) {
     const t = this._localization.localize.bind(this._localization);
+    const options = [
+      { label: t("editor.card_height_auto"), value: "auto" },
+      {
+        label: t("editor.card_height_fit_viewport"),
+        value: "fit_viewport",
+      },
+      {
+        label: t("editor.card_height_fill_container"),
+        value: "fill_container",
+      },
+    ] satisfies readonly SegmentedControlOption[];
     return html`
-      <ha-selector
-        data-config-key=${key}
-        label=${t(`editor.${key}`)}
-        .hass=${this.hass}
-        .selector=${{
-          select: {
-            mode: "dropdown",
-            options: [
-              { label: t("editor.card_height_auto"), value: "auto" },
-              {
-                label: t("editor.card_height_fit_viewport"),
-                value: "fit_viewport",
-              },
-              {
-                label: t("editor.card_height_fill_container"),
-                value: "fill_container",
-              },
-            ],
-          },
-        }}
-        .value=${value}
-        @value-changed=${this._redispatchChange}
-      ></ha-selector>
+      <div class="height-mode-setting">
+        <span class="height-mode-label">${t(`editor.${key}`)}</span>
+        <wzc-segmented-control
+          class="height-mode-control"
+          data-config-key=${key}
+          appearance="compact"
+          .label=${t(`editor.${key}`)}
+          .options=${options}
+          .value=${value}
+          @wzc-segmented-control-value=${this._redispatchChange}
+        ></wzc-segmented-control>
+      </div>
     `;
   }
 

@@ -170,6 +170,7 @@
   "editor.pc_tablet": "PC/Tablet",
   "editor.mobile_phone": "Mobile Phone",
   "editor.mobile_phone_description": "Applies only to physical mobile phones, not to a narrow desktop browser or card.",
+  "editor.mobile_device": "Mobile",
   "editor.standard_device": "Standard",
   "editor.standard_device_description": "Applies to desktop computers and tablets, including narrow browser windows.",
   "editor.unmuted": "Unmuted: {devices}",
