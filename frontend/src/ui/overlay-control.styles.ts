@@ -176,7 +176,7 @@ export const mediaOverlayControlButtonStyles = [
       );
       border: 1px solid
         var(--wzc-control-border-color, var(--wzc-media-overlay-border-color));
-      border-radius: var(--wzc-control-radius, var(--wzc-media-overlay-radius));
+      border-radius: 4px;
       box-shadow: var(--wzc-control-shadow, var(--wzc-media-overlay-shadow));
       color: var(--wzc-control-color, var(--wzc-media-overlay-color));
       inline-size: var(--wzc-control-size, var(--wzc-camera-control-size));
