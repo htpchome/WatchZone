@@ -8480,6 +8480,93 @@ test("keeps Companion edge-to-edge fit viewport inside the outer window", async 
   });
 });
 
+test("keeps browser fit viewport stable when edge-to-edge removes Sections spacing", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 500, height: 1200 });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      get: () =>
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Version/18.0 Safari/604.1",
+    });
+  });
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+
+  const result = await page
+    .locator("watchzone-card")
+    .evaluate(async (element) => {
+      const card = element as HTMLElement & {
+        setConfig(config: unknown): void;
+        updateComplete: Promise<boolean>;
+      };
+      document.body.style.margin = "0";
+      const view = document.createElement("div");
+      const sections = document.createElement("hui-sections-view");
+      const wrapper = document.createElement("div");
+      const container = document.createElement("div");
+      view.style.boxSizing = "border-box";
+      view.style.minHeight = "100vh";
+      view.style.paddingBlockStart = "56px";
+      wrapper.className = "wrapper";
+      wrapper.style.padding = "0 8px";
+      container.className = "container";
+      container.style.padding = "24px 0";
+      element.replaceWith(view);
+      view.append(sections);
+      sections.attachShadow({ mode: "open" }).append(wrapper);
+      wrapper.append(container);
+      container.append(card);
+
+      const geometry = () => {
+        const surface = card.shadowRoot?.querySelector("ha-card");
+        if (!(surface instanceof HTMLElement))
+          throw new Error("Card surface was not rendered");
+        return {
+          cardHeight: surface.getBoundingClientRect().height,
+          containerPadding: container.style.padding,
+          documentHeight: document.documentElement.scrollHeight,
+        };
+      };
+
+      card.setConfig({
+        card_height_mode_phone: "fit_viewport",
+        edge_to_edge_phone: true,
+        type: "custom:watchzone-card",
+      });
+      await card.updateComplete;
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      );
+      const edgeToEdge = geometry();
+
+      card.setConfig({
+        card_height_mode_phone: "fit_viewport",
+        edge_to_edge_phone: false,
+        type: "custom:watchzone-card",
+      });
+      await card.updateComplete;
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      );
+      return { edgeToEdge, standard: geometry() };
+    });
+
+  expect(result).toEqual({
+    edgeToEdge: {
+      cardHeight: 1096,
+      containerPadding: "0px",
+      documentHeight: 1200,
+    },
+    standard: {
+      cardHeight: 1096,
+      containerPadding: "24px 0px",
+      documentHeight: 1200,
+    },
+  });
+});
+
 test("exposes and honors the WatchZone semantic theme-token contract", async ({
   page,
 }) => {

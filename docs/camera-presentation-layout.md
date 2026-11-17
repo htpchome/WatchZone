@@ -33,6 +33,11 @@ retained session, and respects reduced-motion preference.
   phone. It shares ownership across cards in the same view, restores prior
   inline declarations after the last owner releases them, and does not change
   internal row or column gaps, maximum view width, or grid allocation.
+- In a physical-phone browser, the bridge retains the measured block spacing
+  that edge-to-edge removes. The viewport-fit calculation continues to reserve
+  that spacing together with the card's measured HA-navbar offset, preventing
+  the removed presentation gaps from becoming outer document scroll. Companion
+  retains its host-managed viewport calculation.
 - On a physical phone, edge-to-edge `fit_viewport` presentation extends through
   the complete device bottom safe-area inset. Media lists scroll beneath a
   non-interactive safe-area veil using the same background and backdrop filter
