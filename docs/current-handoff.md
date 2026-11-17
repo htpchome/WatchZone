@@ -1,214 +1,144 @@
 # Current Development Handoff
 
-This is a replaceable snapshot, not an architectural contract. `AGENTS.md`,
-`architecture.md`, and the governing contracts in `docs/` take precedence.
+This is a replaceable working snapshot, not an architectural contract.
+`AGENTS.md`, `architecture.md`, and the governing contracts in `docs/` take
+precedence.
 
-## Starting a new chat
+## New-chat handoff message
 
-> Work in `/workspaces/WatchZone`. Read `AGENTS.md` completely, then read
-> `docs/current-handoff.md`. Before changing code, read every repository
-> contract required by `AGENTS.md` for the requested feature. Inspect the
-> current worktree and implementation rather than relying on assumptions from
-> the handoff. Do not commit or sync; provide a proposed commit subject after
-> validation.
+> Work in `/workspaces/WatchZone`. Read `AGENTS.md` and
+> `docs/current-handoff.md` completely. Before changing code, read every
+> contract required by `AGENTS.md` for the affected feature. Verify the current
+> branch, version, commit, and worktree rather than trusting the snapshot
+> blindly. Preserve unrelated changes. Do not commit or sync; after validation,
+> provide the exact version-prefixed proposed commit subject.
 
 ## Repository state
 
 - Branch: `main`
-- Working version: `0.0.4-dev.371`
-- Current commit: `b6b2c52` —
-  `v0.0.4-dev.370 - feat(editor): highlight sections with pending changes`
-- The worktree contains the uncommitted release-budget correction described
-  below. Always verify
-  `git status`, the canonical version in
-  `custom_components/watchzone/const.py`, and the latest commit.
+- Version: `0.0.4-dev.389`
+- HEAD: `98f4f57` —
+  `v0.0.4-dev.389 - fix(ui): unify selection bars and floating top controls`
+- Worktree: clean when this snapshot was written.
+- Latest package was generated at `dist/watchzone.zip`.
 
-## Current camera and media baseline
+Always recheck `git status`, `git log -1`, and
+`custom_components/watchzone/const.py` before starting work.
 
-- Camera live sessions remain document-owned and lease-based. Editor
-  transitions, Home Assistant route navigation, dialogs, and ordinary
-  reparenting must preserve a healthy retained connection rather than create a
-  replacement player.
-- Picture-in-Picture is working across the retained WebRTC, HLS, and MSE paths.
-  MSE PiP survives leaving and returning to the dashboard by resolving the
-  current attached presentation video rather than retaining a stale element.
-  Do not add transport-specific PiP workarounds without tracing session and
-  presentation ownership first.
-- Camera owns authoritative selection. Carousel, navigation, activity modules,
-  alert takeover, and recorded-media flows consume that selection rather than
-  maintaining parallel camera state.
-- Grouped A/B presentations retain independent media identity, zoom, pan, and
-  activity while sharing the owning Camera stage and overlay coordination.
-- Recorded-media dialogs use an isolated zoom/pan viewport, coalesced modal
-  resizing, touch double-tap zoom, and a corner resize grip. Their metadata
-  surface excludes dialog actions and the resize grip.
-- Review and Event tiles use a fixed-height compact presentation with one
-  non-wrapping badge lane, a neutral `+N more` overflow badge, and the shared
-  responsive width contract.
+## Current baseline
 
-## Stage types and minimal camera baseline
+### Architecture and stages
 
-- The editor currently offers Minimal Camera Stage, Camera Only Stage, and Full
-  Stage. Immutable built-in JSON Stage templates are frontend defaults. The
-  future Python-owned Stage Designer and user-created Stage Design persistence
-  are intentionally not being connected yet.
-- Camera Only Stage uses its single standard built-in layout for normal and
-  mobile presentation; it does not expose redundant layout selectors.
-- Minimal Camera Stage renders only the first configured main camera. An A/B
-  secondary is not presented. It uses the reusable lightweight camera
-  presentation rather than instantiating the full Camera module, carousel,
-  zoom/pan, PTZ, TWT, lights, or full side controls.
-- Minimal Camera controls are configurable behind one menu button and include
-  fullscreen, PiP, mute/volume, and optional source label. The expanded control
-  lane remains visible until the menu is explicitly closed.
-- Minimal interactions support tap, hold, and double-tap actions through the
-  Home Assistant-style editor. `Open Live View` transfers the retained player
-  into the draggable/resizable WatchZone live dialog and restores it on close.
-- Minimal presentations enforce backend-reported suspension regardless of live
-  connection type. Suspension must prevent presentation without preventing the
-  user from configuring a Frigate go2rtc source.
-- Alert/detection highlighting applies to both the inline minimal camera and
-  its live dialog.
+- WatchZone remains one mandatory Python integration with a packaged Lit
+  frontend. Provider work, layout ownership, theme boundaries, and retained
+  media-session rules in `architecture.md` remain in force.
+- Built-in Stage JSON is still frontend-owned. Python Stage Design persistence
+  and the Stage Designer are intentionally deferred until user-created designs
+  require them.
+- The editor offers Minimal Camera Stage, Camera Only Stage, and Full Stage.
+  Minimal Camera remains deliberately lightweight and does not load the full
+  Camera module, carousel, zoom/pan, PTZ, talk, or lights.
+- Camera selection is authoritative. Navigation, activity, takeover,
+  recordings, and recorded-media flows consume that shared selection.
 
-## Responsive, theme, and editor invariants
+### Live and recorded media
 
-- Responsive width decisions use the enforced `480px`, `600px`, `768px`, and
-  `1024px` scale. Runtime device classification and CSS container/viewport
-  queries consume the same contract.
+- Live sessions remain document-scoped and lease-based. Editor transitions,
+  HA navigation, dialogs, and ordinary reparenting must preserve healthy
+  retained sessions.
+- Recorded-media viewers use a manual top-layer popover so theme
+  `backdrop-filter` on `ha-card` cannot clip or constrain the draggable dialog.
+- Recording dialogs provide playback rates `0.25x`, `0.5x`, `1x`, `2x`, `5x`,
+  `10x`, and `25x`; a centered readout supports direct selection.
+- Recording segment management supports preview, named Export Segment,
+  Download Segment, and whole-recording download. Export feedback belongs to
+  the modal surface.
+- Reviews, Events, Recordings, and Exports use bounded internal scrolling. A
+  shared floating Top control appears at the bottom center only after roughly
+  two rendered tile heights of scrolling, stays hidden for non-scrolling
+  collections, and returns immediately to `scrollTop = 0`.
+
+### Card layout and mobile behavior
+
+- Standard devices and physical mobile phones have independent height and
+  appearance settings. Physical-client identity, not browser width, selects
+  the phone settings.
+- Height modes are `auto`, `fit_viewport`, and `fill_container`:
+  - `auto` uses natural content height with a five-item media ceiling.
+  - `fit_viewport` uses the visible dynamic viewport remaining below the card's
+    actual HA position.
+  - `fill_container` consumes a definite parent height and otherwise falls
+    back to automatic percentage behavior.
+- Constrained Full Stage layouts keep the camera/content rows intrinsic and
+  give remaining height to the internally scrolling media row. The media row
+  retains a measured three-tile minimum; if that cannot fit, the containing HA
+  view must scroll. Camera Only and Minimal Camera retain natural height.
+- Phone-only edge-to-edge mode may remove HA Sections wrapper/container
+  padding through the isolated shared bridge. It does not alter HA grid gaps or
+  maximum widths.
+- In edge-to-edge `fit_viewport`, WatchZone underlaps at most `0.5rem` of the
+  bottom safe area. Most of HA's themed safe-area surface remains visible.
+- Native Companion pull-to-refresh is preserved. Internal media scrollers hand
+  overscroll back to HA; no WatchZone-specific reload gesture exists. On iOS,
+  list-origin pulls may require a longer pull-and-hold, consistent with other
+  HA nested-scroll pages.
+- The unresolved ultra-narrow behavior near 255px differs between Chromium,
+  Firefox, and Safari. Investigation was deliberately stopped because the
+  layout is below a practical supported card width; do not reopen it without a
+  concrete requirement.
+
+### Theme and editor behavior
+
 - Home Assistant theme variables remain isolated to
-  `frontend/src/styles/theme-tokens.ts`; feature styles consume semantic
-  `--wzc-*` tokens.
-- Media and AI information dialogs share the Home Assistant glass treatment.
-  Filter, calendar, suspension, and other focused task dialogs use the solid
-  task surface.
-- Editor typing updates Home Assistant dirty state and a coalesced preview. The
-  isolated editor lifecycle adapter commits the complete draft immediately
-  before Save. Extracted editor sections must not become independent draft or
-  persistence owners.
+  `frontend/src/styles/theme-tokens.ts`; feature CSS consumes semantic
+  `--wzc-*` tokens only.
+- Compact editor segmented controls and Camera Navigation use the exact same
+  `--wzc-selection-bar-background`, which resolves to the secondary media-tile
+  surface. The editor track has no separate outline or shadow. Camera
+  Navigation retains its independently configurable corners and outer shadow.
+- Card height uses pill-radio controls. Layout appearance is presented in
+  Standard and Mobile columns. Minimal Camera does not expose irrelevant
+  general layout appearance settings; phone edge-to-edge remains available.
+- Editor typing, dirty state, preview, and Save behavior remain owned by the
+  top-level editor and isolated HA lifecycle bridge. Closed accordion headers
+  retain pending-change highlighting while their bodies are unmounted.
 
-## Architecture audit and next work
+## Deferred decisions
 
-The November 16 audit found the overall feature boundaries, retained-session
-lifecycle, lazy transport loading, theme ownership, and listener/observer
-cleanup sound. No broad memory leak or uncontrolled dependency problem was
-identified. The next agreed work is deliberately incremental:
+- Do not connect Python Stage Design persistence merely for immutable built-in
+  defaults. Revisit with the Stage Designer and user-created Stage Designs.
+- Do not make release publication depend on the complete validation workflow
+  during prerelease development. The existing GitHub release pipeline remains
+  unchanged.
+- A read-only normalized backend camera catalog and further download-preparation
+  consolidation remain possible later work, not active requirements.
 
-1. Consider a read-only normalized backend camera catalog later, without
-   migrating stored camera configuration until a concrete provider or Stage
-   Designer requirement needs it.
-2. Consolidate media download preparation one media type at a time, preserving
-   Safari and Companion user-gesture behavior.
+## Budget and validation snapshot
 
-Completed at `0.0.4-dev.362`: provider-neutral direct Event and Review lookup
-routes resolve one ID through the owning backend provider. Deep links use the
-direct route first and retain the bounded paged lookup as a temporary parity
-fallback.
+- The architectural eager-entry target remains 50 KiB gzip. The temporary
+  release ceiling is 64 KiB with a 4 KiB safety margin.
+- At `dev.389`, packaging measured the eager graph at 60,813 bytes gzip.
+- The lazy editor measured 19,422 bytes gzip against the 19,456-byte validator
+  ceiling. Only 34 bytes remain; keep editor changes compact and measure the
+  production output early.
+- `dev.389` passed:
+  - 482 frontend unit tests;
+  - 141 Playwright tests across Chromium, Firefox, and WebKit;
+  - formatting, lint, type checking, architecture/style/license validation,
+    production build, version consistency, release packaging, and
+    `git diff --check`.
+- No Python source changed in the recent layout/UI sequence. Do not infer a
+  current Python pytest result from the frontend validation above.
 
-Completed at `0.0.4-dev.363`: Reviews and Events request only the newest bounded
-page on entry. Older pages load near the list boundary with stable sorting,
-deduplication, independent grouped-camera cursors, and serialized refreshes.
+## Working rules
 
-Corrected at `0.0.4-dev.364`: Reviews load a separate lightweight metadata
-index for complete calendar availability and filter facets. Enriched tiles stay
-paged, selected filters and dates automatically retrieve missing matching tile
-pages, and page merges preserve the visible scroll anchor.
-
-Completed at `0.0.4-dev.365`: realtime Event and Review subscriptions are
-provider-neutral at the browser boundary. Python resolves the camera's owning
-provider, the Frigate adapter owns its MQTT subscription and payload
-normalization, and the frontend consumes only normalized
-`watchzone/activity/subscribe` messages.
-
-Corrected at `0.0.4-dev.366`: dashboard detachment no longer erases an active
-camera takeover. Reconnection retains the last known presentation and
-immediately reconciles it with cache-bypassed provider Review summaries, so an
-ongoing alert survives a fast dashboard return while an alert that ended while
-away is cleared.
-
-Corrected at `0.0.4-dev.367`: provider activity subscriptions are shared and
-retained by the backend for a bounded navigation grace period. A replacement
-card created after navigating to another Home Assistant dashboard receives the
-active Review replay, while Reviews that end during the absence are removed
-before the replacement subscribes. Full and Minimal Camera presentations both
-consume this continuity path; Minimal Camera remains independently lightweight.
-
-Completed at `0.0.4-dev.368`: the card editor delegates Camera Settings, Stage
-Management, interactions, and the controlled settings groups to cohesive
-stateless renderers. The top-level editor remains the sole owner of the
-normalized draft, dirty state, preview, YAML serialization, Save bridge,
-capability probing, and nested camera transaction. Accordion content remains
-mounted while closed in that phase; the following Phase 5 change replaces that
-behavior.
-
-Completed at `0.0.4-dev.369`: the main editor keeps accordion headers mounted
-but mounts only the open section body. Reopening reconstructs Home Assistant
-controls from the same top-level normalized draft, so disclosure changes do not
-alter dirty state, preview state, or saved YAML. Nested camera-dialog accordions
-retain their existing transaction and mounting behavior.
-
-Completed at `0.0.4-dev.370`: each main editor section derives pending state
-from its normalized fields compared with the editor baseline. A closed section
-with unsaved changes retains the shared highlighted header treatment; opening
-and closing sections remains presentation-only, and reverting a section clears
-only that section's highlight.
-
-Explicitly deferred:
-
-- Do not connect Python Stage Design persistence merely for the current
-  immutable built-in JSON defaults. Revisit it with the Stage Designer and
-  user-created Stage Designs.
-- Do not change the GitHub release pipeline or make publication depend on the
-  complete validation workflow during the current prerelease development
-  cycle.
-
-## Performance-budget snapshot
-
-- `architecture.md` retains the long-term eager-entry target of 50 KiB gzip.
-- The current build validator temporarily uses a 64 KiB release ceiling with a
-  4 KiB safety margin. This is implementation headroom, not a replacement
-  architectural target.
-- At `0.0.4-dev.360`, validation measures the eager graph at 57,332 bytes gzip
-  and the lazy editor entry at 18,564 bytes gzip.
-- At `0.0.4-dev.368`, the decomposed lazy editor entry measures approximately
-  19.01 KiB gzip and remains within its 20 KiB release budget.
-- At `0.0.4-dev.369`, conditional section mounting and its explicit ownership
-  state measure approximately 19.23 KiB gzip. This changes runtime DOM work,
-  not the transferred lazy-editor graph.
-- At `0.0.4-dev.370`, section-level pending-state mapping and presentation
-  initially exceeded the editor validation ceiling.
-- At `0.0.4-dev.371`, compact edit-ownership tracking preserves the same
-  section behavior at 19,425 bytes gzip, below the 19,456-byte validation
-  ceiling that maintains the 1 KiB safety margin beneath the 20 KiB budget.
-- The built-in Stage catalog is the largest practical eager-splitting target.
-  Measure and reduce the graph before requesting another ceiling increase.
-- The editor remains close to its current 20 KiB gzip release budget. Keep
-  future editor changes compact and measure the built output before handoff.
-
-## Validation status
-
-Validated for the uncommitted `v0.0.4-dev.371` correction:
-
-- 464 frontend unit tests
-- 129 Playwright tests across Chromium, Firefox, and WebKit
-- formatting, lint, type checking, architecture/style/license checks,
-  production build, version consistency, and `git diff --check`
-- Ruff and strict mypy checks for the Python integration
-
-The Python pytest suite was not completed during the architecture audit; do not
-infer a pass or failure from that audit run.
-
-## Handoff rules
-
-- Trace the complete affected path before editing. Do not stack local patches
-  over symptoms or add browser-specific workarounds without identifying the
-  owning lifecycle.
-- Preserve unrelated user changes and established behavior. Keep changes
-  small, cohesive, and independently testable.
-- Treat mobile Safari, Home Assistant Companion, Chromium, Firefox, WebKit,
-  editor preview, and dashboard navigation as supported environments.
-- Release-affecting work handed off for commit requires a unique synchronized
-  version. Documentation/test/workflow-only work keeps the current version.
-- Do not commit or sync. Provide the exact version-prefixed proposed commit
-  subject after validation.
-- Replace this snapshot when the active task or version changes materially. Do
-  not append a chronological conversation log.
+- Trace ownership before patching symptoms, especially for retained media,
+  Home Assistant layout bridges, mobile scrolling, and theme composition.
+- Treat Chromium, Firefox, WebKit, mobile Safari, Companion, editor preview,
+  and HA navigation as supported environments at their documented boundaries.
+- Preserve unrelated user changes. Keep implementation and contract updates
+  cohesive and independently testable.
+- Release-affecting handoff requires a unique synchronized version.
+  Documentation/test/workflow-only work keeps the current version.
+- Replace this file when the active baseline changes materially; do not append
+  a chronological conversation log.
