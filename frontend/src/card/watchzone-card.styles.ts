@@ -124,9 +124,7 @@ export const cardStyles = css`
     );
   }
 
-  :host(
-    .mobile-edge-to-edge.companion-safe-area-underlap.height-mode-fit-viewport
-  ) {
+  :host(.mobile-edge-to-edge.height-mode-fit-viewport) {
     --wzc-mobile-bottom-underlap: var(--wzc-safe-area-inset-bottom, 0px);
     --wzc-media-safe-area-underlap: var(--wzc-safe-area-inset-bottom, 0px);
   }

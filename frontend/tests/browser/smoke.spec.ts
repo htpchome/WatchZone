@@ -8307,6 +8307,8 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
         setConfig(config: unknown): void;
         updateComplete: Promise<boolean>;
       };
+      const viewContainer = document.createElement("hui-view-container");
+      viewContainer.style.minHeight = "100vh";
       const sections = document.createElement("hui-sections-view");
       const wrapper = document.createElement("div");
       const container = document.createElement("div");
@@ -8319,7 +8321,8 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
       container.append(card);
       wrapper.append(container);
       sections.attachShadow({ mode: "open" }).append(wrapper);
-      document.body.replaceChildren(sections);
+      viewContainer.append(sections);
+      document.body.replaceChildren(viewContainer);
 
       card.setConfig({
         stage_type: "minimal_camera_only",
@@ -8355,9 +8358,6 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
       const cardSurface = card.shadowRoot?.querySelector("ha-card");
       if (!cardSurface) throw new Error("Card surface was not rendered");
       const edge = {
-        companionUnderlapClass: card.classList.contains(
-          "companion-safe-area-underlap",
-        ),
         fitViewportMinimum: getComputedStyle(cardSurface).minBlockSize,
         mediaSafeAreaUnderlap: getComputedStyle(card)
           .getPropertyValue("--wzc-media-safe-area-underlap")
@@ -8366,6 +8366,7 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
         hostClass: card.classList.contains("mobile-edge-to-edge"),
         containerPadding: container.style.padding,
         rowGap: sections.style.getPropertyValue("--ha-view-sections-row-gap"),
+        viewMinHeight: viewContainer.style.minHeight,
         wrapperPadding: wrapper.style.padding,
       };
       card.style.removeProperty("--wzc-fit-viewport-block-size");
@@ -8380,11 +8381,9 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
         minimalEdge,
         minimalRestored,
         restored: {
-          companionUnderlapClass: card.classList.contains(
-            "companion-safe-area-underlap",
-          ),
           hostClass: card.classList.contains("mobile-edge-to-edge"),
           containerPadding: container.style.padding,
+          viewMinHeight: viewContainer.style.minHeight,
           wrapperPadding: wrapper.style.padding,
         },
       };
@@ -8392,13 +8391,13 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
 
   expect(result).toEqual({
     edge: {
-      companionUnderlapClass: false,
-      fitViewportMinimum: "400px",
-      mediaSafeAreaUnderlap: "0px",
+      fitViewportMinimum: "436px",
+      mediaSafeAreaUnderlap: "36px",
       containerPadding: "0px",
       gap: "24px 8px",
       hostClass: true,
       rowGap: "8px",
+      viewMinHeight: "100dvh",
       wrapperPadding: "0px",
     },
     minimalEdge: {
@@ -8410,15 +8409,15 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
       wrapperPadding: "0px 32px",
     },
     restored: {
-      companionUnderlapClass: false,
       containerPadding: "24px 0px",
       hostClass: false,
+      viewMinHeight: "100vh",
       wrapperPadding: "0px 32px",
     },
   });
 });
 
-test("adds safe-area underlap only in the phone Companion app", async ({
+test("leaves the Companion view-container height under Home Assistant ownership", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -8431,43 +8430,26 @@ test("adds safe-area underlap only in the phone Companion app", async ({
   await page.goto("/");
   await waitForWatchZoneDefinition(page);
 
-  const result = await page
+  const minHeight = await page
     .locator("watchzone-card")
     .evaluate(async (element) => {
       const card = element as HTMLElement & {
         setConfig(config: unknown): void;
         updateComplete: Promise<boolean>;
       };
-      document.documentElement.style.setProperty(
-        "--safe-area-inset-bottom",
-        "36px",
-      );
+      const viewContainer = document.createElement("hui-view-container");
+      viewContainer.style.minHeight = "100vh";
+      element.replaceWith(viewContainer);
+      viewContainer.append(element);
       card.setConfig({
         card_height_mode_phone: "fit_viewport",
         type: "custom:watchzone-card",
       });
       await card.updateComplete;
-      card.style.setProperty("--wzc-fit-viewport-block-size", "400px");
-      const cardSurface = card.shadowRoot?.querySelector("ha-card");
-      if (!cardSurface) throw new Error("Card surface was not rendered");
-      return {
-        companionUnderlapClass: card.classList.contains(
-          "companion-safe-area-underlap",
-        ),
-        fitViewportMinimum: getComputedStyle(cardSurface).minBlockSize,
-        hostClass: card.classList.contains("mobile-edge-to-edge"),
-        mediaSafeAreaUnderlap: getComputedStyle(card)
-          .getPropertyValue("--wzc-media-safe-area-underlap")
-          .trim(),
-      };
+      return viewContainer.style.minHeight;
     });
 
-  expect(result).toEqual({
-    companionUnderlapClass: true,
-    fitViewportMinimum: "436px",
-    hostClass: true,
-    mediaSafeAreaUnderlap: "36px",
-  });
+  expect(minHeight).toBe("100vh");
 });
 
 test("exposes and honors the WatchZone semantic theme-token contract", async ({

@@ -1,11 +1,15 @@
 const SECTIONS_VIEW_TAG = "HUI-SECTIONS-VIEW";
 const PANEL_VIEW_TAG = "HUI-PANEL-VIEW";
+const VIEW_CONTAINER_TAG = "HUI-VIEW-CONTAINER";
 const PANEL_NATURAL_HEIGHT_CLASS = "panel-view-natural-height";
 const EDGE_VALUE = "0px";
+const DYNAMIC_VIEWPORT_MIN_HEIGHT = "100dvh";
 
-interface OwnedPadding {
+interface OwnedDeclaration {
   readonly element: HTMLElement;
+  readonly ownedValue: string;
   readonly priority: string;
+  readonly property: string;
   readonly value: string;
 }
 
@@ -15,12 +19,15 @@ interface SectionsLayout {
   readonly wrapper: HTMLElement;
 }
 
-interface SectionsLayoutState {
-  readonly declarations: readonly OwnedPadding[];
+interface SharedLayoutState {
+  readonly declarations: readonly OwnedDeclaration[];
   readonly owners: Set<HomeAssistantLayoutBridge>;
 }
 
-const sectionsLayoutStates = new WeakMap<HTMLElement, SectionsLayoutState>();
+type SharedLayoutStates = WeakMap<HTMLElement, SharedLayoutState>;
+
+const sectionsLayoutStates: SharedLayoutStates = new WeakMap();
+const viewportLayoutStates: SharedLayoutStates = new WeakMap();
 
 function composedParentElement(element: Element): Element | undefined {
   if (element.parentElement) return element.parentElement;
@@ -40,31 +47,72 @@ function findAncestor(
   return undefined;
 }
 
-function ownedPadding(element: HTMLElement): OwnedPadding {
+function ownedDeclaration(
+  element: HTMLElement,
+  property: string,
+  ownedValue: string,
+): OwnedDeclaration {
   return {
     element,
-    priority: element.style.getPropertyPriority("padding"),
-    value: element.style.getPropertyValue("padding"),
+    ownedValue,
+    priority: element.style.getPropertyPriority(property),
+    property,
+    value: element.style.getPropertyValue(property),
   };
 }
 
-function restorePadding(declaration: OwnedPadding): void {
-  const { element } = declaration;
+function applyDeclaration(declaration: OwnedDeclaration): void {
+  declaration.element.style.setProperty(
+    declaration.property,
+    declaration.ownedValue,
+  );
+}
+
+function restoreDeclaration(declaration: OwnedDeclaration): void {
+  const { element, property } = declaration;
   if (
-    element.style.getPropertyValue("padding") !== EDGE_VALUE ||
-    element.style.getPropertyPriority("padding") !== ""
+    element.style.getPropertyValue(property) !== declaration.ownedValue ||
+    element.style.getPropertyPriority(property) !== ""
   ) {
     return;
   }
   if (declaration.value) {
     element.style.setProperty(
-      "padding",
+      property,
       declaration.value,
       declaration.priority,
     );
   } else {
-    element.style.removeProperty("padding");
+    element.style.removeProperty(property);
   }
+}
+
+function acquireLayout(
+  states: SharedLayoutStates,
+  key: HTMLElement,
+  declarations: readonly OwnedDeclaration[],
+  owner: HomeAssistantLayoutBridge,
+): void {
+  let state = states.get(key);
+  if (!state) {
+    state = { declarations, owners: new Set() };
+    states.set(key, state);
+  }
+  state.owners.add(owner);
+  for (const declaration of state.declarations) applyDeclaration(declaration);
+}
+
+function releaseLayout(
+  states: SharedLayoutStates,
+  key: HTMLElement,
+  owner: HomeAssistantLayoutBridge,
+): void {
+  const state = states.get(key);
+  if (!state) return;
+  state.owners.delete(owner);
+  if (state.owners.size > 0) return;
+  for (const declaration of state.declarations) restoreDeclaration(declaration);
+  states.delete(key);
 }
 
 /**
@@ -74,52 +122,68 @@ function restorePadding(declaration: OwnedPadding): void {
  */
 export class HomeAssistantLayoutBridge {
   private _view?: HTMLElement;
+  private _viewportContainer?: HTMLElement;
 
   public constructor(private readonly _host: HTMLElement) {}
 
-  public configure(edgeToEdge: boolean): void {
+  public configure(
+    edgeToEdge: boolean,
+    constrainToDynamicViewport = false,
+  ): void {
     this._host.classList.toggle(
       PANEL_NATURAL_HEIGHT_CLASS,
       Boolean(findAncestor(this._host, PANEL_VIEW_TAG)),
     );
     const layout = edgeToEdge ? this._sectionsLayout() : undefined;
-    if (layout?.view === this._view) return;
-    this.release();
-    if (!layout) return;
-
-    let state = sectionsLayoutStates.get(layout.view);
-    if (!state) {
-      state = {
-        declarations: [
-          ownedPadding(layout.wrapper),
-          ownedPadding(layout.container),
-        ],
-        owners: new Set(),
-      };
-      sectionsLayoutStates.set(layout.view, state);
-    }
-    state.owners.add(this);
-    this._view = layout.view;
-    for (const { element } of state.declarations) {
-      element.style.setProperty("padding", EDGE_VALUE);
-    }
+    this._configureSections(layout);
+    this._configureViewport(
+      constrainToDynamicViewport
+        ? findAncestor(this._host, VIEW_CONTAINER_TAG)
+        : undefined,
+    );
   }
 
   public release(): void {
     this._host.classList.remove(PANEL_NATURAL_HEIGHT_CLASS);
-    const view = this._view;
-    if (!view) return;
+    this._configureSections(undefined);
+    this._configureViewport(undefined);
+  }
+
+  private _configureSections(layout?: SectionsLayout): void {
+    if (layout?.view === this._view) return;
+    const previousView = this._view;
     this._view = undefined;
+    if (previousView) releaseLayout(sectionsLayoutStates, previousView, this);
+    if (!layout) return;
 
-    const state = sectionsLayoutStates.get(view);
-    if (!state) return;
-    state.owners.delete(this);
-    if (state.owners.size > 0) return;
+    acquireLayout(
+      sectionsLayoutStates,
+      layout.view,
+      [
+        ownedDeclaration(layout.wrapper, "padding", EDGE_VALUE),
+        ownedDeclaration(layout.container, "padding", EDGE_VALUE),
+      ],
+      this,
+    );
+    this._view = layout.view;
+  }
 
-    for (const declaration of state.declarations) {
-      restorePadding(declaration);
+  private _configureViewport(container?: HTMLElement): void {
+    if (container === this._viewportContainer) return;
+    const previousContainer = this._viewportContainer;
+    this._viewportContainer = undefined;
+    if (previousContainer) {
+      releaseLayout(viewportLayoutStates, previousContainer, this);
     }
-    sectionsLayoutStates.delete(view);
+    if (!container) return;
+
+    acquireLayout(
+      viewportLayoutStates,
+      container,
+      [ownedDeclaration(container, "min-height", DYNAMIC_VIEWPORT_MIN_HEIGHT)],
+      this,
+    );
+    this._viewportContainer = container;
   }
 
   private _sectionsLayout(): SectionsLayout | undefined {
