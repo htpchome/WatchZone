@@ -35,7 +35,7 @@ export const activityListStyles = css`
   .scroller {
     min-block-size: 0;
     overflow-y: auto;
-    overscroll-behavior: contain;
+    overscroll-behavior-y: auto;
     padding: 0 var(--wzc-event-list-padding) var(--wzc-event-list-padding);
   }
 

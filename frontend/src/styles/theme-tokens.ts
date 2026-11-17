@@ -220,6 +220,10 @@ export const themeTokens = css`
     --wzc-card-border-color: var(--wzc-color-border);
     --wzc-card-border-width: var(--ha-card-border-width, 0);
     --wzc-card-padding: clamp(1rem, 3cqi, 2rem);
+    --wzc-safe-area-inset-bottom: var(
+      --safe-area-inset-bottom,
+      env(safe-area-inset-bottom, 0px)
+    );
     --wzc-stage-module-gap: clamp(0.5rem, 1.5cqi, 1rem);
     --wzc-card-outer-shadow: var(--wzc-shadow-medium);
     --wzc-media-placeholder-background: #242424;

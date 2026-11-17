@@ -36,7 +36,7 @@ export const recordingsStyles = css`
   .scroller {
     min-block-size: 0;
     overflow-y: auto;
-    overscroll-behavior: contain;
+    overscroll-behavior-y: auto;
     padding: 0 var(--wzc-recording-list-padding)
       var(--wzc-recording-list-padding);
   }

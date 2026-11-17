@@ -39,7 +39,7 @@ export const exportsStyles = css`
     inline-size: 100%;
     min-block-size: 0;
     overflow-y: auto;
-    overscroll-behavior: contain;
+    overscroll-behavior-y: auto;
   }
 
   .layout-toggle {

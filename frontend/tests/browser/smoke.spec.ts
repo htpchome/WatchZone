@@ -3852,6 +3852,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   const events = page.locator("wzc-events");
   const viewport = events.locator(".scroller");
   await expect(events.locator(".tile")).toHaveCount(6);
+  await expect(viewport).toHaveCSS("overscroll-behavior-y", "auto");
   await page.locator("watchzone-card").evaluate((element) => {
     element.style.setProperty(
       "--wzc-media-tile-background",
@@ -5359,6 +5360,7 @@ test("switches activity and recordings through the shared media calendar", async
     "Mon, Nov 9 — Recordings",
   );
   const recordingViewport = recordings.locator(".scroller");
+  await expect(recordingViewport).toHaveCSS("overscroll-behavior-y", "auto");
   const recordingScroll = await recordingViewport.evaluate((viewport) => {
     const before = viewport.scrollTop;
     const top = viewport.getBoundingClientRect().top;
@@ -5932,10 +5934,12 @@ test("shows and filters mixed-camera persistent exports", async ({ page }) => {
     return {
       clientHeight: node.clientHeight,
       overflowY: getComputedStyle(node).overflowY,
+      overscrollBehaviorY: getComputedStyle(node).overscrollBehaviorY,
       scrollHeight: node.scrollHeight,
     };
   });
   expect(scrollGeometry.overflowY).toBe("auto");
+  expect(scrollGeometry.overscrollBehaviorY).toBe("auto");
   expect(scrollGeometry.scrollHeight).toBeGreaterThan(
     scrollGeometry.clientHeight,
   );
@@ -8126,10 +8130,21 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
         wrapperPadding: wrapper.style.padding,
       };
 
-      card.setConfig({ type: "custom:watchzone-card" });
+      document.documentElement.style.setProperty(
+        "--safe-area-inset-bottom",
+        "36px",
+      );
+      card.setConfig({
+        card_height_mode_phone: "fit_viewport",
+        type: "custom:watchzone-card",
+      });
       await card.updateComplete;
       const edge = {
+        bottomUnderlap: getComputedStyle(card)
+          .getPropertyValue("--wzc-mobile-bottom-underlap")
+          .trim(),
         gap: container.style.gap,
+        hostClass: card.classList.contains("mobile-edge-to-edge"),
         containerPadding: container.style.padding,
         rowGap: sections.style.getPropertyValue("--ha-view-sections-row-gap"),
         wrapperPadding: wrapper.style.padding,
@@ -8145,6 +8160,7 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
         minimalEdge,
         minimalRestored,
         restored: {
+          hostClass: card.classList.contains("mobile-edge-to-edge"),
           containerPadding: container.style.padding,
           wrapperPadding: wrapper.style.padding,
         },
@@ -8153,8 +8169,10 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
 
   expect(result).toEqual({
     edge: {
+      bottomUnderlap: "36px",
       containerPadding: "0px",
       gap: "24px 8px",
+      hostClass: true,
       rowGap: "8px",
       wrapperPadding: "0px",
     },
@@ -8168,6 +8186,7 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
     },
     restored: {
       containerPadding: "24px 0px",
+      hostClass: false,
       wrapperPadding: "0px 32px",
     },
   });

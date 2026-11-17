@@ -39,8 +39,12 @@ new browser API makes another platform easier or faster.
   viewport edge, such as fullscreen. Card-contained Stage, carousel, control,
   toast, and dialog surfaces use their own local geometry; applying viewport
   safe-area values there would offset the same control differently by host
-  device. Respect text scaling, reduced motion, orientation changes, and Home
-  Assistant theme tokens where they affect the feature.
+  device. A phone edge-to-edge card in `fit_viewport` mode is the narrow
+  exception: its outer card boundary may underlap the bottom inset so content
+  can travel beneath translucent host chrome. Home Assistant's Companion-aware
+  safe-area custom property is authoritative and the browser environment inset
+  is only its fallback. Respect text scaling, reduced motion, orientation
+  changes, and Home Assistant theme tokens where they affect the feature.
 - Shared overlay controls own responsive target sizing, Pointer Events,
   touch-focus release, keyboard focus, and tap-highlight suppression. Compact
   stages may use smaller visible media controls than desktop stages. Feature

@@ -369,9 +369,9 @@ export class DashboardCard extends LitElement {
   };
 
   private _syncEdgeToEdge(config: CardConfig): void {
-    this._haLayout.configure(
-      config.edge_to_edge_phone && CLIENT_PROFILE.isPhone,
-    );
+    const enabled = config.edge_to_edge_phone && CLIENT_PROFILE.isPhone;
+    this.classList.toggle("mobile-edge-to-edge", enabled);
+    this._haLayout.configure(enabled);
   }
 
   private _syncHeightMode(config: CardConfig): void {

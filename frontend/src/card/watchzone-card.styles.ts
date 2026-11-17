@@ -115,10 +115,17 @@ export const cardStyles = css`
   :host(.height-mode-fit-viewport) ha-card {
     block-size: auto;
     height: auto;
-    min-block-size: var(
-      --wzc-fit-viewport-block-size,
-      calc(100dvh - var(--wzc-ha-header-height))
+    min-block-size: calc(
+      var(
+          --wzc-fit-viewport-block-size,
+          calc(100dvh - var(--wzc-ha-header-height))
+        ) +
+        var(--wzc-mobile-bottom-underlap, 0px)
     );
+  }
+
+  :host(.mobile-edge-to-edge.height-mode-fit-viewport) {
+    --wzc-mobile-bottom-underlap: var(--wzc-safe-area-inset-bottom, 0px);
   }
 
   :host(.height-mode-fill-container) ha-card {

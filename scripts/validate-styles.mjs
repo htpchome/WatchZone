@@ -90,6 +90,7 @@ for (const path of await collectTypeScript(sourceRoot)) {
     }
   }
   const safeAreaAllowed =
+    path === themeBoundary ||
     path === fullscreenCameraStyles ||
     path === recordedVideoTransportStyles ||
     relativePath === "frontend/src/ui/media-controls-overlay.styles.ts";
