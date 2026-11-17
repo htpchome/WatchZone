@@ -384,7 +384,13 @@ export class DashboardCard extends LitElement {
 
   private _syncHeightMode(config: CardConfig): void {
     const mode = activeCardHeightMode(config, CLIENT_PROFILE.isPhone);
-    this._viewportFit.configure(mode === "fit_viewport");
+    const fitViewport = mode === "fit_viewport";
+    const browserEdgeToEdge =
+      fitViewport &&
+      config.edge_to_edge_phone &&
+      CLIENT_PROFILE.isPhone &&
+      CLIENT_PROFILE.application === "browser";
+    this._viewportFit.configure(fitViewport, browserEdgeToEdge);
     for (const value of ["auto", "fit-viewport", "fill-container"]) {
       this.classList.toggle(
         `height-mode-${value}`,
