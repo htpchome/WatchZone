@@ -103,7 +103,7 @@
   "editor.display_event_type_badges": "Display Clip/Alert/Detection Badges",
   "editor.display_zone": "Display Zone",
   "editor.event_history_days": "Days of Reviews to Display",
-  "editor.rounded_outer_corners": "Rounded Outer Corners",
+  "editor.rounded_outer_corners": "Card Rounded Corners",
   "editor.outer_shadows": "Card Shadow",
   "editor.outer_padding": "Card Padding",
   "editor.edge_to_edge_phone": "Edge-to-edge on mobile phones",

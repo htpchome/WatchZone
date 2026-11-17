@@ -7701,6 +7701,55 @@ test("fits phone, tablet, and desktop viewports without horizontal overflow", as
   }
 });
 
+test("uses intrinsic card height in Home Assistant Panel view", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+
+  const result = await page
+    .locator("watchzone-card")
+    .evaluate(async (element) => {
+      const card = element as HTMLElement & {
+        setConfig(config: unknown): void;
+        updateComplete: Promise<boolean>;
+      };
+      const panel = document.createElement("hui-panel-view");
+      panel.style.display = "block";
+      panel.style.width = "640px";
+      panel.style.height = "900px";
+      panel.append(card);
+      document.body.replaceChildren(panel);
+      card.setConfig({
+        stage_type: "camera_only",
+        type: "custom:watchzone-card",
+      });
+      await card.updateComplete;
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      );
+      const panelResult = {
+        cardHeight: card.getBoundingClientRect().height,
+        naturalClass: card.classList.contains("panel-view-natural-height"),
+        panelHeight: panel.getBoundingClientRect().height,
+      };
+
+      document.body.append(card);
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => resolve()),
+      );
+      return {
+        ...panelResult,
+        classReleased: !card.classList.contains("panel-view-natural-height"),
+      };
+    });
+
+  expect(result.naturalClass).toBe(true);
+  expect(result.cardHeight).toBeGreaterThan(0);
+  expect(result.cardHeight).toBeLessThan(result.panelHeight);
+  expect(result.classReleased).toBe(true);
+});
+
 test("applies outer shell appearance toggles without changing card identity", async ({
   page,
 }) => {

@@ -1,4 +1,6 @@
 const SECTIONS_VIEW_TAG = "HUI-SECTIONS-VIEW";
+const PANEL_VIEW_TAG = "HUI-PANEL-VIEW";
+const PANEL_NATURAL_HEIGHT_CLASS = "panel-view-natural-height";
 const EDGE_VALUE = "0px";
 
 interface OwnedPadding {
@@ -26,10 +28,13 @@ function composedParentElement(element: Element): Element | undefined {
   return root instanceof ShadowRoot ? root.host : undefined;
 }
 
-function findSectionsView(element: Element): HTMLElement | undefined {
+function findAncestor(
+  element: Element,
+  tagName: string,
+): HTMLElement | undefined {
   let current: Element | undefined = element;
   for (let depth = 0; current && depth < 24; depth += 1) {
-    if (current.tagName === SECTIONS_VIEW_TAG) return current as HTMLElement;
+    if (current.tagName === tagName) return current as HTMLElement;
     current = composedParentElement(current);
   }
   return undefined;
@@ -73,6 +78,10 @@ export class HomeAssistantLayoutBridge {
   public constructor(private readonly _host: HTMLElement) {}
 
   public configure(edgeToEdge: boolean): void {
+    this._host.classList.toggle(
+      PANEL_NATURAL_HEIGHT_CLASS,
+      Boolean(findAncestor(this._host, PANEL_VIEW_TAG)),
+    );
     const layout = edgeToEdge ? this._sectionsLayout() : undefined;
     if (layout?.view === this._view) return;
     this.release();
@@ -97,6 +106,7 @@ export class HomeAssistantLayoutBridge {
   }
 
   public release(): void {
+    this._host.classList.remove(PANEL_NATURAL_HEIGHT_CLASS);
     const view = this._view;
     if (!view) return;
     this._view = undefined;
@@ -113,7 +123,7 @@ export class HomeAssistantLayoutBridge {
   }
 
   private _sectionsLayout(): SectionsLayout | undefined {
-    const view = findSectionsView(this._host);
+    const view = findAncestor(this._host, SECTIONS_VIEW_TAG);
     const root = view?.shadowRoot;
     const wrapper = root?.querySelector<HTMLElement>(".wrapper");
     const container = root?.querySelector<HTMLElement>(".container");

@@ -18,6 +18,12 @@ export const cardStyles = css`
     align-self: start;
   }
 
+  :host(.panel-view-natural-height) {
+    block-size: auto;
+    height: auto;
+    align-self: start;
+  }
+
   ha-card {
     isolation: isolate;
     box-sizing: border-box;
@@ -59,6 +65,12 @@ export const cardStyles = css`
   ha-card.card-picker-preview-shell > wzc-card-picker-preview {
     display: block;
     block-size: auto;
+  }
+
+  :host(.panel-view-natural-height) ha-card,
+  :host(.panel-view-natural-height) .shell {
+    block-size: auto;
+    height: auto;
   }
 
   .shell {

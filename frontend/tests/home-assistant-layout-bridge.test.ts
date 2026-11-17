@@ -33,6 +33,20 @@ afterEach(() => {
 });
 
 describe("Home Assistant layout bridge", () => {
+  it("uses intrinsic card height only inside Panel view", () => {
+    const panel = document.createElement("hui-panel-view");
+    const host = document.createElement("watchzone-card");
+    const bridge = new HomeAssistantLayoutBridge(host);
+    panel.append(host);
+    document.body.append(panel);
+
+    bridge.configure(false);
+    expect(host.classList.contains("panel-view-natural-height")).toBe(true);
+
+    bridge.release();
+    expect(host.classList.contains("panel-view-natural-height")).toBe(false);
+  });
+
   it("removes and restores the Sections outer padding without changing gaps", () => {
     const { bridge, container, sections, wrapper } = sectionsHost();
     wrapper.style.padding = "0px 32px";

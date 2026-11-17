@@ -53,6 +53,12 @@ including a section that spans multiple columns. Content determines the
 default height. The camera stage reserves `--wzc-camera-stage-aspect-ratio`,
 which defaults to `16 / 9`. Outer padding is outside that ratio.
 
+Home Assistant Panel view provides a definite viewport-height allocation even
+when the user has not explicitly resized the card. WatchZone uses intrinsic
+height in that view so its camera stage retains the natural ratio and the page
+can scroll through later modules. This does not override explicit grid-row
+height assigned in Sections view.
+
 The lazy-loading placeholder reserves the same stage ratio and background as
 the loaded camera module. Loading the camera code, fallback image, HLS, or
 WebRTC must not change the card's geometry.
