@@ -46,7 +46,6 @@ function trailingLayoutSpace(host: HTMLElement): number {
 
 /** Keeps the card inside the visible viewport from its real HA layout offset. */
 export class ViewportFitController implements ReactiveController {
-  private _compensateBrowserChrome = false;
   private _enabled = false;
   private _connected = false;
   private _frame?: number;
@@ -61,16 +60,12 @@ export class ViewportFitController implements ReactiveController {
     _host.addController(this);
   }
 
-  public configure(enabled: boolean, compensateBrowserChrome = false): void {
-    if (
-      enabled === this._enabled &&
-      compensateBrowserChrome === this._compensateBrowserChrome
-    ) {
+  public configure(enabled: boolean): void {
+    if (enabled === this._enabled) {
       if (enabled) this._scheduleMeasure();
       return;
     }
     this._enabled = enabled;
-    this._compensateBrowserChrome = compensateBrowserChrome;
     if (!this._connected) return;
     if (enabled) {
       this._observe();
@@ -109,18 +104,12 @@ export class ViewportFitController implements ReactiveController {
     const viewport = window.visualViewport;
     const viewportBottom =
       (viewport?.offsetTop ?? 0) + (viewport?.height ?? window.innerHeight);
-    const hostStyle = getComputedStyle(this._host);
-    const browserChromeCompensation = this._compensateBrowserChrome
-      ? pixels(hostStyle.getPropertyValue("--wzc-ha-header-height")) +
-        pixels(hostStyle.getPropertyValue("--wzc-mobile-bottom-underlap"))
-      : 0;
     const blockSize = Math.max(
       0,
       Math.floor(
         viewportBottom -
           restoredViewportTop(this._host) -
-          trailingLayoutSpace(this._host) -
-          browserChromeCompensation,
+          trailingLayoutSpace(this._host),
       ),
     );
     this._host.style.setProperty(FIT_BLOCK_SIZE_PROPERTY, `${blockSize}px`);
