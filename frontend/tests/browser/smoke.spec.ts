@@ -3915,7 +3915,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
       const style = getComputedStyle(button);
       return {
         button: style.borderRadius,
-        overlay: style.getPropertyValue("--wzc-media-overlay-radius").trim(),
+        overlay: style.getPropertyValue("--wzc-media-action-radius").trim(),
       };
     });
   expect(tileActionRadius.button).toBe(tileActionRadius.overlay);
@@ -4484,6 +4484,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
     "wzc-recorded-video-player wzc-media-controls .control-button",
   );
   await expect(recordedControls).toHaveCount(2);
+  await expect(recordedControls.first()).toHaveCSS("border-radius", "4px");
   expect(
     await mediaDialog
       .locator(".footer-actions .wzc-activity-action")

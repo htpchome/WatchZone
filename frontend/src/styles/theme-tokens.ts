@@ -276,6 +276,7 @@ export const themeTokens = css`
     );
     --wzc-media-overlay-border-color: var(--ha-color-neutral-30, #4a4a4a);
     --wzc-media-overlay-radius: var(--wzc-radius-small);
+    --wzc-media-action-radius: 4px;
     --wzc-media-overlay-shadow: var(--wzc-shadow-card);
     --wzc-media-overlay-transition-duration: 140ms;
     --wzc-media-volume-accent: var(--wzc-color-primary);
