@@ -3753,41 +3753,65 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect(page.locator("wzc-review-media-dialog dialog")).toHaveCount(
     mediaDialogCount,
   );
+  const themedCard = page.locator("watchzone-card").first();
+  await themedCard.evaluate((card) => {
+    card.style.setProperty("--ha-card-background", "rgba(10, 20, 30, 0.5)");
+    card.style.setProperty("--ha-card-backdrop-filter", "blur(2px)");
+  });
+  const cardGlass = await themedCard.locator("ha-card").evaluate((card) => {
+    const style = getComputedStyle(card);
+    return {
+      background: style.backgroundColor,
+    };
+  });
   const safeAreaPresentation = await page
     .locator("wzc-reviews wzc-activity-list")
     .evaluate((list) => {
       const viewport = list.shadowRoot?.querySelector(".viewport");
       const scroller = list.shadowRoot?.querySelector(".scroller");
+      const topControl = list.shadowRoot?.querySelector("wzc-scroll-top");
       if (
         !(viewport instanceof HTMLElement) ||
-        !(scroller instanceof HTMLElement)
+        !(scroller instanceof HTMLElement) ||
+        !(topControl instanceof HTMLElement)
       )
         throw new Error("Activity viewport was not rendered");
       list.style.setProperty("--wzc-media-safe-area-underlap", "0px");
       const basePadding = Number.parseFloat(
         getComputedStyle(scroller).paddingBottom,
       );
-      list.style.setProperty("--wzc-media-safe-area-underlap", "36px");
-      list.style.setProperty(
-        "--wzc-safe-area-surface-background",
-        "rgba(10, 20, 30, 0.5)",
+      const baseTopOffset = Number.parseFloat(
+        getComputedStyle(topControl).bottom,
       );
+      list.style.setProperty("--wzc-media-safe-area-underlap", "36px");
       const veil = getComputedStyle(viewport, "::after");
       const result = {
+        backdropFilter: veil.backdropFilter,
         background: veil.backgroundColor,
         blockSize: veil.blockSize,
         scrollPaddingAdded:
           Number.parseFloat(getComputedStyle(scroller).paddingBottom) -
           basePadding,
+        topOffsetAdded:
+          Number.parseFloat(getComputedStyle(topControl).bottom) -
+          baseTopOffset,
       };
       list.style.removeProperty("--wzc-media-safe-area-underlap");
-      list.style.removeProperty("--wzc-safe-area-surface-background");
       return result;
     });
+  await themedCard.evaluate((card) => {
+    card.style.removeProperty("--ha-card-background");
+    card.style.removeProperty("--ha-card-backdrop-filter");
+  });
+  expect(cardGlass).toEqual({
+    background: "rgba(10, 20, 30, 0.5)",
+  });
   expect(safeAreaPresentation).toEqual({
+    backdropFilter: "blur(2px)",
     background: "rgba(10, 20, 30, 0.5)",
     blockSize: "36px",
     scrollPaddingAdded: 36,
+    topOffsetAdded: 36,
   });
   await reviewState.click();
   await expect(reviewState).toHaveClass(/^review-state reviewed$/);

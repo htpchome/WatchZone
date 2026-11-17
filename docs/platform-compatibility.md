@@ -42,12 +42,14 @@ new browser API makes another platform easier or faster.
   device. A phone edge-to-edge card in `fit_viewport` mode is the narrow
   exception: its outer card boundary underlaps the complete bottom inset so
   media tiles can travel behind translucent host chrome. A non-interactive
-  surface above that content retains Home Assistant's theme-derived background
-  and backdrop treatment, while equivalent scroll padding keeps the final tile
-  reachable above the unsafe region. Home Assistant's Companion-aware safe-area
-  custom property is authoritative and the browser environment inset is only
-  its fallback. Respect text scaling, reduced motion, orientation changes, and
-  Home Assistant theme tokens where they affect the feature.
+  surface above that content uses the same background and backdrop-filter token
+  chain as `ha-card`, while equivalent scroll padding keeps the final tile
+  reachable above the unsafe region. Floating media-list controls are offset
+  above that complete inset and never occupy the unsafe band. Home Assistant's
+  Companion-aware safe-area custom property is authoritative and the browser
+  environment inset is only its fallback. Respect text scaling, reduced
+  motion, orientation changes, and Home Assistant theme tokens where they
+  affect the feature.
 - Shared overlay controls own responsive target sizing, Pointer Events,
   touch-focus release, keyboard focus, and tap-highlight suppression. Compact
   stages may use smaller visible media controls than desktop stages. Feature

@@ -4,7 +4,7 @@ export const scrollTopStyles = css`
   :host {
     position: absolute;
     z-index: 4;
-    inset-block-end: 0.75rem;
+    inset-block-end: calc(0.75rem + var(--wzc-media-safe-area-underlap, 0px));
     inset-inline-start: 50%;
     display: block;
     pointer-events: none;

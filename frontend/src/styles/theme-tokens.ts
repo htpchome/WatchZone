@@ -225,10 +225,7 @@ export const themeTokens = css`
       env(safe-area-inset-bottom, 0px)
     );
     --wzc-media-safe-area-underlap: 0px;
-    --wzc-safe-area-surface-background: var(
-      --primary-background-color,
-      var(--wzc-color-surface)
-    );
+    --wzc-safe-area-surface-background: var(--wzc-card-background);
     --wzc-safe-area-surface-backdrop-filter: var(
       --ha-card-backdrop-filter,
       none

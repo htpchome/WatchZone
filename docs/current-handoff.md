@@ -78,10 +78,11 @@ Always recheck `git status`, `git log -1`, and
   padding through the isolated shared bridge. It does not alter HA grid gaps or
   maximum widths.
 - In edge-to-edge `fit_viewport`, WatchZone underlaps the complete bottom safe
-  area. Reviews, Events, Recordings, and Exports keep a theme-derived veil over
-  scrolling media plus matching trailing scroll padding, so tiles remain
-  visible through glass themes without stranding the final tile under the home
-  indicator.
+  area. Reviews, Events, Recordings, and Exports keep a veil using the exact
+  `ha-card` background and backdrop-filter token chain over scrolling media,
+  plus matching trailing scroll padding. Tiles remain visible through glass
+  themes without stranding the final tile under the home indicator. The
+  floating Top control is offset above the complete safe-area veil.
 - Native Companion pull-to-refresh is preserved. Internal media scrollers hand
   overscroll back to HA; no WatchZone-specific reload gesture exists. On iOS,
   list-origin pulls may require a longer pull-and-hold, consistent with other
