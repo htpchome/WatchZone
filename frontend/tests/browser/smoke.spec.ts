@@ -8307,8 +8307,6 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
         setConfig(config: unknown): void;
         updateComplete: Promise<boolean>;
       };
-      const viewContainer = document.createElement("hui-view-container");
-      viewContainer.style.minHeight = "100vh";
       const sections = document.createElement("hui-sections-view");
       const wrapper = document.createElement("div");
       const container = document.createElement("div");
@@ -8321,8 +8319,7 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
       container.append(card);
       wrapper.append(container);
       sections.attachShadow({ mode: "open" }).append(wrapper);
-      viewContainer.append(sections);
-      document.body.replaceChildren(viewContainer);
+      document.body.replaceChildren(sections);
 
       card.setConfig({
         stage_type: "minimal_camera_only",
@@ -8366,7 +8363,6 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
         hostClass: card.classList.contains("mobile-edge-to-edge"),
         containerPadding: container.style.padding,
         rowGap: sections.style.getPropertyValue("--ha-view-sections-row-gap"),
-        viewMinHeight: viewContainer.style.minHeight,
         wrapperPadding: wrapper.style.padding,
       };
       card.style.removeProperty("--wzc-fit-viewport-block-size");
@@ -8383,7 +8379,6 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
         restored: {
           hostClass: card.classList.contains("mobile-edge-to-edge"),
           containerPadding: container.style.padding,
-          viewMinHeight: viewContainer.style.minHeight,
           wrapperPadding: wrapper.style.padding,
         },
       };
@@ -8397,7 +8392,6 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
       gap: "24px 8px",
       hostClass: true,
       rowGap: "8px",
-      viewMinHeight: "100dvh",
       wrapperPadding: "0px",
     },
     minimalEdge: {
@@ -8411,45 +8405,9 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
     restored: {
       containerPadding: "24px 0px",
       hostClass: false,
-      viewMinHeight: "100vh",
       wrapperPadding: "0px 32px",
     },
   });
-});
-
-test("leaves the Companion view-container height under Home Assistant ownership", async ({
-  page,
-}) => {
-  await page.addInitScript(() => {
-    Object.defineProperty(navigator, "userAgent", {
-      configurable: true,
-      get: () =>
-        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Home Assistant/2026.9 Mobile/HomeAssistant, like Safari",
-    });
-  });
-  await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-
-  const minHeight = await page
-    .locator("watchzone-card")
-    .evaluate(async (element) => {
-      const card = element as HTMLElement & {
-        setConfig(config: unknown): void;
-        updateComplete: Promise<boolean>;
-      };
-      const viewContainer = document.createElement("hui-view-container");
-      viewContainer.style.minHeight = "100vh";
-      element.replaceWith(viewContainer);
-      viewContainer.append(element);
-      card.setConfig({
-        card_height_mode_phone: "fit_viewport",
-        type: "custom:watchzone-card",
-      });
-      await card.updateComplete;
-      return viewContainer.style.minHeight;
-    });
-
-  expect(minHeight).toBe("100vh");
 });
 
 test("exposes and honors the WatchZone semantic theme-token contract", async ({

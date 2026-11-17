@@ -51,11 +51,6 @@ new browser API makes another platform easier or faster.
   environment inset is only its fallback. Respect text scaling, reduced
   motion, orientation changes, and Home Assistant theme tokens where they
   affect the feature.
-- In a physical phone browser, an edge-to-edge `fit_viewport` card may replace
-  Home Assistant's outer view-container `100vh` minimum with `100dvh`. This
-  keeps the fixed view aligned with dynamic browser chrome. The isolated Home
-  Assistant layout bridge owns and restores that declaration. Companion retains
-  Home Assistant's native WebView sizing.
 - Shared overlay controls own responsive target sizing, Pointer Events,
   touch-focus release, keyboard focus, and tap-highlight suppression. Compact
   stages may use smaller visible media controls than desktop stages. Feature

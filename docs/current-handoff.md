@@ -77,10 +77,6 @@ Always recheck `git status`, `git log -1`, and
 - Phone-only edge-to-edge mode may remove HA Sections wrapper/container
   padding through the isolated shared bridge. It does not alter HA grid gaps or
   maximum widths.
-- On physical phone browsers, edge-to-edge `fit_viewport` also uses the shared
-  bridge to replace HA's outer `100vh` view-container minimum with `100dvh`.
-  This prevents expanded browser chrome from making the fixed view taller than
-  the visible viewport. Companion retains HA's native WebView sizing.
 - In edge-to-edge `fit_viewport`, WatchZone underlaps the complete bottom safe
   area. Reviews, Events, Recordings, and Exports keep a veil using the exact
   `ha-card` background and backdrop-filter token chain over scrolling media,

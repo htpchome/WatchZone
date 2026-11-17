@@ -33,11 +33,6 @@ retained session, and respects reduced-motion preference.
   phone. It shares ownership across cards in the same view, restores prior
   inline declarations after the last owner releases them, and does not change
   internal row or column gaps, maximum view width, or grid allocation.
-- For edge-to-edge `fit_viewport` in a physical phone browser, the same bridge
-  constrains Home Assistant's outer view-container minimum to the dynamic
-  viewport rather than the large `100vh` viewport. Companion keeps Home
-  Assistant's native WebView sizing. The bridge restores the original inline
-  declaration after its last owner releases it.
 - On a physical phone, edge-to-edge `fit_viewport` presentation extends through
   the complete device bottom safe-area inset. Media lists scroll beneath a
   non-interactive safe-area veil using the same background and backdrop filter

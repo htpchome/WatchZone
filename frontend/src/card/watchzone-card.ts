@@ -370,12 +370,8 @@ export class DashboardCard extends LitElement {
 
   private _syncEdgeToEdge(config: CardConfig): void {
     const enabled = config.edge_to_edge_phone && CLIENT_PROFILE.isPhone;
-    const constrainBrowserViewport =
-      enabled &&
-      CLIENT_PROFILE.application === "browser" &&
-      activeCardHeightMode(config, CLIENT_PROFILE.isPhone) === "fit_viewport";
     this.classList.toggle("mobile-edge-to-edge", enabled);
-    this._haLayout.configure(enabled, constrainBrowserViewport);
+    this._haLayout.configure(enabled);
   }
 
   private _syncHeightMode(config: CardConfig): void {
