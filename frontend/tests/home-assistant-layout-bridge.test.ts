@@ -7,21 +7,24 @@ import {
 
 function sectionsHost(): {
   readonly bridge: HomeAssistantLayoutBridge;
+  readonly container: HTMLElement;
   readonly host: HTMLElement;
   readonly sections: HTMLElement;
-  readonly wrapper: HTMLElement;
 } {
   const sections = document.createElement("hui-sections-view");
   const wrapper = document.createElement("div");
+  const container = document.createElement("div");
   const host = document.createElement("watchzone-card");
-  wrapper.append(host);
-  sections.append(wrapper);
+  container.className = "container";
+  container.append(host);
+  wrapper.append(container);
+  sections.attachShadow({ mode: "open" }).append(wrapper);
   document.body.append(sections);
   return {
     bridge: new HomeAssistantLayoutBridge(host),
+    container,
     host,
     sections,
-    wrapper,
   };
 }
 
@@ -37,53 +40,67 @@ describe("Home Assistant layout bridge", () => {
     expect(edgeToEdgeEnabled(false, true, false)).toBe(true);
   });
 
-  it("removes and restores only the immediate Sections wrapper spacing", () => {
-    const { bridge, sections, wrapper } = sectionsHost();
-    wrapper.style.margin = "8px";
-    wrapper.style.padding = "12px";
-    sections.style.setProperty("--ha-view-sections-row-gap", "8px");
+  it("removes and restores only the Sections container outer padding", () => {
+    const { bridge, container, sections } = sectionsHost();
+    container.style.padding = "24px 0px";
+    container.style.gap = "24px 8px";
+    sections.style.setProperty("--ha-view-sections-row-gap", "24px");
 
     bridge.configure(true);
 
-    expect(wrapper.style.margin).toBe("0px");
-    expect(wrapper.style.padding).toBe("0px");
+    expect(container.style.padding).toBe("0px");
+    expect(container.style.gap).toBe("24px 8px");
     expect(sections.style.getPropertyValue("--ha-view-sections-row-gap")).toBe(
-      "8px",
+      "24px",
     );
 
     bridge.configure(false);
-    expect(wrapper.style.margin).toBe("8px");
-    expect(wrapper.style.padding).toBe("12px");
+    expect(container.style.padding).toBe("24px 0px");
+  });
+
+  it("keeps shared padding until the last card releases ownership", () => {
+    const first = sectionsHost();
+    const secondHost = document.createElement("watchzone-card");
+    first.container.append(secondHost);
+    const second = new HomeAssistantLayoutBridge(secondHost);
+    first.container.style.padding = "20px 0px";
+
+    first.bridge.configure(true);
+    second.configure(true);
+    first.bridge.release();
+    expect(first.container.style.padding).toBe("0px");
+
+    second.release();
+    expect(first.container.style.padding).toBe("20px 0px");
   });
 
   it("does nothing outside Sections and preserves later external changes", () => {
-    const wrapper = document.createElement("div");
+    const container = document.createElement("div");
     const host = document.createElement("watchzone-card");
-    wrapper.style.padding = "10px";
-    wrapper.append(host);
-    document.body.append(wrapper);
+    container.style.padding = "10px";
+    container.append(host);
+    document.body.append(container);
     const bridge = new HomeAssistantLayoutBridge(host);
 
     bridge.configure(true);
-    expect(wrapper.style.padding).toBe("10px");
+    expect(container.style.padding).toBe("10px");
 
     const sectionsContext = sectionsHost();
-    sectionsContext.wrapper.style.padding = "6px";
+    sectionsContext.container.style.padding = "6px";
     sectionsContext.bridge.configure(true);
-    sectionsContext.wrapper.style.padding = "4px";
+    sectionsContext.container.style.padding = "4px";
     sectionsContext.bridge.release();
-    expect(sectionsContext.wrapper.style.padding).toBe("4px");
+    expect(sectionsContext.container.style.padding).toBe("4px");
   });
 
-  it("does not mutate a Sections view used directly as the parent", () => {
+  it("does nothing when the Sections implementation has no open container", () => {
     const sections = document.createElement("hui-sections-view");
     const host = document.createElement("watchzone-card");
-    sections.style.padding = "16px";
     sections.append(host);
     document.body.append(sections);
 
     new HomeAssistantLayoutBridge(host).configure(true);
 
-    expect(sections.style.padding).toBe("16px");
+    expect(sections.style.padding).toBe("");
   });
 });

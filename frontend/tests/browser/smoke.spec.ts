@@ -7805,7 +7805,7 @@ test("applies outer shell appearance toggles without changing card identity", as
   );
 });
 
-test("applies edge-to-edge spacing only to the immediate Sections wrapper", async ({
+test("applies edge-to-edge spacing to the Sections container outer padding", async ({
   page,
 }) => {
   await page.goto("/");
@@ -7820,11 +7820,14 @@ test("applies edge-to-edge spacing only to the immediate Sections wrapper", asyn
       };
       const sections = document.createElement("hui-sections-view");
       const wrapper = document.createElement("div");
-      wrapper.style.margin = "8px";
-      wrapper.style.padding = "12px";
+      const container = document.createElement("div");
+      container.className = "container";
+      container.style.padding = "24px 0px";
+      container.style.gap = "24px 8px";
       sections.style.setProperty("--ha-view-sections-row-gap", "8px");
-      wrapper.append(card);
-      sections.append(wrapper);
+      container.append(card);
+      wrapper.append(container);
+      sections.attachShadow({ mode: "open" }).append(wrapper);
       document.body.replaceChildren(sections);
 
       card.setConfig({
@@ -7833,8 +7836,8 @@ test("applies edge-to-edge spacing only to the immediate Sections wrapper", asyn
       });
       await card.updateComplete;
       const edge = {
-        margin: wrapper.style.margin,
-        padding: wrapper.style.padding,
+        gap: container.style.gap,
+        padding: container.style.padding,
         rowGap: sections.style.getPropertyValue("--ha-view-sections-row-gap"),
       };
 
@@ -7843,15 +7846,14 @@ test("applies edge-to-edge spacing only to the immediate Sections wrapper", asyn
       return {
         edge,
         restored: {
-          margin: wrapper.style.margin,
-          padding: wrapper.style.padding,
+          padding: container.style.padding,
         },
       };
     });
 
   expect(result).toEqual({
-    edge: { margin: "0px", padding: "0px", rowGap: "8px" },
-    restored: { margin: "8px", padding: "12px" },
+    edge: { gap: "24px 8px", padding: "0px", rowGap: "8px" },
+    restored: { padding: "24px 0px" },
   });
 });
 
