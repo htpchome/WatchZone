@@ -33,13 +33,15 @@ retained session, and respects reduced-motion preference.
   phone. It shares ownership across cards in the same view, restores prior
   inline declarations after the last owner releases them, and does not change
   internal row or column gaps, maximum view width, or grid allocation.
-- On a physical phone, edge-to-edge `fit_viewport` presentation extends through
-  the complete device bottom safe-area inset. Media lists scroll beneath a
-  non-interactive safe-area veil using the same background and backdrop filter
-  as `ha-card`. The visible veil is capped at `1.5rem`, while the complete
-  hardware inset remains reserved as trailing scroll padding. Translucent
-  themes therefore reveal more moving content without placing the final tile
-  beneath the home indicator. Home Assistant's reported
+- In the phone Companion app, edge-to-edge `fit_viewport` presentation extends
+  through the complete device bottom safe-area inset. Media lists scroll
+  beneath a non-interactive safe-area veil using the same background and
+  backdrop filter as `ha-card`. Normal mobile browsers keep the same
+  edge-to-edge presentation bounded to the measured visual viewport so the
+  inset does not create document overflow. The visible Companion veil is capped
+  at `1.5rem`, while the complete hardware inset remains reserved as trailing
+  scroll padding. Translucent themes therefore reveal more moving content
+  without placing the final tile beneath the home indicator. Home Assistant's reported
   `--safe-area-inset-bottom` is authoritative, with the browser environment
   inset as fallback. WatchZone does not reduce the hardware inset itself or
   apply it to ordinary card-contained surfaces.

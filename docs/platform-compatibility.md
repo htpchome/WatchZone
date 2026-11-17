@@ -39,14 +39,16 @@ new browser API makes another platform easier or faster.
   viewport edge, such as fullscreen. Card-contained Stage, carousel, control,
   toast, and dialog surfaces use their own local geometry; applying viewport
   safe-area values there would offset the same control differently by host
-  device. A phone edge-to-edge card in `fit_viewport` mode is the narrow
-  exception: its outer card boundary underlaps the complete bottom inset so
-  media tiles can travel behind translucent host chrome. A non-interactive
-  surface above that content uses the same background and backdrop-filter token
-  chain as `ha-card`. Its visible height is capped at `1.5rem`, independently
-  of the complete hardware inset retained for underlap and scroll clearance.
-  Floating media-list controls are offset above that complete inset and never
-  occupy the unsafe band. Home Assistant's
+  device. A Companion phone edge-to-edge card in `fit_viewport` mode is the
+  narrow exception: its outer card boundary underlaps the complete bottom
+  inset so media tiles can travel behind translucent host chrome. A normal
+  mobile browser remains bounded to its measured visual viewport so the inset
+  does not create document overflow. A non-interactive surface above Companion
+  content uses the same background and backdrop-filter token chain as
+  `ha-card`. Its visible height is capped at `1.5rem`, independently of the
+  complete hardware inset retained for underlap and scroll clearance. Floating
+  media-list controls are offset above that complete inset and never occupy the
+  unsafe band. Home Assistant's
   Companion-aware safe-area custom property is authoritative and the browser
   environment inset is only its fallback. Respect text scaling, reduced
   motion, orientation changes, and Home Assistant theme tokens where they

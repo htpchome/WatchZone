@@ -370,7 +370,9 @@ export class DashboardCard extends LitElement {
 
   private _syncEdgeToEdge(config: CardConfig): void {
     const enabled = config.edge_to_edge_phone && CLIENT_PROFILE.isPhone;
+    const companionUnderlap = enabled && CLIENT_PROFILE.isCompanionApp;
     this.classList.toggle("mobile-edge-to-edge", enabled);
+    this.classList.toggle("companion-safe-area-underlap", companionUnderlap);
     this._haLayout.configure(enabled);
   }
 

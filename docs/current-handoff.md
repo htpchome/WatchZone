@@ -77,13 +77,13 @@ Always recheck `git status`, `git log -1`, and
 - Phone-only edge-to-edge mode may remove HA Sections wrapper/container
   padding through the isolated shared bridge. It does not alter HA grid gaps or
   maximum widths.
-- In edge-to-edge `fit_viewport`, WatchZone underlaps the complete bottom safe
-  area. Reviews, Events, Recordings, and Exports keep a veil using the exact
-  `ha-card` background and backdrop-filter token chain over scrolling media,
-  capped visually at `1.5rem`, plus trailing scroll padding for the complete
-  hardware inset. Tiles remain visible through glass themes without stranding
-  the final tile under the home indicator. The floating Top control is offset
-  above the complete hardware inset.
+- In the phone Companion app, edge-to-edge `fit_viewport` underlaps the complete
+  bottom safe area. Reviews, Events, Recordings, and Exports keep a veil using
+  the exact `ha-card` background and backdrop-filter token chain over scrolling
+  media, capped visually at `1.5rem`, plus trailing scroll padding for the
+  complete hardware inset. Normal mobile browsers remain bounded to their
+  measured visual viewport and do not add this underlap. The floating Top
+  control is offset above the complete inset when underlap is active.
 - Native Companion pull-to-refresh is preserved. Internal media scrollers hand
   overscroll back to HA; no WatchZone-specific reload gesture exists. On iOS,
   list-origin pulls may require a longer pull-and-hold, consistent with other

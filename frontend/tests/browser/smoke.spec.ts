@@ -8355,6 +8355,9 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
       const cardSurface = card.shadowRoot?.querySelector("ha-card");
       if (!cardSurface) throw new Error("Card surface was not rendered");
       const edge = {
+        companionUnderlapClass: card.classList.contains(
+          "companion-safe-area-underlap",
+        ),
         fitViewportMinimum: getComputedStyle(cardSurface).minBlockSize,
         mediaSafeAreaUnderlap: getComputedStyle(card)
           .getPropertyValue("--wzc-media-safe-area-underlap")
@@ -8377,6 +8380,9 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
         minimalEdge,
         minimalRestored,
         restored: {
+          companionUnderlapClass: card.classList.contains(
+            "companion-safe-area-underlap",
+          ),
           hostClass: card.classList.contains("mobile-edge-to-edge"),
           containerPadding: container.style.padding,
           wrapperPadding: wrapper.style.padding,
@@ -8386,8 +8392,9 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
 
   expect(result).toEqual({
     edge: {
-      fitViewportMinimum: "436px",
-      mediaSafeAreaUnderlap: "36px",
+      companionUnderlapClass: false,
+      fitViewportMinimum: "400px",
+      mediaSafeAreaUnderlap: "0px",
       containerPadding: "0px",
       gap: "24px 8px",
       hostClass: true,
@@ -8403,10 +8410,63 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
       wrapperPadding: "0px 32px",
     },
     restored: {
+      companionUnderlapClass: false,
       containerPadding: "24px 0px",
       hostClass: false,
       wrapperPadding: "0px 32px",
     },
+  });
+});
+
+test("adds safe-area underlap only in the phone Companion app", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      get: () =>
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Home Assistant/2026.9 Mobile/HomeAssistant, like Safari",
+    });
+  });
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+
+  const result = await page
+    .locator("watchzone-card")
+    .evaluate(async (element) => {
+      const card = element as HTMLElement & {
+        setConfig(config: unknown): void;
+        updateComplete: Promise<boolean>;
+      };
+      document.documentElement.style.setProperty(
+        "--safe-area-inset-bottom",
+        "36px",
+      );
+      card.setConfig({
+        card_height_mode_phone: "fit_viewport",
+        type: "custom:watchzone-card",
+      });
+      await card.updateComplete;
+      card.style.setProperty("--wzc-fit-viewport-block-size", "400px");
+      const cardSurface = card.shadowRoot?.querySelector("ha-card");
+      if (!cardSurface) throw new Error("Card surface was not rendered");
+      return {
+        companionUnderlapClass: card.classList.contains(
+          "companion-safe-area-underlap",
+        ),
+        fitViewportMinimum: getComputedStyle(cardSurface).minBlockSize,
+        hostClass: card.classList.contains("mobile-edge-to-edge"),
+        mediaSafeAreaUnderlap: getComputedStyle(card)
+          .getPropertyValue("--wzc-media-safe-area-underlap")
+          .trim(),
+      };
+    });
+
+  expect(result).toEqual({
+    companionUnderlapClass: true,
+    fitViewportMinimum: "436px",
+    hostClass: true,
+    mediaSafeAreaUnderlap: "36px",
   });
 });
 
