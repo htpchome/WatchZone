@@ -71,7 +71,7 @@ describe("layout composition", () => {
         columns: 12,
         id: DEFAULT_LAYOUT_ROOT_NODE_ID,
         kind: "container",
-        rows: ["fraction", "content"],
+        rows: ["content", "content"],
       },
     });
   });

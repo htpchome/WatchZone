@@ -7804,6 +7804,86 @@ test("uses intrinsic card height in Home Assistant Panel view", async ({
   expect(result.classReleased).toBe(true);
 });
 
+test("applies viewport and parent height modes without shrinking the Full Stage below its media minimum", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 500, height: 900 });
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  const card = page.locator("watchzone-card");
+  await card.evaluate((element) => {
+    (element as HTMLElement & { setConfig(config: unknown): void }).setConfig({
+      type: "custom:watchzone-card",
+      card_height_mode: "fit_viewport",
+      cameras: [{ entity_id: "camera.front" }],
+    });
+  });
+  await expect(card).toHaveClass(/height-mode-fit-viewport/);
+  await expect(page.locator("wzc-activity-list .viewport")).toBeVisible();
+
+  const fitBounds = await card.boundingBox();
+  const headerHeight = await card.evaluate((element) =>
+    Number.parseFloat(
+      getComputedStyle(element).getPropertyValue("--header-height") || "56",
+    ),
+  );
+  expect(fitBounds?.height).toBeCloseTo(900 - headerHeight, 0);
+  const fitListHeight = await page
+    .locator("wzc-activity-list .viewport")
+    .evaluate((element) => element.getBoundingClientRect().height);
+  const threeTileMinimum = await page
+    .locator("wzc-activity-list")
+    .evaluate((element) => {
+      const style = getComputedStyle(element);
+      const number = (name: string) =>
+        Number.parseFloat(style.getPropertyValue(name)) || 0;
+      return (
+        number("--wzc-media-day-header-block-size") +
+        3 * number("--wzc-event-tile-block-size") +
+        3 * number("--wzc-event-list-gap") +
+        number("--wzc-media-day-header-gap") +
+        number("--wzc-event-list-padding")
+      );
+    });
+  expect(fitListHeight).toBeGreaterThanOrEqual(threeTileMinimum - 1);
+
+  await page.setViewportSize({ width: 500, height: 500 });
+  await expect
+    .poll(async () => (await card.boundingBox())?.height ?? 0)
+    .toBeGreaterThan(500 - headerHeight);
+  await expect
+    .poll(() =>
+      page
+        .locator("wzc-activity-list .viewport")
+        .evaluate((element) => element.getBoundingClientRect().height),
+    )
+    .toBeGreaterThanOrEqual(threeTileMinimum - 1);
+
+  await card.evaluate((element) => {
+    const cardElement = element as HTMLElement & {
+      setConfig(config: unknown): void;
+    };
+    const container = document.createElement("div");
+    container.id = "height-mode-container";
+    container.style.height = "1200px";
+    element.replaceWith(container);
+    container.append(element);
+    cardElement.setConfig({
+      type: "custom:watchzone-card",
+      card_height_mode: "fill_container",
+      cameras: [{ entity_id: "camera.front" }],
+    });
+  });
+  await expect(card).toHaveClass(/height-mode-fill-container/);
+  await expect
+    .poll(async () => (await card.boundingBox())?.height)
+    .toBeCloseTo(1200, 0);
+  const filledListHeight = await page
+    .locator("wzc-activity-list .viewport")
+    .evaluate((element) => element.getBoundingClientRect().height);
+  expect(filledListHeight).toBeGreaterThan(fitListHeight);
+});
+
 test("applies outer shell appearance toggles without changing card identity", async ({
   page,
 }) => {
@@ -9543,7 +9623,12 @@ test("round-trips boolean toggles through defaults before Save", async ({
       updatedCameras?.[0]?.start_live_unmuted_phone === true;
 
     await openSection("layout");
-    const selector = editor.shadowRoot?.querySelector(
+    await customElements.whenDefined("wzc-editor-height-selector");
+    const heightSettings = editor.shadowRoot?.querySelector(
+      "wzc-editor-height-selector",
+    ) as HTMLElement & { updateComplete: Promise<boolean> };
+    await heightSettings.updateComplete;
+    const selector = heightSettings.shadowRoot?.querySelector(
       '[data-config-key="rounded_outer_corners"]',
     );
     selector?.dispatchEvent(
@@ -9600,7 +9685,7 @@ test("round-trips boolean toggles through defaults before Save", async ({
       )?.[0]?.start_live_unmuted_phone,
       savedValue: dialog._cardConfig?.rounded_outer_corners,
       selectorValue: (
-        editor.shadowRoot?.querySelector(
+        heightSettings.shadowRoot?.querySelector(
           '[data-config-key="rounded_outer_corners"]',
         ) as HTMLElement & { value?: boolean }
       ).value,
@@ -10156,8 +10241,8 @@ test("restores controls after pre-editor and retains a replaced live connection"
   expect(layoutSizing.naturalRatio).toBeCloseTo(16 / 9, 2);
   expect(layoutSizing.fixedWithinCard).toBe(true);
   expect(layoutSizing.fixedResizeWithinCard).toBe(true);
-  expect(layoutSizing.fixedHeight).toBeLessThan(
-    layoutSizing.naturalHeight ?? Number.POSITIVE_INFINITY,
+  expect(layoutSizing.fixedHeight).toBeCloseTo(
+    layoutSizing.naturalHeight ?? Number.NaN,
   );
   const controls = page.locator(
     "wzc-camera wzc-camera-controls .control-button",

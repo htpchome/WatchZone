@@ -31,7 +31,7 @@ export const stageRuntimeStyles = css`
   .stage-stack {
     display: grid;
     grid-template-rows: max-content minmax(0, 1fr);
-    min-block-size: 0;
+    min-block-size: var(--wzc-stage-flex-content-min, 0);
   }
 
   .stage-stack-navigation {
@@ -108,7 +108,7 @@ export const stageRuntimeStyles = css`
   .stage-stack-content > .module-slot,
   .stage-stack-content > .module-slot.placeable-ready > * {
     block-size: 100%;
-    min-block-size: 0;
+    min-block-size: var(--wzc-stage-flex-content-min, 0);
   }
 
   .module-composition {
@@ -315,10 +315,13 @@ export const stageRuntimeStyles = css`
     align-content: start;
     box-sizing: border-box;
     block-size: 100%;
-    max-block-size: calc(
-      var(--wzc-media-day-header-block-size) + 5 *
-        var(--wzc-event-tile-block-size) + 5 * var(--wzc-event-list-gap) +
-        var(--wzc-event-list-padding)
+    max-block-size: var(
+      --wzc-activity-list-max-block-size,
+      calc(
+        var(--wzc-media-day-header-block-size) + 5 *
+          var(--wzc-event-tile-block-size) + 5 * var(--wzc-event-list-gap) +
+          var(--wzc-event-list-padding)
+      )
     );
     min-block-size: calc(
       var(--wzc-media-day-header-block-size) + 3 *

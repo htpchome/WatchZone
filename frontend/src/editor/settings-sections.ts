@@ -5,6 +5,7 @@ import type { CardConfig } from "../core/config";
 import {
   DEFAULT_EVENT_HISTORY_DAYS,
   EDITOR_GENERAL_INFO_TAG,
+  EDITOR_HEIGHT_SELECTOR_TAG,
   MAX_CARD_TITLE_LENGTH,
   MAX_EVENT_HISTORY_DAYS,
   MIN_EVENT_HISTORY_DAYS,
@@ -48,7 +49,7 @@ interface CommonSectionOptions {
   readonly config?: CardConfig;
   readonly hass?: HomeAssistant;
   readonly localize: LocalizeFunction;
-  readonly onBooleanChange: (event: ValueChangedEvent) => void;
+  readonly onChange: (event: ValueChangedEvent) => void;
 }
 
 interface GeneralSettingsOptions extends CommonSectionOptions {
@@ -82,20 +83,6 @@ interface ReviewSettingsOptions extends CommonSectionOptions {
 }
 
 const BOOLEAN_SELECTOR = { boolean: {} } as const;
-const EDGE_TO_EDGE_OPTIONS = [
-  "edge_to_edge_phone",
-] as const satisfies readonly BooleanConfigFlag[];
-const CARD_APPEARANCE_OPTIONS = [
-  "rounded_outer_corners",
-  "outer_shadows",
-  "outer_padding",
-  "camera_rounded_corners",
-  "camera_shadows",
-  "camera_bar_rounded_corners",
-  "camera_bar_shadows",
-  "event_rounded_corners",
-  "event_shadows",
-] as const satisfies readonly BooleanConfigFlag[];
 const REVIEW_HISTORY_DAYS_SELECTOR = {
   number: {
     max: MAX_EVENT_HISTORY_DAYS,
@@ -106,6 +93,7 @@ const REVIEW_HISTORY_DAYS_SELECTOR = {
   },
 } as const;
 const generalInfoTag = unsafeStatic(EDITOR_GENERAL_INFO_TAG);
+const heightSelectorTag = unsafeStatic(EDITOR_HEIGHT_SELECTOR_TAG);
 
 function renderBooleanOption(
   options: CommonSectionOptions,
@@ -120,7 +108,7 @@ function renderBooleanOption(
     .hass=${options.hass}
     .selector=${BOOLEAN_SELECTOR}
     .value=${value}
-    @value-changed=${options.onBooleanChange}
+    @value-changed=${options.onChange}
   ></ha-selector>`;
 }
 
@@ -364,28 +352,13 @@ export function renderLayoutSettings(
   options: CommonSectionOptions,
   minimal = false,
 ) {
-  const { config, localize } = options;
-  return html`
-    ${EDGE_TO_EDGE_OPTIONS.map((key) =>
-      renderBooleanOption(
-        options,
-        key,
-        localize(`editor.${key}`),
-        config?.[key] === true,
-      ),
-    )}
-    ${
-      minimal
-        ? null
-        : CARD_APPEARANCE_OPTIONS.map((key) =>
-            renderBooleanOption(
-              options,
-              key,
-              localize(`editor.${key}`),
-              config?.[key] !== false,
-            ),
-          )
-    }
+  return staticHtml`
+    <${heightSelectorTag}
+      .hass=${options.hass}
+      .config=${options.config}
+      .minimal=${minimal}
+      @value-changed=${options.onChange}
+    ></${heightSelectorTag}>
   `;
 }
 

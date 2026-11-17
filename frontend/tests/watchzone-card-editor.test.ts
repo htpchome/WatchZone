@@ -32,6 +32,20 @@ interface TestBooleanSelector extends HTMLElement {
   value: boolean;
 }
 
+function queryBooleanSelector(
+  editor: CardEditor,
+  selector: string,
+): TestBooleanSelector | null {
+  return (
+    (editor.shadowRoot?.querySelector(
+      selector,
+    ) as TestBooleanSelector | null) ??
+    (editor.shadowRoot
+      ?.querySelector("wzc-editor-height-selector")
+      ?.shadowRoot?.querySelector(selector) as TestBooleanSelector | null)
+  );
+}
+
 interface TestEditCardDialog extends HTMLElement {
   _cardConfig?: CardConfig;
   _updateDirtyState?: (config: CardConfig) => void;
@@ -76,9 +90,7 @@ async function setBooleanSelector(
   selector: string,
   checked: boolean,
 ): Promise<TestBooleanSelector> {
-  let control = editor.shadowRoot?.querySelector(
-    selector,
-  ) as TestBooleanSelector | null;
+  let control = queryBooleanSelector(editor, selector);
   if (!control && selector.includes("data-config-key")) {
     const key = selector.match(/data-config-key="([^"]+)"/)?.[1] ?? "";
     const section =
@@ -107,9 +119,14 @@ async function setBooleanSelector(
                 ? "minimal-camera-configuration"
                 : "live-media-player";
     await openEditorSection(editor, section);
-    control = editor.shadowRoot?.querySelector(
-      selector,
-    ) as TestBooleanSelector | null;
+    control = queryBooleanSelector(editor, selector);
+    if (!control && section === "layout") {
+      const heightSettings = editor.shadowRoot?.querySelector(
+        "wzc-editor-height-selector",
+      );
+      await heightSettings?.updateComplete;
+      control = queryBooleanSelector(editor, selector);
+    }
   }
   if (!control)
     throw new Error(`Boolean selector ${selector} was not rendered`);
@@ -366,10 +383,17 @@ describe("watchzone-card-editor", () => {
         ?.getAttribute("label"),
     ).toBe("Show Source Label");
     const layout = await openEditorSection(editor, "layout");
+    await customElements.whenDefined("wzc-editor-height-selector");
+    const heightSettings = layout.querySelector("wzc-editor-height-selector");
+    await heightSettings?.updateComplete;
+    expect(heightSettings?.shadowRoot?.textContent).toContain(
+      "How card height works",
+    );
     expect(
-      [...layout.querySelectorAll<HTMLElement>("[data-config-key]")].map(
-        (control) => control.dataset.configKey,
-      ),
+      [
+        ...(heightSettings?.shadowRoot?.querySelectorAll(".boolean-option") ??
+          []),
+      ].map((control) => (control as HTMLElement).dataset.configKey),
     ).toEqual(["edge_to_edge_phone"]);
     const interactions = await openEditorSection(editor, "interactions");
     const interactionForm = interactions.querySelector<
@@ -1433,7 +1457,8 @@ describe("watchzone-card-editor", () => {
     ]) {
       expect(
         (
-          reopened.shadowRoot?.querySelector(
+          queryBooleanSelector(
+            reopened,
             `[data-config-key="${key}"]`,
           ) as TestBooleanSelector
         ).value,
@@ -1441,7 +1466,8 @@ describe("watchzone-card-editor", () => {
     }
     expect(
       (
-        reopened.shadowRoot?.querySelector(
+        queryBooleanSelector(
+          reopened,
           '[data-config-key="edge_to_edge_phone"]',
         ) as TestBooleanSelector
       ).value,
@@ -1517,7 +1543,8 @@ describe("watchzone-card-editor", () => {
         await openEditorSection(editor, "layout");
         expect(
           (
-            editor.shadowRoot?.querySelector(
+            queryBooleanSelector(
+              editor,
               '[data-config-key="rounded_outer_corners"]',
             ) as TestBooleanSelector
           ).value,
@@ -1560,7 +1587,8 @@ describe("watchzone-card-editor", () => {
     ]) {
       expect(
         (
-          reopened.shadowRoot?.querySelector(
+          queryBooleanSelector(
+            reopened,
             `[data-config-key="${key}"]`,
           ) as TestBooleanSelector
         ).value,

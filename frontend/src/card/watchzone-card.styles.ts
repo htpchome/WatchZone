@@ -24,6 +24,32 @@ export const cardStyles = css`
     align-self: start;
   }
 
+  :host(.height-mode-auto) {
+    block-size: auto;
+    height: auto;
+    align-self: start;
+  }
+
+  :host(.height-mode-fit-viewport) {
+    --wzc-stage-flex-track-min: min-content;
+    --wzc-stage-flex-content-min: min-content;
+    --wzc-activity-list-max-block-size: none;
+    --wzc-recording-list-max-block-size: none;
+    --wzc-export-list-max-block-size: none;
+    block-size: auto;
+    min-block-size: 0;
+  }
+
+  :host(.height-mode-fill-container) {
+    --wzc-stage-flex-track-min: min-content;
+    --wzc-stage-flex-content-min: min-content;
+    --wzc-activity-list-max-block-size: none;
+    --wzc-recording-list-max-block-size: none;
+    --wzc-export-list-max-block-size: none;
+    block-size: 100%;
+    min-block-size: 0;
+  }
+
   ha-card {
     isolation: isolate;
     box-sizing: border-box;
@@ -68,7 +94,33 @@ export const cardStyles = css`
   }
 
   :host(.panel-view-natural-height) ha-card,
-  :host(.panel-view-natural-height) .shell {
+  :host(.panel-view-natural-height) .shell,
+  :host(.height-mode-auto) ha-card,
+  :host(.height-mode-auto) .shell {
+    block-size: auto;
+    height: auto;
+  }
+
+  :host(.height-mode-fit-viewport) ha-card,
+  :host(.height-mode-fill-container) ha-card {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr);
+    min-block-size: min-content;
+  }
+
+  :host(.height-mode-fit-viewport) ha-card {
+    block-size: auto;
+    height: auto;
+    min-block-size: calc(100dvh - var(--wzc-ha-header-height));
+  }
+
+  :host(.height-mode-fill-container) ha-card {
+    block-size: 100%;
+    height: 100%;
+  }
+
+  :host(.height-mode-fit-viewport) .shell,
+  :host(.height-mode-fill-container) .shell {
     block-size: auto;
     height: auto;
   }

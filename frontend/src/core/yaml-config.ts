@@ -16,6 +16,10 @@ export interface YamlCardConfig {
 export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
   const yaml: Record<string, unknown> = { ...config, type: CARD_TYPE };
   if (config.title === DEFAULT_CARD_TITLE) delete yaml.title;
+  if (config.card_height_mode === "auto") delete yaml.card_height_mode;
+  if (config.card_height_mode_phone === "auto") {
+    delete yaml.card_height_mode_phone;
+  }
   if (config.rounded_outer_corners !== false) {
     delete yaml.rounded_outer_corners;
   }

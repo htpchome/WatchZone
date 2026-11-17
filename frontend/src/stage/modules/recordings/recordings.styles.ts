@@ -15,11 +15,14 @@ export const recordingsStyles = css`
     display: grid;
     grid-template-rows: var(--wzc-media-day-header-block-size) minmax(0, 1fr);
     block-size: 100%;
-    max-block-size: calc(
-      var(--wzc-media-day-header-block-size) + 5 *
-        var(--wzc-recording-tile-block-size) + 5 *
-        var(--wzc-recording-list-gap) + var(--wzc-media-day-header-gap) +
-        var(--wzc-recording-list-padding)
+    max-block-size: var(
+      --wzc-recording-list-max-block-size,
+      calc(
+        var(--wzc-media-day-header-block-size) + 5 *
+          var(--wzc-recording-tile-block-size) + 5 *
+          var(--wzc-recording-list-gap) + var(--wzc-media-day-header-gap) +
+          var(--wzc-recording-list-padding)
+      )
     );
     min-block-size: calc(
       var(--wzc-media-day-header-block-size) + 3 *

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeCardConfig } from "../src/core/config";
+import { activeCardHeightMode, normalizeCardConfig } from "../src/core/config";
 import {
   CARD_TYPE,
   MAX_CARD_TITLE_LENGTH,
@@ -25,6 +25,8 @@ describe("WatchZone card configuration", () => {
       camera_rounded_corners: true,
       camera_shadows: true,
       camera_switcher_overlay: false,
+      card_height_mode: "auto",
+      card_height_mode_phone: "auto",
       display_event_type_badges: true,
       display_object_badges: true,
       display_zone: true,
@@ -58,6 +60,44 @@ describe("WatchZone card configuration", () => {
       mobile_data_saving: false,
       cameras: [],
     });
+  });
+
+  it("normalizes independent standard and phone height modes", () => {
+    expect(
+      normalizeCardConfig({
+        card_height_mode: "fit_viewport",
+        card_height_mode_phone: "fill_container",
+      }),
+    ).toMatchObject({
+      card_height_mode: "fit_viewport",
+      card_height_mode_phone: "fill_container",
+    });
+    expect(() => normalizeCardConfig({ card_height_mode: "fixed" })).toThrow(
+      "card_height_mode must be auto, fit_viewport, or fill_container",
+    );
+    expect(() =>
+      normalizeCardConfig({ card_height_mode_phone: "viewport" }),
+    ).toThrow(
+      "card_height_mode_phone must be auto, fit_viewport, or fill_container",
+    );
+  });
+
+  it("selects height mode by physical phone class and leaves camera-only stages natural", () => {
+    const config = normalizeCardConfig({
+      card_height_mode: "fit_viewport",
+      card_height_mode_phone: "fill_container",
+    });
+    expect(activeCardHeightMode(config, false)).toBe("fit_viewport");
+    expect(activeCardHeightMode(config, true)).toBe("fill_container");
+    expect(
+      activeCardHeightMode(
+        normalizeCardConfig({
+          card_height_mode: "fill_container",
+          stage_type: "camera_only",
+        }),
+        false,
+      ),
+    ).toBe("auto");
   });
 
   it("normalizes stage type as the gatekeeper for desktop and phone flows", () => {

@@ -13,6 +13,7 @@ export const HA_DIALOG_SURFACE_BACKDROP_FILTER_PROPERTY =
  */
 export const themeTokens = css`
   :host {
+    --wzc-ha-header-height: var(--header-height, 56px);
     --wzc-color-primary: var(--primary-color, CanvasText);
     --wzc-color-primary-dark: var(
       --dark-primary-color,

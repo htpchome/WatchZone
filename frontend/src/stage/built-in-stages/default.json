@@ -135,7 +135,7 @@
         "columns": 12,
         "id": "default-layout-root",
         "kind": "container",
-        "rows": ["fraction", "content", "content"]
+        "rows": ["content", "content", "fraction"]
       }
     },
     "phone": {
@@ -268,7 +268,7 @@
         "columns": 4,
         "id": "default-layout-root",
         "kind": "container",
-        "rows": ["fraction", "content", "content"]
+        "rows": ["content", "content", "fraction"]
       }
     }
   }

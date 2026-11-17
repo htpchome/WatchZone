@@ -16,10 +16,13 @@ export const activityListStyles = css`
     display: grid;
     grid-template-rows: var(--wzc-media-day-header-block-size) minmax(0, 1fr);
     block-size: 100%;
-    max-block-size: calc(
-      var(--wzc-media-day-header-block-size) + 5 *
-        var(--wzc-event-tile-block-size) + 5 * var(--wzc-event-list-gap) +
-        var(--wzc-media-day-header-gap) + var(--wzc-event-list-padding)
+    max-block-size: var(
+      --wzc-activity-list-max-block-size,
+      calc(
+        var(--wzc-media-day-header-block-size) + 5 *
+          var(--wzc-event-tile-block-size) + 5 * var(--wzc-event-list-gap) +
+          var(--wzc-media-day-header-gap) + var(--wzc-event-list-padding)
+      )
     );
     min-block-size: calc(
       var(--wzc-media-day-header-block-size) + 3 *

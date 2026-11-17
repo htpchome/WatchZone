@@ -2,6 +2,7 @@ import { LitElement } from "lit";
 import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import {
+  activeCardHeightMode,
   cardConfigSignature,
   normalizeCardConfig,
   type CardConfig,
@@ -163,12 +164,14 @@ export class DashboardCard extends LitElement {
     if (cardConfigSignature(next) === cardConfigSignature(this._config)) {
       this._cardHostAppearance.configure(next);
       this._syncEdgeToEdge(next);
+      this._syncHeightMode(next);
       return;
     }
     this._config = next;
     this._previewConfig = undefined;
     this._cardHostAppearance.configure(next);
     this._syncEdgeToEdge(next);
+    this._syncHeightMode(next);
     if (this.isConnected && !this._cardPickerPreview) this._syncLayout(next);
     this.requestUpdate();
   }
@@ -186,6 +189,7 @@ export class DashboardCard extends LitElement {
     }
     this._cardHostAppearance.configure(this._previewConfig ?? this._config);
     this._syncEdgeToEdge(this._previewConfig ?? this._config);
+    this._syncHeightMode(this._previewConfig ?? this._config);
     window.addEventListener(
       EDITOR_PREVIEW_DRAFT_EVENT,
       this._handlePreviewDraft as EventListener,
@@ -342,6 +346,7 @@ export class DashboardCard extends LitElement {
     const config = this._previewConfig ?? this._config;
     this._cardHostAppearance.configure(config);
     this._syncEdgeToEdge(config);
+    this._syncHeightMode(config);
     this._syncLayout(config);
     this.requestUpdate();
   };
@@ -350,6 +355,16 @@ export class DashboardCard extends LitElement {
     this._haLayout.configure(
       config.edge_to_edge_phone && CLIENT_PROFILE.isPhone,
     );
+  }
+
+  private _syncHeightMode(config: CardConfig): void {
+    const mode = activeCardHeightMode(config, CLIENT_PROFILE.isPhone);
+    for (const value of ["auto", "fit-viewport", "fill-container"]) {
+      this.classList.toggle(
+        `height-mode-${value}`,
+        value === mode.replaceAll("_", "-"),
+      );
+    }
   }
 
   private readonly _handleRecordedMediaOpen = (

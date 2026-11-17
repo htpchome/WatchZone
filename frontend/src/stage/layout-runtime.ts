@@ -227,7 +227,11 @@ export class LayoutRuntime implements ReactiveController {
       </div>`;
     }
     const rows = variant.root.rows
-      .map((size) => (size === "content" ? "max-content" : "minmax(0,1fr)"))
+      .map((size) =>
+        size === "content"
+          ? "max-content"
+          : "minmax(var(--wzc-stage-flex-track-min,0px),1fr)",
+      )
       .join(" ");
     return html`<div
       class="stage-grid"

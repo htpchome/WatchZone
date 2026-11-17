@@ -384,6 +384,32 @@ describe("watchzone-card", () => {
     expect(element.style.getPropertyValue("box-shadow")).toBe("");
   });
 
+  it("applies the standard Full Stage height mode and leaves camera-only stages natural", async () => {
+    const element = document.createElement("watchzone-card") as DashboardCard;
+    element.setConfig({
+      card_height_mode: "fit_viewport",
+      type: "custom:watchzone-card",
+    });
+    document.body.append(element);
+    await element.updateComplete;
+
+    expect(element.classList.contains("height-mode-fit-viewport")).toBe(true);
+    element.setConfig({
+      card_height_mode: "fill_container",
+      type: "custom:watchzone-card",
+    });
+    await element.updateComplete;
+    expect(element.classList.contains("height-mode-fill-container")).toBe(true);
+
+    element.setConfig({
+      card_height_mode: "fill_container",
+      stage_type: "camera_only",
+      type: "custom:watchzone-card",
+    });
+    await element.updateComplete;
+    expect(element.classList.contains("height-mode-auto")).toBe(true);
+  });
+
   it("keeps Sections padding for non-phone clients", async () => {
     const sections = document.createElement("hui-sections-view");
     const wrapper = document.createElement("div");

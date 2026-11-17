@@ -30,6 +30,7 @@ export type SlideAdvanceSeconds = 5 | 10 | 20 | 30;
 export type AlertTakeoverMode = "off" | "alerts" | "detections" | "both";
 export type AdditionalCameraLayout = "side_by_side" | "stacked";
 export type MinimalCameraMenuPosition = "top_left" | "top_right";
+export type CardHeightMode = "auto" | "fit_viewport" | "fill_container";
 
 export type HomeAssistantAction =
   | "assist"
@@ -67,6 +68,8 @@ export interface CameraConfig {
 }
 
 export interface CardConfig {
+  readonly card_height_mode: CardHeightMode;
+  readonly card_height_mode_phone: CardHeightMode;
   readonly camera_switcher_overlay: boolean;
   readonly camera_bar_rounded_corners: boolean;
   readonly camera_bar_shadows: boolean;
@@ -149,6 +152,20 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     source.double_tap_action,
     "none",
   );
+
+  for (const key of ["card_height_mode", "card_height_mode_phone"] as const) {
+    const mode = source[key];
+    if (
+      mode !== undefined &&
+      mode !== "auto" &&
+      mode !== "fit_viewport" &&
+      mode !== "fill_container"
+    ) {
+      throw new Error(
+        `${APP_NAME} ${key} must be auto, fit_viewport, or fill_container.`,
+      );
+    }
+  }
 
   for (const key of [
     "camera_bar_rounded_corners",
@@ -254,6 +271,16 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     type: CARD_TYPE,
     title,
   };
+  normalized.card_height_mode =
+    source.card_height_mode === "fit_viewport" ||
+    source.card_height_mode === "fill_container"
+      ? source.card_height_mode
+      : "auto";
+  normalized.card_height_mode_phone =
+    source.card_height_mode_phone === "fit_viewport" ||
+    source.card_height_mode_phone === "fill_container"
+      ? source.card_height_mode_phone
+      : "auto";
   for (const legacyKey of [
     "camera_entity",
     "low_latency_hls",
@@ -782,4 +809,12 @@ function moduleAppearanceValue(
 
 export function cardConfigSignature(config: CardConfig): string {
   return JSON.stringify(config);
+}
+
+export function activeCardHeightMode(
+  config: CardConfig,
+  isPhone: boolean,
+): CardHeightMode {
+  if (config.stage_type !== "full") return "auto";
+  return isPhone ? config.card_height_mode_phone : config.card_height_mode;
 }

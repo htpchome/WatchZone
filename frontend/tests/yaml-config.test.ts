@@ -47,6 +47,22 @@ describe("WatchZone YAML configuration manager", () => {
     ).toEqual({ stage_type: "minimal_camera_only", type: CARD_TYPE });
   });
 
+  it("persists only non-default device height modes", () => {
+    expect(
+      toYamlCardConfig(
+        normalizeCardConfig({
+          card_height_mode: "fit_viewport",
+          card_height_mode_phone: "fill_container",
+          type: CARD_TYPE,
+        }),
+      ),
+    ).toEqual({
+      card_height_mode: "fit_viewport",
+      card_height_mode_phone: "fill_container",
+      type: CARD_TYPE,
+    });
+  });
+
   it("keeps non-default values and unknown HA configuration", () => {
     expect(
       toYamlCardConfig(

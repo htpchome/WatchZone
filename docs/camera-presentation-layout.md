@@ -63,6 +63,34 @@ The lazy-loading placeholder reserves the same stage ratio and background as
 the loaded camera module. Loading the camera code, fallback image, HLS, or
 WebRTC must not change the card's geometry.
 
+## Card height modes
+
+Card configuration stores independent height modes for physical mobile phones
+and for standard devices. Runtime device classification selects the applicable
+setting; narrowing a desktop browser does not select the phone setting. Each
+setting accepts the same three values:
+
+- `auto` leaves the card at its natural content height. Scrollable media
+  modules retain a three-item minimum and five-item natural-height ceiling.
+- `fit_viewport` targets the dynamic viewport height less the semantic Home
+  Assistant header height.
+- `fill_container` fills a definite height supplied by the parent layout and
+  otherwise behaves like automatic percentage sizing.
+
+The current Camera Only and Minimal Camera Stage designs contain no flexible
+media row, so they retain natural height regardless of the selected mode. A
+Full Stage declares camera and navigation rows as content-sized and its media
+stack as the flexible row. Under either constrained mode, the flexible row
+receives remaining height and its internal viewport scrolls. Its five-item
+ceiling is removed, but its three-item minimum remains.
+
+When a viewport or parent allocation cannot contain the Stage's minimum usable
+height, the card grows beyond the requested target. The containing Home
+Assistant view or custom layout must then scroll; WatchZone does not shrink the
+camera or make the media region unusable. Module minimums derive from current
+CSS geometry, so supported theme or user changes to tile sizing also change the
+minimum without a parallel pixel constant.
+
 ## Explicit Home Assistant height
 
 If the user disables automatic height and assigns grid rows, that rectangle is

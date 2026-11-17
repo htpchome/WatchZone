@@ -82,7 +82,6 @@ import {
   renderLiveMediaPlayerSettings,
   renderMinimalCameraSettings,
   renderReviewSettings,
-  type BooleanConfigFlag,
 } from "./settings-sections";
 import { renderStageManagement } from "./stage-management-section";
 import { cardEditorStyles } from "./watchzone-card-editor.styles";
@@ -97,7 +96,7 @@ interface PreviewDraftDetail {
 }
 
 interface ValueChangedEvent extends Event {
-  readonly detail: { readonly value?: unknown };
+  readonly detail: { readonly key?: string; readonly value?: unknown };
 }
 
 interface SelectorElement extends HTMLElement {
@@ -329,7 +328,7 @@ export class CardEditor extends LitElement {
       config: this._config,
       hass: this._hass,
       localize: this._localization.localize,
-      onBooleanChange: this._handleBooleanChange,
+      onChange: this._handleConfigChange,
     };
     return staticHtml`
       <${toastRegionTag}
@@ -1956,16 +1955,14 @@ export class CardEditor extends LitElement {
     )}${talk}${ptz}`;
   }
 
-  private readonly _handleBooleanChange = (event: ValueChangedEvent): void => {
+  private readonly _handleConfigChange = (event: ValueChangedEvent): void => {
     if (!this._config) {
       return;
     }
-    const key = (event.currentTarget as HTMLElement).dataset.configKey as
-      BooleanConfigFlag | undefined;
+    const key =
+      event.detail.key ??
+      (event.currentTarget as HTMLElement).dataset.configKey;
     if (!key) {
-      return;
-    }
-    if (typeof event.detail.value !== "boolean") {
       return;
     }
     const next: Record<string, unknown> = {

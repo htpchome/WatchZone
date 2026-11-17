@@ -17,6 +17,7 @@ import {
 } from "../core/localization";
 import { renderIcon } from "../ui/icons";
 import { generalSettingsInfoStyles } from "./general-settings-info.styles";
+import "./height-mode-info";
 import { SystemInfoController } from "./system-info.controller";
 
 export class GeneralSettingsInfo extends LitElement {
