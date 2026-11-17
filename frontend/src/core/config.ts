@@ -75,6 +75,8 @@ export interface CardConfig {
   readonly display_event_type_badges: boolean;
   readonly display_object_badges: boolean;
   readonly display_zone: boolean;
+  readonly edge_to_edge_non_phone: boolean;
+  readonly edge_to_edge_phone: boolean;
   readonly event_rounded_corners: boolean;
   readonly event_shadows: boolean;
   readonly event_history_days: number;
@@ -158,6 +160,8 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     "display_event_type_badges",
     "display_object_badges",
     "display_zone",
+    "edge_to_edge_non_phone",
+    "edge_to_edge_phone",
     "event_rounded_corners",
     "event_shadows",
     "highlight_camera_on_activity",
@@ -317,6 +321,8 @@ export function normalizeCardConfig(value: unknown): CardConfig {
   normalized.start_alert_takeover_on = source.start_alert_takeover_on === true;
   normalized.view_timelapse_on_thumbnail_hover =
     source.view_timelapse_on_thumbnail_hover !== false;
+  normalized.edge_to_edge_non_phone = source.edge_to_edge_non_phone === true;
+  normalized.edge_to_edge_phone = source.edge_to_edge_phone === true;
   normalized.rounded_outer_corners =
     typeof source.rounded_outer_corners === "boolean"
       ? source.rounded_outer_corners

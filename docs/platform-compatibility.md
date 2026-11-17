@@ -97,12 +97,20 @@ platform markers with touch capability for iPadOS and Android-tablet
 disambiguation. Client identity never derives from viewport, screen, card, or
 container width.
 
+An explicit card configuration may select a presentation preference by this
+physical client class when the user intentionally wants different phone and
+non-phone behavior. This narrow exception is used for device-specific
+edge-to-edge layout and does not allow automatic layout decisions to infer
+physical hardware from size. Container-responsive Stage arrangement and
+control geometry remain separate.
+
 The client identity profile may select policies that genuinely depend on the
 physical client or host application, including mobile connection retention and
-phone-specific startup audio. It does not select responsive layout, control
-geometry, or input behavior. Those remain owned by the container-responsive
-and input-capability profile above. User-agent and platform parsing remains
-prohibited for presentation decisions.
+phone-specific startup audio. Outside an explicit user-configured client-class
+override, it does not select responsive layout, control geometry, or input
+behavior. Those remain owned by the container-responsive and input-capability
+profile above. User-agent and platform parsing remains prohibited for
+automatic presentation decisions.
 
 ### 2.3 Theme profile
 

@@ -25,6 +25,8 @@ export type BooleanConfigFlag =
   | "display_event_type_badges"
   | "display_object_badges"
   | "display_zone"
+  | "edge_to_edge_non_phone"
+  | "edge_to_edge_phone"
   | "event_rounded_corners"
   | "event_shadows"
   | "highlight_camera_on_activity"
@@ -81,6 +83,21 @@ interface ReviewSettingsOptions extends CommonSectionOptions {
 }
 
 const BOOLEAN_SELECTOR = { boolean: {} } as const;
+const EDGE_TO_EDGE_OPTIONS = [
+  "edge_to_edge_phone",
+  "edge_to_edge_non_phone",
+] as const satisfies readonly BooleanConfigFlag[];
+const CARD_APPEARANCE_OPTIONS = [
+  "rounded_outer_corners",
+  "outer_shadows",
+  "outer_padding",
+  "camera_rounded_corners",
+  "camera_shadows",
+  "camera_bar_rounded_corners",
+  "camera_bar_shadows",
+  "event_rounded_corners",
+  "event_shadows",
+] as const satisfies readonly BooleanConfigFlag[];
 const REVIEW_HISTORY_DAYS_SELECTOR = {
   number: {
     max: MAX_EVENT_HISTORY_DAYS,
@@ -345,63 +362,32 @@ export function renderReviewSettings(options: ReviewSettingsOptions) {
   `;
 }
 
-export function renderLayoutSettings(options: CommonSectionOptions) {
+export function renderLayoutSettings(
+  options: CommonSectionOptions,
+  minimal = false,
+) {
   const { config, localize } = options;
   return html`
-    ${renderBooleanOption(
-      options,
-      "rounded_outer_corners",
-      localize("editor.rounded_outer_corners"),
-      config?.rounded_outer_corners !== false,
+    ${EDGE_TO_EDGE_OPTIONS.map((key) =>
+      renderBooleanOption(
+        options,
+        key,
+        localize(`editor.${key}`),
+        config?.[key] === true,
+      ),
     )}
-    ${renderBooleanOption(
-      options,
-      "outer_shadows",
-      localize("editor.outer_shadows"),
-      config?.outer_shadows !== false,
-    )}
-    ${renderBooleanOption(
-      options,
-      "outer_padding",
-      localize("editor.outer_padding"),
-      config?.outer_padding !== false,
-    )}
-    ${renderBooleanOption(
-      options,
-      "camera_rounded_corners",
-      localize("editor.camera_rounded_corners"),
-      config?.camera_rounded_corners !== false,
-    )}
-    ${renderBooleanOption(
-      options,
-      "camera_shadows",
-      localize("editor.camera_shadows"),
-      config?.camera_shadows !== false,
-    )}
-    ${renderBooleanOption(
-      options,
-      "camera_bar_rounded_corners",
-      localize("editor.camera_bar_rounded_corners"),
-      config?.camera_bar_rounded_corners !== false,
-    )}
-    ${renderBooleanOption(
-      options,
-      "camera_bar_shadows",
-      localize("editor.camera_bar_shadows"),
-      config?.camera_bar_shadows !== false,
-    )}
-    ${renderBooleanOption(
-      options,
-      "event_rounded_corners",
-      localize("editor.event_rounded_corners"),
-      config?.event_rounded_corners !== false,
-    )}
-    ${renderBooleanOption(
-      options,
-      "event_shadows",
-      localize("editor.event_shadows"),
-      config?.event_shadows !== false,
-    )}
+    ${
+      minimal
+        ? null
+        : CARD_APPEARANCE_OPTIONS.map((key) =>
+            renderBooleanOption(
+              options,
+              key,
+              localize(`editor.${key}`),
+              config?.[key] !== false,
+            ),
+          )
+    }
   `;
 }
 

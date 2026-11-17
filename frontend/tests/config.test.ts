@@ -28,6 +28,8 @@ describe("WatchZone card configuration", () => {
       display_event_type_badges: true,
       display_object_badges: true,
       display_zone: true,
+      edge_to_edge_non_phone: false,
+      edge_to_edge_phone: false,
       event_history_days: 5,
       event_rounded_corners: true,
       event_shadows: true,
@@ -541,6 +543,12 @@ describe("WatchZone card configuration", () => {
     expect(() => normalizeCardConfig({ mobile_data_saving: "yes" })).toThrow(
       "mobile_data_saving must be a boolean",
     );
+    expect(() => normalizeCardConfig({ edge_to_edge_phone: "yes" })).toThrow(
+      "edge_to_edge_phone must be a boolean",
+    );
+    expect(() =>
+      normalizeCardConfig({ edge_to_edge_non_phone: "yes" }),
+    ).toThrow("edge_to_edge_non_phone must be a boolean");
     expect(() => normalizeCardConfig({ outer_shadows: "yes" })).toThrow(
       "outer_shadows must be a boolean",
     );

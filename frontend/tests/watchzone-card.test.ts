@@ -383,4 +383,28 @@ describe("watchzone-card", () => {
     expect(element.style.getPropertyValue("border-radius")).toBe("");
     expect(element.style.getPropertyValue("box-shadow")).toBe("");
   });
+
+  it("removes and restores Sections wrapper spacing for non-phone clients", async () => {
+    const sections = document.createElement("hui-sections-view");
+    const wrapper = document.createElement("div");
+    wrapper.style.margin = "8px";
+    wrapper.style.padding = "12px";
+    const element = document.createElement("watchzone-card") as DashboardCard;
+    element.setConfig({
+      edge_to_edge_non_phone: true,
+      type: "custom:watchzone-card",
+    });
+    wrapper.append(element);
+    sections.append(wrapper);
+    document.body.append(sections);
+    await element.updateComplete;
+
+    expect(wrapper.style.margin).toBe("0px");
+    expect(wrapper.style.padding).toBe("0px");
+
+    element.setConfig({ type: "custom:watchzone-card" });
+    await element.updateComplete;
+    expect(wrapper.style.margin).toBe("8px");
+    expect(wrapper.style.padding).toBe("12px");
+  });
 });

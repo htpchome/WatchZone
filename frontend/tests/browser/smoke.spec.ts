@@ -7805,6 +7805,56 @@ test("applies outer shell appearance toggles without changing card identity", as
   );
 });
 
+test("applies edge-to-edge spacing only to the immediate Sections wrapper", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+
+  const result = await page
+    .locator("watchzone-card")
+    .evaluate(async (element) => {
+      const card = element as HTMLElement & {
+        setConfig(config: unknown): void;
+        updateComplete: Promise<boolean>;
+      };
+      const sections = document.createElement("hui-sections-view");
+      const wrapper = document.createElement("div");
+      wrapper.style.margin = "8px";
+      wrapper.style.padding = "12px";
+      sections.style.setProperty("--ha-view-sections-row-gap", "8px");
+      wrapper.append(card);
+      sections.append(wrapper);
+      document.body.replaceChildren(sections);
+
+      card.setConfig({
+        edge_to_edge_non_phone: true,
+        type: "custom:watchzone-card",
+      });
+      await card.updateComplete;
+      const edge = {
+        margin: wrapper.style.margin,
+        padding: wrapper.style.padding,
+        rowGap: sections.style.getPropertyValue("--ha-view-sections-row-gap"),
+      };
+
+      card.setConfig({ type: "custom:watchzone-card" });
+      await card.updateComplete;
+      return {
+        edge,
+        restored: {
+          margin: wrapper.style.margin,
+          padding: wrapper.style.padding,
+        },
+      };
+    });
+
+  expect(result).toEqual({
+    edge: { margin: "0px", padding: "0px", rowGap: "8px" },
+    restored: { margin: "8px", padding: "12px" },
+  });
+});
+
 test("exposes and honors the WatchZone semantic theme-token contract", async ({
   page,
 }) => {

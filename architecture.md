@@ -715,7 +715,10 @@ Mandatory behavior:
 - Physical client type and Home Assistant host-application identity come from
   one document-scoped client profile. They never derive from a card or module
   width. Container-responsive presentation classes remain separate and may not
-  select phone retention or phone-specific startup-audio policy.
+  select phone retention or phone-specific startup-audio policy. Explicit
+  user-configured presentation preferences may use the client profile when the
+  user deliberately chooses separate phone and non-phone behavior; automatic
+  responsive presentation continues to use container size.
 - Active leases remain protected across background tabs. Home Assistant route
   and dashboard navigation releases element leases into the centralized
   retention policy; returning consumers reuse a healthy retained session.

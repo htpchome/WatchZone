@@ -6,6 +6,7 @@ import {
   normalizeCardConfig,
   type CardConfig,
 } from "../core/config";
+import { CLIENT_PROFILE } from "../core/client-profile";
 import {
   APP_NAME,
   APP_VERSION,
@@ -55,6 +56,10 @@ import {
   isHomeAssistantCardPickerPreview,
   type CardPickerStubConfig,
 } from "./home-assistant-card-picker";
+import {
+  edgeToEdgeEnabled,
+  HomeAssistantLayoutBridge,
+} from "./home-assistant-layout-bridge";
 
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
 const recordedVideoViewerTag = unsafeStatic(RECORDED_VIDEO_VIEWER_TAG);
@@ -102,6 +107,7 @@ export class DashboardCard extends LitElement {
     (message, key) => this._toasts.error(message, { key }),
   );
   private readonly _cardHostAppearance = new CardHostAppearanceController(this);
+  private readonly _haLayout = new HomeAssistantLayoutBridge(this);
   private _stageResizeFrame?: number;
   private _stageSizeBoundary?: HTMLElement;
   private readonly _stageResizeObserver =
@@ -159,11 +165,13 @@ export class DashboardCard extends LitElement {
     const next = normalizeCardConfig(value);
     if (cardConfigSignature(next) === cardConfigSignature(this._config)) {
       this._cardHostAppearance.configure(next);
+      this._syncEdgeToEdge(next);
       return;
     }
     this._config = next;
     this._previewConfig = undefined;
     this._cardHostAppearance.configure(next);
+    this._syncEdgeToEdge(next);
     if (this.isConnected && !this._cardPickerPreview) this._syncLayout(next);
     this.requestUpdate();
   }
@@ -180,6 +188,7 @@ export class DashboardCard extends LitElement {
       return;
     }
     this._cardHostAppearance.configure(this._previewConfig ?? this._config);
+    this._syncEdgeToEdge(this._previewConfig ?? this._config);
     window.addEventListener(
       EDITOR_PREVIEW_DRAFT_EVENT,
       this._handlePreviewDraft as EventListener,
@@ -240,6 +249,7 @@ export class DashboardCard extends LitElement {
       this._handleRecordedMediaClose,
     );
     this._unobserveConnection();
+    this._haLayout.release();
     super.disconnectedCallback();
   }
 
@@ -334,9 +344,20 @@ export class DashboardCard extends LitElement {
     this._previewConfig = event.detail.config ?? undefined;
     const config = this._previewConfig ?? this._config;
     this._cardHostAppearance.configure(config);
+    this._syncEdgeToEdge(config);
     this._syncLayout(config);
     this.requestUpdate();
   };
+
+  private _syncEdgeToEdge(config: CardConfig): void {
+    this._haLayout.configure(
+      edgeToEdgeEnabled(
+        config.edge_to_edge_phone,
+        config.edge_to_edge_non_phone,
+        CLIENT_PROFILE.isPhone,
+      ),
+    );
+  }
 
   private readonly _handleRecordedMediaOpen = (
     event: CustomEvent<RecordedMediaRequest>,
