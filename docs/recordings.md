@@ -30,9 +30,11 @@
   localized clock ranges. Provider duration and availability replace those
   placeholders when the selected-day response arrives.
 - The row viewport uses the same bounded internal scrolling contract as the
-  Reviews and Events lists. It contains overscroll without expanding the Stage
-  and does not reserve a stable scrollbar gutter. A labeled Top action follows
-  the final row and smoothly returns the recording viewport to its beginning.
+  Reviews and Events lists. At its top boundary it permits scroll handoff to
+  Home Assistant so the Companion app can receive its native pull-to-refresh
+  gesture, while the viewport remains bounded without expanding the Stage or
+  reserving a stable scrollbar gutter. A labeled Top action follows the final
+  row and smoothly returns the recording viewport to its beginning.
 
 ## Calendar and selection
 

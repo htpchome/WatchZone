@@ -33,12 +33,14 @@ retained session, and respects reduced-motion preference.
   phone. It shares ownership across cards in the same view, restores prior
   inline declarations after the last owner releases them, and does not change
   internal row or column gaps, maximum view width, or grid allocation.
-- On a physical phone, edge-to-edge `fit_viewport` presentation extends through
-  the device's bottom safe-area inset so Stage content may travel beneath
-  translucent browser or Companion chrome. Home Assistant's reported
+- On a physical phone, edge-to-edge `fit_viewport` presentation may extend by
+  at most `0.5rem` into the device's bottom safe-area inset. This slightly
+  reduces the reserved bar while preserving most of Home Assistant's themed
+  safe-area surface instead of replacing it with the card's potentially
+  transparent background. Home Assistant's reported
   `--safe-area-inset-bottom` is authoritative, with the browser environment
-  inset as fallback. WatchZone does not reduce the hardware inset or apply it
-  to ordinary card-contained surfaces.
+  inset as fallback. WatchZone does not reduce the hardware inset itself or
+  apply it to ordinary card-contained surfaces.
 - The camera module owns the camera stage, including its clipping radius and
   stage shadow. Appearance is applied to that stable module boundary, not to an
   individual carousel slide.

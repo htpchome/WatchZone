@@ -40,8 +40,10 @@ new browser API makes another platform easier or faster.
   toast, and dialog surfaces use their own local geometry; applying viewport
   safe-area values there would offset the same control differently by host
   device. A phone edge-to-edge card in `fit_viewport` mode is the narrow
-  exception: its outer card boundary may underlap the bottom inset so content
-  can travel beneath translucent host chrome. Home Assistant's Companion-aware
+  exception: its outer card boundary may underlap at most `0.5rem` of the
+  bottom inset. The bounded underlap leaves Home Assistant's themed safe-area
+  surface visible and does not replace the full reserved region with a
+  potentially transparent card surface. Home Assistant's Companion-aware
   safe-area custom property is authoritative and the browser environment inset
   is only its fallback. Respect text scaling, reduced motion, orientation
   changes, and Home Assistant theme tokens where they affect the feature.

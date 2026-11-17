@@ -8139,16 +8139,18 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
         type: "custom:watchzone-card",
       });
       await card.updateComplete;
+      card.style.setProperty("--wzc-fit-viewport-block-size", "400px");
+      const cardSurface = card.shadowRoot?.querySelector("ha-card");
+      if (!cardSurface) throw new Error("Card surface was not rendered");
       const edge = {
-        bottomUnderlap: getComputedStyle(card)
-          .getPropertyValue("--wzc-mobile-bottom-underlap")
-          .trim(),
+        fitViewportMinimum: getComputedStyle(cardSurface).minBlockSize,
         gap: container.style.gap,
         hostClass: card.classList.contains("mobile-edge-to-edge"),
         containerPadding: container.style.padding,
         rowGap: sections.style.getPropertyValue("--ha-view-sections-row-gap"),
         wrapperPadding: wrapper.style.padding,
       };
+      card.style.removeProperty("--wzc-fit-viewport-block-size");
 
       card.setConfig({
         edge_to_edge_phone: false,
@@ -8169,7 +8171,7 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
 
   expect(result).toEqual({
     edge: {
-      bottomUnderlap: "36px",
+      fitViewportMinimum: "408px",
       containerPadding: "0px",
       gap: "24px 8px",
       hostClass: true,
