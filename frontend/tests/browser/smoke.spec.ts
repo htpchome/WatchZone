@@ -7805,9 +7805,16 @@ test("applies outer shell appearance toggles without changing card identity", as
   );
 });
 
-test("applies edge-to-edge spacing to the Sections container outer padding", async ({
+test("applies mobile edge-to-edge spacing to the Sections outer padding", async ({
   page,
 }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      get: () =>
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148",
+    });
+  });
   await page.goto("/");
   await waitForWatchZoneDefinition(page);
 
@@ -7821,6 +7828,8 @@ test("applies edge-to-edge spacing to the Sections container outer padding", asy
       const sections = document.createElement("hui-sections-view");
       const wrapper = document.createElement("div");
       const container = document.createElement("div");
+      wrapper.className = "wrapper";
+      wrapper.style.padding = "0px 32px";
       container.className = "container";
       container.style.padding = "24px 0px";
       container.style.gap = "24px 8px";
@@ -7831,14 +7840,15 @@ test("applies edge-to-edge spacing to the Sections container outer padding", asy
       document.body.replaceChildren(sections);
 
       card.setConfig({
-        edge_to_edge_non_phone: true,
+        edge_to_edge_phone: true,
         type: "custom:watchzone-card",
       });
       await card.updateComplete;
       const edge = {
         gap: container.style.gap,
-        padding: container.style.padding,
+        containerPadding: container.style.padding,
         rowGap: sections.style.getPropertyValue("--ha-view-sections-row-gap"),
+        wrapperPadding: wrapper.style.padding,
       };
 
       card.setConfig({ type: "custom:watchzone-card" });
@@ -7846,14 +7856,23 @@ test("applies edge-to-edge spacing to the Sections container outer padding", asy
       return {
         edge,
         restored: {
-          padding: container.style.padding,
+          containerPadding: container.style.padding,
+          wrapperPadding: wrapper.style.padding,
         },
       };
     });
 
   expect(result).toEqual({
-    edge: { gap: "24px 8px", padding: "0px", rowGap: "8px" },
-    restored: { padding: "24px 0px" },
+    edge: {
+      containerPadding: "0px",
+      gap: "24px 8px",
+      rowGap: "8px",
+      wrapperPadding: "0px",
+    },
+    restored: {
+      containerPadding: "24px 0px",
+      wrapperPadding: "0px 32px",
+    },
   });
 });
 

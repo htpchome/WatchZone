@@ -98,11 +98,10 @@ disambiguation. Client identity never derives from viewport, screen, card, or
 container width.
 
 An explicit card configuration may select a presentation preference by this
-physical client class when the user intentionally wants different phone and
-non-phone behavior. This narrow exception is used for device-specific
-edge-to-edge layout and does not allow automatic layout decisions to infer
-physical hardware from size. Container-responsive Stage arrangement and
-control geometry remain separate.
+physical client class when the user intentionally enables a phone-only
+override. This narrow exception is used for mobile edge-to-edge layout and does
+not allow automatic layout decisions to infer physical hardware from size.
+Container-responsive Stage arrangement and control geometry remain separate.
 
 The client identity profile may select policies that genuinely depend on the
 physical client or host application, including mobile connection retention and

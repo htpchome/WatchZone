@@ -1,20 +1,24 @@
 const SECTIONS_VIEW_TAG = "HUI-SECTIONS-VIEW";
 const EDGE_VALUE = "0px";
 
-interface OwnedDeclaration {
+interface OwnedPadding {
+  readonly element: HTMLElement;
   readonly priority: string;
   readonly value: string;
 }
 
-interface SectionsContainerState {
-  readonly declaration: OwnedDeclaration;
+interface SectionsLayout {
+  readonly container: HTMLElement;
+  readonly view: HTMLElement;
+  readonly wrapper: HTMLElement;
+}
+
+interface SectionsLayoutState {
+  readonly declarations: readonly OwnedPadding[];
   readonly owners: Set<HomeAssistantLayoutBridge>;
 }
 
-const sectionsContainerStates = new WeakMap<
-  HTMLElement,
-  SectionsContainerState
->();
+const sectionsLayoutStates = new WeakMap<HTMLElement, SectionsLayoutState>();
 
 function composedParentElement(element: Element): Element | undefined {
   if (element.parentElement) return element.parentElement;
@@ -31,83 +35,90 @@ function findSectionsView(element: Element): HTMLElement | undefined {
   return undefined;
 }
 
-function inlinePadding(style: CSSStyleDeclaration): OwnedDeclaration {
+function ownedPadding(element: HTMLElement): OwnedPadding {
   return {
-    priority: style.getPropertyPriority("padding"),
-    value: style.getPropertyValue("padding"),
+    element,
+    priority: element.style.getPropertyPriority("padding"),
+    value: element.style.getPropertyValue("padding"),
   };
 }
 
-export function edgeToEdgeEnabled(
-  phoneEnabled: boolean,
-  nonPhoneEnabled: boolean,
-  isPhone: boolean,
-): boolean {
-  return isPhone ? phoneEnabled : nonPhoneEnabled;
+function restorePadding(declaration: OwnedPadding): void {
+  const { element } = declaration;
+  if (
+    element.style.getPropertyValue("padding") !== EDGE_VALUE ||
+    element.style.getPropertyPriority("padding") !== ""
+  ) {
+    return;
+  }
+  if (declaration.value) {
+    element.style.setProperty(
+      "padding",
+      declaration.value,
+      declaration.priority,
+    );
+  } else {
+    element.style.removeProperty("padding");
+  }
 }
 
 /**
- * Owns the feature-detected mutation that removes HA's outer Sections row
- * padding. Multiple cards in one view share the mutation until the last owner
- * releases it.
+ * Owns the feature-detected mutation that removes HA's outer Sections padding.
+ * Multiple cards in one view share the mutation until the last owner releases
+ * it. Internal row and column gaps remain under Home Assistant ownership.
  */
 export class HomeAssistantLayoutBridge {
-  private _container?: HTMLElement;
+  private _view?: HTMLElement;
 
   public constructor(private readonly _host: HTMLElement) {}
 
   public configure(edgeToEdge: boolean): void {
-    const container = edgeToEdge ? this._sectionsContainer() : undefined;
-    if (container === this._container) return;
+    const layout = edgeToEdge ? this._sectionsLayout() : undefined;
+    if (layout?.view === this._view) return;
     this.release();
-    if (!container) return;
+    if (!layout) return;
 
-    let state = sectionsContainerStates.get(container);
+    let state = sectionsLayoutStates.get(layout.view);
     if (!state) {
       state = {
-        declaration: inlinePadding(container.style),
+        declarations: [
+          ownedPadding(layout.wrapper),
+          ownedPadding(layout.container),
+        ],
         owners: new Set(),
       };
-      sectionsContainerStates.set(container, state);
+      sectionsLayoutStates.set(layout.view, state);
     }
     state.owners.add(this);
-    this._container = container;
-    container.style.setProperty("padding", EDGE_VALUE);
+    this._view = layout.view;
+    for (const { element } of state.declarations) {
+      element.style.setProperty("padding", EDGE_VALUE);
+    }
   }
 
   public release(): void {
-    const container = this._container;
-    if (!container) return;
-    this._container = undefined;
+    const view = this._view;
+    if (!view) return;
+    this._view = undefined;
 
-    const state = sectionsContainerStates.get(container);
+    const state = sectionsLayoutStates.get(view);
     if (!state) return;
     state.owners.delete(this);
     if (state.owners.size > 0) return;
 
-    const { style } = container;
-    if (
-      style.getPropertyValue("padding") === EDGE_VALUE &&
-      style.getPropertyPriority("padding") === ""
-    ) {
-      if (state.declaration.value) {
-        style.setProperty(
-          "padding",
-          state.declaration.value,
-          state.declaration.priority,
-        );
-      } else {
-        style.removeProperty("padding");
-      }
+    for (const declaration of state.declarations) {
+      restorePadding(declaration);
     }
-    sectionsContainerStates.delete(container);
+    sectionsLayoutStates.delete(view);
   }
 
-  private _sectionsContainer(): HTMLElement | undefined {
-    return (
-      findSectionsView(this._host)?.shadowRoot?.querySelector<HTMLElement>(
-        ".container",
-      ) ?? undefined
-    );
+  private _sectionsLayout(): SectionsLayout | undefined {
+    const view = findSectionsView(this._host);
+    const root = view?.shadowRoot;
+    const wrapper = root?.querySelector<HTMLElement>(".wrapper");
+    const container = root?.querySelector<HTMLElement>(".container");
+    return view && wrapper && container
+      ? { container, view, wrapper }
+      : undefined;
   }
 }

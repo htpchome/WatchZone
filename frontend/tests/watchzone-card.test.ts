@@ -384,7 +384,7 @@ describe("watchzone-card", () => {
     expect(element.style.getPropertyValue("box-shadow")).toBe("");
   });
 
-  it("removes and restores Sections container padding for non-phone clients", async () => {
+  it("keeps Sections padding for non-phone clients", async () => {
     const sections = document.createElement("hui-sections-view");
     const wrapper = document.createElement("div");
     const container = document.createElement("div");
@@ -392,7 +392,7 @@ describe("watchzone-card", () => {
     container.style.padding = "24px 0px";
     const element = document.createElement("watchzone-card") as DashboardCard;
     element.setConfig({
-      edge_to_edge_non_phone: true,
+      edge_to_edge_phone: true,
       type: "custom:watchzone-card",
     });
     container.append(element);
@@ -401,7 +401,7 @@ describe("watchzone-card", () => {
     document.body.append(sections);
     await element.updateComplete;
 
-    expect(container.style.padding).toBe("0px");
+    expect(container.style.padding).toBe("24px 0px");
 
     element.setConfig({ type: "custom:watchzone-card" });
     await element.updateComplete;

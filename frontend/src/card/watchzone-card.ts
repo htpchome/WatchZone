@@ -56,10 +56,7 @@ import {
   isHomeAssistantCardPickerPreview,
   type CardPickerStubConfig,
 } from "./home-assistant-card-picker";
-import {
-  edgeToEdgeEnabled,
-  HomeAssistantLayoutBridge,
-} from "./home-assistant-layout-bridge";
+import { HomeAssistantLayoutBridge } from "./home-assistant-layout-bridge";
 
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
 const recordedVideoViewerTag = unsafeStatic(RECORDED_VIDEO_VIEWER_TAG);
@@ -351,11 +348,7 @@ export class DashboardCard extends LitElement {
 
   private _syncEdgeToEdge(config: CardConfig): void {
     this._haLayout.configure(
-      edgeToEdgeEnabled(
-        config.edge_to_edge_phone,
-        config.edge_to_edge_non_phone,
-        CLIENT_PROFILE.isPhone,
-      ),
+      config.edge_to_edge_phone && CLIENT_PROFILE.isPhone,
     );
   }
 

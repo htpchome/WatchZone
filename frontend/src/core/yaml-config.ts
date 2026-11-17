@@ -37,7 +37,6 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
     delete yaml.display_object_badges;
   }
   if (config.display_zone !== false) delete yaml.display_zone;
-  if (!config.edge_to_edge_non_phone) delete yaml.edge_to_edge_non_phone;
   if (!config.edge_to_edge_phone) delete yaml.edge_to_edge_phone;
   if (config.event_rounded_corners !== false) {
     delete yaml.event_rounded_corners;

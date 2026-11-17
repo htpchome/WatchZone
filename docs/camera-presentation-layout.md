@@ -28,11 +28,11 @@ retained session, and respects reduced-motion preference.
 - Home Assistant owns the card's allocated grid rectangle.
 - The card shell owns the accessible card name, outer padding, and the stage
   containing the active layout's modules. It does not render a visual heading.
-- The isolated Home Assistant layout bridge may remove the Sections container's
-  outer row padding when the user enables the phone or non-phone edge-to-edge
-  option. It shares ownership across cards in the same view, restores the prior
-  inline declaration after the last owner releases it, and does not change row
-  gaps, horizontal gutters, maximum view width, or the assigned grid rectangle.
+- The isolated Home Assistant layout bridge may remove the Sections wrapper's
+  outer padding when the user enables edge-to-edge presentation on a physical
+  phone. It shares ownership across cards in the same view, restores prior
+  inline declarations after the last owner releases them, and does not change
+  internal row or column gaps, maximum view width, or grid allocation.
 - The camera module owns the camera stage, including its clipping radius and
   stage shadow. Appearance is applied to that stable module boundary, not to an
   individual carousel slide.

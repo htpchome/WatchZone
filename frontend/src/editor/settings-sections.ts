@@ -25,7 +25,6 @@ export type BooleanConfigFlag =
   | "display_event_type_badges"
   | "display_object_badges"
   | "display_zone"
-  | "edge_to_edge_non_phone"
   | "edge_to_edge_phone"
   | "event_rounded_corners"
   | "event_shadows"
@@ -85,7 +84,6 @@ interface ReviewSettingsOptions extends CommonSectionOptions {
 const BOOLEAN_SELECTOR = { boolean: {} } as const;
 const EDGE_TO_EDGE_OPTIONS = [
   "edge_to_edge_phone",
-  "edge_to_edge_non_phone",
 ] as const satisfies readonly BooleanConfigFlag[];
 const CARD_APPEARANCE_OPTIONS = [
   "rounded_outer_corners",

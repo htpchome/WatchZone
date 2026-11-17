@@ -93,7 +93,6 @@ async function setBooleanSelector(
                   "outer_shadows",
                   "outer_padding",
                   "edge_to_edge_phone",
-                  "edge_to_edge_non_phone",
                   "camera_rounded_corners",
                   "camera_shadows",
                   "camera_bar_rounded_corners",
@@ -371,7 +370,7 @@ describe("watchzone-card-editor", () => {
       [...layout.querySelectorAll<HTMLElement>("[data-config-key]")].map(
         (control) => control.dataset.configKey,
       ),
-    ).toEqual(["edge_to_edge_phone", "edge_to_edge_non_phone"]);
+    ).toEqual(["edge_to_edge_phone"]);
     const interactions = await openEditorSection(editor, "interactions");
     const interactionForm = interactions.querySelector<
       HTMLElement & {
@@ -1380,10 +1379,12 @@ describe("watchzone-card-editor", () => {
       await setBooleanSelector(editor, `[data-config-key="${key}"]`, false);
       await card.updateComplete;
     }
-    for (const key of ["edge_to_edge_phone", "edge_to_edge_non_phone"]) {
-      await setBooleanSelector(editor, `[data-config-key="${key}"]`, true);
-      await card.updateComplete;
-    }
+    await setBooleanSelector(
+      editor,
+      '[data-config-key="edge_to_edge_phone"]',
+      true,
+    );
+    await card.updateComplete;
 
     expect(states.at(-1)).toMatchObject({
       rounded_outer_corners: false,
@@ -1395,7 +1396,6 @@ describe("watchzone-card-editor", () => {
       camera_bar_shadows: false,
       event_shadows: false,
       edge_to_edge_phone: true,
-      edge_to_edge_non_phone: true,
     });
     const previewShell = card.shadowRoot?.querySelector("ha-card");
     expect(previewShell?.classList.contains("square-outer-corners")).toBe(true);
@@ -1413,7 +1413,6 @@ describe("watchzone-card-editor", () => {
       camera_bar_shadows: false,
       event_shadows: false,
       edge_to_edge_phone: true,
-      edge_to_edge_non_phone: true,
     });
     const reopened = document.createElement(
       "watchzone-card-editor",
@@ -1440,15 +1439,13 @@ describe("watchzone-card-editor", () => {
         ).value,
       ).toBe(false);
     }
-    for (const key of ["edge_to_edge_phone", "edge_to_edge_non_phone"]) {
-      expect(
-        (
-          reopened.shadowRoot?.querySelector(
-            `[data-config-key="${key}"]`,
-          ) as TestBooleanSelector
-        ).value,
-      ).toBe(true);
-    }
+    expect(
+      (
+        reopened.shadowRoot?.querySelector(
+          '[data-config-key="edge_to_edge_phone"]',
+        ) as TestBooleanSelector
+      ).value,
+    ).toBe(true);
 
     document.removeEventListener("context-request", contextHandler);
   });
