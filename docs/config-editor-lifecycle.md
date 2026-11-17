@@ -120,11 +120,14 @@ Future fields may use an appropriate coalescing strategy, but none may use
 repeated `config-changed` events as a live-preview mechanism.
 
 The Reviews editor section owns the user-facing activity retention control,
-labelled Days of Reviews to Display. It uses Home Assistant's bounded,
-integer-step number selector with a marker for every selectable day. The
-existing `event_history_days` configuration key remains the shared
-compatibility contract for both Reviews and Events; the editor relocation and
-label do not split or migrate that setting.
+labelled Days of Reviews to Display, together with thumbnail preview, object
+badge, classification badge, and zone display controls. These settings are
+presented as divided rows rather than a separate Display Settings disclosure.
+The history control uses Home Assistant's bounded, integer-step number selector
+with a marker for every selectable day. The existing `event_history_days`
+configuration key remains the shared compatibility contract for both Reviews
+and Events; the editor relocation and label do not split or migrate that
+setting.
 
 Camera grouping is edited atomically with its owning main-camera draft. The
 additional-camera selector uses the standard Home Assistant camera-entity

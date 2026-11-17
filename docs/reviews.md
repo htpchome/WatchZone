@@ -36,6 +36,9 @@
 - The card editor presents the shared Reviews and Events history window under
   Reviews as Days of Reviews to Display. The persisted `event_history_days`
   value continues to bound both modules while Events remains available.
+- Reviews also owns the editor controls for thumbnail preview, object and
+  classification badges, and zone display. These controls use divided rows in
+  the Reviews disclosure rather than a separate Display Settings section.
 - Review and Event tiles use the shared media-tile surface tokens. Fine-pointer
   hover darkens the active theme surface slightly without changing touch or
   keyboard behavior.

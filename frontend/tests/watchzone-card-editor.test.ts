@@ -188,8 +188,10 @@ describe("watchzone-card-editor", () => {
       "Reviews",
       "General Settings",
       "Layout Settings",
-      "Display Settings",
     ]);
+    expect(items.find((item) => item.itemKey === "layout")?.icon).toBe(
+      "rulerSquare",
+    );
     expect(items.every((item) => item.childElementCount === 0)).toBe(true);
     expect(items.every((item) => !item.open)).toBe(true);
     const liveMedia = await openEditorSection(editor, "live-media-player");
@@ -1137,7 +1139,7 @@ describe("watchzone-card-editor", () => {
     });
   });
 
-  it("groups event badge overrides under Display Settings", async () => {
+  it("groups event badge overrides under Reviews", async () => {
     const editor = document.createElement(
       "watchzone-card-editor",
     ) as CardEditor;
@@ -1146,7 +1148,7 @@ describe("watchzone-card-editor", () => {
     editor.addEventListener("config-changed", changed);
     document.body.append(editor);
     await editor.updateComplete;
-    await openEditorSection(editor, "display");
+    await openEditorSection(editor, "reviews");
 
     const objectSelector = editor.shadowRoot?.querySelector(
       '[data-config-key="display_object_badges"]',
@@ -1172,10 +1174,18 @@ describe("watchzone-card-editor", () => {
       false,
     );
     await setBooleanSelector(editor, '[data-config-key="display_zone"]', false);
-    const display = editor.shadowRoot?.querySelector<AccordionItem>(
-      `${ACCORDION_ITEM_TAG}[item-key="display"]`,
+    expect(
+      objectSelector?.closest(ACCORDION_ITEM_TAG)?.getAttribute("item-key"),
+    ).toBe("reviews");
+    expect(
+      editor.shadowRoot?.querySelector(
+        `${ACCORDION_ITEM_TAG}[item-key="display"]`,
+      ),
+    ).toBeNull();
+    const reviews = editor.shadowRoot?.querySelector<AccordionItem>(
+      `${ACCORDION_ITEM_TAG}[item-key="reviews"]`,
     );
-    expect(display?.hasAttribute("pending")).toBe(true);
+    expect(reviews?.hasAttribute("pending")).toBe(true);
     expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
       type: CARD_TYPE,
       title: "Camera",
@@ -1635,7 +1645,7 @@ describe("watchzone-card-editor", () => {
         );
       }
       if (key === "rounded_outer_corners") {
-        await openEditorSection(editor, "display");
+        await openEditorSection(editor, "reviews");
         expect(
           editor.shadowRoot?.querySelector(
             '[data-config-key="rounded_outer_corners"]',

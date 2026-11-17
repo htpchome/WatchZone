@@ -44,6 +44,22 @@ export const cardEditorStyles = css`
     margin-block-start: 0.5rem;
   }
 
+  .review-settings-list {
+    border-block: 1px solid var(--wzc-accordion-border-color);
+  }
+
+  .review-settings-list > ha-selector {
+    padding-block: 0.5rem;
+  }
+
+  .review-settings-list > ha-selector + ha-selector {
+    border-block-start: 1px solid var(--wzc-accordion-border-color);
+  }
+
+  .review-settings-list > .boolean-option {
+    margin-block-start: 0;
+  }
+
   .segmented-setting {
     display: grid;
     gap: 0.35rem;

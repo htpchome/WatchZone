@@ -16,10 +16,11 @@ precedence.
 ## Repository state
 
 - Branch: `main`
-- Version: `0.0.4-dev.390`
-- HEAD: `cab6db4` — `md`
-- Worktree: contains the pending `dev.390` editor-bar shadow and shared action-
-  radius changes described below.
+- Version: `0.0.4-dev.391`
+- HEAD: `499342e` —
+  `v0.0.4-dev.390 - style(ui): add editor shadows and align action corners`
+- Worktree: contains the pending `dev.391` Reviews editor reorganization and
+  isolated action-radius correction described below.
 - Latest package was generated at `dist/watchzone.zip`.
 
 Always recheck `git status`, `git log -1`, and
@@ -98,7 +99,12 @@ Always recheck `git status`, `git log -1`, and
   Camera Navigation keeps its nested segmented track shadowless and retains its
   independently configurable corners and outer shadow.
 - Activity-tile icon actions and recorded-media modal footer actions share the
-  same square corner radius as media-overlay buttons.
+  same small square corner radius as media-overlay buttons through an
+  independent action token. Media-overlay button radius ownership is unchanged.
+- Reviews owns the history, thumbnail-preview, object/classification badge,
+  and zone-display controls in one divided-row disclosure. The former Display
+  Settings disclosure is removed. Layout Settings uses the `mdi:ruler-square`
+  icon.
 - Card height uses pill-radio controls. Layout appearance is presented in
   Standard and Mobile columns. Minimal Camera does not expose irrelevant
   general layout appearance settings; phone edge-to-edge remains available.
@@ -120,11 +126,11 @@ Always recheck `git status`, `git log -1`, and
 
 - The architectural eager-entry target remains 50 KiB gzip. The temporary
   release ceiling is 64 KiB with a 4 KiB safety margin.
-- At `dev.390`, packaging measured the eager graph at 60,819 bytes gzip.
-- The lazy editor measured 19,423 bytes gzip against the 19,456-byte validator
-  ceiling. Only 33 bytes remain; keep editor changes compact and measure the
+- At `dev.391`, packaging measured the eager graph at 60,921 bytes gzip.
+- The lazy editor measured 19,443 bytes gzip against the 19,456-byte validator
+  ceiling. Only 13 bytes remain; keep editor changes compact and measure the
   production output early.
-- `dev.390` passed:
+- `dev.391` passed:
   - 482 frontend unit tests;
   - 141 Playwright tests across Chromium, Firefox, and WebKit;
   - formatting, lint, type checking, architecture/style/license validation,

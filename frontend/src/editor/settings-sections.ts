@@ -346,20 +346,41 @@ export function renderLiveMediaPlayerSettings(
 }
 
 export function renderReviewSettings(options: ReviewSettingsOptions) {
+  const { config, localize } = options;
   return html`
-    <ha-selector
-      label=${options.localize("editor.event_history_days")}
-      .hass=${options.hass}
-      .selector=${REVIEW_HISTORY_DAYS_SELECTOR}
-      .value=${options.config?.event_history_days ?? DEFAULT_EVENT_HISTORY_DAYS}
-      @value-changed=${options.onEventHistoryDaysChange}
-    ></ha-selector>
-    ${renderBooleanOption(
-      options,
-      "view_timelapse_on_thumbnail_hover",
-      options.localize("editor.view_timelapse_on_thumbnail_hover"),
-      options.config?.view_timelapse_on_thumbnail_hover !== false,
-    )}
+    <div class="review-settings-list">
+      <ha-selector
+        label=${localize("editor.event_history_days")}
+        .hass=${options.hass}
+        .selector=${REVIEW_HISTORY_DAYS_SELECTOR}
+        .value=${config?.event_history_days ?? DEFAULT_EVENT_HISTORY_DAYS}
+        @value-changed=${options.onEventHistoryDaysChange}
+      ></ha-selector>
+      ${renderBooleanOption(
+        options,
+        "view_timelapse_on_thumbnail_hover",
+        localize("editor.view_timelapse_on_thumbnail_hover"),
+        config?.view_timelapse_on_thumbnail_hover !== false,
+      )}
+      ${renderBooleanOption(
+        options,
+        "display_object_badges",
+        localize("editor.display_object_badges"),
+        config?.display_object_badges !== false,
+      )}
+      ${renderBooleanOption(
+        options,
+        "display_event_type_badges",
+        localize("editor.display_event_type_badges"),
+        config?.display_event_type_badges !== false,
+      )}
+      ${renderBooleanOption(
+        options,
+        "display_zone",
+        localize("editor.display_zone"),
+        config?.display_zone !== false,
+      )}
+    </div>
   `;
 }
 
@@ -370,29 +391,5 @@ export function renderLayoutSettings(options: CommonSectionOptions) {
       .config=${options.config}
       @value-changed=${options.onChange}
     ></${heightSelectorTag}>
-  `;
-}
-
-export function renderDisplaySettings(options: CommonSectionOptions) {
-  const { config, localize } = options;
-  return html`
-    ${renderBooleanOption(
-      options,
-      "display_object_badges",
-      localize("editor.display_object_badges"),
-      config?.display_object_badges !== false,
-    )}
-    ${renderBooleanOption(
-      options,
-      "display_event_type_badges",
-      localize("editor.display_event_type_badges"),
-      config?.display_event_type_badges !== false,
-    )}
-    ${renderBooleanOption(
-      options,
-      "display_zone",
-      localize("editor.display_zone"),
-      config?.display_zone !== false,
-    )}
   `;
 }

@@ -6,7 +6,7 @@ export const activityActionStyles = css`
     align-items: center;
     background: var(--wzc-event-action-background);
     border: 0;
-    border-radius: var(--wzc-media-overlay-radius);
+    border-radius: var(--wzc-event-action-radius);
     color: var(--wzc-event-action-color);
     display: inline-flex;
     justify-content: center;

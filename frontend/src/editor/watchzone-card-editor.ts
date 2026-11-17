@@ -76,7 +76,6 @@ import {
   type OptionalInteractionName,
 } from "./interaction-settings-section";
 import {
-  renderDisplaySettings,
   renderGeneralSettings,
   renderLayoutSettings,
   renderLiveMediaPlayerSettings,
@@ -109,7 +108,6 @@ interface LocalizingHomeAssistant extends HomeAssistant {
 
 type EditorSectionKey =
   | "camera"
-  | "display"
   | "general"
   | "interactions"
   | "layout"
@@ -473,23 +471,10 @@ export class CardEditor extends LitElement {
             : staticHtml`<${accordionItemTag}
           heading=${this._t("editor.layout_settings")}
           item-key="layout"
-          .icon=${"layout"}
+          .icon=${"rulerSquare"}
         >
           ${this._renderSection("layout", () =>
             renderLayoutSettings(commonSettings),
-          )}
-        </${accordionItemTag}>`
-        }
-        ${
-          minimal
-            ? null
-            : staticHtml`<${accordionItemTag}
-          heading=${this._t("editor.display_settings")}
-          item-key="display"
-          .icon=${"tune"}
-        >
-          ${this._renderSection("display", () =>
-            renderDisplaySettings(commonSettings),
           )}
         </${accordionItemTag}>`
         }

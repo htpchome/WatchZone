@@ -413,6 +413,7 @@ export const themeTokens = css`
     --wzc-event-duration-color: var(--wzc-media-overlay-color);
     --wzc-event-action-background: var(--wzc-color-surface);
     --wzc-event-action-color: var(--wzc-color-text-2);
+    --wzc-event-action-radius: var(--wzc-radius-small);
     --wzc-event-action-size: 2.25rem;
     --wzc-event-action-margin: 0.65rem;
 

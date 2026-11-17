@@ -8614,7 +8614,7 @@ test("editor uses exclusive accordions and shared draft status", async ({
     'wzc-accordion-item[item-key="live-media-player"]',
   );
   const reviews = editor.locator('wzc-accordion-item[item-key="reviews"]');
-  await expect(items).toHaveCount(8);
+  await expect(items).toHaveCount(7);
   await expect(items.locator("details[open]")).toHaveCount(0);
   await expect(
     items.locator("ha-selector, ha-input, wzc-segmented-control"),
@@ -8637,6 +8637,18 @@ test("editor uses exclusive accordions and shared draft status", async ({
     'ha-selector[label="Days of Reviews to Display"]',
   );
   await expect(reviewHistory).toHaveCount(1);
+  const reviewRows = reviews.locator(".review-settings-list > ha-selector");
+  await expect(reviewRows).toHaveCount(5);
+  await expect(
+    reviews.locator('[data-config-key="display_object_badges"]'),
+  ).toHaveCount(1);
+  await expect(
+    reviews.locator('[data-config-key="display_event_type_badges"]'),
+  ).toHaveCount(1);
+  await expect(reviews.locator('[data-config-key="display_zone"]')).toHaveCount(
+    1,
+  );
+  await expect(reviewRows.nth(1)).toHaveCSS("border-top-style", "solid");
   await expect(
     editor
       .locator('wzc-accordion-item[item-key="general"]')
