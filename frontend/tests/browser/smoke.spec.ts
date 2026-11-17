@@ -730,6 +730,10 @@ test("keeps camera navigation module and carousel selection bidirectional", asyn
     "background-color",
     "rgba(0, 0, 0, 0)",
   );
+  await expect(navigation.locator(".items .segmented-control")).toHaveCSS(
+    "box-shadow",
+    "none",
+  );
   await expect(navigation.locator(".bar")).toHaveCSS(
     "box-shadow",
     "rgb(20, 21, 22) 0px 4px 8px 0px",
@@ -3904,6 +3908,17 @@ test("keeps activity content in an independently scrolling viewport", async ({
     });
   expect(actionInset).toBeGreaterThanOrEqual(9);
   expect(actionInset).toBeLessThanOrEqual(12);
+  const tileActionRadius = await events
+    .locator(".wzc-activity-action")
+    .first()
+    .evaluate((button) => {
+      const style = getComputedStyle(button);
+      return {
+        button: style.borderRadius,
+        overlay: style.getPropertyValue("--wzc-media-overlay-radius").trim(),
+      };
+    });
+  expect(tileActionRadius.button).toBe(tileActionRadius.overlay);
   await expect(page.locator("watchzone-card ha-card")).toHaveCSS(
     "border-radius",
     "21px",
@@ -4469,6 +4484,16 @@ test("keeps activity content in an independently scrolling viewport", async ({
     "wzc-recorded-video-player wzc-media-controls .control-button",
   );
   await expect(recordedControls).toHaveCount(2);
+  expect(
+    await mediaDialog
+      .locator(".footer-actions .wzc-activity-action")
+      .first()
+      .evaluate((button) => getComputedStyle(button).borderRadius),
+  ).toBe(
+    await recordedControls
+      .first()
+      .evaluate((button) => getComputedStyle(button).borderRadius),
+  );
   expect(
     await recordedControls.evaluateAll((buttons) =>
       buttons.map((button) => button.getAttribute("data-control")),
@@ -8640,10 +8665,11 @@ test("editor uses exclusive accordions and shared draft status", async ({
     "border-style",
     "none",
   );
-  await expect(transitionBar.locator(".segmented-control")).toHaveCSS(
-    "box-shadow",
-    "none",
-  );
+  expect(
+    await transitionBar
+      .locator(".segmented-control")
+      .evaluate((bar) => getComputedStyle(bar).boxShadow),
+  ).not.toBe("none");
   expect(
     await transitionSelection.evaluate(
       (node) => getComputedStyle(node).backgroundColor,

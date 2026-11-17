@@ -8,6 +8,7 @@ export const segmentedControlStyles = css`
     min-inline-size: 0;
     --wzc-segmented-background: var(--wzc-selection-bar-background);
     --wzc-segmented-border: 0;
+    --wzc-segmented-shadow: var(--wzc-selection-bar-shadow);
     --wzc-segmented-radius: var(--wzc-radius-pill);
     --wzc-segmented-gap: var(--wzc-selection-bar-gap);
     --wzc-segmented-padding: var(--wzc-selection-bar-padding);
@@ -34,6 +35,7 @@ export const segmentedControlStyles = css`
     background: var(--wzc-segmented-background);
     border: var(--wzc-segmented-border);
     border-radius: var(--wzc-segmented-radius);
+    box-shadow: var(--wzc-segmented-shadow);
   }
 
   .segmented-control-option {

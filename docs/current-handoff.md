@@ -16,10 +16,10 @@ precedence.
 ## Repository state
 
 - Branch: `main`
-- Version: `0.0.4-dev.389`
-- HEAD: `98f4f57` —
-  `v0.0.4-dev.389 - fix(ui): unify selection bars and floating top controls`
-- Worktree: clean when this snapshot was written.
+- Version: `0.0.4-dev.390`
+- HEAD: `cab6db4` — `md`
+- Worktree: contains the pending `dev.390` editor-bar shadow and shared action-
+  radius changes described below.
 - Latest package was generated at `dist/watchzone.zip`.
 
 Always recheck `git status`, `git log -1`, and
@@ -94,8 +94,11 @@ Always recheck `git status`, `git log -1`, and
   `--wzc-*` tokens only.
 - Compact editor segmented controls and Camera Navigation use the exact same
   `--wzc-selection-bar-background`, which resolves to the secondary media-tile
-  surface. The editor track has no separate outline or shadow. Camera
-  Navigation retains its independently configurable corners and outer shadow.
+  surface. Editor tracks use the semantic small shadow without an outline.
+  Camera Navigation keeps its nested segmented track shadowless and retains its
+  independently configurable corners and outer shadow.
+- Activity-tile icon actions and recorded-media modal footer actions share the
+  same square corner radius as media-overlay buttons.
 - Card height uses pill-radio controls. Layout appearance is presented in
   Standard and Mobile columns. Minimal Camera does not expose irrelevant
   general layout appearance settings; phone edge-to-edge remains available.
@@ -117,18 +120,19 @@ Always recheck `git status`, `git log -1`, and
 
 - The architectural eager-entry target remains 50 KiB gzip. The temporary
   release ceiling is 64 KiB with a 4 KiB safety margin.
-- At `dev.389`, packaging measured the eager graph at 60,813 bytes gzip.
-- The lazy editor measured 19,422 bytes gzip against the 19,456-byte validator
-  ceiling. Only 34 bytes remain; keep editor changes compact and measure the
+- At `dev.390`, packaging measured the eager graph at 60,819 bytes gzip.
+- The lazy editor measured 19,423 bytes gzip against the 19,456-byte validator
+  ceiling. Only 33 bytes remain; keep editor changes compact and measure the
   production output early.
-- `dev.389` passed:
+- `dev.390` passed:
   - 482 frontend unit tests;
   - 141 Playwright tests across Chromium, Firefox, and WebKit;
   - formatting, lint, type checking, architecture/style/license validation,
     production build, version consistency, release packaging, and
     `git diff --check`.
-- No Python source changed in the recent layout/UI sequence. Do not infer a
-  current Python pytest result from the frontend validation above.
+- No Python behavior changed in this styling update; only the synchronized
+  version constants changed. Do not infer a current Python pytest result from
+  the frontend validation above.
 
 ## Working rules
 
