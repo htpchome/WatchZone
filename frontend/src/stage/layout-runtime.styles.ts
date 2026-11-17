@@ -145,6 +145,8 @@ export const stageRuntimeStyles = css`
   }
 
   .camera-overlay-grid {
+    position: absolute;
+    inset: 0;
     grid-column: 1 / -1;
     grid-row: 1 / -1;
     z-index: 3;

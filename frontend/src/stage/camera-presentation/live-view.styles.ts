@@ -8,15 +8,19 @@ export const cameraLiveViewStyles = css`
   ${mediaOverlayBadgeSurfaceStyles}
 
   :host {
+    position: relative;
     display: block;
     inline-size: 100%;
+    block-size: 100%;
     min-inline-size: 0;
     min-block-size: 0;
+    overflow: hidden;
     color: var(--wzc-color-text-1);
   }
 
   .viewport {
-    position: relative;
+    position: absolute;
+    inset: 0;
     display: grid;
     grid-template-areas:
       "left top top top right"
@@ -26,7 +30,8 @@ export const cameraLiveViewStyles = css`
     grid-template-columns: var(--wzc-camera-overlay-grid-columns);
     grid-template-rows: var(--wzc-camera-overlay-grid-rows);
     inline-size: 100%;
-    block-size: 100%;
+    block-size: auto;
+    min-block-size: 0;
     overflow: hidden;
     background: var(--wzc-live-background);
     border-radius: var(--wzc-live-radius, var(--wzc-radius-large, 8px));
@@ -35,6 +40,8 @@ export const cameraLiveViewStyles = css`
 
   .viewport:fullscreen,
   .viewport:-webkit-full-screen {
+    position: fixed;
+    inset: 0;
     inline-size: 100vw;
     block-size: 100vh;
     aspect-ratio: auto;

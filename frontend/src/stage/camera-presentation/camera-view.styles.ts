@@ -23,14 +23,7 @@ export const cameraViewStyles = css`
 
   .camera {
     position: relative;
-    display: grid;
-    grid-template-areas:
-      "left top top top right"
-      "left media media media right"
-      "left lower lower lower right"
-      "metadata metadata metadata metadata metadata";
-    grid-template-columns: var(--wzc-camera-overlay-grid-columns);
-    grid-template-rows: var(--wzc-camera-overlay-grid-rows);
+    display: block;
     aspect-ratio: var(
       --wzc-camera-stage-runtime-aspect-ratio,
       var(--wzc-camera-stage-aspect-ratio)
@@ -45,8 +38,11 @@ export const cameraViewStyles = css`
   }
 
   .live-presentation {
-    grid-column: 1 / -1;
-    grid-row: 1 / -1;
+    position: absolute;
+    inset: 0;
+    block-size: auto;
+    contain: size;
+    overflow: hidden;
     --wzc-live-background: var(--wzc-camera-stage);
     --wzc-placeholder-background: var(--wzc-camera-stage);
     --wzc-placeholder-color: var(--wzc-media-placeholder-color);
@@ -54,9 +50,11 @@ export const cameraViewStyles = css`
   }
 
   .stage-resize-handle {
-    grid-area: metadata;
-    place-self: end center;
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline-start: 50%;
     z-index: 3;
+    transform: translateX(-50%);
   }
 
   .camera:fullscreen .stage-resize-handle,

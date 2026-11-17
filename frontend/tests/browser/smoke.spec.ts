@@ -7681,6 +7681,60 @@ test("aligns phone carousel controls and stage handle to the active stage", asyn
   expect(previousInset).toBeCloseTo(nextInset, 1);
 });
 
+test("keeps the camera stage ratio below the overlay controls' intrinsic width", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 220, height: 640 });
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  await page.locator("watchzone-card").evaluate((element) => {
+    (
+      element as HTMLElement & {
+        setConfig(config: unknown): void;
+      }
+    ).setConfig({
+      type: "custom:watchzone-card",
+      cameras: [{ entity_id: "camera.front" }],
+    });
+  });
+  await expect(page.locator("wzc-camera-view")).toHaveCount(1);
+
+  const camera = page.locator("wzc-camera");
+  const carousel = page.locator("wzc-camera .camera-carousel");
+  const view = page.locator("wzc-camera-view");
+  const stage = page.locator("wzc-camera-view .camera");
+  const live = page.locator("wzc-camera-live");
+  const viewport = page.locator("wzc-camera-live .viewport");
+  await expect(stage).toBeVisible();
+  const [
+    cameraBounds,
+    carouselBounds,
+    viewBounds,
+    bounds,
+    liveBounds,
+    viewportBounds,
+  ] = await Promise.all([
+    camera.boundingBox(),
+    carousel.boundingBox(),
+    view.boundingBox(),
+    stage.boundingBox(),
+    live.boundingBox(),
+    viewport.boundingBox(),
+  ]);
+  expect(bounds).not.toBeNull();
+  expect(bounds?.width ?? 0).toBeLessThan(255);
+  expect((bounds?.width ?? 0) / (bounds?.height ?? 1)).toBeCloseTo(16 / 9, 1);
+  for (const containerBounds of [
+    cameraBounds,
+    carouselBounds,
+    viewBounds,
+    liveBounds,
+    viewportBounds,
+  ]) {
+    expect(containerBounds?.height ?? 0).toBeCloseTo(bounds?.height ?? 0, 1);
+  }
+});
+
 test("fits phone, tablet, and desktop viewports without horizontal overflow", async ({
   page,
 }) => {

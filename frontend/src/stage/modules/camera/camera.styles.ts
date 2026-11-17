@@ -22,13 +22,8 @@ export const cameraStyles = css`
   .camera-carousel {
     position: relative;
     display: grid;
-    grid-template-areas:
-      "left top top top right"
-      "left media media media right"
-      "left lower lower lower right"
-      "metadata metadata metadata metadata metadata";
     grid-template-columns: var(--wzc-camera-overlay-grid-columns);
-    grid-template-rows: var(--wzc-camera-overlay-grid-rows);
+    grid-template-rows: minmax(0, 1fr);
     overflow: hidden;
     background: var(--wzc-camera-stage);
     border-radius: var(--wzc-live-radius);

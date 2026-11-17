@@ -80,6 +80,10 @@ allowed to clip content or escape Home Assistant's allocated grid area.
 - A `16:9` source fills the default stage.
 - A `4:3` source is pillarboxed inside the default stage.
 - Source metadata and first-frame events never resize the stage.
+- Overlay controls and the live-media viewport do not contribute an intrinsic
+  minimum height to the natural camera stage. At extremely narrow card widths,
+  the stage ratio therefore remains authoritative without an additional
+  responsive breakpoint.
 - Grouped feeds use the configured side-by-side or stacked split at tablet and
   desktop widths. At phone-width camera containers, only one member is
   presented and the overlay selector toggles A/B. The responsive change does
