@@ -28,6 +28,7 @@ import { openRecordedMedia } from "../../../core/recorded-media";
 import { buttonBaseStyles } from "../../../ui/button.styles";
 import { renderIcon } from "../../../ui/icons";
 import "../../../ui/media-day-header";
+import { shouldShowScrollTop } from "../../../ui/scroll-top";
 import { ToastManager } from "../../../ui/toast-manager";
 import "../../../ui/toast-region";
 import type { CameraSelectionContext } from "../../camera-selection-context";
@@ -50,6 +51,7 @@ export class ExportsModule extends LitElement {
     _editing: { state: true },
     _layout: { state: true },
     _mutating: { state: true },
+    _showScrollTop: { state: true },
   };
 
   public api?: HomeAssistantApi;
@@ -68,6 +70,7 @@ export class ExportsModule extends LitElement {
   private _hoveredPreviewUrl?: string;
   private _layout: "grid" | "list" = "list";
   private _mutating = false;
+  private _showScrollTop = false;
   private readonly _toasts = new ToastManager(this);
   private readonly _exports = new ExportsController(
     this,
@@ -120,7 +123,7 @@ export class ExportsModule extends LitElement {
             ></ha-icon>
           </button>
         </wzc-media-day-header>
-        <div class="scroller">
+        <div class="scroller" @scroll=${this._handleScroll}>
           ${
             this._exports.loading && this._exports.items.length === 0
               ? html`<div class="empty" aria-busy="true">
@@ -146,6 +149,11 @@ export class ExportsModule extends LitElement {
                   </div>`
           }
         </div>
+        <wzc-scroll-top
+          .label=${this.localize("common.top")}
+          ?hidden=${!this._showScrollTop}
+          @click=${this._scrollToTop}
+        ></wzc-scroll-top>
       </div>
       <wzc-toast-region .notices=${this._toasts.notices}></wzc-toast-region>
       ${this._renderDialog()}`;
@@ -554,6 +562,18 @@ export class ExportsModule extends LitElement {
     this._hoveredPreviewId = undefined;
     this._hoveredPreviewUrl = undefined;
     this._layout = this._layout === "list" ? "grid" : "list";
+  };
+
+  private readonly _handleScroll = (event: Event): void => {
+    const scroller = event.currentTarget as HTMLElement;
+    this._showScrollTop = shouldShowScrollTop(scroller);
+  };
+
+  private readonly _scrollToTop = (): void => {
+    const scroller = this.renderRoot.querySelector<HTMLElement>(".scroller");
+    if (!scroller) return;
+    scroller.scrollTop = 0;
+    this._showScrollTop = false;
   };
 
   static styles = [buttonBaseStyles, exportsStyles];

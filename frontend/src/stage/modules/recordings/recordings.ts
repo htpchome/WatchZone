@@ -19,6 +19,7 @@ import { RECORDINGS_TAG } from "../../../core/constants";
 import { homeAssistantNumberFormat } from "../../../core/number-format";
 import { renderIcon } from "../../../ui/icons";
 import "../../../ui/media-day-header";
+import { shouldShowScrollTop } from "../../../ui/scroll-top";
 import { ToastManager } from "../../../ui/toast-manager";
 import "../../../ui/toast-region";
 import type { CameraSelectionContext } from "../../camera-selection-context";
@@ -34,6 +35,7 @@ export class RecordingsModule extends LitElement {
     localize: { attribute: false },
     mediaDate: { attribute: false },
     targetModuleId: { attribute: false },
+    _showScrollTop: { state: true },
   };
 
   public api?: HomeAssistantApi;
@@ -41,6 +43,8 @@ export class RecordingsModule extends LitElement {
   public localize: LocalizeFunction = englishLocalize;
   public mediaDate?: MediaDateContext;
   public targetModuleId = "";
+
+  private _showScrollTop = false;
 
   private readonly _toasts = new ToastManager(this);
   private readonly _recordings = new RecordingsController(
@@ -67,7 +71,7 @@ export class RecordingsModule extends LitElement {
           >${this._renderDayNavigation("previous", previousDate)}
           ${this._renderDayNavigation("next", nextDate)}</wzc-media-day-header
         >
-        <div class="scroller">
+        <div class="scroller" @scroll=${this._handleScroll}>
           ${
             this._recordings.loading && hours.length === 0
               ? html`<div
@@ -94,21 +98,12 @@ export class RecordingsModule extends LitElement {
                     )}
                   </div>`
           }
-          ${
-            hours.length > 0
-              ? html`<button
-                  class="scroll-top"
-                  type="button"
-                  title=${this.localize("common.top")}
-                  aria-label=${this.localize("common.top")}
-                  @click=${this._scrollToTop}
-                >
-                  <ha-icon icon="mdi:arrow-up" aria-hidden="true"></ha-icon>
-                  <span>${this.localize("common.top")}</span>
-                </button>`
-              : null
-          }
         </div>
+        <wzc-scroll-top
+          .label=${this.localize("common.top")}
+          ?hidden=${!this._showScrollTop}
+          @click=${this._scrollToTop}
+        ></wzc-scroll-top>
       </div>
       <wzc-toast-region .notices=${this._toasts.notices}></wzc-toast-region>
     `;
@@ -137,10 +132,15 @@ export class RecordingsModule extends LitElement {
   }
 
   private readonly _scrollToTop = (): void => {
-    this.renderRoot.querySelector<HTMLElement>(".scroller")?.scrollTo({
-      behavior: "smooth",
-      top: 0,
-    });
+    const scroller = this.renderRoot.querySelector<HTMLElement>(".scroller");
+    if (!scroller) return;
+    scroller.scrollTop = 0;
+    this._showScrollTop = false;
+  };
+
+  private readonly _handleScroll = (event: Event): void => {
+    const scroller = event.currentTarget as HTMLElement;
+    this._showScrollTop = shouldShowScrollTop(scroller);
   };
 
   private _renderHour(hour: RecordingHour) {

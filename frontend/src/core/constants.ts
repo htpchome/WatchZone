@@ -137,6 +137,7 @@ export const ACCORDION_TOGGLE_EVENT = `${APP_ID}-accordion-toggle`;
 export const BADGE_TAG = `${APP_ID}-badge`;
 export const SEGMENTED_CONTROL_TAG = `${APP_ID}-segmented-control`;
 export const SEGMENTED_CONTROL_VALUE_EVENT = `${APP_ID}-segmented-control-value`;
+export const SCROLL_TOP_TAG = `${APP_ID}-scroll-top`;
 export const SORTABLE_LIST_TAG = `${APP_ID}-sortable-list`;
 export const SORTABLE_TILE_TAG = `${APP_ID}-sortable-tile`;
 export const SORTABLE_DRAG_EVENT = `${APP_ID}-sortable-drag`;

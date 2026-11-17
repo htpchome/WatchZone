@@ -117,6 +117,7 @@ export const segmentedControlStyles = css`
   }
 
   :host([appearance="navigation"]) .segmented-control {
+    border: 0;
     overflow-x: auto;
     overflow-y: hidden;
     overscroll-behavior-inline: contain;

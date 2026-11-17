@@ -47,9 +47,12 @@
   visibility while retaining the same item model and typed intents.
 - Reviews and Events group tiles by the Home Assistant-localized civil date.
   Each date heading remains at the top of the list viewport while its tiles
-  scroll beneath it; the next heading pushes it away at the group boundary. A
-  labeled Top action follows the final item and smoothly returns only that
-  module's internal viewport to its beginning.
+  scroll beneath it; the next heading pushes it away at the group boundary.
+  After the viewport has moved by approximately two rendered tile heights, a
+  labeled Top action floats at the bottom center of the visible viewport and
+  immediately returns only that module's internal viewport to its beginning.
+  It is not appended to the collection and remains hidden when the list cannot
+  scroll.
 - The first visible Reviews batch is fully enriched before publication. Action
   availability must not pop in through a second summary-to-detail tile render
   or remain incomplete when that follow-up request races; older history may

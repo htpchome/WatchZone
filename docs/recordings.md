@@ -33,8 +33,10 @@
   Reviews and Events lists. At its top boundary it permits scroll handoff to
   Home Assistant so the Companion app can receive its native pull-to-refresh
   gesture, while the viewport remains bounded without expanding the Stage or
-  reserving a stable scrollbar gutter. A labeled Top action follows the final
-  row and smoothly returns the recording viewport to its beginning.
+  reserving a stable scrollbar gutter. After approximately two rendered rows
+  have passed, a labeled Top action floats at the bottom center of the visible
+  viewport and immediately returns the recording viewport to its beginning. It
+  remains hidden for a non-scrolling collection.
 
 ## Calendar and selection
 

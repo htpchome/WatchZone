@@ -180,6 +180,15 @@ and is prohibited. Camera navigation therefore paints
 segmented-control track stays transparent; only the active option paints
 `--wzc-camera-navigation-active-background`.
 
+The selection-bar background uses the same secondary media-tile surface as
+Reviews, Events, Recordings, Exports, and Camera Navigation. Compact segmented
+selectors and Camera Navigation consume the exact same
+`--wzc-selection-bar-background` token without an editor-only outline, shadow,
+or color override. Camera Navigation retains its separately configurable bar
+corners and outer shadow. Its nested scrolling segmented-control track remains
+transparent and borderless so the outer navigation surface is not painted
+twice.
+
 The isolated editor bridge applies the editor-shell role to Home Assistant's
 owning card-edit dialog for its complete lifetime, including Home Assistant's
 Visibility and Layout tabs, then restores the original inline surface state on

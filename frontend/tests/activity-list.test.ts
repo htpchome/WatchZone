@@ -134,14 +134,14 @@ describe("activity list media failures", () => {
     await list.updateComplete;
     const scroller = list.shadowRoot?.querySelector<HTMLElement>(".scroller");
     if (!scroller) throw new Error("Expected activity scroller.");
-    const scrollTo = vi.fn();
-    scroller.scrollTo = scrollTo;
+    scroller.scrollTop = 750;
 
     list.shadowRoot
-      ?.querySelector<HTMLButtonElement>('button[aria-label="Top"]')
+      ?.querySelector("wzc-scroll-top")
+      ?.shadowRoot?.querySelector<HTMLButtonElement>('button[aria-label="Top"]')
       ?.click();
 
-    expect(scrollTo).toHaveBeenCalledWith({ behavior: "smooth", top: 0 });
+    expect(scroller.scrollTop).toBe(0);
   });
 
   it("keeps the visible tile anchored when a merged page inserts above it", async () => {

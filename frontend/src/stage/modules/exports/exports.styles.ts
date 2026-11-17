@@ -15,6 +15,7 @@ export const exportsStyles = css`
   }
 
   .viewport {
+    position: relative;
     block-size: 100%;
     inline-size: 100%;
     display: grid;

@@ -332,7 +332,7 @@ export const themeTokens = css`
     --wzc-carousel-navigation-icon-size: 2.75rem;
     --wzc-carousel-navigation-control-gap: 0.75rem;
     --wzc-selection-bar-color: var(--wzc-color-text-1);
-    --wzc-selection-bar-background: var(--wzc-color-surface-secondary);
+    --wzc-selection-bar-background: var(--wzc-media-tile-background);
     --wzc-selection-bar-active-color: var(--wzc-color-text-reversed);
     --wzc-selection-bar-active-background: var(--wzc-color-primary);
     --wzc-selection-bar-active-shadow: var(--wzc-shadow-small);

@@ -3998,6 +3998,11 @@ test("keeps activity content in an independently scrolling viewport", async ({
       const positions = [
         ...(list.shadowRoot?.querySelectorAll<HTMLElement>(".tile") ?? []),
       ].map((tile) => Number(tile.getAttribute("aria-posinset")));
+      const topControl = list.shadowRoot?.querySelector("wzc-scroll-top");
+      const topVisible = topControl?.hasAttribute("hidden") === false;
+      topControl?.shadowRoot?.querySelector("button")?.click();
+      await list.updateComplete;
+      const scrollAfterTop = viewportElement.scrollTop;
       list.items = originalItems;
       await list.updateComplete;
       return {
@@ -4010,6 +4015,8 @@ test("keeps activity content in an independently scrolling viewport", async ({
         scrollHeight,
         initialHeaderTop,
         scrollerTop,
+        scrollAfterTop,
+        topVisible,
         visibleHeight: viewportElement.clientHeight,
       };
     });
@@ -4023,6 +4030,8 @@ test("keeps activity content in an independently scrolling viewport", async ({
   ).toBeLessThanOrEqual(1.1);
   expect(virtualized.scrollHeight).toBeGreaterThan(virtualized.visibleHeight);
   expect(virtualized.lastPosition).toBe(100);
+  expect(virtualized.topVisible).toBe(true);
+  expect(virtualized.scrollAfterTop).toBe(0);
   const constrained = await events
     .locator("wzc-activity-list")
     .evaluate((element) => {
@@ -5360,6 +5369,8 @@ test("switches activity and recordings through the shared media calendar", async
     "Mon, Nov 9 — Recordings",
   );
   const recordingViewport = recordings.locator(".scroller");
+  const recordingTop = recordings.locator("wzc-scroll-top");
+  await expect(recordingTop).toBeHidden();
   await expect(recordingViewport).toHaveCSS("overscroll-behavior-y", "auto");
   const recordingScroll = await recordingViewport.evaluate((viewport) => {
     const before = viewport.scrollTop;
@@ -5392,10 +5403,12 @@ test("switches activity and recordings through the shared media calendar", async
     recordingScroll.clientHeight,
   );
   expect(recordingScroll.after).toBeGreaterThan(recordingScroll.before);
+  await expect(recordingTop).toBeVisible();
   await recordings.getByRole("button", { name: "Top" }).click();
   await expect
     .poll(() => recordingViewport.evaluate((viewport) => viewport.scrollTop))
     .toBe(0);
+  await expect(recordingTop).toBeHidden();
   await expect(filter).toHaveCount(1);
   await expect(filter.locator(".filter-trigger")).toBeDisabled();
   const recordingControlsAlignment = await navigation.evaluate((node) => {
@@ -5921,16 +5934,18 @@ test("shows and filters mixed-camera persistent exports", async ({ page }) => {
   await expect(exports.locator(".tile")).toHaveCount(1);
   await expect(exports).toContainText("Front visitor");
 
-  await exports.locator(".tile-player").click();
-  await expect(page.locator("wzc-export-media-dialog dialog")).toBeVisible();
-
-  const scrollGeometry = await exports.locator(".scroller").evaluate((node) => {
+  const exportViewport = exports.locator(".scroller");
+  const exportTop = exports.locator("wzc-scroll-top");
+  await expect(exportTop).toBeHidden();
+  const scrollGeometry = await exportViewport.evaluate((node) => {
     const collection = node.querySelector(".collection");
     const tile = collection?.querySelector(".tile");
     if (!collection || !tile) throw new Error("Export list is incomplete");
     for (let index = 0; index < 6; index += 1) {
       collection.append(tile.cloneNode(true));
     }
+    node.scrollTop = node.scrollHeight;
+    node.dispatchEvent(new Event("scroll"));
     return {
       clientHeight: node.clientHeight,
       overflowY: getComputedStyle(node).overflowY,
@@ -5943,6 +5958,15 @@ test("shows and filters mixed-camera persistent exports", async ({ page }) => {
   expect(scrollGeometry.scrollHeight).toBeGreaterThan(
     scrollGeometry.clientHeight,
   );
+  await expect(exportTop).toBeVisible();
+  await exportTop.getByRole("button", { name: "Top" }).click();
+  await expect
+    .poll(() => exportViewport.evaluate((node) => node.scrollTop))
+    .toBe(0);
+  await expect(exportTop).toBeHidden();
+
+  await exports.locator(".tile-player").first().click();
+  await expect(page.locator("wzc-export-media-dialog dialog")).toBeVisible();
 });
 
 test("lets the camera navigation shadow paint into the card padding", async ({
@@ -8614,6 +8638,10 @@ test("editor uses exclusive accordions and shared draft status", async ({
   await expect(transitionSelection).toHaveAttribute("aria-checked", "true");
   await expect(transitionBar.locator(".segmented-control")).toHaveCSS(
     "border-style",
+    "none",
+  );
+  await expect(transitionBar.locator(".segmented-control")).toHaveCSS(
+    "box-shadow",
     "none",
   );
   expect(

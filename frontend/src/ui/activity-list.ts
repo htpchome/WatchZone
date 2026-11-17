@@ -32,6 +32,7 @@ import {
 } from "./activity-badge-presentations";
 import "./badge";
 import "./media-day-header";
+import { shouldShowScrollTop } from "./scroll-top";
 import { activityActionStyles } from "./activity-action.styles";
 import { activityListStyles } from "./activity-list.styles";
 import { buttonBaseStyles } from "./button.styles";
@@ -147,6 +148,7 @@ export class ActivityList extends LitElement {
     roundedCorners: { attribute: false, type: Boolean },
     selectedDate: { attribute: false },
     shadows: { attribute: false, type: Boolean },
+    _showScrollTop: { state: true },
   };
 
   public displayObjectBadges = true;
@@ -179,6 +181,7 @@ export class ActivityList extends LitElement {
   private _dayHeaderHeight = 0;
   private _rowGap = 0;
   private _rowHeight = 0;
+  private _showScrollTop = false;
   private _virtualFrame?: number;
   private _windowEnd = VIRTUALIZATION_THRESHOLD;
   private _windowStart = 0;
@@ -274,23 +277,12 @@ export class ActivityList extends LitElement {
               ? html`<div class="empty">${this.localize(this.emptyKey)}</div>`
               : html`${this._renderList(groups)}${this._unloadedSpace(groups)}`
         }
-        ${
-          this.items.length > 0
-            ? html`<div class="scroll-top-anchor">
-                <button
-                  class="scroll-top"
-                  type="button"
-                  title=${this.localize("common.top")}
-                  aria-label=${this.localize("common.top")}
-                  @click=${this._scrollToTop}
-                >
-                  <ha-icon icon="mdi:arrow-up" aria-hidden="true"></ha-icon>
-                  <span>${this.localize("common.top")}</span>
-                </button>
-              </div>`
-            : null
-        }
       </div>
+      <wzc-scroll-top
+        .label=${this.localize("common.top")}
+        ?hidden=${!this._showScrollTop}
+        @click=${this._scrollToTop}
+      ></wzc-scroll-top>
     </section>`;
   }
 
@@ -766,6 +758,11 @@ export class ActivityList extends LitElement {
   }
 
   private readonly _handleScroll = (): void => {
+    const scroller = this.renderRoot.querySelector<HTMLElement>(".scroller");
+    const showScrollTop = scroller ? shouldShowScrollTop(scroller) : false;
+    if (showScrollTop !== this._showScrollTop) {
+      this._showScrollTop = showScrollTop;
+    }
     this._scheduleVirtualWindowSync();
     this._syncActiveDay();
     this._requestMoreIfNeeded();
@@ -1024,10 +1021,10 @@ export class ActivityList extends LitElement {
   }
 
   private readonly _scrollToTop = (): void => {
-    this.renderRoot.querySelector<HTMLElement>(".scroller")?.scrollTo({
-      behavior: "smooth",
-      top: 0,
-    });
+    const scroller = this.renderRoot.querySelector<HTMLElement>(".scroller");
+    if (!scroller) return;
+    scroller.scrollTop = 0;
+    this._showScrollTop = false;
   };
 
   private _updateHoverPreview(

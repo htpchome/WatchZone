@@ -11,6 +11,7 @@ export const recordingsStyles = css`
   }
 
   .viewport {
+    position: relative;
     box-sizing: border-box;
     display: grid;
     grid-template-rows: var(--wzc-media-day-header-block-size) minmax(0, 1fr);
@@ -73,34 +74,6 @@ export const recordingsStyles = css`
     display: grid;
     gap: var(--wzc-recording-list-gap);
     margin-block-start: var(--wzc-media-day-header-gap);
-  }
-
-  .scroll-top {
-    align-items: center;
-    appearance: none;
-    display: flex;
-    gap: 0.35rem;
-    margin: var(--wzc-recording-list-gap) auto 0;
-    min-block-size: 2.5rem;
-    padding: 0.4rem 0.8rem;
-    color: var(--wzc-recording-color);
-    background: var(--wzc-recording-action-background);
-    border: 1px solid var(--wzc-recording-action-border-color);
-    border-radius: var(--wzc-radius-pill);
-    box-shadow: var(--wzc-recording-tile-shadow);
-    cursor: pointer;
-    font: inherit;
-    font-size: var(--wzc-font-size-small);
-    font-weight: var(--wzc-font-weight-semibold);
-  }
-
-  .scroll-top ha-icon {
-    --mdc-icon-size: 1rem;
-  }
-
-  .scroll-top:focus-visible {
-    outline: 2px solid var(--wzc-color-primary);
-    outline-offset: 2px;
   }
 
   .tile {
