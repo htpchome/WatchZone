@@ -3809,7 +3809,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(safeAreaPresentation).toEqual({
     backdropFilter: "blur(2px)",
     background: "rgba(10, 20, 30, 0.5)",
-    blockSize: "36px",
+    blockSize: "24px",
     scrollPaddingAdded: 36,
     topOffsetAdded: 36,
   });

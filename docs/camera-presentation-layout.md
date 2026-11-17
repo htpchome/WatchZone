@@ -36,9 +36,10 @@ retained session, and respects reduced-motion preference.
 - On a physical phone, edge-to-edge `fit_viewport` presentation extends through
   the complete device bottom safe-area inset. Media lists scroll beneath a
   non-interactive safe-area veil using the same background and backdrop filter
-  as `ha-card`, and reserve equivalent trailing scroll padding. Translucent
-  themes therefore reveal moving tiles without placing the final tile beneath
-  the home indicator. Home Assistant's reported
+  as `ha-card`. The visible veil is capped at `1.5rem`, while the complete
+  hardware inset remains reserved as trailing scroll padding. Translucent
+  themes therefore reveal more moving content without placing the final tile
+  beneath the home indicator. Home Assistant's reported
   `--safe-area-inset-bottom` is authoritative, with the browser environment
   inset as fallback. WatchZone does not reduce the hardware inset itself or
   apply it to ordinary card-contained surfaces.
