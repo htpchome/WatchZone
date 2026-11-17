@@ -94,6 +94,12 @@ camera or make the media region unusable. Module minimums derive from current
 CSS geometry, so supported theme or user changes to tile sizing also change the
 minimum without a parallel pixel constant.
 
+Card, Camera, camera-navigation, and activity-tile appearance likewise store
+independent standard-device and physical-phone values. Phone defaults use an
+edge-to-edge card without card or Camera padding, shadows, or rounded corners;
+standard-device defaults retain those surfaces. Physical client identity, not
+card width or Stage responsive variant, selects the appearance values.
+
 ## Explicit Home Assistant height
 
 If the user disables automatic height and assigns grid rows, that rectangle is

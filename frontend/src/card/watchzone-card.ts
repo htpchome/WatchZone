@@ -7,6 +7,7 @@ import {
   normalizeCardConfig,
   type CardConfig,
 } from "../core/config";
+import { activeDeviceAppearanceConfig } from "./device-appearance";
 import { CLIENT_PROFILE } from "../core/client-profile";
 import {
   APP_NAME,
@@ -164,14 +165,18 @@ export class DashboardCard extends LitElement {
   public setConfig(value: unknown): void {
     const next = normalizeCardConfig(value);
     if (cardConfigSignature(next) === cardConfigSignature(this._config)) {
-      this._cardHostAppearance.configure(next);
+      this._cardHostAppearance.configure(
+        activeDeviceAppearanceConfig(next, CLIENT_PROFILE.isPhone),
+      );
       this._syncEdgeToEdge(next);
       this._syncHeightMode(next);
       return;
     }
     this._config = next;
     this._previewConfig = undefined;
-    this._cardHostAppearance.configure(next);
+    this._cardHostAppearance.configure(
+      activeDeviceAppearanceConfig(next, CLIENT_PROFILE.isPhone),
+    );
     this._syncEdgeToEdge(next);
     this._syncHeightMode(next);
     if (this.isConnected && !this._cardPickerPreview) this._syncLayout(next);
@@ -189,7 +194,12 @@ export class DashboardCard extends LitElement {
       this.requestUpdate();
       return;
     }
-    this._cardHostAppearance.configure(this._previewConfig ?? this._config);
+    this._cardHostAppearance.configure(
+      activeDeviceAppearanceConfig(
+        this._previewConfig ?? this._config,
+        CLIENT_PROFILE.isPhone,
+      ),
+    );
     this._syncEdgeToEdge(this._previewConfig ?? this._config);
     this._syncHeightMode(this._previewConfig ?? this._config);
     window.addEventListener(
@@ -281,7 +291,10 @@ export class DashboardCard extends LitElement {
         ></${cardPickerPreviewTag}>
       </ha-card>`;
     }
-    const config = this._previewConfig ?? this._config;
+    const config = activeDeviceAppearanceConfig(
+      this._previewConfig ?? this._config,
+      CLIENT_PROFILE.isPhone,
+    );
     const minimal = config.stage_type === "minimal_camera_only";
     const cardClasses = [
       !minimal && config.rounded_outer_corners === false
@@ -346,7 +359,9 @@ export class DashboardCard extends LitElement {
     }
     this._previewConfig = event.detail.config ?? undefined;
     const config = this._previewConfig ?? this._config;
-    this._cardHostAppearance.configure(config);
+    this._cardHostAppearance.configure(
+      activeDeviceAppearanceConfig(config, CLIENT_PROFILE.isPhone),
+    );
     this._syncEdgeToEdge(config);
     this._syncHeightMode(config);
     this._syncLayout(config);
@@ -508,7 +523,9 @@ export class DashboardCard extends LitElement {
   }
 
   private _syncLayout(config: CardConfig): void {
-    const { designs, flow } = createBuiltInStageSet(config);
+    const { designs, flow } = createBuiltInStageSet(
+      activeDeviceAppearanceConfig(config, CLIENT_PROFILE.isPhone),
+    );
     this._layoutRuntime.setStageSet(designs, flow);
     this._syncRuntime();
   }

@@ -13,9 +13,10 @@ Camera configuration is an ordered list capped by the centralized
 `MAX_CAMERAS` value. Adding, editing, removing, or reordering a camera produces
 one complete normalized list update and one dirty-state write. Removal requires
 confirmation before the draft changes. Per-camera live, audio, and linked-light
-options are edited inside that camera's dialog. Camera-module
-appearance is edited once under Layout Settings and applies uniformly to the
-module rather than individual cameras. YAML output omits default values while
+options are edited inside that camera's dialog. Camera-module appearance is
+edited once under Layout Settings with independent standard-device and
+physical-phone values. Each selected value applies uniformly to the module
+rather than individual cameras. YAML output omits default values while
 preserving list order and stable entity identity.
 
 The camera dialog is a nested draft transaction. Update remains disabled until

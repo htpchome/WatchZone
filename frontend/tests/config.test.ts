@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { activeCardHeightMode, normalizeCardConfig } from "../src/core/config";
+import { activeDeviceAppearanceConfig } from "../src/card/device-appearance";
 import {
   CARD_TYPE,
   MAX_CARD_TITLE_LENGTH,
@@ -21,19 +22,25 @@ describe("WatchZone card configuration", () => {
       type: CARD_TYPE,
       title: "Camera",
       camera_bar_rounded_corners: true,
+      camera_bar_rounded_corners_phone: true,
       camera_bar_shadows: true,
+      camera_bar_shadows_phone: true,
       camera_rounded_corners: true,
+      camera_rounded_corners_phone: false,
       camera_shadows: true,
+      camera_shadows_phone: false,
       camera_switcher_overlay: false,
       card_height_mode: "auto",
       card_height_mode_phone: "auto",
       display_event_type_badges: true,
       display_object_badges: true,
       display_zone: true,
-      edge_to_edge_phone: false,
+      edge_to_edge_phone: true,
       event_history_days: 5,
       event_rounded_corners: true,
+      event_rounded_corners_phone: true,
       event_shadows: true,
+      event_shadows_phone: true,
       alert_detection_takeover: "both",
       highlight_camera_on_activity: true,
       minimal_camera_menu_position: "top_left",
@@ -55,8 +62,11 @@ describe("WatchZone card configuration", () => {
       double_tap_action: { action: "none" },
       view_timelapse_on_thumbnail_hover: true,
       rounded_outer_corners: true,
+      rounded_outer_corners_phone: false,
       outer_shadows: true,
+      outer_shadows_phone: false,
       outer_padding: true,
+      outer_padding_phone: false,
       mobile_data_saving: false,
       cameras: [],
     });
@@ -80,6 +90,27 @@ describe("WatchZone card configuration", () => {
     ).toThrow(
       "card_height_mode_phone must be auto, fit_viewport, or fill_container",
     );
+  });
+
+  it("selects physical-phone appearance independently from card width", () => {
+    const config = normalizeCardConfig({
+      camera_bar_shadows: false,
+      camera_bar_shadows_phone: true,
+      camera_rounded_corners: true,
+      camera_rounded_corners_phone: false,
+      outer_padding: true,
+      outer_padding_phone: false,
+      rounded_outer_corners: true,
+      rounded_outer_corners_phone: false,
+    });
+
+    expect(activeDeviceAppearanceConfig(config, false)).toBe(config);
+    expect(activeDeviceAppearanceConfig(config, true)).toMatchObject({
+      camera_bar_shadows: true,
+      camera_rounded_corners: false,
+      outer_padding: false,
+      rounded_outer_corners: false,
+    });
   });
 
   it("selects height mode by physical phone class and leaves camera-only stages natural", () => {

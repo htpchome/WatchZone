@@ -23,17 +23,32 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
   if (config.rounded_outer_corners !== false) {
     delete yaml.rounded_outer_corners;
   }
+  if (!config.rounded_outer_corners_phone) {
+    delete yaml.rounded_outer_corners_phone;
+  }
   if (config.outer_shadows !== false) delete yaml.outer_shadows;
+  if (!config.outer_shadows_phone) delete yaml.outer_shadows_phone;
   if (config.outer_padding !== false) delete yaml.outer_padding;
+  if (!config.outer_padding_phone) delete yaml.outer_padding_phone;
   if (config.camera_rounded_corners !== false) {
     delete yaml.camera_rounded_corners;
   }
+  if (!config.camera_rounded_corners_phone) {
+    delete yaml.camera_rounded_corners_phone;
+  }
   if (config.camera_shadows !== false) delete yaml.camera_shadows;
+  if (!config.camera_shadows_phone) delete yaml.camera_shadows_phone;
   if (!config.camera_switcher_overlay) delete yaml.camera_switcher_overlay;
   if (config.camera_bar_rounded_corners !== false) {
     delete yaml.camera_bar_rounded_corners;
   }
+  if (config.camera_bar_rounded_corners_phone !== false) {
+    delete yaml.camera_bar_rounded_corners_phone;
+  }
   if (config.camera_bar_shadows !== false) delete yaml.camera_bar_shadows;
+  if (config.camera_bar_shadows_phone !== false) {
+    delete yaml.camera_bar_shadows_phone;
+  }
   if (config.display_event_type_badges !== false) {
     delete yaml.display_event_type_badges;
   }
@@ -41,11 +56,17 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
     delete yaml.display_object_badges;
   }
   if (config.display_zone !== false) delete yaml.display_zone;
-  if (!config.edge_to_edge_phone) delete yaml.edge_to_edge_phone;
+  if (config.edge_to_edge_phone) delete yaml.edge_to_edge_phone;
   if (config.event_rounded_corners !== false) {
     delete yaml.event_rounded_corners;
   }
+  if (config.event_rounded_corners_phone !== false) {
+    delete yaml.event_rounded_corners_phone;
+  }
   if (config.event_shadows !== false) delete yaml.event_shadows;
+  if (config.event_shadows_phone !== false) {
+    delete yaml.event_shadows_phone;
+  }
   if (config.event_history_days === DEFAULT_EVENT_HISTORY_DAYS) {
     delete yaml.event_history_days;
   }

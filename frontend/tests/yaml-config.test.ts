@@ -63,6 +63,38 @@ describe("WatchZone YAML configuration manager", () => {
     });
   });
 
+  it("persists only non-default physical-phone appearance", () => {
+    expect(
+      toYamlCardConfig(
+        normalizeCardConfig({
+          camera_bar_rounded_corners_phone: false,
+          camera_bar_shadows_phone: false,
+          camera_rounded_corners_phone: true,
+          camera_shadows_phone: true,
+          edge_to_edge_phone: false,
+          event_rounded_corners_phone: false,
+          event_shadows_phone: false,
+          outer_padding_phone: true,
+          outer_shadows_phone: true,
+          rounded_outer_corners_phone: true,
+          type: CARD_TYPE,
+        }),
+      ),
+    ).toEqual({
+      camera_bar_rounded_corners_phone: false,
+      camera_bar_shadows_phone: false,
+      camera_rounded_corners_phone: true,
+      camera_shadows_phone: true,
+      edge_to_edge_phone: false,
+      event_rounded_corners_phone: false,
+      event_shadows_phone: false,
+      outer_padding_phone: true,
+      outer_shadows_phone: true,
+      rounded_outer_corners_phone: true,
+      type: CARD_TYPE,
+    });
+  });
+
   it("keeps non-default values and unknown HA configuration", () => {
     expect(
       toYamlCardConfig(
@@ -77,7 +109,7 @@ describe("WatchZone YAML configuration manager", () => {
           display_event_type_badges: false,
           display_object_badges: false,
           display_zone: false,
-          edge_to_edge_phone: true,
+          edge_to_edge_phone: false,
           event_history_days: 12,
           event_shadows: false,
           alert_detection_takeover: "alerts",
@@ -126,7 +158,7 @@ describe("WatchZone YAML configuration manager", () => {
       display_event_type_badges: false,
       display_object_badges: false,
       display_zone: false,
-      edge_to_edge_phone: true,
+      edge_to_edge_phone: false,
       event_history_days: 12,
       event_shadows: false,
       alert_detection_takeover: "alerts",

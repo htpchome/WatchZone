@@ -4,6 +4,7 @@ import type { CardConfig, CardHeightMode } from "../core/config";
 import { EDITOR_HEIGHT_SELECTOR_TAG } from "../core/constants";
 import type { HomeAssistant } from "../core/home-assistant";
 import { LocalizationController } from "../core/localization";
+import { renderIcon } from "../ui/icons";
 import {
   heightModeInfoStyles,
   heightModeSelectorStyles,
@@ -21,6 +22,8 @@ const APPEARANCE_KEYS = [
   "event_rounded_corners",
   "event_shadows",
 ] as const;
+type AppearanceKey = (typeof APPEARANCE_KEYS)[number];
+type PhoneAppearanceKey = `${AppearanceKey}_phone`;
 const BOOLEAN_SELECTOR = { boolean: {} } as const;
 
 interface ValueChangedEvent extends Event {
@@ -76,26 +79,97 @@ export class HeightModeSelector extends LitElement {
           </dd>
         </dl>
       </details>
-      ${this._renderBoolean("edge_to_edge_phone", this.config?.edge_to_edge_phone === true)}
-      ${
-        this.minimal
-          ? null
-          : APPEARANCE_KEYS.map((key) =>
-              this._renderBoolean(key, this.config?.[key] !== false),
-            )
-      }
+      <div class="appearance-grid" role="table">
+        <div class="appearance-header" role="row">
+          <span role="columnheader"></span>
+          ${this._renderDeviceHeading("standard")}
+          ${this._renderDeviceHeading("mobile")}
+        </div>
+        ${this._renderPhoneOnlyBoolean(
+          "edge_to_edge_phone",
+          this.config?.edge_to_edge_phone !== false,
+        )}
+        ${
+          this.minimal
+            ? null
+            : APPEARANCE_KEYS.map((key) => this._renderAppearanceRow(key))
+        }
+      </div>
+    `;
+  }
+
+  private _renderDeviceHeading(device: "standard" | "mobile") {
+    const label = this._localization.localize(
+      device === "standard" ? "editor.standard_device" : "editor.mobile_phone",
+    );
+    const description = this._localization.localize(
+      device === "standard"
+        ? "editor.standard_device_description"
+        : "editor.mobile_phone_description",
+    );
+    return html`
+      <span class="device-heading ${device}" role="columnheader">
+        <span
+          class="device-info"
+          role="img"
+          tabindex="0"
+          aria-label=${description}
+        >
+          ${renderIcon("informationOutline")}
+        </span>
+        <span>${label}</span>
+        <span class="device-tooltip" role="tooltip">${description}</span>
+      </span>
+    `;
+  }
+
+  private _renderAppearanceRow(key: AppearanceKey) {
+    const phoneKey = `${key}_phone` as PhoneAppearanceKey;
+    return html`
+      <div class="appearance-row" role="row">
+        <span class="appearance-label" role="rowheader">
+          ${this._localization.localize(`editor.${key}`)}
+        </span>
+        ${this._renderBoolean(key, this.config?.[key] !== false, "standard")}
+        ${this._renderBoolean(
+          phoneKey,
+          this.config?.[phoneKey] !== false,
+          "mobile",
+        )}
+      </div>
+    `;
+  }
+
+  private _renderPhoneOnlyBoolean(key: "edge_to_edge_phone", value: boolean) {
+    return html`
+      <div class="appearance-row" role="row">
+        <span class="appearance-label" role="rowheader">
+          ${this._localization.localize(`editor.${key}`)}
+        </span>
+        <span class="not-applicable" aria-label="Not applicable">—</span>
+        ${this._renderBoolean(key, value, "mobile")}
+      </div>
     `;
   }
 
   private _renderBoolean(
-    key: "edge_to_edge_phone" | (typeof APPEARANCE_KEYS)[number],
+    key: "edge_to_edge_phone" | AppearanceKey | PhoneAppearanceKey,
     value: boolean,
+    device: "standard" | "mobile",
   ) {
+    const appearanceKey: "edge_to_edge_phone" | AppearanceKey =
+      key === "edge_to_edge_phone"
+        ? key
+        : (key.replace(/_phone$/, "") as AppearanceKey);
+    const label = this._localization.localize(`editor.${appearanceKey}`);
+    const deviceLabel = this._localization.localize(
+      device === "standard" ? "editor.standard_device" : "editor.mobile_phone",
+    );
     return html`
       <ha-selector
-        class="boolean-option"
+        class="boolean-option device-boolean-option"
         data-config-key=${key}
-        label=${this._localization.localize(`editor.${key}`)}
+        aria-label=${`${label}, ${deviceLabel}`}
         .hass=${this.hass}
         .selector=${BOOLEAN_SELECTOR}
         .value=${value}

@@ -111,7 +111,8 @@ async function setBooleanSelector(
                   "camera_bar_shadows",
                   "event_rounded_corners",
                   "event_shadows",
-                ].includes(key)
+                ].includes(key.replace(/_phone$/, "")) ||
+                key === "edge_to_edge_phone"
               ? "layout"
               : editor.shadowRoot?.querySelector(
                     `${ACCORDION_ITEM_TAG}[item-key="minimal-camera-configuration"]`,
@@ -1406,6 +1407,11 @@ describe("watchzone-card-editor", () => {
     await setBooleanSelector(
       editor,
       '[data-config-key="edge_to_edge_phone"]',
+      false,
+    );
+    await setBooleanSelector(
+      editor,
+      '[data-config-key="rounded_outer_corners_phone"]',
       true,
     );
     await card.updateComplete;
@@ -1419,7 +1425,8 @@ describe("watchzone-card-editor", () => {
       camera_bar_rounded_corners: false,
       camera_bar_shadows: false,
       event_shadows: false,
-      edge_to_edge_phone: true,
+      edge_to_edge_phone: false,
+      rounded_outer_corners_phone: true,
     });
     const previewShell = card.shadowRoot?.querySelector("ha-card");
     expect(previewShell?.classList.contains("square-outer-corners")).toBe(true);
@@ -1436,7 +1443,8 @@ describe("watchzone-card-editor", () => {
       camera_bar_rounded_corners: false,
       camera_bar_shadows: false,
       event_shadows: false,
-      edge_to_edge_phone: true,
+      edge_to_edge_phone: false,
+      rounded_outer_corners_phone: true,
     });
     const reopened = document.createElement(
       "watchzone-card-editor",
@@ -1471,9 +1479,69 @@ describe("watchzone-card-editor", () => {
           '[data-config-key="edge_to_edge_phone"]',
         ) as TestBooleanSelector
       ).value,
+    ).toBe(false);
+    expect(
+      (
+        queryBooleanSelector(
+          reopened,
+          '[data-config-key="rounded_outer_corners_phone"]',
+        ) as TestBooleanSelector
+      ).value,
     ).toBe(true);
 
     document.removeEventListener("context-request", contextHandler);
+  });
+
+  it("presents standard and physical-phone layout columns with device help", async () => {
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    document.body.append(editor);
+    await editor.updateComplete;
+    const layout = await openEditorSection(editor, "layout");
+    const settings = layout.querySelector("wzc-editor-height-selector");
+    await settings?.updateComplete;
+    const root = settings?.shadowRoot;
+
+    expect(root?.querySelectorAll(".device-info")).toHaveLength(2);
+    expect(
+      [...(root?.querySelectorAll(".device-tooltip") ?? [])].map((element) =>
+        element.textContent?.trim(),
+      ),
+    ).toEqual([
+      "Applies to desktop computers and tablets, including narrow browser windows.",
+      "Applies only to physical mobile phones, not to a narrow desktop browser or card.",
+    ]);
+    expect(root?.querySelector(".appearance-row .device-info")).toBeNull();
+
+    const values = Object.fromEntries(
+      [
+        ...(root?.querySelectorAll<TestBooleanSelector>(".boolean-option") ??
+          []),
+      ].map((control) => [control.dataset.configKey, control.value]),
+    );
+    expect(values).toMatchObject({
+      edge_to_edge_phone: true,
+      rounded_outer_corners: true,
+      rounded_outer_corners_phone: false,
+      outer_shadows: true,
+      outer_shadows_phone: false,
+      outer_padding: true,
+      outer_padding_phone: false,
+      camera_rounded_corners: true,
+      camera_rounded_corners_phone: false,
+      camera_shadows: true,
+      camera_shadows_phone: false,
+      camera_bar_rounded_corners: true,
+      camera_bar_rounded_corners_phone: true,
+      camera_bar_shadows: true,
+      camera_bar_shadows_phone: true,
+      event_rounded_corners: true,
+      event_rounded_corners_phone: true,
+      event_shadows: true,
+      event_shadows_phone: true,
+    });
   });
 
   it("round-trips default-on toggles back to their defaults before Save", async () => {

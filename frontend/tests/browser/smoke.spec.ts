@@ -8105,10 +8105,7 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
       sections.attachShadow({ mode: "open" }).append(wrapper);
       document.body.replaceChildren(sections);
 
-      card.setConfig({
-        edge_to_edge_phone: true,
-        type: "custom:watchzone-card",
-      });
+      card.setConfig({ type: "custom:watchzone-card" });
       await card.updateComplete;
       const edge = {
         gap: container.style.gap,
@@ -8117,7 +8114,10 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
         wrapperPadding: wrapper.style.padding,
       };
 
-      card.setConfig({ type: "custom:watchzone-card" });
+      card.setConfig({
+        edge_to_edge_phone: false,
+        type: "custom:watchzone-card",
+      });
       await card.updateComplete;
       return {
         edge,

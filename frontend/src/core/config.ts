@@ -72,15 +72,21 @@ export interface CardConfig {
   readonly card_height_mode_phone: CardHeightMode;
   readonly camera_switcher_overlay: boolean;
   readonly camera_bar_rounded_corners: boolean;
+  readonly camera_bar_rounded_corners_phone: boolean;
   readonly camera_bar_shadows: boolean;
+  readonly camera_bar_shadows_phone: boolean;
   readonly camera_rounded_corners: boolean;
+  readonly camera_rounded_corners_phone: boolean;
   readonly camera_shadows: boolean;
+  readonly camera_shadows_phone: boolean;
   readonly display_event_type_badges: boolean;
   readonly display_object_badges: boolean;
   readonly display_zone: boolean;
   readonly edge_to_edge_phone: boolean;
   readonly event_rounded_corners: boolean;
+  readonly event_rounded_corners_phone: boolean;
   readonly event_shadows: boolean;
+  readonly event_shadows_phone: boolean;
   readonly event_history_days: number;
   readonly alert_detection_takeover: AlertTakeoverMode;
   readonly highlight_camera_on_activity: boolean;
@@ -102,8 +108,11 @@ export interface CardConfig {
   readonly cameras: readonly CameraConfig[];
   readonly mobile_data_saving?: boolean;
   readonly outer_padding?: boolean;
+  readonly outer_padding_phone: boolean;
   readonly outer_shadows?: boolean;
+  readonly outer_shadows_phone: boolean;
   readonly rounded_outer_corners?: boolean;
+  readonly rounded_outer_corners_phone: boolean;
   readonly type: typeof CARD_TYPE;
   readonly title: string;
   readonly [key: string]: unknown;
@@ -169,16 +178,22 @@ export function normalizeCardConfig(value: unknown): CardConfig {
 
   for (const key of [
     "camera_bar_rounded_corners",
+    "camera_bar_rounded_corners_phone",
     "camera_bar_shadows",
+    "camera_bar_shadows_phone",
     "camera_rounded_corners",
+    "camera_rounded_corners_phone",
     "camera_shadows",
+    "camera_shadows_phone",
     "camera_switcher_overlay",
     "display_event_type_badges",
     "display_object_badges",
     "display_zone",
     "edge_to_edge_phone",
     "event_rounded_corners",
+    "event_rounded_corners_phone",
     "event_shadows",
+    "event_shadows_phone",
     "highlight_camera_on_activity",
     "minimal_camera_show_fullscreen_button",
     "minimal_camera_show_mute_button",
@@ -187,8 +202,11 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     "start_alert_takeover_on",
     "view_timelapse_on_thumbnail_hover",
     "rounded_outer_corners",
+    "rounded_outer_corners_phone",
     "outer_shadows",
+    "outer_shadows_phone",
     "outer_padding",
+    "outer_padding_phone",
     "mobile_data_saving",
   ] as const) {
     if (key in source && typeof source[key] !== "boolean") {
@@ -294,16 +312,26 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     "camera_rounded_corners",
   );
   normalized.camera_shadows = moduleAppearanceValue(source, "camera_shadows");
+  normalized.camera_rounded_corners_phone =
+    source.camera_rounded_corners_phone === true;
+  normalized.camera_shadows_phone = source.camera_shadows_phone === true;
   normalized.camera_switcher_overlay = source.camera_switcher_overlay === true;
   normalized.camera_bar_rounded_corners =
     source.camera_bar_rounded_corners !== false;
+  normalized.camera_bar_rounded_corners_phone =
+    source.camera_bar_rounded_corners_phone !== false;
   normalized.camera_bar_shadows = source.camera_bar_shadows !== false;
+  normalized.camera_bar_shadows_phone =
+    source.camera_bar_shadows_phone !== false;
   normalized.display_event_type_badges =
     source.display_event_type_badges !== false;
   normalized.display_object_badges = source.display_object_badges !== false;
   normalized.display_zone = source.display_zone !== false;
   normalized.event_rounded_corners = source.event_rounded_corners !== false;
+  normalized.event_rounded_corners_phone =
+    source.event_rounded_corners_phone !== false;
   normalized.event_shadows = source.event_shadows !== false;
+  normalized.event_shadows_phone = source.event_shadows_phone !== false;
   normalized.event_history_days =
     typeof eventHistoryDays === "number"
       ? eventHistoryDays
@@ -347,15 +375,19 @@ export function normalizeCardConfig(value: unknown): CardConfig {
   normalized.view_timelapse_on_thumbnail_hover =
     source.view_timelapse_on_thumbnail_hover !== false;
   delete normalized.edge_to_edge_non_phone;
-  normalized.edge_to_edge_phone = source.edge_to_edge_phone === true;
+  normalized.edge_to_edge_phone = source.edge_to_edge_phone !== false;
   normalized.rounded_outer_corners =
     typeof source.rounded_outer_corners === "boolean"
       ? source.rounded_outer_corners
       : true;
+  normalized.rounded_outer_corners_phone =
+    source.rounded_outer_corners_phone === true;
   normalized.outer_shadows =
     typeof source.outer_shadows === "boolean" ? source.outer_shadows : true;
+  normalized.outer_shadows_phone = source.outer_shadows_phone === true;
   normalized.outer_padding =
     typeof source.outer_padding === "boolean" ? source.outer_padding : true;
+  normalized.outer_padding_phone = source.outer_padding_phone === true;
   normalized.mobile_data_saving =
     typeof source.mobile_data_saving === "boolean"
       ? source.mobile_data_saving
