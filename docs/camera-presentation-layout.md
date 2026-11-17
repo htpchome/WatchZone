@@ -72,8 +72,11 @@ setting accepts the same three values:
 
 - `auto` leaves the card at its natural content height. Scrollable media
   modules retain a three-item minimum and five-item natural-height ceiling.
-- `fit_viewport` targets the dynamic viewport height less the semantic Home
-  Assistant header height.
+- `fit_viewport` targets the remaining visible dynamic viewport below the
+  card's actual position in Home Assistant. The calculation includes layout
+  space above the card and trailing wrapper/container spacing, so the card
+  alone does not create main-view scrolling merely because it is offset from
+  the header.
 - `fill_container` fills a definite height supplied by the parent layout and
   otherwise behaves like automatic percentage sizing.
 

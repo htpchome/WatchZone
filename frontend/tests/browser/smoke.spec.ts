@@ -7807,11 +7807,18 @@ test("uses intrinsic card height in Home Assistant Panel view", async ({
 test("applies viewport and parent height modes without shrinking the Full Stage below its media minimum", async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 500, height: 900 });
+  await page.setViewportSize({ width: 500, height: 1000 });
   await page.goto("/");
   await waitForWatchZoneDefinition(page);
   const card = page.locator("watchzone-card");
   await card.evaluate((element) => {
+    document.body.style.margin = "0";
+    const wrapper = document.createElement("div");
+    wrapper.id = "fit-viewport-layout-wrapper";
+    wrapper.style.marginBlockStart = "56px";
+    wrapper.style.paddingBlock = "24px";
+    element.replaceWith(wrapper);
+    wrapper.append(element);
     (element as HTMLElement & { setConfig(config: unknown): void }).setConfig({
       type: "custom:watchzone-card",
       card_height_mode: "fit_viewport",
@@ -7827,7 +7834,12 @@ test("applies viewport and parent height modes without shrinking the Full Stage 
       getComputedStyle(element).getPropertyValue("--header-height") || "56",
     ),
   );
-  expect(fitBounds?.height).toBeCloseTo(900 - headerHeight, 0);
+  expect(fitBounds?.height).toBeCloseTo(1000 - 56 - 24 - 24, 0);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollHeight <= window.innerHeight,
+    ),
+  ).toBe(true);
   const fitListHeight = await page
     .locator("wzc-activity-list .viewport")
     .evaluate((element) => element.getBoundingClientRect().height);
@@ -7880,6 +7892,11 @@ test("applies viewport and parent height modes without shrinking the Full Stage 
     fitBounds?.height ?? Number.NaN,
     0,
   );
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollHeight <= window.innerHeight,
+    ),
+  ).toBe(true);
 
   await page.setViewportSize({ width: 500, height: 500 });
   await expect

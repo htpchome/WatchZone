@@ -58,6 +58,7 @@ import {
   type CardPickerStubConfig,
 } from "./home-assistant-card-picker";
 import { HomeAssistantLayoutBridge } from "./home-assistant-layout-bridge";
+import { ViewportFitController } from "./viewport-fit.controller";
 
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
 const recordedVideoViewerTag = unsafeStatic(RECORDED_VIDEO_VIEWER_TAG);
@@ -106,6 +107,7 @@ export class DashboardCard extends LitElement {
   );
   private readonly _cardHostAppearance = new CardHostAppearanceController(this);
   private readonly _haLayout = new HomeAssistantLayoutBridge(this);
+  private readonly _viewportFit = new ViewportFitController(this);
   private _stageResizeFrame?: number;
   private _stageSizeBoundary?: HTMLElement;
   private readonly _stageResizeObserver =
@@ -359,6 +361,7 @@ export class DashboardCard extends LitElement {
 
   private _syncHeightMode(config: CardConfig): void {
     const mode = activeCardHeightMode(config, CLIENT_PROFILE.isPhone);
+    this._viewportFit.configure(mode === "fit_viewport");
     for (const value of ["auto", "fit-viewport", "fill-container"]) {
       this.classList.toggle(
         `height-mode-${value}`,
