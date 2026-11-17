@@ -17,16 +17,10 @@ interface SectionsLayout {
 
 interface SectionsLayoutState {
   readonly declarations: readonly OwnedPadding[];
-  readonly removedBlockSpacing: RemovedBlockSpacing;
   readonly owners: Set<HomeAssistantLayoutBridge>;
 }
 
 const sectionsLayoutStates = new WeakMap<HTMLElement, SectionsLayoutState>();
-
-export interface RemovedBlockSpacing {
-  readonly end: number;
-  readonly start: number;
-}
 
 function composedParentElement(element: Element): Element | undefined {
   if (element.parentElement) return element.parentElement;
@@ -51,23 +45,6 @@ function ownedPadding(element: HTMLElement): OwnedPadding {
     element,
     priority: element.style.getPropertyPriority("padding"),
     value: element.style.getPropertyValue("padding"),
-  };
-}
-
-function blockPadding(element: HTMLElement): RemovedBlockSpacing {
-  const style = getComputedStyle(element);
-  return {
-    end: Number.parseFloat(style.paddingBottom) || 0,
-    start: Number.parseFloat(style.paddingTop) || 0,
-  };
-}
-
-function removedBlockSpacing(layout: SectionsLayout): RemovedBlockSpacing {
-  const wrapper = blockPadding(layout.wrapper);
-  const container = blockPadding(layout.container);
-  return {
-    end: wrapper.end + container.end,
-    start: wrapper.start + container.start,
   };
 }
 
@@ -100,19 +77,15 @@ export class HomeAssistantLayoutBridge {
 
   public constructor(private readonly _host: HTMLElement) {}
 
-  public configure(edgeToEdge: boolean): RemovedBlockSpacing | undefined {
+  public configure(edgeToEdge: boolean): void {
     this._host.classList.toggle(
       PANEL_NATURAL_HEIGHT_CLASS,
       Boolean(findAncestor(this._host, PANEL_VIEW_TAG)),
     );
     const layout = edgeToEdge ? this._sectionsLayout() : undefined;
-    if (layout?.view === this._view) {
-      return layout
-        ? sectionsLayoutStates.get(layout.view)?.removedBlockSpacing
-        : undefined;
-    }
+    if (layout?.view === this._view) return;
     this.release();
-    if (!layout) return undefined;
+    if (!layout) return;
 
     let state = sectionsLayoutStates.get(layout.view);
     if (!state) {
@@ -121,7 +94,6 @@ export class HomeAssistantLayoutBridge {
           ownedPadding(layout.wrapper),
           ownedPadding(layout.container),
         ],
-        removedBlockSpacing: removedBlockSpacing(layout),
         owners: new Set(),
       };
       sectionsLayoutStates.set(layout.view, state);
@@ -131,7 +103,6 @@ export class HomeAssistantLayoutBridge {
     for (const { element } of state.declarations) {
       element.style.setProperty("padding", EDGE_VALUE);
     }
-    return state.removedBlockSpacing;
   }
 
   public release(): void {

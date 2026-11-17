@@ -370,10 +370,6 @@ export class DashboardCard extends LitElement {
 
   private _syncEdgeToEdge(config: CardConfig): void {
     const enabled = config.edge_to_edge_phone && CLIENT_PROFILE.isPhone;
-    const browserFitViewport =
-      enabled &&
-      CLIENT_PROFILE.application === "browser" &&
-      activeCardHeightMode(config, CLIENT_PROFILE.isPhone) === "fit_viewport";
     const companionFitViewport =
       enabled &&
       CLIENT_PROFILE.isCompanionApp &&
@@ -383,10 +379,7 @@ export class DashboardCard extends LitElement {
       "companion-edge-to-edge-fit-viewport",
       companionFitViewport,
     );
-    const removedBlockSpacing = this._haLayout.configure(enabled);
-    this._viewportFit.setBrowserEdgeToEdgeSpacing(
-      browserFitViewport ? removedBlockSpacing : undefined,
-    );
+    this._haLayout.configure(enabled);
   }
 
   private _syncHeightMode(config: CardConfig): void {

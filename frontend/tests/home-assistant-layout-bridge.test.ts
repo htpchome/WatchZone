@@ -54,9 +54,8 @@ describe("Home Assistant layout bridge", () => {
     container.style.gap = "24px 8px";
     sections.style.setProperty("--ha-view-sections-row-gap", "24px");
 
-    const removedBlockSpacing = bridge.configure(true);
+    bridge.configure(true);
 
-    expect(removedBlockSpacing).toEqual({ end: 24, start: 24 });
     expect(wrapper.style.padding).toBe("0px");
     expect(container.style.padding).toBe("0px");
     expect(container.style.gap).toBe("24px 8px");
@@ -77,8 +76,8 @@ describe("Home Assistant layout bridge", () => {
     first.wrapper.style.padding = "0px 32px";
     first.container.style.padding = "20px 0px";
 
-    expect(first.bridge.configure(true)).toEqual({ end: 20, start: 20 });
-    expect(second.configure(true)).toEqual({ end: 20, start: 20 });
+    first.bridge.configure(true);
+    second.configure(true);
     first.bridge.release();
     expect(first.wrapper.style.padding).toBe("0px");
     expect(first.container.style.padding).toBe("0px");

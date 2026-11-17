@@ -91,10 +91,6 @@ Always recheck `git status`, `git log -1`, and
   overscroll back to HA; no WatchZone-specific reload gesture exists. On iOS,
   list-origin pulls may require a longer pull-and-hold, consistent with other
   HA nested-scroll pages.
-- Physical-phone browser `fit_viewport` sizing separately retains the measured
-  HA-navbar offset and the Sections block spacing removed by edge-to-edge. This
-  keeps outer document scrolling disabled without changing HA's `vh`/`dvh`
-  ownership or the distinct Companion calculation.
 - The unresolved ultra-narrow behavior near 255px differs between Chromium,
   Firefox, and Safari. Investigation was deliberately stopped because the
   layout is below a practical supported card width; do not reopen it without a
