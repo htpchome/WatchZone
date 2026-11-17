@@ -28,12 +28,14 @@ import { openRecordedMedia } from "../../../core/recorded-media";
 import { buttonBaseStyles } from "../../../ui/button.styles";
 import { renderIcon } from "../../../ui/icons";
 import "../../../ui/media-day-header";
+import { mediaSafeAreaStyles } from "../../../ui/media-safe-area.styles";
 import {
   scrollMediaViewportToTop,
   shouldShowScrollTop,
 } from "../../../ui/scroll-top";
 import { ToastManager } from "../../../ui/toast-manager";
 import "../../../ui/toast-region";
+import { ThumbnailPreviewPressController } from "../../../ui/thumbnail-preview-press.controller";
 import type { CameraSelectionContext } from "../../camera-selection-context";
 import type { ExportFilterContext } from "../../export-filter-context";
 import { ExportsController } from "./exports.controller";
@@ -74,6 +76,19 @@ export class ExportsModule extends LitElement {
   private _layout: "grid" | "list" = "list";
   private _mutating = false;
   private _showScrollTop = false;
+  private readonly _touchPreview = new ThumbnailPreviewPressController<string>(
+    this,
+    {
+      activate: (itemId) => {
+        const item = this._exports.items.find(
+          (candidate): candidate is ExportItem =>
+            !isExportJob(candidate) && candidate.id === itemId,
+        );
+        if (item) void this._showHoverPreview(item);
+      },
+      deactivate: (itemId) => this._clearHoverPreview(itemId),
+    },
+  );
   private readonly _toasts = new ToastManager(this);
   private readonly _exports = new ExportsController(
     this,
@@ -170,8 +185,15 @@ export class ExportsModule extends LitElement {
     return html`<article
       class="tile"
       @pointermove=${(event: PointerEvent) =>
-        this._updateHoverPreview(event, item)}
-      @pointerleave=${() => this._clearHoverPreview(item.id)}
+        this._handlePreviewPointerMove(event, item)}
+      @pointerdown=${(event: PointerEvent) =>
+        this._startTouchPreview(event, item)}
+      @pointerup=${(event: PointerEvent) => this._touchPreview.end(event)}
+      @pointercancel=${() => this._touchPreview.cancel()}
+      @pointerleave=${(event: PointerEvent) =>
+        this._handlePreviewPointerLeave(event, item.id)}
+      @contextmenu=${(event: Event) =>
+        this._touchPreview.preventContextMenu(event)}
     >
       ${
         item.in_progress
@@ -182,7 +204,10 @@ export class ExportsModule extends LitElement {
               type="button"
               title=${title}
               aria-label=${title}
-              @click=${() => this._open(item)}
+              @click=${() => {
+                if (this._touchPreview.consumeClick(item.id)) return;
+                this._open(item);
+              }}
             ></button>`
       }
       <div class="thumbnail">
@@ -518,6 +543,47 @@ export class ExportsModule extends LitElement {
     void this._showHoverPreview(item);
   }
 
+  private _startTouchPreview(event: PointerEvent, item: ExportItem): void {
+    if (
+      !this.hoverPreviewEnabled ||
+      item.in_progress ||
+      !this._isInsideThumbnail(event)
+    ) {
+      return;
+    }
+    this._touchPreview.start(event, item.id);
+  }
+
+  private _handlePreviewPointerMove(
+    event: PointerEvent,
+    item: ExportItem,
+  ): void {
+    this._touchPreview.move(event);
+    this._updateHoverPreview(event, item);
+  }
+
+  private _handlePreviewPointerLeave(
+    event: PointerEvent,
+    itemId: string,
+  ): void {
+    if (event.pointerType === "touch") this._touchPreview.cancel();
+    else this._clearHoverPreview(itemId);
+  }
+
+  private _isInsideThumbnail(event: PointerEvent): boolean {
+    const thumbnail = (event.currentTarget as HTMLElement).querySelector(
+      ".thumbnail",
+    );
+    if (!(thumbnail instanceof HTMLElement)) return false;
+    const bounds = thumbnail.getBoundingClientRect();
+    return (
+      event.clientX >= bounds.left &&
+      event.clientX <= bounds.right &&
+      event.clientY >= bounds.top &&
+      event.clientY <= bounds.bottom
+    );
+  }
+
   private async _showHoverPreview(item: ExportItem): Promise<void> {
     const api = this.api;
     if (!api) return;
@@ -568,6 +634,7 @@ export class ExportsModule extends LitElement {
   };
 
   private readonly _handleScroll = (event: Event): void => {
+    this._touchPreview.cancel();
     const scroller = event.currentTarget as HTMLElement;
     this._showScrollTop = shouldShowScrollTop(scroller);
   };
@@ -578,7 +645,7 @@ export class ExportsModule extends LitElement {
     scrollMediaViewportToTop(scroller);
   };
 
-  static styles = [buttonBaseStyles, exportsStyles];
+  static styles = [buttonBaseStyles, mediaSafeAreaStyles, exportsStyles];
 }
 
 if (!customElements.get(EXPORTS_TAG)) {

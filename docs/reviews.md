@@ -39,6 +39,10 @@
 - Reviews also owns the editor controls for thumbnail preview, object and
   classification badges, and zone display. These controls use divided rows in
   the Reviews disclosure rather than a separate Display Settings section.
+- When thumbnail preview is enabled, a fine-pointer hover or a stationary touch
+  long press over the thumbnail presents the same time-lapse preview. Touch
+  movement, scrolling, cancellation, or release clears it, and a completed
+  long press does not also open the recording.
 - Review and Event tiles use the shared media-tile surface tokens. Fine-pointer
   hover darkens the active theme surface slightly without changing touch or
   keyboard behavior.

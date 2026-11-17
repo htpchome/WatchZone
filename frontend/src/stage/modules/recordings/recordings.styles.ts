@@ -39,7 +39,9 @@ export const recordingsStyles = css`
     overflow-y: auto;
     overscroll-behavior-y: auto;
     padding: 0 var(--wzc-recording-list-padding)
-      var(--wzc-recording-list-padding);
+      calc(
+        var(--wzc-recording-list-padding) + var(--wzc-media-safe-area-underlap)
+      );
   }
 
   .day-navigation {

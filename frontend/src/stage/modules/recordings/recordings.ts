@@ -19,6 +19,7 @@ import { RECORDINGS_TAG } from "../../../core/constants";
 import { homeAssistantNumberFormat } from "../../../core/number-format";
 import { renderIcon } from "../../../ui/icons";
 import "../../../ui/media-day-header";
+import { mediaSafeAreaStyles } from "../../../ui/media-safe-area.styles";
 import {
   scrollMediaViewportToTop,
   shouldShowScrollTop,
@@ -362,7 +363,7 @@ export class RecordingsModule extends LitElement {
     });
   }
 
-  static styles = recordingsStyles;
+  static styles = [mediaSafeAreaStyles, recordingsStyles];
 }
 
 if (!customElements.get(RECORDINGS_TAG)) {

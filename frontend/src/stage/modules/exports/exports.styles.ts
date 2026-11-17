@@ -70,6 +70,9 @@ export const exportsStyles = css`
     gap: var(--wzc-export-list-gap);
     inline-size: 100%;
     padding: var(--wzc-export-list-padding);
+    padding-block-end: calc(
+      var(--wzc-export-list-padding) + var(--wzc-media-safe-area-underlap)
+    );
   }
 
   .collection.grid {
@@ -130,6 +133,9 @@ export const exportsStyles = css`
     overflow: hidden;
     background: var(--wzc-media-placeholder-background);
     color: var(--wzc-media-placeholder-color);
+    touch-action: pan-y;
+    -webkit-touch-callout: none;
+    user-select: none;
   }
 
   .grid .thumbnail {

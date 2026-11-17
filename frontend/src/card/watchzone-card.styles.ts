@@ -125,10 +125,8 @@ export const cardStyles = css`
   }
 
   :host(.mobile-edge-to-edge.height-mode-fit-viewport) {
-    --wzc-mobile-bottom-underlap: min(
-      0.5rem,
-      var(--wzc-safe-area-inset-bottom, 0px)
-    );
+    --wzc-mobile-bottom-underlap: var(--wzc-safe-area-inset-bottom, 0px);
+    --wzc-media-safe-area-underlap: var(--wzc-safe-area-inset-bottom, 0px);
   }
 
   :host(.height-mode-fill-container) ha-card {

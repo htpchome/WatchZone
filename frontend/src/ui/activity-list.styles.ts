@@ -37,7 +37,8 @@ export const activityListStyles = css`
     min-block-size: 0;
     overflow-y: auto;
     overscroll-behavior-y: auto;
-    padding: 0 var(--wzc-event-list-padding) var(--wzc-event-list-padding);
+    padding: 0 var(--wzc-event-list-padding)
+      calc(var(--wzc-event-list-padding) + var(--wzc-media-safe-area-underlap));
   }
 
   .list {
@@ -155,6 +156,9 @@ export const activityListStyles = css`
     min-block-size: 0;
     overflow: hidden;
     position: relative;
+    touch-action: pan-y;
+    -webkit-touch-callout: none;
+    user-select: none;
     grid-column: 1;
     grid-row: 1 / -1;
     z-index: 0;

@@ -224,6 +224,15 @@ export const themeTokens = css`
       --safe-area-inset-bottom,
       env(safe-area-inset-bottom, 0px)
     );
+    --wzc-media-safe-area-underlap: 0px;
+    --wzc-safe-area-surface-background: var(
+      --primary-background-color,
+      var(--wzc-color-surface)
+    );
+    --wzc-safe-area-surface-backdrop-filter: var(
+      --ha-card-backdrop-filter,
+      none
+    );
     --wzc-stage-module-gap: clamp(0.5rem, 1.5cqi, 1rem);
     --wzc-card-outer-shadow: var(--wzc-shadow-medium);
     --wzc-media-placeholder-background: #242424;

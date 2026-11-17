@@ -44,7 +44,9 @@ but the Stage module and frontend transport remain provider-neutral.
 - Export tiles use the same borderless outer presentation as the other activity
   tiles and the same theme-aware darkened hover surface. When the card's
   thumbnail-hover timelapse setting is enabled, hovering the thumbnail
-  temporarily replaces it with a muted accelerated video preview.
+  temporarily replaces it with a muted accelerated video preview. A stationary
+  touch long press starts that same preview; movement, scrolling, cancellation,
+  or release clears it without also opening the export.
   The preview uses a signed WatchZone media path, and the thumbnail viewport has
   fixed row geometry so source aspect ratio cannot resize the tile.
 - After approximately two rendered tiles have passed, a labeled Top action

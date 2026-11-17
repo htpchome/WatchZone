@@ -36,6 +36,8 @@ import { scrollMediaViewportToTop, shouldShowScrollTop } from "./scroll-top";
 import { activityActionStyles } from "./activity-action.styles";
 import { activityListStyles } from "./activity-list.styles";
 import { buttonBaseStyles } from "./button.styles";
+import { mediaSafeAreaStyles } from "./media-safe-area.styles";
+import { ThumbnailPreviewPressController } from "./thumbnail-preview-press.controller";
 
 export type ActivityClassification = "alert" | "detection";
 
@@ -182,6 +184,16 @@ export class ActivityList extends LitElement {
   private _rowGap = 0;
   private _rowHeight = 0;
   private _showScrollTop = false;
+  private readonly _touchPreview = new ThumbnailPreviewPressController<string>(
+    this,
+    {
+      activate: (itemId) => {
+        this._hoveredPreviewId = itemId;
+        this.requestUpdate();
+      },
+      deactivate: (itemId) => this._clearHoverPreview(itemId),
+    },
+  );
   private _virtualFrame?: number;
   private _windowEnd = VIRTUALIZATION_THRESHOLD;
   private _windowStart = 0;
@@ -384,8 +396,15 @@ export class ActivityList extends LitElement {
           : {},
       )}
       @pointermove=${(event: PointerEvent) =>
-        this._updateHoverPreview(event, item)}
-      @pointerleave=${() => this._clearHoverPreview(item.id)}
+        this._handlePreviewPointerMove(event, item)}
+      @pointerdown=${(event: PointerEvent) =>
+        this._startTouchPreview(event, item)}
+      @pointerup=${(event: PointerEvent) => this._touchPreview.end(event)}
+      @pointercancel=${() => this._touchPreview.cancel()}
+      @pointerleave=${(event: PointerEvent) =>
+        this._handlePreviewPointerLeave(event, item.id)}
+      @contextmenu=${(event: Event) =>
+        this._touchPreview.preventContextMenu(event)}
     >
       ${
         item.playable
@@ -395,7 +414,10 @@ export class ActivityList extends LitElement {
               type="button"
               title=${playLabel}
               aria-label=${playLabel}
-              @click=${() => this._dispatch({ kind: "open_media", media: "video", item })}
+              @click=${() => {
+                if (this._touchPreview.consumeClick(item.id)) return;
+                this._dispatch({ kind: "open_media", media: "video", item });
+              }}
             ></button>`
           : null
       }
@@ -758,6 +780,7 @@ export class ActivityList extends LitElement {
   }
 
   private readonly _handleScroll = (): void => {
+    this._touchPreview.cancel();
     const scroller = this.renderRoot.querySelector<HTMLElement>(".scroller");
     const showScrollTop = scroller ? shouldShowScrollTop(scroller) : false;
     if (showScrollTop !== this._showScrollTop) {
@@ -1047,13 +1070,56 @@ export class ActivityList extends LitElement {
     this.requestUpdate();
   }
 
+  private _startTouchPreview(
+    event: PointerEvent,
+    item: ActivityListItem,
+  ): void {
+    if (!item.hoverPreviewUrl || !this._isInsideThumbnail(event)) return;
+    this._touchPreview.start(event, item.id);
+  }
+
+  private _handlePreviewPointerMove(
+    event: PointerEvent,
+    item: ActivityListItem,
+  ): void {
+    this._touchPreview.move(event);
+    this._updateHoverPreview(event, item);
+  }
+
+  private _handlePreviewPointerLeave(
+    event: PointerEvent,
+    itemId: string,
+  ): void {
+    if (event.pointerType === "touch") this._touchPreview.cancel();
+    else this._clearHoverPreview(itemId);
+  }
+
+  private _isInsideThumbnail(event: PointerEvent): boolean {
+    const thumbnail = (event.currentTarget as HTMLElement).querySelector(
+      ".thumbnail-wrap",
+    );
+    if (!(thumbnail instanceof HTMLElement)) return false;
+    const bounds = thumbnail.getBoundingClientRect();
+    return (
+      event.clientX >= bounds.left &&
+      event.clientX <= bounds.right &&
+      event.clientY >= bounds.top &&
+      event.clientY <= bounds.bottom
+    );
+  }
+
   private _clearHoverPreview(itemId: string): void {
     if (this._hoveredPreviewId !== itemId) return;
     this._hoveredPreviewId = undefined;
     this.requestUpdate();
   }
 
-  static styles = [buttonBaseStyles, activityActionStyles, activityListStyles];
+  static styles = [
+    buttonBaseStyles,
+    mediaSafeAreaStyles,
+    activityActionStyles,
+    activityListStyles,
+  ];
 }
 
 function mediaKey(item: ActivityListItem, url: string): string {

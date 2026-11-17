@@ -119,6 +119,7 @@ export const SLIDESHOW_COMPONENT_TYPE = "slideshow";
 export const SLIDESHOW_TAG = `${APP_ID}-slideshow`;
 export const DEFAULT_SLIDE_ADVANCE_SECONDS = 10;
 export const LIGHT_LONG_PRESS_MS = 450;
+export const THUMBNAIL_PREVIEW_LONG_PRESS_MS = 450;
 export const LIGHT_ERROR_TOAST_DURATION_MS = 3_600;
 export const PTZ_ERROR_TOAST_DURATION_MS = 3_600;
 export const CAMERA_TAG = `${APP_ID}-camera`;

@@ -11,6 +11,7 @@ const packageJson = JSON.parse(
 const expectedBuild = process.env.GITHUB_SHA?.slice(0, 7) ?? "local";
 const expectedVersion = packageJson.version;
 const LIGHT_LONG_PRESS_WAIT_MS = 500;
+const THUMBNAIL_LONG_PRESS_WAIT_MS = 500;
 const pageErrors = new WeakMap<Page, string[]>();
 
 function cssAlpha(color: string): number {
@@ -3707,6 +3708,87 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect.poll(() => previewRequests).toBe(1);
   await page.mouse.move(0, 0);
   await expect(page.locator("wzc-reviews .hover-preview")).toHaveCount(0);
+  const firstReviewTile = page.locator("wzc-reviews .tile").first();
+  await firstReviewTile.evaluate(async (tile, waitMs) => {
+    const thumbnail = tile.querySelector(".thumbnail-wrap");
+    if (!(thumbnail instanceof HTMLElement))
+      throw new Error("Review thumbnail was not rendered");
+    const bounds = thumbnail.getBoundingClientRect();
+    tile.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        button: 0,
+        clientX: bounds.left + 10,
+        clientY: bounds.top + 10,
+        isPrimary: true,
+        pointerId: 41,
+        pointerType: "touch",
+      }),
+    );
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
+  }, THUMBNAIL_LONG_PRESS_WAIT_MS);
+  await expect(page.locator("wzc-reviews .hover-preview")).toHaveCount(1);
+  const mediaDialogCount = await page
+    .locator("wzc-review-media-dialog dialog")
+    .count();
+  await firstReviewTile.evaluate((tile) => {
+    const thumbnail = tile.querySelector(".thumbnail-wrap");
+    if (!(thumbnail instanceof HTMLElement))
+      throw new Error("Review thumbnail was not rendered");
+    const bounds = thumbnail.getBoundingClientRect();
+    tile.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        button: 0,
+        clientX: bounds.left + 10,
+        clientY: bounds.top + 10,
+        isPrimary: true,
+        pointerId: 41,
+        pointerType: "touch",
+      }),
+    );
+    tile.querySelector<HTMLElement>(".tile-player")?.click();
+  });
+  await expect(page.locator("wzc-reviews .hover-preview")).toHaveCount(0);
+  await expect(page.locator("wzc-review-media-dialog dialog")).toHaveCount(
+    mediaDialogCount,
+  );
+  const safeAreaPresentation = await page
+    .locator("wzc-reviews wzc-activity-list")
+    .evaluate((list) => {
+      const viewport = list.shadowRoot?.querySelector(".viewport");
+      const scroller = list.shadowRoot?.querySelector(".scroller");
+      if (
+        !(viewport instanceof HTMLElement) ||
+        !(scroller instanceof HTMLElement)
+      )
+        throw new Error("Activity viewport was not rendered");
+      list.style.setProperty("--wzc-media-safe-area-underlap", "0px");
+      const basePadding = Number.parseFloat(
+        getComputedStyle(scroller).paddingBottom,
+      );
+      list.style.setProperty("--wzc-media-safe-area-underlap", "36px");
+      list.style.setProperty(
+        "--wzc-safe-area-surface-background",
+        "rgba(10, 20, 30, 0.5)",
+      );
+      const veil = getComputedStyle(viewport, "::after");
+      const result = {
+        background: veil.backgroundColor,
+        blockSize: veil.blockSize,
+        scrollPaddingAdded:
+          Number.parseFloat(getComputedStyle(scroller).paddingBottom) -
+          basePadding,
+      };
+      list.style.removeProperty("--wzc-media-safe-area-underlap");
+      list.style.removeProperty("--wzc-safe-area-surface-background");
+      return result;
+    });
+  expect(safeAreaPresentation).toEqual({
+    background: "rgba(10, 20, 30, 0.5)",
+    blockSize: "36px",
+    scrollPaddingAdded: 36,
+  });
   await reviewState.click();
   await expect(reviewState).toHaveClass(/^review-state reviewed$/);
   await expect(reviewState).toHaveAttribute("aria-pressed", "true");
@@ -5958,6 +6040,47 @@ test("shows and filters mixed-camera persistent exports", async ({ page }) => {
     "src",
     "/export-video.mp4?authSig=test",
   );
+  await page.mouse.move(0, 0);
+  await expect(hoverPreview).toHaveCount(0);
+  await exportTile.evaluate(async (tile, waitMs) => {
+    const thumbnail = tile.querySelector(".thumbnail");
+    if (!(thumbnail instanceof HTMLElement))
+      throw new Error("Export thumbnail was not rendered");
+    const bounds = thumbnail.getBoundingClientRect();
+    tile.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        button: 0,
+        clientX: bounds.left + 10,
+        clientY: bounds.top + 10,
+        isPrimary: true,
+        pointerId: 42,
+        pointerType: "touch",
+      }),
+    );
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
+  }, THUMBNAIL_LONG_PRESS_WAIT_MS);
+  await expect(hoverPreview).toHaveCount(1);
+  await exportTile.evaluate((tile) => {
+    const thumbnail = tile.querySelector(".thumbnail");
+    if (!(thumbnail instanceof HTMLElement))
+      throw new Error("Export thumbnail was not rendered");
+    const bounds = thumbnail.getBoundingClientRect();
+    tile.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        button: 0,
+        clientX: bounds.left + 10,
+        clientY: bounds.top + 10,
+        isPrimary: true,
+        pointerId: 42,
+        pointerType: "touch",
+      }),
+    );
+    tile.querySelector<HTMLElement>(".tile-player")?.click();
+  });
+  await expect(hoverPreview).toHaveCount(0);
+  await expect(page.locator("wzc-export-media-dialog dialog")).toHaveCount(0);
 
   const filter = navigation.locator("wzc-export-filter");
   await filter.locator(".filter-trigger").click();
@@ -8209,6 +8332,9 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
       if (!cardSurface) throw new Error("Card surface was not rendered");
       const edge = {
         fitViewportMinimum: getComputedStyle(cardSurface).minBlockSize,
+        mediaSafeAreaUnderlap: getComputedStyle(card)
+          .getPropertyValue("--wzc-media-safe-area-underlap")
+          .trim(),
         gap: container.style.gap,
         hostClass: card.classList.contains("mobile-edge-to-edge"),
         containerPadding: container.style.padding,
@@ -8236,7 +8362,8 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
 
   expect(result).toEqual({
     edge: {
-      fitViewportMinimum: "408px",
+      fitViewportMinimum: "436px",
+      mediaSafeAreaUnderlap: "36px",
       containerPadding: "0px",
       gap: "24px 8px",
       hostClass: true,
