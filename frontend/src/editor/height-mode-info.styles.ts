@@ -91,7 +91,7 @@ export const heightModeSelectorStyles = css`
     place-items: center;
     inline-size: 1rem;
     block-size: 1rem;
-    color: var(--wzc-color-info);
+    color: var(--wzc-color-text-2);
     cursor: help;
   }
 

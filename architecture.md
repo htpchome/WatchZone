@@ -535,26 +535,15 @@ reverting a control before Save.
 WatchZone uses current Home Assistant controls and semantic theme tokens.
 Project customization variables use the `--wzc-` prefix and resolve to Home
 Assistant tokens by default. Hardcoded application palettes and independent
-light/dark assumptions are prohibited except for the canonical semantic status
-palette defined below.
+light/dark assumptions are prohibited.
 
 `frontend/src/styles/theme-tokens.ts` is the only frontend file allowed to
 consume Home Assistant theme variables directly. It maps them to WatchZone
 semantic tokens for primary, primary-dark, accent, surfaces, four text roles
-(primary, secondary, tertiary/disabled, and reversed), error, warning, info,
-success, borders, fills, radius scale, shadow scale, typography, card surfaces,
-and media overlays. Component styles consume `--wzc-*` tokens only. A new
-visual semantic state defines or reuses a WatchZone token before feature CSS
-uses it.
-
-Error, warning, info, and success are product semantics whose meaning must not
-change with a third-party theme. Their base WatchZone tokens use Home
-Assistant's canonical default palette directly: error `#db4437`, warning
-`#ffa600`, info `#039be5`, and success `#43a047`. Alert and detection
-presentations derive from error and warning respectively; reviewed and
-unreviewed state derive from success and warning. Status fills, borders, and
-quiet variants derive from these same base tokens rather than consuming theme
-overrides.
+(primary, secondary, tertiary/disabled, and reversed), error, warning, success,
+borders, fills, radius scale, shadow scale, typography, card surfaces, and
+media overlays. Component styles consume `--wzc-*` tokens only. A new visual
+semantic state defines or reuses a WatchZone token before feature CSS uses it.
 The write-only `frontend/src/styles/home-assistant-card-bridge.ts` is the sole
 exception: it may assign Home Assistant's card-radius and card-shadow host
 hooks so appearance options cross HA's shadow-DOM boundary, but it must not

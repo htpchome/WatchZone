@@ -85,10 +85,6 @@ export const cardStyles = css`
     padding: 0;
   }
 
-  :host(.mobile-edge-to-edge) ha-card {
-    border-width: 0;
-  }
-
   ha-card.card-picker-preview-shell {
     display: block;
     block-size: auto;

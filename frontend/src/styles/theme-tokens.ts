@@ -79,8 +79,8 @@ export const themeTokens = css`
       var(--primary-text-color, CanvasText)
     );
     --wzc-color-text-2: var(
-      --secondary-text-color,
-      var(--ha-color-text-secondary, var(--wzc-color-text-1))
+      --ha-color-text-secondary,
+      var(--secondary-text-color, var(--wzc-color-text-1))
     );
     --wzc-color-text-3: var(
       --disabled-text-color,
@@ -95,39 +95,52 @@ export const themeTokens = css`
       var(--wzc-color-text-reversed)
     );
 
-    --wzc-color-error: #db4437;
-    --wzc-color-warning: #ffa600;
-    --wzc-color-info: #039be5;
-    --wzc-color-success: #43a047;
-    --wzc-color-on-error: #fff;
-    --wzc-color-on-warning: #111;
-    --wzc-color-on-info: #fff;
-    --wzc-color-on-success: #fff;
-    --wzc-color-fill-error: var(--wzc-color-error);
-    --wzc-color-fill-error-quiet: color-mix(
-      in srgb,
-      var(--wzc-color-error) 12%,
-      transparent
+    --wzc-color-error: var(
+      --ha-color-text-error,
+      var(--error-color, var(--wzc-color-text-1))
     );
-    --wzc-color-fill-warning: var(--wzc-color-warning);
-    --wzc-color-fill-info: var(--wzc-color-info);
-    --wzc-color-fill-success: var(--wzc-color-success);
-    --wzc-color-fill-info-quiet: color-mix(
-      in srgb,
-      var(--wzc-color-info) 12%,
-      transparent
+    --wzc-color-warning: var(--warning-color, var(--wzc-color-accent));
+    --wzc-color-success: var(--success-color, var(--wzc-color-primary));
+    --wzc-color-on-error: var(
+      --ha-color-on-danger-loud,
+      var(--wzc-color-text-reversed)
     );
-    --wzc-color-fill-success-quiet: color-mix(
-      in srgb,
-      var(--wzc-color-success) 12%,
-      transparent
+    --wzc-color-on-warning: var(
+      --ha-color-on-warning-loud,
+      var(--wzc-color-text-1)
     );
-    --wzc-color-fill-warning-quiet: color-mix(
-      in srgb,
-      var(--wzc-color-warning) 18%,
-      transparent
+    --wzc-color-on-success: var(
+      --ha-color-on-success-loud,
+      var(--wzc-color-text-reversed)
     );
-    --wzc-color-warning-text: var(--wzc-color-warning);
+    --wzc-color-fill-error: var(
+      --ha-color-fill-danger-loud-resting,
+      var(--wzc-color-error)
+    );
+    --wzc-color-fill-error-quiet: var(
+      --ha-color-fill-danger-quiet-resting,
+      color-mix(in srgb, var(--wzc-color-error) 12%, transparent)
+    );
+    --wzc-color-fill-warning: var(
+      --ha-color-fill-warning-loud-resting,
+      var(--wzc-color-warning)
+    );
+    --wzc-color-fill-success: var(
+      --ha-color-fill-success-loud-resting,
+      var(--wzc-color-success)
+    );
+    --wzc-color-fill-success-quiet: var(
+      --ha-color-fill-success-quiet-resting,
+      color-mix(in srgb, var(--wzc-color-success) 12%, transparent)
+    );
+    --wzc-color-fill-warning-quiet: var(
+      --ha-color-fill-warning-quiet-resting,
+      color-mix(in srgb, var(--wzc-color-warning) 18%, transparent)
+    );
+    --wzc-color-warning-text: var(
+      --ha-color-on-warning-quiet,
+      var(--wzc-color-text-1)
+    );
     --wzc-suspend-warning-color: color-mix(
       in srgb,
       var(--wzc-color-warning-text) 55%,
@@ -151,10 +164,14 @@ export const themeTokens = css`
       --ha-color-border-neutral-normal,
       var(--wzc-color-border)
     );
-    --wzc-color-border-danger: var(--wzc-color-error);
-    --wzc-color-border-warning: var(--wzc-color-warning);
-    --wzc-color-border-info: var(--wzc-color-info);
-    --wzc-color-border-success: var(--wzc-color-success);
+    --wzc-color-border-danger: var(
+      --ha-color-border-danger-quiet,
+      var(--wzc-color-error)
+    );
+    --wzc-color-border-warning: var(
+      --ha-color-border-warning-normal,
+      var(--wzc-color-warning)
+    );
     --wzc-color-fill-primary: var(
       --ha-color-fill-primary-normal-resting,
       transparent
@@ -494,8 +511,8 @@ export const themeTokens = css`
     --wzc-recording-scrubber-track: #b9efbd;
     --wzc-recording-scrubber-gap: #dddddd;
     --wzc-recording-scrubber-gap-stripe: #b93745;
-    --wzc-recording-scrubber-alert: var(--wzc-color-error);
-    --wzc-recording-scrubber-detection: var(--wzc-color-warning);
+    --wzc-recording-scrubber-alert: #ff9500;
+    --wzc-recording-scrubber-detection: #ffb000;
     --wzc-recording-scrubber-pointer: #ffffff;
     --wzc-recording-scrubber-pointer-outline: #6b6b6b;
     --wzc-recording-scrubber-pointer-text: #252525;

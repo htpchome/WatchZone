@@ -578,7 +578,7 @@ export const activityListStyles = css`
     border-radius: var(--wzc-radius-pill);
     block-size: 1.5rem;
     bottom: 0.12rem;
-    color: var(--wzc-color-info);
+    color: var(--wzc-color-text-1);
     display: inline-flex;
     inline-size: 1.5rem;
     inset-inline-end: var(--wzc-event-action-margin);
@@ -609,7 +609,7 @@ export const activityListStyles = css`
     }
 
     .review-info:hover {
-      color: var(--wzc-color-info);
+      color: var(--wzc-color-primary);
     }
   }
 

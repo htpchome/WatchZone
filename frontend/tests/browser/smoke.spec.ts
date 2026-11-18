@@ -3320,13 +3320,15 @@ test("keeps activity content in an independently scrolling viewport", async ({
     .locator('wzc-reviews button[aria-label="View tracking details"]')
     .first();
   await expect(reviewInfo).toBeVisible();
-  await expect
-    .poll(() => reviewInfo.evaluate((button) => getComputedStyle(button).color))
-    .toBe("rgb(3, 155, 229)");
+  const infoDefaultColor = await reviewInfo.evaluate((button) => ({
+    button: getComputedStyle(button).color,
+    tile: getComputedStyle(button.closest(".tile")!).color,
+  }));
+  expect(infoDefaultColor.button).toBe(infoDefaultColor.tile);
   await reviewInfo.hover();
   await expect
     .poll(() => reviewInfo.evaluate((button) => getComputedStyle(button).color))
-    .toBe("rgb(3, 155, 229)");
+    .toBe("rgb(3, 169, 244)");
   await reviewInfo.click();
   const trackingDialog = page.locator(
     "wzc-reviews wzc-review-tracking-dialog dialog",
@@ -8290,7 +8292,6 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
         setConfig(config: unknown): void;
         updateComplete: Promise<boolean>;
       };
-      card.style.setProperty("--ha-card-border-width", "1px");
       const sections = document.createElement("hui-sections-view");
       const wrapper = document.createElement("div");
       const container = document.createElement("div");
@@ -8339,10 +8340,6 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
       const cardSurface = card.shadowRoot?.querySelector("ha-card");
       if (!cardSurface) throw new Error("Card surface was not rendered");
       const edge = {
-        borderBlockStartWidth:
-          getComputedStyle(cardSurface).borderBlockStartWidth,
-        borderInlineEndWidth:
-          getComputedStyle(cardSurface).borderInlineEndWidth,
         fitViewportMinimum: getComputedStyle(cardSurface).minBlockSize,
         mediaSafeAreaUnderlap: getComputedStyle(card)
           .getPropertyValue("--wzc-media-safe-area-underlap")
@@ -8374,8 +8371,6 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
 
   expect(result).toEqual({
     edge: {
-      borderBlockStartWidth: "0px",
-      borderInlineEndWidth: "0px",
       fitViewportMinimum: "436px",
       mediaSafeAreaUnderlap: "36px",
       containerPadding: "0px",
@@ -8733,11 +8728,6 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     );
     if (!camera) throw new Error("Camera placement was not rendered");
     camera.dataset.landscapeIdentity = "stable";
-    const navbar = document.createElement("div");
-    navbar.dataset.haNavbarFixture = "";
-    navbar.style.height = "56px";
-    navbar.style.width = "100%";
-    document.body.insertBefore(navbar, host);
   });
 
   const phoneCarousel = card.locator("wzc-camera .camera-carousel");
@@ -8773,51 +8763,49 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     "phone",
   );
   await page.setViewportSize({ width: 844, height: 390 });
+  expect(
+    await card.evaluate((element) =>
+      element.classList.contains("companion-phone-landscape"),
+    ),
+  ).toBe(false);
   await expect(card).toHaveClass(/companion-phone-landscape/);
-  await expect(card).not.toHaveClass(/companion-phone-orientation-overlay/);
   await expect(card.locator(".stage-grid")).toHaveAttribute(
     "data-stage-variant",
     "default",
-  );
-  const landscapeFlow = await card.evaluate((element) => {
-    const navbar = document.querySelector<HTMLElement>(
-      "[data-ha-navbar-fixture]",
-    );
-    const cardRect = element.getBoundingClientRect();
-    const navbarRect = navbar?.getBoundingClientRect();
-    return {
-      cardPosition: getComputedStyle(element).position,
-      cardTop: cardRect.top,
-      navbarBottom: navbarRect?.bottom,
-      navbarHeight: navbarRect?.height,
-    };
-  });
-  expect(landscapeFlow).toEqual({
-    cardPosition: "static",
-    cardTop: expect.any(Number),
-    navbarBottom: expect.any(Number),
-    navbarHeight: 56,
-  });
-  expect(landscapeFlow.cardTop).toBeGreaterThanOrEqual(
-    landscapeFlow.navbarBottom ?? 0,
   );
   const enteringAnimations = await card
     .locator(".stage-placement[data-layout-node]")
     .evaluateAll((placements) =>
       placements.map((placement) => placement.getAnimations().length),
     );
-  expect(enteringAnimations.every((count) => count === 0)).toBe(true);
+  expect(
+    enteringAnimations.filter((count) => count > 0).length,
+  ).toBeGreaterThanOrEqual(3);
   const transitioningOutline = card
     .locator("wzc-reviews .thumbnail-wrap.detection")
     .first();
-  await expect(card).not.toHaveClass(
-    /companion-phone-orientation-transitioning/,
-  );
+  await expect(card).toHaveClass(/companion-phone-orientation-transitioning/);
+  expect(
+    await transitioningOutline.evaluate(
+      (element) => getComputedStyle(element, "::after").borderTopWidth,
+    ),
+  ).toBe("0px");
   expect(
     await card
       .locator("ha-card")
       .evaluate((card) => card.getAnimations().length),
-  ).toBeLessThanOrEqual(1);
+  ).toBe(0);
+  await card.evaluate(async (element) => {
+    const animations = Array.from(
+      element.shadowRoot?.querySelectorAll<HTMLElement>(
+        ".stage-placement[data-layout-node]",
+      ) ?? [],
+    ).flatMap((placement) => placement.getAnimations());
+    await Promise.all(animations.map((animation) => animation.finished));
+  });
+  await expect(card).not.toHaveClass(
+    /companion-phone-orientation-transitioning/,
+  );
   expect(
     await transitioningOutline.evaluate(
       (element) => getComputedStyle(element, "::after").borderTopWidth,
@@ -8963,25 +8951,16 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     cameraTop: expect.any(Number),
     columnRatio: geometry.columnRatio,
     gutter: expect.any(Number),
-    host: {
-      height: expect.any(Number),
-      left: expect.any(Number),
-      top: expect.any(Number),
-      width: expect.any(Number),
-    },
+    host: { height: 390, left: 0, top: 0, width: 844 },
     navigationOverflow: "visible",
     placementAnimations: 0,
     stableCamera: "stable",
   });
   expect(geometry.activityLeft).toBeGreaterThan(geometry.cameraLeft);
   expect(geometry.activityHeight).toBeGreaterThan(geometry.cameraHeight);
-  expect(geometry.activityRight).toBeLessThan(
-    geometry.host.left + geometry.host.width,
-  );
+  expect(geometry.activityRight).toBeLessThan(geometry.host.width);
   expect(activityTitle).not.toBeNull();
-  expect(
-    Math.abs((activityTitle?.y ?? 0) - geometry.cameraTop),
-  ).toBeLessThanOrEqual(1);
+  expect(activityTitle?.y).toBeCloseTo(geometry.cameraTop, 0);
   expect(geometry.activityNavigationTop).toBeGreaterThan(
     geometry.cameraTop + geometry.cameraHeight,
   );
@@ -8989,12 +8968,12 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
   expect(geometry.activityNavigationRight).toBeLessThan(geometry.activityLeft);
   expect(geometry.activityNavigationRight).toBeCloseTo(geometry.cameraRight, 0);
   expect(geometry.activityNavigationBottom).toBeLessThanOrEqual(
-    geometry.host.top + geometry.host.height + 32,
+    geometry.host.height + 32,
   );
   expect(geometry.activityNavigationHeight).toBeGreaterThan(0);
   expect(geometry.cameraAspectRatio).toBeCloseTo(16 / 9, 2);
-  expect(geometry.cameraLeft).toBeGreaterThanOrEqual(geometry.host.left);
-  expect(geometry.cameraLeft - geometry.host.left).toBeLessThanOrEqual(4);
+  expect(geometry.cameraLeft).toBeGreaterThan(0);
+  expect(geometry.cameraLeft).toBeLessThanOrEqual(4);
   expect(geometry.columnRatio).toBeCloseTo(3 / 2, 2);
   expect(geometry.gutter).toBeGreaterThanOrEqual(16);
   expect(geometry.activityHeight).toBeLessThanOrEqual(
@@ -9020,87 +8999,6 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     (geometry.cameraRight + geometry.activityLeft) / 2,
     0,
   );
-  await expect(pullHandle).toHaveCSS("position", "absolute");
-  expect(
-    await pullHandle.evaluate((element) =>
-      element.parentElement?.classList.contains("shell"),
-    ),
-  ).toBe(true);
-  await card.evaluate((element) => {
-    const surface = element.shadowRoot?.querySelector<HTMLElement>("ha-card");
-    if (!surface) throw new Error("Card surface was not rendered");
-    surface.style.transform = "translate3d(17px, 0, 0)";
-  });
-  await expect
-    .poll(() =>
-      card.evaluate((element) => {
-        const root = element.shadowRoot;
-        const camera = root?.querySelector<HTMLElement>(
-          '.stage-placement[data-layout-node$="default-camera-module"]',
-        );
-        const activity = root?.querySelector<HTMLElement>(
-          '.stage-placement[data-layout-node$="default-activity-stack"]',
-        );
-        const handle = root?.querySelector<HTMLElement>(
-          ".companion-camera-pull-handle",
-        );
-        if (!camera || !activity || !handle) return Number.NaN;
-        const cameraRect = camera.getBoundingClientRect();
-        const activityRect = activity.getBoundingClientRect();
-        const handleRect = handle.getBoundingClientRect();
-        return Math.abs(
-          handleRect.left +
-            handleRect.width / 2 -
-            (cameraRect.right + activityRect.left) / 2,
-        );
-      }),
-    )
-    .toBeLessThanOrEqual(1);
-  await card.evaluate((element) => {
-    const surface = element.shadowRoot?.querySelector<HTMLElement>("ha-card");
-    surface?.style.removeProperty("transform");
-  });
-  await card.evaluate((element) => {
-    const grid = element.shadowRoot?.querySelector<HTMLElement>(".stage-grid");
-    if (!grid) throw new Error("Stage grid was not rendered");
-    grid.style.columnGap = "48px";
-  });
-  await expect
-    .poll(() =>
-      card.evaluate((element) => {
-        const root = element.shadowRoot;
-        const camera = root?.querySelector<HTMLElement>(
-          '.stage-placement[data-layout-node$="default-camera-module"]',
-        );
-        const activity = root?.querySelector<HTMLElement>(
-          '.stage-placement[data-layout-node$="default-activity-stack"]',
-        );
-        const handle = root?.querySelector<HTMLElement>(
-          ".companion-camera-pull-handle",
-        );
-        if (!camera || !activity || !handle) return Number.NaN;
-        const cameraRect = camera.getBoundingClientRect();
-        const activityRect = activity.getBoundingClientRect();
-        const handleRect = handle.getBoundingClientRect();
-        return Math.abs(
-          handleRect.left +
-            handleRect.width / 2 -
-            (cameraRect.right + activityRect.left) / 2,
-        );
-      }),
-    )
-    .toBeLessThanOrEqual(1);
-  await card.evaluate((element) => {
-    element.shadowRoot
-      ?.querySelector<HTMLElement>(".stage-grid")
-      ?.style.removeProperty("column-gap");
-  });
-  await expect
-    .poll(async () => {
-      const handle = await pullHandle.boundingBox();
-      return (handle?.x ?? 0) + (handle?.width ?? 0) / 2;
-    })
-    .toBeCloseTo(collapsedHandleCenter, 0);
   const handlePresentation = await pullHandle.evaluate((element) => {
     const style = getComputedStyle(element);
     const grip = getComputedStyle(element, "::before");
@@ -9134,30 +9032,6 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     (collapsedHandle?.y ?? 0) + (collapsedHandle?.height ?? 0) / 2,
   );
   await page.mouse.down();
-  const handleAfterPointerDown = await pullHandle.boundingBox();
-  expect(handleAfterPointerDown).not.toBeNull();
-  expect(
-    (handleAfterPointerDown?.x ?? 0) + (handleAfterPointerDown?.width ?? 0) / 2,
-  ).toBeCloseTo(collapsedHandleCenter, 0);
-  const activeCameraPaint = await cameraPlacement.evaluate((element) => {
-    const style = getComputedStyle(element);
-    return {
-      backgroundColor: style.backgroundColor,
-      borderRadius: style.borderRadius,
-      isolation: style.isolation,
-      overflow: style.overflow,
-    };
-  });
-  expect(activeCameraPaint).toEqual({
-    backgroundColor: expect.any(String),
-    borderRadius: "0px",
-    isolation: "isolate",
-    overflow: "hidden",
-  });
-  expect(activeCameraPaint.backgroundColor).not.toMatch(
-    /rgba\(0, 0, 0, 0\)|transparent/,
-  );
-  await expect(cameraCarousel).toHaveCSS("border-radius", "0px");
   expect(
     await cameraCarousel.evaluate(
       (element) => getComputedStyle(element, "::after").borderTopWidth,
@@ -9300,6 +9174,11 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     .toEqual([false, false, true]);
   await pullHandle.press("Home");
   await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await card.evaluate((element) =>
+      element.classList.contains("companion-phone-landscape"),
+    ),
+  ).toBe(true);
   await expect(card).not.toHaveClass(/companion-phone-landscape/);
   await expect(card.locator(".stage-grid")).toHaveAttribute(
     "data-stage-variant",
@@ -9310,26 +9189,9 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     .evaluateAll((placements) =>
       placements.map((placement) => placement.getAnimations().length),
     );
-  expect(leavingAnimations.every((count) => count === 0)).toBe(true);
-  await expect(card).not.toHaveClass(/companion-phone-orientation-overlay/);
-  const portraitFlow = await card.evaluate((element) => {
-    const navbar = document.querySelector<HTMLElement>(
-      "[data-ha-navbar-fixture]",
-    );
-    const cardRect = element.getBoundingClientRect();
-    const navbarRect = navbar?.getBoundingClientRect();
-    return {
-      cardPosition: getComputedStyle(element).position,
-      cardTop: cardRect.top,
-      navbarBottom: navbarRect?.bottom,
-      navbarHeight: navbarRect?.height,
-    };
-  });
-  expect(portraitFlow.cardPosition).toBe("static");
-  expect(portraitFlow.navbarHeight).toBe(56);
-  expect(portraitFlow.cardTop).toBeGreaterThanOrEqual(
-    portraitFlow.navbarBottom ?? 0,
-  );
+  expect(
+    leavingAnimations.filter((count) => count > 0).length,
+  ).toBeGreaterThanOrEqual(3);
 });
 
 test("exposes and honors the WatchZone semantic theme-token contract", async ({
@@ -9361,7 +9223,6 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
       "--wzc-color-text-reversed",
       "--wzc-color-error",
       "--wzc-color-warning",
-      "--wzc-color-info",
       "--wzc-color-success",
       "--wzc-dialog-background",
       "--wzc-dialog-backdrop-filter",
@@ -9408,12 +9269,6 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
     ];
     const host = element as HTMLElement;
     host.style.setProperty("--wzc-color-text-1", "rgb(10, 20, 30)");
-    host.style.setProperty("--secondary-text-color", "rgb(40, 50, 60)");
-    host.style.setProperty("--ha-color-text-secondary", "rgb(140, 150, 160)");
-    host.style.setProperty("--error-color", "rgb(1, 2, 3)");
-    host.style.setProperty("--warning-color", "rgb(4, 5, 6)");
-    host.style.setProperty("--info-color", "rgb(7, 8, 9)");
-    host.style.setProperty("--success-color", "rgb(10, 11, 12)");
     host.style.setProperty("--text-primary-color", "rgba(0, 0, 0, 0.95)");
     host.style.setProperty("--ha-color-on-primary-loud", "rgb(245, 246, 247)");
     host.style.setProperty(
@@ -9445,21 +9300,6 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
     host.shadowRoot?.append(onPrimaryProbe);
     const onPrimaryColor = getComputedStyle(onPrimaryProbe).color;
     onPrimaryProbe.remove();
-    const secondaryTextProbe = document.createElement("span");
-    secondaryTextProbe.style.color = "var(--wzc-color-text-2)";
-    host.shadowRoot?.append(secondaryTextProbe);
-    const secondaryTextColor = getComputedStyle(secondaryTextProbe).color;
-    secondaryTextProbe.remove();
-    const statusColors = Object.fromEntries(
-      ["error", "warning", "info", "success"].map((status) => {
-        const probe = document.createElement("span");
-        probe.style.color = `var(--wzc-color-${status})`;
-        host.shadowRoot?.append(probe);
-        const color = getComputedStyle(probe).color;
-        probe.remove();
-        return [status, color];
-      }),
-    );
     host.style.setProperty("--wzc-stage-module-gap", "7px");
     const placementRects = Array.from(stageGrid?.children ?? []).map((child) =>
       child.getBoundingClientRect(),
@@ -9498,8 +9338,6 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
       popoverRadius: hostStyle.getPropertyValue("--wzc-popover-radius").trim(),
       popoverShadow: hostStyle.getPropertyValue("--wzc-popover-shadow").trim(),
       reversedTextColor,
-      secondaryTextColor,
-      statusColors,
       taskBackground: hostStyle
         .getPropertyValue("--wzc-task-dialog-background")
         .trim(),
@@ -9522,13 +9360,6 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
     onPrimaryColor: "rgb(235, 236, 237)",
     overriddenPlacementGaps: [7, 7, 0],
     reversedTextColor: "rgb(245, 246, 247)",
-    secondaryTextColor: "rgb(40, 50, 60)",
-    statusColors: {
-      error: "rgb(219, 68, 55)",
-      info: "rgb(3, 155, 229)",
-      success: "rgb(67, 160, 71)",
-      warning: "rgb(255, 166, 0)",
-    },
     textColor: "rgb(10, 20, 30)",
   });
   expect(

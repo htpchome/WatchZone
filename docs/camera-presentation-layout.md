@@ -109,23 +109,22 @@ CSS geometry, so supported theme or user changes to tile sizing also change the
 minimum without a parallel pixel constant.
 
 The built-in mobile Full Stage uses a separate Companion-phone landscape
-presentation. It remains in the card's normal Home Assistant flow slot beneath
-the navigation bar; it never fixes the card host to the viewport or covers,
-hides, or restyles Home Assistant's dashboard chrome. The leading 60% contains
-a 16:9 camera plus camera navigation; the trailing 40% contains the active
+presentation. It occupies the fixed WebView, covers Home Assistant's dashboard
+chrome, and applies viewport safe-area padding. The leading 60% contains a
+16:9 camera plus camera navigation; the trailing 40% contains the active
 Reviews, Events, Recordings, or Exports stack. The independently placeable
 activity-navigation module is right-aligned below the camera column at its
 normal toolbar control size. The activity title aligns with the top of the
-camera. An expanded module gutter separates the columns, and a reduced form of
-the larger reported landscape safe-area inset is reserved symmetrically on
-both inline edges so either phone rotation direction protects both columns.
-Each active media list is capped at three complete tiles and remains the only
-scrolling surface. Review-state controls use a compact outlined icon without
-label text in this presentation, aligned on the tile footer with the
-AI-analysis and information controls. The camera uses rounded corners and
-hides its resize handle, independent of the ordinary phone Camera appearance
-setting. This presentation does not activate for browser phones, Companion
-tablets, or incompatible Stage types.
+camera. A top inset protects the camera, an expanded module gutter separates
+the columns, and a reduced form of the larger reported landscape safe-area
+inset is reserved symmetrically on both inline edges so either phone rotation
+direction protects both columns. Each active media list is capped at three
+complete tiles and remains the only scrolling surface. Review-state controls
+use a compact outlined icon without label text in this presentation, aligned
+on the tile footer with the AI-analysis and information controls. The camera
+uses rounded corners and hides its resize handle, independent of the ordinary
+phone Camera appearance setting. This overlay does not activate for browser
+phones, Companion tablets, or incompatible Stage types.
 
 A separate vertical pull handle is centered in the actual gutter at the
 Camera's trailing edge in this presentation. Its borderless three-pixel line

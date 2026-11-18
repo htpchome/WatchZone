@@ -13,9 +13,50 @@ type CanActivate = () => boolean;
 type OrientationChanged = (active: boolean) => void;
 
 const installedHosts = new WeakSet<LandscapeHost>();
-const SURFACE_SETTLE_DURATION_MS = 180;
-const SURFACE_SETTLE_EASING = "cubic-bezier(.2,.8,.2,1)";
-const MAX_SURFACE_SETTLE_TRANSLATION_PX = 96;
+const FLIP_DURATION_MS = 360;
+const FLIP_EASING = "cubic-bezier(.2,.8,.2,1)";
+const OUTER_LAYOUT_SETTLE_MS = 180;
+const PLACEMENT_SELECTOR = ".stage-placement[data-layout-node]";
+const REQUIRED_STABLE_FRAMES = 3;
+
+interface ViewportSnapshot {
+  readonly height: number;
+  readonly layoutTop: number;
+  readonly visualHeight: number;
+  readonly visualWidth: number;
+  readonly width: number;
+}
+
+function composedParentElement(element: Element): Element | undefined {
+  if (element.parentElement) return element.parentElement;
+  const root = element.getRootNode();
+  return root instanceof ShadowRoot ? root.host : undefined;
+}
+
+function viewportSnapshot(host: HTMLElement): ViewportSnapshot {
+  return {
+    height: window.innerHeight,
+    layoutTop:
+      composedParentElement(host)?.getBoundingClientRect().top ??
+      host.getBoundingClientRect().top,
+    visualHeight: window.visualViewport?.height ?? window.innerHeight,
+    visualWidth: window.visualViewport?.width ?? window.innerWidth,
+    width: window.innerWidth,
+  };
+}
+
+function sameViewport(
+  first: ViewportSnapshot,
+  second: ViewportSnapshot,
+): boolean {
+  return (
+    first.height === second.height &&
+    Math.abs(first.layoutTop - second.layoutTop) < 0.5 &&
+    first.visualHeight === second.visualHeight &&
+    first.visualWidth === second.visualWidth &&
+    first.width === second.width
+  );
+}
 
 export function installCompanionPhoneLandscape(
   host: LandscapeHost,
@@ -33,16 +74,17 @@ export function installCompanionPhoneLandscape(
   );
 }
 
-/** Owns the Companion-phone in-flow landscape Stage transition. */
+/** Owns Companion-phone orientation changes and the settled Stage reflow. */
 class CompanionPhoneLandscapeController implements ReactiveController {
   private _active = false;
-  private _animation?: Animation;
+  private readonly _animations = new Set<Animation>();
   private _connected = false;
+  private _frame?: number;
   private _initialized = false;
+  private _lastViewport = viewportSnapshot(this._host);
+  private _lastViewportChange = 0;
   private readonly _pull: CompanionCameraPullController;
-  private _target = false;
-  private _transitionGeneration = 0;
-  private _transitioning = false;
+  private _stableFrames = 0;
 
   public constructor(
     private readonly _host: LandscapeHost,
@@ -63,125 +105,159 @@ class CompanionPhoneLandscapeController implements ReactiveController {
       style.textContent = companionPhoneLandscapeStyles.cssText;
       this._host.renderRoot.append(style);
     }
-    window.addEventListener("orientationchange", this._schedule);
     window.addEventListener("resize", this._schedule);
     window.visualViewport?.addEventListener("resize", this._schedule);
-    this._schedule();
+    void this._sync();
   }
 
   public hostUpdated(): void {
-    if (this._active && !this._transitioning) this._pull.sync();
-    if (!this._transitioning && this._targetActive() !== this._target) {
+    if (this._active) this._pull.sync();
+    if (this._frame === undefined && this._targetActive() !== this._active) {
       this._schedule();
-      return;
     }
   }
 
   public hostDisconnected(): void {
     this._connected = false;
-    this._transitionGeneration += 1;
-    window.removeEventListener("orientationchange", this._schedule);
     window.removeEventListener("resize", this._schedule);
     window.visualViewport?.removeEventListener("resize", this._schedule);
     this._pull.deactivate();
-    this._cancelAnimation();
-    this._host.classList.remove(
-      "companion-phone-landscape",
-      "companion-phone-orientation-transitioning",
-    );
-    this._active = false;
-    this._initialized = false;
-    this._target = false;
-    this._transitioning = false;
+    this._cancelAnimations();
+    this._host.classList.remove("companion-phone-orientation-transitioning");
+    if (this._frame !== undefined) cancelAnimationFrame(this._frame);
+    this._frame = undefined;
   }
 
   private readonly _schedule = (): void => {
     if (!this._connected) return;
-    const target = this._targetActive();
-    if (this._initialized && target === this._target) return;
-    const animate = this._initialized;
-    this._initialized = true;
-    this._target = target;
-    const generation = ++this._transitionGeneration;
-    if (!animate && !target) return;
-    void this._transition(target, generation, animate);
+    this._lastViewport = viewportSnapshot(this._host);
+    this._lastViewportChange = performance.now();
+    this._stableFrames = 0;
+    if (this._frame === undefined) {
+      this._frame = requestAnimationFrame(this._settle);
+    }
+  };
+
+  private readonly _settle = (now: number): void => {
+    this._frame = undefined;
+    if (!this._connected) return;
+    const viewport = viewportSnapshot(this._host);
+    if (sameViewport(viewport, this._lastViewport)) {
+      this._stableFrames += 1;
+    } else {
+      this._lastViewport = viewport;
+      this._lastViewportChange = now;
+      this._stableFrames = 0;
+    }
+    if (
+      this._stableFrames < REQUIRED_STABLE_FRAMES ||
+      now - this._lastViewportChange < OUTER_LAYOUT_SETTLE_MS
+    ) {
+      this._frame = requestAnimationFrame(this._settle);
+      return;
+    }
+    void this._sync();
   };
 
   private _targetActive(): boolean {
     return window.innerWidth > window.innerHeight && this._canActivate();
   }
 
-  private _surfaceRect(): DOMRect | undefined {
-    return this._host.renderRoot
-      .querySelector<HTMLElement>("ha-card")
-      ?.getBoundingClientRect();
+  private _capturePlacements(): Map<HTMLElement, DOMRect> {
+    const placements =
+      this._host.renderRoot.querySelectorAll<HTMLElement>(PLACEMENT_SELECTOR);
+    return new Map(
+      Array.from(placements, (placement) => [
+        placement,
+        placement.getBoundingClientRect(),
+      ]),
+    );
   }
 
-  private _cancelAnimation(): void {
-    this._animation?.cancel();
-    this._animation = undefined;
+  private _cancelAnimations(): void {
+    for (const animation of this._animations) animation.cancel();
+    this._animations.clear();
   }
 
-  private async _playSurfaceSettle(first?: DOMRect): Promise<void> {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const surface = this._host.renderRoot.querySelector<HTMLElement>("ha-card");
-    if (!surface) return;
-    const last = surface.getBoundingClientRect();
-    const measured = first ? first.top - last.top : 0;
-    if (
-      Math.abs(measured) < 0.5 ||
-      Math.abs(measured) > MAX_SURFACE_SETTLE_TRANSLATION_PX
-    ) {
+  private async _playFlip(before: Map<HTMLElement, DOMRect>): Promise<void> {
+    const finished: Promise<void>[] = [];
+    for (const [placement, first] of before) {
+      if (!placement.isConnected) continue;
+      const last = placement.getBoundingClientRect();
+      if (
+        first.width <= 0 ||
+        first.height <= 0 ||
+        last.width <= 0 ||
+        last.height <= 0
+      ) {
+        continue;
+      }
+      const translateX = first.left - last.left;
+      const translateY = first.top - last.top;
+      const scaleX = first.width / last.width;
+      const scaleY = first.height / last.height;
+      if (
+        Math.abs(translateX) < 0.5 &&
+        Math.abs(translateY) < 0.5 &&
+        Math.abs(scaleX - 1) < 0.005 &&
+        Math.abs(scaleY - 1) < 0.005
+      ) {
+        continue;
+      }
+      const animation = placement.animate(
+        [
+          {
+            transform: `translate(${translateX}px, ${translateY}px) scale(${scaleX}, ${scaleY})`,
+            transformOrigin: "0 0",
+          },
+          { transform: "none", transformOrigin: "0 0" },
+        ],
+        {
+          duration: FLIP_DURATION_MS,
+          easing: FLIP_EASING,
+        },
+      );
+      this._animations.add(animation);
+      finished.push(
+        animation.finished.then(
+          () => {
+            this._animations.delete(animation);
+          },
+          () => {
+            this._animations.delete(animation);
+          },
+        ),
+      );
+    }
+    await Promise.all(finished);
+  }
+
+  private async _sync(): Promise<void> {
+    const active = this._targetActive();
+    const animate =
+      this._initialized &&
+      !matchMedia("(prefers-reduced-motion: reduce)").matches;
+    this._initialized = true;
+    if (active === this._active) {
+      if (active) this._pull.sync();
       return;
     }
-    const animation = surface.animate(
-      [
-        { transform: `translate3d(0, ${measured}px, 0)` },
-        { transform: "none" },
-      ],
-      {
-        duration: SURFACE_SETTLE_DURATION_MS,
-        easing: SURFACE_SETTLE_EASING,
-      },
-    );
-    this._animation = animation;
-    await animation.finished.catch(() => undefined);
-    if (this._animation === animation) this._animation = undefined;
-  }
-
-  private async _transition(
-    active: boolean,
-    generation: number,
-    animate: boolean,
-  ): Promise<void> {
-    const first = animate ? this._surfaceRect() : undefined;
-    this._cancelAnimation();
-    this._transitioning = true;
-    this._host.classList.add("companion-phone-orientation-transitioning");
-
-    this._pull.deactivate();
-
+    const before = animate ? this._capturePlacements() : new Map();
+    this._cancelAnimations();
+    if (animate) {
+      this._host.classList.add("companion-phone-orientation-transitioning");
+    }
     this._active = active;
+    if (!active) this._pull.deactivate();
     this._host.classList.toggle("companion-phone-landscape", active);
     this._orientationChanged(active);
     await this._host.updateComplete;
-    if (!this._isCurrent(active, generation)) return;
-    if (animate) await this._playSurfaceSettle(first);
-
-    if (!this._isCurrent(active, generation)) return;
-    this._transitioning = false;
+    if (!this._connected || this._active !== active) return;
+    if (animate) await this._playFlip(before);
+    if (!this._connected || this._active !== active) return;
     this._host.classList.remove("companion-phone-orientation-transitioning");
-    if (active) {
+    if (this._connected && this._active === active && active) {
       this._pull.activate();
     }
-  }
-
-  private _isCurrent(active: boolean, generation: number): boolean {
-    return (
-      this._connected &&
-      this._target === active &&
-      this._active === active &&
-      this._transitionGeneration === generation
-    );
   }
 }

@@ -1,6 +1,15 @@
 import { css } from "lit";
 
 export const companionPhoneLandscapeStyles = css`
+  :host(.companion-phone-landscape) {
+    position: fixed !important;
+    z-index: 1000;
+    inset: 0 !important;
+    inline-size: 100vw !important;
+    block-size: 100dvh !important;
+    margin: 0 !important;
+  }
+
   :host(.companion-phone-orientation-transitioning) {
     --wzc-activity-thumbnail-outline-width: 0px;
     --wzc-camera-activity-outline-width: 0px;
@@ -56,8 +65,20 @@ export const companionPhoneLandscapeStyles = css`
   }
 
   :host(.companion-phone-landscape.height-mode-fit-viewport) ha-card {
-    padding-block: 0 var(--wzc-safe-area-inset-bottom);
+    block-size: 100%;
+    height: 100%;
+    min-block-size: 0;
+    padding-block: env(safe-area-inset-top, 0px)
+      var(--wzc-safe-area-inset-bottom);
     padding-inline: var(--wzc-companion-landscape-inline-inset);
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  :host(.companion-phone-landscape.height-mode-fit-viewport) .shell {
+    block-size: 100%;
+    height: 100%;
+    min-block-size: 0;
   }
 
   :host(.companion-phone-landscape) .stage-grid {
@@ -109,12 +130,6 @@ export const companionPhoneLandscapeStyles = css`
     inline-size: var(--wzc-companion-camera-overlay-inline-size);
     block-size: var(--wzc-companion-camera-overlay-block-size);
     margin: 0;
-    overflow: hidden;
-    isolation: isolate;
-    background: var(--wzc-camera-stage);
-    border-radius: 0;
-    --wzc-camera-square-radius: 0px;
-    --wzc-live-radius: 0px;
   }
 
   :host(.companion-phone-landscape.landscape-camera-overlay-expanded)
@@ -141,7 +156,7 @@ export const companionPhoneLandscapeStyles = css`
   }
 
   .companion-camera-pull-handle {
-    position: absolute;
+    position: fixed;
     z-index: 21;
     inset-block-start: var(--wzc-companion-camera-pull-block-start);
     inset-inline-start: var(--wzc-companion-camera-pull-inline-start);
@@ -156,10 +171,6 @@ export const companionPhoneLandscapeStyles = css`
     border: 0;
     cursor: ew-resize;
     -webkit-tap-highlight-color: transparent;
-  }
-
-  .companion-camera-pull-handle[hidden] {
-    display: none;
   }
 
   .companion-camera-pull-handle::before {
