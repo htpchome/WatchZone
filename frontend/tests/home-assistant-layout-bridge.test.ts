@@ -68,12 +68,6 @@ describe("Home Assistant layout bridge", () => {
     expect(container.style.padding).toBe("24px 0px");
   });
 
-  it("exposes the HA-owned Sections container as the orientation flow anchor", () => {
-    const { bridge, container } = sectionsHost();
-
-    expect(bridge.orientationFlowAnchor()).toBe(container);
-  });
-
   it("keeps shared padding until the last card releases ownership", () => {
     const first = sectionsHost();
     const secondHost = document.createElement("watchzone-card");
@@ -100,8 +94,6 @@ describe("Home Assistant layout bridge", () => {
     container.append(host);
     document.body.append(container);
     const bridge = new HomeAssistantLayoutBridge(host);
-
-    expect(bridge.orientationFlowAnchor()).toBe(container);
 
     bridge.configure(true);
     expect(container.style.padding).toBe("10px");

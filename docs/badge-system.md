@@ -36,7 +36,9 @@ labels cannot be mistaken for semantic error or Alert badges.
 Review classification colors are shared semantics rather than independent
 decorations. The Detection badge background resolves to the same warning color
 as the detection thumbnail outline, while text and shape continue to distinguish
-the badge from the outline.
+the badge from the outline. The Alert badge and alert thumbnail outline likewise
+resolve to the shared error color. These classification colors use WatchZone's
+theme-independent canonical status palette.
 
 When an activity module is scoped to a grouped camera presentation, each review
 or event begins with the configured name of the physical camera that produced

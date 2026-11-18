@@ -7,12 +7,12 @@ feature before changing source code.
 ## Repository state
 
 - Branch: `main`
-- Application version: `0.0.4-dev.432`
-- Baseline commit: `c0875e8` —
-  `v0.0.4-dev.431 - fix(mobile): coordinate Companion rotation as one surface`
-- The worktree was clean at that baseline. The expected pending dev.432 change
-  restores legacy Home Assistant secondary-text theme precedence and updates
-  its focused browser coverage and this handoff.
+- Application version: `0.0.4-dev.433`
+- Baseline commit: `4f9301d` —
+  `v0.0.4-dev.432 - fix(theme): restore legacy secondary text precedence`
+- The worktree was clean at that baseline. The expected pending dev.433 change
+  keeps Companion landscape in Home Assistant flow, pins the canonical status
+  palette, and updates the governing contracts and regression coverage.
 - Release artifact: `dist/watchzone.zip`
 
 Documentation-only work does not require a version bump. The user makes all
@@ -94,43 +94,39 @@ This feature applies only to the Home Assistant Companion app on phones.
 ## Rotation transition implementation
 
 - Companion's native whole-window transition owns the physical rotation.
-- WatchZone immediately acquires its fixed viewport overlay and atomically
-  selects the compatible Stage variant when orientation crosses. Home
-  Assistant's header is therefore covered before a delayed settlement window
-  can expose a full-width intermediate camera.
-- Stage placements are never individually transformed or scaled. One 180ms
-  translation-only Web Animation on the stable `ha-card` surface provides the
-  short final settle and honors reduced-motion preferences.
-- The Home Assistant layout bridge exposes the Sections container as the
-  isolated outer-flow anchor. Portrait position is recorded before landscape.
-  On return, the landscape overlay remains fixed until viewport dimensions are
-  stable and that anchor has returned to its recorded portrait position.
-- A bounded 1.5-second safety release prevents a missing or replaced Home
-  Assistant anchor from trapping the card in its overlay.
+- WatchZone remains in its normal Home Assistant flow slot beneath the
+  navigation bar in both orientations. It never fixes the card host to the
+  viewport or covers, hides, or restyles Home Assistant's navigation.
+- Orientation atomically selects the compatible Stage variant. Stage
+  placements are never individually transformed or scaled.
+- A short translation-only surface settle runs only when the card's measured
+  flow position actually changes and honors reduced-motion preferences. It
+  does not synthesize movement when the surface is already aligned.
 - Activity-tile and camera alert/detection outline widths remain temporarily
   zero during the orientation transaction and are restored after the single
   surface settle.
 
 ## Rotation status: physical-device verification required
 
-The dev.431 implementation addresses the transition defects visible in the two
+The dev.433 implementation addresses the transition defects visible in the
 November 18 recordings:
 
 - the camera no longer receives an independent non-uniform FLIP scale;
 - the 60/40 Stage is selected without a delayed full-width landscape frame;
-- the Home Assistant header is covered as soon as landscape is detected; and
-- portrait overlay release is gated by the previously recorded HA flow anchor,
-  not by elapsed stability time alone.
+- Home Assistant's navigation remains visible in portrait and landscape; and
+- the card cannot peg itself to the physical viewport top or later jump into a
+  navbar-offset flow position because the fixed full-host overlay no longer
+  exists.
 
-Automated browser tests validate ownership, identity, layout, and animation
-boundaries, but they do not reproduce Home Assistant Companion's asynchronous
-iOS navbar lifecycle. The result must be recorded and verified on a physical
-iPhone before this rotation issue is considered closed.
+Automated browser tests validate ownership, identity, layout, animation
+boundaries, and a persistent navigation fixture, but they do not reproduce the
+complete iOS WebView rotation. The result must be recorded and verified on a
+physical iPhone before this rotation issue is considered closed.
 
 The implementation preserves:
 
 - the stable live camera DOM and retained media session;
-- one coordinated surface transition in both directions;
+- one atomic Stage transition in both directions;
 - Companion portrait viewport locking;
 - the 60/40 landscape layout and expansion handle;
 - phone A/B carousel behavior;
@@ -164,33 +160,49 @@ Verify repeatedly on an iPhone in Companion:
   inactive Stage controls continue to consume `--wzc-*` tokens. Do not add
   feature-specific Home Assistant fallbacks or hard-coded corrections.
 
-## Validation at dev.432
+## Canonical semantic status palette
 
-The dev.432 source passed:
+- Error is fixed to `#db4437`, warning to `#ffa600`, info to `#039be5`, and
+  success to `#43a047` at the centralized WatchZone token boundary.
+- Third-party themes cannot override these product semantics. Status fills,
+  quiet fills, and borders derive from the same four bases.
+- Alert presentation uses error; detection presentation uses warning. Reviewed
+  state uses success and unreviewed state uses warning. This includes camera
+  and thumbnail outlines, classification badges, review controls, and
+  recording-scrubber classifications.
+- Information-outline actions and editor help affordances consume the fixed
+  info base.
+
+## Validation at dev.433
+
+The dev.433 source passed:
 
 - formatting, lint, TypeScript type checking, and frontend build;
-- 489 unit tests across 77 files;
+- 488 unit tests across 77 files;
 - 156 Playwright tests across Chromium, Firefox, and WebKit;
-- browser coverage proving the legacy secondary-text token wins when both Home
-  Assistant variables are defined;
+- browser coverage proving the card remains in flow beneath persistent Home
+  Assistant navigation in both orientations;
+- browser coverage proving canonical status colors ignore conflicting theme
+  values and the legacy secondary-text token wins when both HA variables are
+  defined;
 - release packaging and version consistency;
 - `git diff --check`.
 
 Release budget at that baseline:
 
-- eager graph: 60,654 bytes gzip;
+- eager graph: 60,584 bytes gzip;
 - validation ceiling: 61,440 bytes gzip;
-- lazy editor graph: 19,422 bytes gzip.
+- lazy editor graph: 19,421 bytes gzip.
 
-The eager graph has only 786 bytes of remaining validation headroom. Run
+The eager graph has only 856 bytes of remaining validation headroom. Run
 `bash scripts/package-release.sh` before every release-affecting handoff and do
 not hand work back over budget.
 
 ## Working rules for the next session
 
-- Verify dev.431 repeatedly on a physical iPhone before further rotation tuning.
-- If a pop remains, capture a new recording and trace the Home Assistant flow
-  anchor before changing animation duration or adding another timing delay.
+- Verify dev.433 repeatedly on a physical iPhone before further rotation tuning.
+- If a pop remains, capture a new recording and trace the card's own measured
+  flow geometry before changing animation duration or adding a timing delay.
 - Do not change unrelated surfaces while correcting the portrait-return pop.
 - Preserve user changes and do not use destructive Git commands.
 - Do not commit. The user performs commits.

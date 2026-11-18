@@ -130,14 +130,16 @@ standard presentation while using the mobile viewport-height mode.
 
 The built-in mobile Full Stage has one narrower host-specific exception. On a
 physical phone inside Companion, rotating the fixed WebView to landscape
-presents the compatible wide Stage variant as a viewport-edge overlay. The
-same Stage nodes and live sessions are retained in a 60/40 camera/activity
-composition. The controller does not add per-placement transforms; Companion's
-native whole-window orientation transition owns the coordinated rotation. The
-controller waits for viewport resize to settle, commits the responsive layout,
-and applies one short whole-surface settle transform instead of independently
-animating Stage placements. Browser phones and every tablet remain outside
-this controller.
+presents the compatible wide Stage variant in the card's existing Home
+Assistant flow slot. Home Assistant's navigation remains rendered and visible
+above the card in both orientations. The same Stage nodes and live sessions are
+retained in a 60/40 camera/activity composition. The controller does not fix
+the card host to the viewport, cover dashboard chrome, or add per-placement
+transforms; Companion's native whole-window orientation transition owns the
+coordinated rotation. It commits the responsive layout atomically and applies
+one short whole-surface settle transform instead of independently animating
+Stage placements. Browser phones and every tablet remain outside this
+controller.
 
 ### 2.3 Theme profile
 
@@ -154,6 +156,12 @@ not branch on a particular third-party theme name. Visual colors continue to
 flow through the semantic token boundary. The profile exposes stable mode data
 to the card and editor and synchronizes their `color-scheme` without replacing
 theme-provided colors.
+
+The semantic status palette is intentionally theme-independent. WatchZone pins
+error to `#db4437`, warning to `#ffa600`, info to `#039be5`, and success to
+`#43a047`, matching Home Assistant's canonical defaults. Alert, detection,
+review-state, status border, and status fill tokens derive from that palette so
+a third-party theme cannot change the meaning or legibility of those states.
 
 Primary-action contrast prefers Home Assistant's current `on-primary` semantic
 tokens. When those tokens are unavailable, WatchZone preserves compatibility
