@@ -79,10 +79,13 @@ WebRTC must not change the card's geometry.
 
 ## Card height modes
 
-Card configuration stores independent height modes for physical mobile phones
-and for standard devices. Runtime device classification selects the applicable
-setting; narrowing a desktop browser does not select the phone setting. Each
-setting accepts the same three values:
+Card configuration stores independent mobile and standard height modes. The
+mobile height mode applies to physical phones and to tablets hosted by Home
+Assistant Companion, because Companion owns the same fixed-window viewport
+contract on both device classes. Companion tablets retain standard Stage,
+appearance, padding, and edge-to-edge behavior. Browser tablets use the
+standard height mode, and narrowing a desktop browser does not select the
+mobile setting. Each setting accepts the same three values:
 
 - `auto` leaves the card at its natural content height. Scrollable media
   modules retain a three-item minimum and five-item natural-height ceiling.

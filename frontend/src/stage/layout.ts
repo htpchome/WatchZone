@@ -98,7 +98,7 @@ export function validateStageDesign(value: unknown): StageDesignDocument {
     ) ||
     new Set(profiles).size !== profiles.length
   ) {
-    throw new Error("Stage design profiles are invalid.");
+    throw new Error("Invalid Stage profiles.");
   }
   const validatedVariants: Partial<Record<StageVariantName, StageVariant>> = {};
   for (const name of ["default", "phone"] as const) {
@@ -178,7 +178,7 @@ function validateFlowEntries(
     if (
       !design.profiles.includes(variantName === "phone" ? "mobile" : "standard")
     ) {
-      throw new Error(`Stage design "${id}" does not support this profile.`);
+      throw new Error(`Stage design "${id}" is not eligible.`);
     }
   }
   return ids;

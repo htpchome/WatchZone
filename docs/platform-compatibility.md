@@ -125,6 +125,11 @@ behavior. Those remain owned by the container-responsive and input-capability
 profile above. User-agent and platform parsing remains prohibited for
 automatic presentation decisions.
 
+Companion's fixed-window height sizing applies to both phones and tablets.
+This host-application sizing policy is independent from phone-only Stage,
+appearance, and edge-to-edge selection; a Companion tablet retains the
+standard presentation while using the mobile viewport-height mode.
+
 ### 2.3 Theme profile
 
 The shared frontend theme profile uses `hass.themes.darkMode` as Home

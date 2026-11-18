@@ -61,6 +61,10 @@ import {
 import { HomeAssistantLayoutBridge } from "./home-assistant-layout-bridge";
 import { ViewportFitController } from "./viewport-fit.controller";
 
+const USE_MOBILE_HEIGHT_MODE =
+  CLIENT_PROFILE.isPhone ||
+  (CLIENT_PROFILE.isCompanionApp && CLIENT_PROFILE.isTablet);
+
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
 const recordedVideoViewerTag = unsafeStatic(RECORDED_VIDEO_VIEWER_TAG);
 const cardPickerPreviewTag = unsafeStatic(CARD_PICKER_PREVIEW_TAG);
@@ -373,7 +377,7 @@ export class DashboardCard extends LitElement {
     const companionFitViewport =
       enabled &&
       CLIENT_PROFILE.isCompanionApp &&
-      activeCardHeightMode(config, CLIENT_PROFILE.isPhone) === "fit_viewport";
+      activeCardHeightMode(config, USE_MOBILE_HEIGHT_MODE) === "fit_viewport";
     this.classList.toggle("mobile-edge-to-edge", enabled);
     this.classList.toggle(
       "companion-edge-to-edge-fit-viewport",
@@ -383,7 +387,7 @@ export class DashboardCard extends LitElement {
   }
 
   private _syncHeightMode(config: CardConfig): void {
-    const mode = activeCardHeightMode(config, CLIENT_PROFILE.isPhone);
+    const mode = activeCardHeightMode(config, USE_MOBILE_HEIGHT_MODE);
     const fitViewport = mode === "fit_viewport";
     const browserEdgeToEdge =
       fitViewport &&

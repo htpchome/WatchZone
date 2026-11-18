@@ -578,7 +578,7 @@ describe("layout composition", () => {
     ).toThrow("Stage designs must provide at least one variant.");
     expect(() =>
       validateStageDesign({ ...layoutWithModules("node"), profiles: [] }),
-    ).toThrow("Stage design profiles are invalid.");
+    ).toThrow("Invalid Stage profiles.");
   });
 
   it("validates ordered standard and mobile flows against eligibility", () => {
@@ -604,7 +604,7 @@ describe("layout composition", () => {
     });
     expect(() =>
       validateStageFlow({ default: [mobile.id], phone: [shared.id] }, catalog),
-    ).toThrow(`Stage design "${mobile.id}" does not support this profile.`);
+    ).toThrow(`Stage design "${mobile.id}" is not eligible.`);
   });
 
   it("lands on the first flow entry and selects another validated stage", () => {

@@ -8581,6 +8581,68 @@ test("keeps Companion edge-to-edge fit viewport inside the outer window", async 
   });
 });
 
+test("uses mobile viewport sizing without edge-to-edge on Companion tablets", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 820, height: 1200 });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      get: () =>
+        "Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) Home Assistant/2026.9 Mobile/HomeAssistant, like Safari",
+    });
+  });
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+
+  const result = await page
+    .locator("watchzone-card")
+    .evaluate(async (element) => {
+      const card = element as HTMLElement & {
+        setConfig(config: unknown): void;
+        updateComplete: Promise<boolean>;
+      };
+      document.body.style.margin = "0";
+      const sections = document.createElement("hui-sections-view");
+      const wrapper = document.createElement("div");
+      const container = document.createElement("div");
+      wrapper.className = "wrapper";
+      wrapper.style.padding = "56px 24px 36px";
+      container.className = "container";
+      container.append(card);
+      wrapper.append(container);
+      sections.attachShadow({ mode: "open" }).append(wrapper);
+      document.body.replaceChildren(sections);
+
+      card.setConfig({
+        card_height_mode: "auto",
+        card_height_mode_phone: "fit_viewport",
+        edge_to_edge_phone: true,
+        type: "custom:watchzone-card",
+      });
+      await card.updateComplete;
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      );
+      const surface = card.shadowRoot?.querySelector("ha-card");
+      if (!(surface instanceof HTMLElement))
+        throw new Error("Card surface was not rendered");
+      return {
+        cardHeight: surface.getBoundingClientRect().height,
+        edgeToEdge: card.classList.contains("mobile-edge-to-edge"),
+        fitViewport: card.classList.contains("height-mode-fit-viewport"),
+        wrapperPadding: wrapper.style.padding,
+      };
+    });
+
+  expect(result).toEqual({
+    cardHeight: 1108,
+    edgeToEdge: false,
+    fitViewport: true,
+    wrapperPadding: "56px 24px 36px",
+  });
+});
+
 test("exposes and honors the WatchZone semantic theme-token contract", async ({
   page,
 }) => {
