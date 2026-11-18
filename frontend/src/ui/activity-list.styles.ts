@@ -260,18 +260,29 @@ export const activityListStyles = css`
     appearance: none;
     background: transparent;
     border: 1px solid currentcolor;
-    border-radius: var(--wzc-radius-small);
+    border-radius: var(
+      --wzc-review-state-border-radius,
+      var(--wzc-radius-small)
+    );
+    block-size: var(--wzc-review-state-block-size, auto);
     box-sizing: border-box;
     display: inline-flex;
-    gap: 0.225rem;
-    min-block-size: 1.1625rem;
+    gap: var(--wzc-review-state-gap, 0.225rem);
+    inline-size: var(--wzc-review-state-inline-size, auto);
+    inset-block-end: var(--wzc-review-state-inset-block-end, auto);
+    inset-inline-start: var(--wzc-review-state-inset-inline-start, auto);
+    justify-content: var(--wzc-review-state-justify-content, flex-start);
+    min-block-size: var(--wzc-review-state-min-block-size, 1.1625rem);
     max-inline-size: 100%;
-    margin-block-start: 0.15rem;
-    padding: 0.09rem 0.3375rem 0.09rem 0.225rem;
+    margin-block-start: var(--wzc-review-state-margin-block-start, 0.15rem);
+    padding: var(
+      --wzc-review-state-padding,
+      0.09rem 0.3375rem 0.09rem 0.225rem
+    );
     cursor: pointer;
     color: var(--wzc-review-state-color);
     pointer-events: auto;
-    position: relative;
+    position: var(--wzc-review-state-position, relative);
     z-index: 2;
     -webkit-tap-highlight-color: transparent;
   }
@@ -318,6 +329,7 @@ export const activityListStyles = css`
   }
 
   .review-state-label {
+    display: var(--wzc-review-state-label-display, inline);
     font-size: 0.5625rem;
     font-weight: var(--wzc-font-weight-semibold);
     line-height: 1;

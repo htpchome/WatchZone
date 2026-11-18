@@ -18,9 +18,9 @@ export const companionPhoneLandscapeStyles = css`
     );
     --wzc-activity-list-min-block-size: var(--wzc-activity-list-max-block-size);
     --wzc-companion-landscape-inline-inset: max(
-      0.375rem,
-      calc(env(safe-area-inset-left, 0px) - 0.25rem),
-      calc(env(safe-area-inset-right, 0px) - 0.25rem)
+      0.25rem,
+      calc(env(safe-area-inset-left, 0px) - 0.375rem),
+      calc(env(safe-area-inset-right, 0px) - 0.375rem)
     );
     --wzc-camera-square-radius: var(--wzc-radius-card);
     --wzc-export-list-max-block-size: calc(
@@ -39,6 +39,20 @@ export const companionPhoneLandscapeStyles = css`
     --wzc-recording-list-min-block-size: var(
       --wzc-recording-list-max-block-size
     );
+    --wzc-review-state-block-size: 1.5rem;
+    --wzc-review-state-border-radius: 50%;
+    --wzc-review-state-gap: 0;
+    --wzc-review-state-inline-size: 1.5rem;
+    --wzc-review-state-inset-block-end: 0.12rem;
+    --wzc-review-state-inset-inline-start: calc(
+      var(--wzc-event-thumbnail-inline-size) + var(--wzc-event-tile-gap)
+    );
+    --wzc-review-state-justify-content: center;
+    --wzc-review-state-label-display: none;
+    --wzc-review-state-margin-block-start: 0;
+    --wzc-review-state-min-block-size: 1.5rem;
+    --wzc-review-state-padding: 0;
+    --wzc-review-state-position: absolute;
     --wzc-stage-resize-handle-visibility: hidden;
     --wzc-stage-flex-track-min: 0px;
     --wzc-stage-flex-stack-min: 0px;
@@ -65,7 +79,7 @@ export const companionPhoneLandscapeStyles = css`
   :host(.companion-phone-landscape) .stage-grid {
     align-self: start;
     block-size: 100%;
-    column-gap: var(--wzc-stage-module-gap);
+    column-gap: calc(var(--wzc-stage-module-gap) + 0.25rem);
     grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
     grid-template-rows: max-content max-content max-content;
     height: 100%;
@@ -82,9 +96,14 @@ export const companionPhoneLandscapeStyles = css`
 
   :host(.companion-phone-landscape)
     .stage-placement[data-layout-node$="default-activity-navigation-module"] {
-    justify-self: center;
+    justify-self: end;
     inline-size: max-content;
     max-inline-size: 100%;
     margin-block-end: 0;
+  }
+
+  :host(.companion-phone-landscape)
+    .stage-placement[data-layout-node$="default-activity-stack"] {
+    margin-block-start: calc(var(--wzc-stage-module-gap) + 0.125rem);
   }
 `;

@@ -113,16 +113,18 @@ presentation. It occupies the fixed WebView, covers Home Assistant's dashboard
 chrome, and applies viewport safe-area padding. The leading 60% contains a
 16:9 camera plus camera navigation; the trailing 40% contains the active
 Reviews, Events, Recordings, or Exports stack. The independently placeable
-activity-navigation module is centered below the camera column at its normal
-toolbar control size. A top inset protects the camera, a module gutter
-separates the columns, and a slightly reduced form of the larger reported
-landscape safe-area inset is reserved symmetrically on both inline edges so
-either phone rotation direction protects both columns. Each active media list
-is capped at three complete tiles and remains the only scrolling surface. The
-camera uses rounded corners and hides its resize handle in this presentation,
-independent of the ordinary phone Camera appearance setting. This overlay does
-not activate for browser phones, Companion tablets, or incompatible Stage
-types.
+activity-navigation module is right-aligned below the camera column at its
+normal toolbar control size. The activity title aligns with the top of the
+camera. A top inset protects the camera, an expanded module gutter separates
+the columns, and a reduced form of the larger reported landscape safe-area
+inset is reserved symmetrically on both inline edges so either phone rotation
+direction protects both columns. Each active media list is capped at three
+complete tiles and remains the only scrolling surface. Review-state controls
+use a compact outlined icon without label text in this presentation, aligned
+on the tile footer with the AI-analysis and information controls. The camera
+uses rounded corners and hides its resize handle, independent of the ordinary
+phone Camera appearance setting. This overlay does not activate for browser
+phones, Companion tablets, or incompatible Stage types.
 
 Card, Camera, camera-navigation, and activity-tile appearance likewise store
 independent standard-device and physical-phone values. Phone defaults use an

@@ -8685,6 +8685,9 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
         message.type === "watchzone/reviews/list"
           ? {
               items: Array.from({ length: 5 }, (_, index) => ({
+                analysis_description:
+                  index === 0 ? "A person is standing near the door." : null,
+                analysis_title: index === 0 ? "Person at door" : null,
                 camera: "front",
                 classification: "detection",
                 clip_url: null,
@@ -8693,11 +8696,17 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
                 labels: ["person"],
                 media_end_time: 1_700_000_025 - index,
                 media_start_time: 1_699_999_995 - index,
-                playback_sources: [],
+                playback_sources: [
+                  {
+                    content_type: "video/mp4",
+                    transport: "file",
+                    url: `/landscape-review-${index}.mp4`,
+                  },
+                ],
                 preferred_transport: "file",
                 preview_url: null,
                 revision: `landscape-revision-${index}`,
-                related_event_ids: [],
+                related_event_ids: index === 0 ? ["landscape-event-0"] : [],
                 reviewed: false,
                 snapshot_url: null,
                 start_time: 1_700_000_000 - index,
@@ -8752,6 +8761,30 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     "0px",
   );
   await expect(card.locator("wzc-reviews .tile")).toHaveCount(5);
+  const firstLandscapeTile = card.locator("wzc-reviews .tile").first();
+  const reviewState = firstLandscapeTile.locator(".review-state");
+  await expect(reviewState.locator(".review-state-label")).toHaveCSS(
+    "display",
+    "none",
+  );
+  const footerControls = await Promise.all(
+    [
+      reviewState,
+      firstLandscapeTile.locator(".analysis-title"),
+      firstLandscapeTile.locator(".review-info"),
+    ].map((control) => control.boundingBox()),
+  );
+  expect(footerControls.every((bounds) => bounds !== null)).toBe(true);
+  const footerCenters = footerControls.map(
+    (bounds) => (bounds?.y ?? 0) + (bounds?.height ?? 0) / 2,
+  );
+  expect(
+    Math.max(...footerCenters) - Math.min(...footerCenters),
+  ).toBeLessThanOrEqual(1);
+  expect(footerControls[0]?.width).toBeCloseTo(
+    footerControls[0]?.height ?? 0,
+    0,
+  );
   const activityViewport = await card
     .locator("wzc-reviews .viewport")
     .boundingBox();
@@ -8803,6 +8836,7 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
       cameraAspectRatio: cameraRect.width / cameraRect.height,
       cameraHeight: Math.round(navigationRect.bottom - cameraRect.top),
       cameraLeft: Math.round(cameraRect.left),
+      cameraRight: Math.round(cameraRect.right),
       cameraTop: Math.round(cameraRect.top),
       columnRatio: cameraRect.width / activityRect.width,
       gutter: Math.round(activityRect.left - cameraRect.right),
@@ -8821,6 +8855,9 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
       stableCamera: camera.dataset.landscapeIdentity,
     };
   });
+  const activityTitle = await card
+    .locator("wzc-reviews wzc-media-day-header .label")
+    .boundingBox();
 
   expect(geometry).toEqual({
     activityHeight: geometry.activityHeight,
@@ -8836,6 +8873,7 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     cameraAspectRatio: geometry.cameraAspectRatio,
     cameraHeight: expect.any(Number),
     cameraLeft: expect.any(Number),
+    cameraRight: expect.any(Number),
     cameraTop: expect.any(Number),
     columnRatio: geometry.columnRatio,
     gutter: expect.any(Number),
@@ -8847,20 +8885,23 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
   expect(geometry.activityLeft).toBeGreaterThan(geometry.cameraLeft);
   expect(geometry.activityHeight).toBeGreaterThan(geometry.cameraHeight);
   expect(geometry.activityRight).toBeLessThan(geometry.host.width);
+  expect(activityTitle).not.toBeNull();
+  expect(activityTitle?.y).toBeCloseTo(geometry.cameraTop, 0);
   expect(geometry.activityNavigationTop).toBeGreaterThan(
     geometry.cameraTop + geometry.cameraHeight,
   );
   expect(geometry.activityNavigationLeft).toBeGreaterThan(geometry.cameraLeft);
   expect(geometry.activityNavigationRight).toBeLessThan(geometry.activityLeft);
+  expect(geometry.activityNavigationRight).toBeCloseTo(geometry.cameraRight, 0);
   expect(geometry.activityNavigationBottom).toBeLessThanOrEqual(
     geometry.host.height + 32,
   );
   expect(geometry.activityNavigationHeight).toBeGreaterThan(0);
   expect(geometry.cameraAspectRatio).toBeCloseTo(16 / 9, 2);
   expect(geometry.cameraLeft).toBeGreaterThan(0);
-  expect(geometry.cameraTop).toBeGreaterThan(geometry.activityTop);
+  expect(geometry.cameraLeft).toBeLessThanOrEqual(4);
   expect(geometry.columnRatio).toBeCloseTo(3 / 2, 2);
-  expect(geometry.gutter).toBeGreaterThan(0);
+  expect(geometry.gutter).toBeGreaterThanOrEqual(16);
   expect(geometry.activityHeight).toBeLessThanOrEqual(
     geometry.host.height + 32,
   );
