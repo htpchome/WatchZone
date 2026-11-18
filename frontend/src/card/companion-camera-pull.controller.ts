@@ -19,7 +19,6 @@ interface PullStart {
 
 const CAMERA_NODE_SUFFIX = "default-camera-module";
 const ACTIVITY_NODE_SUFFIX = "default-activity-stack";
-const COLLAPSED_HANDLE_OFFSET_PX = 4;
 const DRAG_TOLERANCE_PX = 4;
 const EXPANDED_HANDLE_INSET_PX = 52;
 const EXPAND_THRESHOLD = 0.5;
@@ -136,8 +135,7 @@ export class CompanionCameraPullController {
       top: rect.top - gridRect.top,
       width: rect.width,
     };
-    this._handleBaselineLeft =
-      (rect.right + activityRect.left) / 2 + COLLAPSED_HANDLE_OFFSET_PX;
+    this._handleBaselineLeft = (rect.right + activityRect.left) / 2;
     this._handleBaselineTop = rect.top + rect.height / 2;
     this._host.style.setProperty(
       "--wzc-companion-camera-base-block-size",

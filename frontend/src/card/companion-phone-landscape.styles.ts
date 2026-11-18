@@ -132,6 +132,13 @@ export const companionPhoneLandscapeStyles = css`
     --wzc-camera-square-radius: 0px;
   }
 
+  :host(.companion-phone-landscape.landscape-camera-overlay-dragging)
+    .stage-placement[data-layout-node$="default-camera-module"],
+  :host(.companion-phone-landscape.landscape-camera-overlay-settling)
+    .stage-placement[data-layout-node$="default-camera-module"] {
+    --wzc-camera-activity-outline-width: 0px;
+  }
+
   :host(.companion-phone-landscape.landscape-camera-overlay-settling)
     .stage-placement[data-layout-node$="default-camera-module"],
   :host(.companion-phone-landscape.landscape-camera-overlay-settling)

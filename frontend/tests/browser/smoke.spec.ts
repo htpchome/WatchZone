@@ -8924,7 +8924,7 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
   const collapsedHandleCenter =
     (collapsedHandle?.x ?? 0) + (collapsedHandle?.width ?? 0) / 2;
   expect(collapsedHandleCenter).toBeCloseTo(
-    (geometry.cameraRight + geometry.activityLeft) / 2 + 4,
+    (geometry.cameraRight + geometry.activityLeft) / 2,
     0,
   );
   const handlePresentation = await pullHandle.evaluate((element) => {
@@ -8946,11 +8946,25 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
   expect(handlePresentation.secondaryText).not.toBe("");
   const pullTravel =
     geometry.host.left + geometry.host.width - 52 - collapsedHandleCenter;
+  const cameraCarousel = card.locator("wzc-camera .camera-carousel");
+  await cameraCarousel.evaluate((element) =>
+    element.classList.add("activity-alert"),
+  );
+  expect(
+    await cameraCarousel.evaluate(
+      (element) => getComputedStyle(element, "::after").borderTopWidth,
+    ),
+  ).not.toBe("0px");
   await page.mouse.move(
     collapsedHandleCenter,
     (collapsedHandle?.y ?? 0) + (collapsedHandle?.height ?? 0) / 2,
   );
   await page.mouse.down();
+  expect(
+    await cameraCarousel.evaluate(
+      (element) => getComputedStyle(element, "::after").borderTopWidth,
+    ),
+  ).toBe("0px");
   const activeRowPositions = await card.evaluate((element) => {
     const root = element.shadowRoot;
     const top = (suffix: string) =>
@@ -8978,6 +8992,11 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
   await page.mouse.up();
   await expect(card).not.toHaveClass(/landscape-camera-overlay-active/);
   await expect(pullHandle).toHaveAttribute("aria-valuenow", "0");
+  expect(
+    await cameraCarousel.evaluate(
+      (element) => getComputedStyle(element, "::after").borderTopWidth,
+    ),
+  ).not.toBe("0px");
 
   const resetHandle = await pullHandle.boundingBox();
   await page.mouse.move(
