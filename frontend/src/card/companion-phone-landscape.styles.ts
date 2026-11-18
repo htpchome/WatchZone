@@ -109,6 +109,12 @@ export const companionPhoneLandscapeStyles = css`
     inline-size: var(--wzc-companion-camera-overlay-inline-size);
     block-size: var(--wzc-companion-camera-overlay-block-size);
     margin: 0;
+    overflow: hidden;
+    isolation: isolate;
+    background: var(--wzc-camera-stage);
+    border-radius: 0;
+    --wzc-camera-square-radius: 0px;
+    --wzc-live-radius: 0px;
   }
 
   :host(.companion-phone-landscape.landscape-camera-overlay-expanded)
@@ -135,7 +141,7 @@ export const companionPhoneLandscapeStyles = css`
   }
 
   .companion-camera-pull-handle {
-    position: fixed;
+    position: absolute;
     z-index: 21;
     inset-block-start: var(--wzc-companion-camera-pull-block-start);
     inset-inline-start: var(--wzc-companion-camera-pull-inline-start);

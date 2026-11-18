@@ -9020,6 +9020,87 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     (geometry.cameraRight + geometry.activityLeft) / 2,
     0,
   );
+  await expect(pullHandle).toHaveCSS("position", "absolute");
+  expect(
+    await pullHandle.evaluate((element) =>
+      element.parentElement?.classList.contains("shell"),
+    ),
+  ).toBe(true);
+  await card.evaluate((element) => {
+    const surface = element.shadowRoot?.querySelector<HTMLElement>("ha-card");
+    if (!surface) throw new Error("Card surface was not rendered");
+    surface.style.transform = "translate3d(17px, 0, 0)";
+  });
+  await expect
+    .poll(() =>
+      card.evaluate((element) => {
+        const root = element.shadowRoot;
+        const camera = root?.querySelector<HTMLElement>(
+          '.stage-placement[data-layout-node$="default-camera-module"]',
+        );
+        const activity = root?.querySelector<HTMLElement>(
+          '.stage-placement[data-layout-node$="default-activity-stack"]',
+        );
+        const handle = root?.querySelector<HTMLElement>(
+          ".companion-camera-pull-handle",
+        );
+        if (!camera || !activity || !handle) return Number.NaN;
+        const cameraRect = camera.getBoundingClientRect();
+        const activityRect = activity.getBoundingClientRect();
+        const handleRect = handle.getBoundingClientRect();
+        return Math.abs(
+          handleRect.left +
+            handleRect.width / 2 -
+            (cameraRect.right + activityRect.left) / 2,
+        );
+      }),
+    )
+    .toBeLessThanOrEqual(1);
+  await card.evaluate((element) => {
+    const surface = element.shadowRoot?.querySelector<HTMLElement>("ha-card");
+    surface?.style.removeProperty("transform");
+  });
+  await card.evaluate((element) => {
+    const grid = element.shadowRoot?.querySelector<HTMLElement>(".stage-grid");
+    if (!grid) throw new Error("Stage grid was not rendered");
+    grid.style.columnGap = "48px";
+  });
+  await expect
+    .poll(() =>
+      card.evaluate((element) => {
+        const root = element.shadowRoot;
+        const camera = root?.querySelector<HTMLElement>(
+          '.stage-placement[data-layout-node$="default-camera-module"]',
+        );
+        const activity = root?.querySelector<HTMLElement>(
+          '.stage-placement[data-layout-node$="default-activity-stack"]',
+        );
+        const handle = root?.querySelector<HTMLElement>(
+          ".companion-camera-pull-handle",
+        );
+        if (!camera || !activity || !handle) return Number.NaN;
+        const cameraRect = camera.getBoundingClientRect();
+        const activityRect = activity.getBoundingClientRect();
+        const handleRect = handle.getBoundingClientRect();
+        return Math.abs(
+          handleRect.left +
+            handleRect.width / 2 -
+            (cameraRect.right + activityRect.left) / 2,
+        );
+      }),
+    )
+    .toBeLessThanOrEqual(1);
+  await card.evaluate((element) => {
+    element.shadowRoot
+      ?.querySelector<HTMLElement>(".stage-grid")
+      ?.style.removeProperty("column-gap");
+  });
+  await expect
+    .poll(async () => {
+      const handle = await pullHandle.boundingBox();
+      return (handle?.x ?? 0) + (handle?.width ?? 0) / 2;
+    })
+    .toBeCloseTo(collapsedHandleCenter, 0);
   const handlePresentation = await pullHandle.evaluate((element) => {
     const style = getComputedStyle(element);
     const grip = getComputedStyle(element, "::before");
@@ -9058,6 +9139,25 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
   expect(
     (handleAfterPointerDown?.x ?? 0) + (handleAfterPointerDown?.width ?? 0) / 2,
   ).toBeCloseTo(collapsedHandleCenter, 0);
+  const activeCameraPaint = await cameraPlacement.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      backgroundColor: style.backgroundColor,
+      borderRadius: style.borderRadius,
+      isolation: style.isolation,
+      overflow: style.overflow,
+    };
+  });
+  expect(activeCameraPaint).toEqual({
+    backgroundColor: expect.any(String),
+    borderRadius: "0px",
+    isolation: "isolate",
+    overflow: "hidden",
+  });
+  expect(activeCameraPaint.backgroundColor).not.toMatch(
+    /rgba\(0, 0, 0, 0\)|transparent/,
+  );
+  await expect(cameraCarousel).toHaveCSS("border-radius", "0px");
   expect(
     await cameraCarousel.evaluate(
       (element) => getComputedStyle(element, "::after").borderTopWidth,
