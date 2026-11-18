@@ -8905,6 +8905,68 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
   expect(geometry.activityHeight).toBeLessThanOrEqual(
     geometry.host.height + 32,
   );
+
+  const pullHandle = card.locator(".companion-camera-pull-handle");
+  const cameraPlacement = card.locator(
+    '[data-layout-node$="default-camera-module"]',
+  );
+  const activityScroller = card.locator("wzc-reviews .scroller");
+  const retainedScrollTop = await activityScroller.evaluate((element) => {
+    element.scrollTop = 24;
+    return element.scrollTop;
+  });
+  await expect(pullHandle).toHaveAttribute("role", "slider");
+  await expect(pullHandle).toHaveAttribute("aria-valuenow", "0");
+  const collapsedHandle = await pullHandle.boundingBox();
+  expect(collapsedHandle).not.toBeNull();
+  const pullTravel = geometry.host.width - geometry.cameraRight;
+  await page.mouse.move(
+    (collapsedHandle?.x ?? 0) + (collapsedHandle?.width ?? 0) / 2,
+    (collapsedHandle?.y ?? 0) + (collapsedHandle?.height ?? 0) / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    (collapsedHandle?.x ?? 0) + pullTravel * 0.4,
+    (collapsedHandle?.y ?? 0) + (collapsedHandle?.height ?? 0) / 2,
+    { steps: 4 },
+  );
+  await page.mouse.up();
+  await expect(card).not.toHaveClass(/landscape-camera-overlay-active/);
+  await expect(pullHandle).toHaveAttribute("aria-valuenow", "0");
+
+  const resetHandle = await pullHandle.boundingBox();
+  await page.mouse.move(
+    (resetHandle?.x ?? 0) + (resetHandle?.width ?? 0) / 2,
+    (resetHandle?.y ?? 0) + (resetHandle?.height ?? 0) / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    (resetHandle?.x ?? 0) + pullTravel * 0.65,
+    (resetHandle?.y ?? 0) + (resetHandle?.height ?? 0) / 2,
+    { steps: 6 },
+  );
+  await page.mouse.up();
+  await expect(card).toHaveClass(/landscape-camera-overlay-expanded/);
+  await expect(pullHandle).toHaveAttribute("aria-valuenow", "100");
+  await expect(card).not.toHaveClass(/landscape-camera-overlay-settling/);
+  await expect(cameraPlacement).toHaveCSS("position", "fixed");
+  const expandedCamera = await cameraPlacement.boundingBox();
+  expect(expandedCamera?.x).toBeCloseTo(geometry.host.left, 0);
+  expect(expandedCamera?.y).toBeCloseTo(geometry.host.top, 0);
+  expect(expandedCamera?.width).toBeCloseTo(geometry.host.width, 0);
+  expect(expandedCamera?.height).toBeCloseTo(geometry.host.height, 0);
+  await expect(cameraPlacement).toHaveAttribute(
+    "data-landscape-identity",
+    "stable",
+  );
+  expect(await cameraPlacement.locator("wzc-camera").count()).toBe(1);
+  expect(await activityScroller.evaluate((element) => element.scrollTop)).toBe(
+    retainedScrollTop,
+  );
+
+  await pullHandle.press("Home");
+  await expect(card).not.toHaveClass(/landscape-camera-overlay-active/);
+  await expect(pullHandle).toHaveAttribute("aria-valuenow", "0");
 });
 
 test("exposes and honors the WatchZone semantic theme-token contract", async ({

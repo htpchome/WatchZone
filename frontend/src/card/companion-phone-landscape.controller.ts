@@ -1,5 +1,7 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
+import type { LocalizeFunction } from "../core/localization";
+import { CompanionCameraPullController } from "./companion-camera-pull.controller";
 import { companionPhoneLandscapeStyles } from "./companion-phone-landscape.styles";
 
 interface LandscapeHost extends ReactiveControllerHost, HTMLElement {
@@ -16,30 +18,34 @@ export function installCompanionPhoneLandscape(
   host: LandscapeHost,
   canActivate: CanActivate,
   orientationChanged: OrientationChanged,
+  localize: LocalizeFunction,
 ): void {
   if (installedHosts.has(host)) return;
   installedHosts.add(host);
-  new CompanionPhoneLandscapeController(host, canActivate, orientationChanged);
+  new CompanionPhoneLandscapeController(
+    host,
+    canActivate,
+    orientationChanged,
+    localize,
+  );
 }
 
 /** Owns Companion-phone orientation changes and the Stage reflow animation. */
 class CompanionPhoneLandscapeController implements ReactiveController {
-  private _active: boolean;
+  private _active = false;
   private _connected = false;
   private _frame?: number;
-  private _settleTimer?: number;
+  private readonly _pull: CompanionCameraPullController;
+  private _syncTimer?: number;
 
   public constructor(
     private readonly _host: LandscapeHost,
     private readonly _canActivate: CanActivate,
     private readonly _orientationChanged: OrientationChanged,
+    localize: LocalizeFunction,
   ) {
-    this._active = false;
+    this._pull = new CompanionCameraPullController(_host, localize);
     _host.addController(this);
-  }
-
-  public get active(): boolean {
-    return this._active;
   }
 
   public hostConnected(): void {
@@ -57,28 +63,26 @@ class CompanionPhoneLandscapeController implements ReactiveController {
   }
 
   public hostUpdated(): void {
-    this.sync();
+    if (this._active) this._pull.sync();
+    this._schedule();
   }
 
   public hostDisconnected(): void {
     this._connected = false;
     window.removeEventListener("resize", this._schedule);
     window.visualViewport?.removeEventListener("resize", this._schedule);
-    if (this._settleTimer !== undefined) clearTimeout(this._settleTimer);
-    this._settleTimer = undefined;
+    this._pull.deactivate();
+    if (this._syncTimer !== undefined) clearTimeout(this._syncTimer);
+    this._syncTimer = undefined;
     if (this._frame !== undefined) cancelAnimationFrame(this._frame);
     this._frame = undefined;
   }
 
-  public sync(): void {
-    this._schedule();
-  }
-
   private readonly _schedule = (): void => {
     if (!this._connected) return;
-    if (this._settleTimer !== undefined) clearTimeout(this._settleTimer);
-    this._settleTimer = window.setTimeout(() => {
-      this._settleTimer = undefined;
+    if (this._syncTimer !== undefined) clearTimeout(this._syncTimer);
+    this._syncTimer = window.setTimeout(() => {
+      this._syncTimer = undefined;
       if (this._frame !== undefined) return;
       this._frame = requestAnimationFrame(() => {
         this._frame = undefined;
@@ -90,14 +94,19 @@ class CompanionPhoneLandscapeController implements ReactiveController {
   private async _sync(): Promise<void> {
     const active =
       window.innerWidth > window.innerHeight && this._canActivate();
-    if (active === this._active) return;
+    if (active === this._active) {
+      if (active) this._pull.sync();
+      return;
+    }
     this._active = active;
+    if (!active) this._pull.deactivate();
     this._host.classList.toggle("companion-phone-landscape", active);
     this._orientationChanged(active);
     await this._host.updateComplete;
     await new Promise<void>((resolve) =>
       requestAnimationFrame(() => resolve()),
     );
+    if (active) this._pull.activate();
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     this._host.renderRoot
       .querySelector("ha-card")

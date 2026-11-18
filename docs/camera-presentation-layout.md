@@ -126,6 +126,18 @@ uses rounded corners and hides its resize handle, independent of the ordinary
 phone Camera appearance setting. This overlay does not activate for browser
 phones, Companion tablets, or incompatible Stage types.
 
+A separate vertical pull handle occupies the gutter at the Camera's trailing
+edge in this presentation. Horizontal pointer capture maps the handle's travel
+directly to a camera-overlay progress value while preserving the mounted Camera
+module and retained live session. The Camera grows above the unchanged activity
+column; activity selection and scroll position do not move into the overlay.
+Releasing before 50% returns to the 60/40 layout, while releasing at or beyond
+50% settles into a viewport-covering Camera with its complete composed control
+surface. The expanded handle remains inside the safe trailing edge and can be
+dragged left to restore the split layout. Arrow keys, Home/End, Enter/Space,
+and Escape expose the same two states, and reduced-motion preference removes
+the settle transition.
+
 Card, Camera, camera-navigation, and activity-tile appearance likewise store
 independent standard-device and physical-phone values. Phone defaults use an
 edge-to-edge card without card or Camera padding, shadows, or rounded corners;

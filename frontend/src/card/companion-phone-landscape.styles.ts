@@ -77,6 +77,7 @@ export const companionPhoneLandscapeStyles = css`
   }
 
   :host(.companion-phone-landscape) .stage-grid {
+    position: relative;
     align-self: start;
     block-size: 100%;
     column-gap: calc(var(--wzc-stage-module-gap) + 0.25rem);
@@ -105,5 +106,85 @@ export const companionPhoneLandscapeStyles = css`
   :host(.companion-phone-landscape)
     .stage-placement[data-layout-node$="default-activity-stack"] {
     margin-block-start: calc(var(--wzc-stage-module-gap) + 0.125rem);
+  }
+
+  :host(.companion-phone-landscape.landscape-camera-overlay-active)
+    .stage-grid {
+    grid-template-rows:
+      var(--wzc-companion-camera-base-block-size) max-content
+      max-content;
+  }
+
+  :host(.companion-phone-landscape.landscape-camera-overlay-active)
+    .stage-placement[data-layout-node$="default-camera-module"] {
+    position: fixed;
+    z-index: 20;
+    inset-block-start: var(--wzc-companion-camera-overlay-top);
+    inset-inline-start: var(--wzc-companion-camera-overlay-left);
+    box-sizing: border-box;
+    inline-size: var(--wzc-companion-camera-overlay-inline-size);
+    block-size: var(--wzc-companion-camera-overlay-block-size);
+    margin: 0;
+  }
+
+  :host(.companion-phone-landscape.landscape-camera-overlay-expanded)
+    .stage-placement[data-layout-node$="default-camera-module"] {
+    --wzc-camera-square-radius: 0px;
+  }
+
+  :host(.companion-phone-landscape.landscape-camera-overlay-settling)
+    .stage-placement[data-layout-node$="default-camera-module"],
+  :host(.companion-phone-landscape.landscape-camera-overlay-settling)
+    .companion-camera-pull-handle {
+    transition:
+      inset-block-start 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      inset-inline-start 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      inline-size 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      block-size 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .companion-camera-pull-handle {
+    position: fixed;
+    z-index: 21;
+    inset-block-start: var(--wzc-companion-camera-pull-block-start);
+    inset-inline-start: var(--wzc-companion-camera-pull-inline-start);
+    box-sizing: border-box;
+    inline-size: 2rem;
+    block-size: 6rem;
+    padding: 0;
+    touch-action: none;
+    transform: translate(-50%, -50%);
+    color: var(--wzc-color-primary);
+    background: transparent;
+    border: 0;
+    cursor: ew-resize;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .companion-camera-pull-handle::before {
+    display: block;
+    box-sizing: border-box;
+    inline-size: 0.5rem;
+    block-size: 4.5rem;
+    margin: auto;
+    background: var(--wzc-media-overlay-surface);
+    border: 2px solid currentcolor;
+    border-radius: var(--wzc-radius-small);
+    box-shadow: var(--wzc-shadow-small);
+    content: "";
+  }
+
+  .companion-camera-pull-handle:focus-visible {
+    outline: 2px solid var(--wzc-color-primary);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :host(.companion-phone-landscape.landscape-camera-overlay-settling)
+      .stage-placement[data-layout-node$="default-camera-module"],
+    :host(.companion-phone-landscape.landscape-camera-overlay-settling)
+      .companion-camera-pull-handle {
+      transition: none;
+    }
   }
 `;
