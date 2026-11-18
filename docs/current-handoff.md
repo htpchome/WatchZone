@@ -7,11 +7,12 @@ feature before changing source code.
 ## Repository state
 
 - Branch: `main`
-- Application version: `0.0.4-dev.435`
-- Baseline commit: `05c4348` —
-  `v0.0.4-dev.434 - fix(frontend): restore full-viewport Companion landscape rotation`
-- The expected pending dev.435 change adds synchronized two-panel rotation
-  choreography and removes the fullscreen grip/alert-outline bleed.
+- Application version: `0.0.4-dev.436`
+- Baseline commit: `308eea6` —
+  `v0.0.4-dev.435 - fix(frontend): choreograph two-panel rotation and clean fullscreen media`
+- The expected pending dev.436 change removes the regressive authored panel
+  animation, restores atomic native rotation, keeps the fullscreen grip
+  visible, and suppresses only the fullscreen camera activity outline.
 - Release artifact: `dist/watchzone.zip`
 
 Documentation-only work does not require a version bump. The user makes all
@@ -89,7 +90,8 @@ This feature applies only to the Home Assistant Companion app on phones.
   handle does not shift the lower bars.
 - Alert/detection outlines are suppressed during the active resize to avoid
   expensive border recomposition. They return after settlement only in the
-  collapsed 60/40 layout; fullscreen keeps the outline and grip visual hidden.
+  collapsed 60/40 layout; fullscreen keeps the outline hidden and the grip
+  visible.
 
 ## Rotation transition implementation
 
@@ -98,10 +100,8 @@ This feature applies only to the Home Assistant Companion app on phones.
 - Landscape retains the portrait flow allocation as an inert placeholder and
   fixes the WatchZone surface over the complete viewport. The HA navigation is
   covered, not removed or restyled.
-- Orientation atomically selects the compatible Stage variant. Stage children
-  are never individually scaled or reparented. The stable camera and activity
-  placement containers form two visual panels and receive mirrored 3D
-  rotations around the center gutter with one duration and easing curve.
+- Orientation atomically selects the compatible Stage variant. Stage
+  placements are never individually transformed or scaled.
 - On portrait return, the landscape surface remains until viewport dimensions
   are stable. The portrait Stage update and removal of the landscape cover
   complete in one paint, preventing a portrait-on-overlay frame or late header
@@ -111,7 +111,7 @@ This feature applies only to the Home Assistant Companion app on phones.
 
 ## Rotation status: physical-device verification required
 
-The dev.435 implementation addresses the transition defects visible in the
+The dev.436 implementation addresses the transition defects visible in the
 November 18 recordings:
 
 - the camera no longer receives an independent non-uniform FLIP scale;
@@ -121,10 +121,9 @@ November 18 recordings:
   landscape viewport, preventing page collapse or scroll loss; and
 - fullscreen camera expansion uses the full-viewport surface bounds instead of
   the retained portrait placeholder;
-- the fullscreen grip visual and camera activity outline are suppressed while
-  expanded, eliminating bleed over the media; and
-- the camera and activity panes fold as a synchronized two-panel pair in both
-  orientation directions.
+- the fullscreen camera activity outline is suppressed while expanded without
+  removing the visible return grip; and
+- no authored panel animation delays the atomic return to portrait flow.
 
 Automated browser tests validate ownership, identity, layout, animation
 boundaries, and a persistent navigation fixture, but they do not reproduce the
@@ -178,8 +177,9 @@ Verify repeatedly on an iPhone in Companion:
   state uses success and unreviewed state uses warning. This includes camera
   and thumbnail outlines, classification badges, review controls, and
   recording-scrubber classifications.
-- Information-outline actions and editor help affordances consume the fixed
-  info base.
+- Activity-tile information actions use the existing event-secondary semantic
+  at rest and the fixed info base only on hover. Informational status and editor
+  help semantics remain independently owned.
 
 ## Validation at dev.433
 

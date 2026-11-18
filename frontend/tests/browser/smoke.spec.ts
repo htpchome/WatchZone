@@ -3319,10 +3319,14 @@ test("keeps activity content in an independently scrolling viewport", async ({
   const reviewInfo = page
     .locator('wzc-reviews button[aria-label="View tracking details"]')
     .first();
+  const secondaryEventText = await page
+    .locator("wzc-reviews .metadata")
+    .first()
+    .evaluate((element) => getComputedStyle(element).color);
   await expect(reviewInfo).toBeVisible();
   await expect
     .poll(() => reviewInfo.evaluate((button) => getComputedStyle(button).color))
-    .toBe("rgb(3, 155, 229)");
+    .toBe(secondaryEventText);
   await reviewInfo.hover();
   await expect
     .poll(() => reviewInfo.evaluate((button) => getComputedStyle(button).color))
@@ -8809,28 +8813,18 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
   expect(landscapeFlow.cardTop).toBeGreaterThanOrEqual(
     landscapeFlow.navbarBottom ?? 0,
   );
-  const transitionPanels = card.locator(
-    '.stage-placement[data-layout-node$="default-camera-module"], .stage-placement[data-layout-node$="default-activity-stack"]',
-  );
-  await expect
-    .poll(() =>
-      transitionPanels.evaluateAll((panels) =>
-        panels.map((panel) => panel.getAnimations().length > 0),
-      ),
-    )
-    .toEqual([true, true]);
-  const transitioningOutline = card
-    .locator("wzc-reviews .thumbnail-wrap.detection")
-    .first();
-  await expect(card).not.toHaveClass(
-    /companion-phone-orientation-transitioning/,
-  );
   const enteringAnimations = await card
     .locator(".stage-placement[data-layout-node]")
     .evaluateAll((placements) =>
       placements.map((placement) => placement.getAnimations().length),
     );
   expect(enteringAnimations.every((count) => count === 0)).toBe(true);
+  const transitioningOutline = card
+    .locator("wzc-reviews .thumbnail-wrap.detection")
+    .first();
+  await expect(card).not.toHaveClass(
+    /companion-phone-orientation-transitioning/,
+  );
   expect(
     await card
       .locator("ha-card")
@@ -9141,7 +9135,7 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     await pullHandle.evaluate(
       (element) => getComputedStyle(element, "::before").opacity,
     ),
-  ).toBe("0");
+  ).toBe("1");
   expect(
     await cameraCarousel.evaluate(
       (element) => getComputedStyle(element, "::after").borderTopWidth,
@@ -9245,13 +9239,6 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     });
   });
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect
-    .poll(() =>
-      transitionPanels.evaluateAll((panels) =>
-        panels.map((panel) => panel.getAnimations().length > 0),
-      ),
-    )
-    .toEqual([true, true]);
   await expect(card).not.toHaveClass(/companion-phone-landscape/);
   await expect(card.locator(".stage-grid")).toHaveAttribute(
     "data-stage-variant",

@@ -112,15 +112,6 @@ export const companionPhoneLandscapeStyles = css`
     margin-block-start: calc(var(--wzc-stage-module-gap) + 0.125rem);
   }
 
-  :host(.companion-phone-orientation-transitioning)
-    .stage-placement[data-layout-node$="default-camera-module"],
-  :host(.companion-phone-orientation-transitioning)
-    .stage-placement[data-layout-node$="default-activity-stack"] {
-    backface-visibility: hidden;
-    transform-style: preserve-3d;
-    will-change: transform, opacity;
-  }
-
   :host(.companion-phone-landscape.landscape-camera-overlay-active)
     .stage-grid {
     grid-template-rows:
@@ -192,12 +183,6 @@ export const companionPhoneLandscapeStyles = css`
     border: 0;
     border-radius: 1.5px;
     content: "";
-    transition: opacity 120ms linear;
-  }
-
-  :host(.landscape-camera-overlay-expanded)
-    .companion-camera-pull-handle::before {
-    opacity: 0;
   }
 
   .companion-camera-pull-handle:focus-visible {
