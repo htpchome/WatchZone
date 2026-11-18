@@ -821,7 +821,9 @@ a saved layout contains:
 - Explicit fractional or intrinsic-content sizing for each logical grid row.
 - Explicit standard/mobile physical-client eligibility, independent of
   `default` and `phone` responsive variants. Physical phone eligibility does
-  not change when its container widens on rotation.
+  not change when its container widens on rotation. A Companion phone may
+  select a compatible Full Stage's wide variant for its viewport-edge
+  landscape presentation without changing the mobile flow.
 - Responsive variants whose corresponding nodes reuse stable IDs.
 - Creation and modification metadata where useful.
 

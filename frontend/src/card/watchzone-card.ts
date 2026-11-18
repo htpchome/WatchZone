@@ -51,6 +51,7 @@ import { roundButtonStyles } from "../ui/overlay-control.styles";
 import { ToastManager } from "../ui/toast-manager";
 import "../ui/toast-region";
 import { createBuiltInStageSet } from "../stage/built-in-stages/catalog";
+import { PHONE_STAGE_MAX_INLINE_SIZE } from "../stage/layout";
 import { LayoutRuntime } from "../stage/layout-runtime";
 import { cardStyles } from "./watchzone-card.styles";
 import {
@@ -64,6 +65,13 @@ import { ViewportFitController } from "./viewport-fit.controller";
 const USE_MOBILE_HEIGHT_MODE =
   CLIENT_PROFILE.isPhone ||
   (CLIENT_PROFILE.isCompanionApp && CLIENT_PROFILE.isTablet);
+const USE_COMPANION_PHONE_LANDSCAPE =
+  CLIENT_PROFILE.isCompanionApp && CLIENT_PROFILE.isPhone;
+
+const stageInlineSize =
+  CLIENT_PROFILE.isPhone && !CLIENT_PROFILE.isCompanionApp
+    ? (inlineSize: number) => Math.min(inlineSize, PHONE_STAGE_MAX_INLINE_SIZE)
+    : (inlineSize: number) => inlineSize;
 
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
 const recordedVideoViewerTag = unsafeStatic(RECORDED_VIDEO_VIEWER_TAG);
@@ -129,7 +137,7 @@ export class DashboardCard extends LitElement {
           const inlineSize = contentBox?.inlineSize ?? entry.contentRect.width;
           this._stageResizeFrame = requestAnimationFrame(() => {
             this._stageResizeFrame = undefined;
-            this._layoutRuntime.setInlineSize(inlineSize);
+            this._layoutRuntime.setInlineSize(stageInlineSize(inlineSize));
           });
         });
 
@@ -228,9 +236,12 @@ export class DashboardCard extends LitElement {
       this._handleRecordedMediaClose,
     );
     this._syncLayout(this._previewConfig ?? this._config);
+    this._loadCompanionPhoneLandscape();
     if (this._hass) this._observeConnection(this._hass.connection);
     this._syncRuntime();
-    this._layoutRuntime.setInlineSize(this.getBoundingClientRect().width);
+    this._layoutRuntime.setInlineSize(
+      stageInlineSize(this.getBoundingClientRect().width),
+    );
     this._observeStageSizeBoundary();
   }
 
@@ -349,7 +360,9 @@ export class DashboardCard extends LitElement {
     this._stageResizeObserver?.disconnect();
     this._stageSizeBoundary = boundary;
     this._stageResizeObserver?.observe(boundary);
-    this._layoutRuntime.setInlineSize(boundary.getBoundingClientRect().width);
+    this._layoutRuntime.setInlineSize(
+      stageInlineSize(boundary.getBoundingClientRect().width),
+    );
   }
 
   private readonly _handlePreviewDraft = (
@@ -549,6 +562,18 @@ export class DashboardCard extends LitElement {
     );
     this._layoutRuntime.setStageSet(designs, flow);
     this._syncRuntime();
+  }
+
+  private _loadCompanionPhoneLandscape(): void {
+    if (!USE_COMPANION_PHONE_LANDSCAPE) return;
+    void import("./companion-phone-landscape.controller")
+      .then(({ installCompanionPhoneLandscape }) =>
+        installCompanionPhoneLandscape(
+          this,
+          () => (this._previewConfig ?? this._config).stage_type === "full",
+        ),
+      )
+      .catch(console.error);
   }
 
   private readonly _handleConnectionDisconnected: HomeAssistantConnectionEventListener =

@@ -46,8 +46,12 @@ least one responsive variant: `default` for wider containers, `phone` for
 narrower containers, or both. `profiles` contains `standard`, `mobile`, or
 both and controls which card lineup may select the design. Responsive variants
 are independent presentation layouts selected by container width; rotating a
-physical phone does not move it out of the mobile Stage lineup. `stageType` is one of `full`,
-`camera_only`, or `minimal_camera_only`. The user-facing name of the last
+physical phone does not move it out of the mobile Stage lineup. On a Companion
+phone only, a mobile Full Stage that supplies both variants may use its
+`default` variant as a wide landscape composition. Browser phones, Companion
+tablets, and mobile designs without both variants remain on their ordinary
+responsive presentation. `stageType` is one of `full`, `camera_only`, or
+`minimal_camera_only`. The user-facing name of the last
 classification is Minimal Camera Stage; it has one implicit built-in design,
 so its standard and mobile lineups are not exposed in the card editor. Each variant
 owns a root grid container. Grid coordinates are positive logical columns and
@@ -212,6 +216,9 @@ headings.
 - Each placeable validates its own config at its lazy boundary.
 - Unknown or failed placeables fail locally and do not block siblings.
 - Responsive variant selection uses the card container's inline size.
+- The isolated Companion-phone landscape controller may select a compatible
+  mobile Full Stage's wide variant. It does not change physical-client flow,
+  Stage selection, or tablet/browser presentation.
 - Variant changes reuse records by stable node ID and compatible type.
 - Module-stack selection is local runtime interaction state and is not written
   into the saved Stage Design.

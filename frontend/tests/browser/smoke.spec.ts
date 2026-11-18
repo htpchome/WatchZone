@@ -8643,6 +8643,116 @@ test("uses mobile viewport sizing without edge-to-edge on Companion tablets", as
   });
 });
 
+test("transforms the Companion phone Full Stage into equal landscape columns", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      get: () =>
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Home Assistant/2026.9 Mobile/HomeAssistant, like Safari",
+    });
+  });
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  const card = page.locator("watchzone-card");
+  await card.evaluate(async (element) => {
+    const host = element as HTMLElement & {
+      setConfig(config: unknown): void;
+      updateComplete: Promise<boolean>;
+    };
+    host.setConfig({
+      cameras: [{ entity_id: "camera.front", title: "Front" }],
+      card_height_mode_phone: "fit_viewport",
+      type: "custom:watchzone-card",
+    });
+    await host.updateComplete;
+    const camera = host.shadowRoot?.querySelector<HTMLElement>(
+      '[data-layout-node$="default-camera-module"]',
+    );
+    if (!camera) throw new Error("Camera placement was not rendered");
+    camera.dataset.landscapeIdentity = "stable";
+  });
+
+  await expect(card.locator(".stage-grid")).toHaveAttribute(
+    "data-stage-variant",
+    "phone",
+  );
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect(card).toHaveClass(/companion-phone-landscape/);
+  await expect(card.locator(".stage-grid")).toHaveAttribute(
+    "data-stage-variant",
+    "default",
+  );
+  await expect
+    .poll(() =>
+      card.evaluate((element) =>
+        Array.from(
+          element.shadowRoot?.querySelectorAll<HTMLElement>(
+            ".stage-placement[data-layout-node]",
+          ) ?? [],
+        ).some((placement) => placement.getAnimations().length > 0),
+      ),
+    )
+    .toBe(true);
+  await card.evaluate(async (element) => {
+    const animations = Array.from(
+      element.shadowRoot?.querySelectorAll<HTMLElement>(
+        ".stage-placement[data-layout-node]",
+      ) ?? [],
+    ).flatMap((placement) => placement.getAnimations());
+    await Promise.all(animations.map((animation) => animation.finished));
+  });
+
+  const geometry = await card.evaluate((element) => {
+    const host = element as HTMLElement;
+    const root = host.shadowRoot;
+    const placement = (suffix: string) => {
+      const value = root?.querySelector<HTMLElement>(
+        `[data-layout-node$="${suffix}"]`,
+      );
+      if (!value) throw new Error(`${suffix} placement was not rendered`);
+      return value;
+    };
+    const camera = placement("default-camera-module");
+    const navigation = placement("default-camera-navigation-module");
+    const activity = placement("default-activity-stack");
+    const cameraRect = camera.getBoundingClientRect();
+    const navigationRect = navigation.getBoundingClientRect();
+    const activityRect = activity.getBoundingClientRect();
+    const hostRect = host.getBoundingClientRect();
+    return {
+      activityHeight: Math.round(activityRect.height),
+      activityLeft: Math.round(activityRect.left),
+      cameraHeight: Math.round(navigationRect.bottom - cameraRect.top),
+      cameraLeft: Math.round(cameraRect.left),
+      columnsDifferBy: Math.round(
+        Math.abs(cameraRect.width - activityRect.width),
+      ),
+      host: {
+        height: Math.round(hostRect.height),
+        left: Math.round(hostRect.left),
+        top: Math.round(hostRect.top),
+        width: Math.round(hostRect.width),
+      },
+      stableCamera: camera.dataset.landscapeIdentity,
+    };
+  });
+
+  expect(geometry).toEqual({
+    activityHeight: geometry.cameraHeight,
+    activityLeft: expect.any(Number),
+    cameraHeight: geometry.activityHeight,
+    cameraLeft: 0,
+    columnsDifferBy: 0,
+    host: { height: 390, left: 0, top: 0, width: 844 },
+    stableCamera: "stable",
+  });
+  expect(geometry.activityLeft).toBeGreaterThan(geometry.cameraLeft);
+  expect(geometry.activityHeight).toBeLessThanOrEqual(geometry.host.height);
+});
+
 test("exposes and honors the WatchZone semantic theme-token contract", async ({
   page,
 }) => {

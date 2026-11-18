@@ -86,7 +86,7 @@ export function stageVariantNameForInlineSize(
 export function validateStageDesign(value: unknown): StageDesignDocument {
   const source = objectValue(value, "Stage designs");
   if (source.schemaVersion !== STAGE_SCHEMA_VERSION) {
-    throw new Error("The stage design uses an unsupported schema version.");
+    throw new Error("Bad Stage schema.");
   }
   const variants = objectValue(source.variants, "Stage design variants");
   const profiles = source.profiles;
@@ -98,7 +98,7 @@ export function validateStageDesign(value: unknown): StageDesignDocument {
     ) ||
     new Set(profiles).size !== profiles.length
   ) {
-    throw new Error("Invalid Stage profiles.");
+    throw new Error("Invalid profiles.");
   }
   const validatedVariants: Partial<Record<StageVariantName, StageVariant>> = {};
   for (const name of ["default", "phone"] as const) {
@@ -107,7 +107,7 @@ export function validateStageDesign(value: unknown): StageDesignDocument {
     }
   }
   if (!validatedVariants.default && !validatedVariants.phone) {
-    throw new Error("Stage designs must provide at least one variant.");
+    throw new Error("Variant required.");
   }
   return {
     id: nonEmptyString(source.id, "Stage design IDs"),
@@ -126,7 +126,7 @@ function validateStageType(value: unknown): StageType {
     value !== "camera_only" &&
     value !== "minimal_camera_only"
   ) {
-    throw new Error("Stage designs require a valid stage type.");
+    throw new Error("Invalid Stage type.");
   }
   return value;
 }
@@ -136,12 +136,12 @@ export function validateStageCatalog(values: readonly unknown[]): StageCatalog {
   for (const value of values) {
     const design = validateStageDesign(value);
     if (catalog.has(design.id)) {
-      throw new Error(`Stage design ID "${design.id}" is duplicated.`);
+      throw new Error(`Duplicate Stage ID "${design.id}".`);
     }
     catalog.set(design.id, design);
   }
   if (catalog.size === 0) {
-    throw new Error("Stage catalogs must contain at least one design.");
+    throw new Error("Empty Stage catalog.");
   }
   return catalog;
 }
@@ -163,22 +163,22 @@ function validateFlowEntries(
   catalog: StageCatalog,
 ): readonly string[] {
   if (!Array.isArray(value) || value.length === 0) {
-    throw new Error(`The ${variantName} stage flow must not be empty.`);
+    throw new Error(`${variantName} Stage flow is empty.`);
   }
   const ids = value.map((entry) => nonEmptyString(entry, "Stage flow IDs"));
   const uniqueIds = new Set(ids);
   if (uniqueIds.size !== ids.length) {
-    throw new Error(`The ${variantName} stage flow contains duplicate IDs.`);
+    throw new Error(`Duplicate IDs in ${variantName} Stage flow.`);
   }
   for (const id of ids) {
     const design = catalog.get(id);
     if (!design) {
-      throw new Error(`Stage flow design "${id}" does not exist.`);
+      throw new Error(`Unknown Stage "${id}".`);
     }
     if (
       !design.profiles.includes(variantName === "phone" ? "mobile" : "standard")
     ) {
-      throw new Error(`Stage design "${id}" is not eligible.`);
+      throw new Error(`Ineligible "${id}".`);
     }
   }
   return ids;
@@ -197,7 +197,7 @@ function validateContainer(
   const source = objectValue(value, "Stage containers");
   const id = uniqueId(source.id, ids);
   if (source.kind !== "container" || !Array.isArray(source.children)) {
-    throw new Error(`Stage container "${id}" is invalid.`);
+    throw new Error(`Bad Stage container "${id}".`);
   }
   const columns = positiveInteger(source.columns, "Stage grid columns");
   const rows = validateRows(source.rows);
@@ -223,12 +223,12 @@ function validatePlacement(
   const column = positiveInteger(grid.column, "Stage grid columns");
   const columnSpan = positiveInteger(grid.columnSpan, "Stage column spans");
   if (column + columnSpan - 1 > columns) {
-    throw new Error("A stage placement exceeds its container columns.");
+    throw new Error("Stage exceeds columns.");
   }
   const row = positiveInteger(grid.row, "Stage grid rows");
   const rowSpan = positiveInteger(grid.rowSpan, "Stage row spans");
   if (row + rowSpan - 1 > rows) {
-    throw new Error("A stage placement exceeds its container rows.");
+    throw new Error("Stage exceeds rows.");
   }
   return {
     grid: {
@@ -248,11 +248,11 @@ function validatePlacementNode(
   const source = objectValue(value, "Stage placement nodes");
   if (source.kind === "module") return validateModule(source, ids);
   if (source.kind !== "stack") {
-    throw new Error("Stage placements require a module or module stack.");
+    throw new Error("Bad Stage placement.");
   }
   const id = uniqueId(source.id, ids);
   if (!Array.isArray(source.children) || source.children.length === 0) {
-    throw new Error(`Stage stack "${id}" must contain at least one module.`);
+    throw new Error(`Empty Stage stack "${id}".`);
   }
   return {
     children: source.children.map((child) => validateModule(child, ids)),
@@ -263,11 +263,11 @@ function validatePlacementNode(
 
 function validateRows(value: unknown): readonly StageGridRowSize[] {
   if (!Array.isArray(value) || value.length === 0) {
-    throw new Error("Stage grids require at least one row.");
+    throw new Error("Stage row required.");
   }
   return value.map((row) => {
     if (row !== "content" && row !== "fraction") {
-      throw new Error("Stage grid rows require valid sizing.");
+      throw new Error("Bad Stage row size.");
     }
     return row;
   });
@@ -277,7 +277,7 @@ function validateModule(value: unknown, ids: Set<string>): StageModuleNode {
   const source = objectValue(value, "Stage modules");
   const id = uniqueId(source.id, ids);
   if (source.kind !== "module") {
-    throw new Error(`Stage node "${id}" must be a module.`);
+    throw new Error(`Stage node "${id}" is not a module.`);
   }
   const slots =
     source.slots === undefined ? undefined : validateSlots(source.slots, ids);
@@ -301,7 +301,7 @@ function validateSlots(
     const nodes = source[name];
     if (nodes === undefined) continue;
     if (!Array.isArray(nodes)) {
-      throw new Error(`Stage slot "${name}" must be an array.`);
+      throw new Error(`Invalid Stage slot "${name}".`);
     }
     result[name] = nodes.map((node) => validateComponent(node, ids, name));
   }
@@ -316,7 +316,7 @@ function validateComponent(
   const source = objectValue(value, "Stage components");
   const id = uniqueId(source.id, ids);
   if (source.kind !== "component") {
-    throw new Error(`Stage node "${id}" must be a component.`);
+    throw new Error(`Stage node "${id}" is not a component.`);
   }
   const controlRegion = source.controlRegion;
   if (
@@ -325,12 +325,10 @@ function validateComponent(
     controlRegion !== "center" &&
     controlRegion !== "trailing"
   ) {
-    throw new Error(`Stage component "${id}" has an invalid control region.`);
+    throw new Error(`Bad control region on "${id}".`);
   }
   if (controlRegion !== undefined && slot !== "controls") {
-    throw new Error(
-      `Stage component "${id}" uses a control region outside a controls slot.`,
-    );
+    throw new Error(`Misplaced control region on "${id}".`);
   }
   const overlayRegion = source.overlayRegion;
   const overlayRegions: readonly StageOverlayRegion[] = [
@@ -345,12 +343,10 @@ function validateComponent(
     overlayRegion !== undefined &&
     !overlayRegions.includes(overlayRegion as StageOverlayRegion)
   ) {
-    throw new Error(`Stage component "${id}" has an invalid overlay region.`);
+    throw new Error(`Bad overlay region on "${id}".`);
   }
   if (overlayRegion !== undefined && slot !== "overlay") {
-    throw new Error(
-      `Stage component "${id}" uses an overlay region outside an overlay slot.`,
-    );
+    throw new Error(`Misplaced overlay region on "${id}".`);
   }
   return {
     componentType: nonEmptyString(source.componentType, "Component types"),
@@ -366,35 +362,35 @@ function validateComponent(
 
 function uniqueId(value: unknown, ids: Set<string>): string {
   const id = nonEmptyString(value, "Stage node IDs");
-  if (ids.has(id)) throw new Error(`Stage node ID "${id}" is duplicated.`);
+  if (ids.has(id)) throw new Error(`Duplicate node "${id}".`);
   ids.add(id);
   return id;
 }
 
 function objectValue(value: unknown, label: string): Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new Error(`${label} must be objects.`);
+    throw new Error(`${label}: object required.`);
   }
   return value as Record<string, unknown>;
 }
 
 function nonEmptyString(value: unknown, label: string): string {
   if (typeof value !== "string" || value.trim().length === 0) {
-    throw new Error(`${label} must be non-empty strings.`);
+    throw new Error(`${label}: text required.`);
   }
   return value.trim();
 }
 
 function nonNegativeInteger(value: unknown, label: string): number {
   if (!Number.isInteger(value) || (value as number) < 0) {
-    throw new Error(`${label} must be non-negative integers.`);
+    throw new Error(`${label}: nonnegative integer required.`);
   }
   return value as number;
 }
 
 function positiveInteger(value: unknown, label: string): number {
   if (!Number.isInteger(value) || (value as number) < 1) {
-    throw new Error(`${label} must be positive integers.`);
+    throw new Error(`${label}: positive integer required.`);
   }
   return value as number;
 }

@@ -467,6 +467,7 @@ export class LayoutRuntime implements ReactiveController {
     const controls = node.slots?.controls ?? [];
     return html`<div
       class="stage-placement module-composition has-components"
+      data-layout-node=${node.id}
       style=${placementStyle}
     >
       ${this._renderRecord(node)}

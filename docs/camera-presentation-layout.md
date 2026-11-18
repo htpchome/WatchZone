@@ -111,6 +111,14 @@ camera or make the media region unusable. Module minimums derive from current
 CSS geometry, so supported theme or user changes to tile sizing also change the
 minimum without a parallel pixel constant.
 
+The built-in mobile Full Stage uses a separate Companion-phone landscape
+presentation. It occupies the fixed WebView, covers Home Assistant's dashboard
+chrome, and applies viewport safe-area padding. Camera plus camera navigation
+fill the leading half while the active Reviews, Events, Recordings, or Exports
+stack fills the trailing half. Both columns share the same bounded height; the
+active media list remains the only scrolling surface. This overlay does not
+activate for browser phones, Companion tablets, or incompatible Stage types.
+
 Card, Camera, camera-navigation, and activity-tile appearance likewise store
 independent standard-device and physical-phone values. Phone defaults use an
 edge-to-edge card without card or Camera padding, shadows, or rounded corners;

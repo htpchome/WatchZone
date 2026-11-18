@@ -130,6 +130,13 @@ This host-application sizing policy is independent from phone-only Stage,
 appearance, and edge-to-edge selection; a Companion tablet retains the
 standard presentation while using the mobile viewport-height mode.
 
+The built-in mobile Full Stage has one narrower host-specific exception. On a
+physical phone inside Companion, rotating the fixed WebView to landscape
+presents the compatible wide Stage variant as a viewport-edge overlay. The
+same Stage nodes and live sessions are retained while its camera/navigation
+and activity placements animate into equal columns. Browser phones and every
+tablet remain outside this controller.
+
 ### 2.3 Theme profile
 
 The shared frontend theme profile uses `hass.themes.darkMode` as Home
