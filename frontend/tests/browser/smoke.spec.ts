@@ -8290,6 +8290,7 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
         setConfig(config: unknown): void;
         updateComplete: Promise<boolean>;
       };
+      card.style.setProperty("--ha-card-border-width", "1px");
       const sections = document.createElement("hui-sections-view");
       const wrapper = document.createElement("div");
       const container = document.createElement("div");
@@ -8338,6 +8339,10 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
       const cardSurface = card.shadowRoot?.querySelector("ha-card");
       if (!cardSurface) throw new Error("Card surface was not rendered");
       const edge = {
+        borderBlockStartWidth:
+          getComputedStyle(cardSurface).borderBlockStartWidth,
+        borderInlineEndWidth:
+          getComputedStyle(cardSurface).borderInlineEndWidth,
         fitViewportMinimum: getComputedStyle(cardSurface).minBlockSize,
         mediaSafeAreaUnderlap: getComputedStyle(card)
           .getPropertyValue("--wzc-media-safe-area-underlap")
@@ -8369,6 +8374,8 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
 
   expect(result).toEqual({
     edge: {
+      borderBlockStartWidth: "0px",
+      borderInlineEndWidth: "0px",
       fitViewportMinimum: "436px",
       mediaSafeAreaUnderlap: "36px",
       containerPadding: "0px",
@@ -9046,6 +9053,11 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     (collapsedHandle?.y ?? 0) + (collapsedHandle?.height ?? 0) / 2,
   );
   await page.mouse.down();
+  const handleAfterPointerDown = await pullHandle.boundingBox();
+  expect(handleAfterPointerDown).not.toBeNull();
+  expect(
+    (handleAfterPointerDown?.x ?? 0) + (handleAfterPointerDown?.width ?? 0) / 2,
+  ).toBeCloseTo(collapsedHandleCenter, 0);
   expect(
     await cameraCarousel.evaluate(
       (element) => getComputedStyle(element, "::after").borderTopWidth,

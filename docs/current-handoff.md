@@ -7,7 +7,7 @@ feature before changing source code.
 ## Repository state
 
 - Branch: `main`
-- Application version: `0.0.4-dev.439`
+- Application version: `0.0.4-dev.440`
 - Baseline commit: `4f9301d` —
   `v0.0.4-dev.432 - fix(theme): restore legacy secondary text precedence`
 - The worktree was clean at that baseline. The expected pending dev.433 change

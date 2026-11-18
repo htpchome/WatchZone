@@ -36,6 +36,7 @@ export class CompanionCameraPullController {
   private _handle?: HTMLButtonElement;
   private _handleBaselineLeft?: number;
   private _handleBaselineTop?: number;
+  private _measureFrame?: number;
   private _moved = false;
   private _pendingProgress = 0;
   private _progress = 0;
@@ -57,7 +58,7 @@ export class CompanionCameraPullController {
   public sync(): void {
     if (!this._active) return;
     this._connectHandle();
-    if (this._progress === 0) this._measureBounds();
+    if (this._progress === 0) this._scheduleMeasurement();
     else this._applyProgress(this._progress);
   }
 
@@ -82,6 +83,7 @@ export class CompanionCameraPullController {
     handle.setAttribute("role", "slider");
     handle.setAttribute("aria-valuemin", "0");
     handle.setAttribute("aria-valuemax", "100");
+    handle.hidden = true;
     handle.addEventListener("click", this._handleClick);
     handle.addEventListener("keydown", this._handleKeydown);
     handle.addEventListener("lostpointercapture", this._cancelPointer);
@@ -109,15 +111,15 @@ export class CompanionCameraPullController {
     this._camera = undefined;
   }
 
-  private _measureBounds(): void {
+  private _measureBounds(preserveHandlePosition = false): boolean {
     const camera = this._camera;
-    if (!camera || this._progress > 0) return;
+    if (!camera || this._progress > 0) return false;
     const grid =
       this._host.renderRoot.querySelector<HTMLElement>(".stage-grid");
     const activity = this._host.renderRoot.querySelector<HTMLElement>(
       `.stage-placement[data-layout-node$="${ACTIVITY_NODE_SUFFIX}"]`,
     );
-    if (!grid || !activity) return;
+    if (!grid || !activity) return false;
     const rect = camera.getBoundingClientRect();
     const gridRect = grid.getBoundingClientRect();
     const activityRect = activity.getBoundingClientRect();
@@ -127,7 +129,7 @@ export class CompanionCameraPullController {
       gridRect.width <= 0 ||
       gridRect.height <= 0
     )
-      return;
+      return false;
     this._grid = grid;
     this._baseline = {
       height: rect.height,
@@ -135,19 +137,39 @@ export class CompanionCameraPullController {
       top: rect.top - gridRect.top,
       width: rect.width,
     };
-    this._handleBaselineLeft = (rect.right + activityRect.left) / 2;
-    this._handleBaselineTop = rect.top + rect.height / 2;
+    const handleRect = this._handle?.getBoundingClientRect();
+    this._handleBaselineLeft =
+      preserveHandlePosition && handleRect
+        ? handleRect.left + handleRect.width / 2
+        : (rect.right + activityRect.left) / 2;
+    this._handleBaselineTop =
+      preserveHandlePosition && handleRect
+        ? handleRect.top + handleRect.height / 2
+        : rect.top + rect.height / 2;
     this._host.style.setProperty(
       "--wzc-companion-camera-base-block-size",
       `${rect.bottom - gridRect.top}px`,
     );
     this._applyProgress(0);
+    if (this._handle) this._handle.hidden = false;
+    return true;
+  }
+
+  private _scheduleMeasurement(): void {
+    if (this._measureFrame !== undefined) return;
+    this._measureFrame = requestAnimationFrame(() => {
+      this._measureFrame = requestAnimationFrame(() => {
+        this._measureFrame = undefined;
+        if (!this._active || this._progress > 0) return;
+        this._measureBounds();
+      });
+    });
   }
 
   private readonly _startPointer = (event: PointerEvent): void => {
     if (!this._active || event.button !== 0 || !this._handle) return;
-    this._measureBounds();
-    if (!this._baseline) return;
+    if (this._handle.hidden || !this._measureBounds(true) || !this._baseline)
+      return;
     event.preventDefault();
     this._cancelSettle();
     this._drag = {
@@ -247,7 +269,7 @@ export class CompanionCameraPullController {
     this._host.classList.remove("landscape-camera-overlay-settling");
     if (target === 0) {
       this._host.classList.remove("landscape-camera-overlay-active");
-      this._measureBounds();
+      this._scheduleMeasurement();
     }
     this._syncAccessibility();
   }
@@ -358,6 +380,9 @@ export class CompanionCameraPullController {
     this._cancelSettle();
     if (this._dragFrame !== undefined) cancelAnimationFrame(this._dragFrame);
     this._dragFrame = undefined;
+    if (this._measureFrame !== undefined)
+      cancelAnimationFrame(this._measureFrame);
+    this._measureFrame = undefined;
     if (this._drag && this._handle?.hasPointerCapture(this._drag.pointerId)) {
       this._handle.releasePointerCapture(this._drag.pointerId);
     }

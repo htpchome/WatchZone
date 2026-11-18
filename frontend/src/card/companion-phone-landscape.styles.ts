@@ -152,6 +152,10 @@ export const companionPhoneLandscapeStyles = css`
     -webkit-tap-highlight-color: transparent;
   }
 
+  .companion-camera-pull-handle[hidden] {
+    display: none;
+  }
+
   .companion-camera-pull-handle::before {
     display: block;
     box-sizing: border-box;
