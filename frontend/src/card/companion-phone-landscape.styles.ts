@@ -23,8 +23,16 @@ export const companionPhoneLandscapeStyles = css`
     min-block-size: 0;
     padding-block: env(safe-area-inset-top, 0px)
       var(--wzc-safe-area-inset-bottom);
-    padding-inline: max(0.5rem, calc(env(safe-area-inset-left, 0px) - 1rem))
-      max(0.5rem, calc(env(safe-area-inset-right, 0px) - 1rem));
+    padding-inline: max(
+        0.5rem,
+        env(safe-area-inset-left, 0px),
+        env(safe-area-inset-right, 0px)
+      )
+      max(
+        0.5rem,
+        env(safe-area-inset-left, 0px),
+        env(safe-area-inset-right, 0px)
+      );
     border-radius: 0;
     box-shadow: none;
   }

@@ -116,8 +116,9 @@ presentation. It occupies the fixed WebView, covers Home Assistant's dashboard
 chrome, and applies viewport safe-area padding. The leading 60% contains a
 16:9 camera plus camera navigation; the trailing 40% contains the active
 Reviews, Events, Recordings, or Exports stack. A top inset protects the camera,
-a module gutter separates the columns, and reduced inline safe-area insets
-protect the viewport edges without wasting the full landscape inset. The
+a module gutter separates the columns, and the larger reported landscape
+safe-area inset is reserved symmetrically on both inline edges so either phone
+rotation direction protects both columns. The
 trailing column fills the available viewport height while the active media list
 remains the only scrolling surface. This overlay does not activate for browser
 phones, Companion tablets, or incompatible Stage types.
