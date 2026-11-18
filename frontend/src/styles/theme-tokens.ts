@@ -79,8 +79,8 @@ export const themeTokens = css`
       var(--primary-text-color, CanvasText)
     );
     --wzc-color-text-2: var(
-      --ha-color-text-secondary,
-      var(--secondary-text-color, var(--wzc-color-text-1))
+      --secondary-text-color,
+      var(--ha-color-text-secondary, var(--wzc-color-text-1))
     );
     --wzc-color-text-3: var(
       --disabled-text-color,

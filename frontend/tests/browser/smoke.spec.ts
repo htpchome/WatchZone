@@ -9254,6 +9254,8 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
     ];
     const host = element as HTMLElement;
     host.style.setProperty("--wzc-color-text-1", "rgb(10, 20, 30)");
+    host.style.setProperty("--secondary-text-color", "rgb(40, 50, 60)");
+    host.style.setProperty("--ha-color-text-secondary", "rgb(140, 150, 160)");
     host.style.setProperty("--text-primary-color", "rgba(0, 0, 0, 0.95)");
     host.style.setProperty("--ha-color-on-primary-loud", "rgb(245, 246, 247)");
     host.style.setProperty(
@@ -9285,6 +9287,11 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
     host.shadowRoot?.append(onPrimaryProbe);
     const onPrimaryColor = getComputedStyle(onPrimaryProbe).color;
     onPrimaryProbe.remove();
+    const secondaryTextProbe = document.createElement("span");
+    secondaryTextProbe.style.color = "var(--wzc-color-text-2)";
+    host.shadowRoot?.append(secondaryTextProbe);
+    const secondaryTextColor = getComputedStyle(secondaryTextProbe).color;
+    secondaryTextProbe.remove();
     host.style.setProperty("--wzc-stage-module-gap", "7px");
     const placementRects = Array.from(stageGrid?.children ?? []).map((child) =>
       child.getBoundingClientRect(),
@@ -9323,6 +9330,7 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
       popoverRadius: hostStyle.getPropertyValue("--wzc-popover-radius").trim(),
       popoverShadow: hostStyle.getPropertyValue("--wzc-popover-shadow").trim(),
       reversedTextColor,
+      secondaryTextColor,
       taskBackground: hostStyle
         .getPropertyValue("--wzc-task-dialog-background")
         .trim(),
@@ -9345,6 +9353,7 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
     onPrimaryColor: "rgb(235, 236, 237)",
     overriddenPlacementGaps: [7, 7, 0],
     reversedTextColor: "rgb(245, 246, 247)",
+    secondaryTextColor: "rgb(40, 50, 60)",
     textColor: "rgb(10, 20, 30)",
   });
   expect(

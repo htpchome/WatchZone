@@ -7,12 +7,12 @@ feature before changing source code.
 ## Repository state
 
 - Branch: `main`
-- Application version: `0.0.4-dev.431`
-- Baseline commit: `c6770b6` —
-  `v0.0.4-dev.430 - fix(mobile): synchronize rotation with HA layout settlement`
-- The worktree was clean at that baseline. The expected pending dev.431 change
-  replaces per-placement rotation FLIP with one coordinated card-surface
-  transition and updates its focused tests and this handoff.
+- Application version: `0.0.4-dev.432`
+- Baseline commit: `c0875e8` —
+  `v0.0.4-dev.431 - fix(mobile): coordinate Companion rotation as one surface`
+- The worktree was clean at that baseline. The expected pending dev.432 change
+  restores legacy Home Assistant secondary-text theme precedence and updates
+  its focused browser coverage and this handoff.
 - Release artifact: `dist/watchzone.zip`
 
 Documentation-only work does not require a version bump. The user makes all
@@ -152,23 +152,37 @@ Verify repeatedly on an iPhone in Companion:
 - camera expansion to fullscreen and return;
 - no outer-window scroll and no lower-bar layout shift.
 
-## Validation at dev.431
+## Home Assistant secondary-text compatibility
 
-The dev.431 source passed:
+- `--wzc-color-text-2` is the single frontend bridge for secondary text and
+  inactive icon color.
+- It resolves `--secondary-text-color` first and uses
+  `--ha-color-text-secondary` as the fallback. This preserves older Home
+  Assistant themes that define both variables but provide their intended color
+  through the legacy token.
+- Feature-level semantic aliases such as event metadata, day headings, and
+  inactive Stage controls continue to consume `--wzc-*` tokens. Do not add
+  feature-specific Home Assistant fallbacks or hard-coded corrections.
+
+## Validation at dev.432
+
+The dev.432 source passed:
 
 - formatting, lint, TypeScript type checking, and frontend build;
 - 489 unit tests across 77 files;
 - 156 Playwright tests across Chromium, Firefox, and WebKit;
+- browser coverage proving the legacy secondary-text token wins when both Home
+  Assistant variables are defined;
 - release packaging and version consistency;
 - `git diff --check`.
 
 Release budget at that baseline:
 
-- eager graph: 60,638 bytes gzip;
+- eager graph: 60,654 bytes gzip;
 - validation ceiling: 61,440 bytes gzip;
-- lazy editor graph: 19,414 bytes gzip.
+- lazy editor graph: 19,422 bytes gzip.
 
-The eager graph has only 802 bytes of remaining validation headroom. Run
+The eager graph has only 786 bytes of remaining validation headroom. Run
 `bash scripts/package-release.sh` before every release-affecting handoff and do
 not hand work back over budget.
 
