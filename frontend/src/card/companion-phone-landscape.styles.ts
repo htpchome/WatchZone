@@ -6,6 +6,26 @@ export const companionPhoneLandscapeStyles = css`
     --wzc-camera-activity-outline-width: 0px;
   }
 
+  :host(.companion-phone-orientation-overlay) {
+    position: relative !important;
+    z-index: 1000;
+    box-sizing: border-box;
+    block-size: var(--wzc-companion-portrait-flow-block-size) !important;
+    min-block-size: var(--wzc-companion-portrait-flow-block-size) !important;
+  }
+
+  :host(.companion-phone-orientation-overlay) ha-card {
+    position: fixed;
+    z-index: 0;
+    inset: 0;
+    box-sizing: border-box;
+    inline-size: 100vw;
+    block-size: 100dvh !important;
+    height: 100dvh !important;
+    min-block-size: 100dvh !important;
+    margin: 0;
+  }
+
   :host(.companion-phone-landscape.height-mode-fit-viewport) {
     --wzc-activity-list-max-block-size: calc(
       var(--wzc-media-day-header-block-size) + 3 *

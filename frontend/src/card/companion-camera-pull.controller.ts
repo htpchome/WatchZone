@@ -144,6 +144,14 @@ export class CompanionCameraPullController {
     this._applyProgress(0);
   }
 
+  private _surfaceRect(): DOMRect {
+    return (
+      this._host.renderRoot
+        .querySelector<HTMLElement>("ha-card")
+        ?.getBoundingClientRect() ?? this._host.getBoundingClientRect()
+    );
+  }
+
   private readonly _startPointer = (event: PointerEvent): void => {
     if (!this._active || event.button !== 0 || !this._handle) return;
     this._measureBounds();
@@ -175,7 +183,7 @@ export class CompanionCameraPullController {
     )
       return;
     event.preventDefault();
-    const hostRect = this._host.getBoundingClientRect();
+    const hostRect = this._surfaceRect();
     const travel = Math.max(
       1,
       hostRect.right - EXPANDED_HANDLE_INSET_PX - handleBaselineLeft,
@@ -266,7 +274,7 @@ export class CompanionCameraPullController {
       handleBaselineTop === undefined
     )
       return;
-    const hostRect = this._host.getBoundingClientRect();
+    const hostRect = this._surfaceRect();
     const gridRect = grid.getBoundingClientRect();
     const target: CameraBounds = {
       height: hostRect.height,

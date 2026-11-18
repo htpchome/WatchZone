@@ -109,16 +109,18 @@ CSS geometry, so supported theme or user changes to tile sizing also change the
 minimum without a parallel pixel constant.
 
 The built-in mobile Full Stage uses a separate Companion-phone landscape
-presentation. It remains in the card's normal Home Assistant flow slot beneath
-the navigation bar; it never fixes the card host to the viewport or covers,
-hides, or restyles Home Assistant's dashboard chrome. The leading 60% contains
-a 16:9 camera plus camera navigation; the trailing 40% contains the active
-Reviews, Events, Recordings, or Exports stack. The independently placeable
-activity-navigation module is right-aligned below the camera column at its
-normal toolbar control size. The activity title aligns with the top of the
-camera. An expanded module gutter separates the columns, and a reduced form of
-the larger reported landscape safe-area inset is reserved symmetrically on
-both inline edges so either phone rotation direction protects both columns.
+presentation. Portrait remains in the normal Home Assistant flow beneath its
+navigation. Landscape retains that flow allocation as a placeholder while the
+WatchZone surface covers the complete viewport, including Home Assistant's
+navigation; WatchZone does not remove or restyle the navigation itself. The
+leading 60% contains a 16:9 camera plus camera navigation; the trailing 40%
+contains the active Reviews, Events, Recordings, or Exports stack. The
+independently placeable activity-navigation module is right-aligned below the
+camera column at its normal toolbar control size. The activity title aligns
+with the top of the camera. An expanded module gutter separates the columns,
+and a reduced form of the larger reported landscape safe-area inset is
+reserved symmetrically on both inline edges so either phone rotation direction
+protects both columns.
 Each active media list is capped at three complete tiles and remains the only
 scrolling surface. Review-state controls use a compact outlined icon without
 label text in this presentation, aligned on the tile footer with the

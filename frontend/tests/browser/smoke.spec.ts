@@ -8767,7 +8767,7 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
   );
   await page.setViewportSize({ width: 844, height: 390 });
   await expect(card).toHaveClass(/companion-phone-landscape/);
-  await expect(card).not.toHaveClass(/companion-phone-orientation-overlay/);
+  await expect(card).toHaveClass(/companion-phone-orientation-overlay/);
   await expect(card.locator(".stage-grid")).toHaveAttribute(
     "data-stage-variant",
     "default",
@@ -8777,20 +8777,35 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
       "[data-ha-navbar-fixture]",
     );
     const cardRect = element.getBoundingClientRect();
+    const surfaceRect = element.shadowRoot
+      ?.querySelector<HTMLElement>("ha-card")
+      ?.getBoundingClientRect();
     const navbarRect = navbar?.getBoundingClientRect();
     return {
+      cardHeight: Math.round(cardRect.height),
       cardPosition: getComputedStyle(element).position,
-      cardTop: cardRect.top,
+      cardTop: Math.round(cardRect.top),
       navbarBottom: navbarRect?.bottom,
       navbarHeight: navbarRect?.height,
+      surface: surfaceRect
+        ? {
+            height: Math.round(surfaceRect.height),
+            left: Math.round(surfaceRect.left),
+            top: Math.round(surfaceRect.top),
+            width: Math.round(surfaceRect.width),
+          }
+        : undefined,
     };
   });
   expect(landscapeFlow).toEqual({
-    cardPosition: "static",
+    cardHeight: expect.any(Number),
+    cardPosition: "relative",
     cardTop: expect.any(Number),
     navbarBottom: expect.any(Number),
     navbarHeight: 56,
+    surface: { height: 390, left: 0, top: 0, width: 844 },
   });
+  expect(landscapeFlow.cardHeight).toBeGreaterThan(390);
   expect(landscapeFlow.cardTop).toBeGreaterThanOrEqual(
     landscapeFlow.navbarBottom ?? 0,
   );
@@ -8898,7 +8913,10 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     const navigationRect = navigation.getBoundingClientRect();
     const activityRect = activity.getBoundingClientRect();
     const activityNavigationRect = activityNavigation.getBoundingClientRect();
-    const hostRect = host.getBoundingClientRect();
+    const hostRect = root
+      ?.querySelector<HTMLElement>("ha-card")
+      ?.getBoundingClientRect();
+    if (!hostRect) throw new Error("Card surface was not rendered");
     return {
       activityHeight: Math.round(activityRect.height),
       activityLeft: Math.round(activityRect.left),
@@ -9187,6 +9205,20 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     )
     .toEqual([false, false, true]);
   await pullHandle.press("Home");
+  await card.evaluate((element) => {
+    const states: string[] = [];
+    const record = () =>
+      states.push(
+        `${element.classList.contains("companion-phone-landscape")}:${element.classList.contains("companion-phone-orientation-overlay")}`,
+      );
+    record();
+    const observer = new MutationObserver(record);
+    observer.observe(element, { attributeFilter: ["class"] });
+    Object.assign(window, {
+      __watchZoneOrientationObserver: observer,
+      __watchZoneOrientationStates: states,
+    });
+  });
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(card).not.toHaveClass(/companion-phone-landscape/);
   await expect(card.locator(".stage-grid")).toHaveAttribute(
@@ -9200,6 +9232,17 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     );
   expect(leavingAnimations.every((count) => count === 0)).toBe(true);
   await expect(card).not.toHaveClass(/companion-phone-orientation-overlay/);
+  const orientationStates = await page.evaluate(() => {
+    const trackedWindow = window as Window & {
+      __watchZoneOrientationObserver?: MutationObserver;
+      __watchZoneOrientationStates?: string[];
+    };
+    trackedWindow.__watchZoneOrientationObserver?.disconnect();
+    return trackedWindow.__watchZoneOrientationStates ?? [];
+  });
+  expect(orientationStates).toContain("true:true");
+  expect(orientationStates).toContain("false:false");
+  expect(orientationStates).not.toContain("false:true");
   const portraitFlow = await card.evaluate((element) => {
     const navbar = document.querySelector<HTMLElement>(
       "[data-ha-navbar-fixture]",

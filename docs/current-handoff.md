@@ -7,12 +7,12 @@ feature before changing source code.
 ## Repository state
 
 - Branch: `main`
-- Application version: `0.0.4-dev.433`
-- Baseline commit: `4f9301d` —
-  `v0.0.4-dev.432 - fix(theme): restore legacy secondary text precedence`
-- The worktree was clean at that baseline. The expected pending dev.433 change
-  keeps Companion landscape in Home Assistant flow, pins the canonical status
-  palette, and updates the governing contracts and regression coverage.
+- Application version: `0.0.4-dev.434`
+- Baseline commit: `06289c4` —
+  `v0.0.4-dev.433 - fix(frontend): preserve HA navigation and canonical status colors`
+- The expected pending dev.434 change restores the Companion landscape
+  full-viewport surface while retaining a portrait-flow placeholder, fixes
+  fullscreen camera-pull geometry, and makes portrait release atomic.
 - Release artifact: `dist/watchzone.zip`
 
 Documentation-only work does not require a version bump. The user makes all
@@ -94,29 +94,31 @@ This feature applies only to the Home Assistant Companion app on phones.
 ## Rotation transition implementation
 
 - Companion's native whole-window transition owns the physical rotation.
-- WatchZone remains in its normal Home Assistant flow slot beneath the
-  navigation bar in both orientations. It never fixes the card host to the
-  viewport or covers, hides, or restyles Home Assistant's navigation.
+- Portrait keeps WatchZone in normal Home Assistant flow below the navigation.
+- Landscape retains the portrait flow allocation as an inert placeholder and
+  fixes the WatchZone surface over the complete viewport. The HA navigation is
+  covered, not removed or restyled.
 - Orientation atomically selects the compatible Stage variant. Stage
   placements are never individually transformed or scaled.
-- A short translation-only surface settle runs only when the card's measured
-  flow position actually changes and honors reduced-motion preferences. It
-  does not synthesize movement when the surface is already aligned.
+- On portrait return, the landscape surface remains until viewport dimensions
+  are stable. The portrait Stage update and removal of the landscape cover
+  complete in one paint, preventing a portrait-on-overlay frame or late header
+  push-down.
 - Activity-tile and camera alert/detection outline widths remain temporarily
-  zero during the orientation transaction and are restored after the single
-  surface settle.
+  zero during the orientation transaction and are restored after settlement.
 
 ## Rotation status: physical-device verification required
 
-The dev.433 implementation addresses the transition defects visible in the
+The dev.434 implementation addresses the transition defects visible in the
 November 18 recordings:
 
 - the camera no longer receives an independent non-uniform FLIP scale;
 - the 60/40 Stage is selected without a delayed full-width landscape frame;
-- Home Assistant's navigation remains visible in portrait and landscape; and
-- the card cannot peg itself to the physical viewport top or later jump into a
-  navbar-offset flow position because the fixed full-host overlay no longer
-  exists.
+- Home Assistant's navigation is visible in portrait and covered in landscape;
+- the portrait flow slot remains allocated while the surface covers the
+  landscape viewport, preventing page collapse or scroll loss; and
+- fullscreen camera expansion uses the full-viewport surface bounds instead of
+  the retained portrait placeholder.
 
 Automated browser tests validate ownership, identity, layout, animation
 boundaries, and a persistent navigation fixture, but they do not reproduce the

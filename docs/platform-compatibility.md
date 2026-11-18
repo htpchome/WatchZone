@@ -130,16 +130,18 @@ standard presentation while using the mobile viewport-height mode.
 
 The built-in mobile Full Stage has one narrower host-specific exception. On a
 physical phone inside Companion, rotating the fixed WebView to landscape
-presents the compatible wide Stage variant in the card's existing Home
-Assistant flow slot. Home Assistant's navigation remains rendered and visible
-above the card in both orientations. The same Stage nodes and live sessions are
-retained in a 60/40 camera/activity composition. The controller does not fix
-the card host to the viewport, cover dashboard chrome, or add per-placement
-transforms; Companion's native whole-window orientation transition owns the
-coordinated rotation. It commits the responsive layout atomically and applies
-one short whole-surface settle transform instead of independently animating
-Stage placements. Browser phones and every tablet remain outside this
-controller.
+presents the compatible wide Stage variant as a full-viewport WatchZone
+surface. The card host retains its portrait flow allocation underneath so Home
+Assistant does not scroll or collapse the page. The surface covers the Home
+Assistant navigation in landscape without removing or restyling it; portrait
+reveals that navigation and returns the card to normal flow. The same Stage
+nodes and live sessions are retained in a 60/40 camera/activity composition.
+Companion's native whole-window orientation transition owns the coordinated
+rotation, and WatchZone does not independently transform Stage placements. On
+return, the landscape surface remains intact until the portrait viewport is
+stable; the portrait Stage and flow surface are then committed in one paint so
+portrait content is never rendered over the navigation. Browser phones and
+every tablet remain outside this controller.
 
 ### 2.3 Theme profile
 
