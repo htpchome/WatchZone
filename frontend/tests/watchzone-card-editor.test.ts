@@ -293,6 +293,16 @@ describe("watchzone-card-editor", () => {
       checked: true,
       value: "default-stage",
     });
+    const mobileLayoutInputs = [
+      ...(stageItem?.querySelectorAll<HTMLInputElement>(
+        'input[data-stage-profile="phone"]',
+      ) ?? []),
+    ];
+    expect(mobileLayoutInputs).toHaveLength(1);
+    expect(mobileLayoutInputs[0]).toMatchObject({
+      checked: true,
+      value: "default-mobile-stage",
+    });
 
     fullLayoutInputs[0]!.checked = false;
     fullLayoutInputs[0]!.dispatchEvent(new Event("change", { bubbles: true }));

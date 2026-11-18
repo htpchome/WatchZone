@@ -537,6 +537,9 @@ export class DashboardCard extends LitElement {
   }
 
   private _syncLayout(config: CardConfig): void {
+    this._layoutRuntime.setFlowProfile(
+      CLIENT_PROFILE.isPhone ? "phone" : "default",
+    );
     const { designs, flow } = createBuiltInStageSet(
       activeDeviceAppearanceConfig(config, CLIENT_PROFILE.isPhone),
     );

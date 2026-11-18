@@ -54,7 +54,7 @@ describe("WatchZone card configuration", () => {
       start_alert_takeover_on: false,
       stage_flow: {
         default: ["default-stage"],
-        phone: ["default-stage"],
+        phone: ["default-mobile-stage"],
       },
       stage_type: "full",
       tap_action: { action: "more-info" },
@@ -131,7 +131,18 @@ describe("WatchZone card configuration", () => {
     ).toBe("auto");
   });
 
-  it("normalizes stage type as the gatekeeper for desktop and phone flows", () => {
+  it("normalizes stage type as the gatekeeper for standard and mobile flows", () => {
+    expect(
+      normalizeCardConfig({
+        stage_flow: {
+          default: ["default-stage"],
+          phone: ["default-stage"],
+        },
+      }).stage_flow,
+    ).toEqual({
+      default: ["default-stage"],
+      phone: ["default-mobile-stage"],
+    });
     expect(normalizeCardConfig({ stage_type: "camera_only" })).toMatchObject({
       stage_flow: {
         default: ["standard-camera-stage"],

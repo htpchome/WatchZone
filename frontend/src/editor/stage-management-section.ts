@@ -2,7 +2,12 @@ import { html } from "lit";
 
 import type { CardConfig } from "../core/config";
 import type { LocalizeFunction } from "../core/localization";
-import type { AvailableStageType, ConfiguredStageFlow } from "../core/stage";
+import {
+  DEFAULT_FULL_STAGE_ID,
+  DEFAULT_MOBILE_FULL_STAGE_ID,
+  type AvailableStageType,
+  type ConfiguredStageFlow,
+} from "../core/stage";
 import { builtInStageOptions } from "../stage/built-in-stages/catalog";
 
 interface StageManagementOptions {
@@ -41,7 +46,7 @@ function stageDesignLabel(
   id: string,
   fallback: string,
 ): string {
-  return id === "default-stage"
+  return id === DEFAULT_FULL_STAGE_ID || id === DEFAULT_MOBILE_FULL_STAGE_ID
     ? localize("editor.default_stage_layout")
     : fallback;
 }
@@ -56,7 +61,7 @@ function renderStageLayoutOptions(
   return html`<fieldset class="stage-layout-setting">
     <legend>${heading}</legend>
     <div class="stage-layout-options">
-      ${builtInStageOptions(stageType).map(
+      ${builtInStageOptions(stageType, profile).map(
         (stage) =>
           html`<label
             class=${`stage-layout-option${

@@ -563,50 +563,49 @@ describe("layout composition", () => {
     );
   });
 
-  it("allows stage designs to target one or both responsive profiles", () => {
-    const desktop = layoutWithModules("desktop-node");
-    const phone = {
+  it("keeps physical-client profiles independent from responsive variants", () => {
+    const mobile = {
       ...layoutWithModules("phone-node"),
       id: "phone-stage",
-      variants: { phone: variantWithNodes("phone-node") },
-    };
-    const desktopOnly = {
-      ...desktop,
-      variants: { default: desktop.variants.default },
-    };
+      profiles: ["mobile"],
+    } as const;
 
-    expect(validateStageDesign(desktopOnly).variants.phone).toBeUndefined();
-    expect(validateStageDesign(phone).variants.default).toBeUndefined();
-    expect(() => validateStageDesign({ ...desktop, variants: {} })).toThrow(
-      "Stage designs must provide at least one variant.",
-    );
+    expect(validateStageDesign(mobile).profiles).toEqual(["mobile"]);
+    expect(validateStageDesign(mobile).variants.default).toBeDefined();
+    expect(validateStageDesign(mobile).variants.phone).toBeDefined();
+    expect(() =>
+      validateStageDesign({ ...layoutWithModules("node"), variants: {} }),
+    ).toThrow("Stage designs must provide at least one variant.");
+    expect(() =>
+      validateStageDesign({ ...layoutWithModules("node"), profiles: [] }),
+    ).toThrow("Stage designs must provide at least one profile.");
   });
 
-  it("validates ordered desktop and phone flows against stage eligibility", () => {
+  it("validates ordered standard and mobile flows against eligibility", () => {
     const shared = layoutWithModules("shared-node");
-    const phone = {
+    const mobile = {
       ...layoutWithModules("phone-node"),
       id: "phone-stage",
-      variants: { phone: variantWithNodes("phone-node") },
-    };
-    const catalog = validateStageCatalog([shared, phone]);
+      profiles: ["mobile"],
+    } as const;
+    const catalog = validateStageCatalog([shared, mobile]);
 
     expect(
       validateStageFlow(
         {
           default: [shared.id],
-          phone: [phone.id, shared.id],
+          phone: [mobile.id, shared.id],
         },
         catalog,
       ),
     ).toEqual({
       default: [shared.id],
-      phone: [phone.id, shared.id],
+      phone: [mobile.id, shared.id],
     });
     expect(() =>
-      validateStageFlow({ default: [phone.id], phone: [shared.id] }, catalog),
+      validateStageFlow({ default: [mobile.id], phone: [shared.id] }, catalog),
     ).toThrow(
-      `Stage design "${phone.id}" does not support the default profile.`,
+      `Stage design "${mobile.id}" does not support the standard profile.`,
     );
   });
 
@@ -631,13 +630,18 @@ describe("layout composition", () => {
       container.querySelector(".stage-grid")?.getAttribute("data-stage-design"),
     ).toBe(second.id);
 
+    runtime.setFlowProfile("phone");
+    render(runtime.render(), container);
+    expect(
+      container.querySelector(".stage-grid")?.getAttribute("data-stage-design"),
+    ).toBe(second.id);
     runtime.setInlineSize(500);
     render(runtime.render(), container);
     expect(
       container.querySelector(".stage-grid")?.getAttribute("data-stage-design"),
     ).toBe(second.id);
     expect(runtime.showStage(first.id)).toBe(true);
-    runtime.setInlineSize(900);
+    runtime.setFlowProfile("default");
     render(runtime.render(), container);
     expect(
       container.querySelector(".stage-grid")?.getAttribute("data-stage-design"),
@@ -866,8 +870,9 @@ function layoutWithModules(...ids: string[]): StageDesignDocument {
   return {
     id: "test-stage",
     name: "Test",
+    profiles: ["standard", "mobile"],
     revision: 0,
-    schemaVersion: 2,
+    schemaVersion: 3,
     stageType: "full",
     variants: {
       default: variantWithNodes(...ids),
@@ -911,8 +916,9 @@ function layoutWithStack(): StageDesignDocument {
   return {
     id: "stack-stage",
     name: "Stack",
+    profiles: ["standard", "mobile"],
     revision: 0,
-    schemaVersion: 2,
+    schemaVersion: 3,
     stageType: "full",
     variants: { default: variant, phone: variant },
   };

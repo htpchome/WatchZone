@@ -1,8 +1,9 @@
 {
   "id": "default-stage",
   "name": "Default",
+  "profiles": ["standard"],
   "revision": 0,
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "stageType": "full",
   "variants": {
     "default": {

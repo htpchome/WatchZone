@@ -38,25 +38,29 @@ Modules and components are independently lazy loaded. Neither imports another
 placeable. Shared behavior uses core contracts and typed context. Provider
 mechanics remain below public provider resolvers.
 
-## Version 2 schema
+## Version 3 schema
 
 A Stage Design contains a stable ID, name, schema version, optimistic revision,
-a `stageType` classification, and at least one responsive variant: `default`
-for tablet/desktop, `phone`, or both. `stageType` is one of `full`,
+a `stageType` classification, one or more physical-client `profiles`, and at
+least one responsive variant: `default` for wider containers, `phone` for
+narrower containers, or both. `profiles` contains `standard`, `mobile`, or
+both and controls which card lineup may select the design. Responsive variants
+are independent presentation layouts selected by container width; rotating a
+physical phone does not move it out of the mobile Stage lineup. `stageType` is one of `full`,
 `camera_only`, or `minimal_camera_only`. The user-facing name of the last
 classification is Minimal Camera Stage; it has one implicit built-in design,
-so its desktop and phone lineups are not exposed in the card editor. Variant
-presence declares where the design is
-eligible. Each variant
+so its standard and mobile lineups are not exposed in the card editor. Each variant
 owns a root grid container. Grid coordinates are positive logical columns and
 rows, never CSS pixels. Each grid row declares either `fraction` sizing for
 shared remaining space or `content` sizing for intrinsic controls such as a
 standalone camera navigation bar. This keeps fixed-height cards bounded without
 assigning feature-specific layout behavior to Panel.
 
-Store loading migrates schema-one designs, which predate Stage Type, to schema
-two `full` designs. New saves and direct validation require the current schema
-and an explicit classification.
+Store loading migrates schema-one designs, which predate Stage Type, and
+schema-two designs, which inferred client eligibility from variant presence.
+Migration preserves that eligibility as explicit version-three `profiles`.
+New saves and direct validation require the current schema, an explicit
+classification, and at least one profile.
 
 Container children are placements containing one module node or one module
 stack and one grid area. A module stack contains an ordered, non-empty list of
@@ -103,14 +107,15 @@ parallel overlay-placement grid.
 
 A card's Stage Type is the catalog gatekeeper. Only Stage Designs with the
 selected classification are eligible for its lineups. Changing Stage Type
-resets both responsive lineups to that type's defaults so references from the
+resets both physical-client lineups to that type's defaults so references from the
 previous catalog cannot leak into the new one.
 
-A Stage Flow is an ordered list of eligible Stage Design IDs for one responsive
-profile. Cards have independent `default` and `phone` flows. The first entry is
+A Stage Flow is an ordered list of eligible Stage Design IDs for one physical
+client profile. Cards have independent `default` (standard client) and `phone`
+(physical mobile phone) flows. The first entry is
 the landing stage and later entries are navigation targets. A design may appear
-in both flows only when it supplies both variants. Flow validation rejects
-missing designs, incompatible variants, duplicate IDs, and empty flows before
+in both flows only when its `profiles` include both `standard` and `mobile`.
+Flow validation rejects missing designs, incompatible profiles, duplicate IDs, and empty flows before
 any placeable loads. A lineup must retain at least one selection; the editor
 cannot remove its final entry. Lovelace configuration stores these ordered
 references, never copies of the Stage Design documents.
@@ -202,8 +207,8 @@ headings.
 
 - Structural validation completes before a placeable loads.
 - Catalog and flow validation complete before structural rendering.
-- Responsive profile changes preserve an independent active stage selection
-  for each flow.
+- Physical-client flows preserve an independent active stage selection, while
+  responsive variant changes do not switch flows.
 - Each placeable validates its own config at its lazy boundary.
 - Unknown or failed placeables fail locally and do not block siblings.
 - Responsive variant selection uses the card container's inline size.

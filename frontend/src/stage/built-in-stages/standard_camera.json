@@ -1,8 +1,9 @@
 {
   "id": "standard-camera-stage",
   "name": "Standard Camera",
+  "profiles": ["standard", "mobile"],
   "revision": 0,
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "stageType": "camera_only",
   "variants": {
     "default": {

@@ -72,7 +72,19 @@ class StageDesignStore:
 
 
 def _migrate_stored_design(value: object) -> object:
-    """Classify pre-gatekeeper designs as Full Stage during store loading."""
-    if not isinstance(value, dict) or value.get("schemaVersion") != 1:
+    """Add Stage Type and explicit physical-client profiles to old designs."""
+    if not isinstance(value, dict) or value.get("schemaVersion") not in (1, 2):
         return value
-    return {**value, "schemaVersion": STAGE_SCHEMA_VERSION, "stageType": "full"}
+    variants = value.get("variants")
+    profiles: list[str] = []
+    if isinstance(variants, dict):
+        if "default" in variants:
+            profiles.append("standard")
+        if "phone" in variants:
+            profiles.append("mobile")
+    return {
+        **value,
+        "schemaVersion": STAGE_SCHEMA_VERSION,
+        "stageType": value.get("stageType", "full"),
+        "profiles": profiles,
+    }

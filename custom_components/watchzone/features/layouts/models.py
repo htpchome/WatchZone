@@ -7,7 +7,8 @@ from typing import Any, Literal, cast
 
 from homeassistant.exceptions import HomeAssistantError
 
-STAGE_SCHEMA_VERSION = 2
+STAGE_SCHEMA_VERSION = 3
+StageProfile = Literal["mobile", "standard"]
 StageType = Literal["camera_only", "full", "minimal_camera_only"]
 StageSlotName = Literal["content", "controls", "footer", "overlay"]
 StageControlRegion = Literal["leading", "center", "trailing"]
@@ -100,6 +101,7 @@ class StageDesign:
 
     id: str
     name: str
+    profiles: tuple[StageProfile, ...]
     revision: int
     stage_type: StageType
     variants: dict[StageVariantName, StageVariant]
@@ -131,10 +133,21 @@ def validate_stage_design(value: object) -> StageDesign:
     return StageDesign(
         id=_text(source.get("id"), "Stage design ID"),
         name=_text(source.get("name"), "Stage design name"),
+        profiles=_profiles(source.get("profiles")),
         revision=_non_negative(source.get("revision"), "Stage revision"),
         stage_type=_stage_type(source.get("stageType")),
         variants=validated_variants,
     )
+
+
+def _profiles(value: object) -> tuple[StageProfile, ...]:
+    if not isinstance(value, list) or not value:
+        raise HomeAssistantError("Stage designs require at least one profile")
+    if any(profile not in ("standard", "mobile") for profile in value):
+        raise HomeAssistantError("Stage designs require valid profiles")
+    if len(set(value)) != len(value):
+        raise HomeAssistantError("Stage design profiles must not contain duplicates")
+    return tuple(cast(StageProfile, profile) for profile in value)
 
 
 def _stage_type(value: object) -> StageType:

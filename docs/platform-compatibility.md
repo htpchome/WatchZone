@@ -112,8 +112,9 @@ container width.
 
 An explicit card configuration may select a presentation preference by this
 physical client class when the user intentionally enables a phone-only
-override. This narrow exception is used for mobile edge-to-edge layout and does
-not allow automatic layout decisions to infer physical hardware from size.
+override. This narrow exception is used for mobile edge-to-edge layout and the
+explicit standard/mobile Stage lineup; it does not allow automatic layout
+decisions to infer physical hardware from size.
 Container-responsive Stage arrangement and control geometry remain separate.
 
 The client identity profile may select policies that genuinely depend on the

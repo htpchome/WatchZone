@@ -1,8 +1,9 @@
 {
   "id": "minimal-camera-stage",
   "name": "Minimal Camera",
+  "profiles": ["standard", "mobile"],
   "revision": 0,
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "stageType": "minimal_camera_only",
   "variants": {
     "default": {

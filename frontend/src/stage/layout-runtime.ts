@@ -106,6 +106,7 @@ export class LayoutRuntime implements ReactiveController {
   private _catalog?: StageCatalog;
   private _designError?: string;
   private _flow?: StageFlow;
+  private _flowName: StageVariantName = "default";
   private _inlineSize = Number.POSITIVE_INFINITY;
   private readonly _records = new Map<string, PlaceableRecord>();
   private readonly _activeStackModules = new Map<string, string>();
@@ -150,6 +151,12 @@ export class LayoutRuntime implements ReactiveController {
     this._syncActiveVariant();
   }
 
+  public setFlowProfile(profile: StageVariantName): void {
+    if (profile === this._flowName) return;
+    this._flowName = profile;
+    this._syncActiveVariant();
+  }
+
   public setStageSet(designs: readonly unknown[], flow: unknown): void {
     try {
       const catalog = validateStageCatalog(designs);
@@ -181,12 +188,12 @@ export class LayoutRuntime implements ReactiveController {
     }
   }
 
-  /** Selects a stage already present in the active responsive flow. */
+  /** Selects a stage already present in the active physical-client flow. */
   public showStage(stageId: string): boolean {
-    const flow = this._flow?.[this._variantName];
+    const flow = this._flow?.[this._flowName];
     if (!flow?.includes(stageId)) return false;
-    if (this._activeStageIds[this._variantName] === stageId) return true;
-    this._activeStageIds[this._variantName] = stageId;
+    if (this._activeStageIds[this._flowName] === stageId) return true;
+    this._activeStageIds[this._flowName] = stageId;
     this._syncActiveVariant();
     return true;
   }
@@ -258,7 +265,7 @@ export class LayoutRuntime implements ReactiveController {
   }
 
   private _activeStageId(): string | undefined {
-    return this._activeStageIds[this._variantName];
+    return this._activeStageIds[this._flowName];
   }
 
   private _syncActiveVariant(): void {

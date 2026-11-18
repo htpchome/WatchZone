@@ -35,7 +35,8 @@ def _design(*, revision: int = 0) -> dict[str, object]:
         "id": "default",
         "name": "Default",
         "revision": revision,
-        "schemaVersion": 2,
+        "schemaVersion": 3,
+        "profiles": ["standard", "mobile"],
         "stageType": "full",
         "variants": {
             name: {
@@ -73,7 +74,7 @@ def test_stage_schema_preserves_module_component_and_slot_boundaries() -> None:
 
 
 def test_stage_schema_requires_a_valid_stage_type() -> None:
-    """Stage type classifies designs before responsive flows are selected."""
+    """Stage type classifies designs before physical-client flows are selected."""
     value = _design()
     value["stageType"] = "wide"
 
@@ -261,21 +262,33 @@ def test_stage_schema_preserves_an_ordered_module_stack() -> None:
     assert design.as_json() == value
 
 
-def test_stage_schema_allows_profile_specific_designs() -> None:
-    """A user design may target desktop/tablet or phone without duplication."""
+def test_stage_schema_keeps_profiles_independent_from_responsive_variants() -> None:
+    """Physical-client eligibility does not change with responsive width."""
     value = _design()
-    variants = value["variants"]
-    assert isinstance(variants, dict)
-    variants.pop("phone")
+    value["profiles"] = ["mobile"]
 
     design = validate_stage_design(value)
 
-    assert tuple(design.variants) == ("default",)
+    assert design.profiles == ("mobile",)
+    assert tuple(design.variants) == ("default", "phone")
     assert design.as_json() == value
 
 
+def test_stage_schema_requires_valid_unique_profiles() -> None:
+    """Every design explicitly declares at least one physical-client profile."""
+    for profiles, message in (
+        ([], "at least one profile"),
+        (["watch"], "valid profiles"),
+        (["mobile", "mobile"], "must not contain duplicates"),
+    ):
+        value = _design()
+        value["profiles"] = profiles
+        with pytest.raises(HomeAssistantError, match=message):
+            validate_stage_design(value)
+
+
 def test_stage_schema_requires_at_least_one_variant() -> None:
-    """A design with no eligible responsive profile cannot be saved."""
+    """A design without a responsive presentation cannot be saved."""
     value = _design()
     value["variants"] = {}
 
@@ -303,6 +316,7 @@ async def test_stage_store_migrates_pre_gatekeeper_designs(
     value = _design()
     value["schemaVersion"] = 1
     value.pop("stageType")
+    value.pop("profiles")
     store = StageDesignStore(hass)
     store._store.async_load = AsyncMock(  # type: ignore[method-assign]
         return_value={"designs": [value]}
@@ -313,7 +327,31 @@ async def test_stage_store_migrates_pre_gatekeeper_designs(
     design = store.get("default")
     assert design is not None
     assert design.stage_type == "full"
-    assert design.schema_version == 2
+    assert design.schema_version == 3
+    assert design.profiles == ("standard", "mobile")
+
+
+async def test_stage_store_migrates_variant_eligibility_to_profiles(
+    hass: HomeAssistant,
+) -> None:
+    """Stored schema-two designs retain their former eligibility."""
+    value = _design()
+    value["schemaVersion"] = 2
+    value.pop("profiles")
+    variants = value["variants"]
+    assert isinstance(variants, dict)
+    variants.pop("default")
+    store = StageDesignStore(hass)
+    store._store.async_load = AsyncMock(  # type: ignore[method-assign]
+        return_value={"designs": [value]}
+    )
+
+    await store.async_setup()
+
+    design = store.get("default")
+    assert design is not None
+    assert design.profiles == ("mobile",)
+    assert design.schema_version == 3
 
 
 async def test_stage_store_serializes_competing_writes(hass: HomeAssistant) -> None:

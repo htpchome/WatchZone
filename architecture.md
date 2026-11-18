@@ -819,8 +819,10 @@ a saved layout contains:
   control-region placement for component nodes.
 - Logical grid placement and responsive behavior for container nodes.
 - Explicit fractional or intrinsic-content sizing for each logical grid row.
-- Required `default` and `phone` responsive variants whose corresponding nodes
-  reuse stable IDs.
+- Explicit standard/mobile physical-client eligibility, independent of
+  `default` and `phone` responsive variants. Physical phone eligibility does
+  not change when its container widens on rotation.
+- Responsive variants whose corresponding nodes reuse stable IDs.
 - Creation and modification metadata where useful.
 
 The root is a typed grid container whose placements contain module nodes or
@@ -830,7 +832,7 @@ Containers control placement, modules control major content behavior, and
 components control portable capability presentation. None may absorb another
 category's responsibility.
 
-The normative version-1 schema and runtime rules are defined in
+The normative schema and runtime rules are defined in
 [docs/stage-layout-system.md](docs/stage-layout-system.md).
 
 Stored values are declarative data. Arbitrary executable content, unvalidated

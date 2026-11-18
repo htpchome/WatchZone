@@ -12,6 +12,8 @@ import {
 } from "./constants";
 import { normalizePlainText, sanitizePlainTextInput } from "./plain-text";
 import {
+  DEFAULT_FULL_STAGE_ID,
+  DEFAULT_MOBILE_FULL_STAGE_ID,
   defaultStageFlow,
   type AvailableStageType,
   type ConfiguredStageFlow,
@@ -811,7 +813,10 @@ function normalizeStageFlowEntries(
     if (typeof entry !== "string" || entry.trim().length === 0) {
       throw new Error(`${APP_NAME} stage flow IDs must be non-empty strings.`);
     }
-    return entry.trim();
+    const id = entry.trim();
+    return profile === "phone" && id === DEFAULT_FULL_STAGE_ID
+      ? DEFAULT_MOBILE_FULL_STAGE_ID
+      : id;
   });
   if (new Set(ids).size !== ids.length) {
     throw new Error(

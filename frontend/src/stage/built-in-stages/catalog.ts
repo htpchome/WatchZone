@@ -23,11 +23,13 @@ import {
   type StageFlow,
   type StageModuleNode,
   type StagePlacement,
+  type StageProfile,
   type StageStackNode,
   type StageVariant,
   type StageVariantName,
 } from "../layout";
 import defaultStageJson from "./default.json";
+import defaultMobileStageJson from "./default_mobile.json";
 import standardCameraStageJson from "./standard_camera.json";
 import minimalCameraStageJson from "./minimal_camera.json";
 
@@ -44,6 +46,7 @@ export interface BuiltInStageOption {
 
 const sourceTemplates = [
   validateStageDesign(defaultStageJson),
+  validateStageDesign(defaultMobileStageJson),
   validateStageDesign(standardCameraStageJson),
   validateStageDesign(minimalCameraStageJson),
 ] as const;
@@ -51,9 +54,16 @@ const namespacedTemplates = sourceTemplates.map(namespaceTemplate);
 
 export function builtInStageOptions(
   stageType: AvailableStageType,
+  profile: StageVariantName,
 ): readonly BuiltInStageOption[] {
+  const stageProfile: StageProfile =
+    profile === "phone" ? "mobile" : "standard";
   return sourceTemplates
-    .filter((template) => template.stageType === stageType)
+    .filter(
+      (template) =>
+        template.stageType === stageType &&
+        template.profiles.includes(stageProfile),
+    )
     .map(({ id, name }) => ({ id, name, stageType }));
 }
 

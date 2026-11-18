@@ -1,9 +1,10 @@
 import type { StageType } from "../core/stage";
 
-export const STAGE_SCHEMA_VERSION = 2;
+export const STAGE_SCHEMA_VERSION = 3;
 export const PHONE_STAGE_MAX_INLINE_SIZE = 599;
 
 export type StageVariantName = "default" | "phone";
+export type StageProfile = "mobile" | "standard";
 export type StageSlotName = "content" | "controls" | "footer" | "overlay";
 export type StageControlRegion = "leading" | "center" | "trailing";
 export type StageOverlayRegion =
@@ -62,6 +63,7 @@ export interface StageVariant {
 export interface StageDesignDocument {
   readonly id: string;
   readonly name: string;
+  readonly profiles: readonly StageProfile[];
   readonly revision: number;
   readonly schemaVersion: typeof STAGE_SCHEMA_VERSION;
   readonly stageType: StageType;
@@ -87,6 +89,7 @@ export function validateStageDesign(value: unknown): StageDesignDocument {
     throw new Error("The stage design uses an unsupported schema version.");
   }
   const variants = objectValue(source.variants, "Stage design variants");
+  const profiles = validateStageProfiles(source.profiles);
   const validatedVariants: Partial<Record<StageVariantName, StageVariant>> = {};
   for (const name of ["default", "phone"] as const) {
     if (variants[name] !== undefined) {
@@ -99,11 +102,28 @@ export function validateStageDesign(value: unknown): StageDesignDocument {
   return {
     id: nonEmptyString(source.id, "Stage design IDs"),
     name: nonEmptyString(source.name, "Stage design names"),
+    profiles,
     revision: nonNegativeInteger(source.revision, "Stage design revisions"),
     schemaVersion: STAGE_SCHEMA_VERSION,
     stageType: validateStageType(source.stageType),
     variants: validatedVariants,
   };
+}
+
+function validateStageProfiles(value: unknown): readonly StageProfile[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error("Stage designs must provide at least one profile.");
+  }
+  const profiles = value.map((profile) => {
+    if (profile !== "standard" && profile !== "mobile") {
+      throw new Error("Stage designs require valid profiles.");
+    }
+    return profile;
+  });
+  if (new Set(profiles).size !== profiles.length) {
+    throw new Error("Stage design profiles must not contain duplicates.");
+  }
+  return profiles;
 }
 
 function validateStageType(value: unknown): StageType {
@@ -161,9 +181,11 @@ function validateFlowEntries(
     if (!design) {
       throw new Error(`Stage flow design "${id}" does not exist.`);
     }
-    if (!design.variants[variantName]) {
+    const profile: StageProfile =
+      variantName === "phone" ? "mobile" : "standard";
+    if (!design.profiles.includes(profile)) {
       throw new Error(
-        `Stage design "${id}" does not support the ${variantName} profile.`,
+        `Stage design "${id}" does not support the ${profile} profile.`,
       );
     }
   }
