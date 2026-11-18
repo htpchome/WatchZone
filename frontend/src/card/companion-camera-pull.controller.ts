@@ -18,6 +18,7 @@ interface PullStart {
 }
 
 const CAMERA_NODE_SUFFIX = "default-camera-module";
+const ACTIVITY_NODE_SUFFIX = "default-activity-stack";
 const DRAG_TOLERANCE_PX = 4;
 const EXPANDED_HANDLE_INSET_PX = 52;
 const EXPAND_THRESHOLD = 0.5;
@@ -31,7 +32,10 @@ export class CompanionCameraPullController {
   private _drag?: PullStart;
   private _dragFrame?: number;
   private _expanded = false;
+  private _grid?: HTMLElement;
   private _handle?: HTMLButtonElement;
+  private _handleBaselineLeft?: number;
+  private _handleBaselineTop?: number;
   private _moved = false;
   private _pendingProgress = 0;
   private _progress = 0;
@@ -108,17 +112,34 @@ export class CompanionCameraPullController {
   private _measureBounds(): void {
     const camera = this._camera;
     if (!camera || this._progress > 0) return;
+    const grid =
+      this._host.renderRoot.querySelector<HTMLElement>(".stage-grid");
+    const activity = this._host.renderRoot.querySelector<HTMLElement>(
+      `.stage-placement[data-layout-node$="${ACTIVITY_NODE_SUFFIX}"]`,
+    );
+    if (!grid || !activity) return;
     const rect = camera.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return;
+    const gridRect = grid.getBoundingClientRect();
+    const activityRect = activity.getBoundingClientRect();
+    if (
+      rect.width <= 0 ||
+      rect.height <= 0 ||
+      gridRect.width <= 0 ||
+      gridRect.height <= 0
+    )
+      return;
+    this._grid = grid;
     this._baseline = {
       height: rect.height,
-      left: rect.left,
-      top: rect.top,
+      left: rect.left - gridRect.left,
+      top: rect.top - gridRect.top,
       width: rect.width,
     };
+    this._handleBaselineLeft = (rect.right + activityRect.left) / 2;
+    this._handleBaselineTop = rect.top + rect.height / 2;
     this._host.style.setProperty(
       "--wzc-companion-camera-base-block-size",
-      `${rect.height}px`,
+      `${rect.bottom - gridRect.top}px`,
     );
     this._applyProgress(0);
   }
@@ -146,15 +167,18 @@ export class CompanionCameraPullController {
 
   private readonly _movePointer = (event: PointerEvent): void => {
     const drag = this._drag;
-    const baseline = this._baseline;
-    if (!drag || !baseline || drag.pointerId !== event.pointerId) return;
+    const handleBaselineLeft = this._handleBaselineLeft;
+    if (
+      !drag ||
+      handleBaselineLeft === undefined ||
+      drag.pointerId !== event.pointerId
+    )
+      return;
     event.preventDefault();
     const hostRect = this._host.getBoundingClientRect();
     const travel = Math.max(
       1,
-      hostRect.right -
-        EXPANDED_HANDLE_INSET_PX -
-        (baseline.left + baseline.width),
+      hostRect.right - EXPANDED_HANDLE_INSET_PX - handleBaselineLeft,
     );
     const delta = event.clientX - drag.x;
     if (Math.abs(delta) >= DRAG_TOLERANCE_PX) this._moved = true;
@@ -230,13 +254,24 @@ export class CompanionCameraPullController {
 
   private _applyProgress(progress: number): void {
     const baseline = this._baseline;
+    const grid = this._grid;
     const handle = this._handle;
-    if (!baseline || !handle) return;
+    const handleBaselineLeft = this._handleBaselineLeft;
+    const handleBaselineTop = this._handleBaselineTop;
+    if (
+      !baseline ||
+      !grid ||
+      !handle ||
+      handleBaselineLeft === undefined ||
+      handleBaselineTop === undefined
+    )
+      return;
     const hostRect = this._host.getBoundingClientRect();
+    const gridRect = grid.getBoundingClientRect();
     const target: CameraBounds = {
       height: hostRect.height,
-      left: hostRect.left,
-      top: hostRect.top,
+      left: hostRect.left - gridRect.left,
+      top: hostRect.top - gridRect.top,
       width: hostRect.width,
     };
     this._progress = Math.min(1, Math.max(0, progress));
@@ -246,7 +281,6 @@ export class CompanionCameraPullController {
     const top = mix(baseline.top, target.top);
     const width = mix(baseline.width, target.width);
     const height = mix(baseline.height, target.height);
-    const handleInset = mix(0, EXPANDED_HANDLE_INSET_PX);
     this._host.style.setProperty(
       "--wzc-companion-camera-overlay-left",
       `${left}px`,
@@ -265,11 +299,11 @@ export class CompanionCameraPullController {
     );
     this._host.style.setProperty(
       "--wzc-companion-camera-pull-inline-start",
-      `${left + width - handleInset}px`,
+      `${mix(handleBaselineLeft, hostRect.right - EXPANDED_HANDLE_INSET_PX)}px`,
     );
     this._host.style.setProperty(
       "--wzc-companion-camera-pull-block-start",
-      `${top + height / 2}px`,
+      `${mix(handleBaselineTop, hostRect.top + hostRect.height / 2)}px`,
     );
     handle.setAttribute(
       "aria-valuenow",
@@ -333,6 +367,9 @@ export class CompanionCameraPullController {
     this._pendingProgress = 0;
     this._progress = 0;
     this._baseline = undefined;
+    this._grid = undefined;
+    this._handleBaselineLeft = undefined;
+    this._handleBaselineTop = undefined;
     this._host.classList.remove(
       "landscape-camera-overlay-active",
       "landscape-camera-overlay-dragging",

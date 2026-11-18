@@ -8836,6 +8836,7 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
       cameraAspectRatio: cameraRect.width / cameraRect.height,
       cameraHeight: Math.round(navigationRect.bottom - cameraRect.top),
       cameraLeft: Math.round(cameraRect.left),
+      cameraNavigationTop: Math.round(navigationRect.top),
       cameraRight: Math.round(cameraRect.right),
       cameraTop: Math.round(cameraRect.top),
       columnRatio: cameraRect.width / activityRect.width,
@@ -8873,6 +8874,7 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     cameraAspectRatio: geometry.cameraAspectRatio,
     cameraHeight: expect.any(Number),
     cameraLeft: expect.any(Number),
+    cameraNavigationTop: expect.any(Number),
     cameraRight: expect.any(Number),
     cameraTop: expect.any(Number),
     columnRatio: geometry.columnRatio,
@@ -8919,12 +8921,54 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
   await expect(pullHandle).toHaveAttribute("aria-valuenow", "0");
   const collapsedHandle = await pullHandle.boundingBox();
   expect(collapsedHandle).not.toBeNull();
-  const pullTravel = geometry.host.width - geometry.cameraRight;
+  const collapsedHandleCenter =
+    (collapsedHandle?.x ?? 0) + (collapsedHandle?.width ?? 0) / 2;
+  expect(collapsedHandleCenter).toBeCloseTo(
+    (geometry.cameraRight + geometry.activityLeft) / 2,
+    0,
+  );
+  const handlePresentation = await pullHandle.evaluate((element) => {
+    const style = getComputedStyle(element);
+    const grip = getComputedStyle(element, "::before");
+    const glyph = getComputedStyle(element, "::after");
+    return {
+      accent: style.getPropertyValue("--wzc-color-accent").trim(),
+      color: style.color,
+      glyph: glyph.content,
+      gripColor: grip.backgroundColor,
+      gripWidth: Number.parseFloat(grip.width),
+    };
+  });
+  expect(handlePresentation.gripWidth).toBeGreaterThanOrEqual(16);
+  expect(handlePresentation.glyph).not.toBe("none");
+  expect(handlePresentation.gripColor).toBe(handlePresentation.color);
+  expect(handlePresentation.accent).not.toBe("");
+  const pullTravel =
+    geometry.host.left + geometry.host.width - 52 - collapsedHandleCenter;
   await page.mouse.move(
-    (collapsedHandle?.x ?? 0) + (collapsedHandle?.width ?? 0) / 2,
+    collapsedHandleCenter,
     (collapsedHandle?.y ?? 0) + (collapsedHandle?.height ?? 0) / 2,
   );
   await page.mouse.down();
+  const activeRowPositions = await card.evaluate((element) => {
+    const root = element.shadowRoot;
+    const top = (suffix: string) =>
+      root
+        ?.querySelector<HTMLElement>(`[data-layout-node$="${suffix}"]`)
+        ?.getBoundingClientRect().top;
+    return {
+      activityNavigationTop: top("default-activity-navigation-module"),
+      cameraNavigationTop: top("default-camera-navigation-module"),
+    };
+  });
+  expect(activeRowPositions.activityNavigationTop).toBeCloseTo(
+    geometry.activityNavigationTop,
+    0,
+  );
+  expect(activeRowPositions.cameraNavigationTop).toBeCloseTo(
+    geometry.cameraNavigationTop,
+    0,
+  );
   await page.mouse.move(
     (collapsedHandle?.x ?? 0) + pullTravel * 0.4,
     (collapsedHandle?.y ?? 0) + (collapsedHandle?.height ?? 0) / 2,
@@ -8949,7 +8993,7 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
   await expect(card).toHaveClass(/landscape-camera-overlay-expanded/);
   await expect(pullHandle).toHaveAttribute("aria-valuenow", "100");
   await expect(card).not.toHaveClass(/landscape-camera-overlay-settling/);
-  await expect(cameraPlacement).toHaveCSS("position", "fixed");
+  await expect(cameraPlacement).toHaveCSS("position", "absolute");
   const expandedCamera = await cameraPlacement.boundingBox();
   expect(expandedCamera?.x).toBeCloseTo(geometry.host.left, 0);
   expect(expandedCamera?.y).toBeCloseTo(geometry.host.top, 0);

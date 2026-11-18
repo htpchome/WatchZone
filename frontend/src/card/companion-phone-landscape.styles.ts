@@ -117,7 +117,7 @@ export const companionPhoneLandscapeStyles = css`
 
   :host(.companion-phone-landscape.landscape-camera-overlay-active)
     .stage-placement[data-layout-node$="default-camera-module"] {
-    position: fixed;
+    position: absolute;
     z-index: 20;
     inset-block-start: var(--wzc-companion-camera-overlay-top);
     inset-inline-start: var(--wzc-companion-camera-overlay-left);
@@ -149,12 +149,12 @@ export const companionPhoneLandscapeStyles = css`
     inset-block-start: var(--wzc-companion-camera-pull-block-start);
     inset-inline-start: var(--wzc-companion-camera-pull-inline-start);
     box-sizing: border-box;
-    inline-size: 2rem;
+    inline-size: 2.75rem;
     block-size: 6rem;
     padding: 0;
     touch-action: none;
     transform: translate(-50%, -50%);
-    color: var(--wzc-color-primary);
+    color: var(--wzc-color-accent);
     background: transparent;
     border: 0;
     cursor: ew-resize;
@@ -164,14 +164,26 @@ export const companionPhoneLandscapeStyles = css`
   .companion-camera-pull-handle::before {
     display: block;
     box-sizing: border-box;
-    inline-size: 0.5rem;
+    inline-size: 1rem;
     block-size: 4.5rem;
     margin: auto;
-    background: var(--wzc-media-overlay-surface);
-    border: 2px solid currentcolor;
-    border-radius: var(--wzc-radius-small);
+    background: currentcolor;
+    border: 1px solid var(--wzc-media-overlay-surface);
+    border-radius: var(--wzc-radius-medium);
     box-shadow: var(--wzc-shadow-small);
     content: "";
+  }
+
+  .companion-camera-pull-handle::after {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    color: var(--wzc-color-text-reversed);
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1;
+    transform: translate(-45%, -53%);
+    content: "›";
   }
 
   .companion-camera-pull-handle:focus-visible {

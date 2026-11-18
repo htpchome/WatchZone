@@ -126,11 +126,14 @@ uses rounded corners and hides its resize handle, independent of the ordinary
 phone Camera appearance setting. This overlay does not activate for browser
 phones, Companion tablets, or incompatible Stage types.
 
-A separate vertical pull handle occupies the gutter at the Camera's trailing
-edge in this presentation. Horizontal pointer capture maps the handle's travel
-directly to a camera-overlay progress value while preserving the mounted Camera
-module and retained live session. The Camera grows above the unchanged activity
-column; activity selection and scroll position do not move into the overlay.
+A separate vertical pull handle is centered in the actual gutter at the
+Camera's trailing edge in this presentation. Its accent-colored directional
+grip keeps a wider visual target inside a larger transparent touch target.
+Horizontal pointer capture maps the handle's travel directly to a
+camera-overlay progress value while preserving the mounted Camera module,
+retained live session, and both navigation-row positions. The Camera grows
+above the unchanged activity column; activity selection and scroll position do
+not move into the overlay.
 Releasing before 50% returns to the 60/40 layout, while releasing at or beyond
 50% settles into a viewport-covering Camera with its complete composed control
 surface. The expanded handle remains inside the safe trailing edge and can be
