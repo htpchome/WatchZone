@@ -129,6 +129,12 @@ hides its resize handle, independent of the ordinary phone Camera appearance
 setting. This presentation does not activate for browser phones, Companion
 tablets, or incompatible Stage types.
 
+During Companion orientation changes, the camera placement and active activity
+stack are the two transition panels. They use mirrored 3D rotations around the
+center gutter with one duration and easing curve, so the two sides fold as a
+synchronized pair. The transforms apply only to the stable outer placements;
+live media and activity children are not cloned, replaced, or reparented.
+
 A separate vertical pull handle is centered in the actual gutter at the
 Camera's trailing edge in this presentation. Its borderless three-pixel line
 uses the semantic secondary text color and keeps a tall visual indicator inside
@@ -143,10 +149,12 @@ above the unchanged activity column; activity selection and scroll position do
 not move into the overlay.
 Releasing before 50% returns to the 60/40 layout, while releasing at or beyond
 50% settles into a viewport-covering Camera with its complete composed control
-surface. The expanded handle remains inside the safe trailing edge and can be
-dragged left to restore the split layout. Arrow keys, Home/End, Enter/Space,
-and Escape expose the same two states, and reduced-motion preference removes
-the settle transition.
+surface. At full expansion, the grip visual and camera alert/detection outline
+are hidden so neither can bleed over the media. The transparent handle hit
+target remains inside the safe trailing edge and can be dragged left to
+restore the split layout. Arrow keys, Home/End, Enter/Space, and Escape expose
+the same two states, and reduced-motion preference removes the settle
+transition.
 
 Card, Camera, camera-navigation, and activity-tile appearance likewise store
 independent standard-device and physical-phone values. Phone defaults use an

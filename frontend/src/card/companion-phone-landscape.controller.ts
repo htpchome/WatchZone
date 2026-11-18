@@ -13,6 +13,11 @@ type CanActivate = () => boolean;
 type OrientationChanged = (active: boolean) => void;
 
 const installedHosts = new WeakSet<LandscapeHost>();
+const ACTIVITY_PANEL_SUFFIX = "default-activity-stack";
+const CAMERA_PANEL_SUFFIX = "default-camera-module";
+const PANEL_ENTER_DURATION_MS = 420;
+const PANEL_EXIT_DURATION_MS = 320;
+const PANEL_TRANSITION_EASING = "cubic-bezier(.16,1,.3,1)";
 const PORTRAIT_VIEWPORT_STABLE_FRAMES = 2;
 
 export function installCompanionPhoneLandscape(
@@ -36,6 +41,7 @@ class CompanionPhoneLandscapeController implements ReactiveController {
   private _active = false;
   private _connected = false;
   private _initialized = false;
+  private _panelAnimations: Animation[] = [];
   private readonly _pull: CompanionCameraPullController;
   private _target = false;
   private _transitionGeneration = 0;
@@ -84,6 +90,7 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     window.removeEventListener("resize", this._schedule);
     window.visualViewport?.removeEventListener("resize", this._schedule);
     this._pull.deactivate();
+    this._cancelPanelAnimations();
     this._host.classList.remove(
       "companion-phone-landscape",
       "companion-phone-orientation-overlay",
@@ -121,10 +128,73 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     );
   }
 
+  private _cancelPanelAnimations(): void {
+    for (const animation of this._panelAnimations) animation.cancel();
+    this._panelAnimations = [];
+  }
+
+  private async _playPanelTransition(
+    direction: "enter" | "exit",
+  ): Promise<void> {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const camera = this._host.renderRoot.querySelector<HTMLElement>(
+      `.stage-placement[data-layout-node$="${CAMERA_PANEL_SUFFIX}"]`,
+    );
+    const activity = this._host.renderRoot.querySelector<HTMLElement>(
+      `.stage-placement[data-layout-node$="${ACTIVITY_PANEL_SUFFIX}"]`,
+    );
+    if (!camera || !activity) return;
+
+    this._cancelPanelAnimations();
+    const settled = (side: "left" | "right"): Keyframe => ({
+      opacity: 1,
+      transform:
+        "perspective(72rem) translate3d(0,0,0) rotateY(0deg) rotateZ(0deg)",
+      transformOrigin: side === "left" ? "100% 50%" : "0% 50%",
+    });
+    const folded = (side: "left" | "right"): Keyframe => ({
+      opacity: 0.62,
+      transform:
+        side === "left"
+          ? "perspective(72rem) translate3d(-9%,0,0) rotateY(-44deg) rotateZ(-2deg)"
+          : "perspective(72rem) translate3d(9%,0,0) rotateY(44deg) rotateZ(2deg)",
+      transformOrigin: side === "left" ? "100% 50%" : "0% 50%",
+    });
+    const options: KeyframeAnimationOptions = {
+      duration:
+        direction === "enter"
+          ? PANEL_ENTER_DURATION_MS
+          : PANEL_EXIT_DURATION_MS,
+      easing: PANEL_TRANSITION_EASING,
+      fill: "both",
+    };
+    const keyframes = (side: "left" | "right") =>
+      direction === "enter"
+        ? [folded(side), settled(side)]
+        : [settled(side), folded(side)];
+    const animations = [
+      camera.animate(keyframes("left"), options),
+      activity.animate(keyframes("right"), options),
+    ];
+    this._panelAnimations = animations;
+    await Promise.all(
+      animations.map((animation) => animation.finished.catch(() => undefined)),
+    );
+    if (
+      direction === "enter" &&
+      animations.every((animation, index) =>
+        Object.is(animation, this._panelAnimations[index]),
+      )
+    ) {
+      this._cancelPanelAnimations();
+    }
+  }
+
   private async _transition(
     active: boolean,
     generation: number,
   ): Promise<void> {
+    this._cancelPanelAnimations();
     this._transitioning = true;
     this._host.classList.add("companion-phone-orientation-transitioning");
     this._pull.deactivate();
@@ -139,8 +209,18 @@ class CompanionPhoneLandscapeController implements ReactiveController {
       this._orientationChanged(true);
       await this._host.updateComplete;
       if (!this._isCurrent(true, generation)) return;
+      await this._playPanelTransition("enter");
+      if (!this._isCurrent(true, generation)) return;
     } else {
       if (!(await this._waitForStablePortraitViewport(generation))) return;
+      await this._playPanelTransition("exit");
+      if (
+        !this._connected ||
+        this._target ||
+        !this._active ||
+        this._transitionGeneration !== generation
+      )
+        return;
 
       // Render the portrait Stage while the old landscape surface still covers
       // Home Assistant. Removing both classes in this same microtask prevents a
@@ -159,6 +239,7 @@ class CompanionPhoneLandscapeController implements ReactiveController {
         "companion-phone-landscape",
         "companion-phone-orientation-overlay",
       );
+      this._cancelPanelAnimations();
     }
 
     this._transitioning = false;

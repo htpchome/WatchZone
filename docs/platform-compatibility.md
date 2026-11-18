@@ -137,11 +137,13 @@ Assistant navigation in landscape without removing or restyling it; portrait
 reveals that navigation and returns the card to normal flow. The same Stage
 nodes and live sessions are retained in a 60/40 camera/activity composition.
 Companion's native whole-window orientation transition owns the coordinated
-rotation, and WatchZone does not independently transform Stage placements. On
-return, the landscape surface remains intact until the portrait viewport is
-stable; the portrait Stage and flow surface are then committed in one paint so
-portrait content is never rendered over the navigation. Browser phones and
-every tablet remain outside this controller.
+window rotation. WatchZone adds one mirrored 3D transition to the stable camera
+and activity placement containers, treating them as the two visual panels;
+their children and live media are never cloned or reparented. On return, the
+landscape surface remains intact until the portrait viewport is stable; the
+panels fold out together, then the portrait Stage and flow surface are
+committed in one paint so portrait content is never rendered over the
+navigation. Browser phones and every tablet remain outside this controller.
 
 ### 2.3 Theme profile
 
