@@ -8931,9 +8931,7 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     const style = getComputedStyle(element);
     const grip = getComputedStyle(element, "::before");
     return {
-      navigationBackground: style
-        .getPropertyValue("--wzc-camera-navigation-background")
-        .trim(),
+      secondaryText: style.getPropertyValue("--wzc-color-text-2").trim(),
       gripBorderWidth: Number.parseFloat(grip.borderWidth),
       color: style.color,
       gripColor: grip.backgroundColor,
@@ -8942,10 +8940,10 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     };
   });
   expect(handlePresentation.gripWidth).toBe(3);
-  expect(handlePresentation.gripHeight).toBeGreaterThanOrEqual(88);
+  expect(handlePresentation.gripHeight).toBeGreaterThanOrEqual(128);
   expect(handlePresentation.gripBorderWidth).toBe(0);
   expect(handlePresentation.gripColor).toBe(handlePresentation.color);
-  expect(handlePresentation.navigationBackground).not.toBe("");
+  expect(handlePresentation.secondaryText).not.toBe("");
   const pullTravel =
     geometry.host.left + geometry.host.width - 52 - collapsedHandleCenter;
   await page.mouse.move(

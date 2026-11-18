@@ -150,11 +150,11 @@ export const companionPhoneLandscapeStyles = css`
     inset-inline-start: var(--wzc-companion-camera-pull-inline-start);
     box-sizing: border-box;
     inline-size: 2.75rem;
-    block-size: 6rem;
+    block-size: 8.5rem;
     padding: 0;
     touch-action: none;
     transform: translate(-50%, -50%);
-    color: var(--wzc-camera-navigation-background);
+    color: var(--wzc-color-text-2);
     background: transparent;
     border: 0;
     cursor: ew-resize;
@@ -165,7 +165,7 @@ export const companionPhoneLandscapeStyles = css`
     display: block;
     box-sizing: border-box;
     inline-size: 3px;
-    block-size: 5.5rem;
+    block-size: 8rem;
     margin: auto;
     background: currentcolor;
     border: 0;
