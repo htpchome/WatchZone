@@ -13,7 +13,10 @@ type CanActivate = () => boolean;
 type OrientationChanged = (active: boolean) => void;
 
 const installedHosts = new WeakSet<LandscapeHost>();
-const ORIENTATION_SETTLE_MS = 280;
+const FLIP_DURATION_MS = 360;
+const FLIP_EASING = "cubic-bezier(.2,.8,.2,1)";
+const ORIENTATION_SETTLE_MS = 96;
+const PLACEMENT_SELECTOR = ".stage-placement[data-layout-node]";
 const REQUIRED_STABLE_FRAMES = 3;
 
 interface ViewportSnapshot {
@@ -63,8 +66,10 @@ export function installCompanionPhoneLandscape(
 /** Owns Companion-phone orientation changes and the settled Stage reflow. */
 class CompanionPhoneLandscapeController implements ReactiveController {
   private _active = false;
+  private readonly _animations = new Set<Animation>();
   private _connected = false;
   private _frame?: number;
+  private _initialized = false;
   private _lastViewport = viewportSnapshot();
   private _lastViewportChange = 0;
   private readonly _pull: CompanionCameraPullController;
@@ -106,6 +111,7 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     window.removeEventListener("resize", this._schedule);
     window.visualViewport?.removeEventListener("resize", this._schedule);
     this._pull.deactivate();
+    this._cancelAnimations();
     if (this._frame !== undefined) cancelAnimationFrame(this._frame);
     this._frame = undefined;
   }
@@ -145,20 +151,94 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     return window.innerWidth > window.innerHeight && this._canActivate();
   }
 
+  private _capturePlacements(): Map<HTMLElement, DOMRect> {
+    const placements =
+      this._host.renderRoot.querySelectorAll<HTMLElement>(PLACEMENT_SELECTOR);
+    return new Map(
+      Array.from(placements, (placement) => [
+        placement,
+        placement.getBoundingClientRect(),
+      ]),
+    );
+  }
+
+  private _cancelAnimations(): void {
+    for (const animation of this._animations) animation.cancel();
+    this._animations.clear();
+  }
+
+  private async _playFlip(before: Map<HTMLElement, DOMRect>): Promise<void> {
+    const finished: Promise<void>[] = [];
+    for (const [placement, first] of before) {
+      if (!placement.isConnected) continue;
+      const last = placement.getBoundingClientRect();
+      if (
+        first.width <= 0 ||
+        first.height <= 0 ||
+        last.width <= 0 ||
+        last.height <= 0
+      ) {
+        continue;
+      }
+      const translateX = first.left - last.left;
+      const translateY = first.top - last.top;
+      const scaleX = first.width / last.width;
+      const scaleY = first.height / last.height;
+      if (
+        Math.abs(translateX) < 0.5 &&
+        Math.abs(translateY) < 0.5 &&
+        Math.abs(scaleX - 1) < 0.005 &&
+        Math.abs(scaleY - 1) < 0.005
+      ) {
+        continue;
+      }
+      const animation = placement.animate(
+        [
+          {
+            transform: `translate(${translateX}px, ${translateY}px) scale(${scaleX}, ${scaleY})`,
+            transformOrigin: "0 0",
+          },
+          { transform: "none", transformOrigin: "0 0" },
+        ],
+        {
+          duration: FLIP_DURATION_MS,
+          easing: FLIP_EASING,
+        },
+      );
+      this._animations.add(animation);
+      finished.push(
+        animation.finished.then(
+          () => {
+            this._animations.delete(animation);
+          },
+          () => {
+            this._animations.delete(animation);
+          },
+        ),
+      );
+    }
+    await Promise.all(finished);
+  }
+
   private async _sync(): Promise<void> {
     const active = this._targetActive();
+    const animate =
+      this._initialized &&
+      !matchMedia("(prefers-reduced-motion: reduce)").matches;
+    this._initialized = true;
     if (active === this._active) {
       if (active) this._pull.sync();
       return;
     }
+    const before = animate ? this._capturePlacements() : new Map();
+    this._cancelAnimations();
     this._active = active;
     if (!active) this._pull.deactivate();
     this._host.classList.toggle("companion-phone-landscape", active);
     this._orientationChanged(active);
     await this._host.updateComplete;
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => resolve()),
-    );
+    if (!this._connected || this._active !== active) return;
+    if (animate) await this._playFlip(before);
     if (this._connected && this._active === active && active) {
       this._pull.activate();
     }

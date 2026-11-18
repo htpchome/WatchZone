@@ -8773,16 +8773,27 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     "data-stage-variant",
     "default",
   );
+  const enteringAnimations = await card
+    .locator(".stage-placement[data-layout-node]")
+    .evaluateAll((placements) =>
+      placements.map((placement) => placement.getAnimations().length),
+    );
+  expect(
+    enteringAnimations.filter((count) => count > 0).length,
+  ).toBeGreaterThanOrEqual(3);
   expect(
     await card
       .locator("ha-card")
-      .evaluate(
-        (element) =>
-          element
-            .getAnimations()
-            .filter((animation) => animation.playState !== "finished").length,
-      ),
+      .evaluate((card) => card.getAnimations().length),
   ).toBe(0);
+  await card.evaluate(async (element) => {
+    const animations = Array.from(
+      element.shadowRoot?.querySelectorAll<HTMLElement>(
+        ".stage-placement[data-layout-node]",
+      ) ?? [],
+    ).flatMap((placement) => placement.getAnimations());
+    await Promise.all(animations.map((animation) => animation.finished));
+  });
   const activityNavigation = card.locator("wzc-activity-navigation");
   await expect(activityNavigation.locator("button")).toHaveCount(8);
   const navigationButtonHeights = await activityNavigation
@@ -9156,6 +9167,14 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     "data-stage-variant",
     "phone",
   );
+  const leavingAnimations = await card
+    .locator(".stage-placement[data-layout-node]")
+    .evaluateAll((placements) =>
+      placements.map((placement) => placement.getAnimations().length),
+    );
+  expect(
+    leavingAnimations.filter((count) => count > 0).length,
+  ).toBeGreaterThanOrEqual(3);
 });
 
 test("exposes and honors the WatchZone semantic theme-token contract", async ({
