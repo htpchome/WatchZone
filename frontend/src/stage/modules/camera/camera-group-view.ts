@@ -9,7 +9,7 @@ import {
   CAMERA_VIEW_TAG,
   MEDIA_OVERLAY_INTERACTION_EVENT,
 } from "../../../core/constants";
-import { DeviceProfileController } from "../../../core/device-profile";
+import { CLIENT_PROFILE } from "../../../core/client-profile";
 import {
   isMediaFullscreenActive,
   mediaFullscreenSupported,
@@ -85,7 +85,6 @@ export class CameraGroupView extends LitElement {
   };
 
   private _audioFocus: 0 | 1 = 0;
-  private readonly _deviceProfile = new DeviceProfileController(this);
   private _fullscreenActive = false;
   private readonly _overlay = new MediaOverlayVisibilityController(this, {
     onVisibilityChange: (visible) => this._emitOverlayVisibility(visible),
@@ -119,7 +118,7 @@ export class CameraGroupView extends LitElement {
   protected render() {
     const [main, secondary] = this.cameras;
     if (!main || !secondary) return html``;
-    const phone = this._deviceProfile.profile.deviceClass === "phone";
+    const phone = CLIENT_PROFILE.isPhone;
     const visibleIndex = this.mode === "secondary" ? 1 : 0;
     const combined = !phone && this.mode === "combined";
     const focus = this._audioFocus === 1 ? this._secondaryView : this._mainView;
@@ -309,7 +308,7 @@ export class CameraGroupView extends LitElement {
   }
 
   private get _visibleViews(): readonly CameraView[] {
-    const phone = this._deviceProfile.profile.deviceClass === "phone";
+    const phone = CLIENT_PROFILE.isPhone;
     if (!phone && this.mode === "combined") return this._views;
     return [
       this.mode === "secondary" ? this._secondaryView : this._mainView,
@@ -645,7 +644,7 @@ export class CameraGroupView extends LitElement {
     const combinedSideBySide =
       this.layout === "side_by_side" &&
       this.mode === "combined" &&
-      this._deviceProfile.profile.deviceClass !== "phone";
+      !CLIENT_PROFILE.isPhone;
     const scale =
       combinedSideBySide && size.resized
         ? size.heightRatio / DEFAULT_CAMERA_STAGE_HEIGHT_RATIO

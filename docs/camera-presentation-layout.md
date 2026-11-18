@@ -172,10 +172,12 @@ allowed to clip content or escape Home Assistant's allocated grid area.
   minimum height to the natural camera stage. At extremely narrow card widths,
   the stage ratio therefore remains authoritative without an additional
   responsive breakpoint.
-- Grouped feeds use the configured side-by-side or stacked split at tablet and
-  desktop widths. At phone-width camera containers, only one member is
-  presented and the overlay selector toggles A/B. The responsive change does
-  not rewrite the saved group layout.
+- Grouped feeds use the configured side-by-side or stacked split on physical
+  tablets and desktops. On a physical phone, only one member is presented and
+  the overlay selector toggles A/B regardless of the Camera container width.
+  Rotation, Stage layout, and the Companion landscape Camera pull therefore
+  cannot switch a phone group into combined mode or connect its hidden member.
+  The presentation rule does not rewrite the saved group layout.
 - The split is always contained inside the same camera-stage rectangle used by
   a standalone camera. Child feeds never contribute intrinsic height to the
   carousel, so configuring a group cannot resize that group, another slide, or
@@ -191,7 +193,7 @@ allowed to clip content or escape Home Assistant's allocated grid area.
   viewport-edge surface; fullscreen controls own safe-area treatment instead.
 - A grouped stage has one resize handle and one shared stage-height ratio. Each
   member independently derives media fit and pan bounds inside its own half (or
-  its phone-width solo viewport).
+  its physical-phone solo viewport).
 - Until the expanded stage reaches the active media's intrinsic ratio, media
   remains contained so sources such as `4:3` reveal their available height.
   Expansion beyond the source ratio increases a centered base presentation

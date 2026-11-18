@@ -47,14 +47,14 @@ replace a healthy live presentation or its media-session leases. The camera
 module accepts at most the centralized `MAX_CAMERAS` limit of twelve source
 cameras.
 
-On tablet and desktop, repeatedly activating the selected group navigation
-item cycles `combined → main → secondary → combined`. The label remains the
-group title; main or secondary focus adds only the layout-relative directional
-icon. In a phone-width camera container, one feed is visible and activation
-toggles main/secondary without a combined stop. The shared activity scope
-remains both group members on phone, while desktop solo focus narrows it to the
-visible member. Activity takeover selects the combined desktop group or the
-alerting member on phone.
+On a physical tablet or desktop, repeatedly activating the selected group
+navigation item cycles `combined → main → secondary → combined`. The label
+remains the group title; main or secondary focus adds only the layout-relative
+directional icon. On a physical phone, one feed remains visible at every
+container width and activation toggles main/secondary without a combined stop.
+The shared activity scope remains both group members on phone, while desktop
+solo focus narrows it to the visible member. Activity takeover selects the
+combined desktop group or the alerting member on phone.
 
 The selected slide owns its frontend transport leases, visible controls,
 resize interaction, and audible presentation. A selected combined group may

@@ -10,7 +10,7 @@ import {
   CAMERA_TAG,
   CAMERA_VIEW_TAG,
 } from "../../../core/constants";
-import { DeviceProfileController } from "../../../core/device-profile";
+import { CLIENT_PROFILE } from "../../../core/client-profile";
 import type { CameraSessionContext } from "../../camera-session-context";
 import type { CameraSelectionContext } from "../../camera-selection-context";
 import type {
@@ -130,7 +130,6 @@ export class CameraModule extends LitElement {
       takeoverMode: this.alertTakeoverMode,
     }),
   );
-  private readonly _deviceProfile = new DeviceProfileController(this);
   private readonly _slideshow = new CameraSlideshowController(this, () => ({
     advance: this._advanceSlideshow,
     intervalSeconds: this.slideAdvanceSeconds,
@@ -508,7 +507,7 @@ export class CameraModule extends LitElement {
     if (item?.cameras.length === 2) {
       this._groupModes.set(
         item.id,
-        this._deviceProfile.profile.deviceClass === "phone"
+        CLIENT_PROFILE.isPhone
           ? item.cameras[1].entityId === entityId
             ? "secondary"
             : "main"
@@ -645,7 +644,7 @@ export class CameraModule extends LitElement {
 
   private _groupMode(item: CameraPresentationItem): CameraGroupMode {
     const mode = this._groupModes.get(item.id) ?? "combined";
-    if (this._deviceProfile.profile.deviceClass !== "phone") return mode;
+    if (!CLIENT_PROFILE.isPhone) return mode;
     return mode === "secondary" ? "secondary" : "main";
   }
 
@@ -653,7 +652,7 @@ export class CameraModule extends LitElement {
     const item = this._activePresentation;
     if (!item) return [];
     if (item.cameras.length === 1) return [item.cameras[0].entityId];
-    if (this._deviceProfile.profile.deviceClass === "phone") {
+    if (CLIENT_PROFILE.isPhone) {
       return item.cameras.map(({ entityId }) => entityId);
     }
     const mode = this._groupMode(item);
@@ -690,7 +689,7 @@ export class CameraModule extends LitElement {
 
   private _cycleGroup(item: CameraPresentationItem): void {
     const current = this._groupMode(item);
-    const phone = this._deviceProfile.profile.deviceClass === "phone";
+    const phone = CLIENT_PROFILE.isPhone;
     const next = phone
       ? current === "secondary"
         ? "main"
