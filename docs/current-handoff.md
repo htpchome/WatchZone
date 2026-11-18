@@ -7,12 +7,12 @@ feature before changing source code.
 ## Repository state
 
 - Branch: `main`
-- Application version: `0.0.4-dev.436`
-- Baseline commit: `308eea6` —
-  `v0.0.4-dev.435 - fix(frontend): choreograph two-panel rotation and clean fullscreen media`
-- The expected pending dev.436 change removes the regressive authored panel
-  animation, restores atomic native rotation, keeps the fullscreen grip
-  visible, and suppresses only the fullscreen camera activity outline.
+- Application version: `0.0.4-dev.437`
+- Baseline commit: `4afc456` —
+  `v0.0.4-dev.436 - fix(frontend): remove rotation regression and restore scoped colors`
+- The expected pending dev.437 change keeps the pull handle hidden until its
+  first valid landscape measurement and removes rounded-corner exposure from
+  the expanded camera without replacing or duplicating its live presentation.
 - Release artifact: `dist/watchzone.zip`
 
 Documentation-only work does not require a version bump. The user makes all
@@ -81,6 +81,8 @@ This feature applies only to the Home Assistant Companion app on phones.
 ### Camera expansion handle
 
 - A vertical handle sits in the gutter between the camera and activity pane.
+- The handle remains natively hidden until valid camera and activity geometry
+  places it in that gutter; it never renders at an unmeasured default edge.
 - It is a tall 3px line using the semantic secondary-text color.
 - Dragging right expands the existing camera over the activity pane while
   preserving the live element and its controls.
@@ -111,7 +113,7 @@ This feature applies only to the Home Assistant Companion app on phones.
 
 ## Rotation status: physical-device verification required
 
-The dev.436 implementation addresses the transition defects visible in the
+The dev.437 implementation addresses the transition defects visible in the
 November 18 recordings:
 
 - the camera no longer receives an independent non-uniform FLIP scale;
@@ -123,6 +125,8 @@ November 18 recordings:
   the retained portrait placeholder;
 - the fullscreen camera activity outline is suppressed while expanded without
   removing the visible return grip; and
+- the expanded camera's carousel, camera shell, and live viewport all use
+  square viewport-edge corners so underlying content cannot show through; and
 - no authored panel animation delays the atomic return to portrait flow.
 
 Automated browser tests validate ownership, identity, layout, animation

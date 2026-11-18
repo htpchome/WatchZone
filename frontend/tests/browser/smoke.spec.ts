@@ -8631,16 +8631,15 @@ test("uses mobile viewport sizing without edge-to-edge on Companion tablets", as
 });
 
 test("transforms the Companion phone Full Stage into 60/40 landscape columns", async ({
-  page,
+  browser,
 }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.addInitScript(() => {
-    Object.defineProperty(navigator, "userAgent", {
-      configurable: true,
-      get: () =>
-        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Home Assistant/2026.9 Mobile/HomeAssistant, like Safari",
-    });
+  const context = await browser.newContext({
+    hasTouch: true,
+    userAgent:
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Home Assistant/2026.9 Mobile/HomeAssistant, like Safari",
+    viewport: { width: 390, height: 844 },
   });
+  const page = await context.newPage();
   await page.goto("/");
   await waitForWatchZoneDefinition(page);
   const card = page.locator("watchzone-card");
@@ -8764,6 +8763,31 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
       }
     ).swiper.slideTo(0, 0),
   );
+
+  await card.evaluate((element) => {
+    const history: Array<{ display: string; hidden: boolean }> = [];
+    const record = () => {
+      const handle = element.shadowRoot?.querySelector<HTMLButtonElement>(
+        ".companion-camera-pull-handle",
+      );
+      if (!handle?.isConnected) return;
+      history.push({
+        display: getComputedStyle(handle).display,
+        hidden: handle.hasAttribute("hidden"),
+      });
+    };
+    const observer = new MutationObserver(record);
+    observer.observe(element.shadowRoot ?? element, {
+      attributeFilter: ["hidden"],
+      attributes: true,
+      childList: true,
+      subtree: true,
+    });
+    Object.assign(window, {
+      __watchZonePullHandleHistory: history,
+      __watchZonePullHandleObserver: observer,
+    });
+  });
 
   await expect(card.locator(".stage-grid")).toHaveAttribute(
     "data-stage-variant",
@@ -9027,6 +9051,25 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
   });
   await expect(pullHandle).toHaveAttribute("role", "slider");
   await expect(pullHandle).toHaveAttribute("aria-valuenow", "0");
+  const initialHandleHistory = await page.evaluate(() => {
+    const trackedWindow = window as Window & {
+      __watchZonePullHandleHistory?: Array<{
+        display: string;
+        hidden: boolean;
+      }>;
+      __watchZonePullHandleObserver?: MutationObserver;
+    };
+    trackedWindow.__watchZonePullHandleObserver?.disconnect();
+    return trackedWindow.__watchZonePullHandleHistory ?? [];
+  });
+  expect(initialHandleHistory).toContainEqual({
+    display: "none",
+    hidden: true,
+  });
+  expect(initialHandleHistory.at(-1)).toEqual({
+    display: "block",
+    hidden: false,
+  });
   const collapsedHandle = await pullHandle.boundingBox();
   expect(collapsedHandle).not.toBeNull();
   const collapsedHandleCenter =
@@ -9131,6 +9174,14 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
   await expect(pullHandle).toHaveAttribute("aria-valuenow", "100");
   await expect(card).not.toHaveClass(/landscape-camera-overlay-settling/);
   await expect(cameraPlacement).toHaveCSS("position", "absolute");
+  await expect(cameraCarousel).toHaveCSS("border-radius", "0px");
+  await expect(phoneViews.first().locator(".camera")).toHaveCSS(
+    "border-radius",
+    "0px",
+  );
+  await expect(
+    phoneViews.first().locator("wzc-camera-live .viewport"),
+  ).toHaveCSS("border-radius", "0px");
   expect(
     await pullHandle.evaluate(
       (element) => getComputedStyle(element, "::before").opacity,
@@ -9163,6 +9214,36 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
   expect(await activityScroller.evaluate((element) => element.scrollTop)).toBe(
     retainedScrollTop,
   );
+
+  const activePresentation = phoneViews.first().locator("wzc-camera-live");
+  await activePresentation.evaluate(async (element) => {
+    const presentation = element as HTMLElement & {
+      selected?: "fallback" | "webrtc";
+      updateComplete: Promise<boolean>;
+    };
+    presentation.selected = "fallback";
+    await presentation.updateComplete;
+  });
+  const cameraControls = activePresentation.locator("wzc-camera-controls");
+  const activeViewport = activePresentation.locator(".viewport");
+  await activeViewport.dispatchEvent("pointerleave", {
+    pointerType: "mouse",
+  });
+  await expect(cameraControls).not.toHaveAttribute("visible");
+  const expandedHandle = await pullHandle.boundingBox();
+  if (!expandedHandle) throw new Error("Pull handle was not rendered");
+  await page.touchscreen.tap(
+    expandedHandle.x + expandedHandle.width / 2,
+    expandedHandle.y + expandedHandle.height / 2,
+  );
+  const activeViewportBounds = await activeViewport.boundingBox();
+  if (!activeViewportBounds)
+    throw new Error("Camera viewport was not rendered");
+  await page.touchscreen.tap(
+    activeViewportBounds.x + activeViewportBounds.width / 2,
+    activeViewportBounds.y + activeViewportBounds.height / 2,
+  );
+  await expect(cameraControls).toHaveAttribute("visible", "");
 
   await pullHandle.press("Home");
   await expect(card).not.toHaveClass(/landscape-camera-overlay-active/);
@@ -9280,6 +9361,7 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
   expect(portraitFlow.cardTop).toBeGreaterThanOrEqual(
     portraitFlow.navbarBottom ?? 0,
   );
+  await context.close();
 });
 
 test("exposes and honors the WatchZone semantic theme-token contract", async ({

@@ -132,7 +132,9 @@ tablets, or incompatible Stage types.
 A separate vertical pull handle is centered in the actual gutter at the
 Camera's trailing edge in this presentation. Its borderless three-pixel line
 uses the semantic secondary text color and keeps a tall visual indicator inside
-a larger transparent touch target. Camera alert and detection state remains
+a larger transparent touch target. The handle remains hidden until the
+controller has valid Camera and activity geometry, so an unmeasured handle is
+never painted at a default viewport edge. Camera alert and detection state remains
 active during a pull, but its inner activity outline is suppressed while the
 Camera is resizing and restored after settling so the border is not
 re-rasterized on every drag frame.
@@ -143,7 +145,9 @@ above the unchanged activity column; activity selection and scroll position do
 not move into the overlay.
 Releasing before 50% returns to the 60/40 layout, while releasing at or beyond
 50% settles into a viewport-covering Camera with its complete composed control
-surface. At full expansion, the grip visual and camera alert/detection outline
+surface. The viewport-covering carousel, camera shell, and live viewport all
+use zero corner radius so the underlying Stage cannot show through. At full
+expansion, the grip visual and camera alert/detection outline
 do not share presentation: the outline is hidden so it cannot bleed over the
 media, while the grip remains visible inside the safe trailing edge and can be
 dragged left to restore the split layout. Arrow keys, Home/End, Enter/Space,

@@ -134,6 +134,7 @@ export const companionPhoneLandscapeStyles = css`
   :host(.companion-phone-landscape.landscape-camera-overlay-expanded)
     .stage-placement[data-layout-node$="default-camera-module"] {
     --wzc-camera-square-radius: 0px;
+    --wzc-live-radius: 0px;
     --wzc-camera-activity-outline-width: 0px;
   }
 
