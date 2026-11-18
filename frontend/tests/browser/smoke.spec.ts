@@ -3292,7 +3292,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
     }
     return {
       badge: getComputedStyle(badgeSurface).backgroundColor,
-      outline: getComputedStyle(outline).borderTopColor,
+      outline: getComputedStyle(outline, "::after").borderTopColor,
     };
   });
   expect(detectionColors.badge).toBe(detectionColors.outline);
@@ -3915,7 +3915,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
     .locator("wzc-reviews .thumbnail-wrap")
     .evaluateAll((thumbnails) =>
       thumbnails.slice(0, 2).map((thumbnail) => {
-        const outline = getComputedStyle(thumbnail);
+        const outline = getComputedStyle(thumbnail, "::after");
         return {
           color: outline.borderTopColor,
           style: outline.borderTopStyle,
@@ -8781,6 +8781,15 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
   expect(
     enteringAnimations.filter((count) => count > 0).length,
   ).toBeGreaterThanOrEqual(3);
+  const transitioningOutline = card
+    .locator("wzc-reviews .thumbnail-wrap.detection")
+    .first();
+  await expect(card).toHaveClass(/companion-phone-orientation-transitioning/);
+  expect(
+    await transitioningOutline.evaluate(
+      (element) => getComputedStyle(element, "::after").borderTopWidth,
+    ),
+  ).toBe("0px");
   expect(
     await card
       .locator("ha-card")
@@ -8794,6 +8803,14 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     ).flatMap((placement) => placement.getAnimations());
     await Promise.all(animations.map((animation) => animation.finished));
   });
+  await expect(card).not.toHaveClass(
+    /companion-phone-orientation-transitioning/,
+  );
+  expect(
+    await transitioningOutline.evaluate(
+      (element) => getComputedStyle(element, "::after").borderTopWidth,
+    ),
+  ).not.toBe("0px");
   const activityNavigation = card.locator("wzc-activity-navigation");
   await expect(activityNavigation.locator("button")).toHaveCount(8);
   const navigationButtonHeights = await activityNavigation

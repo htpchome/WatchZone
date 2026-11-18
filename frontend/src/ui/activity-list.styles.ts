@@ -152,7 +152,6 @@ export const activityListStyles = css`
     aspect-ratio: 16 / 9;
     background: var(--wzc-event-thumbnail-placeholder-background);
     block-size: 100%;
-    border: var(--wzc-activity-thumbnail-outline-width) solid transparent;
     border-radius: var(--wzc-event-thumbnail-radius);
     box-sizing: border-box;
     inline-size: 100%;
@@ -170,12 +169,23 @@ export const activityListStyles = css`
 
   .thumbnail-wrap.alert {
     --wzc-activity-thumbnail-outline-color: var(--wzc-color-error);
-    border-color: var(--wzc-activity-thumbnail-outline-color);
   }
 
   .thumbnail-wrap.detection {
     --wzc-activity-thumbnail-outline-color: var(--wzc-color-warning);
-    border-color: var(--wzc-activity-thumbnail-outline-color);
+  }
+
+  .thumbnail-wrap.alert::after,
+  .thumbnail-wrap.detection::after {
+    border: var(--wzc-activity-thumbnail-outline-width) solid
+      var(--wzc-activity-thumbnail-outline-color);
+    border-radius: inherit;
+    box-sizing: border-box;
+    content: "";
+    inset: 0;
+    pointer-events: none;
+    position: absolute;
+    z-index: 2;
   }
 
   .thumbnail,

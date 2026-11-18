@@ -13,23 +13,32 @@ type CanActivate = () => boolean;
 type OrientationChanged = (active: boolean) => void;
 
 const installedHosts = new WeakSet<LandscapeHost>();
-const FLIP_DURATION_MS = 400;
+const FLIP_DURATION_MS = 360;
 const FLIP_EASING = "cubic-bezier(.2,.8,.2,1)";
-const ORIENTATION_SETTLE_MS = 128;
+const OUTER_LAYOUT_SETTLE_MS = 180;
 const PLACEMENT_SELECTOR = ".stage-placement[data-layout-node]";
-const REQUIRED_STABLE_FRAMES = 4;
-const SETTLEMENT_FRAMES = 2;
+const REQUIRED_STABLE_FRAMES = 3;
 
 interface ViewportSnapshot {
   readonly height: number;
+  readonly layoutTop: number;
   readonly visualHeight: number;
   readonly visualWidth: number;
   readonly width: number;
 }
 
-function viewportSnapshot(): ViewportSnapshot {
+function composedParentElement(element: Element): Element | undefined {
+  if (element.parentElement) return element.parentElement;
+  const root = element.getRootNode();
+  return root instanceof ShadowRoot ? root.host : undefined;
+}
+
+function viewportSnapshot(host: HTMLElement): ViewportSnapshot {
   return {
     height: window.innerHeight,
+    layoutTop:
+      composedParentElement(host)?.getBoundingClientRect().top ??
+      host.getBoundingClientRect().top,
     visualHeight: window.visualViewport?.height ?? window.innerHeight,
     visualWidth: window.visualViewport?.width ?? window.innerWidth,
     width: window.innerWidth,
@@ -42,18 +51,11 @@ function sameViewport(
 ): boolean {
   return (
     first.height === second.height &&
+    Math.abs(first.layoutTop - second.layoutTop) < 0.5 &&
     first.visualHeight === second.visualHeight &&
     first.visualWidth === second.visualWidth &&
     first.width === second.width
   );
-}
-
-async function waitForAnimationFrames(count: number): Promise<void> {
-  for (let frame = 0; frame < count; frame += 1) {
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => resolve()),
-    );
-  }
 }
 
 export function installCompanionPhoneLandscape(
@@ -79,7 +81,7 @@ class CompanionPhoneLandscapeController implements ReactiveController {
   private _connected = false;
   private _frame?: number;
   private _initialized = false;
-  private _lastViewport = viewportSnapshot();
+  private _lastViewport = viewportSnapshot(this._host);
   private _lastViewportChange = 0;
   private readonly _pull: CompanionCameraPullController;
   private _stableFrames = 0;
@@ -121,13 +123,14 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     window.visualViewport?.removeEventListener("resize", this._schedule);
     this._pull.deactivate();
     this._cancelAnimations();
+    this._host.classList.remove("companion-phone-orientation-transitioning");
     if (this._frame !== undefined) cancelAnimationFrame(this._frame);
     this._frame = undefined;
   }
 
   private readonly _schedule = (): void => {
     if (!this._connected) return;
-    this._lastViewport = viewportSnapshot();
+    this._lastViewport = viewportSnapshot(this._host);
     this._lastViewportChange = performance.now();
     this._stableFrames = 0;
     if (this._frame === undefined) {
@@ -138,7 +141,7 @@ class CompanionPhoneLandscapeController implements ReactiveController {
   private readonly _settle = (now: number): void => {
     this._frame = undefined;
     if (!this._connected) return;
-    const viewport = viewportSnapshot();
+    const viewport = viewportSnapshot(this._host);
     if (sameViewport(viewport, this._lastViewport)) {
       this._stableFrames += 1;
     } else {
@@ -148,7 +151,7 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     }
     if (
       this._stableFrames < REQUIRED_STABLE_FRAMES ||
-      now - this._lastViewportChange < ORIENTATION_SETTLE_MS
+      now - this._lastViewportChange < OUTER_LAYOUT_SETTLE_MS
     ) {
       this._frame = requestAnimationFrame(this._settle);
       return;
@@ -241,16 +244,18 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     }
     const before = animate ? this._capturePlacements() : new Map();
     this._cancelAnimations();
+    if (animate) {
+      this._host.classList.add("companion-phone-orientation-transitioning");
+    }
     this._active = active;
     if (!active) this._pull.deactivate();
     this._host.classList.toggle("companion-phone-landscape", active);
     this._orientationChanged(active);
     await this._host.updateComplete;
     if (!this._connected || this._active !== active) return;
-    if (animate) {
-      await this._playFlip(before);
-      await waitForAnimationFrames(SETTLEMENT_FRAMES);
-    }
+    if (animate) await this._playFlip(before);
+    if (!this._connected || this._active !== active) return;
+    this._host.classList.remove("companion-phone-orientation-transitioning");
     if (this._connected && this._active === active && active) {
       this._pull.activate();
     }
