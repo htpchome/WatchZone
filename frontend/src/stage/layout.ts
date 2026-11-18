@@ -89,7 +89,17 @@ export function validateStageDesign(value: unknown): StageDesignDocument {
     throw new Error("The stage design uses an unsupported schema version.");
   }
   const variants = objectValue(source.variants, "Stage design variants");
-  const profiles = validateStageProfiles(source.profiles);
+  const profiles = source.profiles;
+  if (
+    !Array.isArray(profiles) ||
+    profiles.length === 0 ||
+    profiles.some(
+      (profile) => profile !== "standard" && profile !== "mobile",
+    ) ||
+    new Set(profiles).size !== profiles.length
+  ) {
+    throw new Error("Stage design profiles are invalid.");
+  }
   const validatedVariants: Partial<Record<StageVariantName, StageVariant>> = {};
   for (const name of ["default", "phone"] as const) {
     if (variants[name] !== undefined) {
@@ -102,28 +112,12 @@ export function validateStageDesign(value: unknown): StageDesignDocument {
   return {
     id: nonEmptyString(source.id, "Stage design IDs"),
     name: nonEmptyString(source.name, "Stage design names"),
-    profiles,
+    profiles: profiles as StageProfile[],
     revision: nonNegativeInteger(source.revision, "Stage design revisions"),
     schemaVersion: STAGE_SCHEMA_VERSION,
     stageType: validateStageType(source.stageType),
     variants: validatedVariants,
   };
-}
-
-function validateStageProfiles(value: unknown): readonly StageProfile[] {
-  if (!Array.isArray(value) || value.length === 0) {
-    throw new Error("Stage designs must provide at least one profile.");
-  }
-  const profiles = value.map((profile) => {
-    if (profile !== "standard" && profile !== "mobile") {
-      throw new Error("Stage designs require valid profiles.");
-    }
-    return profile;
-  });
-  if (new Set(profiles).size !== profiles.length) {
-    throw new Error("Stage design profiles must not contain duplicates.");
-  }
-  return profiles;
 }
 
 function validateStageType(value: unknown): StageType {
@@ -181,12 +175,10 @@ function validateFlowEntries(
     if (!design) {
       throw new Error(`Stage flow design "${id}" does not exist.`);
     }
-    const profile: StageProfile =
-      variantName === "phone" ? "mobile" : "standard";
-    if (!design.profiles.includes(profile)) {
-      throw new Error(
-        `Stage design "${id}" does not support the ${profile} profile.`,
-      );
+    if (
+      !design.profiles.includes(variantName === "phone" ? "mobile" : "standard")
+    ) {
+      throw new Error(`Stage design "${id}" does not support this profile.`);
     }
   }
   return ids;

@@ -3,8 +3,6 @@ import { html } from "lit";
 import type { CardConfig } from "../core/config";
 import type { LocalizeFunction } from "../core/localization";
 import {
-  DEFAULT_FULL_STAGE_ID,
-  DEFAULT_MOBILE_FULL_STAGE_ID,
   type AvailableStageType,
   type ConfiguredStageFlow,
 } from "../core/stage";
@@ -41,16 +39,6 @@ function renderStageTypeOption(
   </label>`;
 }
 
-function stageDesignLabel(
-  localize: LocalizeFunction,
-  id: string,
-  fallback: string,
-): string {
-  return id === DEFAULT_FULL_STAGE_ID || id === DEFAULT_MOBILE_FULL_STAGE_ID
-    ? localize("editor.default_stage_layout")
-    : fallback;
-}
-
 function renderStageLayoutOptions(
   options: StageManagementOptions,
   profile: keyof ConfiguredStageFlow,
@@ -76,7 +64,11 @@ function renderStageLayoutOptions(
               @change=${options.onStageLayoutChange}
             />
             <span
-              >${stageDesignLabel(options.localize, stage.id, stage.name)}</span
+              >${
+                stage.name === "Default"
+                  ? options.localize("editor.default_stage_layout")
+                  : stage.name
+              }</span
             >
           </label>`,
       )}
