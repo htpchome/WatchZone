@@ -37,21 +37,23 @@ application-wide boundaries.
 
 ## Structure and identity
 
-The camera stage contains one `.camera-carousel.swiper`, one
-`.swiper-wrapper`, and one stable `.swiper-slide` per presentation item. A
-presentation item is either one configured camera or one configured
-additional-camera pair. A pair replaces both member cameras in navigation; it
-does not add a third slide or merge either camera's source identity. Each slide
-is keyed by its main camera entity identity so selection and reordering do not
-replace a healthy live presentation or its media-session leases. The camera
-module accepts at most the centralized `MAX_CAMERAS` limit of twelve source
-cameras.
+The camera stage contains one `.camera-carousel.swiper` and one
+`.swiper-wrapper`. On tablets and desktops it has one stable `.swiper-slide`
+per presentation item: either one configured camera or one configured
+additional-camera pair. On a physical phone it instead has one slide per
+physical camera, so swiping always reaches both A/B members even though camera
+navigation continues to represent the pair as one grouped option. Slides keep
+the physical camera entity identity; grouping never merges source identity.
+The camera module accepts at most the centralized `MAX_CAMERAS` limit of twelve
+source cameras.
 
 On a physical tablet or desktop, repeatedly activating the selected group
 navigation item cycles `combined → main → secondary → combined`. The label
 remains the group title; main or secondary focus adds only the layout-relative
 directional icon. On a physical phone, one feed remains visible at every
-container width and activation toggles main/secondary without a combined stop.
+container width; activation selects the other member's physical slide without
+a combined stop. Swiping participates in the same physical slide sequence,
+while the grouped option reports the active member's direction.
 The shared activity scope remains both group members on phone, while desktop
 solo focus narrows it to the visible member. Activity takeover selects the
 combined desktop group or the alerting member on phone.
@@ -106,8 +108,9 @@ cannot complete.
   Swiper, camera navigation, the camera-switcher overlay, and activity modules
   do not create parallel slideshow state.
 - The configured interval is 5, 10, 20, or 30 seconds and defaults to 10.
-  Advancing wraps through Camera's presentation items and uses the configured
-  carousel transition.
+  Advancing wraps through Camera's carousel items and uses the configured
+  transition. Those items are physical cameras on phones and grouped
+  presentation items on tablets and desktops.
 - Every automatic advance uses Camera's authoritative selection path, so camera
   navigation, the overlay selector, Reviews, Events, Recordings, leases, and
   active physical-camera scope update together.

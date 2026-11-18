@@ -998,7 +998,7 @@ test("cycles a grouped camera from combined to each member and back", async ({
   ]);
 });
 
-test("keeps grouped phone navigation to one visible A or B feed", async ({
+test("keeps both grouped phone cameras in the physical swipe sequence", async ({
   page,
 }) => {
   await page.setViewportSize({ height: 800, width: 500 });
@@ -1035,144 +1035,48 @@ test("keeps grouped phone navigation to one visible A or B feed", async ({
     });
   });
 
-  const group = card.locator("wzc-camera-group-view");
+  const carousel = card.locator("wzc-camera .camera-carousel");
+  const views = card.locator("wzc-camera wzc-camera-view");
   const button = card
     .locator("wzc-camera-navigation button")
     .filter({ hasText: "Group A/B" });
   const leadingIcon = button.locator(".option-leading-icon");
-  await expect(group.locator(".feed:not(.hidden)")).toHaveCount(1);
+  await expect(carousel.locator(".swiper-slide")).toHaveCount(3);
+  await expect(card.locator("wzc-camera-group-view")).toHaveCount(0);
   await expect(leadingIcon).toHaveAttribute("data-icon", "arrowLeft");
-  await group.hover();
-  const [
-    phoneGroupBox,
-    phoneSelectorBox,
-    phonePlayerControlBox,
-    phonePickerBox,
-    phoneSlideshowBox,
-  ] = await Promise.all([
-    group.boundingBox(),
-    group.locator(".feed-selector").boundingBox(),
-    group.locator('[data-control="mute"]').boundingBox(),
-    card.locator("wzc-camera-switcher .trigger").boundingBox(),
-    card.locator("wzc-slideshow button").boundingBox(),
-  ]);
-  expect(phoneGroupBox).not.toBeNull();
-  expect(phoneSelectorBox).not.toBeNull();
-  expect(phonePickerBox).not.toBeNull();
-  expect(phoneSlideshowBox).not.toBeNull();
-  expect(phoneSelectorBox?.width).toBeCloseTo(
-    phonePlayerControlBox?.width ?? 0,
-    1,
-  );
-  expect(phoneSelectorBox?.height).toBeCloseTo(
-    phonePlayerControlBox?.height ?? 0,
-    1,
-  );
-  if (
-    phoneGroupBox &&
-    phoneSelectorBox &&
-    phonePickerBox &&
-    phoneSlideshowBox
-  ) {
-    const phoneRailGeometry = await group.evaluate((element) => {
-      const railProbe = document.createElement("span");
-      const insetProbe = document.createElement("span");
-      railProbe.style.cssText =
-        "position:absolute;inline-size:var(--wzc-camera-side-lane-inline-size)";
-      insetProbe.style.cssText =
-        "position:absolute;inline-size:var(--wzc-camera-control-inline-inset)";
-      element.shadowRoot?.append(railProbe, insetProbe);
-      const result = {
-        inset: insetProbe.getBoundingClientRect().width,
-        rail: railProbe.getBoundingClientRect().width,
-      };
-      railProbe.remove();
-      insetProbe.remove();
-      return result;
-    });
-    expect(phoneSelectorBox.x).toBeGreaterThanOrEqual(phoneGroupBox.x);
-    expect(phoneSelectorBox.x + phoneSelectorBox.width).toBeLessThanOrEqual(
-      phoneGroupBox.x + phoneRailGeometry.rail + 1,
-    );
-    expect(phonePickerBox.x + phonePickerBox.width / 2).toBeCloseTo(
-      phoneGroupBox.x + phoneGroupBox.width / 2,
-      0,
-    );
-    expect(phonePickerBox.width).toBeCloseTo(7.125 * 16, 0);
-    expect(
-      phonePickerBox.x - (phoneSlideshowBox.x + phoneSlideshowBox.width),
-    ).toBeCloseTo(4, 1);
-    expect(phoneSelectorBox.x + phoneSelectorBox.width).toBeLessThanOrEqual(
-      phoneSlideshowBox.x,
-    );
-  }
-
-  const phoneSwitcher = card.locator("wzc-camera-switcher");
-  await phoneSwitcher.locator(".trigger").click();
-  const phoneOptions = phoneSwitcher.locator(".options");
-  await expect(phoneOptions).toBeVisible();
-  expect((await phoneOptions.boundingBox())?.width).toBeCloseTo(
-    phonePickerBox?.width ?? 0,
-    1,
-  );
-  expect(
-    await phoneOptions
-      .locator(".option")
-      .evaluateAll((options) =>
-        options.every((option) => option.scrollWidth <= option.clientWidth),
+  await expect
+    .poll(() =>
+      views.evaluateAll((items) =>
+        items.map(
+          (item) => (item as HTMLElement & { connect: boolean }).connect,
+        ),
       ),
-  ).toBe(true);
-  await phoneSwitcher.locator(".trigger").click();
+    )
+    .toEqual([true, false, false]);
 
   await button.click();
-  await expect(group.locator(".feed:not(.hidden)")).toHaveCount(1);
   await expect(leadingIcon).toHaveAttribute("data-icon", "arrowRight");
+  await expect
+    .poll(() =>
+      views.evaluateAll((items) =>
+        items.map(
+          (item) => (item as HTMLElement & { connect: boolean }).connect,
+        ),
+      ),
+    )
+    .toEqual([false, true, false]);
 
   await page.setViewportSize({ height: 500, width: 1_200 });
-  await expect(group.locator(".feed:not(.hidden)")).toHaveCount(1);
+  await expect(carousel.locator(".swiper-slide")).toHaveCount(3);
   await expect(leadingIcon).toHaveAttribute("data-icon", "arrowRight");
 
-  await button.click();
-  await expect(leadingIcon).toHaveAttribute("data-icon", "arrowLeft");
-
-  await page.mouse.move(0, 0);
-  const feedActions = group.locator(".feed-actions");
-  await expect(feedActions).toBeHidden({
-    timeout: MEDIA_OVERLAY_HIDE_DELAY_MS + 1_000,
-  });
-  await expect(feedActions).toHaveCSS("pointer-events", "none");
-  await expect(feedActions).toHaveCSS("visibility", "hidden");
-  const hiddenFeedActionHit = await group
-    .locator(".feed-action")
-    .first()
-    .evaluate((element) => {
-      const bounds = element.getBoundingClientRect();
-      const x = bounds.x + bounds.width / 2;
-      const y = bounds.y + bounds.height / 2;
-      let target = document.elementFromPoint(x, y);
-      while (target?.shadowRoot) {
-        const nested = target.shadowRoot.elementFromPoint(x, y);
-        if (!nested || nested === target) break;
-        target = nested;
+  await carousel.evaluate((element) =>
+    (
+      element as HTMLElement & {
+        swiper: { slideTo(index: number, speed: number): void };
       }
-      return target === element || Boolean(target && element.contains(target));
-    });
-  expect(hiddenFeedActionHit).toBe(false);
-  const groupedSurface = group.locator(".group");
-  await groupedSurface.dispatchEvent("pointerdown", {
-    isPrimary: true,
-    pointerId: 91,
-    pointerType: "touch",
-  });
-  await expect(feedActions).toBeHidden();
-  await groupedSurface.dispatchEvent("pointerup", {
-    isPrimary: true,
-    pointerId: 91,
-    pointerType: "touch",
-  });
-  await expect(feedActions).toBeHidden();
-  await groupedSurface.dispatchEvent("click");
-  await expect(feedActions).toBeVisible();
+    ).swiper.slideTo(0, 0),
+  );
   await expect(leadingIcon).toHaveAttribute("data-icon", "arrowLeft");
 });
 
@@ -8686,6 +8590,7 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
           title: "Front A/B",
         },
         { entity_id: "camera.rear", title: "Rear" },
+        { entity_id: "camera.hall", title: "Hall" },
       ],
       card_height_mode_phone: "fit_viewport",
       camera_rounded_corners_phone: false,
@@ -8702,6 +8607,11 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
           entity_id: "camera.rear",
           state: "streaming",
           attributes: { friendly_name: "Rear" },
+        },
+        "camera.hall": {
+          entity_id: "camera.hall",
+          state: "streaming",
+          attributes: { friendly_name: "Hall" },
         },
       },
       connection: { subscribeMessage: async () => () => undefined },
@@ -8750,6 +8660,34 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     if (!camera) throw new Error("Camera placement was not rendered");
     camera.dataset.landscapeIdentity = "stable";
   });
+
+  const phoneCarousel = card.locator("wzc-camera .camera-carousel");
+  const phoneViews = card.locator("wzc-camera wzc-camera-view");
+  await expect(phoneCarousel.locator(".swiper-slide")).toHaveCount(3);
+  await expect(card.locator("wzc-camera-group-view")).toHaveCount(0);
+  await phoneCarousel.evaluate((element) =>
+    (
+      element as HTMLElement & {
+        swiper: { slideTo(index: number, speed: number): void };
+      }
+    ).swiper.slideTo(1, 0),
+  );
+  await expect
+    .poll(() =>
+      phoneViews.evaluateAll((views) =>
+        views.map(
+          (view) => (view as HTMLElement & { connect: boolean }).connect,
+        ),
+      ),
+    )
+    .toEqual([false, true, false]);
+  await phoneCarousel.evaluate((element) =>
+    (
+      element as HTMLElement & {
+        swiper: { slideTo(index: number, speed: number): void };
+      }
+    ).swiper.slideTo(0, 0),
+  );
 
   await expect(card.locator(".stage-grid")).toHaveAttribute(
     "data-stage-variant",
@@ -9020,19 +8958,15 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     (collapsedHandle?.y ?? 0) + (collapsedHandle?.height ?? 0) / 2,
     { steps: 4 },
   );
-  const landscapeGroup = card.locator("wzc-camera-group-view");
-  await expect(landscapeGroup.locator(".feed:not(.hidden)")).toHaveCount(1);
   await expect
     .poll(() =>
-      landscapeGroup
-        .locator("wzc-camera-view")
-        .evaluateAll((views) =>
-          views.map(
-            (view) => (view as HTMLElement & { connect: boolean }).connect,
-          ),
+      phoneViews.evaluateAll((views) =>
+        views.map(
+          (view) => (view as HTMLElement & { connect: boolean }).connect,
         ),
+      ),
     )
-    .toEqual([true, false]);
+    .toEqual([true, false, false]);
   await page.mouse.up();
   await expect(card).not.toHaveClass(/landscape-camera-overlay-active/);
   await expect(pullHandle).toHaveAttribute("aria-valuenow", "0");
@@ -9068,18 +9002,15 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     "stable",
   );
   expect(await cameraPlacement.locator("wzc-camera").count()).toBe(1);
-  await expect(landscapeGroup.locator(".feed:not(.hidden)")).toHaveCount(1);
   await expect
     .poll(() =>
-      landscapeGroup
-        .locator("wzc-camera-view")
-        .evaluateAll((views) =>
-          views.map(
-            (view) => (view as HTMLElement & { connect: boolean }).connect,
-          ),
+      phoneViews.evaluateAll((views) =>
+        views.map(
+          (view) => (view as HTMLElement & { connect: boolean }).connect,
         ),
+      ),
     )
-    .toEqual([true, false]);
+    .toEqual([true, false, false]);
   expect(await activityScroller.evaluate((element) => element.scrollTop)).toBe(
     retainedScrollTop,
   );
@@ -9093,15 +9024,51 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     .click();
   await expect
     .poll(() =>
-      landscapeGroup
-        .locator("wzc-camera-view")
-        .evaluateAll((views) =>
-          views.map(
-            (view) => (view as HTMLElement & { connect: boolean }).connect,
-          ),
+      phoneViews.evaluateAll((views) =>
+        views.map(
+          (view) => (view as HTMLElement & { connect: boolean }).connect,
         ),
+      ),
     )
-    .toEqual([false, true]);
+    .toEqual([false, true, false]);
+
+  await pullHandle.press("End");
+  await expect(card).toHaveClass(/landscape-camera-overlay-expanded/);
+  await expect
+    .poll(() =>
+      phoneViews.evaluateAll((views) =>
+        views.map(
+          (view) => (view as HTMLElement & { connect: boolean }).connect,
+        ),
+      ),
+    )
+    .toEqual([false, true, false]);
+  await pullHandle.press("Home");
+  await card
+    .locator("wzc-camera-navigation button")
+    .filter({ hasText: "Hall" })
+    .click();
+  await expect
+    .poll(() =>
+      phoneViews.evaluateAll((views) =>
+        views.map(
+          (view) => (view as HTMLElement & { connect: boolean }).connect,
+        ),
+      ),
+    )
+    .toEqual([false, false, true]);
+  await pullHandle.press("End");
+  await expect(card).toHaveClass(/landscape-camera-overlay-expanded/);
+  await expect(phoneCarousel.locator(".swiper-slide")).toHaveCount(3);
+  await expect
+    .poll(() =>
+      phoneViews.evaluateAll((views) =>
+        views.map(
+          (view) => (view as HTMLElement & { connect: boolean }).connect,
+        ),
+      ),
+    )
+    .toEqual([false, false, true]);
 });
 
 test("exposes and honors the WatchZone semantic theme-token contract", async ({

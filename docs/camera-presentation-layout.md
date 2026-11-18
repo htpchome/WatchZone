@@ -173,11 +173,12 @@ allowed to clip content or escape Home Assistant's allocated grid area.
   the stage ratio therefore remains authoritative without an additional
   responsive breakpoint.
 - Grouped feeds use the configured side-by-side or stacked split on physical
-  tablets and desktops. On a physical phone, only one member is presented and
-  the overlay selector toggles A/B regardless of the Camera container width.
-  Rotation, Stage layout, and the Companion landscape Camera pull therefore
-  cannot switch a phone group into combined mode or connect its hidden member.
-  The presentation rule does not rewrite the saved group layout.
+  tablets and desktops. On a physical phone, each member owns a separate
+  carousel slide while camera navigation retains one grouped A/B option. The
+  selector and ordinary swiping both move between those physical slides, and
+  only the selected member connects. Rotation, Stage layout, and the Companion
+  landscape Camera pull cannot switch a phone group into combined mode. The
+  presentation rule does not rewrite the saved group layout.
 - The split is always contained inside the same camera-stage rectangle used by
   a standalone camera. Child feeds never contribute intrinsic height to the
   carousel, so configuring a group cannot resize that group, another slide, or

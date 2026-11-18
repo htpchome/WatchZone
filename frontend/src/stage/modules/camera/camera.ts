@@ -133,7 +133,7 @@ export class CameraModule extends LitElement {
   private readonly _slideshow = new CameraSlideshowController(this, () => ({
     advance: this._advanceSlideshow,
     intervalSeconds: this.slideAdvanceSeconds,
-    itemCount: this._presentationItems.length,
+    itemCount: this._carouselItems.length,
   }));
 
   public api?: HomeAssistantApi;
@@ -240,6 +240,17 @@ export class CameraModule extends LitElement {
     return items;
   }
 
+  private get _carouselItems(): readonly CameraPresentationItem[] {
+    if (!CLIENT_PROFILE.isPhone) {
+      return this._presentationItems;
+    }
+    return this.cameras.map((camera) => ({
+      cameras: [camera],
+      id: camera.entityId,
+      label: camera.label,
+    }));
+  }
+
   public disconnectedCallback(): void {
     this.removeEventListener(
       CAMERA_GESTURE_LOCK_EVENT,
@@ -261,7 +272,7 @@ export class CameraModule extends LitElement {
   protected willUpdate(): void {
     this._activeIndex = Math.max(
       0,
-      Math.min(this._presentationItems.length - 1, this._activeIndex),
+      Math.min(this._carouselItems.length - 1, this._activeIndex),
     );
     const cameraIds = new Set([
       ...this.cameras.map(({ entityId }) => entityId),
@@ -302,7 +313,7 @@ export class CameraModule extends LitElement {
     >
       <div class="swiper-wrapper">
         ${repeat(
-          this._presentationItems,
+          this._carouselItems,
           ({ id }) => id,
           (item, index) => staticHtml`<div
             class="swiper-slide"
@@ -310,7 +321,7 @@ export class CameraModule extends LitElement {
             aria-hidden=${index === this._activeIndex ? "false" : "true"}
             aria-label=${this.localize("camera.position", {
               position: index + 1,
-              total: this._presentationItems.length,
+              total: this._carouselItems.length,
             })}
             aria-roledescription="slide"
             ?inert=${index !== this._activeIndex}
@@ -373,7 +384,7 @@ export class CameraModule extends LitElement {
         aria-hidden=${this._navigationVisible ? "false" : "true"}
         ?inert=${!this._navigationVisible}
         tabindex=${this._navigationVisible ? "0" : "-1"}
-        ?disabled=${this._presentationItems.length < 2 || this._activeIndex === 0}
+        ?disabled=${this._carouselItems.length < 2 || this._activeIndex === 0}
         @pointerdown=${this._stopPointerPropagation}
         @pointerup=${releaseTouchFocus}
         @click=${this._previous}
@@ -392,8 +403,8 @@ export class CameraModule extends LitElement {
         ?inert=${!this._navigationVisible}
         tabindex=${this._navigationVisible ? "0" : "-1"}
         ?disabled=${
-          this._presentationItems.length < 2 ||
-          this._activeIndex === this._presentationItems.length - 1
+          this._carouselItems.length < 2 ||
+          this._activeIndex === this._carouselItems.length - 1
         }
         @pointerdown=${this._stopPointerPropagation}
         @pointerup=${releaseTouchFocus}
@@ -408,17 +419,14 @@ export class CameraModule extends LitElement {
     this._carousel.observe(
       this.renderRoot.querySelector<HTMLElement>(".camera-carousel") ??
         undefined,
-      this._presentationItems.length,
+      this._carouselItems.length,
       this._activeIndex,
       this.transition,
     );
   }
 
   private _select(index: number, settled = true): void {
-    const next = Math.max(
-      0,
-      Math.min(this._presentationItems.length - 1, index),
-    );
+    const next = Math.max(0, Math.min(this._carouselItems.length - 1, index));
     const takeoverSelection = this._takeoverSelectionIndex === next;
     if (this._takeoverSelectionIndex !== undefined && !takeoverSelection) {
       this._takeoverSelectionIndex = undefined;
@@ -433,13 +441,15 @@ export class CameraModule extends LitElement {
       return;
     }
     if (!takeoverSelection) {
-      const entityId = this._presentationItems[next]?.cameras[0].entityId;
+      const entityId = this._carouselItems[next]?.cameras[0].entityId;
       if (entityId) this._activityHighlight.userSelected(entityId);
       if (!this._slideshowAdvancing) this._slideshow.manualSelection();
     }
     this._activeIndex = next;
+    const nextItem = this._carouselItems[next];
+    if (nextItem) this._syncGroupModeForEntity(nextItem.cameras[0].entityId);
     this._syncCameraActivity();
-    const nextPresentationId = this._presentationItems[next]?.id;
+    const nextPresentationId = nextItem?.id;
     if (nextPresentationId) {
       this._overlayVisibilityByCamera.set(nextPresentationId, false);
     }
@@ -450,20 +460,22 @@ export class CameraModule extends LitElement {
   }
 
   private _selectEntity = (entityId: string): void => {
-    const index = this._presentationItems.findIndex(
-      ({ id }) => id === entityId,
-    );
+    const item = this._presentationItems.find(({ id }) => id === entityId);
+    const targetEntityId = item && this._selectedEntityId(item);
+    const index = targetEntityId
+      ? this._carouselIndexForEntity(targetEntityId)
+      : -1;
     if (index < 0) return;
     this._slideshow.manualSelection();
-    this._activityHighlight.userSelected(entityId);
+    this._activityHighlight.userSelected(targetEntityId!);
     this._carousel.select(index);
   };
 
   private _selectPhysicalEntity(entityId: string): boolean {
-    const index = this._presentationItems.findIndex(({ cameras }) =>
+    const navigationIndex = this._presentationItems.findIndex(({ cameras }) =>
       cameras.some((camera) => camera.entityId === entityId),
     );
-    const item = this._presentationItems[index];
+    const item = this._presentationItems[navigationIndex];
     if (!item) return false;
     let groupModeChanged = false;
     if (item.cameras.length === 2) {
@@ -472,11 +484,17 @@ export class CameraModule extends LitElement {
       groupModeChanged = this._groupMode(item) !== nextMode;
       this._groupModes.set(item.id, nextMode);
     }
-    if (index === this._activeIndex) {
+    const carouselIndex = this._carouselIndexForEntity(entityId);
+    if (carouselIndex < 0) return false;
+    if (carouselIndex === this._activeIndex) {
       if (groupModeChanged) {
         this._activityHighlight.userSelected(entityId);
         this.requestUpdate();
       }
+      return true;
+    }
+    if (CLIENT_PROFILE.isPhone) {
+      this._carousel.select(carouselIndex);
       return true;
     }
     return this.cameraSelection?.select(this.selectionId, item.id) ?? false;
@@ -487,23 +505,32 @@ export class CameraModule extends LitElement {
       ({ id }) => id === entityId,
     );
     if (index < 0) return;
+    const item = this._presentationItems[index];
     this._slideshow.manualSelection();
-    if (index !== this._activeIndex) {
+    const activeItem = this._activeNavigationPresentation;
+    if (item.id !== activeItem?.id) {
       this._selectEntity(entityId);
       return;
     }
-    const item = this._presentationItems[index];
     if (item?.cameras.length !== 2) return;
+    if (CLIENT_PROFILE.isPhone) {
+      const nextEntityId =
+        this._activeEntityId === item.cameras[0].entityId
+          ? item.cameras[1].entityId
+          : item.cameras[0].entityId;
+      this._selectPhysicalEntity(nextEntityId);
+      return;
+    }
     this._cycleGroup(item);
   };
 
   private readonly _takeoverEntity = (entityId: string): void => {
-    const index = this._presentationItems.findIndex(({ cameras }) =>
+    const navigationIndex = this._presentationItems.findIndex(({ cameras }) =>
       cameras.some((camera) => camera.entityId === entityId),
     );
-    if (index < 0) return;
+    if (navigationIndex < 0) return;
     this._slideshow.hold();
-    const item = this._presentationItems[index];
+    const item = this._presentationItems[navigationIndex];
     if (item?.cameras.length === 2) {
       this._groupModes.set(
         item.id,
@@ -514,13 +541,14 @@ export class CameraModule extends LitElement {
           : "combined",
       );
     }
-    if (index === this._activeIndex) {
+    const carouselIndex = this._carouselIndexForEntity(entityId);
+    if (carouselIndex === this._activeIndex) {
       this.requestUpdate();
       this._publishSelection();
       return;
     }
-    this._takeoverSelectionIndex = index;
-    this._carousel.select(index);
+    this._takeoverSelectionIndex = carouselIndex;
+    this._carousel.select(carouselIndex);
   };
 
   private _publishSelection(): void {
@@ -531,7 +559,7 @@ export class CameraModule extends LitElement {
       {
         activeEntityId: this._activeEntityId,
         activeEntityIds: this._activeScopeEntityIds,
-        activeSelectionId: this._activePresentation?.id,
+        activeSelectionId: this._activeNavigationPresentation?.id,
         activeReviews: mergeActiveReviews(
           this._activeScopeEntityIds.flatMap((entityId) =>
             this._activityHighlight.reviewsFor(entityId),
@@ -551,12 +579,12 @@ export class CameraModule extends LitElement {
           })),
           label: item.label,
           position:
-            item.id === this._activePresentation?.id
+            item.id === this._activeNavigationPresentation?.id
               ? this._groupPosition(item)
               : undefined,
         })),
         settled: this._selectionSettled,
-        slideshowAvailable: this._presentationItems.length > 1,
+        slideshowAvailable: this._carouselItems.length > 1,
         slideshowEnabled: this._slideshow.enabled,
         slideshowHeld: this._slideshow.held,
         slideshowRemainingSeconds: this._slideshow.remainingSeconds,
@@ -571,7 +599,7 @@ export class CameraModule extends LitElement {
   }
 
   private readonly _advanceSlideshow = (): void => {
-    const count = this._presentationItems.length;
+    const count = this._carouselItems.length;
     if (count <= 1) return;
     this._slideshowAdvancing = true;
     try {
@@ -639,7 +667,15 @@ export class CameraModule extends LitElement {
   }
 
   private get _activePresentation(): CameraPresentationItem | undefined {
-    return this._presentationItems[this._activeIndex];
+    return this._carouselItems[this._activeIndex];
+  }
+
+  private get _activeNavigationPresentation():
+    CameraPresentationItem | undefined {
+    const entityId = this._activeEntityId;
+    return this._presentationItems.find(({ cameras }) =>
+      cameras.some((camera) => camera.entityId === entityId),
+    );
   }
 
   private _groupMode(item: CameraPresentationItem): CameraGroupMode {
@@ -649,7 +685,7 @@ export class CameraModule extends LitElement {
   }
 
   private get _activeScopeEntityIds(): readonly string[] {
-    const item = this._activePresentation;
+    const item = this._activeNavigationPresentation;
     if (!item) return [];
     if (item.cameras.length === 1) return [item.cameras[0].entityId];
     if (CLIENT_PROFILE.isPhone) {
@@ -664,9 +700,30 @@ export class CameraModule extends LitElement {
   private get _activeEntityId(): string | undefined {
     const item = this._activePresentation;
     if (!item) return undefined;
+    return this._selectedEntityId(item);
+  }
+
+  private _selectedEntityId(item: CameraPresentationItem): string {
     return this._groupMode(item) === "secondary" && item.cameras.length === 2
       ? item.cameras[1].entityId
       : item.cameras[0].entityId;
+  }
+
+  private _carouselIndexForEntity(entityId: string): number {
+    return this._carouselItems.findIndex(({ cameras }) =>
+      cameras.some((camera) => camera.entityId === entityId),
+    );
+  }
+
+  private _syncGroupModeForEntity(entityId: string): void {
+    const item = this._presentationItems.find(({ cameras }) =>
+      cameras.some((camera) => camera.entityId === entityId),
+    );
+    if (item?.cameras.length !== 2) return;
+    this._groupModes.set(
+      item.id,
+      item.cameras[1].entityId === entityId ? "secondary" : "main",
+    );
   }
 
   private get _activeClassification(): "alert" | "detection" | undefined {
