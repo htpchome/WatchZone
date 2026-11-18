@@ -8643,7 +8643,7 @@ test("uses mobile viewport sizing without edge-to-edge on Companion tablets", as
   });
 });
 
-test("transforms the Companion phone Full Stage into equal landscape columns", async ({
+test("transforms the Companion phone Full Stage into 60/40 landscape columns", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -8685,26 +8685,6 @@ test("transforms the Companion phone Full Stage into equal landscape columns", a
     "data-stage-variant",
     "default",
   );
-  await expect
-    .poll(() =>
-      card.evaluate((element) =>
-        Array.from(
-          element.shadowRoot?.querySelectorAll<HTMLElement>(
-            ".stage-placement[data-layout-node]",
-          ) ?? [],
-        ).some((placement) => placement.getAnimations().length > 0),
-      ),
-    )
-    .toBe(true);
-  await card.evaluate(async (element) => {
-    const animations = Array.from(
-      element.shadowRoot?.querySelectorAll<HTMLElement>(
-        ".stage-placement[data-layout-node]",
-      ) ?? [],
-    ).flatMap((placement) => placement.getAnimations());
-    await Promise.all(animations.map((animation) => animation.finished));
-  });
-
   const geometry = await card.evaluate((element) => {
     const host = element as HTMLElement;
     const root = host.shadowRoot;
@@ -8725,17 +8705,21 @@ test("transforms the Companion phone Full Stage into equal landscape columns", a
     return {
       activityHeight: Math.round(activityRect.height),
       activityLeft: Math.round(activityRect.left),
+      cameraAspectRatio: cameraRect.width / cameraRect.height,
       cameraHeight: Math.round(navigationRect.bottom - cameraRect.top),
       cameraLeft: Math.round(cameraRect.left),
-      columnsDifferBy: Math.round(
-        Math.abs(cameraRect.width - activityRect.width),
-      ),
+      columnRatio: cameraRect.width / activityRect.width,
       host: {
         height: Math.round(hostRect.height),
         left: Math.round(hostRect.left),
         top: Math.round(hostRect.top),
         width: Math.round(hostRect.width),
       },
+      placementAnimations: Array.from(
+        root?.querySelectorAll<HTMLElement>(
+          ".stage-placement[data-layout-node]",
+        ) ?? [],
+      ).flatMap((placement) => placement.getAnimations()).length,
       stableCamera: camera.dataset.landscapeIdentity,
     };
   });
@@ -8743,13 +8727,17 @@ test("transforms the Companion phone Full Stage into equal landscape columns", a
   expect(geometry).toEqual({
     activityHeight: geometry.cameraHeight,
     activityLeft: expect.any(Number),
+    cameraAspectRatio: geometry.cameraAspectRatio,
     cameraHeight: geometry.activityHeight,
     cameraLeft: 0,
-    columnsDifferBy: 0,
+    columnRatio: geometry.columnRatio,
     host: { height: 390, left: 0, top: 0, width: 844 },
+    placementAnimations: 0,
     stableCamera: "stable",
   });
   expect(geometry.activityLeft).toBeGreaterThan(geometry.cameraLeft);
+  expect(geometry.cameraAspectRatio).toBeCloseTo(16 / 9, 2);
+  expect(geometry.columnRatio).toBeCloseTo(3 / 2, 2);
   expect(geometry.activityHeight).toBeLessThanOrEqual(geometry.host.height);
 });
 

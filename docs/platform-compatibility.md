@@ -133,9 +133,10 @@ standard presentation while using the mobile viewport-height mode.
 The built-in mobile Full Stage has one narrower host-specific exception. On a
 physical phone inside Companion, rotating the fixed WebView to landscape
 presents the compatible wide Stage variant as a viewport-edge overlay. The
-same Stage nodes and live sessions are retained while its camera/navigation
-and activity placements animate into equal columns. Browser phones and every
-tablet remain outside this controller.
+same Stage nodes and live sessions are retained in a 60/40 camera/activity
+composition. The controller does not add per-placement transforms; Companion's
+native whole-window orientation transition owns the coordinated rotation
+motion. Browser phones and every tablet remain outside this controller.
 
 ### 2.3 Theme profile
 

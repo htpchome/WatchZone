@@ -48,9 +48,9 @@ both and controls which card lineup may select the design. Responsive variants
 are independent presentation layouts selected by container width; rotating a
 physical phone does not move it out of the mobile Stage lineup. On a Companion
 phone only, a mobile Full Stage that supplies both variants may use its
-`default` variant as a wide landscape composition. Browser phones, Companion
-tablets, and mobile designs without both variants remain on their ordinary
-responsive presentation. `stageType` is one of `full`, `camera_only`, or
+`default` variant as a wide 60/40 landscape composition. Browser phones,
+Companion tablets, and mobile designs without both variants remain on their
+ordinary responsive presentation. `stageType` is one of `full`, `camera_only`, or
 `minimal_camera_only`. The user-facing name of the last
 classification is Minimal Camera Stage; it has one implicit built-in design,
 so its standard and mobile lineups are not exposed in the card editor. Each variant

@@ -29,14 +29,21 @@ export const companionPhoneLandscapeStyles = css`
     box-shadow: none;
   }
 
-  :host(.companion-phone-landscape.height-mode-fit-viewport) .shell,
-  :host(.companion-phone-landscape.height-mode-fit-viewport) .stage-grid {
+  :host(.companion-phone-landscape.height-mode-fit-viewport) .shell {
     block-size: 100%;
     height: 100%;
     min-block-size: 0;
   }
 
+  :host(.companion-phone-landscape) .stage-grid {
+    align-self: start;
+    block-size: auto;
+    column-gap: 0;
+    height: auto;
+  }
+
   :host(.companion-phone-landscape) .stage-placement {
     min-block-size: 0 !important;
+    overflow: hidden;
   }
 `;

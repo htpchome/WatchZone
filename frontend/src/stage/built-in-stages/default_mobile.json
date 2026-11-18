@@ -12,7 +12,7 @@
           {
             "grid": {
               "column": 1,
-              "columnSpan": 6,
+              "columnSpan": 3,
               "row": 1,
               "rowSpan": 1
             },
@@ -71,7 +71,7 @@
           {
             "grid": {
               "column": 1,
-              "columnSpan": 6,
+              "columnSpan": 3,
               "row": 2,
               "rowSpan": 1
             },
@@ -86,8 +86,8 @@
           },
           {
             "grid": {
-              "column": 7,
-              "columnSpan": 6,
+              "column": 4,
+              "columnSpan": 2,
               "row": 1,
               "rowSpan": 2
             },
@@ -133,10 +133,10 @@
             }
           }
         ],
-        "columns": 12,
+        "columns": 5,
         "id": "default-layout-root",
         "kind": "container",
-        "rows": ["fraction", "content"]
+        "rows": ["content", "content"]
       }
     },
     "phone": {
