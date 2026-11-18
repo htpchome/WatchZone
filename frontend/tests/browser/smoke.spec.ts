@@ -3786,9 +3786,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
       list.style.setProperty("--wzc-media-safe-area-underlap", "36px");
       const veil = getComputedStyle(viewport, "::after");
       const result = {
-        backdropFilter: veil.backdropFilter,
-        background: veil.backgroundColor,
-        blockSize: veil.blockSize,
+        veilContent: veil.content,
         scrollPaddingAdded:
           Number.parseFloat(getComputedStyle(scroller).paddingBottom) -
           basePadding,
@@ -3807,11 +3805,9 @@ test("keeps activity content in an independently scrolling viewport", async ({
     background: "rgba(10, 20, 30, 0.5)",
   });
   expect(safeAreaPresentation).toEqual({
-    backdropFilter: "blur(2px)",
-    background: "rgba(10, 20, 30, 0.5)",
-    blockSize: "24px",
     scrollPaddingAdded: 36,
     topOffsetAdded: 36,
+    veilContent: "none",
   });
   await reviewState.click();
   await expect(reviewState).toHaveClass(/^review-state reviewed$/);
@@ -8664,14 +8660,54 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
   const card = page.locator("watchzone-card");
   await card.evaluate(async (element) => {
     const host = element as HTMLElement & {
+      hass: unknown;
       setConfig(config: unknown): void;
       updateComplete: Promise<boolean>;
     };
     host.setConfig({
       cameras: [{ entity_id: "camera.front", title: "Front" }],
       card_height_mode_phone: "fit_viewport",
+      camera_rounded_corners_phone: false,
       type: "custom:watchzone-card",
     });
+    host.hass = {
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "streaming",
+          attributes: { friendly_name: "Front" },
+        },
+      },
+      connection: { subscribeMessage: async () => () => undefined },
+      hassUrl: (path: string) => path,
+      callService: async () => undefined,
+      callWS: async (message: { type: string }) =>
+        message.type === "watchzone/reviews/list"
+          ? {
+              items: Array.from({ length: 5 }, (_, index) => ({
+                camera: "front",
+                classification: "detection",
+                clip_url: null,
+                end_time: 1_700_000_020 - index,
+                id: `landscape-review-${index}`,
+                labels: ["person"],
+                media_end_time: 1_700_000_025 - index,
+                media_start_time: 1_699_999_995 - index,
+                playback_sources: [],
+                preferred_transport: "file",
+                preview_url: null,
+                revision: `landscape-revision-${index}`,
+                related_event_ids: [],
+                reviewed: false,
+                snapshot_url: null,
+                start_time: 1_700_000_000 - index,
+                sub_labels: [],
+                thumbnail_url: null,
+                zones: [],
+              })),
+            }
+          : { ready: false },
+    };
     await host.updateComplete;
     const camera = host.shadowRoot?.querySelector<HTMLElement>(
       '[data-layout-node$="default-camera-module"]',
@@ -8693,6 +8729,46 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
   await expect(card.locator("ha-card")).toHaveAttribute(
     "data-test-animated",
     "",
+  );
+  await card.evaluate(async (element) => {
+    const animations =
+      element.shadowRoot?.querySelector("ha-card")?.getAnimations() ?? [];
+    await Promise.all(animations.map((animation) => animation.finished));
+  });
+  const activityNavigation = card.locator("wzc-activity-navigation");
+  await expect(activityNavigation.locator("button")).toHaveCount(8);
+  const navigationButtonHeights = await activityNavigation
+    .locator("button")
+    .evaluateAll((buttons) =>
+      buttons.map((button) => button.getBoundingClientRect().height),
+    );
+  expect(navigationButtonHeights.every((height) => height >= 44)).toBe(true);
+  await expect(card.locator("wzc-camera-view .stage-resize-handle")).toHaveCSS(
+    "visibility",
+    "hidden",
+  );
+  await expect(card.locator("wzc-camera .camera-carousel")).not.toHaveCSS(
+    "border-radius",
+    "0px",
+  );
+  await expect(card.locator("wzc-reviews .tile")).toHaveCount(5);
+  const activityViewport = await card
+    .locator("wzc-reviews .viewport")
+    .boundingBox();
+  const activityTiles = await card
+    .locator("wzc-reviews .tile")
+    .evaluateAll((tiles) =>
+      tiles.map((tile) => {
+        const rect = tile.getBoundingClientRect();
+        return { bottom: rect.bottom, top: rect.top };
+      }),
+    );
+  expect(activityViewport).not.toBeNull();
+  expect(activityTiles[2]?.bottom).toBeLessThanOrEqual(
+    (activityViewport?.y ?? 0) + (activityViewport?.height ?? 0) + 1,
+  );
+  expect(activityTiles[3]?.top).toBeGreaterThanOrEqual(
+    (activityViewport?.y ?? 0) + (activityViewport?.height ?? 0) - 1,
   );
   const geometry = await card.evaluate((element) => {
     const host = element as HTMLElement;
@@ -8721,6 +8797,8 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
       activityTop: Math.round(activityRect.top),
       activityNavigationBottom: Math.round(activityNavigationRect.bottom),
       activityNavigationHeight: Math.round(activityNavigationRect.height),
+      activityNavigationLeft: Math.round(activityNavigationRect.left),
+      activityNavigationRight: Math.round(activityNavigationRect.right),
       activityNavigationTop: Math.round(activityNavigationRect.top),
       cameraAspectRatio: cameraRect.width / cameraRect.height,
       cameraHeight: Math.round(navigationRect.bottom - cameraRect.top),
@@ -8752,6 +8830,8 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     activityTop: expect.any(Number),
     activityNavigationBottom: expect.any(Number),
     activityNavigationHeight: expect.any(Number),
+    activityNavigationLeft: expect.any(Number),
+    activityNavigationRight: expect.any(Number),
     activityNavigationTop: expect.any(Number),
     cameraAspectRatio: geometry.cameraAspectRatio,
     cameraHeight: expect.any(Number),
@@ -8768,10 +8848,12 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
   expect(geometry.activityHeight).toBeGreaterThan(geometry.cameraHeight);
   expect(geometry.activityRight).toBeLessThan(geometry.host.width);
   expect(geometry.activityNavigationTop).toBeGreaterThan(
-    geometry.activityTop + geometry.activityHeight,
+    geometry.cameraTop + geometry.cameraHeight,
   );
+  expect(geometry.activityNavigationLeft).toBeGreaterThan(geometry.cameraLeft);
+  expect(geometry.activityNavigationRight).toBeLessThan(geometry.activityLeft);
   expect(geometry.activityNavigationBottom).toBeLessThanOrEqual(
-    geometry.host.height,
+    geometry.host.height + 32,
   );
   expect(geometry.activityNavigationHeight).toBeGreaterThan(0);
   expect(geometry.cameraAspectRatio).toBeCloseTo(16 / 9, 2);
@@ -8779,7 +8861,9 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
   expect(geometry.cameraTop).toBeGreaterThan(geometry.activityTop);
   expect(geometry.columnRatio).toBeCloseTo(3 / 2, 2);
   expect(geometry.gutter).toBeGreaterThan(0);
-  expect(geometry.activityHeight).toBeLessThanOrEqual(geometry.host.height);
+  expect(geometry.activityHeight).toBeLessThanOrEqual(
+    geometry.host.height + 32,
+  );
 });
 
 test("exposes and honors the WatchZone semantic theme-token contract", async ({

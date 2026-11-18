@@ -71,13 +71,13 @@
           {
             "grid": {
               "column": 1,
-              "columnSpan": 2,
+              "columnSpan": 1,
               "row": 3,
               "rowSpan": 1
             },
             "node": {
               "config": {
-                "presentation": "compact-toolbar",
+                "presentation": "toolbar",
                 "targetStackId": "default-activity-stack"
               },
               "id": "default-activity-navigation-module",
@@ -106,7 +106,7 @@
               "column": 2,
               "columnSpan": 1,
               "row": 1,
-              "rowSpan": 2
+              "rowSpan": 3
             },
             "node": {
               "children": [

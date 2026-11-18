@@ -6,8 +6,7 @@ import { englishLocalize } from "../../../core/localization";
 import type { ModuleDefinition } from "../../placeable";
 import type { ActivityNavigationModule } from "./activity-navigation";
 
-export type ActivityNavigationPresentation =
-  "compact-toolbar" | "rail" | "toolbar";
+export type ActivityNavigationPresentation = "rail" | "toolbar";
 
 export interface ActivityNavigationConfig {
   readonly presentation: ActivityNavigationPresentation;
@@ -63,18 +62,13 @@ export const moduleDefinition: ModuleDefinition<
     }
     if (
       source.presentation !== undefined &&
-      source.presentation !== "compact-toolbar" &&
       source.presentation !== "toolbar" &&
       source.presentation !== "rail"
     ) {
       throw new Error("Activity navigation requires a valid presentation.");
     }
     return {
-      presentation:
-        source.presentation === "rail" ||
-        source.presentation === "compact-toolbar"
-          ? source.presentation
-          : "toolbar",
+      presentation: source.presentation === "rail" ? "rail" : "toolbar",
       targetStackId: source.targetStackId,
     };
   },

@@ -11,7 +11,35 @@ export const companionPhoneLandscapeStyles = css`
   }
 
   :host(.companion-phone-landscape.height-mode-fit-viewport) {
+    --wzc-activity-list-max-block-size: calc(
+      var(--wzc-media-day-header-block-size) + 3 *
+        var(--wzc-event-tile-block-size) + 2 * var(--wzc-event-list-gap) +
+        var(--wzc-media-day-header-gap) + var(--wzc-event-list-padding)
+    );
+    --wzc-activity-list-min-block-size: var(--wzc-activity-list-max-block-size);
+    --wzc-companion-landscape-inline-inset: max(
+      0.375rem,
+      calc(env(safe-area-inset-left, 0px) - 0.25rem),
+      calc(env(safe-area-inset-right, 0px) - 0.25rem)
+    );
+    --wzc-camera-square-radius: var(--wzc-radius-card);
+    --wzc-export-list-max-block-size: calc(
+      var(--wzc-media-day-header-block-size) + 3 *
+        var(--wzc-export-tile-block-size) + 2 * var(--wzc-export-list-gap) + 2 *
+        var(--wzc-export-list-padding)
+    );
+    --wzc-export-list-min-block-size: var(--wzc-export-list-max-block-size);
     --wzc-media-safe-area-underlap: 0px;
+    --wzc-recording-list-max-block-size: calc(
+      var(--wzc-media-day-header-block-size) + 3 *
+        var(--wzc-recording-tile-block-size) + 2 *
+        var(--wzc-recording-list-gap) + var(--wzc-media-day-header-gap) +
+        var(--wzc-recording-list-padding)
+    );
+    --wzc-recording-list-min-block-size: var(
+      --wzc-recording-list-max-block-size
+    );
+    --wzc-stage-resize-handle-visibility: hidden;
     --wzc-stage-flex-track-min: 0px;
     --wzc-stage-flex-stack-min: 0px;
     --wzc-stage-flex-content-min: 0px;
@@ -23,16 +51,7 @@ export const companionPhoneLandscapeStyles = css`
     min-block-size: 0;
     padding-block: env(safe-area-inset-top, 0px)
       var(--wzc-safe-area-inset-bottom);
-    padding-inline: max(
-        0.5rem,
-        env(safe-area-inset-left, 0px),
-        env(safe-area-inset-right, 0px)
-      )
-      max(
-        0.5rem,
-        env(safe-area-inset-left, 0px),
-        env(safe-area-inset-right, 0px)
-      );
+    padding-inline: var(--wzc-companion-landscape-inline-inset);
     border-radius: 0;
     box-shadow: none;
   }
@@ -58,16 +77,14 @@ export const companionPhoneLandscapeStyles = css`
 
   :host(.companion-phone-landscape)
     .stage-placement[data-layout-node$="default-camera-module"] {
-    margin-block-start: var(--wzc-stage-module-gap);
+    margin-block-start: calc(var(--wzc-stage-module-gap) + 0.5rem);
   }
 
   :host(.companion-phone-landscape)
     .stage-placement[data-layout-node$="default-activity-navigation-module"] {
-    --wzc-stage-stack-button-size: 1.75rem;
-    --wzc-stage-stack-icon-size: 1rem;
-    --wzc-stage-stack-navigation-padding: 0.125rem;
     justify-self: center;
-    inline-size: min(52rem, 100%);
+    inline-size: max-content;
+    max-inline-size: 100%;
     margin-block-end: 0;
   }
 `;

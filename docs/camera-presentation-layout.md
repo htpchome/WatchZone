@@ -34,19 +34,16 @@ retained session, and respects reduced-motion preference.
   inline declarations after the last owner releases them, and does not change
   internal row or column gaps, maximum view width, or grid allocation.
 - On a physical phone, edge-to-edge `fit_viewport` presentation extends through
-  the complete device bottom safe-area inset. Media lists scroll beneath a
-  non-interactive safe-area veil using the same background and backdrop filter
-  as `ha-card`. The visible veil is capped at `1.5rem`, while the complete
-  hardware inset remains reserved as trailing scroll padding. Translucent
-  themes therefore reveal more moving content without placing the final tile
-  beneath the home indicator. Home Assistant's reported
+  the complete device bottom safe-area inset. Media lists scroll beneath that
+  area without a WatchZone-drawn cover surface, while the complete hardware
+  inset remains reserved as trailing scroll padding so the final tile is not
+  stranded beneath the home indicator. Home Assistant's reported
   `--safe-area-inset-bottom` is authoritative, with the browser environment
   inset as fallback. WatchZone does not reduce the hardware inset itself or
   apply it to ordinary card-contained surfaces. In Companion, the card uses an
   equal trailing layout overlap without adding that inset to the card viewport
   height. Home Assistant's own safe-area spacing therefore does not create
-  outer-window scrolling; only the media viewport moves beneath the stationary
-  veil.
+  outer-window scrolling; only the media viewport moves beneath the safe area.
 - The camera module owns the camera stage, including its clipping radius and
   stage shadow. Appearance is applied to that stable module boundary, not to an
   individual carousel slide.
@@ -116,13 +113,16 @@ presentation. It occupies the fixed WebView, covers Home Assistant's dashboard
 chrome, and applies viewport safe-area padding. The leading 60% contains a
 16:9 camera plus camera navigation; the trailing 40% contains the active
 Reviews, Events, Recordings, or Exports stack. The independently placeable
-activity-navigation module is centered below those columns in a compact toolbar
-presentation. A top inset protects the camera, a module gutter separates the
-columns, and the larger reported landscape safe-area inset is reserved
-symmetrically on both inline edges so either phone rotation direction protects
-both columns. The trailing stack fills the shared main-content height while its
-active media list remains the only scrolling surface. This overlay does not
-activate for browser phones, Companion tablets, or incompatible Stage types.
+activity-navigation module is centered below the camera column at its normal
+toolbar control size. A top inset protects the camera, a module gutter
+separates the columns, and a slightly reduced form of the larger reported
+landscape safe-area inset is reserved symmetrically on both inline edges so
+either phone rotation direction protects both columns. Each active media list
+is capped at three complete tiles and remains the only scrolling surface. The
+camera uses rounded corners and hides its resize handle in this presentation,
+independent of the ordinary phone Camera appearance setting. This overlay does
+not activate for browser phones, Companion tablets, or incompatible Stage
+types.
 
 Card, Camera, camera-navigation, and activity-tile appearance likewise store
 independent standard-device and physical-phone values. Phone defaults use an

@@ -55,6 +55,7 @@ export const cameraViewStyles = css`
     inset-inline-start: 50%;
     z-index: 3;
     transform: translateX(-50%);
+    visibility: var(--wzc-stage-resize-handle-visibility);
   }
 
   .camera:fullscreen .stage-resize-handle,

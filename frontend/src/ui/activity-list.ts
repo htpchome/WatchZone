@@ -36,7 +36,6 @@ import { scrollMediaViewportToTop, shouldShowScrollTop } from "./scroll-top";
 import { activityActionStyles } from "./activity-action.styles";
 import { activityListStyles } from "./activity-list.styles";
 import { buttonBaseStyles } from "./button.styles";
-import { mediaSafeAreaStyles } from "./media-safe-area.styles";
 import { ThumbnailPreviewPressController } from "./thumbnail-preview-press.controller";
 
 export type ActivityClassification = "alert" | "detection";
@@ -1114,12 +1113,7 @@ export class ActivityList extends LitElement {
     this.requestUpdate();
   }
 
-  static styles = [
-    buttonBaseStyles,
-    mediaSafeAreaStyles,
-    activityActionStyles,
-    activityListStyles,
-  ];
+  static styles = [buttonBaseStyles, activityActionStyles, activityListStyles];
 }
 
 function mediaKey(item: ActivityListItem, url: string): string {

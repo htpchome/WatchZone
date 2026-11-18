@@ -41,15 +41,13 @@ new browser API makes another platform easier or faster.
   safe-area values there would offset the same control differently by host
   device. A phone edge-to-edge card in `fit_viewport` mode is the narrow
   exception: its outer card boundary underlaps the complete bottom inset so
-  media tiles can travel behind translucent host chrome. A non-interactive
-  surface above that content uses the same background and backdrop-filter token
-  chain as `ha-card`. Its visible height is capped at `1.5rem`, independently
-  of the complete hardware inset retained for underlap and scroll clearance.
-  Floating media-list controls are offset above that complete inset and never
-  occupy the unsafe band. In Companion, the edge-to-edge card overlaps Home
+  media tiles can travel behind host chrome. WatchZone does not draw a cover
+  surface over that content. The complete hardware inset remains retained for
+  underlap and scroll clearance. Floating media-list controls are offset above
+  that complete inset and never occupy the unsafe band. In Companion, the edge-to-edge card overlaps Home
   Assistant's equal trailing safe-area space without adding that inset to the
   card viewport height, so the outer window remains fixed; only the media
-  viewport scrolls beneath the stationary veil. Home Assistant's
+  viewport scrolls beneath the safe area. Home Assistant's
   Companion-aware safe-area custom property is authoritative and the browser
   environment inset is only its fallback. Respect text scaling, reduced
   motion, orientation changes, and Home Assistant theme tokens where they

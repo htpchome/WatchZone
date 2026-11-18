@@ -50,7 +50,7 @@ export const cameraStyles = css`
   }
 
   .camera-carousel.square-camera-corners {
-    --wzc-live-radius: 0px;
+    --wzc-live-radius: var(--wzc-camera-square-radius);
   }
 
   .camera-carousel.camera-shadow-small {

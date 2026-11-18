@@ -28,10 +28,13 @@ export const exportsStyles = css`
           2 * var(--wzc-export-list-padding)
       )
     );
-    min-block-size: calc(
-      var(--wzc-media-day-header-block-size) + 3 *
-        var(--wzc-export-tile-block-size) + 3 * var(--wzc-export-list-gap) + 2 *
-        var(--wzc-export-list-padding)
+    min-block-size: var(
+      --wzc-export-list-min-block-size,
+      calc(
+        var(--wzc-media-day-header-block-size) + 3 *
+          var(--wzc-export-tile-block-size) + 3 * var(--wzc-export-list-gap) +
+          2 * var(--wzc-export-list-padding)
+      )
     );
     overflow: hidden;
   }

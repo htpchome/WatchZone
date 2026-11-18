@@ -28,7 +28,6 @@ import { openRecordedMedia } from "../../../core/recorded-media";
 import { buttonBaseStyles } from "../../../ui/button.styles";
 import { renderIcon } from "../../../ui/icons";
 import "../../../ui/media-day-header";
-import { mediaSafeAreaStyles } from "../../../ui/media-safe-area.styles";
 import {
   scrollMediaViewportToTop,
   shouldShowScrollTop,
@@ -645,7 +644,7 @@ export class ExportsModule extends LitElement {
     scrollMediaViewportToTop(scroller);
   };
 
-  static styles = [buttonBaseStyles, mediaSafeAreaStyles, exportsStyles];
+  static styles = [buttonBaseStyles, exportsStyles];
 }
 
 if (!customElements.get(EXPORTS_TAG)) {

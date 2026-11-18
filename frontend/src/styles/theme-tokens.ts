@@ -225,18 +225,13 @@ export const themeTokens = css`
       env(safe-area-inset-bottom, 0px)
     );
     --wzc-media-safe-area-underlap: 0px;
-    --wzc-media-safe-area-veil-max-block-size: 1.5rem;
-    --wzc-safe-area-surface-background: var(--wzc-card-background);
-    --wzc-safe-area-surface-backdrop-filter: var(
-      --ha-card-backdrop-filter,
-      none
-    );
     --wzc-stage-module-gap: clamp(0.5rem, 1.5cqi, 1rem);
     --wzc-card-outer-shadow: var(--wzc-shadow-medium);
     --wzc-media-placeholder-background: #242424;
     --wzc-media-placeholder-color: #626262;
     --wzc-camera-stage: var(--wzc-media-placeholder-background);
     --wzc-camera-stage-aspect-ratio: 16 / 9;
+    --wzc-camera-square-radius: 0px;
     --wzc-camera-suspended-background: var(--ha-color-neutral-05, #111111);
     --wzc-camera-suspended-icon-color: var(--wzc-color-error);
     --wzc-camera-suspended-icon-border-color: var(
@@ -577,6 +572,7 @@ export const themeTokens = css`
     --wzc-stage-stack-button-active-color: var(--wzc-color-text-reversed);
     --wzc-stage-stack-button-active-background: var(--wzc-color-primary);
     --wzc-stage-stack-icon-size: 1.35rem;
+    --wzc-stage-resize-handle-visibility: visible;
     --wzc-camera-navigation-item-padding: 1rem;
     --wzc-talk-connected-color: var(--ha-color-green-50, #34d399);
     --wzc-talk-connecting-color: var(--ha-color-blue-50, #3b82f6);
