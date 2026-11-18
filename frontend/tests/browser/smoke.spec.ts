@@ -998,6 +998,80 @@ test("cycles a grouped camera from combined to each member and back", async ({
   ]);
 });
 
+test("keeps selected PC side-by-side and stacked groups combined", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  const card = page.locator("watchzone-card");
+  await card.evaluate((element) => {
+    (
+      element as HTMLElement & {
+        setConfig(config: unknown): void;
+      }
+    ).setConfig({
+      type: "custom:watchzone-card",
+      cameras: [
+        { entity_id: "camera.hall", title: "Hall" },
+        {
+          additional_camera: {
+            entity_id: "camera.driveway",
+            layout: "side_by_side",
+          },
+          entity_id: "camera.porch",
+          title: "Side Pair",
+        },
+        { entity_id: "camera.driveway", title: "Driveway" },
+        {
+          additional_camera: {
+            entity_id: "camera.garage",
+            layout: "stacked",
+          },
+          entity_id: "camera.back",
+          title: "Stack Pair",
+        },
+        { entity_id: "camera.garage", title: "Garage" },
+      ],
+    });
+  });
+
+  const activeGroup = card.locator(
+    "wzc-camera .swiper-slide-active wzc-camera-group-view",
+  );
+  const carouselSlides = card.locator("wzc-camera .swiper-slide");
+  const hallButton = card
+    .locator("wzc-camera-navigation button")
+    .filter({ hasText: "Hall" });
+  const sideButton = card
+    .locator("wzc-camera-navigation button")
+    .filter({ hasText: "Side Pair" });
+  await expect(carouselSlides).toHaveCount(3);
+  await sideButton.click();
+  await expect(activeGroup.locator(".feeds")).toHaveClass(/side-by-side/);
+  await expect(activeGroup.locator(".feed:not(.hidden)")).toHaveCount(2);
+
+  await sideButton.click();
+  await expect(activeGroup.locator(".feed:not(.hidden)")).toHaveCount(1);
+  await expect(sideButton.locator(".option-leading-icon")).toHaveAttribute(
+    "data-icon",
+    "arrowLeft",
+  );
+  await hallButton.click();
+  await sideButton.click();
+  await expect(activeGroup.locator(".feed:not(.hidden)")).toHaveCount(1);
+  await expect(sideButton.locator(".option-leading-icon")).toHaveAttribute(
+    "data-icon",
+    "arrowLeft",
+  );
+
+  await card
+    .locator("wzc-camera-navigation button")
+    .filter({ hasText: "Stack Pair" })
+    .click();
+  await expect(activeGroup.locator(".feeds")).toHaveClass(/stacked/);
+  await expect(activeGroup.locator(".feed:not(.hidden)")).toHaveCount(2);
+});
+
 test("keeps both grouped phone cameras in the physical swipe sequence", async ({
   page,
 }) => {

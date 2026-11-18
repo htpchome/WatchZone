@@ -447,7 +447,9 @@ export class CameraModule extends LitElement {
     }
     this._activeIndex = next;
     const nextItem = this._carouselItems[next];
-    if (nextItem) this._syncGroupModeForEntity(nextItem.cameras[0].entityId);
+    if (CLIENT_PROFILE.isPhone && nextItem) {
+      this._syncPhoneGroupModeForEntity(nextItem.cameras[0].entityId);
+    }
     this._syncCameraActivity();
     const nextPresentationId = nextItem?.id;
     if (nextPresentationId) {
@@ -460,18 +462,61 @@ export class CameraModule extends LitElement {
   }
 
   private _selectEntity = (entityId: string): void => {
+    if (!CLIENT_PROFILE.isPhone) {
+      const index = this._presentationItems.findIndex(
+        ({ id }) => id === entityId,
+      );
+      if (index < 0) return;
+      this._slideshow.manualSelection();
+      this._activityHighlight.userSelected(entityId);
+      this._carousel.select(index);
+      return;
+    }
+    this._selectPhoneNavigationEntity(entityId);
+  };
+
+  private _selectPhoneNavigationEntity(entityId: string): void {
     const item = this._presentationItems.find(({ id }) => id === entityId);
     const targetEntityId = item && this._selectedEntityId(item);
     const index = targetEntityId
-      ? this._carouselIndexForEntity(targetEntityId)
+      ? this._phoneCarouselIndexForEntity(targetEntityId)
       : -1;
     if (index < 0) return;
     this._slideshow.manualSelection();
     this._activityHighlight.userSelected(targetEntityId!);
     this._carousel.select(index);
-  };
+  }
 
   private _selectPhysicalEntity(entityId: string): boolean {
+    return CLIENT_PROFILE.isPhone
+      ? this._selectPhonePhysicalEntity(entityId)
+      : this._selectGroupedPhysicalEntity(entityId);
+  }
+
+  private _selectGroupedPhysicalEntity(entityId: string): boolean {
+    const index = this._presentationItems.findIndex(({ cameras }) =>
+      cameras.some((camera) => camera.entityId === entityId),
+    );
+    const item = this._presentationItems[index];
+    if (!item) return false;
+    let groupModeChanged = false;
+    if (item.cameras.length === 2) {
+      const nextMode =
+        item.cameras[1].entityId === entityId ? "secondary" : "main";
+      groupModeChanged = this._groupMode(item) !== nextMode;
+      this._groupModes.set(item.id, nextMode);
+    }
+    if (index === this._activeIndex) {
+      if (groupModeChanged) {
+        this._activityHighlight.userSelected(entityId);
+        this.requestUpdate();
+      }
+      return true;
+    }
+    return this.cameraSelection?.select(this.selectionId, item.id) ?? false;
+  }
+
+  private _selectPhonePhysicalEntity(entityId: string): boolean {
     const navigationIndex = this._presentationItems.findIndex(({ cameras }) =>
       cameras.some((camera) => camera.entityId === entityId),
     );
@@ -484,7 +529,7 @@ export class CameraModule extends LitElement {
       groupModeChanged = this._groupMode(item) !== nextMode;
       this._groupModes.set(item.id, nextMode);
     }
-    const carouselIndex = this._carouselIndexForEntity(entityId);
+    const carouselIndex = this._phoneCarouselIndexForEntity(entityId);
     if (carouselIndex < 0) return false;
     if (carouselIndex === this._activeIndex) {
       if (groupModeChanged) {
@@ -493,14 +538,33 @@ export class CameraModule extends LitElement {
       }
       return true;
     }
-    if (CLIENT_PROFILE.isPhone) {
-      this._carousel.select(carouselIndex);
-      return true;
-    }
-    return this.cameraSelection?.select(this.selectionId, item.id) ?? false;
+    this._carousel.select(carouselIndex);
+    return true;
   }
 
   private readonly _activateEntity = (entityId: string): void => {
+    if (!CLIENT_PROFILE.isPhone) {
+      this._activateGroupedEntity(entityId);
+      return;
+    }
+    this._activatePhoneEntity(entityId);
+  };
+
+  private _activateGroupedEntity(entityId: string): void {
+    const index = this._presentationItems.findIndex(
+      ({ id }) => id === entityId,
+    );
+    if (index < 0) return;
+    this._slideshow.manualSelection();
+    if (index !== this._activeIndex) {
+      this._selectEntity(entityId);
+      return;
+    }
+    const item = this._presentationItems[index];
+    if (item?.cameras.length === 2) this._cycleGroup(item);
+  }
+
+  private _activatePhoneEntity(entityId: string): void {
     const index = this._presentationItems.findIndex(
       ({ id }) => id === entityId,
     );
@@ -513,18 +577,39 @@ export class CameraModule extends LitElement {
       return;
     }
     if (item?.cameras.length !== 2) return;
-    if (CLIENT_PROFILE.isPhone) {
-      const nextEntityId =
-        this._activeEntityId === item.cameras[0].entityId
-          ? item.cameras[1].entityId
-          : item.cameras[0].entityId;
-      this._selectPhysicalEntity(nextEntityId);
-      return;
-    }
-    this._cycleGroup(item);
-  };
+    const nextEntityId =
+      this._activeEntityId === item.cameras[0].entityId
+        ? item.cameras[1].entityId
+        : item.cameras[0].entityId;
+    this._selectPhonePhysicalEntity(nextEntityId);
+  }
 
   private readonly _takeoverEntity = (entityId: string): void => {
+    if (!CLIENT_PROFILE.isPhone) {
+      this._takeoverGroupedEntity(entityId);
+      return;
+    }
+    this._takeoverPhoneEntity(entityId);
+  };
+
+  private _takeoverGroupedEntity(entityId: string): void {
+    const index = this._presentationItems.findIndex(({ cameras }) =>
+      cameras.some((camera) => camera.entityId === entityId),
+    );
+    if (index < 0) return;
+    this._slideshow.hold();
+    const item = this._presentationItems[index];
+    if (item?.cameras.length === 2) this._groupModes.set(item.id, "combined");
+    if (index === this._activeIndex) {
+      this.requestUpdate();
+      this._publishSelection();
+      return;
+    }
+    this._takeoverSelectionIndex = index;
+    this._carousel.select(index);
+  }
+
+  private _takeoverPhoneEntity(entityId: string): void {
     const navigationIndex = this._presentationItems.findIndex(({ cameras }) =>
       cameras.some((camera) => camera.entityId === entityId),
     );
@@ -534,14 +619,11 @@ export class CameraModule extends LitElement {
     if (item?.cameras.length === 2) {
       this._groupModes.set(
         item.id,
-        CLIENT_PROFILE.isPhone
-          ? item.cameras[1].entityId === entityId
-            ? "secondary"
-            : "main"
-          : "combined",
+        item.cameras[1].entityId === entityId ? "secondary" : "main",
       );
     }
-    const carouselIndex = this._carouselIndexForEntity(entityId);
+    const carouselIndex = this._phoneCarouselIndexForEntity(entityId);
+    if (carouselIndex < 0) return;
     if (carouselIndex === this._activeIndex) {
       this.requestUpdate();
       this._publishSelection();
@@ -549,7 +631,7 @@ export class CameraModule extends LitElement {
     }
     this._takeoverSelectionIndex = carouselIndex;
     this._carousel.select(carouselIndex);
-  };
+  }
 
   private _publishSelection(): void {
     if (!this.cameraSelection || !this.selectionId) return;
@@ -709,13 +791,14 @@ export class CameraModule extends LitElement {
       : item.cameras[0].entityId;
   }
 
-  private _carouselIndexForEntity(entityId: string): number {
+  private _phoneCarouselIndexForEntity(entityId: string): number {
     return this._carouselItems.findIndex(({ cameras }) =>
       cameras.some((camera) => camera.entityId === entityId),
     );
   }
 
-  private _syncGroupModeForEntity(entityId: string): void {
+  private _syncPhoneGroupModeForEntity(entityId: string): void {
+    if (!CLIENT_PROFILE.isPhone) return;
     const item = this._presentationItems.find(({ cameras }) =>
       cameras.some((camera) => camera.entityId === entityId),
     );
