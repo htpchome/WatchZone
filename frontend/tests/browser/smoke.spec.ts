@@ -8685,6 +8685,20 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     "data-stage-variant",
     "default",
   );
+  await expect
+    .poll(() =>
+      card.evaluate(
+        (element) =>
+          element.shadowRoot?.querySelector("ha-card")?.getAnimations()
+            .length ?? 0,
+      ),
+    )
+    .toBeGreaterThan(0);
+  await card.evaluate(async (element) => {
+    const animations =
+      element.shadowRoot?.querySelector("ha-card")?.getAnimations() ?? [];
+    await Promise.all(animations.map((animation) => animation.finished));
+  });
   const geometry = await card.evaluate((element) => {
     const host = element as HTMLElement;
     const root = host.shadowRoot;
@@ -8705,10 +8719,15 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     return {
       activityHeight: Math.round(activityRect.height),
       activityLeft: Math.round(activityRect.left),
+      activityOverflow: getComputedStyle(activity).overflow,
+      activityRight: Math.round(activityRect.right),
+      activityTop: Math.round(activityRect.top),
       cameraAspectRatio: cameraRect.width / cameraRect.height,
       cameraHeight: Math.round(navigationRect.bottom - cameraRect.top),
       cameraLeft: Math.round(cameraRect.left),
+      cameraTop: Math.round(cameraRect.top),
       columnRatio: cameraRect.width / activityRect.width,
+      gutter: Math.round(activityRect.left - cameraRect.right),
       host: {
         height: Math.round(hostRect.height),
         left: Math.round(hostRect.left),
@@ -8720,24 +8739,37 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
           ".stage-placement[data-layout-node]",
         ) ?? [],
       ).flatMap((placement) => placement.getAnimations()).length,
+      navigationOverflow: getComputedStyle(navigation).overflow,
       stableCamera: camera.dataset.landscapeIdentity,
     };
   });
 
   expect(geometry).toEqual({
-    activityHeight: geometry.cameraHeight,
+    activityHeight: geometry.activityHeight,
     activityLeft: expect.any(Number),
+    activityOverflow: "visible",
+    activityRight: expect.any(Number),
+    activityTop: expect.any(Number),
     cameraAspectRatio: geometry.cameraAspectRatio,
-    cameraHeight: geometry.activityHeight,
-    cameraLeft: 0,
+    cameraHeight: expect.any(Number),
+    cameraLeft: expect.any(Number),
+    cameraTop: expect.any(Number),
     columnRatio: geometry.columnRatio,
+    gutter: expect.any(Number),
     host: { height: 390, left: 0, top: 0, width: 844 },
+    navigationOverflow: "visible",
     placementAnimations: 0,
     stableCamera: "stable",
   });
   expect(geometry.activityLeft).toBeGreaterThan(geometry.cameraLeft);
+  expect(geometry.activityHeight).toBeGreaterThan(geometry.cameraHeight);
+  expect(geometry.activityHeight).toBeCloseTo(geometry.host.height, 0);
+  expect(geometry.activityRight).toBeLessThan(geometry.host.width);
   expect(geometry.cameraAspectRatio).toBeCloseTo(16 / 9, 2);
+  expect(geometry.cameraLeft).toBeGreaterThan(0);
+  expect(geometry.cameraTop).toBeGreaterThan(geometry.activityTop);
   expect(geometry.columnRatio).toBeCloseTo(3 / 2, 2);
+  expect(geometry.gutter).toBeGreaterThan(0);
   expect(geometry.activityHeight).toBeLessThanOrEqual(geometry.host.height);
 });
 

@@ -68,10 +68,10 @@ const USE_MOBILE_HEIGHT_MODE =
 const USE_COMPANION_PHONE_LANDSCAPE =
   CLIENT_PROFILE.isCompanionApp && CLIENT_PROFILE.isPhone;
 
-const stageInlineSize =
-  CLIENT_PROFILE.isPhone && !CLIENT_PROFILE.isCompanionApp
-    ? (inlineSize: number) => Math.min(inlineSize, PHONE_STAGE_MAX_INLINE_SIZE)
-    : (inlineSize: number) => inlineSize;
+const stageInlineSize = (inlineSize: number, landscape = false): number =>
+  CLIENT_PROFILE.isPhone && (!CLIENT_PROFILE.isCompanionApp || !landscape)
+    ? Math.min(inlineSize, PHONE_STAGE_MAX_INLINE_SIZE)
+    : inlineSize;
 
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
 const recordedVideoViewerTag = unsafeStatic(RECORDED_VIDEO_VIEWER_TAG);
@@ -137,7 +137,12 @@ export class DashboardCard extends LitElement {
           const inlineSize = contentBox?.inlineSize ?? entry.contentRect.width;
           this._stageResizeFrame = requestAnimationFrame(() => {
             this._stageResizeFrame = undefined;
-            this._layoutRuntime.setInlineSize(stageInlineSize(inlineSize));
+            this._layoutRuntime.setInlineSize(
+              stageInlineSize(
+                inlineSize,
+                this.classList.contains("companion-phone-landscape"),
+              ),
+            );
           });
         });
 
@@ -361,7 +366,10 @@ export class DashboardCard extends LitElement {
     this._stageSizeBoundary = boundary;
     this._stageResizeObserver?.observe(boundary);
     this._layoutRuntime.setInlineSize(
-      stageInlineSize(boundary.getBoundingClientRect().width),
+      stageInlineSize(
+        boundary.getBoundingClientRect().width,
+        this.classList.contains("companion-phone-landscape"),
+      ),
     );
   }
 
@@ -571,6 +579,12 @@ export class DashboardCard extends LitElement {
         installCompanionPhoneLandscape(
           this,
           () => (this._previewConfig ?? this._config).stage_type === "full",
+          (active) =>
+            this._layoutRuntime.setInlineSize(
+              active
+                ? PHONE_STAGE_MAX_INLINE_SIZE + 1
+                : PHONE_STAGE_MAX_INLINE_SIZE,
+            ),
         ),
       )
       .catch(console.error);

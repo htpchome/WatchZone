@@ -23,8 +23,8 @@ export const companionPhoneLandscapeStyles = css`
     min-block-size: 0;
     padding-block: env(safe-area-inset-top, 0px)
       var(--wzc-safe-area-inset-bottom);
-    padding-inline: env(safe-area-inset-left, 0px)
-      env(safe-area-inset-right, 0px);
+    padding-inline: max(0.5rem, calc(env(safe-area-inset-left, 0px) - 1rem))
+      max(0.5rem, calc(env(safe-area-inset-right, 0px) - 1rem));
     border-radius: 0;
     box-shadow: none;
   }
@@ -37,13 +37,18 @@ export const companionPhoneLandscapeStyles = css`
 
   :host(.companion-phone-landscape) .stage-grid {
     align-self: start;
-    block-size: auto;
-    column-gap: 0;
-    height: auto;
+    block-size: 100%;
+    column-gap: var(--wzc-stage-module-gap);
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    height: 100%;
   }
 
   :host(.companion-phone-landscape) .stage-placement {
     min-block-size: 0 !important;
-    overflow: hidden;
+  }
+
+  :host(.companion-phone-landscape)
+    .stage-placement[data-layout-node$="default-camera-module"] {
+    margin-block-start: var(--wzc-stage-module-gap);
   }
 `;

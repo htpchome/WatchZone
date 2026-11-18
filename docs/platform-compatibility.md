@@ -135,8 +135,11 @@ physical phone inside Companion, rotating the fixed WebView to landscape
 presents the compatible wide Stage variant as a viewport-edge overlay. The
 same Stage nodes and live sessions are retained in a 60/40 camera/activity
 composition. The controller does not add per-placement transforms; Companion's
-native whole-window orientation transition owns the coordinated rotation
-motion. Browser phones and every tablet remain outside this controller.
+native whole-window orientation transition owns the coordinated rotation. The
+controller waits for viewport resize to settle, commits the responsive layout,
+and applies one short whole-surface settle transform instead of independently
+animating Stage placements. Browser phones and every tablet remain outside
+this controller.
 
 ### 2.3 Theme profile
 

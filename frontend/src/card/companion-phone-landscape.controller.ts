@@ -4,19 +4,22 @@ import { companionPhoneLandscapeStyles } from "./companion-phone-landscape.style
 
 interface LandscapeHost extends ReactiveControllerHost, HTMLElement {
   readonly renderRoot: DocumentFragment | HTMLElement;
+  readonly updateComplete: Promise<boolean>;
 }
 
 type CanActivate = () => boolean;
+type OrientationChanged = (active: boolean) => void;
 
 const installedHosts = new WeakSet<LandscapeHost>();
 
 export function installCompanionPhoneLandscape(
   host: LandscapeHost,
   canActivate: CanActivate,
+  orientationChanged: OrientationChanged,
 ): void {
   if (installedHosts.has(host)) return;
   installedHosts.add(host);
-  new CompanionPhoneLandscapeController(host, canActivate);
+  new CompanionPhoneLandscapeController(host, canActivate, orientationChanged);
 }
 
 /** Owns Companion-phone orientation changes and the Stage reflow animation. */
@@ -24,10 +27,12 @@ class CompanionPhoneLandscapeController implements ReactiveController {
   private _active: boolean;
   private _connected = false;
   private _frame?: number;
+  private _settleTimer?: number;
 
   public constructor(
     private readonly _host: LandscapeHost,
     private readonly _canActivate: CanActivate,
+    private readonly _orientationChanged: OrientationChanged,
   ) {
     this._active = false;
     _host.addController(this);
@@ -48,7 +53,7 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     }
     window.addEventListener("resize", this._schedule);
     window.visualViewport?.addEventListener("resize", this._schedule);
-    this.sync();
+    void this._sync();
   }
 
   public hostUpdated(): void {
@@ -59,6 +64,8 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     this._connected = false;
     window.removeEventListener("resize", this._schedule);
     window.visualViewport?.removeEventListener("resize", this._schedule);
+    if (this._settleTimer !== undefined) clearTimeout(this._settleTimer);
+    this._settleTimer = undefined;
     if (this._frame !== undefined) cancelAnimationFrame(this._frame);
     this._frame = undefined;
   }
@@ -68,18 +75,35 @@ class CompanionPhoneLandscapeController implements ReactiveController {
   }
 
   private readonly _schedule = (): void => {
-    if (!this._connected || this._frame !== undefined) return;
-    this._frame = requestAnimationFrame(() => {
-      this._frame = undefined;
-      this._sync();
-    });
+    if (!this._connected) return;
+    if (this._settleTimer !== undefined) clearTimeout(this._settleTimer);
+    this._settleTimer = window.setTimeout(() => {
+      this._settleTimer = undefined;
+      if (this._frame !== undefined) return;
+      this._frame = requestAnimationFrame(() => {
+        this._frame = undefined;
+        void this._sync();
+      });
+    }, 120);
   };
 
-  private _sync(): void {
+  private async _sync(): Promise<void> {
     const active =
       window.innerWidth > window.innerHeight && this._canActivate();
     if (active === this._active) return;
     this._active = active;
     this._host.classList.toggle("companion-phone-landscape", active);
+    this._orientationChanged(active);
+    await this._host.updateComplete;
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve()),
+    );
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    this._host.renderRoot
+      .querySelector("ha-card")
+      ?.animate([{ transform: "scale(.985)" }, { transform: "none" }], {
+        duration: 240,
+        easing: "cubic-bezier(.2,.8,.2,1)",
+      });
   }
 }
