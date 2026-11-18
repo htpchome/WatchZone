@@ -559,7 +559,7 @@ describe("layout composition", () => {
 
   it("rejects duplicate stable node IDs", () => {
     expect(() => validateStageDesign(stageWithNodes("same", "same"))).toThrow(
-      'Duplicate node "same".',
+      "Invalid Stage: node.duplicate:same",
     );
   });
 
@@ -575,10 +575,10 @@ describe("layout composition", () => {
     expect(validateStageDesign(mobile).variants.phone).toBeDefined();
     expect(() =>
       validateStageDesign({ ...layoutWithModules("node"), variants: {} }),
-    ).toThrow("Variant required.");
+    ).toThrow("Invalid Stage: variants.empty");
     expect(() =>
       validateStageDesign({ ...layoutWithModules("node"), profiles: [] }),
-    ).toThrow("Invalid profiles.");
+    ).toThrow("Invalid Stage: profiles");
   });
 
   it("validates ordered standard and mobile flows against eligibility", () => {
@@ -604,7 +604,7 @@ describe("layout composition", () => {
     });
     expect(() =>
       validateStageFlow({ default: [mobile.id], phone: [shared.id] }, catalog),
-    ).toThrow(`Ineligible "${mobile.id}".`);
+    ).toThrow(`Invalid Stage: flow.profile:${mobile.id}`);
   });
 
   it("lands on the first flow entry and selects another validated stage", () => {
