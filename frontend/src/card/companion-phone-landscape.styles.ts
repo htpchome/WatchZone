@@ -6,29 +6,6 @@ export const companionPhoneLandscapeStyles = css`
     --wzc-camera-activity-outline-width: 0px;
   }
 
-  :host(.companion-phone-orientation-overlay) {
-    position: relative !important;
-    z-index: 1000;
-    box-sizing: border-box;
-    block-size: var(--wzc-companion-portrait-flow-block-size) !important;
-    min-block-size: var(--wzc-companion-portrait-flow-block-size) !important;
-  }
-
-  :host(.companion-phone-orientation-overlay) ha-card {
-    position: fixed;
-    z-index: 0;
-    inset: 0;
-    box-sizing: border-box;
-    inline-size: 100vw;
-    block-size: 100dvh !important;
-    height: 100dvh !important;
-    min-block-size: 100dvh !important;
-    margin: 0;
-    background:
-      linear-gradient(var(--wzc-card-background), var(--wzc-card-background)),
-      Canvas;
-  }
-
   :host(.companion-phone-landscape.height-mode-fit-viewport) {
     --wzc-activity-list-max-block-size: calc(
       var(--wzc-media-day-header-block-size) + 3 *
@@ -132,16 +109,11 @@ export const companionPhoneLandscapeStyles = css`
     inline-size: var(--wzc-companion-camera-overlay-inline-size);
     block-size: var(--wzc-companion-camera-overlay-block-size);
     margin: 0;
-    overflow: hidden;
-    background: var(--wzc-camera-stage);
-    isolation: isolate;
   }
 
   :host(.companion-phone-landscape.landscape-camera-overlay-expanded)
     .stage-placement[data-layout-node$="default-camera-module"] {
     --wzc-camera-square-radius: 0px;
-    --wzc-live-radius: 0px;
-    --wzc-camera-activity-outline-width: 0px;
   }
 
   :host(.companion-phone-landscape.landscape-camera-overlay-dragging)
@@ -163,7 +135,7 @@ export const companionPhoneLandscapeStyles = css`
   }
 
   .companion-camera-pull-handle {
-    position: absolute;
+    position: fixed;
     z-index: 21;
     inset-block-start: var(--wzc-companion-camera-pull-block-start);
     inset-inline-start: var(--wzc-companion-camera-pull-inline-start);
@@ -178,12 +150,6 @@ export const companionPhoneLandscapeStyles = css`
     border: 0;
     cursor: ew-resize;
     -webkit-tap-highlight-color: transparent;
-  }
-
-  @media (orientation: portrait) {
-    .companion-camera-pull-handle {
-      display: none;
-    }
   }
 
   .companion-camera-pull-handle::before {

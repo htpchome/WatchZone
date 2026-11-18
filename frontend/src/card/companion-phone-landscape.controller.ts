@@ -13,7 +13,9 @@ type CanActivate = () => boolean;
 type OrientationChanged = (active: boolean) => void;
 
 const installedHosts = new WeakSet<LandscapeHost>();
-const PORTRAIT_VIEWPORT_STABLE_FRAMES = 2;
+const SURFACE_SETTLE_DURATION_MS = 180;
+const SURFACE_SETTLE_EASING = "cubic-bezier(.2,.8,.2,1)";
+const MAX_SURFACE_SETTLE_TRANSLATION_PX = 96;
 
 export function installCompanionPhoneLandscape(
   host: LandscapeHost,
@@ -31,9 +33,10 @@ export function installCompanionPhoneLandscape(
   );
 }
 
-/** Owns the Companion-phone full-viewport landscape Stage transition. */
+/** Owns the Companion-phone in-flow landscape Stage transition. */
 class CompanionPhoneLandscapeController implements ReactiveController {
   private _active = false;
+  private _animation?: Animation;
   private _connected = false;
   private _initialized = false;
   private readonly _pull: CompanionCameraPullController;
@@ -67,9 +70,6 @@ class CompanionPhoneLandscapeController implements ReactiveController {
   }
 
   public hostUpdated(): void {
-    if (!this._active && !this._transitioning) {
-      this._capturePortraitFlowBlockSize();
-    }
     if (this._active && !this._transitioning) this._pull.sync();
     if (!this._transitioning && this._targetActive() !== this._target) {
       this._schedule();
@@ -84,12 +84,11 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     window.removeEventListener("resize", this._schedule);
     window.visualViewport?.removeEventListener("resize", this._schedule);
     this._pull.deactivate();
+    this._cancelAnimation();
     this._host.classList.remove(
       "companion-phone-landscape",
-      "companion-phone-orientation-overlay",
       "companion-phone-orientation-transitioning",
     );
-    this._host.style.removeProperty("--wzc-companion-portrait-flow-block-size");
     this._active = false;
     this._initialized = false;
     this._target = false;
@@ -100,92 +99,81 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     if (!this._connected) return;
     const target = this._targetActive();
     if (this._initialized && target === this._target) return;
-    const initialized = this._initialized;
+    const animate = this._initialized;
     this._initialized = true;
     this._target = target;
     const generation = ++this._transitionGeneration;
-    if (!initialized && !target) return;
-    void this._transition(target, generation);
+    if (!animate && !target) return;
+    void this._transition(target, generation, animate);
   };
 
   private _targetActive(): boolean {
     return window.innerWidth > window.innerHeight && this._canActivate();
   }
 
-  private _capturePortraitFlowBlockSize(): void {
-    const height = this._host.getBoundingClientRect().height;
-    if (height <= 0) return;
-    this._host.style.setProperty(
-      "--wzc-companion-portrait-flow-block-size",
-      `${height}px`,
+  private _surfaceRect(): DOMRect | undefined {
+    return this._host.renderRoot
+      .querySelector<HTMLElement>("ha-card")
+      ?.getBoundingClientRect();
+  }
+
+  private _cancelAnimation(): void {
+    this._animation?.cancel();
+    this._animation = undefined;
+  }
+
+  private async _playSurfaceSettle(first?: DOMRect): Promise<void> {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const surface = this._host.renderRoot.querySelector<HTMLElement>("ha-card");
+    if (!surface) return;
+    const last = surface.getBoundingClientRect();
+    const measured = first ? first.top - last.top : 0;
+    if (
+      Math.abs(measured) < 0.5 ||
+      Math.abs(measured) > MAX_SURFACE_SETTLE_TRANSLATION_PX
+    ) {
+      return;
+    }
+    const animation = surface.animate(
+      [
+        { transform: `translate3d(0, ${measured}px, 0)` },
+        { transform: "none" },
+      ],
+      {
+        duration: SURFACE_SETTLE_DURATION_MS,
+        easing: SURFACE_SETTLE_EASING,
+      },
     );
+    this._animation = animation;
+    await animation.finished.catch(() => undefined);
+    if (this._animation === animation) this._animation = undefined;
   }
 
   private async _transition(
     active: boolean,
     generation: number,
+    animate: boolean,
   ): Promise<void> {
+    const first = animate ? this._surfaceRect() : undefined;
+    this._cancelAnimation();
     this._transitioning = true;
     this._host.classList.add("companion-phone-orientation-transitioning");
+
     this._pull.deactivate();
 
-    if (active) {
-      this._capturePortraitFlowBlockSize();
-      this._active = true;
-      this._host.classList.add(
-        "companion-phone-landscape",
-        "companion-phone-orientation-overlay",
-      );
-      this._orientationChanged(true);
-      await this._host.updateComplete;
-      if (!this._isCurrent(true, generation)) return;
-    } else {
-      if (!(await this._waitForStablePortraitViewport(generation))) return;
+    this._active = active;
+    this._host.classList.toggle("companion-phone-landscape", active);
+    this._orientationChanged(active);
+    await this._host.updateComplete;
+    if (!this._isCurrent(active, generation)) return;
+    if (animate) await this._playSurfaceSettle(first);
 
-      // Render the portrait Stage while the old landscape surface still covers
-      // Home Assistant. Removing both classes in this same microtask prevents a
-      // portrait frame from ever occupying the full-viewport overlay.
-      this._orientationChanged(false);
-      await this._host.updateComplete;
-      if (
-        !this._connected ||
-        this._target ||
-        !this._active ||
-        this._transitionGeneration !== generation
-      )
-        return;
-      this._active = false;
-      this._host.classList.remove(
-        "companion-phone-landscape",
-        "companion-phone-orientation-overlay",
-      );
-    }
-
+    if (!this._isCurrent(active, generation)) return;
     this._transitioning = false;
     this._host.classList.remove("companion-phone-orientation-transitioning");
     if (active) {
       this._pull.activate();
     }
-  }
-
-  private async _waitForStablePortraitViewport(
-    generation: number,
-  ): Promise<boolean> {
-    if (window.innerWidth >= window.innerHeight) return true;
-    let previous = "";
-    let stableFrames = 0;
-    while (this._connected && this._transitionGeneration === generation) {
-      await new Promise<void>((resolve) =>
-        requestAnimationFrame(() => resolve()),
-      );
-      if (this._target) return false;
-      if (window.innerWidth >= window.innerHeight) return true;
-      const current = `${window.innerWidth}x${window.innerHeight}`;
-      stableFrames = current === previous ? stableFrames + 1 : 0;
-      previous = current;
-      if (stableFrames >= PORTRAIT_VIEWPORT_STABLE_FRAMES) return true;
-    }
-    return false;
   }
 
   private _isCurrent(active: boolean, generation: number): boolean {

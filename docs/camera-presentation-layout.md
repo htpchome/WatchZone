@@ -109,18 +109,16 @@ CSS geometry, so supported theme or user changes to tile sizing also change the
 minimum without a parallel pixel constant.
 
 The built-in mobile Full Stage uses a separate Companion-phone landscape
-presentation. Portrait remains in the normal Home Assistant flow beneath its
-navigation. Landscape retains that flow allocation as a placeholder while the
-WatchZone surface covers the complete viewport, including Home Assistant's
-navigation; WatchZone does not remove or restyle the navigation itself. The
-leading 60% contains a 16:9 camera plus camera navigation; the trailing 40%
-contains the active Reviews, Events, Recordings, or Exports stack. The
-independently placeable activity-navigation module is right-aligned below the
-camera column at its normal toolbar control size. The activity title aligns
-with the top of the camera. An expanded module gutter separates the columns,
-and a reduced form of the larger reported landscape safe-area inset is
-reserved symmetrically on both inline edges so either phone rotation direction
-protects both columns.
+presentation. It remains in the card's normal Home Assistant flow slot beneath
+the navigation bar; it never fixes the card host to the viewport or covers,
+hides, or restyles Home Assistant's dashboard chrome. The leading 60% contains
+a 16:9 camera plus camera navigation; the trailing 40% contains the active
+Reviews, Events, Recordings, or Exports stack. The independently placeable
+activity-navigation module is right-aligned below the camera column at its
+normal toolbar control size. The activity title aligns with the top of the
+camera. An expanded module gutter separates the columns, and a reduced form of
+the larger reported landscape safe-area inset is reserved symmetrically on
+both inline edges so either phone rotation direction protects both columns.
 Each active media list is capped at three complete tiles and remains the only
 scrolling surface. Review-state controls use a compact outlined icon without
 label text in this presentation, aligned on the tile footer with the
@@ -132,26 +130,18 @@ tablets, or incompatible Stage types.
 A separate vertical pull handle is centered in the actual gutter at the
 Camera's trailing edge in this presentation. Its borderless three-pixel line
 uses the semantic secondary text color and keeps a tall visual indicator inside
-a larger transparent touch target. The handle remains hidden until the
-controller has stable Camera and activity geometry, so an unmeasured handle is
-never painted at a default viewport edge. The handle belongs to the fixed card
-surface and all of its positions are card-local; WebView viewport transforms
-therefore cannot move it between first paint and pointer contact. Camera alert
-and detection state remains active during a pull, but its inner activity
-outline is suppressed while the Camera is resizing and restored after settling
-so the border is not re-rasterized on every drag frame.
+a larger transparent touch target. Camera alert and detection state remains
+active during a pull, but its inner activity outline is suppressed while the
+Camera is resizing and restored after settling so the border is not
+re-rasterized on every drag frame.
 Horizontal pointer capture maps the handle's travel directly to a
 camera-overlay progress value while preserving the mounted Camera module,
 retained live session, and both navigation-row positions. The Camera grows
-above the unchanged activity column on one opaque, clipped paint surface;
-activity selection and scroll position do not move into the overlay.
+above the unchanged activity column; activity selection and scroll position do
+not move into the overlay.
 Releasing before 50% returns to the 60/40 layout, while releasing at or beyond
 50% settles into a viewport-covering Camera with its complete composed control
-surface. The viewport-covering carousel, camera shell, and live viewport all
-use zero corner radius so the underlying Stage cannot show through. At full
-expansion, the grip visual and camera alert/detection outline
-do not share presentation: the outline is hidden so it cannot bleed over the
-media, while the grip remains visible inside the safe trailing edge and can be
+surface. The expanded handle remains inside the safe trailing edge and can be
 dragged left to restore the split layout. Arrow keys, Home/End, Enter/Space,
 and Escape expose the same two states, and reduced-motion preference removes
 the settle transition.
