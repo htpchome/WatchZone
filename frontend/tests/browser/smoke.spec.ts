@@ -3292,7 +3292,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
     }
     return {
       badge: getComputedStyle(badgeSurface).backgroundColor,
-      outline: getComputedStyle(outline, "::after").borderTopColor,
+      outline: getComputedStyle(outline).borderTopColor,
     };
   });
   expect(detectionColors.badge).toBe(detectionColors.outline);
@@ -3915,7 +3915,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
     .locator("wzc-reviews .thumbnail-wrap")
     .evaluateAll((thumbnails) =>
       thumbnails.slice(0, 2).map((thumbnail) => {
-        const outline = getComputedStyle(thumbnail, "::after");
+        const outline = getComputedStyle(thumbnail);
         return {
           color: outline.borderTopColor,
           style: outline.borderTopStyle,

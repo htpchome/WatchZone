@@ -13,11 +13,12 @@ type CanActivate = () => boolean;
 type OrientationChanged = (active: boolean) => void;
 
 const installedHosts = new WeakSet<LandscapeHost>();
-const FLIP_DURATION_MS = 360;
+const FLIP_DURATION_MS = 400;
 const FLIP_EASING = "cubic-bezier(.2,.8,.2,1)";
-const ORIENTATION_SETTLE_MS = 96;
+const ORIENTATION_SETTLE_MS = 128;
 const PLACEMENT_SELECTOR = ".stage-placement[data-layout-node]";
-const REQUIRED_STABLE_FRAMES = 3;
+const REQUIRED_STABLE_FRAMES = 4;
+const SETTLEMENT_FRAMES = 2;
 
 interface ViewportSnapshot {
   readonly height: number;
@@ -45,6 +46,14 @@ function sameViewport(
     first.visualWidth === second.visualWidth &&
     first.width === second.width
   );
+}
+
+async function waitForAnimationFrames(count: number): Promise<void> {
+  for (let frame = 0; frame < count; frame += 1) {
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve()),
+    );
+  }
 }
 
 export function installCompanionPhoneLandscape(
@@ -238,7 +247,10 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     this._orientationChanged(active);
     await this._host.updateComplete;
     if (!this._connected || this._active !== active) return;
-    if (animate) await this._playFlip(before);
+    if (animate) {
+      await this._playFlip(before);
+      await waitForAnimationFrames(SETTLEMENT_FRAMES);
+    }
     if (this._connected && this._active === active && active) {
       this._pull.activate();
     }
