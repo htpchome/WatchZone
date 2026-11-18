@@ -1,4 +1,5 @@
 import {
+  ACTIVITY_NAVIGATION_MODULE_TYPE,
   CAMERA_NAVIGATION_MODULE_TYPE,
   CAMERA_SWITCHER_COMPONENT_TYPE,
   CAMERA_MODULE_TYPE,
@@ -64,6 +65,13 @@ function stackConfig(config: unknown): {
 }
 
 const moduleLoaders = {
+  [ACTIVITY_NAVIGATION_MODULE_TYPE]: {
+    load: () =>
+      import("./modules/activity-navigation").then(
+        ({ moduleDefinition }) => moduleDefinition,
+      ),
+    placeholder: "control",
+  },
   [CAMERA_NAVIGATION_MODULE_TYPE]: {
     load: () =>
       import("./modules/camera-navigation").then(

@@ -828,8 +828,10 @@ a saved layout contains:
 - Creation and modification metadata where useful.
 
 The root is a typed grid container whose placements contain module nodes or
-module-stack nodes. Module stacks own navigation between ordered child modules
-and no feature behavior. Module nodes may publish typed component slots.
+module-stack nodes. Module stacks own the ordered selection state between child
+modules and no feature behavior. Independently placeable navigation modules may
+consume that state through typed Stage context. Module nodes may publish typed
+component slots.
 Containers control placement, modules control major content behavior, and
 components control portable capability presentation. None may absorb another
 category's responsibility.

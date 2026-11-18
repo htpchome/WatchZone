@@ -6,6 +6,8 @@ import { LayoutRuntime } from "../src/stage/layout-runtime";
 import { PlaceableLoader } from "../src/stage/placeable-loader";
 import { normalizeCardConfig } from "../src/core/config";
 import {
+  ACTIVITY_NAVIGATION_MODULE_TYPE,
+  DEFAULT_ACTIVITY_NAVIGATION_MODULE_NODE_ID,
   DEFAULT_ACTIVITY_STACK_NODE_ID,
   DEFAULT_REVIEWS_MODULE_NODE_ID,
   DEFAULT_CAMERA_MODULE_NODE_ID,
@@ -82,7 +84,7 @@ describe("layout composition", () => {
     );
 
     const children = defaultVariant(layout).root.children;
-    expect(children).toHaveLength(3);
+    expect(children).toHaveLength(4);
     expect(children[0].node).toMatchObject({
       id: DEFAULT_CAMERA_MODULE_NODE_ID,
       kind: "module",
@@ -95,7 +97,13 @@ describe("layout composition", () => {
         transition: "slide",
       },
     });
-    expect(children[1].node).toMatchObject({
+    expect(
+      children.find(
+        ({ node }) =>
+          node.kind === "module" &&
+          node.id === DEFAULT_CAMERA_NAVIGATION_MODULE_NODE_ID,
+      )?.node,
+    ).toMatchObject({
       id: DEFAULT_CAMERA_NAVIGATION_MODULE_NODE_ID,
       kind: "module",
       moduleType: "camera-navigation",
@@ -105,7 +113,10 @@ describe("layout composition", () => {
         targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
       },
     });
-    expect(children[2].node).toMatchObject({
+    expect(
+      children.find(({ node }) => node.id === DEFAULT_ACTIVITY_STACK_NODE_ID)
+        ?.node,
+    ).toMatchObject({
       id: DEFAULT_ACTIVITY_STACK_NODE_ID,
       kind: "stack",
       children: [
@@ -130,6 +141,20 @@ describe("layout composition", () => {
           moduleType: "exports",
         },
       ],
+    });
+    expect(
+      children.find(
+        ({ node }) =>
+          node.kind === "module" &&
+          node.id === DEFAULT_ACTIVITY_NAVIGATION_MODULE_NODE_ID,
+      )?.node,
+    ).toMatchObject({
+      config: {
+        presentation: "toolbar",
+        targetStackId: DEFAULT_ACTIVITY_STACK_NODE_ID,
+      },
+      kind: "module",
+      moduleType: ACTIVITY_NAVIGATION_MODULE_TYPE,
     });
     expect(activityModules(layout).map(({ config }) => config)).toEqual([
       {
@@ -295,7 +320,7 @@ describe("layout composition", () => {
         camera_bar_shadows: false,
       }),
     );
-    const navigation = moduleAt(layout, 1);
+    const navigation = moduleOfType(layout, "camera-navigation");
     expect(navigation.config).toMatchObject({
       roundedCorners: false,
       shadows: false,
@@ -701,7 +726,42 @@ describe("layout composition", () => {
     });
     const reviewsLoad = vi.fn(async () => createDefinition("reviews"));
     const eventsLoad = vi.fn(async () => createDefinition("events"));
+    const navigationDefinition: ModuleDefinition<
+      { targetStackId: string },
+      "moduleStackNavigation"
+    > = {
+      contextKeys: ["moduleStackNavigation"],
+      type: ACTIVITY_NAVIGATION_MODULE_TYPE,
+      createElement: () => {
+        const navigation = document.createElement("nav");
+        navigation.className = "stage-stack-navigation";
+        navigation.append(
+          document.createElement("button"),
+          document.createElement("button"),
+        );
+        return navigation;
+      },
+      define: async () => undefined,
+      getEntityIds: () => [],
+      updateElement: (element, config, context) => {
+        const buttons = element.querySelectorAll("button");
+        buttons[0]!.onclick = () =>
+          context.moduleStackNavigation.select(
+            config.targetStackId,
+            "reviews-node",
+          );
+        buttons[1]!.onclick = () =>
+          context.moduleStackNavigation.select(
+            config.targetStackId,
+            "events-node",
+          );
+      },
+      validateConfig: (value) => value as { targetStackId: string },
+    };
     const loader = new PlaceableLoader({
+      [ACTIVITY_NAVIGATION_MODULE_TYPE]: {
+        load: async () => navigationDefinition,
+      },
       reviews: {
         load: reviewsLoad,
         navigation: { icon: "reviews", labelKey: "navigation.reviews" },
@@ -725,9 +785,13 @@ describe("layout composition", () => {
     expect(reviewsLoad).toHaveBeenCalledOnce();
     expect(eventsLoad).not.toHaveBeenCalled();
 
-    container
-      .querySelectorAll<HTMLButtonElement>(".stage-stack-navigation button")[1]
-      ?.click();
+    await vi.waitFor(() => {
+      render(runtime.render(), container);
+      expect(container.querySelector(".stage-stack-navigation")).toBeTruthy();
+    });
+    const navigation = container.querySelector(".stage-stack-navigation");
+    expect(navigation?.querySelectorAll("button")).toHaveLength(2);
+    navigation?.querySelectorAll("button")[1]?.click();
     await vi.waitFor(() => {
       render(runtime.render(), container);
       expect(container.querySelector("article")?.dataset.type).toBe("events");
@@ -735,9 +799,7 @@ describe("layout composition", () => {
     expect(reviews?.isConnected).toBe(false);
     expect(eventsLoad).toHaveBeenCalledOnce();
 
-    container
-      .querySelectorAll<HTMLButtonElement>(".stage-stack-navigation button")[0]
-      ?.click();
+    navigation?.querySelectorAll("button")[0]?.click();
     render(runtime.render(), container);
     expect(container.querySelector("article")).toBe(reviews);
     expect(reviewsLoad).toHaveBeenCalledOnce();
@@ -836,10 +898,25 @@ function moduleAt(design: StageDesignDocument, index: number): StageModuleNode {
   return node;
 }
 
+function moduleOfType(
+  design: StageDesignDocument,
+  moduleType: string,
+): StageModuleNode {
+  const node = defaultVariant(design).root.children.find(
+    ({ node }) => node.kind === "module" && node.moduleType === moduleType,
+  )?.node;
+  if (!node || node.kind !== "module") {
+    throw new Error(`Expected ${moduleType} module.`);
+  }
+  return node;
+}
+
 function activityModules(
   design: StageDesignDocument,
 ): readonly StageModuleNode[] {
-  const node = defaultVariant(design).root.children[2]?.node;
+  const node = defaultVariant(design).root.children.find(
+    ({ node }) => node.kind === "stack",
+  )?.node;
   if (!node || node.kind !== "stack") {
     throw new Error("Expected the built-in activity stack.");
   }
@@ -886,6 +963,18 @@ function layoutWithStack(): StageDesignDocument {
         {
           grid: { column: 1, columnSpan: 12, row: 1, rowSpan: 1 },
           node: {
+            config: {
+              presentation: "toolbar",
+              targetStackId: "activity-stack",
+            },
+            id: "activity-navigation",
+            kind: "module",
+            moduleType: ACTIVITY_NAVIGATION_MODULE_TYPE,
+          },
+        },
+        {
+          grid: { column: 1, columnSpan: 12, row: 2, rowSpan: 1 },
+          node: {
             children: [
               {
                 config: {},
@@ -908,7 +997,7 @@ function layoutWithStack(): StageDesignDocument {
       columns: 12,
       id: "root",
       kind: "container",
-      rows: ["fraction"],
+      rows: ["content", "fraction"],
     },
   };
   return {

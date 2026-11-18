@@ -12,6 +12,7 @@ import { CameraSelectionContext } from "./camera-selection-context";
 import { ActivityFilterContext } from "./activity/activity-filter-context";
 import { ExportFilterContext } from "./export-filter-context";
 import { MediaDateContext } from "./media-date-context";
+import { ModuleStackNavigationContext } from "./module-stack-navigation-context";
 import type {
   HomeAssistant,
   HomeAssistantApi,
@@ -38,22 +39,11 @@ import type {
   PlaceableRuntimeContext,
 } from "./placeable";
 
-let activityControlsDefinition: Promise<unknown> | undefined;
-let exportFilterDefinition: Promise<unknown> | undefined;
-
-function defineActivityControls(): Promise<unknown> {
-  return (activityControlsDefinition ??= import("./activity"));
-}
-
-function defineExportFilter(): Promise<unknown> {
-  return (exportFilterDefinition ??= import("./export-filter"));
-}
 import {
   componentLoader,
   moduleLoader,
   type PlaceableLoader,
 } from "./placeable-loader";
-import { isIconName, renderIcon } from "../ui/icons";
 
 type PlaceableNode = StageModuleNode | StageComponentNode;
 
@@ -100,6 +90,9 @@ export class LayoutRuntime implements ReactiveController {
   private readonly _cameraSession = new CameraSessionContext();
   private readonly _exportFilter = new ExportFilterContext();
   private readonly _mediaDate = new MediaDateContext();
+  private readonly _moduleStackNavigation = new ModuleStackNavigationContext(
+    (stackId, moduleId) => this._showStackModule(stackId, moduleId),
+  );
   private _context: Omit<PlaceableRuntimeContext<never>, "placeableId"> = {};
   private readonly _activeStageIds: Partial<Record<StageVariantName, string>> =
     {};
@@ -271,10 +264,12 @@ export class LayoutRuntime implements ReactiveController {
   private _syncActiveVariant(): void {
     const variant = this._activeVariant();
     if (!variant) {
+      this._moduleStackNavigation.retain(new Set());
       this._removeMissingRecords(new Set());
       this._host.requestUpdate();
       return;
     }
+    this._publishModuleStacks(variant.root.children);
     const nodes = collectPlaceables(
       variant.root.children,
       this._activeStackModules,
@@ -312,110 +307,10 @@ export class LayoutRuntime implements ReactiveController {
       data-layout-node=${node.id}
       style=${placementStyle}
     >
-      <nav
-        class="stage-stack-navigation"
-        aria-label=${this._localize("navigation.activity")}
-      >
-        ${repeat(
-          node.children,
-          ({ id }) => id,
-          (child) => {
-            const navigation = this._moduleLoader.getRegistration(
-              child.moduleType,
-            )?.navigation;
-            const label = navigation
-              ? this._localize(navigation.labelKey)
-              : child.moduleType;
-            return html`<button
-              class=${`round-button stage-stack-button${
-                child.id === activeId ? " active" : ""
-              }`}
-              type="button"
-              aria-label=${label}
-              aria-pressed=${child.id === activeId ? "true" : "false"}
-              title=${label}
-              @pointerenter=${this._handleStackButtonPointerEnter}
-              @pointerleave=${this._handleStackButtonPointerLeave}
-              @pointerdown=${this._handleStackButtonPointerDown}
-              @click=${() => this._showStackModule(node, child.id)}
-            >
-              ${
-                navigation && isIconName(navigation.icon)
-                  ? renderIcon(navigation.icon)
-                  : label
-              }
-            </button>`;
-          },
-        )}
-        ${this._renderStackControls(active)}
-      </nav>
       <div class="stage-stack-content">
         ${active ? this._renderStackModule(active) : nothing}
       </div>
     </div>`;
-  }
-
-  private _renderStackControls(
-    active: StageModuleNode | undefined,
-  ): TemplateResult | typeof nothing {
-    if (!active) return nothing;
-    const accessories = this._moduleLoader
-      .getRegistration(active.moduleType)
-      ?.stackAccessories?.(active.config);
-    if (!accessories) return nothing;
-    if (accessories.filter === "exports") {
-      void defineExportFilter();
-    }
-    void defineActivityControls();
-    return html`<span class="stage-stack-accessories">
-      <wzc-activity-slideshow-toggle
-        .cameraSelection=${this._cameraSelection}
-        .localize=${this._context.localize ?? englishLocalize}
-        .targetModuleId=${accessories.targetModuleId ?? ""}
-      ></wzc-activity-slideshow-toggle>
-      <wzc-activity-takeover-toggle
-        .cameraSelection=${this._cameraSelection}
-        .localize=${this._context.localize ?? englishLocalize}
-        .targetModuleId=${accessories.targetModuleId ?? ""}
-      ></wzc-activity-takeover-toggle>
-      ${
-        accessories.filter === "activity" || accessories.filter === "disabled"
-          ? html`<wzc-activity-filter
-              .cameraSelection=${this._cameraSelection}
-              .disabled=${accessories.filter === "disabled"}
-              .filterContext=${this._activityFilter}
-              .locale=${this._context.api?.locale}
-              .localize=${this._context.localize ?? englishLocalize}
-              .targetModuleId=${accessories.targetModuleId ?? ""}
-            ></wzc-activity-filter>`
-          : accessories.filter === "exports"
-            ? html`<wzc-export-filter
-                .filterContext=${this._exportFilter}
-                .localize=${this._context.localize ?? englishLocalize}
-                .scopeId=${active.id}
-              ></wzc-export-filter>`
-            : nothing
-      }
-      <wzc-activity-calendar
-        .cameraSelection=${this._cameraSelection}
-        .dateContext=${this._mediaDate}
-        .disabled=${accessories.calendar === "disabled"}
-        .disabledLabel=${
-          accessories.calendar === "disabled"
-            ? (this._context.localize ?? englishLocalize)(
-                "exports.calendar_unavailable",
-              )
-            : ""
-        }
-        .historyDays=${accessories.historyDays ?? 1}
-        .localize=${this._context.localize ?? englishLocalize}
-        .locale=${this._context.api?.locale}
-        .mode=${
-          accessories.calendar === "recordings" ? "recordings" : "activity"
-        }
-        .targetModuleId=${accessories.targetModuleId ?? ""}
-      ></wzc-activity-calendar>
-    </span>`;
   }
 
   private _renderStackModule(
@@ -429,32 +324,41 @@ export class LayoutRuntime implements ReactiveController {
       : this._renderRecord(node, "stage-stack-module");
   }
 
-  private _showStackModule(node: StageStackNode, moduleId: string): void {
+  private _showStackModule(stackId: string, moduleId: string): void {
+    const node = this._activeVariant()?.root.children.find(
+      ({ node }) => node.kind === "stack" && node.id === stackId,
+    )?.node;
+    if (!node || node.kind !== "stack") return;
     if (!node.children.some(({ id }) => id === moduleId)) return;
     if (this._activeStackModules.get(node.id) === moduleId) return;
     this._activeStackModules.set(node.id, moduleId);
     this._syncActiveVariant();
   }
 
-  private readonly _handleStackButtonPointerEnter = (
-    event: PointerEvent,
-  ): void => {
-    if (event.pointerType !== "mouse") return;
-    (event.currentTarget as HTMLElement).classList.add("hovered");
-  };
-
-  private readonly _handleStackButtonPointerLeave = (
-    event: PointerEvent,
-  ): void => {
-    (event.currentTarget as HTMLElement).classList.remove("hovered");
-  };
-
-  private readonly _handleStackButtonPointerDown = (
-    event: PointerEvent,
-  ): void => {
-    if (event.pointerType === "mouse") return;
-    (event.currentTarget as HTMLElement).classList.remove("hovered");
-  };
+  private _publishModuleStacks(placements: readonly StagePlacement[]): void {
+    const stackIds = new Set<string>();
+    for (const { node } of placements) {
+      if (node.kind !== "stack") continue;
+      stackIds.add(node.id);
+      const activeId =
+        this._activeStackModules.get(node.id) ?? node.children[0]?.id;
+      this._moduleStackNavigation.publish(node.id, {
+        activeId,
+        items: node.children.map((child) => {
+          const registration = this._moduleLoader.getRegistration(
+            child.moduleType,
+          );
+          return {
+            accessories: registration?.stackAccessories?.(child.config),
+            icon: registration?.navigation?.icon,
+            id: child.id,
+            labelKey: registration?.navigation?.labelKey,
+          };
+        }),
+      });
+    }
+    this._moduleStackNavigation.retain(stackIds);
+  }
 
   private _renderModule(
     node: StageModuleNode,
@@ -744,6 +648,7 @@ export class LayoutRuntime implements ReactiveController {
       cameraSession: this._cameraSession,
       exportFilter: this._exportFilter,
       mediaDate: this._mediaDate,
+      moduleStackNavigation: this._moduleStackNavigation,
     };
     const selected = Object.fromEntries(
       (record.definition?.contextKeys ?? []).map((key) => [key, bindings[key]]),

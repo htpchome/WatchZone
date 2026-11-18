@@ -48,6 +48,7 @@ export const companionPhoneLandscapeStyles = css`
     block-size: 100%;
     column-gap: var(--wzc-stage-module-gap);
     grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    grid-template-rows: max-content max-content max-content;
     height: 100%;
   }
 
@@ -58,5 +59,15 @@ export const companionPhoneLandscapeStyles = css`
   :host(.companion-phone-landscape)
     .stage-placement[data-layout-node$="default-camera-module"] {
     margin-block-start: var(--wzc-stage-module-gap);
+  }
+
+  :host(.companion-phone-landscape)
+    .stage-placement[data-layout-node$="default-activity-navigation-module"] {
+    --wzc-stage-stack-button-size: 1.75rem;
+    --wzc-stage-stack-icon-size: 1rem;
+    --wzc-stage-stack-navigation-padding: 0.125rem;
+    justify-self: center;
+    inline-size: min(52rem, 100%);
+    margin-block-end: 0;
   }
 `;

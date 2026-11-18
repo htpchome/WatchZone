@@ -115,13 +115,14 @@ The built-in mobile Full Stage uses a separate Companion-phone landscape
 presentation. It occupies the fixed WebView, covers Home Assistant's dashboard
 chrome, and applies viewport safe-area padding. The leading 60% contains a
 16:9 camera plus camera navigation; the trailing 40% contains the active
-Reviews, Events, Recordings, or Exports stack. A top inset protects the camera,
-a module gutter separates the columns, and the larger reported landscape
-safe-area inset is reserved symmetrically on both inline edges so either phone
-rotation direction protects both columns. The
-trailing column fills the available viewport height while the active media list
-remains the only scrolling surface. This overlay does not activate for browser
-phones, Companion tablets, or incompatible Stage types.
+Reviews, Events, Recordings, or Exports stack. The independently placeable
+activity-navigation module is centered below those columns in a compact toolbar
+presentation. A top inset protects the camera, a module gutter separates the
+columns, and the larger reported landscape safe-area inset is reserved
+symmetrically on both inline edges so either phone rotation direction protects
+both columns. The trailing stack fills the shared main-content height while its
+active media list remains the only scrolling surface. This overlay does not
+activate for browser phones, Companion tablets, or incompatible Stage types.
 
 Card, Camera, camera-navigation, and activity-tile appearance likewise store
 independent standard-device and physical-phone values. Phone defaults use an

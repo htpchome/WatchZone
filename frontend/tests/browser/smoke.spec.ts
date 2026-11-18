@@ -8653,6 +8653,11 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
       get: () =>
         "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Home Assistant/2026.9 Mobile/HomeAssistant, like Safari",
     });
+    const animate = Element.prototype.animate;
+    Element.prototype.animate = function (...args) {
+      this.setAttribute("data-test-animated", "");
+      return animate.apply(this, args);
+    };
   });
   await page.goto("/");
   await waitForWatchZoneDefinition(page);
@@ -8685,20 +8690,10 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     "data-stage-variant",
     "default",
   );
-  await expect
-    .poll(() =>
-      card.evaluate(
-        (element) =>
-          element.shadowRoot?.querySelector("ha-card")?.getAnimations()
-            .length ?? 0,
-      ),
-    )
-    .toBeGreaterThan(0);
-  await card.evaluate(async (element) => {
-    const animations =
-      element.shadowRoot?.querySelector("ha-card")?.getAnimations() ?? [];
-    await Promise.all(animations.map((animation) => animation.finished));
-  });
+  await expect(card.locator("ha-card")).toHaveAttribute(
+    "data-test-animated",
+    "",
+  );
   const geometry = await card.evaluate((element) => {
     const host = element as HTMLElement;
     const root = host.shadowRoot;
@@ -8712,9 +8707,11 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     const camera = placement("default-camera-module");
     const navigation = placement("default-camera-navigation-module");
     const activity = placement("default-activity-stack");
+    const activityNavigation = placement("default-activity-navigation-module");
     const cameraRect = camera.getBoundingClientRect();
     const navigationRect = navigation.getBoundingClientRect();
     const activityRect = activity.getBoundingClientRect();
+    const activityNavigationRect = activityNavigation.getBoundingClientRect();
     const hostRect = host.getBoundingClientRect();
     return {
       activityHeight: Math.round(activityRect.height),
@@ -8722,6 +8719,9 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
       activityOverflow: getComputedStyle(activity).overflow,
       activityRight: Math.round(activityRect.right),
       activityTop: Math.round(activityRect.top),
+      activityNavigationBottom: Math.round(activityNavigationRect.bottom),
+      activityNavigationHeight: Math.round(activityNavigationRect.height),
+      activityNavigationTop: Math.round(activityNavigationRect.top),
       cameraAspectRatio: cameraRect.width / cameraRect.height,
       cameraHeight: Math.round(navigationRect.bottom - cameraRect.top),
       cameraLeft: Math.round(cameraRect.left),
@@ -8750,6 +8750,9 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     activityOverflow: "visible",
     activityRight: expect.any(Number),
     activityTop: expect.any(Number),
+    activityNavigationBottom: expect.any(Number),
+    activityNavigationHeight: expect.any(Number),
+    activityNavigationTop: expect.any(Number),
     cameraAspectRatio: geometry.cameraAspectRatio,
     cameraHeight: expect.any(Number),
     cameraLeft: expect.any(Number),
@@ -8763,8 +8766,14 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
   });
   expect(geometry.activityLeft).toBeGreaterThan(geometry.cameraLeft);
   expect(geometry.activityHeight).toBeGreaterThan(geometry.cameraHeight);
-  expect(geometry.activityHeight).toBeCloseTo(geometry.host.height, 0);
   expect(geometry.activityRight).toBeLessThan(geometry.host.width);
+  expect(geometry.activityNavigationTop).toBeGreaterThan(
+    geometry.activityTop + geometry.activityHeight,
+  );
+  expect(geometry.activityNavigationBottom).toBeLessThanOrEqual(
+    geometry.host.height,
+  );
+  expect(geometry.activityNavigationHeight).toBeGreaterThan(0);
   expect(geometry.cameraAspectRatio).toBeCloseTo(16 / 9, 2);
   expect(geometry.cameraLeft).toBeGreaterThan(0);
   expect(geometry.cameraTop).toBeGreaterThan(geometry.activityTop);
@@ -8937,7 +8946,7 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
     overlayDimmedOpacity: "52%",
     overlayOpacity: "72%",
     onPrimaryColor: "rgb(235, 236, 237)",
-    overriddenPlacementGaps: [7, 7],
+    overriddenPlacementGaps: [7, 7, 0],
     reversedTextColor: "rgb(245, 246, 247)",
     textColor: "rgb(10, 20, 30)",
   });

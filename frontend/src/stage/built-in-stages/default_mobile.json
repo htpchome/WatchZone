@@ -71,6 +71,23 @@
           {
             "grid": {
               "column": 1,
+              "columnSpan": 2,
+              "row": 3,
+              "rowSpan": 1
+            },
+            "node": {
+              "config": {
+                "presentation": "compact-toolbar",
+                "targetStackId": "default-activity-stack"
+              },
+              "id": "default-activity-navigation-module",
+              "kind": "module",
+              "moduleType": "activity-navigation"
+            }
+          },
+          {
+            "grid": {
+              "column": 1,
               "columnSpan": 1,
               "row": 2,
               "rowSpan": 1
@@ -89,7 +106,7 @@
               "column": 2,
               "columnSpan": 1,
               "row": 1,
-              "rowSpan": 3
+              "rowSpan": 2
             },
             "node": {
               "children": [
@@ -136,7 +153,7 @@
         "columns": 2,
         "id": "default-layout-root",
         "kind": "container",
-        "rows": ["content", "content", "fraction"]
+        "rows": ["content", "content", "content"]
       }
     },
     "phone": {
@@ -205,6 +222,23 @@
             "grid": {
               "column": 1,
               "columnSpan": 4,
+              "row": 3,
+              "rowSpan": 1
+            },
+            "node": {
+              "config": {
+                "presentation": "toolbar",
+                "targetStackId": "default-activity-stack"
+              },
+              "id": "default-activity-navigation-module",
+              "kind": "module",
+              "moduleType": "activity-navigation"
+            }
+          },
+          {
+            "grid": {
+              "column": 1,
+              "columnSpan": 4,
               "row": 2,
               "rowSpan": 1
             },
@@ -221,7 +255,7 @@
             "grid": {
               "column": 1,
               "columnSpan": 4,
-              "row": 3,
+              "row": 4,
               "rowSpan": 1
             },
             "node": {
@@ -269,7 +303,7 @@
         "columns": 4,
         "id": "default-layout-root",
         "kind": "container",
-        "rows": ["content", "content", "fraction"]
+        "rows": ["content", "content", "content", "fraction"]
       }
     }
   }

@@ -6,6 +6,10 @@ import type { LocalizeFunction } from "../core/localization";
 import type { TranslationKey } from "../core/localization";
 import type { MediaDateContext } from "./media-date-context";
 import type { ExportFilterContext } from "./export-filter-context";
+import type {
+  ModuleStackNavigationContext,
+  StageStackAccessoryConfiguration,
+} from "./module-stack-navigation-context";
 
 export interface PlaceableBaseRuntimeContext {
   readonly api?: HomeAssistantApi;
@@ -22,6 +26,7 @@ export interface PlaceableContextBindings {
   readonly cameraSession: CameraSessionContext;
   readonly exportFilter: ExportFilterContext;
   readonly mediaDate: MediaDateContext;
+  readonly moduleStackNavigation: ModuleStackNavigationContext;
 }
 
 export type PlaceableContextKey = keyof PlaceableContextBindings;
@@ -74,13 +79,6 @@ export interface PlaceableLoaderRegistration {
   readonly stackAccessories?: (
     config: unknown,
   ) => StageStackAccessoryConfiguration | undefined;
-}
-
-export interface StageStackAccessoryConfiguration {
-  readonly calendar: "activity" | "disabled" | "recordings";
-  readonly filter: "activity" | "disabled" | "exports" | "none";
-  readonly historyDays?: number;
-  readonly targetModuleId?: string;
 }
 
 export type PlaceableLoaderMap = Readonly<

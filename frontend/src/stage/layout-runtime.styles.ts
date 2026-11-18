@@ -28,81 +28,15 @@ export const stageRuntimeStyles = css`
     gap: var(--wzc-stage-module-gap);
   }
 
+  .stage-placement[data-layout-node$="default-activity-navigation-module"] {
+    margin-block-end: calc(-1 * var(--wzc-stage-module-gap));
+  }
+
   .stage-stack {
     contain: var(--wzc-stage-flex-containment, none);
     display: grid;
-    grid-template-rows: max-content minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
     min-block-size: var(--wzc-stage-flex-stack-min, 0);
-  }
-
-  .stage-stack-navigation {
-    align-items: center;
-    display: flex;
-    justify-content: flex-start;
-    gap: var(--wzc-stage-stack-navigation-gap);
-    padding-block: var(--wzc-stage-stack-navigation-padding);
-  }
-
-  .stage-stack-accessories {
-    align-items: center;
-    display: flex;
-    gap: var(--wzc-stage-stack-navigation-gap);
-    margin-inline-start: auto;
-  }
-
-  .stage-stack-accessories > * {
-    margin-inline-start: 0;
-  }
-
-  .stage-stack-button {
-    --wzc-round-button-size: var(--wzc-stage-stack-button-size);
-    --wzc-round-button-icon-size: var(--wzc-stage-stack-icon-size);
-    --wzc-round-button-color: var(--wzc-stage-stack-button-color);
-    --wzc-round-button-background: var(--wzc-stage-stack-button-background);
-    --wzc-round-button-border-color: transparent;
-    --wzc-round-button-hover-background: var(
-      --wzc-stage-stack-button-background
-    );
-    outline: none;
-  }
-
-  .stage-stack-button:first-child {
-    margin-inline-start: var(--wzc-stage-stack-navigation-padding);
-  }
-
-  .stage-stack-button.active {
-    --wzc-round-button-background: var(
-      --wzc-stage-stack-button-active-background
-    );
-    --wzc-round-button-color: var(--wzc-stage-stack-button-active-color);
-    --wzc-round-button-hover-background: var(
-      --wzc-stage-stack-button-active-background
-    );
-    color: var(--wzc-stage-stack-button-active-color);
-    opacity: 1;
-  }
-
-  .stage-stack-button.active > svg,
-  .stage-stack-button.active > svg path {
-    color: var(--wzc-stage-stack-button-active-color);
-    fill: currentcolor;
-    opacity: 1;
-  }
-
-  .stage-stack-button:focus-visible {
-    outline: none;
-  }
-
-  .stage-stack-button:focus-visible:not(.active),
-  .stage-stack-button.hovered:not(.active, :disabled) {
-    color: var(--wzc-stage-stack-button-hover-color);
-  }
-
-  .stage-stack-button:active:not(.active) {
-    --wzc-round-button-background: var(
-      --wzc-stage-stack-button-active-background
-    );
-    --wzc-round-button-color: var(--wzc-stage-stack-button-active-color);
   }
 
   .stage-stack-content,
@@ -278,6 +212,10 @@ export const stageRuntimeStyles = css`
     inline-size: var(--wzc-camera-control-size);
     block-size: var(--wzc-camera-control-size);
     pointer-events: none;
+  }
+
+  .stage-placement.placeable-loading.placeholder-control {
+    padding-block: var(--wzc-stage-stack-navigation-padding);
   }
 
   .module-slot {

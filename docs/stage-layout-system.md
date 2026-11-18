@@ -137,10 +137,12 @@ root grid
 │   │   ├── two-way-talk component (when enabled)
 │   │   └── PTZ component (when enabled)
 ├── camera-navigation module
+├── activity-navigation module
 └── media-list module stack
     ├── reviews module (initially active)
     ├── events module
-    └── recordings module
+    ├── recordings module
+    └── exports module
 ```
 
 The built-in `camera_only` composition contains the same camera module and its
@@ -187,13 +189,17 @@ device safe-area insets: a Stage is contained inside the Home Assistant card,
 not attached to a physical viewport edge. A true viewport-edge presentation
 such as fullscreen owns its own safe-area treatment.
 
-Module-stack navigation is rendered by the Stage runtime from module metadata,
-not by either child module. The first child is the initial selection. Switching
-disconnects the hidden child so it releases subscriptions and timers, while a
-previously loaded custom element is retained by stable node ID and reconnected
-if selected again. An unvisited hidden child is not imported until selected.
-Navigation controls are leading-aligned above the active child and expose localized
-labels, pressed state, and keyboard focus.
+Module-stack selection state is owned by the Stage runtime and published through
+typed Stage context; it is not owned by any child module. An independently
+placeable activity-navigation module consumes that context and renders the
+stack selectors plus the active module's slideshow, takeover, filter, and
+calendar accessories. Standard and mobile Stages use this same module; only its
+declarative placement and presentation may differ. The first child is the
+initial selection. Switching disconnects the hidden child so it releases
+subscriptions and timers, while a previously loaded custom element is retained
+by stable node ID and reconnected if selected again. An unvisited hidden child
+is not imported until selected. Navigation controls expose localized labels,
+pressed state, and keyboard focus.
 
 The media-list stack's trailing calendar is module-aware. Reviews and Events use
 review/event availability and their shared activity filters. Recordings uses

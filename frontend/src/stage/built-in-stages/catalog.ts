@@ -2,6 +2,7 @@ import type { CardConfig } from "../../core/config";
 import { cameraPresentationItems } from "../../core/camera-groups";
 import type { AvailableStageType } from "../../core/stage";
 import {
+  ACTIVITY_NAVIGATION_MODULE_TYPE,
   APP_ID,
   REVIEWS_MODULE_TYPE,
   CAMERA_NAVIGATION_MODULE_TYPE,
@@ -88,7 +89,13 @@ function namespaceTemplate(template: StageDesignDocument): StageDesignDocument {
     variants: mapVariants(template, (variant) => ({
       root: {
         ...variant.root,
-        children: variant.root.children.map(namespacePlacement),
+        children: variant.root.children
+          .map(namespacePlacement)
+          .sort(
+            (left, right) =>
+              left.grid.row - right.grid.row ||
+              left.grid.column - right.grid.column,
+          ),
         id: namespacedId(variant.root.id),
       },
     })),
@@ -169,6 +176,12 @@ function hydrateModule(
   node: StageModuleNode,
   config: CardConfig,
 ): StageModuleNode | undefined {
+  if (
+    node.moduleType === ACTIVITY_NAVIGATION_MODULE_TYPE &&
+    config.cameras.length === 0
+  ) {
+    return undefined;
+  }
   if (node.moduleType === CAMERA_NAVIGATION_MODULE_TYPE) {
     if (config.cameras.length === 0) return undefined;
     const moduleConfig =
@@ -301,6 +314,16 @@ function hydrateModule(
 }
 
 function namespaceModuleConfig(node: StageModuleNode): unknown {
+  if (node.moduleType === ACTIVITY_NAVIGATION_MODULE_TYPE) {
+    if (typeof node.config !== "object" || node.config === null) {
+      return node.config;
+    }
+    const targetStackId = (node.config as Record<string, unknown>)
+      .targetStackId;
+    return typeof targetStackId === "string"
+      ? { ...node.config, targetStackId: namespacedId(targetStackId) }
+      : node.config;
+  }
   if (
     node.moduleType !== CAMERA_NAVIGATION_MODULE_TYPE &&
     node.moduleType !== EVENTS_MODULE_TYPE &&
