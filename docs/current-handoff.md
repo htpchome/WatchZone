@@ -7,11 +7,12 @@ feature before changing source code.
 ## Repository state
 
 - Branch: `main`
-- Application version: `0.0.4-dev.430`
+- Application version: `0.0.4-dev.431`
 - Baseline commit: `c6770b6` —
   `v0.0.4-dev.430 - fix(mobile): synchronize rotation with HA layout settlement`
-- The worktree was clean at that baseline. The only expected pending change
-  after this handoff update is `docs/current-handoff.md`.
+- The worktree was clean at that baseline. The expected pending dev.431 change
+  replaces per-placement rotation FLIP with one coordinated card-surface
+  transition and updates its focused tests and this handoff.
 - Release artifact: `dist/watchzone.zip`
 
 Documentation-only work does not require a version bump. The user makes all
@@ -92,73 +93,44 @@ This feature applies only to the Home Assistant Companion app on phones.
 
 ## Rotation transition implementation
 
-- Rotation uses FLIP with the Web Animations API (`Element.animate()`) on the
-  stable Stage placements.
-- Both portrait-to-landscape and landscape-to-portrait transitions use the same
-  FLIP lifecycle.
-- The current duration is 360ms. Reduced-motion preferences are honored.
-- The transition controller observes viewport dimensions and the top position
-  of the outer parent layout. It currently waits for 180ms of stable geometry
-  before committing the responsive reflow.
-- Activity-tile and camera alert/detection outline widths are temporarily zero
-  during the orientation FLIP and restored after settled geometry. This avoids
-  outlines visibly trailing their animated surfaces.
-- Do not restore the dev.429 approach of a longer 400ms animation plus extra
-  settlement frames. It made the motion jerky and bouncy and did not solve the
-  outline issue.
+- Companion's native whole-window transition owns the physical rotation.
+- WatchZone immediately acquires its fixed viewport overlay and atomically
+  selects the compatible Stage variant when orientation crosses. Home
+  Assistant's header is therefore covered before a delayed settlement window
+  can expose a full-width intermediate camera.
+- Stage placements are never individually transformed or scaled. One 180ms
+  translation-only Web Animation on the stable `ha-card` surface provides the
+  short final settle and honors reduced-motion preferences.
+- The Home Assistant layout bridge exposes the Sections container as the
+  isolated outer-flow anchor. Portrait position is recorded before landscape.
+  On return, the landscape overlay remains fixed until viewport dimensions are
+  stable and that anchor has returned to its recorded portrait position.
+- A bounded 1.5-second safety release prevents a missing or replaced Home
+  Assistant anchor from trapping the card in its overlay.
+- Activity-tile and camera alert/detection outline widths remain temporarily
+  zero during the orientation transaction and are restored after the single
+  surface settle.
 
-## Active issue: camera still pops on rotation
+## Rotation status: physical-device verification required
 
-The rotation work is not complete.
+The dev.431 implementation addresses the transition defects visible in the two
+November 18 recordings:
 
-On a real iPhone in Companion, returning from landscape to portrait still
-shows the camera at the top of the screen before it abruptly moves down below
-Home Assistant's restored top navigation bar. Entering landscape can also show
-a smaller bounce while that navbar is being removed.
+- the camera no longer receives an independent non-uniform FLIP scale;
+- the 60/40 Stage is selected without a delayed full-width landscape frame;
+- the Home Assistant header is covered as soon as landscape is detected; and
+- portrait overlay release is gated by the previously recorded HA flow anchor,
+  not by elapsed stability time alone.
 
-The relevant behavior is:
+Automated browser tests validate ownership, identity, layout, and animation
+boundaries, but they do not reproduce Home Assistant Companion's asynchronous
+iOS navbar lifecycle. The result must be recorded and verified on a physical
+iPhone before this rotation issue is considered closed.
 
-1. Home Assistant's top navbar is visible in portrait.
-2. Home Assistant removes it asynchronously for the landscape presentation.
-3. Home Assistant restores it asynchronously when returning to portrait.
-4. WatchZone sometimes captures or presents its FLIP destination before that
-   outer Home Assistant layout has reached its final normal-flow position.
-5. Home Assistant then inserts the header space and pushes the card down,
-   producing the visible pop after WatchZone's transition.
-
-Commit dev.430 added parent-top tracking and a 180ms stability window, but the
-real-device recording shows that this is not a sufficient synchronization
-signal. Synthetic browser tests pass because they do not reproduce Home
-Assistant's actual asynchronous navbar lifecycle.
-
-### Required next work
-
-Perform a full layout trace before changing animation values or adding delays.
-The trace must identify the actual sequence for:
-
-- orientation and visual-viewport changes;
-- Home Assistant navbar removal/restoration;
-- the card's outer normal-flow anchor moving;
-- WatchZone changing Stage mode;
-- First and Last FLIP rectangle capture;
-- animation completion and final style cleanup.
-
-The fix should make the controller wait for a reliable Home Assistant-owned
-outer-layout signal or stable normal-flow anchor before capturing the final
-portrait rectangle. The landscape card itself is fixed-positioned, so its own
-host rectangle is not, by itself, a reliable signal for restored portrait
-placement.
-
-Prefer a narrow Home Assistant layout bridge or an existing stable parent
-anchor over guessed pixel constants, longer animation durations, or repeated
-`requestAnimationFrame` settlement loops. Keep Home Assistant DOM knowledge
-isolated at the existing HA boundary rather than spreading shell selectors into
-the Stage controller.
-
-The result must preserve:
+The implementation preserves:
 
 - the stable live camera DOM and retained media session;
-- the same FLIP transition in both directions;
+- one coordinated surface transition in both directions;
 - Companion portrait viewport locking;
 - the 60/40 landscape layout and expansion handle;
 - phone A/B carousel behavior;
@@ -180,29 +152,31 @@ Verify repeatedly on an iPhone in Companion:
 - camera expansion to fullscreen and return;
 - no outer-window scroll and no lower-bar layout shift.
 
-## Validation at dev.430
+## Validation at dev.431
 
-The dev.430 source passed:
+The dev.431 source passed:
 
 - formatting, lint, TypeScript type checking, and frontend build;
-- 488 unit tests across 77 files;
+- 489 unit tests across 77 files;
 - 156 Playwright tests across Chromium, Firefox, and WebKit;
 - release packaging and version consistency;
 - `git diff --check`.
 
 Release budget at that baseline:
 
-- eager graph: 60,612 bytes gzip;
+- eager graph: 60,638 bytes gzip;
 - validation ceiling: 61,440 bytes gzip;
-- lazy editor graph: 19,421 bytes gzip.
+- lazy editor graph: 19,414 bytes gzip.
 
-The eager graph has only 828 bytes of remaining validation headroom. Run
+The eager graph has only 802 bytes of remaining validation headroom. Run
 `bash scripts/package-release.sh` before every release-affecting handoff and do
 not hand work back over budget.
 
 ## Working rules for the next session
 
-- Trace the complete layout lifecycle before editing rotation code.
+- Verify dev.431 repeatedly on a physical iPhone before further rotation tuning.
+- If a pop remains, capture a new recording and trace the Home Assistant flow
+  anchor before changing animation duration or adding another timing delay.
 - Do not change unrelated surfaces while correcting the portrait-return pop.
 - Preserve user changes and do not use destructive Git commands.
 - Do not commit. The user performs commits.

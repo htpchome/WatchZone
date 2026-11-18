@@ -585,6 +585,7 @@ export class DashboardCard extends LitElement {
                 ? PHONE_STAGE_MAX_INLINE_SIZE + 1
                 : PHONE_STAGE_MAX_INLINE_SIZE,
             ),
+          () => this._haLayout.orientationFlowAnchor(),
           this._localization.localize,
         ),
       )

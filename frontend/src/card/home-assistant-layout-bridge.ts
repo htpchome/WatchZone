@@ -122,6 +122,19 @@ export class HomeAssistantLayoutBridge {
     sectionsLayoutStates.delete(view);
   }
 
+  /**
+   * Returns the HA-owned flow surface that moves when dashboard chrome changes.
+   * Rotation code may measure it, but all knowledge of Sections internals stays
+   * inside this boundary.
+   */
+  public orientationFlowAnchor(): HTMLElement | undefined {
+    const parent = composedParentElement(this._host);
+    return (
+      this._sectionsLayout()?.container ??
+      (parent instanceof HTMLElement ? parent : undefined)
+    );
+  }
+
   private _sectionsLayout(): SectionsLayout | undefined {
     const view = findAncestor(this._host, SECTIONS_VIEW_TAG);
     const root = view?.shadowRoot;

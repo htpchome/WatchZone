@@ -1,7 +1,7 @@
 import { css } from "lit";
 
 export const companionPhoneLandscapeStyles = css`
-  :host(.companion-phone-landscape) {
+  :host(.companion-phone-orientation-overlay) {
     position: fixed !important;
     z-index: 1000;
     inset: 0 !important;
@@ -64,18 +64,21 @@ export const companionPhoneLandscapeStyles = css`
     --wzc-stage-flex-content-min: 0px;
   }
 
-  :host(.companion-phone-landscape.height-mode-fit-viewport) ha-card {
+  :host(.companion-phone-orientation-overlay.height-mode-fit-viewport) ha-card {
     block-size: 100%;
     height: 100%;
     min-block-size: 0;
-    padding-block: env(safe-area-inset-top, 0px)
-      var(--wzc-safe-area-inset-bottom);
-    padding-inline: var(--wzc-companion-landscape-inline-inset);
     border-radius: 0;
     box-shadow: none;
   }
 
-  :host(.companion-phone-landscape.height-mode-fit-viewport) .shell {
+  :host(.companion-phone-landscape.height-mode-fit-viewport) ha-card {
+    padding-block: env(safe-area-inset-top, 0px)
+      var(--wzc-safe-area-inset-bottom);
+    padding-inline: var(--wzc-companion-landscape-inline-inset);
+  }
+
+  :host(.companion-phone-orientation-overlay.height-mode-fit-viewport) .shell {
     block-size: 100%;
     height: 100%;
     min-block-size: 0;
