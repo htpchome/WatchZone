@@ -13,6 +13,36 @@ type CanActivate = () => boolean;
 type OrientationChanged = (active: boolean) => void;
 
 const installedHosts = new WeakSet<LandscapeHost>();
+const ORIENTATION_SETTLE_MS = 280;
+const REQUIRED_STABLE_FRAMES = 3;
+
+interface ViewportSnapshot {
+  readonly height: number;
+  readonly visualHeight: number;
+  readonly visualWidth: number;
+  readonly width: number;
+}
+
+function viewportSnapshot(): ViewportSnapshot {
+  return {
+    height: window.innerHeight,
+    visualHeight: window.visualViewport?.height ?? window.innerHeight,
+    visualWidth: window.visualViewport?.width ?? window.innerWidth,
+    width: window.innerWidth,
+  };
+}
+
+function sameViewport(
+  first: ViewportSnapshot,
+  second: ViewportSnapshot,
+): boolean {
+  return (
+    first.height === second.height &&
+    first.visualHeight === second.visualHeight &&
+    first.visualWidth === second.visualWidth &&
+    first.width === second.width
+  );
+}
 
 export function installCompanionPhoneLandscape(
   host: LandscapeHost,
@@ -30,13 +60,15 @@ export function installCompanionPhoneLandscape(
   );
 }
 
-/** Owns Companion-phone orientation changes and the Stage reflow animation. */
+/** Owns Companion-phone orientation changes and the settled Stage reflow. */
 class CompanionPhoneLandscapeController implements ReactiveController {
   private _active = false;
   private _connected = false;
   private _frame?: number;
+  private _lastViewport = viewportSnapshot();
+  private _lastViewportChange = 0;
   private readonly _pull: CompanionCameraPullController;
-  private _syncTimer?: number;
+  private _stableFrames = 0;
 
   public constructor(
     private readonly _host: LandscapeHost,
@@ -64,7 +96,9 @@ class CompanionPhoneLandscapeController implements ReactiveController {
 
   public hostUpdated(): void {
     if (this._active) this._pull.sync();
-    this._schedule();
+    if (this._frame === undefined && this._targetActive() !== this._active) {
+      this._schedule();
+    }
   }
 
   public hostDisconnected(): void {
@@ -72,28 +106,47 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     window.removeEventListener("resize", this._schedule);
     window.visualViewport?.removeEventListener("resize", this._schedule);
     this._pull.deactivate();
-    if (this._syncTimer !== undefined) clearTimeout(this._syncTimer);
-    this._syncTimer = undefined;
     if (this._frame !== undefined) cancelAnimationFrame(this._frame);
     this._frame = undefined;
   }
 
   private readonly _schedule = (): void => {
     if (!this._connected) return;
-    if (this._syncTimer !== undefined) clearTimeout(this._syncTimer);
-    this._syncTimer = window.setTimeout(() => {
-      this._syncTimer = undefined;
-      if (this._frame !== undefined) return;
-      this._frame = requestAnimationFrame(() => {
-        this._frame = undefined;
-        void this._sync();
-      });
-    }, 120);
+    this._lastViewport = viewportSnapshot();
+    this._lastViewportChange = performance.now();
+    this._stableFrames = 0;
+    if (this._frame === undefined) {
+      this._frame = requestAnimationFrame(this._settle);
+    }
   };
 
+  private readonly _settle = (now: number): void => {
+    this._frame = undefined;
+    if (!this._connected) return;
+    const viewport = viewportSnapshot();
+    if (sameViewport(viewport, this._lastViewport)) {
+      this._stableFrames += 1;
+    } else {
+      this._lastViewport = viewport;
+      this._lastViewportChange = now;
+      this._stableFrames = 0;
+    }
+    if (
+      this._stableFrames < REQUIRED_STABLE_FRAMES ||
+      now - this._lastViewportChange < ORIENTATION_SETTLE_MS
+    ) {
+      this._frame = requestAnimationFrame(this._settle);
+      return;
+    }
+    void this._sync();
+  };
+
+  private _targetActive(): boolean {
+    return window.innerWidth > window.innerHeight && this._canActivate();
+  }
+
   private async _sync(): Promise<void> {
-    const active =
-      window.innerWidth > window.innerHeight && this._canActivate();
+    const active = this._targetActive();
     if (active === this._active) {
       if (active) this._pull.sync();
       return;
@@ -106,13 +159,8 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     await new Promise<void>((resolve) =>
       requestAnimationFrame(() => resolve()),
     );
-    if (active) this._pull.activate();
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    this._host.renderRoot
-      .querySelector("ha-card")
-      ?.animate([{ transform: "scale(.985)" }, { transform: "none" }], {
-        duration: 240,
-        easing: "cubic-bezier(.2,.8,.2,1)",
-      });
+    if (this._connected && this._active === active && active) {
+      this._pull.activate();
+    }
   }
 }

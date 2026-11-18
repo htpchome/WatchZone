@@ -8638,11 +8638,6 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
       get: () =>
         "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Home Assistant/2026.9 Mobile/HomeAssistant, like Safari",
     });
-    const animate = Element.prototype.animate;
-    Element.prototype.animate = function (...args) {
-      this.setAttribute("data-test-animated", "");
-      return animate.apply(this, args);
-    };
   });
   await page.goto("/");
   await waitForWatchZoneDefinition(page);
@@ -8768,20 +8763,26 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     "phone",
   );
   await page.setViewportSize({ width: 844, height: 390 });
+  expect(
+    await card.evaluate((element) =>
+      element.classList.contains("companion-phone-landscape"),
+    ),
+  ).toBe(false);
   await expect(card).toHaveClass(/companion-phone-landscape/);
   await expect(card.locator(".stage-grid")).toHaveAttribute(
     "data-stage-variant",
     "default",
   );
-  await expect(card.locator("ha-card")).toHaveAttribute(
-    "data-test-animated",
-    "",
-  );
-  await card.evaluate(async (element) => {
-    const animations =
-      element.shadowRoot?.querySelector("ha-card")?.getAnimations() ?? [];
-    await Promise.all(animations.map((animation) => animation.finished));
-  });
+  expect(
+    await card
+      .locator("ha-card")
+      .evaluate(
+        (element) =>
+          element
+            .getAnimations()
+            .filter((animation) => animation.playState !== "finished").length,
+      ),
+  ).toBe(0);
   const activityNavigation = card.locator("wzc-activity-navigation");
   await expect(activityNavigation.locator("button")).toHaveCount(8);
   const navigationButtonHeights = await activityNavigation
@@ -9143,6 +9144,18 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
       ),
     )
     .toEqual([false, false, true]);
+  await pullHandle.press("Home");
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await card.evaluate((element) =>
+      element.classList.contains("companion-phone-landscape"),
+    ),
+  ).toBe(true);
+  await expect(card).not.toHaveClass(/companion-phone-landscape/);
+  await expect(card.locator(".stage-grid")).toHaveAttribute(
+    "data-stage-variant",
+    "phone",
+  );
 });
 
 test("exposes and honors the WatchZone semantic theme-token contract", async ({
