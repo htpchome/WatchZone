@@ -127,8 +127,10 @@ phone Camera appearance setting. This overlay does not activate for browser
 phones, Companion tablets, or incompatible Stage types.
 
 A separate vertical pull handle is centered in the actual gutter at the
-Camera's trailing edge in this presentation. Its accent-colored directional
-grip keeps a wider visual target inside a larger transparent touch target.
+Camera's trailing edge in this presentation, with a slight bias toward the
+activity column. Its borderless three-pixel line uses the camera-navigation
+bar's background color and keeps a tall visual indicator inside a larger
+transparent touch target.
 Horizontal pointer capture maps the handle's travel directly to a
 camera-overlay progress value while preserving the mounted Camera module,
 retained live session, and both navigation-row positions. The Camera grows

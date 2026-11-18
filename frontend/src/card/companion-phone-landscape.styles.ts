@@ -154,7 +154,7 @@ export const companionPhoneLandscapeStyles = css`
     padding: 0;
     touch-action: none;
     transform: translate(-50%, -50%);
-    color: var(--wzc-color-accent);
+    color: var(--wzc-camera-navigation-background);
     background: transparent;
     border: 0;
     cursor: ew-resize;
@@ -164,26 +164,13 @@ export const companionPhoneLandscapeStyles = css`
   .companion-camera-pull-handle::before {
     display: block;
     box-sizing: border-box;
-    inline-size: 1rem;
-    block-size: 4.5rem;
+    inline-size: 3px;
+    block-size: 5.5rem;
     margin: auto;
     background: currentcolor;
-    border: 1px solid var(--wzc-media-overlay-surface);
-    border-radius: var(--wzc-radius-medium);
-    box-shadow: var(--wzc-shadow-small);
+    border: 0;
+    border-radius: 1.5px;
     content: "";
-  }
-
-  .companion-camera-pull-handle::after {
-    position: absolute;
-    inset-block-start: 50%;
-    inset-inline-start: 50%;
-    color: var(--wzc-color-text-reversed);
-    font-size: 1.25rem;
-    font-weight: 700;
-    line-height: 1;
-    transform: translate(-45%, -53%);
-    content: "›";
   }
 
   .companion-camera-pull-handle:focus-visible {

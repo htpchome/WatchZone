@@ -8924,25 +8924,28 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
   const collapsedHandleCenter =
     (collapsedHandle?.x ?? 0) + (collapsedHandle?.width ?? 0) / 2;
   expect(collapsedHandleCenter).toBeCloseTo(
-    (geometry.cameraRight + geometry.activityLeft) / 2,
+    (geometry.cameraRight + geometry.activityLeft) / 2 + 4,
     0,
   );
   const handlePresentation = await pullHandle.evaluate((element) => {
     const style = getComputedStyle(element);
     const grip = getComputedStyle(element, "::before");
-    const glyph = getComputedStyle(element, "::after");
     return {
-      accent: style.getPropertyValue("--wzc-color-accent").trim(),
+      navigationBackground: style
+        .getPropertyValue("--wzc-camera-navigation-background")
+        .trim(),
+      gripBorderWidth: Number.parseFloat(grip.borderWidth),
       color: style.color,
-      glyph: glyph.content,
       gripColor: grip.backgroundColor,
+      gripHeight: Number.parseFloat(grip.height),
       gripWidth: Number.parseFloat(grip.width),
     };
   });
-  expect(handlePresentation.gripWidth).toBeGreaterThanOrEqual(16);
-  expect(handlePresentation.glyph).not.toBe("none");
+  expect(handlePresentation.gripWidth).toBe(3);
+  expect(handlePresentation.gripHeight).toBeGreaterThanOrEqual(88);
+  expect(handlePresentation.gripBorderWidth).toBe(0);
   expect(handlePresentation.gripColor).toBe(handlePresentation.color);
-  expect(handlePresentation.accent).not.toBe("");
+  expect(handlePresentation.navigationBackground).not.toBe("");
   const pullTravel =
     geometry.host.left + geometry.host.width - 52 - collapsedHandleCenter;
   await page.mouse.move(
