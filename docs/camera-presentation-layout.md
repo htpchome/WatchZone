@@ -133,16 +133,18 @@ A separate vertical pull handle is centered in the actual gutter at the
 Camera's trailing edge in this presentation. Its borderless three-pixel line
 uses the semantic secondary text color and keeps a tall visual indicator inside
 a larger transparent touch target. The handle remains hidden until the
-controller has valid Camera and activity geometry, so an unmeasured handle is
-never painted at a default viewport edge. Camera alert and detection state remains
-active during a pull, but its inner activity outline is suppressed while the
-Camera is resizing and restored after settling so the border is not
-re-rasterized on every drag frame.
+controller has stable Camera and activity geometry, so an unmeasured handle is
+never painted at a default viewport edge. The handle belongs to the fixed card
+surface and all of its positions are card-local; WebView viewport transforms
+therefore cannot move it between first paint and pointer contact. Camera alert
+and detection state remains active during a pull, but its inner activity
+outline is suppressed while the Camera is resizing and restored after settling
+so the border is not re-rasterized on every drag frame.
 Horizontal pointer capture maps the handle's travel directly to a
 camera-overlay progress value while preserving the mounted Camera module,
 retained live session, and both navigation-row positions. The Camera grows
-above the unchanged activity column; activity selection and scroll position do
-not move into the overlay.
+above the unchanged activity column on one opaque, clipped paint surface;
+activity selection and scroll position do not move into the overlay.
 Releasing before 50% returns to the 60/40 layout, while releasing at or beyond
 50% settles into a viewport-covering Camera with its complete composed control
 surface. The viewport-covering carousel, camera shell, and live viewport all

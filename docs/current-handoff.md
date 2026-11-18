@@ -7,12 +7,13 @@ feature before changing source code.
 ## Repository state
 
 - Branch: `main`
-- Application version: `0.0.4-dev.437`
-- Baseline commit: `4afc456` —
-  `v0.0.4-dev.436 - fix(frontend): remove rotation regression and restore scoped colors`
-- The expected pending dev.437 change keeps the pull handle hidden until its
-  first valid landscape measurement and removes rounded-corner exposure from
-  the expanded camera without replacing or duplicating its live presentation.
+- Application version: `0.0.4-dev.438`
+- Baseline commit: `cb4c874` —
+  `v0.0.4-dev.437 - fix(mobile): stabilize landscape pull handle and fullscreen coverage`
+- The pending dev.438 change keeps the pull handle in the fixed card's local
+  coordinate system, permits a real reverse drag from fullscreen, and gives the
+  moving camera one opaque clipped paint surface without replacing or
+  duplicating its live presentation.
 - Release artifact: `dist/watchzone.zip`
 
 Documentation-only work does not require a version bump. The user makes all
@@ -83,11 +84,15 @@ This feature applies only to the Home Assistant Companion app on phones.
 - A vertical handle sits in the gutter between the camera and activity pane.
 - The handle remains natively hidden until valid camera and activity geometry
   places it in that gutter; it never renders at an unmeasured default edge.
+- The handle is positioned inside the fixed WatchZone surface, not against the
+  transformed WebView viewport, so pointer contact cannot make it jump.
 - It is a tall 3px line using the semantic secondary-text color.
 - Dragging right expands the existing camera over the activity pane while
   preserving the live element and its controls.
 - Releasing before halfway snaps the camera back. Releasing at or beyond
   halfway completes the fullscreen camera overlay.
+- Dragging left from fullscreen restores the split layout through the same
+  retained camera element.
 - Camera/navigation geometry is stabilized during the gesture so touching the
   handle does not shift the lower bars.
 - Alert/detection outlines are suppressed during the active resize to avoid
@@ -113,18 +118,21 @@ This feature applies only to the Home Assistant Companion app on phones.
 
 ## Rotation status: physical-device verification required
 
-The dev.437 implementation addresses the transition defects visible in the
+The pending dev.438 implementation addresses the transition defects visible in the
 November 18 recordings:
 
 - the camera no longer receives an independent non-uniform FLIP scale;
 - the 60/40 Stage is selected without a delayed full-width landscape frame;
 - Home Assistant's navigation is visible in portrait and covered in landscape;
+- the landscape cover and moving camera are opaque and clipped, preventing the
+  Home Assistant header, a background camera, or edge pixels from painting
+  through during either drag direction;
 - the portrait flow slot remains allocated while the surface covers the
-  landscape viewport, preventing page collapse or scroll loss; and
+  landscape viewport, preventing page collapse or scroll loss;
 - fullscreen camera expansion uses the full-viewport surface bounds instead of
   the retained portrait placeholder;
 - the fullscreen camera activity outline is suppressed while expanded without
-  removing the visible return grip; and
+  removing the visible return grip;
 - the expanded camera's carousel, camera shell, and live viewport all use
   square viewport-edge corners so underlying content cannot show through; and
 - no authored panel animation delays the atomic return to portrait flow.
@@ -185,34 +193,36 @@ Verify repeatedly on an iPhone in Companion:
   at rest and the fixed info base only on hover. Informational status and editor
   help semantics remain independently owned.
 
-## Validation at dev.433
+## Validation at dev.438
 
-The dev.433 source passed:
+The pending dev.438 source passed:
 
 - formatting, lint, TypeScript type checking, and frontend build;
 - 488 unit tests across 77 files;
 - 156 Playwright tests across Chromium, Firefox, and WebKit;
 - browser coverage proving the card remains in flow beneath persistent Home
   Assistant navigation in both orientations;
+- browser coverage proving forward and reverse handle drags, stable contact
+  geometry, opaque clipped camera paint, and complete portrait cleanup;
 - browser coverage proving canonical status colors ignore conflicting theme
   values and the legacy secondary-text token wins when both HA variables are
   defined;
 - release packaging and version consistency;
 - `git diff --check`.
 
-Release budget at that baseline:
+Release budget at this source state:
 
-- eager graph: 60,584 bytes gzip;
+- eager graph: 60,589 bytes gzip;
 - validation ceiling: 61,440 bytes gzip;
-- lazy editor graph: 19,421 bytes gzip.
+- lazy editor graph: 19,418 bytes gzip.
 
-The eager graph has only 856 bytes of remaining validation headroom. Run
+The eager graph has only 851 bytes of remaining validation headroom. Run
 `bash scripts/package-release.sh` before every release-affecting handoff and do
 not hand work back over budget.
 
 ## Working rules for the next session
 
-- Verify dev.433 repeatedly on a physical iPhone before further rotation tuning.
+- Verify dev.438 repeatedly on a physical iPhone before further rotation tuning.
 - If a pop remains, capture a new recording and trace the card's own measured
   flow geometry before changing animation duration or adding a timing delay.
 - Do not change unrelated surfaces while correcting the portrait-return pop.
