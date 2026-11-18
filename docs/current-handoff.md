@@ -1,161 +1,213 @@
-# Current Development Handoff
+# WatchZone Current Handoff
 
-This is a replaceable working snapshot, not an architectural contract.
-`AGENTS.md`, `architecture.md`, and the governing contracts in `docs/` take
-precedence.
-
-## New-chat handoff message
-
-> Work in `/workspaces/WatchZone`. Read `AGENTS.md` and
-> `docs/current-handoff.md` completely. Before changing code, read every
-> contract required by `AGENTS.md` for the affected feature. Verify the current
-> branch, version, commit, and worktree rather than trusting the snapshot
-> blindly. Preserve unrelated changes. Do not commit or sync; after validation,
-> provide the exact version-prefixed proposed commit subject.
+Use this document to resume work in a new session. Read `AGENTS.md`,
+`architecture.md`, `ROADMAP.md`, and the contracts governing the affected
+feature before changing source code.
 
 ## Repository state
 
 - Branch: `main`
-- Version: `0.0.4-dev.391`
-- HEAD: `499342e` —
-  `v0.0.4-dev.390 - style(ui): add editor shadows and align action corners`
-- Worktree: contains the pending `dev.391` Reviews editor reorganization and
-  isolated action-radius correction described below.
-- Latest package was generated at `dist/watchzone.zip`.
+- Application version: `0.0.4-dev.430`
+- Baseline commit: `c6770b6` —
+  `v0.0.4-dev.430 - fix(mobile): synchronize rotation with HA layout settlement`
+- The worktree was clean at that baseline. The only expected pending change
+  after this handoff update is `docs/current-handoff.md`.
+- Release artifact: `dist/watchzone.zip`
 
-Always recheck `git status`, `git log -1`, and
-`custom_components/watchzone/const.py` before starting work.
+Documentation-only work does not require a version bump. The user makes all
+commits; agents provide a proposed commit subject and must not commit unless
+explicitly instructed.
 
-## Current baseline
+## Current product baseline
 
-### Architecture and stages
+### Architecture and Stage layouts
 
-- WatchZone remains one mandatory Python integration with a packaged Lit
-  frontend. Provider work, layout ownership, theme boundaries, and retained
-  media-session rules in `architecture.md` remain in force.
-- Built-in Stage JSON is still frontend-owned. Python Stage Design persistence
-  and the Stage Designer are intentionally deferred until user-created designs
-  require them.
-- The editor offers Minimal Camera Stage, Camera Only Stage, and Full Stage.
-  Minimal Camera remains deliberately lightweight and does not load the full
-  Camera module, carousel, zoom/pan, PTZ, talk, or lights.
-- Camera selection is authoritative. Navigation, activity, takeover,
-  recordings, and recorded-media flows consume that shared selection.
+- WatchZone remains one Home Assistant Python integration with a packaged Lit
+  frontend.
+- Stage layout rendering follows the versioned Stage Design contract.
+- Built-in layouts now include `default.json` and `default_mobile.json`.
+- A Stage Design can be classified for standard, mobile, or both presentations.
+- Physical mobile clients select the mobile default layout.
+- Activity navigation is a real independently placeable module. It uses the
+  same module implementation in standard and mobile layouts; the mobile
+  landscape presentation only places it differently.
 
-### Live and recorded media
+### Live camera and media behavior
 
-- Live sessions remain document-scoped and lease-based. Editor transitions,
-  HA navigation, dialogs, and ordinary reparenting must preserve healthy
-  retained sessions.
-- Recorded-media viewers use a manual top-layer popover so theme
-  `backdrop-filter` on `ha-card` cannot clip or constrain the draggable dialog.
-- Recording dialogs provide playback rates `0.25x`, `0.5x`, `1x`, `2x`, `5x`,
-  `10x`, and `25x`; a centered readout supports direct selection.
-- Recording segment management supports preview, named Export Segment,
-  Download Segment, and whole-recording download. Export feedback belongs to
-  the modal surface.
-- Reviews, Events, Recordings, and Exports use bounded internal scrolling. A
-  shared floating Top control appears at the bottom center only after roughly
-  two rendered tile heights of scrolling, stays hidden for non-scrolling
-  collections, and smoothly returns that internal viewport to its beginning.
+- Live sessions remain owned by the document-scoped media-session manager.
+- Camera elements retain their sessions across Stage layout changes; rotation
+  code must not clone, replace, or reparent live media elements.
+- Desktop grouped A/B cameras retain their configured side-by-side or stacked
+  presentation.
+- On phones, both physical members of an A/B group are separate carousel stops
+  in portrait and landscape fullscreen. Phone carousel policy is isolated from
+  desktop grouped-camera presentation.
+- Recorded media, reviews, events, recordings, exports, and their existing
+  interaction behavior remain intact.
 
-### Card layout and mobile behavior
+### Mobile sizing and safe areas
 
-- Standard devices and physical mobile phones have independent height and
-  appearance settings. Physical-client identity, not browser width, selects
-  the phone settings.
-- Height modes are `auto`, `fit_viewport`, and `fill_container`:
-  - `auto` uses natural content height with a five-item media ceiling.
-  - `fit_viewport` uses the visible dynamic viewport remaining below the card's
-    actual HA position.
-  - `fill_container` consumes a definite parent height and otherwise falls
-    back to automatic percentage behavior.
-- Constrained Full Stage layouts keep the camera/content rows intrinsic and
-  give remaining height to the internally scrolling media row. The media row
-  retains a measured three-tile minimum; if that cannot fit, the containing HA
-  view must scroll. Camera Only and Minimal Camera retain natural height.
-- Phone-only edge-to-edge mode may remove HA Sections wrapper/container
-  padding through the isolated shared bridge. It does not alter HA grid gaps or
-  maximum widths.
-- In edge-to-edge `fit_viewport`, WatchZone underlaps the complete bottom safe
-  area. Reviews, Events, Recordings, and Exports retain trailing scroll padding
-  for the complete hardware inset without drawing a WatchZone veil over the
-  underscrolling media. Tiles remain visible without stranding the final tile
-  under the home indicator. The floating Top control is offset
-  above the complete hardware inset. Companion applies an equal trailing layout
-  overlap without adding that inset to the card viewport height, so HA's own
-  safe-area spacing cannot create outer-window scrolling; only the active media
-  list scrolls beneath the safe area.
-- Native Companion pull-to-refresh is preserved. Internal media scrollers hand
-  overscroll back to HA; no WatchZone-specific reload gesture exists. On iOS,
-  list-origin pulls may require a longer pull-and-hold, consistent with other
-  HA nested-scroll pages.
-- The unresolved ultra-narrow behavior near 255px differs between Chromium,
-  Firefox, and Safari. Investigation was deliberately stopped because the
-  layout is below a practical supported card width; do not reopen it without a
-  concrete requirement.
+- Companion phone portrait sizing is stable and locks the outer WatchZone view
+  to the viewport. Only the internal activity list scrolls.
+- Browser-phone and Companion sizing are distinct because Home Assistant's
+  Companion shell accounts for layout space differently from a normal mobile
+  browser.
+- Do not change the existing `100dvh` ownership or formula without a complete
+  layout trace and explicit approval.
+- The bottom safe-area veil cover was removed from all presentations. The
+  activity list still underscrolls the safe area.
+- Companion tablets are not part of the current landscape transformation.
 
-### Theme and editor behavior
+## Companion phone landscape presentation
 
-- Home Assistant theme variables remain isolated to
-  `frontend/src/styles/theme-tokens.ts`; feature CSS consumes semantic
-  `--wzc-*` tokens only.
-- Compact editor segmented controls and Camera Navigation use the exact same
-  `--wzc-selection-bar-background`, which resolves to the secondary media-tile
-  surface. Editor tracks use the semantic small shadow without an outline.
-  Camera Navigation keeps its nested segmented track shadowless and retains its
-  independently configurable corners and outer shadow.
-- Activity-tile icon actions and recorded-media modal footer actions share the
-  same small square corner radius as media-overlay buttons through an
-  independent action token. Media-overlay button radius ownership is unchanged.
-- Reviews owns the history, thumbnail-preview, object/classification badge,
-  and zone-display controls in one divided-row disclosure. The former Display
-  Settings disclosure is removed. Layout Settings uses the `mdi:ruler-square`
-  icon.
-- Card height uses pill-radio controls. Layout appearance is presented in
-  Standard and Mobile columns. Minimal Camera does not expose irrelevant
-  general layout appearance settings; phone edge-to-edge remains available.
-- Editor typing, dirty state, preview, and Save behavior remain owned by the
-  top-level editor and isolated HA lifecycle bridge. Closed accordion headers
-  retain pending-change highlighting while their bodies are unmounted.
+This feature applies only to the Home Assistant Companion app on phones.
 
-## Deferred decisions
+- Portrait uses the normal vertical mobile Stage.
+- Landscape transforms the Full Stage into a 60/40 presentation:
+  - camera and camera navigation on the left;
+  - reviews/events/recordings/exports on the right;
+  - activity navigation below the camera on the left.
+- The camera remains 16:9 and is always rounded in this landscape presentation,
+  independent of the editor's camera-corner setting.
+- The portrait camera pull-down/resize handle is hidden in landscape.
+- Three activity tiles are visible in the landscape viewport.
+- Landscape activity tiles use compact reviewed/unreviewed outline icons
+  without status text. The AI action and information action share the footer
+  line.
+- Left and right safe insets and the center gutter are intentionally retained
+  so either phone rotation direction is usable.
 
-- Do not connect Python Stage Design persistence merely for immutable built-in
-  defaults. Revisit with the Stage Designer and user-created Stage Designs.
-- Do not make release publication depend on the complete validation workflow
-  during prerelease development. The existing GitHub release pipeline remains
-  unchanged.
-- A read-only normalized backend camera catalog and further download-preparation
-  consolidation remain possible later work, not active requirements.
+### Camera expansion handle
 
-## Budget and validation snapshot
+- A vertical handle sits in the gutter between the camera and activity pane.
+- It is a tall 3px line using the semantic secondary-text color.
+- Dragging right expands the existing camera over the activity pane while
+  preserving the live element and its controls.
+- Releasing before halfway snaps the camera back. Releasing at or beyond
+  halfway completes the fullscreen camera overlay.
+- Camera/navigation geometry is stabilized during the gesture so touching the
+  handle does not shift the lower bars.
+- Alert/detection outlines are suppressed during the active resize to avoid
+  expensive border recomposition and restored after settlement.
 
-- The architectural eager-entry target remains 50 KiB gzip. The temporary
-  release ceiling is 64 KiB with a 4 KiB safety margin.
-- At `dev.391`, packaging measured the eager graph at 60,921 bytes gzip.
-- The lazy editor measured 19,443 bytes gzip against the 19,456-byte validator
-  ceiling. Only 13 bytes remain; keep editor changes compact and measure the
-  production output early.
-- `dev.391` passed:
-  - 482 frontend unit tests;
-  - 141 Playwright tests across Chromium, Firefox, and WebKit;
-  - formatting, lint, type checking, architecture/style/license validation,
-    production build, version consistency, release packaging, and
-    `git diff --check`.
-- No Python behavior changed in this styling update; only the synchronized
-  version constants changed. Do not infer a current Python pytest result from
-  the frontend validation above.
+## Rotation transition implementation
 
-## Working rules
+- Rotation uses FLIP with the Web Animations API (`Element.animate()`) on the
+  stable Stage placements.
+- Both portrait-to-landscape and landscape-to-portrait transitions use the same
+  FLIP lifecycle.
+- The current duration is 360ms. Reduced-motion preferences are honored.
+- The transition controller observes viewport dimensions and the top position
+  of the outer parent layout. It currently waits for 180ms of stable geometry
+  before committing the responsive reflow.
+- Activity-tile and camera alert/detection outline widths are temporarily zero
+  during the orientation FLIP and restored after settled geometry. This avoids
+  outlines visibly trailing their animated surfaces.
+- Do not restore the dev.429 approach of a longer 400ms animation plus extra
+  settlement frames. It made the motion jerky and bouncy and did not solve the
+  outline issue.
 
-- Trace ownership before patching symptoms, especially for retained media,
-  Home Assistant layout bridges, mobile scrolling, and theme composition.
-- Treat Chromium, Firefox, WebKit, mobile Safari, Companion, editor preview,
-  and HA navigation as supported environments at their documented boundaries.
-- Preserve unrelated user changes. Keep implementation and contract updates
-  cohesive and independently testable.
-- Release-affecting handoff requires a unique synchronized version.
-  Documentation/test/workflow-only work keeps the current version.
-- Replace this file when the active baseline changes materially; do not append
-  a chronological conversation log.
+## Active issue: camera still pops on rotation
+
+The rotation work is not complete.
+
+On a real iPhone in Companion, returning from landscape to portrait still
+shows the camera at the top of the screen before it abruptly moves down below
+Home Assistant's restored top navigation bar. Entering landscape can also show
+a smaller bounce while that navbar is being removed.
+
+The relevant behavior is:
+
+1. Home Assistant's top navbar is visible in portrait.
+2. Home Assistant removes it asynchronously for the landscape presentation.
+3. Home Assistant restores it asynchronously when returning to portrait.
+4. WatchZone sometimes captures or presents its FLIP destination before that
+   outer Home Assistant layout has reached its final normal-flow position.
+5. Home Assistant then inserts the header space and pushes the card down,
+   producing the visible pop after WatchZone's transition.
+
+Commit dev.430 added parent-top tracking and a 180ms stability window, but the
+real-device recording shows that this is not a sufficient synchronization
+signal. Synthetic browser tests pass because they do not reproduce Home
+Assistant's actual asynchronous navbar lifecycle.
+
+### Required next work
+
+Perform a full layout trace before changing animation values or adding delays.
+The trace must identify the actual sequence for:
+
+- orientation and visual-viewport changes;
+- Home Assistant navbar removal/restoration;
+- the card's outer normal-flow anchor moving;
+- WatchZone changing Stage mode;
+- First and Last FLIP rectangle capture;
+- animation completion and final style cleanup.
+
+The fix should make the controller wait for a reliable Home Assistant-owned
+outer-layout signal or stable normal-flow anchor before capturing the final
+portrait rectangle. The landscape card itself is fixed-positioned, so its own
+host rectangle is not, by itself, a reliable signal for restored portrait
+placement.
+
+Prefer a narrow Home Assistant layout bridge or an existing stable parent
+anchor over guessed pixel constants, longer animation durations, or repeated
+`requestAnimationFrame` settlement loops. Keep Home Assistant DOM knowledge
+isolated at the existing HA boundary rather than spreading shell selectors into
+the Stage controller.
+
+The result must preserve:
+
+- the stable live camera DOM and retained media session;
+- the same FLIP transition in both directions;
+- Companion portrait viewport locking;
+- the 60/40 landscape layout and expansion handle;
+- phone A/B carousel behavior;
+- desktop A/B side-by-side and stacked behavior;
+- normal mobile-browser behavior;
+- tablet and desktop layouts;
+- current `100dvh` sizing ownership.
+
+### Required real-device checks
+
+Browser automation remains required, but it is not sufficient for this issue.
+Verify repeatedly on an iPhone in Companion:
+
+- portrait to landscape and landscape to portrait;
+- both clockwise and counter-clockwise rotation;
+- edge-to-edge enabled;
+- a normal camera and an alert/detection-outlined camera;
+- an A/B grouped camera entered from A, from B, and from an unrelated camera;
+- camera expansion to fullscreen and return;
+- no outer-window scroll and no lower-bar layout shift.
+
+## Validation at dev.430
+
+The dev.430 source passed:
+
+- formatting, lint, TypeScript type checking, and frontend build;
+- 488 unit tests across 77 files;
+- 156 Playwright tests across Chromium, Firefox, and WebKit;
+- release packaging and version consistency;
+- `git diff --check`.
+
+Release budget at that baseline:
+
+- eager graph: 60,612 bytes gzip;
+- validation ceiling: 61,440 bytes gzip;
+- lazy editor graph: 19,421 bytes gzip.
+
+The eager graph has only 828 bytes of remaining validation headroom. Run
+`bash scripts/package-release.sh` before every release-affecting handoff and do
+not hand work back over budget.
+
+## Working rules for the next session
+
+- Trace the complete layout lifecycle before editing rotation code.
+- Do not change unrelated surfaces while correcting the portrait-return pop.
+- Preserve user changes and do not use destructive Git commands.
+- Do not commit. The user performs commits.
+- Bump the prerelease version only when handing release-affecting source work
+  back for commit, and synchronize every version-bearing file.
+- Always provide the exact proposed commit subject for a handoff.
+- Run the complete applicable validation matrix, release-budget validation,
+  and `git diff --check` before handing source work back.
