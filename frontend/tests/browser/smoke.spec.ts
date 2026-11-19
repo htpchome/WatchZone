@@ -8770,7 +8770,9 @@ test("applies configured Companion rotate actions to the retained Full Stage", a
   await page.goto("/");
   await waitForWatchZoneDefinition(page);
   const card = page.locator("watchzone-card");
-  const setRotateAction = async (action: "none" | "fullscreen_live_video") => {
+  const setRotateAction = async (
+    action: "double_column" | "fullscreen_live_video" | "none",
+  ) => {
     await card.evaluate((element, companionRotateAction) => {
       const host = element as HTMLElement & {
         hass: unknown;
@@ -8778,6 +8780,7 @@ test("applies configured Companion rotate actions to the retained Full Stage", a
       };
       host.setConfig({
         cameras: [{ entity_id: "camera.front" }],
+        card_height_mode_phone: "fit_viewport",
         companion_rotate_action: companionRotateAction,
         type: "custom:watchzone-card",
       });
@@ -8800,10 +8803,58 @@ test("applies configured Companion rotate actions to the retained Full Stage", a
     }, action);
   };
 
-  await setRotateAction("none");
+  await setRotateAction("double_column");
   await expect(card.locator(".stage-grid")).toBeVisible();
+  const cameraModule = card.locator("wzc-camera");
+  await cameraModule.evaluate((element) => {
+    element.dispatchEvent(
+      new CustomEvent("wzc-camera-stage-size-change", {
+        bubbles: true,
+        composed: true,
+        detail: { heightRatio: 0.9, resized: true, transient: false },
+      }),
+    );
+  });
+  await expect
+    .poll(() => cameraModule.evaluate((element) => element.style.aspectRatio))
+    .not.toBe("");
   await page.setViewportSize({ width: 844, height: 390 });
+  await expect(card).toHaveClass(/companion-phone-landscape/);
+  await expect(card).not.toHaveClass(/landscape-camera-overlay-active/);
+  await expect(card).not.toHaveClass(
+    /companion-phone-orientation-transitioning/,
+  );
+  await expect
+    .poll(() => cameraModule.evaluate((element) => element.style.aspectRatio))
+    .toBe("");
+  const doubleColumnBounds = await card.evaluate((element) => {
+    const root = element.shadowRoot;
+    const navigation = root?.querySelector<HTMLElement>(
+      '[data-layout-node$="default-camera-navigation-module"]',
+    );
+    if (!navigation) {
+      throw new Error("Landscape camera surfaces were not rendered");
+    }
+    const navigationRect = navigation.getBoundingClientRect();
+    return {
+      navigationBottom: navigationRect.bottom,
+    };
+  });
+  expect(doubleColumnBounds.navigationBottom).toBeLessThanOrEqual(390);
+  const doubleColumnCameraContent = await card
+    .locator("wzc-camera-view .camera")
+    .first()
+    .boundingBox();
+  if (!doubleColumnCameraContent) {
+    throw new Error("Landscape camera content bounds were unavailable");
+  }
+  expect(
+    doubleColumnCameraContent.y + doubleColumnCameraContent.height,
+  ).toBeLessThanOrEqual(390);
+
+  await page.setViewportSize({ width: 390, height: 844 });
   await expect(card).not.toHaveClass(/companion-phone-landscape/);
+  await setRotateAction("fullscreen_live_video");
 
   await card.evaluate((element) => {
     const host = element as HTMLElement & {
@@ -8829,7 +8880,7 @@ test("applies configured Companion rotate actions to the retained Full Stage", a
     });
     observer.observe(host, { attributeFilter: ["class"] });
   });
-  await setRotateAction("fullscreen_live_video");
+  await page.setViewportSize({ width: 844, height: 390 });
   await expect(card).toHaveClass(/companion-phone-landscape/);
   await expect(card).toHaveClass(/landscape-camera-overlay-expanded/);
   await expect(card).not.toHaveClass(/landscape-camera-overlay-settling/);
@@ -8848,6 +8899,20 @@ test("applies configured Companion rotate actions to the retained Full Stage", a
     return times.fullscreen - times.landscape;
   });
   expect(fullscreenDelay).toBeLessThan(150);
+  const automaticFullscreenBounds = await Promise.all([
+    card
+      .locator('.stage-placement[data-layout-node$="default-camera-module"]')
+      .boundingBox(),
+    card.locator("wzc-camera-view .camera").first().boundingBox(),
+  ]);
+  for (const bounds of automaticFullscreenBounds) {
+    if (!bounds)
+      throw new Error("Automatic fullscreen bounds were unavailable");
+    expect(bounds.x).toBeCloseTo(0, 0);
+    expect(bounds.y).toBeCloseTo(0, 0);
+    expect(bounds.width).toBeCloseTo(844, 0);
+    expect(bounds.height).toBeCloseTo(390, 0);
+  }
 
   await card.evaluate((element) => {
     const host = element as HTMLElement & { __portraitCameraMotion?: boolean };

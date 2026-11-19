@@ -13,6 +13,15 @@ interface CameraBounds {
   readonly width: number;
 }
 
+function viewportBounds(): CameraBounds {
+  return {
+    height: window.innerHeight,
+    left: 0,
+    top: 0,
+    width: window.innerWidth,
+  };
+}
+
 interface PullStart {
   readonly pointerId: number;
   readonly progress: number;
@@ -347,13 +356,13 @@ export class CompanionCameraPullController {
       handleBaselineTop === undefined
     )
       return;
-    const hostRect = this._host.getBoundingClientRect();
+    const viewport = viewportBounds();
     const gridRect = grid.getBoundingClientRect();
     const target: CameraBounds = {
-      height: hostRect.height,
-      left: hostRect.left - gridRect.left,
-      top: hostRect.top - gridRect.top,
-      width: hostRect.width,
+      height: viewport.height,
+      left: viewport.left - gridRect.left,
+      top: viewport.top - gridRect.top,
+      width: viewport.width,
     };
     this._progress = Math.min(1, Math.max(0, progress));
     const mix = (start: number, end: number) =>
@@ -380,11 +389,14 @@ export class CompanionCameraPullController {
     );
     this._host.style.setProperty(
       "--wzc-companion-camera-pull-inline-start",
-      `${mix(handleBaselineLeft, hostRect.right - EXPANDED_HANDLE_INSET_PX)}px`,
+      `${mix(
+        handleBaselineLeft,
+        viewport.left + viewport.width - EXPANDED_HANDLE_INSET_PX,
+      )}px`,
     );
     this._host.style.setProperty(
       "--wzc-companion-camera-pull-block-start",
-      `${mix(handleBaselineTop, hostRect.top + hostRect.height / 2)}px`,
+      `${mix(handleBaselineTop, viewport.top + viewport.height / 2)}px`,
     );
     handle.setAttribute(
       "aria-valuenow",

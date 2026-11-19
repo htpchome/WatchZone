@@ -214,6 +214,23 @@ export class CameraModule extends LitElement {
       ?.getStageRect?.();
   }
 
+  /** Restores the shared camera stage to its non-resized presentation. */
+  public resetStageSize(): void {
+    if (
+      !this._stageSize.resized &&
+      this._stageSize.heightRatio === DEFAULT_CAMERA_STAGE_HEIGHT_RATIO
+    ) {
+      return;
+    }
+    this._stageSize = {
+      heightRatio: DEFAULT_CAMERA_STAGE_HEIGHT_RATIO,
+      resized: false,
+    };
+    this.style.removeProperty("block-size");
+    this.style.removeProperty("aspect-ratio");
+    this.requestUpdate();
+  }
+
   private get _presentationItems(): readonly CameraPresentationItem[] {
     const groupsByMain = new Map(
       this.groups.map((group) => [group.mainEntityId, group]),

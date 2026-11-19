@@ -126,6 +126,10 @@ on the tile footer with the AI-analysis and information controls. The camera
 uses rounded corners and hides its resize handle, independent of the ordinary
 phone Camera appearance setting. This overlay does not activate for browser
 phones, Companion tablets, or incompatible Stage types.
+Entering either Companion landscape presentation also restores the Camera
+module's shared stage-height ratio to its natural size. A portrait-only
+pull-down size must not survive after its resize handle is removed or push the
+landscape camera navigation outside the fixed WebView.
 
 Fullscreen Live Video starts from the same retained Full Stage and immediately
 opens its existing WatchZone camera overlay to the viewport-covering state.
@@ -145,6 +149,9 @@ settled columns while the phone remains rotated. Returning to portrait from an
 expanded overlay uses the Camera module's measured fullscreen bounds as the
 start of the shared Motion transition; it does not abruptly discard the
 overlay before the portrait destination exists.
+The expanded target is the layout viewport itself, expressed relative to the
+Stage grid. It does not inherit the grid's safe-area inset or a transient
+pre-settlement offset reported by the card host during mobile rotation.
 
 Browser-native media fullscreen is a separate state. While it owns the live
 video, Companion rotation and Swiper geometry remain frozen. After native

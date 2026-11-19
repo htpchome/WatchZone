@@ -584,12 +584,20 @@ export class DashboardCard extends LitElement {
               ? config.companion_rotate_action
               : "none";
           },
-          (active) =>
+          (active) => {
+            if (active) {
+              for (const camera of this.renderRoot.querySelectorAll<
+                HTMLElement & { resetStageSize?: () => void }
+              >(CAMERA_TAG)) {
+                camera.resetStageSize?.();
+              }
+            }
             this._layoutRuntime.setInlineSize(
               active
                 ? PHONE_STAGE_MAX_INLINE_SIZE + 1
                 : PHONE_STAGE_MAX_INLINE_SIZE,
-            ),
+            );
+          },
           this._localization.localize,
         ),
       )
