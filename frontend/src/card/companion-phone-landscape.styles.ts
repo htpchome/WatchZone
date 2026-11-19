@@ -1,6 +1,17 @@
 import { css } from "lit";
 
 export const companionPhoneLandscapeStyles = css`
+  :host(.companion-phone-orientation-transitioning) .stage-grid {
+    pointer-events: none;
+  }
+
+  :host(.companion-phone-orientation-transitioning)
+    .stage-placement[data-layout-node$="default-camera-module"],
+  :host(.companion-phone-orientation-transitioning)
+    .stage-placement[data-layout-node$="default-activity-stack"] {
+    will-change: transform;
+  }
+
   :host(.companion-phone-landscape) {
     position: fixed !important;
     z-index: 1000;
@@ -154,7 +165,14 @@ export const companionPhoneLandscapeStyles = css`
     background: transparent;
     border: 0;
     cursor: ew-resize;
+    opacity: 0;
+    visibility: hidden;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  :host(.companion-phone-landscape.companion-camera-pull-ready)
+    .companion-camera-pull-handle {
+    visibility: visible;
   }
 
   .companion-camera-pull-handle::before {

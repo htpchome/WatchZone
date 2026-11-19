@@ -127,13 +127,18 @@ phone Camera appearance setting. This overlay does not activate for browser
 phones, Companion tablets, or incompatible Stage types.
 
 Orientation retains the same Stage nodes and live sessions. Companion rotates
-the complete WebView; WatchZone does not apply another transform or animation
-to the Stage or its modules. The landscape overlay continues to cover Home
-Assistant's top navigation. On the first portrait resize, WatchZone releases
-that fixed overlay immediately so the card returns directly to Home Assistant
-flow. The actual flow position is authoritative: a visible Home Assistant
-header naturally places the card below it, while a hidden or disabled header
-introduces no synthetic offset.
+the complete WebView. WatchZone immediately commits the final 60/40 layout and
+uses one Motion timeline to translate and scale exactly two live surfaces—the
+Camera placement and active Activity placement—from their rotated prior
+geometry into the new destinations. It does not add another rotation or render
+duplicate media. Camera and activity navigation fade on the same timeline.
+The pull handle is not exposed until its final gutter position has been
+measured and it remeasures automatically when either surface changes size. The
+landscape overlay continues to cover Home Assistant's top navigation. On the
+first portrait resize, WatchZone releases that fixed overlay immediately so
+the card returns directly to Home Assistant flow. The actual flow position is
+authoritative: a visible Home Assistant header naturally places the card below
+it, while a hidden or disabled header introduces no synthetic offset.
 
 A separate vertical pull handle is centered in the actual gutter at the
 Camera's trailing edge in this presentation. Its borderless three-pixel line

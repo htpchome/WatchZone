@@ -8756,7 +8756,7 @@ test("uses mobile viewport sizing without edge-to-edge on Companion tablets", as
   });
 });
 
-test("lets Companion rotate one stable Full Stage into 60/40 landscape columns", async ({
+test("choreographs two Companion surfaces into 60/40 landscape columns", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -8897,12 +8897,57 @@ test("lets Companion rotate one stable Full Stage into 60/40 landscape columns",
     "data-stage-variant",
     "phone",
   );
+  await card.locator(".stage-grid").evaluate((stage) => {
+    stage.dataset.testTransformMotions = "0";
+    stage.dataset.testOpacityMotions = "0";
+    stage.dataset.testRotateMotions = "0";
+    const card = (stage.getRootNode() as ShadowRoot).host;
+    new MutationObserver(() => {
+      if (stage.dataset.stageVariant === "default") {
+        stage.dataset.testLandscapeClassAtDefaultVariant = String(
+          card.classList.contains("companion-phone-landscape"),
+        );
+      }
+    }).observe(stage, { attributeFilter: ["data-stage-variant"] });
+    for (const placement of stage.querySelectorAll<HTMLElement>(
+      ".stage-placement[data-layout-node]",
+    )) {
+      const nativeAnimate = placement.animate.bind(placement);
+      placement.animate = ((
+        keyframes: Keyframe[] | PropertyIndexedKeyframes | null,
+        options?: number | KeyframeAnimationOptions,
+      ) => {
+        const serialized = JSON.stringify(keyframes);
+        if (
+          serialized.includes("translate(") &&
+          serialized.includes("scale(")
+        ) {
+          stage.dataset.testTransformMotions = String(
+            Number(stage.dataset.testTransformMotions ?? "0") + 1,
+          );
+          stage.dataset.testHandlePresentAtMotionStart = String(
+            Boolean(
+              (stage.getRootNode() as ShadowRoot).querySelector(
+                ".companion-camera-pull-handle",
+              ),
+            ),
+          );
+        }
+        if (serialized.includes("opacity")) {
+          stage.dataset.testOpacityMotions = String(
+            Number(stage.dataset.testOpacityMotions ?? "0") + 1,
+          );
+        }
+        if (serialized.includes("rotate(")) {
+          stage.dataset.testRotateMotions = String(
+            Number(stage.dataset.testRotateMotions ?? "0") + 1,
+          );
+        }
+        return nativeAnimate(keyframes, options);
+      }) as typeof placement.animate;
+    }
+  });
   await page.setViewportSize({ width: 844, height: 390 });
-  expect(
-    await card.evaluate((element) =>
-      element.classList.contains("companion-phone-landscape"),
-    ),
-  ).toBe(false);
   await expect(card).toHaveClass(/companion-phone-landscape/);
   expect(
     await page.evaluate(
@@ -8914,6 +8959,27 @@ test("lets Companion rotate one stable Full Stage into 60/40 landscape columns",
   await expect(card.locator(".stage-grid")).toHaveAttribute(
     "data-stage-variant",
     "default",
+  );
+  await expect(card.locator(".stage-grid")).toHaveAttribute(
+    "data-test-landscape-class-at-default-variant",
+    "true",
+  );
+  await expect
+    .poll(() =>
+      card.locator(".stage-grid").getAttribute("data-test-transform-motions"),
+    )
+    .toBe("2");
+  await expect(card.locator(".stage-grid")).toHaveAttribute(
+    "data-test-opacity-motions",
+    "2",
+  );
+  await expect(card.locator(".stage-grid")).toHaveAttribute(
+    "data-test-rotate-motions",
+    "0",
+  );
+  await expect(card.locator(".stage-grid")).toHaveAttribute(
+    "data-test-handle-present-at-motion-start",
+    "false",
   );
   await expect(card).not.toHaveClass(
     /companion-phone-orientation-transitioning/,
@@ -9312,14 +9378,16 @@ test("lets Companion rotate one stable Full Stage into 60/40 landscape columns",
     "data-stage-variant",
     "phone",
   );
+  await expect
+    .poll(() =>
+      card.locator(".stage-grid").getAttribute("data-test-transform-motions"),
+    )
+    .toBe("4");
+  await expect(card.locator(".stage-grid")).toHaveAttribute(
+    "data-test-opacity-motions",
+    "4",
+  );
   await expect(card.locator(".stage-grid")).toHaveCSS("transform", "none");
-  expect(
-    await card
-      .locator(".stage-placement[data-layout-node]")
-      .evaluateAll((placements) =>
-        placements.every((placement) => placement.getAnimations().length === 0),
-      ),
-  ).toBe(true);
   const portraitGeometry = await card.evaluate((element) => ({
     headerOnTop:
       document.elementFromPoint(10, 10) ===
@@ -9330,6 +9398,13 @@ test("lets Companion rotate one stable Full Stage into 60/40 landscape columns",
   await expect(card).not.toHaveClass(
     /companion-phone-orientation-transitioning/,
   );
+  expect(
+    await card
+      .locator(".stage-placement[data-layout-node]")
+      .evaluateAll((placements) =>
+        placements.every((placement) => placement.getAnimations().length === 0),
+      ),
+  ).toBe(true);
   const withoutHeader = await card.evaluate((element) => {
     document.querySelector("[data-test-ha-header]")?.remove();
     element.style.marginTop = "0";

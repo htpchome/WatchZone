@@ -1,5 +1,5 @@
 import type { LocalizeFunction } from "../core/localization";
-import { motionDurations, motionEasings } from "../ui/motion";
+import { motionDurations, motionEasings, OwnedMotion } from "../ui/motion";
 import { OwnedValueMotion } from "../ui/motion-value";
 
 interface PullHost extends HTMLElement {
@@ -37,11 +37,26 @@ export class CompanionCameraPullController {
   private _handle?: HTMLButtonElement;
   private _handleBaselineLeft?: number;
   private _handleBaselineTop?: number;
+  private readonly _handleReveal = new OwnedMotion();
+  private _measureFrame?: number;
   private _moved = false;
   private _pendingProgress = 0;
   private _progress = 0;
   private _settleGeneration = 0;
   private readonly _settleMotion = new OwnedValueMotion();
+  private readonly _geometryObserver = new ResizeObserver(() => {
+    if (
+      !this._active ||
+      this._progress !== 0 ||
+      this._drag ||
+      this._measureFrame !== undefined
+    )
+      return;
+    this._measureFrame = requestAnimationFrame(() => {
+      this._measureFrame = undefined;
+      this._measureBounds();
+    });
+  });
 
   public constructor(
     private readonly _host: PullHost,
@@ -107,19 +122,30 @@ export class CompanionCameraPullController {
     handle.removeEventListener("pointermove", this._movePointer);
     handle.removeEventListener("pointerup", this._finishPointer);
     handle.remove();
+    this._geometryObserver.disconnect();
+    if (this._measureFrame !== undefined)
+      cancelAnimationFrame(this._measureFrame);
+    this._measureFrame = undefined;
+    this._handleReveal.cancel();
+    this._host.classList.remove("companion-camera-pull-ready");
     this._handle = undefined;
     this._camera = undefined;
   }
 
   private _measureBounds(): void {
     const camera = this._camera;
-    if (!camera || this._progress > 0) return;
+    const handle = this._handle;
+    if (!camera || !handle || this._progress > 0) return;
     const grid =
       this._host.renderRoot.querySelector<HTMLElement>(".stage-grid");
     const activity = this._host.renderRoot.querySelector<HTMLElement>(
       `.stage-placement[data-layout-node$="${ACTIVITY_NODE_SUFFIX}"]`,
     );
     if (!grid || !activity) return;
+    this._geometryObserver.disconnect();
+    this._geometryObserver.observe(camera);
+    this._geometryObserver.observe(grid);
+    this._geometryObserver.observe(activity);
     const rect = camera.getBoundingClientRect();
     const gridRect = grid.getBoundingClientRect();
     const activityRect = activity.getBoundingClientRect();
@@ -144,6 +170,17 @@ export class CompanionCameraPullController {
       `${rect.bottom - gridRect.top}px`,
     );
     this._applyProgress(0);
+    if (!this._host.classList.contains("companion-camera-pull-ready")) {
+      this._host.classList.add("companion-camera-pull-ready");
+      this._handleReveal.start(
+        handle,
+        { opacity: [0, 1] },
+        {
+          duration: motionDurations.overlay,
+          ease: motionEasings.standard,
+        },
+      );
+    }
   }
 
   private readonly _startPointer = (event: PointerEvent): void => {
@@ -370,11 +407,17 @@ export class CompanionCameraPullController {
     this._moved = false;
     this._pendingProgress = 0;
     this._progress = 0;
+    this._handleReveal.cancel();
+    this._geometryObserver.disconnect();
+    if (this._measureFrame !== undefined)
+      cancelAnimationFrame(this._measureFrame);
+    this._measureFrame = undefined;
     this._baseline = undefined;
     this._grid = undefined;
     this._handleBaselineLeft = undefined;
     this._handleBaselineTop = undefined;
     this._host.classList.remove(
+      "companion-camera-pull-ready",
       "landscape-camera-overlay-active",
       "landscape-camera-overlay-dragging",
       "landscape-camera-overlay-expanded",
