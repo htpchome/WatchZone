@@ -237,16 +237,6 @@ export class BottomDrawerMediaResizeController implements ReactiveController {
       surface.setPresentationHeightRatio(heightRatio);
       return;
     }
-    if (surface instanceof HTMLImageElement) {
-      const mediaHeightRatio =
-        surface.naturalWidth > 0 && surface.naturalHeight > 0
-          ? surface.naturalHeight / surface.naturalWidth
-          : DEFAULT_HEIGHT_RATIO;
-      surface.style.setProperty(
-        "--wzc-recorded-media-object-fit",
-        heightRatio > mediaHeightRatio ? "cover" : "contain",
-      );
-    }
     surface.style.setProperty(
       "--wzc-recorded-media-presentation-aspect-ratio",
       String(1 / heightRatio),

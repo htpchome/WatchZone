@@ -2,8 +2,8 @@ import { html, type LitElement } from "lit";
 import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import {
-  RECORDED_MEDIA_ERROR_EVENT,
   RECORDED_MEDIA_INFORMATION_TAG,
+  RECORDED_SNAPSHOT_PLAYER_TAG,
   RECORDED_VIDEO_PLAYER_TAG,
   RECORDING_SEGMENT_STATE_EVENT,
 } from "../../core/constants";
@@ -19,8 +19,10 @@ import {
 } from "./media-information";
 import "./media-information";
 import { renderRecordedMediaActions } from "./media-actions";
+import "./recorded-snapshot-player";
 import "./recorded-video-player";
 
+const snapshotPlayerTag = unsafeStatic(RECORDED_SNAPSHOT_PLAYER_TAG);
 const playerTag = unsafeStatic(RECORDED_VIDEO_PLAYER_TAG);
 const informationTag = unsafeStatic(RECORDED_MEDIA_INFORMATION_TAG);
 const recordingSegmentStateEvent = unsafeStatic(RECORDING_SEGMENT_STATE_EVENT);
@@ -124,7 +126,8 @@ export class RecordedMediaDialogContent {
   public get mediaPresentationSurface(): HTMLElement | null {
     const surface = this.mediaSurface;
     return surface instanceof HTMLElement && "presentationSurface" in surface
-      ? ((surface as RecordedVideoPlayer).presentationSurface ?? surface)
+      ? ((surface as HTMLElement & { presentationSurface?: HTMLElement })
+          .presentationSurface ?? surface)
       : surface;
   }
 
@@ -139,12 +142,13 @@ export class RecordedMediaDialogContent {
     if (!options.active || !request) return null;
     if (request.kind === "snapshot") {
       const path = request.sources[0]?.url ?? "";
-      return html`<img
-          class="snapshot media-surface"
-          src=${options.api?.resolveUrl(path) ?? path}
-          alt=${request.title}
-          @error=${this._handleSnapshotError}
-        />${options.mediaResizeControl}`;
+      return staticHtml`<${snapshotPlayerTag}
+        class="media-surface"
+        .alt=${request.title}
+        .localize=${options.localize}
+        .source=${options.api?.resolveUrl(path) ?? path}
+        >${options.mediaResizeControl}</${snapshotPlayerTag}>
+      `;
     }
     return request.timeline
       ? staticHtml`<${playerTag}
@@ -177,14 +181,5 @@ export class RecordedMediaDialogContent {
     event.stopPropagation();
     this._segmentSelectionActive = event.detail.active;
     this._host.requestUpdate();
-  };
-
-  private readonly _handleSnapshotError = (): void => {
-    this._host.dispatchEvent(
-      new CustomEvent(RECORDED_MEDIA_ERROR_EVENT, {
-        bubbles: true,
-        composed: true,
-      }),
-    );
   };
 }

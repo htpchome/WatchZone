@@ -426,6 +426,9 @@ test("presents recorded media in the configured card-width bottom drawer", async
     .toBe("translateY(0px)");
 
   const snapshot = page.locator("wzc-recorded-media-bottom-drawer .snapshot");
+  const snapshotViewport = page.locator(
+    "wzc-recorded-media-bottom-drawer wzc-recorded-snapshot-player .viewport",
+  );
   const snapshotResizeHandle = page.locator(
     "wzc-recorded-media-bottom-drawer .media-resize-handle",
   );
@@ -438,6 +441,31 @@ test("presents recorded media in the configured card-width bottom drawer", async
     initialSnapshotBox.y + initialSnapshotBox.height,
     0,
   );
+  await snapshotViewport.dblclick();
+  await expect
+    .poll(() =>
+      snapshot.evaluate(
+        (image) => new DOMMatrixReadOnly(getComputedStyle(image).transform).a,
+      ),
+    )
+    .toBeGreaterThan(1);
+  const zoomedSnapshotTransform = await snapshot.evaluate(
+    (image) => getComputedStyle(image).transform,
+  );
+  const snapshotViewportBox = await snapshotViewport.boundingBox();
+  if (!snapshotViewportBox) {
+    throw new Error("Snapshot zoom viewport was not rendered");
+  }
+  const snapshotPanX = snapshotViewportBox.x + snapshotViewportBox.width / 2;
+  const snapshotPanY = snapshotViewportBox.y + snapshotViewportBox.height / 2;
+  await page.mouse.move(snapshotPanX, snapshotPanY);
+  await page.mouse.down();
+  await page.mouse.move(snapshotPanX + 40, snapshotPanY);
+  await page.mouse.up();
+  await expect
+    .poll(() => snapshot.evaluate((image) => getComputedStyle(image).transform))
+    .not.toBe(zoomedSnapshotTransform);
+  await snapshotViewport.press("0");
   const snapshotResizeX =
     initialSnapshotHandleBox.x + initialSnapshotHandleBox.width / 2;
   const snapshotResizeY =

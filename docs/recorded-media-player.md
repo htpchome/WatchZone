@@ -223,16 +223,17 @@ viewing. Recording discovery and grouping are governed by
   `16:9` height up to a square height while keeping the width fixed, and follows
   the pointer without programmatic body scrolling. Recording-hour presentations
   slot the handle between the video viewport and their scrubber or segment workflow.
-  Excess source media is center-cropped; video uses the recorded player's
-  existing display-zoom boundary and snapshots use their own object-fit
-  presentation. Pointer, keyboard, and double-activation reset behavior remain
-  owned by the bottom-drawer shell.
+  Excess source media is center-cropped. Video and snapshots each compose the
+  shared display-zoom boundary inside their own media player, so both draggable
+  and drawer presentations support the same pointer, keyboard, double-activation,
+  and bounded-pan behavior. Media-height pointer, keyboard, and
+  double-activation reset behavior remains owned by the bottom-drawer shell.
 - The draggable shell does not participate in drawer media geometry. Shared
   dialog content imposes no player aspect ratio, and only the drawer-owned
   controller writes the requested drawer viewport ratio. The recorded player
-  derives cover scale from the viewport's actual laid-out dimensions rather
-  than the requested ratio, leaving one authoritative geometry at every frame
-  of the pull.
+  applies that ratio and its corresponding cover scale synchronously from one
+  height intent. Resize observation updates pan bounds only; it cannot introduce
+  an intermediate layout using the prior crop scale.
 - Double-clicking the drawer header toggles its preferred inline size between
   its card-derived width and the canonical `1280px` stop when the visible
   viewport permits it. The viewport clamp remains authoritative on smaller

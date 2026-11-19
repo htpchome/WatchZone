@@ -82,6 +82,7 @@ export const ACTIVITY_FILTER_TAG = `${APP_ID}-activity-filter`;
 export const ACTIVITY_TAKEOVER_TOGGLE_TAG = `${APP_ID}-activity-takeover-toggle`;
 export const ACTIVITY_SLIDESHOW_TOGGLE_TAG = `${APP_ID}-activity-slideshow-toggle`;
 export const ACTIVITY_NAVIGATION_TAG = `${APP_ID}-activity-navigation`;
+export const RECORDED_SNAPSHOT_PLAYER_TAG = `${APP_ID}-recorded-snapshot-player`;
 export const RECORDED_VIDEO_PLAYER_TAG = `${APP_ID}-recorded-video-player`;
 export const RECORDED_VIDEO_TRANSPORT_TAG = `${APP_ID}-recorded-video-transport`;
 export const RECORDED_VIDEO_TRANSPORT_EVENT = `${APP_ID}-recorded-video-transport`;

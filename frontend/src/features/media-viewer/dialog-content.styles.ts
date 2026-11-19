@@ -96,18 +96,10 @@ export const recordedMediaDialogContentStyles = css`
     overflow-anchor: none;
   }
 
+  wzc-recorded-snapshot-player,
   wzc-recorded-video-player {
     block-size: auto;
     inline-size: 100%;
-  }
-
-  .snapshot {
-    aspect-ratio: var(--wzc-recorded-media-presentation-aspect-ratio, 16 / 9);
-    background: var(--wzc-recorded-media-background);
-    block-size: auto;
-    display: block;
-    inline-size: 100%;
-    object-fit: var(--wzc-recorded-media-object-fit, contain);
   }
 
   wzc-toast-region {

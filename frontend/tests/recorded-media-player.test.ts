@@ -11,11 +11,13 @@ import { MediaSessionManager } from "../src/core/media-session-manager";
 import type { RecordedMediaRequest } from "../src/core/recorded-media";
 import type { ReviewMediaDialog } from "../src/features/media-viewer/review-media-dialog";
 import { mediaViewerPresentation } from "../src/features/media-viewer/presentation";
+import type { RecordedSnapshotPlayer } from "../src/features/media-viewer/recorded-snapshot-player";
 import type { RecordedVideoPlayer } from "../src/features/media-viewer/recorded-video-player";
 import type { RecordedVideoTransport } from "../src/features/media-viewer/transport-controls";
 import type { RecordedVideoViewer } from "../src/features/media-viewer/recorded-video-viewer";
 import "../src/features/media-viewer";
 import "../src/features/media-viewer/review-media-dialog";
+import "../src/features/media-viewer/recorded-snapshot-player";
 import "../src/features/media-viewer/recorded-video-player";
 
 const request: RecordedMediaRequest = {
@@ -813,22 +815,7 @@ describe("recorded media player", () => {
     expect(observed).not.toContain(player);
   });
 
-  it("derives resized media fit from the laid-out viewport instead of the requested drawer ratio", async () => {
-    const resizeCallbacks: ResizeObserverCallback[] = [];
-    vi.stubGlobal(
-      "ResizeObserver",
-      class {
-        public constructor(callback: ResizeObserverCallback) {
-          resizeCallbacks.push(callback);
-        }
-
-        public disconnect(): void {}
-
-        public observe(): void {}
-
-        public unobserve(): void {}
-      },
-    );
+  it("applies the requested drawer ratio and media fit in one synchronous presentation update", async () => {
     const player = document.createElement(
       "wzc-recorded-video-player",
     ) as RecordedVideoPlayer;
@@ -847,34 +834,12 @@ describe("recorded media player", () => {
     video.dispatchEvent(new Event("loadedmetadata"));
 
     player.setPresentationHeightRatio(0.8);
-    expect(transformScale(video.style.transform)).toBe(1);
-    for (const callback of resizeCallbacks) {
-      callback(
-        [
-          {
-            contentRect: { height: 800, width: 1000 },
-          } as ResizeObserverEntry,
-        ],
-        {} as ResizeObserver,
-      );
-    }
     expect(transformScale(video.style.transform)).toBeCloseTo(0.8 / (9 / 16));
 
     width = 0;
     height = 0;
     video.dispatchEvent(new Event("resize"));
     player.setPresentationHeightRatio(0.9);
-    expect(transformScale(video.style.transform)).toBeCloseTo(0.8 / (9 / 16));
-    for (const callback of resizeCallbacks) {
-      callback(
-        [
-          {
-            contentRect: { height: 900, width: 1000 },
-          } as ResizeObserverEntry,
-        ],
-        {} as ResizeObserver,
-      );
-    }
     expect(transformScale(video.style.transform)).toBeCloseTo(0.9 / (9 / 16));
   });
 
@@ -1019,7 +984,7 @@ describe("recorded media player", () => {
     viewSnapshotButton?.click();
     await vi.waitFor(() =>
       expect(
-        container.shadowRoot?.querySelector("img.snapshot"),
+        container.shadowRoot?.querySelector("wzc-recorded-snapshot-player"),
       ).not.toBeNull(),
     );
     expect(viewReview).toHaveBeenCalledOnce();
@@ -1072,7 +1037,13 @@ describe("recorded media player", () => {
     ) as ReviewMediaDialog;
     await container.updateComplete;
 
-    expect(container.shadowRoot?.querySelector("img.snapshot")).toMatchObject({
+    const snapshotPlayer = container.shadowRoot?.querySelector(
+      "wzc-recorded-snapshot-player",
+    ) as RecordedSnapshotPlayer;
+    await snapshotPlayer.updateComplete;
+    expect(
+      snapshotPlayer.shadowRoot?.querySelector("img.snapshot"),
+    ).toMatchObject({
       alt: "Front snapshot",
       src: "https://ha.local/snapshot.jpg",
     });
@@ -1080,6 +1051,60 @@ describe("recorded media player", () => {
       container.shadowRoot?.querySelector("wzc-recorded-video-player"),
     ).toBeNull();
     expect(states).toEqual([false]);
+  });
+
+  it("gives snapshots the shared zoom and pan presentation in every dialog shell", async () => {
+    const resizeCallbacks: ResizeObserverCallback[] = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        public constructor(callback: ResizeObserverCallback) {
+          resizeCallbacks.push(callback);
+        }
+
+        public disconnect(): void {}
+
+        public observe(): void {}
+
+        public unobserve(): void {}
+      },
+    );
+    const player = document.createElement(
+      "wzc-recorded-snapshot-player",
+    ) as RecordedSnapshotPlayer;
+    player.alt = "Front snapshot";
+    player.source = "/snapshot.jpg";
+    document.body.append(player);
+    await player.updateComplete;
+    const viewport = player.shadowRoot?.querySelector(
+      ".viewport",
+    ) as HTMLElement;
+    const image = player.shadowRoot?.querySelector("img") as HTMLImageElement;
+    Object.defineProperties(image, {
+      naturalHeight: { configurable: true, value: 900 },
+      naturalWidth: { configurable: true, value: 1600 },
+    });
+    image.dispatchEvent(new Event("load"));
+    for (const callback of resizeCallbacks) {
+      callback(
+        [
+          {
+            contentRect: { height: 225, width: 400 },
+          } as ResizeObserverEntry,
+        ],
+        {} as ResizeObserver,
+      );
+    }
+
+    viewport.dispatchEvent(new KeyboardEvent("keydown", { key: "+" }));
+    await player.updateComplete;
+    expect(transformScale(image.style.transform)).toBeGreaterThan(1);
+    const zoomedTransform = image.style.transform;
+
+    viewport.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft" }));
+    await player.updateComplete;
+    expect(image.style.transform).not.toBe(zoomedTransform);
+    expect(image.style.transform).not.toContain("translate3d(0px, 0px, 0)");
   });
 });
 
