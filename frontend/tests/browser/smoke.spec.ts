@@ -1582,11 +1582,13 @@ test("keeps grouped interaction alive across slide alert takeover", async ({
   await expect(takeoverSlides.nth(1)).not.toHaveAttribute("inert");
   await expect
     .poll(() =>
-      card.locator("wzc-camera .camera-carousel").evaluate(
-        (element) =>
-          (element as HTMLElement & { swiper?: { activeIndex: number } })
-            .swiper?.activeIndex,
-      ),
+      card
+        .locator("wzc-camera .camera-carousel")
+        .evaluate(
+          (element) =>
+            (element as HTMLElement & { swiper?: { activeIndex: number } })
+              .swiper?.activeIndex,
+        ),
     )
     .toBe(1);
   const hallViewport = card
@@ -1773,9 +1775,9 @@ test("applies configured camera carousel transitions to swipe and arrow navigati
   await expect(carousel).toHaveClass(/camera-carousel-transitioning/);
   await expect(carousel).not.toHaveClass(/camera-carousel-transitioning/);
 
-  await carousel
-    .locator(".carousel-navigation.previous")
-    .click({ force: true });
+  await page
+    .locator('wzc-camera-navigation button[data-value="camera.front"]')
+    .click();
   await expect
     .poll(() =>
       carousel.evaluate(
@@ -1828,6 +1830,33 @@ test("applies configured camera carousel transitions to swipe and arrow navigati
     'wzc-camera-navigation button[data-value="camera.back"]',
   );
   await expect(front).toHaveAttribute("aria-selected", "true");
+
+  const releaseBoundarySwipe = (
+    direction: "next" | "prev",
+    difference: number,
+  ) =>
+    carousel.evaluate(
+      (element, gesture) => {
+        const swiper = (
+          element as HTMLElement & {
+            swiper: {
+              emit(eventName: string, instance: unknown): void;
+              swipeDirection?: "next" | "prev";
+              touches: { diff: number };
+            };
+          }
+        ).swiper;
+        swiper.touches.diff = gesture.difference;
+        swiper.swipeDirection = gesture.direction;
+        swiper.emit("touchEnd", swiper);
+      },
+      { difference, direction },
+    );
+  await releaseBoundarySwipe("prev", 180);
+  await expect(back).toHaveAttribute("aria-selected", "true");
+  await releaseBoundarySwipe("next", -180);
+  await expect(front).toHaveAttribute("aria-selected", "true");
+
   await carousel
     .locator(".carousel-navigation.previous")
     .click({ force: true });

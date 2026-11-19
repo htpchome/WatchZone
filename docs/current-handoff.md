@@ -16,14 +16,13 @@ precedence.
 ## Repository state
 
 - Branch: `main`.
-- Current HEAD: `e808222` —
-  `v0.0.4-dev.444 - fix(frontend): stabilize Motion and release budgets`.
-- Pending version: `0.0.4-dev.445`.
-- Worktree: the carousel-spacing and semantic-theme corrections described
-  below are intentionally uncommitted. There were no unrelated local changes
-  when they began.
+- Current HEAD: `a774ea9`. Its files and tag are version `0.0.4-dev.445`, but
+  its accidentally early commit subject incorrectly says `v0.0.4-dev.443`.
+- Current version: `0.0.4-dev.445`.
+- Worktree: only the final circular-carousel browser-test refinements described
+  below are intentionally uncommitted.
 - Proposed commit subject:
-  `v0.0.4-dev.445 - fix(frontend): restore carousel and status semantics`.
+  `v0.0.4-dev.445 - test(frontend): harden circular carousel coverage`.
 
 Always recheck `git status`, `git log -1`, and
 `custom_components/watchzone/const.py` before starting work.
@@ -96,11 +95,12 @@ recovery baseline, nothing more.
 - Never call work complete or perfect without current evidence supporting that
   claim.
 
-## Pending Motion migration
+## Motion migration baseline
 
 The user explicitly directed that Motion become the one application animation
 engine, with no feature-local CSS, WAAPI, smooth-scroll, or tween-loop
-patchwork. The pending work implements that decision across the existing UI.
+patchwork. The current baseline implements that decision across the existing
+UI.
 
 - `motion@14.12.0` is the sole animation dependency and its MIT notice is
   recorded.
@@ -148,9 +148,9 @@ patchwork. The pending work implements that decision across the existing UI.
   Alert/detection and review-state semantics must not be coupled to unrelated
   text or action colors.
 
-## Validation baseline from committed `dev.444`
+## Validation baseline for `dev.445`
 
-The pending migration passed:
+The current baseline passes:
 
 - `corepack yarn check:version`;
 - `corepack yarn format`;
@@ -160,8 +160,8 @@ The pending migration passed:
 - `corepack yarn build`;
 - `corepack yarn check:styles`;
 - `corepack yarn check:licenses`;
-- `bash scripts/package-release.sh`: lazy editor 18,556 bytes gzip and eager
-  graph 60,397 bytes gzip, producing `dist/watchzone.zip`;
+- `bash scripts/package-release.sh`: lazy editor 18,555 bytes gzip and eager
+  graph 60,439 bytes gzip, producing `dist/watchzone.zip`;
 - `corepack yarn test:browser`: 156 tests passed across Chromium, Firefox, and
   WebKit;
 - `git diff --check`.
@@ -185,6 +185,14 @@ landscape state instead of only during its brief settle state.
 These results establish repository consistency and automated interaction
 coverage only. They do not establish physical-device visual quality or prove
 that every user-reported animation/compositing defect is fixed.
+
+The `dev.445` carousel uses a 40-pixel Swiper-owned gap that exposes the
+semantic camera-stage background. It navigates circularly at the first/last
+boundary without Swiper loop or rewind: Motion owns the boundary presentation,
+while Swiper retains stable Lit-owned slide order and camera identity. Browser
+coverage verifies boundary swipe release, arrow navigation, alert takeover and
+return, grouped-camera identity, and review-driven live highlighting in all
+three required engines.
 
 ## Working rules
 
