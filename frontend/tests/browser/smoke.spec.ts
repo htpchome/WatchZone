@@ -261,6 +261,56 @@ test("presents recorded media in the configured card-width bottom drawer", async
     0,
   );
 
+  const videoFooterActions = page.locator(
+    "wzc-recorded-media-bottom-drawer .footer-actions",
+  );
+  if (!resizedHandleBox) {
+    throw new Error("Resized video handle geometry was not rendered");
+  }
+  const videoBoundaryX = resizedHandleBox.x + resizedHandleBox.width / 2;
+  const videoBoundaryY = resizedHandleBox.y + resizedHandleBox.height / 2;
+  const viewportBottom = (page.viewportSize()?.height ?? 720) - 2;
+  const sampledVideoHeights = [resizedMediaBox?.height ?? 0];
+  await page.mouse.move(videoBoundaryX, videoBoundaryY);
+  await page.mouse.down();
+  for (let step = 1; step <= 8; step += 1) {
+    await page.mouse.move(
+      videoBoundaryX,
+      Math.min(viewportBottom, videoBoundaryY + step * 80),
+    );
+    sampledVideoHeights.push((await mediaPlayer.boundingBox())?.height ?? 0);
+  }
+  await page.mouse.up();
+  for (let index = 1; index < sampledVideoHeights.length; index += 1) {
+    expect(sampledVideoHeights[index]).toBeGreaterThanOrEqual(
+      (sampledVideoHeights[index - 1] ?? 0) - 1,
+    );
+  }
+  const maximumVideoBox = await mediaPlayer.boundingBox();
+  const maximumVideoHandleBox = await mediaResizeHandle.boundingBox();
+  const videoFooterActionsBox = await videoFooterActions.boundingBox();
+  if (!maximumVideoBox || !maximumVideoHandleBox || !videoFooterActionsBox) {
+    throw new Error("Video maximum resize geometry was not rendered");
+  }
+  expect(
+    maximumVideoHandleBox.y + maximumVideoHandleBox.height,
+  ).toBeLessThanOrEqual(videoFooterActionsBox.y + 1);
+  const stoppedVideoHandleX =
+    maximumVideoHandleBox.x + maximumVideoHandleBox.width / 2;
+  const stoppedVideoHandleY =
+    maximumVideoHandleBox.y + maximumVideoHandleBox.height / 2;
+  await page.mouse.move(stoppedVideoHandleX, stoppedVideoHandleY);
+  await page.mouse.down();
+  await page.mouse.move(
+    stoppedVideoHandleX,
+    Math.min(viewportBottom, stoppedVideoHandleY + 80),
+  );
+  await page.mouse.up();
+  await expect
+    .poll(async () => (await mediaPlayer.boundingBox())?.height ?? 0)
+    .toBeCloseTo(maximumVideoBox.height, 0);
+  await mediaResizeHandle.dblclick();
+
   const handle = page.locator(
     "wzc-recorded-media-bottom-drawer .drawer-handle",
   );
@@ -349,6 +399,46 @@ test("presents recorded media in the configured card-width bottom drawer", async
   await expect
     .poll(async () => (await drawer.boundingBox())?.width ?? 0)
     .toBeCloseTo(1280, 0);
+  await page.locator("wzc-recorded-media-bottom-drawer .header").dblclick();
+  await expect
+    .poll(async () => (await drawer.boundingBox())?.width ?? 0)
+    .toBeCloseTo(768, 0);
+
+  const footerActions = page.locator(
+    "wzc-recorded-media-bottom-drawer .footer-actions",
+  );
+  const boundedHandleBox = await snapshotResizeHandle.boundingBox();
+  if (!boundedHandleBox) {
+    throw new Error("Snapshot resize handle boundary was not rendered");
+  }
+  const boundedHandleX = boundedHandleBox.x + boundedHandleBox.width / 2;
+  const boundedHandleY = boundedHandleBox.y + boundedHandleBox.height / 2;
+  await page.mouse.move(boundedHandleX, boundedHandleY);
+  await page.mouse.down();
+  await page.mouse.move(boundedHandleX, viewportBottom, { steps: 12 });
+  await page.mouse.up();
+  const maximumSnapshotBox = await snapshot.boundingBox();
+  const maximumHandleBox = await snapshotResizeHandle.boundingBox();
+  const footerActionsBox = await footerActions.boundingBox();
+  if (!maximumSnapshotBox || !maximumHandleBox || !footerActionsBox) {
+    throw new Error("Snapshot maximum resize geometry was not rendered");
+  }
+  expect(maximumHandleBox.y + maximumHandleBox.height).toBeLessThanOrEqual(
+    footerActionsBox.y + 1,
+  );
+  const maximumHandleX = maximumHandleBox.x + maximumHandleBox.width / 2;
+  const maximumHandleY = maximumHandleBox.y + maximumHandleBox.height / 2;
+  await page.mouse.move(maximumHandleX, maximumHandleY);
+  await page.mouse.down();
+  await page.mouse.move(
+    maximumHandleX,
+    Math.min(viewportBottom, maximumHandleY + 80),
+    { steps: 6 },
+  );
+  await page.mouse.up();
+  await expect
+    .poll(async () => (await snapshot.boundingBox())?.height ?? 0)
+    .toBeCloseTo(maximumSnapshotBox.height, 0);
   await page.locator("wzc-recorded-media-bottom-drawer .close").click();
   await expect(drawer).toHaveCount(0);
 

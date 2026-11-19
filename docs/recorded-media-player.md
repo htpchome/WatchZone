@@ -227,9 +227,13 @@ viewing. Recording discovery and grouping are governed by
   existing display-zoom boundary and snapshots use their own object-fit
   presentation. Pointer, keyboard, and double-activation reset behavior remain
   owned by the bottom-drawer shell.
-- Double-clicking the drawer header expands its preferred inline size to the
-  canonical `1280px` stop when the visible viewport permits it. The viewport
-  clamp remains authoritative on smaller screens.
+- Double-clicking the drawer header toggles its preferred inline size between
+  its card-derived width and the canonical `1280px` stop when the visible
+  viewport permits it. The viewport clamp remains authoritative on smaller
+  screens.
+- The rendered footer boundary defines each media-resize gesture's maximum.
+  Video and snapshot growth stops when the handle reaches the footer action
+  area; further pointer travel cannot scroll the body or change presentation.
 - The localized top-left close control and a downward drag beginning on the
   pull handle are the only dismissal paths. Releasing before the bounded close
   threshold settles the drawer back open; crossing it animates the drawer out

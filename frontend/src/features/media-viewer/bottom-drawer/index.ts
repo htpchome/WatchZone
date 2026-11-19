@@ -109,7 +109,7 @@ export class RecordedMediaBottomDrawer extends LitElement {
         localize: this.localize,
         mediaResizeControl: this._renderMediaResizeHandle(),
         notices: this.notices,
-        onHeaderDoubleClick: this._expandWidth,
+        onHeaderDoubleClick: this._toggleExpandedWidth,
         request: this.request,
       })}
     </dialog>`;
@@ -130,6 +130,9 @@ export class RecordedMediaBottomDrawer extends LitElement {
       this.renderRoot.querySelector<HTMLButtonElement>(
         ".media-resize-handle",
       ) ?? undefined,
+      this.renderRoot.querySelector<HTMLElement>(".footer-actions") ??
+        undefined,
+      this.renderRoot.querySelector<HTMLElement>(".body") ?? undefined,
     );
     if (changed.has("request") && this.request) this._open();
   }
@@ -416,10 +419,9 @@ export class RecordedMediaBottomDrawer extends LitElement {
     </button>`;
   }
 
-  private readonly _expandWidth = (event: MouseEvent): void => {
+  private readonly _toggleExpandedWidth = (event: MouseEvent): void => {
     event.preventDefault();
-    if (this._expanded) return;
-    this._expanded = true;
+    this._expanded = !this._expanded;
     this._syncGeometry();
   };
 

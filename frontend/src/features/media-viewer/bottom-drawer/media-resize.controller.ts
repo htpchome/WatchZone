@@ -6,6 +6,7 @@ const KEYBOARD_HEIGHT_STEP = 0.025;
 
 interface ResizeDrag {
   readonly heightRatio: number;
+  readonly maximumHeightRatio: number;
   readonly pointerId: number;
   readonly startY: number;
   readonly width: number;
@@ -22,7 +23,9 @@ export class BottomDrawerMediaResizeController implements ReactiveController {
   private _handle?: HTMLButtonElement;
   private _heightRatio = DEFAULT_HEIGHT_RATIO;
   private _listening = false;
+  private _scrollContainer?: HTMLElement;
   private _surface?: ResizableMediaSurface;
+  private _footerBoundary?: HTMLElement;
 
   public constructor(private readonly _host: ReactiveControllerHost) {
     _host.addController(this);
@@ -35,9 +38,13 @@ export class BottomDrawerMediaResizeController implements ReactiveController {
   public observe(
     surface: HTMLElement | undefined,
     handle: HTMLButtonElement | undefined,
+    footerBoundary: HTMLElement | undefined,
+    scrollContainer: HTMLElement | undefined,
   ): void {
     this._surface = surface as ResizableMediaSurface | undefined;
     this._handle = handle;
+    this._footerBoundary = footerBoundary;
+    this._scrollContainer = scrollContainer;
     this._apply();
   }
 
@@ -52,16 +59,20 @@ export class BottomDrawerMediaResizeController implements ReactiveController {
     this._setSurfaceRatio(DEFAULT_HEIGHT_RATIO);
     this._surface = undefined;
     this._handle = undefined;
+    this._footerBoundary = undefined;
+    this._scrollContainer = undefined;
   }
 
   public readonly handlePointerDown = (event: PointerEvent): void => {
     if (event.pointerType === "mouse" && event.button !== 0) return;
     const surface = this._surface;
     const handle = event.currentTarget as HTMLButtonElement;
+    this._scrollContainer?.scrollTo({ top: 0 });
     const rect = surface?.getBoundingClientRect();
     if (!rect || rect.width <= 0) return;
     this._drag = {
       heightRatio: this._heightRatio,
+      maximumHeightRatio: this._maximumHeightRatio(),
       pointerId: event.pointerId,
       startY: event.clientY,
       width: rect.width,
@@ -74,8 +85,9 @@ export class BottomDrawerMediaResizeController implements ReactiveController {
   public readonly handlePointerMove = (event: PointerEvent): void => {
     const drag = this._drag;
     if (!drag || drag.pointerId !== event.pointerId) return;
-    this._heightRatio = clampHeightRatio(
+    this._heightRatio = clampHeightRatioToMaximum(
       drag.heightRatio + (event.clientY - drag.startY) / drag.width,
+      drag.maximumHeightRatio,
     );
     this._frame ??= requestAnimationFrame(this._commit);
     event.preventDefault();
@@ -112,13 +124,16 @@ export class BottomDrawerMediaResizeController implements ReactiveController {
     } else if (event.key === "Home") {
       nextRatio = DEFAULT_HEIGHT_RATIO;
     } else if (event.key === "End") {
-      nextRatio = MAX_HEIGHT_RATIO;
+      nextRatio = this._maximumHeightRatio();
     } else {
       return;
     }
     event.stopPropagation();
     event.preventDefault();
-    this._heightRatio = clampHeightRatio(nextRatio);
+    this._heightRatio = clampHeightRatioToMaximum(
+      nextRatio,
+      this._maximumHeightRatio(),
+    );
     this._apply();
   };
 
@@ -128,10 +143,26 @@ export class BottomDrawerMediaResizeController implements ReactiveController {
   };
 
   private _apply(): void {
+    if (this._drag) this._scrollContainer?.scrollTo({ top: 0 });
     this._setSurfaceRatio(this._heightRatio);
     const percentage = this.heightPercentage;
+    const maximumPercentage = Math.round(this._maximumHeightRatio() * 100);
+    this._handle?.setAttribute("aria-valuemax", String(maximumPercentage));
     this._handle?.setAttribute("aria-valuenow", String(percentage));
     this._handle?.setAttribute("aria-valuetext", `${percentage}%`);
+  }
+
+  private _maximumHeightRatio(): number {
+    const surfaceRect = this._surface?.getBoundingClientRect();
+    const handleRect = this._handle?.getBoundingClientRect();
+    const footerRect = this._footerBoundary?.getBoundingClientRect();
+    if (!surfaceRect || !handleRect || !footerRect || surfaceRect.width <= 0) {
+      return MAX_HEIGHT_RATIO;
+    }
+    const availableTravel = Math.max(0, footerRect.top - handleRect.bottom);
+    return clampHeightRatio(
+      this._heightRatio + availableTravel / surfaceRect.width,
+    );
   }
 
   private _finishDrag(): void {
@@ -226,4 +257,11 @@ export class BottomDrawerMediaResizeController implements ReactiveController {
 
 function clampHeightRatio(value: number): number {
   return Math.min(MAX_HEIGHT_RATIO, Math.max(DEFAULT_HEIGHT_RATIO, value));
+}
+
+function clampHeightRatioToMaximum(value: number, maximum: number): number {
+  return Math.min(
+    Math.max(DEFAULT_HEIGHT_RATIO, maximum),
+    Math.max(DEFAULT_HEIGHT_RATIO, value),
+  );
 }
