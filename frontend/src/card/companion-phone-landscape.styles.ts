@@ -8,9 +8,7 @@ export const companionPhoneLandscapeStyles = css`
   :host(.companion-phone-orientation-transitioning)
     .stage-container[data-layout-node$="default-camera-surface"],
   :host(.companion-phone-orientation-transitioning)
-    .stage-placement[data-layout-node$="default-activity-stack"],
-  :host(.companion-phone-orientation-transitioning)
-    .stage-placement[data-layout-node$="default-activity-navigation-module"] {
+    .stage-container[data-layout-node$="default-activity-surface"] {
     will-change: transform;
   }
 
@@ -76,8 +74,7 @@ export const companionPhoneLandscapeStyles = css`
     block-size: 100%;
     height: 100%;
     min-block-size: 0;
-    padding-block: env(safe-area-inset-top, 0px)
-      var(--wzc-safe-area-inset-bottom);
+    padding-block: env(safe-area-inset-top, 0px) 0;
     padding-inline: var(--wzc-companion-landscape-inline-inset);
     border-radius: 0;
     box-shadow: none;
@@ -105,21 +102,14 @@ export const companionPhoneLandscapeStyles = css`
 
   :host(.companion-phone-landscape)
     .stage-placement[data-layout-node$="default-camera-module"] {
-    margin-block-start: calc(var(--wzc-stage-module-gap) + 0.5rem);
+    margin-block-start: calc(var(--wzc-stage-module-gap) + 0.5rem + 1px);
   }
 
   :host(.companion-phone-landscape)
     .stage-placement[data-layout-node$="default-activity-navigation-module"] {
-    position: fixed;
-    z-index: 2;
-    inset-block-end: var(--wzc-safe-area-inset-bottom);
-    inset-inline-start: var(--wzc-companion-landscape-inline-inset);
-    inline-size: calc(
-      60vw - var(--wzc-companion-landscape-inline-inset) - var(
-          --wzc-stage-module-gap
-        )
-    );
-    max-inline-size: calc(60vw - var(--wzc-companion-landscape-inline-inset));
+    align-self: end;
+    inline-size: 100%;
+    max-inline-size: 100%;
     margin-block-end: 0;
   }
 
@@ -138,7 +128,10 @@ export const companionPhoneLandscapeStyles = css`
 
   :host(.companion-phone-landscape.landscape-camera-overlay-active)
     .stage-container[data-layout-node$="default-camera-surface"] {
-    grid-template-rows: var(--wzc-companion-camera-base-block-size) max-content;
+    z-index: 30;
+    grid-template-rows:
+      var(--wzc-companion-camera-base-block-size) max-content
+      minmax(0, 1fr);
   }
 
   :host(.companion-phone-landscape.landscape-camera-overlay-active)
@@ -169,7 +162,7 @@ export const companionPhoneLandscapeStyles = css`
 
   :host(.companion-phone-landscape) .companion-camera-pull-handle {
     position: fixed;
-    z-index: 21;
+    z-index: 31;
     inset-block-start: var(--wzc-companion-camera-pull-block-start);
     inset-inline-start: var(--wzc-companion-camera-pull-inline-start);
     box-sizing: border-box;

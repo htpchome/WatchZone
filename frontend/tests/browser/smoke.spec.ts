@@ -8897,6 +8897,9 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
     "data-stage-variant",
     "phone",
   );
+  await card.evaluate((element) => {
+    element.style.setProperty("--wzc-companion-landscape-inline-inset", "42px");
+  });
   await card.locator(".stage-grid").evaluate((stage) => {
     stage.dataset.testTransformMotions = "0";
     stage.dataset.testOpacityMotions = "0";
@@ -8968,14 +8971,14 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
     .poll(() =>
       card.locator(".stage-grid").getAttribute("data-test-transform-motions"),
     )
-    .toBe("3");
+    .toBe("2");
   await expect(card.locator(".stage-grid")).toHaveAttribute(
     "data-test-opacity-motions",
     "0",
   );
   await expect(card.locator(".stage-grid")).toHaveAttribute(
     "data-test-rotate-motions",
-    "3",
+    "2",
   );
   await expect(card.locator(".stage-grid")).toHaveAttribute(
     "data-test-handle-present-at-motion-start",
@@ -9114,6 +9117,7 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
       cameraAspectRatio: cameraRect.width / cameraRect.height,
       cameraHeight: Math.round(navigationRect.bottom - cameraRect.top),
       cameraLeft: Math.round(cameraRect.left),
+      cameraNavigationBottom: Math.round(navigationRect.bottom),
       cameraNavigationTop: Math.round(navigationRect.top),
       cameraRight: Math.round(cameraRect.right),
       cameraTop: Math.round(cameraRect.top),
@@ -9135,6 +9139,13 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
       ).flatMap((placement) => placement.getAnimations()).length,
       navigationOverflow: getComputedStyle(navigation).overflow,
       stableCamera: camera.dataset.landscapeIdentity,
+      surfaceMembership: {
+        activityContainsStack: activitySurface.contains(activity),
+        activityContainsToolbar: activitySurface.contains(activityNavigation),
+        cameraContainsCamera: cameraSurface.contains(camera),
+        cameraContainsNavigation: cameraSurface.contains(navigation),
+        cameraContainsToolbar: cameraSurface.contains(activityNavigation),
+      },
     };
   });
   const activityTitle = await card
@@ -9158,6 +9169,7 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
     cameraAspectRatio: geometry.cameraAspectRatio,
     cameraHeight: expect.any(Number),
     cameraLeft: expect.any(Number),
+    cameraNavigationBottom: expect.any(Number),
     cameraNavigationTop: expect.any(Number),
     cameraRight: expect.any(Number),
     cameraTop: expect.any(Number),
@@ -9170,6 +9182,13 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
     navigationOverflow: "visible",
     placementAnimations: 0,
     stableCamera: "stable",
+    surfaceMembership: {
+      activityContainsStack: true,
+      activityContainsToolbar: false,
+      cameraContainsCamera: true,
+      cameraContainsNavigation: true,
+      cameraContainsToolbar: true,
+    },
   });
   expect(geometry.activityLeft).toBeGreaterThan(geometry.cameraLeft);
   expect(geometry.activityRight).toBeLessThan(geometry.host.width);
@@ -9177,6 +9196,7 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
   expect(Math.abs((activityTitle?.y ?? 0) - geometry.activityTop)).toBeLessThan(
     8,
   );
+  expect(activityTitle?.y).toBeCloseTo(geometry.cameraTop, 0);
   expect(geometry.activityNavigationLeft).toBeCloseTo(geometry.cameraLeft, 0);
   expect(
     Math.abs(geometry.activityNavigationRight - geometry.cameraRight),
@@ -9188,12 +9208,14 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
   expect(geometry.activityNavigationTop).toBeGreaterThan(
     geometry.cameraNavigationTop,
   );
+  expect(geometry.activityNavigationTop).toBeGreaterThanOrEqual(
+    geometry.cameraNavigationBottom,
+  );
   expect(geometry.activityNavigationHeight).toBeGreaterThan(0);
   expect(geometry.cameraAspectRatio).toBeCloseTo(16 / 9, 2);
-  expect(geometry.cameraLeft).toBeGreaterThan(0);
-  expect(geometry.cameraLeft).toBeLessThanOrEqual(4);
+  expect(geometry.cameraLeft).toBeCloseTo(42, 0);
   expect(geometry.columnRatio).toBeCloseTo(3 / 2, 2);
-  expect(geometry.gutter).toBeGreaterThanOrEqual(16);
+  expect(geometry.gutter).toBeGreaterThanOrEqual(15);
   expect(geometry.cameraSurfaceTop).toBeCloseTo(geometry.activitySurfaceTop, 0);
   expect(geometry.cameraSurfaceBottom).toBeCloseTo(
     geometry.activitySurfaceBottom,
@@ -9332,6 +9354,41 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
   expect(expandedCameraContent?.width).toBeCloseTo(geometry.host.width, 0);
   expect(expandedCameraContent?.height).toBeCloseTo(geometry.host.height, 0);
   await expect(cameraPlacement).toHaveCSS("--wzc-live-fit", "contain");
+  const expandedStacking = await card.evaluate((element) => {
+    const root = element.shadowRoot;
+    const camera = root?.querySelector<HTMLElement>(
+      '[data-layout-node$="default-camera-module"]',
+    );
+    const cameraSurface = root?.querySelector<HTMLElement>(
+      '[data-layout-node$="default-camera-surface"]',
+    );
+    const handle = root?.querySelector<HTMLElement>(
+      ".companion-camera-pull-handle",
+    );
+    const toolbar = root?.querySelector<HTMLElement>(
+      '[data-layout-node$="default-activity-navigation-module"]',
+    );
+    if (!camera || !cameraSurface || !handle || !toolbar) {
+      throw new Error("Expanded camera stacking surfaces were not rendered");
+    }
+    const toolbarRect = toolbar.getBoundingClientRect();
+    const topElement = root?.elementFromPoint(
+      toolbarRect.left + 8,
+      toolbarRect.top + toolbarRect.height / 2,
+    );
+    return {
+      cameraSurfaceZ: getComputedStyle(cameraSurface).zIndex,
+      cameraZ: getComputedStyle(camera).zIndex,
+      handleZ: getComputedStyle(handle).zIndex,
+      toolbarCovered: Boolean(topElement && camera.contains(topElement)),
+    };
+  });
+  expect(expandedStacking).toEqual({
+    cameraSurfaceZ: "30",
+    cameraZ: "20",
+    handleZ: "31",
+    toolbarCovered: true,
+  });
   await expect(cameraPlacement).toHaveAttribute(
     "data-landscape-identity",
     "stable",
@@ -9415,14 +9472,14 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
     .poll(() =>
       card.locator(".stage-grid").getAttribute("data-test-transform-motions"),
     )
-    .toBe("6");
+    .toBe("4");
   await expect(card.locator(".stage-grid")).toHaveAttribute(
     "data-test-opacity-motions",
     "0",
   );
   await expect(card.locator(".stage-grid")).toHaveAttribute(
     "data-test-rotate-motions",
-    "6",
+    "4",
   );
   await expect(card.locator(".stage-grid")).toHaveCSS("transform", "none");
   const portraitGeometry = await card.evaluate((element) => ({

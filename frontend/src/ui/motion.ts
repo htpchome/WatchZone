@@ -12,6 +12,7 @@ export const motionDurations = {
   settle: 0.24,
   carousel: 0.3,
   layout: 0.36,
+  orientation: 0.6,
 } as const;
 
 export const motionEasings = {

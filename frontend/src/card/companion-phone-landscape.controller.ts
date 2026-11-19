@@ -21,10 +21,8 @@ type OrientationChanged = (active: boolean) => void;
 
 const installedHosts = new WeakSet<LandscapeHost>();
 const SURFACE_SELECTORS = {
-  activity: '.stage-placement[data-layout-node$="default-activity-stack"]',
+  activity: '.stage-container[data-layout-node$="default-activity-surface"]',
   camera: '.stage-container[data-layout-node$="default-camera-surface"]',
-  toolbar:
-    '.stage-placement[data-layout-node$="default-activity-navigation-module"]',
 } as const;
 
 type SurfaceName = keyof typeof SURFACE_SELECTORS;
@@ -296,7 +294,7 @@ class CompanionPhoneLandscapeController implements ReactiveController {
             transformOrigin: "0 0",
           },
           {
-            duration: motionDurations.layout,
+            duration: motionDurations.orientation,
             ease: motionEasings.standard,
           },
         ),

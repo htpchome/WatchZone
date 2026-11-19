@@ -92,12 +92,29 @@
                     "kind": "module",
                     "moduleType": "camera-navigation"
                   }
+                },
+                {
+                  "grid": {
+                    "column": 1,
+                    "columnSpan": 1,
+                    "row": 3,
+                    "rowSpan": 1
+                  },
+                  "node": {
+                    "config": {
+                      "presentation": "toolbar",
+                      "targetStackId": "default-activity-stack"
+                    },
+                    "id": "default-activity-navigation-module",
+                    "kind": "module",
+                    "moduleType": "activity-navigation"
+                  }
                 }
               ],
               "columns": 1,
               "id": "default-camera-surface",
               "kind": "container",
-              "rows": ["content", "content"]
+              "rows": ["content", "content", "fraction"]
             }
           },
           {
@@ -114,23 +131,6 @@
                     "column": 1,
                     "columnSpan": 1,
                     "row": 1,
-                    "rowSpan": 1
-                  },
-                  "node": {
-                    "config": {
-                      "presentation": "toolbar",
-                      "targetStackId": "default-activity-stack"
-                    },
-                    "id": "default-activity-navigation-module",
-                    "kind": "module",
-                    "moduleType": "activity-navigation"
-                  }
-                },
-                {
-                  "grid": {
-                    "column": 1,
-                    "columnSpan": 1,
-                    "row": 2,
                     "rowSpan": 1
                   },
                   "node": {
@@ -178,7 +178,7 @@
               "columns": 1,
               "id": "default-activity-surface",
               "kind": "container",
-              "rows": ["content", "fraction"]
+              "rows": ["fraction"]
             }
           }
         ],
@@ -274,12 +274,29 @@
                     "kind": "module",
                     "moduleType": "camera-navigation"
                   }
+                },
+                {
+                  "grid": {
+                    "column": 1,
+                    "columnSpan": 4,
+                    "row": 3,
+                    "rowSpan": 1
+                  },
+                  "node": {
+                    "config": {
+                      "presentation": "toolbar",
+                      "targetStackId": "default-activity-stack"
+                    },
+                    "id": "default-activity-navigation-module",
+                    "kind": "module",
+                    "moduleType": "activity-navigation"
+                  }
                 }
               ],
               "columns": 4,
               "id": "default-camera-surface",
               "kind": "container",
-              "rows": ["content", "content"]
+              "rows": ["content", "content", "fraction"]
             }
           },
           {
@@ -296,23 +313,6 @@
                     "column": 1,
                     "columnSpan": 4,
                     "row": 1,
-                    "rowSpan": 1
-                  },
-                  "node": {
-                    "config": {
-                      "presentation": "toolbar",
-                      "targetStackId": "default-activity-stack"
-                    },
-                    "id": "default-activity-navigation-module",
-                    "kind": "module",
-                    "moduleType": "activity-navigation"
-                  }
-                },
-                {
-                  "grid": {
-                    "column": 1,
-                    "columnSpan": 4,
-                    "row": 2,
                     "rowSpan": 1
                   },
                   "node": {
@@ -360,7 +360,7 @@
               "columns": 4,
               "id": "default-activity-surface",
               "kind": "container",
-              "rows": ["content", "fraction"]
+              "rows": ["fraction"]
             }
           }
         ],
