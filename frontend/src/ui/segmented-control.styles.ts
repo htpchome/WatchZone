@@ -89,11 +89,11 @@ export const segmentedControlStyles = css`
   }
 
   .option-indicator.danger {
-    color: var(--wzc-color-error);
+    color: var(--wzc-activity-alert-color);
   }
 
   .option-indicator.warning {
-    color: var(--wzc-color-warning);
+    color: var(--wzc-activity-detection-color);
   }
 
   .segmented-control-option[aria-checked="true"],

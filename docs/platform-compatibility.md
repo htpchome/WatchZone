@@ -132,12 +132,14 @@ The built-in mobile Full Stage has one narrower host-specific exception. On a
 physical phone inside Companion, rotating the fixed WebView to landscape
 presents the compatible wide Stage variant as a viewport-edge overlay. The
 same Stage nodes and live sessions are retained in a 60/40 camera/activity
-composition. The controller does not add per-placement transforms; Companion's
-native whole-window orientation transition owns the coordinated rotation. The
-controller waits for viewport resize to settle, commits the responsive layout,
-and applies one short whole-surface settle transform instead of independently
-animating Stage placements. Browser phones and every tablet remain outside
-this controller.
+composition. Companion owns the physical WebView rotation; after committing
+the responsive layout, WatchZone Motion presents one inverse-rotation
+settlement on the stable Stage surface instead of independently animating Stage
+placements. Entering landscape waits for the outer viewport to stabilize.
+Returning to portrait releases the fixed overlay immediately so Home
+Assistant's own header and flow become authoritative without an assumed header
+height, then the same Stage surface settles into that measured flow. Browser
+phones and every tablet remain outside this controller.
 
 ### 2.3 Theme profile
 
@@ -154,6 +156,16 @@ not branch on a particular third-party theme name. Visual colors continue to
 flow through the semantic token boundary. The profile exposes stable mode data
 to the card and editor and synchronizes their `color-scheme` without replacing
 theme-provided colors.
+
+Activity classification and review state are deliberate exceptions to
+theme-selected color values. Alert presentation uses Home Assistant's
+canonical red (`#db4437`), Detection and Not reviewed use canonical amber
+(`#ffa600`), and Reviewed uses canonical green (`#43a047`). This applies only
+to their badges, camera and thumbnail outlines, activity indicators, and
+review-state controls. Generic warning, error, information, and success UI
+continues to use the theme-aware semantic tokens; this includes the Suspend
+camera dialog. Neutral actions such as AI analysis and information controls
+retain ordinary text/icon semantics.
 
 Primary-action contrast prefers Home Assistant's current `on-primary` semantic
 tokens. When those tokens are unavailable, WatchZone preserves compatibility

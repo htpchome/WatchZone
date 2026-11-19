@@ -2995,6 +2995,26 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect(stackButtons).toHaveCount(4);
   const reviewTiles = page.locator("wzc-reviews .tile");
   await expect(reviewTiles).toHaveCount(6);
+  const activityStatusColors = await Promise.all(
+    [
+      reviewTiles.first().locator(".thumbnail-wrap.alert"),
+      reviewTiles.nth(1).locator(".thumbnail-wrap.detection"),
+    ].map((thumbnail) =>
+      thumbnail.evaluate(
+        (element) => getComputedStyle(element, "::after").borderTopColor,
+      ),
+    ),
+  );
+  expect(activityStatusColors).toEqual([
+    "rgb(219, 68, 55)",
+    "rgb(255, 166, 0)",
+  ]);
+  await expect(
+    page.locator('wzc-reviews wzc-badge[variant="alert"] .badge').first(),
+  ).toHaveCSS("background-color", "rgb(219, 68, 55)");
+  await expect(
+    page.locator('wzc-reviews wzc-badge[variant="detection"] .badge').first(),
+  ).toHaveCSS("background-color", "rgb(255, 166, 0)");
   const normalNavigation = await stackNavigation.evaluate((navigation) => {
     const buttons = [...navigation.querySelectorAll("button")];
     const active = getComputedStyle(buttons[0]!);
@@ -3037,6 +3057,15 @@ test("keeps activity content in an independently scrolling viewport", async ({
     "icon",
     "mdi:creation",
   );
+  const neutralReviewActionColors = await Promise.all(
+    [analysisTitle, page.locator("wzc-reviews .review-info").first()].map(
+      (control) =>
+        control.evaluate((element) => getComputedStyle(element).color),
+    ),
+  );
+  expect(neutralReviewActionColors).not.toContain("rgb(219, 68, 55)");
+  expect(neutralReviewActionColors).not.toContain("rgb(255, 166, 0)");
+  expect(neutralReviewActionColors).not.toContain("rgb(67, 160, 71)");
   const analysisTopBeforeExport = await analysisTitle.evaluate((element) => {
     const tile = element.closest(".tile");
     if (!tile)
@@ -3738,6 +3767,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
     };
   });
   expect(unreviewedPresentation.borderColor).toBe(unreviewedPresentation.color);
+  expect(unreviewedPresentation.color).toBe("rgb(255, 166, 0)");
   expect(unreviewedPresentation.background).toBe("rgba(0, 0, 0, 0)");
   expect(unreviewedPresentation.cursor).toBe("pointer");
   expect(unreviewedPresentation.height).toBeLessThan(24);
@@ -3898,7 +3928,15 @@ test("keeps activity content in an independently scrolling viewport", async ({
         .locator(".review-state-indicator")
         .evaluate((indicator) => getComputedStyle(indicator).color),
     )
-    .not.toBe(unreviewedPresentation.color);
+    .toBe("rgb(67, 160, 71)");
+  expect(
+    await Promise.all(
+      [analysisTitle, page.locator("wzc-reviews .review-info").first()].map(
+        (control) =>
+          control.evaluate((element) => getComputedStyle(element).color),
+      ),
+    ),
+  ).toEqual(neutralReviewActionColors);
   const alertList = page.locator("wzc-reviews wzc-activity-list");
   const reviewsModule = page.locator("wzc-reviews");
   await reviewsModule.evaluate(async (element) => {
@@ -8738,6 +8776,13 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
       setConfig(config: unknown): void;
       updateComplete: Promise<boolean>;
     };
+    document.body.style.margin = "0";
+    const header = document.createElement("div");
+    header.dataset.testHaHeader = "";
+    header.style.cssText =
+      "position:fixed;z-index:100;inset:0 0 auto;height:56px;background:rgb(1,2,3)";
+    document.body.append(header);
+    host.style.marginTop = "56px";
     host.setConfig({
       cameras: [
         {
@@ -8852,6 +8897,33 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     "data-stage-variant",
     "phone",
   );
+  await card.locator(".stage-grid").evaluate((stage) => {
+    const host = stage.getRootNode() as ShadowRoot;
+    const card = host.host;
+    const nativeAnimate = stage.animate.bind(stage);
+    stage.dataset.testRotationAnimationCount = "0";
+    stage.animate = ((
+      keyframes: Keyframe[] | PropertyIndexedKeyframes | null,
+      options?: number | KeyframeAnimationOptions,
+    ) => {
+      if (JSON.stringify(keyframes).includes("rotate(")) {
+        stage.dataset.testRotationAnimationCount = String(
+          Number(stage.dataset.testRotationAnimationCount ?? "0") + 1,
+        );
+        stage.dataset.testTransitioningAtAnimationStart = String(
+          card.classList.contains("companion-phone-orientation-transitioning"),
+        );
+        stage.dataset.testThumbnailOutlineWidthAtAnimationStart =
+          getComputedStyle(card).getPropertyValue(
+            "--wzc-activity-thumbnail-outline-width",
+          );
+        stage.dataset.testCameraOutlineWidthAtAnimationStart = getComputedStyle(
+          card,
+        ).getPropertyValue("--wzc-camera-activity-outline-width");
+      }
+      return nativeAnimate(keyframes, options);
+    }) as typeof stage.animate;
+  });
   await page.setViewportSize({ width: 844, height: 390 });
   expect(
     await card.evaluate((element) =>
@@ -8859,43 +8931,61 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     ),
   ).toBe(false);
   await expect(card).toHaveClass(/companion-phone-landscape/);
+  expect(
+    await page.evaluate(
+      () =>
+        document.elementFromPoint(10, 10) ===
+        document.querySelector("[data-test-ha-header]"),
+    ),
+  ).toBe(false);
   await expect(card.locator(".stage-grid")).toHaveAttribute(
     "data-stage-variant",
     "default",
   );
-  const enteringAnimations = await card
-    .locator(".stage-placement[data-layout-node]")
-    .evaluateAll((placements) =>
-      placements.map((placement) => placement.getAnimations().length),
-    );
+  await expect
+    .poll(() =>
+      card
+        .locator(".stage-grid")
+        .getAttribute("data-test-rotation-animation-count"),
+    )
+    .toBe("1");
+  await expect(card.locator(".stage-grid")).toHaveAttribute(
+    "data-test-transitioning-at-animation-start",
+    "true",
+  );
+  await expect(card.locator(".stage-grid")).toHaveAttribute(
+    "data-test-thumbnail-outline-width-at-animation-start",
+    "0px",
+  );
+  await expect(card.locator(".stage-grid")).toHaveAttribute(
+    "data-test-camera-outline-width-at-animation-start",
+    "0px",
+  );
   expect(
-    enteringAnimations.filter((count) => count > 0).length,
-  ).toBeGreaterThanOrEqual(3);
-  const transitioningOutline = card
-    .locator("wzc-reviews .thumbnail-wrap.detection")
-    .first();
-  await expect(card).toHaveClass(/companion-phone-orientation-transitioning/);
-  expect(
-    await transitioningOutline.evaluate(
-      (element) => getComputedStyle(element, "::after").borderTopWidth,
-    ),
-  ).toBe("0px");
+    await card
+      .locator(".stage-placement[data-layout-node]")
+      .evaluateAll((placements) =>
+        placements.every((placement) => placement.getAnimations().length === 0),
+      ),
+  ).toBe(true);
   expect(
     await card
       .locator("ha-card")
       .evaluate((card) => card.getAnimations().length),
   ).toBe(0);
-  await card.evaluate(async (element) => {
-    const animations = Array.from(
-      element.shadowRoot?.querySelectorAll<HTMLElement>(
-        ".stage-placement[data-layout-node]",
-      ) ?? [],
-    ).flatMap((placement) => placement.getAnimations());
-    await Promise.all(animations.map((animation) => animation.finished));
+  await card.locator(".stage-grid").evaluate(async (stage) => {
+    await Promise.all(
+      stage
+        .getAnimations()
+        .map((animation) => animation.finished.catch(() => undefined)),
+    );
   });
   await expect(card).not.toHaveClass(
     /companion-phone-orientation-transitioning/,
   );
+  const transitioningOutline = card
+    .locator("wzc-reviews .thumbnail-wrap.detection")
+    .first();
   expect(
     await transitioningOutline.evaluate(
       (element) => getComputedStyle(element, "::after").borderTopWidth,
@@ -9264,24 +9354,81 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     .toEqual([false, false, true]);
   await pullHandle.press("Home");
   await page.setViewportSize({ width: 390, height: 844 });
-  expect(
-    await card.evaluate((element) =>
-      element.classList.contains("companion-phone-landscape"),
-    ),
-  ).toBe(true);
   await expect(card).not.toHaveClass(/companion-phone-landscape/);
   await expect(card.locator(".stage-grid")).toHaveAttribute(
     "data-stage-variant",
     "phone",
   );
-  const leavingAnimations = await card
-    .locator(".stage-placement[data-layout-node]")
-    .evaluateAll((placements) =>
-      placements.map((placement) => placement.getAnimations().length),
-    );
+  await expect
+    .poll(() =>
+      card
+        .locator(".stage-grid")
+        .getAttribute("data-test-rotation-animation-count"),
+    )
+    .toBe("2");
   expect(
-    leavingAnimations.filter((count) => count > 0).length,
-  ).toBeGreaterThanOrEqual(3);
+    await card
+      .locator(".stage-placement[data-layout-node]")
+      .evaluateAll((placements) =>
+        placements.every((placement) => placement.getAnimations().length === 0),
+      ),
+  ).toBe(true);
+  const portraitGeometry = await card.evaluate((element) => ({
+    headerOnTop:
+      document.elementFromPoint(10, 10) ===
+      document.querySelector("[data-test-ha-header]"),
+    top: element.getBoundingClientRect().top,
+  }));
+  expect(portraitGeometry).toEqual({ headerOnTop: true, top: 56 });
+  await expect(card).not.toHaveClass(
+    /companion-phone-orientation-transitioning/,
+  );
+  const withoutHeader = await card.evaluate((element) => {
+    document.querySelector("[data-test-ha-header]")?.remove();
+    element.style.marginTop = "0";
+    return element.getBoundingClientRect().top;
+  });
+  expect(withoutHeader).toBe(0);
+
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect
+    .poll(() =>
+      card
+        .locator(".stage-grid")
+        .getAttribute("data-test-rotation-animation-count"),
+    )
+    .toBe("3");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(card).not.toHaveClass(/companion-phone-landscape/);
+  await expect(card).not.toHaveClass(
+    /companion-phone-orientation-transitioning/,
+  );
+  expect(
+    await card
+      .locator(".stage-grid")
+      .evaluate((stage) => stage.getAnimations().length),
+  ).toBe(0);
+
+  const animationCountBeforeReducedMotion = await card
+    .locator(".stage-grid")
+    .getAttribute("data-test-rotation-animation-count");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect(card).toHaveClass(/companion-phone-landscape/);
+  await expect(card).not.toHaveClass(
+    /companion-phone-orientation-transitioning/,
+  );
+  expect(
+    await card
+      .locator(".stage-grid")
+      .evaluate((stage) => stage.getAnimations().length),
+  ).toBe(0);
+  await expect(card.locator(".stage-grid")).toHaveAttribute(
+    "data-test-rotation-animation-count",
+    animationCountBeforeReducedMotion ?? "",
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(card).not.toHaveClass(/companion-phone-landscape/);
 });
 
 test("exposes and honors the WatchZone semantic theme-token contract", async ({
@@ -9315,6 +9462,10 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
       "--wzc-color-warning",
       "--wzc-color-info",
       "--wzc-color-success",
+      "--wzc-activity-alert-color",
+      "--wzc-activity-detection-color",
+      "--wzc-review-reviewed-color",
+      "--wzc-review-unreviewed-color",
       "--wzc-dialog-background",
       "--wzc-dialog-backdrop-filter",
       "--wzc-dialog-radius",
@@ -9362,10 +9513,27 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
     host.style.setProperty("--wzc-color-text-1", "rgb(10, 20, 30)");
     host.style.setProperty("--secondary-text-color", "rgb(70, 80, 90)");
     host.style.setProperty("--ha-color-text-secondary", "rgb(170, 180, 190)");
-    host.style.setProperty("--error-color", "initial");
-    host.style.setProperty("--warning-color", "initial");
-    host.style.setProperty("--info-color", "initial");
-    host.style.setProperty("--success-color", "initial");
+    host.style.setProperty("--error-color", "rgb(1, 2, 3)");
+    host.style.setProperty("--warning-color", "rgb(4, 5, 6)");
+    host.style.setProperty("--info-color", "rgb(7, 8, 9)");
+    host.style.setProperty("--success-color", "rgb(10, 11, 12)");
+    host.style.setProperty(
+      "--ha-color-fill-danger-loud-resting",
+      "rgb(13, 14, 15)",
+    );
+    host.style.setProperty(
+      "--ha-color-fill-warning-loud-resting",
+      "rgb(16, 17, 18)",
+    );
+    host.style.setProperty(
+      "--ha-color-fill-success-loud-resting",
+      "rgb(19, 20, 21)",
+    );
+    host.style.setProperty("--ha-color-border-danger-quiet", "rgb(22, 23, 24)");
+    host.style.setProperty(
+      "--ha-color-border-warning-normal",
+      "rgb(25, 26, 27)",
+    );
     host.style.setProperty("--text-primary-color", "rgba(0, 0, 0, 0.95)");
     host.style.setProperty("--ha-color-on-primary-loud", "rgb(245, 246, 247)");
     host.style.setProperty(
@@ -9439,6 +9607,15 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
       warningColor: resolveColor("--wzc-color-warning"),
       infoColor: resolveColor("--wzc-color-info"),
       successColor: resolveColor("--wzc-color-success"),
+      activityAlertColor: resolveColor("--wzc-activity-alert-color"),
+      activityDetectionColor: resolveColor("--wzc-activity-detection-color"),
+      reviewedColor: resolveColor("--wzc-review-reviewed-color"),
+      unreviewedColor: resolveColor("--wzc-review-unreviewed-color"),
+      errorFill: resolveColor("--wzc-color-fill-error"),
+      warningFill: resolveColor("--wzc-color-fill-warning"),
+      successFill: resolveColor("--wzc-color-fill-success"),
+      dangerBorder: resolveColor("--wzc-color-border-danger"),
+      warningBorder: resolveColor("--wzc-color-border-warning"),
       popoverBackground: hostStyle
         .getPropertyValue("--wzc-popover-background")
         .trim(),
@@ -9469,10 +9646,19 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
     overlayOpacity: "72%",
     onPrimaryColor: "rgb(235, 236, 237)",
     secondaryTextColor: "rgb(70, 80, 90)",
-    errorColor: "rgb(219, 68, 55)",
-    warningColor: "rgb(255, 166, 0)",
-    infoColor: "rgb(3, 155, 229)",
-    successColor: "rgb(67, 160, 71)",
+    errorColor: "rgb(1, 2, 3)",
+    warningColor: "rgb(4, 5, 6)",
+    infoColor: "rgb(7, 8, 9)",
+    successColor: "rgb(10, 11, 12)",
+    activityAlertColor: "rgb(219, 68, 55)",
+    activityDetectionColor: "rgb(255, 166, 0)",
+    reviewedColor: "rgb(67, 160, 71)",
+    unreviewedColor: "rgb(255, 166, 0)",
+    errorFill: "rgb(13, 14, 15)",
+    warningFill: "rgb(16, 17, 18)",
+    successFill: "rgb(19, 20, 21)",
+    dangerBorder: "rgb(22, 23, 24)",
+    warningBorder: "rgb(25, 26, 27)",
     overriddenPlacementGaps: [7, 7, 0],
     reversedTextColor: "rgb(245, 246, 247)",
     textColor: "rgb(10, 20, 30)",

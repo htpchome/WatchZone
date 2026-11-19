@@ -421,7 +421,7 @@ export class ReviewsModule extends LitElement {
             ? "reviews.alert"
             : "reviews.detection",
         ),
-        variant: review.classification === "alert" ? "danger" : "warning",
+        variant: review.classification === "alert" ? "alert" : "detection",
       },
       zones: review.zones,
     };

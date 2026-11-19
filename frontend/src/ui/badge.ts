@@ -8,7 +8,13 @@ export type BadgeAppearance = "filled" | "filled-outlined" | "outlined";
 export type BadgeShape = "pill" | "rounded" | "square";
 export type BadgeSize = "large" | "medium" | "small";
 export type BadgeVariant =
-  "accent" | "danger" | "neutral" | "success" | "warning";
+  | "accent"
+  | "alert"
+  | "danger"
+  | "detection"
+  | "neutral"
+  | "success"
+  | "warning";
 
 /** Shared compact label primitive; object-to-color policy lives separately. */
 export class Badge extends LitElement {

@@ -36,8 +36,8 @@ export function activityBadgePresentations(
 }
 
 function reservedColor(variant: BadgeVariant): BadgeColor {
-  if (variant === "danger") return "red";
-  if (variant === "warning") return "amber";
+  if (variant === "alert" || variant === "danger") return "red";
+  if (variant === "detection" || variant === "warning") return "amber";
   if (variant === "success") return "green";
   if (variant === "accent") return "blue";
   return "neutral";

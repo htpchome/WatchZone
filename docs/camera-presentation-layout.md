@@ -126,6 +126,15 @@ uses rounded corners and hides its resize handle, independent of the ordinary
 phone Camera appearance setting. This overlay does not activate for browser
 phones, Companion tablets, or incompatible Stage types.
 
+Orientation retains the same Stage nodes and live sessions. Motion animates
+one stable Stage surface from the inverse device orientation into the committed
+layout; individual modules do not receive competing layout transforms. The
+landscape overlay continues to cover Home Assistant's top navigation. On the
+first portrait resize, WatchZone releases that fixed overlay before settlement
+so the card returns directly to Home Assistant flow. The actual flow position
+is authoritative: a visible Home Assistant header naturally places the card
+below it, while a hidden or disabled header introduces no synthetic offset.
+
 A separate vertical pull handle is centered in the actual gutter at the
 Camera's trailing edge in this presentation. Its borderless three-pixel line
 uses the semantic secondary text color and keeps a tall visual indicator inside

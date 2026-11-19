@@ -13,11 +13,13 @@
 - A review tile exposes its reviewed state as a compact labeled control in the
   tile metadata area; it does not obscure the thumbnail. Its visible label
   names the current state while its accessible label names the toggle action.
-- Reviewed uses the Home Assistant success semantic; unreviewed uses the Home
-  Assistant warning semantic. Both use a short themed outline pill with a
-  checkmark; unreviewed adds a plus sign. The visible pill remains compact in
-  the standard tile while its touch and keyboard target remains at least 44
-  logical pixels.
+- Reviewed uses WatchZone's canonical success base (`#43a047`); unreviewed uses
+  its canonical warning base (`#ffa600`). Themes do not replace those status
+  colors. Both use a short outline pill with a checkmark; unreviewed adds a
+  plus sign. The visible pill remains compact in the standard tile while its
+  touch and keyboard target remains at least 44 logical pixels. Adjacent AI
+  analysis and information icons remain neutral controls and do not inherit
+  either review-state color.
 - Activating the control updates the local review immediately, calls the
   provider-neutral backend mutation, and rolls back with one toast if the
   provider rejects the change.
@@ -118,8 +120,8 @@
   activity. Already-active reviews do not reclaim selection after that manual
   override.
 - Alert is the stronger visual classification when one camera has both active
-  classifications. Its navigation indicator uses the shared alert semantic;
-  Detection uses the shared warning semantic.
+  classifications. Its navigation indicator uses the fixed activity Alert
+  semantic; Detection uses the fixed activity Detection semantic.
 
 ## Export workflow
 

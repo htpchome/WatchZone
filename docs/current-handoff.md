@@ -16,13 +16,14 @@ precedence.
 ## Repository state
 
 - Branch: `main`.
-- Current HEAD: `a774ea9`. Its files and tag are version `0.0.4-dev.445`, but
-  its accidentally early commit subject incorrectly says `v0.0.4-dev.443`.
-- Current version: `0.0.4-dev.445`.
-- Worktree: only the final circular-carousel browser-test refinements described
-  below are intentionally uncommitted.
-- Proposed commit subject:
+- Current HEAD: `b3c26e0` —
   `v0.0.4-dev.445 - test(frontend): harden circular carousel coverage`.
+- Pending version: `0.0.4-dev.446`.
+- Worktree: the Companion-phone orientation transition described below is
+  intentionally uncommitted together with the scoped activity-color correction.
+  There were no unrelated local changes when this work began.
+- Proposed commit subject:
+  `v0.0.4-dev.446 - fix(frontend): coordinate orientation and activity semantics`.
 
 Always recheck `git status`, `git log -1`, and
 `custom_components/watchzone/const.py` before starting work.
@@ -85,8 +86,9 @@ recovery baseline, nothing more.
 - Do not change theme tokens while fixing layout or interaction behavior.
 - Do not change Home Assistant header behavior while fixing camera geometry
   unless the user explicitly requests that separate change.
-- Do not restart rotation-animation experimentation. The user explicitly said
-  to forget the desired transition animation after repeated regressions.
+- Do not reintroduce the rejected per-module, duplicate-surface, or
+  Home-Assistant-header rotation experiments. The user explicitly reopened
+  orientation work for one Motion-owned Stage-surface transition.
 - Preserve the live Camera module and retained media session. Do not replace
   the production presentation with prototype divs or a second fake camera.
 - Treat screenshots, recordings, and physical-device verification as the
@@ -143,12 +145,30 @@ UI.
   icons use the secondary-text semantic chain whose primary Home Assistant
   token is `--secondary-text-color` with `--ha-color-text-secondary` as the
   fallback.
-- WatchZone status semantics use the canonical Home Assistant defaults:
-  error `#db4437`, warning `#ffa600`, info `#039be5`, and success `#43a047`.
-  Alert/detection and review-state semantics must not be coupled to unrelated
-  text or action colors.
+- WatchZone activity semantics use fixed Home Assistant defaults: Alert
+  `#db4437`, Detection and Not reviewed `#ffa600`, and Reviewed `#43a047`.
+  This fixed policy is limited to activity badges and indicators, camera and
+  thumbnail outlines, and review-state controls. Generic status UI—including
+  the Suspend camera dialog—remains theme-aware. AI-analysis sparkle and
+  information icons remain neutral.
 
-## Validation baseline for `dev.445`
+## Pending Companion orientation correction
+
+- Companion continues to own physical WebView rotation. WatchZone commits its
+  final responsive state and uses one Motion transition on the stable Stage
+  surface; it no longer transforms each Stage placement independently.
+- Landscape remains a fixed viewport overlay above Home Assistant dashboard
+  chrome, so the HA top navigation is not exposed.
+- The first portrait resize releases the fixed overlay immediately. Home
+  Assistant flow then decides the card's real top position: an enabled header
+  places it below the header, while a disabled header adds no phantom offset.
+- Motion derives rotation direction from the exposed orientation angle when
+  available, has a deterministic fallback, cancels cleanly on reversal, and
+  becomes immediate under reduced-motion preference.
+- The same Camera, Stage nodes, activity state, scroll position, and retained
+  media sessions remain mounted throughout.
+
+## Validation baseline for pending `dev.446`
 
 The current baseline passes:
 
@@ -160,8 +180,8 @@ The current baseline passes:
 - `corepack yarn build`;
 - `corepack yarn check:styles`;
 - `corepack yarn check:licenses`;
-- `bash scripts/package-release.sh`: lazy editor 18,555 bytes gzip and eager
-  graph 60,439 bytes gzip, producing `dist/watchzone.zip`;
+- `bash scripts/package-release.sh`: lazy editor 18,558 bytes gzip and eager
+  graph 60,548 bytes gzip, producing `dist/watchzone.zip`;
 - `corepack yarn test:browser`: 156 tests passed across Chromium, Firefox, and
   WebKit;
 - `git diff --check`.
@@ -170,23 +190,22 @@ The browser matrix required permission to bind its local Vite server to
 `127.0.0.1:5173`; the initial sandboxed start failed with `EPERM` before any
 test ran. The rerun with the required permission completed successfully.
 
-One unit run executed concurrently with lint, type checking, and a production
-build timed out while loading the lazy general-information panel and reported
-late lazy imports during teardown. A clean isolated rerun passed all 488 tests
-with no unhandled errors.
+The first unit run passed all 488 assertions but reported three late dynamic
+imports from the existing card test after environment teardown. A clean
+isolated rerun passed all 488 tests with no unhandled errors.
 
-The first complete browser rerun exposed a Chromium race between an owned
-camera-navigation page-scroll animation and selected-camera reveal. The
-controller now cancels its page-scroll motion before revealing the selection;
-the focused Chromium regression and the subsequent complete 156-test matrix
-both passed. The Companion landscape pull handle is also styled throughout the
-landscape state instead of only during its brief settle state.
+Focused activity-color, semantic-token, and Companion-orientation coverage
+passed 9 tests across Chromium, Firefox, and WebKit. The orientation test
+records the Motion invocation rather than sampling a short-lived animation,
+and verifies one Stage-surface rotation, no placement animations, immediate
+portrait flow restoration, header-present and header-absent geometry,
+interruption cleanup, and reduced motion.
 
 These results establish repository consistency and automated interaction
 coverage only. They do not establish physical-device visual quality or prove
 that every user-reported animation/compositing defect is fixed.
 
-The `dev.445` carousel uses a 40-pixel Swiper-owned gap that exposes the
+The carousel uses a 40-pixel Swiper-owned gap that exposes the
 semantic camera-stage background. It navigates circularly at the first/last
 boundary without Swiper loop or rewind: Motion owns the boundary presentation,
 while Swiper retains stable Lit-owned slide order and camera identity. Browser

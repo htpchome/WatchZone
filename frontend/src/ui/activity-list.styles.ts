@@ -168,11 +168,11 @@ export const activityListStyles = css`
   }
 
   .thumbnail-wrap.alert {
-    --wzc-activity-thumbnail-outline-color: var(--wzc-color-error);
+    --wzc-activity-thumbnail-outline-color: var(--wzc-activity-alert-color);
   }
 
   .thumbnail-wrap.detection {
-    --wzc-activity-thumbnail-outline-color: var(--wzc-color-warning);
+    --wzc-activity-thumbnail-outline-color: var(--wzc-activity-detection-color);
   }
 
   .thumbnail-wrap.alert::after,
@@ -307,11 +307,11 @@ export const activityListStyles = css`
   }
 
   .review-state.reviewed {
-    --wzc-review-state-color: var(--wzc-color-success);
+    --wzc-review-state-color: var(--wzc-review-reviewed-color);
   }
 
   .review-state.unreviewed {
-    --wzc-review-state-color: var(--wzc-color-warning);
+    --wzc-review-state-color: var(--wzc-review-unreviewed-color);
   }
 
   .review-state svg {

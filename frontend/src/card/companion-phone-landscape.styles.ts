@@ -15,6 +15,11 @@ export const companionPhoneLandscapeStyles = css`
     --wzc-camera-activity-outline-width: 0px;
   }
 
+  :host(.companion-phone-orientation-transitioning) .stage-grid {
+    pointer-events: none;
+    will-change: transform;
+  }
+
   :host(.companion-phone-landscape.height-mode-fit-viewport) {
     --wzc-activity-list-max-block-size: calc(
       var(--wzc-media-day-header-block-size) + 3 *

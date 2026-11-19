@@ -10,7 +10,7 @@ export const reviewTrackingDialogStyles = css`
   }
 
   .tracking {
-    --wzc-tracking-accent: var(--wzc-color-warning);
+    --wzc-tracking-accent: var(--wzc-activity-detection-color);
     display: grid;
     gap: 1rem;
     grid-template-rows: max-content minmax(0, 1fr);
@@ -20,7 +20,7 @@ export const reviewTrackingDialogStyles = css`
   }
 
   .tracking.alert {
-    --wzc-tracking-accent: var(--wzc-color-error);
+    --wzc-tracking-accent: var(--wzc-activity-alert-color);
   }
 
   .tracking-overview {

@@ -63,7 +63,8 @@ export class RecordedMediaInformation extends LitElement {
       classification
         ? {
             label: classification,
-            variant: metadata.classification === "alert" ? "danger" : "warning",
+            variant:
+              metadata.classification === "alert" ? "alert" : "detection",
           }
         : undefined,
     );

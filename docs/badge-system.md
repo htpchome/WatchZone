@@ -34,9 +34,11 @@ The general collision fallback excludes the red family so ordinary object
 labels cannot be mistaken for semantic error or Alert badges.
 
 Review classification colors are shared semantics rather than independent
-decorations. The Detection badge background resolves to the same warning color
-as the detection thumbnail outline, while text and shape continue to distinguish
-the badge from the outline.
+decorations. Dedicated Alert and Detection badge variants use the same fixed
+canonical red and amber as their camera and thumbnail outlines, while text and
+shape continue to distinguish each badge from an outline. Generic warning,
+danger, and success badges remain theme-aware. Stable object-label palette
+colors also remain independently theme-aware and do not become status colors.
 
 When an activity module is scoped to a grouped camera presentation, each review
 or event begins with the configured name of the physical camera that produced

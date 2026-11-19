@@ -99,6 +99,10 @@ export const themeTokens = css`
     --wzc-color-warning: var(--warning-color, #ffa600);
     --wzc-color-info: var(--info-color, #039be5);
     --wzc-color-success: var(--success-color, #43a047);
+    --wzc-activity-alert-color: #db4437;
+    --wzc-activity-detection-color: #ffa600;
+    --wzc-review-reviewed-color: #43a047;
+    --wzc-review-unreviewed-color: #ffa600;
     --wzc-color-on-error: var(
       --ha-color-on-danger-loud,
       var(--wzc-color-text-reversed)
@@ -176,8 +180,8 @@ export const themeTokens = css`
     );
     --wzc-control-disabled-opacity: var(--disabled-opacity, 0.55);
     --wzc-camera-activity-outline-width: 0.25rem;
-    --wzc-camera-alert-outline-color: var(--wzc-color-error);
-    --wzc-camera-detection-outline-color: var(--wzc-color-warning);
+    --wzc-camera-alert-outline-color: var(--wzc-activity-alert-color);
+    --wzc-camera-detection-outline-color: var(--wzc-activity-detection-color);
 
     --wzc-radius-card: var(
       --wzc-theme-card-radius,
@@ -507,8 +511,8 @@ export const themeTokens = css`
     --wzc-recording-scrubber-track: #b9efbd;
     --wzc-recording-scrubber-gap: #dddddd;
     --wzc-recording-scrubber-gap-stripe: #b93745;
-    --wzc-recording-scrubber-alert: var(--wzc-color-error);
-    --wzc-recording-scrubber-detection: var(--wzc-color-warning);
+    --wzc-recording-scrubber-alert: var(--wzc-activity-alert-color);
+    --wzc-recording-scrubber-detection: var(--wzc-activity-detection-color);
     --wzc-recording-scrubber-pointer: #ffffff;
     --wzc-recording-scrubber-pointer-outline: #6b6b6b;
     --wzc-recording-scrubber-pointer-text: #252525;
@@ -643,6 +647,10 @@ export const themeTokens = css`
     --wzc-badge-danger-color: var(--wzc-color-on-error);
     --wzc-badge-success-background: var(--wzc-color-success);
     --wzc-badge-success-color: var(--wzc-color-on-success);
+    --wzc-badge-alert-background: var(--wzc-activity-alert-color);
+    --wzc-badge-alert-color: var(--wzc-color-on-error);
+    --wzc-badge-detection-background: var(--wzc-activity-detection-color);
+    --wzc-badge-detection-color: var(--wzc-color-on-warning);
     --wzc-badge-red-background: var(--ha-color-red-60, #ef4444);
     --wzc-badge-red-color: var(--ha-color-neutral-100, #ffffff);
     --wzc-badge-cyan-background: var(--ha-color-cyan-60, #22d3ee);
