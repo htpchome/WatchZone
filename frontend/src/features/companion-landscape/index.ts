@@ -227,7 +227,10 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     );
     this._pull.deactivate();
     this._cancelAnimations();
-    this._host.classList.remove("companion-phone-orientation-transitioning");
+    this._host.classList.remove(
+      "companion-phone-fullscreen-pending",
+      "companion-phone-orientation-transitioning",
+    );
   }
 
   private readonly _schedule = (): void => {
@@ -409,6 +412,7 @@ class CompanionPhoneLandscapeController implements ReactiveController {
   }
 
   private async _sync(): Promise<void> {
+    this._host.classList.remove("companion-phone-fullscreen-pending");
     const action = this._targetAction();
     const active = action !== "none";
     const animate = this._initialized && !reducedMotionRequested();
@@ -443,6 +447,9 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     if (animate && !immediateFullscreen) {
       this._host.classList.add("companion-phone-orientation-transitioning");
     }
+    if (immediateFullscreen) {
+      this._host.classList.add("companion-phone-fullscreen-pending");
+    }
     this._active = active;
     this._action = action;
     this._host.classList.toggle("companion-phone-landscape", active);
@@ -450,14 +457,10 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     await this._host.updateComplete;
     if (!this._isCurrent(active, generation)) return;
     if (immediateFullscreen) {
+      await nextFrame();
+      if (!this._isCurrent(active, generation)) return;
       this._pull.activate(true, true);
-      this._settledSnapshot = this._captureSnapshot();
-      await nextFrame();
-      if (!this._isCurrent(active, generation)) return;
-      this._pull.sync();
-      await nextFrame();
-      if (!this._isCurrent(active, generation)) return;
-      this._pull.sync();
+      this._host.classList.remove("companion-phone-fullscreen-pending");
       this._settledSnapshot = this._captureSnapshot();
       return;
     }

@@ -302,6 +302,9 @@ export class CompanionCameraPullController {
       "landscape-camera-overlay-expanded",
       this._expanded,
     );
+    if (target === 0) {
+      this._host.classList.remove("landscape-camera-overlay-covering");
+    }
     this._host.classList.add("landscape-camera-overlay-settling");
     const animation = this._settleMotion.start(this._progress, target, {
       duration: motionDurations.settle,
@@ -319,6 +322,7 @@ export class CompanionCameraPullController {
   private _jumpTo(target: 0 | 1): void {
     this._cancelSettle();
     this._expanded = target === 1;
+    this._applyProgress(target);
     this._host.classList.toggle(
       "landscape-camera-overlay-active",
       this._expanded,
@@ -327,7 +331,6 @@ export class CompanionCameraPullController {
       "landscape-camera-overlay-expanded",
       this._expanded,
     );
-    this._applyProgress(target);
     this._syncAccessibility();
     this._onSettled?.();
   }
@@ -365,6 +368,10 @@ export class CompanionCameraPullController {
       width: viewport.width,
     };
     this._progress = Math.min(1, Math.max(0, progress));
+    this._host.classList.toggle(
+      "landscape-camera-overlay-covering",
+      this._progress === 1,
+    );
     const mix = (start: number, end: number) =>
       start + (end - start) * this._progress;
     const left = mix(baseline.left, target.left);
@@ -476,6 +483,7 @@ export class CompanionCameraPullController {
     this._host.classList.remove(
       "companion-camera-pull-ready",
       "landscape-camera-overlay-active",
+      "landscape-camera-overlay-covering",
       "landscape-camera-overlay-dragging",
       "landscape-camera-overlay-expanded",
       "landscape-camera-overlay-settling",

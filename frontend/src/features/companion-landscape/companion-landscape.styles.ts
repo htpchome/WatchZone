@@ -87,12 +87,18 @@ export const companionPhoneLandscapeStyles = css`
   }
 
   :host(.companion-phone-landscape.landscape-camera-overlay-active) ha-card {
-    background: var(--wzc-camera-stage);
     overflow: visible;
   }
 
-  :host(.companion-phone-landscape.landscape-camera-overlay-active) {
+  :host(.companion-phone-fullscreen-pending),
+  :host(.companion-phone-landscape.landscape-camera-overlay-covering),
+  :host(.companion-phone-fullscreen-pending) ha-card,
+  :host(.companion-phone-landscape.landscape-camera-overlay-covering) ha-card {
     background: var(--wzc-camera-stage);
+  }
+
+  :host(.companion-phone-fullscreen-pending) .stage-grid {
+    visibility: hidden;
   }
 
   :host(.companion-phone-landscape.height-mode-fit-viewport) .shell {

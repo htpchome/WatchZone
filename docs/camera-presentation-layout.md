@@ -151,15 +151,16 @@ start of the shared Motion transition; it does not abruptly discard the
 overlay before the portrait destination exists.
 The expanded target is the layout viewport itself, expressed relative to the
 Stage grid. It does not inherit the grid's safe-area inset or a transient
-pre-settlement offset reported by the card host during mobile rotation. After
-placement, WatchZone reapplies that viewport target across the next layout
-frames and on subsequent viewport resize events. It never derives a correction
-from the Camera's prior screen rectangle because mobile WebKit may still report
-portrait geometry during the orientation boundary. While the Camera overlay is
-active, the landscape card surface does not clip the overlay at its own edge;
-it paints the same semantic Camera-stage background through that edge while the
-viewport-relative target covers a small residual inset introduced when Home
-Assistant establishes the fixed card from an inset containing block.
+pre-settlement offset reported by the card host during mobile rotation.
+WatchZone covers the pending landscape frame with the semantic Camera-stage
+background, measures the committed landscape layout on the next frame, and
+then exposes the Camera at its final viewport target. It never presents an
+intermediate Camera position or derives a correction from the Camera's prior
+screen rectangle because mobile WebKit may still report portrait geometry
+during the orientation boundary. The landscape card surface does not clip the
+covering overlay at its own edge. Its semantic Camera-stage backdrop is tied to
+actual full-cover progress, so beginning a pull toward Double Column restores
+the ordinary card surface even if WebKit delays the Motion completion callback.
 
 Browser-native media fullscreen is a separate state. While it owns the live
 video, Companion rotation and Swiper geometry remain frozen. After native

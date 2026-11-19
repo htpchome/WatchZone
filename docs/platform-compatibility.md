@@ -149,6 +149,14 @@ immediately so Home Assistant's own header and flow become authoritative
 without an assumed header height while the same two surfaces settle. Browser
 phones and every tablet remain outside this controller.
 
+Fullscreen Live Video is the narrow exception to exposing the committed
+landscape Stage immediately. It paints the semantic Camera-stage backdrop
+while one animation frame measures that already committed layout, then exposes
+the retained Camera directly at its final viewport-covering bounds. This is a
+single coalesced layout measurement, not a viewport-settle timer or a second
+animation. Leaving full cover restores the ordinary card backdrop from pull
+progress instead of waiting for an animation-completion callback.
+
 Minimal Camera Stage uses its existing internal live dialog for its reduced
 Fullscreen Live Video rotate choice; it does not request browser-native
 fullscreen.

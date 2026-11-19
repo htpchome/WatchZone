@@ -8884,6 +8884,12 @@ test("applies configured Companion rotate actions to the retained Full Stage", a
 
   await card.evaluate((element) => {
     const host = element as HTMLElement & {
+      __firstFullscreenCameraBounds?: {
+        height: number;
+        left: number;
+        top: number;
+        width: number;
+      };
       __rotateClassTimes?: { fullscreen?: number; landscape?: number };
     };
     const times: { fullscreen?: number; landscape?: number } = {};
@@ -8901,6 +8907,18 @@ test("applies configured Companion rotate actions to the retained Full Stage", a
         times.fullscreen === undefined
       ) {
         times.fullscreen = now;
+        const camera = host.shadowRoot?.querySelector<HTMLElement>(
+          '.stage-placement[data-layout-node$="default-camera-module"]',
+        );
+        const rect = camera?.getBoundingClientRect();
+        if (rect) {
+          host.__firstFullscreenCameraBounds = {
+            height: rect.height,
+            left: rect.left,
+            top: rect.top,
+            width: rect.width,
+          };
+        }
         observer.disconnect();
       }
     });
@@ -8925,6 +8943,25 @@ test("applies configured Companion rotate actions to the retained Full Stage", a
     return times.fullscreen - times.landscape;
   });
   expect(fullscreenDelay).toBeLessThan(150);
+  const firstFullscreenBounds = await card.evaluate(
+    (element) =>
+      (
+        element as HTMLElement & {
+          __firstFullscreenCameraBounds?: {
+            height: number;
+            left: number;
+            top: number;
+            width: number;
+          };
+        }
+      ).__firstFullscreenCameraBounds,
+  );
+  expect(firstFullscreenBounds).toEqual({
+    height: 390,
+    left: 0,
+    top: 0,
+    width: 844,
+  });
   const automaticFullscreenBounds = await Promise.all([
     card
       .locator('.stage-placement[data-layout-node$="default-camera-module"]')
@@ -8979,6 +9016,18 @@ test("applies configured Companion rotate actions to the retained Full Stage", a
   expect(
     automaticHandleBounds.y + automaticHandleBounds.height / 2,
   ).toBeCloseTo(390 / 2, 0);
+
+  await expect(card).toHaveClass(/landscape-camera-overlay-covering/);
+  await card.locator(".companion-camera-pull-handle").press("Home");
+  await expect(card).not.toHaveClass(/landscape-camera-overlay-active/);
+  await expect(card).not.toHaveClass(/landscape-camera-overlay-covering/);
+  await expect
+    .poll(() =>
+      card.evaluate((element) => getComputedStyle(element).backgroundColor),
+    )
+    .toBe("rgba(0, 0, 0, 0)");
+  await card.locator(".companion-camera-pull-handle").press("End");
+  await expect(card).toHaveClass(/landscape-camera-overlay-covering/);
 
   await card.evaluate((element) => {
     const host = element as HTMLElement & { __portraitCameraMotion?: boolean };
