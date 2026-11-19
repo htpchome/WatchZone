@@ -23,8 +23,8 @@ export class BottomDrawerMediaResizeController implements ReactiveController {
   private _handle?: HTMLButtonElement;
   private _heightRatio = DEFAULT_HEIGHT_RATIO;
   private _listening = false;
-  private _scrollContainer?: HTMLElement;
-  private _surface?: ResizableMediaSurface;
+  private _presentationTarget?: ResizableMediaSurface;
+  private _surface?: HTMLElement;
   private _footerBoundary?: HTMLElement;
 
   public constructor(private readonly _host: ReactiveControllerHost) {
@@ -37,14 +37,15 @@ export class BottomDrawerMediaResizeController implements ReactiveController {
 
   public observe(
     surface: HTMLElement | undefined,
+    presentationTarget: HTMLElement | undefined,
     handle: HTMLButtonElement | undefined,
     footerBoundary: HTMLElement | undefined,
-    scrollContainer: HTMLElement | undefined,
   ): void {
-    this._surface = surface as ResizableMediaSurface | undefined;
+    this._surface = surface;
+    this._presentationTarget = presentationTarget as
+      ResizableMediaSurface | undefined;
     this._handle = handle;
     this._footerBoundary = footerBoundary;
-    this._scrollContainer = scrollContainer;
     this._apply();
   }
 
@@ -58,16 +59,15 @@ export class BottomDrawerMediaResizeController implements ReactiveController {
     this._finishDrag();
     this._setSurfaceRatio(DEFAULT_HEIGHT_RATIO);
     this._surface = undefined;
+    this._presentationTarget = undefined;
     this._handle = undefined;
     this._footerBoundary = undefined;
-    this._scrollContainer = undefined;
   }
 
   public readonly handlePointerDown = (event: PointerEvent): void => {
     if (event.pointerType === "mouse" && event.button !== 0) return;
     const surface = this._surface;
     const handle = event.currentTarget as HTMLButtonElement;
-    this._scrollContainer?.scrollTo({ top: 0 });
     const rect = surface?.getBoundingClientRect();
     if (!rect || rect.width <= 0) return;
     this._drag = {
@@ -143,7 +143,6 @@ export class BottomDrawerMediaResizeController implements ReactiveController {
   };
 
   private _apply(): void {
-    if (this._drag) this._scrollContainer?.scrollTo({ top: 0 });
     this._setSurfaceRatio(this._heightRatio);
     const percentage = this.heightPercentage;
     const maximumPercentage = Math.round(this._maximumHeightRatio() * 100);
@@ -232,7 +231,7 @@ export class BottomDrawerMediaResizeController implements ReactiveController {
   }
 
   private _setSurfaceRatio(heightRatio: number): void {
-    const surface = this._surface;
+    const surface = this._presentationTarget;
     if (!surface) return;
     if (typeof surface.setPresentationHeightRatio === "function") {
       surface.setPresentationHeightRatio(heightRatio);

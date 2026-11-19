@@ -42,6 +42,7 @@ interface ZoomTransform {
 
 interface MediaZoomCallbacks {
   readonly onInteraction?: () => void;
+  readonly onSurfaceResize?: (width: number, height: number) => void;
 }
 
 /** Owns media zoom, bounded pan, gestures, and lifecycle cleanup. */
@@ -159,6 +160,7 @@ export class MediaZoomController implements ReactiveController {
       this._surfaceWidth ||= rect.width;
       this._surfaceHeight ||= rect.height;
     }
+    this._callbacks.onSurfaceResize?.(this._surfaceWidth, this._surfaceHeight);
     this._renderPresentation();
     if (!surface || typeof ResizeObserver === "undefined") return;
     this._resizeObserver = new ResizeObserver(([entry]) => {
@@ -168,6 +170,10 @@ export class MediaZoomController implements ReactiveController {
         this._surfaceWidth = entry.contentRect.width;
         this._surfaceHeight = entry.contentRect.height;
       }
+      this._callbacks.onSurfaceResize?.(
+        this._surfaceWidth,
+        this._surfaceHeight,
+      );
       if (!this.stageResizeActive) this._clampPan();
       if (this._panX !== previousPanX || this._panY !== previousPanY) {
         this._renderPresentation();

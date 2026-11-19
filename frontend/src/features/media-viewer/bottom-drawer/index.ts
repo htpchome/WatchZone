@@ -126,13 +126,13 @@ export class RecordedMediaBottomDrawer extends LitElement {
 
   protected updated(changed: Map<PropertyKey, unknown>): void {
     this._mediaResize.observe(
+      this._content.mediaPresentationSurface ?? undefined,
       this._content.mediaSurface ?? undefined,
       this.renderRoot.querySelector<HTMLButtonElement>(
         ".media-resize-handle",
       ) ?? undefined,
       this.renderRoot.querySelector<HTMLElement>(".footer-actions") ??
         undefined,
-      this.renderRoot.querySelector<HTMLElement>(".body") ?? undefined,
     );
     if (changed.has("request") && this.request) this._open();
   }

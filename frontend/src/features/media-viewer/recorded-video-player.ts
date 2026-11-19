@@ -95,6 +95,11 @@ export class RecordedVideoPlayer extends LitElement {
   public localize: LocalizeFunction = englishLocalize;
   public request?: RecordedMediaRequest;
 
+  /** The sole box whose height is controlled by a presentation shell. */
+  public get presentationSurface(): HTMLElement | undefined {
+    return this._viewport();
+  }
+
   public setPresentationHeightRatio(heightRatio: number): void {
     this._presentationHeightRatio = Math.min(
       1,
@@ -104,7 +109,6 @@ export class RecordedVideoPlayer extends LitElement {
       "--wzc-recorded-media-presentation-aspect-ratio",
       String(1 / this._presentationHeightRatio),
     );
-    this._syncBasePresentationScale();
   }
 
   public readonly toggleSegmentSelection = async (): Promise<void> => {
@@ -128,6 +132,7 @@ export class RecordedVideoPlayer extends LitElement {
   private _paused = true;
   private _pictureInPictureActive = false;
   private _presentationHeightRatio = DEFAULT_PRESENTATION_HEIGHT_RATIO;
+  private _presentationViewportHeightRatio = DEFAULT_PRESENTATION_HEIGHT_RATIO;
   private _playbackRate = 1;
   private _segmentPreviewActive = false;
   private _segmentPreviewGeneration = 0;
@@ -136,7 +141,10 @@ export class RecordedVideoPlayer extends LitElement {
   private _rateAccelerationTimestamp?: number;
   private _transportHoldRelease?: () => void;
   private _volume = 1;
-  private readonly _media = new MediaPresentationController(this);
+  private readonly _media = new MediaPresentationController(this, {
+    onSurfaceResize: (width, height) =>
+      this._syncPresentationViewportRatio(width, height),
+  });
   private readonly _playback = new RecordedMediaPlaybackController(
     () => this.api,
     () => this._reportError(),
@@ -418,6 +426,26 @@ export class RecordedVideoPlayer extends LitElement {
     this._media.observe(this._viewport(), this._video());
   }
 
+  private _syncPresentationViewportRatio(width: number, height: number): void {
+    if (
+      !Number.isFinite(width) ||
+      !Number.isFinite(height) ||
+      width <= 0 ||
+      height <= 0
+    ) {
+      return;
+    }
+    const nextRatio = height / width;
+    if (
+      Math.abs(nextRatio - this._presentationViewportHeightRatio) <=
+      Number.EPSILON
+    ) {
+      return;
+    }
+    this._presentationViewportHeightRatio = nextRatio;
+    this._syncBasePresentationScale();
+  }
+
   private readonly _handleMediaDimensionsChanged = (): void => {
     this._syncMediaDimensions();
     refreshNativePictureInPictureSuppression(this._video());
@@ -446,8 +474,8 @@ export class RecordedVideoPlayer extends LitElement {
     const mediaHeightRatio = this._mediaHeightRatio;
     this._media.zoom.setBasePresentationScale(
       mediaHeightRatio !== undefined &&
-        this._presentationHeightRatio > mediaHeightRatio
-        ? this._presentationHeightRatio / mediaHeightRatio
+        this._presentationViewportHeightRatio > mediaHeightRatio
+        ? this._presentationViewportHeightRatio / mediaHeightRatio
         : 1,
     );
   }

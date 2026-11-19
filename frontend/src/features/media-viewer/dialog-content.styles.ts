@@ -96,10 +96,6 @@ export const recordedMediaDialogContentStyles = css`
     overflow-anchor: none;
   }
 
-  wzc-recorded-video-player:not([recording-timeline]) {
-    aspect-ratio: var(--wzc-recorded-media-presentation-aspect-ratio, 16 / 9);
-  }
-
   wzc-recorded-video-player {
     block-size: auto;
     inline-size: 100%;

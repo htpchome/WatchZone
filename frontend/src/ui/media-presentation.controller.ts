@@ -22,6 +22,7 @@ interface CompletedActivation {
 
 export interface MediaPresentationOptions extends MediaOverlayVisibilityOptions {
   readonly dismissOverlayOnOutsidePointer?: boolean;
+  readonly onSurfaceResize?: (width: number, height: number) => void;
 }
 
 /** Owns identical overlay and zoom interaction for every video presentation. */
@@ -44,7 +45,9 @@ export class MediaPresentationController implements ReactiveController {
   ) {
     host.addController(this);
     this.overlay = new MediaOverlayVisibilityController(host, _options);
-    this.zoom = new MediaZoomController(host);
+    this.zoom = new MediaZoomController(host, {
+      onSurfaceResize: _options.onSurfaceResize,
+    });
     this.touch = new MediaTouchGestureController(this.zoom);
   }
 

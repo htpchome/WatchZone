@@ -237,8 +237,20 @@ test("presents recorded media in the configured card-width bottom drawer", async
   );
 
   const mediaPlayer = page.locator(
+    "wzc-recorded-media-bottom-drawer wzc-recorded-video-player .viewport",
+  );
+  const mediaPlayerHost = page.locator(
     "wzc-recorded-media-bottom-drawer wzc-recorded-video-player",
   );
+  await expect(mediaPlayerHost).toHaveCSS("aspect-ratio", "auto");
+  const recordedVideo = mediaPlayerHost.locator("video");
+  await recordedVideo.evaluate((video) => {
+    Object.defineProperties(video, {
+      videoHeight: { configurable: true, value: 900 },
+      videoWidth: { configurable: true, value: 1600 },
+    });
+    video.dispatchEvent(new Event("loadedmetadata"));
+  });
   const mediaResizeHandle = page.locator(
     "wzc-recorded-media-bottom-drawer .media-resize-handle",
   );
@@ -277,6 +289,18 @@ test("presents recorded media in the configured card-width bottom drawer", async
   const videoBoundaryY = resizedHandleBox.y + resizedHandleBox.height / 2;
   const viewportBottom = (page.viewportSize()?.height ?? 720) - 2;
   const sampledVideoHeights = [resizedMediaBox?.height ?? 0];
+  const sampledVideoTransforms = [
+    await recordedVideo.evaluate((video) => {
+      const style = getComputedStyle(video);
+      const matrix = new DOMMatrixReadOnly(style.transform);
+      return {
+        scale: matrix.a,
+        transformOrigin: style.transformOrigin,
+        translateX: matrix.e,
+        translateY: matrix.f,
+      };
+    }),
+  ];
   await page.mouse.move(videoBoundaryX, videoBoundaryY);
   await page.mouse.down();
   for (let step = 1; step <= 8; step += 1) {
@@ -285,12 +309,37 @@ test("presents recorded media in the configured card-width bottom drawer", async
       Math.min(viewportBottom, videoBoundaryY + step * 80),
     );
     sampledVideoHeights.push((await mediaPlayer.boundingBox())?.height ?? 0);
+    sampledVideoTransforms.push(
+      await recordedVideo.evaluate((video) => {
+        const style = getComputedStyle(video);
+        const matrix = new DOMMatrixReadOnly(style.transform);
+        return {
+          scale: matrix.a,
+          transformOrigin: style.transformOrigin,
+          translateX: matrix.e,
+          translateY: matrix.f,
+        };
+      }),
+    );
   }
   await page.mouse.up();
   for (let index = 1; index < sampledVideoHeights.length; index += 1) {
     expect(sampledVideoHeights[index]).toBeGreaterThanOrEqual(
       (sampledVideoHeights[index - 1] ?? 0) - 1,
     );
+  }
+  for (let index = 0; index < sampledVideoTransforms.length; index += 1) {
+    const transform = sampledVideoTransforms[index];
+    const height = sampledVideoHeights[index] ?? 0;
+    const origin = transform?.transformOrigin.split(" ").map(Number.parseFloat);
+    expect(transform?.translateX).toBeCloseTo(0, 3);
+    expect(transform?.translateY).toBeCloseTo(0, 3);
+    expect(origin?.[1]).toBeCloseTo(height / 2, 0);
+    if (index > 0) {
+      expect(transform?.scale ?? 0).toBeGreaterThanOrEqual(
+        (sampledVideoTransforms[index - 1]?.scale ?? 0) - 0.001,
+      );
+    }
   }
   const maximumVideoBox = await mediaPlayer.boundingBox();
   const maximumVideoHandleBox = await mediaResizeHandle.boundingBox();

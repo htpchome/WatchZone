@@ -813,7 +813,22 @@ describe("recorded media player", () => {
     expect(observed).not.toContain(player);
   });
 
-  it("retains the last valid media fit while resized video dimensions are transiently unavailable", async () => {
+  it("derives resized media fit from the laid-out viewport instead of the requested drawer ratio", async () => {
+    const resizeCallbacks: ResizeObserverCallback[] = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        public constructor(callback: ResizeObserverCallback) {
+          resizeCallbacks.push(callback);
+        }
+
+        public disconnect(): void {}
+
+        public observe(): void {}
+
+        public unobserve(): void {}
+      },
+    );
     const player = document.createElement(
       "wzc-recorded-video-player",
     ) as RecordedVideoPlayer;
@@ -832,13 +847,34 @@ describe("recorded media player", () => {
     video.dispatchEvent(new Event("loadedmetadata"));
 
     player.setPresentationHeightRatio(0.8);
+    expect(transformScale(video.style.transform)).toBe(1);
+    for (const callback of resizeCallbacks) {
+      callback(
+        [
+          {
+            contentRect: { height: 800, width: 1000 },
+          } as ResizeObserverEntry,
+        ],
+        {} as ResizeObserver,
+      );
+    }
     expect(transformScale(video.style.transform)).toBeCloseTo(0.8 / (9 / 16));
 
     width = 0;
     height = 0;
     video.dispatchEvent(new Event("resize"));
     player.setPresentationHeightRatio(0.9);
-
+    expect(transformScale(video.style.transform)).toBeCloseTo(0.8 / (9 / 16));
+    for (const callback of resizeCallbacks) {
+      callback(
+        [
+          {
+            contentRect: { height: 900, width: 1000 },
+          } as ResizeObserverEntry,
+        ],
+        {} as ResizeObserver,
+      );
+    }
     expect(transformScale(video.style.transform)).toBeCloseTo(0.9 / (9 / 16));
   });
 

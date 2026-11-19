@@ -121,6 +121,13 @@ export class RecordedMediaDialogContent {
     return this._host.renderRoot.querySelector<HTMLElement>(".media-surface");
   }
 
+  public get mediaPresentationSurface(): HTMLElement | null {
+    const surface = this.mediaSurface;
+    return surface instanceof HTMLElement && "presentationSurface" in surface
+      ? ((surface as RecordedVideoPlayer).presentationSurface ?? surface)
+      : surface;
+  }
+
   public get information(): RecordedMediaInformation | null {
     return this._host.renderRoot.querySelector<RecordedMediaInformation>(
       RECORDED_MEDIA_INFORMATION_TAG,
