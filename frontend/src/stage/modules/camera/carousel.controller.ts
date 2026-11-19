@@ -13,12 +13,16 @@ import {
   CAMERA_CAROUSEL_NAVIGATION_HEIGHT_RATIO,
   CAMERA_CAROUSEL_NAVIGATION_MAX_SIZE_PX,
   CAMERA_CAROUSEL_NAVIGATION_MIN_SIZE_PX,
+  CAMERA_CAROUSEL_SLIDE_GAP_PX,
 } from "./constants";
 
 /** Owns the camera-local Swiper instance without owning slides or selection. */
 export class CameraCarouselController implements ReactiveController {
   private _activeIndex = 0;
   private readonly _animations = new Set<MotionAnimation>();
+  private readonly _boundaryElements = new Set<HTMLElement>();
+  private _boundaryFrame?: number;
+  private _boundaryTarget?: number;
   private _container?: HTMLElement;
   private _generation = 0;
   private _slideCount = 0;
@@ -52,10 +56,14 @@ export class CameraCarouselController implements ReactiveController {
       Math.min(normalizedCount - 1, Math.trunc(activeIndex)),
     );
     if (this._container === container && this._transition === transition) {
-      this._setSlideCount(normalizedCount);
+      if (normalizedCount !== this._slideCount) {
+        this._replaceContainer(container, normalizedCount);
+        return;
+      }
       if (
         this._swiper &&
         !this._swiper.destroyed &&
+        this._boundaryTarget !== this._activeIndex &&
         this._swiper.activeIndex !== this._activeIndex
       ) {
         this._swiper.slideTo(this._activeIndex, 0, false);
@@ -76,11 +84,13 @@ export class CameraCarouselController implements ReactiveController {
   }
 
   public next(): void {
-    this.select(Math.min(this._slideCount - 1, this._activeIndex + 1));
+    if (this._slideCount < 2) return;
+    this.select((this._activeIndex + 1) % this._slideCount);
   }
 
   public previous(): void {
-    this.select(Math.max(0, this._activeIndex - 1));
+    if (this._slideCount < 2) return;
+    this.select((this._activeIndex - 1 + this._slideCount) % this._slideCount);
   }
 
   public select(index: number): void {
@@ -89,6 +99,15 @@ export class CameraCarouselController implements ReactiveController {
       this._onSelectionChanged?.(next, true);
       return;
     }
+    if (
+      this._swiper &&
+      !this._swiper.destroyed &&
+      this._isBoundaryMove(this._activeIndex, next)
+    ) {
+      this._animateBoundarySelection(this._swiper, next);
+      return;
+    }
+    this._activeIndex = next;
     if (this._swiper && !this._swiper.destroyed) {
       if (this._swiper.activeIndex === next) {
         this._onSelectionChanged?.(next, true);
@@ -98,7 +117,13 @@ export class CameraCarouselController implements ReactiveController {
       const fromTransform = getComputedStyle(this._swiper.wrapperEl).transform;
       this._swiper.slideTo(next, 0, false);
       this._onSelectionChanged?.(next, false);
-      this._animateSelection(this._swiper, fromIndex, next, fromTransform);
+      this._animateSelection(
+        this._swiper,
+        fromIndex,
+        next,
+        next,
+        fromTransform,
+      );
       return;
     }
     this._onSelectionChanged?.(next, true);
@@ -153,10 +178,12 @@ export class CameraCarouselController implements ReactiveController {
             // slideChange is already settled and must not replace the shared
             // selection state with a transition that can never end.
             if (selectionChanged) {
+              this._activeIndex = swiper.activeIndex;
               this._onSelectionChanged?.(swiper.activeIndex, false);
               this._animateSelection(
                 swiper,
                 swiper.previousIndex,
+                swiper.activeIndex,
                 swiper.activeIndex,
                 this._touchReleaseTransform,
               );
@@ -167,9 +194,31 @@ export class CameraCarouselController implements ReactiveController {
             this._touchReleaseTransform = getComputedStyle(
               swiper.wrapperEl,
             ).transform;
+            const target =
+              Math.abs(swiper.touches.diff) >= 20 &&
+              swiper.swipeDirection === "prev" &&
+              swiper.activeIndex === 0
+                ? this._slideCount - 1
+                : Math.abs(swiper.touches.diff) >= 20 &&
+                    swiper.swipeDirection === "next" &&
+                    swiper.activeIndex === this._slideCount - 1
+                  ? 0
+                  : undefined;
+            if (target !== undefined) {
+              this._touchReleaseTransform = undefined;
+              if (this._boundaryFrame !== undefined) {
+                cancelAnimationFrame(this._boundaryFrame);
+              }
+              this._boundaryFrame = requestAnimationFrame(() => {
+                this._boundaryFrame = undefined;
+                if (swiper.destroyed || swiper !== this._swiper) return;
+                this._animateBoundarySelection(swiper, target);
+              });
+            }
           },
         },
         resizeObserver: true,
+        spaceBetween: CAMERA_CAROUSEL_SLIDE_GAP_PX,
         speed: 0,
         touchStartPreventDefault: false,
         watchOverflow: true,
@@ -177,16 +226,6 @@ export class CameraCarouselController implements ReactiveController {
     } catch {
       // The structural single-slide fallback remains fully usable without JS.
     }
-  }
-
-  private _setSlideCount(slideCount: number): void {
-    if (this._slideCount === slideCount) return;
-    this._slideCount = slideCount;
-    this._syncInteractionClass();
-    if (!this._swiper || this._swiper.destroyed) return;
-    this._swiper.allowTouchMove = this._canMove();
-    this._swiper.params.allowTouchMove = this._canMove();
-    this._swiper.update();
   }
 
   private _syncInteractionClass(): void {
@@ -207,16 +246,106 @@ export class CameraCarouselController implements ReactiveController {
     this._swiper.params.allowTouchMove = this._canMove();
   }
 
+  private _isBoundaryMove(fromIndex: number, toIndex: number): boolean {
+    return (
+      this._slideCount > 1 &&
+      ((fromIndex === 0 && toIndex === this._slideCount - 1) ||
+        (fromIndex === this._slideCount - 1 && toIndex === 0))
+    );
+  }
+
+  private _animateBoundarySelection(swiper: Swiper, targetIndex: number): void {
+    this._cancelAnimations();
+    const fromIndex = swiper.activeIndex;
+    const slides = [...swiper.slides] as HTMLElement[];
+    const outgoing = slides[fromIndex];
+    const incoming = slides[targetIndex];
+    this._activeIndex = targetIndex;
+    if (
+      !outgoing ||
+      !incoming ||
+      this._transition === "none" ||
+      reducedMotionRequested()
+    ) {
+      swiper.slideTo(targetIndex, 0, false);
+      this._onSelectionChanged?.(targetIndex, true);
+      return;
+    }
+
+    const outgoingRect = outgoing.getBoundingClientRect();
+    const incomingRect = incoming.getBoundingClientRect();
+    const travelDirection = targetIndex === 0 ? -1 : 1;
+    const distance = outgoingRect.width + CAMERA_CAROUSEL_SLIDE_GAP_PX;
+    const incomingStart =
+      outgoingRect.left - travelDirection * distance - incomingRect.left;
+    const incomingEnd = outgoingRect.left - incomingRect.left;
+    const generation = ++this._transitionGeneration;
+    const animations: MotionAnimation[] = [];
+    let remaining = 2;
+    this._boundaryTarget = targetIndex;
+    this._boundaryElements.add(outgoing);
+    this._boundaryElements.add(incoming);
+    this._onSelectionChanged?.(targetIndex, false);
+
+    const complete = () => {
+      remaining -= 1;
+      if (remaining > 0 || generation !== this._transitionGeneration) return;
+      swiper.slideTo(targetIndex, 0, false);
+      for (const animation of animations) {
+        animation.cancel();
+        this._animations.delete(animation);
+      }
+      this._clearBoundaryElementStyles();
+      this._boundaryTarget = undefined;
+      this._onSelectionChanged?.(targetIndex, true);
+    };
+    animations.push(
+      animateElement(
+        outgoing,
+        this._transition === "fade"
+          ? { opacity: [1, 0], transform: ["none", "none"] }
+          : {
+              transform: [
+                "none",
+                `translateX(${travelDirection * distance}px)`,
+              ],
+            },
+        {
+          duration: motionDurations.carousel,
+          ease: motionEasings.standard,
+          onComplete: complete,
+        },
+      ),
+      animateElement(
+        incoming,
+        {
+          opacity: this._transition === "fade" ? [0, 1] : [1, 1],
+          transform: [
+            `translateX(${incomingStart}px)`,
+            `translateX(${incomingEnd}px)`,
+          ],
+        },
+        {
+          duration: motionDurations.carousel,
+          ease: motionEasings.standard,
+          onComplete: complete,
+        },
+      ),
+    );
+    for (const animation of animations) this._animations.add(animation);
+  }
+
   private _animateSelection(
     swiper: Swiper,
     fromIndex: number,
     toIndex: number,
+    selectedIndex: number,
     fromTransform?: string,
   ): void {
     this._cancelAnimations();
     const generation = ++this._transitionGeneration;
     if (this._transition === "none" || reducedMotionRequested()) {
-      this._onSelectionChanged?.(toIndex, true);
+      this._onSelectionChanged?.(selectedIndex, true);
       return;
     }
     const animations: MotionAnimation[] = [];
@@ -228,13 +357,13 @@ export class CameraCarouselController implements ReactiveController {
         ? Number(Boolean(outgoing)) + Number(Boolean(incoming))
         : 1;
     if (remaining === 0) {
-      this._onSelectionChanged?.(toIndex, true);
+      this._onSelectionChanged?.(selectedIndex, true);
       return;
     }
     const complete = () => {
       remaining -= 1;
       if (remaining > 0 || generation !== this._transitionGeneration) return;
-      this._onSelectionChanged?.(toIndex, true);
+      this._onSelectionChanged?.(selectedIndex, true);
       for (const animation of animations) {
         animation.cancel();
         this._animations.delete(animation);
@@ -294,8 +423,29 @@ export class CameraCarouselController implements ReactiveController {
 
   private _cancelAnimations(): void {
     this._transitionGeneration += 1;
+    if (this._boundaryFrame !== undefined) {
+      cancelAnimationFrame(this._boundaryFrame);
+      this._boundaryFrame = undefined;
+    }
+    if (
+      this._boundaryTarget !== undefined &&
+      this._swiper &&
+      !this._swiper.destroyed
+    ) {
+      this._swiper.slideTo(this._boundaryTarget, 0, false);
+    }
+    this._boundaryTarget = undefined;
     for (const animation of this._animations) animation.cancel();
     this._animations.clear();
+    this._clearBoundaryElementStyles();
+  }
+
+  private _clearBoundaryElementStyles(): void {
+    for (const element of this._boundaryElements) {
+      element.style.removeProperty("opacity");
+      element.style.removeProperty("transform");
+    }
+    this._boundaryElements.clear();
   }
 
   private _observeSize(container: HTMLElement): void {

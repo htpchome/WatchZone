@@ -389,7 +389,7 @@ export class CameraModule extends LitElement {
         aria-hidden=${this._navigationVisible ? "false" : "true"}
         ?inert=${!this._navigationVisible}
         tabindex=${this._navigationVisible ? "0" : "-1"}
-        ?disabled=${this._carouselItems.length < 2 || this._activeIndex === 0}
+        ?disabled=${this._carouselItems.length < 2}
         @pointerdown=${this._stopPointerPropagation}
         @pointerup=${releaseTouchFocus}
         @click=${this._previous}
@@ -407,10 +407,7 @@ export class CameraModule extends LitElement {
         aria-hidden=${this._navigationVisible ? "false" : "true"}
         ?inert=${!this._navigationVisible}
         tabindex=${this._navigationVisible ? "0" : "-1"}
-        ?disabled=${
-          this._carouselItems.length < 2 ||
-          this._activeIndex === this._carouselItems.length - 1
-        }
+        ?disabled=${this._carouselItems.length < 2}
         @pointerdown=${this._stopPointerPropagation}
         @pointerup=${releaseTouchFocus}
         @click=${this._next}

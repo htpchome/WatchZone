@@ -750,6 +750,32 @@ test("keeps camera navigation module and carousel selection bidirectional", asyn
     "border-radius",
     "19px",
   );
+  const carouselGap = await page
+    .locator("wzc-camera .camera-carousel")
+    .evaluate((element) => {
+      const slides = element.querySelectorAll<HTMLElement>(".swiper-slide");
+      const first = slides[0]?.getBoundingClientRect();
+      const second = slides[1]?.getBoundingClientRect();
+      const swiper = (
+        element as HTMLElement & {
+          swiper?: { params: { spaceBetween?: number | string } };
+        }
+      ).swiper;
+      return {
+        background: getComputedStyle(element).backgroundColor,
+        gap: first && second ? second.left - first.right : 0,
+        slideBackground: slides[0]
+          ? getComputedStyle(slides[0]).backgroundColor
+          : "",
+        spaceBetween: swiper?.params.spaceBetween,
+      };
+    });
+  expect(carouselGap).toMatchObject({
+    gap: 40,
+    slideBackground: "rgba(0, 0, 0, 0)",
+    spaceBetween: 40,
+  });
+  expect(carouselGap.background).not.toBe("rgba(0, 0, 0, 0)");
 
   await buttons.nth(1).click();
   await expect(buttons.nth(1)).toHaveAttribute("aria-selected", "true");
@@ -1554,6 +1580,15 @@ test("keeps grouped interaction alive across slide alert takeover", async ({
   await expect(groupButton.locator(".option-indicator")).toHaveCount(0);
   await expect(takeoverSlides.nth(0)).toHaveAttribute("inert", "");
   await expect(takeoverSlides.nth(1)).not.toHaveAttribute("inert");
+  await expect
+    .poll(() =>
+      card.locator("wzc-camera .camera-carousel").evaluate(
+        (element) =>
+          (element as HTMLElement & { swiper?: { activeIndex: number } })
+            .swiper?.activeIndex,
+      ),
+    )
+    .toBe(1);
   const hallViewport = card
     .locator("wzc-camera .swiper-slide")
     .nth(1)
@@ -1702,13 +1737,34 @@ test("applies configured camera carousel transitions to swipe and arrow navigati
       carousel.evaluate((element) => {
         const swiper = (
           element as HTMLElement & {
-            swiper?: { params: { effect?: string; speed?: number } };
+            swiper?: {
+              params: {
+                effect?: string;
+                loop?: boolean;
+                rewind?: boolean;
+                spaceBetween?: number | string;
+                speed?: number;
+              };
+            };
           }
         ).swiper;
-        return { effect: swiper?.params.effect, speed: swiper?.params.speed };
+        return {
+          effect: swiper?.params.effect,
+          loop: swiper?.params.loop,
+          rewind: swiper?.params.rewind,
+          spaceBetween: swiper?.params.spaceBetween,
+          speed: swiper?.params.speed,
+        };
       }),
     )
-    .toEqual({ effect: "fade", speed: 0 });
+    .toEqual({
+      effect: "fade",
+      loop: false,
+      rewind: false,
+      // Swiper's fade effect overlays slides and normalizes its inactive gap.
+      spaceBetween: 0,
+      speed: 0,
+    });
 
   await page
     .locator('wzc-camera-navigation button[data-value="camera.back"]')
@@ -1724,8 +1780,8 @@ test("applies configured camera carousel transitions to swipe and arrow navigati
     .poll(() =>
       carousel.evaluate(
         (element) =>
-          (element as HTMLElement & { swiper?: { activeIndex: number } }).swiper
-            ?.activeIndex,
+          (element as HTMLElement & { swiper?: { realIndex: number } }).swiper
+            ?.realIndex,
       ),
     )
     .toBe(0);
@@ -1737,13 +1793,47 @@ test("applies configured camera carousel transitions to swipe and arrow navigati
       carousel.evaluate((element) => {
         const swiper = (
           element as HTMLElement & {
-            swiper?: { params: { effect?: string; speed?: number } };
+            swiper?: {
+              params: {
+                effect?: string;
+                loop?: boolean;
+                rewind?: boolean;
+                spaceBetween?: number | string;
+                speed?: number;
+              };
+            };
           }
         ).swiper;
-        return { effect: swiper?.params.effect, speed: swiper?.params.speed };
+        return {
+          effect: swiper?.params.effect,
+          loop: swiper?.params.loop,
+          rewind: swiper?.params.rewind,
+          spaceBetween: swiper?.params.spaceBetween,
+          speed: swiper?.params.speed,
+        };
       }),
     )
-    .toEqual({ effect: "slide", speed: 0 });
+    .toEqual({
+      effect: "slide",
+      loop: false,
+      rewind: false,
+      spaceBetween: 40,
+      speed: 0,
+    });
+
+  const front = page.locator(
+    'wzc-camera-navigation button[data-value="camera.front"]',
+  );
+  const back = page.locator(
+    'wzc-camera-navigation button[data-value="camera.back"]',
+  );
+  await expect(front).toHaveAttribute("aria-selected", "true");
+  await carousel
+    .locator(".carousel-navigation.previous")
+    .click({ force: true });
+  await expect(back).toHaveAttribute("aria-selected", "true");
+  await carousel.locator(".carousel-navigation.next").click({ force: true });
+  await expect(front).toHaveAttribute("aria-selected", "true");
 });
 
 test("uses readable camera navigation labels before HA state is available", async ({
@@ -9194,6 +9284,7 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
       "--wzc-color-text-reversed",
       "--wzc-color-error",
       "--wzc-color-warning",
+      "--wzc-color-info",
       "--wzc-color-success",
       "--wzc-dialog-background",
       "--wzc-dialog-backdrop-filter",
@@ -9240,6 +9331,12 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
     ];
     const host = element as HTMLElement;
     host.style.setProperty("--wzc-color-text-1", "rgb(10, 20, 30)");
+    host.style.setProperty("--secondary-text-color", "rgb(70, 80, 90)");
+    host.style.setProperty("--ha-color-text-secondary", "rgb(170, 180, 190)");
+    host.style.setProperty("--error-color", "initial");
+    host.style.setProperty("--warning-color", "initial");
+    host.style.setProperty("--info-color", "initial");
+    host.style.setProperty("--success-color", "initial");
     host.style.setProperty("--text-primary-color", "rgba(0, 0, 0, 0.95)");
     host.style.setProperty("--ha-color-on-primary-loud", "rgb(245, 246, 247)");
     host.style.setProperty(
@@ -9271,6 +9368,14 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
     host.shadowRoot?.append(onPrimaryProbe);
     const onPrimaryColor = getComputedStyle(onPrimaryProbe).color;
     onPrimaryProbe.remove();
+    const resolveColor = (token: string) => {
+      const probe = document.createElement("span");
+      probe.style.color = `var(${token})`;
+      host.shadowRoot?.append(probe);
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
+    };
     host.style.setProperty("--wzc-stage-module-gap", "7px");
     const placementRects = Array.from(stageGrid?.children ?? []).map((child) =>
       child.getBoundingClientRect(),
@@ -9300,6 +9405,11 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
         .getPropertyValue("--wzc-media-overlay-dimmed-opacity")
         .trim(),
       onPrimaryColor,
+      secondaryTextColor: resolveColor("--wzc-color-text-2"),
+      errorColor: resolveColor("--wzc-color-error"),
+      warningColor: resolveColor("--wzc-color-warning"),
+      infoColor: resolveColor("--wzc-color-info"),
+      successColor: resolveColor("--wzc-color-success"),
       popoverBackground: hostStyle
         .getPropertyValue("--wzc-popover-background")
         .trim(),
@@ -9329,6 +9439,11 @@ test("exposes and honors the WatchZone semantic theme-token contract", async ({
     overlayDimmedOpacity: "52%",
     overlayOpacity: "72%",
     onPrimaryColor: "rgb(235, 236, 237)",
+    secondaryTextColor: "rgb(70, 80, 90)",
+    errorColor: "rgb(219, 68, 55)",
+    warningColor: "rgb(255, 166, 0)",
+    infoColor: "rgb(3, 155, 229)",
+    successColor: "rgb(67, 160, 71)",
     overriddenPlacementGaps: [7, 7, 0],
     reversedTextColor: "rgb(245, 246, 247)",
     textColor: "rgb(10, 20, 30)",

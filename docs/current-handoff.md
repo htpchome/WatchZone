@@ -16,14 +16,14 @@ precedence.
 ## Repository state
 
 - Branch: `main`.
-- Current HEAD: `73d054b` —
-  `v0.0.4-dev.442 - revert(frontend): restore dev.430 implementation`.
-- Pending version: `0.0.4-dev.444`.
-- Worktree: the application-wide Motion migration described below is
-  intentionally uncommitted. There were no unrelated local changes when it
-  began.
-- Proposed commit subject:
+- Current HEAD: `e808222` —
   `v0.0.4-dev.444 - fix(frontend): stabilize Motion and release budgets`.
+- Pending version: `0.0.4-dev.445`.
+- Worktree: the carousel-spacing and semantic-theme corrections described
+  below are intentionally uncommitted. There were no unrelated local changes
+  when they began.
+- Proposed commit subject:
+  `v0.0.4-dev.445 - fix(frontend): restore carousel and status semantics`.
 
 Always recheck `git status`, `git log -1`, and
 `custom_components/watchzone/const.py` before starting work.
@@ -148,7 +148,7 @@ patchwork. The pending work implements that decision across the existing UI.
   Alert/detection and review-state semantics must not be coupled to unrelated
   text or action colors.
 
-## Validation of the pending `dev.444` Motion migration
+## Validation baseline from committed `dev.444`
 
 The pending migration passed:
 

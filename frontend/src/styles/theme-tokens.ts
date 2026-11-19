@@ -79,8 +79,8 @@ export const themeTokens = css`
       var(--primary-text-color, CanvasText)
     );
     --wzc-color-text-2: var(
-      --ha-color-text-secondary,
-      var(--secondary-text-color, var(--wzc-color-text-1))
+      --secondary-text-color,
+      var(--ha-color-text-secondary, var(--wzc-color-text-1))
     );
     --wzc-color-text-3: var(
       --disabled-text-color,
@@ -95,12 +95,10 @@ export const themeTokens = css`
       var(--wzc-color-text-reversed)
     );
 
-    --wzc-color-error: var(
-      --ha-color-text-error,
-      var(--error-color, var(--wzc-color-text-1))
-    );
-    --wzc-color-warning: var(--warning-color, var(--wzc-color-accent));
-    --wzc-color-success: var(--success-color, var(--wzc-color-primary));
+    --wzc-color-error: var(--error-color, #db4437);
+    --wzc-color-warning: var(--warning-color, #ffa600);
+    --wzc-color-info: var(--info-color, #039be5);
+    --wzc-color-success: var(--success-color, #43a047);
     --wzc-color-on-error: var(
       --ha-color-on-danger-loud,
       var(--wzc-color-text-reversed)
@@ -509,8 +507,8 @@ export const themeTokens = css`
     --wzc-recording-scrubber-track: #b9efbd;
     --wzc-recording-scrubber-gap: #dddddd;
     --wzc-recording-scrubber-gap-stripe: #b93745;
-    --wzc-recording-scrubber-alert: #ff9500;
-    --wzc-recording-scrubber-detection: #ffb000;
+    --wzc-recording-scrubber-alert: var(--wzc-color-error);
+    --wzc-recording-scrubber-detection: var(--wzc-color-warning);
     --wzc-recording-scrubber-pointer: #ffffff;
     --wzc-recording-scrubber-pointer-outline: #6b6b6b;
     --wzc-recording-scrubber-pointer-text: #252525;
@@ -641,6 +639,10 @@ export const themeTokens = css`
     --wzc-badge-amber-color: var(--ha-color-neutral-05, #111111);
     --wzc-badge-warning-background: var(--wzc-color-warning);
     --wzc-badge-warning-color: var(--wzc-color-on-warning);
+    --wzc-badge-danger-background: var(--wzc-color-error);
+    --wzc-badge-danger-color: var(--wzc-color-on-error);
+    --wzc-badge-success-background: var(--wzc-color-success);
+    --wzc-badge-success-color: var(--wzc-color-on-success);
     --wzc-badge-red-background: var(--ha-color-red-60, #ef4444);
     --wzc-badge-red-color: var(--ha-color-neutral-100, #ffffff);
     --wzc-badge-cyan-background: var(--ha-color-cyan-60, #22d3ee);

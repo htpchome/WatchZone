@@ -67,6 +67,12 @@ slide disables movement; multiple slides enable swipe and the
 camera-local previous/next chevrons. Those chevrons consume the selected live
 presentation's typed overlay-visibility signal, so controls, source badge, and
 navigation share one timer rather than maintaining parallel hide timers.
+Multiple slides navigate as a circular sequence: swiping or navigating backward
+from the first slide reaches the last, and moving forward from the last reaches
+the first. Motion owns those boundary transitions while Swiper retains stable
+slide geometry. Swiper loop and rewind modes are not used because they reorder
+or jump Lit-owned slide elements and can detach camera identity from activity
+and lease ownership.
 
 ## Loading and lifecycle
 
@@ -132,6 +138,10 @@ cannot complete.
 ## Sizing and stability
 
 - The carousel and every slide fill the camera-owned stage.
+- Adjacent slides retain a 40-pixel Swiper-owned gutter. Slides do not paint a
+  separate gutter color; the gap exposes the camera stage's semantic media
+  background so it remains theme-compatible and prevents neighboring media
+  pixels from touching during navigation.
 - Runtime stage height is one camera-module value shared by every slide.
   Selection never changes stage geometry; each slide independently derives its
   media crop scale from that shared height and its own intrinsic dimensions.
