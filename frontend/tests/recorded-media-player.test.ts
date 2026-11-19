@@ -813,6 +813,35 @@ describe("recorded media player", () => {
     expect(observed).not.toContain(player);
   });
 
+  it("retains the last valid media fit while resized video dimensions are transiently unavailable", async () => {
+    const player = document.createElement(
+      "wzc-recorded-video-player",
+    ) as RecordedVideoPlayer;
+    player.request = request;
+    document.body.append(player);
+    await player.updateComplete;
+    const video = player.shadowRoot?.querySelector("video");
+    expect(video).not.toBeNull();
+    if (!video) return;
+    let width = 1600;
+    let height = 900;
+    Object.defineProperties(video, {
+      videoHeight: { configurable: true, get: () => height },
+      videoWidth: { configurable: true, get: () => width },
+    });
+    video.dispatchEvent(new Event("loadedmetadata"));
+
+    player.setPresentationHeightRatio(0.8);
+    expect(transformScale(video.style.transform)).toBeCloseTo(0.8 / (9 / 16));
+
+    width = 0;
+    height = 0;
+    video.dispatchEvent(new Event("resize"));
+    player.setPresentationHeightRatio(0.9);
+
+    expect(transformScale(video.style.transform)).toBeCloseTo(0.9 / (9 / 16));
+  });
+
   it("presents review details and switches media variants in place", async () => {
     Object.defineProperty(HTMLDialogElement.prototype, "show", {
       configurable: true,
@@ -1017,3 +1046,7 @@ describe("recorded media player", () => {
     expect(states).toEqual([false]);
   });
 });
+
+function transformScale(transform: string): number {
+  return Number(/scale\(([^)]+)\)/.exec(transform)?.[1] ?? Number.NaN);
+}

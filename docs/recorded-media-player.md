@@ -232,8 +232,13 @@ viewing. Recording discovery and grouping are governed by
   viewport permits it. The viewport clamp remains authoritative on smaller
   screens.
 - The rendered footer boundary defines each media-resize gesture's maximum.
-  Video and snapshot growth stops when the handle reaches the footer action
-  area; further pointer travel cannot scroll the body or change presentation.
+  The footer action row remains pinned to the drawer's bottom edge while media
+  and information stay top-aligned. Video and snapshot growth stops when the
+  handle reaches that action area; further pointer travel cannot scroll the
+  body or change presentation.
+- Recorded video retains the last valid intrinsic media ratio through
+  transient zero-dimension reports while its viewport is resizing. Those
+  reports must not reset the base crop scale or expose an unzoomed frame.
 - The localized top-left close control and a downward drag beginning on the
   pull handle are the only dismissal paths. Releasing before the bounded close
   threshold settles the drawer back open; crossing it animates the drawer out

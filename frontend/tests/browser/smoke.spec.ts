@@ -205,6 +205,12 @@ test("presents recorded media in the configured card-width bottom drawer", async
   expect(drawerBox?.height ?? 0).toBeGreaterThan(
     (page.viewportSize()?.height ?? 0) * 0.78,
   );
+  const initialFooterBox = await page
+    .locator("wzc-recorded-media-bottom-drawer .footer-actions")
+    .boundingBox();
+  expect(
+    (initialFooterBox?.y ?? 0) + (initialFooterBox?.height ?? 0),
+  ).toBeCloseTo((drawerBox?.y ?? 0) + (drawerBox?.height ?? 0), 0);
   await expect(
     page.locator("wzc-recorded-media-bottom-drawer .resize-handle"),
   ).toHaveCount(0);
@@ -503,6 +509,44 @@ test("presents recorded media in the configured card-width bottom drawer", async
   expect(recordingScrubberBox.y).toBeGreaterThanOrEqual(
     recordingHandleBox.y + recordingHandleBox.height - 1,
   );
+  await page.locator("wzc-recorded-media-bottom-drawer .close").click();
+  await expect(drawer).toHaveCount(0);
+
+  await page.setViewportSize({ height: 844, width: 390 });
+  await openDrawer();
+  const phoneDrawerBox = await drawer.boundingBox();
+  const phoneMediaBox = await mediaPlayer.boundingBox();
+  const phoneHandleBox = await mediaResizeHandle.boundingBox();
+  const phoneFooterBox = await videoFooterActions.boundingBox();
+  if (!phoneDrawerBox || !phoneMediaBox || !phoneHandleBox || !phoneFooterBox) {
+    throw new Error("Phone drawer resize geometry was not rendered");
+  }
+  expect(phoneFooterBox.y + phoneFooterBox.height).toBeCloseTo(
+    phoneDrawerBox.y + phoneDrawerBox.height,
+    0,
+  );
+  const phoneHandleX = phoneHandleBox.x + phoneHandleBox.width / 2;
+  const phoneHandleY = phoneHandleBox.y + phoneHandleBox.height / 2;
+  await page.mouse.move(phoneHandleX, phoneHandleY);
+  await page.mouse.down();
+  await page.mouse.move(phoneHandleX, 842, { steps: 12 });
+  await page.mouse.up();
+  const expandedPhoneMediaBox = await mediaPlayer.boundingBox();
+  const stoppedPhoneHandleBox = await mediaResizeHandle.boundingBox();
+  const stoppedPhoneFooterBox = await videoFooterActions.boundingBox();
+  if (
+    !expandedPhoneMediaBox ||
+    !stoppedPhoneHandleBox ||
+    !stoppedPhoneFooterBox
+  ) {
+    throw new Error("Expanded phone drawer geometry was not rendered");
+  }
+  expect(expandedPhoneMediaBox.height).toBeGreaterThan(
+    phoneMediaBox.height + 80,
+  );
+  expect(
+    stoppedPhoneHandleBox.y + stoppedPhoneHandleBox.height,
+  ).toBeLessThanOrEqual(stoppedPhoneFooterBox.y + 1);
   await page.locator("wzc-recorded-media-bottom-drawer .close").click();
   await expect(drawer).toHaveCount(0);
 });

@@ -122,6 +122,7 @@ export class RecordedVideoPlayer extends LitElement {
   private _fullscreenActive = false;
   private _currentTime = 0;
   private _duration = 0;
+  private _mediaHeightRatio?: number;
   private _muted = true;
   private _nativePlaybackRate = 1;
   private _paused = true;
@@ -371,6 +372,7 @@ export class RecordedVideoPlayer extends LitElement {
 
   protected willUpdate(changed: Map<PropertyKey, unknown>): void {
     if (changed.has("request")) {
+      this._mediaHeightRatio = undefined;
       this._playbackRate = 1;
       this._segmentPreviewActive = false;
       this._segmentPreviewTimeline = undefined;
@@ -429,19 +431,19 @@ export class RecordedVideoPlayer extends LitElement {
 
   private _syncMediaDimensions(): void {
     const video = this._video();
-    this._media.zoom.setMediaDimensions(
-      video?.videoWidth ?? 0,
-      video?.videoHeight ?? 0,
-    );
+    const width = video?.videoWidth ?? 0;
+    const height = video?.videoHeight ?? 0;
+    if (width > 0 && height > 0) {
+      this._mediaHeightRatio = height / width;
+      this._media.zoom.setMediaDimensions(width, height);
+    } else if (this._mediaHeightRatio === undefined) {
+      this._media.zoom.setMediaDimensions(0, 0);
+    }
     this._syncBasePresentationScale();
   }
 
   private _syncBasePresentationScale(): void {
-    const video = this._video();
-    const mediaHeightRatio =
-      video && video.videoWidth > 0 && video.videoHeight > 0
-        ? video.videoHeight / video.videoWidth
-        : undefined;
+    const mediaHeightRatio = this._mediaHeightRatio;
     this._media.zoom.setBasePresentationScale(
       mediaHeightRatio !== undefined &&
         this._presentationHeightRatio > mediaHeightRatio

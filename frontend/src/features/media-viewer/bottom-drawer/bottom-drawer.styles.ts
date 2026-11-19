@@ -92,6 +92,10 @@ export const bottomDrawerStyles = css`
     flex: none;
   }
 
+  .body {
+    flex: 1 1 auto;
+  }
+
   .footer-actions {
     padding-block-end: 0.25rem;
   }
