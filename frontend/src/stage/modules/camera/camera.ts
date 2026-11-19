@@ -6,6 +6,7 @@ import {
   CAMERA_GESTURE_LOCK_EVENT,
   CAMERA_GROUP_VIEW_TAG,
   CAMERA_OVERLAY_VISIBILITY_EVENT,
+  CAMERA_NATIVE_FULLSCREEN_CHANGE_EVENT,
   CAMERA_STAGE_SIZE_CHANGE_EVENT,
   CAMERA_TAG,
   CAMERA_VIEW_TAG,
@@ -30,6 +31,7 @@ import type { MediaRetentionPreference } from "../../../core/media-retention-pol
 import { renderIcon } from "../../../ui/icons";
 import { releaseTouchFocus } from "../../../ui/control-interaction";
 import type { CameraGestureLockDetail } from "../../camera-presentation/live/presentation";
+import type { CameraNativeFullscreenChangeDetail } from "../../../core/fullscreen";
 import type { CameraOverlayVisibilityDetail } from "../../camera-presentation/live/presentation";
 import "../../camera-presentation/camera-view";
 import "./camera-group-view";
@@ -195,6 +197,10 @@ export class CameraModule extends LitElement {
       CAMERA_OVERLAY_VISIBILITY_EVENT,
       this._handleOverlayVisibility as EventListener,
     );
+    this.addEventListener(
+      CAMERA_NATIVE_FULLSCREEN_CHANGE_EVENT,
+      this._handleNativeFullscreenChange as EventListener,
+    );
     this._publishSelection();
     this.requestUpdate();
   }
@@ -268,6 +274,10 @@ export class CameraModule extends LitElement {
     this.removeEventListener(
       CAMERA_OVERLAY_VISIBILITY_EVENT,
       this._handleOverlayVisibility as EventListener,
+    );
+    this.removeEventListener(
+      CAMERA_NATIVE_FULLSCREEN_CHANGE_EVENT,
+      this._handleNativeFullscreenChange as EventListener,
     );
     getMediaSessionManager().clearCameraActivity(this);
     if (this.selectionId) this.cameraSelection?.clear(this.selectionId, this);
@@ -736,6 +746,12 @@ export class CameraModule extends LitElement {
   ): void => {
     if (!this._activeScopeEntityIds.includes(event.detail.key ?? "")) return;
     this._carousel.setInteractionLocked(event.detail.locked);
+  };
+
+  private readonly _handleNativeFullscreenChange = (
+    event: CustomEvent<CameraNativeFullscreenChangeDetail>,
+  ): void => {
+    this._carousel.setNativeFullscreenActive(event.detail.active);
   };
 
   private readonly _handleStageSizeChange = (

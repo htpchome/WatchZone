@@ -138,6 +138,19 @@ Minimal Camera Stage omits Double Column; Fullscreen Live Video opens its
 existing internal live dialog as a viewport-covering presentation and closes
 that automatically opened presentation when the phone returns to portrait.
 
+Configured Fullscreen Live Video does not wait behind the 60/40 orientation
+animation. WatchZone commits that layout underneath, immediately places the
+retained Camera overlay over it, and leaves the pull handle able to reveal the
+settled columns while the phone remains rotated. Returning to portrait from an
+expanded overlay uses the Camera module's measured fullscreen bounds as the
+start of the shared Motion transition; it does not abruptly discard the
+overlay before the portrait destination exists.
+
+Browser-native media fullscreen is a separate state. While it owns the live
+video, Companion rotation and Swiper geometry remain frozen. After native
+fullscreen exits, the same active video is rebound and resumed before the
+current orientation preference is applied.
+
 Orientation retains the same Stage nodes and live sessions. The Stage owns two
 real nested containers: Camera plus camera navigation, and activity navigation
 plus the active Activity stack. Companion rotates the complete WebView. On the

@@ -1,6 +1,7 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
 import {
+  dispatchCameraNativeFullscreenChange,
   isMediaFullscreenActive,
   mediaFullscreenSupported,
   toggleMediaFullscreen,
@@ -22,6 +23,7 @@ interface CameraLiveControlOptions {
   readonly getLocalize: () => LocalizeFunction;
   readonly getSnapshotKey: () => string | undefined;
   readonly onMuteToggle: () => void;
+  readonly onFullscreenExit?: () => void;
   readonly onSuspendToggle: () => void;
   readonly requestToast: (
     severity: ToastSeverity,
@@ -47,22 +49,31 @@ export class CameraLiveControlController implements ReactiveController {
   private _activeVideo?: HTMLVideoElement;
 
   public constructor(
-    private readonly _host: ReactiveControllerHost,
+    private readonly _host: ReactiveControllerHost & EventTarget,
     private readonly _options: CameraLiveControlOptions,
   ) {
     _host.addController(this);
   }
 
   public hostConnected(): void {
-    document.addEventListener("fullscreenchange", this._syncControlState);
-    document.addEventListener("webkitfullscreenchange", this._syncControlState);
+    document.addEventListener(
+      "fullscreenchange",
+      this._handleDocumentFullscreenChange,
+    );
+    document.addEventListener(
+      "webkitfullscreenchange",
+      this._handleDocumentFullscreenChange,
+    );
   }
 
   public hostDisconnected(): void {
-    document.removeEventListener("fullscreenchange", this._syncControlState);
+    document.removeEventListener(
+      "fullscreenchange",
+      this._handleDocumentFullscreenChange,
+    );
     document.removeEventListener(
       "webkitfullscreenchange",
-      this._syncControlState,
+      this._handleDocumentFullscreenChange,
     );
     this.setActiveVideo(undefined);
   }
@@ -70,8 +81,11 @@ export class CameraLiveControlController implements ReactiveController {
   public setActiveVideo(video: HTMLVideoElement | undefined): void {
     if (this._activeVideo === video) return;
     for (const eventName of VIDEO_CONTROL_STATE_EVENTS) {
-      this._activeVideo?.removeEventListener(eventName, this._syncControlState);
-      video?.addEventListener(eventName, this._syncControlState);
+      this._activeVideo?.removeEventListener(
+        eventName,
+        this._handleVideoControlState,
+      );
+      video?.addEventListener(eventName, this._handleVideoControlState);
     }
     this._activeVideo = video;
     suppressNativePictureInPicture(video);
@@ -131,9 +145,27 @@ export class CameraLiveControlController implements ReactiveController {
     }
   }
 
-  private readonly _syncControlState = (): void => {
+  private readonly _handleVideoControlState = (event: Event): void => {
+    if (event.type === "webkitbeginfullscreen") {
+      this._syncControlState(true);
+      return;
+    }
+    if (event.type === "webkitendfullscreen") {
+      this._syncControlState(false);
+      return;
+    }
+    this._syncControlState();
+  };
+
+  private readonly _handleDocumentFullscreenChange = (): void => {
+    this._syncControlState();
+  };
+
+  private readonly _syncControlState = (forcedFullscreen?: boolean): void => {
     const pictureInPictureActive = isPictureInPictureActive(this._activeVideo);
-    const fullscreenActive = isMediaFullscreenActive(this._activeVideo);
+    const fullscreenActive =
+      forcedFullscreen ?? isMediaFullscreenActive(this._activeVideo);
+    const fullscreenChanged = this.fullscreenActive !== fullscreenActive;
     if (
       this.pictureInPictureActive === pictureInPictureActive &&
       this.fullscreenActive === fullscreenActive
@@ -142,6 +174,10 @@ export class CameraLiveControlController implements ReactiveController {
     }
     this.pictureInPictureActive = pictureInPictureActive;
     this.fullscreenActive = fullscreenActive;
+    if (fullscreenChanged) {
+      if (!fullscreenActive) this._options.onFullscreenExit?.();
+      dispatchCameraNativeFullscreenChange(this._host, fullscreenActive);
+    }
     this._host.requestUpdate();
   };
 

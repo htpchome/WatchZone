@@ -1,3 +1,5 @@
+import { CAMERA_NATIVE_FULLSCREEN_CHANGE_EVENT } from "./constants";
+
 interface FullscreenDocument extends Document {
   webkitExitFullscreen?(): Promise<void> | void;
   webkitFullscreenElement?: Element | null;
@@ -11,6 +13,22 @@ interface FullscreenVideo extends HTMLVideoElement {
   readonly webkitDisplayingFullscreen?: boolean;
   webkitEnterFullScreen?(): void;
   webkitEnterFullscreen?(): void;
+}
+
+export interface CameraNativeFullscreenChangeDetail {
+  readonly active: boolean;
+}
+
+export function dispatchCameraNativeFullscreenChange(
+  target: EventTarget,
+  active: boolean,
+): void {
+  target.dispatchEvent(
+    new CustomEvent<CameraNativeFullscreenChangeDetail>(
+      CAMERA_NATIVE_FULLSCREEN_CHANGE_EVENT,
+      { bubbles: true, composed: true, detail: { active } },
+    ),
+  );
 }
 
 /** Shared browser fullscreen capability boundary for live and recorded media. */

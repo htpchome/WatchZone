@@ -2,9 +2,11 @@ import type { ReactiveController, ReactiveControllerHost } from "lit";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { englishLocalize } from "../src/core/localization";
+import { CAMERA_NATIVE_FULLSCREEN_CHANGE_EVENT } from "../src/core/constants";
+import type { CameraNativeFullscreenChangeDetail } from "../src/core/fullscreen";
 import { CameraLiveControlController } from "../src/stage/camera-presentation/live/control.controller";
 
-class TestHost implements ReactiveControllerHost {
+class TestHost extends EventTarget implements ReactiveControllerHost {
   public readonly requestUpdate = vi.fn<() => void>();
   public readonly updateComplete = Promise.resolve(true);
 
@@ -22,6 +24,7 @@ function createController(
 ) {
   const host = new TestHost();
   const onMuteToggle = vi.fn();
+  const onFullscreenExit = vi.fn();
   const onSuspendToggle = vi.fn();
   const requestToast = vi.fn();
   const controller = new CameraLiveControlController(host, {
@@ -29,6 +32,7 @@ function createController(
     getFullscreenTarget: () => undefined,
     getLocalize: () => englishLocalize,
     getSnapshotKey: () => "camera.front",
+    onFullscreenExit,
     onMuteToggle,
     onSuspendToggle,
     requestToast,
@@ -37,6 +41,7 @@ function createController(
     controller,
     host,
     onMuteToggle,
+    onFullscreenExit,
     onSuspendToggle,
     requestToast,
   };
@@ -86,6 +91,27 @@ describe("camera live control controller", () => {
       "fullscreenchange",
       expect.any(Function),
     );
+  });
+
+  it("treats WebKit video fullscreen events as authoritative and restores on exit", () => {
+    const { controller, host, onFullscreenExit } = createController();
+    const states: boolean[] = [];
+    host.addEventListener(CAMERA_NATIVE_FULLSCREEN_CHANGE_EVENT, (event) => {
+      states.push(
+        (event as CustomEvent<CameraNativeFullscreenChangeDetail>).detail
+          .active,
+      );
+    });
+    const video = document.createElement("video");
+    controller.setActiveVideo(video);
+
+    video.dispatchEvent(new Event("webkitbeginfullscreen"));
+    expect(controller.fullscreenActive).toBe(true);
+    video.dispatchEvent(new Event("webkitendfullscreen"));
+
+    expect(controller.fullscreenActive).toBe(false);
+    expect(onFullscreenExit).toHaveBeenCalledOnce();
+    expect(states).toEqual([true, false]);
   });
 
   it("routes parent-owned mute and suspension intents without duplicating policy", () => {

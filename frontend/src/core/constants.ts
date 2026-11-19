@@ -130,6 +130,7 @@ export const MINIMAL_CAMERA_TAG = `${APP_ID}-minimal-camera`;
 export const CAMERA_VIEW_TAG = `${CAMERA_TAG}-view`;
 export const CAMERA_GROUP_VIEW_TAG = `${CAMERA_TAG}-group-view`;
 export const CAMERA_GESTURE_LOCK_EVENT = `${CAMERA_TAG}-gesture-lock`;
+export const CAMERA_NATIVE_FULLSCREEN_CHANGE_EVENT = `${CAMERA_TAG}-native-fullscreen-change`;
 export const CAMERA_OVERLAY_VISIBILITY_EVENT = `${CAMERA_TAG}-overlay-visibility`;
 export const CAMERA_STAGE_SIZE_CHANGE_EVENT = `${CAMERA_TAG}-stage-size-change`;
 export const CAMERA_LIVE_PRESENTATION_TAG = `${CAMERA_TAG}-live`;

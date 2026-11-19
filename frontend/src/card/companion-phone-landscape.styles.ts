@@ -12,6 +12,11 @@ export const companionPhoneLandscapeStyles = css`
     will-change: transform;
   }
 
+  :host(.companion-phone-orientation-transitioning)
+    .stage-placement[data-layout-node$="default-camera-module"] {
+    will-change: transform;
+  }
+
   :host(.companion-phone-landscape) {
     position: fixed !important;
     z-index: 1000;

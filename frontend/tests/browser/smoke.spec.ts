@@ -8805,6 +8805,30 @@ test("applies configured Companion rotate actions to the retained Full Stage", a
   await page.setViewportSize({ width: 844, height: 390 });
   await expect(card).not.toHaveClass(/companion-phone-landscape/);
 
+  await card.evaluate((element) => {
+    const host = element as HTMLElement & {
+      __rotateClassTimes?: { fullscreen?: number; landscape?: number };
+    };
+    const times: { fullscreen?: number; landscape?: number } = {};
+    host.__rotateClassTimes = times;
+    const observer = new MutationObserver(() => {
+      const now = performance.now();
+      if (
+        host.classList.contains("companion-phone-landscape") &&
+        times.landscape === undefined
+      ) {
+        times.landscape = now;
+      }
+      if (
+        host.classList.contains("landscape-camera-overlay-expanded") &&
+        times.fullscreen === undefined
+      ) {
+        times.fullscreen = now;
+        observer.disconnect();
+      }
+    });
+    observer.observe(host, { attributeFilter: ["class"] });
+  });
   await setRotateAction("fullscreen_live_video");
   await expect(card).toHaveClass(/companion-phone-landscape/);
   await expect(card).toHaveClass(/landscape-camera-overlay-expanded/);
@@ -8812,8 +8836,47 @@ test("applies configured Companion rotate actions to the retained Full Stage", a
   await expect(
     card.locator('.stage-placement[data-layout-node$="default-camera-module"]'),
   ).toHaveCSS("position", "absolute");
+  const fullscreenDelay = await card.evaluate((element) => {
+    const times = (
+      element as HTMLElement & {
+        __rotateClassTimes?: { fullscreen?: number; landscape?: number };
+      }
+    ).__rotateClassTimes;
+    if (times?.fullscreen === undefined || times.landscape === undefined) {
+      throw new Error("Companion rotate class timing was not captured");
+    }
+    return times.fullscreen - times.landscape;
+  });
+  expect(fullscreenDelay).toBeLessThan(150);
+
+  await card.evaluate((element) => {
+    const host = element as HTMLElement & { __portraitCameraMotion?: boolean };
+    const camera = host.shadowRoot?.querySelector<HTMLElement>(
+      '.stage-placement[data-layout-node$="default-camera-module"]',
+    );
+    if (!camera) throw new Error("Camera module was not rendered");
+    host.__portraitCameraMotion = false;
+    const observer = new MutationObserver(() => {
+      if (!camera.style.transform) return;
+      host.__portraitCameraMotion = true;
+      observer.disconnect();
+    });
+    observer.observe(camera, { attributeFilter: ["style"] });
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect
+    .poll(() =>
+      card.evaluate(
+        (element) =>
+          (element as HTMLElement & { __portraitCameraMotion?: boolean })
+            .__portraitCameraMotion,
+      ),
+    )
+    .toBe(true);
+  await expect(card).not.toHaveClass(/companion-phone-landscape/);
 
   await setRotateAction("none");
+  await page.setViewportSize({ width: 844, height: 390 });
   await expect(card).not.toHaveClass(/companion-phone-landscape/);
   await expect(card).not.toHaveClass(/landscape-camera-overlay-active/);
 });
@@ -8872,6 +8935,137 @@ test("opens Minimal Camera Stage live video internally on Companion rotation", a
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(dialog).not.toHaveAttribute("open", "");
+});
+
+test("restores the active Swiper video after WebKit native fullscreen exits", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      get: () =>
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Home Assistant/2026.9 Mobile/HomeAssistant, like Safari",
+    });
+  });
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  const card = page.locator("watchzone-card");
+  await card.evaluate((element) => {
+    const host = element as HTMLElement & {
+      hass: unknown;
+      setConfig(config: unknown): void;
+    };
+    host.setConfig({
+      cameras: [
+        { entity_id: "camera.front" },
+        { entity_id: "camera.driveway" },
+      ],
+      companion_rotate_action: "double_column",
+      type: "custom:watchzone-card",
+    });
+    host.hass = {
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "streaming",
+          attributes: { friendly_name: "Front" },
+        },
+        "camera.driveway": {
+          entity_id: "camera.driveway",
+          state: "streaming",
+          attributes: { friendly_name: "Driveway" },
+        },
+      },
+      connection: { subscribeMessage: async () => () => undefined },
+      hassUrl: (path: string) => path,
+      callService: async () => undefined,
+      callWS: async (message: { type: string }) =>
+        message.type === "watchzone/reviews/list"
+          ? { items: [] }
+          : { ready: false },
+    };
+  });
+
+  const live = card.locator("wzc-camera-live").first();
+  await expect(live).toBeAttached();
+  const playCountBeforeExit = await live.evaluate(async (element) => {
+    const presentation = element as HTMLElement & {
+      fallbackVideo?: HTMLVideoElement;
+      selected?: "fallback" | "webrtc";
+      updateComplete: Promise<boolean>;
+    };
+    const video = document.createElement("video");
+    const state = { fullscreen: false, playCount: 0 };
+    Object.defineProperty(video, "webkitDisplayingFullscreen", {
+      configurable: true,
+      get: () => state.fullscreen,
+    });
+    video.play = async () => {
+      state.playCount += 1;
+    };
+    presentation.fallbackVideo = video;
+    presentation.selected = "fallback";
+    await presentation.updateComplete;
+    (
+      window as unknown as {
+        nativeFullscreenTest?: {
+          state: typeof state;
+          video: HTMLVideoElement;
+        };
+      }
+    ).nativeFullscreenTest = { state, video };
+    state.fullscreen = true;
+    video.dispatchEvent(new Event("webkitbeginfullscreen"));
+    return state.playCount;
+  });
+
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect(card).not.toHaveClass(/companion-phone-landscape/);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await live.evaluate(() => {
+    const test = (
+      window as unknown as {
+        nativeFullscreenTest?: {
+          state: { fullscreen: boolean; playCount: number };
+          video: HTMLVideoElement;
+        };
+      }
+    ).nativeFullscreenTest;
+    if (!test) throw new Error("Native fullscreen test state was not created");
+    test.state.fullscreen = false;
+    test.video.dispatchEvent(new Event("webkitendfullscreen"));
+  });
+  await expect
+    .poll(() =>
+      live.evaluate(() => {
+        const test = (
+          window as unknown as {
+            nativeFullscreenTest?: { state: { playCount: number } };
+          }
+        ).nativeFullscreenTest;
+        return test?.state.playCount ?? 0;
+      }),
+    )
+    .toBeGreaterThan(playCountBeforeExit);
+
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect(card).toHaveClass(/companion-phone-landscape/);
+  expect(
+    await live.evaluate((element) => {
+      const test = (
+        window as unknown as {
+          nativeFullscreenTest?: { video: HTMLVideoElement };
+        }
+      ).nativeFullscreenTest;
+      const video = test?.video;
+      return {
+        connected: video?.isConnected,
+        retained:
+          element.shadowRoot?.querySelector(".fallback-host video") === video,
+      };
+    }),
+  ).toEqual({ connected: true, retained: true });
 });
 
 test("choreographs two Companion surfaces into 60/40 landscape columns", async ({

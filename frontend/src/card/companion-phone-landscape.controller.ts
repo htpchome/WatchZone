@@ -1,6 +1,8 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
 import type { CompanionRotateAction } from "../core/config";
+import { CAMERA_NATIVE_FULLSCREEN_CHANGE_EVENT } from "../core/constants";
+import type { CameraNativeFullscreenChangeDetail } from "../core/fullscreen";
 import type { LocalizeFunction } from "../core/localization";
 import {
   animateElement,
@@ -25,6 +27,8 @@ const SURFACE_SELECTORS = {
   activity: '.stage-container[data-layout-node$="default-activity-surface"]',
   camera: '.stage-container[data-layout-node$="default-camera-surface"]',
 } as const;
+const CAMERA_MODULE_SELECTOR =
+  '.stage-placement[data-layout-node$="default-camera-module"]';
 
 type SurfaceName = keyof typeof SURFACE_SELECTORS;
 
@@ -45,6 +49,7 @@ interface RectSnapshot {
 
 interface TransitionSnapshot {
   readonly angle?: number;
+  readonly cameraModule?: RectSnapshot;
   readonly surfaces: Partial<Record<SurfaceName, RectSnapshot>>;
   readonly viewport: ViewportSnapshot;
 }
@@ -156,6 +161,7 @@ class CompanionPhoneLandscapeController implements ReactiveController {
   private readonly _animations = new Set<MotionAnimation>();
   private _connected = false;
   private _initialized = false;
+  private _nativeFullscreenActive = false;
   private readonly _pull: CompanionCameraPullController;
   private _settledSnapshot?: TransitionSnapshot;
   private _transitionGeneration = 0;
@@ -166,7 +172,9 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     private readonly _orientationChanged: OrientationChanged,
     localize: LocalizeFunction,
   ) {
-    this._pull = new CompanionCameraPullController(_host, localize);
+    this._pull = new CompanionCameraPullController(_host, localize, () => {
+      this._settledSnapshot = this._captureSnapshot();
+    });
     _host.addController(this);
   }
 
@@ -182,6 +190,10 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     window.addEventListener("orientationchange", this._schedule);
     window.addEventListener("resize", this._schedule);
     window.visualViewport?.addEventListener("resize", this._schedule);
+    this._host.addEventListener(
+      CAMERA_NATIVE_FULLSCREEN_CHANGE_EVENT,
+      this._handleNativeFullscreenChange as EventListener,
+    );
     void this._sync();
   }
 
@@ -209,6 +221,10 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     window.removeEventListener("orientationchange", this._schedule);
     window.removeEventListener("resize", this._schedule);
     window.visualViewport?.removeEventListener("resize", this._schedule);
+    this._host.removeEventListener(
+      CAMERA_NATIVE_FULLSCREEN_CHANGE_EVENT,
+      this._handleNativeFullscreenChange as EventListener,
+    );
     this._pull.deactivate();
     this._cancelAnimations();
     this._host.classList.remove("companion-phone-orientation-transitioning");
@@ -227,10 +243,28 @@ class CompanionPhoneLandscapeController implements ReactiveController {
   };
 
   private _targetAction(): CompanionRotateAction {
+    if (this._nativeFullscreenActive) {
+      return this._active ? this._action : "none";
+    }
     return window.innerWidth > window.innerHeight
       ? this._getRotateAction()
       : "none";
   }
+
+  private readonly _handleNativeFullscreenChange = (
+    event: CustomEvent<CameraNativeFullscreenChangeDetail>,
+  ): void => {
+    if (event.detail.active === this._nativeFullscreenActive) return;
+    this._nativeFullscreenActive = event.detail.active;
+    if (this._nativeFullscreenActive) {
+      this._transitionGeneration += 1;
+      this._cancelAnimations();
+      this._host.classList.remove("companion-phone-orientation-transitioning");
+      this._settledSnapshot = this._captureSnapshot();
+      return;
+    }
+    this._schedule();
+  };
 
   private _captureSnapshot(): TransitionSnapshot {
     const surfaces: Partial<Record<SurfaceName, RectSnapshot>> = {};
@@ -249,8 +283,23 @@ class CompanionPhoneLandscapeController implements ReactiveController {
         };
       }
     }
+    const cameraModuleRect = this._host.renderRoot
+      .querySelector<HTMLElement>(CAMERA_MODULE_SELECTOR)
+      ?.getBoundingClientRect();
     return {
       angle: orientationAngle(),
+      ...(cameraModuleRect &&
+      cameraModuleRect.width > 0 &&
+      cameraModuleRect.height > 0
+        ? {
+            cameraModule: {
+              height: cameraModuleRect.height,
+              left: cameraModuleRect.left,
+              top: cameraModuleRect.top,
+              width: cameraModuleRect.width,
+            },
+          }
+        : {}),
       surfaces,
       viewport: viewportSnapshot(this._host),
     };
@@ -259,7 +308,10 @@ class CompanionPhoneLandscapeController implements ReactiveController {
   private _cancelAnimations(): void {
     for (const animation of this._animations) animation.cancel();
     this._animations.clear();
-    for (const selector of [...Object.values(SURFACE_SELECTORS)]) {
+    for (const selector of [
+      ...Object.values(SURFACE_SELECTORS),
+      CAMERA_MODULE_SELECTOR,
+    ]) {
       const element =
         this._host.renderRoot.querySelector<HTMLElement>(selector);
       element?.style.removeProperty("opacity");
@@ -271,6 +323,7 @@ class CompanionPhoneLandscapeController implements ReactiveController {
   private async _playTransition(
     before: TransitionSnapshot,
     active: boolean,
+    fullscreenExit: boolean,
   ): Promise<void> {
     if (reducedMotionRequested()) return;
     const after = this._captureSnapshot();
@@ -282,13 +335,34 @@ class CompanionPhoneLandscapeController implements ReactiveController {
       Math.abs(measuredRotation) === 90 ? measuredRotation : active ? 90 : -90;
     const animations: MotionAnimation[] = [];
 
-    for (const [name, selector] of Object.entries(SURFACE_SELECTORS) as Array<
-      [SurfaceName, string]
-    >) {
+    const transitions: Array<{
+      readonly first?: RectSnapshot;
+      readonly last?: RectSnapshot;
+      readonly selector: string;
+    }> = fullscreenExit
+      ? [
+          {
+            first: before.surfaces.activity,
+            last: after.surfaces.activity,
+            selector: SURFACE_SELECTORS.activity,
+          },
+          {
+            first: before.cameraModule,
+            last: after.cameraModule,
+            selector: CAMERA_MODULE_SELECTOR,
+          },
+        ]
+      : (Object.entries(SURFACE_SELECTORS) as Array<[SurfaceName, string]>).map(
+          ([name, selector]) => ({
+            first: before.surfaces[name],
+            last: after.surfaces[name],
+            selector,
+          }),
+        );
+
+    for (const { first, last, selector } of transitions) {
       const element =
         this._host.renderRoot.querySelector<HTMLElement>(selector);
-      const first = before.surfaces[name];
-      const last = after.surfaces[name];
       if (!element || !first || !last || last.width <= 0 || last.height <= 0)
         continue;
       const mapped = mapRotatedRect(
@@ -346,17 +420,25 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     }
     if (active && this._active && action !== this._action) {
       this._action = action;
-      this._pull.setExpanded(action === "fullscreen_live_video");
+      this._pull.setExpanded(
+        action === "fullscreen_live_video",
+        action === "fullscreen_live_video",
+      );
       this._settledSnapshot = this._captureSnapshot();
       return;
     }
     const generation = ++this._transitionGeneration;
+    const fullscreenExit =
+      !active &&
+      this._action === "fullscreen_live_video" &&
+      this._pull.expanded;
+    const immediateFullscreen = active && action === "fullscreen_live_video";
     const before = this._animations.size
       ? this._captureSnapshot()
       : (this._settledSnapshot ?? this._captureSnapshot());
     this._pull.deactivate();
     this._cancelAnimations();
-    if (animate) {
+    if (animate && !immediateFullscreen) {
       this._host.classList.add("companion-phone-orientation-transitioning");
     }
     this._active = active;
@@ -365,14 +447,19 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     this._orientationChanged(active);
     await this._host.updateComplete;
     if (!this._isCurrent(active, generation)) return;
-    if (animate) await this._playTransition(before, active);
+    if (immediateFullscreen) {
+      this._pull.activate(true, true);
+      this._settledSnapshot = this._captureSnapshot();
+      return;
+    }
+    if (animate) await this._playTransition(before, active, fullscreenExit);
     if (!this._isCurrent(active, generation)) return;
     this._host.classList.remove("companion-phone-orientation-transitioning");
     this._settledSnapshot = this._captureSnapshot();
     if (this._connected && this._active === active && active) {
       await nextFrame();
       if (!this._isCurrent(active, generation)) return;
-      this._pull.activate(action === "fullscreen_live_video");
+      this._pull.activate();
     }
   }
 

@@ -106,6 +106,16 @@ dynamic import cannot initialize a detached or replaced container. The static
 single-slide structure remains usable if optional carousel initialization
 cannot complete.
 
+The controller is also the only owner of responsive Swiper updates; Swiper's
+own window and resize observers remain disabled. While browser-native live
+video fullscreen is active, Camera freezes carousel geometry so orientation
+cannot retarget the active slide underneath the browser-owned video. On
+fullscreen exit, the live presentation first rebinds the same session-owned
+video node to the active slide and resumes playback, then Camera performs one
+deferred Swiper update. WebKit video fullscreen uses its begin/end events as
+the authoritative lifecycle on phones and tablets. This sequence never
+replaces the slide, video, or media-session lease.
+
 ## Slideshow
 
 - Camera owns one slideshow timer and publishes its enabled, held, and

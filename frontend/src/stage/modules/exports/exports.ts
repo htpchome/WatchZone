@@ -30,7 +30,7 @@ import { renderIcon } from "../../../ui/icons";
 import "../../../ui/media-day-header";
 import {
   scrollMediaViewportToTop,
-  shouldShowScrollTop,
+  ScrollTopVisibilityController,
 } from "../../../ui/scroll-top";
 import { ToastManager } from "../../../ui/toast-manager";
 import "../../../ui/toast-region";
@@ -55,7 +55,6 @@ export class ExportsModule extends LitElement {
     _editing: { state: true },
     _layout: { state: true },
     _mutating: { state: true },
-    _showScrollTop: { state: true },
   };
 
   public api?: HomeAssistantApi;
@@ -74,7 +73,10 @@ export class ExportsModule extends LitElement {
   private _hoveredPreviewUrl?: string;
   private _layout: "grid" | "list" = "list";
   private _mutating = false;
-  private _showScrollTop = false;
+  private readonly _scrollTopVisibility = new ScrollTopVisibilityController(
+    this,
+    () => this.renderRoot.querySelector<HTMLElement>(".scroller"),
+  );
   private readonly _touchPreview = new ThumbnailPreviewPressController<string>(
     this,
     {
@@ -168,7 +170,7 @@ export class ExportsModule extends LitElement {
         </div>
         <wzc-scroll-top
           .label=${this.localize("common.top")}
-          ?hidden=${!this._showScrollTop}
+          ?hidden=${!this._scrollTopVisibility.visible}
           @click=${this._scrollToTop}
         ></wzc-scroll-top>
       </div>
@@ -635,7 +637,7 @@ export class ExportsModule extends LitElement {
   private readonly _handleScroll = (event: Event): void => {
     this._touchPreview.cancel();
     const scroller = event.currentTarget as HTMLElement;
-    this._showScrollTop = shouldShowScrollTop(scroller);
+    this._scrollTopVisibility.sync(scroller);
   };
 
   private readonly _scrollToTop = (): void => {

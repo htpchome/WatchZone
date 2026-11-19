@@ -36,7 +36,8 @@
   reserving a stable scrollbar gutter. After approximately two rendered rows
   have passed, a labeled Top action floats at the bottom center of the visible
   viewport and smoothly returns the recording viewport to its beginning. It
-  remains hidden for a non-scrolling collection.
+  remains hidden for a non-scrolling collection. Its visibility uses the same
+  reconnect synchronization as Reviews, Events, and Exports.
 
 ## Calendar and selection
 

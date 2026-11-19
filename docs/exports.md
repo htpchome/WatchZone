@@ -52,7 +52,8 @@ but the Stage module and frontend transport remain provider-neutral.
 - After approximately two rendered tiles have passed, a labeled Top action
   floats at the bottom center of the visible list or grid viewport and
   smoothly returns that internal viewport to its beginning. It remains
-  hidden when the collection cannot scroll.
+  hidden when the collection cannot scroll. Its visibility uses the same
+  reconnect synchronization as Reviews, Events, and Recordings.
 - Selecting a ready tile outside its controls opens the export media dialog.
 - Rename is inline module workflow. Remove requires confirmation. Add to Case is
   visible but disabled with a localized coming-soon explanation.

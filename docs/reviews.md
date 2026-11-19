@@ -61,7 +61,10 @@
   labeled Top action floats at the bottom center of the visible viewport and
   smoothly returns only that module's internal viewport to its beginning.
   It is not appended to the collection and remains hidden when the list cannot
-  scroll.
+  scroll. Reviews, Events, Recordings, and Exports share one lifecycle owner
+  for this visibility state, so switching the retained module stack back to a
+  viewport at its beginning clears a previously visible Top action without
+  requiring another scroll gesture.
 - The first visible Reviews batch is fully enriched before publication. Action
   availability must not pop in through a second summary-to-detail tile render
   or remain incomplete when that follow-up request races; older history may

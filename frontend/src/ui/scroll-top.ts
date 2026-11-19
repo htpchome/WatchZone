@@ -1,4 +1,9 @@
-import { html, LitElement } from "lit";
+import {
+  html,
+  LitElement,
+  type ReactiveController,
+  type ReactiveControllerHost,
+} from "lit";
 
 import { SCROLL_TOP_TAG } from "../core/constants";
 import { scrollTopStyles } from "./scroll-top.styles";
@@ -24,6 +29,56 @@ export function scrollMediaViewportToTop(scroller: HTMLElement): void {
         : "smooth",
     top: 0,
   });
+}
+
+/** Keeps one retained media viewport's Top action synchronized across reconnects. */
+export class ScrollTopVisibilityController implements ReactiveController {
+  public visible = false;
+  private _frame?: number;
+  private _renderOnConnect = false;
+
+  public constructor(
+    private readonly _host: ReactiveControllerHost & HTMLElement,
+    private readonly _getScroller: () => HTMLElement | null,
+  ) {
+    _host.addController(this);
+  }
+
+  public hostConnected(): void {
+    if (this._renderOnConnect) {
+      this._renderOnConnect = false;
+      this._host.requestUpdate();
+    }
+    this.schedule();
+  }
+
+  public hostUpdated(): void {
+    this.schedule();
+  }
+
+  public hostDisconnected(): void {
+    if (this._frame !== undefined) cancelAnimationFrame(this._frame);
+    this._frame = undefined;
+    if (this.visible) {
+      this.visible = false;
+      this._renderOnConnect = true;
+    }
+  }
+
+  public schedule(): void {
+    if (this._frame !== undefined) return;
+    this._frame = requestAnimationFrame(() => {
+      this._frame = undefined;
+      if (this._host.isConnected) this.sync();
+    });
+  }
+
+  public sync(scroller: HTMLElement | null = this._getScroller()): void {
+    const visible = scroller ? shouldShowScrollTop(scroller) : false;
+    if (visible === this.visible) return;
+    this.visible = visible;
+    this._host.requestUpdate();
+  }
 }
 
 /** Shared floating action for bounded Reviews, Events, Recordings, and Exports. */

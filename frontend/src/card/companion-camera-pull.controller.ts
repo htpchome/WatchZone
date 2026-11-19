@@ -61,20 +61,34 @@ export class CompanionCameraPullController {
   public constructor(
     private readonly _host: PullHost,
     private readonly _localize: LocalizeFunction,
+    private readonly _onSettled?: () => void,
   ) {}
 
-  public activate(expanded = false): void {
+  public get expanded(): boolean {
+    return this._expanded;
+  }
+
+  public activate(expanded = false, immediate = false): void {
     if (!this._active) {
       this._active = true;
       window.addEventListener("keydown", this._handleWindowKeydown);
     }
     this.sync();
-    if (expanded) this._settle(1);
+    if (expanded) {
+      if (immediate) this._jumpTo(1);
+      else this._settle(1);
+    }
   }
 
-  public setExpanded(expanded: boolean): void {
-    if (!this._active || expanded === this._expanded) return;
-    this._settle(expanded ? 1 : 0);
+  public setExpanded(expanded: boolean, immediate = false): void {
+    const target = expanded ? 1 : 0;
+    if (
+      !this._active ||
+      (expanded === this._expanded && this._progress === target)
+    )
+      return;
+    if (immediate) this._jumpTo(target);
+    else this._settle(target);
   }
 
   public sync(): void {
@@ -293,6 +307,22 @@ export class CompanionCameraPullController {
     );
   }
 
+  private _jumpTo(target: 0 | 1): void {
+    this._cancelSettle();
+    this._expanded = target === 1;
+    this._host.classList.toggle(
+      "landscape-camera-overlay-active",
+      this._expanded,
+    );
+    this._host.classList.toggle(
+      "landscape-camera-overlay-expanded",
+      this._expanded,
+    );
+    this._applyProgress(target);
+    this._syncAccessibility();
+    this._onSettled?.();
+  }
+
   private _finishSettle(target: 0 | 1): void {
     this._host.classList.remove("landscape-camera-overlay-settling");
     if (target === 0) {
@@ -300,6 +330,7 @@ export class CompanionCameraPullController {
       this._measureBounds();
     }
     this._syncAccessibility();
+    this._onSettled?.();
   }
 
   private _applyProgress(progress: number): void {

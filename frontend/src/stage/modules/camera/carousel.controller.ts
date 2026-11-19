@@ -27,6 +27,7 @@ export class CameraCarouselController implements ReactiveController {
   private _generation = 0;
   private _slideCount = 0;
   private _interactionLocked = false;
+  private _nativeFullscreenActive = false;
   private _resizeFrame?: number;
   private _resizeObserver?: ResizeObserver;
   private _swiper?: Swiper;
@@ -135,6 +136,18 @@ export class CameraCarouselController implements ReactiveController {
     this._syncInteraction();
   }
 
+  public setNativeFullscreenActive(active: boolean): void {
+    if (active === this._nativeFullscreenActive) return;
+    this._nativeFullscreenActive = active;
+    if (active) {
+      if (this._resizeFrame !== undefined)
+        cancelAnimationFrame(this._resizeFrame);
+      this._resizeFrame = undefined;
+      return;
+    }
+    this._scheduleResizeSync();
+  }
+
   private _replaceContainer(
     container: HTMLElement | undefined,
     slideCount: number,
@@ -217,10 +230,11 @@ export class CameraCarouselController implements ReactiveController {
             }
           },
         },
-        resizeObserver: true,
+        resizeObserver: false,
         spaceBetween: CAMERA_CAROUSEL_SLIDE_GAP_PX,
         speed: 0,
         touchStartPreventDefault: false,
+        updateOnWindowResize: false,
         watchOverflow: true,
       });
     } catch {
@@ -452,14 +466,19 @@ export class CameraCarouselController implements ReactiveController {
     this._syncNavigationSize();
     if (typeof ResizeObserver === "undefined") return;
     this._resizeObserver = new ResizeObserver(() => {
-      if (this._resizeFrame !== undefined)
-        cancelAnimationFrame(this._resizeFrame);
-      this._resizeFrame = requestAnimationFrame(() => {
-        this._resizeFrame = undefined;
-        this._syncNavigationSize();
-      });
+      this._scheduleResizeSync();
     });
     this._resizeObserver.observe(container);
+  }
+
+  private _scheduleResizeSync(): void {
+    if (this._nativeFullscreenActive || this._resizeFrame !== undefined) return;
+    this._resizeFrame = requestAnimationFrame(() => {
+      this._resizeFrame = undefined;
+      if (this._nativeFullscreenActive) return;
+      this._swiper?.update();
+      this._syncNavigationSize();
+    });
   }
 
   private _syncNavigationSize(): void {

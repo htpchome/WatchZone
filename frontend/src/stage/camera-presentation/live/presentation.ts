@@ -129,6 +129,7 @@ export class CameraLivePresentation extends LitElement {
       this.renderRoot.querySelector<HTMLElement>(".viewport") ?? undefined,
     getLocalize: () => this.localize,
     getSnapshotKey: () => this.zoomKey,
+    onFullscreenExit: () => this._restoreActiveVideoAfterFullscreen(),
     onMuteToggle: () =>
       this.dispatchEvent(
         new CustomEvent("camera-mute-toggle", {
@@ -652,6 +653,23 @@ export class CameraLivePresentation extends LitElement {
     this._activeVideo = video;
     this._controls.setActiveVideo(video);
     this._syncStageMediaDimensions();
+  }
+
+  private _restoreActiveVideoAfterFullscreen(): void {
+    const video = this._activeVideo;
+    if (!video) return;
+    const host = this.renderRoot.querySelector<HTMLElement>(
+      this.selected === "fallback" ? ".fallback-host" : ".webrtc-host",
+    );
+    if (!host) return;
+    host.append(video);
+    refreshNativePictureInPictureSuppression(video);
+    setMediaElementMuted(video, this.muted);
+    void playMediaElement(video).catch(() => undefined);
+    if (this.selected === "webrtc" && this.webRtcStream) {
+      this._observeWebRtcFrame(video, this.webRtcStream);
+    }
+    this._emitMediaAttached(video);
   }
 
   private get _selectedVideoForRender(): HTMLVideoElement | undefined {

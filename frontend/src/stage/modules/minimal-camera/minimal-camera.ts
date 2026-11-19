@@ -15,6 +15,7 @@ import type {
 } from "../../../core/home-assistant";
 import { performHomeAssistantAction } from "../../../core/home-assistant-actions";
 import {
+  dispatchCameraNativeFullscreenChange,
   isMediaFullscreenActive,
   mediaFullscreenSupported,
   toggleMediaFullscreen,
@@ -98,6 +99,7 @@ export class MinimalCameraModule extends LitElement {
   private _snapshotError?: string;
   private _snapshotPending = false;
   private _automaticLandscapeFullscreen = false;
+  private _nativeFullscreenActive = false;
   private _rotateAction: CompanionRotateAction = "none";
   private _tapTimer?: ReturnType<typeof setTimeout>;
   private readonly _audioControlMotion = new OwnedMotion();
@@ -142,6 +144,8 @@ export class MinimalCameraModule extends LitElement {
         for (const event of [
           "enterpictureinpicture",
           "leavepictureinpicture",
+          "webkitbeginfullscreen",
+          "webkitendfullscreen",
         ]) {
           this._activeVideo?.removeEventListener(
             event,
@@ -153,6 +157,8 @@ export class MinimalCameraModule extends LitElement {
         for (const event of [
           "enterpictureinpicture",
           "leavepictureinpicture",
+          "webkitbeginfullscreen",
+          "webkitendfullscreen",
         ]) {
           video?.addEventListener(event, this._handleMediaModeChange);
         }
@@ -446,14 +452,18 @@ export class MinimalCameraModule extends LitElement {
     );
   }
 
-  private _attachMedia(): void {
+  private _attachMedia(force = false): void {
     const fallback = this._session.fallbackVideo;
     const fallbackHost = this.renderRoot.querySelector<HTMLElement>(
       this._dialog.openState
         ? ".dialog-video-host.fallback"
         : ".video-host.fallback",
     );
-    if (fallback && fallbackHost && fallback.parentElement !== fallbackHost) {
+    if (
+      fallback &&
+      fallbackHost &&
+      (force || fallback.parentElement !== fallbackHost)
+    ) {
       fallback.autoplay = true;
       fallback.playsInline = true;
       setMediaElementMuted(fallback, this._audio.muted);
@@ -475,7 +485,11 @@ export class MinimalCameraModule extends LitElement {
         ? ".dialog-video-host.webrtc"
         : ".video-host.webrtc",
     );
-    if (webRtc && webRtcHost && webRtc.parentElement !== webRtcHost) {
+    if (
+      webRtc &&
+      webRtcHost &&
+      (force || webRtc.parentElement !== webRtcHost)
+    ) {
       webRtc.autoplay = true;
       webRtc.playsInline = true;
       setMediaElementMuted(webRtc, this._audio.muted);
@@ -734,6 +748,7 @@ export class MinimalCameraModule extends LitElement {
     const active =
       CLIENT_PROFILE.isCompanionApp &&
       CLIENT_PROFILE.isPhone &&
+      !this._nativeFullscreenActive &&
       this.rotateAction === "fullscreen_live_video" &&
       window.innerWidth > window.innerHeight;
     if (active === this._automaticLandscapeFullscreen) return;
@@ -765,13 +780,31 @@ export class MinimalCameraModule extends LitElement {
       .catch(() => undefined);
   };
 
-  private readonly _handleMediaModeChange = (): void => {
+  private readonly _handleMediaModeChange = (event: Event): void => {
+    this._syncNativeFullscreenState(
+      event.type === "webkitbeginfullscreen"
+        ? true
+        : event.type === "webkitendfullscreen"
+          ? false
+          : undefined,
+    );
     this.requestUpdate();
   };
 
   private readonly _handleFullscreenChange = (): void => {
+    this._syncNativeFullscreenState();
     this.requestUpdate();
   };
+
+  private _syncNativeFullscreenState(forced?: boolean): void {
+    const active = forced ?? isMediaFullscreenActive(this._activeVideo);
+    if (active === this._nativeFullscreenActive) return;
+    const exited = this._nativeFullscreenActive && !active;
+    this._nativeFullscreenActive = active;
+    if (exited) this._attachMedia(true);
+    dispatchCameraNativeFullscreenChange(this, active);
+    this._syncCompanionRotateAction();
+  }
 
   static styles = minimalCameraStyles;
 }

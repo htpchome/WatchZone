@@ -103,6 +103,11 @@ An adapter declares one supported attachment strategy:
   player from its minimal-camera stage host into the dialog. Closing the dialog
   returns that exact player to the stage host; neither transition acquires a
   replacement transport or creates a second decoder.
+- **WebKit native fullscreen:** The browser temporarily owns the active video
+  presentation. On `webkitendfullscreen`, WatchZone rebinds that exact player
+  to its current presentation host, reapplies mute/playback state, and resumes
+  it before responsive carousel geometry is reconciled. The exit must not fall
+  back to a poster, replace the player, or renegotiate the retained session.
 - **Adapter attachment:** The adapter provides another explicit attach/detach
   mechanism with equivalent retention behavior.
 

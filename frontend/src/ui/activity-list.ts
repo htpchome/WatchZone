@@ -32,7 +32,10 @@ import {
 } from "./activity-badge-presentations";
 import "./badge";
 import "./media-day-header";
-import { scrollMediaViewportToTop, shouldShowScrollTop } from "./scroll-top";
+import {
+  scrollMediaViewportToTop,
+  ScrollTopVisibilityController,
+} from "./scroll-top";
 import { activityActionStyles } from "./activity-action.styles";
 import { activityListStyles } from "./activity-list.styles";
 import { buttonBaseStyles } from "./button.styles";
@@ -149,7 +152,6 @@ export class ActivityList extends LitElement {
     roundedCorners: { attribute: false, type: Boolean },
     selectedDate: { attribute: false },
     shadows: { attribute: false, type: Boolean },
-    _showScrollTop: { state: true },
   };
 
   public displayObjectBadges = true;
@@ -182,8 +184,10 @@ export class ActivityList extends LitElement {
   private _dayHeaderHeight = 0;
   private _rowGap = 0;
   private _rowHeight = 0;
-  private _scrollStateFrame?: number;
-  private _showScrollTop = false;
+  private readonly _scrollTopVisibility = new ScrollTopVisibilityController(
+    this,
+    () => this.renderRoot.querySelector<HTMLElement>(".scroller"),
+  );
   private readonly _touchPreview = new ThumbnailPreviewPressController<string>(
     this,
     {
@@ -225,7 +229,6 @@ export class ActivityList extends LitElement {
       }
     }
     this._restoreScrollAnchor();
-    this._scheduleScrollStateSync();
     if (changed.has("loading") && !this.loading)
       this._loadMoreRequested = false;
     this._scheduleVirtualWindowSync();
@@ -235,7 +238,6 @@ export class ActivityList extends LitElement {
 
   public connectedCallback(): void {
     super.connectedCallback();
-    this._scheduleScrollStateSync();
     if (typeof ResizeObserver === "undefined") return;
     this._badgeResizeObserver ??= new ResizeObserver(() =>
       this._scheduleBadgeLayout(),
@@ -254,10 +256,6 @@ export class ActivityList extends LitElement {
     if (this._loadMoreFrame !== undefined)
       cancelAnimationFrame(this._loadMoreFrame);
     this._loadMoreFrame = undefined;
-    if (this._scrollStateFrame !== undefined)
-      cancelAnimationFrame(this._scrollStateFrame);
-    this._scrollStateFrame = undefined;
-    this._showScrollTop = false;
     super.disconnectedCallback();
   }
 
@@ -298,7 +296,7 @@ export class ActivityList extends LitElement {
       </div>
       <wzc-scroll-top
         .label=${this.localize("common.top")}
-        ?hidden=${!this._showScrollTop}
+        ?hidden=${!this._scrollTopVisibility.visible}
         @click=${this._scrollToTop}
       ></wzc-scroll-top>
     </section>`;
@@ -787,27 +785,13 @@ export class ActivityList extends LitElement {
 
   private readonly _handleScroll = (): void => {
     this._touchPreview.cancel();
-    this._syncScrollTopVisibility();
+    this._scrollTopVisibility.sync(
+      this.renderRoot.querySelector<HTMLElement>(".scroller"),
+    );
     this._scheduleVirtualWindowSync();
     this._syncActiveDay();
     this._requestMoreIfNeeded();
   };
-
-  private _scheduleScrollStateSync(): void {
-    if (this._scrollStateFrame !== undefined) return;
-    this._scrollStateFrame = requestAnimationFrame(() => {
-      this._scrollStateFrame = undefined;
-      if (this.isConnected) this._syncScrollTopVisibility();
-    });
-  }
-
-  private _syncScrollTopVisibility(): void {
-    const scroller = this.renderRoot.querySelector<HTMLElement>(".scroller");
-    const showScrollTop = scroller ? shouldShowScrollTop(scroller) : false;
-    if (showScrollTop !== this._showScrollTop) {
-      this._showScrollTop = showScrollTop;
-    }
-  }
 
   private _requestMoreIfNeeded(): void {
     if (!this.hasMore || this.loading || this._loadMoreRequested) return;

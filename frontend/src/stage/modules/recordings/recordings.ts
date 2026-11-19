@@ -21,7 +21,7 @@ import { renderIcon } from "../../../ui/icons";
 import "../../../ui/media-day-header";
 import {
   scrollMediaViewportToTop,
-  shouldShowScrollTop,
+  ScrollTopVisibilityController,
 } from "../../../ui/scroll-top";
 import { ToastManager } from "../../../ui/toast-manager";
 import "../../../ui/toast-region";
@@ -38,7 +38,6 @@ export class RecordingsModule extends LitElement {
     localize: { attribute: false },
     mediaDate: { attribute: false },
     targetModuleId: { attribute: false },
-    _showScrollTop: { state: true },
   };
 
   public api?: HomeAssistantApi;
@@ -47,7 +46,10 @@ export class RecordingsModule extends LitElement {
   public mediaDate?: MediaDateContext;
   public targetModuleId = "";
 
-  private _showScrollTop = false;
+  private readonly _scrollTopVisibility = new ScrollTopVisibilityController(
+    this,
+    () => this.renderRoot.querySelector<HTMLElement>(".scroller"),
+  );
 
   private readonly _toasts = new ToastManager(this);
   private readonly _recordings = new RecordingsController(
@@ -104,7 +106,7 @@ export class RecordingsModule extends LitElement {
         </div>
         <wzc-scroll-top
           .label=${this.localize("common.top")}
-          ?hidden=${!this._showScrollTop}
+          ?hidden=${!this._scrollTopVisibility.visible}
           @click=${this._scrollToTop}
         ></wzc-scroll-top>
       </div>
@@ -142,7 +144,7 @@ export class RecordingsModule extends LitElement {
 
   private readonly _handleScroll = (event: Event): void => {
     const scroller = event.currentTarget as HTMLElement;
-    this._showScrollTop = shouldShowScrollTop(scroller);
+    this._scrollTopVisibility.sync(scroller);
   };
 
   private _renderHour(hour: RecordingHour) {

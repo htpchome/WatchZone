@@ -16,6 +16,44 @@ describe("recordings module", () => {
     vi.restoreAllMocks();
   });
 
+  it("clears stale Top visibility when the retained module reconnects", async () => {
+    const module = document.createElement(RECORDINGS_TAG) as RecordingsModule;
+    document.body.append(module);
+    await module.updateComplete;
+    const scroller = module.shadowRoot?.querySelector<HTMLElement>(".scroller");
+    if (!scroller) throw new Error("Expected recordings scroller.");
+    const tile = document.createElement("div");
+    tile.className = "tile";
+    tile.getBoundingClientRect = () => ({ height: 80 }) as DOMRect;
+    scroller.append(tile);
+    Object.defineProperties(scroller, {
+      clientHeight: { configurable: true, value: 200 },
+      scrollHeight: { configurable: true, value: 800 },
+      scrollTop: { configurable: true, value: 200, writable: true },
+    });
+    scroller.dispatchEvent(new Event("scroll"));
+    await module.updateComplete;
+    expect(
+      module.shadowRoot
+        ?.querySelector("wzc-scroll-top")
+        ?.hasAttribute("hidden"),
+    ).toBe(false);
+
+    module.remove();
+    scroller.scrollTop = 0;
+    document.body.append(module);
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve()),
+    );
+    await module.updateComplete;
+
+    expect(
+      module.shadowRoot
+        ?.querySelector("wzc-scroll-top")
+        ?.hasAttribute("hidden"),
+    ).toBe(true);
+  });
+
   it("renders hourly ranges and opens or downloads provider media", async () => {
     vi.spyOn(Date, "now").mockReturnValue(Date.UTC(2026, 10, 9, 22, 27));
     const callWS = vi.fn().mockResolvedValue({
