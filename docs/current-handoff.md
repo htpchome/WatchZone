@@ -18,12 +18,12 @@ precedence.
 - Branch: `main`.
 - Current HEAD: `73d054b` —
   `v0.0.4-dev.442 - revert(frontend): restore dev.430 implementation`.
-- Pending version: `0.0.4-dev.443`.
+- Pending version: `0.0.4-dev.444`.
 - Worktree: the application-wide Motion migration described below is
   intentionally uncommitted. There were no unrelated local changes when it
   began.
 - Proposed commit subject:
-  `v0.0.4-dev.443 - refactor(frontend): unify animation ownership with Motion`.
+  `v0.0.4-dev.444 - fix(frontend): stabilize Motion and release budgets`.
 
 Always recheck `git status`, `git log -1`, and
 `custom_components/watchzone/const.py` before starting work.
@@ -148,7 +148,7 @@ patchwork. The pending work implements that decision across the existing UI.
   Alert/detection and review-state semantics must not be coupled to unrelated
   text or action colors.
 
-## Validation of the pending `dev.443` Motion migration
+## Validation of the pending `dev.444` Motion migration
 
 The pending migration passed:
 
@@ -160,6 +160,8 @@ The pending migration passed:
 - `corepack yarn build`;
 - `corepack yarn check:styles`;
 - `corepack yarn check:licenses`;
+- `bash scripts/package-release.sh`: lazy editor 18,556 bytes gzip and eager
+  graph 60,397 bytes gzip, producing `dist/watchzone.zip`;
 - `corepack yarn test:browser`: 156 tests passed across Chromium, Firefox, and
   WebKit;
 - `git diff --check`.
@@ -168,10 +170,17 @@ The browser matrix required permission to bind its local Vite server to
 `127.0.0.1:5173`; the initial sandboxed start failed with `EPERM` before any
 test ran. The rerun with the required permission completed successfully.
 
-One earlier unit run reported three late lazy deep-link imports after Vitest
-environment teardown while all 488 assertions passed. A clean isolated rerun
-passed with no unhandled errors. This is recorded so a future recurrence is not
-hidden.
+One unit run executed concurrently with lint, type checking, and a production
+build timed out while loading the lazy general-information panel and reported
+late lazy imports during teardown. A clean isolated rerun passed all 488 tests
+with no unhandled errors.
+
+The first complete browser rerun exposed a Chromium race between an owned
+camera-navigation page-scroll animation and selected-camera reveal. The
+controller now cancels its page-scroll motion before revealing the selection;
+the focused Chromium regression and the subsequent complete 156-test matrix
+both passed. The Companion landscape pull handle is also styled throughout the
+landscape state instead of only during its brief settle state.
 
 These results establish repository consistency and automated interaction
 coverage only. They do not establish physical-device visual quality or prove

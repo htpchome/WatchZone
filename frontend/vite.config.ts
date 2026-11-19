@@ -20,6 +20,7 @@ export default defineConfig(({ mode }) => ({
   build: {
     emptyOutDir: true,
     manifest: true,
+    minify: "terser",
     outDir: resolve(import.meta.dirname, "../dist/frontend"),
     lib: {
       entry: resolve(import.meta.dirname, "src/main.ts"),

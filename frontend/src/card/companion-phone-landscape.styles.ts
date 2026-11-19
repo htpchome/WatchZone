@@ -144,10 +144,7 @@ export const companionPhoneLandscapeStyles = css`
     --wzc-camera-activity-outline-width: 0px;
   }
 
-  :host(.companion-phone-landscape.landscape-camera-overlay-settling)
-    .stage-placement[data-layout-node$="default-camera-module"],
-  :host(.companion-phone-landscape.landscape-camera-overlay-settling)
-    .companion-camera-pull-handle {
+  :host(.companion-phone-landscape) .companion-camera-pull-handle {
     position: fixed;
     z-index: 21;
     inset-block-start: var(--wzc-companion-camera-pull-block-start);

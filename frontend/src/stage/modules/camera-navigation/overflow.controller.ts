@@ -136,6 +136,7 @@ export class CameraNavigationOverflowController implements ReactiveController {
       (button) => button.dataset.value === this._selectedValue,
     );
     if (!viewport || !selected) return;
+    this._scrollMotion.cancel();
     const viewportRect = viewport.getBoundingClientRect();
     const buttonRect = selected.getBoundingClientRect();
     if (buttonRect.left < viewportRect.left) {
