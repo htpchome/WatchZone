@@ -1,4 +1,4 @@
-import { isHomeAssistant, type HomeAssistant } from "../core/home-assistant";
+import { isHomeAssistant, type HomeAssistant } from "../../core/home-assistant";
 
 const PICKER_ANCESTOR_TAGS = new Set([
   "HUI-CARD-PICKER",
@@ -32,6 +32,11 @@ const LOCALIZED_CAMERA_CANDIDATES: Readonly<Record<string, readonly string[]>> =
 
 export interface CardPickerStubConfig {
   readonly cameras?: readonly { readonly entity_id: string }[];
+}
+
+/** Loads the fixed zero-network picker presentation on first use. */
+export function loadCardPickerPreview(): Promise<void> {
+  return import("./preview").then(() => undefined);
 }
 
 /** Home Assistant does not expose a formal picker-preview flag to custom cards. */

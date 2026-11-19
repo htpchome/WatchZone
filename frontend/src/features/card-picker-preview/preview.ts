@@ -5,11 +5,14 @@ import {
   APP_NAME,
   BADGE_TAG,
   CARD_PICKER_PREVIEW_TAG,
-} from "../core/constants";
-import { englishLocalize, type LocalizeFunction } from "../core/localization";
-import { renderIcon } from "../ui/icons";
-import "../ui/badge";
-import { cardPickerPreviewStyles } from "./card-picker-preview.styles";
+} from "../../core/constants";
+import {
+  englishLocalize,
+  type LocalizeFunction,
+} from "../../core/localization";
+import { renderIcon } from "../../ui/icons";
+import "../../ui/badge";
+import { cardPickerPreviewStyles } from "./preview.styles";
 
 const badgeTag = unsafeStatic(BADGE_TAG);
 

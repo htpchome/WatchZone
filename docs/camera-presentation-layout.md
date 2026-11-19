@@ -151,7 +151,10 @@ start of the shared Motion transition; it does not abruptly discard the
 overlay before the portrait destination exists.
 The expanded target is the layout viewport itself, expressed relative to the
 Stage grid. It does not inherit the grid's safe-area inset or a transient
-pre-settlement offset reported by the card host during mobile rotation.
+pre-settlement offset reported by the card host during mobile rotation. After
+placement, WatchZone reconciles the retained Camera's actual screen rectangle
+to the viewport origin so a transformed or safe-area-offset Home Assistant
+containing block cannot translate the overlay or clip its controls.
 
 Browser-native media fullscreen is a separate state. While it owns the live
 video, Companion rotation and Swiper geometry remain frozen. After native

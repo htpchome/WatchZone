@@ -10,7 +10,7 @@ import type {
 import {
   createCardPickerStubConfig,
   preferredCameraEntityId,
-} from "../src/card/home-assistant-card-picker";
+} from "../src/features/card-picker-preview";
 
 function createHass(
   cameras: Readonly<Record<string, string>>,

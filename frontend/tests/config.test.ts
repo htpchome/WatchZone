@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { activeCardHeightMode, normalizeCardConfig } from "../src/core/config";
-import { activeDeviceAppearanceConfig } from "../src/card/device-appearance";
+import { activeDeviceAppearanceConfig } from "../src/features/card-layout";
 import {
   CARD_TYPE,
   MAX_CARD_TITLE_LENGTH,

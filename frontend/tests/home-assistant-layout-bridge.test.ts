@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { HomeAssistantLayoutBridge } from "../src/card/home-assistant-layout-bridge";
+import { HomeAssistantLayoutBridge } from "../src/features/card-layout";
 
 function sectionsHost(): {
   readonly bridge: HomeAssistantLayoutBridge;

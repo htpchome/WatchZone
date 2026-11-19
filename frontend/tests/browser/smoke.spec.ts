@@ -8855,6 +8855,9 @@ test("applies configured Companion rotate actions to the retained Full Stage", a
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(card).not.toHaveClass(/companion-phone-landscape/);
   await setRotateAction("fullscreen_live_video");
+  await card.evaluate(() => {
+    document.body.style.transform = "translateX(96px)";
+  });
 
   await card.evaluate((element) => {
     const host = element as HTMLElement & {
@@ -8913,6 +8916,19 @@ test("applies configured Companion rotate actions to the retained Full Stage", a
     expect(bounds.width).toBeCloseTo(844, 0);
     expect(bounds.height).toBeCloseTo(390, 0);
   }
+  const automaticHandleBounds = await card
+    .locator(".companion-camera-pull-handle")
+    .boundingBox();
+  if (!automaticHandleBounds) {
+    throw new Error("Automatic fullscreen pull handle bounds were unavailable");
+  }
+  expect(automaticHandleBounds.x + automaticHandleBounds.width / 2).toBeCloseTo(
+    844 - 52,
+    0,
+  );
+  expect(
+    automaticHandleBounds.y + automaticHandleBounds.height / 2,
+  ).toBeCloseTo(390 / 2, 0);
 
   await card.evaluate((element) => {
     const host = element as HTMLElement & { __portraitCameraMotion?: boolean };

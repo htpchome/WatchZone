@@ -1,18 +1,18 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
-import type { CompanionRotateAction } from "../core/config";
-import { CAMERA_NATIVE_FULLSCREEN_CHANGE_EVENT } from "../core/constants";
-import type { CameraNativeFullscreenChangeDetail } from "../core/fullscreen";
-import type { LocalizeFunction } from "../core/localization";
+import type { CompanionRotateAction } from "../../core/config";
+import { CAMERA_NATIVE_FULLSCREEN_CHANGE_EVENT } from "../../core/constants";
+import type { CameraNativeFullscreenChangeDetail } from "../../core/fullscreen";
+import type { LocalizeFunction } from "../../core/localization";
 import {
   animateElement,
   type MotionAnimation,
   motionDurations,
   motionEasings,
   reducedMotionRequested,
-} from "../ui/motion";
-import { CompanionCameraPullController } from "./companion-camera-pull.controller";
-import { companionPhoneLandscapeStyles } from "./companion-phone-landscape.styles";
+} from "../../ui/motion";
+import { CompanionCameraPullController } from "./camera-pull.controller";
+import { companionPhoneLandscapeStyles } from "./companion-landscape.styles";
 
 interface LandscapeHost extends ReactiveControllerHost, HTMLElement {
   readonly renderRoot: DocumentFragment | HTMLElement;

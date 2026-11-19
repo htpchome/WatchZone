@@ -2,12 +2,14 @@ import { LitElement } from "lit";
 import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import {
-  activeCardHeightMode,
   cardConfigSignature,
   normalizeCardConfig,
   type CardConfig,
 } from "../core/config";
-import { activeDeviceAppearanceConfig } from "./device-appearance";
+import {
+  activeDeviceAppearanceConfig,
+  CardLayoutController,
+} from "../features/card-layout";
 import { CLIENT_PROFILE } from "../core/client-profile";
 import {
   APP_NAME,
@@ -51,27 +53,17 @@ import { roundButtonStyles } from "../ui/overlay-control.styles";
 import { ToastManager } from "../ui/toast-manager";
 import "../ui/toast-region";
 import { createBuiltInStageSet } from "../stage/built-in-stages/catalog";
-import { PHONE_STAGE_MAX_INLINE_SIZE } from "../stage/layout";
 import { LayoutRuntime } from "../stage/layout-runtime";
 import { cardStyles } from "./watchzone-card.styles";
 import {
   createCardPickerStubConfig,
   isHomeAssistantCardPickerPreview,
+  loadCardPickerPreview,
   type CardPickerStubConfig,
-} from "./home-assistant-card-picker";
-import { HomeAssistantLayoutBridge } from "./home-assistant-layout-bridge";
-import { ViewportFitController } from "./viewport-fit.controller";
+} from "../features/card-picker-preview";
 
-const USE_MOBILE_HEIGHT_MODE =
-  CLIENT_PROFILE.isPhone ||
-  (CLIENT_PROFILE.isCompanionApp && CLIENT_PROFILE.isTablet);
 const USE_COMPANION_PHONE_LANDSCAPE =
   CLIENT_PROFILE.isCompanionApp && CLIENT_PROFILE.isPhone;
-
-const stageInlineSize = (inlineSize: number, landscape = false): number =>
-  CLIENT_PROFILE.isPhone && (!CLIENT_PROFILE.isCompanionApp || !landscape)
-    ? Math.min(inlineSize, PHONE_STAGE_MAX_INLINE_SIZE)
-    : inlineSize;
 
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
 const recordedVideoViewerTag = unsafeStatic(RECORDED_VIDEO_VIEWER_TAG);
@@ -118,33 +110,10 @@ export class DashboardCard extends LitElement {
     undefined,
     (message, key) => this._toasts.error(message, { key }),
   );
+  private readonly _cardLayout = new CardLayoutController(this, (inlineSize) =>
+    this._layoutRuntime.setInlineSize(inlineSize),
+  );
   private readonly _cardHostAppearance = new CardHostAppearanceController(this);
-  private readonly _haLayout = new HomeAssistantLayoutBridge(this);
-  private readonly _viewportFit = new ViewportFitController(this);
-  private _stageResizeFrame?: number;
-  private _stageSizeBoundary?: HTMLElement;
-  private readonly _stageResizeObserver =
-    typeof ResizeObserver === "undefined"
-      ? undefined
-      : new ResizeObserver(([entry]) => {
-          if (!entry) return;
-          if (this._stageResizeFrame !== undefined) {
-            cancelAnimationFrame(this._stageResizeFrame);
-          }
-          const contentBox = Array.isArray(entry.contentBoxSize)
-            ? entry.contentBoxSize[0]
-            : entry.contentBoxSize;
-          const inlineSize = contentBox?.inlineSize ?? entry.contentRect.width;
-          this._stageResizeFrame = requestAnimationFrame(() => {
-            this._stageResizeFrame = undefined;
-            this._layoutRuntime.setInlineSize(
-              stageInlineSize(
-                inlineSize,
-                this.classList.contains("companion-phone-landscape"),
-              ),
-            );
-          });
-        });
 
   /** Set by Home Assistant for the card shown inside its editor preview. */
   public preview = false;
@@ -185,8 +154,7 @@ export class DashboardCard extends LitElement {
       this._cardHostAppearance.configure(
         activeDeviceAppearanceConfig(next, CLIENT_PROFILE.isPhone),
       );
-      this._syncEdgeToEdge(next);
-      this._syncHeightMode(next);
+      this._cardLayout.configure(next);
       return;
     }
     this._config = next;
@@ -194,8 +162,7 @@ export class DashboardCard extends LitElement {
     this._cardHostAppearance.configure(
       activeDeviceAppearanceConfig(next, CLIENT_PROFILE.isPhone),
     );
-    this._syncEdgeToEdge(next);
-    this._syncHeightMode(next);
+    this._cardLayout.configure(next);
     if (this.isConnected && !this._cardPickerPreview) this._syncLayout(next);
     this.requestUpdate();
   }
@@ -205,9 +172,7 @@ export class DashboardCard extends LitElement {
     this.classList.toggle("card-picker-preview-host", this._cardPickerPreview);
     super.connectedCallback();
     if (this._cardPickerPreview) {
-      this._cardPickerPreviewLoad ??= import("./card-picker-preview").then(
-        () => undefined,
-      );
+      this._cardPickerPreviewLoad ??= loadCardPickerPreview();
       this.requestUpdate();
       return;
     }
@@ -217,8 +182,7 @@ export class DashboardCard extends LitElement {
         CLIENT_PROFILE.isPhone,
       ),
     );
-    this._syncEdgeToEdge(this._previewConfig ?? this._config);
-    this._syncHeightMode(this._previewConfig ?? this._config);
+    this._cardLayout.configure(this._previewConfig ?? this._config);
     window.addEventListener(
       EDITOR_PREVIEW_DRAFT_EVENT,
       this._handlePreviewDraft as EventListener,
@@ -244,19 +208,9 @@ export class DashboardCard extends LitElement {
     this._loadCompanionPhoneLandscape();
     if (this._hass) this._observeConnection(this._hass.connection);
     this._syncRuntime();
-    this._layoutRuntime.setInlineSize(
-      stageInlineSize(this.getBoundingClientRect().width),
-    );
-    this._observeStageSizeBoundary();
   }
 
   public disconnectedCallback(): void {
-    this._stageResizeObserver?.disconnect();
-    this._stageSizeBoundary = undefined;
-    if (this._stageResizeFrame !== undefined) {
-      cancelAnimationFrame(this._stageResizeFrame);
-      this._stageResizeFrame = undefined;
-    }
     window.removeEventListener(
       EDITOR_PREVIEW_DRAFT_EVENT,
       this._handlePreviewDraft as EventListener,
@@ -282,13 +236,7 @@ export class DashboardCard extends LitElement {
       this._handleRecordedMediaClose,
     );
     this._unobserveConnection();
-    this._haLayout.release();
     super.disconnectedCallback();
-  }
-
-  protected firstUpdated(): void {
-    if (this._cardPickerPreview) return;
-    this._observeStageSizeBoundary();
   }
 
   public getCardSize(): number {
@@ -358,21 +306,6 @@ export class DashboardCard extends LitElement {
     `;
   }
 
-  private _observeStageSizeBoundary(): void {
-    const boundary =
-      this.renderRoot.querySelector<HTMLElement>(".shell") ?? undefined;
-    if (!boundary || boundary === this._stageSizeBoundary) return;
-    this._stageResizeObserver?.disconnect();
-    this._stageSizeBoundary = boundary;
-    this._stageResizeObserver?.observe(boundary);
-    this._layoutRuntime.setInlineSize(
-      stageInlineSize(
-        boundary.getBoundingClientRect().width,
-        this.classList.contains("companion-phone-landscape"),
-      ),
-    );
-  }
-
   private readonly _handlePreviewDraft = (
     event: CustomEvent<PreviewDraftDetail>,
   ): void => {
@@ -387,42 +320,10 @@ export class DashboardCard extends LitElement {
     this._cardHostAppearance.configure(
       activeDeviceAppearanceConfig(config, CLIENT_PROFILE.isPhone),
     );
-    this._syncEdgeToEdge(config);
-    this._syncHeightMode(config);
+    this._cardLayout.configure(config);
     this._syncLayout(config);
     this.requestUpdate();
   };
-
-  private _syncEdgeToEdge(config: CardConfig): void {
-    const enabled = config.edge_to_edge_phone && CLIENT_PROFILE.isPhone;
-    const companionFitViewport =
-      enabled &&
-      CLIENT_PROFILE.isCompanionApp &&
-      activeCardHeightMode(config, USE_MOBILE_HEIGHT_MODE) === "fit_viewport";
-    this.classList.toggle("mobile-edge-to-edge", enabled);
-    this.classList.toggle(
-      "companion-edge-to-edge-fit-viewport",
-      companionFitViewport,
-    );
-    this._haLayout.configure(enabled);
-  }
-
-  private _syncHeightMode(config: CardConfig): void {
-    const mode = activeCardHeightMode(config, USE_MOBILE_HEIGHT_MODE);
-    const fitViewport = mode === "fit_viewport";
-    const browserEdgeToEdge =
-      fitViewport &&
-      config.edge_to_edge_phone &&
-      CLIENT_PROFILE.isPhone &&
-      CLIENT_PROFILE.application === "browser";
-    this._viewportFit.configure(fitViewport, browserEdgeToEdge);
-    for (const value of ["auto", "fit-viewport", "fill-container"]) {
-      this.classList.toggle(
-        `height-mode-${value}`,
-        value === mode.replaceAll("_", "-"),
-      );
-    }
-  }
 
   private readonly _handleRecordedMediaOpen = (
     event: CustomEvent<RecordedMediaRequest>,
@@ -574,7 +475,7 @@ export class DashboardCard extends LitElement {
 
   private _loadCompanionPhoneLandscape(): void {
     if (!USE_COMPANION_PHONE_LANDSCAPE) return;
-    void import("./companion-phone-landscape.controller")
+    void import("../features/companion-landscape")
       .then(({ installCompanionPhoneLandscape }) =>
         installCompanionPhoneLandscape(
           this,
@@ -584,20 +485,7 @@ export class DashboardCard extends LitElement {
               ? config.companion_rotate_action
               : "none";
           },
-          (active) => {
-            if (active) {
-              for (const camera of this.renderRoot.querySelectorAll<
-                HTMLElement & { resetStageSize?: () => void }
-              >(CAMERA_TAG)) {
-                camera.resetStageSize?.();
-              }
-            }
-            this._layoutRuntime.setInlineSize(
-              active
-                ? PHONE_STAGE_MAX_INLINE_SIZE + 1
-                : PHONE_STAGE_MAX_INLINE_SIZE,
-            );
-          },
+          (active) => this._cardLayout.setCompanionLandscape(active),
           this._localization.localize,
         ),
       )

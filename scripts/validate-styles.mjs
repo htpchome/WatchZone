@@ -126,7 +126,8 @@ for (const path of await collectTypeScript(sourceRoot)) {
     path === themeBoundary ||
     path === fullscreenCameraStyles ||
     path === recordedVideoTransportStyles ||
-    relativePath === "frontend/src/card/companion-phone-landscape.styles.ts" ||
+    relativePath ===
+      "frontend/src/features/companion-landscape/companion-landscape.styles.ts" ||
     relativePath === "frontend/src/ui/media-controls-overlay.styles.ts";
   if (source.includes("env(safe-area-inset-") && !safeAreaAllowed) {
     violations.push(
