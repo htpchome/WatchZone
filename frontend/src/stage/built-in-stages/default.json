@@ -3,7 +3,7 @@
   "name": "Default",
   "profiles": ["standard"],
   "revision": 0,
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "stageType": "full",
   "variants": {
     "default": {

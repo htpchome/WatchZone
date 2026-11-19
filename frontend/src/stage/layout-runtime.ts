@@ -24,6 +24,7 @@ import {
   validateStageFlow,
   type StageCatalog,
   type StageComponentNode,
+  type StageContainerNode,
   type StageFlow,
   type StageModuleNode,
   type StagePlacement,
@@ -284,6 +285,9 @@ export class LayoutRuntime implements ReactiveController {
   ): TemplateResult | typeof nothing {
     const { column, columnSpan, row, rowSpan } = placement.grid;
     const placementStyle = `grid-column:${column}/span ${columnSpan};grid-row:${row}/span ${rowSpan}`;
+    if (placement.node.kind === "container") {
+      return this._renderContainer(placement.node, placementStyle);
+    }
     if (placement.node.kind === "stack") {
       return this._renderStack(placement.node, placementStyle);
     }
@@ -293,6 +297,30 @@ export class LayoutRuntime implements ReactiveController {
     return hasComponents
       ? this._renderModule(placement.node, placementStyle)
       : this._renderRecord(placement.node, "stage-placement", placementStyle);
+  }
+
+  private _renderContainer(
+    node: StageContainerNode,
+    placementStyle: string,
+  ): TemplateResult {
+    const rows = node.rows
+      .map((size) =>
+        size === "content"
+          ? "max-content"
+          : "minmax(var(--wzc-stage-flex-track-min,0px),1fr)",
+      )
+      .join(" ");
+    return html`<div
+      class="stage-placement stage-container"
+      data-layout-node=${node.id}
+      style=${`${placementStyle};--wzc-stage-container-columns:${node.columns};--wzc-stage-container-rows:${rows}`}
+    >
+      ${repeat(
+        node.children,
+        ({ node: child }) => child.id,
+        (child) => this._renderPlacement(child),
+      )}
+    </div>`;
   }
 
   private _renderStack(
@@ -325,9 +353,7 @@ export class LayoutRuntime implements ReactiveController {
   }
 
   private _showStackModule(stackId: string, moduleId: string): void {
-    const node = this._activeVariant()?.root.children.find(
-      ({ node }) => node.kind === "stack" && node.id === stackId,
-    )?.node;
+    const node = findStack(this._activeVariant()?.root.children ?? [], stackId);
     if (!node || node.kind !== "stack") return;
     if (!node.children.some(({ id }) => id === moduleId)) return;
     if (this._activeStackModules.get(node.id) === moduleId) return;
@@ -337,8 +363,7 @@ export class LayoutRuntime implements ReactiveController {
 
   private _publishModuleStacks(placements: readonly StagePlacement[]): void {
     const stackIds = new Set<string>();
-    for (const { node } of placements) {
-      if (node.kind !== "stack") continue;
+    for (const node of collectStacks(placements)) {
       stackIds.add(node.id);
       const activeId =
         this._activeStackModules.get(node.id) ?? node.children[0]?.id;
@@ -696,6 +721,9 @@ function collectPlaceables(
   activeStackModules: Map<string, string>,
 ): Array<{ readonly node: PlaceableNode; readonly visible: boolean }> {
   return placements.flatMap(({ node }) => {
+    if (node.kind === "container") {
+      return collectPlaceables(node.children, activeStackModules);
+    }
     if (node.kind === "module") return modulePlaceables(node, true);
     const current = activeStackModules.get(node.id);
     const active = node.children.some(({ id }) => id === current)
@@ -705,6 +733,29 @@ function collectPlaceables(
     return node.children.flatMap((child) =>
       modulePlaceables(child, child.id === active),
     );
+  });
+}
+
+function findStack(
+  placements: readonly StagePlacement[],
+  stackId: string,
+): StageStackNode | undefined {
+  for (const { node } of placements) {
+    if (node.kind === "stack" && node.id === stackId) return node;
+    if (node.kind === "container") {
+      const nested = findStack(node.children, stackId);
+      if (nested) return nested;
+    }
+  }
+  return undefined;
+}
+
+function collectStacks(
+  placements: readonly StagePlacement[],
+): StageStackNode[] {
+  return placements.flatMap(({ node }) => {
+    if (node.kind === "container") return collectStacks(node.children);
+    return node.kind === "stack" ? [node] : [];
   });
 }
 

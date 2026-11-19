@@ -20,16 +20,10 @@ type CanActivate = () => boolean;
 type OrientationChanged = (active: boolean) => void;
 
 const installedHosts = new WeakSet<LandscapeHost>();
-const OUTER_LAYOUT_SETTLE_MS = 64;
-const REQUIRED_STABLE_FRAMES = 2;
 const SURFACE_SELECTORS = {
-  activity: '.stage-placement[data-layout-node$="default-activity-stack"]',
-  camera: '.stage-placement[data-layout-node$="default-camera-module"]',
+  activity: '.stage-container[data-layout-node$="default-activity-surface"]',
+  camera: '.stage-container[data-layout-node$="default-camera-surface"]',
 } as const;
-const AUXILIARY_SELECTORS = [
-  '.stage-placement[data-layout-node$="default-camera-navigation-module"]',
-  '.stage-placement[data-layout-node$="default-activity-navigation-module"]',
-] as const;
 
 type SurfaceName = keyof typeof SURFACE_SELECTORS;
 
@@ -70,19 +64,6 @@ function viewportSnapshot(host: HTMLElement): ViewportSnapshot {
     visualWidth: window.visualViewport?.width ?? window.innerWidth,
     width: window.innerWidth,
   };
-}
-
-function sameViewport(
-  first: ViewportSnapshot,
-  second: ViewportSnapshot,
-): boolean {
-  return (
-    first.height === second.height &&
-    Math.abs(first.layoutTop - second.layoutTop) < 0.5 &&
-    first.visualHeight === second.visualHeight &&
-    first.visualWidth === second.visualWidth &&
-    first.width === second.width
-  );
 }
 
 function nextFrame(): Promise<void> {
@@ -148,13 +129,9 @@ class CompanionPhoneLandscapeController implements ReactiveController {
   private _active = false;
   private readonly _animations = new Set<MotionAnimation>();
   private _connected = false;
-  private _frame?: number;
   private _initialized = false;
-  private _lastViewport = viewportSnapshot(this._host);
-  private _lastViewportChange = 0;
   private readonly _pull: CompanionCameraPullController;
   private _settledSnapshot?: TransitionSnapshot;
-  private _stableFrames = 0;
   private _transitionGeneration = 0;
 
   public constructor(
@@ -187,7 +164,7 @@ class CompanionPhoneLandscapeController implements ReactiveController {
       this._settledSnapshot = this._captureSnapshot();
       if (this._active) this._pull.sync();
     }
-    if (this._frame === undefined && this._targetActive() !== this._active) {
+    if (this._targetActive() !== this._active) {
       this._schedule();
     }
   }
@@ -201,48 +178,13 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     this._pull.deactivate();
     this._cancelAnimations();
     this._host.classList.remove("companion-phone-orientation-transitioning");
-    if (this._frame !== undefined) cancelAnimationFrame(this._frame);
-    this._frame = undefined;
   }
 
   private readonly _schedule = (): void => {
     if (!this._connected) return;
-    this._lastViewport = viewportSnapshot(this._host);
-    this._lastViewportChange = performance.now();
-    this._stableFrames = 0;
-    // Claim either destination on the first aspect-ratio change. Waiting for
-    // viewport settlement here lets the ordinary phone Stage paint at the
-    // wide width first, producing the full-width camera flash seen on device.
     if (this._initialized && this._targetActive() !== this._active) {
-      if (this._frame !== undefined) cancelAnimationFrame(this._frame);
-      this._frame = undefined;
       void this._sync();
-      return;
     }
-    if (this._frame === undefined) {
-      this._frame = requestAnimationFrame(this._settle);
-    }
-  };
-
-  private readonly _settle = (now: number): void => {
-    this._frame = undefined;
-    if (!this._connected) return;
-    const viewport = viewportSnapshot(this._host);
-    if (sameViewport(viewport, this._lastViewport)) {
-      this._stableFrames += 1;
-    } else {
-      this._lastViewport = viewport;
-      this._lastViewportChange = now;
-      this._stableFrames = 0;
-    }
-    if (
-      this._stableFrames < REQUIRED_STABLE_FRAMES ||
-      now - this._lastViewportChange < OUTER_LAYOUT_SETTLE_MS
-    ) {
-      this._frame = requestAnimationFrame(this._settle);
-      return;
-    }
-    void this._sync();
   };
 
   private _targetActive(): boolean {
@@ -276,10 +218,7 @@ class CompanionPhoneLandscapeController implements ReactiveController {
   private _cancelAnimations(): void {
     for (const animation of this._animations) animation.cancel();
     this._animations.clear();
-    for (const selector of [
-      ...Object.values(SURFACE_SELECTORS),
-      ...AUXILIARY_SELECTORS,
-    ]) {
+    for (const selector of [...Object.values(SURFACE_SELECTORS)]) {
       const element =
         this._host.renderRoot.querySelector<HTMLElement>(selector);
       element?.style.removeProperty("opacity");
@@ -341,22 +280,6 @@ class CompanionPhoneLandscapeController implements ReactiveController {
       );
     }
 
-    for (const selector of AUXILIARY_SELECTORS) {
-      const element =
-        this._host.renderRoot.querySelector<HTMLElement>(selector);
-      if (!element) continue;
-      animations.push(
-        animateElement(
-          element,
-          { opacity: [0, 1] },
-          {
-            duration: motionDurations.layout,
-            ease: motionEasings.standard,
-          },
-        ),
-      );
-    }
-
     for (const animation of animations) this._animations.add(animation);
     await Promise.all(
       animations.map((animation) =>
@@ -396,7 +319,6 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     this._host.classList.toggle("companion-phone-landscape", active);
     this._orientationChanged(active);
     await this._host.updateComplete;
-    await nextFrame();
     if (!this._isCurrent(active, generation)) return;
     if (animate) await this._playTransition(before, active);
     if (!this._isCurrent(active, generation)) return;

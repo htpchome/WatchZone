@@ -8971,7 +8971,7 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
     .toBe("2");
   await expect(card.locator(".stage-grid")).toHaveAttribute(
     "data-test-opacity-motions",
-    "2",
+    "0",
   );
   await expect(card.locator(".stage-grid")).toHaveAttribute(
     "data-test-rotate-motions",
@@ -9085,12 +9085,16 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
       return value;
     };
     const camera = placement("default-camera-module");
+    const cameraSurface = placement("default-camera-surface");
     const navigation = placement("default-camera-navigation-module");
     const activity = placement("default-activity-stack");
+    const activitySurface = placement("default-activity-surface");
     const activityNavigation = placement("default-activity-navigation-module");
     const cameraRect = camera.getBoundingClientRect();
+    const cameraSurfaceRect = cameraSurface.getBoundingClientRect();
     const navigationRect = navigation.getBoundingClientRect();
     const activityRect = activity.getBoundingClientRect();
+    const activitySurfaceRect = activitySurface.getBoundingClientRect();
     const activityNavigationRect = activityNavigation.getBoundingClientRect();
     const hostRect = host.getBoundingClientRect();
     return {
@@ -9099,6 +9103,9 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
       activityOverflow: getComputedStyle(activity).overflow,
       activityRight: Math.round(activityRect.right),
       activityTop: Math.round(activityRect.top),
+      activitySurfaceBottom: Math.round(activitySurfaceRect.bottom),
+      activitySurfaceLeft: Math.round(activitySurfaceRect.left),
+      activitySurfaceTop: Math.round(activitySurfaceRect.top),
       activityNavigationBottom: Math.round(activityNavigationRect.bottom),
       activityNavigationHeight: Math.round(activityNavigationRect.height),
       activityNavigationLeft: Math.round(activityNavigationRect.left),
@@ -9110,6 +9117,9 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
       cameraNavigationTop: Math.round(navigationRect.top),
       cameraRight: Math.round(cameraRect.right),
       cameraTop: Math.round(cameraRect.top),
+      cameraSurfaceBottom: Math.round(cameraSurfaceRect.bottom),
+      cameraSurfaceLeft: Math.round(cameraSurfaceRect.left),
+      cameraSurfaceTop: Math.round(cameraSurfaceRect.top),
       columnRatio: cameraRect.width / activityRect.width,
       gutter: Math.round(activityRect.left - cameraRect.right),
       host: {
@@ -9137,6 +9147,9 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
     activityOverflow: "visible",
     activityRight: expect.any(Number),
     activityTop: expect.any(Number),
+    activitySurfaceBottom: expect.any(Number),
+    activitySurfaceLeft: expect.any(Number),
+    activitySurfaceTop: expect.any(Number),
     activityNavigationBottom: expect.any(Number),
     activityNavigationHeight: expect.any(Number),
     activityNavigationLeft: expect.any(Number),
@@ -9148,6 +9161,9 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
     cameraNavigationTop: expect.any(Number),
     cameraRight: expect.any(Number),
     cameraTop: expect.any(Number),
+    cameraSurfaceBottom: expect.any(Number),
+    cameraSurfaceLeft: expect.any(Number),
+    cameraSurfaceTop: expect.any(Number),
     columnRatio: geometry.columnRatio,
     gutter: expect.any(Number),
     host: { height: 390, left: 0, top: 0, width: 844 },
@@ -9156,16 +9172,23 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
     stableCamera: "stable",
   });
   expect(geometry.activityLeft).toBeGreaterThan(geometry.cameraLeft);
-  expect(geometry.activityHeight).toBeGreaterThan(geometry.cameraHeight);
   expect(geometry.activityRight).toBeLessThan(geometry.host.width);
   expect(activityTitle).not.toBeNull();
-  expect(activityTitle?.y).toBeCloseTo(geometry.cameraTop, 0);
-  expect(geometry.activityNavigationTop).toBeGreaterThan(
-    geometry.cameraTop + geometry.cameraHeight,
+  expect(Math.abs((activityTitle?.y ?? 0) - geometry.activityTop)).toBeLessThan(
+    8,
+  );
+  expect(geometry.activityNavigationBottom).toBeLessThanOrEqual(
+    geometry.activityTop,
   );
   expect(geometry.activityNavigationLeft).toBeGreaterThan(geometry.cameraLeft);
-  expect(geometry.activityNavigationRight).toBeLessThan(geometry.activityLeft);
-  expect(geometry.activityNavigationRight).toBeCloseTo(geometry.cameraRight, 0);
+  expect(geometry.activityNavigationLeft).toBeCloseTo(
+    geometry.activitySurfaceLeft,
+    0,
+  );
+  expect(geometry.activityNavigationRight).toBeCloseTo(
+    geometry.activityRight,
+    0,
+  );
   expect(geometry.activityNavigationBottom).toBeLessThanOrEqual(
     geometry.host.height + 32,
   );
@@ -9175,6 +9198,11 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
   expect(geometry.cameraLeft).toBeLessThanOrEqual(4);
   expect(geometry.columnRatio).toBeCloseTo(3 / 2, 2);
   expect(geometry.gutter).toBeGreaterThanOrEqual(16);
+  expect(geometry.cameraSurfaceTop).toBeCloseTo(geometry.activitySurfaceTop, 0);
+  expect(geometry.cameraSurfaceBottom).toBeCloseTo(
+    geometry.activitySurfaceBottom,
+    0,
+  );
   expect(geometry.activityHeight).toBeLessThanOrEqual(
     geometry.host.height + 32,
   );
@@ -9385,7 +9413,7 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
     .toBe("4");
   await expect(card.locator(".stage-grid")).toHaveAttribute(
     "data-test-opacity-motions",
-    "4",
+    "0",
   );
   await expect(card.locator(".stage-grid")).toHaveCSS("transform", "none");
   const portraitGeometry = await card.evaluate((element) => ({

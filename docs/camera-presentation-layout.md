@@ -113,9 +113,8 @@ presentation. It occupies the fixed WebView, covers Home Assistant's dashboard
 chrome, and applies viewport safe-area padding. The leading 60% contains a
 16:9 camera plus camera navigation; the trailing 40% contains the active
 Reviews, Events, Recordings, or Exports stack. The independently placeable
-activity-navigation module is right-aligned below the camera column at its
-normal toolbar control size. The activity title aligns with the top of the
-camera. A top inset protects the camera, an expanded module gutter separates
+activity-navigation module sits above that stack inside the trailing surface.
+A top inset protects the camera, an expanded module gutter separates
 the columns, and a reduced form of the larger reported landscape safe-area
 inset is reserved symmetrically on both inline edges so either phone rotation
 direction protects both columns. Each active media list is capped at three
@@ -126,12 +125,14 @@ uses rounded corners and hides its resize handle, independent of the ordinary
 phone Camera appearance setting. This overlay does not activate for browser
 phones, Companion tablets, or incompatible Stage types.
 
-Orientation retains the same Stage nodes and live sessions. Companion rotates
-the complete WebView. WatchZone immediately commits the final 60/40 layout and
-uses one Motion timeline to translate and scale exactly two live surfaces—the
-Camera placement and active Activity placement—from their rotated prior
-geometry into the new destinations. It does not add another rotation or render
-duplicate media. Camera and activity navigation fade on the same timeline.
+Orientation retains the same Stage nodes and live sessions. The Stage owns two
+real nested containers: Camera plus camera navigation, and activity navigation
+plus the active Activity stack. Companion rotates the complete WebView. On the
+first aspect-ratio change WatchZone commits the final 60/40 layout and starts
+one Motion timeline immediately, translating and scaling those two containers
+from their rotated prior geometry into the new destinations. It does not add
+another rotation, fade detached navigation, render duplicate media, wait for a
+viewport-settle timer, or defer Motion to a later animation frame.
 The pull handle is not exposed until its final gutter position has been
 measured and it remeasures automatically when either surface changes size. The
 landscape overlay continues to cover Home Assistant's top navigation. On the

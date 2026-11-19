@@ -135,10 +135,12 @@ same Stage nodes and live sessions are retained in a 60/40 camera/activity
 composition. Companion owns the physical WebView rotation; WatchZone does not
 add a second `rotate()`. On the first landscape aspect-ratio change, WatchZone
 commits the final 60/40 destination before the ordinary wide responsive layout
-can paint. Motion then maps the stored portrait geometry into the rotated
-coordinate space and animates exactly two live surfaces—the Camera placement
-and active Activity placement—into their destinations with one duration and
-easing. Navigation fades on the same timeline. The pull handle is connected
+can paint. The Stage supplies two persistent nested surfaces: Camera with
+camera navigation, and activity navigation with the active Activity stack.
+Motion maps their stored portrait geometry into the rotated coordinate space
+and starts both translate/scale animations during that first aspect-ratio
+change with one duration and easing. There is no viewport-settle timer,
+follow-up animation-frame delay, or separately fading navigation. The pull handle is connected
 only after the final gutter has been measured and remains synchronized through
 ResizeObserver updates. Returning to portrait releases the fixed overlay
 immediately so Home Assistant's own header and flow become authoritative

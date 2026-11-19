@@ -16,13 +16,13 @@ precedence.
 ## Repository state
 
 - Branch: `main`.
-- Current HEAD: `741b2b3` —
-  `v0.0.4-dev.447 - fix(frontend): defer Companion rotation to platform`.
-- Pending version: `0.0.4-dev.448`.
-- Worktree: the two-surface Companion rotation correction described below is
-  intentionally uncommitted.
-- Proposed commit subject:
+- Current HEAD: `373f587` —
   `v0.0.4-dev.448 - fix(frontend): choreograph Companion rotation surfaces`.
+- Pending version: `0.0.4-dev.449`.
+- Worktree: the grouped-surface Companion rotation correction described below
+  is intentionally uncommitted.
+- Proposed commit subject:
+  `v0.0.4-dev.449 - fix(frontend): synchronize grouped orientation motion`.
 
 Always recheck `git status`, `git log -1`, and
 `custom_components/watchzone/const.py` before starting work.
@@ -153,21 +153,23 @@ UI.
 
 ## Pending Companion orientation correction
 
-- Companion owns physical WebView rotation. WatchZone immediately commits the
-  final responsive state and Motion translates/scales exactly two retained
-  live surfaces—Camera and Activity—into place without another rotation.
+- Companion owns physical WebView rotation. The Stage now supplies two real
+  persistent nested containers: Camera plus camera navigation, and activity
+  navigation plus the active Activity stack. Motion translates/scales those
+  two units without another rotation.
 - Landscape remains a fixed viewport overlay above Home Assistant dashboard
   chrome, so the HA top navigation is not exposed.
 - The first portrait resize releases the fixed overlay immediately. Home
   Assistant flow then decides the card's real top position: an enabled header
   places it below the header, while a disabled header adds no phantom offset.
-- Camera and activity navigation fade on the same Motion timeline. The pull
+- The controller has no viewport-settle timer or extra animation-frame wait;
+  it starts both transforms during the first aspect-ratio change. The pull
   handle is created only after its final gutter is measured, then stays
   synchronized through ResizeObserver measurements rather than first input.
 - The same Camera, Stage nodes, activity state, scroll position, and retained
   media sessions remain mounted throughout.
 
-## Validation baseline for pending `dev.448`
+## Validation baseline for pending `dev.449`
 
 The current baseline passes:
 
@@ -177,29 +179,28 @@ The current baseline passes:
 - `corepack yarn typecheck`;
 - `corepack yarn test`: 488 tests passed in 77 files;
 - `corepack yarn build`;
-- `corepack yarn check:styles`;
-- `corepack yarn check:licenses`;
-- `bash scripts/package-release.sh`: lazy editor 18,554 bytes gzip and eager
-  graph 60,546 bytes gzip, producing `dist/watchzone.zip`;
+- `bash scripts/package-release.sh`: lazy editor 18,555 bytes gzip and eager
+  graph 60,722 bytes gzip, producing `dist/watchzone.zip`;
+- focused grouped-orientation coverage passed in Chromium, Firefox, and WebKit;
 - `corepack yarn test:browser`: 156 tests passed across Chromium, Firefox, and
   WebKit;
 - `git diff --check`.
 
-The browser matrix required permission to bind its local Vite server to
-`127.0.0.1:5173`; the initial sandboxed start failed with `EPERM` before any
-test ran. The rerun with the required permission completed successfully.
+Python source compilation passed. Focused Python tests could not collect in
+this workspace because the Home Assistant test dependency is not installed;
+Ruff is also unavailable here.
 
 The first unit run passed all 488 assertions but reported three late dynamic
 imports from the existing card test after environment teardown. A clean
 isolated rerun passed all 488 tests with no unhandled errors.
 
 The whole-Stage inverse rotation and the later unchoreographed platform-only
-attempt both failed physical-device review. The current correction eliminates
-the ordinary full-width landscape camera intermediate state, uses exactly two
-geometry motions with no added rotation, fades auxiliary navigation on the
-same timeline, and delays the pull handle until measured. Automated
-revalidation is complete; physical-device review of this two-surface
-correction is still required.
+attempt both failed physical-device review. The later `dev.448` attempt also
+failed because it transformed only Camera and Activity placements after a
+render delay while their navigation remained detached. The current correction
+uses two real grouped containers and starts their shared Motion timeline during
+the first aspect-ratio change. Automated revalidation is complete;
+physical-device review is still required.
 
 These results establish repository consistency and automated interaction
 coverage only. They do not establish physical-device visual quality or prove

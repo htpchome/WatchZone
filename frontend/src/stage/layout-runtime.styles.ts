@@ -28,6 +28,18 @@ export const stageRuntimeStyles = css`
     gap: var(--wzc-stage-module-gap);
   }
 
+  .stage-container {
+    display: grid;
+    grid-template-columns: repeat(
+      var(--wzc-stage-container-columns),
+      minmax(0, 1fr)
+    );
+    grid-template-rows: var(--wzc-stage-container-rows);
+    align-content: start;
+    align-items: stretch;
+    gap: var(--wzc-stage-module-gap);
+  }
+
   .stage-placement[data-layout-node$="default-activity-navigation-module"] {
     margin-block-end: calc(-1 * var(--wzc-stage-module-gap));
   }

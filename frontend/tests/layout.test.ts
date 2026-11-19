@@ -947,7 +947,7 @@ function layoutWithModules(...ids: string[]): StageDesignDocument {
     name: "Test",
     profiles: ["standard", "mobile"],
     revision: 0,
-    schemaVersion: 3,
+    schemaVersion: 4,
     stageType: "full",
     variants: {
       default: variantWithNodes(...ids),
@@ -1005,7 +1005,7 @@ function layoutWithStack(): StageDesignDocument {
     name: "Stack",
     profiles: ["standard", "mobile"],
     revision: 0,
-    schemaVersion: 3,
+    schemaVersion: 4,
     stageType: "full",
     variants: { default: variant, phone: variant },
   };

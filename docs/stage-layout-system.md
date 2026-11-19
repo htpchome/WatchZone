@@ -38,7 +38,7 @@ Modules and components are independently lazy loaded. Neither imports another
 placeable. Shared behavior uses core contracts and typed context. Provider
 mechanics remain below public provider resolvers.
 
-## Version 3 schema
+## Version 4 schema
 
 A Stage Design contains a stable ID, name, schema version, optimistic revision,
 a `stageType` classification, one or more physical-client `profiles`, and at
@@ -60,16 +60,20 @@ shared remaining space or `content` sizing for intrinsic controls such as a
 standalone camera navigation bar. This keeps fixed-height cards bounded without
 assigning feature-specific layout behavior to Panel.
 
-Store loading migrates schema-one designs, which predate Stage Type, and
-schema-two designs, which inferred client eligibility from variant presence.
-Migration preserves that eligibility as explicit version-three `profiles`.
+Store loading migrates schema-one designs, which predate Stage Type,
+schema-two designs, which inferred client eligibility from variant presence,
+and schema-three designs, which allowed only a root container. Migration
+preserves client eligibility as explicit profiles and accepts the existing
+flat placement tree as a valid version-four layout.
 New saves and direct validation require the current schema, an explicit
 classification, and at least one profile.
 
-Container children are placements containing one module node or one module
-stack and one grid area. A module stack contains an ordered, non-empty list of
-module nodes. A module node contains its validated configuration and optional
-named slots.
+Container children are placements containing one nested container, module, or
+module stack and one grid area. Nested containers own composition geometry
+only; they provide a real shared layout and animation surface without importing
+or coordinating their child placeables. A module stack contains an ordered,
+non-empty list of module nodes. A module node contains its validated
+configuration and optional named slots.
 Slots contain component nodes with their own validated configuration. Node IDs
 must be unique within a variant. Corresponding nodes use the same stable IDs in
 both variants so switching variants preserves loaded custom elements and live
@@ -124,25 +128,27 @@ any placeable loads. A lineup must retain at least one selection; the editor
 cannot remove its final entry. Lovelace configuration stores these ordered
 references, never copies of the Stage Design documents.
 
-The built-in `full` composition is:
+The built-in mobile `full` composition is:
 
 ```text
 root grid
-├── camera module
-│   ├── overlay slot
-│   │   ├── slideshow component (when enabled and multiple cameras exist)
-│   │   └── camera-switcher component (when enabled and multiple cameras exist)
-│   ├── controls slot (responsive intrinsic-size dock)
-│   │   ├── linked-light component (when configured)
-│   │   ├── two-way-talk component (when enabled)
-│   │   └── PTZ component (when enabled)
-├── camera-navigation module
-├── activity-navigation module
-└── media-list module stack
-    ├── reviews module (initially active)
-    ├── events module
-    ├── recordings module
-    └── exports module
+├── camera surface container
+│   ├── camera module
+│   │   ├── overlay slot
+│   │   │   ├── slideshow component (when enabled and multiple cameras exist)
+│   │   │   └── camera-switcher component (when enabled and multiple cameras exist)
+│   │   └── controls slot (responsive intrinsic-size dock)
+│   │       ├── linked-light component (when configured)
+│   │       ├── two-way-talk component (when enabled)
+│   │       └── PTZ component (when enabled)
+│   └── camera-navigation module
+└── activity surface container
+    ├── activity-navigation module
+    └── media-list module stack
+        ├── reviews module (initially active)
+        ├── events module
+        ├── recordings module
+        └── exports module
 ```
 
 The built-in `camera_only` composition contains the same camera module and its

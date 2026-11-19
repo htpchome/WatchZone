@@ -7,7 +7,7 @@ from typing import Any, Literal, cast
 
 from homeassistant.exceptions import HomeAssistantError
 
-STAGE_SCHEMA_VERSION = 3
+STAGE_SCHEMA_VERSION = 4
 StageProfile = Literal["mobile", "standard"]
 StageType = Literal["camera_only", "full", "minimal_camera_only"]
 StageSlotName = Literal["content", "controls", "footer", "overlay"]
@@ -74,7 +74,7 @@ class StagePlacement:
     """One module placement within a grid container."""
 
     grid: StageGridArea
-    node: StageModuleNode | StageStackNode
+    node: StageContainerNode | StageModuleNode | StageStackNode
 
 
 @dataclass(frozen=True, slots=True)
@@ -206,12 +206,16 @@ def _placement(
 
 def _placement_node(
     value: object, ids: set[str]
-) -> StageModuleNode | StageStackNode:
+) -> StageContainerNode | StageModuleNode | StageStackNode:
     source = _mapping(value, "Stage placement node")
+    if source.get("kind") == "container":
+        return _container(source, ids)
     if source.get("kind") == "module":
         return _module(source, ids)
     if source.get("kind") != "stack":
-        raise HomeAssistantError("Stage placements require a module or module stack")
+        raise HomeAssistantError(
+            "Stage placements require a container, module, or module stack"
+        )
     node_id = _unique_id(source.get("id"), ids)
     children = source.get("children")
     if not isinstance(children, list) or not children:

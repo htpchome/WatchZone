@@ -3,7 +3,7 @@
   "name": "Default",
   "profiles": ["mobile"],
   "revision": 0,
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "stageType": "full",
   "variants": {
     "default": {
@@ -17,88 +17,87 @@
               "rowSpan": 1
             },
             "node": {
-              "config": {},
-              "id": "default-camera-module",
-              "kind": "module",
-              "moduleType": "camera",
-              "slots": {
-                "overlay": [
-                  {
-                    "componentType": "slideshow",
+              "children": [
+                {
+                  "grid": {
+                    "column": 1,
+                    "columnSpan": 1,
+                    "row": 1,
+                    "rowSpan": 1
+                  },
+                  "node": {
+                    "config": {},
+                    "id": "default-camera-module",
+                    "kind": "module",
+                    "moduleType": "camera",
+                    "slots": {
+                      "overlay": [
+                        {
+                          "componentType": "slideshow",
+                          "config": {
+                            "targetModuleId": "default-camera-module"
+                          },
+                          "id": "default-slideshow-component",
+                          "kind": "component",
+                          "overlayRegion": "top"
+                        },
+                        {
+                          "componentType": "camera_switcher",
+                          "config": {
+                            "targetModuleId": "default-camera-module"
+                          },
+                          "id": "default-camera-switcher-component",
+                          "kind": "component",
+                          "overlayRegion": "top"
+                        }
+                      ],
+                      "controls": [
+                        {
+                          "componentType": "light_control",
+                          "config": {},
+                          "controlRegion": "leading",
+                          "id": "default-light-component",
+                          "kind": "component"
+                        },
+                        {
+                          "componentType": "two_way_talk",
+                          "config": {},
+                          "controlRegion": "center",
+                          "id": "default-talk-component",
+                          "kind": "component"
+                        },
+                        {
+                          "componentType": "ptz",
+                          "config": {},
+                          "controlRegion": "trailing",
+                          "id": "default-ptz-component",
+                          "kind": "component"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "grid": {
+                    "column": 1,
+                    "columnSpan": 1,
+                    "row": 2,
+                    "rowSpan": 1
+                  },
+                  "node": {
                     "config": {
                       "targetModuleId": "default-camera-module"
                     },
-                    "id": "default-slideshow-component",
-                    "kind": "component",
-                    "overlayRegion": "top"
-                  },
-                  {
-                    "componentType": "camera_switcher",
-                    "config": {
-                      "targetModuleId": "default-camera-module"
-                    },
-                    "id": "default-camera-switcher-component",
-                    "kind": "component",
-                    "overlayRegion": "top"
+                    "id": "default-camera-navigation-module",
+                    "kind": "module",
+                    "moduleType": "camera-navigation"
                   }
-                ],
-                "controls": [
-                  {
-                    "componentType": "light_control",
-                    "config": {},
-                    "controlRegion": "leading",
-                    "id": "default-light-component",
-                    "kind": "component"
-                  },
-                  {
-                    "componentType": "two_way_talk",
-                    "config": {},
-                    "controlRegion": "center",
-                    "id": "default-talk-component",
-                    "kind": "component"
-                  },
-                  {
-                    "componentType": "ptz",
-                    "config": {},
-                    "controlRegion": "trailing",
-                    "id": "default-ptz-component",
-                    "kind": "component"
-                  }
-                ]
-              }
-            }
-          },
-          {
-            "grid": {
-              "column": 1,
-              "columnSpan": 1,
-              "row": 3,
-              "rowSpan": 1
-            },
-            "node": {
-              "config": {
-                "presentation": "toolbar",
-                "targetStackId": "default-activity-stack"
-              },
-              "id": "default-activity-navigation-module",
-              "kind": "module",
-              "moduleType": "activity-navigation"
-            }
-          },
-          {
-            "grid": {
-              "column": 1,
-              "columnSpan": 1,
-              "row": 2,
-              "rowSpan": 1
-            },
-            "node": {
-              "config": {
-                "targetModuleId": "default-camera-module"
-              },
-              "id": "default-camera-navigation-module",
-              "kind": "module",
-              "moduleType": "camera-navigation"
+                }
+              ],
+              "columns": 1,
+              "id": "default-camera-surface",
+              "kind": "container",
+              "rows": ["content", "content"]
             }
           },
           {
@@ -106,54 +105,87 @@
               "column": 2,
               "columnSpan": 1,
               "row": 1,
-              "rowSpan": 3
+              "rowSpan": 1
             },
             "node": {
               "children": [
                 {
-                  "config": {
-                    "roundedCorners": true,
-                    "targetModuleId": "default-camera-module"
+                  "grid": {
+                    "column": 1,
+                    "columnSpan": 1,
+                    "row": 1,
+                    "rowSpan": 1
                   },
-                  "id": "default-reviews-module",
-                  "kind": "module",
-                  "moduleType": "reviews"
+                  "node": {
+                    "config": {
+                      "presentation": "toolbar",
+                      "targetStackId": "default-activity-stack"
+                    },
+                    "id": "default-activity-navigation-module",
+                    "kind": "module",
+                    "moduleType": "activity-navigation"
+                  }
                 },
                 {
-                  "config": {
-                    "roundedCorners": true,
-                    "targetModuleId": "default-camera-module"
+                  "grid": {
+                    "column": 1,
+                    "columnSpan": 1,
+                    "row": 2,
+                    "rowSpan": 1
                   },
-                  "id": "default-events-module",
-                  "kind": "module",
-                  "moduleType": "events"
-                },
-                {
-                  "config": {
-                    "targetModuleId": "default-camera-module"
-                  },
-                  "id": "default-recordings-module",
-                  "kind": "module",
-                  "moduleType": "recordings"
-                },
-                {
-                  "config": {
-                    "targetModuleId": "default-camera-module"
-                  },
-                  "id": "default-exports-module",
-                  "kind": "module",
-                  "moduleType": "exports"
+                  "node": {
+                    "children": [
+                      {
+                        "config": {
+                          "roundedCorners": true,
+                          "targetModuleId": "default-camera-module"
+                        },
+                        "id": "default-reviews-module",
+                        "kind": "module",
+                        "moduleType": "reviews"
+                      },
+                      {
+                        "config": {
+                          "roundedCorners": true,
+                          "targetModuleId": "default-camera-module"
+                        },
+                        "id": "default-events-module",
+                        "kind": "module",
+                        "moduleType": "events"
+                      },
+                      {
+                        "config": {
+                          "targetModuleId": "default-camera-module"
+                        },
+                        "id": "default-recordings-module",
+                        "kind": "module",
+                        "moduleType": "recordings"
+                      },
+                      {
+                        "config": {
+                          "targetModuleId": "default-camera-module"
+                        },
+                        "id": "default-exports-module",
+                        "kind": "module",
+                        "moduleType": "exports"
+                      }
+                    ],
+                    "id": "default-activity-stack",
+                    "kind": "stack"
+                  }
                 }
               ],
-              "id": "default-activity-stack",
-              "kind": "stack"
+              "columns": 1,
+              "id": "default-activity-surface",
+              "kind": "container",
+              "rows": ["content", "fraction"]
             }
           }
         ],
         "columns": 2,
         "id": "default-layout-root",
         "kind": "container",
-        "rows": ["content", "content", "content"]
+        "rows": ["fraction"]
       }
     },
     "phone": {
@@ -167,72 +199,87 @@
               "rowSpan": 1
             },
             "node": {
-              "config": {},
-              "id": "default-camera-module",
-              "kind": "module",
-              "moduleType": "camera",
-              "slots": {
-                "overlay": [
-                  {
-                    "componentType": "slideshow",
+              "children": [
+                {
+                  "grid": {
+                    "column": 1,
+                    "columnSpan": 4,
+                    "row": 1,
+                    "rowSpan": 1
+                  },
+                  "node": {
+                    "config": {},
+                    "id": "default-camera-module",
+                    "kind": "module",
+                    "moduleType": "camera",
+                    "slots": {
+                      "overlay": [
+                        {
+                          "componentType": "slideshow",
+                          "config": {
+                            "targetModuleId": "default-camera-module"
+                          },
+                          "id": "default-slideshow-component",
+                          "kind": "component",
+                          "overlayRegion": "top"
+                        },
+                        {
+                          "componentType": "camera_switcher",
+                          "config": {
+                            "targetModuleId": "default-camera-module"
+                          },
+                          "id": "default-camera-switcher-component",
+                          "kind": "component",
+                          "overlayRegion": "top"
+                        }
+                      ],
+                      "controls": [
+                        {
+                          "componentType": "light_control",
+                          "config": {},
+                          "controlRegion": "leading",
+                          "id": "default-light-component",
+                          "kind": "component"
+                        },
+                        {
+                          "componentType": "two_way_talk",
+                          "config": {},
+                          "controlRegion": "center",
+                          "id": "default-talk-component",
+                          "kind": "component"
+                        },
+                        {
+                          "componentType": "ptz",
+                          "config": {},
+                          "controlRegion": "trailing",
+                          "id": "default-ptz-component",
+                          "kind": "component"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "grid": {
+                    "column": 1,
+                    "columnSpan": 4,
+                    "row": 2,
+                    "rowSpan": 1
+                  },
+                  "node": {
                     "config": {
                       "targetModuleId": "default-camera-module"
                     },
-                    "id": "default-slideshow-component",
-                    "kind": "component",
-                    "overlayRegion": "top"
-                  },
-                  {
-                    "componentType": "camera_switcher",
-                    "config": {
-                      "targetModuleId": "default-camera-module"
-                    },
-                    "id": "default-camera-switcher-component",
-                    "kind": "component",
-                    "overlayRegion": "top"
+                    "id": "default-camera-navigation-module",
+                    "kind": "module",
+                    "moduleType": "camera-navigation"
                   }
-                ],
-                "controls": [
-                  {
-                    "componentType": "light_control",
-                    "config": {},
-                    "controlRegion": "leading",
-                    "id": "default-light-component",
-                    "kind": "component"
-                  },
-                  {
-                    "componentType": "two_way_talk",
-                    "config": {},
-                    "controlRegion": "center",
-                    "id": "default-talk-component",
-                    "kind": "component"
-                  },
-                  {
-                    "componentType": "ptz",
-                    "config": {},
-                    "controlRegion": "trailing",
-                    "id": "default-ptz-component",
-                    "kind": "component"
-                  }
-                ]
-              }
-            }
-          },
-          {
-            "grid": {
-              "column": 1,
-              "columnSpan": 4,
-              "row": 3,
-              "rowSpan": 1
-            },
-            "node": {
-              "config": {
-                "presentation": "toolbar",
-                "targetStackId": "default-activity-stack"
-              },
-              "id": "default-activity-navigation-module",
-              "kind": "module",
-              "moduleType": "activity-navigation"
+                }
+              ],
+              "columns": 4,
+              "id": "default-camera-surface",
+              "kind": "container",
+              "rows": ["content", "content"]
             }
           },
           {
@@ -243,67 +290,84 @@
               "rowSpan": 1
             },
             "node": {
-              "config": {
-                "targetModuleId": "default-camera-module"
-              },
-              "id": "default-camera-navigation-module",
-              "kind": "module",
-              "moduleType": "camera-navigation"
-            }
-          },
-          {
-            "grid": {
-              "column": 1,
-              "columnSpan": 4,
-              "row": 4,
-              "rowSpan": 1
-            },
-            "node": {
               "children": [
                 {
-                  "config": {
-                    "roundedCorners": true,
-                    "targetModuleId": "default-camera-module"
+                  "grid": {
+                    "column": 1,
+                    "columnSpan": 4,
+                    "row": 1,
+                    "rowSpan": 1
                   },
-                  "id": "default-reviews-module",
-                  "kind": "module",
-                  "moduleType": "reviews"
+                  "node": {
+                    "config": {
+                      "presentation": "toolbar",
+                      "targetStackId": "default-activity-stack"
+                    },
+                    "id": "default-activity-navigation-module",
+                    "kind": "module",
+                    "moduleType": "activity-navigation"
+                  }
                 },
                 {
-                  "config": {
-                    "roundedCorners": true,
-                    "targetModuleId": "default-camera-module"
+                  "grid": {
+                    "column": 1,
+                    "columnSpan": 4,
+                    "row": 2,
+                    "rowSpan": 1
                   },
-                  "id": "default-events-module",
-                  "kind": "module",
-                  "moduleType": "events"
-                },
-                {
-                  "config": {
-                    "targetModuleId": "default-camera-module"
-                  },
-                  "id": "default-recordings-module",
-                  "kind": "module",
-                  "moduleType": "recordings"
-                },
-                {
-                  "config": {
-                    "targetModuleId": "default-camera-module"
-                  },
-                  "id": "default-exports-module",
-                  "kind": "module",
-                  "moduleType": "exports"
+                  "node": {
+                    "children": [
+                      {
+                        "config": {
+                          "roundedCorners": true,
+                          "targetModuleId": "default-camera-module"
+                        },
+                        "id": "default-reviews-module",
+                        "kind": "module",
+                        "moduleType": "reviews"
+                      },
+                      {
+                        "config": {
+                          "roundedCorners": true,
+                          "targetModuleId": "default-camera-module"
+                        },
+                        "id": "default-events-module",
+                        "kind": "module",
+                        "moduleType": "events"
+                      },
+                      {
+                        "config": {
+                          "targetModuleId": "default-camera-module"
+                        },
+                        "id": "default-recordings-module",
+                        "kind": "module",
+                        "moduleType": "recordings"
+                      },
+                      {
+                        "config": {
+                          "targetModuleId": "default-camera-module"
+                        },
+                        "id": "default-exports-module",
+                        "kind": "module",
+                        "moduleType": "exports"
+                      }
+                    ],
+                    "id": "default-activity-stack",
+                    "kind": "stack"
+                  }
                 }
               ],
-              "id": "default-activity-stack",
-              "kind": "stack"
+              "columns": 4,
+              "id": "default-activity-surface",
+              "kind": "container",
+              "rows": ["content", "fraction"]
             }
           }
         ],
         "columns": 4,
         "id": "default-layout-root",
         "kind": "container",
-        "rows": ["content", "content", "content", "fraction"]
+        "rows": ["content", "fraction"]
       }
     }
   }

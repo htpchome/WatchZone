@@ -3,7 +3,7 @@
   "name": "Minimal Camera",
   "profiles": ["standard", "mobile"],
   "revision": 0,
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "stageType": "minimal_camera_only",
   "variants": {
     "default": {

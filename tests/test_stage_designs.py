@@ -35,7 +35,7 @@ def _design(*, revision: int = 0) -> dict[str, object]:
         "id": "default",
         "name": "Default",
         "revision": revision,
-        "schemaVersion": 3,
+        "schemaVersion": 4,
         "profiles": ["standard", "mobile"],
         "stageType": "full",
         "variants": {
@@ -327,7 +327,7 @@ async def test_stage_store_migrates_pre_gatekeeper_designs(
     design = store.get("default")
     assert design is not None
     assert design.stage_type == "full"
-    assert design.schema_version == 3
+    assert design.schema_version == 4
     assert design.profiles == ("standard", "mobile")
 
 
@@ -351,7 +351,26 @@ async def test_stage_store_migrates_variant_eligibility_to_profiles(
     design = store.get("default")
     assert design is not None
     assert design.profiles == ("mobile",)
-    assert design.schema_version == 3
+    assert design.schema_version == 4
+
+
+async def test_stage_store_migrates_flat_schema_three_designs(
+    hass: HomeAssistant,
+) -> None:
+    """Stored flat schema-three designs remain valid version-four layouts."""
+    value = _design()
+    value["schemaVersion"] = 3
+    store = StageDesignStore(hass)
+    store._store.async_load = AsyncMock(  # type: ignore[method-assign]
+        return_value={"designs": [value]}
+    )
+
+    await store.async_setup()
+
+    design = store.get("default")
+    assert design is not None
+    assert design.profiles == ("standard", "mobile")
+    assert design.schema_version == 4
 
 
 async def test_stage_store_serializes_competing_writes(hass: HomeAssistant) -> None:

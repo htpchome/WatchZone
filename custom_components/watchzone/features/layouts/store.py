@@ -73,7 +73,7 @@ class StageDesignStore:
 
 def _migrate_stored_design(value: object) -> object:
     """Add Stage Type and explicit physical-client profiles to old designs."""
-    if not isinstance(value, dict) or value.get("schemaVersion") not in (1, 2):
+    if not isinstance(value, dict) or value.get("schemaVersion") not in (1, 2, 3):
         return value
     variants = value.get("variants")
     profiles: list[str] = []
@@ -86,5 +86,5 @@ def _migrate_stored_design(value: object) -> object:
         **value,
         "schemaVersion": STAGE_SCHEMA_VERSION,
         "stageType": value.get("stageType", "full"),
-        "profiles": profiles,
+        "profiles": value.get("profiles", profiles),
     }

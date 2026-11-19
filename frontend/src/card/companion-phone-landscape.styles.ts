@@ -6,9 +6,9 @@ export const companionPhoneLandscapeStyles = css`
   }
 
   :host(.companion-phone-orientation-transitioning)
-    .stage-placement[data-layout-node$="default-camera-module"],
+    .stage-container[data-layout-node$="default-camera-surface"],
   :host(.companion-phone-orientation-transitioning)
-    .stage-placement[data-layout-node$="default-activity-stack"] {
+    .stage-container[data-layout-node$="default-activity-surface"] {
     will-change: transform;
   }
 
@@ -93,7 +93,7 @@ export const companionPhoneLandscapeStyles = css`
     block-size: 100%;
     column-gap: calc(var(--wzc-stage-module-gap) + 0.25rem);
     grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-    grid-template-rows: max-content max-content max-content;
+    grid-template-rows: minmax(0, 1fr);
     height: 100%;
   }
 
@@ -119,11 +119,17 @@ export const companionPhoneLandscapeStyles = css`
     margin-block-start: calc(var(--wzc-stage-module-gap) + 0.125rem);
   }
 
+  :host(.companion-phone-landscape)
+    .stage-container[data-layout-node$="default-camera-surface"],
+  :host(.companion-phone-landscape)
+    .stage-container[data-layout-node$="default-activity-surface"] {
+    block-size: 100%;
+    min-block-size: 0;
+  }
+
   :host(.companion-phone-landscape.landscape-camera-overlay-active)
-    .stage-grid {
-    grid-template-rows:
-      var(--wzc-companion-camera-base-block-size) max-content
-      max-content;
+    .stage-container[data-layout-node$="default-camera-surface"] {
+    grid-template-rows: var(--wzc-companion-camera-base-block-size) max-content;
   }
 
   :host(.companion-phone-landscape.landscape-camera-overlay-active)

@@ -1,6 +1,6 @@
 import type { StageType } from "../core/stage";
 
-export const STAGE_SCHEMA_VERSION = 3;
+export const STAGE_SCHEMA_VERSION = 4;
 export const PHONE_STAGE_MAX_INLINE_SIZE = 599;
 
 export type StageVariantName = "default" | "phone";
@@ -20,7 +20,7 @@ export interface StageGridArea {
 
 export interface StagePlacement {
   readonly grid: StageGridArea;
-  readonly node: StageModuleNode | StageStackNode;
+  readonly node: StageContainerNode | StageModuleNode | StageStackNode;
 }
 
 export interface StageContainerNode {
@@ -244,8 +244,9 @@ function validatePlacement(
 function validatePlacementNode(
   value: unknown,
   ids: Set<string>,
-): StageModuleNode | StageStackNode {
+): StageContainerNode | StageModuleNode | StageStackNode {
   const source = objectValue(value, "placement.node");
+  if (source.kind === "container") return validateContainer(source, ids);
   if (source.kind === "module") return validateModule(source, ids);
   if (source.kind !== "stack") {
     fail("placement.kind");

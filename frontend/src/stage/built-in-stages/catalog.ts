@@ -20,6 +20,7 @@ import {
 import {
   validateStageDesign,
   type StageComponentNode,
+  type StageContainerNode,
   type StageDesignDocument,
   type StageFlow,
   type StageModuleNode,
@@ -106,13 +107,19 @@ function namespacePlacement(placement: StagePlacement): StagePlacement {
   return {
     ...placement,
     node:
-      placement.node.kind === "stack"
+      placement.node.kind === "container"
         ? {
             ...placement.node,
-            children: placement.node.children.map(namespaceModule),
+            children: placement.node.children.map(namespacePlacement),
             id: namespacedId(placement.node.id),
           }
-        : namespaceModule(placement.node),
+        : placement.node.kind === "stack"
+          ? {
+              ...placement.node,
+              children: placement.node.children.map(namespaceModule),
+              id: namespacedId(placement.node.id),
+            }
+          : namespaceModule(placement.node),
   };
 }
 
@@ -161,9 +168,16 @@ function hydrateTemplate(
 }
 
 function hydratePlacementNode(
-  node: StageModuleNode | StageStackNode,
+  node: StageContainerNode | StageModuleNode | StageStackNode,
   config: CardConfig,
-): StageModuleNode | StageStackNode | undefined {
+): StageContainerNode | StageModuleNode | StageStackNode | undefined {
+  if (node.kind === "container") {
+    const children = node.children.flatMap((placement) => {
+      const hydrated = hydratePlacementNode(placement.node, config);
+      return hydrated ? [{ ...placement, node: hydrated }] : [];
+    });
+    return children.length ? { ...node, children } : undefined;
+  }
   if (node.kind === "module") return hydrateModule(node, config);
   const children = node.children.flatMap((child) => {
     const hydrated = hydrateModule(child, config);
