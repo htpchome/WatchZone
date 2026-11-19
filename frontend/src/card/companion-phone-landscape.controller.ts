@@ -129,7 +129,7 @@ function inverseTransform(
   const scaleY = mapped.width / last.height;
   if (![translateX, translateY, scaleX, scaleY].every(Number.isFinite))
     return undefined;
-  return `translate(${translateX}px, ${translateY}px) rotate(${rotation}deg) scale(${scaleX}, ${scaleY})`;
+  return `translate(${translateX}px, ${translateY}px) rotate(${-rotation}deg) scale(${scaleX}, ${scaleY})`;
 }
 
 export function installCompanionPhoneLandscape(

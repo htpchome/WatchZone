@@ -71,6 +71,7 @@ export const companionPhoneLandscapeStyles = css`
   }
 
   :host(.companion-phone-landscape.height-mode-fit-viewport) ha-card {
+    box-sizing: border-box;
     block-size: 100%;
     height: 100%;
     min-block-size: 0;

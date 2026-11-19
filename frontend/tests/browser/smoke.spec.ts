@@ -8927,6 +8927,7 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
     stage.dataset.testCenteredMotions = "0";
     stage.dataset.testOpacityMotions = "0";
     stage.dataset.testRotateMotions = "0";
+    stage.dataset.testRotationStarts = "";
     const card = (stage.getRootNode() as ShadowRoot).host;
     new MutationObserver(() => {
       if (stage.dataset.stageVariant === "default") {
@@ -8976,6 +8977,15 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
           stage.dataset.testRotateMotions = String(
             Number(stage.dataset.testRotateMotions ?? "0") + 1,
           );
+          const start = serialized.match(/rotate\((-?90)deg\)/)?.[1];
+          if (start) {
+            stage.dataset.testRotationStarts = [
+              stage.dataset.testRotationStarts,
+              start,
+            ]
+              .filter(Boolean)
+              .join(",");
+          }
         }
         return nativeAnimate(keyframes, options);
       }) as typeof placement.animate;
@@ -9014,6 +9024,10 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
   await expect(card.locator(".stage-grid")).toHaveAttribute(
     "data-test-centered-motions",
     "2",
+  );
+  await expect(card.locator(".stage-grid")).toHaveAttribute(
+    "data-test-rotation-starts",
+    "-90,-90",
   );
   await expect(card.locator(".stage-grid")).toHaveAttribute(
     "data-test-handle-present-at-motion-start",
@@ -9239,6 +9253,9 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
   expect(geometry.activityNavigationBottom).toBeCloseTo(
     geometry.host.height,
     0,
+  );
+  expect(geometry.activityNavigationBottom).toBeLessThanOrEqual(
+    geometry.host.height,
   );
   expect(geometry.activityNavigationTop).toBeGreaterThan(
     geometry.cameraNavigationTop,
@@ -9515,6 +9532,10 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
   await expect(card.locator(".stage-grid")).toHaveAttribute(
     "data-test-rotate-motions",
     "4",
+  );
+  await expect(card.locator(".stage-grid")).toHaveAttribute(
+    "data-test-rotation-starts",
+    "-90,-90,90,90",
   );
   await expect(card.locator(".stage-grid")).toHaveCSS("transform", "none");
   await expect(card).not.toHaveClass(
