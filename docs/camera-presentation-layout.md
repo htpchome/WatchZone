@@ -155,7 +155,11 @@ pre-settlement offset reported by the card host during mobile rotation. After
 placement, WatchZone reapplies that viewport target across the next layout
 frames and on subsequent viewport resize events. It never derives a correction
 from the Camera's prior screen rectangle because mobile WebKit may still report
-portrait geometry during the orientation boundary.
+portrait geometry during the orientation boundary. While the Camera overlay is
+active, the landscape card surface does not clip the overlay at its own edge;
+it paints the same semantic Camera-stage background through that edge while the
+viewport-relative target covers a small residual inset introduced when Home
+Assistant establishes the fixed card from an inset containing block.
 
 Browser-native media fullscreen is a separate state. While it owns the live
 video, Companion rotation and Swiper geometry remain frozen. After native

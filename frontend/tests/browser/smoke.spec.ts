@@ -8857,8 +8857,10 @@ test("applies configured Companion rotate actions to the retained Full Stage", a
   await setRotateAction("fullscreen_live_video");
   await card.evaluate((element) => {
     const host = element as HTMLElement;
+    const surface = host.shadowRoot?.querySelector<HTMLElement>("ha-card");
     const grid = host.shadowRoot?.querySelector<HTMLElement>(".stage-grid");
-    if (!grid) throw new Error("Stage grid was not rendered");
+    if (!surface || !grid) throw new Error("Stage surface was not rendered");
+    surface.style.transform = "translateX(4px)";
     host.style.setProperty("--wzc-companion-landscape-inline-inset", "96px");
     const getSettledRect = grid.getBoundingClientRect.bind(grid);
     let staleLandscapeRectPending = true;
@@ -8937,6 +8939,33 @@ test("applies configured Companion rotate actions to the retained Full Stage", a
     expect(bounds.width).toBeCloseTo(844, 0);
     expect(bounds.height).toBeCloseTo(390, 0);
   }
+  const automaticFullscreenLeftEdge = await card.evaluate((element) => {
+    const root = element.shadowRoot;
+    const camera = root?.querySelector<HTMLElement>(
+      '.stage-placement[data-layout-node$="default-camera-module"]',
+    );
+    const surface = root?.querySelector<HTMLElement>("ha-card");
+    const hostBackground = getComputedStyle(element).backgroundColor;
+    const hostRect = element.getBoundingClientRect();
+    const surfaceBackground =
+      surface && getComputedStyle(surface).backgroundColor;
+    return {
+      backdropsMatch: hostBackground === surfaceBackground,
+      cameraPresent: Boolean(camera),
+      hostLeft: hostRect.left,
+      hostBackgroundIsTransparent: hostBackground === "rgba(0, 0, 0, 0)",
+      hostWidth: hostRect.width,
+      surfaceOverflow: surface && getComputedStyle(surface).overflow,
+    };
+  });
+  expect(automaticFullscreenLeftEdge).toMatchObject({
+    backdropsMatch: true,
+    cameraPresent: true,
+    hostLeft: 0,
+    hostBackgroundIsTransparent: false,
+    surfaceOverflow: "visible",
+  });
+  expect(automaticFullscreenLeftEdge.hostWidth).toBeCloseTo(844, 0);
   const automaticHandleBounds = await card
     .locator(".companion-camera-pull-handle")
     .boundingBox();

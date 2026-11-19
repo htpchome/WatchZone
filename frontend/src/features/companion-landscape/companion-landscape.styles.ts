@@ -86,6 +86,15 @@ export const companionPhoneLandscapeStyles = css`
     box-shadow: none;
   }
 
+  :host(.companion-phone-landscape.landscape-camera-overlay-active) ha-card {
+    background: var(--wzc-camera-stage);
+    overflow: visible;
+  }
+
+  :host(.companion-phone-landscape.landscape-camera-overlay-active) {
+    background: var(--wzc-camera-stage);
+  }
+
   :host(.companion-phone-landscape.height-mode-fit-viewport) .shell {
     block-size: 100%;
     height: 100%;
