@@ -97,6 +97,7 @@ export const EVENT_MEDIA_DIALOG_TAG = `${APP_ID}-event-media-dialog`;
 export const EXPORT_MEDIA_DIALOG_TAG = `${APP_ID}-export-media-dialog`;
 export const REVIEW_MEDIA_DIALOG_TAG = `${APP_ID}-review-media-dialog`;
 export const RECORDING_MEDIA_DIALOG_TAG = `${APP_ID}-recording-media-dialog`;
+export const RECORDED_MEDIA_BOTTOM_DRAWER_TAG = `${APP_ID}-recorded-media-bottom-drawer`;
 export const RECORDED_VIDEO_CLOSE_EVENT = `${APP_ID}-recorded-video-close`;
 export const MEDIA_CONTROLS_TAG = `${APP_ID}-media-controls`;
 export const MEDIA_CONTROL_EVENT = `${APP_ID}-media-control`;

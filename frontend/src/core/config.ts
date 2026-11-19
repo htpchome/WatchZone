@@ -35,6 +35,7 @@ export type MinimalCameraMenuPosition = "top_left" | "top_right";
 export type CardHeightMode = "auto" | "fit_viewport" | "fill_container";
 export type CompanionRotateAction =
   "none" | "double_column" | "fullscreen_live_video";
+export type RecordedMediaPlayerType = "draggable" | "bottom_drawer";
 
 export type HomeAssistantAction =
   | "assist"
@@ -101,6 +102,7 @@ export interface CardConfig {
   readonly minimal_camera_show_pip_button: boolean;
   readonly minimal_camera_show_source_label: boolean;
   readonly ptz_overlay_control: PtzOverlayControl;
+  readonly recorded_media_player_type: RecordedMediaPlayerType;
   readonly slide_transition: SlideTransition;
   readonly slide_advance_time: SlideAdvanceSeconds;
   readonly start_alert_takeover_on: boolean;
@@ -273,6 +275,15 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     );
   }
   if (
+    source.recorded_media_player_type !== undefined &&
+    source.recorded_media_player_type !== "draggable" &&
+    source.recorded_media_player_type !== "bottom_drawer"
+  ) {
+    throw new Error(
+      `${APP_NAME} recorded_media_player_type must be draggable or bottom_drawer.`,
+    );
+  }
+  if (
     source.slide_transition !== undefined &&
     source.slide_transition !== "none" &&
     source.slide_transition !== "slide" &&
@@ -381,6 +392,10 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     source.ptz_overlay_control === "start_closed"
       ? source.ptz_overlay_control
       : "start_open";
+  normalized.recorded_media_player_type =
+    source.recorded_media_player_type === "bottom_drawer"
+      ? "bottom_drawer"
+      : "draggable";
   normalized.slide_transition =
     source.slide_transition === "none" || source.slide_transition === "fade"
       ? source.slide_transition

@@ -1,7 +1,11 @@
 import { html } from "lit";
 import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
-import type { CardConfig, CompanionRotateAction } from "../core/config";
+import type {
+  CardConfig,
+  CompanionRotateAction,
+  RecordedMediaPlayerType,
+} from "../core/config";
 import {
   DEFAULT_EVENT_HISTORY_DAYS,
   EDITOR_GENERAL_INFO_TAG,
@@ -90,6 +94,12 @@ interface LiveMediaPlayerSettingsOptions extends CommonSectionOptions {
     event: CustomEvent<SegmentedControlValueDetail>,
   ) => void;
   readonly onSlideTransitionChange: (
+    event: CustomEvent<SegmentedControlValueDetail>,
+  ) => void;
+}
+
+interface RecordedMediaPlayerSettingsOptions extends CommonSectionOptions {
+  readonly onPlayerTypeChange: (
     event: CustomEvent<SegmentedControlValueDetail>,
   ) => void;
 }
@@ -391,6 +401,45 @@ export function renderLiveMediaPlayerSettings(
         }
         .value=${String(config?.slide_advance_time ?? 10)}
         @wzc-segmented-control-value=${options.onSlideAdvanceTimeChange}
+      ></wzc-segmented-control>
+    </div>
+  `;
+}
+
+export function renderRecordedMediaPlayerSettings(
+  options: RecordedMediaPlayerSettingsOptions,
+) {
+  const { config, localize } = options;
+  return html`
+    <div class="segmented-setting">
+      <span class="segmented-setting-label">
+        ${localize("editor.recorded_media_player_type")}
+      </span>
+      <wzc-segmented-control
+        class="editor-segmented-control"
+        data-setting="recorded-media-player-type"
+        appearance="compact"
+        mode="radio"
+        .label=${localize("editor.recorded_media_player_type")}
+        .options=${
+          [
+            {
+              label: localize("editor.recorded_media_player_draggable"),
+              value: "draggable" satisfies RecordedMediaPlayerType,
+            },
+            {
+              label: localize("editor.recorded_media_player_bottom_drawer"),
+              value: "bottom_drawer" satisfies RecordedMediaPlayerType,
+            },
+            {
+              disabled: true,
+              label: localize("editor.recorded_media_player_future"),
+              value: "future",
+            },
+          ] satisfies readonly SegmentedControlOption[]
+        }
+        .value=${config?.recorded_media_player_type ?? "draggable"}
+        @wzc-segmented-control-value=${options.onPlayerTypeChange}
       ></wzc-segmented-control>
     </div>
   `;

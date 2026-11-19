@@ -8,6 +8,7 @@ import {
   RECORDED_VIDEO_CLOSE_EVENT,
   RECORDED_VIDEO_VIEWER_TAG,
 } from "../../core/constants";
+import type { RecordedMediaPlayerType } from "../../core/config";
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import {
   englishLocalize,
@@ -33,19 +34,21 @@ export class RecordedVideoViewer extends LitElement {
     api: { attribute: false },
     initialSize: { attribute: false },
     localize: { attribute: false },
+    playerType: { attribute: false },
     request: { attribute: false },
   };
 
   public api?: HomeAssistantApi;
   public initialSize?: RecordedMediaInitialGeometry;
   public localize: LocalizeFunction = englishLocalize;
+  public playerType: RecordedMediaPlayerType = "draggable";
   public request?: RecordedMediaRequest;
 
   private _muteLeaseActive = false;
   private _activeRequest?: RecordedMediaRequest;
   private _downloadAbort?: AbortController;
   private _presentationGeneration = 0;
-  private _presentationTag = mediaViewerPresentation("review").tagName;
+  private _presentationTag = "";
   private readonly _toasts = new ToastManager(this);
 
   public connectedCallback(): void {
@@ -87,30 +90,40 @@ export class RecordedVideoViewer extends LitElement {
 
   protected willUpdate(changed: Map<PropertyKey, unknown>): void {
     if (changed.has("request")) this._activeRequest = this.request;
+    if (changed.has("request") || changed.has("playerType")) {
+      const nextTag = this.request
+        ? mediaViewerPresentation(this.request.presentation, this.playerType)
+            .tagName
+        : "";
+      if (this._presentationTag !== nextTag) this._presentationTag = "";
+    }
   }
 
   protected updated(changed: Map<PropertyKey, unknown>): void {
-    if (!changed.has("request")) return;
+    if (!changed.has("request") && !changed.has("playerType")) return;
     void this._loadPresentation();
     this._syncLiveMute();
   }
 
   private async _loadPresentation(): Promise<void> {
     const request = this._activeRequest;
+    const playerType = this.playerType;
     const generation = ++this._presentationGeneration;
     if (!request) {
-      this._presentationTag = mediaViewerPresentation("review").tagName;
-      this.requestUpdate();
       return;
     }
-    const presentation = mediaViewerPresentation(request.presentation);
+    const presentation = mediaViewerPresentation(
+      request.presentation,
+      playerType,
+    );
     await Promise.all([
       presentation.load(),
       preloadRecordedMediaPlayback(request),
     ]);
     if (
       generation !== this._presentationGeneration ||
-      request !== this.request
+      request !== this.request ||
+      playerType !== this.playerType
     ) {
       return;
     }

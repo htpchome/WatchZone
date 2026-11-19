@@ -1,9 +1,11 @@
 import {
   EVENT_MEDIA_DIALOG_TAG,
   EXPORT_MEDIA_DIALOG_TAG,
+  RECORDED_MEDIA_BOTTOM_DRAWER_TAG,
   RECORDING_MEDIA_DIALOG_TAG,
   REVIEW_MEDIA_DIALOG_TAG,
 } from "../../core/constants";
+import type { RecordedMediaPlayerType } from "../../core/config";
 import type { RecordedMediaRequest } from "../../core/recorded-media";
 
 interface MediaViewerPresentationDefinition {
@@ -38,6 +40,13 @@ const presentations: Readonly<
 /** Selects the concrete shell without coupling viewer lifecycle to geometry. */
 export function mediaViewerPresentation(
   presentation: RecordedMediaRequest["presentation"],
+  playerType: RecordedMediaPlayerType = "draggable",
 ): MediaViewerPresentationDefinition {
+  if (playerType === "bottom_drawer") {
+    return {
+      load: () => import("./bottom-drawer"),
+      tagName: RECORDED_MEDIA_BOTTOM_DRAWER_TAG,
+    };
+  }
   return presentations[presentation];
 }

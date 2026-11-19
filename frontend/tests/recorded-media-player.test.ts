@@ -3,6 +3,7 @@ import type { LitElement } from "lit";
 
 import {
   MEDIA_SESSION_RUNTIME_KEY,
+  RECORDED_MEDIA_BOTTOM_DRAWER_TAG,
   RECORDED_MEDIA_EXPORT_EVENT,
   RECORDING_SCRUBBER_EVENT,
 } from "../src/core/constants";
@@ -55,7 +56,7 @@ describe("recorded media player", () => {
 
   it("keeps event, review, and recording modal implementations distinct", async () => {
     const definitions = (["event", "review", "recording"] as const).map(
-      mediaViewerPresentation,
+      (presentation) => mediaViewerPresentation(presentation),
     );
 
     expect(new Set(definitions.map(({ tagName }) => tagName)).size).toBe(3);
@@ -63,6 +64,61 @@ describe("recorded media player", () => {
     for (const { tagName } of definitions) {
       expect(customElements.get(tagName)).toBeDefined();
     }
+  });
+
+  it("selects one shared bottom drawer shell for every recorded presentation", async () => {
+    const definitions = (
+      ["event", "export", "recording", "review"] as const
+    ).map((presentation) =>
+      mediaViewerPresentation(presentation, "bottom_drawer"),
+    );
+
+    expect(definitions.map(({ tagName }) => tagName)).toEqual([
+      RECORDED_MEDIA_BOTTOM_DRAWER_TAG,
+      RECORDED_MEDIA_BOTTOM_DRAWER_TAG,
+      RECORDED_MEDIA_BOTTOM_DRAWER_TAG,
+      RECORDED_MEDIA_BOTTOM_DRAWER_TAG,
+    ]);
+    await definitions[0].load();
+    expect(customElements.get(RECORDED_MEDIA_BOTTOM_DRAWER_TAG)).toBeDefined();
+  });
+
+  it("opens the configured modal drawer and rejects native cancel dismissal", async () => {
+    Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
+      configurable: true,
+      value: function (this: HTMLDialogElement) {
+        this.setAttribute("open", "");
+      },
+    });
+    Object.defineProperty(HTMLDialogElement.prototype, "close", {
+      configurable: true,
+      value: function (this: HTMLDialogElement) {
+        this.removeAttribute("open");
+      },
+    });
+    const viewer = document.createElement(
+      "wzc-recorded-video-viewer",
+    ) as RecordedVideoViewer;
+    viewer.playerType = "bottom_drawer";
+    viewer.request = request;
+    document.body.append(viewer);
+    await viewer.updateComplete;
+    await vi.waitFor(() =>
+      expect(
+        viewer.shadowRoot?.querySelector(RECORDED_MEDIA_BOTTOM_DRAWER_TAG),
+      ).not.toBeNull(),
+    );
+    const drawer = viewer.shadowRoot?.querySelector(
+      RECORDED_MEDIA_BOTTOM_DRAWER_TAG,
+    ) as LitElement;
+    await drawer.updateComplete;
+    const dialog = drawer.shadowRoot?.querySelector("dialog");
+
+    expect(dialog?.open).toBe(true);
+    expect(
+      dialog?.dispatchEvent(new Event("cancel", { cancelable: true })),
+    ).toBe(false);
+    expect(dialog?.open).toBe(true);
   });
 
   it("opens direct file playback muted with custom transport controls and cleans up", async () => {
@@ -668,6 +724,11 @@ describe("recorded media player", () => {
     const viewer = document.createElement(
       "wzc-recorded-video-viewer",
     ) as RecordedVideoViewer;
+    viewer.initialSize = {
+      height: 337.5,
+      width: 600,
+    };
+    viewer.request = request;
     document.body.append(viewer);
     await viewer.updateComplete;
     await vi.waitFor(() =>
@@ -699,14 +760,6 @@ describe("recorded media player", () => {
         toJSON: () => ({}),
       };
     });
-
-    viewer.initialSize = {
-      height: 337.5,
-      width: 600,
-    };
-    viewer.request = request;
-    await viewer.updateComplete;
-    await container.updateComplete;
 
     expect(dialog.classList.contains("dragged")).toBe(false);
     expect(dialog.style.width).toBe("600px");

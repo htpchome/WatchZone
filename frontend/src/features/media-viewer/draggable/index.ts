@@ -1,40 +1,23 @@
 import { html, LitElement } from "lit";
-import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
-import {
-  RECORDED_MEDIA_ERROR_EVENT,
-  RECORDED_MEDIA_INFORMATION_TAG,
-  RECORDED_VIDEO_CLOSE_EVENT,
-  RECORDED_VIDEO_PLAYER_TAG,
-  RECORDING_SEGMENT_STATE_EVENT,
-} from "../../core/constants";
-import type { HomeAssistantApi } from "../../core/home-assistant";
+import { RECORDED_VIDEO_CLOSE_EVENT } from "../../../core/constants";
+import type { HomeAssistantApi } from "../../../core/home-assistant";
 import {
   englishLocalize,
   type LocalizeFunction,
-} from "../../core/localization";
+} from "../../../core/localization";
 import type {
   RecordedMediaInitialGeometry,
   RecordedMediaRequest,
-} from "../../core/recorded-media";
-import { activityActionStyles } from "../../ui/activity-action.styles";
-import { buttonBaseStyles } from "../../ui/button.styles";
-import type { ToastNotice } from "../../ui/toast-manager";
-import { renderIcon } from "../../ui/icons";
-import "../../ui/toast-region";
-import "./recorded-video-player";
-import type { RecordedVideoPlayer } from "./recorded-video-player";
-import {
-  recordedMediaHeading,
-  type RecordedMediaInformation,
-} from "./media-information";
-import "./media-information";
-import { renderRecordedMediaActions } from "./media-actions";
-import { draggableDialogStyles } from "./draggable-dialog.styles";
-
-const playerTag = unsafeStatic(RECORDED_VIDEO_PLAYER_TAG);
-const informationTag = unsafeStatic(RECORDED_MEDIA_INFORMATION_TAG);
-const recordingSegmentStateEvent = unsafeStatic(RECORDING_SEGMENT_STATE_EVENT);
+} from "../../../core/recorded-media";
+import { activityActionStyles } from "../../../ui/activity-action.styles";
+import { buttonBaseStyles } from "../../../ui/button.styles";
+import type { ToastNotice } from "../../../ui/toast-manager";
+import { renderIcon } from "../../../ui/icons";
+import { RecordedMediaDialogContent } from "../dialog-content";
+import { recordedMediaDialogContentStyles } from "../dialog-content.styles";
+import { recordedMediaHeading } from "../media-information";
+import { draggableDialogStyles } from "./draggable.styles";
 
 /** Draggable non-modal shell for ephemeral recorded-media playback. */
 export abstract class DraggableRecordedMediaDialog extends LitElement {
@@ -54,10 +37,10 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
 
   protected _active = false;
   private _presentation?: "dialog" | "popover";
+  private readonly _content = new RecordedMediaDialogContent(this);
   private _resizeFrame?: number;
   private _resizePendingMediaWidth?: number;
   private _userPositioned = false;
-  private _segmentSelectionActive = false;
   private _drag?: {
     readonly offsetX: number;
     readonly offsetY: number;
@@ -85,57 +68,18 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
         this.localize("reviews.activity")
       }
     >
-      <div
-        class="header"
-        @pointerdown=${this._startDrag}
-        @pointermove=${this._moveDrag}
-        @pointerup=${this._endDrag}
-        @pointercancel=${this._endDrag}
-      >
-        <button
-          class="close"
-          type="button"
-          title=${this.localize("media_player.close")}
-          aria-label=${this.localize("media_player.close")}
-          @pointerdown=${(event: Event) => event.stopPropagation()}
-          @click=${this.close}
-        >
-          <ha-icon icon="mdi:close"></ha-icon>
-        </button>
-        <span class="title"
-          >${recordedMediaHeading(
-            this.request,
-            this.localize,
-            this.api?.locale,
-          )}</span
-        >
-      </div>
-      <div class="body">
-        ${this.renderMediaContent()} ${this._renderMediaInformation()}
-        <wzc-toast-region
-          mode="overlay"
-          .notices=${this.notices}
-        ></wzc-toast-region>
-      </div>
-      <div class="footer-actions">
-        ${
-          this.request?.timeline
-            ? html`<button
-                class=${`wzc-icon-button wzc-activity-action segment-action ${
-                  this._segmentSelectionActive ? "active" : ""
-                }`}
-                type="button"
-                title=${this.localize("recording_segments.activate")}
-                aria-label=${this.localize("recording_segments.activate")}
-                aria-pressed=${this._segmentSelectionActive ? "true" : "false"}
-                @click=${this._toggleSegmentSelection}
-              >
-                <ha-icon icon="mdi:filmstrip"></ha-icon>
-              </button>`
-            : null
-        }
-        ${renderRecordedMediaActions(this.request, this.localize, this)}
-      </div>
+      ${this._content.render({
+        active: this._active,
+        api: this.api,
+        close: this.close,
+        localize: this.localize,
+        notices: this.notices,
+        onHeaderPointerCancel: this._endDrag,
+        onHeaderPointerDown: this._startDrag,
+        onHeaderPointerMove: this._moveDrag,
+        onHeaderPointerUp: this._endDrag,
+        request: this.request,
+      })}
       <button
         class="resize-handle"
         type="button"
@@ -153,39 +97,10 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
     </dialog>`;
   }
 
-  protected abstract renderMediaContent(): unknown;
-
-  private _renderMediaInformation(): unknown {
-    return staticHtml`<${informationTag}
-      class="media-information"
-      .locale=${this.api?.locale}
-      .localize=${this.localize}
-      .request=${this.request}
-    ></${informationTag}>`;
-  }
-
-  protected renderDefaultMediaContent(): unknown {
-    if (!this._active || !this.request) return null;
-    return this.request.kind === "snapshot"
-      ? html`<img
-          class="snapshot media-surface"
-          src=${this._snapshotUrl()}
-          alt=${this.request.title}
-          @error=${this._handleSnapshotError}
-        />`
-      : staticHtml`<${playerTag}
-          class="media-surface"
-          .api=${this.api}
-          .localize=${this.localize}
-          .request=${this.request}
-          @${recordingSegmentStateEvent}=${this._handleSegmentState}
-        ></${playerTag}>`;
-  }
-
   protected willUpdate(changed: Map<PropertyKey, unknown>): void {
     if (changed.has("request") && this.request) {
       this._active = true;
-      this._segmentSelectionActive = false;
+      this._content.reset();
     }
   }
 
@@ -203,21 +118,6 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
     if (presentation === "popover") dialog.hidePopover();
     else dialog.close();
     this._finishClose();
-  };
-
-  private readonly _toggleSegmentSelection = (): void => {
-    const player = this.renderRoot.querySelector<RecordedVideoPlayer>(
-      RECORDED_VIDEO_PLAYER_TAG,
-    );
-    void player?.toggleSegmentSelection();
-  };
-
-  private readonly _handleSegmentState = (
-    event: CustomEvent<{ readonly active: boolean }>,
-  ): void => {
-    event.stopPropagation();
-    this._segmentSelectionActive = event.detail.active;
-    this.requestUpdate();
   };
 
   private _open(): void {
@@ -399,22 +299,8 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
   }
 
   private _mediaSurface(): HTMLElement | null {
-    return this.renderRoot.querySelector<HTMLElement>(".media-surface");
+    return this._content.mediaSurface;
   }
-
-  private _snapshotUrl(): string {
-    const path = this.request?.sources[0]?.url ?? "";
-    return this.api?.resolveUrl(path) ?? path;
-  }
-
-  private readonly _handleSnapshotError = (): void => {
-    this.dispatchEvent(
-      new CustomEvent(RECORDED_MEDIA_ERROR_EVENT, {
-        bubbles: true,
-        composed: true,
-      }),
-    );
-  };
 
   private _removeDocumentListeners(): void {
     document.removeEventListener("click", this._handleDocumentClick, true);
@@ -499,9 +385,7 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
       ? Math.max(0, mediaRect.height - mediaRect.width * (9 / 16))
       : 0;
     const informationHeight =
-      this.renderRoot
-        .querySelector<RecordedMediaInformation>(RECORDED_MEDIA_INFORMATION_TAG)
-        ?.getBoundingClientRect().height ?? 0;
+      this._content.information?.getBoundingClientRect().height ?? 0;
     const bodyGap = px(bodyStyle.rowGap);
     const verticalChrome =
       header.getBoundingClientRect().height +
@@ -558,6 +442,7 @@ export abstract class DraggableRecordedMediaDialog extends LitElement {
   static styles = [
     buttonBaseStyles,
     activityActionStyles,
+    recordedMediaDialogContentStyles,
     draggableDialogStyles,
   ];
 }

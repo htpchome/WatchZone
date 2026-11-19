@@ -283,6 +283,7 @@ export class DashboardCard extends LitElement {
                   .api=${this._haApi}
                   .localize=${this._localization.localize}
                   .initialSize=${this._mediaInitialSize}
+                  .playerType=${config.recorded_media_player_type}
                   .request=${this._mediaRequest}
                 ></${recordedVideoViewerTag}>`
               : null

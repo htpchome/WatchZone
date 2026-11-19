@@ -19,6 +19,7 @@ import {
   type LiveConnectionType,
   type MinimalCameraMenuPosition,
   type PtzOverlayControl,
+  type RecordedMediaPlayerType,
   type SlideAdvanceSeconds,
   type SlideTransition,
 } from "../core/config";
@@ -82,6 +83,7 @@ import {
   renderLiveMediaPlayerSettings,
   renderMobileAndTouchSettings,
   renderMinimalCameraSettings,
+  renderRecordedMediaPlayerSettings,
   renderReviewSettings,
 } from "./settings-sections";
 import { renderStageManagement } from "./stage-management-section";
@@ -451,7 +453,14 @@ export class CardEditor extends LitElement {
           heading=${this._t("editor.recorded_media_player")}
           item-key="recorded-media-player"
           .icon=${"events"}
-        ></${accordionItemTag}>`
+        >
+          ${this._renderSection("recorded-media-player", () =>
+            renderRecordedMediaPlayerSettings({
+              ...commonSettings,
+              onPlayerTypeChange: this._handleRecordedMediaPlayerTypeChange,
+            }),
+          )}
+        </${accordionItemTag}>`
         }
         ${
           minimal
@@ -1994,6 +2003,21 @@ export class CardEditor extends LitElement {
       normalizeCardConfig({
         ...this._config,
         companion_rotate_action: action,
+      }),
+      true,
+    );
+  };
+
+  private readonly _handleRecordedMediaPlayerTypeChange = (
+    event: CustomEvent<SegmentedControlValueDetail>,
+  ): void => {
+    if (!this._config) return;
+    const value = event.detail.value as RecordedMediaPlayerType;
+    if (value !== "draggable" && value !== "bottom_drawer") return;
+    this._applyDraft(
+      normalizeCardConfig({
+        ...this._config,
+        recorded_media_player_type: value,
       }),
       true,
     );

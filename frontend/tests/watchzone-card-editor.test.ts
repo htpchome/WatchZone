@@ -223,12 +223,21 @@ describe("watchzone-card-editor", () => {
         ?.querySelector('[data-value="slide"]')
         ?.getAttribute("aria-checked"),
     ).toBe("true");
-    expect(
-      items.find((item) => item.itemKey === "recorded-media-player")
-        ?.childElementCount,
-    ).toBe(0);
-    const reviews = await openEditorSection(editor, "reviews");
+    const recordedMedia = await openEditorSection(
+      editor,
+      "recorded-media-player",
+    );
     expect(liveMedia.childElementCount).toBe(0);
+    const recordedMediaType = recordedMedia.querySelector<SegmentedControl>(
+      '[data-setting="recorded-media-player-type"]',
+    );
+    await recordedMediaType?.updateComplete;
+    expect(recordedMediaType?.value).toBe("draggable");
+    expect(
+      recordedMediaType?.shadowRoot?.querySelector('[data-value="future"]'),
+    ).toHaveProperty("disabled", true);
+    const reviews = await openEditorSection(editor, "reviews");
+    expect(recordedMedia.childElementCount).toBe(0);
     expect(
       reviews.querySelector(
         '[data-config-key="view_timelapse_on_thumbnail_hover"]',
@@ -973,6 +982,34 @@ describe("watchzone-card-editor", () => {
       type: CARD_TYPE,
       title: "Camera",
       companion_rotate_action: "fullscreen_live_video",
+    });
+  });
+
+  it("defaults and saves the recorded media player type", async () => {
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+    await openEditorSection(editor, "recorded-media-player");
+
+    const control = editor.shadowRoot?.querySelector<SegmentedControl>(
+      '[data-setting="recorded-media-player-type"]',
+    );
+    expect(control?.value).toBe("draggable");
+
+    control?.shadowRoot
+      ?.querySelector<HTMLButtonElement>('[data-value="bottom_drawer"]')
+      ?.click();
+    await editor.updateComplete;
+
+    expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
+      type: CARD_TYPE,
+      title: "Camera",
+      recorded_media_player_type: "bottom_drawer",
     });
   });
 

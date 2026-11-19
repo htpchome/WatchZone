@@ -10,27 +10,32 @@ viewing. Recording discovery and grouping are governed by
   Its recorded player owns one ephemeral recorded-media element, transport
   selection, startup, failure fallback, and cleanup. It is not a UI primitive
   or Stage placeable.
+- Shared viewer lifecycle, playback, content, actions, and information remain
+  at that feature root. `draggable/` and `bottom-drawer/` are peer concrete
+  presentation-shell boundaries. A disabled future editor choice does not
+  justify a placeholder source folder or implementation.
 - The recorded-video viewer owns viewer lifecycle, notices, and the temporary
-  live-audio mute lease. A concrete presentation owns geometry only. Requests
-  carry an `event`, `review`, or `recording` presentation identity; selection
-  of that presentation is independent of the shared playback engine. The
-  current identities may use the same viewport-constrained draggable geometry
-  while remaining independently replaceable.
+  live-audio mute lease. Shared dialog content owns the header, media,
+  information, notices, and footer actions. A concrete presentation shell owns
+  geometry and its associated interaction lifecycle only. Requests carry an
+  `event`, `export`, `review`, or `recording` presentation identity; selection
+  of that identity is independent of the configured draggable or bottom-drawer
+  shell and of the shared playback engine.
 - Recorded-video viewers and presentations are not Stage placeables and do not
   enter the retained live-session pool.
 - Live and recorded video share media presentation primitives: overlay
   geometry, control sizing, touch behavior, zoom, fullscreen, and
   Picture-in-Picture boundaries. They do not share a playback/session engine;
   live sessions are retained and recorded sources are finite and ephemeral.
-- A future drawer or live-area-cover viewer presentation composes those same
-  primitives and recorded player. It does not add a parallel control overlay.
+- The bottom drawer composes those same primitives and recorded player. It does
+  not add a parallel content tree or control overlay.
 - Normalized activity requests may carry presentation-independent metadata,
   snapshot and Review variants, downloads, and a short-lived typed Review
   export intent. Each concrete presentation decides where to place the shared
   information component; the draggable dialog places it beneath the media.
 - Providers normalize media URLs into provider-neutral playback sources. UI
   modules and shared tiles do not construct provider-specific URLs.
-- Snapshot actions reuse the same draggable viewer shell and render the
+- Snapshot actions reuse the configured viewer shell and render the
   authenticated still image directly. They do not create a video player or
   acquire a temporary live-audio mute lease.
 
@@ -191,3 +196,24 @@ viewing. Recording discovery and grouping are governed by
   release, and local surface-relative insets. Safe-area insets apply only when
   a presentation actually reaches the physical viewport edge, such as native
   fullscreen.
+
+## Bottom-drawer viewer
+
+- `recorded_media_player_type: bottom_drawer` selects one shared modal drawer
+  for Review, Event, Recording, Export, and snapshot requests. The default
+  `draggable` value preserves the non-modal draggable presentation.
+- The drawer is a WatchZone-owned native modal dialog. Its backdrop is visually
+  transparent, but the browser modal boundary blocks interaction with the card
+  beneath it. Backdrop activation and Escape do not dismiss the drawer.
+- The drawer enters from the physical bottom edge through the shared Motion
+  boundary. It is horizontally centered on the owning card, uses the card's
+  inline size when that fits the visible viewport, and clamps to the visible
+  viewport otherwise.
+- The header and pull handle remain fixed. The content region grows up to the
+  safe visible viewport top and owns any required vertical scrolling. The
+  drawer is not resizable.
+- The localized top-left close control and a downward drag beginning on the
+  pull handle are the only dismissal paths. Releasing before the bounded close
+  threshold settles the drawer back open; crossing it animates the drawer out
+  and closes it. Gesture and animation ownership ends when the shell
+  disconnects.

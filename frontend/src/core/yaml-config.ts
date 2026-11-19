@@ -98,6 +98,9 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
   if (config.ptz_overlay_control === "start_open") {
     delete yaml.ptz_overlay_control;
   }
+  if (config.recorded_media_player_type === "draggable") {
+    delete yaml.recorded_media_player_type;
+  }
   if (config.slide_transition === "slide") delete yaml.slide_transition;
   if (config.slide_advance_time === DEFAULT_SLIDE_ADVANCE_SECONDS) {
     delete yaml.slide_advance_time;

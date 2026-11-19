@@ -1,12 +1,8 @@
 import { RECORDING_MEDIA_DIALOG_TAG } from "../../core/constants";
-import { DraggableRecordedMediaDialog } from "./draggable-dialog";
+import { DraggableRecordedMediaDialog } from "./draggable";
 
 /** Recording-owned media modal composition. */
-export class RecordingMediaDialog extends DraggableRecordedMediaDialog {
-  protected renderMediaContent(): unknown {
-    return this.renderDefaultMediaContent();
-  }
-}
+export class RecordingMediaDialog extends DraggableRecordedMediaDialog {}
 
 if (!customElements.get(RECORDING_MEDIA_DIALOG_TAG)) {
   customElements.define(RECORDING_MEDIA_DIALOG_TAG, RecordingMediaDialog);

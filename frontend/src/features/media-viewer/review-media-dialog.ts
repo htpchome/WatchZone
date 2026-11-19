@@ -1,12 +1,8 @@
 import { REVIEW_MEDIA_DIALOG_TAG } from "../../core/constants";
-import { DraggableRecordedMediaDialog } from "./draggable-dialog";
+import { DraggableRecordedMediaDialog } from "./draggable";
 
 /** Review-owned recorded-media modal composition. */
-export class ReviewMediaDialog extends DraggableRecordedMediaDialog {
-  protected renderMediaContent(): unknown {
-    return this.renderDefaultMediaContent();
-  }
-}
+export class ReviewMediaDialog extends DraggableRecordedMediaDialog {}
 
 if (!customElements.get(REVIEW_MEDIA_DIALOG_TAG)) {
   customElements.define(REVIEW_MEDIA_DIALOG_TAG, ReviewMediaDialog);

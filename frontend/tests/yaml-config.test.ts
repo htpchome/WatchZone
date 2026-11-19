@@ -16,6 +16,20 @@ describe("WatchZone YAML configuration manager", () => {
     ).toEqual({ type: CARD_TYPE });
   });
 
+  it("persists only a non-default recorded media player type", () => {
+    expect(
+      toYamlCardConfig(
+        normalizeCardConfig({
+          recorded_media_player_type: "bottom_drawer",
+          type: CARD_TYPE,
+        }),
+      ),
+    ).toEqual({
+      recorded_media_player_type: "bottom_drawer",
+      type: CARD_TYPE,
+    });
+  });
+
   it("persists the stage gate while omitting that type's default lineup", () => {
     expect(
       toYamlCardConfig(

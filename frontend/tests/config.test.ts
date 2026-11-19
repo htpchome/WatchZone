@@ -50,6 +50,7 @@ describe("WatchZone card configuration", () => {
       minimal_camera_show_pip_button: true,
       minimal_camera_show_source_label: true,
       ptz_overlay_control: "start_open",
+      recorded_media_player_type: "draggable",
       slide_advance_time: 10,
       slide_transition: "slide",
       start_alert_takeover_on: false,
@@ -104,6 +105,19 @@ describe("WatchZone card configuration", () => {
     ).toThrow(
       "companion_rotate_action must be none, double_column, or fullscreen_live_video",
     );
+  });
+
+  it("normalizes the recorded media player type", () => {
+    expect(normalizeCardConfig({}).recorded_media_player_type).toBe(
+      "draggable",
+    );
+    expect(
+      normalizeCardConfig({ recorded_media_player_type: "bottom_drawer" })
+        .recorded_media_player_type,
+    ).toBe("bottom_drawer");
+    expect(() =>
+      normalizeCardConfig({ recorded_media_player_type: "future" }),
+    ).toThrow("recorded_media_player_type must be draggable or bottom_drawer");
   });
 
   it("selects physical-phone appearance independently from card width", () => {

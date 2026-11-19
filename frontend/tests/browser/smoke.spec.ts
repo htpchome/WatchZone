@@ -120,6 +120,118 @@ test("loads the responsive WatchZone card shell", async ({ page }) => {
   ).toBe("function");
 });
 
+test("presents recorded media in the configured card-width bottom drawer", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  await page.locator("watchzone-card").evaluate((element) => {
+    (
+      element as HTMLElement & {
+        setConfig(config: unknown): void;
+      }
+    ).setConfig({
+      type: "custom:watchzone-card",
+      recorded_media_player_type: "bottom_drawer",
+    });
+    const underlying = document.createElement("button");
+    underlying.dataset.drawerUnderlying = "true";
+    underlying.dataset.clicks = "0";
+    underlying.style.cssText =
+      "position:fixed;inset:0 auto auto 0;width:48px;height:48px;z-index:999999";
+    underlying.addEventListener("click", () => {
+      underlying.dataset.clicks = String(
+        Number(underlying.dataset.clicks ?? "0") + 1,
+      );
+    });
+    document.body.append(underlying);
+  });
+
+  const openDrawer = async (): Promise<void> => {
+    await page.locator("watchzone-card").evaluate((element) => {
+      element.dispatchEvent(
+        new CustomEvent("wzc-recorded-media-open", {
+          bubbles: true,
+          composed: true,
+          detail: {
+            id: "review:drawer-snapshot",
+            kind: "snapshot",
+            presentation: "review",
+            preferredTransport: "file",
+            sources: [
+              {
+                content_type: "image/svg+xml",
+                transport: "file",
+                url: "/thumbnail.svg",
+              },
+            ],
+            title: "Drawer snapshot",
+          },
+        }),
+      );
+    });
+    await expect(
+      page.locator("wzc-recorded-media-bottom-drawer dialog"),
+    ).toBeVisible();
+  };
+
+  await openDrawer();
+  const drawer = page.locator("wzc-recorded-media-bottom-drawer dialog");
+  const cardBox = await page.locator("watchzone-card").boundingBox();
+  const drawerBox = await drawer.boundingBox();
+  expect(drawerBox?.width).toBeCloseTo(cardBox?.width ?? 0, 0);
+  expect(drawerBox?.x).toBeCloseTo(cardBox?.x ?? 0, 0);
+  await expect(
+    page.locator("wzc-recorded-media-bottom-drawer .resize-handle"),
+  ).toHaveCount(0);
+  expect(
+    await drawer.evaluate(
+      (dialog) => getComputedStyle(dialog, "::backdrop").backgroundColor,
+    ),
+  ).toBe("rgba(0, 0, 0, 0)");
+
+  await page.keyboard.press("Escape");
+  await expect(drawer).toBeVisible();
+  await page.mouse.click(24, 24);
+  await expect(drawer).toBeVisible();
+  await expect(page.locator('[data-drawer-underlying="true"]')).toHaveAttribute(
+    "data-clicks",
+    "0",
+  );
+
+  const handle = page.locator(
+    "wzc-recorded-media-bottom-drawer .drawer-handle",
+  );
+  let handleBox = await handle.boundingBox();
+  if (!handleBox) throw new Error("Drawer handle was not rendered");
+  const handleX = handleBox.x + handleBox.width / 2;
+  const handleY = handleBox.y + handleBox.height / 2;
+  await page.mouse.move(handleX, handleY);
+  await page.mouse.down();
+  await page.mouse.move(handleX, handleY + 30);
+  await page.mouse.up();
+  await expect(drawer).toBeVisible();
+  await expect
+    .poll(() => drawer.evaluate((dialog) => dialog.style.transform))
+    .toBe("translateY(0px)");
+
+  handleBox = await handle.boundingBox();
+  if (!handleBox) throw new Error("Drawer handle was not rendered");
+  const settledHandleX = handleBox.x + handleBox.width / 2;
+  const settledHandleY = handleBox.y + handleBox.height / 2;
+  await page.mouse.move(settledHandleX, settledHandleY);
+  await page.mouse.down();
+  await page.mouse.move(settledHandleX, settledHandleY + 220);
+  await page.mouse.up();
+  await expect(drawer).toHaveCount(0);
+
+  await openDrawer();
+  await page.locator("wzc-recorded-media-bottom-drawer .close").click();
+  await expect(
+    page.locator("wzc-recorded-media-bottom-drawer dialog"),
+  ).toHaveCount(0);
+});
+
 test("renders the fixed zero-network community card picker preview", async ({
   page,
 }) => {

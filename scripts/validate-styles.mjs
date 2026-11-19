@@ -20,6 +20,10 @@ const recordedVideoTransportStyles = resolve(
   sourceRoot,
   "features/media-viewer/transport-controls.styles.ts",
 );
+const recordedMediaBottomDrawerStyles = resolve(
+  sourceRoot,
+  "features/media-viewer/bottom-drawer/bottom-drawer.styles.ts",
+);
 const allowedHomeAssistantTokens = new Map([
   [homeAssistantEditorBridge, new Set(["--ha-view-sections-column-max-width"])],
 ]);
@@ -126,6 +130,7 @@ for (const path of await collectTypeScript(sourceRoot)) {
     path === themeBoundary ||
     path === fullscreenCameraStyles ||
     path === recordedVideoTransportStyles ||
+    path === recordedMediaBottomDrawerStyles ||
     relativePath ===
       "frontend/src/features/companion-landscape/companion-landscape.styles.ts" ||
     relativePath === "frontend/src/ui/media-controls-overlay.styles.ts";

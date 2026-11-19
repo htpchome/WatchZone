@@ -136,6 +136,13 @@ defaults to `double_column`; YAML omits that default. Full Stage and Camera
 Only expose None, Double Column, and Fullscreen Live Video. Minimal Camera
 Stage omits the inapplicable Double Column choice.
 
+The Recorded Media Player disclosure owns the presentation used by every
+recorded-media request, including Reviews, Events, Recordings, Exports, and
+snapshot variants. Media Player type uses the shared segmented-control
+presentation. `draggable` is the normalized default and is omitted from YAML;
+`bottom_drawer` selects the modal drawer. The visible Future choice is disabled
+and is not a valid configuration value.
+
 Camera grouping is edited atomically with its owning main-camera draft. The
 additional-camera selector uses the standard Home Assistant camera-entity
 picker and therefore displays every discovered camera. Selecting the main

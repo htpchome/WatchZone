@@ -202,7 +202,9 @@ boundary:
 - Informational and specialized viewing dialogs, including AI analysis and
   recorded media, use Home Assistant's native dialog surface, matching
   backdrop-filter, radius, and shadow. Modal information uses Home Assistant's
-  scrim hooks; the non-blocking recorded-media viewer retains no scrim.
+  scrim hooks. The non-blocking draggable recorded-media viewer has no scrim;
+  the recorded-media drawer uses a transparent modal backdrop so it visibly
+  preserves the card while still blocking interaction beneath the drawer.
 - The Home Assistant card-editor shell uses a mode-aware opaque surface without
   a backdrop filter: Home Assistant's default surface in light mode and the
   active theme's primary background in dark mode. The complete Config,
@@ -217,7 +219,7 @@ Use this matrix when selecting tokens for a new overlay surface:
 
 | Presentation role | Examples                                                                           | Background                       | Backdrop filter                                | Radius and shadow                                      | Scrim                                                                            |
 | ----------------- | ---------------------------------------------------------------------------------- | -------------------------------- | ---------------------------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------- |
-| HA glass          | AI analysis, recorded-media viewer, minimal live viewer, informational dialogs     | `--wzc-dialog-background`        | `--wzc-dialog-backdrop-filter`                 | `--wzc-dialog-radius`, `--wzc-dialog-shadow`           | `--wzc-dialog-scrim-*` for modal dialogs; none for the non-blocking media viewer |
+| HA glass          | AI analysis, recorded-media viewers, minimal live viewer, informational dialogs    | `--wzc-dialog-background`        | `--wzc-dialog-backdrop-filter`                 | `--wzc-dialog-radius`, `--wzc-dialog-shadow`           | `--wzc-dialog-scrim-*` for ordinary modal dialogs; transparent blocking backdrop for the media drawer; none for the draggable viewer |
 | Solid task        | Filter, calendar, Suspend Camera, recorded-media information, forms, confirmations | `--wzc-task-dialog-background`   | `--wzc-task-dialog-backdrop-filter` (`none`)   | `--wzc-task-dialog-radius`, `--wzc-task-dialog-shadow` | `--wzc-dialog-scrim-*` for modal tasks; none for popovers                        |
 | Editor shell      | Home Assistant card editor, WatchZone editor content                               | `--wzc-editor-dialog-background` | `--wzc-editor-dialog-backdrop-filter` (`none`) | Owned by the Home Assistant editor shell               | Owned by the Home Assistant editor shell                                         |
 
