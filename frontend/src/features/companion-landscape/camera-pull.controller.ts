@@ -387,11 +387,14 @@ export class CompanionCameraPullController {
       "--wzc-companion-camera-overlay-block-size",
       `${height}px`,
     );
-    let handleLeft = mix(
+    const handleLeft = mix(
       handleBaselineLeft,
       viewport.left + viewport.width - EXPANDED_HANDLE_INSET_PX,
     );
-    let handleTop = mix(handleBaselineTop, viewport.top + viewport.height / 2);
+    const handleTop = mix(
+      handleBaselineTop,
+      viewport.top + viewport.height / 2,
+    );
     this._host.style.setProperty(
       "--wzc-companion-camera-pull-inline-start",
       `${handleLeft}px`,
@@ -400,39 +403,6 @@ export class CompanionCameraPullController {
       "--wzc-companion-camera-pull-block-start",
       `${handleTop}px`,
     );
-    if (this._progress === 1) {
-      const cameraRect = this._camera?.getBoundingClientRect();
-      if (cameraRect) {
-        const correctedLeft = left + viewport.left - cameraRect.left;
-        const correctedTop = top + viewport.top - cameraRect.top;
-        this._host.style.setProperty(
-          "--wzc-companion-camera-overlay-left",
-          `${correctedLeft}px`,
-        );
-        this._host.style.setProperty(
-          "--wzc-companion-camera-overlay-top",
-          `${correctedTop}px`,
-        );
-      }
-      const handleRect = handle.getBoundingClientRect();
-      handleLeft +=
-        viewport.left +
-        viewport.width -
-        EXPANDED_HANDLE_INSET_PX -
-        (handleRect.left + handleRect.width / 2);
-      handleTop +=
-        viewport.top +
-        viewport.height / 2 -
-        (handleRect.top + handleRect.height / 2);
-      this._host.style.setProperty(
-        "--wzc-companion-camera-pull-inline-start",
-        `${handleLeft}px`,
-      );
-      this._host.style.setProperty(
-        "--wzc-companion-camera-pull-block-start",
-        `${handleTop}px`,
-      );
-    }
     handle.setAttribute(
       "aria-valuenow",
       String(Math.round(this._progress * 100)),

@@ -8855,8 +8855,29 @@ test("applies configured Companion rotate actions to the retained Full Stage", a
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(card).not.toHaveClass(/companion-phone-landscape/);
   await setRotateAction("fullscreen_live_video");
-  await card.evaluate(() => {
-    document.body.style.transform = "translateX(96px)";
+  await card.evaluate((element) => {
+    const host = element as HTMLElement;
+    const grid = host.shadowRoot?.querySelector<HTMLElement>(".stage-grid");
+    if (!grid) throw new Error("Stage grid was not rendered");
+    host.style.setProperty("--wzc-companion-landscape-inline-inset", "96px");
+    const getSettledRect = grid.getBoundingClientRect.bind(grid);
+    let staleLandscapeRectPending = true;
+    grid.getBoundingClientRect = () => {
+      const rect = getSettledRect();
+      if (
+        staleLandscapeRectPending &&
+        host.classList.contains("landscape-camera-overlay-expanded")
+      ) {
+        staleLandscapeRectPending = false;
+        return DOMRect.fromRect({
+          height: rect.height,
+          width: rect.width,
+          x: 0,
+          y: rect.y,
+        });
+      }
+      return rect;
+    };
   });
 
   await card.evaluate((element) => {

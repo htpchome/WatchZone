@@ -233,13 +233,15 @@ class CompanionPhoneLandscapeController implements ReactiveController {
   private readonly _schedule = (): void => {
     if (!this._connected) return;
     const targetAction = this._targetAction();
+    if (!this._initialized) return;
     if (
-      this._initialized &&
-      ((targetAction !== "none") !== this._active ||
-        targetAction !== this._action)
+      (targetAction !== "none") !== this._active ||
+      targetAction !== this._action
     ) {
       void this._sync();
+      return;
     }
+    if (this._active && !this._nativeFullscreenActive) this._pull.sync();
   };
 
   private _targetAction(): CompanionRotateAction {
@@ -449,6 +451,13 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     if (!this._isCurrent(active, generation)) return;
     if (immediateFullscreen) {
       this._pull.activate(true, true);
+      this._settledSnapshot = this._captureSnapshot();
+      await nextFrame();
+      if (!this._isCurrent(active, generation)) return;
+      this._pull.sync();
+      await nextFrame();
+      if (!this._isCurrent(active, generation)) return;
+      this._pull.sync();
       this._settledSnapshot = this._captureSnapshot();
       return;
     }
