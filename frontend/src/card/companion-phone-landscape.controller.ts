@@ -153,9 +153,12 @@ class CompanionPhoneLandscapeController implements ReactiveController {
   private _active = false;
   private readonly _animations = new Set<MotionAnimation>();
   private _connected = false;
+  private _deviceGamma?: number;
+  private _gammaBaseline?: number;
   private _initialized = false;
   private readonly _pull: CompanionCameraPullController;
   private _settledSnapshot?: TransitionSnapshot;
+  private readonly _tiltAnimations = new Map<SurfaceName, MotionAnimation>();
   private _transitionGeneration = 0;
 
   public constructor(
@@ -179,6 +182,7 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     }
     window.addEventListener("orientationchange", this._schedule);
     window.addEventListener("resize", this._schedule);
+    window.addEventListener("deviceorientation", this._trackDeviceTilt);
     window.visualViewport?.addEventListener("resize", this._schedule);
     void this._sync();
   }
@@ -198,8 +202,10 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     this._transitionGeneration += 1;
     window.removeEventListener("orientationchange", this._schedule);
     window.removeEventListener("resize", this._schedule);
+    window.removeEventListener("deviceorientation", this._trackDeviceTilt);
     window.visualViewport?.removeEventListener("resize", this._schedule);
     this._pull.deactivate();
+    this._clearDeviceTilt();
     this._cancelAnimations();
     this._host.classList.remove("companion-phone-orientation-transitioning");
   }
@@ -208,6 +214,41 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     if (!this._connected) return;
     if (this._initialized && this._targetActive() !== this._active) {
       void this._sync();
+    }
+  };
+
+  private readonly _trackDeviceTilt = (event: DeviceOrientationEvent): void => {
+    if (
+      !this._connected ||
+      !this._canActivate() ||
+      this._animations.size > 0 ||
+      reducedMotionRequested() ||
+      typeof event.gamma !== "number"
+    ) {
+      return;
+    }
+    this._deviceGamma = event.gamma;
+    this._gammaBaseline ??= event.gamma;
+    const delta = Math.max(
+      -90,
+      Math.min(90, event.gamma - this._gammaBaseline),
+    );
+    const angle = Math.abs(delta) < 1 ? 0 : delta;
+    for (const [name, selector] of Object.entries(SURFACE_SELECTORS) as Array<
+      [SurfaceName, string]
+    >) {
+      const element =
+        this._host.renderRoot.querySelector<HTMLElement>(selector);
+      if (!element) continue;
+      this._tiltAnimations.get(name)?.stop();
+      this._tiltAnimations.set(
+        name,
+        animateElement(
+          element,
+          { rotate: angle },
+          { duration: 0.1, ease: "linear" },
+        ),
+      );
     }
   };
 
@@ -248,6 +289,16 @@ class CompanionPhoneLandscapeController implements ReactiveController {
       element?.style.removeProperty("opacity");
       element?.style.removeProperty("transform");
       element?.style.removeProperty("transform-origin");
+    }
+  }
+
+  private _clearDeviceTilt(): void {
+    for (const animation of this._tiltAnimations.values()) animation.stop();
+    this._tiltAnimations.clear();
+    for (const selector of Object.values(SURFACE_SELECTORS)) {
+      this._host.renderRoot
+        .querySelector<HTMLElement>(selector)
+        ?.style.removeProperty("rotate");
     }
   }
 
@@ -331,6 +382,7 @@ class CompanionPhoneLandscapeController implements ReactiveController {
       ? this._captureSnapshot()
       : (this._settledSnapshot ?? this._captureSnapshot());
     this._pull.deactivate();
+    this._clearDeviceTilt();
     this._cancelAnimations();
     if (animate) {
       this._host.classList.add("companion-phone-orientation-transitioning");
@@ -343,6 +395,7 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     if (animate) await this._playTransition(before, active);
     if (!this._isCurrent(active, generation)) return;
     this._host.classList.remove("companion-phone-orientation-transitioning");
+    this._gammaBaseline = this._deviceGamma;
     this._settledSnapshot = this._captureSnapshot();
     if (this._connected && this._active === active && active) {
       await nextFrame();

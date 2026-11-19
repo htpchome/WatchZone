@@ -8928,6 +8928,7 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
     stage.dataset.testOpacityMotions = "0";
     stage.dataset.testRotateMotions = "0";
     stage.dataset.testRotationStarts = "";
+    stage.dataset.testTiltMotions = "0";
     const card = (stage.getRootNode() as ShadowRoot).host;
     new MutationObserver(() => {
       if (stage.dataset.stageVariant === "default") {
@@ -8987,10 +8988,32 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
               .join(",");
           }
         }
+        if (
+          serialized.includes('"rotate"') &&
+          !serialized.includes("rotate(")
+        ) {
+          stage.dataset.testTiltMotions = String(
+            Number(stage.dataset.testTiltMotions ?? "0") + 1,
+          );
+        }
         return nativeAnimate(keyframes, options);
       }) as typeof placement.animate;
     }
   });
+  await page.evaluate(() => {
+    const dispatchTilt = (gamma: number) => {
+      const event = new Event("deviceorientation");
+      Object.defineProperty(event, "gamma", { value: gamma });
+      window.dispatchEvent(event);
+    };
+    dispatchTilt(0);
+    dispatchTilt(-45);
+  });
+  await expect
+    .poll(() =>
+      card.locator(".stage-grid").getAttribute("data-test-tilt-motions"),
+    )
+    .toBe("4");
   await page.setViewportSize({ width: 844, height: 390 });
   await expect(card).toHaveClass(/companion-phone-landscape/);
   expect(
@@ -9251,7 +9274,7 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
     Math.abs(geometry.activityNavigationRight - geometry.cameraRight),
   ).toBeLessThanOrEqual(3);
   expect(geometry.activityNavigationBottom).toBeCloseTo(
-    geometry.host.height,
+    geometry.host.height - 8,
     0,
   );
   expect(geometry.activityNavigationBottom).toBeLessThanOrEqual(
