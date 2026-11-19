@@ -270,6 +270,7 @@ export class RecordedVideoPlayer extends LitElement {
         @${transportHoldEvent}=${this._handleTransportHold}
       ></${transportTag}>
     </div>
+    <slot name="media-resize-handle"></slot>
     ${
       timeline
         ? staticHtml`<${recordingScrubberTag}

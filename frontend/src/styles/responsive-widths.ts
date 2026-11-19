@@ -12,4 +12,5 @@ export const responsiveWidths = Object.freeze({
   narrow: pixels(RESPONSIVE_WIDTHS.narrow),
   medium: pixels(RESPONSIVE_WIDTHS.medium),
   wide: pixels(RESPONSIVE_WIDTHS.wide),
+  extraWide: pixels(RESPONSIVE_WIDTHS.extraWide),
 });

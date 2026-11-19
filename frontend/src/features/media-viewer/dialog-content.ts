@@ -30,8 +30,9 @@ interface DialogContentOptions {
   readonly api?: HomeAssistantApi;
   readonly close: () => void;
   readonly localize: LocalizeFunction;
-  readonly mediaOverlay?: unknown;
+  readonly mediaResizeControl?: unknown;
   readonly notices: readonly ToastNotice[];
+  readonly onHeaderDoubleClick?: (event: MouseEvent) => void;
   readonly onHeaderPointerCancel?: (event: PointerEvent) => void;
   readonly onHeaderPointerDown?: (event: PointerEvent) => void;
   readonly onHeaderPointerMove?: (event: PointerEvent) => void;
@@ -58,6 +59,7 @@ export class RecordedMediaDialogContent {
         @pointermove=${options.onHeaderPointerMove}
         @pointerup=${options.onHeaderPointerUp}
         @pointercancel=${options.onHeaderPointerCancel}
+        @dblclick=${options.onHeaderDoubleClick}
       >
         <button
           class="close"
@@ -65,6 +67,7 @@ export class RecordedMediaDialogContent {
           title=${options.localize("media_player.close")}
           aria-label=${options.localize("media_player.close")}
           @pointerdown=${(event: Event) => event.stopPropagation()}
+          @dblclick=${(event: Event) => event.stopPropagation()}
           @click=${options.close}
         >
           <ha-icon icon="mdi:close"></ha-icon>
@@ -79,7 +82,7 @@ export class RecordedMediaDialogContent {
       </div>
       <div class="body">
         <div class="media-container">
-          ${this._renderMedia(options)} ${options.mediaOverlay}
+          ${this._renderMedia(options)}
         </div>
         <${informationTag}
           class="media-information"
@@ -130,19 +133,28 @@ export class RecordedMediaDialogContent {
     if (request.kind === "snapshot") {
       const path = request.sources[0]?.url ?? "";
       return html`<img
-        class="snapshot media-surface"
-        src=${options.api?.resolveUrl(path) ?? path}
-        alt=${request.title}
-        @error=${this._handleSnapshotError}
-      />`;
+          class="snapshot media-surface"
+          src=${options.api?.resolveUrl(path) ?? path}
+          alt=${request.title}
+          @error=${this._handleSnapshotError}
+        />${options.mediaResizeControl}`;
     }
-    return staticHtml`<${playerTag}
-      class="media-surface"
-      .api=${options.api}
-      .localize=${options.localize}
-      .request=${request}
-      @${recordingSegmentStateEvent}=${this._handleSegmentState}
-    ></${playerTag}>`;
+    return request.timeline
+      ? staticHtml`<${playerTag}
+          class="media-surface"
+          .api=${options.api}
+          .localize=${options.localize}
+          .request=${request}
+          @${recordingSegmentStateEvent}=${this._handleSegmentState}
+          >${options.mediaResizeControl}</${playerTag}
+        >`
+      : staticHtml`<${playerTag}
+          class="media-surface"
+          .api=${options.api}
+          .localize=${options.localize}
+          .request=${request}
+          @${recordingSegmentStateEvent}=${this._handleSegmentState}
+        ></${playerTag}>${options.mediaResizeControl}`;
   }
 
   private readonly _toggleSegmentSelection = (): void => {

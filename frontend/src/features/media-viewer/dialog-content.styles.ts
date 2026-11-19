@@ -48,6 +48,7 @@ export const recordedMediaDialogContentStyles = css`
   }
 
   .body {
+    align-content: start;
     background: transparent;
     box-sizing: border-box;
     display: grid;
@@ -55,6 +56,7 @@ export const recordedMediaDialogContentStyles = css`
     gap: 0.8rem;
     min-block-size: 0;
     overflow: auto;
+    overflow-anchor: none;
     overscroll-behavior: contain;
     padding: 0 var(--wzc-recorded-media-dialog-padding);
     position: relative;
@@ -88,8 +90,10 @@ export const recordedMediaDialogContentStyles = css`
   }
 
   .media-container {
+    align-content: start;
+    display: grid;
     min-inline-size: 0;
-    position: relative;
+    overflow-anchor: none;
   }
 
   wzc-recorded-video-player:not([recording-timeline]) {
@@ -102,12 +106,12 @@ export const recordedMediaDialogContentStyles = css`
   }
 
   .snapshot {
-    aspect-ratio: 16 / 9;
+    aspect-ratio: var(--wzc-recorded-media-presentation-aspect-ratio, 16 / 9);
     background: var(--wzc-recorded-media-background);
     block-size: auto;
     display: block;
     inline-size: 100%;
-    object-fit: contain;
+    object-fit: var(--wzc-recorded-media-object-fit, contain);
   }
 
   wzc-toast-region {

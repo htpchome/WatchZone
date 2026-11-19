@@ -69,20 +69,21 @@ prohibited for layout or interaction decisions.
 
 The shared responsive profile uses these container inline-size classes:
 
-| Presentation class | Detailed size class | Inline size  |
-| ------------------ | ------------------- | ------------ |
-| Phone              | Compact phone       | `< 480px`    |
-| Phone              | Phone               | `480–599px`  |
-| Tablet             | Compact tablet      | `600–767px`  |
-| Tablet             | Tablet              | `768–1023px` |
-| Desktop            | Desktop             | `>= 1024px`  |
+| Presentation class | Detailed size class | Inline size   |
+| ------------------ | ------------------- | ------------- |
+| Phone              | Compact phone       | `< 480px`     |
+| Phone              | Phone               | `480–599px`   |
+| Tablet             | Compact tablet      | `600–767px`   |
+| Tablet             | Tablet              | `768–1023px`  |
+| Desktop            | Desktop             | `1024–1279px` |
+| Desktop            | Extra-wide desktop  | `>= 1280px`   |
 
 All responsive width decisions use the canonical `480px`, `600px`, `768px`,
-and `1024px` points. Runtime classification consumes their numeric contract;
-CSS viewport and container queries consume its CSS-safe projection. Arbitrary
-feature-local width points are prohibited. A component still chooses the
-canonical point appropriate to its content; this shared scale does not require
-viewport queries where a container query correctly owns the decision.
+`1024px`, and `1280px` points. Runtime classification consumes their numeric
+contract; CSS viewport and container queries consume its CSS-safe projection.
+Arbitrary feature-local width points are prohibited. A component still chooses
+the canonical point appropriate to its content; this shared scale does not
+require viewport queries where a container query correctly owns the decision.
 
 These categories may select behavior from a typed device matrix. Purely visual
 size changes remain CSS container-query responsibilities.

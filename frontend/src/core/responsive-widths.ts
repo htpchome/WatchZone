@@ -4,4 +4,5 @@ export const RESPONSIVE_WIDTHS = Object.freeze({
   narrow: 600,
   medium: 768,
   wide: 1024,
+  extraWide: 1280,
 });

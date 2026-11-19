@@ -45,6 +45,10 @@ export const recordedVideoPlayerStyles = css`
     outline-offset: -2px;
   }
 
+  slot[name="media-resize-handle"] {
+    display: block;
+  }
+
   video {
     background: var(--wzc-recorded-media-background);
     inset: 0;

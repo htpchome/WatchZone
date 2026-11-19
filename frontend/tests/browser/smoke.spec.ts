@@ -126,6 +126,12 @@ test("presents recorded media in the configured card-width bottom drawer", async
   await page.route("**/recording.mp4", (route) =>
     route.fulfill({ body: "", contentType: "video/mp4" }),
   );
+  await page.route("**/snapshot.svg", (route) =>
+    route.fulfill({
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="90"/>',
+      contentType: "image/svg+xml",
+    }),
+  );
   await page.goto("/");
   await waitForWatchZoneDefinition(page);
   await page.locator("watchzone-card").evaluate((element) => {
@@ -235,6 +241,10 @@ test("presents recorded media in the configured card-width bottom drawer", async
   if (!initialMediaBox || !mediaResizeBox) {
     throw new Error("Recorded media resize handle was not rendered");
   }
+  expect(mediaResizeBox.y).toBeCloseTo(
+    initialMediaBox.y + initialMediaBox.height,
+    0,
+  );
   const mediaResizeX = mediaResizeBox.x + mediaResizeBox.width / 2;
   const mediaResizeY = mediaResizeBox.y + mediaResizeBox.height / 2;
   await page.mouse.move(mediaResizeX, mediaResizeY);
@@ -244,6 +254,12 @@ test("presents recorded media in the configured card-width bottom drawer", async
   await expect
     .poll(async () => (await mediaPlayer.boundingBox())?.height ?? 0)
     .toBeGreaterThan(initialMediaBox.height);
+  const resizedMediaBox = await mediaPlayer.boundingBox();
+  const resizedHandleBox = await mediaResizeHandle.boundingBox();
+  expect(resizedHandleBox?.y).toBeCloseTo(
+    (resizedMediaBox?.y ?? 0) + (resizedMediaBox?.height ?? 0),
+    0,
+  );
 
   const handle = page.locator(
     "wzc-recorded-media-bottom-drawer .drawer-handle",
@@ -276,6 +292,129 @@ test("presents recorded media in the configured card-width bottom drawer", async
   await expect(
     page.locator("wzc-recorded-media-bottom-drawer dialog"),
   ).toHaveCount(0);
+
+  await page.locator("watchzone-card").evaluate((element) => {
+    element.dispatchEvent(
+      new CustomEvent("wzc-recorded-media-open", {
+        bubbles: true,
+        composed: true,
+        detail: {
+          id: "review:drawer-snapshot",
+          kind: "snapshot",
+          presentation: "review",
+          preferredTransport: "file",
+          sources: [
+            {
+              content_type: "image/svg+xml",
+              transport: "file",
+              url: "/snapshot.svg",
+            },
+          ],
+          title: "Drawer snapshot",
+        },
+      }),
+    );
+  });
+  await expect(drawer).toBeVisible();
+  await expect
+    .poll(() => drawer.evaluate((dialog) => dialog.style.transform))
+    .toBe("translateY(0px)");
+
+  const snapshot = page.locator("wzc-recorded-media-bottom-drawer .snapshot");
+  const snapshotResizeHandle = page.locator(
+    "wzc-recorded-media-bottom-drawer .media-resize-handle",
+  );
+  const initialSnapshotBox = await snapshot.boundingBox();
+  const initialSnapshotHandleBox = await snapshotResizeHandle.boundingBox();
+  if (!initialSnapshotBox || !initialSnapshotHandleBox) {
+    throw new Error("Snapshot resize geometry was not rendered");
+  }
+  expect(initialSnapshotHandleBox.y).toBeCloseTo(
+    initialSnapshotBox.y + initialSnapshotBox.height,
+    0,
+  );
+  const snapshotResizeX =
+    initialSnapshotHandleBox.x + initialSnapshotHandleBox.width / 2;
+  const snapshotResizeY =
+    initialSnapshotHandleBox.y + initialSnapshotHandleBox.height / 2;
+  await page.mouse.move(snapshotResizeX, snapshotResizeY);
+  await page.mouse.down();
+  await page.mouse.move(snapshotResizeX, snapshotResizeY + 40);
+  await page.mouse.up();
+  await expect
+    .poll(async () => (await snapshot.boundingBox())?.height ?? 0)
+    .toBeGreaterThan(initialSnapshotBox.height);
+
+  await page.locator("wzc-recorded-media-bottom-drawer .header").dblclick();
+  await expect
+    .poll(async () => (await drawer.boundingBox())?.width ?? 0)
+    .toBeCloseTo(1280, 0);
+  await page.locator("wzc-recorded-media-bottom-drawer .close").click();
+  await expect(drawer).toHaveCount(0);
+
+  await page.locator("watchzone-card").evaluate((element) => {
+    element.dispatchEvent(
+      new CustomEvent("wzc-recorded-media-open", {
+        bubbles: true,
+        composed: true,
+        detail: {
+          id: "recording:drawer-video",
+          kind: "video",
+          presentation: "recording",
+          preferredTransport: "file",
+          sources: [
+            {
+              content_type: "video/mp4",
+              transport: "file",
+              url: "/recording.mp4",
+            },
+          ],
+          timeline: {
+            availableEndTime: 3600,
+            availableStartTime: 0,
+            camera: "front",
+            endTime: 3600,
+            entityId: "camera.front",
+            markers: [],
+            selectionEndTime: 3600,
+            selectionSpans: [{ endTime: 3600, startTime: 0 }],
+            selectionStartTime: 0,
+            spans: [{ endTime: 3600, mediaOffset: 0, startTime: 0 }],
+            startTime: 0,
+          },
+          title: "Drawer recording",
+        },
+      }),
+    );
+  });
+  await expect(drawer).toBeVisible();
+  await expect
+    .poll(() => drawer.evaluate((dialog) => dialog.style.transform))
+    .toBe("translateY(0px)");
+  const recordingViewport = page.locator(
+    "wzc-recorded-media-bottom-drawer wzc-recorded-video-player .viewport",
+  );
+  const recordingResizeHandle = page.locator(
+    "wzc-recorded-media-bottom-drawer .media-resize-handle",
+  );
+  const recordingScrubber = page.locator(
+    "wzc-recorded-media-bottom-drawer wzc-recording-scrubber",
+  );
+  const recordingViewportBox = await recordingViewport.boundingBox();
+  const recordingHandleBox = await recordingResizeHandle.boundingBox();
+  const recordingScrubberBox = await recordingScrubber.boundingBox();
+  if (!recordingViewportBox || !recordingHandleBox || !recordingScrubberBox) {
+    throw new Error("Recording drawer geometry was not rendered");
+  }
+  expect(recordingHandleBox.y).toBeCloseTo(
+    recordingViewportBox.y + recordingViewportBox.height,
+    0,
+  );
+  expect(recordingScrubberBox.y).toBeGreaterThanOrEqual(
+    recordingHandleBox.y + recordingHandleBox.height - 1,
+  );
+  await page.locator("wzc-recorded-media-bottom-drawer .close").click();
+  await expect(drawer).toHaveCount(0);
 });
 
 test("renders the fixed zero-network community card picker preview", async ({

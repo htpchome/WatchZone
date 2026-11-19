@@ -27,7 +27,6 @@ import type { ToastNotice } from "../../../ui/toast-manager";
 import { RecordedMediaDialogContent } from "../dialog-content";
 import { recordedMediaDialogContentStyles } from "../dialog-content.styles";
 import { recordedMediaHeading } from "../media-information";
-import type { RecordedVideoPlayer } from "../recorded-video-player";
 import { bottomDrawerStyles } from "./bottom-drawer.styles";
 import { BottomDrawerMediaResizeController } from "./media-resize.controller";
 
@@ -66,6 +65,7 @@ export class RecordedMediaBottomDrawer extends LitElement {
   private _closing = false;
   private readonly _content = new RecordedMediaDialogContent(this);
   private _dragFrame?: number;
+  private _expanded = false;
   private _gesture?: DrawerGesture;
   private readonly _mediaResize = new BottomDrawerMediaResizeController(this);
   private readonly _motion = new OwnedMotion();
@@ -107,8 +107,9 @@ export class RecordedMediaBottomDrawer extends LitElement {
         api: this.api,
         close: this.close,
         localize: this.localize,
-        mediaOverlay: this._renderMediaResizeHandle(),
+        mediaResizeControl: this._renderMediaResizeHandle(),
         notices: this.notices,
+        onHeaderDoubleClick: this._expandWidth,
         request: this.request,
       })}
     </dialog>`;
@@ -117,6 +118,7 @@ export class RecordedMediaBottomDrawer extends LitElement {
   protected willUpdate(changed: Map<PropertyKey, unknown>): void {
     if (changed.has("request") && this.request) {
       this._active = true;
+      this._expanded = false;
       this._content.reset();
       this._mediaResize.reset();
     }
@@ -124,10 +126,7 @@ export class RecordedMediaBottomDrawer extends LitElement {
 
   protected updated(changed: Map<PropertyKey, unknown>): void {
     this._mediaResize.observe(
-      this.request?.kind === "video"
-        ? ((this._content.mediaSurface as RecordedVideoPlayer | null) ??
-            undefined)
-        : undefined,
+      this._content.mediaSurface ?? undefined,
       this.renderRoot.querySelector<HTMLButtonElement>(
         ".media-resize-handle",
       ) ?? undefined,
@@ -323,10 +322,9 @@ export class RecordedMediaBottomDrawer extends LitElement {
     const viewportWidth = viewport?.width ?? window.innerWidth;
     const viewportHeight = viewport?.height ?? window.innerHeight;
     const cardRect = this._ownerCard()?.getBoundingClientRect();
-    const desiredWidth = Math.max(
-      cardRect?.width ?? viewportWidth,
-      RESPONSIVE_WIDTHS.medium,
-    );
+    const desiredWidth = this._expanded
+      ? RESPONSIVE_WIDTHS.extraWide
+      : Math.max(cardRect?.width ?? viewportWidth, RESPONSIVE_WIDTHS.medium);
     const width = Math.min(desiredWidth, viewportWidth);
     const desiredLeft = cardRect
       ? cardRect.left + (cardRect.width - width) / 2
@@ -391,9 +389,10 @@ export class RecordedMediaBottomDrawer extends LitElement {
   }
 
   private _renderMediaResizeHandle(): unknown {
-    if (this.request?.kind !== "video") return null;
+    if (!this.request) return null;
     return html`<button
       class="media-resize-handle"
+      slot="media-resize-handle"
       type="button"
       role="slider"
       title=${this.localize("camera.stage_resize_title")}
@@ -416,6 +415,13 @@ export class RecordedMediaBottomDrawer extends LitElement {
       ${renderIcon("chevronDown")}
     </button>`;
   }
+
+  private readonly _expandWidth = (event: MouseEvent): void => {
+    event.preventDefault();
+    if (this._expanded) return;
+    this._expanded = true;
+    this._syncGeometry();
+  };
 
   static styles = [
     buttonBaseStyles,

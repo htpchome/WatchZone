@@ -92,10 +92,6 @@ export const bottomDrawerStyles = css`
     flex: none;
   }
 
-  .body {
-    flex: 1 1 auto;
-  }
-
   .footer-actions {
     padding-block-end: 0.25rem;
   }
@@ -109,15 +105,12 @@ export const bottomDrawerStyles = css`
     color: var(--wzc-media-overlay-color);
     cursor: ns-resize;
     inline-size: 5rem;
-    inset-block-end: 0;
-    inset-inline-start: 50%;
-    margin: 0;
+    display: block;
+    margin: 0 auto;
     padding: 0;
-    position: absolute;
-    transform: translateX(-50%);
+    position: relative;
     touch-action: none;
     user-select: none;
-    z-index: 2;
     -webkit-tap-highlight-color: transparent;
   }
 

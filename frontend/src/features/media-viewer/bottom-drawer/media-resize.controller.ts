@@ -1,7 +1,5 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
-import type { RecordedVideoPlayer } from "../recorded-video-player";
-
 const DEFAULT_HEIGHT_RATIO = 9 / 16;
 const MAX_HEIGHT_RATIO = 1;
 const KEYBOARD_HEIGHT_STEP = 0.025;
@@ -13,14 +11,18 @@ interface ResizeDrag {
   readonly width: number;
 }
 
-/** Owns the bottom drawer's transient recorded-video height interaction. */
+type ResizableMediaSurface = HTMLElement & {
+  setPresentationHeightRatio?(heightRatio: number): void;
+};
+
+/** Owns the bottom drawer's transient recorded-media height interaction. */
 export class BottomDrawerMediaResizeController implements ReactiveController {
   private _drag?: ResizeDrag;
   private _frame?: number;
   private _handle?: HTMLButtonElement;
   private _heightRatio = DEFAULT_HEIGHT_RATIO;
   private _listening = false;
-  private _player?: RecordedVideoPlayer;
+  private _surface?: ResizableMediaSurface;
 
   public constructor(private readonly _host: ReactiveControllerHost) {
     _host.addController(this);
@@ -31,10 +33,10 @@ export class BottomDrawerMediaResizeController implements ReactiveController {
   }
 
   public observe(
-    player: RecordedVideoPlayer | undefined,
+    surface: HTMLElement | undefined,
     handle: HTMLButtonElement | undefined,
   ): void {
-    this._player = player;
+    this._surface = surface as ResizableMediaSurface | undefined;
     this._handle = handle;
     this._apply();
   }
@@ -47,16 +49,16 @@ export class BottomDrawerMediaResizeController implements ReactiveController {
 
   public hostDisconnected(): void {
     this._finishDrag();
-    this._player?.setPresentationHeightRatio(DEFAULT_HEIGHT_RATIO);
-    this._player = undefined;
+    this._setSurfaceRatio(DEFAULT_HEIGHT_RATIO);
+    this._surface = undefined;
     this._handle = undefined;
   }
 
   public readonly handlePointerDown = (event: PointerEvent): void => {
     if (event.pointerType === "mouse" && event.button !== 0) return;
-    const player = this._player;
+    const surface = this._surface;
     const handle = event.currentTarget as HTMLButtonElement;
-    const rect = player?.getBoundingClientRect();
+    const rect = surface?.getBoundingClientRect();
     if (!rect || rect.width <= 0) return;
     this._drag = {
       heightRatio: this._heightRatio,
@@ -126,7 +128,7 @@ export class BottomDrawerMediaResizeController implements ReactiveController {
   };
 
   private _apply(): void {
-    this._player?.setPresentationHeightRatio(this._heightRatio);
+    this._setSurfaceRatio(this._heightRatio);
     const percentage = this.heightPercentage;
     this._handle?.setAttribute("aria-valuenow", String(percentage));
     this._handle?.setAttribute("aria-valuetext", `${percentage}%`);
@@ -196,6 +198,29 @@ export class BottomDrawerMediaResizeController implements ReactiveController {
       handle.releasePointerCapture(event.pointerId);
     }
     if (event.pointerType === "touch") handle?.blur();
+  }
+
+  private _setSurfaceRatio(heightRatio: number): void {
+    const surface = this._surface;
+    if (!surface) return;
+    if (typeof surface.setPresentationHeightRatio === "function") {
+      surface.setPresentationHeightRatio(heightRatio);
+      return;
+    }
+    if (surface instanceof HTMLImageElement) {
+      const mediaHeightRatio =
+        surface.naturalWidth > 0 && surface.naturalHeight > 0
+          ? surface.naturalHeight / surface.naturalWidth
+          : DEFAULT_HEIGHT_RATIO;
+      surface.style.setProperty(
+        "--wzc-recorded-media-object-fit",
+        heightRatio > mediaHeightRatio ? "cover" : "contain",
+      );
+    }
+    surface.style.setProperty(
+      "--wzc-recorded-media-presentation-aspect-ratio",
+      String(1 / heightRatio),
+    );
   }
 }
 
