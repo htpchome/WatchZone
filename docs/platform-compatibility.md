@@ -132,14 +132,14 @@ The built-in mobile Full Stage has one narrower host-specific exception. On a
 physical phone inside Companion, rotating the fixed WebView to landscape
 presents the compatible wide Stage variant as a viewport-edge overlay. The
 same Stage nodes and live sessions are retained in a 60/40 camera/activity
-composition. Companion owns the physical WebView rotation; after committing
-the responsive layout, WatchZone Motion presents one inverse-rotation
-settlement on the stable Stage surface instead of independently animating Stage
-placements. Entering landscape waits for the outer viewport to stabilize.
-Returning to portrait releases the fixed overlay immediately so Home
-Assistant's own header and flow become authoritative without an assumed header
-height, then the same Stage surface settles into that measured flow. Browser
-phones and every tablet remain outside this controller.
+composition. Companion owns the physical WebView rotation; WatchZone must not
+add a second rotate, scale, translation, FLIP, or snapshot animation to the
+Stage. Entering landscape waits for the outer viewport to stabilize before
+committing the responsive layout. Returning to portrait releases the fixed
+overlay immediately so Home Assistant's own header and flow become
+authoritative without an assumed header height. Browser phones and every
+tablet remain outside this controller. Platform window rotation is not an
+application animation and therefore does not pass through the Motion boundary.
 
 ### 2.3 Theme profile
 

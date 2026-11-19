@@ -8756,7 +8756,7 @@ test("uses mobile viewport sizing without edge-to-edge on Companion tablets", as
   });
 });
 
-test("transforms the Companion phone Full Stage into 60/40 landscape columns", async ({
+test("lets Companion rotate one stable Full Stage into 60/40 landscape columns", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -8897,33 +8897,6 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     "data-stage-variant",
     "phone",
   );
-  await card.locator(".stage-grid").evaluate((stage) => {
-    const host = stage.getRootNode() as ShadowRoot;
-    const card = host.host;
-    const nativeAnimate = stage.animate.bind(stage);
-    stage.dataset.testRotationAnimationCount = "0";
-    stage.animate = ((
-      keyframes: Keyframe[] | PropertyIndexedKeyframes | null,
-      options?: number | KeyframeAnimationOptions,
-    ) => {
-      if (JSON.stringify(keyframes).includes("rotate(")) {
-        stage.dataset.testRotationAnimationCount = String(
-          Number(stage.dataset.testRotationAnimationCount ?? "0") + 1,
-        );
-        stage.dataset.testTransitioningAtAnimationStart = String(
-          card.classList.contains("companion-phone-orientation-transitioning"),
-        );
-        stage.dataset.testThumbnailOutlineWidthAtAnimationStart =
-          getComputedStyle(card).getPropertyValue(
-            "--wzc-activity-thumbnail-outline-width",
-          );
-        stage.dataset.testCameraOutlineWidthAtAnimationStart = getComputedStyle(
-          card,
-        ).getPropertyValue("--wzc-camera-activity-outline-width");
-      }
-      return nativeAnimate(keyframes, options);
-    }) as typeof stage.animate;
-  });
   await page.setViewportSize({ width: 844, height: 390 });
   expect(
     await card.evaluate((element) =>
@@ -8942,25 +8915,15 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     "data-stage-variant",
     "default",
   );
-  await expect
-    .poll(() =>
-      card
-        .locator(".stage-grid")
-        .getAttribute("data-test-rotation-animation-count"),
-    )
-    .toBe("1");
-  await expect(card.locator(".stage-grid")).toHaveAttribute(
-    "data-test-transitioning-at-animation-start",
-    "true",
+  await expect(card).not.toHaveClass(
+    /companion-phone-orientation-transitioning/,
   );
-  await expect(card.locator(".stage-grid")).toHaveAttribute(
-    "data-test-thumbnail-outline-width-at-animation-start",
-    "0px",
-  );
-  await expect(card.locator(".stage-grid")).toHaveAttribute(
-    "data-test-camera-outline-width-at-animation-start",
-    "0px",
-  );
+  await expect(card.locator(".stage-grid")).toHaveCSS("transform", "none");
+  expect(
+    await card
+      .locator(".stage-grid")
+      .evaluate((stage) => stage.getAnimations().length),
+  ).toBe(0);
   expect(
     await card
       .locator(".stage-placement[data-layout-node]")
@@ -8973,16 +8936,6 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
       .locator("ha-card")
       .evaluate((card) => card.getAnimations().length),
   ).toBe(0);
-  await card.locator(".stage-grid").evaluate(async (stage) => {
-    await Promise.all(
-      stage
-        .getAnimations()
-        .map((animation) => animation.finished.catch(() => undefined)),
-    );
-  });
-  await expect(card).not.toHaveClass(
-    /companion-phone-orientation-transitioning/,
-  );
   const transitioningOutline = card
     .locator("wzc-reviews .thumbnail-wrap.detection")
     .first();
@@ -9359,13 +9312,7 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
     "data-stage-variant",
     "phone",
   );
-  await expect
-    .poll(() =>
-      card
-        .locator(".stage-grid")
-        .getAttribute("data-test-rotation-animation-count"),
-    )
-    .toBe("2");
+  await expect(card.locator(".stage-grid")).toHaveCSS("transform", "none");
   expect(
     await card
       .locator(".stage-placement[data-layout-node]")
@@ -9391,13 +9338,7 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
   expect(withoutHeader).toBe(0);
 
   await page.setViewportSize({ width: 844, height: 390 });
-  await expect
-    .poll(() =>
-      card
-        .locator(".stage-grid")
-        .getAttribute("data-test-rotation-animation-count"),
-    )
-    .toBe("3");
+  await expect(card).toHaveClass(/companion-phone-landscape/);
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(card).not.toHaveClass(/companion-phone-landscape/);
   await expect(card).not.toHaveClass(
@@ -9409,9 +9350,6 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
       .evaluate((stage) => stage.getAnimations().length),
   ).toBe(0);
 
-  const animationCountBeforeReducedMotion = await card
-    .locator(".stage-grid")
-    .getAttribute("data-test-rotation-animation-count");
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 844, height: 390 });
   await expect(card).toHaveClass(/companion-phone-landscape/);
@@ -9423,10 +9361,7 @@ test("transforms the Companion phone Full Stage into 60/40 landscape columns", a
       .locator(".stage-grid")
       .evaluate((stage) => stage.getAnimations().length),
   ).toBe(0);
-  await expect(card.locator(".stage-grid")).toHaveAttribute(
-    "data-test-rotation-animation-count",
-    animationCountBeforeReducedMotion ?? "",
-  );
+  await expect(card.locator(".stage-grid")).toHaveCSS("transform", "none");
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(card).not.toHaveClass(/companion-phone-landscape/);
 });
