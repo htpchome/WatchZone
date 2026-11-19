@@ -114,20 +114,19 @@ function inverseTransform(
   rotation: number,
 ): string | undefined {
   if (last.width <= 0 || last.height <= 0) return undefined;
+  const translateX =
+    mapped.left + mapped.width / 2 - (last.left + last.width / 2);
+  const translateY =
+    mapped.top + mapped.height / 2 - (last.top + last.height / 2);
   if (Math.abs(rotation) !== 90) {
     const scaleX = mapped.width / last.width;
     const scaleY = mapped.height / last.height;
-    const translateX = mapped.left - last.left;
-    const translateY = mapped.top - last.top;
     if (![translateX, translateY, scaleX, scaleY].every(Number.isFinite))
       return undefined;
     return `translate(${translateX}px, ${translateY}px) rotate(0deg) scale(${scaleX}, ${scaleY})`;
   }
   const scaleX = mapped.height / last.width;
   const scaleY = mapped.width / last.height;
-  const translateX =
-    mapped.left - last.left + (rotation > 0 ? mapped.width : 0);
-  const translateY = mapped.top - last.top + (rotation < 0 ? mapped.height : 0);
   if (![translateX, translateY, scaleX, scaleY].every(Number.isFinite))
     return undefined;
   return `translate(${translateX}px, ${translateY}px) rotate(${rotation}deg) scale(${scaleX}, ${scaleY})`;
@@ -291,7 +290,7 @@ class CompanionPhoneLandscapeController implements ReactiveController {
               startTransform,
               "translate(0px, 0px) rotate(0deg) scale(1, 1)",
             ],
-            transformOrigin: "0 0",
+            transformOrigin: "50% 50%",
           },
           {
             duration: motionDurations.orientation,

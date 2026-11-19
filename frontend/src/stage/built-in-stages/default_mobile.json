@@ -296,7 +296,7 @@
               "columns": 4,
               "id": "default-camera-surface",
               "kind": "container",
-              "rows": ["content", "content", "fraction"]
+              "rows": ["content", "content", "content"]
             }
           },
           {

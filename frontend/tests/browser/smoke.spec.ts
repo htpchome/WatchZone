@@ -8897,11 +8897,34 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
     "data-stage-variant",
     "phone",
   );
+  const portraitSurfaces = await card.evaluate((element) => {
+    const root = element.shadowRoot;
+    const placement = (suffix: string) => {
+      const value = root?.querySelector<HTMLElement>(
+        `[data-layout-node$="${suffix}"]`,
+      );
+      if (!value) throw new Error(`${suffix} placement was not rendered`);
+      return value.getBoundingClientRect();
+    };
+    const cameraSurface = placement("default-camera-surface");
+    const toolbar = placement("default-activity-navigation-module");
+    const activitySurface = placement("default-activity-surface");
+    return {
+      activityGap: Math.round(activitySurface.top - cameraSurface.bottom),
+      cameraTrailingSpace: Math.round(cameraSurface.bottom - toolbar.bottom),
+    };
+  });
+  expect(Math.abs(portraitSurfaces.cameraTrailingSpace)).toBeLessThanOrEqual(
+    16,
+  );
+  expect(portraitSurfaces.activityGap).toBeGreaterThanOrEqual(0);
+  expect(portraitSurfaces.activityGap).toBeLessThanOrEqual(16);
   await card.evaluate((element) => {
     element.style.setProperty("--wzc-companion-landscape-inline-inset", "42px");
   });
   await card.locator(".stage-grid").evaluate((stage) => {
     stage.dataset.testTransformMotions = "0";
+    stage.dataset.testCenteredMotions = "0";
     stage.dataset.testOpacityMotions = "0";
     stage.dataset.testRotateMotions = "0";
     const card = (stage.getRootNode() as ShadowRoot).host;
@@ -8934,6 +8957,14 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
                 ".companion-camera-pull-handle",
               ),
             ),
+          );
+        }
+        if (
+          serialized.includes("transformOrigin") &&
+          serialized.includes("50% 50%")
+        ) {
+          stage.dataset.testCenteredMotions = String(
+            Number(stage.dataset.testCenteredMotions ?? "0") + 1,
           );
         }
         if (serialized.includes("opacity")) {
@@ -8978,6 +9009,10 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
   );
   await expect(card.locator(".stage-grid")).toHaveAttribute(
     "data-test-rotate-motions",
+    "2",
+  );
+  await expect(card.locator(".stage-grid")).toHaveAttribute(
+    "data-test-centered-motions",
     "2",
   );
   await expect(card.locator(".stage-grid")).toHaveAttribute(
@@ -9482,16 +9517,41 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
     "4",
   );
   await expect(card.locator(".stage-grid")).toHaveCSS("transform", "none");
-  const portraitGeometry = await card.evaluate((element) => ({
-    headerOnTop:
-      document.elementFromPoint(10, 10) ===
-      document.querySelector("[data-test-ha-header]"),
-    top: element.getBoundingClientRect().top,
-  }));
-  expect(portraitGeometry).toEqual({ headerOnTop: true, top: 56 });
   await expect(card).not.toHaveClass(
     /companion-phone-orientation-transitioning/,
   );
+  const portraitGeometry = await card.evaluate((element) => {
+    const root = element.shadowRoot;
+    const placement = (suffix: string) => {
+      const value = root?.querySelector<HTMLElement>(
+        `[data-layout-node$="${suffix}"]`,
+      );
+      if (!value) throw new Error(`${suffix} placement was not rendered`);
+      return value.getBoundingClientRect();
+    };
+    const cameraSurface = placement("default-camera-surface");
+    const toolbar = placement("default-activity-navigation-module");
+    const activitySurface = placement("default-activity-surface");
+    return {
+      activityGap: Math.round(activitySurface.top - cameraSurface.bottom),
+      cameraTrailingSpace: Math.round(cameraSurface.bottom - toolbar.bottom),
+      headerOnTop:
+        document.elementFromPoint(10, 10) ===
+        document.querySelector("[data-test-ha-header]"),
+      top: element.getBoundingClientRect().top,
+    };
+  });
+  expect(portraitGeometry).toEqual({
+    activityGap: expect.any(Number),
+    cameraTrailingSpace: expect.any(Number),
+    headerOnTop: true,
+    top: 56,
+  });
+  expect(Math.abs(portraitGeometry.cameraTrailingSpace)).toBeLessThanOrEqual(
+    16,
+  );
+  expect(portraitGeometry.activityGap).toBeGreaterThanOrEqual(0);
+  expect(portraitGeometry.activityGap).toBeLessThanOrEqual(16);
   expect(
     await card
       .locator(".stage-placement[data-layout-node]")
