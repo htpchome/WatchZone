@@ -21,8 +21,10 @@ type OrientationChanged = (active: boolean) => void;
 
 const installedHosts = new WeakSet<LandscapeHost>();
 const SURFACE_SELECTORS = {
-  activity: '.stage-container[data-layout-node$="default-activity-surface"]',
+  activity: '.stage-placement[data-layout-node$="default-activity-stack"]',
   camera: '.stage-container[data-layout-node$="default-camera-surface"]',
+  toolbar:
+    '.stage-placement[data-layout-node$="default-activity-navigation-module"]',
 } as const;
 
 type SurfaceName = keyof typeof SURFACE_SELECTORS;
@@ -106,6 +108,31 @@ function mapRotatedRect(
     top: (from.width - rect.left - rect.width) * blockScale,
     width: rect.height * inlineScale,
   };
+}
+
+function inverseTransform(
+  mapped: RectSnapshot,
+  last: RectSnapshot,
+  rotation: number,
+): string | undefined {
+  if (last.width <= 0 || last.height <= 0) return undefined;
+  if (Math.abs(rotation) !== 90) {
+    const scaleX = mapped.width / last.width;
+    const scaleY = mapped.height / last.height;
+    const translateX = mapped.left - last.left;
+    const translateY = mapped.top - last.top;
+    if (![translateX, translateY, scaleX, scaleY].every(Number.isFinite))
+      return undefined;
+    return `translate(${translateX}px, ${translateY}px) rotate(0deg) scale(${scaleX}, ${scaleY})`;
+  }
+  const scaleX = mapped.height / last.width;
+  const scaleY = mapped.width / last.height;
+  const translateX =
+    mapped.left - last.left + (rotation > 0 ? mapped.width : 0);
+  const translateY = mapped.top - last.top + (rotation < 0 ? mapped.height : 0);
+  if (![translateX, translateY, scaleX, scaleY].every(Number.isFinite))
+    return undefined;
+  return `translate(${translateX}px, ${translateY}px) rotate(${rotation}deg) scale(${scaleX}, ${scaleY})`;
 }
 
 export function installCompanionPhoneLandscape(
@@ -256,19 +283,15 @@ class CompanionPhoneLandscapeController implements ReactiveController {
         after.viewport,
         rotation,
       );
-      const translateX = mapped.left - last.left;
-      const translateY = mapped.top - last.top;
-      const scaleX = mapped.width / last.width;
-      const scaleY = mapped.height / last.height;
-      if (![translateX, translateY, scaleX, scaleY].every(Number.isFinite))
-        continue;
+      const startTransform = inverseTransform(mapped, last, rotation);
+      if (!startTransform) continue;
       animations.push(
         animateElement(
           element,
           {
             transform: [
-              `translate(${translateX}px, ${translateY}px) scale(${scaleX}, ${scaleY})`,
-              "none",
+              startTransform,
+              "translate(0px, 0px) rotate(0deg) scale(1, 1)",
             ],
             transformOrigin: "0 0",
           },

@@ -8968,14 +8968,14 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
     .poll(() =>
       card.locator(".stage-grid").getAttribute("data-test-transform-motions"),
     )
-    .toBe("2");
+    .toBe("3");
   await expect(card.locator(".stage-grid")).toHaveAttribute(
     "data-test-opacity-motions",
     "0",
   );
   await expect(card.locator(".stage-grid")).toHaveAttribute(
     "data-test-rotate-motions",
-    "0",
+    "3",
   );
   await expect(card.locator(".stage-grid")).toHaveAttribute(
     "data-test-handle-present-at-motion-start",
@@ -9177,20 +9177,16 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
   expect(Math.abs((activityTitle?.y ?? 0) - geometry.activityTop)).toBeLessThan(
     8,
   );
-  expect(geometry.activityNavigationBottom).toBeLessThanOrEqual(
-    geometry.activityTop,
-  );
-  expect(geometry.activityNavigationLeft).toBeGreaterThan(geometry.cameraLeft);
-  expect(geometry.activityNavigationLeft).toBeCloseTo(
-    geometry.activitySurfaceLeft,
+  expect(geometry.activityNavigationLeft).toBeCloseTo(geometry.cameraLeft, 0);
+  expect(
+    Math.abs(geometry.activityNavigationRight - geometry.cameraRight),
+  ).toBeLessThanOrEqual(3);
+  expect(geometry.activityNavigationBottom).toBeCloseTo(
+    geometry.host.height,
     0,
   );
-  expect(geometry.activityNavigationRight).toBeCloseTo(
-    geometry.activityRight,
-    0,
-  );
-  expect(geometry.activityNavigationBottom).toBeLessThanOrEqual(
-    geometry.host.height + 32,
+  expect(geometry.activityNavigationTop).toBeGreaterThan(
+    geometry.cameraNavigationTop,
   );
   expect(geometry.activityNavigationHeight).toBeGreaterThan(0);
   expect(geometry.cameraAspectRatio).toBeCloseTo(16 / 9, 2);
@@ -9327,6 +9323,15 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
   expect(expandedCamera?.y).toBeCloseTo(geometry.host.top, 0);
   expect(expandedCamera?.width).toBeCloseTo(geometry.host.width, 0);
   expect(expandedCamera?.height).toBeCloseTo(geometry.host.height, 0);
+  const expandedCameraContent = await cameraPlacement
+    .locator("wzc-camera-view .camera")
+    .first()
+    .boundingBox();
+  expect(expandedCameraContent?.x).toBeCloseTo(geometry.host.left, 0);
+  expect(expandedCameraContent?.y).toBeCloseTo(geometry.host.top, 0);
+  expect(expandedCameraContent?.width).toBeCloseTo(geometry.host.width, 0);
+  expect(expandedCameraContent?.height).toBeCloseTo(geometry.host.height, 0);
+  await expect(cameraPlacement).toHaveCSS("--wzc-live-fit", "contain");
   await expect(cameraPlacement).toHaveAttribute(
     "data-landscape-identity",
     "stable",
@@ -9410,10 +9415,14 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
     .poll(() =>
       card.locator(".stage-grid").getAttribute("data-test-transform-motions"),
     )
-    .toBe("4");
+    .toBe("6");
   await expect(card.locator(".stage-grid")).toHaveAttribute(
     "data-test-opacity-motions",
     "0",
+  );
+  await expect(card.locator(".stage-grid")).toHaveAttribute(
+    "data-test-rotate-motions",
+    "6",
   );
   await expect(card.locator(".stage-grid")).toHaveCSS("transform", "none");
   const portraitGeometry = await card.evaluate((element) => ({

@@ -8,7 +8,9 @@ export const companionPhoneLandscapeStyles = css`
   :host(.companion-phone-orientation-transitioning)
     .stage-container[data-layout-node$="default-camera-surface"],
   :host(.companion-phone-orientation-transitioning)
-    .stage-container[data-layout-node$="default-activity-surface"] {
+    .stage-placement[data-layout-node$="default-activity-stack"],
+  :host(.companion-phone-orientation-transitioning)
+    .stage-placement[data-layout-node$="default-activity-navigation-module"] {
     will-change: transform;
   }
 
@@ -108,9 +110,16 @@ export const companionPhoneLandscapeStyles = css`
 
   :host(.companion-phone-landscape)
     .stage-placement[data-layout-node$="default-activity-navigation-module"] {
-    justify-self: end;
-    inline-size: max-content;
-    max-inline-size: 100%;
+    position: fixed;
+    z-index: 2;
+    inset-block-end: var(--wzc-safe-area-inset-bottom);
+    inset-inline-start: var(--wzc-companion-landscape-inline-inset);
+    inline-size: calc(
+      60vw - var(--wzc-companion-landscape-inline-inset) - var(
+          --wzc-stage-module-gap
+        )
+    );
+    max-inline-size: calc(60vw - var(--wzc-companion-landscape-inline-inset));
     margin-block-end: 0;
   }
 
@@ -134,6 +143,8 @@ export const companionPhoneLandscapeStyles = css`
 
   :host(.companion-phone-landscape.landscape-camera-overlay-active)
     .stage-placement[data-layout-node$="default-camera-module"] {
+    --wzc-camera-stage-runtime-aspect-ratio: auto;
+    --wzc-live-fit: contain;
     position: absolute;
     z-index: 20;
     inset-block-start: var(--wzc-companion-camera-overlay-top);
