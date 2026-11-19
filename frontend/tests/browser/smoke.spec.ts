@@ -8864,13 +8864,20 @@ test("applies configured Companion rotate actions to the retained Full Stage", a
     host.style.setProperty("--wzc-companion-landscape-inline-inset", "96px");
     const getSettledRect = grid.getBoundingClientRect.bind(grid);
     let staleLandscapeRectPending = true;
+    const settleObserver = new MutationObserver(() => {
+      if (!host.classList.contains("companion-phone-fullscreen-pending"))
+        return;
+      settleObserver.disconnect();
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          staleLandscapeRectPending = false;
+        });
+      });
+    });
+    settleObserver.observe(host, { attributeFilter: ["class"] });
     grid.getBoundingClientRect = () => {
       const rect = getSettledRect();
-      if (
-        staleLandscapeRectPending &&
-        host.classList.contains("landscape-camera-overlay-expanded")
-      ) {
-        staleLandscapeRectPending = false;
+      if (staleLandscapeRectPending) {
         return DOMRect.fromRect({
           height: rect.height,
           width: rect.width,
@@ -8904,6 +8911,7 @@ test("applies configured Companion rotate actions to the retained Full Stage", a
       }
       if (
         host.classList.contains("landscape-camera-overlay-expanded") &&
+        !host.classList.contains("companion-phone-fullscreen-pending") &&
         times.fullscreen === undefined
       ) {
         times.fullscreen = now;

@@ -460,6 +460,11 @@ class CompanionPhoneLandscapeController implements ReactiveController {
       await nextFrame();
       if (!this._isCurrent(active, generation)) return;
       this._pull.activate(true, true);
+      await nextFrame();
+      if (!this._isCurrent(active, generation)) return;
+      await nextFrame();
+      if (!this._isCurrent(active, generation)) return;
+      this._pull.sync();
       this._host.classList.remove("companion-phone-fullscreen-pending");
       this._settledSnapshot = this._captureSnapshot();
       return;

@@ -97,6 +97,10 @@ export const companionPhoneLandscapeStyles = css`
     background: var(--wzc-camera-stage);
   }
 
+  :host(.companion-phone-fullscreen-pending) {
+    box-shadow: 0 0 0 100vmax var(--wzc-camera-stage);
+  }
+
   :host(.companion-phone-fullscreen-pending) .stage-grid {
     visibility: hidden;
   }

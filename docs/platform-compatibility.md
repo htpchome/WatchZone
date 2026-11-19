@@ -151,9 +151,10 @@ phones and every tablet remain outside this controller.
 
 Fullscreen Live Video is the narrow exception to exposing the committed
 landscape Stage immediately. It paints the semantic Camera-stage backdrop
-while one animation frame measures that already committed layout, then exposes
-the retained Camera directly at its final viewport-covering bounds. This is a
-single coalesced layout measurement, not a viewport-settle timer or a second
+beyond the card containing block while the already committed Stage grid,
+safe-area origin, and Camera carousel finish their bounded frame-coalesced
+layout work, then exposes the retained Camera directly at its final
+viewport-covering bounds. This is not a viewport-settle timer or a second
 animation. Leaving full cover restores the ordinary card backdrop from pull
 progress instead of waiting for an animation-completion callback.
 
