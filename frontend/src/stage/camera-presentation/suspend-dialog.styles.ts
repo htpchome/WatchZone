@@ -101,8 +101,9 @@ export const cameraSuspendDialogStyles = css`
     min-block-size: 2.75rem;
   }
 
-  .timer-toggle input {
+  .timer-switch {
     position: relative;
+    display: block;
     box-sizing: border-box;
     inline-size: 2.75rem;
     block-size: 1.5rem;
@@ -112,35 +113,39 @@ export const cameraSuspendDialogStyles = css`
     border: 1px solid var(--wzc-color-border-control);
     border-radius: var(--wzc-radius-pill);
     cursor: pointer;
-    transition:
-      background var(--wzc-media-overlay-transition-duration) ease,
-      border-color var(--wzc-media-overlay-transition-duration) ease;
   }
 
-  .timer-toggle input::before {
+  .timer-switch input {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .timer-knob {
     position: absolute;
     inset-block-start: 0.1875rem;
     inset-inline-start: 0.1875rem;
     inline-size: 1rem;
     block-size: 1rem;
-    content: "";
     background: var(--wzc-color-text-2);
     border-radius: 50%;
-    transition: inset-inline-start var(--wzc-media-overlay-transition-duration)
-      ease;
   }
 
-  .timer-toggle input:checked {
+  .timer-switch.enabled {
     background: var(--wzc-color-primary);
     border-color: var(--wzc-color-primary);
   }
 
-  .timer-toggle input:checked::before {
+  .timer-switch.enabled .timer-knob {
     inset-inline-start: calc(100% - 1.1875rem);
     background: var(--wzc-color-text-reversed);
   }
 
-  .timer-toggle input:focus-visible {
+  .timer-switch:focus-within {
     outline: 2px solid var(--wzc-color-primary);
     outline-offset: 2px;
   }

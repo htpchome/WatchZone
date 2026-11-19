@@ -1,8 +1,8 @@
 # Shared Toast System
 
-`ToastManager` owns notice identity, keyed replacement, finite timing, fade
-transitions, and lifecycle cleanup. `wzc-toast-region` owns presentation for
-both media overlays and inline application surfaces.
+`ToastManager` owns notice identity, keyed replacement, and finite timing.
+`wzc-toast-region` owns Motion fade transitions, animation lifecycle cleanup,
+and presentation for both media overlays and inline application surfaces.
 
 Notices use success, warning, or error severity. Ordinary notices expire on the
 centralized timer. A persistent notice is allowed for current application

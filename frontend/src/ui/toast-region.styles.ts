@@ -1,7 +1,5 @@
 import { css } from "lit";
 
-import { TOAST_TRANSITION_DURATION_MS } from "../core/constants";
-
 export const toastRegionStyles = css`
   :host {
     position: absolute;
@@ -40,10 +38,6 @@ export const toastRegionStyles = css`
     box-shadow:
       inset 0 1px 0 var(--wzc-toast-highlight-color),
       var(--wzc-toast-shadow);
-    transition:
-      opacity ${TOAST_TRANSITION_DURATION_MS}ms ease,
-      transform ${TOAST_TRANSITION_DURATION_MS}ms ease;
-    animation: wzc-toast-enter ${TOAST_TRANSITION_DURATION_MS}ms ease-out;
   }
 
   .toast-icon {
@@ -76,20 +70,5 @@ export const toastRegionStyles = css`
   .toast[data-dismissing] {
     opacity: 0;
     transform: translateY(0.25rem);
-    animation: none;
-  }
-
-  @keyframes wzc-toast-enter {
-    from {
-      opacity: 0;
-      transform: translateY(0.25rem);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .toast {
-      transition: none;
-      animation: none;
-    }
   }
 `;

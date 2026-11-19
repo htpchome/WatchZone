@@ -80,7 +80,6 @@ export const accordionItemStyles = css`
   .chevron {
     display: grid;
     inline-size: 1.25rem;
-    transition: transform 160ms ease;
   }
 
   details[open] .chevron {
@@ -126,12 +125,6 @@ export const accordionItemStyles = css`
   @media (hover: none) {
     details:not([open]) > summary:hover {
       background: inherit;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .chevron {
-      transition: none;
     }
   }
 `;

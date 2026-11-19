@@ -19,7 +19,7 @@ than inheriting compact control geometry from the Stage placement that opened
 it. Moving the retained player from a small tile into a large dialog therefore
 restores full touch targets without changing the inline tile's compact controls.
 The minimal-camera mute control remains one stable overlay control: muted state
-is circular, while unmuting smoothly expands that same control into a pill with
+is circular, while Motion expands that same control into a pill with
 a volume slider. It collapses without replacing the button or changing the
 retained session, and respects reduced-motion preference.
 
@@ -139,11 +139,11 @@ retained live session, and both navigation-row positions. The Camera grows
 above the unchanged activity column; activity selection and scroll position do
 not move into the overlay.
 Releasing before 50% returns to the 60/40 layout, while releasing at or beyond
-50% settles into a viewport-covering Camera with its complete composed control
+50% uses one Motion settlement into a viewport-covering Camera with its complete composed control
 surface. The expanded handle remains inside the safe trailing edge and can be
 dragged left to restore the split layout. Arrow keys, Home/End, Enter/Space,
-and Escape expose the same two states, and reduced-motion preference removes
-the settle transition.
+and Escape expose the same two states, and reduced-motion preference makes the
+settlement immediate.
 
 Card, Camera, camera-navigation, and activity-tile appearance likewise store
 independent standard-device and physical-phone values. Phone defaults use an

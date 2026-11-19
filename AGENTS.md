@@ -31,6 +31,9 @@ For diagnostics, timing instrumentation, or future logging work, also read
 For any frontend, media, interaction, layout, or styling change, also read
 `docs/platform-compatibility.md` in full.
 
+For animation, transition, gesture settlement, animated scrolling, or visual
+state interpolation, also read `docs/animation-system.md` in full.
+
 For camera display zoom, pan, or gesture changes, also read
 `docs/camera-display-zoom.md` in full.
 
@@ -135,6 +138,11 @@ or future designer work, also read `docs/stage-layout-system.md` in full.
   reference Home Assistant theme variables directly. Feature and component
   styles consume semantic `--wzc-*` tokens only. Define a WatchZone token
   before introducing a new visual semantic state.
+- Motion is the only frontend animation engine. CSS transitions, CSS
+  animations/keyframes, direct Web Animations API calls, browser smooth
+  scrolling, and feature-owned tween loops are prohibited. All animation
+  starts through the shared Motion boundary and remains lifecycle-owned by the
+  feature whose state is being presented.
 
 ## Structure and generated output
 

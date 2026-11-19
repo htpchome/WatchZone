@@ -6,6 +6,7 @@ import {
   type LocalizeFunction,
 } from "../../core/localization";
 import { renderIcon } from "../../ui/icons";
+import { motionDurations, motionEasings, OwnedMotion } from "../../ui/motion";
 import { cameraSuspendDialogStyles } from "./suspend-dialog.styles";
 
 export interface CameraSuspendConfirmDetail {
@@ -29,6 +30,9 @@ export class CameraSuspendDialog extends LitElement {
   private _hours = 1;
   private _minutes = 0;
   private _timerEnabled = false;
+  private readonly _switchMotion = new OwnedMotion();
+  private readonly _knobMotion = new OwnedMotion();
+  private _renderedTimerEnabled?: boolean;
 
   protected render() {
     const suspending = !this.currentSuspended;
@@ -65,13 +69,18 @@ export class CameraSuspendDialog extends LitElement {
                 </p>
                 <label class="timer-toggle">
                   <span>${this.localize("camera.automatically_resume")}</span>
-                  <input
-                    type="checkbox"
-                    role="switch"
-                    .checked=${this._timerEnabled}
-                    ?disabled=${this.pending}
-                    @change=${this._toggleTimer}
-                  />
+                  <span
+                    class=${this._timerEnabled ? "timer-switch enabled" : "timer-switch"}
+                  >
+                    <input
+                      type="checkbox"
+                      role="switch"
+                      .checked=${this._timerEnabled}
+                      ?disabled=${this.pending}
+                      @change=${this._toggleTimer}
+                    />
+                    <span class="timer-knob" aria-hidden="true"></span>
+                  </span>
                 </label>
                 ${
                   this._timerEnabled
@@ -137,11 +146,51 @@ export class CameraSuspendDialog extends LitElement {
   }
 
   protected updated(changed: Map<PropertyKey, unknown>): void {
-    if (!changed.has("active")) return;
-    const dialog = this.renderRoot.querySelector("dialog");
-    if (!dialog) return;
-    if (this.active && !dialog.open) dialog.showModal();
-    else if (!this.active && dialog.open) dialog.close();
+    const timerSwitch =
+      this.renderRoot.querySelector<HTMLElement>(".timer-switch") ?? undefined;
+    const knob =
+      this.renderRoot.querySelector<HTMLElement>(".timer-knob") ?? undefined;
+    if (
+      timerSwitch &&
+      knob &&
+      this._renderedTimerEnabled !== undefined &&
+      this._renderedTimerEnabled !== this._timerEnabled
+    ) {
+      this._switchMotion.start(
+        timerSwitch,
+        {
+          backgroundColor: this._timerEnabled
+            ? "var(--wzc-color-primary)"
+            : "var(--wzc-color-surface-secondary)",
+          borderColor: this._timerEnabled
+            ? "var(--wzc-color-primary)"
+            : "var(--wzc-color-border-control)",
+        },
+        { duration: motionDurations.overlay, ease: motionEasings.standard },
+      );
+      this._knobMotion.start(
+        knob,
+        {
+          insetInlineStart: this._timerEnabled
+            ? "calc(100% - 1.1875rem)"
+            : "0.1875rem",
+        },
+        { duration: motionDurations.overlay, ease: motionEasings.standard },
+      );
+    }
+    this._renderedTimerEnabled = this._timerEnabled;
+    if (changed.has("active")) {
+      const dialog = this.renderRoot.querySelector("dialog");
+      if (!dialog) return;
+      if (this.active && !dialog.open) dialog.showModal();
+      else if (!this.active && dialog.open) dialog.close();
+    }
+  }
+
+  public disconnectedCallback(): void {
+    this._switchMotion.cancel();
+    this._knobMotion.cancel();
+    super.disconnectedCallback();
   }
 
   private _durationSeconds(): number {

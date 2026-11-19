@@ -1,7 +1,7 @@
 {
   "name": "watchzone-frontend",
   "private": true,
-  "version": "0.0.4-dev.442",
+  "version": "0.0.4-dev.443",
   "type": "module",
   "packageManager": "yarn@4.18.1",
   "engines": {
@@ -24,6 +24,7 @@
   "dependencies": {
     "hls.js": "1.7.4",
     "lit": "^3.3.3",
+    "motion": "14.12.0",
     "swiper": "14.4.0"
   },
   "devDependencies": {

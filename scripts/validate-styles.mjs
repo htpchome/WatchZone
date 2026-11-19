@@ -23,6 +23,8 @@ const recordedVideoTransportStyles = resolve(
 const allowedHomeAssistantTokens = new Map([
   [homeAssistantEditorBridge, new Set(["--ha-view-sections-column-max-width"])],
 ]);
+const motionBoundary = resolve(sourceRoot, "ui/motion.ts");
+const motionValueBoundary = resolve(sourceRoot, "ui/motion-value.ts");
 
 async function collectTypeScript(directory, files = []) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -66,6 +68,37 @@ for (const path of await collectTypeScript(sourceRoot)) {
   if (!isStyleFile && path !== themeBoundary && /\bcss\s*`/.test(source)) {
     violations.push(`${relativePath}: embedded Lit CSS is prohibited`);
   }
+  if (
+    isStyleFile &&
+    /\b(?:transition|animation)(?:-[a-z-]+)?\s*:|@keyframes\b/.test(source)
+  ) {
+    violations.push(
+      `${relativePath}: CSS animation is prohibited; use the shared Motion boundary`,
+    );
+  }
+  if (
+    path !== motionBoundary &&
+    path !== motionValueBoundary &&
+    /\.animate\s*\(/.test(source)
+  ) {
+    violations.push(
+      `${relativePath}: direct animation calls are prohibited; use the shared Motion boundary`,
+    );
+  }
+  if (
+    path !== motionBoundary &&
+    path !== motionValueBoundary &&
+    /from\s+["']motion(?:\/mini)?["']/.test(source)
+  ) {
+    violations.push(
+      `${relativePath}: Motion imports are restricted to the shared Motion boundary`,
+    );
+  }
+  if (/behavior\s*:\s*["']smooth["']/.test(source)) {
+    violations.push(
+      `${relativePath}: browser smooth scrolling is prohibited; use the shared Motion boundary`,
+    );
+  }
   if (!isStyleBoundary) {
     const nonWatchZoneVariables = [
       ...source.matchAll(/var\(\s*(--[a-z0-9-]+)/gi),
@@ -93,8 +126,7 @@ for (const path of await collectTypeScript(sourceRoot)) {
     path === themeBoundary ||
     path === fullscreenCameraStyles ||
     path === recordedVideoTransportStyles ||
-    relativePath ===
-      "frontend/src/card/companion-phone-landscape.styles.ts" ||
+    relativePath === "frontend/src/card/companion-phone-landscape.styles.ts" ||
     relativePath === "frontend/src/ui/media-controls-overlay.styles.ts";
   if (source.includes("env(safe-area-inset-") && !safeAreaAllowed) {
     violations.push(
@@ -108,5 +140,5 @@ if (violations.length > 0) {
 }
 
 console.log(
-  "Validated colocated styles, semantic tokens, safe-area ownership, and isolated Home Assistant bridges.",
+  "Validated colocated styles, semantic tokens, Motion ownership, safe-area ownership, and isolated Home Assistant bridges.",
 );

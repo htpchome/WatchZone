@@ -25,6 +25,12 @@ import {
   type PtzCameraSource,
 } from "./session.controller";
 import { ptzStyles } from "./ptz.styles";
+import {
+  motionDurations,
+  motionEasings,
+  OwnedMotion,
+  VisibilityMotion,
+} from "../../../ui/motion";
 
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
 const DIRECTIONS: readonly {
@@ -58,6 +64,9 @@ export class PtzComponent extends LitElement {
     start: (direction) => this._start(direction),
   });
   private readonly _toasts = new ToastManager(this);
+  private readonly _controlVisibilityMotion = new VisibilityMotion();
+  private readonly _triggerVisibilityMotion = new VisibilityMotion();
+  private readonly _panelMotion = new OwnedMotion();
   private readonly _session = new PtzSessionController(this, {
     onFailure: () => this._showFailure(),
     onStopped: () => this._clearActiveDirection(),
@@ -178,6 +187,47 @@ export class PtzComponent extends LitElement {
           : nothing
       }
     </div>`;
+  }
+
+  protected updated(changed: PropertyValues<this>): void {
+    const control =
+      this.renderRoot.querySelector<HTMLElement>(".ptz-control") ?? undefined;
+    const trigger =
+      this.renderRoot.querySelector<HTMLElement>(".ptz-trigger") ?? undefined;
+    this._controlVisibilityMotion.update(
+      control,
+      control?.classList.contains("visible") ?? false,
+    );
+    this._triggerVisibilityMotion.update(
+      trigger,
+      trigger?.classList.contains("visible") ?? false,
+    );
+    if (control && changed.has("expanded") && this._userToggled) {
+      const fromSize = this.expanded
+        ? "var(--wzc-control-size)"
+        : "var(--wzc-ptz-panel-size)";
+      const toSize = this.expanded
+        ? "var(--wzc-ptz-panel-size)"
+        : "var(--wzc-control-size)";
+      this._panelMotion.start(
+        control,
+        {
+          blockSize: [fromSize, toSize],
+          inlineSize: [fromSize, toSize],
+          padding: this.expanded
+            ? ["0", "var(--wzc-ptz-panel-padding, 0.18rem)"]
+            : ["var(--wzc-ptz-panel-padding, 0.18rem)", "0"],
+        },
+        { duration: motionDurations.overlay, ease: motionEasings.standard },
+      );
+    }
+  }
+
+  public disconnectedCallback(): void {
+    this._controlVisibilityMotion.disconnect();
+    this._triggerVisibilityMotion.disconnect();
+    this._panelMotion.cancel();
+    super.disconnectedCallback();
   }
 
   private readonly _handleDirectionPointerUp = (event: PointerEvent): void => {

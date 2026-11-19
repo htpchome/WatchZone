@@ -243,7 +243,6 @@ export const themeTokens = css`
     --wzc-live-background: var(--wzc-color-surface-secondary);
     --wzc-live-radius: var(--wzc-radius-card);
     --wzc-live-shadow: var(--wzc-shadow-medium);
-    --wzc-zoom-transition-duration: 180ms;
     --wzc-stage-resize-handle-opacity: 60%;
     --wzc-stage-resize-handle-active-opacity: 100%;
     --wzc-stage-resize-handle-block-size: 2.75rem;
@@ -281,7 +280,6 @@ export const themeTokens = css`
     --wzc-media-action-radius: 4px;
     --wzc-media-action-gap: 0.5rem;
     --wzc-media-overlay-shadow: var(--wzc-shadow-card);
-    --wzc-media-overlay-transition-duration: 140ms;
     --wzc-media-volume-accent: var(--wzc-color-primary);
     --wzc-media-volume-track: color-mix(
       in srgb,
@@ -614,7 +612,6 @@ export const themeTokens = css`
     --wzc-light-slider-background: var(--ha-color-neutral-90, #e6e6e6);
     --wzc-light-slider-block-size: clamp(7rem, 28cqi, 10rem);
     --wzc-light-slider-thickness: clamp(2.75rem, 11cqi, 3.5rem);
-    --wzc-light-transition-duration: 160ms;
 
     --wzc-accordion-background: var(--wzc-color-background);
     --wzc-accordion-header-color: var(--wzc-color-text-1);

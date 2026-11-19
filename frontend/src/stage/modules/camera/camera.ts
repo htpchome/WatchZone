@@ -45,6 +45,7 @@ import {
   type CameraStageSize,
 } from "../../camera-presentation/stage-resize.controller";
 import { CameraSlideshowController } from "./slideshow.controller";
+import { VisibilityMotion } from "../../../ui/motion";
 
 export type CameraShadowStyle = "medium" | "none" | "small";
 
@@ -135,6 +136,8 @@ export class CameraModule extends LitElement {
     intervalSeconds: this.slideAdvanceSeconds,
     itemCount: this._carouselItems.length,
   }));
+  private readonly _previousNavigationMotion = new VisibilityMotion();
+  private readonly _nextNavigationMotion = new VisibilityMotion();
 
   public api?: HomeAssistantApi;
   public alertTakeoverMode: AlertTakeoverMode = "both";
@@ -252,6 +255,8 @@ export class CameraModule extends LitElement {
   }
 
   public disconnectedCallback(): void {
+    this._previousNavigationMotion.disconnect();
+    this._nextNavigationMotion.disconnect();
     this.removeEventListener(
       CAMERA_GESTURE_LOCK_EVENT,
       this._handleGestureLock as EventListener,
@@ -416,6 +421,27 @@ export class CameraModule extends LitElement {
   }
 
   protected updated(): void {
+    this.renderRoot
+      .querySelector(".camera-carousel")
+      ?.classList.toggle(
+        "camera-carousel-transitioning",
+        !this._selectionSettled,
+      );
+    const previous =
+      this.renderRoot.querySelector<HTMLElement>(
+        ".carousel-navigation.previous",
+      ) ?? undefined;
+    const next =
+      this.renderRoot.querySelector<HTMLElement>(".carousel-navigation.next") ??
+      undefined;
+    this._previousNavigationMotion.update(
+      previous,
+      previous?.classList.contains("visible") ?? false,
+    );
+    this._nextNavigationMotion.update(
+      next,
+      next?.classList.contains("visible") ?? false,
+    );
     this._carousel.observe(
       this.renderRoot.querySelector<HTMLElement>(".camera-carousel") ??
         undefined,
@@ -436,6 +462,9 @@ export class CameraModule extends LitElement {
     if (settled) this._takeoverSelectionIndex = undefined;
     if (!selectionChanged && !settlementChanged) return;
     this._selectionSettled = settled;
+    this.renderRoot
+      .querySelector(".camera-carousel")
+      ?.classList.toggle("camera-carousel-transitioning", !settled);
     if (!selectionChanged) {
       this._publishSelection();
       return;

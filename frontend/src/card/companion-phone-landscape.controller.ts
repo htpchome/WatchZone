@@ -1,6 +1,12 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
 import type { LocalizeFunction } from "../core/localization";
+import {
+  animateElement,
+  type MotionAnimation,
+  motionDurations,
+  motionEasings,
+} from "../ui/motion";
 import { CompanionCameraPullController } from "./companion-camera-pull.controller";
 import { companionPhoneLandscapeStyles } from "./companion-phone-landscape.styles";
 
@@ -13,8 +19,6 @@ type CanActivate = () => boolean;
 type OrientationChanged = (active: boolean) => void;
 
 const installedHosts = new WeakSet<LandscapeHost>();
-const FLIP_DURATION_MS = 360;
-const FLIP_EASING = "cubic-bezier(.2,.8,.2,1)";
 const OUTER_LAYOUT_SETTLE_MS = 180;
 const PLACEMENT_SELECTOR = ".stage-placement[data-layout-node]";
 const REQUIRED_STABLE_FRAMES = 3;
@@ -77,7 +81,7 @@ export function installCompanionPhoneLandscape(
 /** Owns Companion-phone orientation changes and the settled Stage reflow. */
 class CompanionPhoneLandscapeController implements ReactiveController {
   private _active = false;
-  private readonly _animations = new Set<Animation>();
+  private readonly _animations = new Set<MotionAnimation>();
   private _connected = false;
   private _frame?: number;
   private _initialized = false;
@@ -204,23 +208,25 @@ class CompanionPhoneLandscapeController implements ReactiveController {
       ) {
         continue;
       }
-      const animation = placement.animate(
-        [
-          {
-            transform: `translate(${translateX}px, ${translateY}px) scale(${scaleX}, ${scaleY})`,
-            transformOrigin: "0 0",
-          },
-          { transform: "none", transformOrigin: "0 0" },
-        ],
+      const animation = animateElement(
+        placement,
         {
-          duration: FLIP_DURATION_MS,
-          easing: FLIP_EASING,
+          transform: [
+            `translate(${translateX}px, ${translateY}px) scale(${scaleX}, ${scaleY})`,
+            "none",
+          ],
+          transformOrigin: "0 0",
+        },
+        {
+          duration: motionDurations.layout,
+          ease: motionEasings.standard,
         },
       );
       this._animations.add(animation);
       finished.push(
-        animation.finished.then(
+        animation.then(
           () => {
+            animation.cancel();
             this._animations.delete(animation);
           },
           () => {

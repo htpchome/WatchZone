@@ -6,6 +6,13 @@ import {
   ACCORDION_TOGGLE_EVENT,
 } from "../core/constants";
 import { renderIcon, type IconName } from "./icons";
+import {
+  motionDurations,
+  motionEasings,
+  OwnedMotion,
+  reducedMotionRequested,
+} from "./motion";
+import { OwnedValueMotion } from "./motion-value";
 import { accordionItemStyles, accordionStyles } from "./accordion.styles";
 
 export interface AccordionToggleDetail {
@@ -21,7 +28,9 @@ function composedParent(element: Element): Element | null {
 
 interface ScrollPort {
   readonly bottom: number;
-  readonly scrollBy: (options: ScrollToOptions) => void;
+  readonly jumpBy: (top: number) => void;
+  readonly scrollPosition: () => number;
+  readonly setScrollPosition: (value: number) => void;
   readonly top: number;
 }
 
@@ -39,7 +48,11 @@ function scrollPort(element: Element): ScrollPort | undefined {
       const rect = parent.getBoundingClientRect();
       return {
         bottom: rect.bottom,
-        scrollBy: (options) => parent.scrollBy(options),
+        jumpBy: (top) => parent.scrollBy({ behavior: "auto", top }),
+        scrollPosition: () => parent.scrollTop,
+        setScrollPosition: (value) => {
+          parent.scrollTop = value;
+        },
         top: rect.top,
       };
     }
@@ -54,7 +67,9 @@ function scrollPort(element: Element): ScrollPort | undefined {
   ) {
     return {
       bottom: windowObject.innerHeight,
-      scrollBy: (options) => windowObject.scrollBy(options),
+      jumpBy: (top) => windowObject.scrollBy({ behavior: "auto", top }),
+      scrollPosition: () => windowObject.scrollY,
+      setScrollPosition: (value) => windowObject.scrollTo(0, value),
       top: 0,
     };
   }
@@ -77,6 +92,8 @@ export class AccordionItem extends LitElement {
   public itemKey = "";
   public open = false;
   public summaryText = "";
+  private readonly _chevronMotion = new OwnedMotion();
+  private _renderedOpen?: boolean;
 
   public setOpen(open: boolean): void {
     this.open = open;
@@ -106,6 +123,27 @@ export class AccordionItem extends LitElement {
     `;
   }
 
+  protected updated(): void {
+    const chevron = this.renderRoot.querySelector<HTMLElement>(".chevron");
+    if (
+      chevron &&
+      this._renderedOpen !== undefined &&
+      this._renderedOpen !== this.open
+    ) {
+      this._chevronMotion.start(
+        chevron,
+        { transform: this.open ? "rotate(180deg)" : "rotate(0deg)" },
+        { duration: motionDurations.standard, ease: motionEasings.standard },
+      );
+    }
+    this._renderedOpen = this.open;
+  }
+
+  public disconnectedCallback(): void {
+    this._chevronMotion.cancel();
+    super.disconnectedCallback();
+  }
+
   private readonly _handleToggle = (event: Event): void => {
     const open = (event.currentTarget as HTMLDetailsElement).open;
     if (this.open === open) return;
@@ -131,6 +169,7 @@ export class Accordion extends LitElement {
   private _initialized = false;
   private _revealFrame?: number;
   private _revealRequest = 0;
+  private readonly _scrollMotion = new OwnedValueMotion();
 
   public connectedCallback(): void {
     super.connectedCallback();
@@ -146,6 +185,7 @@ export class Accordion extends LitElement {
       this._handleItemToggle as EventListener,
     );
     this._cancelReveal();
+    this._scrollMotion.cancel();
     super.disconnectedCallback();
   }
 
@@ -221,11 +261,16 @@ export class Accordion extends LitElement {
     if (openedRect.top >= port.top && requiredBottom <= port.bottom) {
       return;
     }
-    port.scrollBy({
-      behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? "auto"
-        : "smooth",
-      top: openedRect.top - port.top,
+    const start = port.scrollPosition();
+    const delta = openedRect.top - port.top;
+    if (reducedMotionRequested()) {
+      port.jumpBy(delta);
+      return;
+    }
+    this._scrollMotion.start(start, start + delta, {
+      duration: motionDurations.settle,
+      ease: motionEasings.standard,
+      onUpdate: (value) => port.setScrollPosition(value),
     });
   }
 

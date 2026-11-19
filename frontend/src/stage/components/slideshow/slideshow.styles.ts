@@ -21,17 +21,12 @@ const slideshowPrivateStyles = css`
     visibility: hidden;
     padding: 0 var(--wzc-overlay-control-inline-padding);
     pointer-events: none;
-    transition:
-      opacity var(--wzc-media-overlay-transition-duration) ease,
-      background var(--wzc-media-overlay-transition-duration) ease,
-      visibility 0s linear var(--wzc-media-overlay-transition-duration);
   }
 
   button.visible {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
-    transition-delay: 0s;
   }
 
   button:not(.active) {
@@ -60,12 +55,6 @@ const slideshowPrivateStyles = css`
     font-weight: 700;
     line-height: 1;
     white-space: nowrap;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    button {
-      transition: none;
-    }
   }
 `;
 

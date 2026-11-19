@@ -473,6 +473,17 @@ hide timer as the control overlay. Its exceptions are that Connecting remains
 visible continuously and the first resolved source receives one automatic timed
 introduction before ordinary interaction-controlled behavior.
 
+All frontend animation uses Motion through the shared UI animation boundary.
+CSS transitions and keyframes, direct Web Animations API calls, browser smooth
+scrolling, feature-owned tween loops, and dependency-owned timed transitions
+are prohibited parallel engines. Motion presents state owned by a feature; it
+does not own layout policy, geometry, interaction state, or lifecycle. Every
+animation is cancellable, cleanup-owned, reduced-motion aware, and prevented
+from outliving its element or controller. Frame scheduling remains available
+for coalesced measurement and direct pointer writes, but not interpolation.
+The normative rules are defined in
+[docs/animation-system.md](docs/animation-system.md).
+
 ### 8.4 Custom elements and Lit
 
 - The card shell and meaningful independently updating module boundaries use
@@ -1291,6 +1302,7 @@ An architecture decision is required before changing any of the following:
 - Document-scoped retained media-session ownership and user audio-intent rules.
 - Dirty-state card-editor lifecycle and identity-preserving preview updates.
 - Home Assistant semantic theming and responsive shell requirements.
+- Single-engine Motion animation ownership.
 - Storage format ownership.
 - Authentication or authorization model.
 - Performance budgets.

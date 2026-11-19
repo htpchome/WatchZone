@@ -11,6 +11,7 @@ import {
 } from "../../core/localization";
 import { releaseTouchFocus } from "../../ui/control-interaction";
 import { renderIcon } from "../../ui/icons";
+import { VisibilityMotion } from "../../ui/motion";
 import { recordedVideoTransportStyles } from "./transport-controls.styles";
 
 export type RecordedVideoTransportAction =
@@ -50,6 +51,7 @@ export class RecordedVideoTransport extends LitElement {
   public viewportEdge = false;
   public visible = false;
   public volume = 1;
+  private readonly _visibilityMotion = new VisibilityMotion();
 
   protected render() {
     const duration = finiteMediaValue(this.duration);
@@ -124,6 +126,15 @@ export class RecordedVideoTransport extends LitElement {
         @input=${this._changeVolume}
       />
     </div>`;
+  }
+
+  protected updated(): void {
+    this._visibilityMotion.update(this, this.visible);
+  }
+
+  public disconnectedCallback(): void {
+    this._visibilityMotion.disconnect();
+    super.disconnectedCallback();
   }
 
   private readonly _seek = (event: Event): void => {

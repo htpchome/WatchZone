@@ -1,5 +1,7 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
+import { motionDurations, motionEasings, OwnedMotion } from "./motion";
+
 const CLICK_MOVE_TOLERANCE_PX = 6;
 const DISCRETE_PIXEL_WHEEL_DELTA = 80;
 const KEYBOARD_PAN_FRACTION = 0.05;
@@ -45,6 +47,7 @@ interface MediaZoomCallbacks {
 /** Owns media zoom, bounded pan, gestures, and lifecycle cleanup. */
 export class MediaZoomController implements ReactiveController {
   private _basePresentationScale = 1;
+  private _animateNextTransform = false;
   private _dragStart?: DragStart;
   private _gestureMoved = false;
   private _interactionLifecycleListening = false;
@@ -64,6 +67,7 @@ export class MediaZoomController implements ReactiveController {
   private _surface?: HTMLElement;
   private _surfaceHeight = 0;
   private _surfaceWidth = 0;
+  private readonly _transformMotion = new OwnedMotion();
 
   public constructor(
     private readonly _host: ReactiveControllerHost,
@@ -188,9 +192,10 @@ export class MediaZoomController implements ReactiveController {
     this._pinchStart = undefined;
     this._stageResizeStart = undefined;
     this._stageResizeProgress = 0;
+    this._transformMotion.cancel();
   }
 
-  public reset(): void {
+  public reset(animate = false): void {
     this._scale = MIN_ZOOM;
     this._panX = 0;
     this._panY = 0;
@@ -202,6 +207,7 @@ export class MediaZoomController implements ReactiveController {
     this._pinchStart = undefined;
     this._stageResizeStart = undefined;
     this._stageResizeProgress = 0;
+    this._animateNextTransform = animate;
     this._flushScheduledUpdate();
   }
 
@@ -358,6 +364,7 @@ export class MediaZoomController implements ReactiveController {
     if (nextScale === this._scale) return;
     event.preventDefault();
     this._setScaleAt(nextScale, event.clientX, event.clientY);
+    this._animateNextTransform = true;
     this._renderPresentation();
     this._host.requestUpdate();
   };
@@ -370,11 +377,12 @@ export class MediaZoomController implements ReactiveController {
   /** Applies the shared 1x/2x activation at a gesture-owned focal point. */
   public toggleAt(clientX: number, clientY: number): void {
     if (this.zoomed) {
-      this.reset();
+      this.reset(true);
       this._callbacks.onInteraction?.();
       return;
     }
     this._setScaleAt(TOGGLE_ZOOM, clientX, clientY);
+    this._animateNextTransform = true;
     this._renderPresentation();
     this._host.requestUpdate();
   }
@@ -397,7 +405,7 @@ export class MediaZoomController implements ReactiveController {
     } else if (event.key === "0" || event.key === "Escape") {
       if (!this.pannable) return;
       event.preventDefault();
-      this.reset();
+      this.reset(true);
       this._callbacks.onInteraction?.();
       return;
     } else if (this.pannable && event.key.startsWith("Arrow")) {
@@ -415,6 +423,7 @@ export class MediaZoomController implements ReactiveController {
     } else {
       return;
     }
+    this._animateNextTransform = true;
     this._renderPresentation();
     this._host.requestUpdate();
   };
@@ -437,7 +446,7 @@ export class MediaZoomController implements ReactiveController {
   private _setScaleAt(scale: number, clientX: number, clientY: number): void {
     const nextScale = this._clampScale(scale);
     if (nextScale === MIN_ZOOM) {
-      this.reset();
+      this.reset(true);
       this._callbacks.onInteraction?.();
       return;
     }
@@ -625,7 +634,24 @@ export class MediaZoomController implements ReactiveController {
 
   private _renderPresentation(): void {
     if (!this._surface || !this._presentationTarget) return;
-    this._presentationTarget.style.transform = this.transform;
+    const transform = this.transform;
+    if (
+      this._animateNextTransform &&
+      !this._interacting &&
+      !this.stageResizeActive
+    ) {
+      const current = getComputedStyle(this._presentationTarget).transform;
+      this._presentationTarget.style.transform = transform;
+      this._transformMotion.start(
+        this._presentationTarget,
+        { transform: [current === "none" ? transform : current, transform] },
+        { duration: motionDurations.standard, ease: motionEasings.standard },
+      );
+    } else {
+      this._transformMotion.cancel();
+      this._presentationTarget.style.transform = transform;
+    }
+    this._animateNextTransform = false;
     this._presentationTarget.classList.toggle("interacting", this._interacting);
     this._presentationTarget.classList.toggle("pannable", this.pannable);
     this._presentationTarget.classList.toggle(
@@ -637,6 +663,7 @@ export class MediaZoomController implements ReactiveController {
 
   private _clearPresentation(target: HTMLElement | undefined): void {
     if (!target) return;
+    this._transformMotion.cancel();
     target.style.removeProperty("transform");
     target.classList.remove("interacting", "pannable", "stage-resize-active");
   }

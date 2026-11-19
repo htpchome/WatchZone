@@ -1,4 +1,6 @@
 import type { LocalizeFunction } from "../core/localization";
+import { motionDurations, motionEasings } from "../ui/motion";
+import { OwnedValueMotion } from "../ui/motion-value";
 
 interface PullHost extends HTMLElement {
   readonly renderRoot: DocumentFragment | HTMLElement;
@@ -22,7 +24,6 @@ const ACTIVITY_NODE_SUFFIX = "default-activity-stack";
 const DRAG_TOLERANCE_PX = 4;
 const EXPANDED_HANDLE_INSET_PX = 52;
 const EXPAND_THRESHOLD = 0.5;
-const SETTLE_DURATION_MS = 240;
 
 /** Owns the Companion-phone landscape camera pull gesture and snap state. */
 export class CompanionCameraPullController {
@@ -39,7 +40,8 @@ export class CompanionCameraPullController {
   private _moved = false;
   private _pendingProgress = 0;
   private _progress = 0;
-  private _settleTimer?: number;
+  private _settleGeneration = 0;
+  private readonly _settleMotion = new OwnedValueMotion();
 
   public constructor(
     private readonly _host: PullHost,
@@ -225,25 +227,27 @@ export class CompanionCameraPullController {
 
   private _settle(target: 0 | 1): void {
     this._cancelSettle();
+    const generation = this._settleGeneration;
     this._expanded = target === 1;
     this._host.classList.toggle(
       "landscape-camera-overlay-expanded",
       this._expanded,
     );
     this._host.classList.add("landscape-camera-overlay-settling");
-    requestAnimationFrame(() => this._applyProgress(target));
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      this._finishSettle(target);
-      return;
-    }
-    this._settleTimer = window.setTimeout(
-      () => this._finishSettle(target),
-      SETTLE_DURATION_MS,
+    const animation = this._settleMotion.start(this._progress, target, {
+      duration: motionDurations.settle,
+      ease: motionEasings.standard,
+      onUpdate: (progress) => this._applyProgress(progress),
+    });
+    void animation.then(
+      () => {
+        if (generation === this._settleGeneration) this._finishSettle(target);
+      },
+      () => undefined,
     );
   }
 
   private _finishSettle(target: 0 | 1): void {
-    this._settleTimer = undefined;
     this._host.classList.remove("landscape-camera-overlay-settling");
     if (target === 0) {
       this._host.classList.remove("landscape-camera-overlay-active");
@@ -349,8 +353,8 @@ export class CompanionCameraPullController {
   }
 
   private _cancelSettle(): void {
-    if (this._settleTimer !== undefined) clearTimeout(this._settleTimer);
-    this._settleTimer = undefined;
+    this._settleGeneration += 1;
+    this._settleMotion.cancel();
     this._host.classList.remove("landscape-camera-overlay-settling");
   }
 

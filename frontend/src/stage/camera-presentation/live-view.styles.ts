@@ -62,7 +62,6 @@ export const cameraLiveViewStyles = css`
     touch-action: pan-y;
     user-select: none;
     will-change: transform;
-    transition: transform var(--wzc-zoom-transition-duration) ease;
   }
 
   .media-surface.pannable {
@@ -73,7 +72,6 @@ export const cameraLiveViewStyles = css`
   .media-surface.interacting,
   .media-surface.stage-resize-active {
     cursor: move;
-    transition: none;
   }
 
   .generic-fallback,
@@ -157,15 +155,11 @@ export const cameraLiveViewStyles = css`
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-    transition:
-      opacity var(--wzc-media-overlay-transition-duration) ease,
-      visibility 0s linear var(--wzc-media-overlay-transition-duration);
   }
 
   .source-indicator.visible {
     opacity: 1;
     visibility: visible;
-    transition-delay: 0s;
   }
 
   .viewport:fullscreen .source-indicator,
@@ -189,21 +183,5 @@ export const cameraLiveViewStyles = css`
     border: 2px solid color-mix(in srgb, currentColor 35%, transparent);
     border-block-start-color: currentColor;
     border-radius: 50%;
-    animation: wzc-connection-spin 0.8s linear infinite;
-  }
-
-  @keyframes wzc-connection-spin {
-    to {
-      transform: rotate(1turn);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .connection-spinner,
-    .source-indicator,
-    .media-surface {
-      animation: none;
-      transition: none;
-    }
   }
 `;

@@ -148,14 +148,6 @@ export const companionPhoneLandscapeStyles = css`
     .stage-placement[data-layout-node$="default-camera-module"],
   :host(.companion-phone-landscape.landscape-camera-overlay-settling)
     .companion-camera-pull-handle {
-    transition:
-      inset-block-start 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
-      inset-inline-start 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
-      inline-size 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
-      block-size 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
-  }
-
-  .companion-camera-pull-handle {
     position: fixed;
     z-index: 21;
     inset-block-start: var(--wzc-companion-camera-pull-block-start);
@@ -188,14 +180,5 @@ export const companionPhoneLandscapeStyles = css`
   .companion-camera-pull-handle:focus-visible {
     outline: 2px solid var(--wzc-color-primary);
     outline-offset: 2px;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    :host(.companion-phone-landscape.landscape-camera-overlay-settling)
-      .stage-placement[data-layout-node$="default-camera-module"],
-    :host(.companion-phone-landscape.landscape-camera-overlay-settling)
-      .companion-camera-pull-handle {
-      transition: none;
-    }
   }
 `;

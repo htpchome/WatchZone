@@ -1,6 +1,8 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
 import type { SegmentedControl } from "../../../ui/segmented-control";
+import { motionDurations, motionEasings } from "../../../ui/motion";
+import { OwnedValueMotion } from "../../../ui/motion-value";
 
 const GEOMETRY_EPSILON_PX = 1;
 
@@ -15,6 +17,7 @@ export class CameraNavigationOverflowController implements ReactiveController {
   private _revealPending = false;
   private _resizeObserver?: ResizeObserver;
   private _selectedValue = "";
+  private readonly _scrollMotion = new OwnedValueMotion();
   private _viewport?: HTMLElement;
 
   public constructor(private readonly _host: ReactiveControllerHost) {
@@ -149,13 +152,22 @@ export class CameraNavigationOverflowController implements ReactiveController {
   private _scrollByPage(direction: -1 | 1): void {
     const viewport = this._viewport;
     if (!viewport) return;
-    viewport.scrollBy({
-      behavior: "smooth",
-      left: direction * Math.max(1, viewport.clientWidth * 0.8),
-    });
+    const start = viewport.scrollLeft;
+    this._scrollMotion.start(
+      start,
+      start + direction * Math.max(1, viewport.clientWidth * 0.8),
+      {
+        duration: motionDurations.settle,
+        ease: motionEasings.standard,
+        onUpdate: (value) => {
+          viewport.scrollLeft = value;
+        },
+      },
+    );
   }
 
   private _disconnect(): void {
+    this._scrollMotion.cancel();
     if (this._frame !== undefined) cancelAnimationFrame(this._frame);
     this._frame = undefined;
     this._revealPending = false;

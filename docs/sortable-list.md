@@ -29,10 +29,10 @@ state.
   Lit reconciliation, then settles once into the new slot. The lifted shadow
   remains until that settle completes, so a tile never snaps back to its old
   slot before moving to the new one.
-- During reconciliation, the FLIP settle is the sole transform-animation
-  authority for every tile. Normal displacement transitions remain disabled
-  until the whole list has settled, preventing a CSS transition and the FLIP
-  animation from pulling a tile in opposite directions.
+- During reconciliation, the Motion FLIP settle is the sole transform-animation
+  authority for every tile. The same Motion owner handles sibling displacement
+  and final settlement so parallel engines cannot pull a tile in opposite
+  directions.
 - Drag and settle geometry is measured from the rendered tile surface inside
   its shadow root, never from the stationary custom-element host. This keeps
   the first settle frame at the pointer-release position.

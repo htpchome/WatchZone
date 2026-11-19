@@ -72,18 +72,12 @@ export const cameraStyles = css`
     display: flex;
     box-sizing: content-box;
     block-size: 100%;
-    transition-property: transform;
   }
 
   .swiper-slide {
     position: relative;
     flex-shrink: 0;
     block-size: 100%;
-    transition-property: transform;
-  }
-
-  .camera-carousel.swiper-fade .swiper-slide {
-    transition-property: opacity;
   }
 
   .camera-carousel:not(.camera-carousel-interactive) .swiper-slide {
@@ -109,9 +103,6 @@ export const cameraStyles = css`
     visibility: hidden;
     cursor: pointer;
     pointer-events: none;
-    transition:
-      opacity var(--wzc-media-overlay-transition-duration) ease,
-      visibility 0s linear var(--wzc-media-overlay-transition-duration);
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -143,7 +134,6 @@ export const cameraStyles = css`
     opacity: var(--wzc-carousel-navigation-opacity);
     visibility: visible;
     pointer-events: auto;
-    transition-delay: 0s;
   }
 
   .carousel-navigation:disabled {

@@ -17,6 +17,7 @@ import type {
 } from "../../camera-selection-context";
 import { OverlayInteractionController } from "../../overlay-interaction.controller";
 import { slideshowStyles } from "./slideshow.styles";
+import { VisibilityMotion } from "../../../ui/motion";
 
 const EMPTY_STATE: CameraSelectionState = { items: [] };
 
@@ -40,6 +41,7 @@ export class SlideshowComponent extends LitElement {
   private _state = EMPTY_STATE;
   private _unsubscribeCamera?: () => void;
   private _unsubscribeSelection?: () => void;
+  private readonly _visibilityMotion = new VisibilityMotion();
 
   public connectedCallback(): void {
     super.connectedCallback();
@@ -47,6 +49,7 @@ export class SlideshowComponent extends LitElement {
   }
 
   public disconnectedCallback(): void {
+    this._visibilityMotion.disconnect();
     this._unsubscribeCamera?.();
     this._unsubscribeSelection?.();
     this._unsubscribeCamera = undefined;
@@ -114,6 +117,15 @@ export class SlideshowComponent extends LitElement {
           : nothing
       }
     </button>`;
+  }
+
+  protected updated(): void {
+    const button =
+      this.renderRoot.querySelector<HTMLElement>("button") ?? undefined;
+    this._visibilityMotion.update(
+      button,
+      button?.classList.contains("visible") ?? false,
+    );
   }
 
   private _bindContexts(): void {

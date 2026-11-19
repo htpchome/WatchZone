@@ -5,11 +5,11 @@ import {
   SORTABLE_KEYBOARD_MOVE_EVENT,
   SORTABLE_LIST_TAG,
   SORTABLE_REORDER_EVENT,
-  SORTABLE_SETTLE_DURATION_MS,
   SORTABLE_TILE_TAG,
 } from "../core/constants";
 import { englishLocalize, type LocalizeFunction } from "../core/localization";
 import { renderIcon } from "./icons";
+import { motionDurations, motionEasings, OwnedMotion } from "./motion";
 import { sortableListStyles, sortableTileStyles } from "./sortable-list.styles";
 
 type SortableDragPhase = "cancel" | "end" | "move" | "start";
@@ -53,7 +53,9 @@ export class SortableTile extends LitElement {
   private _offset = 0;
   private _pointerId?: number;
   private _pointerStartY = 0;
-  private _settleAnimation?: Animation;
+  private readonly _displacementMotion = new OwnedMotion();
+  private readonly _settleMotion = new OwnedMotion();
+  private _settleGeneration = 0;
 
   public connectedCallback(): void {
     super.connectedCallback();
@@ -61,8 +63,9 @@ export class SortableTile extends LitElement {
   }
 
   public resetDrag(): void {
-    this._settleAnimation?.cancel();
-    this._settleAnimation = undefined;
+    this._displacementMotion.cancel();
+    this._settleMotion.cancel();
+    this._settleGeneration += 1;
     this.dragging = false;
     this.settling = false;
     this.settleLifted = false;
@@ -95,6 +98,7 @@ export class SortableTile extends LitElement {
   }
 
   public async settleFrom(previousRect: DOMRect): Promise<void> {
+    const generation = ++this._settleGeneration;
     await this.updateComplete;
     const tile = this.renderRoot.querySelector<HTMLElement>(".tile");
     if (!tile) {
@@ -108,30 +112,34 @@ export class SortableTile extends LitElement {
       this.settleLifted = false;
       return;
     }
-    const animation = tile.animate(
-      [
-        { transform: `translateY(${deltaY}px)` },
-        { transform: "translateY(0)" },
-      ],
+    const animation = this._settleMotion.start(
+      tile,
+      { transform: [`translateY(${deltaY}px)`, "translateY(0)"] },
       {
-        duration: SORTABLE_SETTLE_DURATION_MS,
-        easing: "ease-out",
+        duration: motionDurations.standard,
+        ease: motionEasings.out,
       },
     );
-    this._settleAnimation = animation;
     try {
-      await animation.finished;
+      await animation;
     } catch {
       // A new interaction legitimately supersedes an in-flight settle.
     }
-    if (this._settleAnimation !== animation) return;
-    this._settleAnimation = undefined;
+    if (generation !== this._settleGeneration) return;
     this.settling = false;
     this.settleLifted = false;
   }
 
   public setDisplacement(offset: number): void {
     if (this.dragging || this._offset === offset) return;
+    const tile = this.renderRoot.querySelector<HTMLElement>(".tile");
+    if (tile) {
+      this._displacementMotion.start(
+        tile,
+        { transform: `translateY(${offset}px)` },
+        { duration: motionDurations.overlay, ease: motionEasings.standard },
+      );
+    }
     this._offset = offset;
     this.requestUpdate();
   }
@@ -175,8 +183,9 @@ export class SortableTile extends LitElement {
     if (event.button !== 0 || this._pointerId !== undefined) return;
     event.preventDefault();
     event.stopPropagation();
-    this._settleAnimation?.cancel();
-    this._settleAnimation = undefined;
+    this._displacementMotion.cancel();
+    this._settleMotion.cancel();
+    this._settleGeneration += 1;
     this.settling = false;
     this.settleLifted = false;
     this._pointerId = event.pointerId;

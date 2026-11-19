@@ -84,11 +84,10 @@ closed it, the normal provider connection path starts once.
 
 During a direct-manipulation swipe, the camera selection and live lease move as
 soon as Swiper selects the destination slide, but the shared selection remains
-marked unsettled until Swiper reports the transition complete. Activity
+marked unsettled until the WatchZone Motion transition completes. Activity
 consumers defer camera-specific requests, sorting, and list rendering while
-that flag is false. Camera rerenders must not issue a zero-duration `slideTo`
-for the index Swiper is already animating toward, because doing so interrupts
-the compositor transition the user is controlling.
+that flag is false. Camera rerenders must not issue a redundant `slideTo` for
+the index whose Motion settlement is active.
 
 The carousel does not decide mobile network budgets, expiry, retry, or
 provider behavior. It reports selection and device class to the shared session
@@ -164,12 +163,14 @@ cannot complete.
 
 - Card configuration selects `none`, `slide`, or `fade`; `slide` is the
   normalized default and is omitted from compact YAML output.
-- The camera carousel controller owns the Swiper effect for both touch swipes
-  previous/next navigation, camera-navigation or camera-switcher selection, and automatic
-  activity takeover. Presentation components emit selection intent and do not
-  implement a second transition path.
+- The camera carousel controller uses Swiper only for geometry and touch
+  arbitration at zero transition speed. WatchZone Motion owns the effect for
+  touch swipes, previous/next navigation, camera-navigation or camera-switcher
+  selection, and automatic activity takeover. Presentation components emit
+  selection intent and do not implement a second transition path.
 - `none` keeps navigation and touch arbitration intact while settling without
-  animation. `fade` loads Swiper's fade module only when selected.
+  animation. `fade` loads Swiper's fade geometry module only when selected;
+  Swiper timing remains disabled and Motion animates opacity.
 - Changing the configured transition preserves the selected camera and does
   not replace or renegotiate its document-scoped media session.
 

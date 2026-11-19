@@ -9,6 +9,7 @@ import { renderIcon, type IconName } from "./icons";
 import { releaseTouchFocus } from "./control-interaction";
 import { mediaControlsOverlayStyles } from "./media-controls-overlay.styles";
 import { mediaOverlayControlButtonStyles } from "./overlay-control.styles";
+import { VisibilityMotion } from "./motion";
 
 export interface MediaControlDescriptor<Action extends string = string> {
   readonly action: Action;
@@ -40,6 +41,7 @@ export class MediaControlsOverlay extends LitElement {
   public label = "";
   public visible = true;
   public viewportEdge = false;
+  private readonly _visibilityMotion = new VisibilityMotion();
 
   protected render() {
     return html`<div
@@ -70,6 +72,18 @@ export class MediaControlsOverlay extends LitElement {
           </button>`,
       )}
     </div>`;
+  }
+
+  protected updated(): void {
+    this._visibilityMotion.update(
+      this.renderRoot.querySelector<HTMLElement>(".control-group") ?? undefined,
+      this.visible,
+    );
+  }
+
+  public disconnectedCallback(): void {
+    this._visibilityMotion.disconnect();
+    super.disconnectedCallback();
   }
 
   private readonly _stopPropagation = (event: Event): void =>

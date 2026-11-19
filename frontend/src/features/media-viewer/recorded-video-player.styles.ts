@@ -56,13 +56,11 @@ export const recordedVideoPlayerStyles = css`
     pointer-events: none;
     position: absolute;
     transform-origin: center;
-    transition: transform var(--wzc-zoom-transition-duration) ease;
     user-select: none;
   }
 
   video.interacting {
     cursor: move;
-    transition: none;
   }
 
   .player-tools {
@@ -164,12 +162,6 @@ export const recordedVideoPlayerStyles = css`
 
   wzc-recording-segment-manager {
     inline-size: 100%;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    video {
-      transition: none;
-    }
   }
 
   @media (hover: hover) and (pointer: fine) {

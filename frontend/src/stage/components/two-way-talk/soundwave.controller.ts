@@ -1,3 +1,5 @@
+import { OwnedValueMotion } from "../../../ui/motion-value";
+
 const FRAME_INTERVAL_MS = 1000 / 30;
 
 interface AudioContextConstructor {
@@ -6,7 +8,7 @@ interface AudioContextConstructor {
 
 /** Draws bounded incoming/outgoing audio levels without Lit render churn. */
 export class TalkSoundwaveController {
-  private _animation?: number;
+  private readonly _animation = new OwnedValueMotion();
   private _audioContext?: AudioContext;
   private _canvas?: HTMLCanvasElement;
   private _incoming?: AnalyserNode;
@@ -49,12 +51,17 @@ export class TalkSoundwaveController {
     this._outgoing = this._connect(context, outgoing);
     this._incoming = incoming ? this._connect(context, incoming) : undefined;
     void context.resume().catch(() => undefined);
-    this._animation = requestAnimationFrame(this._draw);
+    this._animation.start(0, 1, {
+      duration: 1,
+      ease: "linear",
+      onUpdate: () => this._draw(performance.now()),
+      reduceMotion: false,
+      repeat: Infinity,
+    });
   }
 
   public dispose(): void {
-    if (this._animation !== undefined) cancelAnimationFrame(this._animation);
-    this._animation = undefined;
+    this._animation.cancel();
     for (const source of this._sources.splice(0)) source.disconnect();
     void this._audioContext?.close().catch(() => undefined);
     this._audioContext = undefined;
@@ -76,7 +83,6 @@ export class TalkSoundwaveController {
   }
 
   private readonly _draw = (now: number): void => {
-    this._animation = requestAnimationFrame(this._draw);
     if (
       document.visibilityState !== "visible" ||
       now - this._lastFrame < FRAME_INTERVAL_MS

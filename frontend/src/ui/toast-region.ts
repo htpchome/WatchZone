@@ -3,6 +3,7 @@ import { html, LitElement } from "lit";
 import { TOAST_REGION_TAG } from "../core/constants";
 import type { ToastNotice } from "./toast-manager";
 import { renderIcon } from "./icons";
+import { motionDurations, motionEasings, OwnedMotion } from "./motion";
 import { toastRegionStyles } from "./toast-region.styles";
 
 export type ToastRegionMode = "inline" | "overlay";
@@ -16,12 +17,17 @@ export class ToastRegion extends LitElement {
 
   public mode: ToastRegionMode = "overlay";
   public notices: readonly ToastNotice[] = [];
+  private readonly _motions = new Map<
+    string,
+    { readonly motion: OwnedMotion; dismissing: boolean }
+  >();
 
   protected render() {
     return this.notices.map(
       (notice) =>
         html`<div
           class="toast"
+          data-toast-id=${notice.id}
           data-severity=${notice.severity}
           ?data-dismissing=${notice.dismissing}
           role=${notice.severity === "success" ? "status" : "alert"}
@@ -35,6 +41,59 @@ export class ToastRegion extends LitElement {
           <span>${notice.message}</span>
         </div>`,
     );
+  }
+
+  protected updated(): void {
+    const activeIds = new Set(this.notices.map(({ id }) => id));
+    for (const [id, state] of this._motions) {
+      if (activeIds.has(id)) continue;
+      state.motion.cancel();
+      this._motions.delete(id);
+    }
+    const elements = this.renderRoot.querySelectorAll<HTMLElement>(".toast");
+    for (const [index, notice] of this.notices.entries()) {
+      const element = elements.item(index);
+      if (!element) continue;
+      let state = this._motions.get(notice.id);
+      if (!state) {
+        state = { motion: new OwnedMotion(), dismissing: notice.dismissing };
+        this._motions.set(notice.id, state);
+        state.motion.start(
+          element,
+          {
+            opacity: notice.dismissing ? [1, 0] : [0, 1],
+            transform: notice.dismissing
+              ? ["translateY(0)", "translateY(0.25rem)"]
+              : ["translateY(0.25rem)", "translateY(0)"],
+          },
+          {
+            duration: motionDurations.standard,
+            ease: motionEasings.out,
+          },
+        );
+      } else if (state.dismissing !== notice.dismissing) {
+        state.dismissing = notice.dismissing;
+        state.motion.start(
+          element,
+          {
+            opacity: notice.dismissing ? 0 : 1,
+            transform: notice.dismissing
+              ? "translateY(0.25rem)"
+              : "translateY(0)",
+          },
+          {
+            duration: motionDurations.standard,
+            ease: motionEasings.standard,
+          },
+        );
+      }
+    }
+  }
+
+  public disconnectedCallback(): void {
+    for (const { motion } of this._motions.values()) motion.cancel();
+    this._motions.clear();
+    super.disconnectedCallback();
   }
 
   static styles = toastRegionStyles;

@@ -41,6 +41,11 @@ import { CameraLiveControlController } from "./control.controller";
 import { captureVideoFrame } from "./frame-capture";
 import { mediaTransportLabel } from "./source-label";
 import { renderCameraSuspendedPresentation } from "../suspended-presentation";
+import {
+  OwnedMotion,
+  reducedMotionRequested,
+  VisibilityMotion,
+} from "../../../ui/motion";
 
 interface MediaDimensions {
   readonly height: number;
@@ -110,6 +115,9 @@ export class CameraLivePresentation extends LitElement {
   private _posterFailed = false;
   private _reportedGestureLocked = false;
   private _webRtcFrameRequest?: number;
+  private readonly _sourceVisibilityMotion = new VisibilityMotion();
+  private readonly _spinnerMotion = new OwnedMotion();
+  private _spinnerElement?: HTMLElement;
   private readonly _deviceProfile = new DeviceProfileController(this);
   private readonly _media = new MediaPresentationController(this, {
     dismissOverlayOnOutsidePointer: true,
@@ -225,6 +233,9 @@ export class CameraLivePresentation extends LitElement {
       this._detachWebRtcVideo();
       this._setActiveVideo(undefined);
     });
+    this._sourceVisibilityMotion.disconnect();
+    this._spinnerMotion.cancel();
+    this._spinnerElement = undefined;
     super.disconnectedCallback();
   }
 
@@ -368,6 +379,27 @@ export class CameraLivePresentation extends LitElement {
   }
 
   protected updated(changed: Map<PropertyKey, unknown>): void {
+    const sourceIndicator =
+      this.renderRoot.querySelector<HTMLElement>(".source-indicator") ??
+      undefined;
+    this._sourceVisibilityMotion.update(
+      sourceIndicator,
+      sourceIndicator?.classList.contains("visible") ?? false,
+    );
+    const spinner =
+      this.renderRoot.querySelector<HTMLElement>(".connection-spinner") ??
+      undefined;
+    if (spinner !== this._spinnerElement) {
+      this._spinnerMotion.cancel();
+      this._spinnerElement = spinner;
+      if (spinner && !reducedMotionRequested()) {
+        this._spinnerMotion.start(
+          spinner,
+          { transform: ["rotate(0deg)", "rotate(360deg)"] },
+          { duration: 0.8, ease: "linear", repeat: Infinity },
+        );
+      }
+    }
     this._media.observe(
       this.renderRoot.querySelector<HTMLElement>(".viewport") ?? undefined,
       this.renderRoot.querySelector<HTMLElement>(".media-surface") ?? undefined,

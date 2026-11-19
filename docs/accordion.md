@@ -31,7 +31,8 @@ application module and owns no configuration or feature state.
   header when space permits; content taller than the viewport still starts at
   the top.
 - Scrolling follows composed ancestors so the primitive works inside nested
-  shadow roots. Reduced-motion preference disables smooth scrolling.
+  shadow roots. Motion owns the scroll interpolation and reduced-motion
+  preference makes it immediate.
 - Reveal scrolling is coalesced to one animation-frame request and canceled
   when a newer disclosure action occurs or the accordion disconnects.
 - Styling consumes semantic `--wzc-accordion-*` tokens defined at the sole

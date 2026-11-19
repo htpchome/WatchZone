@@ -18,16 +18,12 @@ export const lightControlStyles = css`
     position: relative;
     opacity: 0;
     visibility: hidden;
-    transition:
-      opacity var(--wzc-media-overlay-transition-duration) ease,
-      visibility 0s linear var(--wzc-media-overlay-transition-duration);
     pointer-events: none;
   }
 
   .light-stack.visible {
     opacity: 1;
     visibility: visible;
-    transition-delay: 0s;
   }
 
   .light-buttons {
@@ -48,15 +44,14 @@ export const lightControlStyles = css`
     --wzc-round-button-touch-action: none;
   }
 
-  .light-button::before {
+  .light-fill {
     position: absolute;
     z-index: -1;
     inset-inline: 0;
     inset-block-end: 0;
     block-size: var(--wzc-light-level);
     background: var(--wzc-light-fill-color);
-    content: "";
-    transition: block-size var(--wzc-light-transition-duration) ease;
+    pointer-events: none;
   }
 
   .dimmer-panel {
@@ -145,13 +140,6 @@ export const lightControlStyles = css`
     button:hover,
     button:active {
       background-color: var(--wzc-media-overlay-background);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .light-stack,
-    .light-button::before {
-      transition: none;
     }
   }
 `;

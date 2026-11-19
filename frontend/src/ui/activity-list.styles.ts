@@ -304,7 +304,6 @@ export const activityListStyles = css`
     block-size: 0.75rem;
     place-items: center;
     color: inherit;
-    transition: transform 120ms ease-out;
   }
 
   .review-state.reviewed {

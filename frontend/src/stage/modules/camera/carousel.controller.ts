@@ -1,6 +1,13 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 import type Swiper from "swiper";
 import type { SlideTransition } from "../../../core/config";
+import {
+  animateElement,
+  type MotionAnimation,
+  motionDurations,
+  motionEasings,
+  reducedMotionRequested,
+} from "../../../ui/motion";
 
 import {
   CAMERA_CAROUSEL_NAVIGATION_HEIGHT_RATIO,
@@ -10,17 +17,17 @@ import {
 
 /** Owns the camera-local Swiper instance without owning slides or selection. */
 export class CameraCarouselController implements ReactiveController {
-  private static readonly SETTLEMENT_FALLBACK_MS = 450;
-
   private _activeIndex = 0;
+  private readonly _animations = new Set<MotionAnimation>();
   private _container?: HTMLElement;
   private _generation = 0;
   private _slideCount = 0;
   private _interactionLocked = false;
   private _resizeFrame?: number;
   private _resizeObserver?: ResizeObserver;
-  private _settlementTimer?: ReturnType<typeof setTimeout>;
   private _swiper?: Swiper;
+  private _touchReleaseTransform?: string;
+  private _transitionGeneration = 0;
   private _transition: SlideTransition = "slide";
 
   public constructor(
@@ -60,6 +67,7 @@ export class CameraCarouselController implements ReactiveController {
   }
 
   public hostConnected(): void {
+    this._onSelectionChanged?.(this._activeIndex, true);
     this._host.requestUpdate();
   }
 
@@ -86,11 +94,11 @@ export class CameraCarouselController implements ReactiveController {
         this._onSelectionChanged?.(next, true);
         return;
       }
-      this._swiper.slideTo(next);
-      // Button navigation and alert takeover have an explicit destination.
-      // Commit that destination immediately so activity modules can begin
-      // loading while Swiper performs the visual transition.
-      this._onSelectionChanged?.(next, true);
+      const fromIndex = this._swiper.activeIndex;
+      const fromTransform = getComputedStyle(this._swiper.wrapperEl).transform;
+      this._swiper.slideTo(next, 0, false);
+      this._onSelectionChanged?.(next, false);
+      this._animateSelection(this._swiper, fromIndex, next, fromTransform);
       return;
     }
     this._onSelectionChanged?.(next, true);
@@ -146,16 +154,23 @@ export class CameraCarouselController implements ReactiveController {
             // selection state with a transition that can never end.
             if (selectionChanged) {
               this._onSelectionChanged?.(swiper.activeIndex, false);
-              this._scheduleSettlement(swiper);
+              this._animateSelection(
+                swiper,
+                swiper.previousIndex,
+                swiper.activeIndex,
+                this._touchReleaseTransform,
+              );
+              this._touchReleaseTransform = undefined;
             }
           },
-          slideChangeTransitionEnd: (swiper) => {
-            this._clearSettlement();
-            this._onSelectionChanged?.(swiper.activeIndex, true);
+          touchEnd: (swiper) => {
+            this._touchReleaseTransform = getComputedStyle(
+              swiper.wrapperEl,
+            ).transform;
           },
         },
         resizeObserver: true,
-        speed: this._transition === "none" ? 0 : 300,
+        speed: 0,
         touchStartPreventDefault: false,
         watchOverflow: true,
       });
@@ -192,26 +207,95 @@ export class CameraCarouselController implements ReactiveController {
     this._swiper.params.allowTouchMove = this._canMove();
   }
 
-  private _scheduleSettlement(swiper: Swiper): void {
-    this._clearSettlement();
-    const generation = this._generation;
-    this._settlementTimer = setTimeout(() => {
-      this._settlementTimer = undefined;
-      if (
-        generation !== this._generation ||
-        swiper.destroyed ||
-        swiper !== this._swiper
-      ) {
-        return;
+  private _animateSelection(
+    swiper: Swiper,
+    fromIndex: number,
+    toIndex: number,
+    fromTransform?: string,
+  ): void {
+    this._cancelAnimations();
+    const generation = ++this._transitionGeneration;
+    if (this._transition === "none" || reducedMotionRequested()) {
+      this._onSelectionChanged?.(toIndex, true);
+      return;
+    }
+    const animations: MotionAnimation[] = [];
+    const slides = [...swiper.slides] as HTMLElement[];
+    const outgoing = slides[fromIndex];
+    const incoming = slides[toIndex];
+    let remaining =
+      this._transition === "fade"
+        ? Number(Boolean(outgoing)) + Number(Boolean(incoming))
+        : 1;
+    if (remaining === 0) {
+      this._onSelectionChanged?.(toIndex, true);
+      return;
+    }
+    const complete = () => {
+      remaining -= 1;
+      if (remaining > 0 || generation !== this._transitionGeneration) return;
+      this._onSelectionChanged?.(toIndex, true);
+      for (const animation of animations) {
+        animation.cancel();
+        this._animations.delete(animation);
       }
-      this._onSelectionChanged?.(swiper.activeIndex, true);
-    }, CameraCarouselController.SETTLEMENT_FALLBACK_MS);
+    };
+    if (this._transition === "fade") {
+      if (outgoing) {
+        animations.push(
+          animateElement(
+            outgoing,
+            { opacity: [1, 0] },
+            {
+              duration: motionDurations.carousel,
+              ease: motionEasings.standard,
+              onComplete: complete,
+            },
+          ),
+        );
+      }
+      if (incoming) {
+        animations.push(
+          animateElement(
+            incoming,
+            { opacity: [0, 1] },
+            {
+              duration: motionDurations.carousel,
+              ease: motionEasings.standard,
+              onComplete: complete,
+            },
+          ),
+        );
+      }
+    } else {
+      const wrapper = swiper.wrapperEl;
+      const targetTransform = getComputedStyle(wrapper).transform;
+      animations.push(
+        animateElement(
+          wrapper,
+          {
+            transform: [
+              fromTransform && fromTransform !== "none"
+                ? fromTransform
+                : targetTransform,
+              targetTransform,
+            ],
+          },
+          {
+            duration: motionDurations.carousel,
+            ease: motionEasings.standard,
+            onComplete: complete,
+          },
+        ),
+      );
+    }
+    for (const animation of animations) this._animations.add(animation);
   }
 
-  private _clearSettlement(): void {
-    if (this._settlementTimer === undefined) return;
-    clearTimeout(this._settlementTimer);
-    this._settlementTimer = undefined;
+  private _cancelAnimations(): void {
+    this._transitionGeneration += 1;
+    for (const animation of this._animations) animation.cancel();
+    this._animations.clear();
   }
 
   private _observeSize(container: HTMLElement): void {
@@ -246,7 +330,7 @@ export class CameraCarouselController implements ReactiveController {
   }
 
   private _destroy(): void {
-    this._clearSettlement();
+    this._cancelAnimations();
     if (this._resizeFrame !== undefined)
       cancelAnimationFrame(this._resizeFrame);
     this._resizeFrame = undefined;

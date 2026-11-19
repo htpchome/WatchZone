@@ -40,6 +40,7 @@ import type { CameraToastRequestDetail } from "../../camera-presentation/live/pr
 import type { CameraSuspendConfirmDetail } from "../../camera-presentation/suspend-dialog";
 import "../../camera-presentation/suspend-dialog";
 import { cameraGroupViewStyles } from "./camera-group-view.styles";
+import { VisibilityMotion } from "../../../ui/motion";
 import { stageResizeHandleStyles } from "../../camera-presentation/stage-resize-handle.styles";
 import {
   CameraStageResizeController,
@@ -89,6 +90,7 @@ export class CameraGroupView extends LitElement {
   private readonly _overlay = new MediaOverlayVisibilityController(this, {
     onVisibilityChange: (visible) => this._emitOverlayVisibility(visible),
   });
+  private readonly _feedActionsMotion = new VisibilityMotion();
   private _snapshotPending = false;
   private _touchSurfaceActivation = false;
   private _suspendDialogActive = false;
@@ -236,6 +238,12 @@ export class CameraGroupView extends LitElement {
   }
 
   protected updated(): void {
+    const feedActions =
+      this.renderRoot.querySelector<HTMLElement>(".feed-actions") ?? undefined;
+    this._feedActionsMotion.update(
+      feedActions,
+      feedActions?.classList.contains("visible") ?? false,
+    );
     this._stageResize.observe(
       this.renderRoot.querySelector<HTMLElement>(".group") ?? undefined,
       this.renderRoot.querySelector<HTMLButtonElement>(
@@ -275,6 +283,7 @@ export class CameraGroupView extends LitElement {
   }
 
   public disconnectedCallback(): void {
+    this._feedActionsMotion.disconnect();
     this.removeEventListener(
       CAMERA_OVERLAY_VISIBILITY_EVENT,
       this._handleOverlayVisibility as EventListener,

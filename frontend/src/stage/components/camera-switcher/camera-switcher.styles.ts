@@ -17,16 +17,12 @@ const cameraSwitcherPrivateStyles = css`
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-    transition:
-      opacity var(--wzc-media-overlay-transition-duration) ease,
-      visibility 0s linear var(--wzc-media-overlay-transition-duration);
   }
 
   .switcher.visible {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
-    transition-delay: 0s;
   }
 
   button {
@@ -54,7 +50,6 @@ const cameraSwitcherPrivateStyles = css`
   .trigger svg {
     inline-size: var(--wzc-control-icon-size);
     block-size: var(--wzc-control-icon-size);
-    transition: transform var(--wzc-media-overlay-transition-duration) ease;
   }
 
   .switcher.open .trigger svg {
@@ -82,13 +77,6 @@ const cameraSwitcherPrivateStyles = css`
 
   .option.selected {
     background: var(--wzc-media-overlay-hover-background);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .switcher,
-    .trigger svg {
-      transition: none;
-    }
   }
 `;
 

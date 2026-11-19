@@ -28,6 +28,12 @@ import { PressInteractionController } from "../../../ui/press-interaction.contro
 import type { CameraLightConfig } from "./index";
 import { lightControlStyles } from "./light-control.styles";
 import { OverlayInteractionController } from "../../overlay-interaction.controller";
+import {
+  motionDurations,
+  motionEasings,
+  OwnedMotion,
+  VisibilityMotion,
+} from "../../../ui/motion";
 
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
 const LIGHT_TOAST_KEY = "light-control-status";
@@ -54,6 +60,11 @@ export class LightControlComponent extends LitElement {
   private _unsubscribeCamera?: () => void;
   private readonly _toasts = new ToastManager(this);
   private readonly _overlay = new OverlayInteractionController(this);
+  private readonly _visibilityMotion = new VisibilityMotion();
+  private readonly _levelMotions = new Map<
+    string,
+    { level: number; readonly motion: OwnedMotion }
+  >();
   private readonly _press = new PressInteractionController<string>(this, {
     actionFor: (target) => target.dataset.lightId,
     end: (entityId, cancelled) => {
@@ -77,6 +88,9 @@ export class LightControlComponent extends LitElement {
   }
 
   public disconnectedCallback(): void {
+    this._visibilityMotion.disconnect();
+    for (const { motion } of this._levelMotions.values()) motion.cancel();
+    this._levelMotions.clear();
     this._unsubscribeCamera?.();
     this._unsubscribeCamera = undefined;
     this._cameraContext = undefined;
@@ -138,6 +152,44 @@ export class LightControlComponent extends LitElement {
     </div>`;
   }
 
+  protected updated(): void {
+    const stack =
+      this.renderRoot.querySelector<HTMLElement>(".light-stack") ?? undefined;
+    this._visibilityMotion.update(
+      stack,
+      stack?.classList.contains("visible") ?? false,
+    );
+    const activeIds = new Set<string>();
+    for (const button of this.renderRoot.querySelectorAll<HTMLElement>(
+      ".light-button[data-light-id]",
+    )) {
+      const entityId = button.dataset.lightId;
+      const level = Number(button.dataset.lightLevel);
+      const fill = button.querySelector<HTMLElement>(".light-fill");
+      if (!entityId || !fill || !Number.isFinite(level)) continue;
+      activeIds.add(entityId);
+      const state = this._levelMotions.get(entityId);
+      if (!state) {
+        this._levelMotions.set(entityId, {
+          level,
+          motion: new OwnedMotion(),
+        });
+      } else if (state.level !== level) {
+        state.level = level;
+        state.motion.start(
+          fill,
+          { blockSize: `${level}%` },
+          { duration: motionDurations.standard, ease: motionEasings.standard },
+        );
+      }
+    }
+    for (const [entityId, state] of this._levelMotions) {
+      if (activeIds.has(entityId)) continue;
+      state.motion.cancel();
+      this._levelMotions.delete(entityId);
+    }
+  }
+
   private _renderLightButton(
     entityId: string,
     entity: HomeAssistantEntity | undefined,
@@ -158,6 +210,7 @@ export class LightControlComponent extends LitElement {
       }
       type="button"
       data-light-id=${entityId}
+      data-light-level=${String(level)}
       style=${`--wzc-light-level:${level}%`}
       title=${title}
       aria-label=${title}
@@ -174,6 +227,7 @@ export class LightControlComponent extends LitElement {
       @keyup=${this._handleKeyUp}
       @focus=${this._overlay.reveal}
     >
+      <span class="light-fill" style=${`block-size:${level}%`}></span>
       ${
         icon ? html`<ha-icon .icon=${icon}></ha-icon>` : renderIcon("lightbulb")
       }

@@ -16,6 +16,12 @@ import type {
 } from "../../camera-selection-context";
 import { OverlayInteractionController } from "../../overlay-interaction.controller";
 import { cameraSwitcherStyles } from "./camera-switcher.styles";
+import {
+  motionDurations,
+  motionEasings,
+  OwnedMotion,
+  VisibilityMotion,
+} from "../../../ui/motion";
 
 const MENU_ID = "camera-switcher-options";
 
@@ -36,6 +42,9 @@ export class CameraSwitcherComponent extends LitElement {
   private _unsubscribeCamera?: () => void;
   private _unsubscribeSelection?: () => void;
   private readonly _overlay = new OverlayInteractionController(this);
+  private readonly _visibilityMotion = new VisibilityMotion();
+  private readonly _chevronMotion = new OwnedMotion();
+  private _renderedOpen?: boolean;
 
   public cameraSelection?: CameraSelectionContext;
   public cameraSession?: CameraSessionContext;
@@ -48,6 +57,8 @@ export class CameraSwitcherComponent extends LitElement {
   }
 
   public disconnectedCallback(): void {
+    this._visibilityMotion.disconnect();
+    this._chevronMotion.cancel();
     this._close();
     this._unsubscribeCamera?.();
     this._unsubscribeSelection?.();
@@ -135,6 +146,29 @@ export class CameraSwitcherComponent extends LitElement {
           : nothing
       }
     </div>`;
+  }
+
+  protected updated(): void {
+    const switcher =
+      this.renderRoot.querySelector<HTMLElement>(".switcher") ?? undefined;
+    this._visibilityMotion.update(
+      switcher,
+      switcher?.classList.contains("visible") ?? false,
+    );
+    const chevron =
+      this.renderRoot.querySelector<SVGElement>(".trigger svg") ?? undefined;
+    if (
+      chevron &&
+      this._renderedOpen !== undefined &&
+      this._renderedOpen !== this._open
+    ) {
+      this._chevronMotion.start(
+        chevron,
+        { transform: this._open ? "rotate(180deg)" : "rotate(0deg)" },
+        { duration: motionDurations.overlay, ease: motionEasings.standard },
+      );
+    }
+    this._renderedOpen = this._open;
   }
 
   private _bindContexts(): void {

@@ -141,12 +141,12 @@ the page. While zoomed, the media surface owns touch pan and pinch.
 - Scale is clamped to `1x` through `3x`.
 - Pan is clamped after every scale, drag, and resize so blank space cannot be
   pulled into view.
-- Stage-return interpolation uses compositor-only media transforms and disables
-  the normal zoom transition while the handle is moving, so the transform
-  follows the pointer without delayed catch-up.
+- Stage-return interpolation uses compositor-only media transforms and cancels
+  the normal Motion zoom settlement while the handle is moving, so the
+  transform follows the pointer without delayed catch-up.
 - Pointer capture, active pointer records, and resize observation are released
   on reset or host disconnection.
-- Reduced-motion preferences disable the animated transform transition.
+- Reduced-motion preference makes the Motion transform settlement immediate.
 - Browser zoom remains separate from optical/provider PTZ.
 
 ## Platform exceptions

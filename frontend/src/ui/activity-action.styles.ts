@@ -13,7 +13,6 @@ export const activityActionStyles = css`
     min-block-size: var(--wzc-event-action-size);
     min-inline-size: var(--wzc-event-action-size);
     padding: 0;
-    transition: color var(--wzc-media-overlay-transition-duration) ease;
   }
 
   .wzc-activity-action:active:not(:disabled) {

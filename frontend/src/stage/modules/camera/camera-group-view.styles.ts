@@ -107,16 +107,12 @@ export const cameraGroupViewStyles = css`
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-    transition:
-      opacity var(--wzc-media-overlay-transition-duration) ease,
-      visibility 0s linear var(--wzc-media-overlay-transition-duration);
   }
 
   .feed-actions.visible {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
-    transition-delay: 0s;
   }
 
   .feed-action {

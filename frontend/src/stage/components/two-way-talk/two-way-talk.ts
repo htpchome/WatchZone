@@ -24,6 +24,11 @@ import { OverlayInteractionController } from "../../overlay-interaction.controll
 import { TalkSessionController } from "./session.controller";
 import { TalkSoundwaveController } from "./soundwave.controller";
 import { twoWayTalkStyles } from "./two-way-talk.styles";
+import {
+  OwnedMotion,
+  reducedMotionRequested,
+  VisibilityMotion,
+} from "../../../ui/motion";
 
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
 const TALK_TOAST_KEY = "two-way-talk-status";
@@ -53,6 +58,9 @@ export class TwoWayTalkComponent extends LitElement {
     },
   );
   private _talkStream?: MediaStream;
+  private readonly _visibilityMotion = new VisibilityMotion();
+  private readonly _spinnerMotion = new OwnedMotion();
+  private _spinnerElement?: HTMLElement;
   private readonly _session = new TalkSessionController(this, {
     onConnected: (connection) => this._handleConnected(connection),
     onFailed: () => this._handleFailed(),
@@ -150,6 +158,27 @@ export class TwoWayTalkComponent extends LitElement {
   }
 
   protected updated(): void {
+    const inactive =
+      this.renderRoot.querySelector<HTMLElement>(".inactive-control") ??
+      undefined;
+    this._visibilityMotion.update(
+      inactive,
+      inactive?.classList.contains("visible") ?? false,
+    );
+    const spinner =
+      this.renderRoot.querySelector<HTMLElement>(".connecting-spinner") ??
+      undefined;
+    if (spinner !== this._spinnerElement) {
+      this._spinnerMotion.cancel();
+      this._spinnerElement = spinner;
+      if (spinner && !reducedMotionRequested()) {
+        this._spinnerMotion.start(
+          spinner,
+          { transform: ["rotate(0deg)", "rotate(360deg)"] },
+          { duration: 0.7, ease: "linear", repeat: Infinity },
+        );
+      }
+    }
     if (!this._session.active) return;
     this._soundwave.attach(
       this.renderRoot.querySelector<HTMLCanvasElement>("canvas") ?? undefined,
@@ -159,6 +188,9 @@ export class TwoWayTalkComponent extends LitElement {
   }
 
   public disconnectedCallback(): void {
+    this._visibilityMotion.disconnect();
+    this._spinnerMotion.cancel();
+    this._spinnerElement = undefined;
     this._soundwave.dispose();
     super.disconnectedCallback();
   }
@@ -222,7 +254,7 @@ export class TwoWayTalkComponent extends LitElement {
       @keydown=${this._press.handleKeyDown}
       @keyup=${this._press.handleKeyUp}
     >
-      ${icon}
+      ${icon}${busy ? html`<span class="connecting-spinner"></span>` : nothing}
     </button>`;
   }
   private readonly _preventClick = (event: Event): void =>

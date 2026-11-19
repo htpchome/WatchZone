@@ -16,18 +16,14 @@ precedence.
 ## Repository state
 
 - Branch: `main`.
-- Current HEAD before the pending rollback: `9bca8a4` —
-  `v0.0.4-dev.441 - fix(mobile): stabilize camera pull geometry and eliminate bleed`.
-- Pending version: `0.0.4-dev.442`.
-- Worktree: the complete tracked tree was restored to commit `c6770b6` —
-  `v0.0.4-dev.430 - fix(mobile): synchronize rotation with HA layout settlement`.
-- Relative to `c6770b6`, only the three synchronized version fields and this
-  handoff differ: `custom_components/watchzone/const.py`,
-  `custom_components/watchzone/manifest.json`, `frontend/package.json`, and
-  `docs/current-handoff.md`.
-- The rollback, version update, and handoff update are intentionally
-  uncommitted. The proposed commit subject is:
+- Current HEAD: `73d054b` —
   `v0.0.4-dev.442 - revert(frontend): restore dev.430 implementation`.
+- Pending version: `0.0.4-dev.443`.
+- Worktree: the application-wide Motion migration described below is
+  intentionally uncommitted. There were no unrelated local changes when it
+  began.
+- Proposed commit subject:
+  `v0.0.4-dev.443 - refactor(frontend): unify animation ownership with Motion`.
 
 Always recheck `git status`, `git log -1`, and
 `custom_components/watchzone/const.py` before starting work.
@@ -100,6 +96,34 @@ recovery baseline, nothing more.
 - Never call work complete or perfect without current evidence supporting that
   claim.
 
+## Pending Motion migration
+
+The user explicitly directed that Motion become the one application animation
+engine, with no feature-local CSS, WAAPI, smooth-scroll, or tween-loop
+patchwork. The pending work implements that decision across the existing UI.
+
+- `motion@14.12.0` is the sole animation dependency and its MIT notice is
+  recorded.
+- `frontend/src/ui/motion.ts` owns DOM Motion animation, shared durations and
+  easing, reduced-motion handling, replaceable ownership, and visibility
+  lifecycle.
+- `frontend/src/ui/motion-value.ts` owns continuous numeric Motion animation.
+- CSS transitions, CSS keyframes, direct feature WAAPI, and browser smooth
+  scrolling were removed from frontend source.
+- Swiper remains the camera carousel's touch/drag, geometry, indexing, and
+  gesture-arbitration system. Its transition speed is zero; Motion alone owns
+  camera slide and fade timing.
+- Motion now owns overlays, toasts, accordions, sortable settlement, zoom
+  settlement, carousel transitions, continuous spinners and soundwave motion,
+  Companion pull/landscape settlement, camera-navigation scrolling, minimal
+  camera expansion, PTZ, light, and suspend-toggle motion.
+- `scripts/validate-styles.mjs` rejects new CSS animation/transition ownership,
+  direct feature `.animate()` calls, direct Motion imports outside the shared
+  boundaries, and smooth browser scrolling.
+- `docs/animation-system.md` is the normative animation contract. Related
+  feature contracts and `architecture.md` were updated to record the approved
+  single-engine decision.
+
 ## Mobile presentation requirements retained from user direction
 
 - Portrait keeps the normal Home Assistant top navigation.
@@ -124,9 +148,9 @@ recovery baseline, nothing more.
   Alert/detection and review-state semantics must not be coupled to unrelated
   text or action colors.
 
-## Validation of the pending `dev.442` recovery
+## Validation of the pending `dev.443` Motion migration
 
-The restored tree and version-only update passed:
+The pending migration passed:
 
 - `corepack yarn check:version`;
 - `corepack yarn format`;
@@ -134,6 +158,8 @@ The restored tree and version-only update passed:
 - `corepack yarn typecheck`;
 - `corepack yarn test`: 488 tests passed in 77 files;
 - `corepack yarn build`;
+- `corepack yarn check:styles`;
+- `corepack yarn check:licenses`;
 - `corepack yarn test:browser`: 156 tests passed across Chromium, Firefox, and
   WebKit;
 - `git diff --check`.
@@ -142,8 +168,14 @@ The browser matrix required permission to bind its local Vite server to
 `127.0.0.1:5173`; the initial sandboxed start failed with `EPERM` before any
 test ran. The rerun with the required permission completed successfully.
 
-These results establish repository consistency only. They do not establish
-that the user-reported physical-device visual defects are fixed.
+One earlier unit run reported three late lazy deep-link imports after Vitest
+environment teardown while all 488 assertions passed. A clean isolated rerun
+passed with no unhandled errors. This is recorded so a future recurrence is not
+hidden.
+
+These results establish repository consistency and automated interaction
+coverage only. They do not establish physical-device visual quality or prove
+that every user-reported animation/compositing defect is fixed.
 
 ## Working rules
 

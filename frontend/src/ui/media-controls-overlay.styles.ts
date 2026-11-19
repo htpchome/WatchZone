@@ -23,26 +23,15 @@ export const mediaControlsOverlayStyles = css`
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-    transition:
-      opacity var(--wzc-media-overlay-transition-duration) ease,
-      visibility 0s linear var(--wzc-media-overlay-transition-duration);
   }
 
   :host([visible]) .control-group {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
-    transition-delay: 0s;
   }
 
   :host([viewport-edge]) .control-group {
     margin-inline-end: env(safe-area-inset-right, 0px);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .control-group,
-    .control-button {
-      transition: none;
-    }
   }
 `;

@@ -41,14 +41,6 @@ export const ptzStyles = css`
     transform-origin: center;
   }
 
-  .ptz-control.user-toggled {
-    transition:
-      opacity var(--wzc-media-overlay-transition-duration) ease,
-      inline-size var(--wzc-media-overlay-transition-duration) ease,
-      block-size var(--wzc-media-overlay-transition-duration) ease,
-      padding var(--wzc-media-overlay-transition-duration) ease;
-  }
-
   .ptz-control.expanded {
     inline-size: var(--wzc-ptz-panel-size);
     block-size: var(--wzc-ptz-panel-size);
@@ -84,7 +76,6 @@ export const ptzStyles = css`
     min-inline-size: 0;
     min-block-size: 0;
     color: inherit;
-    transition: opacity var(--wzc-media-overlay-transition-duration) ease;
   }
 
   button::before {
@@ -141,10 +132,6 @@ export const ptzStyles = css`
     pointer-events: none;
   }
 
-  button.ptz-trigger.user-toggled {
-    transition: opacity var(--wzc-media-overlay-transition-duration) ease;
-  }
-
   button.ptz-trigger.visible {
     opacity: 1;
     visibility: visible;
@@ -186,13 +173,6 @@ export const ptzStyles = css`
     button:hover::before,
     button:active::before {
       background: transparent;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .ptz-control,
-    button.ptz-trigger {
-      transition: none;
     }
   }
 `;

@@ -58,38 +58,26 @@ export const twoWayTalkStyles = css`
     box-shadow: 0 0 0 2px var(--wzc-talk-panel-border-color);
   }
 
-  .talk-button.inactive.connecting::after {
-    content: "";
+  .connecting-spinner {
     position: absolute;
     inset: -0.35rem;
     border: 2px solid
       color-mix(in srgb, var(--wzc-talk-connecting-color) 30%, transparent);
     border-block-start-color: var(--wzc-talk-connecting-color);
     border-radius: 50%;
-    animation: wzc-talk-connecting 700ms linear infinite;
     pointer-events: none;
-  }
-
-  @keyframes wzc-talk-connecting {
-    to {
-      transform: rotate(1turn);
-    }
   }
 
   .inactive-control {
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-    transition:
-      opacity var(--wzc-media-overlay-transition-duration) ease,
-      visibility 0s linear var(--wzc-media-overlay-transition-duration);
   }
 
   .inactive-control.visible {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
-    transition-delay: 0s;
   }
 
   .talk-toast {
@@ -106,16 +94,6 @@ export const twoWayTalkStyles = css`
       --wzc-round-button-hover-background: var(
         --wzc-neutral-control-hover-background
       );
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .inactive-control {
-      transition: none;
-    }
-
-    .talk-button.inactive.connecting::after {
-      animation-duration: 1.4s;
     }
   }
 `;

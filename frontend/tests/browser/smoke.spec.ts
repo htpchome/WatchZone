@@ -1626,26 +1626,12 @@ test("keeps activity loading out of an active camera transition", async ({
     )
     .toBeGreaterThan(0);
 
-  await carousel.evaluate((element) => {
-    const swiper = (
-      element as HTMLElement & {
-        swiper: { slideTo(index: number, speed: number): void };
-      }
-    ).swiper;
-    swiper.slideTo(1, 400);
-  });
+  await page
+    .locator('wzc-camera-navigation button[data-value="camera.back"]')
+    .click();
   await page.waitForTimeout(75);
 
-  expect(
-    await carousel.evaluate((element) => {
-      const swiper = (
-        element as HTMLElement & {
-          swiper: { activeIndex: number; animating: boolean };
-        }
-      ).swiper;
-      return { activeIndex: swiper.activeIndex, animating: swiper.animating };
-    }),
-  ).toEqual({ activeIndex: 1, animating: true });
+  await expect(carousel).toHaveClass(/camera-carousel-transitioning/);
   expect(
     await page.evaluate(
       () =>
@@ -1684,13 +1670,7 @@ test("keeps activity loading out of an active camera transition", async ({
       ),
     )
     .toBe(true);
-  expect(
-    await carousel.evaluate(
-      (element) =>
-        (element as HTMLElement & { swiper: { animating: boolean } }).swiper
-          .animating,
-    ),
-  ).toBe(true);
+  await expect(carousel).not.toHaveClass(/camera-carousel-transitioning/);
 });
 
 test("applies configured camera carousel transitions to swipe and arrow navigation", async ({
@@ -1728,31 +1708,14 @@ test("applies configured camera carousel transitions to swipe and arrow navigati
         return { effect: swiper?.params.effect, speed: swiper?.params.speed };
       }),
     )
-    .toEqual({ effect: "fade", speed: 300 });
+    .toEqual({ effect: "fade", speed: 0 });
 
   await page
     .locator('wzc-camera-navigation button[data-value="camera.back"]')
     .click();
   await page.waitForTimeout(75);
-  expect(
-    await carousel.evaluate((element) => {
-      const swiper = (
-        element as HTMLElement & {
-          swiper?: { activeIndex: number; animating: boolean };
-        }
-      ).swiper;
-      return { activeIndex: swiper?.activeIndex, animating: swiper?.animating };
-    }),
-  ).toEqual({ activeIndex: 1, animating: true });
-  await expect
-    .poll(() =>
-      carousel.evaluate(
-        (element) =>
-          (element as HTMLElement & { swiper?: { animating: boolean } }).swiper
-            ?.animating,
-      ),
-    )
-    .toBe(false);
+  await expect(carousel).toHaveClass(/camera-carousel-transitioning/);
+  await expect(carousel).not.toHaveClass(/camera-carousel-transitioning/);
 
   await carousel
     .locator(".carousel-navigation.previous")
@@ -2464,6 +2427,11 @@ test("keeps minimal camera actions and media controls independent", async ({
   );
   const mute = minimal.getByRole("button", { name: "Unmute" });
   await mute.click();
+  expect(
+    await audioControl.evaluate(
+      (element) => element.getAnimations({ subtree: true }).length,
+    ),
+  ).toBeGreaterThan(0);
   await expect(minimal.getByRole("button", { name: "Mute" })).toBeVisible();
   await expect(audioControl).toHaveClass(/expanded/);
   await expect(
@@ -2478,7 +2446,7 @@ test("keeps minimal camera actions and media controls independent", async ({
     await audioControl.evaluate(
       (element) => getComputedStyle(element).transitionDuration,
     ),
-  ).not.toBe("0s");
+  ).toBe("0s");
   expect(
     await page.evaluate(
       () =>
@@ -6661,7 +6629,10 @@ test("preserves expanded camera-stage geometry across carousel selection", async
   const previousNavigation = page.locator(
     "wzc-camera .carousel-navigation.previous",
   );
-  await expect(previousNavigation).toBeHidden();
+  await page.mouse.move(0, 0);
+  await expect(previousNavigation).toBeHidden({
+    timeout: MEDIA_OVERLAY_HIDE_DELAY_MS + 1_000,
+  });
   await page.locator("wzc-camera-live .viewport").nth(1).hover();
   await expect(previousNavigation).toBeVisible();
   await page.mouse.move(0, 0);

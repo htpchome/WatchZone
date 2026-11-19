@@ -13,16 +13,12 @@ export const recordedVideoTransportStyles = css`
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-    transition:
-      opacity var(--wzc-media-overlay-transition-duration) ease,
-      visibility 0s linear var(--wzc-media-overlay-transition-duration);
   }
 
   :host([visible]) {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
-    transition-delay: 0s;
   }
 
   :host([viewport-edge]) {
@@ -175,12 +171,6 @@ export const recordedVideoTransportStyles = css`
     .time {
       min-inline-size: 4rem;
       font-size: 0.6875rem;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    :host {
-      transition: none;
     }
   }
 `;

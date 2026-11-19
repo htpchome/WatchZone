@@ -29,10 +29,6 @@ export const sortableTileStyles = css`
     border-radius: var(--wzc-sortable-radius);
     box-shadow: var(--wzc-sortable-shadow);
     transform: translateY(var(--wzc-sortable-drag-offset, 0px));
-    transition:
-      transform var(--wzc-media-overlay-transition-duration) ease,
-      border-color var(--wzc-media-overlay-transition-duration) ease,
-      opacity var(--wzc-media-overlay-transition-duration) ease;
   }
 
   :host([dragging]) {
@@ -43,11 +39,6 @@ export const sortableTileStyles = css`
   :host([dragging]) .tile {
     opacity: 0.82;
     box-shadow: var(--wzc-shadow-medium);
-    transition: none;
-  }
-
-  :host([settling]) .tile {
-    transition: none;
   }
 
   :host([settle-lifted]) .tile {
@@ -103,11 +94,5 @@ export const sortableTileStyles = css`
 
   ::slotted([slot="actions"]) {
     flex: 0 0 auto;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .tile {
-      transition: none;
-    }
   }
 `;

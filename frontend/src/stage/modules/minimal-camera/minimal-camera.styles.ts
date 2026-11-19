@@ -151,7 +151,6 @@ const minimalCameraComponentStyles = css`
     border: 1px solid var(--wzc-media-overlay-border-color);
     border-radius: var(--wzc-radius-pill);
     box-shadow: var(--wzc-media-overlay-shadow);
-    transition: inline-size var(--wzc-media-overlay-transition-duration) ease;
   }
 
   .audio-control.expanded {
@@ -183,7 +182,6 @@ const minimalCameraComponentStyles = css`
     cursor: pointer;
     pointer-events: none;
     touch-action: none;
-    transition: opacity var(--wzc-media-overlay-transition-duration) ease;
   }
 
   .control-menu.right .volume-slider {
@@ -419,13 +417,6 @@ const minimalCameraComponentStyles = css`
   @media (hover: hover) and (pointer: fine) {
     .dialog-close:hover {
       color: var(--wzc-color-primary);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .audio-control,
-    .volume-slider {
-      transition: none;
     }
   }
 `;

@@ -45,6 +45,11 @@ import { CameraActivityHighlightController } from "../../camera-presentation/act
 import { CameraRuntimeController } from "../../camera-presentation/runtime.controller";
 import { renderCameraSuspendedPresentation } from "../../camera-presentation/suspended-presentation";
 import { minimalCameraStyles } from "./minimal-camera.styles";
+import {
+  motionDurations,
+  motionEasings,
+  OwnedMotion,
+} from "../../../ui/motion";
 import { MinimalLiveDialogController } from "./minimal-live-dialog.controller";
 
 interface MinimalCameraConfig {
@@ -90,6 +95,9 @@ export class MinimalCameraModule extends LitElement {
   private _snapshotError?: string;
   private _snapshotPending = false;
   private _tapTimer?: ReturnType<typeof setTimeout>;
+  private readonly _audioControlMotion = new OwnedMotion();
+  private readonly _volumeMotion = new OwnedMotion();
+  private _renderedAudioExpanded?: boolean;
   private readonly _activity = new CameraActivityHighlightController(this);
   private readonly _runtime = new CameraRuntimeController(this);
   private readonly _dialog = new MinimalLiveDialogController(this, {
@@ -363,9 +371,38 @@ export class MinimalCameraModule extends LitElement {
     this._dialog.sync();
     this._attachMedia();
     this._audio.syncMediaState();
+    const audioControl =
+      this.renderRoot.querySelector<HTMLElement>(".audio-control") ?? undefined;
+    const volume =
+      this.renderRoot.querySelector<HTMLElement>(".volume-slider") ?? undefined;
+    const expanded = audioControl?.classList.contains("expanded") ?? false;
+    if (
+      audioControl &&
+      volume &&
+      this._renderedAudioExpanded !== undefined &&
+      this._renderedAudioExpanded !== expanded
+    ) {
+      this._audioControlMotion.start(
+        audioControl,
+        {
+          inlineSize: expanded
+            ? "calc(var(--wzc-control-size) + 5rem)"
+            : "var(--wzc-control-size)",
+        },
+        { duration: motionDurations.overlay, ease: motionEasings.standard },
+      );
+      this._volumeMotion.start(
+        volume,
+        { opacity: expanded ? 1 : 0 },
+        { duration: motionDurations.overlay, ease: motionEasings.standard },
+      );
+    }
+    this._renderedAudioExpanded = expanded;
   }
 
   public disconnectedCallback(): void {
+    this._audioControlMotion.cancel();
+    this._volumeMotion.cancel();
     this._cancelHold();
     this._closeControlMenu();
     if (this._tapTimer !== undefined) clearTimeout(this._tapTimer);
