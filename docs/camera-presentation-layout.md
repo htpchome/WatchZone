@@ -108,9 +108,11 @@ camera or make the media region unusable. Module minimums derive from current
 CSS geometry, so supported theme or user changes to tile sizing also change the
 minimum without a parallel pixel constant.
 
-The built-in mobile Full Stage uses a separate Companion-phone landscape
-presentation. It occupies the fixed WebView, covers Home Assistant's dashboard
-chrome, and applies viewport safe-area padding. The leading 60% contains a
+The built-in mobile Full Stage supports a configured Companion-phone rotate
+action. None leaves the ordinary phone presentation under Companion's rotated
+WebView. Double Column is the default separate landscape presentation. It
+occupies the fixed WebView, covers Home Assistant's dashboard chrome, and
+applies viewport safe-area padding. The leading 60% contains a
 16:9 camera plus camera navigation; the trailing 40% contains the active
 Reviews, Events, Recordings, or Exports stack. The independently placeable
 activity-navigation module sits above that stack inside the trailing surface.
@@ -124,6 +126,17 @@ on the tile footer with the AI-analysis and information controls. The camera
 uses rounded corners and hides its resize handle, independent of the ordinary
 phone Camera appearance setting. This overlay does not activate for browser
 phones, Companion tablets, or incompatible Stage types.
+
+Fullscreen Live Video starts from the same retained Full Stage and immediately
+opens its existing WatchZone camera overlay to the viewport-covering state.
+It does not request browser-native video fullscreen, create another Camera
+module, or acquire another media session. The existing pull handle remains the
+owner of returning to the Double Column state. Camera Only exposes the same
+authoring choices for configuration consistency, but its current Stage has no
+Companion rotate presentation and therefore performs no rotate action.
+Minimal Camera Stage omits Double Column; Fullscreen Live Video opens its
+existing internal live dialog as a viewport-covering presentation and closes
+that automatically opened presentation when the phone returns to portrait.
 
 Orientation retains the same Stage nodes and live sessions. The Stage owns two
 real nested containers: Camera plus camera navigation, and activity navigation

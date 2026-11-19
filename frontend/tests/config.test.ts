@@ -30,6 +30,7 @@ describe("WatchZone card configuration", () => {
       camera_shadows: true,
       camera_shadows_phone: false,
       camera_switcher_overlay: false,
+      companion_rotate_action: "double_column",
       card_height_mode: "auto",
       card_height_mode_phone: "auto",
       display_event_type_badges: true,
@@ -89,6 +90,19 @@ describe("WatchZone card configuration", () => {
       normalizeCardConfig({ card_height_mode_phone: "viewport" }),
     ).toThrow(
       "card_height_mode_phone must be auto, fit_viewport, or fill_container",
+    );
+  });
+
+  it("normalizes the Companion rotate action", () => {
+    expect(
+      normalizeCardConfig({
+        companion_rotate_action: "fullscreen_live_video",
+      }).companion_rotate_action,
+    ).toBe("fullscreen_live_video");
+    expect(() =>
+      normalizeCardConfig({ companion_rotate_action: "fullscreen" }),
+    ).toThrow(
+      "companion_rotate_action must be none, double_column, or fullscreen_live_video",
     );
   });
 

@@ -8756,6 +8756,124 @@ test("uses mobile viewport sizing without edge-to-edge on Companion tablets", as
   });
 });
 
+test("applies configured Companion rotate actions to the retained Full Stage", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      get: () =>
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Home Assistant/2026.9 Mobile/HomeAssistant, like Safari",
+    });
+  });
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  const card = page.locator("watchzone-card");
+  const setRotateAction = async (action: "none" | "fullscreen_live_video") => {
+    await card.evaluate((element, companionRotateAction) => {
+      const host = element as HTMLElement & {
+        hass: unknown;
+        setConfig(config: unknown): void;
+      };
+      host.setConfig({
+        cameras: [{ entity_id: "camera.front" }],
+        companion_rotate_action: companionRotateAction,
+        type: "custom:watchzone-card",
+      });
+      host.hass = {
+        states: {
+          "camera.front": {
+            entity_id: "camera.front",
+            state: "streaming",
+            attributes: { friendly_name: "Front" },
+          },
+        },
+        connection: { subscribeMessage: async () => () => undefined },
+        hassUrl: (path: string) => path,
+        callService: async () => undefined,
+        callWS: async (message: { type: string }) =>
+          message.type === "watchzone/reviews/list"
+            ? { items: [] }
+            : { ready: false },
+      };
+    }, action);
+  };
+
+  await setRotateAction("none");
+  await expect(card.locator(".stage-grid")).toBeVisible();
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect(card).not.toHaveClass(/companion-phone-landscape/);
+
+  await setRotateAction("fullscreen_live_video");
+  await expect(card).toHaveClass(/companion-phone-landscape/);
+  await expect(card).toHaveClass(/landscape-camera-overlay-expanded/);
+  await expect(card).not.toHaveClass(/landscape-camera-overlay-settling/);
+  await expect(
+    card.locator('.stage-placement[data-layout-node$="default-camera-module"]'),
+  ).toHaveCSS("position", "absolute");
+
+  await setRotateAction("none");
+  await expect(card).not.toHaveClass(/companion-phone-landscape/);
+  await expect(card).not.toHaveClass(/landscape-camera-overlay-active/);
+});
+
+test("opens Minimal Camera Stage live video internally on Companion rotation", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      get: () =>
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Home Assistant/2026.9 Mobile/HomeAssistant, like Safari",
+    });
+  });
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  const card = page.locator("watchzone-card");
+  await card.evaluate((element) => {
+    const host = element as HTMLElement & {
+      hass: unknown;
+      setConfig(config: unknown): void;
+    };
+    host.setConfig({
+      cameras: [{ entity_id: "camera.front" }],
+      companion_rotate_action: "fullscreen_live_video",
+      stage_type: "minimal_camera_only",
+      type: "custom:watchzone-card",
+    });
+    host.hass = {
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "streaming",
+          attributes: { friendly_name: "Front" },
+        },
+      },
+      connection: { subscribeMessage: async () => () => undefined },
+      hassUrl: (path: string) => path,
+      callService: async () => undefined,
+      callWS: async () => ({ ready: false }),
+    };
+  });
+
+  const dialog = card.locator("wzc-minimal-camera .live-dialog");
+  await expect(dialog).not.toHaveAttribute("open", "");
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect(dialog).toHaveAttribute("open", "");
+  await expect(dialog).toHaveClass(/companion-rotate-fullscreen/);
+  const bounds = await dialog.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return { height: rect.height, width: rect.width };
+  });
+  expect(bounds.width).toBeCloseTo(844, 0);
+  expect(bounds.height).toBeCloseTo(390, 0);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(dialog).not.toHaveAttribute("open", "");
+});
+
 test("choreographs two Companion surfaces into 60/40 landscape columns", async ({
   page,
 }) => {
@@ -10051,7 +10169,7 @@ test("editor uses exclusive accordions and shared draft status", async ({
     'wzc-accordion-item[item-key="live-media-player"]',
   );
   const reviews = editor.locator('wzc-accordion-item[item-key="reviews"]');
-  await expect(items).toHaveCount(7);
+  await expect(items).toHaveCount(8);
   await expect(items.locator("details[open]")).toHaveCount(0);
   await expect(
     items.locator("ha-selector, ha-input, wzc-segmented-control"),

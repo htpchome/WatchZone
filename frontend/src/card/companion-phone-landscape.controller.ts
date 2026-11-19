@@ -1,5 +1,6 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
+import type { CompanionRotateAction } from "../core/config";
 import type { LocalizeFunction } from "../core/localization";
 import {
   animateElement,
@@ -16,7 +17,7 @@ interface LandscapeHost extends ReactiveControllerHost, HTMLElement {
   readonly updateComplete: Promise<boolean>;
 }
 
-type CanActivate = () => boolean;
+type GetRotateAction = () => CompanionRotateAction;
 type OrientationChanged = (active: boolean) => void;
 
 const installedHosts = new WeakSet<LandscapeHost>();
@@ -134,7 +135,7 @@ function inverseTransform(
 
 export function installCompanionPhoneLandscape(
   host: LandscapeHost,
-  canActivate: CanActivate,
+  getRotateAction: GetRotateAction,
   orientationChanged: OrientationChanged,
   localize: LocalizeFunction,
 ): void {
@@ -142,7 +143,7 @@ export function installCompanionPhoneLandscape(
   installedHosts.add(host);
   new CompanionPhoneLandscapeController(
     host,
-    canActivate,
+    getRotateAction,
     orientationChanged,
     localize,
   );
@@ -151,6 +152,7 @@ export function installCompanionPhoneLandscape(
 /** Owns Companion-phone orientation changes and the settled Stage reflow. */
 class CompanionPhoneLandscapeController implements ReactiveController {
   private _active = false;
+  private _action: CompanionRotateAction = "none";
   private readonly _animations = new Set<MotionAnimation>();
   private _connected = false;
   private _initialized = false;
@@ -160,7 +162,7 @@ class CompanionPhoneLandscapeController implements ReactiveController {
 
   public constructor(
     private readonly _host: LandscapeHost,
-    private readonly _canActivate: CanActivate,
+    private readonly _getRotateAction: GetRotateAction,
     private readonly _orientationChanged: OrientationChanged,
     localize: LocalizeFunction,
   ) {
@@ -184,11 +186,19 @@ class CompanionPhoneLandscapeController implements ReactiveController {
   }
 
   public hostUpdated(): void {
-    if (this._animations.size === 0 && this._targetActive() === this._active) {
+    const targetAction = this._targetAction();
+    if (
+      this._animations.size === 0 &&
+      (targetAction !== "none") === this._active &&
+      targetAction === this._action
+    ) {
       this._settledSnapshot = this._captureSnapshot();
       if (this._active) this._pull.sync();
     }
-    if (this._targetActive() !== this._active) {
+    if (
+      (targetAction !== "none") !== this._active ||
+      targetAction !== this._action
+    ) {
       this._schedule();
     }
   }
@@ -206,13 +216,20 @@ class CompanionPhoneLandscapeController implements ReactiveController {
 
   private readonly _schedule = (): void => {
     if (!this._connected) return;
-    if (this._initialized && this._targetActive() !== this._active) {
+    const targetAction = this._targetAction();
+    if (
+      this._initialized &&
+      ((targetAction !== "none") !== this._active ||
+        targetAction !== this._action)
+    ) {
       void this._sync();
     }
   };
 
-  private _targetActive(): boolean {
-    return window.innerWidth > window.innerHeight && this._canActivate();
+  private _targetAction(): CompanionRotateAction {
+    return window.innerWidth > window.innerHeight
+      ? this._getRotateAction()
+      : "none";
   }
 
   private _captureSnapshot(): TransitionSnapshot {
@@ -316,14 +333,21 @@ class CompanionPhoneLandscapeController implements ReactiveController {
   }
 
   private async _sync(): Promise<void> {
-    const active = this._targetActive();
+    const action = this._targetAction();
+    const active = action !== "none";
     const animate = this._initialized && !reducedMotionRequested();
     this._initialized = true;
-    if (active === this._active) {
+    if (active === this._active && action === this._action) {
       if (this._animations.size === 0) {
         this._settledSnapshot = this._captureSnapshot();
         if (active) this._pull.sync();
       }
+      return;
+    }
+    if (active && this._active && action !== this._action) {
+      this._action = action;
+      this._pull.setExpanded(action === "fullscreen_live_video");
+      this._settledSnapshot = this._captureSnapshot();
       return;
     }
     const generation = ++this._transitionGeneration;
@@ -336,6 +360,7 @@ class CompanionPhoneLandscapeController implements ReactiveController {
       this._host.classList.add("companion-phone-orientation-transitioning");
     }
     this._active = active;
+    this._action = action;
     this._host.classList.toggle("companion-phone-landscape", active);
     this._orientationChanged(active);
     await this._host.updateComplete;
@@ -347,7 +372,7 @@ class CompanionPhoneLandscapeController implements ReactiveController {
     if (this._connected && this._active === active && active) {
       await nextFrame();
       if (!this._isCurrent(active, generation)) return;
-      this._pull.activate();
+      this._pull.activate(action === "fullscreen_live_video");
     }
   }
 

@@ -129,8 +129,10 @@ appearance, and edge-to-edge selection; a Companion tablet retains the
 standard presentation while using the mobile viewport-height mode.
 
 The built-in mobile Full Stage has one narrower host-specific exception. On a
-physical phone inside Companion, rotating the fixed WebView to landscape
-presents the compatible wide Stage variant as a viewport-edge overlay. The
+physical phone inside Companion, an explicit card preference may leave the
+ordinary phone presentation unchanged, present the compatible wide Stage
+variant as a viewport-edge 60/40 overlay, or open that overlay's existing
+WatchZone camera presentation to its viewport-covering state. The
 same Stage nodes and live sessions are retained in a 60/40 camera/activity
 composition. Companion owns the physical WebView rotation; WatchZone does not
 add a second `rotate()`. On the first landscape aspect-ratio change, WatchZone
@@ -146,6 +148,10 @@ ResizeObserver updates. Returning to portrait releases the fixed overlay
 immediately so Home Assistant's own header and flow become authoritative
 without an assumed header height while the same two surfaces settle. Browser
 phones and every tablet remain outside this controller.
+
+Minimal Camera Stage uses its existing internal live dialog for its reduced
+Fullscreen Live Video rotate choice; it does not request browser-native
+fullscreen.
 
 ### 2.3 Theme profile
 

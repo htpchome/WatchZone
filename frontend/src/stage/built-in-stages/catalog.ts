@@ -268,6 +268,7 @@ function hydrateModule(
         highlightActivity: config.highlight_camera_on_activity,
         holdAction: config.hold_action,
         menuPosition: config.minimal_camera_menu_position,
+        rotateAction: config.companion_rotate_action,
         showFullscreenButton: config.minimal_camera_show_fullscreen_button,
         showMuteButton: config.minimal_camera_show_mute_button,
         showPictureInPictureButton: config.minimal_camera_show_pip_button,

@@ -578,7 +578,12 @@ export class DashboardCard extends LitElement {
       .then(({ installCompanionPhoneLandscape }) =>
         installCompanionPhoneLandscape(
           this,
-          () => (this._previewConfig ?? this._config).stage_type === "full",
+          () => {
+            const config = this._previewConfig ?? this._config;
+            return config.stage_type === "full"
+              ? config.companion_rotate_action
+              : "none";
+          },
           (active) =>
             this._layoutRuntime.setInlineSize(
               active

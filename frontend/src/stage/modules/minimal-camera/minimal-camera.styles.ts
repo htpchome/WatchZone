@@ -279,6 +279,27 @@ const minimalCameraComponentStyles = css`
     flex-direction: column;
   }
 
+  .live-dialog.companion-rotate-fullscreen {
+    inset: 0;
+    inline-size: 100vw;
+    block-size: 100dvh;
+    max-inline-size: none;
+    max-block-size: none;
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .live-dialog.companion-rotate-fullscreen .live-dialog-media {
+    min-block-size: 0;
+    flex: 1;
+    aspect-ratio: auto;
+  }
+
+  .live-dialog.companion-rotate-fullscreen .live-dialog-footer,
+  .live-dialog.companion-rotate-fullscreen .resize-handle {
+    display: none;
+  }
+
   .live-dialog.dragged {
     inset: auto;
     margin: 0;

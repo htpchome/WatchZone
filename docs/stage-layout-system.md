@@ -229,8 +229,14 @@ headings.
 - Unknown or failed placeables fail locally and do not block siblings.
 - Responsive variant selection uses the card container's inline size.
 - The isolated Companion-phone landscape controller may select a compatible
-  mobile Full Stage's wide variant. It does not change physical-client flow,
-  Stage selection, or tablet/browser presentation.
+  mobile Full Stage's wide variant when the configured rotate action requests
+  Double Column or Fullscreen Live Video. Fullscreen Live Video uses the same
+  retained Camera module and existing pull-overlay owner. None leaves the
+  ordinary phone presentation unchanged. The controller does not change
+  physical-client flow, Stage selection, or tablet/browser presentation.
+- Minimal Camera Stage's reduced Fullscreen Live Video action is owned by that
+  module's existing internal live dialog; it does not introduce another Stage
+  placeable or media session.
 - Variant changes reuse records by stable node ID and compatible type.
 - Module-stack selection is local runtime interaction state and is not written
   into the saved Stage Design.

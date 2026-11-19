@@ -34,6 +34,44 @@ function item(revision: string): ActivityListItem {
 describe("activity list media failures", () => {
   afterEach(() => document.body.replaceChildren());
 
+  it("clears stale Top visibility when a retained list reconnects at the beginning", async () => {
+    const list = document.createElement(ACTIVITY_LIST_TAG) as ActivityList;
+    list.items = Array.from({ length: 4 }, (_, index) => ({
+      ...item(`scroll-${index}`),
+      id: `review-${index}`,
+      startTime: 100 - index,
+    }));
+    document.body.append(list);
+    await list.updateComplete;
+    const scroller = list.shadowRoot?.querySelector<HTMLElement>(".scroller");
+    if (!scroller) throw new Error("Expected activity scroller.");
+    Object.defineProperties(scroller, {
+      clientHeight: { configurable: true, value: 200 },
+      scrollHeight: { configurable: true, value: 800 },
+      scrollTop: { configurable: true, value: 200, writable: true },
+    });
+    const tile = scroller.querySelector<HTMLElement>(".tile");
+    if (!tile) throw new Error("Expected activity tile.");
+    tile.getBoundingClientRect = () => ({ height: 80 }) as DOMRect;
+    scroller.dispatchEvent(new Event("scroll"));
+    await list.updateComplete;
+    expect(
+      list.shadowRoot?.querySelector("wzc-scroll-top")?.hasAttribute("hidden"),
+    ).toBe(false);
+
+    list.remove();
+    scroller.scrollTop = 0;
+    document.body.append(list);
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve()),
+    );
+    await list.updateComplete;
+
+    expect(
+      list.shadowRoot?.querySelector("wzc-scroll-top")?.hasAttribute("hidden"),
+    ).toBe(true);
+  });
+
   it("does not retry or flash the same failed media across metadata revisions", async () => {
     const list = document.createElement(ACTIVITY_LIST_TAG) as ActivityList;
     const retries: ActivityListIntent[] = [];

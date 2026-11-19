@@ -63,12 +63,18 @@ export class CompanionCameraPullController {
     private readonly _localize: LocalizeFunction,
   ) {}
 
-  public activate(): void {
+  public activate(expanded = false): void {
     if (!this._active) {
       this._active = true;
       window.addEventListener("keydown", this._handleWindowKeydown);
     }
     this.sync();
+    if (expanded) this._settle(1);
+  }
+
+  public setExpanded(expanded: boolean): void {
+    if (!this._active || expanded === this._expanded) return;
+    this._settle(expanded ? 1 : 0);
   }
 
   public sync(): void {
@@ -266,6 +272,9 @@ export class CompanionCameraPullController {
     this._cancelSettle();
     const generation = this._settleGeneration;
     this._expanded = target === 1;
+    if (this._expanded) {
+      this._host.classList.add("landscape-camera-overlay-active");
+    }
     this._host.classList.toggle(
       "landscape-camera-overlay-expanded",
       this._expanded,

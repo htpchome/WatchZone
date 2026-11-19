@@ -14,6 +14,7 @@ import {
   type AlertTakeoverMode,
   type CameraConfig,
   type CardConfig,
+  type CompanionRotateAction,
   type FrigateFallbackTransport,
   type LiveConnectionType,
   type MinimalCameraMenuPosition,
@@ -79,6 +80,7 @@ import {
   renderGeneralSettings,
   renderLayoutSettings,
   renderLiveMediaPlayerSettings,
+  renderMobileAndTouchSettings,
   renderMinimalCameraSettings,
   renderReviewSettings,
 } from "./settings-sections";
@@ -112,6 +114,7 @@ type EditorSectionKey =
   | "interactions"
   | "layout"
   | "live-media-player"
+  | "mobile-and-touch"
   | "minimal-camera-configuration"
   | "recorded-media-player"
   | "reviews"
@@ -384,6 +387,20 @@ export class CardEditor extends LitElement {
         </${accordionItemTag}>`
             : null
         }
+        <${accordionItemTag}
+          heading=${this._t("editor.mobile_and_touch")}
+          item-key="mobile-and-touch"
+          .icon=${"tune"}
+        >
+          ${this._renderSection("mobile-and-touch", () =>
+            renderMobileAndTouchSettings({
+              ...commonSettings,
+              minimal,
+              onCompanionRotateActionChange:
+                this._handleCompanionRotateActionChange,
+            }),
+          )}
+        </${accordionItemTag}>
         ${
           minimal
             ? staticHtml`<${accordionItemTag}
@@ -1959,6 +1976,27 @@ export class CardEditor extends LitElement {
       [key]: event.detail.value,
     };
     this._applyDraft(normalizeCardConfig(next), true);
+  };
+
+  private readonly _handleCompanionRotateActionChange = (
+    event: CustomEvent<SegmentedControlValueDetail>,
+  ): void => {
+    if (!this._config) return;
+    const action = event.detail.value as CompanionRotateAction;
+    if (
+      action !== "none" &&
+      action !== "double_column" &&
+      action !== "fullscreen_live_video"
+    ) {
+      return;
+    }
+    this._applyDraft(
+      normalizeCardConfig({
+        ...this._config,
+        companion_rotate_action: action,
+      }),
+      true,
+    );
   };
 
   private readonly _handleStageTypeChange = (event: Event): void => {

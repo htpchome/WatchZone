@@ -100,7 +100,7 @@ async function setBooleanSelector(
     );
     const section =
       key === "mobile_data_saving"
-        ? "general"
+        ? "mobile-and-touch"
         : key === "view_timelapse_on_thumbnail_hover"
           ? "reviews"
           : key.startsWith("display_")
@@ -183,6 +183,7 @@ describe("watchzone-card-editor", () => {
     expect(items.map((item) => item.heading)).toEqual([
       "Camera Settings",
       "Stage Management",
+      "Mobile and Touch",
       "Live Media Player",
       "Recorded Media Player",
       "Reviews",
@@ -222,7 +223,10 @@ describe("watchzone-card-editor", () => {
         ?.querySelector('[data-value="slide"]')
         ?.getAttribute("aria-checked"),
     ).toBe("true");
-    expect(items[3]?.childElementCount).toBe(0);
+    expect(
+      items.find((item) => item.itemKey === "recorded-media-player")
+        ?.childElementCount,
+    ).toBe(0);
     const reviews = await openEditorSection(editor, "reviews");
     expect(liveMedia.childElementCount).toBe(0);
     expect(
@@ -379,6 +383,7 @@ describe("watchzone-card-editor", () => {
       "camera",
       "stage-management",
       "minimal-camera-configuration",
+      "mobile-and-touch",
       "interactions",
       "general",
     ]);
@@ -922,7 +927,7 @@ describe("watchzone-card-editor", () => {
     editor.addEventListener("config-changed", changed);
     document.body.append(editor);
     await editor.updateComplete;
-    await openEditorSection(editor, "general");
+    await openEditorSection(editor, "mobile-and-touch");
     const selector = editor.shadowRoot?.querySelector(
       '[data-config-key="mobile_data_saving"]',
     ) as TestBooleanSelector | null;
@@ -938,6 +943,90 @@ describe("watchzone-card-editor", () => {
       title: "Camera",
       mobile_data_saving: true,
     });
+  });
+
+  it("defaults and saves the Companion rotate action", async () => {
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+    await openEditorSection(editor, "mobile-and-touch");
+
+    const control = editor.shadowRoot?.querySelector<SegmentedControl>(
+      '[data-setting="companion-rotate-action"]',
+    );
+    expect(control?.value).toBe("double_column");
+    expect(
+      control?.shadowRoot?.querySelector('[data-value="double_column"]'),
+    ).not.toBeNull();
+
+    control?.shadowRoot
+      ?.querySelector<HTMLButtonElement>('[data-value="fullscreen_live_video"]')
+      ?.click();
+    await editor.updateComplete;
+
+    expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
+      type: CARD_TYPE,
+      title: "Camera",
+      companion_rotate_action: "fullscreen_live_video",
+    });
+  });
+
+  it("removes Double Column from Minimal Camera Stage rotate actions", async () => {
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as CardEditor;
+    editor.setConfig({
+      type: CARD_TYPE,
+      title: "Camera",
+      stage_type: "minimal_camera_only",
+    });
+    document.body.append(editor);
+    await editor.updateComplete;
+    await openEditorSection(editor, "mobile-and-touch");
+
+    const control = editor.shadowRoot?.querySelector<SegmentedControl>(
+      '[data-setting="companion-rotate-action"]',
+    );
+    expect(control?.value).toBe("none");
+    expect(
+      control?.shadowRoot?.querySelector('[data-value="double_column"]'),
+    ).toBeNull();
+    expect(
+      control?.shadowRoot?.querySelector('[data-value="none"]'),
+    ).not.toBeNull();
+    expect(
+      control?.shadowRoot?.querySelector(
+        '[data-value="fullscreen_live_video"]',
+      ),
+    ).not.toBeNull();
+  });
+
+  it("keeps every Companion rotate action available for Camera Only Stage", async () => {
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as CardEditor;
+    editor.setConfig({
+      type: CARD_TYPE,
+      title: "Camera",
+      stage_type: "camera_only",
+    });
+    document.body.append(editor);
+    await editor.updateComplete;
+    await openEditorSection(editor, "mobile-and-touch");
+
+    const control = editor.shadowRoot?.querySelector<SegmentedControl>(
+      '[data-setting="companion-rotate-action"]',
+    );
+    for (const value of ["none", "double_column", "fullscreen_live_video"]) {
+      expect(
+        control?.shadowRoot?.querySelector(`[data-value="${value}"]`),
+      ).not.toBeNull();
+    }
   });
 
   it("shows system versions and the effective Home Assistant time zone", async () => {

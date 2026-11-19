@@ -33,6 +33,8 @@ export type AlertTakeoverMode = "off" | "alerts" | "detections" | "both";
 export type AdditionalCameraLayout = "side_by_side" | "stacked";
 export type MinimalCameraMenuPosition = "top_left" | "top_right";
 export type CardHeightMode = "auto" | "fit_viewport" | "fill_container";
+export type CompanionRotateAction =
+  "none" | "double_column" | "fullscreen_live_video";
 
 export type HomeAssistantAction =
   | "assist"
@@ -81,6 +83,7 @@ export interface CardConfig {
   readonly camera_rounded_corners_phone: boolean;
   readonly camera_shadows: boolean;
   readonly camera_shadows_phone: boolean;
+  readonly companion_rotate_action: CompanionRotateAction;
   readonly display_event_type_badges: boolean;
   readonly display_object_badges: boolean;
   readonly display_zone: boolean;
@@ -228,6 +231,16 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     );
   }
   if (
+    source.companion_rotate_action !== undefined &&
+    source.companion_rotate_action !== "none" &&
+    source.companion_rotate_action !== "double_column" &&
+    source.companion_rotate_action !== "fullscreen_live_video"
+  ) {
+    throw new Error(
+      `${APP_NAME} companion_rotate_action must be none, double_column, or fullscreen_live_video.`,
+    );
+  }
+  if (
     eventHistoryDays !== undefined &&
     (typeof eventHistoryDays !== "number" ||
       !Number.isInteger(eventHistoryDays) ||
@@ -318,6 +331,11 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     source.camera_rounded_corners_phone === true;
   normalized.camera_shadows_phone = source.camera_shadows_phone === true;
   normalized.camera_switcher_overlay = source.camera_switcher_overlay === true;
+  normalized.companion_rotate_action =
+    source.companion_rotate_action === "none" ||
+    source.companion_rotate_action === "fullscreen_live_video"
+      ? source.companion_rotate_action
+      : "double_column";
   normalized.camera_bar_rounded_corners =
     source.camera_bar_rounded_corners !== false;
   normalized.camera_bar_rounded_corners_phone =

@@ -129,6 +129,13 @@ configuration key remains the shared compatibility contract for both Reviews
 and Events; the editor relocation and label do not split or migrate that
 setting.
 
+The Mobile and Touch disclosure owns physical-client and touch-oriented card
+preferences. It contains Mobile Data Saving and the Companion-app rotate
+action. The rotate action uses the shared segmented-control presentation and
+defaults to `double_column`; YAML omits that default. Full Stage and Camera
+Only expose None, Double Column, and Fullscreen Live Video. Minimal Camera
+Stage omits the inapplicable Double Column choice.
+
 Camera grouping is edited atomically with its owning main-camera draft. The
 additional-camera selector uses the standard Home Assistant camera-entity
 picker and therefore displays every discovered camera. Selecting the main
