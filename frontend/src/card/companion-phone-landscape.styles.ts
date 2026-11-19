@@ -111,7 +111,7 @@ export const companionPhoneLandscapeStyles = css`
     align-self: end;
     inline-size: 100%;
     max-inline-size: 100%;
-    margin-block-end: 0.5rem;
+    margin-block-end: 1rem;
   }
 
   :host(.companion-phone-landscape)
