@@ -3,7 +3,7 @@ import { css } from "lit";
 export const recordedVideoPlayerStyles = css`
   :host {
     background: var(--wzc-recorded-media-background);
-    aspect-ratio: 16 / 9;
+    aspect-ratio: var(--wzc-recorded-media-presentation-aspect-ratio, 16 / 9);
     block-size: auto;
     display: block;
     inline-size: 100%;
@@ -18,7 +18,7 @@ export const recordedVideoPlayerStyles = css`
 
   .viewport {
     background: var(--wzc-recorded-media-background);
-    aspect-ratio: 16 / 9;
+    aspect-ratio: var(--wzc-recorded-media-presentation-aspect-ratio, 16 / 9);
     block-size: auto;
     inline-size: 100%;
     min-block-size: 0;

@@ -2,6 +2,7 @@ import { LitElement } from "lit";
 import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
 import {
+  activeRecordedMediaPlayerType,
   cardConfigSignature,
   normalizeCardConfig,
   type CardConfig,
@@ -283,7 +284,10 @@ export class DashboardCard extends LitElement {
                   .api=${this._haApi}
                   .localize=${this._localization.localize}
                   .initialSize=${this._mediaInitialSize}
-                  .playerType=${config.recorded_media_player_type}
+                  .playerType=${activeRecordedMediaPlayerType(
+                    config,
+                    CLIENT_PROFILE.isPhone,
+                  )}
                   .request=${this._mediaRequest}
                 ></${recordedVideoViewerTag}>`
               : null

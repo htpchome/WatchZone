@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { activeCardHeightMode, normalizeCardConfig } from "../src/core/config";
+import {
+  activeCardHeightMode,
+  activeRecordedMediaPlayerType,
+  normalizeCardConfig,
+} from "../src/core/config";
 import { activeDeviceAppearanceConfig } from "../src/features/card-layout";
 import {
   CARD_TYPE,
@@ -118,6 +122,16 @@ describe("WatchZone card configuration", () => {
     expect(() =>
       normalizeCardConfig({ recorded_media_player_type: "future" }),
     ).toThrow("recorded_media_player_type must be draggable or bottom_drawer");
+  });
+
+  it("always selects the bottom drawer on a physical phone", () => {
+    const draggable = normalizeCardConfig({
+      recorded_media_player_type: "draggable",
+    });
+    expect(activeRecordedMediaPlayerType(draggable, false)).toBe("draggable");
+    expect(activeRecordedMediaPlayerType(draggable, true)).toBe(
+      "bottom_drawer",
+    );
   });
 
   it("selects physical-phone appearance independently from card width", () => {

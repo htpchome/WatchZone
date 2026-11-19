@@ -888,3 +888,11 @@ export function activeCardHeightMode(
   if (config.stage_type !== "full") return "auto";
   return isPhone ? config.card_height_mode_phone : config.card_height_mode;
 }
+
+/** Physical phones always use the recorded-media drawer presentation. */
+export function activeRecordedMediaPlayerType(
+  config: CardConfig,
+  isPhone: boolean,
+): RecordedMediaPlayerType {
+  return isPhone ? "bottom_drawer" : config.recorded_media_player_type;
+}

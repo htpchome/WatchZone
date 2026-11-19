@@ -441,6 +441,9 @@ export function renderRecordedMediaPlayerSettings(
         .value=${config?.recorded_media_player_type ?? "draggable"}
         @wzc-segmented-control-value=${options.onPlayerTypeChange}
       ></wzc-segmented-control>
+      <span class="segmented-setting-description">
+        ${localize("editor.recorded_media_player_phone_override")}
+      </span>
     </div>
   `;
 }

@@ -30,6 +30,7 @@ interface DialogContentOptions {
   readonly api?: HomeAssistantApi;
   readonly close: () => void;
   readonly localize: LocalizeFunction;
+  readonly mediaOverlay?: unknown;
   readonly notices: readonly ToastNotice[];
   readonly onHeaderPointerCancel?: (event: PointerEvent) => void;
   readonly onHeaderPointerDown?: (event: PointerEvent) => void;
@@ -77,7 +78,9 @@ export class RecordedMediaDialogContent {
         >
       </div>
       <div class="body">
-        ${this._renderMedia(options)}
+        <div class="media-container">
+          ${this._renderMedia(options)} ${options.mediaOverlay}
+        </div>
         <${informationTag}
           class="media-information"
           .locale=${options.api?.locale}

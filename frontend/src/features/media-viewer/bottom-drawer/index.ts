@@ -14,6 +14,7 @@ import type {
   RecordedMediaInitialGeometry,
   RecordedMediaRequest,
 } from "../../../core/recorded-media";
+import { RESPONSIVE_WIDTHS } from "../../../core/responsive-widths";
 import {
   motionDurations,
   motionEasings,
@@ -21,11 +22,14 @@ import {
 } from "../../../ui/motion";
 import { activityActionStyles } from "../../../ui/activity-action.styles";
 import { buttonBaseStyles } from "../../../ui/button.styles";
+import { renderIcon } from "../../../ui/icons";
 import type { ToastNotice } from "../../../ui/toast-manager";
 import { RecordedMediaDialogContent } from "../dialog-content";
 import { recordedMediaDialogContentStyles } from "../dialog-content.styles";
 import { recordedMediaHeading } from "../media-information";
+import type { RecordedVideoPlayer } from "../recorded-video-player";
 import { bottomDrawerStyles } from "./bottom-drawer.styles";
+import { BottomDrawerMediaResizeController } from "./media-resize.controller";
 
 interface DrawerGesture {
   readonly pointerId: number;
@@ -42,7 +46,7 @@ function composedParent(element: Element): Element | undefined {
   return root instanceof ShadowRoot ? root.host : undefined;
 }
 
-/** Modal recorded-media shell that enters and dismisses from the bottom edge. */
+/** Non-blocking recorded-media shell that enters from the bottom edge. */
 export class RecordedMediaBottomDrawer extends LitElement {
   public static properties = {
     api: { attribute: false },
@@ -63,9 +67,11 @@ export class RecordedMediaBottomDrawer extends LitElement {
   private readonly _content = new RecordedMediaDialogContent(this);
   private _dragFrame?: number;
   private _gesture?: DrawerGesture;
+  private readonly _mediaResize = new BottomDrawerMediaResizeController(this);
   private readonly _motion = new OwnedMotion();
   private _offset = 0;
   private _pendingOffset = 0;
+  private _presentation?: "dialog" | "popover";
   private _transitionGeneration = 0;
 
   public disconnectedCallback(): void {
@@ -73,35 +79,35 @@ export class RecordedMediaBottomDrawer extends LitElement {
     this._motion.cancel();
     this._cancelGesture();
     this._removeViewportListeners();
-    const dialog = this._dialog();
-    if (dialog?.open) dialog.close();
+    this._dismiss();
     super.disconnectedCallback();
   }
 
   protected render() {
     return html`<dialog
+      popover="manual"
+      tabindex="-1"
       aria-label=${
         recordedMediaHeading(this.request, this.localize, this.api?.locale) ||
         this.localize("reviews.activity")
       }
       @cancel=${this._preventCancel}
     >
-      <button
+      <div
         class="drawer-handle"
-        type="button"
-        title=${this.localize("media_player.drag_to_close")}
-        aria-label=${this.localize("media_player.drag_to_close")}
+        aria-hidden="true"
         @pointerdown=${this._startGesture}
         @pointermove=${this._moveGesture}
         @pointerup=${this._finishGesture}
         @pointercancel=${this._cancelGestureEvent}
         @lostpointercapture=${this._cancelGestureEvent}
-      ></button>
+      ></div>
       ${this._content.render({
         active: this._active,
         api: this.api,
         close: this.close,
         localize: this.localize,
+        mediaOverlay: this._renderMediaResizeHandle(),
         notices: this.notices,
         request: this.request,
       })}
@@ -112,10 +118,20 @@ export class RecordedMediaBottomDrawer extends LitElement {
     if (changed.has("request") && this.request) {
       this._active = true;
       this._content.reset();
+      this._mediaResize.reset();
     }
   }
 
   protected updated(changed: Map<PropertyKey, unknown>): void {
+    this._mediaResize.observe(
+      this.request?.kind === "video"
+        ? ((this._content.mediaSurface as RecordedVideoPlayer | null) ??
+            undefined)
+        : undefined,
+      this.renderRoot.querySelector<HTMLButtonElement>(
+        ".media-resize-handle",
+      ) ?? undefined,
+    );
     if (changed.has("request") && this.request) this._open();
   }
 
@@ -125,9 +141,16 @@ export class RecordedMediaBottomDrawer extends LitElement {
 
   private _open(): void {
     const dialog = this._dialog();
-    if (!dialog || dialog.open || this._closing) return;
+    if (!dialog || this._presentation || this._closing) return;
     this._syncGeometry();
-    dialog.showModal();
+    if (typeof dialog.showPopover === "function") {
+      dialog.showPopover();
+      this._presentation = "popover";
+    } else {
+      dialog.show();
+      this._presentation = "dialog";
+    }
+    dialog.focus({ preventScroll: true });
     this._addViewportListeners();
     const height = dialog.getBoundingClientRect().height;
     const generation = ++this._transitionGeneration;
@@ -140,7 +163,8 @@ export class RecordedMediaBottomDrawer extends LitElement {
         duration: motionDurations.layout,
         ease: motionEasings.out,
         onComplete: () => {
-          if (generation !== this._transitionGeneration || !dialog.open) return;
+          if (generation !== this._transitionGeneration || !this._presentation)
+            return;
           this._motion.cancel();
           dialog.style.transform = "translateY(0px)";
         },
@@ -150,7 +174,7 @@ export class RecordedMediaBottomDrawer extends LitElement {
 
   private async _close(): Promise<void> {
     const dialog = this._dialog();
-    if (!dialog?.open || this._closing) return;
+    if (!dialog || !this._presentation || this._closing) return;
     this._closing = true;
     this._cancelGesture();
     const generation = ++this._transitionGeneration;
@@ -173,7 +197,7 @@ export class RecordedMediaBottomDrawer extends LitElement {
     if (generation !== this._transitionGeneration) return;
     this._motion.cancel();
     dialog.style.removeProperty("transform");
-    dialog.close();
+    this._dismiss();
     this._removeViewportListeners();
     this._closing = false;
     this._active = false;
@@ -192,7 +216,7 @@ export class RecordedMediaBottomDrawer extends LitElement {
 
   private readonly _startGesture = (event: PointerEvent): void => {
     if (event.button !== 0 || this._closing) return;
-    const handle = event.currentTarget as HTMLButtonElement;
+    const handle = event.currentTarget as HTMLElement;
     event.preventDefault();
     this._transitionGeneration += 1;
     this._motion.cancel();
@@ -216,7 +240,7 @@ export class RecordedMediaBottomDrawer extends LitElement {
     event.preventDefault();
     this._flushGestureOffset();
     this._gesture = undefined;
-    const handle = event.currentTarget as HTMLButtonElement;
+    const handle = event.currentTarget as HTMLElement;
     if (handle.hasPointerCapture(event.pointerId)) {
       handle.releasePointerCapture(event.pointerId);
     }
@@ -244,7 +268,7 @@ export class RecordedMediaBottomDrawer extends LitElement {
 
   private _settleOpen(): void {
     const dialog = this._dialog();
-    if (!dialog?.open || this._closing) return;
+    if (!dialog || !this._presentation || this._closing) return;
     const start = Math.max(0, this._offset);
     const generation = ++this._transitionGeneration;
     this._motion.start(
@@ -254,7 +278,8 @@ export class RecordedMediaBottomDrawer extends LitElement {
         duration: motionDurations.settle,
         ease: motionEasings.standard,
         onComplete: () => {
-          if (generation !== this._transitionGeneration || !dialog.open) return;
+          if (generation !== this._transitionGeneration || !this._presentation)
+            return;
           this._offset = 0;
           this._motion.cancel();
           dialog.style.transform = "translateY(0px)";
@@ -282,8 +307,7 @@ export class RecordedMediaBottomDrawer extends LitElement {
     if (this._dragFrame !== undefined) cancelAnimationFrame(this._dragFrame);
     this._dragFrame = undefined;
     const gesture = this._gesture;
-    const handle =
-      this.renderRoot.querySelector<HTMLButtonElement>(".drawer-handle");
+    const handle = this.renderRoot.querySelector<HTMLElement>(".drawer-handle");
     if (gesture && handle?.hasPointerCapture(gesture.pointerId)) {
       handle.releasePointerCapture(gesture.pointerId);
     }
@@ -299,7 +323,10 @@ export class RecordedMediaBottomDrawer extends LitElement {
     const viewportWidth = viewport?.width ?? window.innerWidth;
     const viewportHeight = viewport?.height ?? window.innerHeight;
     const cardRect = this._ownerCard()?.getBoundingClientRect();
-    const desiredWidth = cardRect?.width ?? viewportWidth;
+    const desiredWidth = Math.max(
+      cardRect?.width ?? viewportWidth,
+      RESPONSIVE_WIDTHS.medium,
+    );
     const width = Math.min(desiredWidth, viewportWidth);
     const desiredLeft = cardRect
       ? cardRect.left + (cardRect.width - width) / 2
@@ -313,6 +340,10 @@ export class RecordedMediaBottomDrawer extends LitElement {
     dialog.style.setProperty(
       "--wzc-recorded-media-drawer-viewport-height",
       `${viewportHeight}px`,
+    );
+    dialog.style.setProperty(
+      "--wzc-recorded-media-drawer-open-height",
+      `${viewportHeight * 0.82}px`,
     );
   };
 
@@ -341,6 +372,49 @@ export class RecordedMediaBottomDrawer extends LitElement {
 
   private _dialog(): HTMLDialogElement | null {
     return this.renderRoot.querySelector("dialog");
+  }
+
+  private _dismiss(): void {
+    const dialog = this._dialog();
+    const presentation = this._presentation;
+    this._presentation = undefined;
+    if (!dialog || !presentation) return;
+    if (presentation === "popover") {
+      try {
+        dialog.hidePopover();
+      } catch {
+        // The browser may already have removed the top-layer presentation.
+      }
+    } else if (dialog.open) {
+      dialog.close();
+    }
+  }
+
+  private _renderMediaResizeHandle(): unknown {
+    if (this.request?.kind !== "video") return null;
+    return html`<button
+      class="media-resize-handle"
+      type="button"
+      role="slider"
+      title=${this.localize("camera.stage_resize_title")}
+      aria-label=${this.localize("camera.stage_height")}
+      aria-orientation="vertical"
+      aria-valuemin="56"
+      aria-valuemax="100"
+      aria-valuenow=${String(this._mediaResize.heightPercentage)}
+      aria-valuetext=${this.localize("camera.stage_height_value", {
+        percent: this._mediaResize.heightPercentage,
+      })}
+      @pointerdown=${this._mediaResize.handlePointerDown}
+      @pointermove=${this._mediaResize.handlePointerMove}
+      @pointerup=${this._mediaResize.handlePointerUp}
+      @pointercancel=${this._mediaResize.handlePointerCancel}
+      @lostpointercapture=${this._mediaResize.handleLostPointerCapture}
+      @dblclick=${this._mediaResize.handleDoubleClick}
+      @keydown=${this._mediaResize.handleKeyDown}
+    >
+      ${renderIcon("chevronDown")}
+    </button>`;
   }
 
   static styles = [

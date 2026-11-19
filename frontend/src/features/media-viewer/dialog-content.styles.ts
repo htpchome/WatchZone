@@ -87,8 +87,13 @@ export const recordedMediaDialogContentStyles = css`
     color: var(--wzc-color-primary);
   }
 
+  .media-container {
+    min-inline-size: 0;
+    position: relative;
+  }
+
   wzc-recorded-video-player:not([recording-timeline]) {
-    aspect-ratio: 16 / 9;
+    aspect-ratio: var(--wzc-recorded-media-presentation-aspect-ratio, 16 / 9);
   }
 
   wzc-recorded-video-player {

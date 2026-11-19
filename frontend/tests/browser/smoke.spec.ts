@@ -123,6 +123,9 @@ test("loads the responsive WatchZone card shell", async ({ page }) => {
 test("presents recorded media in the configured card-width bottom drawer", async ({
   page,
 }) => {
+  await page.route("**/recording.mp4", (route) =>
+    route.fulfill({ body: "", contentType: "video/mp4" }),
+  );
   await page.goto("/");
   await waitForWatchZoneDefinition(page);
   await page.locator("watchzone-card").evaluate((element) => {
@@ -134,6 +137,8 @@ test("presents recorded media in the configured card-width bottom drawer", async
       type: "custom:watchzone-card",
       recorded_media_player_type: "bottom_drawer",
     });
+    element.style.inlineSize = "500px";
+    element.style.marginInline = "auto";
     const underlying = document.createElement("button");
     underlying.dataset.drawerUnderlying = "true";
     underlying.dataset.clicks = "0";
@@ -154,18 +159,18 @@ test("presents recorded media in the configured card-width bottom drawer", async
           bubbles: true,
           composed: true,
           detail: {
-            id: "review:drawer-snapshot",
-            kind: "snapshot",
+            id: "review:drawer-video",
+            kind: "video",
             presentation: "review",
             preferredTransport: "file",
             sources: [
               {
-                content_type: "image/svg+xml",
+                content_type: "video/mp4",
                 transport: "file",
-                url: "/thumbnail.svg",
+                url: "/recording.mp4",
               },
             ],
-            title: "Drawer snapshot",
+            title: "Drawer video",
           },
         }),
       );
@@ -173,17 +178,37 @@ test("presents recorded media in the configured card-width bottom drawer", async
     await expect(
       page.locator("wzc-recorded-media-bottom-drawer dialog"),
     ).toBeVisible();
+    await expect
+      .poll(() =>
+        page
+          .locator("wzc-recorded-media-bottom-drawer dialog")
+          .evaluate((dialog) => dialog.style.transform),
+      )
+      .toBe("translateY(0px)");
   };
 
   await openDrawer();
   const drawer = page.locator("wzc-recorded-media-bottom-drawer dialog");
   const cardBox = await page.locator("watchzone-card").boundingBox();
   const drawerBox = await drawer.boundingBox();
-  expect(drawerBox?.width).toBeCloseTo(cardBox?.width ?? 0, 0);
-  expect(drawerBox?.x).toBeCloseTo(cardBox?.x ?? 0, 0);
+  expect(drawerBox?.width).toBeCloseTo(768, 0);
+  expect((drawerBox?.x ?? 0) + (drawerBox?.width ?? 0) / 2).toBeCloseTo(
+    (cardBox?.x ?? 0) + (cardBox?.width ?? 0) / 2,
+    0,
+  );
+  expect(drawerBox?.height ?? 0).toBeGreaterThan(
+    (page.viewportSize()?.height ?? 0) * 0.78,
+  );
   await expect(
     page.locator("wzc-recorded-media-bottom-drawer .resize-handle"),
   ).toHaveCount(0);
+  await expect
+    .poll(() =>
+      page
+        .locator("wzc-recorded-media-bottom-drawer")
+        .evaluate((element) => element.shadowRoot?.activeElement?.localName),
+    )
+    .toBe("dialog");
   expect(
     await drawer.evaluate(
       (dialog) => getComputedStyle(dialog, "::backdrop").backgroundColor,
@@ -196,8 +221,29 @@ test("presents recorded media in the configured card-width bottom drawer", async
   await expect(drawer).toBeVisible();
   await expect(page.locator('[data-drawer-underlying="true"]')).toHaveAttribute(
     "data-clicks",
-    "0",
+    "1",
   );
+
+  const mediaPlayer = page.locator(
+    "wzc-recorded-media-bottom-drawer wzc-recorded-video-player",
+  );
+  const mediaResizeHandle = page.locator(
+    "wzc-recorded-media-bottom-drawer .media-resize-handle",
+  );
+  const initialMediaBox = await mediaPlayer.boundingBox();
+  const mediaResizeBox = await mediaResizeHandle.boundingBox();
+  if (!initialMediaBox || !mediaResizeBox) {
+    throw new Error("Recorded media resize handle was not rendered");
+  }
+  const mediaResizeX = mediaResizeBox.x + mediaResizeBox.width / 2;
+  const mediaResizeY = mediaResizeBox.y + mediaResizeBox.height / 2;
+  await page.mouse.move(mediaResizeX, mediaResizeY);
+  await page.mouse.down();
+  await page.mouse.move(mediaResizeX, mediaResizeY + 60);
+  await page.mouse.up();
+  await expect
+    .poll(async () => (await mediaPlayer.boundingBox())?.height ?? 0)
+    .toBeGreaterThan(initialMediaBox.height);
 
   const handle = page.locator(
     "wzc-recorded-media-bottom-drawer .drawer-handle",

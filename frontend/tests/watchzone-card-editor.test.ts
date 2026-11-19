@@ -233,6 +233,9 @@ describe("watchzone-card-editor", () => {
     );
     await recordedMediaType?.updateComplete;
     expect(recordedMediaType?.value).toBe("draggable");
+    expect(recordedMedia.textContent).toContain(
+      "Mobile Phones will Always use the Bottom Drawer.",
+    );
     expect(
       recordedMediaType?.shadowRoot?.querySelector('[data-value="future"]'),
     ).toHaveProperty("disabled", true);

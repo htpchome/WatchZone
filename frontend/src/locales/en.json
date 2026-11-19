@@ -73,6 +73,7 @@
   "editor.recorded_media_player_draggable": "Draggable",
   "editor.recorded_media_player_bottom_drawer": "Bottom Drawer",
   "editor.recorded_media_player_future": "Future",
+  "editor.recorded_media_player_phone_override": "Mobile Phones will Always use the Bottom Drawer.",
   "editor.reviews": "Reviews",
   "editor.view_timelapse_on_thumbnail_hover": "View timelapse when thumbnail is hovered",
   "editor.general_settings": "General Settings",

@@ -83,17 +83,17 @@ describe("recorded media player", () => {
     expect(customElements.get(RECORDED_MEDIA_BOTTOM_DRAWER_TAG)).toBeDefined();
   });
 
-  it("opens the configured modal drawer and rejects native cancel dismissal", async () => {
-    Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
+  it("opens the configured non-blocking drawer without native cancel dismissal", async () => {
+    Object.defineProperty(HTMLDialogElement.prototype, "showPopover", {
       configurable: true,
       value: function (this: HTMLDialogElement) {
-        this.setAttribute("open", "");
+        this.dataset.testPopoverOpen = "true";
       },
     });
-    Object.defineProperty(HTMLDialogElement.prototype, "close", {
+    Object.defineProperty(HTMLDialogElement.prototype, "hidePopover", {
       configurable: true,
       value: function (this: HTMLDialogElement) {
-        this.removeAttribute("open");
+        delete this.dataset.testPopoverOpen;
       },
     });
     const viewer = document.createElement(
@@ -114,11 +114,11 @@ describe("recorded media player", () => {
     await drawer.updateComplete;
     const dialog = drawer.shadowRoot?.querySelector("dialog");
 
-    expect(dialog?.open).toBe(true);
+    expect(dialog?.dataset.testPopoverOpen).toBe("true");
     expect(
       dialog?.dispatchEvent(new Event("cancel", { cancelable: true })),
     ).toBe(false);
-    expect(dialog?.open).toBe(true);
+    expect(dialog?.dataset.testPopoverOpen).toBe("true");
   });
 
   it("opens direct file playback muted with custom transport controls and cleans up", async () => {

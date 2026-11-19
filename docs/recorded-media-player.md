@@ -199,19 +199,28 @@ viewing. Recording discovery and grouping are governed by
 
 ## Bottom-drawer viewer
 
-- `recorded_media_player_type: bottom_drawer` selects one shared modal drawer
-  for Review, Event, Recording, Export, and snapshot requests. The default
-  `draggable` value preserves the non-modal draggable presentation.
-- The drawer is a WatchZone-owned native modal dialog. Its backdrop is visually
-  transparent, but the browser modal boundary blocks interaction with the card
-  beneath it. Backdrop activation and Escape do not dismiss the drawer.
+- `recorded_media_player_type: bottom_drawer` selects one shared drawer for
+  Review, Event, Recording, Export, and snapshot requests. The default
+  `draggable` value preserves the draggable presentation on non-phone clients.
+  Physical phones always resolve recorded media to the bottom drawer regardless
+  of the stored editor choice.
+- The drawer is a WatchZone-owned manual popover on a non-modal browser dialog,
+  with a non-modal dialog fallback where the Popover API is unavailable. It has
+  no scrim, does not light-dismiss, and does not prevent interaction with Home
+  Assistant navigation or other content outside WatchZone. Escape does not
+  dismiss the drawer.
 - The drawer enters from the physical bottom edge through the shared Motion
-  boundary. It is horizontally centered on the owning card, uses the card's
-  inline size when that fits the visible viewport, and clamps to the visible
-  viewport otherwise.
+  boundary. It is horizontally centered on the owning card and uses the greater
+  of the card's inline size or `768px`, then clamps to the visible viewport so a
+  physical phone is never forced wider than its viewport.
 - The header and pull handle remain fixed. The content region grows up to the
-  safe visible viewport top and owns any required vertical scrolling. The
-  drawer is not resizable.
+  safe visible viewport top, opens at 82% of the visible viewport height, and
+  owns any required vertical scrolling. The drawer shell is not resizable.
+- Video requests provide a separate pull-down media handle. It expands the
+  recorded player from its default `16:9` height up to a square height while
+  keeping the width fixed; excess source media is center-cropped through the
+  recorded player's existing display-zoom boundary. Pointer, keyboard, and
+  double-activation reset behavior remain owned by the bottom-drawer shell.
 - The localized top-left close control and a downward drag beginning on the
   pull handle are the only dismissal paths. Releasing before the bounded close
   threshold settles the drawer back open; crossing it animates the drawer out

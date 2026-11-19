@@ -140,8 +140,10 @@ The Recorded Media Player disclosure owns the presentation used by every
 recorded-media request, including Reviews, Events, Recordings, Exports, and
 snapshot variants. Media Player type uses the shared segmented-control
 presentation. `draggable` is the normalized default and is omitted from YAML;
-`bottom_drawer` selects the modal drawer. The visible Future choice is disabled
-and is not a valid configuration value.
+`bottom_drawer` selects the drawer. The visible Future choice is disabled and
+is not a valid configuration value. A line directly beneath the control states
+that physical mobile phones always use the Bottom Drawer; this runtime override
+does not rewrite or discard the stored choice used by non-phone clients.
 
 Camera grouping is edited atomically with its owning main-camera draft. The
 additional-camera selector uses the standard Home Assistant camera-entity

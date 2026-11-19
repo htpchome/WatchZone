@@ -81,6 +81,7 @@ const recordingSegmentManagerEvent = unsafeStatic(
 );
 type RecordedVideoControlAction = "fullscreen" | "picture_in_picture";
 const PLAYBACK_RATES = [0.25, 0.5, 1, 2, 5, 10, 25] as const;
+const DEFAULT_PRESENTATION_HEIGHT_RATIO = 9 / 16;
 
 /** Ephemeral recorded-media playback engine. */
 export class RecordedVideoPlayer extends LitElement {
@@ -93,6 +94,18 @@ export class RecordedVideoPlayer extends LitElement {
   public api?: HomeAssistantApi;
   public localize: LocalizeFunction = englishLocalize;
   public request?: RecordedMediaRequest;
+
+  public setPresentationHeightRatio(heightRatio: number): void {
+    this._presentationHeightRatio = Math.min(
+      1,
+      Math.max(DEFAULT_PRESENTATION_HEIGHT_RATIO, heightRatio),
+    );
+    this.style.setProperty(
+      "--wzc-recorded-media-presentation-aspect-ratio",
+      String(1 / this._presentationHeightRatio),
+    );
+    this._syncBasePresentationScale();
+  }
 
   public readonly toggleSegmentSelection = async (): Promise<void> => {
     const timeline = this.request?.timeline;
@@ -113,6 +126,7 @@ export class RecordedVideoPlayer extends LitElement {
   private _nativePlaybackRate = 1;
   private _paused = true;
   private _pictureInPictureActive = false;
+  private _presentationHeightRatio = DEFAULT_PRESENTATION_HEIGHT_RATIO;
   private _playbackRate = 1;
   private _segmentPreviewActive = false;
   private _segmentPreviewGeneration = 0;
@@ -417,6 +431,21 @@ export class RecordedVideoPlayer extends LitElement {
     this._media.zoom.setMediaDimensions(
       video?.videoWidth ?? 0,
       video?.videoHeight ?? 0,
+    );
+    this._syncBasePresentationScale();
+  }
+
+  private _syncBasePresentationScale(): void {
+    const video = this._video();
+    const mediaHeightRatio =
+      video && video.videoWidth > 0 && video.videoHeight > 0
+        ? video.videoHeight / video.videoWidth
+        : undefined;
+    this._media.zoom.setBasePresentationScale(
+      mediaHeightRatio !== undefined &&
+        this._presentationHeightRatio > mediaHeightRatio
+        ? this._presentationHeightRatio / mediaHeightRatio
+        : 1,
     );
   }
 
