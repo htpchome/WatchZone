@@ -76,9 +76,10 @@ defaults to `false` and is omitted from YAML at its default.
   button for expand/collapse; the larger panel owns split `+` and `-` center
   controls.
 - A panel zoom press uses provider optical zoom while `zoom` capability is
-  reported and shares the normal press/release Stop lifecycle. Otherwise it
-  emits a narrow display-zoom intent through `CameraSessionContext`; Camera's
-  existing zoom controller remains the sole owner of display scale and pan.
+  reported and shares the normal press/release Stop lifecycle. If optical zoom
+  is unavailable or its command is rejected, it emits a narrow display-zoom
+  intent through `CameraSessionContext`; Camera's existing zoom controller
+  remains the sole owner of display scale and pan.
 - The panel presentation remains expanded and is independent from the Camera
   overlay visibility timer and open/closed state. It shows at most the first
   six provider-reported preset names in provider order and wraps them at
@@ -108,6 +109,9 @@ names and service calls remain beneath the provider adapter; the component and
 `ptz-panel` module never branch on Frigate or another provider identity.
 Frigate recall uses the already-discovered preset name and does not make a
 second capability request before issuing the finite service call.
+Frigate motion activation follows the same rule: the provider acts on the
+capability already resolved for the presentation instead of making a second,
+failure-prone discovery request during the press.
 
 The backend serializes movement per camera and gives each request a generation.
 Starting a new request stops the previous request first. Cleanup from a stale

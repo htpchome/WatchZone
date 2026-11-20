@@ -8480,6 +8480,22 @@ test("opens the PTZ panel and recalls a provider preset without a stop subscript
   await expect(panel).toBeVisible();
   await expect(panel.locator("button.wedge")).toHaveCount(4);
   await expect(panel.locator("button.center-half")).toHaveCount(2);
+  const padSeams = await panel.locator(".circle-pad").evaluate((pad) => {
+    const wedge = pad.querySelector("button.wedge");
+    const hub = pad.querySelector(".center-hub");
+    if (!wedge || !hub) throw new Error("PTZ pad surfaces are unavailable");
+    const padStyles = getComputedStyle(pad);
+    const hubStyles = getComputedStyle(hub);
+    return {
+      backing: padStyles.backgroundColor,
+      hubBorder: hubStyles.borderTopWidth,
+      outerBorder: padStyles.borderTopWidth,
+      wedge: getComputedStyle(wedge).backgroundColor,
+    };
+  });
+  expect(padSeams.outerBorder).toBe("0px");
+  expect(padSeams.hubBorder).toBe("0px");
+  expect(padSeams.backing).not.toBe(padSeams.wedge);
   const presetButtons = panel.locator("button.ptz-preset");
   await expect(presetButtons).toHaveCount(6);
   const presetRows = new Set(

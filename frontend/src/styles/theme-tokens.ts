@@ -590,11 +590,7 @@ export const themeTokens = css`
     --wzc-ptz-pad-center-size: 34%;
     --wzc-ptz-pad-center-icon-size: 58%;
     --wzc-ptz-pad-zoom-font-size: clamp(1rem, 5cqi, 1.75rem);
-    --wzc-ptz-overlay-pad-background: color-mix(
-      in srgb,
-      var(--wzc-media-overlay-surface) var(--wzc-media-overlay-opacity),
-      transparent
-    );
+    --wzc-ptz-overlay-pad-background: var(--wzc-ptz-overlay-pad-divider-color);
     --wzc-ptz-overlay-pad-color: var(--wzc-media-overlay-color);
     --wzc-ptz-overlay-pad-button-background: color-mix(
       in srgb,
@@ -622,7 +618,7 @@ export const themeTokens = css`
       clamp(1rem, 4cqi, 2rem);
     --wzc-ptz-panel-module-min-block-size: 18rem;
     --wzc-ptz-panel-module-control-size: clamp(10rem, 42cqi, 17rem);
-    --wzc-ptz-module-pad-background: var(--wzc-color-surface-secondary);
+    --wzc-ptz-module-pad-background: var(--wzc-ptz-module-pad-divider-color);
     --wzc-ptz-module-pad-color: var(--wzc-color-text-1);
     --wzc-ptz-module-pad-button-background: var(--wzc-color-surface-secondary);
     --wzc-ptz-module-pad-center-background: var(--wzc-color-surface);

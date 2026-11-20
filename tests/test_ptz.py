@@ -248,22 +248,28 @@ async def test_frigate_preset_recall_is_one_finite_service_call(hass: Any) -> No
     }
 
 
-async def test_frigate_optical_zoom_uses_zoom_action(
+async def test_frigate_optical_zoom_uses_zoom_action_without_second_discovery(
     hass: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Optical zoom uses Frigate's continuous zoom command and shared stop."""
+    """Optical zoom uses Frigate's command without a second capability poll."""
     calls: list[Any] = []
 
     async def async_ptz(call: Any) -> None:
         calls.append(call)
 
-    async def async_capabilities(hass_arg: Any, entity_id: str) -> PtzCapabilities:
-        del hass_arg, entity_id
-        return PtzCapabilities(pan=True, tilt=True, zoom=True)
-
     hass.services.async_register("frigate", "ptz", async_ptz)
     provider = FrigatePtzProvider()
-    monkeypatch.setattr(provider, "async_capabilities", async_capabilities)
+    provider._capabilities["camera.front"] = PtzCapabilities(  # noqa: SLF001
+        pan=True,
+        tilt=True,
+        zoom=True,
+    )
+
+    async def unexpected_capabilities(hass_arg: Any, entity_id: str) -> PtzCapabilities:
+        del hass_arg, entity_id
+        raise AssertionError("motion activation must not rediscover capability")
+
+    monkeypatch.setattr(provider, "async_capabilities", unexpected_capabilities)
 
     await provider.async_start(hass, "camera.front", "zoom_out", Context())
     await provider.async_stop(hass, "camera.front", Context())

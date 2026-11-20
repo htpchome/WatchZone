@@ -13,11 +13,18 @@ from .source import async_resolve_source
 class FrigatePtzProvider:
     """Own Frigate PTZ discovery and its registered service surface."""
 
+    def __init__(self) -> None:
+        self._capabilities: dict[str, PtzCapabilities] = {}
+
     async def async_capabilities(
         self, hass: HomeAssistant, entity_id: str
     ) -> PtzCapabilities:
         await async_resolve_source(hass, entity_id)
-        return await async_ptz_capabilities(hass, entity_id) or PtzCapabilities()
+        capabilities = (
+            await async_ptz_capabilities(hass, entity_id) or PtzCapabilities()
+        )
+        self._capabilities[entity_id] = capabilities
+        return capabilities
 
     async def async_start(
         self,
@@ -26,7 +33,7 @@ class FrigatePtzProvider:
         direction: PtzDirection,
         context: Context,
     ) -> None:
-        capabilities = await self.async_capabilities(hass, entity_id)
+        capabilities = self._capabilities.get(entity_id, PtzCapabilities())
         supported = (
             capabilities.zoom
             if direction in {"zoom_in", "zoom_out"}

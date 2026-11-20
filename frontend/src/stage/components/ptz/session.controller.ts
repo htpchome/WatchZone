@@ -113,6 +113,10 @@ export class PtzSessionController implements ReactiveController {
     } catch {
       if (generation !== this._motionGeneration) return;
       this._releaseMotionOverlay();
+      if (zoom) {
+        camera.zoomDisplay?.(direction === "zoom_in" ? "in" : "out");
+        return;
+      }
       this._callbacks.onFailure("motion");
     }
   }

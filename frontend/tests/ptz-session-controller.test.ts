@@ -187,6 +187,23 @@ describe("PTZ session lifecycle", () => {
     expect(session.zoomDisplay).toHaveBeenCalledWith("out");
     expect(resolver.start).not.toHaveBeenCalled();
   });
+
+  it("falls back to display zoom when advertised optical zoom is rejected", async () => {
+    resolver.capability.mockResolvedValue({ ...capability(), zoom: true });
+    resolver.start.mockRejectedValue(new Error("Optical zoom unavailable"));
+    const callbacks = { onFailure: vi.fn(), onStopped: vi.fn() };
+    const controller = new PtzSessionController(new Host(), callbacks);
+    const context = new CameraSessionContext();
+    const session = camera("camera.front");
+    controller.configure(api(), context, [source("camera.front")]);
+    context.publish({}, session);
+    await vi.waitFor(() => expect(controller.capability?.zoom).toBe(true));
+
+    await controller.start("zoom_in", false);
+
+    expect(session.zoomDisplay).toHaveBeenCalledWith("in");
+    expect(callbacks.onFailure).not.toHaveBeenCalled();
+  });
 });
 
 class Host {

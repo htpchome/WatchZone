@@ -31,7 +31,7 @@ export const ptzStyles = css`
     overflow: hidden;
     color: var(--wzc-ptz-pad-color);
     background: var(--wzc-ptz-pad-background);
-    border: 1px solid var(--wzc-ptz-pad-divider-color);
+    border: 0;
     border-radius: 50%;
     box-shadow: var(--wzc-ptz-pad-shadow);
   }
@@ -169,7 +169,7 @@ export const ptzStyles = css`
     overflow: hidden;
     color: inherit;
     background: var(--wzc-ptz-pad-center-background);
-    border: 1px solid var(--wzc-ptz-pad-divider-color);
+    border: 0;
     border-radius: 50%;
   }
 

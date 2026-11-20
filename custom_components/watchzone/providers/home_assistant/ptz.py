@@ -37,14 +37,22 @@ class _Surface:
 class HomeAssistantPtzProvider:
     """Discover and operate PTZ without contacting a camera provider API."""
 
+    def __init__(self) -> None:
+        self._frigate_capabilities: dict[str, PtzCapabilities] = {}
+
     async def async_capabilities(
         self, hass: HomeAssistant, entity_id: str
     ) -> PtzCapabilities:
         """Return capability data exposed by the current HA installation."""
         surface = self._surface(hass, entity_id)
         if surface.kind != "frigate_service":
+            self._frigate_capabilities.pop(entity_id, None)
             return surface.capabilities
-        return await async_ptz_capabilities(hass, entity_id) or PtzCapabilities()
+        capabilities = (
+            await async_ptz_capabilities(hass, entity_id) or PtzCapabilities()
+        )
+        self._frigate_capabilities[entity_id] = capabilities
+        return capabilities
 
     async def async_start(
         self,
@@ -55,11 +63,11 @@ class HomeAssistantPtzProvider:
     ) -> None:
         """Start continuous movement or perform one HA-native step."""
         surface = self._surface(hass, entity_id)
-        capabilities = surface.capabilities
-        if surface.kind == "frigate_service":
-            capabilities = (
-                await async_ptz_capabilities(hass, entity_id) or PtzCapabilities()
-            )
+        capabilities = (
+            self._frigate_capabilities.get(entity_id, PtzCapabilities())
+            if surface.kind == "frigate_service"
+            else surface.capabilities
+        )
         self._require_direction(capabilities, direction)
         if surface.kind == "buttons":
             control = (surface.controls or {}).get(_DIRECTION_KEYS[direction])
