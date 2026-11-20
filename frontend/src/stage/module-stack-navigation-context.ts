@@ -8,6 +8,10 @@ export interface StageStackAccessoryConfiguration {
 }
 
 export interface ModuleStackNavigationItem {
+  readonly availability?: {
+    readonly cameraEntityIds: readonly string[];
+    readonly targetModuleId: string;
+  };
   readonly accessories?: StageStackAccessoryConfiguration;
   readonly icon?: string;
   readonly id: string;

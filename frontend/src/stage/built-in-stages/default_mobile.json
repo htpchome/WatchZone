@@ -168,6 +168,26 @@
                         "id": "default-exports-module",
                         "kind": "module",
                         "moduleType": "exports"
+                      },
+                      {
+                        "config": {
+                          "targetModuleId": "default-camera-module"
+                        },
+                        "id": "default-ptz-panel-module",
+                        "kind": "module",
+                        "moduleType": "ptz-panel",
+                        "slots": {
+                          "content": [
+                            {
+                              "componentType": "ptz",
+                              "config": {
+                                "presentation": "panel"
+                              },
+                              "id": "default-ptz-panel-component",
+                              "kind": "component"
+                            }
+                          ]
+                        }
                       }
                     ],
                     "id": "default-activity-stack",
@@ -350,6 +370,26 @@
                         "id": "default-exports-module",
                         "kind": "module",
                         "moduleType": "exports"
+                      },
+                      {
+                        "config": {
+                          "targetModuleId": "default-camera-module"
+                        },
+                        "id": "default-ptz-panel-module",
+                        "kind": "module",
+                        "moduleType": "ptz-panel",
+                        "slots": {
+                          "content": [
+                            {
+                              "componentType": "ptz",
+                              "config": {
+                                "presentation": "panel"
+                              },
+                              "id": "default-ptz-panel-component",
+                              "kind": "component"
+                            }
+                          ]
+                        }
                       }
                     ],
                     "id": "default-activity-stack",

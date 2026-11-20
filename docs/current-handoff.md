@@ -18,13 +18,35 @@ precedence.
 - Branch: `main`.
 - Restored source baseline: `80286fb` —
   `v0.0.4-dev.476 - docs(handoff): document uniform system ownership`.
-- Version: `0.0.4-dev.479`.
+- Version: `0.0.4-dev.480`.
 - The user will commit this rollback. No agent commit or sync is authorized.
 
 Always recheck `git status`, `git log -1`, and
 `custom_components/watchzone/const.py` before starting work.
 
 ## Failed camera-controls work removed at `dev.479`
+
+## PTZ panel at `dev.480`
+
+The Full Stage activity stack now includes a dedicated `ptz-panel` module
+after Exports when at least one configured main camera has PTZ enabled.
+
+- The round PTZ stack selector appears only while the displayed physical
+  camera is in the configured PTZ scope. Switching to a non-PTZ camera while
+  the panel is active returns the stack to Reviews.
+- `ptz-panel` is a real Stage module with a stable draggable identity. Its
+  `content` slot composes the independently loaded PTZ component; neither
+  placeable imports the other.
+- The PTZ component has a separate panel presentation with the directional
+  control and up to six provider-reported preset buttons. The existing Camera
+  overlay presentation retains its prior behavior and layout.
+- Frigate preset recall is provider-normalized and finite. It calls the
+  Frigate PTZ service once with `action: preset` and the exact preset name; it
+  does not create a movement subscription or send Stop after recall begins.
+- The public provider extension API is version 5 because the PTZ provider
+  contract now includes preset recall.
+
+This work is uncommitted. The user remains the only commit owner.
 
 
 ## Current recorded-media baseline

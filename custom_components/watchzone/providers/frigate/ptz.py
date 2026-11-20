@@ -28,9 +28,7 @@ class FrigatePtzProvider:
     ) -> None:
         capabilities = await self.async_capabilities(hass, entity_id)
         supported = (
-            capabilities.pan
-            if direction in {"left", "right"}
-            else capabilities.tilt
+            capabilities.pan if direction in {"left", "right"} else capabilities.tilt
         )
         if not supported:
             raise HomeAssistantError("Camera does not support that PTZ direction")
@@ -54,6 +52,27 @@ class FrigatePtzProvider:
             "frigate",
             "ptz",
             {"action": "stop"},
+            blocking=True,
+            context=context,
+            target={"entity_id": entity_id},
+        )
+
+    async def async_recall_preset(
+        self,
+        hass: HomeAssistant,
+        entity_id: str,
+        preset: str,
+        context: Context,
+    ) -> None:
+        capabilities = await self.async_capabilities(hass, entity_id)
+        if preset not in capabilities.presets:
+            raise HomeAssistantError("Camera does not expose that PTZ preset")
+        if not hass.services.has_service("frigate", "ptz"):
+            raise HomeAssistantError("Frigate PTZ service is unavailable")
+        await hass.services.async_call(
+            "frigate",
+            "ptz",
+            {"action": "preset", "argument": preset},
             blocking=True,
             context=context,
             target={"entity_id": entity_id},

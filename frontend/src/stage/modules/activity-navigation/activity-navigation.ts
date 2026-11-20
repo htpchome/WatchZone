@@ -11,6 +11,7 @@ import { isIconName, renderIcon } from "../../../ui/icons";
 import "../../activity";
 import type { ActivityFilterContext } from "../../activity";
 import type { CameraSelectionContext } from "../../camera-selection-context";
+import type { CameraSelectionState } from "../../camera-selection-context";
 import type { ExportFilterContext } from "../../export-filter-context";
 import type { MediaDateContext } from "../../media-date-context";
 import type {
@@ -55,6 +56,11 @@ export class ActivityNavigationModule extends LitElement {
 
   private _state = EMPTY_STATE;
   private _unsubscribe?: () => void;
+  private readonly _availabilityStates = new Map<
+    string,
+    CameraSelectionState
+  >();
+  private readonly _availabilityUnsubscribes = new Map<string, () => void>();
 
   public connectedCallback(): void {
     super.connectedCallback();
@@ -64,6 +70,7 @@ export class ActivityNavigationModule extends LitElement {
   public disconnectedCallback(): void {
     this._unsubscribe?.();
     this._unsubscribe = undefined;
+    this._clearAvailabilitySubscriptions();
     super.disconnectedCallback();
   }
 
@@ -71,19 +78,21 @@ export class ActivityNavigationModule extends LitElement {
     if (changed.has("navigationContext") || changed.has("targetStackId")) {
       this._subscribe();
     }
+    if (changed.has("cameraSelection")) {
+      this._syncAvailabilitySubscriptions();
+    }
   }
 
   protected render() {
-    if (this._state.items.length === 0) return nothing;
-    const active = this._state.items.find(
-      ({ id }) => id === this._state.activeId,
-    );
+    const items = this._availableItems();
+    if (items.length === 0) return nothing;
+    const active = items.find(({ id }) => id === this._state.activeId);
     return html`<nav
       class="stage-stack-navigation"
       aria-label=${this.localize("navigation.activity")}
     >
       ${repeat(
-        this._state.items,
+        items,
         ({ id }) => id,
         (item) => {
           const label = item.labelKey ? this.localize(item.labelKey) : item.id;
@@ -172,9 +181,67 @@ export class ActivityNavigationModule extends LitElement {
       this.targetStackId,
       (state) => {
         this._state = state;
+        this._syncAvailabilitySubscriptions();
+        this._selectAvailableFallback();
         this.requestUpdate();
       },
     );
+  }
+
+  private _availableItems() {
+    return this._state.items.filter(({ availability }) => {
+      if (!availability) return true;
+      const activeEntityId = this._availabilityStates.get(
+        availability.targetModuleId,
+      )?.activeEntityId;
+      return (
+        activeEntityId !== undefined &&
+        availability.cameraEntityIds.includes(activeEntityId)
+      );
+    });
+  }
+
+  private _syncAvailabilitySubscriptions(): void {
+    this._clearAvailabilitySubscriptions();
+    if (!this.cameraSelection) return;
+    const targetIds = new Set(
+      this._state.items.flatMap(({ availability }) =>
+        availability ? [availability.targetModuleId] : [],
+      ),
+    );
+    for (const targetId of targetIds) {
+      let subscribing = true;
+      const unsubscribe = this.cameraSelection.subscribe(targetId, (state) => {
+        this._availabilityStates.set(targetId, state);
+        if (!subscribing) this._selectAvailableFallback();
+        this.requestUpdate();
+      });
+      this._availabilityUnsubscribes.set(targetId, unsubscribe);
+      subscribing = false;
+    }
+    this._selectAvailableFallback();
+  }
+
+  private _clearAvailabilitySubscriptions(): void {
+    for (const unsubscribe of this._availabilityUnsubscribes.values()) {
+      unsubscribe();
+    }
+    this._availabilityUnsubscribes.clear();
+    this._availabilityStates.clear();
+  }
+
+  private _selectAvailableFallback(): void {
+    const items = this._availableItems();
+    if (
+      !this._state.activeId ||
+      items.some(({ id }) => id === this._state.activeId)
+    ) {
+      return;
+    }
+    const fallback = items[0];
+    if (fallback) {
+      this.navigationContext?.select(this.targetStackId, fallback.id);
+    }
   }
 
   private readonly _handlePointerEnter = (event: PointerEvent): void => {

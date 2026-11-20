@@ -14,6 +14,7 @@ import {
   EXPORTS_MODULE_TYPE,
   LIGHT_COMPONENT_TYPE,
   PTZ_COMPONENT_TYPE,
+  PTZ_PANEL_MODULE_TYPE,
   RECORDINGS_MODULE_TYPE,
   TALK_COMPONENT_TYPE,
 } from "../../core/constants";
@@ -249,6 +250,41 @@ function hydrateModule(
       },
     };
   }
+  if (node.moduleType === PTZ_PANEL_MODULE_TYPE) {
+    const cameras = configuredPtzCameras(config);
+    if (cameras.length === 0) return undefined;
+    const moduleConfig =
+      typeof node.config === "object" && node.config !== null
+        ? node.config
+        : {};
+    const slots = Object.fromEntries(
+      Object.entries(node.slots ?? {}).flatMap(([name, components]) => {
+        const hydrated = (components ?? []).flatMap((component) =>
+          component.componentType === PTZ_COMPONENT_TYPE
+            ? [
+                {
+                  ...component,
+                  config: {
+                    cameras,
+                    initialState: "open",
+                    presentation: "panel",
+                  },
+                },
+              ]
+            : [component],
+        );
+        return hydrated.length ? [[name, hydrated]] : [];
+      }),
+    );
+    return {
+      ...node,
+      config: {
+        ...moduleConfig,
+        cameraEntityIds: cameras.map(({ entityId }) => entityId),
+      },
+      slots,
+    };
+  }
   if (node.moduleType === MINIMAL_CAMERA_MODULE_TYPE) {
     const first = cameraPresentationItems(config.cameras)[0]?.cameras[0];
     if (!first) return undefined;
@@ -344,7 +380,8 @@ function namespaceModuleConfig(node: StageModuleNode): unknown {
     node.moduleType !== EVENTS_MODULE_TYPE &&
     node.moduleType !== REVIEWS_MODULE_TYPE &&
     node.moduleType !== RECORDINGS_MODULE_TYPE &&
-    node.moduleType !== EXPORTS_MODULE_TYPE
+    node.moduleType !== EXPORTS_MODULE_TYPE &&
+    node.moduleType !== PTZ_PANEL_MODULE_TYPE
   )
     return node.config;
   if (typeof node.config !== "object" || node.config === null)
@@ -395,16 +432,7 @@ function hydrateCameraComponent(
   }
   if (node.componentType === PTZ_COMPONENT_TYPE) {
     if (config.ptz_overlay_control === "none") return undefined;
-    const secondaryIds = groupedSecondaryIds(config);
-    const cameras = config.cameras
-      .filter(
-        ({ entity_id: entityId, ptz_enabled: enabled }) =>
-          enabled && !secondaryIds.has(entityId),
-      )
-      .map(({ connection: provider, entity_id: entityId }) => ({
-        entityId,
-        provider,
-      }));
+    const cameras = configuredPtzCameras(config);
     return cameras.length
       ? {
           ...node,
@@ -412,6 +440,7 @@ function hydrateCameraComponent(
             cameras,
             initialState:
               config.ptz_overlay_control === "start_closed" ? "closed" : "open",
+            presentation: "overlay",
           },
         }
       : undefined;
@@ -429,6 +458,19 @@ function hydrateCameraComponent(
     return cameras.length ? { ...node, config: { cameras } } : undefined;
   }
   return node;
+}
+
+function configuredPtzCameras(config: CardConfig) {
+  const secondaryIds = groupedSecondaryIds(config);
+  return config.cameras
+    .filter(
+      ({ entity_id: entityId, ptz_enabled: enabled }) =>
+        enabled && !secondaryIds.has(entityId),
+    )
+    .map(({ connection: provider, entity_id: entityId }) => ({
+      entityId,
+      provider,
+    }));
 }
 
 function groupedSecondaryIds(config: CardConfig): ReadonlySet<string> {

@@ -17,6 +17,10 @@ ownership. It supplements `architecture.md`, which remains authoritative.
 - The initial presentation is a directional overlay. The normalized capability
   model already represents pan, tilt, optical zoom, focus, and presets so later
   presentations do not need a replacement contract.
+- `ptz-panel` is a dedicated Stage module with its own draggable placement
+  identity. Its `content` slot composes the PTZ component through the Stage
+  renderer; the module and component never import one another. The module owns
+  only its panel surface and active-camera availability.
 
 ## Home Assistant provider
 
@@ -68,8 +72,17 @@ defaults to `false` and is omitted from YAML at its default.
   open or collapsed choice then persists across transient overlay visibility;
   the shared hide timer never rewrites component state.
 - Unsupported axes are not rendered. The initial UI exposes only pan and tilt;
-  zoom, focus, and preset presentations are future work against the existing
+  zoom and focus presentations remain future work against the existing
   normalized capability contract.
+- The panel presentation remains expanded and is independent from the Camera
+  overlay visibility timer and open/closed state. It shows at most the first
+  six provider-reported preset names in provider order and wraps them at
+  narrower container sizes. Missing presets produce no preset buttons.
+- Preset recall is a finite provider-neutral command. It stops an active
+  directional press before recall, sends one provider preset command, and does
+  not create a movement subscription or send Stop after the preset begins.
+- The current Camera overlay presentation does not render presets and retains
+  its existing collapse, visibility, positioning, and Motion behavior.
 - Touch controls have no sticky hover state and suppress platform tap
   highlighting.
 - The shared press-interaction controller owns pointer capture, cancellation,
@@ -83,6 +96,10 @@ stop intent. Motion is stopped on pointer release or cancellation, keyboard
 release, active-camera change, component removal, document visibility loss,
 window blur, freeze, page hide, WebSocket disconnect, provider error, or
 integration unload.
+
+Preset recall does not own a WebSocket subscription. Provider-specific preset
+names and service calls remain beneath the provider adapter; the component and
+`ptz-panel` module never branch on Frigate or another provider identity.
 
 The backend serializes movement per camera and gives each request a generation.
 Starting a new request stops the previous request first. Cleanup from a stale

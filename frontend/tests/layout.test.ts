@@ -17,6 +17,8 @@ import {
   DEFAULT_LAYOUT_ROOT_NODE_ID,
   DEFAULT_LIGHT_COMPONENT_NODE_ID,
   DEFAULT_PTZ_COMPONENT_NODE_ID,
+  DEFAULT_PTZ_PANEL_COMPONENT_NODE_ID,
+  DEFAULT_PTZ_PANEL_MODULE_NODE_ID,
   DEFAULT_RECORDINGS_MODULE_NODE_ID,
   DEFAULT_TALK_COMPONENT_NODE_ID,
   STANDARD_CAMERA_LAYOUT_ROOT_NODE_ID,
@@ -492,6 +494,30 @@ describe("layout composition", () => {
           { entityId: "camera.back", provider: "frigate_go2rtc" },
         ],
         initialState: "open",
+      },
+    });
+    const panel = activityModules(layout).find(
+      ({ id }) => id === DEFAULT_PTZ_PANEL_MODULE_NODE_ID,
+    );
+    expect(panel).toMatchObject({
+      id: DEFAULT_PTZ_PANEL_MODULE_NODE_ID,
+      kind: "module",
+      moduleType: "ptz-panel",
+      config: {
+        cameraEntityIds: ["camera.front", "camera.back"],
+        targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
+      },
+    });
+    expect(panel?.slots?.content?.[0]).toMatchObject({
+      id: DEFAULT_PTZ_PANEL_COMPONENT_NODE_ID,
+      componentType: "ptz",
+      config: {
+        cameras: [
+          { entityId: "camera.front", provider: "home_assistant" },
+          { entityId: "camera.back", provider: "frigate_go2rtc" },
+        ],
+        initialState: "open",
+        presentation: "panel",
       },
     });
   });

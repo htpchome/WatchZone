@@ -81,6 +81,22 @@ class PtzService:
                 if self._active.get(motion.entity_id) is active:
                     self._active.pop(motion.entity_id, None)
 
+    async def async_recall_preset(
+        self,
+        provider_id: str,
+        entity_id: str,
+        preset: str,
+        context: Context,
+    ) -> None:
+        """Stop directional motion, then issue one preset recall command."""
+        provider = self._provider(provider_id)
+        lock = self._locks.setdefault(entity_id, asyncio.Lock())
+        async with lock:
+            active = self._active.pop(entity_id, None)
+            if active:
+                await active.provider.async_stop(self._hass, entity_id, active.context)
+            await provider.async_recall_preset(self._hass, entity_id, preset, context)
+
     async def async_close(self) -> None:
         """Stop every integration-owned motion during unload."""
         active = list(self._active.items())

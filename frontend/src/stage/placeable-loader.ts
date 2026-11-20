@@ -12,6 +12,7 @@ import {
   SLIDESHOW_COMPONENT_TYPE,
   PTZ_COMPONENT_TYPE,
   PANEL_MODULE_TYPE,
+  PTZ_PANEL_MODULE_TYPE,
   TALK_COMPONENT_TYPE,
 } from "../core/constants";
 import type {
@@ -46,6 +47,21 @@ function exportsStackAccessories(config: unknown) {
     filter: "exports" as const,
     targetModuleId: source.targetModuleId,
   };
+}
+
+function ptzPanelAvailability(config: unknown) {
+  if (typeof config !== "object" || config === null) return undefined;
+  const source = config as Record<string, unknown>;
+  if (
+    !Array.isArray(source.cameraEntityIds) ||
+    typeof source.targetModuleId !== "string"
+  ) {
+    return undefined;
+  }
+  const cameraEntityIds = source.cameraEntityIds.filter(
+    (entityId): entityId is string => typeof entityId === "string",
+  );
+  return { cameraEntityIds, targetModuleId: source.targetModuleId };
 }
 
 function stackConfig(config: unknown): {
@@ -107,6 +123,18 @@ const moduleLoaders = {
       import("./modules/panel").then(
         ({ moduleDefinition }) => moduleDefinition,
       ),
+  },
+  [PTZ_PANEL_MODULE_TYPE]: {
+    load: () =>
+      import("./modules/ptz-panel").then(
+        ({ moduleDefinition }) => moduleDefinition,
+      ),
+    navigation: {
+      availability: ptzPanelAvailability,
+      icon: "ptz",
+      labelKey: "navigation.ptz",
+    },
+    placeholder: "control",
   },
   [EVENTS_MODULE_TYPE]: {
     load: () =>

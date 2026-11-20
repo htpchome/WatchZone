@@ -18,6 +18,7 @@ from custom_components.watchzone.extensions import (
     ProviderRegistry,
 )
 from custom_components.watchzone.features.ptz import PtzService
+from custom_components.watchzone.providers.frigate.ptz import FrigatePtzProvider
 from custom_components.watchzone.providers.home_assistant.ptz import (
     HomeAssistantPtzProvider,
 )
@@ -28,12 +29,11 @@ class FakePtzProvider:
     """Record normalized PTZ calls without depending on a concrete provider."""
 
     def __init__(self) -> None:
+        self.presets: list[tuple[str, str]] = []
         self.starts: list[tuple[str, str]] = []
         self.stops: list[str] = []
 
-    async def async_capabilities(
-        self, hass: Any, entity_id: str
-    ) -> PtzCapabilities:
+    async def async_capabilities(self, hass: Any, entity_id: str) -> PtzCapabilities:
         del hass, entity_id
         return PtzCapabilities(pan=True, tilt=True, presets=("Home",))
 
@@ -47,11 +47,19 @@ class FakePtzProvider:
         del hass, context
         self.starts.append((entity_id, direction))
 
-    async def async_stop(
-        self, hass: Any, entity_id: str, context: Context
-    ) -> None:
+    async def async_stop(self, hass: Any, entity_id: str, context: Context) -> None:
         del hass, context
         self.stops.append(entity_id)
+
+    async def async_recall_preset(
+        self,
+        hass: Any,
+        entity_id: str,
+        preset: str,
+        context: Context,
+    ) -> None:
+        del hass, context
+        self.presets.append((entity_id, preset))
 
 
 async def test_ptz_service_resolves_capabilities_and_owns_motion() -> None:
@@ -59,9 +67,7 @@ async def test_ptz_service_resolves_capabilities_and_owns_motion() -> None:
     provider = FakePtzProvider()
     service = PtzService(SimpleNamespace(), registry(provider))  # type: ignore[arg-type]
 
-    capabilities = await service.async_capabilities(
-        "home_assistant", "camera.front"
-    )
+    capabilities = await service.async_capabilities("home_assistant", "camera.front")
     motion = await service.async_start(
         "home_assistant", "camera.front", "left", Context()
     )
@@ -79,9 +85,7 @@ async def test_new_ptz_motion_replaces_old_and_stale_cleanup_is_harmless() -> No
     provider = FakePtzProvider()
     service = PtzService(SimpleNamespace(), registry(provider))  # type: ignore[arg-type]
 
-    old = await service.async_start(
-        "home_assistant", "camera.front", "left", Context()
-    )
+    old = await service.async_start("home_assistant", "camera.front", "left", Context())
     current = await service.async_start(
         "home_assistant", "camera.front", "right", Context()
     )
@@ -95,6 +99,24 @@ async def test_new_ptz_motion_replaces_old_and_stale_cleanup_is_harmless() -> No
 
     await service.async_stop(current)
     assert provider.stops == ["camera.front", "camera.front"]
+
+
+async def test_preset_recall_stops_directional_motion_without_owning_stop() -> None:
+    """Preset recall is finite and does not create another active motion."""
+    provider = FakePtzProvider()
+    service = PtzService(SimpleNamespace(), registry(provider))  # type: ignore[arg-type]
+    motion = await service.async_start(
+        "home_assistant", "camera.front", "left", Context()
+    )
+
+    await service.async_recall_preset(
+        "home_assistant", "camera.front", "Home", Context()
+    )
+    await service.async_stop(motion)
+
+    assert provider.starts == [("camera.front", "left")]
+    assert provider.stops == ["camera.front"]
+    assert provider.presets == [("camera.front", "Home")]
 
 
 async def test_ptz_service_stops_all_motion_during_unload() -> None:
@@ -147,9 +169,7 @@ async def test_home_assistant_ptz_detects_and_uses_same_device_buttons(
     provider = HomeAssistantPtzProvider()
 
     capabilities = await provider.async_capabilities(hass, camera.entity_id)
-    await provider.async_start(
-        hass, camera.entity_id, "left", Context()
-    )
+    await provider.async_start(hass, camera.entity_id, "left", Context())
     await provider.async_stop(hass, camera.entity_id, Context())
 
     assert capabilities.pan is True
@@ -177,9 +197,7 @@ async def test_frigate_ptz_movement_requires_runtime_capability(
     async def async_move(call: Any) -> None:
         calls.append(call)
 
-    async def async_no_capabilities(
-        hass_arg: Any, entity_id: str
-    ) -> PtzCapabilities:
+    async def async_no_capabilities(hass_arg: Any, entity_id: str) -> PtzCapabilities:
         del hass_arg, entity_id
         return PtzCapabilities()
 
@@ -195,6 +213,29 @@ async def test_frigate_ptz_movement_requires_runtime_capability(
         await provider.async_start(hass, camera.entity_id, "left", Context())
 
     assert calls == []
+
+
+async def test_frigate_preset_recall_is_one_finite_service_call(
+    hass: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Preset recall sends the preset action and never sends Stop."""
+    calls: list[Any] = []
+
+    async def async_ptz(call: Any) -> None:
+        calls.append(call)
+
+    async def async_capabilities(hass_arg: Any, entity_id: str) -> PtzCapabilities:
+        del hass_arg, entity_id
+        return PtzCapabilities(pan=True, tilt=True, presets=("Driveway",))
+
+    hass.services.async_register("frigate", "ptz", async_ptz)
+    provider = FrigatePtzProvider()
+    monkeypatch.setattr(provider, "async_capabilities", async_capabilities)
+
+    await provider.async_recall_preset(hass, "camera.front", "Driveway", Context())
+
+    assert len(calls) == 1
+    assert calls[0].data == {"action": "preset", "argument": "Driveway"}
 
 
 def registry(provider: FakePtzProvider) -> ProviderRegistry:

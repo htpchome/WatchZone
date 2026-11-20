@@ -47,3 +47,12 @@ class PtzProvider(Protocol):
         self, hass: HomeAssistant, entity_id: str, context: Context
     ) -> None:
         """Stop movement when the selected HA surface supports it."""
+
+    async def async_recall_preset(
+        self,
+        hass: HomeAssistant,
+        entity_id: str,
+        preset: str,
+        context: Context,
+    ) -> None:
+        """Recall one provider-reported preset without owning a stop lifecycle."""

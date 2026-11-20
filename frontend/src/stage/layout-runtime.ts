@@ -375,6 +375,9 @@ export class LayoutRuntime implements ReactiveController {
           );
           return {
             accessories: registration?.stackAccessories?.(child.config),
+            availability: registration?.navigation?.availability?.(
+              child.config,
+            ),
             icon: registration?.navigation?.icon,
             id: child.id,
             labelKey: registration?.navigation?.labelKey,
@@ -397,6 +400,7 @@ export class LayoutRuntime implements ReactiveController {
     return html`<div
       class="stage-placement module-composition has-components"
       data-layout-node=${node.id}
+      data-module-type=${node.moduleType}
       style=${placementStyle}
     >
       ${this._renderRecord(node)}

@@ -601,6 +601,24 @@ export const themeTokens = css`
       var(--wzc-media-overlay-surface) var(--wzc-media-overlay-opacity),
       transparent
     );
+    --wzc-ptz-panel-module-background: var(--wzc-color-surface-secondary);
+    --wzc-ptz-panel-module-radius: var(--wzc-radius-card);
+    --wzc-ptz-panel-module-gap: clamp(0.75rem, 3cqi, 1.5rem);
+    --wzc-ptz-panel-module-padding: clamp(1rem, 4cqi, 2rem);
+    --wzc-ptz-panel-module-min-block-size: 18rem;
+    --wzc-ptz-panel-module-control-size: clamp(10rem, 42cqi, 17rem);
+    --wzc-ptz-panel-module-control-padding: clamp(0.35rem, 1.5cqi, 0.75rem);
+    --wzc-ptz-panel-module-cell-size: clamp(2.75rem, 11cqi, 4.75rem);
+    --wzc-ptz-panel-module-icon-size: 52%;
+    --wzc-ptz-preset-gap: clamp(0.5rem, 2cqi, 1rem);
+    --wzc-ptz-preset-min-inline-size: min(8rem, 100%);
+    --wzc-ptz-preset-block-size: 2.75rem;
+    --wzc-ptz-preset-inline-padding: 1rem;
+    --wzc-ptz-preset-color: var(--wzc-color-text-1);
+    --wzc-ptz-preset-background: var(--wzc-color-surface);
+    --wzc-ptz-preset-border-color: var(--wzc-color-border-control);
+    --wzc-ptz-preset-hover-background: var(--wzc-color-fill-primary);
+    --wzc-ptz-preset-radius: var(--wzc-radius-pill);
     --wzc-light-control-gap: 0.5rem;
     --wzc-light-fill-color: var(--wzc-color-primary);
     --wzc-light-panel-background: var(--wzc-popover-background);

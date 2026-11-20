@@ -18,6 +18,7 @@ export interface PtzCapability {
 
 const CAPABILITY_COMMAND = `${INTEGRATION_ID}/ptz/capability`;
 const MOVE_COMMAND = `${INTEGRATION_ID}/ptz/move`;
+const PRESET_COMMAND = `${INTEGRATION_ID}/ptz/preset`;
 
 export function getPtzCapability(
   api: HomeAssistantApi,
@@ -42,5 +43,19 @@ export function startPtzMotion(
     provider,
     entity_id: entityId,
     direction,
+  });
+}
+
+export function recallPtzPreset(
+  api: HomeAssistantApi,
+  provider: PtzProviderId,
+  entityId: string,
+  preset: string,
+): Promise<void> {
+  return api.callWS({
+    type: PRESET_COMMAND,
+    provider,
+    entity_id: entityId,
+    preset,
   });
 }

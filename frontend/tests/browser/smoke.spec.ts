@@ -8412,6 +8412,105 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   }
 });
 
+test("opens the PTZ panel and recalls a provider preset without a stop subscription", async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 900, width: 390 });
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  await page.locator("watchzone-card").evaluate((element) => {
+    const card = element as HTMLElement & {
+      hass: unknown;
+      setConfig(config: unknown): void;
+    };
+    const presetMessages: unknown[] = [];
+    (window as typeof window & { presetMessages?: unknown[] }).presetMessages =
+      presetMessages;
+    card.setConfig({
+      type: "custom:watchzone-card",
+      cameras: [{ entity_id: "camera.front", ptz_enabled: true }],
+    });
+    card.hass = {
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "streaming",
+          attributes: { friendly_name: "Front" },
+        },
+      },
+      connection: {
+        subscribeMessage: async () => () => undefined,
+      },
+      hassUrl: (path: string) => path,
+      callWS: async (message: { type: string }) => {
+        presetMessages.push(message);
+        if (message.type === "watchzone/live/camera/ready") {
+          return { ready: false };
+        }
+        if (message.type === "watchzone/ptz/capability") {
+          return {
+            supported: true,
+            pan: true,
+            tilt: true,
+            zoom: false,
+            focus: false,
+            presets: ["One", "Two", "Three", "Four", "Five", "Six", "Seven"],
+          };
+        }
+        if (message.type.endsWith("/list")) return { items: [] };
+        return undefined;
+      },
+    };
+  });
+
+  const ptzNavigation = page.locator(
+    "wzc-activity-navigation button[title='PTZ']",
+  );
+  await expect(ptzNavigation).toBeVisible();
+  await ptzNavigation.click();
+
+  const panel = page.locator("wzc-ptz[presentation='panel']");
+  await expect(panel).toBeVisible();
+  const presetButtons = panel.locator("button.ptz-preset");
+  await expect(presetButtons).toHaveCount(6);
+  const presetRows = new Set(
+    await Promise.all(
+      (await presetButtons.all()).map(async (button) =>
+        Math.round((await button.boundingBox())?.y ?? 0),
+      ),
+    ),
+  );
+  expect(presetRows.size).toBeGreaterThan(1);
+  await presetButtons.first().click();
+
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (
+          window as typeof window & {
+            presetMessages?: Array<{ type?: string }>;
+          }
+        ).presetMessages?.filter(({ type }) => type === "watchzone/ptz/preset"),
+      ),
+    )
+    .toEqual([
+      expect.objectContaining({
+        type: "watchzone/ptz/preset",
+        entity_id: "camera.front",
+        preset: "One",
+      }),
+    ]);
+  expect(
+    await page.evaluate(() =>
+      (
+        window as typeof window & {
+          presetMessages?: Array<{ type?: string }>;
+        }
+      ).presetMessages?.some(({ type }) => type === "watchzone/ptz/move"),
+    ),
+  ).toBe(false);
+});
+
 test("aligns phone carousel controls and stage handle to the active stage", async ({
   page,
 }) => {

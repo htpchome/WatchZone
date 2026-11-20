@@ -148,7 +148,10 @@ root grid
         ├── reviews module (initially active)
         ├── events module
         ├── recordings module
-        └── exports module
+        ├── exports module
+        └── PTZ panel module (when the active camera is PTZ-configured)
+            └── content slot
+                └── PTZ component in panel presentation
 ```
 
 The built-in `camera_only` composition contains the same camera module and its
@@ -206,6 +209,14 @@ subscriptions and timers, while a previously loaded custom element is retained
 by stable node ID and reconnected if selected again. An unvisited hidden child
 is not imported until selected. Navigation controls expose localized labels,
 pressed state, and keyboard focus.
+
+The PTZ panel is a dedicated module rather than a generic Panel configuration,
+so the future Stage Designer may drag it out of the activity stack as one
+stable placeable. Its content slot contains the independently loaded PTZ
+component. Activity navigation shows its selector only while the displayed
+physical camera is present in the module's configured PTZ camera scope. If the
+camera changes while the PTZ panel is active, navigation selects the first
+available stack child; the PTZ module does not mutate stack state itself.
 
 The media-list stack's trailing calendar is module-aware. Reviews and Events use
 review/event availability and their shared activity filters. Recordings uses

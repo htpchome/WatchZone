@@ -78,6 +78,18 @@ export const stageRuntimeStyles = css`
     grid-row: 1 / -1;
   }
 
+  .stage-stack-content > .module-composition[data-module-type="ptz-panel"],
+  .module-composition[data-module-type="ptz-panel"] > .component-slot-content,
+  .module-composition[data-module-type="ptz-panel"]
+    > .component-slot-content
+    > .component-node,
+  .module-composition[data-module-type="ptz-panel"]
+    > .component-slot-content
+    > .component-node.placeable-ready
+    > * {
+    block-size: 100%;
+  }
+
   .component-slot,
   .component-node {
     block-size: 100%;

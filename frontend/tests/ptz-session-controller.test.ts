@@ -5,12 +5,14 @@ import type { HomeAssistantApi } from "../src/core/home-assistant";
 
 const resolver = vi.hoisted(() => ({
   capability: vi.fn(),
+  recallPreset: vi.fn(),
   start: vi.fn(),
 }));
 
 vi.mock("../src/providers/ptz-source-resolver", () => ({
   PtzSourceResolver: class {
     public capability = resolver.capability;
+    public recallPreset = resolver.recallPreset;
     public start = resolver.start;
   },
 }));
@@ -110,6 +112,35 @@ describe("PTZ session lifecycle", () => {
 
     await vi.waitFor(() => expect(controller.capability?.supported).toBe(true));
     expect(resolver.capability).toHaveBeenCalledOnce();
+  });
+
+  it("recalls a preset as a finite command without a stop subscription", async () => {
+    resolver.capability.mockResolvedValue({
+      ...capability(),
+      presets: ["Driveway"],
+    });
+    resolver.recallPreset.mockResolvedValue(undefined);
+    const releaseOverlay = vi.fn();
+    const callbacks = { onFailure: vi.fn(), onStopped: vi.fn() };
+    const controller = new PtzSessionController(new Host(), callbacks);
+    const context = new CameraSessionContext();
+    controller.configure(api(), context, [source("camera.front")]);
+    context.publish({}, camera("camera.front", releaseOverlay));
+    await vi.waitFor(() =>
+      expect(controller.capability?.presets).toEqual(["Driveway"]),
+    );
+
+    await controller.recallPreset("Driveway");
+
+    expect(resolver.recallPreset).toHaveBeenCalledWith(
+      expect.anything(),
+      "home_assistant",
+      "camera.front",
+      "Driveway",
+    );
+    expect(resolver.start).not.toHaveBeenCalled();
+    expect(releaseOverlay).not.toHaveBeenCalled();
+    expect(callbacks.onStopped).not.toHaveBeenCalled();
   });
 });
 

@@ -11,6 +11,12 @@ export const ptzStyles = css`
     pointer-events: none;
   }
 
+  :host([presentation="panel"]) {
+    inline-size: 100%;
+    block-size: 100%;
+    pointer-events: auto;
+  }
+
   .ptz-layer {
     display: grid;
     place-items: center;
@@ -163,9 +169,101 @@ export const ptzStyles = css`
     inline-size: min(22rem, calc(100% - 2rem));
   }
 
+  .ptz-panel-presentation {
+    box-sizing: border-box;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    place-items: center;
+    gap: var(--wzc-ptz-panel-module-gap);
+    inline-size: 100%;
+    min-block-size: var(--wzc-ptz-panel-module-min-block-size);
+    block-size: 100%;
+    padding: var(--wzc-ptz-panel-module-padding);
+    pointer-events: auto;
+  }
+
+  .ptz-panel-directional {
+    box-sizing: border-box;
+    color: var(--wzc-media-overlay-color);
+    background: var(--wzc-ptz-panel-background);
+    border: 1px solid var(--wzc-media-overlay-border-color);
+    border-radius: 50%;
+    display: grid;
+    grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+    place-items: center;
+    inline-size: var(--wzc-ptz-panel-module-control-size);
+    block-size: var(--wzc-ptz-panel-module-control-size);
+    padding: var(--wzc-ptz-panel-module-control-padding);
+  }
+
+  .ptz-panel-directional button {
+    --wzc-round-button-size: var(--wzc-ptz-panel-module-cell-size);
+    --wzc-round-button-icon-size: var(--wzc-ptz-panel-module-icon-size);
+    inline-size: var(--wzc-ptz-panel-module-cell-size);
+    block-size: var(--wzc-ptz-panel-module-cell-size);
+  }
+
+  .ptz-panel-center {
+    grid-area: 2 / 2;
+    display: grid;
+    place-items: center;
+    inline-size: var(--wzc-ptz-panel-module-cell-size);
+    block-size: var(--wzc-ptz-panel-module-cell-size);
+    opacity: 0.72;
+  }
+
+  .ptz-panel-center svg {
+    inline-size: var(--wzc-ptz-panel-module-icon-size);
+    block-size: var(--wzc-ptz-panel-module-icon-size);
+  }
+
+  .ptz-presets {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--wzc-ptz-preset-gap);
+    inline-size: 100%;
+  }
+
+  button.ptz-preset {
+    box-sizing: border-box;
+    inline-size: auto;
+    min-inline-size: var(--wzc-ptz-preset-min-inline-size);
+    max-inline-size: 100%;
+    block-size: var(--wzc-ptz-preset-block-size);
+    padding-inline: var(--wzc-ptz-preset-inline-padding);
+    color: var(--wzc-ptz-preset-color);
+    background: var(--wzc-ptz-preset-background);
+    border: 1px solid var(--wzc-ptz-preset-border-color);
+    border-radius: var(--wzc-ptz-preset-radius);
+    font: inherit;
+    line-height: var(--wzc-line-height-condensed);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    touch-action: manipulation;
+  }
+
+  button.ptz-preset::before {
+    display: none;
+  }
+
+  button.ptz-preset:disabled {
+    color: var(--wzc-color-text-3);
+    cursor: default;
+  }
+
+  .ptz-panel-toast {
+    inline-size: min(24rem, 100%);
+  }
+
   @media (hover: hover) and (pointer: fine) {
     button:hover::before {
       background: var(--wzc-neutral-control-hover-background);
+    }
+
+    button.ptz-preset:hover:not(:disabled) {
+      background: var(--wzc-ptz-preset-hover-background);
     }
   }
 

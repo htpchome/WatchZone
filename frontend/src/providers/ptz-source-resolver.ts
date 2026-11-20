@@ -47,6 +47,15 @@ export class PtzSourceResolver {
     return (await this._provider(provider)).start(api, entityId, direction);
   }
 
+  public async recallPreset(
+    api: HomeAssistantApi,
+    provider: PtzProviderId,
+    entityId: string,
+    preset: string,
+  ): Promise<void> {
+    return (await this._provider(provider)).recallPreset(api, entityId, preset);
+  }
+
   private _provider(
     provider: PtzProviderId,
   ): Promise<

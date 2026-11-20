@@ -5,12 +5,14 @@ import type { HomeAssistantApi } from "../src/core/home-assistant";
 
 const resolver = vi.hoisted(() => ({
   capability: vi.fn(),
+  recallPreset: vi.fn(),
   start: vi.fn(),
 }));
 
 vi.mock("../src/providers/ptz-source-resolver", () => ({
   PtzSourceResolver: class {
     public capability = resolver.capability;
+    public recallPreset = resolver.recallPreset;
     public start = resolver.start;
   },
 }));
@@ -83,7 +85,50 @@ describe("PTZ component", () => {
     ).toEqual({
       cameras: [{ entityId: "camera.front", provider: "frigate_go2rtc" }],
       initialState: "open",
+      presentation: "overlay",
     });
+  });
+
+  it("renders and recalls at most six presets in the panel presentation", async () => {
+    resolver.capability.mockResolvedValue({
+      focus: false,
+      pan: true,
+      presets: ["One", "Two", "Three", "Four", "Five", "Six", "Seven"],
+      supported: true,
+      tilt: true,
+      zoom: false,
+    });
+    resolver.recallPreset.mockResolvedValue(undefined);
+    const context = new CameraSessionContext();
+    const element = document.createElement("wzc-ptz") as PtzComponent;
+    const session = cameraSession();
+    element.api = api();
+    element.cameraSession = context;
+    element.cameras = [
+      { entityId: "camera.front", provider: "frigate_go2rtc" },
+    ];
+    element.presentation = "panel";
+    document.body.append(element);
+    context.publish({}, session);
+
+    await vi.waitFor(() =>
+      expect(
+        element.shadowRoot?.querySelectorAll("button.ptz-preset"),
+      ).toHaveLength(6),
+    );
+    element.shadowRoot
+      ?.querySelector<HTMLButtonElement>("button.ptz-preset")
+      ?.click();
+
+    await vi.waitFor(() =>
+      expect(resolver.recallPreset).toHaveBeenCalledWith(
+        expect.anything(),
+        "frigate_go2rtc",
+        "camera.front",
+        "One",
+      ),
+    );
+    expect(session.holdOverlay).not.toHaveBeenCalled();
   });
 
   it("resolves active-camera capability through the Frigate provider", async () => {

@@ -19,9 +19,7 @@ _DIRECTION_KEYS: dict[PtzDirection, str] = {
     "up": "ptz_up",
 }
 _ZOOM_KEYS = frozenset({"ptz_zoom_in", "ptz_zoom_out"})
-_FOCUS_KEYS = frozenset(
-    {"focus_far", "focus_near", "ptz_focus_far", "ptz_focus_near"}
-)
+_FOCUS_KEYS = frozenset({"focus_far", "focus_near", "ptz_focus_far", "ptz_focus_near"})
 
 type _SurfaceKind = Literal["buttons", "frigate_service", "onvif"]
 
@@ -134,6 +132,31 @@ class HomeAssistantPtzProvider:
             target={"entity_id": entity_id},
         )
 
+    async def async_recall_preset(
+        self,
+        hass: HomeAssistant,
+        entity_id: str,
+        preset: str,
+        context: Context,
+    ) -> None:
+        """Recall presets only on the HA Frigate compatibility surface."""
+        surface = self._surface(hass, entity_id)
+        if surface.kind != "frigate_service":
+            raise HomeAssistantError("PTZ presets are unavailable for this provider")
+        capabilities = await async_ptz_capabilities(hass, entity_id)
+        if capabilities is None or preset not in capabilities.presets:
+            raise HomeAssistantError("Camera does not expose that PTZ preset")
+        if not hass.services.has_service("frigate", "ptz"):
+            raise HomeAssistantError("Frigate PTZ service is unavailable")
+        await hass.services.async_call(
+            "frigate",
+            "ptz",
+            {"action": "preset", "argument": preset},
+            blocking=True,
+            context=context,
+            target={"entity_id": entity_id},
+        )
+
     def _surface(self, hass: HomeAssistant, entity_id: str) -> _Surface:
         registry = er.async_get(hass)
         camera = registry.async_get(entity_id)
@@ -182,9 +205,7 @@ class HomeAssistantPtzProvider:
         )
 
     @staticmethod
-    def _onvif_surface(
-        hass: HomeAssistant, camera: er.RegistryEntry
-    ) -> _Surface:
+    def _onvif_surface(hass: HomeAssistant, camera: er.RegistryEntry) -> _Surface:
         if not camera.config_entry_id or not hass.services.has_service("onvif", "ptz"):
             return _Surface("onvif", PtzCapabilities())
         entry = hass.config_entries.async_get_entry(camera.config_entry_id)
@@ -205,10 +226,9 @@ class HomeAssistantPtzProvider:
         relative = getattr(ptz, "relative", False) is True
         if not continuous and not relative:
             return _Surface("onvif", PtzCapabilities())
-        presets = tuple(str(value) for value in getattr(ptz, "presets", ()) if value)
         return _Surface(
             "onvif",
-            PtzCapabilities(pan=True, tilt=True, presets=presets),
+            PtzCapabilities(pan=True, tilt=True),
             onvif_mode="ContinuousMove" if continuous else "RelativeMove",
         )
 
@@ -232,9 +252,7 @@ class HomeAssistantPtzProvider:
         capabilities: PtzCapabilities, direction: PtzDirection
     ) -> None:
         supported = (
-            capabilities.pan
-            if direction in {"left", "right"}
-            else capabilities.tilt
+            capabilities.pan if direction in {"left", "right"} else capabilities.tilt
         )
         if not supported:
             raise HomeAssistantError("Camera does not support that PTZ direction")

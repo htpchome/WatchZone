@@ -21,7 +21,7 @@ export interface PtzCameraSource {
 }
 
 interface PtzSessionCallbacks {
-  readonly onFailure: () => void;
+  readonly onFailure: (operation: "motion" | "preset") => void;
   readonly onStopped: () => void;
 }
 
@@ -74,7 +74,10 @@ export class PtzSessionController implements ReactiveController {
     );
   }
 
-  public async start(direction: PtzDirection): Promise<void> {
+  public async start(
+    direction: PtzDirection,
+    holdInteraction = true,
+  ): Promise<void> {
     const api = this._api;
     const camera = this._camera;
     const source = this._source;
@@ -87,7 +90,7 @@ export class PtzSessionController implements ReactiveController {
 
     this._stopMotion(false);
     const generation = ++this._motionGeneration;
-    this._releaseOverlay = camera.holdOverlay();
+    this._releaseOverlay = holdInteraction ? camera.holdOverlay() : undefined;
     try {
       const unsubscribe = await this._resolver.start(
         api,
@@ -103,7 +106,35 @@ export class PtzSessionController implements ReactiveController {
     } catch {
       if (generation !== this._motionGeneration) return;
       this._releaseMotionOverlay();
-      this._callbacks.onFailure();
+      this._callbacks.onFailure("motion");
+    }
+  }
+
+  public async recallPreset(preset: string): Promise<void> {
+    const api = this._api;
+    const camera = this._camera;
+    const source = this._source;
+    if (
+      !api ||
+      !camera?.available ||
+      !source ||
+      !this._capability?.presets.includes(preset)
+    ) {
+      return;
+    }
+
+    this._stopMotion(true);
+    const generation = this._motionGeneration;
+    try {
+      await this._resolver.recallPreset(
+        api,
+        source.provider,
+        camera.entityId,
+        preset,
+      );
+    } catch {
+      if (generation === this._motionGeneration)
+        this._callbacks.onFailure("preset");
     }
   }
 
