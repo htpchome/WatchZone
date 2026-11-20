@@ -16,9 +16,9 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
 - Branch: `main`.
 - HEAD before this work: `6d4ddc6` —
   `v0.0.4-dev.492 - fix(talk): harden persistent navigation and audio`.
-- Version being prepared: `0.0.4-dev.493`.
+- Version being prepared: `0.0.4-dev.494`.
 - Proposed subject:
-  `v0.0.4-dev.493 - fix(talk): stabilize persistent audio and layout`.
+  `v0.0.4-dev.494 - fix(talk): discard stopped sessions and preserve mute`.
 
 ## Persistent two-way talk
 
@@ -44,8 +44,10 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
 - Closing the tile ends the call and dismisses its retained target. Pressing
   the tile microphone ends the call but retains the target and tile so the
   same camera can be restarted. Pressing it again restarts the session.
-- A stopped restart launcher is local to the current route. Navigating after
-  talk has ended dismisses it; only a connected session follows navigation.
+- A stopped restart launcher is local to the current camera context. Any route,
+  dashboard, or camera-selection change after talk ends permanently dismisses
+  it; only a connected session follows navigation. Returning to its camera also
+  consumes the launcher, so it cannot reappear on a later camera switch.
 - The camera action returns to the captured Home Assistant route, selects the
   session camera through the existing deep link, and scrolls the matching
   WatchZone surface into view. The tile then yields to the normal controls.
@@ -59,7 +61,9 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
 - One session-owned speaker mute state drives both presentations. Every talk
   connection starts with incoming audio unmuted regardless of prior camera
   state, and every exit stores and applies camera muted regardless of the final
-  in-session speaker state.
+  in-session speaker state. A retained camera presentation refreshes that
+  stored mute preference when it becomes active again, preventing stale
+  pre-exit audio state from restoring unmuted playback.
 - Successful talk capability results are cached by HA connection and camera.
   First-load discovery shows the disabled control in its final position, and a
   retained active session renders immediately when its camera surface returns
@@ -83,11 +87,12 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
 - Shared zoom/pan and shared media-stage resize remain the sole owners of those
   behaviors for live and recorded media.
 
-## Validation for `dev.493`
+## Validation for `dev.494`
 
 - Formatting, lint, typecheck, architecture/style/license checks, production
   build, and version synchronization pass.
-- Unit tests: 531/531 across 80 files.
+- Unit tests: 533/533 across 80 files, including stopped-launcher disposal on
+  camera selection and mute-preference refresh on camera reactivation.
 - The TWT browser flow passes in Chromium, Firefox, and WebKit. The latest full
   matrix passed 173/174; the unrelated Chromium Companion-rotation test missed
   its existing class-timing instrumentation window.

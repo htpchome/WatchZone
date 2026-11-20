@@ -42,6 +42,7 @@ export class CameraAudioController implements ReactiveController {
   private _startUnmutedPhone = false;
   private _talkAudioActive = false;
   private _talkUnmuteOverride = false;
+  private _presentationActive = false;
   private _unsubscribeForcedMute?: () => void;
   private _volume = 1;
 
@@ -104,6 +105,8 @@ export class CameraAudioController implements ReactiveController {
     presentationActive = true,
   ): void {
     const sourceChanged = this._entityId !== entityId;
+    const presentationActivated =
+      !this._presentationActive && presentationActive;
     if (sourceChanged) {
       this._talkAudioActive = false;
       this._talkUnmuteOverride = false;
@@ -111,8 +114,9 @@ export class CameraAudioController implements ReactiveController {
     this._entityId = entityId;
     this._startUnmutedPcTablet = startUnmutedPcTablet;
     this._startUnmutedPhone = startUnmutedPhone;
+    this._presentationActive = presentationActive;
     this._setForcedMute("camera-inactive", !presentationActive, false);
-    if (sourceChanged || reset) this._syncPreference();
+    if (sourceChanged || reset || presentationActivated) this._syncPreference();
   }
 
   public handleActiveVideoChanged(video: HTMLVideoElement | undefined): void {

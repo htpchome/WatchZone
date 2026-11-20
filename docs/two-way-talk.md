@@ -103,9 +103,10 @@ does not contain signaling-path conditions.
   behavior: it ends talk and removes document-level persistence. Away from that
   camera, the persistent tile's center control ends the peer but retains the
   camera target as a restart launcher on the current route. The next Home
-  Assistant navigation dismisses an idle launcher; it does not follow the user
-  after talk has ended. The tile's close control ends any peer and dismisses
-  the launcher.
+  Assistant route, dashboard, or camera-selection change dismisses an idle
+  launcher; it does not follow the user after talk has ended. Returning to the
+  target camera consumes the idle launcher before any later camera switch. The
+  tile's close control ends any peer and dismisses the launcher.
 - The persistent tile is fixed to the bottom center of Home Assistant's actual
   dashboard panel, above the effective safe area. Its position follows the
   expanded, collapsed, hidden, or modal sidebar layout and route replacement.
@@ -133,7 +134,9 @@ does not contain signaling-path conditions.
 - The speaker control uses one talk-session mute state across the normal and
   persistent presentations. It updates the same per-camera mute preference as
   the camera overlay control, subject to the unconditional unmuted-on-start and
-  muted-on-exit rules above.
+  muted-on-exit rules above. A camera presentation becoming active refreshes
+  the stored preference so an inactive controller cannot restore stale
+  unmuted state after talk ends.
 - Incoming and outgoing meters use Web Audio analyzers while talk is active.
   They never route, mix, record, or upload PCM data.
 - Connection success and final failure use the shared bounded toast system.

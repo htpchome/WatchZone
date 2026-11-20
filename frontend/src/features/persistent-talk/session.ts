@@ -55,6 +55,7 @@ export class PersistentTalkSession {
   private readonly _listeners = new Set<PersistentTalkListener>();
   private _microphoneMuted = false;
   private _returnRequested = false;
+  private _restartSurfaceEntities?: ReadonlyMap<object, string>;
   private _speakerMuted = false;
   private _speakerMuteExplicit = false;
   private readonly _surfaces = new Map<object, PersistentTalkSurface>();
@@ -132,6 +133,12 @@ export class PersistentTalkSession {
   public updateSurface(owner: object, surface: PersistentTalkSurface): void {
     const previous = this._surfaces.get(owner);
     if (
+      this._restartSurfaceEntities?.get(owner) !== undefined &&
+      this._restartSurfaceEntities.get(owner) !== surface.entityId
+    ) {
+      this.dismiss();
+    }
+    if (
       previous?.api === surface.api &&
       previous.camera === surface.camera &&
       previous.connection === surface.connection &&
@@ -181,6 +188,10 @@ export class PersistentTalkSession {
   public removeSurface(owner: object): void {
     const removed = this._surfaces.get(owner);
     if (!removed || !this._surfaces.delete(owner)) return;
+    if (this._restartSurfaceEntities?.has(owner)) {
+      this.dismiss();
+      return;
+    }
     if (
       ![...this._surfaces.values()].some((item) => item.host === removed.host)
     ) {
@@ -202,6 +213,7 @@ export class PersistentTalkSession {
       this._closeConnection();
     }
     this._target = nextTarget;
+    this._restartSurfaceEntities = undefined;
     const abort = new AbortController();
     this._abort = abort;
     this._microphoneMuted = false;
@@ -240,6 +252,11 @@ export class PersistentTalkSession {
   /** End the peer while retaining its camera as a restartable tile target. */
   public stopAndRetain(): void {
     this._closeConnection();
+    this._restartSurfaceEntities = new Map(
+      [...this._surfaces.entries()]
+        .filter(([, surface]) => this._surfacePresented(surface))
+        .map(([owner, surface]) => [owner, surface.entityId]),
+    );
     this._publish();
   }
 
@@ -247,6 +264,7 @@ export class PersistentTalkSession {
   public dismiss(): void {
     this._closeConnection();
     this._target = undefined;
+    this._restartSurfaceEntities = undefined;
     this._incomingStream = undefined;
     this._returnRequested = false;
     this._publish();

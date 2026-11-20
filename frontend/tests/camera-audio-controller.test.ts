@@ -33,6 +33,20 @@ describe("camera audio controller talk policy", () => {
 
     expect(controller.muted).toBe(false);
   });
+
+  it("refreshes the stored mute preference when a camera becomes active again", () => {
+    const entityId = "camera.reactivated-muted-test";
+    getMediaSessionManager().setCameraMuted(entityId, false);
+    controller = createController();
+    controller.hostConnected();
+    controller.configure(entityId, false, false, true, true);
+    controller.configure(entityId, false, false, false, false);
+    getMediaSessionManager().setCameraMuted(entityId, true);
+
+    controller.configure(entityId, false, false, false, true);
+
+    expect(controller.muted).toBe(true);
+  });
 });
 
 function createController(): CameraAudioController {
