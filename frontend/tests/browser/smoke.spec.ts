@@ -290,18 +290,35 @@ test("presents recorded media in the configured card-width bottom drawer", async
   const videoBoundaryY = resizedHandleBox.y + resizedHandleBox.height / 2;
   const viewportBottom = (page.viewportSize()?.height ?? 720) - 2;
   const sampledVideoHeights = [resizedMediaBox?.height ?? 0];
-  const sampledVideoTransforms = [
-    await recordedVideoSurface.evaluate((surface) => {
+  const sampleVideoGeometry = async () =>
+    recordedVideoSurface.evaluate((surface) => {
+      const viewport = surface.parentElement;
+      const video = surface.querySelector("video");
+      if (!viewport || !video) {
+        throw new Error("Recorded video presentation was not rendered");
+      }
       const style = getComputedStyle(surface);
       const matrix = new DOMMatrixReadOnly(style.transform);
+      const surfaceRect = surface.getBoundingClientRect();
+      const videoRect = video.getBoundingClientRect();
+      const viewportRect = viewport.getBoundingClientRect();
       return {
+        surfaceCenterOffset:
+          surfaceRect.left +
+          surfaceRect.width / 2 -
+          (viewportRect.left + viewportRect.width / 2),
+        surfaceWidth: surfaceRect.width,
         scale: matrix.a,
         transformOrigin: style.transformOrigin,
         translateX: matrix.e,
         translateY: matrix.f,
+        videoCenterOffset:
+          videoRect.left +
+          videoRect.width / 2 -
+          (viewportRect.left + viewportRect.width / 2),
       };
-    }),
-  ];
+    });
+  const sampledVideoGeometry = [await sampleVideoGeometry()];
   await page.mouse.move(videoBoundaryX, videoBoundaryY);
   await page.mouse.down();
   for (let step = 1; step <= 8; step += 1) {
@@ -310,18 +327,7 @@ test("presents recorded media in the configured card-width bottom drawer", async
       Math.min(viewportBottom, videoBoundaryY + step * 80),
     );
     sampledVideoHeights.push((await mediaPlayer.boundingBox())?.height ?? 0);
-    sampledVideoTransforms.push(
-      await recordedVideoSurface.evaluate((surface) => {
-        const style = getComputedStyle(surface);
-        const matrix = new DOMMatrixReadOnly(style.transform);
-        return {
-          scale: matrix.a,
-          transformOrigin: style.transformOrigin,
-          translateX: matrix.e,
-          translateY: matrix.f,
-        };
-      }),
-    );
+    sampledVideoGeometry.push(await sampleVideoGeometry());
   }
   await page.mouse.up();
   for (let index = 1; index < sampledVideoHeights.length; index += 1) {
@@ -329,16 +335,23 @@ test("presents recorded media in the configured card-width bottom drawer", async
       (sampledVideoHeights[index - 1] ?? 0) - 1,
     );
   }
-  for (let index = 0; index < sampledVideoTransforms.length; index += 1) {
-    const transform = sampledVideoTransforms[index];
+  for (let index = 0; index < sampledVideoGeometry.length; index += 1) {
+    const geometry = sampledVideoGeometry[index];
     const height = sampledVideoHeights[index] ?? 0;
-    const origin = transform?.transformOrigin.split(" ").map(Number.parseFloat);
-    expect(transform?.translateX).toBeCloseTo(0, 3);
-    expect(transform?.translateY).toBeCloseTo(0, 3);
+    const origin = geometry?.transformOrigin.split(" ").map(Number.parseFloat);
+    expect(
+      Math.abs(geometry?.surfaceCenterOffset ?? Number.POSITIVE_INFINITY),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(geometry?.videoCenterOffset ?? Number.POSITIVE_INFINITY),
+    ).toBeLessThanOrEqual(1);
+    expect(geometry?.translateX).toBeCloseTo(0, 3);
+    expect(geometry?.translateY).toBeCloseTo(0, 3);
+    expect(geometry?.scale).toBeCloseTo(1, 3);
     expect(origin?.[1]).toBeCloseTo(height / 2, 0);
     if (index > 0) {
-      expect(transform?.scale ?? 0).toBeGreaterThanOrEqual(
-        (sampledVideoTransforms[index - 1]?.scale ?? 0) - 0.001,
+      expect(geometry?.surfaceWidth ?? 0).toBeGreaterThanOrEqual(
+        (sampledVideoGeometry[index - 1]?.surfaceWidth ?? 0) - 1,
       );
     }
   }

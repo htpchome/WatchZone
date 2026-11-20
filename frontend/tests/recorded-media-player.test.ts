@@ -815,7 +815,7 @@ describe("recorded media player", () => {
     expect(observed).not.toContain(player);
   });
 
-  it("applies the requested drawer ratio and media fit in one synchronous presentation update", async () => {
+  it("applies drawer height through one centered intrinsic media surface", async () => {
     const player = document.createElement(
       "wzc-recorded-video-player",
     ) as RecordedVideoPlayer;
@@ -837,17 +837,16 @@ describe("recorded media player", () => {
     video.dispatchEvent(new Event("loadedmetadata"));
 
     player.setPresentationHeightRatio(0.8);
-    expect(transformScale(mediaSurface.style.transform)).toBeCloseTo(
-      0.8 / (9 / 16),
-    );
+    expect(transformScale(mediaSurface.style.transform)).toBe(1);
+    expect(
+      mediaSurface.style.getPropertyValue("--wzc-zoom-media-aspect-ratio"),
+    ).toBe(String(16 / 9));
 
     width = 0;
     height = 0;
     video.dispatchEvent(new Event("resize"));
     player.setPresentationHeightRatio(0.9);
-    expect(transformScale(mediaSurface.style.transform)).toBeCloseTo(
-      0.9 / (9 / 16),
-    );
+    expect(transformScale(mediaSurface.style.transform)).toBe(1);
   });
 
   it("presents review details and switches media variants in place", async () => {

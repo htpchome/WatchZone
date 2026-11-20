@@ -7,7 +7,6 @@ const DISCRETE_PIXEL_WHEEL_DELTA = 80;
 const KEYBOARD_PAN_FRACTION = 0.05;
 const MAX_ZOOM = 3;
 const MIN_ZOOM = 1;
-const PRESENTATION_RATIO_TOLERANCE = 0.005;
 const TOGGLE_ZOOM = 2;
 const WHEEL_DELTA_PIXEL = 0;
 const WHEEL_ZOOM_STEP = 0.25;
@@ -92,7 +91,11 @@ export class ZoomTransformController implements ReactiveController {
 
   public get transform(): string {
     const { panX, panY, scale } = this._presentationTransform();
-    return `translate3d(${panX}px, ${panY}px, 0) scale(${scale * this._basePresentationScale})`;
+    const presentationScale =
+      this._presentationHeightRatio === undefined
+        ? this._basePresentationScale
+        : MIN_ZOOM;
+    return `translate3d(${panX}px, ${panY}px, 0) scale(${scale * presentationScale})`;
   }
 
   public get zoomed(): boolean {
@@ -100,6 +103,14 @@ export class ZoomTransformController implements ReactiveController {
   }
 
   public get pannable(): boolean {
+    if (this._presentationHeightRatio !== undefined) {
+      const bounds = this._clampTransformPan(
+        Number.POSITIVE_INFINITY,
+        Number.POSITIVE_INFINITY,
+        this.scale,
+      );
+      return bounds.x > 0 || bounds.y > 0;
+    }
     return this.scale * this._basePresentationScale > MIN_ZOOM;
   }
 
@@ -110,10 +121,10 @@ export class ZoomTransformController implements ReactiveController {
   }
 
   /**
-   * Applies a layout-owned viewport ratio as one Zoom geometry intent.
+   * Applies a layout-owned viewport ratio to an intrinsically sized surface.
    *
-   * Zoom derives the cover scale and pan bounds from this ratio immediately;
-   * it does not wait for ResizeObserver to report the resulting DOM size.
+   * The surface's physical size owns the cover crop. Zoom owns only user
+   * scale and pan, and derives their bounds from this ratio immediately.
    */
   public setPresentationHeightRatio(heightRatio: number | undefined): void {
     const nextRatio =
@@ -122,9 +133,18 @@ export class ZoomTransformController implements ReactiveController {
       heightRatio > 0
         ? heightRatio
         : undefined;
-    if (nextRatio === this._presentationHeightRatio) return;
+    const previousRatio = this._presentationHeightRatio;
+    if (nextRatio === previousRatio) return;
+    if (nextRatio !== undefined && previousRatio !== undefined) {
+      const focalScale = nextRatio / previousRatio;
+      this._panX *= focalScale;
+      this._panY *= focalScale;
+    }
     this._presentationHeightRatio = nextRatio;
-    this._syncDerivedBasePresentationScale();
+    this._basePresentationScale = MIN_ZOOM;
+    this._clampPan();
+    this._renderPresentation();
+    this._host.requestUpdate();
   }
 
   public setMediaDimensions(width: number, height: number): void {
@@ -137,10 +157,6 @@ export class ZoomTransformController implements ReactiveController {
         : undefined;
     if (nextRatio === this._mediaHeightRatio) return;
     this._mediaHeightRatio = nextRatio;
-    if (this._presentationHeightRatio !== undefined) {
-      this._syncDerivedBasePresentationScale();
-      return;
-    }
     this._clampPan();
     this._renderPresentation();
     this._host.requestUpdate();
@@ -558,7 +574,10 @@ export class ZoomTransformController implements ReactiveController {
     panY: number,
     userScale: number,
   ): Point {
-    const scale = userScale * this._basePresentationScale;
+    const intrinsicPresentation = this._presentationHeightRatio !== undefined;
+    const scale =
+      userScale *
+      (intrinsicPresentation ? MIN_ZOOM : this._basePresentationScale);
     if (scale <= MIN_ZOOM) return { x: 0, y: 0 };
     const width = this._surfaceWidth;
     const height =
@@ -571,12 +590,14 @@ export class ZoomTransformController implements ReactiveController {
     // assuming that it fills the viewport and exposing blank space.
     if (this._mediaHeightRatio === undefined) return { x: 0, y: 0 };
     const stageHeightRatio = height / width;
-    const contentWidth =
-      stageHeightRatio < this._mediaHeightRatio
+    const contentWidth = intrinsicPresentation
+      ? height / this._mediaHeightRatio
+      : stageHeightRatio < this._mediaHeightRatio
         ? height / this._mediaHeightRatio
         : width;
-    const contentHeight =
-      stageHeightRatio > this._mediaHeightRatio
+    const contentHeight = intrinsicPresentation
+      ? height
+      : stageHeightRatio > this._mediaHeightRatio
         ? width * this._mediaHeightRatio
         : height;
     const maxX = Math.max(0, (contentWidth * scale - width) / 2);
@@ -585,18 +606,6 @@ export class ZoomTransformController implements ReactiveController {
       x: Math.min(maxX, Math.max(-maxX, panX)),
       y: Math.min(maxY, Math.max(-maxY, panY)),
     };
-  }
-
-  private _syncDerivedBasePresentationScale(): void {
-    const presentationRatio = this._presentationHeightRatio;
-    const mediaRatio = this._mediaHeightRatio;
-    const nextScale =
-      presentationRatio !== undefined &&
-      mediaRatio !== undefined &&
-      presentationRatio > mediaRatio + PRESENTATION_RATIO_TOLERANCE
-        ? presentationRatio / mediaRatio
-        : MIN_ZOOM;
-    this._applyBasePresentationScale(nextScale);
   }
 
   private _applyBasePresentationScale(nextScale: number): void {
@@ -691,6 +700,19 @@ export class ZoomTransformController implements ReactiveController {
 
   private _renderPresentation(): void {
     if (!this._surface || !this._presentationTarget) return;
+    if (
+      this._presentationHeightRatio !== undefined &&
+      this._mediaHeightRatio !== undefined
+    ) {
+      this._presentationTarget.style.setProperty(
+        "--wzc-zoom-media-aspect-ratio",
+        String(1 / this._mediaHeightRatio),
+      );
+    } else {
+      this._presentationTarget.style.removeProperty(
+        "--wzc-zoom-media-aspect-ratio",
+      );
+    }
     const transform = this.transform;
     if (
       this._animateNextTransform &&
@@ -722,6 +744,7 @@ export class ZoomTransformController implements ReactiveController {
     if (!target) return;
     this._transformMotion.cancel();
     target.style.removeProperty("transform");
+    target.style.removeProperty("--wzc-zoom-media-aspect-ratio");
     target.classList.remove("interacting", "pannable", "stage-resize-active");
   }
 

@@ -1,6 +1,10 @@
 import { css } from "lit";
 
+import { zoomIntrinsicPresentationStyles } from "../../ui/zoom";
+
 export const recordedVideoPlayerStyles = css`
+  ${zoomIntrinsicPresentationStyles}
+
   :host {
     background: var(--wzc-recorded-media-background);
     block-size: auto;
@@ -50,10 +54,6 @@ export const recordedVideoPlayerStyles = css`
 
   .media-surface {
     background: var(--wzc-recorded-media-background);
-    block-size: 100%;
-    inset: 0;
-    inline-size: 100%;
-    position: absolute;
     transform-origin: center;
     will-change: transform;
   }

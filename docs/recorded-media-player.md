@@ -231,9 +231,10 @@ viewing. Recording discovery and grouping are governed by
 - The draggable shell does not participate in drawer media geometry. Shared
   dialog content imposes no player aspect ratio, and only the drawer-owned
   controller writes the requested drawer viewport ratio. The recorded player
-  applies that ratio and its corresponding cover scale synchronously from one
-  height intent. Resize observation updates pan bounds only; it cannot introduce
-  an intermediate layout using the prior crop scale.
+  applies that ratio to one physically centered, intrinsically proportioned
+  media surface. Its physical overflow owns the center crop while the shared
+  display-zoom controller owns only user zoom, pan, and their bounds. Resize
+  observation cannot introduce an intermediate compensating transform.
 - Double-clicking the drawer header toggles its preferred inline size between
   its card-derived width and the canonical `1280px` stop when the visible
   viewport permits it. The viewport clamp remains authoritative on smaller
@@ -245,7 +246,7 @@ viewing. Recording discovery and grouping are governed by
   body or change presentation.
 - Recorded video retains the last valid intrinsic media ratio through
   transient zero-dimension reports while its viewport is resizing. Those
-  reports must not reset the base crop scale or expose an unzoomed frame.
+  reports must not reset the intrinsic surface or expose a fallback-fit frame.
 - The localized top-left close control and a downward drag beginning on the
   pull handle are the only dismissal paths. Releasing before the bounded close
   threshold settles the drawer back open; crossing it animates the drawer out
