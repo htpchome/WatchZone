@@ -80,19 +80,6 @@ export const twoWayTalkStyles = css`
     border-color: var(--wzc-talk-toolbar-border-color);
   }
 
-  :host([presentation="toolbar"]) .talk-controls canvas {
-    display: none;
-  }
-
-  :host([presentation="toolbar"]) .talk-controls .talk-button:not(.center) {
-    --wzc-round-button-color: var(--wzc-talk-toolbar-color);
-    --wzc-round-button-background: var(--wzc-talk-toolbar-button-background);
-    --wzc-round-button-hover-background: var(
-      --wzc-talk-toolbar-button-hover-background
-    );
-    --wzc-round-button-border-color: var(--wzc-talk-toolbar-border-color);
-  }
-
   .connecting-spinner {
     position: absolute;
     inset: -0.35rem;

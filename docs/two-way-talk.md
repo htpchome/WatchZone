@@ -16,10 +16,9 @@ boundaries. It supplements `architecture.md`, which remains authoritative.
   three-button control surface.
 - The wide Full Stage keeps the talk control on the activity-navigation
   centerline and places linked-light controls before it with the shared control
-  gap. Toolbar presentation uses semantic Home Assistant-aware surfaces and
-  borders and suppresses the overlay soundwave canvas so all three icon buttons
-  retain clear contrast. Overlay presentation retains its translucent
-  soundwave treatment.
+  gap. Toolbar presentation preserves the same single-pill active geometry,
+  transparent side-button surfaces, and visible soundwave canvas as the overlay
+  while using semantic Home Assistant-aware panel, border, and icon colors.
 - The component consumes the card-scoped `CameraSessionContext`. It does not import
   the camera module, reach into its shadow tree, or own live playback.
 - Provider-neutral talk resolution lives behind `TalkSourceResolver`.

@@ -88,9 +88,10 @@ export const stageRuntimeStyles = css`
     > .component-slot-content {
     z-index: 1;
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1fr);
     align-items: center;
     align-self: stretch;
+    column-gap: var(--wzc-control-dock-gap);
   }
 
   .module-composition[data-module-type="activity-navigation"]
@@ -106,7 +107,6 @@ export const stageRuntimeStyles = css`
     > .component-node[data-component-type="light_control"] {
     grid-column: 1;
     justify-self: end;
-    margin-inline-end: var(--wzc-control-dock-gap);
   }
 
   .module-composition[data-module-type="activity-navigation"]

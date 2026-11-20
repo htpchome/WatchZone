@@ -16,9 +16,9 @@ precedence.
 ## Repository baseline
 
 - Branch: `main`.
-- HEAD before the current toolbar-control refinement: `7deba08` —
-  `v0.0.4-dev.485 - feat(activity): add classification display policies`.
-- Version being prepared: `0.0.4-dev.486`.
+- HEAD before the current toolbar-control correction: `ec0bfe3` —
+  `v0.0.4-dev.486 - fix(controls): refine toolbar talk and light presentation`.
+- Version being prepared: `0.0.4-dev.487`.
 - The user remains the commit owner. No agent commit or sync is authorized.
 
 Always recheck `git status`, `git log -1`, and
@@ -73,8 +73,9 @@ This work is uncommitted; the user remains the only commit owner.
 - Wide Full Stage keeps the two-way-talk component exactly centered and places
   linked lights before it with a shared control gap.
 - Two-way talk retains its translucent soundwave presentation on Camera
-  overlays. Toolbar presentation instead uses semantic Home Assistant-aware
-  surfaces and borders and hides the soundwave canvas for clear icon contrast.
+  overlays. Toolbar presentation preserves the same pill, transparent side
+  buttons, and visible soundwave while applying semantic Home Assistant-aware
+  panel, border, and icon colors.
 - The active center microphone remains green while live and changes to the
   fixed WatchZone detection-warning color while its outgoing microphone is
   muted. Hover preserves either active color.

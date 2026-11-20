@@ -7908,11 +7908,10 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
         'button[data-talk-action="microphone"]',
       );
       const panelProbe = document.createElement("span");
-      const buttonProbe = document.createElement("span");
+      const colorProbe = document.createElement("span");
       panelProbe.style.background = "var(--wzc-talk-toolbar-background)";
-      buttonProbe.style.background =
-        "var(--wzc-talk-toolbar-button-background)";
-      controls.append(panelProbe, buttonProbe);
+      colorProbe.style.color = "var(--wzc-talk-toolbar-color)";
+      controls.append(panelProbe, colorProbe);
       const result = {
         canvasDisplay: canvas ? getComputedStyle(canvas).display : "",
         panel: getComputedStyle(controls).backgroundColor,
@@ -7920,16 +7919,18 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
         sideButton: sideButton
           ? getComputedStyle(sideButton).backgroundColor
           : "",
-        sideButtonExpected: getComputedStyle(buttonProbe).backgroundColor,
+        sideButtonColor: sideButton ? getComputedStyle(sideButton).color : "",
+        sideButtonColorExpected: getComputedStyle(colorProbe).color,
       };
       panelProbe.remove();
-      buttonProbe.remove();
+      colorProbe.remove();
       return result;
     });
   expect(activeTalkPresentation).toMatchObject({
-    canvasDisplay: "none",
+    canvasDisplay: "block",
     panel: activeTalkPresentation.panelExpected,
-    sideButton: activeTalkPresentation.sideButtonExpected,
+    sideButton: "rgba(0, 0, 0, 0)",
+    sideButtonColor: activeTalkPresentation.sideButtonColorExpected,
   });
   const connectedColor = await activeTalkCenter.evaluate((button) => {
     const probe = document.createElement("span");
