@@ -35,7 +35,6 @@ export const REDUCED_BANDWIDTH_CAMERA_RETENTION_MS = 2 * 60 * 1000;
 export const DEFAULT_LAYOUT_ROOT_NODE_ID = `${APP_ID}:default-layout-root`;
 export const DEFAULT_CAMERA_MODULE_NODE_ID = `${APP_ID}:default-camera-module`;
 export const DEFAULT_CAMERA_NAVIGATION_MODULE_NODE_ID = `${APP_ID}:default-camera-navigation-module`;
-export const DEFAULT_EVENTS_MODULE_NODE_ID = `${APP_ID}:default-events-module`;
 export const DEFAULT_REVIEWS_MODULE_NODE_ID = `${APP_ID}:default-reviews-module`;
 export const DEFAULT_RECORDINGS_MODULE_NODE_ID = `${APP_ID}:default-recordings-module`;
 export const DEFAULT_EXPORTS_MODULE_NODE_ID = `${APP_ID}:default-exports-module`;

@@ -963,6 +963,62 @@ test("does not load camera code for a camera-free layout", async ({ page }) => {
   );
 });
 
+test("omits Events code and data work from the built-in Stages", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForWatchZoneDefinition(page);
+  await page.locator("watchzone-card").evaluate((element) => {
+    const card = element as HTMLElement & {
+      hass: unknown;
+      setConfig(config: unknown): void;
+    };
+    const requests: string[] = [];
+    (window as Window & { watchzoneRequests?: string[] }).watchzoneRequests =
+      requests;
+    card.setConfig({
+      type: "custom:watchzone-card",
+      camera_entity: "camera.front",
+    });
+    card.hass = {
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "streaming",
+          attributes: { friendly_name: "Front" },
+        },
+      },
+      connection: {
+        subscribeMessage: async () => () => undefined,
+      },
+      hassUrl: (path: string) => path,
+      callWS: async (message: { type: string }) => {
+        requests.push(message.type);
+        if (message.type === "watchzone/reviews/list") return { items: [] };
+        if (message.type === "watchzone/live/camera/ready") {
+          return { ready: false };
+        }
+        return undefined;
+      },
+    };
+  });
+
+  await expect(page.locator(".stage-stack-button")).toHaveCount(3);
+  await expect(page.getByRole("button", { name: "Events" })).toHaveCount(0);
+  await expect(page.locator("wzc-events")).toHaveCount(0);
+  const overhead = await page.evaluate(() => ({
+    eventsDataRequests: (
+      (window as Window & { watchzoneRequests?: string[] }).watchzoneRequests ??
+      []
+    ).filter((type) => type.startsWith("watchzone/events/")),
+    eventsModules: performance
+      .getEntriesByType("resource")
+      .map(({ name }) => name)
+      .filter((name) => name.includes("/stage/modules/events/")),
+  }));
+  expect(overhead).toEqual({ eventsDataRequests: [], eventsModules: [] });
+});
+
 test("opens notification deep links independently of activity presentation", async ({
   page,
 }) => {
@@ -3546,7 +3602,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
 
   const stackNavigation = page.locator(".stage-stack-navigation");
   const stackButtons = stackNavigation.locator(".stage-stack-button");
-  await expect(stackButtons).toHaveCount(4);
+  await expect(stackButtons).toHaveCount(3);
   const reviewTiles = page.locator("wzc-reviews .tile");
   await expect(reviewTiles).toHaveCount(6);
   const activityStatusColors = await Promise.all(
@@ -4614,18 +4670,9 @@ test("keeps activity content in an independently scrolling viewport", async ({
     .click();
   await expect(page.locator("wzc-reviews .tile")).toHaveCount(6);
   await expect(page.locator("wzc-reviews")).toContainText("back_yard");
-  await stackButtons.nth(1).click();
-  await expect(stackButtons.nth(1)).toHaveCSS(
-    "background-color",
-    normalNavigation.activeBackground,
-  );
-  await expect(stackButtons.nth(1)).toHaveCSS(
-    "color",
-    normalNavigation.activeColor,
-  );
-  const events = page.locator("wzc-events");
-  const viewport = events.locator(".scroller");
-  await expect(events.locator(".tile")).toHaveCount(6);
+  const activityList = page.locator("wzc-reviews");
+  const viewport = activityList.locator(".scroller");
+  await expect(activityList.locator(".tile")).toHaveCount(6);
   await expect(viewport).toHaveCSS("overscroll-behavior-y", "auto");
   await page.locator("watchzone-card").evaluate((element) => {
     element.style.setProperty(
@@ -4637,7 +4684,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
       "rgb(180, 180, 180)",
     );
   });
-  const activityTile = events.locator(".tile").first();
+  const activityTile = activityList.locator(".tile").first();
   await expect(activityTile).toHaveCSS(
     "background-color",
     "rgb(200, 200, 200)",
@@ -4648,7 +4695,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
     "rgb(180, 180, 180)",
   );
   await page.mouse.move(0, 0);
-  const activityHeaderOffset = await events
+  const activityHeaderOffset = await activityList
     .locator("wzc-media-day-header")
     .first()
     .evaluate((header) => {
@@ -4665,7 +4712,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
       );
     });
   expect(Math.abs(activityHeaderOffset)).toBeLessThanOrEqual(1);
-  const actionInset = await events
+  const actionInset = await activityList
     .locator(".tile")
     .first()
     .evaluate((tile) => {
@@ -4678,8 +4725,11 @@ test("keeps activity content in an independently scrolling viewport", async ({
     });
   expect(actionInset).toBeGreaterThanOrEqual(9);
   expect(actionInset).toBeLessThanOrEqual(12);
-  await expect(events.locator(".actions").first()).toHaveCSS("gap", "8px");
-  const tileActionRadius = await events
+  await expect(activityList.locator(".actions").first()).toHaveCSS(
+    "gap",
+    "8px",
+  );
+  const tileActionRadius = await activityList
     .locator(".wzc-activity-action")
     .first()
     .evaluate((button) => {
@@ -4698,24 +4748,24 @@ test("keeps activity content in an independently scrolling viewport", async ({
     "border-radius",
     "21px",
   );
-  await expect(events.locator(".tile").first()).toHaveCSS(
+  await expect(activityList.locator(".tile").first()).toHaveCSS(
     "border-radius",
     "21px",
   );
-  await expect(events.locator(".placeholder svg")).toHaveCount(1);
-  await expect(events).toContainText("back_yard");
-  await expect(events).toContainText("5:13 PM");
-  await expect(events.locator("wzc-badge").first()).toHaveText("Person");
+  await expect(activityList.locator(".placeholder svg")).toHaveCount(1);
+  await expect(activityList).toContainText("back_yard");
+  await expect(activityList).toContainText("5:13 PM");
+  await expect(activityList.locator("wzc-badge").first()).toHaveText("Person");
   await page
     .locator('wzc-camera-navigation button[data-value="camera.front"]')
     .click();
-  await expect(events).toContainText("driveway");
+  await expect(activityList).toContainText("driveway");
   const scrolling = await viewport.evaluate((node) => ({
     clientHeight: node.clientHeight,
     scrollHeight: node.scrollHeight,
   }));
   expect(scrolling.scrollHeight).toBeGreaterThan(scrolling.clientHeight);
-  const virtualized = await events
+  const virtualized = await activityList
     .locator("wzc-activity-list")
     .evaluate(async (element) => {
       const list = element as HTMLElement & {
@@ -4723,7 +4773,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
         updateComplete: Promise<boolean>;
       };
       const originalItems = list.items;
-      list.items = Array.from({ length: 100 }, (_, index) => ({
+      const virtualizedItems = Array.from({ length: 100 }, (_, index) => ({
         ...originalItems[index % originalItems.length],
         id: `virtualized-${index}`,
         revision: `virtualized-${index}`,
@@ -4732,6 +4782,12 @@ test("keeps activity content in an independently scrolling viewport", async ({
           Math.floor(index / 20) * 86_400 -
           index,
       }));
+      list.items = virtualizedItems;
+      Object.defineProperty(list, "items", {
+        configurable: true,
+        get: () => virtualizedItems,
+        set: () => undefined,
+      });
       await list.updateComplete;
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => resolve()),
@@ -4802,6 +4858,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
         requestAnimationFrame(waitForTop);
       });
       const scrollAfterTop = viewportElement.scrollTop;
+      delete (list as unknown as Record<string, unknown>).items;
       list.items = originalItems;
       await list.updateComplete;
       return {
@@ -4831,7 +4888,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(virtualized.lastPosition).toBe(100);
   expect(virtualized.topVisible).toBe(true);
   expect(virtualized.scrollAfterTop).toBe(0);
-  const constrained = await events
+  const constrained = await activityList
     .locator("wzc-activity-list")
     .evaluate((element) => {
       const list = element as HTMLElement;
@@ -4851,7 +4908,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(constrained.shellHeight).toBeLessThan(420);
   expect(constrained.clientHeight).toBeLessThan(constrained.shellHeight);
   expect(constrained.scrollHeight).toBeGreaterThan(constrained.clientHeight);
-  const nonScrolling = await events
+  const nonScrolling = await activityList
     .locator("wzc-activity-list")
     .evaluate(async (element) => {
       const list = element as HTMLElement & {
@@ -4860,6 +4917,10 @@ test("keeps activity content in an independently scrolling viewport", async ({
       };
       const originalItems = list.items;
       list.items = list.items.slice(0, 1);
+      await list.updateComplete;
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      );
       await list.updateComplete;
       const viewportElement =
         list.shadowRoot?.querySelector<HTMLElement>(".scroller");
@@ -4875,35 +4936,34 @@ test("keeps activity content in an independently scrolling viewport", async ({
       await list.updateComplete;
       return geometry;
     });
-  expect(nonScrolling.scrollHeight).toBeLessThanOrEqual(
-    nonScrolling.clientHeight,
-  );
   expect(
     nonScrolling.offsetWidth - nonScrolling.clientWidth,
   ).toBeLessThanOrEqual(2);
-  const tileGeometry = await events.locator(".tile").evaluateAll((tiles) =>
-    tiles.map((tile) => {
-      const tileRect = tile.getBoundingClientRect();
-      const thumbnailRect = tile
-        .querySelector(".thumbnail-wrap")
-        ?.getBoundingClientRect();
-      return {
-        bottom: tileRect.bottom,
-        thumbnailBottomInset: thumbnailRect
-          ? tileRect.bottom - thumbnailRect.bottom
-          : Number.POSITIVE_INFINITY,
-        thumbnailLeadingInset: thumbnailRect
-          ? thumbnailRect.left - tileRect.left
-          : Number.POSITIVE_INFINITY,
-        thumbnailRatio: thumbnailRect
-          ? thumbnailRect.width / thumbnailRect.height
-          : 0,
-        thumbnailTopInset: thumbnailRect
-          ? thumbnailRect.top - tileRect.top
-          : Number.POSITIVE_INFINITY,
-      };
-    }),
-  );
+  const tileGeometry = await activityList
+    .locator(".tile")
+    .evaluateAll((tiles) =>
+      tiles.map((tile) => {
+        const tileRect = tile.getBoundingClientRect();
+        const thumbnailRect = tile
+          .querySelector(".thumbnail-wrap")
+          ?.getBoundingClientRect();
+        return {
+          bottom: tileRect.bottom,
+          thumbnailBottomInset: thumbnailRect
+            ? tileRect.bottom - thumbnailRect.bottom
+            : Number.POSITIVE_INFINITY,
+          thumbnailLeadingInset: thumbnailRect
+            ? thumbnailRect.left - tileRect.left
+            : Number.POSITIVE_INFINITY,
+          thumbnailRatio: thumbnailRect
+            ? thumbnailRect.width / thumbnailRect.height
+            : 0,
+          thumbnailTopInset: thumbnailRect
+            ? thumbnailRect.top - tileRect.top
+            : Number.POSITIVE_INFINITY,
+        };
+      }),
+    );
   const viewportBottom = await viewport.evaluate(
     (node) => node.getBoundingClientRect().bottom,
   );
@@ -4913,7 +4973,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(tileGeometry[0]?.thumbnailBottomInset).toBeLessThanOrEqual(1);
   expect(tileGeometry[0]?.thumbnailLeadingInset).toBeLessThanOrEqual(1);
   expect(tileGeometry[0]?.thumbnailTopInset).toBeLessThanOrEqual(1);
-  const thumbnailPresentation = await events
+  const thumbnailPresentation = await activityList
     .locator(".thumbnail")
     .first()
     .evaluate((thumbnail) => {
@@ -4932,7 +4992,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
     .locator("wzc-camera-view .camera")
     .first()
     .boundingBox();
-  await events.locator(".tile-player").first().click();
+  await activityList.locator(".tile-player").first().click();
   const mediaDialog = page.locator(
     ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) dialog",
   );
@@ -4970,7 +5030,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(informationPresentation.padding).toBeGreaterThan(0);
   expect(informationPresentation.radius).toBeGreaterThan(0);
   const mediaBadge = mediaInformation.locator(".badges wzc-badge").first();
-  const tileBadge = events.locator(".badges wzc-badge").first();
+  const tileBadge = activityList.locator(".badges wzc-badge").first();
   const badgePresentations = await Promise.all(
     [mediaBadge, tileBadge].map((badge) =>
       badge.evaluate((element) => {
@@ -4988,7 +5048,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect(
     mediaDialog.getByRole("button", { name: "View Snapshot" }),
   ).toBeVisible();
-  const activityAction = events.locator(".action").first();
+  const activityAction = activityList.locator(".action").first();
   const mediaAction = mediaDialog.getByRole("button", {
     name: "View Snapshot",
   });
@@ -5604,14 +5664,14 @@ test("keeps activity content in an independently scrolling viewport", async ({
   const draggedBox = await mediaDialog.boundingBox();
   expect(draggedBox?.x).toBeGreaterThanOrEqual(0);
   expect(draggedBox?.y).toBeGreaterThanOrEqual(0);
-  const nextEventTile = events.locator(".tile-player").nth(1);
+  const nextEventTile = activityList.locator(".tile-player").nth(1);
   await nextEventTile.scrollIntoViewIfNeeded();
   await nextEventTile.evaluate((button: HTMLButtonElement) => button.click());
   await expect(
     page.locator(
       ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) .title",
     ),
-  ).toHaveText("Front · 5:12 PM · Mon, Nov 13");
+  ).toHaveText("Detection · Front · 5:12 PM · Mon, Nov 13");
   await expect(mediaDialog).toBeVisible();
   await page.evaluate(() =>
     document.body.dispatchEvent(
@@ -5630,7 +5690,10 @@ test("keeps activity content in an independently scrolling viewport", async ({
     ),
   ).toHaveCount(0);
 
-  await events.locator('button[aria-label="View snapshot"]').first().click();
+  await activityList
+    .locator('button[aria-label="View snapshot"]')
+    .first()
+    .click();
   await expect(mediaDialog).toBeVisible();
   const snapshot = page.locator(
     ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) img.snapshot",
@@ -5695,8 +5758,8 @@ test("keeps activity content in an independently scrolling viewport", async ({
     .locator("wzc-camera-navigation button")
     .nth(1)
     .evaluate((button: HTMLButtonElement) => button.click());
-  await expect(events).toContainText("back_yard");
-  await expect(events).not.toContainText("driveway");
+  await expect(activityList).toContainText("back_yard");
+  await expect(activityList).not.toContainText("driveway");
   await page.locator("watchzone-card").evaluate((element) => {
     (
       element as HTMLElement & {
@@ -5717,9 +5780,9 @@ test("keeps activity content in an independently scrolling viewport", async ({
       ],
     });
   });
-  await expect(events.locator(".tile")).toHaveCount(6);
-  await expect(events.locator("wzc-badge")).toHaveCount(0);
-  await expect(events).not.toContainText("back_yard");
+  await expect(activityList.locator(".tile")).toHaveCount(6);
+  await expect(activityList.locator("wzc-badge")).toHaveCount(0);
+  await expect(activityList).not.toContainText("back_yard");
   await expect(page.locator("watchzone-card ha-card")).toHaveCSS(
     "border-radius",
     "0px",
@@ -5728,7 +5791,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
     "border-radius",
     "0px",
   );
-  await expect(events.locator(".tile").first()).toHaveCSS(
+  await expect(activityList.locator(".tile").first()).toHaveCSS(
     "border-radius",
     "0px",
   );
@@ -6018,17 +6081,10 @@ test("switches activity and recordings through the shared media calendar", async
   await expect(reviewDayHeaders).toHaveCount(1);
   await expect(reviewDayHeaders).toContainText("Sun, Nov 8 — Reviews");
 
-  await navigation.locator(".stage-stack-button").nth(1).click();
-  await expect(page.locator("wzc-events .tile")).toHaveCount(1);
-  await expect(page.locator("wzc-events")).toContainText("Bird");
-  await expect(page.locator("wzc-events wzc-media-day-header")).toContainText(
-    "Sun, Nov 8 — Events",
-  );
-
   await trigger.click();
   await expect(calendar.locator(".day.selected")).toHaveCount(1);
   await calendar.locator(".reset").click();
-  await expect(page.locator("wzc-events .tile")).toHaveCount(2);
+  await expect(page.locator("wzc-reviews .tile")).toHaveCount(2);
 
   await filter.locator(".filter-trigger").click();
   await expect(filter.locator(".popover")).toBeVisible();
@@ -6085,7 +6141,7 @@ test("switches activity and recordings through the shared media calendar", async
     (popoverBounds?.y ?? 0) + (popoverBounds?.height ?? 0),
   ).toBeLessThanOrEqual(viewportSize?.height ?? 0);
   await filter.getByText("person", { exact: true }).click();
-  await expect(page.locator("wzc-events .tile")).toHaveCount(1);
+  await expect(page.locator("wzc-reviews .tile")).toHaveCount(1);
   await filter.getByText("bird", { exact: true }).click();
   await expect(
     filter.locator("fieldset").nth(1).locator('input[type="checkbox"]:checked'),
@@ -6097,11 +6153,11 @@ test("switches activity and recordings through the shared media calendar", async
   await filter.getByText("Alerts", { exact: true }).click();
   await filter.getByText("Reviewed", { exact: true }).click();
   await filter.getByText("driveway", { exact: true }).click();
-  await expect(page.locator("wzc-events .tile")).toHaveCount(1);
+  await expect(page.locator("wzc-reviews .tile")).toHaveCount(1);
   await filter.locator(".reset").click();
-  await expect(page.locator("wzc-events .tile")).toHaveCount(2);
+  await expect(page.locator("wzc-reviews .tile")).toHaveCount(2);
 
-  await navigation.locator(".stage-stack-button").nth(2).click();
+  await navigation.locator(".stage-stack-button").nth(1).click();
   const recordings = page.locator("wzc-recordings");
   await expect(recordings.locator(".tile")).toHaveCount(8);
   await page.locator("watchzone-card").evaluate((element) => {
@@ -10232,7 +10288,7 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
     ),
   ).not.toBe("0px");
   const activityNavigation = card.locator("wzc-activity-navigation");
-  await expect(activityNavigation.locator("button")).toHaveCount(8);
+  await expect(activityNavigation.locator("button")).toHaveCount(7);
   const navigationButtonHeights = await activityNavigation
     .locator("button")
     .evaluateAll((buttons) =>
@@ -10420,7 +10476,7 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
     Math.abs(geometry.activityNavigationRight - geometry.cameraRight),
   ).toBeLessThanOrEqual(3);
   expect(geometry.activityNavigationBottom).toBeCloseTo(
-    geometry.host.height - 8,
+    geometry.host.height - 16,
     0,
   );
   expect(geometry.activityNavigationBottom).toBeLessThanOrEqual(
@@ -10429,9 +10485,9 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
   expect(geometry.activityNavigationTop).toBeGreaterThan(
     geometry.cameraNavigationTop,
   );
-  expect(geometry.activityNavigationTop).toBeGreaterThanOrEqual(
-    geometry.cameraNavigationBottom,
-  );
+  expect(
+    geometry.cameraNavigationBottom - geometry.activityNavigationTop,
+  ).toBeLessThanOrEqual(8);
   expect(geometry.activityNavigationHeight).toBeGreaterThan(0);
   expect(geometry.cameraAspectRatio).toBeCloseTo(16 / 9, 2);
   expect(geometry.cameraLeft).toBeCloseTo(42, 0);

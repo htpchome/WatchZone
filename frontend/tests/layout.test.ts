@@ -12,7 +12,6 @@ import {
   DEFAULT_REVIEWS_MODULE_NODE_ID,
   DEFAULT_CAMERA_MODULE_NODE_ID,
   DEFAULT_CAMERA_NAVIGATION_MODULE_NODE_ID,
-  DEFAULT_EVENTS_MODULE_NODE_ID,
   DEFAULT_EXPORTS_MODULE_NODE_ID,
   DEFAULT_LAYOUT_ROOT_NODE_ID,
   DEFAULT_LIGHT_COMPONENT_NODE_ID,
@@ -31,6 +30,7 @@ import {
   validateStageCatalog,
   validateStageDesign,
   validateStageFlow,
+  type StageContainerNode,
   type StageDesignDocument,
   type StageModuleNode,
   type StageStackNode,
@@ -128,11 +128,6 @@ describe("layout composition", () => {
           moduleType: "reviews",
         },
         {
-          id: DEFAULT_EVENTS_MODULE_NODE_ID,
-          kind: "module",
-          moduleType: "events",
-        },
-        {
           id: DEFAULT_RECORDINGS_MODULE_NODE_ID,
           kind: "module",
           moduleType: "recordings",
@@ -170,15 +165,6 @@ describe("layout composition", () => {
         targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
       },
       {
-        displayEventTypeBadges: true,
-        displayObjectBadges: true,
-        displayZone: true,
-        historyDays: 5,
-        roundedCorners: true,
-        shadows: true,
-        targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
-      },
-      {
         targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
       },
       {
@@ -186,6 +172,20 @@ describe("layout composition", () => {
         targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
       },
     ]);
+  });
+
+  it("omits Events from every built-in Full Stage variant", () => {
+    const stageSet = createBuiltInStageSet(
+      normalizeCardConfig({ camera_entity: "camera.front" }),
+    );
+
+    for (const design of stageSet.designs) {
+      for (const variant of Object.values(design.variants)) {
+        expect(variant && collectModuleTypes(variant.root)).not.toContain(
+          "events",
+        );
+      }
+    }
   });
 
   it("gates the camera-only flow to the standard camera design", () => {
@@ -279,7 +279,7 @@ describe("layout composition", () => {
     expect(moduleAt(layout, 0).config).toMatchObject({ transition: "fade" });
   });
 
-  it("maps event badge visibility at the events module boundary", () => {
+  it("maps event badge visibility at the reviews module boundary", () => {
     const layout = builtInStage(
       normalizeCardConfig({
         camera_entity: "camera.front",
@@ -289,7 +289,7 @@ describe("layout composition", () => {
       }),
     );
 
-    for (const module of reviewEventModules(layout)) {
+    for (const module of reviewModules(layout)) {
       expect(module.config).toMatchObject({
         displayEventTypeBadges: false,
         displayObjectBadges: false,
@@ -298,7 +298,7 @@ describe("layout composition", () => {
     }
   });
 
-  it("maps the configured event history range at the events module boundary", () => {
+  it("maps the configured event history range at the reviews module boundary", () => {
     const layout = builtInStage(
       normalizeCardConfig({
         camera_entity: "camera.front",
@@ -306,12 +306,12 @@ describe("layout composition", () => {
       }),
     );
 
-    for (const module of reviewEventModules(layout)) {
+    for (const module of reviewModules(layout)) {
       expect(module.config).toMatchObject({ historyDays: 12 });
     }
-    expect(activityModules(layout)[2]?.config).not.toHaveProperty(
-      "historyDays",
-    );
+    expect(
+      activityModuleOfType(layout, "recordings").config,
+    ).not.toHaveProperty("historyDays");
   });
 
   it("maps camera bar appearance at the navigation module boundary", () => {
@@ -367,14 +367,14 @@ describe("layout composition", () => {
     ]);
   });
 
-  it("maps event shadows at both activity module boundaries", () => {
+  it("maps event shadows at the reviews module boundary", () => {
     const layout = builtInStage(
       normalizeCardConfig({
         camera_entity: "camera.front",
         event_shadows: false,
       }),
     );
-    for (const module of reviewEventModules(layout)) {
+    for (const module of reviewModules(layout)) {
       expect(module.config).toMatchObject({ shadows: false });
     }
   });
@@ -949,12 +949,32 @@ function activityModules(
   return (node as StageStackNode).children;
 }
 
-function reviewEventModules(
+function activityModuleOfType(
+  design: StageDesignDocument,
+  moduleType: string,
+): StageModuleNode {
+  const module = activityModules(design).find(
+    (candidate) => candidate.moduleType === moduleType,
+  );
+  if (!module) throw new Error(`Expected ${moduleType} activity module.`);
+  return module;
+}
+
+function reviewModules(
   design: StageDesignDocument,
 ): readonly StageModuleNode[] {
   return activityModules(design).filter(
-    ({ moduleType }) => moduleType === "reviews" || moduleType === "events",
+    ({ moduleType }) => moduleType === "reviews",
   );
+}
+
+function collectModuleTypes(container: StageContainerNode): string[] {
+  return container.children.flatMap(({ node }) => {
+    if (node.kind === "container") return collectModuleTypes(node);
+    if (node.kind === "stack")
+      return node.children.map(({ moduleType }) => moduleType);
+    return [node.moduleType];
+  });
 }
 
 function setRuntimeStage(

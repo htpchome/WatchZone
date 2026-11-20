@@ -74,13 +74,15 @@ stage may support one or both responsive profiles; the runtime never fabricates
 a missing variant.
 
 The built-in Full Stage template contains one stable camera module node,
-standalone camera navigation, and one media-list module stack whose Reviews
-child precedes Events and Recordings. The built-in Camera Only template contains
-only Camera while retaining Camera's normal overlay and controls slots. Each is
-the default entry in both flows for its Stage Type. Without camera input, the
-composition is empty and no camera module, activity module, provider adapter,
-poster, or media session is requested. Adding backend designs or navigation
-changes the catalog and flow, not the renderer.
+standalone camera navigation, and one media-list module stack containing
+Reviews, Recordings, and Exports, plus the conditional PTZ panel. Events remains
+an available lazy module for future user-created designs but is not referenced
+by either built-in Full Stage template. The built-in Camera Only template
+contains only Camera while retaining Camera's normal overlay and controls
+slots. Each is the default entry in both flows for its Stage Type. Without
+camera input, the composition is empty and no camera module, activity module,
+provider adapter, poster, or media session is requested. Adding backend
+designs or navigation changes the catalog and flow, not the renderer.
 
 ## Invariants
 

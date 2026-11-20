@@ -16,9 +16,9 @@ precedence.
 ## Repository baseline
 
 - Branch: `main`.
-- HEAD before the current lifecycle work: `908501f` —
-  `v0.0.4-dev.482 - fix(ptz): restore pad dividers and zoom fallback`.
-- Version: `0.0.4-dev.483`.
+- HEAD before the current built-in Stage change: `8de163b` —
+  `v0.0.4-dev.483 - fix(live): accelerate foreground and HA restart recovery`.
+- Version: `0.0.4-dev.484`.
 - The user remains the commit owner. No agent commit or sync is authorized.
 
 Always recheck `git status`, `git log -1`, and
@@ -67,6 +67,16 @@ optical zoom.
   Destroying the WebView/document still releases browser-owned resources.
 
 This work is uncommitted; the user remains the only commit owner.
+
+## Events removed from built-in Stages at `dev.484`
+
+The standard and mobile built-in Full Stage templates no longer include the
+Events module in either responsive variant. Events remains a registered,
+independently lazy-loaded module for future user-created Stage Designs.
+Because no built-in layout references it, ordinary cards do not import the
+Events implementation, create its element, subscribe its controllers, or
+request an Events list. Backend command and provider registration remains
+inert until a future layout or an explicit event deep link requests data.
 
 ## Current recorded-media baseline
 

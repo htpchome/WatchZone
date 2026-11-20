@@ -114,7 +114,7 @@ WebView. Double Column is the default separate landscape presentation. It
 occupies the fixed WebView, covers Home Assistant's dashboard chrome, and
 applies viewport safe-area padding. The leading 60% contains a
 16:9 camera plus camera navigation; the trailing 40% contains the active
-Reviews, Events, Recordings, Exports, or PTZ stack. The independently placeable
+Reviews, Recordings, Exports, or PTZ stack. The independently placeable
 activity-navigation module sits above that stack inside the trailing surface.
 A top inset protects the camera, an expanded module gutter separates
 the columns, and a reduced form of the larger reported landscape safe-area

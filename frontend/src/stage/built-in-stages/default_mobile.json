@@ -146,15 +146,6 @@
                       },
                       {
                         "config": {
-                          "roundedCorners": true,
-                          "targetModuleId": "default-camera-module"
-                        },
-                        "id": "default-events-module",
-                        "kind": "module",
-                        "moduleType": "events"
-                      },
-                      {
-                        "config": {
                           "targetModuleId": "default-camera-module"
                         },
                         "id": "default-recordings-module",
@@ -345,15 +336,6 @@
                         "id": "default-reviews-module",
                         "kind": "module",
                         "moduleType": "reviews"
-                      },
-                      {
-                        "config": {
-                          "roundedCorners": true,
-                          "targetModuleId": "default-camera-module"
-                        },
-                        "id": "default-events-module",
-                        "kind": "module",
-                        "moduleType": "events"
                       },
                       {
                         "config": {

@@ -146,7 +146,6 @@ root grid
     ├── activity-navigation module
     └── media-list module stack
         ├── reviews module (initially active)
-        ├── events module
         ├── recordings module
         ├── exports module
         └── PTZ panel module (when the active camera is PTZ-configured)
@@ -190,9 +189,10 @@ width so changing countdown digits cannot move the selector.
 Additional-camera grouping remains inside Camera's private presentation. The
 camera-navigation module and camera-switcher receive one group selection item
 instead of importing group configuration or coordinating either member.
-Review, event, and recording modules consume the active physical-camera scope
-published through context; overlapping grouped recordings remain separate
-source rows.
+Review and recording modules in the built-in Stage consume the active
+physical-camera scope published through context; overlapping grouped
+recordings remain separate source rows. The independently loadable Events
+module remains available to user-created Stage Designs.
 Neither Stage slot consumes
 device safe-area insets: a Stage is contained inside the Home Assistant card,
 not attached to a physical viewport edge. A true viewport-edge presentation
