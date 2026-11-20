@@ -16,9 +16,9 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
 - Branch: `main`.
 - HEAD before this work: `6d4ddc6` —
   `v0.0.4-dev.492 - fix(talk): harden persistent navigation and audio`.
-- Version being prepared: `0.0.4-dev.494`.
+- Version being prepared: `0.0.4-dev.495`.
 - Proposed subject:
-  `v0.0.4-dev.494 - fix(talk): discard stopped sessions and preserve mute`.
+  `v0.0.4-dev.495 - fix(talk): finalize stopped-session and mobile tile lifecycle`.
 
 ## Persistent two-way talk
 
@@ -87,7 +87,7 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
 - Shared zoom/pan and shared media-stage resize remain the sole owners of those
   behaviors for live and recorded media.
 
-## Validation for `dev.494`
+## Validation for `dev.495`
 
 - Formatting, lint, typecheck, architecture/style/license checks, production
   build, and version synchronization pass.
