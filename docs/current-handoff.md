@@ -16,10 +16,10 @@ precedence.
 ## Repository baseline
 
 - Branch: `main`.
-- HEAD before the current PTZ refinement: `9362a48` —
-  `v0.0.4-dev.481 - fix(build): restore release bundle budget`.
-- Version: `0.0.4-dev.482`.
-- The user will commit this rollback. No agent commit or sync is authorized.
+- HEAD before the current lifecycle work: `908501f` —
+  `v0.0.4-dev.482 - fix(ptz): restore pad dividers and zoom fallback`.
+- Version: `0.0.4-dev.483`.
+- The user remains the commit owner. No agent commit or sync is authorized.
 
 Always recheck `git status`, `git log -1`, and
 `custom_components/watchzone/const.py` before starting work.
@@ -46,13 +46,27 @@ after Exports when at least one configured main camera has PTZ enabled.
 - The public provider extension API is version 6 because PTZ provider motion
   now includes optical zoom as well as pan/tilt, in addition to preset recall.
 
-The `dev.482` refinement replaces both PTZ presentations with a shared circular
-wedge control. The overlay center toggles expansion; the panel center supplies
-zoom in/out, preferring provider optical zoom and falling back to Camera's
-existing display-zoom owner. Frigate preset recall no longer performs a second,
-failure-prone capability request before its finite service call. This work is
-uncommitted; the user remains the only commit owner.
+The `dev.483` correction keeps the shared circular wedge geometry and restores
+the center split with the semantic divider token. The panel `+` and `-` always
+drive Camera's existing display-zoom owner and never inspect or invoke provider
+optical zoom.
 
+## Live recovery corrected at `dev.483`
+
+- Home Assistant control-WebSocket interruption no longer destroys a healthy
+  live or parked media transport, and the last sanitized HA entity state stays
+  available so modules do not tear down or produce a toast storm.
+- A failed or background-stalled active connection is promoted immediately
+  when the browser document becomes visible, bypassing background-throttled
+  retry and adapter timeout delays. The active player is resumed in place.
+- Frigate MSE remains as a bounded parked fallback after WebRTC takeover. It
+  drops media while parked and seeks to the live edge on resume, avoiding a
+  cold 15-second MSE startup when fallback is needed.
+- These changes do not broaden retention past the existing document lifetime,
+  Companion reduced-bandwidth policy, lease release, or session eviction.
+  Destroying the WebView/document still releases browser-owned resources.
+
+This work is uncommitted; the user remains the only commit owner.
 
 ## Current recorded-media baseline
 

@@ -251,18 +251,21 @@ time to retire the prior media consumer before the next probe begins while HLS
 remains selected.
 
 The session pool also observes Home Assistant's own WebSocket lifecycle. A
-`disconnected` event invalidates retained and active media transports once;
-the matching authenticated `ready` event restores actively leased sessions
-sequentially in their original acquisition order. A retained session that was
-not interrupted remains healthy and is reused instead of restarted. A full
-Home Assistant restart can accept WebSocket commands briefly
+`disconnected` event marks the control path interrupted but does not close an
+already established media transport that may still be carrying video. If that
+media transport also fails, the matching authenticated `ready` event restores
+actively leased failed sessions sequentially in their original acquisition
+order. Healthy active and parked sessions remain attached to the same media
+objects and are reused instead of restarted. A full Home Assistant restart can
+accept WebSocket commands briefly
 before WatchZone's backend/provider commands are registered, so failed startup
 attempts during that recovery window use a separate bounded five-attempt
 backoff policy. This is independent of each adapter's bounded ordinary-media
-policy. Parked sessions remain inactive until reacquired. This prevents
-a Home Assistant restart from leaving an old media transport indefinitely
-marked `live` or `connecting` without introducing health polling or duplicate
-connections.
+policy. Parked failed sessions remain inactive until reacquired. A foreground
+visibility return resumes healthy media and immediately promotes an active
+failed or background-stalled connection rather than waiting for a throttled
+retry or adapter startup timeout. This recovery remains bounded and does not
+create a second connection for the same session key.
 
 ## 8. Current audio behavior
 

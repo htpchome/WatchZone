@@ -237,9 +237,14 @@ export class CameraLivePresentation extends LitElement {
   public connectedCallback(): void {
     this._disconnectGeneration += 1;
     super.connectedCallback();
+    document.addEventListener("visibilitychange", this._handleVisibilityChange);
   }
 
   public disconnectedCallback(): void {
+    document.removeEventListener(
+      "visibilitychange",
+      this._handleVisibilityChange,
+    );
     const generation = ++this._disconnectGeneration;
     // Preserve the decoded WebRTC frame across a synchronous DOM reparent.
     // A presentation that remains disconnected still detaches immediately
@@ -255,6 +260,11 @@ export class CameraLivePresentation extends LitElement {
     this._spinnerElement = undefined;
     super.disconnectedCallback();
   }
+
+  private readonly _handleVisibilityChange = (): void => {
+    if (document.visibilityState !== "visible" || !this._activeVideo) return;
+    void playMediaElement(this._activeVideo).catch(() => undefined);
+  };
 
   protected willUpdate(changed: Map<PropertyKey, unknown>): void {
     if (changed.has("active")) this._zoom.setActive(this.active);

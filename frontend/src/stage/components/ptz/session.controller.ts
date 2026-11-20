@@ -83,16 +83,15 @@ export class PtzSessionController implements ReactiveController {
     const source = this._source;
     const capability = this._capability;
     const zoom = direction === "zoom_in" || direction === "zoom_out";
-    const supported = zoom
-      ? capability?.zoom
-      : direction === "left" || direction === "right"
-        ? capability?.pan
-        : capability?.tilt;
     if (!camera?.available) return;
-    if (zoom && !supported) {
+    if (zoom) {
       camera.zoomDisplay?.(direction === "zoom_in" ? "in" : "out");
       return;
     }
+    const supported =
+      direction === "left" || direction === "right"
+        ? capability?.pan
+        : capability?.tilt;
     if (!api || !source || !supported) return;
 
     this._stopMotion(false);
@@ -113,10 +112,6 @@ export class PtzSessionController implements ReactiveController {
     } catch {
       if (generation !== this._motionGeneration) return;
       this._releaseMotionOverlay();
-      if (zoom) {
-        camera.zoomDisplay?.(direction === "zoom_in" ? "in" : "out");
-        return;
-      }
       this._callbacks.onFailure("motion");
     }
   }

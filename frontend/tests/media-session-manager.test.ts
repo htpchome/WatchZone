@@ -289,7 +289,7 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
-  it("restarts active media exactly once when Home Assistant reconnects", async () => {
+  it("preserves healthy active media when Home Assistant reconnects", async () => {
     const closes: Array<ReturnType<typeof vi.fn>> = [];
     const factory = vi.fn<ConnectionFactory>(async () => {
       const close = vi.fn();
@@ -302,15 +302,15 @@ describe("MediaSessionManager", () => {
     await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
 
     lifecycle.disconnect();
-    expect(lease.getSnapshot().state).toBe("failed");
-    expect(closes[0]).toHaveBeenCalledOnce();
+    expect(lease.getSnapshot().state).toBe("live");
+    expect(closes[0]).not.toHaveBeenCalled();
 
     lifecycle.ready();
     await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
-    expect(factory).toHaveBeenCalledTimes(2);
+    expect(factory).toHaveBeenCalledOnce();
 
     lifecycle.ready();
-    expect(factory).toHaveBeenCalledTimes(2);
+    expect(factory).toHaveBeenCalledOnce();
     lease.release();
     manager.closeAll();
   });
@@ -318,20 +318,24 @@ describe("MediaSessionManager", () => {
   it("restores interrupted sessions sequentially in acquisition order", async () => {
     let firstRecoveryComplete: (() => void) | undefined;
     let initialConnections = 0;
+    const failures = new Map<string, (error: Error) => void>();
     const recoveryOrder: string[] = [];
-    const factory = vi.fn<ConnectionFactory>(async (_api, entityId) => {
-      initialConnections += 1;
-      if (initialConnections <= 2) {
+    const factory = vi.fn<ConnectionFactory>(
+      async (_api, entityId, _signal, onFailure) => {
+        initialConnections += 1;
+        if (initialConnections <= 2) {
+          failures.set(entityId, onFailure);
+          return { stream: createStream(), close: vi.fn() };
+        }
+        recoveryOrder.push(entityId);
+        if (entityId === "camera.zero") {
+          await new Promise<void>((resolve) => {
+            firstRecoveryComplete = resolve;
+          });
+        }
         return { stream: createStream(), close: vi.fn() };
-      }
-      recoveryOrder.push(entityId);
-      if (entityId === "camera.zero") {
-        await new Promise<void>((resolve) => {
-          firstRecoveryComplete = resolve;
-        });
-      }
-      return { stream: createStream(), close: vi.fn() };
-    });
+      },
+    );
     const manager = new MediaSessionManager(factory);
     const lifecycle = createLifecycleApi();
     const zero = manager.acquireHomeAssistant(lifecycle.api, "camera.zero");
@@ -339,6 +343,8 @@ describe("MediaSessionManager", () => {
     await vi.waitFor(() => expect(one.getSnapshot().state).toBe("live"));
 
     lifecycle.disconnect();
+    failures.get("camera.zero")?.(new Error("media stopped during restart"));
+    failures.get("camera.one")?.(new Error("media stopped during restart"));
     lifecycle.ready();
     await vi.waitFor(() => expect(recoveryOrder).toEqual(["camera.zero"]));
 
@@ -400,9 +406,13 @@ describe("MediaSessionManager", () => {
   it("retries while the backend finishes starting after Home Assistant is ready", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
+    let failInitial: ((error: Error) => void) | undefined;
     const factory = vi
       .fn<ConnectionFactory>()
-      .mockResolvedValueOnce({ stream: createStream(), close: vi.fn() })
+      .mockImplementationOnce(async (_api, _entity, _signal, onFailure) => {
+        failInitial = onFailure;
+        return { stream: createStream(), close: vi.fn() };
+      })
       .mockRejectedValueOnce(new Error("WatchZone backend is starting"))
       .mockResolvedValueOnce({ stream: createStream(), close: vi.fn() });
     const manager = new MediaSessionManager(factory);
@@ -411,6 +421,7 @@ describe("MediaSessionManager", () => {
     await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
 
     lifecycle.disconnect();
+    failInitial?.(new Error("media stopped during restart"));
     lifecycle.ready();
     await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("failed"));
 
@@ -425,9 +436,13 @@ describe("MediaSessionManager", () => {
   it("bounds Home Assistant restart recovery when the backend stays unavailable", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
+    let failInitial: ((error: Error) => void) | undefined;
     const factory = vi
       .fn<ConnectionFactory>()
-      .mockResolvedValueOnce({ stream: createStream(), close: vi.fn() })
+      .mockImplementationOnce(async (_api, _entity, _signal, onFailure) => {
+        failInitial = onFailure;
+        return { stream: createStream(), close: vi.fn() };
+      })
       .mockRejectedValue(new Error("WatchZone backend is unavailable"));
     const manager = new MediaSessionManager(factory);
     const lifecycle = createLifecycleApi();
@@ -435,6 +450,7 @@ describe("MediaSessionManager", () => {
     await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
 
     lifecycle.disconnect();
+    failInitial?.(new Error("media stopped during restart"));
     lifecycle.ready();
     await vi.advanceTimersByTimeAsync(30_000);
 
@@ -467,7 +483,7 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
-  it("does not reconnect a parked session until it is reacquired", async () => {
+  it("preserves a healthy parked session across a Home Assistant restart", async () => {
     const factory = vi.fn<ConnectionFactory>(async () => ({
       stream: createStream(),
       close: vi.fn(),
@@ -487,39 +503,69 @@ describe("MediaSessionManager", () => {
       "camera.front",
     );
     await vi.waitFor(() => expect(returned.getSnapshot().state).toBe("live"));
-    expect(factory).toHaveBeenCalledTimes(2);
+    expect(factory).toHaveBeenCalledOnce();
     returned.release();
     manager.closeAll();
   });
 
-  it("retains Home Assistant restart recovery for a parked session", async () => {
+  it("promotes a failed active retry immediately when the document returns", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
+    const failures: Array<(error: Error) => void> = [];
+    const factory = vi.fn<ConnectionFactory>(
+      async (_api, _entity, _signal, onFailure) => {
+        failures.push(onFailure);
+        return { stream: createStream(), close: vi.fn(), resume: vi.fn() };
+      },
+    );
+    const manager = new MediaSessionManager(factory);
+    const lease = manager.acquireHomeAssistant(createApi(), "camera.front");
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
+
+    failures[0](new Error("background transport stalled"));
+    expect(lease.getSnapshot().state).toBe("failed");
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.waitFor(() => expect(factory).toHaveBeenCalledTimes(2));
+    expect(lease.getSnapshot().state).toBe("live");
+
+    lease.release();
+    manager.closeAll();
+  });
+
+  it("restarts a background-stalled connection immediately in the foreground", async () => {
+    vi.useFakeTimers();
+    let resolveFirst:
+      | ((connection: Awaited<ReturnType<ConnectionFactory>>) => void)
+      | undefined;
     const factory = vi
       .fn<ConnectionFactory>()
-      .mockResolvedValueOnce({ stream: createStream(), close: vi.fn() })
-      .mockRejectedValueOnce(new Error("WatchZone backend is starting"))
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveFirst = resolve;
+          }),
+      )
       .mockResolvedValueOnce({ stream: createStream(), close: vi.fn() });
     const manager = new MediaSessionManager(factory);
-    const lifecycle = createLifecycleApi();
-    const initial = manager.acquireHomeAssistant(lifecycle.api, "camera.front");
-    await vi.waitFor(() => expect(initial.getSnapshot().state).toBe("live"));
-    initial.release();
+    const lease = manager.acquireHomeAssistant(createApi(), "camera.front");
+    expect(lease.getSnapshot().state).toBe("connecting");
 
-    lifecycle.disconnect();
-    lifecycle.ready();
-    expect(factory).toHaveBeenCalledOnce();
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.waitFor(() => expect(factory).toHaveBeenCalledTimes(2));
+    expect(lease.getSnapshot().state).toBe("live");
 
-    const returned = manager.acquireHomeAssistant(
-      lifecycle.api,
-      "camera.front",
-    );
-    await vi.waitFor(() => expect(returned.getSnapshot().state).toBe("failed"));
-    await vi.advanceTimersByTimeAsync(501);
-    await vi.waitFor(() => expect(returned.getSnapshot().state).toBe("live"));
-    expect(factory).toHaveBeenCalledTimes(3);
-
-    returned.release();
+    resolveFirst?.({ stream: createStream(), close: vi.fn() });
+    lease.release();
     manager.closeAll();
   });
 

@@ -408,10 +408,14 @@ describe("camera presentation retention", () => {
       transport: "webrtc",
       close: vi.fn(),
     }));
+    const mseVideo = document.createElement("video");
+    const closeMse = vi.fn();
+    const parkMse = vi.fn();
     const mseFactory = vi.fn<ConnectionFactory>(async () => ({
-      video: document.createElement("video"),
+      video: mseVideo,
       transport: "mse",
-      close: vi.fn(),
+      close: closeMse,
+      park: parkMse,
     }));
     installTestMediaSessionManager(
       new MediaSessionManager(webRtcFactory, mseFactory),
@@ -433,6 +437,8 @@ describe("camera presentation retention", () => {
     await vi.waitFor(() =>
       expect(presentation(first)?.selected).toBe("webrtc"),
     );
+    await vi.waitFor(() => expect(parkMse).toHaveBeenCalledOnce());
+    expect(closeMse).not.toHaveBeenCalled();
 
     first.remove();
     const returned = createLiveView(api);
@@ -450,6 +456,7 @@ describe("camera presentation retention", () => {
     expect(api.callWS).toHaveBeenCalledOnce();
     expect(webRtcFactory).toHaveBeenCalledOnce();
     expect(mseFactory).toHaveBeenCalledOnce();
+    expect(closeMse).not.toHaveBeenCalled();
   });
 
   it("reattaches the same verified WebRTC player without restarting HLS", async () => {

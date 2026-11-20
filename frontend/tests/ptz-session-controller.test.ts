@@ -143,10 +143,8 @@ describe("PTZ session lifecycle", () => {
     expect(callbacks.onStopped).not.toHaveBeenCalled();
   });
 
-  it("uses optical zoom when the provider reports it", async () => {
-    const stopMotion = vi.fn();
+  it("uses display zoom even when the provider reports optical zoom", async () => {
     resolver.capability.mockResolvedValue({ ...capability(), zoom: true });
-    resolver.start.mockResolvedValue(stopMotion);
     const controller = new PtzSessionController(new Host(), {
       onFailure: vi.fn(),
       onStopped: vi.fn(),
@@ -160,14 +158,8 @@ describe("PTZ session lifecycle", () => {
     await controller.start("zoom_in", false);
     controller.stop();
 
-    expect(resolver.start).toHaveBeenCalledWith(
-      expect.anything(),
-      "home_assistant",
-      "camera.front",
-      "zoom_in",
-    );
-    expect(stopMotion).toHaveBeenCalledOnce();
-    expect(session.zoomDisplay).not.toHaveBeenCalled();
+    expect(session.zoomDisplay).toHaveBeenCalledWith("in");
+    expect(resolver.start).not.toHaveBeenCalled();
   });
 
   it("falls back to display zoom when optical zoom is unavailable", async () => {
@@ -186,23 +178,6 @@ describe("PTZ session lifecycle", () => {
 
     expect(session.zoomDisplay).toHaveBeenCalledWith("out");
     expect(resolver.start).not.toHaveBeenCalled();
-  });
-
-  it("falls back to display zoom when advertised optical zoom is rejected", async () => {
-    resolver.capability.mockResolvedValue({ ...capability(), zoom: true });
-    resolver.start.mockRejectedValue(new Error("Optical zoom unavailable"));
-    const callbacks = { onFailure: vi.fn(), onStopped: vi.fn() };
-    const controller = new PtzSessionController(new Host(), callbacks);
-    const context = new CameraSessionContext();
-    const session = camera("camera.front");
-    controller.configure(api(), context, [source("camera.front")]);
-    context.publish({}, session);
-    await vi.waitFor(() => expect(controller.capability?.zoom).toBe(true));
-
-    await controller.start("zoom_in", false);
-
-    expect(session.zoomDisplay).toHaveBeenCalledWith("in");
-    expect(callbacks.onFailure).not.toHaveBeenCalled();
   });
 });
 

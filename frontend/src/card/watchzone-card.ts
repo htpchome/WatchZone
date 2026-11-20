@@ -535,13 +535,12 @@ export class DashboardCard extends LitElement {
   }
 
   private _syncRuntime(): void {
-    const hass =
-      this._transportConnected && this._hass
-        ? this._cameraImageCredentials.sanitize(
-            this._hass,
-            this._cameraEntityIds(),
-          )
-        : undefined;
+    const hass = this._hass
+      ? this._cameraImageCredentials.sanitize(
+          this._hass,
+          this._cameraEntityIds(),
+        )
+      : undefined;
     this._layoutRuntime.setRuntime(
       hass,
       this._haApi,

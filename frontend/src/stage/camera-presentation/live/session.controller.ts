@@ -187,7 +187,10 @@ export class CameraLiveSessionController implements ReactiveController {
       this._fallbackSnapshot.state === "new"
     )
       return;
-    this._releaseFallback(true);
+    const retainFrigateMse =
+      this._connection === "frigate_go2rtc" &&
+      this._effectiveFrigateFallback() === "mse";
+    this._releaseFallback(!retainFrigateMse);
     this._host.requestUpdate();
   }
 

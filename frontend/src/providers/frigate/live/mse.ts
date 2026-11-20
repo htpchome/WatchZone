@@ -260,7 +260,7 @@ export async function createFrigateMseConnection(
       handleBufferUpdate();
     },
     resume: () => {
-      if (!parked || closed) return;
+      if (closed) return;
       parked = false;
       if (video.buffered.length) {
         const liveEdge = video.buffered.end(video.buffered.length - 1);

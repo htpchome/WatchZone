@@ -389,6 +389,16 @@ Visibility changes affect presentation and forced mute, not user preference.
   state are inputs to centralized policy, not independent competing handlers.
 - Returning to visibility removes only the forced reasons that no longer
   apply.
+- Returning to a visible browser document resumes the active media element and
+  promotes an active failed retry immediately instead of waiting for a
+  background-throttled backoff timer. A connection attempt that remained
+  pending while hidden is cancelled and restarted once in the foreground so
+  its adapter timeout cannot impose an additional foreground delay.
+- Frigate MSE may keep one bounded parked fallback after WebRTC takeover. The
+  parked adapter discards incoming media and bounds its buffer; reacquisition
+  seeks that same player to the live edge. The normal retention profile and
+  eviction budget remain authoritative, especially for mobile and Companion
+  clients.
 
 ## 11. Failure and reconnect behavior
 
@@ -404,6 +414,10 @@ Visibility changes affect presentation and forced mute, not user preference.
   preference.
 - Failure UI reflects connection state without discarding the retained session
   until policy closes it.
+- Loss of Home Assistant's control WebSocket does not by itself prove that an
+  already established media transport failed. Healthy active and parked media
+  remain available; a media failure observed during the interruption waits for
+  authenticated `ready` before entering the serialized recovery queue.
 
 ## 12. Cleanup
 

@@ -184,7 +184,11 @@ class ManagedMediaSession {
       this._connection?.resume?.();
       this._setSnapshot({ ...this._snapshot, state: "live" });
     }
-    if (api.identity.connected === false) {
+    if (
+      api.identity.connected === false &&
+      (!this._connection ||
+        (this._snapshot.state !== "live" && this._snapshot.state !== "parked"))
+    ) {
       this._transportInterrupted = true;
       this._closeConnection();
       this._setSnapshot({
@@ -253,7 +257,6 @@ class ManagedMediaSession {
     return (
       this._api.identity === api.identity &&
       this._connection !== undefined &&
-      !this._transportInterrupted &&
       this._snapshot.usable === true &&
       this._snapshot.video !== undefined &&
       (this._snapshot.state === "live" || this._snapshot.state === "parked")
@@ -274,17 +277,18 @@ class ManagedMediaSession {
       clearTimeout(this._reconnectTimer);
       this._reconnectTimer = undefined;
     }
-    this._closeConnection();
-    this._setSnapshot({
-      state: "failed",
-      error: "Home Assistant connection interrupted",
-    });
   }
 
   public async handleTransportReady(): Promise<void> {
     if (this._snapshot.state === "closed" || !this._transportInterrupted)
       return;
     this._transportInterrupted = false;
+    if (
+      this._connection &&
+      (this._snapshot.state === "live" || this._snapshot.state === "parked")
+    ) {
+      return;
+    }
     this._reconnectCause = "home_assistant";
     this._reconnectAttempts = 0;
     if (this._reconnectTimer) {
@@ -294,6 +298,38 @@ class ManagedMediaSession {
     if (this._leaseCount === 0) return;
     this._closeConnection();
     await this._connect();
+  }
+
+  public handleDocumentVisible(): void {
+    if (this._snapshot.state === "closed" || this._leaseCount === 0) return;
+    this._connection?.resume?.();
+    if (this._transportInterrupted) {
+      if (this._api.identity.connected === false) return;
+      this._transportInterrupted = false;
+      if (
+        this._connection &&
+        (this._snapshot.state === "live" || this._snapshot.state === "parked")
+      ) {
+        return;
+      }
+      this._reconnectCause = "home_assistant";
+      this._reconnectAttempts = 0;
+    }
+    if (this._snapshot.state === "connecting") {
+      this._closeConnection();
+      this._setSnapshot({
+        state: "failed",
+        error: "Media connection resumed in the foreground",
+      });
+      this._reconnectCause ??= "media";
+    }
+    if (this._snapshot.state !== "failed") return;
+    if (this._reconnectTimer) {
+      clearTimeout(this._reconnectTimer);
+      this._reconnectTimer = undefined;
+    }
+    this._reconnectCause ??= "media";
+    this._enqueueReconnect(this);
   }
 
   private async _connect(
@@ -355,6 +391,10 @@ class ManagedMediaSession {
         errorCode,
         timing,
       });
+      if (this._transportInterrupted) {
+        this._reconnectCause = "home_assistant";
+        return;
+      }
       if (this._reconnectCause) {
         this._scheduleReconnect();
       } else if (this._retryInitialFailure) {
@@ -381,6 +421,10 @@ class ManagedMediaSession {
       errorCode,
       timing,
     });
+    if (this._transportInterrupted) {
+      this._reconnectCause = "home_assistant";
+      return;
+    }
     this._reconnectCause ??= "media";
     this._scheduleReconnect();
   }
@@ -517,6 +561,7 @@ export class MediaSessionManager {
       () => this._applyRetentionPolicy(),
       retentionEnvironment,
     );
+    document.addEventListener("visibilitychange", this._handleVisibilityChange);
   }
 
   public acquire(request: MediaSessionRequest): MediaSessionLease {
@@ -690,7 +735,18 @@ export class MediaSessionManager {
     this._cameraRetentionMetadata.clear();
     this._retentionPolicy.dispose();
     this._clearConnectionObservers();
+    document.removeEventListener(
+      "visibilitychange",
+      this._handleVisibilityChange,
+    );
   }
+
+  private readonly _handleVisibilityChange = (): void => {
+    if (document.visibilityState !== "visible") return;
+    for (const session of this._sessions.values()) {
+      session.handleDocumentVisible();
+    }
+  };
 
   private _publishForcedMute(active: boolean): void {
     for (const listener of this._forcedMuteListeners) listener(active);

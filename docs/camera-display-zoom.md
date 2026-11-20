@@ -88,7 +88,7 @@ space or create a second transform owner.
 | Pointer drag while zoomed         | Pan within the visible media bounds.                                           |
 | Enter or Space                    | Toggle `1x` and `2x` from the center.                                          |
 | Plus or Minus                     | Zoom in or out in fixed increments.                                            |
-| PTZ panel Plus or Minus           | Use optical zoom when supported; otherwise request the same display increment. |
+| PTZ panel Plus or Minus           | Request the same display increment; never start provider optical zoom.          |
 | Arrow keys                        | Pan while zoomed.                                                              |
 | Zero or Escape                    | Reset to `1x`.                                                                 |
 

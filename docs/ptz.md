@@ -75,11 +75,10 @@ defaults to `false` and is omitted from YAML at its default.
   same circular four-wedge directional presentation. Overlay owns a PTZ center
   button for expand/collapse; the larger panel owns split `+` and `-` center
   controls.
-- A panel zoom press uses provider optical zoom while `zoom` capability is
-  reported and shares the normal press/release Stop lifecycle. If optical zoom
-  is unavailable or its command is rejected, it emits a narrow display-zoom
-  intent through `CameraSessionContext`; Camera's existing zoom controller
-  remains the sole owner of display scale and pan.
+- A panel `+` or `-` press always emits a narrow display-zoom intent through
+  `CameraSessionContext`. It does not inspect provider optical-zoom capability
+  or start provider PTZ motion. Camera's existing zoom controller remains the
+  sole owner of display scale and pan.
 - The panel presentation remains expanded and is independent from the Camera
   overlay visibility timer and open/closed state. It shows at most the first
   six provider-reported preset names in provider order and wraps them at

@@ -191,6 +191,7 @@ export const ptzStyles = css`
     display: flex;
     flex-direction: column;
     gap: 1px;
+    background: var(--wzc-ptz-pad-divider-color);
   }
 
   .center-half {

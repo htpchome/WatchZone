@@ -8483,7 +8483,9 @@ test("opens the PTZ panel and recalls a provider preset without a stop subscript
   const padSeams = await panel.locator(".circle-pad").evaluate((pad) => {
     const wedge = pad.querySelector("button.wedge");
     const hub = pad.querySelector(".center-hub");
-    if (!wedge || !hub) throw new Error("PTZ pad surfaces are unavailable");
+    const half = pad.querySelector("button.center-half");
+    if (!wedge || !hub || !half)
+      throw new Error("PTZ pad surfaces are unavailable");
     const padStyles = getComputedStyle(pad);
     const hubStyles = getComputedStyle(hub);
     return {
@@ -8491,11 +8493,18 @@ test("opens the PTZ panel and recalls a provider preset without a stop subscript
       hubBorder: hubStyles.borderTopWidth,
       outerBorder: padStyles.borderTopWidth,
       wedge: getComputedStyle(wedge).backgroundColor,
+      hubBacking: hubStyles.backgroundColor,
+      half: getComputedStyle(half).backgroundColor,
     };
   });
   expect(padSeams.outerBorder).toBe("0px");
   expect(padSeams.hubBorder).toBe("0px");
   expect(padSeams.backing).not.toBe(padSeams.wedge);
+  expect(padSeams.hubBacking).not.toBe(padSeams.half);
+  const liveViewport = page.locator("wzc-camera-live .viewport");
+  await expect(liveViewport).toHaveAttribute("aria-label", /100 percent/);
+  await panel.locator("button.center-half").first().click();
+  await expect(liveViewport).toHaveAttribute("aria-label", /125 percent/);
   const presetButtons = panel.locator("button.ptz-preset");
   await expect(presetButtons).toHaveCount(6);
   const presetRows = new Set(
