@@ -843,7 +843,7 @@ describe("camera presentation retention", () => {
     expect(hlsVideo.muted).toBe(false);
   });
 
-  it("temporarily unmutes an explicit mute for talk without changing preference", async () => {
+  it("preserves an explicit mute while talk is active", async () => {
     const { api, hlsVideo } = installHlsSession();
     const context = new CameraSessionContext();
     const view = createLiveView(api, true);
@@ -862,7 +862,7 @@ describe("camera presentation retention", () => {
     ).toBe("muted");
 
     context.session?.setTalkAudioActive(true);
-    await vi.waitFor(() => expect(hlsVideo.muted).toBe(false));
+    expect(hlsVideo.muted).toBe(true);
     expect(
       getMediaSessionManager().getCameraMutePreference("camera.front"),
     ).toBe("muted");

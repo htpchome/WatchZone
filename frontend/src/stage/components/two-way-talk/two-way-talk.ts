@@ -142,10 +142,12 @@ export class TwoWayTalkComponent extends LitElement {
                 ${this._renderTalkButton(
                   "speaker",
                   "round-button talk-button",
-                  camera.muted
+                  this._session.speakerMuted
                     ? this.localize("camera.unmute")
                     : this.localize("camera.mute"),
-                  renderIcon(camera.muted ? "volumeOff" : "volumeOn"),
+                  renderIcon(
+                    this._session.speakerMuted ? "volumeOff" : "volumeOn",
+                  ),
                 )}
               </div>`
             : html`<div
@@ -280,10 +282,8 @@ export class TwoWayTalkComponent extends LitElement {
   private readonly _stop = (): void => this._session.stop();
   private readonly _toggleMicrophone = (): void =>
     this._session.toggleMicrophoneMute();
-  private readonly _toggleSpeaker = (): void => {
-    const camera = this._session.camera;
-    if (camera) camera.setMuted(!camera.muted);
-  };
+  private readonly _toggleSpeaker = (): void =>
+    this._session.toggleSpeakerMute();
   static styles = [roundButtonStyles, twoWayTalkStyles];
 }
 

@@ -118,7 +118,7 @@ describe("two-way-talk component", () => {
         setMicrophoneMuted(muted: boolean): void;
       };
       _publish(): void;
-      _syncAudioCamera(): void;
+      _syncIncomingAudio(): void;
       _target?: {
         api: HomeAssistantApi;
         connection: "home_assistant";
@@ -141,7 +141,7 @@ describe("two-way-talk component", () => {
       localStream: {} as MediaStream,
       setMicrophoneMuted,
     };
-    manager._syncAudioCamera();
+    manager._syncIncomingAudio();
     manager._publish();
     await vi.waitFor(() =>
       expect(

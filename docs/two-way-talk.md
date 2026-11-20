@@ -31,6 +31,11 @@ boundaries. It supplements `architecture.md`, which remains authoritative.
   `providers/<provider>/talk/` and the backend provider registry.
 - The retained camera video/audio peer remains untouched. Talk uses a separate
   send-only microphone peer, so stopping talk never tears down live playback.
+- Persistent incoming audio continues to use the camera's live receive peer.
+  While the camera presentation is absent, the document talk service holds a
+  dedicated lease on that peer and attaches its receive stream to a temporary
+  audio element. Incoming media is never requested from or mixed into the
+  send-only talk peer.
 - The outgoing peer and its restartable camera target are owned by one
   document-scoped talk-session service. Stage controls and the persistent tile
   are presentations of that service; neither retains a disconnected card or
@@ -91,12 +96,16 @@ does not contain signaling-path conditions.
 - On the matching active camera, the center control retains its existing
   behavior: it ends talk and removes document-level persistence. Away from that
   camera, the persistent tile's center control ends the peer but retains the
-  camera target as a restart launcher. The tile's close control ends any peer
-  and dismisses the launcher.
+  camera target as a restart launcher on the current route. The next Home
+  Assistant navigation dismisses an idle launcher; it does not follow the user
+  after talk has ended. The tile's close control ends any peer and dismisses
+  the launcher.
 - The persistent tile is fixed to the bottom center of the Home Assistant
   document, above the effective safe area. Below 480px it spans the viewport;
   at 480px and wider it uses a bounded width. It does not consume dashboard or
-  Stage layout space.
+  Stage layout space. It uses the browser top layer when available, with a
+  maximum fixed-layer stack fallback, so card, dashboard, and sticky Home
+  Assistant surfaces cannot cover it.
 - The persistent camera action returns to the dashboard route where talk
   started, selects the session's stable camera entity, and scrolls its matching
   WatchZone card into view. Once that camera surface is active, the tile hides
@@ -108,8 +117,10 @@ does not contain signaling-path conditions.
   the outgoing microphone changes that center surface to WatchZone's fixed
   detection-warning color. Hover preserves the current connected or muted
   surface instead of replacing it with a neutral hover state.
-- The speaker control dispatches the active camera's typed mute intent. It uses
-  the same user mute preference as the camera overlay control.
+- The speaker control uses one talk-session mute state across the normal and
+  persistent presentations. It updates the same explicit per-camera user mute
+  preference as the camera overlay control. Talk may temporarily unmute when
+  no explicit preference exists, but it never overrides an explicit mute.
 - Incoming and outgoing meters use Web Audio analyzers while talk is active.
   They never route, mix, record, or upload PCM data.
 - Connection success and final failure use the shared bounded toast system.
@@ -130,7 +141,8 @@ surface, document visibility loss, freeze, failed negotiation, or
 late completion after cancellation. A connection attempt that has not yet
 succeeded is cancelled when its initiating surface leaves. Talk is never
 retained while the app is backgrounded. Teardown is idempotent and late async
-results close themselves.
+results close themselves. The extra live receive lease and temporary audio
+element follow the same teardown and cannot outlive the connected talk peer.
 
 ## Validation
 

@@ -1,5 +1,10 @@
 import type { LiveConnectionType } from "../core/config";
 
+export interface RetainedCameraAudio {
+  readonly stream: MediaStream;
+  release(): void;
+}
+
 export interface ActiveCameraSession {
   readonly available: boolean;
   readonly connection: LiveConnectionType;
@@ -12,6 +17,7 @@ export interface ActiveCameraSession {
   /** Stable identity for the presentation that owns overlay interaction. */
   readonly overlayOwner?: object;
   holdOverlay(): () => void;
+  retainIncomingAudio?(): RetainedCameraAudio | undefined;
   revealOverlay(): void;
   setMuted(muted: boolean): void;
   setTalkAudioActive(active: boolean): void;

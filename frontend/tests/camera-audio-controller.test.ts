@@ -1,0 +1,57 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { getMediaSessionManager } from "../src/core/media-session-manager";
+import { CameraAudioController } from "../src/stage/camera-presentation/live/audio.controller";
+
+describe("camera audio controller talk policy", () => {
+  let controller: CameraAudioController | undefined;
+
+  afterEach(() => {
+    controller?.hostDisconnected();
+    controller = undefined;
+    vi.restoreAllMocks();
+  });
+
+  it("does not automatically unmute an explicitly muted camera for talk", () => {
+    const entityId = "camera.explicitly-muted-talk-test";
+    getMediaSessionManager().setCameraMuted(entityId, true);
+    controller = createController();
+    controller.hostConnected();
+    controller.configure(entityId, false, false, true);
+
+    controller.setTalkAudioActive(true);
+
+    expect(controller.muted).toBe(true);
+  });
+
+  it("temporarily unmutes talk when no explicit camera preference exists", () => {
+    controller = createController();
+    controller.hostConnected();
+    controller.configure("camera.default-talk-test", false, false, true);
+
+    controller.setTalkAudioActive(true);
+
+    expect(controller.muted).toBe(false);
+  });
+});
+
+function createController(): CameraAudioController {
+  const host = document.createElement("div") as unknown as HTMLElement & {
+    addController(controller: unknown): void;
+    removeController(controller: unknown): void;
+    requestUpdate(): void;
+    readonly updateComplete: Promise<boolean>;
+  };
+  host.addController = vi.fn();
+  host.removeController = vi.fn();
+  host.requestUpdate = vi.fn();
+  Object.defineProperty(host, "updateComplete", {
+    value: Promise.resolve(true),
+  });
+  return new CameraAudioController(host, {
+    dismissToast: vi.fn(),
+    getAutoplayWarning: () => "Audio blocked",
+    getMediaState: () => ({}),
+    showWarning: vi.fn(),
+  });
+}

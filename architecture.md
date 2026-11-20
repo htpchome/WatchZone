@@ -768,6 +768,10 @@ Leaving the matching camera, WatchZone view, dashboard, or Home Assistant route
 keeps a connected peer while the document remains visible. Backgrounding,
 explicit dismissal, camera disablement, or document termination closes it.
 The persistent tile is an application feature and is never a Stage placeable.
+The outgoing talk peer remains send-only. While its camera presentation is
+absent, the talk-session service holds a separate lease on that camera's live
+receive peer and owns the temporary document audio attachment; it never routes
+incoming audio through the outgoing peer.
 
 The detailed normative lifecycle, lease, retention, eviction, and mute-state
 contract is defined in [docs/live-session-lifecycle.md](docs/live-session-lifecycle.md).

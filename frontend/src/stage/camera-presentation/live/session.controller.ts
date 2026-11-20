@@ -13,6 +13,7 @@ import type {
   MediaTransport,
 } from "../../../core/media-session-manager";
 import { LiveSourceResolver } from "../../../providers/live-source-resolver";
+import type { RetainedCameraAudio } from "../../camera-session-context";
 
 export type PresentedSource = "fallback" | "webrtc";
 
@@ -93,6 +94,27 @@ export class CameraLiveSessionController implements ReactiveController {
 
   public get webRtcVideo(): HTMLVideoElement | undefined {
     return this._webRtcSnapshot.video;
+  }
+
+  /** Retain the live receive peer while document-scoped talk owns its audio. */
+  public retainIncomingAudio(): RetainedCameraAudio | undefined {
+    const api = this._api;
+    if (!api || !this._webRtcSnapshot.stream) return undefined;
+    const lease =
+      this._connection === "frigate_go2rtc" && this._frigateSource
+        ? this._resolver.acquireUsableFrigateWebRtc(api, this._frigateSource)
+        : this._connection === "home_assistant" && this._entityId
+          ? this._resolver.acquireUsableHomeAssistantWebRtc(api, this._entityId)
+          : undefined;
+    const stream = lease?.getSnapshot().stream;
+    if (!lease || !stream) {
+      lease?.release();
+      return undefined;
+    }
+    return {
+      stream,
+      release: () => lease.release(),
+    };
   }
 
   public hostConnected(): void {

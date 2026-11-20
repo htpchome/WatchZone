@@ -44,6 +44,7 @@ export class PersistentTalkTile extends LitElement {
     const connecting = status === "connecting";
     return html`<aside
       class="persistent-talk"
+      popover="manual"
       role="region"
       aria-label=${t("talk.persistent_controls")}
     >
@@ -119,6 +120,7 @@ export class PersistentTalkTile extends LitElement {
           aria-label=${
             this._snapshot.muted ? t("camera.unmute") : t("camera.mute")
           }
+          ?disabled=${!connected}
           @click=${this._toggleSpeaker}
         >
           ${renderIcon(this._snapshot.muted ? "volumeOff" : "volumeOn")}
@@ -137,6 +139,15 @@ export class PersistentTalkTile extends LitElement {
   }
 
   protected updated(): void {
+    const panel =
+      this.renderRoot.querySelector<HTMLElement>(".persistent-talk");
+    if (panel && "showPopover" in panel && !panel.matches(":popover-open")) {
+      try {
+        panel.showPopover();
+      } catch {
+        // The fixed-layer fallback remains available if top-layer entry fails.
+      }
+    }
     const spinner =
       this.renderRoot.querySelector<HTMLElement>(".connecting-spinner") ??
       undefined;

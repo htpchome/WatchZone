@@ -13,11 +13,12 @@ export const persistentTalkStyles = css`
   .persistent-talk {
     box-sizing: border-box;
     position: fixed;
-    z-index: 1002;
+    z-index: 2147483647;
+    inset: auto auto max(0.5rem, var(--wzc-safe-area-inset-bottom)) 50%;
+    margin: 0;
     inset-inline-start: 50%;
-    inset-block-end: max(0.5rem, var(--wzc-safe-area-inset-bottom));
     display: grid;
-    grid-template-columns: auto minmax(7rem, 1fr) auto auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     gap: 0.65rem;
     inline-size: min(42rem, calc(100vw - 1rem));
@@ -29,6 +30,7 @@ export const persistentTalkStyles = css`
     border-radius: var(--wzc-radius-pill);
     box-shadow: var(--wzc-shadow-medium);
     transform: translateX(-50%);
+    overflow: visible;
   }
 
   .dismiss,
@@ -43,6 +45,7 @@ export const persistentTalkStyles = css`
 
   .identity {
     min-inline-size: 0;
+    max-inline-size: 10rem;
     line-height: 1.12;
   }
 
@@ -65,13 +68,15 @@ export const persistentTalkStyles = css`
 
   .controls {
     display: grid;
-    position: relative;
+    position: absolute;
+    inset-inline-start: 50%;
     grid-template-columns: repeat(3, var(--wzc-control-size));
     align-items: center;
     color: var(--wzc-talk-panel-color);
     background: var(--wzc-talk-panel-background);
     border: 1px solid var(--wzc-talk-panel-border-color);
     border-radius: var(--wzc-radius-pill);
+    transform: translateX(-50%);
   }
 
   .controls canvas {
@@ -84,7 +89,7 @@ export const persistentTalkStyles = css`
   }
 
   .controls .round-button {
-    --wzc-round-button-color: inherit;
+    --wzc-round-button-color: var(--wzc-color-text-1);
     --wzc-round-button-background: transparent;
     --wzc-round-button-border-color: transparent;
     --wzc-round-button-hover-background: transparent;
@@ -142,9 +147,12 @@ export const persistentTalkStyles = css`
     }
 
     .controls {
+      position: relative;
+      inset-inline-start: auto;
       grid-column: 1 / 3;
       grid-row: 2;
       justify-self: center;
+      transform: none;
     }
 
     .navigate {

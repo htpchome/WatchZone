@@ -8095,14 +8095,63 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
         ).__wzcTalkCloseCount,
     ),
   ).toBe(0);
+  const persistentTalk = page.locator("wzc-persistent-talk .persistent-talk");
+  const cardHost = page.locator("watchzone-card");
+  await cardHost.evaluate((element) => {
+    history.pushState(null, "", "/lovelace/other");
+    element.style.display = "none";
+    window.dispatchEvent(new Event("location-changed"));
+  });
+  await expect(persistentTalk).toBeVisible();
+  await cardHost.evaluate((element) => {
+    history.replaceState(null, "", "/");
+    element.style.display = "";
+    window.dispatchEvent(new Event("location-changed"));
+  });
+  await expect(persistentTalk).toBeHidden();
   await page
     .locator("wzc-camera-navigation")
     .getByRole("tab", { name: "Doorbell" })
     .click();
-  const persistentTalk = page.locator("wzc-persistent-talk .persistent-talk");
   await expect(persistentTalk).toBeVisible();
   await expect(persistentTalk).toContainText("Two Way Talk");
   await expect(persistentTalk).toContainText("Front");
+  expect(
+    await persistentTalk.evaluate((element) =>
+      element.matches(":popover-open"),
+    ),
+  ).toBe(true);
+  const persistentGeometry = await persistentTalk.evaluate((element) => {
+    const panel = element.getBoundingClientRect();
+    const controls = element
+      .querySelector<HTMLElement>(".controls")
+      ?.getBoundingClientRect();
+    const sideButtons = [
+      ...element.querySelectorAll<HTMLButtonElement>(
+        ".controls button:not(.center)",
+      ),
+    ];
+    return {
+      controlsCenter: controls ? controls.x + controls.width / 2 : 0,
+      panelCenter: panel.x + panel.width / 2,
+      sideButtons: sideButtons.map((button) => ({
+        color: getComputedStyle(button).color,
+        iconVisible: Boolean(
+          button.querySelector("svg")?.getBoundingClientRect().width,
+        ),
+      })),
+    };
+  });
+  expect(persistentGeometry.controlsCenter).toBeCloseTo(
+    persistentGeometry.panelCenter,
+    0,
+  );
+  expect(persistentGeometry.sideButtons).toHaveLength(2);
+  expect(
+    persistentGeometry.sideButtons.every(
+      ({ color, iconVisible }) => iconVisible && color !== "rgba(0, 0, 0, 0)",
+    ),
+  ).toBe(true);
   const persistentTalkCenter = persistentTalk.locator("button.center");
   await persistentTalkCenter.click();
   await expect(persistentTalk).toBeVisible();

@@ -1,8 +1,15 @@
 import type { LiveConnectionType } from "../../core/config";
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import { getMediaSessionManager } from "../../core/media-session-manager";
+import {
+  playMediaElement,
+  setMediaElementMuted,
+} from "../../core/media-playback";
 import type { LocalizeFunction } from "../../core/localization";
-import type { ActiveCameraSession } from "../../stage/camera-session-context";
+import type {
+  ActiveCameraSession,
+  RetainedCameraAudio,
+} from "../../stage/camera-session-context";
 import type { TalkConnection } from "../../providers/talk-source-resolver";
 import { TalkSourceResolver } from "../../providers/talk-source-resolver";
 
@@ -43,10 +50,16 @@ export class PersistentTalkSession {
   private _connection?: TalkConnection;
   private _errorRevision = 0;
   private _incomingStream?: MediaStream;
+  private _incomingAudio?: HTMLAudioElement;
+  private _incomingAudioRetention?: RetainedCameraAudio;
   private readonly _listeners = new Set<PersistentTalkListener>();
   private _microphoneMuted = false;
   private _returnRequested = false;
+  private _speakerMuted = false;
+  private _speakerMuteExplicit = false;
   private readonly _surfaces = new Map<object, PersistentTalkSurface>();
+  private readonly _surfaceVisibility = new Map<HTMLElement, boolean>();
+  private readonly _surfaceObserver?: IntersectionObserver;
   private _target?: PersistentTalkTarget;
 
   public constructor(
@@ -55,8 +68,26 @@ export class PersistentTalkSession {
       "connect"
     > = new TalkSourceResolver(),
   ) {
+    if ("IntersectionObserver" in window) {
+      this._surfaceObserver = new IntersectionObserver((entries) => {
+        let changed = false;
+        for (const entry of entries) {
+          if (!(entry.target instanceof HTMLElement)) continue;
+          const visible = entry.isIntersecting && entry.intersectionRatio > 0;
+          if (this._surfaceVisibility.get(entry.target) === visible) continue;
+          this._surfaceVisibility.set(entry.target, visible);
+          changed = true;
+        }
+        if (changed) {
+          this._syncIncomingAudio();
+          this._publish();
+        }
+      });
+    }
     document.addEventListener("visibilitychange", this._handleVisibility);
     document.addEventListener("freeze", this._handleBackground);
+    window.addEventListener("location-changed", this._handleLocationChanged);
+    window.addEventListener("popstate", this._handleLocationChanged);
   }
 
   public get snapshot(): PersistentTalkSnapshot {
@@ -67,11 +98,7 @@ export class PersistentTalkSession {
       errorRevision: this._errorRevision,
       incomingStream: surface?.camera.incomingStream ?? this._incomingStream,
       microphoneMuted: this._microphoneMuted,
-      muted:
-        surface?.camera.muted ??
-        (entityId
-          ? getMediaSessionManager().getCameraMuted(entityId, true)
-          : true),
+      muted: entityId ? this._speakerMuted : true,
       status: this._connection
         ? "connected"
         : this._abort
@@ -94,6 +121,10 @@ export class PersistentTalkSession {
     this.dismiss();
     document.removeEventListener("visibilitychange", this._handleVisibility);
     document.removeEventListener("freeze", this._handleBackground);
+    window.removeEventListener("location-changed", this._handleLocationChanged);
+    window.removeEventListener("popstate", this._handleLocationChanged);
+    this._surfaceObserver?.disconnect();
+    this._surfaceVisibility.clear();
     this._surfaces.clear();
     this._listeners.clear();
   }
@@ -112,8 +143,27 @@ export class PersistentTalkSession {
     ) {
       return;
     }
+    const hostAlreadyObserved = [...this._surfaces.entries()].some(
+      ([surfaceOwner, item]) =>
+        surfaceOwner !== owner && item.host === surface.host,
+    );
+    if (
+      previous?.host !== surface.host &&
+      previous &&
+      ![...this._surfaces.entries()].some(
+        ([surfaceOwner, item]) =>
+          surfaceOwner !== owner && item.host === previous.host,
+      )
+    ) {
+      this._surfaceObserver?.unobserve(previous.host);
+      this._surfaceVisibility.delete(previous.host);
+    }
     this._surfaces.set(owner, surface);
-    this._syncAudioCamera();
+    if (!hostAlreadyObserved && previous?.host !== surface.host) {
+      this._surfaceVisibility.set(surface.host, true);
+      this._surfaceObserver?.observe(surface.host);
+    }
+    this._syncIncomingAudio();
     if (
       this._returnRequested &&
       this._target?.entityId === surface.camera.entityId
@@ -129,12 +179,19 @@ export class PersistentTalkSession {
   }
 
   public removeSurface(owner: object): void {
-    if (!this._surfaces.delete(owner)) return;
+    const removed = this._surfaces.get(owner);
+    if (!removed || !this._surfaces.delete(owner)) return;
+    if (
+      ![...this._surfaces.values()].some((item) => item.host === removed.host)
+    ) {
+      this._surfaceObserver?.unobserve(removed.host);
+      this._surfaceVisibility.delete(removed.host);
+    }
     if (this._abort && !this._matchingSurface()) {
       this.dismiss();
       return;
     }
-    this._syncAudioCamera();
+    this._syncIncomingAudio();
     this._publish();
   }
 
@@ -148,6 +205,11 @@ export class PersistentTalkSession {
     const abort = new AbortController();
     this._abort = abort;
     this._microphoneMuted = false;
+    const speakerPreference = getMediaSessionManager().getCameraMutePreference(
+      nextTarget.entityId,
+    );
+    this._speakerMuted = speakerPreference === "muted";
+    this._speakerMuteExplicit = speakerPreference !== undefined;
     this._publish();
     try {
       const connection = await this._resolver.connect(
@@ -162,10 +224,14 @@ export class PersistentTalkSession {
         return;
       }
       this._connection = connection;
-      this._incomingStream = this._matchingSurface()?.camera.incomingStream;
-      this._syncAudioCamera();
+      this._retainIncomingAudio();
+      this._syncIncomingAudio();
     } catch {
-      if (!abort.signal.aborted) this._errorRevision += 1;
+      if (!abort.signal.aborted) {
+        this._errorRevision += 1;
+        this._target = undefined;
+        this._releaseIncomingAudio();
+      }
     } finally {
       if (this._abort === abort) this._abort = undefined;
       this._publish();
@@ -201,13 +267,17 @@ export class PersistentTalkSession {
 
   public toggleSpeaker(): void {
     const target = this._target;
-    if (!target) return;
+    if (!target || !this._connection) return;
     const surface = this._matchingSurface();
-    const muted =
-      surface?.camera.muted ??
-      getMediaSessionManager().getCameraMuted(target.entityId, true);
-    if (surface) surface.camera.setMuted(!muted);
-    else getMediaSessionManager().setCameraMuted(target.entityId, !muted);
+    this._speakerMuted = !this._speakerMuted;
+    this._speakerMuteExplicit = true;
+    if (surface) surface.camera.setMuted(this._speakerMuted);
+    else
+      getMediaSessionManager().setCameraMuted(
+        target.entityId,
+        this._speakerMuted,
+      );
+    this._syncIncomingAudioElement();
     this._publish();
   }
 
@@ -232,6 +302,7 @@ export class PersistentTalkSession {
     this._connection = undefined;
     this._microphoneMuted = false;
     this._releaseAudioCamera();
+    this._releaseIncomingAudio();
   }
 
   private _matchingSurface(): PersistentTalkSurface | undefined {
@@ -239,24 +310,45 @@ export class PersistentTalkSession {
     if (!entityId) return undefined;
     let matching: PersistentTalkSurface | undefined;
     for (const surface of this._surfaces.values()) {
-      if (surface.camera.entityId === entityId) matching = surface;
+      if (
+        surface.camera.entityId === entityId &&
+        this._surfacePresented(surface)
+      )
+        matching = surface;
     }
     return matching;
   }
 
-  private _syncAudioCamera(): void {
-    const next = this._connection ? this._matchingSurface()?.camera : undefined;
-    if (next === this._audioCamera) return;
+  private _surfacePresented(surface: PersistentTalkSurface): boolean {
+    if (!this._surfaceObserver) return true;
+    const host = surface.host;
     if (
-      next?.overlayOwner &&
-      next.overlayOwner === this._audioCamera?.overlayOwner
-    ) {
-      this._audioCamera = next;
-      return;
+      !host.isConnected ||
+      this._surfaceVisibility.get(host) === false ||
+      host.closest("[inert], [aria-hidden='true']")
+    )
+      return false;
+    return typeof host.checkVisibility !== "function" || host.checkVisibility();
+  }
+
+  private _syncIncomingAudio(): void {
+    const next = this._connection ? this._matchingSurface()?.camera : undefined;
+    if (next !== this._audioCamera) {
+      if (
+        next?.overlayOwner &&
+        next.overlayOwner === this._audioCamera?.overlayOwner
+      ) {
+        this._audioCamera = next;
+      } else {
+        this._releaseAudioCamera();
+        this._audioCamera = next;
+        this._audioCamera?.setTalkAudioActive(true);
+        if (this._audioCamera && this._speakerMuteExplicit) {
+          this._audioCamera.setMuted(this._speakerMuted);
+        }
+      }
     }
-    this._releaseAudioCamera();
-    this._audioCamera = next;
-    this._audioCamera?.setTalkAudioActive(true);
+    this._syncIncomingAudioElement();
   }
 
   private _releaseAudioCamera(): void {
@@ -269,7 +361,9 @@ export class PersistentTalkSession {
     this._connection.close();
     this._connection = undefined;
     this._releaseAudioCamera();
+    this._releaseIncomingAudio();
     this._microphoneMuted = false;
+    this._target = undefined;
     this._errorRevision += 1;
     this._publish();
   }
@@ -279,9 +373,65 @@ export class PersistentTalkSession {
     for (const listener of this._listeners) listener(snapshot);
   }
 
+  private _retainIncomingAudio(): void {
+    this._releaseIncomingAudio();
+    const surface = this._matchingSurface();
+    const retained = surface?.camera.retainIncomingAudio?.();
+    const stream = retained?.stream ?? surface?.camera.incomingStream;
+    if (!stream) {
+      retained?.release();
+      return;
+    }
+    this._incomingAudioRetention = retained;
+    this._incomingStream = stream;
+    const audio = document.createElement("audio");
+    audio.autoplay = true;
+    audio.hidden = true;
+    audio.srcObject = stream;
+    setMediaElementMuted(audio, true);
+    document.body.append(audio);
+    this._incomingAudio = audio;
+    void playMediaElement(audio).catch(() => undefined);
+  }
+
+  private _syncIncomingAudioElement(): void {
+    const audio = this._incomingAudio;
+    if (!audio) return;
+    setMediaElementMuted(
+      audio,
+      Boolean(this._audioCamera) || this._speakerMuted || !this._connection,
+    );
+    if (!audio.muted) void playMediaElement(audio).catch(() => undefined);
+  }
+
+  private _releaseIncomingAudio(): void {
+    if (this._incomingAudio) {
+      this._incomingAudio.pause();
+      this._incomingAudio.srcObject = null;
+      this._incomingAudio.remove();
+      this._incomingAudio = undefined;
+    }
+    this._incomingAudioRetention?.release();
+    this._incomingAudioRetention = undefined;
+    this._incomingStream = undefined;
+  }
+
   private readonly _handleVisibility = (): void => {
     if (document.visibilityState !== "visible") this.dismiss();
   };
 
   private readonly _handleBackground = (): void => this.dismiss();
+
+  private readonly _handleLocationChanged = (): void => {
+    if (this._target && !this._connection && !this._abort) {
+      this.dismiss();
+      return;
+    }
+    const sync = (): void => {
+      this._syncIncomingAudio();
+      this._publish();
+    };
+    sync();
+    requestAnimationFrame(() => requestAnimationFrame(sync));
+  };
 }

@@ -72,6 +72,10 @@ export class TalkSessionController implements ReactiveController {
     return this.active && this._snapshot.microphoneMuted;
   }
 
+  public get speakerMuted(): boolean {
+    return this._snapshot.muted;
+  }
+
   public get supported(): boolean {
     return this._supported;
   }
@@ -151,6 +155,10 @@ export class TalkSessionController implements ReactiveController {
 
   public toggleMicrophoneMute(): void {
     if (this.active) this._manager.toggleMicrophoneMute();
+  }
+
+  public toggleSpeakerMute(): void {
+    if (this.active) this._manager.toggleSpeaker();
   }
 
   private _handleCamera(camera: ActiveCameraSession | undefined): void {

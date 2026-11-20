@@ -83,6 +83,7 @@ function session(owner: object) {
     overlayOwner: owner,
     overlayVisible: true,
     holdOverlay: vi.fn<() => () => void>(() => release),
+    retainIncomingAudio: vi.fn(),
     release,
     revealOverlay: vi.fn<() => void>(),
     setMuted: vi.fn<(muted: boolean) => void>(),
