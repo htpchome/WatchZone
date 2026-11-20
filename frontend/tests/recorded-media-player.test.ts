@@ -823,8 +823,11 @@ describe("recorded media player", () => {
     document.body.append(player);
     await player.updateComplete;
     const video = player.shadowRoot?.querySelector("video");
+    const mediaSurface =
+      player.shadowRoot?.querySelector<HTMLElement>(".media-surface");
     expect(video).not.toBeNull();
-    if (!video) return;
+    expect(mediaSurface).not.toBeNull();
+    if (!video || !mediaSurface) return;
     let width = 1600;
     let height = 900;
     Object.defineProperties(video, {
@@ -834,13 +837,17 @@ describe("recorded media player", () => {
     video.dispatchEvent(new Event("loadedmetadata"));
 
     player.setPresentationHeightRatio(0.8);
-    expect(transformScale(video.style.transform)).toBeCloseTo(0.8 / (9 / 16));
+    expect(transformScale(mediaSurface.style.transform)).toBeCloseTo(
+      0.8 / (9 / 16),
+    );
 
     width = 0;
     height = 0;
     video.dispatchEvent(new Event("resize"));
     player.setPresentationHeightRatio(0.9);
-    expect(transformScale(video.style.transform)).toBeCloseTo(0.9 / (9 / 16));
+    expect(transformScale(mediaSurface.style.transform)).toBeCloseTo(
+      0.9 / (9 / 16),
+    );
   });
 
   it("presents review details and switches media variants in place", async () => {
@@ -1080,6 +1087,9 @@ describe("recorded media player", () => {
       ".viewport",
     ) as HTMLElement;
     const image = player.shadowRoot?.querySelector("img") as HTMLImageElement;
+    const mediaSurface = player.shadowRoot?.querySelector(
+      ".media-surface",
+    ) as HTMLElement;
     Object.defineProperties(image, {
       naturalHeight: { configurable: true, value: 900 },
       naturalWidth: { configurable: true, value: 1600 },
@@ -1098,13 +1108,15 @@ describe("recorded media player", () => {
 
     viewport.dispatchEvent(new KeyboardEvent("keydown", { key: "+" }));
     await player.updateComplete;
-    expect(transformScale(image.style.transform)).toBeGreaterThan(1);
-    const zoomedTransform = image.style.transform;
+    expect(transformScale(mediaSurface.style.transform)).toBeGreaterThan(1);
+    const zoomedTransform = mediaSurface.style.transform;
 
     viewport.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft" }));
     await player.updateComplete;
-    expect(image.style.transform).not.toBe(zoomedTransform);
-    expect(image.style.transform).not.toContain("translate3d(0px, 0px, 0)");
+    expect(mediaSurface.style.transform).not.toBe(zoomedTransform);
+    expect(mediaSurface.style.transform).not.toContain(
+      "translate3d(0px, 0px, 0)",
+    );
   });
 });
 

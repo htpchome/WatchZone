@@ -48,21 +48,30 @@ export const recordedVideoPlayerStyles = css`
     display: block;
   }
 
-  video {
+  .media-surface {
     background: var(--wzc-recorded-media-background);
-    inset: 0;
-    display: block;
     block-size: 100%;
+    inset: 0;
     inline-size: 100%;
+    position: absolute;
+    transform-origin: center;
+    will-change: transform;
+  }
+
+  video {
+    background: inherit;
+    block-size: 100%;
+    display: block;
+    inline-size: 100%;
+    inset: 0;
     max-block-size: 100%;
     object-fit: contain;
     pointer-events: none;
     position: absolute;
-    transform-origin: center;
     user-select: none;
   }
 
-  video.interacting {
+  .media-surface.interacting {
     cursor: move;
   }
 

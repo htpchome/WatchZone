@@ -35,7 +35,8 @@ import {
   refreshNativePictureInPictureSuppression,
   suppressNativePictureInPicture,
 } from "../../../core/picture-in-picture";
-import { MediaPresentationController } from "../../../ui/media-presentation.controller";
+import { ZoomController } from "../../../ui/zoom";
+import { MediaOverlayVisibilityController } from "../../../ui/media-overlay-visibility.controller";
 import type { PresentedSource } from "./session.controller";
 import { CameraLiveControlController } from "./control.controller";
 import { captureVideoFrame } from "./frame-capture";
@@ -119,9 +120,19 @@ export class CameraLivePresentation extends LitElement {
   private readonly _spinnerMotion = new OwnedMotion();
   private _spinnerElement?: HTMLElement;
   private readonly _deviceProfile = new DeviceProfileController(this);
-  private readonly _media = new MediaPresentationController(this, {
-    dismissOverlayOnOutsidePointer: true,
+  private readonly _overlay = new MediaOverlayVisibilityController(this, {
+    dismissOnOutsidePointer: true,
     onVisibilityChange: (visible) => this._emitOverlayVisibility(visible),
+  });
+  private readonly _zoom = new ZoomController(this, {
+    onActivation: (input) => {
+      if (!this.overlayInteractionEnabled) return;
+      if (input === "touch") this._overlay.revealFromTouch();
+      else this._overlay.reveal();
+    },
+    onTouchInteraction: () => {
+      if (this.overlayInteractionEnabled) this._overlay.revealFromTouch();
+    },
   });
   private readonly _controls = new CameraLiveControlController(this, {
     captureFrame: () => this.captureFrame(),
@@ -195,27 +206,28 @@ export class CameraLivePresentation extends LitElement {
   }
 
   public beginStageResizeReturn(): void {
-    this._media.zoom.beginStageResizeReturn();
+    this._zoom.beginStageResizeReturn();
   }
 
   public updateStageResizeReturn(progress: number): void {
-    this._media.zoom.updateStageResizeReturn(progress);
+    this._zoom.updateStageResizeReturn(progress);
   }
 
   public endStageResizeReturn(): void {
-    this._media.endStageResizeReturn();
+    this._zoom.endStageResizeReturn();
+    this._overlay.hide();
   }
 
   public setBasePresentationScale(scale: number): void {
-    this._media.zoom.setBasePresentationScale(scale);
+    this._zoom.setBasePresentationScale(scale);
   }
 
   public revealOverlay(): void {
-    this._media.overlay.reveal();
+    this._overlay.reveal();
   }
 
   public holdOverlay(): () => void {
-    return this._media.overlay.hold();
+    return this._overlay.hold();
   }
 
   public connectedCallback(): void {
@@ -241,17 +253,17 @@ export class CameraLivePresentation extends LitElement {
   }
 
   protected willUpdate(changed: Map<PropertyKey, unknown>): void {
-    if (changed.has("active")) this._media.setActive(this.active);
+    if (changed.has("active")) this._zoom.setActive(this.active);
     if (changed.has("posterUrl")) {
       this._posterDimensions = undefined;
       this._posterFailed = false;
     }
     if (changed.has("transport") && this.transport)
-      this._media.overlay.revealSource();
-    if (changed.has("zoomKey")) this._media.configure(this.zoomKey);
-    if (changed.has("suspended") && this.suspended) this._media.resetZoom();
-    if (changed.has("overlayInteractionEnabled")) {
-      this._media.setOverlayInteractionEnabled(this.overlayInteractionEnabled);
+      this._overlay.revealSource();
+    if (changed.has("zoomKey")) this._zoom.configure(this.zoomKey);
+    if (changed.has("suspended") && this.suspended) this._zoom.resetZoom();
+    if (changed.has("active") || changed.has("overlayInteractionEnabled")) {
+      this._overlay.setActive(this.active && this.overlayInteractionEnabled);
     }
   }
 
@@ -267,41 +279,27 @@ export class CameraLivePresentation extends LitElement {
       connecting ||
       (resolvedSource &&
         (this.externalOverlayVisible ||
-          this._media.overlay.sourceVisible ||
-          this._media.overlay.visible)),
+          this._overlay.sourceVisible ||
+          this._overlay.visible)),
     );
     return staticHtml`
       <div
         class="viewport"
         tabindex="0"
         aria-label=${this.localize("camera.live_view_zoom", {
-          percent: Math.round(this._media.zoom.scale * 100),
+          percent: Math.round(this._zoom.scale * 100),
         })}
         aria-keyshortcuts="Enter Space + - 0 Escape ArrowLeft ArrowRight ArrowUp ArrowDown"
-        @keydown=${this._media.handleKeyDown}
         @pointerenter=${this._handlePointerEnter}
         @pointerleave=${this._handlePointerLeave}
-        @pointermove=${this._handlePointerMove}
         @pointerdown=${this._handlePointerDown}
-        @pointerup=${this._handlePointerUp}
-        @pointercancel=${this._handlePointerCancel}
-        @lostpointercapture=${this._handleLostPointerCapture}
-        @click=${this._media.handleClick}
+        @pointermove=${this._handlePointerMove}
+        @pointerup=${this._handlePointerEnd}
+        @pointercancel=${this._handlePointerEnd}
         @focusin=${this._handleFocusIn}
         @focusout=${this._handleFocusOut}
-        @wheel=${this._media.handleWheel}
       >
-        <div
-          class=${[
-            "media-surface",
-            this._media.zoom.pannable ? "pannable" : "",
-            this._media.zoom.interacting ? "interacting" : "",
-            this._media.zoom.stageResizeActive ? "stage-resize-active" : "",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-          style=${`transform: ${this._media.zoom.transform}`}
-        >
+        <div class="media-surface">
           ${
             this.suspended
               ? renderCameraSuspendedPresentation(this.localize)
@@ -356,7 +354,7 @@ export class CameraLivePresentation extends LitElement {
           this.controlsEnabled && (this.selected || this.suspended)
             ? staticHtml`<${controlsTag}
                 class="player-tools swiper-no-swiping"
-                .visible=${this.suspended || this._media.overlay.visible}
+                .visible=${this.suspended || this._overlay.visible}
                 .fullscreenActive=${this._controls.fullscreenActive}
                 .fullscreenSupported=${this._controls.fullscreenSupported()}
                 .muted=${this.muted}
@@ -401,11 +399,14 @@ export class CameraLivePresentation extends LitElement {
         );
       }
     }
-    this._media.observe(
-      this.renderRoot.querySelector<HTMLElement>(".viewport") ?? undefined,
+    const viewport =
+      this.renderRoot.querySelector<HTMLElement>(".viewport") ?? undefined;
+    this._zoom.attach(
+      viewport,
       this.renderRoot.querySelector<HTMLElement>(".media-surface") ?? undefined,
     );
-    const gestureLocked = this._media.zoom.pannable;
+    this._overlay.attach(viewport);
+    const gestureLocked = this._zoom.pannable;
     if (gestureLocked !== this._reportedGestureLocked) {
       this._reportedGestureLocked = gestureLocked;
       this.dispatchEvent(
@@ -451,48 +452,37 @@ export class CameraLivePresentation extends LitElement {
     }
   }
 
-  private readonly _handlePointerEnter = (event: PointerEvent): void => {
-    if (this.overlayInteractionEnabled)
-      this._media.overlay.handlePointerEnter(event);
+  private readonly _handleOverlayControlInteraction = (): void => {
+    this._overlay.reveal();
   };
 
-  private readonly _handleOverlayControlInteraction = (): void => {
-    this._media.overlay.reveal();
+  private readonly _handlePointerEnter = (event: PointerEvent): void => {
+    if (this.overlayInteractionEnabled) this._overlay.handlePointerEnter(event);
   };
 
   private readonly _handlePointerLeave = (event: PointerEvent): void => {
-    if (this.overlayInteractionEnabled)
-      this._media.overlay.handlePointerLeave(event);
-  };
-
-  private readonly _handlePointerMove = (event: PointerEvent): void => {
-    this._media.handlePointerMove(event);
+    if (this.overlayInteractionEnabled) this._overlay.handlePointerLeave(event);
   };
 
   private readonly _handlePointerDown = (event: PointerEvent): void => {
-    this._media.handlePointerDown(event);
+    if (this.overlayInteractionEnabled) this._overlay.handlePointerDown(event);
   };
 
-  private readonly _handlePointerUp = (event: PointerEvent): void => {
-    this._media.handlePointerUp(event);
+  private readonly _handlePointerMove = (event: PointerEvent): void => {
+    if (this.overlayInteractionEnabled && !this._zoom.interacting)
+      this._overlay.handlePointerMove(event);
   };
 
-  private readonly _handlePointerCancel = (event: PointerEvent): void => {
-    this._media.handlePointerCancel(event);
-  };
-
-  private readonly _handleLostPointerCapture = (event: PointerEvent): void => {
-    this._media.handleLostPointerCapture(event);
+  private readonly _handlePointerEnd = (event: PointerEvent): void => {
+    if (this.overlayInteractionEnabled) this._overlay.handlePointerEnd(event);
   };
 
   private readonly _handleFocusIn = (event: FocusEvent): void => {
-    if (this.overlayInteractionEnabled)
-      this._media.overlay.handleFocusIn(event);
+    if (this.overlayInteractionEnabled) this._overlay.handleFocusIn(event);
   };
 
   private readonly _handleFocusOut = (event: FocusEvent): void => {
-    if (this.overlayInteractionEnabled)
-      this._media.overlay.handleFocusOut(event);
+    if (this.overlayInteractionEnabled) this._overlay.handleFocusOut(event);
   };
 
   private _renderFallback() {
@@ -695,7 +685,7 @@ export class CameraLivePresentation extends LitElement {
       video && video.videoWidth > 0 && video.videoHeight > 0
         ? { height: video.videoHeight, width: video.videoWidth }
         : this._posterDimensions;
-    this._media.zoom.setMediaDimensions(
+    this._zoom.setMediaDimensions(
       dimensions?.width ?? 0,
       dimensions?.height ?? 0,
     );

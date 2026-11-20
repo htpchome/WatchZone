@@ -42,7 +42,8 @@ import type {
   RecordedMediaRequest,
   RecordingTimeline,
 } from "../../core/recorded-media";
-import { MediaPresentationController } from "../../ui/media-presentation.controller";
+import { ZoomController } from "../../ui/zoom";
+import { MediaOverlayVisibilityController } from "../../ui/media-overlay-visibility.controller";
 import type {
   MediaControlDescriptor,
   MediaControlEventDetail,
@@ -109,7 +110,7 @@ export class RecordedVideoPlayer extends LitElement {
       "--wzc-recorded-media-presentation-aspect-ratio",
       String(1 / this._presentationHeightRatio),
     );
-    this._syncBasePresentationScale();
+    this._zoom.setPresentationHeightRatio(this._presentationHeightRatio);
   }
 
   public readonly toggleSegmentSelection = async (): Promise<void> => {
@@ -127,7 +128,6 @@ export class RecordedVideoPlayer extends LitElement {
   private _fullscreenActive = false;
   private _currentTime = 0;
   private _duration = 0;
-  private _mediaHeightRatio?: number;
   private _muted = true;
   private _nativePlaybackRate = 1;
   private _paused = true;
@@ -141,7 +141,14 @@ export class RecordedVideoPlayer extends LitElement {
   private _rateAccelerationTimestamp?: number;
   private _transportHoldRelease?: () => void;
   private _volume = 1;
-  private readonly _media = new MediaPresentationController(this);
+  private readonly _overlay = new MediaOverlayVisibilityController(this);
+  private readonly _zoom = new ZoomController(this, {
+    onActivation: (input) =>
+      input === "touch"
+        ? this._overlay.revealFromTouch()
+        : this._overlay.reveal(),
+    onTouchInteraction: () => this._overlay.revealFromTouch(),
+  });
   private readonly _playback = new RecordedMediaPlaybackController(
     () => this.api,
     () => this._reportError(),
@@ -215,50 +222,46 @@ export class RecordedVideoPlayer extends LitElement {
         },
       ];
     return staticHtml`<div
-      class=${this._media.zoom.pannable ? "viewport pannable" : "viewport"}
+      class="viewport"
       tabindex="0"
       aria-label=${this.localize("media_player.zoom_view", {
-        percent: Math.round(this._media.zoom.scale * 100),
+        percent: Math.round(this._zoom.scale * 100),
       })}
-      @pointerenter=${this._media.overlay.handlePointerEnter}
-      @pointerleave=${this._media.overlay.handlePointerLeave}
-      @pointerdown=${this._media.handlePointerDown}
-      @pointermove=${this._media.handlePointerMove}
-      @pointerup=${this._media.handlePointerUp}
-      @pointercancel=${this._media.handlePointerCancel}
-      @lostpointercapture=${this._media.handleLostPointerCapture}
-      @click=${this._media.handleClick}
-      @wheel=${this._media.handleWheel}
-      @keydown=${this._media.handleKeyDown}
-      @focusin=${this._media.overlay.handleFocusIn}
-      @focusout=${this._media.overlay.handleFocusOut}
+      @pointerenter=${this._overlay.handlePointerEnter}
+      @pointerleave=${this._overlay.handlePointerLeave}
+      @pointerdown=${this._overlay.handlePointerDown}
+      @pointermove=${this._overlay.handlePointerMove}
+      @pointerup=${this._overlay.handlePointerEnd}
+      @pointercancel=${this._overlay.handlePointerEnd}
+      @focusin=${this._overlay.handleFocusIn}
+      @focusout=${this._overlay.handleFocusOut}
     >
-      <video
-        class=${this._media.zoom.interacting ? "interacting" : ""}
-        style=${`transform: ${this._media.zoom.transform}`}
-        autoplay
-        muted
-        playsinline
-        preload="auto"
-        poster=${this.request?.posterUrl ?? ""}
-        @loadedmetadata=${this._handleMediaDimensionsChanged}
-        @resize=${this._handleMediaDimensionsChanged}
-        @emptied=${this._handleMediaDimensionsChanged}
-        @durationchange=${this._syncControlState}
-        @timeupdate=${this._syncControlState}
-        @play=${this._syncControlState}
-        @pause=${this._syncControlState}
-        @ended=${this._handleSegmentPreviewEnded}
-        @volumechange=${this._syncControlState}
-        @enterpictureinpicture=${this._syncControlState}
-        @leavepictureinpicture=${this._syncControlState}
-        @webkitpresentationmodechanged=${this._syncControlState}
-      ></video>
+      <div class="media-surface">
+        <video
+          autoplay
+          muted
+          playsinline
+          preload="auto"
+          poster=${this.request?.posterUrl ?? ""}
+          @loadedmetadata=${this._handleMediaDimensionsChanged}
+          @resize=${this._handleMediaDimensionsChanged}
+          @emptied=${this._handleMediaDimensionsChanged}
+          @durationchange=${this._syncControlState}
+          @timeupdate=${this._syncControlState}
+          @play=${this._syncControlState}
+          @pause=${this._syncControlState}
+          @ended=${this._handleSegmentPreviewEnded}
+          @volumechange=${this._syncControlState}
+          @enterpictureinpicture=${this._syncControlState}
+          @leavepictureinpicture=${this._syncControlState}
+          @webkitpresentationmodechanged=${this._syncControlState}
+        ></video>
+      </div>
       <${mediaControlsTag}
         class="player-tools"
         .controls=${controls}
         .label=${this.localize("media_player.controls")}
-        .visible=${this._media.overlay.visible}
+        .visible=${this._overlay.visible}
         .viewportEdge=${this._fullscreenActive}
         @${mediaControlEvent}=${this._handleControl}
         @${mediaOverlayInteractionEvent}=${this._handleOverlayControlInteraction}
@@ -269,7 +272,7 @@ export class RecordedVideoPlayer extends LitElement {
         .localize=${this.localize}
         .muted=${this._muted}
         .paused=${this._paused}
-        .visible=${this._media.overlay.visible}
+        .visible=${this._overlay.visible}
         .viewportEdge=${this._fullscreenActive}
         .volume=${this._volume}
         @${transportEvent}=${this._handleTransport}
@@ -377,7 +380,6 @@ export class RecordedVideoPlayer extends LitElement {
 
   protected willUpdate(changed: Map<PropertyKey, unknown>): void {
     if (changed.has("request")) {
-      this._mediaHeightRatio = undefined;
       this._playbackRate = 1;
       this._segmentPreviewActive = false;
       this._segmentPreviewTimeline = undefined;
@@ -386,7 +388,7 @@ export class RecordedVideoPlayer extends LitElement {
         "recording-timeline",
         Boolean(this.request?.timeline),
       );
-      this._media.configure(this.request?.id);
+      this._zoom.configure(this.request?.id);
       this._segment.configure(this.request?.timeline);
     }
   }
@@ -420,7 +422,10 @@ export class RecordedVideoPlayer extends LitElement {
   }
 
   private _observeMediaPresentation(): void {
-    this._media.observe(this._viewport(), this._video());
+    this._zoom.attach(
+      this._viewport(),
+      this.renderRoot.querySelector<HTMLElement>(".media-surface") ?? undefined,
+    );
   }
 
   private readonly _handleMediaDimensionsChanged = (): void => {
@@ -439,22 +444,8 @@ export class RecordedVideoPlayer extends LitElement {
     const width = video?.videoWidth ?? 0;
     const height = video?.videoHeight ?? 0;
     if (width > 0 && height > 0) {
-      this._mediaHeightRatio = height / width;
-      this._media.zoom.setMediaDimensions(width, height);
-    } else if (this._mediaHeightRatio === undefined) {
-      this._media.zoom.setMediaDimensions(0, 0);
+      this._zoom.setMediaDimensions(width, height);
     }
-    this._syncBasePresentationScale();
-  }
-
-  private _syncBasePresentationScale(): void {
-    const mediaHeightRatio = this._mediaHeightRatio;
-    this._media.zoom.setBasePresentationScale(
-      mediaHeightRatio !== undefined &&
-        this._presentationHeightRatio > mediaHeightRatio
-        ? this._presentationHeightRatio / mediaHeightRatio
-        : 1,
-    );
   }
 
   private readonly _syncControlState = (): void => {
@@ -669,7 +660,7 @@ export class RecordedVideoPlayer extends LitElement {
   };
 
   private readonly _handleOverlayControlInteraction = (): void => {
-    this._media.overlay.reveal();
+    this._overlay.reveal();
   };
 
   private readonly _handleTransport = (
@@ -688,7 +679,7 @@ export class RecordedVideoPlayer extends LitElement {
   ): void => {
     event.stopPropagation();
     if (event.detail.active) {
-      this._transportHoldRelease ??= this._media.overlay.hold();
+      this._transportHoldRelease ??= this._overlay.hold();
     } else this._releaseTransportHold();
   };
 

@@ -244,6 +244,7 @@ test("presents recorded media in the configured card-width bottom drawer", async
   );
   await expect(mediaPlayerHost).toHaveCSS("aspect-ratio", "auto");
   const recordedVideo = mediaPlayerHost.locator("video");
+  const recordedVideoSurface = mediaPlayerHost.locator(".media-surface");
   await recordedVideo.evaluate((video) => {
     Object.defineProperties(video, {
       videoHeight: { configurable: true, value: 900 },
@@ -290,8 +291,8 @@ test("presents recorded media in the configured card-width bottom drawer", async
   const viewportBottom = (page.viewportSize()?.height ?? 720) - 2;
   const sampledVideoHeights = [resizedMediaBox?.height ?? 0];
   const sampledVideoTransforms = [
-    await recordedVideo.evaluate((video) => {
-      const style = getComputedStyle(video);
+    await recordedVideoSurface.evaluate((surface) => {
+      const style = getComputedStyle(surface);
       const matrix = new DOMMatrixReadOnly(style.transform);
       return {
         scale: matrix.a,
@@ -310,8 +311,8 @@ test("presents recorded media in the configured card-width bottom drawer", async
     );
     sampledVideoHeights.push((await mediaPlayer.boundingBox())?.height ?? 0);
     sampledVideoTransforms.push(
-      await recordedVideo.evaluate((video) => {
-        const style = getComputedStyle(video);
+      await recordedVideoSurface.evaluate((surface) => {
+        const style = getComputedStyle(surface);
         const matrix = new DOMMatrixReadOnly(style.transform);
         return {
           scale: matrix.a,
@@ -426,6 +427,9 @@ test("presents recorded media in the configured card-width bottom drawer", async
     .toBe("translateY(0px)");
 
   const snapshot = page.locator("wzc-recorded-media-bottom-drawer .snapshot");
+  const snapshotSurface = page.locator(
+    "wzc-recorded-media-bottom-drawer wzc-recorded-snapshot-player .media-surface",
+  );
   const snapshotViewport = page.locator(
     "wzc-recorded-media-bottom-drawer wzc-recorded-snapshot-player .viewport",
   );
@@ -444,13 +448,14 @@ test("presents recorded media in the configured card-width bottom drawer", async
   await snapshotViewport.dblclick();
   await expect
     .poll(() =>
-      snapshot.evaluate(
-        (image) => new DOMMatrixReadOnly(getComputedStyle(image).transform).a,
+      snapshotSurface.evaluate(
+        (surface) =>
+          new DOMMatrixReadOnly(getComputedStyle(surface).transform).a,
       ),
     )
     .toBeGreaterThan(1);
-  const zoomedSnapshotTransform = await snapshot.evaluate(
-    (image) => getComputedStyle(image).transform,
+  const zoomedSnapshotTransform = await snapshotSurface.evaluate(
+    (surface) => getComputedStyle(surface).transform,
   );
   const snapshotViewportBox = await snapshotViewport.boundingBox();
   if (!snapshotViewportBox) {
@@ -463,7 +468,11 @@ test("presents recorded media in the configured card-width bottom drawer", async
   await page.mouse.move(snapshotPanX + 40, snapshotPanY);
   await page.mouse.up();
   await expect
-    .poll(() => snapshot.evaluate((image) => getComputedStyle(image).transform))
+    .poll(() =>
+      snapshotSurface.evaluate(
+        (surface) => getComputedStyle(surface).transform,
+      ),
+    )
     .not.toBe(zoomedSnapshotTransform);
   await snapshotViewport.press("0");
   const snapshotResizeX =
@@ -5094,7 +5103,9 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect(modalClose).toHaveCSS("color", modalCloseColor);
   const recordedVideo = page.locator("wzc-recorded-video-player video");
   const recordedViewport = page.locator("wzc-recorded-video-player .viewport");
-  const recordedMediaSurface = recordedVideo;
+  const recordedMediaSurface = page.locator(
+    "wzc-recorded-video-player .media-surface",
+  );
   await expect(recordedVideo).not.toHaveAttribute("controls", "");
   await expect(recordedVideo).toHaveAttribute("autoplay", "");
   await expect(recordedVideo).toHaveAttribute("muted", "");
@@ -5175,7 +5186,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   }
   await expect(
     page.locator("wzc-recorded-video-player .media-surface"),
-  ).toHaveCount(0);
+  ).toHaveCount(1);
   await expect(
     page.locator(
       ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) .scrim",
@@ -5294,13 +5305,13 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(await dispatchRecordedDoubleClick()).toBe(true);
   await expect(recordedMediaSurface).toHaveAttribute("style", /scale\(2\)/);
   const recordedPresentationContract = await recordedMediaSurface.evaluate(
-    (video) => {
-      const element = video as HTMLVideoElement;
-      const viewport = video.parentElement;
+    (surface) => {
+      const video = surface.querySelector("video");
+      const viewport = surface.parentElement;
       return {
-        surfaceHeight: element.offsetHeight,
-        surfaceWidth: element.offsetWidth,
-        videoPosition: getComputedStyle(video).position,
+        surfaceHeight: (surface as HTMLElement).offsetHeight,
+        surfaceWidth: (surface as HTMLElement).offsetWidth,
+        videoPosition: video ? getComputedStyle(video).position : "missing",
         viewportHeight: viewport?.clientHeight ?? 0,
         viewportWidth: viewport?.clientWidth ?? 0,
       };
@@ -5390,13 +5401,13 @@ test("keeps activity content in an independently scrolling viewport", async ({
     1,
   );
   const recordedContentCoverage = await recordedMediaSurface.evaluate(
-    (video) => {
-      const element = video as HTMLVideoElement;
-      const viewport = video.parentElement;
-      if (!viewport) return undefined;
+    (surface) => {
+      const video = surface.querySelector("video");
+      const viewport = surface.parentElement;
+      if (!video || !viewport) return undefined;
       const viewportRect = viewport.getBoundingClientRect();
-      const surfaceRect = video.getBoundingClientRect();
-      const mediaRatio = element.videoWidth / element.videoHeight;
+      const surfaceRect = surface.getBoundingClientRect();
+      const mediaRatio = video.videoWidth / video.videoHeight;
       const viewportRatio = viewportRect.width / viewportRect.height;
       const fittedWidth =
         mediaRatio > viewportRatio
@@ -12966,7 +12977,7 @@ test("restores controls after pre-editor and retains a replaced live connection"
       });
       await expect(mediaSurface).toHaveAttribute(
         "style",
-        /translate3d\(0px, 0px, 0\) scale\(1\)/,
+        /translate3d\(0px, 0px, 0(?:px)?\) scale\(1\)/,
       );
 
       await page.mouse.move(handleX, handleY + expansionDistance, {

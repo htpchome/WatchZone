@@ -1,4 +1,4 @@
-import type { MediaZoomController } from "./media-zoom.controller";
+import type { ZoomTransformController } from "./transform.controller";
 
 const TAP_DURATION_MS = 500;
 const TAP_MOVE_TOLERANCE_PX = 14;
@@ -23,18 +23,18 @@ export function mediaInteractionOriginatesFromControl(event: Event): boolean {
 }
 
 /**
- * Sole interpreter for media touch gestures.
+ * Sole interpreter for zoom touch gestures.
  *
  * Zoom owns transforms; the overlay owns its timer. This controller alone
  * decides whether a touch sequence is a tap, double tap, pan, or pinch.
  */
-export class MediaTouchGestureController {
+export class ZoomTouchGestureInterpreter {
   private readonly _contacts = new Map<number, Contact>();
   private readonly _ignoredPointers = new Set<number>();
   private _multiTouchSequence = false;
   private _surfaceActivationCompleted = false;
 
-  public constructor(private readonly _zoom: MediaZoomController) {}
+  public constructor(private readonly _zoom: ZoomTransformController) {}
 
   public handlePointerDown(event: PointerEvent): boolean {
     this._surfaceActivationCompleted = false;

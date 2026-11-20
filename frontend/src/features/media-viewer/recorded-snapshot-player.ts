@@ -8,7 +8,7 @@ import {
   englishLocalize,
   type LocalizeFunction,
 } from "../../core/localization";
-import { MediaPresentationController } from "../../ui/media-presentation.controller";
+import { ZoomController } from "../../ui/zoom";
 import { recordedSnapshotPlayerStyles } from "./recorded-snapshot-player.styles";
 
 const DEFAULT_PRESENTATION_HEIGHT_RATIO = 9 / 16;
@@ -41,54 +41,38 @@ export class RecordedSnapshotPlayer extends LitElement {
       "--wzc-recorded-media-presentation-aspect-ratio",
       String(1 / this._presentationHeightRatio),
     );
-    this._syncBasePresentationScale();
+    this._zoom.setPresentationHeightRatio(this._presentationHeightRatio);
   }
 
-  private _mediaHeightRatio?: number;
   private _presentationHeightRatio = DEFAULT_PRESENTATION_HEIGHT_RATIO;
-  private readonly _media = new MediaPresentationController(this);
+  private readonly _zoom = new ZoomController(this);
 
   protected render() {
     return html`<div
-        class=${this._media.zoom.pannable ? "viewport pannable" : "viewport"}
+        class="viewport"
         tabindex="0"
         aria-label=${this.localize("media_player.zoom_view", {
-          percent: Math.round(this._media.zoom.scale * 100),
+          percent: Math.round(this._zoom.scale * 100),
         })}
-        @pointerenter=${this._media.overlay.handlePointerEnter}
-        @pointerleave=${this._media.overlay.handlePointerLeave}
-        @pointerdown=${this._media.handlePointerDown}
-        @pointermove=${this._media.handlePointerMove}
-        @pointerup=${this._media.handlePointerUp}
-        @pointercancel=${this._media.handlePointerCancel}
-        @lostpointercapture=${this._media.handleLostPointerCapture}
-        @click=${this._media.handleClick}
-        @wheel=${this._media.handleWheel}
-        @keydown=${this._media.handleKeyDown}
-        @focusin=${this._media.overlay.handleFocusIn}
-        @focusout=${this._media.overlay.handleFocusOut}
       >
-        <img
-          class=${
-            this._media.zoom.interacting ? "snapshot interacting" : "snapshot"
-          }
-          style=${`transform: ${this._media.zoom.transform}`}
-          src=${this.source}
-          alt=${this.alt}
-          draggable="false"
-          @load=${this._handleLoad}
-          @error=${this._handleError}
-        />
+        <div class="media-surface">
+          <img
+            class="snapshot"
+            src=${this.source}
+            alt=${this.alt}
+            draggable="false"
+            @load=${this._handleLoad}
+            @error=${this._handleError}
+          />
+        </div>
       </div>
       <slot name="media-resize-handle"></slot>`;
   }
 
   protected willUpdate(changed: Map<PropertyKey, unknown>): void {
     if (!changed.has("source")) return;
-    this._mediaHeightRatio = undefined;
-    this._media.configure(this.source);
-    this._media.zoom.setBasePresentationScale(1);
-    this._media.zoom.setMediaDimensions(0, 0);
+    this._zoom.configure(this.source);
+    this._zoom.setMediaDimensions(0, 0);
   }
 
   protected firstUpdated(): void {
@@ -108,7 +92,10 @@ export class RecordedSnapshotPlayer extends LitElement {
   }
 
   private _observeMediaPresentation(): void {
-    this._media.observe(this._viewport(), this._image());
+    this._zoom.attach(
+      this._viewport(),
+      this.renderRoot.querySelector<HTMLElement>(".media-surface") ?? undefined,
+    );
   }
 
   private readonly _handleLoad = (): void => {
@@ -116,20 +103,8 @@ export class RecordedSnapshotPlayer extends LitElement {
     const width = image?.naturalWidth ?? 0;
     const height = image?.naturalHeight ?? 0;
     if (width <= 0 || height <= 0) return;
-    this._mediaHeightRatio = height / width;
-    this._media.zoom.setMediaDimensions(width, height);
-    this._syncBasePresentationScale();
+    this._zoom.setMediaDimensions(width, height);
   };
-
-  private _syncBasePresentationScale(): void {
-    const mediaHeightRatio = this._mediaHeightRatio;
-    this._media.zoom.setBasePresentationScale(
-      mediaHeightRatio !== undefined &&
-        this._presentationHeightRatio > mediaHeightRatio
-        ? this._presentationHeightRatio / mediaHeightRatio
-        : 1,
-    );
-  }
 
   private readonly _handleError = (): void => {
     this.dispatchEvent(

@@ -3,6 +3,7 @@ import type { ReactiveController, ReactiveControllerHost } from "lit";
 export const MEDIA_OVERLAY_HIDE_DELAY_MS = 2500;
 
 export interface MediaOverlayVisibilityOptions {
+  readonly dismissOnOutsidePointer?: boolean;
   readonly onVisibilityChange?: (visible: boolean) => void;
 }
 
@@ -19,6 +20,7 @@ export class MediaOverlayVisibilityController implements ReactiveController {
   private _hovered = false;
   private _interactionRoot?: HTMLElement;
   private _pointerFocusPending = false;
+  private _outsidePointerTimer?: ReturnType<typeof setTimeout>;
 
   public constructor(
     private readonly _host: ReactiveControllerHost,
@@ -31,11 +33,27 @@ export class MediaOverlayVisibilityController implements ReactiveController {
     const reconnecting = this._hasConnected;
     this._hasConnected = true;
     if (reconnecting) this.reveal();
+    if (this._options.dismissOnOutsidePointer) {
+      document.addEventListener("pointerdown", this._handleDocumentPointerDown);
+    }
   }
 
   public hostDisconnected(): void {
+    document.removeEventListener(
+      "pointerdown",
+      this._handleDocumentPointerDown,
+    );
+    if (this._outsidePointerTimer !== undefined) {
+      clearTimeout(this._outsidePointerTimer);
+      this._outsidePointerTimer = undefined;
+    }
     this._resetInteraction();
     this.hide();
+  }
+
+  /** Supplies the local presentation boundary for outside-pointer policy. */
+  public attach(interactionRoot: HTMLElement | undefined): void {
+    this._interactionRoot = interactionRoot;
   }
 
   /** Clears transient interaction whenever presentation ownership changes. */
@@ -107,7 +125,7 @@ export class MediaOverlayVisibilityController implements ReactiveController {
   };
 
   public readonly handlePointerDown = (event: PointerEvent): void => {
-    // Touch interpretation is centralized by MediaTouchGestureController.
+    // Touch interpretation is centralized by the Zoom feature when present.
     // This controller owns visibility policy and its timer, not gestures.
     if (event.pointerType === "touch") return;
     this._interactionRoot = event.currentTarget as HTMLElement;
@@ -182,4 +200,21 @@ export class MediaOverlayVisibilityController implements ReactiveController {
     this._interactionRoot = undefined;
     this._pointerFocusPending = false;
   }
+
+  private readonly _handleDocumentPointerDown = (event: PointerEvent): void => {
+    if (this._outsidePointerTimer !== undefined) {
+      clearTimeout(this._outsidePointerTimer);
+      this._outsidePointerTimer = undefined;
+    }
+    if (
+      !this._interactionRoot ||
+      event.composedPath().includes(this._interactionRoot)
+    ) {
+      return;
+    }
+    this._outsidePointerTimer = setTimeout(() => {
+      this._outsidePointerTimer = undefined;
+      this.hide();
+    }, 0);
+  };
 }

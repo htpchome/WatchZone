@@ -1,12 +1,13 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
-import { motionDurations, motionEasings, OwnedMotion } from "./motion";
+import { motionDurations, motionEasings, OwnedMotion } from "../motion";
 
 const CLICK_MOVE_TOLERANCE_PX = 6;
 const DISCRETE_PIXEL_WHEEL_DELTA = 80;
 const KEYBOARD_PAN_FRACTION = 0.05;
 const MAX_ZOOM = 3;
 const MIN_ZOOM = 1;
+const PRESENTATION_RATIO_TOLERANCE = 0.005;
 const TOGGLE_ZOOM = 2;
 const WHEEL_DELTA_PIXEL = 0;
 const WHEEL_ZOOM_STEP = 0.25;
@@ -45,7 +46,7 @@ interface MediaZoomCallbacks {
 }
 
 /** Owns media zoom, bounded pan, gestures, and lifecycle cleanup. */
-export class MediaZoomController implements ReactiveController {
+export class ZoomTransformController implements ReactiveController {
   private _basePresentationScale = 1;
   private _animateNextTransform = false;
   private _dragStart?: DragStart;
@@ -54,6 +55,7 @@ export class MediaZoomController implements ReactiveController {
   private _interacting = false;
   private _key?: string;
   private _mediaHeightRatio?: number;
+  private _presentationHeightRatio?: number;
   private _panX = 0;
   private _panY = 0;
   private _pinchStart?: PinchStart;
@@ -103,12 +105,26 @@ export class MediaZoomController implements ReactiveController {
 
   public setBasePresentationScale(scale: number): void {
     const nextScale = Number.isFinite(scale) ? Math.max(MIN_ZOOM, scale) : 1;
-    if (Math.abs(nextScale - this._basePresentationScale) <= Number.EPSILON)
-      return;
-    this._basePresentationScale = nextScale;
-    this._clampPan();
-    this._renderPresentation();
-    this._host.requestUpdate();
+    this._presentationHeightRatio = undefined;
+    this._applyBasePresentationScale(nextScale);
+  }
+
+  /**
+   * Applies a layout-owned viewport ratio as one Zoom geometry intent.
+   *
+   * Zoom derives the cover scale and pan bounds from this ratio immediately;
+   * it does not wait for ResizeObserver to report the resulting DOM size.
+   */
+  public setPresentationHeightRatio(heightRatio: number | undefined): void {
+    const nextRatio =
+      heightRatio !== undefined &&
+      Number.isFinite(heightRatio) &&
+      heightRatio > 0
+        ? heightRatio
+        : undefined;
+    if (nextRatio === this._presentationHeightRatio) return;
+    this._presentationHeightRatio = nextRatio;
+    this._syncDerivedBasePresentationScale();
   }
 
   public setMediaDimensions(width: number, height: number): void {
@@ -121,6 +137,10 @@ export class MediaZoomController implements ReactiveController {
         : undefined;
     if (nextRatio === this._mediaHeightRatio) return;
     this._mediaHeightRatio = nextRatio;
+    if (this._presentationHeightRatio !== undefined) {
+      this._syncDerivedBasePresentationScale();
+      return;
+    }
     this._clampPan();
     this._renderPresentation();
     this._host.requestUpdate();
@@ -130,10 +150,13 @@ export class MediaZoomController implements ReactiveController {
     if (this._key === key) return;
     this._key = key;
     this._mediaHeightRatio = undefined;
+    if (this._presentationHeightRatio !== undefined) {
+      this._basePresentationScale = MIN_ZOOM;
+    }
     this.reset();
   }
 
-  public observe(
+  public attach(
     surface: HTMLElement | undefined,
     presentationTarget: HTMLElement | undefined = surface,
   ): void {
@@ -538,7 +561,10 @@ export class MediaZoomController implements ReactiveController {
     const scale = userScale * this._basePresentationScale;
     if (scale <= MIN_ZOOM) return { x: 0, y: 0 };
     const width = this._surfaceWidth;
-    const height = this._surfaceHeight;
+    const height =
+      this._presentationHeightRatio !== undefined && width > 0
+        ? width * this._presentationHeightRatio
+        : this._surfaceHeight;
     if (!width || !height) return { x: panX, y: panY };
     // An unknown content ratio has no safe pan boundary. Keep the media
     // centered until its intrinsic dimensions are available rather than
@@ -559,6 +585,37 @@ export class MediaZoomController implements ReactiveController {
       x: Math.min(maxX, Math.max(-maxX, panX)),
       y: Math.min(maxY, Math.max(-maxY, panY)),
     };
+  }
+
+  private _syncDerivedBasePresentationScale(): void {
+    const presentationRatio = this._presentationHeightRatio;
+    const mediaRatio = this._mediaHeightRatio;
+    const nextScale =
+      presentationRatio !== undefined &&
+      mediaRatio !== undefined &&
+      presentationRatio > mediaRatio + PRESENTATION_RATIO_TOLERANCE
+        ? presentationRatio / mediaRatio
+        : MIN_ZOOM;
+    this._applyBasePresentationScale(nextScale);
+  }
+
+  private _applyBasePresentationScale(nextScale: number): void {
+    const previousScale = this._basePresentationScale;
+    if (Math.abs(nextScale - previousScale) <= Number.EPSILON) {
+      this._clampPan();
+      this._renderPresentation();
+      return;
+    }
+
+    // Pan is expressed in viewport pixels. Scale it with the base crop so the
+    // same source point remains at the viewport center while layout changes.
+    const focalScale = nextScale / previousScale;
+    this._panX *= focalScale;
+    this._panY *= focalScale;
+    this._basePresentationScale = nextScale;
+    this._clampPan();
+    this._renderPresentation();
+    this._host.requestUpdate();
   }
 
   private _releasePointers(): void {

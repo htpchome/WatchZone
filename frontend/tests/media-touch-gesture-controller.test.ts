@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { MediaTouchGestureController } from "../src/ui/media-touch-gesture.controller";
-import type { MediaZoomController } from "../src/ui/media-zoom.controller";
+import { ZoomTouchGestureInterpreter } from "../src/ui/zoom/touch-gesture";
+import type { ZoomTransformController } from "../src/ui/zoom/transform.controller";
 
-function zoomController(): MediaZoomController {
+function zoomController(): ZoomTransformController {
   return {
     handlePointerDown: vi.fn(),
     handlePointerUp: vi.fn(),
-  } as unknown as MediaZoomController;
+  } as unknown as ZoomTransformController;
 }
 
 function touchEvent(path: EventTarget[], type = "pointerdown"): PointerEvent {
@@ -25,7 +25,7 @@ function touchEvent(path: EventTarget[], type = "pointerdown"): PointerEvent {
 describe("media touch gesture controller", () => {
   it("classifies a completed surface tap without revealing during pointerdown", () => {
     const zoom = zoomController();
-    const controller = new MediaTouchGestureController(zoom);
+    const controller = new ZoomTouchGestureInterpreter(zoom);
     const surface = document.createElement("div");
     const down = touchEvent([surface]);
     const up = {
@@ -44,7 +44,7 @@ describe("media touch gesture controller", () => {
 
   it("does not consume a deliberate touch that starts on a control", () => {
     const zoom = zoomController();
-    const controller = new MediaTouchGestureController(zoom);
+    const controller = new ZoomTouchGestureInterpreter(zoom);
     const button = document.createElement("button");
     const event = touchEvent([button]);
 
