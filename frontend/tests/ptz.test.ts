@@ -5,12 +5,14 @@ import type { HomeAssistantApi } from "../src/core/home-assistant";
 
 const resolver = vi.hoisted(() => ({
   capability: vi.fn(),
+  recallPreset: vi.fn(),
   start: vi.fn(),
 }));
 
 vi.mock("../src/providers/ptz-source-resolver", () => ({
   PtzSourceResolver: class {
     public capability = resolver.capability;
+    public recallPreset = resolver.recallPreset;
     public start = resolver.start;
   },
 }));
@@ -83,6 +85,7 @@ describe("PTZ component", () => {
     ).toEqual({
       cameras: [{ entityId: "camera.front", provider: "frigate_go2rtc" }],
       initialState: "open",
+      presentation: "overlay",
     });
   });
 
@@ -122,6 +125,48 @@ describe("PTZ component", () => {
     expect(
       element.shadowRoot?.querySelectorAll("button[data-direction]"),
     ).toHaveLength(4);
+  });
+
+  it("renders provider presets in module presentation and recalls one", async () => {
+    resolver.capability.mockResolvedValue({
+      focus: false,
+      pan: true,
+      presets: ["Home", "Driveway"],
+      supported: true,
+      tilt: true,
+      zoom: false,
+    });
+    resolver.recallPreset.mockResolvedValue(undefined);
+    const context = new CameraSessionContext();
+    const element = document.createElement("wzc-ptz") as PtzComponent;
+    const homeAssistantApi = api();
+    element.api = homeAssistantApi;
+    element.cameraSession = context;
+    element.cameras = [
+      { entityId: "camera.front", provider: "home_assistant" },
+    ];
+    element.presentation = "module";
+    document.body.append(element);
+    context.publish({}, cameraSession());
+
+    await vi.waitFor(() =>
+      expect(
+        element.shadowRoot?.querySelectorAll(".preset-button"),
+      ).toHaveLength(2),
+    );
+    element.shadowRoot
+      ?.querySelector<HTMLButtonElement>(".preset-button")
+      ?.click();
+
+    await vi.waitFor(() =>
+      expect(resolver.recallPreset).toHaveBeenCalledWith(
+        homeAssistantApi,
+        "home_assistant",
+        "camera.front",
+        "Home",
+      ),
+    );
+    expect(element.hasAttribute("available")).toBe(true);
   });
 
   it("preserves a user expansion after the overlay hides", async () => {

@@ -91,6 +91,49 @@ export const stageRuntimeStyles = css`
     block-size: auto;
   }
 
+  .component-slot-content.has-surfaces {
+    display: flex;
+    flex-direction: column;
+    gap: var(--wzc-component-surface-gap);
+    block-size: 100%;
+  }
+
+  .component-surface {
+    box-sizing: border-box;
+    display: grid;
+    place-items: center;
+    inline-size: 100%;
+    min-inline-size: 0;
+    min-block-size: 0;
+    padding: var(--wzc-component-surface-padding);
+    background: var(--wzc-component-surface-background);
+    border-radius: var(--wzc-component-surface-radius);
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .component-surface.compact {
+    flex: 0 0 var(--wzc-component-surface-compact-size);
+  }
+
+  .component-surface.expanded {
+    flex: 0 0 var(--wzc-component-surface-expanded-size);
+  }
+
+  .component-surface:not(:has(> .component-node > [available])) {
+    visibility: hidden;
+  }
+
+  .component-surface > .component-node,
+  .component-surface > .component-node.placeable-ready > * {
+    display: grid;
+    place-items: center;
+    inline-size: 100%;
+    block-size: 100%;
+    min-inline-size: 0;
+    min-block-size: 0;
+  }
+
   .camera-overlay-grid {
     position: absolute;
     inset: 0;

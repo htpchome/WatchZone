@@ -7,10 +7,12 @@ import { PlaceableLoader } from "../src/stage/placeable-loader";
 import { normalizeCardConfig } from "../src/core/config";
 import {
   ACTIVITY_NAVIGATION_MODULE_TYPE,
+  CAMERA_CONTROLS_MODULE_TYPE,
   DEFAULT_ACTIVITY_NAVIGATION_MODULE_NODE_ID,
   DEFAULT_ACTIVITY_STACK_NODE_ID,
   DEFAULT_REVIEWS_MODULE_NODE_ID,
   DEFAULT_CAMERA_MODULE_NODE_ID,
+  DEFAULT_CAMERA_CONTROLS_MODULE_NODE_ID,
   DEFAULT_CAMERA_NAVIGATION_MODULE_NODE_ID,
   DEFAULT_EVENTS_MODULE_NODE_ID,
   DEFAULT_EXPORTS_MODULE_NODE_ID,
@@ -496,6 +498,86 @@ describe("layout composition", () => {
     });
   });
 
+  it("composes capability controls into reusable module surfaces", () => {
+    const layout = builtInStage(
+      normalizeCardConfig({
+        cameras: [
+          {
+            entity_id: "camera.front",
+            ptz_enabled: true,
+            two_way_talk_enabled: true,
+          },
+          { entity_id: "camera.back", two_way_talk_enabled: true },
+        ],
+      }),
+    );
+
+    const controls = activityModules(layout).find(
+      ({ moduleType }) => moduleType === CAMERA_CONTROLS_MODULE_TYPE,
+    );
+    expect(controls).toMatchObject({
+      id: DEFAULT_CAMERA_CONTROLS_MODULE_NODE_ID,
+      config: {
+        targetModuleId: DEFAULT_CAMERA_MODULE_NODE_ID,
+        talkCameras: [
+          { connection: "home_assistant", entityId: "camera.front" },
+          { connection: "home_assistant", entityId: "camera.back" },
+        ],
+        ptzCameras: [{ entityId: "camera.front", provider: "home_assistant" }],
+      },
+    });
+    expect(controls?.slots?.content).toEqual([
+      expect.objectContaining({
+        kind: "surface",
+        size: "compact",
+        children: [
+          expect.objectContaining({
+            componentType: "two_way_talk",
+            config: expect.objectContaining({ presentation: "module" }),
+          }),
+        ],
+      }),
+      expect.objectContaining({
+        kind: "surface",
+        size: "expanded",
+        children: [
+          expect.objectContaining({
+            componentType: "ptz",
+            config: expect.objectContaining({ presentation: "module" }),
+          }),
+        ],
+      }),
+    ]);
+  });
+
+  it("keeps module PTZ available when the legacy overlay control is disabled", () => {
+    const layout = builtInStage(
+      normalizeCardConfig({
+        cameras: [{ entity_id: "camera.front", ptz_enabled: true }],
+        ptz_overlay_control: "none",
+      }),
+    );
+
+    expect(
+      moduleAt(layout, 0).slots?.controls?.some(
+        ({ componentType }) => componentType === "ptz",
+      ) ?? false,
+    ).toBe(false);
+    const controls = activityModules(layout).find(
+      ({ moduleType }) => moduleType === CAMERA_CONTROLS_MODULE_TYPE,
+    );
+    expect(controls?.slots?.content).toHaveLength(1);
+    expect(controls?.slots?.content?.[0]).toMatchObject({
+      kind: "surface",
+      children: [
+        expect.objectContaining({
+          componentType: "ptz",
+          config: expect.objectContaining({ presentation: "module" }),
+        }),
+      ],
+    });
+  });
+
   it("hydrates grouped cameras while keeping talk and PTZ on the main camera", () => {
     const layout = builtInStage(
       normalizeCardConfig({
@@ -585,6 +667,78 @@ describe("layout composition", () => {
   it("rejects duplicate stable node IDs", () => {
     expect(() => validateStageDesign(stageWithNodes("same", "same"))).toThrow(
       "Invalid Stage: node.duplicate:same",
+    );
+  });
+
+  it("validates reusable content surfaces and rejects them in control slots", () => {
+    const stage = layoutWithModules("surface-module");
+    const module = moduleAt(stage, 0);
+    const withSurface = {
+      ...stage,
+      variants: {
+        ...stage.variants,
+        default: {
+          root: {
+            ...defaultVariant(stage).root,
+            children: [
+              {
+                ...defaultVariant(stage).root.children[0],
+                node: {
+                  ...module,
+                  slots: {
+                    content: [
+                      {
+                        children: [
+                          {
+                            componentType: "ptz",
+                            config: {},
+                            id: "surface-component",
+                            kind: "component",
+                          },
+                        ],
+                        id: "surface",
+                        kind: "surface",
+                        size: "expanded",
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+    };
+
+    expect(validateStageDesign(withSurface).variants.default).toMatchObject({
+      root: {
+        children: [
+          {
+            node: {
+              slots: {
+                content: [
+                  expect.objectContaining({
+                    kind: "surface",
+                    size: "expanded",
+                  }),
+                ],
+              },
+            },
+          },
+        ],
+      },
+    });
+    const invalid = structuredClone(withSurface);
+    const invalidNode = invalid.variants.default.root.children[0]?.node;
+    if (!invalidNode || invalidNode.kind !== "module") {
+      throw new Error("Expected module with surface.");
+    }
+    const content = invalidNode.slots.content;
+    (invalidNode as unknown as { slots: Record<string, unknown> }).slots = {
+      controls: content,
+    };
+    expect(() => validateStageDesign(invalid)).toThrow(
+      "Invalid Stage: surface.slot",
     );
   });
 
@@ -947,7 +1101,7 @@ function layoutWithModules(...ids: string[]): StageDesignDocument {
     name: "Test",
     profiles: ["standard", "mobile"],
     revision: 0,
-    schemaVersion: 4,
+    schemaVersion: 5,
     stageType: "full",
     variants: {
       default: variantWithNodes(...ids),
@@ -1005,7 +1159,7 @@ function layoutWithStack(): StageDesignDocument {
     name: "Stack",
     profiles: ["standard", "mobile"],
     revision: 0,
-    schemaVersion: 4,
+    schemaVersion: 5,
     stageType: "full",
     variants: { default: variant, phone: variant },
   };

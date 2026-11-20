@@ -1,5 +1,6 @@
 import {
   getPtzCapability,
+  recallPtzPreset,
   startPtzMotion,
   type PtzCapability,
   type PtzDirection,
@@ -43,5 +44,13 @@ export class FrigatePtzProvider {
     direction: PtzDirection,
   ): Promise<HomeAssistantUnsubscribe> {
     return startPtzMotion(api, "frigate_go2rtc", entityId, direction);
+  }
+
+  public recallPreset(
+    api: HomeAssistantApi,
+    entityId: string,
+    preset: string,
+  ): Promise<unknown> {
+    return recallPtzPreset(api, "frigate_go2rtc", entityId, preset);
   }
 }

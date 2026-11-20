@@ -60,6 +60,22 @@ export const activityNavigationStyles = [
       outline: none;
     }
 
+    .stage-stack-button.joined {
+      --wzc-round-button-size: calc(
+        2 * var(--wzc-stage-stack-button-size) - 0.25rem
+      );
+      --wzc-round-button-icon-size: var(--wzc-stage-stack-icon-size);
+      border-radius: var(--wzc-radius-pill);
+      display: inline-flex;
+      gap: 0.15rem;
+      inline-size: var(--wzc-round-button-size);
+    }
+
+    .stage-stack-button.joined > svg {
+      inline-size: var(--wzc-stage-stack-icon-size);
+      block-size: var(--wzc-stage-stack-icon-size);
+    }
+
     .stage-stack-button:first-child {
       margin-inline-start: var(--wzc-stage-stack-navigation-padding);
     }

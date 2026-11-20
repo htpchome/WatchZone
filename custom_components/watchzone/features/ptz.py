@@ -81,6 +81,27 @@ class PtzService:
                 if self._active.get(motion.entity_id) is active:
                     self._active.pop(motion.entity_id, None)
 
+    async def async_recall_preset(
+        self,
+        provider_id: str,
+        entity_id: str,
+        preset: str,
+        context: Context,
+    ) -> None:
+        """Stop active motion and recall one provider-reported preset."""
+        provider = self._provider(provider_id)
+        lock = self._locks.setdefault(entity_id, asyncio.Lock())
+        async with lock:
+            previous = self._active.pop(entity_id, None)
+            if previous:
+                await previous.provider.async_stop(
+                    self._hass, entity_id, previous.context
+                )
+            capabilities = await provider.async_capabilities(self._hass, entity_id)
+            if preset not in capabilities.presets:
+                raise HomeAssistantError("Camera preset is unavailable")
+            await provider.async_recall_preset(self._hass, entity_id, preset, context)
+
     async def async_close(self) -> None:
         """Stop every integration-owned motion during unload."""
         active = list(self._active.items())

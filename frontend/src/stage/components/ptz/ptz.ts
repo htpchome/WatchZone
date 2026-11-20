@@ -52,6 +52,7 @@ export class PtzComponent extends LitElement {
     expanded: { type: Boolean, reflect: true },
     initialState: { attribute: false },
     localize: { attribute: false },
+    presentation: { reflect: true },
   };
 
   private _activeDirection?: PtzDirection;
@@ -78,6 +79,7 @@ export class PtzComponent extends LitElement {
   public expanded = true;
   public initialState: "closed" | "open" = "open";
   public localize: LocalizeFunction = englishLocalize;
+  public presentation: "module" | "overlay" = "overlay";
 
   protected willUpdate(changed: PropertyValues<this>): void {
     if (this.cameraSession)
@@ -99,9 +101,12 @@ export class PtzComponent extends LitElement {
     const camera = this._session.camera;
     const capability = this._session.capability;
     if (!camera || !capability?.supported) return nothing;
+    const expanded = this.presentation === "module" || this.expanded;
     const visible =
-      camera.overlayVisible || this._activeDirection !== undefined;
-    return staticHtml`<div class="ptz-layer">
+      this.presentation === "module" ||
+      camera.overlayVisible ||
+      this._activeDirection !== undefined;
+    return staticHtml`<div class=${`ptz-layer ${this.presentation}`}>
       <${toastRegionTag}
         class="ptz-toast"
         mode="overlay"
@@ -110,16 +115,16 @@ export class PtzComponent extends LitElement {
       <div
         class=${[
           "ptz-control",
-          this.expanded ? "expanded" : "collapsed",
+          expanded ? "expanded" : "collapsed",
           this._userToggled ? "user-toggled" : "",
           visible ? "visible" : "",
         ]
           .filter(Boolean)
           .join(" ")}
-        role=${this.expanded ? "group" : nothing}
-        aria-hidden=${this.expanded && visible ? "false" : "true"}
-        aria-label=${this.expanded ? this.localize("ptz.controls") : nothing}
-        ?inert=${!this.expanded || !visible}
+        role=${expanded ? "group" : nothing}
+        aria-hidden=${expanded && visible ? "false" : "true"}
+        aria-label=${expanded ? this.localize("ptz.controls") : nothing}
+        ?inert=${!expanded || !visible}
         @pointerenter=${this._overlay.handlePointerEnter}
         @pointerleave=${this._overlay.handlePointerLeave}
         @pointerdown=${this._stopPropagation}
@@ -137,8 +142,8 @@ export class PtzComponent extends LitElement {
                 type="button"
                 data-direction=${direction}
                 aria-label=${this.localize(`ptz.${direction}`)}
-                ?disabled=${!this.expanded}
-                tabindex=${this.expanded ? "0" : "-1"}
+                ?disabled=${!expanded}
+                tabindex=${expanded ? "0" : "-1"}
                 @contextmenu=${this._preventDefault}
                 @pointerdown=${this._press.handlePointerDown}
                 @pointerup=${this._handleDirectionPointerUp}
@@ -151,20 +156,24 @@ export class PtzComponent extends LitElement {
               </button>`
             : nothing;
         })}
-        <button
-          class="collapse round-button"
-          type="button"
-          aria-label=${this.localize("ptz.collapse")}
-          ?disabled=${!this.expanded}
-          tabindex=${this.expanded ? "0" : "-1"}
-          @click=${this._toggleExpanded}
-          @pointerup=${releaseTouchFocus}
-        >
-          ${renderIcon("arrowCollapseAll")}
-        </button>
+        ${
+          this.presentation === "overlay"
+            ? html`<button
+                class="collapse round-button"
+                type="button"
+                aria-label=${this.localize("ptz.collapse")}
+                ?disabled=${!expanded}
+                tabindex=${expanded ? "0" : "-1"}
+                @click=${this._toggleExpanded}
+                @pointerup=${releaseTouchFocus}
+              >
+                ${renderIcon("arrowCollapseAll")}
+              </button>`
+            : html`<span class="center-mark" aria-hidden="true"></span>`
+        }
       </div>
       ${
-        !this.expanded
+        !expanded
           ? html`<button
               class=${[
                 "ptz-trigger",
@@ -186,10 +195,37 @@ export class PtzComponent extends LitElement {
             </button>`
           : nothing
       }
+      ${
+        this.presentation === "module" && capability.presets.length > 0
+          ? html`<div
+              class="preset-list"
+              role="group"
+              aria-label=${this.localize("ptz.presets")}
+            >
+              ${capability.presets.map(
+                (preset) =>
+                  html`<button
+                    class="preset-button"
+                    type="button"
+                    title=${this.localize("ptz.recall_preset", { preset })}
+                    aria-label=${this.localize("ptz.recall_preset", { preset })}
+                    @click=${() => void this._session.recallPreset(preset)}
+                    @pointerup=${releaseTouchFocus}
+                  >
+                    ${preset}
+                  </button>`,
+              )}
+            </div>`
+          : nothing
+      }
     </div>`;
   }
 
   protected updated(changed: PropertyValues<this>): void {
+    this.toggleAttribute(
+      "available",
+      Boolean(this._session.capability?.supported),
+    );
     const control =
       this.renderRoot.querySelector<HTMLElement>(".ptz-control") ?? undefined;
     const trigger =
@@ -202,7 +238,12 @@ export class PtzComponent extends LitElement {
       trigger,
       trigger?.classList.contains("visible") ?? false,
     );
-    if (control && changed.has("expanded") && this._userToggled) {
+    if (
+      control &&
+      this.presentation === "overlay" &&
+      changed.has("expanded") &&
+      this._userToggled
+    ) {
       const fromSize = this.expanded
         ? "var(--wzc-control-size)"
         : "var(--wzc-ptz-panel-size)";

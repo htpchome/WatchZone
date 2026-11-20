@@ -11,6 +11,10 @@ import { isIconName, renderIcon } from "../../../ui/icons";
 import "../../activity";
 import type { ActivityFilterContext } from "../../activity";
 import type { CameraSelectionContext } from "../../camera-selection-context";
+import type {
+  ActiveCameraSession,
+  CameraSessionContext,
+} from "../../camera-session-context";
 import type { ExportFilterContext } from "../../export-filter-context";
 import type { MediaDateContext } from "../../media-date-context";
 import type {
@@ -34,6 +38,7 @@ export class ActivityNavigationModule extends LitElement {
   public static properties = {
     activityFilter: { attribute: false },
     cameraSelection: { attribute: false },
+    cameraSession: { attribute: false },
     exportFilter: { attribute: false },
     locale: { attribute: false },
     localize: { attribute: false },
@@ -45,6 +50,7 @@ export class ActivityNavigationModule extends LitElement {
 
   public activityFilter?: ActivityFilterContext;
   public cameraSelection?: CameraSelectionContext;
+  public cameraSession?: CameraSessionContext;
   public exportFilter?: ExportFilterContext;
   public locale?: HomeAssistantLocale;
   public localize: LocalizeFunction = englishLocalize;
@@ -54,16 +60,21 @@ export class ActivityNavigationModule extends LitElement {
   public targetStackId = "";
 
   private _state = EMPTY_STATE;
+  private _activeEntityId?: string;
+  private _cameraUnsubscribe?: () => void;
   private _unsubscribe?: () => void;
 
   public connectedCallback(): void {
     super.connectedCallback();
     this._subscribe();
+    this._subscribeCamera();
   }
 
   public disconnectedCallback(): void {
     this._unsubscribe?.();
     this._unsubscribe = undefined;
+    this._cameraUnsubscribe?.();
+    this._cameraUnsubscribe = undefined;
     super.disconnectedCallback();
   }
 
@@ -71,10 +82,12 @@ export class ActivityNavigationModule extends LitElement {
     if (changed.has("navigationContext") || changed.has("targetStackId")) {
       this._subscribe();
     }
+    if (changed.has("cameraSession")) this._subscribeCamera();
   }
 
   protected render() {
-    if (this._state.items.length === 0) return nothing;
+    const items = this._visibleItems();
+    if (items.length === 0) return nothing;
     const active = this._state.items.find(
       ({ id }) => id === this._state.activeId,
     );
@@ -83,12 +96,17 @@ export class ActivityNavigationModule extends LitElement {
       aria-label=${this.localize("navigation.activity")}
     >
       ${repeat(
-        this._state.items,
+        items,
         ({ id }) => id,
         (item) => {
           const label = item.labelKey ? this.localize(item.labelKey) : item.id;
+          const icons = item.entityIcons
+            ? (item.entityIcons[this._activeEntityId ?? ""] ?? [])
+            : item.icon
+              ? [item.icon]
+              : [];
           return html`<button
-            class=${`round-button stage-stack-button${item.id === active?.id ? " active" : ""}`}
+            class=${`round-button stage-stack-button${icons.length > 1 ? " joined" : ""}${item.id === active?.id ? " active" : ""}`}
             type="button"
             aria-label=${label}
             aria-pressed=${item.id === active?.id ? "true" : "false"}
@@ -99,7 +117,11 @@ export class ActivityNavigationModule extends LitElement {
             @click=${() => this.navigationContext?.select(this.targetStackId, item.id)}
           >
             ${
-              item.icon && isIconName(item.icon) ? renderIcon(item.icon) : label
+              icons.length > 0
+                ? icons.map((icon) =>
+                    isIconName(icon) ? renderIcon(icon) : nothing,
+                  )
+                : label
             }
           </button>`;
         },
@@ -174,6 +196,40 @@ export class ActivityNavigationModule extends LitElement {
         this._state = state;
         this.requestUpdate();
       },
+    );
+  }
+
+  private _subscribeCamera(): void {
+    this._cameraUnsubscribe?.();
+    this._cameraUnsubscribe = undefined;
+    this._activeEntityId = undefined;
+    if (!this.cameraSession) return;
+    this._cameraUnsubscribe = this.cameraSession.subscribe(
+      this._handleCameraSession,
+    );
+  }
+
+  private readonly _handleCameraSession = (
+    session: ActiveCameraSession | undefined,
+  ): void => {
+    this._activeEntityId = session?.entityId;
+    const visible = this._visibleItems();
+    if (
+      session &&
+      this._state.activeId &&
+      !visible.some(({ id }) => id === this._state.activeId) &&
+      visible[0]
+    ) {
+      this.navigationContext?.select(this.targetStackId, visible[0].id);
+    }
+    this.requestUpdate();
+  };
+
+  private _visibleItems(): ModuleStackNavigationState["items"] {
+    return this._state.items.filter(
+      ({ entityIcons }) =>
+        !entityIcons ||
+        Boolean(this._activeEntityId && entityIcons[this._activeEntityId]),
     );
   }
 

@@ -111,6 +111,31 @@ export class PtzSessionController implements ReactiveController {
     this._stopMotion(true);
   }
 
+  public async recallPreset(preset: string): Promise<void> {
+    const api = this._api;
+    const camera = this._camera;
+    const source = this._source;
+    if (
+      !api ||
+      !camera?.available ||
+      !source ||
+      !this._capability?.presets.includes(preset)
+    ) {
+      return;
+    }
+    this._stopMotion(true);
+    try {
+      await this._resolver.recallPreset(
+        api,
+        source.provider,
+        camera.entityId,
+        preset,
+      );
+    } catch {
+      this._callbacks.onFailure();
+    }
+  }
+
   private _stopMotion(notify: boolean): void {
     const wasMoving =
       this._motionUnsubscribe !== undefined ||

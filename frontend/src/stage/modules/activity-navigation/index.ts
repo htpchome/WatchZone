@@ -18,6 +18,7 @@ let definitionPromise: Promise<void> | undefined;
 export const moduleDefinition: ModuleDefinition<
   ActivityNavigationConfig,
   | "activityFilter"
+  | "cameraSession"
   | "cameraSelection"
   | "exportFilter"
   | "mediaDate"
@@ -25,6 +26,7 @@ export const moduleDefinition: ModuleDefinition<
 > = {
   contextKeys: [
     "activityFilter",
+    "cameraSession",
     "cameraSelection",
     "exportFilter",
     "mediaDate",
@@ -41,6 +43,7 @@ export const moduleDefinition: ModuleDefinition<
     const navigation = element as ActivityNavigationModule;
     navigation.activityFilter = context.activityFilter;
     navigation.cameraSelection = context.cameraSelection;
+    navigation.cameraSession = context.cameraSession;
     navigation.exportFilter = context.exportFilter;
     navigation.locale = context.hass?.locale;
     navigation.localize = context.localize ?? englishLocalize;

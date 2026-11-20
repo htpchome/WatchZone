@@ -3,6 +3,7 @@ import { cameraPresentationItems } from "../../core/camera-groups";
 import type { AvailableStageType } from "../../core/stage";
 import {
   ACTIVITY_NAVIGATION_MODULE_TYPE,
+  CAMERA_CONTROLS_MODULE_TYPE,
   APP_ID,
   REVIEWS_MODULE_TYPE,
   CAMERA_NAVIGATION_MODULE_TYPE,
@@ -27,6 +28,8 @@ import {
   type StagePlacement,
   type StageProfile,
   type StageStackNode,
+  type StageSlotNode,
+  type StageSurfaceNode,
   type StageVariant,
   type StageVariantName,
 } from "../layout";
@@ -133,15 +136,30 @@ function namespaceModule(node: StageModuleNode): StageModuleNode {
           slots: Object.fromEntries(
             Object.entries(node.slots).map(([name, nodes]) => [
               name,
-              nodes?.map((component) => ({
-                ...component,
-                config: namespaceComponentConfig(component),
-                id: namespacedId(component.id),
-              })),
+              nodes?.map(namespaceSlotNode),
             ]),
           ),
         }
       : {}),
+  };
+}
+
+function namespaceSlotNode(node: StageComponentNode | StageSurfaceNode) {
+  if (node.kind === "surface") {
+    return {
+      ...node,
+      children: node.children.map((component) => ({
+        ...component,
+        config: namespaceComponentConfig(component),
+        id: namespacedId(component.id),
+      })),
+      id: namespacedId(node.id),
+    };
+  }
+  return {
+    ...node,
+    config: namespaceComponentConfig(node),
+    id: namespacedId(node.id),
   };
 }
 
@@ -249,6 +267,61 @@ function hydrateModule(
       },
     };
   }
+  if (node.moduleType === CAMERA_CONTROLS_MODULE_TYPE) {
+    if (config.cameras.length === 0) return undefined;
+    const slots = Object.fromEntries(
+      Object.entries(node.slots ?? {}).flatMap(([name, nodes]) => {
+        const hydrated: StageSlotNode[] = [];
+        for (const slotNode of nodes ?? []) {
+          if (slotNode.kind === "component") {
+            const component = hydrateCameraComponent(slotNode, config);
+            if (component) hydrated.push(component);
+            continue;
+          }
+          const children = slotNode.children.flatMap(
+            (component: StageComponentNode) => {
+              const hydratedComponent = hydrateCameraComponent(
+                component,
+                config,
+              );
+              return hydratedComponent ? [hydratedComponent] : [];
+            },
+          );
+          if (children.length) hydrated.push({ ...slotNode, children });
+        }
+        return hydrated.length ? [[name, hydrated]] : [];
+      }),
+    );
+    const content = slots.content;
+    if (!Array.isArray(content) || content.length === 0) return undefined;
+    const secondaryIds = groupedSecondaryIds(config);
+    const talkCameras = config.cameras
+      .filter(
+        ({ entity_id: entityId, two_way_talk_enabled: enabled }) =>
+          enabled && !secondaryIds.has(entityId),
+      )
+      .map(({ connection, entity_id: entityId }) => ({ connection, entityId }));
+    const ptzCameras = config.cameras
+      .filter(
+        ({ entity_id: entityId, ptz_enabled: enabled }) =>
+          enabled && !secondaryIds.has(entityId),
+      )
+      .map(({ connection: provider, entity_id: entityId }) => ({
+        entityId,
+        provider,
+      }));
+    return {
+      ...node,
+      config: {
+        ...(typeof node.config === "object" && node.config !== null
+          ? node.config
+          : {}),
+        talkCameras,
+        ptzCameras,
+      },
+      slots,
+    };
+  }
   if (node.moduleType === MINIMAL_CAMERA_MODULE_TYPE) {
     const first = cameraPresentationItems(config.cameras)[0]?.cameras[0];
     if (!first) return undefined;
@@ -281,10 +354,12 @@ function hydrateModule(
   if (config.cameras.length === 0) return undefined;
   const slots = Object.fromEntries(
     Object.entries(node.slots ?? {}).flatMap(([name, components]) => {
-      const hydrated = (components ?? []).flatMap((component) => {
-        const cameraComponent = hydrateCameraComponent(component, config);
-        return cameraComponent ? [cameraComponent] : [];
-      });
+      const hydrated = (components ?? []).flatMap(
+        (component: StageComponentNode) => {
+          const cameraComponent = hydrateCameraComponent(component, config);
+          return cameraComponent ? [cameraComponent] : [];
+        },
+      );
       return hydrated.length ? [[name, hydrated]] : [];
     }),
   );
@@ -341,6 +416,7 @@ function namespaceModuleConfig(node: StageModuleNode): unknown {
   }
   if (
     node.moduleType !== CAMERA_NAVIGATION_MODULE_TYPE &&
+    node.moduleType !== CAMERA_CONTROLS_MODULE_TYPE &&
     node.moduleType !== EVENTS_MODULE_TYPE &&
     node.moduleType !== REVIEWS_MODULE_TYPE &&
     node.moduleType !== RECORDINGS_MODULE_TYPE &&
@@ -391,10 +467,24 @@ function hydrateCameraComponent(
           enabled && !secondaryIds.has(entityId),
       )
       .map(({ connection, entity_id: entityId }) => ({ connection, entityId }));
-    return cameras.length ? { ...node, config: { cameras } } : undefined;
+    const componentConfig =
+      typeof node.config === "object" && node.config !== null
+        ? node.config
+        : {};
+    return cameras.length
+      ? { ...node, config: { ...componentConfig, cameras } }
+      : undefined;
   }
   if (node.componentType === PTZ_COMPONENT_TYPE) {
-    if (config.ptz_overlay_control === "none") return undefined;
+    const componentConfig =
+      typeof node.config === "object" && node.config !== null
+        ? node.config
+        : {};
+    const modulePresentation =
+      (componentConfig as Record<string, unknown>).presentation === "module";
+    if (!modulePresentation && config.ptz_overlay_control === "none") {
+      return undefined;
+    }
     const secondaryIds = groupedSecondaryIds(config);
     const cameras = config.cameras
       .filter(
@@ -409,6 +499,7 @@ function hydrateCameraComponent(
       ? {
           ...node,
           config: {
+            ...componentConfig,
             cameras,
             initialState:
               config.ptz_overlay_control === "start_closed" ? "closed" : "open",

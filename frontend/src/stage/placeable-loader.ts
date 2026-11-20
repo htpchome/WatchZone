@@ -1,5 +1,6 @@
 import {
   ACTIVITY_NAVIGATION_MODULE_TYPE,
+  CAMERA_CONTROLS_MODULE_TYPE,
   CAMERA_NAVIGATION_MODULE_TYPE,
   CAMERA_SWITCHER_COMPONENT_TYPE,
   CAMERA_MODULE_TYPE,
@@ -48,6 +49,34 @@ function exportsStackAccessories(config: unknown) {
   };
 }
 
+function cameraControlsNavigation(config: unknown) {
+  const source =
+    typeof config === "object" && config !== null
+      ? (config as Record<string, unknown>)
+      : {};
+  const talk = cameraIds(source.talkCameras);
+  const ptz = cameraIds(source.ptzCameras);
+  const entityIcons: Record<string, readonly string[]> = {};
+  for (const entityId of new Set([...talk, ...ptz])) {
+    entityIcons[entityId] = [
+      ...(talk.has(entityId) ? ["microphone"] : []),
+      ...(ptz.has(entityId) ? ["ptz"] : []),
+    ];
+  }
+  return { entityIcons, labelKey: "navigation.camera_controls" as const };
+}
+
+function cameraIds(value: unknown): Set<string> {
+  if (!Array.isArray(value)) return new Set();
+  return new Set(
+    value.flatMap((candidate) => {
+      if (typeof candidate !== "object" || candidate === null) return [];
+      const entityId = (candidate as Record<string, unknown>).entityId;
+      return typeof entityId === "string" ? [entityId] : [];
+    }),
+  );
+}
+
 function stackConfig(config: unknown): {
   readonly historyDays?: number;
   readonly targetModuleId?: string;
@@ -78,6 +107,13 @@ const moduleLoaders = {
         ({ moduleDefinition }) => moduleDefinition,
       ),
     placeholder: "camera-navigation",
+  },
+  [CAMERA_CONTROLS_MODULE_TYPE]: {
+    load: () =>
+      import("./modules/camera-controls").then(
+        ({ moduleDefinition }) => moduleDefinition,
+      ),
+    navigation: cameraControlsNavigation,
   },
   [REVIEWS_MODULE_TYPE]: {
     load: () =>
