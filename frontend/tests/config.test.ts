@@ -46,8 +46,9 @@ describe("WatchZone card configuration", () => {
       event_rounded_corners_phone: true,
       event_shadows: true,
       event_shadows_phone: true,
+      alert_detection_highlight: "both",
+      alert_detection_thumbnail_outline: "both",
       alert_detection_takeover: "both",
-      highlight_camera_on_activity: true,
       minimal_camera_menu_position: "top_left",
       minimal_camera_show_fullscreen_button: true,
       minimal_camera_show_mute_button: true,
@@ -279,15 +280,30 @@ describe("WatchZone card configuration", () => {
     ).toThrow("view_timelapse_on_thumbnail_hover must be a boolean");
   });
 
-  it("defaults live activity highlighting on and accepts an explicit opt-out", () => {
-    expect(normalizeCardConfig({}).highlight_camera_on_activity).toBe(true);
+  it("normalizes independent camera and thumbnail classification modes", () => {
+    expect(normalizeCardConfig({}).alert_detection_highlight).toBe("both");
+    expect(normalizeCardConfig({}).alert_detection_thumbnail_outline).toBe(
+      "both",
+    );
     expect(
       normalizeCardConfig({ highlight_camera_on_activity: false })
-        .highlight_camera_on_activity,
-    ).toBe(false);
+        .alert_detection_highlight,
+    ).toBe("off");
+    expect(
+      normalizeCardConfig({
+        alert_detection_highlight: "alerts",
+        alert_detection_thumbnail_outline: "detections",
+      }),
+    ).toMatchObject({
+      alert_detection_highlight: "alerts",
+      alert_detection_thumbnail_outline: "detections",
+    });
     expect(() =>
-      normalizeCardConfig({ highlight_camera_on_activity: "false" }),
-    ).toThrow("highlight_camera_on_activity must be a boolean");
+      normalizeCardConfig({ alert_detection_highlight: "clips" }),
+    ).toThrow("alert_detection_highlight must be off");
+    expect(() =>
+      normalizeCardConfig({ alert_detection_thumbnail_outline: "clips" }),
+    ).toThrow("alert_detection_thumbnail_outline must be off");
   });
 
   it("defaults minimal camera controls on and accepts explicit opt-outs", () => {

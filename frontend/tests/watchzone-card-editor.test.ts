@@ -198,9 +198,7 @@ describe("watchzone-card-editor", () => {
     const liveMedia = await openEditorSection(editor, "live-media-player");
     expect(liveMedia.childElementCount).toBe(7);
     expect(
-      liveMedia.querySelector(
-        '[data-config-key="highlight_camera_on_activity"]',
-      ),
+      liveMedia.querySelector('[data-setting="alert-detection-highlight"]'),
     ).not.toBeNull();
     const ptzControl = liveMedia.querySelector<SegmentedControl>(
       '[data-setting="ptz-overlay-control"]',
@@ -1119,7 +1117,7 @@ describe("watchzone-card-editor", () => {
     ).toBe("/profile/general");
   });
 
-  it("defaults live activity highlighting on and saves an opt-out", async () => {
+  it("defaults camera activity highlighting to both and saves an opt-out", async () => {
     const editor = document.createElement(
       "watchzone-card-editor",
     ) as CardEditor;
@@ -1130,20 +1128,44 @@ describe("watchzone-card-editor", () => {
     await editor.updateComplete;
     await openEditorSection(editor, "live-media-player");
 
-    const selector = editor.shadowRoot?.querySelector(
-      '[data-config-key="highlight_camera_on_activity"]',
-    ) as TestBooleanSelector | null;
-    expect(selector?.value).toBe(true);
-
-    await setBooleanSelector(
-      editor,
-      '[data-config-key="highlight_camera_on_activity"]',
-      false,
+    const selector = editor.shadowRoot?.querySelector<SegmentedControl>(
+      '[data-setting="alert-detection-highlight"]',
     );
+    expect(selector?.value).toBe("both");
+    selector?.shadowRoot
+      ?.querySelector<HTMLButtonElement>('[data-value="off"]')
+      ?.click();
+    await editor.updateComplete;
     expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
       type: CARD_TYPE,
       title: "Camera",
-      highlight_camera_on_activity: false,
+      alert_detection_highlight: "off",
+    });
+  });
+
+  it("saves the Reviews thumbnail outline classification mode", async () => {
+    const editor = document.createElement(
+      "watchzone-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+    await openEditorSection(editor, "reviews");
+
+    const selector = editor.shadowRoot?.querySelector<SegmentedControl>(
+      '[data-setting="alert-detection-thumbnail-outline"]',
+    );
+    expect(selector?.value).toBe("both");
+    selector?.shadowRoot
+      ?.querySelector<HTMLButtonElement>('[data-value="alerts"]')
+      ?.click();
+    await editor.updateComplete;
+    expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
+      type: CARD_TYPE,
+      title: "Camera",
+      alert_detection_thumbnail_outline: "alerts",
     });
   });
 

@@ -3,6 +3,7 @@ import { html, LitElement, nothing } from "lit";
 import { MINIMAL_CAMERA_TAG } from "../../../core/constants";
 import { CLIENT_PROFILE } from "../../../core/client-profile";
 import type {
+  ActivityHighlightMode,
   CompanionRotateAction,
   FrigateFallbackTransport,
   HomeAssistantActionConfig,
@@ -77,7 +78,7 @@ export class MinimalCameraModule extends LitElement {
     doubleTapAction: { attribute: false },
     hass: { attribute: false },
     holdAction: { attribute: false },
-    highlightActivity: { attribute: false, type: Boolean },
+    activityHighlightMode: { attribute: false },
     localize: { attribute: false },
     menuPosition: { attribute: false },
     rotateAction: { attribute: false },
@@ -170,7 +171,7 @@ export class MinimalCameraModule extends LitElement {
   public available = false;
   public camera?: MinimalCameraConfig;
   public hass?: HomeAssistant;
-  public highlightActivity = true;
+  public activityHighlightMode: ActivityHighlightMode = "both";
   public localize: LocalizeFunction = englishLocalize;
   public menuPosition: MinimalCameraMenuPosition = "top_left";
   public showFullscreenButton = true;
@@ -230,8 +231,9 @@ export class MinimalCameraModule extends LitElement {
       false,
     );
     this._activity.configure(
-      this.highlightActivity ? this.api : undefined,
-      this.highlightActivity ? camera?.entityId : undefined,
+      this.api,
+      camera?.entityId,
+      this.activityHighlightMode,
     );
   }
 

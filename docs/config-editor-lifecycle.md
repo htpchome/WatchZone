@@ -123,11 +123,24 @@ The Reviews editor section owns the user-facing activity retention control,
 labelled Days of Reviews to Display, together with thumbnail preview, object
 badge, classification badge, and zone display controls. These settings are
 presented as divided rows rather than a separate Display Settings disclosure.
+It also owns Alert and Detection Thumbnail Outline, an independent segmented
+policy with `off`, `alerts`, `detections`, and `both` choices. `both` is the
+normalized default and is omitted from YAML. This policy changes only the
+classification outline on Review thumbnails; it does not suppress badges,
+activity data, or live-camera highlighting.
 The history control uses Home Assistant's bounded, integer-step number selector
 with a marker for every selectable day. The existing `event_history_days`
 configuration key remains the shared compatibility contract for both Reviews
 and Events; the editor relocation and label do not split or migrate that
 setting.
+
+The Minimal Camera and Live Video sections expose Alert and Detection
+Highlight with the same four choices and `both` default. It controls which
+active Review classifications may highlight a live camera and its navigation
+entry. It is independent from Alert and Detection Takeover. The legacy
+`highlight_camera_on_activity: false` input normalizes to `off`; legacy true or
+an omitted value normalizes to `both`, and normalized YAML uses only the new
+key.
 
 The Mobile and Touch disclosure owns physical-client and touch-oriented card
 preferences. It contains Mobile Data Saving and the Companion-app rotate

@@ -178,6 +178,18 @@ describe("reviews module", () => {
     expect(
       activityRoot(module)?.querySelectorAll(".thumbnail-wrap.detection"),
     ).toHaveLength(1);
+    module.activityThumbnailOutlineMode = "alerts";
+    await module.updateComplete;
+    await (
+      module.shadowRoot?.querySelector(ACTIVITY_LIST_TAG) as
+        (LitElement & { updateComplete: Promise<boolean> }) | null
+    )?.updateComplete;
+    expect(
+      activityRoot(module)?.querySelectorAll(".thumbnail-wrap.alert"),
+    ).toHaveLength(1);
+    expect(
+      activityRoot(module)?.querySelectorAll(".thumbnail-wrap.detection"),
+    ).toHaveLength(0);
     expect(
       activityRoot(module)?.querySelectorAll<HTMLButtonElement>(
         'button[aria-label="View snapshot"]',

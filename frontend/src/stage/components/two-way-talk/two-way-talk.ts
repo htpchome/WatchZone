@@ -41,6 +41,7 @@ export class TwoWayTalkComponent extends LitElement {
     cameraSession: { attribute: false },
     cameras: { attribute: false },
     localize: { attribute: false },
+    presentation: { reflect: true },
   };
 
   private readonly _toasts = new ToastManager(this);
@@ -74,12 +75,15 @@ export class TwoWayTalkComponent extends LitElement {
     readonly entityId: string;
   }[] = [];
   public localize: LocalizeFunction = englishLocalize;
+  public presentation: "overlay" | "toolbar" = "overlay";
 
   protected willUpdate(): void {
     if (this.cameraSession) {
       this._session.configure(this.api, this.cameraSession, this.cameras);
     }
-    this._overlay.configure(this._session.camera);
+    this._overlay.configure(
+      this.presentation === "overlay" ? this._session.camera : undefined,
+    );
   }
 
   protected render() {
@@ -87,7 +91,11 @@ export class TwoWayTalkComponent extends LitElement {
     if (!camera || !this._session.supported) return nothing;
     const active = this._session.active;
     const connecting = this._session.connecting;
-    const visible = active || connecting || camera.overlayVisible;
+    const visible =
+      this.presentation === "toolbar" ||
+      active ||
+      connecting ||
+      camera.overlayVisible;
     return staticHtml`<div class="talk-layer">
       <div class="talk-stack">
         <${toastRegionTag}

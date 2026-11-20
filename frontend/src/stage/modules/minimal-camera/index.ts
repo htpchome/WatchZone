@@ -4,6 +4,7 @@ import {
 } from "../../../core/constants";
 import { cameraImageUrl } from "../../../core/home-assistant";
 import type {
+  ActivityHighlightMode,
   CompanionRotateAction,
   FrigateFallbackTransport,
   HomeAssistantActionConfig,
@@ -24,7 +25,7 @@ export interface MinimalCameraModuleConfig {
     readonly title: string;
   };
   readonly doubleTapAction: HomeAssistantActionConfig;
-  readonly highlightActivity: boolean;
+  readonly activityHighlightMode: ActivityHighlightMode;
   readonly holdAction: HomeAssistantActionConfig;
   readonly menuPosition: MinimalCameraMenuPosition;
   readonly rotateAction: CompanionRotateAction;
@@ -61,7 +62,7 @@ export const moduleDefinition: ModuleDefinition<MinimalCameraModuleConfig> = {
       posterUrl: cameraImageUrl(context.hass, config.camera.entityId),
     };
     camera.doubleTapAction = config.doubleTapAction;
-    camera.highlightActivity = config.highlightActivity;
+    camera.activityHighlightMode = config.activityHighlightMode;
     camera.holdAction = config.holdAction;
     camera.menuPosition = config.menuPosition;
     camera.rotateAction = config.rotateAction;
@@ -88,7 +89,6 @@ function validateMinimalCameraConfig(
     throw new Error("Minimal camera requires one camera entity.");
   }
   for (const [name, setting] of [
-    ["highlightActivity", source.highlightActivity],
     ["showFullscreenButton", source.showFullscreenButton],
     ["showMuteButton", source.showMuteButton],
     ["showPictureInPictureButton", source.showPictureInPictureButton],
@@ -97,6 +97,16 @@ function validateMinimalCameraConfig(
     if (typeof setting !== "boolean") {
       throw new Error(`Minimal camera requires a ${name} setting.`);
     }
+  }
+  if (
+    source.activityHighlightMode !== "off" &&
+    source.activityHighlightMode !== "alerts" &&
+    source.activityHighlightMode !== "detections" &&
+    source.activityHighlightMode !== "both"
+  ) {
+    throw new Error(
+      "Minimal camera requires a valid activityHighlightMode setting.",
+    );
   }
   if (
     source.rotateAction !== "none" &&

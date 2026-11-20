@@ -1,6 +1,10 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
 import { ACTIVITY_UPDATE_SUBSCRIBE_RETRY_MS } from "../../core/constants";
+import {
+  activityClassificationModeIncludes,
+  type ActivityHighlightMode,
+} from "../../core/config";
 import type { HomeAssistantApi } from "../../core/home-assistant";
 import { subscribeActivityUpdates } from "../../api/activity-updates";
 
@@ -14,6 +18,7 @@ export class CameraActivityHighlightController implements ReactiveController {
   private _connected = false;
   private _entityId?: string;
   private _generation = 0;
+  private _highlightMode: ActivityHighlightMode = "both";
   private readonly _reviews = new Map<string, CameraActivityClassification>();
   private _retryTimer?: number;
   private _unsubscribe?: () => void;
@@ -25,13 +30,26 @@ export class CameraActivityHighlightController implements ReactiveController {
   public configure(
     api: HomeAssistantApi | undefined,
     entityId: string | undefined,
+    highlightMode: ActivityHighlightMode,
   ): void {
-    if (this._api?.identity === api?.identity && this._entityId === entityId)
+    const enabled = highlightMode !== "off";
+    const nextApi = enabled ? api : undefined;
+    const nextEntityId = enabled ? entityId : undefined;
+    if (
+      this._api?.identity === nextApi?.identity &&
+      this._entityId === nextEntityId
+    ) {
+      if (this._highlightMode !== highlightMode) {
+        this._highlightMode = highlightMode;
+        this._publish();
+      }
       return;
+    }
     this._stopSubscription();
     this._clearActivity();
-    this._api = api;
-    this._entityId = entityId;
+    this._api = nextApi;
+    this._entityId = nextEntityId;
+    this._highlightMode = highlightMode;
     if (this._connected) this._start();
   }
 
@@ -76,7 +94,9 @@ export class CameraActivityHighlightController implements ReactiveController {
   }
 
   private _publish(): void {
-    const values = [...this._reviews.values()];
+    const values = [...this._reviews.values()].filter((classification) =>
+      activityClassificationModeIncludes(this._highlightMode, classification),
+    );
     const next = values.includes("alert")
       ? "alert"
       : values.includes("detection")

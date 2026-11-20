@@ -17,6 +17,7 @@ export interface CameraLightConfig {
 
 export interface LightControlComponentConfig {
   readonly cameras: readonly CameraLightConfig[];
+  readonly presentation: "overlay" | "toolbar";
 }
 
 let definitionPromise: Promise<void> | undefined;
@@ -38,6 +39,7 @@ export const componentDefinition: ComponentDefinition<
     control.cameras = config.cameras;
     control.hass = context.hass;
     control.localize = context.localize ?? englishLocalize;
+    control.presentation = config.presentation;
   },
   validateConfig(value) {
     if (typeof value !== "object" || value === null) {
@@ -47,8 +49,17 @@ export const componentDefinition: ComponentDefinition<
     if (!Array.isArray(cameras)) {
       throw new Error("Light control requires configured cameras.");
     }
+    const presentation = (value as Record<string, unknown>).presentation;
+    if (
+      presentation !== undefined &&
+      presentation !== "overlay" &&
+      presentation !== "toolbar"
+    ) {
+      throw new Error("Light control requires a valid presentation.");
+    }
     return {
       cameras: cameras.map((camera) => validateCameraLights(camera)),
+      presentation: presentation === "toolbar" ? "toolbar" : "overlay",
     };
   },
 };

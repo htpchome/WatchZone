@@ -83,6 +83,9 @@ defaults to `false` and is omitted from YAML at its default.
   overlay visibility timer and open/closed state. It shows at most the first
   six provider-reported preset names in provider order and wraps them at
   narrower container sizes. Missing presets produce no preset buttons.
+- The `ptz-panel` surface begins after the shared Stage module gap, preserving
+  visible separation from activity navigation without coupling either
+  placeable to the other's geometry.
 - Preset recall is a finite provider-neutral command. It stops an active
   directional press before recall, sends one provider preset command, and does
   not create a movement subscription or send Stop after the preset begins.

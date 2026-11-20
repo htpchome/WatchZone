@@ -11,6 +11,7 @@ import {
   sanitizeCameraTitleInput,
   sanitizeCardTitleInput,
   type AdditionalCameraLayout,
+  type ActivityClassificationMode,
   type AlertTakeoverMode,
   type CameraConfig,
   type CardConfig,
@@ -91,6 +92,17 @@ import { cardEditorStyles } from "./watchzone-card-editor.styles";
 
 interface InputElement extends HTMLElement {
   value: string;
+}
+
+function isActivityClassificationMode(
+  value: string,
+): value is ActivityClassificationMode {
+  return (
+    value === "off" ||
+    value === "alerts" ||
+    value === "detections" ||
+    value === "both"
+  );
 }
 
 interface PreviewDraftDetail {
@@ -383,6 +395,8 @@ export class CardEditor extends LitElement {
           ${this._renderSection("minimal-camera-configuration", () =>
             renderMinimalCameraSettings({
               ...commonSettings,
+              onActivityHighlightModeChange:
+                this._handleActivityHighlightModeChange,
               onMenuPositionChange: this._handleMinimalCameraMenuPositionChange,
             }),
           )}
@@ -438,6 +452,8 @@ export class CardEditor extends LitElement {
           ${this._renderSection("live-media-player", () =>
             renderLiveMediaPlayerSettings({
               ...commonSettings,
+              onActivityHighlightModeChange:
+                this._handleActivityHighlightModeChange,
               onAlertTakeoverModeChange: this._handleAlertTakeoverModeChange,
               onPtzOverlayControlChange: this._handlePtzOverlayControlChange,
               onSlideAdvanceTimeChange: this._handleSlideAdvanceTimeChange,
@@ -473,6 +489,8 @@ export class CardEditor extends LitElement {
           ${this._renderSection("reviews", () =>
             renderReviewSettings({
               ...commonSettings,
+              onActivityThumbnailOutlineModeChange:
+                this._handleActivityThumbnailOutlineModeChange,
               onEventHistoryDaysChange: this._handleEventHistoryDaysChange,
             }),
           )}
@@ -2181,6 +2199,36 @@ export class CardEditor extends LitElement {
       normalizeCardConfig({
         ...this._config,
         alert_detection_takeover: value,
+      }),
+      true,
+    );
+  };
+
+  private readonly _handleActivityHighlightModeChange = (
+    event: CustomEvent<SegmentedControlValueDetail>,
+  ): void => {
+    if (!this._config) return;
+    const value = event.detail.value as ActivityClassificationMode;
+    if (!isActivityClassificationMode(value)) return;
+    this._applyDraft(
+      normalizeCardConfig({
+        ...this._config,
+        alert_detection_highlight: value,
+      }),
+      true,
+    );
+  };
+
+  private readonly _handleActivityThumbnailOutlineModeChange = (
+    event: CustomEvent<SegmentedControlValueDetail>,
+  ): void => {
+    if (!this._config) return;
+    const value = event.detail.value as ActivityClassificationMode;
+    if (!isActivityClassificationMode(value)) return;
+    this._applyDraft(
+      normalizeCardConfig({
+        ...this._config,
+        alert_detection_thumbnail_outline: value,
       }),
       true,
     );

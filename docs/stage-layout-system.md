@@ -128,7 +128,7 @@ any placeable loads. A lineup must retain at least one selection; the editor
 cannot remove its final entry. Lovelace configuration stores these ordered
 references, never copies of the Stage Design documents.
 
-The built-in mobile `full` composition is:
+The built-in `full` composition below the 600px container breakpoint is:
 
 ```text
 root grid
@@ -153,10 +153,21 @@ root grid
                 └── PTZ component in panel presentation
 ```
 
+At 600px and wider, the same stable linked-light and two-way-talk component
+nodes move declaratively from Camera's `controls` slot into the
+activity-navigation module's centered `content` slot. Their explicit `toolbar`
+presentation is independent from Camera's media-overlay visibility timer. PTZ
+remains in Camera's trailing controls region. This responsive relocation is a
+Stage-variant decision: neither component chooses the breakpoint, imports its
+host module, or discovers a sibling. Future Stage Designs may place either
+component in any compatible slot and select its presentation explicitly.
+
 The built-in `camera_only` composition contains the same camera module and its
 private overlay and controls slots, but no standalone camera-navigation or
 media-list modules. Its normal camera switcher, slideshow, linked-light,
 two-way-talk, and PTZ capabilities therefore remain available when configured.
+Because Camera Only has no activity-navigation destination, its linked-light
+and two-way-talk components remain in Camera's controls slot at every size.
 
 Spacing between root Stage modules uses `--wzc-stage-module-gap`. It is
 independent from the outer card padding and defaults to half that padding's
@@ -217,6 +228,8 @@ component. Activity navigation shows its selector only while the displayed
 physical camera is present in the module's configured PTZ camera scope. If the
 camera changes while the PTZ panel is active, navigation selects the first
 available stack child; the PTZ module does not mutate stack state itself.
+Its panel surface starts after one Stage module gap so the active selector row
+and the secondary panel background remain visually separated.
 
 The media-list stack's trailing calendar is module-aware. Reviews and Events use
 review/event availability and their shared activity filters. Recordings uses

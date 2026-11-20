@@ -39,7 +39,6 @@ export type BooleanConfigFlag =
   | "event_rounded_corners_phone"
   | "event_shadows"
   | "event_shadows_phone"
-  | "highlight_camera_on_activity"
   | "minimal_camera_show_fullscreen_button"
   | "minimal_camera_show_mute_button"
   | "minimal_camera_show_pip_button"
@@ -71,6 +70,9 @@ interface GeneralSettingsOptions extends CommonSectionOptions {
 }
 
 interface MinimalCameraSettingsOptions extends CommonSectionOptions {
+  readonly onActivityHighlightModeChange: (
+    event: CustomEvent<SegmentedControlValueDetail>,
+  ) => void;
   readonly onMenuPositionChange: (
     event: CustomEvent<SegmentedControlValueDetail>,
   ) => void;
@@ -84,6 +86,9 @@ interface MobileAndTouchSettingsOptions extends CommonSectionOptions {
 }
 
 interface LiveMediaPlayerSettingsOptions extends CommonSectionOptions {
+  readonly onActivityHighlightModeChange: (
+    event: CustomEvent<SegmentedControlValueDetail>,
+  ) => void;
   readonly onAlertTakeoverModeChange: (
     event: CustomEvent<SegmentedControlValueDetail>,
   ) => void;
@@ -105,6 +110,9 @@ interface RecordedMediaPlayerSettingsOptions extends CommonSectionOptions {
 }
 
 interface ReviewSettingsOptions extends CommonSectionOptions {
+  readonly onActivityThumbnailOutlineModeChange: (
+    event: CustomEvent<SegmentedControlValueDetail>,
+  ) => void;
   readonly onEventHistoryDaysChange: (event: ValueChangedEvent) => void;
 }
 
@@ -136,6 +144,47 @@ function renderBooleanOption(
     .value=${value}
     @value-changed=${options.onChange}
   ></ha-selector>`;
+}
+
+function renderActivityClassificationMode(
+  dataSetting: string,
+  label: string,
+  localize: LocalizeFunction,
+  value: string,
+  onChange: (event: CustomEvent<SegmentedControlValueDetail>) => void,
+) {
+  return html`<div class="segmented-setting">
+    <span class="segmented-setting-label">${label}</span>
+    <wzc-segmented-control
+      class="editor-segmented-control"
+      data-setting=${dataSetting}
+      appearance="compact"
+      mode="radio"
+      .label=${label}
+      .options=${
+        [
+          {
+            label: localize("editor.alert_detection_takeover_off"),
+            value: "off",
+          },
+          {
+            label: localize("editor.alert_detection_takeover_alerts"),
+            value: "alerts",
+          },
+          {
+            label: localize("editor.alert_detection_takeover_detections"),
+            value: "detections",
+          },
+          {
+            label: localize("editor.alert_detection_takeover_both"),
+            value: "both",
+          },
+        ] satisfies readonly SegmentedControlOption[]
+      }
+      .value=${value}
+      @wzc-segmented-control-value=${onChange}
+    ></wzc-segmented-control>
+  </div>`;
 }
 
 export function renderGeneralSettings(options: GeneralSettingsOptions) {
@@ -214,11 +263,12 @@ export function renderMinimalCameraSettings(
       localize("editor.edge_to_edge_phone"),
       config?.edge_to_edge_phone !== false,
     )}
-    ${renderBooleanOption(
-      options,
-      "highlight_camera_on_activity",
-      localize("editor.highlight_camera_on_activity"),
-      config?.highlight_camera_on_activity !== false,
+    ${renderActivityClassificationMode(
+      "alert-detection-highlight",
+      localize("editor.alert_detection_highlight"),
+      localize,
+      config?.alert_detection_highlight ?? "both",
+      options.onActivityHighlightModeChange,
     )}
     ${renderBooleanOption(
       options,
@@ -299,11 +349,12 @@ export function renderLiveMediaPlayerSettings(
       localize("editor.camera_switcher_overlay"),
       config?.camera_switcher_overlay === true,
     )}
-    ${renderBooleanOption(
-      options,
-      "highlight_camera_on_activity",
-      localize("editor.highlight_camera_on_activity"),
-      config?.highlight_camera_on_activity !== false,
+    ${renderActivityClassificationMode(
+      "alert-detection-highlight",
+      localize("editor.alert_detection_highlight"),
+      localize,
+      config?.alert_detection_highlight ?? "both",
+      options.onActivityHighlightModeChange,
     )}
     <div class="segmented-setting">
       <span class="segmented-setting-label">
@@ -459,6 +510,13 @@ export function renderReviewSettings(options: ReviewSettingsOptions) {
         .value=${config?.event_history_days ?? DEFAULT_EVENT_HISTORY_DAYS}
         @value-changed=${options.onEventHistoryDaysChange}
       ></ha-selector>
+      ${renderActivityClassificationMode(
+        "alert-detection-thumbnail-outline",
+        localize("editor.alert_detection_thumbnail_outline"),
+        localize,
+        config?.alert_detection_thumbnail_outline ?? "both",
+        options.onActivityThumbnailOutlineModeChange,
+      )}
       ${renderBooleanOption(
         options,
         "view_timelapse_on_thumbnail_hover",

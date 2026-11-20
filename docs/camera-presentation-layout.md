@@ -336,6 +336,13 @@ absolute-offset system may coexist with this grid.
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
+This diagram describes Camera Only and the built-in Full Stage below 600px.
+At 600px and wider in Full Stage, linked-light and two-way-talk use their
+toolbar presentation in the centered activity-navigation content slot; they
+are not Camera-overlay children and do not follow its hide timer. PTZ remains
+in Camera's lower trailing area. Responsive Stage composition owns that move,
+while each component remains an independently placeable capability.
+
 - Group A/B controls are square shared media-overlay controls owned by the
   fixed left rail and begin at its top inset. They stack within that rail; they
   are never positioned from a percentage of the Stage width. Camera selection
@@ -372,9 +379,9 @@ absolute-offset system may coexist with this grid.
   A and B may resolve different transports. A grouped feed badge follows the
   trailing edge of that feed's fitted media instead of the Stage edge, so a
   stacked feed cannot place its badge in the player-tool rail.
-- Light and talk occupy the lower center band. PTZ occupies the lower trailing
-  band. These precision and communication controls retain their full target
-  size at phone, tablet, and desktop widths. The resize handle owns the bottom
+- When composed into Camera, light and talk occupy the lower center band. PTZ
+  occupies the lower trailing band. These precision and communication controls
+  retain their full target size at phone, tablet, and desktop widths. The resize handle owns the bottom
   center edge. Camera name and timestamp remain unobstructed in the bottom
   metadata strip.
 - Module-private overlays and Stage components follow the same zone geometry;

@@ -191,11 +191,14 @@ function hydrateModule(
   node: StageModuleNode,
   config: CardConfig,
 ): StageModuleNode | undefined {
-  if (
-    node.moduleType === ACTIVITY_NAVIGATION_MODULE_TYPE &&
-    config.cameras.length === 0
-  ) {
-    return undefined;
+  if (node.moduleType === ACTIVITY_NAVIGATION_MODULE_TYPE) {
+    if (config.cameras.length === 0) return undefined;
+    return {
+      ...node,
+      slots: hydrateSlots(node, (component) =>
+        hydrateCameraComponent(component, config),
+      ),
+    };
   }
   if (node.moduleType === CAMERA_NAVIGATION_MODULE_TYPE) {
     if (config.cameras.length === 0) return undefined;
@@ -247,6 +250,12 @@ function hydrateModule(
               hoverPreviewEnabled: config.view_timelapse_on_thumbnail_hover,
             }
           : {}),
+        ...(node.moduleType === REVIEWS_MODULE_TYPE
+          ? {
+              activityThumbnailOutlineMode:
+                config.alert_detection_thumbnail_outline,
+            }
+          : {}),
       },
     };
   }
@@ -289,7 +298,7 @@ function hydrateModule(
           title: first.title,
         },
         doubleTapAction: config.double_tap_action,
-        highlightActivity: config.highlight_camera_on_activity,
+        activityHighlightMode: config.alert_detection_highlight,
         holdAction: config.hold_action,
         menuPosition: config.minimal_camera_menu_position,
         rotateAction: config.companion_rotate_action,
@@ -329,7 +338,7 @@ function hydrateModule(
           : [],
       ),
       alertTakeoverMode: config.alert_detection_takeover,
-      highlightActivity: config.highlight_camera_on_activity,
+      activityHighlightMode: config.alert_detection_highlight,
       retentionPreference: config.mobile_data_saving
         ? "reduced_bandwidth"
         : "automatic",
@@ -409,7 +418,12 @@ function hydrateCameraComponent(
           enabled && !secondaryIds.has(entityId),
       )
       .map(({ connection, entity_id: entityId }) => ({ connection, entityId }));
-    return cameras.length ? { ...node, config: { cameras } } : undefined;
+    return cameras.length
+      ? {
+          ...node,
+          config: { cameras, presentation: controlPresentation(node.config) },
+        }
+      : undefined;
   }
   if (node.componentType === PTZ_COMPONENT_TYPE) {
     if (config.ptz_overlay_control === "none") return undefined;
@@ -436,9 +450,22 @@ function hydrateCameraComponent(
           ...(icon ? { icon } : {}),
         })),
       }));
-    return cameras.length ? { ...node, config: { cameras } } : undefined;
+    return cameras.length
+      ? {
+          ...node,
+          config: { cameras, presentation: controlPresentation(node.config) },
+        }
+      : undefined;
   }
   return node;
+}
+
+function controlPresentation(config: unknown): "overlay" | "toolbar" {
+  return typeof config === "object" &&
+    config !== null &&
+    (config as Record<string, unknown>).presentation === "toolbar"
+    ? "toolbar"
+    : "overlay";
 }
 
 function configuredPtzCameras(config: CardConfig) {

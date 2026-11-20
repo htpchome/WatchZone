@@ -9,6 +9,15 @@ export const lightControlStyles = css`
     pointer-events: none;
   }
 
+  :host([presentation="toolbar"]) {
+    --wzc-round-button-color: var(--wzc-stage-stack-button-color);
+    --wzc-round-button-background: var(--wzc-stage-stack-button-background);
+    --wzc-round-button-border-color: transparent;
+    --wzc-round-button-hover-background: var(
+      --wzc-stage-stack-button-background
+    );
+  }
+
   .light-layer {
     position: relative;
     pointer-events: none;

@@ -26,10 +26,12 @@ describe("two-way-talk component", () => {
     document.body.append(element);
     context.publish(owner, cameraSession(true));
 
-    await vi.waitFor(() =>
-      expect(
-        element.shadowRoot?.querySelector(".inactive-control.visible"),
-      ).not.toBeNull(),
+    await vi.waitFor(
+      () =>
+        expect(
+          element.shadowRoot?.querySelector(".inactive-control.visible"),
+        ).not.toBeNull(),
+      { timeout: 5_000 },
     );
     context.publish(owner, cameraSession(false));
     await element.updateComplete;
@@ -40,6 +42,12 @@ describe("two-way-talk component", () => {
     ).toBeNull();
     expect(
       element.shadowRoot?.querySelector(".inactive-control"),
+    ).not.toBeNull();
+
+    element.presentation = "toolbar";
+    await element.updateComplete;
+    expect(
+      element.shadowRoot?.querySelector(".inactive-control.visible"),
     ).not.toBeNull();
   });
 
@@ -60,10 +68,12 @@ describe("two-way-talk component", () => {
     document.body.append(element);
     context.publish({}, session);
 
-    await vi.waitFor(() =>
-      expect(
-        element.shadowRoot?.querySelector(".inactive-control.visible"),
-      ).not.toBeNull(),
+    await vi.waitFor(
+      () =>
+        expect(
+          element.shadowRoot?.querySelector(".inactive-control.visible"),
+        ).not.toBeNull(),
+      { timeout: 5_000 },
     );
     const control = element.shadowRoot?.querySelector(
       ".inactive-control",

@@ -9,6 +9,7 @@ export interface TwoWayTalkComponentConfig {
     readonly connection: LiveConnectionType;
     readonly entityId: string;
   }[];
+  readonly presentation: "overlay" | "toolbar";
 }
 
 let definitionPromise: Promise<void> | undefined;
@@ -29,11 +30,13 @@ export const componentDefinition: ComponentDefinition<
     talk.cameraSession = context.cameraSession;
     talk.cameras = config.cameras;
     talk.localize = context.localize ?? englishLocalize;
+    talk.presentation = config.presentation;
   },
   validateConfig(value) {
     if (typeof value !== "object" || value === null)
       throw new Error("Two-way-talk configuration must be an object.");
     const cameras = (value as Record<string, unknown>).cameras;
+    const presentation = (value as Record<string, unknown>).presentation;
     if (
       !Array.isArray(cameras) ||
       cameras.some(
@@ -50,7 +53,17 @@ export const componentDefinition: ComponentDefinition<
     ) {
       throw new Error("Two-way talk requires valid camera sources.");
     }
-    return { cameras } as TwoWayTalkComponentConfig;
+    if (
+      presentation !== undefined &&
+      presentation !== "overlay" &&
+      presentation !== "toolbar"
+    ) {
+      throw new Error("Two-way talk requires a valid presentation.");
+    }
+    return {
+      cameras,
+      presentation: presentation === "toolbar" ? "toolbar" : "overlay",
+    } as TwoWayTalkComponentConfig;
   },
 };
 

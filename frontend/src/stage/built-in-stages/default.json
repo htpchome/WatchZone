@@ -44,20 +44,6 @@
                 ],
                 "controls": [
                   {
-                    "componentType": "light_control",
-                    "config": {},
-                    "controlRegion": "leading",
-                    "id": "default-light-component",
-                    "kind": "component"
-                  },
-                  {
-                    "componentType": "two_way_talk",
-                    "config": {},
-                    "controlRegion": "center",
-                    "id": "default-talk-component",
-                    "kind": "component"
-                  },
-                  {
                     "componentType": "ptz",
                     "config": {},
                     "controlRegion": "trailing",
@@ -82,7 +68,27 @@
               },
               "id": "default-activity-navigation-module",
               "kind": "module",
-              "moduleType": "activity-navigation"
+              "moduleType": "activity-navigation",
+              "slots": {
+                "content": [
+                  {
+                    "componentType": "light_control",
+                    "config": {
+                      "presentation": "toolbar"
+                    },
+                    "id": "default-light-component",
+                    "kind": "component"
+                  },
+                  {
+                    "componentType": "two_way_talk",
+                    "config": {
+                      "presentation": "toolbar"
+                    },
+                    "id": "default-talk-component",
+                    "kind": "component"
+                  }
+                ]
+              }
             }
           },
           {

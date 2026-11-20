@@ -4,6 +4,7 @@ import { englishLocalize } from "../../../core/localization";
 import type { MediaSessionLease } from "../../../core/media-session-manager";
 import type { MediaRetentionPreference } from "../../../core/media-retention-policy";
 import type {
+  ActivityHighlightMode,
   AlertTakeoverMode,
   SlideAdvanceSeconds,
   SlideTransition,
@@ -23,7 +24,7 @@ export interface CameraModuleConfig {
   readonly alertTakeoverMode: AlertTakeoverMode;
   readonly cameras: readonly CameraModuleItemConfig[];
   readonly groups: readonly CameraModuleGroupConfig[];
-  readonly highlightActivity: boolean;
+  readonly activityHighlightMode: ActivityHighlightMode;
   readonly retentionPreference: MediaRetentionPreference;
   readonly roundedCorners: boolean;
   readonly shadowStyle: CameraShadowStyle;
@@ -140,7 +141,7 @@ function updateCameraElement(
   camera.cameraSession = context.cameraSession;
   camera.localize = context.localize ?? englishLocalize;
   camera.preview = context.preview === true;
-  camera.highlightActivity = config.highlightActivity;
+  camera.activityHighlightMode = config.activityHighlightMode;
   camera.retentionPreference = config.retentionPreference;
   camera.roundedCorners = config.roundedCorners;
   camera.shadowStyle = config.shadowStyle;
@@ -218,8 +219,13 @@ function validateCameraConfig(value: unknown): CameraModuleConfig {
   ) {
     throw new Error("Camera module shadowStyle is invalid.");
   }
-  if (typeof source.highlightActivity !== "boolean") {
-    throw new Error("Camera modules require a highlightActivity setting.");
+  if (
+    source.activityHighlightMode !== "off" &&
+    source.activityHighlightMode !== "alerts" &&
+    source.activityHighlightMode !== "detections" &&
+    source.activityHighlightMode !== "both"
+  ) {
+    throw new Error("Camera modules require a valid activity highlight mode.");
   }
   if (
     source.alertTakeoverMode !== "off" &&
@@ -251,7 +257,7 @@ function validateCameraConfig(value: unknown): CameraModuleConfig {
     alertTakeoverMode: source.alertTakeoverMode,
     cameras,
     groups,
-    highlightActivity: source.highlightActivity,
+    activityHighlightMode: source.activityHighlightMode,
     retentionPreference: source.retentionPreference,
     roundedCorners: source.roundedCorners,
     shadowStyle: source.shadowStyle,

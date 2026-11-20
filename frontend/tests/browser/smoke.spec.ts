@@ -10,7 +10,6 @@ const packageJson = JSON.parse(
 ) as { version: string };
 const expectedBuild = process.env.GITHUB_SHA?.slice(0, 7) ?? "local";
 const expectedVersion = packageJson.version;
-const LIGHT_LONG_PRESS_WAIT_MS = 500;
 const THUMBNAIL_LONG_PRESS_WAIT_MS = 500;
 const pageErrors = new WeakMap<Page, string[]>();
 
@@ -2628,7 +2627,7 @@ test("centers the slideshow icon inside its compact overlay button", async ({
   ).toBeLessThan(0.5);
 });
 
-test("highlights live video directly from draft review notifications", async ({
+test("filters live-video highlights by review classification", async ({
   page,
 }) => {
   await page.goto("/");
@@ -2700,6 +2699,7 @@ test("highlights live video directly from draft review notifications", async ({
     };
     card.setConfig({
       type: "custom:watchzone-card",
+      alert_detection_highlight: "alerts",
       camera_switcher_overlay: true,
       slide_advance_time: 30,
       slide_transition: "fade",
@@ -2765,16 +2765,16 @@ test("highlights live video directly from draft review notifications", async ({
         }),
       );
   });
-  await expect(carousel).toHaveClass(/activity-detection/);
+  await expect(carousel).not.toHaveClass(/activity-(alert|detection)/);
 
   const cameraButtons = page.locator("wzc-camera-navigation button");
   await expect(
     cameraButtons.nth(0).locator(".option-indicator.warning"),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await cameraButtons.nth(1).click();
   await expect(carousel).not.toHaveClass(/activity-(alert|detection)/);
   await cameraButtons.nth(0).click();
-  await expect(carousel).toHaveClass(/activity-detection/);
+  await expect(carousel).not.toHaveClass(/activity-(alert|detection)/);
 
   await page.evaluate(() => {
     for (const callback of (
@@ -2790,7 +2790,6 @@ test("highlights live video directly from draft review notifications", async ({
       );
   });
   await expect(carousel).toHaveClass(/activity-alert/);
-
   await cameraButtons.nth(1).click();
 
   await page.evaluate(() => {
@@ -2884,7 +2883,7 @@ test("highlights live video directly from draft review notifications", async ({
   await expect(cameraButtons.nth(1)).toHaveAttribute("aria-selected", "true");
   await expect(
     cameraButtons.nth(1).locator(".option-indicator.warning"),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await expect(slideshowOverlay.locator(".status")).toHaveText("Hold");
   const activeDraft = page.locator("wzc-reviews .tile").first();
   await expect(activeDraft.locator(".in-progress")).toHaveText("In progress");
@@ -7390,7 +7389,7 @@ test("preserves expanded camera-stage geometry across carousel selection", async
   });
 });
 
-test("keeps PTZ, talk, and light controls attached to the resizing viewport", async ({
+test("moves talk and light between the wide toolbar and resizing phone viewport", async ({
   page,
 }) => {
   await installHaIconFixture(page);
@@ -7495,7 +7494,9 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
     /swiper-initialized/,
   );
   const controlsSlot = page.locator(".camera-overlay-grid");
-  const leadingControls = controlsSlot.locator(".lower-control-group.leading");
+  const activityNavigationComposition = page.locator(
+    '.module-composition[data-module-type="activity-navigation"]',
+  );
   const selectedLiveViewport = camera
     .locator(".swiper-slide-active wzc-camera-live .viewport")
     .first();
@@ -7518,6 +7519,14 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   const talkIcon = talkButton.locator(":scope > svg");
   const lightIcon = lightButton.locator(":scope > ha-icon svg");
   await expect(talkButton).toBeVisible();
+  await expect(talk).toHaveAttribute("presentation", "toolbar");
+  await expect(lights).toHaveAttribute("presentation", "toolbar");
+  await expect(
+    activityNavigationComposition.locator("wzc-two-way-talk"),
+  ).toHaveCount(1);
+  await expect(
+    activityNavigationComposition.locator("wzc-light-control"),
+  ).toHaveCount(1);
   await expect(ptzTrigger).toBeVisible();
   await talk.evaluate((element) => {
     (
@@ -7843,17 +7852,31 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
       (ptzHostBox.y + ptzHostBox.height / 2),
   ).toBeCloseTo(0, 0);
 
-  expect(talkHostBox.height).toBeCloseTo(talkButtonBox.height, 0);
   expect(cameraBox.width / cameraBox.height).toBeCloseTo(16 / 9, 1);
+  expect(talkHostBox.height).toBeCloseTo(talkButtonBox.height, 0);
   expect(lightHostBox.height).toBeCloseTo(lightButtonBox.height, 0);
   expect(talkHostBox.y + talkHostBox.height).toBeCloseTo(
     lightHostBox.y + lightHostBox.height,
     0,
   );
-  expect(ptzHostBox.y + ptzHostBox.height).toBeCloseTo(
-    lightHostBox.y + lightHostBox.height,
-    0,
+  const activityNavigationBox =
+    await activityNavigationComposition.boundingBox();
+  expect(activityNavigationBox).not.toBeNull();
+  if (!activityNavigationBox) return;
+  expect(
+    (lightHostBox.x +
+      lightHostBox.width / 2 +
+      talkHostBox.x +
+      talkHostBox.width / 2) /
+      2,
+  ).toBeCloseTo(activityNavigationBox.x + activityNavigationBox.width / 2, 0);
+  expect(lightHostBox.y).toBeGreaterThanOrEqual(activityNavigationBox.y);
+  expect(talkHostBox.y + talkHostBox.height).toBeLessThanOrEqual(
+    activityNavigationBox.y + activityNavigationBox.height,
   );
+  expect(
+    talkHostBox.x - (lightHostBox.x + lightHostBox.width),
+  ).toBeGreaterThanOrEqual(8);
   const lowerAreaBox = await page
     .locator(".camera-overlay-area-lower")
     .boundingBox();
@@ -7921,62 +7944,6 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
     return result;
   });
   expect(ptzHoverLayers.button).toBe(ptzHoverLayers.expected);
-  expect(talkHostBox.y + talkHostBox.height).toBeLessThanOrEqual(
-    controlsSlotBox.y + controlsSlotBox.height,
-  );
-  expect(talkButtonBox.y).toBeGreaterThan(cameraBox.y + cameraBox.height / 2);
-  expect(talkButtonBox.x + talkButtonBox.width / 2).toBeCloseTo(
-    cameraBox.x + cameraBox.width / 2,
-    0,
-  );
-  const desktopTalkBottomInset =
-    cameraBox.y + cameraBox.height - (talkButtonBox.y + talkButtonBox.height);
-  const desktopLightBottomInset =
-    cameraBox.y + cameraBox.height - (lightButtonBox.y + lightButtonBox.height);
-  expect(desktopTalkBottomInset).toBeCloseTo(metadataArea.height, 0);
-  expect(desktopLightBottomInset).toBeCloseTo(metadataArea.height, 0);
-  expect(
-    talkButtonBox.x - (lightButtonBox.x + lightButtonBox.width),
-  ).toBeGreaterThanOrEqual(8);
-  const dockLayout = await controlsSlot
-    .locator(".camera-overlay-area-lower")
-    .evaluate((element) => {
-      const styles = getComputedStyle(element);
-      return { columnGap: styles.columnGap, display: styles.display };
-    });
-  expect(dockLayout).toEqual({ columnGap: "8px", display: "grid" });
-  await expect
-    .poll(() =>
-      leadingControls.evaluate((element) => {
-        const styles = getComputedStyle(element);
-        return {
-          display: styles.display,
-          gridAutoFlow: styles.gridAutoFlow,
-        };
-      }),
-    )
-    .toEqual({ display: "grid", gridAutoFlow: "column" });
-
-  await talk.evaluate((element) => {
-    element.style.inlineSize = "calc(var(--wzc-camera-control-size) * 3)";
-  });
-  const [expandedTalkHostBox, reflowedLightHostBox] = await Promise.all([
-    talk.boundingBox(),
-    lights.boundingBox(),
-  ]);
-  expect(expandedTalkHostBox).not.toBeNull();
-  expect(reflowedLightHostBox).not.toBeNull();
-  expect(
-    (expandedTalkHostBox?.x ?? 0) -
-      ((reflowedLightHostBox?.x ?? 0) + (reflowedLightHostBox?.width ?? 0)),
-  ).toBeGreaterThanOrEqual(8);
-  expect(expandedTalkHostBox?.width).toBeCloseTo(talkButtonBox.width * 3, 0);
-  expect(
-    (expandedTalkHostBox?.x ?? 0) + (expandedTalkHostBox?.width ?? 0) / 2,
-  ).toBeCloseTo(cameraBox.x + cameraBox.width / 2, 0);
-  await talk.evaluate((element) => {
-    element.style.removeProperty("inline-size");
-  });
   expect(lightButtonBox.width).toBeCloseTo(talkButtonBox.width, 1);
   expect(lightButtonBox.height).toBeCloseTo(talkButtonBox.height, 1);
   const [talkButtonColor, lightButtonColor] = await Promise.all([
@@ -8059,13 +8026,8 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
     element.style.setProperty("--wzc-light-panel-radius", "18px");
   });
 
-  await page.mouse.move(
-    interactionLightButtonBox.x + interactionLightButtonBox.width / 2,
-    interactionLightButtonBox.y + interactionLightButtonBox.height / 2,
-  );
-  await page.mouse.down();
-  await page.waitForTimeout(LIGHT_LONG_PRESS_WAIT_MS);
-  await page.mouse.up();
+  await lightButton.focus();
+  await lightButton.press("ArrowUp");
   const dimmer = lights.locator(".dimmer-panel");
   await expect(dimmer).toBeVisible();
   await expect(dimmer).toHaveCSS("background-color", "rgb(120, 121, 122)");
@@ -8107,6 +8069,16 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   await expect(dimmer).toBeHidden();
 
   await page.setViewportSize({ width: 390, height: 844 });
+  await expect(talk).toHaveAttribute("presentation", "overlay");
+  await expect(lights).toHaveAttribute("presentation", "overlay");
+  await expect(talk.locator("xpath=..")).toHaveAttribute(
+    "data-control-region",
+    "center",
+  );
+  await expect(lights.locator("xpath=..")).toHaveAttribute(
+    "data-control-region",
+    "leading",
+  );
   await expect
     .poll(async () => {
       const [stageBox, controlBox] = await Promise.all([
@@ -8534,6 +8506,17 @@ test("opens the PTZ panel and recalls a provider preset without a stop subscript
 
   const panel = page.locator("wzc-ptz[presentation='panel']");
   await expect(panel).toBeVisible();
+  const [navigationBox, panelModuleBox] = await Promise.all([
+    page.locator("wzc-activity-navigation").boundingBox(),
+    page.locator("wzc-ptz-panel").boundingBox(),
+  ]);
+  expect(navigationBox).not.toBeNull();
+  expect(panelModuleBox).not.toBeNull();
+  if (navigationBox && panelModuleBox) {
+    expect(
+      panelModuleBox.y - (navigationBox.y + navigationBox.height),
+    ).toBeGreaterThan(0);
+  }
   await expect(panel.locator("button.wedge")).toHaveCount(4);
   await expect(panel.locator("button.center-half")).toHaveCount(2);
   const padSeams = await panel.locator(".circle-pad").evaluate((pad) => {
@@ -11311,6 +11294,14 @@ test("editor uses exclusive accordions and shared draft status", async ({
     1,
   );
   await expect(reviewRows.nth(1)).toHaveCSS("border-top-style", "solid");
+  const thumbnailOutline = reviews.locator(
+    '[data-setting="alert-detection-thumbnail-outline"]',
+  );
+  await expect(thumbnailOutline).toHaveCount(1);
+  await expect(thumbnailOutline.locator('[data-value="both"]')).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
   await expect(
     editor
       .locator('wzc-accordion-item[item-key="general"]')
@@ -11329,7 +11320,13 @@ test("editor uses exclusive accordions and shared draft status", async ({
   ).toMatchObject({ mode: "slider", slider_ticks: true });
   await liveMedia.locator("summary").click();
   const selectionBars = liveMedia.locator("wzc-segmented-control");
-  await expect(selectionBars).toHaveCount(4);
+  await expect(selectionBars).toHaveCount(5);
+  const activityHighlight = liveMedia.locator(
+    '[data-setting="alert-detection-highlight"]',
+  );
+  await expect(
+    activityHighlight.locator('[data-value="both"]'),
+  ).toHaveAttribute("aria-checked", "true");
   const ptzBar = liveMedia.locator('[data-setting="ptz-overlay-control"]');
   const transitionBar = liveMedia.locator('[data-setting="slide-transition"]');
   const ptzSelection = ptzBar.locator('[data-value="start_open"]');

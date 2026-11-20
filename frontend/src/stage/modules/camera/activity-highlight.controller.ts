@@ -1,6 +1,10 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
-import type { AlertTakeoverMode } from "../../../core/config";
+import {
+  activityClassificationModeIncludes,
+  type ActivityHighlightMode,
+  type AlertTakeoverMode,
+} from "../../../core/config";
 import {
   ACTIVITY_FALLBACK_RECONCILE_INTERVAL_MS,
   ACTIVITY_UPDATE_SUBSCRIBE_RETRY_MS,
@@ -19,7 +23,7 @@ interface LiveActivityHighlightContext {
   readonly activeEntityId?: string;
   readonly api?: HomeAssistantApi;
   readonly entityIds: readonly string[];
-  readonly highlightEnabled: boolean;
+  readonly highlightMode: ActivityHighlightMode;
   readonly onTakeover: (entityId: string) => void;
   readonly onTakeoverEnd?: (returnEntityId: string | undefined) => boolean;
   readonly startTakeoverEnabled: boolean;
@@ -52,7 +56,7 @@ export class LiveActivityHighlightController implements ReactiveController {
   private _currentTakeover?: ActiveReview;
   private _entityIdsKey = "";
   private _generation = 0;
-  private _highlightEnabled = false;
+  private _highlightMode: ActivityHighlightMode = "both";
   private _identity?: HomeAssistantApi["identity"];
   private _order = 0;
   private _reconcileInFlight = false;
@@ -132,8 +136,9 @@ export class LiveActivityHighlightController implements ReactiveController {
       context.takeoverMode !== this._takeoverMode ||
       context.startTakeoverEnabled !== this._startTakeoverEnabled;
     if (takeoverConfigChanged) this._configureTakeover(context);
-    this._highlightEnabled = context.highlightEnabled;
-    // Navigation indicators remain live even when outline and takeover are off.
+    const highlightModeChanged = context.highlightMode !== this._highlightMode;
+    this._highlightMode = context.highlightMode;
+    // Activity subscriptions remain live even when outline and takeover are off.
     const subscriptionEnabled = normalizedEntityIds.length > 0;
     const activityContextChanged =
       context.api?.identity !== this._identity ||
@@ -142,7 +147,10 @@ export class LiveActivityHighlightController implements ReactiveController {
       !activityContextChanged &&
       subscriptionEnabled === this._subscriptionEnabled
     ) {
-      if (context.activeEntityId !== this._activeEntityId) {
+      if (
+        context.activeEntityId !== this._activeEntityId ||
+        highlightModeChanged
+      ) {
         this._activeEntityId = context.activeEntityId;
         this._publishActivity();
       }
@@ -436,17 +444,22 @@ export class LiveActivityHighlightController implements ReactiveController {
   private _publishActivity(): void {
     const nextClassifications = new Map<string, LiveActivityClassification>();
     for (const [entityId, reviews] of this._activeReviews) {
-      if (hasClassification(reviews, "alert")) {
+      if (
+        activityClassificationModeIncludes(this._highlightMode, "alert") &&
+        hasClassification(reviews, "alert")
+      ) {
         nextClassifications.set(entityId, "alert");
-      } else if (hasClassification(reviews, "detection")) {
+      } else if (
+        activityClassificationModeIncludes(this._highlightMode, "detection") &&
+        hasClassification(reviews, "detection")
+      ) {
         nextClassifications.set(entityId, "detection");
       }
     }
     this.classifications = nextClassifications;
-    this.classification =
-      this._highlightEnabled && this._activeEntityId
-        ? nextClassifications.get(this._activeEntityId)
-        : undefined;
+    this.classification = this._activeEntityId
+      ? nextClassifications.get(this._activeEntityId)
+      : undefined;
     this._host.requestUpdate();
   }
 

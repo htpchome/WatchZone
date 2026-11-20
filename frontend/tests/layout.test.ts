@@ -155,6 +155,7 @@ describe("layout composition", () => {
     });
     expect(activityModules(layout).map(({ config }) => config)).toEqual([
       {
+        activityThumbnailOutlineMode: "both",
         displayEventTypeBadges: true,
         displayObjectBadges: true,
         displayZone: true,
@@ -399,7 +400,7 @@ describe("layout composition", () => {
     ).not.toHaveProperty("roundedCorners");
   });
 
-  it("composes independent talk controls only for opted-in cameras", () => {
+  it("composes independent talk controls in the wide activity toolbar", () => {
     const layout = builtInStage(
       normalizeCardConfig({
         cameras: [
@@ -409,20 +410,20 @@ describe("layout composition", () => {
       }),
     );
 
-    const camera = moduleAt(layout, 0);
-    expect(camera?.slots?.controls).toHaveLength(1);
-    expect(camera?.slots?.controls?.[0]).toMatchObject({
+    const navigation = moduleOfType(layout, ACTIVITY_NAVIGATION_MODULE_TYPE);
+    expect(navigation.slots?.content).toHaveLength(1);
+    expect(navigation.slots?.content?.[0]).toMatchObject({
       id: DEFAULT_TALK_COMPONENT_NODE_ID,
       kind: "component",
       componentType: "two_way_talk",
-      controlRegion: "center",
       config: {
         cameras: [{ connection: "home_assistant", entityId: "camera.front" }],
+        presentation: "toolbar",
       },
     });
   });
 
-  it("composes linked lights in the responsive controls dock", () => {
+  it("composes linked lights in the wide activity toolbar", () => {
     const layout = builtInStage(
       normalizeCardConfig({
         cameras: [
@@ -441,12 +442,11 @@ describe("layout composition", () => {
       }),
     );
 
-    const camera = moduleAt(layout, 0);
-    expect(camera?.slots?.controls?.[0]).toMatchObject({
+    const navigation = moduleOfType(layout, ACTIVITY_NAVIGATION_MODULE_TYPE);
+    expect(navigation.slots?.content?.[0]).toMatchObject({
       id: DEFAULT_LIGHT_COMPONENT_NODE_ID,
       kind: "component",
       componentType: "light_control",
-      controlRegion: "leading",
       config: {
         cameras: [
           {
@@ -461,8 +461,72 @@ describe("layout composition", () => {
             lights: [{ entityId: "light.yard" }],
           },
         ],
+        presentation: "toolbar",
       },
     });
+  });
+
+  it("moves light and talk components at the canonical 600px Stage variant", () => {
+    const layout = builtInStage(
+      normalizeCardConfig({
+        cameras: [
+          {
+            entity_id: "camera.front",
+            lights: [{ entity_id: "light.porch" }],
+            two_way_talk_enabled: true,
+          },
+        ],
+      }),
+    );
+    const wideNavigation = moduleOfType(
+      layout,
+      ACTIVITY_NAVIGATION_MODULE_TYPE,
+    );
+    expect(
+      wideNavigation.slots?.content?.map(({ componentType, config, id }) => ({
+        componentType,
+        config,
+        id,
+      })),
+    ).toMatchObject([
+      {
+        componentType: "light_control",
+        config: { presentation: "toolbar" },
+        id: DEFAULT_LIGHT_COMPONENT_NODE_ID,
+      },
+      {
+        componentType: "two_way_talk",
+        config: { presentation: "toolbar" },
+        id: DEFAULT_TALK_COMPONENT_NODE_ID,
+      },
+    ]);
+
+    const phone = layout.variants.phone;
+    if (!phone) throw new Error("Expected the built-in phone variant.");
+    const phoneCamera = findModule(phone.root, "camera");
+    const phoneNavigation = findModule(
+      phone.root,
+      ACTIVITY_NAVIGATION_MODULE_TYPE,
+    );
+    expect(phoneNavigation.slots?.content).toBeUndefined();
+    expect(
+      phoneCamera.slots?.controls?.map(({ componentType, config, id }) => ({
+        componentType,
+        config,
+        id,
+      })),
+    ).toMatchObject([
+      {
+        componentType: "light_control",
+        config: { presentation: "overlay" },
+        id: DEFAULT_LIGHT_COMPONENT_NODE_ID,
+      },
+      {
+        componentType: "two_way_talk",
+        config: { presentation: "overlay" },
+        id: DEFAULT_TALK_COMPONENT_NODE_ID,
+      },
+    ]);
   });
 
   it("composes provider-resolved PTZ in the trailing controls region", () => {
@@ -542,6 +606,7 @@ describe("layout composition", () => {
       }),
     );
     const camera = moduleAt(layout, 0);
+    const navigation = moduleOfType(layout, ACTIVITY_NAVIGATION_MODULE_TYPE);
 
     expect(camera.config).toMatchObject({
       groups: [
@@ -555,11 +620,12 @@ describe("layout composition", () => {
       ],
     });
     expect(
-      camera.slots?.controls?.find(
+      navigation.slots?.content?.find(
         ({ componentType }) => componentType === "two_way_talk",
       )?.config,
     ).toEqual({
       cameras: [{ connection: "home_assistant", entityId: "camera.porch" }],
+      presentation: "toolbar",
     });
     expect(
       camera.slots?.controls?.find(
@@ -569,7 +635,7 @@ describe("layout composition", () => {
       cameras: [{ entityId: "camera.porch", provider: "home_assistant" }],
     });
     expect(
-      camera.slots?.controls?.find(
+      navigation.slots?.content?.find(
         ({ componentType }) => componentType === "light_control",
       )?.config,
     ).toMatchObject({
@@ -975,6 +1041,23 @@ function collectModuleTypes(container: StageContainerNode): string[] {
       return node.children.map(({ moduleType }) => moduleType);
     return [node.moduleType];
   });
+}
+
+function findModule(
+  container: StageContainerNode,
+  moduleType: string,
+): StageModuleNode {
+  for (const { node } of container.children) {
+    if (node.kind === "module" && node.moduleType === moduleType) return node;
+    if (node.kind === "container") {
+      try {
+        return findModule(node, moduleType);
+      } catch {
+        // Continue searching sibling containers.
+      }
+    }
+  }
+  throw new Error(`Expected ${moduleType} module.`);
 }
 
 function setRuntimeStage(

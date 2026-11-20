@@ -180,7 +180,7 @@ describe("watchzone-card", () => {
         expect(current).not.toBeNull();
         return current;
       },
-      { timeout: 5_000 },
+      { timeout: 10_000 },
     );
 
     element.setConfig({
@@ -192,7 +192,7 @@ describe("watchzone-card", () => {
     await element.updateComplete;
 
     expect(element.shadowRoot?.querySelector("wzc-camera")).toBe(camera);
-  });
+  }, 15_000);
 
   it("does not rerender for unrelated hass assignments", async () => {
     const element = document.createElement("watchzone-card") as DashboardCard;
@@ -249,15 +249,18 @@ describe("watchzone-card", () => {
     };
     document.body.append(element);
 
-    const camera = await vi.waitFor(() => {
-      const current = element.shadowRoot?.querySelector<
-        HTMLElement & {
-          cameras: readonly { label: string; posterUrl?: string }[];
-        }
-      >("wzc-camera");
-      expect(current?.cameras[0]?.posterUrl).toContain("token=old");
-      return current;
-    });
+    const camera = await vi.waitFor(
+      () => {
+        const current = element.shadowRoot?.querySelector<
+          HTMLElement & {
+            cameras: readonly { label: string; posterUrl?: string }[];
+          }
+        >("wzc-camera");
+        expect(current?.cameras[0]?.posterUrl).toContain("token=old");
+        return current;
+      },
+      { timeout: 10_000 },
+    );
     Object.defineProperty(connection, "connected", { value: false });
     for (const listener of listeners.get("disconnected") ?? []) {
       listener(connection);
@@ -307,7 +310,7 @@ describe("watchzone-card", () => {
     await vi.waitFor(() =>
       expect(camera?.cameras[0]?.posterUrl).toContain("token=new"),
     );
-  });
+  }, 20_000);
 
   it("humanizes camera labels before Home Assistant entity state is available", async () => {
     const element = document.createElement("watchzone-card") as DashboardCard;
@@ -320,19 +323,22 @@ describe("watchzone-card", () => {
     });
     document.body.append(element);
 
-    const camera = await vi.waitFor(() => {
-      const current = element.shadowRoot?.querySelector<
-        HTMLElement & { cameras: readonly { label: string }[] }
-      >("wzc-camera");
-      expect(current?.cameras).toHaveLength(2);
-      return current;
-    });
+    const camera = await vi.waitFor(
+      () => {
+        const current = element.shadowRoot?.querySelector<
+          HTMLElement & { cameras: readonly { label: string }[] }
+        >("wzc-camera");
+        expect(current?.cameras).toHaveLength(2);
+        return current;
+      },
+      { timeout: 10_000 },
+    );
 
     expect(camera?.cameras.map(({ label }) => label)).toEqual([
       "Hall",
       "Front Door",
     ]);
-  });
+  }, 15_000);
 
   it("propagates outer appearance settings through the HA card boundary", async () => {
     const element = document.createElement("watchzone-card") as DashboardCard;

@@ -16,9 +16,9 @@ precedence.
 ## Repository baseline
 
 - Branch: `main`.
-- HEAD before the current built-in Stage change: `8de163b` —
-  `v0.0.4-dev.483 - fix(live): accelerate foreground and HA restart recovery`.
-- Version: `0.0.4-dev.484`.
+- HEAD before the current activity-presentation change: `cf0d37b` —
+  `v0.0.4-dev.484 - refactor(stage): remove Events from built-in layouts`.
+- Version being prepared: `0.0.4-dev.485`.
 - The user remains the commit owner. No agent commit or sync is authorized.
 
 Always recheck `git status`, `git log -1`, and
@@ -77,6 +77,24 @@ Because no built-in layout references it, ordinary cards do not import the
 Events implementation, create its element, subscribe its controllers, or
 request an Events list. Backend command and provider registration remains
 inert until a future layout or an explicit event deep link requests data.
+
+## Activity presentation policies and responsive controls at `dev.485`
+
+- Alert and Detection Highlight replaces the legacy live-camera highlight
+  toggle with `off`, `alerts`, `detections`, and `both`; `both` is the default.
+  It filters presentation only and remains independent from takeover.
+- Reviews has its own Alert and Detection Thumbnail Outline policy with the
+  same values and default. It controls only thumbnail outlines and leaves
+  badges and underlying activity data intact.
+- In Full Stage, linked-light and two-way-talk keep their Camera-overlay
+  placement below 600px. At 600px and wider, the declarative Stage variant
+  moves the same stable component nodes into the centered activity-navigation
+  content slot with toolbar presentation. Camera Only keeps them in Camera at
+  every size. Components do not choose the breakpoint or import either host.
+- The PTZ panel background begins after a shared Stage module gap so it is
+  visually separated from the activity-navigation controls.
+
+This work is uncommitted; the user remains the only commit owner.
 
 ## Current recorded-media baseline
 

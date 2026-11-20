@@ -42,7 +42,11 @@ describe("camera activity highlight controller", () => {
       },
     );
     const controller = new CameraActivityHighlightController(new TestHost());
-    controller.configure({ identity: {} } as HomeAssistantApi, "camera.front");
+    controller.configure(
+      { identity: {} } as HomeAssistantApi,
+      "camera.front",
+      "both",
+    );
     controller.hostConnected();
     await vi.waitFor(() => expect(notify).toBeTypeOf("function"));
     notify?.({
@@ -80,11 +84,52 @@ describe("camera activity highlight controller", () => {
       },
     );
     const controller = new CameraActivityHighlightController(new TestHost());
-    controller.configure({ identity: {} } as HomeAssistantApi, "camera.front");
+    controller.configure(
+      { identity: {} } as HomeAssistantApi,
+      "camera.front",
+      "both",
+    );
 
     controller.hostConnected();
 
     await vi.waitFor(() => expect(controller.classification).toBe("detection"));
+    controller.hostDisconnected();
+  });
+
+  it("filters highlights without restarting the activity subscription", async () => {
+    let notify:
+      ((notification: ActivityUpdateNotification) => void) | undefined;
+    mocks.subscribe.mockImplementation(
+      async (
+        _api: HomeAssistantApi,
+        _entityId: string,
+        _kind: string,
+        callback: (notification: ActivityUpdateNotification) => void,
+      ) => {
+        notify = callback;
+        return vi.fn();
+      },
+    );
+    const api = { identity: {} } as HomeAssistantApi;
+    const controller = new CameraActivityHighlightController(new TestHost());
+    controller.configure(api, "camera.front", "alerts");
+    controller.hostConnected();
+    await vi.waitFor(() => expect(notify).toBeTypeOf("function"));
+    notify?.({
+      cameraName: "front",
+      classification: "detection",
+      id: "review-1",
+      phase: "new",
+      topic: "reviews",
+    });
+    expect(controller.classification).toBeUndefined();
+
+    controller.configure(api, "camera.front", "detections");
+    expect(controller.classification).toBe("detection");
+    expect(mocks.subscribe).toHaveBeenCalledOnce();
+
+    controller.configure(api, "camera.front", "off");
+    expect(controller.classification).toBeUndefined();
     controller.hostDisconnected();
   });
 });

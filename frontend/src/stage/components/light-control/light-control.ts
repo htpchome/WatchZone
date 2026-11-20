@@ -45,6 +45,7 @@ export class LightControlComponent extends LitElement {
     cameraSession: { attribute: false },
     hass: { attribute: false },
     localize: { attribute: false },
+    presentation: { reflect: true },
   };
 
   private _activeCamera?: ActiveCameraSession;
@@ -78,10 +79,13 @@ export class LightControlComponent extends LitElement {
   public cameraSession?: CameraSessionContext;
   public hass?: HomeAssistant;
   public localize: LocalizeFunction = englishLocalize;
+  public presentation: "overlay" | "toolbar" = "overlay";
 
   protected willUpdate(changed: Map<PropertyKey, unknown>): void {
     this._bindCameraContext();
-    this._overlay.configure(this._activeCamera);
+    this._overlay.configure(
+      this.presentation === "overlay" ? this._activeCamera : undefined,
+    );
     if (changed.has("hass") && changed.get("hass") !== undefined) {
       this._optimisticLevels.clear();
     }
@@ -114,7 +118,10 @@ export class LightControlComponent extends LitElement {
       entityId,
       icon,
     }));
-    const visible = camera.overlayVisible || this._openLightId !== undefined;
+    const visible =
+      this.presentation === "toolbar" ||
+      camera.overlayVisible ||
+      this._openLightId !== undefined;
     const openLight = lights.find(
       ({ entityId }) => entityId === this._openLightId,
     );

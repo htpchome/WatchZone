@@ -73,8 +73,11 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
   if (config.event_history_days === DEFAULT_EVENT_HISTORY_DAYS) {
     delete yaml.event_history_days;
   }
-  if (config.highlight_camera_on_activity !== false) {
-    delete yaml.highlight_camera_on_activity;
+  if (config.alert_detection_highlight === "both") {
+    delete yaml.alert_detection_highlight;
+  }
+  if (config.alert_detection_thumbnail_outline === "both") {
+    delete yaml.alert_detection_thumbnail_outline;
   }
   if (config.minimal_camera_show_fullscreen_button !== false) {
     delete yaml.minimal_camera_show_fullscreen_button;

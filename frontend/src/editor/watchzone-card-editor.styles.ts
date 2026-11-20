@@ -48,15 +48,19 @@ export const cardEditorStyles = css`
     border-block: 1px solid var(--wzc-accordion-border-color);
   }
 
-  .review-settings-list > ha-selector {
+  .review-settings-list > * {
     padding-block: 0.5rem;
   }
 
-  .review-settings-list > ha-selector + ha-selector {
+  .review-settings-list > * + * {
     border-block-start: 1px solid var(--wzc-accordion-border-color);
   }
 
   .review-settings-list > .boolean-option {
+    margin-block-start: 0;
+  }
+
+  .review-settings-list > .segmented-setting {
     margin-block-start: 0;
   }
 

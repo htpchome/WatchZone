@@ -78,6 +78,31 @@ export const stageRuntimeStyles = css`
     grid-row: 1 / -1;
   }
 
+  .module-composition[data-module-type="activity-navigation"] {
+    grid-template-areas: "content";
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+  }
+
+  .module-composition[data-module-type="activity-navigation"]
+    > .component-slot-content {
+    z-index: 1;
+    display: grid;
+    grid-auto-columns: max-content;
+    grid-auto-flow: column;
+    place-content: center;
+    align-self: stretch;
+    gap: var(--wzc-control-dock-gap);
+  }
+
+  .module-composition[data-module-type="activity-navigation"]
+    > .component-slot-content
+    > .component-node {
+    inline-size: max-content;
+    block-size: auto;
+    align-self: center;
+  }
+
   .stage-stack-content > .module-composition[data-module-type="ptz-panel"],
   .module-composition[data-module-type="ptz-panel"] > .component-slot-content,
   .module-composition[data-module-type="ptz-panel"]

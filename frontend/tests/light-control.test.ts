@@ -43,6 +43,7 @@ describe("linked-light component", () => {
           ],
         },
       ],
+      presentation: "overlay",
     });
     expect(() =>
       componentDefinition.validateConfig({
@@ -116,6 +117,28 @@ describe("linked-light component", () => {
     await element.updateComplete;
     expect(element.shadowRoot?.querySelector(".dimmer-panel")).toBeNull();
     pressKey(button, " ", "keyup");
+  });
+
+  it("keeps toolbar controls visible independently of the video overlay", async () => {
+    const context = new CameraSessionContext();
+    const element = document.createElement(LIGHT_TAG) as LightControlComponent;
+    element.cameraSession = context;
+    element.cameras = cameraLights({ "camera.front": ["light.porch"] });
+    element.hass = createHass(vi.fn(async () => undefined));
+    element.presentation = "toolbar";
+    document.body.append(element);
+    context.publish(
+      {},
+      {
+        ...activeCamera("camera.front"),
+        overlayVisible: false,
+      },
+    );
+    await element.updateComplete;
+
+    expect(
+      element.shadowRoot?.querySelector(".light-stack.visible"),
+    ).not.toBeNull();
   });
 
   it("holds the shared overlay while its controls are hovered", async () => {

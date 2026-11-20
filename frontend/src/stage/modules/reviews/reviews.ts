@@ -29,6 +29,10 @@ import {
   activityRecordedMediaRequest,
 } from "../../../core/activity-media";
 import { homeAssistantDateKey } from "../../../core/date-time";
+import {
+  activityClassificationModeIncludes,
+  type ActivityClassificationMode,
+} from "../../../core/config";
 import type {
   HomeAssistantApi,
   HomeAssistantLocale,
@@ -67,6 +71,7 @@ export class ReviewsModule extends LitElement {
   public static properties = {
     api: { attribute: false },
     activityFilter: { attribute: false },
+    activityThumbnailOutlineMode: { attribute: false },
     cameraSelection: { attribute: false },
     displayEventTypeBadges: { attribute: false },
     displayObjectBadges: { attribute: false },
@@ -82,6 +87,7 @@ export class ReviewsModule extends LitElement {
 
   public api?: HomeAssistantApi;
   public activityFilter?: ActivityFilterContext;
+  public activityThumbnailOutlineMode: ActivityClassificationMode = "both";
   public cameraSelection?: CameraSelectionContext;
   public displayEventTypeBadges = true;
   public displayObjectBadges = true;
@@ -414,6 +420,12 @@ export class ReviewsModule extends LitElement {
       snapshotUrl: review.snapshot_url,
       startTime: review.start_time,
       thumbnailUrl: review.thumbnail_url,
+      thumbnailOutline: activityClassificationModeIncludes(
+        this.activityThumbnailOutlineMode,
+        review.classification,
+      )
+        ? review.classification
+        : undefined,
       trackingAvailable: review.related_event_ids.length > 0,
       typeBadge: {
         label: this.localize(

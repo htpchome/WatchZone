@@ -83,6 +83,7 @@ export interface ActivityListItem {
   readonly snapshotUrl: string | null;
   readonly startTime: number;
   readonly thumbnailUrl: string | null;
+  readonly thumbnailOutline?: ActivityClassification;
   readonly typeBadge?: ActivityTypeBadge;
   readonly zones: readonly string[];
 }
@@ -425,7 +426,7 @@ export class ActivityList extends LitElement {
             ></button>`
           : null
       }
-      <div class=${`thumbnail-wrap ${item.classification ?? ""}`.trim()}>
+      <div class=${`thumbnail-wrap ${item.thumbnailOutline ?? ""}`.trim()}>
         ${
           previewUrl
             ? html`<img

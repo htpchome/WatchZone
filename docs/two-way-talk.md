@@ -7,9 +7,13 @@ boundaries. It supplements `architecture.md`, which remains authoritative.
 
 - Two-way talk is an independently placeable, lazily loaded frontend component.
   The Stage Designer may choose a compatible module slot and presentation.
-- The built-in Stage presents it in the camera module's responsive controls
-  slot. The slot owns placement and collision-free spacing; the component
-  renders only its intrinsic one-button or active three-button control surface.
+- Below the 600px container breakpoint, the built-in Full Stage presents it in
+  Camera's responsive controls slot. At 600px and wider, the Stage variant
+  moves the same stable component node into activity-navigation's centered
+  content slot with `toolbar` presentation. Camera Only retains the controls
+  placement at every size. The selected slot owns placement and collision-free
+  spacing; the component renders only its intrinsic one-button or active
+  three-button control surface.
 - The component consumes the card-scoped `CameraSessionContext`. It does not import
   the camera module, reach into its shadow tree, or own live playback.
 - Provider-neutral talk resolution lives behind `TalkSourceResolver`.
@@ -54,8 +58,10 @@ does not contain signaling-path conditions.
 
 ## Interaction and audio state
 
-- The inactive microphone control follows the camera overlay's shared
-  visibility state and hide timer.
+- In `overlay` presentation, the inactive microphone control follows the
+  camera overlay's shared visibility state and hide timer. In `toolbar`
+  presentation it remains visible and does not register with Camera's overlay
+  interaction controller.
 - Starting talk requests microphone permission and connects with the outgoing
   microphone live. While startup is pending, the same microphone control shows
   progress and cancels the attempt. Active talk controls remain visible.

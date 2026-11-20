@@ -5,10 +5,12 @@ import {
   MIN_EVENT_HISTORY_DAYS,
 } from "../../../core/constants";
 import { englishLocalize } from "../../../core/localization";
+import type { ActivityClassificationMode } from "../../../core/config";
 import type { ModuleDefinition } from "../../placeable";
 import type { ReviewsModule } from "./reviews";
 
 export interface ReviewsModuleConfig {
+  readonly activityThumbnailOutlineMode: ActivityClassificationMode;
   readonly displayEventTypeBadges: boolean;
   readonly displayObjectBadges: boolean;
   readonly displayZone: boolean;
@@ -34,6 +36,17 @@ export const moduleDefinition: ModuleDefinition<
     const source = value as Record<string, unknown>;
     if (typeof source.targetModuleId !== "string" || !source.targetModuleId) {
       throw new Error("Reviews modules require a target camera module.");
+    }
+    if (
+      source.activityThumbnailOutlineMode !== undefined &&
+      source.activityThumbnailOutlineMode !== "off" &&
+      source.activityThumbnailOutlineMode !== "alerts" &&
+      source.activityThumbnailOutlineMode !== "detections" &&
+      source.activityThumbnailOutlineMode !== "both"
+    ) {
+      throw new Error(
+        "Reviews module requires a valid activity thumbnail outline mode.",
+      );
     }
     if (typeof source.roundedCorners !== "boolean") {
       throw new Error("Reviews module roundedCorners must be a boolean.");
@@ -66,6 +79,12 @@ export const moduleDefinition: ModuleDefinition<
       throw new Error("Reviews module hoverPreviewEnabled must be a boolean.");
     }
     return {
+      activityThumbnailOutlineMode:
+        source.activityThumbnailOutlineMode === "off" ||
+        source.activityThumbnailOutlineMode === "alerts" ||
+        source.activityThumbnailOutlineMode === "detections"
+          ? source.activityThumbnailOutlineMode
+          : "both",
       displayEventTypeBadges: source.displayEventTypeBadges,
       displayObjectBadges: source.displayObjectBadges,
       displayZone: source.displayZone,
@@ -86,6 +105,7 @@ export const moduleDefinition: ModuleDefinition<
   updateElement(element, config, context) {
     const reviews = element as ReviewsModule;
     reviews.activityFilter = context.activityFilter;
+    reviews.activityThumbnailOutlineMode = config.activityThumbnailOutlineMode;
     reviews.api = context.api;
     reviews.cameraSelection = context.cameraSelection;
     reviews.displayEventTypeBadges = config.displayEventTypeBadges;

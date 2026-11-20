@@ -29,7 +29,10 @@ export type FrigateFallbackTransport = "hls" | "mse";
 export type PtzOverlayControl = "none" | "start_closed" | "start_open";
 export type SlideTransition = "none" | "slide" | "fade";
 export type SlideAdvanceSeconds = 5 | 10 | 20 | 30;
-export type AlertTakeoverMode = "off" | "alerts" | "detections" | "both";
+export type ActivityClassificationMode =
+  "off" | "alerts" | "detections" | "both";
+export type ActivityHighlightMode = ActivityClassificationMode;
+export type AlertTakeoverMode = ActivityClassificationMode;
 export type AdditionalCameraLayout = "side_by_side" | "stacked";
 export type MinimalCameraMenuPosition = "top_left" | "top_right";
 export type CardHeightMode = "auto" | "fit_viewport" | "fill_container";
@@ -94,8 +97,9 @@ export interface CardConfig {
   readonly event_shadows: boolean;
   readonly event_shadows_phone: boolean;
   readonly event_history_days: number;
+  readonly alert_detection_highlight: ActivityHighlightMode;
+  readonly alert_detection_thumbnail_outline: ActivityClassificationMode;
   readonly alert_detection_takeover: AlertTakeoverMode;
-  readonly highlight_camera_on_activity: boolean;
   readonly minimal_camera_show_fullscreen_button: boolean;
   readonly minimal_camera_menu_position: MinimalCameraMenuPosition;
   readonly minimal_camera_show_mute_button: boolean;
@@ -254,6 +258,28 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     );
   }
   if (
+    source.alert_detection_highlight !== undefined &&
+    source.alert_detection_highlight !== "off" &&
+    source.alert_detection_highlight !== "alerts" &&
+    source.alert_detection_highlight !== "detections" &&
+    source.alert_detection_highlight !== "both"
+  ) {
+    throw new Error(
+      `${APP_NAME} alert_detection_highlight must be off, alerts, detections, or both.`,
+    );
+  }
+  if (
+    source.alert_detection_thumbnail_outline !== undefined &&
+    source.alert_detection_thumbnail_outline !== "off" &&
+    source.alert_detection_thumbnail_outline !== "alerts" &&
+    source.alert_detection_thumbnail_outline !== "detections" &&
+    source.alert_detection_thumbnail_outline !== "both"
+  ) {
+    throw new Error(
+      `${APP_NAME} alert_detection_thumbnail_outline must be off, alerts, detections, or both.`,
+    );
+  }
+  if (
     source.alert_detection_takeover !== undefined &&
     source.alert_detection_takeover !== "off" &&
     source.alert_detection_takeover !== "alerts" &&
@@ -367,8 +393,21 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     typeof eventHistoryDays === "number"
       ? eventHistoryDays
       : DEFAULT_EVENT_HISTORY_DAYS;
-  normalized.highlight_camera_on_activity =
-    source.highlight_camera_on_activity !== false;
+  normalized.alert_detection_highlight =
+    source.alert_detection_highlight === "off" ||
+    source.alert_detection_highlight === "alerts" ||
+    source.alert_detection_highlight === "detections"
+      ? source.alert_detection_highlight
+      : source.highlight_camera_on_activity === false
+        ? "off"
+        : "both";
+  normalized.alert_detection_thumbnail_outline =
+    source.alert_detection_thumbnail_outline === "off" ||
+    source.alert_detection_thumbnail_outline === "alerts" ||
+    source.alert_detection_thumbnail_outline === "detections"
+      ? source.alert_detection_thumbnail_outline
+      : "both";
+  delete normalized.highlight_camera_on_activity;
   normalized.minimal_camera_show_fullscreen_button =
     source.minimal_camera_show_fullscreen_button !== false;
   normalized.minimal_camera_menu_position =
@@ -895,4 +934,15 @@ export function activeRecordedMediaPlayerType(
   isPhone: boolean,
 ): RecordedMediaPlayerType {
   return isPhone ? "bottom_drawer" : config.recorded_media_player_type;
+}
+
+export function activityClassificationModeIncludes(
+  mode: ActivityClassificationMode,
+  classification: "alert" | "detection",
+): boolean {
+  return (
+    mode === "both" ||
+    (mode === "alerts" && classification === "alert") ||
+    (mode === "detections" && classification === "detection")
+  );
 }

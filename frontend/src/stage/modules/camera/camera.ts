@@ -15,6 +15,7 @@ import { CLIENT_PROFILE } from "../../../core/client-profile";
 import type { CameraSessionContext } from "../../camera-session-context";
 import type { CameraSelectionContext } from "../../camera-selection-context";
 import type {
+  ActivityHighlightMode,
   AlertTakeoverMode,
   FrigateFallbackTransport,
   LiveConnectionType,
@@ -91,7 +92,7 @@ export class CameraModule extends LitElement {
     cameraSelection: { attribute: false },
     cameras: { attribute: false },
     groups: { attribute: false },
-    highlightActivity: { attribute: false, type: Boolean },
+    activityHighlightMode: { attribute: false },
     localize: { attribute: false },
     retentionPreference: { attribute: false },
     preview: { attribute: false, type: Boolean },
@@ -126,7 +127,7 @@ export class CameraModule extends LitElement {
       activeEntityId: this._activeEntityId,
       api: this.api,
       entityIds: this.cameras.map(({ entityId }) => entityId),
-      highlightEnabled: this.highlightActivity,
+      highlightMode: this.activityHighlightMode,
       onTakeover: this._takeoverEntity,
       onTakeoverEnd: () => this._slideshow.resumeAfterTakeover(),
       startTakeoverEnabled: this.startAlertTakeoverOn,
@@ -147,7 +148,7 @@ export class CameraModule extends LitElement {
   public cameraSelection?: CameraSelectionContext;
   public cameras: readonly CameraItemConfig[] = [];
   public groups: readonly CameraGroupConfig[] = [];
-  public highlightActivity = true;
+  public activityHighlightMode: ActivityHighlightMode = "both";
   public localize: LocalizeFunction = englishLocalize;
   public retentionPreference: MediaRetentionPreference = "automatic";
   public preview = false;
