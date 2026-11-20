@@ -2,6 +2,7 @@ import { html, LitElement, nothing } from "lit";
 
 import { PERSISTENT_TALK_TAG } from "../../core/constants";
 import { englishLocalize } from "../../core/localization";
+import { RESPONSIVE_WIDTHS } from "../../core/responsive-widths";
 import { themeTokens } from "../../styles/theme-tokens";
 import { renderIcon } from "../../ui/icons";
 import { roundButtonStyles } from "../../ui/overlay-control.styles";
@@ -245,8 +246,48 @@ export class PersistentTalkTile extends LitElement {
         "--wzc-persistent-talk-available-width",
         `${width}px`,
       );
+      this._layoutCompactControls(panel);
     });
   };
+
+  private _layoutCompactControls(panel: HTMLElement): void {
+    const identity = panel.querySelector<HTMLElement>(".identity");
+    const controls = panel.querySelector<HTMLElement>(".controls");
+    const navigate = panel.querySelector<HTMLElement>(".navigate");
+    identity?.style.removeProperty("max-inline-size");
+    if (
+      window.innerWidth > RESPONSIVE_WIDTHS.compact ||
+      !identity ||
+      !controls ||
+      !navigate
+    ) {
+      panel.style.removeProperty("--wzc-persistent-talk-compact-controls-left");
+      return;
+    }
+    const panelBounds = panel.getBoundingClientRect();
+    let identityBounds = identity.getBoundingClientRect();
+    const controlsBounds = controls.getBoundingClientRect();
+    const navigateBounds = navigate.getBoundingClientRect();
+    const gap = Number.parseFloat(getComputedStyle(panel).columnGap) || 0;
+    const centeredLeft = (panelBounds.width - controlsBounds.width) / 2;
+    const maximumLeft =
+      navigateBounds.left - panelBounds.left - gap - controlsBounds.width;
+    let minimumLeft = identityBounds.right - panelBounds.left + gap;
+    if (minimumLeft > maximumLeft) {
+      const identityWidth = Math.max(
+        0,
+        maximumLeft - (identityBounds.left - panelBounds.left) - gap,
+      );
+      identity.style.maxInlineSize = `${identityWidth}px`;
+      identityBounds = identity.getBoundingClientRect();
+      minimumLeft = identityBounds.right - panelBounds.left + gap;
+    }
+    const left = Math.min(maximumLeft, Math.max(centeredLeft, minimumLeft));
+    panel.style.setProperty(
+      "--wzc-persistent-talk-compact-controls-left",
+      `${Math.max(0, left)}px`,
+    );
+  }
 
   static styles = [themeTokens, roundButtonStyles, persistentTalkStyles];
 }

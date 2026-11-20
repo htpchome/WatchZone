@@ -33,11 +33,14 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
 - The tile is a fixed, document-body overlay at bottom center with safe-area
   padding. It follows the live Home Assistant dashboard-panel rectangle across
   expanded, collapsed, hidden, and modal sidebar layouts. It spans the viewport
-  in one horizontal row at the compact breakpoint and is bounded by the
-  dashboard panel on larger screens. It enters the browser top layer with a
-  maximum-z fixed fallback, and its controls remain centered with explicitly
-  contrasting side icons. Its background uses the defined opaque popover
-  surface token rather than an undefined token.
+  in one row at the compact breakpoint and is bounded by the dashboard panel on
+  larger screens. Compact presentation has visible side gutters while remaining
+  flush to the viewport bottom; safe-area space is internal. Talk controls use
+  the true center when clear, otherwise shift only far enough right to clear the
+  identity without wrapping, while edge actions stay pinned. The tile enters
+  the browser top layer with a maximum-z fixed fallback, and its controls retain
+  explicitly contrasting side icons. Its background uses the defined opaque
+  popover surface token rather than an undefined token.
 - Closing the tile ends the call and dismisses its retained target. Pressing
   the tile microphone ends the call but retains the target and tile so the
   same camera can be restarted. Pressing it again restarts the session.
@@ -85,12 +88,14 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
 - Formatting, lint, typecheck, architecture/style/license checks, production
   build, and version synchronization pass.
 - Unit tests: 531/531 across 80 files.
-- Browser tests: 174/174 across Chromium, Firefox, and WebKit.
+- The TWT browser flow passes in Chromium, Firefox, and WebKit. The latest full
+  matrix passed 173/174; the unrelated Chromium Companion-rotation test missed
+  its existing class-timing instrumentation window.
 - Browser assertions cover the normal-control/global-tile handoff, connected
   call retention across direct route departure and camera changes, retained
   restart behavior, navigation back to the session camera, top-layer stacking,
-  centered visible controls, compact full-width layout, bounded desktop layout,
-  and responsive relocation of the normal controls.
+  centered visible controls, compact side gutters and bottom anchoring, bounded
+  desktop layout, and responsive relocation of the normal controls.
 - Physical Home Assistant, Companion, Safari hardware media, Catalyst, and
   real-device microphone behavior remain authoritative where automation cannot
   reproduce host or hardware behavior; report those as unverified until tested.

@@ -109,11 +109,16 @@ does not contain signaling-path conditions.
 - The persistent tile is fixed to the bottom center of Home Assistant's actual
   dashboard panel, above the effective safe area. Its position follows the
   expanded, collapsed, hidden, or modal sidebar layout and route replacement.
-  Below 480px it spans the viewport in one horizontal row; at 480px and wider
-  it uses a bounded width constrained by the available dashboard panel. It does
-  not consume dashboard or Stage layout space. It uses the browser top layer
-  when available, with a maximum fixed-layer stack fallback, so card,
-  dashboard, and sticky Home Assistant surfaces cannot cover it.
+  Below 480px it is anchored directly to the viewport bottom with visible side
+  gutters and one row: dismiss and identity remain at the left, the camera
+  action remains at the right, and talk controls use the true center whenever
+  they clear both. When identity needs more room, the controls shift only far
+  enough right to clear it and never wrap. The safe area is internal padding,
+  never an external gap below the tile. At 480px and wider the tile uses a
+  bounded width constrained by the available dashboard panel. It does not
+  consume dashboard or Stage layout space. It uses the browser top layer when
+  available, with a maximum fixed-layer stack fallback, so card, dashboard,
+  and sticky Home Assistant surfaces cannot cover it.
 - The persistent camera action returns to the dashboard route where talk
   started, selects the session's stable camera entity, and scrolls its matching
   WatchZone card into view. Once that camera surface is active, the tile hides

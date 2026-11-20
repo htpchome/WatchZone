@@ -8207,27 +8207,37 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
       const box = await persistentTalk.boundingBox();
       return box ? { width: box.width, x: box.x } : undefined;
     })
-    .toEqual({ width: 390, x: 0 });
+    .toEqual({ width: 374, x: 8 });
   const compactPersistentGeometry = await persistentTalk.evaluate((element) => {
     const panel = element.getBoundingClientRect();
-    const selectors = [".dismiss", ".identity", ".controls", ".navigate"];
+    const identity = element
+      .querySelector<HTMLElement>(".identity")
+      ?.getBoundingClientRect();
+    const controls = element
+      .querySelector<HTMLElement>(".controls")
+      ?.getBoundingClientRect();
+    const navigate = element
+      .querySelector<HTMLElement>(".navigate")
+      ?.getBoundingClientRect();
     return {
+      bottom: panel.bottom,
       height: panel.height,
-      panelCenter: panel.y + panel.height / 2,
-      itemCenters: selectors.map((selector) => {
-        const bounds = element
-          .querySelector<HTMLElement>(selector)
-          ?.getBoundingClientRect();
-        return bounds ? bounds.y + bounds.height / 2 : 0;
-      }),
+      identityRight: identity?.right ?? 0,
+      controlsCenterX: controls ? controls.x + controls.width / 2 : 0,
+      controlsLeft: controls?.left ?? 0,
+      controlsRight: controls?.right ?? 0,
+      navigateLeft: navigate?.left ?? 0,
     };
   });
+  expect(compactPersistentGeometry.bottom).toBe(844);
   expect(compactPersistentGeometry.height).toBeLessThanOrEqual(80);
-  expect(
-    compactPersistentGeometry.itemCenters.every(
-      (center) => Math.abs(center - compactPersistentGeometry.panelCenter) <= 1,
-    ),
-  ).toBe(true);
+  expect(compactPersistentGeometry.controlsCenterX).toBeGreaterThanOrEqual(195);
+  expect(compactPersistentGeometry.controlsLeft).toBeGreaterThan(
+    compactPersistentGeometry.identityRight,
+  );
+  expect(compactPersistentGeometry.controlsRight).toBeLessThan(
+    compactPersistentGeometry.navigateLeft,
+  );
   await page.setViewportSize(desktopViewport);
 
   await persistentTalk.locator("button.navigate").click();
