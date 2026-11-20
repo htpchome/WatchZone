@@ -7,7 +7,7 @@ from typing import Any, Literal, cast
 
 from homeassistant.exceptions import HomeAssistantError
 
-STAGE_SCHEMA_VERSION = 5
+STAGE_SCHEMA_VERSION = 4
 StageProfile = Literal["mobile", "standard"]
 StageType = Literal["camera_only", "full", "minimal_camera_only"]
 StageSlotName = Literal["content", "controls", "footer", "overlay"]
@@ -25,7 +25,6 @@ StageOverlayRegion = Literal[
 ]
 StageVariantName = Literal["default", "phone"]
 StageGridRowSize = Literal["content", "fraction"]
-StageSurfaceSize = Literal["compact", "expanded"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,23 +50,13 @@ class StageComponentNode:
 
 
 @dataclass(frozen=True, slots=True)
-class StageSurfaceNode:
-    """Reusable visual surface containing portable components."""
-
-    children: tuple[StageComponentNode, ...]
-    id: str
-    size: StageSurfaceSize
-    kind: Literal["surface"] = "surface"
-
-
-@dataclass(frozen=True, slots=True)
 class StageModuleNode:
     """Major stage content system with semantic component slots."""
 
     config: object
     id: str
     module_type: str
-    slots: dict[StageSlotName, tuple[StageComponentNode | StageSurfaceNode, ...]]
+    slots: dict[StageSlotName, tuple[StageComponentNode, ...]]
     kind: Literal["module"] = "module"
 
 
@@ -182,14 +171,18 @@ def _container(value: object, ids: set[str]) -> StageContainerNode:
     columns = _positive(source.get("columns"), "Stage columns")
     rows = _rows(source.get("rows"))
     return StageContainerNode(
-        children=tuple(_placement(item, columns, len(rows), ids) for item in children),
+        children=tuple(
+            _placement(item, columns, len(rows), ids) for item in children
+        ),
         columns=columns,
         id=node_id,
         rows=rows,
     )
 
 
-def _placement(value: object, columns: int, rows: int, ids: set[str]) -> StagePlacement:
+def _placement(
+    value: object, columns: int, rows: int, ids: set[str]
+) -> StagePlacement:
     source = _mapping(value, "Stage placement")
     grid = _mapping(source.get("grid"), "Stage grid area")
     column = _positive(grid.get("column"), "Stage column")
@@ -247,14 +240,14 @@ def _module(value: object, ids: set[str]) -> StageModuleNode:
         raise HomeAssistantError(f"Invalid stage module {node_id}")
     raw_slots = source.get("slots", {})
     slots_source = _mapping(raw_slots, "Stage slots")
-    slots: dict[StageSlotName, tuple[StageComponentNode | StageSurfaceNode, ...]] = {}
+    slots: dict[StageSlotName, tuple[StageComponentNode, ...]] = {}
     for name in ("content", "controls", "footer", "overlay"):
         raw_nodes = slots_source.get(name)
         if raw_nodes is None:
             continue
         if not isinstance(raw_nodes, list):
             raise HomeAssistantError(f"Stage slot {name} must be a list")
-        slots[name] = tuple(_slot_node(item, ids, name) for item in raw_nodes)
+        slots[name] = tuple(_component(item, ids, name) for item in raw_nodes)
     return StageModuleNode(
         config=source.get("config"),
         id=node_id,
@@ -263,29 +256,9 @@ def _module(value: object, ids: set[str]) -> StageModuleNode:
     )
 
 
-def _slot_node(
+def _component(
     value: object, ids: set[str], slot: StageSlotName
-) -> StageComponentNode | StageSurfaceNode:
-    source = _mapping(value, "Stage slot node")
-    if source.get("kind") != "surface":
-        return _component(source, ids, slot)
-    if slot != "content":
-        raise HomeAssistantError("Stage surfaces require a content slot")
-    node_id = _unique_id(source.get("id"), ids)
-    raw_children = source.get("children")
-    if not isinstance(raw_children, list) or not raw_children:
-        raise HomeAssistantError(f"Stage surface {node_id} requires components")
-    raw_size = source.get("size", "expanded")
-    if raw_size not in ("compact", "expanded"):
-        raise HomeAssistantError(f"Invalid stage surface size for {node_id}")
-    return StageSurfaceNode(
-        children=tuple(_component(item, ids, slot) for item in raw_children),
-        id=node_id,
-        size=cast(StageSurfaceSize, raw_size),
-    )
-
-
-def _component(value: object, ids: set[str], slot: StageSlotName) -> StageComponentNode:
+) -> StageComponentNode:
     source = _mapping(value, "Stage component")
     node_id = _unique_id(source.get("id"), ids)
     if source.get("kind") != "component":

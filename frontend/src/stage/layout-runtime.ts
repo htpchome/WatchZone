@@ -29,9 +29,7 @@ import {
   type StageModuleNode,
   type StagePlacement,
   type StageSlotName,
-  type StageSlotNode,
   type StageStackNode,
-  type StageSurfaceNode,
   type StageVariantName,
 } from "./layout";
 import { englishLocalize, type LocalizeFunction } from "../core/localization";
@@ -375,14 +373,11 @@ export class LayoutRuntime implements ReactiveController {
           const registration = this._moduleLoader.getRegistration(
             child.moduleType,
           );
-          const navigation = registration?.navigation;
           return {
             accessories: registration?.stackAccessories?.(child.config),
-            config: child.config,
-            icon: navigation?.icon,
+            icon: registration?.navigation?.icon,
             id: child.id,
-            labelKey: navigation?.labelKey,
-            moduleType: child.moduleType,
+            labelKey: registration?.navigation?.labelKey,
           };
         }),
       });
@@ -396,13 +391,12 @@ export class LayoutRuntime implements ReactiveController {
   ): TemplateResult {
     const slotEntries = Object.entries(node.slots ?? {}).filter(
       ([name]) => name !== "overlay" && name !== "controls",
-    ) as Array<[StageSlotName, readonly StageSlotNode[]]>;
-    const overlays = componentNodes(node.slots?.overlay);
-    const controls = componentNodes(node.slots?.controls);
+    ) as Array<[StageSlotName, readonly StageComponentNode[]]>;
+    const overlays = node.slots?.overlay ?? [];
+    const controls = node.slots?.controls ?? [];
     return html`<div
       class="stage-placement module-composition has-components"
       data-layout-node=${node.id}
-      data-module-type=${node.moduleType}
       style=${placementStyle}
     >
       ${this._renderRecord(node)}
@@ -462,30 +456,14 @@ export class LayoutRuntime implements ReactiveController {
 
   private _renderComponentSlot(
     name: StageSlotName,
-    nodes: readonly StageSlotNode[],
+    components: readonly StageComponentNode[],
   ): TemplateResult {
     return html`<div
-      class=${`component-slot component-slot-${name}${nodes.some(({ kind }) => kind === "surface") ? " has-surfaces" : ""}`}
+      class=${`component-slot component-slot-${name}`}
       data-stage-slot=${name}
     >
       ${repeat(
-        nodes,
-        ({ id }) => id,
-        (node) =>
-          node.kind === "surface"
-            ? this._renderSurface(node)
-            : this._renderRecord(node, ""),
-      )}
-    </div>`;
-  }
-
-  private _renderSurface(node: StageSurfaceNode): TemplateResult {
-    return html`<div
-      class=${`component-surface ${node.size}`}
-      data-layout-node=${node.id}
-    >
-      ${repeat(
-        node.children,
+        components,
         ({ id }) => id,
         (component) => this._renderRecord(component, ""),
       )}
@@ -787,22 +765,13 @@ function modulePlaceables(
 ): Array<{ readonly node: PlaceableNode; readonly visible: boolean }> {
   return [
     { node, visible },
-    ...Object.values(node.slots ?? {}).flatMap((nodes) =>
-      (nodes ?? []).flatMap((slotNode: StageSlotNode) =>
-        (slotNode.kind === "surface" ? slotNode.children : [slotNode]).map(
-          (component: StageComponentNode) => ({ node: component, visible }),
-        ),
-      ),
+    ...Object.values(node.slots ?? {}).flatMap((components) =>
+      (components ?? []).map((component) => ({
+        node: component,
+        visible,
+      })),
     ),
   ];
-}
-
-function componentNodes(
-  nodes: readonly StageSlotNode[] | undefined,
-): readonly StageComponentNode[] {
-  return (nodes ?? []).filter(
-    (node): node is StageComponentNode => node.kind === "component",
-  );
 }
 
 function placeableType(node: PlaceableNode): string {

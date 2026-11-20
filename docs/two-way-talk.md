@@ -10,10 +10,6 @@ boundaries. It supplements `architecture.md`, which remains authoritative.
 - The built-in Stage presents it in the camera module's responsive controls
   slot. The slot owns placement and collision-free spacing; the component
   renders only its intrinsic one-button or active three-button control surface.
-- The built-in Full Stage also composes the same component in the Camera
-  Controls module's compact content surface. That presentation remains visible
-  while the module is selected and retains the same connection, three-button,
-  soundwave, audio-intent, and teardown behavior.
 - The component consumes the card-scoped `CameraSessionContext`. It does not import
   the camera module, reach into its shadow tree, or own live playback.
 - Provider-neutral talk resolution lives behind `TalkSourceResolver`.

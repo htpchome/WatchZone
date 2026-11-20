@@ -1,6 +1,5 @@
 import {
   getPtzCapability,
-  recallPtzPreset,
   startPtzMotion,
   type PtzCapability,
   type PtzDirection,
@@ -44,13 +43,5 @@ export class HomeAssistantPtzProvider {
     direction: PtzDirection,
   ): Promise<HomeAssistantUnsubscribe> {
     return startPtzMotion(api, "home_assistant", entityId, direction);
-  }
-
-  public recallPreset(
-    api: HomeAssistantApi,
-    entityId: string,
-    preset: string,
-  ): Promise<unknown> {
-    return recallPtzPreset(api, "home_assistant", entityId, preset);
   }
 }

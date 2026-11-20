@@ -436,10 +436,6 @@ named `content`, `overlay`, `controls`, or `footer`. Camera and the future event
 surface are modules. A **component** is a portable capability presentation
 placed in a compatible module slot. PTZ and two-way talk are components. A
 **container** owns logical grid placement and no feature behavior. A
-**component surface** is a reusable visual container inside a module's content
-slot. It owns only its background, responsive size, and ordered component
-children; the Stage renderer owns composition and the contained components
-retain their independent behavior and lifecycle. A
 **presentation** is private rendering inside its owner; camera live video is a
 camera presentation rather than another placeable.
 
@@ -832,8 +828,6 @@ a saved layout contains:
   time without allowing child modules to import or control one another.
 - Component type, validated component configuration, and optional logical
   control-region placement for component nodes.
-- Reusable content-surface nodes with stable IDs, responsive size, and ordered
-  component children.
 - Logical grid placement and responsive behavior for container nodes.
 - Explicit fractional or intrinsic-content sizing for each logical grid row.
 - Explicit standard/mobile physical-client eligibility, independent of

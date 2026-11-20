@@ -116,42 +116,7 @@ async def ws_ptz_move(
     connection.send_result(msg["id"])
 
 
-@websocket_command(
-    {
-        vol.Required("type"): f"{DOMAIN}/ptz/preset",
-        vol.Required("provider"): cv.string,
-        vol.Required("entity_id"): cv.entity_id,
-        vol.Required("preset"): cv.string,
-    }
-)
-@async_response
-async def ws_ptz_preset(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
-) -> None:
-    """Recall one provider-reported PTZ preset."""
-    try:
-        _require_permission(connection, msg["entity_id"], POLICY_CONTROL)
-        user = connection.user
-        if user is None:
-            raise HomeAssistantError("Authentication required")
-        await runtime_from_hass(hass).ptz.async_recall_preset(
-            msg["provider"],
-            msg["entity_id"],
-            msg["preset"],
-            Context(user_id=user.id),
-        )
-    except HomeAssistantError as err:
-        connection.send_error(msg["id"], "ptz_preset_failed", str(err))
-        return
-    except Exception:
-        _LOGGER.exception("Unable to recall PTZ preset for %s", msg["entity_id"])
-        connection.send_error(msg["id"], "ptz_preset_failed", "PTZ preset failed")
-        return
-    connection.send_result(msg["id"])
-
-
 @callback
 def async_register(hass: HomeAssistant) -> None:
     async_register_command(hass, ws_ptz_capability)
     async_register_command(hass, ws_ptz_move)
-    async_register_command(hass, ws_ptz_preset)

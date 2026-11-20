@@ -41,7 +41,6 @@ export class TwoWayTalkComponent extends LitElement {
     cameraSession: { attribute: false },
     cameras: { attribute: false },
     localize: { attribute: false },
-    presentation: { reflect: true },
   };
 
   private readonly _toasts = new ToastManager(this);
@@ -75,7 +74,6 @@ export class TwoWayTalkComponent extends LitElement {
     readonly entityId: string;
   }[] = [];
   public localize: LocalizeFunction = englishLocalize;
-  public presentation: "module" | "overlay" = "overlay";
 
   protected willUpdate(): void {
     if (this.cameraSession) {
@@ -89,11 +87,7 @@ export class TwoWayTalkComponent extends LitElement {
     if (!camera || !this._session.supported) return nothing;
     const active = this._session.active;
     const connecting = this._session.connecting;
-    const visible =
-      this.presentation === "module" ||
-      active ||
-      connecting ||
-      camera.overlayVisible;
+    const visible = active || connecting || camera.overlayVisible;
     return staticHtml`<div class="talk-layer">
       <div class="talk-stack">
         <${toastRegionTag}
@@ -153,11 +147,7 @@ export class TwoWayTalkComponent extends LitElement {
                   connecting
                     ? this.localize("talk.cancel_connecting")
                     : this.localize("talk.connect"),
-                  renderIcon(
-                    this.presentation === "module"
-                      ? "microphone"
-                      : "microphoneOff",
-                  ),
+                  renderIcon("microphoneOff"),
                   !camera.available,
                   connecting,
                 )}
@@ -168,7 +158,6 @@ export class TwoWayTalkComponent extends LitElement {
   }
 
   protected updated(): void {
-    this.toggleAttribute("available", this._session.supported);
     const inactive =
       this.renderRoot.querySelector<HTMLElement>(".inactive-control") ??
       undefined;

@@ -1,6 +1,6 @@
 import type { StageType } from "../core/stage";
 
-export const STAGE_SCHEMA_VERSION = 5;
+export const STAGE_SCHEMA_VERSION = 4;
 export const PHONE_STAGE_MAX_INLINE_SIZE = 599;
 
 export type StageVariantName = "default" | "phone";
@@ -40,30 +40,14 @@ export interface StageComponentNode {
   readonly overlayRegion?: StageOverlayRegion;
 }
 
-export type StageSurfaceSize = "compact" | "expanded";
-
-export interface StageSurfaceNode {
-  readonly children: readonly StageComponentNode[];
-  readonly id: string;
-  readonly kind: "surface";
-  readonly size: StageSurfaceSize;
-}
-
-export type StageSlotNode = StageComponentNode | StageSurfaceNode;
-
-export interface StageModuleSlots {
-  readonly content?: readonly StageSlotNode[];
-  readonly controls?: readonly StageComponentNode[];
-  readonly footer?: readonly StageSlotNode[];
-  readonly overlay?: readonly StageComponentNode[];
-}
-
 export interface StageModuleNode {
   readonly config: unknown;
   readonly id: string;
   readonly kind: "module";
   readonly moduleType: string;
-  readonly slots?: StageModuleSlots;
+  readonly slots?: Readonly<
+    Partial<Record<StageSlotName, readonly StageComponentNode[]>>
+  >;
 }
 
 export interface StageStackNode {
@@ -307,46 +291,22 @@ function validateModule(value: unknown, ids: Set<string>): StageModuleNode {
   };
 }
 
-function validateSlots(value: unknown, ids: Set<string>): StageModuleSlots {
+function validateSlots(
+  value: unknown,
+  ids: Set<string>,
+): Partial<Record<StageSlotName, readonly StageComponentNode[]>> {
   const source = objectValue(value, "module.slots");
-  const result: Partial<Record<StageSlotName, readonly StageSlotNode[]>> = {};
+  const result: Partial<Record<StageSlotName, readonly StageComponentNode[]>> =
+    {};
   for (const name of ["content", "controls", "footer", "overlay"] as const) {
     const nodes = source[name];
     if (nodes === undefined) continue;
     if (!Array.isArray(nodes)) {
       fail(`slot:${name}`);
     }
-    result[name] = nodes.map((node) => validateSlotNode(node, ids, name));
+    result[name] = nodes.map((node) => validateComponent(node, ids, name));
   }
-  return result as StageModuleSlots;
-}
-
-function validateSlotNode(
-  value: unknown,
-  ids: Set<string>,
-  slot: StageSlotName,
-): StageSlotNode {
-  const source = objectValue(value, "slot node");
-  if (source.kind !== "surface") return validateComponent(source, ids, slot);
-  if (slot !== "content") fail("surface.slot");
-  const id = uniqueId(source.id, ids);
-  const children = source.children;
-  if (!Array.isArray(children) || children.length === 0) {
-    fail(`surface.children:${id}`);
-  }
-  if (
-    source.size !== undefined &&
-    source.size !== "compact" &&
-    source.size !== "expanded"
-  ) {
-    fail(`surface.size:${id}`);
-  }
-  return {
-    children: children.map((child) => validateComponent(child, ids, slot)),
-    id,
-    kind: "surface",
-    size: source.size === "compact" ? "compact" : "expanded",
-  };
+  return result;
 }
 
 function validateComponent(

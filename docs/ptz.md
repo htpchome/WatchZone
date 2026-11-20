@@ -14,10 +14,9 @@ ownership. It supplements `architecture.md`, which remains authoritative.
 - The backend `PtzService` resolves the configured connection provider through
   the extension registry. Provider-specific discovery and commands remain
   beneath `providers/<provider>/ptz`.
-- The component provides a compact directional overlay and a larger Camera
-  Controls module presentation. Both use the same normalized command and
-  lifecycle contract. The larger presentation also exposes provider-reported
-  presets without assuming a default name or ordering.
+- The initial presentation is a directional overlay. The normalized capability
+  model already represents pan, tilt, optical zoom, focus, and presets so later
+  presentations do not need a replacement contract.
 
 ## Home Assistant provider
 
@@ -68,11 +67,9 @@ defaults to `false` and is omitted from YAML at its default.
 - The configured open/closed state initializes each active camera. A user's
   open or collapsed choice then persists across transient overlay visibility;
   the shared hide timer never rewrites component state.
-- Unsupported axes are not rendered. Both presentations expose pan and tilt.
-  The module presentation renders every provider-reported preset by its exact
-  name and recalls it through the provider-neutral PTZ service. Zoom and focus
-  presentations remain future work against the existing normalized capability
-  contract.
+- Unsupported axes are not rendered. The initial UI exposes only pan and tilt;
+  zoom, focus, and preset presentations are future work against the existing
+  normalized capability contract.
 - Touch controls have no sticky hover state and suppress platform tap
   highlighting.
 - The shared press-interaction controller owns pointer capture, cancellation,

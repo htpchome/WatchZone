@@ -1,6 +1,5 @@
 import {
   ACTIVITY_NAVIGATION_MODULE_TYPE,
-  CAMERA_CONTROLS_MODULE_TYPE,
   CAMERA_NAVIGATION_MODULE_TYPE,
   CAMERA_SWITCHER_COMPONENT_TYPE,
   CAMERA_MODULE_TYPE,
@@ -79,13 +78,6 @@ const moduleLoaders = {
         ({ moduleDefinition }) => moduleDefinition,
       ),
     placeholder: "camera-navigation",
-  },
-  [CAMERA_CONTROLS_MODULE_TYPE]: {
-    load: () =>
-      import("./modules/camera-controls").then(
-        ({ moduleDefinition }) => moduleDefinition,
-      ),
-    navigation: { labelKey: "navigation.camera_controls" },
   },
   [REVIEWS_MODULE_TYPE]: {
     load: () =>

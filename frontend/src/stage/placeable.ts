@@ -68,14 +68,12 @@ export type ComponentDefinition<
   TContext extends PlaceableContextKey = PlaceableContextKey,
 > = PlaceableDefinition<TConfig, TContext>;
 
-export interface PlaceableNavigationConfiguration {
-  readonly icon?: string;
-  readonly labelKey: TranslationKey;
-}
-
 export interface PlaceableLoaderRegistration {
   readonly load: () => Promise<PlaceableDefinition>;
-  readonly navigation?: PlaceableNavigationConfiguration;
+  readonly navigation?: {
+    readonly icon: string;
+    readonly labelKey: TranslationKey;
+  };
   readonly placeholder?:
     "activity" | "camera" | "camera-navigation" | "control";
   readonly stackAccessories?: (

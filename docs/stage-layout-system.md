@@ -28,9 +28,6 @@ second layout model.
   data and its children remain independent placeables.
 - A **slot** is a named placement surface: `content`, `overlay`, `controls`, or
   `footer`.
-- A **component surface** is a reusable visual container inside a module's
-  `content` slot. It owns only background, responsive size, and ordered
-  component placement; it owns no capability behavior.
 - A **presentation** is private rendering inside its owner. Camera live video is
   a camera presentation, not another module or component.
 - A generic **panel module** gives a standalone component a grid placement and
@@ -41,7 +38,7 @@ Modules and components are independently lazy loaded. Neither imports another
 placeable. Shared behavior uses core contracts and typed context. Provider
 mechanics remain below public provider resolvers.
 
-## Version 5 schema
+## Version 4 schema
 
 A Stage Design contains a stable ID, name, schema version, optimistic revision,
 a `stageType` classification, one or more physical-client `profiles`, and at
@@ -67,8 +64,7 @@ Store loading migrates schema-one designs, which predate Stage Type,
 schema-two designs, which inferred client eligibility from variant presence,
 and schema-three designs, which allowed only a root container. Migration
 preserves client eligibility as explicit profiles and accepts the existing
-flat placement tree as a valid current layout. Schema-four designs migrate
-unchanged except for their version because component surfaces are additive.
+flat placement tree as a valid version-four layout.
 New saves and direct validation require the current schema, an explicit
 classification, and at least one profile.
 
@@ -78,13 +74,10 @@ only; they provide a real shared layout and animation surface without importing
 or coordinating their child placeables. A module stack contains an ordered,
 non-empty list of module nodes. A module node contains its validated
 configuration and optional named slots.
-Overlay, controls, and footer slots contain component nodes with their own
-validated configuration. A content slot may additionally contain component
-surface nodes. Each surface has a stable ID, a compact or expanded responsive
-size, and one or more ordered component children. Surfaces cannot nest and do
-not import, configure, or coordinate their children. Node IDs must be unique
-within a variant. Corresponding nodes use the same stable IDs in both variants
-so switching variants preserves loaded custom elements and live session leases.
+Slots contain component nodes with their own validated configuration. Node IDs
+must be unique within a variant. Corresponding nodes use the same stable IDs in
+both variants so switching variants preserves loaded custom elements and live
+session leases.
 
 The built-in Minimal Camera Stage contains one `minimal_camera` module. Its
 runtime binding resolves the first user-facing camera item and, for an A/B
@@ -155,11 +148,7 @@ root grid
         ├── reviews module (initially active)
         ├── events module
         ├── recordings module
-        ├── exports module
-        └── camera-controls module
-            └── content slot
-                ├── compact surface → two-way-talk component
-                └── expanded surface → PTZ component
+        └── exports module
 ```
 
 The built-in `camera_only` composition contains the same camera module and its

@@ -5,14 +5,12 @@ import type { HomeAssistantApi } from "../src/core/home-assistant";
 
 const resolver = vi.hoisted(() => ({
   capability: vi.fn(),
-  recallPreset: vi.fn(),
   start: vi.fn(),
 }));
 
 vi.mock("../src/providers/ptz-source-resolver", () => ({
   PtzSourceResolver: class {
     public capability = resolver.capability;
-    public recallPreset = resolver.recallPreset;
     public start = resolver.start;
   },
 }));
@@ -112,33 +110,6 @@ describe("PTZ session lifecycle", () => {
 
     await vi.waitFor(() => expect(controller.capability?.supported).toBe(true));
     expect(resolver.capability).toHaveBeenCalledOnce();
-  });
-
-  it("recalls only provider-reported presets and reports failures", async () => {
-    resolver.capability.mockResolvedValue({
-      ...capability(),
-      presets: ["Home"],
-    });
-    resolver.recallPreset.mockRejectedValue(new Error("unavailable"));
-    const callbacks = { onFailure: vi.fn(), onStopped: vi.fn() };
-    const controller = new PtzSessionController(new Host(), callbacks);
-    const context = new CameraSessionContext();
-    const homeAssistantApi = api();
-    controller.configure(homeAssistantApi, context, [source("camera.front")]);
-    context.publish({}, camera("camera.front"));
-    await vi.waitFor(() => expect(controller.capability?.supported).toBe(true));
-
-    await controller.recallPreset("Unknown");
-    expect(resolver.recallPreset).not.toHaveBeenCalled();
-
-    await controller.recallPreset("Home");
-    expect(resolver.recallPreset).toHaveBeenCalledWith(
-      homeAssistantApi,
-      "home_assistant",
-      "camera.front",
-      "Home",
-    );
-    expect(callbacks.onFailure).toHaveBeenCalledOnce();
   });
 });
 

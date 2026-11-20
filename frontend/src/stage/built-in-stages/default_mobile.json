@@ -3,7 +3,7 @@
   "name": "Default",
   "profiles": ["mobile"],
   "revision": 0,
-  "schemaVersion": 5,
+  "schemaVersion": 4,
   "stageType": "full",
   "variants": {
     "default": {
@@ -168,48 +168,6 @@
                         "id": "default-exports-module",
                         "kind": "module",
                         "moduleType": "exports"
-                      },
-                      {
-                        "config": {
-                          "targetModuleId": "default-camera-module"
-                        },
-                        "id": "default-camera-controls-module",
-                        "kind": "module",
-                        "moduleType": "camera-controls",
-                        "slots": {
-                          "content": [
-                            {
-                              "children": [
-                                {
-                                  "componentType": "two_way_talk",
-                                  "config": {
-                                    "presentation": "module"
-                                  },
-                                  "id": "default-camera-controls-talk-component",
-                                  "kind": "component"
-                                }
-                              ],
-                              "id": "default-camera-controls-talk-surface",
-                              "kind": "surface",
-                              "size": "compact"
-                            },
-                            {
-                              "children": [
-                                {
-                                  "componentType": "ptz",
-                                  "config": {
-                                    "presentation": "module"
-                                  },
-                                  "id": "default-camera-controls-ptz-component",
-                                  "kind": "component"
-                                }
-                              ],
-                              "id": "default-camera-controls-ptz-surface",
-                              "kind": "surface",
-                              "size": "expanded"
-                            }
-                          ]
-                        }
                       }
                     ],
                     "id": "default-activity-stack",
@@ -392,48 +350,6 @@
                         "id": "default-exports-module",
                         "kind": "module",
                         "moduleType": "exports"
-                      },
-                      {
-                        "config": {
-                          "targetModuleId": "default-camera-module"
-                        },
-                        "id": "default-camera-controls-module",
-                        "kind": "module",
-                        "moduleType": "camera-controls",
-                        "slots": {
-                          "content": [
-                            {
-                              "children": [
-                                {
-                                  "componentType": "two_way_talk",
-                                  "config": {
-                                    "presentation": "module"
-                                  },
-                                  "id": "default-camera-controls-talk-component",
-                                  "kind": "component"
-                                }
-                              ],
-                              "id": "default-camera-controls-talk-surface",
-                              "kind": "surface",
-                              "size": "compact"
-                            },
-                            {
-                              "children": [
-                                {
-                                  "componentType": "ptz",
-                                  "config": {
-                                    "presentation": "module"
-                                  },
-                                  "id": "default-camera-controls-ptz-component",
-                                  "kind": "component"
-                                }
-                              ],
-                              "id": "default-camera-controls-ptz-surface",
-                              "kind": "surface",
-                              "size": "expanded"
-                            }
-                          ]
-                        }
                       }
                     ],
                     "id": "default-activity-stack",

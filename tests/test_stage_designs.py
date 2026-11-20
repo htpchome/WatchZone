@@ -35,7 +35,7 @@ def _design(*, revision: int = 0) -> dict[str, object]:
         "id": "default",
         "name": "Default",
         "revision": revision,
-        "schemaVersion": 5,
+        "schemaVersion": 4,
         "profiles": ["standard", "mobile"],
         "stageType": "full",
         "variants": {
@@ -115,73 +115,6 @@ def test_stage_schema_preserves_optional_control_regions() -> None:
         == "trailing"
     )
     assert design.as_json() == value
-
-
-def test_stage_schema_preserves_reusable_component_surfaces() -> None:
-    """Content surfaces retain their ordered portable component children."""
-    value = _design()
-    variants = value["variants"]
-    assert isinstance(variants, dict)
-    default = variants["default"]
-    assert isinstance(default, dict)
-    root = default["root"]
-    assert isinstance(root, dict)
-    children = root["children"]
-    assert isinstance(children, list)
-    placement = children[0]
-    assert isinstance(placement, dict)
-    camera = placement["node"]
-    assert isinstance(camera, dict)
-    slots = camera["slots"]
-    assert isinstance(slots, dict)
-    component = slots.pop("overlay")[0]
-    slots["content"] = [
-        {
-            "children": [component],
-            "id": "camera-controls-surface",
-            "kind": "surface",
-            "size": "expanded",
-        }
-    ]
-
-    design = validate_stage_design(value)
-
-    surface = design.variants["default"].root.children[0].node.slots["content"][0]
-    assert surface.kind == "surface"
-    assert surface.size == "expanded"
-    assert surface.children[0].component_type == "ptz"
-    assert design.as_json() == value
-
-
-def test_stage_schema_rejects_surfaces_outside_content_slots() -> None:
-    """Reusable surfaces cannot bypass the module's semantic content slot."""
-    value = _design()
-    variants = value["variants"]
-    assert isinstance(variants, dict)
-    default = variants["default"]
-    assert isinstance(default, dict)
-    root = default["root"]
-    assert isinstance(root, dict)
-    children = root["children"]
-    assert isinstance(children, list)
-    placement = children[0]
-    assert isinstance(placement, dict)
-    camera = placement["node"]
-    assert isinstance(camera, dict)
-    slots = camera["slots"]
-    assert isinstance(slots, dict)
-    component = slots["overlay"][0]
-    slots["controls"] = [
-        {
-            "children": [component],
-            "id": "invalid-surface",
-            "kind": "surface",
-            "size": "compact",
-        }
-    ]
-
-    with pytest.raises(HomeAssistantError, match="content slot"):
-        validate_stage_design(value)
 
 
 def test_stage_schema_rejects_invalid_control_regions() -> None:
@@ -394,7 +327,7 @@ async def test_stage_store_migrates_pre_gatekeeper_designs(
     design = store.get("default")
     assert design is not None
     assert design.stage_type == "full"
-    assert design.schema_version == 5
+    assert design.schema_version == 4
     assert design.profiles == ("standard", "mobile")
 
 
@@ -418,13 +351,13 @@ async def test_stage_store_migrates_variant_eligibility_to_profiles(
     design = store.get("default")
     assert design is not None
     assert design.profiles == ("mobile",)
-    assert design.schema_version == 5
+    assert design.schema_version == 4
 
 
 async def test_stage_store_migrates_flat_schema_three_designs(
     hass: HomeAssistant,
 ) -> None:
-    """Stored flat schema-three designs remain valid current layouts."""
+    """Stored flat schema-three designs remain valid version-four layouts."""
     value = _design()
     value["schemaVersion"] = 3
     store = StageDesignStore(hass)
@@ -437,25 +370,7 @@ async def test_stage_store_migrates_flat_schema_three_designs(
     design = store.get("default")
     assert design is not None
     assert design.profiles == ("standard", "mobile")
-    assert design.schema_version == 5
-
-
-async def test_stage_store_migrates_schema_four_designs(
-    hass: HomeAssistant,
-) -> None:
-    """Schema-four designs gain additive component-surface support."""
-    value = _design()
-    value["schemaVersion"] = 4
-    store = StageDesignStore(hass)
-    store._store.async_load = AsyncMock(  # type: ignore[method-assign]
-        return_value={"designs": [value]}
-    )
-
-    await store.async_setup()
-
-    design = store.get("default")
-    assert design is not None
-    assert design.schema_version == 5
+    assert design.schema_version == 4
 
 
 async def test_stage_store_serializes_competing_writes(hass: HomeAssistant) -> None:

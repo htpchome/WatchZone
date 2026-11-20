@@ -8,7 +8,6 @@ import type { PtzCameraSource } from "./session.controller";
 export interface PtzComponentConfig {
   readonly cameras: readonly PtzCameraSource[];
   readonly initialState: "closed" | "open";
-  readonly presentation: "module" | "overlay";
 }
 
 let definitionPromise: Promise<void> | undefined;
@@ -29,7 +28,6 @@ export const componentDefinition: ComponentDefinition<
     ptz.cameras = config.cameras;
     ptz.initialState = config.initialState;
     ptz.localize = context.localize ?? englishLocalize;
-    ptz.presentation = config.presentation;
   },
   validateConfig(value) {
     if (typeof value !== "object" || value === null)
@@ -62,18 +60,9 @@ export const componentDefinition: ComponentDefinition<
     ) {
       throw new Error("PTZ initial state must be closed or open.");
     }
-    if (
-      sourceConfig.presentation !== undefined &&
-      sourceConfig.presentation !== "module" &&
-      sourceConfig.presentation !== "overlay"
-    ) {
-      throw new Error("PTZ presentation must be module or overlay.");
-    }
     return {
       cameras: normalized,
       initialState: sourceConfig.initialState === "closed" ? "closed" : "open",
-      presentation:
-        sourceConfig.presentation === "module" ? "module" : "overlay",
     };
   },
 };

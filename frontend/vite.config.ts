@@ -29,15 +29,6 @@ export default defineConfig(({ mode }) => ({
     },
     rollupOptions: {
       output: {
-        manualChunks(id) {
-          if (
-            id.endsWith("/src/main.ts") ||
-            id.includes("/src/stage/built-in-stages/") ||
-            id.endsWith("/src/stage/layout.ts")
-          ) {
-            return "watchzone";
-          }
-        },
         chunkFileNames: "assets/[name]-[hash].js",
         assetFileNames: "assets/[name]-[hash][extname]",
       },

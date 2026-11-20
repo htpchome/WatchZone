@@ -9,29 +9,6 @@ export const twoWayTalkStyles = css`
     pointer-events: none;
   }
 
-  :host([presentation="module"]) {
-    display: grid;
-    place-items: center;
-    inline-size: 100%;
-    block-size: 100%;
-  }
-
-  :host([presentation="module"]) .inactive-control,
-  :host([presentation="module"]) .inactive-control.visible {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-  }
-
-  :host([presentation="module"]) .talk-button.inactive {
-    --wzc-round-button-color: var(--wzc-color-text-1);
-    --wzc-round-button-background: var(--wzc-color-surface-primary);
-    --wzc-round-button-border-color: transparent;
-    --wzc-round-button-hover-background: var(
-      --wzc-neutral-control-hover-background
-    );
-  }
-
   .talk-layer {
     position: relative;
     pointer-events: none;

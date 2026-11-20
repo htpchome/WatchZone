@@ -28,11 +28,12 @@ class FakePtzProvider:
     """Record normalized PTZ calls without depending on a concrete provider."""
 
     def __init__(self) -> None:
-        self.recalls: list[tuple[str, str]] = []
         self.starts: list[tuple[str, str]] = []
         self.stops: list[str] = []
 
-    async def async_capabilities(self, hass: Any, entity_id: str) -> PtzCapabilities:
+    async def async_capabilities(
+        self, hass: Any, entity_id: str
+    ) -> PtzCapabilities:
         del hass, entity_id
         return PtzCapabilities(pan=True, tilt=True, presets=("Home",))
 
@@ -46,19 +47,11 @@ class FakePtzProvider:
         del hass, context
         self.starts.append((entity_id, direction))
 
-    async def async_stop(self, hass: Any, entity_id: str, context: Context) -> None:
-        del hass, context
-        self.stops.append(entity_id)
-
-    async def async_recall_preset(
-        self,
-        hass: Any,
-        entity_id: str,
-        preset: str,
-        context: Context,
+    async def async_stop(
+        self, hass: Any, entity_id: str, context: Context
     ) -> None:
         del hass, context
-        self.recalls.append((entity_id, preset))
+        self.stops.append(entity_id)
 
 
 async def test_ptz_service_resolves_capabilities_and_owns_motion() -> None:
@@ -66,7 +59,9 @@ async def test_ptz_service_resolves_capabilities_and_owns_motion() -> None:
     provider = FakePtzProvider()
     service = PtzService(SimpleNamespace(), registry(provider))  # type: ignore[arg-type]
 
-    capabilities = await service.async_capabilities("home_assistant", "camera.front")
+    capabilities = await service.async_capabilities(
+        "home_assistant", "camera.front"
+    )
     motion = await service.async_start(
         "home_assistant", "camera.front", "left", Context()
     )
@@ -84,7 +79,9 @@ async def test_new_ptz_motion_replaces_old_and_stale_cleanup_is_harmless() -> No
     provider = FakePtzProvider()
     service = PtzService(SimpleNamespace(), registry(provider))  # type: ignore[arg-type]
 
-    old = await service.async_start("home_assistant", "camera.front", "left", Context())
+    old = await service.async_start(
+        "home_assistant", "camera.front", "left", Context()
+    )
     current = await service.async_start(
         "home_assistant", "camera.front", "right", Context()
     )
@@ -110,24 +107,6 @@ async def test_ptz_service_stops_all_motion_during_unload() -> None:
     await service.async_close()
 
     assert sorted(provider.stops) == ["camera.back", "camera.front"]
-
-
-async def test_ptz_service_stops_motion_and_recalls_reported_preset() -> None:
-    """Preset recall is serialized with motion and capability-validated."""
-    provider = FakePtzProvider()
-    service = PtzService(SimpleNamespace(), registry(provider))  # type: ignore[arg-type]
-    await service.async_start("home_assistant", "camera.front", "up", Context())
-
-    await service.async_recall_preset(
-        "home_assistant", "camera.front", "Home", Context()
-    )
-
-    assert provider.stops == ["camera.front"]
-    assert provider.recalls == [("camera.front", "Home")]
-    with pytest.raises(HomeAssistantError, match="preset is unavailable"):
-        await service.async_recall_preset(
-            "home_assistant", "camera.front", "Unknown", Context()
-        )
 
 
 async def test_home_assistant_ptz_detects_and_uses_same_device_buttons(
@@ -168,7 +147,9 @@ async def test_home_assistant_ptz_detects_and_uses_same_device_buttons(
     provider = HomeAssistantPtzProvider()
 
     capabilities = await provider.async_capabilities(hass, camera.entity_id)
-    await provider.async_start(hass, camera.entity_id, "left", Context())
+    await provider.async_start(
+        hass, camera.entity_id, "left", Context()
+    )
     await provider.async_stop(hass, camera.entity_id, Context())
 
     assert capabilities.pan is True
@@ -196,7 +177,9 @@ async def test_frigate_ptz_movement_requires_runtime_capability(
     async def async_move(call: Any) -> None:
         calls.append(call)
 
-    async def async_no_capabilities(hass_arg: Any, entity_id: str) -> PtzCapabilities:
+    async def async_no_capabilities(
+        hass_arg: Any, entity_id: str
+    ) -> PtzCapabilities:
         del hass_arg, entity_id
         return PtzCapabilities()
 

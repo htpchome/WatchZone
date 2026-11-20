@@ -11,78 +11,12 @@ export const ptzStyles = css`
     pointer-events: none;
   }
 
-  :host([presentation="module"]) {
-    inline-size: 100%;
-    block-size: 100%;
-  }
-
   .ptz-layer {
     display: grid;
     place-items: center;
     inline-size: 100%;
     block-size: 100%;
     pointer-events: none;
-  }
-
-  .ptz-layer.module {
-    grid-template-rows: minmax(0, 1fr) auto;
-    gap: var(--wzc-component-surface-gap);
-  }
-
-  .ptz-layer.module .ptz-control {
-    --wzc-ptz-cell-size: calc(var(--wzc-ptz-module-dial-size) / 3);
-    --wzc-ptz-button-size: calc(var(--wzc-ptz-module-dial-size) / 3);
-    --wzc-ptz-icon-size: clamp(1.5rem, 7cqi, 3.5rem);
-    grid-row: 1;
-    inline-size: var(--wzc-ptz-module-dial-size);
-    block-size: var(--wzc-ptz-module-dial-size);
-    padding: 0;
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-  }
-
-  .ptz-layer.module .center-mark {
-    grid-area: 2 / 2;
-    inline-size: calc(var(--wzc-ptz-module-dial-size) / 5);
-    block-size: calc(var(--wzc-ptz-module-dial-size) / 5);
-    background: currentcolor;
-    border-radius: 50%;
-  }
-
-  .preset-list {
-    grid-row: 2;
-    display: flex;
-    justify-content: center;
-    gap: var(--wzc-control-dock-gap);
-    max-inline-size: 100%;
-    overflow-x: auto;
-    pointer-events: auto;
-    scrollbar-width: thin;
-  }
-
-  .preset-button {
-    box-sizing: border-box;
-    flex: 0 0 auto;
-    min-block-size: var(--wzc-control-size);
-    padding-inline: 1rem;
-    color: var(--wzc-color-text-1);
-    background: var(--wzc-color-surface-primary);
-    border: 1px solid var(--wzc-color-border);
-    border-radius: var(--wzc-radius-pill);
-    font: inherit;
-    cursor: pointer;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .preset-button:focus-visible {
-    outline: 2px solid var(--wzc-color-primary);
-    outline-offset: 2px;
-  }
-
-  .preset-button:active {
-    background: var(--wzc-neutral-control-hover-background);
   }
 
   .ptz-control {
@@ -231,10 +165,6 @@ export const ptzStyles = css`
 
   @media (hover: hover) and (pointer: fine) {
     button:hover::before {
-      background: var(--wzc-neutral-control-hover-background);
-    }
-
-    .preset-button:hover {
       background: var(--wzc-neutral-control-hover-background);
     }
   }

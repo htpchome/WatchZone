@@ -3,7 +3,7 @@
   "name": "Standard Camera",
   "profiles": ["standard", "mobile"],
   "revision": 0,
-  "schemaVersion": 5,
+  "schemaVersion": 4,
   "stageType": "camera_only",
   "variants": {
     "default": {

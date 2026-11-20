@@ -228,12 +228,6 @@ export const themeTokens = css`
     );
     --wzc-media-safe-area-underlap: 0px;
     --wzc-stage-module-gap: clamp(0.5rem, 1.5cqi, 1rem);
-    --wzc-component-surface-gap: var(--wzc-stage-module-gap);
-    --wzc-component-surface-background: var(--wzc-media-tile-background);
-    --wzc-component-surface-radius: var(--wzc-radius-large);
-    --wzc-component-surface-padding: clamp(0.75rem, 2cqi, 1.5rem);
-    --wzc-component-surface-compact-size: 22%;
-    --wzc-component-surface-expanded-size: 72%;
     --wzc-card-outer-shadow: var(--wzc-shadow-medium);
     --wzc-media-placeholder-background: #242424;
     --wzc-media-placeholder-color: #626262;
@@ -602,7 +596,6 @@ export const themeTokens = css`
         var(--wzc-ptz-cell-size) + var(--wzc-ptz-panel-padding) +
         var(--wzc-ptz-panel-padding) + 2px
     );
-    --wzc-ptz-module-dial-size: clamp(8rem, 36cqi, 17rem);
     --wzc-ptz-panel-background: color-mix(
       in srgb,
       var(--wzc-media-overlay-surface) var(--wzc-media-overlay-opacity),

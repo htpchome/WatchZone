@@ -1,10 +1,7 @@
 import { html, LitElement, nothing, type PropertyValues } from "lit";
 import { repeat } from "lit/directives/repeat.js";
 
-import {
-  ACTIVITY_NAVIGATION_TAG,
-  CAMERA_CONTROLS_MODULE_TYPE,
-} from "../../../core/constants";
+import { ACTIVITY_NAVIGATION_TAG } from "../../../core/constants";
 import type { HomeAssistantLocale } from "../../../core/home-assistant";
 import {
   englishLocalize,
@@ -14,10 +11,6 @@ import { isIconName, renderIcon } from "../../../ui/icons";
 import "../../activity";
 import type { ActivityFilterContext } from "../../activity";
 import type { CameraSelectionContext } from "../../camera-selection-context";
-import type {
-  ActiveCameraSession,
-  CameraSessionContext,
-} from "../../camera-session-context";
 import type { ExportFilterContext } from "../../export-filter-context";
 import type { MediaDateContext } from "../../media-date-context";
 import type {
@@ -41,7 +34,6 @@ export class ActivityNavigationModule extends LitElement {
   public static properties = {
     activityFilter: { attribute: false },
     cameraSelection: { attribute: false },
-    cameraSession: { attribute: false },
     exportFilter: { attribute: false },
     locale: { attribute: false },
     localize: { attribute: false },
@@ -53,7 +45,6 @@ export class ActivityNavigationModule extends LitElement {
 
   public activityFilter?: ActivityFilterContext;
   public cameraSelection?: CameraSelectionContext;
-  public cameraSession?: CameraSessionContext;
   public exportFilter?: ExportFilterContext;
   public locale?: HomeAssistantLocale;
   public localize: LocalizeFunction = englishLocalize;
@@ -63,21 +54,16 @@ export class ActivityNavigationModule extends LitElement {
   public targetStackId = "";
 
   private _state = EMPTY_STATE;
-  private _activeEntityId?: string;
-  private _cameraUnsubscribe?: () => void;
   private _unsubscribe?: () => void;
 
   public connectedCallback(): void {
     super.connectedCallback();
     this._subscribe();
-    this._subscribeCamera();
   }
 
   public disconnectedCallback(): void {
     this._unsubscribe?.();
     this._unsubscribe = undefined;
-    this._cameraUnsubscribe?.();
-    this._cameraUnsubscribe = undefined;
     super.disconnectedCallback();
   }
 
@@ -85,12 +71,10 @@ export class ActivityNavigationModule extends LitElement {
     if (changed.has("navigationContext") || changed.has("targetStackId")) {
       this._subscribe();
     }
-    if (changed.has("cameraSession")) this._subscribeCamera();
   }
 
   protected render() {
-    const items = this._visibleItems();
-    if (items.length === 0) return nothing;
+    if (this._state.items.length === 0) return nothing;
     const active = this._state.items.find(
       ({ id }) => id === this._state.activeId,
     );
@@ -99,13 +83,12 @@ export class ActivityNavigationModule extends LitElement {
       aria-label=${this.localize("navigation.activity")}
     >
       ${repeat(
-        items,
+        this._state.items,
         ({ id }) => id,
         (item) => {
           const label = item.labelKey ? this.localize(item.labelKey) : item.id;
-          const icons = this._icons(item);
           return html`<button
-            class=${`round-button stage-stack-button${icons.length > 1 ? " joined" : ""}${item.id === active?.id ? " active" : ""}`}
+            class=${`round-button stage-stack-button${item.id === active?.id ? " active" : ""}`}
             type="button"
             aria-label=${label}
             aria-pressed=${item.id === active?.id ? "true" : "false"}
@@ -116,11 +99,7 @@ export class ActivityNavigationModule extends LitElement {
             @click=${() => this.navigationContext?.select(this.targetStackId, item.id)}
           >
             ${
-              icons.length > 0
-                ? icons.map((icon) =>
-                    isIconName(icon) ? renderIcon(icon) : nothing,
-                  )
-                : label
+              item.icon && isIconName(item.icon) ? renderIcon(item.icon) : label
             }
           </button>`;
         },
@@ -196,64 +175,6 @@ export class ActivityNavigationModule extends LitElement {
         this.requestUpdate();
       },
     );
-  }
-
-  private _subscribeCamera(): void {
-    this._cameraUnsubscribe?.();
-    this._cameraUnsubscribe = undefined;
-    this._activeEntityId = undefined;
-    if (!this.cameraSession) return;
-    this._cameraUnsubscribe = this.cameraSession.subscribe(
-      this._handleCameraSession,
-    );
-  }
-
-  private readonly _handleCameraSession = (
-    session: ActiveCameraSession | undefined,
-  ): void => {
-    this._activeEntityId = session?.entityId;
-    const visible = this._visibleItems();
-    if (
-      session &&
-      this._state.activeId &&
-      !visible.some(({ id }) => id === this._state.activeId) &&
-      visible[0]
-    ) {
-      this.navigationContext?.select(this.targetStackId, visible[0].id);
-    }
-    this.requestUpdate();
-  };
-
-  private _visibleItems(): ModuleStackNavigationState["items"] {
-    return this._state.items.filter(
-      (item) =>
-        item.moduleType !== CAMERA_CONTROLS_MODULE_TYPE ||
-        this._icons(item).length > 0,
-    );
-  }
-
-  private _icons(
-    item: ModuleStackNavigationState["items"][number],
-  ): readonly string[] {
-    if (item.moduleType !== CAMERA_CONTROLS_MODULE_TYPE) {
-      return item.icon ? [item.icon] : [];
-    }
-    const source =
-      typeof item.config === "object" && item.config !== null
-        ? (item.config as Record<string, unknown>)
-        : {};
-    const supports = (key: "ptzCameras" | "talkCameras") =>
-      Array.isArray(source[key]) &&
-      source[key].some(
-        (camera) =>
-          typeof camera === "object" &&
-          camera !== null &&
-          (camera as Record<string, unknown>).entityId === this._activeEntityId,
-      );
-    return [
-      ...(supports("talkCameras") ? ["microphone"] : []),
-      ...(supports("ptzCameras") ? ["ptz"] : []),
-    ];
   }
 
   private readonly _handlePointerEnter = (event: PointerEvent): void => {

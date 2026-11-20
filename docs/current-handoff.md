@@ -16,13 +16,16 @@ precedence.
 ## Repository baseline
 
 - Branch: `main`.
-- HEAD: `89be1b8` —
-  `v0.0.4-dev.476 - fix(frontend): rebuild recorded media drawer presentation`.
-- Version: `0.0.4-dev.476`.
-- Worktree was clean when this handoff was refreshed.
+- Restored source baseline: `80286fb` —
+  `v0.0.4-dev.476 - docs(handoff): document uniform system ownership`.
+- Version: `0.0.4-dev.479`.
+- The user will commit this rollback. No agent commit or sync is authorized.
 
 Always recheck `git status`, `git log -1`, and
 `custom_components/watchzone/const.py` before starting work.
+
+## Failed camera-controls work removed at `dev.479`
+
 
 ## Current recorded-media baseline
 
@@ -133,7 +136,7 @@ Future agents must therefore:
   `docs/animation-system.md`, and `docs/platform-compatibility.md` before
   changing these systems.
 
-## Validation at `dev.476`
+## Validation inherited from `dev.476`
 
 Completed successfully:
 
