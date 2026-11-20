@@ -5323,7 +5323,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(recordedPresentationContract.surfaceHeight).toBe(
     recordedPresentationContract.viewportHeight,
   );
-  expect(recordedPresentationContract.videoPosition).toBe("absolute");
+  expect(recordedPresentationContract.videoPosition).toBe("static");
   await expect(
     page.getByRole("button", { name: "Mute recorded video" }),
   ).toBeVisible();

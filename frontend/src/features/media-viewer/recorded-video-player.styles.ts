@@ -63,11 +63,9 @@ export const recordedVideoPlayerStyles = css`
     block-size: 100%;
     display: block;
     inline-size: 100%;
-    inset: 0;
     max-block-size: 100%;
     object-fit: contain;
     pointer-events: none;
-    position: absolute;
     user-select: none;
   }
 
