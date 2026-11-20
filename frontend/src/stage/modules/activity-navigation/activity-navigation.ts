@@ -189,7 +189,8 @@ export class ActivityNavigationModule extends LitElement {
   }
 
   private _availableItems() {
-    return this._state.items.filter(({ availability }) => {
+    return this._state.items.filter((item) => {
+      const availability = this._availability(item.config);
       if (!availability) return true;
       const activeEntityId = this._availabilityStates.get(
         availability.targetModuleId,
@@ -205,9 +206,10 @@ export class ActivityNavigationModule extends LitElement {
     this._clearAvailabilitySubscriptions();
     if (!this.cameraSelection) return;
     const targetIds = new Set(
-      this._state.items.flatMap(({ availability }) =>
-        availability ? [availability.targetModuleId] : [],
-      ),
+      this._state.items.flatMap(({ config }) => {
+        const availability = this._availability(config);
+        return availability ? [availability.targetModuleId] : [];
+      }),
     );
     for (const targetId of targetIds) {
       let subscribing = true;
@@ -220,6 +222,18 @@ export class ActivityNavigationModule extends LitElement {
       subscribing = false;
     }
     this._selectAvailableFallback();
+  }
+
+  private _availability(config: unknown) {
+    if (typeof config !== "object" || config === null) return undefined;
+    const source = config as Record<string, unknown>;
+    return Array.isArray(source.cameraEntityIds) &&
+      typeof source.targetModuleId === "string"
+      ? {
+          cameraEntityIds: source.cameraEntityIds,
+          targetModuleId: source.targetModuleId,
+        }
+      : undefined;
   }
 
   private _clearAvailabilitySubscriptions(): void {

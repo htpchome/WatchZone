@@ -71,12 +71,6 @@ export type ComponentDefinition<
 export interface PlaceableLoaderRegistration {
   readonly load: () => Promise<PlaceableDefinition>;
   readonly navigation?: {
-    readonly availability?: (config: unknown) =>
-      | {
-          readonly cameraEntityIds: readonly string[];
-          readonly targetModuleId: string;
-        }
-      | undefined;
     readonly icon: string;
     readonly labelKey: TranslationKey;
   };

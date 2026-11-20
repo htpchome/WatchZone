@@ -2,7 +2,6 @@ import { html, LitElement } from "lit";
 
 import { TOAST_REGION_TAG } from "../core/constants";
 import type { ToastNotice } from "./toast-manager";
-import { renderIcon } from "./icons";
 import { motionDurations, motionEasings, OwnedMotion } from "./motion";
 import { toastRegionStyles } from "./toast-region.styles";
 
@@ -17,6 +16,8 @@ export class ToastRegion extends LitElement {
 
   public mode: ToastRegionMode = "overlay";
   public notices: readonly ToastNotice[] = [];
+  private _iconLoad?: Promise<void>;
+  private _renderIcon?: typeof import("./icons").renderIcon;
   private readonly _motions = new Map<
     string,
     { readonly motion: OwnedMotion; dismissing: boolean }
@@ -35,7 +36,9 @@ export class ToastRegion extends LitElement {
         >
           ${
             notice.icon
-              ? html`<span class="toast-icon">${renderIcon(notice.icon)}</span>`
+              ? html`<span class="toast-icon"
+                  >${this._renderIcon?.(notice.icon)}</span
+                >`
               : null
           }
           <span>${notice.message}</span>
@@ -44,6 +47,7 @@ export class ToastRegion extends LitElement {
   }
 
   protected updated(): void {
+    if (this.notices.some(({ icon }) => icon)) this._loadIcons();
     const activeIds = new Set(this.notices.map(({ id }) => id));
     for (const [id, state] of this._motions) {
       if (activeIds.has(id)) continue;
@@ -88,6 +92,18 @@ export class ToastRegion extends LitElement {
         );
       }
     }
+  }
+
+  private _loadIcons(): void {
+    if (this._renderIcon || this._iconLoad) return;
+    this._iconLoad = import("./icons")
+      .then(({ renderIcon }) => {
+        this._renderIcon = renderIcon;
+        this.requestUpdate();
+      })
+      .catch((error: unknown) =>
+        console.error("Failed to load toast icons", error),
+      );
   }
 
   public disconnectedCallback(): void {

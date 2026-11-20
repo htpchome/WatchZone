@@ -49,21 +49,6 @@ function exportsStackAccessories(config: unknown) {
   };
 }
 
-function ptzPanelAvailability(config: unknown) {
-  if (typeof config !== "object" || config === null) return undefined;
-  const source = config as Record<string, unknown>;
-  if (
-    !Array.isArray(source.cameraEntityIds) ||
-    typeof source.targetModuleId !== "string"
-  ) {
-    return undefined;
-  }
-  const cameraEntityIds = source.cameraEntityIds.filter(
-    (entityId): entityId is string => typeof entityId === "string",
-  );
-  return { cameraEntityIds, targetModuleId: source.targetModuleId };
-}
-
 function stackConfig(config: unknown): {
   readonly historyDays?: number;
   readonly targetModuleId?: string;
@@ -130,7 +115,6 @@ const moduleLoaders = {
         ({ moduleDefinition }) => moduleDefinition,
       ),
     navigation: {
-      availability: ptzPanelAvailability,
       icon: "ptz",
       labelKey: "navigation.ptz",
     },

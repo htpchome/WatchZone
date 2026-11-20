@@ -16,9 +16,9 @@ precedence.
 ## Repository baseline
 
 - Branch: `main`.
-- Restored source baseline: `80286fb` —
-  `v0.0.4-dev.476 - docs(handoff): document uniform system ownership`.
-- Version: `0.0.4-dev.480`.
+- HEAD before the current bundle correction: `83e4d5e` —
+  `v0.0.4-dev.480 - feat(ptz): add PTZ panel and preset recall`.
+- Version: `0.0.4-dev.481`.
 - The user will commit this rollback. No agent commit or sync is authorized.
 
 Always recheck `git status`, `git log -1`, and
@@ -26,7 +26,7 @@ Always recheck `git status`, `git log -1`, and
 
 ## Failed camera-controls work removed at `dev.479`
 
-## PTZ panel at `dev.480`
+## PTZ panel at `dev.480`; release-budget correction at `dev.481`
 
 The Full Stage activity stack now includes a dedicated `ptz-panel` module
 after Exports when at least one configured main camera has PTZ enabled.
@@ -46,7 +46,11 @@ after Exports when at least one configured main camera has PTZ enabled.
 - The public provider extension API is version 5 because the PTZ provider
   contract now includes preset recall.
 
-This work is uncommitted. The user remains the only commit owner.
+The `dev.481` correction moves optional toast-icon rendering behind an
+on-demand import and keeps camera-availability parsing in the lazy activity
+navigation module. The release package gate passes without relaxing its eager
+graph budget. This correction is uncommitted; the user remains the only commit
+owner.
 
 
 ## Current recorded-media baseline

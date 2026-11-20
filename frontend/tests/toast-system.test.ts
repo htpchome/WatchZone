@@ -61,6 +61,26 @@ describe("toast system", () => {
     expect(region.shadowRoot?.textContent).toContain("Playback blocked");
   });
 
+  it("loads optional toast icons on demand", async () => {
+    const region = document.createElement("wzc-toast-region") as ToastRegion;
+    region.notices = [
+      {
+        dismissing: false,
+        icon: "check",
+        id: "saved",
+        message: "Saved",
+        severity: "success",
+      },
+    ];
+    document.body.append(region);
+
+    await vi.waitFor(() =>
+      expect(
+        region.shadowRoot?.querySelector(".toast-icon svg"),
+      ).not.toBeNull(),
+    );
+  });
+
   it("replaces keyed notices and fades them out on the shared timer", () => {
     vi.useFakeTimers();
     const host = new TestHost();

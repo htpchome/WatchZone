@@ -375,9 +375,7 @@ export class LayoutRuntime implements ReactiveController {
           );
           return {
             accessories: registration?.stackAccessories?.(child.config),
-            availability: registration?.navigation?.availability?.(
-              child.config,
-            ),
+            config: child.config,
             icon: registration?.navigation?.icon,
             id: child.id,
             labelKey: registration?.navigation?.labelKey,

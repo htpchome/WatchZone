@@ -23,12 +23,13 @@ describe("activity navigation", () => {
       activeId: "reviews",
       items: [
         {
+          config: {},
           icon: "reviews",
           id: "reviews",
           labelKey: "navigation.reviews",
         },
         {
-          availability: {
+          config: {
             cameraEntityIds: ["camera.front"],
             targetModuleId: "camera-module",
           },
@@ -61,12 +62,13 @@ describe("activity navigation", () => {
       activeId: "ptz-panel",
       items: [
         {
+          config: {},
           icon: "reviews",
           id: "reviews",
           labelKey: "navigation.reviews",
         },
         {
-          availability: {
+          config: {
             cameraEntityIds: ["camera.front"],
             targetModuleId: "camera-module",
           },
