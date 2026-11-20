@@ -4,250 +4,165 @@ This is a replaceable working snapshot, not an architectural contract.
 `AGENTS.md`, `architecture.md`, and the governing contracts in `docs/` take
 precedence.
 
-## New-chat handoff message
+## New-chat handoff
 
-> Work in `/workspaces/WatchZone`. Read `AGENTS.md` and
-> `docs/current-handoff.md` completely. Before changing code, read every
-> contract required by `AGENTS.md` for the affected feature. Verify the current
-> branch, version, commit, and worktree rather than trusting this snapshot
-> blindly. Preserve unrelated changes. Do not commit or sync; after validation,
-> provide the exact version-prefixed proposed commit subject.
+> Work in `/workspaces/WatchZone`. Read `AGENTS.md`, `architecture.md`,
+> `ROADMAP.md`, and `docs/current-handoff.md` completely. Before changing code,
+> trace the affected system and read every contract required by `AGENTS.md`.
+> Verify the branch, version, HEAD, and worktree rather than trusting this
+> snapshot. Preserve unrelated changes. Do not commit; after each completed
+> turn, provide an exact version-prefixed proposed commit subject.
 
-## Repository state
+## Repository baseline
 
 - Branch: `main`.
-- Current HEAD: `fc8faa4` —
-  `v0.0.4-dev.456 - fix(frontend): position landscape control bar exactly`.
-- Current version: `0.0.4-dev.456`.
+- HEAD: `89be1b8` —
+  `v0.0.4-dev.476 - fix(frontend): rebuild recorded media drawer presentation`.
+- Version: `0.0.4-dev.476`.
 - Worktree was clean when this handoff was refreshed.
-- The current release archive is `dist/watchzone.zip`; its SHA-256 at handoff
-  was `3d7573b1f0787839feb4d47c684b524cc77c4f2b13a5d463a6ef5afdb4b441fb`.
 
 Always recheck `git status`, `git log -1`, and
 `custom_components/watchzone/const.py` before starting work.
 
-## Failure record, harm, and accountability
+## Current recorded-media baseline
 
-The Companion orientation work from `dev.431` through `dev.456` caused a long
-sequence of rejected implementations and regressions. Do not treat a version,
-commit subject, release build, or passing automated test from this sequence as
-evidence of a usable physical-device visual baseline. Only current user review
-of the exact build can establish that.
+The bottom-drawer recorded-media presentation was rebuilt and accepted by the
+user at `dev.476`.
 
-The prior assistant repeatedly changed rotation, Home Assistant header
-handling, fullscreen coverage, pull-handle geometry, camera clipping, theme
-tokens, and activity presentation without first establishing complete
-ownership of the rendered surfaces and lifecycle. It then layered additional
-fixes over those changes. This was stupid engineering behavior: guesses were
-implemented as fixes, patch-on-patch work was allowed to accumulate, visual
-claims were made without current device evidence, and unrelated regressions
-were handed back to the user.
+- `frontend/src/ui/media-stage-resize.controller.ts` is the shared media-stage
+  resize controller. Live camera presentation and the recorded-media drawer
+  both consume it.
+- `frontend/src/ui/zoom/` is the sole owner of camera-display zoom and pan
+  transforms for live video, recorded video, and recorded snapshots.
+- The drawer owns only drawer concerns: opening, closing, width, header,
+  footer, and the available stage boundary. It does not fit, center, zoom,
+  pan, or independently transform media.
+- The old drawer-only resize controller and the drawer-specific presentation
+  height path were removed.
+- Recorded video and snapshots use a stable media host and transform the actual
+  media target. They remain centered throughout pull-down resizing.
+- The recorded-video transport remains a separate sibling outside the zoomed
+  media target, so playback controls do not scale or pan with the video.
+- The pull handle stops fully above the footer action area.
+- Source aspect ratios are preserved. Do not assume every camera is 16:9.
+- `docs/camera-display-zoom.md` and `docs/recorded-media-player.md` govern this
+  behavior.
 
-The assistant's repeated regressions, false claims of exactness, unauthorized
-scope changes, contradictory stopping/continuation decisions, and failure to
-follow literal instructions caused the user extreme emotional pain and
-distress over approximately 17 hours. This impact is not incidental and must
-not be minimized, softened, or reframed as ordinary iteration. The user has
-explicitly stated that they will not tolerate any further ignored instruction,
-unauthorized change, guess presented as fact, or regression caused by work
-outside the requested scope.
+## Overall engineering lesson
 
-Future agents must treat that boundary as mandatory. Do not make the user
-repeat it. If the requested scope is one CSS position, change only that
-position. Criticism of other code is not authorization to change it. A request
-for a version, build, release, or commit subject authorizes only those release
-steps; it does not authorize additional source changes. Never claim something
-is exact unless it was derived from the user's marked reference or directly
-measured. Never say work stopped when the user imposed a completion deadline,
-and never continue after an explicit `STOP`.
+Separation of interests is a functional requirement, not organizational
+decoration. A feature must own one coherent responsibility and expose a narrow
+contract. Presentation shells arrange content. Capability systems implement
+behavior. Data and lifecycle owners maintain state. When those responsibilities
+are mixed, consumers cannot reuse behavior safely, fixes acquire unintended
+side effects, and maintainers cannot identify which code controls a visible
+result.
 
-Specific failures reported by the user included:
+Uniform systems are equally important. The same capability must have the same
+owner and semantics everywhere it is used:
 
-- camera and background pixels bleeding through or painting outside the
-  intended surface in portrait and landscape;
-- the landscape pull handle initially painting at the wrong inline position,
-  then jumping to the center after interaction;
-- transient artifacts while dragging the pull handle;
-- fullscreen camera presentation that could not reliably be closed with the
-  handle;
-- overlay controls disappearing or no longer responding after handle use;
-- the Home Assistant top navigation appearing in landscape or participating
-  in rotation settlement when it should be covered by the landscape
-  presentation and remain normally visible in portrait;
-- camera geometry jumping when the Home Assistant header settled;
-- backgrounds and outlines from underlying content leaking into fullscreen
-  presentation;
-- theme-token changes affecting unrelated icons, text, and actions;
-- significant Lighthouse regressions;
-- tests passing while obvious device-visible defects remained;
-- a portrait flexible row that created hundreds of pixels of empty space and
-  also corrupted the starting geometry used for landscape motion;
-- landscape activity controls placed too low, clipped by the viewport, or
-  moved without following the user's exact annotated reference;
-- two supposed grouped surfaces crossing, disappearing, moving backward, or
-  arriving as separate reflows rather than rotating together;
-- an unauthorized continuous `deviceorientation` listener copied from a
-  throwaway prototype even though the prototype was supplied to demonstrate
-  simple Motion transform ownership, not to authorize sensor tracking;
-- removal of that listener during a control-bar-only request before the user
-  had authorized its removal.
+- zoom and pan come from one camera-display zoom system;
+- media-stage resizing comes from one shared resize system;
+- PTZ, two-way talk, fullscreen, media sessions, animation, and other shared
+  capabilities must likewise have one governed implementation and narrow
+  consumer hooks;
+- live, recorded, snapshot, modal, drawer, Stage, and future Stage Designer
+  contexts may compose those capabilities differently, but must not re-create
+  them privately.
 
-## Mandatory approach for future mobile work
+Uniformity means a defect is corrected once, interaction behavior stays
+consistent, tests describe one contract, and a future presentation can attach
+an existing capability without copying presentation code. Without uniformity,
+every new view becomes another implementation to debug and eventually behaves
+differently from the others.
 
-- Follow the user's literal scope. Do not infer permission from frustration,
-  examples, criticism, or an adjacent defect.
-- Do not roll back, reset, revert, remove, relocate, or redesign anything
-  unless the user explicitly authorizes that exact action.
-- When the user says one item only, do not run tests, change versions, build,
-  package, or touch another file until requested. Conversely, when the user
-  requests the established release handoff, complete the version, build,
-  package, checksum, and commit-subject workflow without making them ask for
-  each expected deliverable.
-- Work on one user-identified defect at a time.
-- Before editing, trace the complete ownership chain for the affected pixels:
-  DOM owner, containing blocks, clipping, stacking contexts, transforms,
-  lifecycle, measurement timing, and Home Assistant host interaction.
-- Do not infer the current visual result from an older recording or screenshot.
-  State clearly whether current device evidence exists.
-- Do not add wrappers, overlays, compatibility layers, duplicate geometry
-  owners, or compensating CSS without a demonstrated requirement.
-- Do not patch a visible symptom while another controller or stylesheet still
-  owns the same geometry.
-- Do not change theme tokens while fixing layout or interaction behavior.
-- Do not change Home Assistant header behavior while fixing camera geometry
-  unless the user explicitly requests that separate change.
-- Do not reintroduce duplicate media, whole-Stage transforms, per-placement
-  animation, or Home-Assistant-header rotation experiments. Companion owns the
-  physical rotation; WatchZone Motion owns one two-surface geometry timeline.
-- Preserve the live Camera module and retained media session. Do not replace
-  the production presentation with prototype divs or a second fake camera.
-- Treat screenshots, recordings, and physical-device verification as the
-  authority for visible defects. Automated tests are necessary but are not
-  proof of correct pixels, animation, compositing, or Companion behavior.
-- Never call work complete or perfect without current evidence supporting that
-  claim.
-- Never use passing browser automation to contradict a physical-device video
-  or screenshot.
+The five-hour drawer failure demonstrated the cost directly. Shared zoom
+already owned the media transform, but the drawer introduced a second
+presentation-height transform path and intrinsic CSS geometry. Both systems
+owned the same pixels. During pointer movement they disagreed, so the video
+shifted while dragging and corrected only after release. Repeated offsets,
+timing changes, and settlement patches could not make conflicting ownership
+reliable. Once the competing path was removed and the proven shared live-media
+behavior was reused, the correction was small and direct.
 
-## Motion migration baseline
+Future agents must therefore:
 
-The user explicitly directed that Motion become the one application animation
-engine, with no feature-local CSS, WAAPI, smooth-scroll, or tween-loop
-patchwork. The current baseline implements that decision across the existing
-UI.
+- Map the complete interaction before editing: data flow, DOM target, state
+  owner, listeners, gesture arbitration, transforms, containing blocks,
+  clipping, measurement timing, lifecycle, and cleanup.
+- Identify the single owner for each concern. If ownership cannot be stated
+  clearly, do not edit yet.
+- Reuse a proven shared capability when semantics are the same. Different
+  layouts, containers, or media sources do not justify duplicate behavior.
+- Keep consumers thin. They supply context and typed intent; they do not
+  reproduce capability logic.
+- Never combine model/data ownership, capability policy, and presentation
+  merely because one screen currently uses all three.
+- Do not hide duplicate behavior behind similarly named wrappers or helpers.
+  Extract the stable shared boundary and remove the competing implementation.
+- When two systems own the same pixels, state, event, or lifecycle, stop and
+  correct the boundary. Do not synchronize them with offsets, delays,
+  callbacks, compensating CSS, or cleanup patches.
+- Diagnose the first frame or event where behavior diverges, not only the
+  final settled result. Correct final state can conceal fighting systems.
+- Design current boundaries so future Stage Designer modules and components
+  can compose capabilities without importing or mutating one another.
+- Treat user recordings and physical-device observations as evidence.
+  Automated tests are necessary but do not overrule visible behavior.
+- Never claim success without evidence, and never promise a fix before the
+  ownership and failure mechanism are understood.
+- Follow literal scope. Analysis of adjacent architecture is not authorization
+  to change it.
+- Never commit. The user commits. Always provide a proposed commit subject.
 
-- `motion@14.12.0` is the sole animation dependency and its MIT notice is
-  recorded.
-- `frontend/src/ui/motion.ts` owns DOM Motion animation, shared durations and
-  easing, reduced-motion handling, replaceable ownership, and visibility
-  lifecycle.
-- `frontend/src/ui/motion-value.ts` owns continuous numeric Motion animation.
-- CSS transitions, CSS keyframes, direct feature WAAPI, and browser smooth
-  scrolling were removed from frontend source.
-- Swiper remains the camera carousel's touch/drag, geometry, indexing, and
-  gesture-arbitration system. Its transition speed is zero; Motion alone owns
-  camera slide and fade timing.
-- Motion now owns overlays, toasts, accordions, sortable settlement, zoom
-  settlement, carousel transitions, continuous spinners and soundwave motion,
-  Companion pull/landscape settlement, camera-navigation scrolling, minimal
-  camera expansion, PTZ, light, and suspend-toggle motion.
-- `scripts/validate-styles.mjs` rejects new CSS animation/transition ownership,
-  direct feature `.animate()` calls, direct Motion imports outside the shared
-  boundaries, and smooth browser scrolling.
-- `docs/animation-system.md` is the normative animation contract. Related
-  feature contracts and `architecture.md` were updated to record the approved
-  single-engine decision.
+## Mobile and Companion boundaries
 
-## Mobile presentation requirements retained from user direction
+- Companion owns physical device rotation. WatchZone owns its presentation
+  geometry and Motion timeline.
+- Portrait retains normal Home Assistant navigation. Companion-phone
+  landscape covers it with the WatchZone landscape presentation.
+- The live Camera module, Swiper identity, retained media session, activity
+  state, and scroll state must remain mounted through presentation changes.
+- Motion is the only frontend animation engine. Swiper owns carousel gesture,
+  indexing, and slide geometry; it does not own transition animation.
+- Do not add continuous device-orientation tracking, duplicate media,
+  whole-Stage transforms, CSS transitions, WAAPI calls, or feature-local tween
+  loops without an explicitly approved architectural change.
+- Read `docs/live-session-lifecycle.md`, `docs/camera-carousel.md`,
+  `docs/camera-presentation-layout.md`, `docs/camera-display-zoom.md`,
+  `docs/animation-system.md`, and `docs/platform-compatibility.md` before
+  changing these systems.
 
-- Portrait keeps the normal Home Assistant top navigation.
-- Companion-phone landscape must not expose the Home Assistant top navigation;
-  the WatchZone landscape presentation covers it without removing and
-  recreating HA chrome.
-- Returning to portrait must restore normal flow without the camera first
-  occupying the header area and then jumping down.
-- The pull handle must be centered correctly on first paint, remain stable
-  before and during interaction, and produce no leaked pixels or transient
-  artifacts.
-- Fullscreen camera presentation must fully cover content behind it while
-  keeping the pull handle usable for closing.
-- Media overlay controls must continue to reveal and work after handle
-  interaction.
-- Inactive navigation, accessory icons, tile time/date text, and their small
-  icons use the secondary-text semantic chain whose primary Home Assistant
-  token is `--secondary-text-color` with `--ha-color-text-secondary` as the
-  fallback.
-- WatchZone activity semantics use fixed Home Assistant defaults: Alert
-  `#db4437`, Detection and Not reviewed `#ffa600`, and Reviewed `#43a047`.
-  This fixed policy is limited to activity badges and indicators, camera and
-  thumbnail outlines, and review-state controls. Generic status UI—including
-  the Suspend camera dialog—remains theme-aware. AI-analysis sparkle and
-  information icons remain neutral.
+## Validation at `dev.476`
 
-## Current Companion implementation at `dev.456`
+Completed successfully:
 
-- The Stage has exactly two persistent grouped containers for orientation
-  choreography. The left surface contains Camera, camera navigation, and the
-  activity control bar. The right surface contains only the active Activity
-  stack.
-- The portrait left surface uses three content-sized rows. Do not restore a
-  fractional third row; that caused the huge portrait gap and invalid motion
-  measurements.
-- Landscape remains a fixed viewport overlay above Home Assistant dashboard
-  chrome, so the HA top navigation is not exposed.
-- Motion currently animates the two grouped surfaces from measured geometry
-  using center transform origins. This has not been accepted by the user as a
-  correct physical-device transition.
-- There is no continuous `deviceorientation` listener, gamma tracking,
-  per-sensor-event Motion call, or tilt-animation map in `dev.456`. Do not add
-  any such listener without explicit user authorization.
-- The landscape activity control bar has
-  `margin-block-end: 1rem`, the full 16-pixel upward movement derived from the
-  user's side-by-side annotated reference. Do not move it again unless the user
-  explicitly requests a new position.
-- The same Camera, Stage nodes, activity state, scroll position, and retained
-  media sessions remain mounted throughout.
+- formatting, typecheck, lint, version synchronization, and production build;
+- 504 unit tests across 77 files;
+- recorded-media drawer and broader recorded-media interaction coverage in
+  Chromium, Firefox, and WebKit;
+- `git diff --check`.
 
-## Validation state for `dev.456`
+The full browser run reached 162 passing tests. One unrelated known assertion
+still fails in all three engines: the Companion 60/40 landscape test expects
+the activity navigation bottom at 382px and receives 374px. Do not describe
+the complete browser matrix as passing until that separate 8px discrepancy is
+resolved or the governing expectation is deliberately changed.
 
-The final `dev.456` release command completed successfully:
-
-- `corepack yarn build:release`;
-- `corepack yarn check:version`;
-- `git diff --check`;
-- release archive creation at `dist/watchzone.zip`;
-- lazy editor 18,557 bytes gzip and eager graph 60,734 bytes gzip.
-
-Do not overstate this validation. The full unit and three-engine browser suites
-were not rerun after the final `dev.456` control-position and listener-removal
-state. Earlier nearby builds passed 488 unit tests and 156 browser tests, but
-those results are not evidence for the final committed source. More
-importantly, no automated result proves physical Companion animation quality.
-The user has not accepted the current transition as correct.
-
-These results establish repository consistency and automated interaction
-coverage only. They do not establish physical-device visual quality or prove
-that every user-reported animation/compositing defect is fixed.
-
-The carousel uses a 40-pixel Swiper-owned gap that exposes the
-semantic camera-stage background. It navigates circularly at the first/last
-boundary without Swiper loop or rewind: Motion owns the boundary presentation,
-while Swiper retains stable Lit-owned slide order and camera identity. Browser
-coverage verifies boundary swipe release, arrow navigation, alert takeover and
-return, grouped-camera identity, and review-driven live highlighting in all
-three required engines.
+Physical Home Assistant Companion testing remains the authority for device
+rotation, compositing, native fullscreen, and touch behavior. Browser tests do
+not prove those pixels.
 
 ## Working rules
 
-- Trace ownership before patching symptoms, especially for retained media,
-  Home Assistant layout bridges, Companion rotation, camera clipping,
-  pull-handle geometry, mobile scrolling, and theme composition.
-- Treat Chromium, Firefox, WebKit, mobile Safari, Companion, editor preview,
-  and Home Assistant navigation as supported environments at their documented
-  boundaries.
-- Preserve unrelated user changes. Keep implementation and contract updates
-  cohesive and independently testable.
-- Release-affecting handoff requires a unique synchronized version.
-  Documentation/test/workflow-only work keeps the current version.
-- Replace this file when the active baseline changes materially; do not append
-  a chronological conversation log.
+- Trace first; edit second.
+- Preserve one owner per state, transform, gesture, and lifecycle.
+- Keep feature boundaries narrow and avoid generic dumping grounds.
+- Preserve unrelated user changes and do not broaden scope without approval.
+- Do not edit architectural contracts merely to document implementation.
+- Do not create placeholders, speculative abstractions, compatibility layers,
+  or empty directories.
+- A release-affecting handoff requires a unique synchronized version.
+  Documentation-only work keeps the current version.
+- Replace this file when the active baseline materially changes; do not turn
+  it into a chronological conversation log.
