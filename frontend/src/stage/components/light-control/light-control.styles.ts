@@ -9,12 +9,21 @@ export const lightControlStyles = css`
     pointer-events: none;
   }
 
-  :host([presentation="toolbar"]) {
-    --wzc-round-button-color: var(--wzc-stage-stack-button-color);
-    --wzc-round-button-background: var(--wzc-stage-stack-button-background);
-    --wzc-round-button-border-color: transparent;
+  :host {
+    --wzc-round-button-color: var(--wzc-capability-control-color);
+    --wzc-round-button-background: var(--wzc-capability-control-background);
+    --wzc-round-button-border-color: var(--wzc-capability-control-border-color);
     --wzc-round-button-hover-background: var(
-      --wzc-stage-stack-button-background
+      --wzc-capability-control-hover-background
+    );
+  }
+
+  :host([presentation="overlay"]) {
+    --wzc-round-button-color: var(--wzc-media-overlay-color);
+    --wzc-round-button-background: var(--wzc-media-overlay-background);
+    --wzc-round-button-border-color: var(--wzc-media-overlay-border-color);
+    --wzc-round-button-hover-background: var(
+      --wzc-neutral-control-hover-background
     );
   }
 

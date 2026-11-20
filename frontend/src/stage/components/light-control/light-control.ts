@@ -80,7 +80,7 @@ export class LightControlComponent extends LitElement {
   public cameraSession?: CameraSessionContext;
   public hass?: HomeAssistant;
   public localize: LocalizeFunction = englishLocalize;
-  public presentation: "overlay" | "toolbar" = "overlay";
+  public presentation: "overlay" | "standard" = "standard";
 
   protected willUpdate(changed: Map<PropertyKey, unknown>): void {
     this._bindCameraContext();
@@ -120,7 +120,7 @@ export class LightControlComponent extends LitElement {
       icon,
     }));
     const visible =
-      this.presentation === "toolbar" ||
+      this.presentation !== "overlay" ||
       camera.overlayVisible ||
       this._openLightId !== undefined;
     const openLight = lights.find(

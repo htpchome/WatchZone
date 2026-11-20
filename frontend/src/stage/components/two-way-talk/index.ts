@@ -9,7 +9,7 @@ export interface TwoWayTalkComponentConfig {
     readonly connection: LiveConnectionType;
     readonly entityId: string;
   }[];
-  readonly presentation: "overlay" | "toolbar";
+  readonly presentation: "overlay" | "standard";
 }
 
 let definitionPromise: Promise<void> | undefined;
@@ -56,13 +56,13 @@ export const componentDefinition: ComponentDefinition<
     if (
       presentation !== undefined &&
       presentation !== "overlay" &&
-      presentation !== "toolbar"
+      presentation !== "standard"
     ) {
       throw new Error("Two-way talk requires a valid presentation.");
     }
     return {
       cameras,
-      presentation: presentation === "toolbar" ? "toolbar" : "overlay",
+      presentation: presentation === "overlay" ? "overlay" : "standard",
     } as TwoWayTalkComponentConfig;
   },
 };

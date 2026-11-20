@@ -148,9 +148,40 @@ describe("two-way-talk session lifecycle", () => {
 
     expect(activeCamera.setTalkAudioActive).toHaveBeenLastCalledWith(false);
   });
+
+  it("preserves an active session across a transient responsive reparent", async () => {
+    const close = vi.fn();
+    resolver.supports.mockResolvedValue(true);
+    resolver.connect.mockResolvedValue({
+      close,
+      localStream: {} as MediaStream,
+      setMicrophoneMuted: vi.fn(),
+    });
+    const host = new Host();
+    const controller = new TalkSessionController(host, {
+      onConnected: vi.fn(),
+      onFailed: vi.fn(),
+      onStopped: vi.fn(),
+    });
+    const cameraContext = new CameraSessionContext();
+    controller.configure(api(), cameraContext, [source("camera.front")]);
+    cameraContext.publish({}, camera("camera.front"));
+    await vi.waitFor(() => expect(controller.supported).toBe(true));
+    await controller.start();
+
+    host.isConnected = false;
+    controller.hostDisconnected();
+    host.isConnected = true;
+    controller.hostConnected();
+    await Promise.resolve();
+
+    expect(close).not.toHaveBeenCalled();
+    expect(controller.active).toBe(true);
+  });
 });
 
 class Host {
+  public isConnected = true;
   public readonly updateComplete = Promise.resolve(true);
   public addController = vi.fn();
   public removeController = vi.fn();

@@ -16,9 +16,9 @@ precedence.
 ## Repository baseline
 
 - Branch: `main`.
-- HEAD before the current toolbar-control correction: `ec0bfe3` —
-  `v0.0.4-dev.486 - fix(controls): refine toolbar talk and light presentation`.
-- Version being prepared: `0.0.4-dev.487`.
+- HEAD before the current control correction: `b9c3728` —
+  `v0.0.4-dev.487 - fix(controls): restore active talk layout`.
+- Version being prepared: `0.0.4-dev.488`.
 - The user remains the commit owner. No agent commit or sync is authorized.
 
 Always recheck `git status`, `git log -1`, and
@@ -68,14 +68,15 @@ optical zoom.
 
 This work is uncommitted; the user remains the only commit owner.
 
-## Toolbar control refinement at `dev.486`
+## Talk placement and lifecycle correction at `dev.488`
 
-- Wide Full Stage keeps the two-way-talk component exactly centered and places
-  linked lights before it with a shared control gap.
-- Two-way talk retains its translucent soundwave presentation on Camera
-  overlays. Toolbar presentation preserves the same pill, transparent side
-  buttons, and visible soundwave while applying semantic Home Assistant-aware
-  panel, border, and icon colors.
+- Wide Full Stage reserves the active TWT width and anchors inactive TWT at its
+  start, so the linked-light button does not move when TWT expands.
+- Overlay presentation alone uses overlay styling. Every other placement uses
+  generic Home Assistant-aware capability tokens while preserving the same
+  pill, transparent side buttons, and visible soundwave.
+- Responsive Stage relocation preserves the same active TWT element, peer,
+  microphone mute state, and soundwave state through the transient DOM move.
 - The active center microphone remains green while live and changes to the
   fixed WatchZone detection-warning color while its outgoing microphone is
   muted. Hover preserves either active color.
@@ -104,7 +105,7 @@ inert until a future layout or an explicit event deep link requests data.
 - In Full Stage, linked-light and two-way-talk keep their Camera-overlay
   placement below 600px. At 600px and wider, the declarative Stage variant
   moves the same stable component nodes into the centered activity-navigation
-  content slot with toolbar presentation. Camera Only keeps them in Camera at
+  content slot with standard presentation. Camera Only keeps them in Camera at
   every size. Components do not choose the breakpoint or import either host.
 - The PTZ panel background begins after a shared Stage module gap so it is
   visually separated from the activity-navigation controls.

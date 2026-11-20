@@ -155,15 +155,17 @@ root grid
 
 At 600px and wider, the same stable linked-light and two-way-talk component
 nodes move declaratively from Camera's `controls` slot into the
-activity-navigation module's centered `content` slot. Their explicit `toolbar`
-presentation is independent from Camera's media-overlay visibility timer. PTZ
+activity-navigation module's centered `content` slot. That module placement
+uses each component's `standard` presentation and is
+independent from Camera's media-overlay visibility timer. PTZ
 remains in Camera's trailing controls region. This responsive relocation is a
 Stage-variant decision: neither component chooses the breakpoint, imports its
 host module, or discovers a sibling. Future Stage Designs may place either
 component in any compatible slot and select its presentation explicitly.
-The activity-navigation content slot reserves its center column for two-way
-talk and aligns linked-light controls to the preceding column with the shared
-control gap, so changing light count or width cannot move talk off center.
+The activity-navigation content slot reserves the complete active-talk width
+on its centerline. Inactive talk anchors to the start of that reservation and
+linked-light controls align immediately before it with the shared gap, so the
+light does not move when talk expands.
 
 The built-in `camera_only` composition contains the same camera module and its
 private overlay and controls slots, but no standalone camera-navigation or

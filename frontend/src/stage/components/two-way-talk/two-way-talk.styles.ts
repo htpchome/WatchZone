@@ -9,12 +9,21 @@ export const twoWayTalkStyles = css`
     pointer-events: none;
   }
 
-  :host([presentation="toolbar"]) {
-    --wzc-round-button-color: var(--wzc-stage-stack-button-color);
-    --wzc-round-button-background: var(--wzc-stage-stack-button-background);
-    --wzc-round-button-border-color: transparent;
+  :host {
+    --wzc-round-button-color: var(--wzc-capability-control-color);
+    --wzc-round-button-background: var(--wzc-capability-control-background);
+    --wzc-round-button-border-color: var(--wzc-capability-control-border-color);
     --wzc-round-button-hover-background: var(
-      --wzc-stage-stack-button-background
+      --wzc-capability-control-hover-background
+    );
+  }
+
+  :host([presentation="overlay"]) {
+    --wzc-round-button-color: var(--wzc-media-overlay-color);
+    --wzc-round-button-background: var(--wzc-media-overlay-background);
+    --wzc-round-button-border-color: var(--wzc-media-overlay-border-color);
+    --wzc-round-button-hover-background: var(
+      --wzc-neutral-control-hover-background
     );
   }
 
@@ -36,7 +45,7 @@ export const twoWayTalkStyles = css`
     grid-template-columns: repeat(3, var(--wzc-control-size));
     align-items: center;
     min-block-size: var(--wzc-control-size);
-    color: var(--wzc-media-overlay-color);
+    color: var(--wzc-talk-panel-color);
     background: var(--wzc-talk-panel-background);
     border: 1px solid var(--wzc-talk-panel-border-color);
     border-radius: var(--wzc-radius-pill);
@@ -74,10 +83,10 @@ export const twoWayTalkStyles = css`
     --wzc-round-button-hover-background: var(--wzc-talk-muted-color);
   }
 
-  :host([presentation="toolbar"]) .talk-controls {
-    color: var(--wzc-talk-toolbar-color);
-    background: var(--wzc-talk-toolbar-background);
-    border-color: var(--wzc-talk-toolbar-border-color);
+  :host([presentation="overlay"]) .talk-controls {
+    color: var(--wzc-media-overlay-color);
+    background: var(--wzc-talk-overlay-panel-background);
+    border-color: var(--wzc-talk-overlay-panel-border-color);
   }
 
   .connecting-spinner {

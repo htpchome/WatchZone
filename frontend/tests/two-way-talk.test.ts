@@ -23,6 +23,7 @@ describe("two-way-talk component", () => {
     element.cameras = [
       { connection: "home_assistant" as const, entityId: "camera.front" },
     ];
+    element.presentation = "overlay";
     document.body.append(element);
     context.publish(owner, cameraSession(true));
 
@@ -44,7 +45,7 @@ describe("two-way-talk component", () => {
       element.shadowRoot?.querySelector(".inactive-control"),
     ).not.toBeNull();
 
-    element.presentation = "toolbar";
+    element.presentation = "standard";
     await element.updateComplete;
     expect(
       element.shadowRoot?.querySelector(".inactive-control.visible"),
@@ -65,6 +66,7 @@ describe("two-way-talk component", () => {
     element.cameras = [
       { connection: "home_assistant" as const, entityId: "camera.front" },
     ];
+    element.presentation = "overlay";
     document.body.append(element);
     context.publish({}, session);
 
@@ -96,7 +98,7 @@ describe("two-way-talk component", () => {
     element.cameras = [
       { connection: "home_assistant" as const, entityId: "camera.front" },
     ];
-    element.presentation = "toolbar";
+    element.presentation = "standard";
     document.body.append(element);
     context.publish({}, cameraSession(false));
     await vi.waitFor(() =>

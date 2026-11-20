@@ -572,22 +572,28 @@ export const themeTokens = css`
     --wzc-stage-stack-button-active-color: var(--wzc-color-text-reversed);
     --wzc-stage-stack-button-active-background: var(--wzc-color-primary);
     --wzc-stage-stack-icon-size: 1.35rem;
+    --wzc-capability-control-color: var(--wzc-color-text-2);
+    --wzc-capability-control-background: var(--wzc-color-surface-secondary);
+    --wzc-capability-control-border-color: var(--wzc-color-border-control);
+    --wzc-capability-control-hover-background: var(
+      --wzc-neutral-control-hover-background
+    );
     --wzc-stage-resize-handle-visibility: visible;
     --wzc-camera-navigation-item-padding: 1rem;
     --wzc-talk-connected-color: var(--ha-color-green-50, #34d399);
     --wzc-talk-connecting-color: var(--ha-color-blue-50, #3b82f6);
     --wzc-talk-muted-color: var(--wzc-activity-detection-color);
-    --wzc-talk-panel-background: color-mix(
+    --wzc-talk-panel-color: var(--wzc-capability-control-color);
+    --wzc-talk-panel-background: var(--wzc-capability-control-background);
+    --wzc-talk-panel-border-color: var(--wzc-capability-control-border-color);
+    --wzc-talk-overlay-panel-background: color-mix(
       in srgb,
       var(--wzc-media-overlay-surface) 80%,
       transparent
     );
-    --wzc-talk-panel-border-color: var(--ha-color-purple-50, #a78bfa);
+    --wzc-talk-overlay-panel-border-color: var(--ha-color-purple-50, #a78bfa);
     --wzc-talk-wave-incoming-color: var(--ha-color-blue-40, #60a5fa);
     --wzc-talk-wave-outgoing-color: var(--ha-color-purple-40, #c084fc);
-    --wzc-talk-toolbar-color: var(--wzc-color-text-1);
-    --wzc-talk-toolbar-background: var(--wzc-color-surface-secondary);
-    --wzc-talk-toolbar-border-color: var(--wzc-color-border-control);
     --wzc-ptz-panel-size: 5.5rem;
     --wzc-ptz-pad-arrow-size: 18%;
     --wzc-ptz-pad-arrow-offset: 15%;

@@ -75,7 +75,7 @@ export class TwoWayTalkComponent extends LitElement {
     readonly entityId: string;
   }[] = [];
   public localize: LocalizeFunction = englishLocalize;
-  public presentation: "overlay" | "toolbar" = "overlay";
+  public presentation: "overlay" | "standard" = "standard";
 
   protected willUpdate(): void {
     if (this.cameraSession) {
@@ -92,7 +92,7 @@ export class TwoWayTalkComponent extends LitElement {
     const active = this._session.active;
     const connecting = this._session.connecting;
     const visible =
-      this.presentation === "toolbar" ||
+      this.presentation !== "overlay" ||
       active ||
       connecting ||
       camera.overlayVisible;

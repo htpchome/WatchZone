@@ -7519,8 +7519,8 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
   const talkIcon = talkButton.locator(":scope > svg");
   const lightIcon = lightButton.locator(":scope > ha-icon svg");
   await expect(talkButton).toBeVisible();
-  await expect(talk).toHaveAttribute("presentation", "toolbar");
-  await expect(lights).toHaveAttribute("presentation", "toolbar");
+  await expect(talk).toHaveAttribute("presentation", "standard");
+  await expect(lights).toHaveAttribute("presentation", "standard");
   await expect(
     activityNavigationComposition.locator("wzc-two-way-talk"),
   ).toHaveCount(1);
@@ -7861,12 +7861,15 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
   );
   const activityNavigationBox =
     await activityNavigationComposition.boundingBox();
+  const talkPlacementBox = await talk.locator("xpath=..").boundingBox();
   expect(activityNavigationBox).not.toBeNull();
-  if (!activityNavigationBox) return;
-  expect(talkHostBox.x + talkHostBox.width / 2).toBeCloseTo(
+  expect(talkPlacementBox).not.toBeNull();
+  if (!activityNavigationBox || !talkPlacementBox) return;
+  expect(talkPlacementBox.x + talkPlacementBox.width / 2).toBeCloseTo(
     activityNavigationBox.x + activityNavigationBox.width / 2,
     0,
   );
+  expect(talkHostBox.x).toBeCloseTo(talkPlacementBox.x, 0);
   expect(lightHostBox.y).toBeGreaterThanOrEqual(activityNavigationBox.y);
   expect(talkHostBox.y + talkHostBox.height).toBeLessThanOrEqual(
     activityNavigationBox.y + activityNavigationBox.height,
@@ -7876,6 +7879,17 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
   ).toBeGreaterThanOrEqual(8);
 
   await talk.evaluate((element) => {
+    (
+      window as typeof window & {
+        __wzcTalkCloseCount?: number;
+        __wzcTalkElement?: Element;
+      }
+    ).__wzcTalkCloseCount = 0;
+    (
+      window as typeof window & {
+        __wzcTalkElement?: Element;
+      }
+    ).__wzcTalkElement = element;
     const talkElement = element as HTMLElement & {
       requestUpdate(): void;
       _session: {
@@ -7888,7 +7902,13 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
     };
     const session = talkElement._session;
     session._connection = {
-      close: () => undefined,
+      close: () => {
+        const testWindow = window as typeof window & {
+          __wzcTalkCloseCount?: number;
+        };
+        testWindow.__wzcTalkCloseCount =
+          (testWindow.__wzcTalkCloseCount ?? 0) + 1;
+      },
       setMicrophoneMuted: (muted) => {
         session._microphoneMuted = muted;
       },
@@ -7900,6 +7920,16 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
     'button[data-talk-action="microphone"]',
   );
   await expect(activeTalkCenter).toBeVisible();
+  const [activeLightBox, activeTalkMicrophoneBox] = await Promise.all([
+    lightButton.boundingBox(),
+    activeTalkMicrophone.boundingBox(),
+  ]);
+  expect(activeLightBox?.x).toBeCloseTo(lightButtonBox.x, 0);
+  expect(activeLightBox?.y).toBeCloseTo(lightButtonBox.y, 0);
+  expect(
+    (activeTalkMicrophoneBox?.x ?? 0) -
+      ((activeLightBox?.x ?? 0) + (activeLightBox?.width ?? 0)),
+  ).toBeGreaterThanOrEqual(8);
   const activeTalkPresentation = await talk
     .locator(".talk-controls")
     .evaluate((controls) => {
@@ -7909,8 +7939,8 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
       );
       const panelProbe = document.createElement("span");
       const colorProbe = document.createElement("span");
-      panelProbe.style.background = "var(--wzc-talk-toolbar-background)";
-      colorProbe.style.color = "var(--wzc-talk-toolbar-color)";
+      panelProbe.style.background = "var(--wzc-talk-panel-background)";
+      colorProbe.style.color = "var(--wzc-talk-panel-color)";
       controls.append(panelProbe, colorProbe);
       const result = {
         canvasDisplay: canvas ? getComputedStyle(canvas).display : "",
@@ -7968,6 +7998,47 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
     "background-color",
     mutedColor.expected,
   );
+  const desktopViewport = page.viewportSize();
+  if (!desktopViewport) throw new Error("Expected a desktop viewport");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(talk).toHaveAttribute("presentation", "overlay");
+  await expect(activeTalkCenter).toBeVisible();
+  await expect(activeTalkCenter).toHaveClass(/\bmuted\b/);
+  expect(
+    await talk.evaluate(
+      (element) =>
+        element ===
+        (
+          window as typeof window & {
+            __wzcTalkElement?: Element;
+          }
+        ).__wzcTalkElement,
+    ),
+  ).toBe(true);
+  expect(
+    await page.evaluate(
+      () =>
+        (
+          window as typeof window & {
+            __wzcTalkCloseCount?: number;
+          }
+        ).__wzcTalkCloseCount,
+    ),
+  ).toBe(0);
+  await page.setViewportSize(desktopViewport);
+  await expect(talk).toHaveAttribute("presentation", "standard");
+  await expect(activeTalkCenter).toBeVisible();
+  await expect(activeTalkCenter).toHaveClass(/\bmuted\b/);
+  expect(
+    await page.evaluate(
+      () =>
+        (
+          window as typeof window & {
+            __wzcTalkCloseCount?: number;
+          }
+        ).__wzcTalkCloseCount,
+    ),
+  ).toBe(0);
   await talk.evaluate((element) => {
     const talkElement = element as HTMLElement & {
       requestUpdate(): void;

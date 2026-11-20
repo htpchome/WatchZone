@@ -17,7 +17,7 @@ export interface CameraLightConfig {
 
 export interface LightControlComponentConfig {
   readonly cameras: readonly CameraLightConfig[];
-  readonly presentation: "overlay" | "toolbar";
+  readonly presentation: "overlay" | "standard";
 }
 
 let definitionPromise: Promise<void> | undefined;
@@ -53,13 +53,13 @@ export const componentDefinition: ComponentDefinition<
     if (
       presentation !== undefined &&
       presentation !== "overlay" &&
-      presentation !== "toolbar"
+      presentation !== "standard"
     ) {
       throw new Error("Light control requires a valid presentation.");
     }
     return {
       cameras: cameras.map((camera) => validateCameraLights(camera)),
-      presentation: presentation === "toolbar" ? "toolbar" : "overlay",
+      presentation: presentation === "overlay" ? "overlay" : "standard",
     };
   },
 };

@@ -88,7 +88,9 @@ export const stageRuntimeStyles = css`
     > .component-slot-content {
     z-index: 1;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1fr);
+    grid-template-columns:
+      minmax(0, 1fr) calc(3 * var(--wzc-camera-control-size) + 2px)
+      minmax(0, 1fr);
     align-items: center;
     align-self: stretch;
     column-gap: var(--wzc-control-dock-gap);
@@ -113,7 +115,8 @@ export const stageRuntimeStyles = css`
     > .component-slot-content
     > .component-node[data-component-type="two_way_talk"] {
     grid-column: 2;
-    justify-self: center;
+    inline-size: 100%;
+    justify-self: start;
   }
 
   .stage-stack-content > .module-composition[data-module-type="ptz-panel"],

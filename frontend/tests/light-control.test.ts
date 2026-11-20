@@ -43,7 +43,7 @@ describe("linked-light component", () => {
           ],
         },
       ],
-      presentation: "overlay",
+      presentation: "standard",
     });
     expect(() =>
       componentDefinition.validateConfig({
@@ -129,7 +129,7 @@ describe("linked-light component", () => {
     element.cameraSession = context;
     element.cameras = cameraLights({ "camera.front": ["light.porch"] });
     element.hass = createHass(vi.fn(async () => undefined));
-    element.presentation = "toolbar";
+    element.presentation = "standard";
     document.body.append(element);
     context.publish(
       {},
@@ -158,6 +158,7 @@ describe("linked-light component", () => {
         lights: [{ entityId: "light.porch", icon: "mdi:coach-lamp" }],
       },
     ];
+    element.presentation = "overlay";
     element.hass = createHass(vi.fn(async () => undefined));
     document.body.append(element);
     context.publish(

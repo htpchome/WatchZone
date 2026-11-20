@@ -45,14 +45,18 @@
                 "controls": [
                   {
                     "componentType": "light_control",
-                    "config": {},
+                    "config": {
+                      "presentation": "overlay"
+                    },
                     "controlRegion": "leading",
                     "id": "standard-light-component",
                     "kind": "component"
                   },
                   {
                     "componentType": "two_way_talk",
-                    "config": {},
+                    "config": {
+                      "presentation": "overlay"
+                    },
                     "controlRegion": "center",
                     "id": "standard-talk-component",
                     "kind": "component"
@@ -114,14 +118,18 @@
                 "controls": [
                   {
                     "componentType": "light_control",
-                    "config": {},
+                    "config": {
+                      "presentation": "overlay"
+                    },
                     "controlRegion": "leading",
                     "id": "standard-light-component",
                     "kind": "component"
                   },
                   {
                     "componentType": "two_way_talk",
-                    "config": {},
+                    "config": {
+                      "presentation": "overlay"
+                    },
                     "controlRegion": "center",
                     "id": "standard-talk-component",
                     "kind": "component"

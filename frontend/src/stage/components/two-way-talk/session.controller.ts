@@ -31,6 +31,7 @@ export class TalkSessionController implements ReactiveController {
   private _capabilityEnabled = false;
   private _capabilityGeneration = 0;
   private _connection?: TalkConnection;
+  private _disconnectGeneration = 0;
   private _configuredSources: readonly TalkCameraSource[] = [];
   private _microphoneMuted = false;
   private _supported = false;
@@ -92,6 +93,7 @@ export class TalkSessionController implements ReactiveController {
   }
 
   public hostConnected(): void {
+    this._disconnectGeneration += 1;
     document.addEventListener("visibilitychange", this._handleVisibility);
     document.addEventListener("freeze", this._handleBackground);
     window.addEventListener("pagehide", this._handleBackground);
@@ -101,10 +103,20 @@ export class TalkSessionController implements ReactiveController {
     document.removeEventListener("visibilitychange", this._handleVisibility);
     document.removeEventListener("freeze", this._handleBackground);
     window.removeEventListener("pagehide", this._handleBackground);
-    this._unsubscribeCamera?.();
-    this._unsubscribeCamera = undefined;
-    this._cameraContext = undefined;
-    this.stop();
+    const generation = ++this._disconnectGeneration;
+    queueMicrotask(() => {
+      if (
+        generation !== this._disconnectGeneration ||
+        (this._host as ReactiveControllerHost & { isConnected?: boolean })
+          .isConnected
+      ) {
+        return;
+      }
+      this._unsubscribeCamera?.();
+      this._unsubscribeCamera = undefined;
+      this._cameraContext = undefined;
+      this.stop();
+    });
   }
 
   public async start(): Promise<void> {

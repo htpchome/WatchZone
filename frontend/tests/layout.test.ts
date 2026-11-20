@@ -418,7 +418,7 @@ describe("layout composition", () => {
       componentType: "two_way_talk",
       config: {
         cameras: [{ connection: "home_assistant", entityId: "camera.front" }],
-        presentation: "toolbar",
+        presentation: "standard",
       },
     });
   });
@@ -461,7 +461,7 @@ describe("layout composition", () => {
             lights: [{ entityId: "light.yard" }],
           },
         ],
-        presentation: "toolbar",
+        presentation: "standard",
       },
     });
   });
@@ -491,12 +491,12 @@ describe("layout composition", () => {
     ).toMatchObject([
       {
         componentType: "light_control",
-        config: { presentation: "toolbar" },
+        config: { presentation: "standard" },
         id: DEFAULT_LIGHT_COMPONENT_NODE_ID,
       },
       {
         componentType: "two_way_talk",
-        config: { presentation: "toolbar" },
+        config: { presentation: "standard" },
         id: DEFAULT_TALK_COMPONENT_NODE_ID,
       },
     ]);
@@ -625,7 +625,7 @@ describe("layout composition", () => {
       )?.config,
     ).toEqual({
       cameras: [{ connection: "home_assistant", entityId: "camera.porch" }],
-      presentation: "toolbar",
+      presentation: "standard",
     });
     expect(
       camera.slots?.controls?.find(

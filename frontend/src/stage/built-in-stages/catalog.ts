@@ -460,12 +460,12 @@ function hydrateCameraComponent(
   return node;
 }
 
-function controlPresentation(config: unknown): "overlay" | "toolbar" {
+function controlPresentation(config: unknown): "overlay" | "standard" {
   return typeof config === "object" &&
     config !== null &&
-    (config as Record<string, unknown>).presentation === "toolbar"
-    ? "toolbar"
-    : "overlay";
+    (config as Record<string, unknown>).presentation === "overlay"
+    ? "overlay"
+    : "standard";
 }
 
 function configuredPtzCameras(config: CardConfig) {

@@ -99,7 +99,7 @@
                         {
                           "componentType": "light_control",
                           "config": {
-                            "presentation": "toolbar"
+                            "presentation": "standard"
                           },
                           "id": "default-light-component",
                           "kind": "component"
@@ -107,7 +107,7 @@
                         {
                           "componentType": "two_way_talk",
                           "config": {
-                            "presentation": "toolbar"
+                            "presentation": "standard"
                           },
                           "id": "default-talk-component",
                           "kind": "component"
@@ -253,14 +253,18 @@
                       "controls": [
                         {
                           "componentType": "light_control",
-                          "config": {},
+                          "config": {
+                            "presentation": "overlay"
+                          },
                           "controlRegion": "leading",
                           "id": "default-light-component",
                           "kind": "component"
                         },
                         {
                           "componentType": "two_way_talk",
-                          "config": {},
+                          "config": {
+                            "presentation": "overlay"
+                          },
                           "controlRegion": "center",
                           "id": "default-talk-component",
                           "kind": "component"

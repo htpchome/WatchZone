@@ -10,13 +10,14 @@ boundaries. It supplements `architecture.md`, which remains authoritative.
 - Below the 600px container breakpoint, the built-in Full Stage presents it in
   Camera's responsive controls slot. At 600px and wider, the Stage variant
   moves the same stable component node into activity-navigation's centered
-  content slot with `toolbar` presentation. Camera Only retains the controls
+  content slot with `standard` presentation. Camera Only retains the controls
   placement at every size. The selected slot owns placement and collision-free
   spacing; the component renders only its intrinsic one-button or active
   three-button control surface.
-- The wide Full Stage keeps the talk control on the activity-navigation
-  centerline and places linked-light controls before it with the shared control
-  gap. Toolbar presentation preserves the same single-pill active geometry,
+- The wide Full Stage reserves the complete active-talk width on the
+  activity-navigation centerline. The inactive talk control anchors to the
+  start of that reservation, so its linked-light control remains at the exact
+  same coordinates when talk expands. Standard presentation preserves the same single-pill active geometry,
   transparent side-button surfaces, and visible soundwave canvas as the overlay
   while using semantic Home Assistant-aware panel, border, and icon colors.
 - The component consumes the card-scoped `CameraSessionContext`. It does not import
@@ -64,7 +65,7 @@ does not contain signaling-path conditions.
 ## Interaction and audio state
 
 - In `overlay` presentation, the inactive microphone control follows the
-  camera overlay's shared visibility state and hide timer. In `toolbar`
+  camera overlay's shared visibility state and hide timer. In `standard`
   presentation it remains visible and does not register with Camera's overlay
   interaction controller.
 - Starting talk requests microphone permission and connects with the outgoing
@@ -91,7 +92,9 @@ does not contain signaling-path conditions.
 
 ## Mandatory teardown
 
-The talk peer and every acquired microphone track are closed on explicit stop,
+Responsive relocation may synchronously disconnect and reconnect the same
+stable component node. Cleanup defers through that DOM handoff and preserves
+the active peer when the node reconnects. The talk peer and every acquired microphone track are closed on explicit stop,
 active-camera change, camera disablement, component/card removal, editor/layout
 replacement, document visibility loss, freeze, page hide, failed negotiation,
 or late completion after cancellation. Talk is never retained while the app is
