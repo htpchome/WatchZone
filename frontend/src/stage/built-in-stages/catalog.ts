@@ -294,30 +294,27 @@ function hydrateModule(
     );
     const content = slots.content;
     if (!Array.isArray(content) || content.length === 0) return undefined;
-    const secondaryIds = groupedSecondaryIds(config);
-    const talkCameras = config.cameras
-      .filter(
-        ({ entity_id: entityId, two_way_talk_enabled: enabled }) =>
-          enabled && !secondaryIds.has(entityId),
-      )
-      .map(({ connection, entity_id: entityId }) => ({ connection, entityId }));
-    const ptzCameras = config.cameras
-      .filter(
-        ({ entity_id: entityId, ptz_enabled: enabled }) =>
-          enabled && !secondaryIds.has(entityId),
-      )
-      .map(({ connection: provider, entity_id: entityId }) => ({
-        entityId,
-        provider,
-      }));
+    const components = content.flatMap((slotNode) =>
+      slotNode.kind === "surface" ? slotNode.children : [slotNode],
+    );
+    const camerasFor = (componentType: string) => {
+      const componentConfig = components.find(
+        (component) => component.componentType === componentType,
+      )?.config;
+      const cameras =
+        typeof componentConfig === "object" && componentConfig !== null
+          ? (componentConfig as Record<string, unknown>).cameras
+          : undefined;
+      return Array.isArray(cameras) ? cameras : [];
+    };
     return {
       ...node,
       config: {
         ...(typeof node.config === "object" && node.config !== null
           ? node.config
           : {}),
-        talkCameras,
-        ptzCameras,
+        talkCameras: camerasFor(TALK_COMPONENT_TYPE),
+        ptzCameras: camerasFor(PTZ_COMPONENT_TYPE),
       },
       slots,
     };

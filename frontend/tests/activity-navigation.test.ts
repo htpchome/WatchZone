@@ -16,12 +16,16 @@ describe("activity navigation", () => {
       activeId: "camera-controls",
       items: [
         {
-          entityIcons: {
-            "camera.both": ["microphone", "ptz"],
-            "camera.ptz": ["ptz"],
+          config: {
+            talkCameras: [{ entityId: "camera.both" }],
+            ptzCameras: [
+              { entityId: "camera.both" },
+              { entityId: "camera.ptz" },
+            ],
           },
           id: "camera-controls",
           labelKey: "navigation.camera_controls",
+          moduleType: "camera-controls",
         },
       ],
     });

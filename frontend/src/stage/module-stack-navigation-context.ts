@@ -9,10 +9,11 @@ export interface StageStackAccessoryConfiguration {
 
 export interface ModuleStackNavigationItem {
   readonly accessories?: StageStackAccessoryConfiguration;
-  readonly entityIcons?: Readonly<Record<string, readonly string[]>>;
+  readonly config: unknown;
   readonly icon?: string;
   readonly id: string;
   readonly labelKey?: TranslationKey;
+  readonly moduleType: string;
 }
 
 export interface ModuleStackNavigationState {

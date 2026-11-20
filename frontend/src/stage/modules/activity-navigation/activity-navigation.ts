@@ -1,7 +1,10 @@
 import { html, LitElement, nothing, type PropertyValues } from "lit";
 import { repeat } from "lit/directives/repeat.js";
 
-import { ACTIVITY_NAVIGATION_TAG } from "../../../core/constants";
+import {
+  ACTIVITY_NAVIGATION_TAG,
+  CAMERA_CONTROLS_MODULE_TYPE,
+} from "../../../core/constants";
 import type { HomeAssistantLocale } from "../../../core/home-assistant";
 import {
   englishLocalize,
@@ -100,11 +103,7 @@ export class ActivityNavigationModule extends LitElement {
         ({ id }) => id,
         (item) => {
           const label = item.labelKey ? this.localize(item.labelKey) : item.id;
-          const icons = item.entityIcons
-            ? (item.entityIcons[this._activeEntityId ?? ""] ?? [])
-            : item.icon
-              ? [item.icon]
-              : [];
+          const icons = this._icons(item);
           return html`<button
             class=${`round-button stage-stack-button${icons.length > 1 ? " joined" : ""}${item.id === active?.id ? " active" : ""}`}
             type="button"
@@ -227,10 +226,34 @@ export class ActivityNavigationModule extends LitElement {
 
   private _visibleItems(): ModuleStackNavigationState["items"] {
     return this._state.items.filter(
-      ({ entityIcons }) =>
-        !entityIcons ||
-        Boolean(this._activeEntityId && entityIcons[this._activeEntityId]),
+      (item) =>
+        item.moduleType !== CAMERA_CONTROLS_MODULE_TYPE ||
+        this._icons(item).length > 0,
     );
+  }
+
+  private _icons(
+    item: ModuleStackNavigationState["items"][number],
+  ): readonly string[] {
+    if (item.moduleType !== CAMERA_CONTROLS_MODULE_TYPE) {
+      return item.icon ? [item.icon] : [];
+    }
+    const source =
+      typeof item.config === "object" && item.config !== null
+        ? (item.config as Record<string, unknown>)
+        : {};
+    const supports = (key: "ptzCameras" | "talkCameras") =>
+      Array.isArray(source[key]) &&
+      source[key].some(
+        (camera) =>
+          typeof camera === "object" &&
+          camera !== null &&
+          (camera as Record<string, unknown>).entityId === this._activeEntityId,
+      );
+    return [
+      ...(supports("talkCameras") ? ["microphone"] : []),
+      ...(supports("ptzCameras") ? ["ptz"] : []),
+    ];
   }
 
   private readonly _handlePointerEnter = (event: PointerEvent): void => {

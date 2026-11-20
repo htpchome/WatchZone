@@ -375,16 +375,14 @@ export class LayoutRuntime implements ReactiveController {
           const registration = this._moduleLoader.getRegistration(
             child.moduleType,
           );
-          const navigation =
-            typeof registration?.navigation === "function"
-              ? registration.navigation(child.config)
-              : registration?.navigation;
+          const navigation = registration?.navigation;
           return {
             accessories: registration?.stackAccessories?.(child.config),
-            entityIcons: navigation?.entityIcons,
+            config: child.config,
             icon: navigation?.icon,
             id: child.id,
             labelKey: navigation?.labelKey,
+            moduleType: child.moduleType,
           };
         }),
       });
