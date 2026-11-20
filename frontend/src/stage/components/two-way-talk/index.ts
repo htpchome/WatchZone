@@ -8,6 +8,7 @@ export interface TwoWayTalkComponentConfig {
   readonly cameras: readonly {
     readonly connection: LiveConnectionType;
     readonly entityId: string;
+    readonly label?: string;
   }[];
   readonly presentation: "overlay" | "standard";
 }
@@ -46,6 +47,7 @@ export const componentDefinition: ComponentDefinition<
           !("entityId" in camera) ||
           typeof camera.entityId !== "string" ||
           !camera.entityId.startsWith("camera.") ||
+          ("label" in camera && typeof camera.label !== "string") ||
           !("connection" in camera) ||
           (camera.connection !== "home_assistant" &&
             camera.connection !== "frigate_go2rtc"),

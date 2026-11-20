@@ -19,10 +19,9 @@ import { renderIcon } from "../../../ui/icons";
 import { ToastManager } from "../../../ui/toast-manager";
 import { PressInteractionController } from "../../../ui/press-interaction.controller";
 import "../../../ui/toast-region";
-import type { TalkConnection } from "../../../providers/talk-source-resolver";
 import { OverlayInteractionController } from "../../overlay-interaction.controller";
 import { TalkSessionController } from "./session.controller";
-import { TalkSoundwaveController } from "./soundwave.controller";
+import { TalkSoundwaveController } from "../../../ui/talk-soundwave.controller";
 import { twoWayTalkStyles } from "./two-way-talk.styles";
 import {
   OwnedMotion,
@@ -63,7 +62,7 @@ export class TwoWayTalkComponent extends LitElement {
   private readonly _spinnerMotion = new OwnedMotion();
   private _spinnerElement?: HTMLElement;
   private readonly _session = new TalkSessionController(this, {
-    onConnected: (connection) => this._handleConnected(connection),
+    onConnected: (localStream) => this._handleConnected(localStream),
     onFailed: () => this._handleFailed(),
     onStopped: () => this._handleStopped(),
   });
@@ -73,13 +72,22 @@ export class TwoWayTalkComponent extends LitElement {
   public cameras: readonly {
     readonly connection: LiveConnectionType;
     readonly entityId: string;
+    readonly label?: string;
   }[] = [];
   public localize: LocalizeFunction = englishLocalize;
   public presentation: "overlay" | "standard" = "standard";
 
   protected willUpdate(): void {
     if (this.cameraSession) {
-      this._session.configure(this.api, this.cameraSession, this.cameras);
+      this._session.configure(
+        this.api,
+        this.cameraSession,
+        this.cameras.map((camera) => ({
+          ...camera,
+          label: camera.label ?? camera.entityId,
+        })),
+        this.localize,
+      );
     }
     this._overlay.configure(
       this.presentation === "overlay" ? this._session.camera : undefined,
@@ -205,8 +213,8 @@ export class TwoWayTalkComponent extends LitElement {
     super.disconnectedCallback();
   }
 
-  private _handleConnected(connection: TalkConnection): void {
-    this._talkStream = connection.localStream;
+  private _handleConnected(localStream: MediaStream): void {
+    this._talkStream = localStream;
     this._toasts.success(this.localize("talk.connected"), {
       durationMs: TALK_SUCCESS_TOAST_DURATION_MS,
       key: TALK_TOAST_KEY,

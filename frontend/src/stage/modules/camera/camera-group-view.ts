@@ -58,6 +58,7 @@ export interface GroupCameraItem {
   readonly entityId: string;
   readonly frigateFallback?: FrigateFallbackTransport;
   readonly lowLatencyHls: boolean;
+  readonly label: string;
   readonly posterUrl?: string;
   readonly startUnmutedPcTablet: boolean;
   readonly startUnmutedPhone: boolean;
@@ -168,6 +169,7 @@ export class CameraGroupView extends LitElement {
               .frigateFallback=${camera.frigateFallback}
               .interactionActive=${this.active}
               .lowLatencyHls=${camera.lowLatencyHls}
+              .label=${camera.label}
               .localize=${this.localize}
               .overlayInteractionEnabled=${false}
               .overlayVisible=${visible}

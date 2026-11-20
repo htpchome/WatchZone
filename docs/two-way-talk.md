@@ -7,6 +7,10 @@ boundaries. It supplements `architecture.md`, which remains authoritative.
 
 - Two-way talk is an independently placeable, lazily loaded frontend component.
   The Stage Designer may choose a compatible module slot and presentation.
+- The persistent two-way-talk tile is a document-level application feature,
+  not a Stage module, component, slot, or designer-placeable. It becomes
+  available automatically after a talk session connects and renders only when
+  no connected WatchZone surface is presenting that session's camera.
 - Below the 600px container breakpoint, the built-in Full Stage presents it in
   Camera's responsive controls slot. At 600px and wider, the Stage variant
   moves the same stable component node into activity-navigation's centered
@@ -27,6 +31,10 @@ boundaries. It supplements `architecture.md`, which remains authoritative.
   `providers/<provider>/talk/` and the backend provider registry.
 - The retained camera video/audio peer remains untouched. Talk uses a separate
   send-only microphone peer, so stopping talk never tears down live playback.
+- The outgoing peer and its restartable camera target are owned by one
+  document-scoped talk-session service. Stage controls and the persistent tile
+  are presentations of that service; neither retains a disconnected card or
+  owns the peer independently.
 
 ## Capability and configuration
 
@@ -80,6 +88,19 @@ does not contain signaling-path conditions.
   auto-unmute is an initial default only and never overwrites user intent.
 - The center control disconnects talk. The small microphone control disables
   only the outgoing audio track and keeps the peer alive.
+- On the matching active camera, the center control retains its existing
+  behavior: it ends talk and removes document-level persistence. Away from that
+  camera, the persistent tile's center control ends the peer but retains the
+  camera target as a restart launcher. The tile's close control ends any peer
+  and dismisses the launcher.
+- The persistent tile is fixed to the bottom center of the Home Assistant
+  document, above the effective safe area. Below 480px it spans the viewport;
+  at 480px and wider it uses a bounded width. It does not consume dashboard or
+  Stage layout space.
+- The persistent camera action returns to the dashboard route where talk
+  started, selects the session's stable camera entity, and scrolls its matching
+  WatchZone card into view. Once that camera surface is active, the tile hides
+  and the ordinary talk controls present the same session.
 - The two small active side controls are icon-only surfaces. They remain
   transparent during hover, press, and idle states so they never cover the
   shared soundwave canvas; non-overlay hover changes only the icon color.
@@ -97,15 +118,25 @@ does not contain signaling-path conditions.
 
 Responsive relocation may synchronously disconnect and reconnect the same
 stable component node. Cleanup defers through that DOM handoff and preserves
-the active peer when the node reconnects. The talk peer and every acquired microphone track are closed on explicit stop,
-active-camera change, camera disablement, component/card removal, editor/layout
-replacement, document visibility loss, freeze, page hide, failed negotiation,
-or late completion after cancellation. Talk is never retained while the app is
-backgrounded. Teardown is idempotent and late async results close themselves.
+the active peer when the node reconnects. After connection, active-camera
+change, component/card removal, editor/layout replacement, WatchZone internal
+navigation, Home Assistant route navigation, and dashboard changes detach the
+Stage presentation but preserve the document-owned talk peer. A matching
+camera surface reattaches the ordinary controls without creating a new peer.
+
+The talk peer and every acquired microphone track are closed on explicit
+surface stop, persistent-tile dismissal, camera disablement on the owning
+surface, document visibility loss, freeze, failed negotiation, or
+late completion after cancellation. A connection attempt that has not yet
+succeeded is cancelled when its initiating surface leaves. Talk is never
+retained while the app is backgrounded. Teardown is idempotent and late async
+results close themselves.
 
 ## Validation
 
-Tests must cover opt-in configuration compaction, component composition, provider
-fallback, cancellation, camera-switch teardown, microphone mute, and media
-track cleanup. Browser validation must include permission denial, backgrounding,
-live playback continuity, and both accelerated and standard signaling paths.
+Tests must cover opt-in configuration compaction, component composition,
+provider fallback, cancellation, camera-switch retention, route and dashboard
+retention, persistent-tile dismissal and restart, return navigation,
+microphone mute, and media-track cleanup. Browser validation must include
+permission denial, backgrounding, live playback continuity, responsive tile
+geometry, and both accelerated and standard signaling paths.

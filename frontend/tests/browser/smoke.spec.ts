@@ -7392,6 +7392,7 @@ test("preserves expanded camera-stage geometry across carousel selection", async
 test("moves talk and light between the wide toolbar and resizing phone viewport", async ({
   page,
 }) => {
+  test.setTimeout(60_000);
   await installHaIconFixture(page);
   await page.goto("/");
   await waitForWatchZoneDefinition(page);
@@ -7529,16 +7530,18 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
   ).toHaveCount(1);
   await expect(ptzTrigger).toBeVisible();
   await talk.evaluate((element) => {
-    (
-      window as typeof window & {
-        __wzcTalkTouchStarts?: number;
-      }
-    ).__wzcTalkTouchStarts = 0;
-    (
+    const testWindow = window as typeof window & {
+      __wzcOriginalTalkStart?: () => Promise<void>;
+      __wzcTalkTouchStarts?: number;
+    };
+    testWindow.__wzcTalkTouchStarts = 0;
+    const session = (
       element as HTMLElement & {
         _session: { start(): Promise<void> };
       }
-    )._session.start = () => {
+    )._session;
+    testWindow.__wzcOriginalTalkStart = session.start.bind(session);
+    session.start = () => {
       const testWindow = window as typeof window & {
         __wzcTalkTouchStarts?: number;
       };
@@ -7560,6 +7563,20 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
       ),
     )
     .toBe(1);
+  await talk.evaluate((element) => {
+    const testWindow = window as typeof window & {
+      __wzcOriginalTalkStart?: () => Promise<void>;
+    };
+    const original = testWindow.__wzcOriginalTalkStart;
+    if (original) {
+      (
+        element as HTMLElement & {
+          _session: { start(): Promise<void> };
+        }
+      )._session.start = original;
+      delete testWindow.__wzcOriginalTalkStart;
+    }
+  });
   await expect(talkButton).toBeVisible();
   await selectedLiveViewport.evaluate((viewport) => {
     const badge = document.createElement("wzc-badge");
@@ -7894,29 +7911,55 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
       }
     ).__wzcTalkElement = element;
     const talkElement = element as HTMLElement & {
-      requestUpdate(): void;
       _session: {
-        _connection?: {
-          close(): void;
-          setMicrophoneMuted(muted: boolean): void;
+        _manager: {
+          _resolver: {
+            connect(...args: unknown[]): Promise<{
+              close(): void;
+              localStream: MediaStream;
+              setMicrophoneMuted(muted: boolean): void;
+            }>;
+          };
         };
-        _microphoneMuted: boolean;
       };
     };
-    const session = talkElement._session;
-    session._connection = {
-      close: () => {
-        const testWindow = window as typeof window & {
-          __wzcTalkCloseCount?: number;
-        };
-        testWindow.__wzcTalkCloseCount =
-          (testWindow.__wzcTalkCloseCount ?? 0) + 1;
-      },
-      setMicrophoneMuted: (muted) => {
-        session._microphoneMuted = muted;
-      },
+    talkElement._session._manager._resolver = {
+      connect: async () => ({
+        close: () => {
+          const testWindow = window as typeof window & {
+            __wzcTalkCloseCount?: number;
+          };
+          testWindow.__wzcTalkCloseCount =
+            (testWindow.__wzcTalkCloseCount ?? 0) + 1;
+        },
+        localStream: new MediaStream(),
+        setMicrophoneMuted: () => undefined,
+      }),
     };
-    talkElement.requestUpdate();
+  });
+  const startedTalkState = await talk.evaluate(async (element) => {
+    const session = (
+      element as HTMLElement & {
+        _session: {
+          active: boolean;
+          start(): Promise<void>;
+          _manager: {
+            snapshot: { status: string; target?: { entityId: string } };
+          };
+        };
+      }
+    )._session;
+    await session.start();
+    return {
+      active: session.active,
+      status: session._manager.snapshot.status,
+      target: session._manager.snapshot.target?.entityId,
+    };
+  });
+  expect(startedTalkState).toEqual({
+    active: true,
+    status: "connected",
+    target: "camera.front",
   });
   const activeTalkCenter = talk.locator('button[data-talk-action="stop"]');
   const activeTalkMicrophone = talk.locator(
@@ -8052,19 +8095,56 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
         ).__wzcTalkCloseCount,
     ),
   ).toBe(0);
-  await talk.evaluate((element) => {
-    const talkElement = element as HTMLElement & {
-      requestUpdate(): void;
-      _session: {
-        _connection?: unknown;
-        _microphoneMuted: boolean;
-      };
-    };
-    const session = talkElement._session;
-    session._connection = undefined;
-    session._microphoneMuted = false;
-    talkElement.requestUpdate();
-  });
+  await page
+    .locator("wzc-camera-navigation")
+    .getByRole("tab", { name: "Doorbell" })
+    .click();
+  const persistentTalk = page.locator("wzc-persistent-talk .persistent-talk");
+  await expect(persistentTalk).toBeVisible();
+  await expect(persistentTalk).toContainText("Two Way Talk");
+  await expect(persistentTalk).toContainText("Front");
+  const persistentTalkCenter = persistentTalk.locator("button.center");
+  await persistentTalkCenter.click();
+  await expect(persistentTalk).toBeVisible();
+  await expect(persistentTalkCenter).toHaveAttribute(
+    "title",
+    "Restart two-way talk",
+  );
+  expect(
+    await page.evaluate(
+      () =>
+        (
+          window as typeof window & {
+            __wzcTalkCloseCount?: number;
+          }
+        ).__wzcTalkCloseCount,
+    ),
+  ).toBe(1);
+  await persistentTalkCenter.click();
+  await expect(persistentTalkCenter).toHaveAttribute(
+    "title",
+    "End two-way talk and keep this control available",
+  );
+  const desktopPersistentTalkBox = await persistentTalk.boundingBox();
+  expect(desktopPersistentTalkBox).not.toBeNull();
+  expect(desktopPersistentTalkBox?.width).toBeLessThan(desktopViewport.width);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect
+    .poll(async () => {
+      const box = await persistentTalk.boundingBox();
+      return box ? { width: box.width, x: box.x } : undefined;
+    })
+    .toEqual({ width: 390, x: 0 });
+  await page.setViewportSize(desktopViewport);
+
+  await persistentTalk.locator("button.navigate").click();
+  await expect(persistentTalk).toBeHidden();
+  await expect(activeTalkCenter).toBeVisible();
+  await selectedLiveViewport.hover();
+  await ptzTrigger.click();
+  await expect(ptzControl).toHaveClass(/\bexpanded\b/);
+  await activeTalkCenter.click();
   await expect(talkButton).toBeVisible();
   const lowerAreaBox = await page
     .locator(".camera-overlay-area-lower")

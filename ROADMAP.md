@@ -226,8 +226,11 @@ designer UI so saved layouts are declarative and testable.
   transport fallback is not implemented in the presentation module.
 - Talk start/stop, microphone mute, incoming-audio mute, audio focus, and live
   mute preference kept as distinct state.
-- Full cancellation and cleanup for permission denial, camera switch, layout
-  removal, backgrounding, disconnect, and late async completion.
+- Document-scoped persistence across camera, Stage, dashboard, and Home
+  Assistant route navigation, with a non-placeable bottom tile that returns to
+  the originating camera and supports explicit dismissal or restart.
+- Full cancellation and cleanup for permission denial, backgrounding, explicit
+  dismissal, camera disablement, disconnect, and late async completion.
 - Optional lightweight audio-level visualization loaded only while required.
 
 ### 10. Events, reviews, clips, and snapshots

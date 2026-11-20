@@ -389,6 +389,7 @@ export class CameraModule extends LitElement {
               .entityId=${item.cameras[0].entityId}
               .frigateFallback=${item.cameras[0].frigateFallback}
               .interactionActive=${index === this._activeIndex}
+              .label=${item.cameras[0].label}
               .lowLatencyHls=${item.cameras[0].lowLatencyHls}
               .localize=${this.localize}
               .overlayVisible=${

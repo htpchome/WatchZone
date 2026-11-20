@@ -226,6 +226,14 @@ export const themeTokens = css`
       --safe-area-inset-bottom,
       env(safe-area-inset-bottom, 0px)
     );
+    --wzc-safe-area-inset-left: var(
+      --safe-area-inset-left,
+      env(safe-area-inset-left, 0px)
+    );
+    --wzc-safe-area-inset-right: var(
+      --safe-area-inset-right,
+      env(safe-area-inset-right, 0px)
+    );
     --wzc-media-safe-area-underlap: 0px;
     --wzc-stage-module-gap: clamp(0.5rem, 1.5cqi, 1rem);
     --wzc-card-outer-shadow: var(--wzc-shadow-medium);

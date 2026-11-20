@@ -760,6 +760,15 @@ User audio intent is separate from temporary playback state:
 - Audio-focus rules prevent accidental simultaneous playback without changing
   saved preferences.
 
+An active two-way-talk peer follows the same document-lifetime navigation
+boundary through a dedicated document-scoped talk-session service. The Stage
+component and the document-level persistent tile are presentations of that
+service; neither a card nor a detached Lit element owns or preserves the peer.
+Leaving the matching camera, WatchZone view, dashboard, or Home Assistant route
+keeps a connected peer while the document remains visible. Backgrounding,
+explicit dismissal, camera disablement, or document termination closes it.
+The persistent tile is an application feature and is never a Stage placeable.
+
 The detailed normative lifecycle, lease, retention, eviction, and mute-state
 contract is defined in [docs/live-session-lifecycle.md](docs/live-session-lifecycle.md).
 
@@ -1300,6 +1309,8 @@ An architecture decision is required before changing any of the following:
 - Release-as-one-integration strategy.
 - Separation of provider capabilities from browser transport mechanics.
 - Document-scoped retained media-session ownership and user audio-intent rules.
+- Document-scoped two-way-talk ownership and its non-placeable persistent
+  presentation.
 - Dirty-state card-editor lifecycle and identity-preserving preview updates.
 - Home Assistant semantic theming and responsive shell requirements.
 - Single-engine Motion animation ownership.

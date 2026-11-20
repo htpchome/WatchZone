@@ -417,7 +417,11 @@ function hydrateCameraComponent(
         ({ entity_id: entityId, two_way_talk_enabled: enabled }) =>
           enabled && !secondaryIds.has(entityId),
       )
-      .map(({ connection, entity_id: entityId }) => ({ connection, entityId }));
+      .map(({ connection, entity_id: entityId, title: label }) => ({
+        connection,
+        entityId,
+        ...(label ? { label } : {}),
+      }));
     return cameras.length
       ? {
           ...node,

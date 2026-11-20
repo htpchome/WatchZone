@@ -56,6 +56,7 @@ export const STANDARD_PTZ_COMPONENT_NODE_ID = `${APP_ID}:standard-ptz-component`
 export const STANDARD_LIGHT_COMPONENT_NODE_ID = `${APP_ID}:standard-light-component`;
 export const TALK_COMPONENT_TYPE = "two_way_talk";
 export const TALK_TAG = `${APP_ID}-two-way-talk`;
+export const PERSISTENT_TALK_TAG = `${APP_ID}-persistent-talk`;
 export const PTZ_COMPONENT_TYPE = "ptz";
 export const PTZ_TAG = `${APP_ID}-ptz`;
 export const PTZ_PANEL_TAG = `${APP_ID}-ptz-panel`;

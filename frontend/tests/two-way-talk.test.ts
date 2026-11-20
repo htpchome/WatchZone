@@ -2,11 +2,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CameraSessionContext } from "../src/stage/camera-session-context";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
+import { englishLocalize } from "../src/core/localization";
+import { getPersistentTalkSession } from "../src/features/persistent-talk";
 import type { TwoWayTalkComponent } from "../src/stage/components/two-way-talk/two-way-talk";
 import "../src/stage/components/two-way-talk/two-way-talk";
 
 describe("two-way-talk component", () => {
   afterEach(() => {
+    getPersistentTalkSession().dismiss();
     document.body.replaceChildren();
     vi.restoreAllMocks();
   });
@@ -107,30 +110,49 @@ describe("two-way-talk component", () => {
       ).not.toBeNull(),
     );
 
-    const session = (
-      element as unknown as {
-        _session: {
-          _connection?: {
-            close(): void;
-            setMicrophoneMuted(muted: boolean): void;
-          };
-          _microphoneMuted: boolean;
-          toggleMicrophoneMute(): void;
-        };
-      }
-    )._session;
     const setMicrophoneMuted = vi.fn();
-    session._connection = {
+    const manager = getPersistentTalkSession() as unknown as {
+      _connection?: {
+        close(): void;
+        localStream: MediaStream;
+        setMicrophoneMuted(muted: boolean): void;
+      };
+      _publish(): void;
+      _syncAudioCamera(): void;
+      _target?: {
+        api: HomeAssistantApi;
+        connection: "home_assistant";
+        entityId: string;
+        label: string;
+        localize: typeof englishLocalize;
+        returnPath: string;
+      };
+    };
+    manager._target = {
+      api: element.api as HomeAssistantApi,
+      connection: "home_assistant",
+      entityId: "camera.front",
+      label: "Front",
+      localize: englishLocalize,
+      returnPath: "/lovelace/home",
+    };
+    manager._connection = {
       close: vi.fn(),
+      localStream: {} as MediaStream,
       setMicrophoneMuted,
     };
-    element.requestUpdate();
-    await element.updateComplete;
+    manager._syncAudioCamera();
+    manager._publish();
+    await vi.waitFor(() =>
+      expect(
+        element.shadowRoot?.querySelector(".talk-button.center:not(.muted)"),
+      ).not.toBeNull(),
+    );
 
     expect(
       element.shadowRoot?.querySelector(".talk-button.center:not(.muted)"),
     ).not.toBeNull();
-    session.toggleMicrophoneMute();
+    getPersistentTalkSession().toggleMicrophoneMute();
     await element.updateComplete;
 
     expect(setMicrophoneMuted).toHaveBeenCalledWith(true);

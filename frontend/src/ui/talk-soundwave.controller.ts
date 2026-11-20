@@ -1,4 +1,4 @@
-import { OwnedValueMotion } from "../../../ui/motion-value";
+import { OwnedValueMotion } from "./motion-value";
 
 const FRAME_INTERVAL_MS = 1000 / 30;
 
@@ -76,6 +76,7 @@ export class TalkSoundwaveController {
     const analyser = context.createAnalyser();
     analyser.fftSize = 128;
     analyser.smoothingTimeConstant = 0.72;
+    if (stream.getAudioTracks().length === 0) return analyser;
     const source = context.createMediaStreamSource(stream);
     source.connect(analyser);
     this._sources.push(source);

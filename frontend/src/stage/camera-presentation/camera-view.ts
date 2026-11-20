@@ -56,6 +56,7 @@ export class CameraView extends LitElement {
     entityId: { attribute: false },
     frigateFallback: { attribute: false },
     interactionActive: { attribute: false, type: Boolean },
+    label: { attribute: false },
     lowLatencyHls: { attribute: false, type: Boolean },
     localize: { attribute: false },
     overlayInteractionEnabled: { attribute: false, type: Boolean },
@@ -115,6 +116,7 @@ export class CameraView extends LitElement {
   public entityId?: string;
   public frigateFallback: FrigateFallbackTransport = "mse";
   public interactionActive = false;
+  public label = "";
   public lowLatencyHls = true;
   public localize: LocalizeFunction = englishLocalize;
   public overlayInteractionEnabled = true;
@@ -284,6 +286,7 @@ export class CameraView extends LitElement {
       entityId: this.entityId,
       connection: this.connection,
       incomingStream: this._session.webRtcStream,
+      label: this.label,
       muted: this._audio.muted,
       overlayVisible: this.overlayVisible,
       overlayOwner: this,
@@ -306,6 +309,7 @@ export class CameraView extends LitElement {
       entityId: this.entityId,
       connection: this.connection,
       incomingStream: this._session.webRtcStream,
+      label: this.label,
       muted: this._audio.muted,
       overlayVisible: this.overlayVisible,
       overlayOwner: this,

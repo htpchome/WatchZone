@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CameraSessionContext } from "../src/stage/camera-session-context";
 import type { HomeAssistantApi } from "../src/core/home-assistant";
+import { getPersistentTalkSession } from "../src/features/persistent-talk";
 
 const resolver = vi.hoisted(() => ({
   connect: vi.fn(),
@@ -18,9 +19,13 @@ vi.mock("../src/providers/talk-source-resolver", () => ({
 import { TalkSessionController } from "../src/stage/components/two-way-talk/session.controller";
 
 describe("two-way-talk session lifecycle", () => {
-  afterEach(() => vi.clearAllMocks());
+  afterEach(() => {
+    getPersistentTalkSession().dismiss();
+    document.body.replaceChildren();
+    vi.clearAllMocks();
+  });
 
-  it("closes the microphone peer on camera change and keeps live state external", async () => {
+  it("keeps the microphone peer on camera change and moves control to the persistent surface", async () => {
     const close = vi.fn();
     const setMicrophoneMuted = vi.fn();
     resolver.supports.mockResolvedValue(true);
@@ -36,6 +41,7 @@ describe("two-way-talk session lifecycle", () => {
       onStopped: vi.fn(),
     };
     const controller = new TalkSessionController(host, callbacks);
+    controller.hostConnected();
     const cameraContext = new CameraSessionContext();
     controller.configure(api(), cameraContext, [source("camera.front")]);
     cameraContext.publish({}, camera("camera.front"));
@@ -47,9 +53,11 @@ describe("two-way-talk session lifecycle", () => {
 
     expect(resolver.connect).toHaveBeenCalledOnce();
     expect(setMicrophoneMuted).toHaveBeenCalledWith(true);
-    expect(close).toHaveBeenCalledOnce();
-    expect(callbacks.onStopped).toHaveBeenCalledOnce();
+    expect(close).not.toHaveBeenCalled();
+    expect(callbacks.onStopped).not.toHaveBeenCalled();
     expect(controller.active).toBe(false);
+    expect(getPersistentTalkSession().snapshot.status).toBe("connected");
+    expect(getPersistentTalkSession().snapshot.surfaceActive).toBe(false);
   });
 
   it("closes an active talk peer when its camera is disabled", async () => {
@@ -66,6 +74,7 @@ describe("two-way-talk session lifecycle", () => {
       onFailed: vi.fn(),
       onStopped: vi.fn(),
     });
+    controller.hostConnected();
     const cameraContext = new CameraSessionContext();
     cameraContext.publish({}, camera("camera.front"));
     controller.configure(api(), cameraContext, [source("camera.front")]);
@@ -104,6 +113,7 @@ describe("two-way-talk session lifecycle", () => {
       onStopped: vi.fn(),
     };
     const controller = new TalkSessionController(new Host(), callbacks);
+    controller.hostConnected();
     const cameraContext = new CameraSessionContext();
     controller.configure(api(), cameraContext, [source("camera.front")]);
     cameraContext.publish({}, camera("camera.front"));
@@ -134,6 +144,7 @@ describe("two-way-talk session lifecycle", () => {
       onFailed: vi.fn(),
       onStopped: vi.fn(),
     });
+    controller.hostConnected();
     const cameraContext = new CameraSessionContext();
     controller.configure(api(), cameraContext, [source("camera.front")]);
     cameraContext.publish({}, activeCamera);
@@ -163,6 +174,7 @@ describe("two-way-talk session lifecycle", () => {
       onFailed: vi.fn(),
       onStopped: vi.fn(),
     });
+    controller.hostConnected();
     const cameraContext = new CameraSessionContext();
     controller.configure(api(), cameraContext, [source("camera.front")]);
     cameraContext.publish({}, camera("camera.front"));
@@ -177,6 +189,35 @@ describe("two-way-talk session lifecycle", () => {
 
     expect(close).not.toHaveBeenCalled();
     expect(controller.active).toBe(true);
+  });
+
+  it("retains an active peer when its card surface is removed", async () => {
+    const close = vi.fn();
+    resolver.supports.mockResolvedValue(true);
+    resolver.connect.mockResolvedValue({
+      close,
+      localStream: {} as MediaStream,
+      setMicrophoneMuted: vi.fn(),
+    });
+    const host = new Host();
+    const controller = new TalkSessionController(host, {
+      onConnected: vi.fn(),
+      onFailed: vi.fn(),
+      onStopped: vi.fn(),
+    });
+    controller.hostConnected();
+    const cameraContext = new CameraSessionContext();
+    controller.configure(api(), cameraContext, [source("camera.front")]);
+    cameraContext.publish({}, camera("camera.front"));
+    await vi.waitFor(() => expect(controller.supported).toBe(true));
+    await controller.start();
+
+    host.isConnected = false;
+    controller.hostDisconnected();
+    await Promise.resolve();
+
+    expect(close).not.toHaveBeenCalled();
+    expect(getPersistentTalkSession().snapshot.status).toBe("connected");
   });
 });
 
