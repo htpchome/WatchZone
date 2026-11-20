@@ -8229,8 +8229,8 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
       navigateLeft: navigate?.left ?? 0,
     };
   });
-  expect(compactPersistentGeometry.bottom).toBe(844);
-  expect(compactPersistentGeometry.height).toBeLessThanOrEqual(80);
+  expect(compactPersistentGeometry.bottom).toBe(836);
+  expect(compactPersistentGeometry.height).toBeLessThanOrEqual(65);
   expect(compactPersistentGeometry.controlsCenterX).toBeGreaterThanOrEqual(195);
   expect(compactPersistentGeometry.controlsLeft).toBeGreaterThan(
     compactPersistentGeometry.identityRight,

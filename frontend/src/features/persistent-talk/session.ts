@@ -133,7 +133,7 @@ export class PersistentTalkSession {
   public updateSurface(owner: object, surface: PersistentTalkSurface): void {
     const previous = this._surfaces.get(owner);
     if (
-      this._restartSurfaceEntities?.get(owner) !== undefined &&
+      this._restartSurfaceEntities &&
       this._restartSurfaceEntities.get(owner) !== surface.entityId
     ) {
       this.dismiss();
@@ -253,9 +253,10 @@ export class PersistentTalkSession {
   public stopAndRetain(): void {
     this._closeConnection();
     this._restartSurfaceEntities = new Map(
-      [...this._surfaces.entries()]
-        .filter(([, surface]) => this._surfacePresented(surface))
-        .map(([owner, surface]) => [owner, surface.entityId]),
+      [...this._surfaces.entries()].map(([owner, surface]) => [
+        owner,
+        surface.entityId,
+      ]),
     );
     this._publish();
   }

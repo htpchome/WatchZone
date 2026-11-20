@@ -98,6 +98,27 @@ describe("persistent two-way-talk session", () => {
     expect(session.snapshot.target).toBeUndefined();
   });
 
+  it("discards a stopped restart launcher when a new camera surface appears", async () => {
+    const session = createSession({
+      connect: vi.fn().mockResolvedValue(talkConnection(vi.fn())),
+    });
+    await session.start(target());
+    session.stopAndRetain();
+
+    session.updateSurface(
+      {},
+      {
+        ...target(),
+        entityId: "camera.side",
+        camera: camera({ entityId: "camera.side" }),
+        host: document.createElement("div"),
+      },
+    );
+
+    expect(session.snapshot.status).toBe("idle");
+    expect(session.snapshot.target).toBeUndefined();
+  });
+
   it("retains and plays incoming audio from the separate live-camera peer", async () => {
     vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
     vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => {});

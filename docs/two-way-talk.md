@@ -110,12 +110,11 @@ does not contain signaling-path conditions.
 - The persistent tile is fixed to the bottom center of Home Assistant's actual
   dashboard panel, above the effective safe area. Its position follows the
   expanded, collapsed, hidden, or modal sidebar layout and route replacement.
-  Below 480px it is anchored directly to the viewport bottom with visible side
-  gutters and one row: dismiss and identity remain at the left, the camera
+  Below 480px it uses visible side and bottom gutters and one compact row. The
+  title and camera name are inline, dismiss remains at the left, the camera
   action remains at the right, and talk controls use the true center whenever
   they clear both. When identity needs more room, the controls shift only far
-  enough right to clear it and never wrap. The safe area is internal padding,
-  never an external gap below the tile. At 480px and wider the tile uses a
+  enough right to clear it and never wrap. At 480px and wider the tile uses a
   bounded width constrained by the available dashboard panel. It does not
   consume dashboard or Stage layout space. It uses the browser top layer when
   available, with a maximum fixed-layer stack fallback, so card, dashboard,

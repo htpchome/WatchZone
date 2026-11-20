@@ -139,13 +139,12 @@ export const persistentTalkStyles = css`
 
     .persistent-talk {
       left: 50%;
-      inset-block-end: 0;
+      inset-block-end: 0.5rem;
       inline-size: calc(100vw - 1rem);
       grid-template-columns: auto minmax(0, 1fr) auto;
       gap: 0.4rem;
       padding: 0.4rem 0.5rem;
       border-radius: var(--wzc-radius-large);
-      padding-block-end: max(0.4rem, var(--wzc-safe-area-inset-bottom));
       padding-inline: max(0.5rem, var(--wzc-safe-area-inset-left))
         max(0.5rem, var(--wzc-safe-area-inset-right));
     }
@@ -153,8 +152,11 @@ export const persistentTalkStyles = css`
     .identity {
       grid-column: 2;
       grid-row: 1;
+      display: flex;
       inline-size: max-content;
       max-inline-size: min(10rem, 100%);
+      align-items: baseline;
+      gap: 0.35rem;
       justify-self: start;
     }
 
