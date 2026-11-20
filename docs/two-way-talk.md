@@ -80,6 +80,9 @@ does not contain signaling-path conditions.
   auto-unmute is an initial default only and never overwrites user intent.
 - The center control disconnects talk. The small microphone control disables
   only the outgoing audio track and keeps the peer alive.
+- The two small active side controls are icon-only surfaces. They remain
+  transparent during hover, press, and idle states so they never cover the
+  shared soundwave canvas; non-overlay hover changes only the icon color.
 - While talk is active, the center microphone uses the connected color. Muting
   the outgoing microphone changes that center surface to WatchZone's fixed
   detection-warning color. Hover preserves the current connected or muted

@@ -66,6 +66,7 @@ export const twoWayTalkStyles = css`
     --wzc-round-button-color: inherit;
     --wzc-round-button-background: transparent;
     --wzc-round-button-border-color: transparent;
+    --wzc-round-button-hover-background: transparent;
   }
 
   .talk-button.center {
@@ -121,18 +122,26 @@ export const twoWayTalkStyles = css`
   }
 
   @media (hover: hover) and (pointer: fine) {
-    :host([presentation="overlay"]) .talk-button:hover {
+    :host([presentation="overlay"]) .inactive-control .talk-button:hover {
       --wzc-round-button-hover-background: var(
         --wzc-neutral-control-hover-background
       );
     }
 
     :host(:not([presentation="overlay"]))
-      .talk-button:not(.center):hover:not(:disabled) {
+      .inactive-control
+      .talk-button:hover:not(:disabled) {
       color: var(--wzc-capability-control-hover-color);
       --wzc-round-button-hover-background: var(
         --wzc-capability-control-hover-background
       );
+    }
+
+    :host(:not([presentation="overlay"]))
+      .talk-controls
+      .talk-button:not(.center):hover:not(:disabled) {
+      color: var(--wzc-capability-control-hover-color);
+      --wzc-round-button-hover-background: transparent;
     }
 
     .talk-button.center:hover {
@@ -145,7 +154,8 @@ export const twoWayTalkStyles = css`
   }
 
   :host(:not([presentation="overlay"]))
-    .talk-button:not(.center):active:not(:disabled) {
+    .inactive-control
+    .talk-button:active:not(:disabled) {
     color: var(--wzc-capability-control-active-color);
     background: var(--wzc-capability-control-active-background);
   }

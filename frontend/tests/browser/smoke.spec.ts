@@ -7982,6 +7982,11 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
     "background-color",
     connectedColor.expected,
   );
+  await activeTalkMicrophone.hover();
+  await expect(activeTalkMicrophone).toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  );
   await activeTalkMicrophone.click();
   await expect(activeTalkCenter).toHaveClass(/\bmuted\b/);
   const mutedColor = await activeTalkCenter.evaluate((button) => {
@@ -8007,6 +8012,11 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
   await expect(talk).toHaveAttribute("presentation", "overlay");
   await expect(activeTalkCenter).toBeVisible();
   await expect(activeTalkCenter).toHaveClass(/\bmuted\b/);
+  await activeTalkMicrophone.hover();
+  await expect(activeTalkMicrophone).toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  );
   expect(
     await talk.evaluate(
       (element) =>
