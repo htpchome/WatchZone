@@ -753,7 +753,9 @@ User audio intent is separate from temporary playback state:
   preference exists.
 - Automatic policies may temporarily force a session silent, but they never
   overwrite the user's preference.
-- No automatic behavior may unmute a camera the user explicitly muted.
+- Automatic playback policy may not unmute a camera the user explicitly
+  muted. User-started two-way talk is the explicit exception defined by the
+  two-way-talk contract: it begins audible and always leaves the camera muted.
 - When a temporary forced mute ends, the manager restores the user's desired
   state when browser autoplay rules permit.
 - Browser autoplay rejection is represented separately from user mute intent.

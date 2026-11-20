@@ -44,6 +44,7 @@ export class TalkSessionController implements ReactiveController {
   private _localize?: LocalizeFunction;
   private readonly _manager = getPersistentTalkSession();
   private _snapshot: PersistentTalkSnapshot = this._manager.snapshot;
+  private _supportPending = false;
   private _supported = false;
   private _unsubscribeCamera?: () => void;
   private _unsubscribeSession?: () => void;
@@ -78,6 +79,10 @@ export class TalkSessionController implements ReactiveController {
 
   public get supported(): boolean {
     return this._supported;
+  }
+
+  public get supportPending(): boolean {
+    return this._supportPending;
   }
 
   public configure(
@@ -183,19 +188,24 @@ export class TalkSessionController implements ReactiveController {
     this._capabilityEnabled = enabled;
     const generation = ++this._capabilityGeneration;
     this._supported = false;
+    this._supportPending = false;
     if (!source || !entityId || !this._api) {
       this._host.requestUpdate();
       return;
     }
+    this._supportPending = true;
+    this._host.requestUpdate();
     void this._resolver
       .supports(this._api, source.connection, entityId)
       .then((supported) => {
         if (generation !== this._capabilityGeneration) return;
+        this._supportPending = false;
         this._supported = supported;
         this._host.requestUpdate();
       })
       .catch(() => {
         if (generation !== this._capabilityGeneration) return;
+        this._supportPending = false;
         this._supported = false;
         this._host.requestUpdate();
       });

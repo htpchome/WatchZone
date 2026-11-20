@@ -96,9 +96,16 @@ export class TwoWayTalkComponent extends LitElement {
 
   protected render() {
     const camera = this._session.camera;
-    if (!camera || !this._session.supported) return nothing;
     const active = this._session.active;
     const connecting = this._session.connecting;
+    if (
+      !camera ||
+      (!this._session.supported &&
+        !this._session.supportPending &&
+        !active &&
+        !connecting)
+    )
+      return nothing;
     const visible =
       this.presentation !== "overlay" ||
       active ||
@@ -168,7 +175,7 @@ export class TwoWayTalkComponent extends LitElement {
                     ? this.localize("talk.cancel_connecting")
                     : this.localize("talk.connect"),
                   renderIcon("microphoneOff"),
-                  !camera.available,
+                  !camera.available || !this._session.supported,
                   connecting,
                 )}
               </div>`

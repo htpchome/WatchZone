@@ -60,6 +60,22 @@ describe("two-way-talk session lifecycle", () => {
     expect(getPersistentTalkSession().snapshot.surfaceActive).toBe(false);
   });
 
+  it("reports capability discovery as pending before the provider resolves", () => {
+    resolver.supports.mockReturnValue(new Promise(() => undefined));
+    const controller = new TalkSessionController(new Host(), {
+      onConnected: vi.fn(),
+      onFailed: vi.fn(),
+      onStopped: vi.fn(),
+    });
+    controller.hostConnected();
+    const cameraContext = new CameraSessionContext();
+    controller.configure(api(), cameraContext, [source("camera.front")]);
+    cameraContext.publish({}, camera("camera.front"));
+
+    expect(controller.supportPending).toBe(true);
+    expect(controller.supported).toBe(false);
+  });
+
   it("closes an active talk peer when its camera is disabled", async () => {
     const close = vi.fn();
     resolver.supports.mockResolvedValue(true);

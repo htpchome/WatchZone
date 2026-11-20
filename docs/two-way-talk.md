@@ -66,6 +66,13 @@ their own provider adapter. A future Frigate go2rtc connection may use the
 integration API directly; that behavior must not be added to the Home Assistant
 provider or the provider-neutral component.
 
+Successful capability discovery is cached for the current Home Assistant
+connection and camera identity. Recreated cards reuse that result instead of
+waiting on another WebSocket round trip. During a first unresolved probe, the
+inactive control occupies its normal layout position in a disabled state. A
+retained active session always renders its normal controls immediately and is
+never gated on repeated capability discovery.
+
 ## Signaling fallback
 
 For an eligible Frigate camera, the backend first resolves the registered
@@ -84,13 +91,12 @@ does not contain signaling-path conditions.
 - Starting talk requests microphone permission and connects with the outgoing
   microphone live. While startup is pending, the same microphone control shows
   progress and cancels the attempt. Active talk controls remain visible.
-- A successful talk connection activates a temporary audible-playback override
-  through the existing camera audio manager. It does not replace the user's
-  stored mute preference. Ending or failing talk removes only that override and
-  restores the current user preference. An explicit mute or unmute while talk
-  is active cancels the override and remains authoritative after talk ends.
-  Cancellation before connection does not change audio state. Configured
-  auto-unmute is an initial default only and never overwrites user intent.
+- A successful talk connection always starts incoming camera audio unmuted,
+  regardless of the camera's prior mute preference. The user may still mute or
+  unmute while talk is active. Every talk exit path—normal stop, retained-tile
+  stop, dismissal, failure, cancellation, background teardown, or camera
+  disablement—sets the camera mute preference to muted. The pre-talk mute state
+  is deliberately not restored.
 - The center control disconnects talk. The small microphone control disables
   only the outgoing audio track and keeps the peer alive.
 - On the matching active camera, the center control retains its existing
@@ -100,12 +106,14 @@ does not contain signaling-path conditions.
   Assistant navigation dismisses an idle launcher; it does not follow the user
   after talk has ended. The tile's close control ends any peer and dismisses
   the launcher.
-- The persistent tile is fixed to the bottom center of the Home Assistant
-  document, above the effective safe area. Below 480px it spans the viewport;
-  at 480px and wider it uses a bounded width. It does not consume dashboard or
-  Stage layout space. It uses the browser top layer when available, with a
-  maximum fixed-layer stack fallback, so card, dashboard, and sticky Home
-  Assistant surfaces cannot cover it.
+- The persistent tile is fixed to the bottom center of Home Assistant's actual
+  dashboard panel, above the effective safe area. Its position follows the
+  expanded, collapsed, hidden, or modal sidebar layout and route replacement.
+  Below 480px it spans the viewport in one horizontal row; at 480px and wider
+  it uses a bounded width constrained by the available dashboard panel. It does
+  not consume dashboard or Stage layout space. It uses the browser top layer
+  when available, with a maximum fixed-layer stack fallback, so card,
+  dashboard, and sticky Home Assistant surfaces cannot cover it.
 - The persistent camera action returns to the dashboard route where talk
   started, selects the session's stable camera entity, and scrolls its matching
   WatchZone card into view. Once that camera surface is active, the tile hides
@@ -118,9 +126,9 @@ does not contain signaling-path conditions.
   detection-warning color. Hover preserves the current connected or muted
   surface instead of replacing it with a neutral hover state.
 - The speaker control uses one talk-session mute state across the normal and
-  persistent presentations. It updates the same explicit per-camera user mute
-  preference as the camera overlay control. Talk may temporarily unmute when
-  no explicit preference exists, but it never overrides an explicit mute.
+  persistent presentations. It updates the same per-camera mute preference as
+  the camera overlay control, subject to the unconditional unmuted-on-start and
+  muted-on-exit rules above.
 - Incoming and outgoing meters use Web Audio analyzers while talk is active.
   They never route, mix, record, or upload PCM data.
 - Connection success and final failure use the shared bounded toast system.

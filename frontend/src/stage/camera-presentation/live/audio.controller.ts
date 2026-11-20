@@ -172,11 +172,7 @@ export class CameraAudioController implements ReactiveController {
   public setTalkAudioActive(active: boolean): void {
     if (this._talkAudioActive === active) return;
     this._talkAudioActive = active;
-    this._talkUnmuteOverride =
-      active &&
-      (!this._entityId ||
-        getMediaSessionManager().getCameraMutePreference(this._entityId) !==
-          "muted");
+    this._talkUnmuteOverride = active;
     if (active) {
       this._callbacks.dismissToast(AUTOPLAY_WARNING_KEY);
       this._autoplayBlocked = false;

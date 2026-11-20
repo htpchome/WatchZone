@@ -14,18 +14,23 @@ export const persistentTalkStyles = css`
     box-sizing: border-box;
     position: fixed;
     z-index: 2147483647;
-    inset: auto auto max(0.5rem, var(--wzc-safe-area-inset-bottom)) 50%;
+    inset-block: auto max(0.5rem, var(--wzc-safe-area-inset-bottom));
+    inset-inline: auto;
+    left: var(--wzc-persistent-talk-center-x, 50%);
     margin: 0;
-    inset-inline-start: 50%;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     gap: 0.65rem;
-    inline-size: min(42rem, calc(100vw - 1rem));
+    inline-size: min(
+      42rem,
+      calc(var(--wzc-persistent-talk-available-width, 100vw) - 1rem)
+    );
     min-block-size: 4rem;
     padding: 0.45rem 0.65rem;
     color: var(--wzc-color-text-1);
-    background: var(--wzc-color-surface-primary);
+    background: var(--wzc-popover-background, Canvas);
+    backdrop-filter: var(--wzc-popover-backdrop-filter, none);
     border: 1px solid var(--wzc-color-border);
     border-radius: var(--wzc-radius-pill);
     box-shadow: var(--wzc-shadow-medium);
@@ -133,8 +138,9 @@ export const persistentTalkStyles = css`
     }
 
     .persistent-talk {
+      left: 50%;
       inline-size: 100vw;
-      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-columns: auto minmax(0, 1fr) auto auto;
       gap: 0.4rem;
       padding: 0.4rem 0.5rem;
       border-radius: var(--wzc-radius-large) var(--wzc-radius-large) 0 0;
@@ -144,20 +150,21 @@ export const persistentTalkStyles = css`
 
     .identity {
       grid-column: 2;
+      grid-row: 1;
     }
 
     .controls {
       position: relative;
       inset-inline-start: auto;
-      grid-column: 1 / 3;
-      grid-row: 2;
+      grid-column: 3;
+      grid-row: 1;
       justify-self: center;
       transform: none;
     }
 
     .navigate {
-      grid-column: 3;
-      grid-row: 1 / 3;
+      grid-column: 4;
+      grid-row: 1;
     }
   }
 `;

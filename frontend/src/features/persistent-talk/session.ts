@@ -205,11 +205,8 @@ export class PersistentTalkSession {
     const abort = new AbortController();
     this._abort = abort;
     this._microphoneMuted = false;
-    const speakerPreference = getMediaSessionManager().getCameraMutePreference(
-      nextTarget.entityId,
-    );
-    this._speakerMuted = speakerPreference === "muted";
-    this._speakerMuteExplicit = speakerPreference !== undefined;
+    this._speakerMuted = false;
+    this._speakerMuteExplicit = true;
     this._publish();
     try {
       const connection = await this._resolver.connect(
@@ -224,11 +221,13 @@ export class PersistentTalkSession {
         return;
       }
       this._connection = connection;
+      this._setCameraMuted(false);
       this._retainIncomingAudio();
       this._syncIncomingAudio();
     } catch {
       if (!abort.signal.aborted) {
         this._errorRevision += 1;
+        this._setCameraMuted(true);
         this._target = undefined;
         this._releaseIncomingAudio();
       }
@@ -296,6 +295,7 @@ export class PersistentTalkSession {
   }
 
   private _closeConnection(): void {
+    if (this._target) this._setCameraMuted(true);
     this._abort?.abort();
     this._abort = undefined;
     this._connection?.close();
@@ -358,6 +358,7 @@ export class PersistentTalkSession {
 
   private _handleConnectionFailure(entityId: string): void {
     if (this._target?.entityId !== entityId || !this._connection) return;
+    this._setCameraMuted(true);
     this._connection.close();
     this._connection = undefined;
     this._releaseAudioCamera();
@@ -402,6 +403,17 @@ export class PersistentTalkSession {
       Boolean(this._audioCamera) || this._speakerMuted || !this._connection,
     );
     if (!audio.muted) void playMediaElement(audio).catch(() => undefined);
+  }
+
+  private _setCameraMuted(muted: boolean): void {
+    const target = this._target;
+    if (!target) return;
+    this._speakerMuted = muted;
+    this._speakerMuteExplicit = true;
+    const surface = this._matchingSurface();
+    if (surface) surface.camera.setMuted(muted);
+    else getMediaSessionManager().setCameraMuted(target.entityId, muted);
+    this._syncIncomingAudioElement();
   }
 
   private _releaseIncomingAudio(): void {

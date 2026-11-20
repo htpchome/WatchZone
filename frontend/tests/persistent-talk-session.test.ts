@@ -124,6 +124,30 @@ describe("persistent two-way-talk session", () => {
     expect(session.snapshot.target).toBeUndefined();
   });
 
+  it("always starts camera audio unmuted and leaves it muted", async () => {
+    const activeCamera = camera();
+    const session = createSession({
+      connect: vi.fn().mockResolvedValue(talkConnection(vi.fn())),
+    });
+    session.updateSurface(
+      {},
+      {
+        ...target(),
+        camera: activeCamera,
+        host: document.createElement("div"),
+      },
+    );
+
+    await session.start(target());
+
+    expect(activeCamera.setMuted).toHaveBeenCalledWith(false);
+    session.toggleSpeaker();
+    session.toggleSpeaker();
+    session.stopFromSurface();
+    expect(activeCamera.setMuted).toHaveBeenLastCalledWith(true);
+    expect(session.snapshot.muted).toBe(true);
+  });
+
   it("returns to the originating dashboard with the bound camera target", () => {
     const session = createSession({ connect: vi.fn() });
     const internal = session as unknown as {

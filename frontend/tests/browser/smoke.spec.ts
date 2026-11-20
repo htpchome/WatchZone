@@ -8097,6 +8097,20 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
   ).toBe(0);
   const persistentTalk = page.locator("wzc-persistent-talk .persistent-talk");
   const cardHost = page.locator("watchzone-card");
+  const dashboardPanelBounds = await page.evaluate(() => {
+    const main = document.createElement("home-assistant-main");
+    main.style.cssText =
+      "position:fixed;inset:0;display:block;pointer-events:none";
+    const shadow = main.attachShadow({ mode: "open" });
+    const style = document.createElement("style");
+    style.textContent =
+      "partial-panel-resolver{position:fixed;inset:0 0 0 240px;display:block}";
+    const panel = document.createElement("partial-panel-resolver");
+    shadow.append(style, panel);
+    document.body.append(main);
+    const bounds = panel.getBoundingClientRect();
+    return { center: bounds.x + bounds.width / 2, width: bounds.width };
+  });
   await cardHost.evaluate((element) => {
     history.pushState(null, "", "/lovelace/other");
     element.style.display = "none";
@@ -8132,6 +8146,7 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
       ),
     ];
     return {
+      background: getComputedStyle(element).backgroundColor,
       controlsCenter: controls ? controls.x + controls.width / 2 : 0,
       panelCenter: panel.x + panel.width / 2,
       sideButtons: sideButtons.map((button) => ({
@@ -8142,8 +8157,13 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
       })),
     };
   });
+  expect(persistentGeometry.background).not.toBe("rgba(0, 0, 0, 0)");
   expect(persistentGeometry.controlsCenter).toBeCloseTo(
     persistentGeometry.panelCenter,
+    0,
+  );
+  expect(persistentGeometry.panelCenter).toBeCloseTo(
+    dashboardPanelBounds.center,
     0,
   );
   expect(persistentGeometry.sideButtons).toHaveLength(2);
@@ -8177,6 +8197,9 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
   const desktopPersistentTalkBox = await persistentTalk.boundingBox();
   expect(desktopPersistentTalkBox).not.toBeNull();
   expect(desktopPersistentTalkBox?.width).toBeLessThan(desktopViewport.width);
+  expect(desktopPersistentTalkBox?.width).toBeLessThanOrEqual(
+    dashboardPanelBounds.width,
+  );
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect
@@ -8185,6 +8208,26 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
       return box ? { width: box.width, x: box.x } : undefined;
     })
     .toEqual({ width: 390, x: 0 });
+  const compactPersistentGeometry = await persistentTalk.evaluate((element) => {
+    const panel = element.getBoundingClientRect();
+    const selectors = [".dismiss", ".identity", ".controls", ".navigate"];
+    return {
+      height: panel.height,
+      panelCenter: panel.y + panel.height / 2,
+      itemCenters: selectors.map((selector) => {
+        const bounds = element
+          .querySelector<HTMLElement>(selector)
+          ?.getBoundingClientRect();
+        return bounds ? bounds.y + bounds.height / 2 : 0;
+      }),
+    };
+  });
+  expect(compactPersistentGeometry.height).toBeLessThanOrEqual(80);
+  expect(
+    compactPersistentGeometry.itemCenters.every(
+      (center) => Math.abs(center - compactPersistentGeometry.panelCenter) <= 1,
+    ),
+  ).toBe(true);
   await page.setViewportSize(desktopViewport);
 
   await persistentTalk.locator("button.navigate").click();

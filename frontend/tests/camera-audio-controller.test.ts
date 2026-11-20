@@ -12,7 +12,7 @@ describe("camera audio controller talk policy", () => {
     vi.restoreAllMocks();
   });
 
-  it("does not automatically unmute an explicitly muted camera for talk", () => {
+  it("unmutes an explicitly muted camera while talk is active", () => {
     const entityId = "camera.explicitly-muted-talk-test";
     getMediaSessionManager().setCameraMuted(entityId, true);
     controller = createController();
@@ -21,7 +21,7 @@ describe("camera audio controller talk policy", () => {
 
     controller.setTalkAudioActive(true);
 
-    expect(controller.muted).toBe(true);
+    expect(controller.muted).toBe(false);
   });
 
   it("temporarily unmutes talk when no explicit camera preference exists", () => {

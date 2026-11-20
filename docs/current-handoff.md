@@ -14,11 +14,11 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
 ## Baseline
 
 - Branch: `main`.
-- HEAD before this work: `b47a345` —
-  `v0.0.4-dev.491 - feat(talk): retain two-way talk across HA navigation`.
-- Version being prepared: `0.0.4-dev.492`.
-- Proposed subject:
+- HEAD before this work: `6d4ddc6` —
   `v0.0.4-dev.492 - fix(talk): harden persistent navigation and audio`.
+- Version being prepared: `0.0.4-dev.493`.
+- Proposed subject:
+  `v0.0.4-dev.493 - fix(talk): stabilize persistent audio and layout`.
 
 ## Persistent two-way talk
 
@@ -31,10 +31,13 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
   controls. The global tile is shown only while that camera surface is absent
   or presenting another camera.
 - The tile is a fixed, document-body overlay at bottom center with safe-area
-  padding. It spans the viewport at the compact breakpoint and is bounded on
-  larger screens, independently of card and dashboard layout. It enters the
-  browser top layer with a maximum-z fixed fallback, and its controls remain
-  centered with explicitly contrasting side icons.
+  padding. It follows the live Home Assistant dashboard-panel rectangle across
+  expanded, collapsed, hidden, and modal sidebar layouts. It spans the viewport
+  in one horizontal row at the compact breakpoint and is bounded by the
+  dashboard panel on larger screens. It enters the browser top layer with a
+  maximum-z fixed fallback, and its controls remain centered with explicitly
+  contrasting side icons. Its background uses the defined opaque popover
+  surface token rather than an undefined token.
 - Closing the tile ends the call and dismisses its retained target. Pressing
   the tile microphone ends the call but retains the target and tile so the
   same camera can be restarted. Pressing it again restarts the session.
@@ -50,9 +53,14 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
   talk session takes an additional receive lease and owns a temporary audio
   attachment while the camera presentation is absent, so dashboard navigation
   cannot park or evict the receive peer. The talk peer remains send-only.
-- One session-owned speaker mute state now drives both presentations. Explicit
-  camera mute remains authoritative; the temporary talk unmute applies only
-  when no explicit preference exists.
+- One session-owned speaker mute state drives both presentations. Every talk
+  connection starts with incoming audio unmuted regardless of prior camera
+  state, and every exit stores and applies camera muted regardless of the final
+  in-session speaker state.
+- Successful talk capability results are cached by HA connection and camera.
+  First-load discovery shows the disabled control in its final position, and a
+  retained active session renders immediately when its camera surface returns
+  without waiting for capability discovery.
 - The global tile is lazy loaded only when talk is first started. Shared
   soundwave rendering moved to `frontend/src/ui/` so neither presentation
   imports the other.
@@ -72,11 +80,11 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
 - Shared zoom/pan and shared media-stage resize remain the sole owners of those
   behaviors for live and recorded media.
 
-## Validation for `dev.492`
+## Validation for `dev.493`
 
 - Formatting, lint, typecheck, architecture/style/license checks, production
   build, and version synchronization pass.
-- Unit tests: 527/527 across 80 files.
+- Unit tests: 531/531 across 80 files.
 - Browser tests: 174/174 across Chromium, Firefox, and WebKit.
 - Browser assertions cover the normal-control/global-tile handoff, connected
   call retention across direct route departure and camera changes, retained

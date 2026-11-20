@@ -18,6 +18,9 @@ export class PersistentTalkTile extends LitElement {
   private readonly _spinner = new OwnedMotion();
   private _spinnerElement?: HTMLElement;
   private _unsubscribe?: () => void;
+  private _dashboardPanel?: Element;
+  private _layoutFrame?: number;
+  private _layoutObserver?: ResizeObserver;
 
   public connectedCallback(): void {
     super.connectedCallback();
@@ -25,6 +28,9 @@ export class PersistentTalkTile extends LitElement {
       this._snapshot = snapshot;
       this.requestUpdate();
     });
+    window.addEventListener("resize", this._scheduleDashboardLayout);
+    window.addEventListener("location-changed", this._refreshDashboardPanel);
+    this._refreshDashboardPanel();
   }
 
   public disconnectedCallback(): void {
@@ -33,6 +39,15 @@ export class PersistentTalkTile extends LitElement {
     this._soundwave.dispose();
     this._spinner.cancel();
     this._spinnerElement = undefined;
+    window.removeEventListener("resize", this._scheduleDashboardLayout);
+    window.removeEventListener("location-changed", this._refreshDashboardPanel);
+    this._layoutObserver?.disconnect();
+    this._layoutObserver = undefined;
+    this._dashboardPanel = undefined;
+    if (this._layoutFrame !== undefined) {
+      cancelAnimationFrame(this._layoutFrame);
+      this._layoutFrame = undefined;
+    }
     super.disconnectedCallback();
   }
 
@@ -148,6 +163,7 @@ export class PersistentTalkTile extends LitElement {
         // The fixed-layer fallback remains available if top-layer entry fails.
       }
     }
+    this._scheduleDashboardLayout();
     const spinner =
       this.renderRoot.querySelector<HTMLElement>(".connecting-spinner") ??
       undefined;
@@ -189,7 +205,67 @@ export class PersistentTalkTile extends LitElement {
     this._manager.toggleMicrophoneMute();
   private readonly _toggleSpeaker = (): void => this._manager.toggleSpeaker();
 
+  private readonly _refreshDashboardPanel = (): void => {
+    requestAnimationFrame(() => {
+      if (!this.isConnected) return;
+      const nextPanel = findHomeAssistantDashboardPanel();
+      if (nextPanel !== this._dashboardPanel) {
+        this._layoutObserver?.disconnect();
+        this._dashboardPanel = nextPanel;
+        if (nextPanel && typeof ResizeObserver !== "undefined") {
+          this._layoutObserver = new ResizeObserver(
+            this._scheduleDashboardLayout,
+          );
+          this._layoutObserver.observe(nextPanel);
+        }
+      }
+      this._scheduleDashboardLayout();
+    });
+  };
+
+  private readonly _scheduleDashboardLayout = (): void => {
+    if (this._layoutFrame !== undefined) return;
+    this._layoutFrame = requestAnimationFrame(() => {
+      this._layoutFrame = undefined;
+      const panel =
+        this.renderRoot.querySelector<HTMLElement>(".persistent-talk");
+      if (!panel) return;
+      const bounds = this._dashboardPanel?.getBoundingClientRect();
+      const viewportWidth = document.documentElement.clientWidth;
+      const left = bounds && bounds.width > 0 ? Math.max(0, bounds.left) : 0;
+      const right = bounds
+        ? Math.min(viewportWidth, bounds.right)
+        : viewportWidth;
+      const width = Math.max(0, right - left);
+      panel.style.setProperty(
+        "--wzc-persistent-talk-center-x",
+        `${left + width / 2}px`,
+      );
+      panel.style.setProperty(
+        "--wzc-persistent-talk-available-width",
+        `${width}px`,
+      );
+    });
+  };
+
   static styles = [themeTokens, roundButtonStyles, persistentTalkStyles];
+}
+
+function findHomeAssistantDashboardPanel(): Element | undefined {
+  const main = findAcrossOpenShadowRoots("home-assistant-main");
+  return main?.shadowRoot?.querySelector("partial-panel-resolver") ?? undefined;
+}
+
+function findAcrossOpenShadowRoots(selector: string): Element | undefined {
+  const roots: Array<Document | ShadowRoot> = [document];
+  for (const root of roots) {
+    const match = root.querySelector(selector);
+    if (match) return match;
+    for (const element of root.querySelectorAll("*")) {
+      if (element.shadowRoot) roots.push(element.shadowRoot);
+    }
+  }
+  return undefined;
 }
 
 if (!customElements.get(PERSISTENT_TALK_TAG)) {

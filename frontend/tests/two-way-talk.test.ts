@@ -14,6 +14,86 @@ describe("two-way-talk component", () => {
     vi.restoreAllMocks();
   });
 
+  it("occupies its control position while capability discovery is pending", async () => {
+    const context = new CameraSessionContext();
+    const element = document.createElement(
+      "wzc-two-way-talk",
+    ) as TwoWayTalkComponent;
+    element.api = api(pendingCallWS);
+    element.cameraSession = context;
+    element.cameras = [
+      { connection: "home_assistant" as const, entityId: "camera.front" },
+    ];
+    element.presentation = "standard";
+    document.body.append(element);
+    context.publish({}, cameraSession(true));
+
+    await vi.waitFor(() =>
+      expect(
+        element.shadowRoot?.querySelector<HTMLButtonElement>(
+          "button[data-talk-action=connect]",
+        ),
+      ).not.toBeNull(),
+    );
+    expect(
+      element.shadowRoot?.querySelector<HTMLButtonElement>(
+        "button[data-talk-action=connect]",
+      )?.disabled,
+    ).toBe(true);
+  });
+
+  it("renders a retained active session without waiting for capability discovery", async () => {
+    const pendingApi = api(pendingCallWS);
+    const manager = getPersistentTalkSession() as unknown as {
+      _connection?: {
+        close(): void;
+        localStream: MediaStream;
+        setMicrophoneMuted(muted: boolean): void;
+      };
+      _publish(): void;
+      _target?: {
+        api: HomeAssistantApi;
+        connection: "home_assistant";
+        entityId: string;
+        label: string;
+        localize: typeof englishLocalize;
+        returnPath: string;
+      };
+    };
+    manager._target = {
+      api: pendingApi,
+      connection: "home_assistant",
+      entityId: "camera.front",
+      label: "Front",
+      localize: englishLocalize,
+      returnPath: "/lovelace/home",
+    };
+    manager._connection = {
+      close: vi.fn(),
+      localStream: {} as MediaStream,
+      setMicrophoneMuted: vi.fn(),
+    };
+    manager._publish();
+    const context = new CameraSessionContext();
+    const element = document.createElement(
+      "wzc-two-way-talk",
+    ) as TwoWayTalkComponent;
+    element.api = pendingApi;
+    element.cameraSession = context;
+    element.cameras = [
+      { connection: "home_assistant" as const, entityId: "camera.front" },
+    ];
+    element.presentation = "standard";
+    document.body.append(element);
+    context.publish({}, cameraSession(true));
+
+    await vi.waitFor(() =>
+      expect(
+        element.shadowRoot?.querySelector('button[data-talk-action="stop"]'),
+      ).not.toBeNull(),
+    );
+  });
+
   it("uses the active-camera context without repeating capability requests", async () => {
     const callWS = vi.fn().mockResolvedValue({ supported: true });
     const context = new CameraSessionContext();
@@ -37,6 +117,7 @@ describe("two-way-talk component", () => {
         ).not.toBeNull(),
       { timeout: 5_000 },
     );
+    await vi.waitFor(() => expect(callWS).toHaveBeenCalledOnce());
     context.publish(owner, cameraSession(false));
     await element.updateComplete;
 
@@ -244,4 +325,8 @@ function api(callWS: HomeAssistantApi["callWS"]): HomeAssistantApi {
     resolveUrl: (path) => path,
     subscribeMessage: vi.fn(),
   };
+}
+
+function pendingCallWS<T>(): Promise<T> {
+  return new Promise(() => undefined);
 }
