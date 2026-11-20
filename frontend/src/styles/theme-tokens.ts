@@ -574,10 +574,13 @@ export const themeTokens = css`
     --wzc-stage-stack-icon-size: 1.35rem;
     --wzc-capability-control-color: var(--wzc-color-text-2);
     --wzc-capability-control-background: var(--wzc-color-surface-secondary);
-    --wzc-capability-control-border-color: var(--wzc-color-border-control);
+    --wzc-capability-control-border-color: transparent;
+    --wzc-capability-control-hover-color: var(--wzc-color-primary);
     --wzc-capability-control-hover-background: var(
-      --wzc-neutral-control-hover-background
+      --wzc-color-surface-secondary
     );
+    --wzc-capability-control-active-color: var(--wzc-color-text-reversed);
+    --wzc-capability-control-active-background: var(--wzc-color-primary);
     --wzc-stage-resize-handle-visibility: visible;
     --wzc-camera-navigation-item-padding: 1rem;
     --wzc-talk-connected-color: var(--ha-color-green-50, #34d399);

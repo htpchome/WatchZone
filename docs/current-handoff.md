@@ -16,9 +16,9 @@ precedence.
 ## Repository baseline
 
 - Branch: `main`.
-- HEAD before the current control correction: `b9c3728` —
-  `v0.0.4-dev.487 - fix(controls): restore active talk layout`.
-- Version being prepared: `0.0.4-dev.488`.
+- HEAD before the current control correction: `fde4382` —
+  `v0.0.4-dev.488 - fix(controls): preserve talk state and stable light placement`.
+- Version being prepared: `0.0.4-dev.489`.
 - The user remains the commit owner. No agent commit or sync is authorized.
 
 Always recheck `git status`, `git log -1`, and
@@ -70,8 +70,9 @@ This work is uncommitted; the user remains the only commit owner.
 
 ## Talk placement and lifecycle correction at `dev.488`
 
-- Wide Full Stage reserves the active TWT width and anchors inactive TWT at its
-  start, so the linked-light button does not move when TWT expands.
+- Wide Full Stage reserves the active TWT width, keeps the inactive microphone
+  centered, and fixes the linked-light button at the active pill's leading
+  position so neither control shifts incorrectly when TWT expands.
 - Overlay presentation alone uses overlay styling. Every other placement uses
   generic Home Assistant-aware capability tokens while preserving the same
   pill, transparent side buttons, and visible soundwave.

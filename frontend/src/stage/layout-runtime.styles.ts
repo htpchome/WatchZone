@@ -114,9 +114,10 @@ export const stageRuntimeStyles = css`
   .module-composition[data-module-type="activity-navigation"]
     > .component-slot-content
     > .component-node[data-component-type="two_way_talk"] {
+    display: grid;
     grid-column: 2;
     inline-size: 100%;
-    justify-self: start;
+    justify-items: center;
   }
 
   .stage-stack-content > .module-composition[data-module-type="ptz-panel"],

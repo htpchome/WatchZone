@@ -7869,7 +7869,10 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
     activityNavigationBox.x + activityNavigationBox.width / 2,
     0,
   );
-  expect(talkHostBox.x).toBeCloseTo(talkPlacementBox.x, 0);
+  expect(talkHostBox.x + talkHostBox.width / 2).toBeCloseTo(
+    activityNavigationBox.x + activityNavigationBox.width / 2,
+    0,
+  );
   expect(lightHostBox.y).toBeGreaterThanOrEqual(activityNavigationBox.y);
   expect(talkHostBox.y + talkHostBox.height).toBeLessThanOrEqual(
     activityNavigationBox.y + activityNavigationBox.height,
@@ -8127,6 +8130,45 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
     lightButton.evaluate((element) => getComputedStyle(element).color),
   ]);
   expect(talkButtonColor).toBe(lightButtonColor);
+  const standardControlPresentation = await talkButton.evaluate((element) => {
+    const backgroundProbe = document.createElement("span");
+    const colorProbe = document.createElement("span");
+    backgroundProbe.style.background =
+      "var(--wzc-capability-control-background)";
+    colorProbe.style.color = "var(--wzc-capability-control-color)";
+    element.append(backgroundProbe, colorProbe);
+    const styles = getComputedStyle(element);
+    const result = {
+      background: styles.backgroundColor,
+      backgroundExpected: getComputedStyle(backgroundProbe).backgroundColor,
+      borderWidth: styles.borderWidth,
+      color: styles.color,
+      colorExpected: getComputedStyle(colorProbe).color,
+    };
+    backgroundProbe.remove();
+    colorProbe.remove();
+    return result;
+  });
+  expect(standardControlPresentation).toMatchObject({
+    background: standardControlPresentation.backgroundExpected,
+    borderWidth: "0px",
+    color: standardControlPresentation.colorExpected,
+  });
+  await talkButton.hover();
+  const standardTalkHover = await talkButton.evaluate((element) => {
+    const probe = document.createElement("span");
+    probe.style.color = "var(--wzc-capability-control-hover-color)";
+    element.append(probe);
+    const result = {
+      actual: getComputedStyle(element).color,
+      expected: getComputedStyle(probe).color,
+    };
+    probe.remove();
+    return result;
+  });
+  expect(standardTalkHover.actual).toBe(standardTalkHover.expected);
+  await lightButton.hover();
+  await expect(lightButton).toHaveCSS("color", standardTalkHover.expected);
   expect(lightIconBox.width).toBeCloseTo(talkIconBox.width, 1);
   expect(lightIconBox.height).toBeCloseTo(talkIconBox.height, 1);
   expect(lightIconBox.x + lightIconBox.width / 2).toBeCloseTo(

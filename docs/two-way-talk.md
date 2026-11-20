@@ -15,9 +15,9 @@ boundaries. It supplements `architecture.md`, which remains authoritative.
   spacing; the component renders only its intrinsic one-button or active
   three-button control surface.
 - The wide Full Stage reserves the complete active-talk width on the
-  activity-navigation centerline. The inactive talk control anchors to the
-  start of that reservation, so its linked-light control remains at the exact
-  same coordinates when talk expands. Standard presentation preserves the same single-pill active geometry,
+  activity-navigation centerline. The inactive microphone stays centered in
+  that reservation, while linked-light controls remain immediately before the
+  active pill boundary and do not move when talk expands. Standard presentation preserves the same single-pill active geometry,
   transparent side-button surfaces, and visible soundwave canvas as the overlay
   while using semantic Home Assistant-aware panel, border, and icon colors.
 - The component consumes the card-scoped `CameraSessionContext`. It does not import

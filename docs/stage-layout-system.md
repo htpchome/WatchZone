@@ -163,9 +163,9 @@ Stage-variant decision: neither component chooses the breakpoint, imports its
 host module, or discovers a sibling. Future Stage Designs may place either
 component in any compatible slot and select its presentation explicitly.
 The activity-navigation content slot reserves the complete active-talk width
-on its centerline. Inactive talk anchors to the start of that reservation and
-linked-light controls align immediately before it with the shared gap, so the
-light does not move when talk expands.
+on its centerline. The inactive microphone remains centered in that reserved
+width, while linked-light controls align immediately before the active pill
+boundary with the shared gap and do not move when talk expands.
 
 The built-in `camera_only` composition contains the same camera module and its
 private overlay and controls slots, but no standalone camera-navigation or

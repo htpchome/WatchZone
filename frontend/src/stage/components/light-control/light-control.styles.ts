@@ -149,14 +149,24 @@ export const lightControlStyles = css`
   }
 
   @media (hover: hover) and (pointer: fine) {
-    button:hover:not(:disabled) {
+    :host([presentation="overlay"]) button:hover:not(:disabled) {
       background-color: var(--wzc-neutral-control-hover-background);
+    }
+
+    :host(:not([presentation="overlay"])) button:hover:not(:disabled) {
+      color: var(--wzc-capability-control-hover-color);
+      background-color: var(--wzc-capability-control-hover-background);
     }
   }
 
+  :host(:not([presentation="overlay"])) button:active:not(:disabled) {
+    color: var(--wzc-capability-control-active-color);
+    background-color: var(--wzc-capability-control-active-background);
+  }
+
   @media (hover: none) {
-    button:hover,
-    button:active {
+    :host([presentation="overlay"]) button:hover,
+    :host([presentation="overlay"]) button:active {
       background-color: var(--wzc-media-overlay-background);
     }
   }

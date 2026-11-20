@@ -121,9 +121,17 @@ export const twoWayTalkStyles = css`
   }
 
   @media (hover: hover) and (pointer: fine) {
-    .talk-button:hover {
+    :host([presentation="overlay"]) .talk-button:hover {
       --wzc-round-button-hover-background: var(
         --wzc-neutral-control-hover-background
+      );
+    }
+
+    :host(:not([presentation="overlay"]))
+      .talk-button:not(.center):hover:not(:disabled) {
+      color: var(--wzc-capability-control-hover-color);
+      --wzc-round-button-hover-background: var(
+        --wzc-capability-control-hover-background
       );
     }
 
@@ -134,5 +142,11 @@ export const twoWayTalkStyles = css`
     .talk-button.center.muted:hover {
       --wzc-round-button-hover-background: var(--wzc-talk-muted-color);
     }
+  }
+
+  :host(:not([presentation="overlay"]))
+    .talk-button:not(.center):active:not(:disabled) {
+    color: var(--wzc-capability-control-active-color);
+    background: var(--wzc-capability-control-active-background);
   }
 `;
