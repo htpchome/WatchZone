@@ -1,7 +1,5 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
-const DEFAULT_HEIGHT_RATIO = 9 / 16;
-const MAX_HEIGHT_RATIO = 1;
 const KEYBOARD_HEIGHT_STEP = 0.025;
 
 interface ResizeDrag {
@@ -13,7 +11,7 @@ interface ResizeDrag {
 }
 
 type ResizableMediaSurface = HTMLElement & {
-  setPresentationHeightRatio?(heightRatio: number): void;
+  setPresentationHeightRatio?(heightRatio: number | undefined): void;
 };
 
 /** Owns the bottom drawer's transient recorded-media height interaction. */
@@ -21,8 +19,9 @@ export class BottomDrawerMediaResizeController implements ReactiveController {
   private _drag?: ResizeDrag;
   private _frame?: number;
   private _handle?: HTMLButtonElement;
-  private _heightRatio = DEFAULT_HEIGHT_RATIO;
+  private _heightRatio?: number;
   private _listening = false;
+  private _minimumHeightRatio?: number;
   private _presentationTarget?: ResizableMediaSurface;
   private _surface?: HTMLElement;
   private _footerBoundary?: HTMLElement;
@@ -32,7 +31,7 @@ export class BottomDrawerMediaResizeController implements ReactiveController {
   }
 
   public get heightPercentage(): number {
-    return Math.round(this._heightRatio * 100);
+    return Math.round((this._heightRatio ?? 0) * 100);
   }
 
   public observe(
@@ -51,13 +50,33 @@ export class BottomDrawerMediaResizeController implements ReactiveController {
 
   public reset(): void {
     this._finishDrag();
-    this._heightRatio = DEFAULT_HEIGHT_RATIO;
+    this._heightRatio = undefined;
+    this._minimumHeightRatio = undefined;
+    this._apply();
+  }
+
+  public setMediaDimensions(width: number, height: number): void {
+    if (
+      !Number.isFinite(width) ||
+      !Number.isFinite(height) ||
+      width <= 0 ||
+      height <= 0
+    ) {
+      return;
+    }
+    const heightRatio = height / width;
+    if (heightRatio === this._minimumHeightRatio) return;
+    this._finishDrag();
+    this._minimumHeightRatio = heightRatio;
+    this._heightRatio = heightRatio;
     this._apply();
   }
 
   public hostDisconnected(): void {
     this._finishDrag();
-    this._setSurfaceRatio(DEFAULT_HEIGHT_RATIO);
+    this._setSurfaceRatio(undefined);
+    this._heightRatio = undefined;
+    this._minimumHeightRatio = undefined;
     this._surface = undefined;
     this._presentationTarget = undefined;
     this._handle = undefined;
@@ -67,11 +86,20 @@ export class BottomDrawerMediaResizeController implements ReactiveController {
   public readonly handlePointerDown = (event: PointerEvent): void => {
     if (event.pointerType === "mouse" && event.button !== 0) return;
     const surface = this._surface;
+    const heightRatio = this._heightRatio;
+    const minimumHeightRatio = this._minimumHeightRatio;
     const handle = event.currentTarget as HTMLButtonElement;
     const rect = surface?.getBoundingClientRect();
-    if (!rect || rect.width <= 0) return;
+    if (
+      !rect ||
+      rect.width <= 0 ||
+      heightRatio === undefined ||
+      minimumHeightRatio === undefined
+    ) {
+      return;
+    }
     this._drag = {
-      heightRatio: this._heightRatio,
+      heightRatio,
       maximumHeightRatio: this._maximumHeightRatio(),
       pointerId: event.pointerId,
       startY: event.clientY,
@@ -87,6 +115,7 @@ export class BottomDrawerMediaResizeController implements ReactiveController {
     if (!drag || drag.pointerId !== event.pointerId) return;
     this._heightRatio = clampHeightRatioToMaximum(
       drag.heightRatio + (event.clientY - drag.startY) / drag.width,
+      this._minimumHeightRatio ?? drag.heightRatio,
       drag.maximumHeightRatio,
     );
     this._frame ??= requestAnimationFrame(this._commit);
@@ -112,17 +141,24 @@ export class BottomDrawerMediaResizeController implements ReactiveController {
 
   public readonly handleDoubleClick = (event: MouseEvent): void => {
     event.preventDefault();
-    this.reset();
+    const minimumHeightRatio = this._minimumHeightRatio;
+    if (minimumHeightRatio === undefined) return;
+    this._finishDrag();
+    this._heightRatio = minimumHeightRatio;
+    this._apply();
   };
 
   public readonly handleKeyDown = (event: KeyboardEvent): void => {
+    const heightRatio = this._heightRatio;
+    const minimumHeightRatio = this._minimumHeightRatio;
+    if (heightRatio === undefined || minimumHeightRatio === undefined) return;
     let nextRatio: number | undefined;
     if (event.key === "ArrowDown" || event.key === "PageDown") {
-      nextRatio = this._heightRatio + KEYBOARD_HEIGHT_STEP;
+      nextRatio = heightRatio + KEYBOARD_HEIGHT_STEP;
     } else if (event.key === "ArrowUp" || event.key === "PageUp") {
-      nextRatio = this._heightRatio - KEYBOARD_HEIGHT_STEP;
+      nextRatio = heightRatio - KEYBOARD_HEIGHT_STEP;
     } else if (event.key === "Home") {
-      nextRatio = DEFAULT_HEIGHT_RATIO;
+      nextRatio = minimumHeightRatio;
     } else if (event.key === "End") {
       nextRatio = this._maximumHeightRatio();
     } else {
@@ -132,6 +168,7 @@ export class BottomDrawerMediaResizeController implements ReactiveController {
     event.preventDefault();
     this._heightRatio = clampHeightRatioToMaximum(
       nextRatio,
+      minimumHeightRatio,
       this._maximumHeightRatio(),
     );
     this._apply();
@@ -144,23 +181,40 @@ export class BottomDrawerMediaResizeController implements ReactiveController {
 
   private _apply(): void {
     this._setSurfaceRatio(this._heightRatio);
+    const heightRatio = this._heightRatio;
+    const minimumHeightRatio = this._minimumHeightRatio;
+    if (heightRatio === undefined || minimumHeightRatio === undefined) {
+      if (this._handle) this._handle.disabled = true;
+      this._handle?.removeAttribute("aria-valuemin");
+      this._handle?.removeAttribute("aria-valuemax");
+      this._handle?.removeAttribute("aria-valuenow");
+      this._handle?.removeAttribute("aria-valuetext");
+      return;
+    }
+    if (this._handle) this._handle.disabled = false;
     const percentage = this.heightPercentage;
     const maximumPercentage = Math.round(this._maximumHeightRatio() * 100);
+    this._handle?.setAttribute(
+      "aria-valuemin",
+      String(Math.round(minimumHeightRatio * 100)),
+    );
     this._handle?.setAttribute("aria-valuemax", String(maximumPercentage));
     this._handle?.setAttribute("aria-valuenow", String(percentage));
     this._handle?.setAttribute("aria-valuetext", `${percentage}%`);
   }
 
   private _maximumHeightRatio(): number {
+    const heightRatio = this._heightRatio ?? this._minimumHeightRatio ?? 0;
     const surfaceRect = this._surface?.getBoundingClientRect();
     const handleRect = this._handle?.getBoundingClientRect();
     const footerRect = this._footerBoundary?.getBoundingClientRect();
     if (!surfaceRect || !handleRect || !footerRect || surfaceRect.width <= 0) {
-      return MAX_HEIGHT_RATIO;
+      return heightRatio;
     }
     const availableTravel = Math.max(0, footerRect.top - handleRect.bottom);
-    return clampHeightRatio(
-      this._heightRatio + availableTravel / surfaceRect.width,
+    return Math.max(
+      this._minimumHeightRatio ?? heightRatio,
+      heightRatio + availableTravel / surfaceRect.width,
     );
   }
 
@@ -230,27 +284,30 @@ export class BottomDrawerMediaResizeController implements ReactiveController {
     if (event.pointerType === "touch") handle?.blur();
   }
 
-  private _setSurfaceRatio(heightRatio: number): void {
+  private _setSurfaceRatio(heightRatio: number | undefined): void {
     const surface = this._presentationTarget;
     if (!surface) return;
     if (typeof surface.setPresentationHeightRatio === "function") {
       surface.setPresentationHeightRatio(heightRatio);
       return;
     }
-    surface.style.setProperty(
-      "--wzc-recorded-media-presentation-aspect-ratio",
-      String(1 / heightRatio),
-    );
+    if (heightRatio === undefined) {
+      surface.style.removeProperty(
+        "--wzc-recorded-media-presentation-aspect-ratio",
+      );
+    } else {
+      surface.style.setProperty(
+        "--wzc-recorded-media-presentation-aspect-ratio",
+        String(1 / heightRatio),
+      );
+    }
   }
 }
 
-function clampHeightRatio(value: number): number {
-  return Math.min(MAX_HEIGHT_RATIO, Math.max(DEFAULT_HEIGHT_RATIO, value));
-}
-
-function clampHeightRatioToMaximum(value: number, maximum: number): number {
-  return Math.min(
-    Math.max(DEFAULT_HEIGHT_RATIO, maximum),
-    Math.max(DEFAULT_HEIGHT_RATIO, value),
-  );
+function clampHeightRatioToMaximum(
+  value: number,
+  minimum: number,
+  maximum: number,
+): number {
+  return Math.min(Math.max(minimum, maximum), Math.max(minimum, value));
 }

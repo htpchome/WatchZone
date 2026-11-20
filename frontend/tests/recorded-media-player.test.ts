@@ -828,7 +828,7 @@ describe("recorded media player", () => {
     expect(video).not.toBeNull();
     expect(mediaSurface).not.toBeNull();
     if (!video || !mediaSurface) return;
-    let width = 1600;
+    let width = 1200;
     let height = 900;
     Object.defineProperties(video, {
       videoHeight: { configurable: true, get: () => height },
@@ -836,11 +836,14 @@ describe("recorded media player", () => {
     });
     video.dispatchEvent(new Event("loadedmetadata"));
 
+    expect(player.hasAttribute("intrinsic-presentation")).toBe(false);
+
     player.setPresentationHeightRatio(0.8);
+    expect(player.hasAttribute("intrinsic-presentation")).toBe(true);
     expect(transformScale(mediaSurface.style.transform)).toBe(1);
     expect(
       mediaSurface.style.getPropertyValue("--wzc-zoom-media-aspect-ratio"),
-    ).toBe(String(16 / 9));
+    ).toBe(String(4 / 3));
 
     width = 0;
     height = 0;

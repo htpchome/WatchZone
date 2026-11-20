@@ -5,6 +5,7 @@ import {
   MEDIA_CONTROL_EVENT,
   MEDIA_CONTROLS_TAG,
   MEDIA_OVERLAY_INTERACTION_EVENT,
+  RECORDED_MEDIA_DIMENSIONS_EVENT,
   RECORDED_VIDEO_TRANSPORT_EVENT,
   RECORDED_VIDEO_TRANSPORT_HOLD_EVENT,
   RECORDED_VIDEO_TRANSPORT_TAG,
@@ -38,6 +39,7 @@ import {
   togglePictureInPicture,
 } from "../../core/picture-in-picture";
 import type {
+  RecordedMediaDimensions,
   RecordedMediaExportIntent,
   RecordedMediaRequest,
   RecordingTimeline,
@@ -82,8 +84,6 @@ const recordingSegmentManagerEvent = unsafeStatic(
 );
 type RecordedVideoControlAction = "fullscreen" | "picture_in_picture";
 const PLAYBACK_RATES = [0.25, 0.5, 1, 2, 5, 10, 25] as const;
-const DEFAULT_PRESENTATION_HEIGHT_RATIO = 9 / 16;
-
 /** Ephemeral recorded-media playback engine. */
 export class RecordedVideoPlayer extends LitElement {
   public static properties = {
@@ -101,16 +101,25 @@ export class RecordedVideoPlayer extends LitElement {
     return this._viewport();
   }
 
-  public setPresentationHeightRatio(heightRatio: number): void {
-    this._presentationHeightRatio = Math.min(
-      1,
-      Math.max(DEFAULT_PRESENTATION_HEIGHT_RATIO, heightRatio),
-    );
-    this.style.setProperty(
-      "--wzc-recorded-media-presentation-aspect-ratio",
-      String(1 / this._presentationHeightRatio),
-    );
-    this._zoom.setPresentationHeightRatio(this._presentationHeightRatio);
+  public setPresentationHeightRatio(heightRatio: number | undefined): void {
+    const nextRatio =
+      heightRatio !== undefined &&
+      Number.isFinite(heightRatio) &&
+      heightRatio > 0
+        ? heightRatio
+        : undefined;
+    this.toggleAttribute("intrinsic-presentation", nextRatio !== undefined);
+    if (nextRatio === undefined) {
+      this.style.removeProperty(
+        "--wzc-recorded-media-presentation-aspect-ratio",
+      );
+    } else {
+      this.style.setProperty(
+        "--wzc-recorded-media-presentation-aspect-ratio",
+        String(1 / nextRatio),
+      );
+    }
+    this._zoom.setPresentationHeightRatio(nextRatio);
   }
 
   public readonly toggleSegmentSelection = async (): Promise<void> => {
@@ -132,7 +141,6 @@ export class RecordedVideoPlayer extends LitElement {
   private _nativePlaybackRate = 1;
   private _paused = true;
   private _pictureInPictureActive = false;
-  private _presentationHeightRatio = DEFAULT_PRESENTATION_HEIGHT_RATIO;
   private _playbackRate = 1;
   private _segmentPreviewActive = false;
   private _segmentPreviewGeneration = 0;
@@ -445,6 +453,16 @@ export class RecordedVideoPlayer extends LitElement {
     const height = video?.videoHeight ?? 0;
     if (width > 0 && height > 0) {
       this._zoom.setMediaDimensions(width, height);
+      this.dispatchEvent(
+        new CustomEvent<RecordedMediaDimensions>(
+          RECORDED_MEDIA_DIMENSIONS_EVENT,
+          {
+            bubbles: true,
+            composed: true,
+            detail: { height, width },
+          },
+        ),
+      );
     }
   }
 

@@ -1,6 +1,7 @@
 import { LitElement, html } from "lit";
 
 import {
+  RECORDED_MEDIA_DIMENSIONS_EVENT,
   RECORDED_MEDIA_ERROR_EVENT,
   RECORDED_SNAPSHOT_PLAYER_TAG,
 } from "../../core/constants";
@@ -8,10 +9,9 @@ import {
   englishLocalize,
   type LocalizeFunction,
 } from "../../core/localization";
+import type { RecordedMediaDimensions } from "../../core/recorded-media";
 import { ZoomController } from "../../ui/zoom";
 import { recordedSnapshotPlayerStyles } from "./recorded-snapshot-player.styles";
-
-const DEFAULT_PRESENTATION_HEIGHT_RATIO = 9 / 16;
 
 /** Shared zoomable snapshot presentation for every recorded-media shell. */
 export class RecordedSnapshotPlayer extends LitElement {
@@ -32,19 +32,27 @@ export class RecordedSnapshotPlayer extends LitElement {
     return this._viewport();
   }
 
-  public setPresentationHeightRatio(heightRatio: number): void {
-    this._presentationHeightRatio = Math.min(
-      1,
-      Math.max(DEFAULT_PRESENTATION_HEIGHT_RATIO, heightRatio),
-    );
-    this.style.setProperty(
-      "--wzc-recorded-media-presentation-aspect-ratio",
-      String(1 / this._presentationHeightRatio),
-    );
-    this._zoom.setPresentationHeightRatio(this._presentationHeightRatio);
+  public setPresentationHeightRatio(heightRatio: number | undefined): void {
+    const nextRatio =
+      heightRatio !== undefined &&
+      Number.isFinite(heightRatio) &&
+      heightRatio > 0
+        ? heightRatio
+        : undefined;
+    this.toggleAttribute("intrinsic-presentation", nextRatio !== undefined);
+    if (nextRatio === undefined) {
+      this.style.removeProperty(
+        "--wzc-recorded-media-presentation-aspect-ratio",
+      );
+    } else {
+      this.style.setProperty(
+        "--wzc-recorded-media-presentation-aspect-ratio",
+        String(1 / nextRatio),
+      );
+    }
+    this._zoom.setPresentationHeightRatio(nextRatio);
   }
 
-  private _presentationHeightRatio = DEFAULT_PRESENTATION_HEIGHT_RATIO;
   private readonly _zoom = new ZoomController(this);
 
   protected render() {
@@ -104,6 +112,16 @@ export class RecordedSnapshotPlayer extends LitElement {
     const height = image?.naturalHeight ?? 0;
     if (width <= 0 || height <= 0) return;
     this._zoom.setMediaDimensions(width, height);
+    this.dispatchEvent(
+      new CustomEvent<RecordedMediaDimensions>(
+        RECORDED_MEDIA_DIMENSIONS_EVENT,
+        {
+          bubbles: true,
+          composed: true,
+          detail: { height, width },
+        },
+      ),
+    );
   };
 
   private readonly _handleError = (): void => {

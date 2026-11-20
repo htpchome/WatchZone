@@ -1,4 +1,5 @@
 import {
+  RECORDED_MEDIA_DIMENSIONS_EVENT,
   RECORDED_MEDIA_EXPORT_EVENT,
   RECORDED_MEDIA_NOTICE_EVENT,
   RECORDED_MEDIA_OPEN_EVENT,
@@ -113,6 +114,11 @@ export interface RecordedMediaInitialGeometry {
   readonly width: number;
 }
 
+export interface RecordedMediaDimensions {
+  readonly height: number;
+  readonly width: number;
+}
+
 export interface RecordedMediaExportIntent {
   readonly camera: string;
   readonly endTime: number;
@@ -142,6 +148,7 @@ export function openRecordedMedia(
 
 declare global {
   interface HTMLElementEventMap {
+    [RECORDED_MEDIA_DIMENSIONS_EVENT]: CustomEvent<RecordedMediaDimensions>;
     [RECORDED_MEDIA_EXPORT_EVENT]: CustomEvent<RecordedMediaExportIntent>;
     [RECORDED_MEDIA_NOTICE_EVENT]: CustomEvent<RecordedMediaNotice>;
     [RECORDED_MEDIA_OPEN_EVENT]: CustomEvent<RecordedMediaRequest>;

@@ -128,10 +128,11 @@ test("presents recorded media in the configured card-width bottom drawer", async
   );
   await page.route("**/snapshot.svg", (route) =>
     route.fulfill({
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="90"/>',
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="120"/>',
       contentType: "image/svg+xml",
     }),
   );
+  await page.setViewportSize({ height: 1_000, width: 1_280 });
   await page.goto("/");
   await waitForWatchZoneDefinition(page);
   await page.locator("watchzone-card").evaluate((element) => {
@@ -191,6 +192,17 @@ test("presents recorded media in the configured card-width bottom drawer", async
           .evaluate((dialog) => dialog.style.transform),
       )
       .toBe("translateY(0px)");
+    await page
+      .locator(
+        "wzc-recorded-media-bottom-drawer wzc-recorded-video-player video",
+      )
+      .evaluate((video) => {
+        Object.defineProperties(video, {
+          videoHeight: { configurable: true, value: 900 },
+          videoWidth: { configurable: true, value: 1200 },
+        });
+        video.dispatchEvent(new Event("loadedmetadata"));
+      });
   };
 
   await openDrawer();
@@ -243,15 +255,7 @@ test("presents recorded media in the configured card-width bottom drawer", async
     "wzc-recorded-media-bottom-drawer wzc-recorded-video-player",
   );
   await expect(mediaPlayerHost).toHaveCSS("aspect-ratio", "auto");
-  const recordedVideo = mediaPlayerHost.locator("video");
   const recordedVideoSurface = mediaPlayerHost.locator(".media-surface");
-  await recordedVideo.evaluate((video) => {
-    Object.defineProperties(video, {
-      videoHeight: { configurable: true, value: 900 },
-      videoWidth: { configurable: true, value: 1600 },
-    });
-    video.dispatchEvent(new Event("loadedmetadata"));
-  });
   const mediaResizeHandle = page.locator(
     "wzc-recorded-media-bottom-drawer .media-resize-handle",
   );
@@ -260,6 +264,7 @@ test("presents recorded media in the configured card-width bottom drawer", async
   if (!initialMediaBox || !mediaResizeBox) {
     throw new Error("Recorded media resize handle was not rendered");
   }
+  expect(initialMediaBox.height / initialMediaBox.width).toBeCloseTo(3 / 4, 2);
   expect(mediaResizeBox.y).toBeCloseTo(
     initialMediaBox.y + initialMediaBox.height,
     0,
@@ -303,6 +308,8 @@ test("presents recorded media in the configured card-width bottom drawer", async
       const videoRect = video.getBoundingClientRect();
       const viewportRect = viewport.getBoundingClientRect();
       return {
+        justifyItems: getComputedStyle(viewport).justifyItems,
+        surfaceLeft: surfaceRect.left,
         surfaceCenterOffset:
           surfaceRect.left +
           surfaceRect.width / 2 -
@@ -316,6 +323,8 @@ test("presents recorded media in the configured card-width bottom drawer", async
           videoRect.left +
           videoRect.width / 2 -
           (viewportRect.left + viewportRect.width / 2),
+        viewportLeft: viewportRect.left,
+        viewportWidth: viewportRect.width,
       };
     });
   const sampledVideoGeometry = [await sampleVideoGeometry()];
@@ -341,6 +350,7 @@ test("presents recorded media in the configured card-width bottom drawer", async
     const origin = geometry?.transformOrigin.split(" ").map(Number.parseFloat);
     expect(
       Math.abs(geometry?.surfaceCenterOffset ?? Number.POSITIVE_INFINITY),
+      JSON.stringify(geometry),
     ).toBeLessThanOrEqual(1);
     expect(
       Math.abs(geometry?.videoCenterOffset ?? Number.POSITIVE_INFINITY),
@@ -454,6 +464,10 @@ test("presents recorded media in the configured card-width bottom drawer", async
   if (!initialSnapshotBox || !initialSnapshotHandleBox) {
     throw new Error("Snapshot resize geometry was not rendered");
   }
+  expect(initialSnapshotBox.height / initialSnapshotBox.width).toBeCloseTo(
+    3 / 4,
+    2,
+  );
   expect(initialSnapshotHandleBox.y).toBeCloseTo(
     initialSnapshotBox.y + initialSnapshotBox.height,
     0,

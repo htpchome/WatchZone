@@ -105,6 +105,7 @@ export const MEDIA_CONTROL_EVENT = `${APP_ID}-media-control`;
 export const MEDIA_OVERLAY_INTERACTION_EVENT = `${APP_ID}-media-overlay-interaction`;
 export const RECORDED_MEDIA_OPEN_EVENT = `${APP_ID}-recorded-media-open`;
 export const RECORDED_MEDIA_ERROR_EVENT = `${APP_ID}-recorded-media-error`;
+export const RECORDED_MEDIA_DIMENSIONS_EVENT = `${APP_ID}-recorded-media-dimensions`;
 export const RECORDED_MEDIA_EXPORT_EVENT = `${APP_ID}-recorded-media-export`;
 export const RECORDED_MEDIA_NOTICE_EVENT = `${APP_ID}-recorded-media-notice`;
 export const RECORDED_MEDIA_ACTION_EVENT = `${APP_ID}-recorded-media-action`;

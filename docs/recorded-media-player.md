@@ -219,11 +219,14 @@ viewing. Recording discovery and grouping are governed by
   top-packed rather than stretching across unused drawer height. The drawer
   shell is not resizable.
 - Video and snapshot requests provide a separate pull-down media handle in
-  normal flow directly beneath the media. It expands the media from its default
-  `16:9` height up to a square height while keeping the width fixed, and follows
-  the pointer without programmatic body scrolling. Recording-hour presentations
-  slot the handle between the video viewport and their scrubber or segment workflow.
-  Excess source media is center-cropped. Video and snapshots each compose the
+  normal flow directly beneath the media. Its reset and minimum height come
+  from that video's or snapshot's actual intrinsic ratio; the shell never
+  assumes a `16:9` camera. The handle remains disabled until those dimensions
+  are known, then expands the fixed-width media until the rendered footer
+  boundary is reached and follows the pointer without programmatic body
+  scrolling. Recording-hour presentations slot the handle between the video
+  viewport and their scrubber or segment workflow. Excess source media is
+  physically center-cropped on every intermediate frame. Video and snapshots each compose the
   shared display-zoom boundary inside their own media player, so both draggable
   and drawer presentations support the same pointer, keyboard, double-activation,
   and bounded-pan behavior. Media-height pointer, keyboard, and
@@ -232,7 +235,8 @@ viewing. Recording discovery and grouping are governed by
   dialog content imposes no player aspect ratio, and only the drawer-owned
   controller writes the requested drawer viewport ratio. The recorded player
   applies that ratio to one physically centered, intrinsically proportioned
-  media surface. Its physical overflow owns the center crop while the shared
+  media surface. Drawer-only intrinsic sizing does not leak into the draggable
+  shell. Its physical overflow owns the center crop while the shared
   display-zoom controller owns only user zoom, pan, and their bounds. Resize
   observation cannot introduce an intermediate compensating transform.
 - Double-clicking the drawer header toggles its preferred inline size between

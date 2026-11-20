@@ -35,6 +35,10 @@ export const recordedSnapshotPlayerStyles = css`
 
   .media-surface {
     background: var(--wzc-recorded-media-background);
+    block-size: 100%;
+    inline-size: 100%;
+    inset: 0;
+    position: absolute;
     transform-origin: center;
     will-change: transform;
   }

@@ -3,6 +3,7 @@ import { html, LitElement } from "lit";
 import {
   CARD_TAG,
   RECORDED_MEDIA_BOTTOM_DRAWER_TAG,
+  RECORDED_MEDIA_DIMENSIONS_EVENT,
   RECORDED_VIDEO_CLOSE_EVENT,
 } from "../../../core/constants";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
@@ -11,6 +12,7 @@ import {
   type LocalizeFunction,
 } from "../../../core/localization";
 import type {
+  RecordedMediaDimensions,
   RecordedMediaInitialGeometry,
   RecordedMediaRequest,
 } from "../../../core/recorded-media";
@@ -74,7 +76,19 @@ export class RecordedMediaBottomDrawer extends LitElement {
   private _presentation?: "dialog" | "popover";
   private _transitionGeneration = 0;
 
+  public connectedCallback(): void {
+    super.connectedCallback();
+    this.addEventListener(
+      RECORDED_MEDIA_DIMENSIONS_EVENT,
+      this._handleMediaDimensions,
+    );
+  }
+
   public disconnectedCallback(): void {
+    this.removeEventListener(
+      RECORDED_MEDIA_DIMENSIONS_EVENT,
+      this._handleMediaDimensions,
+    );
     this._transitionGeneration += 1;
     this._motion.cancel();
     this._cancelGesture();
@@ -401,8 +415,7 @@ export class RecordedMediaBottomDrawer extends LitElement {
       title=${this.localize("camera.stage_resize_title")}
       aria-label=${this.localize("camera.stage_height")}
       aria-orientation="vertical"
-      aria-valuemin="56"
-      aria-valuemax="100"
+      ?disabled=${this._mediaResize.heightPercentage === 0}
       aria-valuenow=${String(this._mediaResize.heightPercentage)}
       aria-valuetext=${this.localize("camera.stage_height_value", {
         percent: this._mediaResize.heightPercentage,
@@ -423,6 +436,16 @@ export class RecordedMediaBottomDrawer extends LitElement {
     event.preventDefault();
     this._expanded = !this._expanded;
     this._syncGeometry();
+  };
+
+  private readonly _handleMediaDimensions = (
+    event: CustomEvent<RecordedMediaDimensions>,
+  ): void => {
+    event.stopPropagation();
+    this._mediaResize.setMediaDimensions(
+      event.detail.width,
+      event.detail.height,
+    );
   };
 
   static styles = [
