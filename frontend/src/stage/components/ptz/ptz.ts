@@ -116,6 +116,7 @@ export class PtzComponent extends LitElement {
       <div
         class=${[
           "ptz-control",
+          "circle-pad",
           this.expanded ? "expanded" : "collapsed",
           this._userToggled ? "user-toggled" : "",
           visible ? "visible" : "",
@@ -132,42 +133,7 @@ export class PtzComponent extends LitElement {
         @focusin=${this._overlay.handleFocusIn}
         @focusout=${this._overlay.handleFocusOut}
       >
-        ${DIRECTIONS.map(({ direction, icon }) => {
-          const supported =
-            direction === "left" || direction === "right"
-              ? capability.pan
-              : capability.tilt;
-          return supported
-            ? html`<button
-                class=${`${direction} direction round-button`}
-                type="button"
-                data-direction=${direction}
-                aria-label=${this.localize(`ptz.${direction}`)}
-                ?disabled=${!this.expanded}
-                tabindex=${this.expanded ? "0" : "-1"}
-                @contextmenu=${this._preventDefault}
-                @pointerdown=${this._press.handlePointerDown}
-                @pointerup=${this._handleDirectionPointerUp}
-                @pointercancel=${this._handleDirectionPointerCancel}
-                @lostpointercapture=${this._press.handlePointerCancel}
-                @keydown=${this._press.handleKeyDown}
-                @keyup=${this._press.handleKeyUp}
-              >
-                ${renderIcon(icon)}
-              </button>`
-            : nothing;
-        })}
-        <button
-          class="collapse round-button"
-          type="button"
-          aria-label=${this.localize("ptz.collapse")}
-          ?disabled=${!this.expanded}
-          tabindex=${this.expanded ? "0" : "-1"}
-          @click=${this._toggleExpanded}
-          @pointerup=${releaseTouchFocus}
-        >
-          ${renderIcon("arrowCollapseAll")}
-        </button>
+        ${this._renderPad(capability, "overlay")}
       </div>
       ${
         !this.expanded
@@ -221,9 +187,6 @@ export class PtzComponent extends LitElement {
         {
           blockSize: [fromSize, toSize],
           inlineSize: [fromSize, toSize],
-          padding: this.expanded
-            ? ["0", "var(--wzc-ptz-panel-padding, 0.18rem)"]
-            : ["var(--wzc-ptz-panel-padding, 0.18rem)", "0"],
         },
         { duration: motionDurations.overlay, ease: motionEasings.standard },
       );
@@ -299,36 +262,11 @@ export class PtzComponent extends LitElement {
         .notices=${this._toasts.notices}
       ></${toastRegionTag}>
       <div
-        class="ptz-panel-directional"
+        class="ptz-panel-directional circle-pad"
         role="group"
         aria-label=${this.localize("ptz.controls")}
       >
-        ${DIRECTIONS.map(({ direction, icon }) => {
-          const supported =
-            direction === "left" || direction === "right"
-              ? capability.pan
-              : capability.tilt;
-          return supported
-            ? html`<button
-                class=${`${direction} direction round-button`}
-                type="button"
-                data-direction=${direction}
-                aria-label=${this.localize(`ptz.${direction}`)}
-                @contextmenu=${this._preventDefault}
-                @pointerdown=${this._press.handlePointerDown}
-                @pointerup=${this._handleDirectionPointerUp}
-                @pointercancel=${this._handleDirectionPointerCancel}
-                @lostpointercapture=${this._press.handlePointerCancel}
-                @keydown=${this._press.handleKeyDown}
-                @keyup=${this._press.handleKeyUp}
-              >
-                ${renderIcon(icon)}
-              </button>`
-            : nothing;
-        })}
-        <span class="ptz-panel-center" aria-hidden="true">
-          ${renderIcon("ptz")}
-        </span>
+        ${this._renderPad(capability, "panel")}
       </div>
       ${
         presets.length > 0
@@ -351,6 +289,75 @@ export class PtzComponent extends LitElement {
           : nothing
       }
     </div>`;
+  }
+
+  private _renderPad(
+    capability: PtzCapability,
+    presentation: "overlay" | "panel",
+  ) {
+    return html`${DIRECTIONS.map(({ direction, icon }) => {
+      const supported =
+        direction === "left" || direction === "right"
+          ? capability.pan
+          : capability.tilt;
+      return supported
+        ? html`<button
+            class=${`${direction} direction wedge`}
+            type="button"
+            data-direction=${direction}
+            aria-label=${this.localize(`ptz.${direction}`)}
+            ?disabled=${presentation === "overlay" && !this.expanded}
+            tabindex=${presentation === "overlay" && !this.expanded ? "-1" : "0"}
+            @contextmenu=${this._preventDefault}
+            @pointerdown=${this._press.handlePointerDown}
+            @pointerup=${this._handleDirectionPointerUp}
+            @pointercancel=${this._handleDirectionPointerCancel}
+            @lostpointercapture=${this._press.handlePointerCancel}
+            @keydown=${this._press.handleKeyDown}
+            @keyup=${this._press.handleKeyUp}
+          >
+            ${renderIcon(icon)}
+          </button>`
+        : nothing;
+    })}
+    ${
+      presentation === "overlay"
+        ? html`<button
+            class="center-toggle"
+            type="button"
+            aria-label=${this.localize("ptz.collapse")}
+            ?disabled=${!this.expanded}
+            tabindex=${this.expanded ? "0" : "-1"}
+            @click=${this._toggleExpanded}
+            @pointerup=${releaseTouchFocus}
+          >
+            ${renderIcon("ptz")}
+          </button>`
+        : html`<div class="center-hub">
+            ${this._renderZoomButton("zoom_in", "+")}
+            ${this._renderZoomButton("zoom_out", "−")}
+          </div>`
+    }`;
+  }
+
+  private _renderZoomButton(direction: "zoom_in" | "zoom_out", label: string) {
+    return html`<button
+      class=${`center-half ${direction === "zoom_in" ? "top" : "bottom"}`}
+      type="button"
+      data-direction=${direction}
+      aria-label=${this.localize(
+        direction === "zoom_in" ? "ptz.zoom_in" : "ptz.zoom_out",
+      )}
+      @contextmenu=${this._preventDefault}
+      @pointerdown=${this._press.handlePointerDown}
+      @pointerup=${this._handleDirectionPointerUp}
+      @pointercancel=${this._handleDirectionPointerCancel}
+      @lostpointercapture=${this._press.handlePointerCancel}
+      @keydown=${this._press.handleKeyDown}
+      @keyup=${this._press.handleKeyUp}
+    >
+      ${label}
+    </button>`;
   }
 
   private async _recallPreset(preset: string): Promise<void> {

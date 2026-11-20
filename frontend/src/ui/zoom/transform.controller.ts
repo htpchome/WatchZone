@@ -369,6 +369,21 @@ export class ZoomTransformController implements ReactiveController {
     this.toggleAt(event.clientX, event.clientY);
   };
 
+  /** Applies one keyboard/wheel-sized zoom step at the viewport center. */
+  public zoomBy(direction: "in" | "out"): void {
+    const rect = this._surface?.getBoundingClientRect();
+    const centerX = rect ? rect.left + rect.width / 2 : 0;
+    const centerY = rect ? rect.top + rect.height / 2 : 0;
+    this._setScaleAt(
+      this._scale + (direction === "in" ? WHEEL_ZOOM_STEP : -WHEEL_ZOOM_STEP),
+      centerX,
+      centerY,
+    );
+    this._animateNextTransform = true;
+    this._renderPresentation();
+    this._host.requestUpdate();
+  }
+
   /** Applies the shared 1x/2x activation at a gesture-owned focal point. */
   public toggleAt(clientX: number, clientY: number): void {
     if (this.zoomed) {
@@ -393,10 +408,10 @@ export class ZoomTransformController implements ReactiveController {
     }
     if (event.key === "+" || event.key === "=") {
       event.preventDefault();
-      this._setScaleAt(this._scale + WHEEL_ZOOM_STEP, centerX, centerY);
+      this.zoomBy("in");
     } else if (event.key === "-") {
       event.preventDefault();
-      this._setScaleAt(this._scale - WHEEL_ZOOM_STEP, centerX, centerY);
+      this.zoomBy("out");
     } else if (event.key === "0" || event.key === "Escape") {
       if (!this.pannable) return;
       event.preventDefault();

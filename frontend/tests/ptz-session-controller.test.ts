@@ -142,6 +142,51 @@ describe("PTZ session lifecycle", () => {
     expect(releaseOverlay).not.toHaveBeenCalled();
     expect(callbacks.onStopped).not.toHaveBeenCalled();
   });
+
+  it("uses optical zoom when the provider reports it", async () => {
+    const stopMotion = vi.fn();
+    resolver.capability.mockResolvedValue({ ...capability(), zoom: true });
+    resolver.start.mockResolvedValue(stopMotion);
+    const controller = new PtzSessionController(new Host(), {
+      onFailure: vi.fn(),
+      onStopped: vi.fn(),
+    });
+    const context = new CameraSessionContext();
+    const session = camera("camera.front");
+    controller.configure(api(), context, [source("camera.front")]);
+    context.publish({}, session);
+    await vi.waitFor(() => expect(controller.capability?.zoom).toBe(true));
+
+    await controller.start("zoom_in", false);
+    controller.stop();
+
+    expect(resolver.start).toHaveBeenCalledWith(
+      expect.anything(),
+      "home_assistant",
+      "camera.front",
+      "zoom_in",
+    );
+    expect(stopMotion).toHaveBeenCalledOnce();
+    expect(session.zoomDisplay).not.toHaveBeenCalled();
+  });
+
+  it("falls back to display zoom when optical zoom is unavailable", async () => {
+    resolver.capability.mockResolvedValue(capability());
+    const controller = new PtzSessionController(new Host(), {
+      onFailure: vi.fn(),
+      onStopped: vi.fn(),
+    });
+    const context = new CameraSessionContext();
+    const session = camera("camera.front");
+    controller.configure(api(), context, [source("camera.front")]);
+    context.publish({}, session);
+    await vi.waitFor(() => expect(controller.capability?.supported).toBe(true));
+
+    await controller.start("zoom_out", false);
+
+    expect(session.zoomDisplay).toHaveBeenCalledWith("out");
+    expect(resolver.start).not.toHaveBeenCalled();
+  });
 });
 
 class Host {
@@ -177,6 +222,7 @@ function camera(entityId: string, releaseOverlay = vi.fn()) {
     revealOverlay: vi.fn(),
     setMuted: vi.fn(),
     setTalkAudioActive: vi.fn(),
+    zoomDisplay: vi.fn(),
   };
 }
 

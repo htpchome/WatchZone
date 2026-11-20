@@ -21,7 +21,7 @@ from ..const import DOMAIN
 from . import runtime_from_hass
 
 _LOGGER = logging.getLogger(__name__)
-_DIRECTIONS = ("down", "left", "right", "up")
+_DIRECTIONS = ("down", "left", "right", "up", "zoom_in", "zoom_out")
 
 
 def _require_permission(

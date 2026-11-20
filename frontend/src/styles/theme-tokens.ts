@@ -584,32 +584,53 @@ export const themeTokens = css`
     --wzc-talk-panel-border-color: var(--ha-color-purple-50, #a78bfa);
     --wzc-talk-wave-incoming-color: var(--ha-color-blue-40, #60a5fa);
     --wzc-talk-wave-outgoing-color: var(--ha-color-purple-40, #c084fc);
-    --wzc-ptz-cell-size: 1.7rem;
-    --wzc-ptz-button-size: calc(
-      var(--wzc-ptz-cell-size) + var(--wzc-ptz-panel-padding) +
-        var(--wzc-ptz-panel-padding) + 2px
-    );
-    --wzc-ptz-icon-size: 42%;
-    --wzc-ptz-panel-padding: 0.18rem;
-    --wzc-ptz-panel-size: calc(
-      var(--wzc-ptz-cell-size) + var(--wzc-ptz-cell-size) +
-        var(--wzc-ptz-cell-size) + var(--wzc-ptz-panel-padding) +
-        var(--wzc-ptz-panel-padding) + 2px
-    );
-    --wzc-ptz-panel-background: color-mix(
+    --wzc-ptz-panel-size: 5.5rem;
+    --wzc-ptz-pad-arrow-size: 18%;
+    --wzc-ptz-pad-arrow-offset: 15%;
+    --wzc-ptz-pad-center-size: 34%;
+    --wzc-ptz-pad-center-icon-size: 58%;
+    --wzc-ptz-pad-zoom-font-size: clamp(1rem, 5cqi, 1.75rem);
+    --wzc-ptz-overlay-pad-background: color-mix(
       in srgb,
       var(--wzc-media-overlay-surface) var(--wzc-media-overlay-opacity),
       transparent
     );
+    --wzc-ptz-overlay-pad-color: var(--wzc-media-overlay-color);
+    --wzc-ptz-overlay-pad-button-background: color-mix(
+      in srgb,
+      var(--wzc-media-overlay-surface) var(--wzc-media-overlay-opacity),
+      transparent
+    );
+    --wzc-ptz-overlay-pad-center-background: color-mix(
+      in srgb,
+      var(--wzc-media-overlay-surface) var(--wzc-media-overlay-hover-opacity),
+      transparent
+    );
+    --wzc-ptz-overlay-pad-divider-color: var(--wzc-media-overlay-border-color);
+    --wzc-ptz-overlay-pad-hover-background: var(
+      --wzc-neutral-control-hover-background
+    );
+    --wzc-ptz-overlay-pad-active-background: var(
+      --wzc-media-overlay-hover-background
+    );
+    --wzc-ptz-overlay-pad-active-color: var(--wzc-color-on-primary);
+    --wzc-ptz-overlay-pad-shadow: var(--wzc-media-overlay-shadow);
     --wzc-ptz-panel-module-background: var(--wzc-color-surface-secondary);
     --wzc-ptz-panel-module-radius: var(--wzc-radius-card);
     --wzc-ptz-panel-module-gap: clamp(0.75rem, 3cqi, 1.5rem);
-    --wzc-ptz-panel-module-padding: clamp(1rem, 4cqi, 2rem);
+    --wzc-ptz-panel-module-padding: clamp(0.5rem, 2cqi, 1rem)
+      clamp(1rem, 4cqi, 2rem);
     --wzc-ptz-panel-module-min-block-size: 18rem;
     --wzc-ptz-panel-module-control-size: clamp(10rem, 42cqi, 17rem);
-    --wzc-ptz-panel-module-control-padding: clamp(0.35rem, 1.5cqi, 0.75rem);
-    --wzc-ptz-panel-module-cell-size: clamp(2.75rem, 11cqi, 4.75rem);
-    --wzc-ptz-panel-module-icon-size: 52%;
+    --wzc-ptz-module-pad-background: var(--wzc-color-surface-secondary);
+    --wzc-ptz-module-pad-color: var(--wzc-color-text-1);
+    --wzc-ptz-module-pad-button-background: var(--wzc-color-surface-secondary);
+    --wzc-ptz-module-pad-center-background: var(--wzc-color-surface);
+    --wzc-ptz-module-pad-divider-color: var(--wzc-color-border-control);
+    --wzc-ptz-module-pad-hover-background: var(--wzc-color-fill-primary);
+    --wzc-ptz-module-pad-active-background: var(--wzc-color-primary);
+    --wzc-ptz-module-pad-active-color: var(--wzc-color-on-primary);
+    --wzc-ptz-module-pad-shadow: var(--wzc-shadow-medium);
     --wzc-ptz-preset-gap: clamp(0.5rem, 2cqi, 1rem);
     --wzc-ptz-preset-min-inline-size: min(8rem, 100%);
     --wzc-ptz-preset-block-size: 2.75rem;

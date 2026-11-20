@@ -52,7 +52,7 @@ __all__ = [
     "register_provider_extension",
 ]
 
-EXTENSION_API_VERSION = 5
+EXTENSION_API_VERSION = 6
 _DATA_PROVIDER_REGISTRY = "provider_registry"
 
 

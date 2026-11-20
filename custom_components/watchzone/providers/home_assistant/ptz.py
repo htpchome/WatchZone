@@ -17,6 +17,8 @@ _DIRECTION_KEYS: dict[PtzDirection, str] = {
     "left": "ptz_left",
     "right": "ptz_right",
     "up": "ptz_up",
+    "zoom_in": "ptz_zoom_in",
+    "zoom_out": "ptz_zoom_out",
 }
 _ZOOM_KEYS = frozenset({"ptz_zoom_in", "ptz_zoom_out"})
 _FOCUS_KEYS = frozenset({"focus_far", "focus_near", "ptz_focus_far", "ptz_focus_near"})
@@ -72,7 +74,13 @@ class HomeAssistantPtzProvider:
             )
             return
         if surface.kind == "onvif":
-            axis = "pan" if direction in {"left", "right"} else "tilt"
+            axis = (
+                "zoom"
+                if direction in {"zoom_in", "zoom_out"}
+                else "pan"
+                if direction in {"left", "right"}
+                else "tilt"
+            )
             await hass.services.async_call(
                 "onvif",
                 "ptz",
@@ -89,7 +97,10 @@ class HomeAssistantPtzProvider:
         await hass.services.async_call(
             "frigate",
             "ptz",
-            {"action": "move", "argument": direction},
+            {
+                "action": "zoom" if direction.startswith("zoom_") else "move",
+                "argument": direction.removeprefix("zoom_"),
+            },
             blocking=True,
             context=context,
             target={"entity_id": entity_id},
@@ -143,9 +154,6 @@ class HomeAssistantPtzProvider:
         surface = self._surface(hass, entity_id)
         if surface.kind != "frigate_service":
             raise HomeAssistantError("PTZ presets are unavailable for this provider")
-        capabilities = await async_ptz_capabilities(hass, entity_id)
-        if capabilities is None or preset not in capabilities.presets:
-            raise HomeAssistantError("Camera does not expose that PTZ preset")
         if not hass.services.has_service("frigate", "ptz"):
             raise HomeAssistantError("Frigate PTZ service is unavailable")
         await hass.services.async_call(
@@ -252,7 +260,11 @@ class HomeAssistantPtzProvider:
         capabilities: PtzCapabilities, direction: PtzDirection
     ) -> None:
         supported = (
-            capabilities.pan if direction in {"left", "right"} else capabilities.tilt
+            capabilities.zoom
+            if direction in {"zoom_in", "zoom_out"}
+            else capabilities.pan
+            if direction in {"left", "right"}
+            else capabilities.tilt
         )
         if not supported:
             raise HomeAssistantError("Camera does not support that PTZ direction")

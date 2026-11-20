@@ -7,7 +7,7 @@ from typing import Literal, Protocol
 
 from homeassistant.core import Context, HomeAssistant
 
-type PtzDirection = Literal["down", "left", "right", "up"]
+type PtzDirection = Literal["down", "left", "right", "up", "zoom_in", "zoom_out"]
 
 
 @dataclass(frozen=True, slots=True)

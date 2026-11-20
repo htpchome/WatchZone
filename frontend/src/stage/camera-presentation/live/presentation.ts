@@ -230,6 +230,10 @@ export class CameraLivePresentation extends LitElement {
     return this._overlay.hold();
   }
 
+  public zoomDisplay(direction: "in" | "out"): void {
+    this._zoom.zoomBy(direction);
+  }
+
   public connectedCallback(): void {
     this._disconnectGeneration += 1;
     super.connectedCallback();

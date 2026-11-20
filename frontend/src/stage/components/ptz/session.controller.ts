@@ -82,11 +82,18 @@ export class PtzSessionController implements ReactiveController {
     const camera = this._camera;
     const source = this._source;
     const capability = this._capability;
-    const supported =
-      direction === "left" || direction === "right"
+    const zoom = direction === "zoom_in" || direction === "zoom_out";
+    const supported = zoom
+      ? capability?.zoom
+      : direction === "left" || direction === "right"
         ? capability?.pan
         : capability?.tilt;
-    if (!api || !camera?.available || !source || !supported) return;
+    if (!camera?.available) return;
+    if (zoom && !supported) {
+      camera.zoomDisplay?.(direction === "zoom_in" ? "in" : "out");
+      return;
+    }
+    if (!api || !source || !supported) return;
 
     this._stopMotion(false);
     const generation = ++this._motionGeneration;

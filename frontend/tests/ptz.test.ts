@@ -116,6 +116,9 @@ describe("PTZ component", () => {
         element.shadowRoot?.querySelectorAll("button.ptz-preset"),
       ).toHaveLength(6),
     );
+    expect(
+      element.shadowRoot?.querySelectorAll("button.center-half"),
+    ).toHaveLength(2);
     element.shadowRoot
       ?.querySelector<HTMLButtonElement>("button.ptz-preset")
       ?.click();
@@ -199,7 +202,9 @@ describe("PTZ component", () => {
       ?.querySelector<HTMLButtonElement>("button.ptz-trigger")
       ?.click();
     await element.updateComplete;
-    expect(element.shadowRoot?.querySelector("button.collapse")).not.toBeNull();
+    expect(
+      element.shadowRoot?.querySelector("button.center-toggle"),
+    ).not.toBeNull();
 
     context.publish(owner, { ...cameraSession(), overlayVisible: false });
     await element.updateComplete;
@@ -207,7 +212,7 @@ describe("PTZ component", () => {
     context.publish(owner, cameraSession());
     await vi.waitFor(() =>
       expect(
-        element.shadowRoot?.querySelector("button.collapse"),
+        element.shadowRoot?.querySelector("button.center-toggle"),
       ).not.toBeNull(),
     );
     expect(element.shadowRoot?.querySelector("button.ptz-trigger")).toBeNull();
@@ -235,11 +240,11 @@ describe("PTZ component", () => {
 
     await vi.waitFor(() =>
       expect(
-        element.shadowRoot?.querySelector("button.collapse"),
+        element.shadowRoot?.querySelector("button.center-toggle"),
       ).not.toBeNull(),
     );
     element.shadowRoot
-      ?.querySelector<HTMLButtonElement>("button.collapse")
+      ?.querySelector<HTMLButtonElement>("button.center-toggle")
       ?.click();
     await element.updateComplete;
     expect(element.expanded).toBe(false);
@@ -261,6 +266,7 @@ function cameraSession() {
     revealOverlay: vi.fn(),
     setMuted: vi.fn(),
     setTalkAudioActive: vi.fn(),
+    zoomDisplay: vi.fn(),
   };
 }
 

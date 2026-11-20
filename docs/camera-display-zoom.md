@@ -27,6 +27,10 @@ boundaries.
 - Provider adapters and retained media sessions do not know about display
   zoom. Changing HLS, WebRTC, a fallback image, or a future connection source
   must not reset zoom for the same camera.
+- Camera capability components may request one fixed display-zoom increment
+  through `CameraSessionContext`. Camera forwards that intent to the active
+  live presentation's shared zoom controller; the requesting component never
+  imports the camera module, accesses media DOM, or owns zoom state.
 - Zoom does not depend on Swiper. A future carousel may compose the camera
   module without inheriting or duplicating its gesture implementation.
 
@@ -84,6 +88,7 @@ space or create a second transform owner.
 | Pointer drag while zoomed         | Pan within the visible media bounds.                                           |
 | Enter or Space                    | Toggle `1x` and `2x` from the center.                                          |
 | Plus or Minus                     | Zoom in or out in fixed increments.                                            |
+| PTZ panel Plus or Minus           | Use optical zoom when supported; otherwise request the same display increment. |
 | Arrow keys                        | Pan while zoomed.                                                              |
 | Zero or Escape                    | Reset to `1x`.                                                                 |
 

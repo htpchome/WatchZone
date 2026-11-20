@@ -7455,7 +7455,7 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   const sourceBadge = selectedLiveViewport.locator(".source-indicator .badge");
   const talkButton = talk.locator("button.inactive");
   const ptzControl = ptz.locator(".ptz-control");
-  const ptzCollapse = ptz.locator("button.collapse");
+  const ptzCollapse = ptz.locator("button.center-toggle");
   const ptzTrigger = ptz.locator("button.ptz-trigger");
   const ptzRightButton = ptz.locator("button.right");
   const lightButton = lights.locator(".light-button");
@@ -7816,16 +7816,20 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
   ).toBeLessThanOrEqual(lowerAreaBox.x + lowerAreaBox.width + 1);
   const ptzDirectionVisualGeometry = await ptzRightButton.evaluate(
     (element) => {
-      const styles = getComputedStyle(element, "::before");
+      const styles = getComputedStyle(element);
       const control = element.closest(".ptz-control");
       if (!control) throw new Error("PTZ control is unavailable");
       const buttonRect = element.getBoundingClientRect();
       const controlRect = control.getBoundingClientRect();
+      const controlStyles = getComputedStyle(control);
       return {
-        height: Number.parseFloat(styles.height),
-        width: Number.parseFloat(styles.width),
+        clipPath: styles.clipPath,
+        height: buttonRect.height,
+        width: buttonRect.width,
         expectedDiameter:
-          2 * (controlRect.right - (buttonRect.left + buttonRect.width / 2)),
+          controlRect.width -
+          Number.parseFloat(controlStyles.borderInlineStartWidth) -
+          Number.parseFloat(controlStyles.borderInlineEndWidth),
       };
     },
   );
@@ -7837,27 +7841,30 @@ test("keeps PTZ, talk, and light controls attached to the resizing viewport", as
     ptzDirectionVisualGeometry.expectedDiameter,
     0,
   );
-  expect(ptzRightIconBox.width).toBeCloseTo(ptzRightButtonBox.width * 0.42, 1);
+  expect(ptzDirectionVisualGeometry.clipPath).not.toBe("none");
+  expect(ptzRightIconBox.width).toBeCloseTo(ptzRightButtonBox.width * 0.18, 1);
   expect(ptzRightIconBox.height).toBeCloseTo(
-    ptzRightButtonBox.height * 0.42,
+    ptzRightButtonBox.height * 0.18,
     1,
   );
-  await ptzRightButton.hover();
+  await ptzRightButton.hover({
+    position: {
+      x: ptzRightButtonBox.width * 0.82,
+      y: ptzRightButtonBox.height / 2,
+    },
+  });
   const ptzHoverLayers = await ptzRightButton.evaluate((element) => {
-    const neutralProbe = document.createElement("span");
-    neutralProbe.style.background =
-      "var(--wzc-neutral-control-hover-background)";
-    element.append(neutralProbe);
+    const hoverProbe = document.createElement("span");
+    hoverProbe.style.background = "var(--wzc-ptz-pad-hover-background)";
+    element.append(hoverProbe);
     const result = {
       button: getComputedStyle(element).backgroundColor,
-      expected: getComputedStyle(neutralProbe).backgroundColor,
-      visual: getComputedStyle(element, "::before").backgroundColor,
+      expected: getComputedStyle(hoverProbe).backgroundColor,
     };
-    neutralProbe.remove();
+    hoverProbe.remove();
     return result;
   });
-  expect(ptzHoverLayers.button).toBe("rgba(0, 0, 0, 0)");
-  expect(ptzHoverLayers.visual).toBe(ptzHoverLayers.expected);
+  expect(ptzHoverLayers.button).toBe(ptzHoverLayers.expected);
   expect(talkHostBox.y + talkHostBox.height).toBeLessThanOrEqual(
     controlsSlotBox.y + controlsSlotBox.height,
   );
@@ -8471,6 +8478,8 @@ test("opens the PTZ panel and recalls a provider preset without a stop subscript
 
   const panel = page.locator("wzc-ptz[presentation='panel']");
   await expect(panel).toBeVisible();
+  await expect(panel.locator("button.wedge")).toHaveCount(4);
+  await expect(panel.locator("button.center-half")).toHaveCount(2);
   const presetButtons = panel.locator("button.ptz-preset");
   await expect(presetButtons).toHaveCount(6);
   const presetRows = new Set(

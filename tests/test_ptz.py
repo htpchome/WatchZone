@@ -150,7 +150,15 @@ async def test_home_assistant_ptz_detects_and_uses_same_device_buttons(
         suggested_object_id="front",
     )
     buttons: dict[str, str] = {}
-    for key in ("ptz_up", "ptz_down", "ptz_left", "ptz_right", "ptz_stop"):
+    for key in (
+        "ptz_up",
+        "ptz_down",
+        "ptz_left",
+        "ptz_right",
+        "ptz_zoom_in",
+        "ptz_zoom_out",
+        "ptz_stop",
+    ):
         entry = entity_registry.async_get_or_create(
             "button",
             "example",
@@ -171,11 +179,16 @@ async def test_home_assistant_ptz_detects_and_uses_same_device_buttons(
     capabilities = await provider.async_capabilities(hass, camera.entity_id)
     await provider.async_start(hass, camera.entity_id, "left", Context())
     await provider.async_stop(hass, camera.entity_id, Context())
+    await provider.async_start(hass, camera.entity_id, "zoom_in", Context())
 
     assert capabilities.pan is True
     assert capabilities.tilt is True
-    assert capabilities.zoom is False
-    assert calls == [buttons["ptz_left"], buttons["ptz_stop"]]
+    assert capabilities.zoom is True
+    assert calls == [
+        buttons["ptz_left"],
+        buttons["ptz_stop"],
+        buttons["ptz_zoom_in"],
+    ]
 
 
 async def test_frigate_ptz_movement_requires_runtime_capability(
@@ -215,10 +228,30 @@ async def test_frigate_ptz_movement_requires_runtime_capability(
     assert calls == []
 
 
-async def test_frigate_preset_recall_is_one_finite_service_call(
+async def test_frigate_preset_recall_is_one_finite_service_call(hass: Any) -> None:
+    """Preset recall does not depend on a second capability request."""
+    calls: list[Any] = []
+
+    async def async_ptz(call: Any) -> None:
+        calls.append(call)
+
+    hass.services.async_register("frigate", "ptz", async_ptz)
+    provider = FrigatePtzProvider()
+
+    await provider.async_recall_preset(hass, "camera.front", "Driveway", Context())
+
+    assert len(calls) == 1
+    assert calls[0].data == {
+        "action": "preset",
+        "argument": "Driveway",
+        "entity_id": "camera.front",
+    }
+
+
+async def test_frigate_optical_zoom_uses_zoom_action(
     hass: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Preset recall sends the preset action and never sends Stop."""
+    """Optical zoom uses Frigate's continuous zoom command and shared stop."""
     calls: list[Any] = []
 
     async def async_ptz(call: Any) -> None:
@@ -226,16 +259,17 @@ async def test_frigate_preset_recall_is_one_finite_service_call(
 
     async def async_capabilities(hass_arg: Any, entity_id: str) -> PtzCapabilities:
         del hass_arg, entity_id
-        return PtzCapabilities(pan=True, tilt=True, presets=("Driveway",))
+        return PtzCapabilities(pan=True, tilt=True, zoom=True)
 
     hass.services.async_register("frigate", "ptz", async_ptz)
     provider = FrigatePtzProvider()
     monkeypatch.setattr(provider, "async_capabilities", async_capabilities)
 
-    await provider.async_recall_preset(hass, "camera.front", "Driveway", Context())
+    await provider.async_start(hass, "camera.front", "zoom_out", Context())
+    await provider.async_stop(hass, "camera.front", Context())
 
-    assert len(calls) == 1
-    assert calls[0].data == {"action": "preset", "argument": "Driveway"}
+    assert [call.data["action"] for call in calls] == ["zoom", "stop"]
+    assert calls[0].data["argument"] == "out"
 
 
 def registry(provider: FakePtzProvider) -> ProviderRegistry:

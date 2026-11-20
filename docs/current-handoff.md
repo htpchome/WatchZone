@@ -16,9 +16,9 @@ precedence.
 ## Repository baseline
 
 - Branch: `main`.
-- HEAD before the current bundle correction: `83e4d5e` —
-  `v0.0.4-dev.480 - feat(ptz): add PTZ panel and preset recall`.
-- Version: `0.0.4-dev.481`.
+- HEAD before the current PTZ refinement: `9362a48` —
+  `v0.0.4-dev.481 - fix(build): restore release bundle budget`.
+- Version: `0.0.4-dev.482`.
 - The user will commit this rollback. No agent commit or sync is authorized.
 
 Always recheck `git status`, `git log -1`, and
@@ -26,7 +26,7 @@ Always recheck `git status`, `git log -1`, and
 
 ## Failed camera-controls work removed at `dev.479`
 
-## PTZ panel at `dev.480`; release-budget correction at `dev.481`
+## PTZ panel refined at `dev.482`
 
 The Full Stage activity stack now includes a dedicated `ptz-panel` module
 after Exports when at least one configured main camera has PTZ enabled.
@@ -43,14 +43,15 @@ after Exports when at least one configured main camera has PTZ enabled.
 - Frigate preset recall is provider-normalized and finite. It calls the
   Frigate PTZ service once with `action: preset` and the exact preset name; it
   does not create a movement subscription or send Stop after recall begins.
-- The public provider extension API is version 5 because the PTZ provider
-  contract now includes preset recall.
+- The public provider extension API is version 6 because PTZ provider motion
+  now includes optical zoom as well as pan/tilt, in addition to preset recall.
 
-The `dev.481` correction moves optional toast-icon rendering behind an
-on-demand import and keeps camera-availability parsing in the lazy activity
-navigation module. The release package gate passes without relaxing its eager
-graph budget. This correction is uncommitted; the user remains the only commit
-owner.
+The `dev.482` refinement replaces both PTZ presentations with a shared circular
+wedge control. The overlay center toggles expansion; the panel center supplies
+zoom in/out, preferring provider optical zoom and falling back to Camera's
+existing display-zoom owner. Frigate preset recall no longer performs a second,
+failure-prone capability request before its finite service call. This work is
+uncommitted; the user remains the only commit owner.
 
 
 ## Current recorded-media baseline

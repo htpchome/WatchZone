@@ -4,7 +4,8 @@ import type {
   HomeAssistantUnsubscribe,
 } from "../core/home-assistant";
 
-export type PtzDirection = "down" | "left" | "right" | "up";
+export type PtzDirection =
+  "down" | "left" | "right" | "up" | "zoom_in" | "zoom_out";
 export type PtzProviderId = "home_assistant" | "frigate_go2rtc";
 
 export interface PtzCapability {

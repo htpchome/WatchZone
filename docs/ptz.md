@@ -71,9 +71,14 @@ defaults to `false` and is omitted from YAML at its default.
 - The configured open/closed state initializes each active camera. A user's
   open or collapsed choice then persists across transient overlay visibility;
   the shared hide timer never rewrites component state.
-- Unsupported axes are not rendered. The initial UI exposes only pan and tilt;
-  zoom and focus presentations remain future work against the existing
-  normalized capability contract.
+- Unsupported pan or tilt axes are not rendered. Both overlay and panel use the
+  same circular four-wedge directional presentation. Overlay owns a PTZ center
+  button for expand/collapse; the larger panel owns split `+` and `-` center
+  controls.
+- A panel zoom press uses provider optical zoom while `zoom` capability is
+  reported and shares the normal press/release Stop lifecycle. Otherwise it
+  emits a narrow display-zoom intent through `CameraSessionContext`; Camera's
+  existing zoom controller remains the sole owner of display scale and pan.
 - The panel presentation remains expanded and is independent from the Camera
   overlay visibility timer and open/closed state. It shows at most the first
   six provider-reported preset names in provider order and wraps them at
@@ -81,8 +86,9 @@ defaults to `false` and is omitted from YAML at its default.
 - Preset recall is a finite provider-neutral command. It stops an active
   directional press before recall, sends one provider preset command, and does
   not create a movement subscription or send Stop after the preset begins.
-- The current Camera overlay presentation does not render presets and retains
-  its existing collapse, visibility, positioning, and Motion behavior.
+- The Camera overlay does not render presets. It retains its existing shared
+  visibility, placement, and Motion-owned expand/collapse lifecycle while
+  using the circular wedge presentation.
 - Touch controls have no sticky hover state and suppress platform tap
   highlighting.
 - The shared press-interaction controller owns pointer capture, cancellation,
@@ -100,6 +106,8 @@ integration unload.
 Preset recall does not own a WebSocket subscription. Provider-specific preset
 names and service calls remain beneath the provider adapter; the component and
 `ptz-panel` module never branch on Frigate or another provider identity.
+Frigate recall uses the already-discovered preset name and does not make a
+second capability request before issuing the finite service call.
 
 The backend serializes movement per camera and gives each request a generation.
 Starting a new request stops the previous request first. Cleanup from a stale

@@ -14,6 +14,7 @@ export interface ActiveCameraSession {
   revealOverlay(): void;
   setMuted(muted: boolean): void;
   setTalkAudioActive(active: boolean): void;
+  zoomDisplay?(direction: "in" | "out"): void;
 }
 
 export type ActiveCameraSessionListener = (

@@ -112,6 +112,10 @@ export class ZoomController implements ReactiveController {
     this._zoom.reset();
   }
 
+  public zoomBy(direction: "in" | "out"): void {
+    this._zoom.zoomBy(direction);
+  }
+
   public endStageResizeReturn(): void {
     this._zoom.endStageResizeReturn();
   }

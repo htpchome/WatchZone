@@ -281,6 +281,8 @@
   "ptz.down": "Move camera down",
   "ptz.left": "Move camera left",
   "ptz.right": "Move camera right",
+  "ptz.zoom_in": "Zoom in",
+  "ptz.zoom_out": "Zoom out",
   "ptz.failed": "Camera movement failed",
   "ptz.preset": "Move camera to {preset}",
   "ptz.preset_failed": "Camera preset failed",
