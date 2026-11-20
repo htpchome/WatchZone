@@ -576,6 +576,7 @@ export const themeTokens = css`
     --wzc-camera-navigation-item-padding: 1rem;
     --wzc-talk-connected-color: var(--ha-color-green-50, #34d399);
     --wzc-talk-connecting-color: var(--ha-color-blue-50, #3b82f6);
+    --wzc-talk-muted-color: var(--wzc-activity-detection-color);
     --wzc-talk-panel-background: color-mix(
       in srgb,
       var(--wzc-media-overlay-surface) 80%,
@@ -584,6 +585,13 @@ export const themeTokens = css`
     --wzc-talk-panel-border-color: var(--ha-color-purple-50, #a78bfa);
     --wzc-talk-wave-incoming-color: var(--ha-color-blue-40, #60a5fa);
     --wzc-talk-wave-outgoing-color: var(--ha-color-purple-40, #c084fc);
+    --wzc-talk-toolbar-color: var(--wzc-stage-stack-button-color);
+    --wzc-talk-toolbar-background: var(--wzc-color-surface-secondary);
+    --wzc-talk-toolbar-border-color: var(--wzc-color-border-control);
+    --wzc-talk-toolbar-button-background: var(--wzc-color-surface);
+    --wzc-talk-toolbar-button-hover-background: var(
+      --wzc-neutral-control-hover-background
+    );
     --wzc-ptz-panel-size: 5.5rem;
     --wzc-ptz-pad-arrow-size: 18%;
     --wzc-ptz-pad-arrow-offset: 15%;

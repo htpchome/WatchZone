@@ -7863,13 +7863,10 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
     await activityNavigationComposition.boundingBox();
   expect(activityNavigationBox).not.toBeNull();
   if (!activityNavigationBox) return;
-  expect(
-    (lightHostBox.x +
-      lightHostBox.width / 2 +
-      talkHostBox.x +
-      talkHostBox.width / 2) /
-      2,
-  ).toBeCloseTo(activityNavigationBox.x + activityNavigationBox.width / 2, 0);
+  expect(talkHostBox.x + talkHostBox.width / 2).toBeCloseTo(
+    activityNavigationBox.x + activityNavigationBox.width / 2,
+    0,
+  );
   expect(lightHostBox.y).toBeGreaterThanOrEqual(activityNavigationBox.y);
   expect(talkHostBox.y + talkHostBox.height).toBeLessThanOrEqual(
     activityNavigationBox.y + activityNavigationBox.height,
@@ -7877,6 +7874,113 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
   expect(
     talkHostBox.x - (lightHostBox.x + lightHostBox.width),
   ).toBeGreaterThanOrEqual(8);
+
+  await talk.evaluate((element) => {
+    const talkElement = element as HTMLElement & {
+      requestUpdate(): void;
+      _session: {
+        _connection?: {
+          close(): void;
+          setMicrophoneMuted(muted: boolean): void;
+        };
+        _microphoneMuted: boolean;
+      };
+    };
+    const session = talkElement._session;
+    session._connection = {
+      close: () => undefined,
+      setMicrophoneMuted: (muted) => {
+        session._microphoneMuted = muted;
+      },
+    };
+    talkElement.requestUpdate();
+  });
+  const activeTalkCenter = talk.locator('button[data-talk-action="stop"]');
+  const activeTalkMicrophone = talk.locator(
+    'button[data-talk-action="microphone"]',
+  );
+  await expect(activeTalkCenter).toBeVisible();
+  const activeTalkPresentation = await talk
+    .locator(".talk-controls")
+    .evaluate((controls) => {
+      const canvas = controls.querySelector("canvas");
+      const sideButton = controls.querySelector<HTMLButtonElement>(
+        'button[data-talk-action="microphone"]',
+      );
+      const panelProbe = document.createElement("span");
+      const buttonProbe = document.createElement("span");
+      panelProbe.style.background = "var(--wzc-talk-toolbar-background)";
+      buttonProbe.style.background =
+        "var(--wzc-talk-toolbar-button-background)";
+      controls.append(panelProbe, buttonProbe);
+      const result = {
+        canvasDisplay: canvas ? getComputedStyle(canvas).display : "",
+        panel: getComputedStyle(controls).backgroundColor,
+        panelExpected: getComputedStyle(panelProbe).backgroundColor,
+        sideButton: sideButton
+          ? getComputedStyle(sideButton).backgroundColor
+          : "",
+        sideButtonExpected: getComputedStyle(buttonProbe).backgroundColor,
+      };
+      panelProbe.remove();
+      buttonProbe.remove();
+      return result;
+    });
+  expect(activeTalkPresentation).toMatchObject({
+    canvasDisplay: "none",
+    panel: activeTalkPresentation.panelExpected,
+    sideButton: activeTalkPresentation.sideButtonExpected,
+  });
+  const connectedColor = await activeTalkCenter.evaluate((button) => {
+    const probe = document.createElement("span");
+    probe.style.background = "var(--wzc-talk-connected-color)";
+    button.append(probe);
+    const result = {
+      actual: getComputedStyle(button).backgroundColor,
+      expected: getComputedStyle(probe).backgroundColor,
+    };
+    probe.remove();
+    return result;
+  });
+  expect(connectedColor.actual).toBe(connectedColor.expected);
+  await activeTalkCenter.hover();
+  await expect(activeTalkCenter).toHaveCSS(
+    "background-color",
+    connectedColor.expected,
+  );
+  await activeTalkMicrophone.click();
+  await expect(activeTalkCenter).toHaveClass(/\bmuted\b/);
+  const mutedColor = await activeTalkCenter.evaluate((button) => {
+    const probe = document.createElement("span");
+    probe.style.background = "var(--wzc-activity-detection-color)";
+    button.append(probe);
+    const result = {
+      actual: getComputedStyle(button).backgroundColor,
+      expected: getComputedStyle(probe).backgroundColor,
+    };
+    probe.remove();
+    return result;
+  });
+  expect(mutedColor.actual).toBe(mutedColor.expected);
+  await activeTalkCenter.hover();
+  await expect(activeTalkCenter).toHaveCSS(
+    "background-color",
+    mutedColor.expected,
+  );
+  await talk.evaluate((element) => {
+    const talkElement = element as HTMLElement & {
+      requestUpdate(): void;
+      _session: {
+        _connection?: unknown;
+        _microphoneMuted: boolean;
+      };
+    };
+    const session = talkElement._session;
+    session._connection = undefined;
+    session._microphoneMuted = false;
+    talkElement.requestUpdate();
+  });
+  await expect(talkButton).toBeVisible();
   const lowerAreaBox = await page
     .locator(".camera-overlay-area-lower")
     .boundingBox();

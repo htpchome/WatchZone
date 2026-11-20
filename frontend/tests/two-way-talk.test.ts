@@ -85,6 +85,58 @@ describe("two-way-talk component", () => {
     expect(release).toHaveBeenCalledOnce();
   });
 
+  it("marks the active center microphone with the fixed muted-warning state", async () => {
+    const callWS = vi.fn().mockResolvedValue({ supported: true });
+    const context = new CameraSessionContext();
+    const element = document.createElement(
+      "wzc-two-way-talk",
+    ) as TwoWayTalkComponent;
+    element.api = api(callWS);
+    element.cameraSession = context;
+    element.cameras = [
+      { connection: "home_assistant" as const, entityId: "camera.front" },
+    ];
+    element.presentation = "toolbar";
+    document.body.append(element);
+    context.publish({}, cameraSession(false));
+    await vi.waitFor(() =>
+      expect(
+        element.shadowRoot?.querySelector(".inactive-control.visible"),
+      ).not.toBeNull(),
+    );
+
+    const session = (
+      element as unknown as {
+        _session: {
+          _connection?: {
+            close(): void;
+            setMicrophoneMuted(muted: boolean): void;
+          };
+          _microphoneMuted: boolean;
+          toggleMicrophoneMute(): void;
+        };
+      }
+    )._session;
+    const setMicrophoneMuted = vi.fn();
+    session._connection = {
+      close: vi.fn(),
+      setMicrophoneMuted,
+    };
+    element.requestUpdate();
+    await element.updateComplete;
+
+    expect(
+      element.shadowRoot?.querySelector(".talk-button.center:not(.muted)"),
+    ).not.toBeNull();
+    session.toggleMicrophoneMute();
+    await element.updateComplete;
+
+    expect(setMicrophoneMuted).toHaveBeenCalledWith(true);
+    expect(
+      element.shadowRoot?.querySelector(".talk-button.center.muted"),
+    ).not.toBeNull();
+  });
+
   it("owns a visible touch press without dismissing the live overlay", async () => {
     const callWS = vi.fn().mockResolvedValue({ supported: true });
     const context = new CameraSessionContext();

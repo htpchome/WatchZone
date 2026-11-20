@@ -88,11 +88,9 @@ export const stageRuntimeStyles = css`
     > .component-slot-content {
     z-index: 1;
     display: grid;
-    grid-auto-columns: max-content;
-    grid-auto-flow: column;
-    place-content: center;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: center;
     align-self: stretch;
-    gap: var(--wzc-control-dock-gap);
   }
 
   .module-composition[data-module-type="activity-navigation"]
@@ -101,6 +99,21 @@ export const stageRuntimeStyles = css`
     inline-size: max-content;
     block-size: auto;
     align-self: center;
+  }
+
+  .module-composition[data-module-type="activity-navigation"]
+    > .component-slot-content
+    > .component-node[data-component-type="light_control"] {
+    grid-column: 1;
+    justify-self: end;
+    margin-inline-end: var(--wzc-control-dock-gap);
+  }
+
+  .module-composition[data-module-type="activity-navigation"]
+    > .component-slot-content
+    > .component-node[data-component-type="two_way_talk"] {
+    grid-column: 2;
+    justify-self: center;
   }
 
   .stage-stack-content > .module-composition[data-module-type="ptz-panel"],

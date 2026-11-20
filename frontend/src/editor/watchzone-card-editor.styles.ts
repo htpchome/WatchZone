@@ -492,13 +492,13 @@ export const cardEditorStyles = css`
   }
 
   .linked-light-row > ha-icon,
-  .add-light svg {
+  .add-light ha-icon {
     display: grid;
     color: var(--wzc-color-primary);
   }
 
   .linked-light-row ha-icon,
-  .add-light svg {
+  .add-light ha-icon {
     inline-size: 1.25rem;
     block-size: 1.25rem;
   }

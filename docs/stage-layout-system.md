@@ -161,6 +161,9 @@ remains in Camera's trailing controls region. This responsive relocation is a
 Stage-variant decision: neither component chooses the breakpoint, imports its
 host module, or discovers a sibling. Future Stage Designs may place either
 component in any compatible slot and select its presentation explicitly.
+The activity-navigation content slot reserves its center column for two-way
+talk and aligns linked-light controls to the preceding column with the shared
+control gap, so changing light count or width cannot move talk off center.
 
 The built-in `camera_only` composition contains the same camera module and its
 private overlay and controls slots, but no standalone camera-navigation or

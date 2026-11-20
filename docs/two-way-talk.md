@@ -14,6 +14,12 @@ boundaries. It supplements `architecture.md`, which remains authoritative.
   placement at every size. The selected slot owns placement and collision-free
   spacing; the component renders only its intrinsic one-button or active
   three-button control surface.
+- The wide Full Stage keeps the talk control on the activity-navigation
+  centerline and places linked-light controls before it with the shared control
+  gap. Toolbar presentation uses semantic Home Assistant-aware surfaces and
+  borders and suppresses the overlay soundwave canvas so all three icon buttons
+  retain clear contrast. Overlay presentation retains its translucent
+  soundwave treatment.
 - The component consumes the card-scoped `CameraSessionContext`. It does not import
   the camera module, reach into its shadow tree, or own live playback.
 - Provider-neutral talk resolution lives behind `TalkSourceResolver`.
@@ -74,6 +80,10 @@ does not contain signaling-path conditions.
   auto-unmute is an initial default only and never overwrites user intent.
 - The center control disconnects talk. The small microphone control disables
   only the outgoing audio track and keeps the peer alive.
+- While talk is active, the center microphone uses the connected color. Muting
+  the outgoing microphone changes that center surface to WatchZone's fixed
+  detection-warning color. Hover preserves the current connected or muted
+  surface instead of replacing it with a neutral hover state.
 - The speaker control dispatches the active camera's typed mute intent. It uses
   the same user mute preference as the camera overlay control.
 - Incoming and outgoing meters use Web Audio analyzers while talk is active.

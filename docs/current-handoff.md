@@ -16,9 +16,9 @@ precedence.
 ## Repository baseline
 
 - Branch: `main`.
-- HEAD before the current activity-presentation change: `cf0d37b` —
-  `v0.0.4-dev.484 - refactor(stage): remove Events from built-in layouts`.
-- Version being prepared: `0.0.4-dev.485`.
+- HEAD before the current toolbar-control refinement: `7deba08` —
+  `v0.0.4-dev.485 - feat(activity): add classification display policies`.
+- Version being prepared: `0.0.4-dev.486`.
 - The user remains the commit owner. No agent commit or sync is authorized.
 
 Always recheck `git status`, `git log -1`, and
@@ -67,6 +67,20 @@ optical zoom.
   Destroying the WebView/document still releases browser-owned resources.
 
 This work is uncommitted; the user remains the only commit owner.
+
+## Toolbar control refinement at `dev.486`
+
+- Wide Full Stage keeps the two-way-talk component exactly centered and places
+  linked lights before it with a shared control gap.
+- Two-way talk retains its translucent soundwave presentation on Camera
+  overlays. Toolbar presentation instead uses semantic Home Assistant-aware
+  surfaces and borders and hides the soundwave canvas for clear icon contrast.
+- The active center microphone remains green while live and changes to the
+  fixed WatchZone detection-warning color while its outgoing microphone is
+  muted. Hover preserves either active color.
+- Linked-light controls and editor affordances now use Home Assistant
+  `ha-icon` with `mdi:lightbulb` as the default; the duplicate WatchZone
+  lightbulb SVG was removed.
 
 ## Events removed from built-in Stages at `dev.484`
 

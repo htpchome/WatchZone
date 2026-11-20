@@ -61,10 +61,36 @@ export const twoWayTalkStyles = css`
 
   .talk-button.center {
     transform: scale(1.18);
-    --wzc-round-button-color: var(--wzc-media-overlay-surface);
+    --wzc-round-button-color: var(--wzc-color-text-reversed);
     --wzc-round-button-background: var(--wzc-talk-connected-color);
+    --wzc-round-button-hover-background: var(--wzc-talk-connected-color);
     --wzc-round-button-border-color: transparent;
     box-shadow: 0 0 0 2px var(--wzc-talk-panel-border-color);
+  }
+
+  .talk-button.center.muted {
+    --wzc-round-button-color: var(--wzc-color-on-warning);
+    --wzc-round-button-background: var(--wzc-talk-muted-color);
+    --wzc-round-button-hover-background: var(--wzc-talk-muted-color);
+  }
+
+  :host([presentation="toolbar"]) .talk-controls {
+    color: var(--wzc-talk-toolbar-color);
+    background: var(--wzc-talk-toolbar-background);
+    border-color: var(--wzc-talk-toolbar-border-color);
+  }
+
+  :host([presentation="toolbar"]) .talk-controls canvas {
+    display: none;
+  }
+
+  :host([presentation="toolbar"]) .talk-controls .talk-button:not(.center) {
+    --wzc-round-button-color: var(--wzc-talk-toolbar-color);
+    --wzc-round-button-background: var(--wzc-talk-toolbar-button-background);
+    --wzc-round-button-hover-background: var(
+      --wzc-talk-toolbar-button-hover-background
+    );
+    --wzc-round-button-border-color: var(--wzc-talk-toolbar-border-color);
   }
 
   .connecting-spinner {
@@ -103,6 +129,14 @@ export const twoWayTalkStyles = css`
       --wzc-round-button-hover-background: var(
         --wzc-neutral-control-hover-background
       );
+    }
+
+    .talk-button.center:hover {
+      --wzc-round-button-hover-background: var(--wzc-talk-connected-color);
+    }
+
+    .talk-button.center.muted:hover {
+      --wzc-round-button-hover-background: var(--wzc-talk-muted-color);
     }
   }
 `;

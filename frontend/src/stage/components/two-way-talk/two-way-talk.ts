@@ -125,7 +125,9 @@ export class TwoWayTalkComponent extends LitElement {
                 )}
                 ${this._renderTalkButton(
                   "stop",
-                  "round-button talk-button center",
+                  this._session.microphoneMuted
+                    ? "round-button talk-button center muted"
+                    : "round-button talk-button center",
                   this.localize("talk.disconnect"),
                   renderIcon("microphone"),
                 )}

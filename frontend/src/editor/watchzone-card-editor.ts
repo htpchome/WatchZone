@@ -992,7 +992,8 @@ export class CardEditor extends LitElement {
                 title=${this._t("editor.add_light")}
                 @click=${this._startAddingLight}
               >
-                ${renderIcon("lightbulb")} ${this._t("editor.add_light")}
+                <ha-icon .icon=${DEFAULT_LIGHT_ICON}></ha-icon>
+                ${this._t("editor.add_light")}
               </ha-button>`
             : nothing
       }

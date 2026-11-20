@@ -81,6 +81,10 @@ describe("linked-light component", () => {
     expect(button.title).toBe("Turn off Porch");
     expect(button.ariaLabel).toBe("Turn off Porch");
     expect(button.style.getPropertyValue("--wzc-light-level")).toBe("50%");
+    expect(
+      (button.querySelector("ha-icon") as HTMLElement & { icon?: string }).icon,
+    ).toBe("mdi:lightbulb");
+    expect(button.querySelector(":scope > svg")).toBeNull();
 
     pressKey(button, " ", "keydown");
     pressKey(button, " ", "keyup");
@@ -218,7 +222,10 @@ describe("linked-light component", () => {
     ) as HTMLElement;
     expect(button.getAttribute("aria-pressed")).toBe("false");
     expect(button.getAttribute("style")).toContain("--wzc-light-level:0%");
-    expect(button.querySelector("svg")).not.toBeNull();
+    expect(
+      (button.querySelector("ha-icon") as HTMLElement & { icon?: string }).icon,
+    ).toBe("mdi:lightbulb");
+    expect(button.querySelector(":scope > svg")).toBeNull();
   });
 
   it("switches linked controls with the active camera and cleans up presses", async () => {

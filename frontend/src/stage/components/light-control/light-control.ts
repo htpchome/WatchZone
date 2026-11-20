@@ -37,6 +37,7 @@ import {
 
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
 const LIGHT_TOAST_KEY = "light-control-status";
+const DEFAULT_LIGHT_ICON = "mdi:lightbulb";
 
 /** Independently placeable Home Assistant light controls for the active camera. */
 export class LightControlComponent extends LitElement {
@@ -235,9 +236,7 @@ export class LightControlComponent extends LitElement {
       @focus=${this._overlay.reveal}
     >
       <span class="light-fill" style=${`block-size:${level}%`}></span>
-      ${
-        icon ? html`<ha-icon .icon=${icon}></ha-icon>` : renderIcon("lightbulb")
-      }
+      <ha-icon .icon=${icon ?? DEFAULT_LIGHT_ICON}></ha-icon>
     </button>`;
   }
 
