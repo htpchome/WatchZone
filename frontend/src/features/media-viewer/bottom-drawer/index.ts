@@ -25,16 +25,27 @@ import {
 import { activityActionStyles } from "../../../ui/activity-action.styles";
 import { buttonBaseStyles } from "../../../ui/button.styles";
 import { renderIcon } from "../../../ui/icons";
+import {
+  MediaStageResizeController,
+  type MediaStageResizeContext,
+  type MediaStageResizeInteraction,
+} from "../../../ui/media-stage-resize.controller";
 import type { ToastNotice } from "../../../ui/toast-manager";
 import { RecordedMediaDialogContent } from "../dialog-content";
 import { recordedMediaDialogContentStyles } from "../dialog-content.styles";
 import { recordedMediaHeading } from "../media-information";
 import { bottomDrawerStyles } from "./bottom-drawer.styles";
-import { BottomDrawerMediaResizeController } from "./media-resize.controller";
 
 interface DrawerGesture {
   readonly pointerId: number;
   readonly startY: number;
+}
+
+interface RecordedMediaStageTarget extends HTMLElement {
+  beginStageResizeReturn(): void;
+  endStageResizeReturn(): void;
+  setBasePresentationScale(scale: number): void;
+  updateStageResizeReturn(progress: number): void;
 }
 
 const MIN_CLOSE_DISTANCE_PX = 72;
@@ -69,7 +80,16 @@ export class RecordedMediaBottomDrawer extends LitElement {
   private _dragFrame?: number;
   private _expanded = false;
   private _gesture?: DrawerGesture;
-  private readonly _mediaResize = new BottomDrawerMediaResizeController(this);
+  private readonly _mediaResize = new MediaStageResizeController(this, {
+    maximumHeightRatio: (context) => this._maximumMediaHeightRatio(context),
+    onInteraction: (interaction) =>
+      this._handleMediaResizeInteraction(interaction),
+    onMediaPresentationScaleChange: (scale) =>
+      this._mediaStageTarget()?.setBasePresentationScale(scale),
+    presentationAspectRatioProperty:
+      "--wzc-recorded-media-presentation-aspect-ratio",
+    resizedClass: "stage-resized",
+  });
   private readonly _motion = new OwnedMotion();
   private _offset = 0;
   private _pendingOffset = 0;
@@ -134,6 +154,7 @@ export class RecordedMediaBottomDrawer extends LitElement {
       this._active = true;
       this._expanded = false;
       this._content.reset();
+      this._mediaResize.configure(this.request.id);
       this._mediaResize.reset();
     }
   }
@@ -141,12 +162,12 @@ export class RecordedMediaBottomDrawer extends LitElement {
   protected updated(changed: Map<PropertyKey, unknown>): void {
     this._mediaResize.observe(
       this._content.mediaPresentationSurface ?? undefined,
-      this._content.mediaSurface ?? undefined,
       this.renderRoot.querySelector<HTMLButtonElement>(
         ".media-resize-handle",
       ) ?? undefined,
-      this.renderRoot.querySelector<HTMLElement>(".footer-actions") ??
-        undefined,
+    );
+    this._mediaStageTarget()?.setBasePresentationScale(
+      this._mediaResize.mediaPresentationScale,
     );
     if (changed.has("request") && this.request) this._open();
   }
@@ -415,7 +436,6 @@ export class RecordedMediaBottomDrawer extends LitElement {
       title=${this.localize("camera.stage_resize_title")}
       aria-label=${this.localize("camera.stage_height")}
       aria-orientation="vertical"
-      ?disabled=${this._mediaResize.heightPercentage === 0}
       aria-valuenow=${String(this._mediaResize.heightPercentage)}
       aria-valuetext=${this.localize("camera.stage_height_value", {
         percent: this._mediaResize.heightPercentage,
@@ -447,6 +467,56 @@ export class RecordedMediaBottomDrawer extends LitElement {
       event.detail.height,
     );
   };
+
+  private _mediaStageTarget(): RecordedMediaStageTarget | undefined {
+    const target = this._content.mediaSurface;
+    if (
+      !target ||
+      !("setBasePresentationScale" in target) ||
+      !("beginStageResizeReturn" in target) ||
+      !("updateStageResizeReturn" in target) ||
+      !("endStageResizeReturn" in target)
+    ) {
+      return undefined;
+    }
+    return target as RecordedMediaStageTarget;
+  }
+
+  private _handleMediaResizeInteraction(
+    interaction: MediaStageResizeInteraction,
+  ): void {
+    const target = this._mediaStageTarget();
+    if (interaction.phase === "start") target?.beginStageResizeReturn();
+    else if (interaction.phase === "update") {
+      target?.updateStageResizeReturn(interaction.returnProgress);
+    } else target?.endStageResizeReturn();
+  }
+
+  private _maximumMediaHeightRatio(context: MediaStageResizeContext): number {
+    const stageRect = context.stage?.getBoundingClientRect();
+    const handle = context.handle;
+    const handleRect = handle?.getBoundingClientRect();
+    const footerRect = this.renderRoot
+      .querySelector<HTMLElement>(".footer-actions")
+      ?.getBoundingClientRect();
+    if (
+      !stageRect ||
+      !handle ||
+      !handleRect ||
+      !footerRect ||
+      stageRect.width <= 0
+    ) {
+      return context.currentHeightRatio;
+    }
+    const handleHeight = Math.max(
+      handleRect.height,
+      Number.parseFloat(getComputedStyle(handle).blockSize) || 0,
+    );
+    return Math.max(
+      context.currentHeightRatio,
+      (footerRect.top - stageRect.top - handleHeight) / stageRect.width,
+    );
+  }
 
   static styles = [
     buttonBaseStyles,

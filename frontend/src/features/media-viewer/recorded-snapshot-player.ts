@@ -27,30 +27,25 @@ export class RecordedSnapshotPlayer extends LitElement {
 
   public static styles = recordedSnapshotPlayerStyles;
 
-  /** The sole box whose height is controlled by a presentation shell. */
+  /** The stable viewport whose height is controlled by a presentation shell. */
   public get presentationSurface(): HTMLElement | undefined {
     return this._viewport();
   }
 
-  public setPresentationHeightRatio(heightRatio: number | undefined): void {
-    const nextRatio =
-      heightRatio !== undefined &&
-      Number.isFinite(heightRatio) &&
-      heightRatio > 0
-        ? heightRatio
-        : undefined;
-    this.toggleAttribute("intrinsic-presentation", nextRatio !== undefined);
-    if (nextRatio === undefined) {
-      this.style.removeProperty(
-        "--wzc-recorded-media-presentation-aspect-ratio",
-      );
-    } else {
-      this.style.setProperty(
-        "--wzc-recorded-media-presentation-aspect-ratio",
-        String(1 / nextRatio),
-      );
-    }
-    this._zoom.setPresentationHeightRatio(nextRatio);
+  public setBasePresentationScale(scale: number): void {
+    this._zoom.setBasePresentationScale(scale);
+  }
+
+  public beginStageResizeReturn(): void {
+    this._zoom.beginStageResizeReturn();
+  }
+
+  public updateStageResizeReturn(progress: number): void {
+    this._zoom.updateStageResizeReturn(progress);
+  }
+
+  public endStageResizeReturn(): void {
+    this._zoom.endStageResizeReturn();
   }
 
   private readonly _zoom = new ZoomController(this);
@@ -64,14 +59,16 @@ export class RecordedSnapshotPlayer extends LitElement {
         })}
       >
         <div class="media-surface">
-          <img
-            class="snapshot"
-            src=${this.source}
-            alt=${this.alt}
-            draggable="false"
-            @load=${this._handleLoad}
-            @error=${this._handleError}
-          />
+          <div class="media-host">
+            <img
+              class="snapshot"
+              src=${this.source}
+              alt=${this.alt}
+              draggable="false"
+              @load=${this._handleLoad}
+              @error=${this._handleError}
+            />
+          </div>
         </div>
       </div>
       <slot name="media-resize-handle"></slot>`;
@@ -100,10 +97,7 @@ export class RecordedSnapshotPlayer extends LitElement {
   }
 
   private _observeMediaPresentation(): void {
-    this._zoom.attach(
-      this._viewport(),
-      this.renderRoot.querySelector<HTMLElement>(".media-surface") ?? undefined,
-    );
+    this._zoom.attach(this._viewport(), this._image());
   }
 
   private readonly _handleLoad = (): void => {

@@ -1,13 +1,16 @@
 # Camera Display Zoom
 
-This document defines the implementation contract for display zoom and pan in
-the camera module. It supplements `architecture.md`; that document remains
-authoritative for application-wide boundaries.
+This document defines the shared implementation contract for display zoom and
+pan in live and recorded media presentations. It supplements
+`architecture.md`; that document remains authoritative for application-wide
+boundaries.
 
 ## Ownership
 
-- Camera is the parent module. Display zoom is private camera presentation
-  behavior under `frontend/src/stage/modules/camera/live/`.
+- Display zoom is a shared presentation primitive under
+  `frontend/src/ui/zoom/`. Live Camera and recorded-media players each compose
+  it through the same attachment and lifecycle boundary; neither implements a
+  private zoom or pan system.
 - The shared `MediaTouchGestureController` classifies control contact,
   completed surface taps, pan, and pinch for live and recorded presentations.
   It does not own double-activation timing or zoom policy.

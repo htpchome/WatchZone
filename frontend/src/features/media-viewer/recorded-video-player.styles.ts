@@ -1,10 +1,6 @@
 import { css } from "lit";
 
-import { zoomIntrinsicPresentationStyles } from "../../ui/zoom";
-
 export const recordedVideoPlayerStyles = css`
-  ${zoomIntrinsicPresentationStyles}
-
   :host {
     background: var(--wzc-recorded-media-background);
     block-size: auto;
@@ -23,6 +19,7 @@ export const recordedVideoPlayerStyles = css`
     background: var(--wzc-recorded-media-background);
     aspect-ratio: var(--wzc-recorded-media-presentation-aspect-ratio, 16 / 9);
     block-size: auto;
+    display: grid;
     inline-size: 100%;
     min-block-size: 0;
     min-inline-size: 0;
@@ -55,25 +52,37 @@ export const recordedVideoPlayerStyles = css`
   .media-surface {
     background: var(--wzc-recorded-media-background);
     block-size: 100%;
+    grid-column: 1;
+    grid-row: 1;
     inline-size: 100%;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .media-host,
+  video {
+    background: inherit;
+    block-size: 100%;
+    display: block;
     inset: 0;
+    inline-size: 100%;
+    object-fit: contain;
+    pointer-events: none;
     position: absolute;
-    transform-origin: center;
-    will-change: transform;
   }
 
   video {
     background: inherit;
     block-size: 100%;
-    display: block;
     inline-size: 100%;
     max-block-size: 100%;
-    object-fit: contain;
-    pointer-events: none;
+    max-inline-size: 100%;
+    transform-origin: center;
     user-select: none;
+    will-change: transform;
   }
 
-  .media-surface.interacting {
+  .viewport.pannable {
     cursor: move;
   }
 

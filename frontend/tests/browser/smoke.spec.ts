@@ -255,7 +255,7 @@ test("presents recorded media in the configured card-width bottom drawer", async
     "wzc-recorded-media-bottom-drawer wzc-recorded-video-player",
   );
   await expect(mediaPlayerHost).toHaveCSS("aspect-ratio", "auto");
-  const recordedVideoSurface = mediaPlayerHost.locator(".media-surface");
+  const recordedVideoSurface = mediaPlayerHost.locator("video");
   const mediaResizeHandle = page.locator(
     "wzc-recorded-media-bottom-drawer .media-resize-handle",
   );
@@ -264,7 +264,7 @@ test("presents recorded media in the configured card-width bottom drawer", async
   if (!initialMediaBox || !mediaResizeBox) {
     throw new Error("Recorded media resize handle was not rendered");
   }
-  expect(initialMediaBox.height / initialMediaBox.width).toBeCloseTo(3 / 4, 2);
+  expect(initialMediaBox.height / initialMediaBox.width).toBeCloseTo(9 / 16, 2);
   expect(mediaResizeBox.y).toBeCloseTo(
     initialMediaBox.y + initialMediaBox.height,
     0,
@@ -297,15 +297,15 @@ test("presents recorded media in the configured card-width bottom drawer", async
   const sampledVideoHeights = [resizedMediaBox?.height ?? 0];
   const sampleVideoGeometry = async () =>
     recordedVideoSurface.evaluate((surface) => {
-      const viewport = surface.parentElement;
-      const video = surface.querySelector("video");
-      if (!viewport || !video) {
+      const target = surface as HTMLElement;
+      const viewport = target.closest<HTMLElement>(".viewport");
+      const mediaHost = target.parentElement;
+      if (!viewport || !mediaHost) {
         throw new Error("Recorded video presentation was not rendered");
       }
-      const style = getComputedStyle(surface);
+      const style = getComputedStyle(target);
       const matrix = new DOMMatrixReadOnly(style.transform);
-      const surfaceRect = surface.getBoundingClientRect();
-      const videoRect = video.getBoundingClientRect();
+      const surfaceRect = target.getBoundingClientRect();
       const viewportRect = viewport.getBoundingClientRect();
       return {
         justifyItems: getComputedStyle(viewport).justifyItems,
@@ -315,14 +315,13 @@ test("presents recorded media in the configured card-width bottom drawer", async
           surfaceRect.width / 2 -
           (viewportRect.left + viewportRect.width / 2),
         surfaceWidth: surfaceRect.width,
+        surfaceOffsetWidth: target.offsetWidth,
         scale: matrix.a,
         transformOrigin: style.transformOrigin,
         translateX: matrix.e,
         translateY: matrix.f,
-        videoCenterOffset:
-          videoRect.left +
-          videoRect.width / 2 -
-          (viewportRect.left + viewportRect.width / 2),
+        mediaHostOffsetWidth: mediaHost.offsetWidth,
+        mediaHostComputedWidth: getComputedStyle(mediaHost).width,
         viewportLeft: viewportRect.left,
         viewportWidth: viewportRect.width,
       };
@@ -352,12 +351,13 @@ test("presents recorded media in the configured card-width bottom drawer", async
       Math.abs(geometry?.surfaceCenterOffset ?? Number.POSITIVE_INFINITY),
       JSON.stringify(geometry),
     ).toBeLessThanOrEqual(1);
-    expect(
-      Math.abs(geometry?.videoCenterOffset ?? Number.POSITIVE_INFINITY),
-    ).toBeLessThanOrEqual(1);
     expect(geometry?.translateX).toBeCloseTo(0, 3);
     expect(geometry?.translateY).toBeCloseTo(0, 3);
-    expect(geometry?.scale).toBeCloseTo(1, 3);
+    const stageRatio = height / (geometry?.viewportWidth ?? 1);
+    expect(geometry?.scale).toBeCloseTo(
+      stageRatio > 3 / 4 + 0.005 ? stageRatio / (3 / 4) : 1,
+      3,
+    );
     expect(origin?.[1]).toBeCloseTo(height / 2, 0);
     if (index > 0) {
       expect(geometry?.surfaceWidth ?? 0).toBeGreaterThanOrEqual(
@@ -451,7 +451,7 @@ test("presents recorded media in the configured card-width bottom drawer", async
 
   const snapshot = page.locator("wzc-recorded-media-bottom-drawer .snapshot");
   const snapshotSurface = page.locator(
-    "wzc-recorded-media-bottom-drawer wzc-recorded-snapshot-player .media-surface",
+    "wzc-recorded-media-bottom-drawer wzc-recorded-snapshot-player .snapshot",
   );
   const snapshotViewport = page.locator(
     "wzc-recorded-media-bottom-drawer wzc-recorded-snapshot-player .viewport",
@@ -465,7 +465,7 @@ test("presents recorded media in the configured card-width bottom drawer", async
     throw new Error("Snapshot resize geometry was not rendered");
   }
   expect(initialSnapshotBox.height / initialSnapshotBox.width).toBeCloseTo(
-    3 / 4,
+    9 / 16,
     2,
   );
   expect(initialSnapshotHandleBox.y).toBeCloseTo(
@@ -527,7 +527,9 @@ test("presents recorded media in the configured card-width bottom drawer", async
     "wzc-recorded-media-bottom-drawer .footer-actions",
   );
   const boundedHandleBox = await snapshotResizeHandle.boundingBox();
-  if (!boundedHandleBox) {
+  const boundedViewportBox = await snapshotViewport.boundingBox();
+  const boundedFooterBox = await footerActions.boundingBox();
+  if (!boundedHandleBox || !boundedViewportBox || !boundedFooterBox) {
     throw new Error("Snapshot resize handle boundary was not rendered");
   }
   const boundedHandleX = boundedHandleBox.x + boundedHandleBox.width / 2;
@@ -542,9 +544,17 @@ test("presents recorded media in the configured card-width bottom drawer", async
   if (!maximumSnapshotBox || !maximumHandleBox || !footerActionsBox) {
     throw new Error("Snapshot maximum resize geometry was not rendered");
   }
-  expect(maximumHandleBox.y + maximumHandleBox.height).toBeLessThanOrEqual(
-    footerActionsBox.y + 1,
-  );
+  expect(
+    maximumHandleBox.y + maximumHandleBox.height,
+    JSON.stringify({
+      boundedFooterBox,
+      boundedHandleBox,
+      boundedViewportBox,
+      footerActionsBox,
+      maximumHandleBox,
+      maximumSnapshotBox,
+    }),
+  ).toBeLessThanOrEqual(footerActionsBox.y + 1);
   const maximumHandleX = maximumHandleBox.x + maximumHandleBox.width / 2;
   const maximumHandleY = maximumHandleBox.y + maximumHandleBox.height / 2;
   await page.mouse.move(maximumHandleX, maximumHandleY);
@@ -5130,9 +5140,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect(modalClose).toHaveCSS("color", modalCloseColor);
   const recordedVideo = page.locator("wzc-recorded-video-player video");
   const recordedViewport = page.locator("wzc-recorded-video-player .viewport");
-  const recordedMediaSurface = page.locator(
-    "wzc-recorded-video-player .media-surface",
-  );
+  const recordedMediaTarget = recordedVideo;
   await expect(recordedVideo).not.toHaveAttribute("controls", "");
   await expect(recordedVideo).toHaveAttribute("autoplay", "");
   await expect(recordedVideo).toHaveAttribute("muted", "");
@@ -5330,15 +5338,15 @@ test("keeps activity content in an independently scrolling viewport", async ({
     element.dispatchEvent(new Event("resize"));
   });
   expect(await dispatchRecordedDoubleClick()).toBe(true);
-  await expect(recordedMediaSurface).toHaveAttribute("style", /scale\(2\)/);
-  const recordedPresentationContract = await recordedMediaSurface.evaluate(
-    (surface) => {
-      const video = surface.querySelector("video");
-      const viewport = surface.parentElement;
+  await expect(recordedMediaTarget).toHaveAttribute("style", /scale\(2\)/);
+  const recordedPresentationContract = await recordedMediaTarget.evaluate(
+    (video) => {
+      const surface = video.parentElement;
+      const viewport = video.closest(".viewport");
       return {
-        surfaceHeight: (surface as HTMLElement).offsetHeight,
-        surfaceWidth: (surface as HTMLElement).offsetWidth,
-        videoPosition: video ? getComputedStyle(video).position : "missing",
+        surfaceHeight: (surface as HTMLElement | null)?.offsetHeight ?? 0,
+        surfaceWidth: (surface as HTMLElement | null)?.offsetWidth ?? 0,
+        videoPosition: getComputedStyle(video).position,
         viewportHeight: viewport?.clientHeight ?? 0,
         viewportWidth: viewport?.clientWidth ?? 0,
       };
@@ -5350,7 +5358,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(recordedPresentationContract.surfaceHeight).toBe(
     recordedPresentationContract.viewportHeight,
   );
-  expect(recordedPresentationContract.videoPosition).toBe("static");
+  expect(recordedPresentationContract.videoPosition).toBe("absolute");
   await expect(
     page.getByRole("button", { name: "Mute recorded video" }),
   ).toBeVisible();
@@ -5427,35 +5435,17 @@ test("keeps activity content in an independently scrolling viewport", async ({
     informationBeforePan?.height ?? 0,
     1,
   );
-  const recordedContentCoverage = await recordedMediaSurface.evaluate(
-    (surface) => {
-      const video = surface.querySelector("video");
-      const viewport = surface.parentElement;
-      if (!video || !viewport) return undefined;
+  const recordedContentCoverage = await recordedMediaTarget.evaluate(
+    (video) => {
+      const viewport = video.closest(".viewport");
+      if (!viewport) return undefined;
       const viewportRect = viewport.getBoundingClientRect();
-      const surfaceRect = surface.getBoundingClientRect();
-      const mediaRatio = video.videoWidth / video.videoHeight;
-      const viewportRatio = viewportRect.width / viewportRect.height;
-      const fittedWidth =
-        mediaRatio > viewportRatio
-          ? viewportRect.width
-          : viewportRect.height * mediaRatio;
-      const fittedHeight =
-        mediaRatio > viewportRatio
-          ? viewportRect.width / mediaRatio
-          : viewportRect.height;
-      const scale = surfaceRect.width / viewportRect.width;
-      const contentWidth = fittedWidth * scale;
-      const contentHeight = fittedHeight * scale;
-      const contentLeft =
-        surfaceRect.left + (surfaceRect.width - contentWidth) / 2;
-      const contentTop =
-        surfaceRect.top + (surfaceRect.height - contentHeight) / 2;
+      const contentRect = video.getBoundingClientRect();
       return {
-        bottomGap: viewportRect.bottom - (contentTop + contentHeight),
-        leftGap: contentLeft - viewportRect.left,
-        rightGap: viewportRect.right - (contentLeft + contentWidth),
-        topGap: contentTop - viewportRect.top,
+        bottomGap: viewportRect.bottom - contentRect.bottom,
+        leftGap: contentRect.left - viewportRect.left,
+        rightGap: viewportRect.right - contentRect.right,
+        topGap: contentRect.top - viewportRect.top,
       };
     },
   );
@@ -5466,7 +5456,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(recordedContentCoverage?.bottomGap ?? 1).toBeLessThanOrEqual(1);
   await page.mouse.up();
   expect(await dispatchRecordedDoubleClick()).toBe(true);
-  await expect(recordedMediaSurface).toHaveAttribute("style", /scale\(1\)/);
+  await expect(recordedMediaTarget).toHaveAttribute("style", /scale\(1\)/);
   expect(await page.evaluate(() => document.fullscreenElement)).toBeNull();
   const dispatchRecordedTouchTap = (): Promise<void> =>
     recordedViewport.evaluate((element) => {
@@ -5497,11 +5487,11 @@ test("keeps activity content in an independently scrolling viewport", async ({
     });
   await dispatchRecordedTouchTap();
   await dispatchRecordedTouchTap();
-  await expect(recordedMediaSurface).toHaveAttribute("style", /scale\(2\)/);
+  await expect(recordedMediaTarget).toHaveAttribute("style", /scale\(2\)/);
   await expect(recordedMute).toBeVisible();
   await dispatchRecordedTouchTap();
   await dispatchRecordedTouchTap();
-  await expect(recordedMediaSurface).toHaveAttribute("style", /scale\(1\)/);
+  await expect(recordedMediaTarget).toHaveAttribute("style", /scale\(1\)/);
   const resizeHandle = page.locator(
     ":is(wzc-event-media-dialog, wzc-review-media-dialog, wzc-recording-media-dialog) .resize-handle",
   );

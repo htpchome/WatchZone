@@ -96,30 +96,25 @@ export class RecordedVideoPlayer extends LitElement {
   public localize: LocalizeFunction = englishLocalize;
   public request?: RecordedMediaRequest;
 
-  /** The sole box whose height is controlled by a presentation shell. */
+  /** The stable viewport whose height is controlled by a presentation shell. */
   public get presentationSurface(): HTMLElement | undefined {
     return this._viewport();
   }
 
-  public setPresentationHeightRatio(heightRatio: number | undefined): void {
-    const nextRatio =
-      heightRatio !== undefined &&
-      Number.isFinite(heightRatio) &&
-      heightRatio > 0
-        ? heightRatio
-        : undefined;
-    this.toggleAttribute("intrinsic-presentation", nextRatio !== undefined);
-    if (nextRatio === undefined) {
-      this.style.removeProperty(
-        "--wzc-recorded-media-presentation-aspect-ratio",
-      );
-    } else {
-      this.style.setProperty(
-        "--wzc-recorded-media-presentation-aspect-ratio",
-        String(1 / nextRatio),
-      );
-    }
-    this._zoom.setPresentationHeightRatio(nextRatio);
+  public setBasePresentationScale(scale: number): void {
+    this._zoom.setBasePresentationScale(scale);
+  }
+
+  public beginStageResizeReturn(): void {
+    this._zoom.beginStageResizeReturn();
+  }
+
+  public updateStageResizeReturn(progress: number): void {
+    this._zoom.updateStageResizeReturn(progress);
+  }
+
+  public endStageResizeReturn(): void {
+    this._zoom.endStageResizeReturn();
   }
 
   public readonly toggleSegmentSelection = async (): Promise<void> => {
@@ -245,25 +240,27 @@ export class RecordedVideoPlayer extends LitElement {
       @focusout=${this._overlay.handleFocusOut}
     >
       <div class="media-surface">
-        <video
-          autoplay
-          muted
-          playsinline
-          preload="auto"
-          poster=${this.request?.posterUrl ?? ""}
-          @loadedmetadata=${this._handleMediaDimensionsChanged}
-          @resize=${this._handleMediaDimensionsChanged}
-          @emptied=${this._handleMediaDimensionsChanged}
-          @durationchange=${this._syncControlState}
-          @timeupdate=${this._syncControlState}
-          @play=${this._syncControlState}
-          @pause=${this._syncControlState}
-          @ended=${this._handleSegmentPreviewEnded}
-          @volumechange=${this._syncControlState}
-          @enterpictureinpicture=${this._syncControlState}
-          @leavepictureinpicture=${this._syncControlState}
-          @webkitpresentationmodechanged=${this._syncControlState}
-        ></video>
+        <div class="media-host">
+          <video
+            autoplay
+            muted
+            playsinline
+            preload="auto"
+            poster=${this.request?.posterUrl ?? ""}
+            @loadedmetadata=${this._handleMediaDimensionsChanged}
+            @resize=${this._handleMediaDimensionsChanged}
+            @emptied=${this._handleMediaDimensionsChanged}
+            @durationchange=${this._syncControlState}
+            @timeupdate=${this._syncControlState}
+            @play=${this._syncControlState}
+            @pause=${this._syncControlState}
+            @ended=${this._handleSegmentPreviewEnded}
+            @volumechange=${this._syncControlState}
+            @enterpictureinpicture=${this._syncControlState}
+            @leavepictureinpicture=${this._syncControlState}
+            @webkitpresentationmodechanged=${this._syncControlState}
+          ></video>
+        </div>
       </div>
       <${mediaControlsTag}
         class="player-tools"
@@ -430,10 +427,7 @@ export class RecordedVideoPlayer extends LitElement {
   }
 
   private _observeMediaPresentation(): void {
-    this._zoom.attach(
-      this._viewport(),
-      this.renderRoot.querySelector<HTMLElement>(".media-surface") ?? undefined,
-    );
+    this._zoom.attach(this._viewport(), this._video());
   }
 
   private readonly _handleMediaDimensionsChanged = (): void => {

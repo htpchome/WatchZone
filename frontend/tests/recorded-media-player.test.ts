@@ -815,7 +815,7 @@ describe("recorded media player", () => {
     expect(observed).not.toContain(player);
   });
 
-  it("applies drawer height through one centered intrinsic media surface", async () => {
+  it("applies the shared stage base scale without a drawer-only surface", async () => {
     const player = document.createElement(
       "wzc-recorded-video-player",
     ) as RecordedVideoPlayer;
@@ -823,11 +823,8 @@ describe("recorded media player", () => {
     document.body.append(player);
     await player.updateComplete;
     const video = player.shadowRoot?.querySelector("video");
-    const mediaSurface =
-      player.shadowRoot?.querySelector<HTMLElement>(".media-surface");
     expect(video).not.toBeNull();
-    expect(mediaSurface).not.toBeNull();
-    if (!video || !mediaSurface) return;
+    if (!video) return;
     let width = 1200;
     let height = 900;
     Object.defineProperties(video, {
@@ -836,20 +833,16 @@ describe("recorded media player", () => {
     });
     video.dispatchEvent(new Event("loadedmetadata"));
 
-    expect(player.hasAttribute("intrinsic-presentation")).toBe(false);
-
-    player.setPresentationHeightRatio(0.8);
-    expect(player.hasAttribute("intrinsic-presentation")).toBe(true);
-    expect(transformScale(mediaSurface.style.transform)).toBe(1);
-    expect(
-      mediaSurface.style.getPropertyValue("--wzc-zoom-media-aspect-ratio"),
-    ).toBe(String(4 / 3));
+    player.setBasePresentationScale(4 / 3);
+    expect(transformScale(video.style.transform)).toBeCloseTo(4 / 3);
 
     width = 0;
     height = 0;
     video.dispatchEvent(new Event("resize"));
-    player.setPresentationHeightRatio(0.9);
-    expect(transformScale(mediaSurface.style.transform)).toBe(1);
+    expect(transformScale(video.style.transform)).toBeCloseTo(4 / 3);
+
+    player.setBasePresentationScale(1);
+    expect(transformScale(video.style.transform)).toBe(1);
   });
 
   it("presents review details and switches media variants in place", async () => {
@@ -1089,9 +1082,6 @@ describe("recorded media player", () => {
       ".viewport",
     ) as HTMLElement;
     const image = player.shadowRoot?.querySelector("img") as HTMLImageElement;
-    const mediaSurface = player.shadowRoot?.querySelector(
-      ".media-surface",
-    ) as HTMLElement;
     Object.defineProperties(image, {
       naturalHeight: { configurable: true, value: 900 },
       naturalWidth: { configurable: true, value: 1600 },
@@ -1110,15 +1100,13 @@ describe("recorded media player", () => {
 
     viewport.dispatchEvent(new KeyboardEvent("keydown", { key: "+" }));
     await player.updateComplete;
-    expect(transformScale(mediaSurface.style.transform)).toBeGreaterThan(1);
-    const zoomedTransform = mediaSurface.style.transform;
+    expect(transformScale(image.style.transform)).toBeGreaterThan(1);
+    const zoomedTransform = image.style.transform;
 
     viewport.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft" }));
     await player.updateComplete;
-    expect(mediaSurface.style.transform).not.toBe(zoomedTransform);
-    expect(mediaSurface.style.transform).not.toContain(
-      "translate3d(0px, 0px, 0)",
-    );
+    expect(image.style.transform).not.toBe(zoomedTransform);
+    expect(image.style.transform).not.toContain("translate3d(0px, 0px, 0)");
   });
 });
 

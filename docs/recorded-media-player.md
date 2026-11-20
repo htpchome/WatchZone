@@ -219,26 +219,25 @@ viewing. Recording discovery and grouping are governed by
   top-packed rather than stretching across unused drawer height. The drawer
   shell is not resizable.
 - Video and snapshot requests provide a separate pull-down media handle in
-  normal flow directly beneath the media. Its reset and minimum height come
-  from that video's or snapshot's actual intrinsic ratio; the shell never
-  assumes a `16:9` camera. The handle remains disabled until those dimensions
-  are known, then expands the fixed-width media until the rendered footer
-  boundary is reached and follows the pointer without programmatic body
-  scrolling. Recording-hour presentations slot the handle between the video
-  viewport and their scrubber or segment workflow. Excess source media is
-  physically center-cropped on every intermediate frame. Video and snapshots each compose the
-  shared display-zoom boundary inside their own media player, so both draggable
-  and drawer presentations support the same pointer, keyboard, double-activation,
-  and bounded-pan behavior. Media-height pointer, keyboard, and
-  double-activation reset behavior remains owned by the bottom-drawer shell.
-- The draggable shell does not participate in drawer media geometry. Shared
-  dialog content imposes no player aspect ratio, and only the drawer-owned
-  controller writes the requested drawer viewport ratio. The recorded player
-  applies that ratio to one physically centered, intrinsically proportioned
-  media surface. Drawer-only intrinsic sizing does not leak into the draggable
-  shell. Its physical overflow owns the center crop while the shared
-  display-zoom controller owns only user zoom, pan, and their bounds. Resize
-  observation cannot introduce an intermediate compensating transform.
+  normal flow directly beneath the media. The recorded player starts with the
+  same stable `16:9` stage geometry as live video; a source's intrinsic ratio
+  informs media fit and pan bounds but never changes that initial viewport.
+  The handle expands the fixed-width stage until the rendered footer boundary
+  is reached and follows the pointer without programmatic body scrolling.
+  Recording-hour presentations slot the handle between the video viewport and
+  their scrubber or segment workflow. Video and snapshots each compose the
+  shared display-zoom boundary inside their own media player, so draggable,
+  drawer, and live presentations support the same pointer, keyboard,
+  double-activation, base-fit, and bounded-pan behavior. Media-height pointer,
+  keyboard, and double-activation reset behavior remains owned by the shared
+  media-stage resize controller rather than by zoom or a drawer-only player.
+- The draggable shell does not participate in drawer media geometry. The
+  drawer changes only the stable viewport ratio. Until the expanded stage
+  reaches the source's intrinsic ratio, media remains contained and centered.
+  Expansion beyond that ratio emits the same centered base presentation scale
+  used by live video. The shared display-zoom controller is the sole owner of
+  the resulting transform, user zoom, pan, focal point, and bounds; the drawer
+  never installs an intrinsic surface mode or a compensating transform.
 - Double-clicking the drawer header toggles its preferred inline size between
   its card-derived width and the canonical `1280px` stop when the visible
   viewport permits it. The viewport clamp remains authoritative on smaller

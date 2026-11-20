@@ -54,7 +54,6 @@ export class ZoomTransformController implements ReactiveController {
   private _interacting = false;
   private _key?: string;
   private _mediaHeightRatio?: number;
-  private _presentationHeightRatio?: number;
   private _panX = 0;
   private _panY = 0;
   private _pinchStart?: PinchStart;
@@ -91,11 +90,7 @@ export class ZoomTransformController implements ReactiveController {
 
   public get transform(): string {
     const { panX, panY, scale } = this._presentationTransform();
-    const presentationScale =
-      this._presentationHeightRatio === undefined
-        ? this._basePresentationScale
-        : MIN_ZOOM;
-    return `translate3d(${panX}px, ${panY}px, 0) scale(${scale * presentationScale})`;
+    return `translate3d(${panX}px, ${panY}px, 0) scale(${scale * this._basePresentationScale})`;
   }
 
   public get zoomed(): boolean {
@@ -103,48 +98,12 @@ export class ZoomTransformController implements ReactiveController {
   }
 
   public get pannable(): boolean {
-    if (this._presentationHeightRatio !== undefined) {
-      const bounds = this._clampTransformPan(
-        Number.POSITIVE_INFINITY,
-        Number.POSITIVE_INFINITY,
-        this.scale,
-      );
-      return bounds.x > 0 || bounds.y > 0;
-    }
     return this.scale * this._basePresentationScale > MIN_ZOOM;
   }
 
   public setBasePresentationScale(scale: number): void {
     const nextScale = Number.isFinite(scale) ? Math.max(MIN_ZOOM, scale) : 1;
-    this._presentationHeightRatio = undefined;
     this._applyBasePresentationScale(nextScale);
-  }
-
-  /**
-   * Applies a layout-owned viewport ratio to an intrinsically sized surface.
-   *
-   * The surface's physical size owns the cover crop. Zoom owns only user
-   * scale and pan, and derives their bounds from this ratio immediately.
-   */
-  public setPresentationHeightRatio(heightRatio: number | undefined): void {
-    const nextRatio =
-      heightRatio !== undefined &&
-      Number.isFinite(heightRatio) &&
-      heightRatio > 0
-        ? heightRatio
-        : undefined;
-    const previousRatio = this._presentationHeightRatio;
-    if (nextRatio === previousRatio) return;
-    if (nextRatio !== undefined && previousRatio !== undefined) {
-      const focalScale = nextRatio / previousRatio;
-      this._panX *= focalScale;
-      this._panY *= focalScale;
-    }
-    this._presentationHeightRatio = nextRatio;
-    this._basePresentationScale = MIN_ZOOM;
-    this._clampPan();
-    this._renderPresentation();
-    this._host.requestUpdate();
   }
 
   public setMediaDimensions(width: number, height: number): void {
@@ -166,9 +125,6 @@ export class ZoomTransformController implements ReactiveController {
     if (this._key === key) return;
     this._key = key;
     this._mediaHeightRatio = undefined;
-    if (this._presentationHeightRatio !== undefined) {
-      this._basePresentationScale = MIN_ZOOM;
-    }
     this.reset();
   }
 
@@ -574,30 +530,22 @@ export class ZoomTransformController implements ReactiveController {
     panY: number,
     userScale: number,
   ): Point {
-    const intrinsicPresentation = this._presentationHeightRatio !== undefined;
-    const scale =
-      userScale *
-      (intrinsicPresentation ? MIN_ZOOM : this._basePresentationScale);
+    const scale = userScale * this._basePresentationScale;
     if (scale <= MIN_ZOOM) return { x: 0, y: 0 };
     const width = this._surfaceWidth;
-    const height =
-      this._presentationHeightRatio !== undefined && width > 0
-        ? width * this._presentationHeightRatio
-        : this._surfaceHeight;
+    const height = this._surfaceHeight;
     if (!width || !height) return { x: panX, y: panY };
     // An unknown content ratio has no safe pan boundary. Keep the media
     // centered until its intrinsic dimensions are available rather than
     // assuming that it fills the viewport and exposing blank space.
     if (this._mediaHeightRatio === undefined) return { x: 0, y: 0 };
     const stageHeightRatio = height / width;
-    const contentWidth = intrinsicPresentation
-      ? height / this._mediaHeightRatio
-      : stageHeightRatio < this._mediaHeightRatio
+    const contentWidth =
+      stageHeightRatio < this._mediaHeightRatio
         ? height / this._mediaHeightRatio
         : width;
-    const contentHeight = intrinsicPresentation
-      ? height
-      : stageHeightRatio > this._mediaHeightRatio
+    const contentHeight =
+      stageHeightRatio > this._mediaHeightRatio
         ? width * this._mediaHeightRatio
         : height;
     const maxX = Math.max(0, (contentWidth * scale - width) / 2);
@@ -700,19 +648,6 @@ export class ZoomTransformController implements ReactiveController {
 
   private _renderPresentation(): void {
     if (!this._surface || !this._presentationTarget) return;
-    if (
-      this._presentationHeightRatio !== undefined &&
-      this._mediaHeightRatio !== undefined
-    ) {
-      this._presentationTarget.style.setProperty(
-        "--wzc-zoom-media-aspect-ratio",
-        String(1 / this._mediaHeightRatio),
-      );
-    } else {
-      this._presentationTarget.style.removeProperty(
-        "--wzc-zoom-media-aspect-ratio",
-      );
-    }
     const transform = this.transform;
     if (
       this._animateNextTransform &&
@@ -744,7 +679,6 @@ export class ZoomTransformController implements ReactiveController {
     if (!target) return;
     this._transformMotion.cancel();
     target.style.removeProperty("transform");
-    target.style.removeProperty("--wzc-zoom-media-aspect-ratio");
     target.classList.remove("interacting", "pannable", "stage-resize-active");
   }
 

@@ -78,10 +78,6 @@ export class ZoomController implements ReactiveController {
     this._zoom.setBasePresentationScale(scale);
   }
 
-  public setPresentationHeightRatio(heightRatio: number | undefined): void {
-    this._zoom.setPresentationHeightRatio(heightRatio);
-  }
-
   public setMediaDimensions(width: number, height: number): void {
     this._zoom.setMediaDimensions(width, height);
   }

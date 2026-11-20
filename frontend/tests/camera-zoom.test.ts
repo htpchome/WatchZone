@@ -917,59 +917,6 @@ describe("camera media zoom", () => {
     expect(controller.transform).toBe("translate3d(0px, 0px, 0) scale(1)");
   });
 
-  it("keeps intrinsic presentation centered without a compensating transform", () => {
-    const surface = createSurface();
-    const controller = new ZoomTransformController(createHost());
-    controller.attach(surface);
-    controller.setMediaDimensions(1600, 900);
-    controller.setPresentationHeightRatio(0.8);
-    connectPointerEvents(surface, controller);
-
-    expect(controller.transform).toBe("translate3d(0px, 0px, 0) scale(1)");
-    expect(
-      surface.style.getPropertyValue("--wzc-zoom-media-aspect-ratio"),
-    ).toBe(String(16 / 9));
-
-    surface.dispatchEvent(
-      pointerEvent("pointerdown", {
-        clientX: 200,
-        clientY: 112.5,
-        pointerId: 1,
-        pointerType: "mouse",
-      }),
-    );
-    surface.dispatchEvent(
-      pointerEvent("pointermove", {
-        clientX: 200,
-        clientY: 600,
-        pointerId: 1,
-        pointerType: "mouse",
-      }),
-    );
-
-    expect(controller.transform).toContain("translate3d(0px, 0px, 0)");
-  });
-
-  it("preserves the source focal point while presentation crop changes", () => {
-    const surface = createSurface();
-    const controller = new ZoomTransformController(createHost());
-    controller.attach(surface);
-    controller.setMediaDimensions(1600, 900);
-    controller.setPresentationHeightRatio(9 / 16);
-    controller.toggleAt(100, 112.5);
-
-    expect(controller.transform).toContain(
-      "translate3d(100px, 0px, 0) scale(2)",
-    );
-
-    controller.setPresentationHeightRatio(0.8);
-
-    expect(controller.transform).toContain(
-      `translate3d(${100 * (0.8 / (9 / 16))}px, 0px, 0)`,
-    );
-    expect(controller.transform).toContain("scale(2)");
-  });
-
   it("resets zoom when camera identity changes", () => {
     const surface = createSurface();
     const controller = new ZoomTransformController(createHost());
