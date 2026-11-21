@@ -136,8 +136,8 @@ export class LiveSourceResolver {
       : `home_assistant:hls:standard:${entityId}`;
   }
 
-  public frigateWebRtcKey(source: FrigateGo2RtcLiveSourceDescriptor): string {
-    return `${source.id}:webrtc`;
+  public frigateWebRtcKey(entityId: string, sourceKey?: string): string {
+    return `frigate_go2rtc:${entityId}:${sourceKey ?? "main"}:webrtc`;
   }
 
   public frigateMseKey(source: FrigateGo2RtcLiveSourceDescriptor): string {
@@ -145,18 +145,21 @@ export class LiveSourceResolver {
   }
 
   public frigateHlsKey(
-    source: FrigateGo2RtcLiveSourceDescriptor,
+    entityId: string,
+    sourceKey: string | undefined,
     lowLatencyHls = true,
   ): string {
-    return lowLatencyHls ? `${source.id}:hls` : `${source.id}:hls:standard`;
+    const source = `frigate_go2rtc:${entityId}:${sourceKey ?? "main"}`;
+    return lowLatencyHls ? `${source}:hls` : `${source}:hls:standard`;
   }
 
   public acquireUsableFrigateWebRtc(
     api: HomeAssistantApi,
-    source: FrigateGo2RtcLiveSourceDescriptor,
+    entityId: string,
+    sourceKey?: string,
   ): MediaSessionLease | undefined {
     return getMediaSessionManager().acquireUsable(
-      this.frigateWebRtcKey(source),
+      this.frigateWebRtcKey(entityId, sourceKey),
       api,
     );
   }
@@ -175,11 +178,12 @@ export class LiveSourceResolver {
 
   public acquireUsableFrigateHls(
     api: HomeAssistantApi,
-    source: FrigateGo2RtcLiveSourceDescriptor,
+    entityId: string,
+    sourceKey: string | undefined,
     options: MediaConnectionOptions,
   ): MediaSessionLease | undefined {
     return getMediaSessionManager().acquireUsable(
-      this.frigateHlsKey(source, options.lowLatencyHls !== false),
+      this.frigateHlsKey(entityId, sourceKey, options.lowLatencyHls !== false),
       api,
       options,
     );
@@ -188,13 +192,13 @@ export class LiveSourceResolver {
   public async acquireFrigateWebRtc(
     api: HomeAssistantApi,
     entityId: string,
-    source: FrigateGo2RtcLiveSourceDescriptor,
+    sourceKey?: string,
   ): Promise<MediaSessionLease> {
     return (await getFrigateProvider()).acquireWebRtc(
       api,
       entityId,
-      this.frigateWebRtcKey(source),
-      source,
+      this.frigateWebRtcKey(entityId, sourceKey),
+      sourceKey,
     );
   }
 
@@ -216,15 +220,15 @@ export class LiveSourceResolver {
   public async acquireFrigateHls(
     api: HomeAssistantApi,
     entityId: string,
-    source: FrigateGo2RtcLiveSourceDescriptor,
+    sourceKey: string | undefined,
     options: MediaConnectionOptions,
   ): Promise<MediaSessionLease> {
     return (await getFrigateProvider()).acquireHls(
       api,
       entityId,
-      this.frigateHlsKey(source, options.lowLatencyHls !== false),
+      this.frigateHlsKey(entityId, sourceKey, options.lowLatencyHls !== false),
       options,
-      source,
+      sourceKey,
     );
   }
 }

@@ -646,7 +646,7 @@ describe("camera presentation retention", () => {
     expect(video?.classList.contains("candidate")).toBe(false);
 
     failures[0](new Error("transient WebRTC failure"));
-    await vi.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(1_000);
     await vi.waitFor(() => expect(webRtcFactory).toHaveBeenCalledTimes(2));
     const recoveredVideo = await vi.waitFor(() => {
       const element = presentation(view)?.webRtcVideo;
@@ -714,7 +714,7 @@ describe("camera presentation retention", () => {
     await vi.advanceTimersByTimeAsync(500);
     await vi.waitFor(() => expect(hlsFactory).toHaveBeenCalledTimes(2));
     expect(webRtcFactory).toHaveBeenCalledOnce();
-    await vi.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(1_000);
     await vi.waitFor(() => expect(webRtcFactory).toHaveBeenCalledTimes(2));
     await vi.waitFor(() =>
       expect(presentation(view)?.webRtcVideo?.srcObject).toBe(stream),
@@ -729,7 +729,7 @@ describe("camera presentation retention", () => {
           ?.textContent?.trim(),
       ).toBe("WebRTC"),
     );
-    await vi.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(1_000);
     expect(webRtcFactory).toHaveBeenCalledTimes(2);
   });
 
@@ -768,7 +768,7 @@ describe("camera presentation retention", () => {
     await vi.advanceTimersByTimeAsync(500);
     await vi.waitFor(() => expect(hlsFactory).toHaveBeenCalledTimes(2));
     expect(webRtcFactory).toHaveBeenCalledOnce();
-    await vi.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(1_000);
     await vi.waitFor(() => expect(webRtcFactory).toHaveBeenCalledTimes(2));
 
     await vi.waitFor(() =>
@@ -778,7 +778,7 @@ describe("camera presentation retention", () => {
           ?.textContent?.trim(),
       ).toBe("HLS-LL · HLS.js"),
     );
-    await vi.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(1_000);
     expect(webRtcFactory).toHaveBeenCalledTimes(2);
   });
 

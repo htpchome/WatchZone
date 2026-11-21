@@ -1,5 +1,4 @@
-import { APP_NAME } from "../core/constants";
-import { getMediaSessionManager } from "../core/media-session-manager";
+import { APP_NAME, INTEGRATION_ID } from "../core/constants";
 import type {
   HomeAssistantApi,
   HomeAssistantConnection,
@@ -53,24 +52,20 @@ export class BackendAvailabilityManager {
     return {
       ...api,
       callWS: <T>(message: HomeAssistantMessage): Promise<T> =>
-        this._call(api, () => api.callWS<T>(message)),
+        this._isBackendCommand(message)
+          ? this._call(api, () => api.callWS<T>(message))
+          : api.callWS<T>(message),
       subscribeMessage: <T>(
         callback: (message: T) => void,
         message: HomeAssistantMessage,
         options?: HomeAssistantSubscriptionOptions,
       ): Promise<HomeAssistantUnsubscribe> =>
-        this._call(api, () => api.subscribeMessage(callback, message, options)),
+        this._isBackendCommand(message)
+          ? this._call(api, () =>
+              api.subscribeMessage(callback, message, options),
+            )
+          : api.subscribeMessage(callback, message, options),
     };
-  }
-
-  public reportSetupRequired(api: HomeAssistantApi): void {
-    const availability = this._availability(api.identity);
-    if (availability.incident?.kind === "setup_required") return;
-    this._setIncident(api.identity, {
-      checking: false,
-      kind: "setup_required",
-    });
-    getMediaSessionManager().invalidateAll();
   }
 
   public snapshot(
@@ -140,7 +135,6 @@ export class BackendAvailabilityManager {
       checking: true,
       kind: "setup_required",
     });
-    getMediaSessionManager().invalidateAll();
     void import("./backend-diagnosis")
       .then(({ diagnoseBackend }) => diagnoseBackend(api))
       .then((incident) => {
@@ -161,6 +155,10 @@ export class BackendAvailabilityManager {
     const availability = this._availability(identity);
     availability.incident = incident;
     for (const listener of availability.listeners) listener(incident);
+  }
+
+  private _isBackendCommand(message: HomeAssistantMessage): boolean {
+    return message.type.startsWith(`${INTEGRATION_ID}/`);
   }
 }
 

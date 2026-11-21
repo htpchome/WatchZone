@@ -20,21 +20,23 @@ describe("live source identity", () => {
       stream_name: "front",
     };
 
-    expect(resolver.frigateWebRtcKey(home)).not.toBe(
-      resolver.frigateWebRtcKey(workshop),
+    expect(resolver.frigateWebRtcKey("camera.home")).not.toBe(
+      resolver.frigateWebRtcKey("camera.workshop"),
     );
     expect(resolver.frigateMseKey(home)).not.toBe(
       resolver.frigateMseKey(workshop),
     );
-    expect(resolver.frigateHlsKey(home)).not.toBe(
-      resolver.frigateHlsKey(workshop),
+    expect(resolver.frigateHlsKey("camera.home", undefined)).not.toBe(
+      resolver.frigateHlsKey("camera.workshop", undefined),
     );
-    expect(resolver.frigateHlsKey(home)).not.toBe(resolver.frigateMseKey(home));
-    expect(resolver.frigateHlsKey(home, true)).not.toBe(
-      resolver.frigateHlsKey(home, false),
+    expect(resolver.frigateHlsKey("camera.home", undefined)).not.toBe(
+      resolver.frigateMseKey(home),
+    );
+    expect(resolver.frigateHlsKey("camera.home", undefined, true)).not.toBe(
+      resolver.frigateHlsKey("camera.home", undefined, false),
     );
     expect(resolver.homeAssistantWebRtcKey("camera.front")).not.toBe(
-      resolver.frigateWebRtcKey(home),
+      resolver.frigateWebRtcKey("camera.front"),
     );
   });
 

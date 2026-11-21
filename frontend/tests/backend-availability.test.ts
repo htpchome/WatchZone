@@ -35,17 +35,20 @@ describe("backend availability", () => {
     expect(manager.snapshot(api)).toBeUndefined();
   });
 
-  it("opens once, diagnoses once, blocks more traffic, and explicitly recovers", async () => {
+  it("blocks only backend traffic while native HA traffic remains available", async () => {
     let ready = false;
     const callWS = vi.fn(
       async <T>(message: HomeAssistantMessage): Promise<T> => {
         if (message.type === "camera_optics/bootstrap/status") {
           return {
-            backend_version: "0.0.5-dev.8",
+            backend_version: "0.0.5-dev.9",
             saved_settings_version: ready ? 2 : null,
             state: ready ? "ready" : "not_configured",
             supported_settings_version: 2,
           } as T;
+        }
+        if (message.type === "camera/webrtc/get_client_config") {
+          return { configuration: {} } as T;
         }
         throw { code: "unknown_command", message: "Unknown command" };
       },
@@ -75,6 +78,14 @@ describe("backend availability", () => {
       guarded.callWS({ type: "camera_optics/events/list" }),
     ).rejects.toThrow("waiting for setup or recovery");
     expect(callWS).toHaveBeenCalledTimes(2);
+
+    await expect(
+      guarded.callWS({
+        type: "camera/webrtc/get_client_config",
+        entity_id: "camera.front",
+      }),
+    ).resolves.toEqual({ configuration: {} });
+    expect(callWS).toHaveBeenCalledTimes(3);
 
     ready = true;
     await manager.retry(api);

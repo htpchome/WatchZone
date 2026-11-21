@@ -1,4 +1,3 @@
-import { waitForHomeAssistantCameraReady } from "../../../api/live-signaling";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
 import {
   getMediaSessionManager,
@@ -12,15 +11,11 @@ import {
 // provider retires its media consumer. Space later probes so they cannot pile
 // onto that retiring consumer while HLS remains available to the presentation.
 const WEBRTC_RECONNECT_POLICY: MediaReconnectPolicy = {
-  baseDelayMs: 60_000,
+  baseDelayMs: 1_000,
   maxAttempts: 5,
 };
 
 const webRtcFactory: ConnectionFactory = async (...args) => {
-  const [api, entityId] = args;
-  if (!(await waitForHomeAssistantCameraReady(api, entityId))) {
-    throw new Error("Home Assistant camera is not ready");
-  }
   const timing = args[4];
   timing.mark("adapter_import_started");
   const { createHomeAssistantWebRtcConnection } = await import("./webrtc");
@@ -29,10 +24,6 @@ const webRtcFactory: ConnectionFactory = async (...args) => {
 };
 
 const hlsFactory: ConnectionFactory = async (...args) => {
-  const [api, entityId] = args;
-  if (!(await waitForHomeAssistantCameraReady(api, entityId))) {
-    throw new Error("Home Assistant camera is not ready");
-  }
   const timing = args[4];
   timing.mark("adapter_import_started");
   const { createHomeAssistantHlsConnection } = await import("./hls");

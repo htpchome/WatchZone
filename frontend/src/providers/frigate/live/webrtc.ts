@@ -4,7 +4,6 @@ import {
   type LiveOfferEvent,
 } from "../../../api/live-signaling";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
-import type { FrigateGo2RtcLiveSourceDescriptor } from "../../../api/live-source";
 import type { LiveStartupTiming } from "../../../core/live-startup-timing";
 import type {
   MediaConnection,
@@ -38,7 +37,7 @@ export async function createFrigateWebRtcConnection(
   onFailure: (error: Error) => void,
   timing: LiveStartupTiming,
   options: MediaConnectionOptions = { initialMuted: true },
-  source: FrigateGo2RtcLiveSourceDescriptor,
+  sourceKey?: string,
 ): Promise<MediaConnection> {
   const client = await api.callWS<{
     readonly configuration: RTCConfiguration;
@@ -63,7 +62,7 @@ export async function createFrigateWebRtcConnection(
           offer,
           (event) => callback(mapEvent(event)),
           "frigate_go2rtc",
-          source.source_key,
+          sourceKey,
         ),
     },
     timing,

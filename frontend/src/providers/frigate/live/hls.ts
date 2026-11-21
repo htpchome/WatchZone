@@ -6,7 +6,6 @@ import type {
   MediaConnectionOptions,
 } from "../../../core/media-session-manager";
 import { createHlsConnection } from "../../live/hls";
-import type { FrigateGo2RtcLiveSourceDescriptor } from "../../../api/live-source";
 
 interface StreamResponse {
   readonly url: string;
@@ -20,7 +19,7 @@ export function createFrigateHlsConnection(
   onFailure: (error: Error) => void,
   timing: LiveStartupTiming,
   options: MediaConnectionOptions,
-  source?: FrigateGo2RtcLiveSourceDescriptor,
+  sourceKey?: string,
 ): Promise<MediaConnection> {
   return createHlsConnection(
     api,
@@ -33,7 +32,7 @@ export function createFrigateHlsConnection(
       const stream = await client.callWS<StreamResponse>({
         type: `${INTEGRATION_ID}/live/frigate/hls`,
         entity_id: cameraEntityId,
-        ...(source?.source_key ? { source_key: source.source_key } : {}),
+        ...(sourceKey ? { source_key: sourceKey } : {}),
       });
       return stream.url;
     },

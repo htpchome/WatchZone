@@ -1,5 +1,5 @@
-import type { FrigateGo2RtcLiveSourceDescriptor } from "../../../api/live-source";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
+import type { FrigateGo2RtcLiveSourceDescriptor } from "../../../api/live-source";
 import {
   getMediaSessionManager,
   type ConnectionFactory,
@@ -9,16 +9,14 @@ import {
 } from "../../../core/media-session-manager";
 
 const WEBRTC_RECONNECT_POLICY: MediaReconnectPolicy = {
-  baseDelayMs: 60_000,
+  baseDelayMs: 1_000,
   maxAttempts: 5,
 };
 
-function webRtcFactory(
-  source: FrigateGo2RtcLiveSourceDescriptor,
-): ConnectionFactory {
+function webRtcFactory(sourceKey?: string): ConnectionFactory {
   return async (...args) => {
     const { createFrigateWebRtcConnection } = await import("./webrtc");
-    return createFrigateWebRtcConnection(...args, source);
+    return createFrigateWebRtcConnection(...args, sourceKey);
   };
 }
 
@@ -31,12 +29,10 @@ function mseFactory(
   };
 }
 
-function hlsFactory(
-  source: FrigateGo2RtcLiveSourceDescriptor,
-): ConnectionFactory {
+function hlsFactory(sourceKey?: string): ConnectionFactory {
   return async (...args) => {
     const { createFrigateHlsConnection } = await import("./hls");
-    return createFrigateHlsConnection(...args, source);
+    return createFrigateHlsConnection(...args, sourceKey);
   };
 }
 
@@ -46,13 +42,13 @@ export class FrigateLiveProvider {
     api: HomeAssistantApi,
     entityId: string,
     key: string,
-    source: FrigateGo2RtcLiveSourceDescriptor,
+    sourceKey?: string,
   ): MediaSessionLease {
     return getMediaSessionManager().acquire({
       api,
       cameraKey: entityId,
       entityId,
-      factory: webRtcFactory(source),
+      factory: webRtcFactory(sourceKey),
       key,
       mediaReconnectPolicy: WEBRTC_RECONNECT_POLICY,
       retryInitialFailure: true,
@@ -84,13 +80,13 @@ export class FrigateLiveProvider {
     entityId: string,
     key: string,
     options: MediaConnectionOptions,
-    source: FrigateGo2RtcLiveSourceDescriptor,
+    sourceKey?: string,
   ): MediaSessionLease {
     return getMediaSessionManager().acquire({
       api,
       cameraKey: entityId,
       entityId,
-      factory: hlsFactory(source),
+      factory: hlsFactory(sourceKey),
       key,
       options,
       retryInitialFailure: true,

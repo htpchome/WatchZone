@@ -119,7 +119,7 @@ test("loads the responsive CameraOptics card shell", async ({ page }) => {
   ).toBe("function");
 });
 
-test("guides a HACS-only installation through Home Assistant setup", async ({
+test("does not infer missing setup from a transient components list", async ({
   page,
 }) => {
   await page.goto("/");
@@ -131,6 +131,7 @@ test("guides a HACS-only installation through Home Assistant setup", async ({
     };
     card.setConfig({
       camera_entity: "camera.front",
+      stage_type: "camera_only",
       type: "custom:camera-optics-card",
     });
     card.hass = {
@@ -145,24 +146,22 @@ test("guides a HACS-only installation through Home Assistant setup", async ({
       connection: { subscribeMessage: async () => () => undefined },
       callService: async () => undefined,
       callWS: async () => {
-        throw new Error("No backend request should start");
+        throw new Error("Camera request failed");
       },
       hassUrl: (path: string) => path,
     };
   });
 
-  const recovery = page.locator("camera-optics-card .backend-recovery");
-  await expect(recovery).toBeVisible();
-  await expect(recovery).toContainText("Finish setting up CameraOptics");
-  await expect(recovery).toContainText("Select Devices & services");
-  await expect(recovery).toContainText("Select Add integration");
-  await expect(page.locator("camera-optics-card wzc-camera")).toHaveCount(0);
+  await expect(page.locator("camera-optics-card wzc-camera")).toHaveCount(1);
+  await expect(
+    page.locator("camera-optics-card .backend-recovery"),
+  ).toHaveCount(0);
   expect(
-    await page.evaluate(() => customElements.get("wzc-camera")),
-  ).toBeUndefined();
-  await expect(page.locator("camera-optics-card wzc-toast-region")).toHaveCount(
-    0,
-  );
+    await page.evaluate(() => customElements.get("wzc-camera") !== undefined),
+  ).toBe(true);
+  await expect(
+    page.locator("camera-optics-card wzc-toast-region.card-toast"),
+  ).toHaveCount(1);
 });
 
 test("presents recorded media in the configured card-width bottom drawer", async ({

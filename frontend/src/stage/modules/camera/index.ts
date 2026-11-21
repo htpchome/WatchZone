@@ -63,15 +63,8 @@ export const moduleDefinition: ModuleDefinition<
     const first = config.cameras[0];
     if (!first || !context.api || !context.hass?.states[first.entityId])
       return undefined;
-    const posterUrl = cameraImageUrl(context.hass, first.entityId);
-    if (posterUrl) preloadPoster(posterUrl);
     let lease: MediaSessionLease;
     if (first.connection === "frigate_go2rtc") {
-      const source = await resolver.resolveFrigate(
-        context.api,
-        first.entityId,
-        first.frigateStream,
-      );
       const policy = resolver.frigateTransportPolicy(
         first.frigateFallback ?? "mse",
       );
@@ -79,7 +72,7 @@ export const moduleDefinition: ModuleDefinition<
         ? await resolver.acquireFrigateHls(
             context.api,
             first.entityId,
-            source,
+            first.frigateStream,
             {
               initialMuted: true,
               lowLatencyHls: first.lowLatencyHls,
@@ -89,7 +82,7 @@ export const moduleDefinition: ModuleDefinition<
         : await resolver.acquireFrigateWebRtc(
             context.api,
             first.entityId,
-            source,
+            first.frigateStream,
           );
     } else {
       lease = await resolver.acquireHomeAssistantWebRtc(
@@ -97,6 +90,8 @@ export const moduleDefinition: ModuleDefinition<
         first.entityId,
       );
     }
+    const posterUrl = cameraImageUrl(context.hass, first.entityId);
+    if (posterUrl) preloadPoster(posterUrl);
     return {
       release: () =>
         context.preview === true ? lease.discard() : lease.release(),

@@ -70,13 +70,7 @@ describe("Frigate HLS source acquisition", () => {
       vi.fn(),
       {} as LiveStartupTiming,
       { initialMuted: true },
-      {
-        id: "frigate_go2rtc:entry-home:front_sub",
-        type: "frigate_go2rtc",
-        frigate_instance_id: "frigate",
-        stream_name: "front_sub",
-        source_key: "front_sub",
-      },
+      "front_sub",
     );
     const resolveStreamUrl = createHlsConnection.mock.calls[0]?.[6] as (
       client: HomeAssistantApi,

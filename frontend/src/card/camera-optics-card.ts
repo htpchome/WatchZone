@@ -29,7 +29,6 @@ import {
   RECORDED_MEDIA_EXPORT_EVENT,
   RECORDED_MEDIA_NOTICE_EVENT,
   TOAST_REGION_TAG,
-  INTEGRATION_ID,
 } from "../core/constants";
 import {
   createHomeAssistantApi,
@@ -147,12 +146,6 @@ export class DashboardCard extends LitElement {
     }
     this._transportConnected = value.connection.connected !== false;
     this._observeConnection(value.connection);
-    if (
-      value.config?.components &&
-      !value.config.components.includes(INTEGRATION_ID)
-    ) {
-      backendAvailability.reportSetupRequired(this._rawHaApi!);
-    }
     this._syncRuntime();
     if (transportChanged) this.requestUpdate();
   }
@@ -181,11 +174,7 @@ export class DashboardCard extends LitElement {
       activeDeviceAppearanceConfig(next, CLIENT_PROFILE.isPhone),
     );
     this._cardLayout.configure(next);
-    if (
-      this.isConnected &&
-      !this._cardPickerPreview &&
-      !this._backendIncident
-    ) {
+    if (this.isConnected && !this._cardPickerPreview) {
       this._syncLayout(next);
     }
     this.requestUpdate();
@@ -231,9 +220,7 @@ export class DashboardCard extends LitElement {
       RECORDED_VIDEO_CLOSE_EVENT,
       this._handleRecordedMediaClose,
     );
-    if (!this._backendIncident) {
-      this._syncLayout(this._previewConfig ?? this._config);
-    }
+    this._syncLayout(this._previewConfig ?? this._config);
     this._loadCompanionPhoneLandscape();
     if (this._hass) this._observeConnection(this._hass.connection);
     this._syncRuntime();
@@ -307,6 +294,7 @@ export class DashboardCard extends LitElement {
     return staticHtml`
       <ha-card class=${cardClasses}>
         <div class="shell" role="region" aria-label=${config.title}>
+          ${this._layoutRuntime.render()}
           ${
             this._backendIncident
               ? (this._backendRecoveryRenderer?.(
@@ -315,12 +303,10 @@ export class DashboardCard extends LitElement {
                   this._openIntegrations,
                   this._retryBackend,
                 ) ?? this._renderBackendRecoveryFallback(this._backendIncident))
-              : this._layoutRuntime.render()
+              : null
           }
           ${
-            !this._backendIncident &&
-            this._recordedVideoViewerReady &&
-            this._mediaRequest
+            this._recordedVideoViewerReady && this._mediaRequest
               ? staticHtml`<${recordedVideoViewerTag}
                   .api=${this._haApi}
                   .localize=${this._localization.localize}
@@ -334,7 +320,7 @@ export class DashboardCard extends LitElement {
               : null
           }
           ${
-            !this._backendIncident && this._exportNameDialogReady
+            this._exportNameDialogReady
               ? staticHtml`<${exportNameDialogTag}
                   variant="segment"
                   .draft=${this._pendingRecordedExport?.draft}
@@ -342,15 +328,11 @@ export class DashboardCard extends LitElement {
                 ></${exportNameDialogTag}>`
               : null
           }
-          ${
-            this._backendIncident
-              ? null
-              : staticHtml`<${toastRegionTag}
-                  class="card-toast"
-                  mode="overlay"
-                  .notices=${this._toasts.notices}
-                ></${toastRegionTag}>`
-          }
+          ${staticHtml`<${toastRegionTag}
+              class="card-toast"
+              mode="overlay"
+              .notices=${this._toasts.notices}
+            ></${toastRegionTag}>`}
         </div>
       </ha-card>
     `;
@@ -409,7 +391,7 @@ export class DashboardCard extends LitElement {
       activeDeviceAppearanceConfig(config, CLIENT_PROFILE.isPhone),
     );
     this._cardLayout.configure(config);
-    if (!this._backendIncident) this._syncLayout(config);
+    this._syncLayout(config);
     this.requestUpdate();
   };
 
@@ -602,18 +584,11 @@ export class DashboardCard extends LitElement {
     this._backendAvailabilityUnsubscribe = backendAvailability.subscribe(
       api,
       (incident) => {
-        const previous = this._backendIncident;
         this._backendIncident = incident;
         if (incident) {
           this._loadBackendRecovery();
-          this._toasts.clear();
-          this._layoutRuntime.clearStageSet();
-          this._syncRuntime();
-        } else if (previous) {
-          this._syncLayout(this._previewConfig ?? this._config);
-        } else {
-          this._syncRuntime();
         }
+        this._syncRuntime();
         this.requestUpdate();
       },
     );
@@ -652,16 +627,15 @@ export class DashboardCard extends LitElement {
   }
 
   private _syncRuntime(): void {
-    const hass =
-      this._hass && !this._backendIncident
-        ? this._cameraImageCredentials.sanitize(
-            this._hass,
-            this._cameraEntityIds(),
-          )
-        : undefined;
+    const hass = this._hass
+      ? this._cameraImageCredentials.sanitize(
+          this._hass,
+          this._cameraEntityIds(),
+        )
+      : undefined;
     this._layoutRuntime.setRuntime(
       hass,
-      this._backendIncident ? undefined : this._haApi,
+      this._haApi,
       this._localization.localize,
       this.preview,
     );

@@ -199,7 +199,7 @@ describe("camera-optics-card", () => {
     expect(hass.callWS).not.toHaveBeenCalled();
   });
 
-  it("guides HACS-only installations through Home Assistant setup", async () => {
+  it("does not infer missing setup from a transient components list", async () => {
     const hass: HomeAssistant = {
       ...createHass({ "camera.front": "Front Door" }),
       config: { components: ["frontend", "lovelace"] },
@@ -209,36 +209,30 @@ describe("camera-optics-card", () => {
     ) as DashboardCard;
     element.setConfig({
       camera_entity: "camera.front",
+      stage_type: "camera_only",
       type: "custom:camera-optics-card",
     });
     element.hass = hass;
     document.body.append(element);
 
-    await vi.waitFor(() =>
-      expect(element.shadowRoot?.textContent).toContain(
-        "Select Devices & services",
-      ),
+    await vi.waitFor(
+      () =>
+        expect(element.shadowRoot?.querySelector("wzc-camera")).not.toBeNull(),
+      { timeout: 5_000 },
     );
-    const text = element.shadowRoot?.textContent ?? "";
-    expect(text).toContain("Finish setting up CameraOptics");
-    expect(text).toContain("Installing CameraOptics through HACS");
-    expect(text).toContain("Select Devices & services");
-    expect(text).toContain("Select Add integration");
-    expect(text).toContain("Search for CameraOptics");
-    expect(element.shadowRoot?.querySelector("wzc-camera")).toBeNull();
+    expect(element.shadowRoot?.querySelector(".backend-recovery")).toBeNull();
     expect(
       element.shadowRoot?.querySelector("wzc-toast-region.card-toast"),
-    ).toBeNull();
-    expect(hass.callWS).not.toHaveBeenCalled();
+    ).not.toBeNull();
   });
 
-  it("replaces the Stage with human recovery guidance after a backend failure", async () => {
+  it("keeps the Stage active with recovery guidance after a backend failure", async () => {
     const base = createHass({ "camera.front": "Front Door" });
     const callWS = vi.fn(
       async (message: { readonly type: string }): Promise<unknown> => {
         if (message.type === "camera_optics/bootstrap/status") {
           return {
-            backend_version: "0.0.5-dev.8",
+            backend_version: "0.0.5-dev.9",
             saved_settings_version: 4,
             state: "incompatible_settings",
             supported_settings_version: 2,
@@ -277,7 +271,7 @@ describe("camera-optics-card", () => {
     expect(primaryText.toLocaleLowerCase()).not.toContain("schema");
     expect(primaryText).toContain("update or redownload CameraOptics in HACS");
     expect(primaryText).toContain("Do not remove CameraOptics");
-    expect(element.shadowRoot?.querySelector("wzc-camera")).toBeNull();
+    expect(element.shadowRoot?.querySelector("wzc-camera")).not.toBeNull();
     expect(
       callWS.mock.calls.filter(
         ([message]) => message.type === "camera_optics/bootstrap/status",

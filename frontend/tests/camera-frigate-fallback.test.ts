@@ -21,6 +21,60 @@ function lease(key: string): MediaSessionLease {
 afterEach(() => vi.restoreAllMocks());
 
 describe("Frigate fallback selection", () => {
+  it("starts WebRTC without waiting for Frigate source discovery", () => {
+    const api = {
+      identity: {},
+      callWS: vi.fn(),
+      resolveUrl: (path: string) => path,
+      subscribeMessage: vi.fn(),
+    } as unknown as HomeAssistantApi;
+    vi.spyOn(LiveSourceResolver.prototype, "cachedFrigate").mockReturnValue(
+      undefined,
+    );
+    const resolveSource = vi
+      .spyOn(LiveSourceResolver.prototype, "resolveFrigate")
+      .mockReturnValue(new Promise(() => undefined));
+    const acquireWebRtc = vi
+      .spyOn(LiveSourceResolver.prototype, "acquireUsableFrigateWebRtc")
+      .mockReturnValue(lease("frigate_go2rtc:camera.front:front_sub:webrtc"));
+    const controller = new CameraLiveSessionController(
+      {
+        addController: vi.fn(),
+        removeController: vi.fn(),
+        requestUpdate: vi.fn(),
+        updateComplete: Promise.resolve(true),
+      },
+      {
+        getInitialMuted: () => true,
+        onActiveVideoChanged: vi.fn(),
+      },
+    );
+
+    controller.hostConnected();
+    controller.configure(
+      api,
+      "camera.front",
+      true,
+      "frigate_go2rtc",
+      true,
+      "mse",
+      true,
+      false,
+      "front_sub",
+    );
+
+    expect(resolveSource).toHaveBeenCalledWith(
+      api,
+      "camera.front",
+      "front_sub",
+    );
+    expect(acquireWebRtc).toHaveBeenCalledWith(
+      api,
+      "camera.front",
+      "front_sub",
+    );
+  });
+
   it("acquires HLS without also acquiring MSE", () => {
     const source: FrigateGo2RtcLiveSourceDescriptor = {
       id: "frigate_go2rtc:entry-home:front",
@@ -40,7 +94,7 @@ describe("Frigate fallback selection", () => {
     vi.spyOn(
       LiveSourceResolver.prototype,
       "acquireUsableFrigateWebRtc",
-    ).mockReturnValue(lease(`${source.id}:webrtc`));
+    ).mockReturnValue(lease("frigate_go2rtc:camera.front:main:webrtc"));
     const acquireHls = vi
       .spyOn(LiveSourceResolver.prototype, "acquireUsableFrigateHls")
       .mockReturnValue(lease(`${source.id}:hls`));
@@ -86,7 +140,7 @@ describe("Frigate fallback selection", () => {
       resolveUrl: (path: string) => path,
       subscribeMessage: vi.fn(),
     } as unknown as HomeAssistantApi;
-    const previewLease = lease(`${source.id}:webrtc`);
+    const previewLease = lease("frigate_go2rtc:camera.front:main:webrtc");
     vi.spyOn(LiveSourceResolver.prototype, "cachedFrigate").mockReturnValue(
       source,
     );
@@ -138,7 +192,7 @@ describe("Frigate fallback selection", () => {
       resolveUrl: (path: string) => path,
       subscribeMessage: vi.fn(),
     } as unknown as HomeAssistantApi;
-    const retainedLease = lease(`${source.id}:webrtc`);
+    const retainedLease = lease("frigate_go2rtc:camera.front:main:webrtc");
     vi.spyOn(LiveSourceResolver.prototype, "cachedFrigate").mockReturnValue(
       source,
     );
@@ -231,7 +285,7 @@ describe("Frigate fallback selection", () => {
     );
 
     expect(acquireHls).toHaveBeenCalledOnce();
-    expect(acquireHls).toHaveBeenCalledWith(api, source, {
+    expect(acquireHls).toHaveBeenCalledWith(api, "camera.front", undefined, {
       initialMuted: true,
       lowLatencyHls: true,
       nativeHlsOnly: true,
