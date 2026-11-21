@@ -56,6 +56,44 @@ def _require_camera_read(connection: ActiveConnection, entity_id: str) -> None:
 
 @websocket_command(
     {
+        vol.Required("type"): f"{DOMAIN}/live/availability/subscribe",
+        vol.Required("connection"): vol.In(("frigate_go2rtc",)),
+        vol.Required("entity_id"): cv.entity_id,
+    }
+)
+@async_response
+async def ws_live_availability_subscribe(
+    hass: HomeAssistant,
+    connection: ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Subscribe to a provider signal that can wake live recovery."""
+    entity_id = msg["entity_id"]
+    try:
+        _require_camera_read(connection, entity_id)
+
+        @callback
+        def send(online: bool) -> None:
+            connection.send_message(
+                event_message(msg["id"], {"online": online})
+            )
+
+        unsubscribe = (
+            await runtime_from_hass(hass).live_connection.async_subscribe_availability(
+                msg["connection"], entity_id, send
+            )
+        )
+    except HomeAssistantError as err:
+        connection.send_error(
+            msg["id"], "live_availability_unavailable", str(err)
+        )
+        return
+    connection.subscriptions[msg["id"]] = unsubscribe
+    connection.send_result(msg["id"])
+
+
+@websocket_command(
+    {
         vol.Required("type"): f"{DOMAIN}/live/source",
         vol.Required("connection"): vol.In(("home_assistant", "frigate_go2rtc")),
         vol.Required("entity_id"): cv.entity_id,
@@ -268,6 +306,7 @@ async def ws_live_candidate(
 @callback
 def async_register(hass: HomeAssistant) -> None:
     """Register CameraOptics live WebSocket commands."""
+    async_register_command(hass, ws_live_availability_subscribe)
     async_register_command(hass, ws_live_camera_ready)
     async_register_command(hass, ws_frigate_hls)
     async_register_command(hass, ws_live_source)

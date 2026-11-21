@@ -1046,6 +1046,40 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
+  it("restarts a stalled provider attempt when availability returns", async () => {
+    let attempts = 0;
+    const factory = vi.fn<ConnectionFactory>(async (_api, _entity, signal) => {
+      attempts += 1;
+      if (attempts === 1) {
+        await new Promise<void>((_resolve, reject) => {
+          signal.addEventListener(
+            "abort",
+            () => reject(new DOMException("cancelled", "AbortError")),
+            { once: true },
+          );
+        });
+      }
+      return { stream: createStream(), close: vi.fn() };
+    });
+    const manager = new MediaSessionManager(factory);
+    const lease = manager.acquire({
+      api: createApi(),
+      cameraKey: "camera.front",
+      entityId: "camera.front",
+      factory,
+      key: "frigate_go2rtc:camera.front:main:webrtc",
+      retention: "preferred",
+    });
+    expect(lease.getSnapshot().state).toBe("connecting");
+
+    manager.wake("frigate_go2rtc:");
+
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
+    expect(factory).toHaveBeenCalledTimes(2);
+    lease.release();
+    manager.closeAll();
+  });
+
   it("immediately discards an unshared losing HLS session", async () => {
     const close = vi.fn();
     const hlsFactory = vi.fn<ConnectionFactory>(async () => ({

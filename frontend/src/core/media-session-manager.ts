@@ -122,16 +122,16 @@ function setEquals<T>(left: ReadonlySet<T>, right: ReadonlySet<T>): boolean {
 class ManagedMediaSession {
   private _api: HomeAssistantApi;
   private _connection?: MediaConnection;
-  private _connectAbort?: AbortController;
+  private _abort?: AbortController;
   private _generation = 0;
   private _leaseCount = 0;
-  private _connectionOptions: MediaConnectionOptions = { initialMuted: true };
-  private _documentParked = false;
-  private _reconnectCause?: ReconnectCause;
-  private _reconnectAttempts = 0;
-  private _reconnectTimer?: ReturnType<typeof setTimeout>;
-  private _stabilityTimer?: ReturnType<typeof setTimeout>;
-  private _transportInterrupted = false;
+  private _options: MediaConnectionOptions = { initialMuted: true };
+  private _documentHidden = false;
+  private _retryCause?: ReconnectCause;
+  private _retryCount = 0;
+  private _retryTimer?: ReturnType<typeof setTimeout>;
+  private _stableTimer?: ReturnType<typeof setTimeout>;
+  private _haInterrupted = false;
   private readonly _listeners = new Set<
     (snapshot: MediaSessionSnapshot) => void
   >();
@@ -151,10 +151,10 @@ class ManagedMediaSession {
     private readonly _factory: ConnectionFactory,
     public readonly retention: MediaRetentionClass,
     private readonly _retryInitialFailure: boolean,
-    private readonly _mediaReconnectPolicy: MediaReconnectPolicy,
+    private readonly _mediaRetryPolicy: MediaReconnectPolicy,
     private readonly _onClosed: () => void,
     private readonly _onRetained: () => void,
-    private readonly _enqueueReconnect: (session: ManagedMediaSession) => void,
+    private readonly _queueRetry: (session: ManagedMediaSession) => void,
   ) {
     this._api = api;
   }
@@ -165,7 +165,7 @@ class ManagedMediaSession {
   ): MediaSessionLease {
     const transportChanged = this._api.identity !== api.identity;
     this._api = api;
-    this._connectionOptions = {
+    this._options = {
       initialMuted: options.initialMuted,
       lowLatencyHls: options.lowLatencyHls,
       nativeHlsOnly: options.nativeHlsOnly,
@@ -174,16 +174,11 @@ class ManagedMediaSession {
     this._leaseCount += 1;
 
     if (transportChanged) {
-      if (this._reconnectTimer) {
-        clearTimeout(this._reconnectTimer);
-        this._reconnectTimer = undefined;
-      }
-      this._reconnectCause = undefined;
-      this._reconnectAttempts = 0;
+      this._resetRetry();
       this._closeConnection();
       this._setSnapshot({ state: "new" });
     } else if (this._snapshot.state === "parked") {
-      if (!this._documentParked) this._resumeConnection();
+      if (!this._documentHidden) this._resumeConnection();
       this._setSnapshot({ ...this._snapshot, state: "live" });
     }
     if (
@@ -191,7 +186,7 @@ class ManagedMediaSession {
       (!this._connection ||
         (this._snapshot.state !== "live" && this._snapshot.state !== "parked"))
     ) {
-      this._transportInterrupted = true;
+      this._haInterrupted = true;
       this._closeConnection();
       this._setSnapshot({
         state: "failed",
@@ -201,8 +196,8 @@ class ManagedMediaSession {
       void this._connect(options);
     } else if (
       this._snapshot.state === "failed" &&
-      !this._reconnectTimer &&
-      this._hasReconnectCapacity()
+      !this._retryTimer &&
+      this._canRetry()
     ) {
       void this._connect(options);
     }
@@ -244,10 +239,7 @@ class ManagedMediaSession {
       return;
     }
     this._setSnapshot({ state: "closing" });
-    if (this._reconnectTimer) {
-      clearTimeout(this._reconnectTimer);
-      this._reconnectTimer = undefined;
-    }
+    this._resetRetry();
     this._closeConnection();
     this._setSnapshot({ state: "closed" });
     this._listeners.clear();
@@ -268,49 +260,53 @@ class ManagedMediaSession {
     );
   }
 
-  public async reconnectIfFailed(): Promise<void> {
-    if (this._leaseCount === 0 || this._snapshot.state !== "failed") return;
+  public async retryFailed(): Promise<void> {
+    if (
+      !this._leaseCount ||
+      !["connecting", "failed"].includes(this._snapshot.state)
+    )
+      return;
     await this._connect();
+  }
+
+  public wake(): void {
+    if (
+      !this._leaseCount ||
+      !["connecting", "failed"].includes(this._snapshot.state)
+    )
+      return;
+    this._resetRetry("media");
+    this._closeConnection();
+    this._queueRetry(this);
   }
 
   public handleTransportDisconnected(): void {
     if (this._snapshot.state === "closed") return;
-    this._transportInterrupted = true;
-    this._reconnectCause = undefined;
-    this._reconnectAttempts = 0;
-    if (this._reconnectTimer) {
-      clearTimeout(this._reconnectTimer);
-      this._reconnectTimer = undefined;
-    }
+    this._haInterrupted = true;
+    this._resetRetry();
   }
 
   public async handleTransportReady(): Promise<void> {
-    if (this._snapshot.state === "closed" || !this._transportInterrupted)
-      return;
-    this._transportInterrupted = false;
+    if (this._snapshot.state === "closed" || !this._haInterrupted) return;
+    this._haInterrupted = false;
     if (
       this._connection &&
       (this._snapshot.state === "live" || this._snapshot.state === "parked")
     ) {
       return;
     }
-    this._reconnectCause = "home_assistant";
-    this._reconnectAttempts = 0;
-    if (this._reconnectTimer) {
-      clearTimeout(this._reconnectTimer);
-      this._reconnectTimer = undefined;
-    }
+    this._resetRetry("home_assistant");
     if (this._leaseCount === 0) return;
     this._closeConnection();
     await this._connect();
   }
 
   public handleDocumentHidden(closeConnection: boolean): void {
-    if (this._snapshot.state === "closed" || this._documentParked) return;
-    this._documentParked = true;
+    if (this._snapshot.state === "closed" || this._documentHidden) return;
+    this._documentHidden = true;
     if (closeConnection) {
       if (this._connection || this._snapshot.state === "connecting") {
-        this._reconnectCause = undefined;
+        this._resetRetry();
         this._closeConnection();
         this._setSnapshot({
           state: "failed",
@@ -323,21 +319,20 @@ class ManagedMediaSession {
   }
 
   public handleDocumentVisible(): void {
-    const wasDocumentParked = this._documentParked;
-    this._documentParked = false;
+    const wasDocumentParked = this._documentHidden;
+    this._documentHidden = false;
     if (this._snapshot.state === "closed" || this._leaseCount === 0) return;
     if (wasDocumentParked && this._connection) this._resumeConnection();
-    if (this._transportInterrupted) {
+    if (this._haInterrupted) {
       if (this._api.identity.connected === false) return;
-      this._transportInterrupted = false;
+      this._haInterrupted = false;
       if (
         this._connection &&
         (this._snapshot.state === "live" || this._snapshot.state === "parked")
       ) {
         return;
       }
-      this._reconnectCause = "home_assistant";
-      this._reconnectAttempts = 0;
+      this._resetRetry("home_assistant");
     }
     if (this._snapshot.state === "connecting") {
       this._closeConnection();
@@ -345,21 +340,19 @@ class ManagedMediaSession {
         state: "failed",
         error: "Media connection resumed in the foreground",
       });
-      this._reconnectCause ??= "media";
+      this._retryCause ??= "media";
     }
     if (this._snapshot.state !== "failed") return;
-    if (this._reconnectTimer || !this._hasReconnectCapacity()) return;
-    this._reconnectCause ??= "media";
-    this._enqueueReconnect(this);
+    if (this._retryTimer || !this._canRetry()) return;
+    this._retryCause ??= "media";
+    this._queueRetry(this);
   }
 
-  private async _connect(
-    connectionOptions = this._connectionOptions,
-  ): Promise<void> {
+  private async _connect(connectionOptions = this._options): Promise<void> {
     const generation = ++this._generation;
-    this._connectAbort?.abort();
+    this._abort?.abort();
     const abort = new AbortController();
-    this._connectAbort = abort;
+    this._abort = abort;
     this._setSnapshot({ state: "connecting" });
     const timing = beginLiveStartupTiming(this.key);
     try {
@@ -383,15 +376,14 @@ class ManagedMediaSession {
         return;
       }
       this._connection = connection;
-      if (this._leaseCount === 0 || this._documentParked) connection.park?.();
-      if (this._reconnectAttempts > 0) {
-        this._stabilityTimer = setTimeout(() => {
-          this._stabilityTimer = undefined;
-          this._reconnectCause = undefined;
-          this._reconnectAttempts = 0;
+      if (this._leaseCount === 0 || this._documentHidden) connection.park?.();
+      if (this._retryCount > 0) {
+        this._stableTimer = setTimeout(() => {
+          this._stableTimer = undefined;
+          this._resetRetry();
         }, RECONNECT_STABLE_RESET_MS);
       } else {
-        this._reconnectCause = undefined;
+        this._resetRetry();
       }
       this._setSnapshot({
         state: this._leaseCount > 0 ? "live" : "parked",
@@ -412,15 +404,15 @@ class ManagedMediaSession {
         errorCode,
         timing,
       });
-      if (this._transportInterrupted) {
-        this._reconnectCause = "home_assistant";
+      if (this._haInterrupted) {
+        this._retryCause = "home_assistant";
         return;
       }
-      if (this._reconnectCause) {
-        this._scheduleReconnect();
+      if (this._retryCause) {
+        this._scheduleRetry();
       } else if (this._retryInitialFailure) {
-        this._reconnectCause = "media";
-        this._scheduleReconnect();
+        this._retryCause = "media";
+        this._scheduleRetry();
       }
     }
   }
@@ -442,56 +434,58 @@ class ManagedMediaSession {
       errorCode,
       timing,
     });
-    if (this._transportInterrupted) {
-      this._reconnectCause = "home_assistant";
+    if (this._haInterrupted) {
+      this._retryCause = "home_assistant";
       return;
     }
-    this._reconnectCause ??= "media";
-    this._scheduleReconnect();
+    this._retryCause ??= "media";
+    this._scheduleRetry();
   }
 
   private _retry(): void {
-    if (this._snapshot.state === "connecting" || this._reconnectTimer) {
+    if (this._snapshot.state === "connecting" || this._retryTimer) {
       return;
     }
-    this._reconnectCause = undefined;
-    this._reconnectAttempts = 0;
+    this._resetRetry();
     this._closeConnection();
     void this._connect();
   }
 
-  private _hasReconnectCapacity(): boolean {
-    if (!this._reconnectCause) return true;
+  private _canRetry(): boolean {
+    if (!this._retryCause) return true;
     const policy =
-      this._reconnectCause === "media"
-        ? this._mediaReconnectPolicy
+      this._retryCause === "media"
+        ? this._mediaRetryPolicy
         : HOME_ASSISTANT_RECONNECT_POLICY;
-    return this._reconnectAttempts < policy.maxAttempts;
+    return this._retryCount < policy.maxAttempts;
   }
 
-  private _scheduleReconnect(): void {
+  private _resetRetry(cause?: ReconnectCause): void {
+    clearTimeout(this._retryTimer);
+    this._retryTimer = undefined;
+    this._retryCause = cause;
+    this._retryCount = 0;
+  }
+
+  private _scheduleRetry(): void {
     const policy =
-      this._reconnectCause === "media"
-        ? this._mediaReconnectPolicy
-        : this._reconnectCause === "home_assistant"
+      this._retryCause === "media"
+        ? this._mediaRetryPolicy
+        : this._retryCause === "home_assistant"
           ? HOME_ASSISTANT_RECONNECT_POLICY
           : undefined;
-    if (
-      !policy ||
-      this._reconnectAttempts >= policy.maxAttempts ||
-      this._reconnectTimer
-    ) {
+    if (!policy || this._retryCount >= policy.maxAttempts || this._retryTimer) {
       return;
     }
-    const attempt = this._reconnectAttempts++;
+    const attempt = this._retryCount++;
     const delay =
       policy.baseDelayMs * 2 ** attempt +
       Math.floor(Math.random() * RECONNECT_JITTER_MS);
     this._snapshot.timing?.setReconnect(attempt + 1, delay);
-    this._reconnectTimer = setTimeout(() => {
-      this._reconnectTimer = undefined;
+    this._retryTimer = setTimeout(() => {
+      this._retryTimer = undefined;
       if (this._leaseCount > 0 && this._snapshot.state === "failed") {
-        this._enqueueReconnect(this);
+        this._queueRetry(this);
       }
     }, delay);
   }
@@ -564,20 +558,20 @@ class ManagedMediaSession {
       errorCode: "unknown",
       timing: this._snapshot.timing,
     });
-    this._reconnectCause = "media";
-    if (this._leaseCount > 0 && !this._documentParked) {
-      this._enqueueReconnect(this);
+    this._retryCause = "media";
+    if (this._leaseCount > 0 && !this._documentHidden) {
+      this._queueRetry(this);
     }
   }
 
   private _closeConnection(): void {
     this._generation += 1;
-    if (this._stabilityTimer) {
-      clearTimeout(this._stabilityTimer);
-      this._stabilityTimer = undefined;
+    if (this._stableTimer) {
+      clearTimeout(this._stableTimer);
+      this._stableTimer = undefined;
     }
-    this._connectAbort?.abort();
-    this._connectAbort = undefined;
+    this._abort?.abort();
+    this._abort = undefined;
     this._connection?.close();
     this._connection = undefined;
   }
@@ -598,37 +592,37 @@ export class MediaSessionManager {
   private readonly _sessions = new Map<string, ManagedMediaSession>();
   private readonly _forcedMuteOwners = new Set<object>();
   private readonly _forcedMuteListeners = new Set<(active: boolean) => void>();
-  private readonly _cameraActivity = new Map<object, string>();
-  private readonly _cameraRetentionContexts = new Map<
+  private readonly _activity = new Map<object, string>();
+  private readonly _retentionContexts = new Map<
     object,
     {
       readonly cameraKeys: ReadonlySet<string>;
       readonly preference: MediaRetentionPreference;
     }
   >();
-  private readonly _cameraRetentionMetadata = new Map<
+  private readonly _retentionMetadata = new Map<
     string,
     {
       readonly preference: MediaRetentionPreference;
     }
   >();
-  private readonly _connectionObservers = new Map<
+  private readonly _haObservers = new Map<
     HomeAssistantConnection,
     {
       readonly disconnected: HomeAssistantConnectionEventListener;
       readonly ready: HomeAssistantConnectionEventListener;
     }
   >();
-  private _recoveryGeneration = 0;
-  private readonly _reconnectQueue = new Set<ManagedMediaSession>();
-  private _reconnectBatchTimer?: ReturnType<typeof setTimeout>;
-  private _reconnectDrain?: Promise<void>;
-  private readonly _closeConnectionsWhenHidden: boolean;
+  private _restoreGen = 0;
+  private readonly _retryQueue = new Set<ManagedMediaSession>();
+  private _retryBatchTimer?: ReturnType<typeof setTimeout>;
+  private _retryDrain?: Promise<void>;
+  private readonly _closeWhenHidden: boolean;
   private _documentHidden = document.visibilityState !== "visible";
   private readonly _retentionPolicy: MediaRetentionPolicy;
 
   public constructor(retentionEnvironment: MediaRetentionEnvironment = {}) {
-    this._closeConnectionsWhenHidden =
+    this._closeWhenHidden =
       (retentionEnvironment.clientDeviceClass ?? CLIENT_PROFILE.deviceClass) ===
       "phone";
     this._retentionPolicy = new MediaRetentionPolicy(
@@ -662,7 +656,7 @@ export class MediaSessionManager {
     this._observeConnection(api.identity);
     const lease = session.acquire(api, options);
     if (this._documentHidden) {
-      session.handleDocumentHidden(this._closeConnectionsWhenHidden);
+      session.handleDocumentHidden(this._closeWhenHidden);
     }
     this._pruneConnectionObservers();
     this._applyRetentionPolicy();
@@ -705,12 +699,12 @@ export class MediaSessionManager {
   }
 
   public setCameraActivity(owner: object, cameraKey: string | undefined): void {
-    const current = this._cameraActivity.get(owner);
+    const current = this._activity.get(owner);
     if (current === cameraKey) return;
     if (cameraKey) {
-      this._cameraActivity.set(owner, cameraKey);
+      this._activity.set(owner, cameraKey);
     } else {
-      this._cameraActivity.delete(owner);
+      this._activity.delete(owner);
     }
     this._applyRetentionPolicy();
     this._pruneCameraRetentionMetadata();
@@ -721,7 +715,7 @@ export class MediaSessionManager {
     cameraKeys: readonly string[],
     preference: MediaRetentionPreference,
   ): void {
-    const previous = this._cameraRetentionContexts.get(owner);
+    const previous = this._retentionContexts.get(owner);
     const nextKeys = new Set(cameraKeys);
     if (
       previous?.preference === preference &&
@@ -729,7 +723,7 @@ export class MediaSessionManager {
     ) {
       return;
     }
-    this._cameraRetentionContexts.set(owner, {
+    this._retentionContexts.set(owner, {
       cameraKeys: nextKeys,
       preference,
     });
@@ -741,13 +735,19 @@ export class MediaSessionManager {
   }
 
   public clearCameraActivity(owner: object): void {
-    const activityRemoved = this._cameraActivity.delete(owner);
-    const context = this._cameraRetentionContexts.get(owner);
-    const contextRemoved = this._cameraRetentionContexts.delete(owner);
+    const activityRemoved = this._activity.delete(owner);
+    const context = this._retentionContexts.get(owner);
+    const contextRemoved = this._retentionContexts.delete(owner);
     if (!activityRemoved && !contextRemoved) return;
     if (context) this._refreshCameraRetentionMetadata(context.cameraKeys);
     this._applyRetentionPolicy();
     this._pruneCameraRetentionMetadata();
+  }
+
+  public wake(providerPrefix: string): void {
+    for (const [key, session] of this._sessions) {
+      if (key.startsWith(providerPrefix)) session.wake();
+    }
   }
 
   private _acquire(
@@ -758,7 +758,7 @@ export class MediaSessionManager {
     factory: ConnectionFactory,
     retention: MediaRetentionClass,
     retryInitialFailure: boolean,
-    mediaReconnectPolicy: MediaReconnectPolicy,
+    mediaRetryPolicy: MediaReconnectPolicy,
     options: MediaConnectionOptions = { initialMuted: true },
   ): MediaSessionLease {
     let session = this._sessions.get(key);
@@ -778,23 +778,23 @@ export class MediaSessionManager {
         factory,
         retention,
         retryInitialFailure,
-        mediaReconnectPolicy,
+        mediaRetryPolicy,
         () => {
           const closedSession = this._sessions.get(key);
-          if (closedSession) this._reconnectQueue.delete(closedSession);
+          if (closedSession) this._retryQueue.delete(closedSession);
           this._sessions.delete(key);
           this._pruneCameraRetentionMetadata();
           this._pruneConnectionObservers();
         },
         () => this._applyRetentionPolicy(),
-        (reconnectSession) => this._enqueueReconnect(reconnectSession),
+        (reconnectSession) => this._queueRetry(reconnectSession),
       );
       this._sessions.set(key, session);
     }
     this._observeConnection(api.identity);
     const lease = session.acquire(api, options);
     if (this._documentHidden) {
-      session.handleDocumentHidden(this._closeConnectionsWhenHidden);
+      session.handleDocumentHidden(this._closeWhenHidden);
     }
     this._pruneConnectionObservers();
     this._applyRetentionPolicy();
@@ -813,17 +813,17 @@ export class MediaSessionManager {
 
   /** Close integration-dependent work while keeping the manager reusable. */
   public invalidateAll(): void {
-    this._reconnectQueue.clear();
-    if (this._reconnectBatchTimer) {
-      clearTimeout(this._reconnectBatchTimer);
-      this._reconnectBatchTimer = undefined;
+    this._retryQueue.clear();
+    if (this._retryBatchTimer) {
+      clearTimeout(this._retryBatchTimer);
+      this._retryBatchTimer = undefined;
     }
     for (const session of [...this._sessions.values()]) {
       session.close();
     }
-    this._cameraActivity.clear();
-    this._cameraRetentionContexts.clear();
-    this._cameraRetentionMetadata.clear();
+    this._activity.clear();
+    this._retentionContexts.clear();
+    this._retentionMetadata.clear();
     this._clearConnectionObservers();
   }
 
@@ -831,7 +831,7 @@ export class MediaSessionManager {
     if (document.visibilityState !== "visible") {
       this._documentHidden = true;
       for (const session of this._sessions.values()) {
-        session.handleDocumentHidden(this._closeConnectionsWhenHidden);
+        session.handleDocumentHidden(this._closeWhenHidden);
       }
       return;
     }
@@ -846,7 +846,7 @@ export class MediaSessionManager {
   }
 
   private _applyRetentionPolicy(): void {
-    const activeCameraKeys = new Set(this._cameraActivity.values());
+    const activeCameraKeys = new Set(this._activity.values());
     const cameras = new Map<string, MediaRetentionCamera>();
     for (const session of this._sessions.values()) {
       const current = cameras.get(session.cameraKey);
@@ -858,7 +858,7 @@ export class MediaSessionManager {
         key: session.cameraKey,
         lastUsed: Math.max(current?.lastUsed ?? 0, session.lastUsed),
         preference:
-          this._cameraRetentionMetadata.get(session.cameraKey)?.preference ??
+          this._retentionMetadata.get(session.cameraKey)?.preference ??
           "automatic",
       });
     }
@@ -875,7 +875,7 @@ export class MediaSessionManager {
 
   private _refreshCameraRetentionMetadata(cameraKeys: Iterable<string>): void {
     for (const cameraKey of cameraKeys) {
-      const contexts = [...this._cameraRetentionContexts.values()].filter(
+      const contexts = [...this._retentionContexts.values()].filter(
         ({ cameraKeys: configured }) => configured.has(cameraKey),
       );
       if (contexts.length === 0) continue;
@@ -884,63 +884,62 @@ export class MediaSessionManager {
       );
       const selected = reduced ?? contexts.at(-1);
       if (!selected) continue;
-      this._cameraRetentionMetadata.set(cameraKey, {
+      this._retentionMetadata.set(cameraKey, {
         preference: selected.preference,
       });
     }
   }
 
   private _pruneCameraRetentionMetadata(): void {
-    const referenced = new Set(this._cameraActivity.values());
-    for (const context of this._cameraRetentionContexts.values()) {
+    const referenced = new Set(this._activity.values());
+    for (const context of this._retentionContexts.values()) {
       for (const cameraKey of context.cameraKeys) referenced.add(cameraKey);
     }
     for (const session of this._sessions.values()) {
       referenced.add(session.cameraKey);
     }
-    for (const cameraKey of this._cameraRetentionMetadata.keys()) {
-      if (!referenced.has(cameraKey))
-        this._cameraRetentionMetadata.delete(cameraKey);
+    for (const cameraKey of this._retentionMetadata.keys()) {
+      if (!referenced.has(cameraKey)) this._retentionMetadata.delete(cameraKey);
     }
   }
 
-  private _enqueueReconnect(session: ManagedMediaSession): void {
+  private _queueRetry(session: ManagedMediaSession): void {
     if (!this._sessions.has(session.key)) return;
-    this._reconnectQueue.add(session);
-    if (this._reconnectDrain || this._reconnectBatchTimer) return;
-    this._reconnectBatchTimer = setTimeout(() => {
-      this._reconnectBatchTimer = undefined;
-      this._reconnectDrain = this._drainReconnectQueue().finally(() => {
-        this._reconnectDrain = undefined;
-        const next = this._reconnectQueue.values().next().value;
-        if (next) this._enqueueReconnect(next);
+    this._retryQueue.add(session);
+    if (this._retryDrain || this._retryBatchTimer) return;
+    this._retryBatchTimer = setTimeout(() => {
+      this._retryBatchTimer = undefined;
+      this._retryDrain = this._drainReconnectQueue().finally(() => {
+        this._retryDrain = undefined;
+        const next = this._retryQueue.values().next().value;
+        if (next) this._queueRetry(next);
       });
     }, 0);
   }
 
   private async _drainReconnectQueue(): Promise<void> {
-    while (this._reconnectQueue.size > 0) {
+    while (this._retryQueue.size > 0) {
       const session = [...this._sessions.values()].find((candidate) =>
-        this._reconnectQueue.has(candidate),
+        this._retryQueue.has(candidate),
       );
       if (!session) {
-        this._reconnectQueue.clear();
+        this._retryQueue.clear();
         return;
       }
-      this._reconnectQueue.delete(session);
-      await session.reconnectIfFailed();
+      this._retryQueue.delete(session);
+      await session.retryFailed();
     }
   }
 
   private _observeConnection(connection: HomeAssistantConnection): void {
     if (
-      this._connectionObservers.has(connection) ||
+      this._haObservers.has(connection) ||
       !connection.addEventListener ||
       !connection.removeEventListener
     )
       return;
     const disconnected: HomeAssistantConnectionEventListener = () => {
-      this._recoveryGeneration += 1;
+      this._restoreGen += 1;
       for (const session of this._sessions.values()) {
         if (session.connectionIdentity === connection) {
           session.handleTransportDisconnected();
@@ -952,18 +951,18 @@ export class MediaSessionManager {
     };
     connection.addEventListener("disconnected", disconnected);
     connection.addEventListener("ready", ready);
-    this._connectionObservers.set(connection, { disconnected, ready });
+    this._haObservers.set(connection, { disconnected, ready });
   }
 
   private async _restoreConnectionSessions(
     connection: HomeAssistantConnection,
   ): Promise<void> {
-    const generation = ++this._recoveryGeneration;
+    const generation = ++this._restoreGen;
     const sessions = [...this._sessions.values()].filter(
       (session) => session.connectionIdentity === connection,
     );
     for (const session of sessions) {
-      if (generation !== this._recoveryGeneration) return;
+      if (generation !== this._restoreGen) return;
       await session.handleTransportReady();
     }
   }
@@ -972,20 +971,20 @@ export class MediaSessionManager {
     const activeConnections = new Set(
       [...this._sessions.values()].map((session) => session.connectionIdentity),
     );
-    for (const [connection, listeners] of this._connectionObservers) {
+    for (const [connection, listeners] of this._haObservers) {
       if (activeConnections.has(connection)) continue;
       connection.removeEventListener?.("disconnected", listeners.disconnected);
       connection.removeEventListener?.("ready", listeners.ready);
-      this._connectionObservers.delete(connection);
+      this._haObservers.delete(connection);
     }
   }
 
   private _clearConnectionObservers(): void {
-    for (const [connection, listeners] of this._connectionObservers) {
+    for (const [connection, listeners] of this._haObservers) {
       connection.removeEventListener?.("disconnected", listeners.disconnected);
       connection.removeEventListener?.("ready", listeners.ready);
     }
-    this._connectionObservers.clear();
+    this._haObservers.clear();
   }
 
   private _evictIfNeeded(): void {

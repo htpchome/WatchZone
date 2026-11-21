@@ -75,6 +75,7 @@ const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
 const recordedVideoViewerTag = unsafeStatic(RECORDED_VIDEO_VIEWER_TAG);
 const cardPickerPreviewTag = unsafeStatic(CARD_PICKER_PREVIEW_TAG);
 const exportNameDialogTag = unsafeStatic(EXPORT_NAME_DIALOG_TAG);
+let statusModule: Promise<typeof import("../api/status")> | undefined;
 
 interface PreviewDraftDetail {
   readonly baselineSignature: string;
@@ -177,6 +178,7 @@ export class DashboardCard extends LitElement {
     if (this.isConnected && !this._cardPickerPreview) {
       this._syncLayout(next);
     }
+    this._syncRuntime();
     this.requestUpdate();
   }
 
@@ -254,6 +256,7 @@ export class DashboardCard extends LitElement {
     this._unobserveConnection();
     this._backendAvailabilityUnsubscribe?.();
     this._backendAvailabilityUnsubscribe = undefined;
+    this._syncRuntime();
     super.disconnectedCallback();
   }
 
@@ -392,6 +395,7 @@ export class DashboardCard extends LitElement {
     );
     this._cardLayout.configure(config);
     this._syncLayout(config);
+    this._syncRuntime();
     this.requestUpdate();
   };
 
@@ -627,6 +631,19 @@ export class DashboardCard extends LitElement {
   }
 
   private _syncRuntime(): void {
+    const frigate = (this._previewConfig ?? this._config).cameras.find(
+      (camera) => camera.connection === "frigate_go2rtc",
+    )?.entity_id;
+    if (frigate) statusModule ??= import("../api/status");
+    void statusModule?.then(({ sync }) =>
+      sync(
+        this,
+        this.isConnected && this._haApi,
+        frigate,
+        this._toasts,
+        this._localization.localize,
+      ),
+    );
     const hass = this._hass
       ? this._cameraImageCredentials.sanitize(
           this._hass,

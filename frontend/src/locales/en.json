@@ -267,6 +267,7 @@
   "camera.suspended_description": "Resume this camera to restore live video.",
   "camera.suspended_success": "Camera suspended.",
   "camera.resumed_success": "Camera resumed.",
+  "frigate.up": "Frigate is online.",
   "camera.suspend_failed": "Unable to suspend camera.",
   "camera.resume_failed": "Unable to resume camera.",
   "camera.live_view_zoom": "Camera live view, zoom {percent} percent",

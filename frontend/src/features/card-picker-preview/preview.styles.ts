@@ -9,6 +9,8 @@ export const cardPickerPreviewStyles = css`
     min-inline-size: 0;
     color: var(--wzc-color-text-1);
     font-family: var(--wzc-font-family);
+    --wzc-camera-stage: #242424;
+    --wzc-media-placeholder-color: #626262;
   }
 
   svg {

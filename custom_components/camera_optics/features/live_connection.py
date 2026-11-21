@@ -5,7 +5,12 @@ from homeassistant.exceptions import HomeAssistantError
 
 from ..extensions import ProviderRegistry, get_provider_registry
 from ..providers.live import ProviderPreparationError
-from ..providers.live_connection import LiveSourceDescriptor, LiveSourceOption
+from ..providers.live_connection import (
+    LiveAvailabilityCallback,
+    LiveAvailabilityUnsubscribe,
+    LiveSourceDescriptor,
+    LiveSourceOption,
+)
 
 
 class LiveConnectionService:
@@ -73,3 +78,19 @@ class LiveConnectionService:
         if provider is None:
             return False
         return await provider.async_talk_capability(self._hass, entity_id)
+
+    async def async_subscribe_availability(
+        self,
+        provider_id: str,
+        entity_id: str,
+        callback: LiveAvailabilityCallback,
+    ) -> LiveAvailabilityUnsubscribe:
+        """Subscribe to an optional provider recovery signal."""
+        provider = self._providers.live_availability_provider(provider_id)
+        if provider is None:
+            raise HomeAssistantError(
+                "Selected connection does not publish availability"
+            )
+        return await provider.async_subscribe_availability(
+            self._hass, entity_id, callback
+        )

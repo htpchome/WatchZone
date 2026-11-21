@@ -224,7 +224,8 @@ export const activityListStyles = css`
   .duration {
     background: var(--wzc-event-duration-background);
     border-radius: var(--wzc-radius-small);
-    bottom: 0.2rem;
+    bottom: 0.3rem;
+    right: 0.6rem;
     color: var(--wzc-event-duration-color);
     font-size: var(--wzc-font-size-small);
     inset-inline-end: 0.2rem;

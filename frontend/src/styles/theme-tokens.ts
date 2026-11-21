@@ -237,8 +237,8 @@ export const themeTokens = css`
     --wzc-media-safe-area-underlap: 0px;
     --wzc-stage-module-gap: clamp(0.5rem, 1.5cqi, 1rem);
     --wzc-card-outer-shadow: var(--wzc-shadow-medium);
-    --wzc-media-placeholder-background: #242424;
-    --wzc-media-placeholder-color: #626262;
+    --wzc-media-placeholder-background: var(--wzc-color-surface-secondary);
+    --wzc-media-placeholder-color: var(--wzc-color-text-2);
     --wzc-camera-stage: var(--wzc-media-placeholder-background);
     --wzc-camera-stage-aspect-ratio: 16 / 9;
     --wzc-camera-square-radius: 0px;

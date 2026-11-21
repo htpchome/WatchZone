@@ -1,5 +1,6 @@
 """Provider contracts for explicit live-connection capabilities."""
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -46,6 +47,22 @@ class LiveHlsProvider(Protocol):
         self, hass: HomeAssistant, entity_id: str, source_key: str | None = None
     ) -> str:
         """Return an authenticated endpoint URL."""
+
+
+LiveAvailabilityCallback = Callable[[bool], None]
+LiveAvailabilityUnsubscribe = Callable[[], None]
+
+
+class LiveAvailabilityProvider(Protocol):
+    """Publish provider availability changes for recovery wake-up."""
+
+    async def async_subscribe_availability(
+        self,
+        hass: HomeAssistant,
+        entity_id: str,
+        callback: LiveAvailabilityCallback,
+    ) -> LiveAvailabilityUnsubscribe:
+        """Subscribe to normalized online and offline transitions."""
 
 
 class TalkCapabilityProvider(Protocol):

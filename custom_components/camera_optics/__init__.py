@@ -58,6 +58,9 @@ from .providers.frigate import live as frigate_live
 from .providers.frigate.activity_updates import (
     activity_updates as frigate_activity_updates,
 )
+from .providers.frigate.availability import (
+    live_availability as frigate_live_availability,
+)
 from .providers.frigate.capabilities import talk_capability as frigate_talk_capability
 from .providers.frigate.events import events as frigate_events
 from .providers.frigate.exports import exports as frigate_exports
@@ -268,6 +271,7 @@ def _register_builtin_providers(hass: HomeAssistant) -> ProviderRegistry:
             live_signaling=frigate_live,
             live_source=frigate_live_source,
             live_hls=frigate_live_hls,
+            live_availability=frigate_live_availability,
             talk_signaling=frigate_live,
             talk_capability=frigate_talk_capability,
             ptz=frigate_ptz,

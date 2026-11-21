@@ -165,6 +165,49 @@ describe("camera-optics-card", () => {
     expect(element.shadowRoot?.textContent).not.toContain("Front Door");
   });
 
+  it("shows a success toast when Frigate returns online", async () => {
+    let availability:
+      ((message: { readonly online: boolean }) => void) | undefined;
+    const hass = createHass({ "camera.front": "Front Door" });
+    vi.mocked(hass.connection.subscribeMessage).mockImplementation(
+      async (callback, message) => {
+        if (message.type === "camera_optics/live/availability/subscribe") {
+          availability = callback as typeof availability;
+        }
+        return () => undefined;
+      },
+    );
+    const element = document.createElement(
+      "camera-optics-card",
+    ) as DashboardCard;
+    element.setConfig({
+      type: "custom:camera-optics-card",
+      cameras: [{ entity_id: "camera.front", connection: "frigate_go2rtc" }],
+    });
+    element.hass = hass;
+    document.body.append(element);
+    await vi.waitFor(() => expect(availability).toBeTypeOf("function"));
+    const region = element.shadowRoot?.querySelector<
+      HTMLElement & {
+        notices: readonly { message: string; severity: string }[];
+      }
+    >("wzc-toast-region.card-toast");
+    availability?.({ online: true });
+    expect(region?.notices).toEqual([]);
+
+    availability?.({ online: false });
+    availability?.({ online: true });
+
+    await vi.waitFor(() =>
+      expect(region?.notices).toContainEqual(
+        expect.objectContaining({
+          message: "Frigate is online.",
+          severity: "success",
+        }),
+      ),
+    );
+  });
+
   it("keeps camera code and presentation absent from an empty layout", async () => {
     const element = document.createElement(
       "camera-optics-card",
@@ -232,7 +275,7 @@ describe("camera-optics-card", () => {
       async (message: { readonly type: string }): Promise<unknown> => {
         if (message.type === "camera_optics/bootstrap/status") {
           return {
-            backend_version: "0.0.5-dev.9",
+            backend_version: "0.0.5-dev.10",
             saved_settings_version: 4,
             state: "incompatible_settings",
             supported_settings_version: 2,

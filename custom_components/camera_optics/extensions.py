@@ -19,6 +19,7 @@ from .providers.live import (
     SendLiveSignalingEvent,
 )
 from .providers.live_connection import (
+    LiveAvailabilityProvider,
     LiveHlsProvider,
     LiveSourceDescriptor,
     LiveSourceOption,
@@ -39,6 +40,7 @@ __all__ = [
     "ExportsProvider",
     "LiveSignalingProvider",
     "LiveSignalingSession",
+    "LiveAvailabilityProvider",
     "LiveHlsProvider",
     "LiveSourceDescriptor",
     "LiveSourceOption",
@@ -54,7 +56,7 @@ __all__ = [
     "register_provider_extension",
 ]
 
-EXTENSION_API_VERSION = 7
+EXTENSION_API_VERSION = 8
 _DATA_PROVIDER_REGISTRY = "provider_registry"
 
 
@@ -72,6 +74,7 @@ class ProviderExtension:
     live_signaling: LiveSignalingProvider | None = None
     live_source: LiveSourceProvider | None = None
     live_hls: LiveHlsProvider | None = None
+    live_availability: LiveAvailabilityProvider | None = None
     talk_signaling: LiveSignalingProvider | None = None
     talk_capability: TalkCapabilityProvider | None = None
     ptz: PtzProvider | None = None
@@ -157,6 +160,13 @@ class ProviderRegistry:
         """Resolve HLS preparation by explicit connection identity."""
         extension = self._providers.get(provider_id)
         return extension.live_hls if extension else None
+
+    def live_availability_provider(
+        self, provider_id: str
+    ) -> LiveAvailabilityProvider | None:
+        """Resolve provider availability by explicit connection identity."""
+        extension = self._providers.get(provider_id)
+        return extension.live_availability if extension else None
 
     def talk_signaling(self, platform: str) -> LiveSignalingProvider | None:
         """Resolve one platform's optional talk-signaling capability."""
