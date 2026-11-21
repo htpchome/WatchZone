@@ -7,8 +7,9 @@ HLS and WebRTC for fast initial video, then prefers WebRTC. Backend camera
 providers have not been added yet.
 
 ##Quick Look
+
 ![Quickview of CameraOptics for Frigate.  A look at a few of the layouts](https://github.com/user-attachments/assets/df4038ff-7a7f-41fd-a444-ce9ab7ade2a9)
-<img width="320" height="356" alt="layout1_320" src="https://github.com/user-attachments/assets/df4038ff-7a7f-41fd-a444-ce9ab7ade2a9" />
+
 
 
 ## Install for development
