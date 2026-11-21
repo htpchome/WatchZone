@@ -172,12 +172,12 @@ class ManagedMediaSession {
     };
     this.lastUsed = performance.now();
     this._leaseCount += 1;
-    if (this._reconnectTimer) {
-      clearTimeout(this._reconnectTimer);
-      this._reconnectTimer = undefined;
-    }
 
     if (transportChanged) {
+      if (this._reconnectTimer) {
+        clearTimeout(this._reconnectTimer);
+        this._reconnectTimer = undefined;
+      }
       this._reconnectCause = undefined;
       this._reconnectAttempts = 0;
       this._closeConnection();
@@ -197,9 +197,12 @@ class ManagedMediaSession {
         state: "failed",
         error: "Home Assistant is reconnecting",
       });
+    } else if (this._snapshot.state === "new") {
+      void this._connect(options);
     } else if (
-      this._snapshot.state === "new" ||
-      this._snapshot.state === "failed"
+      this._snapshot.state === "failed" &&
+      !this._reconnectTimer &&
+      this._hasReconnectCapacity()
     ) {
       void this._connect(options);
     }
@@ -345,10 +348,7 @@ class ManagedMediaSession {
       this._reconnectCause ??= "media";
     }
     if (this._snapshot.state !== "failed") return;
-    if (this._reconnectTimer) {
-      clearTimeout(this._reconnectTimer);
-      this._reconnectTimer = undefined;
-    }
+    if (this._reconnectTimer || !this._hasReconnectCapacity()) return;
     this._reconnectCause ??= "media";
     this._enqueueReconnect(this);
   }
@@ -451,17 +451,22 @@ class ManagedMediaSession {
   }
 
   private _retry(): void {
-    if (this._snapshot.state === "connecting") {
+    if (this._snapshot.state === "connecting" || this._reconnectTimer) {
       return;
-    }
-    if (this._reconnectTimer) {
-      clearTimeout(this._reconnectTimer);
-      this._reconnectTimer = undefined;
     }
     this._reconnectCause = undefined;
     this._reconnectAttempts = 0;
     this._closeConnection();
     void this._connect();
+  }
+
+  private _hasReconnectCapacity(): boolean {
+    if (!this._reconnectCause) return true;
+    const policy =
+      this._reconnectCause === "media"
+        ? this._mediaReconnectPolicy
+        : HOME_ASSISTANT_RECONNECT_POLICY;
+    return this._reconnectAttempts < policy.maxAttempts;
   }
 
   private _scheduleReconnect(): void {
@@ -473,7 +478,6 @@ class ManagedMediaSession {
           : undefined;
     if (
       !policy ||
-      this._leaseCount === 0 ||
       this._reconnectAttempts >= policy.maxAttempts ||
       this._reconnectTimer
     ) {

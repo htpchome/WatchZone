@@ -402,9 +402,9 @@ Visibility changes affect presentation and forced mute, not user preference.
   bounded foreground validation window closes only that stale transport and
   starts its replacement immediately. A healthy retained transport is reused
   and does not renegotiate.
-- Returning to a visible browser document resumes the active media element and
-  promotes an active failed retry immediately instead of waiting for a
-  background-throttled backoff timer. A connection attempt that remained
+- Returning to a visible browser document resumes the active media element.
+  An active failed retry keeps its provider cooldown so repeated lifecycle
+  events cannot overlap upstream consumers. A connection attempt that remained
   pending while hidden is cancelled and restarted once in the foreground so
   its adapter timeout cannot impose an additional foreground delay.
 - Frigate MSE may keep one bounded parked fallback after WebRTC takeover. The
@@ -416,8 +416,10 @@ Visibility changes affect presentation and forced mute, not user preference.
 ## 11. Failure and reconnect behavior
 
 - Reconnect attempts are bounded, cancellable, and use backoff with jitter.
-- A new visible lease may request immediate retry without creating a duplicate
-  session.
+- A new visible lease reuses a healthy or connecting session and preserves any
+  failed session's existing retry cooldown. Camera navigation must not cancel
+  that cooldown or create another attempt while the provider may still be
+  retiring the preceding consumer.
 - Authentication failures return to backend source resolution before retrying
   stale credentials or signed URLs.
 - Adapter failure is contained to that session and does not close unrelated

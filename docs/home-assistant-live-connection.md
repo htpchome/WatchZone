@@ -248,7 +248,9 @@ Replacement WebRTC signaling for one authenticated browser connection and
 camera is serialized behind complete cleanup of its predecessor. Bounded
 background WebRTC upgrade retries are additionally spaced so a provider has
 time to retire the prior media consumer before the next probe begins while HLS
-remains selected.
+remains selected. Releasing and reacquiring the camera presentation preserves
+that retry schedule; navigation does not turn a failed or retiring WebRTC probe
+into an immediate replacement attempt.
 
 The session pool also observes Home Assistant's own WebSocket lifecycle. A
 `disconnected` event marks the control path interrupted but does not close an
@@ -262,10 +264,10 @@ before WatchZone's backend/provider commands are registered, so failed startup
 attempts during that recovery window use a separate bounded five-attempt
 backoff policy. This is independent of each adapter's bounded ordinary-media
 policy. Parked failed sessions remain inactive until reacquired. A foreground
-visibility return resumes healthy media and immediately promotes an active
-failed or background-stalled connection rather than waiting for a throttled
-retry or adapter startup timeout. This recovery remains bounded and does not
-create a second connection for the same session key.
+visibility return resumes healthy media and immediately replaces only a
+background-stalled pending connection. A failed WebRTC probe keeps its
+provider cooldown so repeated visibility or navigation events cannot create a
+second upstream consumer for the same session key.
 
 ## 8. Current audio behavior
 

@@ -54,6 +54,7 @@ export class HomeAssistantLiveProvider {
       factory: webRtcFactory,
       key,
       mediaReconnectPolicy: WEBRTC_RECONNECT_POLICY,
+      retryInitialFailure: true,
       retention: "preferred",
     });
   }

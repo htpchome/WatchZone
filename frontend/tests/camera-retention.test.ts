@@ -665,7 +665,7 @@ describe("camera presentation retention", () => {
     expect(hlsFactory).toHaveBeenCalledTimes(2);
   });
 
-  it("retries previously unavailable WebRTC once after HLS recovers", async () => {
+  it("keeps the WebRTC cooldown while HLS recovers", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
     vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
@@ -713,6 +713,8 @@ describe("camera presentation retention", () => {
     hlsFailures[0](new Error("HLS interrupted"));
     await vi.advanceTimersByTimeAsync(500);
     await vi.waitFor(() => expect(hlsFactory).toHaveBeenCalledTimes(2));
+    expect(webRtcFactory).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(60_000);
     await vi.waitFor(() => expect(webRtcFactory).toHaveBeenCalledTimes(2));
     await vi.waitFor(() =>
       expect(presentation(view)?.webRtcVideo?.srcObject).toBe(stream),
@@ -731,7 +733,7 @@ describe("camera presentation retention", () => {
     expect(webRtcFactory).toHaveBeenCalledTimes(2);
   });
 
-  it("keeps recovered HLS when the single WebRTC retry remains unavailable", async () => {
+  it("keeps recovered HLS through a scheduled unavailable WebRTC retry", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
     vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
@@ -765,6 +767,8 @@ describe("camera presentation retention", () => {
     hlsFailures[0](new Error("HLS interrupted"));
     await vi.advanceTimersByTimeAsync(500);
     await vi.waitFor(() => expect(hlsFactory).toHaveBeenCalledTimes(2));
+    expect(webRtcFactory).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(60_000);
     await vi.waitFor(() => expect(webRtcFactory).toHaveBeenCalledTimes(2));
 
     await vi.waitFor(() =>

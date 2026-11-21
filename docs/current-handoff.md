@@ -14,11 +14,11 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
 ## Baseline
 
 - Branch: `main`.
-- HEAD before this work: `d3d6de8` —
-  `v0.0.4-dev.498 - fix(talk): make shared controls context-independent`.
-- Version being prepared: `0.0.4-dev.499`.
-- Proposed subject:
+- HEAD before this work: `2476c52` —
   `v0.0.4-dev.499 - fix(live): retain healthy background transports`.
+- Version being prepared: `0.0.4-dev.500`.
+- Proposed subject:
+  `v0.0.4-dev.500 - fix(live): serialize WebRTC upgrade retries`.
 
 ## Persistent two-way talk
 
@@ -94,6 +94,10 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
   park decoder/loading work and must produce an advancing frame on foreground
   resume; only a stale transport is closed and immediately replaced. Physical
   phones close transports while hidden and reconnect active leases on return.
+- WebRTC initial failures and established failures share the provider's bounded
+  retry cadence. Camera release/reacquisition preserves an in-flight attempt or
+  its cooldown instead of creating another upstream consumer; MSE/HLS remains
+  available until one decoded WebRTC frame takes over.
 - Full Stage moves the same stable linked-light and TWT component nodes between
   Camera controls below 600px and activity navigation at 600px and wider.
 - Only `overlay` presentation consumes overlay tokens. Every non-overlay
@@ -103,18 +107,19 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
 - Events is absent from built-in Stage JSON but remains a registered lazy module
   for future Stage Designs.
 - HA control-WebSocket interruption does not destroy a healthy retained media
-  transport. Visible recovery promotes stalled work immediately.
+  transport. Visible recovery restarts stalled pending work without bypassing
+  a failed WebRTC probe's provider cooldown.
 - Shared zoom/pan and shared media-stage resize remain the sole owners of those
   behaviors for live and recorded media.
 
-## Validation for `dev.499`
+## Validation for `dev.500`
 
 - Formatting, lint, typecheck, architecture/style/license checks, production
   build, and version synchronization pass.
 - Unit tests cover desktop background retention, stale retained-player
   replacement, phone background closure, MSE foreground frame validation,
-  stopped-launcher disposal, and mute-preference refresh on camera
-  reactivation.
+  WebRTC cooldown preservation across camera reacquisition, stopped-launcher
+  disposal, and mute-preference refresh on camera reactivation.
 - Browser tests: 174/174 across Chromium, Firefox, and WebKit. The TWT flow
   additionally asserts one ready button versus three connected buttons and a
   stable shared-control bounding box across connection state changes. The

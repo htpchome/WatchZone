@@ -622,7 +622,7 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
-  it("promotes a failed active retry immediately when the document returns", async () => {
+  it("preserves a failed retry cooldown when the document returns", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
     const failures: Array<(error: Error) => void> = [];
@@ -643,7 +643,9 @@ describe("MediaSessionManager", () => {
       value: "visible",
     });
     document.dispatchEvent(new Event("visibilitychange"));
-    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(499);
+    expect(factory).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(1);
     await vi.waitFor(() => expect(factory).toHaveBeenCalledTimes(2));
     expect(lease.getSnapshot().state).toBe("live");
 
@@ -751,6 +753,41 @@ describe("MediaSessionManager", () => {
     expect(factory).toHaveBeenCalledTimes(3);
 
     lease.release();
+    manager.closeAll();
+  });
+
+  it("preserves a WebRTC retry cooldown across camera release and reacquisition", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const factory = vi
+      .fn<ConnectionFactory>()
+      .mockRejectedValue(new Error("WebRTC signaling unavailable"));
+    const manager = new MediaSessionManager(factory);
+    const request = {
+      api: createApi(),
+      cameraKey: "camera.front",
+      entityId: "camera.front",
+      factory,
+      key: "test:webrtc:camera.front",
+      mediaReconnectPolicy: { baseDelayMs: 60_000, maxAttempts: 5 },
+      retention: "preferred" as const,
+      retryInitialFailure: true,
+    };
+    const initial = manager.acquire(request);
+    await vi.waitFor(() => expect(initial.getSnapshot().state).toBe("failed"));
+    expect(factory).toHaveBeenCalledOnce();
+    initial.release();
+
+    const returned = manager.acquire(request);
+    expect(returned.getSnapshot().state).toBe("failed");
+    expect(factory).toHaveBeenCalledOnce();
+
+    await vi.advanceTimersByTimeAsync(59_000);
+    expect(factory).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(1_000);
+    await vi.waitFor(() => expect(factory).toHaveBeenCalledTimes(2));
+
+    returned.release();
     manager.closeAll();
   });
 
