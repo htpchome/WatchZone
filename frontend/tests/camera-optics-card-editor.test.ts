@@ -2047,6 +2047,91 @@ describe("camera-optics-card-editor", () => {
     document.removeEventListener("context-request", contextHandler);
   });
 
+  it("enables Update and saves a selected Frigate live stream", async () => {
+    const states: CardConfig[] = [];
+    const contextHandler = (event: Event) => {
+      const request = event as ContextRequest;
+      request.callback?.({ setState: (config) => states.push(config) });
+    };
+    document.addEventListener("context-request", contextHandler);
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.hass = {
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "streaming",
+          attributes: { friendly_name: "Front" },
+        },
+      },
+      connection: { subscribeMessage: async () => () => undefined },
+      callService: async () => undefined,
+      callWS: async <T>(message: HomeAssistantMessage): Promise<T> => {
+        if (message.type.endsWith("/live/source"))
+          return {
+            id: "frigate_go2rtc:entry-front:front",
+            type: "frigate_go2rtc",
+            frigate_instance_id: "frigate",
+            stream_name: "front",
+          } as T;
+        if (message.type.endsWith("/live/sources"))
+          return [{ key: "front_sub", label: "Sub Stream" }] as T;
+        if (message.type.endsWith("/talk/capability"))
+          return { supported: false } as T;
+        return { supported: false } as T;
+      },
+      hassUrl: (path: string) => path,
+    };
+    editor.setConfig({
+      type: CARD_TYPE,
+      cameras: [{ entity_id: "camera.front", connection: "frigate_go2rtc" }],
+    });
+    document.body.append(editor);
+    await editor.updateComplete;
+    await openEditorSection(editor, "camera");
+    (
+      editor.shadowRoot?.querySelector(
+        '[aria-label="Edit camera: Front"]',
+      ) as HTMLElement
+    ).click();
+    const stream = await vi.waitFor(() => {
+      const selector = editor.shadowRoot?.querySelector(
+        'ha-selector[label="Live stream"]',
+      ) as (HTMLElement & { value: string }) | null;
+      expect(selector).not.toBeNull();
+      return selector!;
+    });
+    const update = editor.shadowRoot?.querySelector(
+      'ha-button[appearance="accent"][variant="brand"]',
+    ) as HTMLElement & { disabled: boolean };
+    expect(update.disabled).toBe(true);
+
+    stream.value = "front_sub";
+    stream.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: "front_sub" },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await editor.updateComplete;
+
+    expect(update.disabled).toBe(false);
+    update.click();
+    await editor.updateComplete;
+    expect(states.at(-1)).toMatchObject({
+      cameras: [
+        {
+          entity_id: "camera.front",
+          connection: "frigate_go2rtc",
+          frigate_stream: "front_sub",
+        },
+      ],
+    });
+    document.removeEventListener("context-request", contextHandler);
+  });
+
   it("retains HA and capability choices while switching connection types", async () => {
     const editor = document.createElement(
       "camera-optics-card-editor",

@@ -2441,6 +2441,7 @@ function cameraConfigEquals(left: CameraConfig, right: CameraConfig): boolean {
     left.entity_id === right.entity_id &&
     left.connection === right.connection &&
     left.frigate_fallback === right.frigate_fallback &&
+    left.frigate_stream === right.frigate_stream &&
     left.group_name === right.group_name &&
     linkedLightsEqual(left.lights, right.lights) &&
     left.low_latency_hls === right.low_latency_hls &&
