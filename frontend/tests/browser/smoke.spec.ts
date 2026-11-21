@@ -12308,18 +12308,22 @@ test("camera editor configures lights and confirms accessible removal", async ({
   expect(initialDialogBounds?.height).toBeLessThanOrEqual(
     (page.viewportSize()?.height ?? 0) - 32,
   );
-  const compactHeader = await items.nth(1).locator("summary").boundingBox();
+  const compactHeader = await items
+    .nth(1)
+    .locator("summary")
+    .first()
+    .boundingBox();
   expect(compactHeader?.height).toBeLessThanOrEqual(44);
 
-  await items.nth(1).locator("summary").click();
+  await items.nth(1).locator("summary").first().click();
   await expect(items.locator("details[open]")).toHaveCount(1);
   await expect(items.nth(0).locator("details")).not.toHaveAttribute("open", "");
   await expect(items.nth(1).locator("h3")).toHaveText("Connection Source");
-  await items.nth(3).locator("summary").click();
+  await items.nth(3).locator("summary").last().click();
   await expect(items.locator("details[open]")).toHaveCount(1);
   await expect(items.nth(0).locator("details")).not.toHaveAttribute("open", "");
   await expect(items.nth(3).locator("details")).toHaveAttribute("open", "");
-  await items.nth(0).locator("summary").click();
+  await items.nth(0).locator("summary").last().click();
   await expect(items.locator("details[open]")).toHaveCount(1);
   await expect(items.nth(0).locator("details")).toHaveAttribute("open", "");
   await expect(items.nth(3).locator("details")).not.toHaveAttribute("open", "");

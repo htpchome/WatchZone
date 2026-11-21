@@ -134,6 +134,29 @@ different source identities receive different sessions.
 Session keys must not contain bearer tokens, signed URLs, or other secrets in
 logs, diagnostics, DOM attributes, or persistent preference storage.
 
+### 4.1 Primary camera and live-only substream identity
+
+A camera may select a different source only for live video. The primary camera
+entity remains authoritative for camera identity, runtime suspension, activity,
+PTZ, two-way talk, linked lights, navigation, and audio preference. The
+live-only source participates in the media-session key so changing substreams
+cannot reuse the primary stream's transport.
+
+Frigate go2rtc uses a provider-discovered raw stream after the backend verifies
+that the stream belongs to the authorized primary camera; this direct path does
+not require a managed entity. CameraOptics may also create live-only camera
+entities for explicitly selected cameras already backed by Home Assistant's
+go2rtc provider or for streams selected from a separately configured external
+go2rtc server. The card lists those managed entities only in the substream
+field and excludes them from primary and secondary camera selection.
+
+Managed Home Assistant sources delegate receive signaling and HLS fallback to
+their existing camera. Managed external sources keep URL and optional Basic
+authentication in backend config-entry data and expose native WebRTC signaling
+without sending credentials to the browser. Every substream path changes only
+live receive video; PTZ, talk, lights, activity, navigation, runtime state, and
+audio preference continue to use the primary camera.
+
 ## 5. Session states
 
 A session has one explicit state:

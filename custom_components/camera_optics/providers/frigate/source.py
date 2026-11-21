@@ -3,19 +3,23 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Protocol, cast
 
+from aiohttp import ClientTimeout
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_URL
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.importlib import async_import_module
 from yarl import URL
 
 from ..live import ProviderPreparationError
 from ..live_connection import LiveSourceDescriptor
+
+_SUBSTREAM_DISCOVERY_TIMEOUT = ClientTimeout(total=5)
 
 if TYPE_CHECKING:
     from homeassistant.components.camera import Camera
@@ -168,6 +172,65 @@ async def async_resolve_source(
     )
 
 
+async def async_list_substreams(hass: HomeAssistant, entity_id: str) -> tuple[str, ...]:
+    """List validated go2rtc streams belonging to one Frigate camera."""
+    source = await async_resolve_source(hass, entity_id)
+    return await _async_list_substreams(hass, source)
+
+
+async def _async_list_substreams(
+    hass: HomeAssistant, source: FrigateSource
+) -> tuple[str, ...]:
+    """List substreams for one already resolved Frigate source."""
+    try:
+        headers = await source.client.get_auth_headers()
+        session = async_get_clientsession(hass)
+        payload: object | None = None
+        for url in (
+            URL(source.base_url) / "api/go2rtc/streams",
+            URL(source.base_url) / "api/go2rtc/api/streams",
+        ):
+            response = await session.get(
+                url,
+                headers=headers,
+                ssl=source.client.validate_ssl,
+                timeout=_SUBSTREAM_DISCOVERY_TIMEOUT,
+            )
+            async with response:
+                if response.status != 200:
+                    continue
+                payload = await response.json(content_type=None)
+                break
+    except Exception as err:
+        raise ProviderPreparationError("frigate_substream_discovery_failed") from err
+    if not isinstance(payload, dict):
+        raise ProviderPreparationError("frigate_substream_discovery_failed")
+    prefix = f"{source.camera_name.lower()}_"
+    audio_stream = f"{source.camera_name.lower()}_audio"
+    streams = {
+        normalized
+        for value in payload
+        if (normalized := _normalize_stream_name(value)) is not None
+        and normalized.lower().startswith(prefix)
+        and normalized.lower() != audio_stream
+        and normalized != source.stream_name
+    }
+    return tuple(sorted(streams, key=str.casefold))
+
+
+async def async_resolve_substream_source(
+    hass: HomeAssistant, entity_id: str, stream_name: str
+) -> FrigateSource:
+    """Resolve one live-only stream after proving it belongs to the camera."""
+    normalized = _normalize_stream_name(stream_name)
+    if normalized is None:
+        raise ProviderPreparationError("frigate_substream_invalid")
+    source = await async_resolve_source(hass, entity_id)
+    if normalized not in await _async_list_substreams(hass, source):
+        raise ProviderPreparationError("frigate_substream_unavailable")
+    return replace(source, stream_name=normalized)
+
+
 class FrigateLiveSourceProvider:
     """Resolve an explicitly selected Frigate go2rtc source."""
 
@@ -184,6 +247,20 @@ class FrigateLiveSourceProvider:
 
 
 live_source = FrigateLiveSourceProvider()
+
+
+def _normalize_stream_name(value: object) -> str | None:
+    """Normalize one bounded go2rtc stream identifier."""
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip()
+    if (
+        not normalized
+        or len(normalized) > 512
+        or any(ord(character) < 32 or ord(character) == 127 for character in normalized)
+    ):
+        return None
+    return normalized
 
 
 async def async_get_frigate_client(

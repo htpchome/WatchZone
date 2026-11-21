@@ -145,6 +145,7 @@ export class DashboardCard extends LitElement {
   }
 
   public static async getConfigElement(): Promise<HTMLElement> {
+    await import("../editor/camera/live-substream-field");
     await import("../editor/camera-optics-card-editor");
     return document.createElement(EDITOR_TAG);
   }

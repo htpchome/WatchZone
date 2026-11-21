@@ -117,5 +117,11 @@
   "camera.slideshow_hold": "Em espera",
   "camera.slideshow_seconds": "{seconds}s",
   "editor.slide_advance_time": "Tempo de avanço do slide",
-  "editor.slide_advance_seconds": "{seconds}s"
+  "editor.slide_advance_seconds": "{seconds}s",
+  "editor.live_substream": "Substream ao vivo",
+  "editor.main_stream": "Stream principal",
+  "editor.live_substream_checking": "Verificando substreams disponíveis do Frigate…",
+  "editor.live_substream_discovery_failed": "A descoberta de substreams do Frigate falhou. O stream configurado foi mantido.",
+  "editor.live_substream_none": "Não há substreams adicionais do Frigate go2rtc disponíveis.",
+  "editor.live_substream_frigate_help": "O stream do Frigate go2rtc selecionado é usado apenas para vídeo ao vivo."
 }

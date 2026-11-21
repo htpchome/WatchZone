@@ -1,6 +1,121 @@
 {
   "title": "CameraOptics",
-  "config": {"step": {"user": {"title": "Configurar CameraOptics", "description": "Crea la entrada de la aplicación CameraOptics. Los proveedores de cámaras se pueden agregar más adelante."}}, "abort": {"single_instance_allowed": "CameraOptics ya está configurado."}},
-  "config_subentries": {"camera_preload": {"entry_type": "Cámaras precargadas", "initiate_flow": {"user": "Agregar cámaras precargadas", "reconfigure": "Configurar cámaras precargadas"}, "step": {"camera_preload": {"title": "Cámaras precargadas", "description": "Mantén listo el HLS de Home Assistant solo para las cámaras seleccionadas. Esto usa recursos del servidor aunque no haya una tarjeta visible.", "data": {"hls_prewarm_cameras": "Cámaras HLS precalentadas"}, "data_description": {"hls_prewarm_cameras": "Selecciona hasta 12 cámaras. Se reutilizan sus entidades y procesos de transmisión de Home Assistant; no se crean cámaras duplicadas."}}}, "error": {"too_many_prewarm_cameras": "Selecciona no más de 12 cámaras."}, "abort": {"single_camera_preload_allowed": "Las cámaras precargadas ya están configuradas.", "reconfigure_successful": "Las cámaras precargadas se actualizaron correctamente."}}}
-  ,"options": {"step": {"init": {"title": "Diagnóstico", "description": "El registro de diagnóstico solo se conserva en una memoria limitada del servidor. Al desactivarlo o reiniciar Home Assistant se borran todos los registros.", "data": {"diagnostic_logging": "Activar registro de diagnóstico"}, "data_description": {"diagnostic_logging": "Captura un historial de CameraOptics depurado y con límite de frecuencia para las descargas de diagnóstico de Home Assistant. No utiliza la base de datos del grabador."}}}}
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configurar CameraOptics",
+        "description": "Crea la entrada de la aplicación CameraOptics. Los proveedores de cámaras se pueden agregar más adelante."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "CameraOptics ya está configurado."
+    }
+  },
+  "config_subentries": {
+    "camera_preload": {
+      "entry_type": "Cámaras precargadas",
+      "initiate_flow": {
+        "user": "Agregar cámaras precargadas",
+        "reconfigure": "Configurar cámaras precargadas"
+      },
+      "step": {
+        "camera_preload": {
+          "title": "Cámaras precargadas",
+          "description": "Mantén listo el HLS de Home Assistant solo para las cámaras seleccionadas. Esto usa recursos del servidor aunque no haya una tarjeta visible.",
+          "data": {
+            "hls_prewarm_cameras": "Cámaras HLS precalentadas"
+          },
+          "data_description": {
+            "hls_prewarm_cameras": "Selecciona hasta 12 cámaras. Se reutilizan sus entidades y procesos de transmisión de Home Assistant; no se crean cámaras duplicadas."
+          }
+        }
+      },
+      "error": {
+        "too_many_prewarm_cameras": "Selecciona no más de 12 cámaras."
+      },
+      "abort": {
+        "single_camera_preload_allowed": "Las cámaras precargadas ya están configuradas.",
+        "reconfigure_successful": "Las cámaras precargadas se actualizaron correctamente."
+      }
+    },
+    "home_assistant_substreams": {
+      "entry_type": "Home Assistant substreams",
+      "initiate_flow": {
+        "user": "Add Home Assistant substreams",
+        "reconfigure": "Configure Home Assistant substreams"
+      },
+      "step": {
+        "home_assistant_substreams": {
+          "title": "Home Assistant Substreams",
+          "description": "Create CameraOptics live-only camera entities from existing Home Assistant cameras that are already connected through Home Assistant's go2rtc provider.",
+          "data": {
+            "source_cameras": "Source cameras"
+          },
+          "data_description": {
+            "source_cameras": "Only cameras currently backed by Home Assistant's go2rtc provider are listed. CameraOptics does not read Home Assistant YAML or credentials."
+          }
+        }
+      },
+      "error": {
+        "invalid_source_camera": "One or more selected cameras are no longer available through Home Assistant go2rtc."
+      },
+      "abort": {
+        "single_home_assistant_substreams_allowed": "Home Assistant Substreams is already configured.",
+        "reconfigure_successful": "Home Assistant substreams updated successfully."
+      }
+    },
+    "external_go2rtc": {
+      "entry_type": "External go2rtc server",
+      "initiate_flow": {
+        "user": "Add external go2rtc server",
+        "reconfigure": "Configure external go2rtc server"
+      },
+      "step": {
+        "external_go2rtc": {
+          "title": "External go2rtc Server",
+          "description": "Connect directly to a go2rtc HTTP API. Credentials remain in this Home Assistant config entry and are never sent to the browser. Use HTTPS when the server is reached across an untrusted network.",
+          "data": {
+            "url": "Server URL",
+            "username": "Username",
+            "password": "Password"
+          },
+          "data_description": {
+            "password": "Leave blank while reconfiguring to retain the existing password."
+          }
+        },
+        "external_go2rtc_streams": {
+          "title": "External go2rtc Streams",
+          "description": "Select the streams that CameraOptics should expose as live-only camera entities.",
+          "data": {
+            "streams": "Streams"
+          }
+        }
+      },
+      "error": {
+        "cannot_connect": "Unable to connect to the go2rtc server.",
+        "duplicate_server": "This go2rtc server is already configured.",
+        "invalid_auth": "The go2rtc server rejected the supplied credentials.",
+        "invalid_stream": "One or more selected streams are no longer available.",
+        "invalid_url": "Enter a valid HTTP or HTTPS URL.",
+        "no_streams": "The go2rtc server did not report any streams."
+      },
+      "abort": {
+        "reconfigure_successful": "External go2rtc server updated successfully."
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Diagnóstico",
+        "description": "El registro de diagnóstico solo se conserva en una memoria limitada del servidor. Al desactivarlo o reiniciar Home Assistant se borran todos los registros.",
+        "data": {
+          "diagnostic_logging": "Activar registro de diagnóstico"
+        },
+        "data_description": {
+          "diagnostic_logging": "Captura un historial de CameraOptics depurado y con límite de frecuencia para las descargas de diagnóstico de Home Assistant. No utiliza la base de datos del grabador."
+        }
+      }
+    }
+  }
 }

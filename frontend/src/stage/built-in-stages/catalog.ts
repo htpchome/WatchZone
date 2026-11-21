@@ -292,6 +292,14 @@ function hydrateModule(
           connection: first.connection,
           entityId: first.entity_id,
           frigateFallback: first.frigate_fallback,
+          frigateSubstream:
+            first.connection === "frigate_go2rtc" &&
+            !first.live_substream?.startsWith("camera.")
+              ? first.live_substream
+              : undefined,
+          liveEntityId: first.live_substream?.startsWith("camera.")
+            ? first.live_substream
+            : undefined,
           lowLatencyHls: first.low_latency_hls,
           startUnmutedPcTablet: first.start_live_unmuted_pc_tablet,
           startUnmutedPhone: first.start_live_unmuted_phone,
@@ -319,6 +327,14 @@ function hydrateModule(
         connection: camera.connection,
         entityId: camera.entity_id,
         frigateFallback: camera.frigate_fallback,
+        frigateSubstream:
+          camera.connection === "frigate_go2rtc" &&
+          !camera.live_substream?.startsWith("camera.")
+            ? camera.live_substream
+            : undefined,
+        liveEntityId: camera.live_substream?.startsWith("camera.")
+          ? camera.live_substream
+          : undefined,
         lowLatencyHls: camera.low_latency_hls,
         startUnmutedPcTablet: camera.start_live_unmuted_pc_tablet,
         startUnmutedPhone: camera.start_live_unmuted_phone,

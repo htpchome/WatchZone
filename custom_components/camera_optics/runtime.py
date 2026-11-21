@@ -22,6 +22,7 @@ class CameraOpticsRuntime:
     """Runtime state owned by one CameraOptics config entry."""
 
     entry_id: str
+    managed_camera_signature: str
     backend_log: BackendDiagnosticLog
     activity_updates: ActivityUpdatesService
     camera_runtime: CameraRuntimeService

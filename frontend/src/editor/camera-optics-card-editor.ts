@@ -33,6 +33,7 @@ import {
   ACCORDION_TAG,
   ACCORDION_TOGGLE_EVENT,
   CARD_TYPE,
+  EDITOR_LIVE_SUBSTREAM_FIELD_TAG,
   EDITOR_PREVIEW_DRAFT_EVENT,
   EDITOR_TAG,
   EDITOR_TEXT_PREVIEW_DELAY_MS,
@@ -148,6 +149,7 @@ const DEFAULT_LIGHT_ICON = "mdi:lightbulb";
 
 const accordionTag = unsafeStatic(ACCORDION_TAG);
 const accordionItemTag = unsafeStatic(ACCORDION_ITEM_TAG);
+const liveSubstreamFieldTag = unsafeStatic(EDITOR_LIVE_SUBSTREAM_FIELD_TAG);
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
 const EDITOR_STATUS_KEY = "draft";
 
@@ -162,6 +164,7 @@ type CameraBooleanConfigFlag = Exclude<
   | "frigate_fallback"
   | "group_name"
   | "lights"
+  | "live_substream"
   | "title"
 >;
 
@@ -669,7 +672,7 @@ export class CardEditor extends LitElement {
                     density="compact"
                     heading=${this._t("editor.connection_source")}
                     item-key="connection"
-                    summary-text=${this._connectionName(camera.connection)}
+                    summary-text=${this._connectionSummary(camera)}
                   >
                     <div class="camera-section-fields">
                       <h3>${this._t("editor.connection_source")}</h3>
@@ -681,6 +684,11 @@ export class CardEditor extends LitElement {
                         .required=${true}
                         @value-changed=${this._handleConnectionChange}
                       ></ha-selector>
+                      ${staticHtml`<${liveSubstreamFieldTag}
+                        .camera=${camera}
+                        .hass=${this._hass}
+                        @value-changed=${this._live}
+                      ></${liveSubstreamFieldTag}>`}
                       ${
                         camera.connection === "home_assistant"
                           ? this._renderCameraBoolean(
@@ -1280,7 +1288,11 @@ export class CardEditor extends LitElement {
   ): void => {
     if (!this._cameraDraft) return;
     const value = eventString(event);
-    this._cameraDraft = { ...this._cameraDraft, entity_id: value };
+    this._cameraDraft = {
+      ...this._cameraDraft,
+      entity_id: value,
+      live_substream: undefined,
+    };
     this._checkCapabilities(value, this._cameraDraft.connection);
     this.requestUpdate();
   };
@@ -1292,8 +1304,20 @@ export class CardEditor extends LitElement {
     const connection = eventString(event) as LiveConnectionType;
     if (connection !== "home_assistant" && connection !== "frigate_go2rtc")
       return;
-    this._cameraDraft = { ...this._cameraDraft, connection };
+    this._cameraDraft = {
+      ...this._cameraDraft,
+      connection,
+      live_substream:
+        connection === this._cameraDraft.connection
+          ? this._cameraDraft.live_substream
+          : undefined,
+    };
     this._checkCapabilities(this._cameraDraft.entity_id, connection);
+    this.requestUpdate();
+  };
+
+  private readonly _live = (event: ValueChangedEvent): void => {
+    this._cameraDraft = event.detail.value as CameraConfig;
     this.requestUpdate();
   };
 
@@ -1915,6 +1939,16 @@ export class CardEditor extends LitElement {
       : this._t("editor.home_assistant");
   }
 
+  private _connectionSummary(camera: CameraConfig): string {
+    const substream =
+      camera.connection === "frigate_go2rtc"
+        ? camera.live_substream
+        : undefined;
+    return [this._connectionName(camera.connection), substream]
+      .filter((value): value is string => Boolean(value))
+      .join(" · ");
+  }
+
   private _additionalCameraSummary(camera: CameraConfig): string {
     const group = camera.additional_camera;
     if (!group) return this._t("editor.not_configured");
@@ -2419,6 +2453,7 @@ function cameraConfigEquals(left: CameraConfig, right: CameraConfig): boolean {
     left.frigate_fallback === right.frigate_fallback &&
     left.group_name === right.group_name &&
     linkedLightsEqual(left.lights, right.lights) &&
+    left.live_substream === right.live_substream &&
     left.low_latency_hls === right.low_latency_hls &&
     left.ptz_enabled === right.ptz_enabled &&
     left.start_live_unmuted_pc_tablet === right.start_live_unmuted_pc_tablet &&

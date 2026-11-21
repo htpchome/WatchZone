@@ -117,5 +117,11 @@
   "camera.slideshow_hold": "Em espera",
   "camera.slideshow_seconds": "{seconds}s",
   "editor.slide_advance_time": "Tempo de avanço do diapositivo",
-  "editor.slide_advance_seconds": "{seconds}s"
+  "editor.slide_advance_seconds": "{seconds}s",
+  "editor.live_substream": "Subfluxo em direto",
+  "editor.main_stream": "Fluxo principal",
+  "editor.live_substream_checking": "A verificar subfluxos do Frigate disponíveis…",
+  "editor.live_substream_discovery_failed": "A deteção de subfluxos do Frigate falhou. O fluxo configurado é mantido.",
+  "editor.live_substream_none": "Não existem subfluxos adicionais do Frigate go2rtc disponíveis.",
+  "editor.live_substream_frigate_help": "O fluxo do Frigate go2rtc selecionado é usado apenas para vídeo em direto."
 }

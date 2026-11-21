@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 from pathlib import Path
 from types import MappingProxyType
@@ -17,7 +19,7 @@ from homeassistant.components.lovelace.resources import (
     ResourceYAMLCollection,
 )
 from homeassistant.config_entries import ConfigEntry, ConfigSubentry
-from homeassistant.const import CONF_ID, CONF_TYPE, CONF_URL
+from homeassistant.const import CONF_ID, CONF_TYPE, CONF_URL, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 
@@ -33,6 +35,8 @@ from .const import (
     DOMAIN,
     FRONTEND_URL_BASE,
     SUBENTRY_TYPE_CAMERA_PRELOAD,
+    SUBENTRY_TYPE_EXTERNAL_GO2RTC,
+    SUBENTRY_TYPE_HOME_ASSISTANT_SUBSTREAMS,
     SUBENTRY_UNIQUE_ID_CAMERA_PRELOAD,
 )
 from .extensions import (
@@ -152,6 +156,7 @@ async def async_setup_entry(
     await stage_designs.async_setup()
     runtime = CameraOpticsRuntime(
         entry_id=entry.entry_id,
+        managed_camera_signature=_managed_camera_signature(entry),
         backend_log=BackendDiagnosticLog(enabled=_diagnostic_logging_enabled(entry)),
         activity_updates=ActivityUpdatesService(hass, providers),
         camera_runtime=camera_runtime,
@@ -169,10 +174,17 @@ async def async_setup_entry(
     entry.runtime_data = runtime
     hass.data.setdefault(DOMAIN, {})[DATA_RUNTIME] = runtime
     entry.async_on_unload(entry.add_update_listener(_async_entry_updated))
+    camera_platform_loaded = False
     try:
+        await hass.config_entries.async_forward_entry_setups(entry, [Platform.CAMERA])
+        camera_platform_loaded = True
         await _async_register_card_resource(hass)
     except BaseException:
         try:
+            if camera_platform_loaded:
+                await hass.config_entries.async_unload_platforms(
+                    entry, [Platform.CAMERA]
+                )
             await runtime.async_close()
         finally:
             hass.data[DOMAIN].pop(DATA_RUNTIME, None)
@@ -184,7 +196,10 @@ async def _async_entry_updated(
     hass: HomeAssistant, entry: CameraOpticsConfigEntry
 ) -> None:
     """Reconcile typed child settings without reloading frontend resources."""
-    del hass
+    signature = _managed_camera_signature(entry)
+    if signature != entry.runtime_data.managed_camera_signature:
+        await hass.config_entries.async_reload(entry.entry_id)
+        return
     entry.runtime_data.backend_log.set_enabled(_diagnostic_logging_enabled(entry))
     await entry.runtime_data.hls_prewarm.async_set_entities(_prewarm_camera_ids(entry))
 
@@ -205,9 +220,28 @@ def _prewarm_camera_ids(entry: ConfigEntry) -> list[str]:
     return list(selected) if isinstance(selected, list) else []
 
 
+def _managed_camera_signature(entry: ConfigEntry) -> str:
+    """Hash entity-producing child settings without exposing their contents."""
+    managed = [
+        {
+            "id": subentry.subentry_id,
+            "type": subentry.subentry_type,
+            "data": dict(subentry.data),
+        }
+        for subentry in entry.subentries.values()
+        if subentry.subentry_type
+        in {
+            SUBENTRY_TYPE_EXTERNAL_GO2RTC,
+            SUBENTRY_TYPE_HOME_ASSISTANT_SUBSTREAMS,
+        }
+    ]
+    payload = json.dumps(managed, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(payload.encode()).hexdigest()
+
+
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Move legacy prewarm options into the typed child configuration."""
-    if entry.version > 2:
+    if entry.version > 3:
         return False
 
     if entry.version == 1:
@@ -232,6 +266,9 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         options = dict(entry.options)
         options.pop(CONF_HLS_PREWARM_CAMERAS, None)
         hass.config_entries.async_update_entry(entry, options=options, version=2)
+
+    if entry.version == 2:
+        hass.config_entries.async_update_entry(entry, version=3)
 
     return True
 
@@ -264,6 +301,7 @@ def _register_builtin_providers(hass: HomeAssistant) -> ProviderRegistry:
             live_signaling=frigate_live,
             live_source=frigate_live_source,
             live_hls=frigate_live_hls,
+            live_substream=frigate_live.live_substream,
             talk_signaling=frigate_live,
             talk_capability=frigate_talk_capability,
             ptz=frigate_ptz,
@@ -285,6 +323,9 @@ async def async_unload_entry(
     domain_data = hass.data.get(DOMAIN)
     if not domain_data:
         return True
+
+    if not await hass.config_entries.async_unload_platforms(entry, [Platform.CAMERA]):
+        return False
 
     await entry.runtime_data.async_close()
     domain_data.pop(DATA_RUNTIME, None)

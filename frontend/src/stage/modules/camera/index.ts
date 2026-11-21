@@ -58,16 +58,32 @@ export const moduleDefinition: ModuleDefinition<
   contextKeys: ["cameraSelection", "cameraSession"],
   type: CAMERA_MODULE_TYPE,
   validateConfig: validateCameraConfig,
-  getEntityIds: ({ cameras }) => cameras.map(({ entityId }) => entityId),
+  getEntityIds: ({ cameras }) => [
+    ...new Set(
+      cameras.flatMap(({ entityId, liveEntityId }) => [
+        entityId,
+        ...(liveEntityId ? [liveEntityId] : []),
+      ]),
+    ),
+  ],
   async prepare(config, context) {
     const first = config.cameras[0];
-    if (!first || !context.api || !context.hass?.states[first.entityId])
+    if (
+      !first ||
+      !context.api ||
+      !context.hass?.states[first.entityId] ||
+      (first.liveEntityId && !context.hass.states[first.liveEntityId])
+    )
       return undefined;
     const posterUrl = cameraImageUrl(context.hass, first.entityId);
     if (posterUrl) preloadPoster(posterUrl);
     let lease: MediaSessionLease;
     if (first.connection === "frigate_go2rtc") {
-      const source = await resolver.resolveFrigate(context.api, first.entityId);
+      const source = await resolver.resolveFrigate(
+        context.api,
+        first.entityId,
+        first.frigateSubstream,
+      );
       const policy = resolver.frigateTransportPolicy(
         first.frigateFallback ?? "mse",
       );
@@ -90,7 +106,7 @@ export const moduleDefinition: ModuleDefinition<
     } else {
       lease = await resolver.acquireHomeAssistantWebRtc(
         context.api,
-        first.entityId,
+        first.liveEntityId ?? first.entityId,
       );
     }
     return {
@@ -156,7 +172,10 @@ function updateCameraElement(
     if (friendlyName) friendlyNames.set(item.entityId, friendlyName);
     return {
       ...item,
-      available: Boolean(context.hass?.states[item.entityId]),
+      available: Boolean(
+        context.hass?.states[item.entityId] &&
+        (!item.liveEntityId || context.hass.states[item.liveEntityId]),
+      ),
       label:
         item.title ||
         friendlyName ||

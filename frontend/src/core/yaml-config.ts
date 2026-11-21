@@ -160,6 +160,9 @@ function compactCameraConfig(camera: CameraConfig): Record<string, unknown> {
       ...(light.icon ? { icon: light.icon } : {}),
     }));
   }
+  if (camera.live_substream) {
+    compact.live_substream = camera.live_substream;
+  }
   if (!camera.low_latency_hls) compact.low_latency_hls = false;
   if (camera.ptz_enabled) compact.ptz_enabled = true;
   if (camera.start_live_unmuted_pc_tablet)

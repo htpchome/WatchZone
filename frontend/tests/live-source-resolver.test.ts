@@ -62,4 +62,40 @@ describe("live source identity", () => {
     );
     expect(callWS).toHaveBeenCalledOnce();
   });
+
+  it("keeps a Frigate substream distinct and requests it through the backend", async () => {
+    const api: HomeAssistantApi = {
+      identity: {} as HomeAssistantApi["identity"],
+      callWS: vi.fn(async (message) => ({
+        frigate_instance_id: "frigate",
+        id: `frigate_go2rtc:entry:${String(message.substream ?? "front")}`,
+        stream_name: String(message.substream ?? "front"),
+        substream: Boolean(message.substream),
+        type: "frigate_go2rtc",
+      })) as HomeAssistantApi["callWS"],
+      resolveUrl: (path) => path,
+      subscribeMessage: vi.fn(),
+    };
+    const resolver = new LiveSourceResolver();
+
+    const main = await resolver.resolveFrigate(api, "camera.front");
+    const substream = await resolver.resolveFrigate(
+      api,
+      "camera.front",
+      "front_sub",
+    );
+
+    expect(substream.id).not.toBe(main.id);
+    expect(substream.substream).toBe(true);
+    expect(api.callWS).toHaveBeenLastCalledWith({
+      type: "camera_optics/live/source",
+      connection: "frigate_go2rtc",
+      entity_id: "camera.front",
+      substream: "front_sub",
+    });
+    expect(resolver.cachedFrigate(api, "camera.front")).toBe(main);
+    expect(resolver.cachedFrigate(api, "camera.front", "front_sub")).toBe(
+      substream,
+    );
+  });
 });

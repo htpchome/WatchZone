@@ -20,18 +20,42 @@ class LiveConnectionService:
         self._providers = providers or get_provider_registry(hass)
 
     async def async_resolve_source(
-        self, provider_id: str, entity_id: str
+        self, provider_id: str, entity_id: str, substream: str | None = None
     ) -> LiveSourceDescriptor:
         """Resolve a source without substituting another connection."""
-        provider = self._providers.live_source_provider(provider_id)
-        if provider is None:
+        if substream is not None:
+            substream_provider = self._providers.live_substream_provider(provider_id)
+            if substream_provider is None:
+                raise HomeAssistantError(
+                    "Selected connection does not support substreams"
+                )
+            try:
+                return await substream_provider.async_resolve_substream(
+                    self._hass, entity_id, substream
+                )
+            except ProviderPreparationError as err:
+                raise HomeAssistantError("Selected substream is unavailable") from err
+        source_provider = self._providers.live_source_provider(provider_id)
+        if source_provider is None:
             raise HomeAssistantError("Selected connection provider is unavailable")
         try:
-            return await provider.async_resolve_source(self._hass, entity_id)
+            return await source_provider.async_resolve_source(self._hass, entity_id)
         except ProviderPreparationError as err:
             raise HomeAssistantError(
                 "Selected connection provider is unavailable"
             ) from err
+
+    async def async_list_substreams(
+        self, provider_id: str, entity_id: str
+    ) -> tuple[str, ...]:
+        """List live-only substreams through the selected connection."""
+        provider = self._providers.live_substream_provider(provider_id)
+        if provider is None:
+            return ()
+        try:
+            return await provider.async_list_substreams(self._hass, entity_id)
+        except ProviderPreparationError as err:
+            raise HomeAssistantError("Substream discovery is unavailable") from err
 
     async def async_prepare_hls(self, provider_id: str, entity_id: str) -> str:
         """Prepare HLS through the explicitly selected connection."""

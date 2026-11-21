@@ -117,5 +117,11 @@
   "camera.slideshow_hold": "Αναμονή",
   "camera.slideshow_seconds": "{seconds}δ",
   "editor.slide_advance_time": "Χρόνος εναλλαγής διαφανειών",
-  "editor.slide_advance_seconds": "{seconds}δ"
+  "editor.slide_advance_seconds": "{seconds}δ",
+  "editor.live_substream": "Ζωντανή υποροή",
+  "editor.main_stream": "Κύρια ροή",
+  "editor.live_substream_checking": "Έλεγχος διαθέσιμων υποροών Frigate…",
+  "editor.live_substream_discovery_failed": "Η ανακάλυψη υποροών Frigate απέτυχε. Η διαμορφωμένη ροή διατηρείται.",
+  "editor.live_substream_none": "Δεν υπάρχουν πρόσθετες υποροές Frigate go2rtc.",
+  "editor.live_substream_frigate_help": "Η επιλεγμένη ροή Frigate go2rtc χρησιμοποιείται μόνο για ζωντανό βίντεο."
 }

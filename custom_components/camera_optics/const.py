@@ -2,9 +2,16 @@
 
 DOMAIN = "camera_optics"
 NAME = "CameraOptics"
-VERSION = "0.0.4"
+VERSION = "0.0.5-dev.1"
 
 DATA_RUNTIME = "runtime"
+
+CONF_GO2RTC_STREAMS = "streams"
+CONF_SOURCE_CAMERAS = "source_cameras"
+SUBENTRY_TYPE_EXTERNAL_GO2RTC = "external_go2rtc"
+SUBENTRY_TYPE_HOME_ASSISTANT_SUBSTREAMS = "home_assistant_substreams"
+SUBENTRY_UNIQUE_ID_HOME_ASSISTANT_SUBSTREAMS = "home_assistant_substreams"
+HOME_ASSISTANT_SUBSTREAMS_TITLE = "Home Assistant Substreams"
 
 CONF_DIAGNOSTIC_LOGGING = "diagnostic_logging"
 DEFAULT_DIAGNOSTIC_LOGGING = False

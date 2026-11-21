@@ -117,5 +117,11 @@
   "camera.slideshow_hold": "Halten",
   "camera.slideshow_seconds": "{seconds}s",
   "editor.slide_advance_time": "Folienwechselzeit",
-  "editor.slide_advance_seconds": "{seconds}s"
+  "editor.slide_advance_seconds": "{seconds}s",
+  "editor.live_substream": "Live-Substream",
+  "editor.main_stream": "Hauptstream",
+  "editor.live_substream_checking": "Verfügbare Frigate-Substreams werden geprüft…",
+  "editor.live_substream_discovery_failed": "Die Frigate-Substream-Erkennung ist fehlgeschlagen. Der konfigurierte Stream bleibt erhalten.",
+  "editor.live_substream_none": "Keine zusätzlichen Frigate-go2rtc-Substreams verfügbar.",
+  "editor.live_substream_frigate_help": "Der ausgewählte Frigate-go2rtc-Stream wird nur für Live-Video verwendet."
 }

@@ -12,6 +12,7 @@ from homeassistant.components.lovelace.resources import (
     ResourceStorageCollection,
     ResourceYAMLCollection,
 )
+from homeassistant.const import CONF_URL
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -28,13 +29,34 @@ from custom_components.camera_optics.const import (
     CAMERA_PRELOAD_TITLE,
     CARD_MODULE_URL,
     CONF_DIAGNOSTIC_LOGGING,
+    CONF_GO2RTC_STREAMS,
     CONF_HLS_PREWARM_CAMERAS,
     DOMAIN,
     SUBENTRY_TYPE_CAMERA_PRELOAD,
+    SUBENTRY_TYPE_EXTERNAL_GO2RTC,
     SUBENTRY_UNIQUE_ID_CAMERA_PRELOAD,
 )
 from custom_components.camera_optics.providers.frigate import camera as frigate_camera
 from custom_components.camera_optics.providers.frigate import live as frigate_live
+
+
+@pytest.fixture(autouse=True)
+def camera_platform_forwarding(hass: HomeAssistant):
+    """Keep direct lifecycle unit calls focused on CameraOptics orchestration."""
+    with (
+        patch.object(
+            hass.config_entries,
+            "async_forward_entry_setups",
+            new_callable=AsyncMock,
+        ) as forward,
+        patch.object(
+            hass.config_entries,
+            "async_unload_platforms",
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as unload,
+    ):
+        yield forward, unload
 
 
 def test_builtin_provider_composition_is_idempotent(hass: HomeAssistant) -> None:
@@ -64,7 +86,7 @@ async def test_migration_moves_legacy_prewarm_options_to_subentry(
 
     assert await async_migrate_entry(hass, entry)
 
-    assert entry.version == 2
+    assert entry.version == 3
     assert entry.options == {"unrelated": True}
     preload = entry.get_subentries_of_type(SUBENTRY_TYPE_CAMERA_PRELOAD)
     assert len(preload) == 1
@@ -197,6 +219,50 @@ async def test_option_update_reconciles_and_releases_diagnostic_log(
     assert entry.runtime_data.backend_log.snapshot()["enabled"] is False
     assert entry.runtime_data.backend_log.snapshot()["records"] == []
     assert await async_unload_entry(hass, entry)
+
+
+async def test_managed_substream_update_reloads_camera_platform(
+    hass: HomeAssistant,
+) -> None:
+    """Entity-producing child changes reload exactly one platform owner."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={},
+        version=3,
+        subentries_data=[
+            {
+                "subentry_type": SUBENTRY_TYPE_EXTERNAL_GO2RTC,
+                "title": "go2rtc.example.test",
+                "data": {
+                    CONF_URL: "https://go2rtc.example.test",
+                    CONF_GO2RTC_STREAMS: ["porch"],
+                },
+            }
+        ],
+    )
+    entry.add_to_hass(hass)
+    hass.data[LOVELACE_DATA] = SimpleNamespace(
+        resources=ResourceStorageCollection(hass, LovelaceStorage(hass, None))
+    )
+    assert await async_setup_entry(hass, entry)
+    subentry = entry.get_subentries_of_type(SUBENTRY_TYPE_EXTERNAL_GO2RTC)[0]
+
+    with patch.object(
+        hass.config_entries, "async_reload", new_callable=AsyncMock
+    ) as reload_entry:
+        hass.config_entries.async_update_subentry(
+            entry,
+            subentry,
+            data=MappingProxyType(
+                {
+                    CONF_URL: "https://go2rtc.example.test",
+                    CONF_GO2RTC_STREAMS: ["porch", "porch_low"],
+                }
+            ),
+        )
+        await hass.async_block_till_done()
+
+    reload_entry.assert_awaited_once_with(entry.entry_id)
 
 
 async def test_setup_failure_releases_diagnostic_handler(

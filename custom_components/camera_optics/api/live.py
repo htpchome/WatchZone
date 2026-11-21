@@ -59,6 +59,7 @@ def _require_camera_read(connection: ActiveConnection, entity_id: str) -> None:
         vol.Required("type"): f"{DOMAIN}/live/source",
         vol.Required("connection"): vol.In(("home_assistant", "frigate_go2rtc")),
         vol.Required("entity_id"): cv.entity_id,
+        vol.Optional("substream"): str,
     }
 )
 @async_response
@@ -72,9 +73,9 @@ async def ws_live_source(
     try:
         _require_camera_read(connection, entity_id)
         source = await runtime_from_hass(hass).live_connection.async_resolve_source(
-            msg["connection"], entity_id
+            msg["connection"], entity_id, msg.get("substream")
         )
-        descriptor = {
+        descriptor: dict[str, Any] = {
             "id": source.id,
             "type": source.type,
         }
@@ -82,10 +83,37 @@ async def ws_live_source(
             descriptor["frigate_instance_id"] = source.frigate_instance_id
         if source.stream_name is not None:
             descriptor["stream_name"] = source.stream_name
+        if source.substream:
+            descriptor["substream"] = True
     except (HomeAssistantError, ProviderPreparationError) as err:
         connection.send_error(msg["id"], "live_source_unavailable", str(err))
         return
     connection.send_result(msg["id"], descriptor)
+
+
+@websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/live/frigate/substreams",
+        vol.Required("entity_id"): cv.entity_id,
+    }
+)
+@async_response
+async def ws_frigate_substreams(
+    hass: HomeAssistant,
+    connection: ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """List authorized Frigate-native substreams for one primary camera."""
+    entity_id = msg["entity_id"]
+    try:
+        _require_camera_read(connection, entity_id)
+        streams = await runtime_from_hass(hass).live_connection.async_list_substreams(
+            "frigate_go2rtc", entity_id
+        )
+    except (HomeAssistantError, ProviderPreparationError) as err:
+        connection.send_error(msg["id"], "substream_discovery_failed", str(err))
+        return
+    connection.send_result(msg["id"], {"streams": list(streams)})
 
 
 @websocket_command(
@@ -149,6 +177,7 @@ async def ws_live_camera_ready(
         vol.Optional("provider", default="home_assistant"): vol.In(
             ("home_assistant", "frigate_go2rtc")
         ),
+        vol.Optional("substream"): str,
     }
 )
 @async_response
@@ -172,6 +201,7 @@ async def ws_live_offer(
             entity_id,
             send_event,
             connection_provider_id=msg["provider"],
+            substream=msg.get("substream"),
         )
     except HomeAssistantError as err:
         connection.send_error(msg["id"], "webrtc_offer_failed", str(err))
@@ -237,6 +267,7 @@ def async_register(hass: HomeAssistant) -> None:
     """Register CameraOptics live WebSocket commands."""
     async_register_command(hass, ws_live_camera_ready)
     async_register_command(hass, ws_frigate_hls)
+    async_register_command(hass, ws_frigate_substreams)
     async_register_command(hass, ws_live_source)
     async_register_command(hass, ws_live_offer)
     async_register_command(hass, ws_live_candidate)

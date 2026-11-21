@@ -638,10 +638,11 @@ owned beneath the provider boundary that can perform the capability:
   contain separate browser transport adapters such as WebRTC, MSE, or HLS.
 
 A camera belongs to one provider instance but may expose multiple live source
-candidates. For example, a Frigate camera may be viewable through Frigate's
-go2rtc endpoint or through a linked Home Assistant camera entity. Layouts and
-modules refer to the stable CameraOptics camera ID, not directly to a transport
-URL.
+candidates. A Frigate camera may use an authorized raw stream from its Frigate
+go2rtc server. CameraOptics may also expose explicitly selected Home Assistant
+go2rtc cameras or authenticated external go2rtc streams as managed, live-only
+Home Assistant camera entities. Layouts and modules retain the stable primary
+CameraOptics camera ID; the managed entity supplies only receive video.
 
 Conceptually, the backend returns data shaped like:
 
@@ -661,6 +662,11 @@ Provider and live-resolution rules:
 
 - The backend discovers, authorizes, normalizes, and ranks available source
   descriptors.
+- External go2rtc credentials remain in backend config-entry data and never
+  enter frontend configuration, descriptors, entity attributes, or diagnostics.
+- Managed substream entities are excluded from primary and secondary camera
+  selection. Frigate raw streams remain direct provider sources and do not
+  require managed entities.
 - The frontend live-source resolver selects a compatible source according to
   saved preference, required capabilities, health, and deterministic fallback
   order.

@@ -140,6 +140,7 @@ describe("CameraOptics YAML configuration manager", () => {
               connection: "frigate_go2rtc",
               entity_id: "camera.front",
               frigate_fallback: "hls",
+              live_substream: "front_sub",
               lights: [
                 { entity_id: "light.porch", icon: "mdi:coach-lamp" },
                 { entity_id: "light.driveway" },
@@ -191,6 +192,7 @@ describe("CameraOptics YAML configuration manager", () => {
           connection: "frigate_go2rtc",
           entity_id: "camera.front",
           frigate_fallback: "hls",
+          live_substream: "front_sub",
           lights: [
             { entity_id: "light.porch", icon: "mdi:coach-lamp" },
             { entity_id: "light.driveway" },

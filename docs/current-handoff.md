@@ -16,9 +16,9 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
 - Branch: `main`.
 - HEAD before this work: `45c2138` —
   `v0.0.4-dev.502 - refactor(identity): rename app to CameraOptics`.
-- Version being prepared: `0.0.4`.
+- Version being prepared: `0.0.5-dev.1`.
 - Proposed subject:
-  `v0.0.4 - release(identity): establish CameraOptics stable cutover`.
+  `v0.0.5-dev.1 - feat(camera): add live-only substream selection`.
 
 ## CameraOptics identity
 
@@ -106,6 +106,13 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
 
 ## Other active baselines
 
+- A camera may use a live-only substream without changing its primary identity.
+  Frigate go2rtc discovers and backend-validates related raw streams without a
+  managed entity. CameraOptics can also create live-only entities for selected
+  Home Assistant go2rtc cameras or authenticated external go2rtc streams. Those
+  entities are available only in the substream selector and are excluded from
+  primary and secondary camera selectors. The primary camera continues to own
+  TWT, PTZ, lights, activity, navigation, runtime, and audio preference.
 - Desktop and tablet documents retain healthy WebRTC, MSE, HLS.js, and native
   HLS transport identity while hidden, unfocused, or minimized. Their players
   park decoder/loading work and must produce an advancing frame on foreground
@@ -133,20 +140,22 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
   zoom. The UI root contains no loose implementation files, compatibility
   re-exports, or generic barrel module.
 
-## Validation for `0.0.4`
+## Validation for `0.0.5-dev.1`
 
 - Formatting, lint, typecheck, architecture/style/license checks, production
   build, and version synchronization pass.
-- Frontend unit tests pass 539/539 and cover desktop background retention,
+- Frontend unit tests pass 547/547 and cover desktop background retention,
   stale retained-player
   replacement, phone background closure, MSE foreground frame validation,
   WebRTC cooldown preservation across camera reacquisition, stopped-launcher
   disposal, and mute-preference refresh on camera reactivation.
-- Python Ruff and mypy validation pass. Pytest passes 118/121; the remaining
-  failures predate and are unrelated to the identity rename: two stale test
-  expectations against the installed Home Assistant/data behavior and one
-  missing `turbojpeg` development dependency.
-- Browser tests: 174/174 across Chromium, Firefox, and WebKit. The TWT flow
+- Python Ruff and mypy validation pass. Pytest passes 127/129; the two remaining
+  failures predate and are unrelated to managed substreams: one stale entity
+  registry fixture against the installed Home Assistant API and one event
+  fixture that expects a score it does not provide.
+- The full browser matrix passes 173/174 across Chromium, Firefox, and WebKit;
+  the single Chromium Companion-rotation timing capture miss passes on its
+  immediate isolated rerun. The TWT flow
   additionally asserts one ready button versus three connected buttons and a
   stable shared-control bounding box across connection state changes. The
   focused TWT browser flow additionally compares standard camera and persistent

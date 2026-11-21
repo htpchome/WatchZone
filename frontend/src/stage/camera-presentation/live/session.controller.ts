@@ -33,6 +33,7 @@ export class CameraLiveSessionController implements ReactiveController {
   private _entityId?: string;
   private _frigateSource?: FrigateGo2RtcLiveSourceDescriptor;
   private _frigateSourcePending = false;
+  private _frigateSubstream?: string;
   private _frigateFallback: FrigateFallbackTransport = "mse";
   private _sourceGeneration = 0;
   private _fallbackLease?: MediaSessionLease;
@@ -145,13 +146,16 @@ export class CameraLiveSessionController implements ReactiveController {
     frigateFallback: FrigateFallbackTransport = "mse",
     retainWhenInactive = true,
     discardSessionsOnRelease = false,
+    frigateSubstream?: string,
   ): void {
     const providerChanged = this._connection !== connection;
+    const frigateSubstreamChanged = this._frigateSubstream !== frigateSubstream;
     const frigateFallbackChanged =
       this._connection === "frigate_go2rtc" &&
       this._effectiveFrigateFallback() !==
         this._resolver.frigateTransportPolicy(frigateFallback).fallback;
-    const identityChanged = this._entityId !== entityId || providerChanged;
+    const identityChanged =
+      this._entityId !== entityId || providerChanged || frigateSubstreamChanged;
     const changed =
       this._api?.identity !== api?.identity ||
       identityChanged ||
@@ -163,12 +167,13 @@ export class CameraLiveSessionController implements ReactiveController {
     this._available = available;
     this._lowLatencyHls = lowLatencyHls;
     this._frigateFallback = frigateFallback;
+    this._frigateSubstream = frigateSubstream;
     this._discardSessionsOnRelease = discardSessionsOnRelease;
     if (identityChanged) {
       this._sourceGeneration += 1;
       this._frigateSource =
         connection === "frigate_go2rtc" && api && entityId
-          ? this._resolver.cachedFrigate(api, entityId)
+          ? this._resolver.cachedFrigate(api, entityId, frigateSubstream)
           : undefined;
       this._frigateSourcePending = false;
     }
@@ -225,12 +230,17 @@ export class CameraLiveSessionController implements ReactiveController {
       this._frigateSource = this._resolver.cachedFrigate(
         this._api,
         this._entityId,
+        this._frigateSubstream,
       );
     }
     if (this._connection === "frigate_go2rtc" && !this._frigateSource) {
       if (!this._frigateSourcePending) {
         this._frigateSourcePending = true;
-        void this._resolveFrigateSource(this._api, this._entityId);
+        void this._resolveFrigateSource(
+          this._api,
+          this._entityId,
+          this._frigateSubstream,
+        );
       }
       return;
     }
@@ -273,16 +283,22 @@ export class CameraLiveSessionController implements ReactiveController {
   private async _resolveFrigateSource(
     api: HomeAssistantApi,
     entityId: string,
+    substream?: string,
   ): Promise<void> {
     const generation = ++this._sourceGeneration;
     try {
-      const source = await this._resolver.resolveFrigate(api, entityId);
+      const source = await this._resolver.resolveFrigate(
+        api,
+        entityId,
+        substream,
+      );
       if (generation !== this._sourceGeneration) return;
       this._frigateSourcePending = false;
       if (
         !this._connected ||
         this._api?.identity !== api.identity ||
         this._entityId !== entityId ||
+        this._frigateSubstream !== substream ||
         this._connection !== "frigate_go2rtc"
       )
         return;

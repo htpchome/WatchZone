@@ -22,6 +22,7 @@ from .providers.live_connection import (
     LiveHlsProvider,
     LiveSourceDescriptor,
     LiveSourceProvider,
+    LiveSubstreamProvider,
     TalkCapabilityProvider,
 )
 from .providers.ptz import PtzProvider
@@ -41,6 +42,7 @@ __all__ = [
     "LiveHlsProvider",
     "LiveSourceDescriptor",
     "LiveSourceProvider",
+    "LiveSubstreamProvider",
     "ProviderExtension",
     "ProviderPreparationError",
     "PtzProvider",
@@ -52,7 +54,7 @@ __all__ = [
     "register_provider_extension",
 ]
 
-EXTENSION_API_VERSION = 6
+EXTENSION_API_VERSION = 7
 _DATA_PROVIDER_REGISTRY = "provider_registry"
 
 
@@ -70,6 +72,7 @@ class ProviderExtension:
     live_signaling: LiveSignalingProvider | None = None
     live_source: LiveSourceProvider | None = None
     live_hls: LiveHlsProvider | None = None
+    live_substream: LiveSubstreamProvider | None = None
     talk_signaling: LiveSignalingProvider | None = None
     talk_capability: TalkCapabilityProvider | None = None
     ptz: PtzProvider | None = None
@@ -156,6 +159,11 @@ class ProviderRegistry:
         extension = self._providers.get(provider_id)
         return extension.live_hls if extension else None
 
+    def live_substream_provider(self, provider_id: str) -> LiveSubstreamProvider | None:
+        """Resolve native substream support by connection identity."""
+        extension = self._providers.get(provider_id)
+        return extension.live_substream if extension else None
+
     def talk_signaling(self, platform: str) -> LiveSignalingProvider | None:
         """Resolve one platform's optional talk-signaling capability."""
         extension = self._platforms.get(platform)
@@ -222,6 +230,7 @@ class ProviderRegistry:
                 extension.ptz,
                 extension.live_source,
                 extension.live_hls,
+                extension.live_substream,
                 extension.talk_capability,
             )
         ):
