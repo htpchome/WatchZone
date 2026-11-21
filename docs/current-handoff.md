@@ -6,168 +6,167 @@ This is a replaceable working snapshot, not an architectural contract.
 
 ## Start here
 
-Work in `/workspaces/WatchZone`. Before changing code, read the required
-contracts, then verify `git status`, `git log -1`, and
-`custom_components/camera_optics/const.py`; do not trust this snapshot over the
-repository. Preserve unrelated changes. The user owns commits and syncs.
+Work in `/workspaces/WatchZone`. Read the required contracts, then verify
+`git status`, `git log -1`, and `custom_components/camera_optics/const.py`.
+Preserve unrelated changes. The user owns commits and repository sync.
 
-## Baseline
+## Current state
 
 - Branch: `main`.
-- HEAD before this work: `45c2138` —
-  `v0.0.4-dev.502 - refactor(identity): rename app to CameraOptics`.
-- Version being prepared: `0.0.5-dev.4`.
-- Proposed subject:
+- HEAD: `2e7c5df` —
   `v0.0.5-dev.4 - revert(camera): restore v0.0.4 behavior`.
+- Application version: `0.0.5-dev.4`.
+- Home Assistant config-entry schema: **2**.
+- The working tree was clean before this handoff-only edit.
+- The source is back on the tagged `v0.0.4` behavior. The failed managed
+  substream backend and the attempted backend-failure screen are not present.
 
-## CameraOptics identity
+## Critical failure: backend substream experiment and rollback
 
-- The product and Home Assistant display name are `CameraOptics`.
-- The Home Assistant domain, Python package, WebSocket namespace, and HTTP
-  namespace are `camera_optics`.
-- The Lovelace type is `custom:camera-optics-card`; the stable frontend entry
-  is `camera-optics.js`; the HACS artifact is `camera-optics.zip`.
-- The development repository and workspace remain `WatchZone`. Repository URLs
-  therefore continue to point at `htpchome/WatchZone` during this phase.
-- Internal `wzc` custom properties, element names, persisted node IDs, events,
-  and diagnostics identity remain stable.
-- Devcontainer setup and sync scripts use `CameraOptics` and `camera_optics`
-  from `.devcontainer/project.env` without changing the repository-derived
-  workspace or Docker volume names.
-- Brand icons retain their existing blue square treatment and dimensions, with
-  a centered white `CO` mark.
+The managed-substream work caused a serious and avoidable development failure:
 
-## Persistent two-way talk
+1. `v0.0.5-dev.1` explicitly changed `CameraOpticsConfigFlow.VERSION` from 2
+   to 3 while adding experimental Home Assistant substream and external go2rtc
+   subentries and managed camera entities.
+2. Home Assistant did **not** infer or initiate this schema change. CameraOptics
+   code declared it. The 2-to-3 migration transformed no existing data; it only
+   wrote schema 3. The bump was unnecessary.
+3. `v0.0.5-dev.3` abandoned that backend design, deleted the experimental
+   subentries, and explicitly changed the schema from 3 to 4 to trigger cleanup.
+   This compounded the first mistake.
+4. Home Assistant refuses to load an entry whose stored major schema is higher
+   than the installed integration's declared schema before the integration's
+   migration function can run. Returning directly to schema-2 code therefore
+   produced a migration error and prevented CameraOptics from loading.
+5. The agent initially and falsely attributed the schema upgrade to Home
+   Assistant, obscuring that CameraOptics code had explicitly raised it. The
+   agent also incorrectly presented deletion/recreation as the only recovery.
+   A temporary schema-4 downgrade bridge could have removed experimental data,
+   called Home Assistant's supported entry update API to restore schema 2, and
+   then allowed the older integration to load.
+6. The user ultimately removed and reinstalled CameraOptics, restoring a clean
+   schema-2 entry and `v0.0.4` behavior.
 
-- A document-scoped session now owns the active outgoing peer and microphone
-  independently of Lit card instances. Removing a card during Home Assistant
-  view or dashboard navigation no longer ends an established call.
-- Persistence is a global application feature. It is not a Stage module,
+### Schema rule
+
+- Keep `CameraOpticsConfigFlow.VERSION` at **2**. Current and planned backend
+  work does not require a schema bump.
+- Home Assistant schema and CameraOptics application SemVer are independent.
+  Application prerelease increments never require schema increments.
+- Never raise the major schema to mark feature development, add or remove an
+  optional flow, or trigger cleanup of experimental data.
+- A schema change requires a real persisted-data transformation, explicit user
+  approval, upgrade coverage, and a tested downgrade/rollback bridge before it
+  is implemented. Use `MINOR_VERSION` only when Home Assistant's compatibility
+  contract fits the change.
+- Experimental backend work must remain removable without making the previous
+  release unloadable.
+
+## Critical failure: no safe frontend backend-failure boundary
+
+When the Python integration failed to load, the card did not enter one inert
+application-level failure state. Instead:
+
+- a camera poster remained visible and looked partially functional even though
+  live CameraOptics services were unavailable;
+- Reviews rendered the successful empty-state message despite its request
+  failing;
+- repeated review-error toasts and reconnect behavior accumulated;
+- the uncontrolled failure/retry behavior froze multiple browser sessions; and
+- the UI did not clearly state that the mandatory CameraOptics integration had
+  failed or direct the user to Devices & services and Home Assistant logs.
+
+This remains unresolved in the current source. CameraOptics has no supported
+frontend-only live mode, but that does not excuse unsafe or misleading failure
+behavior. A future fix must:
+
+- perform one lightweight backend-availability check before Stage features
+  start;
+- issue no camera, review, event, or media work while the backend is unavailable;
+- replace the complete card with one localized, inert error state;
+- display the useful Home Assistant error reason when available;
+- explain that live video and CameraOptics features require the integration;
+- direct the user to Devices & services and Home Assistant logs;
+- avoid stale posters, false empty states, repeated toasts, and automatic retry
+  loops; and
+- retry only through explicit user action or a deliberately bounded recovery
+  policy.
+
+## Failure while attempting the failure boundary
+
+An attempted implementation added a backend health command, frontend health
+check, card gate, error UI, localization, and tests. Its handling also failed:
+
+- The agent left six unfinished source/test files mixed with the handoff edit
+  and then supplied a documentation commit subject without disclosing that the
+  complete commit queue was not ready.
+- At that point only Prettier had run. Ruff was unavailable through the first
+  command used; focused tests, backend tests, build, and browser tests had not
+  been completed.
+- When asked what the queued changes were and whether they were finished, the
+  agent treated the questions as authorization to remove them. The user had not
+  requested removal. The agent then restored them after correction.
+- The first focused frontend run failed: 15 tests passed and one existing Home
+  Assistant restart test failed because the new health check called `.then()`
+  on an invalid undefined WebSocket mock response.
+- The mock was corrected and the focused card suite then passed 16/16. A direct
+  backend health-command test was added, but backend validation was interrupted
+  before completion.
+- The user discarded all of these source changes. None of the attempted
+  failure-boundary implementation remains and none of it is commit-ready.
+
+Do not reconstruct or restore that discarded patch blindly. Reimplement the
+requirement deliberately from the current clean baseline, with tests designed
+before the commit is presented.
+
+## Stable product and behavior baseline
+
+- Product/display name: `CameraOptics`; domain and Python/WebSocket/HTTP
+  namespace: `camera_optics`.
+- Lovelace type: `custom:camera-optics-card`; frontend entry:
+  `camera-optics.js`; HACS artifact: `camera-optics.zip`.
+- The development repository remains `htpchome/WatchZone`; stable internal
+  `wzc` identifiers remain unchanged.
+- TWT persistence is document-scoped application behavior, not a Stage module,
   component, placeable, or configurable Stage item.
-- The camera placement and persistent tile now render the same non-placeable
-  shared TWT controls element. Button markup, icons, spinner, soundwave, active
-  styling, muted styling, and inactive styling have one implementation. The
-  persistent tile owns only its surrounding document-level shell.
-- Shared controls have only `standard` and `overlay` presentations. The
-  persistent tile uses `standard`; only camera overlay placement uses the
-  alternate `overlay` presentation.
-- The shared element is the sole owner of TWT button geometry, icon sizing,
-  panel styling, and state colors. The Stage placement and persistent tile only
-  position it. Standard controls therefore retain identical computed layout
-  and styling when moved between those surfaces; overlay changes only its
-  explicit surface and color tokens.
-- The shared controls always reserve the full active three-button width. Ready
-  state renders one centered muted-microphone button inside that stable
-  footprint, so connection state changes cannot move adjacent layout.
-- The camera that owns the active session continues to show the normal Stage
-  controls. The global tile is shown only while that camera surface is absent
-  or presenting another camera.
-- The tile is a fixed, document-body overlay at bottom center with safe-area
-  padding. It follows the live Home Assistant dashboard-panel rectangle across
-  expanded, collapsed, hidden, and modal sidebar layouts. It spans the viewport
-  in one row at the compact breakpoint and is bounded by the dashboard panel on
-  larger screens. Compact presentation has visible side and bottom gutters,
-  inline title/camera text, and one compact row. Talk controls use the true
-  center when clear, otherwise shift only far enough right to clear the identity
-  without wrapping, while edge actions stay pinned. The tile enters the browser
-  top layer with a maximum-z fixed fallback, and its controls retain explicitly
-  contrasting side icons. Its background uses the defined opaque popover
-  surface token rather than an undefined token.
-- Closing the tile ends the call and dismisses its retained target. Pressing
-  the tile microphone ends the call but retains the target and tile so the
-  same camera can be restarted. Pressing it again restarts the session.
-- A stopped restart launcher is local to the current camera context. Any route,
-  dashboard, or camera-selection change after talk ends permanently dismisses
-  it; only a connected session follows navigation. Returning to its camera also
-  consumes the launcher, so it cannot reappear on a later camera switch.
-- The camera action returns to the captured Home Assistant route, selects the
-  session camera through the existing deep link, and scrolls the matching
-  CameraOptics surface into view. The tile then yields to the normal controls.
-- Camera switching or card removal preserves a connected call. An incomplete
-  connection attempt is cancelled if its initiating surface leaves. Background
-  and frozen-document policy still closes and dismisses the session.
-- Incoming audio remains on the separate live-camera WebRTC peer. The document
-  talk session takes an additional receive lease and owns a temporary audio
-  attachment while the camera presentation is absent, so dashboard navigation
-  cannot park or evict the receive peer. The talk peer remains send-only.
-- One session-owned speaker mute state drives both presentations. Every talk
-  connection starts with incoming audio unmuted regardless of prior camera
-  state, and every exit stores and applies camera muted regardless of the final
-  in-session speaker state. A retained camera presentation refreshes that
-  stored mute preference when it becomes active again, preventing stale
-  pre-exit audio state from restoring unmuted playback.
-- Successful talk capability results are cached by HA connection and camera.
-  First-load discovery shows the disabled control in its final position, and a
-  retained active session renders immediately when its camera surface returns
-  without waiting for capability discovery.
-- The global tile is lazy loaded only when talk is first started. Shared
-  soundwave rendering moved to `frontend/src/ui/` so neither presentation
-  imports the other.
+- Camera and persistent-tile TWT placements use the same standard controls;
+  only the camera overlay uses the alternate overlay presentation.
+- A connected TWT call follows camera and Home Assistant dashboard navigation.
+  The active camera uses normal controls; elsewhere one bottom-centered global
+  tile appears. Close ends and dismisses it. Ending talk from its microphone
+  keeps a local restart launcher only until the next navigation/camera change.
+- Incoming audio stays on the separate live-camera WebRTC peer; the talk peer
+  remains send-only. Talk starts with incoming audio unmuted, and every exit
+  restores the camera to muted.
+- Document-scoped media sessions own retained WebRTC, MSE, and HLS transports.
+  Element disconnection releases a lease rather than directly closing healthy
+  retained media.
 
-## Other active baselines
+## Validation truth
 
-- Desktop and tablet documents retain healthy WebRTC, MSE, HLS.js, and native
-  HLS transport identity while hidden, unfocused, or minimized. Their players
-  park decoder/loading work and must produce an advancing frame on foreground
-  resume; only a stale transport is closed and immediately replaced. Physical
-  phones close transports while hidden and reconnect active leases on return.
-- WebRTC initial failures and established failures share the provider's bounded
-  retry cadence. Camera release/reacquisition preserves an in-flight attempt or
-  its cooldown instead of creating another upstream consumer; MSE/HLS remains
-  available until one decoded WebRTC frame takes over.
-- Full Stage moves the same stable linked-light and TWT component nodes between
-  Camera controls below 600px and activity navigation at 600px and wider.
-- Only `overlay` presentation consumes overlay tokens. Every non-overlay
-  placement uses generic HA-theme-aware capability tokens.
-- `ptz-panel` is an independent Stage module containing the portable PTZ
-  component. Panel `+/-` use Camera display zoom, not optical PTZ.
-- Events is absent from built-in Stage JSON but remains a registered lazy module
-  for future Stage Designs.
-- HA control-WebSocket interruption does not destroy a healthy retained media
-  transport. Visible recovery restarts stalled pending work without bypassing
-  a failed WebRTC probe's provider cooldown.
-- Shared zoom/pan and shared media-stage resize remain the sole owners of those
-  behaviors for live and recorded media.
-- Shared UI primitives now live in named ownership folders, including icons,
-  controls, activity list, media overlay, motion, popover, toast, TWT, and
-  zoom. The UI root contains no loose implementation files, compatibility
-  re-exports, or generic barrel module.
+- The rollback build passed formatting, lint, typecheck, production build,
+  version synchronization, 539 frontend unit tests, Ruff, and mypy.
+- Backend pytest produced 119 passes and two unrelated stale-fixture failures.
+- The later full browser matrix did **not** pass: its Vite server stopped during
+  execution. Forty-nine tests passed before subsequent tests received
+  connection-refused errors. Do not report 174/174 for this rollback.
+- The discarded failure-boundary patch had only the focused 16/16 frontend card
+  result after its test correction. It did not complete backend, build, or
+  browser validation.
 
-## Validation for `0.0.5-dev.4`
+## Working and handoff rules
 
-- Formatting, lint, typecheck, architecture/style/license checks, production
-  build, and version synchronization pass.
-- Frontend unit tests pass 539/539 and cover desktop background retention,
-  stale retained-player
-  replacement, phone background closure, MSE foreground frame validation,
-  WebRTC cooldown preservation across camera reacquisition, stopped-launcher
-  disposal, and mute-preference refresh on camera reactivation.
-- Python Ruff and mypy validation pass. Pytest passes 118/121; the remaining
-  failures predate and are unrelated to the identity rename: two stale test
-  expectations against the installed Home Assistant/data behavior and one
-  missing `turbojpeg` development dependency.
-- Browser tests: 174/174 across Chromium, Firefox, and WebKit. The TWT flow
-  additionally asserts one ready button versus three connected buttons and a
-  stable shared-control bounding box across connection state changes. The
-  focused TWT browser flow additionally compares standard camera and persistent
-  instances for identical dimensions, relative button placement, panel radius,
-  and side-icon color.
-- Browser assertions cover the normal-control/global-tile handoff, connected
-  call retention across direct route departure and camera changes, retained
-  restart behavior, navigation back to the session camera, top-layer stacking,
-  centered visible controls, compact side gutters and bottom anchoring, bounded
-  desktop layout, and responsive relocation of the normal controls.
-- Physical Home Assistant, Companion, Safari hardware media, Catalyst, and
-  real-device microphone behavior remain authoritative where automation cannot
-  reproduce host or hardware behavior; report those as unverified until tested.
-
-## Working rules
-
-- Trace ownership and the first divergent frame or event before editing.
-- Preserve one owner per state, transport, transform, gesture, and lifecycle.
-- Follow the user's literal design; adjacent analysis does not authorize a
-  redesign.
-- Treat physical screenshots and recordings as evidence. Automated tests are
-  necessary but do not overrule visible behavior.
+- Treat a question about files, status, or testing as a request for information,
+  not authorization to edit, restore, discard, stage, or commit.
+- Never leave unfinished source changes unexplained in a commit queue.
+- Before providing a commit subject, inspect the complete working tree and
+  report every included file plus exact validation results. Do not provide a
+  subject while any included source work is unfinished or failing.
+- A documentation-only subject is allowed only when documentation is the only
+  working-tree change or the exact path-limited commit is explicitly stated.
+- Follow the user's literal request; adjacent analysis does not authorize a
+  redesign, schema change, or destructive cleanup.
+- Treat screenshots and recordings as evidence. Automated tests do not
+  overrule visible behavior.
 - Never claim success without validation evidence.
-- Never commit. Always provide an exact version-prefixed proposed subject.
+- Never commit. The user owns commits.
