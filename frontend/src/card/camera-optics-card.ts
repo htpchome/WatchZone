@@ -61,6 +61,7 @@ import {
   backendAvailability,
   type BackendAvailabilityIncident,
 } from "./backend-availability";
+import type { renderBackendRecovery } from "./backend-recovery";
 import {
   createCardPickerStubConfig,
   isHomeAssistantCardPickerPreview,
@@ -95,6 +96,8 @@ export class DashboardCard extends LitElement {
   private _haApi?: HomeAssistantApi;
   private _backendAvailabilityUnsubscribe?: () => void;
   private _backendIncident?: BackendAvailabilityIncident;
+  private _backendRecoveryRenderer?: typeof renderBackendRecovery;
+  private _backendRecoveryLoad?: Promise<void>;
   private _previewConfig?: CardConfig;
   private _observedConnection?: HomeAssistantConnection;
   private _transportConnected = true;
@@ -306,7 +309,12 @@ export class DashboardCard extends LitElement {
         <div class="shell" role="region" aria-label=${config.title}>
           ${
             this._backendIncident
-              ? this._renderBackendRecovery(this._backendIncident)
+              ? (this._backendRecoveryRenderer?.(
+                  this._backendIncident,
+                  this._localization.localize,
+                  this._openIntegrations,
+                  this._retryBackend,
+                ) ?? this._renderBackendRecoveryFallback(this._backendIncident))
               : this._layoutRuntime.render()
           }
           ${
@@ -348,137 +356,42 @@ export class DashboardCard extends LitElement {
     `;
   }
 
-  private _renderBackendRecovery(incident: BackendAvailabilityIncident) {
+  private _renderBackendRecoveryFallback(
+    incident: BackendAvailabilityIncident,
+  ) {
     const setup = incident.kind === "setup_required";
-    const incompatible = incident.kind === "incompatible_settings";
-    const title = setup
-      ? this._localization.localize("recovery.setup_title")
-      : this._localization.localize("recovery.start_failed_title");
-    const introduction = setup
-      ? this._localization.localize("recovery.setup_introduction")
-      : incompatible
-        ? this._localization.localize("recovery.incompatible_introduction")
-        : this._localization.localize("recovery.load_failed_introduction");
     return staticHtml`<section
       class="backend-recovery"
       role="alert"
       aria-live="assertive"
     >
       <div class="backend-recovery-content">
-        <h2>${title}</h2>
-        <p>${introduction}</p>
-        <h3>${this._localization.localize("recovery.steps_title")}</h3>
-        <ol>
-          ${
+        <h2>
+          ${this._localization.localize(
+            setup ? "recovery.setup_title" : "recovery.start_failed_title",
+          )}
+        </h2>
+        <p>
+          ${this._localization.localize(
             setup
-              ? staticHtml`<li>
-                    ${this._localization.localize("recovery.setup_step_settings")}
-                  </li>
-                  <li>
-                    ${this._localization.localize("recovery.setup_step_devices")}
-                  </li>
-                  <li>
-                    ${this._localization.localize("recovery.setup_step_add")}
-                  </li>
-                  <li>
-                    ${this._localization.localize("recovery.setup_step_search")}
-                  </li>
-                  <li>
-                    ${this._localization.localize("recovery.setup_step_return")}
-                  </li>`
-              : staticHtml`<li>
-                    ${this._localization.localize("recovery.failure_step_devices")}
-                  </li>
-                  <li>
-                    ${this._localization.localize("recovery.failure_step_reload")}
-                  </li>
-                  <li>
-                    ${
-                      incompatible
-                        ? this._localization.localize(
-                            "recovery.failure_step_update",
-                          )
-                        : this._localization.localize(
-                            "recovery.failure_step_logs",
-                          )
-                    }
-                  </li>
-                  <li>
-                    ${this._localization.localize("recovery.setup_step_return")}
-                  </li>`
-          }
-        </ol>
-        ${
-          incompatible
-            ? staticHtml`<p class="recovery-caution">
-                ${this._localization.localize("recovery.do_not_remove")}
-              </p>`
-            : null
-        }
-        <div class="backend-recovery-actions">
-          <ha-button
-            appearance="accent"
-            variant="brand"
-            size="m"
-            type="button"
-            @click=${this._openIntegrations}
-          >
-            ${this._localization.localize("recovery.open_integrations")}
-          </ha-button>
-          <ha-button
-            appearance="plain"
-            variant="neutral"
-            size="m"
-            type="button"
-            .disabled=${incident.checking}
-            @click=${this._retryBackend}
-          >
-            ${
-              incident.checking
-                ? this._localization.localize("recovery.checking")
-                : this._localization.localize("recovery.try_again")
-            }
-          </ha-button>
-        </div>
-        ${
-          incident.backendVersion
-            ? staticHtml`<details class="backend-support-information">
-                <summary>
-                  ${this._localization.localize("recovery.support_information")}
-                </summary>
-                <dl>
-                  <dt>${this._localization.localize("recovery.card_version")}</dt>
-                  <dd>${APP_VERSION}</dd>
-                  <dt>
-                    ${this._localization.localize("recovery.integration_version")}
-                  </dt>
-                  <dd>${incident.backendVersion}</dd>
-                  ${
-                    incident.savedSettingsVersion === undefined
-                      ? null
-                      : staticHtml`<dt>
-                            ${this._localization.localize(
-                              "recovery.saved_settings_format",
-                            )}
-                          </dt>
-                          <dd>${incident.savedSettingsVersion}</dd>`
-                  }
-                  ${
-                    incident.supportedSettingsVersion === undefined
-                      ? null
-                      : staticHtml`<dt>
-                            ${this._localization.localize(
-                              "recovery.supported_settings_format",
-                            )}
-                          </dt>
-                          <dd>${incident.supportedSettingsVersion}</dd>`
-                  }
-                </dl>
-              </details>`
-            : null
-        }
+              ? "recovery.setup_introduction"
+              : "recovery.load_failed_introduction",
+          )}
+        </p>
       </div>
     </section>`;
+  }
+
+  private _loadBackendRecovery(): void {
+    if (this._backendRecoveryRenderer) return;
+    this._backendRecoveryLoad ??= import("./backend-recovery")
+      .then(({ renderBackendRecovery: renderer }) => {
+        this._backendRecoveryRenderer = renderer;
+        if (this.isConnected) this.requestUpdate();
+      })
+      .catch(() => {
+        this._backendRecoveryLoad = undefined;
+      });
   }
 
   private readonly _handlePreviewDraft = (
@@ -692,6 +605,7 @@ export class DashboardCard extends LitElement {
         const previous = this._backendIncident;
         this._backendIncident = incident;
         if (incident) {
+          this._loadBackendRecovery();
           this._toasts.clear();
           this._layoutRuntime.clearStageSet();
           this._syncRuntime();

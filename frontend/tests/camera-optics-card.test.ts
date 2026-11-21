@@ -215,9 +215,9 @@ describe("camera-optics-card", () => {
     document.body.append(element);
 
     await vi.waitFor(() =>
-      expect(
-        element.shadowRoot?.querySelector(".backend-recovery"),
-      ).not.toBeNull(),
+      expect(element.shadowRoot?.textContent).toContain(
+        "Select Devices & services",
+      ),
     );
     const text = element.shadowRoot?.textContent ?? "";
     expect(text).toContain("Finish setting up CameraOptics");
@@ -238,7 +238,7 @@ describe("camera-optics-card", () => {
       async (message: { readonly type: string }): Promise<unknown> => {
         if (message.type === "camera_optics/bootstrap/status") {
           return {
-            backend_version: "0.0.5-dev.4",
+            backend_version: "0.0.5-dev.6",
             saved_settings_version: 4,
             state: "incompatible_settings",
             supported_settings_version: 2,

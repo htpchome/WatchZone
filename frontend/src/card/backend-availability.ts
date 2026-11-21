@@ -1,7 +1,3 @@
-import {
-  getBackendBootstrapStatus,
-  type BackendBootstrapStatus,
-} from "../api/bootstrap-status";
 import { APP_NAME } from "../core/constants";
 import { getMediaSessionManager } from "../core/media-session-manager";
 import type {
@@ -28,61 +24,22 @@ type AvailabilityListener = (
 ) => void;
 
 interface ConnectionAvailability {
-  diagnostic?: Promise<void>;
   incident?: BackendAvailabilityIncident;
   readonly listeners: Set<AvailabilityListener>;
 }
 
-class BackendCircuitOpenError extends Error {
-  public constructor() {
-    super(`${APP_NAME} is waiting for setup or recovery.`);
-    this.name = "BackendCircuitOpenError";
-  }
-}
-
-function errorDetails(error: unknown): { code?: string; message?: string } {
-  if (typeof error !== "object" || error === null) return {};
+export function isBackendUnavailableError(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
   const candidate = error as {
     readonly code?: unknown;
     readonly message?: unknown;
   };
-  return {
-    ...(typeof candidate.code === "string" ? { code: candidate.code } : {}),
-    ...(typeof candidate.message === "string"
-      ? { message: candidate.message }
-      : {}),
-  };
-}
-
-export function isBackendUnavailableError(error: unknown): boolean {
-  const { code, message } = errorDetails(error);
-  if (code === "unknown_command") return true;
   return (
-    message?.trim().toLocaleLowerCase() ===
-    `${APP_NAME.toLocaleLowerCase()} is not configured`
+    candidate.code === "unknown_command" ||
+    (typeof candidate.message === "string" &&
+      candidate.message.trim().toLocaleLowerCase() ===
+        `${APP_NAME.toLocaleLowerCase()} is not configured`)
   );
-}
-
-function incidentFromStatus(
-  status: BackendBootstrapStatus,
-  checking = false,
-): BackendAvailabilityIncident | undefined {
-  if (status.state === "ready") return undefined;
-  const kind: BackendRecoveryKind =
-    status.state === "incompatible_settings"
-      ? "incompatible_settings"
-      : status.state === "not_configured"
-        ? "setup_required"
-        : "load_failed";
-  return {
-    backendVersion: status.backend_version,
-    checking,
-    kind,
-    ...(status.saved_settings_version === null
-      ? {}
-      : { savedSettingsVersion: status.saved_settings_version }),
-    supportedSettingsVersion: status.supported_settings_version,
-  };
 }
 
 /** One circuit per Home Assistant connection, shared by every card instance. */
@@ -139,8 +96,8 @@ export class BackendAvailabilityManager {
       checking: true,
     });
     try {
-      const status = await getBackendBootstrapStatus(api);
-      this._setIncident(api.identity, incidentFromStatus(status));
+      const { diagnoseBackend } = await import("./backend-diagnosis");
+      this._setIncident(api.identity, await diagnoseBackend(api));
     } catch {
       this._setIncident(api.identity, {
         checking: false,
@@ -160,21 +117,18 @@ export class BackendAvailabilityManager {
     return availability;
   }
 
-  private _call<T>(
+  private async _call<T>(
     api: HomeAssistantApi,
     request: () => Promise<T>,
   ): Promise<T> {
     if (this._availability(api.identity).incident) {
-      return Promise.reject(new BackendCircuitOpenError());
+      throw new Error(`${APP_NAME} is waiting for setup or recovery.`);
     }
     try {
-      return Promise.resolve(request()).catch((error: unknown) => {
-        this._reportFailure(api, error);
-        throw error;
-      });
+      return await request();
     } catch (error) {
       this._reportFailure(api, error);
-      return Promise.reject(error);
+      throw error;
     }
   }
 
@@ -187,18 +141,16 @@ export class BackendAvailabilityManager {
       kind: "setup_required",
     });
     getMediaSessionManager().invalidateAll();
-    availability.diagnostic ??= getBackendBootstrapStatus(api)
-      .then((status) => {
-        this._setIncident(api.identity, incidentFromStatus(status));
+    void import("./backend-diagnosis")
+      .then(({ diagnoseBackend }) => diagnoseBackend(api))
+      .then((incident) => {
+        this._setIncident(api.identity, incident);
       })
       .catch(() => {
         this._setIncident(api.identity, {
           checking: false,
           kind: "setup_required",
         });
-      })
-      .finally(() => {
-        availability.diagnostic = undefined;
       });
   }
 
