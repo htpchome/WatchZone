@@ -35,7 +35,7 @@ from .const import (
 class CameraOpticsConfigFlow(ConfigFlow, domain=DOMAIN):
     """Create the single CameraOptics application entry."""
 
-    VERSION = 4
+    VERSION = 2
 
     @staticmethod
     @callback

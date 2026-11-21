@@ -1,16 +1,10 @@
 # CameraOptics
 
-CameraOptics for Frigate is a modular camera interface delivered as one Home Assistant custom
-integration. Version `0.0.5-dev.3` provides a responsive, theme-aware Lovelace
+CameraOptics is a modular camera interface delivered as one Home Assistant custom
+integration. Version `0.0.5-dev.4` provides a responsive, theme-aware Lovelace
 card with an accessible name and a retained Home Assistant live view that races
 HLS and WebRTC for fast initial video, then prefers WebRTC. Backend camera
 providers have not been added yet.
-
-## Quick Look
-
-![Quickview of CameraOptics for Frigate.  A look at a few of the layouts](https://github.com/user-attachments/assets/977781b6-030f-43ce-943d-4e519c1dec52)
-
-
 
 ## Install for development
 

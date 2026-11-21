@@ -11,8 +11,6 @@ export const CARD_PICKER_PREVIEW_TAG = `${APP_ID}-card-picker-preview`;
 export const EDITOR_TAG = `${CARD_TAG}-editor`;
 export const EDITOR_GENERAL_INFO_TAG = `${APP_ID}-editor-general-info`;
 export const EDITOR_HEIGHT_SELECTOR_TAG = `${APP_ID}-editor-height-selector`;
-export const EDITOR_LIVE_SUBSTREAM_FIELD_TAG = `${APP_ID}-editor-live-substream-field`;
-export const EDITOR_LIVE_SUBSTREAM_CHANGED_EVENT = `${APP_ID}-editor-live-substream-changed`;
 
 export const DEFAULT_CARD_TITLE = APP_NAME;
 export const EDITOR_DIRTY_STATE_KEY = `${CARD_TAG}-editor`;

@@ -117,11 +117,5 @@
   "camera.slideshow_hold": "In attesa",
   "camera.slideshow_seconds": "{seconds}s",
   "editor.slide_advance_time": "Tempo di avanzamento diapositiva",
-  "editor.slide_advance_seconds": "{seconds}s",
-  "editor.live_substream": "Flusso secondario live",
-  "editor.main_stream": "Flusso principale",
-  "editor.live_substream_checking": "Verifica dei flussi secondari Frigate disponibili…",
-  "editor.live_substream_discovery_failed": "Rilevamento dei flussi secondari Frigate non riuscito. Il flusso configurato viene mantenuto.",
-  "editor.live_substream_none": "Non sono disponibili flussi secondari Frigate go2rtc aggiuntivi.",
-  "editor.live_substream_frigate_help": "Il flusso Frigate go2rtc selezionato viene usato solo per il video live."
+  "editor.slide_advance_seconds": "{seconds}s"
 }

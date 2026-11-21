@@ -84,7 +84,6 @@ _ASSET_DIRECTORY = _FRONTEND_DIRECTORY / "assets"
 _DATA_RESOURCE_ID = "resource_id"
 _DATA_YAML_RESOURCE = "yaml_resource"
 _DATA_BUILTIN_PROVIDERS = "builtin_providers_registered"
-_REMOVED_SUBENTRY_TYPES = frozenset({"home_assistant_substreams", "external_go2rtc"})
 
 type CameraOpticsConfigEntry = ConfigEntry[CameraOpticsRuntime]
 
@@ -208,7 +207,7 @@ def _prewarm_camera_ids(entry: ConfigEntry) -> list[str]:
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Move legacy prewarm options into the typed child configuration."""
-    if entry.version > 4:
+    if entry.version > 2:
         return False
 
     if entry.version == 1:
@@ -232,14 +231,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         options = dict(entry.options)
         options.pop(CONF_HLS_PREWARM_CAMERAS, None)
-        hass.config_entries.async_update_entry(entry, options=options)
-
-    for subentry in tuple(entry.subentries.values()):
-        if subentry.subentry_type in _REMOVED_SUBENTRY_TYPES:
-            hass.config_entries.async_remove_subentry(entry, subentry.subentry_id)
-
-    if entry.version != 4:
-        hass.config_entries.async_update_entry(entry, version=4)
+        hass.config_entries.async_update_entry(entry, options=options, version=2)
 
     return True
 
@@ -272,7 +264,6 @@ def _register_builtin_providers(hass: HomeAssistant) -> ProviderRegistry:
             live_signaling=frigate_live,
             live_source=frigate_live_source,
             live_hls=frigate_live_hls,
-            live_substream=frigate_live.live_substream,
             talk_signaling=frigate_live,
             talk_capability=frigate_talk_capability,
             ptz=frigate_ptz,

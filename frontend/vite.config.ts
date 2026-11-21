@@ -21,10 +21,7 @@ export default defineConfig(({ mode }) => ({
     emptyOutDir: true,
     manifest: true,
     minify: "terser",
-    terserOptions: {
-      compress: { passes: 2 },
-      mangle: { properties: { regex: /^_handle/ } },
-    },
+    terserOptions: { compress: { passes: 2 } },
     outDir: resolve(import.meta.dirname, "../dist/frontend"),
     lib: {
       entry: resolve(import.meta.dirname, "src/main.ts"),

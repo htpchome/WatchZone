@@ -78,13 +78,5 @@
   "camera.slideshow_hold": "Hold",
   "camera.slideshow_seconds": "{seconds}s",
   "editor.slide_advance_time": "Slide Advance Time",
-  "editor.slide_advance_seconds": "{seconds}s",
-  "editor.live_substream": "Live Substream",
-  "editor.live_substream_ha_details_body": "Choose an existing Home Assistant camera entity for live video. Cameras imported by the Frigate integration are excluded. The main camera still owns PTZ, two-way talk, lights, activity, and camera identity.",
-  "editor.main_stream": "Main stream",
-  "editor.live_substream_checking": "Checking available Frigate substreams…",
-  "editor.live_substream_discovery_failed": "Frigate substream discovery failed. The configured stream is retained.",
-  "editor.live_substream_none": "No additional Frigate go2rtc substreams are available.",
-  "editor.live_substream_frigate_help": "The selected raw Frigate go2rtc stream is used only for live video.",
-  "editor.live_substream_ha_help": "Existing non-Frigate Home Assistant camera entities are listed."
+  "editor.slide_advance_seconds": "{seconds}s"
 }

@@ -57,8 +57,6 @@ export interface GroupCameraItem {
   readonly connection: LiveConnectionType;
   readonly entityId: string;
   readonly frigateFallback?: FrigateFallbackTransport;
-  readonly frigateSubstream?: string;
-  readonly liveEntityId?: string;
   readonly lowLatencyHls: boolean;
   readonly label: string;
   readonly posterUrl?: string;
@@ -169,8 +167,6 @@ export class CameraGroupView extends LitElement {
               .connection=${camera.connection}
               .entityId=${camera.entityId}
               .frigateFallback=${camera.frigateFallback}
-              .frigateSubstream=${camera.frigateSubstream}
-              .liveEntityId=${camera.liveEntityId}
               .interactionActive=${this.active}
               .lowLatencyHls=${camera.lowLatencyHls}
               .label=${camera.label}

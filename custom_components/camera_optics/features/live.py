@@ -95,7 +95,6 @@ class LiveSignalingService:
         connection_provider_id: str,
         force_standard: bool = False,
         purpose: str = "live",
-        substream: str | None = None,
     ) -> CreatedLiveSignalingSession:
         """Create one signaling session without starting negotiation.
 
@@ -103,32 +102,10 @@ class LiveSignalingService:
         changes only signaling; connection identity and standard fallback stay
         owned by the selected connection.
         """
-        await self._async_wait_for_closing(owner_id, entity_id, purpose)
-        session_id = ulid()
-        if substream is not None:
-            if purpose != "live":
-                raise HomeAssistantError("Substreams are available only for live video")
-            provider = self._providers.live_substream_provider(connection_provider_id)
-            if provider is None:
-                raise HomeAssistantError(
-                    "Selected connection does not support substreams"
-                )
-            try:
-                substream_session = await provider.async_prepare_substream_session(
-                    self._hass, entity_id, substream, send_event
-                )
-            except ProviderPreparationError as err:
-                raise HomeAssistantError("Selected substream is unavailable") from err
-            self._sessions[session_id] = _OwnedSession(
-                owner_id, entity_id, purpose, substream_session
-            )
-            return CreatedLiveSignalingSession(
-                session_id, substream_session.signaling_path, None
-            )
-
         from homeassistant.components.camera.const import StreamType
         from homeassistant.components.camera.helper import get_camera_from_entity_id
 
+        await self._async_wait_for_closing(owner_id, entity_id, purpose)
         camera = get_camera_from_entity_id(self._hass, entity_id)
         accelerated = self._providers.entity_signaling_acceleration(
             connection_provider_id
@@ -138,6 +115,7 @@ class LiveSignalingService:
         ):
             raise HomeAssistantError("Camera does not support WebRTC")
 
+        session_id = ulid()
         session: LiveSignalingSession | None = None
         fallback_reason: str | None = "standard_requested"
         if not accelerated:

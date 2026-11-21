@@ -55,8 +55,6 @@ export class CameraView extends LitElement {
     connection: { attribute: false },
     entityId: { attribute: false },
     frigateFallback: { attribute: false },
-    frigateSubstream: { attribute: false },
-    liveEntityId: { attribute: false },
     interactionActive: { attribute: false, type: Boolean },
     label: { attribute: false },
     lowLatencyHls: { attribute: false, type: Boolean },
@@ -117,8 +115,6 @@ export class CameraView extends LitElement {
   public connection: LiveConnectionType = "home_assistant";
   public entityId?: string;
   public frigateFallback: FrigateFallbackTransport = "mse";
-  public frigateSubstream?: string;
-  public liveEntityId?: string;
   public interactionActive = false;
   public label = "";
   public lowLatencyHls = true;
@@ -163,17 +159,16 @@ export class CameraView extends LitElement {
     );
     this._session.configure(
       this.api,
-      this.liveEntityId ?? this.entityId,
+      this.entityId,
       this.connect &&
         this.available &&
         runtime?.available !== false &&
         !suspended,
-      this.liveEntityId ? "home_assistant" : this.connection,
+      this.connection,
       this.lowLatencyHls,
       this.frigateFallback,
       !suspended,
       this.discardSessionsOnDisconnect,
-      this.frigateSubstream,
     );
   }
 

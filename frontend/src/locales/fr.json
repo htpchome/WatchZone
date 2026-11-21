@@ -117,11 +117,5 @@
   "camera.slideshow_hold": "En attente",
   "camera.slideshow_seconds": "{seconds}s",
   "editor.slide_advance_time": "Délai d'avancement",
-  "editor.slide_advance_seconds": "{seconds}s",
-  "editor.live_substream": "Sous-flux en direct",
-  "editor.main_stream": "Flux principal",
-  "editor.live_substream_checking": "Recherche des sous-flux Frigate disponibles…",
-  "editor.live_substream_discovery_failed": "La détection des sous-flux Frigate a échoué. Le flux configuré est conservé.",
-  "editor.live_substream_none": "Aucun sous-flux Frigate go2rtc supplémentaire n'est disponible.",
-  "editor.live_substream_frigate_help": "Le flux Frigate go2rtc sélectionné est utilisé uniquement pour la vidéo en direct."
+  "editor.slide_advance_seconds": "{seconds}s"
 }

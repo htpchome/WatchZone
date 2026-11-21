@@ -53,20 +53,14 @@ export class LiveSourceResolver {
   public async resolveFrigate(
     api: HomeAssistantApi,
     entityId: string,
-    substream?: string,
   ): Promise<FrigateGo2RtcLiveSourceDescriptor> {
-    const cached = this.cachedFrigate(api, entityId, substream);
+    const cached = this.cachedFrigate(api, entityId);
     if (cached) return cached;
-    const descriptor = await resolveLiveSource(
-      api,
-      "frigate_go2rtc",
-      entityId,
-      substream,
-    );
+    const descriptor = await resolveLiveSource(api, "frigate_go2rtc", entityId);
     if (descriptor.type !== "frigate_go2rtc")
       throw new Error("Frigate go2rtc source is unavailable");
     const sources = frigateSources.get(api.identity) ?? new Map();
-    sources.set(this.frigateSourceCacheKey(entityId, substream), descriptor);
+    sources.set(entityId, descriptor);
     frigateSources.set(api.identity, sources);
     return descriptor;
   }
@@ -74,15 +68,8 @@ export class LiveSourceResolver {
   public cachedFrigate(
     api: HomeAssistantApi,
     entityId: string,
-    substream?: string,
   ): FrigateGo2RtcLiveSourceDescriptor | undefined {
-    return frigateSources
-      .get(api.identity)
-      ?.get(this.frigateSourceCacheKey(entityId, substream));
-  }
-
-  private frigateSourceCacheKey(entityId: string, substream?: string): string {
-    return `${entityId}\u0000${substream ?? ""}`;
+    return frigateSources.get(api.identity)?.get(entityId);
   }
 
   public connectionKey(
@@ -197,7 +184,6 @@ export class LiveSourceResolver {
       api,
       entityId,
       this.frigateWebRtcKey(source),
-      source,
     );
   }
 
@@ -227,7 +213,6 @@ export class LiveSourceResolver {
       entityId,
       this.frigateHlsKey(source, options.lowLatencyHls !== false),
       options,
-      source,
     );
   }
 }

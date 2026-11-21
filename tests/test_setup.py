@@ -64,50 +64,13 @@ async def test_migration_moves_legacy_prewarm_options_to_subentry(
 
     assert await async_migrate_entry(hass, entry)
 
-    assert entry.version == 4
+    assert entry.version == 2
     assert entry.options == {"unrelated": True}
     preload = entry.get_subentries_of_type(SUBENTRY_TYPE_CAMERA_PRELOAD)
     assert len(preload) == 1
     assert preload[0].title == CAMERA_PRELOAD_TITLE
     assert preload[0].unique_id == SUBENTRY_UNIQUE_ID_CAMERA_PRELOAD
     assert _prewarm_camera_ids(entry) == ["camera.porch", "camera.garage"]
-
-
-async def test_migration_removes_abandoned_managed_substream_entries(
-    hass: HomeAssistant,
-) -> None:
-    """Version three entries discard the withdrawn managed-substream design."""
-    entry = MockConfigEntry(
-        domain=DOMAIN,
-        data={},
-        version=3,
-        subentries_data=[
-            {
-                "subentry_type": SUBENTRY_TYPE_CAMERA_PRELOAD,
-                "data": {CONF_HLS_PREWARM_CAMERAS: []},
-                "title": CAMERA_PRELOAD_TITLE,
-                "unique_id": SUBENTRY_UNIQUE_ID_CAMERA_PRELOAD,
-            },
-            {
-                "subentry_type": "home_assistant_substreams",
-                "data": {"source_cameras": ["camera.porch_low"]},
-                "title": "Home Assistant Substreams",
-            },
-            {
-                "subentry_type": "external_go2rtc",
-                "data": {"url": "http://go2rtc.test"},
-                "title": "External go2rtc",
-            },
-        ],
-    )
-    entry.add_to_hass(hass)
-
-    assert await async_migrate_entry(hass, entry)
-
-    assert entry.version == 4
-    assert set(entry.subentries) == {
-        entry.get_subentries_of_type(SUBENTRY_TYPE_CAMERA_PRELOAD)[0].subentry_id
-    }
 
 
 async def test_setup_registers_packaged_frontend(

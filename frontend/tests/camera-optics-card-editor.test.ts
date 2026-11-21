@@ -8,7 +8,6 @@ import {
   CARD_TYPE,
   EDITOR_DIRTY_STATE_KEY,
   EDITOR_GENERAL_INFO_TAG,
-  EDITOR_LIVE_SUBSTREAM_FIELD_TAG,
   EDITOR_TEXT_PREVIEW_DELAY_MS,
 } from "../src/core/constants";
 import type { AccordionItem } from "../src/ui/accordion";
@@ -54,11 +53,6 @@ interface TestEditCardDialog extends HTMLElement {
 
 interface LocalizingTestHass {
   localize(key: string): string;
-}
-
-function liveSubstreamRoot(editor: CardEditor): ShadowRoot | null | undefined {
-  return editor.shadowRoot?.querySelector(EDITOR_LIVE_SUBSTREAM_FIELD_TAG)
-    ?.shadowRoot;
 }
 
 async function openEditorSection(
@@ -165,7 +159,6 @@ describe("camera-optics-card-editor", () => {
       this.removeAttribute("open");
     };
     await import("../src/main");
-    await import("../src/editor/camera/live-substream-field");
     await import("../src/editor/camera-optics-card-editor");
   });
 
@@ -2191,213 +2184,6 @@ describe("camera-optics-card-editor", () => {
         ) as TestBooleanSelector
       ).value,
     ).toBe(false);
-  });
-
-  it("discovers and saves a Frigate-only live substream", async () => {
-    const callWS = vi.fn(
-      async <T>(message: HomeAssistantMessage): Promise<T> => {
-        if (message.type.endsWith("/live/frigate/substreams")) {
-          return { streams: ["front_low", "front_sub"] } as T;
-        }
-        if (message.type.endsWith("/live/source")) {
-          return {
-            id: "frigate_go2rtc:entry-front:front",
-            type: "frigate_go2rtc",
-            frigate_instance_id: "frigate",
-            stream_name: "front",
-          } as T;
-        }
-        if (message.type.endsWith("/talk/capability")) {
-          return { supported: true } as T;
-        }
-        return {
-          supported: true,
-          pan: true,
-          tilt: true,
-          zoom: false,
-          focus: false,
-          presets: [],
-        } as T;
-      },
-    );
-    const editor = document.createElement(
-      "camera-optics-card-editor",
-    ) as CardEditor;
-    editor.hass = {
-      states: {
-        "camera.front": {
-          entity_id: "camera.front",
-          state: "streaming",
-          attributes: { friendly_name: "Front" },
-        },
-      },
-      connection: { subscribeMessage: async () => () => undefined },
-      callService: async () => undefined,
-      callWS,
-      hassUrl: (path: string) => path,
-    };
-    editor.setConfig({
-      type: CARD_TYPE,
-      cameras: [{ entity_id: "camera.front", connection: "frigate_go2rtc" }],
-    });
-    const changed = vi.fn();
-    editor.addEventListener("config-changed", changed);
-    document.body.append(editor);
-    await editor.updateComplete;
-    await openEditorSection(editor, "camera");
-    (
-      editor.shadowRoot?.querySelector(
-        '[aria-label="Edit camera: Front"]',
-      ) as HTMLElement
-    ).click();
-
-    await vi.waitFor(() =>
-      expect(
-        liveSubstreamRoot(editor)?.querySelector(
-          'ha-selector[label="Live Substream"]',
-        ),
-      ).not.toBeNull(),
-    );
-    await vi.waitFor(() =>
-      expect(callWS).toHaveBeenCalledWith({
-        type: "camera_optics/live/frigate/substreams",
-        entity_id: "camera.front",
-      }),
-    );
-    const details = liveSubstreamRoot(editor)?.querySelector(
-      ".live-substream-details",
-    );
-    const selector = liveSubstreamRoot(editor)?.querySelector(
-      'ha-selector[label="Live Substream"]',
-    ) as InputElement & {
-      selector: {
-        select: { options: Array<{ label: string; value: string }> };
-      };
-    };
-    expect(details?.nextElementSibling).toBe(selector);
-    expect(details?.textContent).toContain("Substream details");
-    expect(selector.selector.select.options.map(({ value }) => value)).toEqual([
-      "__camera_optics_main_stream__",
-      "front_low",
-      "front_sub",
-    ]);
-
-    selector.dispatchEvent(
-      new CustomEvent("value-changed", {
-        bubbles: true,
-        composed: true,
-        detail: { value: "front_low" },
-      }),
-    );
-    await editor.updateComplete;
-    editor.shadowRoot
-      ?.querySelector(".camera-editor-dialog form")
-      ?.dispatchEvent(
-        new SubmitEvent("submit", { bubbles: true, cancelable: true }),
-      );
-
-    expect(changed).toHaveBeenCalledOnce();
-    expect(changed.mock.calls[0][0].detail.config.cameras[0]).toMatchObject({
-      connection: "frigate_go2rtc",
-      entity_id: "camera.front",
-      live_substream: "front_low",
-    });
-  });
-
-  it("uses an existing Home Assistant camera entity for live video only", async () => {
-    const editor = document.createElement(
-      "camera-optics-card-editor",
-    ) as CardEditor;
-    editor.hass = {
-      states: {
-        "camera.front": {
-          entity_id: "camera.front",
-          state: "streaming",
-          attributes: { friendly_name: "Front" },
-        },
-        "camera.front_sub": {
-          entity_id: "camera.front_sub",
-          state: "streaming",
-          attributes: {
-            friendly_name: "Front Substream",
-          },
-        },
-        "camera.frigate_sub": {
-          entity_id: "camera.frigate_sub",
-          state: "streaming",
-          attributes: {
-            friendly_name: "Frigate Substream",
-          },
-        },
-      },
-      entities: {
-        "camera.front": { platform: "generic" },
-        "camera.front_sub": { platform: "generic" },
-        "camera.frigate_sub": { platform: "frigate" },
-      },
-      connection: { subscribeMessage: async () => () => undefined },
-      callService: async () => undefined,
-      callWS: async <T>(): Promise<T> => ({ supported: false }) as T,
-      hassUrl: (path: string) => path,
-    };
-    editor.setConfig({
-      type: CARD_TYPE,
-      cameras: [{ entity_id: "camera.front" }],
-    });
-    const changed = vi.fn();
-    editor.addEventListener("config-changed", changed);
-    document.body.append(editor);
-    await editor.updateComplete;
-    await openEditorSection(editor, "camera");
-    (
-      editor.shadowRoot?.querySelector(
-        '[aria-label="Edit camera: Front"]',
-      ) as HTMLElement
-    ).click();
-    let field: Element | null | undefined;
-    await vi.waitFor(() => {
-      field = editor.shadowRoot?.querySelector(EDITOR_LIVE_SUBSTREAM_FIELD_TAG);
-      expect(
-        field?.shadowRoot?.querySelector('ha-selector[label="Live Substream"]'),
-      ).toBeTruthy();
-    });
-
-    const selector = field?.shadowRoot?.querySelector(
-      'ha-selector[label="Live Substream"]',
-    ) as InputElement & {
-      disabled: boolean;
-      selector: {
-        select: { options: Array<{ label: string; value: string }> };
-      };
-    };
-    expect(selector.disabled).toBe(false);
-    expect(selector.selector.select.options).toEqual([
-      { label: "Main stream", value: "__camera_optics_main_stream__" },
-      { label: "Front Substream", value: "camera.front_sub" },
-    ]);
-    expect(
-      field?.shadowRoot?.querySelector(".live-substream-details")?.textContent,
-    ).toContain("existing Home Assistant camera entity");
-
-    selector.dispatchEvent(
-      new CustomEvent("value-changed", {
-        bubbles: true,
-        composed: true,
-        detail: { value: "camera.front_sub" },
-      }),
-    );
-    await editor.updateComplete;
-    editor.shadowRoot
-      ?.querySelector(".camera-editor-dialog form")
-      ?.dispatchEvent(
-        new SubmitEvent("submit", { bubbles: true, cancelable: true }),
-      );
-
-    expect(changed).toHaveBeenCalledOnce();
-    expect(changed.mock.calls[0][0].detail.config.cameras[0]).toMatchObject({
-      entity_id: "camera.front",
-      live_substream: "camera.front_sub",
-    });
   });
 
   it("uses a one-time dirty-state writer without subscribing", async () => {

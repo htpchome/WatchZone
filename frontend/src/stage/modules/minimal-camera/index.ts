@@ -19,8 +19,6 @@ export interface MinimalCameraModuleConfig {
     readonly connection: LiveConnectionType;
     readonly entityId: string;
     readonly frigateFallback: FrigateFallbackTransport;
-    readonly frigateSubstream?: string;
-    readonly liveEntityId?: string;
     readonly lowLatencyHls: boolean;
     readonly startUnmutedPcTablet: boolean;
     readonly startUnmutedPhone: boolean;
@@ -44,10 +42,7 @@ export const moduleDefinition: ModuleDefinition<MinimalCameraModuleConfig> = {
   contextKeys: [],
   type: MINIMAL_CAMERA_MODULE_TYPE,
   validateConfig: validateMinimalCameraConfig,
-  getEntityIds: ({ camera }) => [
-    camera.entityId,
-    ...(camera.liveEntityId ? [camera.liveEntityId] : []),
-  ],
+  getEntityIds: ({ camera }) => [camera.entityId],
   define() {
     return (definitionPromise ??= import("./minimal-camera").then(
       () => undefined,
@@ -61,11 +56,7 @@ export const moduleDefinition: ModuleDefinition<MinimalCameraModuleConfig> = {
     camera.api = context.api;
     camera.hass = context.hass;
     if (context.localize) camera.localize = context.localize;
-    camera.available = Boolean(
-      context.hass?.states[config.camera.entityId] &&
-      (!config.camera.liveEntityId ||
-        context.hass.states[config.camera.liveEntityId]),
-    );
+    camera.available = Boolean(context.hass?.states[config.camera.entityId]);
     camera.camera = {
       ...config.camera,
       posterUrl: cameraImageUrl(context.hass, config.camera.entityId),

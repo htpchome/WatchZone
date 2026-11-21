@@ -67,7 +67,6 @@ export interface CameraConfig {
   readonly frigate_fallback: FrigateFallbackTransport;
   readonly group_name?: string;
   readonly lights: readonly LinkedLightConfig[];
-  readonly live_substream?: string;
   readonly low_latency_hls: boolean;
   readonly ptz_enabled: boolean;
   readonly start_live_unmuted_pc_tablet: boolean;
@@ -591,16 +590,6 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
       `${APP_NAME} camera ${index + 1} connection must be a supported connection type.`,
     );
   }
-  const connection =
-    source.connection === "frigate_go2rtc"
-      ? "frigate_go2rtc"
-      : defaults.connection;
-  const liveSubstream = normalizeLiveSubstream(
-    source.live_substream,
-    index,
-    connection,
-    defaults.entity_id,
-  );
   for (const key of [
     "low_latency_hls",
     "ptz_enabled",
@@ -659,13 +648,15 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
             index,
           ),
         }),
-    connection,
+    connection:
+      source.connection === "frigate_go2rtc"
+        ? "frigate_go2rtc"
+        : defaults.connection,
     entity_id: defaults.entity_id,
     frigate_fallback:
       source.frigate_fallback === "hls" ? "hls" : defaults.frigate_fallback,
     ...(groupName === undefined ? {} : { group_name: groupName }),
     lights,
-    ...(liveSubstream ? { live_substream: liveSubstream } : {}),
     low_latency_hls:
       typeof source.low_latency_hls === "boolean"
         ? source.low_latency_hls
@@ -676,34 +667,6 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
     title: cameraTitle,
     two_way_talk_enabled: source.two_way_talk_enabled === true,
   };
-}
-
-function normalizeLiveSubstream(
-  value: unknown,
-  cameraIndex: number,
-  connection: LiveConnectionType,
-  primaryEntityId: string,
-): string | undefined {
-  if (value === undefined) return undefined;
-  if (
-    typeof value !== "string" ||
-    !value.trim() ||
-    value.trim().length > 512 ||
-    [...value].some(
-      (character) => character.charCodeAt(0) < 32 || character === "\u007f",
-    )
-  ) {
-    throw new Error(
-      `${APP_NAME} camera ${cameraIndex + 1} live substream is invalid.`,
-    );
-  }
-  const normalized = value.trim();
-  if (connection === "home_assistant" && !normalized.startsWith("camera.")) {
-    throw new Error(
-      `${APP_NAME} camera ${cameraIndex + 1} Home Assistant substream must use a camera entity.`,
-    );
-  }
-  return normalized === primaryEntityId ? undefined : normalized;
 }
 
 function normalizeAdditionalCamera(

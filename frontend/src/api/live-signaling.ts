@@ -53,14 +53,12 @@ export function subscribeLiveOffer(
   offer: string,
   callback: (event: LiveOfferEvent) => void,
   provider: LiveConnectionType = "home_assistant",
-  substream?: string,
 ): Promise<HomeAssistantUnsubscribe> {
   return api.subscribeMessage(callback, {
     type: OFFER_COMMAND,
     entity_id: entityId,
     offer,
     provider,
-    ...(substream ? { substream } : {}),
   });
 }
 

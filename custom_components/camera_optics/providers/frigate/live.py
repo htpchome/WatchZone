@@ -18,13 +18,7 @@ from ..live import (
     ProviderPreparationError,
     SendLiveSignalingEvent,
 )
-from ..live_connection import LiveSourceDescriptor
-from .source import (
-    FrigateSource,
-    async_list_substreams,
-    async_resolve_source,
-    async_resolve_substream_source,
-)
+from .source import async_resolve_source
 
 if TYPE_CHECKING:
     from homeassistant.components.camera import Camera
@@ -134,15 +128,6 @@ async def async_prepare_session(
 ) -> LiveSignalingSession:
     """Prepare fast Frigate signaling or report a sanitized fallback reason."""
     source = await async_resolve_source(hass, entity_id, camera)
-    return await _async_prepare_source_session(hass, source, send_event)
-
-
-async def _async_prepare_source_session(
-    hass: HomeAssistant,
-    source: FrigateSource,
-    send_event: SendLiveSignalingEvent,
-) -> LiveSignalingSession:
-    """Prepare signaling for one already validated Frigate source."""
     url = (URL(source.base_url) / _GO2RTC_WEBSOCKET_PATH) % {"src": source.stream_name}
     try:
         headers = await source.client.get_auth_headers()
@@ -160,37 +145,3 @@ async def _async_prepare_source_session(
     except (ClientError, TimeoutError) as err:
         raise ProviderPreparationError("frigate_websocket_unreachable") from err
     return FrigateLiveSignalingSession(hass, websocket, send_event)
-
-
-class FrigateLiveSubstreamProvider:
-    """Discover and prepare Frigate-native live-only substreams."""
-
-    async def async_list_substreams(
-        self, hass: HomeAssistant, entity_id: str
-    ) -> tuple[str, ...]:
-        return await async_list_substreams(hass, entity_id)
-
-    async def async_resolve_substream(
-        self, hass: HomeAssistant, entity_id: str, stream_name: str
-    ) -> LiveSourceDescriptor:
-        source = await async_resolve_substream_source(hass, entity_id, stream_name)
-        return LiveSourceDescriptor(
-            id=source.source_id,
-            type="frigate_go2rtc",
-            frigate_instance_id=source.frigate_instance_id,
-            stream_name=source.stream_name,
-            substream=True,
-        )
-
-    async def async_prepare_substream_session(
-        self,
-        hass: HomeAssistant,
-        entity_id: str,
-        stream_name: str,
-        send_event: SendLiveSignalingEvent,
-    ) -> LiveSignalingSession:
-        source = await async_resolve_substream_source(hass, entity_id, stream_name)
-        return await _async_prepare_source_session(hass, source, send_event)
-
-
-live_substream = FrigateLiveSubstreamProvider()

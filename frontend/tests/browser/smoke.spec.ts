@@ -12308,22 +12308,18 @@ test("camera editor configures lights and confirms accessible removal", async ({
   expect(initialDialogBounds?.height).toBeLessThanOrEqual(
     (page.viewportSize()?.height ?? 0) - 32,
   );
-  const compactHeader = await items
-    .nth(1)
-    .locator("summary")
-    .first()
-    .boundingBox();
+  const compactHeader = await items.nth(1).locator("summary").boundingBox();
   expect(compactHeader?.height).toBeLessThanOrEqual(44);
 
-  await items.nth(1).locator("summary").first().click();
+  await items.nth(1).locator("summary").click();
   await expect(items.locator("details[open]")).toHaveCount(1);
   await expect(items.nth(0).locator("details")).not.toHaveAttribute("open", "");
   await expect(items.nth(1).locator("h3")).toHaveText("Connection Source");
-  await items.nth(3).locator("summary").last().click();
+  await items.nth(3).locator("summary").click();
   await expect(items.locator("details[open]")).toHaveCount(1);
   await expect(items.nth(0).locator("details")).not.toHaveAttribute("open", "");
   await expect(items.nth(3).locator("details")).toHaveAttribute("open", "");
-  await items.nth(0).locator("summary").last().click();
+  await items.nth(0).locator("summary").click();
   await expect(items.locator("details[open]")).toHaveCount(1);
   await expect(items.nth(0).locator("details")).toHaveAttribute("open", "");
   await expect(items.nth(3).locator("details")).not.toHaveAttribute("open", "");
@@ -12504,107 +12500,6 @@ test("camera editor configures lights and confirms accessible removal", async ({
   await removeAction.click();
   await removeDialog.locator('ha-button[variant="danger"]').click();
   await expect(editor.locator("wzc-sortable-tile")).toHaveCount(0);
-});
-
-test("camera editor saves a bubbling Frigate substream selection", async ({
-  page,
-}) => {
-  await page.goto("/");
-  await waitForCameraOpticsDefinition(page);
-  await page.evaluate(async () => {
-    const constructor = customElements.get(
-      "camera-optics-card",
-    ) as typeof HTMLElement & {
-      getConfigElement(): Promise<
-        HTMLElement & {
-          hass: unknown;
-          setConfig(config: unknown): void;
-          updateComplete: Promise<boolean>;
-        }
-      >;
-    };
-    const editor = await constructor.getConfigElement();
-    editor.id = "substream-config-editor";
-    editor.hass = {
-      states: {
-        "camera.front": {
-          entity_id: "camera.front",
-          state: "streaming",
-          attributes: { friendly_name: "Front" },
-        },
-      },
-      connection: { subscribeMessage: async () => () => undefined },
-      callService: async () => undefined,
-      callWS: async (message: { type?: string }) =>
-        message.type === "camera_optics/live/frigate/substreams"
-          ? { streams: ["front_low"] }
-          : { supported: false },
-      hassUrl: (path: string) => path,
-    };
-    editor.setConfig({
-      type: "custom:camera-optics-card",
-      cameras: [{ entity_id: "camera.front", connection: "frigate_go2rtc" }],
-    });
-    editor.addEventListener("config-changed", (event) => {
-      (
-        window as typeof window & { __substreamConfig?: unknown }
-      ).__substreamConfig = (event as CustomEvent).detail.config;
-    });
-    document.body.append(editor);
-    await editor.updateComplete;
-  });
-
-  const editor = page.locator("#substream-config-editor");
-  await editor.locator("wzc-accordion-item").first().locator("summary").click();
-  await editor.locator('[aria-label="Edit camera: Front"]').click();
-  const selector = editor.locator(
-    'wzc-editor-live-substream-field ha-selector[label="Live Substream"]',
-  );
-  await expect(selector).toHaveCount(1);
-  await expect
-    .poll(() =>
-      selector.evaluate(
-        (
-          element: HTMLElement & {
-            selector?: { select?: { options?: unknown[] } };
-          },
-        ) => element.selector?.select?.options?.length,
-      ),
-    )
-    .toBe(2);
-
-  await selector.evaluate((element) => {
-    element.dispatchEvent(
-      new CustomEvent("value-changed", {
-        bubbles: true,
-        composed: true,
-        detail: { value: "front_low" },
-      }),
-    );
-  });
-  await expect(editor.locator(".camera-editor-dialog")).toBeVisible();
-  await editor.locator(".camera-editor-dialog form").evaluate((form) => {
-    form.dispatchEvent(
-      new SubmitEvent("submit", { bubbles: true, cancelable: true }),
-    );
-  });
-
-  await expect
-    .poll(() =>
-      page.evaluate(
-        () =>
-          (
-            window as typeof window & {
-              __substreamConfig?: { cameras?: unknown[] };
-            }
-          ).__substreamConfig?.cameras?.[0],
-      ),
-    )
-    .toMatchObject({
-      connection: "frigate_go2rtc",
-      entity_id: "camera.front",
-      live_substream: "front_low",
-    });
 });
 
 test("camera editor configures and sanitizes an additional-camera group", async ({

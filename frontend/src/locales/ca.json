@@ -117,11 +117,5 @@
   "camera.slideshow_hold": "En espera",
   "camera.slideshow_seconds": "{seconds}s",
   "editor.slide_advance_time": "Temps d'avanç de diapositiva",
-  "editor.slide_advance_seconds": "{seconds}s",
-  "editor.live_substream": "Subflux en directe",
-  "editor.main_stream": "Flux principal",
-  "editor.live_substream_checking": "S'estan comprovant els subfluxos de Frigate disponibles…",
-  "editor.live_substream_discovery_failed": "Ha fallat la detecció de subfluxos de Frigate. Es conserva el flux configurat.",
-  "editor.live_substream_none": "No hi ha subfluxos addicionals de Frigate go2rtc disponibles.",
-  "editor.live_substream_frigate_help": "El flux de Frigate go2rtc seleccionat només s'utilitza per al vídeo en directe."
+  "editor.slide_advance_seconds": "{seconds}s"
 }

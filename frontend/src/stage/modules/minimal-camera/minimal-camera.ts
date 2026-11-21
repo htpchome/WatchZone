@@ -60,8 +60,6 @@ interface MinimalCameraConfig {
   readonly connection: LiveConnectionType;
   readonly entityId: string;
   readonly frigateFallback: FrigateFallbackTransport;
-  readonly frigateSubstream?: string;
-  readonly liveEntityId?: string;
   readonly lowLatencyHls: boolean;
   readonly posterUrl?: string;
   readonly startUnmutedPcTablet: boolean;
@@ -221,7 +219,7 @@ export class MinimalCameraModule extends LitElement {
     );
     this._session.configure(
       this.api,
-      camera?.liveEntityId ?? camera?.entityId,
+      camera?.entityId,
       this.available &&
         runtime !== undefined &&
         runtime.available !== false &&
@@ -231,7 +229,6 @@ export class MinimalCameraModule extends LitElement {
       camera?.frigateFallback,
       !suspended,
       false,
-      camera?.frigateSubstream,
     );
     this._activity.configure(
       this.api,

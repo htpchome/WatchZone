@@ -175,41 +175,6 @@ describe("layout composition", () => {
     ]);
   });
 
-  it("keeps primary camera identity separate from both live substream types", () => {
-    const layout = builtInStage(
-      normalizeCardConfig({
-        cameras: [
-          {
-            connection: "home_assistant",
-            entity_id: "camera.front",
-            live_substream: "camera.front_sub",
-          },
-          {
-            connection: "frigate_go2rtc",
-            entity_id: "camera.back",
-            live_substream: "back_low",
-          },
-        ],
-      }),
-    );
-    const cameras = (
-      moduleAt(layout, 0).config as {
-        cameras: Array<Record<string, unknown>>;
-      }
-    ).cameras;
-
-    expect(cameras[0]).toMatchObject({
-      entityId: "camera.front",
-      liveEntityId: "camera.front_sub",
-      frigateSubstream: undefined,
-    });
-    expect(cameras[1]).toMatchObject({
-      entityId: "camera.back",
-      frigateSubstream: "back_low",
-      liveEntityId: undefined,
-    });
-  });
-
   it("omits Events from every built-in Full Stage variant", () => {
     const stageSet = createBuiltInStageSet(
       normalizeCardConfig({ camera_entity: "camera.front" }),

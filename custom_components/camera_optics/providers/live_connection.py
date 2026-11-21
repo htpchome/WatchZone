@@ -5,8 +5,6 @@ from typing import Protocol
 
 from homeassistant.core import HomeAssistant
 
-from .live import LiveSignalingSession, SendLiveSignalingEvent
-
 
 @dataclass(frozen=True, slots=True)
 class LiveSourceDescriptor:
@@ -16,7 +14,6 @@ class LiveSourceDescriptor:
     type: str
     frigate_instance_id: str | None = None
     stream_name: str | None = None
-    substream: bool = False
 
 
 class LiveSourceProvider(Protocol):
@@ -33,29 +30,6 @@ class LiveHlsProvider(Protocol):
 
     async def async_prepare_hls(self, hass: HomeAssistant, entity_id: str) -> str:
         """Return an authenticated endpoint URL."""
-
-
-class LiveSubstreamProvider(Protocol):
-    """Discover and prepare provider-native live-only substreams."""
-
-    async def async_list_substreams(
-        self, hass: HomeAssistant, entity_id: str
-    ) -> tuple[str, ...]:
-        """Return validated substreams belonging to one camera."""
-
-    async def async_resolve_substream(
-        self, hass: HomeAssistant, entity_id: str, stream_name: str
-    ) -> LiveSourceDescriptor:
-        """Resolve one validated substream descriptor."""
-
-    async def async_prepare_substream_session(
-        self,
-        hass: HomeAssistant,
-        entity_id: str,
-        stream_name: str,
-        send_event: SendLiveSignalingEvent,
-    ) -> LiveSignalingSession:
-        """Prepare signaling for one validated substream."""
 
 
 class TalkCapabilityProvider(Protocol):

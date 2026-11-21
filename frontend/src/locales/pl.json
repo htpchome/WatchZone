@@ -117,11 +117,5 @@
   "camera.slideshow_hold": "Wstrzymano",
   "camera.slideshow_seconds": "{seconds}s",
   "editor.slide_advance_time": "Czas zmiany slajdu",
-  "editor.slide_advance_seconds": "{seconds}s",
-  "editor.live_substream": "Podstrumień na żywo",
-  "editor.main_stream": "Strumień główny",
-  "editor.live_substream_checking": "Sprawdzanie dostępnych podstrumieni Frigate…",
-  "editor.live_substream_discovery_failed": "Wykrywanie podstrumieni Frigate nie powiodło się. Skonfigurowany strumień został zachowany.",
-  "editor.live_substream_none": "Brak dodatkowych podstrumieni Frigate go2rtc.",
-  "editor.live_substream_frigate_help": "Wybrany strumień Frigate go2rtc jest używany tylko do obrazu na żywo."
+  "editor.slide_advance_seconds": "{seconds}s"
 }

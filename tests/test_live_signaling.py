@@ -26,10 +26,8 @@ from custom_components.camera_optics.providers.frigate.live import (
     async_prepare_session,
 )
 from custom_components.camera_optics.providers.frigate.source import (
-    FrigateSource,
     _camera_name,
     _stream_name,
-    async_list_substreams,
     async_resolve_source,
 )
 
@@ -47,22 +45,6 @@ class _FakeMessage:
         self._payload = payload
 
     def as_dict(self) -> dict[str, object]:
-        return self._payload
-
-
-class _FakeJsonResponse:
-    def __init__(self, payload: object, status: int = 200) -> None:
-        self.status = status
-        self._payload = payload
-
-    async def __aenter__(self) -> _FakeJsonResponse:
-        return self
-
-    async def __aexit__(self, *args: object) -> None:
-        del args
-
-    async def json(self, *, content_type: object = None) -> object:
-        del content_type
         return self._payload
 
 
@@ -306,88 +288,6 @@ async def test_explicit_frigate_connection_uses_only_its_selected_provider() -> 
 
     assert resolved is session
     factory.assert_awaited_once()
-
-
-async def test_frigate_substream_signaling_uses_only_the_substream_provider() -> None:
-    """A live-only substream never changes the primary camera signaling owner."""
-    session = SimpleNamespace(signaling_path="frigate:trickle_ice")
-    substream_factory = AsyncMock(return_value=session)
-    ordinary_factory = AsyncMock()
-    providers = ProviderRegistry()
-    providers.register(
-        ProviderExtension(
-            api_version=EXTENSION_API_VERSION,
-            provider_id="frigate_go2rtc",
-            entity_platforms=frozenset({"frigate"}),
-            live_signaling=SimpleNamespace(async_prepare_session=ordinary_factory),
-            live_substream=SimpleNamespace(
-                async_prepare_substream_session=substream_factory
-            ),
-        )
-    )
-    service = LiveSignalingService(SimpleNamespace(), providers)  # type: ignore[arg-type]
-
-    created = await service.async_create(
-        "owner",
-        "camera.front",
-        Mock(),
-        connection_provider_id="frigate_go2rtc",
-        substream="front_sub",
-    )
-
-    assert created.signaling_path == "frigate:trickle_ice"
-    assert substream_factory.await_count == 1
-    assert substream_factory.await_args.args[:3] == (
-        service._hass,  # noqa: SLF001
-        "camera.front",
-        "front_sub",
-    )
-    ordinary_factory.assert_not_awaited()
-
-
-async def test_frigate_substream_discovery_returns_only_related_streams() -> None:
-    """Discovery excludes other cameras, the main stream, and audio-only input."""
-    client = SimpleNamespace(
-        validate_ssl=False,
-        get_auth_headers=AsyncMock(return_value={"Authorization": "token"}),
-    )
-    source = FrigateSource(
-        base_url="http://frigate:5000",
-        camera_name="front",
-        client=client,
-        config_entry=SimpleNamespace(entry_id="entry"),  # type: ignore[arg-type]
-        frigate_instance_id="frigate",
-        stream_name="front",
-    )
-    response = _FakeJsonResponse(
-        {
-            "front": {},
-            "front_sub": {},
-            "front_audio": {},
-            "front_low": {},
-            "back_sub": {},
-        }
-    )
-    websession = SimpleNamespace(get=AsyncMock(return_value=response))
-    with (
-        patch(
-            "custom_components.camera_optics.providers.frigate.source.async_resolve_source",
-            new=AsyncMock(return_value=source),
-        ),
-        patch(
-            "custom_components.camera_optics.providers.frigate.source.async_get_clientsession",
-            return_value=websession,
-        ),
-    ):
-        streams = await async_list_substreams(
-            SimpleNamespace(),  # type: ignore[arg-type]
-            "camera.front",
-        )
-
-    assert streams == ("front_low", "front_sub")
-    assert websession.get.call_args.args[0] == URL(
-        "http://frigate:5000/api/go2rtc/streams"
-    )
 
 
 async def test_frigate_capability_uses_public_camera_identity_for_go2rtc() -> None:

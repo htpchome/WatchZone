@@ -13,14 +13,10 @@ const WEBRTC_RECONNECT_POLICY: MediaReconnectPolicy = {
   maxAttempts: 5,
 };
 
-function webRtcFactory(
-  source: FrigateGo2RtcLiveSourceDescriptor,
-): ConnectionFactory {
-  return async (...args) => {
-    const { createFrigateWebRtcConnection } = await import("./webrtc");
-    return createFrigateWebRtcConnection(...args, source);
-  };
-}
+const webRtcFactory: ConnectionFactory = async (...args) => {
+  const { createFrigateWebRtcConnection } = await import("./webrtc");
+  return createFrigateWebRtcConnection(...args);
+};
 
 function mseFactory(
   source: FrigateGo2RtcLiveSourceDescriptor,
@@ -31,14 +27,10 @@ function mseFactory(
   };
 }
 
-function hlsFactory(
-  source: FrigateGo2RtcLiveSourceDescriptor,
-): ConnectionFactory {
-  return async (...args) => {
-    const { createFrigateHlsConnection } = await import("./hls");
-    return createFrigateHlsConnection(...args, source);
-  };
-}
+const hlsFactory: ConnectionFactory = async (...args) => {
+  const { createFrigateHlsConnection } = await import("./hls");
+  return createFrigateHlsConnection(...args);
+};
 
 /** Owns direct Frigate go2rtc source identity and transport adapters. */
 export class FrigateLiveProvider {
@@ -46,13 +38,12 @@ export class FrigateLiveProvider {
     api: HomeAssistantApi,
     entityId: string,
     key: string,
-    source: FrigateGo2RtcLiveSourceDescriptor,
   ): MediaSessionLease {
     return getMediaSessionManager().acquire({
       api,
       cameraKey: entityId,
       entityId,
-      factory: webRtcFactory(source),
+      factory: webRtcFactory,
       key,
       mediaReconnectPolicy: WEBRTC_RECONNECT_POLICY,
       retryInitialFailure: true,
@@ -84,13 +75,12 @@ export class FrigateLiveProvider {
     entityId: string,
     key: string,
     options: MediaConnectionOptions,
-    source: FrigateGo2RtcLiveSourceDescriptor,
   ): MediaSessionLease {
     return getMediaSessionManager().acquire({
       api,
       cameraKey: entityId,
       entityId,
-      factory: hlsFactory(source),
+      factory: hlsFactory,
       key,
       options,
       retryInitialFailure: true,
