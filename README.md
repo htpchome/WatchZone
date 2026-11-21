@@ -8,7 +8,7 @@ providers have not been added yet.
 
 ## Quick Look
 
-![Quickview of CameraOptics for Frigate.  A look at a few of the layouts]([github.com/user-attachments/assets/977781b6-030f-43ce-943d-4e519c1dec52](https://github.com/user-attachments/assets/977781b6-030f-43ce-943d-4e519c1dec52))
+![Quickview of CameraOptics for Frigate.  A look at a few of the layouts](https://github.com/user-attachments/assets/977781b6-030f-43ce-943d-4e519c1dec52)
 
 
 
