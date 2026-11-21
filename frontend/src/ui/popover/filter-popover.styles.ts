@@ -1,6 +1,6 @@
 import { css } from "lit";
 
-import { toolbarIconButtonStyles } from "./toolbar-icon-button.styles";
+import { toolbarIconButtonStyles } from "../controls/toolbar-icon-button.styles";
 
 const filterPopoverPrivateStyles = css`
   :host {

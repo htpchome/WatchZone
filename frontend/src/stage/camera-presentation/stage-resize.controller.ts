@@ -6,7 +6,7 @@ import {
   MediaStageResizeController,
   type MediaStageResizeInteraction,
   type MediaStageSize,
-} from "../../ui/media-stage-resize.controller";
+} from "../../ui/media-overlay/stage-resize.controller";
 
 export const DEFAULT_CAMERA_STAGE_HEIGHT_RATIO =
   DEFAULT_MEDIA_STAGE_HEIGHT_RATIO;

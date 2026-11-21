@@ -9,7 +9,7 @@ import { ZoomTransformController } from "../src/ui/zoom/transform.controller";
 import {
   MEDIA_OVERLAY_HIDE_DELAY_MS,
   MediaOverlayVisibilityController,
-} from "../src/ui/media-overlay-visibility.controller";
+} from "../src/ui/media-overlay/visibility.controller";
 
 function createHost(): ReactiveControllerHost {
   return {

@@ -3,7 +3,7 @@ import { html, LitElement, nothing } from "lit";
 import { EXPORT_FILTER_TAG } from "../core/constants";
 import { englishLocalize, type LocalizeFunction } from "../core/localization";
 import { renderIcon } from "../ui/icons";
-import { PopoverInteractionController } from "../ui/popover-interaction.controller";
+import { PopoverInteractionController } from "../ui/popover/interaction.controller";
 import { exportFilterStyles } from "./export-filter.styles";
 import { ActivityPopoverController } from "./activity";
 import type {

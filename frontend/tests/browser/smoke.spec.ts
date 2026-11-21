@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
-import { MEDIA_OVERLAY_HIDE_DELAY_MS } from "../../src/ui/media-overlay-visibility.controller";
+import { MEDIA_OVERLAY_HIDE_DELAY_MS } from "../../src/ui/media-overlay/visibility.controller";
 
 const packageJson = JSON.parse(
   readFileSync(new URL("../../package.json", import.meta.url), "utf8"),

@@ -1,6 +1,6 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
-import { THUMBNAIL_PREVIEW_LONG_PRESS_MS } from "../core/constants";
+import { THUMBNAIL_PREVIEW_LONG_PRESS_MS } from "../../core/constants";
 
 const MOVE_TOLERANCE_PX = 10;
 

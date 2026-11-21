@@ -13,7 +13,7 @@ import {
   suppressNativePictureInPicture,
   togglePictureInPicture,
 } from "../../../core/picture-in-picture";
-import type { ToastSeverity } from "../../../ui/toast-manager";
+import type { ToastSeverity } from "../../../ui/toast/manager";
 import type { CameraControlAction } from "../controls-overlay";
 import { downloadSnapshot } from "./frame-capture";
 

@@ -3,7 +3,7 @@ import {
   mediaOverlayBadgeSizingStyles,
   mediaOverlayBadgeSurfaceStyles,
   mediaOverlayControlButtonStyles,
-} from "../../../ui/overlay-control.styles";
+} from "../../../ui/controls/overlay-control.styles";
 import { cameraSuspendedPresentationStyles } from "../../camera-presentation/suspended-presentation.styles";
 
 const minimalCameraComponentStyles = css`

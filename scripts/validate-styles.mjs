@@ -27,8 +27,8 @@ const recordedMediaBottomDrawerStyles = resolve(
 const allowedHomeAssistantTokens = new Map([
   [homeAssistantEditorBridge, new Set(["--ha-view-sections-column-max-width"])],
 ]);
-const motionBoundary = resolve(sourceRoot, "ui/motion.ts");
-const motionValueBoundary = resolve(sourceRoot, "ui/motion-value.ts");
+const motionBoundary = resolve(sourceRoot, "ui/motion/index.ts");
+const motionValueBoundary = resolve(sourceRoot, "ui/motion/value.ts");
 
 async function collectTypeScript(directory, files = []) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -133,7 +133,7 @@ for (const path of await collectTypeScript(sourceRoot)) {
     path === recordedMediaBottomDrawerStyles ||
     relativePath ===
       "frontend/src/features/companion-landscape/companion-landscape.styles.ts" ||
-    relativePath === "frontend/src/ui/media-controls-overlay.styles.ts";
+    relativePath === "frontend/src/ui/media-overlay/controls.styles.ts";
   if (source.includes("env(safe-area-inset-") && !safeAreaAllowed) {
     violations.push(
       `${relativePath}: safe-area insets are restricted to explicit viewport/fullscreen boundaries`,

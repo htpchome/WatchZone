@@ -25,16 +25,16 @@ import {
   type LocalizeFunction,
 } from "../../../core/localization";
 import { openRecordedMedia } from "../../../core/recorded-media";
-import { buttonBaseStyles } from "../../../ui/button.styles";
+import { buttonBaseStyles } from "../../../ui/controls/button.styles";
 import { renderIcon } from "../../../ui/icons";
-import "../../../ui/media-day-header";
+import "../../../ui/activity-list/media-day-header";
 import {
   scrollMediaViewportToTop,
   ScrollTopVisibilityController,
 } from "../../../ui/scroll-top";
-import { ToastManager } from "../../../ui/toast-manager";
-import "../../../ui/toast-region";
-import { ThumbnailPreviewPressController } from "../../../ui/thumbnail-preview-press.controller";
+import { ToastManager } from "../../../ui/toast/manager";
+import "../../../ui/toast/region";
+import { ThumbnailPreviewPressController } from "../../../ui/activity-list/thumbnail-preview-press.controller";
 import type { CameraSelectionContext } from "../../camera-selection-context";
 import type { ExportFilterContext } from "../../export-filter-context";
 import { ExportsController } from "./exports.controller";

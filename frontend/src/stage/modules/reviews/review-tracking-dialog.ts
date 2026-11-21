@@ -22,8 +22,8 @@ import {
   type TranslationKey,
 } from "../../../core/localization";
 import { homeAssistantNumberFormat } from "../../../core/number-format";
-import { centerDialogOnCard } from "../../../ui/dialog-position";
-import { activityBadgePresentations } from "../../../ui/activity-badge-presentations";
+import { centerDialogOnCard } from "../../../ui/popover/dialog-position";
+import { activityBadgePresentations } from "../../../ui/activity-list/badge-presentations";
 import type { ActivityTypeBadge } from "../../../ui/activity-list";
 import "../../../ui/badge";
 import { renderIcon } from "../../../ui/icons";

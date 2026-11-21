@@ -4,8 +4,8 @@ import {
   APP_ID,
   TOAST_TRANSITION_DURATION_MS,
   TOAST_VISIBLE_DURATION_MS,
-} from "../core/constants";
-import type { IconName } from "./icons";
+} from "../../core/constants";
+import type { IconName } from "../icons";
 
 export type ToastSeverity = "error" | "success" | "warning";
 

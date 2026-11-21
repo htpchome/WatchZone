@@ -54,7 +54,7 @@ import { ThemeProfileController } from "../core/theme-profile";
 import { toYamlCardConfig, type YamlCardConfig } from "../core/yaml-config";
 import { defaultStageFlow } from "../core/stage";
 import { themeTokens } from "../styles/theme-tokens";
-import { ToastManager } from "../ui/toast-manager";
+import { ToastManager } from "../ui/toast/manager";
 import { iconPath, renderIcon } from "../ui/icons";
 import type {
   SegmentedControlOption,
@@ -64,7 +64,7 @@ import type { SortableReorderDetail } from "../ui/sortable-list";
 import type { AccordionItem, AccordionToggleDetail } from "../ui/accordion";
 import "../ui/accordion";
 import "../ui/segmented-control";
-import "../ui/toast-region";
+import "../ui/toast/region";
 import {
   type DirtyStateContext,
   requestDirtyStateContext,

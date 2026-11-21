@@ -1,6 +1,6 @@
 import type { LocalizeFunction } from "../../core/localization";
 import { motionDurations, motionEasings, OwnedMotion } from "../../ui/motion";
-import { OwnedValueMotion } from "../../ui/motion-value";
+import { OwnedValueMotion } from "../../ui/motion/value";
 
 interface PullHost extends HTMLElement {
   readonly renderRoot: DocumentFragment | HTMLElement;

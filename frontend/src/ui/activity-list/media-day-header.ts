@@ -1,6 +1,6 @@
 import { html, LitElement } from "lit";
 
-import { MEDIA_DAY_HEADER_TAG } from "../core/constants";
+import { MEDIA_DAY_HEADER_TAG } from "../../core/constants";
 import { mediaDayHeaderStyles } from "./media-day-header.styles";
 
 /** Shared sticky date heading for media-list scroll surfaces. */

@@ -14,11 +14,11 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
 ## Baseline
 
 - Branch: `main`.
-- HEAD before this work: `2476c52` —
-  `v0.0.4-dev.499 - fix(live): retain healthy background transports`.
-- Version being prepared: `0.0.4-dev.500`.
-- Proposed subject:
+- HEAD before this work: `a19ca8a` —
   `v0.0.4-dev.500 - fix(live): serialize WebRTC upgrade retries`.
+- Version being prepared: `0.0.4-dev.501`.
+- Proposed subject:
+  `v0.0.4-dev.501 - refactor(ui): organize shared primitives`.
 
 ## Persistent two-way talk
 
@@ -111,8 +111,12 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
   a failed WebRTC probe's provider cooldown.
 - Shared zoom/pan and shared media-stage resize remain the sole owners of those
   behaviors for live and recorded media.
+- Shared UI primitives now live in named ownership folders, including icons,
+  controls, activity list, media overlay, motion, popover, toast, TWT, and
+  zoom. The UI root contains no loose implementation files, compatibility
+  re-exports, or generic barrel module.
 
-## Validation for `dev.500`
+## Validation for `dev.501`
 
 - Formatting, lint, typecheck, architecture/style/license checks, production
   build, and version synchronization pass.

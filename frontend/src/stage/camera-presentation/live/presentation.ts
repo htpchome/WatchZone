@@ -20,15 +20,15 @@ import {
   type LocalizeFunction,
 } from "../../../core/localization";
 import { DeviceProfileController } from "../../../core/device-profile";
-import type { ToastNotice, ToastSeverity } from "../../../ui/toast-manager";
+import type { ToastNotice, ToastSeverity } from "../../../ui/toast/manager";
 import "../../../ui/badge";
-import "../../../ui/toast-region";
+import "../../../ui/toast/region";
 import type {
   CameraControlAction,
   CameraControlEventDetail,
 } from "../controls-overlay";
 import "../controls-overlay";
-import { mediaOverlayBadgeSizingStyles } from "../../../ui/overlay-control.styles";
+import { mediaOverlayBadgeSizingStyles } from "../../../ui/controls/overlay-control.styles";
 import { cameraLiveViewStyles } from "../live-view.styles";
 import {
   isPictureInPictureActive,
@@ -36,7 +36,7 @@ import {
   suppressNativePictureInPicture,
 } from "../../../core/picture-in-picture";
 import { ZoomController } from "../../../ui/zoom";
-import { MediaOverlayVisibilityController } from "../../../ui/media-overlay-visibility.controller";
+import { MediaOverlayVisibilityController } from "../../../ui/media-overlay/visibility.controller";
 import type { PresentedSource } from "./session.controller";
 import { CameraLiveControlController } from "./control.controller";
 import { captureVideoFrame } from "./frame-capture";

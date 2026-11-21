@@ -13,9 +13,9 @@ import {
 } from "../../core/localization";
 import { renderIcon } from "../icons";
 import { OwnedMotion, reducedMotionRequested } from "../motion";
-import { roundButtonStyles } from "../overlay-control.styles";
-import { PressInteractionController } from "../press-interaction.controller";
-import { TalkSoundwaveController } from "../talk-soundwave.controller";
+import { roundButtonStyles } from "../controls/overlay-control.styles";
+import { PressInteractionController } from "../press";
+import { TalkSoundwaveController } from "./soundwave.controller";
 import { twoWayTalkControlsStyles } from "./controls.styles";
 
 export type TwoWayTalkControlsStatus = "connected" | "connecting" | "ready";

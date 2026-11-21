@@ -22,15 +22,15 @@ import {
   motionEasings,
   OwnedMotion,
 } from "../../../ui/motion";
-import { activityActionStyles } from "../../../ui/activity-action.styles";
-import { buttonBaseStyles } from "../../../ui/button.styles";
+import { activityActionStyles } from "../../../ui/activity-list/action.styles";
+import { buttonBaseStyles } from "../../../ui/controls/button.styles";
 import { renderIcon } from "../../../ui/icons";
 import {
   MediaStageResizeController,
   type MediaStageResizeContext,
   type MediaStageResizeInteraction,
-} from "../../../ui/media-stage-resize.controller";
-import type { ToastNotice } from "../../../ui/toast-manager";
+} from "../../../ui/media-overlay/stage-resize.controller";
+import type { ToastNotice } from "../../../ui/toast/manager";
 import { RecordedMediaDialogContent } from "../dialog-content";
 import { recordedMediaDialogContentStyles } from "../dialog-content.styles";
 import { recordedMediaHeading } from "../media-information";

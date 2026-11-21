@@ -4,12 +4,12 @@ import {
   MEDIA_CONTROL_EVENT,
   MEDIA_CONTROLS_TAG,
   MEDIA_OVERLAY_INTERACTION_EVENT,
-} from "../core/constants";
-import { renderIcon, type IconName } from "./icons";
-import { releaseTouchFocus } from "./control-interaction";
-import { mediaControlsOverlayStyles } from "./media-controls-overlay.styles";
-import { mediaOverlayControlButtonStyles } from "./overlay-control.styles";
-import { VisibilityMotion } from "./motion";
+} from "../../core/constants";
+import { renderIcon, type IconName } from "../icons";
+import { releaseTouchFocus } from "../controls/control-interaction";
+import { mediaControlsOverlayStyles } from "./controls.styles";
+import { mediaOverlayControlButtonStyles } from "../controls/overlay-control.styles";
+import { VisibilityMotion } from "../motion";
 
 export interface MediaControlDescriptor<Action extends string = string> {
   readonly action: Action;

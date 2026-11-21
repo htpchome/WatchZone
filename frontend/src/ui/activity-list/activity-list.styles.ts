@@ -1,6 +1,6 @@
 import { css } from "lit";
 
-import { responsiveWidths } from "../styles/responsive-widths";
+import { responsiveWidths } from "../../styles/responsive-widths";
 
 export const activityListStyles = css`
   :host {

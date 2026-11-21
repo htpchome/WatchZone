@@ -4,7 +4,7 @@ import {
   type ValueAnimationTransition,
 } from "motion";
 
-import { reducedMotionRequested } from "./motion";
+import { reducedMotionRequested } from "./index";
 
 export interface ValueMotionOptions extends ValueAnimationTransition {
   readonly onUpdate?: (value: number) => void;

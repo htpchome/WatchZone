@@ -5,9 +5,9 @@ import {
   TOAST_TRANSITION_DURATION_MS,
   TOAST_VISIBLE_DURATION_MS,
 } from "../src/core/constants";
-import { ToastManager } from "../src/ui/toast-manager";
-import type { ToastRegion } from "../src/ui/toast-region";
-import "../src/ui/toast-region";
+import { ToastManager } from "../src/ui/toast/manager";
+import type { ToastRegion } from "../src/ui/toast/region";
+import "../src/ui/toast/region";
 
 class TestHost implements ReactiveControllerHost {
   public readonly requestUpdate = vi.fn<() => void>();

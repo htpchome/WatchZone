@@ -1,7 +1,7 @@
 import type { ReactiveControllerHost } from "lit";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { PressInteractionController } from "../src/ui/press-interaction.controller";
+import { PressInteractionController } from "../src/ui/press";
 
 describe("press interaction controller", () => {
   afterEach(() => {

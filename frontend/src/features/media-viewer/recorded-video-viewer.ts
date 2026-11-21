@@ -20,7 +20,7 @@ import {
   type RecordedMediaInitialGeometry,
   type RecordedMediaRequest,
 } from "../../core/recorded-media";
-import { ToastManager } from "../../ui/toast-manager";
+import { ToastManager } from "../../ui/toast/manager";
 import { mediaViewerPresentation } from "./presentation";
 import { recordedVideoViewerStyles } from "./recorded-video-viewer.styles";
 import type { RecordedMediaActionDetail } from "./media-actions";

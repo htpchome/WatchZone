@@ -10,9 +10,9 @@ import type {
   RecordedMediaInitialGeometry,
   RecordedMediaRequest,
 } from "../../../core/recorded-media";
-import { activityActionStyles } from "../../../ui/activity-action.styles";
-import { buttonBaseStyles } from "../../../ui/button.styles";
-import type { ToastNotice } from "../../../ui/toast-manager";
+import { activityActionStyles } from "../../../ui/activity-list/action.styles";
+import { buttonBaseStyles } from "../../../ui/controls/button.styles";
+import type { ToastNotice } from "../../../ui/toast/manager";
 import { renderIcon } from "../../../ui/icons";
 import { RecordedMediaDialogContent } from "../dialog-content";
 import { recordedMediaDialogContentStyles } from "../dialog-content.styles";

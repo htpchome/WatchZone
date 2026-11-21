@@ -9,7 +9,7 @@ import {
   englishLocalize,
   type LocalizeFunction,
 } from "../../core/localization";
-import { releaseTouchFocus } from "../../ui/control-interaction";
+import { releaseTouchFocus } from "../../ui/controls/control-interaction";
 import { renderIcon } from "../../ui/icons";
 import { VisibilityMotion } from "../../ui/motion";
 import { recordedVideoTransportStyles } from "./transport-controls.styles";

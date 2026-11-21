@@ -18,13 +18,13 @@ import { openRecordedMedia } from "../../../core/recorded-media";
 import { RECORDINGS_TAG } from "../../../core/constants";
 import { homeAssistantNumberFormat } from "../../../core/number-format";
 import { renderIcon } from "../../../ui/icons";
-import "../../../ui/media-day-header";
+import "../../../ui/activity-list/media-day-header";
 import {
   scrollMediaViewportToTop,
   ScrollTopVisibilityController,
 } from "../../../ui/scroll-top";
-import { ToastManager } from "../../../ui/toast-manager";
-import "../../../ui/toast-region";
+import { ToastManager } from "../../../ui/toast/manager";
+import "../../../ui/toast/region";
 import type { CameraSelectionContext } from "../../camera-selection-context";
 import type { MediaDateContext } from "../../media-date-context";
 import { RecordingsController } from "./recordings.controller";

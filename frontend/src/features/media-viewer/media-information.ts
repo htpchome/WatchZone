@@ -16,7 +16,7 @@ import {
 } from "../../core/localization";
 import { homeAssistantNumberFormat } from "../../core/number-format";
 import type { RecordedMediaRequest } from "../../core/recorded-media";
-import { activityBadgePresentations } from "../../ui/activity-badge-presentations";
+import { activityBadgePresentations } from "../../ui/activity-list/badge-presentations";
 import "../../ui/badge";
 import { mediaInformationStyles } from "./media-information.styles";
 

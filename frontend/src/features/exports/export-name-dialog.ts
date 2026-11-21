@@ -9,8 +9,8 @@ import {
   englishLocalize,
   type LocalizeFunction,
 } from "../../core/localization";
-import { buttonBaseStyles } from "../../ui/button.styles";
-import { centerDialogOnCard } from "../../ui/dialog-position";
+import { buttonBaseStyles } from "../../ui/controls/button.styles";
+import { centerDialogOnCard } from "../../ui/popover/dialog-position";
 import { MAX_EXPORT_TITLE_LENGTH, normalizeExportTitle } from "./title";
 import { exportNameDialogStyles } from "./export-name-dialog.styles";
 

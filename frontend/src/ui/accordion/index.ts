@@ -4,15 +4,15 @@ import {
   ACCORDION_ITEM_TAG,
   ACCORDION_TAG,
   ACCORDION_TOGGLE_EVENT,
-} from "../core/constants";
-import { renderIcon, type IconName } from "./icons";
+} from "../../core/constants";
+import { renderIcon, type IconName } from "../icons";
 import {
   motionDurations,
   motionEasings,
   OwnedMotion,
   reducedMotionRequested,
-} from "./motion";
-import { OwnedValueMotion } from "./motion-value";
+} from "../motion";
+import { OwnedValueMotion } from "../motion/value";
 import { accordionItemStyles, accordionStyles } from "./accordion.styles";
 
 export interface AccordionToggleDetail {

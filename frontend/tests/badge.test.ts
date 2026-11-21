@@ -6,7 +6,7 @@ import {
   distinctBadgeColorsForLabels,
   normalizeBadgeLabel,
   OBJECT_BADGE_COLORS,
-} from "../src/ui/badge-colors";
+} from "../src/ui/badge/colors";
 import type { Badge } from "../src/ui/badge";
 import "../src/ui/badge";
 

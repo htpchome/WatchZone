@@ -2,7 +2,7 @@ import type { ReactiveController, ReactiveControllerHost } from "lit";
 
 import type { SegmentedControl } from "../../../ui/segmented-control";
 import { motionDurations, motionEasings } from "../../../ui/motion";
-import { OwnedValueMotion } from "../../../ui/motion-value";
+import { OwnedValueMotion } from "../../../ui/motion/value";
 
 const GEOMETRY_EPSILON_PX = 1;
 

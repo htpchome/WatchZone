@@ -2,7 +2,7 @@ import type { ReactiveControllerHost } from "lit";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { THUMBNAIL_PREVIEW_LONG_PRESS_MS } from "../src/core/constants";
-import { ThumbnailPreviewPressController } from "../src/ui/thumbnail-preview-press.controller";
+import { ThumbnailPreviewPressController } from "../src/ui/activity-list/thumbnail-preview-press.controller";
 
 describe("thumbnail preview press controller", () => {
   afterEach(() => {

@@ -30,7 +30,7 @@ import {
 import { getMediaSessionManager } from "../../../core/media-session-manager";
 import type { MediaRetentionPreference } from "../../../core/media-retention-policy";
 import { renderIcon } from "../../../ui/icons";
-import { releaseTouchFocus } from "../../../ui/control-interaction";
+import { releaseTouchFocus } from "../../../ui/controls/control-interaction";
 import type { CameraGestureLockDetail } from "../../camera-presentation/live/presentation";
 import type { CameraNativeFullscreenChangeDetail } from "../../../core/fullscreen";
 import type { CameraOverlayVisibilityDetail } from "../../camera-presentation/live/presentation";

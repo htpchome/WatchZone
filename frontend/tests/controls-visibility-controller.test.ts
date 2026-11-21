@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   MEDIA_OVERLAY_HIDE_DELAY_MS,
   MediaOverlayVisibilityController,
-} from "../src/ui/media-overlay-visibility.controller";
+} from "../src/ui/media-overlay/visibility.controller";
 
 class TestHost implements ReactiveControllerHost {
   public readonly controllers: ReactiveController[] = [];

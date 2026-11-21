@@ -1,6 +1,6 @@
 import { css } from "lit";
 
-import { toolbarIconButtonStyles } from "../../ui/toolbar-icon-button.styles";
+import { toolbarIconButtonStyles } from "../../ui/controls/toolbar-icon-button.styles";
 
 const activityCalendarPrivateStyles = css`
   :host {

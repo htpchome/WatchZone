@@ -1,6 +1,6 @@
 import { css } from "lit";
 
-import { mediaOverlayButtonStyles } from "../../../ui/media-overlay-button.styles";
+import { mediaOverlayButtonStyles } from "../../../ui/media-overlay/button.styles";
 
 const cameraSwitcherPrivateStyles = css`
   :host {

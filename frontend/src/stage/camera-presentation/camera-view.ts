@@ -16,7 +16,7 @@ import {
   englishLocalize,
   type LocalizeFunction,
 } from "../../core/localization";
-import { ToastManager } from "../../ui/toast-manager";
+import { ToastManager } from "../../ui/toast/manager";
 import { renderIcon } from "../../ui/icons";
 import { cameraViewStyles } from "./camera-view.styles";
 import { stageResizeHandleStyles } from "./stage-resize-handle.styles";

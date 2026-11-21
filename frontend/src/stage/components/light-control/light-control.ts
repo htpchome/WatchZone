@@ -19,12 +19,12 @@ import {
   englishLocalize,
   type LocalizeFunction,
 } from "../../../core/localization";
-import { roundButtonStyles } from "../../../ui/overlay-control.styles";
+import { roundButtonStyles } from "../../../ui/controls/overlay-control.styles";
 import { renderIcon } from "../../../ui/icons";
-import { ToastManager } from "../../../ui/toast-manager";
-import { releaseTouchFocus } from "../../../ui/control-interaction";
-import "../../../ui/toast-region";
-import { PressInteractionController } from "../../../ui/press-interaction.controller";
+import { ToastManager } from "../../../ui/toast/manager";
+import { releaseTouchFocus } from "../../../ui/controls/control-interaction";
+import "../../../ui/toast/region";
+import { PressInteractionController } from "../../../ui/press";
 import type { CameraLightConfig } from "./index";
 import { lightControlStyles } from "./light-control.styles";
 import { OverlayInteractionController } from "../../overlay-interaction.controller";

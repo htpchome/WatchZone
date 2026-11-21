@@ -11,7 +11,7 @@ import {
   type ExportJob,
 } from "../../../features/exports";
 import type { ActivityListItem } from "../../../ui/activity-list";
-import type { ToastManager } from "../../../ui/toast-manager";
+import type { ToastManager } from "../../../ui/toast/manager";
 import type {
   ReviewExportConfirmation,
   ReviewExportDraft,

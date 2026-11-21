@@ -13,12 +13,12 @@ import {
   englishLocalize,
   type LocalizeFunction,
 } from "../../../core/localization";
-import { releaseTouchFocus } from "../../../ui/control-interaction";
+import { releaseTouchFocus } from "../../../ui/controls/control-interaction";
 import { renderIcon, type IconName } from "../../../ui/icons";
-import { ToastManager } from "../../../ui/toast-manager";
-import "../../../ui/toast-region";
-import { PressInteractionController } from "../../../ui/press-interaction.controller";
-import { roundButtonStyles } from "../../../ui/overlay-control.styles";
+import { ToastManager } from "../../../ui/toast/manager";
+import "../../../ui/toast/region";
+import { PressInteractionController } from "../../../ui/press";
+import { roundButtonStyles } from "../../../ui/controls/overlay-control.styles";
 import { OverlayInteractionController } from "../../overlay-interaction.controller";
 import {
   PtzSessionController,

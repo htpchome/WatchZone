@@ -3,7 +3,7 @@ import type { ReactiveController, ReactiveControllerHost } from "lit";
 import {
   isPrimaryControlPointer,
   releaseTouchFocus,
-} from "./control-interaction";
+} from "../controls/control-interaction";
 
 interface PressInteractionCallbacks<Action> {
   actionFor(target: HTMLElement): Action | undefined;

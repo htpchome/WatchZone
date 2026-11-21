@@ -1,6 +1,6 @@
 import { css } from "lit";
 
-import { mediaOverlayControlSizingStyles } from "./overlay-control.styles";
+import { mediaOverlayControlSizingStyles } from "../controls/overlay-control.styles";
 
 /** Shared theme-aware button surface for controls placed over camera media. */
 export const mediaOverlayButtonStyles = [

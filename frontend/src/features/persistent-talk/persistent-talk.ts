@@ -13,7 +13,7 @@ import { englishLocalize } from "../../core/localization";
 import { RESPONSIVE_WIDTHS } from "../../core/responsive-widths";
 import { themeTokens } from "../../styles/theme-tokens";
 import { renderIcon } from "../../ui/icons";
-import { roundButtonStyles } from "../../ui/overlay-control.styles";
+import { roundButtonStyles } from "../../ui/controls/overlay-control.styles";
 import "../../ui/two-way-talk/controls";
 import { getPersistentTalkSession, type PersistentTalkSnapshot } from "./index";
 import { persistentTalkStyles } from "./persistent-talk.styles";

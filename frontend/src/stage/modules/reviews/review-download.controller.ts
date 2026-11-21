@@ -3,7 +3,7 @@ import type { ReactiveController, ReactiveControllerHost } from "lit";
 import type { HomeAssistantApi } from "../../../core/home-assistant";
 import type { LocalizeFunction } from "../../../core/localization";
 import type { ActivityListItem } from "../../../ui/activity-list";
-import type { ToastManager } from "../../../ui/toast-manager";
+import type { ToastManager } from "../../../ui/toast/manager";
 
 const OBJECT_URL_REVOKE_DELAY_MS = 1_000;
 

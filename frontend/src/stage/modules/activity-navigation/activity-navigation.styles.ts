@@ -1,6 +1,6 @@
 import { css } from "lit";
 
-import { roundButtonStyles } from "../../../ui/overlay-control.styles";
+import { roundButtonStyles } from "../../../ui/controls/overlay-control.styles";
 
 export const activityNavigationStyles = [
   ...roundButtonStyles,

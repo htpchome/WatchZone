@@ -45,13 +45,13 @@ import type {
   RecordingTimeline,
 } from "../../core/recorded-media";
 import { ZoomController } from "../../ui/zoom";
-import { MediaOverlayVisibilityController } from "../../ui/media-overlay-visibility.controller";
+import { MediaOverlayVisibilityController } from "../../ui/media-overlay/visibility.controller";
 import type {
   MediaControlDescriptor,
   MediaControlEventDetail,
-} from "../../ui/media-controls-overlay";
-import { releaseTouchFocus } from "../../ui/control-interaction";
-import "../../ui/media-controls-overlay";
+} from "../../ui/media-overlay/controls";
+import { releaseTouchFocus } from "../../ui/controls/control-interaction";
+import "../../ui/media-overlay/controls";
 import { RecordedMediaPlaybackController } from "./recorded-media-playback.controller";
 import { recordedVideoPlayerStyles } from "./recorded-video-player.styles";
 import {

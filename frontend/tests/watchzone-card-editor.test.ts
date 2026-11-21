@@ -12,7 +12,7 @@ import {
 } from "../src/core/constants";
 import type { AccordionItem } from "../src/ui/accordion";
 import type { SegmentedControl } from "../src/ui/segmented-control";
-import type { ToastRegion } from "../src/ui/toast-region";
+import type { ToastRegion } from "../src/ui/toast/region";
 import { iconPath } from "../src/ui/icons";
 import type { CardEditor } from "../src/editor/watchzone-card-editor";
 

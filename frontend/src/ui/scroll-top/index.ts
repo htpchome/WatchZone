@@ -5,7 +5,7 @@ import {
   type ReactiveControllerHost,
 } from "lit";
 
-import { SCROLL_TOP_TAG } from "../core/constants";
+import { SCROLL_TOP_TAG } from "../../core/constants";
 import { scrollTopStyles } from "./scroll-top.styles";
 
 const MIN_SCROLL_TOP_OFFSET = 64;

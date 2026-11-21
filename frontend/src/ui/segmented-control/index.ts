@@ -4,9 +4,9 @@ import { repeat } from "lit/directives/repeat.js";
 import {
   SEGMENTED_CONTROL_TAG,
   SEGMENTED_CONTROL_VALUE_EVENT,
-} from "../core/constants";
+} from "../../core/constants";
 import { segmentedControlStyles } from "./segmented-control.styles";
-import { renderIcon, type IconName } from "./icons";
+import { renderIcon, type IconName } from "../icons";
 
 export interface SegmentedControlOption {
   readonly accessibleLabel?: string;

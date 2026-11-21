@@ -1,7 +1,7 @@
 import { html, LitElement } from "lit";
 
-import { BADGE_TAG } from "../core/constants";
-import type { BadgeColor } from "./badge-colors";
+import { BADGE_TAG } from "../../core/constants";
+import type { BadgeColor } from "./colors";
 import { badgeStyles } from "./badge.styles";
 
 export type BadgeAppearance = "filled" | "filled-outlined" | "outlined";

@@ -22,10 +22,10 @@ import {
 } from "../../../core/localization";
 import { pictureInPictureMethod } from "../../../core/picture-in-picture";
 import { renderIcon } from "../../../ui/icons";
-import { releaseTouchFocus } from "../../../ui/control-interaction";
-import { MediaOverlayVisibilityController } from "../../../ui/media-overlay-visibility.controller";
+import { releaseTouchFocus } from "../../../ui/controls/control-interaction";
+import { MediaOverlayVisibilityController } from "../../../ui/media-overlay/visibility.controller";
 import { mediaInteractionOriginatesFromControl } from "../../../ui/zoom";
-import { mediaOverlayControlButtonStyles } from "../../../ui/overlay-control.styles";
+import { mediaOverlayControlButtonStyles } from "../../../ui/controls/overlay-control.styles";
 import type { CameraSessionContext } from "../../camera-session-context";
 import type {
   FrigateFallbackTransport,

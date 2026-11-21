@@ -1,5 +1,5 @@
-import type { BadgeVariant } from "./badge";
-import { distinctBadgeColorsForLabels, type BadgeColor } from "./badge-colors";
+import type { BadgeVariant } from "../badge";
+import { distinctBadgeColorsForLabels, type BadgeColor } from "../badge/colors";
 
 export interface ActivityBadgePresentation {
   readonly color?: BadgeColor;

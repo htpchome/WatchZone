@@ -1,6 +1,6 @@
 import { css } from "lit";
 
-import { mediaOverlayBadgeSurfaceStyles } from "../../ui/overlay-control.styles";
+import { mediaOverlayBadgeSurfaceStyles } from "../../ui/controls/overlay-control.styles";
 import { cameraSuspendedPresentationStyles } from "./suspended-presentation.styles";
 
 export const cameraLiveViewStyles = css`

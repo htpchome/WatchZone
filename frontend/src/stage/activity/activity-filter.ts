@@ -7,7 +7,7 @@ import {
   type LocalizeFunction,
 } from "../../core/localization";
 import { renderIcon } from "../../ui/icons";
-import { PopoverInteractionController } from "../../ui/popover-interaction.controller";
+import { PopoverInteractionController } from "../../ui/popover/interaction.controller";
 import type { CameraSelectionContext } from "../camera-selection-context";
 import type {
   ActivityClassificationFilter,

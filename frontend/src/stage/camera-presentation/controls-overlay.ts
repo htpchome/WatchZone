@@ -14,8 +14,8 @@ import type { IconName } from "../../ui/icons";
 import type {
   MediaControlDescriptor,
   MediaControlEventDetail,
-} from "../../ui/media-controls-overlay";
-import "../../ui/media-controls-overlay";
+} from "../../ui/media-overlay/controls";
+import "../../ui/media-overlay/controls";
 import { cameraControlsStyles } from "./controls-overlay.styles";
 
 const mediaControlsTag = unsafeStatic(MEDIA_CONTROLS_TAG);

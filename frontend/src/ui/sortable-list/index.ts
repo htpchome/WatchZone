@@ -6,10 +6,13 @@ import {
   SORTABLE_LIST_TAG,
   SORTABLE_REORDER_EVENT,
   SORTABLE_TILE_TAG,
-} from "../core/constants";
-import { englishLocalize, type LocalizeFunction } from "../core/localization";
-import { renderIcon } from "./icons";
-import { motionDurations, motionEasings, OwnedMotion } from "./motion";
+} from "../../core/constants";
+import {
+  englishLocalize,
+  type LocalizeFunction,
+} from "../../core/localization";
+import { renderIcon } from "../icons";
+import { motionDurations, motionEasings, OwnedMotion } from "../motion";
 import { sortableListStyles, sortableTileStyles } from "./sortable-list.styles";
 
 type SortableDragPhase = "cancel" | "end" | "move" | "start";

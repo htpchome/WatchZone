@@ -21,7 +21,7 @@ import type {
   RecordingTimeline,
   RecordingTimelineMarker,
 } from "../../core/recorded-media";
-import { releaseTouchFocus } from "../../ui/control-interaction";
+import { releaseTouchFocus } from "../../ui/controls/control-interaction";
 import { renderIcon } from "../../ui/icons";
 import { recordingScrubberStyles } from "./recording-scrubber.styles";
 import {

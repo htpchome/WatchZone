@@ -5,40 +5,40 @@ import { styleMap } from "lit/directives/style-map.js";
 import {
   ACTIVITY_LIST_INTENT_EVENT,
   ACTIVITY_LIST_TAG,
-} from "../core/constants";
+} from "../../core/constants";
 import {
   formatHomeAssistantDateKey,
   formatHomeAssistantEventDate,
   formatHomeAssistantTime,
   homeAssistantDateKey,
-} from "../core/date-time";
-import type { HomeAssistantLocale } from "../core/home-assistant";
+} from "../../core/date-time";
+import type { HomeAssistantLocale } from "../../core/home-assistant";
 import type {
   RecordedMediaSource,
   RecordedMediaTransport,
-} from "../core/recorded-media";
-import { homeAssistantNumberFormat } from "../core/number-format";
+} from "../../core/recorded-media";
+import { homeAssistantNumberFormat } from "../../core/number-format";
 import {
   englishLocalize,
   type LocalizeFunction,
   type TranslationKey,
-} from "../core/localization";
-import { renderIcon } from "./icons";
-import { activityMediaTitle } from "../core/activity-media";
-import type { BadgeVariant } from "./badge";
+} from "../../core/localization";
+import { renderIcon } from "../icons";
+import { activityMediaTitle } from "../../core/activity-media";
+import type { BadgeVariant } from "../badge";
 import {
   activityBadgePresentations,
   type ActivityBadgePresentation,
-} from "./activity-badge-presentations";
-import "./badge";
+} from "./badge-presentations";
+import "../badge";
 import "./media-day-header";
 import {
   scrollMediaViewportToTop,
   ScrollTopVisibilityController,
-} from "./scroll-top";
-import { activityActionStyles } from "./activity-action.styles";
+} from "../scroll-top";
+import { activityActionStyles } from "./action.styles";
 import { activityListStyles } from "./activity-list.styles";
-import { buttonBaseStyles } from "./button.styles";
+import { buttonBaseStyles } from "../controls/button.styles";
 import { ThumbnailPreviewPressController } from "./thumbnail-preview-press.controller";
 
 export type ActivityClassification = "alert" | "detection";

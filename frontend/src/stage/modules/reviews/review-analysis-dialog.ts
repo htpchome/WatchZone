@@ -10,7 +10,7 @@ import {
 } from "../../../core/localization";
 import type { HomeAssistantLocale } from "../../../core/home-assistant";
 import { homeAssistantNumberFormat } from "../../../core/number-format";
-import { centerDialogOnCard } from "../../../ui/dialog-position";
+import { centerDialogOnCard } from "../../../ui/popover/dialog-position";
 import { reviewAnalysisDialogStyles } from "./review-analysis-dialog.styles";
 import { reviewDialogBaseStyles } from "./review-dialog.styles";
 

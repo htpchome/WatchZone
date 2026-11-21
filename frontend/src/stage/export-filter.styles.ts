@@ -1,6 +1,6 @@
 import { css } from "lit";
 
-import { filterPopoverStyles } from "../ui/filter-popover.styles";
+import { filterPopoverStyles } from "../ui/popover/filter-popover.styles";
 
 export const exportFilterStyles = [
   filterPopoverStyles,

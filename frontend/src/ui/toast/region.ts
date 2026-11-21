@@ -1,9 +1,9 @@
 import { html, LitElement } from "lit";
 
-import { TOAST_REGION_TAG } from "../core/constants";
-import type { ToastNotice } from "./toast-manager";
-import { motionDurations, motionEasings, OwnedMotion } from "./motion";
-import { toastRegionStyles } from "./toast-region.styles";
+import { TOAST_REGION_TAG } from "../../core/constants";
+import type { ToastNotice } from "./manager";
+import { motionDurations, motionEasings, OwnedMotion } from "../motion";
+import { toastRegionStyles } from "./region.styles";
 
 export type ToastRegionMode = "inline" | "overlay";
 
@@ -17,7 +17,7 @@ export class ToastRegion extends LitElement {
   public mode: ToastRegionMode = "overlay";
   public notices: readonly ToastNotice[] = [];
   private _iconLoad?: Promise<void>;
-  private _renderIcon?: typeof import("./icons").renderIcon;
+  private _renderIcon?: typeof import("../icons").renderIcon;
   private readonly _motions = new Map<
     string,
     { readonly motion: OwnedMotion; dismissing: boolean }
@@ -96,7 +96,7 @@ export class ToastRegion extends LitElement {
 
   private _loadIcons(): void {
     if (this._renderIcon || this._iconLoad) return;
-    this._iconLoad = import("./icons")
+    this._iconLoad = import("../icons")
       .then(({ renderIcon }) => {
         this._renderIcon = renderIcon;
         this.requestUpdate();

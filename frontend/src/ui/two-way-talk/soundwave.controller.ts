@@ -1,4 +1,4 @@
-import { OwnedValueMotion } from "./motion-value";
+import { OwnedValueMotion } from "../motion/value";
 
 const FRAME_INTERVAL_MS = 1000 / 30;
 
