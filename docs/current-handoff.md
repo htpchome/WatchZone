@@ -16,9 +16,9 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
 - Branch: `main`.
 - HEAD before this work: `45c2138` —
   `v0.0.4-dev.502 - refactor(identity): rename app to CameraOptics`.
-- Version being prepared: `0.0.5-dev.1`.
+- Version being prepared: `0.0.5-dev.2`.
 - Proposed subject:
-  `v0.0.5-dev.1 - feat(camera): add live-only substream selection`.
+  `v0.0.5-dev.2 - fix(build): restore editor release budget`.
 
 ## CameraOptics identity
 
@@ -140,7 +140,7 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
   zoom. The UI root contains no loose implementation files, compatibility
   re-exports, or generic barrel module.
 
-## Validation for `0.0.5-dev.1`
+## Validation for `0.0.5-dev.2`
 
 - Formatting, lint, typecheck, architecture/style/license checks, production
   build, and version synchronization pass.
