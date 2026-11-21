@@ -42,7 +42,7 @@ export class TwoWayTalkControls extends LitElement {
   public localize: LocalizeFunction = englishLocalize;
   public microphoneMuted = false;
   public outgoingStream?: MediaStream;
-  public presentation: "overlay" | "standard" | "persistent" = "standard";
+  public presentation: "overlay" | "standard" = "standard";
   public speakerMuted = true;
   public status: TwoWayTalkControlsStatus = "ready";
   public stopLabel = "";

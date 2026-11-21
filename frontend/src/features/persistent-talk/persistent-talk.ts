@@ -87,7 +87,7 @@ export class PersistentTalkTile extends LitElement {
         .localize=${t}
         .microphoneMuted=${this._snapshot.microphoneMuted}
         .outgoingStream=${this._snapshot.connection?.localStream}
-        presentation="persistent"
+        presentation="standard"
         .speakerMuted=${this._snapshot.muted}
         .status=${connected ? "connected" : connecting ? "connecting" : "ready"}
         .stopLabel=${t("talk.disconnect_keep_persistent")}

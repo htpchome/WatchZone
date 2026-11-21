@@ -16,9 +16,9 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
 - Branch: `main`.
 - HEAD before this work: `6d4ddc6` —
   `v0.0.4-dev.492 - fix(talk): harden persistent navigation and audio`.
-- Version being prepared: `0.0.4-dev.496`.
+- Version being prepared: `0.0.4-dev.497`.
 - Proposed subject:
-  `v0.0.4-dev.496 - refactor(talk): share controls across all presentations`.
+  `v0.0.4-dev.497 - fix(talk): enforce standard controls outside overlays`.
 
 ## Persistent two-way talk
 
@@ -31,6 +31,9 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
   shared TWT controls element. Button markup, icons, spinner, soundwave, active
   styling, muted styling, and inactive styling have one implementation. The
   persistent tile owns only its surrounding document-level shell.
+- Shared controls have only `standard` and `overlay` presentations. The
+  persistent tile uses `standard`; only camera overlay placement uses the
+  alternate `overlay` presentation.
 - The shared controls always reserve the full active three-button width. Ready
   state renders one centered muted-microphone button inside that stable
   footprint, so connection state changes cannot move adjacent layout.
@@ -94,7 +97,7 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
 - Shared zoom/pan and shared media-stage resize remain the sole owners of those
   behaviors for live and recorded media.
 
-## Validation for `dev.496`
+## Validation for `dev.497`
 
 - Formatting, lint, typecheck, architecture/style/license checks, production
   build, and version synchronization pass.

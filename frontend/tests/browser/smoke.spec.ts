@@ -8180,6 +8180,10 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
   const persistentSharedControls = persistentTalk.locator(
     "wzc-two-way-talk-controls",
   );
+  await expect(persistentSharedControls).toHaveAttribute(
+    "presentation",
+    "standard",
+  );
   await expect(persistentSharedControls.locator("button")).toHaveCount(3);
   const connectedPersistentControlsBox =
     await persistentSharedControls.boundingBox();

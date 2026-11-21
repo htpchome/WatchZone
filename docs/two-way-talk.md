@@ -87,6 +87,9 @@ does not contain signaling-path conditions.
 - Every camera and persistent presentation uses the same non-placeable shared
   controls element for ready, connecting, connected, microphone-muted, and
   speaker-muted states. The persistent tile must not duplicate those controls.
+- The controls expose exactly two presentations: `standard`, used everywhere
+  including the persistent tile, and `overlay`, used only in camera overlay
+  placement. Persistent presentation is not a third visual variant.
 - The shared controls always reserve the connected three-button width. Ready
   state shows only the single muted-microphone button centered inside that
   footprint, preventing layout movement when talk starts or stops.
