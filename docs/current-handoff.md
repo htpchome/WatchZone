@@ -14,11 +14,11 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
 ## Baseline
 
 - Branch: `main`.
-- HEAD before this work: `a77ce74` —
-  `v0.0.4-dev.501 - refactor(ui): organize shared primitives`.
-- Version being prepared: `0.0.4-dev.502`.
-- Proposed subject:
+- HEAD before this work: `45c2138` —
   `v0.0.4-dev.502 - refactor(identity): rename app to CameraOptics`.
+- Version being prepared: `0.0.4`.
+- Proposed subject:
+  `v0.0.4 - release(identity): establish CameraOptics stable cutover`.
 
 ## CameraOptics identity
 
@@ -133,7 +133,7 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
   zoom. The UI root contains no loose implementation files, compatibility
   re-exports, or generic barrel module.
 
-## Validation for `dev.502`
+## Validation for `0.0.4`
 
 - Formatting, lint, typecheck, architecture/style/license checks, production
   build, and version synchronization pass.
