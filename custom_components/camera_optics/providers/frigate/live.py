@@ -125,9 +125,14 @@ async def async_prepare_session(
     camera: Camera,
     entity_id: str,
     send_event: SendLiveSignalingEvent,
+    source_key: str | None = None,
 ) -> LiveSignalingSession:
     """Prepare fast Frigate signaling or report a sanitized fallback reason."""
-    source = await async_resolve_source(hass, entity_id, camera)
+    source = (
+        await async_resolve_source(hass, entity_id, camera)
+        if source_key is None
+        else await async_resolve_source(hass, entity_id, camera, source_key)
+    )
     url = (URL(source.base_url) / _GO2RTC_WEBSOCKET_PATH) % {"src": source.stream_name}
     try:
         headers = await source.client.get_auth_headers()

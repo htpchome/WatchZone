@@ -65,6 +65,7 @@ export interface CameraConfig {
   readonly connection: LiveConnectionType;
   readonly entity_id: string;
   readonly frigate_fallback: FrigateFallbackTransport;
+  readonly frigate_stream?: string;
   readonly group_name?: string;
   readonly lights: readonly LinkedLightConfig[];
   readonly low_latency_hls: boolean;
@@ -570,7 +571,7 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
     source.frigate_fallback !== "hls"
   ) {
     throw new Error(
-      `${APP_NAME} camera ${index + 1} Frigate fallback must be mse or hls.`,
+      `${APP_NAME} camera ${index + 1} Frigate fallback must be mse/hls.`,
     );
   }
   const defaults = createDefaultCameraConfig(source.entity_id.trim());
@@ -586,9 +587,7 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
     source.connection !== "home_assistant" &&
     source.connection !== "frigate_go2rtc"
   ) {
-    throw new Error(
-      `${APP_NAME} camera ${index + 1} connection must be a supported connection type.`,
-    );
+    throw new Error(`${APP_NAME} camera ${index + 1} connection is invalid.`);
   }
   for (const key of [
     "low_latency_hls",
@@ -607,21 +606,16 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
       );
     }
   }
-  if (
-    "title" in source &&
-    source.title !== undefined &&
-    typeof source.title !== "string"
-  ) {
-    throw new Error(`${APP_NAME} camera ${index + 1} title must be a string.`);
-  }
-  if (
-    "group_name" in source &&
-    source.group_name !== undefined &&
-    typeof source.group_name !== "string"
-  ) {
-    throw new Error(
-      `${APP_NAME} camera ${index + 1} group_name must be a string.`,
-    );
+  for (const key of ["title", "group_name"] as const) {
+    if (
+      key in source &&
+      source[key] !== undefined &&
+      typeof source[key] !== "string"
+    ) {
+      throw new Error(
+        `${APP_NAME} camera ${index + 1} ${key} must be a string.`,
+      );
+    }
   }
   const hasAdditionalCamera = source.additional_camera !== undefined;
   const explicitGroupName =
@@ -655,6 +649,10 @@ function normalizeCameraConfig(value: unknown, index: number): CameraConfig {
     entity_id: defaults.entity_id,
     frigate_fallback:
       source.frigate_fallback === "hls" ? "hls" : defaults.frigate_fallback,
+    ...(typeof source.frigate_stream === "string" &&
+    source.frigate_stream.trim()
+      ? { frigate_stream: source.frigate_stream.trim() }
+      : {}),
     ...(groupName === undefined ? {} : { group_name: groupName }),
     lights,
     low_latency_hls:

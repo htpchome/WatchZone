@@ -160,6 +160,7 @@ type CameraBooleanConfigFlag = Exclude<
   | "connection"
   | "entity_id"
   | "frigate_fallback"
+  | "frigate_stream"
   | "group_name"
   | "lights"
   | "title"
@@ -699,6 +700,18 @@ export class CardEditor extends LitElement {
                                   this._handleFrigateFallbackChange
                                 }
                               ></ha-selector>
+                              ${
+                                this._capabilities?.renderStreamSelector(
+                                  this._hass,
+                                  camera.frigate_stream,
+                                  [
+                                    this._t("editor.frigate_stream"),
+                                    this._t("editor.frigate_stream_main"),
+                                    this._t("editor.frigate_stream_help"),
+                                  ],
+                                  this._handleFrigateStreamChange,
+                                ) ?? nothing
+                              }
                               ${
                                 camera.frigate_fallback === "hls"
                                   ? this._renderCameraBoolean(
@@ -1304,6 +1317,17 @@ export class CardEditor extends LitElement {
     const value = eventString(event) as FrigateFallbackTransport;
     if (value !== "mse" && value !== "hls") return;
     this._cameraDraft = { ...this._cameraDraft, frigate_fallback: value };
+    this.requestUpdate();
+  };
+
+  private readonly _handleFrigateStreamChange = (
+    event: ValueChangedEvent,
+  ): void => {
+    if (!this._cameraDraft) return;
+    this._cameraDraft = {
+      ...this._cameraDraft,
+      frigate_stream: eventString(event).trim() || undefined,
+    };
     this.requestUpdate();
   };
 

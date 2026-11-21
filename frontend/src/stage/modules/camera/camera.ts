@@ -57,6 +57,7 @@ export interface CameraItemConfig {
   readonly connection: LiveConnectionType;
   readonly entityId: string;
   readonly frigateFallback?: FrigateFallbackTransport;
+  readonly frigateStream?: string;
   readonly lowLatencyHls: boolean;
   readonly label: string;
   readonly posterUrl?: string;
@@ -388,6 +389,7 @@ export class CameraModule extends LitElement {
               .connection=${item.cameras[0].connection}
               .entityId=${item.cameras[0].entityId}
               .frigateFallback=${item.cameras[0].frigateFallback}
+              .frigateStream=${item.cameras[0].frigateStream}
               .interactionActive=${index === this._activeIndex}
               .label=${item.cameras[0].label}
               .lowLatencyHls=${item.cameras[0].lowLatencyHls}

@@ -43,6 +43,27 @@ and `ptz.md`, which remain authoritative.
   Talk and PTZ therefore resolve independently as selection moves between
   providers in a mixed card.
 
+## Optional live stream
+
+- A Frigate go2rtc camera may store an optional `frigate_stream` in card
+  configuration. This is frontend card data; it never changes the Home
+  Assistant integration config entry or its schema version.
+- The configured Home Assistant camera remains the camera identity. The
+  optional stream changes only live WebRTC, MSE, and HLS presentation. Activity,
+  reviews, recordings, snapshots, PTZ, and two-way talk continue to use the
+  configured camera entity and its main Frigate camera identity.
+- Stream discovery runs only while editing a Frigate camera. It uses the
+  authenticated owning Frigate integration and returns streams that are either
+  declared in that camera's Frigate `live.streams` mapping or use that camera's
+  stream-name prefix. A normal dashboard load never performs catalog discovery.
+- Every runtime request carries the optional stream as a bounded source key.
+  The backend enforces Home Assistant camera read permission, owning Frigate
+  instance scope, and camera-to-stream association before media acquisition.
+  Arbitrary streams from another camera or Frigate instance are rejected.
+- Automatic main-stream behavior remains the default and keeps the existing
+  request and acquisition path. A selected stream becomes part of the retained
+  session identity, so changing it restarts only that camera's live session.
+
 ## Live transports
 
 - Frigate go2rtc provides WebRTC as its preferred transport and exactly one
@@ -107,4 +128,7 @@ mixed-provider cards, configuration switching without lost intent, provider
 specific capability resolution, WebRTC-to-MSE fallback, WebRTC-to-HLS
 fallback, the absence of an MSE/HLS race, retained navigation, MSE and HLS
 cleanup and live-edge correction, talk teardown, PTZ stop ownership, and
-unchanged Home Assistant Direct behavior.
+unchanged Home Assistant Direct behavior. Optional-stream coverage must also
+prove editor-only discovery, camera association enforcement, distinct retained
+session identities, consistent WebRTC/MSE/HLS selection, and unchanged main
+camera identity for non-live features.

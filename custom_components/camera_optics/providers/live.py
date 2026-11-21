@@ -47,5 +47,6 @@ class LiveSignalingProvider(Protocol):
         camera: Camera,
         entity_id: str,
         send_event: SendLiveSignalingEvent,
+        source_key: str | None = None,
     ) -> LiveSignalingSession:
         """Prepare one provider-backed signaling session."""

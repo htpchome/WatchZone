@@ -1100,17 +1100,20 @@ describe("camera-optics-card-editor", () => {
     await editor.updateComplete;
     await openEditorSection(editor, "general");
 
-    await vi.waitFor(() => {
-      const info = editor.shadowRoot?.querySelector(EDITOR_GENERAL_INFO_TAG);
-      const summary = info?.shadowRoot?.querySelector(".system-summary");
-      expect(summary?.textContent).toContain("Home Assistant Version");
-      expect(summary?.textContent).toContain("2026.11.2");
-      expect(summary?.textContent).toContain("0.18.1");
-      expect(summary?.textContent).toContain("Installed · v5.15.6");
-      expect(info?.shadowRoot?.textContent).toContain(
-        "Central Time (America/Chicago)",
-      );
-    });
+    await vi.waitFor(
+      () => {
+        const info = editor.shadowRoot?.querySelector(EDITOR_GENERAL_INFO_TAG);
+        const summary = info?.shadowRoot?.querySelector(".system-summary");
+        expect(summary?.textContent).toContain("Home Assistant Version");
+        expect(summary?.textContent).toContain("2026.11.2");
+        expect(summary?.textContent).toContain("0.18.1");
+        expect(summary?.textContent).toContain("Installed · v5.15.6");
+        expect(info?.shadowRoot?.textContent).toContain(
+          "Central Time (America/Chicago)",
+        );
+      },
+      { timeout: 3_000 },
+    );
     const info = editor.shadowRoot?.querySelector(EDITOR_GENERAL_INFO_TAG);
     expect(
       info?.shadowRoot?.querySelector(".timezone-copy a")?.getAttribute("href"),

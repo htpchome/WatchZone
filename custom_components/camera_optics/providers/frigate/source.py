@@ -6,16 +6,18 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol, cast
 
+from aiohttp import ClientTimeout
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_URL
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.importlib import async_import_module
 from yarl import URL
 
 from ..live import ProviderPreparationError
-from ..live_connection import LiveSourceDescriptor
+from ..live_connection import LiveSourceDescriptor, LiveSourceOption
 
 if TYPE_CHECKING:
     from homeassistant.components.camera import Camera
@@ -43,6 +45,7 @@ class FrigateSource:
     config_entry: ConfigEntry
     frigate_instance_id: str
     stream_name: str
+    stream_source: str | None = None
 
     @property
     def source_id(self) -> str:
@@ -102,7 +105,10 @@ async def async_resolve_activity_identity(
 
 
 async def async_resolve_source(
-    hass: HomeAssistant, entity_id: str, camera: Camera | None = None
+    hass: HomeAssistant,
+    entity_id: str,
+    camera: Camera | None = None,
+    source_key: str | None = None,
 ) -> FrigateSource:
     """Resolve a camera through its owning Frigate config entry."""
     registry_entry = er.async_get(hass).async_get(entity_id)
@@ -158,13 +164,32 @@ async def async_resolve_source(
     if not instance_id:
         raise ProviderPreparationError("frigate_instance_id_unavailable")
 
-    return FrigateSource(
+    source = FrigateSource(
         base_url=base_url,
         camera_name=camera_name or stream_name,
         client=client,
         config_entry=config_entry,
         frigate_instance_id=instance_id,
         stream_name=stream_name,
+        stream_source=stream_source,
+    )
+    if source_key is None:
+        return source
+    selected = _normalize_stream_name(source_key)
+    if selected is None or not _stream_belongs_to_camera(hass, source, selected):
+        raise ProviderPreparationError("frigate_stream_unavailable")
+    return FrigateSource(
+        base_url=source.base_url,
+        camera_name=source.camera_name,
+        client=source.client,
+        config_entry=source.config_entry,
+        frigate_instance_id=source.frigate_instance_id,
+        stream_name=selected,
+        stream_source=(
+            str(URL(source.stream_source).with_path(f"/{selected}"))
+            if source.stream_source
+            else None
+        ),
     )
 
 
@@ -172,18 +197,110 @@ class FrigateLiveSourceProvider:
     """Resolve an explicitly selected Frigate go2rtc source."""
 
     async def async_resolve_source(
-        self, hass: HomeAssistant, entity_id: str
+        self, hass: HomeAssistant, entity_id: str, source_key: str | None = None
     ) -> LiveSourceDescriptor:
-        source = await async_resolve_source(hass, entity_id)
+        source = await async_resolve_source(hass, entity_id, source_key=source_key)
         return LiveSourceDescriptor(
             id=source.source_id,
             type="frigate_go2rtc",
             frigate_instance_id=source.frigate_instance_id,
             stream_name=source.stream_name,
+            source_key=source_key,
+        )
+
+    async def async_list_sources(
+        self, hass: HomeAssistant, entity_id: str
+    ) -> tuple[LiveSourceOption, ...]:
+        source = await async_resolve_source(hass, entity_id)
+        try:
+            headers = await source.client.get_auth_headers()
+            session = async_get_clientsession(hass)
+            payload: object | None = None
+            for url in (
+                URL(source.base_url) / "api/go2rtc/streams",
+                URL(source.base_url) / "api/go2rtc/api/streams",
+            ):
+                async with session.get(
+                    url,
+                    headers=headers,
+                    ssl=source.client.validate_ssl,
+                    timeout=ClientTimeout(total=5),
+                ) as response:
+                    if response.status == 200:
+                        payload = await response.json(content_type=None)
+                        break
+        except Exception as err:
+            raise ProviderPreparationError("frigate_stream_discovery_failed") from err
+        if not isinstance(payload, dict):
+            raise ProviderPreparationError("frigate_stream_discovery_failed")
+        configured = _configured_stream_labels(hass, source)
+        options = {
+            name: configured.get(name, _stream_label(source.camera_name, name))
+            for value in payload
+            if (name := _normalize_stream_name(value)) is not None
+            and name != source.stream_name
+            and _stream_belongs_to_camera(hass, source, name)
+        }
+        return tuple(
+            LiveSourceOption(key=key, label=label)
+            for key, label in sorted(
+                options.items(), key=lambda item: item[1].casefold()
+            )
         )
 
 
 live_source = FrigateLiveSourceProvider()
+
+
+def _normalize_stream_name(value: object) -> str | None:
+    """Normalize one bounded go2rtc stream identifier."""
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip()
+    if (
+        not normalized
+        or len(normalized) > 512
+        or any(ord(character) < 32 or ord(character) == 127 for character in normalized)
+    ):
+        return None
+    return normalized
+
+
+def _stream_belongs_to_camera(
+    hass: HomeAssistant, source: FrigateSource, stream_name: str
+) -> bool:
+    """Prove a live-only source belongs to the authorized camera."""
+    if stream_name == source.stream_name:
+        return True
+    camera_key = source.camera_name.casefold()
+    if stream_name.casefold().startswith(f"{camera_key}_"):
+        return stream_name.casefold() != f"{camera_key}_audio"
+    return stream_name in _configured_stream_labels(hass, source)
+
+
+def _configured_stream_labels(
+    hass: HomeAssistant, source: FrigateSource
+) -> dict[str, str]:
+    frigate_data = hass.data.get("frigate", {}).get(source.config_entry.entry_id, {})
+    config = frigate_data.get("config") if isinstance(frigate_data, dict) else None
+    cameras = config.get("cameras") if isinstance(config, dict) else None
+    camera_config = (
+        cameras.get(source.camera_name) if isinstance(cameras, dict) else None
+    )
+    live = camera_config.get("live") if isinstance(camera_config, dict) else None
+    streams = live.get("streams") if isinstance(live, dict) else None
+    if not isinstance(streams, dict):
+        return {}
+    return {
+        stream: label
+        for label, stream in streams.items()
+        if isinstance(label, str) and isinstance(stream, str)
+    }
+
+
+def _stream_label(camera_name: str, stream_name: str) -> str:
+    suffix = stream_name[len(camera_name) :].lstrip("_-").replace("_", " ")
+    return suffix.title() or stream_name
 
 
 async def async_get_frigate_client(

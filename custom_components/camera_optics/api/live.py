@@ -59,6 +59,7 @@ def _require_camera_read(connection: ActiveConnection, entity_id: str) -> None:
         vol.Required("type"): f"{DOMAIN}/live/source",
         vol.Required("connection"): vol.In(("home_assistant", "frigate_go2rtc")),
         vol.Required("entity_id"): cv.entity_id,
+        vol.Optional("source_key"): str,
     }
 )
 @async_response
@@ -72,7 +73,7 @@ async def ws_live_source(
     try:
         _require_camera_read(connection, entity_id)
         source = await runtime_from_hass(hass).live_connection.async_resolve_source(
-            msg["connection"], entity_id
+            msg["connection"], entity_id, msg.get("source_key")
         )
         descriptor = {
             "id": source.id,
@@ -82,6 +83,8 @@ async def ws_live_source(
             descriptor["frigate_instance_id"] = source.frigate_instance_id
         if source.stream_name is not None:
             descriptor["stream_name"] = source.stream_name
+        if source.source_key is not None:
+            descriptor["source_key"] = source.source_key
     except (HomeAssistantError, ProviderPreparationError) as err:
         connection.send_error(msg["id"], "live_source_unavailable", str(err))
         return
@@ -90,8 +93,36 @@ async def ws_live_source(
 
 @websocket_command(
     {
+        vol.Required("type"): f"{DOMAIN}/live/sources",
+        vol.Required("connection"): vol.In(("home_assistant", "frigate_go2rtc")),
+        vol.Required("entity_id"): cv.entity_id,
+    }
+)
+@async_response
+async def ws_live_sources(
+    hass: HomeAssistant,
+    connection: ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """List authorized live-only sources for the card editor."""
+    try:
+        _require_camera_read(connection, msg["entity_id"])
+        sources = await runtime_from_hass(hass).live_connection.async_list_sources(
+            msg["connection"], msg["entity_id"]
+        )
+    except HomeAssistantError as err:
+        connection.send_error(msg["id"], "live_sources_unavailable", str(err))
+        return
+    connection.send_result(
+        msg["id"], [{"key": source.key, "label": source.label} for source in sources]
+    )
+
+
+@websocket_command(
+    {
         vol.Required("type"): f"{DOMAIN}/live/frigate/hls",
         vol.Required("entity_id"): cv.entity_id,
+        vol.Optional("source_key"): str,
     }
 )
 @async_response
@@ -105,7 +136,7 @@ async def ws_frigate_hls(
     try:
         _require_camera_read(connection, entity_id)
         url = await runtime_from_hass(hass).live_connection.async_prepare_hls(
-            "frigate_go2rtc", entity_id
+            "frigate_go2rtc", entity_id, msg.get("source_key")
         )
     except (HomeAssistantError, ProviderPreparationError) as err:
         connection.send_error(msg["id"], "frigate_hls_unavailable", str(err))
@@ -149,6 +180,7 @@ async def ws_live_camera_ready(
         vol.Optional("provider", default="home_assistant"): vol.In(
             ("home_assistant", "frigate_go2rtc")
         ),
+        vol.Optional("source_key"): str,
     }
 )
 @async_response
@@ -172,6 +204,7 @@ async def ws_live_offer(
             entity_id,
             send_event,
             connection_provider_id=msg["provider"],
+            source_key=msg.get("source_key"),
         )
     except HomeAssistantError as err:
         connection.send_error(msg["id"], "webrtc_offer_failed", str(err))
@@ -238,5 +271,6 @@ def async_register(hass: HomeAssistant) -> None:
     async_register_command(hass, ws_live_camera_ready)
     async_register_command(hass, ws_frigate_hls)
     async_register_command(hass, ws_live_source)
+    async_register_command(hass, ws_live_sources)
     async_register_command(hass, ws_live_offer)
     async_register_command(hass, ws_live_candidate)

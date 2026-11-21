@@ -67,7 +67,11 @@ export const moduleDefinition: ModuleDefinition<
     if (posterUrl) preloadPoster(posterUrl);
     let lease: MediaSessionLease;
     if (first.connection === "frigate_go2rtc") {
-      const source = await resolver.resolveFrigate(context.api, first.entityId);
+      const source = await resolver.resolveFrigate(
+        context.api,
+        first.entityId,
+        first.frigateStream,
+      );
       const policy = resolver.frigateTransportPolicy(
         first.frigateFallback ?? "mse",
       );
@@ -352,6 +356,7 @@ function validateCameraItem(
         : "home_assistant",
     entityId: source.entityId,
     frigateFallback: source.frigateFallback === "hls" ? "hls" : "mse",
+    frigateStream: source.frigateStream,
     lowLatencyHls: source.lowLatencyHls as boolean,
     startUnmutedPcTablet: source.startUnmutedPcTablet as boolean,
     startUnmutedPhone: source.startUnmutedPhone as boolean,

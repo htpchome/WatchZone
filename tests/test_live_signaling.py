@@ -4,6 +4,7 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
+import pytest
 from homeassistant.exceptions import HomeAssistantError
 from webrtc_models import RTCIceCandidateInit
 from yarl import URL
@@ -26,10 +27,45 @@ from custom_components.camera_optics.providers.frigate.live import (
     async_prepare_session,
 )
 from custom_components.camera_optics.providers.frigate.source import (
+    FrigateSource,
     _camera_name,
+    _stream_belongs_to_camera,
     _stream_name,
     async_resolve_source,
 )
+
+
+def test_frigate_substream_must_belong_to_authorized_camera() -> None:
+    """A card cannot select another camera's stream on the same instance."""
+    entry = SimpleNamespace(entry_id="entry-home")
+    source = FrigateSource(
+        base_url="http://frigate:5000",
+        camera_name="front",
+        client=SimpleNamespace(),  # type: ignore[arg-type]
+        config_entry=entry,  # type: ignore[arg-type]
+        frigate_instance_id="frigate",
+        stream_name="front",
+    )
+    hass = SimpleNamespace(
+        data={
+            "frigate": {
+                "entry-home": {
+                    "config": {
+                        "cameras": {
+                            "front": {
+                                "live": {"streams": {"Low quality": "mobile"}}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    )
+
+    assert _stream_belongs_to_camera(hass, source, "front_sub")  # type: ignore[arg-type]
+    assert _stream_belongs_to_camera(hass, source, "mobile")  # type: ignore[arg-type]
+    assert not _stream_belongs_to_camera(hass, source, "front_audio")  # type: ignore[arg-type]
+    assert not _stream_belongs_to_camera(hass, source, "back_sub")  # type: ignore[arg-type]
 
 
 class _FakeHass:
@@ -74,6 +110,30 @@ async def test_frigate_hls_uses_validated_camera_stream_worker() -> None:
     stream.add_provider.assert_called_once_with("hls")
     stream.start.assert_awaited_once()
     assert endpoint == "/api/hls/token/master_playlist.m3u8"
+
+
+async def test_selected_frigate_hls_never_falls_back_to_main_stream() -> None:
+    """An unavailable selected source must not present the main camera as selected."""
+    source = SimpleNamespace(stream_source=None)
+    camera = SimpleNamespace(async_create_stream=AsyncMock())
+    with (
+        patch(
+            "custom_components.camera_optics.providers.frigate.hls.async_resolve_source",
+            new=AsyncMock(return_value=source),
+        ),
+        patch(
+            "custom_components.camera_optics.providers.frigate.hls._camera",
+            return_value=camera,
+        ),
+        pytest.raises(HomeAssistantError, match="Selected Frigate stream"),
+    ):
+        await async_prepare_hls_endpoint(
+            SimpleNamespace(),  # type: ignore[arg-type]
+            "camera.front",
+            "front_sub",
+        )
+
+    camera.async_create_stream.assert_not_awaited()
 
 
 async def test_replacement_signaling_waits_for_prior_cleanup() -> None:
@@ -337,13 +397,14 @@ async def test_frigate_capability_uses_public_camera_identity_for_go2rtc() -> No
             camera,  # type: ignore[arg-type]
             "camera.porch",
             Mock(),
+            "porch_sub",
         )
 
     assert isinstance(session, FrigateLiveSignalingSession)
     assert session.signaling_path == "frigate:trickle_ice"
     import_frigate.assert_awaited_once_with(hass, "custom_components.frigate.views")
     websession.ws_connect.assert_awaited_once_with(
-        URL("http://frigate:5000/live/webrtc/api/ws?src=porch"),
+        URL("http://frigate:5000/live/webrtc/api/ws?src=porch_sub"),
         headers={"Authorization": "Bearer token"},
         ssl=False,
     )
@@ -422,11 +483,20 @@ async def test_frigate_sources_are_scoped_to_their_owning_instance() -> None:
             "camera.workshop",
             cameras["camera.workshop"],  # type: ignore[arg-type]
         )
+        home_substream = await async_resolve_source(
+            hass,
+            "camera.home",
+            cameras["camera.home"],  # type: ignore[arg-type]
+            "front_sub",
+        )
 
     assert home.frigate_instance_id == "frigate"
     assert workshop.frigate_instance_id == "myWorkshop"
     assert home.stream_name == workshop.stream_name == "front"
     assert home.source_id != workshop.source_id
+    assert home_substream.stream_name == "front_sub"
+    assert home_substream.stream_source == "rtsp://frigate-home:8554/front_sub"
+    assert home_substream.source_id != home.source_id
 
 
 async def test_frigate_source_identity_survives_camera_suspension() -> None:

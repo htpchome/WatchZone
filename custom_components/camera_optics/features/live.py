@@ -95,6 +95,7 @@ class LiveSignalingService:
         connection_provider_id: str,
         force_standard: bool = False,
         purpose: str = "live",
+        source_key: str | None = None,
     ) -> CreatedLiveSignalingSession:
         """Create one signaling session without starting negotiation.
 
@@ -120,7 +121,12 @@ class LiveSignalingService:
         fallback_reason: str | None = "standard_requested"
         if not accelerated:
             session = await self._async_prepare_explicit_provider_session(
-                connection_provider_id, camera, entity_id, send_event, purpose
+                connection_provider_id,
+                camera,
+                entity_id,
+                send_event,
+                purpose,
+                source_key,
             )
             fallback_reason = None
         elif not force_standard:
@@ -143,6 +149,7 @@ class LiveSignalingService:
         entity_id: str,
         send_event: SendLiveSignalingEvent,
         purpose: str,
+        source_key: str | None = None,
     ) -> LiveSignalingSession:
         """Prepare an explicitly selected provider without cross-provider fallback."""
         provider = (
@@ -154,7 +161,11 @@ class LiveSignalingService:
             raise HomeAssistantError("Selected connection provider is unavailable")
         try:
             return await provider.async_prepare_session(
-                self._hass, camera, entity_id, send_event
+                self._hass,
+                camera,
+                entity_id,
+                send_event,
+                source_key if not purpose.startswith("talk") else None,
             )
         except ProviderPreparationError as err:
             raise HomeAssistantError(
@@ -246,7 +257,7 @@ class LiveSignalingService:
             if provider is None:
                 return None, "provider_adapter_unavailable"
             return await provider.async_prepare_session(
-                self._hass, camera, entity_id, send_event
+                self._hass, camera, entity_id, send_event, None
             ), None
         except ProviderPreparationError as err:
             return None, err.code

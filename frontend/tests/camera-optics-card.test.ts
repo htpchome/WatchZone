@@ -238,7 +238,7 @@ describe("camera-optics-card", () => {
       async (message: { readonly type: string }): Promise<unknown> => {
         if (message.type === "camera_optics/bootstrap/status") {
           return {
-            backend_version: "0.0.5-dev.6",
+            backend_version: "0.0.5-dev.7",
             saved_settings_version: 4,
             state: "incompatible_settings",
             supported_settings_version: 2,

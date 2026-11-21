@@ -21,6 +21,7 @@ from .providers.live import (
 from .providers.live_connection import (
     LiveHlsProvider,
     LiveSourceDescriptor,
+    LiveSourceOption,
     LiveSourceProvider,
     TalkCapabilityProvider,
 )
@@ -40,6 +41,7 @@ __all__ = [
     "LiveSignalingSession",
     "LiveHlsProvider",
     "LiveSourceDescriptor",
+    "LiveSourceOption",
     "LiveSourceProvider",
     "ProviderExtension",
     "ProviderPreparationError",
@@ -52,7 +54,7 @@ __all__ = [
     "register_provider_extension",
 ]
 
-EXTENSION_API_VERSION = 6
+EXTENSION_API_VERSION = 7
 _DATA_PROVIDER_REGISTRY = "provider_registry"
 
 

@@ -20,15 +20,48 @@ class _Stream(Protocol):
 
 
 class _Camera(Protocol):
+    entity_id: str
+    stream_options: dict[str, str | bool | float]
+
     async def async_create_stream(self) -> _Stream | None:
         """Create or reuse the camera's stream worker."""
 
 
-async def async_prepare_hls_endpoint(hass: HomeAssistant, entity_id: str) -> str:
+_streams: dict[str, _Stream] = {}
+
+
+async def async_prepare_hls_endpoint(
+    hass: HomeAssistant, entity_id: str, source_key: str | None = None
+) -> str:
     """Expose HLS from one backend-validated Frigate go2rtc source."""
-    await async_resolve_source(hass, entity_id)
+    source = (
+        await async_resolve_source(hass, entity_id)
+        if source_key is None
+        else await async_resolve_source(hass, entity_id, source_key=source_key)
+    )
     camera = _camera(hass, entity_id)
-    stream = await camera.async_create_stream()
+    if source_key is None:
+        stream = await camera.async_create_stream()
+    else:
+        if source.stream_source is None:
+            raise HomeAssistantError("Selected Frigate stream is unavailable")
+        from homeassistant.components.camera.prefs import (
+            get_dynamic_camera_stream_settings,
+        )
+        from homeassistant.components.stream import create_stream
+
+        stream = _streams.get(source.source_id)
+        if stream is None:
+            stream = create_stream(
+                hass,
+                source.stream_source,
+                options=camera.stream_options,
+                dynamic_stream_settings=await get_dynamic_camera_stream_settings(
+                    hass, entity_id
+                ),
+                stream_label=f"{entity_id}:{source.stream_name}",
+            )
+            _streams[source.source_id] = stream
     if stream is None:
         raise HomeAssistantError("Frigate camera does not expose a stream")
     stream.add_provider("hls")
@@ -39,8 +72,10 @@ async def async_prepare_hls_endpoint(hass: HomeAssistant, entity_id: str) -> str
 class FrigateLiveHlsProvider:
     """Prepare HLS for the explicitly selected Frigate connection."""
 
-    async def async_prepare_hls(self, hass: HomeAssistant, entity_id: str) -> str:
-        return await async_prepare_hls_endpoint(hass, entity_id)
+    async def async_prepare_hls(
+        self, hass: HomeAssistant, entity_id: str, source_key: str | None = None
+    ) -> str:
+        return await async_prepare_hls_endpoint(hass, entity_id, source_key)
 
 
 live_hls = FrigateLiveHlsProvider()

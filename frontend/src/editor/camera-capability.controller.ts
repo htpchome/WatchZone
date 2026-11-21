@@ -1,6 +1,14 @@
-import type { ReactiveController, ReactiveControllerHost } from "lit";
+import {
+  html,
+  type ReactiveController,
+  type ReactiveControllerHost,
+} from "lit";
 
-import { resolveLiveSource } from "../api/live-source";
+import {
+  listLiveSources,
+  resolveLiveSource,
+  type LiveSourceOption,
+} from "../api/live-source";
 import type { PtzCapability } from "../api/ptz";
 import type { LiveConnectionType } from "../core/config";
 import type { HomeAssistantApi } from "../core/home-assistant";
@@ -15,6 +23,7 @@ export class CameraCapabilityController implements ReactiveController {
   public ptzPending = false;
   public frigateAvailable = false;
   public frigatePending = false;
+  public frigateStreams: readonly LiveSourceOption[] = [];
 
   private _talkGeneration = 0;
   private _ptzGeneration = 0;
@@ -37,6 +46,27 @@ export class CameraCapabilityController implements ReactiveController {
     this.checkConnection(entityId);
     this.checkTalk(entityId, connection);
     this.checkPtz(entityId, connection);
+  }
+
+  public renderStreamSelector(
+    hass: unknown,
+    value: string | undefined,
+    labels: readonly [field: string, main: string, help: string],
+    onChange: unknown,
+  ) {
+    const options = [
+      { label: labels[1], value: "" },
+      ...this.frigateStreams.map(({ key, label }) => ({ label, value: key })),
+    ];
+    return html`<ha-selector
+        label=${labels[0]}
+        .hass=${hass}
+        .selector=${{ select: { mode: "dropdown", options } }}
+        .value=${value ?? ""}
+        .disabled=${this.frigatePending}
+        @value-changed=${onChange}
+      ></ha-selector>
+      <small class="capability-status">${labels[2]}</small>`;
   }
 
   public checkTalk(entityId: string, connection: LiveConnectionType): void {
@@ -86,6 +116,7 @@ export class CameraCapabilityController implements ReactiveController {
   public checkConnection(entityId: string): void {
     const generation = ++this._frigateGeneration;
     this.frigateAvailable = false;
+    this.frigateStreams = [];
     const api = this._validApi(entityId);
     if (!api) {
       this.frigatePending = false;
@@ -95,11 +126,15 @@ export class CameraCapabilityController implements ReactiveController {
     this.frigatePending = true;
     this._host.requestUpdate();
     void resolveLiveSource(api, "frigate_go2rtc", entityId)
-      .then(() => true)
-      .catch(() => false)
-      .then((available) => {
+      .then(() =>
+        listLiveSources(api, "frigate_go2rtc", entityId).catch(() => []),
+      )
+      .then((streams) => ({ available: true, streams }))
+      .catch(() => ({ available: false, streams: [] }))
+      .then(({ available, streams }) => {
         if (generation !== this._frigateGeneration) return;
         this.frigateAvailable = available;
+        this.frigateStreams = Array.isArray(streams) ? streams : [];
         this.frigatePending = false;
         this._host.requestUpdate();
       });
@@ -115,6 +150,7 @@ export class CameraCapabilityController implements ReactiveController {
     this.ptzPending = false;
     this.frigateAvailable = false;
     this.frigatePending = false;
+    this.frigateStreams = [];
   }
 
   private _validApi(entityId: string): HomeAssistantApi | undefined {

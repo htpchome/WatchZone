@@ -19,6 +19,7 @@ export interface MinimalCameraModuleConfig {
     readonly connection: LiveConnectionType;
     readonly entityId: string;
     readonly frigateFallback: FrigateFallbackTransport;
+    readonly frigateStream?: string;
     readonly lowLatencyHls: boolean;
     readonly startUnmutedPcTablet: boolean;
     readonly startUnmutedPhone: boolean;

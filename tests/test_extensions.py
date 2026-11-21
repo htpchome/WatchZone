@@ -14,6 +14,7 @@ from custom_components.camera_optics.features.live_connection import (
 )
 from custom_components.camera_optics.providers.live_connection import (
     LiveSourceDescriptor,
+    LiveSourceOption,
 )
 
 
@@ -82,14 +83,20 @@ async def test_live_connection_service_preserves_explicit_provider_choice() -> N
             self.talk: list[str] = []
 
         async def async_resolve_source(
-            self, hass: object, entity_id: str
+            self, hass: object, entity_id: str, source_key: str | None = None
         ) -> LiveSourceDescriptor:
-            del hass
+            del hass, source_key
             self.sources.append(entity_id)
             return LiveSourceDescriptor(
                 id=f"{self.provider_id}:{entity_id}",
                 type=self.provider_id,
             )
+
+        async def async_list_sources(
+            self, hass: object, entity_id: str
+        ) -> tuple[LiveSourceOption, ...]:
+            del hass, entity_id
+            return ()
 
         async def async_talk_capability(self, hass: object, entity_id: str) -> bool:
             del hass

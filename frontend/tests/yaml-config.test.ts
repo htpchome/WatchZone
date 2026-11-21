@@ -5,6 +5,28 @@ import { CARD_TYPE, DEFAULT_CARD_TITLE } from "../src/core/constants";
 import { toYamlCardConfig } from "../src/core/yaml-config";
 
 describe("CameraOptics YAML configuration manager", () => {
+  it("persists a Frigate live-only stream selection", () => {
+    expect(
+      toYamlCardConfig(
+        normalizeCardConfig({
+          type: CARD_TYPE,
+          cameras: [
+            {
+              entity_id: "camera.front",
+              connection: "frigate_go2rtc",
+              frigate_stream: "front_sub",
+            },
+          ],
+        }),
+      ).cameras,
+    ).toEqual([
+      {
+        entity_id: "camera.front",
+        connection: "frigate_go2rtc",
+        frigate_stream: "front_sub",
+      },
+    ]);
+  });
   it("omits known defaults", () => {
     expect(
       toYamlCardConfig(

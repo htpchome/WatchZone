@@ -5,7 +5,7 @@ from homeassistant.exceptions import HomeAssistantError
 
 from ..extensions import ProviderRegistry, get_provider_registry
 from ..providers.live import ProviderPreparationError
-from ..providers.live_connection import LiveSourceDescriptor
+from ..providers.live_connection import LiveSourceDescriptor, LiveSourceOption
 
 
 class LiveConnectionService:
@@ -20,26 +20,48 @@ class LiveConnectionService:
         self._providers = providers or get_provider_registry(hass)
 
     async def async_resolve_source(
-        self, provider_id: str, entity_id: str
+        self, provider_id: str, entity_id: str, source_key: str | None = None
     ) -> LiveSourceDescriptor:
         """Resolve a source without substituting another connection."""
         provider = self._providers.live_source_provider(provider_id)
         if provider is None:
             raise HomeAssistantError("Selected connection provider is unavailable")
         try:
-            return await provider.async_resolve_source(self._hass, entity_id)
+            if source_key is None:
+                return await provider.async_resolve_source(self._hass, entity_id)
+            return await provider.async_resolve_source(
+                self._hass, entity_id, source_key
+            )
         except ProviderPreparationError as err:
             raise HomeAssistantError(
                 "Selected connection provider is unavailable"
             ) from err
 
-    async def async_prepare_hls(self, provider_id: str, entity_id: str) -> str:
+    async def async_prepare_hls(
+        self, provider_id: str, entity_id: str, source_key: str | None = None
+    ) -> str:
         """Prepare HLS through the explicitly selected connection."""
         provider = self._providers.live_hls_provider(provider_id)
         if provider is None:
             raise HomeAssistantError("Selected connection does not support HLS")
         try:
-            return await provider.async_prepare_hls(self._hass, entity_id)
+            if source_key is None:
+                return await provider.async_prepare_hls(self._hass, entity_id)
+            return await provider.async_prepare_hls(self._hass, entity_id, source_key)
+        except ProviderPreparationError as err:
+            raise HomeAssistantError(
+                "Selected connection provider is unavailable"
+            ) from err
+
+    async def async_list_sources(
+        self, provider_id: str, entity_id: str
+    ) -> tuple[LiveSourceOption, ...]:
+        """List sources only when the editor explicitly requests them."""
+        provider = self._providers.live_source_provider(provider_id)
+        if provider is None:
+            raise HomeAssistantError("Selected connection provider is unavailable")
+        try:
+            return await provider.async_list_sources(self._hass, entity_id)
         except ProviderPreparationError as err:
             raise HomeAssistantError(
                 "Selected connection provider is unavailable"
