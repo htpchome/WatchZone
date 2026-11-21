@@ -6,7 +6,7 @@ card with an accessible name and a retained Home Assistant live view that races
 HLS and WebRTC for fast initial video, then prefers WebRTC. Backend camera
 providers have not been added yet.
 
-##Quick Look
+## Quick Look
 
 ![Quickview of CameraOptics for Frigate.  A look at a few of the layouts](https://github.com/user-attachments/assets/df4038ff-7a7f-41fd-a444-ce9ab7ade2a9)
 
