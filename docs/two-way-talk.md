@@ -84,6 +84,13 @@ does not contain signaling-path conditions.
 
 ## Interaction and audio state
 
+- Every camera and persistent presentation uses the same non-placeable shared
+  controls element for ready, connecting, connected, microphone-muted, and
+  speaker-muted states. The persistent tile must not duplicate those controls.
+- The shared controls always reserve the connected three-button width. Ready
+  state shows only the single muted-microphone button centered inside that
+  footprint, preventing layout movement when talk starts or stops.
+
 - In `overlay` presentation, the inactive microphone control follows the
   camera overlay's shared visibility state and hide timer. In `standard`
   presentation it remains visible and does not register with Camera's overlay

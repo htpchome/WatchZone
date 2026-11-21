@@ -5,6 +5,7 @@ import type { HomeAssistantApi } from "../src/core/home-assistant";
 import { englishLocalize } from "../src/core/localization";
 import { getPersistentTalkSession } from "../src/features/persistent-talk";
 import type { TwoWayTalkComponent } from "../src/stage/components/two-way-talk/two-way-talk";
+import type { TwoWayTalkControls } from "../src/ui/two-way-talk/controls";
 import "../src/stage/components/two-way-talk/two-way-talk";
 
 describe("two-way-talk component", () => {
@@ -30,16 +31,18 @@ describe("two-way-talk component", () => {
 
     await vi.waitFor(() =>
       expect(
-        element.shadowRoot?.querySelector<HTMLButtonElement>(
+        controls(element)?.shadowRoot?.querySelector<HTMLButtonElement>(
           "button[data-talk-action=connect]",
         ),
       ).not.toBeNull(),
     );
-    expect(
-      element.shadowRoot?.querySelector<HTMLButtonElement>(
-        "button[data-talk-action=connect]",
-      )?.disabled,
-    ).toBe(true);
+    await vi.waitFor(() =>
+      expect(
+        controls(element)?.shadowRoot?.querySelector<HTMLButtonElement>(
+          "button[data-talk-action=connect]",
+        )?.disabled,
+      ).toBe(true),
+    );
   });
 
   it("renders a retained active session without waiting for capability discovery", async () => {
@@ -89,7 +92,9 @@ describe("two-way-talk component", () => {
 
     await vi.waitFor(() =>
       expect(
-        element.shadowRoot?.querySelector('button[data-talk-action="stop"]'),
+        controls(element)?.shadowRoot?.querySelector(
+          'button[data-talk-action="stop"]',
+        ),
       ).not.toBeNull(),
     );
   });
@@ -226,20 +231,28 @@ describe("two-way-talk component", () => {
     manager._publish();
     await vi.waitFor(() =>
       expect(
-        element.shadowRoot?.querySelector(".talk-button.center:not(.muted)"),
+        controls(element)?.shadowRoot?.querySelector(
+          ".talk-button.center:not(.muted)",
+        ),
       ).not.toBeNull(),
     );
 
     expect(
-      element.shadowRoot?.querySelector(".talk-button.center:not(.muted)"),
+      controls(element)?.shadowRoot?.querySelector(
+        ".talk-button.center:not(.muted)",
+      ),
     ).not.toBeNull();
     getPersistentTalkSession().toggleMicrophoneMute();
     await element.updateComplete;
 
     expect(setMicrophoneMuted).toHaveBeenCalledWith(true);
-    expect(
-      element.shadowRoot?.querySelector(".talk-button.center.muted"),
-    ).not.toBeNull();
+    await vi.waitFor(() =>
+      expect(
+        controls(element)?.shadowRoot?.querySelector(
+          ".talk-button.center.muted",
+        ),
+      ).not.toBeNull(),
+    );
   });
 
   it("owns a visible touch press without dismissing the live overlay", async () => {
@@ -258,7 +271,9 @@ describe("two-way-talk component", () => {
 
     await vi.waitFor(() =>
       expect(
-        element.shadowRoot?.querySelector("button[data-talk-action=connect]"),
+        controls(element)?.shadowRoot?.querySelector(
+          "button[data-talk-action=connect]",
+        ),
       ).not.toBeNull(),
     );
     const start = vi.fn();
@@ -267,7 +282,9 @@ describe("two-way-talk component", () => {
         _session: { start(): Promise<void> };
       }
     )._session.start = start;
-    const button = element.shadowRoot?.querySelector<HTMLButtonElement>(
+    const button = controls(
+      element,
+    )?.shadowRoot?.querySelector<HTMLButtonElement>(
       "button[data-talk-action=connect]",
     );
     expect(button).toBeDefined();
@@ -288,6 +305,16 @@ describe("two-way-talk component", () => {
     expect(start).toHaveBeenCalledOnce();
   });
 });
+
+function controls(
+  element: TwoWayTalkComponent,
+): TwoWayTalkControls | undefined {
+  return (
+    element.shadowRoot?.querySelector<TwoWayTalkControls>(
+      "wzc-two-way-talk-controls",
+    ) ?? undefined
+  );
+}
 
 function touchPointerEvent(type: string, pointerId: number): PointerEvent {
   const event = new Event(type, {

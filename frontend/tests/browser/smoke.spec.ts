@@ -7966,6 +7966,10 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
     'button[data-talk-action="microphone"]',
   );
   await expect(activeTalkCenter).toBeVisible();
+  const activeTalkHostBox = await talk.boundingBox();
+  expect(activeTalkHostBox).not.toBeNull();
+  expect(activeTalkHostBox?.width).toBeCloseTo(talkHostBox.width, 0);
+  expect(activeTalkHostBox?.x).toBeCloseTo(talkHostBox.x, 0);
   const [activeLightBox, activeTalkMicrophoneBox] = await Promise.all([
     lightButton.boundingBox(),
     activeTalkMicrophone.boundingBox(),
@@ -8140,10 +8144,11 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
     const controls = element
       .querySelector<HTMLElement>(".controls")
       ?.getBoundingClientRect();
+    const sharedControls = element.querySelector<HTMLElement>(".controls");
     const sideButtons = [
-      ...element.querySelectorAll<HTMLButtonElement>(
-        ".controls button:not(.center)",
-      ),
+      ...(sharedControls?.shadowRoot?.querySelectorAll<HTMLButtonElement>(
+        ".talk-controls button:not(.center)",
+      ) ?? []),
     ];
     return {
       background: getComputedStyle(element).backgroundColor,
@@ -8172,12 +8177,32 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
       ({ color, iconVisible }) => iconVisible && color !== "rgba(0, 0, 0, 0)",
     ),
   ).toBe(true);
-  const persistentTalkCenter = persistentTalk.locator("button.center");
-  await persistentTalkCenter.click();
+  const persistentSharedControls = persistentTalk.locator(
+    "wzc-two-way-talk-controls",
+  );
+  await expect(persistentSharedControls.locator("button")).toHaveCount(3);
+  const connectedPersistentControlsBox =
+    await persistentSharedControls.boundingBox();
+  const persistentTalkStop = persistentTalk.locator("button.center");
+  await persistentTalkStop.click();
   await expect(persistentTalk).toBeVisible();
-  await expect(persistentTalkCenter).toHaveAttribute(
+  const persistentTalkRestart = persistentTalk.locator(
+    'button[data-talk-action="connect"]',
+  );
+  await expect(persistentTalkRestart).toHaveAttribute(
     "title",
     "Restart two-way talk",
+  );
+  await expect(persistentSharedControls.locator("button")).toHaveCount(1);
+  const readyPersistentControlsBox =
+    await persistentSharedControls.boundingBox();
+  expect(readyPersistentControlsBox?.width).toBeCloseTo(
+    connectedPersistentControlsBox?.width ?? 0,
+    0,
+  );
+  expect(readyPersistentControlsBox?.x).toBeCloseTo(
+    connectedPersistentControlsBox?.x ?? 0,
+    0,
   );
   expect(
     await page.evaluate(
@@ -8189,8 +8214,9 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
         ).__wzcTalkCloseCount,
     ),
   ).toBe(1);
-  await persistentTalkCenter.click();
-  await expect(persistentTalkCenter).toHaveAttribute(
+  await persistentTalkRestart.click();
+  await expect(persistentSharedControls.locator("button")).toHaveCount(3);
+  await expect(persistentTalkStop).toHaveAttribute(
     "title",
     "End two-way talk and keep this control available",
   );

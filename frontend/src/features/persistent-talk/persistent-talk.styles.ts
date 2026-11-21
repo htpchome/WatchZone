@@ -72,64 +72,9 @@ export const persistentTalkStyles = css`
   }
 
   .controls {
-    display: grid;
     position: absolute;
     inset-inline-start: 50%;
-    grid-template-columns: repeat(3, var(--wzc-control-size));
-    align-items: center;
-    color: var(--wzc-talk-panel-color);
-    background: var(--wzc-talk-panel-background);
-    border: 1px solid var(--wzc-talk-panel-border-color);
-    border-radius: var(--wzc-radius-pill);
     transform: translateX(-50%);
-  }
-
-  .controls canvas {
-    position: absolute;
-    inset: 0;
-    inline-size: 100%;
-    block-size: 100%;
-    border-radius: inherit;
-    pointer-events: none;
-  }
-
-  .controls .round-button {
-    --wzc-round-button-color: var(--wzc-color-text-1);
-    --wzc-round-button-background: transparent;
-    --wzc-round-button-border-color: transparent;
-    --wzc-round-button-hover-background: transparent;
-  }
-
-  .controls .center {
-    transform: scale(1.18);
-    --wzc-round-button-color: var(--wzc-color-text-reversed);
-    --wzc-round-button-background: var(--wzc-talk-connected-color);
-    --wzc-round-button-hover-background: var(--wzc-talk-connected-color);
-    box-shadow: 0 0 0 2px var(--wzc-talk-panel-border-color);
-  }
-
-  .controls .center.muted {
-    --wzc-round-button-color: var(--wzc-color-on-warning);
-    --wzc-round-button-background: var(--wzc-talk-muted-color);
-    --wzc-round-button-hover-background: var(--wzc-talk-muted-color);
-  }
-
-  .controls .center.ready {
-    --wzc-round-button-color: var(--wzc-capability-control-color);
-    --wzc-round-button-background: var(--wzc-capability-control-background);
-    --wzc-round-button-hover-background: var(
-      --wzc-capability-control-hover-background
-    );
-  }
-
-  .connecting-spinner {
-    position: absolute;
-    inset: -0.35rem;
-    border: 2px solid
-      color-mix(in srgb, var(--wzc-talk-connecting-color) 30%, transparent);
-    border-block-start-color: var(--wzc-talk-connecting-color);
-    border-radius: 50%;
-    pointer-events: none;
   }
 
   @media (max-width: ${responsiveWidths.compact}) {

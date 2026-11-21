@@ -16,9 +16,9 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
 - Branch: `main`.
 - HEAD before this work: `6d4ddc6` —
   `v0.0.4-dev.492 - fix(talk): harden persistent navigation and audio`.
-- Version being prepared: `0.0.4-dev.495`.
+- Version being prepared: `0.0.4-dev.496`.
 - Proposed subject:
-  `v0.0.4-dev.495 - fix(talk): finalize stopped-session and mobile tile lifecycle`.
+  `v0.0.4-dev.496 - refactor(talk): share controls across all presentations`.
 
 ## Persistent two-way talk
 
@@ -27,6 +27,13 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
   view or dashboard navigation no longer ends an established call.
 - Persistence is a global application feature. It is not a Stage module,
   component, placeable, or configurable Stage item.
+- The camera placement and persistent tile now render the same non-placeable
+  shared TWT controls element. Button markup, icons, spinner, soundwave, active
+  styling, muted styling, and inactive styling have one implementation. The
+  persistent tile owns only its surrounding document-level shell.
+- The shared controls always reserve the full active three-button width. Ready
+  state renders one centered muted-microphone button inside that stable
+  footprint, so connection state changes cannot move adjacent layout.
 - The camera that owns the active session continues to show the normal Stage
   controls. The global tile is shown only while that camera surface is absent
   or presenting another camera.
@@ -87,15 +94,15 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
 - Shared zoom/pan and shared media-stage resize remain the sole owners of those
   behaviors for live and recorded media.
 
-## Validation for `dev.495`
+## Validation for `dev.496`
 
 - Formatting, lint, typecheck, architecture/style/license checks, production
   build, and version synchronization pass.
 - Unit tests: 534/534 across 80 files, including stopped-launcher disposal on
   camera selection and mute-preference refresh on camera reactivation.
-- The TWT browser flow passes in Chromium, Firefox, and WebKit. The latest full
-  matrix passed 173/174; the unrelated Chromium Companion-rotation test missed
-  its existing class-timing instrumentation window.
+- Browser tests: 174/174 across Chromium, Firefox, and WebKit. The TWT flow
+  additionally asserts one ready button versus three connected buttons and a
+  stable shared-control bounding box across connection state changes.
 - Browser assertions cover the normal-control/global-tile handoff, connected
   call retention across direct route departure and camera changes, retained
   restart behavior, navigation back to the session camera, top-layer stacking,
