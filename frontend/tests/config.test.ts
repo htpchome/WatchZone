@@ -623,7 +623,7 @@ describe("CameraOptics card configuration", () => {
           },
         ],
       }),
-    ).toThrow("Home Assistant substream must use a managed camera entity");
+    ).toThrow("Home Assistant substream must use a camera entity");
   });
 
   it("normalizes the opt-in PTZ camera capability", () => {

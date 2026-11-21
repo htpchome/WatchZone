@@ -33,6 +33,7 @@ import {
   ACCORDION_TAG,
   ACCORDION_TOGGLE_EVENT,
   CARD_TYPE,
+  EDITOR_LIVE_SUBSTREAM_CHANGED_EVENT,
   EDITOR_LIVE_SUBSTREAM_FIELD_TAG,
   EDITOR_PREVIEW_DRAFT_EVENT,
   EDITOR_TAG,
@@ -150,6 +151,9 @@ const DEFAULT_LIGHT_ICON = "mdi:lightbulb";
 const accordionTag = unsafeStatic(ACCORDION_TAG);
 const accordionItemTag = unsafeStatic(ACCORDION_ITEM_TAG);
 const liveSubstreamFieldTag = unsafeStatic(EDITOR_LIVE_SUBSTREAM_FIELD_TAG);
+const liveSubstreamChangedEvent = unsafeStatic(
+  EDITOR_LIVE_SUBSTREAM_CHANGED_EVENT,
+);
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
 const EDITOR_STATUS_KEY = "draft";
 
@@ -687,7 +691,7 @@ export class CardEditor extends LitElement {
                       ${staticHtml`<${liveSubstreamFieldTag}
                         .camera=${camera}
                         .hass=${this._hass}
-                        @value-changed=${this._live}
+                        @${liveSubstreamChangedEvent}=${this._live}
                       ></${liveSubstreamFieldTag}>`}
                       ${
                         camera.connection === "home_assistant"
@@ -1940,10 +1944,9 @@ export class CardEditor extends LitElement {
   }
 
   private _connectionSummary(camera: CameraConfig): string {
-    const substream =
-      camera.connection === "frigate_go2rtc"
-        ? camera.live_substream
-        : undefined;
+    const substream = camera.live_substream?.startsWith("camera.")
+      ? this._cameraName(camera.live_substream)
+      : camera.live_substream;
     return [this._connectionName(camera.connection), substream]
       .filter((value): value is string => Boolean(value))
       .join(" · ");

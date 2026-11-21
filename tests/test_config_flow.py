@@ -1,26 +1,18 @@
 """Tests for the CameraOptics config flow."""
 
-from unittest.mock import AsyncMock, patch
-
 from homeassistant import config_entries
-from homeassistant.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.selector import SelectOptionDict
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.camera_optics.const import (
     CAMERA_PRELOAD_TITLE,
     CONF_DIAGNOSTIC_LOGGING,
-    CONF_GO2RTC_STREAMS,
     CONF_HLS_PREWARM_CAMERAS,
-    CONF_SOURCE_CAMERAS,
     DOMAIN,
     MAX_HLS_PREWARM_CAMERAS,
     NAME,
     SUBENTRY_TYPE_CAMERA_PRELOAD,
-    SUBENTRY_TYPE_EXTERNAL_GO2RTC,
-    SUBENTRY_TYPE_HOME_ASSISTANT_SUBSTREAMS,
     SUBENTRY_UNIQUE_ID_CAMERA_PRELOAD,
 )
 
@@ -176,75 +168,3 @@ async def test_subentry_flow_rejects_duplicate_preload_tile(
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "single_camera_preload_allowed"
-
-
-async def test_home_assistant_substreams_save_only_go2rtc_backed_sources(
-    hass: HomeAssistant,
-) -> None:
-    """The HA child flow persists only the public go2rtc-backed choices."""
-    entry = MockConfigEntry(domain=DOMAIN, data={}, version=3)
-    entry.add_to_hass(hass)
-    options = [SelectOptionDict(value="camera.porch_low", label="Porch Low")]
-
-    with patch(
-        "custom_components.camera_optics.config_flow._async_home_assistant_go2rtc_camera_options",
-        new=AsyncMock(return_value=options),
-    ):
-        result = await hass.config_entries.subentries.async_init(
-            (entry.entry_id, SUBENTRY_TYPE_HOME_ASSISTANT_SUBSTREAMS),
-            context={"source": config_entries.SOURCE_USER},
-        )
-        assert result["type"] is FlowResultType.FORM
-        assert result["step_id"] == "home_assistant_substreams"
-
-        result = await hass.config_entries.subentries.async_configure(
-            result["flow_id"],
-            user_input={CONF_SOURCE_CAMERAS: ["camera.porch_low"]},
-        )
-
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["data"] == {CONF_SOURCE_CAMERAS: ["camera.porch_low"]}
-
-
-async def test_external_go2rtc_flow_validates_then_saves_selected_streams(
-    hass: HomeAssistant,
-) -> None:
-    """External credentials stay backend-side with explicitly selected streams."""
-    entry = MockConfigEntry(domain=DOMAIN, data={}, version=3)
-    entry.add_to_hass(hass)
-
-    with patch(
-        "custom_components.camera_optics.config_flow.async_list_streams",
-        new=AsyncMock(return_value=("porch", "porch_low")),
-    ):
-        result = await hass.config_entries.subentries.async_init(
-            (entry.entry_id, SUBENTRY_TYPE_EXTERNAL_GO2RTC),
-            context={"source": config_entries.SOURCE_USER},
-        )
-        assert result["type"] is FlowResultType.FORM
-        assert result["step_id"] == "external_go2rtc"
-
-        result = await hass.config_entries.subentries.async_configure(
-            result["flow_id"],
-            user_input={
-                CONF_URL: "https://go2rtc.example.test/",
-                CONF_USERNAME: "viewer",
-                CONF_PASSWORD: "secret",
-            },
-        )
-        assert result["type"] is FlowResultType.FORM
-        assert result["step_id"] == "external_go2rtc_streams"
-
-        result = await hass.config_entries.subentries.async_configure(
-            result["flow_id"],
-            user_input={CONF_GO2RTC_STREAMS: ["porch_low"]},
-        )
-
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"] == "go2rtc.example.test"
-    assert result["data"] == {
-        CONF_URL: "https://go2rtc.example.test",
-        CONF_USERNAME: "viewer",
-        CONF_PASSWORD: "secret",
-        CONF_GO2RTC_STREAMS: ["porch_low"],
-    }

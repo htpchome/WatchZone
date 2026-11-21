@@ -2,7 +2,10 @@ import { html, LitElement } from "lit";
 
 import { listFrigateSubstreams } from "../../api/live-source";
 import type { CameraConfig } from "../../core/config";
-import { EDITOR_LIVE_SUBSTREAM_FIELD_TAG } from "../../core/constants";
+import {
+  EDITOR_LIVE_SUBSTREAM_CHANGED_EVENT,
+  EDITOR_LIVE_SUBSTREAM_FIELD_TAG,
+} from "../../core/constants";
 import {
   createHomeAssistantApi,
   type HomeAssistant,
@@ -11,8 +14,6 @@ import { LocalizationController } from "../../core/localization";
 import { liveSubstreamFieldStyles } from "./live-substream-field.styles";
 
 const MAIN_STREAM_VALUE = "__camera_optics_main_stream__";
-const MANAGED_SUBSTREAM_ATTRIBUTE = "camera_optics_substream";
-
 export class LiveSubstreamField extends LitElement {
   public static properties = {
     camera: { attribute: false },
@@ -50,10 +51,9 @@ export class LiveSubstreamField extends LitElement {
     if (!camera) return html``;
     const frigate = camera.connection === "frigate_go2rtc";
     const configured = camera.live_substream;
-    const managed = this._managedSubstreams(camera);
     const streams = frigate
-      ? [...new Set([...this._streams, ...managed])]
-      : managed;
+      ? [...this._streams]
+      : this._homeAssistantSubstreams(camera);
     if (configured && !streams.includes(configured)) streams.push(configured);
     return html`<details class="live-substream-details">
         <summary>${this._t("editor.live_substream_details")}</summary>
@@ -114,7 +114,7 @@ export class LiveSubstreamField extends LitElement {
     const value =
       typeof event.detail.value === "string" ? event.detail.value : "";
     this.dispatchEvent(
-      new CustomEvent("value-changed", {
+      new CustomEvent(EDITOR_LIVE_SUBSTREAM_CHANGED_EVENT, {
         bubbles: true,
         composed: true,
         detail: {
@@ -128,16 +128,17 @@ export class LiveSubstreamField extends LitElement {
     );
   };
 
-  private _managedSubstreams(camera: CameraConfig): string[] {
+  private _homeAssistantSubstreams(camera: CameraConfig): string[] {
     const entityIds = Object.keys(this.hass?.states ?? {}).filter(
       (entityId) =>
         entityId.startsWith("camera.") &&
         entityId !== camera.entity_id &&
-        this.hass?.states[entityId]?.attributes[MANAGED_SUBSTREAM_ATTRIBUTE] ===
-          true,
+        this.hass?.entities?.[entityId]?.platform !== "frigate",
     );
     if (
       camera.live_substream?.startsWith("camera.") &&
+      this.hass?.states[camera.live_substream] &&
+      this.hass.entities?.[camera.live_substream]?.platform !== "frigate" &&
       !entityIds.includes(camera.live_substream)
     ) {
       entityIds.push(camera.live_substream);

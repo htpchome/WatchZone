@@ -700,7 +700,7 @@ function normalizeLiveSubstream(
   const normalized = value.trim();
   if (connection === "home_assistant" && !normalized.startsWith("camera.")) {
     throw new Error(
-      `${APP_NAME} camera ${cameraIndex + 1} Home Assistant substream must use a managed camera entity.`,
+      `${APP_NAME} camera ${cameraIndex + 1} Home Assistant substream must use a camera entity.`,
     );
   }
   return normalized === primaryEntityId ? undefined : normalized;

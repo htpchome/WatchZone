@@ -2284,6 +2284,8 @@ describe("camera-optics-card-editor", () => {
 
     selector.dispatchEvent(
       new CustomEvent("value-changed", {
+        bubbles: true,
+        composed: true,
         detail: { value: "front_low" },
       }),
     );
@@ -2318,9 +2320,20 @@ describe("camera-optics-card-editor", () => {
           state: "streaming",
           attributes: {
             friendly_name: "Front Substream",
-            camera_optics_substream: true,
           },
         },
+        "camera.frigate_sub": {
+          entity_id: "camera.frigate_sub",
+          state: "streaming",
+          attributes: {
+            friendly_name: "Frigate Substream",
+          },
+        },
+      },
+      entities: {
+        "camera.front": { platform: "generic" },
+        "camera.front_sub": { platform: "generic" },
+        "camera.frigate_sub": { platform: "frigate" },
       },
       connection: { subscribeMessage: async () => () => undefined },
       callService: async () => undefined,
@@ -2364,10 +2377,12 @@ describe("camera-optics-card-editor", () => {
     ]);
     expect(
       field?.shadowRoot?.querySelector(".live-substream-details")?.textContent,
-    ).toContain("managed by CameraOptics");
+    ).toContain("existing Home Assistant camera entity");
 
     selector.dispatchEvent(
       new CustomEvent("value-changed", {
+        bubbles: true,
+        composed: true,
         detail: { value: "camera.front_sub" },
       }),
     );

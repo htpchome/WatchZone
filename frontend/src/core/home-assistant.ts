@@ -8,6 +8,11 @@ export interface HomeAssistantEntity {
   };
 }
 
+export interface HomeAssistantEntityRegistryEntry {
+  readonly entity_id?: string;
+  readonly platform?: string;
+}
+
 export type HomeAssistantMessage = Readonly<Record<string, unknown>> & {
   readonly type: string;
 };
@@ -70,6 +75,9 @@ export interface HomeAssistant {
     readonly version?: string;
   };
   readonly states: Readonly<Record<string, HomeAssistantEntity>>;
+  readonly entities?: Readonly<
+    Record<string, HomeAssistantEntityRegistryEntry>
+  >;
   readonly connection: HomeAssistantConnection;
   readonly language?: string;
   readonly locale?: HomeAssistantLocale;
