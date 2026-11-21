@@ -182,6 +182,15 @@ export class LayoutRuntime implements ReactiveController {
     }
   }
 
+  /** Release every placeable while the application shell is intentionally inert. */
+  public clearStageSet(): void {
+    this._catalog = undefined;
+    this._flow = undefined;
+    this._designError = undefined;
+    this._removeMissingRecords(new Set());
+    this._host.requestUpdate();
+  }
+
   /** Selects a stage already present in the active physical-client flow. */
   public showStage(stageId: string): boolean {
     const flow = this._flow?.[this._flowName];

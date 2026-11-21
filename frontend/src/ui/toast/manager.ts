@@ -102,6 +102,13 @@ export class ToastManager implements ReactiveController {
     this._timers.set(id, timers);
   }
 
+  public clear(): void {
+    for (const id of this._timers.keys()) this._clearTimers(id);
+    if (this._notices.length === 0) return;
+    this._notices = [];
+    this._host.requestUpdate();
+  }
+
   public hostDisconnected(): void {
     for (const id of this._timers.keys()) this._clearTimers(id);
     this._notices = [];

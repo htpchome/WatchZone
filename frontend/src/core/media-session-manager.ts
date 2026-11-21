@@ -802,6 +802,17 @@ export class MediaSessionManager {
   }
 
   public closeAll(): void {
+    this.invalidateAll();
+    this._retentionPolicy.dispose();
+    this._clearConnectionObservers();
+    document.removeEventListener(
+      "visibilitychange",
+      this._handleVisibilityChange,
+    );
+  }
+
+  /** Close integration-dependent work while keeping the manager reusable. */
+  public invalidateAll(): void {
     this._reconnectQueue.clear();
     if (this._reconnectBatchTimer) {
       clearTimeout(this._reconnectBatchTimer);
@@ -813,12 +824,7 @@ export class MediaSessionManager {
     this._cameraActivity.clear();
     this._cameraRetentionContexts.clear();
     this._cameraRetentionMetadata.clear();
-    this._retentionPolicy.dispose();
     this._clearConnectionObservers();
-    document.removeEventListener(
-      "visibilitychange",
-      this._handleVisibilityChange,
-    );
   }
 
   private readonly _handleVisibilityChange = (): void => {

@@ -162,6 +162,95 @@ export const cardStyles = css`
     z-index: 8;
   }
 
+  .backend-recovery {
+    box-sizing: border-box;
+    display: grid;
+    place-items: center;
+    min-inline-size: 0;
+    min-block-size: 0;
+    overflow: auto;
+    padding: clamp(1rem, 4cqi, 2rem);
+  }
+
+  .backend-recovery-content {
+    inline-size: min(100%, 42rem);
+  }
+
+  .backend-recovery h2,
+  .backend-recovery h3,
+  .backend-recovery p {
+    margin-block-start: 0;
+  }
+
+  .backend-recovery h2 {
+    margin-block-end: 0.75rem;
+    color: var(--wzc-color-text-1);
+    font-size: clamp(1.25rem, 5cqi, 1.75rem);
+    line-height: 1.2;
+  }
+
+  .backend-recovery h3 {
+    margin-block: 1.25rem 0.5rem;
+    color: var(--wzc-color-text-1);
+    font-size: 1rem;
+  }
+
+  .backend-recovery p,
+  .backend-recovery li {
+    color: var(--wzc-color-text-2);
+    line-height: 1.5;
+  }
+
+  .backend-recovery ol {
+    margin-block: 0 1.25rem;
+    padding-inline-start: 1.5rem;
+  }
+
+  .backend-recovery li + li {
+    margin-block-start: 0.35rem;
+  }
+
+  .backend-recovery .recovery-caution {
+    padding: 0.75rem;
+    color: var(--wzc-color-warning-text);
+    background: var(--wzc-color-fill-warning-quiet);
+    border: 1px solid var(--wzc-color-border-warning);
+    border-radius: var(--wzc-radius-small);
+  }
+
+  .backend-recovery-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-block-start: 1.25rem;
+  }
+
+  .backend-support-information {
+    margin-block-start: 1.25rem;
+    color: var(--wzc-color-text-2);
+  }
+
+  .backend-support-information summary {
+    cursor: pointer;
+  }
+
+  .backend-support-information dl {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 0.35rem 0.75rem;
+    margin-block-end: 0;
+  }
+
+  .backend-support-information dt {
+    color: var(--wzc-color-text-3);
+  }
+
+  .backend-support-information dd {
+    min-inline-size: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
   @container (max-width: ${responsiveWidths.narrow}) {
     .stage-grid {
       --wzc-camera-control-size: 1.875rem;

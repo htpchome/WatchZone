@@ -6,6 +6,7 @@ import type {
   HomeAssistant,
   HomeAssistantConnectionEvent,
   HomeAssistantConnectionEventListener,
+  HomeAssistantMessage,
 } from "../src/core/home-assistant";
 import {
   createCardPickerStubConfig,
@@ -178,6 +179,111 @@ describe("camera-optics-card", () => {
       "No modules are configured.",
     );
   });
+
+  it("adds no backend status request to a healthy empty card", async () => {
+    const hass: HomeAssistant = {
+      ...createHass({}),
+      config: { components: ["camera_optics"] },
+    };
+    const element = document.createElement(
+      "camera-optics-card",
+    ) as DashboardCard;
+    element.setConfig({
+      stage_type: "camera_only",
+      type: "custom:camera-optics-card",
+    });
+    element.hass = hass;
+    document.body.append(element);
+    await element.updateComplete;
+
+    expect(hass.callWS).not.toHaveBeenCalled();
+  });
+
+  it("guides HACS-only installations through Home Assistant setup", async () => {
+    const hass: HomeAssistant = {
+      ...createHass({ "camera.front": "Front Door" }),
+      config: { components: ["frontend", "lovelace"] },
+    };
+    const element = document.createElement(
+      "camera-optics-card",
+    ) as DashboardCard;
+    element.setConfig({
+      camera_entity: "camera.front",
+      type: "custom:camera-optics-card",
+    });
+    element.hass = hass;
+    document.body.append(element);
+
+    await vi.waitFor(() =>
+      expect(
+        element.shadowRoot?.querySelector(".backend-recovery"),
+      ).not.toBeNull(),
+    );
+    const text = element.shadowRoot?.textContent ?? "";
+    expect(text).toContain("Finish setting up CameraOptics");
+    expect(text).toContain("Installing CameraOptics through HACS");
+    expect(text).toContain("Select Devices & services");
+    expect(text).toContain("Select Add integration");
+    expect(text).toContain("Search for CameraOptics");
+    expect(element.shadowRoot?.querySelector("wzc-camera")).toBeNull();
+    expect(
+      element.shadowRoot?.querySelector("wzc-toast-region.card-toast"),
+    ).toBeNull();
+    expect(hass.callWS).not.toHaveBeenCalled();
+  });
+
+  it("replaces the Stage with human recovery guidance after a backend failure", async () => {
+    const base = createHass({ "camera.front": "Front Door" });
+    const callWS = vi.fn(
+      async (message: { readonly type: string }): Promise<unknown> => {
+        if (message.type === "camera_optics/bootstrap/status") {
+          return {
+            backend_version: "0.0.5-dev.4",
+            saved_settings_version: 4,
+            state: "incompatible_settings",
+            supported_settings_version: 2,
+          };
+        }
+        throw { code: "unknown_command", message: "Unknown command" };
+      },
+    );
+    const hass: HomeAssistant = {
+      ...base,
+      config: { components: ["camera_optics"] },
+      callWS: <T>(message: HomeAssistantMessage) =>
+        callWS(message) as Promise<T>,
+    };
+    const element = document.createElement(
+      "camera-optics-card",
+    ) as DashboardCard;
+    element.setConfig({
+      camera_entity: "camera.front",
+      type: "custom:camera-optics-card",
+    });
+    element.hass = hass;
+    document.body.append(element);
+
+    await vi.waitFor(
+      () => {
+        expect(element.shadowRoot?.textContent).toContain(
+          "The installed version of CameraOptics cannot read settings saved by a different version.",
+        );
+      },
+      { timeout: 10_000 },
+    );
+    const primaryText =
+      element.shadowRoot?.querySelector(".backend-recovery-content")
+        ?.textContent ?? "";
+    expect(primaryText.toLocaleLowerCase()).not.toContain("schema");
+    expect(primaryText).toContain("update or redownload CameraOptics in HACS");
+    expect(primaryText).toContain("Do not remove CameraOptics");
+    expect(element.shadowRoot?.querySelector("wzc-camera")).toBeNull();
+    expect(
+      callWS.mock.calls.filter(
+        ([message]) => message.type === "camera_optics/bootstrap/status",
+      ),
+    ).toHaveLength(1);
+  }, 15_000);
 
   it("preserves a configured camera module by its stable layout node ID", async () => {
     const element = document.createElement(

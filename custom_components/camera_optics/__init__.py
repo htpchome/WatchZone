@@ -116,6 +116,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     from .api.activity_updates import (
         async_register as async_register_activity_updates_api,
     )
+    from .api.bootstrap_status import (
+        async_register as async_register_bootstrap_status_api,
+    )
     from .api.camera import async_register as async_register_camera_api
     from .api.events import async_register as async_register_events_api
     from .api.exports import async_register as async_register_exports_api
@@ -126,6 +129,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     from .api.system_info import async_register as async_register_system_info_api
     from .api.talk import async_register as async_register_talk_api
 
+    async_register_bootstrap_status_api(hass)
     async_register_activity_updates_api(hass)
     async_register_camera_api(hass)
     async_register_events_api(hass)

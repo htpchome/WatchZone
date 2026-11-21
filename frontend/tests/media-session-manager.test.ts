@@ -842,6 +842,31 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
+  it("invalidates integration work while remaining reusable after recovery", async () => {
+    const firstClose = vi.fn();
+    const secondClose = vi.fn();
+    const factory = vi
+      .fn<ConnectionFactory>()
+      .mockResolvedValueOnce({ stream: createStream(), close: firstClose })
+      .mockResolvedValueOnce({ stream: createStream(), close: secondClose });
+    const manager = new MediaSessionManager(factory);
+    const api = createApi();
+    const first = manager.acquireHomeAssistant(api, "camera.front");
+    await vi.waitFor(() => expect(first.getSnapshot().state).toBe("live"));
+
+    manager.invalidateAll();
+
+    expect(firstClose).toHaveBeenCalledOnce();
+    expect(first.getSnapshot().state).toBe("closed");
+    const recovered = manager.acquireHomeAssistant(api, "camera.front");
+    await vi.waitFor(() => expect(recovered.getSnapshot().state).toBe("live"));
+    expect(factory).toHaveBeenCalledTimes(2);
+
+    recovered.release();
+    manager.closeAll();
+    expect(secondClose).toHaveBeenCalledOnce();
+  });
+
   it("deduplicates and retains Home Assistant HLS sessions", async () => {
     vi.useFakeTimers();
     const video = document.createElement("video");

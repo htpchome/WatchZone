@@ -29,6 +29,7 @@ import {
   RECORDED_MEDIA_EXPORT_EVENT,
   RECORDED_MEDIA_NOTICE_EVENT,
   TOAST_REGION_TAG,
+  INTEGRATION_ID,
 } from "../core/constants";
 import {
   createHomeAssistantApi,
@@ -56,6 +57,10 @@ import "../ui/toast/region";
 import { createBuiltInStageSet } from "../stage/built-in-stages/catalog";
 import { LayoutRuntime } from "../stage/layout-runtime";
 import { cardStyles } from "./camera-optics-card.styles";
+import {
+  backendAvailability,
+  type BackendAvailabilityIncident,
+} from "./backend-availability";
 import {
   createCardPickerStubConfig,
   isHomeAssistantCardPickerPreview,
@@ -86,7 +91,10 @@ export class DashboardCard extends LitElement {
 
   private _config: CardConfig = normalizeCardConfig({});
   private _hass?: HomeAssistant;
+  private _rawHaApi?: HomeAssistantApi;
   private _haApi?: HomeAssistantApi;
+  private _backendAvailabilityUnsubscribe?: () => void;
+  private _backendIncident?: BackendAvailabilityIncident;
   private _previewConfig?: CardConfig;
   private _observedConnection?: HomeAssistantConnection;
   private _transportConnected = true;
@@ -132,10 +140,16 @@ export class DashboardCard extends LitElement {
       return;
     }
     if (transportChanged || !this._haApi) {
-      this._haApi = createHomeAssistantApi(value);
+      this._setHomeAssistantApi(createHomeAssistantApi(value));
     }
     this._transportConnected = value.connection.connected !== false;
     this._observeConnection(value.connection);
+    if (
+      value.config?.components &&
+      !value.config.components.includes(INTEGRATION_ID)
+    ) {
+      backendAvailability.reportSetupRequired(this._rawHaApi!);
+    }
     this._syncRuntime();
     if (transportChanged) this.requestUpdate();
   }
@@ -164,7 +178,13 @@ export class DashboardCard extends LitElement {
       activeDeviceAppearanceConfig(next, CLIENT_PROFILE.isPhone),
     );
     this._cardLayout.configure(next);
-    if (this.isConnected && !this._cardPickerPreview) this._syncLayout(next);
+    if (
+      this.isConnected &&
+      !this._cardPickerPreview &&
+      !this._backendIncident
+    ) {
+      this._syncLayout(next);
+    }
     this.requestUpdate();
   }
 
@@ -184,6 +204,9 @@ export class DashboardCard extends LitElement {
       ),
     );
     this._cardLayout.configure(this._previewConfig ?? this._config);
+    if (this._rawHaApi && !this._backendAvailabilityUnsubscribe) {
+      this._setHomeAssistantApi(this._rawHaApi);
+    }
     window.addEventListener(
       EDITOR_PREVIEW_DRAFT_EVENT,
       this._handlePreviewDraft as EventListener,
@@ -205,7 +228,9 @@ export class DashboardCard extends LitElement {
       RECORDED_VIDEO_CLOSE_EVENT,
       this._handleRecordedMediaClose,
     );
-    this._syncLayout(this._previewConfig ?? this._config);
+    if (!this._backendIncident) {
+      this._syncLayout(this._previewConfig ?? this._config);
+    }
     this._loadCompanionPhoneLandscape();
     if (this._hass) this._observeConnection(this._hass.connection);
     this._syncRuntime();
@@ -237,6 +262,8 @@ export class DashboardCard extends LitElement {
       this._handleRecordedMediaClose,
     );
     this._unobserveConnection();
+    this._backendAvailabilityUnsubscribe?.();
+    this._backendAvailabilityUnsubscribe = undefined;
     super.disconnectedCallback();
   }
 
@@ -277,9 +304,15 @@ export class DashboardCard extends LitElement {
     return staticHtml`
       <ha-card class=${cardClasses}>
         <div class="shell" role="region" aria-label=${config.title}>
-          ${this._layoutRuntime.render()}
           ${
-            this._recordedVideoViewerReady && this._mediaRequest
+            this._backendIncident
+              ? this._renderBackendRecovery(this._backendIncident)
+              : this._layoutRuntime.render()
+          }
+          ${
+            !this._backendIncident &&
+            this._recordedVideoViewerReady &&
+            this._mediaRequest
               ? staticHtml`<${recordedVideoViewerTag}
                   .api=${this._haApi}
                   .localize=${this._localization.localize}
@@ -293,7 +326,7 @@ export class DashboardCard extends LitElement {
               : null
           }
           ${
-            this._exportNameDialogReady
+            !this._backendIncident && this._exportNameDialogReady
               ? staticHtml`<${exportNameDialogTag}
                   variant="segment"
                   .draft=${this._pendingRecordedExport?.draft}
@@ -301,14 +334,151 @@ export class DashboardCard extends LitElement {
                 ></${exportNameDialogTag}>`
               : null
           }
-          <${toastRegionTag}
-            class="card-toast"
-            mode="overlay"
-            .notices=${this._toasts.notices}
-          ></${toastRegionTag}>
+          ${
+            this._backendIncident
+              ? null
+              : staticHtml`<${toastRegionTag}
+                  class="card-toast"
+                  mode="overlay"
+                  .notices=${this._toasts.notices}
+                ></${toastRegionTag}>`
+          }
         </div>
       </ha-card>
     `;
+  }
+
+  private _renderBackendRecovery(incident: BackendAvailabilityIncident) {
+    const setup = incident.kind === "setup_required";
+    const incompatible = incident.kind === "incompatible_settings";
+    const title = setup
+      ? this._localization.localize("recovery.setup_title")
+      : this._localization.localize("recovery.start_failed_title");
+    const introduction = setup
+      ? this._localization.localize("recovery.setup_introduction")
+      : incompatible
+        ? this._localization.localize("recovery.incompatible_introduction")
+        : this._localization.localize("recovery.load_failed_introduction");
+    return staticHtml`<section
+      class="backend-recovery"
+      role="alert"
+      aria-live="assertive"
+    >
+      <div class="backend-recovery-content">
+        <h2>${title}</h2>
+        <p>${introduction}</p>
+        <h3>${this._localization.localize("recovery.steps_title")}</h3>
+        <ol>
+          ${
+            setup
+              ? staticHtml`<li>
+                    ${this._localization.localize("recovery.setup_step_settings")}
+                  </li>
+                  <li>
+                    ${this._localization.localize("recovery.setup_step_devices")}
+                  </li>
+                  <li>
+                    ${this._localization.localize("recovery.setup_step_add")}
+                  </li>
+                  <li>
+                    ${this._localization.localize("recovery.setup_step_search")}
+                  </li>
+                  <li>
+                    ${this._localization.localize("recovery.setup_step_return")}
+                  </li>`
+              : staticHtml`<li>
+                    ${this._localization.localize("recovery.failure_step_devices")}
+                  </li>
+                  <li>
+                    ${this._localization.localize("recovery.failure_step_reload")}
+                  </li>
+                  <li>
+                    ${
+                      incompatible
+                        ? this._localization.localize(
+                            "recovery.failure_step_update",
+                          )
+                        : this._localization.localize(
+                            "recovery.failure_step_logs",
+                          )
+                    }
+                  </li>
+                  <li>
+                    ${this._localization.localize("recovery.setup_step_return")}
+                  </li>`
+          }
+        </ol>
+        ${
+          incompatible
+            ? staticHtml`<p class="recovery-caution">
+                ${this._localization.localize("recovery.do_not_remove")}
+              </p>`
+            : null
+        }
+        <div class="backend-recovery-actions">
+          <ha-button
+            appearance="accent"
+            variant="brand"
+            size="m"
+            type="button"
+            @click=${this._openIntegrations}
+          >
+            ${this._localization.localize("recovery.open_integrations")}
+          </ha-button>
+          <ha-button
+            appearance="plain"
+            variant="neutral"
+            size="m"
+            type="button"
+            .disabled=${incident.checking}
+            @click=${this._retryBackend}
+          >
+            ${
+              incident.checking
+                ? this._localization.localize("recovery.checking")
+                : this._localization.localize("recovery.try_again")
+            }
+          </ha-button>
+        </div>
+        ${
+          incident.backendVersion
+            ? staticHtml`<details class="backend-support-information">
+                <summary>
+                  ${this._localization.localize("recovery.support_information")}
+                </summary>
+                <dl>
+                  <dt>${this._localization.localize("recovery.card_version")}</dt>
+                  <dd>${APP_VERSION}</dd>
+                  <dt>
+                    ${this._localization.localize("recovery.integration_version")}
+                  </dt>
+                  <dd>${incident.backendVersion}</dd>
+                  ${
+                    incident.savedSettingsVersion === undefined
+                      ? null
+                      : staticHtml`<dt>
+                            ${this._localization.localize(
+                              "recovery.saved_settings_format",
+                            )}
+                          </dt>
+                          <dd>${incident.savedSettingsVersion}</dd>`
+                  }
+                  ${
+                    incident.supportedSettingsVersion === undefined
+                      ? null
+                      : staticHtml`<dt>
+                            ${this._localization.localize(
+                              "recovery.supported_settings_format",
+                            )}
+                          </dt>
+                          <dd>${incident.supportedSettingsVersion}</dd>`
+                  }
+                </dl>
+              </details>`
+            : null
+        }
+      </div>
+    </section>`;
   }
 
   private readonly _handlePreviewDraft = (
@@ -326,7 +496,7 @@ export class DashboardCard extends LitElement {
       activeDeviceAppearanceConfig(config, CLIENT_PROFILE.isPhone),
     );
     this._cardLayout.configure(config);
-    this._syncLayout(config);
+    if (!this._backendIncident) this._syncLayout(config);
     this.requestUpdate();
   };
 
@@ -512,6 +682,39 @@ export class DashboardCard extends LitElement {
       this._syncRuntime();
     };
 
+  private _setHomeAssistantApi(api: HomeAssistantApi): void {
+    this._backendAvailabilityUnsubscribe?.();
+    this._rawHaApi = api;
+    this._haApi = backendAvailability.guard(api);
+    this._backendAvailabilityUnsubscribe = backendAvailability.subscribe(
+      api,
+      (incident) => {
+        const previous = this._backendIncident;
+        this._backendIncident = incident;
+        if (incident) {
+          this._toasts.clear();
+          this._layoutRuntime.clearStageSet();
+          this._syncRuntime();
+        } else if (previous) {
+          this._syncLayout(this._previewConfig ?? this._config);
+        } else {
+          this._syncRuntime();
+        }
+        this.requestUpdate();
+      },
+    );
+  }
+
+  private readonly _openIntegrations = (): void => {
+    if (!this._hass) return;
+    window.location.assign(this._hass.hassUrl("/config/integrations"));
+  };
+
+  private readonly _retryBackend = (): void => {
+    if (!this._rawHaApi || this._backendIncident?.checking) return;
+    void backendAvailability.retry(this._rawHaApi);
+  };
+
   private _observeConnection(connection: HomeAssistantConnection): void {
     if (this._observedConnection === connection) return;
     this._unobserveConnection();
@@ -535,15 +738,16 @@ export class DashboardCard extends LitElement {
   }
 
   private _syncRuntime(): void {
-    const hass = this._hass
-      ? this._cameraImageCredentials.sanitize(
-          this._hass,
-          this._cameraEntityIds(),
-        )
-      : undefined;
+    const hass =
+      this._hass && !this._backendIncident
+        ? this._cameraImageCredentials.sanitize(
+            this._hass,
+            this._cameraEntityIds(),
+          )
+        : undefined;
     this._layoutRuntime.setRuntime(
       hass,
-      this._haApi,
+      this._backendIncident ? undefined : this._haApi,
       this._localization.localize,
       this.preview,
     );

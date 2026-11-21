@@ -66,6 +66,7 @@ export interface HomeAssistantThemes {
 
 export interface HomeAssistant {
   readonly config?: {
+    readonly components?: readonly string[];
     readonly time_zone?: string;
     readonly version?: string;
   };

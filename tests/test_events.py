@@ -94,6 +94,7 @@ def test_event_revision_changes_with_mutable_media_and_end_time() -> None:
             "camera": "front",
             "label": "person",
             "sub_label": ["Resident", 0.91],
+            "top_score": 0.94,
             "start_time": 1700000000.1,
             "end_time": 1700000024.2,
             "has_snapshot": True,

@@ -119,6 +119,52 @@ test("loads the responsive CameraOptics card shell", async ({ page }) => {
   ).toBe("function");
 });
 
+test("guides a HACS-only installation through Home Assistant setup", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForCameraOpticsDefinition(page);
+  await page.locator("camera-optics-card").evaluate((element) => {
+    const card = element as HTMLElement & {
+      hass: unknown;
+      setConfig(config: unknown): void;
+    };
+    card.setConfig({
+      camera_entity: "camera.front",
+      type: "custom:camera-optics-card",
+    });
+    card.hass = {
+      config: { components: ["frontend", "lovelace"] },
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "idle",
+          attributes: { friendly_name: "Front Door" },
+        },
+      },
+      connection: { subscribeMessage: async () => () => undefined },
+      callService: async () => undefined,
+      callWS: async () => {
+        throw new Error("No backend request should start");
+      },
+      hassUrl: (path: string) => path,
+    };
+  });
+
+  const recovery = page.locator("camera-optics-card .backend-recovery");
+  await expect(recovery).toBeVisible();
+  await expect(recovery).toContainText("Finish setting up CameraOptics");
+  await expect(recovery).toContainText("Select Devices & services");
+  await expect(recovery).toContainText("Select Add integration");
+  await expect(page.locator("camera-optics-card wzc-camera")).toHaveCount(0);
+  expect(
+    await page.evaluate(() => customElements.get("wzc-camera")),
+  ).toBeUndefined();
+  await expect(page.locator("camera-optics-card wzc-toast-region")).toHaveCount(
+    0,
+  );
+});
+
 test("presents recorded media in the configured card-width bottom drawer", async ({
   page,
 }) => {

@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.camera_optics.extensions import (
     EXTENSION_API_VERSION,
@@ -337,12 +338,16 @@ async def test_frigate_activity_identity_does_not_require_live_stream(
     hass: HomeAssistant,
 ) -> None:
     """Activity subscriptions remain independent from live transport readiness."""
+    config_entry = MockConfigEntry(
+        domain="frigate", data={}, entry_id="frigate-entry"
+    )
+    config_entry.add_to_hass(hass)
     entity = er.async_get(hass).async_get_or_create(
         "camera",
         "frigate",
         "front",
         suggested_object_id="front",
-        config_entry="frigate-entry",
+        config_entry=config_entry,
     )
     hass.states.async_set(
         entity.entity_id,

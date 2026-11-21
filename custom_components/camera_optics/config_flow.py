@@ -23,6 +23,7 @@ from .const import (
     CAMERA_PRELOAD_TITLE,
     CONF_DIAGNOSTIC_LOGGING,
     CONF_HLS_PREWARM_CAMERAS,
+    CONFIG_ENTRY_VERSION,
     DEFAULT_DIAGNOSTIC_LOGGING,
     DOMAIN,
     MAX_HLS_PREWARM_CAMERAS,
@@ -35,7 +36,7 @@ from .const import (
 class CameraOpticsConfigFlow(ConfigFlow, domain=DOMAIN):
     """Create the single CameraOptics application entry."""
 
-    VERSION = 2
+    VERSION = CONFIG_ENTRY_VERSION
 
     @staticmethod
     @callback
