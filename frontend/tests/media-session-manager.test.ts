@@ -70,6 +70,10 @@ function createLifecycleApi(initiallyConnected = true): {
 describe("MediaSessionManager", () => {
   afterEach(() => {
     vi.useRealTimers();
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
+    });
     const runtime = window as unknown as Record<string, unknown>;
     delete runtime[MEDIA_SESSION_RUNTIME_KEY];
   });
@@ -146,6 +150,116 @@ describe("MediaSessionManager", () => {
     expect(resume).toHaveBeenCalledOnce();
 
     returned.release();
+    manager.closeAll();
+  });
+
+  it("parks desktop media while hidden and resumes the same transport", async () => {
+    const close = vi.fn();
+    const park = vi.fn();
+    const resume = vi.fn();
+    const factory = vi.fn<ConnectionFactory>(async () => ({
+      close,
+      park,
+      resume,
+      stream: createStream(),
+    }));
+    const manager = new MediaSessionManager(factory, factory, {
+      clientDeviceClass: "desktop",
+    });
+    const lease = manager.acquireHomeAssistant(createApi(), "camera.front");
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
+
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "hidden",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(park).toHaveBeenCalledOnce();
+    expect(close).not.toHaveBeenCalled();
+
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(resume).toHaveBeenCalledOnce();
+    expect(factory).toHaveBeenCalledOnce();
+    expect(lease.getSnapshot().state).toBe("live");
+
+    lease.release();
+    manager.closeAll();
+  });
+
+  it("replaces only a retained desktop transport that fails foreground validation", async () => {
+    const firstClose = vi.fn();
+    const firstResume = vi.fn(() =>
+      Promise.reject(new Error("Retained media did not resume")),
+    );
+    const factory = vi
+      .fn<ConnectionFactory>()
+      .mockResolvedValueOnce({
+        close: firstClose,
+        park: vi.fn(),
+        resume: firstResume,
+        stream: createStream(),
+      })
+      .mockResolvedValueOnce({ close: vi.fn(), stream: createStream() });
+    const manager = new MediaSessionManager(factory, factory, {
+      clientDeviceClass: "desktop",
+    });
+    const lease = manager.acquireHomeAssistant(createApi(), "camera.front");
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
+
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "hidden",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    await vi.waitFor(() => expect(factory).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
+    expect(firstResume).toHaveBeenCalledOnce();
+    expect(firstClose).toHaveBeenCalledOnce();
+
+    lease.release();
+    manager.closeAll();
+  });
+
+  it("closes mobile media while hidden and reconnects in the foreground", async () => {
+    const closes: Array<ReturnType<typeof vi.fn>> = [];
+    const factory = vi.fn<ConnectionFactory>(async () => {
+      const close = vi.fn();
+      closes.push(close);
+      return { close, stream: createStream() };
+    });
+    const manager = new MediaSessionManager(factory, factory, {
+      clientDeviceClass: "phone",
+    });
+    const lease = manager.acquireHomeAssistant(createApi(), "camera.front");
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
+
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "hidden",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(closes[0]).toHaveBeenCalledOnce();
+    expect(lease.getSnapshot().state).toBe("failed");
+
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.waitFor(() => expect(factory).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
+
+    lease.release();
     manager.closeAll();
   });
 

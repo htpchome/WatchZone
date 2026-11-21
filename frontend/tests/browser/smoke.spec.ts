@@ -13442,6 +13442,14 @@ test("restores controls after pre-editor and retains a replaced live connection"
   });
 
   const video = page.locator("wzc-camera video.webrtc");
+  await video.evaluate((element) => {
+    const retainedVideo = element as HTMLVideoElement;
+    Object.defineProperty(retainedVideo, "currentTime", {
+      configurable: true,
+      value: retainedVideo.currentTime + 0.1,
+    });
+    retainedVideo.dispatchEvent(new Event("timeupdate"));
+  });
   expect(
     await video.evaluate(
       (element) =>

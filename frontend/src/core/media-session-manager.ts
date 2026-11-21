@@ -3,6 +3,7 @@ import type {
   HomeAssistantConnection,
   HomeAssistantConnectionEventListener,
 } from "./home-assistant";
+import { CLIENT_PROFILE } from "./client-profile";
 import {
   MAX_RETAINED_CAMERA_SESSIONS,
   MEDIA_SESSION_RUNTIME_KEY,
@@ -49,7 +50,7 @@ export interface MediaConnection {
   /** Suspend decoder/buffer work while retaining the transport identity. */
   park?(): void;
   /** Resume a previously parked transport without reconnecting it. */
-  resume?(): void;
+  resume?(): Promise<void> | void;
 }
 
 export interface MediaConnectionOptions {
@@ -125,6 +126,7 @@ class ManagedMediaSession {
   private _generation = 0;
   private _leaseCount = 0;
   private _connectionOptions: MediaConnectionOptions = { initialMuted: true };
+  private _documentParked = false;
   private _reconnectCause?: ReconnectCause;
   private _reconnectAttempts = 0;
   private _reconnectTimer?: ReturnType<typeof setTimeout>;
@@ -181,7 +183,7 @@ class ManagedMediaSession {
       this._closeConnection();
       this._setSnapshot({ state: "new" });
     } else if (this._snapshot.state === "parked") {
-      this._connection?.resume?.();
+      if (!this._documentParked) this._resumeConnection();
       this._setSnapshot({ ...this._snapshot, state: "live" });
     }
     if (
@@ -300,9 +302,28 @@ class ManagedMediaSession {
     await this._connect();
   }
 
+  public handleDocumentHidden(closeConnection: boolean): void {
+    if (this._snapshot.state === "closed" || this._documentParked) return;
+    this._documentParked = true;
+    if (closeConnection) {
+      if (this._connection || this._snapshot.state === "connecting") {
+        this._reconnectCause = undefined;
+        this._closeConnection();
+        this._setSnapshot({
+          state: "failed",
+          error: "Media suspended while the mobile client is backgrounded",
+        });
+      }
+      return;
+    }
+    this._connection?.park?.();
+  }
+
   public handleDocumentVisible(): void {
+    const wasDocumentParked = this._documentParked;
+    this._documentParked = false;
     if (this._snapshot.state === "closed" || this._leaseCount === 0) return;
-    this._connection?.resume?.();
+    if (wasDocumentParked && this._connection) this._resumeConnection();
     if (this._transportInterrupted) {
       if (this._api.identity.connected === false) return;
       this._transportInterrupted = false;
@@ -362,7 +383,7 @@ class ManagedMediaSession {
         return;
       }
       this._connection = connection;
-      if (this._leaseCount === 0) connection.park?.();
+      if (this._leaseCount === 0 || this._documentParked) connection.park?.();
       if (this._reconnectAttempts > 0) {
         this._stabilityTimer = setTimeout(() => {
           this._stabilityTimer = undefined;
@@ -501,6 +522,50 @@ class ManagedMediaSession {
     this._setSnapshot({ ...this._snapshot, usable: true });
   }
 
+  private _resumeConnection(): void {
+    const connection = this._connection;
+    if (!connection?.resume) return;
+    const generation = this._generation;
+    let resumed: Promise<void> | void;
+    try {
+      resumed = connection.resume();
+    } catch (error) {
+      this._handleResumeFailure(generation, connection, error);
+      return;
+    }
+    if (!resumed) return;
+    void resumed.catch((error: unknown) =>
+      this._handleResumeFailure(generation, connection, error),
+    );
+  }
+
+  private _handleResumeFailure(
+    generation: number,
+    connection: MediaConnection,
+    error: unknown,
+  ): void {
+    if (
+      generation !== this._generation ||
+      connection !== this._connection ||
+      this._snapshot.state === "closed"
+    )
+      return;
+    this._closeConnection();
+    this._setSnapshot({
+      state: "failed",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Retained media did not resume",
+      errorCode: "unknown",
+      timing: this._snapshot.timing,
+    });
+    this._reconnectCause = "media";
+    if (this._leaseCount > 0 && !this._documentParked) {
+      this._enqueueReconnect(this);
+    }
+  }
+
   private _closeConnection(): void {
     this._generation += 1;
     if (this._stabilityTimer) {
@@ -554,9 +619,14 @@ export class MediaSessionManager {
   private readonly _reconnectQueue = new Set<ManagedMediaSession>();
   private _reconnectBatchTimer?: ReturnType<typeof setTimeout>;
   private _reconnectDrain?: Promise<void>;
+  private readonly _closeConnectionsWhenHidden: boolean;
+  private _documentHidden = document.visibilityState !== "visible";
   private readonly _retentionPolicy: MediaRetentionPolicy;
 
   public constructor(retentionEnvironment: MediaRetentionEnvironment = {}) {
+    this._closeConnectionsWhenHidden =
+      (retentionEnvironment.clientDeviceClass ?? CLIENT_PROFILE.deviceClass) ===
+      "phone";
     this._retentionPolicy = new MediaRetentionPolicy(
       () => this._applyRetentionPolicy(),
       retentionEnvironment,
@@ -587,6 +657,9 @@ export class MediaSessionManager {
     if (!session?.isUsable(api)) return undefined;
     this._observeConnection(api.identity);
     const lease = session.acquire(api, options);
+    if (this._documentHidden) {
+      session.handleDocumentHidden(this._closeConnectionsWhenHidden);
+    }
     this._pruneConnectionObservers();
     this._applyRetentionPolicy();
     return lease;
@@ -716,6 +789,9 @@ export class MediaSessionManager {
     }
     this._observeConnection(api.identity);
     const lease = session.acquire(api, options);
+    if (this._documentHidden) {
+      session.handleDocumentHidden(this._closeConnectionsWhenHidden);
+    }
     this._pruneConnectionObservers();
     this._applyRetentionPolicy();
     return lease;
@@ -742,7 +818,14 @@ export class MediaSessionManager {
   }
 
   private readonly _handleVisibilityChange = (): void => {
-    if (document.visibilityState !== "visible") return;
+    if (document.visibilityState !== "visible") {
+      this._documentHidden = true;
+      for (const session of this._sessions.values()) {
+        session.handleDocumentHidden(this._closeConnectionsWhenHidden);
+      }
+      return;
+    }
+    this._documentHidden = false;
     for (const session of this._sessions.values()) {
       session.handleDocumentVisible();
     }

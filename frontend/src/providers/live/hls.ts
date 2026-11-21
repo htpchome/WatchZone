@@ -4,6 +4,7 @@ import type { HomeAssistantApi } from "../../core/home-assistant";
 import type { LiveStartupTiming } from "../../core/live-startup-timing";
 import {
   playMediaElement,
+  resumeMediaElement,
   setMediaElementMuted,
 } from "../../core/media-playback";
 import type {
@@ -316,7 +317,7 @@ export async function createHlsConnection(
     },
     resume: () => {
       hls?.startLoad(-1);
-      void playMediaElement(video).catch(() => undefined);
+      return resumeMediaElement(video);
     },
   };
 }

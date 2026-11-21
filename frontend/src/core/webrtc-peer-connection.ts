@@ -1,5 +1,5 @@
 import type { LiveStartupTiming } from "./live-startup-timing";
-import { playMediaElement, setMediaElementMuted } from "./media-playback";
+import { resumeMediaElement, setMediaElementMuted } from "./media-playback";
 import {
   MediaConnectionError,
   normalizeMediaConnectionError,
@@ -74,7 +74,7 @@ export function attachWebRtcVideo(
     },
     resume: () => {
       video.srcObject = connection.stream ?? null;
-      void playMediaElement(video).catch(() => undefined);
+      return resumeMediaElement(video);
     },
     close: () => {
       video.pause();

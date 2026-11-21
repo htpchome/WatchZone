@@ -81,6 +81,7 @@ describe("Frigate MSE connection", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -146,6 +147,12 @@ describe("Frigate MSE connection", () => {
       expect.any(Function),
     );
 
+    connection.park?.();
+    const resumed = connection.resume?.();
+    video!.currentTime = 20;
+    video!.dispatchEvent(new Event("timeupdate"));
+    await resumed;
+
     connection.close();
     expect(socket.close).toHaveBeenCalledOnce();
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:frigate-mse");
@@ -193,6 +200,44 @@ describe("Frigate MSE connection", () => {
     connection.close();
     expect(socket.close).toHaveBeenCalledOnce();
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:frigate-mse");
+  });
+
+  it("rejects a retained player that does not advance after resume", async () => {
+    vi.useFakeTimers();
+    let video: HTMLVideoElement | undefined;
+    const connectionPromise = createFrigateMseConnection(
+      api(),
+      "camera.front",
+      new AbortController().signal,
+      vi.fn(),
+      new LiveStartupTiming("frigate-mse-stale-resume"),
+      {
+        initialMuted: true,
+        onVideo: (element) => {
+          video = element;
+        },
+      },
+      source,
+    );
+    await nextMicrotask();
+
+    const mediaSource = FakeMediaSource.instances[0]!;
+    const socket = FakeWebSocket.instances[0]!;
+    mediaSource.dispatchEvent(new Event("sourceopen"));
+    socket.dispatchEvent(new Event("open"));
+    socket.message('{"type":"mse","value":"video/mp4"}');
+    video!.dispatchEvent(new Event("loadeddata"));
+    const connection = await connectionPromise;
+
+    connection.park?.();
+    const resumed = connection.resume?.();
+    const rejected = expect(Promise.resolve(resumed)).rejects.toThrow(
+      "Retained media did not resume",
+    );
+    await vi.advanceTimersByTimeAsync(4_000);
+    await rejected;
+
+    connection.close();
   });
 
   it("cleans up a timed-out startup and removes its abort listener", async () => {

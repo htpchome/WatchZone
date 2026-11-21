@@ -14,11 +14,11 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
 ## Baseline
 
 - Branch: `main`.
-- HEAD before this work: `175f80b` —
-  `v0.0.4-dev.497 - fix(talk): enforce standard controls outside overlays`.
-- Version being prepared: `0.0.4-dev.498`.
-- Proposed subject:
+- HEAD before this work: `d3d6de8` —
   `v0.0.4-dev.498 - fix(talk): make shared controls context-independent`.
+- Version being prepared: `0.0.4-dev.499`.
+- Proposed subject:
+  `v0.0.4-dev.499 - fix(live): retain healthy background transports`.
 
 ## Persistent two-way talk
 
@@ -89,6 +89,11 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
 
 ## Other active baselines
 
+- Desktop and tablet documents retain healthy WebRTC, MSE, HLS.js, and native
+  HLS transport identity while hidden, unfocused, or minimized. Their players
+  park decoder/loading work and must produce an advancing frame on foreground
+  resume; only a stale transport is closed and immediately replaced. Physical
+  phones close transports while hidden and reconnect active leases on return.
 - Full Stage moves the same stable linked-light and TWT component nodes between
   Camera controls below 600px and activity navigation at 600px and wider.
 - Only `overlay` presentation consumes overlay tokens. Every non-overlay
@@ -102,12 +107,14 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
 - Shared zoom/pan and shared media-stage resize remain the sole owners of those
   behaviors for live and recorded media.
 
-## Validation for `dev.498`
+## Validation for `dev.499`
 
 - Formatting, lint, typecheck, architecture/style/license checks, production
   build, and version synchronization pass.
-- Unit tests: 534/534 across 80 files, including stopped-launcher disposal on
-  camera selection and mute-preference refresh on camera reactivation.
+- Unit tests cover desktop background retention, stale retained-player
+  replacement, phone background closure, MSE foreground frame validation,
+  stopped-launcher disposal, and mute-preference refresh on camera
+  reactivation.
 - Browser tests: 174/174 across Chromium, Firefox, and WebKit. The TWT flow
   additionally asserts one ready button versus three connected buttons and a
   stable shared-control bounding box across connection state changes. The

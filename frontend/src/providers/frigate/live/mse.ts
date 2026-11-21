@@ -2,7 +2,7 @@ import type { FrigateGo2RtcLiveSourceDescriptor } from "../../../api/live-source
 import type { HomeAssistantApi } from "../../../core/home-assistant";
 import type { LiveStartupTiming } from "../../../core/live-startup-timing";
 import {
-  playMediaElement,
+  resumeMediaElement,
   setMediaElementMuted,
 } from "../../../core/media-playback";
 import type {
@@ -266,7 +266,7 @@ export async function createFrigateMseConnection(
         const liveEdge = video.buffered.end(video.buffered.length - 1);
         video.currentTime = Math.max(0, liveEdge - 0.25);
       }
-      void playMediaElement(video).catch(() => undefined);
+      return resumeMediaElement(video);
     },
     close: () => {
       cleanup();
